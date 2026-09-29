@@ -39,20 +39,6 @@ A module may import only its own group's modules; the rule in § 1 about "anothe
 | `cp-g0-pena-testes.l4` | g0 | tests of `cp-pena.l4` |
 | `cp-g3-furto.l4`, `cp-g3-furto-testes.l4` | g3 (written by g0) | art. 155, the worked pattern |
 
-The encoding groups and their ranges, as the roadmap parts under `registers/parts/` assign them (measured from those files on 2026-09-29):
-
-| group | articles | | group | articles |
-| --- | --- | --- | --- | --- |
-| g1a | 1–31 | | g3 | 155–183-A |
-| g1b | 32–76 | | g3b | 184–212 |
-| g1c | 77–120 | | g4a | 213–249 |
-| g2a | 121–137 | | g4b | 250–288-A |
-| g2b | 138–154-B | | g5 | 289–311-A and 359-I–361 |
-| | | | g6a | 312–337-D |
-| | | | g6b | 337-E–359-H |
-
-Where this plan says "g1" without a letter it means the Parte Geral groups, and the article number says which.
-
 Your own files are `cp-gN-<assunto>.l4`, split along the Code's structure (a Capítulo, or a run of related articles), each under about 1,500 lines.
 Their tests are `cp-gN-<assunto>-testes.l4`, one per module, importing the module under test.
 ASCII in file names; `<assunto>` in Portuguese without accents, e.g. `cp-g2-homicidio.l4`, `cp-g6-peculato-e-concussao.l4`.
@@ -138,7 +124,7 @@ Each has an illustration that runs, in `cp-g0-pena-testes.l4` § `As formas de u
 | 7. a preceito that depends on the fact | "de um a cinco anos, e multa, se o documento é público, e … de um a três anos, e multa, … se o documento é particular" (art. 299, 2097; art. 305, 2122 likewise); "de três a seis anos, e multa, no caso de dolo, ou detenção, de seis meses a dois anos, no caso de culpa" (art. 254, 1812) | a function from the fact to a `Pena cominada`: `BRANCH` on the fact, one complete `Pena cominada` per arm, each with its own species and multa. |
 
 A cause changes only the custodial range: `` `a pena cominada com a causa` `` leaves `multa` as it was, because `multa` is a conjunction, not a number.
-Where a paragraph's words reach the fine too ("As penas aplicam-se … em dobro", art. 146 § 1º, plural), whether the number of dias-multa is also doubled is a fork for that article's encoder: record the readings and take one.
+Where a paragraph's words reach the fine too ("As penas aplicam-se … em dobro", art. 146 § 1º, plural), whether the number of dias-multa is also doubled is a fork for that article's encoder: record the readings and take one, and cross-refer to F-g0-28, which records only that the shared machinery does not decide it.
 
 ### 2.3 Causes of increase and decrease — ranges, never a chosen number
 
@@ -358,7 +344,7 @@ Measured for art. 155: Lei nº 15.397/2026, art. 4º, in force on publication, D
 - Every qualified form present and absent; every cause present and absent; each cause's fraction asserted against the words.
 - Several forms at once, and a cause on the attempt, where the article allows them.
 - **Assert every gate directly** as well as through the rules behind it (§ 12, T5).
-- Before you trust a clean run, break the code once and watch a test fail: g0's run mutated eight things one at a time (the § 1º fraction, the Tema 1087 condition, the § 4º IV count, idoso's threshold, art. 10's first day, the vigência boundary, § 9º's privilege, the larger factor of a cause) and each was caught — the vigência one only after the gate got its own assertion (T5).
+- Before you trust a clean run, break the code once and watch a test fail: g0's run mutated eleven things one at a time (the § 1º fraction, the Tema 1087 condition, the § 4º IV count, idoso's threshold, art. 10's first day, the vigência boundary, § 9º's privilege, the larger factor of a cause; then, for § 2.2.1, a one-bound change that also moved the other bound, art. 58 admitting a fine under `sem multa`, and `o triplo` as a multiplier) and each was caught — the vigência one only after the gate got its own assertion (T5).
 
 ## 11a. The P2 sweep and reserved fork ids
 

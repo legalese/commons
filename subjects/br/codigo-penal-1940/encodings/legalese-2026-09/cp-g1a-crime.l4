@@ -1,0 +1,489 @@
+@lang pt
+IMPORT prelude
+IMPORT daydate
+IMPORT `cp-dominio`
+IMPORT `cp-pena`
+
+-- Código Penal, Parte Geral, Título II — Do crime, arts. 13 and 15 to 19.
+-- Written by g1a.
+--
+-- Art. 14 (consummation, attempt, the attempt's reduction) is g0's, in
+-- cp-pena.l4 (PLAN § 9); this module calls it. Arts. 20 to 22 (error,
+-- coercion, obedience) are in cp-g1a-erro.l4, and arts. 23 to 25 (the
+-- exclusions of illicitude) in cp-g1a-ilicitude.l4, split along the runs of
+-- related articles the Título has no chapters to mark.
+--
+-- THE TEXT ENCODED is the Título as re-enacted by Lei nº 7.209/1984 and
+-- unchanged since; no vigência gate is needed.
+--
+-- WHAT THE PARTE ESPECIAL ENCODERS SHOULD CALL (at integration):
+--   * `o desfecho da execução (arts. 14, 15 e 17)` — whether a begun offence
+--     is consummated, a punishable attempt, an impossible crime, or abandoned
+--     by the agent's own will. cp-g3-furto decides consummation and attempt
+--     directly through art. 14 and does not model arts. 15 or 17.
+--   * `o resultado é imputável ao agente (art. 13)` — for every offence whose
+--     existence depends on a result (homicide, injury, damage), including the
+--     commission by omission of § 2º.
+--   * `o agente responde pelo resultado que agrava especialmente a pena
+--     (art. 19)` — for every form qualified by its result (art. 129, § 3º;
+--     art. 157, § 3º; and the like).
+--   * `a modalidade do crime (art. 18)` and `o fato é punível quanto ao
+--     elemento subjetivo (art. 18, parágrafo único)` — dolo, culpa, and
+--     whether the offence exists in the culposo form.
+--   * `as causas de diminuição cabíveis (art. 16)` — the arrependimento
+--     posterior, for offences without violence or grave threat to the person.
+--
+-- WHAT THE JUDGE DECIDES stays an input: whether the conduct was a condition
+-- of the result, whether a supervening cause produced it "por si só", whether
+-- the agent wanted the result or took the risk of it, whether the means was
+-- ABSOLUTELY ineffective, whether a desistance was voluntary.
+--
+-- Forks met here (registers/parts/g1a.forks.json): F-sweep-a-07 (crime
+-- impossível and the police: Súmulas 145 STF and 567 STJ, M-sweep-a-18 and
+-- M-sweep-a-19), F-g1a-07 (voluntary is not spontaneous, art. 15), F-g1a-08
+-- (art. 16's "até o recebimento" and what "violência" bars), F-g1a-09 (art.
+-- 16: integral reparation).
+
+§ `Título II — Do crime`
+
+§§ `Art. 13 — Relação de causalidade`
+
+-- "§ 2º - ... O dever de agir incumbe a quem: a) tenha por lei obrigação de
+-- cuidado, proteção ou vigilância; b) de outra forma, assumiu a
+-- responsabilidade de impedir o resultado; c) com seu comportamento
+-- anterior, criou o risco da ocorrência do resultado."
+-- Which of these holds is the fact-finder's characterisation of the case
+-- (whether a statute imposes a duty of care on this person, whether they took
+-- on the responsibility): every one that holds is listed.
+DECLARE `Fonte do dever de agir` IS ONE OF
+    `tem por lei obrigação de cuidado, proteção ou vigilância`
+    @nlg:en the law places on them a duty of care, protection or supervision
+    `de outra forma, assumiu a responsabilidade de impedir o resultado`
+    @nlg:en they otherwise took on the responsibility of preventing the result
+    `com seu comportamento anterior, criou o risco da ocorrência do resultado`
+    @nlg:en by their earlier conduct they created the risk of the result
+
+DECLARE `Modalidade da conduta` IS ONE OF
+    `ação`
+    @nlg:en an action
+    `omissão`
+    @nlg:en an omission
+
+-- PROPOSTO-COMUM: every offence whose existence depends on a result (arts.
+-- 121, 129, 163 ...) and every form qualified by its result needs art. 13's
+-- facts; a witness or expert can give them.
+-- The conduct and the result it is said to have caused. For an omission, the
+-- first finding asks the counterfactual the caput sets: had the omitted act
+-- been done, would the result have occurred?
+DECLARE `Conduta e resultado` HAS
+    modalidade IS A `Modalidade da conduta`
+    @nlg:en whether the conduct was an action or an omission
+    `sem a ação ou omissão o resultado não teria ocorrido` IS A BOOLEAN
+    @nlg:en the result would not have occurred without the action, or would not have occurred had the omitted act been done
+    `fontes do dever de agir` IS A LIST OF `Fonte do dever de agir`
+    @nlg:en for an omission, the grounds of paragraph 2 on which the omitter had a duty to act
+    `o omitente podia agir para evitar o resultado` IS A BOOLEAN
+    @nlg:en for an omission, the omitter could have acted to prevent the result
+    `sobreveio causa relativamente independente` IS A BOOLEAN
+    @nlg:en a relatively independent cause supervened after the conduct
+    `a causa superveniente, por si só, produziu o resultado` IS A BOOLEAN
+    @nlg:en that supervening cause produced the result by itself
+
+-- "§ 2º - A omissão é penalmente relevante quando o omitente devia e podia
+-- agir para evitar o resultado."
+@ref CP art. 13, § 2º, a a c
+GIVEN c IS A `Conduta e resultado`
+GIVETH A BOOLEAN
+@nlg:en the omitter had a duty to act under one of the grounds of paragraph 2
+`o omitente devia agir (art. 13, § 2º)` c MEANS
+    NOT null (c's `fontes do dever de agir`)
+
+@ref CP art. 13, § 2º
+GIVEN c IS A `Conduta e resultado`
+GIVETH A BOOLEAN
+@nlg:en the omission is relevant to the criminal law: the omitter had to act and could have
+`a omissão é penalmente relevante (art. 13, § 2º)` c MEANS
+        "devia" ... `o omitente devia agir (art. 13, § 2º)` c
+    AND "e podia agir para evitar o resultado" ... c's `o omitente podia agir para evitar o resultado`
+
+-- "Art. 13 - O resultado, de que depende a existência do crime, somente é
+-- imputável a quem lhe deu causa. Considera-se causa a ação ou omissão sem a
+-- qual o resultado não teria ocorrido."
+@ref CP art. 13, caput
+GIVEN c IS A `Conduta e resultado`
+GIVETH A BOOLEAN
+@nlg:en the action or omission is a cause of the result: without it the result would not have occurred
+`a ação ou omissão é causa do resultado (art. 13, caput)` c MEANS
+    c's `sem a ação ou omissão o resultado não teria ocorrido`
+
+-- "§ 1º - A superveniência de causa relativamente independente exclui a
+-- imputação quando, por si só, produziu o resultado; os fatos anteriores,
+-- entretanto, imputam-se a quem os praticou."
+@ref CP art. 13, § 1º
+GIVEN c IS A `Conduta e resultado`
+GIVETH A BOOLEAN
+@nlg:en a supervening, relatively independent cause produced the result by itself, which excludes imputing the result
+`a superveniência de causa relativamente independente exclui a imputação (art. 13, § 1º)` c MEANS
+        c's `sobreveio causa relativamente independente`
+    AND "quando, por si só, produziu o resultado" ... c's `a causa superveniente, por si só, produziu o resultado`
+
+DECLARE `Imputação do resultado` IS ONE OF
+    `o resultado é imputável a quem lhe deu causa (art. 13)`
+    @nlg:en the result is imputed to the agent, who caused it
+    `o resultado não é imputável: a ação ou omissão não é sua causa (art. 13, caput)`
+    @nlg:en the result is not imputed to the agent: the result would have occurred without the conduct
+    `o resultado não é imputável: a omissão não é penalmente relevante (art. 13, § 2º)`
+    @nlg:en the result is not imputed to the agent: the omitter had no duty to act, or could not act
+    `o resultado não é imputável, mas os fatos anteriores imputam-se a quem os praticou (art. 13, § 1º)`
+    @nlg:en the result is not imputed, for a supervening cause produced it by itself; the earlier acts are still imputed to the agent
+
+-- ARM ORDER is the encoding's: the caput's condition first, then the relevance
+-- of an omission (§ 2º), then the break in the chain (§ 1º).
+@export Diz se o resultado de que depende a existência do crime é imputável ao agente, por ação ou omissão (Código Penal, art. 13 e §§ 1º e 2º)
+@ref CP art. 13, caput, §§ 1º e 2º
+GIVEN c IS A `Conduta e resultado` @desc a conduta, ação ou omissão, e o que dela se sabe em relação ao resultado
+GIVETH AN `Imputação do resultado`
+@nlg:en whether and how the result is imputed to the agent
+`a imputação do resultado (art. 13)` c MEANS
+    BRANCH
+        IF   NOT `a ação ou omissão é causa do resultado (art. 13, caput)` c
+        THEN `o resultado não é imputável: a ação ou omissão não é sua causa (art. 13, caput)`
+        IF   c's modalidade EQUALS `omissão` AND NOT `a omissão é penalmente relevante (art. 13, § 2º)` c
+        THEN `o resultado não é imputável: a omissão não é penalmente relevante (art. 13, § 2º)`
+        IF   `a superveniência de causa relativamente independente exclui a imputação (art. 13, § 1º)` c
+        THEN `o resultado não é imputável, mas os fatos anteriores imputam-se a quem os praticou (art. 13, § 1º)`
+        OTHERWISE `o resultado é imputável a quem lhe deu causa (art. 13)`
+
+@ref CP art. 13
+GIVEN c IS A `Conduta e resultado`
+GIVETH A BOOLEAN
+@nlg:en the result is imputed to the agent
+`o resultado é imputável ao agente (art. 13)` c MEANS
+    `a imputação do resultado (art. 13)` c EQUALS `o resultado é imputável a quem lhe deu causa (art. 13)`
+
+§§ `Arts. 14, 15 e 17 — Consumação, tentativa, desistência e crime impossível`
+
+-- Why a begun execution did not end in consummation: art. 14, II's "por
+-- circunstâncias alheias à vontade do agente", or art. 15's two acts of the
+-- agent's own will. One of them, so a case cannot be both.
+DECLARE `Por que a execução iniciada não se consumou` IS ONE OF
+    `por circunstâncias alheias à vontade do agente`
+    @nlg:en something outside the agent's will stopped it
+    `o agente desistiu voluntariamente de prosseguir na execução`
+    @nlg:en the agent voluntarily gave up carrying on with the execution
+    `o agente impediu voluntariamente que o resultado se produzisse`
+    @nlg:en the agent voluntarily prevented the result from happening
+
+DECLARE `Até onde chegou a execução` IS ONE OF
+    `a execução não foi iniciada`
+    @nlg:en the execution was not begun
+    `a execução foi iniciada e o crime não se consumou`
+    @nlg:en the execution was begun and the crime was not consummated
+        HAS `por que não se consumou` IS A `Por que a execução iniciada não se consumou`
+        @nlg:en why it was not consummated
+    `todos os elementos da definição legal se reuniram`
+    @nlg:en every element of the crime's legal definition came together
+
+-- PROPOSTO-COMUM: every offence that admits an attempt needs how far the
+-- execution went. g5 declared its own `Estágio da execução` for the same
+-- purpose (notes/g1a.md); the conductor should keep one.
+-- The course of the execution, and the facts art. 17 turns on. Whether a
+-- means was ABSOLUTELY ineffective, or an object ABSOLUTELY improper, is a
+-- judgement on the facts (a relatively ineffective means leaves a punishable
+-- attempt). The last two fields are Súmula 145 STF's and Súmula 567 STJ's
+-- (fork F-sweep-a-07).
+DECLARE `Execução do crime` HAS
+    `até onde chegou` IS AN `Até onde chegou a execução`
+    @nlg:en how far the execution went
+    `o meio empregado era absolutamente ineficaz` IS A BOOLEAN
+    @nlg:en the means used was absolutely incapable of consummating the crime
+    `o objeto era absolutamente impróprio` IS A BOOLEAN
+    @nlg:en the object was absolutely unsuitable for the crime to be consummated on it
+    `a preparação do flagrante pela polícia tornou impossível a consumação` IS A BOOLEAN
+    @nlg:en the police set up the catch in the act in a way that made consummation impossible
+    `havia vigilância ou segurança no local` IS A BOOLEAN
+    @nlg:en there was electronic surveillance or security staff at the place
+
+-- The three facts cp-pena's art. 14 rules read.
+@ref CP art. 14, I e II
+GIVEN e IS AN `Execução do crime`
+GIVETH A BOOLEAN
+@nlg:en the execution was begun
+`a execução foi iniciada` e MEANS
+    CONSIDER e's `até onde chegou`
+    WHEN `a execução não foi iniciada` THEN FALSE
+    OTHERWISE TRUE
+
+@ref CP art. 14, I
+GIVEN e IS AN `Execução do crime`
+GIVETH A BOOLEAN
+@nlg:en every element of the legal definition came together
+`os elementos da definição legal se reuniram` e MEANS
+    e's `até onde chegou` EQUALS `todos os elementos da definição legal se reuniram`
+
+@ref CP art. 14, II; art. 15
+GIVEN e IS AN `Execução do crime`
+      m IS A `Por que a execução iniciada não se consumou`
+GIVETH A BOOLEAN
+@nlg:en the begun execution was not consummated for this reason
+`não se consumou por` e m MEANS
+    CONSIDER e's `até onde chegou`
+    WHEN `a execução foi iniciada e o crime não se consumou` `o motivo` THEN `o motivo` EQUALS m
+    OTHERWISE FALSE
+
+@ref CP art. 14, II
+GIVEN e IS AN `Execução do crime`
+GIVETH A BOOLEAN
+@nlg:en the crime is attempted in the sense of article 14, II
+`o crime é tentado (art. 14, II)` e MEANS
+    `crime tentado (art. 14, II)` (`a execução foi iniciada` e) (`os elementos da definição legal se reuniram` e) (`não se consumou por` e `por circunstâncias alheias à vontade do agente`)
+
+-- "Art. 15 - O agente que, voluntariamente, desiste de prosseguir na execução
+-- ou impede que o resultado se produza, só responde pelos atos já praticados."
+-- Voluntary, not necessarily spontaneous: a desistance someone else prompted
+-- is still the agent's own choice (fork F-g1a-07).
+@ref CP art. 15, primeira parte
+GIVEN e IS AN `Execução do crime`
+GIVETH A BOOLEAN
+@nlg:en the agent voluntarily gave up the execution
+`desistência voluntária (art. 15)` e MEANS
+    `não se consumou por` e `o agente desistiu voluntariamente de prosseguir na execução`
+
+@ref CP art. 15, segunda parte
+GIVEN e IS AN `Execução do crime`
+GIVETH A BOOLEAN
+@nlg:en the agent voluntarily prevented the result
+`arrependimento eficaz (art. 15)` e MEANS
+    `não se consumou por` e `o agente impediu voluntariamente que o resultado se produzisse`
+
+@ref CP art. 15
+GIVEN e IS AN `Execução do crime`
+GIVETH A BOOLEAN
+@nlg:en the agent answers only for the acts already done
+`o agente só responde pelos atos já praticados (art. 15)` e MEANS
+        `desistência voluntária (art. 15)` e
+    OR  `arrependimento eficaz (art. 15)` e
+
+-- "Art. 17 - Não se pune a tentativa quando, por ineficácia absoluta do meio
+-- ou por absoluta impropriedade do objeto, é impossível consumar-se o crime."
+-- The third limb is STF Súmula 145, "NÃO HÁ CRIME, QUANDO A PREPARAÇÃO DO
+-- FLAGRANTE PELA POLÍCIA TORNA IMPOSSÍVEL A SUA CONSUMAÇÃO" (M-sweep-a-18);
+-- surveillance or security staff alone do not make the crime impossible, STJ
+-- Súmula 567 (M-sweep-a-19, and M-sweep-b-33 for furto), so that field is
+-- deliberately not read here (fork F-sweep-a-07).
+@ref CP art. 17; STF, Súmula 145 (13.12.1963); STJ, Súmula 567 (24.2.2016)
+GIVEN e IS AN `Execução do crime`
+GIVETH A BOOLEAN
+@nlg:en the crime was impossible to consummate, so the attempt is not punished
+`crime impossível (art. 17)` e MEANS
+        NOT `os elementos da definição legal se reuniram` e
+    AND (    "por ineficácia absoluta do meio" ... e's `o meio empregado era absolutamente ineficaz`
+         ..  "ou por absoluta impropriedade do objeto" ... e's `o objeto era absolutamente impróprio`
+         OR  "Súmula 145 STF" ... e's `a preparação do flagrante pela polícia tornou impossível a consumação`)
+
+@ref CP art. 14, II e parágrafo único; arts. 15 e 17
+GIVEN e IS AN `Execução do crime`
+GIVETH A BOOLEAN
+@nlg:en the attempt is punishable
+`a tentativa é punível (arts. 14, 15 e 17)` e MEANS
+        `o crime é tentado (art. 14, II)` e
+    AND NOT `crime impossível (art. 17)` e
+
+DECLARE `Desfecho da execução` IS ONE OF
+    `consumação (art. 14, I)`
+    @nlg:en the crime was consummated
+    `tentativa punível, com a pena do crime consumado diminuída de um a dois terços (art. 14, II e parágrafo único)`
+    @nlg:en a punishable attempt, with the penalty for the consummated crime reduced by one to two thirds
+    `tentativa não punível: crime impossível (art. 17)`
+    @nlg:en the attempt is not punished, for the crime was impossible
+    `desistência voluntária: só responde pelos atos já praticados (art. 15)`
+    @nlg:en the agent gave up voluntarily and answers only for the acts already done
+    `arrependimento eficaz: só responde pelos atos já praticados (art. 15)`
+    @nlg:en the agent prevented the result voluntarily and answers only for the acts already done
+    `execução não iniciada: não há tentativa (art. 14, II)`
+    @nlg:en the execution was not begun, so there is no attempt
+
+-- ARM ORDER is the encoding's. Consummation first (art. 14, I); then a
+-- conduct that never reached execution; then art. 17, which forbids punishing
+-- an attempt however it ended; then the agent's own will (art. 15), and only
+-- then an attempt stopped from outside (art. 14, II).
+@export Diz até onde chegou o crime e o que isso importa: consumado, tentativa punível, crime impossível, desistência voluntária, arrependimento eficaz, ou execução não iniciada (Código Penal, arts. 14, 15 e 17)
+@ref CP arts. 14, 15 e 17; STF, Súmula 145
+GIVEN e IS AN `Execução do crime` @desc até onde chegou a execução, por que não se consumou, e os fatos do art. 17
+GIVETH A `Desfecho da execução`
+@nlg:en how the execution ended, and what follows
+`o desfecho da execução (arts. 14, 15 e 17)` e MEANS
+    BRANCH
+        IF   `crime consumado (art. 14, I)` (`os elementos da definição legal se reuniram` e)
+        THEN `consumação (art. 14, I)`
+        IF   NOT `a execução foi iniciada` e
+        THEN `execução não iniciada: não há tentativa (art. 14, II)`
+        IF   `crime impossível (art. 17)` e
+        THEN `tentativa não punível: crime impossível (art. 17)`
+        IF   `desistência voluntária (art. 15)` e
+        THEN `desistência voluntária: só responde pelos atos já praticados (art. 15)`
+        IF   `arrependimento eficaz (art. 15)` e
+        THEN `arrependimento eficaz: só responde pelos atos já praticados (art. 15)`
+        OTHERWISE `tentativa punível, com a pena do crime consumado diminuída de um a dois terços (art. 14, II e parágrafo único)`
+
+§§ `Art. 16 — Arrependimento posterior`
+
+-- "Art. 16 - Nos crimes cometidos sem violência ou grave ameaça à pessoa,
+-- reparado o dano ou restituída a coisa, até o recebimento da denúncia ou da
+-- queixa, por ato voluntário do agente, a pena será reduzida de um a dois
+-- terços."
+-- "será reduzida": a reduction the judge must make, where arts. 21, 24, 26,
+-- 28 and 29 say "pode" or "poderá". The fraction within the range is the
+-- judge's.
+@ref CP art. 16
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the reduction of one to two thirds for repairing the damage before the charge is received
+`diminuição do art. 16` MEANS `causa de diminuição` (entre `um terço` `dois terços`)
+
+-- The reparation, and the receipt of the charge. A date absent is a thing
+-- that has not happened: no reparation, or a charge not yet received. The
+-- reparation recorded is a whole one: a partial one is not "reparado o dano"
+-- (fork F-g1a-09).
+DECLARE `Reparação do dano` HAS
+    `data da reparação do dano ou da restituição da coisa` IS A MAYBE DATE
+    @nlg:en the day the damage was fully repaired or the thing returned, if it was
+    `por ato voluntário do agente` IS A BOOLEAN
+    @nlg:en the repair or return was the agent's own voluntary act
+    `data do recebimento da denúncia ou da queixa` IS A MAYBE DATE
+    @nlg:en the day the court received the charge (denúncia or queixa), if it has
+
+-- "crimes cometidos sem violência ou grave ameaça à pessoa": read off the
+-- means the shared `Fato` records. Violence against a thing (the broken lock
+-- of art. 155, § 4º, I) does not bar the reduction; a threat that is not
+-- grave does not either (fork F-g1a-08).
+@ref CP art. 16
+GIVEN f IS A Fato
+GIVETH A BOOLEAN
+@nlg:en the crime was committed without violence or serious threat to a person
+`crime cometido sem violência ou grave ameaça à pessoa (art. 16)` f MEANS
+        NOT elem `violência à pessoa` (f's `meios empregados`)
+    AND NOT elem `grave ameaça` (f's `meios empregados`)
+
+-- "até o recebimento da denúncia ou da queixa": on the day of receipt is in
+-- time (fork F-g1a-08).
+@ref CP art. 16
+GIVEN f IS A Fato
+      r IS A `Reparação do dano`
+GIVETH A BOOLEAN
+@nlg:en the reduction for repairing the damage applies
+`incide a diminuição do art. 16` f r MEANS
+        `crime cometido sem violência ou grave ameaça à pessoa (art. 16)` f
+    AND "por ato voluntário do agente" ... r's `por ato voluntário do agente`
+    AND CONSIDER r's `data da reparação do dano ou da restituição da coisa`
+        WHEN NOTHING THEN FALSE
+        WHEN JUST `o dia da reparação` THEN
+            CONSIDER r's `data do recebimento da denúncia ou da queixa`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST `o dia do recebimento` THEN `o dia da reparação` AT MOST `o dia do recebimento`
+
+@export Lista a causa de diminuição do arrependimento posterior quando incide (Código Penal, art. 16): um a dois terços, se reparado o dano ou restituída a coisa até o recebimento da denúncia, em crime sem violência ou grave ameaça à pessoa
+@ref CP art. 16
+GIVEN f IS A Fato @desc o fato, cujos meios empregados dizem se houve violência ou grave ameaça à pessoa
+      r IS A `Reparação do dano` @desc a reparação do dano ou restituição da coisa e o recebimento da denúncia ou queixa
+GIVETH A LIST OF `Causa de aumento ou de diminuição`
+@nlg:en the reduction under article 16, if it applies
+`as causas de diminuição cabíveis (art. 16)` f r MEANS
+    IF   `incide a diminuição do art. 16` f r
+    THEN LIST `diminuição do art. 16`
+    ELSE EMPTY
+
+§§ `Art. 18 — Crime doloso e crime culposo`
+
+DECLARE `Modalidade de culpa` IS ONE OF
+    `imprudência`
+    @nlg:en imprudence
+    `negligência`
+    @nlg:en negligence
+    `imperícia`
+    @nlg:en lack of skill (imperícia)
+
+-- PROPOSTO-COMUM: every offence with a culposo form, and every form qualified
+-- by its result (art. 19), needs the agent's relation to the result.
+-- The agent's relation to the result, as the fact-finder finds it.
+DECLARE `Elemento subjetivo` HAS
+    `o agente quis o resultado` IS A BOOLEAN
+    @nlg:en the agent wanted the result
+    `o agente assumiu o risco de produzi-lo` IS A BOOLEAN
+    @nlg:en the agent took on the risk of producing the result
+    `modalidades de culpa` IS A LIST OF `Modalidade de culpa`
+    @nlg:en the ways, if any, in which the agent caused the result by imprudence, negligence or lack of skill
+
+-- "Art. 18 - Diz-se o crime: I - doloso, quando o agente quis o resultado ou
+-- assumiu o risco de produzi-lo;"
+@ref CP art. 18, I
+GIVEN e IS AN `Elemento subjetivo`
+GIVETH A BOOLEAN
+@nlg:en the crime is intentional: the agent wanted the result or took on the risk of it
+`crime doloso (art. 18, I)` e MEANS
+        "quis o resultado" ... e's `o agente quis o resultado`
+    OR  "ou assumiu o risco de produzi-lo" ... e's `o agente assumiu o risco de produzi-lo`
+
+-- "II - culposo, quando o agente deu causa ao resultado por imprudência,
+-- negligência ou imperícia."
+-- That the agent caused the result is art. 13's question; this rule takes it
+-- as answered and reads only the manner.
+@ref CP art. 18, II
+GIVEN e IS AN `Elemento subjetivo`
+GIVETH A BOOLEAN
+@nlg:en the crime is negligent: the agent caused the result by imprudence, negligence or lack of skill
+`crime culposo (art. 18, II)` e MEANS
+    NOT null (e's `modalidades de culpa`)
+
+DECLARE `Modalidade do crime` IS ONE OF
+    `dolo (art. 18, I)`
+    @nlg:en intentional
+    `culpa (art. 18, II)`
+    @nlg:en negligent
+    `nem dolo nem culpa`
+    @nlg:en neither intentional nor negligent
+
+-- ARM ORDER: where the fact-finder finds both dolo and a way of culpa, the
+-- crime is doloso; the two incisos are not meant to overlap.
+@ref CP art. 18, I e II
+GIVEN e IS AN `Elemento subjetivo`
+GIVETH A `Modalidade do crime`
+@nlg:en whether the crime is intentional, negligent, or neither
+`a modalidade do crime (art. 18)` e MEANS
+    BRANCH
+        IF   `crime doloso (art. 18, I)` e
+        THEN `dolo (art. 18, I)`
+        IF   `crime culposo (art. 18, II)` e
+        THEN `culpa (art. 18, II)`
+        OTHERWISE `nem dolo nem culpa`
+
+-- "Parágrafo único - Salvo os casos expressos em lei, ninguém pode ser
+-- punido por fato previsto como crime, senão quando o pratica dolosamente."
+-- Whether the law expressly provides the culposo form is the offence's to
+-- say (arts. 121, § 3º, 129, § 6º, 180, § 3º ...): an input.
+@export Diz se o fato é punível pelo elemento subjetivo: doloso sempre; culposo só nos casos expressos em lei (Código Penal, art. 18, parágrafo único)
+@ref CP art. 18, parágrafo único
+GIVEN e IS AN `Elemento subjetivo` @desc se o agente quis o resultado, assumiu o risco de produzi-lo, ou lhe deu causa por imprudência, negligência ou imperícia
+      `a lei prevê a forma culposa do crime` IS A BOOLEAN @desc se a lei pune expressamente a forma culposa deste crime
+GIVETH A BOOLEAN
+@nlg:en the fact is punishable as far as the agent's state of mind goes
+`o fato é punível quanto ao elemento subjetivo (art. 18, parágrafo único)` e `a lei prevê a forma culposa do crime` MEANS
+    CONSIDER `a modalidade do crime (art. 18)` e
+    WHEN `dolo (art. 18, I)` THEN TRUE
+    WHEN `culpa (art. 18, II)` THEN "Salvo os casos expressos em lei" ... `a lei prevê a forma culposa do crime`
+    WHEN `nem dolo nem culpa` THEN FALSE
+
+§§ `Art. 19 — Agravação pelo resultado`
+
+-- "Art. 19 - Pelo resultado que agrava especialmente a pena, só responde o
+-- agente que o houver causado ao menos culposamente."
+-- The aggravating result must be the agent's by art. 13, and reached by dolo
+-- or, at least, culpa as to that result.
+@export Diz se o agente responde pelo resultado que agrava especialmente a pena: só se o causou, ao menos culposamente (Código Penal, art. 19)
+@ref CP art. 19; art. 13; art. 18
+GIVEN c IS A `Conduta e resultado` @desc a conduta e o resultado agravador que dela teria decorrido
+      e IS AN `Elemento subjetivo` @desc a relação do agente com esse resultado agravador
+GIVETH A BOOLEAN
+@nlg:en the agent answers for the result that especially aggravates the penalty
+`o agente responde pelo resultado que agrava especialmente a pena (art. 19)` c e MEANS
+        "o houver causado" ... `o resultado é imputável ao agente (art. 13)` c
+    AND "ao menos culposamente" ... (NOT (`a modalidade do crime (art. 18)` e EQUALS `nem dolo nem culpa`))

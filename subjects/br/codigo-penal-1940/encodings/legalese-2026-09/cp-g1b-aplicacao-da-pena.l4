@@ -1,0 +1,373 @@
+@lang pt
+IMPORT prelude
+IMPORT daydate
+IMPORT `cp-dominio`
+IMPORT `cp-pena`
+IMPORT `cp-g1b-condenacao`
+IMPORT `cp-g1b-circunstancias`
+IMPORT `cp-g1b-privativas-de-liberdade`
+IMPORT `cp-g1b-restritivas-de-direitos`
+
+-- Código Penal, Parte Geral, Título V, Capítulo III — Da aplicação da pena:
+-- arts. 59, 60 and 68. Written by g1b. Arts. 61 to 67 are in
+-- `cp-g1b-circunstancias.l4`; the arithmetic of a cause (art. 68's third
+-- phase) is g0's machinery in `cp-pena.l4`.
+--
+-- JUDGEMENT STAYS WITH THE JUDGE. Art. 59 gives the judge eight
+-- circumstances to weigh and a range to choose in; art. 68 orders three
+-- phases, each the judge's. So nothing here chooses a quantity. For each
+-- phase the module returns the range the Code allows, and
+-- `a dosimetria respeita o art. 68` checks the quantities a sentence records
+-- against those ranges. Where a phase's range is wide, that width is the
+-- Code's, and the reasons for a point inside it are the judge's to give
+-- (Súmula 443 STJ, M-sweep-a-40, for the third phase of roubo).
+--
+-- ADPF 1.107 (M-sweep-a-04): from 6.5.2024, in sentencing a crime against
+-- sexual dignity the judge may not weigh the victim's prior sexual life or
+-- way of life. Keyed on the day of the sentence; before it, whether such a
+-- valuation was barred is not answered here, and the rule refuses (fork
+-- F-g1b-23).
+
+§ `Título V — Capítulo III — Da aplicação da pena (arts. 59, 60 e 68)`
+
+§§ `Art. 59 — Fixação da pena`
+
+-- "Art. 59 - O juiz, atendendo à culpabilidade, aos antecedentes, à conduta
+-- social, à personalidade do agente, aos motivos, às circunstâncias e
+-- conseqüências do crime, bem como ao comportamento da vítima, estabelecerá,
+-- conforme seja necessário e suficiente para reprovação e prevenção do
+-- crime:" (Vide ADPF 1107)
+-- The eight circumstances are the judge's valuations (`Circunstâncias
+-- judiciais`); what the Code and the courts allow those valuations to rest
+-- on is checked below.
+
+§§§ `Art. 59, I — as penas aplicáveis dentre as cominadas`
+
+-- "I - as penas aplicáveis dentre as cominadas;"
+-- One option per combination the preceito leaves open: the species where it
+-- is "reclusão ou detenção", and the fine where it is "ou multa" or "ou
+-- multa, ou ambas as penas". The judge chooses.
+DECLARE `Pena aplicável` HAS
+    `espécie privativa` IS A MAYBE `Espécie aplicada`
+    @nlg:en the custodial penalty applied, if any
+    `com multa` IS A BOOLEAN
+    @nlg:en a fine is applied
+
+@ref CP art. 59, I
+GIVEN e IS AN `Espécie aplicada`
+      m IS A `Cominação da multa`
+GIVETH A LIST OF `Pena aplicável`
+@nlg:en the options with this custodial species
+`as opções com a espécie` e m MEANS
+    CONSIDER m
+    WHEN `sem multa`                        THEN LIST `a opção` (JUST e) FALSE
+    WHEN `multa cumulativa`                 THEN LIST `a opção` (JUST e) TRUE
+    WHEN `multa alternativa`                THEN LIST `a opção` (JUST e) FALSE
+    WHEN `multa alternativa ou cumulativa`  THEN LIST `a opção` (JUST e) FALSE, `a opção` (JUST e) TRUE
+    WHERE
+        GIVEN pe IS A MAYBE `Espécie aplicada`
+              cm IS A BOOLEAN
+        GIVETH A `Pena aplicável`
+        `a opção` pe cm MEANS `Pena aplicável` WITH `espécie privativa` IS pe, `com multa` IS cm
+
+@export Lista as penas que o juiz pode aplicar dentre as cominadas no preceito secundário (Código Penal, art. 59, I): a espécie privativa, onde o preceito a deixa ao juiz, e a multa, onde é alternativa
+@ref CP art. 59, I; art. 53
+GIVEN ps IS A `Preceito secundário` @desc o preceito secundário do tipo: a pena privativa de liberdade cominada, com a sua espécie e a sua multa, ou somente multa
+GIVETH A LIST OF `Pena aplicável`
+@nlg:en the penalties the judge may apply among those prescribed
+`as penas aplicáveis dentre as cominadas (art. 59, I)` ps MEANS
+    CONSIDER ps
+    WHEN `somente pena de multa` THEN LIST `só a multa`
+    WHEN `com pena privativa de liberdade` pc THEN append (`as opções privativas` pc) (`só a multa, se alternativa` pc)
+    WHERE
+        `só a multa` MEANS `Pena aplicável` WITH `espécie privativa` IS NOTHING, `com multa` IS TRUE
+        `as opções privativas` pc MEANS
+            CONSIDER pc's `espécie`
+            WHEN `reclusão` THEN `as opções com a espécie` `pena de reclusão` (pc's multa)
+            WHEN `detenção` THEN `as opções com a espécie` `pena de detenção` (pc's multa)
+            WHEN `reclusão ou detenção` THEN append (`as opções com a espécie` `pena de reclusão` (pc's multa)) (`as opções com a espécie` `pena de detenção` (pc's multa))
+        `só a multa, se alternativa` pc MEANS
+            CONSIDER pc's multa
+            WHEN `multa alternativa` THEN LIST `só a multa`
+            WHEN `multa alternativa ou cumulativa` THEN LIST `só a multa`
+            OTHERWISE EMPTY
+
+§§§ `Art. 59, II — a pena-base`
+
+-- "II - a quantidade de pena aplicável, dentro dos limites previstos;"
+@export Diz o intervalo em que o juiz fixa a pena-base: os limites da pena cominada (Código Penal, art. 59, II; art. 53)
+@ref CP art. 59, II; art. 53
+GIVEN pc IS A `Pena cominada` @desc a pena privativa de liberdade cominada ao crime, na forma que se aplica ao caso
+GIVETH AN `Intervalo de duração`
+@nlg:en the range in which the judge fixes the base penalty
+`o intervalo da pena-base (art. 59, II)` pc MEANS
+    `Intervalo de duração` WITH `mínimo` IS pc's `mínimo`, `máximo` IS pc's `máximo`
+
+§§§ `Art. 59 — o que a valoração pode considerar`
+
+-- The antecedentes (forks F-sweep-a-02 and F-sweep-a-03):
+--   * only FINAL convictions count (RE 593.818/SC: "condenações definitivas"),
+--     final by the day of the sentence; pending inquiries and prosecutions
+--     never (Súmula 444 STJ, M-sweep-a-11);
+--   * no five-year limit: a conviction art. 64, I takes out of reincidência
+--     may still be weighed (RE 593.818/SC, M-sweep-a-12) — which is why the
+--     rule below never consults art. 64;
+--   * the same conviction may not be weighed here and as the reincidência of
+--     art. 61, I (Súmula 241 STJ, M-sweep-a-10). A reincidente whose every
+--     reincidência-generating conviction was weighed as a bad record has had
+--     the reincidência weighed twice, since art. 61 says the agravante
+--     "sempre" applies.
+@ref CP art. 59 ("antecedentes"); arts. 61, I, 63 e 64; Súmulas 241 e 444 STJ; STF, RE 593.818/SC
+GIVEN cj IS A `Circunstâncias judiciais`
+      cr IS A `Crime em julgamento`
+      `a data da sentença` IS A DATE
+GIVETH A BOOLEAN
+@nlg:en what the record was valued on is admissible
+`a valoração dos antecedentes é admissível` cj cr `a data da sentença` MEANS
+        "Súmula 444 STJ" ... (NOT cj's `inquéritos ou ações penais em curso valorados como antecedentes`)
+    AND "condenações definitivas" ... all `é condenação definitiva` (cj's `condenações valoradas como antecedentes`)
+    AND "Súmula 241 STJ" ... (NOT `a reincidência foi valorada duas vezes`)
+    WHERE
+        `é condenação definitiva` id MEANS
+            any (GIVEN c YIELD c's `identificação do processo` EQUALS id AND c's `data do trânsito em julgado` AT MOST `a data da sentença`) (cr's `condenações anteriores`)
+        `a reincidência foi valorada duas vezes` MEANS
+                `reincidente (arts. 63 e 64)` cr
+            AND all (GIVEN c YIELD elem (c's `identificação do processo`) (cj's `condenações valoradas como antecedentes`)) (`as condenações que geram reincidência (arts. 63 e 64)` cr)
+
+@ref STF, ADPF 1.107, Plenário, 6.5.2024 (M-sweep-a-04)
+GIVETH A DATE
+@nlg:en the day of the STF's ruling in ADPF 1107
+`a data da ADPF 1.107` MEANS YMD 2024 5 6
+
+@ref CP art. 59 before ADPF 1.107 — not encoded
+GIVEN a IS A TYPE
+GIVETH AN a
+@nlg:en whether a sentence before ADPF 1107 could weigh the victim's sexual life is not encoded
+`a valoração da vida sexual da vítima antes da ADPF 1.107 não está codificada` MEANS
+    REFUSE "se, antes da ADPF 1.107 (6.5.2024), a sentença por crime sexual podia valorar a vida sexual pregressa ou o modo de vida da vítima não está codificado"
+
+-- ADPF 1.107, item iii (M-sweep-a-04): "vedado ao magistrado, na fixação da
+-- pena em crimes sexuais, valorar a vida sexual pregressa da vítima ou seu
+-- modo de vida". "crimes sexuais": those the crime record classifies as
+-- against sexual dignity, Título VI (fork F-g1b-23).
+@ref CP art. 59 ("comportamento da vítima"); STF, ADPF 1.107 (M-sweep-a-04)
+GIVEN cj IS A `Circunstâncias judiciais`
+      cr IS A `Crime em julgamento`
+      `a data da sentença` IS A DATE
+GIVETH A BOOLEAN
+@nlg:en what the victim's behaviour was valued on is admissible
+`a valoração do comportamento da vítima é admissível (ADPF 1.107)` cj cr `a data da sentença` MEANS
+    IF   NOT (    elem `crime contra a dignidade sexual` (cr's `classificações`)
+              AND cj's `comportamento da vítima valorado pela vida sexual pregressa ou pelo modo de vida da vítima`)
+    THEN TRUE
+    ELSE IF   `a data da sentença` AT LEAST `a data da ADPF 1.107`
+         THEN FALSE
+         ELSE `a valoração da vida sexual da vítima antes da ADPF 1.107 não está codificada`
+
+@export Diz se a valoração das circunstâncias judiciais na sentença se apoiou só no que a lei e os tribunais permitem (Código Penal, art. 59; Súmulas 241 e 444 STJ; RE 593.818; ADPF 1.107)
+@ref CP art. 59
+GIVEN s IS A `Sentença` @desc a sentença, com a valoração das circunstâncias judiciais, o crime (com as condenações anteriores e as classificações) e a data
+GIVETH A BOOLEAN
+@nlg:en the valuation of art. 59's circumstances rests only on what may be weighed
+`a valoração das circunstâncias judiciais é admissível (art. 59)` s MEANS
+        `a valoração dos antecedentes é admissível` (s's `circunstâncias judiciais`) (s's crime) (s's `data da sentença`)
+    AND `a valoração do comportamento da vítima é admissível (ADPF 1.107)` (s's `circunstâncias judiciais`) (s's crime) (s's `data da sentença`)
+
+§§§ `Art. 59, III e IV — regime inicial e substituição`
+
+-- "III - o regime inicial de cumprimento da pena privativa de liberdade;" —
+-- `os regimes iniciais admissíveis na sentença (art. 33, §§ 2º e 3º)`.
+-- "IV - a substituição da pena privativa da liberdade aplicada, por outra
+-- espécie de pena, se cabível." — by penalties restricting rights (art. 44)
+-- or by a fine (art. 60, § 2º).
+DECLARE `Substituição cabível` IS ONE OF
+    `por penas restritivas de direitos (art. 44)`
+    @nlg:en by penalties restricting rights
+    `por multa (art. 60, § 2º)`
+    @nlg:en by a fine
+
+@export Lista as substituições da pena privativa de liberdade aplicada que cabem na sentença (Código Penal, art. 59, IV; arts. 44 e 60, § 2º)
+@ref CP art. 59, IV; art. 44; art. 60, § 2º
+GIVEN s IS A `Sentença` @desc a sentença: o crime, a pena aplicada e os juízos do juiz sobre a suficiência da substituição
+GIVETH A LIST OF `Substituição cabível`
+@nlg:en the substitutions available for the sentence's custodial penalty
+`as substituições cabíveis (art. 59, IV)` s MEANS
+    filter `cabe` (LIST `por penas restritivas de direitos (art. 44)`, `por multa (art. 60, § 2º)`)
+    WHERE
+        `cabe` x MEANS
+            CONSIDER x
+            WHEN `por penas restritivas de direitos (art. 44)` THEN `cabe a substituição na sentença (art. 44)` s
+            WHEN `por multa (art. 60, § 2º)` THEN `cabe a multa substitutiva (art. 60, § 2º)` s
+
+§§ `Art. 60 — Critérios especiais da pena de multa`
+
+-- "Art. 60 - Na fixação da pena de multa o juiz deve atender, principalmente,
+-- à situação econômica do réu." The judge's; nothing to compute.
+-- "§ 1º - A multa pode ser aumentada até o triplo, se o juiz considerar que,
+-- em virtude da situação econômica do réu, é ineficaz, embora aplicada no
+-- máximo."
+-- What is tripled is the value of the dia-multa, whose maximum is five
+-- minimum wages (art. 49, § 1º), so at most fifteen (fork F-g1b-24). The
+-- judge's finding of ineffectiveness opens it.
+@ref CP art. 60, § 1º
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase of up to three times for a fine ineffective at its maximum
+`aumento do art. 60, § 1º` MEANS `causa de aumento` (`até` `o triplo`)
+
+@export Diz se o valor do dia-multa está nos limites, contando com o aumento até o triplo quando o juiz considera a multa ineficaz, embora aplicada no máximo (Código Penal, arts. 49, § 1º, e 60, § 1º)
+@ref CP art. 60, § 1º; art. 49, § 1º
+GIVEN m IS A `Multa aplicada` @desc a multa aplicada: o número de dias-multa e o valor de cada um, em reais
+      `o maior salário mínimo mensal vigente ao tempo do fato` IS A NUMBER @desc o maior salário mínimo mensal vigente ao tempo do fato, em reais
+      `o juiz considerou a multa ineficaz, embora aplicada no máximo` IS A BOOLEAN @desc se o juiz considerou que, pela situação econômica do réu, a multa seria ineficaz mesmo no máximo
+GIVETH A BOOLEAN
+@nlg:en the value of the day-fine is within its limits, with the increase of art. 60 where it applies
+`o valor do dia-multa está nos limites (arts. 49 e 60, § 1º)` m `o maior salário mínimo mensal vigente ao tempo do fato` `o juiz considerou a multa ineficaz, embora aplicada no máximo` MEANS
+    IF   `o juiz considerou a multa ineficaz, embora aplicada no máximo`
+    THEN     m's `valor do dia-multa em reais` AT LEAST (`o maior salário mínimo mensal vigente ao tempo do fato` DIVIDED BY 30)
+         AND m's `valor do dia-multa em reais` AT MOST  ((`o maior salário mínimo mensal vigente ao tempo do fato` TIMES 5) TIMES `o maior fator da causa` `aumento do art. 60, § 1º`)
+    ELSE `o valor do dia-multa está nos limites do art. 49, § 1º` m `o maior salário mínimo mensal vigente ao tempo do fato`
+
+-- "§ 2º - A pena privativa de liberdade aplicada, não superior a 6 (seis)
+-- meses, pode ser substituída pela de multa, observados os critérios dos
+-- incisos II e III do art. 44 deste Código."
+-- Both this and art. 44, § 2º's fine stand as printed: this one asks only
+-- art. 44's II and III, not I (fork F-g1b-25). Art. 44's incisos are the
+-- 1998 wording, so an earlier fact refuses as art. 44 does.
+@ref CP art. 60, § 2º; art. 44, II e III
+GIVEN s IS A `Sentença`
+GIVETH A BOOLEAN
+@nlg:en the custodial penalty may be replaced by a fine under art. 60, paragraph 2
+`cabe a multa substitutiva (art. 60, § 2º)` s MEANS
+    IF   NOT `o fato está sob a redação de 1998 das penas restritivas` (s's crime)
+    THEN `a redação dos arts. 43 a 46 anterior à Lei nº 9.714, de 1998, não está codificada`
+    ELSE     "não superior a 6 (seis) meses" ... (NOT `a duração excede` (s's `pena aplicada`) (meses 6))
+         AND "art. 44, II" ... `o réu não é reincidente em crime doloso (art. 44, II)` (s's crime)
+         AND "art. 44, III" ... s's `a substituição é suficiente, a juízo do juiz`
+
+§§ `Art. 68 — Cálculo da pena`
+
+-- "Art. 68 - A pena-base será fixada atendendo-se ao critério do art. 59
+-- deste Código; em seguida serão consideradas as circunstâncias atenuantes e
+-- agravantes; por último, as causas de diminuição e de aumento."
+
+-- The second phase of a sentence: the circumstances of arts. 61 to 66 found
+-- in the crime, applied to the sentence's pena-base under art. 67.
+@export Diz a direção e o intervalo em que o juiz fixa a pena provisória na segunda fase (Código Penal, arts. 61 a 68)
+@ref CP art. 68; arts. 61 a 67
+GIVEN s IS A `Sentença` @desc a sentença, com a pena-base fixada, o crime (com as circunstâncias e as condenações anteriores) e a data
+GIVETH A `Segunda fase`
+@nlg:en the direction and range of the sentence's second phase
+`a segunda fase da sentença (art. 68)` s MEANS
+    `a segunda fase (arts. 61 a 67)`
+        (s's `pena-base`)
+        (s's crime's `pena cominada`)
+        (`as circunstâncias agravantes (arts. 61 e 62)` (s's crime))
+        (`as circunstâncias atenuantes (arts. 65 e 66)` (s's crime) (s's `data da sentença`))
+        (`multirreincidente (arts. 63, 64 e 67; STJ, Tema 585)` (s's crime))
+
+-- "Parágrafo único - No concurso de causas de aumento ou de diminuição
+-- previstas na parte especial, pode o juiz limitar-se a um só aumento ou a
+-- uma só diminuição, prevalecendo, todavia, a causa que mais aumente ou
+-- diminua."
+-- A power, so its options: every cause; or, where there are several, one
+-- increase only, one decrease only, or both — and the one kept is the one
+-- that most increases or decreases: the larger largest fraction, then the
+-- larger smallest one (fork F-g1b-26). Causes of the Parte Geral (the
+-- attempt, art. 14) are always applied. Several causes compose in cascade
+-- (fork F-g0-10).
+DECLARE `Opção do art. 68, parágrafo único` IS ONE OF
+    `todas as causas`
+    @nlg:en every cause
+    `um só aumento`
+    @nlg:en only the cause that increases most
+    `uma só diminuição`
+    @nlg:en only the cause that decreases most
+    `um só aumento e uma só diminuição`
+    @nlg:en only the cause that increases most and the one that decreases most
+
+DECLARE `Terceira fase possível` HAS
+    `opção` IS AN `Opção do art. 68, parágrafo único`
+    @nlg:en which of the judge's options this is
+    `causas aplicadas` IS A LIST OF `Causa de aumento ou de diminuição`
+    @nlg:en the causes applied under that option
+    intervalo IS AN `Intervalo de duração`
+    @nlg:en the range in which the judge then fixes the final penalty
+
+@ref CP art. 68, parágrafo único
+GIVEN a IS A `Causa de aumento ou de diminuição`
+      b IS A `Causa de aumento ou de diminuição`
+GIVETH A BOOLEAN
+@nlg:en the first cause moves the penalty further than the second
+`a causa pesa mais que` a b MEANS
+        a's `fração`'s `maior fração` GREATER THAN b's `fração`'s `maior fração`
+    OR  (    a's `fração`'s `maior fração` EQUALS b's `fração`'s `maior fração`
+         AND fromMaybe 0 (a's `fração`'s `menor fração`) GREATER THAN fromMaybe 0 (b's `fração`'s `menor fração`))
+
+@ref CP art. 68, parágrafo único
+GIVEN c  IS A `Causa de aumento ou de diminuição`
+      cs IS A LIST OF `Causa de aumento ou de diminuição`
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the cause that moves the penalty furthest, the first on a tie
+`a que mais pesa entre` c cs MEANS
+    CONSIDER cs
+    WHEN EMPTY THEN c
+    WHEN d FOLLOWED BY resto THEN
+        `a que mais pesa entre` (IF `a causa pesa mais que` d c THEN d ELSE c) resto
+
+@ref CP art. 68, parágrafo único
+GIVEN cs IS A LIST OF `Causa de aumento ou de diminuição`
+GIVETH A LIST OF `Causa de aumento ou de diminuição`
+@nlg:en the cause that moves the penalty furthest, alone
+`só a que mais pesa` cs MEANS
+    CONSIDER cs
+    WHEN EMPTY THEN EMPTY
+    WHEN c FOLLOWED BY resto THEN LIST (`a que mais pesa entre` c resto)
+
+@export Lista as opções do juiz na terceira fase (Código Penal, art. 68 e parágrafo único) e, para cada uma, as causas aplicadas e o intervalo da pena definitiva
+@ref CP art. 68, parágrafo único; art. 14, parágrafo único
+GIVEN `a pena provisória` IS A Duração @desc a pena provisória fixada na segunda fase, em meses
+      `as causas da parte especial` IS A LIST OF `Causa de aumento ou de diminuição` @desc as causas de aumento e de diminuição previstas no artigo da parte especial que incidem no caso
+      `as causas da parte geral` IS A LIST OF `Causa de aumento ou de diminuição` @desc as causas da parte geral que incidem no caso (a tentativa, por exemplo)
+GIVETH A LIST OF `Terceira fase possível`
+@nlg:en the judge's options in the third phase, each with its range
+`as opções da terceira fase (art. 68, parágrafo único)` `a pena provisória` `as causas da parte especial` `as causas da parte geral` MEANS
+    append (LIST `a opção` `todas as causas` `as causas da parte especial`)
+        (append (IF count `os aumentos` AT LEAST 2
+                 THEN LIST `a opção` `um só aumento` (append (`só a que mais pesa` `os aumentos`) `as diminuições`)
+                 ELSE EMPTY)
+            (append (IF count `as diminuições` AT LEAST 2
+                     THEN LIST `a opção` `uma só diminuição` (append `os aumentos` (`só a que mais pesa` `as diminuições`))
+                     ELSE EMPTY)
+                    (IF count `os aumentos` AT LEAST 2 AND count `as diminuições` AT LEAST 2
+                     THEN LIST `a opção` `um só aumento e uma só diminuição` (append (`só a que mais pesa` `os aumentos`) (`só a que mais pesa` `as diminuições`))
+                     ELSE EMPTY)))
+    WHERE
+        `os aumentos` MEANS filter (GIVEN c YIELD c's sentido EQUALS `de aumento`) `as causas da parte especial`
+        `as diminuições` MEANS filter (GIVEN c YIELD c's sentido EQUALS `de diminuição`) `as causas da parte especial`
+        GIVEN o  IS AN `Opção do art. 68, parágrafo único`
+              cs IS A LIST OF `Causa de aumento ou de diminuição`
+        GIVETH A `Terceira fase possível`
+        `a opção` o cs MEANS
+            `Terceira fase possível` WITH
+                `opção` IS o
+                `causas aplicadas` IS cs
+                intervalo IS `o intervalo com as causas` `a pena provisória` (append cs `as causas da parte geral`)
+
+-- The three phases of a sentence, checked. Each quantity the sentence
+-- records must lie in the range its phase allows:
+--   1. the pena-base within the cominated limits (art. 59, II);
+--   2. the pena provisória within the second phase's range (arts. 61–67);
+--   3. the final penalty within the range of one of the third phase's
+--      options.
+-- It checks; it does not choose.
+@export Diz se as três fases da dosimetria registradas na sentença ficaram nos intervalos que o Código permite (Código Penal, arts. 59, 61 a 68)
+@ref CP art. 68; art. 59, II; arts. 61 a 67
+GIVEN s IS A `Sentença` @desc a sentença, com a pena-base, a pena provisória e a pena aplicada, o crime e as suas circunstâncias
+      `as causas da parte especial` IS A LIST OF `Causa de aumento ou de diminuição` @desc as causas de aumento e de diminuição da parte especial que incidem no caso
+      `as causas da parte geral` IS A LIST OF `Causa de aumento ou de diminuição` @desc as causas da parte geral que incidem no caso
+GIVETH A BOOLEAN
+@nlg:en the sentence's three phases stayed within the ranges the Code allows
+`a dosimetria respeita o art. 68` s `as causas da parte especial` `as causas da parte geral` MEANS
+        "primeira fase" ... `a quantidade está no intervalo` (s's `pena-base`) (`o intervalo da pena-base (art. 59, II)` (s's crime's `pena cominada`))
+    AND "segunda fase" ... `a quantidade está no intervalo` (s's `pena provisória`) ((`a segunda fase da sentença (art. 68)` s)'s intervalo)
+    AND "terceira fase" ... any (GIVEN o YIELD `a quantidade está no intervalo` (s's `pena aplicada`) (o's intervalo)) (`as opções da terceira fase (art. 68, parágrafo único)` (s's `pena provisória`) `as causas da parte especial` `as causas da parte geral`)

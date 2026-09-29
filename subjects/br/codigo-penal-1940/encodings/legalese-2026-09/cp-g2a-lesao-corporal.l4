@@ -1,0 +1,899 @@
+@lang pt
+IMPORT prelude
+IMPORT daydate
+IMPORT `cp-dominio`
+IMPORT `cp-pena`
+IMPORT `cp-g2a-comum`
+IMPORT `cp-g2a-homicidio`
+
+-- Código Penal, art. 129 — lesão corporal. Parte Especial, Título I, Capítulo
+-- II. Written by g2a.
+--
+-- THE TEXT ENCODED is art. 129 as compiled by Planalto through Lei nº
+-- 15.517/2026 (source lines 729–794). Which facts it answers for:
+--   * Lei nº 14.994/2024 (DOU 10.10.2024) re-wrote § 9º's pena and § 13 whole.
+--     The earlier text is not in the source, so every art. 129 PENALTY rule
+--     refuses for a fact before 10.10.2024; the older amendments (§§ 7º, 8º,
+--     10, 11) were all in force by then.
+--   * Lei nº 15.159/2025 (in force 4.7.2025, S-sweep-b-02) re-wrote § 12. A
+--     fact before 4.7.2025 on which § 12 would bear gets a refusal from the
+--     causes of increase (§ 12 changes no pena cominada).
+--   * Lei nº 15.455/2026 (in force 2.7.2026, S-sweep-b-02) re-wrote § 9º's
+--     list of relationships. A fact before 2.7.2026 with one of those
+--     relationships is refused wherever § 9º could bear: the pena of an
+--     intentional slight injury (§ 9º's own form), and the causes (§§ 10, 11).
+--   * Lei nº 15.358/2026 (in force 25.3.2026) ADDED §§ 3º-A and 8º-A: before
+--     that day they do not apply (the law's own answer, PLAN § 10).
+-- The definition in the caput ("Ofender a integridade corporal ou a saúde de
+-- outrem") has not changed since 1940 and answers for any date.
+--
+-- THE GRADE OF THE INJURY. §§ 1º and 2º define "lesão corporal de natureza
+-- grave" and the heavier grade by the result the medical report attests
+-- (incapacity for more than thirty days, danger to life, ...). This module reads
+-- those incisos (`Consequência da lesão corporal`) and computes the grade from
+-- them; `a natureza da lesão (art. 129, §§ 1º e 2º)` gives it as the shared
+-- `Resultado` that other articles read (fork F-g0-07, F-g2a-11).
+--
+-- THE AÇÃO PENAL. The Code states none for art. 129. It is taken from Lei nº
+-- 9.099/1995, art. 88, and Lei nº 11.340/2006, art. 41, as STJ Súmula 542 reads
+-- them (binding entry M-sweep-b-16, reserved fork F-sweep-b-07).
+--
+-- Forks met here: F-sweep-b-07 (ação penal), F-g2a-09 (§§ 9º and 13 as forms
+-- of the slight injury), F-g2a-10 (§ 7º: which sentence of art. 121 § 4º
+-- serves which injury), F-g2a-11 (the grade from the incisos), F-g2a-12 (§ 10
+-- and § 3º-A), F-g2a-13 (§ 12, I, c beside § 12, II), F-g2a-14 (§ 11: "na
+-- hipótese do § 9º"), F-g2a-02 (§ 4º "pode"). M-sweep-b-07 (§ 5º's fine in
+-- réis) is implemented in `a multa substitutiva do art. 129, § 5º`.
+
+§ `Título I — Dos crimes contra a pessoa`
+
+§§ `Capítulo II — Das lesões corporais (art. 129)`
+
+§§§ `Os fatos`
+
+-- The results §§ 1º and 2º list, as the medical report (laudo de exame de corpo
+-- de delito) attests them. Record every one that occurred.
+DECLARE `Consequência da lesão corporal` IS ONE OF
+    -- § 1º, I a IV
+    `incapacidade para as ocupações habituais, por mais de trinta dias`
+    @nlg:en incapacity for the victim's usual occupations for more than thirty days
+    `perigo de vida`
+    @nlg:en danger to life
+    `debilidade permanente de membro, sentido ou função`
+    @nlg:en permanent weakening of a limb, sense or function
+    `aceleração de parto`
+    @nlg:en acceleration of childbirth
+    -- § 2º, I a V
+    `incapacidade permanente para o trabalho`
+    @nlg:en permanent incapacity for work
+    `enfermidade incurável`
+    @nlg:en an incurable illness
+    `perda ou inutilização de membro, sentido ou função`
+    @nlg:en loss or loss of use of a limb, sense or function
+    `deformidade permanente`
+    @nlg:en permanent disfigurement
+    aborto
+    @nlg:en miscarriage (aborto)
+
+-- The case: an injury, intentional (consummated or attempted) or culpable.
+-- The act's `resultados` carry `morte` where the victim died (§ 3º).
+DECLARE `Fato de lesão corporal` HAS
+    agente IS AN Agente
+    @nlg:en the agent
+    `vítima` IS A `Vítima`
+    @nlg:en the person injured
+    fato IS A Fato
+    @nlg:en the act
+    `elemento subjetivo` IS AN `Elemento subjetivo`
+    @nlg:en whether the agent acted with intent or with negligence
+    `execução iniciada` IS A BOOLEAN
+    @nlg:en the agent began to carry out the injury
+    `consumação impedida por circunstâncias alheias à vontade do agente` IS A BOOLEAN
+    @nlg:en something outside the agent's will stopped the injury from being done
+    `consequências da lesão` IS A LIST OF `Consequência da lesão corporal`
+    @nlg:en the results of the injury the medical report attests, in the words of paragraphs 1 and 2
+    `circunstâncias do crime` IS A LIST OF `Circunstância do crime contra a pessoa`
+    @nlg:en the circumstances of the injury that art. 129 and the articles it borrows from name
+
+@ref CP art. 4º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A DATE
+@nlg:en the date of the injury
+`a data da lesão` f MEANS f's fato's `data do fato`
+
+@ref CP art. 129
+GIVEN c IS A `Circunstância do crime contra a pessoa`
+      f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the circumstance is present in the injury
+`consta da lesão` c f MEANS elem c (f's `circunstâncias do crime`)
+
+@ref CP art. 129
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury was intentional
+`lesão dolosa` f MEANS f's `elemento subjetivo` EQUALS dolo
+
+@ref CP art. 129
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the victim died
+`a vítima morreu` f MEANS elem morte (f's fato's resultados)
+
+§§§ `Vigência das redações codificadas`
+
+@ref Lei nº 15.159/2025, art. 4º (DOU 4.7.2025)
+GIVETH A DATE
+@nlg:en the day the current wording of paragraph 12 came into force
+`a vigência da redação do art. 129, § 12` MEANS YMD 2025 7 4
+
+@ref Lei nº 15.455/2026, art. 10 (DOU 2.7.2026)
+GIVETH A DATE
+@nlg:en the day the current wording of paragraph 9 came into force
+`a vigência da redação do art. 129, § 9º` MEANS YMD 2026 7 2
+
+@ref Lei nº 15.358/2026, art. 44 (DOU 25.3.2026)
+GIVETH A DATE
+@nlg:en the day paragraphs 3-A and 8-A came into force
+`a vigência do art. 129, §§ 3º-A e 8º-A` MEANS YMD 2026 3 25
+
+@ref CP art. 129 in the wording before Lei nº 14.994/2024 — not encoded
+GIVEN a IS A TYPE
+GIVETH AN a
+@nlg:en the wording of art. 129 before Law 14,994 of 2024 is not encoded
+`a redação do art. 129 anterior à Lei nº 14.994, de 2024, não está codificada` MEANS
+    REFUSE "a redação do art. 129 anterior à Lei nº 14.994, de 2024 (em vigor em 10.10.2024), que reescreveu a pena do § 9º e o § 13, não está codificada"
+
+@ref CP art. 129, § 9º in the wording before Lei nº 15.455/2026 — not encoded
+GIVEN a IS A TYPE
+GIVETH AN a
+@nlg:en the wording of paragraph 9 before Law 15,455 of 2026 is not encoded
+`a redação do art. 129, § 9º, anterior à Lei nº 15.455, de 2026, não está codificada` MEANS
+    REFUSE "a redação do art. 129, § 9º, anterior à Lei nº 15.455, de 2026 (em vigor em 2.7.2026), não está codificada"
+
+@ref CP art. 129, § 12 in the wording before Lei nº 15.159/2025 — not encoded
+GIVEN a IS A TYPE
+GIVETH AN a
+@nlg:en the wording of paragraph 12 before Law 15,159 of 2025 is not encoded
+`a redação do art. 129, § 12, anterior à Lei nº 15.159, de 2025, não está codificada` MEANS
+    REFUSE "a redação do art. 129, § 12, anterior à Lei nº 15.159, de 2025 (em vigor em 4.7.2025), não está codificada"
+
+§§§ `Art. 129 — Lesão corporal`
+
+-- "Art. 129. Ofender a integridade corporal ou a saúde de outrem:"
+-- A death the agent wanted, or whose risk the agent accepted, is not an injury
+-- "seguida de morte" (§ 3º) but a homicide; a culpable death is art. 121 § 3º.
+-- So the crime is the injury without a death, or with a death under § 3º.
+@ref CP art. 129, caput e § 3º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the death, if any, is the one paragraph 3 describes
+`a morte, se houve, é a do § 3º` f MEANS
+        NOT `a vítima morreu` f
+    OR  (    `lesão dolosa` f
+         AND `consta da lesão` `as circunstâncias evidenciam que o agente não quis o resultado morte, nem assumiu o risco de produzi-lo` f)
+
+@ref CP art. 129, caput
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the bodily integrity or the health of the victim was offended
+`houve ofensa à integridade corporal ou à saúde` f MEANS
+        NOT null (f's fato's resultados)
+    OR  NOT null (f's `consequências da lesão`)
+
+@ref CP art. 129, caput; art. 14, I
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury was consummated
+`lesão corporal consumada (art. 129; art. 14, I)` f MEANS
+        `crime consumado (art. 14, I)` ("Ofender a integridade corporal ou a saúde de outrem" ... `houve ofensa à integridade corporal ou à saúde` f)
+    AND `a morte, se houve, é a do § 3º` f
+
+@ref CP art. 129, caput; art. 14, II
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury was attempted
+`lesão corporal tentada (art. 129; art. 14, II)` f MEANS
+        `lesão dolosa` f
+    AND `crime tentado (art. 14, II)` (f's `execução iniciada`) (`houve ofensa à integridade corporal ou à saúde` f) (f's `consumação impedida por circunstâncias alheias à vontade do agente`)
+
+-- "§ 6° Se a lesão é culposa:" — consummated only.
+@ref CP art. 129, § 6º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury was negligent
+`lesão corporal culposa (art. 129, § 6º)` f MEANS
+        f's `elemento subjetivo` EQUALS culpa
+    AND `lesão corporal consumada (art. 129; art. 14, I)` f
+
+@export Decide se os fatos constituem o crime de lesão corporal (Código Penal, art. 129): dolosa, consumada ou tentada, ou culposa (§ 6º)
+@ref CP art. 129, caput e §§ 3º e 6º; art. 14
+GIVEN f IS A `Fato de lesão corporal` @desc os fatos da lesão: o agente, a vítima, o ato, o elemento subjetivo, as consequências atestadas pelo laudo e as circunstâncias
+GIVETH A BOOLEAN
+@nlg:en the facts make out the crime of bodily injury under art. 129
+`crime de lesão corporal (art. 129)` f MEANS
+        (    `lesão dolosa` f
+         AND (    `lesão corporal consumada (art. 129; art. 14, I)` f
+              OR  `lesão corporal tentada (art. 129; art. 14, II)` f))
+    OR  `lesão corporal culposa (art. 129, § 6º)` f
+
+-- "Pena - detenção, de três meses a um ano."
+@ref CP art. 129, caput
+GIVETH A `Pena cominada`
+@nlg:en the penalty for bodily injury
+`pena do art. 129, caput` MEANS
+    `Pena cominada` WITH
+        `espécie` IS `detenção`
+        `mínimo`  IS meses 3
+        `máximo`  IS anos 1
+        multa     IS `sem multa`
+        `além da pena correspondente à violência` IS FALSE
+
+§§§ `Art. 129, §§ 1º e 2º — a natureza da lesão`
+
+-- "§ 1º Se resulta: I - Incapacidade para as ocupações habituais, por mais de
+-- trinta dias; II - perigo de vida; III - debilidade permanente de membro,
+-- sentido ou função; IV - aceleração de parto: Pena - reclusão, de um a cinco
+-- anos."
+@ref CP art. 129, § 1º, I a IV
+GIVEN cs IS A LIST OF `Consequência da lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en a result of paragraph 1 is present
+`resulta o previsto no art. 129, § 1º` cs MEANS
+        "I"   ... elem `incapacidade para as ocupações habituais, por mais de trinta dias` cs
+    ..  "II"  ... elem `perigo de vida` cs
+    ..  "III" ... elem `debilidade permanente de membro, sentido ou função` cs
+    OR  "IV"  ... elem `aceleração de parto` cs
+
+-- "§ 2° Se resulta: I - Incapacidade permanente para o trabalho; II -
+-- enfermidade incuravel; III perda ou inutilização do membro, sentido ou
+-- função; IV - deformidade permanente; V - aborto: Pena - reclusão, de dois a
+-- oito anos."
+@ref CP art. 129, § 2º, I a V
+GIVEN cs IS A LIST OF `Consequência da lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en a result of paragraph 2 is present
+`resulta o previsto no art. 129, § 2º` cs MEANS
+        "I"   ... elem `incapacidade permanente para o trabalho` cs
+    ..  "II"  ... elem `enfermidade incurável` cs
+    ..  "III" ... elem `perda ou inutilização de membro, sentido ou função` cs
+    ..  "IV"  ... elem `deformidade permanente` cs
+    OR  "V"   ... elem aborto cs
+
+-- The grade as the shared `Resultado` records it, computed from the incisos
+-- (F-g2a-11). The heavier grade wins where both are present.
+@export Diz a natureza da lesão corporal (Código Penal, art. 129, §§ 1º e 2º) pelas consequências que o laudo atesta: leve, grave ou gravíssima
+@ref CP art. 129, §§ 1º e 2º
+GIVEN cs IS A LIST OF `Consequência da lesão corporal` @desc as consequências que o laudo atesta, nas palavras dos §§ 1º e 2º do art. 129
+GIVETH A Resultado
+@nlg:en the grade of the injury, from the results the medical report attests
+`a natureza da lesão (art. 129, §§ 1º e 2º)` cs MEANS
+    BRANCH
+        IF   `resulta o previsto no art. 129, § 2º` cs
+        THEN `lesão corporal de natureza gravíssima`
+        IF   `resulta o previsto no art. 129, § 1º` cs
+        THEN `lesão corporal de natureza grave`
+        OTHERWISE `lesão corporal`
+
+@ref CP art. 129, § 1º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury is serious under paragraph 1
+`lesão corporal de natureza grave do art. 129, § 1º` f MEANS
+        `lesão dolosa` f
+    AND `resulta o previsto no art. 129, § 1º` (f's `consequências da lesão`)
+
+@ref CP art. 129, § 2º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury is very serious under paragraph 2
+`lesão corporal de natureza gravíssima do art. 129, § 2º` f MEANS
+        `lesão dolosa` f
+    AND `resulta o previsto no art. 129, § 2º` (f's `consequências da lesão`)
+
+@ref CP art. 129, § 1º
+GIVETH A `Pena cominada`
+@nlg:en the penalty for serious bodily injury
+`pena do art. 129, § 1º` MEANS
+    `Pena cominada` WITH
+        `espécie` IS `reclusão`
+        `mínimo`  IS anos 1
+        `máximo`  IS anos 5
+        multa     IS `sem multa`
+        `além da pena correspondente à violência` IS FALSE
+
+@ref CP art. 129, § 2º
+GIVETH A `Pena cominada`
+@nlg:en the penalty for very serious bodily injury
+`pena do art. 129, § 2º` MEANS
+    `Pena cominada` WITH
+        `espécie` IS `reclusão`
+        `mínimo`  IS anos 2
+        `máximo`  IS anos 8
+        multa     IS `sem multa`
+        `além da pena correspondente à violência` IS FALSE
+
+§§§ `Art. 129, §§ 3º e 3º-A — Lesão corporal seguida de morte`
+
+-- "§ 3° Se resulta morte e as circunstâncias evidenciam que o agente não quís
+-- o resultado, nem assumiu o risco de produzí-lo: Pena - reclusão, de quatro a
+-- doze anos."
+@ref CP art. 129, § 3º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury was followed by a death the agent neither wanted nor risked
+`lesão corporal seguida de morte do art. 129, § 3º` f MEANS
+        `lesão dolosa` f
+    AND `a vítima morreu` f
+    AND `consta da lesão` `as circunstâncias evidenciam que o agente não quis o resultado morte, nem assumiu o risco de produzi-lo` f
+
+@ref CP art. 129, § 3º
+GIVETH A `Pena cominada`
+@nlg:en the penalty for bodily injury followed by death
+`pena do art. 129, § 3º` MEANS
+    `Pena cominada` WITH
+        `espécie` IS `reclusão`
+        `mínimo`  IS anos 4
+        `máximo`  IS anos 12
+        multa     IS `sem multa`
+        `além da pena correspondente à violência` IS FALSE
+
+-- "§ 3º-A. No crime previsto no § 3º deste artigo, se cometido no contexto da
+-- atuação ou para a consecução das condutas previstas no art. 2º da lei que
+-- institui o marco legal do combate ao crime organizado no Brasil: Pena -
+-- reclusão, de 20 (vinte) a 40 (quarenta) anos." The context is an input fact
+-- (M-sweep-b-43); unlike art. 121 § 2º-D, no membership is asked.
+@ref CP art. 129, § 3º-A (incluído pela Lei nº 15.358/2026); Lei nº 15.358/2026, art. 2º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury followed by death was in the context of the conduct of the organised-crime framework law
+`lesão corporal seguida de morte do art. 129, § 3º-A` f MEANS
+        `lesão corporal seguida de morte do art. 129, § 3º` f
+    AND `a data da lesão` f AT LEAST `a vigência do art. 129, §§ 3º-A e 8º-A`
+    AND elem `no contexto das condutas do art. 2º do marco legal do combate ao crime organizado` (f's fato's `circunstâncias`)
+
+@ref CP art. 129, § 3º-A (incluído pela Lei nº 15.358/2026)
+GIVETH A `Pena cominada`
+@nlg:en the penalty under paragraph 3-A
+`pena do art. 129, § 3º-A` MEANS
+    `Pena cominada` WITH
+        `espécie` IS `reclusão`
+        `mínimo`  IS anos 20
+        `máximo`  IS anos 40
+        multa     IS `sem multa`
+        `além da pena correspondente à violência` IS FALSE
+
+§§§ `Art. 129, § 4º — Diminuição de pena`
+
+-- "§ 4° Se o agente comete o crime impelido por motivo de relevante valor
+-- social ou moral ou sob o domínio de violenta emoção, logo em seguida a
+-- injusta provocação da vítima, o juiz pode reduzir a pena de um sexto a um
+-- terço." The same words as art. 121 § 1º (fork F-g2a-02 on "pode").
+@ref CP art. 129, § 4º
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the reduction of one sixth to one third for a privileged injury
+`diminuição do art. 129, § 4º` MEANS `causa de diminuição` (entre `um sexto` `um terço`)
+
+@ref CP art. 129, § 4º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the reduction of paragraph 4 applies
+`incide a diminuição do art. 129, § 4º` f MEANS
+        `lesão dolosa` f
+    AND `as hipóteses do art. 121, § 1º` (f's `circunstâncias do crime`)
+
+§§§ `Art. 129, § 5º — Substituição da pena`
+
+-- "§ 5° O juiz, não sendo graves as lesões, pode ainda substituir a pena de
+-- detenção pela de multa, de duzentos mil réis a dois contos de réis: I - se
+-- ocorre qualquer das hipóteses do parágrafo anterior; II - se as lesões são
+-- recíprocas."
+-- "não sendo graves as lesões" and "a pena de detenção": the slight
+-- intentional injury under the caput. The amount in réis is not law: Lei nº
+-- 7.209/1984, art. 2º cancelled every fine amount in the Parte Especial and
+-- replaced "multa de" with "multa" (binding entry M-sweep-b-07; PLAN § 2.2), so
+-- the substituted fine is the day-fine of art. 49. The réis words are quoted
+-- above and are inert.
+DECLARE `Opção do art. 129, § 5º` IS ONE OF
+    `substituir a pena de detenção pela de multa`
+    @nlg:en replace detenção with a fine
+
+@ref CP art. 129, § 5º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the conditions of paragraph 5 are met
+`cabe a substituição do art. 129, § 5º` f MEANS
+        "não sendo graves as lesões" ... `a pena cominada à lesão corporal é a do caput` f
+    AND (    "I"  ... `as hipóteses do art. 121, § 1º` (f's `circunstâncias do crime`)
+         OR  "II" ... `consta da lesão` `as lesões são recíprocas` f)
+
+@export Lista a opção do art. 129, § 5º, do Código Penal (substituir a detenção por multa, nas lesões que não são graves); lista vazia quando não cabe
+@ref CP art. 129, § 5º
+GIVEN f IS A `Fato de lesão corporal` @desc os fatos da lesão
+GIVETH A LIST OF `Opção do art. 129, § 5º`
+@nlg:en the option paragraph 5 gives the judge
+`as opções do juiz pelo art. 129, § 5º` f MEANS
+    `sob a redação codificada do art. 129 (pena)` f
+        (IF   `cabe a substituição do art. 129, § 5º` f
+         THEN LIST `substituir a pena de detenção pela de multa`
+         ELSE EMPTY)
+
+-- The fine that replaces detenção under § 5º has art. 49's limits, not the
+-- réis the paragraph still prints (M-sweep-b-07).
+@ref CP art. 129, § 5º; art. 49; Lei nº 7.209/1984, art. 2º
+GIVEN m IS A `Multa aplicada`
+      `o maior salário mínimo mensal vigente ao tempo do fato` IS A NUMBER
+GIVETH A BOOLEAN
+@nlg:en the substituted fine is within the limits of art. 49
+`a multa substitutiva do art. 129, § 5º, cabe nos limites do art. 49` m `o maior salário mínimo mensal vigente ao tempo do fato` MEANS
+    `a multa está nos limites do art. 49` m `o maior salário mínimo mensal vigente ao tempo do fato`
+
+§§§ `Art. 129, § 6º — Lesão corporal culposa`
+
+-- "§ 6° Se a lesão é culposa: Pena - detenção, de dois meses a um ano."
+@ref CP art. 129, § 6º
+GIVETH A `Pena cominada`
+@nlg:en the penalty for negligent bodily injury
+`pena do art. 129, § 6º` MEANS
+    `Pena cominada` WITH
+        `espécie` IS `detenção`
+        `mínimo`  IS meses 2
+        `máximo`  IS anos 1
+        multa     IS `sem multa`
+        `além da pena correspondente à violência` IS FALSE
+
+§§§ `Art. 129, §§ 7º, 8º e 8º-A`
+
+-- "§ 7o Aumenta-se a pena de 1/3 (um terço) se ocorrer qualquer das hipóteses
+-- dos §§ 4o e 6o do art. 121 deste Código."
+-- The CONDITIONS are art. 121's; the fraction is § 7º's own (1/3), not
+-- § 6º's "1/3 até a metade". Art. 121 § 4º has a sentence for the culpable
+-- homicide and one for the intentional: each serves the injury of its kind
+-- (fork F-g2a-10).
+@ref CP art. 129, § 7º
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase of one third under paragraph 7
+`aumento do art. 129, § 7º` MEANS `causa de aumento` (fixa `um terço`)
+
+@ref CP art. 129, § 7º; art. 121, §§ 4º e 6º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the increase of paragraph 7 applies
+`incide o aumento do art. 129, § 7º` f MEANS
+        "§ 4º, primeira parte" ... (    `lesão corporal culposa (art. 129, § 6º)` f
+                                    AND `as hipóteses do art. 121, § 4º, primeira parte` (f's `circunstâncias do crime`))
+    ..  "§ 4º, segunda parte" ... (    `lesão dolosa` f
+                                   AND `a hipótese do art. 121, § 4º, segunda parte` (f's `vítima`) (`a data da lesão` f))
+    OR  "§ 6º" ... `as hipóteses do art. 121, § 6º` (f's `circunstâncias do crime`)
+
+-- "§ 8º - Aplica-se à lesão culposa o disposto no § 5º do art. 121."
+@export Lista a opção do art. 121, § 5º, que o art. 129, § 8º, do Código Penal aplica à lesão culposa (o juiz pode deixar de aplicar a pena); lista vazia quando não cabe
+@ref CP art. 129, § 8º; art. 121, § 5º
+GIVEN f IS A `Fato de lesão corporal` @desc os fatos da lesão
+GIVETH A LIST OF `Opção do art. 121, § 5º`
+@nlg:en the option paragraph 8 gives the judge for a negligent injury
+`as opções do juiz pelo art. 129, § 8º` f MEANS
+    IF   `lesão corporal culposa (art. 129, § 6º)` f AND `a hipótese do art. 121, § 5º` (f's `circunstâncias do crime`)
+    THEN LIST `deixar de aplicar a pena`
+    ELSE EMPTY
+
+-- "§ 8º-A. Com exceção do disposto no § 3º-A deste artigo, aumenta-se a pena
+-- em 2/3 (dois terços) se a lesão é praticada por integrante de organização
+-- criminosa ultraviolenta, grupo paramilitar ou milícia privada, no contexto da
+-- atuação ou para a consecução das condutas previstas no art. 2º da lei que
+-- institui o marco legal do combate ao crime organizado no Brasil."
+@ref CP art. 129, § 8º-A (incluído pela Lei nº 15.358/2026)
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase of two thirds under paragraph 8-A
+`aumento do art. 129, § 8º-A` MEANS `causa de aumento` (fixa `dois terços`)
+
+@ref CP art. 129, § 8º-A (incluído pela Lei nº 15.358/2026); Lei nº 15.358/2026, art. 2º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the increase of paragraph 8-A applies
+`incide o aumento do art. 129, § 8º-A` f MEANS
+        `a data da lesão` f AT LEAST `a vigência do art. 129, §§ 3º-A e 8º-A`
+    AND "Com exceção do disposto no § 3º-A" ... NOT `lesão corporal seguida de morte do art. 129, § 3º-A` f
+    AND (    elem `organização criminosa ultraviolenta` (f's agente's `grupos de que é integrante`)
+         OR  elem `grupo paramilitar` (f's agente's `grupos de que é integrante`)
+         OR  elem `milícia privada` (f's agente's `grupos de que é integrante`))
+    AND elem `no contexto das condutas do art. 2º do marco legal do combate ao crime organizado` (f's fato's `circunstâncias`)
+
+§§§ `Art. 129, §§ 9º a 11 — Violência doméstica`
+
+-- "§ 9º Se a lesão for praticada contra ascendente, descendente, irmão, cônjuge
+-- ou companheiro, pessoa com relação de trabalho doméstico ou com quem conviva
+-- ou tenha convivido, ou, ainda, prevalecendo-se o agente das relações
+-- domésticas, de trabalho doméstico, de coabitação ou de hospitalidade: Pena –
+-- reclusão, de 2 (dois) a 5 (cinco) anos."
+-- The relationships are the shared `Relação do agente com a vítima`; the
+-- members for "prevalecendo-se ... das relações domésticas, de coabitação ou
+-- de hospitalidade" are there for exactly this (cp-dominio's comment).
+@ref CP art. 129, § 9º (redação da Lei nº 15.455/2026)
+GIVEN v IS A `Vítima`
+GIVETH A BOOLEAN
+@nlg:en the victim stands to the agent in one of the relationships of paragraph 9
+`as circunstâncias do art. 129, § 9º` v MEANS
+        elem ascendente (v's `relações com o agente`)
+    ..  elem descendente (v's `relações com o agente`)
+    ..  elem irmão (v's `relações com o agente`)
+    ..  elem cônjuge (v's `relações com o agente`)
+    ..  elem companheiro (v's `relações com o agente`)
+    ..  "pessoa com relação de trabalho doméstico" ... elem `relação de trabalho doméstico` (v's `relações com o agente`)
+    ..  "ou com quem conviva ou tenha convivido" ... elem `convivência atual ou passada` (v's `relações com o agente`)
+    ..  "prevalecendo-se o agente das relações domésticas" ... elem `relações domésticas` (v's `relações com o agente`)
+    ..  "de coabitação" ... elem `coabitação` (v's `relações com o agente`)
+    OR  "ou de hospitalidade" ... elem hospitalidade (v's `relações com o agente`)
+
+-- § 9º is the domestic form of the SLIGHT injury: for the graver results the
+-- Code sends the case to §§ 1º to 3º and increases them by § 10 (fork
+-- F-g2a-09). Intentional only.
+@ref CP art. 129, § 9º (redação da Lei nº 15.455/2026)
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury is the domestic-violence form of paragraph 9
+`lesão corporal do art. 129, § 9º` f MEANS
+        `lesão dolosa` f
+    AND `as circunstâncias do art. 129, § 9º` (f's `vítima`)
+    AND NOT `lesão corporal de natureza grave, gravíssima ou seguida de morte` f
+
+@ref CP art. 129, § 9º (pena na redação da Lei nº 14.994/2024)
+GIVETH A `Pena cominada`
+@nlg:en the penalty for domestic-violence bodily injury
+`pena do art. 129, § 9º` MEANS
+    `Pena cominada` WITH
+        `espécie` IS `reclusão`
+        `mínimo`  IS anos 2
+        `máximo`  IS anos 5
+        multa     IS `sem multa`
+        `além da pena correspondente à violência` IS FALSE
+
+-- "§ 10. Nos casos previstos nos §§ 1o a 3o deste artigo, se as circunstâncias
+-- são as indicadas no § 9o deste artigo, aumenta-se a pena em 1/3 (um terço)."
+-- "§§ 1º a 3º" does not reach § 3º-A, inserted later with its own pena
+-- (fork F-g2a-12).
+@ref CP art. 129, § 10
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase of one third under paragraph 10
+`aumento do art. 129, § 10` MEANS `causa de aumento` (fixa `um terço`)
+
+@ref CP art. 129, §§ 1º a 3º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury is serious, very serious or followed by death
+`lesão corporal de natureza grave, gravíssima ou seguida de morte` f MEANS
+        `lesão corporal de natureza grave do art. 129, § 1º` f
+    OR  `lesão corporal de natureza gravíssima do art. 129, § 2º` f
+    OR  `lesão corporal seguida de morte do art. 129, § 3º` f
+
+@ref CP art. 129, § 10
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the increase of paragraph 10 applies
+`incide o aumento do art. 129, § 10` f MEANS
+        `lesão corporal de natureza grave, gravíssima ou seguida de morte` f
+    AND NOT `lesão corporal seguida de morte do art. 129, § 3º-A` f
+    AND `as circunstâncias do art. 129, § 9º` (f's `vítima`)
+
+-- "§ 11. Na hipótese do § 9o deste artigo, a pena será aumentada de um terço
+-- se o crime for cometido contra pessoa portadora de deficiência."
+-- "Na hipótese do § 9º": wherever § 9º's circumstances are present, whether
+-- the injury is slight (§ 9º's pena) or graver (§§ 1º–3º with § 10) — fork
+-- F-g2a-14.
+@ref CP art. 129, § 11
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase of one third under paragraph 11
+`aumento do art. 129, § 11` MEANS `causa de aumento` (fixa `um terço`)
+
+@ref CP art. 129, § 11
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the increase of paragraph 11 applies
+`incide o aumento do art. 129, § 11` f MEANS
+        `lesão dolosa` f
+    AND `as circunstâncias do art. 129, § 9º` (f's `vítima`)
+    AND NOT `lesão corporal seguida de morte do art. 129, § 3º-A` f
+    AND elem `pessoa com deficiência` (f's `vítima`'s `condições na data do fato`)
+
+§§§ `Art. 129, § 12`
+
+-- "§ 12. Aumenta-se a pena de: I - 1/3 (um terço) a 2/3 (dois terços) se a
+-- lesão dolosa for praticada: a) contra autoridade ou agente descrito nos arts.
+-- 142 e 144 da Constituição Federal ou integrantes do sistema prisional ou da
+-- Força Nacional de Segurança Pública, no exercício da função ou em
+-- decorrência dela, ou contra seu cônjuge, companheiro ou parente consanguíneo
+-- até terceiro grau, em razão dessa condição; b) contra membro do Poder
+-- Judiciário, do Ministério Público, da Defensoria Pública ou da Advocacia
+-- Pública, de que tratam os arts. 131 e 132 da Constituição Federal, ou oficial
+-- de justiça, no exercício da função ou em decorrência dela, ou contra seu
+-- cônjuge, companheiro ou parente, inclusive por afinidade, até o terceiro
+-- grau, em razão dessa condição; ou c) nas dependências de instituição de
+-- ensino; II - 2/3 (dois terços) ao dobro se a lesão dolosa for praticada nas
+-- dependências de instituição de ensino e: a) a vítima for pessoa com
+-- deficiência ou com doença que acarrete condição limitante ou de
+-- vulnerabilidade física ou mental; ou b) o autor for ascendente, padrasto ou
+-- madrasta, tio, irmão, cônjuge, companheiro, tutor, curador, preceptor ou
+-- empregador da vítima ou por qualquer outro título tiver autoridade sobre ela
+-- ou, ainda, for professor ou funcionário da instituição de ensino."
+-- a) and b) name the victims of art. 121 § 2º VII, a and b ("integrantes do
+-- sistema prisional OU da Força Nacional" where art. 121 has "e"): read as one
+-- class (notes/g2a.md).
+@ref CP art. 129, § 12, I
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase of one third to two thirds under paragraph 12 (I)
+`aumento do art. 129, § 12, I` MEANS `causa de aumento` (entre `um terço` `dois terços`)
+
+@ref CP art. 129, § 12, II
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase of two thirds up to double under paragraph 12 (II)
+`aumento do art. 129, § 12, II` MEANS `causa de aumento` (entre `dois terços` `o dobro`)
+
+@ref CP art. 129, § 12, II (redação da Lei nº 15.159/2025)
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the increase of paragraph 12 (II) applies
+`incide o aumento do art. 129, § 12, II` f MEANS
+        `lesão dolosa` f
+    AND elem `nas dependências de instituição de ensino` (f's fato's `circunstâncias`)
+    AND (    "a)" ... `a vítima é pessoa com deficiência ou com doença que acarrete condição limitante ou de vulnerabilidade física ou mental` (f's `vítima`) (f's `circunstâncias do crime`)
+         ..  "b)" ... `o autor é ascendente, padrasto ou madrasta, tio, irmão, cônjuge, companheiro, tutor, curador, preceptor ou empregador da vítima, ou tem autoridade sobre ela` (f's `vítima`)
+         OR  "b)" ... `consta da lesão` `o autor é professor ou funcionário da instituição de ensino` f)
+
+-- I, c) is the school without II's further conditions: where II applies, the
+-- school is counted there and not again under I, c) (fork F-g2a-13).
+@ref CP art. 129, § 12, I (redação da Lei nº 15.159/2025)
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the increase of paragraph 12 (I) applies
+`incide o aumento do art. 129, § 12, I` f MEANS
+        `lesão dolosa` f
+    AND (    "a)" ... `contra vítima do art. 121, § 2º, VII, a` (f's `circunstâncias do crime`)
+         ..  "b)" ... `contra vítima do art. 121, § 2º, VII, b` (f's `circunstâncias do crime`)
+         OR  "c)" ... (    elem `nas dependências de instituição de ensino` (f's fato's `circunstâncias`)
+                       AND NOT `incide o aumento do art. 129, § 12, II` f))
+
+@ref CP art. 129, § 12
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en paragraph 12 bears on the injury
+`o art. 129, § 12, incide` f MEANS
+        `incide o aumento do art. 129, § 12, I` f
+    OR  `incide o aumento do art. 129, § 12, II` f
+
+§§§ `Art. 129, § 13`
+
+-- "§ 13. Se a lesão é praticada contra a mulher, por razões da condição do
+-- sexo feminino, nos termos do § 1º do art. 121-A deste Código: Pena –
+-- reclusão, de 2 (dois) a 5 (cinco) anos."
+-- Like § 9º, the form of the slight injury (fork F-g2a-09). The razões are
+-- art. 121-A § 1º's, read as that module reads them (F-sweep-b-08).
+@ref CP art. 129, § 13 (redação da Lei nº 14.994/2024); art. 121-A, § 1º
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury was against a woman for reasons of the female condition
+`lesão corporal do art. 129, § 13` f MEANS
+        `lesão dolosa` f
+    AND "contra a mulher" ... f's `vítima`'s pessoa's mulher
+    AND "por razões da condição do sexo feminino" ... `há razões da condição do sexo feminino (art. 121-A, § 1º)` (f's `circunstâncias do crime`)
+    AND NOT `lesão corporal de natureza grave, gravíssima ou seguida de morte` f
+
+@ref CP art. 129, § 13 (redação da Lei nº 14.994/2024)
+GIVETH A `Pena cominada`
+@nlg:en the penalty for bodily injury against a woman for reasons of the female condition
+`pena do art. 129, § 13` MEANS
+    `Pena cominada` WITH
+        `espécie` IS `reclusão`
+        `mínimo`  IS anos 2
+        `máximo`  IS anos 5
+        multa     IS `sem multa`
+        `além da pena correspondente à violência` IS FALSE
+
+§§§ `Art. 129 — a pena que cabe ao caso`
+
+DECLARE `Forma da lesão corporal` IS ONE OF
+    `lesão corporal de natureza grave (art. 129, § 1º)`
+    @nlg:en serious bodily injury under paragraph 1
+    `lesão corporal de natureza gravíssima (art. 129, § 2º)`
+    @nlg:en very serious bodily injury under paragraph 2
+    `lesão corporal seguida de morte (art. 129, § 3º)`
+    @nlg:en bodily injury followed by death under paragraph 3
+    `lesão corporal seguida de morte (art. 129, § 3º-A)`
+    @nlg:en bodily injury followed by death under paragraph 3-A
+    `lesão corporal em violência doméstica (art. 129, § 9º)`
+    @nlg:en domestic-violence bodily injury under paragraph 9
+    `lesão corporal contra a mulher (art. 129, § 13)`
+    @nlg:en bodily injury against a woman under paragraph 13
+
+@ref CP art. 129, §§ 1º, 2º, 3º, 3º-A, 9º e 13
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A LIST OF `Forma da lesão corporal`
+@nlg:en the forms of intentional injury whose conditions the facts meet
+`as formas da lesão corporal presentes` f MEANS
+    filter (GIVEN forma YIELD `a forma está presente` forma) (LIST
+          `lesão corporal de natureza grave (art. 129, § 1º)`
+        , `lesão corporal de natureza gravíssima (art. 129, § 2º)`
+        , `lesão corporal seguida de morte (art. 129, § 3º)`
+        , `lesão corporal seguida de morte (art. 129, § 3º-A)`
+        , `lesão corporal em violência doméstica (art. 129, § 9º)`
+        , `lesão corporal contra a mulher (art. 129, § 13)`)
+    WHERE
+        `a forma está presente` forma MEANS
+            CONSIDER forma
+            WHEN `lesão corporal de natureza grave (art. 129, § 1º)`      THEN `lesão corporal de natureza grave do art. 129, § 1º` f
+            WHEN `lesão corporal de natureza gravíssima (art. 129, § 2º)` THEN `lesão corporal de natureza gravíssima do art. 129, § 2º` f
+            WHEN `lesão corporal seguida de morte (art. 129, § 3º)`       THEN `lesão corporal seguida de morte do art. 129, § 3º` f
+            WHEN `lesão corporal seguida de morte (art. 129, § 3º-A)`     THEN `lesão corporal seguida de morte do art. 129, § 3º-A` f
+            WHEN `lesão corporal em violência doméstica (art. 129, § 9º)` THEN `lesão corporal do art. 129, § 9º` f
+            WHEN `lesão corporal contra a mulher (art. 129, § 13)`        THEN `lesão corporal do art. 129, § 13` f
+
+@ref CP art. 129, §§ 1º, 2º, 3º, 3º-A, 9º e 13
+GIVEN forma IS A `Forma da lesão corporal`
+GIVETH A `Pena cominada`
+@nlg:en the penalty each form prescribes
+`a pena cominada à forma da lesão corporal` forma MEANS
+    CONSIDER forma
+    WHEN `lesão corporal de natureza grave (art. 129, § 1º)`      THEN `pena do art. 129, § 1º`
+    WHEN `lesão corporal de natureza gravíssima (art. 129, § 2º)` THEN `pena do art. 129, § 2º`
+    WHEN `lesão corporal seguida de morte (art. 129, § 3º)`       THEN `pena do art. 129, § 3º`
+    WHEN `lesão corporal seguida de morte (art. 129, § 3º-A)`     THEN `pena do art. 129, § 3º-A`
+    WHEN `lesão corporal em violência doméstica (art. 129, § 9º)` THEN `pena do art. 129, § 9º`
+    WHEN `lesão corporal contra a mulher (art. 129, § 13)`        THEN `pena do art. 129, § 13`
+
+@ref CP art. 129, caput
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the penalty that applies is the caput's
+`a pena cominada à lesão corporal é a do caput` f MEANS
+        `lesão dolosa` f
+    AND null (`as formas da lesão corporal presentes` f)
+
+-- The gates. The first applies to everything; the second to the pena, where
+-- § 9º's own form could govern; the third and fourth to the causes.
+@ref CP art. 129; Lei nº 14.994/2024
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the act falls before the wording of art. 129 this encoding carries
+`o fato é anterior à redação codificada do art. 129` f MEANS
+    `a data da lesão` f LESS THAN `a vigência da Lei nº 14.994, de 2024`
+
+@ref CP art. 129, § 9º; Lei nº 15.455/2026
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en paragraph 9, in a wording this encoding does not carry, bears on the act
+`o § 9º, em redação não codificada, incide` f MEANS
+        `lesão dolosa` f
+    AND `as circunstâncias do art. 129, § 9º` (f's `vítima`)
+    AND `a data da lesão` f LESS THAN `a vigência da redação do art. 129, § 9º`
+
+@ref CP art. 129, § 12; Lei nº 15.159/2025
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en paragraph 12, in a wording this encoding does not carry, bears on the act
+`o § 12, em redação não codificada, incide` f MEANS
+        `o art. 129, § 12, incide` f
+    AND `a data da lesão` f LESS THAN `a vigência da redação do art. 129, § 12`
+
+@ref CP art. 129; Leis nº 14.994/2024 e 15.455/2026
+GIVEN a IS A TYPE
+      f IS A `Fato de lesão corporal`
+      `a resposta` IS AN a
+GIVETH AN a
+@nlg:en the penalty answer, if the act falls under the wording of art. 129 this encoding carries
+`sob a redação codificada do art. 129 (pena)` f `a resposta` MEANS
+    BRANCH
+        IF   `o fato é anterior à redação codificada do art. 129` f
+        THEN `a redação do art. 129 anterior à Lei nº 14.994, de 2024, não está codificada`
+        IF   `o § 9º, em redação não codificada, incide` f AND NOT `lesão corporal de natureza grave, gravíssima ou seguida de morte` f
+        THEN `a redação do art. 129, § 9º, anterior à Lei nº 15.455, de 2026, não está codificada`
+        OTHERWISE `a resposta`
+
+@ref CP art. 129; Leis nº 14.994/2024, 15.159/2025 e 15.455/2026
+GIVEN a IS A TYPE
+      f IS A `Fato de lesão corporal`
+      `a resposta` IS AN a
+GIVETH AN a
+@nlg:en the answer on causes, if the act falls under the wording of art. 129 this encoding carries
+`sob a redação codificada do art. 129 (causas)` f `a resposta` MEANS
+    BRANCH
+        IF   `o fato é anterior à redação codificada do art. 129` f
+        THEN `a redação do art. 129 anterior à Lei nº 14.994, de 2024, não está codificada`
+        IF   `o § 9º, em redação não codificada, incide` f
+        THEN `a redação do art. 129, § 9º, anterior à Lei nº 15.455, de 2026, não está codificada`
+        IF   `o § 12, em redação não codificada, incide` f
+        THEN `a redação do art. 129, § 12, anterior à Lei nº 15.159, de 2025, não está codificada`
+        OTHERWISE `a resposta`
+
+@export Diz a pena cominada à lesão corporal (Código Penal, art. 129) conforme a forma, antes das causas de aumento e de diminuição
+@ref CP art. 129, caput e §§ 1º, 2º, 3º, 3º-A, 6º, 9º e 13
+GIVEN f IS A `Fato de lesão corporal` @desc os fatos da lesão
+GIVETH A `Pena cominada`
+@nlg:en the penalty the Code prescribes for this injury, before causes of increase and decrease
+`a pena cominada à lesão corporal (art. 129)` f MEANS
+    `sob a redação codificada do art. 129 (pena)` f `a pena`
+    WHERE
+        `a pena` MEANS
+            IF   `lesão corporal culposa (art. 129, § 6º)` f
+            THEN `pena do art. 129, § 6º`
+            ELSE `a mais grave das penas cominadas` `pena do art. 129, caput` (map `a pena cominada à forma da lesão corporal` (`as formas da lesão corporal presentes` f))
+
+@export Lista as causas de aumento de pena da lesão corporal (Código Penal, art. 129, §§ 7º, 8º-A, 10, 11 e 12) que os fatos fazem incidir, cada uma com a sua fração
+@ref CP art. 129, §§ 7º, 8º-A, 10, 11 e 12
+GIVEN f IS A `Fato de lesão corporal` @desc os fatos da lesão
+GIVETH A LIST OF `Causa de aumento ou de diminuição`
+@nlg:en the causes of increase of art. 129 the facts bring into play
+`as causas de aumento da lesão corporal (art. 129)` f MEANS
+    `sob a redação codificada do art. 129 (causas)` f
+        (`as causas que incidem` (LIST
+              `a causa, se incide` (`incide o aumento do art. 129, § 7º` f)      `aumento do art. 129, § 7º`
+            , `a causa, se incide` (`incide o aumento do art. 129, § 8º-A` f)    `aumento do art. 129, § 8º-A`
+            , `a causa, se incide` (`incide o aumento do art. 129, § 10` f)      `aumento do art. 129, § 10`
+            , `a causa, se incide` (`incide o aumento do art. 129, § 11` f)      `aumento do art. 129, § 11`
+            , `a causa, se incide` (`incide o aumento do art. 129, § 12, I` f)   `aumento do art. 129, § 12, I`
+            , `a causa, se incide` (`incide o aumento do art. 129, § 12, II` f)  `aumento do art. 129, § 12, II`))
+
+@export Lista as causas de diminuição de pena da lesão corporal (Código Penal, art. 129, § 4º) que os fatos fazem incidir
+@ref CP art. 129, § 4º
+GIVEN f IS A `Fato de lesão corporal` @desc os fatos da lesão
+GIVETH A LIST OF `Causa de aumento ou de diminuição`
+@nlg:en the causes of decrease of art. 129 the facts bring into play
+`as causas de diminuição da lesão corporal (art. 129)` f MEANS
+    `sob a redação codificada do art. 129 (causas)` f
+        (IF   `incide a diminuição do art. 129, § 4º` f
+         THEN LIST `diminuição do art. 129, § 4º`
+         ELSE EMPTY)
+
+@export Diz os limites da pena da lesão corporal (Código Penal, art. 129) depois de aplicadas as causas de aumento e de diminuição e, se tentada, a diminuição da tentativa (art. 14, parágrafo único)
+@ref CP art. 129; art. 14, parágrafo único; art. 68
+GIVEN f IS A `Fato de lesão corporal` @desc os fatos da lesão
+GIVETH A `Pena cominada`
+@nlg:en the limits of the penalty for this injury once the causes and any attempt reduction are applied
+`os limites da pena da lesão corporal com as causas (art. 129)` f MEANS
+    `a pena cominada com as causas` (`a pena cominada à lesão corporal (art. 129)` f) `todas as causas`
+    WHERE
+        `as causas próprias` MEANS
+            append (`as causas de aumento da lesão corporal (art. 129)` f) (`as causas de diminuição da lesão corporal (art. 129)` f)
+        `todas as causas` MEANS
+            IF   `lesão corporal tentada (art. 129; art. 14, II)` f
+            THEN append `as causas próprias` (LIST `diminuição pela tentativa (art. 14, parágrafo único)`)
+            ELSE `as causas próprias`
+
+§§§ `Art. 129 — a ação penal`
+
+-- The Code is silent. "Art. 88. Além das hipóteses do Código Penal e da
+-- legislação especial, dependerá de representação a ação penal relativa aos
+-- crimes de lesões corporais leves e lesões culposas." (Lei nº 9.099/1995.)
+-- "Aos crimes praticados com violência doméstica e familiar contra a mulher,
+-- independentemente da pena prevista, não se aplica a Lei nº 9.099" (Lei nº
+-- 11.340/2006, art. 41); "A ação penal relativa ao crime de lesão corporal
+-- resultante de violência doméstica contra a mulher é pública incondicionada"
+-- (STJ Súmula 542). M-sweep-b-16; fork F-sweep-b-07, whose open edge — § 9º
+-- against a man, § 13 outside the home — is read here by the grade of the
+-- INJURY ("lesões corporais leves"), not by the band of the pena: both need
+-- representação unless the violence is domestic and family violence against a
+-- woman.
+@ref CP art. 129; Lei nº 9.099/1995, art. 88; Lei nº 11.340/2006, art. 41; STJ Súmula 542
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury is a slight or a negligent one
+`lesão corporal leve ou culposa` f MEANS
+        `lesão corporal culposa (art. 129, § 6º)` f
+    OR  (    `lesão dolosa` f
+         AND NOT `lesão corporal de natureza grave, gravíssima ou seguida de morte` f)
+
+@ref CP art. 129; Lei nº 11.340/2006, arts. 5º e 41
+GIVEN f IS A `Fato de lesão corporal`
+GIVETH A BOOLEAN
+@nlg:en the injury results from domestic and family violence against a woman
+`resulta de violência doméstica e familiar contra a mulher` f MEANS
+        f's `vítima`'s pessoa's mulher
+    AND `consta da lesão` `violência doméstica e familiar` f
+
+@export Diz a ação penal da lesão corporal (Código Penal, art. 129), que o Código não declara, pela Lei nº 9.099/1995, art. 88, e pela Lei nº 11.340/2006, art. 41 (Súmula 542 do STJ)
+@ref CP art. 129; Lei nº 9.099/1995, art. 88; Lei nº 11.340/2006, art. 41; STJ Súmula 542
+GIVEN f IS A `Fato de lesão corporal` @desc os fatos da lesão
+GIVETH AN `Ação penal`
+@nlg:en the prosecution the injury calls for
+`a ação penal da lesão corporal (art. 129)` f MEANS
+    IF   `lesão corporal leve ou culposa` f AND NOT `resulta de violência doméstica e familiar contra a mulher` f
+    THEN `ação penal pública condicionada à representação do ofendido`
+    ELSE `ação penal pública incondicionada`

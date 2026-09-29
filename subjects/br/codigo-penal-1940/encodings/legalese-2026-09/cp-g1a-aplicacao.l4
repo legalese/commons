@@ -1,0 +1,767 @@
+@lang pt
+IMPORT prelude
+IMPORT daydate
+IMPORT `cp-dominio`
+IMPORT `cp-pena`
+
+-- Código Penal, Parte Geral, Título I — Da aplicação da lei penal (arts. 1º
+-- a 12). Written by g1a.
+--
+-- Arts. 10 and 11 are encoded by g0 in cp-pena.l4 (PLAN § 9) and are not
+-- repeated here. Every other article of the Título is here: arts. 1º to 4º
+-- (the law in time), 5º to 7º (the law in space), 8º and 9º (foreign
+-- sentences) and 12 (special laws).
+--
+-- THE TEXT ENCODED is the Título as re-enacted by Lei nº 7.209/1984 and
+-- unchanged since (every article carries "Redação dada pela Lei nº 7.209"),
+-- so no rule here has a vigência gate of its own.
+--
+-- WHAT THE PARTE ESPECIAL ENCODERS SHOULD CALL (at integration; PLAN § 1 lets
+-- no other group import this module today):
+--   * `a redação alcança o fato (arts. 2º e 4º)` — the one-line test a
+--     penalty rule needs where a recent law re-wrote its article: the current
+--     wording reaches a fact on or after its vigência, or an earlier fact when
+--     it favours the agent (art. 2º, parágrafo único). cp-g3-furto's gate
+--     (`o fato está sob a redação codificada do art. 155`) is the first half
+--     of it; the second half is the retroactivity of a milder law, which that
+--     gate does not need because Lei nº 15.397/2026 was harsher.
+--   * `a lei que rege o fato (arts. 1º a 4º)` — the full succession of laws.
+--   * `a lei brasileira se aplica ao crime (arts. 5º a 7º)` — where the
+--     offence may have been committed abroad or aboard a ship or aircraft.
+--
+-- WHAT THE JUDGE DECIDES stays an input: whether a later law "de qualquer
+-- modo favorecer o agente" (art. 2º, parágrafo único) is a comparison of whole
+-- laws the Code leaves to the judge (fork F-g1a-02); the classes of crime art.
+-- 7º names are legal characterisations the Parte Especial makes.
+--
+-- Forks met here (registers/parts/g1a.forks.json): F-sweep-a-06 (the law of
+-- a crime permanente or continuado; STF Súmula 711, M-sweep-a-16), F-g1a-01
+-- (the lei intermediária), F-g1a-02 (combining laws), F-g1a-03 (art. 3º
+-- against the lex mitior), F-g1a-04 ("espaço aéreo correspondente"), F-g1a-05
+-- (art. 8º's "idênticas").
+
+§ `Título I — Da aplicação da lei penal`
+
+§§ `Arts. 1º a 4º — os fatos`
+
+-- One law in the succession of laws that bear on a fact: the law in force
+-- when it was committed, and every law that came after it. "Lei" here is the
+-- incriminating norm as successive laws worded it, so a re-wording of one
+-- article by a later law is a new member of the list.
+DECLARE `Lei penal no tempo` HAS
+    `designação` IS A STRING
+    @nlg:en the law's name and number
+    `início da vigência` IS A DATE
+    @nlg:en the first day the law was in force
+    `último dia de vigência` IS A MAYBE DATE
+    @nlg:en the last day the law was in force, where it has ceased to be in force
+    `define o fato como crime` IS A BOOLEAN
+    @nlg:en the law defines the fact as a crime
+    `comina pena ao fato` IS A BOOLEAN
+    @nlg:en the law prescribes a penalty for the fact
+    `excepcional ou temporária` IS A BOOLEAN
+    @nlg:en the law is an exceptional or temporary law
+    `favorece o agente em relação à lei do tempo do crime, segundo o juiz` IS A BOOLEAN
+    @nlg:en the judge finds that this law favours the agent, in any way, compared with the law in force at the time of the crime
+
+-- The fact, and the laws that bear on it, in the order they came into force.
+-- The shared `Fato`'s `data do fato` is the moment of the action or omission
+-- (art. 4º). A crime permanente (one whose consummation lasts) or continuado
+-- (art. 71) has a day on which the permanence or the continuity ceased; any
+-- other crime has none.
+DECLARE `Fato no tempo` HAS
+    fato IS A Fato
+    @nlg:en the act
+    `data do resultado` IS A MAYBE DATE
+    @nlg:en the day the result occurred, where the crime has a result apart from the conduct
+    `data da cessação da permanência ou da continuidade` IS A MAYBE DATE
+    @nlg:en for a permanent or continued crime, the day the permanence or the continuity ceased
+    `leis que se sucederam` IS A LIST OF `Lei penal no tempo`
+    @nlg:en the laws that bore on the fact, the law of its time and every later one, in the order they came into force
+
+§§ `Art. 4º — Tempo do crime`
+
+-- "Art. 4º - Considera-se praticado o crime no momento da ação ou omissão,
+-- ainda que outro seja o momento do resultado."
+@ref CP art. 4º
+GIVEN f IS A `Fato no tempo`
+GIVETH A DATE
+@nlg:en the time the crime is taken to have been committed, which is the moment of the action or omission
+`o tempo do crime (art. 4º)` f MEANS
+    f's fato's `data do fato`
+
+-- Which law governs a crime permanente or continuado when the law changes
+-- while it lasts: the law in force when the permanence or continuity ceased,
+-- even if more severe, provided it came into force before the cessation. STF
+-- Súmula 711 (fork F-sweep-a-06, sweep entry M-sweep-a-16): "A LEI PENAL MAIS
+-- GRAVE APLICA-SE AO CRIME CONTINUADO OU AO CRIME PERMANENTE, SE A SUA
+-- VIGÊNCIA É ANTERIOR À CESSAÇÃO DA CONTINUIDADE OU DA PERMANÊNCIA."
+@ref CP arts. 2º e 4º; STF, Súmula 711 (24.9.2003)
+GIVEN f IS A `Fato no tempo`
+GIVETH A DATE
+@nlg:en the day that fixes which law governs the fact: the moment of the action or omission, or, for a permanent or continued crime, the day it ceased
+`o dia que fixa a lei aplicável (art. 4º; Súmula 711 STF)` f MEANS
+    CONSIDER f's `data da cessação da permanência ou da continuidade`
+    WHEN NOTHING THEN `o tempo do crime (art. 4º)` f
+    WHEN JUST `o dia da cessação` THEN `o dia da cessação`
+
+@ref CP arts. 1º a 4º
+GIVEN l IS A `Lei penal no tempo`
+      d IS A DATE
+GIVETH A BOOLEAN
+@nlg:en the law was in force on the day
+`a lei estava em vigor no dia` l d MEANS
+        l's `início da vigência` AT MOST d
+    AND `não cessou antes do dia`
+    WHERE
+        `não cessou antes do dia` MEANS
+            CONSIDER l's `último dia de vigência`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST `o último dia` THEN d AT MOST `o último dia`
+
+-- The law of the time of the crime: of the laws in the list, the last to
+-- have come into force that was in force on the day that fixes the law.
+-- NOTHING: no law in the list was in force that day.
+@ref CP art. 4º; STF, Súmula 711
+GIVEN f IS A `Fato no tempo`
+GIVETH A MAYBE `Lei penal no tempo`
+@nlg:en the law in force at the time of the crime, if any
+`a lei do tempo do crime (art. 4º)` f MEANS
+    `a última` (filter (GIVEN l YIELD `a lei estava em vigor no dia` l (`o dia que fixa a lei aplicável (art. 4º; Súmula 711 STF)` f)) (f's `leis que se sucederam`))
+    WHERE
+        GIVEN ls IS A LIST OF `Lei penal no tempo`
+        GIVETH A MAYBE `Lei penal no tempo`
+        `a última` ls MEANS
+            CONSIDER ls
+            WHEN EMPTY THEN NOTHING
+            WHEN l FOLLOWED BY resto THEN
+                CONSIDER `a última` resto
+                WHEN NOTHING THEN JUST l
+                WHEN JUST m THEN JUST m
+
+§§ `Art. 1º — Anterioridade da lei`
+
+-- "Art. 1º - Não há crime sem lei anterior que o defina. Não há pena sem
+-- prévia cominação legal."
+@ref CP art. 1º, primeira parte
+GIVEN f IS A `Fato no tempo`
+GIVETH A BOOLEAN
+@nlg:en a law in force at the time of the crime defined the fact as a crime
+`há lei anterior que define o fato como crime (art. 1º)` f MEANS
+    CONSIDER `a lei do tempo do crime (art. 4º)` f
+    WHEN NOTHING THEN FALSE
+    WHEN JUST l THEN l's `define o fato como crime`
+
+@ref CP art. 1º, segunda parte
+GIVEN f IS A `Fato no tempo`
+GIVETH A BOOLEAN
+@nlg:en a law in force at the time of the crime prescribed a penalty for it
+`há prévia cominação legal da pena (art. 1º)` f MEANS
+    CONSIDER `a lei do tempo do crime (art. 4º)` f
+    WHEN NOTHING THEN FALSE
+    WHEN JUST l THEN l's `define o fato como crime` AND l's `comina pena ao fato`
+
+§§ `Art. 2º — Lei penal no tempo`
+
+-- The laws that came into force after the day that fixes the law and no later
+-- than the day the question is decided. "Lei posterior" is any of them, even
+-- one revoked before that day (the lei intermediária, fork F-g1a-01), and the
+-- day may fall after the conviction became final: the parágrafo único reaches
+-- facts "ainda que decididos por sentença condenatória transitada em julgado",
+-- and the caput stops the execution itself.
+@ref CP art. 2º
+GIVEN f IS A `Fato no tempo`
+      `a data da apreciação` IS A DATE
+GIVETH A LIST OF `Lei penal no tempo`
+@nlg:en the laws that came into force after the crime and on or before the day the question is decided
+`as leis posteriores ao crime (art. 2º)` f `a data da apreciação` MEANS
+    filter (GIVEN l YIELD     `o dia que fixa a lei aplicável (art. 4º; Súmula 711 STF)` f LESS THAN l's `início da vigência`
+                          AND l's `início da vigência` AT MOST `a data da apreciação`)
+           (f's `leis que se sucederam`)
+
+-- "Art. 2º - Ninguém pode ser punido por fato que lei posterior deixa de
+-- considerar crime, cessando em virtude dela a execução e os efeitos penais
+-- da sentença condenatória."
+-- Art. 3º's exceptional or temporary law is excepted: its end is not a later
+-- law that "deixa de considerar crime" the fact (fork F-g1a-03).
+@ref CP art. 2º, caput; art. 3º
+GIVEN f IS A `Fato no tempo`
+      `a data da apreciação` IS A DATE
+GIVETH A BOOLEAN
+@nlg:en a later law ceased to consider the fact a crime, so no one can be punished for it
+`abolitio criminis (art. 2º, caput)` f `a data da apreciação` MEANS
+        `há lei anterior que define o fato como crime (art. 1º)` f
+    AND NOT `a lei excepcional ou temporária rege o fato praticado durante sua vigência (art. 3º)` f
+    AND any (GIVEN l YIELD NOT l's `define o fato como crime`) (`as leis posteriores ao crime (art. 2º)` f `a data da apreciação`)
+
+-- "Parágrafo único - A lei posterior, que de qualquer modo favorecer o agente,
+-- aplica-se aos fatos anteriores, ainda que decididos por sentença
+-- condenatória transitada em julgado."
+-- Whether a law favours the agent is a comparison of whole laws, the judge's
+-- (`favorece o agente ... segundo o juiz`); where several later laws do, the
+-- judge applies the most favourable, whole, never parts of two (fork
+-- F-g1a-02). This rule lists them; it does not choose.
+@ref CP art. 2º, parágrafo único; art. 3º
+GIVEN f IS A `Fato no tempo`
+      `a data da apreciação` IS A DATE
+GIVETH A LIST OF `Lei penal no tempo`
+@nlg:en the later laws that favour the agent and so reach the earlier fact
+`as leis posteriores mais favoráveis (art. 2º, parágrafo único)` f `a data da apreciação` MEANS
+    IF   `a lei excepcional ou temporária rege o fato praticado durante sua vigência (art. 3º)` f
+    THEN EMPTY
+    ELSE filter (GIVEN l YIELD l's `favorece o agente em relação à lei do tempo do crime, segundo o juiz`)
+                (`as leis posteriores ao crime (art. 2º)` f `a data da apreciação`)
+
+-- The rule a Parte Especial penalty rule needs where a recent law re-wrote
+-- its article and the earlier wording is not in the source: does the current
+-- wording reach this fact? It does for a fact on or after its vigência (art.
+-- 4º; art. 1º), and for an earlier fact when it favours the agent (art. 2º,
+-- parágrafo único). Otherwise the earlier wording governs, and the caller
+-- refuses by name, as cp-g3-furto does.
+@export Diz se a redação atual de um artigo alcança um fato: sim se o fato é posterior à sua vigência, ou, se anterior, quando a nova redação favorece o agente (Código Penal, arts. 2º, parágrafo único, e 4º)
+@ref CP art. 2º, parágrafo único; art. 4º
+GIVEN `a data do fato` IS A DATE @desc o dia da ação ou omissão (art. 4º)
+      `o início da vigência da redação` IS A DATE @desc o primeiro dia de vigência da redação atual do artigo
+      `a redação favorece o agente em relação à anterior` IS A BOOLEAN @desc se o juiz considera que a redação atual favorece o agente, de qualquer modo, em relação à que vigia ao tempo do fato
+GIVETH A BOOLEAN
+@nlg:en the current wording of the article reaches the fact
+`a redação alcança o fato (arts. 2º e 4º)` `a data do fato` `o início da vigência da redação` `a redação favorece o agente em relação à anterior` MEANS
+        `a data do fato` AT LEAST `o início da vigência da redação`
+    OR  `a redação favorece o agente em relação à anterior`
+
+§§ `Art. 3º — Lei excepcional ou temporária`
+
+-- "Art. 3º - A lei excepcional ou temporária, embora decorrido o período de
+-- sua duração ou cessadas as circunstâncias que a determinaram, aplica-se ao
+-- fato praticado durante sua vigência."
+@ref CP art. 3º
+GIVEN f IS A `Fato no tempo`
+GIVETH A BOOLEAN
+@nlg:en the law in force at the time of the crime was exceptional or temporary, so it still governs the fact after it lapsed
+`a lei excepcional ou temporária rege o fato praticado durante sua vigência (art. 3º)` f MEANS
+    CONSIDER `a lei do tempo do crime (art. 4º)` f
+    WHEN NOTHING THEN FALSE
+    WHEN JUST l THEN l's `excepcional ou temporária`
+
+§§ `Arts. 1º a 4º — a lei que rege o fato`
+
+DECLARE `A lei que rege o fato` IS ONE OF
+    `não há crime sem lei anterior que o defina (art. 1º)`
+    @nlg:en there is no crime, for no law in force at the time defined it
+    `não há pena sem prévia cominação legal (art. 1º)`
+    @nlg:en there is no penalty, for no law in force at the time prescribed one
+    `rege a lei excepcional ou temporária do tempo do crime (art. 3º)`
+    @nlg:en the exceptional or temporary law of the time of the crime governs, even after it lapsed
+        HAS `a lei excepcional ou temporária` IS A `Lei penal no tempo`
+        @nlg:en the exceptional or temporary law
+    `ninguém pode ser punido: a lei posterior deixou de considerar o fato crime (art. 2º, caput)`
+    @nlg:en no one can be punished, for a later law ceased to consider the fact a crime; execution and the penal effects of any conviction cease
+    `rege a lei posterior mais favorável (art. 2º, parágrafo único)`
+    @nlg:en a later law that favours the agent governs; where there are several, the judge applies the most favourable
+        HAS `as leis mais favoráveis` IS A LIST OF `Lei penal no tempo`
+        @nlg:en the later laws that favour the agent
+    `rege a lei do tempo do crime (art. 4º)`
+    @nlg:en the law in force at the time of the crime governs
+        HAS `a lei do tempo` IS A `Lei penal no tempo`
+        @nlg:en the law of the time of the crime
+
+-- ARM ORDER. The Código states no order among arts. 1º to 4º; this one is the
+-- encoding's, chosen so each arm runs only where those above it did not
+-- decide: is there a crime at all (art. 1º), does an exceptional or temporary
+-- law hold on to it (art. 3º, which art. 2º cannot reach), has a later law
+-- abolished it (art. 2º, caput), does a later law favour the agent (art. 2º,
+-- parágrafo único), and only then the law of the time (art. 4º).
+@export Diz qual lei rege um fato, dada a sucessão de leis penais: a do tempo do crime, uma posterior mais favorável, a excepcional ou temporária, ou nenhuma (Código Penal, arts. 1º a 4º)
+@ref CP arts. 1º, 2º, 3º e 4º; STF, Súmula 711
+GIVEN f IS A `Fato no tempo` @desc o fato e as leis que se sucederam desde o seu tempo
+      `a data da apreciação` IS A DATE @desc o dia em que a questão é decidida, ainda que depois do trânsito em julgado
+GIVETH A `A lei que rege o fato`
+@nlg:en the law that governs the fact, given the laws that succeeded one another
+`a lei que rege o fato (arts. 1º a 4º)` f `a data da apreciação` MEANS
+    BRANCH
+        IF   NOT `há lei anterior que define o fato como crime (art. 1º)` f
+        THEN `não há crime sem lei anterior que o defina (art. 1º)`
+        IF   NOT `há prévia cominação legal da pena (art. 1º)` f
+        THEN `não há pena sem prévia cominação legal (art. 1º)`
+        IF   `a lei excepcional ou temporária rege o fato praticado durante sua vigência (art. 3º)` f
+        THEN `rege a lei excepcional ou temporária do tempo do crime (art. 3º)` (`a lei do tempo, que existe` f)
+        IF   `abolitio criminis (art. 2º, caput)` f `a data da apreciação`
+        THEN `ninguém pode ser punido: a lei posterior deixou de considerar o fato crime (art. 2º, caput)`
+        IF   NOT null (`as leis posteriores mais favoráveis (art. 2º, parágrafo único)` f `a data da apreciação`)
+        THEN `rege a lei posterior mais favorável (art. 2º, parágrafo único)` (`as leis posteriores mais favoráveis (art. 2º, parágrafo único)` f `a data da apreciação`)
+        OTHERWISE `rege a lei do tempo do crime (art. 4º)` (`a lei do tempo, que existe` f)
+    WHERE
+        -- Reached only below the art. 1º arms, where the law of the time exists.
+        GIVEN g IS A `Fato no tempo`
+        GIVETH A `Lei penal no tempo`
+        `a lei do tempo, que existe` g MEANS
+            CONSIDER `a lei do tempo do crime (art. 4º)` g
+            WHEN JUST l THEN l
+            WHEN NOTHING THEN `a lei do tempo do crime não existe; os arts. 1º a 4º já decidiram`
+
+-- Unreachable by construction (the art. 1º arms answer first), and named so
+-- that, if an edit ever made it reachable, it would say so rather than invent
+-- a law.
+@ref CP art. 1º
+GIVEN a IS A TYPE
+GIVETH AN a
+@nlg:en the law of the time of the crime does not exist, and articles 1 to 4 have already decided
+`a lei do tempo do crime não existe; os arts. 1º a 4º já decidiram` MEANS
+    REFUSE "a lei do tempo do crime não existe; os arts. 1º a 4º já decidiram"
+
+§§ `Arts. 5º e 6º — Territorialidade e lugar do crime`
+
+DECLARE `Embarcação ou aeronave` IS ONE OF
+    embarcação
+    @nlg:en a vessel
+    aeronave
+    @nlg:en an aircraft
+
+DECLARE `Natureza da embarcação ou aeronave` IS ONE OF
+    `de natureza pública ou a serviço do governo`
+    @nlg:en public, or in the service of the government
+    `mercante ou de propriedade privada`
+    @nlg:en merchant, or privately owned
+
+-- Where the vessel or aircraft was, in the words of art. 5º, §§ 1º and 2º, and
+-- art. 7º, II, c. "no espaço aéreo correspondente" in § 1º is the airspace over
+-- the high seas, as "respectivamente" pairs it with the aircraft (fork
+-- F-g1a-04); in § 2º it is the airspace over the national territory.
+DECLARE `Onde se encontrava` IS ONE OF
+    `em porto ou mar territorial do Brasil`
+    @nlg:en in a Brazilian port or in Brazil's territorial sea
+    `em pouso no território nacional`
+    @nlg:en landed in the national territory
+    `em voo no espaço aéreo brasileiro`
+    @nlg:en in flight in the airspace over the national territory
+    `em alto-mar`
+    @nlg:en on the high seas
+    `no espaço aéreo correspondente ao alto-mar`
+    @nlg:en in the airspace over the high seas
+    `em território estrangeiro`
+    @nlg:en in foreign territory, waters or airspace
+
+DECLARE `Veículo` HAS
+    `embarcação ou aeronave` IS AN `Embarcação ou aeronave`
+    @nlg:en whether it is a vessel or an aircraft
+    brasileira IS A BOOLEAN
+    @nlg:en it is Brazilian
+    natureza IS A `Natureza da embarcação ou aeronave`
+    @nlg:en whether it is public or in government service, or merchant or private
+    `onde se encontrava` IS A `Onde se encontrava`
+    @nlg:en where it was at the time
+
+-- A place where part of the crime happened: in the national territory itself
+-- (land, inland waters, territorial sea, and the airspace over them), on board
+-- a vessel or aircraft, or abroad.
+DECLARE Lugar IS ONE OF
+    `no território nacional, fora de embarcação ou aeronave`
+    @nlg:en in the national territory, not on board a vessel or aircraft
+    `a bordo de`
+    @nlg:en on board a vessel or aircraft
+        HAS `o veículo` IS A `Veículo`
+        @nlg:en the vessel or aircraft
+    `no estrangeiro, fora de embarcação ou aeronave`
+    @nlg:en abroad, not on board a vessel or aircraft
+
+-- "Art. 6º - Considera-se praticado o crime no lugar em que ocorreu a ação ou
+-- omissão, no todo ou em parte, bem como onde se produziu ou deveria
+-- produzir-se o resultado."
+DECLARE `Lugar do crime` HAS
+    `onde ocorreu a ação ou omissão, no todo ou em parte` IS A LIST OF Lugar
+    @nlg:en the places where the action or omission happened, in whole or in part
+    `onde se produziu o resultado` IS A LIST OF Lugar
+    @nlg:en the places where the result happened
+    `onde deveria produzir-se o resultado` IS A LIST OF Lugar
+    @nlg:en the places where the result was to happen
+    `a lei brasileira é afastada por convenção, tratado ou regra de direito internacional` IS A BOOLEAN
+    @nlg:en a convention, treaty or rule of international law takes the case out of Brazilian law, as for a diplomatic immunity
+
+-- "Art. 5º - Aplica-se a lei brasileira, sem prejuízo de convenções, tratados
+-- e regras de direito internacional, ao crime cometido no território
+-- nacional."
+-- "§ 1º - Para os efeitos penais, consideram-se como extensão do território
+-- nacional as embarcações e aeronaves brasileiras, de natureza pública ou a
+-- serviço do governo brasileiro onde quer que se encontrem, bem como as
+-- aeronaves e as embarcações brasileiras, mercantes ou de propriedade
+-- privada, que se achem, respectivamente, no espaço aéreo correspondente ou
+-- em alto-mar."
+-- "§ 2º - É também aplicável a lei brasileira aos crimes praticados a bordo de
+-- aeronaves ou embarcações estrangeiras de propriedade privada, achando-se
+-- aquelas em pouso no território nacional ou em vôo no espaço aéreo
+-- correspondente, e estas em porto ou mar territorial do Brasil."
+-- A Brazilian vessel or aircraft of any kind that is itself in the national
+-- territory is in it (caput). A foreign one of public nature is outside §
+-- 2º, which names only private ones: the rules of international law the
+-- caput preserves treat it as its State's.
+@ref CP art. 5º, caput e §§ 1º e 2º
+GIVEN v IS A `Veículo`
+GIVETH A BOOLEAN
+@nlg:en the vessel or aircraft counts as national territory, or Brazilian law reaches what happens on board
+`a bordo, aplica-se a lei brasileira (art. 5º)` v MEANS
+        "caput" ... (    v's brasileira
+                     AND `em território brasileiro`)
+    ..  "§ 1º, pública" ... (    v's brasileira
+                             AND v's natureza EQUALS `de natureza pública ou a serviço do governo`)
+    ..  "§ 1º, privada" ... (    v's brasileira
+                             AND v's natureza EQUALS `mercante ou de propriedade privada`
+                             AND (   (    v's `embarcação ou aeronave` EQUALS aeronave
+                                      AND v's `onde se encontrava` EQUALS `no espaço aéreo correspondente ao alto-mar`)
+                                  OR (    v's `embarcação ou aeronave` EQUALS embarcação
+                                      AND v's `onde se encontrava` EQUALS `em alto-mar`)))
+    OR  "§ 2º" ... (    NOT v's brasileira
+                    AND v's natureza EQUALS `mercante ou de propriedade privada`
+                    AND (   (    v's `embarcação ou aeronave` EQUALS aeronave
+                             AND (   v's `onde se encontrava` EQUALS `em pouso no território nacional`
+                                  OR v's `onde se encontrava` EQUALS `em voo no espaço aéreo brasileiro`))
+                         OR (    v's `embarcação ou aeronave` EQUALS embarcação
+                             AND v's `onde se encontrava` EQUALS `em porto ou mar territorial do Brasil`)))
+    WHERE
+        `em território brasileiro` MEANS
+               v's `onde se encontrava` EQUALS `em porto ou mar territorial do Brasil`
+            OR v's `onde se encontrava` EQUALS `em pouso no território nacional`
+            OR v's `onde se encontrava` EQUALS `em voo no espaço aéreo brasileiro`
+
+@ref CP art. 5º
+GIVEN l IS A Lugar
+GIVETH A BOOLEAN
+@nlg:en the place is national territory, or counts as it, for Brazilian law
+`o lugar está sob a lei brasileira (art. 5º)` l MEANS
+    CONSIDER l
+    WHEN `no território nacional, fora de embarcação ou aeronave` THEN TRUE
+    WHEN `a bordo de` v THEN `a bordo, aplica-se a lei brasileira (art. 5º)` v
+    WHEN `no estrangeiro, fora de embarcação ou aeronave` THEN FALSE
+
+@ref CP art. 6º
+GIVEN lc IS A `Lugar do crime`
+GIVETH A BOOLEAN
+@nlg:en the crime is taken to have been committed in the national territory
+`o crime é praticado no território nacional (arts. 5º e 6º)` lc MEANS
+        "a ação ou omissão, no todo ou em parte" ... any `o lugar está sob a lei brasileira (art. 5º)` (lc's `onde ocorreu a ação ou omissão, no todo ou em parte`)
+    ..  "onde se produziu" ... any `o lugar está sob a lei brasileira (art. 5º)` (lc's `onde se produziu o resultado`)
+    OR  "ou deveria produzir-se o resultado" ... any `o lugar está sob a lei brasileira (art. 5º)` (lc's `onde deveria produzir-se o resultado`)
+
+@ref CP arts. 5º e 6º
+GIVEN lc IS A `Lugar do crime`
+GIVETH A BOOLEAN
+@nlg:en Brazilian law applies because the crime was committed in the national territory
+`aplica-se a lei brasileira pela territorialidade (art. 5º)` lc MEANS
+        `o crime é praticado no território nacional (arts. 5º e 6º)` lc
+    AND NOT "sem prejuízo de convenções, tratados e regras de direito internacional" ... lc's `a lei brasileira é afastada por convenção, tratado ou regra de direito internacional`
+
+§§ `Art. 7º — Extraterritorialidade`
+
+-- The kinds of crime art. 7º names. Which of them a given crime is, is the
+-- Parte Especial's characterisation, supplied with the case.
+DECLARE `Classe do crime para a extraterritorialidade` IS ONE OF
+    `contra a vida ou a liberdade do Presidente da República`
+    @nlg:en against the life or liberty of the President of the Republic
+    `contra o patrimônio ou a fé pública de ente ou entidade pública`
+    @nlg:en against the property or public faith of the Union, the Federal District, a State, a Territory, a Municipality, a public company, a mixed-capital company, an autarchy or a foundation instituted by the public power
+    `contra a administração pública, por quem está a seu serviço`
+    @nlg:en against the public administration, by someone in its service
+    `genocídio`
+    @nlg:en genocide
+    `que, por tratado ou convenção, o Brasil se obrigou a reprimir`
+    @nlg:en one that Brazil undertook by treaty or convention to repress
+
+-- The conditions of § 2º are recorded as the facts they turn on, in the
+-- positive: d) and e) are "não ter sido o agente absolvido ..." and the rule
+-- does the negating (phrasebook entry 1.8).
+DECLARE `Crime cometido no estrangeiro` HAS
+    `classes do crime` IS A LIST OF `Classe do crime para a extraterritorialidade`
+    @nlg:en the kinds of crime, among those article 7 names, the crime belongs to
+    `o agente é brasileiro` IS A BOOLEAN
+    @nlg:en the agent is Brazilian
+    `o agente é domiciliado no Brasil` IS A BOOLEAN
+    @nlg:en the agent is domiciled in Brazil
+    `a vítima é brasileira` IS A BOOLEAN
+    @nlg:en the victim is Brazilian
+    `praticado a bordo de` IS A MAYBE `Veículo`
+    @nlg:en the vessel or aircraft the crime was committed on board, if any
+    `julgado no estrangeiro, onde foi praticado` IS A BOOLEAN
+    @nlg:en the crime was tried in the foreign country where it was committed
+    `o agente entrou no território nacional` IS A BOOLEAN
+    @nlg:en the agent entered the national territory
+    `o fato é punível também no país em que foi praticado` IS A BOOLEAN
+    @nlg:en the act is also punishable in the country where it was committed
+    `o crime está entre aqueles pelos quais a lei brasileira autoriza a extradição` IS A BOOLEAN
+    @nlg:en the crime is one for which Brazilian law allows extradition
+    `o agente foi absolvido no estrangeiro` IS A BOOLEAN
+    @nlg:en the agent was acquitted abroad
+    `o agente cumpriu a pena no estrangeiro` IS A BOOLEAN
+    @nlg:en the agent served the sentence abroad
+    `o agente foi perdoado no estrangeiro` IS A BOOLEAN
+    @nlg:en the agent was pardoned abroad
+    `a punibilidade está extinta por outro motivo, segundo a lei mais favorável` IS A BOOLEAN
+    @nlg:en punishability is extinguished for another reason, under the more favourable law
+    `a extradição foi pedida` IS A BOOLEAN
+    @nlg:en extradition was requested
+    `a extradição foi negada` IS A BOOLEAN
+    @nlg:en extradition was refused
+    `houve requisição do Ministro da Justiça` IS A BOOLEAN
+    @nlg:en the Minister of Justice requisitioned the prosecution
+
+-- "Art. 7º - Ficam sujeitos à lei brasileira, embora cometidos no estrangeiro:
+-- I - os crimes: a) contra a vida ou a liberdade do Presidente da República;
+-- b) contra o patrimônio ou a fé pública da União, do Distrito Federal, de
+-- Estado, de Território, de Município, de empresa pública, sociedade de
+-- economia mista, autarquia ou fundação instituída pelo Poder Público; c)
+-- contra a administração pública, por quem está a seu serviço; d) de
+-- genocídio, quando o agente for brasileiro ou domiciliado no Brasil;"
+@ref CP art. 7º, I, a a d
+GIVEN c IS A `Crime cometido no estrangeiro`
+GIVETH A BOOLEAN
+@nlg:en the crime is one of those in item I of article 7
+`hipótese do art. 7º, I` c MEANS
+        "a)" ... elem `contra a vida ou a liberdade do Presidente da República` (c's `classes do crime`)
+    ..  "b)" ... elem `contra o patrimônio ou a fé pública de ente ou entidade pública` (c's `classes do crime`)
+    ..  "c)" ... elem `contra a administração pública, por quem está a seu serviço` (c's `classes do crime`)
+    OR  "d)" ... (    elem `genocídio` (c's `classes do crime`)
+                  AND "quando o agente for brasileiro ou domiciliado no Brasil"
+                  ... (c's `o agente é brasileiro` OR c's `o agente é domiciliado no Brasil`))
+
+-- "II - os crimes: a) que, por tratado ou convenção, o Brasil se obrigou a
+-- reprimir; b) praticados por brasileiro; c) praticados em aeronaves ou
+-- embarcações brasileiras, mercantes ou de propriedade privada, quando em
+-- território estrangeiro e aí não sejam julgados."
+@ref CP art. 7º, II, a a c
+GIVEN c IS A `Crime cometido no estrangeiro`
+GIVETH A BOOLEAN
+@nlg:en the crime is one of those in item II of article 7
+`hipótese do art. 7º, II` c MEANS
+        "a)" ... elem `que, por tratado ou convenção, o Brasil se obrigou a reprimir` (c's `classes do crime`)
+    ..  "b)" ... c's `o agente é brasileiro`
+    OR  "c)" ... (    `em embarcação ou aeronave brasileira, mercante ou privada, em território estrangeiro`
+                  AND NOT c's `julgado no estrangeiro, onde foi praticado`)
+    WHERE
+        `em embarcação ou aeronave brasileira, mercante ou privada, em território estrangeiro` MEANS
+            CONSIDER c's `praticado a bordo de`
+            WHEN NOTHING THEN FALSE
+            WHEN JUST v THEN     v's brasileira
+                             AND v's natureza EQUALS `mercante ou de propriedade privada`
+                             AND v's `onde se encontrava` EQUALS `em território estrangeiro`
+
+-- "§ 2º - Nos casos do inciso II, a aplicação da lei brasileira depende do
+-- concurso das seguintes condições: a) entrar o agente no território
+-- nacional; b) ser o fato punível também no país em que foi praticado; c)
+-- estar o crime incluído entre aqueles pelos quais a lei brasileira autoriza a
+-- extradição; d) não ter sido o agente absolvido no estrangeiro ou não ter aí
+-- cumprido a pena; e) não ter sido o agente perdoado no estrangeiro ou, por
+-- outro motivo, não estar extinta a punibilidade, segundo a lei mais
+-- favorável."
+@ref CP art. 7º, § 2º, a a e
+GIVEN c IS A `Crime cometido no estrangeiro`
+GIVETH A BOOLEAN
+@nlg:en all the conditions of paragraph 2 of article 7 are met
+`as condições do art. 7º, § 2º, estão reunidas` c MEANS
+        "a)" ... c's `o agente entrou no território nacional`
+    ... "b)" ... c's `o fato é punível também no país em que foi praticado`
+    ... "c)" ... c's `o crime está entre aqueles pelos quais a lei brasileira autoriza a extradição`
+    ... "d)" ... (NOT c's `o agente foi absolvido no estrangeiro`) AND (NOT c's `o agente cumpriu a pena no estrangeiro`)
+    AND "e)" ... (NOT c's `o agente foi perdoado no estrangeiro`) AND (NOT c's `a punibilidade está extinta por outro motivo, segundo a lei mais favorável`)
+
+-- "§ 3º - A lei brasileira aplica-se também ao crime cometido por estrangeiro
+-- contra brasileiro fora do Brasil, se, reunidas as condições previstas no
+-- parágrafo anterior: a) não foi pedida ou foi negada a extradição; b) houve
+-- requisição do Ministro da Justiça."
+@ref CP art. 7º, § 3º
+GIVEN c IS A `Crime cometido no estrangeiro`
+GIVETH A BOOLEAN
+@nlg:en the crime falls under paragraph 3 of article 7: a foreigner's crime against a Brazilian abroad, with its conditions met
+`hipótese do art. 7º, § 3º` c MEANS
+        "por estrangeiro" ... (NOT c's `o agente é brasileiro`)
+    ... "contra brasileiro" ... c's `a vítima é brasileira`
+    ... `as condições do art. 7º, § 2º, estão reunidas` c
+    ... "a)" ... (    NOT c's `a extradição foi pedida`
+                  OR  c's `a extradição foi negada`)
+    AND "b)" ... c's `houve requisição do Ministro da Justiça`
+
+DECLARE `Extraterritorialidade` IS ONE OF
+    `incondicionada (art. 7º, I)`
+    @nlg:en Brazilian law applies without conditions, even if the agent was acquitted or convicted abroad
+    `condicionada, com as condições reunidas (art. 7º, II e § 2º)`
+    @nlg:en Brazilian law applies, the conditions of paragraph 2 being met
+    `condicionada, faltando condição (art. 7º, II e § 2º)`
+    @nlg:en the crime is of a kind Brazilian law may reach, but a condition of paragraph 2 is missing, so it does not
+    `crime de estrangeiro contra brasileiro (art. 7º, § 3º)`
+    @nlg:en Brazilian law applies to a foreigner's crime against a Brazilian abroad, its conditions being met
+    `a lei brasileira não alcança o crime (art. 7º)`
+    @nlg:en Brazilian law does not reach the crime committed abroad
+
+-- "§ 1º - Nos casos do inciso I, o agente é punido segundo a lei brasileira,
+-- ainda que absolvido ou condenado no estrangeiro." The inciso I arm reads no
+-- foreign acquittal or sentence; art. 8º then deals with a sentence served.
+-- ARM ORDER: inciso I first, because § 1º makes it answer regardless of
+-- anything done abroad; then inciso II; then § 3º, which is a foreigner's
+-- crime, so it never meets inciso II, b.
+@export Diz se e como a lei brasileira alcança um crime cometido no estrangeiro (Código Penal, art. 7º): incondicionada, condicionada às condições do § 2º, pelo § 3º, ou não alcança
+@ref CP art. 7º, I, II, §§ 1º a 3º
+GIVEN c IS A `Crime cometido no estrangeiro` @desc o crime cometido fora do Brasil e os fatos de que dependem as hipóteses e as condições do art. 7º
+GIVETH AN `Extraterritorialidade`
+@nlg:en how Brazilian law reaches the crime committed abroad
+`a extraterritorialidade (art. 7º)` c MEANS
+    BRANCH
+        IF   `hipótese do art. 7º, I` c
+        THEN `incondicionada (art. 7º, I)`
+        IF   `hipótese do art. 7º, II` c AND `as condições do art. 7º, § 2º, estão reunidas` c
+        THEN `condicionada, com as condições reunidas (art. 7º, II e § 2º)`
+        IF   `hipótese do art. 7º, II` c
+        THEN `condicionada, faltando condição (art. 7º, II e § 2º)`
+        IF   `hipótese do art. 7º, § 3º` c
+        THEN `crime de estrangeiro contra brasileiro (art. 7º, § 3º)`
+        OTHERWISE `a lei brasileira não alcança o crime (art. 7º)`
+
+@ref CP art. 7º
+GIVEN c IS A `Crime cometido no estrangeiro`
+GIVETH A BOOLEAN
+@nlg:en Brazilian law reaches the crime committed abroad
+`a lei brasileira alcança o crime cometido no estrangeiro (art. 7º)` c MEANS
+    CONSIDER `a extraterritorialidade (art. 7º)` c
+    WHEN `incondicionada (art. 7º, I)` THEN TRUE
+    WHEN `condicionada, com as condições reunidas (art. 7º, II e § 2º)` THEN TRUE
+    WHEN `crime de estrangeiro contra brasileiro (art. 7º, § 3º)` THEN TRUE
+    OTHERWISE FALSE
+
+§§ `Art. 8º — Pena cumprida no estrangeiro`
+
+-- "Art. 8º - A pena cumprida no estrangeiro atenua a pena imposta no Brasil
+-- pelo mesmo crime, quando diversas, ou nela é computada, quando idênticas."
+-- "Idênticas" is read as of the same kind among art. 32's three (fork
+-- F-g1a-05): a custodial sentence served abroad is deducted from a custodial
+-- one imposed here, whatever the regime or the species of art. 33.
+DECLARE `Pena cumprida no estrangeiro` HAS
+    `pelo mesmo crime` IS A BOOLEAN
+    @nlg:en the sentence served abroad was for the same crime
+    `espécie da pena cumprida no estrangeiro` IS AN `Espécie de pena`
+    @nlg:en the kind of penalty served abroad
+    `espécie da pena imposta no Brasil` IS AN `Espécie de pena`
+    @nlg:en the kind of penalty imposed in Brazil
+    `tempo cumprido no estrangeiro` IS A Duração
+    @nlg:en the time served abroad
+    `tempo imposto no Brasil` IS A Duração
+    @nlg:en the time imposed in Brazil
+
+DECLARE `Efeito da pena cumprida no estrangeiro` IS ONE OF
+    `é computada na pena imposta no Brasil`
+    @nlg:en it is deducted from the penalty imposed in Brazil
+    `atenua a pena imposta no Brasil`
+    @nlg:en it mitigates the penalty imposed in Brazil, by an amount the judge fixes
+    `nenhum, por não ser o mesmo crime`
+    @nlg:en none, since it was not for the same crime
+
+@export Diz o efeito da pena cumprida no estrangeiro sobre a pena imposta no Brasil pelo mesmo crime (Código Penal, art. 8º): computada, se idênticas; atenuante, se diversas
+@ref CP art. 8º
+GIVEN p IS A `Pena cumprida no estrangeiro` @desc a pena cumprida no estrangeiro e a imposta no Brasil
+GIVETH AN `Efeito da pena cumprida no estrangeiro`
+@nlg:en the effect of the sentence served abroad on the penalty imposed in Brazil
+`o efeito da pena cumprida no estrangeiro (art. 8º)` p MEANS
+    BRANCH
+        IF   NOT p's `pelo mesmo crime`
+        THEN `nenhum, por não ser o mesmo crime`
+        IF   p's `espécie da pena cumprida no estrangeiro` EQUALS p's `espécie da pena imposta no Brasil`
+        THEN `é computada na pena imposta no Brasil`
+        OTHERWISE `atenua a pena imposta no Brasil`
+
+-- The deduction, where the penalties are identical and measured in time (a
+-- custodial or a restrictive one). How far a different penalty mitigates is
+-- the judge's, and a fine is deducted in money, not in time: for those the
+-- rule declines by name.
+@ref CP art. 8º
+GIVEN p IS A `Pena cumprida no estrangeiro`
+GIVETH A Duração
+@nlg:en the time still to be served in Brazil once the time served abroad is deducted
+`o tempo que resta cumprir no Brasil (art. 8º)` p MEANS
+    BRANCH
+        IF   `o efeito da pena cumprida no estrangeiro (art. 8º)` p EQUALS `é computada na pena imposta no Brasil`
+             AND NOT (p's `espécie da pena imposta no Brasil` EQUALS `pena de multa`)
+        THEN Duração WITH `em meses` IS max 0 (p's `tempo imposto no Brasil`'s `em meses` MINUS p's `tempo cumprido no estrangeiro`'s `em meses`)
+        IF   `o efeito da pena cumprida no estrangeiro (art. 8º)` p EQUALS `atenua a pena imposta no Brasil`
+        THEN `a atenuação pela pena cumprida no estrangeiro é fixada pelo juiz (art. 8º)`
+        OTHERWISE `o art. 8º não reduz em tempo esta pena`
+
+@ref CP art. 8º
+GIVEN a IS A TYPE
+GIVETH AN a
+@nlg:en how far a different sentence served abroad mitigates is for the judge
+`a atenuação pela pena cumprida no estrangeiro é fixada pelo juiz (art. 8º)` MEANS
+    REFUSE "a atenuação pela pena cumprida no estrangeiro, quando diversas as penas, é fixada pelo juiz (art. 8º)"
+
+@ref CP art. 8º
+GIVEN a IS A TYPE
+GIVETH AN a
+@nlg:en article 8 does not reduce this penalty in time: it is not the same crime, or it is a fine
+`o art. 8º não reduz em tempo esta pena` MEANS
+    REFUSE "o art. 8º não reduz em tempo esta pena: não é o mesmo crime, ou é pena de multa, que se computa em dinheiro"
+
+§§ `Art. 9º — Eficácia de sentença estrangeira`
+
+DECLARE `Efeito da sentença estrangeira` IS ONE OF
+    `obrigar o condenado à reparação do dano, a restituições e a outros efeitos civis`
+    @nlg:en to oblige the convicted person to repair the damage, make restitution and bear other civil effects
+    `sujeitá-lo a medida de segurança`
+    @nlg:en to subject the person to a security measure
+
+DECLARE `Pedido de homologação de sentença estrangeira` HAS
+    `efeito pretendido` IS AN `Efeito da sentença estrangeira`
+    @nlg:en the effect for which recognition is sought
+    `a aplicação da lei brasileira produz na espécie as mesmas conseqüências` IS A BOOLEAN
+    @nlg:en Brazilian law, applied to the case, would produce the same consequences
+    `há pedido da parte interessada` IS A BOOLEAN
+    @nlg:en the interested party requested recognition
+    `há tratado de extradição com o país de cuja autoridade judiciária emanou a sentença` IS A BOOLEAN
+    @nlg:en there is an extradition treaty with the country whose court gave the sentence
+    `houve requisição do Ministro da Justiça` IS A BOOLEAN
+    @nlg:en the Minister of Justice requisitioned recognition
+
+-- "Art. 9º - A sentença estrangeira, quando a aplicação da lei brasileira
+-- produz na espécie as mesmas conseqüências, pode ser homologada no Brasil
+-- para: I - obrigar o condenado à reparação do dano, a restituições e a outros
+-- efeitos civis; II - sujeitá-lo a medida de segurança."
+-- "Parágrafo único - A homologação depende: a) para os efeitos previstos no
+-- inciso I, de pedido da parte interessada; b) para os outros efeitos, da
+-- existência de tratado de extradição com o país de cuja autoridade judiciária
+-- emanou a sentença, ou, na falta de tratado, de requisição do Ministro da
+-- Justiça."
+-- "Pode ser homologada": whether it is, is the court's decision; this says
+-- when it may be. Which court homologates (the STJ, since Emenda
+-- Constitucional nº 45/2004) is procedure, outside this Code.
+@export Diz se a sentença penal estrangeira pode ser homologada no Brasil para o efeito pedido (Código Penal, art. 9º)
+@ref CP art. 9º, I e II, parágrafo único, a e b
+GIVEN h IS A `Pedido de homologação de sentença estrangeira` @desc o efeito pretendido e os fatos de que depende a homologação
+GIVETH A BOOLEAN
+@nlg:en the foreign sentence may be recognised in Brazil for the effect sought
+`a sentença estrangeira pode ser homologada (art. 9º)` h MEANS
+        "quando a aplicação da lei brasileira produz na espécie as mesmas conseqüências"
+        ... h's `a aplicação da lei brasileira produz na espécie as mesmas conseqüências`
+    AND CONSIDER h's `efeito pretendido`
+        WHEN `obrigar o condenado à reparação do dano, a restituições e a outros efeitos civis`
+        THEN "parágrafo único, a)" ... h's `há pedido da parte interessada`
+        WHEN `sujeitá-lo a medida de segurança`
+        THEN "parágrafo único, b)" ... (    h's `há tratado de extradição com o país de cuja autoridade judiciária emanou a sentença`
+                                         OR h's `houve requisição do Ministro da Justiça`)
+
+§§ `Art. 12 — Legislação especial`
+
+-- "Art. 12 - As regras gerais deste Código aplicam-se aos fatos incriminados
+-- por lei especial, se esta não dispuser de modo diverso."
+-- Whether a special law provides otherwise on a point is read from that law,
+-- which this encoding does not carry: an input.
+@ref CP art. 12
+GIVEN `a lei especial dispõe de modo diverso` IS A BOOLEAN
+GIVETH A BOOLEAN
+@nlg:en the general rules of the Code apply to a fact made a crime by a special law
+`as regras gerais do Código aplicam-se ao fato previsto em lei especial (art. 12)` `a lei especial dispõe de modo diverso` MEANS
+    NOT `a lei especial dispõe de modo diverso`
+
+-- Arts. 5º to 7º together: the law in space.
+@export Diz se a lei brasileira se aplica ao crime, pela territorialidade (arts. 5º e 6º) ou, se cometido no estrangeiro, pela extraterritorialidade (art. 7º), do Código Penal
+@ref CP arts. 5º, 6º e 7º
+GIVEN lc IS A `Lugar do crime` @desc os lugares da ação ou omissão e do resultado
+      c  IS A `Crime cometido no estrangeiro` @desc os fatos que o art. 7º lê, usados se o crime não foi praticado no território nacional
+GIVETH A BOOLEAN
+@nlg:en Brazilian law applies to the crime, where it was committed or by extraterritoriality
+`a lei brasileira se aplica ao crime (arts. 5º a 7º)` lc c MEANS
+    IF   `o crime é praticado no território nacional (arts. 5º e 6º)` lc
+    THEN `aplica-se a lei brasileira pela territorialidade (art. 5º)` lc
+    ELSE `a lei brasileira alcança o crime cometido no estrangeiro (art. 7º)` c
