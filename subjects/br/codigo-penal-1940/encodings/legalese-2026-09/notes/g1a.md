@@ -4,6 +4,11 @@
 
 ## PROGRESS
 
+**Checkpoint (SAVESCUM, 2026-09-29).** Done: every unit of arts. 1–31. Half-done: nothing. Next: nothing in my range. Integration items for the conductor are in § 7. No `cp-g1a-*.l4` has changed since the last run, and the roadmap validates (`register-validate: ok`). Last check.sh TOTAL, verbatim:
+`TOTAL (12 modules)                                 0       276       0       0     276`
+
+**On `notes/conductor.md`** (read at the start; the conductor says it was never specification). Every reading in these modules comes from the source text, from BRIEF/PLAN, or from g0's forks in `cp-pena.l4` (the ages: F-g0-01, F-g0-06). None of it comes from that log, which says nothing specific about arts. 1–31. Its entry on "maior de N anos" concerns other groups' thresholds; art. 27 uses "menor de 18" through cp-pena, as F-g0-06 reads it.
+
 - [x] Read BRIEF.md, PLAN.md, the writing-l4-rules skill (SKILL.md, gotchas, drafting-patterns, all eleven source-pattern pages), encoding-a-subject.
 - [x] Read cp-dominio.l4, cp-pena.l4, cp-g3-furto.l4 and its tests.
 - [x] Read source lines 19–156 (arts. 1–31), sweep-a entries and proposed forks naming arts. 1–31, and the sweep-b/c entries that mention them.
@@ -177,3 +182,4 @@ Every tests module's `#ASSERT` count equals its satisfied count; nothing refused
 - **An authority the sweep did not list:** STJ Súmula 501 (combination of laws), which settles F-g1a-02. sweep-a may want it as an interpretive entry.
 - **Rules that take a date the shared records lack.** Art. 23's rules take `a data da decisão` (ADPF 779); art. 2º's take `a data da apreciação`. Neither is a fact of the case, so neither is a field.
 - **cp-g5-comum.l4.** I printed its first 40 lines by accident (§ 4). Nothing from it is used.
+- **Agreed with g1b (2026-09-30).** g1b cross-refers to F-sweep-a-06 at art. 71 and does not create it. g1b's art. 73 reads art. 20, § 3º as g1a's `a vítima cujas condições se consideram (art. 20, § 3º)` does: the intended victim's qualities are considered. g1b cites the article without importing this module, so the two can be wired together at integration.

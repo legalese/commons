@@ -1,0 +1,506 @@
+@lang pt
+IMPORT prelude
+IMPORT daydate
+IMPORT `cp-dominio`
+IMPORT `cp-pena`
+IMPORT `cp-g1b-condenacao`
+
+-- Código Penal, Parte Geral, Título V, Capítulo III — arts. 69 to 76:
+-- concurso material, concurso formal, crime continuado, the fines in
+-- concurso, erro na execução, resultado diverso, the limit of the penalties
+-- and the order of execution. Written by g1b.
+--
+-- The inputs are the penalties the judge fixed for each crime
+-- (`Pena aplicada a um crime`); arts. 70 and 71 turn them into the RANGE the
+-- judge fixes the joint penalty in, never a chosen number.
+--
+-- A special rule outside these articles restricts them: Lei nº 15.402/2026
+-- added art. 359-M-A (in force 8.5.2026), under which the crimes of Título
+-- XII, Capítulo II committed in one context are punished as concurso formal
+-- próprio even with autonomous designs, excluding art. 69 and art. 70's
+-- second part (M-sweep-a-08; fork F-sweep-c-05, M-sweep-c-09). The Título XII
+-- encoder (g5) encodes it; `a regra do concurso (arts. 69 a 71)` below is the
+-- general rule that one overrides.
+--
+-- WHICH FACTS ART. 75 ANSWERS FOR. Lei nº 13.964/2019 raised the limit from
+-- thirty to forty years (in force 23.1.2020: "após decorridos 30 (trinta)
+-- dias de sua publicação oficial", DOU 24.12.2019). A harsher law does not
+-- reach an earlier crime, and the thirty-year wording is not in the source,
+-- so the rules of art. 75 refuse where any of the crimes is earlier.
+
+§ `Título V — Capítulo III — Do concurso de crimes e dos limites (arts. 69 a 76)`
+
+§§ `A gravidade das penas`
+
+-- "executa-se primeiro aquela" (art. 69: the reclusão before the detenção)
+-- and "executar-se-á primeiramente a pena mais grave" (art. 76). The graver
+-- penalty is the reclusão; within one species, the longer (fork F-g1b-33).
+@ref CP arts. 69 e 76
+GIVEN e IS AN `Espécie aplicada`
+GIVETH A NUMBER
+@nlg:en how grave the species is, reclusão being the graver
+`a gravidade da espécie` e MEANS
+    CONSIDER e
+    WHEN `pena de reclusão` THEN 2
+    WHEN `pena de detenção` THEN 1
+
+@ref CP arts. 69, 70 e 76
+GIVEN a IS A `Pena aplicada a um crime`
+      b IS A `Pena aplicada a um crime`
+GIVETH A BOOLEAN
+@nlg:en the first penalty is at least as grave as the second
+`a pena é ao menos tão grave quanto` a b MEANS
+        `a gravidade da espécie` (a's `espécie`) GREATER THAN `a gravidade da espécie` (b's `espécie`)
+    OR  (    `a gravidade da espécie` (a's `espécie`) EQUALS `a gravidade da espécie` (b's `espécie`)
+         AND a's quantidade's `em meses` AT LEAST b's quantidade's `em meses`)
+
+@ref CP arts. 69 e 76
+GIVEN ps IS A LIST OF `Pena aplicada a um crime`
+GIVETH A Duração
+@nlg:en the sum of the penalties
+`a soma das penas (art. 69)` ps MEANS
+    meses (sum (map (GIVEN p YIELD p's quantidade's `em meses`) ps))
+
+§§ `Art. 69 — Concurso material`
+
+-- "Art. 69 - Quando o agente, mediante mais de uma ação ou omissão, pratica
+-- dois ou mais crimes, idênticos ou não, aplicam-se cumulativamente as penas
+-- privativas de liberdade em que haja incorrido. No caso de aplicação
+-- cumulativa de penas de reclusão e de detenção, executa-se primeiro
+-- aquela."
+-- See the header on art. 359-M-A (M-sweep-a-08), which bars this rule for
+-- the crimes of Título XII, Capítulo II in one context.
+
+@export Diz a ordem em que as penas se executam: a mais grave primeiro, a reclusão antes da detenção (Código Penal, arts. 69 e 76)
+@ref CP art. 69; art. 76
+GIVEN ps IS A LIST OF `Pena aplicada a um crime` @desc as penas privativas de liberdade aplicadas a cada crime, com a espécie e a quantidade
+GIVETH A LIST OF `Pena aplicada a um crime`
+@nlg:en the order in which the penalties are executed
+`a ordem de execução (arts. 69 e 76)` ps MEANS
+    sortBy `a pena é ao menos tão grave quanto` ps
+
+-- "§ 1º - Na hipótese deste artigo, quando ao agente tiver sido aplicada pena
+-- privativa de liberdade, não suspensa, por um dos crimes, para os demais
+-- será incabível a substituição de que trata o art. 44 deste Código."
+@ref CP art. 69, § 1º
+GIVEN `a um dos crimes foi aplicada pena privativa de liberdade não suspensa` IS A BOOLEAN
+GIVETH A BOOLEAN
+@nlg:en substitution under art. 44 is still available for the other crimes
+`a substituição do art. 44 ainda cabe aos demais crimes (art. 69, § 1º)` `a um dos crimes foi aplicada pena privativa de liberdade não suspensa` MEANS
+    NOT `a um dos crimes foi aplicada pena privativa de liberdade não suspensa`
+
+-- "§ 2º - Quando forem aplicadas penas restritivas de direitos, o condenado
+-- cumprirá simultaneamente as que forem compatíveis entre si e
+-- sucessivamente as demais." Whether two are compatible is the judge's.
+DECLARE `Modo de cumprimento das restritivas (art. 69, § 2º)` IS ONE OF
+    simultaneamente
+    @nlg:en at the same time
+    sucessivamente
+    @nlg:en one after the other
+
+@ref CP art. 69, § 2º
+GIVEN `são compatíveis entre si` IS A BOOLEAN
+GIVETH A `Modo de cumprimento das restritivas (art. 69, § 2º)`
+@nlg:en how two penalties restricting rights are served
+`o modo de cumprimento das restritivas (art. 69, § 2º)` `são compatíveis entre si` MEANS
+    IF `são compatíveis entre si` THEN simultaneamente ELSE sucessivamente
+
+§§ `Os fatos do concurso`
+
+-- How the crimes were committed, as the court found. The last three are the
+-- court's findings on the words of arts. 70 and 71.
+DECLARE `Concurso de crimes` HAS
+    penas IS A LIST OF `Pena aplicada a um crime`
+    @nlg:en the penalty the judge fixed for each crime
+    `mediante uma só ação ou omissão` IS A BOOLEAN
+    @nlg:en the crimes were committed by a single act or omission
+    `a ação ou omissão é dolosa e os crimes resultam de desígnios autônomos` IS A BOOLEAN
+    @nlg:en the act was intentional and the crimes result from separate designs
+    `crimes da mesma espécie` IS A BOOLEAN
+    @nlg:en the crimes are of the same kind
+    `os subsequentes são havidos como continuação do primeiro` IS A BOOLEAN
+    @nlg:en by time, place, manner of execution and the like, the later crimes are taken as a continuation of the first
+    `crimes dolosos, contra vítimas diferentes, com violência ou grave ameaça à pessoa` IS A BOOLEAN
+    @nlg:en the crimes are intentional, against different victims, with violence or a serious threat to a person
+
+DECLARE `Regra do concurso` IS ONE OF
+    `concurso material (art. 69)`
+    @nlg:en cumulative concurrence (several acts)
+    `concurso formal próprio (art. 70, primeira parte)`
+    @nlg:en ideal concurrence (one act)
+    `concurso formal impróprio (art. 70, segunda parte)`
+    @nlg:en ideal concurrence with separate designs, penalties cumulated
+    `crime continuado (art. 71, caput)`
+    @nlg:en continued crime
+    `crime continuado específico (art. 71, parágrafo único)`
+    @nlg:en continued crime against different victims with violence
+
+@export Diz qual regra de concurso se aplica aos crimes (Código Penal, arts. 69 a 71); nada, se não houver dois ou mais crimes
+@ref CP arts. 69, 70 e 71
+GIVEN c IS A `Concurso de crimes` @desc os crimes, as penas fixadas para cada um, e os achados do juiz sobre como foram cometidos
+GIVETH A MAYBE `Regra do concurso`
+@nlg:en which concurrence rule applies
+`a regra do concurso (arts. 69 a 71)` c MEANS
+    BRANCH
+        IF   count (c's penas) LESS THAN 2
+        THEN NOTHING
+        IF   c's `mediante uma só ação ou omissão` AND c's `a ação ou omissão é dolosa e os crimes resultam de desígnios autônomos`
+        THEN JUST `concurso formal impróprio (art. 70, segunda parte)`
+        IF   c's `mediante uma só ação ou omissão`
+        THEN JUST `concurso formal próprio (art. 70, primeira parte)`
+        IF   c's `crimes da mesma espécie` AND c's `os subsequentes são havidos como continuação do primeiro` AND c's `crimes dolosos, contra vítimas diferentes, com violência ou grave ameaça à pessoa`
+        THEN JUST `crime continuado específico (art. 71, parágrafo único)`
+        IF   c's `crimes da mesma espécie` AND c's `os subsequentes são havidos como continuação do primeiro`
+        THEN JUST `crime continuado (art. 71, caput)`
+        OTHERWISE JUST `concurso material (art. 69)`
+
+§§ `Art. 70 — Concurso formal`
+
+-- "Art. 70 - Quando o agente, mediante uma só ação ou omissão, pratica dois
+-- ou mais crimes, idênticos ou não, aplica-se-lhe a mais grave das penas
+-- cabíveis ou, se iguais, somente uma delas, mas aumentada, em qualquer caso,
+-- de um sexto até metade. As penas aplicam-se, entretanto, cumulativamente,
+-- se a ação ou omissão é dolosa e os crimes concorrentes resultam de
+-- desígnios autônomos, consoante o disposto no artigo anterior."
+-- "Parágrafo único - Não poderá a pena exceder a que seria cabível pela
+-- regra do art. 69 deste Código."
+-- "a mais grave das penas cabíveis": the penalty the judge fixed for each
+-- crime, the graver by species and then by length (fork F-g1b-27).
+
+@ref CP art. 70; art. 71
+GIVEN p  IS A `Pena aplicada a um crime`
+      ps IS A LIST OF `Pena aplicada a um crime`
+GIVETH A `Pena aplicada a um crime`
+@nlg:en the gravest of the penalties
+`a mais grave das penas (art. 70)` p ps MEANS
+    CONSIDER ps
+    WHEN EMPTY THEN p
+    WHEN q FOLLOWED BY resto THEN
+        `a mais grave das penas (art. 70)` (IF `a pena é ao menos tão grave quanto` p q THEN p ELSE q) resto
+
+@ref CP art. 70
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase of one sixth to one half for ideal concurrence
+`aumento do art. 70` MEANS `causa de aumento` (entre `um sexto` metade)
+
+-- A range capped, at both ends, at the sum of art. 69.
+@ref CP art. 70, parágrafo único
+GIVEN i IS AN `Intervalo de duração`
+      s IS A Duração
+GIVETH AN `Intervalo de duração`
+@nlg:en the range with neither end above the cumulative sum
+`o intervalo limitado à soma do art. 69` i s MEANS
+    `Intervalo de duração` WITH
+        `mínimo` IS meses (min (i's `mínimo`'s `em meses`) (s's `em meses`))
+        `máximo` IS meses (min (i's `máximo`'s `em meses`) (s's `em meses`))
+
+@ref CP art. 70 e parágrafo único
+GIVEN ps IS A LIST OF `Pena aplicada a um crime`
+GIVETH AN `Intervalo de duração`
+@nlg:en the range of the penalty for ideal concurrence
+`o intervalo do concurso formal próprio (art. 70)` ps MEANS
+    CONSIDER ps
+    WHEN EMPTY THEN `Intervalo de duração` WITH `mínimo` IS meses 0, `máximo` IS meses 0
+    WHEN p FOLLOWED BY resto THEN
+        `o intervalo limitado à soma do art. 69`
+            (`o intervalo com a causa` ((`a mais grave das penas (art. 70)` p resto)'s quantidade) `aumento do art. 70`)
+            (`a soma das penas (art. 69)` ps)
+
+§§ `Art. 71 — Crime continuado`
+
+-- "Art. 71 - Quando o agente, mediante mais de uma ação ou omissão, pratica
+-- dois ou mais crimes da mesma espécie e, pelas condições de tempo, lugar,
+-- maneira de execução e outras semelhantes, devem os subseqüentes ser havidos
+-- como continuação do primeiro, aplica-se-lhe a pena de um só dos crimes, se
+-- idênticas, ou a mais grave, se diversas, aumentada, em qualquer caso, de um
+-- sexto a dois terços."
+-- Which law governs a continued crime when the law changes before it ends
+-- is fork F-sweep-a-06 (Súmula 711 STF), g1a's, at `o dia que fixa a lei
+-- aplicável (art. 4º; Súmula 711 STF)` in cp-g1a-aplicacao.l4.
+-- How the fraction in "de um sexto a dois terços" is chosen is fork
+-- F-sweep-a-04. Both readings run, as an interpretation field:
+--   * faixaDoJuiz — the Code's range, the judge's to choose in;
+--   * escalaPorNumeroDeCrimes — Súmula 659 STJ (M-sweep-a-14): 1/6 for two
+--     crimes, 1/5 for three, 1/4 for four, 1/3 for five, 1/2 for six, 2/3 for
+--     seven or more.
+-- The encoding takes the second (the STJ's settled application), and names
+-- it `a leitura da Súmula 659 STJ`. TYPICALLY cannot carry it on this binary
+-- (notes/g1b.md, design decisions).
+DECLARE `Leitura do aumento do crime continuado` IS ONE OF
+    faixaDoJuiz
+    @nlg:en the Code's range, one sixth to two thirds, the judge's to choose in
+    escalaPorNumeroDeCrimes
+    @nlg:en the fraction fixed by the number of crimes (Súmula 659 STJ)
+
+DECLARE `Leituras do concurso` HAS
+    `o aumento do crime continuado` IS A `Leitura do aumento do crime continuado`
+    @nlg:en how the increase for a continued crime is chosen
+
+@ref CP art. 71; Súmula 659 STJ (M-sweep-a-14)
+GIVETH A `Leituras do concurso`
+@nlg:en the reading this encoding takes, the STJ's Súmula 659
+`a leitura da Súmula 659 STJ` MEANS
+    `Leituras do concurso` WITH `o aumento do crime continuado` IS escalaPorNumeroDeCrimes
+
+@ref CP art. 71, caput
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase of one sixth to two thirds for a continued crime
+`aumento do art. 71, caput` MEANS `causa de aumento` (entre `um sexto` `dois terços`)
+
+@ref CP art. 71, caput; Súmula 659 STJ
+GIVEN n IS A NUMBER
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase Súmula 659 fixes for this number of crimes
+`o aumento da Súmula 659 STJ` n MEANS
+    BRANCH
+        IF n AT MOST 2 THEN `causa de aumento` (fixa `um sexto`)
+        IF n EQUALS  3 THEN `causa de aumento` (fixa (1 DIVIDED BY 5))
+        IF n EQUALS  4 THEN `causa de aumento` (fixa `um quarto`)
+        IF n EQUALS  5 THEN `causa de aumento` (fixa `um terço`)
+        IF n EQUALS  6 THEN `causa de aumento` (fixa metade)
+        OTHERWISE        `causa de aumento` (fixa `dois terços`)
+
+@export Diz a causa de aumento do crime continuado (Código Penal, art. 71, caput), pela leitura dada: a faixa do Código, ou a fração da Súmula 659 STJ pelo número de crimes
+@ref CP art. 71, caput; Súmula 659 STJ
+GIVEN l IS A `Leituras do concurso` @desc a leitura do aumento: faixaDoJuiz (a faixa de um sexto a dois terços) ou escalaPorNumeroDeCrimes (Súmula 659 STJ)
+      n IS A NUMBER @desc o número de crimes em continuidade
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase for this continued crime
+`o aumento do crime continuado (art. 71)` l n MEANS
+    CONSIDER l's `o aumento do crime continuado`
+    WHEN faixaDoJuiz THEN `aumento do art. 71, caput`
+    WHEN escalaPorNumeroDeCrimes THEN `o aumento da Súmula 659 STJ` n
+
+-- "Parágrafo único - Nos crimes dolosos, contra vítimas diferentes, cometidos
+-- com violência ou grave ameaça à pessoa, poderá o juiz, considerando a
+-- culpabilidade, os antecedentes, a conduta social e a personalidade do
+-- agente, bem como os motivos e as circunstâncias, aumentar a pena de um só
+-- dos crimes, se idênticas, ou a mais grave, se diversas, até o triplo,
+-- observadas as regras do parágrafo único do art. 70 e do art. 75 deste
+-- Código."
+-- "até o triplo": up to an increase of twice the penalty (PLAN § 2.3), its
+-- floor unstated (fork F-g0-09); capped at art. 69's sum by art. 70's
+-- parágrafo único. Art. 75 limits the time served, not the penalty imposed
+-- (fork F-g1b-28). The caput's range is not capped by the text (fork
+-- F-g1b-29).
+@ref CP art. 71, parágrafo único
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the increase of up to three times for a continued crime against different victims with violence
+`aumento do art. 71, parágrafo único` MEANS `causa de aumento` (`até` `o triplo`)
+
+@export Diz o intervalo da pena no concurso de crimes, pela regra que se aplica (Código Penal, arts. 69 a 71); nada, se não houver dois ou mais crimes
+@ref CP arts. 69, 70 e 71
+GIVEN l IS A `Leituras do concurso` @desc a leitura do aumento do crime continuado (a da Súmula 659 STJ é `a leitura da Súmula 659 STJ`)
+      c IS A `Concurso de crimes` @desc os crimes, as penas fixadas para cada um, e os achados do juiz sobre como foram cometidos
+GIVETH A MAYBE `Intervalo de duração`
+@nlg:en the range of the joint penalty
+`o intervalo da pena no concurso (arts. 69 a 71)` l c MEANS
+    CONSIDER `a regra do concurso (arts. 69 a 71)` c
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST r THEN
+        CONSIDER c's penas
+        WHEN EMPTY THEN NOTHING
+        WHEN p FOLLOWED BY resto THEN JUST (`o intervalo pela regra` r ((`a mais grave das penas (art. 70)` p resto)'s quantidade))
+    WHERE
+        `a soma` MEANS `a soma das penas (art. 69)` (c's penas)
+        `cumulativas` MEANS `Intervalo de duração` WITH `mínimo` IS `a soma`, `máximo` IS `a soma`
+        GIVEN r IS A `Regra do concurso`
+              `a mais grave` IS A Duração
+        GIVETH AN `Intervalo de duração`
+        `o intervalo pela regra` r `a mais grave` MEANS
+            CONSIDER r
+            WHEN `concurso material (art. 69)` THEN `cumulativas`
+            WHEN `concurso formal impróprio (art. 70, segunda parte)` THEN `cumulativas`
+            WHEN `concurso formal próprio (art. 70, primeira parte)` THEN `o intervalo do concurso formal próprio (art. 70)` (c's penas)
+            WHEN `crime continuado (art. 71, caput)` THEN `o intervalo com a causa` `a mais grave` (`o aumento do crime continuado (art. 71)` l (count (c's penas)))
+            WHEN `crime continuado específico (art. 71, parágrafo único)` THEN
+                `o intervalo limitado à soma do art. 69` (`o intervalo com a causa` `a mais grave` `aumento do art. 71, parágrafo único`) `a soma`
+
+-- Súmula 497 STF (fork F-sweep-a-05, M-sweep-a-15): "Quando se tratar de
+-- crime continuado, a prescrição regula-se pela pena imposta na sentença, não
+-- se computando o acréscimo decorrente da continuação." The penalty before
+-- the increase, for g1c's prescription (arts. 109 to 119).
+@ref CP art. 71; art. 119; Súmula 497 STF
+GIVEN p  IS A `Pena aplicada a um crime`
+      ps IS A LIST OF `Pena aplicada a um crime`
+GIVETH A Duração
+@nlg:en the penalty that governs prescription for a continued crime, without the increase
+`a pena que regula a prescrição do crime continuado (Súmula 497 STF)` p ps MEANS
+    (`a mais grave das penas (art. 70)` p ps)'s quantidade
+
+§§ `Art. 72 — Multas no concurso de crimes`
+
+-- "Art. 72 - No concurso de crimes, as penas de multa são aplicadas distinta
+-- e integralmente." Every concurso, the continued crime included (fork
+-- F-g1b-30).
+@export Diz o valor total das multas no concurso de crimes: cada uma aplicada distinta e integralmente (Código Penal, art. 72)
+@ref CP art. 72; art. 49
+GIVEN ps IS A LIST OF `Pena aplicada a um crime` @desc as penas aplicadas a cada crime, com a multa de cada um, se houver
+GIVETH A NUMBER
+@nlg:en the total of the fines, each applied in full
+`o valor das multas no concurso (art. 72)` ps MEANS
+    sum (map `o valor` ps)
+    WHERE
+        `o valor` p MEANS
+            CONSIDER p's `multa aplicada`
+            WHEN NOTHING THEN 0
+            WHEN JUST m THEN `o valor da multa (art. 49)` m
+
+§§ `Art. 73 — Erro na execução`
+
+-- "Art. 73 - Quando, por acidente ou erro no uso dos meios de execução, o
+-- agente, ao invés de atingir a pessoa que pretendia ofender, atinge pessoa
+-- diversa, responde como se tivesse praticado o crime contra aquela,
+-- atendendo-se ao disposto no § 3º do art. 20 deste Código. No caso de ser
+-- também atingida a pessoa que o agente pretendia ofender, aplica-se a regra
+-- do art. 70 deste Código."
+-- Art. 20, § 3º (g1a's): the qualities of the intended victim, not of the
+-- one hit, are the ones considered — so a crime record built for sentencing
+-- should carry the intended victim.
+DECLARE `Erro na execução` HAS
+    `a pessoa que o agente pretendia ofender` IS A `Vítima`
+    @nlg:en the person the agent meant to harm
+    `a pessoa atingida` IS A `Vítima`
+    @nlg:en the person actually hit
+    `também atingida a pessoa que o agente pretendia ofender` IS A BOOLEAN
+    @nlg:en the intended person was hit as well
+
+@export Diz contra quem o agente responde no erro na execução: a pessoa que pretendia ofender (Código Penal, art. 73; art. 20, § 3º)
+@ref CP art. 73; art. 20, § 3º
+GIVEN e IS AN `Erro na execução` @desc a pessoa que o agente pretendia ofender, a pessoa atingida, e se a pretendida também foi atingida
+GIVETH A `Vítima`
+@nlg:en the victim the agent answers for
+`a vítima considerada (art. 73)` e MEANS e's `a pessoa que o agente pretendia ofender`
+
+@ref CP art. 73, segunda parte
+GIVEN e IS AN `Erro na execução`
+GIVETH A BOOLEAN
+@nlg:en the rule of ideal concurrence applies
+`aplica-se a regra do art. 70 (art. 73)` e MEANS
+    e's `também atingida a pessoa que o agente pretendia ofender`
+
+§§ `Art. 74 — Resultado diverso do pretendido`
+
+-- "Art. 74 - Fora dos casos do artigo anterior, quando, por acidente ou erro
+-- na execução do crime, sobrevém resultado diverso do pretendido, o agente
+-- responde por culpa, se o fato é previsto como crime culposo; se ocorre
+-- também o resultado pretendido, aplica-se a regra do art. 70 deste Código."
+-- What the agent answers for as to the intended crime, where it did not
+-- happen, the article does not say (fork F-g1b-31).
+DECLARE `Consequência do resultado diverso (art. 74)` IS ONE OF
+    `responde por culpa pelo resultado diverso`
+    @nlg:en the agent answers for the different result as negligence
+    `não responde pelo resultado diverso, que não é previsto como crime culposo`
+    @nlg:en the agent does not answer for the different result, which is not a negligent crime
+    `aplica-se a regra do art. 70`
+    @nlg:en the rule of ideal concurrence applies
+
+@export Diz a consequência do resultado diverso do pretendido (Código Penal, art. 74)
+@ref CP art. 74
+GIVEN `o fato é previsto como crime culposo` IS A BOOLEAN @desc se o resultado que sobreveio é previsto como crime culposo
+      `ocorreu também o resultado pretendido` IS A BOOLEAN @desc se também ocorreu o resultado que o agente pretendia
+GIVETH A `Consequência do resultado diverso (art. 74)`
+@nlg:en what follows from a result other than the one intended
+`a consequência do resultado diverso (art. 74)` `o fato é previsto como crime culposo` `ocorreu também o resultado pretendido` MEANS
+    BRANCH
+        IF   `ocorreu também o resultado pretendido`
+        THEN `aplica-se a regra do art. 70`
+        IF   `o fato é previsto como crime culposo`
+        THEN `responde por culpa pelo resultado diverso`
+        OTHERWISE `não responde pelo resultado diverso, que não é previsto como crime culposo`
+
+§§ `Art. 75 — Limite das penas`
+
+-- "Art. 75. O tempo de cumprimento das penas privativas de liberdade não
+-- pode ser superior a 40 (quarenta) anos." (Redação dada pela Lei nº 13.964,
+-- de 2019)
+-- "§ 1º Quando o agente for condenado a penas privativas de liberdade cuja
+-- soma seja superior a 40 (quarenta) anos, devem elas ser unificadas para
+-- atender ao limite máximo deste artigo." (Redação dada pela Lei nº 13.964,
+-- de 2019)
+-- "§ 2º - Sobrevindo condenação por fato posterior ao início do cumprimento
+-- da pena, far-se-á nova unificação, desprezando-se, para esse fim, o período
+-- de pena já cumprido."
+
+@ref Lei nº 13.964/2019, art. 20 (DOU 24.12.2019; "após decorridos 30 (trinta) dias de sua publicação oficial")
+GIVETH A DATE
+@nlg:en the day the forty-year limit of art. 75 came into force
+`a vigência da redação atual do art. 75` MEANS YMD 2020 1 23
+
+@ref CP art. 75 in the wording before Lei nº 13.964/2019 — not encoded
+GIVEN a IS A TYPE
+GIVETH AN a
+@nlg:en the wording of art. 75 before Lei 13.964 of 2019 is not encoded
+`a redação do art. 75 anterior à Lei nº 13.964, de 2019, não está codificada` MEANS
+    REFUSE "a redação do art. 75 anterior à Lei nº 13.964, de 2019 (em vigor em 23.1.2020), não está codificada"
+
+@ref CP art. 75; Lei nº 13.964/2019
+GIVEN ps IS A LIST OF `Pena aplicada a um crime`
+GIVETH A BOOLEAN
+@nlg:en every crime falls under the forty-year wording of art. 75
+`os crimes estão sob a redação atual do art. 75` ps MEANS
+    all (GIVEN p YIELD p's `data do fato` AT LEAST `a vigência da redação atual do art. 75`) ps
+
+@ref CP art. 75, caput
+GIVETH A Duração
+@nlg:en the longest time custodial penalties may be served
+`o limite do tempo de cumprimento (art. 75)` MEANS anos 40
+
+@export Diz o tempo de cumprimento das penas privativas de liberdade, unificadas para atender ao limite de 40 anos (Código Penal, art. 75 e § 1º)
+@ref CP art. 75, caput e § 1º
+GIVEN ps IS A LIST OF `Pena aplicada a um crime` @desc as penas privativas de liberdade aplicadas ao agente, com a data de cada crime
+GIVETH A Duração
+@nlg:en the time to be served, unified at the limit
+`o tempo de cumprimento unificado (art. 75, § 1º)` ps MEANS
+    IF   NOT `os crimes estão sob a redação atual do art. 75` ps
+    THEN `a redação do art. 75 anterior à Lei nº 13.964, de 2019, não está codificada`
+    ELSE IF   `a duração excede` (`a soma das penas (art. 69)` ps) `o limite do tempo de cumprimento (art. 75)`
+         THEN `o limite do tempo de cumprimento (art. 75)`
+         ELSE `a soma das penas (art. 69)` ps
+
+-- § 2º: a new conviction for a fact after serving began. The new
+-- unification adds the new penalty to what remains of the penalties imposed
+-- — the total, less the time served — and limits the result (fork
+-- F-g1b-32). For a fact before serving began, § 2º does not apply: NOTHING.
+@export Diz o tempo a cumprir depois da nova unificação por condenação por fato posterior ao início do cumprimento (Código Penal, art. 75, § 2º); nada, se o fato não é posterior ao início
+@ref CP art. 75, § 2º
+GIVEN `as penas anteriores` IS A LIST OF `Pena aplicada a um crime` @desc as penas privativas de liberdade que o agente já cumpria
+      `o início do cumprimento` IS A DATE @desc o dia em que começou o cumprimento da pena
+      `o tempo já cumprido` IS A Duração @desc o tempo de pena já cumprido quando sobrevém a nova condenação, em meses
+      `a nova pena` IS A `Pena aplicada a um crime` @desc a pena da nova condenação, com a data do fato
+GIVETH A MAYBE Duração
+@nlg:en the time to serve after the new unification
+`a nova unificação (art. 75, § 2º)` `as penas anteriores` `o início do cumprimento` `o tempo já cumprido` `a nova pena` MEANS
+    IF   NOT (`a nova pena`'s `data do fato` GREATER THAN `o início do cumprimento`)
+    THEN NOTHING
+    ELSE IF   NOT `os crimes estão sob a redação atual do art. 75` (`a nova pena` FOLLOWED BY `as penas anteriores`)
+         THEN `a redação do art. 75 anterior à Lei nº 13.964, de 2019, não está codificada`
+         ELSE JUST (meses (min (`o limite do tempo de cumprimento (art. 75)`'s `em meses`) `o que resta com a nova pena`))
+    WHERE
+        `o que resta com a nova pena` MEANS
+                (`a soma das penas (art. 69)` `as penas anteriores`)'s `em meses`
+            MINUS `o tempo já cumprido`'s `em meses`
+            PLUS  `a nova pena`'s quantidade's `em meses`
+
+-- Súmula 715 STF (fork F-sweep-a-08, M-sweep-a-20): the unified penalty
+-- "não é considerada para a concessão de outros benefícios, como o
+-- livramento condicional ou regime mais favorável de execução": those are
+-- computed on the total. For g1c's art. 83 and the regime's progression.
+@export Diz a pena sobre a qual se calculam os benefícios da execução: o total das penas, não a pena unificada (Código Penal, art. 75; Súmula 715 STF)
+@ref CP art. 75; Súmula 715 STF
+GIVEN ps IS A LIST OF `Pena aplicada a um crime` @desc as penas privativas de liberdade aplicadas ao agente
+GIVETH A Duração
+@nlg:en the penalty the benefits of execution are computed on
+`a pena considerada para os benefícios (art. 75; Súmula 715 STF)` ps MEANS
+    `a soma das penas (art. 69)` ps
+
+§§ `Art. 76 — Concurso de infrações`
+
+-- "Art. 76 - No concurso de infrações, executar-se-á primeiramente a pena
+-- mais grave." `a ordem de execução (arts. 69 e 76)`, above.
+@ref CP art. 76
+GIVEN ps IS A LIST OF `Pena aplicada a um crime`
+GIVETH A MAYBE `Pena aplicada a um crime`
+@nlg:en the penalty executed first
+`a pena executada primeiro (art. 76)` ps MEANS
+    listToMaybe (`a ordem de execução (arts. 69 e 76)` ps)

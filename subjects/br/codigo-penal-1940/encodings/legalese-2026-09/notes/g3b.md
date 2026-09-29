@@ -1,6 +1,6 @@
 # g3b — arts. 184–212: notes for the reviewer
 
-**Status (2026-09-29): every article in scope encoded or out of scope; tests green; mutation run and final check recorded below.**
+**Status (2026-09-29): done. Every article in scope encoded (18) or revoked and out of scope (11); 331 of 331 assertions satisfied; 24 of 24 mutations caught.**
 Parte Especial Títulos III (propriedade imaterial), IV (organização do trabalho) and V (sentimento religioso e respeito aos mortos).
 
 ## PROGRESS
@@ -17,7 +17,14 @@ Parte Especial Títulos III (propriedade imaterial), IV (organização do trabal
 - [x] Forks: 24 entries (F-g3b-01 to -24); validate (my entries clean).
 - [x] English glosses: every rule of the four modules renders through its herald (§ 5).
 - [x] Every quotation of the Code checked verbatim against the source (§ 5).
-- [ ] Mutation run (positive control) — results in § 5 when it finishes.
+- [x] Mutation run (positive control): 24 single mutations, each caught by at least one failing assertion (§ 5).
+- [x] Final `check.sh`: 0 errors, 331 satisfied, 0 failed, 0 refused, 331 asserts; exit 0 (§ 5).
+- [x] Report sent to team-lead (2026-09-29).
+
+**Checkpoint (SAVESCUM, 2026-09-29).** Done: every unit of arts. 184–212 (18 encoded, 11 out-of-scope, 0 deferred; roadmap part validates). Half-done: nothing. Next: nothing in scope; await the conductor (F-g3b-10 open for a lawyer or the sweep). Last `check.sh` TOTAL, verbatim:
+`TOTAL (7 modules)                                  0       331       0       0     331`
+
+**On `notes/conductor.md`.** g3b read it at the start, before the conductor withdrew it as a private log. Nothing in it concerns arts. 184–212 beyond the count of an independent tester's cases, and no reading, fork or test here depends on it: every reading was made from the source and recorded as a fork.
 
 ## 1. What g3b encoded, and what it did not
 
@@ -101,8 +108,48 @@ Read and not bearing on the range: every other sweep-b entry (all name articles 
 `L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-g3b-`, from the encoding directory, 2026-09-29:
 
 ```
-(filled in at the end of the run — see below)
+module                                        errors satisfied  failed refused asserts
+cp-g3b-comum.l4                                    0         0       0       0       0
+cp-g3b-organizacao-do-trabalho-testes.l4           0       165       0       0     165
+cp-g3b-organizacao-do-trabalho.l4                  0         0       0       0       0
+cp-g3b-propriedade-imaterial-testes.l4             0        90       0       0      90
+cp-g3b-propriedade-imaterial.l4                    0         0       0       0       0
+cp-g3b-sentimento-religioso-e-mortos-testes.l4       0        76       0       0      76
+cp-g3b-sentimento-religioso-e-mortos.l4            0         0       0       0       0
+TOTAL (7 modules)                                  0       331       0       0     331
+(a failed assertion also counts as an error; errors minus failed = everything else)
 ```
+
+Exit status 0. The `#ASSERT` lines number 90, 165 and 76, so every assertion produced a verdict and every verdict was "satisfied".
+
+**A positive control.** Every assertion passed on its first run, which is exactly when a test suite cannot be trusted until it has been seen to fail. Twenty-four single mutations were made, one at a time, to copies of the modules (a scratch directory, never the encoding), each a plausible misreading of the text or a slip of a number; each made at least one assertion fail:
+
+| mutation | failed |
+| --- | --- |
+| art. 184 § 1º without "sem autorização expressa" | 1 |
+| § 4º applied to the caput too (F-g3b-03's other reading) | 3 |
+| art. 186 III not consulted first (F-g3b-05) | 6 |
+| Lei 10.695/2003 in force a day late (1 failed, 2 refused: the gate's own assertion is what fails loudly, PLAN T5) | 1 |
+| § 2º "sem autorização" on both limbs (F-g3b-04) | 1 |
+| a computer program not refused (F-g3b-02) | 4 |
+| arts. 197–199 accepting a plain threat | 2 |
+| art. 197 II minimum of one month instead of three | 2 |
+| art. 200 p.u. with two employees | 3 |
+| "coletivo" required of a suspension too (F-g3b-07; applied by hand, the script's anchor missed it) | 2 |
+| arts. 203/207 § 2º including sensory disability (F-g3b-13) | 1 |
+| art. 203 § 2º up to one half instead of one third | 3 |
+| Lei 9.777/1998 in force a day late (3 failed, 1 refused) | 3 |
+| one worker as "trabalhadores" (F-g3b-15) | 3 |
+| art. 207 § 1º's return clause not negated | 2 |
+| art. 205 satisfied by one act (F-g3b-18) | 1 |
+| art. 203 caput accepting a serious threat | 2 |
+| arts. 208/209 p.u. counting violence against a thing (F-g3b-06) | 3 |
+| art. 211 reaching the ashes (F-g3b-19) | 1 |
+| art. 212 reaching a part (F-g3b-19) | 1 |
+| art. 208's mockery without publicity | 1 |
+| art. 211's attempt ignoring a consummated act | 2 |
+| art. 212 as reclusão | 1 |
+| an abandoned execution (art. 15) counted as an attempt, in `cp-g3b-comum.l4` | 1 in each of the three test modules |
 
 Cross-checks:
 

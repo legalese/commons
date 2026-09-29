@@ -79,10 +79,26 @@ Why this and not days, or a years/months/days record:
 - L4 numbers are exact rationals: `(1 DIVIDED BY 3) TIMES 3 EQUALS 1` holds, and so does "two thirds of six years is four years" (`cp-g0-pena-testes.l4`, § Duração). The causes of increase and decrease are fractions, and one number keeps the fraction arithmetic exact with no rounding drift.
 - `EQUALS` is right on it: `anos 1 EQUALS meses 12` holds. A years/months/days record would compare the components, and one year would not equal twelve months.
 - Art. 109 compares a maximum against year thresholds; one number compares directly. Use `` `a duração excede` a b `` and `` `a duração é inferior a` a b ``, or compare `em meses`.
-- The 30-day month is the dosimetry convention for taking a fraction of a quantity. The calendar comes in only when a term is served (art. 10): `` `o último dia do prazo` d `o primeiro dia` `` splits the Duração into calendar months and loose days (fork F-g0-03).
+- The 30-day month is the dosimetry convention for taking a fraction of a quantity. The calendar comes in only when a term is served (art. 10): `` `o último dia do prazo` d `o primeiro dia` `` splits the Duração into calendar months and loose days (fork F-g0-03). A period the Code states in days has its own rule; see below.
 - Art. 11 drops fractions of a day. The arithmetic keeps them, and the court's final quantity goes through `` `desprezadas as frações de dia` `` (when in the calculation: fork F-g0-04).
 
 To read one back: `` `em anos, meses e dias` d `` gives `anos completos`, `meses restantes`, `dias restantes`.
+
+**A period the Code states in days is counted in days (fork F-g0-29, 2026-09-30).**
+`dias n` is a quantity for dosimetry, and a Duração does not remember its unit: `dias 180` EQUALS `meses 6`.
+`o último dia do prazo` counts a Duração's whole months as calendar months, so given `dias 180` it counts six calendar months.
+To count a period stated in days, write `` `o último dia do prazo em dias` n `o primeiro dia` ``, with the Code's number of days:
+
+| the Code says | write | from 5 July 2026 |
+| --- | --- | --- |
+| a period of 180 days | `` `o último dia do prazo em dias` 180 d `` | 31 December 2026 |
+| a period of six months | `` `o último dia do prazo` (meses 6) d `` | 4 January 2027 |
+| (wrong for 180 days) | `` `o último dia do prazo` (dias 180) d `` | 4 January 2027 |
+
+Under thirty days the two rules agree (`cp-g0-pena-testes.l4`, § Art. 10), which is how the defect hid until g6b counted art. 359-G's 180 days.
+Across February they differ: from 10 February 2026, one month ends on 9 March, and 30 days end on 11 March.
+Periods in months or years, and quantities that dosimetry produced, still go to `o último dia do prazo`, whose results are unchanged.
+`Duração` itself is unchanged. A second field recording the unit would break every `Duração WITH` built outside `cp-pena.l4`, and every `EQUALS` between a quantity built from days and one built from months.
 
 ### 2.2 `Pena cominada` — one per preceito secundário
 
@@ -272,7 +288,8 @@ The probes are `cp-g0-sonda-nlg-posicao.l4`, `cp-g0-sonda-nlg-posicao-2.l4`, `cp
 | constant with a `GIVETH` line and the herald below it | **attaches** |
 | record field herald on its own line **below** the field | **attaches**, including below a field line that ends in a `-- comment` |
 | record field herald trailing the field's own line | **does not reach the field** (it goes to the type) |
-| enum constructor herald below, or trailing | **attaches** |
+| enum constructor herald below, or trailing | **attaches**, for a constructor with no fields |
+| herald below a constructor line that carries `HAS f IS A T` | **goes to the field**; the constructor renders bare (T9b) |
 | parameter herald trailing its `GIVEN` line | describes the parameter; the rule still renders bare |
 | untagged `@nlg` beside `@nlg:en` | `--lang en` takes `:en`; no flag or `--lang pt` takes the untagged one |
 
@@ -385,6 +402,20 @@ Guard every gate with an assertion that fails loudly (`` #ASSERT `o fato está s
 **T8. Record construction on one line swallows commas.** § 7; `cp-g0-sonda-lista-virgula.l4`.
 
 **T9. `add months` clamps.** `` `add months` (YMD 2026 1 31) 1 `` is 28 February 2026 (`cp-g0-sonda-add-months.l4`). `o último dia do prazo` handles this for art. 10; do not add months to a date yourself.
+
+**T9a. A Duração does not remember that it was stated in days.** `` `o último dia do prazo` (dias 180) (YMD 2026 7 5) `` is 4 January 2027, six calendar months; 180 days end on 31 December 2026. Count a period stated in days with `o último dia do prazo em dias` (§ 2.1; `cp-g0-pena-testes.l4`, § Art. 10). Silent, and invisible under thirty days.
+
+**T9b. A constructor that carries a field takes its herald only if its name stands alone on its line.** Written `` `X` HAS f IS A T `` with the herald below, the herald goes to the field and the constructor renders bare, with no diagnostic (found by g1a; `cp-g0-sonda-construtor-nlg-mesma-linha.l4`). Put the herald below the bare name, and `HAS` on the next line, indented:
+
+```
+DECLARE `Preceito secundário` IS ONE OF
+    `com pena privativa de liberdade`
+    @nlg:en a provision prescribing a custodial penalty
+        HAS `a pena` IS A `Pena cominada`
+        @nlg:en the penalty the provision prescribes
+```
+
+(`cp-g0-sonda-construtor-nlg.l4`.) `cp-pena.l4`'s `Preceito secundário` had the first form until 2026-09-30.
 
 **T10. `IMPORT prelude` prints a warning that a copy of `prelude` in `~/.local/share/jl4/libraries` is shadowed.**
 The embedded copy is the one used, which is what the brief wants (`JL4_LIBRARY_PATH` unset). It is noise, not a defect.

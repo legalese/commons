@@ -32,7 +32,15 @@ if ! command -v "$L4" >/dev/null 2>&1; then
   exit 2
 fi
 
-msg() { printf '%s\n' "$1" | grep -cE "^[[:space:]]*Message:[[:space:]]+assertion $2"; }
+# Count the RESULTS section's verdict line, exactly two spaces then
+# "assertion …", which `l4 run` prints once per directive. The diagnostics
+# section repeats each verdict after "Message:", except that a failed
+# `#ASSERT REFUSED` prints "Message:" alone with the verdict indented four
+# spaces on the next line (found by g4a, 2026-09-29). An earlier pattern that
+# anchored on "Message:" missed that case, and one that accepted both layouts
+# counted every verdict twice. Measured on probes with one satisfied, one
+# failed, one refused and one failed-REFUSED assertion.
+msg() { printf '%s\n' "$1" | grep -cE "^  assertion $2"; }
 
 total_err=0 total_ok=0 total_bad=0 total_ref=0 total_n=0 unaccounted=0 n=0
 printf '%-44s %7s %9s %7s %7s %7s\n' module errors satisfied failed refused asserts

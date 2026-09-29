@@ -21,6 +21,11 @@
 
 Import order: `geral` ← `vulneravel` ← `liberdade-sexual`; `geral` ← `lenocinio`. The Título VII modules import only `cp-dominio` and `cp-pena`.
 
+Checkpoint (SAVESCUM, 2026-09-29): **done** — all 49 units; **half-done** — nothing; **next** — nothing in range; only answering the conductor at integration. Final report sent to team-lead.
+Last `check.sh . cp-g4a-` TOTAL, verbatim:
+`TOTAL (12 modules)                                 0       422       0       0     422`
+The conductor's private log (`notes/conductor.md`, since moved out of ENC) was read at the start; nothing encoded here depends on it (ages follow cp-pena and F-g0-06, not its test-author notes).
+
 ## 1. What is encoded, and what is not
 
 Every article in 213–249 that states a crime is encoded: the elements (consummated and, where the text admits it, attempted, through cp-pena's art. 14), each preceito secundário as a `Pena cominada` checked against its words, every cause of increase as a fraction plus a predicate, the qualified and privileged forms, the judge's options where the Code gives a power (arts. 242 p.ú., 249 § 2º), and the ação penal where the Code states it (art. 225 for Título VI Caps. I–II; art. 236 p.ú.).
@@ -120,9 +125,9 @@ TOTAL (12 modules)                                 0       422       0       0  
 
 | module mutated | mutation | test file's verdicts after it |
 | --- | --- | --- |
-| cp-g4a-vulneravel.l4 | "menor de 14" read as "menor de 15" where art. 217-A tests it | 1 failed |
+| cp-g4a-vulneravel.l4 | "menor de 14" → "menor de 15" in arts. 217-A, 218 and 218-A at once (one sed matched all three) | 1 failed (only art. 217-A then had a birthday test) |
 | cp-g4a-vulneravel.l4 | art. 217-A § 3º's minimum 12 years → 11 | 1 failed |
-| cp-g4a-dignidade-sexual-geral.l4 | Lei 15.280/2025's vigência one day early | 1 failed, 5 more errors (REFUSED assertions that now got a value) |
+| cp-g4a-dignidade-sexual-geral.l4 | Lei 15.280/2025's vigência one day early | 6 failed: the gate's own assertion, and five `#ASSERT REFUSED` reporting "assertion failed: expected a refusal, but the expression produced a value" (read, not inferred) |
 | cp-g4a-vulneravel.l4 | art. 218-C § 2º's exclusion removed | 3 failed |
 | cp-g4a-vulneravel.l4 | "maior de 14" → "maior de 13" in art. 218-B § 2º, I | 1 failed |
 | cp-g4a-lenocinio.l4 | the minimum 3 years (arts. 228 § 1º, 230 § 1º) → 4 | 3 failed |
@@ -151,4 +156,5 @@ The first run of the first mutation also showed arts. 218 and 218-A had no fourt
 - **"Não havia crime" as a refusal.** A penalty function for a crime that did not yet exist (arts. 215-A, 216-A, 216-B, 232-A) refuses with the law's own answer in words, because `Pena cominada` has no "no such crime" value. PLAN § 10 reserves refusals for the encoder's gaps; this is the one place I bent that, and a `MAYBE Pena cominada` (or a type-wide convention) would be the alternative. The crime predicates themselves answer FALSE before those dates.
 - **Cross-group readings to align**: F-g4a-12 repeats g0's F-g0-23; F-g4a-02's specialty reading for 218/227 and 218-B/228 reads the age facts directly rather than calling Cap. II's rules, since the modules share a group but not a case record.
 - **Defects in the Code's text met on the way** (no assertion failed; each is a finding about the text, recorded where it bites): art. 213 § 1º's "ou maior de 14" (F-g4a-15); art. 216-A's § 2º with no § 1º (the vetoed parágrafo único); art. 228 § 2º's stray comma ("Se o crime, é cometido"); Capítulo IV of Título VII headed "PÁTRIO PODER, TUTELA CURATELA" without the comma; art. 230 § 1º's age gap (F-g4a-17).
+- **A blind spot in `check.sh`'s failed column — since fixed by the conductor** (`msg()` now accepts both layouts; this paragraph records what was found). A failing `#ASSERT REFUSED` prints its message on the line after `Message:` ("assertion failed: expected a refusal, but the expression produced a value"), and `check.sh` counts only `Message: assertion failed` on one line. Measured on the vigência mutation above: the file showed 6 errors, 1 failed, 0 refused. The run still fails (errors, and satisfied + failed + refused falls short of the assertion count, so UNACCOUNTED fires), but the failed column under-reports. Matching the message across the line break, or counting "assertion failed" anywhere in the diagnostic, would fix it.
 - **Run time.** Measured with `time l4 run` on 2026-09-29: `cp-g4a-liberdade-sexual-testes.l4` 58 s, `cp-g4a-vulneravel-testes.l4` 20 s, `cp-g4a-dignidade-sexual-geral-testes.l4` 11 s. Most of the Cap. I assertions pass through the apparent-conflict chain (215-A → 215 → 213 → 217-A); I have not profiled whether that is the cost.
