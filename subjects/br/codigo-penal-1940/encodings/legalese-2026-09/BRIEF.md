@@ -1,7 +1,7 @@
 # Encoding brief: Código Penal (Brazil, 1940), in L4
 
-You are one of seven encoders producing an L4 encoding of the Brazilian Penal Code from its source text.
-This brief is the whole specification, shared by all seven; your own task message adds only your scope.
+You are one of a team producing an L4 encoding of the Brazilian Penal Code from its source text: an ontology pass (g0), then encoders working in parallel on disjoint ranges of articles, alongside three sweep agents and a set of independent test authors.
+This brief is the whole specification, shared by all of them; your own task message adds only your role and scope.
 Read it fully before opening the source.
 
 ## The subject
@@ -77,11 +77,9 @@ Under `ENC/registers/parts/`, you own exactly these (the conductor merges them):
    Any unit still `deferred` at the end must carry its specific reason in place of the starting text `NOT YET ENCODED …`.
    Validate: `node /Users/mengwong/src/legalese/l4wt/br-penal/etc/go/lib/register-validate.mjs encoding-roadmap <file> <ENC>/registers/source-bundle.json` — run it from `/Users/mengwong/src/legalese/l4wt/br-penal` so the relative paths resolve.
 2. **`gN.forks.json`** — a JSON array of fork **entries** in the shape of `…/etc/go/spec/schemas/fork-register.schema.json` `$defs.entry` (read the schema and `…/spec/schemas/fixtures/fork-register.valid.json`). Id them `F-gN-01`, `F-gN-02`, …. Every ambiguity you met: the readings, the one you took, why, with the text that licenses each. A fork settled by the STF or STJ carries `settled_by`. "None found" is not believable; if you found few, say where you looked.
-3. **`gN.external-modifications.json`** — an object `{ "searches": [...], "entries": [...], "dispositions": [...] }` whose members follow `…/spec/schemas/external-modifications.schema.json` (`$defs.search`, `$defs.entry`, `$defs.disposition`; fixture `…/fixtures/external-modifications.valid.json`). Id searches `S-gN-01…`, entries `M-gN-01…`.
-   - Dispose of every `V` marker your task message assigns you (`document: "cp-planalto-compilado"`).
-   - Sweep for what has happened to your articles since they were printed: STF rulings (ADI, ADPF — the Senado XML names the "interpretação conforme" ones), binding súmulas (súmula vinculante), STJ súmulas that fix a reading (e.g. on how causes of increase combine), and **prospective change**: any 2025–2026 amending law in your range whose vigência has not yet begun on 2026-09-29.
-   - A search records its scope, its date, and — required — what it does not cover. You may use WebSearch and WebFetch; record each search you relied on. A sweep that found nothing and says so, with its searches listed, is a finding.
-   - Route each finding: `binding` (the text was struck, suspended or read down — encode it, as a rule-version arm or a fork, and name where), `interpretive` (it opens or settles a fork — name the fork id), `prospective` (a currency risk, with the date it takes effect).
+3. **The P2 sweep is not yours; reading it is.** Three sweep agents research what has happened to the Code since it was printed (STF rulings, binding súmulas, STJ súmulas, prospective amendments) and write `ENC/registers/parts/sweep-a.external-modifications.json` (Parte Geral, arts. 1–120), `sweep-b…` (arts. 121–212) and `sweep-c…` (arts. 213–361). Each is an object `{ "searches": [...], "entries": [...], "dispositions": [...] }` in the shape of `…/etc/go/spec/schemas/external-modifications.schema.json`, with entries `M-sweep-a-01…`.
+   **Before you finish, read the sweep file covering your range** (if it is not there yet, check again at the end). For every `binding` entry on your articles, the text was struck, suspended or read down: encode that — a rule-version arm, a fork, or a `REFUSE` where the reading-down leaves no answer — and cite the entry id in a comment. For every `interpretive` entry, open or settle the fork it bears on, and put the entry id in the fork's `settled_by.external_modification`. List every entry id you acted on in your notes file. Encoders write no external-modifications file.
+   **Reserved fork ids.** A sweep entry that opens a fork names a reserved id such as `F-sweep-b-03` in its `routing.fork_ids`, and describes the fork in `ENC/registers/parts/sweep-b.forks-proposed.json` (readings, citations, quote). If the article is yours, **create that fork in your own forks file under exactly that reserved id**, with your `site` and your `taken`, so the sweep's reference resolves. A binding entry that strikes, stays or reads down a provision names a proposed `routing.rule_version_arm`; implement it, and record in your notes where it landed.
 4. **`ENC/notes/gN.md`** — your record for the reviewer: what you encoded and what you did not; the forks in prose; proposed shared nouns (`PROPOSTO-COMUM`); what `check.sh` prints for your modules, verbatim; open questions for a Brazilian criminal lawyer; and a **PROGRESS** section you update after each Capítulo, so that if your context is compacted you can resume from the file rather than from memory.
 
 ## The self-check — read diagnostics, not exit codes
@@ -98,4 +96,4 @@ Useful libraries: `prelude` (always import it), `daydate` for dates.
 
 ## When you finish
 
-Reply with: modules written; the roadmap tally (encoded / inert / out-of-scope / deferred); `check.sh`'s TOTAL line verbatim; the number of forks and of external-modification entries; any failing assertion you believe is a finding about the Code; and anything the conductor must decide at integration.
+Reply with: modules written; the roadmap tally (encoded / inert / out-of-scope / deferred); `check.sh`'s TOTAL line verbatim; the number of forks; the sweep entry ids you acted on; any failing assertion you believe is a finding about the Code; and anything the conductor must decide at integration.

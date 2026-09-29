@@ -5,7 +5,7 @@ The encoding reads `codigo-penal-1940.txt` and nothing else.
 
 | file | what it is |
 | --- | --- |
-| `del2848compilado.htm` | Planalto's compiled text, the "Texto Atualizado" that LexML points at. ISO-8859-1 HTML. |
+| `del2848compilado.htm` | Planalto's compiled text, the "Texto Atualizado" that LexML points at. Windows-1252 HTML with no charset declaration. |
 | `extract.py` | turns that HTML into `codigo-penal-1940.txt`, one source paragraph per line |
 | `codigo-penal-1940.txt` | the text encoded from; its digest is the one the source bundle pins |
 | `vide-index.tsv` | the 33 `(Vide …)` pointers in the text, numbered V1–V33 for the P2 sweep |

@@ -1,0 +1,809 @@
+@lang pt
+IMPORT prelude
+IMPORT daydate
+IMPORT `cp-dominio`
+
+-- Código Penal (Decreto-Lei nº 2.848/1940) — a maquinaria da pena.
+--
+-- Written by the ontology pass (g0). Read-only to every other encoder. Every
+-- offence module imports it for the types a preceito secundário is written in
+-- and for the arithmetic every cause of increase and decrease needs.
+--
+-- PARTE GERAL ARTICLES ENCODED HERE, and only these (g1 owns the rest):
+--   art. 10          whole  — contagem de prazo
+--   art. 11          whole  — frações não computáveis
+--   art. 14          whole  — consumação, tentativa, pena da tentativa
+--   art. 32          whole  — espécies de pena
+--   art. 33          caput and § 1º only — reclusão, detenção, os regimes
+--   art. 43          whole  — as penas restritivas de direitos
+--   art. 49          whole  — a multa
+--   art. 53          whole  — os limites da pena cominada
+--   art. 58          caput only — the multa a tipo prescribes has art. 49's limits
+-- The third phase of art. 68 (applying a cause to a quantity) is machinery
+-- here, cited to art. 68; art. 68 itself — the three phases, and the judge's
+-- power in its parágrafo único to apply only one cause — stays with g1.
+--
+-- THE DURATION REPRESENTATION, and why (PLAN.md § 2 has the long form).
+-- A `Duração` is ONE exact rational number of months: a year is 12 months and
+-- a day is 1/30 of a month.
+--   * The Code states penalties in days, months and years ("de quinze dias a
+--     seis meses", "de dois a oito anos"); `dias`, `meses` and `anos` build a
+--     Duração from exactly those words, so a preceito reads as it is written.
+--   * The causes of increase and decrease are fractions (1/6, 1/3, 2/3,
+--     "até a metade"). L4 numbers are exact rationals (measured: 1/3 × 3 = 1),
+--     so 2/3 of 6 years is exactly 4 years, with no rounding drift, and the
+--     "juros sobre juros" of successive causes stays exact.
+--   * Art. 109 compares the maximum against year thresholds; a single number
+--     compares directly, and `EQUALS` is correct on it: `anos 1` and
+--     `meses 12` are the same value.
+--   * The 30-day month is the dosimetry convention, not the calendar. Art. 10
+--     counts a term by the common calendar; `o último dia do prazo` does
+--     that, splitting the Duração into whole months (added on the calendar)
+--     and remaining days. The two conventions meet only at the edge where a
+--     computed quantity has 30 or more loose days, which normalisation removes
+--     (fork F-g0-03).
+--   * Art. 11 discards fractions of a day. The arithmetic here keeps them, and
+--     `desprezadas as frações de dia` drops them when a court fixes the final
+--     quantity. WHEN in the calculation that happens is fork F-g0-04.
+
+§ `Código Penal — maquinaria da pena`
+
+§§ `Duração da pena`
+
+DECLARE Duração HAS
+    `em meses` IS A NUMBER
+    @nlg:en the length in months, counting a year as twelve months and a day as a thirtieth of a month
+
+@ref CP art. 53; art. 10
+GIVEN n IS A NUMBER
+GIVETH A Duração
+@nlg:en a length of a number of years
+anos n MEANS Duração WITH `em meses` IS n TIMES 12
+
+@ref CP art. 53; art. 10
+GIVEN n IS A NUMBER
+GIVETH A Duração
+@nlg:en a length of a number of months
+meses n MEANS Duração WITH `em meses` IS n
+
+@ref CP art. 53; art. 10
+GIVEN n IS A NUMBER
+GIVETH A Duração
+@nlg:en a length of a number of days
+dias n MEANS Duração WITH `em meses` IS n DIVIDED BY 30
+
+GIVEN a IS A Duração
+      b IS A Duração
+GIVETH A Duração
+@nlg:en the sum of two lengths
+`a soma das durações` a b MEANS Duração WITH `em meses` IS a's `em meses` PLUS b's `em meses`
+
+GIVEN d IS A Duração
+      f IS A NUMBER
+GIVETH A Duração
+@nlg:en a length multiplied by a factor
+`a duração multiplicada por` d f MEANS Duração WITH `em meses` IS d's `em meses` TIMES f
+
+GIVEN a IS A Duração
+      b IS A Duração
+GIVETH A BOOLEAN
+@nlg:en the first length is longer than the second
+`a duração excede` a b MEANS a's `em meses` GREATER THAN b's `em meses`
+
+GIVEN a IS A Duração
+      b IS A Duração
+GIVETH A BOOLEAN
+@nlg:en the first length is shorter than the second
+`a duração é inferior a` a b MEANS a's `em meses` LESS THAN b's `em meses`
+
+-- For reading a Duração back the way a sentence states it.
+DECLARE `Anos, meses e dias` HAS
+    `anos completos` IS A NUMBER
+    @nlg:en the whole years
+    `meses restantes` IS A NUMBER
+    @nlg:en the whole months beyond the years
+    `dias restantes` IS A NUMBER
+    @nlg:en the days beyond the months, which may carry a fraction until art. 11 is applied
+
+GIVEN d IS A Duração
+GIVETH AN `Anos, meses e dias`
+@nlg:en a length stated in years, months and days
+`em anos, meses e dias` d MEANS
+    `Anos, meses e dias` WITH
+        `anos completos`  IS `os anos`
+        `meses restantes` IS `os meses`
+        `dias restantes`  IS (d's `em meses` MINUS (`os anos` TIMES 12) MINUS `os meses`) TIMES 30
+    WHERE
+        `os anos`  MEANS FLOOR (d's `em meses` DIVIDED BY 12)
+        `os meses` MEANS FLOOR (d's `em meses` MINUS (`os anos` TIMES 12))
+
+§§ `Art. 10 — Contagem de prazo`
+
+-- "Art. 10 - O dia do começo inclui-se no cômputo do prazo. Contam-se os dias,
+-- os meses e os anos pelo calendário comum."
+--
+-- Because the first day counts, a term of N months that begins on day D ends
+-- on the day BEFORE the day of the same number N months later: a year begun
+-- on 10 March 2020 ends on 9 March 2021. Where the later month has no day of
+-- that number (a month begun on 31 January; a year begun on 29 February), the
+-- anniversary is taken to be the first day of the following month, so the term
+-- ends on the last day of the shorter month. That second step is a reading the
+-- text does not state: fork F-g0-02.
+@ref CP art. 10
+GIVEN d IS A Duração
+      `o primeiro dia` IS A DATE
+GIVETH A DATE
+@nlg:en the last day of a term that begins on a given day, the first day counting
+`o último dia do prazo` d `o primeiro dia` MEANS
+    (`o aniversário` PLUS `os dias soltos`) MINUS 1
+    WHERE
+        `os meses inteiros` MEANS FLOOR (d's `em meses`)
+        `os dias soltos` MEANS FLOOR ((d's `em meses` MINUS `os meses inteiros`) TIMES 30)
+        `o dia de mesmo número` MEANS `add months` `o primeiro dia` `os meses inteiros`
+        `o aniversário` MEANS
+            IF   DATE_DAY `o dia de mesmo número` LESS THAN DATE_DAY `o primeiro dia`
+            THEN `o dia de mesmo número` PLUS 1
+            ELSE `o dia de mesmo número`
+
+§§ `Art. 11 — Frações não computáveis da pena`
+
+-- "Art. 11 - Desprezam-se, nas penas privativas de liberdade e nas restritivas
+-- de direitos, as frações de dia, e, na pena de multa, as frações de cruzeiro."
+@ref CP art. 11
+GIVEN d IS A Duração
+GIVETH A Duração
+@nlg:en the length with the fraction of a day discarded
+`desprezadas as frações de dia` d MEANS
+    Duração WITH `em meses` IS `os meses inteiros` PLUS (FLOOR ((d's `em meses` MINUS `os meses inteiros`) TIMES 30) DIVIDED BY 30)
+    WHERE
+        `os meses inteiros` MEANS FLOOR (d's `em meses`)
+
+-- The cruzeiro is long gone; the Code was never re-worded. Read as the
+-- fractions of the currency in force — centavos of the real (fork F-g0-04's
+-- sibling, recorded as F-g0-12).
+@ref CP art. 11
+GIVEN `o valor em reais` IS A NUMBER
+GIVETH A NUMBER
+@nlg:en the fine's amount with the fraction of the currency unit discarded
+`desprezadas as frações da moeda` `o valor em reais` MEANS FLOOR `o valor em reais`
+
+§§ `Art. 14 — Crime consumado e tentativa`
+
+-- "Art. 14 - Diz-se o crime: I - consumado, quando nele se reúnem todos os
+-- elementos de sua definição legal; II - tentado, quando, iniciada a execução,
+-- não se consuma por circunstâncias alheias à vontade do agente."
+-- Whether ALL the elements of a given offence are present is that offence's
+-- rule; each offence module decides it and passes the answer here.
+@ref CP art. 14, I
+GIVEN `todos os elementos da definição legal reunidos` IS A BOOLEAN
+GIVETH A BOOLEAN
+@nlg:en the crime is consummated
+`crime consumado (art. 14, I)` `todos os elementos da definição legal reunidos` MEANS
+    `todos os elementos da definição legal reunidos`
+
+@ref CP art. 14, II
+GIVEN `execução iniciada` IS A BOOLEAN
+      `todos os elementos da definição legal reunidos` IS A BOOLEAN
+      `consumação impedida por circunstâncias alheias à vontade do agente` IS A BOOLEAN
+GIVETH A BOOLEAN
+@nlg:en the crime is attempted
+`crime tentado (art. 14, II)` `execução iniciada` `todos os elementos da definição legal reunidos` `consumação impedida por circunstâncias alheias à vontade do agente` MEANS
+        `execução iniciada`
+    AND NOT `todos os elementos da definição legal reunidos`
+    AND `consumação impedida por circunstâncias alheias à vontade do agente`
+
+-- "Parágrafo único - Salvo disposição em contrário, pune-se a tentativa com a
+-- pena correspondente ao crime consumado, diminuída de um a dois terços."
+-- "Salvo disposição em contrário": an offence that punishes the attempt as the
+-- consummated crime (the "tentar" offences of arts. 352, 359-L and 359-M) does
+-- not use this cause.
+@ref CP art. 14, parágrafo único
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en the reduction of one to two thirds for an attempt
+`diminuição pela tentativa (art. 14, parágrafo único)` MEANS
+    `causa de diminuição` (entre `um terço` `dois terços`)
+
+@ref CP art. 14, parágrafo único
+GIVEN `a pena do crime consumado` IS A `Pena cominada`
+GIVETH A `Pena cominada`
+@nlg:en the limits of the penalty for the attempt
+`a pena cominada à tentativa (art. 14, parágrafo único)` `a pena do crime consumado` MEANS
+    `a pena cominada com a causa` `a pena do crime consumado` `diminuição pela tentativa (art. 14, parágrafo único)`
+
+§§ `Art. 32 — Espécies de pena`
+
+DECLARE `Espécie de pena` IS ONE OF
+    `pena privativa de liberdade`
+    @nlg:en a custodial penalty
+    `pena restritiva de direitos`
+    @nlg:en a penalty restricting rights
+    `pena de multa`
+    @nlg:en a fine
+
+@ref CP art. 32, I a III
+GIVETH A LIST OF `Espécie de pena`
+@nlg:en the kinds of penalty
+`as espécies de pena (art. 32)` MEANS
+    LIST `pena privativa de liberdade`, `pena restritiva de direitos`, `pena de multa`
+
+§§ `Art. 33 — Reclusão e detenção (caput e § 1º)`
+
+-- The species of custodial penalty. `reclusão ou detenção` is not a third
+-- species: it is how two preceitos (arts. 235 § 1º and 306, parágrafo único)
+-- leave the species to the judge, and it exists so those preceitos can be
+-- written in `Pena cominada` as they are printed.
+DECLARE `Espécie de pena privativa de liberdade` IS ONE OF
+    `reclusão`
+    @nlg:en reclusão (the heavier custodial penalty)
+    `detenção`
+    @nlg:en detenção (the lighter custodial penalty)
+    `reclusão ou detenção`
+    @nlg:en reclusão or detenção, at the judge's choice
+
+DECLARE Regime IS ONE OF
+    `regime fechado`
+    @nlg:en the closed regime
+    `regime semi-aberto`
+    @nlg:en the semi-open regime
+    `regime aberto`
+    @nlg:en the open regime
+
+-- "A pena de reclusão deve ser cumprida em regime fechado, semi-aberto ou
+-- aberto. A de detenção, em regime semi-aberto, ou aberto, salvo necessidade
+-- de transferência a regime fechado."
+@ref CP art. 33, caput
+GIVEN e IS AN `Espécie de pena privativa de liberdade`
+GIVETH A LIST OF Regime
+@nlg:en the regimes in which the penalty is served
+`os regimes da espécie (art. 33, caput)` e MEANS
+    CONSIDER e
+    WHEN `reclusão` THEN LIST `regime fechado`, `regime semi-aberto`, `regime aberto`
+    WHEN `detenção` THEN LIST `regime semi-aberto`, `regime aberto`
+    WHEN `reclusão ou detenção` THEN LIST `regime fechado`, `regime semi-aberto`, `regime aberto`
+
+@ref CP art. 33, caput
+GIVEN e IS AN `Espécie de pena privativa de liberdade`
+GIVETH A BOOLEAN
+@nlg:en the closed regime is reached only by a transfer
+`o regime fechado só por transferência (art. 33, caput)` e MEANS
+    CONSIDER e
+    WHEN `detenção` THEN TRUE
+    OTHERWISE FALSE
+
+-- "§ 1º - Considera-se: a) regime fechado a execução da pena em estabelecimento
+-- de segurança máxima ou média; b) regime semi-aberto a execução da pena em
+-- colônia agrícola, industrial ou estabelecimento similar; c) regime aberto a
+-- execução da pena em casa de albergado ou estabelecimento adequado."
+-- A definition by kind of establishment; nothing in the Code computes from it,
+-- so it is carried as the Code's words.
+@ref CP art. 33, § 1º, a a c
+GIVEN r IS A Regime
+GIVETH A STRING
+@nlg:en where the penalty is served in the regime
+`a definição do regime (art. 33, § 1º)` r MEANS
+    CONSIDER r
+    WHEN `regime fechado`     THEN "a execução da pena em estabelecimento de segurança máxima ou média"
+    WHEN `regime semi-aberto` THEN "a execução da pena em colônia agrícola, industrial ou estabelecimento similar"
+    WHEN `regime aberto`      THEN "a execução da pena em casa de albergado ou estabelecimento adequado"
+
+§§ `Art. 43 — Penas restritivas de direitos`
+
+DECLARE `Pena restritiva de direitos` IS ONE OF
+    `prestação pecuniária`
+    @nlg:en a pecuniary payment
+    `perda de bens e valores`
+    @nlg:en the loss of goods and values
+    `limitação de fim de semana`
+    @nlg:en weekend limitation
+    `prestação de serviço à comunidade ou a entidades públicas`
+    @nlg:en community service or service to public entities
+    `interdição temporária de direitos`
+    @nlg:en a temporary interdiction of rights
+
+-- The six incisos in the Code's order. Incisos III and VI both read
+-- "limitação de fim de semana" in the compiled text (III marked "Incluído pela
+-- Lei nº 7.209, de 1984", VI "Incluído pela Lei nº 9.714, de 25.11.1998"), so
+-- the list has six entries and five species. Fork F-g0-11.
+@ref CP art. 43, I a VI
+GIVETH A LIST OF `Pena restritiva de direitos`
+@nlg:en the penalties restricting rights, inciso by inciso
+`as penas restritivas de direitos, inciso a inciso (art. 43)` MEANS
+    LIST `prestação pecuniária`
+       , `perda de bens e valores`
+       , `limitação de fim de semana`
+       , `prestação de serviço à comunidade ou a entidades públicas`
+       , `interdição temporária de direitos`
+       , `limitação de fim de semana`
+
+§§ `Art. 49 — Multa`
+
+-- "Art. 49 - A pena de multa consiste no pagamento ao fundo penitenciário da
+-- quantia fixada na sentença e calculada em dias-multa. Será, no mínimo, de 10
+-- (dez) e, no máximo, de 360 (trezentos e sessenta) dias-multa."
+-- "§ 1º - O valor do dia-multa será fixado pelo juiz não podendo ser inferior
+-- a um trigésimo do maior salário mínimo mensal vigente ao tempo do fato, nem
+-- superior a 5 (cinco) vezes esse salário."
+-- "§ 2º - O valor da multa será atualizado, quando da execução, pelos índices
+-- de correção monetária."
+-- The minimum wage and the correction index are published figures, not facts
+-- of the case and not constants of the Code: they are inputs.
+DECLARE `Multa aplicada` HAS
+    `número de dias-multa` IS A NUMBER
+    @nlg:en the number of day-fines fixed in the sentence
+    `valor do dia-multa em reais` IS A NUMBER
+    @nlg:en the value of one day-fine in reais, fixed by the judge
+
+@ref CP art. 49, caput
+GIVETH A NUMBER
+@nlg:en the minimum number of day-fines
+`o mínimo de dias-multa (art. 49)` MEANS 10
+
+@ref CP art. 49, caput
+GIVETH A NUMBER
+@nlg:en the maximum number of day-fines
+`o máximo de dias-multa (art. 49)` MEANS 360
+
+@ref CP art. 49, caput
+GIVEN m IS A `Multa aplicada`
+GIVETH A NUMBER
+@nlg:en the amount of the fine in reais
+`o valor da multa (art. 49)` m MEANS m's `número de dias-multa` TIMES m's `valor do dia-multa em reais`
+
+@ref CP art. 49, caput
+GIVEN m IS A `Multa aplicada`
+GIVETH A BOOLEAN
+@nlg:en the number of day-fines is within the Code's limits
+`o número de dias-multa está nos limites do art. 49` m MEANS
+        m's `número de dias-multa` AT LEAST `o mínimo de dias-multa (art. 49)`
+    AND m's `número de dias-multa` AT MOST  `o máximo de dias-multa (art. 49)`
+
+@ref CP art. 49, § 1º
+GIVEN m IS A `Multa aplicada`
+      `o maior salário mínimo mensal vigente ao tempo do fato` IS A NUMBER
+GIVETH A BOOLEAN
+@nlg:en the value of the day-fine is within the Code's limits
+`o valor do dia-multa está nos limites do art. 49, § 1º` m `o maior salário mínimo mensal vigente ao tempo do fato` MEANS
+        m's `valor do dia-multa em reais` AT LEAST `o maior salário mínimo mensal vigente ao tempo do fato` DIVIDED BY 30
+    AND m's `valor do dia-multa em reais` AT MOST  `o maior salário mínimo mensal vigente ao tempo do fato` TIMES 5
+
+@ref CP art. 49, caput e § 1º
+GIVEN m IS A `Multa aplicada`
+      `o maior salário mínimo mensal vigente ao tempo do fato` IS A NUMBER
+GIVETH A BOOLEAN
+@nlg:en the fine is within the limits of art. 49
+`a multa está nos limites do art. 49` m `o maior salário mínimo mensal vigente ao tempo do fato` MEANS
+        `o número de dias-multa está nos limites do art. 49` m
+    AND `o valor do dia-multa está nos limites do art. 49, § 1º` m `o maior salário mínimo mensal vigente ao tempo do fato`
+
+@ref CP art. 49, § 2º
+GIVEN m IS A `Multa aplicada`
+      `o índice acumulado de correção monetária` IS A NUMBER
+GIVETH A NUMBER
+@nlg:en the amount of the fine updated at execution by monetary correction
+`o valor da multa atualizado na execução (art. 49, § 2º)` m `o índice acumulado de correção monetária` MEANS
+    `o valor da multa (art. 49)` m TIMES `o índice acumulado de correção monetária`
+
+§§ `Art. 53 — A pena cominada`
+
+-- What a preceito secundário can say about the fine. "ou multa, ou ambas as
+-- penas" (art. 180, § 3º) is the fourth. A preceito that still prints an
+-- amount in réis or in minimum wages ("multa, de trezentos mil réis a dois
+-- contos de réis") is read through Lei nº 7.209/1984, art. 2º, which cancelled
+-- those amounts (the "Vide Lei nº 7.209" markers V25, V26, V32; sweep entries
+-- M-sweep-a-07 and M-sweep-b-07, binding): it is written with the member its
+-- conjunction names — "e multa" cumulative, "ou multa" alternative.
+DECLARE `Cominação da multa` IS ONE OF
+    `sem multa`
+    @nlg:en no fine
+    `multa cumulativa`
+    @nlg:en and a fine ("e multa")
+    `multa alternativa`
+    @nlg:en or a fine ("ou multa")
+    `multa alternativa ou cumulativa`
+    @nlg:en or a fine, or both ("ou multa, ou ambas as penas")
+
+-- "Art. 53 - As penas privativas de liberdade têm seus limites estabelecidos
+-- na sanção correspondente a cada tipo legal de crime." This record IS that
+-- sanção: one per preceito secundário. Build it with `WITH` and name every
+-- field; never with positional `OF` — `mínimo` and `máximo` are the same type,
+-- and a swap would type-check.
+DECLARE `Pena cominada` HAS
+    `espécie` IS AN `Espécie de pena privativa de liberdade`
+    @nlg:en the kind of custodial penalty the provision prescribes
+    `mínimo` IS A Duração
+    @nlg:en the minimum the provision prescribes
+    `máximo` IS A Duração
+    @nlg:en the maximum the provision prescribes
+    multa IS A `Cominação da multa`
+    @nlg:en whether and how a fine is prescribed with it
+    `além da pena correspondente à violência` IS A BOOLEAN
+    @nlg:en the penalty for the violence is applied in addition
+
+-- Every preceito but one prescribes a custodial penalty. Art. 146-A caput
+-- ("Pena - multa, se a conduta não constituir crime mais grave") prescribes
+-- only a fine; this type lets a function that must take any preceito — g1c's
+-- prescrição under arts. 109 and 114 — take that one too.
+DECLARE `Preceito secundário` IS ONE OF
+    `com pena privativa de liberdade` HAS `a pena` IS A `Pena cominada`
+    @nlg:en a provision prescribing a custodial penalty
+    `somente pena de multa`
+    @nlg:en a provision prescribing only a fine
+
+@ref CP art. 53; art. 59, II
+GIVEN q  IS A Duração
+      pc IS A `Pena cominada`
+GIVETH A BOOLEAN
+@nlg:en the quantity lies within the limits the provision prescribes
+`a quantidade está nos limites da pena cominada (art. 53)` q pc MEANS
+        pc's `mínimo`'s `em meses` AT MOST q's `em meses`
+    AND q's `em meses` AT MOST pc's `máximo`'s `em meses`
+
+§§§ `Um parágrafo que altera parte da pena do caput`
+
+-- Some paragraphs restate only one part of the caput's preceito and leave the
+-- rest standing:
+--   art. 290, parágrafo único: "O máximo da reclusão é elevado a doze anos e
+--     multa" — the maximum changes, the minimum stays the caput's;
+--   art. 146, § 1º: "As penas aplicam-se cumulativamente e em dobro" — the
+--     caput's "ou multa" becomes cumulative (and a cause doubles the penalty).
+-- Write such a paragraph as the caput's pena with that one part changed, so
+-- every part it does not mention is the caput's by construction and is never
+-- retyped. Only the rules below change a `Pena cominada`; they copy the rest.
+@ref CP art. 53; art. 290, parágrafo único
+GIVEN pc IS A `Pena cominada`
+      d  IS A Duração
+GIVETH A `Pena cominada`
+@nlg:en the prescribed penalty with only its maximum changed
+`a pena cominada com outro máximo` pc d MEANS
+    `Pena cominada` WITH
+        `espécie` IS pc's `espécie`
+        `mínimo`  IS pc's `mínimo`
+        `máximo`  IS d
+        multa     IS pc's multa
+        `além da pena correspondente à violência` IS pc's `além da pena correspondente à violência`
+
+@ref CP art. 53
+GIVEN pc IS A `Pena cominada`
+      d  IS A Duração
+GIVETH A `Pena cominada`
+@nlg:en the prescribed penalty with only its minimum changed
+`a pena cominada com outro mínimo` pc d MEANS
+    `Pena cominada` WITH
+        `espécie` IS pc's `espécie`
+        `mínimo`  IS d
+        `máximo`  IS pc's `máximo`
+        multa     IS pc's multa
+        `além da pena correspondente à violência` IS pc's `além da pena correspondente à violência`
+
+@ref CP art. 53; art. 146, § 1º
+GIVEN pc IS A `Pena cominada`
+      c  IS A `Cominação da multa`
+GIVETH A `Pena cominada`
+@nlg:en the prescribed penalty with only its fine changed
+`a pena cominada com outra multa` pc c MEANS
+    `Pena cominada` WITH
+        `espécie` IS pc's `espécie`
+        `mínimo`  IS pc's `mínimo`
+        `máximo`  IS pc's `máximo`
+        multa     IS c
+        `além da pena correspondente à violência` IS pc's `além da pena correspondente à violência`
+
+-- "além da pena correspondente à violência", and its variants: a separate
+-- paragraph for the whole article (arts. 146, § 2º; 147-A, § 2º; 329, § 2º),
+-- one that applies only if violence was used (arts. 161, § 2º; 351, § 2º), and
+-- a cause of increase that carries it (arts. 208 and 209, parágrafo único). It
+-- adds no number to this penalty: it says the penalty of the violence, itself
+-- another offence (art. 129's, for instance), is imposed as well.
+@ref CP art. 53; art. 146, § 2º; art. 161, § 2º
+GIVEN pc IS A `Pena cominada`
+GIVETH A `Pena cominada`
+@nlg:en the prescribed penalty with the penalty for the violence imposed as well
+`a pena cominada com a pena correspondente à violência` pc MEANS
+    `Pena cominada` WITH
+        `espécie` IS pc's `espécie`
+        `mínimo`  IS pc's `mínimo`
+        `máximo`  IS pc's `máximo`
+        multa     IS pc's multa
+        `além da pena correspondente à violência` IS TRUE
+
+§§ `Art. 58 — A multa cominada (caput)`
+
+-- "Art. 58 - A multa, prevista em cada tipo legal de crime, tem os limites
+-- fixados no art. 49 e seus parágrafos deste Código."
+-- So a `Cominação da multa` carries no amount: the fine a tipo prescribes is
+-- always art. 49's day-fine, and an amount still printed in réis or in minimum
+-- wages (arts. 129 § 5º, 153, 154, 244, 299) has no field to go in. A tipo that
+-- prescribes no fine admits none; the substitutive fine that the parágrafo
+-- único allows "independentemente de cominação" (arts. 44 and 60, § 2º) is
+-- g1b's, and not this rule.
+@ref CP art. 58, caput; art. 49
+GIVEN m  IS A `Multa aplicada`
+      pc IS A `Pena cominada`
+      `o maior salário mínimo mensal vigente ao tempo do fato` IS A NUMBER
+GIVETH A BOOLEAN
+@nlg:en the fine imposed fits the fine the provision prescribes
+`a multa aplicada cabe na pena cominada (art. 58)` m pc `o maior salário mínimo mensal vigente ao tempo do fato` MEANS
+    CONSIDER pc's multa
+    WHEN `sem multa` THEN FALSE
+    OTHERWISE `a multa está nos limites do art. 49` m `o maior salário mínimo mensal vigente ao tempo do fato`
+
+§§ `Frações das causas de aumento e de diminuição`
+
+-- The fractions the Code writes, as exact rationals. A fraction here is always
+-- a fraction OF INCREASE OR DECREASE applied to the penalty: "aumentada até o
+-- dobro" is an increase of up to `o dobro` = 1 (the penalty doubles), "aplica-se
+-- em triplo" an increase of `o triplo` = 2.
+GIVETH A NUMBER
+@nlg:en one sixth
+`um sexto` MEANS 1 DIVIDED BY 6
+
+GIVETH A NUMBER
+@nlg:en one quarter
+`um quarto` MEANS 1 DIVIDED BY 4
+
+GIVETH A NUMBER
+@nlg:en one third
+`um terço` MEANS 1 DIVIDED BY 3
+
+GIVETH A NUMBER
+@nlg:en one half
+metade MEANS 1 DIVIDED BY 2
+
+GIVETH A NUMBER
+@nlg:en two thirds
+`dois terços` MEANS 2 DIVIDED BY 3
+
+GIVETH A NUMBER
+@nlg:en an increase of the whole (the penalty doubles)
+`o dobro` MEANS 1
+
+GIVETH A NUMBER
+@nlg:en an increase of twice the whole (the penalty triples)
+`o triplo` MEANS 2
+
+DECLARE `Sentido da causa` IS ONE OF
+    `de aumento`
+    @nlg:en of increase
+    `de diminuição`
+    @nlg:en of decrease
+
+-- The Code writes a cause's fraction three ways: fixed ("de metade"), a range
+-- ("de um a dois terços"), or a ceiling alone ("até a metade", "até o dobro").
+-- For the third the floor is NOTHING — the Code does not state one (fork
+-- F-g0-09) — and the arithmetic below treats it as 0, the infimum, never as a
+-- value a judge could choose.
+DECLARE `Fração da causa` HAS
+    `menor fração` IS A MAYBE NUMBER
+    @nlg:en the smallest fraction the Code allows, where it states one
+    `maior fração` IS A NUMBER
+    @nlg:en the largest fraction the Code allows
+
+DECLARE `Causa de aumento ou de diminuição` HAS
+    sentido IS A `Sentido da causa`
+    @nlg:en whether the cause increases or decreases the penalty
+    `fração` IS A `Fração da causa`
+    @nlg:en the fraction by which it does so
+
+GIVEN f IS A NUMBER
+GIVETH A `Fração da causa`
+@nlg:en a fixed fraction
+fixa f MEANS `Fração da causa` WITH `menor fração` IS JUST f, `maior fração` IS f
+
+GIVEN a IS A NUMBER
+      b IS A NUMBER
+GIVETH A `Fração da causa`
+@nlg:en a fraction between a smaller and a larger bound
+entre a b MEANS `Fração da causa` WITH `menor fração` IS JUST a, `maior fração` IS b
+
+GIVEN b IS A NUMBER
+GIVETH A `Fração da causa`
+@nlg:en a fraction up to a stated ceiling
+`até` b MEANS `Fração da causa` WITH `menor fração` IS NOTHING, `maior fração` IS b
+
+GIVEN f IS A `Fração da causa`
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en a cause of increase
+`causa de aumento` f MEANS `Causa de aumento ou de diminuição` WITH sentido IS `de aumento`, `fração` IS f
+
+GIVEN f IS A `Fração da causa`
+GIVETH A `Causa de aumento ou de diminuição`
+@nlg:en a cause of decrease
+`causa de diminuição` f MEANS `Causa de aumento ou de diminuição` WITH sentido IS `de diminuição`, `fração` IS f
+
+§§ `Aplicação das causas (art. 68, terceira fase)`
+
+-- "Art. 68 - ... por último, as causas de diminuição e de aumento." A cause
+-- turns a quantity into a RANGE, and the judge chooses in it; this module
+-- computes the range and never the choice. Two applications:
+--   * to a quantity the judge has already reached (`o intervalo com a causa`);
+--   * to a pena cominada, giving its outer limits once the cause is applied
+--     (`a pena cominada com a causa`) — the "pena em abstrato" that arts. 109
+--     and 111 read: an increase at its largest fraction on the maximum, a
+--     decrease at its smallest.
+-- Several causes compose by multiplication ("em cascata"), fork F-g0-10; the
+-- parágrafo único of art. 68 lets the judge apply only one of several causes
+-- from the Parte Especial, which is g1b's to encode and which this module does
+-- not pre-empt: a caller passes only the causes it has decided apply. Where in
+-- a range the judge stops needs concrete reasons, not a count of the causes
+-- (Súmula 443 STJ, sweep entry M-sweep-a-40); nothing here computes that.
+
+@ref CP art. 68 (terceira fase)
+GIVEN c IS A `Causa de aumento ou de diminuição`
+GIVETH A NUMBER
+@nlg:en the smallest factor the cause multiplies the penalty by
+`o menor fator da causa` c MEANS
+    CONSIDER c's sentido
+    WHEN `de aumento`    THEN 1 PLUS  fromMaybe 0 (c's `fração`'s `menor fração`)
+    WHEN `de diminuição` THEN 1 MINUS c's `fração`'s `maior fração`
+
+@ref CP art. 68 (terceira fase)
+GIVEN c IS A `Causa de aumento ou de diminuição`
+GIVETH A NUMBER
+@nlg:en the largest factor the cause multiplies the penalty by
+`o maior fator da causa` c MEANS
+    CONSIDER c's sentido
+    WHEN `de aumento`    THEN 1 PLUS  c's `fração`'s `maior fração`
+    WHEN `de diminuição` THEN 1 MINUS fromMaybe 0 (c's `fração`'s `menor fração`)
+
+DECLARE `Intervalo de duração` HAS
+    `mínimo` IS A Duração
+    @nlg:en the lower end of the range
+    `máximo` IS A Duração
+    @nlg:en the upper end of the range
+
+@ref CP art. 68 (terceira fase)
+GIVEN q IS A Duração
+      c IS A `Causa de aumento ou de diminuição`
+GIVETH AN `Intervalo de duração`
+@nlg:en the range in which the judge fixes the quantity once the cause is applied
+`o intervalo com a causa` q c MEANS
+    `Intervalo de duração` WITH
+        `mínimo` IS `a duração multiplicada por` q (`o menor fator da causa` c)
+        `máximo` IS `a duração multiplicada por` q (`o maior fator da causa` c)
+
+@ref CP art. 68 (terceira fase)
+GIVEN i IS AN `Intervalo de duração`
+      c IS A `Causa de aumento ou de diminuição`
+GIVETH AN `Intervalo de duração`
+@nlg:en a range with one more cause applied
+`o intervalo com mais uma causa` i c MEANS
+    `Intervalo de duração` WITH
+        `mínimo` IS `a duração multiplicada por` (i's `mínimo`) (`o menor fator da causa` c)
+        `máximo` IS `a duração multiplicada por` (i's `máximo`) (`o maior fator da causa` c)
+
+@ref CP art. 68 (terceira fase)
+GIVEN q      IS A Duração
+      causas IS A LIST OF `Causa de aumento ou de diminuição`
+GIVETH AN `Intervalo de duração`
+@nlg:en the range once all the causes are applied in cascade
+`o intervalo com as causas` q causas MEANS
+    `aplicadas em cascata` (`Intervalo de duração` WITH `mínimo` IS q, `máximo` IS q) causas
+    WHERE
+        GIVEN i  IS AN `Intervalo de duração`
+              cs IS A LIST OF `Causa de aumento ou de diminuição`
+        GIVETH AN `Intervalo de duração`
+        `aplicadas em cascata` i cs MEANS
+            CONSIDER cs
+            WHEN EMPTY THEN i
+            WHEN c FOLLOWED BY resto THEN `aplicadas em cascata` (`o intervalo com mais uma causa` i c) resto
+
+@ref CP art. 68 (terceira fase)
+GIVEN q IS A Duração
+      i IS AN `Intervalo de duração`
+GIVETH A BOOLEAN
+@nlg:en the quantity chosen lies in the range
+`a quantidade está no intervalo` q i MEANS
+        i's `mínimo`'s `em meses` AT MOST q's `em meses`
+    AND q's `em meses` AT MOST i's `máximo`'s `em meses`
+
+@ref CP art. 68 (terceira fase); art. 53
+GIVEN pc IS A `Pena cominada`
+      c  IS A `Causa de aumento ou de diminuição`
+GIVETH A `Pena cominada`
+@nlg:en the limits of the prescribed penalty once the cause is applied
+`a pena cominada com a causa` pc c MEANS
+    `Pena cominada` WITH
+        `espécie` IS pc's `espécie`
+        `mínimo`  IS `a duração multiplicada por` (pc's `mínimo`) (`o menor fator da causa` c)
+        `máximo`  IS `a duração multiplicada por` (pc's `máximo`) (`o maior fator da causa` c)
+        multa     IS pc's multa
+        `além da pena correspondente à violência` IS pc's `além da pena correspondente à violência`
+
+@ref CP art. 68 (terceira fase); art. 53
+GIVEN pc     IS A `Pena cominada`
+      causas IS A LIST OF `Causa de aumento ou de diminuição`
+GIVETH A `Pena cominada`
+@nlg:en the limits of the prescribed penalty once all the causes are applied in cascade
+`a pena cominada com as causas` pc causas MEANS
+    CONSIDER causas
+    WHEN EMPTY THEN pc
+    WHEN c FOLLOWED BY resto THEN `a pena cominada com as causas` (`a pena cominada com a causa` pc c) resto
+
+§§ `Ação penal`
+
+-- The vocabulary an offence uses where its article states the ação penal
+-- (e.g. art. 145: "somente se procede mediante queixa"). The rule that the
+-- ação is public unless the law says otherwise is art. 100, and g1c's.
+DECLARE `Ação penal` IS ONE OF
+    `ação penal pública incondicionada`
+    @nlg:en a public prosecution, unconditional
+    `ação penal pública condicionada à representação do ofendido`
+    @nlg:en a public prosecution, conditional on the victim's representation
+    `ação penal pública condicionada à requisição do Ministro da Justiça`
+    @nlg:en a public prosecution, conditional on a requisition by the Minister of Justice
+    `ação penal privada`
+    @nlg:en a private prosecution, by the victim's complaint (queixa)
+
+§§ `Idade`
+
+-- Not an article: the arithmetic every age threshold in the Code needs (14,
+-- 18, 21, 60, 70). Age is counted in completed years; a person completes a
+-- year on the day of the same number in the same month, and one born on 29
+-- February completes it on 1 March in a common year (fork F-g0-01).
+-- Each rule takes a `Pessoa` and a date, two different types, so the
+-- arguments cannot be swapped without a type error. Pass the date the
+-- provision names: the date of the fact ("na data do fato", art. 65, I), or of
+-- the sentence ("na data da sentença", arts. 65, I and 115).
+GIVEN p IS A Pessoa
+      `a data` IS A DATE
+GIVETH A NUMBER
+@nlg:en the age in completed years on a given day
+`a idade em anos completos` p `a data` MEANS
+    IF   `o aniversário do ano já chegou`
+    THEN `a diferença de anos`
+    ELSE `a diferença de anos` MINUS 1
+    WHERE
+        `a diferença de anos` MEANS DATE_YEAR `a data` MINUS DATE_YEAR (p's `data de nascimento`)
+        `o aniversário do ano já chegou` MEANS
+                DATE_MONTH `a data` GREATER THAN DATE_MONTH (p's `data de nascimento`)
+            OR  (    DATE_MONTH `a data` EQUALS DATE_MONTH (p's `data de nascimento`)
+                 AND DATE_DAY `a data` AT LEAST DATE_DAY (p's `data de nascimento`))
+
+-- "menor de N anos": has not completed N years.
+GIVEN n IS A NUMBER
+      p IS A Pessoa
+      `a data` IS A DATE
+GIVETH A BOOLEAN
+@nlg:en under a number of years of age on the day
+`menor de` n p `a data` MEANS
+    `a idade em anos completos` p `a data` LESS THAN n
+
+-- "maior de N anos": HAS completed N years. On the birthday itself the person
+-- is "maior de N" and no longer "menor de N", so no day falls between the two.
+-- The strict reading (only after the birthday) is recorded, not taken: fork
+-- F-g0-06.
+GIVEN n IS A NUMBER
+      p IS A Pessoa
+      `a data` IS A DATE
+GIVETH A BOOLEAN
+@nlg:en over a number of years of age on the day
+`maior de` n p `a data` MEANS
+    `a idade em anos completos` p `a data` AT LEAST n
+
+-- "idoso": the Code uses the word (arts. 147-A, 149-A, 155 § 4º-C, 171 § 4º,
+-- 203, 207, 234-A) without defining it; art. 183, III says "idade igual ou
+-- superior a 60 (sessenta) anos". Read as that (fork F-g0-08).
+GIVEN p IS A Pessoa
+      `a data` IS A DATE
+GIVETH A BOOLEAN
+@nlg:en an older person, sixty or more, on the day
+idoso p `a data` MEANS
+    `a idade em anos completos` p `a data` AT LEAST 60
+
+-- "criança", "adolescente": undefined in the Code; read as the Estatuto da
+-- Criança e do Adolescente reads them — under 12, and 12 to under 18 — which
+-- is outside this encoding's sources (fork F-g0-24).
+GIVEN p IS A Pessoa
+      `a data` IS A DATE
+GIVETH A BOOLEAN
+@nlg:en a child, under twelve, on the day
+`criança` p `a data` MEANS
+    `a idade em anos completos` p `a data` LESS THAN 12
+
+GIVEN p IS A Pessoa
+      `a data` IS A DATE
+GIVETH A BOOLEAN
+@nlg:en an adolescent, twelve to under eighteen, on the day
+adolescente p `a data` MEANS
+        `a idade em anos completos` p `a data` AT LEAST 12
+    AND `a idade em anos completos` p `a data` LESS THAN 18
