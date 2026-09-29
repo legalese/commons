@@ -22,8 +22,9 @@ This file is written as the work goes; the PROGRESS list is the resume point.
 - [x] English glosses checked (§ 6).
 - [x] Mutation results for prescrição (12/12) and extinção (4/4).
 - [x] cp-pena's day-counting defect (conductor, 2026-09-30): the one day-stated period in my range, art. 92, IV's 180 days, now has a day-counted end date tagged `-- DIAS-PRAZO` and its own test (5.7.2026 → 31.12.2026). No other rule of mine sends a day-stated period through `o último dia do prazo`; the prescription suspensions add days by plain date arithmetic.
-- [x] Final check.sh (§ 5): `TOTAL (15 modules)                                 0       467       0       0     467`; reply sent to the conductor.
-- Last check.sh TOTAL: `TOTAL (15 modules)                                 0       467       0       0     467`
+- [x] Report sent to the conductor (2026-09-30).
+- [x] The conductor's integration rulings (2026-09-30), applied (§ 10). Strict PLAN § 10 for art. 115 (every crime before 4.7.2025), art. 92, II (every fact before 10.10.2024) and art. 92, § 2º (every fact from 10.10.2024 to 6.8.2026). Refused assertions were kept as `#ASSERT REFUSED`, and post-amendment twins were added. Súmula 608 STF is cited by number only in F-g1c-23, since no official or LexML copy could be fetched.
+- Last check.sh TOTAL: `TOTAL (15 modules)                                 0       486       0       0     486`
 
 ## 1. What is encoded, and what is not
 
@@ -78,7 +79,7 @@ Seven modules and their seven tests modules, all `cp-g1c-*`:
 | F-g1c-20 | Art. 97 "punível com detenção" | the preceito admits detenção; a fine alone does not |
 | F-g1c-21 | Art. 98 and art. 97's detenção rule | both measures open |
 | F-g1c-22 | Art. 100 § 4º "cônjuge" and the companheiro | as printed |
-| F-g1c-23 | Art. 101 when the complex crime's article declares a private action | a public component prevails (Súmula 608 STF's reading) |
+| F-g1c-23 | Art. 101 when the complex crime's article declares a private action | a public component prevails (Súmula 608 STF cited by number) |
 | F-g1c-24 | Two acts on the same day (arts. 102, 106 § 2º) | REFUSE: the dates cannot order them |
 | F-g1c-25 | Art. 114: the fine cominated or applied | cominated before the final judgment, applied after |
 | F-g1c-26 | Art. 115's "sentença" | the first condemnatory decision |
@@ -134,18 +135,11 @@ V16 (ADPF 569) and V17 are disposed by the sweep; V16 is M-sweep-a-05 above.
 
 ## 5. What `check.sh` prints
 
-Last full run (2026-09-29, before the usage stop; unchanged files):
+Final run, in the foreground on 2026-09-30, after the conductor's rulings (§ 10), exit 0:
 
 ```
-TOTAL (15 modules)                                 0       464       0       0     464
+TOTAL (15 modules)                                 0       486       0       0     486
 ```
-
-Final run (2026-09-30), after the art. 92, IV day count was added: see the line under it.
-
-```
-TOTAL (15 modules)                                 0       467       0       0     467
-```
-(exit 0; run in the foreground on 2026-09-30, after the art. 92, IV day count and the Súmula 715 test were added)
 
 Mutation controls, each a single change in a scratch copy, run against that module's tests:
 
@@ -157,9 +151,11 @@ Mutation controls, each a single change in a scratch copy, run against that modu
 | medidas de segurança | 5 | 5 |
 | ação penal | 7 | 7 |
 | prescrição | 12 | 12 (among them the art. 109 thresholds, Tema 788's date, the day-count of suspensions, the stop at art. 117, V, the § 1º start, the art. 115 age) |
+| the rulings' gates (2026-09-30), on the final tree | 7 | 7: art. 115's date gate removed (43 assertions fail), its vigência moved a day earlier (2), its 21 made 22 (1), its 70 made 71 (1); art. 92, II's date gate removed (2); § 2º's window gate removed (4); § 2º's words check dropped (7) |
+| prescrição after the rulings, re-run | 12 | 12: without the twins, three (art. 110's third, the § 1º start at the denúncia, art. 117, V's stop) went uncaught, because the assertions that caught them now expect a refusal; the twins of `P4`, `P5`, `E1`, `E6` and `E7`, dated after 4.7.2025, catch them again |
 | extinção da punibilidade | 4 | 4 |
 
-One assertion failed on its first run and was a finding about my test, not the code: `P1`'s agent was twenty at a 2010 crime, and art. 115 rightly halved the period. The case now uses an older agent, and the twenty-year-old's case is its own assertion.
+One assertion failed on its first run and was a finding about my test, not the code: `P1`'s agent was twenty at a 2010 crime, and art. 115 halved the period. The case now uses an older agent, and the twenty-year-old's case is its own assertion, which since the conductor's ruling expects the art. 115 refusal (the crime is before Lei 15.160/2025).
 
 ## 6. English glosses
 
@@ -207,10 +203,7 @@ Recorded at the conductor's request, NOT encoded: each rule that reads a re-word
 | 116, II | Lei 7.209/1984 ("no estrangeiro" — sweep-a: form only), to 22.1.2020 | `v-l7209.txt` |
 | 117, IV | Lei 7.209/1984 ("pela sentença condenatória, recorrível"), to 29.11.2007 | `v-l7209.txt`, `g1c-l11596.txt` |
 
-Two places where the encoding already answers an earlier crime by the current words, because sweep-a's copies show the words did not change there — for the conductor to confirm or undo in the vintage pass:
-
-- **art. 115** for a crime before 4.7.2025 where the exception is not engaged: the halving (sweep-a: the only change of substance was the added exception). Where it is engaged, REFUSE.
-- **art. 92, II** where the crime is against none of the persons the inciso names and not against a woman for reasons of her sex: FALSE on any date (every earlier wording sweep-a quotes names only children, wards and co-holders).
+For arts. 115 and 92, II, these copies are what a vintage pass would use to restore the answers listed in § 10.
 
 ## 9. Open questions for a Brazilian criminal lawyer
 
@@ -218,7 +211,7 @@ Two places where the encoding already answers an earlier crime by the current wo
 2. Art. 88 with LEP art. 141: may a new livramento follow a revocation for an earlier crime (F-g1c-14)?
 3. Art. 97: is outpatient treatment open, by case law, for an act punishable with reclusão (F-g1c-20)?
 4. Art. 100 § 4º: does the companheiro take the spouse's place (F-g1c-22)?
-5. Art. 101: is Súmula 608 STF's reading (a public component prevails) still the rule after art. 225's rewrite, and is the text I quote from memory exact (F-g1c-23)?
+5. Art. 101: what does Súmula 608 STF say, does it rest on art. 101's reading (a public component prevails), and what does it still reach after art. 225's rewrite (F-g1c-23)? Its text could not be fetched, so the fork cites it by number only.
 6. Art. 117, VI: does the reincidência interrupt on the day of the new crime or when its conviction becomes final (F-g1c-30)?
 7. Art. 115: which decision is "a sentença" when the conviction first comes on appeal (F-g1c-26)?
 8. Art. 81, II: is frustrating the fine still a ground after Lei 9.268/1996 (F-g1c-06)?
@@ -233,6 +226,13 @@ Two places where the encoding already answers an earlier crime by the current wo
 - **Inputs to wire at integration:** art. 26 (g1a) → `inimputável (art. 26, caput)`, the semi-imputável of art. 98; art. 44 (g1b) → `a substituição prevista no art. 44 é indicada ou cabível` (art. 77, III); art. 121-A § 1º (g2a) → the § 2º class of art. 92; arts. 63–64 (g1b) → the reincidência inputs; art. 51 with ADI 7.032 (g1b) → the fine left after arts. 82 and 90.
 - **`cp-dominio`'s `Relação do agente com a vítima`** is reused in art. 100 § 4º for what a successor is to the victim; the constructors fit, the type's name does not. A neutral kinship type would be cleaner.
 - **Three vigências are unverified** (§ 7): Leis 9.268/1996, 12.694/2012, 13.344/2016.
-- **Two answers for earlier facts** go by the current words where sweep-a's copies show no change (§ 8): art. 115 without the exception, art. 92, II outside its persons.
+- **The conductor's rulings of 2026-09-30, applied: strict PLAN § 10.** A provision a later law re-worded refuses by name for every earlier fact, even one its present words would not reach, because what the earlier wording said is in no bundled source. Every refused assertion is kept as `#ASSERT REFUSED … BECAUSE "…"` and still carries the answer the present words give. Recorded in forks F-g1c-19 and F-g1c-26.
+  - **Art. 115:** every crime before 4.7.2025 refuses (`a redação do art. 115 anterior à Lei nº 15.160, de 2025, não está codificada`), whatever the age and whether or not the exception is engaged. **Measured cost — strict gate: 36 of 119 prescription assertions refuse; no prescription is computable for a crime before 4.7.2025 until the vintage pass brings the pre-2025 art. 115 into the bundle.** Every period passes through art. 115, which is why the cost is so wide, and why arts. 115 and 92 should come first in the vintage pass. In all, 43 prescription assertions now expect this refusal: those 36, the six flipped under the first ruling, and the one (exception engaged) that expected it from the start.
+  - **Twins after the amendment:** fifteen assertions on crimes of 2025–2030 keep the arithmetic tested: `P9`, `P4`, `P5`, `E1`, `E6` and `E7`, each marked "depois da Lei nº 15.160" (the shift is twelve years, which keeps leap years in step), plus Vicente's two. Without them three of the twelve prescription mutations went uncaught (§ 5).
+  - **The other gates still show:** the prescription tests that refuse on their own gates (arts. 110, § 1º before 2010; 111, V before 2022; 116, II before 2020; 117, IV before 2007; 114 without a fine) still refuse with their own reason, because those gates are reached before art. 115. Each now names its reason in a `BECAUSE`, so a change in evaluation order that let art. 115's refusal mask them would fail loudly.
+  - **Art. 92, II:** every fact before 10.10.2024 refuses, including one against none of the persons the inciso names (one assertion flipped).
+  - **Art. 92, § 2º:** every fact from 10.10.2024 to 6.8.2026 refuses, whether or not the present words reach it. The refusal reaches art. 92, I and II and `os efeitos específicos da condenação (art. 92)` in that window. **Measured cost:** one existing assertion flipped, and two added for the spread. Art. 92, I still answers TRUE in the window where its own thresholds are met, because its "ou" is decided before § 2º is consulted (asserted).
+  - **A vintage pass would restore** these answers from sweep-a's copies (§ 8). For art. 115, the 1984 wording has the same age rule without the exception. For art. 92, II, every earlier wording names only children, wards and co-holders. For § 2º, Lei 14.994/2024's caput is in `g1c-l14994.txt`.
+  - **Súmula 608 STF** (F-g1c-23) is cited by number only. On 2026-09-30, portal.stf.jus.br's súmula page and the STF's PDF of súmulas both returned HTTP 403 to this machine, and a second route failed STF's certificate check. LexML's URN resolver had no document for it, and its search sits behind a JavaScript check. The fork says so, and the paraphrase in `cp-g1c-acao-penal.l4` is gone as well.
 - **Record type names render bare** in `nlg` in every module, `cp-pena`'s included.
 - **Exported rules** (all prefix names): `a ação penal do crime (art. 100)`, `a ação penal do crime complexo (art. 101)`, and one or more per chapter; each has `@export`, `@desc` on every input, and `@nlg:en`.

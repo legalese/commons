@@ -1,6 +1,6 @@
 # g1b — arts. 32–76: the penalties, their cominação and application, concurso, the limit of art. 75
 
-**Status (2026-09-30): done.** All 45 units of `registers/parts/g1b.roadmap.json` are dispositioned (42 encoded, 3 inert, 0 deferred); `check.sh` prints 0 errors and 388 of 388 assertions satisfied (§ 4); 42 forks.
+**Status (2026-09-30): done.** All 45 units of `registers/parts/g1b.roadmap.json` are dispositioned (42 encoded, 3 inert, 0 deferred); `check.sh` prints 0 errors and 389 of 389 assertions satisfied (§ 4); 42 forks.
 This file is the reviewer's record and was the resume point through a usage-limit stop on 2026-09-29.
 
 ## PROGRESS
@@ -19,9 +19,9 @@ This file is the reviewer's record and was the resume point through a usage-limi
 - [x] nlg: 385 rendered lines over the seven tests modules; 0 of 274 module rule and constructor names render bare.
 - [x] Quotations: every clause quoted from the Code found verbatim in the source; three paraphrased comment quotes corrected.
 - [x] Mutation run: 20 single mutations, 20 caught (§ 5).
-- [x] Forks: 42 entries, validated (§ 8 for the one deliberate finding).
+- [x] Forks: 42 entries, validated; the only finding left is F-g1b-12's cross-ref into sweep-c, which resolves against sweep-c (§ 8).
 - [x] Roadmap: validated (`register-validate: ok`).
-- Last check.sh (2026-09-30): `TOTAL (16 modules)                                 0       388       0       0     388`
+- Last check.sh (2026-09-30, after F-sweep-a-04 became a BOOLEAN): `TOTAL (16 modules)                                 0       389       0       0     389`
 
 ## 1. What g1b encoded, and what it did not
 
@@ -117,7 +117,7 @@ cp-g1b-circunstancias-testes.l4                    0       122       0       0  
 cp-g1b-circunstancias.l4                           0         0       0       0       0
 cp-g1b-cominacao-testes.l4                         0        24       0       0      24
 cp-g1b-cominacao.l4                                0         0       0       0       0
-cp-g1b-concurso-de-crimes-testes.l4                0        57       0       0      57
+cp-g1b-concurso-de-crimes-testes.l4                0        58       0       0      58
 cp-g1b-concurso-de-crimes.l4                       0         0       0       0       0
 cp-g1b-condenacao.l4                               0         0       0       0       0
 cp-g1b-multa-testes.l4                             0        23       0       0      23
@@ -126,7 +126,7 @@ cp-g1b-privativas-de-liberdade-testes.l4           0        54       0       0  
 cp-g1b-privativas-de-liberdade.l4                  0         0       0       0       0
 cp-g1b-restritivas-de-direitos-testes.l4           0        56       0       0      56
 cp-g1b-restritivas-de-direitos.l4                  0         0       0       0       0
-TOTAL (16 modules)                                 0       388       0       0     388
+TOTAL (16 modules)                                 0       389       0       0     389
 (a failed assertion also counts as an error; errors minus failed = everything else)
 ```
 
@@ -212,8 +212,11 @@ Vacatio legis counted as LC 95/1998, art. 8º, § 1º has it (the day of publica
 
 ## 8. For the conductor
 
-- **F-sweep-a-04 fails one validator rule on purpose.** `materialisation-implies-mechanism` requires TYPICALLY for an interpretation field; this binary rejects a TYPICALLY whose value is a constructor of an own enum (`notes/cp-g1b-sondas/cp-g1b-sonda-typically-enum.l4`). The fork is materialised (both readings run, as `Leituras do concurso`) with mechanism `encoded` and a named default, `a leitura da Súmula 659 STJ`. Decide whether the schema or the entry changes.
-- **Two skill findings for `writing-l4-rules`.** Source-patterns entry 1.5 says a constructor of one's own ONE OF type is accepted as a TYPICALLY value: false on this binary. And a field herald on its own line below a TYPICALLY field attaches to the TYPICALLY value, not to the field (`cp-g1b-sonda-typically-herald.l4`).
+- **F-sweep-a-04 conforms since 2026-09-30.** At the conductor's request its interpretation field is a BOOLEAN, `o aumento segue a escala da Súmula 659 STJ`, TYPICALLY TRUE (TRUE is the reading escalaPorNumeroDeCrimes, FALSE is faixaDoJuiz); mechanism TYPICALLY. It was an enum first; this binary rejects a TYPICALLY whose value is a constructor of an own enum (`notes/cp-g1b-sondas/cp-g1b-sonda-typically-enum.l4`).
+- **Three skill findings for `writing-l4-rules`, all in `notes/cp-g1b-sondas/`.**
+  - Source-patterns entry 1.5 says a constructor of one's own ONE OF type is accepted as a TYPICALLY value. It is not on this binary ("must be a literal"): `cp-g1b-sonda-typically-enum.l4`.
+  - A field gloss on its own line below an enum-typed TYPICALLY field attaches to the TYPICALLY value and breaks the check: `cp-g1b-sonda-typically-herald.l4`.
+  - Worse, below a BOOLEAN TYPICALLY field the gloss is silently lost, with no diagnostic, and the field renders bare: `cp-g1b-sonda-typically-boolean.l4`. Putting the gloss between the field's name and `IS A … TYPICALLY …` on a continuation line works, with TYPICALLY still in the AST: `cp-g1b-sonda-typically-boolean-split.l4`, the layout `cp-g1b-concurso-de-crimes.l4` uses.
 - **Possible sweep gaps.** (a) Lei nº 8.072/1990, art. 2º, § 1º (initial closed regime for crimes hediondos), which the Senado records against art. 33 and which STF case law is reported to have struck — not in sweep-a, not verified here, not encoded. (b) STJ Tema 585 (confession against reincidência), used in F-g1b-18 — sweep-a lists it as not fetched. (c) The Código de Trânsito Brasileiro's own licence suspension, which displaces much of art. 57.
 - **Forks g1b created for spans.** F-sweep-a-05 and F-sweep-a-08 span g1c's articles (message sent to g1c). F-g1b-12's cross-ref M-sweep-c-13 resolves only against sweep-c.
 - **Hoisting** (§ 3): `Condenação anterior`, `Natureza da infração anterior`, `Espécie aplicada`.
