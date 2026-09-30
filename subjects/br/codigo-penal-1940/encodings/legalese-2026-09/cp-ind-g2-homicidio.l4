@@ -1,0 +1,476 @@
+@lang pt
+IMPORT prelude
+IMPORT daydate
+IMPORT `cp-dominio`
+IMPORT `cp-pena`
+IMPORT `cp-g2a-comum`
+IMPORT `cp-g2a-homicidio`
+
+-- Independent tests (ta-g2, phase 2) for arts. 121, 121-A and 121-B: cases
+-- IT-g2-001 .. IT-g2-081 of ~/.claude/br-penal-oracle/cases/ta-g2.json.
+-- Every expected value was fixed from the source text BEFORE the encoding was
+-- read, and is asserted here exactly as the case states it. A failing assertion
+-- is a disagreement between two independent readings; it is classified in
+-- notes/independent-g2.md, never "fixed" by changing the expectation.
+-- One directive per case, under a comment carrying the case's question.
+-- Every fact is dated 29.9.2026, after every vigência gate in these articles.
+
+§ `Testes independentes (ta-g2) — arts. 121 a 121-B`
+
+§§ `Fixtures`
+
+`o dia dos fatos` MEANS YMD 2026 9 29
+
+`sem vínculo público` MEANS
+    `Vínculo com a administração pública` WITH
+        `exerce cargo, emprego ou função pública` IS FALSE
+        `exerce cargo, emprego ou função em entidade paraestatal` IS FALSE
+        `trabalha para empresa contratada ou conveniada para atividade típica da Administração Pública` IS FALSE
+        `ocupa cargo em comissão ou função de direção ou assessoramento` IS FALSE
+
+GIVEN `o ano` IS A NUMBER
+      `o mês` IS A NUMBER
+      `o dia` IS A NUMBER
+GIVETH A Pessoa
+`homem nascido em` `o ano` `o mês` `o dia` MEANS
+    Pessoa WITH `identificação` IS "homem", `data de nascimento` IS YMD `o ano` `o mês` `o dia`, mulher IS FALSE
+
+GIVEN `o ano` IS A NUMBER
+      `o mês` IS A NUMBER
+      `o dia` IS A NUMBER
+GIVETH A Pessoa
+`mulher nascida em` `o ano` `o mês` `o dia` MEANS
+    Pessoa WITH `identificação` IS "mulher", `data de nascimento` IS YMD `o ano` `o mês` `o dia`, mulher IS TRUE
+
+GIVEN p IS A Pessoa
+      g IS A LIST OF `Grupo criminoso`
+GIVETH AN Agente
+`um agente ind` p g MEANS
+    Agente WITH pessoa IS p, reincidente IS FALSE, `vínculo com a administração pública` IS `sem vínculo público`, `grupos de que é integrante` IS g
+
+`agente homem` MEANS `um agente ind` (`homem nascido em` 1980 1 1) EMPTY
+`agente mulher` MEANS `um agente ind` (`mulher nascida em` 1985 1 1) EMPTY
+
+GIVEN p  IS A Pessoa
+      cs IS A LIST OF `Condição da vítima`
+      rs IS A LIST OF `Relação do agente com a vítima`
+GIVETH A `Vítima`
+`uma vítima ind` p cs rs MEANS
+    `Vítima` WITH pessoa IS p, `condições na data do fato` IS cs, `relações com o agente` IS rs, `vínculo com a administração pública` IS `sem vínculo público`
+
+GIVEN ms IS A LIST OF `Meio empregado`
+      rs IS A LIST OF Resultado
+      cs IS A LIST OF `Circunstância do fato`
+GIVETH A Fato
+`um ato ind` ms rs cs MEANS
+    Fato WITH `data do fato` IS `o dia dos fatos`, `número de pessoas que concorreram para o crime` IS 1, `meios empregados` IS ms, resultados IS rs, `circunstâncias` IS cs
+
+-- The victim died unless `resultados` lacks `morte`; an act without death is
+-- an attempt stopped by circumstances outside the agent's will.
+GIVEN ag IS AN Agente
+      v  IS A `Vítima`
+      fa IS A Fato
+      es IS AN `Elemento subjetivo`
+      cs IS A LIST OF `Circunstância do crime contra a pessoa`
+      pa IS A MAYBE DATE
+GIVETH A `Fato de homicídio`
+`um homicídio ind` ag v fa es cs pa MEANS
+    `Fato de homicídio` WITH
+        agente IS ag
+        `vítima` IS v
+        fato IS fa
+        `elemento subjetivo` IS es
+        `execução iniciada` IS TRUE
+        `consumação impedida por circunstâncias alheias à vontade do agente` IS NOT (elem morte (fa's resultados))
+        `circunstâncias do crime` IS cs
+        `data do parto mais recente da vítima` IS pa
+
+`uma morte` MEANS `um ato ind` EMPTY (LIST morte) EMPTY
+
+GIVEN pc IS A `Pena cominada`
+      e  IS AN `Espécie de pena privativa de liberdade`
+      mn IS A Duração
+      mx IS A Duração
+      m  IS A `Cominação da multa`
+GIVETH A BOOLEAN
+`a pena confere com` pc e mn mx m MEANS
+        (pc's `espécie`) EQUALS e
+    AND (pc's `mínimo`) EQUALS mn
+    AND (pc's `máximo`) EQUALS mx
+    AND (pc's multa) EQUALS m
+
+GIVEN f IS A `Fato de homicídio`
+GIVETH A `Pena cominada`
+`a pena do caso` f MEANS `a pena cominada ao crime de matar (arts. 121 a 121-B e 123)` f
+
+-- A woman killed in a setting of domestic and family violence.
+GIVEN p  IS A Pessoa
+      cs IS A LIST OF `Circunstância do crime contra a pessoa`
+      pa IS A MAYBE DATE
+GIVETH A `Fato de homicídio`
+`um feminicídio doméstico ind` p cs pa MEANS
+    `um homicídio ind` `agente homem` (`uma vítima ind` p EMPTY (LIST cônjuge)) `uma morte` dolo (`violência doméstica e familiar` FOLLOWED BY cs) pa
+
+GIVEN p  IS A Pessoa
+      ms IS A LIST OF `Meio empregado`
+      cs IS A LIST OF `Circunstância do crime contra a pessoa`
+GIVETH A `Fato de homicídio`
+`um feminicídio doméstico com meios ind` p ms cs MEANS
+    `um homicídio ind` `agente homem` (`uma vítima ind` p EMPTY (LIST cônjuge)) (`um ato ind` ms (LIST morte) EMPTY) dolo (`violência doméstica e familiar` FOLLOWED BY cs) NOTHING
+
+-- The killing of a person tied to M, aimed at M, in a setting of domestic
+-- violence against M (art. 121-B's frame), with the tie and extras given.
+GIVEN p   IS A Pessoa
+      cs  IS A LIST OF `Circunstância do crime contra a pessoa`
+      fcs IS A LIST OF `Circunstância do fato`
+GIVETH A `Fato de homicídio`
+`um vicaricídio ind` p cs fcs MEANS
+    `um homicídio ind` `agente homem` (`uma vítima ind` p EMPTY EMPTY) (`um ato ind` EMPTY (LIST morte) fcs) dolo cs NOTHING
+
+`fim e contexto` MEANS LIST `com o fim específico de causar sofrimento, punição ou controle à mulher visada`, `no contexto de violência doméstica e familiar contra a mulher visada`
+
+§§ `Os casos`
+
+`caso 001` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 003` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) (`um ato ind` EMPTY EMPTY EMPTY) dolo EMPTY NOTHING
+`caso 004` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1950 1 1) (LIST enfermo) (LIST descendente)) `uma morte` dolo (LIST `impelido por motivo de relevante valor social ou moral`) NOTHING
+`caso 008` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) (`um ato ind` (LIST `paga ou promessa de recompensa`) (LIST morte) EMPTY) dolo EMPTY NOTHING
+`caso 009` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) (`um ato ind` (LIST veneno) (LIST morte) EMPTY) dolo EMPTY NOTHING
+`caso 010` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) (`um ato ind` (LIST emboscada) (LIST morte) EMPTY) dolo EMPTY NOTHING
+`caso 011` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo (LIST `para assegurar a execução, a ocultação, a impunidade ou vantagem de outro crime`) NOTHING
+`caso 013` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1991 1 1) EMPTY NOTHING
+`caso 014` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo (LIST `contra autoridade ou agente dos arts. 142 e 144 da Constituição Federal, integrante do sistema prisional ou da Força Nacional de Segurança Pública, no exercício da função ou em decorrência dela`) NOTHING
+-- 015: a cunhado of an alínea-a agent. The only alínea-a relative input reads
+-- "parente consanguíneo"; no input carries a relative by affinity, so none is given.
+`caso 015` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 016` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo (LIST `contra cônjuge, companheiro ou parente, inclusive por afinidade, até o terceiro grau de membro ou oficial da alínea b, em razão dessa condição`) NOTHING
+-- 017: a fourth-degree cousin; 018: an off-duty officer, killing unrelated to
+-- the function. Neither fits an alínea-a input's words, so none is given.
+`caso 017` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 018` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 019` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo (LIST `contra membro do Poder Judiciário, do Ministério Público, da Defensoria Pública ou da Advocacia Pública, ou oficial de justiça, no exercício da função ou em decorrência dela`) NOTHING
+`caso 020` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) (`um ato ind` (LIST `emprego de arma de fogo de uso restrito ou proibido`) (LIST morte) EMPTY) dolo EMPTY NOTHING
+`caso 021` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) (`um ato ind` (LIST `emprego de arma de fogo de uso permitido`) (LIST morte) EMPTY) dolo EMPTY NOTHING
+-- 13 years and 11 months on 29.9.2026.
+`caso 022` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2012 10 29) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+-- Fourteenth birthday on 29.9.2026.
+`caso 023` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2012 9 29) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 024` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) (`um ato ind` EMPTY (LIST morte) (LIST `nas dependências de instituição de ensino`)) dolo EMPTY NOTHING
+`caso 026` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2017 1 1) (LIST `pessoa com deficiência`) EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 027` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2018 1 1) EMPTY (LIST `padrasto ou madrasta`)) `uma morte` dolo EMPTY NOTHING
+`caso 028` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2016 1 1) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+-- 029: a hired nanny; the relation the facts state is guard and care.
+`caso 029` MEANS `um homicídio ind` `agente mulher` (`uma vítima ind` (`homem nascido em` 2023 1 1) EMPTY (LIST `guarda, cuidado ou vigilância da vítima`)) `uma morte` dolo EMPTY NOTHING
+`caso 030` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2014 1 1) EMPTY EMPTY) (`um ato ind` EMPTY (LIST morte) (LIST `nas dependências de instituição de ensino`)) dolo (LIST `em instituição de educação básica pública ou privada`) NOTHING
+`caso 031` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2013 1 1) EMPTY EMPTY) (`um ato ind` EMPTY (LIST morte) (LIST `nas dependências de instituição de ensino`)) dolo EMPTY NOTHING
+`caso 032` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2011 1 1) (LIST `pessoa com deficiência`) EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 033` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`mulher nascida em` 2004 1 1) (LIST `pessoa com deficiência`) EMPTY) (`um ato ind` EMPTY (LIST morte) (LIST `nas dependências de instituição de ensino`)) dolo EMPTY NOTHING
+`caso 034` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2006 1 1) EMPTY EMPTY) (`um ato ind` EMPTY (LIST morte) (LIST `nas dependências de instituição de ensino`)) dolo (LIST `o autor é professor ou funcionário da instituição de ensino`) NOTHING
+`caso 035` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1996 1 1) EMPTY EMPTY) (`um ato ind` EMPTY (LIST morte) (LIST `nas dependências de instituição de ensino`)) dolo EMPTY NOTHING
+`caso 036` MEANS `um homicídio ind` (`um agente ind` (`homem nascido em` 1980 1 1) (LIST `milícia privada`)) (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) (`um ato ind` EMPTY (LIST morte) (LIST `no contexto das condutas do art. 2º do marco legal do combate ao crime organizado`)) dolo EMPTY NOTHING
+`caso 037` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 038` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` culpa EMPTY NOTHING
+`caso 039` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` culpa (LIST `inobservância de regra técnica de profissão, arte ou ofício`) NOTHING
+`caso 040` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` culpa (LIST `o agente deixa de prestar imediato socorro à vítima`) NOTHING
+`caso 041` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` culpa EMPTY NOTHING
+`caso 042` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1961 1 1) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 043` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1967 1 1) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+-- 60 years and 5 months on 29.9.2026.
+`caso 044` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1966 4 29) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+-- Sixtieth birthday on 29.9.2026.
+`caso 045` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1966 9 29) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 046` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1954 1 1) EMPTY EMPTY) `uma morte` culpa EMPTY NOTHING
+`caso 047` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2016 1 1) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+-- 048/049: the judge's finding on the gravity of the consequences is given.
+`caso 048` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 2021 1 1) EMPTY (LIST ascendente)) `uma morte` culpa (LIST `as conseqüências da infração atingem o próprio agente de forma tão grave que a sanção penal se torna desnecessária`) NOTHING
+`caso 050` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1982 1 1) EMPTY (LIST irmão)) `uma morte` dolo (LIST `as conseqüências da infração atingem o próprio agente de forma tão grave que a sanção penal se torna desnecessária`) NOTHING
+`caso 051` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo (LIST `por grupo de extermínio`) NOTHING
+`caso 052` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`homem nascido em` 1950 1 1) (LIST enfermo) (LIST descendente)) (`um ato ind` (LIST veneno) (LIST morte) EMPTY) dolo (LIST `impelido por motivo de relevante valor social ou moral`) NOTHING
+`caso 053` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1991 1 1) EMPTY NOTHING
+`caso 054` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`mulher nascida em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo (LIST `menosprezo ou discriminação à condição de mulher`) NOTHING
+`caso 055` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`mulher nascida em` 1991 1 1) EMPTY EMPTY) `uma morte` dolo EMPTY NOTHING
+`caso 056` MEANS `um homicídio ind` `agente mulher` (`uma vítima ind` (`homem nascido em` 1980 1 1) EMPTY (LIST cônjuge)) `uma morte` dolo (LIST `violência doméstica e familiar`) NOTHING
+`caso 057` MEANS `um homicídio ind` `agente mulher` (`uma vítima ind` (`mulher nascida em` 1991 1 1) EMPTY (LIST companheiro)) `uma morte` dolo (LIST `violência doméstica e familiar`) NOTHING
+`caso 059` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`mulher nascida em` 1991 1 1) (LIST gestante) (LIST companheiro)) `uma morte` dolo (LIST `violência doméstica e familiar`) NOTHING
+`caso 060` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1990 1 1) EMPTY (JUST (YMD 2026 7 29))
+`caso 061` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1996 1 1) EMPTY (JUST (YMD 2026 5 29))
+`caso 062` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1990 1 1) (LIST `a vítima é a mãe ou a responsável por criança, adolescente ou pessoa com deficiência de qualquer idade`) (JUST (YMD 2026 5 29))
+`caso 063` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1971 1 1) (LIST `a vítima é a mãe ou a responsável por criança, adolescente ou pessoa com deficiência de qualquer idade`) NOTHING
+-- 064: mother only of an adult son without a disability; the input's words do not fit.
+`caso 064` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1976 1 1) EMPTY NOTHING
+`caso 065` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1964 1 1) EMPTY NOTHING
+`caso 066` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1981 1 1) EMPTY NOTHING
+`caso 067` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1990 1 1) (LIST `na presença física ou virtual de descendente ou de ascendente da vítima`) NOTHING
+-- 068: only the victim's sister was present; the input's words do not fit.
+`caso 068` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1990 1 1) EMPTY NOTHING
+`caso 069` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1990 1 1) (LIST `em descumprimento das medidas protetivas de urgência dos incisos I, II e III do caput do art. 22 da Lei Maria da Penha`) NOTHING
+-- 070: a protective measure WAS breached (art. 22, V): the generic fact
+-- circumstance is given, the § 2º IV input (incisos I to III) is not.
+`caso 070` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`mulher nascida em` 1990 1 1) EMPTY (LIST cônjuge)) (`um ato ind` EMPTY (LIST morte) (LIST `em descumprimento de medida protetiva de urgência`)) dolo (LIST `violência doméstica e familiar`) NOTHING
+`caso 071` MEANS `um feminicídio doméstico com meios ind` (`mulher nascida em` 1990 1 1) (LIST fogo) EMPTY
+`caso 072` MEANS `um feminicídio doméstico ind` (`mulher nascida em` 1990 1 1) (LIST `por motivo fútil`) NOTHING
+-- 073: C, the co-author, is the agent; the reasons are A's, not C's own.
+`caso 073` MEANS `um homicídio ind` `agente homem` (`uma vítima ind` (`mulher nascida em` 1990 1 1) EMPTY EMPTY) `uma morte` dolo (LIST `violência doméstica e familiar`, `as razões da condição do sexo feminino são de outro que concorreu para o crime`) NOTHING
+`caso 074` MEANS `um vicaricídio ind` (`homem nascido em` 2016 1 1) (`a vítima é descendente da mulher visada` FOLLOWED BY `fim e contexto`) EMPTY
+`caso 076` MEANS `um vicaricídio ind` (`homem nascido em` 2009 1 1) (LIST `a vítima é enteado da mulher visada`, `no contexto de violência doméstica e familiar contra a mulher visada`) EMPTY
+`caso 077` MEANS `um vicaricídio ind` (`mulher nascida em` 1990 1 1) `fim e contexto` EMPTY
+`caso 078` MEANS `um vicaricídio ind` (`homem nascido em` 1996 1 1) (`a vítima é descendente da mulher visada` FOLLOWED BY `na presença da mulher a quem se pretende causar sofrimento, punição ou controle` FOLLOWED BY `fim e contexto`) EMPTY
+`caso 079` MEANS `um vicaricídio ind` (`homem nascido em` 2016 1 1) (`a vítima é descendente da mulher visada` FOLLOWED BY `fim e contexto`) EMPTY
+`caso 080` MEANS `um vicaricídio ind` (`homem nascido em` 1976 1 1) (`a vítima é ascendente da mulher visada` FOLLOWED BY `fim e contexto`) (LIST `em descumprimento de medida protetiva de urgência`)
+`caso 081` MEANS `um vicaricídio ind` (`homem nascido em` 1971 1 1) (`a vítima é ascendente da mulher visada` FOLLOWED BY `fim e contexto`) EMPTY
+
+§§ `Art. 121`
+
+-- IT-g2-001: A conduta de A realiza o tipo do art. 121, caput (homicídio simples)?
+#ASSERT `crime de homicídio (art. 121)` `caso 001` AND `homicídio consumado (art. 121, caput; art. 14, I)` `caso 001` AND NOT (`homicídio qualificado do art. 121, § 2º` `caso 001`)
+
+-- IT-g2-002: Qual a pena cominada ao homicídio simples?
+#ASSERT `a pena confere com` (`a pena do caso` `caso 001`) `reclusão` (anos 6) (anos 20) `sem multa`
+
+-- IT-g2-003: Consumou-se o crime do art. 121 (matar alguém)?
+#ASSERT NOT (`homicídio consumado (art. 121, caput; art. 14, I)` `caso 003`)
+
+-- IT-g2-004: Incide a causa de diminuição do art. 121, § 1º?
+#ASSERT `incide a diminuição do art. 121, § 1º` `caso 004`
+
+-- IT-g2-005: Qual o intervalo de redução da pena previsto no art. 121, § 1º?
+#ASSERT `diminuição do art. 121, § 1º` EQUALS `causa de diminuição` (entre `um sexto` `um terço`)
+
+-- IT-g2-006: Incide o art. 121, § 1º?
+-- NOT EXPRESSIBLE: "sob o domínio de violenta emoção, logo em seguida a
+-- injusta provocação da vítima" is one input finding; whether three days later
+-- is "logo em seguida" is that finding itself.
+
+-- IT-g2-007: O texto obriga o juiz a reduzir a pena?
+-- Expected "no". In the encoding's vocabulary an obligation is a cause returned
+-- among the case's causes; a faculty would be an option (fork F-g2a-02).
+#ASSERT NOT (elem `diminuição do art. 121, § 1º` (`as causas de diminuição do crime de matar (arts. 121 a 121-B e 123)` `caso 004`))
+
+-- IT-g2-008: O homicídio cometido por A é qualificado pelo art. 121, § 2º, I?
+#ASSERT `qualificado pelo art. 121, § 2º, I` `caso 008` AND `homicídio qualificado do art. 121, § 2º` `caso 008`
+
+-- IT-g2-009: O homicídio é qualificado pelo art. 121, § 2º, III?
+#ASSERT `qualificado pelo art. 121, § 2º, III` `caso 009` AND `homicídio qualificado do art. 121, § 2º` `caso 009`
+
+-- IT-g2-010: O homicídio é qualificado pelo art. 121, § 2º, IV?
+#ASSERT `qualificado pelo art. 121, § 2º, IV` `caso 010` AND `homicídio qualificado do art. 121, § 2º` `caso 010`
+
+-- IT-g2-011: O homicídio é qualificado pelo art. 121, § 2º, V?
+#ASSERT `qualificado pelo art. 121, § 2º, V` `caso 011` AND `homicídio qualificado do art. 121, § 2º` `caso 011`
+
+-- IT-g2-012: Qual a pena cominada ao homicídio qualificado do art. 121, § 2º, I a V?
+#ASSERT `a pena confere com` (`a pena do caso` `caso 008`) `reclusão` (anos 12) (anos 30) `sem multa`
+
+-- IT-g2-013: O fato é qualificado pelo art. 121, § 2º, VI?
+#ASSERT NOT (`homicídio qualificado do art. 121, § 2º` `caso 013`)
+
+-- IT-g2-014: O homicídio é qualificado pelo art. 121, § 2º, VII, a?
+#ASSERT `contra vítima do art. 121, § 2º, VII, a` (`caso 014`'s `circunstâncias do crime`) AND `qualificado pelo art. 121, § 2º, VII` `caso 014`
+
+-- IT-g2-015: O homicídio de C é qualificado pelo art. 121, § 2º, VII, a?
+#ASSERT NOT (`qualificado pelo art. 121, § 2º, VII` `caso 015`)
+
+-- IT-g2-016: O homicídio de C é qualificado pelo art. 121, § 2º, VII, b?
+#ASSERT `contra vítima do art. 121, § 2º, VII, b` (`caso 016`'s `circunstâncias do crime`) AND `qualificado pelo art. 121, § 2º, VII` `caso 016`
+
+-- IT-g2-017: O homicídio de C é qualificado pelo art. 121, § 2º, VII, a?
+#ASSERT NOT (`qualificado pelo art. 121, § 2º, VII` `caso 017`)
+
+-- IT-g2-018: O homicídio é qualificado pelo art. 121, § 2º, VII, a?
+#ASSERT NOT (`qualificado pelo art. 121, § 2º, VII` `caso 018`)
+
+-- IT-g2-019: O homicídio é qualificado pelo art. 121, § 2º, VII, b?
+#ASSERT `contra vítima do art. 121, § 2º, VII, b` (`caso 019`'s `circunstâncias do crime`) AND `qualificado pelo art. 121, § 2º, VII` `caso 019`
+
+-- IT-g2-020: O homicídio é qualificado pelo art. 121, § 2º, VIII?
+#ASSERT `qualificado pelo art. 121, § 2º, VIII` `caso 020`
+
+-- IT-g2-021: O homicídio é qualificado pelo art. 121, § 2º, VIII?
+#ASSERT NOT (`qualificado pelo art. 121, § 2º, VIII` `caso 021`)
+
+-- IT-g2-022: O homicídio é qualificado pelo art. 121, § 2º, IX?
+#ASSERT `qualificado pelo art. 121, § 2º, IX` `caso 022`
+
+-- IT-g2-023: O homicídio é qualificado pelo art. 121, § 2º, IX?
+#ASSERT NOT (`qualificado pelo art. 121, § 2º, IX` `caso 023`)
+
+-- IT-g2-024: O homicídio é qualificado pelo art. 121, § 2º, X?
+#ASSERT `qualificado pelo art. 121, § 2º, X` `caso 024`
+
+-- IT-g2-025: Qual a pena cominada ao homicídio qualificado pelos incisos VII a X do § 2º?
+#ASSERT `a pena confere com` (`a pena do caso` `caso 020`) `reclusão` (anos 12) (anos 30) `sem multa`
+
+-- IT-g2-026: Qual o intervalo de aumento do art. 121, § 2º-B, I?
+#ASSERT `incide o aumento do art. 121, § 2º-B, I` `caso 026` AND `aumento do art. 121, § 2º-B, I` EQUALS `causa de aumento` (entre `um terço` metade)
+
+-- IT-g2-027: Qual a fração de aumento do art. 121, § 2º-B, II?
+#ASSERT `incide o aumento do art. 121, § 2º-B, II` `caso 027` AND `aumento do art. 121, § 2º-B, II` EQUALS `causa de aumento` (fixa `dois terços`)
+
+-- IT-g2-028: Incide o aumento do art. 121, § 2º-B, II?
+#ASSERT NOT (`incide o aumento do art. 121, § 2º-B, II` `caso 028`)
+
+-- IT-g2-029: Incide o aumento do art. 121, § 2º-B, II?
+#ASSERT `incide o aumento do art. 121, § 2º-B, II` `caso 029`
+
+-- IT-g2-030: Qual a fração de aumento do art. 121, § 2º-B, III?
+#ASSERT `incide o aumento do art. 121, § 2º-B, III` `caso 030` AND `aumento do art. 121, § 2º-B, III` EQUALS `causa de aumento` (fixa `dois terços`)
+
+-- IT-g2-031: Incide o aumento do art. 121, § 2º-B, III?
+#ASSERT NOT (`incide o aumento do art. 121, § 2º-B, III` `caso 031`)
+
+-- IT-g2-032: Incide o aumento do art. 121, § 2º-B, I?
+#ASSERT NOT (`incide o aumento do art. 121, § 2º-B, I` `caso 032`)
+
+-- IT-g2-033: Qual o intervalo de aumento do art. 121, § 2º-C, I?
+#ASSERT `incide o aumento do art. 121, § 2º-C, I` `caso 033` AND `aumento do art. 121, § 2º-C, I` EQUALS `causa de aumento` (entre `um terço` metade)
+
+-- IT-g2-034: Qual a fração de aumento do art. 121, § 2º-C, II?
+#ASSERT `incide o aumento do art. 121, § 2º-C, II` `caso 034` AND `aumento do art. 121, § 2º-C, II` EQUALS `causa de aumento` (fixa `dois terços`)
+
+-- IT-g2-035: Incide algum aumento do art. 121, § 2º-C?
+#ASSERT (NOT (`incide o aumento do art. 121, § 2º-C, I` `caso 035`)) AND (NOT (`incide o aumento do art. 121, § 2º-C, II` `caso 035`))
+
+-- IT-g2-036: Qual a pena cominada pelo art. 121, § 2º-D?
+#ASSERT `homicídio qualificado do art. 121, § 2º-D` `caso 036` AND `a pena confere com` (`a pena do caso` `caso 036`) `reclusão` (anos 20) (anos 40) `sem multa`
+
+-- IT-g2-037: Incide o art. 121, § 2º-D?
+#ASSERT NOT (`homicídio qualificado do art. 121, § 2º-D` `caso 037`)
+
+-- IT-g2-038: Qual a pena cominada ao homicídio culposo?
+#ASSERT `a pena confere com` (`a pena do caso` `caso 038`) `detenção` (anos 1) (anos 3) `sem multa`
+
+-- IT-g2-039: Qual a fração de aumento do art. 121, § 4º, primeira parte?
+#ASSERT `incide o aumento do art. 121, § 4º, primeira parte` `caso 039` AND `aumento do art. 121, § 4º, primeira parte` EQUALS `causa de aumento` (fixa `um terço`)
+
+-- IT-g2-040: Incide o aumento do art. 121, § 4º, primeira parte?
+#ASSERT `incide o aumento do art. 121, § 4º, primeira parte` `caso 040`
+
+-- IT-g2-041: Incide o aumento do art. 121, § 4º, primeira parte?
+#ASSERT NOT (`incide o aumento do art. 121, § 4º, primeira parte` `caso 041`)
+
+-- IT-g2-042: Incide o aumento do art. 121, § 4º, segunda parte?
+#ASSERT `incide o aumento do art. 121, § 4º, segunda parte` `caso 042`
+
+-- IT-g2-043: Incide o aumento do art. 121, § 4º, segunda parte?
+#ASSERT NOT (`incide o aumento do art. 121, § 4º, segunda parte` `caso 043`)
+
+-- IT-g2-044: Incide o aumento do art. 121, § 4º, segunda parte?
+#ASSERT `incide o aumento do art. 121, § 4º, segunda parte` `caso 044`
+
+-- IT-g2-045: Incide o aumento do art. 121, § 4º, segunda parte?
+#ASSERT NOT (`incide o aumento do art. 121, § 4º, segunda parte` `caso 045`)
+
+-- IT-g2-046: Incide o aumento de 1/3 pela idade da vítima previsto no art. 121, § 4º?
+#ASSERT NOT (`incide o aumento do art. 121, § 4º, segunda parte` `caso 046`)
+
+-- IT-g2-047: Além da qualificadora do § 2º, IX, incide também o aumento de 1/3 do § 4º, segunda parte?
+#ASSERT `qualificado pelo art. 121, § 2º, IX` `caso 047` AND `incide o aumento do art. 121, § 4º, segunda parte` `caso 047`
+
+-- IT-g2-048: O art. 121, § 5º, confere ao juiz o poder de deixar de aplicar a pena?
+#ASSERT `as opções do juiz pelo art. 121, § 5º` `caso 048` EQUALS LIST `deixar de aplicar a pena`
+
+-- IT-g2-049: O juiz está obrigado a deixar de aplicar a pena?
+-- A REFUSE case. The encoding answers "left to the judge" not by refusing but
+-- by returning the pardon as an option while the preceito still stands; that
+-- is asserted instead of a refusal.
+#ASSERT (`as opções do juiz pelo art. 121, § 5º` `caso 048` EQUALS (LIST `deixar de aplicar a pena`)) AND `a pena confere com` (`a pena do caso` `caso 048`) `detenção` (anos 1) (anos 3) `sem multa`
+
+-- IT-g2-050: O art. 121, § 5º, permite ao juiz deixar de aplicar a pena?
+#ASSERT `as opções do juiz pelo art. 121, § 5º` `caso 050` EQUALS EMPTY
+
+-- IT-g2-051: Qual o intervalo de aumento do art. 121, § 6º?
+#ASSERT `incide o aumento do art. 121, § 6º` `caso 051` AND `aumento do art. 121, § 6º` EQUALS `causa de aumento` (entre `um terço` metade)
+
+-- IT-g2-052: Podem incidir juntas a qualificadora do § 2º, III (veneno) e a diminuição do § 1º?
+#ASSERT `qualificado pelo art. 121, § 2º, III` `caso 052` AND `incide a diminuição do art. 121, § 1º` `caso 052`
+
+§§ `Art. 121-A`
+
+-- IT-g2-053: A cometeu feminicídio (art. 121-A)?
+#ASSERT `crime de feminicídio (art. 121-A)` `caso 053`
+
+-- IT-g2-054: A cometeu feminicídio (art. 121-A)?
+#ASSERT `crime de feminicídio (art. 121-A)` `caso 054`
+
+-- IT-g2-055: O fato é feminicídio (art. 121-A)?
+#ASSERT NOT (`crime de feminicídio (art. 121-A)` `caso 055`)
+
+-- IT-g2-056: O fato é feminicídio (art. 121-A)?
+#ASSERT NOT (`crime de feminicídio (art. 121-A)` `caso 056`)
+
+-- IT-g2-057: O fato é feminicídio (art. 121-A)?
+#ASSERT `crime de feminicídio (art. 121-A)` `caso 057`
+
+-- IT-g2-058: Qual a pena cominada ao feminicídio?
+#ASSERT `a pena confere com` (`a pena do caso` `caso 053`) `reclusão` (anos 20) (anos 40) `sem multa`
+
+-- IT-g2-059: Qual o intervalo de aumento do art. 121-A, § 2º?
+#ASSERT `incide o aumento do art. 121-A, § 2º` `caso 059` AND `aumento do art. 121-A, § 2º` EQUALS `causa de aumento` (entre `um terço` metade)
+
+-- IT-g2-060: Incide o aumento do art. 121-A, § 2º, I?
+#ASSERT `incide o aumento do art. 121-A, § 2º` `caso 060`
+
+-- IT-g2-061: Incide o aumento do art. 121-A, § 2º, I?
+#ASSERT NOT (`incide o aumento do art. 121-A, § 2º` `caso 061`)
+
+-- IT-g2-062: Incide o aumento do art. 121-A, § 2º, I?
+#ASSERT `incide o aumento do art. 121-A, § 2º` `caso 062`
+
+-- IT-g2-063: Incide o aumento do art. 121-A, § 2º, I?
+#ASSERT `incide o aumento do art. 121-A, § 2º` `caso 063`
+
+-- IT-g2-064: Incide o aumento do art. 121-A, § 2º, I?
+#ASSERT NOT (`incide o aumento do art. 121-A, § 2º` `caso 064`)
+
+-- IT-g2-065: Incide o aumento do art. 121-A, § 2º, II?
+#ASSERT `incide o aumento do art. 121-A, § 2º` `caso 065`
+
+-- IT-g2-066: Incide o aumento do art. 121-A, § 2º, II?
+#ASSERT NOT (`incide o aumento do art. 121-A, § 2º` `caso 066`)
+
+-- IT-g2-067: Incide o aumento do art. 121-A, § 2º, III?
+#ASSERT `incide o aumento do art. 121-A, § 2º` `caso 067`
+
+-- IT-g2-068: Incide o aumento do art. 121-A, § 2º, III?
+#ASSERT NOT (`incide o aumento do art. 121-A, § 2º` `caso 068`)
+
+-- IT-g2-069: Incide o aumento do art. 121-A, § 2º, IV?
+#ASSERT `incide o aumento do art. 121-A, § 2º` `caso 069`
+
+-- IT-g2-070: Incide o aumento do art. 121-A, § 2º, IV?
+#ASSERT NOT (`incide o aumento do art. 121-A, § 2º` `caso 070`)
+
+-- IT-g2-071: Incide o aumento do art. 121-A, § 2º, V?
+#ASSERT `incide o aumento do art. 121-A, § 2º` `caso 071`
+
+-- IT-g2-072: Incide o aumento do art. 121-A, § 2º, V?
+#ASSERT NOT (`incide o aumento do art. 121-A, § 2º` `caso 072`)
+
+-- IT-g2-073: A circunstância do § 1º (violência doméstica e familiar) comunica-se a C, que responde por feminicídio?
+#ASSERT `as razões da condição do sexo feminino alcançam o agente (art. 121-A, § 3º)` `caso 073` AND `crime de feminicídio (art. 121-A)` `caso 073`
+
+§§ `Art. 121-B`
+
+-- IT-g2-074: A cometeu o crime do art. 121-B (vicaricídio)?
+#ASSERT `crime de vicaricídio (art. 121-B)` `caso 074`
+
+-- IT-g2-075: Qual a pena cominada ao art. 121-B?
+#ASSERT `a pena confere com` (`a pena do caso` `caso 074`) `reclusão` (anos 20) (anos 40) `sem multa`
+
+-- IT-g2-076: A cometeu o crime do art. 121-B?
+#ASSERT NOT (`crime de vicaricídio (art. 121-B)` `caso 076`)
+
+-- IT-g2-077: A cometeu o crime do art. 121-B?
+#ASSERT NOT (`crime de vicaricídio (art. 121-B)` `caso 077`)
+
+-- IT-g2-078: Qual o intervalo de aumento do art. 121-B, parágrafo único?
+#ASSERT `incide o aumento do art. 121-B, parágrafo único` `caso 078` AND `aumento do art. 121-B, parágrafo único` EQUALS `causa de aumento` (entre `um terço` metade)
+
+-- IT-g2-079: Incide o aumento do art. 121-B, parágrafo único, II?
+#ASSERT `incide o aumento do art. 121-B, parágrafo único` `caso 079`
+
+-- IT-g2-080: Incide o aumento do art. 121-B, parágrafo único, III?
+#ASSERT `incide o aumento do art. 121-B, parágrafo único` `caso 080`
+
+-- IT-g2-081: Incide algum aumento do art. 121-B, parágrafo único?
+#ASSERT NOT (`incide o aumento do art. 121-B, parágrafo único` `caso 081`)
