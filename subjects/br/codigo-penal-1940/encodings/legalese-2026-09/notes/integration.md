@@ -157,3 +157,44 @@ Every group equal to its baseline row: g0 124, g1a 276, g1b 389, g1c 486, g2a 50
 - **Wiring, not done (brief § 6):** g2a's and g4b's dolo/culpa input versus g1a's art. 18 classification; g4b's `Imputação do resultado agravador (art. 19)` versus g1a's art. 19 rule.
 - **Near-duplicates outside this scope, not colliding:** the attempt helpers listed at the end of Step 2; WHERE-local copies of the heaviest-penalty fold and the cause helper in cp-g3-furto and cp-g4a-dignidade-sexual-geral.
 
+
+### Art. 327 ruling (g6a, 2026-09-30)
+
+**The ruling (conductor):** art. 327's caput answers for any date; § 1º — BOTH limbs — refuses by name for a fact before Lei nº 9.983/2000's vigência (16.10.2000), and 15.10.2000 refuses as the uncertain day (S-sweep-c-15). Recorded as fork F-g6a-23.
+
+**Owner rule changed** (`cp-g6a-funcionario-publico.l4`): `equiparado a funcionário público (art. 327, § 1º)` now reads the two § 1º facts first and then `o art. 327, § 1º, na redação da Lei nº 9.983, de 2000, rege o fato` (TRUE from 16.10.2000; refused on 15.10.2000; refused before, as `o art. 327, § 1º, anterior à Lei nº 9.983, de 2000, não está codificado`). A person with neither § 1º fact is FALSE on any date and never reaches a refusal; an official under the caput is TRUE on any date. The Lei nº 9.983 gate for provisions that law ADDED (`a Lei nº 9.983, de 2000, vigia na data do fato`: FALSE before, refused on 15.10.2000) is unchanged.
+
+**Copies redirected to the owner, local readings deleted:**
+- g2b: `funcionário público para os efeitos penais (art. 327, caput e § 1º)` deleted from `cp-g2b-comum`; its 4 call sites (`cp-g2b-domicilio` 1, `cp-g2b-honra` 2, `cp-g2b-sequestro-escravidao` 1) call `funcionário público para os efeitos penais (art. 327)` with the fact's date.
+- g5: `o agente é funcionário público (art. 327, § 1º desde a Lei nº 9.983)` deleted from `cp-g5-comum`; 6 call sites (`cp-g5-moeda-falsa` 2, `-falsidade-documental`, `-fraudes-em-certames`, `-outras-falsidades`, `-papeis-publicos`) and 8 test lines call the owner with the agent's vínculo.
+- g6b: `funcionário pelos fatos do art. 327` deleted from `cp-g6b-justica-exercicio-arbitrario-a-desobediencia`; its 1 call site (art. 351 § 4º) calls the owner with the fact's date.
+- g2b's `cp-g2b-segredos`: its own `a vigência da Lei nº 9.983, de 2000` (15.10.2000, taken as in force) is deleted; art. 153 § 1º-A and its ação penal read g6a's `a Lei nº 9.983, de 2000, vigia na data do fato`, with the facts before the gate so a fact without the § 1º-A elements or without prejuízo is answered on 15.10.2000.
+Each module that now calls g6a's rule has `IMPORT `cp-g6a-funcionario-publico``; no name collides: each of those modules checks with 0 errors below.
+
+**Assertions whose expectation moved** (flipped, not deleted; each carries a comment saying what it was):
+
+| test module | assertion | was | now |
+| --- | --- | --- | --- |
+| cp-g6a-peculato-a-concussao-testes | `crime de peculato (art. 312)` `a apropriação pelo terceirizado na véspera` (14.10.2000) | NOT | REFUSED BECAUSE "a redação do art. 327, § 1º, anterior à Lei nº 9.983, de 2000 (em vigor em 16.10.2000), não está codificada" |
+| cp-g5-moeda-falsa-testes | art. 327 status of `o empregado da paraestatal` on 14.10.2000 | NOT | REFUSED BECAUSE (same message) |
+| cp-g5-moeda-falsa-testes | art. 327 status of `o empregado da paraestatal` on 1.1.1999 | NOT | REFUSED BECAUSE (same message) |
+| cp-g2b-segredos-testes | `crime de divulgação de segredo (art. 153)` `o vazamento no dia da lei` (15.10.2000) | TRUE | REFUSED BECAUSE "não está estabelecido se a Lei nº 9.983, de 2000, entrou em vigor em 15.10.2000 (contagem da LC nº 95/1998) ou em 16.10.2000" |
+| cp-g2b-segredos-testes | `a vigência da Lei nº 9.983, de 2000` EQUALS YMD 2000 10 15 | TRUE | the constant is deleted; now `#ASSERT REFUSED `a Lei nº 9.983, de 2000, vigia na data do fato` (YMD 2000 10 15)` |
+
+Reworded, same verdict: cp-g5-moeda-falsa-testes, the status of `o empregado da paraestatal` on 15.10.2000 stays REFUSED; its BECAUSE now carries the owner's message instead of g5's.
+
+**Post-2000 twins, so the logic stays tested:** g6a `a apropriação pelo terceirizado no dia` and (new) `a apropriação pelo empregado de paraestatal no dia` (16.10.2000, crime); g5's existing 16.10.2000 and June 2026 lines; g2b-segredos (new) `o vazamento no dia seguinte` (16.10.2000, crime) and the gate TRUE on 16.10.2000.
+**Added under the ruling (g6a):** the paraestatal limb refused on 14.10.2000; an official (caput) answered and a private person with neither link FALSE on 14.10.2000; the new gate asserted on 14, 15 and 16.10.2000.
+
+**check.sh, foreground, after the change:**
+
+    g2b  TOTAL (13 modules)                                 0       509       0       0     509
+    g5   TOTAL (16 modules)                                 0       467       0       0     467
+    g6a  TOTAL (13 modules)                                 0       449       0       0     449
+    g6b  TOTAL (10 modules)                                 0       411       0       0     411
+
+g2b +2 and g6a +7 are the added assertions; g5 and g6b equal their baselines. Every other assertion in the four groups kept its expectation: the table above is every assertion that failed or refused after the change and before the flips.
+
+**Mutation control on the owner rule** (scratch copies; the harness now also copies `cp-vigencias.l4`, which `cp-g6a-comum` imports since integration — without it the control showed one import error): unmutated control 142/142 satisfied, 0 errors; § 1º ungated — caught (3 failed); earlier dates FALSE instead of refused — caught (3 failed); gate boundary exclusive — caught (3 refused); only the contracted limb gated, the old reading — caught (1 failed).
+
+**Left for the owning groups (other groups' fork parts were not edited):** F-g6b-14's rationale still says art. 327 "is not imported" and names the deleted reader; its site anchor now resolves to the comment at art. 351 § 4º that records the deletion. F-g5-01's rationale still says the § 1º limbs count "only for a fact under Lei nº 9.983/2000" (before, they now refuse), and its note asks for a cross-check assertion that the redirect makes unnecessary; its anchor resolves to `cp-g5-comum.l4`'s header comment, which now records the deletion. Both taken readings (§ 1º reaches beyond Capítulo I, and beyond Título XI) still hold. g6a's fork F-g6a-22 no longer lists art. 327 § 1º, and F-g6a-23 records the ruling.

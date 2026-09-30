@@ -4,18 +4,19 @@
 
 ## PROGRESS
 
-Last updated 2026-09-30, after the usage-limit stop.
+Last updated 2026-09-30, after the integration step that unified art. 327.
 
 - [x] Read BRIEF, PLAN, the skills, `cp-dominio.l4`, `cp-pena.l4`, `cp-g3-furto*.l4`, arts. 312–337-D in the source, sweep-c (entries, searches, proposed forks) and M-sweep-b-11.
 - [x] All 34 roadmap units ENCODED, in six modules plus `cp-g6a-comum.l4` (shared machinery and every vigência date) and `cp-g6a-casos.l4` (test fixtures). Roadmap part validates.
 - [x] Vigência dates confirmed by sweep-c S-sweep-c-15; Lei 9.983/2000's first day (15 or 16.10.2000) is uncertain and 15.10.2000 is refused by name (F-g6a-22).
 - [x] M-sweep-c-28 (Lei 10.684/2003 art. 9º for art. 337-A) encoded.
-- [x] Forks: `registers/parts/g6a.forks.json`, 27 entries (5 reserved F-sweep-c-*, 22 F-g6a-*); validates; every cross-ref resolves against sweep-c or sweep-b.
+- [x] Forks: `registers/parts/g6a.forks.json`, 28 entries (5 reserved F-sweep-c-*, 23 F-g6a-*); validates; every cross-ref resolves against sweep-c or sweep-b.
 - [x] Positive control: 21 single mutations, all caught; two unmutated controls fully satisfied (`scratchpad/g6a/mutar-2.txt`).
-- [x] Herald check: `nlg --lang en` on the five test modules, 442 lines; 0 of the 322 rules defined in g6a's modules and `cp-pena.l4` render as a bare name.
+- [x] Herald check: `nlg --lang en` on the five test modules, 442 lines before integration (peculato's re-render after it: 142 of 142); 0 of the 322 rules defined in g6a's modules and `cp-pena.l4` render as a bare name.
 - [x] The reviewer's sections of these notes (below).
+- [x] Integration, art. 327 (the conductor's ruling): the caput answers for any date; § 1º, both limbs, is refused by name before 16.10.2000 and on 15.10.2000 (F-g6a-23). g2b's, g5's and g6b's local readings are deleted and their callers call the owner rule; g2b's art. 153 § 1º-A reads g6a's Lei nº 9.983 gate. Flipped assertions, twins and the four groups' TOTALs are in `notes/integration.md` under 'Art. 327 ruling'. Owner-rule mutation control: unmutated 142/142, all 4 mutations caught (`scratchpad/g6a/mutar327.py`).
 - Half-done: nothing inside a module; every file parses.
-- Last check.sh TOTAL (2026-09-30, after the conductor's check.sh fix): `TOTAL (13 modules)                                 0       442       0       0     442`
+- Last check.sh TOTAL (2026-09-30, after the art. 327 integration): `TOTAL (13 modules)                                 0       449       0       0     449`
 - Next: nothing owed inside the range. The report to the lead is the last step.
 
 ## Plan of modules
@@ -37,7 +38,7 @@ Every article of Título XI, Capítulos I, II and II-A: arts. 312 to 337-D, 34 r
 For each punishing provision: the case record, the elements, consummated and attempted where the conduct can be begun and stopped (fork F-g6a-05), the pena cominada of every preceito, every cause of increase as a constant plus an `incide …` predicate, and exported functions for the crime, the pena for a case, the causes and the outer limits.
 None of these articles states its ação penal, so none is written (art. 100 is g1c's).
 
-**Two definitions other groups need.** Art. 327: `funcionário público para os efeitos penais (art. 327)` takes the person's `Vínculo com a administração pública` and the date of the fact, so the contracted-company limb of § 1º is gated on Lei nº 9.983/2000. Art. 337-D: `funcionário público estrangeiro (art. 337-D)`. At integration, groups that now read the `cp-dominio` facts directly (art. 155 § 11, IV and others) should call the first.
+**Two definitions other groups need.** Art. 327: `funcionário público para os efeitos penais (art. 327)` takes the person's `Vínculo com a administração pública` and the date of the fact; § 1º, both limbs, is refused by name for a fact before Lei nº 9.983/2000's vigência and on its uncertain first day (F-g6a-23). Art. 337-D: `funcionário público estrangeiro (art. 337-D)`. g2b, g5 and g6b call the first since integration. `cp-g3-furto.l4`'s art. 155 § 11, IV still reads the caput's fact directly; whether it reaches the § 1º persons is g3's question.
 
 **Shared machinery, `cp-g6a-comum.l4`.** `Ato do agente` (agent, the art. 327 § 2º bodies, the act, and how far the execution went: begun, completed, stopped from outside), which every g6a case record embeds. Art. 14, I is the elements plus a completed conduct; art. 14, II the elements with the conduct begun, not completed and stopped from outside. The article's facts record the conduct undertaken, so an attempt says which crime was attempted. The module also holds every vigência date (one constant per law), the heaviest-penalty fold and the cause-list helpers.
 
@@ -47,7 +48,7 @@ None of these articles states its ação penal, so none is written (art. 100 is 
 | --- | --- | --- | --- |
 | Lei nº 8.137/1990 | 28.12.1990 | art. 316 § 1º re-worded; art. 318's pena | § 1º refused whole before; art. 318's pena refused before |
 | Lei nº 9.127/1995 | 17.11.1995 | art. 332 re-worded | refused whole before |
-| Lei nº 9.983/2000 | 15 or 16.10.2000 | added arts. 313-A, 313-B, 325 §§ 1º–2º, 327 § 1º's second limb, 337-A | not law before 15.10; refused ON 15.10 (F-g6a-22); law from 16.10 |
+| Lei nº 9.983/2000 | 15 or 16.10.2000 | added arts. 313-A, 313-B, 325 §§ 1º–2º, 337-A; marked 327 § 1º 'Incluído' | 313-A to 337-A: not law before 15.10; refused ON 15.10 (F-g6a-22); law from 16.10. 327 § 1º: refused before 16.10 (F-g6a-23) |
 | Lei nº 10.467/2002 | 12.6.2002 | added Capítulo II-A | not a crime before |
 | Lei nº 10.684/2003 | 31.5.2003 | art. 9º (M-sweep-c-28) | a benefit: reaches earlier acts |
 | Lei nº 10.763/2003 | 13.11.2003 | arts. 317 and 333 penas | penas refused before; definitions answer for any date |
@@ -91,6 +92,7 @@ None of these articles states its ação penal, so none is written (art. 100 is 
 | F-g6a-20 | art. 337-A § 1º and Lei nº 10.684/2003 art. 9º | two independent grounds (M-sweep-c-28) |
 | F-g6a-21 | art. 337-A § 4º's readjusted ceiling | a parameter; refused by name if asked of the encoding |
 | F-g6a-22 | Lei nº 9.983/2000's first day in force | 15.10.2000 refused; from 16.10.2000 in force |
+| F-g6a-23 | art. 327 § 1º before Lei nº 9.983/2000 | both limbs refused by name (the conductor's ruling) |
 
 Where the forks were looked for: every preceito secundário (species, bounds, fine conjunction), every "ou"/"e" chain, every cross-reference, every date, the chapter headings, and the overlaps with g6b's Capítulo II-B.
 
@@ -121,7 +123,7 @@ M-sweep-c-01 (Lei nº 7.209/1984, art. 2º) was checked: no preceito in arts. 31
 
 ## 5. What `check.sh` prints
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-g6a-`, 2026-09-30:
+`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-g6a-`, 2026-09-30, after the art. 327 integration:
 
 ```
 module                                        errors satisfied  failed refused asserts
@@ -134,17 +136,17 @@ cp-g6a-corrupcao-passiva-a-sigilo.l4               0         0       0       0  
 cp-g6a-descaminho-a-sonegacao-testes.l4            0       100       0       0     100
 cp-g6a-descaminho-a-sonegacao.l4                   0         0       0       0       0
 cp-g6a-funcionario-publico.l4                      0         0       0       0       0
-cp-g6a-peculato-a-concussao-testes.l4              0       135       0       0     135
+cp-g6a-peculato-a-concussao-testes.l4              0       142       0       0     142
 cp-g6a-peculato-a-concussao.l4                     0         0       0       0       0
 cp-g6a-usurpacao-a-corrupcao-ativa-testes.l4       0        69       0       0      69
 cp-g6a-usurpacao-a-corrupcao-ativa.l4              0         0       0       0       0
-TOTAL (13 modules)                                 0       442       0       0     442
+TOTAL (13 modules)                                 0       449       0       0     449
 (a failed assertion also counts as an error; errors minus failed = everything else)
 ```
 
 **Positive control.** Every test module passed on its first run, so 21 single mutations were made to scratch copies, one at a time, each breaking something the text decides (the § 2º list, the 9.983 gate and its uncertain day, § 3º's same day, the proveito limb, a penalty bound, the heaviest-penalty fold, the attempt reduction, § 1º of art. 317, art. 318's crime, art. 325's subsidiarity, art. 329's threat, art. 331's gravity, art. 333's gate, art. 334's ceiling, art. 334-A's refusal, art. 335's "procurar afastar", art. 337-A's § 5º and § 3º, art. 337-D, and Lei nº 10.684's § 3º). All 21 were caught, and two unmutated controls were fully satisfied. The harness's first version captured only stdout and scored every run as caught with 0 of N satisfied; that run proved nothing and was repaired before the result above.
 
-**English.** `nlg --lang en` renders 442 lines for the five test modules, one per assertion; no rule of g6a's modules renders as its bare name.
+**English.** `nlg --lang en` renders 442 lines for the five test modules, one per assertion (measured before the art. 327 integration; the re-render of `cp-g6a-peculato-a-concussao-testes.l4` after it gives 142 lines for its 142 assertions, and the new § 1º gate renders from its `@nlg:en`); no rule of g6a's modules renders as its bare name.
 
 ## 6. Open questions for a Brazilian criminal lawyer
 
@@ -159,11 +161,12 @@ TOTAL (13 modules)                                 0       442       0       0  
 9. A repair of the damage on the very day the sentence becomes final (art. 312 § 3º): before or after? (F-g6a-08)
 10. Which of these crimes admit an attempt, in particular disobedience and desacato in writing? (F-g6a-05)
 11. Was Lei nº 9.983/2000 in force on 15.10.2000? (F-g6a-22)
+12. Before Lei nº 9.983/2000, was an employee of an entidade paraestatal a funcionário público for the penal law, and under what text? The source carries none, so the encoding refuses. (F-g6a-23)
 
 ## 7. For the conductor at integration
 
 - Arts. 326/335 and g6b's arts. 337-I/337-J/337-K overlap (F-g6a-15); g6b has been told.
 - Replace `cp-dominio`'s `ocupa cargo em comissão ou função de direção ou assessoramento` with `Entidade da administração pública` (§ 4).
-- Groups that read the art. 327 facts directly should call `funcionário público para os efeitos penais (art. 327)`.
+- `cp-g3-furto.l4`'s art. 155 § 11, IV reads art. 327's caput fact directly, not the owner rule.
 - Arts. 168-A and 337-A should share the Lei nº 10.684/2003 art. 9º predicate.
 - `notes/conductor.md` was read at the start, before it was withdrawn. One fork note cited a test author's expectation from it; that note has been removed, and no reading in the encoding rests on it.
