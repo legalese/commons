@@ -49,7 +49,17 @@ for p in sorted(glob.glob(os.path.join(PARTS, "*.roadmap.json"))):
         if prev and prev[1] != u:
             problems.append(f"roadmap: {u['id']} is in {prev[0]} and {os.path.basename(p)} with different content")
         units[u["id"]] = (os.path.basename(p), u)
-roadmap_units = [u for _, u in sorted(units.values(), key=lambda t: line_of(t[1].get("anchor")))]
+def article_key(uid):
+    # "art. 359-M-A" -> (359, ["M", "A"]); an article with no suffix sorts before
+    # its lettered insertions. Anchors are no longer usable for ordering: some
+    # encoders re-pointed them at module anchors (g1c, g5; 85 units, found by
+    # integ-titles 2026-09-30), so the order is the Code's own numbering.
+    m = re.match(r"art\. (\d+)((?:-[A-Z]+)*)$", uid)
+    if not m:
+        problems.append(f"roadmap: unit id {uid!r} is not an article id")
+        return (10**9, [])
+    return (int(m.group(1)), [x for x in m.group(2).split("-") if x])
+roadmap_units = [u for _, u in sorted(units.values(), key=lambda t: article_key(t[1]["id"]))]
 tally = {}
 for u in roadmap_units:
     tally[u["disposition"]] = tally.get(u["disposition"], 0) + 1
