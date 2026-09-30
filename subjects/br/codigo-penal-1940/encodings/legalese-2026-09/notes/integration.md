@@ -198,3 +198,99 @@ g2b +2 and g6a +7 are the added assertions; g5 and g6b equal their baselines. Ev
 **Mutation control on the owner rule** (scratch copies; the harness now also copies `cp-vigencias.l4`, which `cp-g6a-comum` imports since integration — without it the control showed one import error): unmutated control 142/142 satisfied, 0 errors; § 1º ungated — caught (3 failed); earlier dates FALSE instead of refused — caught (3 failed); gate boundary exclusive — caught (3 refused); only the contracted limb gated, the old reading — caught (1 failed).
 
 **Left for the owning groups (other groups' fork parts were not edited):** F-g6b-14's rationale still says art. 327 "is not imported" and names the deleted reader; its site anchor now resolves to the comment at art. 351 § 4º that records the deletion. F-g5-01's rationale still says the § 1º limbs count "only for a fact under Lei nº 9.983/2000" (before, they now refuse), and its note asks for a cross-check assertion that the redirect makes unnecessary; its anchor resolves to `cp-g5-comum.l4`'s header comment, which now records the deletion. Both taken readings (§ 1º reaches beyond Capítulo I, and beyond Título XI) still hold. g6a's fork F-g6a-22 no longer lists art. 327 § 1º, and F-g6a-23 records the ruling.
+
+## integ-ctors (2026-09-30): the composer, and the constructor collisions
+
+Scope: write `cp-codigo-penal.l4`, make it check with every non-test module loaded, and resolve the collisions that stop it.
+
+**Result: the composer checked with 0 errors on its first run, so no collision stopped it and nothing was hoisted or renamed.**
+The 61 names in the inventory are all still defined twice or more, and all of them now meet in one scope; none is an error there, for the reason measured below.
+
+### Baseline
+
+`fulltree.sh` before any edit (started 13:46:27, before the composer existed, so it is not in the count):
+
+    TOTAL (169 modules) errors=0 satisfied=5484 failed=0 refused=0 asserts=5484 unaccounted_modules=0
+
+5,484 = integ-shared's 5,475 + g2b's 2 + g6a's 7 from the art. 327 ruling. Every group matched its row in `scratchpad/integ/baseline-per-shard.txt` except those two, which matched the ruling's own figures (g2b 509, g6a 449).
+
+### Step 1 — the composer, `cp-codigo-penal.l4` (DONE)
+
+`@lang pt`; IMPORT `prelude`, `daydate`, `cp-dominio`, `cp-pena`, `cp-vigencias`; then 85 modules, every `cp-g*.l4` that is neither `*-testes.l4` nor `*-casos.l4`. No rules, no directives; a header comment and one comment line per group naming its Parte, Título and articles (taken from each group's `registers/parts/<g>.roadmap.json` enumeration basis).
+Order is the Code's: within a group, `-comum` first, then by the first roadmap unit that lists the module.
+One departure from "g1a … g6b": g5 wrote both Título X and Título XII, so `cp-g5-estado-democratico` (arts. 359-I ff.) and `cp-g5-disposicoes-finais` (arts. 360–361) come after g6b's Título XI.
+
+- g1a: Parte Geral, Títulos I a IV, arts. 1 a 31 — `cp-g1a-aplicacao`, `cp-g1a-crime`, `cp-g1a-erro`, `cp-g1a-ilicitude`, `cp-g1a-imputabilidade`, `cp-g1a-concurso`
+- g1b: Parte Geral, Título V, Capítulos I a III, arts. 32 a 76 — `cp-g1b-privativas-de-liberdade`, `cp-g1b-restritivas-de-direitos`, `cp-g1b-multa`, `cp-g1b-cominacao`, `cp-g1b-aplicacao-da-pena`, `cp-g1b-condenacao`, `cp-g1b-circunstancias`, `cp-g1b-concurso-de-crimes`
+- g1c: Parte Geral, Título V, Capítulos IV a VII, e Títulos VI a VIII, arts. 77 a 120 — `cp-g1c-comum`, `cp-g1c-suspensao-condicional`, `cp-g1c-livramento-condicional`, `cp-g1c-efeitos-e-reabilitacao`, `cp-g1c-medidas-de-seguranca`, `cp-g1c-acao-penal`, `cp-g1c-extincao-da-punibilidade`, `cp-g1c-prescricao`
+- g2a: Parte Especial, Título I, Capítulos I a IV, arts. 121 a 137 — `cp-g2a-comum`, `cp-g2a-homicidio`, `cp-g2a-lesao-corporal`, `cp-g2a-suicidio`, `cp-g2a-aborto`, `cp-g2a-periclitacao`, `cp-g2a-rixa`
+- g2b: Parte Especial, Título I, Capítulos V e VI, arts. 138 a 154-B — `cp-g2b-comum`, `cp-g2b-honra`, `cp-g2b-constrangimento-ameaca`, `cp-g2b-sequestro-escravidao`, `cp-g2b-domicilio`, `cp-g2b-correspondencia`, `cp-g2b-segredos`
+- g3: Parte Especial, Título II, arts. 155 a 183-A — `cp-g3-comum`, `cp-g3-furto`, `cp-g3-roubo`, `cp-g3-extorsao`, `cp-g3-usurpacao`, `cp-g3-dano`, `cp-g3-apropriacao-indebita`, `cp-g3-estelionato`, `cp-g3-outras-fraudes`, `cp-g3-receptacao`, `cp-g3-disposicoes-gerais`
+- g3b: Parte Especial, Títulos III a V, arts. 184 a 212 — `cp-g3b-comum`, `cp-g3b-propriedade-imaterial`, `cp-g3b-organizacao-do-trabalho`, `cp-g3b-sentimento-religioso-e-mortos`
+- g4a: Parte Especial, Títulos VI e VII, arts. 213 a 249 — `cp-g4a-liberdade-sexual`, `cp-g4a-vulneravel`, `cp-g4a-dignidade-sexual-geral`, `cp-g4a-lenocinio`, `cp-g4a-casamento-e-filiacao`, `cp-g4a-assistencia-familiar`
+- g4b: Parte Especial, Títulos VIII e IX, arts. 250 a 288-A — `cp-g4b-comum`, `cp-g4b-perigo-comum`, `cp-g4b-transportes-e-servicos`, `cp-g4b-saude-publica-epidemia-e-agua`, `cp-g4b-saude-publica-forma-qualificada`, `cp-g4b-saude-publica-alimentos-e-medicamentos`, `cp-g4b-saude-publica-exercicio-ilegal`, `cp-g4b-paz-publica`
+- g5: Parte Especial, Título X, arts. 289 a 311-A — `cp-g5-comum`, `cp-g5-moeda-falsa`, `cp-g5-papeis-publicos`, `cp-g5-falsidade-documental`, `cp-g5-outras-falsidades`, `cp-g5-fraudes-em-certames`
+- g6a: Parte Especial, Título XI, Capítulos I, II e II-A, arts. 312 a 337-D — `cp-g6a-comum`, `cp-g6a-peculato-a-concussao`, `cp-g6a-corrupcao-passiva-a-sigilo`, `cp-g6a-funcionario-publico`, `cp-g6a-usurpacao-a-corrupcao-ativa`, `cp-g6a-descaminho-a-sonegacao`, `cp-g6a-administracao-estrangeira`
+- g6b: Parte Especial, Título XI, Capítulos II-B, III e IV, arts. 337-E a 359-H — `cp-g6b-comum`, `cp-g6b-licitacoes`, `cp-g6b-justica-reingresso-a-coacao`, `cp-g6b-justica-exercicio-arbitrario-a-desobediencia`, `cp-g6b-financas-publicas`
+- g5: Parte Especial, Título XII, e Disposições Finais, arts. 359-I a 361 — `cp-g5-estado-democratico`, `cp-g5-disposicoes-finais`
+
+### Step 2 — the composer check, and why it finds no collision
+
+First `l4 check cp-codigo-penal.l4` (before any other edit): `Check succeeded.`, 0 `DiagnosticSeverity_Error` lines; the only output is the two T10 warnings (prelude and daydate shadowed). 22 min 43 s wall, 760 s user, run beside the baseline `fulltree.sh`.
+
+Why, measured on probes (`scratchpad/integ/ctors/probe/`): L4 resolves a constructor name by its expected type, as integ-shared found for rules.
+- Importing two enums that share a constructor is not an error by itself (`pc.l4`).
+- A use where the type is known resolves and evaluates: `GIVETH A T1 … MEANS xx`; `t EQUALS xx` with `t IS A T1`; `(LIST xx, yy) EQUALS (LIST xx, yy)` where only `yy` fixes the type; a record field of the other type (`pd.l4`; `pi.l4`, whose 4 assertions are satisfied).
+- Only a use with no type to go on fails: `xx EQUALS xx` gives "There are multiple definitions for the identifier" (`pg.l4`).
+- A constructor and a rule of the same name already coexist in green modules: `cp-g1b-circunstancias` imports `cp-g1b-condenacao` (16 such pairs), `cp-g3-usurpacao` imports `cp-g3-disposicoes-gerais` (2 pairs).
+
+The composer has no expressions, so it has no use sites and cannot meet an ambiguity; each module's own uses are checked in that module's own scope, which is unchanged.
+
+**Positive control** (a scratch copy of the tree, `scratchpad/integ/ctors/ctl/zz-controle.l4`, importing the composer): one type-ambiguous line, `#ASSERT fabricar EQUALS fabricar`, gave exactly 3 errors, all on that line, listing all five `fabricar` constructors the composer brings in (cp-g4b-comum `Ação do agente`; cp-g5-moeda-falsa, -papeis-publicos, -falsidade-documental, -outras-falsidades, the conducts of Título X's Capítulos I–IV). The file's other five lines that name `fabricar` or `vender` where the type is known gave no error. So the check does see every module's names, and does fail on a real ambiguity; the zero is not the instrument's.
+
+### Step 3 — collisions resolved: none needed
+
+Hoists: 0. Renames: 0.
+The 61 inventory names (`names.py` over the 85 modules plus cp-dominio, cp-pena, cp-vigencias) were left as they are: none is an error in the composer, and this task's collisions are the ones the check reports.
+They are latent, not harmless: a consumer that imports the composer and writes one of them where nothing fixes the type (`#EVAL fabricar`, `x EQUALS x` over two constructors) gets the error above. Classified, for whoever decides whether to tidy them:
+
+| class | names | groups |
+| --- | --- | --- |
+| constructor = rule of the same name, same group, already coexisting | 16 art. 61/62 circumstances (`Circunstância agravante` in cp-g1b-condenacao vs the rules in cp-g1b-circunstancias); `usurpação de águas (art. 161, § 1º, I)`, `esbulho possessório (art. 161, § 1º, II)` | g1b, g3 |
+| verbs of different articles' conduct enums | 24 verbs (`adquirir`, `adulterar`, `alterar`, `ceder`, `destruir`, `distribuir`, `divulgar`, `emprestar`, `exportar`, `fabricar`, `facilitar`, `fornecer`, `guardar`, `impedir`, `importar`, `ocultar`, `perturbar`, `possuir`, `subtrair`, `suprimir`, `transportar`, `trocar`, `usar`, `vender`) and 5 phrases (`expor à venda`, `manter em depósito`, `restituir à circulação`, `em comércio irregular ou clandestino`, `no exercício de atividade comercial ou industrial`) | g2b, g3b, g4a, g4b, g5 |
+| the stage of execution | `execução interrompida por circunstâncias alheias à vontade do agente`, `execução não iniciada` | g3b, g5 |
+| one concept, in the brief's § 2 hoist clusters | `contravenção penal` (g1b `Natureza da infração anterior`, g1c `Natureza da infração`: the reincidência cluster); `violência doméstica e familiar`, `menosprezo ou discriminação à condição de mulher` (g2b `Razão da condição do sexo feminino`; g2a folds the same two reasons into `Circunstância do crime contra a pessoa`) | g1b, g1c, g2a, g2b |
+| shared words, different enums | `autarquia`, `empresa pública`, `sociedade de economia mista` (g3b `Ente público ofendido (art. 186, III)`, g6a `Entidade da administração pública`); `a União`, `um Estado`, `o Distrito Federal`, `um Município` (g1c `Destinatário do produto ou proveito`, g3 `Titular do patrimônio lesado`, g4b `Ente federado`); `deixar de aplicar a pena` (g2a, g3, g4a); `homicídio (art. 121)` (g2a, g4b) | g1c, g2a, g3, g3b, g4a, g4b, g6a |
+
+The stage of execution was not touched, as instructed: the two enums still differ on arrependimento eficaz (integ-shared's Step 1 table), and they do not collide.
+
+### Step 5 — art. 155 § 11, IV reads art. 327 through g6a (DONE, green)
+
+`cp-g3-furto.l4`'s § 11, IV read the caput fact directly (`f's agente's `vínculo com a administração pública`'s `exerce cargo, emprego ou função pública``).
+It now calls g6a's `funcionário público (art. 327, caput)` on the same vínculo, whose body is exactly that field read, and `cp-g3-furto` imports `cp-g6a-funcionario-publico`. A comment at the rule says why.
+**Not** the owner rule the task suggested, `funcionário público para os efeitos penais (art. 327)`: that one adds § 1º (paraestatal employees; contracted-company workers), and § 1º's Lei nº 9.983 gate is TRUE for every fact § 11 reaches: § 11 requires § 10, which requires a fact on or after `a vigência dos §§ 10 a 12 do art. 155` (Lei nº 15.517/2026). Calling it would move the answer from FALSE to TRUE for those two classes, and whether "ocupante de cargo, de emprego ou de função pública" reaches art. 327 § 1º's equiparados is a reading. **For the conductor**; g6a's header comment expects the owner rule to be called here.
+Evidence: check.sh over cp-g3- after the edit: 22 modules, 0 errors, 578 satisfied, 0 failed, 0 refused, 578 asserts (the baseline row). Mutation control on a scratch copy, IV forced to FALSE: 1 failed, `cp-g3-furto-testes.l4:485` (`o combustível pelo servidor`), so the redirected limb is tested.
+
+### Final runs
+
+Both final runs started at 14:37:00; the last `.l4` write before them was cp-g3-furto.l4 at 14:12:32, and none followed.
+
+`l4 check cp-codigo-penal.l4`, after step 5 (34 min 42 s wall, 744 s user, beside `fulltree.sh`); the two warnings are T10's, shortened here:
+
+    Warning | [Import Resolution] Multiple differing copies of module `prelude` are visible: …
+    Warning | [Import Resolution] Multiple differing copies of module `daydate` are visible: …
+    Check succeeded.
+
+0 `DiagnosticSeverity_Error` lines, exit 0: the same as the first run.
+
+`fulltree.sh` (its list already had `cp-codigo-penal`; the composer row is new, 1 module, 0 errors, 0 assertions):
+
+    TOTAL (170 modules) errors=0 satisfied=5484 failed=0 refused=0 asserts=5484 unaccounted_modules=0
+
+Every shard's TOTAL row is byte-identical to the baseline run's; 170 = the baseline's 169 + the composer.
+
+### Left undone
+
+- The 61 latent duplicate names above: not errors, so not renamed. A consumer writing type-ambiguous expressions against the composer would meet them. The two § 2 clusters in the table (`Natureza da infração`, `Razão da condição do sexo feminino`) are still hoist candidates, for the wiring pass that connects g1b to g1c and g2b to g2a.
+- Art. 155 § 11, IV and art. 327 § 1º: see Step 5.
+- Cost: `l4 check` on the composer takes about 12.5 CPU minutes (760 s and 744 s user; 23 and 35 minutes wall here, under load). `fulltree.sh` now runs it as a shard with `l4 run`, which took more than 18 CPU minutes, and it was the last shard to finish.
