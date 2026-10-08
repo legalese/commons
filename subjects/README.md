@@ -239,6 +239,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`za/`](za/) | South African Acts -- **licence unclear; metadata only** until resolved |
 | [`hk/`](hk/) | Hong Kong ordinances -- **not openly licensed; metadata only**; English and Chinese equally authentic |
 | [`il/`](il/) | Israeli Laws (no copyright in statutes, Copyright Act 2007 s 6) -- Hebrew authoritative |
+| [`br/`](br/) | Brazilian federal laws (no copyright in laws, Lei 9.610/1998 art. 8º IV) -- Portuguese authoritative; where the text is, and what LexML does and does not give, in its README |
 | [`us/al/`](us/al/) | Alabama (US state) -- **metadata only**; licence decision pending |
 | [`us/ak/`](us/ak/) | Alaska (US state) -- **metadata only**; licence decision pending |
 | [`us/az/`](us/az/) | Arizona (US state) -- **metadata only**; licence decision pending |
