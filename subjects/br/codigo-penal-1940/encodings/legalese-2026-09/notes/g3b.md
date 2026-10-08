@@ -20,6 +20,7 @@ Parte Especial Títulos III (propriedade imaterial), IV (organização do trabal
 - [x] Mutation run (positive control): 24 single mutations, each caught by at least one failing assertion (§ 5).
 - [x] Final `check.sh`: 0 errors, 331 satisfied, 0 failed, 0 refused, 331 asserts; exit 0 (§ 5).
 - [x] Report sent to team-lead (2026-09-29).
+- [x] 2026-10-08: added `ato lícito` to `Conduta contra o respeito aos mortos` so a lawful act on a grave, corpse or ashes can be recorded (F-g3b-25); six tests; check.sh 337 of 337.
 
 **Checkpoint (SAVESCUM, 2026-09-29).** Done: every unit of arts. 184–212 (18 encoded, 11 out-of-scope, 0 deferred; roadmap part validates). Half-done: nothing. Next: nothing in scope; await the conductor (F-g3b-10 open for a lawyer or the sweep). Last `check.sh` TOTAL, verbatim:
 `TOTAL (7 modules)                                  0       331       0       0     331`
@@ -194,3 +195,17 @@ Not searched: case law of the STF or STJ on any of the forks (no fork is settled
 - **Module paths** in the roadmap and forks use the l4-ide symlink form, `jl4/examples/legal/br-codigo-penal/encodings/legalese-2026-09/…`, as g0's do.
 - **Names** that other groups might also declare: `Etapa da execução` (PROPOSTO-COMUM, § 3). Constructor names chosen to avoid the shared modules' (`consumada` is spelled `execução consumada`).
 - Art. 197 has no preceito outside its incisos; for facts in neither inciso its pena function refuses by name ("os fatos não estão em nenhum inciso do art. 197, que não tem outra pena") rather than hand back inciso I's pena. Every other pena function in the range returns its article's one preceito for any case, as `cp-g3-furto.l4` does.
+
+## 9. Change of 2026-10-08: recording a lawful act against the dead (F-g3b-25)
+
+An independent test pass found that the record could not state an act that is none of the criminal verbs: an authorised restoration of a tomb had to be recorded as `violar`, and ashes scattered respectfully as `vilipendiar`.
+
+| old | new |
+| --- | --- |
+| `Conduta contra o respeito aos mortos` ended at `vilipendiar` | one more constructor, `` `ato lícito` ``, glossed in English; arts. 209 to 212 each ask for their own verbs, so no rule changed and none makes out a crime for it |
+| header comment "The verbs of arts. 209 to 212, in their order." | adds that `ato lícito` is for an act that is none of them, citing F-g3b-25 |
+| tests: 76 assertions | 82: six `NOT crime` assertions (`a sepultura restaurada com autorização`, `a urna recolocada com autorização` under art. 210; `o cadáver exumado com autorização`, `o cadáver cremado com autorização` under art. 211; `as cinzas espalhadas com respeito`, `o cadáver tratado com respeito` under art. 212); the existing criminal cases per article are untouched |
+| `g3b.forks.json`: 24 entries | 25: F-g3b-25 (delegated to the fact supplier): is an authorised act outside the verb, or inside it with only unlawfulness excluded (art. 23, III)? Taken: outside, as a recorded fact |
+
+Positive control: in a scratch copy where arts. 210 to 212 accept `ato lícito` as their verb, the six new assertions fail (and so do the existing criminal cases, 34 failure lines in all, because that mutation also removed their verbs).
+`check.sh` TOTAL after the change: `TOTAL (7 modules) 0 337 0 0 337`.
