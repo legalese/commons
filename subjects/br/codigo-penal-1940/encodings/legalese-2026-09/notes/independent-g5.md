@@ -125,3 +125,81 @@ IT-g5-088 (the declaração de hipossuficiência) agrees on the text alone: the 
 Four subagents wrote one slice each (arts. 289–295; 296–305; 306–311-A; Título XII and 360–361), each running `check.sh` on its own files.
 The two files with directives but no genuine failure (`cp-ind-g5-papeis-publicos.l4`, `cp-ind-g5-fraudes-em-certames.l4`) each got one planted false assertion, which failed, and was then removed and the file re-run.
 ta-g5 re-read the rules behind every (E) claim, searched `registers/fork-register.json` for a fork covering each, moved 21 explanatory comments so that each `-- IT-g5-NNN:` line sits directly above its directive (non-comment lines checked identical before and after), and re-ran `check.sh` over all seven files for the output above.
+
+## Re-run after fix round (ta-g5 rerun, 2026-10-09)
+
+The encoders' fix round (F-g5-31 to F-g5-34) made knowledge fields required, and F-g5-29 now makes art. 359-T REFUSE on violent conduct.
+No expected value was changed.
+Only fixtures were: 31 sites, all to supply a new knowledge field (2 builders gained a parameter).
+`cases/ta-g5.json` was not edited.
+
+### check.sh before and after
+
+"Before" is the files as left by the 2026-09-30 pass, run against today's encoding.
+
+| module | before (errors / satisfied / failed / refused / asserts) | after |
+| --- | --- | --- |
+| `cp-ind-g5-disposicoes-finais.l4` | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 / 0 |
+| `cp-ind-g5-estado-democratico.l4` | 4 / 48 / 4 / 2 / 54 | 1 / 51 / 1 / 2 / 54 |
+| `cp-ind-g5-falsidade-documental.l4` | 5 / 68 / 5 / 0 / 73 | 2 / 71 / 2 / 0 / 73 |
+| `cp-ind-g5-fraudes-em-certames.l4` | 7 / 3 / 7 / 0 / 10 | 0 / 10 / 0 / 0 / 10 |
+| `cp-ind-g5-moeda-falsa.l4` | 1 / 0 / 0 / 0 / 34, UNACCOUNTED 34 (does not typecheck) | 1 / 33 / 1 / 0 / 34 |
+| `cp-ind-g5-outras-falsidades.l4` | 1 / 0 / 0 / 0 / 34, UNACCOUNTED 34 (does not typecheck) | 1 / 33 / 1 / 0 / 34 |
+| `cp-ind-g5-papeis-publicos.l4` | 6 / 12 / 6 / 0 / 18 | 0 / 18 / 0 / 0 / 18 |
+| TOTAL | 24 / 131 / 22 / 2 / 223 (68 asserts unaccounted) | 5 / 216 / 5 / 2 / 223, UNACCOUNTED 0 |
+
+Agreeing: 131 of 223 before (68 produced no verdict), 216 of 223 after.
+On 2026-09-30 it was 212 of 223.
+
+### Fixtures changed (31 sites)
+
+| kind | n | where |
+| --- | --- | --- |
+| a new required Boolean field in a record builder | 2 builders, 6 call sites | moeda-falsa (art. 291 `o agente sabia que o objeto era destinado...`; both call sites TRUE), outras-falsidades (art. 306 `o agente sabia que a marca ou sinal era falsificado`; cases 124, 125, 126, 128 all TRUE) |
+| a knowledge member added to a circumstance list | 25 | papeis-publicos 038, 039, 041, 045, 048, 051; fraudes-em-certames 158, 159, 160, 162, 163, 164, 165, 166, 167 (9); moeda-falsa 006, 012; outras-falsidades 149, 150, 151; falsidade-documental 054, 107, 114; estado-democratico: the shared `ind espionagem` list (cases 180, 183) and case 186 |
+
+Rule 2: every knowledge field was set to "knowing", which keeps each case's original facts.
+The case says so outright in 006, 012, 038, 045, 054, 114 and 125; every other site is a case silent on knowledge (forgers, leakers, vendors, Zacarias, Abílio), set to knowing and logged here.
+No field was set to FALSE and no "ignorava" member was used: the error and ignorance cases (008, 011, 047, 153, 185) needed no knowledge member and were not touched.
+159 and 167 (expected NOT) got the member too, which is consistent with their facts; they pass for the reasons they passed before.
+
+### Positive control
+
+The two builders went from a missing-input error to typechecking, and the circumstance-list edits turned the failed assertions of those modules green (totals in the table above); 159 and 167 were already passing.
+Explicitly: in a scratch copy of outras-falsidades, case 125 (Estela, who used a forged mark "sabendo") with the new field flipped to FALSE failed IT-g5-125, besides the existing IT-g5-150; the scratch file was deleted.
+
+### Disagreements (7: 5 failed, 2 refused)
+
+| id | expected | got | one line |
+| --- | --- | --- | --- |
+| IT-g5-005 | TRUE | FALSE | unchanged: F-sweep-c-11, Súmula 73 grossness finding |
+| IT-g5-115 | REFUSE | TRUE and TRUE | unchanged: no REFUSE for the forger who uses his own forgery; exposed to g5 (2026-10-08) and still disagrees, so NOT fixed |
+| IT-g5-117 | TRUE | FALSE | unchanged: F-sweep-c-12, Súmula 17 |
+| IT-g5-150 | TRUE | FALSE | unchanged: F-g5-20 |
+| IT-g5-203 | TRUE | REFUSED | unchanged: M-sweep-c-09 / F-sweep-c-05 |
+| IT-g5-224 | FALSE | REFUSED | CHANGED: was TRUE (the exclusion applied). Now 359-L's crime predicate REFUSES on violent conduct plus the finding (F-g5-29, fork text printed in the diagnostic). The expected FALSE is not met; the case is marked arguable. For the conductor. |
+| IT-g5-226 | REFUSE | FALSE | unchanged: S-sweep-c-17, vigência from 1.12.2021 |
+
+### Now agreeing, with how to score them
+
+| id | before | now | score |
+| --- | --- | --- | --- |
+| IT-g5-008 | TRUE (no knowledge field) | FALSE, agrees with expected | fixed (relayed to g5, 2026-10-08): the knowledge member F-g5-31 to 34 added |
+| IT-g5-100 | both crimes | agrees | fixed (relayed to g5) |
+| IT-g5-113 | wrong pena | agrees | fixed (relayed to g5) |
+| IT-g5-123 | TRUE | agrees (REFUSED) | fixed (relayed to g5) |
+
+The ADI refusal message did not appear in any cp-ind-g5 expectation: no assertion pins its wording, and no output changed in a way that a g5 assertion reads.
+The art. 359-T change touched exactly one: IT-g5-224, above.
+
+### Odd
+
+The first `check.sh` run took about 10 minutes under load.
+`git status` shows other edits in the tree (`notes/g3.md`, `registers/parts/g3.forks.json`, `cp-g*` files) that are not mine.
+
+### Conductor triage of the 2026-10-09 re-run (IT-g5-224)
+
+IT-g5-224 (violent invasion of the Congress seat; does art. 359-T exclude art. 359-L?) expected FALSE (the crime stands) and used to agree.
+It now gets REFUSED, by the conductor's ruling on F-g5-29 (2026-10-08): with the finding plus violence or grave threat on the record, the encoding names both readings and does not pick one.
+Class F (recorded fork), not E: the test author marked the case "arguable" and its `alternative` field states the opposite reading; the encoding now records that disagreement instead of resolving it.
+Expected value unchanged; this is a deliberate loss of an agreement in exchange for an honest refusal.
