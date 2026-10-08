@@ -21,6 +21,7 @@
 - [x] Mutation controls on the session-2 logic: six of six caught (§ 4).
 - [x] Notes §§ 1–6 written; final report sent to team-lead.
 - [x] Conductor's DIAS-PRAZO warning (2026-09-30): no g4b rule counts a calendar period. `o último dia do prazo` appears nowhere in g4b's modules, and the only `dias n` is a dosimetry quantity: art. 268's minimum of one month raised by a third is `dias 40`, in cp-g4b-saude-publica-epidemia-e-agua-testes.l4:129. Nothing to mark.
+- [x] KNOWLEDGE FIX (2026-10-08, brief knowledge-fix-brief.md; fork F-g4b-29): dealing verbs now read a local three-valued finding, `Conhecimento da qualidade da coisa negociada`. Old → new below, in "The knowledge fix".
 
 ## 1. What is encoded, and what is not
 
@@ -223,3 +224,28 @@ Every row was read from the law's own text on Planalto, fetched with curl on 202
 
 One date in the modules is not in the table, because g4b did not fetch the law: Lei nº 10.826/2003 (Estatuto do Desarmamento), in force 23.12.2003, from M-sweep-c-32's quotation of its art. 37 ("Esta Lei entra em vigor na data de sua publicação.", DOU 23.12.2003).
 It gates the refusal of art. 253 for an explosive device.
+
+## The knowledge fix (2026-10-08, fork F-g4b-29)
+
+Audit finding (s-dolo-audit, g4b rows): arts. 270 § 1º, 272 § 1º-A and § 1º, 273 § 1º and § 1º-B, 276, 277 and 278 convicted a dealer who did not know the quality of what he dealt in, and art. 253's `dolo` ("wanted the result") did not state knowledge of what the thing was.
+Where the article has a culpable form (270 § 2º, 272 § 2º, 273 § 2º, 278 p.ú.), `Elemento subjetivo` (dolo | culpa) could only record a blameless dealer as `culpa`, and the culpable rule then convicted him.
+
+The reading taken: a local finding on each affected record, in the style of F-g5-34 but three-valued where a culpable form exists.
+Not knowing the factual quality is art. 20 and excludes dolo; not knowing that the law forbids it, or requires a licence, is art. 21 and is not asked.
+`Elemento subjetivo` and `cp-dominio` are untouched.
+
+Old → new:
+
+- `cp-g4b-comum.l4`: new enum `Conhecimento da qualidade da coisa negociada` (`sabia da qualidade da coisa negociada` | `ignorava a qualidade da coisa negociada, por culpa` | `ignorava a qualidade da coisa negociada, sem culpa`), and two rules: `a ciência da qualidade basta ao dolo` produziu conhecimento (the agent made the quality himself, or knew it) and `o desconhecimento da qualidade é culposo` produziu conhecimento (made it himself, or did not know it through want of care).
+- Each affected case record gained one field, `conhecimento da qualidade da coisa negociada`: `Fato de fabrico, fornecimento, aquisição, posse ou transporte de explosivos ou gás` (art. 253), `Fato de envenenamento de água potável ou de substância alimentícia ou medicinal` (270), `Fato de falsificação de substância ou produto alimentício` (272), `Fato de falsificação de produto destinado a fins terapêuticos ou medicinais` (273), `Fato de produto ou substância nas condições dos arts. 274 e 275` (276), `Fato de substância destinada à falsificação` (277), `Fato de outras substâncias nocivas à saúde pública` (278).
+- The consummated and attempted rules of those seven articles: `o crime doloso está consumado` / `está tentado` (f's comum) (elements) → (elements AND `a ciência da qualidade basta ao dolo` produziu conhecimento).
+  `produziu`: art. 253 and 278, `fabricar` among the actions; art. 270, the caput's elements (poisoning); art. 272, the caput's elements or `fabricar`; art. 273, the caput's elements; arts. 276 and 277, FALSE (the knowledge is always asked).
+  New helper rules for it: `o agente fabricou a coisa (art. 253)`, `o agente envenenou a água ou a substância (art. 270)`, `o agente produziu a falsificação do alimento (art. 272)`, `o agente produziu a falsificação do produto (art. 273)`, `o agente fabricou a coisa nociva (art. 278)`.
+- The culpable rules of arts. 270 § 2º, 272 § 2º, 273 § 2º and 278 p.ú.: `o crime culposo está configurado` (f's comum) (elements) → (elements AND `o desconhecimento da qualidade é culposo` produziu conhecimento).
+- Tests: the seven builders `um art. N:` now delegate to a new builder `um art. N com conhecimento` k `, e o resto:` ...; the old builders pass `o conhecimento que acompanha` (dolo → `sabia`, culpa → `ignorava, por culpa`), so no existing fixture line changed and no `#ASSERT` changed.
+  New section "O conhecimento da qualidade da coisa negociada (F-g4b-29)" in each of cp-g4b-comum-testes, -alimentos-e-medicamentos-testes, -epidemia-e-agua-testes and -perigo-comum-testes: 46 new assertions (comum 10, alimentos 26, epidemia 7, perigo-comum 3).
+- `registers/parts/g4b.forks.json`: F-g4b-29.
+- Not changed: art. 280 (the dispensing is the agent's own act; the culpable p.ú. is the home of the mistake), arts. 274, 275, and every verb listed in F-g4b-29's notes.
+
+For a Brazilian criminal lawyer: should art. 273 § 1º-B, V ("de procedência ignorada") ask for the dealer's knowledge at all, since the condition is his own ignorance of the origin?
+The encoding asks (the same finding) and expects it to be `sabia` in practice.
