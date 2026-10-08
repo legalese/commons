@@ -4,6 +4,8 @@
 
 ## PROGRESS
 
+2026-10-08, art. 337-M knowledge (fork F-g6b-24): caput and § 1º now require the new local field `o agente sabia que a empresa ou o profissional fora declarado inidôneo` (old: the verbs alone made the crime; new: verb AND knowledge; § 2º unchanged). Fixture `inidônea:` gained a `, sabendo` parameter. Tests +4 asserts, no existing #ASSERT changed. Positive control: removing the requirement fails 2. Positive controls of the four record-shape fixes (mut-fix4.py) run 2026-10-08: all seven mutants killed as expected.
+
 2026-10-08, the conductor's four fixes (§ 10): code and tests done; positive controls not yet run. Last check.sh TOTAL (all ten g6b modules): `TOTAL (10 modules)                                 0       427       0       0     427`, exit 0; 411 earlier assertions unchanged, 16 new. Roadmap part and forks part (24 entries) validate. NEXT: the reply to the conductor.
 
 - [x] Art. 351: record field `o fugitivo é o próprio agente`; the lone escape is not art. 351 (fork F-g6b-23). Tests +3.
