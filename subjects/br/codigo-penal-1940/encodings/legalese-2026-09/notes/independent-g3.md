@@ -138,3 +138,59 @@ So agreement on IT-g3-106, 107, 115 and 116 was reachable legitimately.
 
 Re-run with `L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ENC/check.sh ENC cp-ind-g3-`.
 On 2026-09-30 the load average was between 100 and 430, from other sessions' mutation runs, and one module took 20 to 80 minutes.
+
+## Re-run after fix round (2026-10-09, s-ta-g3)
+
+Brief: `~/.claude/br-penal-scratch/ta-rerun-brief.md`, N=3. Expected values were not changed.
+Toolchain `~/.claude/br-penal-toolchain/l4`, one process at a time, `nice -n 15`.
+
+**Before** (encoding as it stands, my fixtures untouched): 287 satisfied, 5 failed, 0 refused of 391; three modules did not typecheck, so 99 directives produced no verdict.
+
+| module | before | after |
+| --- | --- | --- |
+| `cp-ind-g3-extorsao.l4` | 1 error, 0/35 (UNACCOUNTED 35) | 0 errors, 35 satisfied of 35 |
+| `cp-ind-g3-outras-fraudes.l4` | 1 error, 0/48 (UNACCOUNTED 48) | 0 errors, 48 satisfied of 48 |
+| `cp-ind-g3-propriedade-imaterial.l4` | 10 errors, 0/16 (UNACCOUNTED 16) | 0 errors, 16 satisfied of 16 |
+| `cp-ind-g3-furto.l4` | 3 failed, 58 satisfied | unchanged: 3 failed (IT-g3-009, 017, 034) |
+| `cp-ind-g3-estelionato.l4` | 2 failed, 26 satisfied | unchanged: 2 failed (IT-g3-214, 223) |
+| `cp-ind-g3-disposicoes-gerais.l4` | 19 satisfied | 19 satisfied (before and after, see IT-g3-310 below) |
+| the other seven modules | all satisfied | untouched, all satisfied |
+
+**After:** 386 satisfied, 5 failed, 0 refused, 0 unaccounted, of 391 directives (14 modules, `cp-ind-g3-comum.l4` holds none).
+Agreement was 287/391 before (99 unexercised), 386/391 after.
+The summary above says 6 failed and 1 refused in the original pass; the 2026-09-30 numbers for `extorsao` (IT-g3-102) and `disposicoes-gerais` (IT-g3-310) have since moved to agreement.
+
+### Fixtures changed (3 files, 12 edits, all to supply a new required field)
+
+- `cp-ind-g3-extorsao.l4`, builder `uma extorsão independente`: `no contexto da atuação ou para a consecução das condutas previstas (art. 158, § 4º)` is set from the case's own facts, `elem` of the facção-context circumstance in the act's `circunstâncias`. It is TRUE for IT-g3-102 and 103, the only cases that build their act with `no contexto da facção`, and FALSE elsewhere (1 edit).
+- `cp-ind-g3-outras-fraudes.l4`, builder `uma fraude no comércio`: `o agente sabia que a coisa vendida era falsa, deteriorada ou de outra qualidade` IS TRUE (1 edit). IT-g3-233 and 262 say "sabia"; the other art. 175 cases are silent, so knowing keeps their original facts (IT-g3-237 included).
+- `cp-ind-g3-propriedade-imaterial.l4`, all 10 `Fato de violação de direito autoral` builders: `o agente sabia que o original ou cópia fora reproduzido com violação de direito` IS TRUE (10 edits). IT-g3-326 says "sabendo"; the rest are silent, so knowing.
+
+### Disagreements (5, all unchanged in kind from the first pass)
+
+| id | expected | got | why |
+| --- | --- | --- | --- |
+| IT-g3-009 | TRUE | FALSE | Tema 1087 STJ, `incide o aumento do art. 155, § 1º` excludes qualified forms (class S) |
+| IT-g3-017 | TRUE | FALSE | Súmula 511 STJ, no privilege for abuso de confiança (class S) |
+| IT-g3-034 | REFUSED | value (TRUE) | `idoso` read as 60 years from `cp-pena` (class F, F-g0-08) |
+| IT-g3-214 | NOT (FALSE) | TRUE | Súmula 554 STF read a contrario (class S) |
+| IT-g3-223 | REFUSED | value (TRUE) | `idoso` read as 60 years (class F, F-g0-08) |
+
+### Cases that now agree
+
+- IT-g3-102 (art. 158 § 4º, a non-ultraviolent organisation): was FALSE against my TRUE, now satisfied. It is on the fix-round list, not in EXPOSURE.md as relayed to encoders by number; I did not diff the encoding to see how.
+- IT-g3-310 (divorced ex-spouse, ação penal): was REFUSE, now satisfied against my expectation. Listed in EXPOSURE.md as relayed (F-sweep-b-23), so it counts as fixed.
+- IT-g3-202 (treasure on the finder's own land) was "not expressible" and is still not expressed. The relayed ruling changed art. 169; I did not add a directive, since the brief changes fixtures and not the set of cases. It is open for a follow-up if wanted.
+- IT-g3-393 and 398 (arts. 210, 212, no way to record a lawful act): listed in EXPOSURE.md as relayed to s-g3b on 2026-10-08. Likewise not added.
+
+### Positive controls
+
+Scratch copies (deleted) with a new field flipped:
+- extorsão, context field `AND FALSE`: IT-g3-102 and 103 failed (2 failed, 33 satisfied).
+- propriedade imaterial, all knowing flags FALSE: 1 failed (the line 284 directive, art. 184 § 2º with `sabendo`), 15 satisfied.
+
+The outras-fraudes knowing flag has no control: I did not run one, so I cannot say which directive exercises it. The art. 175 pena function is s-g3e's; no transient error appeared there.
+
+### Odd
+
+`check.sh` has the machine at load 8, so a module took 30 to 90 seconds this time, not minutes. The art. 177 and receptação REFUSE changes touched no directive of mine: both modules were fully satisfied before and after.
