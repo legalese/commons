@@ -19,6 +19,7 @@
 - [x] Mutations (§ 5): each caught.
 - [x] `registers/parts/g4a.forks.json` (28 entries) validates; `registers/parts/g4a.roadmap.json` validates.
 - [x] 2026-10-08, conductor's request (ta-g4, IT-g4-173): art. 234-B § 3º now reads the crime; fork F-g4a-24 records both readings; both are executable and tested; positive control run (below).
+- [x] 2026-10-08, conductor's request (s-dolo-audit, both MED): arts. 218-C and 234 (caput, p.ú. I) now require the agent's knowledge (arts. 18 p.ú., 20); fork F-g4a-25; positive control run (below).
 
 Import order: `geral` ← `vulneravel` ← `liberdade-sexual`; `geral` ← `lenocinio`. The Título VII modules import only `cp-dominio` and `cp-pena`.
 
@@ -72,6 +73,7 @@ Where I looked: every article's words; each "ou"/"e" and each list against its s
 | F-g4a-22 | Art. 244 "cônjuge" and the companheiro | spouse only (no analogy against the accused) |
 | F-g4a-23 | Art. 249 § 1º | a contrario: a parent, guardian or curator not deprived is not the agent |
 | F-g4a-24 | Art. 234-B § 3º, "O réu condenado": which convicts are monitored | § 1º's réu — a convict of one of the eight listed crimes, not of any crime of the Título; both readings executable (`o réu condenado passa a ser monitorado, na leitura`) and tested on arts. 213 (both), 233 and 232-A (they part) |
+| F-g4a-25 | Arts. 218-C and 234: knowledge as an element of dolo | positive findings, absent = no crime; for art. 234 knowledge of the content, never that it is legally `obsceno` (art. 21); no culpable form, so no `Elemento subjetivo` |
 | F-sweep-c-06 | Can the presumption of art. 217-A be relativised before § 4º-A? | **settled**: no (STJ Súmula 593, Tema 918; M-sweep-c-10); relativising reading arguable, pending at the TJMG (M-sweep-c-11, currency risk) |
 | F-sweep-c-07 | A slight lustful act with a child under fourteen: 215-A? | **settled**: no, always 217-A (STJ repetitive thesis, 1.7.2022; M-sweep-c-12) |
 | F-sweep-c-08 | Art. 61, II, f with art. 226, II | **settled**: both, save where authority is the only link (STJ Tema 1215; M-sweep-c-13) |
@@ -161,3 +163,13 @@ The first run of the first mutation also showed arts. 218 and 218-A had no fourt
 - **Defects in the Code's text met on the way** (no assertion failed; each is a finding about the text, recorded where it bites): art. 213 § 1º's "ou maior de 14" (F-g4a-15); art. 216-A's § 2º with no § 1º (the vetoed parágrafo único); art. 228 § 2º's stray comma ("Se o crime, é cometido"); Capítulo IV of Título VII headed "PÁTRIO PODER, TUTELA CURATELA" without the comma; art. 230 § 1º's age gap (F-g4a-17).
 - **A blind spot in `check.sh`'s failed column — since fixed by the conductor** (`msg()` now accepts both layouts; this paragraph records what was found). A failing `#ASSERT REFUSED` prints its message on the line after `Message:` ("assertion failed: expected a refusal, but the expression produced a value"), and `check.sh` counts only `Message: assertion failed` on one line. Measured on the vigência mutation above: the file showed 6 errors, 1 failed, 0 refused. The run still fails (errors, and satisfied + failed + refused falls short of the assertion count, so UNACCOUNTED fires), but the failed column under-reports. Matching the message across the line break, or counting "assertion failed" anywhere in the diagnostic, would fix it.
 - **Run time.** Measured with `time l4 run` on 2026-09-29: `cp-g4a-liberdade-sexual-testes.l4` 58 s, `cp-g4a-vulneravel-testes.l4` 20 s, `cp-g4a-dignidade-sexual-geral-testes.l4` 11 s. Most of the Cap. I assertions pass through the apparent-conflict chain (215-A → 215 → 213 → 217-A); I have not profiled whether that is the cost.
+
+## 8. The missing-knowledge fix (2026-10-08, fork F-g4a-25), old -> new
+
+- `cp-g4a-vulneravel.l4`: `Fato de divulgação de cena de sexo ou de estupro` gains `o agente sabia o que o registro continha` and `o agente sabia que a vítima não consentira`. New rule `o agente conhecia o registro (art. 218-C; art. 18, p.ú.)`: content known, and, unless the record is a rape scene or apologia, non-consent known. `divulgação consumada` and `divulgação tentada` each now also require it. Old: neither read any knowledge.
+- `cp-g4a-lenocinio.l4`: `Fato de escrito ou objeto obsceno` gains `o agente conhecia o conteúdo do escrito, desenho, pintura, estampa ou objeto`. New rule `o agente conhecia o conteúdo do objeto (art. 234, caput)`: the finding, or `fazer` among the verbs. `crime de escrito ou objeto obsceno (art. 234)`: the caput limb requires it; the p.ú. limb is now (II or III verb) or (I verb and the finding). Old: the caput limb needed the judge's obscenity finding only, and any p.ú. verb sufficed.
+- Tests: `uma divulgação` and `um objeto` keep their signatures and now set both knowledge findings TRUE; `divulgação conforme o que o agente sabia` and `um objeto conforme o que o agente sabia` take them as arguments. The inline record of the consent test carries the two new fields. 6 new asserts in `cp-g4a-vulneravel-testes.l4`, 7 in `cp-g4a-lenocinio-testes.l4`; no existing expected value changed.
+- Art. 234-B's rules read the crime of conviction and list neither article: no test moved.
+- Positive control (scratch copy with the knowledge requirement replaced by TRUE): 4 new asserts fail in each module (8 in all).
+- Observed, not changed: the p.ú. limb of art. 234 does not read the judge's obscenity finding, though the field's gloss says it covers it.
+- Records built outside g4a's modules (e.g. `cp-ind-*`) need the three new fields.
