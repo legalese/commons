@@ -1,6 +1,6 @@
 # g1b — arts. 32–76: the penalties, their cominação and application, concurso, the limit of art. 75
 
-**Status (2026-09-30): done.** All 45 units of `registers/parts/g1b.roadmap.json` are dispositioned (42 encoded, 3 inert, 0 deferred); `check.sh` prints 0 errors and 389 of 389 assertions satisfied (§ 4); 42 forks.
+**Status (2026-09-30): done.** All 45 units of `registers/parts/g1b.roadmap.json` are dispositioned (42 encoded, 3 inert, 0 deferred); `check.sh` prints 0 errors and 407 of 407 assertions satisfied (§ 4); 42 forks.
 This file is the reviewer's record and was the resume point through a usage-limit stop on 2026-09-29.
 
 ## PROGRESS
@@ -9,7 +9,7 @@ This file is the reviewer's record and was the resume point through a usage-limi
 - [x] Vigência of every law that re-worded arts. 32–76, read from Planalto's texts of the laws (§ 7).
 - [x] `cp-g1b-condenacao.l4` — the nouns of the sentencing (DECLARE only).
 - [x] `cp-g1b-circunstancias.l4` — arts. 61–67 (122 assertions).
-- [x] `cp-g1b-privativas-de-liberdade.l4` — art. 33 §§ 2º–4º, arts. 34–42 (54).
+- [x] `cp-g1b-privativas-de-liberdade.l4` — art. 33 §§ 2º–4º, arts. 34–42 (72).
 - [x] `cp-g1b-restritivas-de-direitos.l4` — arts. 44–48 (56).
 - [x] `cp-g1b-multa.l4` — arts. 50–52 (23).
 - [x] `cp-g1b-cominacao.l4` — arts. 54–57, 58 parágrafo único (24).
@@ -21,7 +21,9 @@ This file is the reviewer's record and was the resume point through a usage-limi
 - [x] Mutation run: 20 single mutations, 20 caught (§ 5).
 - [x] Forks: 42 entries, validated; the only finding left is F-g1b-12's cross-ref into sweep-c, which resolves against sweep-c (§ 8).
 - [x] Roadmap: validated (`register-validate: ok`).
-- Last check.sh (2026-09-30, after F-sweep-a-04 became a BOOLEAN): `TOTAL (16 modules)                                 0       389       0       0     389`
+- [x] IT-g1-099 (conductor, 2026-09-30): art. 42 credits each period of custody as whole calendar months from its first day plus the days left over (art. 10), where it had credited days at a thirtieth of a month; 18 assertions added, among them the eight-month case and February; positive control in § 5; F-g1b-04 and the roadmap note rewritten.
+- [x] IT-g1-171 (conductor, 2026-09-30): checked, not changed. Art. 71's fraction by Súmula 659 STJ is the recorded fork F-sweep-a-04, whose FALSE reading keeps the Code's range of 1/6 to 2/3 (§ 8).
+- Last check.sh (2026-09-30, after IT-g1-099): `TOTAL (16 modules)                                 0       407       0       0     407`
 
 ## 1. What g1b encoded, and what it did not
 
@@ -65,7 +67,7 @@ The g1b forks most worth a lawyer's time: F-g1b-18 (which circumstances preponde
 | F-g1b-01 | 33 caput, § 2º a | detenção over 8 years: § 2º a (fechado) or caput (never starts closed) | caput: semi-aberto |
 | F-g1b-02 | 33 § 2º | "pena": cominada or aplicada | aplicada (the sentence's) |
 | F-g1b-03 | 33 § 3º; Súmula 269 | "favoráveis as circunstâncias judiciais" | none valued desfavorável |
-| F-g1b-04 | 42 | days of custody: inclusive of both ends? | yes (art. 10) |
+| F-g1b-04 | 42 | time in custody: calendar months, or days at a thirtieth of a month? | calendar months from the first day plus the days left over, both ends counting (art. 10) |
 | F-g1b-05 | 33 § 4º | "crime contra a administração pública" | Título XI; delegated classification |
 | F-g1b-06 | 44 I | does the violence bar reach the culposo limb | no |
 | F-g1b-07 | 44 I | "violência": does reduction to impotence (violência imprópria) count | no (literal) |
@@ -122,11 +124,11 @@ cp-g1b-concurso-de-crimes.l4                       0         0       0       0  
 cp-g1b-condenacao.l4                               0         0       0       0       0
 cp-g1b-multa-testes.l4                             0        23       0       0      23
 cp-g1b-multa.l4                                    0         0       0       0       0
-cp-g1b-privativas-de-liberdade-testes.l4           0        54       0       0      54
+cp-g1b-privativas-de-liberdade-testes.l4           0        72       0       0      72
 cp-g1b-privativas-de-liberdade.l4                  0         0       0       0       0
 cp-g1b-restritivas-de-direitos-testes.l4           0        56       0       0      56
 cp-g1b-restritivas-de-direitos.l4                  0         0       0       0       0
-TOTAL (16 modules)                                 0       389       0       0     389
+TOTAL (16 modules)                                 0       407       0       0     407
 (a failed assertion also counts as an error; errors minus failed = everything else)
 ```
 
@@ -158,9 +160,20 @@ The harness first reported 0 satisfied for every run: it read stdout only, and `
 | art. 75 limit 40 → 30 | 4 | 0 |
 | art. 75 vigência a day late | 1 | 1 |
 | ADPF 1.107 read-down dropped | 3 | 0 |
-| detração not inclusive | 4 | 0 |
+| detração: the last day not counted toward a whole month | 11 | 0 |
 
 The ADI 7.032 mutation showed only as a refused assertion (PLAN § 12, T5); the three ruling-date gates now carry direct assertions that fail loudly.
+
+The art. 42 rewrite (IT-g1-099) had its own control, run one at a time against `cp-g1b-privativas-de-liberdade-testes.l4` (scratchpad `g1b/mut/pc42.py`); an unmutated copy gives 72 of 72.
+
+| mutation | failed | refused |
+| --- | --- | --- |
+| days at a thirtieth of a month, the method replaced | 8 | 0 |
+| the m + 1 candidate dropped (1 April to 30 November; 1 to 28 February) | 9 | 0 |
+| the m - 1 candidate dropped (15 March to 10 May) | 2 | 0 |
+| the last day not counted toward a whole month | 11 | 0 |
+
+Under the old method the eight-month case, February 2026, 29 February 2024, 31 January to 28 February, 15 March to 20 May and the year from 10 November all fail; the one-month and single-day cases agree under both methods, as they should.
 
 ## 6. Open questions for a Brazilian criminal lawyer
 
@@ -212,6 +225,8 @@ Vacatio legis counted as LC 95/1998, art. 8º, § 1º has it (the day of publica
 
 ## 8. For the conductor
 
+- **IT-g1-099 fixed (art. 42).** Each period of custody is credited as the whole calendar months it covers from its first day, plus the days left over, both ends counting: 1 April to 30 November 2026 is eight months, so three years leave two years and four months (it was 2 years, 3 months and 26 days); 1 to 28 February 2026 is a month (it was 28 thirtieths). A month is whole when cp-pena's `o último dia do prazo` for that many months ends on or before the last day, so a period begun on the 31st follows F-g0-02. F-g1b-04 now records this reading against days at a thirtieth of a month.
+- **IT-g1-171 left as is.** Súmula 659 STJ's fixed fraction for art. 71 is the recorded fork F-sweep-a-04 (settled, M-sweep-a-14). Its reading faixaDoJuiz, `o aumento segue a escala da Súmula 659 STJ` FALSE, keeps the Code's range of 1/6 to 2/3, and both readings are executed and tested.
 - **F-sweep-a-04 conforms since 2026-09-30.** At the conductor's request its interpretation field is a BOOLEAN, `o aumento segue a escala da Súmula 659 STJ`, TYPICALLY TRUE (TRUE is the reading escalaPorNumeroDeCrimes, FALSE is faixaDoJuiz); mechanism TYPICALLY. It was an enum first; this binary rejects a TYPICALLY whose value is a constructor of an own enum (`notes/cp-g1b-sondas/cp-g1b-sonda-typically-enum.l4`).
 - **Three skill findings for `writing-l4-rules`, all in `notes/cp-g1b-sondas/`.**
   - Source-patterns entry 1.5 says a constructor of one's own ONE OF type is accepted as a TYPICALLY value. It is not on this binary ("must be a literal"): `cp-g1b-sonda-typically-enum.l4`.
@@ -226,6 +241,7 @@ Vacatio legis counted as LC 95/1998, art. 8º, § 1º has it (the day of publica
 - **cp-pena's day-period defect in `o último dia do prazo` (found by g6b; warning of 2026-09-30).** Checked every g1b rule that counts a period.
   - Only art. 64, I (five years) and art. 46, § 3º (the penalty, stated in months or years) go through the helper; neither is stated in days.
   - Art. 50's ten days use date arithmetic, now marked `-- DIAS-PRAZO`.
-  - Art. 42 and art. 44, § 4º compute Durações, not calendar ends; § 4º's thirty days carry a comment telling whoever counts them on the calendar to count in days.
+  - Art. 42 counts whole calendar months through the helper, but only ever a whole number of months, which the defect does not touch; the days left over are counted by date arithmetic.
+  - Art. 44, § 4º computes a Duração, not a calendar end; its thirty days carry a comment telling whoever counts them on the calendar to count in days.
   - No test expectation came from the helper: art. 46's 365, 366 and 181 hours were counted on the calendar by hand, for periods stated in years and months.
 - **Wiring at integration.** Art. 73 should read g1a's `a vítima cujas condições se consideram (art. 20, § 3º)` (cp-g1a-erro.l4), which g1a confirms agrees with g1b's reading. F-sweep-a-05 has a second site at g1c's `a pena que regula a prescrição no crime continuado (Súmula 497 STF)`; g1c dropped its duplicate of that fork. F-sweep-a-06 is g1a's, and art. 71's comment points to it.

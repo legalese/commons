@@ -22,7 +22,16 @@ Undated cases are dated 1 June 2026 (`um fato em junho`), after every law that t
 
 ## Counts
 
-CHECK-COUNTS
+| | n |
+| --- | --- |
+| cases | 232 |
+| expressed as a directive | 223 |
+| not expressible | 9 |
+| satisfied | 212 |
+| failed | 10 |
+| refused (a plain `#ASSERT` whose expression refused) | 1 (IT-g5-203) |
+| refuse cases satisfied as `#ASSERT REFUSED` | 0 of 3 (115, 123, 226 all failed; 127 is expressed differently, below) |
+| disagreements (failed + refused) | 11 |
 
 | class | n | ids |
 | --- | --- | --- |
@@ -38,8 +47,19 @@ The other two (008, 113) are on cases marked certain.
 
 ## check.sh, verbatim
 
+Run over all seven files from 17:37 to 17:53 SGT on 2026-09-30 (`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-ind-g5-`); `cp-ind-g5-estado-democratico.l4` was re-run alone at 22:57, after a comment-only edit, with the same line. Exit status 1, as expected with failures.
+
 ```
-CHECK-OUTPUT
+module                                        errors satisfied  failed refused asserts
+cp-ind-g5-disposicoes-finais.l4                    0         0       0       0       0
+cp-ind-g5-estado-democratico.l4                    2        51       2       1      54
+cp-ind-g5-falsidade-documental.l4                  5        68       5       0      73
+cp-ind-g5-fraudes-em-certames.l4                   0        10       0       0      10
+cp-ind-g5-moeda-falsa.l4                           2        32       2       0      34
+cp-ind-g5-outras-falsidades.l4                     1        33       1       0      34
+cp-ind-g5-papeis-publicos.l4                       0        18       0       0      18
+TOTAL (7 modules)                                 10       212      10       1     223
+(a failed assertion also counts as an error; errors minus failed = everything else)
 ```
 
 ## Disagreements
