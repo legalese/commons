@@ -8,7 +8,7 @@ The encoding reads `codigo-penal-1940.txt` and nothing else.
 | `del2848compilado.htm` | Planalto's compiled text, the "Texto Atualizado" that LexML points at. Windows-1252 HTML with no charset declaration. |
 | `extract.py` | turns that HTML into `codigo-penal-1940.txt`, one source paragraph per line |
 | `codigo-penal-1940.txt` | the text encoded from; its digest is the one the source bundle pins |
-| `vide-index.tsv` | the 33 `(Vide …)` pointers in the text, numbered V1–V33 for the P2 sweep |
+| `vide-index.tsv` | the 38 `(Vide …)` pointers in the text, numbered V1–V38 for the P2 sweep (V34–V38, the bare pointers to Lei 8.072, were added after sweep-b found the first inventory incomplete) |
 | `senado-dadosabertos-527942.xml` | the Senado's amendment metadata for the Code (see below) |
 | `lexml-record.html` | the LexML index page, kept as evidence of what it pointed at |
 
@@ -35,13 +35,15 @@ The six struck-through passages survive in the text wrapped as `⟦STRUCK: …�
 
 `senado-dadosabertos-527942.xml` lists **164 later norms** that affected the Code.
 Each entry carries its signing and publication dates and names the dispositivos it touched, labelled Alteração (371), Acréscimo (184), Dispositivo Correlato (138), Revogação (24), Revogação de Parte do Texto (12) or Acréscimo Vetado (11).
-Seven entries are STF rulings giving an **interpretação conforme a Constituição**:
+Six entries are STF rulings. Five of them give an **interpretação conforme a Constituição**, and the Senado labels seven provision entries with that phrase between them:
 
 - ADI 3.150 (2018), on art. 51
 - ADPF 779 (2023), on arts. 23 II and 25, the "legítima defesa da honra" argument
 - ADI 7.032 (2024), on art. 51
 - ADPF 1.107 (2024), on art. 59
 - ADPF 569 (2024), on art. 91 II b
+
+The sixth, ADPF 496 (2020), is listed against art. 331 (desacato) as a Dispositivo Correlato.
 
 This is the dated, per-provision amendment inventory that Planalto's inline notes give only as prose.
 The P2 sweep reads it as its starting point.
