@@ -1,6 +1,6 @@
 # g4a — arts. 213–249 (Parte Especial, Títulos VI and VII): notes for the reviewer
 
-**Status (2026-09-29): all 49 units disposed (35 encoded, 14 inert, 0 deferred); six modules and six tests modules written and checked.**
+**Status (2026-10-08): all 49 units disposed (35 encoded, 14 inert, 0 deferred); six modules and six tests modules written and checked. Revised 2026-10-08 for art. 234-B § 3º (fork F-g4a-24), on a finding of the independent test pass.**
 `check.sh`'s output is in § 5, verbatim.
 
 ## PROGRESS
@@ -17,13 +17,14 @@
 - [x] `cp-g4a-assistencia-familiar.l4` + tests — Título VII Caps. III–IV (arts. 244–249).
 - [x] `nlg --lang en` on every tests module: no rule or constructor of these modules renders bare (§ 5).
 - [x] Mutations (§ 5): each caught.
-- [x] `registers/parts/g4a.forks.json` (27 entries) validates; `registers/parts/g4a.roadmap.json` validates.
+- [x] `registers/parts/g4a.forks.json` (28 entries) validates; `registers/parts/g4a.roadmap.json` validates.
+- [x] 2026-10-08, conductor's request (ta-g4, IT-g4-173): art. 234-B § 3º now reads the crime; fork F-g4a-24 records both readings; both are executable and tested; positive control run (below).
 
 Import order: `geral` ← `vulneravel` ← `liberdade-sexual`; `geral` ← `lenocinio`. The Título VII modules import only `cp-dominio` and `cp-pena`.
 
-Checkpoint (SAVESCUM, 2026-09-29): **done** — all 49 units; **half-done** — nothing; **next** — nothing in range; only answering the conductor at integration. Final report sent to team-lead.
-Last `check.sh . cp-g4a-` TOTAL, verbatim:
-`TOTAL (12 modules)                                 0       422       0       0     422`
+Checkpoint (2026-10-08): **done** — all 49 units, and the art. 234-B § 3º revision (F-g4a-24); **half-done** — nothing; **next** — nothing in range; only answering the conductor at integration. Paths moved on 2026-10-08: ENC is now under `~/src/legalese/commonswt/br-penal/…`, the validator is run from `/Volumes/transcend/src/l4wt/br-penal`, and scratch is `~/.claude/br-penal-scratch/g4a/`.
+Last `check.sh <ENC> cp-g4a-` TOTAL, verbatim (2026-10-08):
+`TOTAL (12 modules)                                 0       433       0       0     433`
 The conductor's private log (`notes/conductor.md`, since moved out of ENC) was read at the start; nothing encoded here depends on it (ages follow cp-pena and F-g0-06, not its test-author notes).
 
 ## 1. What is encoded, and what is not
@@ -42,7 +43,7 @@ Carried inert (labelled stubs, no operative outcome): the revoked arts. 214, 216
 
 ## 2. The forks, in prose
 
-27 entries in `registers/parts/g4a.forks.json`: four carry the ids sweep-c reserved (F-sweep-c-06 to -09, all settled by an authority the sweep found); the rest are F-g4a-01 to -23, resolved by argument.
+28 entries in `registers/parts/g4a.forks.json`: four carry the ids sweep-c reserved (F-sweep-c-06 to -09, all settled by an authority the sweep found); the rest are F-g4a-01 to -24, resolved by argument.
 Where I looked: every article's words; each "ou"/"e" and each list against its siblings (arts. 213 § 1º, 218-B § 2º, 227 § 1º, 228 § 1º, 230 § 1º); every "se o fato não constitui crime mais grave"; every reach clause ("neste Título", "Capítulos I e II", art. 226's silence); every consummation verb; every date.
 
 | id | question | taken |
@@ -70,6 +71,7 @@ Where I looked: every article's words; each "ou"/"e" and each list against its s
 | F-g4a-21 | Art. 242: what "suprimindo ou alterando direito inerente ao estado civil" qualifies | the last limb only (the semicolons) |
 | F-g4a-22 | Art. 244 "cônjuge" and the companheiro | spouse only (no analogy against the accused) |
 | F-g4a-23 | Art. 249 § 1º | a contrario: a parent, guardian or curator not deprived is not the agent |
+| F-g4a-24 | Art. 234-B § 3º, "O réu condenado": which convicts are monitored | § 1º's réu — a convict of one of the eight listed crimes, not of any crime of the Título; both readings executable (`o réu condenado passa a ser monitorado, na leitura`) and tested on arts. 213 (both), 233 and 232-A (they part) |
 | F-sweep-c-06 | Can the presumption of art. 217-A be relativised before § 4º-A? | **settled**: no (STJ Súmula 593, Tema 918; M-sweep-c-10); relativising reading arguable, pending at the TJMG (M-sweep-c-11, currency risk) |
 | F-sweep-c-07 | A slight lustful act with a child under fourteen: 215-A? | **settled**: no, always 217-A (STJ repetitive thesis, 1.7.2022; M-sweep-c-12) |
 | F-sweep-c-08 | Art. 61, II, f with art. 226, II | **settled**: both, save where authority is the only link (STJ Tema 1215; M-sweep-c-13) |
@@ -99,7 +101,7 @@ I first took these from the Senado record's DOU dates and my recollection of two
 
 ## 5. What `check.sh` prints
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh . cp-g4a-`, 2026-09-29, final tree, exit 0:
+`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ./check.sh <ENC> cp-g4a-`, 2026-10-08, final tree, exit 0, 2 min 44 s wall clock:
 
 ```
 module                                        errors satisfied  failed refused asserts
@@ -107,7 +109,7 @@ cp-g4a-assistencia-familiar-testes.l4              0        58       0       0  
 cp-g4a-assistencia-familiar.l4                     0         0       0       0       0
 cp-g4a-casamento-e-filiacao-testes.l4              0        47       0       0      47
 cp-g4a-casamento-e-filiacao.l4                     0         0       0       0       0
-cp-g4a-dignidade-sexual-geral-testes.l4            0        58       0       0      58
+cp-g4a-dignidade-sexual-geral-testes.l4            0        69       0       0      69
 cp-g4a-dignidade-sexual-geral.l4                   0         0       0       0       0
 cp-g4a-lenocinio-testes.l4                         0        73       0       0      73
 cp-g4a-lenocinio.l4                                0         0       0       0       0
@@ -115,7 +117,7 @@ cp-g4a-liberdade-sexual-testes.l4                  0        83       0       0  
 cp-g4a-liberdade-sexual.l4                         0         0       0       0       0
 cp-g4a-vulneravel-testes.l4                        0       103       0       0     103
 cp-g4a-vulneravel.l4                               0         0       0       0       0
-TOTAL (12 modules)                                 0       422       0       0     422
+TOTAL (12 modules)                                 0       433       0       0     433
 (a failed assertion also counts as an error; errors minus failed = everything else)
 ```
 
@@ -136,6 +138,7 @@ TOTAL (12 modules)                                 0       422       0       0  
 | cp-g4a-assistencia-familiar.l4 | art. 244 "maior de 60" → "maior de 61" | 1 failed |
 | cp-g4a-dignidade-sexual-geral.l4 | art. 226, IV, a no longer displaces I | 3 failed |
 | cp-g4a-liberdade-sexual.l4 | art. 213 § 1º read literally ("ou maior de 14") | 7 failed |
+| cp-g4a-dignidade-sexual-geral.l4 | (2026-10-08) art. 234-B § 3º's exported rule pinned to the wider reading | 3 failed: exactly the no-monitoring assertions for arts. 233, 232-A and 215, where the readings part (66 of 69 satisfied) |
 
 The first run of the first mutation also showed arts. 218 and 218-A had no fourteenth-birthday test; both were added.
 

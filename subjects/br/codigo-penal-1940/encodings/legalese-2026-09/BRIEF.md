@@ -12,7 +12,7 @@ Parte Especial (arts. 121–361): the offences, in twelve Títulos arranged by p
 
 ## Sources — read these and nothing else
 
-`SOURCE` = `/Users/mengwong/src/legalese/canonwt/br-penal/subjects/br/codigo-penal-1940/source/`
+`SOURCE` = `/Users/mengwong/src/legalese/commonswt/br-penal/subjects/br/codigo-penal-1940/source/`
 
 - `SOURCE/codigo-penal-1940.txt` — **the text you encode from.** One source paragraph per line. Every quotation you put in the encoding is copied from this file, never retyped from memory.
   Text wrapped `⟦STRUCK: …⟧` is revoked matter that Planalto shows struck through; it is not law.
@@ -27,7 +27,7 @@ The source is Portuguese and so is the encoding. There is no official English te
 
 ## Where you write
 
-`ENC` = `/Users/mengwong/src/legalese/canonwt/br-penal/subjects/br/codigo-penal-1940/encodings/legalese-2026-09/`
+`ENC` = `/Users/mengwong/src/legalese/commonswt/br-penal/subjects/br/codigo-penal-1940/encodings/legalese-2026-09/`
 
 Every file you create is under `ENC`, named with **your group prefix** (your task message gives it: `cp-g0-`, `cp-g1-`, … `cp-g6-`), ASCII only.
 **Do not edit a file another group owns.** Two exceptions, both owned by the ontology pass and read-only to everyone after it: `cp-dominio.l4` and `cp-pena.l4`.
@@ -75,7 +75,7 @@ Under `ENC/registers/parts/`, you own exactly these (the conductor merges them):
 
 1. **`gN-….roadmap.json`** — already written, one unit per article in your scope, every one `deferred`. Move each to `encoded` (with `modules`), `inert` (quoted, not operative — e.g. a definition you fold into a rule, a vigência clause), or `out-of-scope` (with a reason of real length) **as you land it**, not at the end.
    Any unit still `deferred` at the end must carry its specific reason in place of the starting text `NOT YET ENCODED …`.
-   Validate: `node /Users/mengwong/src/legalese/l4wt/br-penal/etc/go/lib/register-validate.mjs encoding-roadmap <file> <ENC>/registers/source-bundle.json` — run it from `/Users/mengwong/src/legalese/l4wt/br-penal` so the relative paths resolve.
+   Validate: `node /Volumes/transcend/src/l4wt/br-penal/etc/go/lib/register-validate.mjs encoding-roadmap <file> <ENC>/registers/source-bundle.json` — run it from `/Volumes/transcend/src/l4wt/br-penal` so the relative paths resolve.
 2. **`gN.forks.json`** — a JSON array of fork **entries** in the shape of `…/etc/go/spec/schemas/fork-register.schema.json` `$defs.entry` (read the schema and `…/spec/schemas/fixtures/fork-register.valid.json`). Id them `F-gN-01`, `F-gN-02`, …. Every ambiguity you met: the readings, the one you took, why, with the text that licenses each. A fork settled by the STF or STJ carries `settled_by`. "None found" is not believable; if you found few, say where you looked.
 3. **The P2 sweep is not yours; reading it is.** Three sweep agents research what has happened to the Code since it was printed (STF rulings, binding súmulas, STJ súmulas, prospective amendments) and write `ENC/registers/parts/sweep-a.external-modifications.json` (Parte Geral, arts. 1–120), `sweep-b…` (arts. 121–212) and `sweep-c…` (arts. 213–361). Each is an object `{ "searches": [...], "entries": [...], "dispositions": [...] }` in the shape of `…/etc/go/spec/schemas/external-modifications.schema.json`, with entries `M-sweep-a-01…`.
    **Before you finish, read the sweep file covering your range** (if it is not there yet, check again at the end). For every `binding` entry on your articles, the text was struck, suspended or read down: encode that — a rule-version arm, a fork, or a `REFUSE` where the reading-down leaves no answer — and cite the entry id in a comment. For every `interpretive` entry, open or settle the fork it bears on, and put the entry id in the fork's `settled_by.external_modification`. List every entry id you acted on in your notes file. Encoders write no external-modifications file.
@@ -92,7 +92,7 @@ Under `ENC/registers/parts/`, you own exactly these (the conductor merges them):
 Leave `JL4_LIBRARY_PATH` **unset**: the standard library is compiled into the binary and matches it.
 `L4_BIN check FILE` typechecks; `L4_BIN run FILE` also evaluates every `#EVAL` and `#ASSERT`; `L4_BIN nlg --lang en FILE` renders the English glosses.
 Useful libraries: `prelude` (always import it), `daydate` for dates.
-**Never run `cabal`**, and never edit anything under `/Users/mengwong/src/legalese/l4-ide` or `/Users/mengwong/src/legalese/l4wt/`. Do not commit or push anything; the conductor does that.
+**Never run `cabal`**, and never edit anything under `/Users/mengwong/src/legalese/l4-ide` or `/Users/mengwong/src/legalese/l4wt/` or `/Volumes/transcend/src/l4wt/`. Do not commit or push anything; the conductor does that.
 
 ## When you finish
 
