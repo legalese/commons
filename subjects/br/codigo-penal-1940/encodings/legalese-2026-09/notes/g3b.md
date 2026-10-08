@@ -22,6 +22,8 @@ Parte Especial Títulos III (propriedade imaterial), IV (organização do trabal
 - [x] Report sent to team-lead (2026-09-29).
 - [x] 2026-10-08: added `ato lícito` to `Conduta contra o respeito aos mortos` so a lawful act on a grave, corpse or ashes can be recorded (F-g3b-25); six tests; check.sh 337 of 337.
 
+- [x] 2026-10-08 (s-g3b2): art. 184 § 2º, first limb, now reads a knowledge finding (F-g3b-26); eight tests added; check.sh 345 of 345; positive control: removing the requirement fails 5 of the 98 assertions of the module. Changes, old -> new: (a) `Fato de violação de direito autoral` gains `o agente sabia que o original ou cópia fora reproduzido com violação de direito` (BOOLEAN, @nlg:en); (b) `violação de direito autoral qualificada do art. 184, § 2º`: the first limb was verbs AND `reproduzido com violação`, now also AND `o agente conhecia a violação na origem da cópia` (the finding OR the agent's own reproduction, `reprodução total ou parcial`); the rental limb is unchanged; (c) tests: `Achado` gains `ciente da pirataria`, the eight pirated-copy fixtures carry it, six new cases and eight new `#ASSERT`s (no existing `#ASSERT` changed). Checked and left alone: caput, § 1º, § 3º (the agent's own violation, reproduction or offering), the rental limb (see the fork), art. 186.
+
 **Checkpoint (SAVESCUM, 2026-09-29).** Done: every unit of arts. 184–212 (18 encoded, 11 out-of-scope, 0 deferred; roadmap part validates). Half-done: nothing. Next: nothing in scope; await the conductor (F-g3b-10 open for a lawyer or the sweep). Last `check.sh` TOTAL, verbatim:
 `TOTAL (7 modules)                                  0       331       0       0     331`
 
