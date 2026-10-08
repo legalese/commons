@@ -1,10 +1,19 @@
 # g6b — arts. 337-E–359-H: notes for the reviewer
 
-**Status (2026-09-30): complete.** All 44 units encoded; check.sh `TOTAL (10 modules) 0 errors, 411 satisfied, 0 failed, 0 refused, 411 asserts`. Parte Especial, Título XI, Capítulos II-B (crimes em licitações e contratos administrativos), III (crimes contra a administração da justiça) and IV (crimes contra as finanças públicas).
+**Status (2026-10-08): complete, with ta-g6's four record-shape findings fixed (§ 10; their positive controls not yet run).** All 44 units encoded; check.sh `TOTAL (10 modules) 0 errors, 427 satisfied, 0 failed, 0 refused, 427 asserts`. Parte Especial, Título XI, Capítulos II-B (crimes em licitações e contratos administrativos), III (crimes contra a administração da justiça) and IV (crimes contra as finanças públicas).
 
 ## PROGRESS
 
-Resumed 2026-09-30 after the usage-limit stop. Last check.sh TOTAL (all ten g6b modules): `TOTAL (10 modules)                                 0       411       0       0     411`. Roadmap part validates: 44 encoded. Notes §§ 1–9 written; final check.sh in § 6. NEXT: nothing in scope; the reply to the conductor.
+2026-10-08, the conductor's four fixes (§ 10): code and tests done; positive controls not yet run. Last check.sh TOTAL (all ten g6b modules): `TOTAL (10 modules)                                 0       427       0       0     427`, exit 0; 411 earlier assertions unchanged, 16 new. Roadmap part and forks part (24 entries) validate. NEXT: the reply to the conductor.
+
+- [x] Art. 351: record field `o fugitivo é o próprio agente`; the lone escape is not art. 351 (fork F-g6b-23). Tests +3.
+- [x] Arts. 342, 343 (and 357): `parte no processo`, `pessoa sem função no processo` in `Pessoa que funciona no processo`; art. 357's list made positive. Tests +6.
+- [x] Art. 344 (and 342): `nenhum processo ou procedimento` in `Processo ou procedimento`. Tests +3.
+- [x] Art. 337-P: the combined check reads the crime (`Crime cuja multa se fixa`) and refuses one outside the chapter. Tests +5; four existing calls pass `crime do art. 337-E` where they passed `pena do art. 337-E`, same expected values.
+- [ ] Positive controls: NOT RUN. Seven mutants are written in `~/.claude/br-penal-scratch/g6b/mut-fix4.py` (§ 10); the run was held behind the `cp-codigo-penal.l4` typecheck (one l4 at a time), and the conductor called for the report first.
+- [x] Dependants re-checked: `cp-ind-g6-justica-exercicio-arbitrario-a-desobediencia.l4` no longer compiles (the new art. 351 field, § 10); the other three cp-ind-g6 modules and `cp-codigo-penal.l4` compile ("Check succeeded.").
+
+Resumed 2026-09-30 after the usage-limit stop; the 2026-09-30 TOTAL was 411/411.
 
 
 - [x] Read BRIEF.md, PLAN.md, the writing-l4-rules skill (SKILL.md, gotchas, drafting-patterns, all eleven source-pattern pages), encoding-a-subject, cp-dominio.l4, cp-pena.l4, cp-g3-furto*.l4.
@@ -45,7 +54,7 @@ Each gate is asserted directly on the first day and the day before (PLAN trap T5
 **Not encoded, deliberately:**
 
 - The wordings before the re-writings above (not in the source; named refusals).
-- Art. 327 (who is a funcionário público) is g6a's and not imported; art. 351, § 4º reads cp-dominio's `Vínculo` facts directly (fork F-g6b-14). Art. 327, § 2º's increase reaches none of my chapters (F-g6b-01).
+- Art. 327 (who is a funcionário público) is g6a's: since integration (2026-09-30, ruling F-g6a-23) art. 351, § 4º calls g6a's owner rule `funcionário público para os efeitos penais (art. 327)` (fork F-g6b-14). Art. 327, § 2º's increase reaches none of my chapters (F-g6b-01).
 - The procurement and public-finance laws the Code's blanks point to (Lei 14.133/2021's cases of dispensa, the limits "estabelecido em lei ou em resolução do Senado", "despesa total com pessoal"): their answers are inputs.
 - Ação penal: only art. 345 states one; elsewhere art. 100 (g1c's) governs and nothing is written.
 - Insignificância: inapplicable in Título XI (Súmula 599 STJ, M-sweep-c-15, fork F-sweep-c-10, created by g6a); no g6b offence takes the finding.
@@ -54,17 +63,17 @@ Each gate is asserted directly on the first day and the day before (PLAN trap T5
 
 | module | articles | tests | asserts |
 | --- | --- | --- | --- |
-| `cp-g6b-comum.l4` | none: `Execução` (art. 14 II's facts), `Processo ou procedimento`, `Pessoa que funciona no processo` | `cp-g6b-comum-testes.l4` | 20 |
-| `cp-g6b-licitacoes.l4` | 337-E–337-P | `cp-g6b-licitacoes-testes.l4` | 94 |
-| `cp-g6b-justica-reingresso-a-coacao.l4` | 338–344 | `…-testes.l4` | 110 |
-| `cp-g6b-justica-exercicio-arbitrario-a-desobediencia.l4` | 345–359 | `…-testes.l4` | 113 |
+| `cp-g6b-comum.l4` | none: the attempt over cp-dominio's `Execução do crime` (art. 14 II's facts), `Processo ou procedimento`, `Pessoa que funciona no processo` | `cp-g6b-comum-testes.l4` | 20 |
+| `cp-g6b-licitacoes.l4` | 337-E–337-P | `cp-g6b-licitacoes-testes.l4` | 99 |
+| `cp-g6b-justica-reingresso-a-coacao.l4` | 338–344 | `…-testes.l4` | 116 |
+| `cp-g6b-justica-exercicio-arbitrario-a-desobediencia.l4` | 345–359 | `…-testes.l4` | 118 |
 | `cp-g6b-financas-publicas.l4` | 359-A–359-H | `…-testes.l4` | 74 |
 
 Positive control: 43 single mutations over the four article modules (8, 10, 14 and 11), each run in a scratch copy with the verdicts counted from the tool's output and the total checked to account for every `#ASSERT`; every one made at least one test fail.
 
 ## 3. The forks, in prose
 
-23 entries in `registers/parts/g6b.forks.json`. One is settled by an authority, one is open, the rest were resolved by g6b on argument; three are executable interpretation fields.
+24 entries in `registers/parts/g6b.forks.json`. One is settled by an authority, one is open, the rest were resolved by g6b on argument; three are executable interpretation fields.
 
 | id | question | taken |
 | --- | --- | --- |
@@ -82,7 +91,7 @@ Positive control: 43 single mutations over the four article modules (8, 10, 14 a
 | F-g6b-11 | 348 § 2º "cônjuge" and the companheiro | as written: not exempt (the other reading is live) |
 | F-g6b-12 | 348: is "reclusão ou detenção" "cominada pena de reclusão"? | yes |
 | F-g6b-13 | 351 § 1º "a mão armada" | any weapon, an object used as one included |
-| F-g6b-14 | 351 § 4º "funcionário" | art. 327 caput and § 1º, read from the facts |
+| F-g6b-14 | 351 § 4º "funcionário" | art. 327 caput and § 1º, by g6a's owner rule since integration |
 | F-g6b-15 | 352 "o preso", without 351's "legalmente" | as written: legality not required |
 | F-g6b-16 | 354: how many make a motim? | two or more |
 | F-g6b-17 | 358: do the means qualify both figures? | only the second (the semicolon) |
@@ -91,6 +100,7 @@ Positive control: 43 single mutations over the four article modules (8, 10, 14 a
 | F-g6b-20 | 359-G "cento e oitenta dias anteriores ao final do mandato" | **interpretation field**, TYPICALLY the 180 days ending on the last day, included |
 | F-g6b-21 | 359-C, 359-G: whose term? | the fact supplier's (delegated) |
 | F-g6b-22 | 337-O's heading "por projetista" | adds no element; the three contracting contexts do the confining |
+| F-g6b-23 | 351: can the fugitive be the agent? | no: art. 351 is another's escape; the prisoner's own is art. 352's when violent (the other reading would punish a peaceful escape more than a violent one) |
 
 Where I looked for ambiguity: every preceito's words against its neighbours' (the retraction, family-exemption and "legalmente" clauses differ between neighbours and are encoded as each is worded), every threshold word ("exceda", "ultrapassa", "superior", "igual ou superior", "mais de uma"), every list of persons or proceedings, every count of time.
 
@@ -108,12 +118,12 @@ Fork F-g6a-15 (g6a's: arts. 326 and 335 overlap arts. 337-J, 337-I and 337-K) is
 
 ## 5. Proposed shared nouns
 
-- `Execução` (`cp-g6b-comum.l4`, marked `PROPOSTO-COMUM`): the two facts art. 14, II reads. cp-g3-furto carries them as loose fields of its record; a shared record would let every group build attempts the same way.
+- `Execução`: adopted at integration (2026-09-30) as cp-dominio's `Execução do crime`; `cp-g6b-comum.l4` keeps only the attempt predicate over it.
 - Nothing is proposed for `cp-dominio.l4` beyond that. `Processo ou procedimento` and `Pessoa que funciona no processo` stay group nouns: no article outside my range lists these kinds of proceeding (a search of the source for them found only "processo" in other senses).
 
 ## 6. What `check.sh` prints
 
-`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ENC/check.sh ENC cp-g6b-`, 2026-09-30, exit 0:
+`L4=/Users/mengwong/.claude/br-penal-toolchain/l4 ENC/check.sh ENC cp-g6b-`, 2026-10-08, after the four fixes of § 10, exit 0:
 
 ```
 module                                        errors satisfied  failed refused asserts
@@ -121,15 +131,17 @@ cp-g6b-comum-testes.l4                             0        20       0       0  
 cp-g6b-comum.l4                                    0         0       0       0       0
 cp-g6b-financas-publicas-testes.l4                 0        74       0       0      74
 cp-g6b-financas-publicas.l4                        0         0       0       0       0
-cp-g6b-justica-exercicio-arbitrario-a-desobediencia-testes.l4       0       113       0       0     113
+cp-g6b-justica-exercicio-arbitrario-a-desobediencia-testes.l4       0       118       0       0     118
 cp-g6b-justica-exercicio-arbitrario-a-desobediencia.l4       0         0       0       0       0
-cp-g6b-justica-reingresso-a-coacao-testes.l4       0       110       0       0     110
+cp-g6b-justica-reingresso-a-coacao-testes.l4       0       116       0       0     116
 cp-g6b-justica-reingresso-a-coacao.l4              0         0       0       0       0
-cp-g6b-licitacoes-testes.l4                        0        94       0       0      94
+cp-g6b-licitacoes-testes.l4                        0        99       0       0      99
 cp-g6b-licitacoes.l4                               0         0       0       0       0
-TOTAL (10 modules)                                 0       411       0       0     411
+TOTAL (10 modules)                                 0       427       0       0     427
 (a failed assertion also counts as an error; errors minus failed = everything else)
 ```
+
+On 2026-09-30 the same command printed 411/411 (exercicio 113, reingresso 110, licitações 94); the 16 new assertions are § 10's.
 
 Every module has as many verdicts as `#ASSERT` lines, and none refused. The `#ASSERT REFUSED` lines count as satisfied when the refusal comes with the named message.
 
@@ -158,7 +170,7 @@ The two vacatio counts are asserted in the tests: `(YMD 2019 9 5) PLUS 120` is 3
 - **Senado index error**: the Senado record indexes Lei 14.133/2021's insertion as "Art. 377-E" to "Art. 377-P" and omits 337-L (it should be 337-E to 337-P).
 - **cp-pena's `o último dia do prazo` is wrong for periods the Code counts in days**: it reads `dias 180` as six calendar months (asserted: from 5.7.2026 it gives 4.1.2027; 180 calendar days end on 31.12.2026). Correct for art. 10's months and years and for dosimetry; a trap for anyone counting a tipo's days with it. Cap. IV counts days by date arithmetic instead.
 - **`TYPICALLY` with a user enum constructor** is accepted on a `GIVEN` parameter and rejected on a record field ("must be a literal … could not find a definition"), on this binary. Phrasebook entry 1.5 says a constructor of your own `ONE OF` type is accepted; that holds only for parameters. The three interpretation fields are therefore parameters of the exported rules.
-- **Art. 327 read from facts** at art. 351, § 4º (`funcionário pelos fatos do art. 327`): replace with g6a's rule at integration, or keep and add a cross-check assertion.
+- **Art. 327 at art. 351, § 4º**: replaced at integration by g6a's owner rule (ruling F-g6a-23); nothing owed.
 - **Roadmap titles corrected** where the mechanical enumeration took a neighbour's line: arts. 337-E–337-O (the amendment note), 343, 346, 349-A (no heading in the source), 359-C, 359-G (a pena line).
 - **check.sh's transient double count** (~21:00 on 2026-09-29) was seen and not acted on; the counts above are from the fixed script.
 - **No failing assertion**; nothing is expected to fail.
@@ -173,8 +185,22 @@ The two vacatio counts are asserted in the tests: `(YMD 2019 9 5) PLUS 120` is 3
 5. Art. 348, § 2º: is the companheiro exempt? (F-g6b-11)
 6. Art. 348: is a crime punished with "reclusão ou detenção" one "a que é cominada pena de reclusão"? (F-g6b-12)
 7. Art. 352: must the imprisonment be lawful, as art. 351 says? (F-g6b-15)
+8. Art. 351: a prisoner who instigates a third party to free him — does he take part in the third party's art. 351 (art. 29), or is his own escape, being atypical without violence, beyond it? The record describes only the agent's conduct and does not decide this. (F-g6b-23)
 8. Art. 354: how many prisoners make a motim? (F-g6b-16)
 9. Art. 359-C: which period is "os dois últimos quadrimestres do último ano do mandato" for a term ending on 5 or 6 January or 31 January? And does enough cash for the carried-over part take the obligation out? (F-g6b-18, F-g6b-19)
 10. Art. 359-G: is the term's last day inside "os cento e oitenta dias anteriores ao final do mandato"? (F-g6b-20)
 11. Arts. 359-C and 359-G: whose term — the agent's, or the head of the power's? (F-g6b-21)
 12. Art. 345, parágrafo único: does violence against a thing make the prosecution public? (F-g6b-05)
+
+## 10. Fixes after the independent test pass (ta-g6, 2026-10-08)
+
+Four record-shape findings, each fixed in the record and tested; no earlier expectation changed.
+
+- **Art. 351 (IT-g6-321).** The record gains `o fugitivo é o próprio agente`. The predicate `de pessoa legalmente presa ou submetida a medida de segurança detentiva, que não o agente (art. 351)` requires another person, and the intentional form, its attempt and § 4º's negligent form all read it (fork F-g6b-23). Tests: the lone escape, consummated and attempted, is not art. 351.
+- **Arts. 342, 343 (IT-g6-272, IT-g6-284).** `Pessoa que funciona no processo` gains `parte no processo` and `pessoa sem função no processo`. Art. 342's list was already positive; art. 357's was `WHEN contador THEN FALSE OTHERWISE TRUE`, which would have admitted both new members, so it is now the eight named persons and OTHERWISE FALSE. Tests: a party and a no-role person, under arts. 342, 343 and 357.
+- **Art. 344 (IT-g6-289).** `Processo ou procedimento` gains `nenhum processo ou procedimento`, which no article's list names. Tests: art. 344 consummated and attempted, and art. 342, with no proceeding.
+- **Art. 337-P (IT-g6-247).** The combined check takes the crime (`Crime cuja multa se fixa`: arts. 337-E–337-O, 337-M as two entries, and `crime de fora do Capítulo II-B`) instead of a `Pena cominada`, reads the pena from it, and refuses a crime outside the chapter. The four existing calls pass `crime do art. 337-E` where they passed `pena do art. 337-E`; their expected values are unchanged.
+
+**Dependant broken:** `cp-ind-g6-justica-exercicio-arbitrario-a-desobediencia.l4` (ta-g6's, not edited) builds the art. 351 record at lines 205–215 without the new field; it needs `` `o fugitivo é o próprio agente` IS FALSE ``.
+
+**Positive controls, not run.** `~/.claude/br-penal-scratch/g6b/mut-fix4.py` copies the modules to scratch, runs a no-mutation baseline per tests module, then seven single mutants: M1 the agent may be the fugitive (expects 3 failed), M2 a party named by art. 342 (2), M3 art. 357 back to OTHERWISE TRUE (2), M4 art. 344 admits no proceeding (2), M5 art. 342 admits no proceeding (1), M6 the chapter test admits any crime (1), M7 the 337-P fix reverted (1). Under M6 the outside-chapter REFUSED test is expected to stay satisfied, because the pena lookup refuses on its own; M7 removes both.
