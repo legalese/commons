@@ -124,3 +124,36 @@ They are listed by how silent the wrong answer would be:
 3. **Art. 337-P (IT-g6-247).** The 2% floor rule accepts any crime's pena. Passing art. 333's would apply the floor to corrupção ativa, outside "os crimes previstos neste Capítulo".
 4. **Arts. 312 + 30 (IT-g6-023).** There is no path by which a non-official participant is charged with peculato. The encoding can only answer "not peculato" for him.
 5. **Art. 344 (IT-g6-289).** A coercion with no proceeding at all must be entered against some proceeding. The element that saves it (`contra … pessoa que … é chamada a intervir no processo`) then has to be set FALSE by hand.
+
+## 6. Re-run after fix round (2026-10-09)
+
+Three of the eleven modules no longer type-checked, because a fixture builder lacked a field the encoders added.
+Each got one line, and no expected value was touched.
+
+| module | builder | field supplied | value | why |
+| --- | --- | --- | --- | --- |
+| `cp-ind-g6-descaminho-a-sonegacao.l4` | `g6 contrabando` | `o agente conhecia a natureza da mercadoria proibida (art. 334-A, § 1º, IV e V)` | TRUE | the cases are silent; knowing keeps their original facts |
+| `cp-ind-g6-licitacoes.l4` | `g6 inidônea` | `o agente sabia que a empresa ou o profissional fora declarado inidôneo` | TRUE | the cases are silent; knowing keeps their original facts |
+| `cp-ind-g6-justica-exercicio-arbitrario-a-desobediencia.l4` | `g6 fuga` | `o fugitivo é o próprio agente` | FALSE | every expressed case is about someone who helps another escape (the lone-fugitive case, IT-g6-321, was never expressible) |
+
+The builders' signatures are unchanged, so no call site moved.
+The new `Pessoa que funciona no processo` and `Processo ou procedimento` members and the art. 337-P signature change broke nothing in the expressed files.
+
+Check line, `check.sh . cp-ind-g6-` (errors / satisfied / failed / refused / asserts):
+
+| module | before the fixtures | after |
+| --- | --- | --- |
+| descaminho-a-sonegacao | 1 / 0 / 0 / 0 / 41, UNACCOUNTED 41 | 3 / 38 / 3 / 0 / 41 |
+| licitacoes | 1 / 0 / 0 / 0 / 41, UNACCOUNTED 41 | 0 / 41 / 0 / 0 / 41 |
+| justica-exercicio-arbitrario-a-desobediencia | 1 / 0 / 0 / 0 / 59, UNACCOUNTED 59 | 0 / 59 / 0 / 0 / 59 |
+| the other eight | unchanged | unchanged |
+| TOTAL | 5 / 228 / 2 / 1 / 372 | 5 / 366 / 5 / 1 / 372, UNACCOUNTED 0 |
+
+Agreeing: 228 of 372 before (three modules not evaluating), 366 of 372 after.
+The after row is the same as § 1: the encoding's changes did not move any previously agreeing case.
+The six disagreements stand as recorded in § 2 (IT-g6-008, 154, 178, 182, 259, 380); they were not re-probed by id, only matched by module and count (descaminho 3 failed, financas-publicas 1 failed, reingresso 1 failed, funcionario-publico 1 refused).
+No new disagreement appeared.
+Exposed cases IT-g6-090 and 192 were not checked by id; the module counts match § 1 exactly, which is the evidence that they still agree.
+Not applied: the art. 30 + 312 trap (IT-g6-023) was left for a later pass, as instructed.
+
+Positive control: a scratch copy of `cp-ind-g6-licitacoes.l4` with the new knowledge field set FALSE gave 39 satisfied / 2 failed instead of 41 satisfied, so the field is exercised; the copy was deleted.
