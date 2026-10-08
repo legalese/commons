@@ -126,3 +126,45 @@ ta-g4 then re-read the rule and the fork or sweep entry behind every disagreemen
 Positive controls: in `cp-ind-g4-familia.l4` and `cp-ind-g4-perigo-comum-e-transportes.l4`, a temporary copy with four expectations flipped failed exactly those four and nothing else, and was deleted; each of the other four files has at least one genuine failure, so its assertions demonstrably can fail.
 `check.sh` was run over all six files, one module at a time, for the output above (started 17:52 SGT on 2026-09-30).
 While it ran, one comment was edited (IT-g4-278's label, so that each id labels exactly once); no directive changed, so the verdicts stand.
+
+## Re-run after fix round (2026-10-09)
+
+Before the re-run, four of the six modules did not typecheck, because their fixture builders lacked the new knowledge fields; they produced no verdicts at all (UNACCOUNTED = all their assertions).
+No expected value was changed. Only builders gained fields.
+
+| module | before (errors / satisfied / failed / refused / asserts) | after |
+| --- | --- | --- |
+| disposicoes-gerais-e-lenocinio | 1 / 0 / 0 / 0 / 80 (does not typecheck) | 4 / 76 / 4 / 0 / 80 |
+| familia | 1 / 67 / 1 / 0 / 68 | unchanged |
+| liberdade-sexual-e-vulneravel | 3 / 0 / 0 / 0 / 93 (does not typecheck) | 1 / 92 / 1 / 0 / 93 |
+| paz-publica | 1 / 23 / 1 / 0 / 24 | unchanged |
+| perigo-comum-e-transportes | 3 / 0 / 0 / 0 / 78 (does not typecheck) | 0 / 77 / 0 / 1 / 78 |
+| saude-publica | 6 / 0 / 0 / 0 / 62 (does not typecheck) | 1 / 61 / 1 / 0 / 62 |
+
+Agreeing: 90 of 405 before (only the two modules that compiled), 396 of 405 after. UNACCOUNTED is 0 everywhere.
+
+**Fixtures changed (13 builder sites, 4 files, one kind: a new required knowledge field).**
+- `o agente conhecia o conteúdo do escrito, desenho, pintura, estampa ou objeto` IS TRUE on the art. 234 builder (1 site; the case is silent, so knowing).
+- `o agente sabia o que o registro continha` IS TRUE and `o agente sabia que a vítima não consentira` on the three art. 218-C builders (3 sites). The second is `NOT con` in the builder that takes the victim's consent as an argument, and TRUE in the two that fix it FALSE; the case is silent on knowledge, so the agent knows.
+- `conhecimento da qualidade da coisa negociada` on the arts. 253 (`perigo-comum`, 3 sites: `sabia`, all dolosos) and 270, 272, 273, 274/275, 277, 278 (`saude-publica`, 6 sites). Where the builder takes the fact's `Dados comuns` as an argument (arts. 270, 272, 273), the field is derived from it: `sabia` when its `elemento subjetivo` is `dolo`, `ignorava a qualidade da coisa negociada, por culpa` otherwise, because a culposo case is one where the agent did not know; the other three sites fix `o caso doloso`, so `sabia`. All the culposo rows still agree.
+- Case silent on knowledge everywhere: no case describes ignorance except through the culposo form, so "knowing" keeps the original facts.
+
+**Positive control.** A scratch copy of the disposições module with the art. 234 `conhecia` field flipped to FALSE failed IT-g4-152 (a new red beside the four already red); the copy was deleted.
+
+**Disagreements (9, all already triaged above; none new).** Each is still the same disagreement as in the triage table.
+
+| id | expected | got | why |
+| --- | --- | --- | --- |
+| IT-g4-097 | REFUSE | a value | F-g4a-03, art. 215 gets inciso I only |
+| IT-g4-107 | REFUSE | FALSE | F-g4a-03, art. 226 does not reach Capítulo V |
+| IT-g4-162 | REFUSE | TRUE | F-g0-08, idoso is 60 or more |
+| IT-g4-173 | REFUSE | FALSE | F-g4a-24 (2026-10-08): § 3º monitors only § 1º's eight crimes; art. 233 is not one. Told to g4a (EXPOSURE.md), so this is a fix that moved the answer from TRUE to FALSE, **not** a fix that agrees: the case still expects REFUSE |
+| IT-g4-060 | art. 218 TRUE | FALSE | F-g4a-09, contact goes to art. 217-A |
+| IT-g4-216 | the printed words (a fine fits or not) | substituted | M-sweep-c-27 |
+| IT-g4-283 | reclusão 2 to 5 with multa | REFUSE | F-sweep-c-17, dolosa form revoked |
+| IT-g4-351 | reclusão 10 to 15 | 1 to 3 | STF Tema 1003 |
+| IT-g4-407 | REFUSE | a value (TRUE) | F-g4b-22 |
+
+Of the IT-g4-173 row, the "got" was measured with an `#EVAL` of the same expression in the scratch copy: FALSE. The other "got" columns repeat the earlier triage and were not re-measured (the assertions fail the same way).
+
+Anything odd: `check.sh` run without the module filter took more than the 120 s tool limit when the machine was loaded; run per module it takes seconds each.
