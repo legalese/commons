@@ -160,3 +160,17 @@ IT-g1-315 and 316 disagree, as R; a disagreement is still a finding.
 
 Per-case results, one object per case with the encoding's answer and the evidence, are in ta-g1's scratchpad as `g1/results-all.json` (session 452e2526).
 They are not part of the deposit.
+
+## 8. Re-run after fix round (2026-10-09)
+
+Re-run of `cp-ind-g1-*.l4` (21 modules) with `check.sh` after the F-g1-* fix round, no edits to any cp-ind file.
+Every module still typechecks; no fixture needed a new field, so no fixture was changed and no positive control applied.
+
+```
+TOTAL (21 modules)                                13       311      13       9     333
+```
+
+Before: 310 satisfied, 14 failed, 9 refused. After: 311 satisfied, 13 failed, 9 refused. UNACCOUNTED 0.
+The only change is IT-g1-099 (art. 42, the E): it now agrees (g1b art. 42 fix).
+The 13 failed are IT-g1-070, 094, 095, 125, 148, 159, 161, 162, 171, 172, 217, 304, 331; the 9 refused are IT-g1-295, 296, 301, 302, 314, 315, 316, 338, 339.
+These are the same sets as in § 1 and § 2 (F, S and R classes, unchanged).
