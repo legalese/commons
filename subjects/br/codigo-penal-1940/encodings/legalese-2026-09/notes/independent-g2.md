@@ -134,3 +134,72 @@ EXPOSURE.md lists what the encoders saw of the test authors' work. For ta-g2 tha
 - `cp-ind-g2-segredos.l4` — arts. 153–154-B (IT-g2-356–383)
 
 Per-case results (verdict, class, evidence) for every one of the 383 cases: `/Users/mengwong/.claude/br-penal-oracle/results/ta-g2/*.json`, one file per slice.
+
+## Re-run after fix round (2026-10-09)
+
+The twelve `cp-ind-g2-*.l4` modules were re-run against the encoding as it now stands.
+**No module stopped type-checking**, so no new required fixture field was needed.
+Two fixtures had to change, however, because the encoders made two predicates stricter and the old fixtures silently satisfied neither; the modules still type-checked and the assertions simply went red.
+No expected value was touched.
+
+| module | before the fixture edits | after | agreeing / total |
+| --- | --- | --- | --- |
+| aborto | 3 failed | 1 failed (IT-g2-123) | 25 / 26 |
+| constrangimento-ameaca | 1 failed | 1 failed (IT-g2-292) | 32 / 33 |
+| correspondencia | 0 | 0 | 13 / 13 |
+| domicilio | 0 | 0 | 11 / 11 |
+| homicidio | 11 failed | 3 failed (IT-g2-007, 045, 047) | 77 / 80 |
+| honra | 1 failed | 1 failed (IT-g2-265) | 52 / 53 |
+| lesao-corporal | 0 | 0 | 39 / 39 |
+| periclitacao | 0 | 0 | 46 / 46 |
+| rixa | 1 failed | 1 failed (IT-g2-213) | 4 / 5 |
+| segredos | 0 | 0 | 28 / 28 |
+| sequestro-escravidao | 1 failed | 1 failed (IT-g2-315) | 29 / 30 |
+| suicidio | 0 | 0 | 16 / 16 |
+| **total** | 18 failed, 0 refused, 362 agree | 8 failed, 0 refused, 372 agree | 372 / 380 |
+
+For comparison, the 2026-09-30 run had 369 agreeing, 10 failed and 1 refused of 380.
+UNACCOUNTED was 0 on every run.
+
+### Fixtures changed (2 edits, 2 files; fixture kinds: person identity, relation direction)
+
+1. `cp-ind-g2-homicidio.l4`, `agente homem` and `agente mulher`.
+   `a vítima é alguém que não o agente (art. 121, caput)` (cp-g2a-homicidio.l4:147-150) now compares the two persons' `identificação`.
+   The builders gave the agent and the victim the same identificação ("homem", or "mulher"), so every homicide case read as a suicide, and 11 assertions failed (IT-g2-001, 038, 039, 040, 048, 049, 057, 074, 075 and the pair below).
+   The agent now has its own identificação ("agente homem", "agente mulher"); birth dates and sex are unchanged.
+   This is the "de outrem" fix surfacing in the fixtures.
+2. `cp-ind-g2-aborto.l4`, the four victims of cases 098, 100, 101, 102: `(LIST descendente)` became `(LIST ascendente)`.
+   `Relação do agente com a vítima` records what the AGENT is to the victim (cp-dominio.l4:62-), and `a agente é a mãe da vítima (art. 123)` (cp-g2a-homicidio.l4:1066-1071) now requires `ascendente`.
+   The old fixtures recorded the child's relation to the mother, the wrong direction, and IT-g2-098 and 099 failed.
+   Cases 100-102 agreed before and after, because they expect no infanticídio.
+   In the homicidio module `caso 004` and the like also use `descendente`; those are cases where the agent is the victim's descendant and were left alone.
+
+**Positive control.** The first run on the unedited fixtures is the control: restoring either old fixture reproduces exactly the red assertions listed above (11 in homicidio, 2 more in aborto), and the edits turn exactly those green.
+Cases whose answers depend on the victim being someone else (all of homicidio) went green only with the identificação edit.
+
+### Disagreements (8, none new; expected values unchanged)
+
+| id | expected | got | one line |
+| --- | --- | --- | --- |
+| IT-g2-007 | FALSE (arguable) | reduction returned as a cause | F-g2a-02, as before. It was hidden in the pre-edit run only because the victim read as the agent. |
+| IT-g2-045 | FALSE (arguable) | TRUE | F-g0-06 birthday boundary, EXPOSED, as before |
+| IT-g2-047 | TRUE (arguable) | FALSE | F-g2a-03, as before |
+| IT-g2-123 | FALSE (arguable) | assertion conjunction FALSE: D and G not punishable, ADPF 54 read-down excludes the fact from arts. 124 and 126 (not re-probed in this run beyond the conjunction being FALSE) | S (F-g2a-22, M-sweep-b-01), as before |
+| IT-g2-213 | REFUSE (arguable) | a value (`há rixa` for two is FALSE) | F-g2a-30, as before |
+| IT-g2-265 | pública condicionada (arguable) | LIST representação, privada | S, Súmula 714, as before |
+| IT-g2-292 | TRUE (arguable) | FALSE | F-sweep-b-24, EXPOSED, as before |
+| IT-g2-315 | TRUE | FALSE (judge's finding of intense and persistent violation is required) | S, STF Inq 3412, as before |
+
+### Moved since 2026-09-30
+
+- IT-g2-126 (art. 129 "de outrem"): the one class E, **now agrees**. Relayed to g2a (EXPOSURE.md, 2026-09-30).
+- IT-g2-029 (nanny, § 2º-B II): **now agrees**. Not in EXPOSURE.md's relayed list as such; the encoding changed.
+- IT-g2-263 (injúria real, ação penal): was a refusal, **now agrees**. Relayed to g2b (EXPOSURE.md, F-g2b-06, 2026-09-30).
+- The rest of the list at the head of this section is unchanged: 8 of the original 11 disagreements remain, 3 resolved.
+- Of the 15 exposed cases: IT-g2-045 and IT-g2-292 still disagree, the other 13 agree.
+
+### Odd
+
+- A fixture that no longer means what the encoding reads is invisible to the type checker and to `check.sh`'s error column except as failures.
+  Both edits above were found by reading why a case that obviously should hold went red, not from a type error.
+- An agreeing case that was masked by the same fixture defect cannot be told apart from a true agreement in the 2026-09-30 notes: IT-g2-007 is the one visible example (red again after the identificação edit).
