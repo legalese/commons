@@ -8,6 +8,7 @@ ta-g1 merged their results and checked that every case id appears exactly once.
 It checked that every fork id and sweep entry cited below exists in `registers/fork-register.json` and `registers/external-modifications.json`.
 It re-ran the whole set with `check.sh` (TOTAL line below).
 It also re-classified one disagreement (IT-g1-099, F → E; see § 3).
+On 2026-10-11 the class label of four S rows was re-checked against the sweep register; two moved from S to F (IT-g1-161, 217; see § 9).
 
 Each case is one directive, `#ASSERT` or `#ASSERT REFUSED`, preceded by `-- IT-g1-NNN: <question>`.
 It encodes the case's expected value exactly as the case states it.
@@ -25,20 +26,23 @@ Where a case gave no date, the subagent chose one and said so in a comment besid
 | disagree | 23 |
 | — E, the encoding departs from the text | 1 |
 | — T, the case misread the text | 0 |
-| — F, a genuine ambiguity, a fork took the other reading | 9 |
-| — S, a sweep entry or ruling changed the answer | 6 |
+| — F, a genuine ambiguity, a fork took the other reading | 11 |
+| — S, a sweep entry or ruling changed the answer | 4 |
 | — R, the conductor's strict vigência ruling (PLAN § 10) | 7 |
 | exposed (`~/.claude/br-penal-oracle/EXPOSURE.md`) | 17 (15 agree, 2 disagree) |
 | independent agreements (agree, not exposed) | 295 |
 
-`check.sh` over `cp-ind-g1-`, verbatim:
+These counts are those of 2026-09-30, with the F and S rows as re-labelled on 2026-10-11 (§ 9): 1 + 0 + 11 + 4 + 7 = 23.
+After the fix round (§ 8) IT-g1-099 agrees, so the same table reads agree 311, disagree 22, E 0, with F, S and R as above.
+
+`check.sh` over `cp-ind-g1-`, verbatim, as run on 2026-09-30:
 
 ```
 module                                        errors satisfied  failed refused asserts
 TOTAL (21 modules)                                14       310      14       9     333
 ```
 
-Failed (14): the E (IT-g1-099), seven F (IT-g1-094, 095, 148, 159, 171, 172, 331) and the six S.
+Failed (14): the E (IT-g1-099), nine F (IT-g1-094, 095, 148, 159, 161, 171, 172, 217, 331) and the four S (IT-g1-070, 125, 162, 304).
 Refused (9): the seven R, and IT-g1-301 and 302 (F, fork F-g1c-19).
 Satisfied (310): the agreements.
 There are no errors other than the failed assertions, and every `#ASSERT` has a verdict.
@@ -58,16 +62,16 @@ IT-g1-148's "exatamente 5 anos" needed a calendar date to be asserted, and which
 | IT-g1-125 | art. 51 | REFUSE | FALSE (the unpaid fine does not bar extinção, inability to pay proven, decision after 22.3.2024) | S | M-sweep-a-03 (ADI 7.032, binding read-down), implemented as `a multa obsta a extinção da punibilidade (art. 51; ADI 7.032)`, cp-g1b-multa.l4 |
 | IT-g1-148 | art. 64, I | true | TRUE for 'não prevalece' (the condenação no longer counts on the fifth anniversary, 30.6.2020) | F | F-g1b-17 took inicioDaProvaEArtigoDez: art. 10 counting, the five years end on 29.6.2020, so on 30.6.2020 more than five years have passed; cp-g1b-circunstancias.l4 `a condenação anterior não prevalece pelo decurso de cinco anos (art. 64, I)` |
 | IT-g1-159 | art. 67 | reincidência | `nenhuma prepondera: a ponderação é do juiz` (single reincidência vs confissão) | F | F-g1b-18 took motivosPersonalidadeReincidencia with the confession as personality (STJ Tema 585); `a segunda fase (arts. 61 a 67)`, cp-g1b-circunstancias.l4 |
-| IT-g1-161 | art. 59 | REFUSE | FALSE (valuing pending inquiries/prosecutions as antecedentes is inadmissible) | S | M-sweep-a-11 (Súmula 444 STJ, interpretive) settling F-sweep-a-03; `a valoração dos antecedentes é admissível`, cp-g1b-aplicacao-da-pena.l4 |
-| IT-g1-162 | art. 59 | REFUSE | FALSE (for a sentence from 6.5.2024, a sexual crime's victim's prior sexual life may not be weighed) | S | M-sweep-a-04 (ADPF 1.107, binding read-down); `a valoração do comportamento da vítima é admissível (ADPF 1.107)`, cp-g1b-aplicacao-da-pena.l4 |
+| IT-g1-161 | art. 59 | REFUSE | FALSE (valuing pending inquiries/prosecutions as antecedentes is inadmissible) | F (was S; § 9) | F-sweep-a-03 took condenacoesDefinitivasSemPrazo and demoted processosEmCurso ("Súmula 444 STJ forbids it"); the sweep entry behind it, M-sweep-a-11 (Súmula 444 STJ), is class interpretive and routes to that fork; `a valoração dos antecedentes é admissível`, cp-g1b-aplicacao-da-pena.l4:126 |
+| IT-g1-162 | art. 59 | REFUSE | FALSE (for a sentence from 6.5.2024, a sexual crime's victim's prior sexual life may not be weighed) | S (confirmed; § 9) | M-sweep-a-04 (ADPF 1.107, class binding, read-down, no fork routed); `a valoração do comportamento da vítima é admissível (ADPF 1.107)`, cp-g1b-aplicacao-da-pena.l4:159 |
 | IT-g1-171 | art. 71 | 2 anos e 4 meses a 3 anos e 4 meses | JUST [2 anos, 4 meses e 24 dias, the same] (a fixed increase of 1/5 for three crimes) | F | F-sweep-a-04 took escalaPorNumeroDeCrimes (Súmula 659 STJ, M-sweep-a-14) as the TYPICALLY default; `o intervalo da pena no concurso (arts. 69 a 71)` |
 | IT-g1-172 | art. 71 | 1/6 a 2/3 | `causa de aumento` (fixa 1/5) | F | F-sweep-a-04 (Súmula 659 STJ, M-sweep-a-14); `o aumento do crime continuado (art. 71)` with `a leitura da Súmula 659 STJ` |
-| IT-g1-217 | art. 89 | false | true (extinct: no suspension during the período de prova) | S | `a pena privativa de liberdade está extinta pelo art. 90` cp-g1c-livramento-condicional.l4; fork F-sweep-a-14 took extintaSemSuspensaoTempestiva (Súmula 617 STJ), sweep entry M-sweep-a-29 |
+| IT-g1-217 | art. 89 | false | true (extinct: no suspension during the período de prova) | F (was S; § 9) | `a pena privativa de liberdade está extinta pelo art. 90`, cp-g1c-livramento-condicional.l4:561; fork F-sweep-a-14 took extintaSemSuspensaoTempestiva and demoted art89ImpedeExtincao, which is the literal reading of art. 89 my case gave; the sweep entry behind it, M-sweep-a-29 (Súmula 617 STJ), is class interpretive and routes to that fork |
 | IT-g1-295 | art. 110, § 1º | false | REFUSE: 'a redação do art. 115 anterior à Lei nº 15.160, de 2025 (em vigor em 4.7.2025), não está codificada' | R | `os prazos de prescrição são reduzidos de metade (art. 115)`, cp-g1c-prescricao.l4:297-300; PLAN § 10, conductor's ruling 2026-09-30 |
 | IT-g1-296 | art. 110, § 1º; art. 117, IV | true | REFUSE: 'a redação do art. 115 anterior à Lei nº 15.160, de 2025 (em vigor em 4.7.2025), não está codificada' | R | `os prazos de prescrição são reduzidos de metade (art. 115)`, cp-g1c-prescricao.l4:297-300; PLAN § 10, conductor's ruling 2026-09-30 |
 | IT-g1-301 | art. 111, V | "2028-04-20" | REFUSE: 'a redação do art. 111, V anterior à Lei nº 14.344, de 2022 (em vigor em 9.7.2022), não está codificada' | F | F-g1c-19 (dataDoFato): `o termo inicial da prescrição (art. 111)`, cp-g1c-prescricao.l4:392-394 |
 | IT-g1-302 | art. 111, V; art. 111, I | "2020-08-01" | REFUSE: 'a redação do art. 111, V anterior à Lei nº 14.344, de 2022 (em vigor em 9.7.2022), não está codificada' | F | F-g1c-19 (dataDoFato): `o termo inicial da prescrição (art. 111)`, cp-g1c-prescricao.l4:387-396 |
-| IT-g1-304 | art. 112, I | "2021-03-10" | JUST 2022-09-20 (trânsito for both parties) | S | M-sweep-a-06 (binding; STF Tema 788, ARE 848.107, modulated to trânsito para a acusação after 12.11.2020): `vale o Tema 788 (art. 112, I)`, cp-g1c-prescricao.l4:774-790 |
+| IT-g1-304 | art. 112, I | "2021-03-10" | JUST 2022-09-20 (trânsito for both parties) | S (confirmed; § 9) | M-sweep-a-06 (class binding, binding_effect struck; STF Tema 788, ARE 848.107, modulated to trânsito para a acusação after 12.11.2020, no fork routed): `vale o Tema 788 (art. 112, I)`, cp-g1c-prescricao.l4:774-790 |
 | IT-g1-314 | art. 115 | 8 anos | REFUSE: 'a redação do art. 115 anterior à Lei nº 15.160, de 2025 (em vigor em 4.7.2025), não está codificada' | R | `os prazos de prescrição são reduzidos de metade (art. 115)`, cp-g1c-prescricao.l4:297-300; PLAN § 10, conductor's ruling 2026-09-30 |
 | IT-g1-315 | art. 115 | true | REFUSE: 'a redação do art. 115 anterior à Lei nº 15.160, de 2025 (em vigor em 4.7.2025), não está codificada' | R (exposed) | `os prazos de prescrição são reduzidos de metade (art. 115)`, cp-g1c-prescricao.l4:297-300; PLAN § 10, conductor's ruling 2026-09-30 |
 | IT-g1-316 | art. 115 | false | REFUSE: 'a redação do art. 115 anterior à Lei nº 15.160, de 2025 (em vigor em 4.7.2025), não está codificada' | R (exposed) | `os prazos de prescrição são reduzidos de metade (art. 115)`, cp-g1c-prescricao.l4:297-300; PLAN § 10, conductor's ruling 2026-09-30 |
@@ -173,4 +177,53 @@ TOTAL (21 modules)                                13       311      13       9  
 Before: 310 satisfied, 14 failed, 9 refused. After: 311 satisfied, 13 failed, 9 refused. UNACCOUNTED 0.
 The only change is IT-g1-099 (art. 42, the E): it now agrees (g1b art. 42 fix).
 The 13 failed are IT-g1-070, 094, 095, 125, 148, 159, 161, 162, 171, 172, 217, 304, 331; the 9 refused are IT-g1-295, 296, 301, 302, 314, 315, 316, 338, 339.
-These are the same sets as in § 1 and § 2 (F, S and R classes, unchanged).
+These are the same sets as in § 1 and § 2 (F, S and R classes, unchanged by the fix round; two S rows were re-labelled F on 2026-10-11, § 9).
+
+## 9. Class labels re-checked, 2026-10-11
+
+Four disagreements had been labelled S: IT-g1-161, 162, 217 and 304.
+The question was whether S fits each, or whether the honest label is F.
+The test applied is the sweep register's own, from `BRIEF.md` item 3 and `sweep-a.external-modifications.json`.
+An entry of class `binding` struck, suspended or read down a provision, and the encoder implements it as a rule-version arm or a REFUSE.
+An entry of class `interpretive` chooses between readings of the text, and the encoder opens or settles a fork on it.
+So S fits where the entry is `binding`, and F fits where the entry is `interpretive` and a recorded fork took the other reading.
+Nothing here asserts what any court holds beyond what the register records.
+
+| case | old | new | the register says | the "got" |
+| --- | --- | --- | --- | --- |
+| IT-g1-161 | S | F | M-sweep-a-11 (Súmula 444 STJ) is `interpretive`, `fork_ids` F-sweep-a-03. The fork (`kind` vagueness, `status` settled) took condenacoesDefinitivasSemPrazo and demoted processosEmCurso with the rationale "Súmula 444 STJ forbids it". | Reproduced. The `#ASSERT REFUSED` fails with "expected a refusal, but the expression produced a value", and `#EVAL` of the same expression gives FALSE. |
+| IT-g1-162 | S | S | M-sweep-a-04 (ADPF 1.107, item iii) is `binding`, `binding_effect` read-down, `fork_ids` empty. The encoding keys the arm on the sentence date 6.5.2024 and on Título VI (F-g1b-23, `encoding-placement`, taken tituloSeisEDataDaSentenca), which fixes the scope and the date key, and not the answer for a sentence on or after 6.5.2024. | Reproduced, with the fixture's sentence date in 2025. The `#ASSERT REFUSED` fails the same way and `#EVAL` gives FALSE. |
+| IT-g1-217 | S | F | M-sweep-a-29 (Súmula 617 STJ) is `interpretive`, `fork_ids` F-sweep-a-14. The fork (`kind` statutory-wording, `status` settled) took extintaSemSuspensaoTempestiva and demoted art89ImpedeExtincao, whose description is the literal reading of art. 89 that my case gave. | Reproduced. `#ASSERT NOT (…)` fails, and `#EVAL` of the inner expression gives TRUE. |
+| IT-g1-304 | S | S | M-sweep-a-06 (Tema 788, ARE 848.107/DF) is `binding`, `binding_effect` struck, `fork_ids` empty. Its disposition note gives the modulation: trânsito para a acusação after 12.11.2020 and a penalty not yet declared extinct by prescription. The case's acusação trânsito is 10.3.2021, so the arm applies. | Reproduced. The assertion fails, and the termo inicial evaluates to `JUST OF (DATE OF 20, 9, 2022)`, the defesa's trânsito. |
+
+**IT-g1-161 and 217 move from S to F.**
+In both, the source the encoding follows is an STJ súmula, which the register classes `interpretive`, and the encoder recorded a fork whose demoted reading is the one my case took.
+That is the definition of F, and it matches how the file already labels IT-g1-094 (M-sweep-a-23, Súmula 269 STJ, fork F-sweep-a-10) and IT-g1-171 and 172 (M-sweep-a-14, Súmula 659 STJ, fork F-sweep-a-04).
+The register agrees with those three labels: M-sweep-a-23 and M-sweep-a-14 are `interpretive` and route to F-sweep-a-10 and F-sweep-a-04.
+
+**A caveat on IT-g1-161, so the label is not read as more than it is.**
+F-sweep-a-03 is also settled by M-sweep-a-12 (RE 593.818/SC), whose disposition note says it is "binding on lower courts as a repercussão-geral thesis, but its effect on the text is interpretive: it chooses between two readings of arts. 59 and 64 and strikes nothing".
+So the register's own line between S and F is the entry's class, not whether the court that decided is binding.
+The fork's rejection of processosEmCurso cites Súmula 444 STJ alone, and that is the source my case's `alternative` named.
+I did not check whether any other source in the register bears on pending inquiries and prosecutions as maus antecedentes; M-sweep-a-11 and a-12 are the entries routed to this fork.
+
+**IT-g1-217 is not a T, and the label is F, not E.**
+Art. 89 read alone says the judge may not declare the penalty extinct while the liberado's trial is pending, and my case answered false.
+Art. 90 says the penalty is extinct if the livramento is not revoked by its end.
+The register records both readings as a fork of `kind` statutory-wording, with the literal art. 89 reading as a demoted option, so the text supports it and I did not misread it.
+The encoding does not depart from the text either: it takes the reading the fork records and cites its settling entry in the rule's comment (cp-g1c-livramento-condicional.l4:548).
+§ 1 stands: the case should have been marked arguable.
+
+**IT-g1-162 and 304 stay S.**
+Both entries are `binding` with an empty `fork_ids`: the text was read down (ADPF 1.107) or struck in part (Tema 788), and the encoding implements the register's proposed rule-version arm.
+My text-only answer is out of date for any sentence or trânsito after the dates the entries key on.
+In IT-g1-304 the case's own facts fall after the date (10.3.2021 against 12.11.2020).
+IT-g1-162 states no sentence date; the converting subagent chose a sentence in 2025, after 6.5.2024 (`a data da ADPF 1.107`, cp-g1b-aplicacao-da-pena.l4:140).
+With the sentence date changed to 1.1.2023 the same call refuses ("se, antes da ADPF 1.107 (6.5.2024), a sentença por crime sexual podia valorar a vida sexual pregressa … não está codificado"), which matches my REFUSE.
+So the disagreement exists only because of the date the converting subagent chose.
+
+**Counts.**
+E 1, T 0, F 9 → 11, S 6 → 4, R 7; the total is 23 both before and after (1 + 0 + 11 + 4 + 7).
+After the fix round (§ 8) IT-g1-099 agrees, so the live total is 22 (13 failed and 9 refused), with E 0.
+No E and no T was found among the four.
+The `.l4` files were not changed, and no fork or register entry was edited.
