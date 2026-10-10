@@ -70,7 +70,7 @@ TOTAL (7 modules)                                 10       212      10       1  
 | IT-g5-008 | art. 289 § 1º; art. 18 p.ú. | FALSE: Joaquim kept notes he received as genuine and never suspected; no dolo | TRUE: § 1º present | E | `moeda falsa do art. 289, § 1º` (`cp-g5-moeda-falsa.l4`) is met by `guardar` + counterfeit + legal tender + apt to deceive; no fact of the record says the agent knew. The good-faith flag is read only to carve the circulation verbs out (F-g5-04). No g5 record carries `Elemento subjetivo` (it is in `cp-dominio`), no fork and no PLAN convention presumes dolo. |
 | IT-g5-100 | arts. 297; 301 § 1º | art. 301 § 1º only (specialty; arguable) | both: the 301 § 1º form is present and `crime de falsificação de documento público (art. 297)` is TRUE | E | No fork weighs art. 301 § 1º against arts. 297/298 (fork register searched for "301, § 1", "especialidade", "specialty"); the encoder applied specialty for the privileged good-faith forms (F-g5-04, F-g5-09) but not here. |
 | IT-g5-113 | arts. 304; 301 § 1º | detenção, 3 meses a 2 anos, sem multa | `JUST` reclusão, 1 a 5 anos, multa cumulativa | E | `a pena cominada ao uso de documento falso (art. 304)` takes `a mais grave de todas as penas` over every falsity of arts. 297–302 the paper embodies; a certificate forged to obtain public office always also meets art. 298 (or 297), so 301 § 1º's pena is never the one borrowed. Same root as 100. The fixture records the certificate's issuer as not public (the case is silent); recorded as public, the answer would be art. 297's, still not 301 § 1º's. |
-| IT-g5-115 | arts. 304; 297 | REFUSE: the Code does not say whether the forger who uses his own forgery answers for both (arguable) | TRUE AND TRUE: both crimes made out on the same agent | E | The encoding models absorption at the level of the crime predicate (Súmula 17's finding removes art. 297 and art. 304, F-sweep-c-12), so two TRUE predicates are its answer to the concurso question; no fork or finding covers the forger's own use (STJ: post factum impunível), where the brief's rule is REFUSE. |
+| IT-g5-115 | arts. 304; 297 | REFUSE: the Code does not say whether the forger who uses his own forgery answers for both (arguable) | TRUE AND TRUE: both crimes made out on the same agent | E | The encoding models absorption at the level of the crime predicate (Súmula 17's finding removes art. 297 and art. 304, F-sweep-c-12), so two TRUE predicates are its answer to the concurso question; no fork or finding covers the forger's own use (STJ: post factum impunível), where the brief's rule is REFUSE. (True on 2026-09-30; fork F-g5-32 followed on 2026-10-08. See "Second look" below.) |
 | IT-g5-117 | art. 297 § 2º; art. 171 | TRUE on the text (arguable, Súmula 17) | FALSE once the judge's exhaustion finding is set | F | F-sweep-c-12, settled by STJ Súmula 17 (M-sweep-c-20), the alternative the case named. |
 | IT-g5-123 | arts. 305; 298 p.ú. | REFUSE: the card's equiparação is "para fins do disposto no caput" of art. 298 only (arguable) | TRUE, private-document branch | E | `crime de supressão de documento (art. 305)` accepts `cartão de crédito ou débito` as a private document. F-g5-14 covers the card only before Lei 12.737/2012; no fork reads the equiparação's limit to art. 298's caput, in contrast with art. 297 § 2º's "para os efeitos penais" (F-g5-11). |
 | IT-g5-150 | art. 311 §§ 1º, 2º I | TRUE: § 1º's third reaches the official of § 2º I (arguable) | FALSE: no cause | F | F-g5-20 takes "excetoInciso1" and records "todasAsFormas" (the case's reading) as double counting; the case's alternative named exactly this. |
@@ -88,7 +88,7 @@ TOTAL (7 modules)                                 10       212      10       1  
    Art. 289 § 1º convicts someone who keeps counterfeit notes he received as genuine and never suspected.
    Art. 18 p.ú. requires dolo, and the encoding's own § 2º treats knowledge ("depois de conhecer a falsidade") as a fact the record carries.
    Only art. 289 § 1º was tested; the same shape probably holds for every possession verb in the range (art. 291 "possuir ou guardar", art. 293 § 1º I "usa, guarda, possui ou detém", art. 294, art. 311 § 2º II). That is an inference from the rules' shape, not a measurement.
-3. **Use of a forgery by the forger himself (IT-g5-115).** Both crimes stand, with no fork, although the encoding treats absorption at the predicate level elsewhere (Súmula 17).
+3. **Use of a forgery by the forger himself (IT-g5-115).** Both crimes stand, with no fork, although the encoding treats absorption at the predicate level elsewhere (Súmula 17). (As of 2026-09-30; see "Second look" below.)
 4. **A credit card under art. 305 (IT-g5-123).** Treated as a private document although art. 298 p.ú. limits the equiparação to art. 298's caput; no fork. Low stakes.
 
 ## Not expressible (9)
@@ -173,7 +173,7 @@ Explicitly: in a scratch copy of outras-falsidades, case 125 (Estela, who used a
 | id | expected | got | one line |
 | --- | --- | --- | --- |
 | IT-g5-005 | TRUE | FALSE | unchanged: F-sweep-c-11, Súmula 73 grossness finding |
-| IT-g5-115 | REFUSE | TRUE and TRUE | unchanged: no REFUSE for the forger who uses his own forgery; exposed to g5 (2026-10-08) and still disagrees, so NOT fixed |
+| IT-g5-115 | REFUSE | TRUE and TRUE | unchanged: no REFUSE for the forger who uses his own forgery; exposed to g5 (2026-10-08) and still disagrees, so NOT fixed. **This row's "got" was out of date when written**; see "Second look" below |
 | IT-g5-117 | TRUE | FALSE | unchanged: F-sweep-c-12, Súmula 17 |
 | IT-g5-150 | TRUE | FALSE | unchanged: F-g5-20 |
 | IT-g5-203 | TRUE | REFUSED | unchanged: M-sweep-c-09 / F-sweep-c-05 |
@@ -203,3 +203,46 @@ IT-g5-224 (violent invasion of the Congress seat; does art. 359-T exclude art. 3
 It now gets REFUSED, by the conductor's ruling on F-g5-29 (2026-10-08): with the finding plus violence or grave threat on the record, the encoding names both readings and does not pick one.
 Class F (recorded fork), not E: the test author marked the case "arguable" and its `alternative` field states the opposite reading; the encoding now records that disagreement instead of resolving it.
 Expected value unchanged; this is a deliberate loss of an agreement in exchange for an honest refusal.
+
+## Second look, 2026-10-11
+
+Only IT-g5-115.
+It was told to g5 on 2026-10-08 (EXPOSURE.md), so its agreement is the fix working, not independent evidence.
+No expected value changed and `cases/ta-g5.json` was not edited.
+
+**What the 2026-10-09 re-run row got wrong.**
+It reported the encoding as "TRUE and TRUE" with "no fork or finding" on the forger's own use.
+Fork F-g5-32 had landed in a62b67d7 on 2026-10-08 15:33 (+0800), before that re-run (b887f7b6, 2026-10-09 01:03), and the exported art. 304 rule already left the forger's use out.
+The assertion was red for a different reason: the fixture `o uso 115` gave `, com:` EMPTY, so the user had neither the knowledge finding (F-g5-34) nor the authorship finding, `uso do art. 304` was FALSE, and so was the crime.
+Measured on 2026-10-11 with an `#EVAL` of the old fixture in a scratch copy: `uso do art. 304` FALSE and `crime de uso de documento falso (art. 304)` FALSE.
+The re-run's "got" column repeated the 2026-09-30 triage text and was not re-measured.
+
+| id | expected | at the re-run, as reported | measured before this look | now | result |
+| --- | --- | --- | --- | --- | --- |
+| IT-g5-115 | REFUSE | TRUE and TRUE | art. 297 TRUE, art. 304 FALSE (post factum taken by F-g5-32; the fixture lacked the user's authorship, so it was FALSE on knowledge first) | art. 297 TRUE, art. 304 REFUSED by name | agrees; scored **fixed**, not an independent agreement |
+
+**Decision: a refusal, in the existing fork F-g5-32 (no new fork).**
+The Code does not say whether the forger who uses his own forgery answers for the use as well.
+The case's own `alternative` makes taking the post factum line conditional on "a fork citing the ruling".
+No ruling is in the sweep register (the nearest entry, M-sweep-c-20, is Súmula 17 and Tema 933 on a falsity spent in estelionato or descaminho) or in the source, none was retrieved, and this look asserts nothing about what the STJ or STF hold on the question.
+So F-g5-32, which already records exactly this question and its two readings, changed from `resolved` (post factum taken) to `open`, with a third entry `recusaEnquantoAberto` as `taken`, as at F-g2b-01.
+`crime de uso de documento falso (art. 304)` now refuses only when every other element is made out and the user is also the author or a participant of the forgery; it answers FALSE where the use was not begun or made, or the judge found the falsity spent (Súmula 17), and TRUE for a user who did not forge.
+No new field was needed: `o agente do uso é autor ou partícipe da falsificação do papel` already existed.
+
+**Fixture changed (one site).**
+`o uso 115` in `cp-ind-g5-falsidade-documental.l4` now carries `(LIST `o agente do uso é autor ou partícipe da falsificação do papel`)` where `, com:` was EMPTY.
+The case says Túlio forged the licence and then used it.
+
+**check.sh, before and after** (`L4=~/.claude/br-penal-toolchain/l4-1008`):
+
+| module | before | after |
+| --- | --- | --- |
+| cp-ind-g5-falsidade-documental | 2 / 71 / 2 / 0 / 73 | 1 / 72 / 1 / 0 / 73 |
+| cp-g5-falsidade-documental-testes (the encoder's) | 0 / 144 / 0 / 0 / 144 | 0 / 148 / 0 / 0 / 148 |
+
+The one failure left in the independent module is IT-g5-117 (Súmula 17, F-sweep-c-12), unchanged.
+The other six cp-ind-g5 modules do not import the changed module and were not re-run, so the cp-ind-g5 totals are 4 / 217 / 4 / 2 / 223 (the 2026-10-09 re-run had 5 / 216 / 5 / 2 / 223).
+`cp-codigo-penal.l4`, which imports every module, typechecks with 0 errors.
+
+**Positive control** (scratch copies of the tree; the two reversions reproduce the previous behaviour):
+reverting the rule to the old conjunction with `NOT absorvido` (post factum) turned the two `#ASSERT REFUSED` in the tests module red and IT-g5-115 red (the independent module went 1 -> 2 failed); counting the forger's use (reading `ambos`) did the same; removing the first branch's guard turned five older assertions red and the three new non-refusal assertions to refused.
