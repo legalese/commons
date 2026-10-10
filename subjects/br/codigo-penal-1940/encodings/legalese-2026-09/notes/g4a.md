@@ -1,6 +1,6 @@
 # g4a — arts. 213–249 (Parte Especial, Títulos VI and VII): notes for the reviewer
 
-**Status (2026-10-08): all 49 units disposed (35 encoded, 14 inert, 0 deferred); six modules and six tests modules written and checked. Revised 2026-10-08 for art. 234-B § 3º (fork F-g4a-24), on a finding of the independent test pass.**
+**Status (2026-10-08): all 49 units disposed (35 encoded, 14 inert, 0 deferred); six modules and six tests modules written and checked. Revised 2026-10-08 for art. 234-B § 3º (fork F-g4a-24), on a finding of the independent test pass, and again 2026-10-11 (the rule now refuses where the two readings part; § 4 and the fork table below).**
 `check.sh`'s output is in § 5, verbatim.
 
 ## PROGRESS
@@ -18,7 +18,8 @@
 - [x] `nlg --lang en` on every tests module: no rule or constructor of these modules renders bare (§ 5).
 - [x] Mutations (§ 5): each caught.
 - [x] `registers/parts/g4a.forks.json` (28 entries) validates; `registers/parts/g4a.roadmap.json` validates.
-- [x] 2026-10-08, conductor's request (ta-g4, IT-g4-173): art. 234-B § 3º now reads the crime; fork F-g4a-24 records both readings; both are executable and tested; positive control run (below).
+- [x] 2026-10-08, conductor's request (ta-g4, IT-g4-173): art. 234-B § 3º now reads the crime; fork F-g4a-24 records both readings; both are executable and tested; positive control run (below). The narrow reading was then taken.
+- [x] 2026-10-11, conductor's second look (ta-g4, IT-g4-173, which still expected REFUSE): the text of § 3º does not decide, no authority was found, and the narrow reading rested on arguments the fork itself called contestable, so the exported rule `o réu condenado passa a ser monitorado por dispositivo eletrônico (art. 234-B, § 3º)` no longer takes it. It answers where the two readings agree and REFUSES by name where they part (a Título VI crime outside § 1º's list, everything else holding). F-g4a-24 is now `open`, `taken` = `recusaEnquantoAberto`, both readings `live`. Three existing assertions in `cp-g4a-dignidade-sexual-geral-testes.l4` that asserted the narrow reading's `NOT` (arts. 233, 232-A, 215) became `#ASSERT REFUSED`, and four were added for the cases where the readings agree (art. 233 before 28.11.2024, without a conviction, acquitted on appeal; `na leitura` for the first): 69 → 73 satisfied. Positive control (below). Also corrected: the fork and a module comment called ato obsceno 'punishable by a fine alone'; art. 233 prescribes detenção or, alternatively, multa.
 - [x] 2026-10-08, conductor's request (s-dolo-audit, both MED): arts. 218-C and 234 (caput, p.ú. I) now require the agent's knowledge (arts. 18 p.ú., 20); fork F-g4a-25; positive control run (below).
 
 Import order: `geral` ← `vulneravel` ← `liberdade-sexual`; `geral` ← `lenocinio`. The Título VII modules import only `cp-dominio` and `cp-pena`.
@@ -72,7 +73,7 @@ Where I looked: every article's words; each "ou"/"e" and each list against its s
 | F-g4a-21 | Art. 242: what "suprimindo ou alterando direito inerente ao estado civil" qualifies | the last limb only (the semicolons) |
 | F-g4a-22 | Art. 244 "cônjuge" and the companheiro | spouse only (no analogy against the accused) |
 | F-g4a-23 | Art. 249 § 1º | a contrario: a parent, guardian or curator not deprived is not the agent |
-| F-g4a-24 | Art. 234-B § 3º, "O réu condenado": which convicts are monitored | § 1º's réu — a convict of one of the eight listed crimes, not of any crime of the Título; both readings executable (`o réu condenado passa a ser monitorado, na leitura`) and tested on arts. 213 (both), 233 and 232-A (they part) |
+| F-g4a-24 | Art. 234-B § 3º, "O réu condenado": which convicts are monitored | **open since 2026-10-11**: neither reading taken. The rule answers where they agree (a crime § 1º lists: yes; before 28.11.2024, unconvicted, acquitted on appeal: no) and refuses by name where they part (arts. 233, 232-A, 215...). Both readings executable (`o réu condenado passa a ser monitorado, na leitura`) and tested. Until 2026-10-11 the narrow reading (§ 1º's eight crimes) was taken |
 | F-g4a-25 | Arts. 218-C and 234: knowledge as an element of dolo | positive findings, absent = no crime; for art. 234 knowledge of the content, never that it is legally `obsceno` (art. 21); no culpable form, so no `Elemento subjetivo` |
 | F-sweep-c-06 | Can the presumption of art. 217-A be relativised before § 4º-A? | **settled**: no (STJ Súmula 593, Tema 918; M-sweep-c-10); relativising reading arguable, pending at the TJMG (M-sweep-c-11, currency risk) |
 | F-sweep-c-07 | A slight lustful act with a child under fourteen: 215-A? | **settled**: no, always 217-A (STJ repetitive thesis, 1.7.2022; M-sweep-c-12) |
@@ -123,6 +124,11 @@ TOTAL (12 modules)                                 0       433       0       0  
 (a failed assertion also counts as an error; errors minus failed = everything else)
 ```
 
+**Re-run 2026-10-11, after the art. 234-B § 3º revision** (`L4=~/.claude/br-penal-toolchain/l4-1008 ./check.sh . cp-g4a-`, 12 modules, exit 0; only `cp-g4a-dignidade-sexual-geral-testes.l4` changed on account of this revision, 69 -> 73; `lenocinio` 73 -> 80 and `vulneravel` 103 -> 108 differ from the block above because of 9dbbcd86 (2026-10-08, F-g4a-25), and the run at the start of this look already showed them):
+`cp-g4a-dignidade-sexual-geral-testes.l4                  0        73       0       0      73`
+`TOTAL (12 modules)                                 0       449       0       0     449`
+`cp-codigo-penal.l4` (imports every module) typechecks with 0 errors.
+
 **Glosses.** `l4 nlg --lang en` on each tests module, every backticked name in the output compared with the rules and constructors these six modules define: none renders bare. Positive control: the same scan does list the tests' own fixtures (`um casamento`, `em junho de 2026`), which carry no herald.
 
 **Mutations** (one at a time, on a copy of the modules; each run's failed or refused count must rise):
@@ -141,6 +147,9 @@ TOTAL (12 modules)                                 0       433       0       0  
 | cp-g4a-dignidade-sexual-geral.l4 | art. 226, IV, a no longer displaces I | 3 failed |
 | cp-g4a-liberdade-sexual.l4 | art. 213 § 1º read literally ("ou maior de 14") | 7 failed |
 | cp-g4a-dignidade-sexual-geral.l4 | (2026-10-08) art. 234-B § 3º's exported rule pinned to the wider reading | 3 failed: exactly the no-monitoring assertions for arts. 233, 232-A and 215, where the readings part (66 of 69 satisfied) |
+| cp-g4a-dignidade-sexual-geral.l4 | (2026-10-11) the same rule reverted to the narrow reading | 3 failed: the three `#ASSERT REFUSED` for arts. 233, 232-A and 215 (70 of 73 satisfied) |
+| cp-g4a-dignidade-sexual-geral.l4 | (2026-10-11) the same rule pinned to the wider reading | 3 failed: the same three (70 of 73) |
+| cp-g4a-dignidade-sexual-geral.l4 | (2026-10-11) the same rule with the `FALSE` branch for 'the wider reading says no' removed, so it refuses whenever the narrow one says no | 0 failed, 5 refused (68 of 73 satisfied): the three new art. 233 cases where the readings agree, and the two older ones for art. 213 before 28.11.2024 and without a conviction |
 
 The first run of the first mutation also showed arts. 218 and 218-A had no fourteenth-birthday test; both were added.
 
@@ -150,7 +159,7 @@ The first run of the first mutation also showed arts. 218 and 218-A had no fourt
 2. **Art. 213 or 217-A § 1º** where the agent's own violence left the victim unable to resist: the encoding follows the victim's condition as the fact supplier records it (F-g4a-02, note).
 3. **Art. 230 § 1º and a victim under fourteen** (F-g4a-17): the words leave a gap; is it art. 218-B, or the caput?
 4. **Art. 245 § 2º and the ECA** (arts. 238–239, 1990): did the Estatuto displace § 2º (1984)? The ECA is outside the sources and the sweep's correlated-legislation rows were not researched (S-sweep-c-03).
-5. **Art. 234-B §§ 1º–3º** (F-g4a-08): procedural and immediate, or material and prospective?
+5. **Art. 234-B §§ 1º–3º** (F-g4a-08): procedural and immediate, or material and prospective? And (F-g4a-24, open): does § 3º's "o réu condenado" mean a convict of any crime of Título VI, or only of the eight crimes § 1º lists?
 6. **Lei 5.478/1968** (F-g4a-01): did the rectification of 14.8.1968 restart the vacatio, and did the 1974 republication correct art. 244?
 7. **"exploração sexual"** (F-g4a-13): is an adult's voluntary prostitution within arts. 228–229?
 8. **Art. 218** (F-g4a-09, -10): where is the line between inducing a contactless act and taking part in art. 217-A, and is the crime formal or material?

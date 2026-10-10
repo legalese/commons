@@ -70,7 +70,7 @@ Every failed or refused assertion is one of the nine in the table below; each mo
 | IT-g4-097 | art. 226, I and IV, a (art. 215 by two agents) | REFUSE: the text gives 1/4 (I) and 1/3–2/3 (IV, a) and does not choose (arguable) | one cause, 1/4 fixed (art. 226, I) | F | F-g4a-03, taken `capitulosAnterioresIVParaEstupro`: inciso IV reaches only estupro (`cp-g4a-dignidade-sexual-geral.l4:385`), so art. 215 gets inciso I (`:415`). The case's alternative named this reading. |
 | IT-g4-107 | art. 226, I (art. 228 by two persons) | REFUSE: the text does not say whether art. 226 reaches Capítulo V (arguable) | FALSE | F | F-g4a-03: `o art. 226 alcança o crime` (`:373`) admits only Capítulos I, I-A and II; `tituloInteiro` is the recorded other reading. |
 | IT-g4-162 | art. 234-A, IV (victim 60 years and 2 months) | REFUSE: the Code does not define "idosa" (arguable) | TRUE | F | F-g0-08, taken `sessentaOuMais`: `idoso` is 60 or more (`cp-pena.l4:910`), the Estatuto reading the case named as its alternative. |
-| IT-g4-173 | art. 234-B, § 3º (conviction under art. 233) | REFUSE: "o réu condenado" may be any convict of the Título, or only of the crimes § 1º lists (arguable) | TRUE | E | `o réu condenado passa a ser monitorado por dispositivo eletrônico (art. 234-B, § 3º)` (`cp-g4a-dignidade-sexual-geral.l4:644`) never reads the crime. F-g4a-08 is about § 3º's reach in time only; no fork addresses its reach by crime, and sweep-c has no entry on art. 234-B. |
+| IT-g4-173 | art. 234-B, § 3º (conviction under art. 233) | REFUSE: "o réu condenado" may be any convict of the Título, or only of the crimes § 1º lists (arguable) | TRUE | E | `o réu condenado passa a ser monitorado por dispositivo eletrônico (art. 234-B, § 3º)` (`cp-g4a-dignidade-sexual-geral.l4:644`) never reads the crime. F-g4a-08 is about § 3º's reach in time only; no fork addresses its reach by crime, and sweep-c has no entry on art. 234-B. (Superseded: fork F-g4a-24 on 2026-10-08, then a refusal on 2026-10-11; see "Second look" below.) |
 | IT-g4-216 | art. 244 (the multa) | "de uma a dez vezes o maior salário mínimo vigente no País" (arguable; the alternative named Lei nº 7.209/1984, art. 2º) | the multa is art. 49's day-fine: 360 dias-multa at five minimum wages each (1,800 minimum wages) fits art. 244's pena | S | M-sweep-c-27 (binding, "substituted"); `cp-g4a-assistencia-familiar.l4:171-181` keeps the printed words as an inert string; PLAN § 2.2. |
 | IT-g4-283 | art. 259, intentional form | reclusão, 2 to 5 years, and multa (certain) | REFUSE: "a forma dolosa do art. 259 foi revogada … pela Lei nº 9.605/1998" | S | M-sweep-c-31 (interpretive) opened F-sweep-c-17, taken `revogadoSalvoCulposa` (`cp-g4b-perigo-comum.l4:1245-1247`). The constant `pena do art. 259, caput` still equals the preceito's words. |
 | IT-g4-351 | art. 273, § 1º-B, I | reclusão, 10 to 15 years, and multa: the text (arguable; Tema 1003 named) | reclusão, 1 to 3 years, and multa | S | M-sweep-c-03 (binding): STF Tema 1003 restores the original penalty for § 1º-B, I; F-g4b-12 (settled by the STF) and F-g4b-13. |
@@ -158,7 +158,7 @@ Agreeing: 90 of 405 before (only the two modules that compiled), 396 of 405 afte
 | IT-g4-097 | REFUSE | a value | F-g4a-03, art. 215 gets inciso I only |
 | IT-g4-107 | REFUSE | FALSE | F-g4a-03, art. 226 does not reach Capítulo V |
 | IT-g4-162 | REFUSE | TRUE | F-g0-08, idoso is 60 or more |
-| IT-g4-173 | REFUSE | FALSE | F-g4a-24 (2026-10-08): § 3º monitors only § 1º's eight crimes; art. 233 is not one. Told to g4a (EXPOSURE.md), so this is a fix that moved the answer from TRUE to FALSE, **not** a fix that agrees: the case still expects REFUSE |
+| IT-g4-173 | REFUSE | FALSE | F-g4a-24 (2026-10-08): § 3º monitors only § 1º's eight crimes; art. 233 is not one. Told to g4a (EXPOSURE.md), so this is a fix that moved the answer from TRUE to FALSE, **not** a fix that agrees: the case still expects REFUSE. Superseded 2026-10-11: now REFUSED, see "Second look" below. |
 | IT-g4-060 | art. 218 TRUE | FALSE | F-g4a-09, contact goes to art. 217-A |
 | IT-g4-216 | the printed words (a fine fits or not) | substituted | M-sweep-c-27 |
 | IT-g4-283 | reclusão 2 to 5 with multa | REFUSE | F-sweep-c-17, dolosa form revoked |
@@ -168,3 +168,32 @@ Agreeing: 90 of 405 before (only the two modules that compiled), 396 of 405 afte
 Of the IT-g4-173 row, the "got" was measured with an `#EVAL` of the same expression in the scratch copy: FALSE. The other "got" columns repeat the earlier triage and were not re-measured (the assertions fail the same way).
 
 Anything odd: `check.sh` run without the module filter took more than the 120 s tool limit when the machine was loaded; run per module it takes seconds each.
+
+## Second look, 2026-10-11
+
+Only IT-g4-173.
+It was told to g4a on 2026-10-08 and again now (EXPOSURE.md), so its agreement is the fix working, not independent evidence.
+No expected value changed; `cases/ta-g4.json` was not edited, and no cp-ind-g4 file was touched.
+
+| id | expected | the first fix (2026-10-08) | now | class | result |
+| --- | --- | --- | --- | --- | --- |
+| IT-g4-173 | REFUSE | FALSE: fork F-g4a-24 took the narrow reading (§ 1º's eight crimes) | REFUSED, by name, with both readings in the message | was E, then F | agrees; scored **fixed**, not an independent agreement |
+
+**Why a refusal and not a recorded fork whose reading is taken.**
+The text of § 3º names no crime, and nothing in the sources decides which convicts it reaches: the sweep did not search § 3º's reach (a grep of `sweep-c.external-modifications.json` on 2026-10-11 finds art. 234-B only in the vigência search for Lei nº 15.035/2024), and the Senado XML only records and dates that law's additions.
+The narrow reading rested on the definite article, the common enactment of §§ 1º to 3º and the restrictive reading of a burden on liberty; those are arguments, and the fork itself recorded that a court could still take the wider reading.
+The BRIEF's rule is "Where the source does not answer, REFUSE", and the conductor took that position on F-g5-29 on 2026-10-08 (name both readings, do not pick one).
+The refusal is narrow: the rule answers where the readings agree (a crime § 1º lists: yes; before 28.11.2024, without a conviction, or acquitted on appeal: no) and refuses only for a Título VI crime outside § 1º's list when everything else holds.
+Changed files: `cp-g4a-dignidade-sexual-geral.l4` (the exported rule), `cp-g4a-dignidade-sexual-geral-testes.l4`, `registers/parts/g4a.forks.json` (F-g4a-24 now `open`), `registers/parts/g4a.roadmap.json` (one note), `notes/g4a.md`.
+
+**check.sh, before and after** (`L4=~/.claude/br-penal-toolchain/l4-1008`, one prefix at a time):
+
+| module | before | after |
+| --- | --- | --- |
+| cp-ind-g4-disposicoes-gerais-e-lenocinio | 4 / 76 / 4 / 0 / 80 | 3 / 77 / 3 / 0 / 80 |
+| cp-ind-g4-liberdade-sexual-e-vulneravel (imports the changed module) | 1 / 92 / 1 / 0 / 93 | 1 / 92 / 1 / 0 / 93 |
+| cp-g4a-dignidade-sexual-geral-testes (the encoder's) | 0 / 69 / 0 / 0 / 69 | 0 / 73 / 0 / 0 / 73 |
+
+The three failures left in the first row are IT-g4-097, 107 and 162 (read from the run's line numbers: 203, 268, 590), unchanged.
+The other four cp-ind-g4 modules do not import the changed module and were not re-run.
+Across the six cp-ind-g4 modules the totals are therefore 397 satisfied, 7 failed, 1 refused where a value was expected, of 405 (the 2026-10-09 re-run had 396 and 8).
