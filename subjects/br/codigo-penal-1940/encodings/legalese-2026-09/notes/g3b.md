@@ -192,8 +192,8 @@ Not searched: case law of the STF or STJ on any of the forks (no fork is settled
 
 ## 8. For the conductor
 
-- **F-g3b-10 is open** and the question it raises (arts. 200–201 and the right to strike) was not examined by sweep-b. Worth a relay to sweep-b if it is still running.
-- **Lei nº 9.609/1998** (software) displaces art. 184 for computer programs; the encoding refuses by name there. Not examined by the sweep.
+- **F-g3b-10 is open** and the question it raises (arts. 200–201 and the right to strike) was not examined by the first sweep-b pass; the later sweep-b pass searched and found no STF or STJ decision (M-sweep-b-48), so the fork stays open.
+- **Lei nº 9.609/1998** (software) displaces art. 184 for computer programs; the encoding refuses by name there. Not examined by the first sweep pass; M-sweep-b-50 later quoted art. 12 of that law.
 - **Module paths** in the roadmap and forks use the l4-ide symlink form, `jl4/examples/legal/br-codigo-penal/encodings/legalese-2026-09/…`, as g0's do.
 - **Names** that other groups might also declare: `Etapa da execução` (PROPOSTO-COMUM, § 3). Constructor names chosen to avoid the shared modules' (`consumada` is spelled `execução consumada`).
 - Art. 197 has no preceito outside its incisos; for facts in neither inciso its pena function refuses by name ("os fatos não estão em nenhum inciso do art. 197, que não tem outra pena") rather than hand back inciso I's pena. Every other pena function in the range returns its article's one preceito for any case, as `cp-g3-furto.l4` does.
