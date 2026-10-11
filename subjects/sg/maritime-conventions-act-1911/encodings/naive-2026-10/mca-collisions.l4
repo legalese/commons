@@ -1,0 +1,201 @@
+IMPORT prelude
+
+-- Maritime Conventions Act 1911 (Singapore) -- who pays when ships collide: division of property loss by degree of fault (s 1),
+-- joint and several liability for death and injury on board (s 2), contribution between shipowners (s 3), the duty of a master to
+-- save life at sea (s 6), the 2-year and 1-year time bars and their extension (s 8), and charterers standing in for owners (s 9(5)).
+--
+-- Edition: 2020 Revised Edition as deposited at ../../registers/source-bundle/MCA1911.txt. The deposit says the revised edition
+-- "incorporates all amendments up to and including 1 December 2021 and comes into operation on 31 December 2021"; the latest
+-- amendment annotated in it is Act 3 of 2019 (Merchant Shipping (Miscellaneous Amendments) Act 2019, ss 18 and 19, commenced
+-- 24 July 2021), which repealed s 7 and is marked against s 8(1). The SSO metadata gives it as the current version at 3 October 2026.
+--
+-- WHY THIS ACT. Requirement REQ-0109 in ../../../requirements.jsonl: Tier 2 of the remaining Singapore Acts, ordered by
+-- everyday-life relevance. It asks what the Act decides for a person or business it applies to; no scenario has asked a sharper
+-- question yet. The Act is ten sections long, so nearly all of it is encoded.
+-- Not encoded: s 5 (admiralty jurisdiction for death and injury, in rem or in personam) beyond a comment; s 9(1) to (3) (territorial
+-- extent, a 1911 text listing dominions); s 10; the limitation of liability that ss 1(3), 2(2)(b) and 3(2) preserve but do not state;
+-- the Rules of Court that govern the discretionary extension in s 8(3)(a); and any penalty for the s 6 offence, which this Act does
+-- not state (s 10 construes it "as one with the Merchant Shipping Act 1995", which was not read).
+--
+-- NAIVE ENCODING. Straight from the deposited text with the writing-l4-rules skill. No pipeline, no coverage table,
+-- no independent test pass, no human gate. See NOTES.md.
+
+§ `Maritime Conventions Act 1911 -- collisions`
+
+DECLARE Claim IS ONE OF
+    `damage to one of the colliding ships`
+    `loss of cargo on a colliding ship`
+    `loss of freight`
+    `loss of passage money`
+    `loss of charter hire`
+    `salvage expenses caused by the fault`
+    `loss of life on board a colliding ship`
+    `personal injury on board a colliding ship`
+    `damage to a pier struck by the ships`
+
+§§ `1 -- division of loss in proportion to fault`
+
+-- s 1(1): "Where, by the fault of 2 or more ships, damage or loss is caused to one or more of those ships, to their cargoes or
+-- freight, or to any property on board, the liability to make good the damage or loss shall be in proportion to the degree in which
+-- each ship was in fault, except that if ... it is not possible to establish different degrees of fault, the liability shall be
+-- apportioned equally."
+-- (2): no ship is liable "for any loss or damage to which her fault has not contributed".
+-- (4): "'freight' includes passage money and hire", and damage caused by fault includes "any salvage or other expenses, consequent upon
+-- that fault, recoverable at law by way of damages".
+--
+-- s 1 reaches only the colliding ships, their cargo, freight and property on board. Damage to a pier or other third-party property
+-- off the ships is outside it; the Act says nothing about how that is shared, so the encoding answers FALSE to both questions below.
+GIVEN `the claim` IS A Claim
+GIVETH A BOOLEAN
+DECIDE `liability is divided by degree of fault` IF
+    CONSIDER `the claim`
+    WHEN `damage to one of the colliding ships` THEN TRUE
+    WHEN `loss of cargo on a colliding ship` THEN TRUE
+    WHEN `loss of freight` THEN TRUE
+    WHEN `loss of passage money` THEN TRUE
+    WHEN `loss of charter hire` THEN TRUE
+    WHEN `salvage expenses caused by the fault` THEN TRUE
+    OTHERWISE FALSE
+
+-- Two ships. A ship whose fault did not contribute pays nothing (s 1(2)). Where only this ship was at fault s 1 does not apply (it
+-- needs "2 or more ships"); returning the whole loss in that case is an INFERENCE from ordinary fault liability, not from the text.
+GIVEN `this ship's fault` IS A NUMBER, `the other ship's fault` IS A NUMBER, `degrees of fault can be established` IS A BOOLEAN,
+      `the property loss` IS A NUMBER
+GIVETH A NUMBER
+`this ship's share of the property loss` MEANS
+    IF `this ship's fault` AT MOST 0 THEN 0
+    ELSE IF `the other ship's fault` AT MOST 0 THEN `the property loss`
+         ELSE IF NOT `degrees of fault can be established` THEN `the property loss` DIVIDED BY 2
+              ELSE `the property loss` TIMES `this ship's fault` DIVIDED BY (`this ship's fault` PLUS `the other ship's fault`)
+
+§§ `2 -- loss of life and personal injury: joint and several`
+
+-- s 2(1): "Where loss of life or personal injuries are suffered by any person on board a ship owing to the fault of that ship and of
+-- any other ship or ships, the liability of the owners of the ships shall be joint and several." (2) keeps any independent defence and
+-- the right to limit liability "in the manner provided by law".
+GIVEN `the claim` IS A Claim
+GIVETH A BOOLEAN
+DECIDE `liability is joint and several` IF
+    CONSIDER `the claim`
+    WHEN `loss of life on board a colliding ship` THEN TRUE
+    WHEN `personal injury on board a colliding ship` THEN TRUE
+    OTHERWISE FALSE
+
+-- So the injured person may take the whole of the damages from the owners of either ship, whatever its share of the fault, provided
+-- that ship was at fault at all (subject to defences and limitation, not modelled).
+GIVEN `the sued ship was at fault` IS A BOOLEAN, `the injury damages` IS A NUMBER
+GIVETH A NUMBER
+`what the injured person may recover from the sued ship's owners` MEANS
+    IF `the sued ship was at fault` THEN `the injury damages` ELSE 0
+
+§§ `3 -- contribution between shipowners`
+
+-- s 3(1): where a proportion of the damages "is recovered against the owners of one of the ships which exceeds the proportion in which
+-- she was in fault, they may recover by way of contribution the amount of the excess from the owners of the other ship or ships to the
+-- extent to which those ships were respectively in fault".
+-- (2): "No amount shall be recovered under subsection (1) which could not, by reason of any statutory or contractual limitation of, or
+-- exemption from, liability, or which could not for any other reason, have been recovered in the first instance as damages".
+-- s 3 has no "apportioned equally" fallback of its own; the encoding takes degrees of fault as given.
+GIVEN a IS A NUMBER, b IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` a b MEANS IF a AT MOST b THEN a ELSE b
+
+GIVEN `paid by this ship's owners` IS A NUMBER, `the total injury damages` IS A NUMBER, `this ship's degree of fault` IS A NUMBER,
+      `the other ship's degree of fault` IS A NUMBER, `the most the injured could have recovered from the other ship` IS A NUMBER
+GIVETH A NUMBER
+`the contribution recoverable` MEANS
+    IF `the excess` AT MOST 0 THEN 0
+    ELSE `the lesser of` `the excess` `the most the injured could have recovered from the other ship`
+    WHERE
+        `this ship's proportion` MEANS
+            `the total injury damages` TIMES `this ship's degree of fault`
+                DIVIDED BY (`this ship's degree of fault` PLUS `the other ship's degree of fault`)
+        `the excess` MEANS `paid by this ship's owners` MINUS `this ship's proportion`
+
+-- s 5 (not encoded as a rule): admiralty jurisdiction "in respect of damage" extends to damages for loss of life or personal injury,
+-- and such proceedings "may be brought in rem (against the thing) or in personam (against the person)".
+
+§§ `6 -- duty to render assistance to persons in danger at sea`
+
+-- s 6(1): "The master or person in charge of a ship shall, so far as he can do so without serious danger to his own ship, her crew and
+-- passengers (if any), render assistance to every person, even if such person be a subject of a foreign State at war with Singapore,
+-- who is found at sea in danger of being lost, and, if he fails to do so, he shall be guilty of an offence."
+-- (2): compliance "shall not affect his right or the right of any other person to salvage".
+-- The duty is owed to persons, not to ships or cargo. The person's nationality is irrelevant, which is why the last parameter is not
+-- used. No penalty is stated in this Act.
+GIVEN `is the master or person in charge` IS A BOOLEAN, `a person was found at sea in danger of being lost` IS A BOOLEAN,
+      `assisting would seriously endanger the master's own ship, crew or passengers` IS A BOOLEAN, `assistance was rendered` IS A BOOLEAN,
+      `the person is a national of a State at war with Singapore` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the master commits an offence under s 6` IF
+        `is the master or person in charge`
+    AND `a person was found at sea in danger of being lost`
+    AND (NOT `assisting would seriously endanger the master's own ship, crew or passengers`)
+    AND (NOT `assistance was rendered`)
+
+§§ `8 -- limitation of actions`
+
+-- s 8(1): no action against "a ship or her owners" for damage or loss to "another ship, her cargo or freight, or any property on board
+-- her, or damages for loss of life or personal injuries suffered by any person on board her, caused by the fault of the former ship
+-- ... unless proceedings therein are commenced within 2 years from the date when the damage, loss or injury was caused".
+-- (2): contribution for an overpaid proportion of death or injury damages: "within one year from the date of payment".
+-- Dates are year, month, day. The period is read as ending on the anniversary date (an INFERENCE about counting; the Act does not say
+-- whether the anniversary itself is inside). A 29 February start is not handled.
+GIVEN y1 IS A NUMBER, m1 IS A NUMBER, d1 IS A NUMBER, y2 IS A NUMBER, m2 IS A NUMBER, d2 IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the first date is on or before the second` IF
+        y1 LESS THAN y2
+    OR  (y1 EQUALS y2 AND m1 LESS THAN m2)
+    OR  (y1 EQUALS y2 AND m1 EQUALS m2 AND d1 AT MOST d2)
+
+GIVEN `damage year` IS A NUMBER, `damage month` IS A NUMBER, `damage day` IS A NUMBER,
+      `filed year` IS A NUMBER, `filed month` IS A NUMBER, `filed day` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `a collision claim is commenced within 2 years` IF
+    `the first date is on or before the second` `filed year` `filed month` `filed day` (`damage year` PLUS 2) `damage month` `damage day`
+
+GIVEN `payment year` IS A NUMBER, `payment month` IS A NUMBER, `payment day` IS A NUMBER,
+      `filed year` IS A NUMBER, `filed month` IS A NUMBER, `filed day` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `a contribution claim is commenced within 1 year` IF
+    `the first date is on or before the second` `filed year` `filed month` `filed day` (`payment year` PLUS 1) `payment month` `payment day`
+
+-- s 8(1) covers claims by those on or interested in ANOTHER ship against the ship at fault. A passenger's claim against the ship she
+-- was travelling on, or a pier owner's claim, is not described by s 8(1); the text gives it no period here.
+GIVEN `the claimant's ship is the other ship in the collision` IS A BOOLEAN, `the claim` IS A Claim
+GIVETH A BOOLEAN
+DECIDE `the 2-year period in s 8(1) governs the claim` IF
+        `the claimant's ship is the other ship in the collision`
+    AND (`liability is divided by degree of fault` `the claim` OR `liability is joint and several` `the claim`)
+
+-- s 8(3): the court "(a) may, in accordance with the Rules of Court, extend any such period ...; and (b) shall, if satisfied that there
+-- has not during such period been any reasonable opportunity of arresting the defendant ship within the jurisdiction of the court, or
+-- within the territorial waters of the country to which the plaintiff's ship belongs or in which the plaintiff resides or has his
+-- principal place of business, extend any such period to an extent sufficient to give such reasonable opportunity".
+GIVEN `there was a reasonable opportunity to arrest within the jurisdiction` IS A BOOLEAN,
+      `there was a reasonable opportunity to arrest in the plaintiff's home waters` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the court must extend the period` IF
+        (NOT `there was a reasonable opportunity to arrest within the jurisdiction`)
+    AND (NOT `there was a reasonable opportunity to arrest in the plaintiff's home waters`)
+
+GIVEN `commenced within the period` IS A BOOLEAN, `commenced within an extension granted` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the action is maintainable` IF
+    `commenced within the period` OR `commenced within an extension granted`
+
+§§ `9(4), (5) -- who answers as "owners"`
+
+-- s 9(4): the Act applies to "any persons other than the owners responsible for the fault of the ship as though the expression
+-- 'owners' included such persons". (5): where "by virtue of any charter or demise, or for any other reason, the owners are not
+-- responsible for the navigation and management of the ship", references to the owners are read as references "to the charterers or
+-- other persons for the time being so responsible".
+DECLARE Answerer IS ONE OF
+    `the registered owners`
+    `the charterers or others responsible for navigation and management`
+
+GIVEN `the owners are responsible for navigation and management` IS A BOOLEAN
+GIVETH AN Answerer
+`who answers as owners` MEANS
+    IF `the owners are responsible for navigation and management` THEN `the registered owners`
+    ELSE `the charterers or others responsible for navigation and management`
