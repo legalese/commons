@@ -1,6 +1,6 @@
 # Cradle to grave, abridged — twenty beats
 
-The same life as [`SCENARIO.md`](SCENARIO.md), cut to two beats a chapter. Each beat is a scene: where Simone is, how old she looks, what she asks, and what the law in this repository says back. The status words are those of the full scenario (`ENC`, `PART`, `NONE`, `REGS`, `POLICY`, `CASE`), and every beat here is flagged `"abridged": true` in [`facts.json`](facts.json), which also carries each character's age at every event.
+The same life as [`SCENARIO.md`](SCENARIO.md), cut to two beats a chapter. Each beat is a scene: where Simone is, how old she looks, what she asks, and what the law in this repository says back. The status words are those of the full scenario (`ENC`, `PART`, `NONE`, `REGS`, `ADMIN-POLICY`, `CASE`), and every beat here is flagged `"abridged": true` in [`facts.json`](facts.json), which also carries each character's age at every event.
 
 The assistant is a character. It is the only one who does not age. Where a row refuses or runs out, that is a beat too: the assistant says what it has and names what it does not, and the audience learns that grounded means bounded.
 
@@ -33,7 +33,7 @@ The assistant is a character. It is the only one who does not age. Where a row r
 
 **Beat 3 · 4 January 2010 · a school gate in Tampines.** Age six, oversized bag. Her mother hesitates at the gate.
 
-- *Does she have to go?* — Compulsory Education Act 2000 s 2 (compulsory school age: above 6, under 15), s 3 (a citizen child born after 1 January 1996, resident in Singapore, must attend a national primary school; each parent commits an offence if she does not). `ENC`. Which school, and in which phase, is MOE policy: `POLICY`.
+- *Does she have to go?* — Compulsory Education Act 2000 s 2 (compulsory school age: above 6, under 15), s 3 (a citizen child born after 1 January 1996, resident in Singapore, must attend a national primary school; each parent commits an offence if she does not). `ENC`. Which school, and in which phase, is MOE policy: `ADMIN-POLICY`.
 
 **Beat 4 · June 2011 · a passport photo booth.** Age eight, told not to smile.
 
@@ -73,7 +73,7 @@ The assistant is a character. It is the only one who does not age. Where a row r
 
 **Beat 11 · 20 February 2028 · the HDB Hub.** Engaged, not married, applying for a flat.
 
-- *Are we allowed to apply before the wedding?* — the fiancé/fiancée scheme, income ceiling and grant are HDB policy, `POLICY`; the one statutory test, that neither of them owns or has sold property in the last 30 months, is Housing and Development Act 1959 s 50(1), `ENC`, and they pass it.
+- *Are we allowed to apply before the wedding?* — the fiancé/fiancée scheme, income ceiling and grant are HDB policy, `ADMIN-POLICY`; the one statutory test, that neither of them owns or has sold property in the last 30 months, is Housing and Development Act 1959 s 50(1), `ENC`, and they pass it.
 
 **Beat 12 · 18 May 2029 · the Registry of Marriages.** Twenty-six and twenty-nine.
 
@@ -117,7 +117,7 @@ The assistant is a character. It is the only one who does not age. Where a row r
 
 **Beat 20 · 2 November 2088 · the two-room flat.** Simone dies at 85. Kai En, 58, is executor. The assistant is asked the last questions by the boy from the pram.
 
-- *What do I do this week?* — register the death, RBDA ss 19-23. *Her will?* — Wills Act; Probate and Administration Act. *Her CPF?* — split between two nominees as s 25(1) directs. *Her insurance?* — Insurance Act ss 132-133 nominations. *Estate duty?* — Estate Duty Act s 2A: none, for a death after 15 February 2008. All `ENC`. *The unexpired lease?* — HDB's short-lease terms, `POLICY`. The assistant answers, and does not age.
+- *What do I do this week?* — register the death, RBDA ss 19-23. *Her will?* — Wills Act; Probate and Administration Act. *Her CPF?* — split between two nominees as s 25(1) directs. *Her insurance?* — Insurance Act ss 132-133 nominations. *Estate duty?* — Estate Duty Act s 2A: none, for a death after 15 February 2008. All `ENC`. *The unexpired lease?* — HDB's short-lease terms, `ADMIN-POLICY`. The assistant answers, and does not age.
 
 ## Notes for the screenplay
 

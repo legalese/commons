@@ -10,7 +10,7 @@ For every Act an event touches:
   NONE claimed, row exists          -> reported (a row has landed; promote to ENC or PART
                                        after reading its scope)
   slug not under subjects/sg/       -> reported
-REGS, POLICY and CASE entries carry no subject check beyond the slug existing.
+REGS, ADMIN-POLICY and CASE entries carry no subject check beyond the slug existing.
 
 Run from anywhere:  python subjects/sg/scenarios/cradle-to-grave-simone/check-status.py
 Exit code 1 if anything is reported.

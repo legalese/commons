@@ -39,7 +39,7 @@ An entry is a **brief**, not a complaint. It must carry enough for an encoder wh
 | `out-of-scope` | a row exists and its scope statement excludes the provision asked about | `scope` (enlarge the row) |
 | `named-refusal` | the row refuses through a named `ASSUME` or `REFUSE`; the encoding is working as designed and the refusal names what is missing | `scope`, or `new-row` for the thing named |
 | `supplied-fact` | the row answers, but only once given a figure that is really prescribed by subsidiary legislation (a rate, a cap, a sum, a threshold) | `new-row` for the instrument, under the parent Act's subject |
-| `policy` | no legislative instrument exists; the answer is an administrative scheme as published | `policy-row` (an "as published" row in the manner of `sg/child-support`) |
+| `admin-policy` | no legislative instrument exists; the answer is an administrative scheme as published | `admin-policy-row` (an "as published" row in the manner of `sg/child-support`) |
 | `case-law` | only a decision, or a common-law doctrine, settles the point | `fork` where the point is an interpretive choice in an existing row; `new-subject` for a doctrine with no statute |
 | `cross-row` | two rows reach different answers to the same question | the fork register of each row; `resolution` records which reading was taken |
 | `rule-version` | the question is dated before (or after) the version of the law the row states | `scope` (a dated arm) |
