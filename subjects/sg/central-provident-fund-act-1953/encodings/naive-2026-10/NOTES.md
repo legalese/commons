@@ -7,9 +7,10 @@ pass, no human gate.
 **Edition:** 2020 Revised Edition, informal consolidation in force from
 1 July 2026.
 
-**Checks:** `l4 run cpf-cases.l4`, `l4 run cpf-medisave-cases.l4`, `l4 run cpf-rates-and-death-cases.l4` and
-`l4 run cpf-allocation-and-exemption-cases.l4` -- 136 assertions satisfied, 0 errors. Of these, 60 predate
-11 October 2026. On that day 41 were added for REQ-0001 and REQ-0012, and 35 for REQ-0002 and REQ-0003.
+**Checks:** `l4 run cpf-cases.l4`, `l4 run cpf-medisave-cases.l4`, `l4 run cpf-rates-and-death-cases.l4`,
+`l4 run cpf-allocation-and-exemption-cases.l4` and `l4 run cpf-self-employed-cases.l4` -- 182 assertions satisfied,
+0 errors, 0 warnings. Of these, 60 predate 11 October 2026. On that day 41 were added for REQ-0001 and REQ-0012,
+35 for REQ-0002 and REQ-0003, and 46 for REQ-0268.
 
 ## Scope — read this first
 
@@ -239,6 +240,60 @@ The students covered:
 **REQ-0003:** an NUS student whose internship is part of the course is exempt under para 5(a). No
 contributions are payable on the $1,200. The test is whether the *institution approved the training*,
 not whether she is full-time. An internship the university has not approved is not exempt. Both are asserted.
+
+## Self-employed Medisave (added 11 October 2026 for REQ-0268)
+
+`cpf-self-employed.l4` and `cpf-self-employed-cases.l4` (46 assertions). The question (Jun Hao scenario,
+event j043) was: a self-employed delivery rider born 30 August 2006 declares $31,000 of trade income for a
+year. What Medisave contribution must he make, and by when?
+
+1. **The answer, as far as the Act gives one.** Under **s 9A(1)** he must pay contributions to the Fund on his
+   "income". He must pay the amount "computed in the manner prescribed" (para (a)), "before the expiry of the
+   prescribed period, or any longer period that the Board specifies" (para (b)), and "in the approved manner"
+   (para (c)). Whether the $31,000 is "income" depends on **s 9A(3)**: it must be assessable income from a trade,
+   business, profession or vocation, ascertained under s 37(1) of the Income Tax Act 1947, excluding employment
+   under a contract of service and any income the regulations exclude. **The Act gives no figure and no date.**
+   The rate, the income floor, any cap, the age bands (s 9A(2) allows them) and the payment period are all left to
+   regulations under s 77(1). So is the meaning of "self-employed person" itself (s 2). The Act does not name
+   those regulations, and none is deposited.
+2. **Stand-in, not law.** The first assertion passes 8% of income over a $6,000 floor, capped at $7,680. This is
+   the encoder's recollection of the CPF Board's figures for a member under 35 with income over $18,000, and it
+   has **not been checked**. On those inputs he owes **$2,480** (8% of $31,000). The deadline assertions use a
+   30-day stand-in period. The ledger expected "the Board's published self-employed Medisave rate"; that is
+   right about where the figure lives, but the Act does not make it a *Medisave* rate (see 3).
+3. **s 9A does not say "Medisave".** Contributions under s 9A are credited "in such manner as the Minister may
+   direct" (**s 13(4)(b)**). The only place the Act sends self-employed contributions to the medisave account is
+   **s 13A(1)(a)**: an authority licensing under an Act in the Third Schedule may make s 9A contributions, credited
+   to the medisave account, a condition of the licence. The Road Traffic Act 1961 is item 34. That the money all
+   goes to Medisave is the Minister's direction and the Board's practice, not the Act.
+4. **A platform rider may be outside s 9A altogether.** By **s 8A(9)**, ss 9A and 9B "do not apply to any platform
+   remuneration paid or payable to a platform worker on or after a date prescribed by regulations". The date is in
+   regulations that are not deposited. A platform worker born on or after 1 January 1995 is a **Group A worker**
+   (Fourth Schedule para 5(a)), and for him the platform operator pays under s 8A and the Fourth Schedule. Jun Hao
+   (born 2006) is Group A if the $31,000 is platform remuneration. The Act does not say whether a platform worker
+   is a "self-employed person": that term is defined only by regulation. What it does say is that platform
+   remuneration paid after the date leaves s 9A. *Inference:* the carve-out goes by the kind of income, not the
+   person, so any other trade income stays under s 9A. The REQ-0268 facts call him "self-employed" and his money
+   "trade income", so the first assertions treat it as non-platform income. The platform reading is asserted
+   alongside.
+5. **Not paying.** Interest runs daily at the prescribed rate from the prescribed date (**s 9(2)**). The Board may
+   waive it (**s 9(3)**), and the Minister may waive the contribution (**s 9C**). Failing to pay "within such period
+   as may be prescribed" is an offence under **s 58(1)(e)**; s 5(7)(d) confirms that is the self-employed limb. The
+   penalty is the general one in **s 61(1)**: a fine up to $5,000, imprisonment up to 6 months, or both. For a
+   repeat offender it is $10,000 or 12 months. **There is no minimum fine**, because s 61(2)'s minimums attach only
+   to ss 7(5), 8A(5) and 58(1)(b). On conviction the court may order the contributions and interest paid
+   (**s 61B(1)**). The Board may sue for them as a Government debt (**s 65**), and it may compound the offence for up
+   to $1,000 if the offence is prescribed as compoundable (**s 63**).
+6. **Labelled inferences in the encoding.** (a) The amount is modelled as rate x income above a floor, capped.
+   The real table may phase rates in between bands, and the model is right only inside a single-rate band.
+   (b) Interest is modelled as simple daily interest. (c) The s 58(1)(e) period is taken to be the s 9A(1)(b)
+   period as the Board extends it.
+7. **Subsidiary legislation needed to answer REQ-0268 with a figure:** the regulations under s 77(1) for s 9A.
+   They define "self-employed person" (s 2, s 77(1)(e)), determine the income and exclusions, fix the computation
+   (rates by age and income band, floor, cap), the prescribed period, and the s 9(2) interest rate and start date.
+   The regulations under s 77(1) also prescribe the s 8A(9) date. The Act names none of them. *Unverified
+   recollection, to be confirmed against SSO:* the instrument is the Central Provident Fund (Self-Employed Persons)
+   Regulations. The Minister's s 13(4) direction on crediting is also needed; it is not legislation.
 
 ## Still a small fraction of the Act
 
