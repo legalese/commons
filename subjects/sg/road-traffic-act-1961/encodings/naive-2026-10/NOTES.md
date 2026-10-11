@@ -7,7 +7,7 @@ pass, no human gate.
 **Edition:** 2020 Revised Edition, informal consolidation, incorporating the Road
 Traffic (Miscellaneous Amendments) Act 2025, which restructured ss 64 and 65.
 
-**Checks:** two case files, 164 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** three case files (`rta-cases-driving-offences.l4`, `rta-cases-forfeiture-accidents.l4`, `rta-cases-speeding.l4`), 220 assertions satisfied, 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -90,5 +90,50 @@ not discharge the duty to report. Asserted.
 
 - **The prescribed alcohol limit and the rules** were not retrieved.
 - **No case law was searched.** Sentencing frameworks for ss 64 and 65 are extensive.
-- The general disqualification power (s 42), speeding (s 63) and the remaining Parts
+- The general disqualification power (s 42) and speeding (s 63) are now in `rta-speeding.l4` as far as the Act goes; the remaining Parts
   are not encoded.
+
+## Speeding (added 11 October 2026 for REQ-0273)
+
+`rta-speeding.l4` and `rta-cases-speeding.l4` (56 assertions). The question (Jun Hao scenario, event j084): a
+motorcyclist caught 25 km/h over the limit on an expressway -- the composition sum, the demerit points, and when the
+licence is suspended. **The Act answers the ceiling and the machinery, not the figures.**
+
+1. **The offence and its maximum.** s 63(4) makes it an offence to drive "at a speed exceeding any speed limit imposed by
+   or in exercise of powers conferred by this Act". It carries no penalty of its own, so the general penalty in s 131(2)
+   applies: a fine of up to **$1,000** or up to **3 months'** imprisonment or both for a first offence; **$2,000** or
+   **6 months** for a second or subsequent one. No minimum fine, and no speed bands: 1 km/h and 60 km/h over carry the
+   same maximum. Neither the motorcycle nor the expressway changes the punishment; they matter only to which limit applies.
+2. **The composition sum is capped at $500.** s 135(1) lets an authorised officer compound an offence "prescribed as a
+   compoundable offence" for a sum not exceeding the lower of half the maximum fine and $5,000: **$500** for a first
+   offence, $1,000 if the second-offence maximum is the one meant (inference: the Act does not say which maximum applies
+   before conviction). The $5,000 limb never bites for speeding. Whether speeding is compoundable and **the actual sum**
+   are for rules under s 135(2) and the published scale -- not deposited. Asserted with an illustrative $300.
+3. **Points and suspension are wholly in the rules.** s 45(2) to (4) require rules that specify the points for each
+   offence, the **suspension threshold**, and the period over which it is counted. Reaching the threshold makes
+   suspension *available* ("may", s 45(3)), for up to **5 years** (s 45(1)), after a notice giving at least **4 weeks**
+   (s 46(1)); a warning is due at **50%** of the threshold (s 45(5)); only the largest-points offence counts when several
+   are committed on one occasion (s 45(7)); points are cancelled at the end of a s 45(1) suspension (s 47(3)) and on a
+   court disqualification (s 45(6)); a suspension of a year or more needs a fresh test (s 47A). Points and threshold
+   are inputs, asserted with illustrative figures.
+4. **A new driver can lose the licence outright.** s 35A: within 12 months of the grant, the Deputy Commissioner may
+   *revoke* rather than suspend, on a separate **revocation threshold** fixed by rules; revocation while a new driver
+   takes the holder's other licences with it unless he is no longer a new driver on them (s 35A(7A)). Whether Jun Hao is
+   a new driver in 2049 is a scenario fact.
+5. **The court may disqualify, but need not.** s 42(1) lets a court disqualify for any period on conviction for an
+   offence "in connection with the driving of a motor vehicle" (inference: speeding is one). Nothing in the Act makes
+   disqualification for speeding mandatory or sets a minimum. Under a year, the licence is suspended for the period;
+   a year or more, it is of no effect and a new test is needed (s 43(1)).
+6. **25 km/h over does not count towards anything worse.** Speeding feeds the repeat-offender test for dangerous and
+   careless driving (s 64(11)(b), s 65(11)(b)) and the enhanced-penalty power (s 67A(2)) only where the excess was **more
+   than 40 km/h**. s 67A(2)'s "the offence in respect of which he or she had been previously convicted" is singular
+   against the "2 or more" of s 67A(1); read here as at least one earlier conviction over 40 km/h (inference).
+7. **Compounding is not wiped clean.** s 139AA lets a court treat an offence compounded on or after 1 November 2019 as an
+   aggravating factor in a later sentence. And s 63(4) is in Third Schedule Part 1, so an owner who holds a licence and
+   fails to identify the rider is presumed to have been riding (s 81(1B)).
+
+**What needs subsidiary legislation (not deposited):** the expressway speed limit (rules under s 63(1) or a notification
+under s 63(2)); the composition rules made under s 135(2), believed to be the Road Traffic (Composition of Offences) Rules,
+and the published scale of composition sums; the points rules made under s 45(2) and s 35A(2) (the scheme known as the
+Driver Improvement Points System), for the points for exceeding the limit by 25 km/h, the suspension threshold and
+its period, and the new-driver revocation threshold. The titles are as recalled, not verified against SSO.
