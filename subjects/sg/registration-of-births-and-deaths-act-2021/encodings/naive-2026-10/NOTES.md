@@ -9,7 +9,8 @@ pass, no human gate.
 (15 October 2024) and Act 16 of 2026 (30 September 2026) shown. This Act has no
 2020 Revised Edition; it post-dates it.
 
-**Checks:** one case file, 108 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** two case files, 162 assertions satisfied (108 in `rbda-cases-reporting.l4`, 54 in
+`rbda-cases-father-particulars.l4`), 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -100,6 +101,78 @@ character" by reference to "section 19(3) of the Registration of Births and Deat
 2021". s 19(3) is marked "[Deleted by Act 2 of 2024 wef 16/04/2024]", and the
 definition now sits in s 2(1). Whether the National Registration Act was itself updated
 was not checked. Not asserted.
+
+## The father's particulars (added 11 October 2026 for REQ-0272)
+
+REQ-0272 (Jun Hao scenario, event j051, 22 January 2033) asks: a child is born to
+parents not married to each other; may the father's name and particulars be entered
+in the register, and on whose request? The expectation was "yes, at the joint request
+of both parents". Module `rbda-father-particulars.l4`, cases
+`rbda-cases-father-particulars.l4` (54 assertions; the first four are REQ-0272's own).
+
+### 1. The Act does not answer the question; it hands it to regulations and the Registrar-General's website
+
+There is no provision on registering a father's particulars where the parents are not
+married. The word "father" does not occur in the Act, nor does "joint request". The
+particulars to be entered are "birth particulars" (s 2(1)): those "required by or
+under this Act" and those the Registrar-General "specifies on a prescribed website",
+which may differ "for children in different circumstances" (s 2(2)). The Minister's
+power to prescribe "particulars to be recorded in registers" and "recording of
+particulars in registers after registration" is s 61(2)(a). So the answer is in the
+Registration of Births and Deaths Regulations and/or on the Registrar-General's
+website, neither of which is deposited. **REQ-0272 is addressed, not satisfied.**
+The "joint request of both parents" rule is, from memory and not checked, s 10 of the
+repealed Registration of Births and Deaths Act (Cap. 267), repealed by s 62; it was
+not carried into the 2021 Act's text. Asserted (as "the Act does not say" and "the
+Act requires no joint request").
+
+### 2. On whose request: anyone may give the particulars, and the father is himself under the duty
+
+s 9(1): the Registrar-General must register "after receiving the child's birth
+particulars (whether from a responsible person mentioned in section 8(1) or any other
+person)". s 8(5)(a) makes "every parent" a responsible person who must give the
+particulars within 42 days (s 8(1)); one parent's compliance discharges the other
+(s 8(3)). INFERENCE: "parent" is undefined, and nothing reads out an unmarried father,
+so Jun Hao is under the duty and may give the particulars alone. Whether the
+Registrar-General will then *enter* him without the mother's concurrence is the point
+left to the regulations. Asserted.
+
+### 3. The parents' marriage changes nothing the Act says at first registration
+
+The only provision of the Act that rules on whose particulars go in as parents is
+s 16, and it is about the Status of Children (Assisted Reproduction Technology) Act
+2013: a court order under that Act governs; otherwise that Act governs if the
+Registrar-General is satisfied and hears of no dispute; failing that, the birth may be
+registered under s 9(2) "without entering the particulars of either or both of the
+parents". Asserted, with the marriage flag shown to be inert.
+
+### 4. Registration may go ahead with the father missing, and the duty to supply him runs on
+
+s 9(2) lets the Registrar-General register on incomplete particulars; s 8(1A)(b) keeps
+a responsible person's duty to give any missing particular alive until it is given;
+s 38(2) treats recording an omitted particular later as an "alteration", lawful only
+"as authorised by or under this Act" (s 38(1)). INFERENCE: these bite on the father's
+particulars only if the regulations or website make them a birth particular in his
+case. s 40(3) also lets "any person" ask for an error of fact in the births register to
+be corrected. Asserted.
+
+### 5. If the parents later marry, one parent alone may apply to re-register, and the child's name may change to reflect paternity
+
+s 15: a child legitimated under the Legitimacy Act 1934 by the parents' marriage after
+registration may be re-registered on the application of "a parent" while a minor (the
+child, or a parent with the child's consent, once adult). The application may change
+the name "only to the extent of altering the subject person's name ... to reflect the
+paternity" (s 15(3)), subject to s 19. This is the only place the Act touches the
+child's surname following the father. Asserted. Whether the child is legitimated is a
+Legitimacy Act question, not encoded here.
+
+### Needs subsidiary legislation
+
+The Registration of Births and Deaths Regulations made under s 61 (the 2022
+Regulations, name from memory, not deposited), and the Registrar-General's
+prescribed-website specification of birth particulars under s 2(1)(b) and (2) --
+specifically, whether and on whose request or consent an unmarried father's
+particulars are entered at first registration or added later.
 
 ## What would need doing before this is worth anything
 
