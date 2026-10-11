@@ -126,7 +126,7 @@ A security officer's licence and a job at Sentinel: $2,600 basic and twelve-hour
 
 | date | event | the question | law | status |
 | --- | --- | --- | --- | --- |
-| 2034-02-01 | security officer at Sentinel | May he work unlicensed; what does Part 4 give a workman on $2,600? | Private Security Industry Act 2007 s 13, ss 16-20; Employment Act ss 35, 36, 38; CPF Act s 7 | `ENC` |
+| 2034-02-01 | security officer at Sentinel, posted to the office tower where Lexi Technologies, Haziq's company and Simone's employer, is a tenant | May he work unlicensed; what does Part 4 give a workman on $2,600? | Private Security Industry Act 2007 s 13, ss 16-20; Employment Act ss 35, 36, 38; CPF Act s 7 | `ENC` |
 | 2035-03-31 | overtime at the basic rate for 13 months | What is owed; how far back? | Employment Act s 38(4), s 21 | `ENC` — $4,100 |
 | 2036-03-10 | mediation, then the Employment Claims Tribunal; order for $4,100 | Must he mediate first; time limits; what may be ordered? | Employment Claims Act 2016 ss 3, 12-16, 21-24 | `ENC` |
 | 2036-08-22 | a friend's loan shark: paint and glue on the door | Enforceable? What offence? What protection? | Moneylenders Act ss 19, 47; Protection from Harassment Act 2014 ss 3-4, 12; Vandalism Act 1966 ss 2-3 | `ENC` |
@@ -160,7 +160,7 @@ Singapore Pools on Saturdays, then the casino on paydays, paying the daily entry
 | 2047-03-04 | a job form asks about convictions | Must he disclose a spent record? | Registration of Criminals Act s 7E | `ENC` — no |
 | 2049-07-19 | motorcycle, 25 km/h over | — | Road Traffic Act s 63; the demerit points scheme | `PART`; `REGS` |
 | 2052-08-19 | his father dies; everything to his mother | Does he take anything? | Wills Act; Probate and Administration Act (succession rows) | `ENC` — no |
-| 2053-10-05 | a fall on patrol at 47; 8% permanent incapacity, at the edge of a band | The employer's liability; the lump sum; what if the assessment is borderline? | WICA ss 7, 14, 16, First Schedule Tables; WSH Act 2006 s 12 | `ENC` — the sum is arithmetic from the Table, the percentage a clinical judgement; `PART` for s 12 |
+| 2053-10-05 | a fall on patrol at 47, in Lexi's building; 8% permanent incapacity, at the edge of a band | The employer's liability; the lump sum; what if the assessment is borderline; is the tenant liable as occupier? | WICA ss 7, 14, 16, First Schedule Tables; WSH Act 2006 ss 11-12 | `ENC` — the sum is arithmetic from the Table, the percentage a clinical judgement; `PART` for ss 11-12 |
 | 2055-11-30 | retrenched at 49 | Notice; retrenchment benefit; support | Employment Act ss 10-11, s 45; the Tripartite Advisory; Workfare; SkillsFuture | `ENC` (the Act sets no amount); `ADMIN-POLICY`; `NONE` for the SkillsFuture Act |
 | 2056-02-01 | a cleaner under the Progressive Wage Model | The wage floor, and where it is written | Employment Act Part 4; the PWM; Environmental Public Health Act Part 5A | `ENC`; `ADMIN-POLICY`; `PART` |
 | 2060-01-27 | his mother dies intestate | Who takes, in what shares? | Intestate Succession Act s 7; PAA | `ENC` — half each |
