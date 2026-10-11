@@ -6,7 +6,7 @@ pattern, minLength, minimum, items, nested properties — the subset the schema 
 dependency on a jsonschema package); unique ids; every named subject directory exists; a
 superseded entry names an existing id; a satisfied entry has a resolution.
 
-Usage:  python tools/society-sim/check-ledger.py [subjects/sg/requirements.jsonl]
+Usage:  python docs/ledger/check-ledger.py [subjects/sg/requirements.jsonl]
 Exit code 1 if any line fails.
 """
 import json

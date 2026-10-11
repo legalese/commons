@@ -2,7 +2,7 @@
 
 From Michael, 10 October 2026. Read this before the next encoding.
 
-**From now on, take your encoding priority from the requirement ledger**, not from `sg-candidates.json` or the tier list on its own. The ledger is one file, `subjects/sg/requirements.jsonl`, one JSON object per line, described in [`LEDGER.md`](LEDGER.md) and validated by `python tools/society-sim/check-ledger.py`, which also prints the open queue in the order you should work it.
+**From now on, take your encoding priority from the requirement ledger**, not from `sg-candidates.json` or the tier list on its own. The ledger is one file, `subjects/sg/requirements.jsonl`, one JSON object per line, described in [`LEDGER.md`](LEDGER.md) and validated by `python docs/ledger/check-ledger.py`, which also prints the open queue in the order you should work it.
 
 ## What is in it now
 

@@ -4,7 +4,7 @@ One file, across every Act: the questions the simulated Singapore asked that the
 
 - The ledger: [`subjects/sg/requirements.jsonl`](../../subjects/sg/requirements.jsonl), one JSON object per line, append-only except for status changes.
 - The schema: [`ledger.schema.json`](ledger.schema.json), JSON Schema 2020-12.
-- The checker: `python tools/society-sim/check-ledger.py` validates every line, checks ids are unique and subjects exist, and prints the open queue ranked.
+- The checker: `python docs/ledger/check-ledger.py` validates every line, checks ids are unique and subjects exist, and prints the open queue ranked.
 
 The ledger is one file rather than one per subject because the encoding agent ranks across Acts, and because a single requirement often names more than one subject (two rows that disagree, or a regulation under one Act that another Act's row needs). Each subject's `NOTES.md` may point at its entries by id; the ledger does not point back.
 

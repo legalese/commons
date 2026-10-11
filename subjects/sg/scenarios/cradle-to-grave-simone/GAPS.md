@@ -2,7 +2,7 @@
 
 What [`SCENARIO.md`](SCENARIO.md) needs that this repository does not hold on 10 October 2026. Six sections: Acts with no encoding row, ranked by how hard the scenario leans on them; encoded Acts whose row stops short of the question asked; subsidiary legislation that no row retrieved; policy that has no legislative instrument; the common-law doctrines a case register would have to carry; and seams between rows that a runnable scenario will trip over.
 
-The first eighteen of these gaps are written up as briefs in the requirement ledger at [`subjects/sg/requirements.jsonl`](../../requirements.jsonl), in the shape described in [`tools/society-sim/LEDGER.md`](../../../../tools/society-sim/LEDGER.md); the simulation will raise the rest.
+The first eighteen of these gaps are written up as briefs in the requirement ledger at [`subjects/sg/requirements.jsonl`](../../requirements.jsonl), in the shape described in [`docs/ledger/LEDGER.md`](../../../../docs/ledger/LEDGER.md); the simulation will raise the rest.
 
 Status of every subject was read from `subjects/sg/*/encodings/*/encoding.json` on 2026-10-10; "no row" means the source is deposited under `registers/source-bundle/` and nothing has been encoded from it.
 

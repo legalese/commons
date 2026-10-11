@@ -43,6 +43,18 @@ Before creating a subject, check whether the law already has one: a second encod
 - `subjects/il/hvac-work-licensing-2025/encodings/legalese/` — a Law and its fee regulations in three vintages, with a scope statement, a fork register, a table of every fee in each vintage, and a test file that is meant to fail and says how many times.
 - `subjects/sg/child-support/` — a subject whose primary source is an announcement rather than a statute, and says so.
 
+## The requirement ledger
+
+Singapore's encoding priority comes from the requirement ledger, `subjects/sg/requirements.jsonl`.
+It is described in [`docs/ledger/LEDGER.md`](docs/ledger/LEDGER.md), and
+[`docs/ledger/NOTE-TO-ENCODER.md`](docs/ledger/NOTE-TO-ENCODER.md) says how to take work from it.
+`python docs/ledger/check-ledger.py` validates it and prints the open queue.
+
+## Only law lives here
+
+Commons holds the law and its encodings. Tools, consoles, pipelines and simulations are kept in a
+separate repository; nothing under `subjects/` depends on them.
+
 ## When the encoding exists
 
 [`PIPELINE.md`](PIPELINE.md) describes the l4-ide pipeline that takes a finished encoding to its projections (DMN, BPMN, a web wizard) and the two human gates.
