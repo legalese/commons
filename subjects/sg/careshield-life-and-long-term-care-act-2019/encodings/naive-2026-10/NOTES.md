@@ -12,7 +12,8 @@ the text, the latest being Act 18 of 2025 (CareShield Life and Long-Term Care
 (Amendment) Act 2025, commencement 1 January 2026), the last entry in the deposited
 legislative history. SSO's metadata calls it the "Current version as at 01 Oct 2026".
 
-**Checks:** one module, one case file, 50 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** two modules, two case files, 102 assertions satisfied (50 in `cll-cases-careshield.l4`, 52 in
+`cll-assessment-cases.l4`), 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -123,3 +124,61 @@ court may order repayment into the Fund with interest. Asserted.
   Explanatory Statement.
 - Age is taken as a number of whole years; the s 2(2) rules (29 February birthdays,
   unknown dates) are not encoded.
+
+## Disability assessment (added 12 October 2026 for REQ-0278)
+
+Module `cll-assessment.l4`, cases `cll-assessment-cases.l4` (52 assertions). Sources: the Act; the CareShield Life
+and Long-Term Care (Disability Assessment Fees) Regulations 2020 (S 69/2020) at
+`../../registers/source-bundle/CLLTCA2019-S69-2020.txt`; and the CareShield Life and Long-Term Care (CSHL Scheme)
+Regulations 2020 (S 849/2020) at `../../registers/source-bundle/CLLTCA2019-S849-2020.txt`.
+
+The question (Haziq scenario): after a stroke a claimant cannot bathe or dress unaided and can transfer only
+sometimes. Who assesses whether he cannot perform three of the six activities of daily living, and how is
+"sometimes" treated?
+
+1. **Who assesses: an assessor approved by the Minister; the Administrator decides.** s 2(1) defines "assessor" as
+   one "approved by the Minister under section 17(1) to conduct, and report on, disability assessments". s 17(1)
+   lets the Minister approve individuals "having the necessary qualifications", subject to conditions. The Act does
+   not say what the qualifications are and does not require an assessor to be a doctor. A doctor who has not been
+   approved is not an assessor. The assessor only conducts and reports. Under s 16 and Part 2 of the Second Schedule
+   the Administrator accepts or refuses the claim, and refuses it if the insured person "is not severely disabled"
+   (s 16(4)(a)). The Board pays (s 18(1)). Asserted.
+2. **How "sometimes" is treated: the Act does not say, and the answer decides this claim.** The First Schedule makes
+   a person severely disabled when "unable to perform 3 or more" of the six activities. The words "all the time"
+   appear only in the Fourth Schedule ("not disabled"). Bathing (a) and dressing (b) are two activities he cannot
+   perform. Whether transferring "sometimes" makes a third depends on whether an activity done only some of the
+   time counts as one he is "unable to perform". Neither the Act nor either deposited regulation defines "unable to
+   perform" or says how an assessor scores an activity. The ledger expected the scoring to be in MOH guidelines
+   rather than law, and the deposit bears that out: nothing in it settles the point. The encoding takes it as an
+   open parameter, `sometimes counts as unable`. With FALSE his count is 2 and he is not severely disabled. With
+   TRUE it is 3 and he is. Asserted both ways.
+3. **Under the Fourth Schedule "sometimes" plainly counts against him.** He cannot do bathing, dressing or
+   transferring "without assistance all the time", so he is not "not disabled". That matters for cover (s 6(1)(b),
+   reg 2A, reg 6(1AA) and (1B)), not for a claim. Whatever the First Schedule answer, he is at least in the gap
+   the Act leaves between "not disabled" and "severely disabled". Asserted.
+4. **An assessment is a power, not a step every claim must take.** The Administrator "may" require one on a claim
+   (s 16(3)(c)) or a periodic review (s 21(2)(c)). The Board "may" require one on an application for cover
+   (s 7(5)(c)) or to establish disability for s 6(1)(b) and (c) (s 6(2)). If he does not attend, the claim may be
+   refused (s 16(4)(c)), or payment stopped after a review (s 21(3)). Asserted (which body may require it on each
+   occasion).
+5. **The fee is capped.** s 17(2) with S 69/2020 reg 2 and the Schedule: at most $100 at the assessor's place of
+   practice and $250 at any other premises (a home visit, say), "inclusive of GST, if applicable". The Fund may
+   reimburse assessors' fees "as determined by the Board" (s 36(1)). How much is reimbursed is not in the
+   deposit and is not encoded. Asserted.
+6. **A stroke is not an excluded cause.** s 16(4)(d) with S 849/2020 reg 26 lets the Administrator refuse a claim
+   only for war, invasion, act of foreign enemies, hostility, terrorist act, insurrection or military or usurped
+   power. Asserted.
+7. **A false assessment report is an offence (s 49).** It applies where an assessor gives false information or
+   conceals information intending to affect cover or a claim. The punishment is a fine up to $10,000 or 2 years or
+   both, plus 4 times the "relevant amount", defined as "the amount of overpayment and the amount of assessment fee
+   charged". The encoding adds the two together, which is an inference from "and". Composition would be capped at
+   $1,000 if the offence is prescribed as compoundable (s 56(1); which offences are prescribed was not retrieved).
+   Asserted.
+8. **Facts assumed.** The question does not mention feeding, toileting or walking. The fixture assumes he manages
+   all three without assistance all the time. If he could not do any one of them, he would be severely disabled
+   under either reading.
+
+Needed for a full answer: MOH's disability assessment guidelines or the conditions of approval imposed on assessors
+under s 17(1), for how an assessor scores an activity done "sometimes" (none retrieved); and any decision or appeal
+practice on the Administrator's reading of "unable to perform". A search of the Act for "appeal" finds it only in
+the premium-recovery provisions, not against refusal of a claim; nothing on reconsideration was found in the deposit.
