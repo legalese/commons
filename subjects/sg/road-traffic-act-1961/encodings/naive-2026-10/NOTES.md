@@ -7,7 +7,7 @@ pass, no human gate.
 **Edition:** 2020 Revised Edition, informal consolidation, incorporating the Road
 Traffic (Miscellaneous Amendments) Act 2025, which restructured ss 64 and 65.
 
-**Checks:** three case files (`rta-cases-driving-offences.l4`, `rta-cases-forfeiture-accidents.l4`, `rta-cases-speeding.l4`), 220 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** four case files (`rta-cases-driving-offences.l4`, `rta-cases-forfeiture-accidents.l4`, `rta-cases-speeding.l4`, `rta-cases-demerit-points.l4`), 279 assertions satisfied, 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -137,3 +137,45 @@ under s 63(2)); the composition rules made under s 135(2), believed to be the Ro
 and the published scale of composition sums; the points rules made under s 45(2) and s 35A(2) (the scheme known as the
 Driver Improvement Points System), for the points for exceeding the limit by 25 km/h, the suspension threshold and
 its period, and the new-driver revocation threshold. The titles are as recalled, not verified against SSO.
+
+## Composition and demerit points (added 12 October 2026 for REQ-0273)
+
+`rta-demerit-points.l4` and `rta-cases-demerit-points.l4` (59 assertions), from the two rules deposited on 13 October 2026:
+the Road Traffic (Composition of Offences) Rules (R 29, in force from 6 September 2023, `RTA1961-R29.txt`) and the Road
+Traffic (Driver Improvement Points System) Rules (R 25, in force from 1 January 2026, `RTA1961-R25.txt`). They supply the
+figures `rta-speeding.l4` held as illustrative inputs; that module and its cases are unchanged (one pointer line in its header).
+
+1. **The answer, as far as the deposit goes.** 25 km/h over the limit falls in Schedule item (2)(b) (s 63(4), "more than 20
+   but not more than 30 kilometres per hour"): **8 demerit points**. They are awarded whether he is convicted or pays a
+   composition sum (rule 3(1)(a), (b)), and "shall" leaves no discretion. Speeding under s 63(4) **is compoundable** (R 29 rule
+   2(a)). **No composition sum is fixed by the rules**; the only figure is the Act's ceiling, **$500** on a first offence
+   (s 135(1), and the inference in the section above about which maximum applies). On a clean record the licence is **not**
+   liable to suspension: that needs **24 or more points within 24 months** (rule 4(1)), so 16 more after these 8; after an
+   earlier suspension or liability to one, **12 or more within 12 months** (rule 4(2)), until 24 clean months have passed
+   (rule 4(3)). Suspension is then *available* ("may"), for **up to 36 months** (rule 4(1), (2)), within the Act's 5-year cap.
+2. **The ledger's description is right on the points and thresholds and wrong on one item.** R 25 holds **no new-driver
+   threshold**: it takes the meaning of "new driver" from the Road Traffic (New Drivers) Rules (R 32), which is where the
+   revocation threshold under s 35A would be. R 32 is not deposited. What R 25 says about new drivers is only that they are
+   not eligible for the safe-driving course (rule 3A(1)(a)(i)(A)).
+3. **Motorcycle or expressway makes no difference to the points.** Item (1) ("Exceeding speed limit for vehicle", the class
+   limit) and item (2) ("on a road") carry identical bands. Item (1) cites "Section 63(1) of the Act", which is a prohibition,
+   not the offence-creating subsection (that is s 63(4)); R 29 lists only 63(4). Noted, not resolved.
+4. **8 points is the course trigger.** Rule 3A(1)(b)(iii): points bringing a holder to "8 or more demerit points within a
+   period of 24 months" oblige the Deputy Commissioner to issue a notice of eligibility for the safe-driving course (4 in 12
+   months for a rule 4(2) person), if the other criteria hold -- not a new driver, not liable to suspension, no more than one
+   earlier disregard in 10 years and none in 12 months. Completing the course lets the Deputy Commissioner disregard 4 points
+   (rule 3A(3), "may"). So Jun Hao's 8 points, on a clean record and not as a new driver, should bring a notice. Asserted.
+5. **The zone supplement.** In a school zone, silver zone or "Friendly Streets" zone the Deputy Commissioner may add **2**
+   points for speeding, and not more than 2 where zones overlap (rule 3(1A), (1B)). An expressway is unlikely to be any of
+   these (inference).
+6. **Two notice periods.** Rule 5(1) requires the holder to show cause **within 14 days** of the notice; the Act's s 46(1)
+   requires the proposed suspension date to be **at least 4 weeks** after it. Both are encoded; they do not conflict.
+7. **Clean year.** Twelve consecutive months without a scheduled offence (suspension and disqualification periods excluded)
+   wipe the earlier points for the suspension count (rule 4(5)); rule 4(6), the late award for an older offence, is not
+   encoded. The windows run "from the date of the first award" (rule 4(4)); points within the window are inputs here.
+8. **Foreign licences.** Rule 7: a prohibition order at 13 points within 12 months of the grant (for 12 months), or 24 within
+   24 months (up to 36). Asserted, as the visitor's analogue.
+
+**Still outside the deposit:** the expressway speed limit (rules under s 63(1) or a notification under s 63(2)); the sum
+actually offered on composition (no scale is in R 29; presumably an administrative scale -- an inference, nothing deposited says so); the
+Road Traffic (New Drivers) Rules (R 32) for the new-driver revocation threshold under s 35A.
