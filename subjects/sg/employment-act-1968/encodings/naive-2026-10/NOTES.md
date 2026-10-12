@@ -8,8 +8,9 @@ pass, no human gate.
 5 December 2025.
 
 **Checks:** `l4 run` on each of `ea-part2-cases.l4`, `ea-parts-3-and-4-cases.l4`,
-`ea-parts-5-to-12-cases.l4` and `ea-part12-retrenchment-cases.l4` — 289 assertions
-satisfied (52 + 116 + 78 + 43), 0 errors, 0 warnings (12 October 2026).
+`ea-parts-5-to-12-cases.l4`, `ea-part12-retrenchment-cases.l4` and
+`ea-retrenchment-reporting-notification-cases.l4` — 334 assertions
+satisfied (52 + 116 + 78 + 43 + 45), 0 errors, 0 warnings (12 October 2026).
 
 ## Scope
 
@@ -245,6 +246,69 @@ particulars?
    untouched here: s 45 (no entitlement under 2 years' continuous service) is in
    `ea-part4-hours.l4`, and this encoding found no provision fixing the amount of
    a benefit (not searched beyond s 45).
+
+## Retrenchment reporting notification (added 12 October 2026 for REQ-0289)
+
+`ea-retrenchment-reporting-notification.l4` and
+`ea-retrenchment-reporting-notification-cases.l4` (45 assertions). The
+Employment (Retrenchment Reporting) Notification 2019 (S 200/2019), version in
+force from 1 November 2021, deposited at
+`../../registers/source-bundle/EmA1968-S200-2019.txt`. It is the Gazette
+notification under s 96A(1) that the section above found missing, and it fills
+the supplied facts that `ea-part12-retrenchment.l4` left open.
+
+1. **The answer: yes, within 5 working days, with the Schedule particulars.**
+   An employer with 10 or more covered employees on the day it gives notice
+   (para 2(1), 2(3)) must give the Commissioner a retrenchment report for every
+   notice of retrenchment given on or after 1 November 2021 (para 3(1)),
+   "not later than 5 working days after the day that the employer gives the
+   notice" (para 4), in the form on the Ministry of Manpower website unless the
+   Commissioner allows otherwise (para 5), containing the Schedule's
+   particulars: seven about the employer (para 1(a)-(g), two of them
+   conditional) and eight about each retrenched employee (para 2(a)-(h), one
+   conditional). The 40/12 employer, assuming its staff are on open-ended
+   contracts, must report all 12. Asserted first in the cases.
+2. **The ledger's "5 or more retrenched within 6 months" is not in the deposited
+   text.** The current para 3(1) is triggered by "any" one notice to one covered
+   employee; there is no minimum number and no aggregation period. A 10-employee
+   employer retrenching one person must report; a 9-employee employer
+   retrenching anyone need not. The deposit shows one definition in para 2(1)
+   "[Deleted by S 781/2021 wef 01/11/2021]" without its old words, and the
+   version from 1 April 2019 to 31 October 2021 was not deposited; inference
+   only: the ledger's figure may come from that earlier version or from MOM
+   guidance. The "5 working days" in the expectation is right, but it runs from
+   the day the notice is given, not from the day the retrenchment takes effect
+   ("regardless when the notice takes effect or when the employment ends").
+3. **Who counts is narrower than the Act's "employee".** Para 2(2) reads every
+   reference to an employee as one on a contract with no end date or with a
+   term of at least 6 months. Reading: that applies to the 10-employee count as
+   well as to who must be reported, so short fixed-term staff count for
+   neither. The person must also be an "employee" under s 2(1) of the Act (no
+   seafarers or domestic workers), carried as a supplied fact.
+4. **"Retrench" is narrow:** termination at the employer's initiative because of
+   redundancy or reorganisation (para 2(1)). A resignation or a dismissal for
+   misconduct is outside it.
+5. **Working days:** para 2(1) excludes Saturdays, Sundays and public holidays.
+   The encoding counts from the day after the notice and takes the report as in
+   time on or before the 5th working day (a reading of "not later than ... after
+   the day"). Public holidays are not in the deposit and are supplied as a list;
+   the holidays in the cases are illustrative. Day numbers start at
+   Monday 1 November 2021 = 0. The Interpretation Act 1965 provisions on
+   computing time were not retrieved.
+6. **Particulars:** the Schedule's lists are introduced by "including", so they
+   are not closed on their face; only what is named is encoded. Para 1(b) (trade
+   name) applies only if different; para 2(g) (reasons for paying no benefit)
+   only if none was paid; para 1(d) (recognised trade union) is read as
+   applying only where a union is recognised. The content of the MOM website
+   form was not retrieved.
+7. **Consequences** are as in the section above, now on the Notification's own
+   facts: each unreported covered retrenchment is one s 126B(1)(aa) occasion.
+   The prescribed penalty amount is still not retrieved.
+8. **Needs, for a complete answer:** the pre-1 November 2021 text of S 200/2019
+   (and S 781/2021, the amending notification) for retrenchments notified
+   before that date; the Public Holidays Act gazettes for the actual holidays;
+   the MOM retrenchment-reporting form; the regulations prescribing the
+   s 126B administrative penalty; possibly the Interpretation Act 1965 on time.
 
 ## What would still need doing
 
