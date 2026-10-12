@@ -7,7 +7,7 @@ pass, no human gate.
 **Edition:** 2020 Revised Edition, informal consolidation (amendments to Act 25 of
 2021).
 
-**Checks:** two case files, 72 assertions satisfied (27 in `cha-cases-governance.l4`, 45 in `cha-cases-ipc.l4`), 0 errors, 0 warnings.
+**Checks:** three case files, 143 assertions satisfied (27 in `cha-cases-governance.l4`, 45 in `cha-cases-ipc.l4`, 71 in `cha-cases-ipc-regulations.l4`), 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -109,3 +109,58 @@ Needs for a full answer: the regulations under s 42 (inferred to be the Charitie
 Gazette notices of Sector Administrators' sectors, the Commissioner's IPC policy or
 guidance, and the Income Tax Act 1947 s 37 and its rules for the deduction itself. No case
 law was searched.
+
+## IPC Regulations (added 12 October 2026 for REQ-0292)
+
+Module `cha-ipc-regulations.l4`, cases `cha-cases-ipc-regulations.l4` (71 assertions). Source: the Charities
+(Institutions of a Public Character) Regulations (Cap. 37, Rg 5), 2008 Revised Edition, informal consolidation in force
+from 1 January 2025, deposited at `registers/source-bundle/CA1994-RG5.txt`. The Regulations' heading still cites the
+Act's former "section 40C", now s 42. Regulation numbers in the body agree with the arrangement table.
+
+1. **The answer, completed.** The status is IPC (s 40, finding 1 above). Under the Regulations the decision maker is
+   "the Sector Administrator", which reg 2 defines as the Sector Administrator designated for the applicant's sector, or
+   the Commissioner where none is designated. The conditions are in reg 3(1): (a) registered or exempt charity;
+   (b) governing instruments approved by the Sector Administrator; (c) activities "exclusively beneficial to the community
+   in Singapore as a whole", not confined to groups based on race, belief or religion; (d) activities meet its own and the
+   Sector Administrator's objectives; (e) at least half the board independent in the reg 3(4) sense (not employees, not
+   related to the founder or its controllers, not part of a related bloc of half the board); (ea) at least half the board
+   Singapore citizens; (f) board accountable for donations; (g) auditor's appointment approved; (h) approval not contrary
+   to the public interest. Asserted on the Haziq facts (assumed: board of 8, 4 independent, 4 citizens): it may be
+   approved.
+2. **Meeting the conditions does not entitle the charity to approval.** reg 4(2) lets the Sector Administrator refuse
+   "despite the applicant satisfying all of the applicable conditions", on any consideration it thinks fit (past
+   non-compliance, mismanagement, a qualified audit, doubts about the board or plans). The encoding returns "may be
+   approved, but ... may still refuse". Reading reg 3's "may be approved ... if" as making the conditions necessary is an
+   inference, supported by reg 5A(1).
+3. **Period.** A first approval lasts at most 2 years (reg 4(3)); an extension at most 5 (reg 5(4)), applied for at least
+   2 months before expiry or within a time the Sector Administrator sets (reg 5(2)). Asserted.
+4. **Waivers (reg 5A).** The Minister may waive (c) and (ea); the Commissioner may waive (e). Nothing else is waivable;
+   in particular being a registered or exempt charity is not. The conditions must hold throughout the approval (5A(1)).
+   Note the split with the Act: s 40 names the Minister as an approver, but in the Regulations the Minister only waives.
+5. **Losing it (reg 6).** Revocation is mandatory if the IPC has ceased to operate or no longer serves a purpose for the
+   benefit of the community in Singapore; suspension (up to 2 years) or revocation is discretionary for non-compliance,
+   mismanagement or the public interest. Donations during suspension or after revocation are not tax deductible, and those
+   made before the public is told must be refunded in full on request (reg 6(3)). Asserted.
+6. **Receipts and records (regs 9, 10).** A tax deduction receipt may be issued only for a tax deductible donation (9(1))
+   and only while approval is current (9(7)); it must carry the prescribed statement, the Sector Administrator's name where
+   applicable, the amount, a serial number, and for an s 37AB donation the Overseas Humanitarian Assistance Tax Deduction
+   Scheme (9(3)). Donation records hold seven particulars (10(2)) for at least 5 years from the end of the year of
+   assessment (10(3)). That the year of assessment is the year after receipt is an INFERENCE from the Income Tax Act, not
+   read for this module. Asserted.
+7. **Use, reporting, large IPCs.** reg 11's order (donor's purpose, then communicated purpose, then any activity, always
+   within objectives and Income Tax Act s 37(3C)), refunds within 4 years; reg 16 documents within 6 months of year end and
+   donation details to the Comptroller by 31 January; auditor change every 5 years (17(7)); large IPC = gross receipts of
+   at least $10 million in each of the 2 preceding years, with a board of at least 10 (reg 20). Asserted.
+8. **Penalties.** reg 21(1) makes breaches of regs 7, 8, 10, 11 (not (8)), 12, 15A(3)/(4), 16(1)(c), 16(2)(b), 17(3),
+   17(7) and 20(3) offences ($10,000 or 3 years or both, plus $100 a day); reg 21(2) the fund-raising cap (no daily fine);
+   reg 22 a financial penalty for receipts under 9(1) or 9(7) of the higher of $100 and 0.4 x the donations that ought not
+   to be deductible. Breaching reg 16(2)(a) (details to the Comptroller), reg 11(8) or reg 9(3) is not in Part VI; it may
+   still ground suspension or revocation under reg 6(2)(a). Asserted.
+9. **Defect in the deposit: the reg 15 formula is missing.** The fund-raising-expense cap is "30% of the total receipts
+   from fund-raising and sponsorships ... as determined by the following formula", but the formula was an image and is not
+   in the text. The encoding uses E <= 0.3 x (R + S), an INFERENCE from the words; check against the PDF.
+
+Still needed for a full answer: the Income Tax Act 1947 ss 37 and 37AB (which donations are tax deductible, the
+multiplier, the year of assessment); the Gazette designations of Sector Administrators and their sectors; the
+Commissioner's and Sector Administrators' IPC application guidance and their practice under reg 4(2); the reg 15 formula
+from the PDF; the Commissioner's directions under reg 15(2). No case law was searched.
