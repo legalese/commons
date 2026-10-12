@@ -7,7 +7,8 @@ pass, no human gate.
 **Edition:** 2020 Revised Edition, informal consolidation (amendments to Act 32 of
 2024).
 
-**Checks:** one case file, 64 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** two case files, 112 assertions satisfied (64 in ml-cases-borrowers.l4, 48 in
+ml-rules-interest-and-fees-cases.l4), 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -71,3 +72,38 @@ before repayment is due and despite any contrary term (s 37(4)). Asserted.
   is a recurrent question.
 - Harassment by a licensed lender is governed elsewhere (the Protection from Harassment
   Act row, and the Rules); not followed here.
+
+## Interest caps and permitted fees (added 12 October 2026 for REQ-0277)
+
+Module `ml-rules-interest-and-fees.l4`, cases `ml-rules-interest-and-fees-cases.l4` (48 assertions). Source: the
+Moneylenders Rules 2009 (S 72/2009), version in force from 1 August 2026, deposited at
+`../../registers/source-bundle/MA2008-R1.txt`. Rule numbers were taken from the body.
+
+The question: a licensed moneylender lends $8,000 to a borrower earning $36,000 a year in August 2032 -- the highest
+monthly interest, and what fees.
+
+1. **The answer: 4% a month, $320 in the first month.** Rule 11(1) fixes the s 36(1) maximum at "the nominal interest
+   rate of 4% per month", and rule 11(2) runs it on the outstanding principal after payments appropriated to principal,
+   so the cap in money falls as the loan is repaid ($280 once $1,000 of principal is repaid). Late interest is capped
+   separately at 4% a month (rule 11(3)), and only on an amount that has fallen due and is unpaid (rule 11(4), (5)).
+   Asserted.
+2. **Fees: three kinds and no others.** Rule 12(1): a grant fee of at most 10% of the principal ($800 here); late-payment
+   fees "not exceeding an aggregate of $60 per month"; and legal costs of recovery as ordered by a court. Each only if the
+   borrower agreed. The ledger's "administrative fee as prescribed" does not match the text: there is no administrative
+   or processing fee in the list, and s 35(3) makes any such charge irrecoverable (refundable if paid). Asserted.
+3. **Interest, late interest and the two fees together cannot exceed the principal** -- $8,000 here (rule 12A(b)). Court
+   costs are outside that aggregate. For a revolving credit loan granted on or after 30 November 2018 the ceiling is the
+   amount drawn and unrepaid instead (rule 12A(a)); not encoded beyond this note. Asserted.
+4. **The borrower's income matters for how much can be lent, not for the rate.** Rule 21(2): to a borrower earning at
+   least $20,000 a year, a licensee's unsecured loans in total may not exceed 6 months' income -- $18,000 on $36,000 a
+   year -- so $8,000 is allowed if the borrower owes no more than $10,000 on other unsecured licensee loans. The encoding
+   ASSUMES a Singapore borrower and no other unsecured loans; neither is in the question. "Annual income" is the last
+   3 months' income times 4 (rule 21(6)), not a declared salary. Asserted.
+5. **Business loans are different.** Rule 12B disapplies the 4% caps and the rule 12A ceiling for a business loan (a loan
+   to a company, LLP or registered business trading at least a year, rule 1A). Its permitted fees are a different list
+   (rule 12(2)) -- with no grant fee and no $60 limit on late fees. Asserted.
+6. **The 2032 date cannot be answered from the deposit.** The Rules deposited are the version in force from 1 August
+   2026; its legislative history ends with the Moneylenders (Amendment) Rules 2026 (S 543/2026). The encoding
+   answers on that text; whether the 4% cap and the fee list still stand in 2032 is not known.
+7. **Not checked:** case law on rule 12A and s 36(3); guidance from the Registrar of Moneylenders; the s 66(5)(b) credit report
+   that supplies the outstanding unsecured loan amount.
