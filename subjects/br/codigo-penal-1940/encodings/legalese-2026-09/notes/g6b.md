@@ -171,7 +171,9 @@ The two vacatio counts are asserted in the tests: `(YMD 2019 9 5) PLUS 120` is 3
 
 - **Senado index error**: the Senado record indexes Lei 14.133/2021's insertion as "Art. 377-E" to "Art. 377-P" and omits 337-L (it should be 337-E to 337-P).
 - **cp-pena's `o último dia do prazo` is wrong for periods the Code counts in days**: it reads `dias 180` as six calendar months (asserted: from 5.7.2026 it gives 4.1.2027; 180 calendar days end on 31.12.2026). Correct for art. 10's months and years and for dosimetry; a trap for anyone counting a tipo's days with it. Cap. IV counts days by date arithmetic instead.
-- **`TYPICALLY` with a user enum constructor** is accepted on a `GIVEN` parameter and rejected on a record field ("must be a literal … could not find a definition"), on this binary. Phrasebook entry 1.5 says a constructor of your own `ONE OF` type is accepted; that holds only for parameters. The three interpretation fields are therefore parameters of the exported rules.
+- **`TYPICALLY` with a user enum constructor** is accepted on a `GIVEN` parameter and rejected on a record field ("must be a literal … could not find a definition"), on the 29 September binary. Phrasebook entry 1.5 says a constructor of your own `ONE OF` type is accepted; that held only for parameters then. The three interpretation fields are therefore parameters of the exported rules.
+  Re-probed 2026-10-12: the same construct on a record field (g1b's `cp-g1b-sonda-typically-enum.l4`) checks on `l4-1008` and on a reference-checkout build of 11 October; see `notes/g1b.md` section 8.
+  The g6b fields were not rewritten as record fields, and nothing needs it.
 - **Art. 327 at art. 351, § 4º**: replaced at integration by g6a's owner rule (ruling F-g6a-23); nothing owed.
 - **Roadmap titles corrected** where the mechanical enumeration took a neighbour's line: arts. 337-E–337-O (the amendment note), 343, 346, 349-A (no heading in the source), 359-C, 359-G (a pena line).
 - **check.sh's transient double count** (~21:00 on 2026-09-29) was seen and not acted on; the counts above are from the fixed script.
