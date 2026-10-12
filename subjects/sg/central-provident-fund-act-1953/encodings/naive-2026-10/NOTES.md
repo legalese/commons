@@ -8,9 +8,11 @@ pass, no human gate.
 1 July 2026.
 
 **Checks:** `l4 run cpf-cases.l4`, `l4 run cpf-medisave-cases.l4`, `l4 run cpf-rates-and-death-cases.l4`,
-`l4 run cpf-allocation-and-exemption-cases.l4` and `l4 run cpf-self-employed-cases.l4` -- 182 assertions satisfied,
+`l4 run cpf-allocation-and-exemption-cases.l4`, `l4 run cpf-self-employed-cases.l4`,
+`l4 run cpf-self-employed-rates-cases.l4` and `l4 run cpf-exemption-current-cases.l4` -- 274 assertions satisfied,
 0 errors, 0 warnings. Of these, 60 predate 11 October 2026. On that day 41 were added for REQ-0001 and REQ-0012,
-35 for REQ-0002 and REQ-0003, and 46 for REQ-0268.
+35 for REQ-0002 and REQ-0003, and 46 for REQ-0268; on 12 October 2026 a further 46 were added for REQ-0268 from the
+Self-Employed Persons Regulations, and 46 for REQ-0265 from the current Exemption Order.
 
 ## Scope — read this first
 
@@ -294,6 +296,128 @@ year. What Medisave contribution must he make, and by when?
    The regulations under s 77(1) also prescribe the s 8A(9) date. The Act names none of them. *Unverified
    recollection, to be confirmed against SSO:* the instrument is the Central Provident Fund (Self-Employed Persons)
    Regulations. The Minister's s 13(4) direction on crediting is also needed; it is not legislation.
+
+## Self-employed contribution rates (added 12 October 2026 for REQ-0268)
+
+`cpf-self-employed-rates.l4` and `cpf-self-employed-rates-cases.l4` (46 assertions: 11 on the question's facts,
+35 more). The source is the Central Provident Fund (Self-Employed Persons) Regulations 1992 (Rg 25), informal
+consolidation in force from 1 January 2026, deposited at `../../registers/source-bundle/CPFA1953-RG25.txt`. It
+supplies the figures that s 9A leaves to regulations (see the section above). The question, raised again by the
+Haziq scenario (event from the Jun Hao scenario, event j043, 2028), is the same: a self-employed delivery rider,
+born 30 August 2006, declares $31,000 of trade income for a year. What Medisave contribution must he make, and
+by when?
+
+1. **The answer: $2,480, payable not later than 30 days after the date the CPF Board issues the contributions
+   notice for that year.** The Board may specify a longer period, and he may pay in instalments if the whole is
+   paid by then. The steps:
+   - He is a "self-employed person" if he is a citizen or permanent resident (reg 2(1); *assumed*).
+   - The Regulations apply because his income is "more than $6,000" (reg 3(1)).
+   - None of the $31,000 is platform remuneration, so reg 2A excludes nothing.
+   - His column in First Schedule item 23 is fixed by his age "on 1 January of the relevant year". He was born in
+     2006, so he is 20 on 1 January 2027 and 21 on 1 January 2028 (s 2(1A)(a) of the Act). Either way he is in
+     the "has not attained 35" column.
+   - His income is in the band "Exceeding $18,000", where the rate is "8% of the income ... subject to a maximum
+     of $7,680". 8% of 31,000 = 2,480.
+   - Reg 14 drops fractions of a dollar; there are none. Reg 8A deducts any s 9B estimated contributions; none
+     are assumed.
+   - The time is in **reg 7A(2)**, and instalments are allowed by reg 7A(3).
+   - The amount is computed on the income "stated in a notice of assessment" (reg 7A(4)), so the declaration
+     does not itself fix the figure; the Board's notice does.
+   - *Inference:* the relevant year is taken to be the year the income was earned (2027 if he files in 2028).
+     The rate and column are the same for 2026, 2027 and 2028.
+2. **The stand-in in `cpf-self-employed.l4` happened to give the right figure on these facts, but its shape is
+   wrong below $18,000.** It took 8% of the income, capped at $7,680, with a $6,000 floor. Item 23 agrees above
+   $18,000. Below that, the rate is 4% from $6,000 to $12,000, then "$480 and 0.16 of the difference" between the
+   income and $12,000, phasing in to 8% at $18,000. On $15,000 the stand-in gives $1,200, while the Regulations
+   give $960. Every age column joins up at $12,000 and $18,000, and every cap is the top rate on $96,000. That is
+   a check that the column-by-column `.txt` table was read correctly. The stand-in module is left as it was,
+   with a pointer to this one; the new cases use the new module.
+3. **Neither the Act nor the Regulations call this a "Medisave" contribution.** Reg 4(1) says only that he must
+   "pay contributions into the Fund on his or her own behalf". Rg 25 mentions the medisave account only in
+   reg 9(4) and reg 10(4), which concern the reduction proportion for years before 2025 and for MPs, and in
+   reg 17AB (voluntary contributions). Where reg 4 money is credited is still the Minister's direction under
+   s 13(4)(b) of the Act. That direction is not legislation and is not deposited. So the question's word
+   "Medisave" rests on that direction and Board practice, not on the text read here.
+4. **The s 8A(9) date is 1 January 2025** (reg 2A(1)), inserted by S 888/2025 with effect from 1 January 2026.
+   If his $31,000 were platform remuneration paid on or after 1 January 2025, s 9A would not reach it, and the
+   Regulations' "income" would exclude it (reg 2A(2)). If he has both kinds of income, the contributions notice
+   is computed on the notice-of-assessment income less his total APE (reg 7A(4A)). APE is defined in Fourth
+   Schedule para 1 of the Act and is not encoded here. The ledger assumed non-platform income, and the first
+   assertions follow it.
+5. **The cap on everything (Third Schedule) is a separate thing from the First Schedule maximum.** For 2026
+   onwards the figures are the same ($7,680 / $8,640 / $9,600 / $10,080), but they do different jobs:
+   - The First Schedule maximum caps the reg 4 amount.
+   - The Third Schedule cap is reached only on his written application under reg 9A, and only if he is also an
+     employee or a platform worker with contributions made. It cuts his s 9A contributions so that "the
+     aggregate amount of all contributions paid into the self-employed person's account" stays within the cap.
+   - *Inference (labelled in the module):* which contributions count towards that aggregate is taken as an
+     input. Reg 9A, unlike the old reg 9(3)(b), does not mention a medisave proportion.
+   - On REQ-0268's facts (no employment, no platform work) reg 9A does not arise.
+6. **What Rg 25 still does not supply:**
+   - The s 9(2) interest rate and start date: Rg 25 contains no interest provision, so they are in another
+     instrument, not identified.
+   - The Minister's s 13(4) crediting direction.
+   - Whether s 58(1)(e) is a compoundable offence: the Board's rules under s 63(2).
+   - The date the Board will issue the contributions notice: an administrative act, so the encoding counts days
+     from it.
+   - *Inference (labelled):* reg 7A(2)(b)'s "extended period" is taken to end more than 30 days after issue.
+7. **Version.** Read from the consolidation in force from 1 January 2026, current on SSO as at 13 October 2026.
+   An amendment taking effect before the 2027 or 2028 relevant year would not be in the deposit.
+
+## The current Exemption Order (added 12 October 2026 for REQ-0265)
+
+`cpf-exemption-current.l4` encodes the **Central Provident Fund (Exemption) Order 2018 as it stands today**:
+2025 Revised Edition, informal consolidation in force from 1 June 2026, deposited at
+`../../registers/source-bundle/CPFA1953-OR10.txt`. Paras 2, 3, 3A, 4 and 5 and the Schedule are encoded.
+`cpf-exemption.l4` (the version as made) is left as it was, with a one-line pointer to the new module.
+Cases: `cpf-exemption-current-cases.l4`, 46 assertions.
+
+1. **A university student on training approved by the university is still exempt today.** A citizen or PR
+   who is a matriculated or registered student of a university "whose function of providing university
+   education is determined by any written law", "employed for training approved by the institution
+   concerned", is now specified in **Schedule para 6(a)** (para 5(a) as made). Para 2(2) exempts the employer
+   from s 7 contributions and from community-fund contributions under s 76(3). The REQ-0003 answer stands
+   on the current text. Asserted, together with the same facts under the as-made module.
+2. **Yes, the Order has been amended.** The deposit's Legislative History lists S 73/2018 (from 1 March 2018),
+   S 716/2024 (two commencements, 31 December 2021 and 1 October 2024), S 1031/2024 (from 1 January 2025),
+   the 2025 Revised Edition (17 December 2025), S 895/2025 (from 31 December 2025) and S 325/2026 (from
+   1 June 2026).
+3. **The student paragraphs did not change in substance; they moved.** As-made paras 5 to 8 are now paras
+   6 to 9, with the same words apart from updated Act citations, "student of" for "student in" in para 7(a),
+   and the MOE web address. Para 2(1) and (2) now point at para 6(a). The new module reuses the as-made
+   module's `Student` and `Institution` types, and four assertions check that both versions give the same
+   result on the same student.
+4. **The ledger's expected answer is partly wrong.** It said "the current version's Schedule paras 5 to 8
+   and para 3 are as encoded". The students are now paras **6 to 9**; Schedule para 5 is "[Deleted by
+   S 325/2026]". Schedule para 3 is now OECD staff at the IEA Regional Cooperation Centre, not the seamen.
+   If "para 3" meant Order para 3 (foreign employees), that is unchanged word for word.
+5. **Who else is exempt has changed.**
+   - Domestic employees on 14 hours or less (as-made Schedule para 1) are now covered only by **Order
+     para 4**. That is a transitional exemption for citizens and PRs whose contract, or a "prior connected
+     contract", was made and begun before 1 June 2026, for months after 31 May 2026. Para 4(2)(c) imposes an
+     hours test for the period up to 31 May 2026.
+   - A new domestic contract made after 1 June 2026 is no longer exempt, even at 14 hours or less. Asserted
+     against the as-made module, which exempted it.
+   - Seamen on Swedish, Norwegian or East Asiatic Co terms are now covered only by **Order para 5**, also
+     transitional: citizens on contracts made and begun before 1 June 2026, for periods after 31 May 2026.
+   - New: **para 3A** exempts platform operators from s 8A contributions for foreign platform workers. New
+     **Schedule para 2A** covers ICSID and MIGA employees in Singapore, and Schedule para 2 now reaches UN
+     "related organisations". Schedule para 3 (OECD/IEA) is new as against the as-made text.
+   - The as-made Schedule paras 4 (Seventh-Day Adventists) and 9 (SHATEC trainees) are not in the current
+     text. **When** they left, and what current Schedule paras 4 and 5 said just before S 325/2026 deleted
+     them, cannot be read from the deposit. The amending orders were not retrieved.
+6. **May 2025 is not answered.** The version in force in May 2025 (after S 1031/2024, before the 2025
+   Revised Edition) was not obtainable and is not deposited. The student words are identical in the 2018 and
+   2026 texts, so *by inference only* they are likely to have read the same in May 2025. That rests on no
+   text, and an amendment made and later reversed in between cannot be ruled out without S 73/2018,
+   S 716/2024 and S 1031/2024.
+7. **A fork in para 4(2)(c)(ii)(B).** "In every period of 7 consecutive days falling within **any one**
+   calendar month" may mean some one month or each month. The encoding takes it as an input stated in the
+   Order's own words and does not choose. Para 4(2)(c) is also taken on the facts of one qualifying contract.
+8. **Still inputs:** whether an institution is within para 6, whether training is "approved by the
+   institution", whether a person is a "domestic employee" (para 4(4)), a seaman, a platform worker or a
+   student of a "private education institution" (Private Education Act 2009 s 2), and MOE's listed
+   programmes and school holiday periods (on the MOE website).
 
 ## Still a small fraction of the Act
 
