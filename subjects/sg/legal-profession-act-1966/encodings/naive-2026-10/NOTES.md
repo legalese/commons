@@ -7,7 +7,7 @@ pass, no human gate.
 **Edition:** 2020 Revised Edition, informal consolidation (amendments to Act 37 of
 2023).
 
-**Checks:** one case file, 52 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** two case files, 96 assertions satisfied (lp-cases-clients.l4 52, lp-cases-admission.l4 44), 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -86,3 +86,82 @@ years' suspension, and a $100,000 penalty. Asserted.
   ... property") has been litigated.
 - The rest of the Act -- practising certificates, foreign lawyers, accounts and the
   disciplinary procedure -- is not encoded.
+
+## Admission and practising certificates (added 12 October 2026 for REQ-0283)
+
+Module `lp-admission.l4`, cases `lp-cases-admission.l4` (44 assertions). Source: the
+deposit `LPA1966.txt`, version in force from 17 April 2025, Parts 2AA, 2A, 2B and 3
+as recast by Act 37 of 2023 wef 17 July 2024.
+
+### 1. The answer: two admissions by the court, then a practising certificate every April-to-March year
+
+Before he may practise, the graduate must (a) be an **eligible person**, which since
+17 July 2024 means first being **admitted by the court as a lawyer (NP)** (s 2(1),
+ss 11A, 11B) unless the Minister approves him under s 14(1); (b) be **admitted by the
+court as an advocate and solicitor** (s 12), which puts his name on the roll (s 16(2));
+and (c) hold a **practising certificate** in force (s 32(1)). For the certificate he
+applies to the Registrar "in every year before he or she does any act in the capacity
+of an advocate and solicitor" (s 25(1)), and it is in force only "to the end of the
+year", the year being 1 April to 31 March (s 25(3), (6)). That certificate is what he
+renews each year. Asserted.
+
+### 2. Where the text differs from the ledger's assumption
+
+The ledger assumed he is "admitted on application after training". That is half
+right. Admission is on application, but it is the **court's discretion** ("may, in
+its discretion", s 12(1)): the Attorney-General, the Law Society and the Institute
+may object (s 12(4)), and the court may adjourn or make other orders having regard to
+his conduct and character (s 12(5A)). s 13 lists conditions without which he must
+**not** be admitted (21, good character, the practice training period served,
+prescribed courses completed and examinations passed); meeting them does not entitle
+him to admission. The encoding says only that nothing in ss 12 and 13 bars it.
+The ledger also left out the **lawyer (NP)** step, which is now the gateway: a law
+graduate who has not been admitted as a lawyer (NP) is not an eligible person and
+cannot be admitted as an advocate and solicitor. Asserted both ways.
+
+### 3. The Act does not say six months, and does not name a Bar course
+
+The length of the practice training period is left to the Institute's rules
+(s 10(2)(b), "including different durations for different classes"), as are the
+courses and examinations for each admission (s 10(2)(c), (d), (da), (db)), their
+period of validity (s 10(2)(fa)) and the admission procedure and fees (s 10(2)(g),
+(h)). Whether Haziq's six months satisfies s 13(c) depends on those rules; the
+encoding takes the applicable period as an input and the cases assume six. Reading
+"completed the Bar course" as completing the prescribed courses and examinations is
+an assumption, labelled in the case file.
+
+### 4. The annual certificate dies on 31 March, whenever issued
+
+s 25(3) and (6): a certificate issued on 1 August 2026 or on 15 February 2027 alike
+expires on 31 March 2027. s 25(5): one issued in April counts as in force from
+1 April. Asserted.
+
+### 5. What he must declare and who may not apply
+
+s 25(1): the application carries declarations of his practice, that he is not
+disqualified, that Law Society subscriptions, levies and Compensation Fund
+contributions and Academy moneys are paid or arranged, professional indemnity
+compliance, any Institute-prescribed declaration (s 25(1)(ca); [inference] probably
+the continuing professional development declaration, since s 10(2)(i) gives CPD
+rules to the Institute), an accountant's report or Council certificate, and the
+prescribed fee. s 26(1): he may not apply unless practising or intending to practise
+in a Singapore law practice (or under s 36E, or as a locum), nor while an undischarged
+bankrupt, in a composition with creditors, with $100,000 or more of judgments unpaid
+for 6 months, or lacking capacity. The Registrar "must ... thereupon issue" subject to
+ss 25A, 25AA and 25B. Asserted.
+
+### 6. Between training and admission: the provisional practising certificate
+
+A lawyer (NP) serving training with a Singapore law practice, who has served the
+prescribed part of it, must get a provisional practising certificate before acting
+as an advocate and solicitor under supervision (s 18(1), (2), s 32(1A)). It lasts
+12 months from issue or until admission, whichever is earlier (s 18(6)). The
+encoding reads 12 months as 365 days [inference]; the prescribed period is an input.
+
+### 7. Needs other instruments
+
+The Institute's admission rules and the Minister's qualified-person rules (titles not given in the deposit; who is a
+qualified person, the courses, examinations, practice training period and its
+length, admission procedure and time limits), the Law Society's rules on practising
+certificates and provisional practising certificates (ss 18(9), 25(7)), the CPD rules
+(s 10(2)(i)), and the fees under s 189. None was retrieved. No case law was searched.
