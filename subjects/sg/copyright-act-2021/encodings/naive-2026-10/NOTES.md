@@ -7,7 +7,7 @@ pass, no human gate.
 **Edition:** 2020 Revised Edition, informal consolidation, as the deposit labels itself
 (amendments to Act 31 of 2022).
 
-**Checks:** one case file, 26 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** two case files, 61 assertions satisfied (26 in `cpa-cases-uses.l4`, 35 in `cpa-cases-ownership.l4`), 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -63,3 +63,56 @@ identified. s 122: 70 years from publication for a sound recording. Asserted.
 - The education, library and disability permitted uses are the next most-used and are
   not encoded.
 - No case law was searched.
+
+## First ownership (added 12 October 2026 for REQ-0287)
+
+Module `cpa-ownership.l4`, cases `cpa-cases-ownership.l4` (35 assertions). Raised by the Haziq scenario, event h045:
+salaried engineers write a company's software in the course of their employment, with nothing in their contracts about
+ownership. Who owns the copyright?
+
+### 1. The company, as first owner, under s 134(3)
+
+A computer program is a literary work (s 13(1)(b)), so an authorial work (s 9). Where "in the course of a contract of
+service, the employee ... makes an authorial work" (s 134(1)(a)), "the employer is the first owner of any copyright in the
+relevant work" (s 134(3)), and s 133 (author as default owner) is displaced (s 134(2)). The ledger's expected answer is
+right. Asserted.
+
+### 2. The Act says "contract of service", not "employment"
+
+The test is a contract of service, which s 7(1) defines by reference to s 2(1) of the Employment Act 1968. That Act is not
+deposited here, and whether a work was made "in the course of" the contract is a question of fact for which no case law was
+searched. The encoding takes both as an input. A freelance contractor is outside s 134, so the contractor (the author) owns
+the copyright by default (s 133(1)(a)). Asserted.
+
+### 3. "Absent agreement to the contrary" has a formality from 21 November 2021
+
+s 134(5): the employer's ownership gives way to a contrary intention only in a **written** agreement between employer and
+employee made on or after 21 November 2021, or in **any** agreement made before that date. An oral understanding reached
+in 2023 does not displace it, but one from 2019 does. The encoding does not say what the agreement provides, only that the
+default is displaced. Asserted.
+
+### 4. The periodical exception, and it reaches code
+
+s 134(4): where the employer is the proprietor of a periodical and a literary, dramatic or artistic work is made for
+publication in one, the employer owns only the periodical publishing rights and the employee owns the rest (or, for works made
+before 10 April 1987, the employer owns but the employee may restrain non-periodical publication). Musical works are not in
+the list. Because a computer program is a literary work, on the words this would split ownership of code written by a magazine's
+staff for publication in it; that is an inference from ss 13 and 134(4), not tested against case law. It does not touch the
+REQ-0287 facts. Asserted.
+
+### 5. Sound recordings, films, broadcasts and editions by employees: only from 21 November 2021
+
+s 134(1)(b) brings these in only when made, provided or published on or after 21 November 2021; an employee's sound
+recording from 2020 falls back on s 133 ("the maker"). Who the "maker" was is not encoded. Asserted.
+
+### 6. The Government
+
+s 136(1)(a), (d): the Government is first owner of an unpublished authorial work, or a sound recording or film, made by or under
+its direction or control, "despite" ss 133 to 135, subject only to its own contrary agreement (s 136(2)). Paras (b) and (c),
+international organisations (s 136(3), (4)) and pre-2021 commissions (s 135) are not encoded.
+
+### Needs other instruments
+
+- Employment Act 1968 s 2(1), for "contract of service".
+- Case law on "in the course of" a contract of service, and on the employee/contractor line.
+- Nothing on subsistence (qualified persons, connecting factors) is encoded, so the encoding assumes copyright subsists.
