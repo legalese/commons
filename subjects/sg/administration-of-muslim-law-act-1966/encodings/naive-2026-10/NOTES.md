@@ -8,7 +8,7 @@ pass, no human gate.
 of 2024 (latest commencement annotated 1 October 2025) and Act 5 of 2025 (9 March
 2025) shown. The Third Schedule amounts carry the annotation S 144/2016.
 
-**Checks:** one case file, 117 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** two case files, 161 assertions satisfied (117 + 44), 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -103,3 +103,64 @@ This row was encoded against the deposit as it stood before the source refresh: 
 earlier retrieval, still in git at commit da331074. The deposit has since been replaced by the consolidation current as at
 9 October 2026, whose text differs. **The row has not been re-checked against the refreshed text.** Its assertions do not
 read the source, so they still pass; whether the encoded provisions changed is an open question.
+
+## Wills and inheritance (added 12 October 2026 for REQ-0282)
+
+Module `amla-wills-inheritance.l4`, cases `amla-cases-wills-inheritance.l4` (44 assertions). ss 110 to 116 and 118, numbered
+from the BODY of the deposit: the arrangement table at its head is out of step from s 111 (it lists "113. Inheritance
+certificate" and "115. [Repealed]"); in the body s 115 is the inheritance certificate and s 117 is the repealed section. The
+ledger's numbers (s 111, s 115) match the body.
+
+### 1. The answer: the will is valid only so far as his school allows; the Act states no "one third"
+
+s 111(1): no Muslim domiciled in Singapore may, after 1 July 1968, dispose of property by will "except in accordance with the
+provisions of and subject to the restrictions imposed by the school of Muslim law professed by him or her", despite English
+law or any other written law. The Act does not say what those restrictions are. The ledger's "valid up to one third to a
+non-heir" is a rule of Muslim law (a school's rule), not a provision of the Act; nothing in the deposit states it. The
+encoding takes the school's answer, or its fraction, as an input. On the ledger's assumption that his school allows a
+one-third gift to a non-heir, the gift to the charity stands; a share above the supplied limit does not. Asserted both ways.
+
+### 2. The two thirds pass by Muslim law as a partial intestacy
+
+s 112(1) and (2): the estate of a Muslim domiciled in Singapore dying intestate is distributed "according to the Muslim law as
+modified, where applicable, by Malay custom", and this applies where he "dies partly intestate". So the part of Haziq's estate
+not disposed of by the will goes to the heirs by Muslim law. Who the heirs are and their shares is again Muslim law, not the
+Act. Asserted.
+
+### 3. No certificate is required by the Act; the inheritance certificate is available, not compulsory
+
+s 115(1): in proceedings on the administration or distribution of an estate to be distributed by Muslim law, where a court or
+authority must determine the persons entitled or their shares, the Syariah Court "may", on a request by that court or
+authority, or on the application of a person claiming to be a beneficiary, and on payment of the prescribed fee, certify its
+opinion on who is entitled and in what shares. Nothing in the deposit makes the certificate a condition of distribution or
+puts a duty on the family to obtain one. The ledger's "must obtain" goes beyond the text; whether a court or authority in practice
+asks for one is a matter of practice or rules, not the Act (not retrieved; inference that it may). Asserted as a constant FALSE plus the
+conditions under which the Court may certify. Reading: the fee is treated as due on both routes; the text could be read as
+attaching it to the beneficiary's application only.
+
+### 4. The Syariah Court certifies on law, never on facts
+
+s 115(1), (2): the opinion rests on facts found by the court or authority or on hypothetical facts; the Syariah Court may hear
+the parties on a question of law but "is not to hear evidence or make findings on any question of fact". s 115(3): in a case of
+special difficulty it may refer the question to the Legal Committee of the Majlis and, if that opinion is given, must certify
+in accordance with it. Asserted.
+
+### 5. Other points encoded
+
+- s 113: the probate or administration affidavit for a deceased Muslim must state the Mazhab professed.
+- s 111(2): the restriction does not affect the Wills Act 1838 (except its s 3), the Insurance Act 1966, the Probate and
+  Administration Act 1934, or the will of a Muslim who died before 1 July 1968. The date test is encoded on the date of death
+  from (2)(d); s 111(1)'s "after 1 July 1968, dispose" could be read as the date of making the will (inference).
+- s 112(3): for "a Malay dying intestate" the court may divide harta sepencarian; its reach to partial intestacy rests on
+  s 112(2) (inference).
+- s 116: letters of administration on intestacy may go to any next-of-kin or anyone entitled to a share under Muslim law.
+- s 118: a married woman may, with or without her husband's concurrence, by will dispose of her own property, subject to s 111.
+
+### What the full answer still needs
+
+- The rule of the school professed (for most Singapore Muslims, by inference, the Shafi'i school) on the bequeathable third and
+  bequests to heirs; s 114 lets the court take it from the listed books. Not in the Act.
+- The Administration of Muslim Law rules on the inheritance certificate fee and form (s 145(2)(e), (f)); not retrieved.
+- Whether the High Court or Public Trustee in practice requires a certificate before granting or distributing (Probate and
+  Administration Act 1934, Rules of Court, practice); not retrieved.
+- No Syariah Court or High Court decisions were searched.
