@@ -1,0 +1,347 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `acc-types`
+
+-- Accident Compensation Act 2001 — GOAL 3: WHAT IS THE CLAIMANT ENTITLED TO?
+--
+--   "What first week and weekly compensation is payable, from when, and until
+--    when; what lump sum for permanent impairment; what do survivors receive
+--    after a fatal injury; and does any disentitlement apply?"
+--
+-- Source: ../source/ACC2001.txt — Part 4 (ss 67-132) and Schedule 1.
+
+§ `Goal 3 — entitlements`
+
+§§ `First week and weekly compensation (ss 97-100; Schedule 1 Part 2)`
+
+-- s 97(1)-(2): first week compensation "is 80% of the amount of earnings as
+-- an employee lost ... during the first week of incapacity", for a
+-- work-related injury (or a s 29(2) motor vehicle injury) to a person who was
+-- an employee. (3): the loss is presumed to be earnings in the 7 days before
+-- less earnings in the first week. s 98(1): the employer pays it.
+@ref s 97(1)-(3)
+GIVEN `work-related or s 29(2) injury` IS A BOOLEAN, `an employee before the incapacity` IS A BOOLEAN, `earnings in the 7 days before` IS A NUMBER, `earnings in the first week` IS A NUMBER
+GIVETH A NUMBER
+`first week compensation, work-related:` `work-related or s 29(2) injury` `, employee:` `an employee before the incapacity` `, earnings before` `earnings in the 7 days before` `, earnings during` `earnings in the first week` MEANS
+    IF `work-related or s 29(2) injury` AND `an employee before the incapacity`
+    THEN (`earnings in the 7 days before` MINUS `earnings in the first week`) TIMES 80 DIVIDED BY 100
+    ELSE 0
+
+-- s 6(1) "first week of incapacity": from the day incapacity first commences
+-- "ending with the close of the sixth day after that day". Schedule 1 cl
+-- 32(2)(a): weekly compensation "on and from the day after the first week of
+-- incapacity ends".
+@ref s 6(1) "first week of incapacity"; Schedule 1 cl 32(2)(a)
+GIVEN `incapacity began` IS A DATE
+GIVETH A DATE
+`weekly compensation starts on, incapacity began` `incapacity began` MEANS `incapacity began` PLUS 7
+
+-- Schedule 1 cl 34(1)-(2): a permanent employee's weekly earnings are, for the
+-- 4 weeks after the first week, earnings in the 4 weeks before incapacity
+-- divided by the weeks (full or part) worked in them; afterwards, earnings in
+-- the 52 weeks before divided by the weeks worked. FORK F4: "week of
+-- incapacity" counts from the start of incapacity, so weeks 2 to 5 use the
+-- 4-week figure.
+@ref Schedule 1 cl 34
+GIVEN e IS AN `Earnings facts`, `week of incapacity` IS A NUMBER
+GIVETH A NUMBER
+`the weekly earnings of a permanent employee,` e `, in week` `week of incapacity` MEANS
+    IF `week of incapacity` AT MOST 5
+    THEN e's `earnings in the 4 weeks before incapacity` DIVIDED BY e's `weeks worked in those 4 weeks`
+    ELSE e's `earnings in the 52 weeks before incapacity` DIVIDED BY e's `weeks worked in those 52 weeks`
+
+-- Schedule 1 cl 42(2): a full-time (or minimum-levy) earner incapacitated for
+-- more than a week whose weekly earnings are below the minimum weekly
+-- earnings is deemed to have the minimum.
+@ref Schedule 1 cl 42(1)-(2)
+GIVEN e IS AN `Earnings facts`, calculated IS A NUMBER
+GIVETH A NUMBER
+`the weekly earnings after the low-earner rule,` e `, calculated` calculated MEANS
+    IF e's `in full-time employment or on the minimum levy` AND calculated LESS THAN e's `minimum weekly earnings`
+    THEN e's `minimum weekly earnings`
+    ELSE calculated
+
+-- Schedule 1 cl 32(3): weekly compensation "is 80% of the claimant's weekly
+-- earnings"; cl 46(1): at most "$1,341.31 a week" (as indexed under s 115 — the
+-- current figure is an input when indexed); cl 51(2): reduced so that
+-- compensation plus earnings after incapacity do not exceed the weekly
+-- earnings.
+@ref Schedule 1 cls 32(3), 46, 51(2)
+GIVEN `weekly earnings` IS A NUMBER, `earnings after incapacity` IS A NUMBER, maximum IS A NUMBER
+GIVETH A NUMBER
+`the weekly compensation on weekly earnings of` `weekly earnings` `, earning after incapacity` `earnings after incapacity` `, maximum` maximum MEANS
+    `the least of` (LIST `eighty per cent`, maximum, `room under the earnings`)
+    WHERE
+        `eighty per cent` MEANS `weekly earnings` TIMES 80 DIVIDED BY 100
+        `room under the earnings` MEANS
+            IF `weekly earnings` MINUS `earnings after incapacity` LESS THAN 0 THEN 0
+            ELSE `weekly earnings` MINUS `earnings after incapacity`
+
+GIVEN xs IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the least of` xs MEANS
+    CONSIDER xs
+    WHEN EMPTY THEN 0
+    WHEN x FOLLOWED BY rest THEN
+        CONSIDER rest
+        WHEN EMPTY THEN x
+        OTHERWISE IF x AT MOST `the least of` rest THEN x ELSE `the least of` rest
+
+@ref Schedule 1 cl 46(1)
+`the maximum weekly compensation in the Act` MEANS 1341.31
+
+-- Schedule 1 cl 47: a potential earner aged 18 or over, not in full-time
+-- study, earning no more than the minimum, gets 80% of the minimum weekly
+-- earnings once incapacitated "for at least 6 months".
+@ref Schedule 1 cl 47(1)-(4)
+GIVEN age IS A NUMBER, `in full-time study or training` IS A BOOLEAN, `earnings per week` IS A NUMBER, `minimum weekly earnings` IS A NUMBER, `months incapacitated` IS A NUMBER
+GIVETH A NUMBER
+`potential earner compensation, age` age `, studying:` `in full-time study or training` `, earning` `earnings per week` `, minimum` `minimum weekly earnings` `, months incapacitated` `months incapacitated` MEANS
+    IF     age AT LEAST 18
+       AND (NOT `in full-time study or training`)
+       AND `earnings per week` AT MOST `minimum weekly earnings`
+       AND `months incapacitated` AT LEAST 6
+    THEN `minimum weekly earnings` TIMES 80 DIVIDED BY 100
+    ELSE 0
+
+-- Schedule 1 cl 52: a claimant entitled for 24 months or longer before New
+-- Zealand superannuation qualification age loses it at that age; one first
+-- entitled less than 24 months before (or after) gets 24 months from
+-- entitlement.
+@ref Schedule 1 cl 52
+GIVEN `entitled from` IS A DATE, `reaches superannuation age on` IS A DATE
+GIVETH A DATE
+`weekly compensation ends by superannuation age on, entitled from` `entitled from` `, superannuation age` `reaches superannuation age on` MEANS
+    IF `add months` `entitled from` 24 AT MOST `reaches superannuation age on`
+    THEN `reaches superannuation age on`
+    ELSE `add months` `entitled from` 24
+
+-- s 112: a claimant found to have vocational independence "loses ... weekly
+-- compensation 3 months after the date on which he or she is notified".
+@ref s 112
+GIVEN notified IS A DATE
+GIVETH A DATE
+`weekly compensation ends after vocational independence, notified` notified MEANS `add months` notified 3
+
+-- s 87(2): vocational rehabilitation for no longer than "3 years (which need
+-- not be consecutive)", unless (2B) the Corporation's discretion applies.
+@ref s 87(2)-(2B)
+GIVEN `months already provided` IS A NUMBER, `the s 87(2B) discretion is exercised` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `vocational rehabilitation may continue, months provided` `months already provided` `, discretion:` `the s 87(2B) discretion is exercised` IF
+    `months already provided` LESS THAN 36 OR `the s 87(2B) discretion is exercised`
+
+-- s 114(1)-(5): interest if weekly compensation is not paid "within 1 month
+-- after the Corporation has received all information necessary"; simple
+-- interest at the base rate plus 0.95% for the days late, excluding the due
+-- day and including the payment day. Example 1: $100, 120 days, 4.275% gives
+-- $1.41.
+@ref s 114
+GIVEN amount IS A NUMBER, `rate per cent` IS A NUMBER, `days late` IS A NUMBER
+GIVETH A NUMBER
+`the interest on late weekly compensation of` amount `, rate` `rate per cent` `, days` `days late` MEANS
+    amount TIMES `rate per cent` DIVIDED BY 100 TIMES `days late` DIVIDED BY 365
+
+@ref s 114(4)(b)
+GIVEN `base rate per cent` IS A NUMBER
+GIVETH A NUMBER
+`the s 114 interest rate on a base of` `base rate per cent` MEANS `base rate per cent` PLUS 0.95
+
+§§ `Lump sum compensation (Schedule 1 Part 3)`
+
+-- cl 54(1): a lump sum if cover is for injury after 1 April 2002, the claimant
+-- "has survived the personal injury for not less than 28 days", is alive when
+-- assessed, and has "whole-person impairment of 10% or more". cl 56: at least
+-- "$2,500 ... payable to a claimant whose degree of whole-person impairment
+-- is 10%", at most "$100,000 ... 80% or more" (as indexed); the amounts in
+-- between are in regulations (an input).
+@ref Schedule 1 cl 54(1)
+GIVEN `injured on` IS A DATE, `days survived` IS A NUMBER, `alive when assessed` IS A BOOLEAN, `whole-person impairment per cent` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `entitled to a lump sum, injured` `injured on` `, days survived` `days survived` `, alive at assessment:` `alive when assessed` `, impairment` `whole-person impairment per cent` IF
+        `injured on` AT LEAST YMD 2002 4 1
+    AND `days survived` AT LEAST 28
+    AND `alive when assessed`
+    AND `whole-person impairment per cent` AT LEAST 10
+
+@ref Schedule 1 cl 56(1), (3)-(4)
+GIVEN `whole-person impairment per cent` IS A NUMBER, `regulation amount` IS A NUMBER
+GIVETH A NUMBER
+`the lump sum for impairment of` `whole-person impairment per cent` `per cent, regulation amount` `regulation amount` MEANS
+    BRANCH IF `whole-person impairment per cent` LESS THAN 10 THEN 0
+           IF `whole-person impairment per cent` AT LEAST 80  THEN 100000
+           IF `whole-person impairment per cent` EQUALS 10    THEN 2500
+           OTHERWISE IF `regulation amount` LESS THAN 2500 THEN 2500 ELSE IF `regulation amount` GREATER THAN 100000 THEN 100000 ELSE `regulation amount`
+
+-- cl 57(1): no assessment until a medical certificate that the condition has
+-- stabilised and permanent impairment is likely, or — "after 2 years have
+-- passed since the date of the personal injury" — one that it has not
+-- stabilised but impairment is likely. (2): mental injury of a claimant under
+-- 16 waits until 16, unless compelling reasons.
+@ref Schedule 1 cl 57(1)
+GIVEN `injured on` IS A DATE, `a stabilised certificate` IS A BOOLEAN, `a not-stabilised certificate` IS A BOOLEAN, `as at` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the lump sum may be assessed, injured` `injured on` `, stabilised certificate:` `a stabilised certificate` `, not-stabilised certificate:` `a not-stabilised certificate` `, as at` `as at` IF
+    `a stabilised certificate` OR (`a not-stabilised certificate` AND `as at` AT LEAST `add years` `injured on` 2)
+
+-- cl 59(6): "no claimant is to be assessed as having more than 100%
+-- whole-person impairment". cl 61(7): at most "1 reassessment ... in any
+-- 12-month period".
+@ref Schedule 1 cl 59(6)
+GIVEN assessed IS A NUMBER
+GIVETH A NUMBER
+`the whole-person impairment, capped, assessed at` assessed MEANS IF assessed GREATER THAN 100 THEN 100 ELSE assessed
+
+§§ `Fatal injuries (Schedule 1 Part 4)`
+
+-- cl 64: a funeral grant of "the lesser of — (a) the actual costs of the
+-- funeral; or (b) $4,500" (as indexed).
+@ref Schedule 1 cl 64
+GIVEN `funeral costs` IS A NUMBER
+GIVETH A NUMBER
+`the funeral grant for costs of` `funeral costs` MEANS IF `funeral costs` LESS THAN 4500 THEN `funeral costs` ELSE 4500
+
+-- cl 65: a survivor's grant of "$4,702.79" to the surviving spouse or partner
+-- (divided equally if more than one), "$2,351.40" to each child under 18 and
+-- to any other dependant (as indexed).
+@ref Schedule 1 cl 65
+GIVEN f IS A `Survivor facts`
+GIVETH A NUMBER
+`the survivors' grants in total for` f MEANS
+    (IF f's `surviving spouses or partners` GREATER THAN 0 THEN 4702.79 ELSE 0)
+    PLUS 2351.40 TIMES (f's `children under 18` PLUS f's `other dependants`)
+
+-- cls 66, 70, 71: weekly compensation of 60% (spouse or partner) and 20% (each
+-- child, doubled if both parents have died; each other dependant) of the
+-- deceased's weekly compensation at the end of 5 weeks of total incapacity.
+-- cl 74: the total "must not exceed" that compensation, and may be reduced pro
+-- rata.
+@ref Schedule 1 cls 66(2), 70(2), (6), 71(2), 74
+GIVEN f IS A `Survivor facts`, `the deceased's weekly compensation` IS A NUMBER
+GIVETH A NUMBER
+`the survivors' weekly compensation in total for` f `, deceased's compensation` `the deceased's weekly compensation` MEANS
+    IF `uncapped` GREATER THAN `the deceased's weekly compensation` THEN `the deceased's weekly compensation` ELSE `uncapped`
+    WHERE
+        `uncapped` MEANS
+            `the deceased's weekly compensation` TIMES
+                (  (IF f's `surviving spouses or partners` GREATER THAN 0 THEN 60 ELSE 0)
+                 PLUS (IF f's `both parents of the child have died` THEN 40 ELSE 20) TIMES f's `children under 18`
+                 PLUS 20 TIMES f's `other dependants`)
+            DIVIDED BY 100
+
+-- cl 66(5): the spouse or partner's weekly compensation ends on the latest of
+-- 5 years from first payment, ceasing to care for all children under 18, the
+-- youngest child in their care turning 18, and ceasing to care for other
+-- dependants.
+@ref Schedule 1 cl 66(5)
+GIVEN `first payable` IS A DATE, `care of children or dependants ends` IS A MAYBE DATE
+GIVETH A DATE
+`the spouse's weekly compensation ends on, first payable` `first payable` `, care ends` `care of children or dependants ends` MEANS
+    CONSIDER `care of children or dependants ends`
+    WHEN JUST c  THEN `the later of` (`add years` `first payable` 5) c
+    WHEN NOTHING THEN `add years` `first payable` 5
+
+-- cl 70(5): a child's compensation ends at the later of the end of the
+-- calendar year the child turns 18, or, in full-time study, the earliest of
+-- ceasing, completing, or turning 21.
+@ref Schedule 1 cl 70(5)
+GIVEN `turns 18 on` IS A DATE, `full-time study ends` IS A MAYBE DATE, `turns 21 on` IS A DATE
+GIVETH A DATE
+`a child's weekly compensation ends on, turns 18` `turns 18 on` `, study ends` `full-time study ends` `, turns 21` `turns 21 on` MEANS
+    CONSIDER `full-time study ends`
+    WHEN JUST s  THEN `the later of` `end of the year turning 18` (`the earlier of` s `turns 21 on`)
+    WHEN NOTHING THEN `end of the year turning 18`
+    WHERE
+        `end of the year turning 18` MEANS Date 31 12 (DATE_YEAR `turns 18 on`)
+
+-- cl 76(2): child care payments per child of "$100" for one child, "$60" each
+-- for two, and "$140 divided by the number" for three or more (as indexed).
+-- cl 77(2): until the earlier of 5 years or the child turning 14 (or ceasing
+-- to need care).
+@ref Schedule 1 cl 76(2)
+GIVEN children IS A NUMBER
+GIVETH A NUMBER
+`the weekly child care payment per child, children` children MEANS
+    BRANCH IF children EQUALS 1 THEN 100
+           IF children EQUALS 2 THEN 60
+           IF children AT LEAST 3 THEN 140 DIVIDED BY children
+           OTHERWISE 0
+
+@ref Schedule 1 cl 77(2)
+GIVEN started IS A DATE, `turns 14 on` IS A DATE
+GIVETH A DATE
+`child care payments end on, started` started `, turns 14` `turns 14 on` MEANS `the earlier of` (`add years` started 5) `turns 14 on`
+
+-- cl 63: a child born within 12 months after the claimant's death is a
+-- dependent child.
+@ref Schedule 1 cl 63
+GIVEN died IS A DATE, born IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the posthumous child counts, died` died `, born` born IF born AT MOST `add months` died 12
+
+§§ `Disentitlements and payment rules (ss 117-132)`
+
+-- s 119: no Schedule 1 entitlements for wilful self-injury or suicide —
+-- except treatment and related services, mental injury from a covered injury
+-- or s 21/21B, or assisted dying. s 120: none to a convicted murderer;
+-- suspended while charged. s 121: none under Parts 2 or 4 of Schedule 1
+-- while in prison. s 122: none if injured committing an offence punishable by
+-- 2 years or more and imprisoned — except treatment (and surgery only to
+-- return to work). s 121(2): Part 3 assessments and payments are not required
+-- while in prison, so a lump sum is treated as barred for that time (FORK F7).
+@ref ss 119-122
+GIVEN d IS A Disentitlement, k IS AN `Entitlement kind`
+GIVETH A BOOLEAN
+DECIDE `the entitlement is barred by` d `, entitlement` k IF
+    CONSIDER d
+    WHEN `wilfully self-inflicted injury or suicide (s 119)` THEN NOT k EQUALS `treatment or a related service`
+    WHEN `conviction for murdering the deceased (s 120)` THEN k EQUALS `survivors' entitlements (Schedule 1 Part 4)`
+    WHEN `charged with murdering the deceased (s 120(2))` THEN k EQUALS `survivors' entitlements (Schedule 1 Part 4)`
+    WHEN `in prison (s 121)` THEN
+           k EQUALS `weekly compensation (Schedule 1 Part 2)`
+        OR k EQUALS `lump sum compensation (Schedule 1 Part 3)`
+        OR k EQUALS `survivors' entitlements (Schedule 1 Part 4)`
+    WHEN `injured committing an offence punishable by 2 years or more, and imprisoned (s 122)` THEN NOT k EQUALS `treatment or a related service`
+    WHEN `none` THEN FALSE
+
+-- s 126(2): an amount owed at death is paid to the estate "if the estate
+-- applies for it within 3 years after the date of the claimant's death".
+@ref s 126(2)
+GIVEN died IS A DATE
+GIVETH A DATE
+`the estate must apply by, died` died MEANS `add years` died 3
+
+-- s 127(1): no weekly compensation abroad for an injury suffered abroad
+-- unless the claimant had earnings abroad before the injury, or within 6
+-- months before leaving New Zealand. s 129(2): attendant care abroad for at
+-- most "28 days in each period".
+@ref s 127(1)
+GIVEN `earnings abroad before the injury` IS A BOOLEAN, `months between last earnings and leaving` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `weekly compensation may be paid abroad, earnings abroad:` `earnings abroad before the injury` `, months since earnings on leaving` `months between last earnings and leaving` IF
+    `earnings abroad before the injury` OR `months between last earnings and leaving` AT MOST 6
+
+@ref s 129(2)
+GIVEN `days abroad` IS A NUMBER
+GIVETH A NUMBER
+`days of attendant care payable abroad, days abroad` `days abroad` MEANS IF `days abroad` GREATER THAN 28 THEN 28 ELSE `days abroad`
+
+-- s 123(2)(b): an independence allowance may be assigned "for a period of not
+-- more than 5 years".
+@ref s 123(2)(b)
+GIVEN `years assigned` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the assignment of an independence allowance is permitted, years` `years assigned` IF `years assigned` AT MOST 5
+
+§§ `Provisions carried as text`
+
+@ref ss 67-96, 98(2), 99-111, 113, 115-118, 123(1), 124, 125, 127(2)-(4), 128, 130-132; Schedule 1 Parts 1, 2 (cls 30-31A, 33, 35-41, 43-45, 48-50), 3 (cls 55-55D, 58, 60-62), 4 (cls 67, 72, 75, 78)
+GIVETH A LIST OF STRING
+`entitlement provisions carried as text` MEANS
+    LIST "ss 67-96 and Schedule 1 Part 1: entitlement to rehabilitation, treatment costs and prior approval, the individual rehabilitation plan, social rehabilitation (aids, attendant care, child care, education, home help, home and vehicle modifications), vocational rehabilitation and its assessments"
+         "ss 98(2), 99-111, 113: employer evidence, first week compensation as wages, incapacity tests under ss 103 and 105, vocational independence assessment and its regain at the higher rate"
+         "ss 115-118: indexation (the figures in cls 46, 56, 64, 65, 76 are indexed — current figures are inputs), suspension and decline, gradual process proceedings before 1993"
+         "ss 123-125, 127(2)-(4), 128, 130-132: inalienability, payment to the claimant, carers, abroad, in New Zealand dollars, advances, part periods"
+         "Schedule 1 cls 30-31A, 33, 35-41, 43-45, 48-50: the other weekly-earnings formulas (non-permanent, self-employed, shareholder-employee, multiple jobs, ended employment, parental leave, organ donors, estimates, further injury)"
+         "Schedule 1 cls 55-55D, 58, 60-62: transitional lump sum limits and elections, assessors, deductions of earlier lump sums, reassessment, payment to the estate"
+         "Schedule 1 cls 67, 72, 75, 78: aggregated payments, other dependants and superannuation, later relationships, payment to caregivers"

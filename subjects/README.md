@@ -223,6 +223,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/sa/`](au/sa/) | South Australian Acts |
 | [`au/tas/`](au/tas/) | Tasmanian Acts |
 | [`nz/`](nz/) | New Zealand Acts and Bills |
+| [`nz/accident-compensation-act-2001`](nz/accident-compensation-act-2001) | Accident Compensation Act 2001 (NZ) — the whole Act under one top-level goal (is there cover, what class of injury, which Account pays, what weekly compensation follows) and six goals: cover, claims, entitlements, reviews and appeals, levies, offences — row `legalese-aswathy` | `draft` |
 | [`uk/`](uk/) | United Kingdom Acts (Westminster) |
 | [`au/act/`](au/act/) | Australian Capital Territory Acts |
 | [`au/nt/`](au/nt/) | Northern Territory Acts -- conditional permission; confirm before quoting text |
