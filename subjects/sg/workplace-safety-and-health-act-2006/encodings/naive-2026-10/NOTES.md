@@ -9,7 +9,8 @@ pass, no human gate.
 2025), Act 12 of 2020 (s 19(3), in force 1 October 2025) and S 754/2025 (in force
 1 December 2025) shown.
 
-**Checks:** one case file, 120 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** two case files, 166 assertions satisfied (120 in `wsha-cases-duties.l4`, 46 in
+`wsha-cases-occupier-and-employer.l4`), 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -94,3 +95,46 @@ action (s 60). Asserted.
 - The second-conviction rate for s 15(5) and the s 51 repeat rule are modelled as
   flags on the facts, not derived from a conviction history.
 - No sentencing decisions or case law were searched.
+
+## Occupier and employer (added 12 October 2026 for REQ-0288)
+
+Module `wsha-occupier-and-employer.l4`, cases `wsha-cases-occupier-and-employer.l4` (46 assertions). Raised by the Haziq
+scenario, event h080: an agency's security officer falls on a wet stairwell in an office tower leased by a software
+company. Section numbers were read from the body of the deposit; its arrangement table runs out of step from s 14 on.
+
+1. **The answer.** The company, if it has "charge, management or control" of the premises (s 4(1) "occupier", para (c)),
+   must take reasonably practicable measures so that the workplace and "all means of access to or egress from the
+   workplace" are "safe and without risks to health to every person within those premises, whether or not the person is at
+   work or is an employee of the occupier" (s 11). The officer need not be its employee. The agency, as his employer, owes him
+   the separate s 12(1) duty to ensure his safety and health "at work", which s 4(1) defines as wherever his work is carried
+   out, so it follows him onto premises the agency does not occupy; s 12(3) lists what that includes (a safe work environment,
+   protection from hazards in his workplace, emergency procedures, instruction, training and supervision). Asserted.
+2. **Neither duty dilutes the other.** s 10(b), (c): the Act may put the same duty on two persons, and a duty "is not
+   diminished or affected" by its being imposed on another. Each party is tested on its own facts. Asserted.
+3. **The company is probably also the agency's principal**, which adds duties the question did not ask about. s 14(1) (the
+   contractor's employees) applies only if the company directs "the manner in which the work is carried out" (s 14(2)); s 14A
+   (ensuring the agency has the expertise and has taken adequate safety measures) applies to any contractor engaged on or after
+   1 September 2011, whatever the direction (s 14A(6)). That hiring a guard for one's offices is "in connection with" the
+   company's business, so that it is a "principal", is an **inference**. If its own staff (cleaners, say) wetted the stairs, s
+   12(2) and s 14(3) add duties to persons affected by its undertaking. Asserted on variant facts.
+4. **Leasing is not the test; control is.** The s 4(1) definition applies "whether or not the person is also the owner". A
+   tenant of one floor whose stairwell the landlord or management controls may not be the occupier of the stairwell; whether a
+   lessee has control is a question of fact the encoding takes as a flag. But s 11(b) reaches the means of access to the
+   occupier's own workplace, so the encoding holds a tenant-occupier to s 11 for a stairwell it uses as access even if it does
+   not control it (a **reading**; what is "reasonably practicable" for a tenant there is left open). Where the stairwell is
+   strata common property used by persons at work, s 19 treats it as part of their workplace and puts the access-and-egress
+   duty on the occupier of the common area, which includes the management corporation (s 19(3)). Asserted.
+5. **The ledger's assumption is half right.** "The occupier must keep the premises safe" overstates s 11: the duty is to take
+   measures "so far as is reasonably practicable", and s 47 puts the onus of proving that nothing more was practicable on the
+   accused. "The employer's WICA liability is unaffected" is not something this Act says. It names the Work Injury
+   Compensation Act 2019 only in s 27B(1) (learning reports inadmissible in WICA proceedings). The nearest it comes is s 59
+   (nothing in it "derogates from the effect of any other written law") and s 60(1)(b) (it does not affect any right of
+   action in civil proceedings). What WICA gives the officer, and against whom, needs that Act, which is not deposited here.
+6. **Consequences.** A breach of s 11 or s 12 is an offence under s 20; no penalty is stated, so s 50 applies: up to $500,000
+   for a company (plus $5,000 a day if it continues after conviction), $200,000 or 2 years or both for an individual. The
+   Commissioner may serve a remedial or stop-work order on whoever controls the workplace, or owes a duty to a person at work
+   in it, or poses a risk (s 21(2)), so on both parties here. Asserted.
+7. **Needs other instruments.** Whether and how the fall must be reported (s 27 and the regulations under it, not
+   retrieved; believed to be the Workplace Safety and Health (Incident Reporting) Regulations, a name not read in the deposit); the approved codes of practice that inform "reasonably practicable" (s
+   40C); the Work Injury Compensation Act 2019 for compensation; and case law on who has "control" of premises and on what is
+   reasonably practicable. None was retrieved.
