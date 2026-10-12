@@ -1,0 +1,354 @@
+IMPORT prelude
+
+-- HDB flat schemes AS PUBLISHED: the Fiance/Fiancee Scheme and the Single Singapore Citizen Scheme for a new flat bought
+-- from HDB, the Enhanced CPF Housing Grant (Singles), and the minimum occupation period (MOP) of a new flat.
+--
+-- SOURCES. Housing & Development Board (HDB) web pages, all read on 12 October 2026 (the text of each page was read in a
+-- browser; the pages carry no "last updated" date):
+--   (1) "Couples and Families", tab "Fiance and fiancee":
+--       https://www.hdb.gov.sg/buying-a-flat/flat-grant-and-loan-eligibility/couples-and-families
+--   (2) "Singles", tab "Singles":
+--       https://www.hdb.gov.sg/buying-a-flat/flat-grant-and-loan-eligibility/singles
+--   (3) "Enhanced CPF Housing Grant for Singles", and the PDF table it links, "average gross monthly income and
+--       corresponding EHG amount" (3 pages):
+--       https://www.hdb.gov.sg/buying-a-flat/flat-grant-and-loan-eligibility/singles/enhanced-cpf-housing-grant
+--       https://www.hdb.gov.sg/-/media/buying-a-flat/flat-grant-and-loan-eligibility/singles/enhanced-cpf-housing-grant/EHG-amount-Singles.pdf
+--   (4) "Conditions After Buying a New Flat" (the MOP):
+--       https://www.hdb.gov.sg/buying-a-flat/bto-sbf-and-open-booking-of-flats/conditions-after-buying-a-new-flat
+--
+-- AS PUBLISHED, NOT LAW. None of this is legislation. These are HDB's eligibility conditions and grant rules as its website
+-- states them. They change by announcement, without a Bill or a gazetted instrument, and the site keeps no dated history.
+-- So every figure here is "as published on 12 October 2026" unless the page itself gives a date; the only figure with a
+-- page-given date is the EHG (Singles) "From 20 August 2024". The pages cite no statute. HDB sells flats under Part 4 of
+-- the Housing and Development Act 1959 (row subjects/sg/housing-and-development-act-1959): s 50 (restrictions as to
+-- purchase) and s 55(1), which bars sale "within the prescribed minimum occupation period" without the Board's consent.
+-- This row supplies the period as HDB publishes it; the statutory tests stay in the Act's row.
+--
+-- WHY. Added on 12 October 2026 for three requirements in subjects/sg/requirements.jsonl:
+--   REQ-0007 (cradle-to-grave-simone e050, 2028-02-20): an engaged couple apply for a new 4-room flat under the
+--            Fiance/Fiancee Scheme; are they eligible, and by when must they marry?
+--   REQ-0018 (cradle-to-grave-simone e07c, 2036-08-15): keys collected 15 August 2031 to a new Standard 4-room flat; from
+--            what date may it be sold?
+--   REQ-0274 (cradle-to-grave-jun-hao j074, 2042-02-18): a single citizen of 35 earning $2,800 a month applies for a new
+--            2-room Flexi flat; eligible, and what grant?
+-- The scenario dates are in the future; the encoding answers on the policy as published in October 2026.
+--
+-- NOT ENCODED: resale flats and resale grants; the multi-generation, orphaned-siblings, non-resident-family, seniors and
+-- short-lease 2-room Flexi routes; the $24,000 extended-family ceiling; SPR households (3 years' SPR status) and the
+-- $10,000 premium; a fiance(e) under 21 (who may only be a core occupier); undischarged bankrupts; the resale levy and
+-- subsidy recovery; the HDB Flat Eligibility (HFE) letter process itself; how "income" is assessed (an input); the EHG
+-- (Singles) table for an applicant with a non-resident spouse (the PDF's second page extracts with its columns
+-- misaligned, so it was not transcribed); the pro-rating of the EHG for a lease that does not cover the youngest core
+-- member to age 95; MOP periods excluded because the owners did not live in the flat; what "legal completion" of a new
+-- flat is (taken here as key collection, an inference -- see NOTES.md finding 2).
+--
+-- NAIVE ENCODING. Written in one pass from the pages above, in the style of the writing-l4-rules skill. No pipeline, no
+-- coverage table, no independent test pass, no human gate. See NOTES.md.
+
+§ `HDB flat schemes, as published on 12 October 2026`
+
+DECLARE FlatType IS ONE OF
+    `2-room Flexi`
+    `3-room`
+    `4-room`
+    `5-room`
+    `3Gen`
+    `executive`
+
+-- Page (4): a new flat is Standard, Plus or Prime; "unclassified" flats are those sold before the October 2024 sales
+-- exercise and not so classified. Prime includes Prime Location Public Housing (PLH) flats sold before then.
+DECLARE Classification IS ONE OF
+    `Standard`
+    `Plus`
+    `Prime`
+    `unclassified`
+
+§§ `Calendar helpers (no source; the civil calendar)`
+
+-- A date is written as the number yyyymmdd, e.g. 20310815 for 15 August 2031.
+GIVEN y IS A NUMBER, m IS A NUMBER, d IS A NUMBER
+GIVETH A NUMBER
+`the date` y m d MEANS
+    y TIMES 10000 PLUS m TIMES 100 PLUS d
+
+GIVEN y IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a leap year` y IF
+        (y MODULO 4 EQUALS 0 AND (NOT (y MODULO 100 EQUALS 0)))
+    OR  y MODULO 400 EQUALS 0
+
+GIVEN y IS A NUMBER, m IS A NUMBER
+GIVETH A NUMBER
+`the days in month` y m MEANS
+    IF m EQUALS 2
+    THEN IF `is a leap year` y THEN 29 ELSE 28
+    ELSE IF m EQUALS 4 OR m EQUALS 6 OR m EQUALS 9 OR m EQUALS 11
+         THEN 30
+         ELSE 31
+
+§§ `Common conditions for a new flat from HDB (pages (1) and (2))`
+
+-- Private residential property: every applicant and occupier "Must not own or have an interest in" any local or overseas
+-- private residential property, and must not have disposed of one in the 30 months before the HFE letter application,
+-- counted from the legal completion date of the disposal. Page (2)'s worked example: disposal on 1 July 2024, HFE letter
+-- application on or after 1 January 2027.
+GIVETH A NUMBER
+`the private property wait in months` MEANS 30
+
+GIVEN `owns private residential property` IS A BOOLEAN,
+      `has disposed of private residential property` IS A BOOLEAN,
+      `months since that disposal` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the private property condition is met` IF
+        (NOT `owns private residential property`)
+    AND (    (NOT `has disposed of private residential property`)
+          OR `months since that disposal` AT LEAST `the private property wait in months`)
+
+-- Non-residential property: the household may own or have an interest in up to 1 at the HFE letter application.
+GIVEN `non-residential properties owned` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the non-residential property condition is met` IF
+    `non-residential properties owned` AT MOST 1
+
+§§ `The Fiance/Fiancee Scheme, new flat (page (1))`
+
+-- Flat type: "Up to a 5-room flat". A 3Gen flat goes through the multi-generation route instead.
+GIVEN f IS A FlatType
+GIVETH A BOOLEAN
+DECIDE `a fiance couple may apply for the flat type` f IF
+    CONSIDER f
+        WHEN `2-room Flexi` THEN TRUE
+        WHEN `3-room` THEN TRUE
+        WHEN `4-room` THEN TRUE
+        WHEN `5-room` THEN TRUE
+        OTHERWISE FALSE
+
+-- Monthly household income ceiling (total income of all persons in the HFE letter application), new flats:
+--   2-room Flexi (99-year lease): $8,000;
+--   3-room: $16,000 or $8,000 "depending on project" (the sales-launch press release says which);
+--   4- and 5-room: $16,000.
+-- As published on 12 October 2026; no effective date given. 0 means no new flat of that type under this scheme.
+GIVEN f IS A FlatType, `the 3-room project has the $8,000 ceiling` IS A BOOLEAN
+GIVETH A NUMBER
+`the family income ceiling for a new flat` f `the 3-room project has the $8,000 ceiling` MEANS
+    CONSIDER f
+        WHEN `2-room Flexi` THEN 8000
+        WHEN `3-room` THEN IF `the 3-room project has the $8,000 ceiling` THEN 8000 ELSE 16000
+        WHEN `4-room` THEN 16000
+        WHEN `5-room` THEN 16000
+        OTHERWISE 0
+
+-- Citizenship: "Be a Singapore Citizen (SC)" and include at least 1 other SC or SPR. Age: at least 21 (both, for both to
+-- be applicants). Previous subsidies: a household with a core member who has taken 2 housing subsidies may not buy from
+-- HDB; one subsidy makes a second-timer, who pays a resale levy but may apply.
+GIVEN `citizens among the couple` IS A NUMBER,
+      `permanent residents among the couple` IS A NUMBER,
+      `age of the elder` IS A NUMBER,
+      `age of the younger` IS A NUMBER,
+      `household monthly income` IS A NUMBER,
+      `flat type` IS A FlatType,
+      `the 3-room project has the $8,000 ceiling` IS A BOOLEAN,
+      `owns private residential property` IS A BOOLEAN,
+      `has disposed of private residential property` IS A BOOLEAN,
+      `months since that disposal` IS A NUMBER,
+      `non-residential properties owned` IS A NUMBER,
+      `most housing subsidies taken by a core member` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the couple may apply under the Fiance Fiancee Scheme` IF
+        `a fiance couple may apply for the flat type` `flat type`
+    AND `citizens among the couple` AT LEAST 1
+    AND `citizens among the couple` PLUS `permanent residents among the couple` AT LEAST 2
+    AND `age of the elder` AT LEAST 21
+    AND `age of the younger` AT LEAST 21
+    AND `household monthly income` AT MOST `the family income ceiling for a new flat` `flat type` `the 3-room project has the $8,000 ceiling`
+    AND `the private property condition is met` `owns private residential property` `has disposed of private residential property` `months since that disposal`
+    AND `the non-residential property condition is met` `non-residential properties owned`
+    AND `most housing subsidies taken by a core member` AT MOST 1
+
+-- Solemnisation: "You need to solemnise your marriage within 3 months from the completion of the flat purchase". HDB "may
+-- request" a copy of the marriage certificate; a marriage registered overseas must be shown by a copy of its certificate
+-- within the same 3 months.
+GIVETH A NUMBER
+`the months allowed to solemnise the marriage` MEANS 3
+
+-- The last day to solemnise, given the completion date (y m d) of the flat purchase. ENCODER'S CONVENTION, not HDB's: the
+-- same day of the month 3 months on, or the last day of that month if it is shorter.
+GIVEN y IS A NUMBER, m IS A NUMBER, d IS A NUMBER
+GIVETH A NUMBER
+`the last day to solemnise the marriage` y m d MEANS
+    IF m PLUS `the months allowed to solemnise the marriage` GREATER THAN 12
+    THEN `the date` (y PLUS 1) (m PLUS 3 MINUS 12) (`the smaller of` d (`the days in month` (y PLUS 1) (m PLUS 3 MINUS 12)))
+    ELSE `the date` y (m PLUS 3) (`the smaller of` d (`the days in month` y (m PLUS 3)))
+
+GIVEN a IS A NUMBER, b IS A NUMBER
+GIVETH A NUMBER
+`the smaller of` a b MEANS
+    IF a AT MOST b THEN a ELSE b
+
+§§ `The Single Singapore Citizen Scheme, new flat (page (2))`
+
+-- A single is a Singapore citizen who is unmarried, widowed or divorced. New flat: a 2-room Flexi flat only; SC; "At least
+-- 35 years old" (the age-21 route for widows and orphans is for resale flats only); household income ceiling for a 2-room
+-- Flexi flat (99-year lease) $8,000; only first-timers ("Only first-timer core member may qualify"); the property
+-- conditions as for families.
+GIVETH A NUMBER
+`the singles minimum age for a new flat` MEANS 35
+
+GIVETH A NUMBER
+`the singles income ceiling for a new 2-room Flexi flat` MEANS 8000
+
+GIVEN `is a citizen` IS A BOOLEAN,
+      `is married` IS A BOOLEAN,
+      age IS A NUMBER,
+      `household monthly income` IS A NUMBER,
+      `flat type` IS A FlatType,
+      `owns private residential property` IS A BOOLEAN,
+      `has disposed of private residential property` IS A BOOLEAN,
+      `months since that disposal` IS A NUMBER,
+      `non-residential properties owned` IS A NUMBER,
+      `housing subsidies taken` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the single may apply for a new flat` IF
+        `is a citizen`
+    AND (NOT `is married`)
+    AND age AT LEAST `the singles minimum age for a new flat`
+    AND (CONSIDER `flat type`
+            WHEN `2-room Flexi` THEN TRUE
+            OTHERWISE FALSE)
+    AND `household monthly income` AT MOST `the singles income ceiling for a new 2-room Flexi flat`
+    AND `the private property condition is met` `owns private residential property` `has disposed of private residential property` `months since that disposal`
+    AND `the non-residential property condition is met` `non-residential properties owned`
+    AND `housing subsidies taken` EQUALS 0
+
+-- Page (2): for a new flat bought by singles, an additional $15,000 is "incorporated into the price of the booked flat".
+GIVETH A NUMBER
+`the additional amount payable by singles for a new flat` MEANS 15000
+
+§§ `The Enhanced CPF Housing Grant (Singles), new flat (page (3))`
+
+-- "From 20 August 2024" first-timer singles may get up to $60,000; two or more singles up to $120,000 in all. The page
+-- gives no earlier table, so the amounts below are for an HFE letter application on or after that date only.
+GIVEN `HFE application date` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the published EHG table applies` `HFE application date` IF
+    `HFE application date` AT LEAST 20240820
+
+-- Eligibility for a single buying a flat from HDB: first-timer, aged 35 or more, buying alone or with other first-timer
+-- single citizens; has worked continuously for at least 12 months (the 12-month period ends 2 months before the HFE letter
+-- application) and is working at the application; average gross monthly household income over the months worked in that
+-- period not above $4,500 (alone) or $9,000 (with other singles); remaining lease more than 20 years; the property
+-- conditions as for the flat.
+GIVETH A NUMBER
+`the EHG income ceiling for a single alone` MEANS 4500
+
+GIVETH A NUMBER
+`the EHG income ceiling for two or more singles` MEANS 9000
+
+GIVEN `is a first-timer` IS A BOOLEAN,
+      age IS A NUMBER,
+      `buying with other singles` IS A BOOLEAN,
+      `worked continuously for 12 months and working at application` IS A BOOLEAN,
+      `average monthly household income` IS A NUMBER,
+      `remaining lease in years` IS A NUMBER,
+      `the property conditions are met` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the single qualifies for the EHG` IF
+        `is a first-timer`
+    AND age AT LEAST 35
+    AND `worked continuously for 12 months and working at application`
+    AND `average monthly household income` AT MOST
+            (IF `buying with other singles`
+             THEN `the EHG income ceiling for two or more singles`
+             ELSE `the EHG income ceiling for a single alone`)
+    AND `remaining lease in years` GREATER THAN 20
+    AND `the property conditions are met`
+
+-- The PDF, page 1 ("single applicant/ single child aged 35 or above buying with parents"): the grant by the single's
+-- average monthly income. Bands of $250 from $750 to $4,500; nothing above $4,500.
+GIVEN income IS A NUMBER
+GIVETH A NUMBER
+`the EHG for a single alone` income MEANS
+    IF income AT MOST 750 THEN 60000
+    ELSE IF income AT MOST 1000 THEN 55000
+     ELSE IF income AT MOST 1250 THEN 52500
+      ELSE IF income AT MOST 1500 THEN 47500
+       ELSE IF income AT MOST 1750 THEN 45000
+        ELSE IF income AT MOST 2000 THEN 40000
+         ELSE IF income AT MOST 2250 THEN 35000
+          ELSE IF income AT MOST 2500 THEN 32500
+           ELSE IF income AT MOST 2750 THEN 27500
+            ELSE IF income AT MOST 3000 THEN 25000
+             ELSE IF income AT MOST 3250 THEN 20000
+              ELSE IF income AT MOST 3500 THEN 15000
+               ELSE IF income AT MOST 3750 THEN 12500
+                ELSE IF income AT MOST 4000 THEN 10000
+                 ELSE IF income AT MOST 4250 THEN 5000
+                  ELSE IF income AT MOST 4500 THEN 2500
+                   ELSE 0
+
+-- The PDF, page 3 ("two or more first-timer singles"): the grant for the household by its average monthly income. Bands
+-- of $500 from $1,500 to $9,000. Up to 2 singles each receive a share (page (3)).
+GIVEN income IS A NUMBER
+GIVETH A NUMBER
+`the EHG for two or more singles` income MEANS
+    IF income AT MOST 1500 THEN 120000
+    ELSE IF income AT MOST 2000 THEN 110000
+     ELSE IF income AT MOST 2500 THEN 105000
+      ELSE IF income AT MOST 3000 THEN 95000
+       ELSE IF income AT MOST 3500 THEN 90000
+        ELSE IF income AT MOST 4000 THEN 80000
+         ELSE IF income AT MOST 4500 THEN 70000
+          ELSE IF income AT MOST 5000 THEN 65000
+           ELSE IF income AT MOST 5500 THEN 55000
+            ELSE IF income AT MOST 6000 THEN 50000
+             ELSE IF income AT MOST 6500 THEN 40000
+              ELSE IF income AT MOST 7000 THEN 30000
+               ELSE IF income AT MOST 7500 THEN 25000
+                ELSE IF income AT MOST 8000 THEN 20000
+                 ELSE IF income AT MOST 8500 THEN 10000
+                  ELSE IF income AT MOST 9000 THEN 5000
+                   ELSE 0
+
+-- The grant a single receives: nil unless eligible and the published table applies.
+GIVEN `is eligible` IS A BOOLEAN, `HFE application date` IS A NUMBER, `buying with other singles` IS A BOOLEAN,
+      `average monthly household income` IS A NUMBER
+GIVETH A NUMBER
+`the EHG (Singles) for the household` `is eligible` `HFE application date` `buying with other singles` `average monthly household income` MEANS
+    IF `is eligible` AND `the published EHG table applies` `HFE application date`
+    THEN IF `buying with other singles`
+         THEN `the EHG for two or more singles` `average monthly household income`
+         ELSE `the EHG for a single alone` `average monthly household income`
+    ELSE 0
+
+§§ `The minimum occupation period of a new flat (page (4))`
+
+-- Page (4): an unclassified or Standard flat, 5 years; a Plus or Prime flat, 10 years; a flat bought under the Fresh Start
+-- Housing Scheme, 20 years. Until the MOP ends the owners may not sell on the open market, rent out the whole flat, apply
+-- for an HFE letter, or acquire private property. As published on 12 October 2026; no effective date given.
+GIVEN c IS A Classification, `bought under the Fresh Start Housing Scheme` IS A BOOLEAN
+GIVETH A NUMBER
+`the minimum occupation period in years` c `bought under the Fresh Start Housing Scheme` MEANS
+    IF `bought under the Fresh Start Housing Scheme`
+    THEN 20
+    ELSE CONSIDER c
+            WHEN `Plus` THEN 10
+            WHEN `Prime` THEN 10
+            OTHERWISE 5
+
+-- The MOP "starts from the legal completion date of your flat purchase". For a new flat this encoding takes that to be
+-- key collection (an inference; NOTES.md finding 2). The first day the flat may be sold on the open market is the
+-- anniversary of completion that many years on. ENCODER'S CONVENTION, not HDB's: from 29 February, in a year that is not
+-- a leap year, the first day is 1 March.
+GIVEN y IS A NUMBER, m IS A NUMBER, d IS A NUMBER, c IS A Classification, `bought under the Fresh Start Housing Scheme` IS A BOOLEAN
+GIVETH A NUMBER
+`the first day the flat may be sold on the open market` y m d c `bought under the Fresh Start Housing Scheme` MEANS
+    IF m EQUALS 2 AND d EQUALS 29 AND (NOT (`is a leap year` (y PLUS `the minimum occupation period in years` c `bought under the Fresh Start Housing Scheme`)))
+    THEN `the date` (y PLUS `the minimum occupation period in years` c `bought under the Fresh Start Housing Scheme`) 3 1
+    ELSE `the date` (y PLUS `the minimum occupation period in years` c `bought under the Fresh Start Housing Scheme`) m d
+
+-- Whether, on a given date (yyyymmdd), the MOP has ended. Assumes no excluded period (the MOP excludes time when the owners
+-- did not live in the flat; not encoded).
+GIVEN y IS A NUMBER, m IS A NUMBER, d IS A NUMBER, c IS A Classification, `bought under the Fresh Start Housing Scheme` IS A BOOLEAN, `the day asked` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the MOP has ended` y m d c `bought under the Fresh Start Housing Scheme` `the day asked` IF
+    `the day asked` AT LEAST `the first day the flat may be sold on the open market` y m d c `bought under the Fresh Start Housing Scheme`
