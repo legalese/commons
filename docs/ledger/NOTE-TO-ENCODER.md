@@ -2,6 +2,8 @@
 
 From Michael, 10 October 2026. Read this before the next encoding.
 
+**Ledgers per jurisdiction.** Singapore's ledger is `subjects/sg/requirements.jsonl`; Western Australia's, opened 13 October 2026, is `subjects/au/wa/requirements.jsonl`. Pass the file to the checker: `python docs/ledger/check-ledger.py subjects/au/wa/requirements.jsonl`. What follows was written for Singapore and applies to each.
+
 **From now on, take your encoding priority from the requirement ledger**, not from `sg-candidates.json` or the tier list on its own. The ledger is one file, `subjects/sg/requirements.jsonl`, one JSON object per line, described in [`LEDGER.md`](LEDGER.md) and validated by `python docs/ledger/check-ledger.py`, which also prints the open queue in the order you should work it.
 
 ## What is in it now

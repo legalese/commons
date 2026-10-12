@@ -6,7 +6,9 @@ pattern, minLength, minimum, items, nested properties — the subset the schema 
 dependency on a jsonschema package); unique ids; every named subject directory exists; a
 superseded entry names an existing id; a satisfied entry has a resolution.
 
-Usage:  python docs/ledger/check-ledger.py [subjects/sg/requirements.jsonl]
+Usage:  python docs/ledger/check-ledger.py [subjects/<jurisdiction>/requirements.jsonl]   (default: subjects/sg)
+A subject slug is looked up in the ledger's own jurisdiction folder; a slug containing "/" is a path from
+subjects/, so a Western Australian entry can name a Commonwealth Act as au/fair-work-act-2009.
 Exit code 1 if any line fails.
 """
 import json
@@ -89,7 +91,10 @@ def main():
             ids[eid] = n
             for slug in (e.get("instrument", {}).get("subject"), e.get("instrument", {}).get("parent_subject"),
                          e.get("attach_to", {}).get("subject")):
-                if slug and not os.path.isdir(os.path.join(jurisdiction_dir, slug)):
+                # a bare slug is in the ledger's own jurisdiction; a slug with a "/" is a path from subjects/
+                # (e.g. a WA entry naming the Commonwealth's "au/fair-work-act-2009")
+                where = os.path.join(ROOT, "subjects", slug) if slug and "/" in slug else os.path.join(jurisdiction_dir, slug or "")
+                if slug and not os.path.isdir(where):
                     errors.append(f"subject directory not found: {slug}")
             if e.get("status") == "satisfied" and not e.get("resolution", {}).get("commit"):
                 errors.append("satisfied without resolution.commit")

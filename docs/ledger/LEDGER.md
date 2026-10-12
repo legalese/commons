@@ -2,9 +2,15 @@
 
 One file, across every Act: the questions the simulated Singapore asked that the encoding library could not answer. The simulation writes to it when adjudication runs out of law, proceeds on a declared assumption, and taints the trace. The encoding agent (for now, a person) reads from the top of it. An entry is closed when the run that raised it replays without tainting at that point.
 
-- The ledger: [`subjects/sg/requirements.jsonl`](../../subjects/sg/requirements.jsonl), one JSON object per line, append-only except for status changes.
+- The ledgers, one per jurisdiction: [`subjects/sg/requirements.jsonl`](../../subjects/sg/requirements.jsonl) (Singapore) and [`subjects/au/wa/requirements.jsonl`](../../subjects/au/wa/requirements.jsonl) (Western Australia, opened 13 October 2026). One JSON object per line, append-only except for status changes.
 - The schema: [`ledger.schema.json`](ledger.schema.json), JSON Schema 2020-12.
-- The checker: `python docs/ledger/check-ledger.py` validates every line, checks ids are unique and subjects exist, and prints the open queue ranked.
+- The checker: `python docs/ledger/check-ledger.py [ledger]` validates every line, checks ids are unique and subjects exist, and prints the open queue ranked. With no argument it checks Singapore's.
+
+## One ledger per jurisdiction
+
+Each jurisdiction keeps its own ledger beside its subjects, with the same schema, the same kinds and the same lifecycle. Ids restart at `REQ-0001` in each file; to refer across jurisdictions, prefix the folder, as in `au/wa:REQ-0001`.
+
+A subject slug is looked up in the ledger's own folder. A slug containing a `/` is a path from `subjects/`. That matters in a federation: a Western Australian life meets Commonwealth law (tax, superannuation, Centrelink, workplace relations) as often as state law, so a WA entry may name `au/fair-work-act-2009`. Which layer governs is itself part of the question; when the answer is "the Commonwealth's", the entry still lives in the WA ledger, because that is the life that raised it.
 
 The ledger is one file rather than one per subject because the encoding agent ranks across Acts, and because a single requirement often names more than one subject (two rows that disagree, or a regulation under one Act that another Act's row needs). Each subject's `NOTES.md` may point at its entries by id; the ledger does not point back.
 
