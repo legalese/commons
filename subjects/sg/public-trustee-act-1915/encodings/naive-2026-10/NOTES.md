@@ -9,7 +9,8 @@ session). No pipeline, no coverage table, no independent test pass, no human gat
 Act 25 of 2021 (wef 1 April 2022) and Act 31 of 2022 (wef 1 November 2022)
 annotated.
 
-**Checks:** one case file, 54 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** two case files, 92 assertions satisfied (54 in `pta-cases-trusts.l4`, 38 in
+`pta-cases-small-estates.l4`), 0 errors, 0 warnings.
 
 ## Why this Act, and why scoped
 
@@ -87,3 +88,43 @@ others (s 13(7)). Asserted.
 - The income formula in s 12A(2) is garbled in the text deposit (the fraction is
   split across lines) and was not encoded; the PDF should be checked before it is.
 - No case law on s 17 or s 22 was searched.
+
+## Small estates (added 12 October 2026 for REQ-0279)
+
+Module `pta-small-estates.l4`, cases `pta-cases-small-estates.l4`. Source: Act s 6 and the
+Public Trustee Rules (R 1, informal consolidation in force from 1 April 2022), deposited at
+`registers/source-bundle/PTA1915-R1.txt`.
+
+1. **The answer: no, not under s 6(1). The prescribed amount is $5,000, not $50,000.**
+   Rule 7A reads: "For the purposes of section 6(1) of the Act, the prescribed amount is
+   $5,000." (inserted by S 864/2014 wef 31 December 2014). The figure was read in the .txt
+   deposit and again in a fresh `pdftotext` extraction of the deposited PDF; both give
+   "$5,000", and the heading and text of rule 9(1) ("Estate less than $5,000") repeat it, so
+   this is not a garbled extraction. The ledger's expected $50,000 is not what the deposited
+   Rules say. An intestate estate of $38,000 is not "less than the prescribed amount", so
+   the Public Trustee has neither the duty nor (on this route) the power to take it on
+   application under s 6(1), and rule 9(1) says it "shall refuse the application".
+2. **"Less than" is strict.** An estate of exactly $5,000 is outside; $4,999.99 is inside.
+   The test is the "gross capital value", proved "to the satisfaction of the Public Trustee".
+3. **Within the limit the duty is mandatory, with three outs.** The Public Trustee "must
+   administer" if the applicant could apply to court for an administration order, the
+   beneficiaries appear to be "persons of small means", and it sees no "good reason for
+   refusing". "Small means" and "good reason" are not defined; they are inputs.
+4. **"Without a grant" is an inference.** s 6(2) vests the trust property in the Public
+   Trustee "by virtue of this Act" on its signed and sealed declaration. The Act never says
+   "without a grant"; reading the vesting as dispensing with probate or letters is labelled
+   an inference in the module.
+5. **The court route has no value limit.** Under s 6(6), on administration proceedings
+   already instituted, the court may order the Public Trustee to administer where the small
+   value makes it more economical or it is "expedient" for any other reason, after
+   considering the Public Trustee's views (s 6(7)); s 6(8) then treats it as if the
+   undertaking under s 6(2) had been given. That is the only route under s 6 for $38,000, and
+   it needs a court.
+6. **What the full answer needs from elsewhere.** The ledger's "$50,000" probably comes from a
+   different instrument (an inference: perhaps the Public Trustee's administration of small
+   estates under the Probate and Administration Act or related rules, none of which was read
+   here). The Intestate Succession Act decides who takes the $38,000. A refusal under rule 9
+   does not stop the Public Trustee acting under other powers if duly appointed (rule 9(3)).
+   No case law on "small means" or "good reason" was searched.
+7. The earlier module `pta-trusts.l4` keeps its own s 6(1) rule with the amount as a parameter
+   (its cases use $50,000 as an illustrative figure); it was not rewritten.
