@@ -7,7 +7,7 @@ pass, no human gate.
 **Edition:** 2020 Revised Edition, informal consolidation (amendments to Act 31
 of 2023, Act 5 of 2025 and Act 16 of 2026).
 
-**Checks:** two case files, 149 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** three case files, 190 assertions satisfied, 0 errors, 0 warnings (90 + 59 + 41).
 
 ## Why this Act, and why scoped
 
@@ -115,3 +115,60 @@ continues even if they come back on a visit pass (s 11(1C)). Asserted.
 - **No case law was searched.** Sentencing practice on s 15 and s 57 is extensive.
 - Finding 1 should be read with current administrative practice on HIV, which this
   row does not have.
+
+## A citizen's spouse: passes and permanent residence (added 12 October 2026 for REQ-0286)
+
+Module `imm-spouse-passes-and-pr.l4`, cases `imm-cases-spouse-passes-and-pr.l4` (41 assertions; the first six are the
+requirement's own question). The question (Haziq scenario, event h033) asks on what basis a citizen's Malaysian spouse is
+given a long-term visit pass, and on what basis and after how long she may be granted permanent residence. "She" is read
+as the Malaysian spouse.
+
+### 1. The Act does not answer the first half: the long-term visit pass is not in it
+
+The Act never mentions a long-term visit pass, a spouse's pass or any class of pass. s 2 defines "pass" only as "a pass
+issued under the regulations entitling the holder thereof to remain, or enter and remain, temporarily in Singapore", and
+s 55(1)(c) leaves "passes (including classes of passes)", their issue, validity, conditions and cancellation to
+regulations. The basis of an LTVP is therefore the Immigration Regulations (not retrieved) and ICA's practice under them.
+The ledger's assumption ("LTVP as a citizen's spouse") may be right as practice, but nothing in the deposit says so.
+Asserted only as far as the Act goes: the instrument is the s 55 regulations, and a pass is never permanent.
+
+### 2. Permanent residence: an entry permit the Controller *may* issue, with no period and no spousal criterion
+
+s 10(1): "A non-citizen who wishes to be a permanent resident of Singapore must apply for an entry permit in such form and
+manner as the Controller requires." s 10(2): on that application "and on payment of the prescribed fee, the Controller
+**may** issue" it. s 2: a "permanent resident of Singapore" is "the holder of a valid entry permit". The grant is
+discretionary in every case and of right in none. Asserted: the Malaysian spouse and an unmarried foreigner on the same
+facts get the same footing (`discretionary`), and twenty years of marriage does not make it `as of right`.
+
+### 3. "After how long": the Act states no period
+
+No minimum residence, marriage length or other qualifying time appears in s 10 or anywhere else in the Act. The encoding
+records the Act's minimum as 0 years; that is a statement about the statute, not about how long ICA in fact takes or
+expects. The ledger's "published framework" is policy, not law, and is not in the deposit.
+
+### 4. What else the Act does say about the spouse
+
+- **Entry (ss 6(1)(c), 7(1)):** the citizen needs no permit or pass; the spouse must hold her own valid pass (or permit).
+- **Prohibited immigrants (s 8):** marriage exempts the spouse from nothing. Class (a) catches a person unable to show
+  means of support for self and dependants or definite employment, or likely to become a charge on the public. A
+  prohibited immigrant may enter only on a pass issuable to prohibited immigrants under the regulations (s 8(2)(b)). If
+  she held an entry permit while a prohibited immigrant, s 14(3) says the Controller "must cancel" it (inference: so it
+  would not be issued).
+- **Visas (ss 9B, 9C, 10(2)):** a non-citizen needs a Singapore visa to travel unless her passport is from a country the
+  Minister has approved. Whether Malaysia is approved is not in the Act. If a visa is needed, the Controller **must**
+  grant one with the entry permit, valid until the permit is cancelled. A visa is not permission to enter (s 9C(1)).
+- **Conditions (s 10(3) to (4A)):** the Controller may impose conditions on the entry permit at issue and vary them at any
+  time, "whether or not" entitled to cancel; notice must be given individually, or for a class by publication on a
+  prescribed website or in the Gazette where individual notice is impracticable.
+- **s 12 does not help:** it endorses a *wife* on the holder's own permit, pass or certificate. A citizen husband
+  ordinarily holds none, and a citizen wife cannot endorse a husband (finding 7 above).
+- **s 57C(6):** a pass and an entry permit for the spouse (or her child or parent) are each an "immigration advantage",
+  so a marriage made to obtain one is within the marriage-of-convenience offence (finding 6 above).
+- **Cancellation of the pass** is by the regulations (s 55(1)(c)(i)), not s 14, which speaks of permits and certificates.
+
+### 5. What a full answer needs
+
+The Immigration Regulations (the long-term visit pass class, its eligibility, conditions and cancellation, and the
+prescribed fees for passes and entry permits); the Minister's list of visa-exempt countries under s 9B(2); and ICA's
+published criteria for spouses of citizens (LTVP and PR), which are policy. No case law was searched; s 39A in any event
+excludes judicial review except on procedure.
