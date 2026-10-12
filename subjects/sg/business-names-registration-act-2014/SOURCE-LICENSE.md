@@ -9,7 +9,7 @@ Legislation Division of the Attorney-General's Chambers of Singapore ("AGC").
   grant in [SSO's Terms of Use](https://sso.agc.gov.sg/Terms-of-Use) cl.13,
   subject to the conditions reproduced below. AGC may modify or revoke that
   permission at any time without notice (cl.14).
-- **Retrieved**: 2026-10-01, from https://sso.agc.gov.sg/Act/BNRA2014
+- **Retrieved**: PDF created 2026-09-30, downloaded by hand from https://sso.agc.gov.sg/Act/BNRA2014 (`source/BNRA2014.pdf`; see `source/PROVENANCE.md`).
 - **Excluded from the grant**: graphics and images on SSO, which may not be
   reproduced without AGC's prior written permission (cl.6).
 
@@ -27,12 +27,19 @@ Legislation Division of the Attorney-General's Chambers of Singapore ("AGC").
 - **No suggestion of endorsement** (cl.13(c)(i)): nothing in this repository
   conveys that AGC or SSO is associated or affiliated with, or endorses, this
   work or its producers.
-- **Extraction window** (cl.13(d)(i)): the automated extraction that produced
-  this file was carried out between 3 a.m. and 7 a.m. Singapore Time, and was
-  rate-limited to SSO's published crawl-delay.
+- **Extraction window** (cl.13(d)(i)): not engaged. The PDF was downloaded by hand from SSO
+  through an ordinary browser session, not extracted through automated means, so the
+  3 a.m. to 7 a.m. condition does not apply to it.
 
 ## Status of the text (cl.8)
 
 SSO reproduces an **unofficial** consolidation. It is not the authoritative text
 of Singapore legislation, and s 48 of the Interpretation Act 1965 does not apply
 to anything copied from it.
+
+## A second rendering of the same consolidation
+
+`registers/source-bundle/BNRA2014-2026-10-01.pdf` and `.txt` are the Revised Edition PDF of the same Act, retrieved from
+https://sso.agc.gov.sg/Act/BNRA2014 on 2026-10-01 by the bulk SSO fetch, with its metadata in
+`BNRA2014-2026-10-01.meta.json`. Same terms as above. They came from a duplicate subject folder,
+`business-names-registration-act-2014`, merged into this one on 2026-10-12; the encoding still cites `source/BNRA2014.txt`.
