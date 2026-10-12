@@ -7,8 +7,9 @@ pass, no human gate.
 **Edition:** 2020 Revised Edition, informal consolidation in force from
 5 December 2025.
 
-**Checks:** `l4 run ea-part2-cases.l4` — 52 assertions satisfied, 0 errors,
-0 warnings.
+**Checks:** `l4 run` on each of `ea-part2-cases.l4`, `ea-parts-3-and-4-cases.l4`,
+`ea-parts-5-to-12-cases.l4` and `ea-part12-retrenchment-cases.l4` — 289 assertions
+satisfied (52 + 116 + 78 + 43), 0 errors, 0 warnings (12 October 2026).
 
 ## Scope
 
@@ -196,6 +197,54 @@ Nothing in the encoding can decide whether such a notification exists.
 Industrial work as such is not forbidden to a 15-year-old; a declaration is
 needed. Contrast s 68, where the prohibition on employing a child is general and
 the exceptions are narrow.
+
+## Retrenchment information (added 12 October 2026 for REQ-0289)
+
+`ea-part12-retrenchment.l4` and `ea-part12-retrenchment-cases.l4` (43 assertions).
+The question (Haziq scenario, event h065): an employer with 40 employees retrenches
+12 in one exercise — must it notify the Commissioner, within what time, and with what
+particulars?
+
+1. **The Act answers "only if a Gazette notification says so", and nothing more.**
+   s 96A(1): the Commissioner "may, by notification in the Gazette, require any
+   employer, or any employer in a class of employers" to furnish information on a
+   retrenchment "at such time and in such form as may be specified in the
+   notification". s 96A(2): every employer "to whom the notification applies must
+   comply". With a notification that applies to the employer and covers the
+   retrenchment, the 40/12 employer must report; without one, the Act alone imposes
+   no duty. Both asserted.
+2. **The ledger's expectation is not in the Act.** "5 or more retrenched within
+   6 months" and "within 5 working days" appear nowhere in the deposit. Nor does any
+   workforce size. If those figures are right they come from the Commissioner's
+   notification (or from policy), which was not retrieved; the encoding reports that
+   the time, the form, the particulars, and which employers and which retrenchments
+   are covered are all fixed by the notification, and asserts that a covered
+   4-person firm retrenching 1 owes the same duty as the 40-person firm. Hence
+   "addresses", not "satisfies".
+3. **Section number confirmed.** s 96A is where the ledger put it (body of the
+   deposit, Part 12, annotated [55/2018]).
+4. **A failure is a civil contravention, not an offence.** s 126A(aa) declares it a
+   civil contravention; s 101(3) takes it out of the s 101 returns offence. s 126B(1)(aa)
+   lets an authorised officer issue a contravention notice for "each occasion" of
+   failure concerning "any one employee", so 12 unreported retrenchments are 12
+   occasions. The amount is "prescribed" and was not retrieved; the cases use an
+   illustrative 1,000 and say so.
+5. **The returns secrecy rule does not protect it.** s 102(5) disapplies s 102(1)-(4)
+   for information furnished under s 96A.
+6. **The criminal route is one step removed.** An authorised officer may give
+   directions under s 126D(1); disobeying one without reasonable excuse is an offence
+   (fine up to $5,000, imprisonment up to 6 months, or both, s 126D(2)). Enforcement
+   of a penalty is stayed during reconsideration or appeal (s 126C(6)).
+7. **Seafarers and domestic workers are not "employees"** (s 2(1)), so their
+   retrenchment is outside s 96A. Inference: whether the 12 count at all depends on
+   that definition; the Act does not say whether a notification counts heads across
+   them.
+8. **Needs, for a full answer:** the Commissioner's Gazette notification under
+   s 96A(1) (thresholds, deadline, form, particulars); the regulations prescribing the
+   administrative penalty amounts and the s 126C periods. Retrenchment benefit is
+   untouched here: s 45 (no entitlement under 2 years' continuous service) is in
+   `ea-part4-hours.l4`, and this encoding found no provision fixing the amount of
+   a benefit (not searched beyond s 45).
 
 ## What would still need doing
 
