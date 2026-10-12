@@ -7,7 +7,7 @@ pass, no human gate.
 **Edition:** 2020 Revised Edition, informal consolidation carrying amendments to
 Act 24 of 2025 in force from 6 May 2026.
 
-**Checks:** four case files, 335 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** five case files, 400 assertions satisfied, 0 errors, 0 warnings (335 in the four original files, 65 in `coa-cases-formation-shares-buyback.l4`).
 
 ## Why this part of this Act
 
@@ -264,3 +264,103 @@ This row was encoded against the deposit as it stood before the source refresh: 
 earlier retrieval, still in git at commit da331074. The deposit has since been replaced by the consolidation current as at
 9 October 2026, whose text differs. **The row has not been re-checked against the refreshed text.** Its assertions do not
 read the source, so they still pass; whether the encoded provisions changed is an open question.
+
+## Formation, share issue, controllers, buy-back and the guarantee company (added 12 October 2026 for REQ-0284)
+
+Module `coa-formation-shares-buyback.l4`, cases `coa-cases-formation-shares-buyback.l4` (65 assertions; the first 30 are the
+requirement's own facts). Encoded against the refreshed deposit (version in force from 6 May 2026). The arrangement table at
+the head of the deposit is out of step with the body: it gives s 161 as "Loans and quasi-loans to directors", but the body's
+s 161 is the general meeting's approval of share issues. Every number here was taken from the body.
+
+The question (Haziq scenario, event h042): a person incorporates a private company, allots shares to an investor who then holds
+25%, later buys back a 20% holder's shares, and later still incorporates a company limited by guarantee. What does each step
+require of the directors? Facts assumed for the cases: Haziq is the sole director; the subscribers take 55 (Haziq) and 20
+(Bee) shares of one class; Ivan is issued 25, making 100; Bee's 20 are bought back and cancelled, leaving 80.
+
+1. **The answer, step by step, as far as the Act gives it.**
+   - *Incorporation.* There are no directors until the company exists, so s 19(1) (constitution, first financial year end,
+     fee) falls on the person seeking incorporation. The s 19(2) declaration may be made by a registered qualified individual
+     *or* a person named as director or secretary, so a director need not make it. Each person named as a director must
+     first file a consent to act and statements that he or she is not disqualified or debarred (s 146(1), (1A)). There must be
+     at least one director ordinarily resident in Singapore (s 145(1)), and every director must be a natural person of 18 or
+     over (s 145(2)). The company is private only if it has a share capital and its constitution restricts transfers and caps
+     members at 50 (s 18(1)). Afterwards the directors appoint a secretary (s 171(3)), who cannot be the sole director (s
+     171(1E)), and the office may not be vacant for more than 6 months (s 171(4A)). A company incorporated on or after the
+     s 386AF(14) appointed day keeps its register of registrable controllers *from the day of incorporation* (s 386AF(1A)), and
+     Haziq, at 55 of 75 shares, belongs in it.
+   - *Issuing shares to Ivan.* The directors may not issue shares without the *prior* approval of the company in general
+     meeting, "despite anything in a company's constitution" (s 161(1)). The approval lapses at the earlier of the next AGM's
+     conclusion and the deadline for holding it (s 161(3)), unless the shares are issued under an offer made while it was in
+     force (s 161(4)). An issue without it is void (s 161(6)), and a director who knowingly contravened it can be sued by the
+     company and the allottee for two years (s 161(7)). The private company allots by lodging a return of allotment (s 63(1)),
+     and the allotment takes effect only when the Registrar updates the electronic register of members (s 63(2)).
+   - *Buying back Bee's 20%.* This is a selective off-market purchase (s 76D). The constitution must expressly permit
+     buy-backs (s 76B(1)). The shares must be within the 20% cap (s 76B(3)), and 20 of 100 sits exactly on it. The agreement
+     needs a special resolution on which Bee and her associated persons cast no votes (s 76D(2)), and, because Bee's shares are
+     not the whole class, the prior consent of at least 75% of the other holders of the class (s 76D(2A), added by Act 24 of
+     2025). The notice must give an expiry date no later than the next AGM and state the sources of funds and their effect on
+     the company's finances (s 76D(3)). The agreement must lie open at the registered office for 15 days ending with the
+     meeting, and at the meeting itself (s 76D(7)), unless the resolution is passed by written means (s 76D(4A)). Payment is
+     lawful only if the company is solvent on the date of payment (s 76F(1), (2), (4)). A director who approves the purchase
+     knowing the company is not solvent commits an offence (s 76F(3)). The private company lodges the resolution and a notice
+     of purchase (s 76B(7)), and the purchase takes effect when the register of members is updated (s 76B(8)). The shares are
+     then cancelled unless held in treasury (s 76B(5)).
+   - *Incorporating the company limited by guarantee.* It may not have a share capital (s 17(5)). It therefore cannot be a
+     private company (s 18(1)) and is a public company (s 4(1)). Its constitution must state the guarantee up to a specified
+     amount (s 22(1)(c)) and the number of members it is registering with (s 22(1)(e)), and the company must notify a change
+     in that number within 14 days (s 22(1AA)). Sections 145, 146 and 171 apply as before. Sections 161 and 76B to 76F do not
+     arise, because there are no shares. Its controllers are measured by capital or profits, not shares (Sixteenth Schedule
+     para 3).
+   - *Throughout*, s 157(1): act honestly and use reasonable diligence. A breach carries a fine of up to $20,000, imprisonment
+     of up to 12 months, or both (s 157(3), as amended by Act 24 of 2025 with effect from 6 May 2026). s 157(4) keeps the general law of directors' duties, which
+     is not encoded.
+
+2. **Section 81, named by the ledger, does not reach this company.** Division 4 of Part 4 applies to a "company" as defined in
+   s 79(2), and paragraph (a) of that definition was deleted by Act 2 of 2009. What remains is a body *declared by the Minister
+   by Gazette notification*. So for an ordinary private company, Ivan's 25% is not a substantial shareholding under s 81 at
+   all. Even where Division 4 does apply, the notices under ss 82 to 84 are the *shareholder's* duty, not the directors'.
+   Asserted both ways. The deposit does not say where the listed-company regime went after 2009, and this row did not
+   follow it.
+
+3. **25% is the line that matters, and exactly 25% is below it.** The 25% that does bite is in Part 11A. A significant
+   interest needs *more than* 25% of the shares or votes (Sixteenth Schedule para 2), so Ivan at exactly 25% is not a
+   registrable controller on shares or votes, unless he has significant influence or control under para 1(c), which is a
+   question of fact. **The buy-back then pushes him over without his doing anything:** with Bee's shares cancelled, his 25 of
+   80 shares are 31.25%. The company must now enter him in its register (s 386AF(7)-(9)), and an officer in default commits an
+   offence carrying a fine of up to $25,000 (s 386AF(12)). Asserted. The directors of a company that buys back shares need to
+   recompute every holder's percentage.
+
+4. **Ivan has two vetoes over the buy-back.** Only Haziq's 55 votes and Ivan's 25 count. 55 for and 25 against is 68.75%,
+   below three-fourths (s 184(1)). And under s 76D(2A), with Haziq and Ivan the only other holders of the class, Haziq's
+   consent alone is 50%. "At least 75% of the holders" does not say whether holders are counted by head or by shares held;
+   the encoding counts heads, and on these facts either reading gives the same result. s 76D(2A) applies whenever the shares
+   bought "do not constitute all the shares in that class", so it reaches even a company with a single class of shares.
+   Asserted.
+
+5. **A buy-back needs no solvency statement, only solvency, and its offence is worded differently.** s 76F asks whether the
+   company *is* solvent at the date of payment, on the same three limbs as s 7A(1). There is no directors' statement, unlike
+   ss 70, 76(9A) and 78B to 78C, which use s 7A. The s 76F(3) offence requires knowledge, and its penalty is a fine of up to
+   $100,000 "or" imprisonment of up to 3 years. ss 7A(6) and 157(3) say "or to both"; s 76F(3) does not. The encoding records
+   the words and does not decide whether both may be imposed.
+
+6. **Where an AGM is not required, the Act gives no end date for s 161 approvals or s 76D authorities.** Both run until the
+   next AGM or the date by which it "is required by law to be held". A private company that has dispensed with AGMs under
+   s 175A(1)(a) has no such meeting and no such date. The Act does not say when the approval or the authority ends, so this
+   is left unencoded. The encoding takes the two days as inputs.
+
+7. **Readings made.** In s 20(1), "all matters precedent" is read to include ss 145 and 146. A s 161 approval is read as in
+   force on the day it is given and spent on the day its earlier limit arrives. At exactly 24 months, the s 161(7) period is
+   read as not yet expired. For a guarantee contribution, a member still in membership is read as liable for every debt, and
+   the contribution is the lesser of the amount required and the specified amount. A deemed allotment to subscribers is read
+   as taking effect without a s 63 return.
+
+8. **What the full answer needs beyond the Act:**
+   - the prescribed forms, particulars and fees under ss 19, 63, 76B(7) and 146;
+   - the "prescribed time" and "prescribed manner" for entering and updating the register of controllers (s 386AF(8)); the
+     regulations themselves were not retrieved;
+   - the date of the s 386AF(14) "appointed day". The amendment tags suggest 16 June 2025 ("wef 16/06/2025"), but that is an
+     inference;
+   - the Fourteenth Schedule, for whether a company is outside Part 11A;
+   - any Ministerial declaration under s 79(2), or a s 76B(3) notification changing the 20%;
+   - case law on directors' duties, which s 157(4) preserves, on "significant influence or control" (para 1(c)), and on
+     whether s 76F(3) permits both penalties together.
