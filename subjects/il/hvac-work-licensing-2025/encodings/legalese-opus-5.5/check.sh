@@ -61,4 +61,16 @@ for f in "$DIR"/*.l4; do
 done
 printf '%-40s %7d %9d %7d %8d\n' "TOTAL ($n modules)" "$total_err" "$total_ok" "$total_bad" "$total_ref"
 echo "(a failed assertion is also an error; any other error, or any refused assertion, makes the run red)"
+# The vendored time module must stay byte-identical to the Interpretation Law subject's copy,
+# which is the canonical one: edit it there, then copy it here.
+CANON="$DIR/../../../interpretation-law-1981/encodings/legalese-sonnet-5.5/il-interpretation-time.l4"
+if [ -f "$CANON" ]; then
+  if cmp -s "$DIR/il-interpretation-time.l4" "$CANON"; then
+    echo "il-interpretation-time.l4: identical to the Interpretation Law subject's copy"
+  else
+    echo "il-interpretation-time.l4: WRONG: differs from $CANON"; status=1
+  fi
+else
+  echo "il-interpretation-time.l4: canonical copy not found beside this row; byte-identity not checked"
+fi
 exit $status
