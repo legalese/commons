@@ -3,9 +3,11 @@
 
 Phrases that do not occur are listed with file:line.  The SimpLEX screenshot is an image, so its words
 cannot be found in any text input: they are transcribed by eye and are expected to be listed here."""
-import re, glob, pathlib
+import os, re, glob, pathlib
 
 W = pathlib.Path(__file__).resolve().parent.parent
+INP = pathlib.Path(os.environ['INPUTS']) if 'INPUTS' in os.environ else W / 'inputs'
+DEP = pathlib.Path(os.environ['DEPOSIT']) if 'DEPOSIT' in os.environ else (W / 'deposit' if (W / 'deposit').exists() else W)
 BIDI = re.compile('[‎‏‪-‮⁦-⁩﻿️]')
 
 _src = (pathlib.Path(__file__).resolve().parent / 'quote.py').read_text(encoding='utf-8').split('def main')[0]
@@ -30,11 +32,16 @@ def load(f):
     return norm(t)
 
 
-corpus = ' '.join(load(f) for f in glob.glob(str(W / 'inputs' / '*.txt')) + glob.glob(str(W / 'inputs' / '*.wiki')))
+# The vendored module's comments quote Interpretation Law ss 3, 8, 10, 21 and Ordinance s 17, texts that are not
+# among this row's inputs.  They count as a corpus for the Hebrew that this row's own modules copy from them,
+# which proves the copy is faithful to the module and nothing more (the module quotes unofficial Wikisource
+# copies; only s 10 of the Law has been compared with the gazette).  The module itself is not checked here.
+VENDORED = 'il-interpretation-time.l4'
+corpus = ' '.join(load(f) for f in glob.glob(str(INP / '*.txt')) + glob.glob(str(INP / '*.wiki')) + [str(DEP / VENDORED)])
 HEB = re.compile(r'[א-ת][א-ת"״\'׳\s\-–־.,:;()/\d]*[א-ת"״\'׳\d)]')
 bad = []
 total = 0
-for f in sorted(glob.glob(str(W / 'deposit' / '*.l4'))):
+for f in sorted(g for g in glob.glob(str(DEP / '*.l4')) if not g.endswith(VENDORED)):
     for i, line in enumerate(open(f, encoding='utf-8').read().split('\n'), 1):
         pieces = []
         for m in HEB.finditer(line):

@@ -34,3 +34,10 @@ The sha256 values are of the files as supplied in `inputs/`.
 | `fig4-en-p28-28.png` | the English page of the paper carrying the figure caption (page 379 of the journal) | aid | `9b3328a07fb55af03e5a72c97747ca705c56a2b412ae77b989d81612131ccb31` |
 
 Fetch dates and original URLs are not recorded in the inputs beyond the links the two Wikisource files carry (above), so none is asserted here.
+
+## Added 2026-10-13: the vendored module
+
+`il-interpretation-time.l4` in this directory is a byte-identical copy of the module of the same name in the Interpretation Law row (`subjects/il/interpretation-law-1981/encodings/legalese-sonnet-5.5/`), made for the date correction recorded in `NOTES.md` section 11.
+Its comments quote Interpretation Law 5741-1981 ss 3, 8, 10 and 21 and Interpretation Ordinance [New Version] s 17 in Hebrew, from the Wikisource consolidations that row fetched.
+The terms those texts carry are that row's question, recorded in its own `SOURCE-LICENSE.md`; they are undetermined here for the same reason as above, and no grant is claimed.
+This encoding's own modules quote the Interpretation Ordinance s 17 once, in a comment in `hvac-fees-regs.l4`, from the same copy.

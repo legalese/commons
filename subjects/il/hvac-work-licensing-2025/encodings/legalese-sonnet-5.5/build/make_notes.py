@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Generate deposit/NOTES.md.  The coverage counts, the file list and the check.sh output are computed
-here, not typed, so that they cannot drift from the files they describe."""
-import pathlib, subprocess, collections, datetime
+"""Generate NOTES.md.  The coverage counts, the file list and the check.sh output are computed
+here, not typed, so that they cannot drift from the files they describe.
+
+Sections 1 to 9 come from notes_template.md; section 10 (added by the launching session, holding the
+AS-RUN numbers) is spliced in verbatim from section10.md and is never regenerated; section 11 (the date
+correction) comes from notes_section11.md; section 12 (added by the launching session) is spliced in verbatim from section12.md.  DEPOSIT (default: the row directory) is where NOTES.md is
+written and where check.sh is run."""
+import os, re, pathlib, subprocess, collections, datetime, hashlib
 
 W = pathlib.Path(__file__).resolve().parent.parent
-DEP = W / 'deposit'
+DEP = pathlib.Path(os.environ['DEPOSIT']) if 'DEPOSIT' in os.environ else (W / 'deposit' if (W / 'deposit').exists() else W)
 L4 = '/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4'
 
 # (id, provision, heading / what it is, disposition, where)
@@ -17,6 +22,8 @@ M = {
     's23': 'hvac-law-s2-s3-licensing-duty.l4',
     's79': 'hvac-law-s7-s9-exemption-and-temporary-licence.l4',
     's1617': 'hvac-law-s16-s17-duties-of-licensee.l4',
+    'interp': 'il-interpretation-time.l4',
+    'cal': 'hvac-tests-calendars.l4',
 }
 E, I, X, R = 'encoded', 'inert', 'out-of-scope', 'refused'
 rows = []
@@ -84,8 +91,8 @@ row('Fees Regs reg 3(b), as made and as amended', 'the Director General publishe
 row('Fees Regs reg 3, draft', 'only the heading "עדכוני אגרות" is shown; the body is not', R, M['fees'] + ' (named refusals)')
 row('Fees Regs reg 4, as made and as amended', 'full payment as a condition of a licence, exam or objection', E, M['fees'])
 row('Fees Regs reg 4, draft', 'text not shown; encoded from the SimpLEX panel gloss, for exams only', E, M['fees'] + ' (fork F-D1)')
-row('Fees Regs reg 5, as made', 'commencement seven days from publication', E, M['fees'])
-row('Fees Regs reg 5, as amended', '12383 has no commencement provision', R, M['fees'] + ' (named refusal)')
+row('Fees Regs reg 5, as made', 'commencement seven days from publication, counted under Interpretation Law s 10(a)', E, M['fees'])
+row('Fees Regs reg 5, as amended', '12383 has no commencement provision; the day is the day of publication under Interpretation Ordinance s 17 (fork F-N1)', E, M['fees'])
 row('Fees Regs reg 5, draft', 'not shown', R, M['fees'] + ' (named refusal)')
 row('Fees Regs signature blocks and footnotes (all vintages)', 'dates of signature, footnote citations', I, '(none)')
 # ---- the SimpLEX panel
@@ -103,15 +110,44 @@ COUNTS = ', '.join('%s: %d' % (k, count[k]) for k in (E, I, R, X)) + ', deferred
 
 # ---- file list
 files = sorted(p.name for p in DEP.glob('*.l4'))
-FLIST = '\n'.join('- `%s` (%d lines)' % (f, len((DEP / f).read_text(encoding='utf-8').split('\n'))) for f in files)
+VENDORED = 'il-interpretation-time.l4'
+VSHA = hashlib.sha256((DEP / VENDORED).read_bytes()).hexdigest()
+def _flist_line(f):
+    n = len((DEP / f).read_text(encoding='utf-8').split('\n'))
+    note = ' -- vendored, not generated: a byte-identical copy of the Interpretation row\'s module (sha256 `%s`)' % VSHA if f == VENDORED else ''
+    return '- `%s` (%d lines)%s' % (f, n, note)
+FLIST = '\n'.join(_flist_line(f) for f in files)
 
 # ---- check.sh output, computed
 chk = subprocess.run([str(DEP / 'check.sh'), str(DEP)], capture_output=True, text=True).stdout.rstrip()
 
 tot = [l for l in chk.split('\n') if l.startswith('TOTAL')][0].split()
 NASSERT = str(int(tot[-3]) + int(tot[-2]) + int(tot[-1]))
-tpl = (W / 'build' / 'notes_template.md').read_text(encoding='utf-8')
-out = (tpl.replace('@@TABLE@@', TABLE).replace('@@COUNTS@@', COUNTS).replace('@@FILES@@', FLIST)
-          .replace('@@CHECK@@', chk).replace('@@NASSERT@@', NASSERT).replace('@@DATE@@', datetime.date.today().isoformat()))
+def _count(f, pat):
+    return len(re.findall(pat, (DEP / f).read_text(encoding='utf-8'), re.M))
+NTRACE = sum(_count(f, r'^#TRACE') for f in files)
+SUB = {
+    '@@TABLE@@': TABLE, '@@COUNTS@@': COUNTS, '@@FILES@@': FLIST, '@@CHECK@@': chk, '@@NASSERT@@': NASSERT,
+    '@@NTRACE@@': str(NTRACE), '@@VSHA@@': VSHA, '@@DATE@@': datetime.date.today().isoformat(),
+    '@@N_LAW@@': str(_count('hvac-tests-law.l4', r'^#ASSERT')), '@@N_FEES@@': str(_count('hvac-tests-fees.l4', r'^#ASSERT')),
+    '@@N_SIMPLEX@@': str(_count('hvac-tests-simplex.l4', r'^#ASSERT')), '@@N_RED@@': str(_count('hvac-tests-red.l4', r'^#ASSERT')),
+    '@@N_CAL@@': str(_count('hvac-tests-calendars.l4', r'^#ASSERT')),
+}
+def fill(t):
+    for k, v in SUB.items():
+        t = t.replace(k, v)
+    left = re.findall(r'@@[A-Z_]+@@', t)
+    assert not left, 'unfilled placeholders: %s' % left
+    return t
+sec19 = fill((W / 'build' / 'notes_template.md').read_text(encoding='utf-8'))
+sec10 = (W / 'build' / 'section10.md').read_text(encoding='utf-8')
+sec11 = fill((W / 'build' / 'notes_section11.md').read_text(encoding='utf-8'))
+assert sec10.startswith('## 10. Provenance of this run')
+out = sec19.rstrip('\n') + '\n\n' + sec10.rstrip('\n') + '\n\n' + sec11.rstrip('\n') + '\n'
+if (W / 'build' / 'section12.md').exists():
+    sec12 = (W / 'build' / 'section12.md').read_text(encoding='utf-8')
+    assert sec12.startswith('## 12. Verification of the date correction')
+    out = out.rstrip('\n') + '\n\n' + sec12.rstrip('\n') + '\n'
 (DEP / 'NOTES.md').write_text(out, encoding='utf-8')
+assert sec10.rstrip('\n') in out
 print('wrote NOTES.md;', COUNTS)
