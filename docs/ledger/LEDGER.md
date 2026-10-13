@@ -2,7 +2,7 @@
 
 One file, across every Act: the questions the simulated Singapore asked that the encoding library could not answer. The simulation writes to it when adjudication runs out of law, proceeds on a declared assumption, and taints the trace. The encoding agent (for now, a person) reads from the top of it. An entry is closed when the run that raised it replays without tainting at that point.
 
-- The ledgers, one per jurisdiction: [`subjects/sg/requirements.jsonl`](../../subjects/sg/requirements.jsonl) (Singapore) [`subjects/au/wa/requirements.jsonl`](../../subjects/au/wa/requirements.jsonl) (Western Australia) and [`subjects/au/requirements.jsonl`](../../subjects/au/requirements.jsonl) (the Commonwealth of Australia), both opened 13 October 2026. One JSON object per line, append-only except for status changes.
+- The ledgers, one per jurisdiction: [`subjects/sg/requirements.jsonl`](../../subjects/sg/requirements.jsonl) (Singapore) [`subjects/au/wa/requirements.jsonl`](../../subjects/au/wa/requirements.jsonl) (Western Australia) [`subjects/au/requirements.jsonl`](../../subjects/au/requirements.jsonl) (the Commonwealth of Australia) and [`subjects/nz/requirements.jsonl`](../../subjects/nz/requirements.jsonl) (New Zealand), all three opened 13 October 2026. One JSON object per line, append-only except for status changes.
 - The schema: [`ledger.schema.json`](ledger.schema.json), JSON Schema 2020-12.
 - The checker: `python docs/ledger/check-ledger.py [ledger]` validates every line, checks ids are unique and subjects exist, and prints the open queue ranked. With no argument it checks Singapore's.
 
