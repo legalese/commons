@@ -79,4 +79,4 @@ LQA mode reads the same traces afterwards and writes its own incidents elsewhere
 
 ## Seed entries
 
-The first entries were written by hand from Simone's life (`subjects/sg/scenarios/cradle-to-grave-simone/GAPS.md`), one or two per kind, so that the shape of a good brief is on the record before the simulation writes any. Their `raised.by` is `hand` and their `closes_when` names the scenario event rather than a seed; when the replay exists, the entries should be re-raised by it and these superseded.
+The first entries were written by hand from Simone's life (the workbench's `scenarios/sg/cradle-to-grave-simone/GAPS.md`), one or two per kind, so that the shape of a good brief is on the record before the simulation writes any. Their `raised.by` is `hand` and their `closes_when` names the scenario event rather than a seed; when the replay exists, the entries should be re-raised by it and these superseded.

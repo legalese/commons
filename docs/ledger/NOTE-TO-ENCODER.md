@@ -8,7 +8,7 @@ From Michael, 10 October 2026. Read this before the next encoding.
 
 ## What is in it now
 
-Eighteen entries, all at **priority 1**, written by hand from the cradle-to-grave scenario at `subjects/sg/scenarios/cradle-to-grave-simone/`. Each is a brief: the Act or instrument, the provision, a question that stands alone, the facts the simulation had, the answer it expected, and where the encoding attaches (enlarge an existing row's scope, resolve a fork, add a row, add a subject, or write an "as published" policy row). Priority 1 means it was raised by a life, and it skips the queue.
+Eighteen entries, all at **priority 1**, written by hand from the cradle-to-grave scenario at `scenarios/sg/cradle-to-grave-simone/` in the workbench repository. Each is a brief: the Act or instrument, the provision, a question that stands alone, the facts the simulation had, the answer it expected, and where the encoding attaches (enlarge an existing row's scope, resolve a fork, add a row, add a subject, or write an "as published" policy row). Priority 1 means it was raised by a life, and it skips the queue.
 
 ## What you should add
 
@@ -36,4 +36,4 @@ The checker requires the `subject` slug to be a directory under `subjects/sg/`; 
 
 ## What not to do
 
-Do not edit the scenario files under `subjects/sg/scenarios/`; they are the simulation's regression suite and are changed by the scenario's author. Do not change ids, delete entries, or re-prioritise another entry to move your own up. Do not write rules in anything but L4: the simulation calls the rows directly, and anything encoded elsewhere is invisible to it.
+The scenario files live in the workbench repository under `scenarios/`, not here; they are the simulation's regression suite and are changed by the scenario's author. Do not change ids, delete entries, or re-prioritise another entry to move your own up. Do not write rules in anything but L4: the simulation calls the rows directly, and anything encoded elsewhere is invisible to it.
