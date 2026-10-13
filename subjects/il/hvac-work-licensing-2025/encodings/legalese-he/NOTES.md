@@ -62,10 +62,12 @@ for what that binary could and could not check):
 
 | module | assertions, `../legalese` | assertions, here | `Result:` blocks |
 | --- | --- | --- | --- |
-| law | 27 | 27 | 31, identical |
+| law | 32 | 32 | 36, identical |
 | fees | 18 | 18 | 26, identical |
 | tests-simplex | 63 | 63 | 75, identical |
-| tests-generated | 343 | 343 | 343, identical |
+| tests-generated | 366 | 366 | 366, identical |
+
+**Updated 2026-10-13.** The law row's date logic was corrected against Interpretation Law s.10 (see `../legalese/NOTES.md` section 9), this row was regenerated with `source/revoice.py`, and the table above now shows the new counts (law 32, generated 366). The regeneration added one parameter, `ימי מנוחה` (days of rest, a list of dates), and one `@desc` gloss for it; that Hebrew was written by the launching session and is not reviewed. The module `il-interpretation-time.l4` is vendored here byte-identical and kept in English (see `glossary.json`, `keep`). The section 3 rendering check fails under the current `l4` for the reason given in `../legalese/NOTES.md`; it failed identically before this change.
 
 The counts rose on 2026-09-22 when the two enacted texts of regulation 2 moved onto the
 rule-effective-time axis: `hvac-fees.l4` gained the boundary assertions, `hvac-tests-simplex.l4`

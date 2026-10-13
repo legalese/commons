@@ -48,4 +48,18 @@ for m in hvac-law hvac-fees; do
   printf '%-30s nlg: %s lines en, %s lines with Hebrew under --lang he\n' "$m.l4" "$en" "$he"
   [ "$he" -gt 0 ] || status=1
 done
+
+# The vendored time module must stay byte-identical to the Interpretation Law subject's copy,
+# which is the canonical one: edit it there, then copy it here.
+CANON="../../../interpretation-law-1981/encodings/legalese-sonnet-5.5/il-interpretation-time.l4"
+if [ -f "$CANON" ]; then
+  if cmp -s il-interpretation-time.l4 "$CANON"; then
+    printf '%-30s identical to the Interpretation Law subject'"'"'s copy\n' il-interpretation-time.l4
+  else
+    printf '%-30s WRONG: differs from %s\n' il-interpretation-time.l4 "$CANON"; status=1
+  fi
+else
+  printf '%-30s canonical copy not found beside this row; byte-identity not checked\n' il-interpretation-time.l4
+fi
+
 exit $status

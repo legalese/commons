@@ -23,8 +23,8 @@ consolidated text carries only the principal Regulations' own reg. 5 and does no
 
 ## `gen-tests.py` — the tier-3 test generator
 
-`gen-tests.py` writes `../encodings/legalese/hvac-tests-generated.l4`, which holds **343
-assertions** over `hvac-law.l4` and `hvac-fees.l4`.
+`gen-tests.py` writes `../encodings/legalese/hvac-tests-generated.l4`, which holds **366
+assertions** over `hvac-law.l4` and `hvac-fees.l4` (343 until 2026-10-13, when the Interpretation Law's s.10 moved the boundary of the Second Schedule's three-year window and rest-day cases were added).
 
 Regenerate it from the repository root of this subject:
 

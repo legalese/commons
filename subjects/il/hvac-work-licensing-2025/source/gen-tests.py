@@ -202,11 +202,28 @@ def route_is_time_limited(prior: str) -> bool:
     return prior == "qualifying experience"
 
 
+def last_day_of_three_years(commencement: datetime.date,
+                            rest: frozenset = frozenset()) -> datetime.date:
+    """The last day of "three years from the commencement day".
+
+    Interpretation Law 5741-1981 s.10(b): a period of years after an event ends on
+    the day whose number is the event day's (clamped to the month's length), and
+    that day is INSIDE the period.  s.10(c): rest, recess and holiday days count
+    in a period unless they are its LAST days, so the end moves on to the first
+    day that is not one (reading A of fork F3 in subjects/il/interpretation-law-1981;
+    that fork is open).  The days of rest are an input, never computed.
+    """
+    last = add_years(commencement, 3)
+    while last in rest:
+        last += datetime.timedelta(days=1)
+    return last
+
+
 def route_open(prior: str, commencement: datetime.date,
-               application: datetime.date) -> bool:
+               application: datetime.date, rest: frozenset = frozenset()) -> bool:
     if not route_is_time_limited(prior):
         return True
-    return application < add_years(commencement, 3)
+    return application <= last_day_of_three_years(commencement, rest)
 
 
 class Applicant:
@@ -227,7 +244,8 @@ def personal_conditions(a: Applicant) -> bool:
 
 
 def training_condition(a: Applicant, grade: str, commencement: datetime.date,
-                       application: datetime.date) -> bool:
+                       application: datetime.date,
+                       rest: frozenset = frozenset()) -> bool:
     """s.6(a)(4): the completion certificate (a), OR -- limbs (b) and (c), both
     "in accordance with the conditions in the Second Schedule" -- any row of the
     Schedule that one of the applicant's prior qualifications opens, still open
@@ -235,7 +253,7 @@ def training_condition(a: Applicant, grade: str, commencement: datetime.date,
     if a.holds_certificate:
         return True
     for prior in a.priors:
-        if not route_open(prior, commencement, application):
+        if not route_open(prior, commencement, application, rest):
             continue
         kind, _hours = schedule_requires(grade, prior)
         if kind == "no further requirements":
@@ -247,9 +265,10 @@ def training_condition(a: Applicant, grade: str, commencement: datetime.date,
 
 def registrar_shall_grant(a: Applicant, grade: str,
                           commencement: datetime.date,
-                          application: datetime.date) -> bool:
+                          application: datetime.date,
+                          rest: frozenset = frozenset()) -> bool:
     return (personal_conditions(a)
-            and training_condition(a, grade, commencement, application))
+            and training_condition(a, grade, commencement, application, rest))
 
 
 # ---------------------------------------------------------------------------
@@ -285,6 +304,13 @@ def num(x) -> str:
 
 def ymd(d: datetime.date) -> str:
     return f"YMD {d.year} {d.month} {d.day}"
+
+
+def rest_literal(rest: frozenset) -> str:
+    """The `days of rest` argument as an L4 list literal."""
+    if not rest:
+        return "EMPTY"
+    return "(LIST " + ", ".join(ymd(d) for d in sorted(rest)) + ")"
 
 
 def bracketed(d: datetime.date) -> str:
@@ -666,10 +692,19 @@ COMMENCEMENT = datetime.date(2025, 7, 16)
 APPLICATION_DATES = (
     (datetime.date(2025, 7, 16), "the commencement day itself"),
     (datetime.date(2026, 1, 1), "well inside the three years"),
-    (datetime.date(2028, 7, 15), "the last day the experience route is open"),
-    (datetime.date(2028, 7, 16), "three years to the day: the experience route has closed"),
+    (datetime.date(2028, 7, 15), "the day before the last day"),
+    (datetime.date(2028, 7, 16), "three years to the day: the last day the experience route is open (s.10(b))"),
+    (datetime.date(2028, 7, 17), "the day after: the experience route has closed"),
     (datetime.date(2030, 1, 1), "long after it closed"),
 )
+
+REST_CALENDARS = (
+    frozenset({datetime.date(2028, 7, 16)}),
+    frozenset({datetime.date(2028, 7, 16), datetime.date(2028, 7, 17)}),
+    frozenset({datetime.date(2028, 7, 15), datetime.date(2028, 7, 16)}),
+)
+
+REST_DATES = tuple(datetime.date(2028, 7, d) for d in (14, 15, 16, 17, 18, 19))
 
 DANA = Applicant(
     name="Dana, who relies on her experience",
@@ -725,7 +760,11 @@ def family_schedule(e: Emitter):
          "",
          "The experience-only rows of the Schedule (Part A item 2, Part B item 4, Part C",
          "item 5) each stand for three years from the commencement day and no longer.",
-         "The commencement day is 16 July 2025, so those rows close on 16 July 2028.",
+         "The commencement day is 16 July 2025. s.10(b) of the Interpretation Law ends a",
+         "period of years on the day whose number is the event day's, and that last day is",
+         "INSIDE the period: the rows are open through 16 July 2028 and closed from 17 July.",
+         "s.10(c): days of rest that are the last days of the period are not counted, so",
+         "the window runs on to the first day that is not one (the days of rest are an input).",
          "Nothing else in the Schedule is time-limited.",
          "",
          "Three applicants, alike in everything the Schedule does not reach."])
@@ -743,7 +782,18 @@ def family_schedule(e: Emitter):
         for application, note in APPLICATION_DATES:
             expected = registrar_shall_grant(DANA, grade, COMMENCEMENT, application)
             e.assert_bool(f"`the registrar shall grant the licence` `{DANA.name}` {grade_lit(grade)} "
-                          f"{bracketed(COMMENCEMENT)} {bracketed(application)}", expected)
+                          f"{bracketed(COMMENCEMENT)} {bracketed(application)} EMPTY", expected)
+    e.blank()
+    e.comment("s.10(c): were the last day a day of rest, it would not count. The calendars below")
+    e.comment("are ILLUSTRATIONS, not any Israeli calendar: one rest day on the last day, and")
+    e.comment("two in a row (reading A of fork F3 in the Interpretation Law subject, open).")
+    for rest in REST_CALENDARS:
+        e.blank()
+        e.comment("Days of rest: " + ", ".join(d.isoformat() for d in sorted(rest)) + ".")
+        for application in REST_DATES:
+            e.assert_bool(f"`the registrar shall grant the licence` `{DANA.name}` `Grade 1` "
+                          f"{bracketed(COMMENCEMENT)} {bracketed(application)} {rest_literal(rest)}",
+                          registrar_shall_grant(DANA, "Grade 1", COMMENCEMENT, application, rest))
     e.blank()
     e.comment("Noa's route is the five-unit certificate, which the Schedule does not")
     e.comment("time-limit. Part B item 5 asks 50 hours of her (item 1(2) would ask nothing,")
@@ -751,7 +801,7 @@ def family_schedule(e: Emitter):
     e.comment("those dates, including the ones on which Dana's route has closed.")
     for application, note in APPLICATION_DATES:
         e.assert_bool(f"`the registrar shall grant the licence` `{NOA.name}` `Grade 2` "
-                      f"{bracketed(COMMENCEMENT)} {bracketed(application)}",
+                      f"{bracketed(COMMENCEMENT)} {bracketed(application)} EMPTY",
                       registrar_shall_grant(NOA, "Grade 2", COMMENCEMENT, application))
     e.blank()
     e.comment("Part A, however, has no row for the five-unit certificate at all: it is the")
@@ -760,14 +810,14 @@ def family_schedule(e: Emitter):
     e.comment("sunset, and does not move when the sunset passes.")
     for application, note in APPLICATION_DATES:
         e.assert_bool(f"`the registrar shall grant the licence` `{NOA.name}` `Grade 1` "
-                      f"{bracketed(COMMENCEMENT)} {bracketed(application)}",
+                      f"{bracketed(COMMENCEMENT)} {bracketed(application)} EMPTY",
                       registrar_shall_grant(NOA, "Grade 1", COMMENCEMENT, application))
     e.blank()
     e.comment("Part C does have a row for her, asking 240 hours of supplementary studies,")
     e.comment("which she has done -- so Grade 3 is open although Grade 1 is not.")
     for application, note in APPLICATION_DATES[:2]:
         e.assert_bool(f"`the registrar shall grant the licence` `{NOA.name}` `Grade 3` "
-                      f"{bracketed(COMMENCEMENT)} {bracketed(application)}",
+                      f"{bracketed(COMMENCEMENT)} {bracketed(application)} EMPTY",
                       registrar_shall_grant(NOA, "Grade 3", COMMENCEMENT, application))
     e.blank()
     e.comment("The Second Schedule is a route, not the only one. Once Noa holds the")
@@ -775,7 +825,7 @@ def family_schedule(e: Emitter):
     e.comment("the Grade 1 door opens.")
     for application, note in (APPLICATION_DATES[0], APPLICATION_DATES[-1]):
         e.assert_bool(f"`the registrar shall grant the licence` `{NOA_WITH_CERTIFICATE.name}` `Grade 1` "
-                      f"{bracketed(COMMENCEMENT)} {bracketed(application)}",
+                      f"{bracketed(COMMENCEMENT)} {bracketed(application)} EMPTY",
                       registrar_shall_grant(NOA_WITH_CERTIFICATE, "Grade 1", COMMENCEMENT, application))
 
 

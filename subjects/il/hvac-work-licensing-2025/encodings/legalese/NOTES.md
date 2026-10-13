@@ -1,6 +1,15 @@
 # NOTES — il/hvac-work-licensing-2025, encoding row `legalese`
 
-## Verification status, 2026-09-26
+## Verification status, 2026-10-13 (after the date-logic correction; see section 9)
+
+Run with the `l4` at `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-41dd7a67/bin/l4` (built 2026-10-13 16:13 from l4-ide `unstable`, sha256 `2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187`), `JL4_LIBRARY_PATH` unset.
+
+- `check.sh` exits 0 in both rows. All assertions are satisfied: `hvac-law.l4` 32, `hvac-fees.l4` 18, `hvac-tests-simplex.l4` 63, `hvac-tests-generated.l4` 366. `hvac-tests-simplex-red.l4` fails on exactly 3, as intended.
+- The twin's section 4 cross-row comparison passes: every `Result:` block is identical after unmapping.
+- The twin's section 3 rendering check does NOT pass under this binary, in either module, and it failed identically on the committed twin before this correction. The 2026-09-26 binary printed dates as `` `YMD` with y, m and d ``; this one prints `1 July 2025`, so the check finds English month names in the Hebrew default rendering. The correction adds two words to the law module's list, `list` and `of`, from the new `LIST OF DATE` parameter. This is a renderer-version artifact of the check, not a change in the encoding's answers.
+- `projections/` in both rows was NOT regenerated, so it still shows the 2026-09-26 text.
+
+## Verification status, 2026-09-26 (as deposited; the numbers are superseded by the block above)
 
 Run with an `l4` built from l4-ide `unstable` at `64c71638b` (macOS arm64), with
 `JL4_LIBRARY_PATH` unset so the binary used its own embedded stdlib, on the deposited files
@@ -150,8 +159,11 @@ answering `NOTHING`, `NOTHING` and `JUST 198`.
   It is rejected because reg. 5 fixed the commencement of the Regulations it belongs to, an
   event completed in July 2025; the amending regulations are a separate חיקוק with their own
   commencement, and s.17 supplies it. The fork is recorded rather than buried because the
-  Interpretation Ordinance is a general statute not deposited in `source/`, so the reader
-  cannot check the step from the sources in this subject alone.
+  step rests on a general statute. As of 2026-10-13 that statute is deposited: s.17 is encoded
+  in `subjects/il/interpretation-law-1981` and vendored here as `il-interpretation-time.l4`,
+  whose `Ordinance s 17 — …` function now computes the amendment's day; and the Ordinance's
+  official text is in that subject's `source/official/2_lsr_vn_525666.pdf`, whose s.17
+  reads as the Wikisource text this note quotes.
   `hvac-tests-simplex.l4` § "Tier 2 — the day the amendment commenced" asserts 3, 4 and
   11 May explicitly: those are the assertions that go red if F6 is ever resolved the other
   way, and `source/gen-tests.py` recomputes the date rather than copying it, so the
@@ -159,6 +171,10 @@ answering `NOTHING`, `NOTHING` and `JUST 198`.
 - **s.6(a)(4)(b), the registry limb.** The chapeau subjects all three limbs to the Second Schedule ("והכול בהתאם לתנאים שבתוספת השנייה"), so registry membership is encoded as a column A entry and not as a free-standing route: a registered technician reaches Grade 2 through Part B item 2 (with the completion course) or item 6 (50 hours without it), a registered practical engineer reaches Grade 3 through Part C items 2 and 7, and Part A has no registry row at all.
 - **s.6(a)(3)** (unfit by reason of a conviction "in the registrar's opinion") and **s.9(a)(3)** (recognised by the registrar as of repute) are discretionary; both are inputs, not decided.
 - **s.3(b)** exemptions by ministerial order are an input; no order has been located.
+
+- **F7, s.10(c) and a period of validity (added 2026-10-13).** Interpretation Law s.10(c) says rest, recess and holiday days at the END of a period are not counted. This row applies it to the one period in which something is done within a window, the three-year Second Schedule window (`the route is open on the application date` takes a list of rest days). It does NOT apply it to the five-year validity of s.8 or the temporary licence of s.9, because that would extend a licence's validity when its last day is a day of rest, a consequence the text does not obviously intend. The words of (c) are unqualified, so this is a choice and not a finding; the Interpretation subject's F2 reads (c) as reaching months and years. A domain expert should say. The deontic `WITHIN 30` of s.16 takes no calendar, so (c) is not applied to it either.
+- **F8, the commencement day is the last day of the period (added 2026-10-13).** The Law and the Regulations commence "three months from publication", "eighteen months from the commencement day" and "seven days from publication". s.10 fixes the LAST DAY of such a period; this row takes the provision to commence on that day (14 April 2025, 16 January 2027, 16 July 2025), as the Wikisource note on s.63(a)(1) does for the Regulations (9 July 2025 plus seven days is 16 July 2025). Whether it commences on the last day or the day after is not settled by s.10; every date in `commencement` rests on it.
+- **F9, the chain of temporary licences (added 2026-10-13).** `the latest day a temporary licence can run to` is three years after the first grant (s.10(b)). That is the end of the third period only if each renewal is granted on the day the previous period ends; s.10(b) puts a period's last day one year after the day of its own event, so a renewal granted the day AFTER pushes the outside date later by a day for each renewal. Which of the two the text means is not stated.
 
 ## 5. Review findings
 
@@ -237,3 +253,27 @@ supported way to fetch and verify one.
 The binary must be at or after l4-ide `unstable` PR #432 (2026-09-19) for `@lang`,
 `@nlg:he` and `--lang`. **Before that, the modules do not even lex** — see the verification
 banner at the top of this file for what could and could not be checked here.
+
+## 9. Date correction, 2026-10-13
+
+**Why.** Interpretation Law 5741-1981 s.10 now exists in this repository as an executable, tested module (`subjects/il/interpretation-law-1981`; its text was checked against the enacted official PDF), and it decides how periods end. This row's date logic was written before it and had to be checked against it.
+
+**What changed.**
+
+- `il-interpretation-time.l4` is vendored into this row, byte-identical to the Interpretation subject's copy, and imported by `hvac-law.l4` and `hvac-fees.l4`. Do not edit the copy.
+- The three-year Second Schedule window (`the route is open on the application date`) ended on 2028-07-15 and now ends on **2028-07-16**: s.10(b) puts the last day of a period of years on the day whose number is the event day's, and that day is inside the period. The rows are open through 16 July 2028 and closed from 17 July.
+- That rule, and the exported `the registrar shall grant the licence` that reaches it, now take a `days of rest` list of dates (s.10(c); fork F7). An empty list reproduces the old behaviour except for the boundary day above.
+- s.8's five years, s.9's three years, s.63's 3 and 18 months, reg. 5's seven days and the 5786 amendment's day (Ordinance s.17) are now computed by the module. Their VALUES did not move.
+- `source/gen-tests.py` was changed the same way and regenerated `hvac-tests-generated.l4`: 343 assertions became 366 (the boundary dates moved, and rest-day cases were added). It is an independent Python reading, and it agrees with the L4 code.
+
+**Expectations that moved.**
+
+| expectation | before | after | cites |
+| --- | --- | --- | --- |
+| the experience route is open on 2028-07-16 | no | **yes** | Interpretation Law s.10(b) |
+| the experience route is open on 2028-07-17 | (not asserted) | no | s.10(b) |
+
+**What the 15 July reading was.** The row ended the window on 15 July 2028 by comparing `LESS THAN` the third anniversary. Nothing in the sources of the time stated the convention; the Interpretation Law does, and it says the anniversary day is inside.
+
+**Not changed, and open.** F3 of the Interpretation subject (what s.10(c) does when several rest days close a period) is open; the rest-day tests here use its reading A and say so. Forks F7 to F9 above are open. `projections/` was not regenerated.
+

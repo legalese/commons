@@ -11,11 +11,11 @@ A row marked `composed` has no counterpart in either instrument and the note say
 
 | provenance | entries |
 | --- | --- |
-| `law` | 72 |
+| `law` | 73 |
 | `schedule` | 24 |
 | `regulations` | 36 |
 | `composed` | 63 |
-| **total** | **195** |
+| **total** | **196** |
 
 Two names are deliberately **not** renamed, because they are not ours: `add years` and `add months`, which the `daydate` library defines.
 
@@ -153,6 +153,7 @@ Two names are deliberately **not** renamed, because they are not ours: `add year
 | `application date` | `מועד הגשת הבקשה` | law | s.9(a)(2) ‘הגשת הבקשה’ |
 | `base index` | `המדד היסודי` | regulations | reg. 3(a) definition, verbatim |
 | `commencement day` | `יום התחילה` | law | s.63(a)(1) (להלן – יום התחילה) |
+| `days of rest` | `ימי מנוחה` | law | Interpretation Law s.10(c) ‘ימי מנוחה, פגרה או שבתון שעל פי חיקוק’; the short form of a list of such days, supplied by the caller. Added 2026-10-13 by the date-logic correction; the Hebrew is not reviewed. |
 | `e` | `המומחה` | law | s.9's מומחה זר |
 | `eighteen` | `שמונהעשר` | law | s.63(b) ‘18 חודשים’. A BARE name, so it is written solid: a space or a maqaf would split it |
 | `fee` | `אגרה` | regulations | reg. 2's word |
@@ -264,7 +265,7 @@ See `NOTES.md` § 4 for the measurement. The Hebrew row therefore keeps Latin fi
 
 ## Prose that is translated, not renamed
 
-`@export` and `@desc` carry sentences, not identifiers, so they are translated whole from the glossary's `prose` map rather than composed out of renamed parts. There are 25 of them.
+`@export` and `@desc` carry sentences, not identifiers, so they are translated whole from the glossary's `prose` map rather than composed out of renamed parts. There are 26 of them.
 
 ## Comments
 
