@@ -1,0 +1,538 @@
+@lang en
+IMPORT prelude
+IMPORT daydate
+IMPORT `il-interpretation-time`
+IMPORT domain
+
+-- g3-training-duty.l4: section 17 of the Regulation of Engagement in Work on Refrigeration or Air-Conditioning
+-- Systems Law 5785-2025: the licensee's continuing training (the Hebrew heading is the plural of "training course").
+-- Written by ENCODER G3.  Imports only prelude, daydate, il-interpretation-time and domain.
+--
+-- What this module decides:
+--   s.17(a)  at least eight hours of qualifying training in the last year of the validity of the licence, and meeting
+--            the requirements of that training (MUST; the hours are summed from the sessions attended).
+--   s.17(b)  the Registrar may require a particular course after consulting the Council; the licensee must attend it.
+--   s.17(c)  the Registrar may extend the validity by up to three months after consulting the Council.
+--   s.17(d)  the duty of (a) and (b) is deemed a licence condition: its breach is the input of IP8 that G1 and G2 consume.
+--   s.17(e)  the Registrar must ensure that the trainings exist and are available.
+--   s.17(f)  the Registrar must publish the trainings a reasonable time before them.
+--
+-- Standard names taken from other groups (PLAN section (c)): the Council's consultation and its validity (IP7) are
+-- FIELDS of the course and of the extension, because each decision has its own consultation; the Registrar's opinions are
+-- fields named `in the Registrar's opinion ...` (IP17); `the Law has commenced for the work on the system` (IP2).
+-- Fork COM: s.63(a) fixes commencement only "for the performance of work on a system"; section 17 is about a licensee's training, so the
+-- input `the Law has commenced for the work on the system` is read as "the Law has commenced for the licensee's work" (trap T20), and passing TRUE
+-- gives the reading with no commencement gate.  The Registrar's duties of (e) and (f) take no gate: they are about the training, not about any work.
+-- The last day of validity is an input date from G2 (IP19); the licence kinds in force are not used here, because the licence
+-- whose last year is counted is the subject of the inputs.
+--
+-- PERIODS (kinds as in the PLAN's section (d)):
+--   P15, kind B: "the last year of the validity", counted BACKWARDS from the end of validity.  Interpretation Law s.10
+--     counts forwards only, so no function of il-interpretation-time is used for it: the window is found by plain comparison
+--     of dates (fork S17-B).
+--   P16, kind Q: "at least eight hours" is a quantity, not a period.
+--   P17, kind N: "a reasonable time" is not a period; it is an input judgement carried as a BOOLEAN, never a number.
+--   P18, kind V: "not exceeding three months" is counted forwards from the end of validity by IL s.10(b) (calendar months),
+--     and IL s.10(c) is NOT applied to it (the brief's ruling 4: a period of validity); the alternative is callable (fork S17-V).
+-- THE UNIT OF EVERY WITHIN IN THIS MODULE IS DAYS, and only this comment says so.
+--
+-- Forks and what the sources do not answer are in FRAGMENT-G3.md; the fork numbers in comments are its.
+
+§ `Chapter 3 (continued): continuing training, section 17`
+
+-- src:144 | {{ח:סעיף|17|חובת השתתפות בהשתלמויות}}
+
+§§ `Nouns of section 17`
+
+-- The acts that section 17 speaks of, named by what is done and not by the subsection.
+@ref s.17 (src:145-150)
+DECLARE `Act under section 17 of the Law` IS ONE OF
+    `complete the eight hours of qualifying training in the last year of validity and meet its requirements`
+    `require the licensee to attend a particular course`
+    `attend the particular course and meet its requirements`
+    `extend the validity of the licence by up to three months`
+    `ensure that the trainings exist and are available`
+    `publish a training on the Ministry website`
+
+-- One session of training the licensee attended: whether it counts towards the eight hours of (a) is a rule over these facts.
+@ref s.17(a) (src:145)
+DECLARE `Training session attended` HAS
+    `the day attended` IS A DATE @desc The day the session was attended
+    `the licence was in force on the day attended` IS A BOOLEAN @desc True if the licence was in force on the day attended; a session before the licence began, or while it was not in force, is not "during its validity" (fork S17-W)
+    `hours attended` IS A NUMBER @desc The length of the session in hours
+    `held under the supervision of the Ministry` IS A BOOLEAN @desc True if the session was under the supervision of the Ministry
+    `conducted by the Registrar or recognised by the Training Division` IS A BOOLEAN @desc True if the Registrar conducted the session or the Training Division recognised it
+    `within the licensee's field of work under the licence` IS A BOOLEAN @desc True if the session is in the licensee's field of work under his licence
+    `held on a date the Registrar directed` IS A BOOLEAN @desc True if the session was held on a date the Registrar directed
+    `attended because the Registrar required that particular course under section 17(b)` IS A BOOLEAN @desc True if the licensee attended this session as the particular course the Registrar required under section 17(b)
+    `the licensee met the requirements of the training` IS A BOOLEAN @desc True if the licensee met the requirements of the training
+
+-- A particular course the Registrar required under (b).  The Council's consultation is IP7: both facts are those of THIS requirement.
+@ref s.17(b) (src:146)
+DECLARE `Particular course required under section 17(b)` HAS
+    `the day of the course` IS A DATE @desc The day of the course the licensee was required to attend
+    `the day notice of the requirement was given` IS A DATE @desc The day notice of the requirement was given to the licensee
+    `the course was conducted by the Registrar or recognised by the Training Division` IS A BOOLEAN @desc True if the Registrar conducted the course or the Training Division recognised it
+    `the Council was consulted about requiring the course` IS A BOOLEAN @desc IP7: True if the Registrar consulted the Council before requiring the course
+    `the Council's advice about requiring the course was validly given` IS A BOOLEAN @desc IP7: True if the Council's advice was validly given (quorum, majority) as section 24 and following require; decided by the Council group
+    `in the Registrar's opinion circumstances justify requiring attendance` IS A BOOLEAN @desc IP17: the Registrar's finding that circumstances justify requiring attendance
+    `in the Registrar's opinion attendance is required to train the licensee and to realise the purposes of the Law` IS A BOOLEAN @desc IP17: the Registrar's finding that attendance is required for the training of the licensee and to realise the purposes of the Law
+    `notice was given a reasonable time before the date of the course` IS A BOOLEAN @desc The judgement that the notice reached the licensee a reasonable time before the date of the course (a standard, not a number)
+    `the licensee attended the course` IS A BOOLEAN @desc True if the licensee attended the course
+    `the licensee met the requirements of the course` IS A BOOLEAN @desc True if the licensee met the requirements of the course
+
+-- An extension of validity under (c).  Three last days are kept apart because the sources do not say how the cap of three
+-- months is counted when an extension has been given before (fork S17-V2).
+@ref s.17(c) (src:147)
+DECLARE `Extension of validity under section 17(c)` HAS
+    `the day of the Registrar's decision` IS A DATE @desc The day the Registrar decided to extend the validity
+    `the last day of validity before any extension under section 17(c)` IS A DATE @desc The last day of validity as the licence was granted or renewed, from the group that decides validity
+    `the last day of validity as it stands when the decision is taken` IS A DATE @desc The last day of validity on the day of the decision; the same as the one before if no extension was given earlier
+    `the last day of validity fixed by the extension` IS A DATE @desc The last day of validity the Registrar fixed by this extension
+    `the licensee had not fulfilled the duty under section 17(a) or (b)` IS A BOOLEAN @desc True if, on the day of the decision, the licensee had not fulfilled the duty to attend training under (a) or (b)
+    `the Council was consulted about the extension` IS A BOOLEAN @desc IP7: True if the Registrar consulted the Council before extending
+    `the Council's advice about the extension was validly given` IS A BOOLEAN @desc IP7: True if the Council's advice was validly given; decided by the Council group
+    `in the Registrar's opinion these are special cases and the circumstances are justified` IS A BOOLEAN @desc IP17: the Registrar's finding of special cases and justified circumstances
+    `the extension is granted so that the licensee can fulfil the duty` IS A BOOLEAN @desc True if the extension was granted for the purpose of fulfilling the duty
+
+-- A training the Registrar runs or the Training Division recognised, for the duty of (f) to publish it.
+@ref s.17(f) (src:150)
+DECLARE `Training offered` HAS
+    `the day of the training` IS A DATE @desc The day of the training
+    `the day it was published on the Ministry website` IS A MAYBE DATE @desc The day the Registrar published the training on the Ministry website; NOTHING if it was not published
+    `the publication was a reasonable time before the training` IS A BOOLEAN @desc The judgement that the publication was a reasonable time before the training (a standard, not a number)
+
+§§ `Named refusals of section 17`
+
+@ref s.17(b) (src:146)
+GIVEN a IS A TYPE
+GIVETH AN a
+`s.17(b) — notice of the requirement was given after the day of the course` MEANS
+    REFUSE "s.17(b): notice of the requirement was given after the day of the course, so no period can be counted to it"
+
+§§ `17(a). The duty to attend eight hours in the last year of validity`
+
+-- src:145 | {{ח:תת|(א)}} בעל רישיון ישתתף במהלך השנה האחרונה לתוקפו של הרישיון, בהשתלמויות בפיקוח המשרד, שערך הרשם או שהאגף להכשרה מקצועית הכיר בהן, בהיקף של שמונה שעות לפחות, בתחום עיסוקו לפי רישיונו, במועדים שעליהם הורה הרשם, ויעמוד בדרישות אותן השתלמויות.
+
+-- "Eight hours at least" (kind Q, a quantity).
+@ref s.17(a) (src:145)
+GIVETH A NUMBER
+`s.17(a) — the hours of training the licensee must attend in the last year of validity` MEANS 8
+
+-- The same day one year earlier, clamped to the last day of the month (29 February has no counterpart in a common year).
+-- This is date construction, not IL s.10 counting: the window is counted BACKWARDS and IL s.10 does not cover that (fork S17-B).
+@ref s.17(a) (src:145)
+GIVEN date IS A DATE
+GIVETH A DATE
+`s.17(a) — the same day one year earlier than` date MEANS
+    YMD (DATE_YEAR date MINUS 1) (DATE_MONTH date) (min (DATE_DAY date) (`Days in month` (DATE_MONTH date) (DATE_YEAR date MINUS 1)))
+
+-- "During the last year of its validity": the days after the anniversary one year before the anchor, up to and including
+-- the closing day, and while the licence was in force (a session before the licence began does not count, fork S17-W: the flag on
+-- the session carries it, so that a licence whose term is shorter than a year, such as a temporary licence, is not credited with training
+-- attended before it began).  Taken (fork S17-A): the anchor is the last day of validity before any extension and the window closes on
+-- the last day as extended, so that what is attended during an extension counts, the extension being "so as to fulfil the duty".
+@ref s.17(a) (src:145)
+GIVEN day IS A DATE
+      anchor IS A DATE
+      closing IS A DATE
+GIVETH A BOOLEAN
+`s.17(a) — the day is in the last year of validity` day anchor closing MEANS
+        `s.17(a) — the same day one year earlier than` anchor LESS THAN day
+    AND day AT MOST closing
+
+-- A session counts towards the eight hours when it is under the Ministry's supervision, conducted by the Registrar or recognised by
+-- the Training Division, in the licensee's field under the licence, on a date the Registrar directed, and in the window.
+-- Taken (fork S17-C): a course required under (b) is "in addition to" the trainings of (a), so it does not count.
+@ref s.17(a) (src:145)
+GIVEN session IS A `Training session attended`
+      anchor IS A DATE
+      closing IS A DATE
+GIVETH A BOOLEAN
+`s.17(a) — the session counts towards the eight hours` session anchor closing MEANS
+        session's `the licence was in force on the day attended`
+    AND session's `held under the supervision of the Ministry`
+    AND session's `conducted by the Registrar or recognised by the Training Division`
+    AND session's `within the licensee's field of work under the licence`
+    AND session's `held on a date the Registrar directed`
+    AND NOT session's `attended because the Registrar required that particular course under section 17(b)`
+    AND `s.17(a) — the day is in the last year of validity` (session's `the day attended`) anchor closing
+
+@ref s.17(a) (src:145)
+GIVEN sessions IS A LIST OF `Training session attended`
+      anchor IS A DATE
+      closing IS A DATE
+GIVETH A NUMBER
+`s.17(a) — the hours counted towards the eight hours` sessions anchor closing MEANS
+    sum (map (GIVEN session YIELD session's `hours attended`)
+             (filter (GIVEN session YIELD `s.17(a) — the session counts towards the eight hours` session anchor closing) sessions))
+
+-- "And shall meet the requirements of those trainings": taken (fork S17-D) to reach every session that counts.
+@ref s.17(a) (src:145)
+GIVEN sessions IS A LIST OF `Training session attended`
+      anchor IS A DATE
+      closing IS A DATE
+GIVETH A BOOLEAN
+`s.17(a) — the licensee met the requirements of every session that counts` sessions anchor closing MEANS
+    all (GIVEN session YIELD session's `the licensee met the requirements of the training`)
+        (filter (GIVEN session YIELD `s.17(a) — the session counts towards the eight hours` session anchor closing) sessions)
+
+@ref s.17(a) (src:145)
+@export Decides whether a licensee attended at least eight hours of qualifying training in the last year of the validity of the licence and met the requirements of that training
+GIVEN sessions IS A LIST OF `Training session attended` @desc Every training session the licensee attended, with the facts that decide whether it counts
+      anchor IS A DATE @desc The last day of validity of the licence before any extension under section 17(c)
+      closing IS A DATE @desc The last day of validity as extended under section 17(c); the same as the anchor if there is no extension
+GIVETH A BOOLEAN
+`s.17(a) — the training duty of section 17(a) was met` sessions anchor closing MEANS
+        `s.17(a) — the hours counted towards the eight hours` sessions anchor closing AT LEAST `s.17(a) — the hours of training the licensee must attend in the last year of validity`
+    AND `s.17(a) — the licensee met the requirements of every session that counts` sessions anchor closing
+
+-- Alternative S17-A: the last year counted back from the EXTENDED last day (the window moves with the extension).
+@ref s.17(a) (src:145)
+GIVEN sessions IS A LIST OF `Training session attended`
+      closing IS A DATE
+GIVETH A BOOLEAN
+`s.17(a) — the training duty was met, the last year counted back from the last day as extended` sessions closing MEANS
+    `s.17(a) — the training duty of section 17(a) was met` sessions closing closing
+
+-- Alternative S17-C: a course required under (b) also counts towards the eight hours.  The session is read as if the Registrar had
+-- not required it under (b); every other fact of the session is kept.
+@ref s.17(a) (src:145)
+GIVEN session IS A `Training session attended`
+GIVETH A `Training session attended`
+`s.17(a) — the session as if no requirement under section 17(b) had been made` session MEANS
+    `Training session attended` WITH
+        `the day attended` IS session's `the day attended`
+        `the licence was in force on the day attended` IS session's `the licence was in force on the day attended`
+        `hours attended` IS session's `hours attended`
+        `held under the supervision of the Ministry` IS session's `held under the supervision of the Ministry`
+        `conducted by the Registrar or recognised by the Training Division` IS session's `conducted by the Registrar or recognised by the Training Division`
+        `within the licensee's field of work under the licence` IS session's `within the licensee's field of work under the licence`
+        `held on a date the Registrar directed` IS session's `held on a date the Registrar directed`
+        `attended because the Registrar required that particular course under section 17(b)` IS FALSE
+        `the licensee met the requirements of the training` IS session's `the licensee met the requirements of the training`
+
+@ref s.17(a) (src:145)
+GIVEN sessions IS A LIST OF `Training session attended`
+      anchor IS A DATE
+      closing IS A DATE
+GIVETH A BOOLEAN
+`s.17(a) — the training duty was met, counting a course required under section 17(b) as well` sessions anchor closing MEANS
+    `s.17(a) — the training duty of section 17(a) was met`
+        (map `s.17(a) — the session as if no requirement under section 17(b) had been made` sessions)
+        anchor closing
+
+-- Alternative S17-D: a session counts only if its requirements were met, and the requirements limb adds nothing more.
+@ref s.17(a) (src:145)
+GIVEN sessions IS A LIST OF `Training session attended`
+      anchor IS A DATE
+      closing IS A DATE
+GIVETH A BOOLEAN
+`s.17(a) — the training duty was met, a session counting only if its requirements were met` sessions anchor closing MEANS
+    `s.17(a) — the hours counted towards the eight hours`
+        (filter (GIVEN session YIELD session's `the licensee met the requirements of the training`) sessions) anchor closing
+    AT LEAST `s.17(a) — the hours of training the licensee must attend in the last year of validity`
+
+-- Alternative S17-E: the sources impose the Registrar's duty (e) but no excuse for the licensee if no training was available.
+@ref s.17(a) (src:145); s.17(e) (src:149)
+GIVEN sessions IS A LIST OF `Training session attended`
+      anchor IS A DATE
+      closing IS A DATE
+      `no qualifying training was available to the licensee in the last year of validity` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(a) — the training duty was met, or no qualifying training was available` sessions anchor closing `no qualifying training was available to the licensee in the last year of validity` MEANS
+        `no qualifying training was available to the licensee in the last year of validity`
+    OR  `s.17(a) — the training duty of section 17(a) was met` sessions anchor closing
+
+-- The duty as a regulative rule.  "Eight hours in the last year" is a quantity over a window, so the one act is the completion of
+-- the scope, and its deadline is the closing day of the window.  Day 0 of a trace is the anniversary day, the day BEFORE the window opens and
+-- not part of it (the same convention as s.16, where day 0 is the day of the change); day 1 is the first day of the window; and the WITHIN is
+-- the number of days from the anniversary to the closing day, the closing day being inside it.
+@ref s.17(a) (src:145)
+GIVEN anchor IS A DATE
+      closing IS A DATE
+GIVETH A DEONTIC Party `Act under section 17 of the Law`
+`s.17(a) — the licensee must attend eight hours of qualifying training in the last year of validity` anchor closing MEANS
+    PARTY `the licensee`
+    MUST `complete the eight hours of qualifying training in the last year of validity and meet its requirements`
+    WITHIN (Day closing MINUS Day (`s.17(a) — the same day one year earlier than` anchor))
+    HENCE FULFILLED
+    LEST BREACH BY `the licensee` BECAUSE "s.17(a): the licensee did not attend eight hours of qualifying training in the last year of validity and meet its requirements"
+
+§§ `17(b). The Registrar may require a particular course`
+
+-- src:146 | {{ח:תת|(ב)}} נוסף על ההשתלמויות לפי סעיף קטן (א), הרשם רשאי לדרוש מבעל רישיון להשתתף בהשתלמות מסוימת שערך הרשם או שהאגף להכשרה מקצועית הכיר בה לאחר התייעצות עם המועצה, אם מצא כי מתקיימות נסיבות המצדיקות זאת וכי ההשתתפות נדרשת לשם הכשרת בעל הרישיון ולשם מימוש מטרות חוק זה; הודעה לפי סעיף קטן זה תינתן לבעל הרישיון זמן סביר לפני מועד ההשתלמות.
+
+@ref s.17(b) (src:146)
+GIVEN course IS A `Particular course required under section 17(b)`
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(b) — the Registrar has the power to require attendance at the course` course `the Law has commenced for the work on the system` MEANS
+        `the Law has commenced for the work on the system`
+    AND course's `the course was conducted by the Registrar or recognised by the Training Division`
+    AND course's `the Council was consulted about requiring the course`
+    AND course's `the Council's advice about requiring the course was validly given`
+    AND course's `in the Registrar's opinion circumstances justify requiring attendance`
+    AND course's `in the Registrar's opinion attendance is required to train the licensee and to realise the purposes of the Law`
+
+-- "Notice under this subsection shall be given to the licensee a reasonable time before the date of the course".
+-- Taken (fork S17-F): reasonable notice is a condition of the licensee's duty to attend, since a licensee cannot be bound to attend a
+-- course he was not told of in time.  "Reasonable" is a standard, so it is an input judgement, never a number of days.
+@ref s.17(b) (src:146)
+GIVEN course IS A `Particular course required under section 17(b)`
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(b) — the licensee must attend the course` course `the Law has commenced for the work on the system` MEANS
+        `s.17(b) — the Registrar has the power to require attendance at the course` course `the Law has commenced for the work on the system`
+    AND course's `notice was given a reasonable time before the date of the course`
+
+-- Alternative S17-F: the notice is a duty of the Registrar and its lack does not undo the requirement.
+@ref s.17(b) (src:146)
+GIVEN course IS A `Particular course required under section 17(b)`
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(b) — the licensee must attend the course, whether or not notice was given a reasonable time before` course `the Law has commenced for the work on the system` MEANS
+    `s.17(b) — the Registrar has the power to require attendance at the course` course `the Law has commenced for the work on the system`
+
+@ref s.17(b) (src:146)
+GIVEN course IS A `Particular course required under section 17(b)`
+GIVETH A BOOLEAN
+`s.17(b) — the licensee attended the course and met its requirements` course MEANS
+        course's `the licensee attended the course`
+    AND course's `the licensee met the requirements of the course`
+
+-- The duty to attend is due on the day of the course; no earlier time is stated.  Before that day nothing has been breached.
+@ref s.17(b) (src:146); s.17(d) (src:148)
+GIVEN `the day the question is asked` IS A DATE
+      course IS A `Particular course required under section 17(b)`
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(b) — the licensee breached the duty to attend the course as at` `the day the question is asked` course `the Law has commenced for the work on the system` MEANS
+        `s.17(b) — the licensee must attend the course` course `the Law has commenced for the work on the system`
+    AND `the day the question is asked` GREATER THAN course's `the day of the course`
+    AND NOT `s.17(b) — the licensee attended the course and met its requirements` course
+
+-- The Registrar's requirement is a power (MAY) held on conditions; once it is exercised the licensee must attend.
+-- The licensee's WITHIN counts from the day of the notice to the day of the course, which is the last day for attending.
+@ref s.17(b) (src:146)
+GIVEN course IS A `Particular course required under section 17(b)`
+GIVETH A DEONTIC Party `Act under section 17 of the Law`
+`s.17(b) — the licensee must attend the course the Registrar required` course MEANS
+    IF   Day (course's `the day of the course`) AT LEAST Day (course's `the day notice of the requirement was given`)
+    THEN PARTY `the licensee`
+         MUST `attend the particular course and meet its requirements`
+         WITHIN (Day (course's `the day of the course`) MINUS Day (course's `the day notice of the requirement was given`))
+         HENCE FULFILLED
+         LEST BREACH BY `the licensee` BECAUSE "s.17(b): the licensee did not attend the particular course the Registrar required, and meet its requirements, by the day of the course"
+    ELSE `s.17(b) — notice of the requirement was given after the day of the course`
+
+@ref s.17(b) (src:146)
+GIVEN course IS A `Particular course required under section 17(b)`
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A DEONTIC Party `Act under section 17 of the Law`
+`s.17(b) — the Registrar may require attendance at a particular course` course `the Law has commenced for the work on the system` MEANS
+    IF   `s.17(b) — the licensee must attend the course` course `the Law has commenced for the work on the system`
+    THEN PARTY `the Registrar`
+         MAY `require the licensee to attend a particular course`
+         HENCE `s.17(b) — the licensee must attend the course the Registrar required` course
+    ELSE FULFILLED
+
+§§ `17(c). The Registrar may extend the validity by up to three months`
+
+-- src:147 | {{ח:תת|(ג)}} הרשם רשאי, לאחר התייעצות עם המועצה, להאריך את תקופת תוקף רישיונו של בעל רישיון שלא מילא את חובתו להשתתף בהשתלמות לפי סעיף קטן (א) או (ב), במקרים מיוחדים ובנסיבות מוצדקות, בתקופה שלא תעלה על שלושה חודשים, לשם מילוי החובה.
+
+-- "For a period not exceeding three months" (kind V): counted forwards from the end of validity, so IL s.10(b), calendar months.
+-- Taken (fork S17-V): IL s.10(c) is NOT applied to a period of validity, so the cap is the date three calendar months after.
+@ref s.17(c) (src:147)
+GIVEN `the last day of validity` IS A DATE
+GIVETH A DATE
+`s.17(c) — the latest last day of validity after an extension of up to three months from` `the last day of validity` MEANS
+    `s 10(b) — the last day of a period of` 3 `months after an event on` `the last day of validity`
+
+-- Alternative S17-V: IL s.10(c) applied to the cap, so a cap that falls on a day of rest moves to the next day that is not one.
+@ref s.17(c) (src:147)
+GIVEN `the last day of validity` IS A DATE
+      `the calendar` IS A `Calendar of rest days`
+GIVETH A DATE
+`s.17(c) — the latest last day of validity, with IL s.10(c) applied, after an extension of up to three months from` `the last day of validity` `the calendar` MEANS
+    `s 10(b), (c) — the last day of a period of` 3 `months after an event on` `the last day of validity` `, when days of rest, recess or holiday are` (`days of rest, recess or holiday listed in` (`the calendar`'s `days of rest, recess or holiday`))
+
+-- Taken (fork S17-V2): "for a period not exceeding three months" is said of each extension, counted from the last day of validity as
+-- it stands when the extension is decided; the text does not limit the number of extensions.  An extension must move the end later.
+@ref s.17(c) (src:147)
+GIVEN extension IS A `Extension of validity under section 17(c)`
+GIVETH A BOOLEAN
+`s.17(c) — the extension is for a period not exceeding three months` extension MEANS
+        extension's `the last day of validity fixed by the extension` GREATER THAN extension's `the last day of validity as it stands when the decision is taken`
+    AND extension's `the last day of validity fixed by the extension` AT MOST `s.17(c) — the latest last day of validity after an extension of up to three months from` (extension's `the last day of validity as it stands when the decision is taken`)
+
+-- Alternative S17-V2: the three months are cumulative, counted from the last day of validity before any extension.
+@ref s.17(c) (src:147)
+GIVEN extension IS A `Extension of validity under section 17(c)`
+GIVETH A BOOLEAN
+`s.17(c) — the extension is for a period not exceeding three months in all` extension MEANS
+        extension's `the last day of validity fixed by the extension` GREATER THAN extension's `the last day of validity as it stands when the decision is taken`
+    AND extension's `the last day of validity fixed by the extension` AT MOST `s.17(c) — the latest last day of validity after an extension of up to three months from` (extension's `the last day of validity before any extension under section 17(c)`)
+
+-- Taken (fork S17-T): the power is over the validity of a licence that still has validity, so the decision is taken on or before
+-- the last day of validity as it stands ("licensee" means a holder of a licence).
+@ref s.17(c) (src:147)
+@export Decides whether the Registrar may extend the validity of a licence by up to three months under section 17(c), on the conditions the section gives
+GIVEN extension IS A `Extension of validity under section 17(c)` @desc The extension of validity the Registrar decided: the days, the Council's consultation, the Registrar's opinion and the fact that the duty was unfulfilled
+      `the Law has commenced for the work on the system` IS A BOOLEAN @desc True if the Law has commenced for the work on the system, under section 63 (decided by the commencement group)
+GIVETH A BOOLEAN
+`s.17(c) — the Registrar may extend the validity of the licence` extension `the Law has commenced for the work on the system` MEANS
+        `the Law has commenced for the work on the system`
+    AND extension's `the licensee had not fulfilled the duty under section 17(a) or (b)`
+    AND extension's `the Council was consulted about the extension`
+    AND extension's `the Council's advice about the extension was validly given`
+    AND extension's `in the Registrar's opinion these are special cases and the circumstances are justified`
+    AND extension's `the extension is granted so that the licensee can fulfil the duty`
+    AND `s.17(c) — the extension is for a period not exceeding three months` extension
+    AND extension's `the day of the Registrar's decision` AT MOST extension's `the last day of validity as it stands when the decision is taken`
+
+-- Alternative S17-T: the Registrar may extend whenever the decision is taken, even after the validity has run out.
+@ref s.17(c) (src:147)
+GIVEN extension IS A `Extension of validity under section 17(c)`
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(c) — the Registrar may extend the validity of the licence, whenever the decision is taken` extension `the Law has commenced for the work on the system` MEANS
+        `the Law has commenced for the work on the system`
+    AND extension's `the licensee had not fulfilled the duty under section 17(a) or (b)`
+    AND extension's `the Council was consulted about the extension`
+    AND extension's `the Council's advice about the extension was validly given`
+    AND extension's `in the Registrar's opinion these are special cases and the circumstances are justified`
+    AND extension's `the extension is granted so that the licensee can fulfil the duty`
+    AND `s.17(c) — the extension is for a period not exceeding three months` extension
+
+-- Alternative S17-V2 as a power: the cumulative cap.
+@ref s.17(c) (src:147)
+GIVEN extension IS A `Extension of validity under section 17(c)`
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(c) — the Registrar may extend the validity of the licence, the three months being cumulative` extension `the Law has commenced for the work on the system` MEANS
+        `s.17(c) — the Registrar may extend the validity of the licence` extension `the Law has commenced for the work on the system`
+    AND `s.17(c) — the extension is for a period not exceeding three months in all` extension
+
+-- Section 8 limits validity to 31 March of the fifth year.  Whether an extension may pass that date is not stated (T25, fork S17-M).
+-- Taken: it may, because (c) speaks of extending "the validity period" that section 8 defines, which only an extension can lengthen.
+-- Alternative S17-M: the extended last day may not pass the limit of section 8, which is an input date.
+@ref s.17(c) (src:147); s.8
+GIVEN extension IS A `Extension of validity under section 17(c)`
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+      `the limit of section 8 for this licence` IS A DATE
+GIVETH A BOOLEAN
+`s.17(c) — the Registrar may extend the validity of the licence, no later than the limit of section 8` extension `the Law has commenced for the work on the system` `the limit of section 8 for this licence` MEANS
+        `s.17(c) — the Registrar may extend the validity of the licence` extension `the Law has commenced for the work on the system`
+    AND extension's `the last day of validity fixed by the extension` AT MOST `the limit of section 8 for this licence`
+
+-- The power is a MAY held on those conditions; exercised, it has no further consequence in this section.
+@ref s.17(c) (src:147)
+GIVEN extension IS A `Extension of validity under section 17(c)`
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A DEONTIC Party `Act under section 17 of the Law`
+`s.17(c) — the Registrar may extend the validity of the licence by up to three months` extension `the Law has commenced for the work on the system` MEANS
+    IF   `s.17(c) — the Registrar may extend the validity of the licence` extension `the Law has commenced for the work on the system`
+    THEN PARTY `the Registrar`
+         MAY `extend the validity of the licence by up to three months`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+§§ `17(d). The duty is deemed a licence condition`
+
+-- src:148 | {{ח:תת|(ד)}} יראו חובת השתתפות בהשתלמות ועמידה בדרישותיה לפי סעיף זה כתנאי ברישיון של בעל הרישיון.
+
+-- "The duty to participate in training and to meet its requirements under this section is deemed a licence condition."  A breach of
+-- the duty of (a) or of (b) is therefore the breach of a licence condition (IP8), which s.3(a) and s.10(a)(3) consume.  (a) is breached
+-- only when its window has closed without the eight hours and the requirements; (b), when the day of the course has passed.
+@ref s.17(d) (src:148)
+GIVEN `the day the question is asked` IS A DATE
+      sessions IS A LIST OF `Training session attended`
+      anchor IS A DATE
+      closing IS A DATE
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(d) — the licence condition of section 17(a) was breached as at` `the day the question is asked` sessions anchor closing `the Law has commenced for the work on the system` MEANS
+        `the Law has commenced for the work on the system`
+    AND `the day the question is asked` GREATER THAN closing
+    AND NOT `s.17(a) — the training duty of section 17(a) was met` sessions anchor closing
+
+-- Alternative S17-d: a deemed condition of the licence binds from the first day of the last year, so the licensee is in breach of it on every day of
+-- the last year until the eight hours are met.  Read with s.3(a) ("in accordance with the conditions of his licence") that would bar a licensee from work
+-- for the whole of his last year (trap T12), which is the ground of the reading taken.
+@ref s.17(d) (src:148)
+GIVEN `the day the question is asked` IS A DATE
+      sessions IS A LIST OF `Training session attended`
+      anchor IS A DATE
+      closing IS A DATE
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(d) — the condition of section 17(a), read as binding from the first day of the last year, was breached as at` `the day the question is asked` sessions anchor closing `the Law has commenced for the work on the system` MEANS
+        `the Law has commenced for the work on the system`
+    AND `s.17(a) — the same day one year earlier than` anchor LESS THAN `the day the question is asked`
+    AND NOT `s.17(a) — the training duty of section 17(a) was met` sessions anchor closing
+
+@ref s.17(d) (src:148)
+GIVEN `the day the question is asked` IS A DATE
+      courses IS A LIST OF `Particular course required under section 17(b)`
+      `the Law has commenced for the work on the system` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(d) — the licence condition of section 17(b) was breached as at` `the day the question is asked` courses `the Law has commenced for the work on the system` MEANS
+    any (GIVEN course YIELD `s.17(b) — the licensee breached the duty to attend the course as at` `the day the question is asked` course `the Law has commenced for the work on the system`) courses
+
+@ref s.17(d) (src:148)
+@export Decides whether the training duty of section 17, which section 17(d) deems a licence condition, was breached on a given day
+GIVEN `the day the question is asked` IS A DATE @desc The day on which the question is put; a deadline is not breached before its last day has passed
+      sessions IS A LIST OF `Training session attended` @desc Every training session the licensee attended, with the facts that decide whether it counts
+      anchor IS A DATE @desc The last day of validity of the licence before any extension under section 17(c)
+      closing IS A DATE @desc The last day of validity as extended under section 17(c); the same as the anchor if there is no extension
+      courses IS A LIST OF `Particular course required under section 17(b)` @desc The particular courses the Registrar required of the licensee under section 17(b)
+      `the Law has commenced for the work on the system` IS A BOOLEAN @desc True if the Law has commenced for the work on the system, under section 63 (decided by the commencement group)
+GIVETH A BOOLEAN
+`s.17(d) — the licensee breached a licence condition through the training duty as at` `the day the question is asked` sessions anchor closing courses `the Law has commenced for the work on the system` MEANS
+        `s.17(d) — the licence condition of section 17(a) was breached as at` `the day the question is asked` sessions anchor closing `the Law has commenced for the work on the system`
+    OR  `s.17(d) — the licence condition of section 17(b) was breached as at` `the day the question is asked` courses `the Law has commenced for the work on the system`
+
+§§ `17(e). The Registrar must ensure that trainings exist and are available`
+
+-- src:149 | {{ח:תת|(ה)}} הרשם יוודא את קיומן, לרבות באמצעות אחר, של השתלמויות, ואת זמינותן.
+
+-- "Shall ensure, including through another": a duty of the Registrar with no time stated (so no WITHIN), which the Registrar may
+-- discharge through another person.  Whether the Registrar acted personally or through another changes nothing here.
+@ref s.17(e) (src:149)
+GIVETH A DEONTIC Party `Act under section 17 of the Law`
+`s.17(e) — the Registrar must ensure that the trainings exist and are available` MEANS
+    PARTY `the Registrar`
+    MUST `ensure that the trainings exist and are available`
+    HENCE FULFILLED
+
+@ref s.17(e) (src:149)
+GIVEN `the trainings exist` IS A BOOLEAN
+      `the trainings are available` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s.17(e) — the Registrar has ensured that the trainings exist and are available` `the trainings exist` `the trainings are available` MEANS
+        `the trainings exist`
+    AND `the trainings are available`
+
+§§ `17(f). The Registrar must publish the trainings`
+
+-- src:150 | {{ח:תת|(ו)}} הרשם יפרסם השתלמויות שהוא עורך והשתלמויות שהאגף להכשרה מקצועית הכיר בהן לפי סעיף זה, באתר האינטרנט של המשרד, זמן סביר לפני מועד ההשתלמות.
+
+-- "A reasonable time before the date of the training" (kind N): not a period.  The publication must precede the training; whether it
+-- was a reasonable time before is an input judgement.
+@ref s.17(f) (src:150)
+GIVEN training IS A `Training offered`
+GIVETH A BOOLEAN
+`s.17(f) — the Registrar published the training in good time` training MEANS
+    CONSIDER training's `the day it was published on the Ministry website`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST published THEN
+            published LESS THAN training's `the day of the training`
+        AND training's `the publication was a reasonable time before the training`
+
+@ref s.17(f) (src:150)
+GIVETH A DEONTIC Party `Act under section 17 of the Law`
+`s.17(f) — the Registrar must publish the trainings on the Ministry website` MEANS
+    PARTY `the Registrar`
+    MUST `publish a training on the Ministry website`
+    HENCE FULFILLED

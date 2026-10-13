@@ -11,6 +11,7 @@ was taken.
 | `kovetz-hatakanot-11951-p2116.pdf` | the Fees Regulations **as made**, KT 11951 of 9 July 2025, 5785 p. 2116 |
 | `kovetz-hatakanot-12383-p2062.pdf` | the **amending** regulations, KT 12383 of 4 May 2026, 5786 p. 2062 |
 | `law.wiki`, `regulations-fees.wiki` | the Hebrew Wikisource consolidated texts |
+| `kovetz-hatakanot-11951-p2116.txt`, `kovetz-hatakanot-12383-p2062.txt` | the text layers of the two Kovetz HaTakanot PDFs above, as read by the quotation check of `../encodings/legalese-full-sonnet-5.5/check.sh` (its `src:` line numbers refer to these files, so they must not be regenerated); the Hebrew in them is bidirectionally scrambled, so use them to check numbers, never to quote |
 
 `kovetz-hatakanot-12383-p2062.pdf` was deposited on 2026-09-22, when the two enacted texts
 of reg. 2 were moved onto L4's rule-effective-time axis and the amendment's commencement

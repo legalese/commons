@@ -1,0 +1,812 @@
+@lang en
+IMPORT prelude
+IMPORT daydate
+IMPORT `il-interpretation-time`
+IMPORT domain
+
+-- g4-council-membership.l4: Law 5785-2025, sections 20 to 23: the Council's eleven seats, the bar on appointment,
+-- the four-year term and the ways service ends.  (Section 24, the saving of the Council's acts, is in g4-council-work.l4
+-- beside the quorum, because both count the same base: see FRAGMENT-G4.md, fork F-base.)
+-- Group G4 (the Registrar and the Council), written by ENCODER G4.  Source: inputs/law.wiki, cited as src:N (quotation
+-- lines are copied by script, work/g4/build.py); checked against the gazette (Sefer HaChukim 3349, pp. 186-187).
+-- English beside the Hebrew is the encoder's paraphrase; the Hebrew governs.
+--
+-- Inputs this module takes under standard names: none of the PLAN's IP names; its own facts are records below.  It takes
+--   `the candidate is barred from the Council by section 29(b)` and `the member is barred from the Council by section 29(b)`
+--   as BOOLEAN fields, which g4-conflict decides (the INTEGRATOR wires them).
+-- Time: s.22's four years are counted by the vendored module, `s 10(b) — the last day of a period of` n `years after an event on` d;
+--   IL s.10(c) (rest days) is not applied to a term (kind V) and is offered as a callable alternative.  IL s.10 does not cover a
+--   period counted backwards, so s.23(c)'s "one year" is plain date comparison against a window and says so where it is used.
+
+§ `Chapter 4: the Registrar and the Council`
+
+§§ `Sections 20 to 23: the members of the Council`
+
+§§§ `The acts of these sections, and the facts they ask about`
+
+-- One action type for the four sections.  The first actor-typed field is the performer.
+DECLARE `An act under sections 20 to 23` IS ONE OF
+    `appoint a member of the Council` HAS
+        actor IS A Party
+        `the seat` IS A `Council seat`
+        `the candidate` IS A `Candidate for a seat on the Council`
+        `the proceedings against the candidate` IS A LIST OF `Proceeding against a Council candidate or member for an offence`
+        `the candidate is barred from the Council by section 29(b)` IS A BOOLEAN
+        `as soon as possible after the previous member ceased` IS A BOOLEAN
+    `extend the term of a member of the Council` HAS
+        actor IS A Party
+        `the member` IS A STRING
+    `remove a member of the Council from office` HAS
+        actor IS A Party
+        `the member` IS A STRING
+        `by written notice` IS A BOOLEAN
+        `after the member had the opportunity to put arguments in writing` IS A BOOLEAN
+        `close to the time the circumstance arose` IS A BOOLEAN
+
+-- The eleven items of s.20, one constructor each, numbered as the Law numbers them (T43: eleven items, eleven seats).
+DECLARE `Council seat` IS ONE OF
+    `seat 1: representative of the senior occupations-regulation division of the Ministry, the chair`
+    `seat 2: the Registrar`
+    `seat 3: the Commissioner for Standards, or an employee on the Commissioner's behalf`
+    `seat 4: employee of the Ministry of Energy and Infrastructure`
+    `seat 5: employee of the Ministry of Environmental Protection`
+    `seat 6: employee of the National Fire and Rescue Authority`
+    `seat 7: representative of the workers' organisation with the most licence holders`
+    `seat 8: representative of an employers' organisation`
+    `seat 9: representative of the organisation with the most engineers`
+    `seat 10: representative of the representative organisation under the Engineers and Technicians Law`
+    `seat 11: public representative`
+
+-- What a candidate for a seat must be.  Four generic facts serve all eleven items: the position the seat describes, the
+-- proposal of the competent Minister (items 4 to 6), the Minister's opinion (items 8, 9, 11) and being an engineer (item 7).
+@desc A candidate for one of the eleven seats and the facts s.20 asks about
+DECLARE `Candidate for a seat on the Council` HAS
+    `holds the position the seat describes` IS A BOOLEAN @desc True if the candidate has the office, employment or representative capacity the item names
+    `the competent Minister or Commissioner proposed the appointment` IS A BOOLEAN @desc True if the Minister of Energy and Infrastructure, the Minister of Environmental Protection or the Fire and Rescue Commissioner proposed the appointment (items 4 to 6)
+    `in the Minister's opinion the candidate or the candidate's organisation is as the seat describes` IS A BOOLEAN @desc The Minister's opinion for items 8, 9 and 11: an input, never computed
+    `is a practical engineer or an engineer` IS A BOOLEAN @desc True if the candidate is a practical engineer or an engineer (item 7 excludes them)
+
+-- s.21 and s.23(b)(1) speak of an offence that "by its substance, gravity or circumstances" makes the person unfit
+-- ("שמפאת מהותה, חומרתה או נסיבותיה אין הוא ראוי"): a judgement, so an input on each proceeding.
+DECLARE `Outcome of a proceeding against a Council candidate or member` IS ONE OF
+    `proceeding ended in a conviction`
+    `proceeding with no final judgment yet`
+    `proceeding ended in a final judgment other than a conviction`
+
+@desc One conviction, indictment or complaint against a person, for a criminal or disciplinary offence
+DECLARE `Proceeding against a Council candidate or member for an offence` HAS
+    `the offence, by its nature, severity or circumstances, makes the person unfit to be a member of the Council` IS A BOOLEAN @desc The appointer's judgement ("אין הוא ראוי לכהן כחבר המועצה"): an input
+    `the outcome of the proceeding` IS AN `Outcome of a proceeding against a Council candidate or member` @desc A conviction, no final judgment yet, or a final judgment that is not a conviction (an acquittal, say)
+
+@desc The three days on which a member's service can end of its own accord under s.23(a)
+DECLARE `Events ending a member's service under section 23(a)` HAS
+    `the day the member delivered a letter of resignation to the Minister` IS A MAYBE DATE @desc NOTHING if no letter was delivered
+    `the day the member ceased to be an employee of the government ministry or a member of the body the member represents` IS A MAYBE DATE @desc NOTHING if the member did not cease (read for seats 1 to 10)
+    `the day the member, a public representative, was appointed a State employee` IS A MAYBE DATE @desc NOTHING if the member was not appointed (read for seat 11)
+
+@desc The facts about a member that s.23(b) asks about
+DECLARE `Facts about a member for section 23(b)` HAS
+    `the proceedings against the member` IS A LIST OF `Proceeding against a Council candidate or member for an offence` @desc Every conviction, indictment and complaint, with its outcome
+    `the member is permanently unable to perform the function` IS A BOOLEAN @desc "נבצר ממנו דרך קבע": a judgement, an input
+    `the member still satisfies the conditions of the seat` IS A BOOLEAN @desc The s.20 item conditions, asked of the member now
+    `the member is barred from the Council by section 29(b)` IS A BOOLEAN @desc Decided in g4-conflict, asked of the member now
+    `the member has not already ceased to serve under section 23(a)` IS A BOOLEAN @desc True if the member still serves: a removal presupposes an office to be removed from (see contradiction C-23a-b3)
+
+@desc One meeting of the Council, and what it shows about one member's attendance
+DECLARE `Meeting of the Council and a member's attendance` HAS
+    `the day of the meeting` IS A DATE @desc The day the meeting was held
+    `held by a subcommittee of the Council` IS A BOOLEAN @desc True if it was a meeting of a subcommittee and not of the Council
+    `the member was serving on the day of the meeting` IS A BOOLEAN @desc Absence counts only while the member serves
+    `the member attended` IS A BOOLEAN @desc True if the member attended
+    `the absence was justified` IS A BOOLEAN @desc "סיבה מוצדקת": a judgement, an input
+
+@desc One member's service record: the seat, the appointment, the terms and the ways service has ended
+DECLARE `Service record of a member of the Council` HAS
+    `reference for the member` IS A STRING @desc Any stable identifier for the member
+    `the seat` IS A `Council seat` @desc The seat the member holds
+    `appointed on` IS A DATE @desc The day of appointment
+    `further terms granted by the Minister` IS A NUMBER @desc How many further terms the Minister extended the term by (s.22)
+    `events ending service under section 23(a)` IS AN `Events ending a member's service under section 23(a)` @desc Resignation, ceasing to be employee or member, appointment as a State employee
+    `removed from office by the Minister on` IS A MAYBE DATE @desc The day of a removal under s.23(b) or (c); NOTHING if none
+
+§§§ `Section 20: the Council and its eleven seats`
+
+-- src:166 | {{ח:ת}} השר ימנה מועצה בת 11 חברים, שתמלא את התפקידים שנקבעו לה לפי חוק זה, וזה הרכבה:
+@ref s.20 (src:166)
+GIVETH A LIST OF `Council seat`
+`the eleven seats of the Council` MEANS
+    LIST `seat 1: representative of the senior occupations-regulation division of the Ministry, the chair`
+       , `seat 2: the Registrar`
+       , `seat 3: the Commissioner for Standards, or an employee on the Commissioner's behalf`
+       , `seat 4: employee of the Ministry of Energy and Infrastructure`
+       , `seat 5: employee of the Ministry of Environmental Protection`
+       , `seat 6: employee of the National Fire and Rescue Authority`
+       , `seat 7: representative of the workers' organisation with the most licence holders`
+       , `seat 8: representative of an employers' organisation`
+       , `seat 9: representative of the organisation with the most engineers`
+       , `seat 10: representative of the representative organisation under the Engineers and Technicians Law`
+       , `seat 11: public representative`
+
+-- "מועצה בת 11 חברים": a council of 11 members.
+@ref s.20 (src:166)
+GIVETH A NUMBER
+`s 20 — the number of seats on the Council` MEANS
+    count `the eleven seats of the Council`
+
+-- src:167 | {{ח:תת|(1)}} נציג אגף בכיר לאסדרת עיסוקים במשרד, והוא יהיה היושב ראש;
+@ref s.20(1) (src:167)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(1) — the candidate represents the senior occupations-regulation division of the Ministry` candidate MEANS
+    candidate's `holds the position the seat describes`
+
+-- The chair is the holder of item (1), not the Registrar of item (2) (T43).
+@ref s.20(1) (src:167)
+GIVEN seat IS A `Council seat`
+GIVETH A BOOLEAN
+`s 20(1) — the seat is the chair's` seat MEANS
+    seat EQUALS `seat 1: representative of the senior occupations-regulation division of the Ministry, the chair`
+
+-- src:168 | {{ח:תת|(2)}} הרשם;
+@ref s.20(2) (src:168)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(2) — the candidate is the Registrar` candidate MEANS
+    candidate's `holds the position the seat describes`
+
+-- src:169 | {{ח:תת|(3)}} הממונה על התקינה במשרד הכלכלה והתעשייה או עובד מטעמו;
+@ref s.20(3) (src:169)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(3) — the candidate is the Commissioner for Standards at the Ministry of Economy and Industry or an employee on the Commissioner's behalf` candidate MEANS
+    candidate's `holds the position the seat describes`
+
+-- src:170 | {{ח:תת|(4)}} עובד משרד האנרגיה והתשתיות, שימונה לפי הצעת שר האנרגיה והתשתיות;
+@ref s.20(4) (src:170)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(4) — the candidate is an employee of the Ministry of Energy and Infrastructure, appointed on the proposal of its Minister` candidate MEANS
+        candidate's `holds the position the seat describes`
+    AND candidate's `the competent Minister or Commissioner proposed the appointment`
+
+-- src:171 | {{ח:תת|(5)}} עובד המשרד להגנת הסביבה, שימונה לפי הצעת השר להגנת הסביבה;
+@ref s.20(5) (src:171)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(5) — the candidate is an employee of the Ministry of Environmental Protection, appointed on the proposal of its Minister` candidate MEANS
+        candidate's `holds the position the seat describes`
+    AND candidate's `the competent Minister or Commissioner proposed the appointment`
+
+-- src:172 | {{ח:תת|(6)}} עובד הרשות הארצית לכבאות והצלה, שימונה לפי הצעת נציב כבאות והצלה;
+@ref s.20(6) (src:172)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(6) — the candidate is an employee of the National Fire and Rescue Authority, appointed on the proposal of the Fire and Rescue Commissioner` candidate MEANS
+        candidate's `holds the position the seat describes`
+    AND candidate's `the competent Minister or Commissioner proposed the appointment`
+
+-- Item 7: whether the organisation "represents the greatest number" of licence holders is a fact the candidate record carries;
+-- the encoding does not compare membership figures across organisations.  Practical engineers and engineers are excluded.
+-- src:173 | {{ח:תת|(7)}} נציג ארגון עובדים המייצג את המספר הגדול ביותר של בעלי רישיון דרגה 1, רישיון דרגה 2 או רישיון דרגה 3, שאינו הנדסאי או מהנדס;
+@ref s.20(7) (src:173)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(7) — the candidate represents the workers' organisation with the most holders of grade 1, 2 or 3 licences and is neither a practical engineer nor an engineer` candidate MEANS
+        candidate's `holds the position the seat describes`
+    AND (NOT candidate's `is a practical engineer or an engineer`)
+
+-- src:174 | {{ח:תת|(8)}} נציג ארגון מעסיקים שלדעת השר הוא יציג בתחום קירור או מיזוג אוויר;
+@ref s.20(8) (src:174)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(8) — the candidate represents an employers' organisation that in the Minister's opinion is representative in the field` candidate MEANS
+        candidate's `holds the position the seat describes`
+    AND candidate's `in the Minister's opinion the candidate or the candidate's organisation is as the seat describes`
+
+-- src:175 | {{ח:תת|(9)}} נציג ארגון שלדעת השר מייצג את המספר הגדול ביותר של מהנדסים העוסקים בתחום קירור או מיזוג אוויר;
+@ref s.20(9) (src:175)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(9) — the candidate represents the organisation that in the Minister's opinion represents the most engineers working in the field` candidate MEANS
+        candidate's `holds the position the seat describes`
+    AND candidate's `in the Minister's opinion the candidate or the candidate's organisation is as the seat describes`
+
+-- src:176 | {{ח:תת|(10)}} נציג הארגון היציג כהגדרתו {{ח:חיצוני|חוק ההנדסאים והטכנאים המוסמכים|בחוק ההנדסאים והטכנאים המוסמכים}};
+@ref s.20(10) (src:176)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(10) — the candidate represents the representative organisation as defined in the Engineers and Technicians Law` candidate MEANS
+    candidate's `holds the position the seat describes`
+
+-- src:177 | {{ח:תת|(11)}} נציג ציבור שלדעת השר עיקר עיסוקו בביצוע עבודות במערכות קירור או מיזוג אוויר.
+@ref s.20(11) (src:177)
+GIVEN candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20(11) — the candidate is a public representative whose main occupation is, in the Minister's opinion, work on cooling systems` candidate MEANS
+        candidate's `holds the position the seat describes`
+    AND candidate's `in the Minister's opinion the candidate or the candidate's organisation is as the seat describes`
+
+-- The eleven items, dispatched by seat.
+-- src:166 | {{ח:ת}} השר ימנה מועצה בת 11 חברים, שתמלא את התפקידים שנקבעו לה לפי חוק זה, וזה הרכבה:
+-- src:167 | {{ח:תת|(1)}} נציג אגף בכיר לאסדרת עיסוקים במשרד, והוא יהיה היושב ראש;
+-- src:168 | {{ח:תת|(2)}} הרשם;
+-- src:169 | {{ח:תת|(3)}} הממונה על התקינה במשרד הכלכלה והתעשייה או עובד מטעמו;
+-- src:170 | {{ח:תת|(4)}} עובד משרד האנרגיה והתשתיות, שימונה לפי הצעת שר האנרגיה והתשתיות;
+-- src:171 | {{ח:תת|(5)}} עובד המשרד להגנת הסביבה, שימונה לפי הצעת השר להגנת הסביבה;
+-- src:172 | {{ח:תת|(6)}} עובד הרשות הארצית לכבאות והצלה, שימונה לפי הצעת נציב כבאות והצלה;
+-- src:173 | {{ח:תת|(7)}} נציג ארגון עובדים המייצג את המספר הגדול ביותר של בעלי רישיון דרגה 1, רישיון דרגה 2 או רישיון דרגה 3, שאינו הנדסאי או מהנדס;
+-- src:174 | {{ח:תת|(8)}} נציג ארגון מעסיקים שלדעת השר הוא יציג בתחום קירור או מיזוג אוויר;
+-- src:175 | {{ח:תת|(9)}} נציג ארגון שלדעת השר מייצג את המספר הגדול ביותר של מהנדסים העוסקים בתחום קירור או מיזוג אוויר;
+-- src:176 | {{ח:תת|(10)}} נציג הארגון היציג כהגדרתו {{ח:חיצוני|חוק ההנדסאים והטכנאים המוסמכים|בחוק ההנדסאים והטכנאים המוסמכים}};
+-- src:177 | {{ח:תת|(11)}} נציג ציבור שלדעת השר עיקר עיסוקו בביצוע עבודות במערכות קירור או מיזוג אוויר.
+@ref s.20 (src:166-177)
+GIVEN seat IS A `Council seat`
+      candidate IS A `Candidate for a seat on the Council`
+GIVETH A BOOLEAN
+`s 20 — the candidate satisfies the conditions of the seat` seat candidate MEANS
+    CONSIDER seat
+    WHEN `seat 1: representative of the senior occupations-regulation division of the Ministry, the chair` THEN `s 20(1) — the candidate represents the senior occupations-regulation division of the Ministry` candidate
+    WHEN `seat 2: the Registrar` THEN `s 20(2) — the candidate is the Registrar` candidate
+    WHEN `seat 3: the Commissioner for Standards, or an employee on the Commissioner's behalf` THEN `s 20(3) — the candidate is the Commissioner for Standards at the Ministry of Economy and Industry or an employee on the Commissioner's behalf` candidate
+    WHEN `seat 4: employee of the Ministry of Energy and Infrastructure` THEN `s 20(4) — the candidate is an employee of the Ministry of Energy and Infrastructure, appointed on the proposal of its Minister` candidate
+    WHEN `seat 5: employee of the Ministry of Environmental Protection` THEN `s 20(5) — the candidate is an employee of the Ministry of Environmental Protection, appointed on the proposal of its Minister` candidate
+    WHEN `seat 6: employee of the National Fire and Rescue Authority` THEN `s 20(6) — the candidate is an employee of the National Fire and Rescue Authority, appointed on the proposal of the Fire and Rescue Commissioner` candidate
+    WHEN `seat 7: representative of the workers' organisation with the most licence holders` THEN `s 20(7) — the candidate represents the workers' organisation with the most holders of grade 1, 2 or 3 licences and is neither a practical engineer nor an engineer` candidate
+    WHEN `seat 8: representative of an employers' organisation` THEN `s 20(8) — the candidate represents an employers' organisation that in the Minister's opinion is representative in the field` candidate
+    WHEN `seat 9: representative of the organisation with the most engineers` THEN `s 20(9) — the candidate represents the organisation that in the Minister's opinion represents the most engineers working in the field` candidate
+    WHEN `seat 10: representative of the representative organisation under the Engineers and Technicians Law` THEN `s 20(10) — the candidate represents the representative organisation as defined in the Engineers and Technicians Law` candidate
+    WHEN `seat 11: public representative` THEN `s 20(11) — the candidate is a public representative whose main occupation is, in the Minister's opinion, work on cooling systems` candidate
+
+§§§ `Section 21: the bar on appointment`
+
+-- The two limbs.  (1) convicted of an offence that makes the person unfit; (2) an indictment or complaint has been filed for such an
+-- offence and "טרם ניתן פסק דין סופי" (no final judgment has yet been given).  A conviction is a proceeding with the outcome
+-- `proceeding ended in a conviction`; a pending one has `proceeding with no final judgment yet`; one that ended without conviction does NOT bar (T29, the s.21 side).
+-- src:180 | {{ח:ת}} לא ימונה לחבר המועצה מי שהורשע בעבירה פלילית או בעבירת משמעת שמפאת מהותה, חומרתה או נסיבותיה אין הוא ראוי לכהן כחבר המועצה, או שהוגשו נגדו כתב אישום או קובלנה בעבירה כאמור וטרם ניתן פסק דין סופי בעניינו.
+@ref s.21 (src:180)
+GIVEN p IS A `Proceeding against a Council candidate or member for an offence`
+GIVETH A BOOLEAN
+`s 21 — the proceeding bars the person from appointment` p MEANS
+        p's `the offence, by its nature, severity or circumstances, makes the person unfit to be a member of the Council`
+    AND CONSIDER p's `the outcome of the proceeding`
+        WHEN `proceeding ended in a conviction` THEN TRUE
+        WHEN `proceeding with no final judgment yet` THEN TRUE
+        WHEN `proceeding ended in a final judgment other than a conviction` THEN FALSE
+
+@ref s.21 (src:180)
+@export Whether a person is barred from appointment to the Council by section 21: convicted of, or charged or complained against for and with no final judgment yet, an offence that makes the person unfit
+GIVEN proceedings IS A LIST OF `Proceeding against a Council candidate or member for an offence` @desc Every conviction, indictment and complaint against the person, with the outcome of each and whether its offence makes the person unfit
+GIVETH A BOOLEAN
+`s 21 — the person is barred from appointment to the Council` proceedings MEANS
+    any `s 21 — the proceeding bars the person from appointment` proceedings
+
+-- "Whether the person may be appointed" gathers every bar the Law puts on appointment: the conditions of the seat (s.20),
+-- the bar of s.21 and the bar of s.29(b) (decided in g4-conflict and taken here as a BOOLEAN).
+-- src:166 | {{ח:ת}} השר ימנה מועצה בת 11 חברים, שתמלא את התפקידים שנקבעו לה לפי חוק זה, וזה הרכבה:
+-- src:167 | {{ח:תת|(1)}} נציג אגף בכיר לאסדרת עיסוקים במשרד, והוא יהיה היושב ראש;
+-- src:168 | {{ח:תת|(2)}} הרשם;
+-- src:169 | {{ח:תת|(3)}} הממונה על התקינה במשרד הכלכלה והתעשייה או עובד מטעמו;
+-- src:170 | {{ח:תת|(4)}} עובד משרד האנרגיה והתשתיות, שימונה לפי הצעת שר האנרגיה והתשתיות;
+-- src:171 | {{ח:תת|(5)}} עובד המשרד להגנת הסביבה, שימונה לפי הצעת השר להגנת הסביבה;
+-- src:172 | {{ח:תת|(6)}} עובד הרשות הארצית לכבאות והצלה, שימונה לפי הצעת נציב כבאות והצלה;
+-- src:173 | {{ח:תת|(7)}} נציג ארגון עובדים המייצג את המספר הגדול ביותר של בעלי רישיון דרגה 1, רישיון דרגה 2 או רישיון דרגה 3, שאינו הנדסאי או מהנדס;
+-- src:174 | {{ח:תת|(8)}} נציג ארגון מעסיקים שלדעת השר הוא יציג בתחום קירור או מיזוג אוויר;
+-- src:175 | {{ח:תת|(9)}} נציג ארגון שלדעת השר מייצג את המספר הגדול ביותר של מהנדסים העוסקים בתחום קירור או מיזוג אוויר;
+-- src:176 | {{ח:תת|(10)}} נציג הארגון היציג כהגדרתו {{ח:חיצוני|חוק ההנדסאים והטכנאים המוסמכים|בחוק ההנדסאים והטכנאים המוסמכים}};
+-- src:177 | {{ח:תת|(11)}} נציג ציבור שלדעת השר עיקר עיסוקו בביצוע עבודות במערכות קירור או מיזוג אוויר.
+-- src:180 | {{ח:ת}} לא ימונה לחבר המועצה מי שהורשע בעבירה פלילית או בעבירת משמעת שמפאת מהותה, חומרתה או נסיבותיה אין הוא ראוי לכהן כחבר המועצה, או שהוגשו נגדו כתב אישום או קובלנה בעבירה כאמור וטרם ניתן פסק דין סופי בעניינו.
+@ref s.20 (src:166-177)
+@ref s.21 (src:180)
+@export Whether a candidate may be appointed to a seat on the Council: the candidate meets the conditions of the seat, is not barred by section 21 and is not barred by section 29(b)
+GIVEN seat IS A `Council seat` @desc The seat
+      candidate IS A `Candidate for a seat on the Council` @desc The candidate and the facts section 20 asks about
+      proceedings IS A LIST OF `Proceeding against a Council candidate or member for an offence` @desc Every conviction, indictment and complaint against the candidate
+      `the candidate is barred from the Council by section 29(b)` IS A BOOLEAN @desc True if, because of the service, the candidate would regularly be in a conflict of interest that prevents the main part of the function (decided under section 29(b))
+GIVETH A BOOLEAN
+`s 20, s 21, s 29(b) — the candidate may be appointed to the seat` seat candidate proceedings `the candidate is barred from the Council by section 29(b)` MEANS
+        `s 20 — the candidate satisfies the conditions of the seat` seat candidate
+    AND (NOT `s 21 — the person is barred from appointment to the Council` proceedings)
+    AND (NOT `the candidate is barred from the Council by section 29(b)`)
+
+-- The duty: the Minister appoints a member to a seat ("ימנה").  Only an appointment of a candidate who may be appointed is performance.
+-- No time is stated, so no WITHIN.  The seat is the rule's own input; the candidate and the facts about the candidate are bound
+-- from the appointment act.
+-- src:166 | {{ח:ת}} השר ימנה מועצה בת 11 חברים, שתמלא את התפקידים שנקבעו לה לפי חוק זה, וזה הרכבה:
+-- src:167 | {{ח:תת|(1)}} נציג אגף בכיר לאסדרת עיסוקים במשרד, והוא יהיה היושב ראש;
+-- src:168 | {{ח:תת|(2)}} הרשם;
+-- src:169 | {{ח:תת|(3)}} הממונה על התקינה במשרד הכלכלה והתעשייה או עובד מטעמו;
+-- src:170 | {{ח:תת|(4)}} עובד משרד האנרגיה והתשתיות, שימונה לפי הצעת שר האנרגיה והתשתיות;
+-- src:171 | {{ח:תת|(5)}} עובד המשרד להגנת הסביבה, שימונה לפי הצעת השר להגנת הסביבה;
+-- src:172 | {{ח:תת|(6)}} עובד הרשות הארצית לכבאות והצלה, שימונה לפי הצעת נציב כבאות והצלה;
+-- src:173 | {{ח:תת|(7)}} נציג ארגון עובדים המייצג את המספר הגדול ביותר של בעלי רישיון דרגה 1, רישיון דרגה 2 או רישיון דרגה 3, שאינו הנדסאי או מהנדס;
+-- src:174 | {{ח:תת|(8)}} נציג ארגון מעסיקים שלדעת השר הוא יציג בתחום קירור או מיזוג אוויר;
+-- src:175 | {{ח:תת|(9)}} נציג ארגון שלדעת השר מייצג את המספר הגדול ביותר של מהנדסים העוסקים בתחום קירור או מיזוג אוויר;
+-- src:176 | {{ח:תת|(10)}} נציג הארגון היציג כהגדרתו {{ח:חיצוני|חוק ההנדסאים והטכנאים המוסמכים|בחוק ההנדסאים והטכנאים המוסמכים}};
+-- src:177 | {{ח:תת|(11)}} נציג ציבור שלדעת השר עיקר עיסוקו בביצוע עבודות במערכות קירור או מיזוג אוויר.
+@ref s.20 (src:166-177)
+GIVEN seat IS A `Council seat`
+GIVETH A DEONTIC Party `An act under sections 20 to 23`
+`s 20 — the Minister must appoint a member to the seat` seat MEANS
+    PARTY `the Minister`
+    MUST `appoint a member of the Council` `the Minister` seat candidate proceedings barred soon
+         PROVIDED `s 20, s 21, s 29(b) — the candidate may be appointed to the seat` seat candidate proceedings barred
+    HENCE FULFILLED
+    LEST BREACH BY `the Minister` BECAUSE "s 20: no member who may be appointed was appointed to the seat"
+
+-- "מועצה בת 11 חברים": all the seats of the list, in parallel.  An empty list is the base case and is neutral under RAND.
+-- src:166 | {{ח:ת}} השר ימנה מועצה בת 11 חברים, שתמלא את התפקידים שנקבעו לה לפי חוק זה, וזה הרכבה:
+@ref s.20 (src:166)
+GIVEN seats IS A LIST OF `Council seat`
+GIVETH A DEONTIC Party `An act under sections 20 to 23`
+`s 20 — the Minister must appoint a member to each of the seats` seats MEANS
+    CONSIDER seats
+    WHEN EMPTY THEN FULFILLED
+    WHEN seat FOLLOWED BY rest THEN
+        (`s 20 — the Minister must appoint a member to the seat` seat)
+        RAND
+        (`s 20 — the Minister must appoint a member to each of the seats` rest)
+
+-- The prohibition of s.21 as a regulative rule.  The passive "לא ימונה" names no actor; the appointer of s.20 is the Minister, so the
+-- prohibition is put on the Minister (FORK F-21-actor; no alternative actor is named in the text, so the boolean above is the
+-- actor-free reading).  An appointment of a barred person is a breach; an appointment of anyone else is not.
+-- src:180 | {{ח:ת}} לא ימונה לחבר המועצה מי שהורשע בעבירה פלילית או בעבירת משמעת שמפאת מהותה, חומרתה או נסיבותיה אין הוא ראוי לכהן כחבר המועצה, או שהוגשו נגדו כתב אישום או קובלנה בעבירה כאמור וטרם ניתן פסק דין סופי בעניינו.
+@ref s.21 (src:180)
+GIVETH A DEONTIC Party `An act under sections 20 to 23`
+`s 21 — the Minister must not appoint to the Council a person barred by section 21` MEANS
+    PARTY `the Minister`
+    SHANT `appoint a member of the Council` `the Minister` seat candidate proceedings barred soon
+          PROVIDED `s 21 — the person is barred from appointment to the Council` proceedings
+    HENCE FULFILLED
+    LEST BREACH BY `the Minister` BECAUSE "s 21: a person barred by conviction or by a pending charge was appointed to the Council"
+
+§§§ `Section 22: the term of office`
+
+-- "למעט הרשם": the Registrar has no four-year term.  The Registrar's seat is item (2).
+-- src:183 | {{ח:ת}} תקופת כהונתו של חבר המועצה, למעט הרשם, תהיה ארבע שנים, ורשאי השר להאריך את תקופת כהונתו לתקופות כהונה נוספות.
+@ref s.22 (src:183)
+GIVEN seat IS A `Council seat`
+GIVETH A BOOLEAN
+`s 22 — the seat has a term of four years` seat MEANS
+    NOT (seat EQUALS `seat 2: the Registrar`)
+
+-- Kind V (a period of validity).  Reading taken (FORK F-22-V): IL s.10(c) is NOT applied: a term is a duration, not a time within which
+-- someone must act, and moving its end would lengthen it by a rest day.  The last day of a term of four years after the day of
+-- appointment is IL s.10(b): the same-numbered day four years on, or the month's last day, and that day is inside the term.
+-- Each further term (reading A, FORK F-22-length) is four years counted on from the last day of the term before it.
+@ref s.22 (src:183)
+GIVEN terms IS A NUMBER
+      d IS A DATE
+GIVETH A DATE
+`s 22 — the last day of the term of office when` terms `terms of four years run from the day` d MEANS
+    IF   terms AT MOST 1
+    THEN `s 10(b) — the last day of a period of` 4 `years after an event on` d
+    ELSE `s 10(b) — the last day of a period of` 4 `years after an event on` (`s 22 — the last day of the term of office when` (terms MINUS 1) `terms of four years run from the day` d)
+
+-- "למעט הרשם": NOTHING is the source's own absent case.  For every other seat the last day, after the further terms the Minister granted.
+@ref s.22 (src:183)
+@export The last day of a Council member's term of office: four years after the day of appointment, and four years more for each further term the Minister granted; no end by term for the Registrar's seat
+GIVEN seat IS A `Council seat` @desc The seat the member holds
+      d IS A DATE @desc The day of appointment
+      furtherTerms IS A NUMBER @desc How many further terms the Minister granted, 0 if none
+GIVETH A MAYBE DATE
+`s 22 — the last day of the term of office of the member in the seat` seat `appointed on the day` d `, after` furtherTerms `further terms granted` MEANS
+    IF   `s 22 — the seat has a term of four years` seat
+    THEN JUST (`s 22 — the last day of the term of office when` (furtherTerms PLUS 1) `terms of four years run from the day` d)
+    ELSE NOTHING
+
+-- FORK F-22-V, alternative: IL s.10(c) applied to the end of the first term (rest days are an input).
+@ref s.22 (src:183)
+GIVEN d IS A DATE
+      calendar IS A `Calendar of rest days`
+GIVETH A DATE
+`s 22, alternative reading — the last day of the first term when IL s.10(c) moves an end that falls on a day of rest, appointed on` d `with days of rest` calendar MEANS
+    `s 10(b), (c) — the last day of a period of` 4 `years after an event on` d `, when days of rest, recess or holiday are` (`days of rest, recess or holiday listed in` (calendar's `days of rest, recess or holiday`))
+
+-- FORK F-22-length, alternative: the Minister fixes the length in years of each further term (the text gives none).  The list holds the
+-- years of each further term in order; the first term is four years.
+@ref s.22 (src:183)
+GIVEN d IS A DATE
+      `years of each further term` IS A LIST OF NUMBER
+GIVETH A DATE
+`s 22, alternative reading — the last day of a term when the Minister fixes each further term, appointed on` d `with further terms of` `years of each further term` MEANS
+    `the last day after the further terms` (`s 10(b) — the last day of a period of` 4 `years after an event on` d) `years of each further term`
+    WHERE
+        `the last day after the further terms` end years MEANS
+            CONSIDER years
+            WHEN EMPTY THEN end
+            WHEN y FOLLOWED BY rest THEN `the last day after the further terms` (`s 10(b) — the last day of a period of` y `years after an event on` end) rest
+
+-- "ורשאי השר להאריך": the Minister MAY extend; the Registrar has no term to extend.
+@ref s.22 (src:183)
+GIVEN seat IS A `Council seat`
+      member IS A STRING
+GIVETH A DEONTIC Party `An act under sections 20 to 23`
+`s 22 — the Minister may extend the term of the member in the seat` seat member MEANS
+    IF   `s 22 — the seat has a term of four years` seat
+    THEN PARTY `the Minister` MAY `extend the term of a member of the Council` `the Minister` member
+    ELSE FULFILLED
+
+§§§ `Section 23(a): service that ends of its own accord`
+
+-- src:186 | {{ח:תת|(א)}} חבר המועצה יחדל לכהן לפני תום תקופת כהונתו, בהתקיים אחד מאלה:
+-- src:187 | {{ח:תתת|(1)}} הוא התפטר במסירת כתב התפטרות לשר;
+@ref s.23(a)(1) (src:186-187)
+GIVEN events IS AN `Events ending a member's service under section 23(a)`
+GIVETH A MAYBE DATE
+`s 23(a)(1) — the day the member's service ended by resignation` events MEANS
+    events's `the day the member delivered a letter of resignation to the Minister`
+
+-- (a)(2): for a member who represents a ministry or a body, ceasing to be its employee or member; "ואם הוא נציג ציבור" (and if a
+-- public representative), being appointed a State employee.  The seat decides which limb is read.
+-- src:188 | {{ח:תתת|(2)}} הוא חדל להיות עובד המשרד הממשלתי או חבר הגוף שהוא מייצג במועצה, ואם הוא נציג ציבור – הוא התמנה לעובד המדינה.
+@ref s.23(a)(2) (src:188)
+GIVEN seat IS A `Council seat`
+      events IS AN `Events ending a member's service under section 23(a)`
+GIVETH A MAYBE DATE
+`s 23(a)(2) — the day the member's service ended by ceasing to be employee or member, or by becoming a State employee` seat events MEANS
+    IF   seat EQUALS `seat 11: public representative`
+    THEN events's `the day the member, a public representative, was appointed a State employee`
+    ELSE events's `the day the member ceased to be an employee of the government ministry or a member of the body the member represents`
+
+-- The earlier of two possible days.
+GIVEN a IS A MAYBE DATE
+      b IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 23(a) — the earlier of the possible days` a `and` b MEANS
+    CONSIDER a
+    WHEN NOTHING THEN b
+    WHEN JUST x THEN
+        CONSIDER b
+        WHEN NOTHING THEN JUST x
+        WHEN JUST y THEN IF x AT MOST y THEN JUST x ELSE JUST y
+
+-- src:186 | {{ח:תת|(א)}} חבר המועצה יחדל לכהן לפני תום תקופת כהונתו, בהתקיים אחד מאלה:
+@ref s.23(a) (src:186)
+@export The day a Council member's service ended of its own accord under section 23(a): resignation, ceasing to be an employee or member, or becoming a State employee; NOTHING if it has not ended
+GIVEN seat IS A `Council seat` @desc The seat the member holds
+      events IS AN `Events ending a member's service under section 23(a)` @desc The days of the events in the member's service record
+GIVETH A MAYBE DATE
+`s 23(a) — the day the member ceased to serve under section 23(a)` seat events MEANS
+    `s 23(a) — the earlier of the possible days` (`s 23(a)(1) — the day the member's service ended by resignation` events) `and` (`s 23(a)(2) — the day the member's service ended by ceasing to be employee or member, or by becoming a State employee` seat events)
+
+§§§ `Section 22 and section 23: whether a member is serving on a day`
+
+-- FORK F-day: a member no longer serves from the day of the event that ends service (the day of resignation, of removal, of ceasing);
+-- the last day of the term is a day of service (IL s.10(b): the last day is inside the period).  The alternative counts the day of the
+-- event as a day of service.
+-- src:183 | {{ח:ת}} תקופת כהונתו של חבר המועצה, למעט הרשם, תהיה ארבע שנים, ורשאי השר להאריך את תקופת כהונתו לתקופות כהונה נוספות.
+-- src:186 | {{ח:תת|(א)}} חבר המועצה יחדל לכהן לפני תום תקופת כהונתו, בהתקיים אחד מאלה:
+-- src:187 | {{ח:תתת|(1)}} הוא התפטר במסירת כתב התפטרות לשר;
+-- src:188 | {{ח:תתת|(2)}} הוא חדל להיות עובד המשרד הממשלתי או חבר הגוף שהוא מייצג במועצה, ואם הוא נציג ציבור – הוא התמנה לעובד המדינה.
+-- src:189 | {{ח:תת|(ב)}} התקיימה נסיבה מהנסיבות כמפורט להלן לגבי חבר המועצה, יעבירו השר מכהונתו לפני תום תקופת הכהונה ובסמוך למועד התקיימות הנסיבה, בהודעה בכתב:
+-- src:190 | {{ח:תתת|(1)}} הוא הורשע בעבירה פלילית או בעבירת משמעת שמפאת מהותה, חומרתה או נסיבותיה אין הוא ראוי לכהן כחבר המועצה, או הוגשו נגדו כתב אישום או קובלנה בעבירה כאמור;
+-- src:191 | {{ח:תתת|(2)}} נבצר ממנו דרך קבע למלא את תפקידו;
+-- src:192 | {{ח:תתת|(3)}} חדל להתקיים בו תנאי מהתנאים הדרושים למינויו כחבר המועצה.
+-- src:193 | {{ח:תת|(ג)}} השר, בהתייעצות עם יושב ראש המועצה, רשאי להעביר את חבר המועצה מכהונתו לפני תום תקופת הכהונה אם חבר המועצה נעדר בלא סיבה מוצדקת משלוש ישיבות רצופות של המועצה או מיותר ממחצית הישיבות שקיימה במהלך שנה אחת.
+-- src:194 | {{ח:תת|(ד)}} השר לא יפסיק את כהונתו של חבר המועצה לפי סעיף קטן (ב) או (ג) אלא לאחר שניתנה לו הזדמנות לטעון את טענותיו בכתב לעניין זה.
+-- src:195 | {{ח:תת|(ה)}} הפסיק חבר המועצה לכהן לפי הוראות סעיף זה, יפעל השר בהתאם להוראות {{ח:פנימי|סעיף 20|סעיף 20}} למינוי חבר אחר במקומו, בהקדם האפשרי.
+@ref s.22 (src:183)
+@ref s.23 (src:186-195)
+GIVEN x IS A DATE
+      record IS A `Service record of a member of the Council`
+GIVETH A BOOLEAN
+`s 22, s 23 — the member is serving on the day` x `according to` record MEANS
+        x AT LEAST record's `appointed on`
+    AND `the term has not ended by` x
+    AND `service has not ended of its own accord by` x
+    AND `the member has not been removed by` x
+    WHERE
+        `the term has not ended by` day MEANS
+            CONSIDER `s 22 — the last day of the term of office of the member in the seat` (record's `the seat`) `appointed on the day` (record's `appointed on`) `, after` (record's `further terms granted by the Minister`) `further terms granted`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST last THEN day AT MOST last
+        `service has not ended of its own accord by` day MEANS
+            CONSIDER `s 23(a) — the day the member ceased to serve under section 23(a)` (record's `the seat`) (record's `events ending service under section 23(a)`)
+            WHEN NOTHING THEN TRUE
+            WHEN JUST c THEN day LESS THAN c
+        `the member has not been removed by` day MEANS
+            CONSIDER record's `removed from office by the Minister on`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST r THEN day LESS THAN r
+
+-- src:183 | {{ח:ת}} תקופת כהונתו של חבר המועצה, למעט הרשם, תהיה ארבע שנים, ורשאי השר להאריך את תקופת כהונתו לתקופות כהונה נוספות.
+-- src:186 | {{ח:תת|(א)}} חבר המועצה יחדל לכהן לפני תום תקופת כהונתו, בהתקיים אחד מאלה:
+-- src:187 | {{ח:תתת|(1)}} הוא התפטר במסירת כתב התפטרות לשר;
+-- src:188 | {{ח:תתת|(2)}} הוא חדל להיות עובד המשרד הממשלתי או חבר הגוף שהוא מייצג במועצה, ואם הוא נציג ציבור – הוא התמנה לעובד המדינה.
+-- src:189 | {{ח:תת|(ב)}} התקיימה נסיבה מהנסיבות כמפורט להלן לגבי חבר המועצה, יעבירו השר מכהונתו לפני תום תקופת הכהונה ובסמוך למועד התקיימות הנסיבה, בהודעה בכתב:
+-- src:190 | {{ח:תתת|(1)}} הוא הורשע בעבירה פלילית או בעבירת משמעת שמפאת מהותה, חומרתה או נסיבותיה אין הוא ראוי לכהן כחבר המועצה, או הוגשו נגדו כתב אישום או קובלנה בעבירה כאמור;
+-- src:191 | {{ח:תתת|(2)}} נבצר ממנו דרך קבע למלא את תפקידו;
+-- src:192 | {{ח:תתת|(3)}} חדל להתקיים בו תנאי מהתנאים הדרושים למינויו כחבר המועצה.
+-- src:193 | {{ח:תת|(ג)}} השר, בהתייעצות עם יושב ראש המועצה, רשאי להעביר את חבר המועצה מכהונתו לפני תום תקופת הכהונה אם חבר המועצה נעדר בלא סיבה מוצדקת משלוש ישיבות רצופות של המועצה או מיותר ממחצית הישיבות שקיימה במהלך שנה אחת.
+-- src:194 | {{ח:תת|(ד)}} השר לא יפסיק את כהונתו של חבר המועצה לפי סעיף קטן (ב) או (ג) אלא לאחר שניתנה לו הזדמנות לטעון את טענותיו בכתב לעניין זה.
+-- src:195 | {{ח:תת|(ה)}} הפסיק חבר המועצה לכהן לפי הוראות סעיף זה, יפעל השר בהתאם להוראות {{ח:פנימי|סעיף 20|סעיף 20}} למינוי חבר אחר במקומו, בהקדם האפשרי.
+@ref s.22 (src:183)
+@ref s.23 (src:186-195)
+GIVEN x IS A DATE
+      record IS A `Service record of a member of the Council`
+GIVETH A BOOLEAN
+`s 22, s 23, alternative reading — the member is serving on the day` x `counting the day service ends as a day of service, according to` record MEANS
+        x AT LEAST record's `appointed on`
+    AND `the term has not ended by` x
+    AND `service has not ended of its own accord by` x
+    AND `the member has not been removed by` x
+    WHERE
+        `the term has not ended by` day MEANS
+            CONSIDER `s 22 — the last day of the term of office of the member in the seat` (record's `the seat`) `appointed on the day` (record's `appointed on`) `, after` (record's `further terms granted by the Minister`) `further terms granted`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST last THEN day AT MOST last
+        `service has not ended of its own accord by` day MEANS
+            CONSIDER `s 23(a) — the day the member ceased to serve under section 23(a)` (record's `the seat`) (record's `events ending service under section 23(a)`)
+            WHEN NOTHING THEN TRUE
+            WHEN JUST c THEN day AT MOST c
+        `the member has not been removed by` day MEANS
+            CONSIDER record's `removed from office by the Minister on`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST r THEN day AT MOST r
+
+-- FORK F-20-2 (the Registrar's membership and the office): s.22 excludes the Registrar from the four-year term and s.20(2) makes "הרשם" a member.
+-- Reading A (taken, the function above): nothing in the Law ends the Registrar's membership with the office; a Registrar who ceases to hold the
+-- office has ceased to meet the condition of seat 2, which is a ground for removal under s.23(b)(3), so he serves until the Minister removes him.
+-- The alternative: the seat is the office's, so the membership ends on the day the person ceases to be the Registrar.
+-- src:168 | {{ח:תת|(2)}} הרשם;
+-- src:183 | {{ח:ת}} תקופת כהונתו של חבר המועצה, למעט הרשם, תהיה ארבע שנים, ורשאי השר להאריך את תקופת כהונתו לתקופות כהונה נוספות.
+@ref s.22 (src:183)
+@ref s.20 (src:168)
+GIVEN x IS A DATE
+      ceased IS A MAYBE DATE
+GIVETH A BOOLEAN
+`s 20(2), s 22, alternative reading — the Registrar's membership continues on the day` x `, the office having ended on` ceased MEANS
+    CONSIDER ceased
+    WHEN NOTHING THEN TRUE
+    WHEN JUST c THEN x LESS THAN c
+
+§§§ `Section 23(b): the Minister must remove the member`
+
+-- src:189 | {{ח:תת|(ב)}} התקיימה נסיבה מהנסיבות כמפורט להלן לגבי חבר המועצה, יעבירו השר מכהונתו לפני תום תקופת הכהונה ובסמוך למועד התקיימות הנסיבה, בהודעה בכתב:
+-- src:190 | {{ח:תתת|(1)}} הוא הורשע בעבירה פלילית או בעבירת משמעת שמפאת מהותה, חומרתה או נסיבותיה אין הוא ראוי לכהן כחבר המועצה, או הוגשו נגדו כתב אישום או קובלנה בעבירה כאמור;
+-- The words of (b)(1) are taken literally (FORK F-23b1, trap T29): the second limb has no "טרם ניתן פסק דין סופי", so a proceeding
+-- on an offence that makes the person unfit counts whatever became of it, an acquittal included.
+@ref s.23(b)(1) (src:189-190)
+GIVEN p IS A `Proceeding against a Council candidate or member for an offence`
+GIVETH A BOOLEAN
+`s 23(b)(1) — the proceeding is a ground for removal` p MEANS
+    p's `the offence, by its nature, severity or circumstances, makes the person unfit to be a member of the Council`
+
+-- FORK F-23b1, alternative: the ground mirrors the bar of s.21, so a proceeding that ended in a final judgment other than a conviction is not a ground.
+@ref s.23(b)(1) (src:189-190)
+GIVEN p IS A `Proceeding against a Council candidate or member for an offence`
+GIVETH A BOOLEAN
+`s 23(b)(1), alternative reading mirroring section 21 — the proceeding is a ground for removal` p MEANS
+    `s 21 — the proceeding bars the person from appointment` p
+
+-- src:191 | {{ח:תתת|(2)}} נבצר ממנו דרך קבע למלא את תפקידו;
+@ref s.23(b)(2) (src:191)
+GIVEN facts IS A `Facts about a member for section 23(b)`
+GIVETH A BOOLEAN
+`s 23(b)(2) — the member is permanently unable to perform the function` facts MEANS
+    facts's `the member is permanently unable to perform the function`
+
+-- (b)(3), FORK F-23b3: the conditions "required for his appointment" are taken to be all the conditions the Law puts on appointment:
+-- the item of s.20, the bar of s.21 and the bar of s.29(b).  The alternative reads only the item of s.20.
+-- src:192 | {{ח:תתת|(3)}} חדל להתקיים בו תנאי מהתנאים הדרושים למינויו כחבר המועצה.
+@ref s.23(b)(3) (src:192)
+GIVEN facts IS A `Facts about a member for section 23(b)`
+GIVETH A BOOLEAN
+`s 23(b)(3) — the member ceased to meet a condition required for the appointment` facts MEANS
+        (NOT facts's `the member still satisfies the conditions of the seat`)
+    OR  `s 21 — the person is barred from appointment to the Council` (facts's `the proceedings against the member`)
+    OR  facts's `the member is barred from the Council by section 29(b)`
+
+@ref s.23(b)(3) (src:192)
+GIVEN facts IS A `Facts about a member for section 23(b)`
+GIVETH A BOOLEAN
+`s 23(b)(3), alternative reading — the member ceased to satisfy the conditions of the seat` facts MEANS
+    NOT facts's `the member still satisfies the conditions of the seat`
+
+-- src:189 | {{ח:תת|(ב)}} התקיימה נסיבה מהנסיבות כמפורט להלן לגבי חבר המועצה, יעבירו השר מכהונתו לפני תום תקופת הכהונה ובסמוך למועד התקיימות הנסיבה, בהודעה בכתב:
+-- src:190 | {{ח:תתת|(1)}} הוא הורשע בעבירה פלילית או בעבירת משמעת שמפאת מהותה, חומרתה או נסיבותיה אין הוא ראוי לכהן כחבר המועצה, או הוגשו נגדו כתב אישום או קובלנה בעבירה כאמור;
+-- src:191 | {{ח:תתת|(2)}} נבצר ממנו דרך קבע למלא את תפקידו;
+-- src:192 | {{ח:תתת|(3)}} חדל להתקיים בו תנאי מהתנאים הדרושים למינויו כחבר המועצה.
+@ref s.23(b) (src:189-192)
+@export Whether a ground exists on which the Minister must remove a Council member under section 23(b): a conviction or charge for an offence that makes the member unfit, permanent inability, or a condition of appointment that ceased to be met
+GIVEN facts IS A `Facts about a member for section 23(b)` @desc The member's proceedings and the member's present qualification
+GIVETH A BOOLEAN
+`s 23(b) — a ground for removal exists` facts MEANS
+        any `s 23(b)(1) — the proceeding is a ground for removal` (facts's `the proceedings against the member`)
+    OR  `s 23(b)(2) — the member is permanently unable to perform the function` facts
+    OR  `s 23(b)(3) — the member ceased to meet a condition required for the appointment` facts
+
+@ref s.23(b) (src:189-192)
+GIVEN facts IS A `Facts about a member for section 23(b)`
+GIVETH A BOOLEAN
+`s 23(b), alternative reading — a ground for removal exists` facts MEANS
+        any `s 23(b)(1), alternative reading mirroring section 21 — the proceeding is a ground for removal` (facts's `the proceedings against the member`)
+    OR  `s 23(b)(2) — the member is permanently unable to perform the function` facts
+    OR  `s 23(b)(3) — the member ceased to meet a condition required for the appointment` facts
+
+-- CONTRADICTION C-23a-b3: a member who ceases to be an employee of his ministry (or a member of the body he represents) ceases to serve AT ONCE under
+-- (a)(2); the same event is a "condition required for his appointment" that "ceased to be fulfilled" under (b)(3), which makes the Minister remove him.
+-- A removal has no object once the member no longer serves.  Reading A (taken): the duty of (b) arises only while the member still serves.  The alternative:
+-- the duty arises whenever a ground exists, even for a member who has already ceased under (a).
+@ref s.23(b) (src:189-192)
+GIVEN facts IS A `Facts about a member for section 23(b)`
+GIVETH A BOOLEAN
+`s 23(b) — the Minister's duty to remove the member arises` facts MEANS
+        `s 23(b) — a ground for removal exists` facts
+    AND facts's `the member has not already ceased to serve under section 23(a)`
+
+@ref s.23(b) (src:189-192)
+GIVEN facts IS A `Facts about a member for section 23(b)`
+GIVETH A BOOLEAN
+`s 23(b), alternative reading — the Minister's duty to remove the member arises whether or not the member has ceased under section 23(a)` facts MEANS
+    `s 23(b) — a ground for removal exists` facts
+
+-- The duty: "יעבירו השר מכהונתו לפני תום תקופת הכהונה ובסמוך למועד התקיימות הנסיבה, בהודעה בכתב": remove by written notice, close to the time.
+-- (d) adds that the Minister may not end the term before the member had the opportunity to put arguments in writing, so a removal
+-- counts as performance only if it was by written notice and after that opportunity (the two TRUEs).  "בסמוך" is vague (kind N): it is a
+-- judgement on the act, and a removal that was not close to the time still removes the member but is a breach (the HENCE).
+@ref s.23(b) (src:189-192)
+GIVEN member IS A STRING
+      facts IS A `Facts about a member for section 23(b)`
+GIVETH A DEONTIC Party `An act under sections 20 to 23`
+`s 23(b) — the Minister must remove the member by written notice` member facts MEANS
+    IF   `s 23(b) — the Minister's duty to remove the member arises` facts
+    THEN PARTY `the Minister`
+         MUST `remove a member of the Council from office` `the Minister` member TRUE TRUE close
+         HENCE (IF close
+                THEN FULFILLED
+                ELSE BREACH BY `the Minister` BECAUSE "s 23(b): the member was not removed close to the time the circumstance arose")
+         LEST BREACH BY `the Minister` BECAUSE "s 23(b): the member was not removed by written notice after the opportunity to respond in writing"
+    ELSE FULFILLED
+
+§§§ `Section 23(c): removal for absence`
+
+-- src:193 | {{ח:תת|(ג)}} השר, בהתייעצות עם יושב ראש המועצה, רשאי להעביר את חבר המועצה מכהונתו לפני תום תקופת הכהונה אם חבר המועצה נעדר בלא סיבה מוצדקת משלוש ישיבות רצופות של המועצה או מיותר ממחצית הישיבות שקיימה במהלך שנה אחת.
+-- Kind B (a count over a backwards window): IL s.10 does not cover a period counted backwards, and "one year" here is not a period
+-- "from" a day.  The window is plain date comparison.  FORK F-23c-year: which year.  Reading A (taken): the year ending on the day
+-- of the removal.  A meeting belongs to it if it is not after that day and the day of the removal falls before the first anniversary of the
+-- meeting (IL s.10(b) forwards from the meeting, so no date is ever subtracted).  Alternatives below: any year at all; a calendar year.
+@ref s.23(c) (src:193)
+GIVEN meeting IS A `Meeting of the Council and a member's attendance`
+GIVETH A BOOLEAN
+`s 23(c) — the member was absent from the meeting without justification` meeting MEANS
+        meeting's `the member was serving on the day of the meeting`
+    AND (NOT meeting's `the member attended`)
+    AND (NOT meeting's `the absence was justified`)
+
+-- FORK F-23c-sub: "ישיבות רצופות של המועצה" (consecutive meetings of the Council): reading A (taken) leaves out meetings of a subcommittee.
+@ref s.23(c) (src:193)
+GIVEN meetings IS A LIST OF `Meeting of the Council and a member's attendance`
+GIVETH A LIST OF `Meeting of the Council and a member's attendance`
+`s 23(c) — the meetings of the Council itself among` meetings MEANS
+    filter (GIVEN m YIELD NOT m's `held by a subcommittee of the Council`) meetings
+
+-- Three consecutive meetings, the list oldest first: each of the three is a meeting from which the member was absent without
+-- justification; a meeting attended, or an absence justified, breaks the run.
+@ref s.23(c) (src:193)
+GIVEN run IS A NUMBER
+      meetings IS A LIST OF `Meeting of the Council and a member's attendance`
+GIVETH A BOOLEAN
+`s 23(c) — three consecutive meetings were missed without justification, counting a run of` run `already, in` meetings MEANS
+    IF   run AT LEAST 3
+    THEN TRUE
+    ELSE CONSIDER meetings
+         WHEN EMPTY THEN FALSE
+         WHEN m FOLLOWED BY rest THEN
+             IF   `s 23(c) — the member was absent from the meeting without justification` m
+             THEN `s 23(c) — three consecutive meetings were missed without justification, counting a run of` (run PLUS 1) `already, in` rest
+             ELSE `s 23(c) — three consecutive meetings were missed without justification, counting a run of` 0 `already, in` rest
+
+@ref s.23(c) (src:193)
+GIVEN meetings IS A LIST OF `Meeting of the Council and a member's attendance`
+GIVETH A BOOLEAN
+`s 23(c) — the member was absent without justification from three consecutive meetings of the Council` meetings MEANS
+    `s 23(c) — three consecutive meetings were missed without justification, counting a run of` 0 `already, in` (`s 23(c) — the meetings of the Council itself among` meetings)
+
+-- "More than half": strictly more than half of the meetings the Council held in the year.  The window is the year ending on the day of the
+-- removal (reading A).
+@ref s.23(c) (src:193)
+GIVEN removal IS A DATE
+      meeting IS A `Meeting of the Council and a member's attendance`
+GIVETH A BOOLEAN
+`s 23(c) — the meeting was held during the year ending on` removal `, the meeting being` meeting MEANS
+        meeting's `the day of the meeting` AT MOST removal
+    AND removal LESS THAN `s 10(b) — the last day of a period of` 1 `years after an event on` (meeting's `the day of the meeting`)
+
+@ref s.23(c) (src:193)
+GIVEN removal IS A DATE
+      meetings IS A LIST OF `Meeting of the Council and a member's attendance`
+GIVETH A BOOLEAN
+`s 23(c) — the member was absent without justification from more than half of the meetings of the Council held during the year ending on` removal `, among` meetings MEANS
+    (`the number of absences without justification` TIMES 2) GREATER THAN `the number of meetings held`
+    WHERE
+        `the meetings in the window` MEANS
+            filter (GIVEN m YIELD `s 23(c) — the meeting was held during the year ending on` removal `, the meeting being` m) (`s 23(c) — the meetings of the Council itself among` meetings)
+        `the number of meetings held` MEANS count `the meetings in the window`
+        `the number of absences without justification` MEANS
+            count (filter (GIVEN m YIELD `s 23(c) — the member was absent from the meeting without justification` m) `the meetings in the window`)
+
+-- FORK F-23c-year, alternative B: any one year at all.  A window starts on each meeting day and runs to the day before its first anniversary.
+@ref s.23(c) (src:193)
+GIVEN meetings IS A LIST OF `Meeting of the Council and a member's attendance`
+GIVETH A BOOLEAN
+`s 23(c), alternative reading — the member was absent without justification from more than half of the meetings of the Council held during some one year, among` meetings MEANS
+    any `a window starting at the meeting is such a year` (`s 23(c) — the meetings of the Council itself among` meetings)
+    WHERE
+        `a window starting at the meeting is such a year` start MEANS
+            (`absences in the window` TIMES 2) GREATER THAN `meetings in the window`
+            WHERE
+                `the window` MEANS
+                    filter (GIVEN m YIELD
+                                    (m's `the day of the meeting` AT LEAST start's `the day of the meeting`)
+                                AND (m's `the day of the meeting` LESS THAN `s 10(b) — the last day of a period of` 1 `years after an event on` (start's `the day of the meeting`)))
+                           (`s 23(c) — the meetings of the Council itself among` meetings)
+                `meetings in the window` MEANS count `the window`
+                `absences in the window` MEANS count (filter (GIVEN m YIELD `s 23(c) — the member was absent from the meeting without justification` m) `the window`)
+
+-- FORK F-23c-year, alternative C: a calendar year.
+@ref s.23(c) (src:193)
+GIVEN year IS A NUMBER
+      meetings IS A LIST OF `Meeting of the Council and a member's attendance`
+GIVETH A BOOLEAN
+`s 23(c), alternative reading — the member was absent without justification from more than half of the meetings of the Council held in the calendar year` year `, among` meetings MEANS
+    (count (filter (GIVEN m YIELD `s 23(c) — the member was absent from the meeting without justification` m) `the meetings in the year`) TIMES 2) GREATER THAN count `the meetings in the year`
+    WHERE
+        `the meetings in the year` MEANS
+            filter (GIVEN m YIELD DATE_YEAR (m's `the day of the meeting`) EQUALS year) (`s 23(c) — the meetings of the Council itself among` meetings)
+
+-- FORK F-23c-sub, alternative: meetings of a subcommittee count as meetings of the Council.  The same functions are called on a list in which
+-- they have been marked as meetings of the Council; no separate function is needed, and the test passes such a list.
+
+@ref s.23(c) (src:193)
+@export Whether the ground in section 23(c) for removing a member exists: absence without justification from three consecutive meetings, or from more than half of the meetings held in the year ending on the day of removal
+GIVEN removal IS A DATE @desc The day on which the Minister would remove the member
+      meetings IS A LIST OF `Meeting of the Council and a member's attendance` @desc The meetings of the Council, oldest first, each with the member's attendance
+GIVETH A BOOLEAN
+`s 23(c) — a ground for removal by absence exists on` removal `, according to` meetings MEANS
+        `s 23(c) — the member was absent without justification from three consecutive meetings of the Council` meetings
+    OR  `s 23(c) — the member was absent without justification from more than half of the meetings of the Council held during the year ending on` removal `, among` meetings
+
+-- The power: "השר, בהתייעצות עם יושב ראש המועצה, רשאי": a MAY, preconditioned on the ground and on consulting the chair.  A removal needs the
+-- same written notice and the same prior opportunity to respond as under (b) (s.23(d)); "close to the time" is not asked of (c).
+@ref s.23(c) (src:193)
+GIVEN member IS A STRING
+      meetings IS A LIST OF `Meeting of the Council and a member's attendance`
+      removal IS A DATE
+      `the Minister consulted the chair of the Council` IS A BOOLEAN
+GIVETH A DEONTIC Party `An act under sections 20 to 23`
+`s 23(c) — the Minister may remove the member for absence` member meetings removal `the Minister consulted the chair of the Council` MEANS
+    IF       `s 23(c) — a ground for removal by absence exists on` removal `, according to` meetings
+         AND `the Minister consulted the chair of the Council`
+    THEN PARTY `the Minister`
+         MAY `remove a member of the Council from office` `the Minister` member TRUE TRUE closeness
+    ELSE FULFILLED
+
+§§§ `Section 23(d): the opportunity to respond`
+
+-- src:194 | {{ח:תת|(ד)}} השר לא יפסיק את כהונתו של חבר המועצה לפי סעיף קטן (ב) או (ג) אלא לאחר שניתנה לו הזדמנות לטעון את טענותיו בכתב לעניין זה.
+@ref s.23(d) (src:194)
+GIVETH A DEONTIC Party `An act under sections 20 to 23`
+`s 23(d) — the Minister must not end a member's term under section 23(b) or (c) before the member had the opportunity to put arguments in writing` MEANS
+    PARTY `the Minister`
+    SHANT `remove a member of the Council from office` `the Minister` member notice FALSE closeness
+    HENCE FULFILLED
+    LEST BREACH BY `the Minister` BECAUSE "s 23(d): a member's term was ended before the member had the opportunity to put arguments in writing"
+
+§§§ `Section 23(e): the replacement`
+
+-- "יפעל השר בהתאם להוראות סעיף 20 למינוי חבר אחר במקומו, בהקדם האפשרי": appoint another member under s.20 as soon as possible.  The
+-- appointment is the same act as in s.20 and must meet the same conditions; "as soon as possible" is vague (kind N) and is a judgement
+-- on the act: a replacement made late still fills the seat but is a breach.
+-- src:195 | {{ח:תת|(ה)}} הפסיק חבר המועצה לכהן לפי הוראות סעיף זה, יפעל השר בהתאם להוראות {{ח:פנימי|סעיף 20|סעיף 20}} למינוי חבר אחר במקומו, בהקדם האפשרי.
+@ref s.23(e) (src:195)
+GIVEN seat IS A `Council seat`
+GIVETH A DEONTIC Party `An act under sections 20 to 23`
+`s 23(e) — the Minister must appoint another member to the seat of one who ceased to serve` seat MEANS
+    PARTY `the Minister`
+    MUST `appoint a member of the Council` `the Minister` seat candidate proceedings barred soon
+         PROVIDED `s 20, s 21, s 29(b) — the candidate may be appointed to the seat` seat candidate proceedings barred
+    HENCE (IF soon
+           THEN FULFILLED
+           ELSE BREACH BY `the Minister` BECAUSE "s 23(e): the replacement was not appointed as soon as possible")
+    LEST BREACH BY `the Minister` BECAUSE "s 23(e): no replacement who may be appointed was appointed to the seat"

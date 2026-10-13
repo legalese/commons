@@ -3,7 +3,7 @@
 This directory holds several encodings of the same law side by side.
 Rows are equal and canon ranks none of them (`docs/directory-conventions.md`).
 This page says who made each row, how, and what it covers, so that nobody compares two rows that answer different questions.
-Last checked 2026-10-13.
+Last checked 2026-10-14.
 
 | row | made by | how | covers | tests |
 | --- | --- | --- | --- | --- |
@@ -11,6 +11,7 @@ Last checked 2026-10-13.
 | [`legalese-he`](legalese-he/) | Legalese | **generated**, not encoded: `source/revoice.py` re-voices the five modules of `legalese` into Hebrew-canonical L4 using `glossary.json` | the same as `legalese`, rule for rule | its `check.sh` compares its answers with `legalese` module by module |
 | [`legalese-sonnet-5.5`](legalese-sonnet-5.5/) | Legalese | one Claude Sonnet 5.5 agent working alone in a cleanroom from THERMOSTAT's brief (`BRIEF.md`), 2026-10-13; no independent test pass | the same scope as `legalese`; its law modules are generated from `build/src/*.l4.in` | its `check.sh`: 347 assertions satisfied, and `hvac-tests-red.l4` fails on exactly 13 by design, after the 2026-10-13 date correction (as run: 281 and 7); re-run by the launching session |
 | [`legalese-opus-5.5`](legalese-opus-5.5/) | Legalese | one Claude Opus 5.5 agent working alone in a cleanroom from the same brief, binary and effort as `legalese-sonnet-5.5`, 2026-10-13; no independent test pass | the same scope as `legalese` | its `check.sh`: 239 assertions satisfied, and `tests-simplex-red.l4` fails on exactly 2 by design, after the 2026-10-13 date correction (as run: 202 and 2); re-run by the launching session |
+| [`legalese-full-sonnet-5.5`](legalese-full-sonnet-5.5/) | Legalese | a Claude Sonnet 5.5 fleet in the economy shape (one survey agent, eight parallel group encoders, one integrator), with three independent Claude Opus 5.5 test authors and a blind Opus 5.5 hunt for contradictions in the source, 2026-10-13 and 2026-10-14; every agent at high effort; one reading ruled by the owner (the commencement day of s.63(a)(1), 16 July 2025) | the whole Law (all 63 sections and the four schedules) and the Fees Regulations in three vintages with the SimpLEX table; every provision has a coverage row, none deferred | its `check.sh`: 137 modules, 5,224 assertions satisfied, 227 failed and 15 refused by design (the red files and the open-question files), 458 traces guarded; the three independent suites decided their expected answers from the source before opening the encoding |
 | [`legalese-michael`](legalese-michael/) | an external contribution (`michaellegalese`, committed 2026-09-22) | made with ChatGPT, without Legalese's `encoding-a-subject` skill or pipeline | the whole Law: all 63 sections and the four schedules, as one module with Hebrew comments; **not** the Fees Regulations | `tests.l4` (107 assertions) and `traces.l4` (6 traces), written by the run that wrote the code |
 
 ## Reading the table
@@ -18,6 +19,7 @@ Last checked 2026-10-13.
 **The rows do not all cover the same ground.**
 `legalese-michael` covers more of the Law (all 63 sections; the sanctions chapter, the First Schedule works, the register, the council and inspection provisions) and none of the fee regulations.
 `legalese`, `legalese-he`, `legalese-sonnet-5.5` and `legalese-opus-5.5` cover nine sections and the fee regulations in three vintages, and can run the SimpLEX scenarios from Figure 4 of Schwartz, Bar-Siman-Tov & Gelbard (2025); `legalese-michael` cannot.
+`legalese-full-sonnet-5.5` covers the whole Law and the fee regulations, and is the only row that covers both.
 Compare rows by what they answer on the same scenario, never by their text or by their assertion counts.
 
 **`legalese-he` is not an independent encoding.**
@@ -39,6 +41,7 @@ Its time module `il-interpretation-time.l4` is vendored, byte-identical, into th
 | `legalese-he` | as `legalese`, which it is generated from | as `legalese` |
 | `legalese-sonnet-5.5` | yes; its first encoding already did | applied to deadlines (s.16, s.17(c)), not to validity or commencement (its F-X1 to F-X3) |
 | `legalese-opus-5.5` | yes, since 2026-10-13 (five-year limb and three-year window moved a day) | applied to deadlines and to validity, not to commencement (its F31) |
+| `legalese-full-sonnet-5.5` | yes, through the vendored time module for every period | applied to deadlines and to windows for an application or request, not to validity or to a commencement counted from another date (the fleet default, each period's fork registers the alternative as a callable function) |
 | `legalese-michael` | **no**: three periods end a day early, and the row's file is not edited (see its `encoding.json`) | not modelled |
 
 Whether s.10(c) reaches periods of validity and commencement dates is open in every row, and so is what it does when several rest days close a period (fork F3 of the Interpretation subject).
@@ -49,6 +52,7 @@ A domain expert should rule on both.
 ```sh
 sh legalese/check.sh        # needs an l4 at least as new as the rows; see the script
 sh legalese-he/check.sh
+L4=/path/to/l4 sh legalese-full-sonnet-5.5/check.sh     # about three minutes; reads ../source/ and tools/srcrefs.py
 cd legalese-michael && l4 check hvac-act.l4 && l4 run tests.l4 && l4 run traces.l4
 ```
 

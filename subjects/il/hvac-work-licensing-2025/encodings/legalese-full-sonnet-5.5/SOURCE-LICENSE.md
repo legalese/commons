@@ -1,0 +1,19 @@
+# SOURCE-LICENSE: the terms the quoted source text carries
+
+This file records the terms of the SOURCE text quoted in the modules and in NOTES.md.
+It is not the licence of the encoding, which is Apache-2.0 like the rest of canon.
+Where a term could not be established, this file says "undetermined" and says why; no grant has been written that was not found.
+
+| source (file in `inputs/`) | what it is | terms |
+| --- | --- | --- |
+| `law.wiki` | Hebrew Wikisource, revision 2947808 (10 July 2025), of the Regulation of Engagement in Work on Refrigeration or Air-Conditioning Systems Law 5785-2025 | The text of the Law is a statute. Under section 6 of the Israeli Copyright Act 5768-2007 there is no copyright in a statute (nor in a judgment or other official legislative text), so the Law's own words are free to quote. Wikisource's editorial additions (the markup, the notes in the margin, the layout templates, the editorial notes marked as notes) are available under CC BY-SA 4.0; the modules quote the Law's text and, where they cite a note (for example the date 16.7.2025 beside section 63(a)(1)), they say it is the editor's. |
+| `sefer-hachukim-3349-pp182-209.pdf` and `.txt` | the official issue of Sefer HaChukim 3349, pages 182 to 209 | An official text of legislation; no copyright, section 6 of the Copyright Act. The text layer is bidirectionally scrambled and was used to check numbers; the page images were read for structure. |
+| `knesset-bill-25_ls2_5256851.pdf` | the Knesset committee's text for the second and third readings, 11 December 2024 (not the bill as tabled) | **Undetermined.** It was used to check the structure of ss.8 and 9 and is not quoted in any module; whether a bill at that stage is a "statute" for section 6 of the Copyright Act was not established. |
+| `kovetz-hatakanot-11951-p2116.pdf` and `.txt` | the Fees Regulations as made (Kovetz HaTakanot 11951, 9 July 2025) | An official text of subordinate legislation; no copyright, section 6. |
+| `takanot-12383.pdf` and `.txt` | the amending regulations (Kovetz HaTakanot 12383, 4 May 2026) | As above. |
+| `regulations-fees.wiki` | Hebrew Wikisource's consolidated Fees Regulations (unofficial) | As `law.wiki`: the text of the regulations is free; Wikisource's editorial additions (the "adjusted to 2025 / 2026" notes, the bracketed corrections of headings) are CC BY-SA 4.0 and are cited as the editor's. |
+| `il-interpretation-time.l4` and `interpretation-NOTES.md` | the vendored encoding of Interpretation Law 5741-1981 ss.3, 8, 10, 21 and Interpretation Ordinance s.17 | The quoted text is statute (no copyright, section 6). The module was supplied by the fleet lead and copied byte for byte into this deposit; the licence of that module is **undetermined** here: its hash is pinned by `check.sh`, and its own header should be consulted for its terms. |
+| `fig4-simplex-screenshot.png`, `fig4-page34-400dpi.png`, `fig4-en-p28-28.png` | Figure 4 of Schwartz, Bar-Siman-Tov and Gelbard (2025), the SimpLEX draft of the Fees Regulations and its test table | **Undetermined.** The figure appears in a published paper whose licence was not among the sources; the encoding transcribes the draft regulation's figures and structure (NIS amounts, the numbering of regulations 1 and 2, the outcome words of the test rows), which are facts and a draft legislative text, and does not reproduce the paper's prose. Whether the figure itself may be redistributed is for the paper's rightsholders. |
+| `revisions.json` | the revision list of the two Wikisource pages | Metadata of the Wikisource edit history; CC BY-SA 4.0 as Wikisource's own text. |
+
+The Hebrew in the modules is copied by script from `law.wiki` and the other raw files (`srcrefs.py quote`); `check.sh` re-checks that every quotation is a verbatim slice of its source line.

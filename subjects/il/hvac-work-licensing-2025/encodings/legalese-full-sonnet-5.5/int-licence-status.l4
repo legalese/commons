@@ -1,0 +1,145 @@
+@lang en
+IMPORT prelude
+IMPORT daydate
+IMPORT domain
+IMPORT `g1-adverse-action`
+IMPORT `g2-renewal`
+IMPORT `g2-validity`
+IMPORT `g3-training-duty`
+IMPORT `g4-council-work`
+
+-- int-licence-status.l4: integration points IP1, IP8, IP19 and IP20.  When is a licence in force, which kinds does a person hold in
+-- force on a day, what does an extension under s.17(c) do to the register, and when is the training duty of s.17, which s.17(d) makes a
+-- condition of the licence, breached.  This is the INTEGRATOR's module: it imports groups 1, 2, 3 and 4 and is the only place that
+-- composes them.
+--
+--   IP1   group 2 decides "the licence is in force on a day" from the grant, the renewals and the register's record of revocation and
+--         suspension (s.8, s.10).  Group 1's own rules for s.10 read the same three register fields.  The two were written apart; the
+--         tests in int-tests-consistency.l4 compare them on every edge day.  The wiring uses group 2's function.
+--   IP20  a temporary licence under s.9 is a grade 3 licence (the domain says so); it enters the list of kinds in force like any other,
+--         and group 2 refuses for the whole list if one temporary licence has no recorded last day.  The wiring does not hide that.
+--   IP19  the end of validity: group 3 decides whether the Registrar may extend it (s.17(c)); group 2 reads the register's recorded end.
+--         The extension reaches group 2 by rebuilding the Licence with `validity ends on, as recorded` set to the day the extension
+--         fixes.  If group 3 says the Registrar may not extend, the Licence is returned as it was: the Law then gives no extension.
+--   IP8   group 3's s.17(d) says when the training duty was breached; group 1 and group 2 take it as "the licensee breached a licence
+--         condition".  The wiring computes it from the licence's own dates: the anchor is the last day of validity before any extension
+--         (the Law alone, or the recorded day for a temporary licence), the closing day is the register's last day (which carries an
+--         extension).
+
+§ `Integration points IP1, IP8, IP19, IP20: the status of a licence`
+
+§§ `IP1 and IP20: the kinds a person holds in force`
+
+@ref Law s.8, s.9, s.10 (IP1, IP20)
+@export The kinds of licence, among the given licences, that are in force on the given day: within the period of validity (s.8, or the term the register records for a temporary licence, s.9) and neither revoked nor suspended (s.10); a temporary licence is a grade 3 licence
+GIVEN day IS A DATE @desc The day asked about
+      licences IS A LIST OF Licence @desc The licences the person holds or held, as the register records them
+GIVETH A LIST OF `Licence kind`
+`int — the licence kinds in force on the day` day licences MEANS
+    `the licence kinds in force on the day` day licences
+
+@ref Law s.3(a) (the flag `a licence of the person is not in force`), group 1 fork F8
+@desc True if the person holds or held a licence that was granted on or before the day and is not in force on it (it lapsed, or was revoked or suspended): the flag group 1 reads to tell "no licence at all" from "no licence of the appropriate kind"
+GIVEN day IS A DATE @desc The day asked about
+      licences IS A LIST OF Licence @desc The licences the person holds or held, as the register records them
+GIVETH A BOOLEAN
+`int — a licence of the person is not in force on the day` day licences MEANS
+    any (GIVEN licence YIELD licence's `granted on` AT MOST day AND NOT `the licence is in force on` licence day) licences
+
+@ref Law s.3(a), s.10 (IP1)
+@desc True if the person holds a licence of the given kind in force on the day
+GIVEN day IS A DATE
+      licences IS A LIST OF Licence
+      kind IS A `Licence kind`
+GIVETH A BOOLEAN
+`int — the person holds a licence in force on the day of the kind` day licences kind MEANS
+    elem kind (`the licence kinds in force on the day` day licences)
+
+§§ `IP19: an extension of validity under section 17(c)`
+
+@ref Law s.17(c), s.8, s.11(a)(1) (IP19)
+@desc What the Registrar decided to do under s.17(c) and the facts the power asks about; the consultation of the Council is given as a consultation, and the two Council flags group 3 asks for are worked out from it by group 4
+DECLARE `Decision to extend the validity of a licence` HAS
+    `the day of the Registrar's decision` IS A DATE @desc The day the Registrar decided to extend the validity
+    `the last day of validity fixed by the extension` IS A DATE @desc The last day of validity the Registrar fixed; at most three months after the last day as it stands
+    `the licensee had not fulfilled the duty under section 17(a) or (b)` IS A BOOLEAN @desc True if, on the day of the decision, the licensee had not fulfilled the duty to attend training
+    `the consultation of the Council about the extension` IS A `Consultation of the Council` @desc The consultation of the Council before the extension (section 17(c) says: after consulting the Council)
+    `in the Registrar's opinion these are special cases and the circumstances are justified` IS A BOOLEAN @desc The Registrar's finding of special cases and justified circumstances
+    `the extension is granted so that the licensee can fulfil the duty` IS A BOOLEAN @desc True if the extension was granted for the purpose of fulfilling the duty
+
+@ref Law s.8 (the last day before any extension), s.9 (a temporary licence's recorded term)
+@desc The last day of validity of the licence before any extension under s.17(c): the Law alone for an ordinary licence, the register's recorded term for a temporary one (the Law fixes none)
+GIVEN licence IS A Licence
+GIVETH A DATE
+`int — the last day of validity before any extension of` licence MEANS
+    IF   licence's `a temporary licence under section 9`
+    THEN `s 8 — the last day of validity of the licence` licence
+    ELSE `s 8 — the last day of validity of the licence, by the Law alone` licence
+
+@ref Law s.17(c) (group 3), s.8 (group 2)
+@desc Group 3's record of an extension, built from the licence and the decision: the last day before any extension and as it stands come from group 2, the two Council flags from group 4
+GIVEN decision IS A `Decision to extend the validity of a licence`
+      licence IS A Licence
+GIVETH AN `Extension of validity under section 17(c)`
+`int — the extension of section 17(c) that` decision `asks of` licence MEANS
+    `Extension of validity under section 17(c)` WITH
+        `the day of the Registrar's decision` IS decision's `the day of the Registrar's decision`
+        `the last day of validity before any extension under section 17(c)` IS `int — the last day of validity before any extension of` licence
+        `the last day of validity as it stands when the decision is taken` IS `s 8 — the last day of validity of the licence` licence
+        `the last day of validity fixed by the extension` IS decision's `the last day of validity fixed by the extension`
+        `the licensee had not fulfilled the duty under section 17(a) or (b)` IS decision's `the licensee had not fulfilled the duty under section 17(a) or (b)`
+        `the Council was consulted about the extension` IS `s 26 — the Council was consulted` (decision's `the consultation of the Council about the extension`)
+        `the Council's advice about the extension was validly given` IS `s 24 to 26 — the Council's advice was validly given` (decision's `the consultation of the Council about the extension`)
+        `in the Registrar's opinion these are special cases and the circumstances are justified` IS decision's `in the Registrar's opinion these are special cases and the circumstances are justified`
+        `the extension is granted so that the licensee can fulfil the duty` IS decision's `the extension is granted so that the licensee can fulfil the duty`
+
+@ref Law s.17(c) (IP19)
+@export Whether the Registrar may extend the validity of the licence by the decision (section 17(c)): the licensee had not fulfilled the duty, the Council was consulted and its advice validly given, the Registrar found special cases, the extension is for fulfilling the duty and runs no more than three months; the Law must have commenced for the licensee's work
+GIVEN licence IS A Licence @desc The licence as the register records it
+      decision IS A `Decision to extend the validity of a licence` @desc The Registrar's decision and its preconditions
+      `the Law has commenced for the work on the system` IS A BOOLEAN @desc True if the Law has commenced for the work on the system (group 3 gates the power on it; fork COM)
+GIVETH A BOOLEAN
+`int — the Registrar may extend the validity of the licence by the decision` licence decision `the Law has commenced for the work on the system` MEANS
+    `s.17(c) — the Registrar may extend the validity of the licence` (`int — the extension of section 17(c) that` decision `asks of` licence) `the Law has commenced for the work on the system`
+
+@ref Law s.17(c), s.11(a)(1) (IP19)
+@export The licence as the register records it after the decision: with its recorded last day of validity set to the day the extension fixes if the Registrar may extend, otherwise unchanged (the Law then gives no extension)
+GIVEN licence IS A Licence @desc The licence as the register records it
+      decision IS A `Decision to extend the validity of a licence` @desc The Registrar's decision and its preconditions
+      `the Law has commenced for the work on the system` IS A BOOLEAN @desc True if the Law has commenced for the work on the system
+GIVETH A Licence
+`int — the licence after the decision to extend` licence decision `the Law has commenced for the work on the system` MEANS
+    IF   `int — the Registrar may extend the validity of the licence by the decision` licence decision `the Law has commenced for the work on the system`
+    THEN Licence WITH
+             `the holder` IS licence's `the holder`
+             `the kind of licence` IS licence's `the kind of licence`
+             `a temporary licence under section 9` IS licence's `a temporary licence under section 9`
+             `granted on` IS licence's `granted on`
+             `renewed on` IS licence's `renewed on`
+             `validity ends on, as recorded` IS JUST (decision's `the last day of validity fixed by the extension`)
+             `revoked on` IS licence's `revoked on`
+             `suspended from` IS licence's `suspended from`
+             `suspended until` IS licence's `suspended until`
+    ELSE licence
+
+§§ `IP8: the training duty as a condition of the licence`
+
+@ref Law s.17(a), s.17(b), s.17(d) (IP8)
+@export Whether the training duty of section 17, which section 17(d) makes a condition of the licence, was breached on the given day: group 3's rule, fed the licence's last day before any extension and its last day as extended; this is the value of the input `the licensee breached a licence condition` of groups 1 and 2
+GIVEN licence IS A Licence @desc The licence as the register records it
+      day IS A DATE @desc The day on which the question is put
+      sessions IS A LIST OF `Training session attended` @desc Every training session the licensee attended
+      courses IS A LIST OF `Particular course required under section 17(b)` @desc The particular courses the Registrar required
+      `the Law has commenced for the work on the system` IS A BOOLEAN @desc True if the Law has commenced for the work on the system
+GIVETH A BOOLEAN
+`int — the training duty was breached under the licence on the day` licence day sessions courses `the Law has commenced for the work on the system` MEANS
+    `s.17(d) — the licensee breached a licence condition through the training duty as at` day sessions (`int — the last day of validity before any extension of` licence) (`s 8 — the last day of validity of the licence` licence) courses `the Law has commenced for the work on the system`
+
+@ref Law s.10(a)(2) (IP18), s.6, s.9
+@desc True if a condition for the grant of the licence has ceased to hold (ground (2) of s.10(a)): the negation of group 2's "the conditions of the licence still hold", fed group 2's two re-examinations
+GIVEN licence IS A Licence
+      `the conditions of a licence under section 6 still hold` IS A BOOLEAN
+      `the conditions of a licence under section 9 still hold` IS A BOOLEAN
+GIVETH A BOOLEAN
+`int — a condition for the grant of the licence ceased to hold` licence `the conditions of a licence under section 6 still hold` `the conditions of a licence under section 9 still hold` MEANS
+    NOT `the conditions of the licence still hold` licence `the conditions of a licence under section 6 still hold` `the conditions of a licence under section 9 still hold`

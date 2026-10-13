@@ -1,0 +1,325 @@
+@lang en
+IMPORT prelude
+IMPORT daydate
+IMPORT domain
+IMPORT `g1-first-schedule`
+IMPORT `g1-interpretation`
+IMPORT `g1-licensing-duty`
+IMPORT `g1-adverse-action`
+IMPORT `g2-validity`
+IMPORT `g3-licensee-duties`
+IMPORT `g3-training-duty`
+IMPORT `g3-operator`
+IMPORT `g5-inspectors`
+IMPORT `g7-electrical`
+IMPORT `int-commencement`
+IMPORT `int-licence-status`
+
+-- int-work.l4: integration points IP2, IP3, IP4, IP9 and IP21, and headline (b): may this person do this work on this day.
+-- The INTEGRATOR's module.  It builds group 1's record of one piece of work (s.3(a)) from facts about a person, their licences, the
+-- system and the act, supplying every input from the group that decides it:
+--   IP1/IP20  the kinds in force on the day: group 2 (through int-licence-status);
+--   IP2       the Law has commenced for the work on the system: group 7 (through int-commencement, the facts as the sources give them);
+--   IP3       which licence kinds cover the system: group 1's s.2;
+--   IP4       whether the act is work on a cooling system: group 1's s.2 and the First Schedule;
+--   IP8       a breach of a licence condition: group 3's training duty (s.17(d)) or any other condition (an input);
+--   IP9       the violations that groups 1, 3 and 5 produce for group 6, as `Violation` records;
+--   IP21      the licensee is treated as a service electrician (s.58, s.61): group 7.
+-- What the sources do not give stays an input: the activity the act amounts to (the First Schedule item), an exemption order under
+-- s.3(b), a restriction under s.10, and a breach of "the provisions under the Law" (the sources list none).
+
+§ `Integration points IP2, IP3, IP4, IP9, IP21 and headline (b): the work`
+
+§§ `The situation of one piece of work`
+
+@ref Law s.17(a), s.17(b), s.17(d) (IP8)
+@desc The facts of the training duty under one licence: the sessions attended and the particular courses required; whether the duty was breached on a day is group 3's rule, fed the licence's dates
+DECLARE `Training record under one licence` HAS
+    `the licence the record concerns` IS A Licence @desc The licence under which the training duty runs
+    `the sessions attended` IS A LIST OF `Training session attended` @desc Every training session the licensee attended in the course of that licence
+    `the courses required under section 17(b)` IS A LIST OF `Particular course required under section 17(b)` @desc The particular courses the Registrar required
+
+@ref Law s.3(a), s.2 definition of work on a cooling system, First Schedule
+@desc Everything the integration needs about one piece of work done by one person on one day: who, with which licences, on which system, what the act amounts to, and the facts of conditions, restrictions and exemptions
+DECLARE `Situation of one piece of work` HAS
+    `the person who does the work` IS A Person @desc The person who does the work; the violator if a violation arises
+    `licences of the person` IS A LIST OF Licence @desc Every licence the person holds or held, as the register records them
+    `the day of the work` IS A DATE @desc The day the work is done
+    `the cooling system worked on` IS A `Cooling system` @desc The system: its cooling capacity and the refrigerants it operates by
+    `the activity the act amounts to` IS A MAYBE `First Schedule activity` @desc The First Schedule activity the act amounts to; NOTHING if it amounts to none of them (the classification is the caller's: the Law does not classify acts)
+    `the limits of the item` IS A `Facts about an act for the limits of First Schedule items` @desc The facts that decide whether the act stays inside the limits of the items that say only
+    `a restriction covering this work` IS A MAYBE `Period of a restriction or suspension under section 10` @desc A restriction under s.10(a) or a direction under s.10(c) that covers this work; NOTHING if none
+    `the system is of a class exempted by an order under section 3(b)` IS A BOOLEAN @desc True if an order of the Minister under s.3(b) exempts the class of systems; no such order is in the sources
+    `the person breached a licence condition other than the training duty` IS A BOOLEAN @desc True if the person breached a condition of the licence that is not the training duty of s.17 (the sources list no conditions)
+    `a provision under the Law was breached by the work` IS A BOOLEAN @desc True if the work was done in breach of a provision made under the Law (the sources list none)
+    `the training records` IS A LIST OF `Training record under one licence` @desc The training duty under each licence the person holds; empty if the duty is not in question
+
+@ref Law s.3(a)
+@desc The kinds of licence the person holds in force on the day of the work
+GIVEN s IS A `Situation of one piece of work`
+GIVETH A LIST OF `Licence kind`
+`int — the kinds in force for the situation` s MEANS
+    `int — the licence kinds in force on the day` (s's `the day of the work`) (s's `licences of the person`)
+
+@ref Law s.2 "work on a cooling system", First Schedule (IP4)
+@desc Whether the act of the situation is work on a cooling system (s.2): an act of a kind the First Schedule lists, within the limits of the item
+GIVEN s IS A `Situation of one piece of work`
+GIVETH A BOOLEAN
+`int — the act of the situation is work on a cooling system` s MEANS
+    `s 2 — the act is work on a cooling system` (s's `the activity the act amounts to`) (s's `the limits of the item`)
+
+@ref Law s.17(d), s.3(a), s.10(a)(3) (IP8)
+@desc True if the person breached a condition of a licence on the day of the work: the training duty of s.17 (group 3, fed by group 2's dates) under any licence the person holds, or any other condition (an input)
+GIVEN s IS A `Situation of one piece of work`
+GIVETH A BOOLEAN
+`int — a licence condition was breached in the situation` s MEANS
+        s's `the person breached a licence condition other than the training duty`
+    OR  any (GIVEN record YIELD `int — the training duty was breached under the licence on the day` (record's `the licence the record concerns`) (s's `the day of the work`) (record's `the sessions attended`) (record's `the courses required under section 17(b)`) (`int — the Law has commenced for work on the system on the day` (s's `the cooling system worked on`) (s's `the day of the work`))) (s's `the training records`)
+
+@ref Law s.10(a), s.10(c) (the flag `the licensee is restricted from the work`)
+@desc True if a restriction or bar covering this work is in force on the day of the work
+GIVEN s IS A `Situation of one piece of work`
+GIVETH A BOOLEAN
+`int — the person is restricted from the work in the situation` s MEANS
+    CONSIDER s's `a restriction covering this work`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST period THEN `a restriction or bar is in force on the day` period (s's `the day of the work`)
+
+@ref Law s.3(a) (the record of group 1)
+@desc Group 1's record of one piece of work under s.3(a), every standard input supplied from the group that decides it
+GIVEN s IS A `Situation of one piece of work`
+GIVETH A `Circumstances of work under section 3(a)`
+`int — the circumstances of section 3(a) for the situation` s MEANS
+    `Circumstances of work under section 3(a)` WITH
+        `the cooling system worked on` IS s's `the cooling system worked on`
+        `the activity the act amounts to` IS s's `the activity the act amounts to`
+        `the limits of the item` IS s's `the limits of the item`
+        `licence kinds in force on the day` IS `int — the kinds in force for the situation` s
+        `a licence of the person is not in force` IS `int — a licence of the person is not in force on the day` (s's `the day of the work`) (s's `licences of the person`)
+        `the Law has commenced for the work on the system` IS `int — the Law has commenced for work on the system on the day` (s's `the cooling system worked on`) (s's `the day of the work`)
+        `the system is of a class exempted by an order under section 3(b)` IS s's `the system is of a class exempted by an order under section 3(b)`
+        `the licensee breached a licence condition` IS `int — a licence condition was breached in the situation` s
+        `the licensee is restricted from the work` IS `int — the person is restricted from the work in the situation` s
+        `a provision under the Law was breached by the work` IS s's `a provision under the Law was breached by the work`
+
+§§ `Headline (b): may this person do this work on this day`
+
+@ref Law s.3(a), s.2, s.8, s.10, s.17(d), s.63(a)
+@export What section 3(a) says about one piece of work, with every input wired: whether the act is work on a cooling system, whether the Law has commenced for it, whether the system is exempted by order, and whether the person holds, in force on the day, a licence of the kind appropriate to the system and the work and works within its conditions; a named refusal where a group's answer is a refusal
+GIVEN s IS A `Situation of one piece of work` @desc The person, their licences, the day, the system, the act and the facts of conditions, restrictions and exemptions
+GIVETH AN `Outcome of section 3(a)`
+`int — the outcome of section 3(a) for the work of` s MEANS
+    `the outcome of section 3(a) for the work` (`int — the circumstances of section 3(a) for the situation` s)
+
+@ref Law s.3(a)
+@export True if the person may do the work on the day: section 3(a) does not forbid it (it is not work on a cooling system, or the Law has not commenced for it, or the class is exempted, or the person holds a licence in force of the appropriate kind and works within its conditions)
+GIVEN s IS A `Situation of one piece of work` @desc The person, their licences, the day, the system, the act and the facts of conditions, restrictions and exemptions
+GIVETH A BOOLEAN
+`int — the person may do the work of` s MEANS
+    NOT `section 3(a) forbids the work` (`int — the circumstances of section 3(a) for the situation` s)
+
+@ref Law s.3(a), group 1 fork F8
+@desc The same, a licence that is not in force counting as a licence held (a lapsed licence then gives item (2) and not item (1))
+GIVEN s IS A `Situation of one piece of work`
+GIVETH AN `Outcome of section 3(a)`
+`int (a licence not in force counting as held) — the outcome of section 3(a) for the work of` s MEANS
+    `the outcome of section 3(a) for the work, a licence that is not in force counting as a licence held` (`int — the circumstances of section 3(a) for the situation` s)
+
+§§ `IP21: the licensee as a service electrician (ss.58, 61)`
+
+@ref Law s.61, First Schedule items A12 and B14 (IP21)
+@desc True if the electrical work is in accordance with the First Schedule: the act amounts to item A.1(12) or B.1(14) and is done in the integral electrical system only
+GIVEN s IS A `Situation of one piece of work`
+GIVETH A BOOLEAN
+`int — the electrical work of the situation is in accordance with the First Schedule` s MEANS
+    CONSIDER s's `the activity the act amounts to`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST a THEN
+            (a EQUALS `A.1(12) electrical work in the integral electrical system only` OR a EQUALS `B.1(14) electrical work in the integral electrical system only`)
+        AND (s's `the limits of the item`)'s `the electrical work is done in the integral electrical system only`
+
+@ref Law s.58 (IP21)
+@export True if the person is, for the act of the situation, treated as a service electrician under s.6 of the Electricity Law (section 58): a licence in force on the day and the act is work on a cooling system
+GIVEN s IS A `Situation of one piece of work` @desc The person, their licences, the day and the act
+GIVETH A BOOLEAN
+`int — the licensee of the situation is treated as a service electrician` s MEANS
+    `the licensee is treated as a service electrician under section 58` (`int — the kinds in force for the situation` s) (`int — the act of the situation is work on a cooling system` s)
+
+@ref Law s.61 (IP21)
+@export True if the person may do the electrical work under subsection (e) added to s.6 of the Electricity Law (section 61): a licence in force, the act is work on a cooling system, and the electrical work is in accordance with the First Schedule
+GIVEN s IS A `Situation of one piece of work` @desc The person, their licences, the day and the act
+GIVETH A BOOLEAN
+`int — the licensee of the situation may do the electrical work under section 61` s MEANS
+    `s 61 — the licensee may do electrical work under subsection (e) added to section 6 of the Electricity Law` (`int — the kinds in force for the situation` s) (`int — the act of the situation is work on a cooling system` s) (`int — the electrical work of the situation is in accordance with the First Schedule` s)
+
+§§ `IP9: the violations the producers hand to group 6`
+
+@ref Law s.3(a), Third Schedule items (1) and (2) (IP9)
+@export The violation, if any, that the work of the situation committed under s.3(a): item (1) for work with no licence at all, item (2) for work without a licence of the appropriate kind; NOTHING where no Third Schedule item prices it (work outside the conditions of a licence of the right kind, or no breach)
+GIVEN s IS A `Situation of one piece of work` @desc The person, their licences, the day, the system, the act and the facts
+      reference IS A STRING @desc A reference that identifies the act; two violations with the same reference are one act (s.55)
+GIVETH A MAYBE Violation
+`int — the violation committed under section 3(a) by` s `with the reference` reference MEANS
+    CONSIDER `the listed violation committed under section 3(a)` (`int — the circumstances of section 3(a) for the situation` s)
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST listed THEN
+        JUST (Violation WITH
+                  `the violator` IS s's `the person who does the work`
+                  `the listed violation` IS listed
+                  `reference for the act` IS reference
+                  `date of the act` IS s's `the day of the work`)
+
+@ref Law s.4, Third Schedule item (3) (IP9)
+@desc A person who advertises themselves as a licensee, with their licences and the day of the advertisement
+DECLARE `Situation of one self-description` HAS
+    `the person who advertises` IS A Person @desc The person who advertises
+    `licences of the person` IS A LIST OF Licence @desc Every licence the person holds or held, as the register records them
+    `the day of the advertisement` IS A DATE @desc The day of the advertisement
+    `the person advertised themselves as a licensee` IS A BOOLEAN @desc True if the person advertised themselves as a licensee
+    `the kind of licence advertised` IS A MAYBE `Licence kind` @desc The kind they advertised; NOTHING if they named none
+    `the Law has commenced for the advertisement` IS A BOOLEAN @desc True if s.4 binds on the day of the advertisement (the sources do not say which limb of s.63(a) governs an advertisement: group 1, fork F14)
+
+@ref Law s.4 (group 1)
+@desc Group 1's record of a self-description under s.4, the kinds in force supplied by group 2
+GIVEN s IS A `Situation of one self-description`
+GIVETH A `Circumstances of a self-description under section 4`
+`int — the circumstances of section 4 for the self-description` s MEANS
+    `Circumstances of a self-description under section 4` WITH
+        `the person advertised themselves as a licensee` IS s's `the person advertised themselves as a licensee`
+        `the kind of licence advertised` IS s's `the kind of licence advertised`
+        `licence kinds in force on the day` IS `int — the licence kinds in force on the day` (s's `the day of the advertisement`) (s's `licences of the person`)
+        `a licence of the person is not in force` IS `int — a licence of the person is not in force on the day` (s's `the day of the advertisement`) (s's `licences of the person`)
+        `the Law has commenced for the advertisement` IS s's `the Law has commenced for the advertisement`
+
+@ref Law s.4, Third Schedule item (3) (IP9)
+@export The violation, if any, that the self-description committed under s.4: item (3) where the person advertised themselves as a licensee without a licence, or as one of a kind they do not hold
+GIVEN s IS A `Situation of one self-description` @desc The person, their licences and the advertisement
+      reference IS A STRING @desc A reference that identifies the act
+GIVETH A MAYBE Violation
+`int — the violation committed under section 4 by` s `with the reference` reference MEANS
+    CONSIDER `the listed violation committed under section 4` (`int — the circumstances of section 4 for the self-description` s)
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST listed THEN
+        JUST (Violation WITH
+                  `the violator` IS s's `the person who advertises`
+                  `the listed violation` IS listed
+                  `reference for the act` IS reference
+                  `date of the act` IS s's `the day of the advertisement`)
+
+@ref Law s.13, Third Schedule item (4) (IP9)
+@export The violation, if any, that the licensee of the situation committed under s.13: an installation without the tightness test of the refrigerant piping (item (4)); group 3 judges the work against the wording of Israeli Standard 994 in force on the day; NOTHING where no item prices the breach
+GIVEN s IS A `Situation of one piece of work` @desc The person, their licences, the day, the system and the act
+      `the kind of job` IS A `Job kind` @desc Installation or maintenance
+      reference IS A STRING @desc A reference that identifies the act
+      wordings IS A LIST OF `Wording of Israeli Standard 994` @desc The wordings of the Standard against which the work is judged, each with the day it took effect and the findings on the work
+GIVETH A MAYBE Violation
+`int — the violation committed under section 13 by` s `being a` `the kind of job` `with the reference` reference `judged by` wordings MEANS
+    `s.13 — the violation committed under section 13`
+        (`Work item` WITH
+             `performed by` IS s's `the person who does the work`
+             `the kind of job` IS `the kind of job`
+             `the system` IS s's `the cooling system worked on`
+             `date performed` IS s's `the day of the work`)
+        reference
+        wordings
+        (`int — the Law has commenced for work on the system on the day` (s's `the cooling system worked on`) (s's `the day of the work`))
+        (`int — the kinds in force for the situation` s)
+        (`int — the act of the situation is work on a cooling system` s)
+
+@ref Law s.18(a), Third Schedule items (5) and (6) (IP9, IP3)
+@desc An operator who engages another person in work, the engaged person's licences and the work
+DECLARE `Situation of one engagement` HAS
+    `the operator` IS A Person @desc The person who engages another
+    `facts about the operator` IS A `Facts about a person who engages others in work on cooling systems` @desc Whether the operator engages others regularly, or owns or manages a business offering the work to the public
+    `licences of the engaged person` IS A LIST OF Licence @desc Every licence the engaged person holds or held, as the register records them
+    `the day of the engagement` IS A DATE @desc The day the operator engaged the person
+    `the cooling system worked on` IS A `Cooling system` @desc The system the engaged person is to work on
+    `the activity the act amounts to` IS A MAYBE `First Schedule activity` @desc The First Schedule activity the work amounts to
+    `the limits of the item` IS A `Facts about an act for the limits of First Schedule items` @desc The facts that decide whether the act stays inside the limits of the items that say only
+
+@ref Law s.18(a), s.3(a), First Schedule column A (IP3; the lead's finding P1)
+@desc The licence kinds appropriate to the engaged work, as group 3's input `licence kinds that cover the system`: the kinds that cover the capacity of the system AND are listed in the First Schedule under the activity (group 1's `licence kinds appropriate to the activity on the system`); for an act that amounts to no First Schedule activity, which is not work and which group 3 does not price, the kinds that cover the capacity
+GIVEN e IS A `Situation of one engagement`
+GIVETH A LIST OF `Licence kind`
+`int — the kinds appropriate to the work of` e MEANS
+    CONSIDER e's `the activity the act amounts to`
+    WHEN JUST activity THEN `licence kinds appropriate to the activity on the system` activity (e's `the cooling system worked on`)
+    WHEN NOTHING THEN `licence kinds that cover a cooling system` (e's `the cooling system worked on`)
+
+@ref Law s.18(a), Third Schedule items (5) and (6) (IP9, IP3)
+@export The violation, if any, that the operator committed under s.18(a) by engaging the person: item (5) where the person holds no licence in force, item (6) where they hold none of the kind appropriate to the work; the kind is appropriate to the work when it covers the capacity of the system and the First Schedule lists the activity under it (the same meaning as in s.3(a)); NOTHING where the person was properly licensed
+GIVEN e IS A `Situation of one engagement` @desc The operator, the engaged person, the day, the system and the work
+      reference IS A STRING @desc A reference that identifies the act
+GIVETH A MAYBE Violation
+`int — the violation committed under section 18(a) in` e `with the reference` reference MEANS
+    `s.18(a) — the violation committed under section 18(a)`
+        (e's `the operator`)
+        reference
+        (e's `the day of the engagement`)
+        (e's `facts about the operator`)
+        (`int — the Law has commenced for work on the system on the day` (e's `the cooling system worked on`) (e's `the day of the engagement`))
+        (`s 2 — the act is work on a cooling system` (e's `the activity the act amounts to`) (e's `the limits of the item`))
+        (`int — the licence kinds in force on the day` (e's `the day of the engagement`) (e's `licences of the engaged person`))
+        (`int — the kinds appropriate to the work of` e)
+
+@ref Law s.18(a), group 3 (the capacity-only reading of "appropriate to that system", IP3 as the PLAN wrote it)
+@desc The same violation on the reading that "appropriate to that system" asks only the capacity of the system and not the First Schedule's column A: the reading the PLAN's integration point IP3 first proposed; NOT the default of the integrated row (see the consistency register)
+GIVEN e IS A `Situation of one engagement`
+      reference IS A STRING
+GIVETH A MAYBE Violation
+`int (capacity only) — the violation committed under section 18(a) in` e `with the reference` reference MEANS
+    `s.18(a) — the violation committed under section 18(a)`
+        (e's `the operator`)
+        reference
+        (e's `the day of the engagement`)
+        (e's `facts about the operator`)
+        (`int — the Law has commenced for work on the system on the day` (e's `the cooling system worked on`) (e's `the day of the engagement`))
+        (`s 2 — the act is work on a cooling system` (e's `the activity the act amounts to`) (e's `the limits of the item`))
+        (`int — the licence kinds in force on the day` (e's `the day of the engagement`) (e's `licences of the engaged person`))
+        (`licence kinds that cover a cooling system` (e's `the cooling system worked on`))
+
+@ref Law s.18(a) (group 3), s.3(a), First Schedule column A
+@export True if the operator may engage the person in the work: the person holds, in force on the day, a licence of a kind appropriate to the work (it covers the capacity of the system and the First Schedule lists the activity under it); the same meaning of "appropriate" as in s.3(a)
+GIVEN e IS A `Situation of one engagement` @desc The operator, the engaged person, the day, the system and the work
+GIVETH A BOOLEAN
+`int — the operator may engage the person in` e MEANS
+    `s.18(a) — the operator may engage the person` (`int — the licence kinds in force on the day` (e's `the day of the engagement`) (e's `licences of the engaged person`)) (`int — the kinds appropriate to the work of` e)
+
+@ref Law s.18(a) (group 3), the capacity-only alternative
+@desc The same, on the reading that asks only the capacity of the system (the PLAN's IP3)
+GIVEN e IS A `Situation of one engagement`
+GIVETH A BOOLEAN
+`int (capacity only) — the operator may engage the person in` e MEANS
+    `s.18(a) — the operator may engage the person` (`int — the licence kinds in force on the day` (e's `the day of the engagement`) (e's `licences of the engaged person`)) (`licence kinds that cover a cooling system` (e's `the cooling system worked on`))
+
+@ref Law s.31(2), Third Schedule item (7) (IP9, IP10)
+@export The violation, if any, committed under s.31(2): a document was lawfully demanded by an inspector (group 5 checks the badge and the certificate of s.32) and the person did not give it (item (7)); NOTHING otherwise
+GIVEN violator IS A Person @desc The person who did not give the document
+      reference IS A STRING @desc A reference that identifies the act
+      dayOfTheAct IS A DATE @desc The day the failure occurred
+      i IS AN `An inspector at work` @desc The inspector and the facts of the occasion
+      d IS A `Demand under section 31(2)` @desc The demand
+      `the person did not give the document` IS A BOOLEAN @desc True if the person did not give the document
+GIVETH A MAYBE Violation
+`int — the violation committed under section 31(2) by` violator `with the reference` reference `on the day` dayOfTheAct `when the inspector was` i `and the demand was` d `and the person did not give the document is` `the person did not give the document` MEANS
+    `the violation committed under s.31(2), if any` i d violator reference dayOfTheAct `the person did not give the document`
+
+@ref Law s.63(a), s.31, s.32 (IP2, group 5)
+@desc Group 5's record of an inspector at work with its commencement field set by group 7: the Law has commenced for the work on the system being supervised, on the day
+GIVEN system IS A `Cooling system`
+      day IS A DATE
+      i IS AN `An inspector at work`
+GIVETH AN `An inspector at work`
+`int — the inspector's occasion with the commencement of the Law for` system `on the day` day `set in` i MEANS
+    `An inspector at work` WITH
+        `authorised by the Minister as an inspector under section 30(a)` IS i's `authorised by the Minister as an inspector under section 30(a)`
+        `powers conferred by the authorisation` IS i's `powers conferred by the authorisation`
+        `acting to supervise the implementation of the Law` IS i's `acting to supervise the implementation of the Law`
+        `performing his function` IS i's `performing his function`
+        `visibly wearing a badge` IS i's `visibly wearing a badge`
+        `the badge identifies him and his function` IS i's `the badge identifies him and his function`
+        `holding a certificate signed by the Minister` IS i's `holding a certificate signed by the Minister`
+        `the certificate states his function and his powers as an inspector` IS i's `the certificate states his function and his powers as an inspector`
+        `the certificate was demanded` IS i's `the certificate was demanded`
+        `the certificate was shown on demand` IS i's `the certificate was shown on demand`
+        `the Law has commenced for the work on the system being supervised` IS `int — the Law has commenced for work on the system on the day` system day
