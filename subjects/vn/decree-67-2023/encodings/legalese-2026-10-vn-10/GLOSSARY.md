@@ -1,6 +1,6 @@
 # Glossary — Decree 67/2023/NĐ-CP, compulsory motor insurance (row VN-10)
 
-Vietnamese in the first column is copied from the gazette text and checked by `tools/vnsrc.py` to occur verbatim in one of the three raw sources.
+Vietnamese in the first column is copied from the gazette text and checked by `tools/vnsrc.py` to occur verbatim in one of the raw sources: three, and since 2026-10-13 five (the last section).
 "src line N" means line N of `../../source/raw/nd67-congbao-1017-1018.txt` unless the line says `1019-1020` (`../../source/raw/nd67-congbao-1019-1020.txt`) or `220` (`../../source/raw/nd220-2026-congbao-367.txt`).
 The three sources this glossary draws on, one line from each:
 
@@ -131,3 +131,17 @@ Identifiers are those of the `.l4` modules; "—" in the second column means the
 | dính các khớp ngón tay | `stiffness of the joints of a digit, special case 1` | ankylosis (fusion) of the finger joints | special case 1, 1019-1020 src line 2178 | high: "dính khớp" (ankylosis) and the table's "cứng khớp" (stiffness) may be different conditions; the L4 field says "stiffness" (finding R14) |
 | Liệt chi trên; liệt chi dưới | `an upper limb`; `a lower limb` | paralysis of an upper or a lower limb | note to B.I 4.2.9-4.2.16, 1019-1020 src lines 670-671 | low |
 | Nữ; Nam | `female`; `male` | woman; man | note to B.I 6.3.7-6.3.8, 1019-1020 src line 763 | low |
+
+## Terms of Decree 03/2021 and Circular 04/2021 (added 2026-10-13)
+
+"src line N" here means line N of `../../source/raw/nd03-congbao-125-126.txt`, or of `../../source/raw/tt04-2021-btc.txt` where the line says `tt04`; the Circular's text is OCR (NOTES.md §1.5).
+
+| Vietnamese term (verbatim) | English identifier in the L4 | English meaning, one line | where defined or used (Điều / clause, src line) | translation risk |
+| --- | --- | --- | --- | --- |
+| do xe cơ giới gây ra | `Decree 03/2021 Articles 5 and 13 — the answer on cover for …` | caused by the motor vehicle | Decree 03 Art 5, src lines 110-112 | medium: the scope's only condition; whether Điều 2 adds "in traffic or operating" is fork F37 |
+| có nồng độ cồn | `the driver had alcohol in the blood or breath, at any level` | had alcohol (in the blood or breath) | Decree 03 Art 13(5), src lines 353-354 | low: no threshold is stated, where Decree 67 says "vượt quá mức trị số bình thường" |
+| điều chỉnh tăng phí bảo hiểm | `Decree 03/2021 Article 7(3) — the premium after an increase of` | adjust the premium upwards | Decree 03 Art 7(3), src lines 153-156 | low |
+| thời hạn kiểm định an toàn kỹ thuật và bảo vệ môi trường | `Decree 03/2021 Article 9(1)(b) caps a term over 1 year at …` | the interval of the periodic technical safety and environmental inspection | Decree 03 Art 9(1)(b), src lines 184-186 | low; not among the facts (fork F38) |
+| chi phí hợp lý | `Decree 03/2021 Article 11(1)(b) — the refund before the reasonable costs, …` | reasonable costs (deducted from the refund) | Decree 03 Art 11(1)(b), src line 236 | medium: unquantified (fork F39) |
+| được điều trị cấp cứu | `treated as an emergency` | given emergency treatment | Decree 03 Art 14(2), src lines 379, 385 | medium: who decides, and whether a later admission counts, is not said (fork F41) |
+| xe máy chuyên dùng | — | special-purpose machine (construction, farm, forestry and the like) | Decree 03 Art 3(2), src lines 59-68; tt04 src line 497 | low; no class in this row |

@@ -19,7 +19,8 @@ L4=/Users/mengwong/.local/bin/l4 ./check.sh
 ```
 
 It takes about four minutes, most of it in the 1,235 generated Annex VI tests.
-Totals: **14 modules, 0 errors, 1,487 assertions satisfied, 0 failed, 0 refused**; `check.sh` exit 0 (the table is in §6; last run 2026-10-07, after the last change to any module).
+Totals: **14 modules, 0 errors, 1,487 assertions satisfied, 0 failed, 0 refused**; `check.sh` exit 0 (run 2026-10-07).
+On 2026-10-13, after Decree 03/2021 was added (§1.5), with `~/.local/bin/l4` then resolving to `jl4-0.1-3b445744` (sha256 `38ff9f2c9d719bca41912343503ce6ac6ab323e68bcd6c16eb190fa97fc483ed`, modified 2026-10-13 14:30 local): **14 modules, 0 errors, 1,557 assertions satisfied, 0 failed, 0 refused**, exit 0, about 20 seconds (the table is in §6).
 
 The three gazette PDFs were hashed before use and match `../../subject.json`: `nd67-congbao-1017-1018.pdf` `19a1de3a…1253c8`, `nd67-congbao-1019-1020.pdf` `456cbc7d…d79d59`, `nd220-2026-congbao-367.pdf` `ab0e75cd…1f3a52`.
 No network was used.
@@ -36,20 +37,20 @@ The modules, in import order:
 
 | module | what it holds | lines |
 | --- | --- | --- |
-| `nd67-vn10-nouns.l4` | every `DECLARE`: vintages, vehicle classes, the contract, certificate, accident, person, injury, claim file, results and problems | 401 |
-| `nd67-ch1-general.l4` | Chapter I (Articles 1-4) and which vintage governs a contract (Articles 76(1), 77(1); Decree 220 Articles 9-10) | 321 |
-| `nd67-art5-7-cover.l4` | Articles 5-7: object, limits, scope, exclusions, the answer on cover | 317 |
-| `nd67-art8-premium.l4` | Article 8 and Annex I | 354 |
-| `nd67-art9-11-term.l4` | Articles 9-11: term, certificate, termination and refund | 173 |
+| `nd67-vn10-nouns.l4` | every `DECLARE`: vintages and the rules that govern a contract, vehicle classes, the contract, certificate, accident, person, injury, claim file, results and problems | 415 |
+| `nd67-ch1-general.l4` | Chapter I (Articles 1-4) and which rules govern a contract (Articles 76(1), 77(1); Decree 220 Articles 9-10; Decree 03 Articles 46, 47(1)) | 335 |
+| `nd67-art5-7-cover.l4` | Articles 5-7: object, limits, scope, exclusions, the answer on cover; Decree 03 Articles 5 and 13 | 401 |
+| `nd67-art8-premium.l4` | Article 8 and Annex I; Decree 03 Article 7(3)-(4) and Circular 04 Annex I | 429 |
+| `nd67-art9-11-term.l4` | Articles 9-11: term, certificate, termination and refund; Decree 03 Articles 9-11 | 314 |
 | `nd67-annex6-table.l4` | GENERATED: the 1,135 rows of Annex VI and the 10 rows of its acuity table, each under its source lines | 2,734 |
 | `nd67-annex6.l4` | Annex VI lookups, formula, two notes, special cases | 274 |
-| `nd67-art12-13-claims.l4` | Articles 12-13: advance, payee, amounts, reduction, limit, one-contract rule, claim file | 434 |
+| `nd67-art12-13-claims.l4` | Articles 12-13: advance, payee, amounts, reduction, limit, one-contract rule, claim file; Decree 03 Article 14(2)-(3) and its Annex I item B.IV 2.1.2 | 632 |
 | `nd67-art12-duties-hours.l4` | Article 12(2) as regulative rules, clock in hours | 84 |
 | `nd67-art12-duties-workdays.l4` | Articles 10(1), 12(1), (3), (4), (7), (10), (11) as regulative rules, clock in working days; working-day dates | 247 |
-| `nd67-tests.l4` | 180 hand-written tests from the source | 596 |
+| `nd67-tests.l4` | 250 hand-written tests from the source (70 of them for Decree 03, added 2026-10-13) | 742 |
 | `nd67-annex1-tests.l4` | GENERATED: 55 premium tests | 124 |
 | `nd67-annex6-tests.l4` | GENERATED: 1,235 Annex VI tests | 2,397 |
-| `nd67-findings.l4` | 17 assertions that state the findings' surprising answers | 156 |
+| `nd67-findings.l4` | 17 assertions that state the findings' surprising answers | 157 |
 
 The generated table module is long because the table is: one L4 row per source row, each beside the source line it encodes, so a reviewer checks it row by row against the gazette.
 
@@ -62,10 +63,11 @@ Chapter II Section 1 in full, Articles 5 to 13.
 Chapter I as the motor chapter uses it: Article 2(1); Article 3(1), (2), (3) and (5)(a); Article 4(1), (3), (4) (with Article 12(9)), (5)(a), (7) (the outer bound), (8).
 The annexes Articles 5 to 13 name, which are exactly two (Article 8(1) and (2) name Annex I, src lines 233-238; Article 12(6)(a) names Annex VI five times, src lines 353, 358, 361, 367-368, 372-373; no other annex is named in Articles 5-13): **Annex I** in full (sections A, A.VII and B) and **Annex VI** in full (Parts A and B, 1,135 rows, the 10 × 10 acuity table, two of its seventeen notes, and its special cases 1, 3, 4, 5 and 6).
 The transitional and commencement provisions that decide the vintage: Decree 67 Articles 76(1) and 77(1); Decree 220 Articles 9(1) and 10(1)-(2).
+Since 2026-10-13, for a contract Article 76(1) continues under it, Decree 03/2021/NĐ-CP and Circular 04/2021/TT-BTC where they differ from Decree 67, with Decree 03 Articles 46 and 47(1) (§1.5).
 
 **Inputs, with their citations, not encoded:** whatever the Road Traffic Law decides (the vehicle kinds of Article 6(2) and Annex I, the driver's age, which vehicles need a licence); the Ministry of Health's alcohol level; the facts of the accident and the persons harmed; the medical assessment's rate within a band of Annex VI; the estimated compensation for the advance; the working-day calendar's days off; agreed and court-fixed sums.
 
-**Declined by a named `REFUSE`:** a contract concluded before Decree 67, which Article 76(1) leaves under rules not in the sources; the premium payment deadline the Minister of Finance sets (Article 4(7)); a refund on a change of owner (Article 9(3) with Article 11); a band of Annex VI with no assessed rate; a row whose "cộng lùi" addition applies; an unlisted injury with no rate (special case 5); a number of seats Annex I does not list; two contracts concluded on the same first day (Article 12(9)).
+**Declined by a named `REFUSE`:** a contract concluded before 1 March 2021, which Decree 03 Article 46 leaves under Decree 103/2008 and its amendments, not in the sources (a contract concluded from 1 March 2021 to 5 September 2023 is answered under Decree 03/2021 and Circular 04/2021, §1.5); under Decree 03, a term over 1 year for a vehicle other than a motorcycle or moped (fork F38) and the refund on revocation (fork F39); the premium payment deadline the Minister of Finance sets (Article 4(7)); a refund on a change of owner (Article 9(3) with Article 11); a band of Annex VI with no assessed rate; a row whose "cộng lùi" addition applies; an unlisted injury with no rate (special case 5); a number of seats Annex I does not list; two contracts concluded on the same first day (Article 12(9)).
 
 **Not encoded (out of scope, §2):** Chapter II Section 2 (the Motor Vehicle Insurance Fund, Articles 14-22) except the insurer's right in Article 12(3) to ask it for repayment; Chapters III and IV (fire, construction); Chapter V (Articles 61-75); Chapter VI beyond the vintage; the annexes that belong only to those (II, III, IV, V, VII, VIII, IX, X); Decree 220 Articles 1-8.
 
@@ -103,11 +105,69 @@ Decree 67 Article 77(1) puts it in force from signature, 6 September 2023 (src l
 Article 76(1) keeps a contract concluded before then and still running under the earlier rules, unless the parties amend it (src lines 1978-1997).
 Decree 220 Article 10(2) does the same for a contract concluded before 1 July 2026 (220 src lines 196-200).
 Both speak of the date the contract was **concluded** ("đã giao kết trước ngày"); neither mentions the accident or the claim.
+Decree 03 Article 47(1) puts it in force from 1 March 2021, and its Article 46 does the same for a contract concluded before that day (Decree 03 lines 1032-1038), so the rules of a contract concluded from 1 March 2021 to 5 September 2023, not amended, are Decree 03's (§1.5).
 So the encoding selects the vintage from the contract's conclusion date and any agreed amendment, as an explicit derived input (`the rules that govern`, `the vintage that governs`), not from the rule-effective-time axis: the date that decides is a fact of the contract, not the date of evaluation (fork F1).
+
+### 1.5 Decree 03/2021 and Circular 04/2021, for the contracts Article 76(1) continues under them (added 2026-10-13)
+
+**Why.**
+Decree 67 Article 76(1) keeps a contract concluded before 6 September 2023 under the law in force when it was concluded, unless the parties amend it to apply Decree 67 (§1.3).
+For a contract concluded from 1 March 2021, that law is Decree 03/2021/NĐ-CP (in force from that day, its Article 47(1)), with Circular 04/2021/TT-BTC, which set its limits and premiums.
+Decree 03 let a motorcycle's term run up to 3 years (its Article 9(1)(a)), so a contract concluded on 5 September 2023 could run to 5 September 2026, and a claim may be made within 1 year of the accident (its Article 16(1)).
+Until this section the row declined every such contract; it now answers them under Decree 03, and declines only a contract concluded before 1 March 2021, which Decree 03 Article 46 leaves under Decree 103/2008 and its amendments, not in the sources.
+A contract amended by agreement to apply Decree 67 (or Decree 220) is answered under that text, whenever it was concluded.
+
+**Sources.**
+Decree 03/2021 is the gazette copy, Công báo issue 125+126 of 28 January 2021 (`nd03-congbao-125-126`, 95 pages, text layer, quoted as `src:nd03-congbao-125-126:N`).
+Circular 04/2021 is a scan with no text layer on the government's document portal; no gazette copy with a text layer was found in the Công báo issues of January to October 2021.
+`../../source/fetch.sh` reads it by OCR (tesseract 5.5.3 here, the tessdata_best Vietnamese model pinned by sha256, 200 dpi, `--psm 4`), and quotations of it (`src:tt04-2021-btc:N`) quote the OCR as read, misreadings included ("Môtô2 bánh", "tựi").
+Every figure taken from it was read against the Decree 67 figure it is compared with below, and they agree except where the table says so.
+URLs and digests are in `../../subject.json`.
+
+**How the two were compared.**
+Articles 3 to 20 of Decree 03 and Articles 3 and 5 to 13 of Decree 67 were read side by side.
+The tables of payments (Decree 03 Annex I, Decree 67 Annex VI) were compared item by item by running `tools/annex6.py`'s parser over both texts (Decree 03 lines 1055-2744, without the Decree 67 layout overrides): the same 1,135 items under the same keys, the same 10 × 10 acuity table, and the same rates in every item but one.
+The parser also reported two items in Decree 03's section V that are not items: "1.2.1" and "1.3.2" wrapped to the start of a line inside the cross-references of items 1.2.2 and 1.3.3 (Decree 03 lines 1632-1633, 1637-1638).
+The special cases at the foot of the two tables differ only in words ("mức" for "giới hạn" trách nhiệm; "thiệt hại về người" for "thiệt hại về sức khỏe, tính mạng").
+The premium tables (Circular 04 Annex I, Decree 67 Annex I) were compared row by row, sections I to VII.
+
+**Where they differ, and what this row does about it.**
+Each difference that changes an answer is tested on both sides in `nd67-tests.l4`, section "Decree 03/2021 and Circular 04/2021 — each difference from Decree 67, tested on both sides".
+
+| | Decree 03/2021, Circular 04/2021 | Decree 67/2023 | in this row |
+| --- | --- | --- | --- |
+| Scope | Art 5: damage the vehicle "caused" ("do xe cơ giới gây ra"); no condition that it was in traffic or operating | Art 7(1): caused by the vehicle "tham gia giao thông, hoạt động" | encoded; fork F37 |
+| Alcohol | Art 13(5): property excluded for any alcohol in the driver's blood or breath | Art 7(2)(đ): only above the Ministry of Health's normal level | encoded; a new accident fact, `the driver had alcohol in the blood or breath, at any level` |
+| Premium of a 50 cc motorcycle | Circular 04 Annex I: "Từ 50 cc trở xuống" 55,000; "Trên 50 cc" 60,000 | Annex I: "Dưới 50 cc" 55,000; "Từ 50 cc trở lên" 60,000 | encoded: exactly 50 cc is 55,000 under Decree 03, 60,000 under Decree 67 |
+| Adjusting the premium | Art 7(3): the insurer may raise it, by at most 15% | Art 8(2): raise or lower, by at most 15% | encoded; a decrease is a problem with the facts under Decree 03 |
+| Term | Art 9(1)(a)-(b): a motorcycle or moped 1 to 3 years; any other vehicle from 1 year to its periodic inspection interval, where that is over 1 year | Art 9(1): 1 to 3 years for every vehicle | encoded; a term over 1 year for a vehicle other than a motorcycle or moped is declined (fork F38) |
+| Change of owner | Art 9(3): the former owner's cover continues for the new owner | Art 9(3): the former owner may terminate the contract | encoded |
+| Termination | Art 10: three grounds (revocation of the registration; the premium not paid in full; a change in the factors the premium is based on) | Art 11: the revocation only | encoded, as which grounds the decree provides; the Law on Insurance Business's own grounds are not (LAW fork L9) |
+| Refund on revocation | Art 11(1): the contract ends when the insurer receives the notice; the refund is pro rata, "after deducting the reasonable costs related to the contract", and none where an insured event had made the insurer liable before the end | Art 11: the contract ends at the revocation; the refund is pro rata | encoded before the reasonable costs, which the decree does not quantify; the contract-level refund is declined (fork F39) |
+| The advance, partial injuries | Art 14(2): 50% (scope found) or 10% of the limit (not found) for a partial injury "được điều trị cấp cứu" (treated as an emergency) | Art 12(3): 50% for a partial injury (scope found); 30% of the limit at 81% or more and 10% from 31% to under 81% (not found) | encoded; emergency treatment is a fact the caller gives (fork F41) |
+| Table of payments | Annex I, section IV item 2.1.2, "Có biến dạng dạ dày hình hai túi": 31-35% (Decree 03 line 1493) | Annex VI, the same item: 41-45% (`nd67-congbao-1019-1020` line 1019) | encoded as Decree 67's table with that one item replaced |
+| Licence | Art 13(3): an invalid licence is one whose blank number does not match the latest issued, or one not issued by a competent authority | Art 7(2)(c): a licence invalid under the law on driver training, testing and licensing | one fact for both, `the driver used an invalid driving licence` (fork F40) |
+| Age | Art 13(3): "chưa đủ độ tuổi hoặc quá độ tuổi" (under or over the age) | Art 7(2)(c): "không đủ điều kiện về độ tuổi" | one fact for both, `the driver did not meet the age condition of the Road Traffic Law`; no answer differs |
+| Motor vehicle | Art 3(2) includes special-purpose machines ("xe máy chuyên dùng"); Circular 04 prices them (Annex I VII.5) and sets their property limit at 100 million (Art 4(2)(b)) | Art 3 defines no motor vehicle; Art 6(2) and Annex I name no special-purpose machine | not encoded: this row has no vehicle class for one |
+| "Operating" | Art 3(5): under the control of the driver | Art 3(2): under the control of the owner or the driver | Decree 03's scope does not use the term (fork F37), so no answer here turns on it |
+| Passengers | Art 5(2): "hành khách" | Art 7(1)(b): "hành khách trên chiếc xe đó" | read alike: a passenger of another vehicle is a third party under both definitions |
+| Certificate | Art 6(3): plate number **or** chassis and engine numbers; the limit for third parties and passengers; Art 6(2): issued only once the premium is paid or its payment term agreed | Art 10(2): plate number **and** chassis and engine numbers; the limit for the third party | not encoded: `Article 10(2) — the certificate carries every particular it must` checks Decree 67's list only |
+| Notice of the accident | Art 16(2): 5 working days, "trừ trường hợp bất khả kháng" | Art 12(4): 5 working days, except force majeure "hoặc trở ngại khách quan" | not re-encoded: the regulative modules are Decree 67's |
+| Claim deadlines | Art 16(1), (3), (4): a claim within 1 year of the accident; payment within 15 days of a complete file, 30 with verification; a refusal within 30 days | none in Articles 5-13 (the Law on Insurance Business, LAW forks L1, L2) | not encoded |
+
+**The same in both** (read side by side): the third party and its exceptions (Decree 03 Art 3(3), Decree 67 Art 3(5)(a)); exclusions 1-4 and 6-8 (Art 13; Art 7(2)); the limits (Circular 04 Art 4; Art 6): 150 million per person per accident, 50 million for property for a motorcycle or moped, 100 million for a car, tractor or towed trailer; every premium of Annex I but the 50 cc boundary, with the same section VII percentages; the premium for a term other than 1 year (Art 7(4); Annex I section B); the four cases of a term under 1 year (Art 9(1)(c)-(d); Art 9(1)(a)-(c), 9(2)); who is paid (Art 14(1); Art 12(5)); the compensation for health, life and property (Art 14(3); Art 12(6)), with the halving for an accident caused entirely by a third party; the limit (Art 14(4); Art 12(8)); the first contract pays (Art 14(5); Art 12(9)); the reduction of up to 5% for property (Art 19(2); Art 12(7)); the advance within 3 working days, and 70% or 30% for a death (Art 14(2); Art 12(3)); the insurer's 1 hour and 24 hours (Art 20(4); Art 12(2)).
+
+**What answers under Decree 03.**
+The questions asked of a contract: the cover (`the answer on cover under the contract for …`), the compensation (`the compensation under the contract for …`), the premium (`the premium under the contract, after an adjustment of …`), the term (`Article 9 — the term is permitted for`), and two new ones, `the decree gives the former owner a right to terminate on a change of owner, under` and `the decree provides for ending the contract on … under`.
+Each takes the rules from `the rules that govern`, which now has three answers.
+The rules that take a vintage of Decree 67 directly (`Article 7 — …`, `Article 12(6)(a) — …`) are Decree 67's; their Decree 03 counterparts are named `Decree 03/2021 …`.
+Not modelled: Decree 03 Article 46's second sentence, under which a contract concluded before 1 March 2021 and amended after it comes under Decree 03; `amended by agreement to apply` names only a vintage of Decree 67, so such a contract is still declined.
+`the vintage that governs` declines a contract under Decree 03, which has no vintage of Decree 67; so does every rule built on it, among them the crosswalk to the Law on Insurance Business (`crosswalk/section-a/`), which is a crosswalk of Decree 67 only.
 
 ## 2. Coverage table
 
 Every provision in scope, with its heading as the decree writes it.
+The provisions of Decree 03/2021 and Circular 04/2021 added on 2026-10-13 are listed in §1.5, not here.
 Dispositions: `encoded`, `inert` (quoted, decides no case), `out-of-scope`, `reached-and-refused`.
 Totals: **78 rows: 61 encoded (one of them in part), 9 inert, 5 out-of-scope, 3 reached-and-refused, 0 deferred**.
 
@@ -235,6 +295,11 @@ Places looked at where no fork was found are named at the end.
 | F34 | Art 7(1)(a) | "Thiệt hại ngoài hợp đồng": which third-party damage is contractual? | — | none is distinguished: every third party's damage is taken as non-contractual. A third party's goods carried under a contract with the owner are a case this does not model. |
 | F35 | Art 12(6)(a) third paragraph | Does the 50% reach passengers? | — | **no**: "đối với các đối tượng thuộc người thứ ba". |
 | F36 | Art 12(1)(b) | How is the exception for safety, harm and authority demands applied? | — | as a fact about the act: where it holds, the prohibition does not bind. |
+| F37 | Decree 03 Art 5; Art 2(1), 3(5)-(6) | Does Decree 03's scope require the vehicle to have been in traffic or operating, as Decree 67 Art 7(1) does? | (i) no: Art 5 says only "do xe cơ giới gây ra"; (ii) yes: Art 2(1) applies the decree to owners "tham gia giao thông và hoạt động", and Art 3(5)-(6) define those terms | **(i)**, added 2026-10-13: Art 5 does not use the defined terms, and Art 2(1) says who the decree applies to, not which damage is covered. The consequence is tested: a pedestrian killed by a vehicle neither in traffic nor operating is `covered` under a 2022 contract and outside the scope under a 2026 one. Reading (ii) would give Decree 67's answer. A question for a lawyer (§8). |
+| F38 | Decree 03 Art 9(1)(b) | The maximum term of a vehicle other than a motorcycle or moped is its periodic inspection interval "có thời hạn trên 1 năm". | — | added 2026-10-13: a term of exactly 1 year is the minimum and is permitted; a longer one turns on the interval, which is not among this row's facts, so it is declined by name rather than guessed. |
+| F39 | Decree 03 Art 11(1)(b) | How much are "các chi phí hợp lý có liên quan đến hợp đồng bảo hiểm", deducted from the refund? | — | added 2026-10-13: the decree does not say; the refund is given before them, under a name that says so, and the contract-level refund question is declined for a contract under Decree 03. The remaining time is counted from the day the insurer received the notice, as fork F12 counts it from the revocation. |
+| F40 | Decree 03 Art 13(3) | Decree 03 defines an invalid licence (a blank number not matching the latest issued) and adds a licence not issued by a competent authority; Decree 67 Art 7(2)(c) refers to the licensing law. One fact or two? | — | added 2026-10-13: one fact, `the driver used an invalid driving licence`, for both: each decree's words name a licence the driver may not rely on, and the row takes whether it is one as an input (as fork F3 does for the Road Traffic Law). |
+| F41 | Decree 03 Art 14(2) | The advance for a partial injury turns on whether it was "được điều trị cấp cứu" (treated as an emergency), not on its estimated rate. | — | added 2026-10-13: a fact the caller gives; a partial injury not so treated is none of the cases; a persistent vegetative state is a partial injury, as in fork F16. |
 
 **LAW forks** (Law on Insurance Business 08/2022/QH15, `.aids/law-08-2022-qh15.txt`, an aid; not encoded; quoted here in English):
 
@@ -456,7 +521,7 @@ The Annex I figure at R5 (16 seats, 3.054.000) and the rows of section A were al
 
 Run under both vintages (contracts concluded 30 June 2026 and 1 July 2026, or the vintage given directly): the third-party test (5 cases), the term for the third party (the only difference: "người thứ ba" / "bên thứ ba"), the premium, the compensation for health and life (including the third-party-fault halving), the compensation for property, and the cover answer for R1.
 **No answer differs.**
-A contract concluded on 5 September 2023 is declined (`a contract concluded before Decree 67/2023 is governed by earlier rules not encoded in this model`).
+A contract concluded on 5 September 2023 was declined until 2026-10-13; it is now answered under Decree 03/2021 (§1.5), and the same scenario gives the same three amounts. A contract concluded on 28 February 2021 is declined (`a contract concluded before 1 March 2021 is governed by Decree 103/2008 and other earlier rules, not encoded in this model`).
 
 ## 6. What `check.sh` prints
 
@@ -480,7 +545,15 @@ TOTAL (14 modules)                             0      1487       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 ```
 
-`check.sh` exit 0 (run 2026-10-07). No failure is expected and none occurs; `expected_failed` is unchanged (0 for every module).
+`check.sh` exit 0 (run 2026-10-07).
+On 2026-10-13, after §1.5, the same table but for two lines:
+
+```
+nd67-tests.l4                                  0       250       0        0         0
+TOTAL (14 modules)                             0      1557       0        0
+```
+
+exit 0. No failure is expected and none occurs; `expected_failed` is unchanged (0 for every module).
 The regulative modules carry `#TRACE`s rather than assertions (a `DEONTIC` cannot be compared); their breaches print at Information severity and are not errors. Their deadlines are also asserted, on both sides, through the date and hour functions in `nd67-tests.l4`.
 
 The harness can fail. A scratch copy of the eleven modules `nd67-tests.l4` needs, with three expected values in `nd67-tests.l4` altered by one unit (105,000,000 → 105,000,001; 8 → 9 October; 874,000 → 874,001), run through the same `check.sh` on 2026-10-06, printed:
@@ -529,6 +602,8 @@ vnsrc check: 2062 src: lines, 651 Vietnamese runs, 0 problems
 
 No qualified `src:ID:N` line fails either run.
 
+On 2026-10-13, after §1.5, the gate over the same files: `vnsrc check: 2177 src: lines, 703 Vietnamese runs, 0 problems`. The new quotations name two more raw files, `nd03-congbao-125-126.txt` and `tt04-2021-btc.txt`; `tools/vnsrc.py` is unchanged.
+
 **How this `tools/vnsrc.py` differs from the shared one**, in one sentence: `SRC_LINE` accepts an optional qualifier, `src:ID:N[-M]`, where ID names `ID.txt` beside RAW.txt and the quotation is checked as a slice of that file (an ID with no file is a problem); the rule-2 haystack is RAW.txt plus every raw a `src:ID:` line in the checked files names; and a new subcommand `quoteid` prints quotations in the qualified form (plain `src:N` and every other behaviour are unchanged).
 
 ## 8. Open questions for a domain expert
@@ -544,3 +619,6 @@ No qualified `src:ID:N` line fails either run.
 9. R5: is the 16-seat figure of 3.054.000 an error in the gazette, and if so what is the intended figure?
 10. L3: does Article 46(1) of the Law on Insurance Business limit the 5% reduction of Article 12(7)?
 11. R10: does the Fund in practice repay an advance made under point (a)?
+12. F37: under Decree 03/2021, is damage caused by a vehicle that was neither in traffic nor operating within the scope of Article 5?
+13. F39: what reasonable costs do insurers deduct from a refund under Decree 03/2021 Article 11(1)(b)?
+14. F38: under Decree 03/2021 Article 9(1)(b), what was the longest term an insurer could give a car whose inspection interval was 1 year or less?
