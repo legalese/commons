@@ -1,12 +1,12 @@
 # Gap register for Daniel's scenario
 
-As for the other two: the statute books are deposited and unencoded on 13 October 2026, so this is an encoding order, taken from how often and how early a professional, employer and investor life asks each Act. Ledger entries, one `no-row` per Act with a count, are in [`../../requirements.jsonl`](../../requirements.jsonl) (Commonwealth) and [`../../wa/requirements.jsonl`](../../wa/requirements.jsonl) (state). Three things this life asks are outside any Australian row's reach, and they come first below because no encoding will answer them.
+As for the other two: the statute books are deposited and unencoded on 13 October 2026, so this is an encoding order, taken from how often and how early a professional, employer and investor life asks each Act. Ledger entries, one `no-row` per Act with a count, are in [`../../requirements.jsonl`](../../requirements.jsonl) (Commonwealth) and [`../../wa/requirements.jsonl`](../../wa/requirements.jsonl) (state). Three things this life asks were outside the library's reach when it was written; the first has since been deposited, and the other two are foreign law.
 
 ## A. Outside the library's reach
 
 | what | where | note |
 | --- | --- | --- |
-| **The Commonwealth Constitution, s 44(i)** | Ch 6 | the Constitution has no subject directory under `subjects/au/`; a candidate's capacity is decided by it and by *Re Canavan* [2017] HCA 45. Deposit it as a subject (the Commonwealth of Australia Constitution Act 1900 (Imp), as in force) before the ledger can carry the requirement |
+| **The Commonwealth Constitution, s 44(i)** | Ch 6 | deposited on 14 Oct 2026 as `subjects/au/commonwealth-of-australia-constitution-act-1900` (compilation C2013Q00005, as altered to 1977), so the ledger now carries it as a `no-row` entry; the reading is *Re Canavan* [2017] HCA 45 and stays `CASE` |
 | **Italian forced heirship** | Ch 7, 9 | Codice Civile arts 536-542 and the EU Succession Regulation 650/2012: foreign law reaching an Australian family's estate. Not Australian law and not for Commons to encode; the simulation records the Italian shares as a human input and the Australian will as governing only the Australian assets |
 | **Indian citizenship law** | Ch 4 | India permits no dual citizenship; Priya's renunciation and OCI card are foreign law |
 

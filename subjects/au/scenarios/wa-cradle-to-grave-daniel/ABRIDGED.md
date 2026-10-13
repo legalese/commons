@@ -57,7 +57,7 @@ Haziq asked what he owed. Daniel asks the same, and three times the answer comes
 
 ## Chapter 6 — The candidate and the acquirer
 
-**Beat 13 · 15 March 2040 · the Italian consulate.** *Can I stand?* — Constitution s 44(i): not while Italian. The voice has no subject directory for the Constitution and says so; it quotes Re Canavan and stops. He renounces.
+**Beat 13 · 15 March 2040 · the Italian consulate.** *Can I stand?* — Constitution s 44(i): not while Italian. The Constitution is in the library and unencoded; the voice quotes s 44 and Re Canavan and stops. He renounces.
 
 **Beat 14 · 15 June 2043 · a signing room.** *Duty on the shares?* — Duties Act: none, since 2013, unless the company is land-rich. *The ACCC?* — Part IVA: below the thresholds.
 
@@ -81,6 +81,6 @@ Haziq asked what he owed. Daniel asks the same, and three times the answer comes
 
 ## Notes for the screenplay
 
-- The three stops: the Constitution (13), the foreign code (16), and the capital/income line (15). None is a missing row; each is a boundary of the library itself.
+- The three stops: the Constitution (13), the foreign code (16), and the capital/income line (15). The first is a missing row since 14 October 2026; the other two are boundaries of the library itself.
 - Beats 9, 10, 11, 14 and 15 are the adjudicator's side of the other two films.
 - Figures on screen: $73,515, $207,378, $2,000, forty million, two million, and a quarter, a half, a quarter.

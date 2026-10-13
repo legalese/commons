@@ -2,7 +2,7 @@
 
 Haziq's life, moved to Perth. Born in 1996 to a bricklayer from Calabria and a bookkeeper in Spearwood, and into Chloe's and Jake's lives only in 2034, when she joins his company and he guards its tower. A commerce degree and a Juris Doctor on HECS and FEE-HELP, admission by the Supreme Court, a practising certificate under the Uniform Law, an authorised witness, a year in London, a founder, an employer, a candidate who must first renounce the Italian citizenship he was born with, an acquirer under the new mandatory merger regime, a seller with a capital gains discount, a private ancillary fund, a listed board, an angel. Married by a civil celebrant to an Indian national who comes on a partner visa, becomes a permanent resident and then a citizen, and gives up her Indian citizenship because India allows no other way. A daughter born in London who is a citizen by descent. And at the end, an estate that four rules divide: the house by survivorship, the super by nomination, the residue by a will into a testamentary trust, and, when his father dies, a house in Calabria that Italian law divides for the family whatever the Australian will says.
 
-Where Haziq's life ran on a second personal law applied by statute, Daniel's runs on three things Singapore does not have: a federal Constitution that disqualifies a dual citizen from Parliament, a foreign law that reaches into an Australian estate, and a Privacy Act that does not apply to his company until it is big enough.
+Where Haziq's life ran on a second personal law applied by statute, Daniel's runs on three things Singapore does not have: a federal Constitution that disqualifies a dual citizen from Parliament (deposited as a subject on 14 October 2026), a foreign law that reaches into an Australian estate, and a Privacy Act that does not apply to his company until it is big enough.
 
 Companion files:
 
@@ -117,7 +117,7 @@ Before he can nominate for the House of Representatives, section 44 of the Const
 
 | date | event | the question | law | status |
 | --- | --- | --- | --- | --- |
-| 2040-03-15 | renounces Italian citizenship | Is a dual citizen capable of being chosen? | Commonwealth Constitution s 44(i); Re Canavan [2017] HCA 45; Italian Law 91/1992 art 11 | `CASE` — the Constitution has no subject directory |
+| 2040-03-15 | renounces Italian citizenship | Is a dual citizen capable of being chosen? | Commonwealth of Australia Constitution Act 1900 s 44(i); Re Canavan [2017] HCA 45; Italian Law 91/1992 art 11 | `NONE` (the Constitution was deposited on 14 Oct 2026); `CASE` for the reading and the Italian step |
 | 2040-06-23 | nominated; the deposit; the checklist | Who may stand; the deposit; forfeiture; disclosure | Commonwealth Electoral Act ss 163, 170, 173, Part XX | `NONE` — $2,000, returned at 4% |
 | 2040-06-30 | a false post; a concerns notice; an offer of amends | Defamatory? The notice? The offer? | Defamation Act 2005 (WA) ss 10A, 12A-12B, Part 3 Div 1 | `NONE` |
 | 2040-07-04 | 41%; the deposit returned; the return | — | Commonwealth Electoral Act s 173, Part XX Div 5 | `NONE` |
