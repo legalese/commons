@@ -382,8 +382,8 @@ The pass found no misreading and one unregistered fork; the lead asked for the r
    Both attachments are grammatical, so it is now a named switch (`the absorption basket in section 223 "insured" (4)`), default declined where the readings differ.
    They differ only for a resident immigrant, not insured under Chapter 11, who has no recorded basket.
    My own tests that rested on the old reading were re-pointed by name, values unchanged: the immigrant-without-basket assertion is now three (declined by default; not insured on `qualifies both`; insured on `qualifies only the visa holder`).
-   The tester's two assertions (lines 388, 389) are kept as they are; they now REFUSE by default and `check.sh` declares them as expected refusals (expected failed 0, expected refused 3, with a comment).
-   Named, the tester's reading holds: with `qualifies only the visa holder`, the facts of its line 388 give insured.
+   The tester's two assertions (lines 387, 388) are kept as they are; they now REFUSE by default and `check.sh` declares them as expected refusals (expected failed 0, expected refused 3, with a comment).
+   Named, the tester's reading holds: with `qualifies only the visa holder`, the facts of its line 387 give insured.
 2. **CH-31, s 69: fork P3 revised from class (b) to a switch.**
    I had held that (a) pays the mother whether or not she is entitled, because the other reading seemed to leave an entitled father unpaid.
    The tester decided the father, with confidence L, through (b) or (d).

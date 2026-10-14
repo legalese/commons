@@ -11,9 +11,9 @@ Only `check.sh`'s two `case` lists (expected 5 failed, 2 refused for `tests-inde
 
 | # | lines of tests-independent.l4 | my case | class | what |
 |---|---|---|---|---|
-| 1 | 129 (refused) | C013 | OURS-WRONG (minor) | `Order of 5759-1999 s 3 — the Order applies to contributions payable for the day` refuses on 31.12.1998 ("governed by the Order No. 2 of 5747-1987, which is not deposited"). |
-| 2 | 326 (refused) | C269 | AMBIGUITY | Began civic service 1.9.2026, for October 2026: I decided "not reached" on the deposited text and said "unless an Act extended the Law". The encoding's default declines (fork C1). My assertion at the named reading (`the deposited expiry, the day itself in force`) passes (line 324). |
-| 3 | 220 to 223 and 225 (failed) | C143 to C147 | TESTER-WRONG | I divided each branch rate by the printed total 14.60; the encoding divides by the sum of the cells it is given (14.49). See finding S1. |
+| 1 | 128 (refused) | C013 | OURS-WRONG (minor) | `Order of 5759-1999 s 3 — the Order applies to contributions payable for the day` refuses on 31.12.1998 ("governed by the Order No. 2 of 5747-1987, which is not deposited"). |
+| 2 | 325 (refused) | C269 | AMBIGUITY | Began civic service 1.9.2026, for October 2026: I decided "not reached" on the deposited text and said "unless an Act extended the Law". The encoding's default declines (fork C1). My assertion at the named reading (`the deposited expiry, the day itself in force`) passes (line 323). |
+| 3 | 219 to 222 and 224 (failed) | C143 to C147 | TESTER-WRONG | I divided each branch rate by the printed total 14.60; the encoding divides by the sum of the cells it is given (14.49). See finding S1. |
 
 ### 1. Order s 3 on 31 December 1998 (OURS-WRONG, minor)
 
@@ -28,7 +28,7 @@ The refusal for the amount of wage for a month before 1999 is right: there the a
 The deposited text (Wikisource revision of 2026-04-01) says s 36(a) "עד יום י״ח באלול התשפ״ו (31 באוגוסט 2026)" and s 36(b) keeps the Law for "מי שהחל את שירותו ... לפני מועד הפקיעה".
 Nothing deposited says an Act moved the date, and nothing after 2026-04-01 is deposited, so both of us say the answer turns on a later Act; I take "not moved" as my reading, the encoding declines.
 The brief's question, "whether the National-Civic Service Law moved s 348(e)'s 31.8.2026 expiry", is answered the same way by both: the text deposited says 31.8.2026, the date in s 348(e)'s editorial note is the Civic Law's own lapse date, and a later amendment cannot be excluded from the sources.
-Agreement elsewhere: began 1.3.2026 and serving in October 2026 yes (line 320); began 1.7.2026 and still serving, s 36(b) yes; 30.8.2026 in force; 1.9.2026 not in force at the deposited reading; the start on 31.8.2026 declined at the default (my C270, flagged L; line 328, satisfied).
+Agreement elsewhere: began 1.3.2026 and serving in October 2026 yes (line 319); began 1.7.2026 and still serving, s 36(b) yes; 30.8.2026 in force; 1.9.2026 not in force at the deposited reading; the start on 31.8.2026 declined at the default (my C270, flagged L; line 327, satisfied).
 
 ### 3. Section 28(a) with employee rates (TESTER-WRONG), and a source anomaly (S1)
 
@@ -54,8 +54,8 @@ I used 13,566 and tested both figures for Schedule A (2,034.90 and 2,065.35, bot
 M1. The tests and NOTES answer table use 3,442 as "the Schedule K minimum" for s 345B(c)(2) ("A pensioner of 2,000 with no other income: 3,442 counts") and for s 350A(c).
 s 345B(c)(2) names "ההכנסה המזערית הקבועה בפרט 3 בלוח י״א"; item 3 is "5% of the average wage ... times 3" a quarter, that is 678.30 a month (2,034.90 a quarter) at 13,566, not 3,442.
 3,442 is 25% of 13,769, which is item 2's (self-employed) monthly minimum computed with the s 2 note's wage, so the fixture takes the wrong item (and the other average wage, S6).
-The rules take the minimum as an input, so no rule is wrong: with 678.3 my assertions pass (lines 296, 298, 300 and 302).
-The same figure for s 345(e): item 2 gives 3,391.50 at 13,566 (lines 293 and 294, satisfied with that input).
+The rules take the minimum as an input, so no rule is wrong: with 678.3 my assertions pass (lines 295, 297, 299 and 301).
+The same figure for s 345(e): item 2 gives 3,391.50 at 13,566 (lines 292 and 293, satisfied with that input).
 For s 350A(c) "the minimum stated for him" depends on his class; the fixture 3,442 is item 2 only.
 
 ## What I checked in the encoder's reading of the sources

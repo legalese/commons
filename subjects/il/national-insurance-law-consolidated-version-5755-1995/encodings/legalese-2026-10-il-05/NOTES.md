@@ -99,12 +99,12 @@ A dated note at the end of the file cites each line with its item, reading and `
 
 | line | id | item | reading | `DECIDED-ANSWERS.md` | expected | at the switch | at 0.6.0, re-pointed |
 | ---: | --- | --- | --- | --- | --- | --- | --- |
-| 367 | G3 | 05-X1 | (a1) as `the part up to the 25% sum is not taken into account` | section G: "a deduction, not a cliff"; G3 | 0.01 | declined (F3) | satisfied |
-| 371 | G5 | 05-X1 | the same | section G; G5 | 8,557.75 | declined (F3) | satisfied |
-| 395 | H6 | 05-F6 (F6) | item 3 as `the classes section 348(d) and (e) name` | section H, row H6: "item 3, not item 4, governs him" | item 3 | declined (F6) | satisfied |
-| 396 | H6 | 05-F6 (F6) | the same | row H6 | 3,000 | declined (F6) | satisfied |
+| 366 | G3 | 05-X1 | (a1) as `the part up to the 25% sum is not taken into account` | section G: "a deduction, not a cliff"; G3 | 0.01 | declined (F3) | satisfied |
+| 370 | G5 | 05-X1 | the same | section G; G5 | 8,557.75 | declined (F3) | satisfied |
+| 394 | H6 | 05-F6 (F6) | item 3 as `the classes section 348(d) and (e) name` | section H, row H6: "item 3, not item 4, governs him" | item 3 | declined (F6) | satisfied |
+| 395 | H6 | 05-F6 (F6) | the same | row H6 | 3,000 | declined (F6) | satisfied |
 
-Line 395's rule takes figures in its reading form, so the line now passes the tester's own `fid 2026 figures`, which line 396 already passes; under its old name the rule read the same 2026 figures as published.
+Line 394's rule takes figures in its reading form, so the line now passes the tester's own `fid 2026 figures`, which line 395 already passes; under its old name the rule read the same 2026 figures as published.
 The file was re-run after the edit: 131 satisfied, 6 failed, 2 refused, each of the four satisfied with its original value.
 
 ### What `check.sh` prints at 0.6.0
@@ -257,11 +257,11 @@ The version is minor, not a patch, because the row now answers questions it coul
 - **05-RC1: nine of the independent tester's assertions called the items' reading (OURS-WRONG, test wiring).**
   Read before re-pointing: `DECIDED-ANSWERS.md` section 1 decides "col D (employee deduction) total 7.00 above the bracket, 1.04 below"; its B and C tables work every value on 7%; and its "Revised" section, item 1, keeps them on the printed total after finding that the rows sum to 4.67.
   The nine called the s 342(c) and (d) rules under their 0.1.0 names, which read the items, so they failed with values that are right under the ruling of 2026-10-07.
-  They were re-pointed, as row IL-04 v0.3.1 re-pointed its tester's, to the reading the tester decided by name, `, reading Schedule J as` `the printed totals govern`, with no expected value changed and no line inserted: lines 220-223, 226, 228, 236, 245 and 248.
+  They were re-pointed, as row IL-04 v0.3.1 re-pointed its tester's, to the reading the tester decided by name, `, reading Schedule J as` `the printed totals govern`, with no expected value changed and no line inserted: lines 219-222, 225, 227, 235, 244 and 247.
   At the printed totals this row takes column D for the deduction branches together as an argument, so each line now carries the tester's own figure for it, 7,703 × 1.04% plus the rest of the wage × 7%, written out as an expression on the wage of the line.
-  05-RC2 was done first; line 226 (B8, a wage of 60,000) uses its new rule, with the tester's own `fid 2026 figures` and `fid column D amounts on a wage of` and, at the printed totals, a function applying 1.04 and 7.00 as the tester's `fid banded` applies the rows.
+  05-RC2 was done first; line 225 (B8, a wage of 60,000) uses its new rule, with the tester's own `fid 2026 figures` and `fid column D amounts on a wage of` and, at the printed totals, a function applying 1.04 and 7.00 as the tester's `fid banded` applies the rows.
   All nine now pass.
-  The note at the end of `tests-independent.l4` gives the details, including that lines 220-223 and 236 now check only that the figure passes through when nothing is left out: the arithmetic is row IL-04's, whose own tests assert two of the values at its default (80.1812 at 7,704 and 240.9012 at 10,000, its `nii-il04-tests.l4` lines 343 and 504).
+  The note at the end of `tests-independent.l4` gives the details, including that lines 219-222 and 235 now check only that the figure passes through when nothing is left out: the arithmetic is row IL-04's, whose own tests assert two of the values at its default (80.1812 at 7,704 and 240.9012 at 10,000, its `nii-il04-tests.l4` lines 343 and 504).
 - **05-P3: a person who is both an employee and self-employed took two calls (OURS-WRONG, optional interface).**
   New record `An insured person who may be both an employee and self-employed, for section 342(a)-(b)` (`nii-il05-nouns.l4`) and rule `s 342(a)-(b) — the persons liable to pay the contributions for`, which returns a list: the employer for the employee under (b), and the person for himself under (a).
   Each status is put to the one-column rule, which is unchanged, so one call answers as the two calls did (the tester's A7; the Axiom comparison's X5 and P3).
@@ -320,17 +320,17 @@ All 29 were satisfied on that first run; with three of them altered in a scratch
 
 | line | id | expected | at 0.3.0 | at 0.4.0 |
 | ---: | --- | --- | --- | --- |
-| 220 | B4, 7,704 | 80.1812 | failed (80.1579) | satisfied |
-| 221 | B5, 8,000 | 100.9012 | failed (93.9811) | satisfied |
-| 222 | B6, 10,000 | 240.9012 | failed (187.3811) | satisfied |
-| 223 | B7, 51,910 | 3,174.6012 | failed (2,144.5781) | satisfied |
-| 226 | B8, 60,000 | 3,174.6012 | failed (2,522.3811) | satisfied, through the 05-RC2 rule |
-| 228 | B9, police, 10,000 | 234.5369 | failed (181.0168) | satisfied |
-| 236 | B12, a man of 69, 10,000 | 240.9012 | failed (187.3811) | satisfied |
-| 245 | C1, pays | 375.3012 | failed (228.5811) | satisfied |
-| 248 | C2, refund | 1,507.2012 | failed (2,537.2243) | satisfied |
+| 219 | B4, 7,704 | 80.1812 | failed (80.1579) | satisfied |
+| 220 | B5, 8,000 | 100.9012 | failed (93.9811) | satisfied |
+| 221 | B6, 10,000 | 240.9012 | failed (187.3811) | satisfied |
+| 222 | B7, 51,910 | 3,174.6012 | failed (2,144.5781) | satisfied |
+| 225 | B8, 60,000 | 3,174.6012 | failed (2,522.3811) | satisfied, through the 05-RC2 rule |
+| 227 | B9, police, 10,000 | 234.5369 | failed (181.0168) | satisfied |
+| 235 | B12, a man of 69, 10,000 | 240.9012 | failed (187.3811) | satisfied |
+| 244 | C1, pays | 375.3012 | failed (228.5811) | satisfied |
+| 247 | C2, refund | 1,507.2012 | failed (2,537.2243) | satisfied |
 
-The six failures and two refusals that remain are the tester's E8 (lines 303-306) and H1 (385), inventory 05-RC3, TESTER-WRONG; H2 and H3 (387, 389, refused), 05-RC4, AMBIGUITY; and I3 (421), 05-RC5, WORDING.
+The six failures and two refusals that remain are the tester's E8 (lines 302-305) and H1 (384), inventory 05-RC3, TESTER-WRONG; H2 and H3 (386, 388, refused), 05-RC4, AMBIGUITY; and I3 (420), 05-RC5, WORDING.
 
 ### What `check.sh` prints at 0.4.0
 
@@ -437,7 +437,7 @@ TOTAL (7 modules)                              3       172       3        0
 
 `check.sh` exit 0.
 The 3 errors are the 3 failed assertions of `nii-il05-tests-expected-red.l4`, which `check.sh`'s `expected_failed` table and `encoding.json`'s `expected_red` both name with that count; there is no other error, and no warning in any module.
-They were predicted before that module was first run, and the run failed exactly those three, read from the diagnostics by line (45, 46, 61; none "could not be evaluated"):
+They were predicted before that module was first run, and the run failed exactly those three, read from the diagnostics by line (44, 45, 60; none "could not be evaluated"):
 
 - **2: s 342(e)(3) and (e)(4) name "column E of Schedule J" for the rates of the employer's deduction** (lines 3669-3670), where Schedule J's column E is "the State Treasury's allocation under s 32(c1)" and the deduction is column D, "the deduction from the employee's wage for s 342(c)" (line 4717). Fork F22.
 - **1: s 342(c)(2) is made "subject to s 245(b2)"** (line 3662), and s 245(b2) reads "(בוטל)", repealed (line 2474). Fork F10.

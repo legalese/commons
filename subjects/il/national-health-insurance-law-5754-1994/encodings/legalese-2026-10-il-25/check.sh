@@ -45,8 +45,8 @@ expected_refused() {
   case "$1" in
     # Version 0.5.0 (BACKLOG IL-56, fid-il-25): tests-independent.l4 asserts the independent tester's values for
     # months before 2026 and the encoding declines them by design (class SCOPE, NOTES.md: months from January 2026).
-    # The seven refused assertions are lines 248 (C66, 2025-01), 250 (C67, 2025-02), 252 (C68, 2025-12), 254 (C69, 7,522),
-    # 256 (C70, 7,523), 258 (C71, 60,000 with the 2025 cap) and 260 (C73, 2024-06 at 3.1%).
+    # The seven refused assertions are lines 247 (C66, 2025-01), 249 (C67, 2025-02), 251 (C68, 2025-12), 253 (C69, 7,522),
+    # 255 (C70, 7,523), 257 (C71, 60,000 with the 2025 cap) and 259 (C73, 2024-06 at 3.1%).
     tests-independent.l4) echo 7 ;;
     *) echo 0 ;;
   esac

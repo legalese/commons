@@ -31,10 +31,10 @@ L4="${L4:-l4}"
 expected_failed() {
   case "$1" in
     # tests-independent.l4 (fid-il-30, row IL-56). Version 0.1.1 repair: of its 11 declared failures at 0.1.0, 10 are resolved and 1 remains.
-    #   line 1307 BT10  TESTER-WRONG   decided 25% on the middle part for a material shareholder (that uplift is ITO s 91(b1)(1)(a)(2), not RE Tax Law s 48A(b1)(1)(b)); the
+    #   line 1306 BT10  TESTER-WRONG   decided 25% on the middle part for a material shareholder (that uplift is ITO s 91(b1)(1)(a)(2), not RE Tax Law s 48A(b1)(1)(b)); the
     #                   encoding is right (INDEPENDENT-FINDINGS.md section 2). Left failing, value unchanged.
-    #   Resolved by 0.1.1 and now satisfied: DV12 (line 781, the third reading "at any time" added to forks D1 and D2, default declines); BT09, BT11, BT12 (lines 1305, 1309, 1311) and
-    #   BT19, BT20, BT22, BT23 (lines 1325, 1327, 1331, 1333) (the RE Tax Law's day counts: the parts now partition the days under every reading, and the Transition Day reading is named).
+    #   Resolved by 0.1.1 and now satisfied: DV12 (line 780, the third reading "at any time" added to forks D1 and D2, default declines); BT09, BT11, BT12 (lines 1304, 1308, 1310) and
+    #   BT19, BT20, BT22, BT23 (lines 1324, 1326, 1330, 1332) (the RE Tax Law's day counts: the parts now partition the days under every reading, and the Transition Day reading is named).
     tests-independent.l4) echo 1 ;;
     *) echo 0 ;;
   esac
@@ -45,12 +45,12 @@ expected_failed() {
 expected_refused() {
   case "$1" in
     # tests-independent.l4 (fid-il-30, row IL-56): 10 declared refusals where the tester decided a value. At 0.1.0 there were 17.
-    #   lines 543, 545 CG20; 553 CG22   SCOPE   the s 88 parts of the real gain for a sale before the fixed date or the change date are declined, though s 88 has no date limit
-    #   lines 680 T30; 1319 BT16; 1321 BT17   SCOPE   a sale before 1 January 2012 (assumption A6)
-    #   line 702 T49   AMBIGUITY (new at 0.1.1, was a failure)   a right bought and sold in the same tax year: the text does not say whether the empty period of ownership gives no tax year or one (fork 30-F19); declined by default
-    #   line 799 DV21   AMBIGUITY   a dividend on 29 February 2024 and a holding on 28 February 2023: the 12-month boundary (the encoding is right to decline)
-    #   line 1342 BT27  AMBIGUITY (new at 0.1.1, was a failure)   s 48A(b4) with a 2005 purchase: (b4) and (b1) collide (fork 30-F20); declined by default
-    #   line 1477 PT54  SCOPE   the (c1a)(1) window before July 2013: its printed amounts were indexed every 16 January while it ran and the indices are not supplied
+    #   lines 542, 544 CG20; 552 CG22   SCOPE   the s 88 parts of the real gain for a sale before the fixed date or the change date are declined, though s 88 has no date limit
+    #   lines 679 T30; 1318 BT16; 1320 BT17   SCOPE   a sale before 1 January 2012 (assumption A6)
+    #   line 701 T49   AMBIGUITY (new at 0.1.1, was a failure)   a right bought and sold in the same tax year: the text does not say whether the empty period of ownership gives no tax year or one (fork 30-F19); declined by default
+    #   line 798 DV21   AMBIGUITY   a dividend on 29 February 2024 and a holding on 28 February 2023: the 12-month boundary (the encoding is right to decline)
+    #   line 1341 BT27  AMBIGUITY (new at 0.1.1, was a failure)   s 48A(b4) with a 2005 purchase: (b4) and (b1) collide (fork 30-F20); declined by default
+    #   line 1476 PT54  SCOPE   the (c1a)(1) window before July 2013: its printed amounts were indexed every 16 January while it ran and the indices are not supplied
     #   Resolved by 0.1.1 and now satisfied (they were SCOPE refusals): PT37, PT43, PT44, PT45, PT47 (the 2022 to 2024 columns), PT48, PT49, PT51 (the 2013 column and the (c1b)(2) scale), PT53 ((c1b)(1)).
     tests-independent.l4) echo 10 ;;
     *) echo 0 ;;

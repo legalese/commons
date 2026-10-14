@@ -19,13 +19,13 @@ Text elsewhere in this file that 0.3.0 changed is marked "(0.3.0)" in place.
 
 | id | fork | class | what changed | tests added |
 | --- | --- | --- | --- | --- |
-| 01-F1 | F1, s 36A and residence | (a) gating choice | A switch, `section 36A — the reading this row takes on residence`, default `declined where residence decides section 36A`; readings `section 36A has no residence condition` (0.2.0's) and `section 36A gives its half point only to an Israeli resident`, with a new rule `section 36A, read with a residence condition, applies in the tax year of`. The default declines only for a woman who does not count as an Israeli resident. Shared with row IL-02 (s 66(c)(4)), whose agent does its side; the refusal is worded so that IL-02 can copy it. | 10, 4 of them refusals (tests lines 562-590) |
-| 01-F2 | F2, s 36 and income from personal exertion | (a) gating choice | A switch, `section 36 — the reading this row takes on income from personal exertion`, default `declined where income from personal exertion decides section 36`; readings `section 36 for every resident individual` (0.2.0's) and `section 36 only for an individual with income from personal exertion`; a new input on `Taxpayer in a tax year`. The default declines only for an individual without such income whom s 36 would otherwise give anything. | 13, 4 refusals (lines 591-624) |
-| 01-F4 | F4, residence for part of a tax year | (a) gating choice | A switch, `sections 34 and 36 — the reading this row takes for part of a tax year`, default `declined for residence in part of a tax year` (the tester's reading (ii)); readings `one residence status for the whole tax year` (0.2.0's, (i)) and `apportioned by the months of residence, as section 41 apportions` ((iii), s 41(1), line 1691); a new input on `Taxpayer in a tax year`. The default declines wherever a year of residence would give anything. | 13, 5 refusals (lines 625-660) |
+| 01-F1 | F1, s 36A and residence | (a) gating choice | A switch, `section 36A — the reading this row takes on residence`, default `declined where residence decides section 36A`; readings `section 36A has no residence condition` (0.2.0's) and `section 36A gives its half point only to an Israeli resident`, with a new rule `section 36A, read with a residence condition, applies in the tax year of`. The default declines only for a woman who does not count as an Israeli resident. Shared with row IL-02 (s 66(c)(4)), whose agent does its side; the refusal is worded so that IL-02 can copy it. | 10, 4 of them refusals (tests lines 561-589) |
+| 01-F2 | F2, s 36 and income from personal exertion | (a) gating choice | A switch, `section 36 — the reading this row takes on income from personal exertion`, default `declined where income from personal exertion decides section 36`; readings `section 36 for every resident individual` (0.2.0's) and `section 36 only for an individual with income from personal exertion`; a new input on `Taxpayer in a tax year`. The default declines only for an individual without such income whom s 36 would otherwise give anything. | 13, 4 refusals (lines 590-623) |
+| 01-F4 | F4, residence for part of a tax year | (a) gating choice | A switch, `sections 34 and 36 — the reading this row takes for part of a tax year`, default `declined for residence in part of a tax year` (the tester's reading (ii)); readings `one residence status for the whole tax year` (0.2.0's, (i)) and `apportioned by the months of residence, as section 41 apportions` ((iii), s 41(1), line 1691); a new input on `Taxpayer in a tax year`. The default declines wherever a year of residence would give anything. | 13, 5 refusals (lines 624-659) |
 | 01-F5 | F5, s 33A's set-off | (b) only one reading arguable for the question asked | None in the rules; a comment in `ito-s33a-credit-point.l4` and the fork register say why: a set-off cannot take the tax below nothing, s 91(e)(2)(b) presupposes an unused "יתרת נקודות הזיכוי", and whether a balance is paid out is not a question this row answers; the order of credits does not arise in a rule that sets one amount against one tax. | 0 |
 | 01-F9 | F9, "אשה" | (c) input convention | None in the rules; a comment on the `a woman` field and the fork register state the convention: the caller determines who is a woman. | 0 |
 
-Three further assertions pin the three defaults (tests lines 558-560).
+Three further assertions pin the three defaults (tests lines 557-559).
 
 ### Choices made here (assumed, not ruled)
 
@@ -56,31 +56,31 @@ At the defaults, the year-aware rules and the `@export` now decline: s 36A for a
 
 | line | rule (year-aware) | case | now | value | why |
 | ---: | --- | --- | --- | --- | --- |
-| 347 | s 36 | an Israeli citizen resident in the Area, a man, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 349 | ss 34+36+36A | an Israeli citizen resident in the Area, a man, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 9/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 350 | ss 34+36+36A | an Israeli citizen resident in the Area, a woman, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 11/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 354 | s 36 | an Israeli citizen operating in the Area, a man, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 355 | ss 34+36 | an Israeli citizen operating in the Area, a man, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 9/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 365 | s 36A | an Israeli citizen resident in the Area, a woman, 2016 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/2 | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines |
-| 383 | ss 34+36+36A | a resident man, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 9/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 384 | ss 34+36+36A | a resident man, 2024 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 9/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 385 | ss 34+36+36A | a resident woman, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 11/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 386 | ss 34+36+36A | a non-resident woman, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/2 | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines |
-| 394 | s 36 | a resident woman, 1990 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 395 | ss 34+36 | a resident woman, 1990 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 9/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 397 | ss 34+36+36A | a resident woman, 1990 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | refused: this encoding does not hold the text of section 36A for a tax year before 1997 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines (the default now refuses first in s 36's words) |
-| 415 | s 36 | a resident man, 1978 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 437 | s 36 | a resident man who is a foreign worker, 2001 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 438 | ss 34+36+36A | a resident woman who is a foreign worker, 2001 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 11/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 439 | s 36A | a non-resident woman who is a foreign worker, 2001 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/2 | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines |
-| 449 | s 36A | a non-resident woman who is a foreign worker, 2013 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | refused: section 48A and the regulations made under it are not encoded in this model | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines (the default now refuses in F1's words, before s 48A) |
-| 450 | s 36A | a non-resident woman who is a foreign worker, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | refused: section 48A and the regulations made under it are not encoded in this model | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines (the default now refuses in F1's words, before s 48A) |
-| 458 | s 36A | a woman resident in the Area, not an Israeli citizen and not an Israeli resident, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/2 | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines |
-| 483 | @export amount | a resident woman, 2025 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 7986 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 484 | @export amount | a resident man, 2025 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 6534 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 488 | @export amount | an Israeli citizen resident in the Area, a man, 2025 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 6534 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 489 | @export amount | an Israeli citizen resident in the Area, a woman, 2025 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 7986 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
-| 490 | @export amount | an Israeli citizen operating in the Area, a man, 2025 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 6534 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 346 | s 36 | an Israeli citizen resident in the Area, a man, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 348 | ss 34+36+36A | an Israeli citizen resident in the Area, a man, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 9/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 349 | ss 34+36+36A | an Israeli citizen resident in the Area, a woman, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 11/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 353 | s 36 | an Israeli citizen operating in the Area, a man, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 354 | ss 34+36 | an Israeli citizen operating in the Area, a man, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 9/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 364 | s 36A | an Israeli citizen resident in the Area, a woman, 2016 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/2 | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines |
+| 382 | ss 34+36+36A | a resident man, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 9/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 383 | ss 34+36+36A | a resident man, 2024 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 9/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 384 | ss 34+36+36A | a resident woman, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 11/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 385 | ss 34+36+36A | a non-resident woman, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/2 | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines |
+| 393 | s 36 | a resident woman, 1990 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 394 | ss 34+36 | a resident woman, 1990 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 9/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 396 | ss 34+36+36A | a resident woman, 1990 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | refused: this encoding does not hold the text of section 36A for a tax year before 1997 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines (the default now refuses first in s 36's words) |
+| 414 | s 36 | a resident man, 1978 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 436 | s 36 | a resident man who is a foreign worker, 2001 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 437 | ss 34+36+36A | a resident woman who is a foreign worker, 2001 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 11/4 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 438 | s 36A | a non-resident woman who is a foreign worker, 2001 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/2 | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines |
+| 448 | s 36A | a non-resident woman who is a foreign worker, 2013 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | refused: section 48A and the regulations made under it are not encoded in this model | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines (the default now refuses in F1's words, before s 48A) |
+| 449 | s 36A | a non-resident woman who is a foreign worker, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | refused: section 48A and the regulations made under it are not encoded in this model | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines (the default now refuses in F1's words, before s 48A) |
+| 457 | s 36A | a woman resident in the Area, not an Israeli citizen and not an Israeli resident, 2026 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 1/2 | F1: s 36A for a woman who does not count as resident (or, in 2016, whose s 3A(f) residence cannot be read); the default now declines |
+| 482 | @export amount | a resident woman, 2025 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 7986 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 483 | @export amount | a resident man, 2025 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 6534 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 487 | @export amount | an Israeli citizen resident in the Area, a man, 2025 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 6534 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 488 | @export amount | an Israeli citizen resident in the Area, a woman, 2025 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 7986 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
+| 489 | @export amount | an Israeli citizen operating in the Area, a man, 2025 | the same rule at `the readings versions 0.1.0 and 0.2.0 took` | 6534 | F2: s 36 for a (deemed) resident entered without income from personal exertion; the default now declines |
 
 ### Assertions added
 
@@ -88,45 +88,45 @@ Every expected value was worked out from the source, in the comment beside it, b
 
 | line | rule (year-aware) | case | reading | old | new |
 | ---: | --- | --- | --- | --- | --- |
-| 558 | the row's default reading of the fork | — | — | — | declined where residence decides section 36A |
-| 559 | the row's default reading of the fork | — | — | — | declined where income from personal exertion decides section 36 |
-| 560 | the row's default reading of the fork | — | — | — | declined for residence in part of a tax year |
-| 569 | s 36A | a non-resident woman, 2026 | default | — | refused: section 36A does not say whether a woman who is not an Israeli resident gets its half point |
-| 570 | s 36A | a non-resident woman, 2026 | F1: section 36A has no residence condition | — | 1/2 |
-| 571 | s 36A | a non-resident woman, 2026 | F1: section 36A gives its half point only to an Israeli resident | — | 0 |
-| 574 | s 36A | a woman resident in the Area, not an Israeli citizen and not an Israeli resident, 2026 | default | — | refused: section 36A does not say whether a woman who is not an Israeli resident gets its half point |
-| 579 | s 36A | a resident woman, with income from personal exertion, 2026 | default | — | 1/2 |
-| 580 | s 36A | an Israeli citizen resident in the Area, a woman, 2026 | default | — | 1/2 |
-| 581 | s 36A | a non-resident man, 2026 | default | — | 0 |
-| 586 | s 36A | a resident woman who is a foreign worker, 2026 | F1: section 36A gives its half point only to an Israeli resident | — | refused: section 48A and the regulations made under it are not encoded in this model |
-| 587 | s 36A | a non-resident woman who is a foreign worker, 2026 | F1: section 36A gives its half point only to an Israeli resident | — | 0 |
-| 589 | s 36A | a non-resident woman, 1996 | F1: section 36A gives its half point only to an Israeli resident | — | refused: this encoding does not hold the text of section 36A for a tax year before 1997 |
-| 599 | s 36 | a resident man, 2026 | default | — | refused: section 36 does not say whether an individual without income from personal exertion gets its quarter point |
-| 600 | s 36 | a resident man, 2026 | F2: section 36 for every resident individual | — | 1/4 |
-| 601 | s 36 | a resident man, 2026 | F2: section 36 only for an individual with income from personal exertion | — | 0 |
-| 603 | s 34 | a resident man, 2026 | default | — | 2 |
-| 605 | s 36 | a resident man, with income from personal exertion, 2026 | default | — | 1/4 |
-| 607 | s 36 | a non-resident man, 2026 | default | — | 0 |
-| 609 | s 36 | a resident man, 1970 | F2: section 36 only for an individual with income from personal exertion | — | refused: this encoding does not hold the text of section 36 for a tax year before 1978 |
-| 613 | s 36 | a resident man who is a foreign worker, with income from personal exertion, 2026 | default | — | refused: section 48A and the regulations made under it are not encoded in this model |
-| 614 | s 36 | a resident man who is a foreign worker, 2026 | F2: section 36 only for an individual with income from personal exertion | — | 0 |
-| 620 | ss 34+36+36A | a resident woman, with income from personal exertion, 2026 | default | — | 11/4 |
-| 621 | ss 34+36 | a resident woman, with income from personal exertion, 2026 | default | — | 9/4 |
-| 622 | @export amount | a resident woman, with income from personal exertion, 2025 | default | — | 7986 |
-| 623 | ss 34+36 | a resident woman, 2026 | default | — | refused: section 36 does not say whether an individual without income from personal exertion gets its quarter point |
-| 635 | s 34 | a resident man, resident 7 months of 2026, with income from personal exertion | default | — | refused: sections 34 and 36 do not say what an individual who was an Israeli resident for only part of the tax year gets |
-| 636 | s 36 | a resident man, resident 7 months of 2026, with income from personal exertion | default | — | refused: sections 34 and 36 do not say what an individual who was an Israeli resident for only part of the tax year gets |
-| 637 | s 34 | a resident man, resident 7 months of 2026, with income from personal exertion | F4: one residence status for the whole tax year | — | 2 |
-| 638 | s 36 | a resident man, resident 7 months of 2026, with income from personal exertion | F4: one residence status for the whole tax year | — | 1/4 |
-| 639 | s 34 | a resident man, resident 7 months of 2026, with income from personal exertion | F4: apportioned by the months of residence, as section 41 apportions | — | 7/6 |
-| 640 | s 36 | a resident man, resident 7 months of 2026, with income from personal exertion | F4: apportioned by the months of residence, as section 41 apportions | — | 7/48 |
-| 644 | s 34 | a non-resident man, resident 5 months of 2026, with income from personal exertion | F4: one residence status for the whole tax year | — | 0 |
-| 645 | s 34 | a non-resident man, resident 5 months of 2026, with income from personal exertion | F4: apportioned by the months of residence, as section 41 apportions | — | 5/6 |
-| 646 | s 34 | a non-resident man, resident 5 months of 2026, with income from personal exertion | default | — | refused: sections 34 and 36 do not say what an individual who was an Israeli resident for only part of the tax year gets |
-| 651 | ss 34+36+36A | a resident woman, resident 7 months of 2026, with income from personal exertion | F4: apportioned by the months of residence, as section 41 apportions | — | 87/48 |
-| 656 | s 34 | a company, resident 7 months of 2026, with income from personal exertion | default | — | 0 |
-| 657 | s 34 | a resident man, resident 7 months of 1970, with income from personal exertion | default | — | refused: this encoding does not hold the text of section 34 for a tax year before 1976 |
-| 660 | s 34 | a resident man who is a foreign worker, resident 7 months of 2026, with income from personal exertion | F4: apportioned by the months of residence, as section 41 apportions | — | refused: section 48A and the regulations made under it are not encoded in this model |
+| 557 | the row's default reading of the fork | — | — | — | declined where residence decides section 36A |
+| 558 | the row's default reading of the fork | — | — | — | declined where income from personal exertion decides section 36 |
+| 559 | the row's default reading of the fork | — | — | — | declined for residence in part of a tax year |
+| 568 | s 36A | a non-resident woman, 2026 | default | — | refused: section 36A does not say whether a woman who is not an Israeli resident gets its half point |
+| 569 | s 36A | a non-resident woman, 2026 | F1: section 36A has no residence condition | — | 1/2 |
+| 570 | s 36A | a non-resident woman, 2026 | F1: section 36A gives its half point only to an Israeli resident | — | 0 |
+| 573 | s 36A | a woman resident in the Area, not an Israeli citizen and not an Israeli resident, 2026 | default | — | refused: section 36A does not say whether a woman who is not an Israeli resident gets its half point |
+| 578 | s 36A | a resident woman, with income from personal exertion, 2026 | default | — | 1/2 |
+| 579 | s 36A | an Israeli citizen resident in the Area, a woman, 2026 | default | — | 1/2 |
+| 580 | s 36A | a non-resident man, 2026 | default | — | 0 |
+| 585 | s 36A | a resident woman who is a foreign worker, 2026 | F1: section 36A gives its half point only to an Israeli resident | — | refused: section 48A and the regulations made under it are not encoded in this model |
+| 586 | s 36A | a non-resident woman who is a foreign worker, 2026 | F1: section 36A gives its half point only to an Israeli resident | — | 0 |
+| 588 | s 36A | a non-resident woman, 1996 | F1: section 36A gives its half point only to an Israeli resident | — | refused: this encoding does not hold the text of section 36A for a tax year before 1997 |
+| 598 | s 36 | a resident man, 2026 | default | — | refused: section 36 does not say whether an individual without income from personal exertion gets its quarter point |
+| 599 | s 36 | a resident man, 2026 | F2: section 36 for every resident individual | — | 1/4 |
+| 600 | s 36 | a resident man, 2026 | F2: section 36 only for an individual with income from personal exertion | — | 0 |
+| 602 | s 34 | a resident man, 2026 | default | — | 2 |
+| 604 | s 36 | a resident man, with income from personal exertion, 2026 | default | — | 1/4 |
+| 606 | s 36 | a non-resident man, 2026 | default | — | 0 |
+| 608 | s 36 | a resident man, 1970 | F2: section 36 only for an individual with income from personal exertion | — | refused: this encoding does not hold the text of section 36 for a tax year before 1978 |
+| 612 | s 36 | a resident man who is a foreign worker, with income from personal exertion, 2026 | default | — | refused: section 48A and the regulations made under it are not encoded in this model |
+| 613 | s 36 | a resident man who is a foreign worker, 2026 | F2: section 36 only for an individual with income from personal exertion | — | 0 |
+| 619 | ss 34+36+36A | a resident woman, with income from personal exertion, 2026 | default | — | 11/4 |
+| 620 | ss 34+36 | a resident woman, with income from personal exertion, 2026 | default | — | 9/4 |
+| 621 | @export amount | a resident woman, with income from personal exertion, 2025 | default | — | 7986 |
+| 622 | ss 34+36 | a resident woman, 2026 | default | — | refused: section 36 does not say whether an individual without income from personal exertion gets its quarter point |
+| 634 | s 34 | a resident man, resident 7 months of 2026, with income from personal exertion | default | — | refused: sections 34 and 36 do not say what an individual who was an Israeli resident for only part of the tax year gets |
+| 635 | s 36 | a resident man, resident 7 months of 2026, with income from personal exertion | default | — | refused: sections 34 and 36 do not say what an individual who was an Israeli resident for only part of the tax year gets |
+| 636 | s 34 | a resident man, resident 7 months of 2026, with income from personal exertion | F4: one residence status for the whole tax year | — | 2 |
+| 637 | s 36 | a resident man, resident 7 months of 2026, with income from personal exertion | F4: one residence status for the whole tax year | — | 1/4 |
+| 638 | s 34 | a resident man, resident 7 months of 2026, with income from personal exertion | F4: apportioned by the months of residence, as section 41 apportions | — | 7/6 |
+| 639 | s 36 | a resident man, resident 7 months of 2026, with income from personal exertion | F4: apportioned by the months of residence, as section 41 apportions | — | 7/48 |
+| 643 | s 34 | a non-resident man, resident 5 months of 2026, with income from personal exertion | F4: one residence status for the whole tax year | — | 0 |
+| 644 | s 34 | a non-resident man, resident 5 months of 2026, with income from personal exertion | F4: apportioned by the months of residence, as section 41 apportions | — | 5/6 |
+| 645 | s 34 | a non-resident man, resident 5 months of 2026, with income from personal exertion | default | — | refused: sections 34 and 36 do not say what an individual who was an Israeli resident for only part of the tax year gets |
+| 650 | ss 34+36+36A | a resident woman, resident 7 months of 2026, with income from personal exertion | F4: apportioned by the months of residence, as section 41 apportions | — | 87/48 |
+| 655 | s 34 | a company, resident 7 months of 2026, with income from personal exertion | default | — | 0 |
+| 656 | s 34 | a resident man, resident 7 months of 1970, with income from personal exertion | default | — | refused: this encoding does not hold the text of section 34 for a tax year before 1976 |
+| 659 | s 34 | a resident man who is a foreign worker, resident 7 months of 2026, with income from personal exertion | F4: apportioned by the months of residence, as section 41 apportions | — | refused: section 48A and the regulations made under it are not encoded in this model |
 
 **The harness can fail on them.** On a scratch copy outside this directory, three edits (F1's default set to "no residence condition", apportioning by 11 for 12, and F2's earning reading giving the quarter point regardless) made `ito-credit-points-tests.l4` print 8 failed and 1 refused.
 

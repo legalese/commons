@@ -38,8 +38,8 @@ The modules, in import order (each imports only the one before it; the three tes
 
 | module | what it holds | lines |
 | --- | --- | --- |
-| `nd67-vn27-nouns.l4` | every `DECLARE`: the vintage, the working-day calendar, the person harmed and the vehicles, an advance, the Fund's money, a contribution year, an offer, the hotline, look-up and explanation, Form 1 of Annex X, parties and acts, results and problems | 444 |
-| `nd67-vn27-general.l4` | which vintage answers (Article 77(1); Decree 220 Articles 8-10), the rule that forces the vintage, "the day before", working days, Article 6(1)'s limit | 148 |
+| `nd67-vn27-nouns.l4` | every `DECLARE`: the vintage, the working-day calendar, the person harmed and the vehicles, an advance, the Fund's money, a contribution year, an offer, the hotline, look-up and explanation, Form 1 of Annex X, parties and acts, results and problems | 443 |
+| `nd67-vn27-general.l4` | which vintage answers (Article 77(1); Decree 220 Articles 8-10), the rule that forces the vintage, "the day before", working days, Article 6(1)'s limit | 147 |
 | `nd67-vn27-fund-art14-16.l4` | Articles 14-16 (principles, sources, contributions) with Article 20(2)(c) | 191 |
 | `nd67-vn27-fund-art17.l4` | Article 17: humanitarian support, repaying advances (with Article 12(3)(b) and its last paragraph), the ceilings, the carry-over, the emergency | 350 |
 | `nd67-vn27-fund-art18-22.l4` | Articles 18(2), 21(1)(b) and (d); the rest of Articles 18-22 recorded | 138 |

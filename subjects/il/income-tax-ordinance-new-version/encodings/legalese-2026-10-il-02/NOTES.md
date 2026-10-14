@@ -27,15 +27,15 @@ The test builders `the couple … , read as` and `this row's readings, but F… 
 
 | id | class | what changed | tests added (`ito66-tests.l4`) | own tests re-pointed to the old reading by name, values unchanged |
 | --- | --- | --- | --- | --- |
-| 02-F1 | (a) | fork F1 a switch (`ito66-d-common-source.l4`); the (d) gate, the (a)(1) claim and the assembly ask it; reading (ii) reads a new fact on `A common source of income`, `the income from personal exertion it gives the spouse who is not the registered spouse, if known` (MAYBE NUMBER), and declines by name where the facts do not give it | 14, lines 704-734 | 60-64, 66, 264, 425 |
+| 02-F1 | (a) | fork F1 a switch (`ito66-d-common-source.l4`); the (d) gate, the (a)(1) claim and the assembly ask it; reading (ii) reads a new fact on `A common source of income`, `the income from personal exertion it gives the spouse who is not the registered spouse, if known` (MAYBE NUMBER), and declines by name where the facts do not give it | 14, lines 703-733 | 59-63, 65, 263, 424 |
 | 02-F3 | (b) | none. (a)(2) already declines equal non-zero incomes by name ("s 66(a)(2) does not say …"). The other reading the inventory names, "a practice rule", is not in the text, and which rule the Tax Authority applies is not known here (that reading would need a source, class (d)) | — | — |
-| 02-F6 | (a), two forks | fork F6 (s 65's exception under (a)(3)) a switch, with a new fact on the couple, `of the children's income within (a)(3), the part from assets received by inheritance or from compensation or insurance for bodily injury` (0 where none); fork F14 (the children's income when (a)(2) sends the pool to the other spouse) a switch, asked by the assembly | 7, lines 749-761; 5, lines 778-787 | none |
-| 02-F7 | (a) | fork F7 a switch (`ito66-b-property-income.l4`); under reading (ii) the registered spouse's (b) income joins his own assessment, a new term of the assembly | 6, lines 791-805 | 224, 278, 541 |
-| 02-F8 | (a), two forks | forks F18 (the registered spouse under (c)(1A)) and F8 ((c)(1A) where a common source fails) switches in the (1A) request; whether (c) governs asks its two limbs in an order set by the common source, so that the limb that can settle it is asked first | 12, lines 809-833 | 419, 420 (F18); 426 (F8) |
+| 02-F6 | (a), two forks | fork F6 (s 65's exception under (a)(3)) a switch, with a new fact on the couple, `of the children's income within (a)(3), the part from assets received by inheritance or from compensation or insurance for bodily injury` (0 where none); fork F14 (the children's income when (a)(2) sends the pool to the other spouse) a switch, asked by the assembly | 7, lines 748-760; 5, lines 777-786 | none |
+| 02-F7 | (a) | fork F7 a switch (`ito66-b-property-income.l4`); under reading (ii) the registered spouse's (b) income joins his own assessment, a new term of the assembly | 6, lines 790-804 | 223, 277, 540 |
+| 02-F8 | (a), two forks | forks F18 (the registered spouse under (c)(1A)) and F8 ((c)(1A) where a common source fails) switches in the (1A) request; whether (c) governs asks its two limbs in an order set by the common source, so that the limb that can settle it is asked first | 12, lines 808-832 | 418, 419 (F18); 425 (F8) |
 | 02-F9 | (b) | none. A couple of the same sex is already declined by name; the readings the inventory names (the caller says who is "האשה", or each spouse by sex) are not taken | — | — |
 | 02-F10 | (b) | none. A provision (c) does not name is already declined by name | — | — |
-| 02-F13 | (a) | fork F13 a switch, as a reading argument on the set-off rule (`ito66-c-credit-points.l4`) | 4, lines 837-843 | 462, 464 |
-| 01-F1 (IL-02's side) | (a) | new fork F20: the half point under s 36A in (c)(4), mirroring row IL-01 v0.3.0's F1 (commit b64a3efb), declined by default for a woman who is not an Israeli resident in IL-01's words, before s 48A as IL-01 does; a new fact on `A spouse`, `an Israeli resident in the tax year, for section 36A` | 14, lines 872-897 | none |
+| 02-F13 | (a) | fork F13 a switch, as a reading argument on the set-off rule (`ito66-c-credit-points.l4`) | 4, lines 836-842 | 461, 463 |
+| 01-F1 (IL-02's side) | (a) | new fork F20: the half point under s 36A in (c)(4), mirroring row IL-01 v0.3.0's F1 (commit b64a3efb), declined by default for a woman who is not an Israeli resident in IL-01's words, before s 48A as IL-01 does; a new fact on `A spouse`, `an Israeli resident in the tax year, for section 36A` | 14, lines 871-896 | none |
 | 02-E4 | done in 0.3.0 (F19) | — | — | — |
 
 None of the items is class (c) or (d).
@@ -58,27 +58,27 @@ Every changed answer is a decline where the encoding of 0.1.0-0.3.0 answered und
 For inputs that existed before 0.4.0, the declines are: a couple with a common source failing (d)(1) where the spouse who is not the registered spouse has income within (a)(1) (F1: the (d) gate, the (a)(1) claim and calculation, the (b) proviso for her, the assembly, and whether (c) governs where (1A) does not settle it); a registered spouse's (b) income where (a)(1) makes a separate calculation or he requests one under (1A) (F7); a registered spouse's request under (1A) (F18); a request under (1A) where a common source fails (F8); the assembly where the pool goes to the spouse who is not the registered spouse and the children have (a)(3) income (F14); the children's credit above the tax on income from personal exertion (F13).
 F6 and F20 decline only on facts that could not be stated before 0.4.0 (an inherited part, a spouse who is not resident); the fixtures set them as every earlier scenario was, 0 and resident.
 
-**Assertions re-pointed** (`ito66-tests.l4`, in place, values unchanged): lines 60-64 and 66 (the (d) gate and the (a)(1) claim, failing source) and 264 (S5) and 425 to F1 (i); 224, 278 (S6) and 541 to F7 (i); 419 and 420 (C5) to F18 (i); 426 to F8 (i); 462 and 464 to F13 (i).
+**Assertions re-pointed** (`ito66-tests.l4`, in place, values unchanged): lines 59-63 and 65 (the (d) gate and the (a)(1) claim, failing source) and 263 (S5) and 424 to F1 (i); 223, 277 (S6) and 540 to F7 (i); 418 and 419 (C5) to F18 (i); 425 to F8 (i); 461 and 463 to F13 (i).
 
 **Assertions added** (`ito66-tests.l4`; none existed before; every value worked out from the source in the comment beside it before the module was run, and all passed on their first run; a control copy with five of them made wrong reported five failures):
 
 | lines | fork | values |
 | --- | --- | --- |
-| 704-734 | F1 | the switch; default: claim declined with no share given (707), (d) gate declined (709), claim declined with 50,000 from the source (712), no claim with all 120,000 from it (715) or no income (717), assembly declined (734); (i): no claim (719), s 65 arm 0, 0 (732); (ii): (d) gate TRUE (721), claim with 50,000 from the source (722), no claim with all of it (723), declined where the facts do not say (725), assembly 250,000, 70,000, 0 (730) |
-| 749-761 | F6 | the switch; default declined with 1,000 inherited (751), 4,000 with none (754); (i) 4,000 (756); (ii) 3,000 (757); the child still within (a)(3) (759); assembly under (ii) 203,000, 120,000, 0 (761) |
-| 778-787 | F14 | the switch; default declined (780); (i) 160,000, 300,000, 0 (783); (ii) 150,000, 310,000, 0 (785); no (a)(3) income 150,000, 300,000, 0 (787) |
-| 791-805 | F7 | the switch; default declined (795); (ii) `it is added to …` (797), assembly 269,000, 160,000, 0 (801); not reached: S1 `it is not calculated separately` (803), C4 FALSE (805) |
-| 809-833 | F18, F8 | the switches; F18: default declined (813), (ii) FALSE (815) and (c) does not govern (816), governs where (a)(1) is made, TRUE (819), the other spouse not reached, TRUE (821); F8: default declined (824), (i) TRUE (826), (ii) FALSE (827), with (1A) shut governs turns on F1 and declines (830), a passing source TRUE (833) |
-| 837-843 | F13 | the switch; default declined at 450 against 300 (839); (ii) 450 (841); 450 against 1,000 under (ii) (843) |
-| 872-897 | F20 | the switch; the half point: default declined for a non-resident woman (874), (i) 0.5 (876), (ii) 0 (877), resident woman 0.5 (879), non-resident man 0 (880), a non-resident foreign worker declined on residence first (883), under (i) on s 48A (885), under (ii) 0 (887); (c) for the non-resident woman: declined (890), (i) 0.5, 0, 2 (892), (ii) 0, 0, 2 (893), s 36A entitlement declined (894); the resident man 0, 0, 1 (897) |
+| 703-733 | F1 | the switch; default: claim declined with no share given (706), (d) gate declined (708), claim declined with 50,000 from the source (711), no claim with all 120,000 from it (714) or no income (716), assembly declined (733); (i): no claim (718), s 65 arm 0, 0 (731); (ii): (d) gate TRUE (720), claim with 50,000 from the source (721), no claim with all of it (722), declined where the facts do not say (724), assembly 250,000, 70,000, 0 (729) |
+| 748-760 | F6 | the switch; default declined with 1,000 inherited (750), 4,000 with none (753); (i) 4,000 (755); (ii) 3,000 (756); the child still within (a)(3) (758); assembly under (ii) 203,000, 120,000, 0 (760) |
+| 777-786 | F14 | the switch; default declined (779); (i) 160,000, 300,000, 0 (782); (ii) 150,000, 310,000, 0 (784); no (a)(3) income 150,000, 300,000, 0 (786) |
+| 790-804 | F7 | the switch; default declined (794); (ii) `it is added to …` (796), assembly 269,000, 160,000, 0 (800); not reached: S1 `it is not calculated separately` (802), C4 FALSE (804) |
+| 808-832 | F18, F8 | the switches; F18: default declined (812), (ii) FALSE (814) and (c) does not govern (815), governs where (a)(1) is made, TRUE (818), the other spouse not reached, TRUE (820); F8: default declined (823), (i) TRUE (825), (ii) FALSE (826), with (1A) shut governs turns on F1 and declines (829), a passing source TRUE (832) |
+| 836-842 | F13 | the switch; default declined at 450 against 300 (838); (ii) 450 (840); 450 against 1,000 under (ii) (842) |
+| 871-896 | F20 | the switch; the half point: default declined for a non-resident woman (873), (i) 0.5 (875), (ii) 0 (876), resident woman 0.5 (878), non-resident man 0 (879), a non-resident foreign worker declined on residence first (882), under (i) on s 48A (884), under (ii) 0 (886); (c) for the non-resident woman: declined (889), (i) 0.5, 0, 2 (891), (ii) 0, 0, 2 (892), s 36A entitlement declined (893); the resident man 0, 0, 1 (896) |
 
 **The independent tests.**
 Their interface needs no change: the new facts reach them through the fixture builders, at the values every earlier scenario had (0 inherited, resident, the source's share not given, this row's readings).
 Eleven of their plain assertions would refuse under the new defaults, each resting on a reading that is now a named alternative.
 The lead authorised, on 2026-10-08, re-pointing those whose reading the tester had decided, by name, in place, on the terms of the repair brief's addendum.
 Five were re-pointed and pass with their values unchanged, each cited in the dated NOTE BY THE LEAD at the end of `tests-independent.l4`:
-line 256 (D-8) to F1 (i), DECIDED-ANSWERS.md line 62; line 300 (A3-10) to F14 (i), line 93; line 409 (C-CAP) to F13 (i), line 191; lines 416 (R1A-2) and 420 (R1A-4) to F18 (i), lines 198 and 200.
-Six were not: lines 241, 243, 244, 248, 250 (D-2, D-3, D-5, D-6) and 259 (D-9), on F1.
+line 255 (D-8) to F1 (i), DECIDED-ANSWERS.md line 62; line 299 (A3-10) to F14 (i), line 93; line 408 (C-CAP) to F13 (i), line 191; lines 415 (R1A-2) and 419 (R1A-4) to F18 (i), lines 198 and 200.
+Six were not: lines 240, 242, 243, 247, 249 (D-2, D-3, D-5, D-6) and 258 (D-9), on F1.
 Their decided answers (DECIDED-ANSWERS.md lines 56-60, 63) settle whether the (d)(1) conditions fail and that (b) survives them, not which of F1's readings holds: on their scenario, where the income is the common source's, the readings agree.
 The interface's mapping gives the woman a salary the source is not tied to, so no decided reading can be named, and they are declared in `check.sh` as `expected_refused 6`.
 They would hold under the default if the share of her salary from the source were given as all of it; that is a fact the tester's scenarios imply but did not state, and adding it needs the lead's yes.
@@ -153,20 +153,20 @@ No other answer moved: a child born from 2024 on, a child without the election, 
 
 | line | case | new | why (source) |
 | --- | --- | --- | --- |
-| 644 | the switch | `an election for a child born before 2024 is declined` | SHRUG |
-| 647 | mother's points, born 2023, elected, 2024, default | declined | SHRUG; line 2467 "בשנת הלידה" |
-| 649 | the same, reading (ii) by name | declined | SHRUG |
-| 651 | the same, reading (i) by name | 5.5 | line 2466, 4½ "החל בשנת המס שלאחר שנת לידתו"; line 2467, one point moved |
-| 653 | the same in 2023, reading (i) by name | refused, A1's sentence | the year gate comes first |
-| 658 | born 2023, no election, 2024, default | 4.5 | line 2466 |
-| 660 | born 2023, elected, 2025, default | 4.5 | line 2466, age 2; the election moves nothing then |
-| 662 | born 2024, elected, 2025, default | 5.5 | lines 2466-2467; the year of birth is held |
-| 665 | (c)(4)-(6), the woman, that child, 2024, default | declined | through (a1) |
-| 667 | the same, reading (i) by name | 5.5 | through (a1) |
-| 673 | (c), the woman, 2024, default | declined | through the children's points |
-| 675 | the same, reading (ii) by name | declined | the same |
-| 677 | the same, reading (i) by name | ½, 0, 5½ | line 2465 (s 36A ½); no s 37 point; 5½ as at 651 |
-| 678 | (c), the man, 2024, default | 0, 0, 4½ | line 2475, 4½ "החל בשנת המס שלאחר לידתו"; the election is the mother's |
+| 643 | the switch | `an election for a child born before 2024 is declined` | SHRUG |
+| 646 | mother's points, born 2023, elected, 2024, default | declined | SHRUG; line 2467 "בשנת הלידה" |
+| 648 | the same, reading (ii) by name | declined | SHRUG |
+| 650 | the same, reading (i) by name | 5.5 | line 2466, 4½ "החל בשנת המס שלאחר שנת לידתו"; line 2467, one point moved |
+| 652 | the same in 2023, reading (i) by name | refused, A1's sentence | the year gate comes first |
+| 657 | born 2023, no election, 2024, default | 4.5 | line 2466 |
+| 659 | born 2023, elected, 2025, default | 4.5 | line 2466, age 2; the election moves nothing then |
+| 661 | born 2024, elected, 2025, default | 5.5 | lines 2466-2467; the year of birth is held |
+| 664 | (c)(4)-(6), the woman, that child, 2024, default | declined | through (a1) |
+| 666 | the same, reading (i) by name | 5.5 | through (a1) |
+| 672 | (c), the woman, 2024, default | declined | through the children's points |
+| 674 | the same, reading (ii) by name | declined | the same |
+| 676 | the same, reading (i) by name | ½, 0, 5½ | line 2465 (s 36A ½); no s 37 point; 5½ as at 651 |
+| 677 | (c), the man, 2024, default | 0, 0, 4½ | line 2475, 4½ "החל בשנת המס שלאחר לידתו"; the election is the mother's |
 
 ### What `check.sh` prints, version 0.3.0
 
@@ -256,8 +256,8 @@ The behaviour of 0.1.0, reading (i), 5½, is kept as the default until the rulin
 **02-N3 (WORDING), IL-02's half.**
 The type `A child` is now `A child, for section 66` (IL-07 `RECONCILE.md` N3), so that one module can name it beside row IL-06's child.
 The rename touches `ito66-nouns.l4` (the DECLARE and the `children` field of `Spouses in a tax year`), `ito66-a-separate-calculation.l4` (2), `ito66-c-credit-points.l4` (5), `ito66-fixtures.l4` (4) and `ito66-tests.l4` (2); no field, constructor of another type, or rule was renamed.
-The tester's `tests-independent.l4` names the type at lines 141, 143 (the record constructor), 158, 171 and 190; the lead authorised on 2026-10-08 replacing those five in place, on the precedent of IL-04 v0.3.1, and they were, with no line inserted and no expected value or input changed, and a dated "NOTE BY THE LEAD, 2026-10-08" appended at the end of that file.
-Its comment at line 293 still says `A child`; it is prose and needs no change to compile.
+The tester's `tests-independent.l4` names the type at lines 140, 142 (the record constructor), 157, 170 and 189; the lead authorised on 2026-10-08 replacing those five in place, on the precedent of IL-04 v0.3.1, and they were, with no line inserted and no expected value or input changed, and a dated "NOTE BY THE LEAD, 2026-10-08" appended at the end of that file.
+Its comment at line 292 still says `A child`; it is prose and needs no change to compile.
 No answer moved.
 
 ### Assertions added or changed
@@ -268,46 +268,46 @@ Added, all in `ito66-tests.l4` (none existed before, so "old" is none; "refused"
 
 | line | rule, case | new | why (source) |
 | --- | --- | --- | --- |
-| 492 | (d) applies, 2023 | refused | A1; line 2454 |
-| 494 | (a)(1) may claim, 2023 | refused | A1 |
-| 496 | (a)(1) made, 2023 | refused | A1 |
-| 498 | (a)(2) destination, 2023 | refused | A1 |
-| 500 | (a)(3), the child born 2015, 2023 | refused | A1 |
-| 502 | (a)(3) children's income, 2023 | refused | A1 |
-| 504 | (b) other separate calculation, registered spouse, 2023 | refused | A1 (it answered FALSE before) |
-| 506 | (b) where it goes, the woman, 2023 | refused | A1 |
-| 508 | (c)(1A) request, registered spouse, 2023 | refused | A1 |
-| 510 | (c) governs, the woman, 2023 | refused | A1 |
-| 512 | (4A), (6) child of the widowed partner, 2023 | refused | A1 |
-| 514 | (c)(4)-(6) the woman's points for the child, 2023 | refused | A1 (the tester's probe had 2) |
-| 518 | (a1) a child born 2023, deferring, in 2023 | refused | A1 (it answered 1½ before) |
-| 522 | (a)(2) pooled income, 2023 | refused | through line 506's rule |
-| 524 | (a) registered apart from the pool, 2023 | refused | through line 502's rule |
-| 526 | (a) separate apart from the pool, 2023 | refused | through line 506's rule |
-| 531 | (d) applies, 2024 | TRUE | (d)(1) chapeau, line 2479: no common source |
-| 533 | (a)(1) may claim, 2024 | TRUE | line 2456: 120,000 of salary |
-| 534 | (a)(1) made, 2024 | TRUE | line 2456: she claims |
-| 536 | (a)(2) destination, 2024 | `registered spouse` | line 2457: 200,000 > 120,000 |
-| 538 | (a)(3), the child, 2024 | TRUE | line 2458: 2024 − 2015 = 9 < 18, his child |
-| 539 | (a)(3) children's income, 2024 | 4000 | line 2458: the child's interest |
-| 541 | (b) other separate calculation, registered spouse, 2024 | FALSE | fork F7 |
-| 543 | (b) where it goes, the woman, 2024 | `it is not calculated separately` | line 2459: no (b) income, no claim |
-| 545 | (c)(1A) request, registered spouse, 2024 | FALSE | line 2462: he does not request |
-| 547 | (c) governs, the woman, 2024 | TRUE | line 2460, (a)(1) made |
-| 549 | (4A), (6), the child, 2024 | FALSE | line 2472: the child is hers |
-| 551 | (c)(4)-(6) the woman's points for the child, 2024 | 2 | line 2466: age 9, "החל בשנת המס שבה מלאו לו שש שנים" |
-| 593 | half point, a foreign-worker woman | refused, "section 48A and the regulations made under it are not encoded in this model" | 02-R2; line 1811; IL-01 |
-| 595 | half point, a woman not a foreign worker | 0.5 | line 2465 |
-| 597 | half point, a foreign-worker man | 0 | line 2465 ("האשה"); IL-01 alike |
-| 603 | (c)'s record for the foreign-worker woman, whole | refused, s 48A sentence | it holds the declined half point |
-| 605 | its half point under s 36A | refused, s 48A sentence | 02-R2 |
-| 607 | its children's points | 2 | line 2466: the child turns 10; A6 |
-| 608 | its half point under s 37 | 0 | line 2463: no s 37 point |
-| 611 | entitlement under s 36A, the foreign-worker woman | refused, s 48A sentence | 02-R2 |
-| 613 | entitlement under s 34, the foreign-worker woman | TRUE | line 2461, "יהיו לכל אחד מבני הזוג" |
-| 618 | (c)'s record for a foreign-worker man, registered | 0, 0, 1 | line 2465 ("האשה"); line 2476: (5)(c), age 10 |
-| 619 | (c)'s record for the woman married to him | 0.5, 0, 2 | lines 2465-2466 |
-| 620 | entitlement under s 36A, the foreign-worker man | FALSE | line 2465 ("האשה") |
+| 491 | (d) applies, 2023 | refused | A1; line 2454 |
+| 493 | (a)(1) may claim, 2023 | refused | A1 |
+| 495 | (a)(1) made, 2023 | refused | A1 |
+| 497 | (a)(2) destination, 2023 | refused | A1 |
+| 499 | (a)(3), the child born 2015, 2023 | refused | A1 |
+| 501 | (a)(3) children's income, 2023 | refused | A1 |
+| 503 | (b) other separate calculation, registered spouse, 2023 | refused | A1 (it answered FALSE before) |
+| 505 | (b) where it goes, the woman, 2023 | refused | A1 |
+| 507 | (c)(1A) request, registered spouse, 2023 | refused | A1 |
+| 509 | (c) governs, the woman, 2023 | refused | A1 |
+| 511 | (4A), (6) child of the widowed partner, 2023 | refused | A1 |
+| 513 | (c)(4)-(6) the woman's points for the child, 2023 | refused | A1 (the tester's probe had 2) |
+| 517 | (a1) a child born 2023, deferring, in 2023 | refused | A1 (it answered 1½ before) |
+| 521 | (a)(2) pooled income, 2023 | refused | through line 505's rule |
+| 523 | (a) registered apart from the pool, 2023 | refused | through line 501's rule |
+| 525 | (a) separate apart from the pool, 2023 | refused | through line 505's rule |
+| 530 | (d) applies, 2024 | TRUE | (d)(1) chapeau, line 2479: no common source |
+| 532 | (a)(1) may claim, 2024 | TRUE | line 2456: 120,000 of salary |
+| 533 | (a)(1) made, 2024 | TRUE | line 2456: she claims |
+| 535 | (a)(2) destination, 2024 | `registered spouse` | line 2457: 200,000 > 120,000 |
+| 537 | (a)(3), the child, 2024 | TRUE | line 2458: 2024 − 2015 = 9 < 18, his child |
+| 538 | (a)(3) children's income, 2024 | 4000 | line 2458: the child's interest |
+| 540 | (b) other separate calculation, registered spouse, 2024 | FALSE | fork F7 |
+| 542 | (b) where it goes, the woman, 2024 | `it is not calculated separately` | line 2459: no (b) income, no claim |
+| 544 | (c)(1A) request, registered spouse, 2024 | FALSE | line 2462: he does not request |
+| 546 | (c) governs, the woman, 2024 | TRUE | line 2460, (a)(1) made |
+| 548 | (4A), (6), the child, 2024 | FALSE | line 2472: the child is hers |
+| 550 | (c)(4)-(6) the woman's points for the child, 2024 | 2 | line 2466: age 9, "החל בשנת המס שבה מלאו לו שש שנים" |
+| 592 | half point, a foreign-worker woman | refused, "section 48A and the regulations made under it are not encoded in this model" | 02-R2; line 1811; IL-01 |
+| 594 | half point, a woman not a foreign worker | 0.5 | line 2465 |
+| 596 | half point, a foreign-worker man | 0 | line 2465 ("האשה"); IL-01 alike |
+| 602 | (c)'s record for the foreign-worker woman, whole | refused, s 48A sentence | it holds the declined half point |
+| 604 | its half point under s 36A | refused, s 48A sentence | 02-R2 |
+| 606 | its children's points | 2 | line 2466: the child turns 10; A6 |
+| 607 | its half point under s 37 | 0 | line 2463: no s 37 point |
+| 610 | entitlement under s 36A, the foreign-worker woman | refused, s 48A sentence | 02-R2 |
+| 612 | entitlement under s 34, the foreign-worker woman | TRUE | line 2461, "יהיו לכל אחד מבני הזוג" |
+| 617 | (c)'s record for a foreign-worker man, registered | 0, 0, 1 | line 2465 ("האשה"); line 2476: (5)(c), age 10 |
+| 618 | (c)'s record for the woman married to him | 0.5, 0, 2 | lines 2465-2466 |
+| 619 | entitlement under s 36A, the foreign-worker man | FALSE | line 2465 ("האשה") |
 
 ### What `check.sh` prints, version 0.2.0
 

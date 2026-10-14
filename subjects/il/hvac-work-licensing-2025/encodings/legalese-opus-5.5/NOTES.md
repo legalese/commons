@@ -488,7 +488,7 @@ TOTAL (12 modules)                             2       239       2        0
 ```
 
 Exit status 0.
-The two errors are the two failed assertions of `tests-simplex-red.l4`, at its lines 27 and 30, and both are expected: they are the table's expectations that do not hold as made.
+The two errors are the two failed assertions of `tests-simplex-red.l4`, at its lines 26 and 29, and both are expected: they are the table's expectations that do not hold as made.
 No module raises any warning.
 The 8 `#TRACE` directives were read by hand:
 - s. 3: unlicensed work, breached.

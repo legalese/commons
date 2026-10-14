@@ -242,21 +242,21 @@ The figures that matter, as read: 13 years (SH 2972, text layer and image agree)
 | --- | --- | --- | --- |
 | `ito-il03-nouns.l4` | `../legalese-2026-10-il-03/ito-il03-nouns.l4` | `600429fefd7adebe83b8f3045e3e4a0a0ef0016b85da96c7f622b0de467f4e09` | byte for byte, at the IL-03 tree of 2026-10-08; never edited here. If IL-03 changes its nouns, this copy goes stale and `cmp` will say so. |
 
-The rules of Part B were written from the Hebrew, not copied from `ito-121b-additional-tax.l4` (sha256 `6d54cd5113e49566…`), and then compared with it (section 6, Controls).
+The rules of Part B were written from the Hebrew, not copied from `ito-121b-additional-tax.l4` (sha256 `00a1b1c3599a6451…`), and then compared with it (section 6, Controls).
 
 ## 9. What IL-02, IL-03 and the capstone would change to call this row
 
 This is not this row's job; it is the exact change.
 
 **Row IL-03 (preferred; then Part B of this row is evidence, not a dependency).**
-In `ito-121b-additional-tax.l4` (sha256 `6d54cd5113e49566…`), the boundary `2026` becomes `2025` at three places, and the residential helper's test follows:
+In `ito-121b-additional-tax.l4` (sha256 `00a1b1c3599a6451…`), the boundary `2026` becomes `2025` at three places, and the residential helper's test follows:
 
-- lines 77-80: `the text fixes the residential-apartment sale value for tax year` — `LESS THAN 2026` becomes `LESS THAN 2025`, and `ELSE the tax year EQUALS 2026` becomes `ELSE the tax year AT MOST 2027` if IL-03 adopts observation O5, otherwise `AT MOST 2026`;
-- lines 99-101: `the residential-apartment sale value in section 121B(e) for tax year` — `LESS THAN 2026` becomes `LESS THAN 2025`;
-- lines 229-231: `the additional tax under section 121B for` — `LESS THAN 2026` becomes `LESS THAN 2025`;
-- the refusal text at lines 91-92 and its three call sites, the header comment at lines 18-31, and IL-03's NOTES.md A1, S13 and question 4, which say the commencement is unknown.
+- lines 76-79: `the text fixes the residential-apartment sale value for tax year` — `LESS THAN 2026` becomes `LESS THAN 2025`, and `ELSE the tax year EQUALS 2026` becomes `ELSE the tax year AT MOST 2027` if IL-03 adopts observation O5, otherwise `AT MOST 2026`;
+- lines 98-100: `the residential-apartment sale value in section 121B(e) for tax year` — `LESS THAN 2026` becomes `LESS THAN 2025`;
+- lines 228-230: `the additional tax under section 121B for` — `LESS THAN 2026` becomes `LESS THAN 2025`;
+- the refusal text at lines 90-91 and its three call sites, the header comment at lines 17-30, and IL-03's NOTES.md A1, S13 and question 4, which say the commencement is unknown.
 
-Its independent tester's two refused lines (`tests-independent.l4` 371 and 384) would then be answered, and equal 8,922 and 2,353.2, which are the values this row's tests derive by hand.
+Its independent tester's two refused lines (`tests-independent.l4` 370 and 383) would then be answered, and equal 8,922 and 2,353.2, which are the values this row's tests derive by hand.
 
 **The capstone (IL-07)** asks `the additional tax under section 121B for` through `il07-adapter-il03.l4` lines 72-85 and `il07-pipeline.l4` lines 321-329, with the amount from `il07-published-figures.l4`, which holds 2026 only.
 For tax year 2025 it needs two things, neither of which this row can do:
@@ -355,5 +355,5 @@ This row read none.
 It read rows IL-02 and IL-03 (their NOTES.md, modules and, for IL-03, the independent tester's `tests-independent.l4`), the capstone's modules and the lead's brief; it did not read any "Comparison with Axiom" section.
 One line of a grep over IL-03's NOTES.md (line 717 of that file) came back with an Axiom comparison cell in it; it was not used, and no figure in this row comes from it.
 The expected values of this row were worked from the Hebrew before the assertions were run.
-Two values coincide with the IL-03 tester's expectations (8,922 at line 371 and 2,353.2 at line 384 of its `tests-independent.l4`).
+Two values coincide with the IL-03 tester's expectations (8,922 at line 370 and 2,353.2 at line 383 of its `tests-independent.l4`).
 Both were first worked here before that file was opened (the capital gain of 1,000,000 with 100,000 inflationary, and the salary of 500,000 with a sale of other land); the dividend of 900,000 and the salary of 600,000 with a residential sale were added to the tests after reading those lines, their values worked by hand again from the text, with the arithmetic beside them.

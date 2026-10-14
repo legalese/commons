@@ -574,7 +574,7 @@ No test measured the length of a marked string, and none of my 28 mutations touc
 
 Repair.
 - `build.py` now writes the marks with `chr(0x200E)` and `chr(0x200F)` (no mark and no placeholder in its source), and after expanding a template it scans the output for any unsubstituted placeholder token (`{{MARK`, `{{Q `, `{{DATA4}}`, `{{H `, `{{HF `, `{{COVERAGE}}`, `{{CHECK}}`, `{{MUTATIONS}}`) and aborts if it finds one.
-- Both files were regenerated; line 372 of `g7-fourth-schedule.l4` now holds a real U+200E and a real U+200F (checked by code point).
+- Both files were regenerated; line 371 of `g7-fourth-schedule.l4` now holds a real U+200E and a real U+200F (checked by code point).
 - Scan of every generated `g7-*.l4` for `{{` in a non-comment line: none (the quote lines of the wiki carry the wiki's own double-brace templates, inside `--` comments, by design).
 - No exported name or signature changed: the module template is untouched, so only the string on that one line differs; the test file gained assertions.
 

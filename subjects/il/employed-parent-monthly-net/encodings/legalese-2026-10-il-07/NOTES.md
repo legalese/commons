@@ -492,12 +492,12 @@ Compared assertion by assertion (a script over the two runs' diagnostics, in the
 | 0.1.0 → 0.2.0 | count | which (line: household, figure) | why |
 | --- | ---: | --- | --- |
 | satisfied → satisfied | 177 | — | — |
-| failed → failed, the same | 77 | F1's 74 (the deduction above 7,703 and the net, at 4.67% against the tester's 7%); F4's H43 tax (line 670); F5's H45 deduction and net | Unchanged by design: the Schedule J reading is not ruled (K14); the tax of a non-resident is still answered (ss 34 and 36 give no points, s 121 applies); H45 was the tester's own error. |
-| failed → satisfied | 1 | 671: H43, the net (refusal expected) | F4: a non-resident with no statuses is now declined by s 335 (K16), so the net is refused. |
-| failed → refused | 2 | 518, 519: H44n, the allowance and the net | F3: no longer 0; s 72 pays November for the 18th birthday on 1 November, and IL-06 counts the child on no day of it: declined (K15). The tester expected 173. |
-| refused → satisfied | 3 | 480: H25, 528: H27, 537: H28, the allowance | F2: s 72 is composed: 392, 392, 173, as the tester decided. |
-| refused → failed | 3 | 481: H25, 529: H27, 538: H28, the net | Now answered, and each differs from the tester's by F1 alone (100.1201 = 380.9012 − 280.7811): 11,394.7571, 11,515.7571, 11,296.7571 against 11,294.637, 11,415.637, 11,196.637. |
-| satisfied → failed | 15 | 597: H32, 605: H36, 613: H36m (s 40(b)); 620-624: H38, 629-633: H39 (the period); 658: H41, 665: H42 (the unencoded credit) | The words of a refusal 0.2.0 changed: s 40(b) is encoded and reads facts the tester's households do not give; the composed rows are eight; ss 35, 45A and 47 are encoded. Each still refuses; only the BECAUSE differs. |
+| failed → failed, the same | 77 | F1's 74 (the deduction above 7,703 and the net, at 4.67% against the tester's 7%); F4's H43 tax (line 669); F5's H45 deduction and net | Unchanged by design: the Schedule J reading is not ruled (K14); the tax of a non-resident is still answered (ss 34 and 36 give no points, s 121 applies); H45 was the tester's own error. |
+| failed → satisfied | 1 | 670: H43, the net (refusal expected) | F4: a non-resident with no statuses is now declined by s 335 (K16), so the net is refused. |
+| failed → refused | 2 | 517, 518: H44n, the allowance and the net | F3: no longer 0; s 72 pays November for the 18th birthday on 1 November, and IL-06 counts the child on no day of it: declined (K15). The tester expected 173. |
+| refused → satisfied | 3 | 479: H25, 527: H27, 536: H28, the allowance | F2: s 72 is composed: 392, 392, 173, as the tester decided. |
+| refused → failed | 3 | 480: H25, 528: H27, 537: H28, the net | Now answered, and each differs from the tester's by F1 alone (100.1201 = 380.9012 − 280.7811): 11,394.7571, 11,515.7571, 11,296.7571 against 11,294.637, 11,415.637, 11,196.637. |
+| satisfied → failed | 15 | 596: H32, 604: H36, 612: H36m (s 40(b)); 619-623: H38, 628-632: H39 (the period); 657: H41, 664: H42 (the unencoded credit) | The words of a refusal 0.2.0 changed: s 40(b) is encoded and reads facts the tester's households do not give; the composed rows are eight; ss 35, 45A and 47 are encoded. Each still refuses; only the BECAUSE differs. |
 
 So of the 80 failures: 77 stand, 1 now passes, 2 are now refused (and now declined by name rather than answered wrongly). Of the 6 refusals: 3 now pass and 3 now fail on F1 alone. 15 assertions that passed now fail on reworded refusals.
 `check.sh` expects exactly 95 failures and 2 refusals from this module.
@@ -843,40 +843,40 @@ Worked by hand from the source before the run, in the comment above each asserti
 
 | line | assertion | 0.2.2 | 0.3.0 | why |
 | ---: | --- | --- | --- | --- |
-| 255 | the credit-point value, tax year 2028 | REFUSED "the rounding rules made under section 120B(d) are not encoded in this model" | REFUSED "IL-07 holds no s 120B figure other than the 1 January 2024 amount after rounding, which is all s 120B(e)(1) reads for tax years 2025 to 2027" | row IL-03's 03-O2: for 2028 it reads the 1 January 2024 amount before rounding (s 120B(e)(2), line 4345, "טרם עיגולם") before the rounding rules, and the capstone holds none |
-| 527, 528 | IL-01's ss 34, 36, 36A in tax year 2026: H1, H2 | — | 2.25; 2.75 | ss 34, 36 (2 + 1/4), s 36A (+ 1/2 for a woman) |
-| 529 | the same, H1, 1975 | — | REFUSED "this encoding does not hold the text of section 34 for a tax year before 1976" | s 34's last listed amendment is of 5735 (IL-01's 01-YR) |
-| 530 | the same, H18 (a foreign worker), 2026 | — | REFUSED, IL-01's s 48A words | s 48A, line 1811 |
-| 532, 533 | s 33A for 2026: 2.25 points at 2,904; set off against 13,435.2 | — | 6,534; 6,901.2 | s 33A |
-| 543 | H21 (R2's household): IL-02's half point under s 36A | (expected red: REFUSED, failed with 0.5) | REFUSED, the s 48A words | moved from R2; IL-02's 02-R2 |
-| 544 | H21: IL-01's s 36A, 2026 | — | REFUSED, the s 48A words | as IL-01 |
-| 547 | H21: IL-02's children's points | — | 0 | no children |
-| 548 | H21: the tax | — | REFUSED, the s 48A words | IL-01's s 34 for a foreign worker |
-| 582, 583 | a part-time earner, 10,000, February: the s 348 income; the deduction | — | 10,000; 240.9012 | above 6,247.67: 7,703 × 1.04% + 2,297 × 7% |
-| 585 | the same, 6,247.67 | — | 64.975768 | 6,247.67 × 1.04% |
-| 588 | the same, 6,300, March | — | 65.52 | 6,300 × 1.04% |
-| 589 | the same, 6,300, April | — | REFUSED, the Schedule K words | below 6,443.85 |
-| 591 | the same, 3,000, January | — | REFUSED, the Schedule K words | below 6,247.67 (the tester's H10) |
+| 254 | the credit-point value, tax year 2028 | REFUSED "the rounding rules made under section 120B(d) are not encoded in this model" | REFUSED "IL-07 holds no s 120B figure other than the 1 January 2024 amount after rounding, which is all s 120B(e)(1) reads for tax years 2025 to 2027" | row IL-03's 03-O2: for 2028 it reads the 1 January 2024 amount before rounding (s 120B(e)(2), line 4345, "טרם עיגולם") before the rounding rules, and the capstone holds none |
+| 526, 527 | IL-01's ss 34, 36, 36A in tax year 2026: H1, H2 | — | 2.25; 2.75 | ss 34, 36 (2 + 1/4), s 36A (+ 1/2 for a woman) |
+| 528 | the same, H1, 1975 | — | REFUSED "this encoding does not hold the text of section 34 for a tax year before 1976" | s 34's last listed amendment is of 5735 (IL-01's 01-YR) |
+| 529 | the same, H18 (a foreign worker), 2026 | — | REFUSED, IL-01's s 48A words | s 48A, line 1811 |
+| 531, 532 | s 33A for 2026: 2.25 points at 2,904; set off against 13,435.2 | — | 6,534; 6,901.2 | s 33A |
+| 542 | H21 (R2's household): IL-02's half point under s 36A | (expected red: REFUSED, failed with 0.5) | REFUSED, the s 48A words | moved from R2; IL-02's 02-R2 |
+| 543 | H21: IL-01's s 36A, 2026 | — | REFUSED, the s 48A words | as IL-01 |
+| 546 | H21: IL-02's children's points | — | 0 | no children |
+| 547 | H21: the tax | — | REFUSED, the s 48A words | IL-01's s 34 for a foreign worker |
+| 581, 582 | a part-time earner, 10,000, February: the s 348 income; the deduction | — | 10,000; 240.9012 | above 6,247.67: 7,703 × 1.04% + 2,297 × 7% |
+| 584 | the same, 6,247.67 | — | 64.975768 | 6,247.67 × 1.04% |
+| 587 | the same, 6,300, March | — | 65.52 | 6,300 × 1.04% |
+| 588 | the same, 6,300, April | — | REFUSED, the Schedule K words | below 6,443.85 |
+| 590 | the same, 3,000, January | — | REFUSED, the Schedule K words | below 6,247.67 (the tester's H10) |
 
 `il07-tests-il08.l4` (line numbers at 0.3.0):
 
 | line | assertion | 0.2.2 | 0.3.0 | why |
 | ---: | --- | --- | --- | --- |
-| 341, 342 | N4 (D187): the tax; the net | REFUSED (D187) | 6,107.4; 8,882.587 | credit 35% × 2,268 = 793.8 (s 45A(d), lines 1725-1730); 13,435.2 − 6,534 − 793.8; 10,000 − 508.95 − 240.9012 − 367.5618 |
-| 345, 346 | N4: the credit, through the pipeline and as IL-08 computes it | — (346 was R3, expected red) | 793.8; 793.8 | the floor after the provisos |
-| 361 | N5 (D183): the tax | REFUSED (D183) | 5,446.2 | 25% × 5,820 (the 5% proviso of 116,400) = 1,455; 13,435.2 − 6,534 − 1,455 |
-| 363, 364 | N5: the credit; the net | — | 1,455; 8,937.687 | 10,000 − 453.85 − 240.9012 − 367.5618 |
-| 436 | N10 (OB1): s 40(b) points | — | 11 | (1) 4 1/2 + the moved point; (1B) 1 + 4 1/2 (lines 1633, 1636, 1638, 1639) |
-| 437 | N10: the tax | REFUSED (OB1) | 0 | (2.75 + 11) × 2,904 = 39,930 > 38,712 |
-| 438 | N10: the net | — | 18,347.537 | 20,000 − 0 − 940.9012 − 884.5618 + 173 |
-| 465 | N13 (D055): the tax | REFUSED, the capstone's D055 words | REFUSED "one who was formerly an immigrant is credited, notwithstanding section 35(c), under rules made under section 35(e)(1), which are not encoded in this model" | IL-08 declines it itself |
-| 475, 476 | N28 (first immigrated 1 December 2025): the tax; the net | — | REFUSED, the temporary Law's words | F1 |
-| 478, 479 | N28: the deduction; the allowance | — | 940.9012; 0 | 7,703 × 1.04% + 12,297 × 7%; no children |
-| 484-488 | the period: 4 November 2025; 5 November 2025; 31 December 2026; 1 December 2025 not the first time; no immigration | — | FALSE; TRUE; TRUE; FALSE; FALSE | s 2(a)'s period and "לראשונה" |
-| 499, 500 | a returning resident, 1 March 2026, six years abroad; fewer | — | TRUE; FALSE | ITO s 14(a)'s ten years need six |
-| 581 | N21, November: the allowance | REFUSED (K15) | 611 | s 72(a), line 854: Keren, Eli, Dana, 173 + 219 + 219 |
-| 582 | N21, November: the net | — | 13,911.537 | 15,000 − 482.5 − 590.9012 − 626.0618 + 611 |
-| 597 | N22, an 18th birthday on 10 September and a birth on 12 September | REFUSED (K15) | 830 | 173 + 3 × 219 |
+| 340, 341 | N4 (D187): the tax; the net | REFUSED (D187) | 6,107.4; 8,882.587 | credit 35% × 2,268 = 793.8 (s 45A(d), lines 1725-1730); 13,435.2 − 6,534 − 793.8; 10,000 − 508.95 − 240.9012 − 367.5618 |
+| 344, 345 | N4: the credit, through the pipeline and as IL-08 computes it | — (346 was R3, expected red) | 793.8; 793.8 | the floor after the provisos |
+| 360 | N5 (D183): the tax | REFUSED (D183) | 5,446.2 | 25% × 5,820 (the 5% proviso of 116,400) = 1,455; 13,435.2 − 6,534 − 1,455 |
+| 362, 363 | N5: the credit; the net | — | 1,455; 8,937.687 | 10,000 − 453.85 − 240.9012 − 367.5618 |
+| 435 | N10 (OB1): s 40(b) points | — | 11 | (1) 4 1/2 + the moved point; (1B) 1 + 4 1/2 (lines 1633, 1636, 1638, 1639) |
+| 436 | N10: the tax | REFUSED (OB1) | 0 | (2.75 + 11) × 2,904 = 39,930 > 38,712 |
+| 437 | N10: the net | — | 18,347.537 | 20,000 − 0 − 940.9012 − 884.5618 + 173 |
+| 464 | N13 (D055): the tax | REFUSED, the capstone's D055 words | REFUSED "one who was formerly an immigrant is credited, notwithstanding section 35(c), under rules made under section 35(e)(1), which are not encoded in this model" | IL-08 declines it itself |
+| 474, 475 | N28 (first immigrated 1 December 2025): the tax; the net | — | REFUSED, the temporary Law's words | F1 |
+| 477, 478 | N28: the deduction; the allowance | — | 940.9012; 0 | 7,703 × 1.04% + 12,297 × 7%; no children |
+| 483-487 | the period: 4 November 2025; 5 November 2025; 31 December 2026; 1 December 2025 not the first time; no immigration | — | FALSE; TRUE; TRUE; FALSE; FALSE | s 2(a)'s period and "לראשונה" |
+| 498, 499 | a returning resident, 1 March 2026, six years abroad; fewer | — | TRUE; FALSE | ITO s 14(a)'s ten years need six |
+| 580 | N21, November: the allowance | REFUSED (K15) | 611 | s 72(a), line 854: Keren, Eli, Dana, 173 + 219 + 219 |
+| 581 | N21, November: the net | — | 13,911.537 | 15,000 − 482.5 − 590.9012 − 626.0618 + 611 |
+| 596 | N22, an 18th birthday on 10 September and a birth on 12 September | REFUSED (K15) | 830 | 173 + 3 × 219 |
 
 `il07-tests-expected-red.l4`: R2's and R3's assertions removed (moved, above).
 
@@ -889,24 +889,24 @@ Both were run on the binary above before any change (version 0.2.2's vendored co
 
 | line | household, figure | 0.2.2 | 0.3.0 | class |
 | ---: | --- | --- | --- | --- |
-| 518 | H44n (18 on 1 November 2026), the allowance, 173 | refused (K15) | **satisfied** | its F3, inventory 06-S72: repaired (IL-06's month question) |
-| 519 | H44n, the net, 10,349.637 | refused (K15) | **satisfied** | as 518 |
+| 517 | H44n (18 on 1 November 2026), the allowance, 173 | refused (K15) | **satisfied** | its F3, inventory 06-S72: repaired (IL-06's month question) |
+| 518 | H44n, the net, 10,349.637 | refused (K15) | **satisfied** | as 518 |
 
-The 18 failures are unchanged, line for line: 597, 605, 613 (s 40(b)), 620-624 and 629-633 (the period), 658 and 665 (the unencoded credit), refusals whose words 0.2.0 changed (inventory 07-T15, TESTER-WRONG, stale wording); 670 (H43's tax, 07-H43, TESTER-WRONG); 678 and 680 (H45, 07-H45, TESTER-WRONG).
+The 18 failures are unchanged, line for line: 596, 604, 612 (s 40(b)), 619-623 and 628-632 (the period), 657 and 664 (the unencoded credit), refusals whose words 0.2.0 changed (inventory 07-T15, TESTER-WRONG, stale wording); 669 (H43's tax, 07-H43, TESTER-WRONG); 677 and 679 (H45, 07-H45, TESTER-WRONG).
 No new failure or refusal.
 
 **`tests-independent-2.l4`** (fid-il-13, against version 0.2.2): 296 satisfied, 9 failed, 20 refused → **298 satisfied, 7 failed, 20 refused**.
 
 | line | household, figure | 0.2.2 | 0.3.0 | class |
 | ---: | --- | --- | --- | --- |
-| 435 | H24 (18 on 1 June 2026), health read through the household's month, 367.5618 | refused (K15) | **satisfied** | its F4/F6: repaired (06-S72) |
-| 436 | H24, the allowance, 392 | refused (K15) | **satisfied** | its F4: repaired (06-S72) |
-| 437 | H24, the net, 9,450.437 | refused (K15) | **satisfied** | its F4: repaired (06-S72) |
-| 514 | H33 (first immigrated 1 December 2025), tax/12, 0 | failed (2,157.1667) | **refused**, the temporary Law's words | its F1: capstone wrong, now declined by name; NOT-ENCODED (BACKLOG IL-36, deferred) |
-| 518 | H33, the net, 18,347.537 | failed (16,190.3703) | **refused**, the same | its F1, as 514 |
-| 516 | H33, health read through the household's month, 884.5618 | satisfied | **refused**, the same | its F6: propagation of 514's decline (the household's month declines as a whole); new |
+| 434 | H24 (18 on 1 June 2026), health read through the household's month, 367.5618 | refused (K15) | **satisfied** | its F4/F6: repaired (06-S72) |
+| 435 | H24, the allowance, 392 | refused (K15) | **satisfied** | its F4: repaired (06-S72) |
+| 436 | H24, the net, 9,450.437 | refused (K15) | **satisfied** | its F4: repaired (06-S72) |
+| 513 | H33 (first immigrated 1 December 2025), tax/12, 0 | failed (2,157.1667) | **refused**, the temporary Law's words | its F1: capstone wrong, now declined by name; NOT-ENCODED (BACKLOG IL-36, deferred) |
+| 517 | H33, the net, 18,347.537 | failed (16,190.3703) | **refused**, the same | its F1, as 514 |
+| 515 | H33, health read through the household's month, 884.5618 | satisfied | **refused**, the same | its F6: propagation of 514's decline (the household's month declines as a whole); new |
 
-Unchanged: failed 215, 218 (H01), 524, 527 (H34), 584, 587, 589 (H40), its F5, the tester's own error (TESTER-WRONG); refused 562, 563, 565 (H38), 573, 574, 576 (H39), 604, 605, 607 (H42), its F2, fewer than six deduction branches at the printed totals (AMBIGUITY, BACKLOG IL-37, waits on Meng); 308, 309, 311 (H10), 640, 641, 643 (H46), its F3, a part-time minimum below the full adult figure (a recorded gap, still declined after the narrowing); 668, 677 (H49, H50 health), its F6, propagation.
+Unchanged: failed 214, 217 (H01), 523, 526 (H34), 583, 586, 588 (H40), its F5, the tester's own error (TESTER-WRONG); refused 561, 562, 564 (H38), 572, 573, 575 (H39), 603, 604, 606 (H42), its F2, fewer than six deduction branches at the printed totals (AMBIGUITY, BACKLOG IL-37, waits on Meng); 307, 308, 310 (H10), 639, 640, 642 (H46), its F3, a part-time minimum below the full adult figure (a recorded gap, still declined after the narrowing); 667, 676 (H49, H50 health), its F6, propagation.
 `check.sh` declares 18/0 and 7/20, each line named.
 
 ### 12.8 Refusals removed and added
@@ -1022,30 +1022,30 @@ Worked by hand from the rows' rules and the source before the run; none was chan
 
 | line | assertion | 0.3.0 | 0.4.0 | why |
 | ---: | --- | --- | --- | --- |
-| 370 | N6, the s 47 deduction | 2,220 | REFUSED, IL-08's F35 words | deduction first 2,220; credit first, s 45A credits all 7,200 (within 8,148), so 0: the order changes the answer |
-| 371 | N6, the tax | REFUSED, the capstone's D190 words | REFUSED, IL-08's F35 words | the capstone's decline is removed; IL-08's reaches it |
-| 634 | N26 (a controlling shareholder), the deduction, default | REFUSED, IL-04's fewer-branches words | 234.5369 | TAKEAWAY: 7,703 × 1.02% + 2,297 × 6.79% = 78.5706 + 155.9663 |
-| 635 | N26, the net | REFUSED, the same | 8,822.8013 | 10,000 − 575.1 − 234.5369 − 367.5618 |
-| 664 | N26, the deduction, at the printed totals by name | REFUSED, the same | 234.5369 | as 634 |
+| 369 | N6, the s 47 deduction | 2,220 | REFUSED, IL-08's F35 words | deduction first 2,220; credit first, s 45A credits all 7,200 (within 8,148), so 0: the order changes the answer |
+| 370 | N6, the tax | REFUSED, the capstone's D190 words | REFUSED, IL-08's F35 words | the capstone's decline is removed; IL-08's reaches it |
+| 633 | N26 (a controlling shareholder), the deduction, default | REFUSED, IL-04's fewer-branches words | 234.5369 | TAKEAWAY: 7,703 × 1.02% + 2,297 × 6.79% = 78.5706 + 155.9663 |
+| 634 | N26, the net | REFUSED, the same | 8,822.8013 | 10,000 − 575.1 − 234.5369 − 367.5618 |
+| 663 | N26, the deduction, at the printed totals by name | REFUSED, the same | 234.5369 | as 634 |
 
 Added, section "Version 0.4.0" (14, all satisfied on the first run):
 
 | line | case | expected | why |
 | ---: | --- | --- | --- |
-| 681 | N6c (N6 paying 1,000 a month): not a beneficiary member | TRUE | deposits 12 × 1,750 = 21,000 < 26,436.48 |
-| 682 | N6c, the s 47 deduction | 2,220 | both orders: 2,220 first; credit first leaves 12,000 − 8,148 = 3,852 ≥ 2,220 |
-| 683 | N6c, the s 45A credit | 2,851.8 | s 47(c): 9,780 creditable, cut to 7% × 116,400 = 8,148, at 35% |
-| 684 | N6c, the taxable income | 117,780 | 120,000 − 2,220 |
-| 685 | N6c, the tax | 3,738.6 | s 121 on 117,780: 8,412 + 33,660 × 14% = 13,124.4; less 6,534 and 2,851.8 |
-| 686 | N6c, the net | 9,079.987 | 10,000 − 311.55 − 240.9012 − 367.5618 |
-| 705 | N29 (a woman of 63, between her retirement age and 67, without an old-age pension), the deduction | 171.9195 | DESSERT: 7,703 × 0.72% + 2,297 × 5.07% = 55.4616 + 116.4579 |
-| 706 | N29, at the items | 118.3994 | 55.4616 + 2,297 × 2.74% (62.9378) |
-| 707 | N29, the net | 9,006.4187 | 10,000 − 454.1 − 171.9195 − 367.5618 |
-| 714 | N30 (H3 with Eli born 29 February 2016), June: the allowance | 392 | 18 on 28 February or 1 March 2034, paid on either: 173 + 219 |
-| 715 | N30, the net | 13,692.537 | H3's: Eli, 10, one point under s 66(c)(5), as at 7 |
-| 724 | N31 (H3 with Keren born 29 February 2008), February | 611 | paid on both readings: Keren, Eli, Dana, 173 + 219 + 219 |
-| 725 | N31, March | REFUSED, IL-06's F2 words | paid at 1 March, not at 28 February |
-| 726 | N31, April | 392 | paid on neither |
+| 680 | N6c (N6 paying 1,000 a month): not a beneficiary member | TRUE | deposits 12 × 1,750 = 21,000 < 26,436.48 |
+| 681 | N6c, the s 47 deduction | 2,220 | both orders: 2,220 first; credit first leaves 12,000 − 8,148 = 3,852 ≥ 2,220 |
+| 682 | N6c, the s 45A credit | 2,851.8 | s 47(c): 9,780 creditable, cut to 7% × 116,400 = 8,148, at 35% |
+| 683 | N6c, the taxable income | 117,780 | 120,000 − 2,220 |
+| 684 | N6c, the tax | 3,738.6 | s 121 on 117,780: 8,412 + 33,660 × 14% = 13,124.4; less 6,534 and 2,851.8 |
+| 685 | N6c, the net | 9,079.987 | 10,000 − 311.55 − 240.9012 − 367.5618 |
+| 704 | N29 (a woman of 63, between her retirement age and 67, without an old-age pension), the deduction | 171.9195 | DESSERT: 7,703 × 0.72% + 2,297 × 5.07% = 55.4616 + 116.4579 |
+| 705 | N29, at the items | 118.3994 | 55.4616 + 2,297 × 2.74% (62.9378) |
+| 706 | N29, the net | 9,006.4187 | 10,000 − 454.1 − 171.9195 − 367.5618 |
+| 713 | N30 (H3 with Eli born 29 February 2016), June: the allowance | 392 | 18 on 28 February or 1 March 2034, paid on either: 173 + 219 |
+| 714 | N30, the net | 13,692.537 | H3's: Eli, 10, one point under s 66(c)(5), as at 7 |
+| 723 | N31 (H3 with Keren born 29 February 2008), February | 611 | paid on both readings: Keren, Eli, Dana, 173 + 219 + 219 |
+| 724 | N31, March | REFUSED, IL-06's F2 words | paid at 1 March, not at 28 February |
+| 725 | N31, April | 392 | paid on neither |
 
 `il07-tests-expected-red.l4`: no assertion, as at 0.3.0.
 
@@ -1055,26 +1055,26 @@ Neither file was edited. Both were run on the binary above with version 0.3.0's 
 
 **`tests-independent.l4`** (fid-il-07, against version 0.1.0): 260 satisfied, 18 failed, 0 refused → **260 satisfied, 18 failed, 0 refused**.
 No assertion changed.
-Still failing, unchanged: 597, 605, 613 (s 40(b)), 620-624, 629-633 (the period), 658, 665 (the unencoded credit), refusals whose words 0.2.0 changed (inventory 07-T15, TESTER-WRONG, stale wording); 670 (H43's tax; 07-H43, TESTER-WRONG); 678, 680 (H45; 07-H45, TESTER-WRONG).
+Still failing, unchanged: 596, 604, 612 (s 40(b)), 619-623, 628-632 (the period), 657, 664 (the unencoded credit), refusals whose words 0.2.0 changed (inventory 07-T15, TESTER-WRONG, stale wording); 669 (H43's tax; 07-H43, TESTER-WRONG); 677, 679 (H45; 07-H45, TESTER-WRONG).
 
 **`tests-independent-2.l4`** (fid-il-13, against version 0.2.2): 298 satisfied, 7 failed, 20 refused → **304 satisfied, 7 failed, 14 refused**.
 
 | line | household, figure | 0.3.0 | 0.4.0 | class |
 | ---: | --- | --- | --- | --- |
-| 562 | H38 (a controlling shareholder, 30,000), NI, 1,592.5369 | refused | **satisfied** | its F2, resolved by TAKEAWAY (row IL-04 v0.5.0, fork F21) |
-| 563 | H38, health read through the household's month, 1,401.5618 | refused | **satisfied** | its F2/F6, as 562 |
-| 565 | H38, net, 21,443.4013 | refused | **satisfied** | its F2, as 562 |
-| 604 | H42 (aged 68, no old-age pension, 12,000), NI, 262.7552 | refused | **satisfied** | its F2, resolved by TAKEAWAY |
-| 605 | H42, health read through the household's month, 470.9618 | refused | **satisfied** | its F2/F6, as 604 |
-| 607 | H42, net, 10,830.783 | refused | **satisfied** | its F2, as 604 |
+| 561 | H38 (a controlling shareholder, 30,000), NI, 1,592.5369 | refused | **satisfied** | its F2, resolved by TAKEAWAY (row IL-04 v0.5.0, fork F21) |
+| 562 | H38, health read through the household's month, 1,401.5618 | refused | **satisfied** | its F2/F6, as 562 |
+| 564 | H38, net, 21,443.4013 | refused | **satisfied** | its F2, as 562 |
+| 603 | H42 (aged 68, no old-age pension, 12,000), NI, 262.7552 | refused | **satisfied** | its F2, resolved by TAKEAWAY |
+| 604 | H42, health read through the household's month, 470.9618 | refused | **satisfied** | its F2/F6, as 604 |
+| 606 | H42, net, 10,830.783 | refused | **satisfied** | its F2, as 604 |
 
 No new failure or refusal.
-Still failing (7): 215, 218 (H01), 524, 527 (H34), 584, 587, 589 (H40): its F5, the tester's own error on the Schedule K minimum (TESTER-WRONG).
+Still failing (7): 214, 217 (H01), 523, 526 (H34), 583, 586, 588 (H40): its F5, the tester's own error on the Schedule K minimum (TESTER-WRONG).
 Still refused (14):
-- 573, 574, 576 (H39, a non-resident, 0.10 / 3.20 by the tester's formula): its F2, still declined by IL-04's fork F21, the set's rate not being published; TAKEAWAY declines it by name (ruled).
-- 308, 309, 311 (H10), 640, 641, 643 (H46): its F3, a part-time minimum below the full adult figure (a recorded gap, GAPS.md item 11).
-- 514, 516, 518 (H33): its F1, the Encouragement of Aliyah and Return (Temporary Provision) Law 5786-2026, NOT-ENCODED (BACKLOG IL-36).
-- 668, 677 (H49, H50 health): its F6, propagation of the tax declines the tester expected.
+- 572, 573, 575 (H39, a non-resident, 0.10 / 3.20 by the tester's formula): its F2, still declined by IL-04's fork F21, the set's rate not being published; TAKEAWAY declines it by name (ruled).
+- 307, 308, 310 (H10), 639, 640, 642 (H46): its F3, a part-time minimum below the full adult figure (a recorded gap, GAPS.md item 11).
+- 513, 515, 517 (H33): its F1, the Encouragement of Aliyah and Return (Temporary Provision) Law 5786-2026, NOT-ENCODED (BACKLOG IL-36).
+- 667, 676 (H49, H50 health): its F6, propagation of the tax declines the tester expected.
 
 ### 13.6 Forks and conventions, added or revised
 
@@ -1210,38 +1210,38 @@ None is (a), so no switch was added for them and no answer moved; each is marked
 No expected value changed.
 Worked by hand from the rows' rules and the source before the run; each new assertion was satisfied on its first run.
 
-**Re-pointed by name, values unchanged** (in place, on the same lines, to `IL-07: the readings versions 0.1.0 to 0.4.0 took`, or for line 320 of `il07-tests.l4` to `IL-07: the child stays in the count of the parent section 66 excludes`): every assertion of the capstone's own tests that met a refusal at the new defaults.
+**Re-pointed by name, values unchanged** (in place, on the same lines, to `IL-07: the readings versions 0.1.0 to 0.4.0 took`, or for line 319 of `il07-tests.l4` to `IL-07: the child stays in the count of the parent section 66 excludes`): every assertion of the capstone's own tests that met a refusal at the new defaults.
 
 | module | lines | the fork whose default refused it |
 | --- | --- | --- |
-| `il07-tests.l4` | 286, 289, 291, 295, 342, 343, 349, 350, 351, 370, 374, 378, 383, 389, 390, 397, 402, 406, 415, 416, 464 (H3, H5 to H8, H10, H3 in 2025) | row IL-02's F18 |
-| `il07-tests.l4` | 320, 396 (H7) | row IL-06's F6 |
-| `il07-tests.l4` | 361 (H4, the worked record's children's credit) | row IL-02's F13 (the tax itself, line 362, is answered by K23) |
-| `il07-tests-il08.l4` | 308, 309, 312, 313, 314 (N2); 526, 527, 529 (N16); 550, 552 (N19); 562 (N20); 582, 585 (N21); 662, 663 (N2 at both Schedule J readings); 715 (N30) | row IL-02's F18 |
-| `il07-tests-il08.l4` | 533, 534 (N17: refusals on s 37's statuses, which F18's refusal now met first) | row IL-02's F18 |
-| `il07-tests-il08.l4` | 388 (N7, the worked record's s 40(b) points) | row IL-08's F16 (the tax and the net, lines 389 and 392, are answered by K23) |
+| `il07-tests.l4` | 285, 288, 290, 294, 341, 342, 348, 349, 350, 369, 373, 377, 382, 388, 389, 396, 401, 405, 414, 415, 463 (H3, H5 to H8, H10, H3 in 2025) | row IL-02's F18 |
+| `il07-tests.l4` | 319, 395 (H7) | row IL-06's F6 |
+| `il07-tests.l4` | 360 (H4, the worked record's children's credit) | row IL-02's F13 (the tax itself, line 361, is answered by K23) |
+| `il07-tests-il08.l4` | 307, 308, 311, 312, 313 (N2); 525, 526, 528 (N16); 549, 551 (N19); 561 (N20); 581, 584 (N21); 661, 662 (N2 at both Schedule J readings); 714 (N30) | row IL-02's F18 |
+| `il07-tests-il08.l4` | 532, 533 (N17: refusals on s 37's statuses, which F18's refusal now met first) | row IL-02's F18 |
+| `il07-tests-il08.l4` | 387 (N7, the worked record's s 40(b) points) | row IL-08's F16 (the tax and the net, lines 388 and 391, are answered by K23) |
 
 **Added**, section "Version 0.5.0" at the end of each module:
 
 | module, line | case | expected | why |
 | --- | --- | --- | --- |
-| `il07-tests.l4` 618 | H3, the tax, at the defaults | REFUSED, row IL-02's F18 words | the registered spouse requests under (c)(1A): 5,790 or 18,858 |
-| 619 | H3, the registered spouse may request | 5,790 | as line 342 |
-| 620 | H3, only the other spouse may request | 18,858 | s 65 in the earner's name, no children's points (K12): s 121 on 180,000 is 8,412 + 5,124 + 11,856 = 25,392, less 2.25 points, 6,534 |
-| 621 | H3, the same, the calculation | the consolidated calculation under section 65, in the earner's name | (c) does not govern; the earner is the registered spouse |
-| 629 | H4, the children's credit, at the defaults | REFUSED, row IL-02's F13 words | 23,232 against an s 121 tax of 18,192 |
-| 630 | H4, the credit set first against that tax | 23,232 | 8 points at 2,904 |
-| 631 | H4, the tax, the same | 0 | credits 7,986 + 23,232 exceed 18,192; no additional tax |
-| 640 | H7, the earner's count, at the defaults | REFUSED, row IL-06's F6 words | 2 kept in his count, 0 moved |
-| 641 | H7, the count, moved to another insured parent | 0 | the children are the mother's if she is insured, in no count if not (row IL-06's F18): none in his |
-| 642 | H7, the allowance, at the defaults | REFUSED, row IL-06's F6 words | as line 640 |
-| `il07-tests-il08.l4` 735 | N7, the s 40(b) points, at the defaults | REFUSED, row IL-08's F16 words | 5 once, 6 for each child |
-| 736 | N7, the points, for each child | 6 | (1): 2 + 2; (2): one for each of the two children |
-| 743 | N32 (N7 paid 20,000), the tax, at the defaults | REFUSED, row IL-08's F16 words | 17,658 once, 14,754 for each child |
-| 744 | N32, once | 17,658 | s 121 on 240,000: 8,412 + 5,124 + 21,456 + 3,720 = 38,712, less 7.25 points, 21,054 |
-| 745 | N32, for each child | 14,754 | 38,712 less 8.25 points, 23,958 |
+| `il07-tests.l4` 617 | H3, the tax, at the defaults | REFUSED, row IL-02's F18 words | the registered spouse requests under (c)(1A): 5,790 or 18,858 |
+| 618 | H3, the registered spouse may request | 5,790 | as line 341 |
+| 619 | H3, only the other spouse may request | 18,858 | s 65 in the earner's name, no children's points (K12): s 121 on 180,000 is 8,412 + 5,124 + 11,856 = 25,392, less 2.25 points, 6,534 |
+| 620 | H3, the same, the calculation | the consolidated calculation under section 65, in the earner's name | (c) does not govern; the earner is the registered spouse |
+| 628 | H4, the children's credit, at the defaults | REFUSED, row IL-02's F13 words | 23,232 against an s 121 tax of 18,192 |
+| 629 | H4, the credit set first against that tax | 23,232 | 8 points at 2,904 |
+| 630 | H4, the tax, the same | 0 | credits 7,986 + 23,232 exceed 18,192; no additional tax |
+| 639 | H7, the earner's count, at the defaults | REFUSED, row IL-06's F6 words | 2 kept in his count, 0 moved |
+| 640 | H7, the count, moved to another insured parent | 0 | the children are the mother's if she is insured, in no count if not (row IL-06's F18): none in his |
+| 641 | H7, the allowance, at the defaults | REFUSED, row IL-06's F6 words | as line 639 |
+| `il07-tests-il08.l4` 734 | N7, the s 40(b) points, at the defaults | REFUSED, row IL-08's F16 words | 5 once, 6 for each child |
+| 735 | N7, the points, for each child | 6 | (1): 2 + 2; (2): one for each of the two children |
+| 742 | N32 (N7 paid 20,000), the tax, at the defaults | REFUSED, row IL-08's F16 words | 17,658 once, 14,754 for each child |
+| 743 | N32, once | 17,658 | s 121 on 240,000: 8,412 + 5,124 + 21,456 + 3,720 = 38,712, less 7.25 points, 21,054 |
+| 744 | N32, for each child | 14,754 | 38,712 less 8.25 points, 23,958 |
 
-At the defaults, before re-pointing, K23 already answers the tax and the net of H4 (lines 362, 366 of `il07-tests.l4`) and of N7 (lines 389, 392 of `il07-tests-il08.l4`), which the rows' defaults alone would have declined; line 442 of `il07-tests-il08.l4` (N7 with an entry for one child only) is again refused in the capstone's own words, which row IL-08's F16 refusal had met first.
+At the defaults, before re-pointing, K23 already answers the tax and the net of H4 (lines 361, 365 of `il07-tests.l4`) and of N7 (lines 388, 391 of `il07-tests-il08.l4`), which the rows' defaults alone would have declined; line 441 of `il07-tests-il08.l4` (N7 with an entry for one child only) is again refused in the capstone's own words, which row IL-08's F16 refusal had met first.
 `il07-tests-expected-red.l4`: no assertion, as at 0.4.0.
 
 ### 14.7 The independent tests, line by line (BACKLOG IL-54's record)
@@ -1252,25 +1252,25 @@ Both files were run on the binary above at version 0.4.0 (before), at version 0.
 
 | lines | household | 0.4.0 | 0.5.0 at the defaults | class | re-pointed to |
 | --- | --- | --- | --- | --- | --- |
-| 384-387, 390; 397-400, 403; 408-411, 414; 419-422, 425; 430-433, 436; 441-444, 447; 452-455, 458; 463-466, 469; 476-478, 481; 486-487, 490; 495-497, 500; 505-506, 509; 519; 524-526, 529; 534-535, 538; 543-545, 548; 555-557, 560; 565-567, 570; 575-576, 579; 584-585, 588 | H37, H18 to H29, H44, H44b, H44n, H30, H31, H33, H34 (80 lines) | satisfied | refused, row IL-02's F18 | the rows' SHRUG default (AMBIGUITY, ruled) | F18, the registered spouse may request: DECIDED-ANSWERS.md lines 55, 267, 285 (560 and 588 also to F6, below) |
-| 559, 587 | H30, H34, the allowance (with 560 and 588, their nets) | satisfied | refused, row IL-06's F6 | the same | F6, the child stays in the excluded father's count: lines 84, 226, 237 (and F18) |
+| 383-386, 389; 396-399, 402; 407-410, 413; 418-421, 424; 429-432, 435; 440-443, 446; 451-454, 457; 462-465, 468; 475-477, 480; 485-486, 489; 494-496, 499; 504-505, 508; 518; 523-525, 528; 533-534, 537; 542-544, 547; 554-556, 559; 564-566, 569; 574-575, 578; 583-584, 587 | H37, H18 to H29, H44, H44b, H44n, H30, H31, H33, H34 (80 lines) | satisfied | refused, row IL-02's F18 | the rows' SHRUG default (AMBIGUITY, ruled) | F18, the registered spouse may request: DECIDED-ANSWERS.md lines 55, 267, 285 (559 and 587 also to F6, below) |
+| 558, 586 | H30, H34, the allowance (with 559 and 587, their nets) | satisfied | refused, row IL-06's F6 | the same | F6, the child stays in the excluded father's count: lines 84, 226, 237 (and F18) |
 
-Still failing, unchanged: 597, 605, 613 (s 40(b)), 620-624, 629-633 (the period), 658, 665 (the unencoded credit), refusals whose words 0.2.0 changed (inventory 07-T15, TESTER-WRONG, stale wording); 670 (H43's tax; 07-H43, TESTER-WRONG); 678, 680 (H45; 07-H45, TESTER-WRONG).
+Still failing, unchanged: 596, 604, 612 (s 40(b)), 619-623, 628-632 (the period), 657, 664 (the unencoded credit), refusals whose words 0.2.0 changed (inventory 07-T15, TESTER-WRONG, stale wording); 669 (H43's tax; 07-H43, TESTER-WRONG); 677, 679 (H45; 07-H45, TESTER-WRONG).
 
 **`tests-independent-2.l4`** (fid-il-13, against version 0.2.2): 304 satisfied, 7 failed, 14 refused → at the defaults 163 satisfied, 4 failed, 158 refused → re-pointed: **304 satisfied, 7 failed, 14 refused**, every assertion and message as at 0.4.0.
 
 | lines | household | 0.4.0 | 0.5.0 at the defaults | class | re-pointed to |
 | --- | --- | --- | --- | --- | --- |
-| 214, 216 (H01); 223, 225, 227 (H02); 234, 236, 238 (H03); 245, 247, 249 (H04); 256, 258, 260 (H05); 267, 269, 271 (H06); 278, 280, 282 (H07); 289, 291, 293 (H08); 298, 300, 302 (H09); 307 (H10); 316, 318, 320 (H11); 325, 327, 329 (H12); 334, 336, 338 (H13); 406, 408, 410 (H21); 415, 417, 419 (H22); 424, 426, 428 (H23); 433, 435, 437 (H24); 442, 444, 446 (H25); 451, 453, 455 (H26); 460, 462, 464 (H27); 469, 471, 473 (H28); 496, 498, 500 (H31); 505, 507, 509 (H32); 523, 525 (H34); 532, 534, 536 (H35); 541, 543, 545 (H36); 550, 552, 554 (H37); 561, 563, 565 (H38); 594, 596, 598 (H41); 603, 605, 607 (H42); 612, 614, 616 (H43); 621, 623, 625 (H44); 630, 632, 634 (H45); 639 (H46); 684, 686, 688 (H52); 693, 695, 697 (H53); 702, 704, 706 (H54); 711, 713, 715 (H55); 720, 722, 724 (H56); 729, 731, 733 (H57); 738, 740, 742 (H58); 756, 758, 760 (H60); 765, 767, 769 (H61); 774, 776, 778 (H62); 783, 785, 787 (H63) | the tax, health and net (129 lines) | satisfied | refused, row IL-02's F18 | the rows' SHRUG default | F18, the registered spouse may request: DECIDED-ANSWERS-2.md line 49 (D2) |
-| 218 (H01), 527 (H34) | the net | failed (its F5, TESTER-WRONG) | refused, row IL-02's F18 | the same | the same; failing again as before |
-| 309, 311 (H10), 641, 643 (H46) | health, net | refused, its F3 (declared) | refused, row IL-02's F18 (other words) | the same | the same; refused in the part-time minimum's words again |
-| 301 | H09, the allowance | satisfied | refused, row IL-06's F6 | the same | F6, the children stay in the excluded father's count: line 55 (D8), line 427 |
-| 352, 354, 356; 370, 372, 374; 747, 749, 751 | H15, H17, H59 | satisfied | refused, row IL-08's F16 (K23: the tax differs) | the same | F16, once: lines 593, 651, 1756 |
-| 583, 585 | H40, the tax and health | satisfied | refused, row IL-01's F1 | the same | F1 and F20, s 36A without a residence condition: line 57 (D10), line 1292 |
-| 587 | H40, the net | failed (its F5) | refused, row IL-01's F1 | the same | the same; failing again as before |
+| 213, 215 (H01); 222, 224, 226 (H02); 233, 235, 237 (H03); 244, 246, 248 (H04); 255, 257, 259 (H05); 266, 268, 270 (H06); 277, 279, 281 (H07); 288, 290, 292 (H08); 297, 299, 301 (H09); 306 (H10); 315, 317, 319 (H11); 324, 326, 328 (H12); 333, 335, 337 (H13); 405, 407, 409 (H21); 414, 416, 418 (H22); 423, 425, 427 (H23); 432, 434, 436 (H24); 441, 443, 445 (H25); 450, 452, 454 (H26); 459, 461, 463 (H27); 468, 470, 472 (H28); 495, 497, 499 (H31); 504, 506, 508 (H32); 522, 524 (H34); 531, 533, 535 (H35); 540, 542, 544 (H36); 549, 551, 553 (H37); 560, 562, 564 (H38); 593, 595, 597 (H41); 602, 604, 606 (H42); 611, 613, 615 (H43); 620, 622, 624 (H44); 629, 631, 633 (H45); 638 (H46); 683, 685, 687 (H52); 692, 694, 696 (H53); 701, 703, 705 (H54); 710, 712, 714 (H55); 719, 721, 723 (H56); 728, 730, 732 (H57); 737, 739, 741 (H58); 755, 757, 759 (H60); 764, 766, 768 (H61); 773, 775, 777 (H62); 782, 784, 786 (H63) | the tax, health and net (129 lines) | satisfied | refused, row IL-02's F18 | the rows' SHRUG default | F18, the registered spouse may request: DECIDED-ANSWERS-2.md line 49 (D2) |
+| 217 (H01), 526 (H34) | the net | failed (its F5, TESTER-WRONG) | refused, row IL-02's F18 | the same | the same; failing again as before |
+| 308, 310 (H10), 640, 642 (H46) | health, net | refused, its F3 (declared) | refused, row IL-02's F18 (other words) | the same | the same; refused in the part-time minimum's words again |
+| 300 | H09, the allowance | satisfied | refused, row IL-06's F6 | the same | F6, the children stay in the excluded father's count: line 55 (D8), line 427 |
+| 351, 353, 355; 369, 371, 373; 746, 748, 750 | H15, H17, H59 | satisfied | refused, row IL-08's F16 (K23: the tax differs) | the same | F16, once: lines 593, 651, 1756 |
+| 582, 584 | H40, the tax and health | satisfied | refused, row IL-01's F1 | the same | F1 and F20, s 36A without a residence condition: line 57 (D10), line 1292 |
+| 586 | H40, the net | failed (its F5) | refused, row IL-01's F1 | the same | the same; failing again as before |
 
-Before fork K23 was written (an intermediate run, recorded for completeness), H18, H19 and H20 (lines 379, 381, 383, 388, 390, 392, 397, 399, 401) were refused too, in row IL-08's F16 words; under K23 their tax is nil on either reading and they are answered at the defaults.
-The edits (the note at each file's end lists them): `tests-independent.l4`, 82 lines, the argument `, reading the composed rows' forks as` with the decided readings inserted after the household; `tests-independent-2.l4`, 4 lines, the helpers `i2 tax` (187), `i2 health` (199), `i2 allowance` (203), `i2 net` (207).
+Before fork K23 was written (an intermediate run, recorded for completeness), H18, H19 and H20 (lines 378, 380, 382, 387, 389, 391, 396, 398, 400) were refused too, in row IL-08's F16 words; under K23 their tax is nil on either reading and they are answered at the defaults.
+The edits (the note at each file's end lists them): `tests-independent.l4`, 82 lines, the argument `, reading the composed rows' forks as` with the decided readings inserted after the household; `tests-independent-2.l4`, 4 lines, the helpers `i2 tax` (186), `i2 health` (198), `i2 allowance` (202), `i2 net` (206).
 Removing the inserted argument from each edited line gives back the line as it was, character for character; no line was inserted or deleted above the notes.
 Still failing (7) and still refused (14): the lines and classes of 13.5, unchanged.
 
@@ -1342,7 +1342,7 @@ TOTAL (22 modules)                            25       871      25       11
 
 | row | wired | how | answers moved |
 | --- | --- | --- | --- |
-| IL-36, the Encouragement of Aliyah and Return (Temporary Provision) Law 5786-2026 | **yes, by default** (priority 1) | in place of the capstone's by-name decline (fork K20, the second tester's F1), for the earners fork K24 names; the rest declined by name, in narrower words | refusals only: N28's tax and net (`il07-tests-il08.l4` 475, 476) and the second tester's H33 (514, 516, 518) are answered |
+| IL-36, the Encouragement of Aliyah and Return (Temporary Provision) Law 5786-2026 | **yes, by default** (priority 1) | in place of the capstone's by-name decline (fork K20, the second tester's F1), for the earners fork K24 names; the rest declined by name, in narrower words | refusals only: N28's tax and net (`il07-tests-il08.l4` 474, 475) and the second tester's H33 (513, 515, 517) are answered |
 | IL-32, the Minimum Wage Law 5747-1987 | **yes, by default** (priority 2) | the full adult monthly minimum wage on the first day of each quarter, which Schedule K item 1 reads and fork K21 takes as its bound, comes from row IL-32's dated rule (s 1 with s 5 and the published figures) instead of row IL-05's copy of the Institute's table | none: the four figures are the same (6,247.67; 6,443.85 three times) |
 | IL-28, ITO ss 48 and 48A, the Area order of 5755-1995 and the foreign worker Regulations of 5775-2014 | **by name only** (priority 3) | the household holds two of the facts row IL-28 reads; a caller who adds the rest, for an earner with no spouse, has row IL-28 composed in place of rows IL-01 and IL-08 (fork K25) | none: without the added facts every such earner is refused as before |
 | IL-29, ITO residence and sources | **no** (priority 4) | the household holds none of the facts row IL-29 derives residence from (days in Israel in three years, the centre of life, the residence regulations' facts); the one Boolean stays, a stated convention (14.3; K19) | none |
@@ -1421,39 +1421,39 @@ Worked by hand from the rows' rules and the source before the run; none was chan
 
 | line | assertion | 0.5.0 | 0.6.0 | why |
 | ---: | --- | --- | --- | --- |
-| 475 | N28 (Galit, 20,000, first immigrated under the Law of Return on 1 December 2025), the tax | REFUSED, the Law not encoded | 0 | row IL-36: 240,000 exempt within 600,000; no taxable income |
-| 476 | N28, the net | REFUSED, the same | 18,174.537 | 20,000 - 0 - 940.9012 - 884.5618 |
+| 474 | N28 (Galit, 20,000, first immigrated under the Law of Return on 1 December 2025), the tax | REFUSED, the Law not encoded | 0 | row IL-36: 240,000 exempt within 600,000; no taxable income |
+| 475 | N28, the net | REFUSED, the same | 18,174.537 | 20,000 - 0 - 940.9012 - 884.5618 |
 
 **Added** (each section "Version 0.6.0" at the end of its module; all satisfied on their first run but the three withholding values, whose first run met two input conventions of the adapter (the card's section on other income, the hours of a full position) that were then corrected, not the values):
 
 | module, line | case | expected | why |
 | --- | --- | --- | --- |
-| `il07-tests-il08.l4` 753 | N28, the exempt income | 240,000 | the whole year's salary |
-| 754 | N28, the taxable income | 0 | 240,000 - 240,000 |
-| 759 | N33 (N28's woman paid 60,000), the exempt income | 600,000 | the ceiling of s 2(a)(1) binds |
-| 760 | N33, the taxable income | 120,000 | 720,000 - 600,000 |
-| 761 | N33, s 121 | 13,435.2 | 8,412 + 14% of 35,880 |
-| 764 | N12, first immigrated 1 January 2026, the tax | 0 | resident all 2026: 240,000 exempt |
-| 772 | first immigrated 2 January 2026 | REFUSED, part of the year | 15.3 |
-| 773 | a returning resident with six years abroad, returned 1 December 2025 | REFUSED, the facts | 15.3 |
-| 774 | a Law of Return immigrant whose citizenship the record says was cancelled | REFUSED, the facts | 15.3 |
-| 775 | a returning resident with fewer than six years (outside the period) | 30,726 | 38,712 - 2.75 points |
-| 779 | N2, the withholding (a s 45A credit) | REFUSED, row IL-26 not composed | 15.6 |
-| `il07-tests.l4` 723 | a resident foreign woman, no facts added | REFUSED, row IL-01's s 48A words | as version 0.5.0 |
-| 727, 728 | the same, a legal caring-sector worker: tax, net | 5,449.2; 8,937.437 | 2.75 points; 10,000 - 454.1 - 240.9012 - 367.5618 |
-| 730 | the same, legal, not caring | 9,079.2 | 1.5 points |
-| 732 | a foreign man, legal, not caring | 10,531.2 | 1 point |
-| 735 | the woman, stay not lawful | 13,435.2 | reg 3(d): no point |
-| 737 | the woman, not an Israeli resident | REFUSED, row IL-28's FW1 | 15.4 |
-| 740 | a resident of the Area, a man | 6,901.2 | the Order: 2.25 points |
-| 744 | the same, a woman | REFUSED, s 36A's F1 | 15.4 |
-| 745 | the same, s 36A without a residence condition | 5,449.2 | 2.75 points |
-| 753, 754 | H1: row IL-25's figure; it agrees | 367.5618; TRUE | 7,703 x 3.23% + 2,297 x 5.17% |
-| 755, 756 | H9 (5,000): the same | 161.5; TRUE | 5,000 x 3.23% |
-| 757 | H7 (70,000): row IL-25 | REFUSED, its F1 | above 51,910 |
-| 766 | H1, the withholding | 575 | (13,435.2 - 6,534) / 12 = 575.1 |
-| 767 | H2, the withholding | 454 | (13,435.2 - 7,986) / 12 = 454.1 |
-| 768 | H3 at the readings of 0.1.0 to 0.4.0, the withholding | 483 | (25,392 - 19,602) / 12 = 482.5, rounded up |
+| `il07-tests-il08.l4` 752 | N28, the exempt income | 240,000 | the whole year's salary |
+| 753 | N28, the taxable income | 0 | 240,000 - 240,000 |
+| 758 | N33 (N28's woman paid 60,000), the exempt income | 600,000 | the ceiling of s 2(a)(1) binds |
+| 759 | N33, the taxable income | 120,000 | 720,000 - 600,000 |
+| 760 | N33, s 121 | 13,435.2 | 8,412 + 14% of 35,880 |
+| 763 | N12, first immigrated 1 January 2026, the tax | 0 | resident all 2026: 240,000 exempt |
+| 771 | first immigrated 2 January 2026 | REFUSED, part of the year | 15.3 |
+| 772 | a returning resident with six years abroad, returned 1 December 2025 | REFUSED, the facts | 15.3 |
+| 773 | a Law of Return immigrant whose citizenship the record says was cancelled | REFUSED, the facts | 15.3 |
+| 774 | a returning resident with fewer than six years (outside the period) | 30,726 | 38,712 - 2.75 points |
+| 778 | N2, the withholding (a s 45A credit) | REFUSED, row IL-26 not composed | 15.6 |
+| `il07-tests.l4` 722 | a resident foreign woman, no facts added | REFUSED, row IL-01's s 48A words | as version 0.5.0 |
+| 726, 727 | the same, a legal caring-sector worker: tax, net | 5,449.2; 8,937.437 | 2.75 points; 10,000 - 454.1 - 240.9012 - 367.5618 |
+| 729 | the same, legal, not caring | 9,079.2 | 1.5 points |
+| 731 | a foreign man, legal, not caring | 10,531.2 | 1 point |
+| 734 | the woman, stay not lawful | 13,435.2 | reg 3(d): no point |
+| 736 | the woman, not an Israeli resident | REFUSED, row IL-28's FW1 | 15.4 |
+| 739 | a resident of the Area, a man | 6,901.2 | the Order: 2.25 points |
+| 743 | the same, a woman | REFUSED, s 36A's F1 | 15.4 |
+| 744 | the same, s 36A without a residence condition | 5,449.2 | 2.75 points |
+| 752, 753 | H1: row IL-25's figure; it agrees | 367.5618; TRUE | 7,703 x 3.23% + 2,297 x 5.17% |
+| 754, 755 | H9 (5,000): the same | 161.5; TRUE | 5,000 x 3.23% |
+| 756 | H7 (70,000): row IL-25 | REFUSED, its F1 | above 51,910 |
+| 765 | H1, the withholding | 575 | (13,435.2 - 6,534) / 12 = 575.1 |
+| 766 | H2, the withholding | 454 | (13,435.2 - 7,986) / 12 = 454.1 |
+| 767 | H3 at the readings of 0.1.0 to 0.4.0, the withholding | 483 | (25,392 - 19,602) / 12 = 482.5, rounded up |
 
 `il07-tests-expected-red.l4`: no assertion, as before.
 
@@ -1466,13 +1466,13 @@ Both were run on the binary above with version 0.5.0 (before) and 0.6.0 (after) 
 
 | line | household, figure | 0.5.0 | 0.6.0 | class |
 | ---: | --- | --- | --- | --- |
-| 514 | H33 (first immigrated 1 December 2025), the tax, 0 | refused (the Law not encoded) | **satisfied** | its F1 (CAPSTONE WRONG at 0.2.2, declined by name from 0.3.0), resolved by row IL-36 (fork K24) |
-| 516 | H33, health read through the household's month, 884.5618 | refused | **satisfied** | the same |
-| 518 | H33, the net, 18,347.537 | refused | **satisfied** | the same |
+| 513 | H33 (first immigrated 1 December 2025), the tax, 0 | refused (the Law not encoded) | **satisfied** | its F1 (CAPSTONE WRONG at 0.2.2, declined by name from 0.3.0), resolved by row IL-36 (fork K24) |
+| 515 | H33, health read through the household's month, 884.5618 | refused | **satisfied** | the same |
+| 517 | H33, the net, 18,347.537 | refused | **satisfied** | the same |
 
 No previously satisfied assertion changed, and nothing new fails or is refused.
-Still failing (7): 215, 218 (H01), 524, 527 (H34), 584, 587, 589 (H40): its F5, the tester's own error on the Schedule K minimum (TESTER-WRONG).
-Still refused (11): 573, 574, 576 (H39, a non-resident: row IL-04's F21); 308, 309, 311 (H10), 640, 641, 643 (H46): its F3, a part-time minimum below the full adult figure, which row IL-32 would answer from the hours of work, which the household does not hold (15.9); 668, 677 (H49, H50 health): its F6, propagation.
+Still failing (7): 214, 217 (H01), 523, 526 (H34), 583, 586, 588 (H40): its F5, the tester's own error on the Schedule K minimum (TESTER-WRONG).
+Still refused (11): 572, 573, 575 (H39, a non-resident: row IL-04's F21); 307, 308, 310 (H10), 639, 640, 642 (H46): its F3, a part-time minimum below the full adult figure, which row IL-32 would answer from the hours of work, which the household does not hold (15.9); 667, 676 (H49, H50 health): its F6, propagation.
 
 ### 15.9 Forks and conventions, added or revised
 
@@ -1502,15 +1502,15 @@ For each item: what is missing, and the existing households and figures that wou
 
 | # | item | what is missing | existing households that would change, and how |
 | --- | --- | --- | --- |
-| FW1 | Row IL-32's part-time minimum (its s 2(b)), by name | the hours worked in the month and the hours of a full position (row IL-32's fork F1), as facts a caller adds, read by the National Insurance rule | the second tester's H10 (lines 308, 309, 311: refused) with 40% of a position, 74.4 of 186 hours: minimum 0.4 x 6,247.67 = 2,499.068, below the salary of 3,000, so the deduction is on the salary: 31.2, health 96.9, net 3,044.9, its decided values; H46 (640, 641, 643) at 93 of 186 hours: 3,123.835 below 3,500: 36.4, 113.05, 3,523.55. No other household. |
+| FW1 | Row IL-32's part-time minimum (its s 2(b)), by name | the hours worked in the month and the hours of a full position (row IL-32's fork F1), as facts a caller adds, read by the National Insurance rule | the second tester's H10 (lines 307, 308, 310: refused) with 40% of a position, 74.4 of 186 hours: minimum 0.4 x 6,247.67 = 2,499.068, below the salary of 3,000, so the deduction is on the salary: 31.2, health 96.9, net 3,044.9, its decided values; H46 (639, 640, 642) at 93 of 186 hours: 3,123.835 below 3,500: 36.4, 113.05, 3,523.55. No other household. |
 | FW2 | Row IL-36 for a first residence after 1 January 2026 | a reading of row IL-01's fork F4 (part of a tax year) and of row IL-36's fork F5 (days or months) | own N12 first immigrated on 2 January 2026 (`il07-tests-il08.l4` line 771: refused): every month's salary produced while resident, ceiling 598,356.16 by days or 600,000 by months, either above 240,000, so tax 0 at F4's whole-year reading; net 18,174.537 (as N28). |
 | FW3 | Row IL-36 for a veteran returning resident | ITO s 14(a)'s ten consecutive years abroad and the Ministry's certificate | line 773 (returned 1 December 2025, six years abroad: refused): tax 0 if a veteran with the certificate (240,000 exempt); if not, the ordinary tax with row IL-08's s 35 points for a returning resident (not worked here). |
-| FW4 | Row IL-36 for another ground of s 35(d), or a cancelled citizenship | whether the earner is in a class entitled to an absorption basket; a cancellation under s 11 of the Citizenship Law (the household holds s 10(d)) | line 774 (s 10(d) cancelled: refused): tax 0 as N28 if not cancelled under s 11 and resident all of 2026. No tester household. |
+| FW4 | Row IL-36 for another ground of s 35(d), or a cancelled citizenship | whether the earner is in a class entitled to an absorption basket; a cancellation under s 11 of the Citizenship Law (the household holds s 10(d)) | line 773 (s 10(d) cancelled: refused): tax 0 as N28 if not cancelled under s 11 and resident all of 2026. No tester household. |
 | FW5 | Row IL-28 for a couple | row IL-02's s 66(c) for a foreign worker (row IL-28's open question 4) and the facts of s 37 for the Order | none existing (no married foreign worker or Area resident). |
 | FW6 | Row IL-28 by default | the facts row IL-28 reads (15.4), which the household does not hold | H18 (`il07-tests.l4` line 496: refused): with the facts, 5,449.2 (a legal caring-sector worker), 9,079.2 (legal, not caring), 13,435.2 (not lawful). |
-| FW7 | Row IL-33: a housewife insured under Chapter 11; s 69's payee; statuses from facts; rounding and the updating clause | the person record (permission to stay, the first residence, work, marriage facts, the spouse's date of birth); a turn of its fork U1 | H7 (line 396) at row IL-06's F6 second reading only: declined to 392; every other housewife household unchanged (15.5); N27's statuses: no change (no deduction past her Part D age); the basic amounts 173 and 219 are whole shekels, so rounding moves none. |
+| FW7 | Row IL-33: a housewife insured under Chapter 11; s 69's payee; statuses from facts; rounding and the updating clause | the person record (permission to stay, the first residence, work, marriage facts, the spouse's date of birth); a turn of its fork U1 | H7 (line 395) at row IL-06's F6 second reading only: declined to 392; every other housewife household unchanged (15.5); N27's statuses: no change (no deduction past her Part D age); the basic amounts 173 and 219 are whole shekels, so rounding moves none. |
 | FW8 | Row IL-29: residence from facts | the days in Israel of three tax years, the centre of life, the residence regulations' facts | none identifiable: every household gives the Boolean, and no test gives facts that contradict it. |
-| FW9 | Row IL-27's credits (ss 39A, 39B, 40A-40E, 44-46, 47A; s 35(e)'s rules; s 47(d)'s regulations), by name | each section's facts (row IL-27's NOTES.md section 10) | own H20 (lines 516, 517: refused) by the facts of its credit (not worked); the second tester's H49 (s 40C) and H50 (s 39B): their REFUSED tax and net (666, 670; 675, 679) would fail, being answered, and their health lines 668, 677 (now refused) would pass. |
+| FW9 | Row IL-27's credits (ss 39A, 39B, 40A-40E, 44-46, 47A; s 35(e)'s rules; s 47(d)'s regulations), by name | each section's facts (row IL-27's NOTES.md section 10) | own H20 (lines 515, 516: refused) by the facts of its credit (not worked); the second tester's H49 (s 40C) and H50 (s 39B): their REFUSED tax and net (665, 669; 674, 678) would fail, being answered, and their health lines 667, 676 (now refused) would pass. |
 | FW10 | Row IL-25 in place of the health input | a reading of row IL-25's fork F1 (the ceiling) | at the default the 15 households above 51,910 (15.6) would be declined where they are answered today, and the 3 non-residents too: so it stays a cross-check. At F1's "caps" reading the 15 would agree (by hand: 7,703 x 3.23% + 44,207 x 5.17% = 248.8069 + 2,285.5019 = 2,534.3088) but N33's placeholder 0; the 3 non-residents and N32's placeholder stay apart, and the 9 the capstone declines stay declined. |
 | FW11 | Row IL-35's index readings | a reading of its fork F1 across a base change | if the capstone computed the 2026 threshold from the index, every household's deduction would be declined at the default (row IL-35's NOTES.md section 8: its default declines NII s 334(a)(1) for 2026); the capstone keeps the published 7,703. |
 | FW12 | Rows IL-30, IL-31, IL-34 | a second kind of income (IL-30); tax year 2025 and its s 121B(a) amount (IL-31); several employers, s 341, national-civic service (IL-34) | none existing. |

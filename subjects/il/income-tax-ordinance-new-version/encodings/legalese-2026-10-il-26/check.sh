@@ -36,9 +36,9 @@ expected_failed() {
 
 # A module that is MEANT to refuse some plain assertions is listed here with its exact count
 # (added by fid-il-26, BACKLOG IL-56, as the IL-02 and IL-08 check.sh do). tests-independent.l4 refuses 7:
-#   lines 155-158  ids A25, A26, A27, A28  class SCOPE      (tax years 2025 and 2023: "section 121 as it stood before tax year 2026 is not in the deposited text")
-#   lines 178, 179 ids C01, C02            class AMBIGUITY  (the Director's table not held: the tester computes items (1)-(5), the encoding refuses by name)
-#   line 235       id  F02                 class AMBIGUITY  (reg 3(b), a part payment of 5,000 of 10,000: 287.50 or 288; the tester flagged it too and the encoding refuses)
+#   lines 154-157  ids A25, A26, A27, A28  class SCOPE      (tax years 2025 and 2023: "section 121 as it stood before tax year 2026 is not in the deposited text")
+#   lines 177, 178 ids C01, C02            class AMBIGUITY  (the Director's table not held: the tester computes items (1)-(5), the encoding refuses by name)
+#   line 234       id  F02                 class AMBIGUITY  (reg 3(b), a part payment of 5,000 of 10,000: 287.50 or 288; the tester flagged it too and the encoding refuses)
 expected_refused() {
   case "$1" in
     tests-independent.l4) echo 7 ;;

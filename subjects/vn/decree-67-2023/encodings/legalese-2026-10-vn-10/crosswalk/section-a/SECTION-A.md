@@ -41,7 +41,7 @@ I mutation-tested the assertions: ten deliberately wrong assertions (a driver as
 
 **What the Law vintages rest on.**
 Law 139/2025/QH15, which makes V2 and V3, is not among the files I was given; the vintages are VN-29's encoding of it.
-Where §1 says a row holds in V1, V2 and V3, that means VN-29 gives the predicate one arm only (in `law08-ch1-general.l4` the only vintage tests are in Dieu 3, 6, 8, 9, 11 and 13, and none in Dieu 4, which runs from line 111 to line 514; `law08-ch2-general.l4` and `law08-ch2-property.l4` have none), and each row's standard-case assertion is run at V1 (2025-06-01), V2 (2026-03-01) and V3 (2026-08-01) to show it.
+Where §1 says a row holds in V1, V2 and V3, that means VN-29 gives the predicate one arm only (in `law08-ch1-general.l4` the only vintage tests are in Dieu 3, 6, 8, 9, 11 and 13, and none in Dieu 4, which runs from line 110 to line 513; `law08-ch2-general.l4` and `law08-ch2-property.l4` have none), and each row's standard-case assertion is run at V1 (2025-06-01), V2 (2026-03-01) and V3 (2026-08-01) to show it.
 V1 runs from 2023-01-01, V2 from 2026-01-01, V3 from 2026-07-01 (`law08-vintage.l4`).
 Decree 220/2026 takes effect on 2026-07-01 (decree220:195); in the motor chapter it replaces one word (decree220:172-178).
 The join takes the decree's vintage and the Law's vintage as two independent inputs and does not check that a pair of them can coexist.

@@ -30,8 +30,8 @@ expected_failed() {
   case "$1" in
     # tests-red.l4) echo 3 ;;
     # fid-il-29 (IL-56): 8 independent assertions that assert the tester's decided answer and fail against the encoding;
-    # lines of tests-independent.l4 (see INDEPENDENT-FINDINGS.md): B06 (175, assumption A3), J08 (664, note-only cap), J32 (666,
-    # other motorcycle), J31 (668, note-only L3 amount), K08/K09/K07 (681-683, note-only reductions), L12 (726, note-only ceiling).
+    # lines of tests-independent.l4 (see INDEPENDENT-FINDINGS.md): B06 (174, assumption A3), J08 (663, note-only cap), J32 (665,
+    # other motorcycle), J31 (667, note-only L3 amount), K08/K09/K07 (680-682, note-only reductions), L12 (725, note-only ceiling).
     tests-independent.l4) echo 8 ;;
     *) echo 0 ;;
   esac
@@ -42,8 +42,8 @@ expected_failed() {
 expected_refused() {
   case "$1" in
     # fid-il-29 (IL-56): 8 independent assertions where the tester decided an answer and the encoding refuses by design:
-    # A34 (128, fork C2), A35 (131, fork C1), A36 (134, fork C1), C34/C35 default (288, TESTER-WRONG: s 75A circularity),
-    # G02 default (462, fork N90), K13 (687, no cap for 2029), L15 default (721, fork XD), L07 (724, workplace-only phone).
+    # A34 (127, fork C2), A35 (130, fork C1), A36 (133, fork C1), C34/C35 default (287, TESTER-WRONG: s 75A circularity),
+    # G02 default (461, fork N90), K13 (686, no cap for 2029), L15 default (720, fork XD), L07 (723, workplace-only phone).
     tests-independent.l4) echo 8 ;;
     *) echo 0 ;;
   esac

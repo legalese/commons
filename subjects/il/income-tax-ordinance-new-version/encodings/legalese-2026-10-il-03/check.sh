@@ -30,29 +30,29 @@ L4="${L4:-l4}"
 # Version 0.2.0 (CHK-03): the independent tester's file is listed. Its six failures, by line
 # of tests-independent.l4, with the inventory id (findings/il-2026-10-08/inventory.tsv) and
 # class of each:
-#   267, 268, 269  D03-D05  03-F2  AMBIGUITY (fork F2, the age-60 date; the tester would refuse)
-#   284            F01      03-F1  AMBIGUITY (fork F1, mixed income on the scale; the tester would refuse)
-#   285            F02      03-T1  TESTER-WRONG (every placement gives 12,300; INDEPENDENT-FINDINGS.md:57-59)
-#   286            F03      03-T1  TESTER-WRONG (LEFT is the refusal meant; INDEPENDENT-FINDINGS.md:61-62)
+#   266, 268, 268  D03-D05  03-F2  AMBIGUITY (fork F2, the age-60 date; the tester would refuse)
+#   283            F01      03-F1  AMBIGUITY (fork F1, mixed income on the scale; the tester would refuse)
+#   284            F02      03-T1  TESTER-WRONG (every placement gives 12,300; INDEPENDENT-FINDINGS.md:57-59)
+#   285            F03      03-T1  TESTER-WRONG (LEFT is the refusal meant; INDEPENDENT-FINDINGS.md:61-62)
 # The two AMBIGUITY items wait on rulings (BACKLOG IL-24); 03-T1 is the tester's own error,
 # left failing, its expected values unchanged.
 # Version 0.3.0 (BACKLOG IL-48): Meng ruled SHRUG on 2026-10-08, and forks F1 and F2 now decline
-# by default where their readings part, so lines 267-269 and 284 pass as the tester wrote them.
-# Two remain, both 03-T1 (285, 286). Line 327 (I04, a fall of the index, fork F4, now declined by
+# by default where their readings part, so lines 266-268 and 283 pass as the tester wrote them.
+# Two remain, both 03-T1 (284, 285). Line 326 (I04, a fall of the index, fork F4, now declined by
 # default) was re-pointed by the lead's leave to the reading the tester decided, by name, value
 # unchanged, and passes.
 expected_failed() {
   case "$1" in
     # tests-red.l4) echo 3 ;;
-    tests-independent.l4) echo 2 ;;   # lines 285-286 (03-T1); see above. 0.2.0: 6
+    tests-independent.l4) echo 2 ;;   # lines 284-285 (03-T1); see above. 0.2.0: 6
     *) echo 0 ;;
   esac
 }
 
 # Version 0.2.0 (CHK-03): a module that is MEANT to refuse some assertions is listed with its
 # exact count. The independent tester's two, by line of tests-independent.l4:
-#   371  S13  03-S13  AMBIGUITY (factual): s 121B in tax year 2025, declined here (assumption A1)
-#   384  S25  03-S13  AMBIGUITY (factual): the same, with a residential sale
+#   370  S13  03-S13  AMBIGUITY (factual): s 121B in tax year 2025, declined here (assumption A1)
+#   383  S25  03-S13  AMBIGUITY (factual): the same, with a residential sale
 # Both wait on the deposit of amendment 276 (Sefer HaChukim 3342; BACKLOG IL-31). The repair of
 # 03-O1 (version 0.2.0) made the s 121B(e) helpers decline 2025 too, so S25 is refused by the
 # section's own refusal as before and no count moves.
@@ -60,7 +60,7 @@ expected_failed() {
 # fetched for BACKLOG IL-31).
 expected_refused() {
   case "$1" in
-    tests-independent.l4) echo 2 ;;   # lines 371, 384 (03-S13); see above
+    tests-independent.l4) echo 2 ;;   # lines 370, 383 (03-S13); see above
     *) echo 0 ;;
   esac
 }

@@ -16,20 +16,20 @@ Every one of the 16 non-satisfied assertions (14 rows below) is a fork the encod
 
 | # | IDs | line(s) of tests-independent.l4 | class | what |
 |---|---|---|---|---|
-| 1 | A34 | 128 | AMBIGUITY (fork C2) | I read a rebuttal as showing the centre of life is abroad, so "rebutted, no finding" is not resident; the encoding declines. |
-| 2 | A35 | 131 | AMBIGUITY (fork C1) | I answered resident for five ties all in Israel; the encoding declines. |
-| 3 | A36 | 134 | AMBIGUITY (fork C1), and my confidence was too high | I answered not resident for five ties all abroad (H); the list is "בין השאר" (non-exhaustive), so unanimity of the five listed ties is not conclusive. |
-| 4 | B06 | 175 | AMBIGUITY (assumption A3) | On the fifth anniversary I flagged the day-count convention; the encoding fixes "ends the day before the anniversary" (not forked) and answers. |
-| 5 | C34, C35 | 288 | TESTER-WRONG | I took the foreign journalist and athlete as inputs; s 75A defines both as "תושב חוץ" (ITO line 2640 and 2642), so the class is circular for a resident; the encoder's fork JA is right. Under the named reading my answer holds (line 287). |
-| 6 | G02 | 462 | AMBIGUITY (fork N90) | Notice on day 90: I answered in time (day of arrival excluded); the encoding declines. Under reading A it agrees (line 463). |
-| 7 | J08 | 664 | AMBIGUITY (policy on note-only figures) | The 2024 cap is only in a Wikisource note; I expect "needs the published figure"; the encoding answers from its marked published-figures module. |
-| 8 | J31 | 668 | same | 2026 L3 motorcycle amount (1,070, note only). |
-| 9 | J32 | 666 | AMBIGUITY (assumption A11) | A motorcycle not of class L3: reg 2(א) excludes only "אופנוע כאמור בתקנת משנה (ב)"; I flagged it, the encoding treats it as an ordinary vehicle. |
-| 10 | K07-K09 | 681-683 | same as 7 | 2026 plug-in, hybrid and electric reductions (1,150 / 580 / 1,380, notes only). |
-| 11 | K13 | 687 | SCOPE (conservative) | Tax year 2029, hybrid, price 200,000: no reduction applies (the period ends 2028-12-31) and the price is below any cap, so 4,960 is determinable; the encoding refuses because it holds no cap for 2029. |
-| 12 | L07 | 724 | AMBIGUITY | A phone from which only the workplace can be called: I said value 0; the Regulations only exclude it from their rule (TEL reg 2) and say nothing about its value, so the encoding's refusal is defensible. |
-| 13 | L12 | 726 | same as 7 | 2025 ceiling of the phone value (115, note only). |
-| 14 | L15 | 721 | AMBIGUITY (fork XD) | The employee pays the whole expense: I said 0 (M); the encoding declines. Under reading "nil" it agrees (line 722). |
+| 1 | A34 | 127 | AMBIGUITY (fork C2) | I read a rebuttal as showing the centre of life is abroad, so "rebutted, no finding" is not resident; the encoding declines. |
+| 2 | A35 | 130 | AMBIGUITY (fork C1) | I answered resident for five ties all in Israel; the encoding declines. |
+| 3 | A36 | 133 | AMBIGUITY (fork C1), and my confidence was too high | I answered not resident for five ties all abroad (H); the list is "בין השאר" (non-exhaustive), so unanimity of the five listed ties is not conclusive. |
+| 4 | B06 | 174 | AMBIGUITY (assumption A3) | On the fifth anniversary I flagged the day-count convention; the encoding fixes "ends the day before the anniversary" (not forked) and answers. |
+| 5 | C34, C35 | 287 | TESTER-WRONG | I took the foreign journalist and athlete as inputs; s 75A defines both as "תושב חוץ" (ITO line 2640 and 2642), so the class is circular for a resident; the encoder's fork JA is right. Under the named reading my answer holds (line 287). |
+| 6 | G02 | 461 | AMBIGUITY (fork N90) | Notice on day 90: I answered in time (day of arrival excluded); the encoding declines. Under reading A it agrees (line 463). |
+| 7 | J08 | 663 | AMBIGUITY (policy on note-only figures) | The 2024 cap is only in a Wikisource note; I expect "needs the published figure"; the encoding answers from its marked published-figures module. |
+| 8 | J31 | 667 | same | 2026 L3 motorcycle amount (1,070, note only). |
+| 9 | J32 | 665 | AMBIGUITY (assumption A11) | A motorcycle not of class L3: reg 2(א) excludes only "אופנוע כאמור בתקנת משנה (ב)"; I flagged it, the encoding treats it as an ordinary vehicle. |
+| 10 | K07-K09 | 680-682 | same as 7 | 2026 plug-in, hybrid and electric reductions (1,150 / 580 / 1,380, notes only). |
+| 11 | K13 | 686 | SCOPE (conservative) | Tax year 2029, hybrid, price 200,000: no reduction applies (the period ends 2028-12-31) and the price is below any cap, so 4,960 is determinable; the encoding refuses because it holds no cap for 2029. |
+| 12 | L07 | 723 | AMBIGUITY | A phone from which only the workplace can be called: I said value 0; the Regulations only exclude it from their rule (TEL reg 2) and say nothing about its value, so the encoding's refusal is defensible. |
+| 13 | L12 | 725 | same as 7 | 2025 ceiling of the phone value (115, note only). |
+| 14 | L15 | 720 | AMBIGUITY (fork XD) | The employee pays the whole expense: I said 0 (M); the encoding declines. Under reading "nil" it agrees (line 721). |
 
 The numbering counts the 16 expected non-satisfied lines as 14 rows because C34/C35 share a line and K07-K09 are three lines.
 

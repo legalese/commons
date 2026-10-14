@@ -89,16 +89,16 @@ The lead reports that agent `fetch-il` is fetching amendment 276 for IL-31; when
 ### The independent tester's file
 
 No line of `tests-independent.l4` was edited for forks F1 and F2: the defaults decline where the tester decided to refuse.
-So D03-D05 (lines 267-269, 03-F2) and F01 (line 284, 03-F1), which failed from 0.1.0 to 0.2.0, pass as the tester wrote them.
-F02 (line 285) still fails: there every placement agrees, the default answers 12,300, and the tester's findings say that is right (03-T1); F03 (line 286) is unchanged (03-T1).
-For fork F4, the lead authorised one edit, under the terms of the repair brief's addendum and the precedent of IL-04 v0.3.1: line 327 (I04), in place, now names the reading the tester decided (`DECIDED-ANSWERS.md` R0.7), `, reading a fall as` `the fall of the index is applied`; its expected value, 75,504.24, and its inputs, readings 100 and 99.4, are unchanged.
+So D03-D05 (lines 266-268, 03-F2) and F01 (line 283, 03-F1), which failed from 0.1.0 to 0.2.0, pass as the tester wrote them.
+F02 (line 284) still fails: there every placement agrees, the default answers 12,300, and the tester's findings say that is right (03-T1); F03 (line 285) is unchanged (03-T1).
+For fork F4, the lead authorised one edit, under the terms of the repair brief's addendum and the precedent of IL-04 v0.3.1: line 326 (I04), in place, now names the reading the tester decided (`DECIDED-ANSWERS.md` R0.7), `, reading a fall as` `the fall of the index is applied`; its expected value, 75,504.24, and its inputs, readings 100 and 99.4, are unchanged.
 Without it, the new default would have refused it.
-A second dated "NOTE BY THE LEAD, 2026-10-08" is appended after the file's last line (lines 417-429, after a blank line) and lists the edit; nothing was inserted above it, and the first 415 lines differ from 0.2.0's on line 327 only (checked by `diff`).
-The file's counts move from 118 satisfied, 6 failed, 2 refused to 122 satisfied, 2 failed (285, 286; 03-T1), 2 refused (371, 384; 03-S13), and `check.sh` declares 2 and 2.
+A second dated "NOTE BY THE LEAD, 2026-10-08" is appended after the file's last line (lines 416-428, after a blank line) and lists the edit; nothing was inserted above it, and the first 414 lines differ from 0.2.0's on line 326 only (checked by `diff`).
+The file's counts move from 118 satisfied, 6 failed, 2 refused to 122 satisfied, 2 failed (284, 285; 03-T1), 2 refused (370, 383; 03-S13), and `check.sh` declares 2 and 2.
 
 ### Expected values changed or added (`ito-il03-tests.l4`)
 
-No expected value changed: four tests were re-pointed to their reading by name with the same value (lines 174, 362, 389, 421).
+No expected value changed: four tests were re-pointed to their reading by name with the same value (lines 173, 361, 388, 420).
 Added, each worked by hand before it was run:
 
 | assertion | expected | why |
@@ -217,7 +217,7 @@ Renamed, with no answer moved:
 - the rule `s 120B(b) — the pension-point amount from the month of an agreed cost-of-living increment` → `s 120B(b) — the allowance-point amount from the month of an agreed cost-of-living increment`;
 - and the section heading, comments and test fixture names that said "pension-point".
 
-The tester's file uses the second and third names on lines 315, 317, 351 and 352, adapted as the lead authorised; its own fixture `a pension point of 1,000` keeps its name.
+The tester's file uses the second and third names on lines 314, 316, 350 and 351, adapted as the lead authorised; its own fixture `a pension point of 1,000` keeps its name.
 The comparison section below, which quotes the old names, is untouched.
 
 ### 03-N4 (IL-03's half): `A problem with the facts`, qualified
@@ -227,7 +227,7 @@ Rows IL-03 and IL-06 both declared a type `A problem with the facts`, so no modu
 IL-03's is now `A problem with the facts, for sections 121 and 121B`, after the sections whose rules return it (the style of RECONCILE's N3); its three constructors are unchanged.
 It is named in `ito-il03-nouns.l4` (the declaration), in `ito-121-individual-rates.l4` lines 226 and 236, and in two signatures of `ito-121b-additional-tax.l4`, renames only.
 The lead authorised the edit to `ito-121-individual-rates.l4`, which jobs.txt had listed as untouched; it is vendored by the capstone.
-The tester's file names the type on lines 167 and 172, adapted as the lead authorised.
+The tester's file names the type on lines 166 and 171, adapted as the lead authorised.
 
 ### 03-F7: fork F7, read against the enacted 5786 Law; assumption A3 re-based
 
@@ -248,7 +248,7 @@ Either way the 2028 base of each stated amount is the figure s 5 prints; and for
 For 84,120 and 120,720, which s 5 does not restate, (e)(2) restarts from their own 1 January 2024 amounts before rounding, which no deposited source gives (an input, as before).
 **No answer in this row changes.**
 s 121 from 2028 is still declined, now because the 2027 index readings and the rounding Order are not in this row, not because F7 was open; the refusal's words, "the section 121 ceilings from tax year 2028 are not determined by the deposited text", stay true.
-The header of `ito-121-individual-rates.l4` (lines 22-23: the 1 January 2024 figures "which for the amended ceilings the deposited text does not give") and its `@ref` on line 62 are now out of date in that clause; this job may only rename in that module (03-N4, renames only, as the lead authorised), so they are recorded here and left for its next edit.
+The header of `ito-121-individual-rates.l4` (lines 21-22: the 1 January 2024 figures "which for the amended ceilings the deposited text does not give") and its `@ref` on line 61 are now out of date in that clause; this job may only rename in that module (03-N4, renames only, as the lead authorised), so they are recorded here and left for its next edit.
 Fork F5 (2027's rise only) is unchanged: s 7 says what is adjusted, not by which index.
 **A3**: for the four figures s 5 states, the basis is now the enacted Law, s 5 with s 6's commencement, and it agrees with the text exactly (the capstone found the same, `RECONCILE.md` line 79).
 For 84,120 and 120,720 the basis is unchanged: the note at line 4350, the editorial tables at lines 4429-4447 (which show both figures unchanged from 2024-2025 to 2026-2027), and s 120B(e)(1).
@@ -276,7 +276,7 @@ Marked **(0.2.0)** in place: the pass was run after the line was written (common
 
 Recorded at `check.sh` lines 29-34 and in `red-checks.txt` (CHK-03), and at `INDEPENDENT-FINDINGS.md` lines 57-62 (03-T1).
 `check.sh` exited 1 at 0.1.0 because it did not list the tester's module and had no `expected_refused`.
-It now has `expected_refused`, as IL-04's does, and lists `tests-independent.l4` with 6 failed and 2 refused, with a comment naming each line, its inventory id and class: lines 267-269 (D03-D05, 03-F2, AMBIGUITY), 284 (F01, 03-F1, AMBIGUITY), 285-286 (F02, F03, 03-T1, TESTER-WRONG), and refused 371 and 384 (S13, S25, 03-S13, AMBIGUITY, waiting on the deposit of amendment 276).
+It now has `expected_refused`, as IL-04's does, and lists `tests-independent.l4` with 6 failed and 2 refused, with a comment naming each line, its inventory id and class: lines 266-268 (D03-D05, 03-F2, AMBIGUITY), 283 (F01, 03-F1, AMBIGUITY), 284-285 (F02, F03, 03-T1, TESTER-WRONG), and refused 370 and 383 (S13, S25, 03-S13, AMBIGUITY, waiting on the deposit of amendment 276).
 03-T1 is annotated there, here and in the lead's note at the end of the tester's file: by the tester's own account (`INDEPENDENT-FINDINGS.md` lines 57-62) F02's every placement gives 12,300 and F03's `LEFT` is the refusal meant; the encoding's answers stand and the two stay failing, their expected values unchanged.
 `encoding.json` gains `expected_red`.
 
@@ -286,13 +286,13 @@ As the lead authorised on 2026-10-08, under the precedent of IL-04 v0.3.1, seven
 
 | line | before | after | item |
 | --- | --- | --- | --- |
-| 167, 172 | `GIVETH AN EITHER` `A problem with the facts` `NUMBER` | the type `A problem with the facts, for sections 121 and 121B` | 03-N4 |
-| 310 | `IS before` | `IS JUST before` | 03-O2 |
-| 315, 317 | `A pension-point amount in a tax year` | `An allowance-point amount in a tax year` | 01-W5 |
-| 351, 352 | `s 120B(b) — the pension-point amount from the month of an agreed cost-of-living increment` | `s 120B(b) — the allowance-point amount from …` | 01-W5 |
+| 166, 171 | `GIVETH AN EITHER` `A problem with the facts` `NUMBER` | the type `A problem with the facts, for sections 121 and 121B` | 03-N4 |
+| 309 | `IS before` | `IS JUST before` | 03-O2 |
+| 314, 316 | `A pension-point amount in a tax year` | `An allowance-point amount in a tax year` | 01-W5 |
+| 350, 351 | `s 120B(b) — the pension-point amount from the month of an agreed cost-of-living increment` | `s 120B(b) — the allowance-point amount from …` | 01-W5 |
 
-A dated "NOTE BY THE LEAD, 2026-10-08" is appended after the file's last line (lines 395-415, after a blank line) and lists each line and why; nothing was inserted above it, so every line the findings and `check.sh` cite still holds.
-The first 393 lines differ from 0.1.0's only on those seven lines (checked by `diff`), and the file's counts are unchanged: 118 satisfied, 6 failed, 2 refused, on the same eight lines.
+A dated "NOTE BY THE LEAD, 2026-10-08" is appended after the file's last line (lines 394-414, after a blank line) and lists each line and why; nothing was inserted above it, so every line the findings and `check.sh` cite still holds.
+The first 392 lines differ from 0.1.0's only on those seven lines (checked by `diff`), and the file's counts are unchanged: 118 satisfied, 6 failed, 2 refused, on the same eight lines.
 
 ### Expected values changed or added (`ito-il03-tests.l4`)
 
@@ -346,7 +346,7 @@ Against the source alone it flags, in `ito-il03-published-figures.l4` and this f
 
 | kind | 0.1.0 | 0.2.0 | in vendored module | capstone users found |
 | --- | --- | --- | --- | --- |
-| type | `A problem with the facts` | `A problem with the facts, for sections 121 and 121B` | `ito-il03-nouns.l4`, used in `ito-121-individual-rates.l4`, `ito-121b-additional-tax.l4` | none by name: `il07-adapter-il03.l4` matches `LEFT p`; its comment on line 15 names the old type |
+| type | `A problem with the facts` | `A problem with the facts, for sections 121 and 121B` | `ito-il03-nouns.l4`, used in `ito-121-individual-rates.l4`, `ito-121b-additional-tax.l4` | none by name: `il07-adapter-il03.l4` matches `LEFT p`; its comment on line 14 names the old type |
 | field type | `amount on 1 January 2024, before rounding` IS A NUMBER | IS A MAYBE NUMBER | `ito-il03-nouns.l4` | `il07-adapter-il03.l4` line 113 passes a named refusal, which still typechecks |
 | constructor | `the amount of a pension point` | `the amount of an allowance point` | `ito-il03-nouns.l4` | none |
 | type | `A pension-point amount in a tax year` | `An allowance-point amount in a tax year` | `ito-il03-nouns.l4` | none |

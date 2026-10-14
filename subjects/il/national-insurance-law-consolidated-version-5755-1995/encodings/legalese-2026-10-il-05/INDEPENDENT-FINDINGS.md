@@ -43,15 +43,15 @@ The encoder's own suite relies on 4.67 too: `nii-il05-tests.l4:595` asserts coor
 
 | line | id | expected (decided) | encoding | classification |
 |---|---|---|---|---|
-| 220 | B4, wage 7,704 | 80.1812 | 80.1579 | source inconsistency, **not recorded** (also my own oversight: I did not check the rows before deciding) |
-| 221 | B5, wage 8,000 | 100.9012 | 93.9811 | same |
-| 222 | B6, wage 10,000 | 240.9012 | 187.3811 | same |
-| 223 | B7, wage 51,910 | 3,174.6012 | 2,144.5781 | same |
-| 226 | B8, wage 60,000 | 3,174.6012 | 2,522.3811 | same, **plus root cause 2** |
-| 228 | B9, police officer, 10,000 (s 342(c)(2) "לא ינוכה משכרם הניכוי כאמור בפרט 6") | 234.5369 | 181.0168 | same root cause. The police rule itself is right: the supplementary B9' at 7,000 is satisfied (71.40) |
-| 236 | B12, man of 69 without pension, 10,000 | 240.9012 | 187.3811 | same root cause. The age rule itself is right (B10, B11, B12' satisfied) |
-| 245 | C1, two employers at 7,000; s 342(d)(1) "יהיה העובד חייב בתשלום ההפרש" | pays 375.3012 | pays 228.5811 | same root cause. The (d) comparison itself is right (C3 and A6 satisfied) |
-| 248 | C2, two employers at 40,000; s 342(d)(2) "זכאי להחזר ההפרש" | refund 1,507.2012 | refund 2,537.2243 | same root cause (I supplied the coordinated month already capped at 51,910) |
+| 219 | B4, wage 7,704 | 80.1812 | 80.1579 | source inconsistency, **not recorded** (also my own oversight: I did not check the rows before deciding) |
+| 220 | B5, wage 8,000 | 100.9012 | 93.9811 | same |
+| 221 | B6, wage 10,000 | 240.9012 | 187.3811 | same |
+| 222 | B7, wage 51,910 | 3,174.6012 | 2,144.5781 | same |
+| 225 | B8, wage 60,000 | 3,174.6012 | 2,522.3811 | same, **plus root cause 2** |
+| 227 | B9, police officer, 10,000 (s 342(c)(2) "לא ינוכה משכרם הניכוי כאמור בפרט 6") | 234.5369 | 181.0168 | same root cause. The police rule itself is right: the supplementary B9' at 7,000 is satisfied (71.40) |
+| 235 | B12, man of 69 without pension, 10,000 | 240.9012 | 187.3811 | same root cause. The age rule itself is right (B10, B11, B12' satisfied) |
+| 244 | C1, two employers at 7,000; s 342(d)(1) "יהיה העובד חייב בתשלום ההפרש" | pays 375.3012 | pays 228.5811 | same root cause. The (d) comparison itself is right (C3 and A6 satisfied) |
+| 247 | C2, two employers at 40,000; s 342(d)(2) "זכאי להחזר ההפרש" | refund 1,507.2012 | refund 2,537.2243 | same root cause (I supplied the coordinated month already capped at 51,910) |
 
 This is Schedule J's arithmetic, so it belongs to row IL-04's table more than to IL-05's logic.
 It reaches s 342(c) because IL-05 sums per-branch rows; nothing in IL-05 can see the printed total.
@@ -70,11 +70,11 @@ NOTES section 1 says the per-branch amounts are IL-04's `the column D deduction 
 
 | line | id | expected (decided) | encoding | classification |
 |---|---|---|---|---|
-| 303 | E8, item 2, monthly maximum | REFUSE | 51,910 | genuine ambiguity, **recorded (F2)**; on reflection I prefer the encoder's reading |
-| 304 | E8, item 2, monthly minimum | REFUSE | 3,442.25 | same |
-| 305 | E8, item 3, monthly minimum | REFUSE | 688.45 | same |
-| 306 | E8, item 4, monthly minimum | REFUSE | 2,065.35 | same |
-| 385 | H1, s 348(d) "שקיבל דמי אבטלה לחודש מלא", deemed monthly income | REFUSE (item 3 prints only "לרבעון … ולשנה") | 688.45 | same (F2 with F5) |
+| 302 | E8, item 2, monthly maximum | REFUSE | 51,910 | genuine ambiguity, **recorded (F2)**; on reflection I prefer the encoder's reading |
+| 303 | E8, item 2, monthly minimum | REFUSE | 3,442.25 | same |
+| 304 | E8, item 3, monthly minimum | REFUSE | 688.45 | same |
+| 305 | E8, item 4, monthly minimum | REFUSE | 2,065.35 | same |
+| 384 | H1, s 348(d) "שקיבל דמי אבטלה לחודש מלא", deemed monthly income | REFUSE (item 3 prints only "לרבעון … ולשנה") | 688.45 | same (F2 with F5) |
 
 Schedule K items 2-4 print no monthly row.
 I refused. The encoder takes a third of the quarter, because each quarterly figure is written as a monthly amount "כפול 3" and the Institute prints exactly those monthly figures.
@@ -84,14 +84,14 @@ Having read the reason I think the encoder's reading is the better one; the asse
 
 | line | id | expected (decided) | encoding | classification |
 |---|---|---|---|---|
-| 387 | H2, full-month unemployment benefit in every month of Q1 2026, no other income | 2,065.35 (item 3, quarter) | refuses: "section 348(d) is stated for a full month" | genuine ambiguity, **recorded (F5 and the named refusal)**; also partly not expressible: the case has one boolean "for a full month" and cannot say "in every month of the quarter" |
-| 389 | H3, as H2 with 5,000 of other income; (d) has no "אינה מגיעה" limb | 2,065.35 (deeming) | refuses (same message) | genuine ambiguity, **recorded (F5: deeming or floor, declined where they differ)** |
+| 386 | H2, full-month unemployment benefit in every month of Q1 2026, no other income | 2,065.35 (item 3, quarter) | refuses: "section 348(d) is stated for a full month" | genuine ambiguity, **recorded (F5 and the named refusal)**; also partly not expressible: the case has one boolean "for a full month" and cannot say "in every month of the quarter" |
+| 388 | H3, as H2 with 5,000 of other income; (d) has no "אינה מגיעה" limb | 2,065.35 (deeming) | refuses (same message) | genuine ambiguity, **recorded (F5: deeming or floor, declined where they differ)** |
 
 ### Root cause 5: the 2027 deduction (1 failure)
 
 | line | id | expected (decided) | encoding | classification |
 |---|---|---|---|---|
-| 421 | I3, s 342(c) for February 2027 | REFUSE: the temporary Schedule J ends on 31.12.2026 (Amendment 252 s 7(a)) unless extended by order for 2027 (s 7(b)), and no source says whether an order was made | 187.3811 (sums the inputs) | genuine ambiguity, **not recorded in IL-05**. NOTES does not mention the s 7(b) extension power, and its own 2027 scenario assumes the permanent table. Low severity for IL-05, because the column D amounts are inputs and the choice falls on IL-04 or the caller |
+| 420 | I3, s 342(c) for February 2027 | REFUSE: the temporary Schedule J ends on 31.12.2026 (Amendment 252 s 7(a)) unless extended by order for 2027 (s 7(b)), and no source says whether an order was made | 187.3811 (sums the inputs) | genuine ambiguity, **not recorded in IL-05**. NOTES does not mention the s 7(b) extension power, and its own 2027 scenario assumes the permanent table. Low severity for IL-05, because the column D amounts are inputs and the choice falls on IL-04 or the caller |
 
 ## Expectations that could not be expressed through the interface: 4
 

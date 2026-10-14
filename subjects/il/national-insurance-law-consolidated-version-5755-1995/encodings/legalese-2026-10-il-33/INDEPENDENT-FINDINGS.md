@@ -19,9 +19,9 @@ Every other module is unchanged: 0 errors, and its own satisfied counts as befor
 
 | id | decided answer | encoding | class |
 | --- | --- | --- | --- |
-| ST-37 (test line 388) | a 17-year-old resident who came under the Law of Return is insured for long-term care (s 223 "מבוטח" (4)), without an absorption basket | not insured unless the basket was given (`nii-statuses-chapters.l4` s 223: `(immigrated OR visa) AND basket`) | AMBIGUITY, with an unregistered fork |
-| ST-38 (line 389) | an immigrant who first became resident at 70 (so excluded from Chapter 11 by Part C) is insured for long-term care through (4) | same, not insured without the basket | AMBIGUITY, same cause |
-| ML-18 (line 837) | a creditor exempt under ML s 9A(c)(1) is not barred by the exit rules, so the month is paid | refuses by name: s 9A(c)(2) pays such a creditor by rules the Minister of Justice fixes and they are not deposited | TESTER-WRONG |
+| ST-37 (test line 387) | a 17-year-old resident who came under the Law of Return is insured for long-term care (s 223 "מבוטח" (4)), without an absorption basket | not insured unless the basket was given (`nii-statuses-chapters.l4` s 223: `(immigrated OR visa) AND basket`) | AMBIGUITY, with an unregistered fork |
+| ST-38 (line 388) | an immigrant who first became resident at 70 (so excluded from Chapter 11 by Part C) is insured for long-term care through (4) | same, not insured without the basket | AMBIGUITY, same cause |
+| ML-18 (line 836) | a creditor exempt under ML s 9A(c)(1) is not barred by the exit rules, so the month is paid | refuses by name: s 9A(c)(2) pays such a creditor by rules the Minister of Justice fixes and they are not deposited | TESTER-WRONG |
 | ST-78 (first draft, corrected before the final run) | 5 months of service, not insured | the first draft passed the flag "six months and married within 30 days" as TRUE with 5 months, a contradiction; the encoding answered insured from the flag | TESTER-WRONG on the input; see the note on the flag below |
 
 ### ST-37 and ST-38: where the absorption-basket clause attaches (AMBIGUITY)

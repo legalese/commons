@@ -12,7 +12,7 @@ The only disagreements are SCOPE (months before 2026) and AMBIGUITY (the encodin
 
 ## Disagreements
 
-- SCOPE, C66 to C71 and C73 (assertions at lines 248, 250, 252, 254, 256, 258, 260): the tester asserted values for January, February and December 2025, the 7,522 edge, a capped 2025 wage and a 2024 wage at 3.1%; the encoding refuses every month before January 2026 ("this row answers contribution months from January 2026").
+- SCOPE, C66 to C71 and C73 (assertions at lines 247, 249, 251, 253, 255, 257, 259): the tester asserted values for January, February and December 2025, the 7,522 edge, a capped 2025 wage and a 2024 wage at 3.1%; the encoding refuses every month before January 2026 ("this row answers contribution months from January 2026").
   The Hebrew supports the tester's 2025 arithmetic: 3.23% on the first 7,522 (note to NIL s 334(a)), 5.16% in January 2025 and 5.17% after (notes to s 14(b), (c)), cap 5 x 10,139 = 50,695 (note to NIL s 1 "basic amount" para (3)).
   Example: 2025-06, wage 10,000: 242.9606 + 2,478 x 5.17% = 371.0732.
   The encoder's reason is that the pre-2026 rate history is only in editorial notes; the tester accepts that as a scope choice but notes that the 2025 figures are deposited in the NIL text.

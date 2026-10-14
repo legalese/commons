@@ -83,10 +83,10 @@ The inventory records that the capstone answers 2026 only.
 
 ### Assertions added (none changed)
 
-In `nii-il04-tests.l4`, a new section at the end, `Version 0.6.1: SHRUG, fork F5 an input convention` (lines 733-741), each value worked from s 1 "self-employed person" (source lines 206-211) before it was run:
+In `nii-il04-tests.l4`, a new section at the end, `Version 0.6.1: SHRUG, fork F5 an input convention` (lines 732-740), each value worked from s 1 "self-employed person" (source lines 206-211) before it was run:
 
-- Line 740: an occupation not as an employee, 10 hours a week, 6,800 a month, with the average wage at `the average wage from 1 January 2026 under section 1, for contributions, as published by the National Insurance Institute` (13,566) and the Schedule A sum at 15% of it: a self-employed person, **TRUE**. Limb (1) fails (10 < 20 hours); limb (2) holds (50% of 13,566 is 6,783, and 6,800 is not less); limb (3) fails (10 < 12 hours).
-- Line 741: the same with `the average wage from 1 January 2026 as calculated under section 2, for contributions, as published by the National Insurance Institute` (13,769): **not** a self-employed person (`#ASSERT NOT`). Limb (2) fails (50% of 13,769 is 6,884.50, and 6,800 is less); limbs (1) and (3) fail on hours as above.
+- Line 739: an occupation not as an employee, 10 hours a week, 6,800 a month, with the average wage at `the average wage from 1 January 2026 under section 1, for contributions, as published by the National Insurance Institute` (13,566) and the Schedule A sum at 15% of it: a self-employed person, **TRUE**. Limb (1) fails (10 < 20 hours); limb (2) holds (50% of 13,566 is 6,783, and 6,800 is not less); limb (3) fails (10 < 12 hours).
+- Line 740: the same with `the average wage from 1 January 2026 as calculated under section 2, for contributions, as published by the National Insurance Institute` (13,769): **not** a self-employed person (`#ASSERT NOT`). Limb (2) fails (50% of 13,769 is 6,884.50, and 6,800 is less); limbs (1) and (3) fail on hours as above.
 
 ### What `check.sh` prints at 0.6.1
 
@@ -108,7 +108,7 @@ TOTAL (10 modules)                            20       904      20        0
 Exit 0. Run 2026-10-08T22:24:17Z to 22:24:28Z, `L4=~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset; no module changed during the run.
 The binary resolves to the cabal store, `jl4-0.1-6df1397b/bin/l4`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after.
 It is a newer build than 0.6.0's (`jl4-0.1-d4290e25`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`); before any edit it printed 0.6.0's counts (235; 641/5; 26/15), and the three test modules print the same result, assertion by assertion, on both binaries (compared with the edit in place).
-The tester's five failures are still lines 756, 924, 929, 930 and 931 (04-TF3); `nii-il04-tests.l4` is 237 of 237 (235 and the 2 added).
+The tester's five failures are still lines 755, 923, 928, 929 and 930 (04-TF3); `nii-il04-tests.l4` is 237 of 237 (235 and the 2 added).
 `check.sh` needed no change: no module's declared count moved.
 `tools/srcquote.py` leaves `nii-il04-tests.l4` byte-identical, and `tools/hebcheck.py` passes on it.
 
@@ -159,31 +159,31 @@ Two expected values change, by the ruling, not by a run; both are on their 0.5.0
 
 | line | assertion | 0.5.0 | 0.6.0 | why |
 | ---: | --- | --- | --- | --- |
-| 621 | the Institute publishes the rate for her set | NOT (FALSE) | TRUE | DESSERT |
-| 651 | combined column D, upper, 2026, her branches, default | REFUSED, the fewer-branches words | 5.07 | 7.00 − 0.07 − 1.86 |
+| 620 | the Institute publishes the rate for her set | NOT (FALSE) | TRUE | DESSERT |
+| 650 | combined column D, upper, 2026, her branches, default | REFUSED, the fewer-branches words | 5.07 | 7.00 − 0.07 − 1.86 |
 
-The two comment lines above 651, and one above 621 (line 602), were reworded in place to say so.
+The two comment lines above 650, and one above 620 (line 601), were reworded in place to say so.
 
 Added, section "Version 0.6.0" (16, all satisfied on the first run; each value worked by hand before it):
 
 | line | case | expected | why |
 | ---: | --- | --- | --- |
-| 699 | combined column D, lower, default | the page's 3.95 − 3.23 (0.72) | 1.04 − 0.03 − 0.29 |
-| 700 | combined column D, upper, default | the page's 10.24 − 5.17 (5.07) | 7.00 − 0.07 − 1.86 |
-| 701 | the same, reading (i) | REFUSED, the fewer-branches words | |
-| 706 | deduction, 7,800 (near the threshold), default | 60.3795 | 7,703 × 0.72% + 97 × 5.07% = 55.4616 + 4.9179 |
-| 707 | the same, reading (ii) | 60.3795 | |
-| 708 | the same, reading (i) | REFUSED, the fewer-branches words | |
-| 709 | the same, at the items | 58.1194 | 55.4616 + 97 × 2.74% (2.6578) |
-| 711 | deduction, 7,703, reading (i) | 55.4616 | nothing above the threshold |
-| 714 | deduction, 20,000 (well above), default | 678.9195 | 55.4616 + 12,297 × 5.07% (623.4579) |
-| 715 | the same, reading (ii) | 678.9195 | |
-| 716 | the same, reading (i) | REFUSED, the fewer-branches words | |
-| 717 | the same, at the items | 392.3994 | 55.4616 + 12,297 × 2.74% (336.9378) |
-| 720 | deduction, 2027, threshold 8,000, 10,000, default | 123.8 | 8,000 × (0.40 − 0.01 − 0.11)% + 2,000 × 5.07% = 22.4 + 101.4 |
-| 729 | column C, an employee, above, her branches, default | REFUSED, the fewer-branches words | column C keeps reading (i) |
-| 730 | the same, at the items | 12.08 | 14.49 − 0.13 − 2.28 |
-| 731 | column C, an employee, not above, her branches | 4.89 | the items reach the total: 5.55 − 0.04 − 0.62 |
+| 698 | combined column D, lower, default | the page's 3.95 − 3.23 (0.72) | 1.04 − 0.03 − 0.29 |
+| 699 | combined column D, upper, default | the page's 10.24 − 5.17 (5.07) | 7.00 − 0.07 − 1.86 |
+| 700 | the same, reading (i) | REFUSED, the fewer-branches words | |
+| 705 | deduction, 7,800 (near the threshold), default | 60.3795 | 7,703 × 0.72% + 97 × 5.07% = 55.4616 + 4.9179 |
+| 706 | the same, reading (ii) | 60.3795 | |
+| 707 | the same, reading (i) | REFUSED, the fewer-branches words | |
+| 708 | the same, at the items | 58.1194 | 55.4616 + 97 × 2.74% (2.6578) |
+| 710 | deduction, 7,703, reading (i) | 55.4616 | nothing above the threshold |
+| 713 | deduction, 20,000 (well above), default | 678.9195 | 55.4616 + 12,297 × 5.07% (623.4579) |
+| 714 | the same, reading (ii) | 678.9195 | |
+| 715 | the same, reading (i) | REFUSED, the fewer-branches words | |
+| 716 | the same, at the items | 392.3994 | 55.4616 + 12,297 × 2.74% (336.9378) |
+| 719 | deduction, 2027, threshold 8,000, 10,000, default | 123.8 | 8,000 × (0.40 − 0.01 − 0.11)% + 2,000 × 5.07% = 22.4 + 101.4 |
+| 728 | column C, an employee, above, her branches, default | REFUSED, the fewer-branches words | column C keeps reading (i) |
+| 729 | the same, at the items | 12.08 | 14.49 − 0.13 − 2.28 |
+| 730 | column C, an employee, not above, her branches | 4.89 | the items reach the total: 5.55 − 0.04 − 0.62 |
 
 `tests-independent.l4` (not edited) and `nii-il04-tests-expected-red.l4` print what they printed at 0.5.0, assertion by assertion (compared line by line on the same binary): 641 satisfied, 5 failed; 26 satisfied, 15 failed. No tester line passes or changes.
 
@@ -280,39 +280,39 @@ A woman between her retirement age and 67 without an old-age pension (not insure
 
 ### Assertions added (none changed)
 
-All 38 in `nii-il04-tests.l4`, section "Version 0.5.0: a printed total for fewer branches than it is for (fork F21)", lines 616-682; every value was worked by hand from the cells before the run, and all were satisfied on the first run.
+All 38 in `nii-il04-tests.l4`, section "Version 0.5.0: a printed total for fewer branches than it is for (fork F21)", lines 615-681; every value was worked by hand from the cells before the run, and all were satisfied on the first run.
 The four sets of column D branches are named there; the Institute's printed rates are test expectations in that section, with their provenance, not figures any rule reads.
 
 | line(s) | case | expected | why |
 | --- | --- | --- | --- |
-| 616 | the switch | `… , for a set the Institute publishes` | TAKEAWAY |
-| 617 | the column D branches a controlling shareholder does not pay | `unemployment` | s 335(e) |
-| 618-621 | the Institute publishes the rate: controlling shareholder; 67-70; non-resident; woman between her retirement age and 67 | TRUE; TRUE; FALSE; FALSE | the two ruled sets |
-| 625, 626 | combined column D, upper, 2026, controlling shareholder, default | 6.79; the page's 11.96 − 5.17 | 7.00 − 0.21 |
-| 627 | the same, lower | the page's 4.25 − 3.23 (1.02) | 1.04 − 0.02 |
-| 628 | the same, upper, at the items | 4.46 | 4.67 − 0.21 |
-| 629 | upper, reading (ii) | 6.79 | |
-| 630 | upper, reading (i) | REFUSED, the fewer-branches words | |
-| 632 | lower, reading (i) | 1.02 | the items reach the total below the threshold |
-| 637-639 | aged 67 to 70, upper default; = the page's 10.03 − 5.17; lower = the page's 3.93 − 3.23 | 4.86; 4.86; 0.70 | 7.00 − 0.07 − 0.21 − 1.86; 1.04 − 0.03 − 0.02 − 0.29 |
-| 640 | the same, at the items | 2.53 | 0.87 + 0.14 + 1.52 |
-| 641 | the same, reading (i) | REFUSED, the fewer-branches words | |
-| 645 | non-resident, upper, default | REFUSED, the fewer-branches words | not a published set |
-| 646 | the same, reading (ii) | 3.2 | 7.00 − 3.80 |
-| 647 | the same, at the items | 0.87 | |
-| 651 | woman between her retirement age and 67, default | REFUSED, the fewer-branches words | not a ruled set |
-| 652 | the same, reading (ii) | 5.07 | 7.00 − 0.07 − 1.86; the page's 10.24 − 5.17 |
-| 653 | the same, at the items | 2.74 | 0.87 + 0.21 + 0.14 + 1.52 |
-| 658 | deduction, 2026, controlling shareholder, 10,000, default | 234.5369 | 7,703 × 1.02% + 2,297 × 6.79% = 78.5706 + 155.9663 |
-| 659 | the same, at the items | 181.0168 | 78.5706 + 2,297 × 4.46% (102.4462) |
-| 660 | the same, reading (ii) | 234.5369 | |
-| 661 | the same, reading (i) | REFUSED, the fewer-branches words | |
-| 663 | controlling shareholder, 30,000 (row IL-07's tester, H38) | 1,592.5369 | 78.5706 + 22,297 × 6.79% (1,513.9663) |
-| 665 | controlling shareholder, 7,000, reading (i) | 71.4 | below the threshold, every reading |
-| 669, 670 | aged 67 to 70, 12,000 (row IL-07's tester, H42): default; at the items | 262.7552; 162.6351 | 7,703 × 0.70% + 4,297 × 4.86% = 53.921 + 208.8342; 53.921 + 4,297 × 2.53% (108.7141) |
-| 673-675 | non-resident, 10,000: default; reading (ii); at the items | REFUSED; 81.207; 27.6869 | 7.703 + 2,297 × 3.20% (73.504); 7.703 + 2,297 × 0.87% (19.9839) |
-| 678, 679 | every deduction branch, 10,000: reading (i); the default | 240.9012; 240.9012 | the fork is not reached |
-| 682 | controlling shareholder, 2027, threshold 8,000, 10,000 | 167 | 8,000 × (0.40 − 0.01)% + 2,000 × 6.79% |
+| 615 | the switch | `… , for a set the Institute publishes` | TAKEAWAY |
+| 616 | the column D branches a controlling shareholder does not pay | `unemployment` | s 335(e) |
+| 617-620 | the Institute publishes the rate: controlling shareholder; 67-70; non-resident; woman between her retirement age and 67 | TRUE; TRUE; FALSE; FALSE | the two ruled sets |
+| 624, 625 | combined column D, upper, 2026, controlling shareholder, default | 6.79; the page's 11.96 − 5.17 | 7.00 − 0.21 |
+| 626 | the same, lower | the page's 4.25 − 3.23 (1.02) | 1.04 − 0.02 |
+| 627 | the same, upper, at the items | 4.46 | 4.67 − 0.21 |
+| 628 | upper, reading (ii) | 6.79 | |
+| 629 | upper, reading (i) | REFUSED, the fewer-branches words | |
+| 631 | lower, reading (i) | 1.02 | the items reach the total below the threshold |
+| 636-638 | aged 67 to 70, upper default; = the page's 10.03 − 5.17; lower = the page's 3.93 − 3.23 | 4.86; 4.86; 0.70 | 7.00 − 0.07 − 0.21 − 1.86; 1.04 − 0.03 − 0.02 − 0.29 |
+| 639 | the same, at the items | 2.53 | 0.87 + 0.14 + 1.52 |
+| 640 | the same, reading (i) | REFUSED, the fewer-branches words | |
+| 644 | non-resident, upper, default | REFUSED, the fewer-branches words | not a published set |
+| 645 | the same, reading (ii) | 3.2 | 7.00 − 3.80 |
+| 646 | the same, at the items | 0.87 | |
+| 650 | woman between her retirement age and 67, default | REFUSED, the fewer-branches words | not a ruled set |
+| 651 | the same, reading (ii) | 5.07 | 7.00 − 0.07 − 1.86; the page's 10.24 − 5.17 |
+| 652 | the same, at the items | 2.74 | 0.87 + 0.21 + 0.14 + 1.52 |
+| 657 | deduction, 2026, controlling shareholder, 10,000, default | 234.5369 | 7,703 × 1.02% + 2,297 × 6.79% = 78.5706 + 155.9663 |
+| 658 | the same, at the items | 181.0168 | 78.5706 + 2,297 × 4.46% (102.4462) |
+| 659 | the same, reading (ii) | 234.5369 | |
+| 660 | the same, reading (i) | REFUSED, the fewer-branches words | |
+| 662 | controlling shareholder, 30,000 (row IL-07's tester, H38) | 1,592.5369 | 78.5706 + 22,297 × 6.79% (1,513.9663) |
+| 664 | controlling shareholder, 7,000, reading (i) | 71.4 | below the threshold, every reading |
+| 668, 669 | aged 67 to 70, 12,000 (row IL-07's tester, H42): default; at the items | 262.7552; 162.6351 | 7,703 × 0.70% + 4,297 × 4.86% = 53.921 + 208.8342; 53.921 + 4,297 × 2.53% (108.7141) |
+| 672-674 | non-resident, 10,000: default; reading (ii); at the items | REFUSED; 81.207; 27.6869 | 7.703 + 2,297 × 3.20% (73.504); 7.703 + 2,297 × 0.87% (19.9839) |
+| 677, 678 | every deduction branch, 10,000: reading (i); the default | 240.9012; 240.9012 | the fork is not reached |
+| 681 | controlling shareholder, 2027, threshold 8,000, 10,000 | 167 | 8,000 × (0.40 − 0.01)% + 2,000 × 6.79% |
 
 `tests-independent.l4` (not edited) and `nii-il04-tests-expected-red.l4` print what they printed at 0.4.1, assertion by assertion (compared line by line on the same binary): 641 satisfied, 5 failed; 26 satisfied, 15 failed.
 The red module's two controlling-shareholder composites still compare the items with the Institute (14.12 against 14.17; 4.46 against 6.79) and still fail, as declared; at the default the deduction's 6.79 is now reached, above.
@@ -366,7 +366,7 @@ Four rules in `nii-schedule-j.l4` take `the average wage`: `where column D's upp
 Since the F3 repair of 2026-10-07 none of them reads it for a version selected for a contribution month, but the signatures kept it, and only the comment above them said so.
 Each now says so on the argument, in a `@desc` on the same line as its `GIVEN` entry (lines 382, 407, 591 and 614): "the average wage (s 1); not read from 2026: each version selected for 2026 on begins column D's upper part at the threshold (fork F3, repaired), so any figure gives the same answer; only the 2025 text kept as data reads it".
 Because the `@desc` shares the line, no line number in the module moved.
-Checked against the code before writing it: the four versions the year rule can select (lines 62, 71, 80, 89) set `column D upper part begins above 60% of the average wage` to FALSE (lines 67, 76, 85, 94); only `Schedule J, the temporary version as enacted for 2025 (data; 2025 is not answered)` sets it TRUE (line 125); and `where column D's upper part begins in` reads the average wage only when the flag is TRUE (line 385).
+Checked against the code before writing it: the four versions the year rule can select (lines 61, 70, 79, 88) set `column D upper part begins above 60% of the average wage` to FALSE (lines 67, 76, 85, 94); only `Schedule J, the temporary version as enacted for 2025 (data; 2025 is not answered)` sets it TRUE (line 125); and `where column D's upper part begins in` reads the average wage only when the flag is TRUE (line 385).
 A probe in a scratch copy, outside the row, gave 7,703 for 2026 with the average wage at 13,566 and at 99,999.
 The inventory's other option, a 2026-on entry point without the argument, was not taken: it would add a name for the capstone to follow, and the job is wording only.
 Fork F5 (which average wage) is unchanged; its entries in section 4 and in `encoding.json` are marked (0.4.1).
@@ -374,13 +374,13 @@ Fork F5 (which average wage) is unchanged; its entries in section 4 and in `enco
 ### 04-TF3: the tester's five F3 expectations
 
 Recorded at "Repair 2026-10-07" below (the `tests-independent.l4` bullet), `check.sh` line 34 and `encoding.json` `expected_red`.
-Five assertions of the independent tester encode the pre-repair F3: line 756 (the 2026 version's flag asserted TRUE), line 924 (the upper part begins at 8,139.6) and lines 929-931 (refusals at 7,703.01, 8,000 and 10,000).
+Five assertions of the independent tester encode the pre-repair F3: line 755 (the 2026 version's flag asserted TRUE), line 923 (the upper part begins at 8,139.6) and lines 928-930 (refusals at 7,703.01, 8,000 and 10,000).
 The enacted 2025 Budget-year Law s 19(6) replaces "60% of the average wage" with "the reduced collection threshold as defined in s 334(a)" everywhere in Schedule J, and s 21 commences that chapter on 1 January 2026; both were re-read in the deposited PDF (`../../registers/source-bundle/amending-laws/25_lsr_6133485.pdf`, Sefer HaChukim 3384, pp. 395-396) before the note was written.
 As the lead authorised, no expected value and no input of theirs changed.
 A second dated note, "NOTE BY THE LEAD, 2026-10-08", follows the note of 2026-10-07 at the end of the file (lines 948-969), and nothing was inserted above it, so every cited line number still holds.
 It says what the enacted Laws say instead; gives the 2026 answers at both readings of fork F4 (below); records that the capstone's independent tester, fid-il-07, deciding from the sources before opening any encoding, reached the 7,703 boundary separately (IL-07 `DECIDED-ANSWERS.md` line 69, `INDEPENDENT-FINDINGS.md` line 41); and says the five are kept failing as the record of what the consolidation says.
-It also notes that T7 (line 787), the sixth failure the 2026-10-07 note names, passes from 0.4.0.
-`check.sh` still expects 5 failures from the file; its comment now names each line (756, 924, 929, 930, 931), the inventory id 04-TF3 and the class TESTER-WRONG.
+It also notes that T7 (line 786), the sixth failure the 2026-10-07 note names, passes from 0.4.0.
+`check.sh` still expects 5 failures from the file; its comment now names each line (755, 923, 928, 929, 930), the inventory id 04-TF3 and the class TESTER-WRONG.
 
 ### Expected values changed or added
 
@@ -415,7 +415,7 @@ TOTAL (10 modules)                            20       848      20        0
 
 Exit 0. Run 2026-10-08T06:50:28Z to 06:51:27Z, `L4=~/.local/bin/l4`, `JL4_LIBRARY_PATH` unset.
 The binary resolves to the cabal store, `jl4-0.1-d4290e25/bin/l4`, sha256 `f4f2bd2558f02f828f0deced5f74313a33670f08cc3275ff95b83f2cde71e448`, the same before and after the run (0.4.0 ran on `4476e758…`).
-The 0.4.0 baseline was re-run on this binary before any edit and printed the same table, line for line, so the counts did not move; the failing lines of `tests-independent.l4` were 756, 924, 929, 930 and 931 both times.
+The 0.4.0 baseline was re-run on this binary before any edit and printed the same table, line for line, so the counts did not move; the failing lines of `tests-independent.l4` were 755, 923, 928, 929 and 930 both times.
 `tools/srcquote.py` changes nothing in copies of the two changed `.l4` modules, and `tools/hebcheck.py` passes on `nii-schedule-j.l4`, `tests-independent.l4`, `check.sh` and `encoding.json`.
 On this file it flags the same five runs as at 0.4.0, all in the comparison section, which quote the enacted Laws ("Repair 2026-10-07" says why); none is in text added at 0.4.1.
 
@@ -475,7 +475,7 @@ Added (21, its "Section 334(a)" section, each value worked by hand from s 334(a)
 - no change under each reading and by default: index 100 to 100 in 2027 (four), average wage 10,000 to 10,000 in 2029 by default (one); 8,000 stays 8,000.
 
 `nii-il04-tests.l4`: **181 satisfied**, 0 failed, 0 refused (0.3.1: 160).
-`tests-independent.l4` (not edited): **641 satisfied, 5 failed, 0 refused** (0.3.1: 640, 6, 0). The one change, compared line by line: T7, line 787, failed at 0.3.1 and is satisfied at 0.4.0. The five that stand are the pre-repair F3 expectations (lines 756, 924, 929-931), unchanged. `check.sh` now expects 5 failures from it.
+`tests-independent.l4` (not edited): **641 satisfied, 5 failed, 0 refused** (0.3.1: 640, 6, 0). The one change, compared line by line: T7, line 786, failed at 0.3.1 and is satisfied at 0.4.0. The five that stand are the pre-repair F3 expectations (lines 755, 923, 928-930), unchanged. `check.sh` now expects 5 failures from it.
 `nii-il04-tests-expected-red.l4`: 26 satisfied, 15 failed, unchanged.
 
 ### What `check.sh` prints at 0.4.0
@@ -512,9 +512,9 @@ No rule module changed, so the capstone's vendored copies are unaffected.
 Why re-point rather than change the values: the tester decided the items' reading on purpose and before the ruling ("the rows are the law", its section 3).
 Its figures are independent evidence for the reading the ruling preserves, so they now test that branch of the fork instead of failing against the default.
 
-- **The 13 that failed** at 0.3.0 now pass: lines 505, 507-510, 801-803, 846-848, 856, 933.
-- **The 9 that were refused** at 0.3.0 now pass: lines 805-810, 854, 858, 895.
-- **The 6 that stand** are unchanged findings: T7 (line 787, fork F6) and the five pre-repair F3 expectations (lines 756, 924, 929-931).
+- **The 13 that failed** at 0.3.0 now pass: lines 504, 506-509, 800-802, 845-847, 855, 932.
+- **The 9 that were refused** at 0.3.0 now pass: lines 804-809, 853, 857, 894.
+- **The 6 that stand** are unchanged findings: T7 (line 786, fork F6) and the five pre-repair F3 expectations (lines 755, 923, 928-930).
 
 `tests-independent.l4`: **640 satisfied, 6 failed, 0 refused** (0.3.0: 618, 19, 9; 0.2.0: 640, 6, 0).
 `check.sh` now expects 6 failures and no refusals from it.
@@ -586,9 +586,9 @@ TOTAL (10 modules)                            34       804      34        9
 
 `tests-independent.l4` (fid-il-04's, not edited), 646 assertions: **618 satisfied, 19 failed, 9 refused** (0.2.0: 640, 6, 0). Compared assertion by assertion with the run before the change:
 
-- **6 failures stand**, unchanged: T7 (line 787, fork F6) and the five pre-repair F3 expectations (lines 756, 924, 929-931).
-- **13 that passed now fail**, each an items' figure where the default now reads the printed total: the composites for an employee above the threshold in 2026, 2027 and 2028 and not above it in 2027 and 2028 (lines 505, 507-510); s 337(a)(1) for all nine branches in 2026 at 7,704, 10,000 and 60,000 (lines 801-803), in 2027 at and around the scenario threshold 7,857.06 and at 10,000 (846-848), and in 2028 at 10,000 (856); column D in 2027 at 10,000 (933).
-- **9 that passed are now refused**, each fewer branches than the totals row covers, above the threshold: one branch in 2026 at 10,000 (lines 805-810: senior citizens and survivors, work injury, unemployment, maternity, children, disability), work injury in 2027 and 2028 (854, 858), and the seven branches of a controlling shareholder (895).
+- **6 failures stand**, unchanged: T7 (line 786, fork F6) and the five pre-repair F3 expectations (lines 755, 923, 928-930).
+- **13 that passed now fail**, each an items' figure where the default now reads the printed total: the composites for an employee above the threshold in 2026, 2027 and 2028 and not above it in 2027 and 2028 (lines 504, 506-509); s 337(a)(1) for all nine branches in 2026 at 7,704, 10,000 and 60,000 (lines 800-802), in 2027 at and around the scenario threshold 7,857.06 and at 10,000 (845-847), and in 2028 at 10,000 (855); column D in 2027 at 10,000 (932).
+- **9 that passed are now refused**, each fewer branches than the totals row covers, above the threshold: one branch in 2026 at 10,000 (lines 804-809: senior citizens and survivors, work injury, unemployment, maternity, children, disability), work injury in 2027 and 2028 (853, 857), and the seven branches of a controlling shareholder (894).
 
 None of these is a defect of the tests: each was decided against fork F4's items reading, which version 0.2.0 took and 0.3.0, by ruling, does not. They are left for the tester to reclassify. **(0.3.1)** Superseded: the lead re-pointed all 22 to the items' reading by name; see "Version 0.3.1".
 
@@ -658,7 +658,7 @@ TOTAL (10 modules)                            21       809      21        0
 
 - `nii-il04-tests.l4`: 143 of 143 (120 before, 23 added).
 - `nii-il04-tests-expected-red.l4`: 15 of 41 fail, the 14 of section 0 and the 2025 text (line 137).
-- `tests-independent.l4` (the independent tester's; not edited): 646 assertions, 640 satisfied, 6 failed. One is T7 (line 787, fork F6), failing before the repair. **Five encode the pre-repair F3** and now fail: line 756 (the 2026 version's flag asserted TRUE), line 924 (upper part begins at 8,139.6), and lines 929-931 (refusals at 7,703.01, 8,000 and 10,000, for which the enacted Laws give, on the items, 80.111667, 93.9811 and 187.3811; this row's tests now assert 187.3811). They stay failing and are left for the tester to reclassify. **(0.4.1)** Classed TESTER-WRONG (inventory 04-TF3) and annotated by the lead in a dated note at the end of the file, values unchanged and still failing ("Version 0.4.1" above). `check.sh`'s `expected_failed` table now lists `tests-independent.l4` with 6 (the encoder's change to `check.sh`, made so that the run's exit status reflects the expected count; the tester's file is unchanged).
+- `tests-independent.l4` (the independent tester's; not edited): 646 assertions, 640 satisfied, 6 failed. One is T7 (line 786, fork F6), failing before the repair. **Five encode the pre-repair F3** and now fail: line 755 (the 2026 version's flag asserted TRUE), line 923 (upper part begins at 8,139.6), and lines 928-930 (refusals at 7,703.01, 8,000 and 10,000, for which the enacted Laws give, on the items, 80.111667, 93.9811 and 187.3811; this row's tests now assert 187.3811). They stay failing and are left for the tester to reclassify. **(0.4.1)** Classed TESTER-WRONG (inventory 04-TF3) and annotated by the lead in a dated note at the end of the file, values unchanged and still failing ("Version 0.4.1" above). `check.sh`'s `expected_failed` table now lists `tests-independent.l4` with 6 (the encoder's change to `check.sh`, made so that the run's exit status reflects the expected count; the tester's file is unchanged).
 
 **Mechanical checks after the repair.** `tools/srcquote.py` over the nine `nii-*.l4` modules changes nothing; `tools/schedule_j.py` still reproduces `nii-schedule-j-tables.l4` byte for byte (the 2025 row is hand-written in `nii-schedule-j.l4`, not generated, because it is not in the consolidation); `tools/hebcheck.py` passes on every `.l4` module (`tests-independent.l4` included), `BRIEF.md`, `SOURCE-LICENSE.md`, `encoding.json`, and this file up to the comparison section. It flags five Hebrew runs inside the comparison section (lines 493-536 at the time of writing), which quote the enacted Laws, not the consolidation the tool checks against; that section is the comparison author's and is not edited here. (Section 0's sentence that the check passes on "this file" was true when written, before the comparison section was appended.)
 

@@ -31,10 +31,10 @@ expected_failed() {
   case "$1" in
     # tests-red.l4) echo 3 ;;
     # The independent tester's module, tests-independent.l4, is expected to fail nothing.
-    # Version 0.2.0 (CHK-02) listed it with 1: line 385, E-4, inventory 02-E4, fork F19, a
+    # Version 0.2.0 (CHK-02) listed it with 1: line 384, E-4, inventory 02-E4, fork F19, a
     # birth-year point elected in 2023 carried into 2024, which the encoding answered 5 1/2.
     # Version 0.3.0 (BACKLOG IL-38): Meng ruled F19 on 2026-10-08 (SHRUG), default decline, so
-    # E-4's expected refusal holds and the entry is gone. Its V-4 (line 204) passes from 0.2.0.
+    # E-4's expected refusal holds and the entry is gone. Its V-4 (line 203) passes from 0.2.0.
     *) echo 0 ;;
   esac
 }
@@ -45,9 +45,9 @@ expected_failed() {
 # Version 0.4.0 (BACKLOG IL-47, Meng's SHRUG of 2026-10-08): eleven of the tester's plain
 # assertions rested on a reading the encoding took silently before, now a named alternative.
 # The lead authorised re-pointing those whose reading the tester had decided: five were
-# (lines 256, 300, 409, 416, 420; the file's NOTE BY THE LEAD of 2026-10-08) and now pass.
-# Six stay refused, class AMBIGUITY, fork F1, inventory 02-F1: lines 241, 243, 244, 248,
-# 250 (D-2, D-3, D-5, D-6) and 259 (D-9). Their decided answers settle whether the (d)(1)
+# (lines 255, 299, 408, 415, 419; the file's NOTE BY THE LEAD of 2026-10-08) and now pass.
+# Six stay refused, class AMBIGUITY, fork F1, inventory 02-F1: lines 240, 242, 243, 247,
+# 249 (D-2, D-3, D-5, D-6) and 258 (D-9). Their decided answers settle whether the (d)(1)
 # conditions fail, not which of F1's readings holds, so no decided reading can be named.
 expected_refused() {
   case "$1" in

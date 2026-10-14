@@ -20,17 +20,17 @@ Of the 17 refusals, 1 is AMBIGUITY (the encoding is right to decline), 16 are SC
 
 | line | id | class | what |
 | ---: | --- | --- | --- |
-| 702 | T49 | AMBIGUITY | a right bought and sold in the same tax year: 1 year spreading decided, 0 returned |
-| 781 | DV12 | AMBIGUITY | s 125B(3) with a holding 18 months earlier: the decided refusal, a value returned |
-| 1305 | BT09 | AMBIGUITY | RE s 47 day counts at the Starting Day |
-| 1307 | BT10 | TESTER-WRONG, then AMBIGUITY | middle part for a material shareholder, then the Starting Day |
-| 1309 | BT11 | AMBIGUITY | the Starting Day count |
-| 1311 | BT12 | AMBIGUITY | the Starting Day count (purchase on the Starting Day) |
-| 1325 | BT19 | AMBIGUITY | the Transition Day count in the exempt part of (b2) |
-| 1327 | BT20 | AMBIGUITY | the Transition Day count |
-| 1331 | BT22 | AMBIGUITY | the Transition Day count |
-| 1333 | BT23 | AMBIGUITY | the Transition Day count |
-| 1342 | BT27 | AMBIGUITY | s 48A(b4) with a 2005 purchase |
+| 701 | T49 | AMBIGUITY | a right bought and sold in the same tax year: 1 year spreading decided, 0 returned |
+| 780 | DV12 | AMBIGUITY | s 125B(3) with a holding 18 months earlier: the decided refusal, a value returned |
+| 1304 | BT09 | AMBIGUITY | RE s 47 day counts at the Starting Day |
+| 1306 | BT10 | TESTER-WRONG, then AMBIGUITY | middle part for a material shareholder, then the Starting Day |
+| 1308 | BT11 | AMBIGUITY | the Starting Day count |
+| 1310 | BT12 | AMBIGUITY | the Starting Day count (purchase on the Starting Day) |
+| 1324 | BT19 | AMBIGUITY | the Transition Day count in the exempt part of (b2) |
+| 1326 | BT20 | AMBIGUITY | the Transition Day count |
+| 1330 | BT22 | AMBIGUITY | the Transition Day count |
+| 1332 | BT23 | AMBIGUITY | the Transition Day count |
+| 1341 | BT27 | AMBIGUITY | s 48A(b4) with a 2005 purchase |
 
 ### T49 (AMBIGUITY)
 
@@ -99,12 +99,12 @@ The encoding gives a reason for each; the class is mine.
 
 | lines | ids | class | what |
 | --- | --- | --- | --- |
-| 543, 545, 553 | CG20, CG22 | SCOPE | the s 88 parts of the real gain for a sale before the change date or the fixed date; the definitions in s 88 have no date limit, and the encoding's guards are wider than its assumption A6 needs; impact is low because the rate sections decline those dates anyway |
-| 680, 1319, 1321 | T30, BT16, BT17 | SCOPE | a sale before 1 January 2012, declined by name (assumption A6); expected by the lead |
-| 799 | DV21 | AMBIGUITY | a dividend on 29 February 2024 and a holding on 28 February 2023: whether the 12 months begin on 29 February 2023 (which does not exist) or 1 March 2023; the encoding is right to decline, and my value 25% assumed the later reading |
-| 1443, 1455, 1457, 1459, 1463 | PT37, PT43, PT44, PT45, PT47 | SCOPE | purchase tax for a single dwelling between 16 January 2022 and 15 January 2025: the table in the source prints the 2022, 2023 and 2024 columns, so these were answerable from the text; the encoding encodes the 2025-2027 amounts only (its assumption A15) |
-| 1465, 1467, 1471 | PT48, PT49, PT51 | SCOPE | the 2013 nominal column of the same table and the (c1b)(2) scale, printed in the source, not encoded |
-| 1475, 1477 | PT53, PT54 | SCOPE | the windows of (c1b)(1) and (c1a)(1) before July 2013; the printed amounts are indexed and the encoding leaves them out |
+| 542, 544, 552 | CG20, CG22 | SCOPE | the s 88 parts of the real gain for a sale before the change date or the fixed date; the definitions in s 88 have no date limit, and the encoding's guards are wider than its assumption A6 needs; impact is low because the rate sections decline those dates anyway |
+| 679, 1318, 1320 | T30, BT16, BT17 | SCOPE | a sale before 1 January 2012, declined by name (assumption A6); expected by the lead |
+| 798 | DV21 | AMBIGUITY | a dividend on 29 February 2024 and a holding on 28 February 2023: whether the 12 months begin on 29 February 2023 (which does not exist) or 1 March 2023; the encoding is right to decline, and my value 25% assumed the later reading |
+| 1442, 1454, 1456, 1458, 1462 | PT37, PT43, PT44, PT45, PT47 | SCOPE | purchase tax for a single dwelling between 16 January 2022 and 15 January 2025: the table in the source prints the 2022, 2023 and 2024 columns, so these were answerable from the text; the encoding encodes the 2025-2027 amounts only (its assumption A15) |
+| 1464, 1466, 1470 | PT48, PT49, PT51 | SCOPE | the 2013 nominal column of the same table and the (c1b)(2) scale, printed in the source, not encoded |
+| 1474, 1476 | PT53, PT54 | SCOPE | the windows of (c1b)(1) and (c1a)(1) before July 2013; the printed amounts are indexed and the encoding leaves them out |
 
 ## 4. Refusals that matched the decided refusals
 

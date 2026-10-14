@@ -39,8 +39,8 @@ L4="${L4:-l4}"
 expected_failed() {
   case "$1" in
     # il07-tests-expected-red.l4: 0 from version 0.3.0 (was 2: R2, R3, both resolved by the row repairs of 2026-10-08, their assertions moved to the ordinary tests; R1 resolved in 0.2.1). NOTES.md section 12.
-    tests-independent.l4) echo 18 ;;         # the independent tester's record against v0.1.0 (0.5.0: 82 lines re-pointed in place to the readings it decided, IL-02 F18 and IL-06 F6; no value changed): lines 597, 605, 613 (s 40(b)), 620-624, 629-633 (the period), 658, 665 (the unencoded credit): 15 refusals 0.2.0 reworded, inventory 07-T15, TESTER-WRONG (stale wording); 670, H43's tax, 07-H43, TESTER-WRONG; 678, 680, H45, 07-H45, TESTER-WRONG. NOTES.md 11.8, 11.13, 12
-    tests-independent-2.l4) echo 7 ;;        # the second independent tester (IL-13, fid-il-13), against v0.2.2 (0.5.0: helpers at lines 187, 199, 203, 207 re-pointed in place to the readings it decided; no value changed): lines 215, 218 (H01), 524, 527 (H34), 584, 587, 589 (H40): its F5, the tester's own error on the Schedule K minimum, TESTER-WRONG. (0.2.2: 9; H33's two, its F1, are declined by name from 0.3.0.) INDEPENDENT-FINDINGS-2.txt; NOTES.md section 12
+    tests-independent.l4) echo 18 ;;         # the independent tester's record against v0.1.0 (0.5.0: 82 lines re-pointed in place to the readings it decided, IL-02 F18 and IL-06 F6; no value changed): lines 596, 604, 612 (s 40(b)), 619-623, 628-632 (the period), 657, 664 (the unencoded credit): 15 refusals 0.2.0 reworded, inventory 07-T15, TESTER-WRONG (stale wording); 669, H43's tax, 07-H43, TESTER-WRONG; 677, 679, H45, 07-H45, TESTER-WRONG. NOTES.md 11.8, 11.13, 12
+    tests-independent-2.l4) echo 7 ;;        # the second independent tester (IL-13, fid-il-13), against v0.2.2 (0.5.0: helpers at lines 186, 198, 202, 206 re-pointed in place to the readings it decided; no value changed): lines 214, 217 (H01), 523, 526 (H34), 583, 586, 588 (H40): its F5, the tester's own error on the Schedule K minimum, TESTER-WRONG. (0.2.2: 9; H33's two, its F1, are declined by name from 0.3.0.) INDEPENDENT-FINDINGS-2.txt; NOTES.md section 12
     *) echo 0 ;;
   esac
 }
@@ -50,8 +50,8 @@ expected_failed() {
 # Every other module must refuse nothing.
 expected_refused() {
   case "$1" in
-    # tests-independent.l4: 0 from version 0.3.0 (was 2: H44n's allowance and net, lines 518-519, NII s 72 and fork K15; answered from 0.3.0 through row IL-06's month question, inventory 06-S72)
-    tests-independent-2.l4) echo 11 ;;       # IL-13, declined by name: lines 573, 574, 576 (H39, a non-resident), its F2, fewer than six deduction branches at the printed totals, still declined by row IL-04's fork F21 (a set the Institute does not publish; AMBIGUITY); 308, 309, 311 (H10), 640, 641, 643 (H46), its F3, a part-time minimum below the full adult figure (recorded gap); 668, 677 (H49, H50 health read through a declined month), its F6, propagation. (0.3.0: 20; 0.4.0: H38's and H42's six, its F2, now answered under TAKEAWAY, row IL-04 v0.5.0.) (0.6.0: 11; H33's three, 514, 516, 518, its F1, now answered: row IL-36 composed, NOTES.md section 15.)
+    # tests-independent.l4: 0 from version 0.3.0 (was 2: H44n's allowance and net, lines 517-518, NII s 72 and fork K15; answered from 0.3.0 through row IL-06's month question, inventory 06-S72)
+    tests-independent-2.l4) echo 11 ;;       # IL-13, declined by name: lines 572, 573, 575 (H39, a non-resident), its F2, fewer than six deduction branches at the printed totals, still declined by row IL-04's fork F21 (a set the Institute does not publish; AMBIGUITY); 307, 308, 310 (H10), 639, 640, 642 (H46), its F3, a part-time minimum below the full adult figure (recorded gap); 667, 676 (H49, H50 health read through a declined month), its F6, propagation. (0.3.0: 20; 0.4.0: H38's and H42's six, its F2, now answered under TAKEAWAY, row IL-04 v0.5.0.) (0.6.0: 11; H33's three, 513, 515, 517, its F1, now answered: row IL-36 composed, NOTES.md section 15.)
     *) echo 0 ;;
   esac
 }

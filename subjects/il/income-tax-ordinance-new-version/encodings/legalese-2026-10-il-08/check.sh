@@ -32,18 +32,18 @@ expected_failed() {
     # tests-red.l4) echo 3 ;;
     # Version 0.2.0 (2026-10-08, BACKLOG IL-19, inventory CHK-08i): the independent tester's module.
     # Five assertions remain failed, each an item of findings/il-2026-10-08/inventory.tsv:
-    #   line 92  D019  (08i-D019, AMBIGUITY, fork F34): REFUSED expected of the record alone, which
+    #   line 91  D019  (08i-D019, AMBIGUITY, fork F34): REFUSED expected of the record alone, which
     #                 carries no later tax year; the form that takes them declines (ito-s1-israeli-resident.l4)
-    #   line 676 D190, lines 767-768 D236 (08i-D190, AMBIGUITY, fork F35, waits on BACKLOG IL-24):
+    #   line 675 D190, lines 766-767 D236 (08i-D190, AMBIGUITY, fork F35, waits on BACKLOG IL-24):
     #                 REFUSED expected; the deduction is taken first, as in version 0.1.0
     #                 (version 0.4.0: these three pass; see below)
-    #   line 779 D244 (08i-T1, TESTER-WRONG): the tester's facts contradict each other
-    # D187 (line 667) and D055 (line 201) passed from version 0.2.0. Lines 286 and 860 were adapted in
+    #   line 778 D244 (08i-T1, TESTER-WRONG): the tester's facts contradict each other
+    # D187 (line 666) and D055 (line 200) passed from version 0.2.0. Lines 285 and 859 were adapted in
     # place to version 0.3.0's interfaces (the lead's note at the end of the file); their assertions pass.
     # Version 0.4.0 (BACKLOG IL-42, Meng's ruling SHRUG on fork F35): the s 47 deduction declines by
-    # default where the order of the deduction and the s 45A credit changes the answer, so D190 (676)
-    # and D236 (767, 768), which expect that refusal, pass. Two remain: D019 (92) and D244 (779).
-    # Version 0.5.0 (BACKLOG IL-52, SHRUG on forks F2, F15, F16): line 552 (D165) re-pointed in place to
+    # default where the order of the deduction and the s 45A credit changes the answer, so D190 (675)
+    # and D236 (766, 767), which expect that refusal, pass. Two remain: D019 (91) and D244 (778).
+    # Version 0.5.0 (BACKLOG IL-52, SHRUG on forks F2, F15, F16): line 551 (D165) re-pointed in place to
     # the reading its author decided (F16 "once"), as the lead's note at the end of the file records;
     # it passes. The counts are unchanged.
     tests-independent.l4) echo 2 ;;
@@ -55,8 +55,8 @@ expected_failed() {
 expected_refused() {
   case "$1" in
     # The independent tester's module: seven values for tax years before 2024, which every rule of
-    # this row declines (NOTES.md assumption A1; inventory 08i-T2, TESTER-WRONG (scope)): lines 153
-    # (D040), 177 (D047), 180 (D048), 183 (D049), 190 (D052), 193 and 195 (D053). D183 (line 659)
+    # this row declines (NOTES.md assumption A1; inventory 08i-T2, TESTER-WRONG (scope)): lines 152
+    # (D040), 176 (D047), 179 (D048), 182 (D049), 189 (D052), 192 and 194 (D053). D183 (line 658)
     # was answered from version 0.2.0.
     tests-independent.l4) echo 7 ;;
     *) echo 0 ;;

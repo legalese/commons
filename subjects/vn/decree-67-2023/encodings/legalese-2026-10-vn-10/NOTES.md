@@ -37,20 +37,20 @@ The modules, in import order:
 
 | module | what it holds | lines |
 | --- | --- | --- |
-| `nd67-vn10-nouns.l4` | every `DECLARE`: vintages and the rules that govern a contract, vehicle classes, the contract, certificate, accident, person, injury, claim file, results and problems | 415 |
-| `nd67-ch1-general.l4` | Chapter I (Articles 1-4) and which rules govern a contract (Articles 76(1), 77(1); Decree 220 Articles 9-10; Decree 03 Articles 46, 47(1)) | 335 |
-| `nd67-art5-7-cover.l4` | Articles 5-7: object, limits, scope, exclusions, the answer on cover; Decree 03 Articles 5 and 13 | 401 |
-| `nd67-art8-premium.l4` | Article 8 and Annex I; Decree 03 Article 7(3)-(4) and Circular 04 Annex I | 429 |
-| `nd67-art9-11-term.l4` | Articles 9-11: term, certificate, termination and refund; Decree 03 Articles 9-11 | 314 |
-| `nd67-annex6-table.l4` | GENERATED: the 1,135 rows of Annex VI and the 10 rows of its acuity table, each under its source lines | 2,734 |
-| `nd67-annex6.l4` | Annex VI lookups, formula, two notes, special cases | 274 |
-| `nd67-art12-13-claims.l4` | Articles 12-13: advance, payee, amounts, reduction, limit, one-contract rule, claim file; Decree 03 Article 14(2)-(3) and its Annex I item B.IV 2.1.2 | 632 |
-| `nd67-art12-duties-hours.l4` | Article 12(2) as regulative rules, clock in hours | 84 |
-| `nd67-art12-duties-workdays.l4` | Articles 10(1), 12(1), (3), (4), (7), (10), (11) as regulative rules, clock in working days; working-day dates | 247 |
-| `nd67-tests.l4` | 250 hand-written tests from the source (70 of them for Decree 03, added 2026-10-13) | 742 |
-| `nd67-annex1-tests.l4` | GENERATED: 55 premium tests | 124 |
-| `nd67-annex6-tests.l4` | GENERATED: 1,235 Annex VI tests | 2,397 |
-| `nd67-findings.l4` | 17 assertions that state the findings' surprising answers | 157 |
+| `nd67-vn10-nouns.l4` | every `DECLARE`: vintages and the rules that govern a contract, vehicle classes, the contract, certificate, accident, person, injury, claim file, results and problems | 414 |
+| `nd67-ch1-general.l4` | Chapter I (Articles 1-4) and which rules govern a contract (Articles 76(1), 77(1); Decree 220 Articles 9-10; Decree 03 Articles 46, 47(1)) | 334 |
+| `nd67-art5-7-cover.l4` | Articles 5-7: object, limits, scope, exclusions, the answer on cover; Decree 03 Articles 5 and 13 | 400 |
+| `nd67-art8-premium.l4` | Article 8 and Annex I; Decree 03 Article 7(3)-(4) and Circular 04 Annex I | 428 |
+| `nd67-art9-11-term.l4` | Articles 9-11: term, certificate, termination and refund; Decree 03 Articles 9-11 | 313 |
+| `nd67-annex6-table.l4` | GENERATED: the 1,135 rows of Annex VI and the 10 rows of its acuity table, each under its source lines | 2,733 |
+| `nd67-annex6.l4` | Annex VI lookups, formula, two notes, special cases | 273 |
+| `nd67-art12-13-claims.l4` | Articles 12-13: advance, payee, amounts, reduction, limit, one-contract rule, claim file; Decree 03 Article 14(2)-(3) and its Annex I item B.IV 2.1.2 | 631 |
+| `nd67-art12-duties-hours.l4` | Article 12(2) as regulative rules, clock in hours | 83 |
+| `nd67-art12-duties-workdays.l4` | Articles 10(1), 12(1), (3), (4), (7), (10), (11) as regulative rules, clock in working days; working-day dates | 246 |
+| `nd67-tests.l4` | 250 hand-written tests from the source (70 of them for Decree 03, added 2026-10-13) | 741 |
+| `nd67-annex1-tests.l4` | GENERATED: 55 premium tests | 123 |
+| `nd67-annex6-tests.l4` | GENERATED: 1,235 Annex VI tests | 2,396 |
+| `nd67-findings.l4` | 17 assertions that state the findings' surprising answers | 156 |
 
 The generated table module is long because the table is: one L4 row per source row, each beside the source line it encodes, so a reviewer checks it row by row against the gazette.
 

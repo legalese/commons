@@ -230,7 +230,7 @@ Each switch has a public rule that answers at the switch, and a form with the re
 
 - Its constant `the expiry of the National-Civic Service Law, which ends the temporary text of section 348(e)` is 31.8.2026, which is this row's reading C1 "the expiry stays as the deposited text states it".
 - This row's rule `s 348(e) — the temporary text reaches one serving in national-civic service who began on… for the span…` is IL-05's `s 348(e) — the person serves in national-civic service in a period the temporary text reaches`, with the end of the temporary text made a switch.
-- **At this row's switch, two of IL-05's answers are declined and not FALSE:** a person who began on 31.8.2026 for September 2026 (IL-05's tests line 462) and one who began on 15.9.2026 for the fourth quarter of 2026 (line 466).
+- **At this row's switch, two of IL-05's answers are declined and not FALSE:** a person who began on 31.8.2026 for September 2026 (IL-05's tests line 461) and one who began on 15.9.2026 for the fourth quarter of 2026 (line 465).
   Both are "the temporary text does not reach him" if the Law's expiry stands, and "it does" if a later Act moved it.
   IL-05's other civic-service answers (lines 458 to 460, 463, 465) are the same here: TRUE, TRUE, TRUE, TRUE, and the straddling quarter declined with the same message.
   Whether IL-05 should take this switch is the lead's; I did not edit IL-05.
@@ -412,7 +412,7 @@ Its three disagreements and what I did:
    Fixed: the rule is now `Day d AT LEAST 1.1.1999`, and `Order of 5759-1999 — the Order's amount applies to…` is FALSE before then.
    Added by hand-worked assertions: 31.12.1998 and 1.6.1990 are outside the Order; an employee and a self-employed person on 31.12.1998 are outside it.
    The AMOUNT of a pre-1999 month stays refused (the repealed Order No. 2 of 5747-1987 would be needed).
-   The tester's line 129 now passes; its refusal count in `check.sh` falls from 2 to 1.
+   The tester's line 128 now passes; its refusal count in `check.sh` falls from 2 to 1.
 2. **3,442 labelled as the item 3 minimum.**
    By the text item 3 is 5 percent of the average wage: 5% x 13,566 = 678.30 a month; 3,442 is item 2 computed with the other 2026 average wage.
    The rules take the minimum as an input, so no rule changed.
@@ -426,7 +426,7 @@ Its three disagreements and what I did:
    The plain list form is unchanged and is the "sum of the cells" reading; it is what the tester's five assertions call, so they still fail, as declared in `check.sh` with a comment.
    New tests (8): 14,490 by the cells and 14,600 by the printed total both give maternity 1,400; 14,600 by the cells gives 14,600 x 1.40 / 14.49; the default declines; equal totals answer (12,830 gives 940); a printed total of 0 is refused.
 
-**C269** (a start on 1.9.2026 for October 2026): the tester decided "not reached unless an Act extended the Law"; fork C1 declines at the switch and answers FALSE at the named reading `the deposited expiry, the day itself in force` (its line 324 passes).
+**C269** (a start on 1.9.2026 for October 2026): the tester decided "not reached unless an Act extended the Law"; fork C1 declines at the switch and answers FALSE at the named reading `the deposited expiry, the day itself in force` (its line 323 passes).
 The tester's refusal is declared in `check.sh`.
 
 **The two 2026 average wages (13,566 in s 1's note, 13,769 in s 2(a)'s note).**

@@ -35,10 +35,10 @@ expected_failed() {
 
 # Independent tests (fid-il-28, IL-56): assertions of the tester's decided answers that the encoding REFUSES, each a
 # disagreement recorded in INDEPENDENT-FINDINGS.md, not hidden. ito-il28-tests-independent.l4 lines:
-#   216 A11 (Area resident who is an Israeli resident: encoding says neither instrument reaches him; SCOPE)
-#   224 A15 (2022 money: s 37 text held only from 2023 so the total refuses; SCOPE)
-#   228, 230 A18, A18b (tax years 1995 and 2016: s 3A text held only from 2017; AMBIGUITY)
-#   232 A19-2022 (s 37 facts in 2022: s 37 text held only from 2023; SCOPE)
+#   215 A11 (Area resident who is an Israeli resident: encoding says neither instrument reaches him; SCOPE)
+#   223 A15 (2022 money: s 37 text held only from 2023 so the total refuses; SCOPE)
+#   227, 229 A18, A18b (tax years 1995 and 2016: s 3A text held only from 2017; AMBIGUITY)
+#   231 A19-2022 (s 37 facts in 2022: s 37 text held only from 2023; SCOPE)
 expected_refused() {
   case "$1" in
     ito-il28-tests-independent.l4) echo 5 ;;

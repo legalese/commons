@@ -32,7 +32,7 @@ expected_failed() {
     # tests-red.l4) echo 3 ;;
     # Version 0.2.0 (CHK-06) declared the independent tester's remaining failures, each a recorded
     # fork; 0.3.0 (IL-40) passed two of them (forks F2, F18, SHRUG); version 0.4.0 (BACKLOG IL-51)
-    # passes the last three (line 594, fork F7; lines 613, 615, fork F3), which expected refusals
+    # passes the last three (line 593, fork F7; lines 612, 614, fork F3), which expected refusals
     # and now get them. None fails; seven are refused instead (expected_refused, below).
     *) echo 0 ;;
   esac
@@ -43,9 +43,9 @@ expected_failed() {
 # switches declined by default where their readings differ; the independent tester had decided
 # the reading this row took before, and seven of its assertions are now declined by name, each in
 # the words of the fork it turns on (inventory class AMBIGUITY, ruled; not an encoding error):
-#   lines 346, 347       B6, B7: only the mother insured, the child with both / with the father only (fork F7, 06-F7)
-#   lines 385, 386, 387  B15: the father excluded by s 66, the child with both (fork F6, 06-F6)
-#   lines 490, 491       C26: the mother paid Income Support, the children in the father's count (fork F14, 06-F14)
+#   lines 345, 346       B6, B7: only the mother insured, the child with both / with the father only (fork F7, 06-F7)
+#   lines 384, 385, 386  B15: the father excluded by s 66, the child with both (fork F6, 06-F6)
+#   lines 489, 490       C26: the mother paid Income Support, the children in the father's count (fork F14, 06-F14)
 expected_refused() {
   case "$1" in
     tests-independent.l4) echo 7 ;;

@@ -44,18 +44,18 @@ All worked from lines 854-856 before the run; none was changed to match what the
 
 | line | assertion | old | new | why |
 | ---: | --- | --- | --- | --- |
-| 55 | export, March 2026: born 1 January 2026, died 5 February, nothing paid | NOT paid (default) | NOT paid, at `section 72(c) runs only after an allowance was paid for the child` by name | re-pointed: it rests on the old reading |
-| 122 | export, March 2026: 72-57 recorded as not paid | NOT paid (default) | NOT paid, at that reading by name | re-pointed |
-| 123 | last month: 72-57 recorded as not paid | February 2026 (default) | February 2026, at that reading by name | re-pointed |
-| 143 | the switch | — | `section 72(c) is declined where the two readings differ` | the ruling |
-| 149-153 | born 1 January 2026, died 5 February, nothing paid, at the default | — | February paid; March and May REFUSED (fork N2); June not paid; last month REFUSED | (a) pays January and February on both readings; February + 1 to + 3 differ; June is after May |
-| 154 | the same, last month, only after a payment | — | February 2026 | (a) ends payment with the month of the death |
-| 155-158 | the same, any child who dies while entitled | — | March and May paid; June not; last month May 2026 | (c): February + 3 |
-| 161, 162 | 72-57 recorded as not paid, March 2026 | — | default REFUSED (fork N2); any child: paid | (a) from March; the death in February; (c) to May on that reading |
-| 165, 166 | 72-57 recorded as paid, March 2026 | — | any child: paid (the record not read); only after a payment: REFUSED (item 08n-PAID) | (a) made no month payable up to February |
-| 168 | 72-56 recorded as paid, May 2026 | — | paid at both named readings | paid within (a); (c) on both |
-| 171 | lived three days, never left the hospital, nothing paid, March 2026, any child | — | not paid | (b) bars every month on every reading |
-| 176-178 | died 10 March 2015, entitled since 2010, nothing paid | — | May 2015 REFUSED at the default; not paid only after a payment; June 2015 paid for any child | (a) ends with March 2015, before the period; (c) runs to June 2015 |
+| 54 | export, March 2026: born 1 January 2026, died 5 February, nothing paid | NOT paid (default) | NOT paid, at `section 72(c) runs only after an allowance was paid for the child` by name | re-pointed: it rests on the old reading |
+| 121 | export, March 2026: 72-57 recorded as not paid | NOT paid (default) | NOT paid, at that reading by name | re-pointed |
+| 122 | last month: 72-57 recorded as not paid | February 2026 (default) | February 2026, at that reading by name | re-pointed |
+| 142 | the switch | — | `section 72(c) is declined where the two readings differ` | the ruling |
+| 148-152 | born 1 January 2026, died 5 February, nothing paid, at the default | — | February paid; March and May REFUSED (fork N2); June not paid; last month REFUSED | (a) pays January and February on both readings; February + 1 to + 3 differ; June is after May |
+| 153 | the same, last month, only after a payment | — | February 2026 | (a) ends payment with the month of the death |
+| 154-157 | the same, any child who dies while entitled | — | March and May paid; June not; last month May 2026 | (c): February + 3 |
+| 160, 161 | 72-57 recorded as not paid, March 2026 | — | default REFUSED (fork N2); any child: paid | (a) from March; the death in February; (c) to May on that reading |
+| 164, 165 | 72-57 recorded as paid, March 2026 | — | any child: paid (the record not read); only after a payment: REFUSED (item 08n-PAID) | (a) made no month payable up to February |
+| 167 | 72-56 recorded as paid, May 2026 | — | paid at both named readings | paid within (a); (c) on both |
+| 170 | lived three days, never left the hospital, nothing paid, March 2026, any child | — | not paid | (b) bars every month on every reading |
+| 175-177 | died 10 March 2015, entitled since 2010, nothing paid | — | May 2015 REFUSED at the default; not paid only after a payment; June 2015 paid for any child | (a) ends with March 2015, before the period; (c) runs to June 2015 |
 
 The module had 54 assertions and has 74: 3 re-pointed, 20 added.
 Answers that changed in the rules: at the default, the export now declines the three months after the death of a child with no payment recorded (from 0.1.0 to 0.3.0 they were unpaid), and the last-month rule declines for such a child.
@@ -125,15 +125,15 @@ Not changed: the s 72 and s 335 modules and their tests, the independent tester'
 
 The three tests of the day that existed (`nii-il08-tests-part-d.l4` lines 69, 71, 73) land on days that exist (15 November 2013, 31 May 2018, 30 June 2020), so none rested on the clamp; they stay at the default reading, values unchanged.
 No other test of this row computes such a day, so no test was re-pointed.
-14 assertions were added (lines 85-105), each worked from the printed rows before the run:
+14 assertions were added (lines 84-104), each worked from the printed rows before the run:
 
 | line | born | months (row) | reaches the age in | default | clamp | roll | declined by name |
 | ---: | --- | --- | --- | --- | --- | --- | --- |
-| 85-88 | 31 October 1945 | 812 (line 4446, 67 and 8 months) | June 2013, 30 days | REFUSED | 30 June 2013 | 1 July 2013 | REFUSED |
-| 91-93 | 29 February 1944 | 804 (line 4444, 67) | February 2011, a common year | REFUSED | 28 February 2011 | 1 March 2011 | — |
-| 96-98 | 31 July 1945 | 808 (line 4445, 67 and 4 months) | November 2012, 30 days | REFUSED | 30 November 2012 | 1 December 2012 | — |
-| 101-103 | 15 March 1946 | 812 | November 2013, the day exists | — | 15 November 2013 | 15 November 2013 | 15 November 2013 |
-| 105 | 30 October 1945 | 812 | June 2013, which has a 30th | 30 June 2013 | — | — | — |
+| 84-87 | 31 October 1945 | 812 (line 4446, 67 and 8 months) | June 2013, 30 days | REFUSED | 30 June 2013 | 1 July 2013 | REFUSED |
+| 90-92 | 29 February 1944 | 804 (line 4444, 67) | February 2011, a common year | REFUSED | 28 February 2011 | 1 March 2011 | — |
+| 95-97 | 31 July 1945 | 808 (line 4445, 67 and 4 months) | November 2012, 30 days | REFUSED | 30 November 2012 | 1 December 2012 | — |
+| 100-102 | 15 March 1946 | 812 | November 2013, the day exists | — | 15 November 2013 | 15 November 2013 | 15 November 2013 |
+| 104 | 30 October 1945 | 812 | June 2013, which has a 30th | 30 June 2013 | — | — | — |
 
 The module had 37 assertions and has 51; no expected value changed.
 The tester's D-46, D-47 and D-48 (`tests-independent.l4` lines 733, 735, 737, `#ASSERT REFUSED`) now pass: they were the three DATE failures declared from 0.2.0.
@@ -231,21 +231,21 @@ All worked from lines 854-856 (and 4315 for the message) before the run; none wa
 
 | line | assertion | old | new | why |
 | ---: | --- | --- | --- | --- |
-| 62 (was 61) | export, April 2015, arose 1 January 2010 | REFUSED, "… the period row IL-06 answers" | REFUSED, "… a scope chosen to compose with row IL-06, not the commencement of the Law (s 402: 1 October 1995)" | 08n-A2 wording |
-| 68 | first month, arose 10 June 2026 | — | June 2026 (10th, by the 15th) | 08n-GATE: a month of the period is answered |
-| 70 | last month, not ended | — | NOTHING | 08n-GATE |
-| 73 | first month, arose 20 March 2008 | — | REFUSED (April 2008, before May 2015) | 08n-GATE |
-| 75 | export, June 2026, the same child | — | paid (began April 2008, not ended) | 08n-GATE: the export still answers |
-| 78, 79 | arose 20 April 2015 (after the 15th) | — | first month May 2015; May 2015 paid | 08n-GATE, the edge |
-| 82, 83 | arose 15 April 2015 (by the 15th) | — | first month REFUSED (April 2015); May 2015 paid | 08n-GATE, the edge |
-| 87, 88 | ceased 30 April 2015 | — | last month REFUSED (April 2015); May 2015 not paid | 08n-GATE |
-| 91-93 | ceased 1 May 2015 | — | last month May 2015; May paid; June not | 08n-GATE |
-| 97-99 | died 10 February 2015, paid since 2010 | — | last month May 2015 (February + 3, (c)); May paid; June not | 08n-GATE with (c) |
-| 103, 104 | died 10 January 2015, the same | — | last month REFUSED (April 2015); May 2015 not paid | 08n-GATE with (c) |
-| 115-120 | 72-57 recorded as paid (born 20 February 2026, died 25 February) | — | February not paid; March and May REFUSED; June not paid; first month March 2026; last month REFUSED | 08n-PAID: (a) pays from March, ends with February, so no month was payable |
-| 122, 123 | 72-57 recorded as not paid | — | March not paid; last month February 2026 | fork N2, unchanged reading |
-| 128-130 | lived three days, never left the hospital, recorded as paid | — | February and March not paid; last month REFUSED | 08n-PAID with (b) |
-| 134-136 | 72-56 recorded as paid (born 10 February 2026, died 20 February) | — | May paid; June not; last month May 2026 | 08n-PAID, a consistent record: (c) applies |
+| 61 (was 60) | export, April 2015, arose 1 January 2010 | REFUSED, "… the period row IL-06 answers" | REFUSED, "… a scope chosen to compose with row IL-06, not the commencement of the Law (s 402: 1 October 1995)" | 08n-A2 wording |
+| 67 | first month, arose 10 June 2026 | — | June 2026 (10th, by the 15th) | 08n-GATE: a month of the period is answered |
+| 69 | last month, not ended | — | NOTHING | 08n-GATE |
+| 72 | first month, arose 20 March 2008 | — | REFUSED (April 2008, before May 2015) | 08n-GATE |
+| 74 | export, June 2026, the same child | — | paid (began April 2008, not ended) | 08n-GATE: the export still answers |
+| 77, 78 | arose 20 April 2015 (after the 15th) | — | first month May 2015; May 2015 paid | 08n-GATE, the edge |
+| 81, 82 | arose 15 April 2015 (by the 15th) | — | first month REFUSED (April 2015); May 2015 paid | 08n-GATE, the edge |
+| 86, 87 | ceased 30 April 2015 | — | last month REFUSED (April 2015); May 2015 not paid | 08n-GATE |
+| 90-92 | ceased 1 May 2015 | — | last month May 2015; May paid; June not | 08n-GATE |
+| 96-98 | died 10 February 2015, paid since 2010 | — | last month May 2015 (February + 3, (c)); May paid; June not | 08n-GATE with (c) |
+| 102, 103 | died 10 January 2015, the same | — | last month REFUSED (April 2015); May 2015 not paid | 08n-GATE with (c) |
+| 114-119 | 72-57 recorded as paid (born 20 February 2026, died 25 February) | — | February not paid; March and May REFUSED; June not paid; first month March 2026; last month REFUSED | 08n-PAID: (a) pays from March, ends with February, so no month was payable |
+| 121, 122 | 72-57 recorded as not paid | — | March not paid; last month February 2026 | fork N2, unchanged reading |
+| 127-129 | lived three days, never left the hospital, recorded as paid | — | February and March not paid; last month REFUSED | 08n-PAID with (b) |
+| 133-135 | 72-56 recorded as paid (born 10 February 2026, died 20 February) | — | May paid; June not; last month May 2026 | 08n-PAID, a consistent record: (c) applies |
 
 The module had 22 assertions and has 54: one reworded, 32 added.
 Answers that changed in the rules: the export for a child recorded as paid whose window was empty (72-57 with TRUE: March to May 2026 were paid, now declined); the first-month and last-month rules for a month before May 2015 (answered, now declined); the export's refusal message.
@@ -327,12 +327,12 @@ Every assertion was satisfied on the first run that evaluated it; before that, t
 
 | module | lines | holds |
 | --- | ---: | --- |
-| `nii-il08-nouns.l4` | 93 (0.2.0: 99, comments; 0.3.0: 116, the Part D reading; 0.4.0: 133, the s 72(c) reading) | the nine branches (as rows IL-04 and IL-05 spell them), the person for s 335, the entitlement for s 72; `DECLARE` only |
-| `nii-schedule-a1-part-d.l4` | 96 (0.3.0: 136) | Part D: a woman's age by month of birth, in months, and the day she reaches it (0.3.0: at a reading of fork N4, declined by default where the month lacks her day) |
-| `nii-s72-period-of-allowance.l4` | 90 (0.2.0: 218; 0.4.0: 302, fork N2 a switch) | s 72(a)-(c): whether the child allowance is paid for a month (0.2.0: the first and last months placed against the period, and "was paid" read against (a) and (b)) |
-| `nii-s335-branches.l4` | 131 | s 335(a)-(j): the branches in which a person pays |
-| `nii-il08-tests-part-d.l4` | 74 (0.3.0: 105) | 37 assertions: every band of Part D at both its edges (0.3.0: 51, with the three readings of fork N4) |
-| `nii-il08-tests-s72-s335.l4` | 85 (0.2.0: 160; 0.4.0: 202) | 22 assertions (0.2.0: 54; 0.4.0: 74) |
+| `nii-il08-nouns.l4` | 93 (0.2.0: 99, comments; 0.3.0: 116, the Part D reading; 0.4.0: 132, the s 72(c) reading) | the nine branches (as rows IL-04 and IL-05 spell them), the person for s 335, the entitlement for s 72; `DECLARE` only |
+| `nii-schedule-a1-part-d.l4` | 96 (0.3.0: 135) | Part D: a woman's age by month of birth, in months, and the day she reaches it (0.3.0: at a reading of fork N4, declined by default where the month lacks her day) |
+| `nii-s72-period-of-allowance.l4` | 90 (0.2.0: 218; 0.4.0: 301, fork N2 a switch) | s 72(a)-(c): whether the child allowance is paid for a month (0.2.0: the first and last months placed against the period, and "was paid" read against (a) and (b)) |
+| `nii-s335-branches.l4` | 130 | s 335(a)-(j): the branches in which a person pays |
+| `nii-il08-tests-part-d.l4` | 74 (0.3.0: 104) | 37 assertions: every band of Part D at both its edges (0.3.0: 51, with the three readings of fork N4) |
+| `nii-il08-tests-s72-s335.l4` | 85 (0.2.0: 160; 0.4.0: 201) | 22 assertions (0.2.0: 54; 0.4.0: 74) |
 
 Not encoded: s 65 (encoded in full by row IL-06), s 67A (no such section), the other Parts of Schedule A1, and the statuses s 335 reads (each another Chapter's answer).
 

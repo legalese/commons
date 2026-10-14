@@ -17,7 +17,7 @@ TOTAL (10 modules)                            15       791      15        0
 
 (Modules with no assertions omitted; each printed 0 everywhere.)
 `tests-independent.l4` has 646 assertions: 645 satisfied, 1 failed, 0 refused, and its one error is the failed assertion.
-Read from the diagnostics, not the exit code: the one Error-severity diagnostic is at line 787, `assertion failed: expected a refusal, but the expression produced a value`; the only other non-Information diagnostics are the two Warnings about shadowed copies of `prelude` and `daydate`.
+Read from the diagnostics, not the exit code: the one Error-severity diagnostic is at line 786, `assertion failed: expected a refusal, but the expression produced a value`; the only other non-Information diagnostics are the two Warnings about shadowed copies of `prelude` and `daydate`.
 **`check.sh` exits 1 with this module present**, because its `expected_failed` table gives `tests-independent.l4` an expected count of 0. I did not edit `check.sh`; whoever weighs the finding below decides whether to list the module with a count of 1 or to change the encoding.
 
 Breakdown of the 646: 279 cell assertions (all 270 cells of section 2 of DECIDED-ANSWERS, plus item 4 again for 2035), 54 on the printed totals and the sums of rows, 6 on combined rates (section 3), 216 reading every cell branch by branch as a person who pays the branch (dashes asserted as refusals), and 91 hand-written scenarios.
