@@ -42,7 +42,7 @@ The maximum is the same for every item, so neither fork moves it.
 That is already the shape SHRUG asks for; no reading is taken silently.
 Fork DATE (0.5.0) settles the day in a month that lacks the day of birth.
 **05-RC4, class (b).** As in the table.
-The independent tester's H2 and H3 (`tests-independent.l4` lines 387, 389) stay refused, as declared since 0.3.0.
+The independent tester's H2 and H3 (`tests-independent.l4` lines 386, 388) stay refused, as declared since 0.3.0.
 **05-Q7, class (d).** The editors' note and Amendment 9 give 31.8.2026 (fork F8).
 This row read Amendments 7 to 9 (section 7) and did not search for a later one; nothing was fetched for this version.
 The National-Civic Service Law 5774-2014 has since been deposited (`subjects/il/national-civic-service-law-5774-2014/registers/source-bundle/`, commons commit 317b20c5); it was not read for this version, and on the lead's instruction Q7 stays class (d) here, BACKLOG IL-34 to encode that Law.
@@ -261,7 +261,7 @@ The version is minor, not a patch, because the row now answers questions it coul
   At the printed totals this row takes column D for the deduction branches together as an argument, so each line now carries the tester's own figure for it, 7,703 × 1.04% plus the rest of the wage × 7%, written out as an expression on the wage of the line.
   05-RC2 was done first; line 226 (B8, a wage of 60,000) uses its new rule, with the tester's own `fid 2026 figures` and `fid column D amounts on a wage of` and, at the printed totals, a function applying 1.04 and 7.00 as the tester's `fid banded` applies the rows.
   All nine now pass.
-  The note at the end of `tests-independent.l4` gives the details, including that lines 220-223 and 236 now check only that the figure passes through when nothing is left out: the arithmetic is row IL-04's, whose own tests assert two of the values at its default (80.1812 at 7,704 and 240.9012 at 10,000, its `nii-il04-tests.l4` lines 344 and 505).
+  The note at the end of `tests-independent.l4` gives the details, including that lines 220-223 and 236 now check only that the figure passes through when nothing is left out: the arithmetic is row IL-04's, whose own tests assert two of the values at its default (80.1812 at 7,704 and 240.9012 at 10,000, its `nii-il04-tests.l4` lines 343 and 504).
 - **05-P3: a person who is both an employee and self-employed took two calls (OURS-WRONG, optional interface).**
   New record `An insured person who may be both an employee and self-employed, for section 342(a)-(b)` (`nii-il05-nouns.l4`) and rule `s 342(a)-(b) — the persons liable to pay the contributions for`, which returns a list: the employer for the employee under (b), and the person for himself under (a).
   Each status is put to the one-column rule, which is unchanged, so one call answers as the two calls did (the tester's A7; the Axiom comparison's X5 and P3).
@@ -270,7 +270,7 @@ The version is minor, not a patch, because the row now answers questions it coul
   Amendment 252 s 7(b) (the deposited `amending-laws/25_lsr_5482787.pdf`, PDF page 4, read with `pdftotext -raw`) lets the Minister of Finance, after consulting the Minister of Labour and with the approval of the Knesset Labour and Welfare Committee, extend by order the temporary provision for contributions collected for 2027 and 2028, one year at a time; s 7(c) has the order brought to the Committee at least two months before the year.
   Row IL-04 takes no order by default (its assumption A8) and has entry points that take one.
   This row takes column D from its caller, so whether the temporary or the permanent table applies in 2027 is the caller's: this row's own 2027 scenario (`nii-il05-tests.l4`, section "Section 342(d)") uses the permanent table, which is IL-04's A8 default, not a finding that no order was made.
-  The tester's I3 (`tests-independent.l4` line 421) expects a refusal for February 2027; the rules that take amounts answer on what they are given (187.3811), and it stays failing, declared in `check.sh`.
+  The tester's I3 (`tests-independent.l4` line 420) expects a refusal for February 2027; the rules that take amounts answer on what they are given (187.3811), and it stays failing, declared in `check.sh`.
   The new rules of 05-RC2 decline 2027 at the switch, because the Schedule K figures for 2027 were not published, not because of s 7(b).
 - **05-X1, its F3 rewording (P1) (WORDING).** Fork F3's reason is restated in place, and open question 2 is extended; the answer is unchanged.
   **(0.6.0)** Ruled by Meng on 2026-10-08 (SHRUG): fork F3 is now a switch, declined by default where its readings differ; see "Version 0.6.0".
@@ -861,7 +861,7 @@ In (a) the subject is "the amount" of the income, masculine, with יבוא (line
 Read as all or nothing, (a) would disregard the whole income of anyone above the maximum, which cannot be meant, so (a) must mean the part above; (a1) read as all or nothing gives a cliff at 3,442.25 (2026), which is odd but not absurd.
 So on the words alone Axiom's reading is at least as natural as ours, and the text does not decide.
 What supports ours is the regulator: the Institute's January 2026 example charges rent of 12,000 on 8,558, "income up to 3,442 a month is exempt" (both fetches agree; NOTES section 7, DECIDED-ANSWERS G5), which is a deduction.
-This row's own tests show the readings part exactly where Axiom's case does (`nii-il05-tests.l4` lines 404-406), and our all-or-nothing rule reproduces Axiom's 0 on Axiom's own case (scratch run, below).
+This row's own tests show the readings part exactly where Axiom's case does (`nii-il05-tests.l4` lines 403-405), and our all-or-nothing rule reproduces Axiom's 0 on Axiom's own case (scratch run, below).
 
 ### Our 22 forks, and what Axiom does
 

@@ -194,7 +194,7 @@ def main():
         "license": "Apache-2.0",
         "maintainer": {"name": "Legalese Pte. Ltd.", "github": "legalese"},
         "run": {"id": "VN-29-20261010", "agent": "enc-vn-29", "date": "2026-10-10", "method": "one agent, one session, no sub-agents, from BRIEF.md"},
-        "language": {"source_text": "vi", "module_body": "en", "note": "Identifiers and comments are English (@lang en). Vietnamese appears only in `-- src:N |` comment lines generated mechanically from line N of a deposited source (tools/expand.py), and in short runs in GLOSSARY.md and NOTES.md that tools/vnsrc.py checks occur verbatim in a source."},
+        "language": {"source_text": "vi", "module_body": "en", "note": "Identifiers and comments are English (the default language, so no `@lang` line). Vietnamese appears only in `-- src:N |` comment lines generated mechanically from line N of a deposited source (tools/expand.py), and in short runs in GLOSSARY.md and NOTES.md that tools/vnsrc.py checks occur verbatim in a source."},
         "source": docs,
         "modules": l4mods,
         "scope": ("The whole Act: all 157 articles of Law 08/2022/QH15 in V1, and the effect on them of all 25 numbered clauses of Law 139/2025/QH15 in V2 and V3. "

@@ -22,7 +22,7 @@ Semi-cleanroom: in this job nothing of Axiom's was read, nor the section "Compar
 
 ### 03-F1 (a): where the eligible income sits on the scale
 
-Recorded at fork F1 (section 4), question 1 (section 8), `INDEPENDENT-FINDINGS.md` lines 34 and 51-55, and `tests-independent.l4` line 284; inventory class AMBIGUITY.
+Recorded at fork F1 (section 4), question 1 (section 8), `INDEPENDENT-FINDINGS.md` lines 34 and 51-55, and `tests-independent.l4` line 283; inventory class AMBIGUITY.
 s 121(b)(1) gives the reduced rates "על כל שקל חדש מ־84,120 השקלים החדשים הראשונים" and so on (lines 4354-4358) to the eligible income, and does not say which shekels of the scale that income occupies when other income is on the scale too.
 The readings part for an individual with both, and the s 121 tax is the question asked, so it is a gating choice.
 In `ito-121-individual-rates.l4` the rule `s 121 — the tax on … , at the ceilings … , placing the eligible income as` p computes each reading as arithmetic, with R(x) the reduced-rate tax on the first x shekels of the scale and the tax always (a) on the whole income, less (a)(1)'s 31% on the eligible shekels inside the first band, plus the reduced rates on those shekels:
@@ -35,12 +35,12 @@ In `ito-121-individual-rates.l4` the rule `s 121 — the tax on … , at the cei
 They agree where all the income on the scale is eligible, where none is, and where every eligible shekel falls in the same reduced band under every placement, as in the independent tester's F02 (12,300).
 The switch is `section 121(b)(1) — the reading this row takes of where the eligible income sits on the scale`; the 0.2.0 names `s 121 — the tax on … , at the ceilings …` and `the tax under section 121 for` now follow it.
 The fork register's 0.1.0 argument against (ii) overstated it, as the independent pass found, and is corrected there in place.
-The two tests of 0.2.0 that rest on (i) with mixed income (`ito-il03-tests.l4` lines 362 and 421) are re-pointed to it by name, values unchanged; six tests are added.
+The two tests of 0.2.0 that rest on (i) with mixed income (`ito-il03-tests.l4` lines 361 and 420) are re-pointed to it by name, values unchanged; six tests are added.
 The capstone is not reached: its earner has a salary only, all of it eligible.
 
 ### 03-F2 (a): on what day the age of 60 is tested
 
-Recorded at fork F2 (section 4), question 2 (section 8), `INDEPENDENT-FINDINGS.md` lines 31-33 and 44-49, and `tests-independent.l4` lines 267-269; inventory class AMBIGUITY.
+Recorded at fork F2 (section 4), question 2 (section 8), `INDEPENDENT-FINDINGS.md` lines 31-33 and 44-49, and `tests-independent.l4` lines 266-268; inventory class AMBIGUITY.
 "ולגבי הכנסה חייבת בשנת המס של יחיד שמלאו לו 60 שנים" (line 4354) names no day of the tax year for the age, and for an individual whose 60th birthday falls from 2 January to 31 December of the tax year, income that is eligible by the age limb alone (on the scale, not from personal exertion, with books kept where required) is eligible under one test and not under the other.
 The readings, `A reading of section 121(b)(1) on when the age of 60 is tested`:
 
@@ -52,7 +52,7 @@ The readings, `A reading of section 121(b)(1) on when the age of 60 is tested`:
 Where the two tests give the same tax, so does any split by date, because the tax falls as the eligible income grows under every placement of F1; the third reading therefore cannot give a different answer there.
 The switch is `section 121(b)(1) — the reading this row takes of when the age of 60 is tested`; the entry point with both readings is `the tax under section 121 for` i `, placing the eligible income as` p `and testing the age of 60 as` a.
 Eligibility now takes the age as a BOOLEAN argument (`eligible for the reduced rates` item `, as income of an individual who, for section 121(b)(1), has reached 60:` b, and `the income eligible for the reduced rates of` i `, who, for section 121(b)(1), has reached 60:` b); the 0.2.0 forms without it keep their names and decline where the two tests give different answers to what they ask.
-The 0.2.0 test that rests on the end-of-year test with a birthday inside the year (`ito-il03-tests.l4` line 389, born 31 December 1966) is re-pointed to it by name, value unchanged; eleven tests are added.
+The 0.2.0 test that rests on the end-of-year test with a birthday inside the year (`ito-il03-tests.l4` line 388, born 31 December 1966) is re-pointed to it by name, value unchanged; eleven tests are added.
 The capstone is not reached: its earner's salary is eligible at any age.
 
 ### 03-F4 (a): a fall of the index
@@ -63,8 +63,8 @@ s 120B(a) and (b) adjust "לפי שיעור עליית המדד" (lines 4338-433
 A rise, or no change, is the same under all three.
 The switch is `section 120B — the reading this row takes where the index falls`; (a), (b), (e)(2), `s 120B — the amount for the tax year` and `s 120B — the amount in force in the tax year` each gain a form ending `, reading a fall as` r, and their 0.2.0 names follow the switch.
 The frozen years 2025-2027 read no index, so they are untouched.
-The one 0.2.0 test of a fall (`ito-il03-tests.l4` line 174) is re-pointed to "the fall of the index is applied" by name, value unchanged (990); sixteen tests are added.
-The independent tester's I04 (`tests-independent.l4` line 327) asserted the fall applied by the 0.2.0 name; by the lead's leave it was re-pointed in place to that reading by name, value 75,504.24 and inputs unchanged (below).
+The one 0.2.0 test of a fall (`ito-il03-tests.l4` line 173) is re-pointed to "the fall of the index is applied" by name, value unchanged (990); sixteen tests are added.
+The independent tester's I04 (`tests-independent.l4` line 326) asserted the fall applied by the 0.2.0 name; by the lead's leave it was re-pointed in place to that reading by name, value 75,504.24 and inputs unchanged (below).
 The capstone is not reached: it reads s 120B only for 2025-2027.
 
 ### 03-F5 (b): 2027's rise only, not a switch
@@ -81,7 +81,7 @@ So only one reading is arguable on the text, and no switch is made.
 
 ### 03-S13 (d): s 121B in 2025
 
-Recorded at `INDEPENDENT-FINDINGS.md` lines 37-38 and 64-67, `tests-independent.l4` lines 371 and 384, and question 4 (section 8); inventory class AMBIGUITY (factual; needs the enacted Law).
+Recorded at `INDEPENDENT-FINDINGS.md` lines 37-38 and 64-67, `tests-independent.l4` lines 370 and 383, and question 4 (section 8); inventory class AMBIGUITY (factual; needs the enacted Law).
 Whether s 121B as amended in 5785 reaches tax year 2025 turns on the commencement of amendment 276 (Sefer HaChukim 3342), which is not deposited (`../../registers/source-bundle/amending-laws/` holds only the 5786 Law, checked 2026-10-08; BACKLOG IL-31).
 The row already declines s 121B for 2025 by name, and its s 121B(e) helpers have declined 2025 too since 0.2.0, so no code changes; the tester's S13 and S25 stay refused, as declared.
 The lead reports that agent `fetch-il` is fetching amendment 276 for IL-31; when it is deposited, its commencement section decides whether s 121B answers 2025 (moving the boundary in `the additional tax under section 121B for` and the two helpers), and nothing here assumes which way.
@@ -173,14 +173,14 @@ Line numbers that those three cite in the `.l4` files are lines of version 0.1.0
 | item | class | files | what changed |
 | --- | --- | --- | --- |
 | 03-O1 | OURS-WRONG | `ito-121b-additional-tax.l4`, `ito-il03-tests.l4` | the two s 121B(e) helpers decline 2025 (and earlier) with the section's own refusal, as its rule does; one expected value changed, six added |
-| 03-O2 | OURS-WRONG (silent) | `ito-il03-nouns.l4`, `ito-120b-indexation.l4`, `ito-il03-tests.l4`; `tests-independent.l4` line 310 (as the lead authorised) | `amount on 1 January 2024, before rounding` is a MAYBE NUMBER; 2028 with NOTHING is declined by name; five assertions added, three inputs wrapped in `JUST` |
+| 03-O2 | OURS-WRONG (silent) | `ito-il03-nouns.l4`, `ito-120b-indexation.l4`, `ito-il03-tests.l4`; `tests-independent.l4` line 309 (as the lead authorised) | `amount on 1 January 2024, before rounding` is a MAYBE NUMBER; 2028 with NOTHING is declined by name; five assertions added, three inputs wrapped in `JUST` |
 | 03-F7 | WORDING | `NOTES.md`, `encoding.json` | fork F7 answered from s 7 of the enacted 5786 Law; assumption A3 cites its ss 5-6; no answer changed |
 | 03-721 | NOT-ENCODED (data) | new `ito-il03-published-figures.l4`, `ito-il03-tests.l4`, `NOTES.md`, `encoding.json` | the Tax Authority's 721,560 for 2026, carried as a published figure, not law; six assertions added |
 | 03-W1 | WORDING | `NOTES.md`, `encoding.json` | "the independent test pass was not run" marked stale |
 | CHK-03 | WORDING | `check.sh`, `encoding.json` | `expected_refused` added; the tester's 6 failed and 2 refused declared line by line; `check.sh` exits 0 |
-| 03-T1 | TESTER-WRONG | `check.sh`, `NOTES.md`, the lead's note at the end of `tests-independent.l4` | annotated: F02 and F03 (`tests-independent.l4` lines 285, 286) stay failing, values unchanged |
-| 01-W5 (IL-03 half) | WORDING | `ito-il03-nouns.l4`, `ito-120b-indexation.l4`, `ito-il03-tests.l4`; `tests-independent.l4` lines 315, 317, 351, 352 (as the lead authorised) | "pension point" renamed "allowance point" in three names (the lead's choice, assumed, not ruled); no answer moved |
-| 03-N4 (IL-03 half) | WORDING | `ito-il03-nouns.l4`, `ito-121-individual-rates.l4`, `ito-121b-additional-tax.l4`; `tests-independent.l4` lines 167, 172 (as the lead authorised) | `A problem with the facts` renamed `A problem with the facts, for sections 121 and 121B`; no answer moved |
+| 03-T1 | TESTER-WRONG | `check.sh`, `NOTES.md`, the lead's note at the end of `tests-independent.l4` | annotated: F02 and F03 (`tests-independent.l4` lines 284, 285) stay failing, values unchanged |
+| 01-W5 (IL-03 half) | WORDING | `ito-il03-nouns.l4`, `ito-120b-indexation.l4`, `ito-il03-tests.l4`; `tests-independent.l4` lines 314, 316, 350, 351 (as the lead authorised) | "pension point" renamed "allowance point" in three names (the lead's choice, assumed, not ruled); no answer moved |
+| 03-N4 (IL-03 half) | WORDING | `ito-il03-nouns.l4`, `ito-121-individual-rates.l4`, `ito-121b-additional-tax.l4`; `tests-independent.l4` lines 166, 171 (as the lead authorised) | `A problem with the facts` renamed `A problem with the facts, for sections 121 and 121B`; no answer moved |
 
 ### 03-O1: the 2025 residential threshold, answered by a helper and refused by the rule
 
@@ -189,20 +189,20 @@ In 0.1.0 `the text fixes the residential-apartment sale value for tax year` was 
 So the note on line 4462, "(נקוב לשנת 2025; בשנת 2026, 5,385,285 ש״ח)", was read as answering 2025 by the helpers and as not answering it by the rule.
 The note says what the figure is in 2025; it does not say that s 121B as amended in 5785 reaches tax year 2025, and the deposited text does not say from when that amendment applies (assumption A1, question 4; amendment 276, Sefer HaChukim 3342, is not deposited, BACKLOG IL-31).
 The inventory's other option, letting the rule answer 2025, waits on that deposit (03-S13) and was not taken.
-Both helpers now decline 2025 and earlier with the section's own refusal, "section 121B for tax years before 2026 is not encoded in this model" (`ito-121b-additional-tax.l4` lines 77-80 and 99-104).
+Both helpers now decline 2025 and earlier with the section's own refusal, "section 121B for tax years before 2026 is not encoded in this model" (`ito-121b-additional-tax.l4` lines 76-79 and 98-103).
 The predicate answers TRUE for 2026 and FALSE from 2027; the threshold answers 5,385,285 for 2026 and declines from 2027 under RE Law s 9(c2), as before.
-The section's rule reaches neither helper before 2026, so none of its answers moves, and the tester's S25 (`tests-independent.l4` line 384) is refused as before.
+The section's rule reaches neither helper before 2026, so none of its answers moves, and the tester's S25 (`tests-independent.l4` line 383) is refused as before.
 
 ### 03-O2: a rounded 2024 figure silently accepted for 2028
 
 Recorded at `INDEPENDENT-FINDINGS.md` line 86 (observation O2) and at line 350 of this file as it stood at 0.1.0; class OURS-WRONG (silent).
 For 1 January 2028, s 120B(e)(2) adjusts "הסכומים כפי שהיו ביום כ׳ בטבת התשפ״ד (1 בינואר 2024) טרם עיגולם" (line 4345), the amounts as they were on 1 January 2024 before rounding.
 The Tax Authority publishes the rounded figures. In 0.1.0 the record `An amount on 1 January of a tax year` required a NUMBER before rounding, so a caller who held only the rounded figure had to put something there, and the rounded figure gave a plausible 2028 amount with exit 0.
-As the inventory proposed, the field `amount on 1 January 2024, before rounding` is now a `MAYBE NUMBER` (`ito-il03-nouns.l4` line 153).
+As the inventory proposed, the field `amount on 1 January 2024, before rounding` is now a `MAYBE NUMBER` (`ito-il03-nouns.l4` line 152).
 `s 120B — the amount for the tax year` reads it only for 2028, and on `NOTHING` declines by name: "section 120B(e)(2) adjusts the 1 January 2024 amount before rounding, and that amount was not supplied" (`ito-120b-indexation.l4`, a new refusal above the dispatcher; the 2028 arm is now a `WHERE` binding, `the 2028 adjustment`).
 `s 120B — the amount in force in the tax year` reaches the same refusal first, because it must have the amount before it asks for the rounding Order.
 The frozen years 2025-2027 read only the figure after rounding, and 2029 on reads the previous year's base, so they answer as before with `NOTHING` in the field.
-The capstone's adapter (`il07-adapter-il03.l4` line 114) passes a polymorphic named refusal into this field; that still typechecks against a `MAYBE NUMBER` and is never forced for 2025-2027, so it needs no change, though job IL-22 may prefer to pass `NOTHING`.
+The capstone's adapter (`il07-adapter-il03.l4` line 113) passes a polymorphic named refusal into this field; that still typechecks against a `MAYBE NUMBER` and is never forced for 2025-2027, so it needs no change, though job IL-22 may prefer to pass `NOTHING`.
 The tester's file built the record with `IS before`, a NUMBER, which no longer typechecks (probed on a scratch copy: 1 error, no assertion run); the lead authorised changing that one line, 310, to `IS JUST before` (see "The tester's file" below).
 
 ### 01-W5 (IL-03's half): "allowance point", not "pension point"
@@ -225,7 +225,7 @@ The comparison section below, which quotes the old names, is untouched.
 Recorded at the capstone's `RECONCILE.md` line 47 (N4); class WORDING.
 Rows IL-03 and IL-06 both declared a type `A problem with the facts`, so no module could import both rows and name either.
 IL-03's is now `A problem with the facts, for sections 121 and 121B`, after the sections whose rules return it (the style of RECONCILE's N3); its three constructors are unchanged.
-It is named in `ito-il03-nouns.l4` (the declaration), in `ito-121-individual-rates.l4` lines 227 and 237, and in two signatures of `ito-121b-additional-tax.l4`, renames only.
+It is named in `ito-il03-nouns.l4` (the declaration), in `ito-121-individual-rates.l4` lines 226 and 236, and in two signatures of `ito-121b-additional-tax.l4`, renames only.
 The lead authorised the edit to `ito-121-individual-rates.l4`, which jobs.txt had listed as untouched; it is vendored by the capstone.
 The tester's file names the type on lines 167 and 172, adapted as the lead authorised.
 
@@ -347,7 +347,7 @@ Against the source alone it flags, in `ito-il03-published-figures.l4` and this f
 | kind | 0.1.0 | 0.2.0 | in vendored module | capstone users found |
 | --- | --- | --- | --- | --- |
 | type | `A problem with the facts` | `A problem with the facts, for sections 121 and 121B` | `ito-il03-nouns.l4`, used in `ito-121-individual-rates.l4`, `ito-121b-additional-tax.l4` | none by name: `il07-adapter-il03.l4` matches `LEFT p`; its comment on line 15 names the old type |
-| field type | `amount on 1 January 2024, before rounding` IS A NUMBER | IS A MAYBE NUMBER | `ito-il03-nouns.l4` | `il07-adapter-il03.l4` line 114 passes a named refusal, which still typechecks |
+| field type | `amount on 1 January 2024, before rounding` IS A NUMBER | IS A MAYBE NUMBER | `ito-il03-nouns.l4` | `il07-adapter-il03.l4` line 113 passes a named refusal, which still typechecks |
 | constructor | `the amount of a pension point` | `the amount of an allowance point` | `ito-il03-nouns.l4` | none |
 | type | `A pension-point amount in a tax year` | `An allowance-point amount in a tax year` | `ito-il03-nouns.l4` | none |
 | rule | `s 120B(b) — the pension-point amount from the month of an agreed cost-of-living increment` | `s 120B(b) — the allowance-point amount from the month of an agreed cost-of-living increment` | `ito-120b-indexation.l4` | none |
@@ -661,18 +661,18 @@ Line numbers `L…` are lines of the source file; file references without a dire
 
 | id | provision | ours | Axiom | source | class | repair to ours |
 | --- | --- | --- | --- | --- | --- | --- |
-| X01 | s 121B(a), the amount | an input with no default; the printed 640,000 is read by no rule (`ito-121b-additional-tax.l4:39`, `:213-216`) | `additional_tax_threshold` is 640000 from `0001-01-01`, every year (`section-121b.yaml:33-50`) | L4335 makes the s 121B amount an income ceiling; L4338 adjusts income ceilings every 1 January; L4344 fixes 2025-2027 at the 1 January 2024 figure after rounding; the note at L4456 marks 640,000 as the 2017 nominal figure | **theirs wrong**, and conceded (`ENCODING-GAPS.md:276-286`) | none |
+| X01 | s 121B(a), the amount | an input with no default; the printed 640,000 is read by no rule (`ito-121b-additional-tax.l4:38`, `:212-215`) | `additional_tax_threshold` is 640000 from `0001-01-01`, every year (`section-121b.yaml:33-50`) | L4335 makes the s 121B amount an income ceiling; L4338 adjusts income ceilings every 1 January; L4344 fixes 2025-2027 at the 1 January 2024 figure after rounding; the note at L4456 marks 640,000 as the 2017 nominal figure | **theirs wrong**, and conceded (`ENCODING-GAPS.md:276-286`) | none |
 | X02 | s 121B(a1), years before 2025 | declined (every year before 2026) | applied in every year; its four companion cases are all dated 2024, and one asserts an (a1) charge of 3,200 (`section-121b.test.yaml:1-16`) | L4455 lists the 5785 amendment; the deposited text does not say from when (a1) applies | **scope difference** on the deposited text. Axiom's gap file cites the commencement of the amending Law (amendment 276, Sefer HaChukim 3342, s 3: 1 January 2025) and concedes the defect (`ENCODING-GAPS.md:289-308`); not verified here | none |
 | X03 | s 121B, tax year 2025 | declined (assumption A1; section 8 Q4) | answered, at 640,000 | L4455 (the 5785 tag); the note at L4462 "נקוב לשנת 2025" | **genuine ambiguity** on the deposited text; the commencement Axiom cites (X02) would resolve it toward answering 2025 | none; see follow-up 1 |
-| X04 | s 121, tax years 2028 on | declined (`ito-121-individual-rates.l4:62-74`) | every version runs from `2026-01-01` with no end, so the 2026 figures answer 2028 on (`section-121.yaml:29` and the other nine `effective_from`) | L4345 adjusts the amounts on 1 January 2028; L4335 makes the s 121 amounts income ceilings | **theirs wrong** from 2028. Axiom records that the indexation, (e)(2) included, is not encoded (`ENCODING-GAPS.md:383-391`, `:240-249`), but not that its s 121 answers 2028 | none |
+| X04 | s 121, tax years 2028 on | declined (`ito-121-individual-rates.l4:61-73`) | every version runs from `2026-01-01` with no end, so the 2026 figures answer 2028 on (`section-121.yaml:29` and the other nine `effective_from`) | L4345 adjusts the amounts on 1 January 2028; L4335 makes the s 121 amounts income ceilings | **theirs wrong** from 2028. Axiom records that the indexation, (e)(2) included, is not encoded (`ENCODING-GAPS.md:383-391`, `:240-249`), but not that its s 121 answers 2028 | none |
 | X05 | s 120B | the mechanism, over supplied readings and amounts | (e)(1) only; (a)-(d) and (e)(2) not encoded (`ENCODING-GAPS.md:383-391`) | L4338-L4345 | **scope difference** | none |
-| X06 | s 120B(e)(1), which years | computed: 2025 to 2027 inclusive (`ito-120b-indexation.l4:131-133`; F13) | the years appear in the excerpt and in `effective_from: '2025-01-01'`, not in the formula; by the formula, a caller who supplies `true` for 2028 gets "holds" | L4344 | **representational**: the year test is left to the caller | none |
-| X07 | s 121(b)(1), the age of 60 | from date of birth, 60th birthday on or before 31 December of the tax year (`ito-121-individual-rates.l4:203-204`; F2) | a boolean input (`section-121.yaml:180`) | L4354 names no date | **representational**: Axiom leaves F2 to the caller; the text does not decide it | none |
-| X08 | s 121, the income on the scale | the items flagged `charged at the rates in section 121` (`ito-121-individual-rates.l4:192-194`) | `taxable_income` as supplied; nothing excludes income another section charges at its own rate | L4350 "המס על הכנסתו החייבת של יחיד"; the special-rate sections are outside the slice | **scope difference** at the interface: wages 84,120 with a dividend of 1,000,000 left in Axiom's `taxable_income` gives 412,589.60 there and 8,412 here | none |
-| X09 | s 121, negative income | `LEFT an amount of income is negative` (`ito-121-individual-rates.l4:228-231`) | clamped to 0 (`section-121.yaml:253-254`) | silent | **representational** | none |
-| X10 | s 121(a)(1) and (b)(1)(d), the two tops of the 31% band | declined if they differ (F8; `ito-121-individual-rates.l4:176-180`) | (a)(1)'s top bounds the general band, (b)(1)(d)'s bounds the credit-back, unchecked (`section-121.yaml:254`, `:261`) | L4351, L4358 | **representational**: the same answer with the printed figures | none |
+| X06 | s 120B(e)(1), which years | computed: 2025 to 2027 inclusive (`ito-120b-indexation.l4:130-132`; F13) | the years appear in the excerpt and in `effective_from: '2025-01-01'`, not in the formula; by the formula, a caller who supplies `true` for 2028 gets "holds" | L4344 | **representational**: the year test is left to the caller | none |
+| X07 | s 121(b)(1), the age of 60 | from date of birth, 60th birthday on or before 31 December of the tax year (`ito-121-individual-rates.l4:202-203`; F2) | a boolean input (`section-121.yaml:180`) | L4354 names no date | **representational**: Axiom leaves F2 to the caller; the text does not decide it | none |
+| X08 | s 121, the income on the scale | the items flagged `charged at the rates in section 121` (`ito-121-individual-rates.l4:191-193`) | `taxable_income` as supplied; nothing excludes income another section charges at its own rate | L4350 "המס על הכנסתו החייבת של יחיד"; the special-rate sections are outside the slice | **scope difference** at the interface: wages 84,120 with a dividend of 1,000,000 left in Axiom's `taxable_income` gives 412,589.60 there and 8,412 here | none |
+| X09 | s 121, negative income | `LEFT an amount of income is negative` (`ito-121-individual-rates.l4:227-230`) | clamped to 0 (`section-121.yaml:253-254`) | silent | **representational** | none |
+| X10 | s 121(a)(1) and (b)(1)(d), the two tops of the 31% band | declined if they differ (F8; `ito-121-individual-rates.l4:175-179`) | (a)(1)'s top bounds the general band, (b)(1)(d)'s bounds the credit-back, unchecked (`section-121.yaml:254`, `:261`) | L4351, L4358 | **representational**: the same answer with the printed figures | none |
 | X11 | s 121, band edges | the tops only; each band is the slice above one top up to the next | the tops plus "first shekel" figures (301,201; 84,121; 120,721; 228,001), each band `min(x, top) - first + 1` | L4351-L4358 | **representational**: the same continuous arithmetic (F16) | none |
-| X12 | s 121B(e), the income base | computed: s 88 and Real Estate Taxation Law s 47 inflationary amounts out, betterment in, the residential limb with its threshold and exemption (`ito-121b-additional-tax.l4:54-147`) | deferred: the caller supplies `taxable_income_for_section_121b` complete (`section-121b.yaml:13-31`); the 5,385,285 parameter is dated `0001-01-01` and read by no rule | L4462 | **scope difference** | none |
+| X12 | s 121B(e), the income base | computed: s 88 and Real Estate Taxation Law s 47 inflationary amounts out, betterment in, the residential limb with its threshold and exemption (`ito-121b-additional-tax.l4:53-146`) | deferred: the caller supplies `taxable_income_for_section_121b` complete (`section-121b.yaml:13-31`); the 5,385,285 parameter is dated `0001-01-01` and read by no rule | L4462 | **scope difference** | none |
 | X13 | s 121B(b), (c), (d) | (b) as its one answer, (c) inert, (d) an input convention | in the module summary only (`ENCODING-GAPS.md:456-458`) | L4458-L4460 | **scope difference**; no answer differs | none |
 | X14 | s 120B(e)(2), its wording | F5: the 1 January 2024 amounts before rounding, adjusted by the 2027 rise only | not encoded; the summary drops "as they were on 1 January 2024 before rounding" (`section-120b.yaml:8`), and the gap file calls (e)(2) "the 2028 catch-up" (`ENCODING-GAPS.md:388`) | L4345 | **representational**: no value is computed on Axiom's side; "catch-up" leans toward the cumulative reading F5 rejects, but it is a label | none |
 
@@ -739,7 +739,7 @@ This encoding has, and Axiom does not: the s 120B mechanism and the s 1 arithmet
 No divergence is classed ours wrong, so no repair is proposed.
 Three follow-ups depend on reading the amending Laws, which neither this comparison nor Axiom's citations can stand in for:
 
-1. If amendment 276, s 3, commences s 121B(a1) on 1 January 2025 as Axiom reports, s 121B can answer 2025 with the amount supplied: the boundary at `ito-121b-additional-tax.l4:217` (and the refusal at `:80-81` and `:91`) would move to 2025, which also removes observation O1. Check first whether that amendment changed anything else in s 121B for 2025.
+1. If amendment 276, s 3, commences s 121B(a1) on 1 January 2025 as Axiom reports, s 121B can answer 2025 with the amount supplied: the boundary at `ito-121b-additional-tax.l4:216` (and the refusal at `:80-81` and `:91`) would move to 2025, which also removes observation O1. Check first whether that amendment changed anything else in s 121B for 2025.
 2. If amendment 288, s 7, reads as Axiom quotes it, F7 is answered by reading (iii), which here comes to (ii): the 2028 base for the moved ceilings is the 5786 figures. No answer here changes while the rounding Order is declined; the fork register and question 3 would record the answer.
 3. Amendment 288, s 6, if confirmed, gives assumption A1's 2026 boundary for s 121 a basis in the Law rather than in the editorial tables.
 

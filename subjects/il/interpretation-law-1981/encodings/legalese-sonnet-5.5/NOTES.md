@@ -371,7 +371,7 @@ Other results the tests pin (section citation in the test file): the Law binds f
 
 ## 5. What `check.sh` prints, and which failures are expected
 
-`check.sh` is the skill's script plus three checks of its own: every module starts with `@lang en` and has an ASCII filename, `l4 check` prints no stray-`@ref` warning, and `srcrefs.py check --refs` finds no problem in any quotation or locator.
+`check.sh` is the skill's script plus three checks of its own: every module has an ASCII filename, `l4 check` prints no stray-`@ref` warning, and `srcrefs.py check --refs` finds no problem in any quotation or locator.
 It reads the diagnostics, not the exit code: `l4 run` exits 0 when an `#ASSERT` fails.
 The run recorded here, with the binary named in section 0:
 

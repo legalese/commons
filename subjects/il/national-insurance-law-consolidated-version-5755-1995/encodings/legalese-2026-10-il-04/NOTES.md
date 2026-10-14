@@ -40,7 +40,7 @@ Whether column C should read F21 for the sets whose column C total the formula r
 Which figure "the average wage" means in s 1 "self-employed person" (2) and in s 334(a)(2), the s 1 figure (13,566 for 2026) or the figure calculated under s 2 (13,769), is not chosen anywhere in this row.
 Every rule that reads it takes it as an argument: `s 1 "self-employed person" (2) — average monthly income of` … `not less than 50% of the average wage of` … and `s 1 — a self-employed person in the period:` … `with the average wage at` … in `nii-s1-definitions.l4`; `s 334(a)(2) — the threshold on 1 January of` … `by the average wage from` … `to` … in `nii-s334-interpretation.l4`.
 Since the F3 repair of 2026-10-07, Schedule J reads it for no version selected for a contribution month (F5, as worded at 0.4.1).
-Both published figures are offered by name, and no rule uses either (`nii-il04-published-figures.l4:52`, `:56`).
+Both published figures are offered by name, and no rule uses either (`nii-il04-published-figures.l4:51`, `:55`).
 The input convention, stated: the caller says which figure it supplies.
 This row's tests supply the s 1 figure, 13,566, and their expected values are for that input; they are not a finding that it is the figure Chapter 15 uses.
 The readings do give different answers, and the two assertions added below show one: ten hours a week at 6,800 a month is a self-employed person on the s 1 figure and not on the s 2 figure.
@@ -49,7 +49,7 @@ The text bears on it: s 2(b) applies its changes "בחישוב השכר הממו
 Whether that leaves only one reading arguable is for a row that picks a figure, not for this one.
 
 **04-F8, class (b).**
-The case where F8's readings part, an advance period other than a month (whether the threshold scales with the period), is already declined by name: `section 337(a)(2) is encoded only for advance-payment periods of a month, the period the reduced collection threshold is applied to` (`nii-s337-rates.l4:115-116`, applied at `:144-145`; tested at `nii-il04-tests.l4:286`).
+The case where F8's readings part, an advance period other than a month (whether the threshold scales with the period), is already declined by name: `section 337(a)(2) is encoded only for advance-payment periods of a month, the period the reduced collection threshold is applied to` (`nii-s337-rates.l4:114-115`, applied at `:144-145`; tested at `nii-il04-tests.l4:285`).
 For a monthly period the readings coincide, the threshold being a monthly figure.
 Equal shares is the only reading the words give: s 337(a)(2) applies the rates to the annual income "כשהיא מחולקת לתקופות שנקבעו לצורך תשלום מקדמות" (as divided into the periods set for paying advances; line 3627), against s 337(a)(1)'s monthly income for an employee.
 `Another insured person's year of contributions` carries the annual income and the number of periods, and no income for any one period that could be divided by another measure.
@@ -63,22 +63,22 @@ F18 is still "not settled by any text read"; but there is no second workable rea
 
 **04-Q5, class (b).**
 The question is from which month item 4's work-injury figure of 2.06 applied: 1 January 2024 (the Economic Efficiency Law 5783-2023 s 24, and the editors' note) or 1 February 2025 (the date the Institute gives its 14.6% composite).
-Both dates precede January 2026, the first month this row answers; earlier months are declined by name (A1; `nii-il04-tests.l4:76-77`).
+Both dates precede January 2026, the first month this row answers; earlier months are declined by name (A1; `nii-il04-tests.l4:75-76`).
 In every month the row answers, the two dates give the same item 4.
 
 **04-A8, classes (c) and (d).**
 Not a reading of the text.
 Amendment 252 s 7(a) makes the temporary table the rates for 2025 and 2026, and s 7(b) lets an order extend it a year at a time (A3, A8); for a year with an order and for a year without one the text gives one answer each, and which holds is a fact about an order.
-Every entry point that selects a version of Schedule J by year has a form that takes the order as an argument (`nii-schedule-j.l4:147`; `nii-s337-rates.l4:65`, `:131`), and the tests answer both values of it (`nii-il04-tests.l4:510-513`, `:525-528`).
-The forms that take no order (`nii-schedule-j.l4:168-169`; `nii-s337-rates.l4:94`, `:159`), and the year-only forms built on them, pass "no order".
+Every entry point that selects a version of Schedule J by year has a form that takes the order as an argument (`nii-schedule-j.l4:146`; `nii-s337-rates.l4:64`, `:130`), and the tests answer both values of it (`nii-il04-tests.l4:509-512`, `:524-527`).
+The forms that take no order (`nii-schedule-j.l4:167-168`; `nii-s337-rates.l4:93`, `:158`), and the year-only forms built on them, pass "no order".
 The input convention, stated: a call that gives only a year is a call for a year in which no order under s 7(b) has been made.
-It is the convention this row already applies to orders under s 337(b): "the deposited text is the schedule as amended at retrieval, so no order is applied on top of it" (`nii-s337-rates.l4:183`).
+It is the convention this row already applies to orders under s 337(b): "the deposited text is the schedule as amended at retrieval, so no order is applied on top of it" (`nii-s337-rates.l4:182`).
 Whether an order was made for 2027 or 2028 is class (d): no order is in the sources, and none was looked for in this session.
 By A8's reading of s 7(b) an order must be brought to the Knesset Labour and Welfare Committee two months before its year; for 2027 that point had not passed when this was written.
 
 Not done, and recorded for the lead and Meng: if the year-only forms should decline 2027 and 2028 instead, that is a change to the three forms that take no order, and it would move these tests, every value unchanged:
-this row's helpers `the version for 2027` and `the version for 2028` (`nii-il04-tests.l4:67-68`, used by 15 assertions) and the two year-only threshold-form assertions (`:536`, `:556`) would be re-pointed to the form with the order at FALSE, and one refusal (`:232`) might then give a different reason;
-the independent tester's helper `ind v` (`tests-independent.l4:33`, used by 371 assertions for 2027 and 2028) and two threshold-form assertions (`:850`, `:852`) would need the addendum's interface adaptation.
+this row's helpers `the version for 2027` and `the version for 2028` (`nii-il04-tests.l4:66-67`, used by 15 assertions) and the two year-only threshold-form assertions (`:536`, `:556`) would be re-pointed to the form with the order at FALSE, and one refusal (`:232`) might then give a different reason;
+the independent tester's helper `ind v` (`tests-independent.l4:32`, used by 371 assertions for 2027 and 2028) and two threshold-form assertions (`:850`, `:852`) would need the addendum's interface adaptation.
 The inventory records that the capstone answers 2026 only.
 
 ### Assertions added (none changed)
@@ -116,7 +116,7 @@ The tester's five failures are still lines 756, 924, 929, 930 and 931 (04-TF3); 
 
 Nothing is renamed and nothing is added to any rule module; no module the capstone vendors changed, so its IL-04 pins hold.
 - **04-Q2:** nothing to follow. Fork F21 is as it was at 0.6.0. Row IL-05 takes column D for the deduction branches from its caller at the printed totals, and its one partial-set computation, its fork F23 (the printed total less item 6), is the set without unemployment, which is one of F21's published sets, so it agrees with this row's default (row IL-05's NOTES, "Row IL-37 (TAKEAWAY): nothing is needed here").
-- **04-F5:** nothing to follow from this row: no name, type or value changed, and this row picks no figure. Row IL-05's fork F1 takes the s 2 figure in its 2026 figures for Schedule K items 2 to 4 and s 348(a1); classing that is row IL-05's own item. If row IL-05 names the two figures, this row's names are at `nii-il04-published-figures.l4:52` and `:56`; it cannot import them across directories and would re-declare them.
+- **04-F5:** nothing to follow from this row: no name, type or value changed, and this row picks no figure. Row IL-05's fork F1 takes the s 2 figure in its 2026 figures for Schedule K items 2 to 4 and s 348(a1); classing that is row IL-05's own item. If row IL-05 names the two figures, this row's names are at `nii-il04-published-figures.l4:51` and `:55`; it cannot import them across directories and would re-declare them.
 
 ## Version 0.6.0 (2026-10-08): fork F21's third published set (BACKLOG IL-45)
 
@@ -273,7 +273,7 @@ A woman between her retirement age and 67 without an old-age pension (not insure
 
 ### Choices made here (assumed, not ruled)
 
-- **Column D only.** The ruling is for the employee's deduction. In column C (the contributions, s 337) the formula does not reach the Institute's National Insurance totals above the threshold for either set: a controlling shareholder, 14.60 − 0.33 − 0.04 = 14.23 where the page's National Insurance table prints 14.17; aged 67 to 70, 14.60 − 0.13 − 0.33 − 2.28 = 11.86 where the page's 16.99 less 5.17 is 11.82. So column C keeps reading (i), unchanged; `nii-il04-tests.l4` line 565 still asserts it. Open question 2 (the controlling shareholder's 14.17) stands.
+- **Column D only.** The ruling is for the employee's deduction. In column C (the contributions, s 337) the formula does not reach the Institute's National Insurance totals above the threshold for either set: a controlling shareholder, 14.60 − 0.33 − 0.04 = 14.23 where the page's National Insurance table prints 14.17; aged 67 to 70, 14.60 − 0.13 − 0.33 − 2.28 = 11.86 where the page's 16.99 less 5.17 is 11.82. So column C keeps reading (i), unchanged; `nii-il04-tests.l4` line 564 still asserts it. Open question 2 (the controlling shareholder's 14.17) stands.
 - **The sets are recognised by their branches, in any table.** The Institute's figures confirm the formula on 2026's table (the temporary version); the same sets are answered by it for a later table too (2027's permanent version: a controlling shareholder at 10,000 with a threshold of 8,000, 8,000 × 0.39% + 2,000 × 6.79% = 167). The ruling names sets, not years.
 - **The words of the decline are unchanged** for every set the default declines, so callers' and testers' assertions of it hold.
 - **The rule names.** `the column D deduction under … , reading Schedule J as` r and `the combined percentage in column D of … , reading Schedule J as` r keep their names and now follow fork F21's switch; each has a form `…, fewer branches read as` f; `what the printed total adds in … , fewer branches read as` f is new. The rules without a fewer-branches reading in column C, and `what the printed total adds in …` without it, are unchanged.
@@ -394,7 +394,7 @@ The figures the note quotes were worked by hand from column D's 2026 figures for
 | 8,000 | 297 | 80.1112 + 13.8699 = 93.9811 | 80.1112 + 20.79 = 100.9012 |
 | 10,000 | 2,297 | 80.1112 + 107.2699 = 187.3811 | 80.1112 + 160.79 = 240.9012 |
 
-The items' three are the figures "Repair 2026-10-07" already gave; 187.3811 and 240.9012 are this row's own assertions at `nii-il04-tests.l4` lines 504-505.
+The items' three are the figures "Repair 2026-10-07" already gave; 187.3811 and 240.9012 are this row's own assertions at `nii-il04-tests.l4` lines 503-504.
 
 ### What `check.sh` prints at 0.4.1
 
@@ -440,7 +440,7 @@ The three readings are kept by name, as the constructors of `A reading of sectio
 | --- | --- | --- |
 | (i) the fall is applied: the rate of rise is negative, and the threshold goes down by it | `the fall is applied` | this row, versions 0.1.0 to 0.3.1 (fork register F6, "taken") |
 | (ii) no update on a fall: the threshold stays where it was | `the threshold stays where it was` | the Axiom Foundation's encoding, as BACKLOG row IL-12 records it; this row did not read Axiom's material (the semi-cleanroom ruling of 2026-10-06) |
-| (iii) declined: the text provides for a rise and says nothing of a fall | `a fall is declined` | the independent tester, fid-il-04: T7, `tests-independent.l4` line 787, "My decided answer: REFUSE (genuine ambiguity)"; its `DECIDED-ANSWERS.md` adds that "rise" makes (ii) at least as strong as (i) |
+| (iii) declined: the text provides for a rise and says nothing of a fall | `a fall is declined` | the independent tester, fid-il-04: T7, `tests-independent.l4` line 786, "My decided answer: REFUSE (genuine ambiguity)"; its `DECIDED-ANSWERS.md` adds that "rise" makes (ii) at least as strong as (i) |
 
 **The default is (iii), declined.** The ruling's reason: this project's rule is to decline where the text does not decide, and on a fall s 334(a) does not decide.
 The refusal reads "section 334(a) updates the threshold by the rate of rise of the index or of the average wage, and says nothing of a fall".

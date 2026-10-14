@@ -40,7 +40,7 @@ Not done: Hebrew `@nlg:he` heralds (they were optional), an independent test pas
 - `hvac-tests-law.l4` (700 lines)
 - `hvac-tests-red.l4` (85 lines)
 - `hvac-tests-simplex.l4` (61 lines)
-- `il-interpretation-time.l4` (501 lines) -- vendored, not generated: a byte-identical copy of the Interpretation row's module (sha256 `d1552de57266d7dc7a5d2fca43b73e100b8814dc78f33fb755daeb2294cf671f`)
+- `il-interpretation-time.l4` (500 lines) -- vendored, not generated: a byte-identical copy of the Interpretation row's module (sha256 `f85afc00eb066e86ad50340fef40cf977986bda8287cc7a1b59e5d165cc28385`)
 
 Import order: `hvac-nouns` first (nouns only, no rules); `il-interpretation-time` (vendored; it imports only `prelude` and `daydate`); then `hvac-fees-regs`; then the Law in the order `hvac-law-s63-commencement`, `hvac-law-s6-second-schedule`, `hvac-law-s8-validity`, `hvac-law-s2-s3-licensing-duty`, `hvac-law-s7-s9-exemption-and-temporary-licence`, `hvac-law-s16-s17-duties-of-licensee`; then the tests, with `hvac-tests-calendars` (the calendars of rest days the tests supply, and positive controls on their weekdays) under the three test modules that use it.
 s 63 comes before the Second Schedule because three Schedule rows are "valid three years from the commencement of this Law under s 63(a)(1)".

@@ -335,7 +335,7 @@ The scales in these tests are fixtures (the s 121 bands as printed, or one flat 
 The l4 binary is `jl4-0.1-6df1397b`, sha256 `f0759b2ef2f1d1b2a577c68f059c54f487de9d913553fc9f0d9bf0f7f5dab0d8`, the same before and after the 0.1.1 run (the 0.1.0 run is in section 11).
 Exit code 0, 35 modules, 1 error (the one declared failure of the independent module), 1040 assertions satisfied, 1 failed, 10 refused.
 This encoding's own test modules have no failure and no refusal: every refusal they make is asserted with `#ASSERT REFUSED … BECAUSE "…"` and counts as satisfied.
-The independent module `tests-independent.l4` (fid-il-30, frozen, sha256 `2778d70caca08dcfbebfec37a691124af8a201b2e79fb5f33009928d8f9967e2`) has 422 satisfied, 1 failed and 10 refused, all declared line by line in `check.sh`:
+The independent module `tests-independent.l4` (fid-il-30, frozen, sha256 `549bd33259ba3f643b1b387b8bc1542596d3f0918ebf3cb234a303fbdd915148`; as delivered it was `2778d70caca08dcfbebfec37a691124af8a201b2e79fb5f33009928d8f9967e2`, before its `@lang en` line was removed on 2026-10-14, the only change) has 422 satisfied, 1 failed and 10 refused, all declared line by line in `check.sh`:
 the failure is BT10 (TESTER-WRONG, section 11); the refusals are CG20, CG22 (3 assertions), T30, BT16, BT17 (a date before 2012), T49 and BT27 (forks 30-F19 and 30-F20, new), DV21 and PT54.
 
 | module | satisfied |
@@ -390,9 +390,9 @@ To call the rule, a row vendors three files from this directory beside its own m
 
 | file | sha256 |
 | --- | --- |
-| `ito-rounding-order-nouns.l4` | `8ffa2a650a11e8b97bee8a2a459b3af2d1770524f2efb0bacba2c860c24f426a` |
-| `ito-rounding-order-5746.l4` | `eb9bd4676e306773adb43b78aff2a2b3919bb7d054ea241a9f104635ddb9c1d0` |
-| `ito-120b-d-rounding-power.l4` | `3a7b7111cb4ff5b9cad1945f38d964365b7db9ad7d402aeb20a829399265a33f` |
+| `ito-rounding-order-nouns.l4` | `50618f4e4353d272f44be57df6d797ffc2dd686e6701e95b84866dfef5aef1be` |
+| `ito-rounding-order-5746.l4` | `b198ea7f475f04fce8d7f39f9199936ab96d5ed53dd71af7ffab02622635f79f` |
+| `ito-120b-d-rounding-power.l4` | `e70cb99a12b79c696c537163ff0c078ee8936f18191aaf3d7ae986b6013ed950` |
 
 The call is `s 120B(d) — the amount after rounding` amount `, of the kind` kind, with the kind `an income ceiling`, `the amount of a credit point` or `the amount of an allowance point` for the three groups IL-03 uses.
 Section 15 of the Order says the base of the next adjustment is the unrounded figure; that is the reading IL-03's fork F6 takes for 2029 onward, and this row finds nothing against it.

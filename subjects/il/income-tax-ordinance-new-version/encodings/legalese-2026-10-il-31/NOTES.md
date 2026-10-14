@@ -240,7 +240,7 @@ The figures that matter, as read: 13 years (SH 2972, text layer and image agree)
 
 | file | from | sha256 | note |
 | --- | --- | --- | --- |
-| `ito-il03-nouns.l4` | `../legalese-2026-10-il-03/ito-il03-nouns.l4` | `0c8b52c31d9026867ecd8818cb345f7c64391a55a1acfb045fcc3138095c5f20` | byte for byte, at the IL-03 tree of 2026-10-08; never edited here. If IL-03 changes its nouns, this copy goes stale and `cmp` will say so. |
+| `ito-il03-nouns.l4` | `../legalese-2026-10-il-03/ito-il03-nouns.l4` | `600429fefd7adebe83b8f3045e3e4a0a0ef0016b85da96c7f622b0de467f4e09` | byte for byte, at the IL-03 tree of 2026-10-08; never edited here. If IL-03 changes its nouns, this copy goes stale and `cmp` will say so. |
 
 The rules of Part B were written from the Hebrew, not copied from `ito-121b-additional-tax.l4` (sha256 `6d54cd5113e49566…`), and then compared with it (section 6, Controls).
 
@@ -258,7 +258,7 @@ In `ito-121b-additional-tax.l4` (sha256 `6d54cd5113e49566…`), the boundary `20
 
 Its independent tester's two refused lines (`tests-independent.l4` 371 and 384) would then be answered, and equal 8,922 and 2,353.2, which are the values this row's tests derive by hand.
 
-**The capstone (IL-07)** asks `the additional tax under section 121B for` through `il07-adapter-il03.l4` lines 73-86 and `il07-pipeline.l4` lines 322-330, with the amount from `il07-published-figures.l4`, which holds 2026 only.
+**The capstone (IL-07)** asks `the additional tax under section 121B for` through `il07-adapter-il03.l4` lines 72-85 and `il07-pipeline.l4` lines 321-329, with the amount from `il07-published-figures.l4`, which holds 2026 only.
 For tax year 2025 it needs two things, neither of which this row can do:
 
 1. IL-03's change above, or, without it, a branch in the adapter on the tax year of the month: tax year 2025 calls `the additional tax under section 121B in tax year 2025 for` (this row), every later year calls IL-03's rule.

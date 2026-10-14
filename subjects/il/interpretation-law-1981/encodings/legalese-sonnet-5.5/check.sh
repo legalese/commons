@@ -60,17 +60,16 @@ printf '%-40s %7d %9d %7d %8d\n' "TOTAL ($n modules)" "$total_err" "$total_ok" "
 echo "(a failed assertion is also an error; any other error, or any refused assertion, makes the run red)"
 
 # --- Beyond the skill's stock check.sh: the checks specific to this encoding -----------------------------------
-# (1) every module starts with `@lang en`; (2) filenames are ASCII; (3) l4 check warnings that check.sh's
-# counts do not show; (4) srcrefs.py: every `-- src:` quotation is a verbatim slice of the source, and every
+# (1) filenames are ASCII; (2) l4 check warnings that check.sh's
+# counts do not show; (3) srcrefs.py: every `-- src:` quotation is a verbatim slice of the source, and every
 # `@ref` locator lies inside a quotation in the same file.
 echo
 echo "extra checks"
 for f in "$DIR"/*.l4; do
   m="$(basename "$f")"
-  [ "$(head -n 1 "$f")" = "@lang en" ] || { echo "  FAIL $m: first line is not '@lang en'"; status=1; }
   case "$m" in *[!A-Za-z0-9._-]*) echo "  FAIL $m: filename is not ASCII-safe"; status=1;; esac
 done
-echo "  all modules start with '@lang en' and have ASCII filenames"
+echo "  all modules have ASCII filenames"
 
 warn="$(for f in "$DIR"/*.l4; do "$L4" check "$f" 2>&1; done | grep -E 'is at the end of the file|follows code on its line|Not attached' || true)"
 if [ -n "$warn" ]; then echo "  FAIL l4 check warnings:"; printf '%s\n' "$warn" | sed 's/^/    /'; status=1; else echo "  l4 check: no stray @ref warnings"; fi

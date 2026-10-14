@@ -542,7 +542,7 @@ The 7 `#TRACE` directives (1 in `tests-fees.l4`, 6 in `tests-law.l4`) are not co
 **Checked against the sources by the launching session.**
 Section 5's as-made and as-amended columns, cell by cell, against Kovetz HaTakanot 11951 and 12383: 194, 40, 284 charged on receipt, 398, 158, a theory exam silent as made, and the practical-exam objection fee silent as amended.
 The draft column was checked only for 273, 40 and 398, against our own notes of the screenshot, not against the image.
-Section 8's five-year limb is read in `law-licensing.l4` lines 111 to 116 as the day before the fifth anniversary, which differs by one day from the sibling rows' anniversary; the comment at lines 94 to 100 and forks F14, F16 and F17 record the readings.
+Section 8's five-year limb is read in `law-licensing.l4` lines 110 to 115 as the day before the fifth anniversary, which differs by one day from the sibling rows' anniversary; the comment at lines 94 to 100 and forks F14, F16 and F17 record the readings.
 
 **Cleanroom, and what it was not.**
 The encoder's transcript was audited afterwards: its Read, Glob and Grep calls touch only its own `inputs/` and `crops/` directories and the `encoding-a-subject` and `writing-l4-rules` skills, and no tool call names `commons`, `commonswt`, `canon` or `il`.

@@ -9,8 +9,8 @@
 #      so a module that is meant to refuse has as many warnings as refusals.  A module is red if it has an error other than a
 #      failed assertion, a number of failed assertions other than expected_failed says, a number of refused assertions other than
 #      expected_refused says, or a number of warnings other than expected_refused says (so any warning that is not a refusal is red).
-#   2. The vendored time module is checked against its sha256 (the brief pins it).
-#   3. Every module starts with `@lang en`, has an ASCII name, and imports only what its group may: a group module imports prelude,
+#   2. The vendored time module is checked against its sha256 (the brief pinned it; the pin below is the module's hash after its `@lang en` line was removed, 2026-10-14).
+#   3. Every module has an ASCII name, and imports only what its group may: a group module imports prelude,
 #      daydate, il-interpretation-time, domain and modules of its OWN group; only int- modules (and their tests) and the ind- independent tests import across groups.
 #   4. srcrefs.py `check --refs` over every module against the raw sources (quotations and locators).
 #   5. check-traces.py over every module that has a #TRACE: a DEONTIC value cannot be compared in #ASSERT, so without this the traces
@@ -37,7 +37,7 @@ if [ -z "${SRCREFS:-}" ]; then
 fi
 # The two Kovetz HaTakanot text layers are named takanot-12383.txt in the fleet's inputs and kovetz-hatakanot-12383-p2062.txt in source/.
 KT12383="$INPUTS/takanot-12383.txt"; [ -f "$KT12383" ] || KT12383="$INPUTS/kovetz-hatakanot-12383-p2062.txt"
-TIME_SHA="d1552de57266d7dc7a5d2fca43b73e100b8814dc78f33fb755daeb2294cf671f"
+TIME_SHA="f85afc00eb066e86ad50340fef40cf977986bda8287cc7a1b59e5d165cc28385"
 L4_SHA="2e3d6bd3a154e6b4080a445af6cc189dbc4ac087d8221682d09509212f1ce187"
 
 # A module that is MEANT to fail is listed here with its exact count, and named in encoding.json `expected_red`.
@@ -105,14 +105,12 @@ echo
 
 # ---- 2. the vendored time module --------------------------------------------------------------------------------------------
 sum="$(shasum -a 256 "$DIR/il-interpretation-time.l4" | cut -d' ' -f1)"
-if [ "$sum" = "$TIME_SHA" ]; then echo "il-interpretation-time.l4: sha256 matches the brief ($TIME_SHA)"; else echo "il-interpretation-time.l4: sha256 $sum DIFFERS from the brief's $TIME_SHA"; status=1; fi
+if [ "$sum" = "$TIME_SHA" ]; then echo "il-interpretation-time.l4: sha256 matches the pin ($TIME_SHA)"; else echo "il-interpretation-time.l4: sha256 $sum DIFFERS from the pin $TIME_SHA"; status=1; fi
 
 # ---- 3. shape of the modules and of the import graph --------------------------------------------------------------------------
 shape_bad=0
 for f in "$DIR"/*.l4; do
   m="$(basename "$f")"
-  first="$(head -n 1 "$f")"
-  [ "$first" = "@lang en" ] || { echo "  $m: first line is not '@lang en'"; shape_bad=1; }
   case "$m" in *[!A-Za-z0-9._-]*) echo "  $m: name is not ASCII-safe"; shape_bad=1 ;; esac
   case "$m" in
     g[1-8]-*)
@@ -126,7 +124,7 @@ for f in "$DIR"/*.l4; do
       done ;;
   esac
 done
-if [ "$shape_bad" -eq 0 ]; then echo "shape: every module starts with @lang en, has a plain name, and no group module imports another group's"; else status=1; fi
+if [ "$shape_bad" -eq 0 ]; then echo "shape: every module has a plain name, and no group module imports another group's"; else status=1; fi
 
 # ---- 4. quotations and locators against the sources ---------------------------------------------------------------------------
 if [ -f "$SRCREFS" ] && [ -f "$INPUTS/law.wiki" ] && [ -f "$INPUTS/regulations-fees.wiki" ] && [ -f "$INPUTS/kovetz-hatakanot-11951-p2116.txt" ] && [ -f "$KT12383" ]; then

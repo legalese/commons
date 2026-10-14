@@ -39,7 +39,7 @@ The Institute prints the employee's share above the bracket as "7% (החל ב- 0
 s 342(c)(1) makes the employer deduct "אחוזים מההכנסה שלפיה משתלמים דמי הביטוח כאמור בלוח י׳".
 I decided on the printed total, 7.00.
 The encoding takes one column D amount per branch as input and sums the six branches s 342(c)(1) names. Fed the source's rows, it therefore deducts at 4.67% above the bracket.
-The encoder's own suite relies on 4.67 too: `nii-il05-tests.l4:596` asserts coordinated contributions of 218.8 for "two employers at 6,000 each, permanent version, threshold 8,000 (scenario 2027)", worked at line 591 as 8,000 × 0.40% + 4,000 × 4.67%.
+The encoder's own suite relies on 4.67 too: `nii-il05-tests.l4:595` asserts coordinated contributions of 218.8 for "two employers at 6,000 each, permanent version, threshold 8,000 (scenario 2027)", worked at line 591 as 8,000 × 0.40% + 4,000 × 4.67%.
 
 | line | id | expected (decided) | encoding | classification |
 |---|---|---|---|---|
@@ -120,7 +120,7 @@ One artefact: the quarterly yeshiva-student cases (H5, H6) put the student's inc
 
 - `registers/source-bundle/amending-laws/SOURCES.json` says `25_lsr_6133485.pdf` has 5 pages; `pdfinfo` reports 40, and the National Insurance part (Part E, ss 19-21) is on PDF pages 11-12 (printed pp 395-396). A reader who trusts the manifest and reads five pages will not find s 19.
 - NOTES section 11 says the independent test pass "was not run". This file is that pass.
-- `nii-il05-tests.l4:591-596` asserts coordinated contributions of 218.8 for a 2027 scenario, with the working "8,000 × 0.40% + 4,000 × 4.67%" (NOTES line 257 repeats it). So the encoder's own suite carries the column D row sum (root cause 1) as an expected value, unflagged.
+- `nii-il05-tests.l4:590-595` asserts coordinated contributions of 218.8 for a 2027 scenario, with the working "8,000 × 0.40% + 4,000 × 4.67%" (NOTES line 257 repeats it). So the encoder's own suite carries the column D row sum (root cause 1) as an expected value, unflagged.
 
 ## Anything read that should not have been
 

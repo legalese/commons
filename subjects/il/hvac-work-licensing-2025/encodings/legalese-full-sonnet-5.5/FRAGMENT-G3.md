@@ -20,7 +20,7 @@ Independence: nothing under `commons/`, `commonswt/`, `canon/`, `il/` or `jl4/ex
 | `g3-tests-licensee-duties.l4`, `g3-tests-training-duty.l4`, `g3-tests-operator.l4` | the passing tests (expected values decided from the Hebrew before the modules were run) |
 | `g3-tests-red.l4` | 19 assertions that are MEANT to fail: the answer of a rejected reading put to the reading taken (section 2) |
 
-Each module opens with `@lang en`, imports only `prelude`, `daydate`, `il-interpretation-time` (not `g3-operator.l4`, which counts no period) and `domain`, and carries `@ref` with `src:` locators on every rule.
+Each module opened with `@lang en` as delivered (that line was removed on 2026-10-14; English is the default), imports only `prelude`, `daydate`, `il-interpretation-time` (not `g3-operator.l4`, which counts no period) and `domain`, and carries `@ref` with `src:` locators on every rule.
 The Hebrew in comments is copied by `srcrefs.py quote`, never typed; this fragment quotes Hebrew only in section 10, by the same script.
 Every rule of a duty or power is a regulative rule typed by the party and the act; every discretion (the Registrar's opinions, "regularly", "sufficient measures", "a reasonable time") is an input.
 

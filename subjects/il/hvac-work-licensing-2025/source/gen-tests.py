@@ -918,7 +918,6 @@ HEADER = """\
 --   g. reg. 2 on the rule-effective-time axis -- which of the two enacted
 --      texts governs on a given day, read off the commencement dates rather
 --      than off an enum, and both sides of each boundary one day apart.
-@lang en
 
 IMPORT prelude
 IMPORT daydate

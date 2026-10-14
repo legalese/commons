@@ -43,7 +43,7 @@ Rows 7 and 8 are counted by `check.sh` as **refused**, not failed: the expressio
 
 **1-3, the age-60 date (F2).**
 The text attaches "has reached 60" to the individual and "in the tax year" to the income, and names no date for the age.
-The encoder took "60 on or before 31 December of the tax year" (`aged 60 or more by the end of the tax year`, `ito-121-individual-rates.l4:203`), which is the most favourable of the three readings it lists.
+The encoder took "60 on or before 31 December of the tax year" (`aged 60 or more by the end of the tax year`, `ito-121-individual-rates.l4:202`), which is the most favourable of the three readings it lists.
 The stake is large and lands on one day: in D05 one day at 60 moves 100,000 of rent from 31,000 to 10,635.20, a difference of 20,364.80.
 I would have declined (as the brief asks where the sources do not answer); the encoder answered and recorded the fork.
 D01, D02 (60 on 1 January 2026) and D06 (60 on 1 January 2027) agree with the encoding under every reading and pass.
@@ -71,20 +71,20 @@ I keep the expectation visible and do not claim the encoding is wrong.
 | id | expectation | why it cannot be asserted | status |
 |---|---|---|---|
 | S11 | no s 121B(a) amount supplied → REFUSE | the amount is a required argument of `the additional tax under section 121B for … , with the amount in section 121B(a) at …`; the case cannot be posed | satisfied by the types |
-| S12 | 640,000 must not be applied as the threshold in 2025-2027 | a negative claim about the code | checked by reading: `the amount printed in section 121B(a), as at 2017` (`ito-121b-additional-tax.l4:39`) is defined and no rule reads it; `640_000` and `721_560` occur nowhere else in the rule modules |
+| S12 | 640,000 must not be applied as the threshold in 2025-2027 | a negative claim about the code | checked by reading: `the amount printed in section 121B(a), as at 2017` (`ito-121b-additional-tax.l4:38`) is defined and no rule reads it; `640_000` and `721_560` occur nowhere else in the rule modules |
 | I11 | 2028, caller holds only the ROUNDED 1 January 2024 figure → REFUSE | `An amount on 1 January of a tax year` requires both the before- and after-rounding 2024 figures for every year | see observation O2 |
 | S31 | s 121B(c), "notwithstanding any enactment" | inert in the encoding (no other enactment to override) | agrees with my reading |
-| S32 | s 121B(d), s 8(c) spreading applies | an input convention on `amount` (`ito-il03-nouns.l4:26`) | agrees with my reading |
+| S32 | s 121B(d), s 8(c) spreading applies | an input convention on `amount` (`ito-il03-nouns.l4:25`) | agrees with my reading |
 
 ## Observations from reading the encoding (not assertions)
 
 **O1. The 2025 residential threshold is unreachable, and its helper disagrees with its section.**
-`the text fixes the residential-apartment sale value for tax year` answers 2025 and 2026 (`ito-121b-additional-tax.l4:67-69`), and NOTES §5 tabulates 5,385,285 for 2025, so the encoder accepts the note "(נקוב לשנת 2025)" as showing the 5785 text applies in 2025 for s 121B(e).
+`the text fixes the residential-apartment sale value for tax year` answers 2025 and 2026 (`ito-121b-additional-tax.l4:66-68`), and NOTES §5 tabulates 5,385,285 for 2025, so the encoder accepts the note "(נקוב לשנת 2025)" as showing the 5785 text applies in 2025 for s 121B(e).
 But `the additional tax under section 121B for` refuses every year before 2026 at its first arm (`:217-218`), so the 2025 arm is reachable only by calling the helper directly.
 Either the note is good enough to answer 2025 (and S13/S25 should compute) or it is not (and the helper should decline 2025 too). The current state reads the same note both ways.
 
 **O2. A silent failure in the s 120B record.**
-For 2028 the answer depends only on `amount on 1 January 2024, before rounding` (`ito-120b-indexation.l4:169`).
+For 2028 the answer depends only on `amount on 1 January 2024, before rounding` (`ito-120b-indexation.l4:168`).
 A caller who holds only the published, rounded 2024 figure must still fill that field, and if they put the rounded figure in it the encoding returns a plausible 2028 amount with exit 0 and no warning.
 For 2029 onward both 2024 fields are required and unused.
 A `MAYBE` on the before-rounding field, refusing 2028 when it is `NOTHING`, would turn this from silent to loud.

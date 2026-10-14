@@ -91,7 +91,6 @@ def name(key, what):
 
 out = []
 w = out.append
-w("@lang en")
 w("IMPORT prelude")
 w("IMPORT `nii-il04-nouns`")
 w("")

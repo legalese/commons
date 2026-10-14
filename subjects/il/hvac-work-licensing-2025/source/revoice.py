@@ -21,7 +21,10 @@ What it does, precisely:
     "longest match first" never arises: a backticked name is matched as one whole token and
     a bare name only where it is a bare identifier. String literals, numbers, keywords and
     comment prose are never touched.
-  * `@lang en` becomes `@lang he`.
+  * Adds `@lang he`. The English row carries no `@lang` line, because a module with none is English
+    (the default), so the line is inserted just above the blank line that precedes the first
+    declaration, where the English row's `@lang en` stood when it still had one. A source that does
+    carry `@lang en` has it turned into `@lang he` in place, as before.
   * Swaps the heralds. A rule reading
         DECIDE `x` @nlg <english>
                    @nlg:he <hebrew>
@@ -216,6 +219,7 @@ def revoice(src_name, text, g, names, keep, uncovered, stats, used, hit_blocks):
     lines = text.split("\n")
 
     out = []
+    seen_lang = False
     i = 0
     while i < len(lines):
         # 1. a comment block that quotes the statute in translation
@@ -259,9 +263,19 @@ def revoice(src_name, text, g, names, keep, uncovered, stats, used, hit_blocks):
             raise Fatal("%s line %d: a stray @nlg:he" % (src_name, i + 1))
 
         # 3. everything else
+        if not seen_lang and code.strip():
+            # The first line of code, and no `@lang` yet: the English row says nothing, so it is English by default.
+            # This row is Hebrew and says so, above the blank line(s) that precede its first declaration.
+            blanks = []
+            while out and out[-1].strip() == "":
+                blanks.append(out.pop())
+            out.append("@lang he")
+            out.extend(reversed(blanks))
+            seen_lang = True
         new_code = rename_code(code, names, keep, uncovered)
         rest = ""
         if kind == "lang":
+            seen_lang = True
             rest = "@lang he" if atext.strip() == "en" else "@lang " + atext
         elif kind in ("desc", "export"):
             if atext not in g["prose"]:

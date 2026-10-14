@@ -8,7 +8,7 @@ The page images of the gazette (Sefer HaChukim 3349, printed pages 197, 198, 206
 
 ## 0. What was written, and what the check printed
 
-Files in `deposit/` (all start with `@lang en` and have ASCII names):
+Files in `deposit/` (all started with `@lang en` as delivered, a line removed on 2026-10-14 because English is the default; all have ASCII names):
 
 | file | what it holds |
 | --- | --- |

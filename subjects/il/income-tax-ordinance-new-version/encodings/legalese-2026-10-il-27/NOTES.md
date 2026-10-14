@@ -6,7 +6,7 @@ Status: draft. No domain expert has read this encoding against the source (HG1 n
 
 ## 0. Conventions
 
-Identifiers are English backtick names (`@lang en`).
+Identifiers are English backtick names (the default language, so no `@lang` line).
 Hebrew appears only in `-- src:N |` comments (line N of the Ordinance), `-- ext:[TAG:N] |` comments (line N of the rules of 5738-1977 `reg35`, the Regulations of 5740-1980 `reg47`, or the Retirement Age Law `ral`), and short runs in other comments.
 `tools/srcquote.py` generates the first two kinds from the deposited files and `tools/sq.sh --check` verifies them, and every other run of Hebrew, against the union of the four sources (exit 0 on 2026-10-08T23:13Z for every module of this row's own; the vendored modules of rows IL-01 and IL-08 are checked in those rows, where their `ext:[a262]` lines are verified against the amending Law's PDF).
 Money is NIS, a bare NUMBER, for a whole tax year.
@@ -99,13 +99,13 @@ Imports in l4 resolve only beside the importing file, so the minimum of two earl
 
 | file | from | sha256 |
 | --- | --- | --- |
-| `ito-credit-points-published-figures.l4` | row IL-01 | `edde7287fffe0bfbf67503771e44c46bed58678e56f3fa8e81c16cc194bf09f8` |
-| `ito-il08-nouns.l4` | row IL-08 v0.5.0 | `945359683dab7195eaff9b207f6e75ab47e6cfad481eb8417e3304cfeeb7a0f2` |
-| `ito-il08-tax-years.l4` | row IL-08 | `9e686a4dfed2f85b90c4d87c1fa177517d496f1661047d7983f85e10453b2494` |
-| `ito-s47a-definitions.l4` | row IL-08 | `4e23063c356b6adbe35c7c6e60a827aa4c266ca98d4b109c46ac1e2d1f94af1d` |
-| `ito-s45a-insurance-and-pension-credit.l4` | row IL-08 | `da504d771a1ee880a21575a69b78f0fac0a78befe4717deccc297ba67cb2a70c` |
-| `ito-s47-deduction.l4` | row IL-08 | `a6228d39eaaa51eccdf71eebb1bdd9ae765c95cdcdbe11c5bb65196fd5ec9e02` |
-| `ito-s35-new-immigrant.l4` | row IL-08 | `6d02395ef64734f3f94e3da74b79f1bd4ad5e824d9b9d25edcf1ce26f2a16b6e` |
+| `ito-credit-points-published-figures.l4` | row IL-01 | `cecddcfb2af076d703eeb4ba1cfdf545c4a74b25e33c24c4e4aeee9422a3bddf` |
+| `ito-il08-nouns.l4` | row IL-08 v0.5.0 | `d37fd3ddb6cb0745b8ac7a592399fb71cf3888e47766460d10992e8135b42d12` |
+| `ito-il08-tax-years.l4` | row IL-08 | `153fa009f89d9fefc15ddf6ee91aa70700d1d07f604421ee69d0ba8168a711ef` |
+| `ito-s47a-definitions.l4` | row IL-08 | `afc6e4aa9f4f2691c6a2cce14ddbe0a9e66bede743682377dbb3e988fce65c2d` |
+| `ito-s45a-insurance-and-pension-credit.l4` | row IL-08 | `b7443b466a971e2855b784ea66b61672ce98189adadff8946d91c89a57fcdd2d` |
+| `ito-s47-deduction.l4` | row IL-08 | `1baadee41f72c031dd55817c9e6d1b354ec56f394fb337b489d60b32850a6316` |
+| `ito-s35-new-immigrant.l4` | row IL-08 | `389f4827a60e05c3073058af2809673a90f35efcb9998b576177e20f71b3d030` |
 
 IL-08's s 47 and s 45A are used by `ito-s47d-regulations-5740-1980.l4` (the ordinary deduction, the sums the deduction can take, the pension sums s 45A credits, the order reading); IL-08's s 35 fractions of a point by `ito-s35e-rules-5738-1977.l4`; IL-01's published figures by the tests of ss 39A and 39B (the value of a credit point, 2,904 for 2025, the Authority's `itc135-2025` p. 4).
 The IL-08 files were copied on 2026-10-08 at the hashes above, which match the originals under `../legalese-2026-10-il-08/` and `../legalese-2026-10-il-01/` at the time of copying.

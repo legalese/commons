@@ -136,7 +136,7 @@ F19: a child born before 2024 (in practice in 2023), the mother's (c)(4)(a1) ele
 None of this row's own tests rested on reading (i): every election test before 0.3.0 has a child born in 2024 or later, which the fork does not reach, so none needed re-pointing.
 Fourteen assertions were added to `ito66-tests.l4`, every expected value worked out from lines 2466-2467 and 2475 in the comment beside it before the module was run; all passed on their first run.
 A control copy with three of them made wrong reported two failures and one refusal.
-The independent tester's E-4 (`tests-independent.l4:385`), which expected a refusal, now holds; its file was not edited for this change, and `check.sh` no longer lists it in `expected_failed`.
+The independent tester's E-4 (`tests-independent.l4:384`), which expected a refusal, now holds; its file was not edited for this change, and `check.sh` no longer lists it in `expected_failed`.
 
 **Answers changed** (old is 0.2.0's answer; "declined" is the F19 sentence above):
 
@@ -145,7 +145,7 @@ The independent tester's E-4 (`tests-independent.l4:385`), which expected a refu
 | `s 66(c)(4)(a)-(a1) — the mother's credit points for` | a child born 2023, the election set, tax year 2024 | 5½ | declined | F19 ruled, default (ii) |
 | `s 66(c)(4)-(6) — the credit points of the` | the woman, the same child, 2024 | 5½ | declined | the same, through (a1) |
 | `s 66(c) — the credit points it gives the` | the woman of a couple with that child, 2024 | ½, 0, 5½ | declined | the same, through the children's points |
-| `tests-independent.l4:385` (E-4) | the same as the row above, the tester's | answered (failed) | refused (satisfied) | expected value unchanged |
+| `tests-independent.l4:384` (E-4) | the same as the row above, the tester's | answered (failed) | refused (satisfied) | expected value unchanged |
 
 No other answer moved: a child born from 2024 on, a child without the election, the year after next, and the man's points answer as before.
 
@@ -216,7 +216,7 @@ The year gate `in tax year … , the answer is` (`ito66-tax-years.l4`) now wraps
 The three rules gated in 0.1.0 keep their gate.
 Not wrapped, and why: the rules that take one spouse, one item, a child's age or a provision carry no year, and state the deposited text; `the particulars of the …` and `the particulars of the partner of the …` are plumbing; `a woman and a man:` is a fact about the couple, not a provision.
 The three parts of the (a)-(b) assembly in `ito66-ab-taxable-income.l4`, which is not among job B's files, are not wrapped; each sums a gated rule and refuses through it, as three new assertions show.
-The independent tests' V-4 (`tests-independent.l4:204`) now passes.
+The independent tests' V-4 (`tests-independent.l4:203`) now passes.
 No answer for a tax year from 2024 moved.
 
 **02-R2 (OURS-WRONG; assumed, not ruled: the lead's choice).**
@@ -225,7 +225,7 @@ This row gave every woman in a separate calculation the half point that s 66(c)(
 Of the two options in the inventory (drop the half point and leave s 36A to IL-01, or add the fact and decline in IL-01's words) the lead chose the second.
 
 - New field on `A spouse`: `a foreign worker within the meaning of section 48A` (BOOLEAN), named apart from IL-01's `a foreign worker` so the two cannot collide (section 9).
-- New rule `s 66(c)(4) — the half point under section 36A, for`: a woman who is a foreign worker is declined with "section 48A and the regulations made under it are not encoded in this model", IL-01's words (`ito-s34-s36-s36a-credits.l4:103` at commons HEAD `3f7d673`, and `:115-116` in IL-01's v0.2.0 working tree of 2026-10-08, where rep-il-14 confirmed the string is unchanged and is applied from tax year 2002, so in every year this row answers; not edited); any other woman ½; a man 0, a foreign worker or not, as in IL-01, where s 36A does not reach a man and so s 48A cannot change the answer.
+- New rule `s 66(c)(4) — the half point under section 36A, for`: a woman who is a foreign worker is declined with "section 48A and the regulations made under it are not encoded in this model", IL-01's words (`ito-s34-s36-s36a-credits.l4:102` at commons HEAD `3f7d673`, and `:115-116` in IL-01's v0.2.0 working tree of 2026-10-08, where rep-il-14 confirmed the string is unchanged and is applied from tax year 2002, so in every year this row answers; not edited); any other woman ½; a man 0, a foreign worker or not, as in IL-01, where s 36A does not reach a man and so s 48A cannot change the answer.
 - The decline is a rule named `row IL-02, section 66(c)(4): section 48A and the regulations made under it are not encoded in this model`, prefixed as row IL-08 prefixes its own, so it cannot collide with IL-01's rule of the same words where both rows are imported.
 - `s 66(c) — the credit points it gives the` takes its first field from the new rule. For a foreign-worker woman that field refuses and the other two answer, because L4 evaluates a field of a record only when it is read; asked as a whole, the record refuses.
 - `s 66(c) — in a separate calculation, the … has the entitlement under` `section 36A` declines alike.
@@ -245,7 +245,7 @@ The status lines at the head of this file and the recommendation at the end of s
 Both are marked in place.
 
 **CHK-02 (housekeeping).**
-`check.sh` declares the tester's one remaining failure, `tests-independent.l4` line 385 (E-4, inventory 02-E4, class AMBIGUITY), as `expected_failed` 1, and gains `expected_refused`, 0 for every module, as IL-04's `check.sh` has.
+`check.sh` declares the tester's one remaining failure, `tests-independent.l4` line 384 (E-4, inventory 02-E4, class AMBIGUITY), as `expected_failed` 1, and gains `expected_refused`, 0 for every module, as IL-04's `check.sh` has.
 It exits 0.
 (0.3.0: the entry is gone; E-4 holds once F19 is ruled.)
 
@@ -263,7 +263,7 @@ No answer moved.
 ### Assertions added or changed
 
 No expected value of 0.1.0 changed.
-One assertion of the independent tests changed outcome with its expected value untouched: `tests-independent.l4:204` (V-4), expected a refusal, answered `TRUE` (failed) in 0.1.0, refuses (satisfied) in 0.2.0.
+One assertion of the independent tests changed outcome with its expected value untouched: `tests-independent.l4:203` (V-4), expected a refusal, answered `TRUE` (failed) in 0.1.0, refuses (satisfied) in 0.2.0.
 Added, all in `ito66-tests.l4` (none existed before, so "old" is none; "refused" is A1's sentence, "this encoding does not hold the text of section 66 for a tax year before 2024", unless another is named):
 
 | line | rule, case | new | why (source) |
@@ -332,7 +332,7 @@ TOTAL (11 modules)                             1       307       1        0
 ```
 
 Exit 0.
-The one error is the one expected failure, `tests-independent.l4` line 385 (E-4, fork F19).
+The one error is the one expected failure, `tests-independent.l4` line 384 (E-4, fork F19).
 `ito66-tests.l4` grew from 139 to 179 satisfied: the 40 assertions in the table above.
 
 ## 1. What is encoded, and what is not
@@ -468,7 +468,7 @@ None has been settled by a court or the Tax Authority to my knowledge; I did not
 | F16 | (c) chapeau with (c)(4), (5) | once (a)(1) gives a separate calculation, does (c) govern the registered spouse's calculation too? | yes | (c)(1) says "לכל אחד מבני הזוג", and (c)(4)/(5) speak of the woman and the man, one of whom is the registered spouse. |
 | F17 | (c)(4), (5) | must the child be maintained by, or live with, the spouse (as s 40(b)(1) requires)? | no condition | (c)(4) and (5) say only "ילדיה" / "ילדיו". |
 | F18 | (c)(1A) | does "בן זוג" include the registered spouse? | yes, to 0.3.0; **(0.4.0) RULED by Meng on 2026-10-08 (SHRUG): one named switch, default DECLINE where the readings differ, every reading kept by name and tested** (BACKLOG IL-47; switch `section 66(c)(1A) — the reading this row takes as to the registered spouse`) (inventory 02-F8) | the paragraph says "בן זוג", not "בן זוג שאיננו בן זוג רשום" as (a)(1) does, and it would otherwise add nothing to (a)(1). |
-| F19 (0.2.0, 02-E4) | (c)(4)(a1), line 2467, at the vintage boundary of A1 | a child born in 2023, the mother's election set, asked of tax year 2024: (i) the 2024 text governs the 2024 calculation and says where the point lands, 4½ + 1 = 5½; (ii) the point moved is one "מתוך נקודות הזיכוי שלהן היא זכאית כאמור באותה פסקה, בשנת הלידה", the year of birth is 2023, and whether a 2023 mother could elect and had a point to move is 2023 law, which is not held: refuse | (i), kept as the default in 0.2.0; **(0.3.0) RULED by Meng on 2026-10-08 (SHRUG): one named switch, default (ii), a refusal by name; (i) kept by name and tested** (BACKLOG IL-38; switch `section 66(c)(4)(a1) — the reading this row takes for an election for a child born before 2024`) | (i) is the encoder's, taken by construction in 0.1.0 and unrecorded until 0.2.0. (ii) is the independent tester's (E-4, `tests-independent.l4:385`, confidence L; "on reflection I would not call the encoding wrong"), left failing and declared in `check.sh`. Axiom is silent: it does not apply (a1) (AX-14). The input `the mother elects to count one birth-year credit point in the following tax year` carries no year, so the encoding cannot tell an election of 2023 from one of 2024. Under the lead's recommendation for IL-24 (a named switch, default decline), (ii) would become the default. (0.3.0: it has; the tester's E-4 now holds.) |
+| F19 (0.2.0, 02-E4) | (c)(4)(a1), line 2467, at the vintage boundary of A1 | a child born in 2023, the mother's election set, asked of tax year 2024: (i) the 2024 text governs the 2024 calculation and says where the point lands, 4½ + 1 = 5½; (ii) the point moved is one "מתוך נקודות הזיכוי שלהן היא זכאית כאמור באותה פסקה, בשנת הלידה", the year of birth is 2023, and whether a 2023 mother could elect and had a point to move is 2023 law, which is not held: refuse | (i), kept as the default in 0.2.0; **(0.3.0) RULED by Meng on 2026-10-08 (SHRUG): one named switch, default (ii), a refusal by name; (i) kept by name and tested** (BACKLOG IL-38; switch `section 66(c)(4)(a1) — the reading this row takes for an election for a child born before 2024`) | (i) is the encoder's, taken by construction in 0.1.0 and unrecorded until 0.2.0. (ii) is the independent tester's (E-4, `tests-independent.l4:384`, confidence L; "on reflection I would not call the encoding wrong"), left failing and declared in `check.sh`. Axiom is silent: it does not apply (a1) (AX-14). The input `the mother elects to count one birth-year credit point in the following tax year` carries no year, so the encoding cannot tell an election of 2023 from one of 2024. Under the lead's recommendation for IL-24 (a named switch, default decline), (ii) would become the default. (0.3.0: it has; the tester's E-4 now holds.) |
 | F20 (0.4.0, 01-F1, shared with row IL-01's F1) | (c)(4), line 2465, with s 36A, line 1597 | does the half point (c)(4) gives "לפי סעיף 36א" need the woman to be an Israeli resident? (i) no: s 36A, "בחישוב המס של אשה תובא בחשבון ½ נקודת זיכוי", names none, where ss 34 and 36 beside it do; (ii) yes, by the context of ss 34 and 36 | (i) silently to 0.3.0 (this row had no residence input); **(0.4.0) RULED by Meng on 2026-10-08 (SHRUG): one named switch, default DECLINE where the readings differ, every reading kept by name and tested** (BACKLOG IL-47; switch `section 66(c)(4) — the reading this row takes of section 36A on residence`), mirroring IL-01 v0.3.0 (b64a3efb), whose refusal words it uses; residence is a new fact on `A spouse` | IL-01's encoder, tester and Axiom all read (i), which the inventory calls "agreement, not proof". s 66 itself does not test residence. |
 
 **A consolidation oddity, not a fork.**
@@ -629,7 +629,7 @@ It omits without recording it: (c)(1A), line 2462 (not in `deferred_outputs`, no
 
 | id | provision | ours | theirs | source lines | classification | proposed repair to ours |
 | --- | --- | --- | --- | --- | --- | --- |
-| AX-1 | the tax years s 66 answers | refuses before 2024 at three rules; seven couple-level rules answer 2023 (independent finding V-4) | every rule `effective_from: '0001-01-01'`; no case outside 2024; a 2023 period gets the current text | 2454 (amendment list ending תשפ״ג־6, תשפ״ד־3); the text states no commencement | **theirs wrong** for years before 2024, on the ITA circulars, an aid, which print other figures "עד שנת 2023" (`ito66-tests-ita.l4:30-32`; not re-fetched here); the Hebrew text alone does not decide; ours is internally inconsistent (V-4, already recorded) | the V-4 repair: wrap the seven rules in `in tax year … , the answer is`, or name one entry point and call the rest helpers |
+| AX-1 | the tax years s 66 answers | refuses before 2024 at three rules; seven couple-level rules answer 2023 (independent finding V-4) | every rule `effective_from: '0001-01-01'`; no case outside 2024; a 2023 period gets the current text | 2454 (amendment list ending תשפ״ג־6, תשפ״ד־3); the text states no commencement | **theirs wrong** for years before 2024, on the ITA circulars, an aid, which print other figures "עד שנת 2023" (`ito66-tests-ita.l4:29-31`; not re-fetched here); the Hebrew text alone does not decide; ours is internally inconsistent (V-4, already recorded) | the V-4 repair: wrap the seven rules in `in tax year … , the answer is`, or name one entry point and call the rest helpers |
 | AX-2 | (a)(1) proviso, the five-year window | Boolean input; the edge is the caller's | `qualifying_separate_calculation_years_before_pension_started >= 1 and … <= pension_separate_calculation_lookback_years` (5); case 22 (5) holds, case 23 (6) does not; 0 is the value for "no history" | 2456 "בחמש השנים האחרונות שלפני תחילת תשלום הקיצבה" | **scope difference**: Axiom computes an edge s 66 itself sets, which ours leaves to the caller; at the edge, a genuine ambiguity the text leaves open: it counts back from the start of payment and fixes no whole-year convention, and Axiom's whole-year count cannot express an entitlement earlier in the same tax year as the start | not wrong; recommended (as INDEPENDENT-FINDINGS already does): take the pension's start and the last entitlement as inputs and compute the window, or say in §1 that the caller decides it |
 | AX-3 | (d)(1)(b) | two inputs, both required | one input, `each_spouse_shared_income_directly_proportional_to_contribution`, named for the second limb only | 2481 "התואמת את תרומתו … ועומדת ביחס ישיר לתרומתו" | representational: same answer when the caller folds both limbs into the one input; probes show ours fails if either limb fails | none |
 | AX-4 | (a)(1), the unit decided and the claim | per spouse: may claim if any item within (a)(1) is above 0; made only if the spouse claims | per person and one income: "available"; no claim input; whether a calculation is made is the input `spouse_tax_is_calculated_separately` | 2456 "רשאי … לתבוע" | representational | none |
@@ -716,7 +716,7 @@ It gets back ten outputs: two band indices, the woman's and the man's points for
 **V-4, tax year 2023 answered instead of refused.**
 Axiom has no year gate: every rule is `effective_from: '0001-01-01'`, so a 2023 period, or a 1990 one, is answered by the current text in all ten outputs.
 What our tester classified as our error in seven rules is Axiom's behaviour throughout.
-For the children's ladders the circulars, as transcribed in `ito66-tests-ita.l4:30-32`, print other figures "עד שנת 2023", so Axiom's 2023 ladder answers are the 2024 figures.
+For the children's ladders the circulars, as transcribed in `ito66-tests-ita.l4:29-31`, print other figures "עד שנת 2023", so Axiom's 2023 ladder answers are the 2024 figures.
 A probe on the scratch copy repeats V-4 unchanged: our per-child rule `s 66(c)(4)-(6) — the credit points of the … for` answers 2.5 for a 2023 couple with a child born 2023, while `s 66(c) — the credit points it gives the` refuses.
 
 **E-4, a birth-year point moved out of 2023 into 2024.**

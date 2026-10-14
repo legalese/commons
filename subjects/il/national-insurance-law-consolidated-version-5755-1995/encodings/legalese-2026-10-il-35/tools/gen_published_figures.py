@@ -105,7 +105,6 @@ def build():
     L = []
     w = L.append
     m1 = meta[F1]; m2 = meta[F2]
-    w("@lang en")
     w("IMPORT prelude")
     w("IMPORT `cpi-il35-nouns`")
     w("")

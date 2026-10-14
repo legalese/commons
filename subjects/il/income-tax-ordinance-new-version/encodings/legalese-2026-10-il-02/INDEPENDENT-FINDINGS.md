@@ -27,15 +27,15 @@ A control that the record comparisons are not vacuous: a scratch probe asserting
 
 ### 1. V-4 — the (a)(1) claim is answered for tax year 2023
 
-- **Assertion:** `tests-independent.l4:204`, `#ASSERT REFUSED (s 66(a)(1) — the spouse who is not the registered spouse may claim a separate calculation, for <a couple in tax year 2023>)`.
+- **Assertion:** `tests-independent.l4:203`, `#ASSERT REFUSED (s 66(a)(1) — the spouse who is not the registered spouse may claim a separate calculation, for <a couple in tax year 2023>)`.
 - **Scenario:** a salaried registered man and a salaried woman who is not the registered spouse and claims under (a)(1), tax year 2023.
 - **Provision and words:** the brief, "The text answers tax years from 2024 … For an earlier tax year the encoding does not hold the text, and refuses"; the source shows only s 66 as amended at retrieval, whose amendment list (line 2454) ends at "תשפ״ג־6, תשפ״ד־3".
 - **Expected:** a refusal.
 - **Encoding answered:** `TRUE`.
 - **Classification: encoding error** (the scope of the year gate), not recorded as a fork.
   `NOTES.md` §3 A1 says "For a tax year before 2024 every top-level rule refuses", and §1 lists "whether the spouse who is not the registered spouse may claim, and has made, a separate calculation" among the things the modules answer "for a married couple in a tax year from 2024".
-  The gate `in tax year … , the answer is` (`ito66-tax-years.l4:55`) is applied in only three rules: `s 66(a)-(b) — the calculations, for`, `s 66(c) — the credit points it gives the`, and `s 66(c) — in a separate calculation, the … has the entitlement under`.
-  My companion assertion through the assembled rule, `tests-independent.l4:205`, refuses as expected.
+  The gate `in tax year … , the answer is` (`ito66-tax-years.l4:54`) is applied in only three rules: `s 66(a)-(b) — the calculations, for`, `s 66(c) — the credit points it gives the`, and `s 66(c) — in a separate calculation, the … has the entitlement under`.
+  My companion assertion through the assembled rule, `tests-independent.l4:204`, refuses as expected.
   A follow-up probe (not a decided assertion) on the same 2023 couple shows **seven of the eleven couple-level rules answer 2023 instead of refusing**:
 
   | rule | 2023 answer |
@@ -57,7 +57,7 @@ A control that the record comparisons are not vacuous: a scratch probe asserting
 
 ### 2. E-4 — a birth-year point deferred out of 2023 into 2024
 
-- **Assertion:** `tests-independent.l4:385`, `#ASSERT REFUSED (the woman's s 66(c) points, tax year 2024, child born 2023, mother defers TRUE)`.
+- **Assertion:** `tests-independent.l4:384`, `#ASSERT REFUSED (the woman's s 66(c) points, tax year 2024, child born 2023, mother defers TRUE)`.
 - **Scenario:** a child of both spouses born in 2023; the mother elected under (c)(4)(a1) to count one birth-year point in the following year; the question is her children's points for 2024.
 - **Provision and words:** (c)(4)(a1) "אמו של ילד תהיה זכאית לבחור אם נקודת זיכוי אחת מתוך נקודות הזיכוי שלהן היא זכאית כאמור באותה פסקה, בשנת הלידה, תובא בחשבון בשנת המס שבה נולד הילד או בשנת המס שלאחריה"; the brief, "what it does not show, you do not know".
 - **Expected:** a refusal, because the point moved is one of the points the mother was entitled to "under that paragraph, in the year of birth", and the year of birth is 2023, whose text the source does not show.
@@ -117,6 +117,6 @@ E-4 is listed above as an ambiguity rather than an encoding error because my own
 
 ## What I read
 
-`second-pass.md`, `writing-l4-rules/SKILL.md`, `source-patterns/11-when-the-encoding-cannot-answer.md`, the deposited Hebrew source (s 1, ss 33A-40A, 64B, 65, 66, 66A, 66B), and `BRIEF.md`; then the encoding's `.l4` modules except `ito66-tests-ita.l4` (only `ito66-tests.l4` lines 1-90, for the input-supply pattern); then `NOTES.md`.
+`second-pass.md`, `writing-l4-rules/SKILL.md`, `source-patterns/11-when-the-encoding-cannot-answer.md`, the deposited Hebrew source (s 1, ss 33A-40A, 64B, 65, 66, 66A, 66B), and `BRIEF.md`; then the encoding's `.l4` modules except `ito66-tests-ita.l4` (only `ito66-tests.l4` lines 1-89, for the input-supply pattern); then `NOTES.md`.
 The rule modules name fork ids F1-F13 in comments, with a one-line gloss of each reading; I read those after my answers were frozen.
 Nothing from the Axiom Foundation, no `rulespec-*`, no `ENCODING-GAPS.md`, no `.axiom/`, no `tax-benefit-source-map.json` and no `specs/research/AXIOM-*` was read, searched or fetched. No web access was used.

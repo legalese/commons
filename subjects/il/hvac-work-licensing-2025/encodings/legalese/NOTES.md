@@ -205,7 +205,7 @@ What a knowledge engineer would add next, in the reviewer's order: a `Work` type
 
 ## 6. Multilingual design
 
-The module body is English (`@lang en`), because English is the working language of the people this was built for tomorrow; every rule carries an English `@nlg` herald and a Hebrew `@nlg:he` herald.
+The module body is English (the default language, so the modules carry no `@lang` line), because English is the working language of the people this was built for tomorrow; every rule carries an English `@nlg` herald and a Hebrew `@nlg:he` herald.
 `l4 nlg --lang he` and `l4 render --lang he --format html` therefore produce a Hebrew document from the same source; the four renderings are in `projections/`.
 
 Two limits of the current tooling, observed on the l4-ide `unstable` binary of 2026-09-19:

@@ -140,8 +140,7 @@ named["the default readings but FW1 is B and F1 is B"] = readings(FW1="B", F1="B
 named["the default readings but FW1 is B and F1 is A"] = readings(FW1="B", F1="A")
 named["the default readings but FW1 is B and F1 is D"] = readings(FW1="B")
 
-print("""@lang en
-
+print("""
 IMPORT prelude
 IMPORT `ito-il28-nouns`
 

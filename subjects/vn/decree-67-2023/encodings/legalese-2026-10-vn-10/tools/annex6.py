@@ -209,7 +209,6 @@ def main():
 
     out = []
     w = out.append
-    w("@lang en")
     w("IMPORT prelude")
     w("IMPORT `nd67-vn10-nouns`")
     w("")
@@ -321,7 +320,6 @@ def main():
     # ---- tests ------------------------------------------------------------------------
     t = []
     a = t.append
-    a("@lang en")
     a("IMPORT prelude")
     a("IMPORT `nd67-vn10-nouns`")
     a("IMPORT `nd67-annex6-table`")

@@ -74,7 +74,6 @@ def ymd(d):
 def main(out):
     lines = []
     emit = lines.append
-    emit("@lang en")
     emit("IMPORT prelude")
     emit("IMPORT daydate")
     emit("IMPORT `il-interpretation-time`")
