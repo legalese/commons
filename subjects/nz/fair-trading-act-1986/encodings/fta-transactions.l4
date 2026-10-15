@@ -1,0 +1,238 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `fta-types`
+
+-- Fair Trading Act 1986 — GOAL 2: CONSUMER TRANSACTIONS AND AUCTIONS.
+--
+--   "Is this a layby sale or an uninvited direct sale; who may cancel it,
+--    by when, at what charge, and what is refunded; when may an extended
+--    warranty be cancelled; when may a gift card expire; and what are the
+--    auction rules on vendor bids, late sales and paying the vendor?"
+--
+-- Source: ../registers/source-bundle/act_public_1986_121.txt — Part 4A,
+-- ss 36A-36ZF.
+
+§ `Goal 2 — consumer transactions and auctions`
+
+§§ `Working days`
+
+GIVEN n IS A NUMBER, d IS A DATE
+GIVETH A DATE
+`the day` n `days after` d MEANS Date (Day d PLUS n)
+
+GIVEN d IS A DATE, cal IS A `Working day calendar`
+GIVETH A BOOLEAN
+DECIDE `is a working day` d cal IF
+        NOT `Weekday of` d EQUALS Saturday
+    AND NOT `Weekday of` d EQUALS Sunday
+    AND NOT elem d (cal's `weekdays that are not working days`)
+
+-- "within n working days after the date": the n-th working day after it.
+GIVEN n IS A NUMBER, d IS A DATE, cal IS A `Working day calendar`
+GIVETH A DATE
+`the` n `th working day after` d `, calendar` cal MEANS
+    IF   n AT MOST 0
+    THEN d
+    ELSE IF   `is a working day` next cal
+         THEN `the` (n MINUS 1) `th working day after` next `, calendar` cal
+         ELSE `the` n `th working day after` next `, calendar` cal
+    WHERE
+        next MEANS `the day` 1 `days after` d
+
+§§ `Layby sales (ss 36B-36J)`
+
+-- s 36B "(1) ... an agreement ... between a supplier and a consumer for the
+-- supply of goods on terms ... that provide that— (a) the consumer will not
+-- take possession of the goods until all or a specified portion of the total
+-- price of the goods has been paid; and (b) the price of the goods is to be
+-- paid by— (i) 3 or more instalments; or (ii) if the agreement specifies
+-- that it is a layby sale agreement, 2 or more instalments. (2) However, a
+-- layby sale agreement does not include an agreement for the supply of goods
+-- that have a purchase price that is more than $60,000 or, if greater, the
+-- amount specified in section 10(1A)(b) of the Disputes Tribunal Act 1988.
+-- (3) ... a deposit ... is an instalment."
+@ref s 36B
+@export Whether an agreement is a layby sale agreement under s 36B of the Fair Trading Act 1986 (NZ): the consumer takes possession only once all or part of the price is paid, the price is paid in 3 or more instalments (2 or more if the agreement says it is a layby), a deposit counting as an instalment, and the price is not more than $60,000 (or the Disputes Tribunal Act amount, if greater). DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN l IS A `Layby facts`  @desc Whether possession waits for payment, the instalments (counting any deposit), whether the agreement calls itself a layby, the purchase price, and the Disputes Tribunal Act amount
+GIVETH A BOOLEAN
+DECIDE `is a layby sale agreement` l IF
+        l's `possession only once all or part of the price is paid`
+    AND (    l's `instalments, counting any deposit` AT LEAST 3
+         OR  (l's `the agreement says it is a layby sale agreement` AND l's `instalments, counting any deposit` AT LEAST 2))
+    AND l's `purchase price` AT MOST max 60000 (l's `the Disputes Tribunal Act amount`)
+
+-- s 36F(3) "A supplier must not require the consumer to pay a charge for the
+-- cancellation ... unless— (a) the agreement is cancelled— (i) by the
+-- consumer under subsection (1); or (ii) by the supplier, because the
+-- consumer has breached a material term ...; and (b) the agreement provides
+-- that a cancellation charge is payable; and (c) the supplier has not
+-- breached the agreement." (4) not "more than the supplier's reasonable costs
+-- arising directly from the agreement".
+@ref s 36F(3)-(4)
+GIVEN x IS A `Layby cancellation`
+GIVETH A NUMBER
+`the cancellation charge the supplier may require` x MEANS
+    IF       (    x's `who cancelled` EQUALS `the consumer, before taking possession`
+              OR  x's `who cancelled` EQUALS `the supplier, for a breach of a material term by the consumer`)
+         AND x's `the agreement provides for a cancellation charge`
+         AND NOT x's `the supplier has breached the agreement`
+    THEN min (x's `cancellation charge claimed`) (x's `the supplier's reasonable costs arising directly from the agreement`)
+    ELSE 0
+
+-- s 36H "the supplier— (a) must immediately repay to the consumer all money
+-- paid ..., less (in the case of cancellation under section 36F or 36G(a))
+-- any cancellation charge that is payable; and (b) is, if the amounts paid
+-- ... are insufficient to cover the cancellation charge ..., entitled to
+-- recover the balance of that charge from the consumer as a debt".
+@ref s 36H(a)
+@export The refund to the consumer when a layby sale agreement is cancelled under ss 36F-36H of the Fair Trading Act 1986 (NZ): all money paid, less a cancellation charge only where the consumer cancelled or the supplier cancelled for the consumer's breach, the agreement provides for one and the supplier is not in breach, and no more than the supplier's reasonable costs arising directly from the agreement. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN x IS A `Layby cancellation`  @desc Who cancelled and why, whether the agreement provides a charge, whether the supplier is in breach, the charge claimed, the supplier's reasonable costs, and the money paid
+GIVETH A NUMBER
+`the refund on cancelling the layby` x MEANS
+    max 0 (x's `paid under the agreement` MINUS `the cancellation charge the supplier may require` x)
+
+@ref s 36H(b)
+GIVEN x IS A `Layby cancellation`
+GIVETH A NUMBER
+`the balance of the charge the supplier may recover` x MEANS
+    max 0 (`the cancellation charge the supplier may require` x MINUS x's `paid under the agreement`)
+
+-- s 36I(4) "Subsections (2) and (3) do not apply to a consumer who has, in
+-- breach of the agreement, made no payments to the supplier during the 3
+-- months immediately before the relevant event".
+@ref s 36I(2), (4)
+GIVEN `last payment` IS A DATE, event IS A DATE, `payments in breach` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the consumer may complete the layby after the supplier's insolvency, last paid` `last payment` `, insolvency event` event `, missed payments in breach:` `payments in breach` IF
+    NOT (`payments in breach` AND `last payment` LESS THAN `add months` event (0 MINUS 3))
+
+§§ `Uninvited direct sales (ss 36K-36RA)`
+
+-- s 36K(1) "an agreement for the supply, in trade, of goods or services to a
+-- consumer— (a) that is made as a result of negotiations ... in a situation
+-- described in either subsection (2) or (3); and (b) where the price ... (i)
+-- is more than $100; or (ii) cannot be ascertained at the time of supply
+-- ...". (2) uninvited, in each other's presence, at the consumer's home or
+-- workplace; (3) an uninvited telephone call. (4) not a renewal agreement.
+@ref s 36K
+@export Whether an agreement is an uninvited direct sale agreement under s 36K of the Fair Trading Act 1986 (NZ): a supply in trade to a consumer, negotiated in person at the consumer's home or workplace, or by telephone, without the consumer's invitation, for a price over $100 or one that cannot be ascertained at the time of supply, and not a renewal agreement. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN s IS A `Direct sale facts`  @desc Where and how the negotiations took place, the price and whether it can be ascertained, whether it renews an existing agreement, and whether it is a supply in trade to a consumer
+GIVETH A BOOLEAN
+DECIDE `is an uninvited direct sale agreement` s IF
+        s's `supplied in trade to a consumer`
+    AND NOT s's `negotiations` EQUALS `elsewhere, or by invitation`
+    AND (s's `price paid or payable` GREATER THAN 100 OR s's `the price cannot be ascertained at the time of supply`)
+    AND NOT s's `a renewal agreement`
+
+-- s 36M(1) "A consumer may cancel an uninvited direct sale agreement by
+-- giving notice ...— (a) within 5 working days after the date on which the
+-- consumer receives a copy of the agreement; or (b) if the supplier has
+-- failed to comply with section 36L (except to the extent provided for in
+-- section 36N(2)), at any time." s 36V(1) the same for an extended warranty,
+-- with 36U; (2)(a) not for a warranty that is a condition of a consumer
+-- credit contract.
+@ref ss 36M(1), 36N(2), 36V(1)-(2)
+GIVEN received IS A DATE, `disclosure failed materially` IS A BOOLEAN, cancelled IS A DATE, cal IS A `Working day calendar`
+GIVETH A BOOLEAN
+DECIDE `may cancel within the cooling-off period, copy received` received `, disclosure failed materially:` `disclosure failed materially` `, cancelled on` cancelled `, calendar` cal IF
+        `disclosure failed materially`
+    OR  cancelled AT MOST `the` 5 `th working day after` received `, calendar` cal
+
+-- s 36V(2)(a) "subsection (1) does not apply in relation to an extended
+-- warranty agreement that has been entered into as a condition of a
+-- consumer credit contract". (added after the independent pass)
+@ref s 36V(1)-(2)
+GIVEN received IS A DATE, `disclosure failed materially` IS A BOOLEAN, `condition of a consumer credit contract` IS A BOOLEAN, cancelled IS A DATE, cal IS A `Working day calendar`
+GIVETH A BOOLEAN
+DECIDE `may cancel the extended warranty, copy received` received `, disclosure failed materially:` `disclosure failed materially` `, a condition of a consumer credit contract:` `condition of a consumer credit contract` `, cancelled on` cancelled `, calendar` cal IF
+        NOT `condition of a consumer credit contract`
+    AND `may cancel within the cooling-off period, copy received` received `, disclosure failed materially:` `disclosure failed materially` `, cancelled on` cancelled `, calendar` cal
+
+-- s 36Q(1)(b) the consumer must take reasonable care of the goods "until the
+-- end of 10 working days beginning with the date on which notice was given":
+-- the notice day counts if it is a working day. (added after the
+-- independent pass)
+@ref s 36Q(1)(b), s 36R(2)(a)
+GIVEN notice IS A DATE, cal IS A `Working day calendar`
+GIVETH A DATE
+`the last day of the 10 working days beginning with` notice `, calendar` cal MEANS
+    IF   `is a working day` notice cal
+    THEN `the` 9 `th working day after` notice `, calendar` cal
+    ELSE `the` 10 `th working day after` notice `, calendar` cal
+
+-- s 36RA(5) "If the direction is a specific one, the person must not, for the
+-- purpose of negotiating an uninvited direct sale agreement, enter or
+-- re-enter the premises within 2 years after the direction is given."
+@ref s 36RA(5)
+GIVEN given IS A DATE
+GIVETH A DATE
+`the first day a seller may return after a specific direction given` given MEANS
+    `the day` 1 `days after` (`add years` given 2)
+
+§§ `Gift cards (ss 36WB, 36WC)`
+
+-- s 36WB "(1) A person must not, in trade, sell to a consumer a gift card
+-- with an expiry date that is less than 3 years after the date of sale ...
+-- (3) If the expiry date ... is void because of subsection (2), the expiry
+-- date is taken to be 3 years after the date of sale". Schedule 1AA cl 3:
+-- not for gift cards sold before the 2024 amendment commenced (an input).
+@ref s 36WB; Schedule 1AA cl 3
+@export The expiry date of a gift card sold in trade to a consumer under s 36WB of the Fair Trading Act 1986 (NZ): the stated expiry date if it is at least 3 years after the sale (or there is none), otherwise 3 years after the sale; a gift card sold before the 2024 amendment commenced keeps its stated date. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN sold IS A DATE  @desc The date the gift card was sold
+      stated IS A MAYBE DATE  @desc The expiry date stated, if any
+      `after the 2024 amendment` IS A BOOLEAN  @desc Whether it was sold on or after the Fair Trading (Gift Card Expiry) Amendment Act 2024 commenced
+GIVETH A MAYBE DATE
+`the gift card expiry date, sold` sold `, stated expiry` stated `, sold after the 2024 amendment:` `after the 2024 amendment` MEANS
+    CONSIDER stated
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST e THEN
+        IF   `after the 2024 amendment` AND e LESS THAN `add years` sold 3
+        THEN JUST (`add years` sold 3)
+        ELSE JUST e
+
+§§ `Auctions (ss 36ZA, 36ZD, 36ZF)`
+
+-- s 36ZA(3) property "must be treated as having been sold at auction, even
+-- if the bidding ceased without the property being sold, if— (a) the
+-- auctioneer accepts a subsequent offer from a person who attended the
+-- auction; and (b) that offer is accepted before the end of the first working
+-- day following the day of the auction."
+@ref s 36ZA(3)
+GIVEN auction IS A DATE, accepted IS A DATE, attended IS A BOOLEAN, cal IS A `Working day calendar`
+GIVETH A BOOLEAN
+DECIDE `is treated as sold at auction, auction on` auction `, later offer accepted on` accepted `, offeror attended:` attended `, calendar` cal IF
+        attended
+    AND accepted AT MOST `the` 1 `th working day after` auction `, calendar` cal
+
+-- s 36ZD(1) "An auctioneer must not accept a vendor bid unless— (a) the terms
+-- of the auction specify that vendor bids are permitted; and (b) the
+-- auctioneer identifies each vendor bid as it is given; and (c) the property
+-- is offered for sale with a reserve price and the vendor bid is less than
+-- the reserve price."
+@ref s 36ZD
+GIVEN v IS A `Vendor bid facts`
+GIVETH A BOOLEAN
+DECIDE `the auctioneer may accept the vendor bid` v IF
+        v's `the terms permit vendor bids`
+    AND v's `the bid was identified as a vendor bid`
+    AND v's `there is a reserve price`
+    AND v's `the bid is below the reserve price`
+
+-- s 36ZF "(1) Within 10 working days after the sale ..., the auctioneer must
+-- provide to the vendor— (a) the balance of the proceeds ...; and (b) an
+-- account of the sale ... (2) However, unless the vendor and auctioneer have
+-- agreed otherwise, if the vendor requests ... sooner than 10 working days
+-- after the sale, the auctioneer must comply with the request within 5
+-- working days after the request is made." The earlier of the two.
+@ref s 36ZF(1)-(2)
+GIVEN sale IS A DATE, request IS A MAYBE DATE, cal IS A `Working day calendar`
+GIVETH A DATE
+`the last day to pay the vendor, sale on` sale `, request made` request `, calendar` cal MEANS
+    CONSIDER request
+    WHEN NOTHING THEN tenth
+    WHEN JUST r THEN
+        IF   `the` 5 `th working day after` r `, calendar` cal LESS THAN tenth
+        THEN `the` 5 `th working day after` r `, calendar` cal
+        ELSE tenth
+    WHERE
+        tenth MEANS `the` 10 `th working day after` sale `, calendar` cal

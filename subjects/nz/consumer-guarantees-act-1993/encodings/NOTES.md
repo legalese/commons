@@ -58,10 +58,10 @@ Read this first. `BRIEF.md` is the specification. The source is `../registers/so
 | --- | --- | --- | --- | --- |
 | F1 | ss 18(2)-(3), 32(a)-(b) | A failure that can be remedied but is of a substantial character | Both sets of remedies are open: require a remedy, or reject (cancel) or claim damages at once | (2) applies "Where the failure can be remedied"; (3) "Where the failure cannot be remedied or is of a substantial character" — the conditions overlap |
 | F2 | s 5A(2) | Delivery failure that is not substantial | Only damages under s 18(4), and only if there is foreseeable loss | s 5A(4) limits the redress to s 5A(2) |
+| F3 | s 27(2) | Consequential damages from a manufacturer before it was asked to repair under an express guarantee | Not reached: s 27(2) bars only "an action ... under subsection (1)(a)" (value), so consequential damages under (1)(b) stay open | The words of s 27(2) |
 | F4 | s 41(2) | Does a charity's supply for the recipient's benefit also bar redress against the manufacturer? | No: only redress "against a charitable organisation" | The words of s 41(2); adopted after the independent pass |
 | F5 | s 36(c) | "where section 29 applies" | Where the s 29 guarantee is engaged (a purpose or result made known), whichever guarantee failed | As s 21(c) "where section 8(1) applies"; adopted after the independent pass |
 | F6 | s 32(a)(ii)(B) | Cancelling when there is no contract between supplier and consumer | Not available | There must be a contract to cancel; s 2 "supplier" reaches consumers who are not parties; adopted after the independent pass |
-| F3 | s 27(2) | Consequential damages from a manufacturer before it was asked to repair under an express guarantee | Not reached: s 27(2) bars only "an action ... under subsection (1)(a)" (value), so consequential damages under (1)(b) stay open | The words of s 27(2) |
 
 Also read, without a fork: a remedy open under two limbs is listed once; the s 2 repair limb of "consumer" applies only to goods; a guarantee that does not fit what was supplied (s 6 on electricity, s 7A on goods) gives no remedies, and a goods failure on a supply of services is answered as goods (ss 15, 34); the s 11 and s 31 price guarantees give only the right to refuse to pay more than a reasonable price; the s 47 limits are inclusive ("does not exceed").
 
