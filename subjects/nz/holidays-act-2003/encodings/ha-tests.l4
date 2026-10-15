@@ -1,0 +1,519 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ha-types`
+IMPORT `ha-pay`
+IMPORT `ha-annual`
+IMPORT `ha-public`
+IMPORT `ha-leave`
+IMPORT `ha-enforcement`
+IMPORT `ha-goal`
+
+-- Holidays Act 2003 — TESTS.
+-- Expected values are worked from
+-- ../registers/source-bundle/act_public_2003_129.txt, not from the code.
+-- Amounts are made up; the Act fixes none of its own except the 8%, the
+-- penalty maxima, and the day counts.
+
+§ `Tests`
+
+§§ `Helpers`
+
+-- Weekly pay determinable under s 8(1): ordinary week, regular incentives,
+-- regular overtime.
+GIVEN ordinary IS A NUMBER, incentive IS A NUMBER, overtime IS A NUMBER
+GIVETH A `Weekly pay facts`
+`weekly` ordinary incentive overtime MEANS
+    `Weekly pay facts` OF TRUE, ordinary, incentive, overtime, NOTHING, 0, 0, NOTHING
+
+-- Relevant daily pay determinable, not varying.
+GIVEN amount IS A NUMBER
+GIVETH A `Daily pay facts`
+`daily` amount MEANS
+    `Daily pay facts` OF TRUE, amount, NOTHING, NOTHING, FALSE, FALSE, 0, 0
+
+GIVEN kind IS A `Kind of absence`, days IS A NUMBER, agreed IS A BOOLEAN
+GIVETH AN Absence
+`absence` kind days agreed MEANS Absence OF kind, days, agreed
+
+`Monday to Friday` MEANS LIST 1, 2, 3, 4, 5
+
+GIVEN y IS A NUMBER
+GIVETH A `Calendar inputs`
+`weekday calendar` y MEANS `Calendar inputs` OF y, Date 20 6 y, Date 20 1 y, `Monday to Friday`
+
+GIVEN start IS A DATE
+GIVETH A Service
+`service from` start MEANS Service OF start, NOTHING, FALSE
+
+-- A spell of leave of kind k from day d, for an employee who started on s:
+-- days asked, days left, whose sickness, bereavements.
+GIVEN k IS A `Leave kind`, d IS A DATE, s IS A DATE, asked IS A NUMBER, left IS A NUMBER, w IS A `Whose sickness`, bs IS A LIST OF Bereavement
+GIVETH A Leave
+`leave` k d s asked left w bs MEANS
+    Leave OF k, d, `service from` s, asked, left, FALSE, w, bs, (`Family violence facts` OF TRUE, FALSE), `daily` 200, 0, FALSE
+
+`no bereavements` MEANS LIST `(b) the death of another person, if the employer does not accept it`
+
+-- A public holiday: otherwise a working day, worked, the s 50 inputs.
+GIVEN otherwise IS A BOOLEAN, worked IS A BOOLEAN, portion IS A NUMBER, penal IS A NUMBER, rdp IS A NUMBER
+GIVETH A `Public holiday worked or not`
+`public holiday` otherwise worked portion penal rdp MEANS
+    `Public holiday worked or not` OF Date 25 4 2025, otherwise, worked, worked, `any other reason`, FALSE, `not on call`, `daily` 200, portion, penal, rdp
+
+`a full record` MEANS
+    `Holiday and leave record` OF TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE
+
+§§ `Goal 1 — the pay measures`
+
+-- s 10
+#ASSERT `the cash value of board or lodgings counted` NOTHING EQUALS 0
+#ASSERT `the cash value of board or lodgings counted` (JUST (`Board or lodgings` OF 50, FALSE, FALSE)) EQUALS 50
+#ASSERT `the cash value of board or lodgings counted` (JUST (`Board or lodgings` OF 50, TRUE, FALSE)) EQUALS 0
+#ASSERT `the cash value of board or lodgings counted` (JUST (`Board or lodgings` OF 50, FALSE, TRUE)) EQUALS 0
+
+-- s 14, s 10A: wages 1000 + overtime 200 + HCS s 14 50 + first week comp 80
+-- count; discretionary 300, super 30, ACC weekly 400, HCS s 19 20, s 28B
+-- payout 100 do not: 1330.
+#ASSERT `the gross earnings in` (LIST (Payment OF `(a)(i) salary or wages`, 1000), (Payment OF `(a)(v) a payment for overtime`, 200), (Payment OF `(b)(i) a discretionary payment`, 300), (Payment OF `(c)(iii) an employer contribution to a superannuation scheme`, 30), (Payment OF `(b)(ii) weekly compensation under the Accident Compensation Act 2001`, 400), (Payment OF `s 10A(a) a payment under s 14 of the Home and Community Support Settlement Act 2016`, 50), (Payment OF `s 10A(b) a payment under s 19 of the Home and Community Support Settlement Act 2016`, 20), (Payment OF `(c)(iv) a payment for annual holidays paid out under s 28B`, 100), (Payment OF `(a)(vii) first week compensation under s 97 of the Accident Compensation Act 2001`, 80)) EQUALS 1330
+#ASSERT `the gross earnings in` (LIST (Payment OF `(a)(iii) pay for a holiday or leave taken in the period`, 400), (Payment OF `(c)(i) a reimbursement of actual costs`, 60), (Payment OF `(c)(ii) a reimbursement of a reasonably assessed amount of costs`, 25), (Payment OF `(b)(iii) a payment for absence on volunteers leave`, 150)) EQUALS 400
+#ASSERT `the gross earnings in` (LIST (Payment OF `(a)(ii) an allowance, other than a non-taxable reimbursement of actual costs`, 70), (Payment OF `(a)(iv) a productivity or incentive-based payment`, 30), (Payment OF `(a)(vi) the cash value of board or lodgings agreed or determined under s 10`, 40)) EQUALS 140
+
+-- s 8(1): 1000 + 100 + 50 + board 40 = 1190
+#ASSERT `the ordinary weekly pay` (`Weekly pay facts` OF TRUE, 1000, 100, 50, JUST (`Board or lodgings` OF 40, FALSE, FALSE), 0, 0, NOTHING) EQUALS 1190
+-- s 8(2): (4800 - 400) / 4 = 1100
+#ASSERT `the ordinary weekly pay` (`Weekly pay facts` OF FALSE, 0, 0, 0, NOTHING, 4800, 400, NOTHING) EQUALS 1100
+-- s 8(2) with a monthly pay period: still divided by 4 (F1)
+#ASSERT `the ordinary weekly pay` (`Weekly pay facts` OF FALSE, 0, 0, 0, NOTHING, 5200, 0, NOTHING) EQUALS 1300
+-- s 8(3)
+#ASSERT `the ordinary weekly pay` (`Weekly pay facts` OF TRUE, 1000, 0, 0, NOTHING, 0, 0, JUST 1200) EQUALS 1200
+#ASSERT `the ordinary weekly pay` (`Weekly pay facts` OF TRUE, 1000, 0, 0, NOTHING, 0, 0, JUST 900) EQUALS 1000
+#ASSERT `the ordinary weekly pay` (`Weekly pay facts` OF TRUE, 1000, 0, 0, NOTHING, 0, 0, JUST 1000) EQUALS 1000
+#ASSERT `the ordinary weekly pay` (`weekly` 1000 0 0) EQUALS 1000
+
+-- s 9: 200 + board 10 = 210; special rates
+#ASSERT `the relevant daily pay` (`Daily pay facts` OF TRUE, 200, JUST (`Board or lodgings` OF 10, FALSE, FALSE), NOTHING, FALSE, FALSE, 0, 0) EQUALS 210
+#ASSERT `the relevant daily pay` (`Daily pay facts` OF TRUE, 200, JUST (`Board or lodgings` OF 10, FALSE, FALSE), JUST 250, FALSE, FALSE, 0, 0) EQUALS 250
+#ASSERT `the relevant daily pay` (`Daily pay facts` OF TRUE, 200, JUST (`Board or lodgings` OF 10, FALSE, FALSE), JUST 150, FALSE, FALSE, 0, 0) EQUALS 210
+
+-- s 9A: 52000 / 260 = 200
+#ASSERT `the average daily pay` (`Daily pay facts` OF TRUE, 0, NOTHING, NOTHING, FALSE, FALSE, 52000, 260) EQUALS 200
+#ASSERT REFUSED (`the average daily pay` (`Daily pay facts` OF FALSE, 0, NOTHING, NOTHING, FALSE, FALSE, 52000, 0))
+
+-- ss 9, 9A: which measure
+#ASSERT `the daily pay` (`Daily pay facts` OF FALSE, 0, NOTHING, NOTHING, FALSE, FALSE, 52000, 260) EQUALS 200
+#ASSERT `the daily pay` (`Daily pay facts` OF TRUE, 180, NOTHING, NOTHING, TRUE, TRUE, 52000, 260) EQUALS 200
+#ASSERT `the daily pay` (`Daily pay facts` OF TRUE, 180, NOTHING, NOTHING, TRUE, FALSE, 52000, 260) EQUALS 180
+#ASSERT `the daily pay` (`Daily pay facts` OF TRUE, 180, NOTHING, NOTHING, FALSE, TRUE, 52000, 260) EQUALS 180
+#ASSERT `the employer may use average daily pay` (`Daily pay facts` OF TRUE, 180, NOTHING, NOTHING, FALSE, TRUE, 52000, 260) EQUALS FALSE
+#ASSERT `the employer may use average daily pay` (`Daily pay facts` OF FALSE, 180, NOTHING, NOTHING, FALSE, FALSE, 52000, 260) EQUALS TRUE
+
+-- s 16(2): which absences count toward the 12 months
+#ASSERT `the absence counts toward the 12 months` (`absence` `other unpaid leave` 7 FALSE) EQUALS TRUE
+#ASSERT `the absence counts toward the 12 months` (`absence` `other unpaid leave` 8 FALSE) EQUALS FALSE
+#ASSERT `the absence counts toward the 12 months` (`absence` `other unpaid leave` 30 TRUE) EQUALS TRUE
+#ASSERT `the absence counts toward the 12 months` (`absence` `(a)(ii) parental leave` 180 FALSE) EQUALS TRUE
+#ASSERT `the absence counts toward the 12 months` (`absence` `(a)(v) unpaid sick, bereavement or family violence leave` 20 FALSE) EQUALS TRUE
+
+-- s 5, s 16(3): 52000/52 = 1000; 10 days agreed: 1 part week over the first,
+-- divisor 51; 21 days agreed: 2 weeks over, divisor 50 -> 1040; not agreed:
+-- no reduction.
+#ASSERT `the average weekly earnings over 12 months, gross` 52000 `, absences` (LIST) EQUALS 1000
+#ASSERT `the divisor for 12 months, after s 16(3), given` (LIST (`absence` `other unpaid leave` 10 TRUE)) EQUALS 51
+#ASSERT `the average weekly earnings over 12 months, gross` 52000 `, absences` (LIST (`absence` `other unpaid leave` 21 TRUE)) EQUALS 1040
+#ASSERT `the average weekly earnings over 12 months, gross` 52000 `, absences` (LIST (`absence` `other unpaid leave` 21 FALSE)) EQUALS 1000
+#ASSERT `the divisor for 12 months, after s 16(3), given` (LIST (`absence` `other unpaid leave` 7 TRUE)) EQUALS 52
+
+§§ `Goal 2 — annual holidays`
+
+-- s 16(1): 12 months from 1 April 2024 complete; entitled 1 April 2025.
+#ASSERT `the day the employee becomes entitled to annual holidays, 12 months from` (Date 1 4 2024) `, absences` (LIST) EQUALS Date 1 4 2025
+-- 14 days' other unpaid leave not agreed: deferred 14 days (F5)
+#ASSERT `the day the employee becomes entitled to annual holidays, 12 months from` (Date 1 4 2024) `, absences` (LIST (`absence` `other unpaid leave` 14 FALSE)) EQUALS Date 15 4 2025
+#ASSERT `the day the employee becomes entitled to annual holidays, 12 months from` (Date 1 4 2024) `, absences` (LIST (`absence` `other unpaid leave` 5 FALSE)) EQUALS Date 1 4 2025
+#ASSERT `the day the employee becomes entitled to annual holidays, 12 months from` (Date 1 4 2024) `, absences` (LIST (`absence` `(a)(iii) volunteers leave` 30 FALSE)) EQUALS Date 1 4 2025
+#ASSERT `the annual holidays entitlement in weeks` EQUALS 4
+
+-- s 18(1) (F6)
+#ASSERT `the last day by which the employer must allow the holidays, entitlement arising` (Date 1 4 2025) EQUALS Date 1 4 2026
+
+-- s 19(2): notice on 1 March, holiday from 16 March: 14 clear days between.
+#ASSERT `not less than 14 days' notice, given` (Date 1 3 2025) `, for` (Date 16 3 2025) EQUALS TRUE
+#ASSERT `not less than 14 days' notice, given` (Date 1 3 2025) `, for` (Date 15 3 2025) EQUALS FALSE
+#ASSERT `the employer may require annual holidays from` (Date 16 3 2025) `, no agreement under s 18(3):` TRUE `, s 32 applies:` FALSE `, notice on` (Date 1 3 2025) EQUALS TRUE
+#ASSERT `the employer may require annual holidays from` (Date 16 3 2025) `, no agreement under s 18(3):` FALSE `, s 32 applies:` FALSE `, notice on` (Date 1 3 2025) EQUALS FALSE
+#ASSERT `the employer may require annual holidays from` (Date 10 3 2025) `, no agreement under s 18(3):` TRUE `, s 32 applies:` FALSE `, notice on` (Date 1 3 2025) EQUALS FALSE
+
+-- s 35
+#ASSERT `the 12 months restart, under s 35, on` (Date 20 12 2024) `, nominated` NOTHING EQUALS Date 20 12 2024
+#ASSERT `the 12 months restart, under s 35, on` (Date 20 12 2024) `, nominated` (JUST (Date 23 12 2024)) EQUALS Date 23 12 2024
+
+-- s 21: 2 weeks; OWP 1000; 12 months' gross 57200 (AWE 1100): 2200.
+#ASSERT `the annual holiday pay for` (`Annual holiday` OF Date 1 7 2025, 2, FALSE, Date 1 4 2023, `weekly` 1000 0 0, Date 29 6 2025, 57200, LIST) EQUALS 2200
+-- OWP 1200 is greater: 2400.
+#ASSERT `the annual holiday pay for` (`Annual holiday` OF Date 1 7 2025, 2, FALSE, Date 1 4 2023, `weekly` 1200 0 0, Date 29 6 2025, 57200, LIST) EQUALS 2400
+-- half a week: 550
+#ASSERT `the annual holiday pay for` (`Annual holiday` OF Date 1 7 2025, 0.5, FALSE, Date 1 4 2023, `weekly` 1000 0 0, Date 29 6 2025, 57200, LIST) EQUALS 550
+
+-- s 22: in advance, employed from 1 January 2025, last pay period ended 30
+-- June 2025: 181 days, 26 whole or part weeks; gross 27300: AWE 1050.
+#ASSERT `the whole or part weeks of employment before the holiday` (`Annual holiday` OF Date 7 7 2025, 1, TRUE, Date 1 1 2025, `weekly` 900 0 0, Date 30 6 2025, 27300, LIST) EQUALS 26
+#ASSERT `the annual holiday pay for` (`Annual holiday` OF Date 7 7 2025, 1, TRUE, Date 1 1 2025, `weekly` 900 0 0, Date 30 6 2025, 27300, LIST) EQUALS 1050
+#ASSERT `the annual holiday pay for` (`Annual holiday` OF Date 7 7 2025, 1, TRUE, Date 1 1 2025, `weekly` 1100 0 0, Date 30 6 2025, 27300, LIST) EQUALS 1100
+-- 12 months worked by the end of the last pay period (F7)
+#ASSERT `the employee has worked 12 months before the holiday` (`Annual holiday` OF Date 7 7 2025, 1, TRUE, Date 1 7 2024, `weekly` 900 0 0, Date 30 6 2025, 52000, LIST) EQUALS TRUE
+#ASSERT `the employee has worked 12 months before the holiday` (`Annual holiday` OF Date 7 7 2025, 1, TRUE, Date 1 7 2024, `weekly` 900 0 0, Date 29 6 2025, 52000, LIST) EQUALS FALSE
+
+-- s 27
+#ASSERT `when annual holiday pay is due, agreed to pay in the period:` FALSE `, employment ended:` FALSE `, s 28 applies:` FALSE EQUALS `before the holiday is taken`
+#ASSERT `when annual holiday pay is due, agreed to pay in the period:` TRUE `, employment ended:` FALSE `, s 28 applies:` FALSE EQUALS `in the pay for the period in which the holiday is taken`
+#ASSERT `when annual holiday pay is due, agreed to pay in the period:` FALSE `, employment ended:` TRUE `, s 28 applies:` FALSE EQUALS `in the pay for the final period of employment`
+
+-- s 28(1)
+#ASSERT `annual holiday pay may be paid with the employee's pay` (`Pay-as-you-go arrangement` OF `(a)(i) a fixed-term agreement to work for less than 12 months`, TRUE, TRUE, 8) EQUALS TRUE
+#ASSERT `annual holiday pay may be paid with the employee's pay` (`Pay-as-you-go arrangement` OF `(a)(ii) work so intermittent or irregular that 4 weeks' holidays are impracticable`, TRUE, TRUE, 8.5) EQUALS TRUE
+#ASSERT `annual holiday pay may be paid with the employee's pay` (`Pay-as-you-go arrangement` OF `(a)(i) a fixed-term agreement to work for less than 12 months`, TRUE, TRUE, 7.5) EQUALS FALSE
+#ASSERT `annual holiday pay may be paid with the employee's pay` (`Pay-as-you-go arrangement` OF `neither`, TRUE, TRUE, 8) EQUALS FALSE
+#ASSERT `annual holiday pay may be paid with the employee's pay` (`Pay-as-you-go arrangement` OF `(a)(i) a fixed-term agreement to work for less than 12 months`, TRUE, FALSE, 8) EQUALS FALSE
+#ASSERT `annual holiday pay may be paid with the employee's pay` (`Pay-as-you-go arrangement` OF `(a)(i) a fixed-term agreement to work for less than 12 months`, FALSE, TRUE, 8) EQUALS FALSE
+-- s 28(3), (2)
+#ASSERT `entitled to paid annual holidays despite payments with pay` (`Pay-as-you-go arrangement` OF `neither`, TRUE, TRUE, 8) `, employed 12 months or more:` TRUE EQUALS TRUE
+#ASSERT `entitled to paid annual holidays despite payments with pay` (`Pay-as-you-go arrangement` OF `neither`, TRUE, TRUE, 8) `, employed 12 months or more:` FALSE EQUALS FALSE
+#ASSERT `entitled to paid annual holidays despite payments with pay` (`Pay-as-you-go arrangement` OF `(a)(i) a fixed-term agreement to work for less than 12 months`, TRUE, TRUE, 8) `, employed 12 months or more:` TRUE EQUALS FALSE
+#ASSERT `the holiday pay after a fixed term becomes permanent, holiday pay` 4000 `, already received` 1500 EQUALS 2500
+
+-- ss 28A, 28B: 1 week at max(1000, 57200/52 = 1100) = 1100
+#ASSERT `the payout for` (`Payout request` OF TRUE, 1, 0, FALSE, TRUE, `weekly` 1000 0 0, 57200, 4, LIST) EQUALS 1100
+#ASSERT `the payout for` (`Payout request` OF TRUE, 0.5, 0.5, FALSE, TRUE, `weekly` 1000 0 0, 57200, 4, LIST) EQUALS 550
+#ASSERT `the payout for` (`Payout request` OF TRUE, 1, 0.5, FALSE, TRUE, `weekly` 1000 0 0, 57200, 4, LIST) EQUALS 0
+#ASSERT `the payout for` (`Payout request` OF FALSE, 1, 0, FALSE, TRUE, `weekly` 1000 0 0, 57200, 4, LIST) EQUALS 0
+#ASSERT `the payout for` (`Payout request` OF TRUE, 1, 0, TRUE, TRUE, `weekly` 1000 0 0, 57200, 4, LIST) EQUALS 0
+#ASSERT `the payout for` (`Payout request` OF TRUE, 1, 0, FALSE, FALSE, `weekly` 1000 0 0, 57200, 4, LIST) EQUALS 0
+-- s 28A(1): no more than the entitlement not taken
+#ASSERT `the payout for` (`Payout request` OF TRUE, 1, 0, FALSE, TRUE, `weekly` 1000 0 0, 57200, 0.5, LIST) EQUALS 0
+#ASSERT `the payout for` (`Payout request` OF TRUE, 0.5, 0, FALSE, TRUE, `weekly` 1000 0 0, 57200, 0.5, LIST) EQUALS 550
+-- s 16(3) applies to the s 21(2) rate: 21 days' agreed unpaid leave, divisor 50: 57200/50 = 1144
+#ASSERT `the payout for` (`Payout request` OF TRUE, 1, 0, FALSE, TRUE, `weekly` 1000 0 0, 57200, 4, LIST (`absence` `other unpaid leave` 21 TRUE)) EQUALS 1144
+#ASSERT `the entitlement remains after a payout, requested:` FALSE EQUALS TRUE
+#ASSERT `the entitlement remains after a payout, requested:` TRUE EQUALS FALSE
+
+-- ss 23-26
+-- s 23: 8% of 20000 = 1600, less 500 advance = 1100
+#ASSERT `the annual holiday pay owed at the end of` (`End of employment` OF Date 30 9 2025, Date 1 1 2025, FALSE, 0, `weekly` 1000 0 0, 0, LIST, 20000, 500, 0, 0, 0, `daily` 200) EQUALS 1100
+#ASSERT `the annual holiday pay owed at the end of` (`End of employment` OF Date 30 9 2025, Date 1 1 2025, FALSE, 0, `weekly` 1000 0 0, 0, LIST, 20000, 0, 600, 0, 0, `daily` 200) EQUALS 1000
+-- advance pay exceeds the 8% (F8)
+#ASSERT `the annual holiday pay owed at the end of` (`End of employment` OF Date 30 9 2025, Date 1 1 2025, FALSE, 0, `weekly` 1000 0 0, 0, LIST, 20000, 2000, 0, 0, 0, `daily` 200) EQUALS 0
+-- s 24: 2 weeks at max(1000, 62400/52 = 1200) = 2400
+#ASSERT `the holiday pay under s 24 for` (`End of employment` OF Date 30 9 2025, Date 1 1 2020, TRUE, 2, `weekly` 1000 0 0, 62400, LIST, 10000, 0, 0, 0, 0, `daily` 200) EQUALS 2400
+-- s 25 with s 26: 8% of (10000 + 2400) = 992
+#ASSERT `the holiday pay under s 25 for` (`End of employment` OF Date 30 9 2025, Date 1 1 2020, TRUE, 2, `weekly` 1000 0 0, 62400, LIST, 10000, 0, 0, 0, 0, `daily` 200) EQUALS 992
+#ASSERT `the annual holiday pay owed at the end of` (`End of employment` OF Date 30 9 2025, Date 1 1 2020, TRUE, 2, `weekly` 1000 0 0, 62400, LIST, 10000, 0, 0, 0, 0, `daily` 200) EQUALS 3392
+-- OWP 1300 at the end is greater: 2600 + 8% of 12600 = 1008 -> 3608
+#ASSERT `the annual holiday pay owed at the end of` (`End of employment` OF Date 30 9 2025, Date 1 1 2020, TRUE, 2, `weekly` 1300 0 0, 62400, LIST, 10000, 0, 0, 0, 0, `daily` 200) EQUALS 3608
+-- all taken: s 25 alone, 8% of 10000 = 800
+#ASSERT `the annual holiday pay owed at the end of` (`End of employment` OF Date 30 9 2025, Date 1 1 2020, TRUE, 0, `weekly` 1000 0 0, 62400, LIST, 10000, 0, 0, 0, 0, `daily` 200) EQUALS 800
+
+-- ss 29-35
+-- entitled, 3 weeks' closedown, 2 weeks' entitlement, rate max(1000, 1000):
+-- 2 weeks as annual holidays, 2000; notice 1 Dec for 20 Dec.
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, TRUE, 3, 2, FALSE, `weekly` 1000 0 0, 52000, 0, 0, 0, LIST))'s `holiday pay for the closedown` EQUALS 2000
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, TRUE, 3, 2, FALSE, `weekly` 1000 0 0, 52000, 0, 0, 0, LIST))'s `weeks taken as annual holidays` EQUALS 2
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, TRUE, 3, 2, FALSE, `weekly` 1000 0 0, 52000, 0, 0, 0, LIST))'s `the employer may require the closedown to be taken` EQUALS TRUE
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, TRUE, 3, 2, FALSE, `weekly` 1000 0 0, 52000, 0, 0, 0, LIST))'s `the 12 months restart at the closedown (s 35)` EQUALS FALSE
+-- with an agreement to take the rest in advance: 3 weeks, 3000
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, TRUE, 3, 2, TRUE, `weekly` 1000 0 0, 52000, 0, 0, 0, LIST))'s `holiday pay for the closedown` EQUALS 3000
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, TRUE, 3, 2, TRUE, `weekly` 1000 0 0, 52000, 0, 0, 0, LIST))'s `weeks taken as annual holidays in advance` EQUALS 1
+-- entitlement covers the whole closedown
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, TRUE, 2, 4, FALSE, `weekly` 1000 0 0, 52000, 0, 0, 0, LIST))'s `holiday pay for the closedown` EQUALS 2000
+-- not entitled: 8% of 15000 = 1200, less 200 advance = 1000; s 35 restart
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, FALSE, 2, 0, FALSE, `weekly` 1000 0 0, 52000, 15000, 200, 0, LIST))'s `holiday pay for the closedown` EQUALS 1000
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, FALSE, 2, 0, FALSE, `weekly` 1000 0 0, 52000, 15000, 200, 0, LIST))'s `the 12 months restart at the closedown (s 35)` EQUALS TRUE
+-- not entitled, agreed under s 34(4) to take it in advance: 2 x 1000
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, FALSE, 2, 0, TRUE, `weekly` 1000 0 0, 52000, 15000, 200, 0, LIST))'s `holiday pay for the closedown` EQUALS 2000
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, FALSE, 2, 0, TRUE, `weekly` 1000 0 0, 52000, 15000, 200, 0, LIST))'s `the 12 months restart at the closedown (s 35)` EQUALS FALSE
+-- a second closedown in 12 months; short notice
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 1 12 2025, TRUE, TRUE, 2, 4, FALSE, `weekly` 1000 0 0, 52000, 0, 0, 0, LIST))'s `the employer may require the closedown to be taken` EQUALS FALSE
+#ASSERT (`the closedown position for` (Closedown OF Date 20 12 2025, Date 10 12 2025, FALSE, TRUE, 2, 4, FALSE, `weekly` 1000 0 0, 52000, 0, 0, 0, LIST))'s `the employer may require the closedown to be taken` EQUALS FALSE
+
+-- ss 36-40
+#ASSERT `how the time may be taken under ss 36 to 39` `s 36 sick or injured, or a spouse, partner or dependant is, during annual holidays` EQUALS `as sick leave, if the employer agrees`
+#ASSERT `how the time may be taken under ss 36 to 39` `s 37 a bereavement during annual holidays` EQUALS `as bereavement leave, which the employer must allow`
+#ASSERT `how the time may be taken under ss 36 to 39` `s 37A family violence leave becomes available during annual holidays` EQUALS `as family violence leave, which the employer must allow`
+#ASSERT `how the time may be taken under ss 36 to 39` `s 38 any of these before scheduled annual holidays` EQUALS `as sick, bereavement or family violence leave, which the employer must allow`
+#ASSERT `how the time may be taken under ss 36 to 39` `s 39 sick, bereavement or family violence leave exhausted` EQUALS `not as annual holidays unless the employer agrees to the employee's request`
+#ASSERT `the days of annual holidays used, working days in the holiday` 10 `, public holidays on them` 1 EQUALS 9
+
+§§ `Goal 3 — public holidays`
+
+#ASSERT `Easter Sunday in` 2024 EQUALS Date 31 3 2024
+#ASSERT `Easter Sunday in` 2025 EQUALS Date 20 4 2025
+#ASSERT `Easter Sunday in` 2026 EQUALS Date 5 4 2026
+#ASSERT `Easter Sunday in` 2027 EQUALS Date 28 3 2027
+#ASSERT `the day` `Good Friday` `falls on, calendar` (`weekday calendar` 2026) EQUALS Date 3 4 2026
+#ASSERT `the day` `Easter Monday` `falls on, calendar` (`weekday calendar` 2026) EQUALS Date 6 4 2026
+#ASSERT `the day` `the Sovereign's birthday` `falls on, calendar` (`weekday calendar` 2026) EQUALS Date 1 6 2026
+#ASSERT `the day` `Labour Day` `falls on, calendar` (`weekday calendar` 2026) EQUALS Date 26 10 2026
+#ASSERT `the day` `Labour Day` `falls on, calendar` (`weekday calendar` 2025) EQUALS Date 27 10 2025
+#ASSERT `the day` `Matariki Observance Day` `falls on, calendar` (`weekday calendar` 2026) EQUALS Date 20 6 2026
+
+-- s 45: 2027, Christmas Saturday -> Monday 27; Boxing Sunday -> Tuesday 28;
+-- 2 January Saturday -> Monday 4 January. s 45A: Waitangi Saturday ->
+-- Monday 8 February; ANZAC Sunday -> Monday 26 April.
+#ASSERT `the day` `(a) Christmas Day` `is treated as falling on, calendar` (`weekday calendar` 2027) EQUALS Date 27 12 2027
+#ASSERT `the day` `(b) Boxing Day` `is treated as falling on, calendar` (`weekday calendar` 2027) EQUALS Date 28 12 2027
+#ASSERT `the day` `(d) 2 January` `is treated as falling on, calendar` (`weekday calendar` 2027) EQUALS Date 4 1 2027
+#ASSERT `the day` `(c) New Year's Day` `is treated as falling on, calendar` (`weekday calendar` 2027) EQUALS Date 1 1 2027
+#ASSERT `the day` `Waitangi Day` `is treated as falling on, calendar` (`weekday calendar` 2027) EQUALS Date 8 2 2027
+#ASSERT `the day` `ANZAC Day` `is treated as falling on, calendar` (`weekday calendar` 2027) EQUALS Date 26 4 2027
+-- 2022: Christmas Sunday -> Tuesday 27 December (Boxing Day is Monday 26)
+#ASSERT `the day` `(a) Christmas Day` `is treated as falling on, calendar` (`weekday calendar` 2022) EQUALS Date 27 12 2022
+#ASSERT `the day` `(b) Boxing Day` `is treated as falling on, calendar` (`weekday calendar` 2022) EQUALS Date 26 12 2022
+-- a Saturday worker keeps Christmas 2027 on the Saturday
+#ASSERT `the day` `(a) Christmas Day` `is treated as falling on, calendar` (`Calendar inputs` OF 2027, Date 25 6 2027, Date 25 1 2027, LIST 1, 2, 3, 4, 5, 6) EQUALS Date 25 12 2027
+-- a Sunday worker keeps ANZAC Day 2027 on the Sunday
+#ASSERT `the day` `ANZAC Day` `is treated as falling on, calendar` (`Calendar inputs` OF 2027, Date 25 6 2027, Date 25 1 2027, LIST 0, 1, 2) EQUALS Date 25 4 2027
+-- Good Friday is never moved
+#ASSERT `the day` `Good Friday` `is treated as falling on, calendar` (`Calendar inputs` OF 2027, Date 25 6 2027, Date 25 1 2027, LIST 1, 2) EQUALS Date 26 3 2027
+
+#ASSERT count (`the public holidays for the employee in` (`weekday calendar` 2027)) EQUALS 12
+-- 2038: Easter Sunday is 25 April; ANZAC Day moves to Monday 26 April, Easter
+-- Monday: one day (F10)
+#ASSERT `Easter Sunday in` 2038 EQUALS Date 25 4 2038
+#ASSERT count (`the public holidays for the employee in` (`weekday calendar` 2038)) EQUALS 11
+#ASSERT REFUSED (`the public holidays for the employee in` (`weekday calendar` 2021))
+#ASSERT `is a public holiday for the employee` (Date 27 12 2027) (`weekday calendar` 2027) EQUALS TRUE
+#ASSERT `is a public holiday for the employee` (Date 25 12 2027) (`weekday calendar` 2027) EQUALS FALSE
+
+-- ss 44A-44C
+#ASSERT `the whole transfer is valid` (`Whole transfer` OF TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) EQUALS TRUE
+#ASSERT `the whole transfer is valid` (`Whole transfer` OF TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) EQUALS FALSE
+#ASSERT `the whole transfer is valid` (`Whole transfer` OF TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE) EQUALS FALSE
+#ASSERT `the whole transfer is valid` (`Whole transfer` OF TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) EQUALS FALSE
+#ASSERT `the whole transfer is valid` (`Whole transfer` OF FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) EQUALS FALSE
+#ASSERT `the whole transfer is valid` (`Whole transfer` OF TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) EQUALS FALSE
+#ASSERT `the part transfer is valid` (`Part transfer` OF TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) EQUALS TRUE
+#ASSERT `the part transfer is valid` (`Part transfer` OF TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) EQUALS FALSE
+#ASSERT `the part transfer is valid` (`Part transfer` OF FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) EQUALS FALSE
+#ASSERT `the part transfer is valid` (`Part transfer` OF TRUE, TRUE, TRUE, TRUE, FALSE, TRUE) EQUALS FALSE
+
+-- s 47
+#ASSERT `the employer may require work on the public holiday, otherwise a working day:` TRUE `, required by the agreement:` TRUE EQUALS TRUE
+#ASSERT `the employer may require work on the public holiday, otherwise a working day:` FALSE `, required by the agreement:` TRUE EQUALS FALSE
+#ASSERT `the employer may require work on the public holiday, otherwise a working day:` TRUE `, required by the agreement:` FALSE EQUALS FALSE
+
+-- s 50: 200 x 1.5 = 300; penal 50: 150 x 1.5 = 225; penal 100: 150 < 200
+#ASSERT `the pay for the public holiday` (`public holiday` TRUE TRUE 200 0 200) EQUALS 300
+#ASSERT `the pay for the public holiday` (`public holiday` TRUE TRUE 200 50 200) EQUALS 225
+#ASSERT `the pay for the public holiday` (`public holiday` TRUE TRUE 200 100 200) EQUALS 200
+-- worked on a day not otherwise a working day: s 50 still
+#ASSERT `the pay for the public holiday` (`public holiday` FALSE TRUE 100 0 100) EQUALS 150
+-- s 49: not worked, otherwise a working day: daily pay 200
+#ASSERT `the pay for the public holiday` (`public holiday` TRUE FALSE 0 0 0) EQUALS 200
+-- s 48(1)(a): not worked, not otherwise a working day: nothing
+#ASSERT `the pay for the public holiday` (`public holiday` FALSE FALSE 0 0 0) EQUALS 0
+
+-- s 56
+#ASSERT `the employee earns an alternative holiday for` (`public holiday` TRUE TRUE 200 0 200) EQUALS TRUE
+#ASSERT `the employee earns an alternative holiday for` (`public holiday` FALSE TRUE 100 0 100) EQUALS FALSE
+#ASSERT `the employee earns an alternative holiday for` (`public holiday` TRUE FALSE 0 0 0) EQUALS FALSE
+#ASSERT `the employee earns an alternative holiday for` (`Public holiday worked or not` OF Date 25 4 2025, TRUE, TRUE, TRUE, `any other reason`, TRUE, `not on call`, `daily` 200, 200, 0, 200) EQUALS FALSE
+-- s 59
+#ASSERT `the employee earns an alternative holiday for` (`Public holiday worked or not` OF Date 25 4 2025, TRUE, FALSE, FALSE, `any other reason`, FALSE, `(3) on call, not called in, and for all practical purposes not a whole holiday`, `daily` 200, 0, 0, 0) EQUALS TRUE
+#ASSERT `the employee earns an alternative holiday for` (`Public holiday worked or not` OF Date 25 4 2025, TRUE, FALSE, FALSE, `any other reason`, FALSE, `(3) on call, not called in, and had a whole holiday`, `daily` 200, 0, 0, 0) EQUALS FALSE
+#ASSERT `the employee earns an alternative holiday for` (`Public holiday worked or not` OF Date 25 4 2025, FALSE, FALSE, FALSE, `any other reason`, FALSE, `(3) on call, not called in, and for all practical purposes not a whole holiday`, `daily` 200, 0, 0, 0) EQUALS FALSE
+#ASSERT `the pay for the public holiday` (`Public holiday worked or not` OF Date 25 4 2025, TRUE, FALSE, FALSE, `any other reason`, FALSE, `(3) on call, not called in, and for all practical purposes not a whole holiday`, `daily` 200, 0, 0, 0) EQUALS 200
+-- s 61A: required to work, sick: s 49 pay, no alternative holiday
+#ASSERT `s 61A applies to` (`Public holiday worked or not` OF Date 25 4 2025, TRUE, FALSE, TRUE, `(a) sick or injured, or a spouse, partner or dependant is`, FALSE, `not on call`, `daily` 200, 0, 0, 0) EQUALS TRUE
+#ASSERT `the pay for the public holiday` (`Public holiday worked or not` OF Date 25 4 2025, TRUE, FALSE, TRUE, `(a) sick or injured, or a spouse, partner or dependant is`, FALSE, `not on call`, `daily` 200, 0, 0, 0) EQUALS 200
+#ASSERT `the employee earns an alternative holiday for` (`Public holiday worked or not` OF Date 25 4 2025, TRUE, FALSE, TRUE, `(a) sick or injured, or a spouse, partner or dependant is`, FALSE, `not on call`, `daily` 200, 0, 0, 0) EQUALS FALSE
+
+-- s 48
+#ASSERT `s 46 is complied with for` (`public holiday` TRUE TRUE 200 0 200) `, paid` 300 `, alternative holiday provided:` TRUE EQUALS TRUE
+#ASSERT `s 46 is complied with for` (`public holiday` TRUE TRUE 200 0 200) `, paid` 300 `, alternative holiday provided:` FALSE EQUALS FALSE
+#ASSERT `s 46 is complied with for` (`public holiday` TRUE TRUE 200 0 200) `, paid` 250 `, alternative holiday provided:` TRUE EQUALS FALSE
+#ASSERT `s 46 is complied with for` (`public holiday` FALSE FALSE 0 0 0) `, paid` 0 `, alternative holiday provided:` FALSE EQUALS TRUE
+
+-- ss 52, 53
+#ASSERT `the date the agreement must confirm the s 50 right, entered` (Date 1 5 2004) `, existing collective with s 51:` FALSE `, existing individual with s 51:` FALSE `, replaced` NOTHING `, next amended` NOTHING EQUALS Date 1 5 2004
+#ASSERT `the date the agreement must confirm the s 50 right, entered` (Date 1 1 2003) `, existing collective with s 51:` TRUE `, existing individual with s 51:` FALSE `, replaced` (JUST (Date 1 7 2008)) `, next amended` NOTHING EQUALS Date 1 7 2008
+#ASSERT `the date the agreement must confirm the s 50 right, entered` (Date 1 1 2003) `, existing collective with s 51:` TRUE `, existing individual with s 51:` FALSE `, replaced` (JUST (Date 1 7 2006)) `, next amended` NOTHING EQUALS Date 1 4 2007
+#ASSERT `the date the agreement must confirm the s 50 right, entered` (Date 1 1 2003) `, existing collective with s 51:` FALSE `, existing individual with s 51:` TRUE `, replaced` NOTHING `, next amended` NOTHING EQUALS Date 1 4 2007
+#ASSERT `the date the agreement must confirm the s 50 right, entered` (Date 1 1 2003) `, existing collective with s 51:` FALSE `, existing individual with s 51:` FALSE `, replaced` NOTHING `, next amended` (JUST (Date 1 10 2004)) EQUALS Date 1 10 2004
+#ASSERT `the date the agreement must confirm the s 50 right, entered` (Date 1 1 2003) `, existing collective with s 51:` FALSE `, existing individual with s 51:` FALSE `, replaced` NOTHING `, next amended` (JUST (Date 1 6 2005)) EQUALS Date 1 4 2005
+#ASSERT `the date the agreement must confirm the s 50 right, entered` (Date 1 1 2003) `, existing collective with s 51:` FALSE `, existing individual with s 51:` FALSE `, replaced` NOTHING `, next amended` NOTHING EQUALS Date 1 4 2005
+#ASSERT REFUSED (`the date the agreement must confirm the s 50 right, entered` (Date 1 4 2004) `, existing collective with s 51:` FALSE `, existing individual with s 51:` FALSE `, replaced` NOTHING `, next amended` NOTHING)
+#ASSERT REFUSED (`the date the agreement must confirm the s 50 right, entered` (Date 1 1 2003) `, existing collective with s 51:` TRUE `, existing individual with s 51:` FALSE `, replaced` NOTHING `, next amended` NOTHING)
+
+-- s 57
+#ASSERT `the alternative holiday meets s 57` (`Alternative holiday` OF Date 10 3 2025, TRUE, TRUE, TRUE, FALSE, NOTHING, `daily` 200) EQUALS TRUE
+#ASSERT `the alternative holiday meets s 57` (`Alternative holiday` OF Date 16 3 2025, FALSE, TRUE, TRUE, FALSE, JUST (Date 1 3 2025), `daily` 200) EQUALS TRUE
+#ASSERT `the alternative holiday meets s 57` (`Alternative holiday` OF Date 15 3 2025, FALSE, TRUE, TRUE, FALSE, JUST (Date 1 3 2025), `daily` 200) EQUALS FALSE
+#ASSERT `the alternative holiday meets s 57` (`Alternative holiday` OF Date 10 3 2025, FALSE, TRUE, TRUE, FALSE, NOTHING, `daily` 200) EQUALS FALSE
+#ASSERT `the alternative holiday meets s 57` (`Alternative holiday` OF Date 10 3 2025, TRUE, TRUE, TRUE, TRUE, NOTHING, `daily` 200) EQUALS FALSE
+#ASSERT `the alternative holiday meets s 57` (`Alternative holiday` OF Date 10 3 2025, TRUE, FALSE, TRUE, FALSE, NOTHING, `daily` 200) EQUALS FALSE
+#ASSERT `the alternative holiday meets s 57` (`Alternative holiday` OF Date 10 3 2025, TRUE, TRUE, FALSE, FALSE, NOTHING, `daily` 200) EQUALS FALSE
+-- s 60
+#ASSERT `the pay for the alternative holiday` (`Alternative holiday` OF Date 10 3 2025, TRUE, TRUE, TRUE, FALSE, NOTHING, `daily` 200) EQUALS 200
+#ASSERT `the pay for alternative holidays not taken at the end of` (`End of employment` OF Date 30 9 2025, Date 1 1 2020, TRUE, 0, `weekly` 1000 0 0, 52000, LIST, 0, 0, 0, 0, 2, `daily` 180) EQUALS 360
+-- s 61
+#ASSERT `the employee may request the exchange` (`Exchange request` OF Date 1 1 2025, Date 31 12 2025, TRUE, 250) EQUALS FALSE
+#ASSERT `the employee may request the exchange` (`Exchange request` OF Date 1 1 2025, Date 1 1 2026, TRUE, 250) EQUALS TRUE
+#ASSERT `the payment in exchange for the alternative holiday` (`Exchange request` OF Date 1 1 2025, Date 1 1 2026, TRUE, 250) EQUALS 250
+#ASSERT `the payment in exchange for the alternative holiday` (`Exchange request` OF Date 1 1 2025, Date 1 6 2025, TRUE, 250) EQUALS 0
+#ASSERT `the payment in exchange for the alternative holiday` (`Exchange request` OF Date 1 1 2025, Date 1 1 2026, FALSE, 250) EQUALS 0
+
+-- s 40(3): employment ends Friday 20 December 2024, Monday-Friday worker.
+-- 5 days untaken: Mon 23, Tue 24, (Christmas Wed 25, Boxing Thu 26 are public
+-- holidays), Fri 27, Mon 30, Tue 31: 2 public holidays. 10 days: and New
+-- Year's Day, 2 January: 4.
+#ASSERT `the public holidays in the notional holiday after` (Date 20 12 2024) `, working days untaken` 5 `, this year` (`weekday calendar` 2024) `, next year` (`weekday calendar` 2025) EQUALS 2
+#ASSERT `the public holidays in the notional holiday after` (Date 20 12 2024) `, working days untaken` 10 `, this year` (`weekday calendar` 2024) `, next year` (`weekday calendar` 2025) EQUALS 4
+#ASSERT `the public holidays in the notional holiday after` (Date 20 12 2024) `, working days untaken` 2 `, this year` (`weekday calendar` 2024) `, next year` (`weekday calendar` 2025) EQUALS 0
+#ASSERT `the public holidays in the notional holiday after` (Date 30 6 2025) `, working days untaken` 10 `, this year` (`weekday calendar` 2025) `, next year` (`weekday calendar` 2026) EQUALS 0
+
+§§ `Goals 4 and 5 — sick, bereavement and family violence leave`
+
+-- s 63(1)(a): from 1 January 2025, 6 months complete on 30 June
+#ASSERT `entitled under s 63(1) or 72D(1)` (`service from` (Date 1 1 2025)) `on` (Date 30 6 2025) EQUALS FALSE
+#ASSERT `entitled under s 63(1) or 72D(1)` (`service from` (Date 1 1 2025)) `on` (Date 1 7 2025) EQUALS TRUE
+-- s 63(1)(b): the hours test met over 6 months to 31 March 2025
+#ASSERT `entitled under s 63(1) or 72D(1)` (Service OF Date 1 1 2025, JUST (Date 31 3 2025), TRUE) `on` (Date 1 4 2025) EQUALS TRUE
+#ASSERT `entitled under s 63(1) or 72D(1)` (Service OF Date 1 1 2025, JUST (Date 31 3 2025), TRUE) `on` (Date 31 3 2025) EQUALS FALSE
+#ASSERT `entitled under s 63(1) or 72D(1)` (Service OF Date 1 1 2025, JUST (Date 31 3 2025), FALSE) `on` (Date 1 4 2025) EQUALS FALSE
+-- s 63(2): 12-month periods from 1 July 2024
+#ASSERT `the first day of the 12-month entitlement period containing` (Date 15 8 2025) `for` (`service from` (Date 1 1 2024)) EQUALS Date 1 7 2025
+#ASSERT `the first day of the 12-month entitlement period containing` (Date 30 6 2025) `for` (`service from` (Date 1 1 2024)) EQUALS Date 1 7 2024
+#ASSERT `the first day of the 12-month entitlement period containing` (Date 1 7 2027) `for` (`service from` (Date 1 1 2024)) EQUALS Date 1 7 2027
+
+-- s 65(2), Schedule 1AA cl 5
+#ASSERT `the sick leave for the 12-month period beginning` (Date 1 8 2021) EQUALS 10
+#ASSERT `the sick leave for the 12-month period beginning` (Date 24 7 2021) EQUALS 10
+#ASSERT REFUSED (`the sick leave for the 12-month period beginning` (Date 1 7 2021))
+-- s 66: 10 + up to 10 carried, max 20
+#ASSERT `the sick leave available for the period beginning` (Date 1 7 2025) `, unused` 7 EQUALS 17
+#ASSERT `the sick leave available for the period beginning` (Date 1 7 2025) `, unused` 15 EQUALS 20
+#ASSERT `the sick leave available for the period beginning` (Date 1 7 2025) `, unused` 0 EQUALS 10
+#ASSERT `the sick leave available for the period beginning` (Date 1 7 2025) `, unused` 25 EQUALS 20
+
+-- s 65(1)
+#ASSERT `a ground for sick leave` `(c) a person who depends on the employee for care is sick or injured` EQUALS TRUE
+#ASSERT `a ground for sick leave` `someone else` EQUALS FALSE
+
+-- s 68
+#ASSERT `the employer may require proof of sickness or injury` (`Proof request` OF 3, FALSE, FALSE, FALSE) EQUALS TRUE
+#ASSERT `the employer may require proof of sickness or injury` (`Proof request` OF 2, TRUE, TRUE, FALSE) EQUALS TRUE
+#ASSERT `the employer may require proof of sickness or injury` (`Proof request` OF 2, TRUE, FALSE, FALSE) EQUALS FALSE
+#ASSERT `the employer may require proof of sickness or injury` (`Proof request` OF 1, FALSE, FALSE, TRUE) EQUALS TRUE
+
+-- ss 69, 70
+#ASSERT `the bereavement leave for` `(a) the death of a spouse or partner, parent, child, brother or sister, grandparent, grandchild, or spouse's or partner's parent` EQUALS 3
+#ASSERT `the bereavement leave for` `(b) the death of another person, if the employer accepts the employee has suffered a bereavement` EQUALS 1
+#ASSERT `the bereavement leave for` `(b) the death of another person, if the employer does not accept it` EQUALS 0
+#ASSERT `the bereavement leave for` `(c) the end of the employee's pregnancy by miscarriage or still-birth` EQUALS 3
+#ASSERT `the bereavement leave for` `(d) the end of another person's pregnancy by miscarriage or still-birth, for a spouse, partner, intended parent or primary carer` EQUALS 3
+#ASSERT `the bereavement leave for` `(d) the end of another person's pregnancy, for anyone else` EQUALS 0
+#ASSERT `the bereavement leave for all of` (LIST `(a) the death of a spouse or partner, parent, child, brother or sister, grandparent, grandchild, or spouse's or partner's parent`, `(a) the death of a spouse or partner, parent, child, brother or sister, grandparent, grandchild, or spouse's or partner's parent`) EQUALS 6
+
+-- s 72B
+#ASSERT `a person affected by family violence` (`Family violence facts` OF FALSE, TRUE) EQUALS TRUE
+#ASSERT `a person affected by family violence` (`Family violence facts` OF FALSE, FALSE) EQUALS FALSE
+
+-- the leave position
+-- sick: 2 days, 5 left, daily pay 200: 400, 2 deducted
+#ASSERT (`the leave position for` (`leave` `sick leave` (Date 1 9 2025) (Date 1 1 2024) 2 5 `(a) the employee is sick or injured` `no bereavements`))'s `leave pay` EQUALS 400
+#ASSERT (`the leave position for` (`leave` `sick leave` (Date 1 9 2025) (Date 1 1 2024) 2 5 `(a) the employee is sick or injured` `no bereavements`))'s `days deducted from the entitlement` EQUALS 2
+#ASSERT (`the leave position for` (`leave` `sick leave` (Date 1 9 2025) (Date 1 1 2024) 2 5 `(a) the employee is sick or injured` `no bereavements`))'s `when leave pay is due` EQUALS `in the pay for the pay period in which the holiday or leave falls`
+-- 6 days asked, 5 left: 5 paid
+#ASSERT (`the leave position for` (`leave` `sick leave` (Date 1 9 2025) (Date 1 1 2024) 6 5 `(a) the employee is sick or injured` `no bereavements`))'s `leave pay` EQUALS 1000
+-- 3 months into the job: not entitled
+#ASSERT (`the leave position for` (`leave` `sick leave` (Date 1 4 2025) (Date 1 1 2025) 2 0 `(a) the employee is sick or injured` `no bereavements`))'s `entitled to the leave` EQUALS FALSE
+#ASSERT (`the leave position for` (`leave` `sick leave` (Date 1 4 2025) (Date 1 1 2025) 2 0 `(a) the employee is sick or injured` `no bereavements`))'s `when leave pay is due` EQUALS `nothing is payable`
+-- in advance by agreement (s 63(3))
+#ASSERT (`the leave position for` (Leave OF `sick leave`, Date 1 4 2025, `service from` (Date 1 1 2025), 2, 2, TRUE, `(a) the employee is sick or injured`, `no bereavements`, (`Family violence facts` OF FALSE, FALSE), `daily` 200, 0, FALSE))'s `leave pay` EQUALS 400
+-- ACC weekly compensation for 2 of 3 days (s 71(2))
+#ASSERT (`the leave position for` (Leave OF `sick leave`, Date 1 9 2025, `service from` (Date 1 1 2024), 3, 5, FALSE, `(a) the employee is sick or injured`, `no bereavements`, (`Family violence facts` OF FALSE, FALSE), `daily` 200, 2, FALSE))'s `leave pay` EQUALS 200
+-- proof not produced (s 72(2))
+#ASSERT (`the leave position for` (Leave OF `sick leave`, Date 1 9 2025, `service from` (Date 1 1 2024), 3, 5, FALSE, `(a) the employee is sick or injured`, `no bereavements`, (`Family violence facts` OF FALSE, FALSE), `daily` 200, 0, TRUE))'s `when leave pay is due` EQUALS `when the employee produces the proof required`
+-- sick for someone else: no ground
+#ASSERT (`the leave position for` (`leave` `sick leave` (Date 1 9 2025) (Date 1 1 2024) 2 5 `someone else` `no bereavements`))'s `entitled to the leave` EQUALS FALSE
+-- bereavement: a parent, 3 days, none deducted
+#ASSERT (`the leave position for` (`leave` `bereavement leave` (Date 1 9 2025) (Date 1 1 2024) 3 0 `(a) the employee is sick or injured` (LIST `(a) the death of a spouse or partner, parent, child, brother or sister, grandparent, grandchild, or spouse's or partner's parent`)))'s `leave pay` EQUALS 600
+#ASSERT (`the leave position for` (`leave` `bereavement leave` (Date 1 9 2025) (Date 1 1 2024) 3 0 `(a) the employee is sick or injured` (LIST `(a) the death of a spouse or partner, parent, child, brother or sister, grandparent, grandchild, or spouse's or partner's parent`)))'s `days deducted from the entitlement` EQUALS 0
+-- bereavement: another person accepted: 1 day of 3 asked
+#ASSERT (`the leave position for` (`leave` `bereavement leave` (Date 1 9 2025) (Date 1 1 2024) 3 0 `(a) the employee is sick or injured` (LIST `(b) the death of another person, if the employer accepts the employee has suffered a bereavement`)))'s `days of leave allowed` EQUALS 1
+-- family violence: 12 asked, 10 left: 10, 2000
+#ASSERT (`the leave position for` (`leave` `family violence leave` (Date 1 9 2025) (Date 1 1 2024) 12 10 `(a) the employee is sick or injured` `no bereavements`))'s `leave pay` EQUALS 2000
+#ASSERT (`the leave position for` (`leave` `family violence leave` (Date 1 9 2025) (Date 1 1 2024) 12 15 `(a) the employee is sick or injured` `no bereavements`))'s `days of leave allowed` EQUALS 10
+#ASSERT REFUSED (`the leave position for` (`leave` `family violence leave` (Date 1 3 2019) (Date 1 1 2017) 2 10 `(a) the employee is sick or injured` `no bereavements`))
+-- sick leave in a period that began 1 July 2021, before the 2021 amendment
+#ASSERT REFUSED (`the leave position for` (`leave` `sick leave` (Date 1 7 2021) (Date 1 1 2020) 2 5 `(a) the employee is sick or injured` `no bereavements`))
+-- s 71(4)
+#ASSERT `the days deducted for topping up ACC compensation, whole days topped up` 12 EQUALS 2
+#ASSERT `the days deducted for topping up ACC compensation, whole days topped up` 4 EQUALS 0
+
+§§ `Goal 6 — enforcement and records`
+
+#ASSERT `may enforce` `(c) a representative of the employee's union` `, an entitlement beyond the Act:` TRUE EQUALS TRUE
+#ASSERT `may enforce` `(e) a Labour Inspector` `, an entitlement beyond the Act:` TRUE EQUALS FALSE
+#ASSERT `may enforce` `(d) an employer` `, an entitlement beyond the Act:` FALSE EQUALS TRUE
+
+#ASSERT `the maximum penalty under s 75 for a breach of` `s 81` `, the employer:` TRUE `, involved:` FALSE `, a person who is` `an individual` `, conduct on` (Date 1 7 2024) EQUALS 10000
+#ASSERT `the maximum penalty under s 75 for a breach of` `s 16 or ss 21 to 28` `, the employer:` TRUE `, involved:` FALSE `, a person who is` `a company or other body corporate` `, conduct on` (Date 1 7 2024) EQUALS 20000
+#ASSERT `the maximum penalty under s 75 for a breach of` `s 72C or ss 72H to 72J` `, the employer:` FALSE `, involved:` TRUE `, a person who is` `an individual` `, conduct on` (Date 1 7 2024) EQUALS 10000
+#ASSERT `the maximum penalty under s 75 for a breach of` `s 81` `, the employer:` FALSE `, involved:` FALSE `, a person who is` `an individual` `, conduct on` (Date 1 7 2024) EQUALS 0
+#ASSERT `the maximum penalty under s 75 for a breach of` `another provision` `, the employer:` TRUE `, involved:` FALSE `, a person who is` `an individual` `, conduct on` (Date 1 7 2024) EQUALS 0
+#ASSERT REFUSED (`the maximum penalty under s 75 for a breach of` `s 81` `, the employer:` TRUE `, involved:` FALSE `, a person who is` `an individual` `, conduct on` (Date 1 7 2015))
+
+#ASSERT `may bring a penalty action` `(a) the employee` `, against the employer:` TRUE EQUALS TRUE
+#ASSERT `may bring a penalty action` `(a) the employee` `, against the employer:` FALSE EQUALS FALSE
+#ASSERT `may bring a penalty action` `(e) a Labour Inspector` `, against the employer:` FALSE EQUALS TRUE
+#ASSERT `may bring a penalty action` `(c) a representative of the employee's union` `, against the employer:` TRUE EQUALS FALSE
+#ASSERT `the last day to commence a penalty action, known` (Date 1 3 2025) `, should have known` (Date 1 1 2025) `, court refused` NOTHING EQUALS Date 1 1 2026
+#ASSERT `the last day to commence a penalty action, known` (Date 1 3 2025) `, should have known` (Date 1 1 2025) `, court refused` (JUST (Date 10 2 2026)) EQUALS Date 10 5 2026
+
+#ASSERT `the arrears recoverable under s 77A by` `(e) a Labour Inspector` `, involved:` TRUE `, leave:` FALSE `, unpaid` 5000 `, the employer can pay` 2000 `, conduct on` (Date 1 7 2024) EQUALS 3000
+#ASSERT `the arrears recoverable under s 77A by` `(a) the employee` `, involved:` TRUE `, leave:` FALSE `, unpaid` 5000 `, the employer can pay` 2000 `, conduct on` (Date 1 7 2024) EQUALS 0
+#ASSERT `the arrears recoverable under s 77A by` `(a) the employee` `, involved:` TRUE `, leave:` TRUE `, unpaid` 5000 `, the employer can pay` 2000 `, conduct on` (Date 1 7 2024) EQUALS 3000
+#ASSERT `the arrears recoverable under s 77A by` `(e) a Labour Inspector` `, involved:` FALSE `, leave:` FALSE `, unpaid` 5000 `, the employer can pay` 0 `, conduct on` (Date 1 7 2024) EQUALS 0
+#ASSERT `the arrears recoverable under s 77A by` `(e) a Labour Inspector` `, involved:` TRUE `, leave:` FALSE `, unpaid` 5000 `, the employer can pay` 6000 `, conduct on` (Date 1 7 2024) EQUALS 0
+#ASSERT REFUSED (`the arrears recoverable under s 77A by` `(e) a Labour Inspector` `, involved:` TRUE `, leave:` FALSE `, unpaid` 5000 `, the employer can pay` 0 `, conduct on` (Date 1 7 2015))
+
+#ASSERT `the holiday and leave record meets s 81` `a full record` EQUALS TRUE
+#ASSERT `the holiday and leave record meets s 81` (`Holiday and leave record` OF TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) EQUALS FALSE
+#ASSERT `the first day the information may be discarded, entered` (Date 1 7 2020) EQUALS Date 2 7 2026
+#ASSERT `may request access to the holiday and leave record` `(d) an employer` EQUALS FALSE
+#ASSERT `may request access to the holiday and leave record` `(e) a Labour Inspector` EQUALS TRUE
+#ASSERT `the Authority may accept the employee's statements, failure to comply with s 81 or 82:` TRUE `, prevented an accurate claim:` TRUE EQUALS TRUE
+#ASSERT `the Authority may accept the employee's statements, failure to comply with s 81 or 82:` TRUE `, prevented an accurate claim:` FALSE EQUALS FALSE
+
+#ASSERT `the employment is treated as continuous, dismissed` (Date 1 3 2025) `, re-employed` (Date 1 4 2025) `, Labour Inspector determination under s 85(2):` FALSE EQUALS TRUE
+#ASSERT `the employment is treated as continuous, dismissed` (Date 1 3 2025) `, re-employed` (Date 2 4 2025) `, Labour Inspector determination under s 85(2):` FALSE EQUALS FALSE
+#ASSERT `the employment is treated as continuous, dismissed` (Date 1 3 2025) `, re-employed` (Date 15 3 2025) `, Labour Inspector determination under s 85(2):` TRUE EQUALS FALSE
+
+§§ `The top-level goal`
+
+-- a public holiday worked: 300, an alternative holiday, in that pay period
+#ASSERT (`the holiday pay position for` (`a public holiday` (`public holiday` TRUE TRUE 200 0 200)))'s `amount the employer must pay` EQUALS 300
+#ASSERT (`the holiday pay position for` (`a public holiday` (`public holiday` TRUE TRUE 200 0 200)))'s `an alternative holiday is earned` EQUALS TRUE
+#ASSERT (`the holiday pay position for` (`a public holiday` (`public holiday` TRUE TRUE 200 0 200)))'s `when it is due` EQUALS `in the pay for the pay period in which the holiday or leave falls`
+-- a public holiday on a day not worked and not otherwise a working day
+#ASSERT (`the holiday pay position for` (`a public holiday` (`public holiday` FALSE FALSE 0 0 0)))'s `when it is due` EQUALS `nothing is payable`
+#ASSERT (`the holiday pay position for` (`a public holiday` (`public holiday` FALSE FALSE 0 0 0)))'s `the employee is entitled` EQUALS FALSE
+-- an annual holiday: 2200 before it is taken
+#ASSERT (`the holiday pay position for` (`an annual holiday` (`Annual holiday` OF Date 1 7 2025, 2, FALSE, Date 1 4 2023, `weekly` 1000 0 0, Date 29 6 2025, 57200, LIST) FALSE FALSE))'s `amount the employer must pay` EQUALS 2200
+#ASSERT (`the holiday pay position for` (`an annual holiday` (`Annual holiday` OF Date 1 7 2025, 2, FALSE, Date 1 4 2023, `weekly` 1000 0 0, Date 29 6 2025, 57200, LIST) FALSE FALSE))'s `when it is due` EQUALS `before the holiday is taken`
+-- the end: 3392 annual + 2 public holidays at 200 + 1 alternative holiday at 200 = 3992
+#ASSERT (`the holiday pay position for` (`the end of the employment` (`End of employment` OF Date 30 9 2025, Date 1 1 2020, TRUE, 2, `weekly` 1000 0 0, 62400, LIST, 10000, 0, 0, 2, 1, `daily` 200)))'s `amount the employer must pay` EQUALS 3992
+#ASSERT (`the holiday pay position for` (`the end of the employment` (`End of employment` OF Date 30 9 2025, Date 1 1 2020, TRUE, 2, `weekly` 1000 0 0, 62400, LIST, 10000, 0, 0, 2, 1, `daily` 200)))'s `when it is due` EQUALS `in the pay for the final period of employment`
+-- s 40(2)(b): no s 40(3) pay before the first entitlement: 8% of 20000 = 1600 only
+#ASSERT (`the holiday pay position for` (`the end of the employment` (`End of employment` OF Date 30 9 2025, Date 1 1 2025, FALSE, 0, `weekly` 1000 0 0, 0, LIST, 20000, 0, 0, 2, 0, `daily` 200)))'s `amount the employer must pay` EQUALS 1600
+-- sick leave
+#ASSERT (`the holiday pay position for` (`a spell of leave` (`leave` `sick leave` (Date 1 9 2025) (Date 1 1 2024) 2 5 `(a) the employee is sick or injured` `no bereavements`)))'s `amount the employer must pay` EQUALS 400
+#ASSERT (`the holiday pay position for` (`a spell of leave` (`leave` `sick leave` (Date 1 9 2025) (Date 1 1 2024) 2 5 `(a) the employee is sick or injured` `no bereavements`)))'s `entitlement used` EQUALS 2
+-- a cash-up and an exchange
+#ASSERT (`the holiday pay position for` (`a request to cash up annual holidays` (`Payout request` OF TRUE, 1, 0, FALSE, TRUE, `weekly` 1000 0 0, 57200, 4, LIST)))'s `amount the employer must pay` EQUALS 1100
+#ASSERT (`the holiday pay position for` (`a request to cash up annual holidays` (`Payout request` OF TRUE, 1, 0, FALSE, TRUE, `weekly` 1000 0 0, 57200, 4, LIST)))'s `when it is due` EQUALS `as soon as practicable after the employer agrees`
+#ASSERT (`the holiday pay position for` (`a request to exchange an alternative holiday` (`Exchange request` OF Date 1 1 2025, Date 1 1 2026, TRUE, 250)))'s `amount the employer must pay` EQUALS 250
+-- a closedown, not entitled
+#ASSERT (`the holiday pay position for` (`a closedown` (Closedown OF Date 20 12 2025, Date 1 12 2025, FALSE, FALSE, 2, 0, FALSE, `weekly` 1000 0 0, 52000, 15000, 200, 0, LIST)))'s `amount the employer must pay` EQUALS 1000
+-- an alternative holiday taken
+#ASSERT (`the holiday pay position for` (`an alternative holiday taken` (`Alternative holiday` OF Date 10 3 2025, TRUE, TRUE, TRUE, FALSE, NOTHING, `daily` 200)))'s `amount the employer must pay` EQUALS 200

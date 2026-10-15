@@ -15,6 +15,4 @@ encoded rule can be traced to the text it encodes.
 
 ## Status of this deposit
 
-No statute text has been deposited yet. The register's listing pages refuse scripted
-clients; bulk retrieval should go through the PCO API (key from contact@pco.govt.nz), which is
-also how the register id for this Act will be confirmed.
+The text of the version as at 20 December 2023 is deposited at `registers/source-bundle/act_public_2003_129.txt`, converted from the PCO XML on 2026-10-13 (`act_public_2003_129.meta.json` records the download and text hashes). The conversion drops paragraph labels and the symbols of the formulas in s 8(2) and s 9A(2); the encoding's `BRIEF.md` says how they are read. The encoding quotes the Act's words in comments and names.

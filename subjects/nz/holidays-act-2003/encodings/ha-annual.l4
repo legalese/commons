@@ -1,0 +1,391 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ha-types`
+IMPORT `ha-pay`
+
+-- Holidays Act 2003 — GOAL 2: ANNUAL HOLIDAYS.
+--
+--   "When is the employee entitled to annual holidays; may the employer
+--    require them to be taken; what is the annual holiday pay when they are
+--    taken, cashed up, taken in a closedown, or owed when the employment
+--    ends; and when must it be paid?"
+--
+-- Source: ../registers/source-bundle/act_public_2003_129.txt — ss 16-40.
+
+§ `Goal 2 — annual holidays`
+
+§§ `Days and dates`
+
+GIVEN n IS A NUMBER, d IS A DATE
+GIVETH A DATE
+`the day` n `days after` d MEANS Date (Day d PLUS n)
+
+-- ss 19(2), 32(3), 57(3) "not less than 14 days' notice". FORK F4: the days
+-- of the notice and of the holiday are not counted (Legislation Act 2019,
+-- s 54: a number of days between 2 events, expressed as "not less than",
+-- excludes the days on which the events happen).
+@ref ss 19(2), 32(3), 57(3)
+GIVEN notice IS A DATE, start IS A DATE
+GIVETH A BOOLEAN
+DECIDE `not less than 14 days' notice, given` notice `, for` start IF
+    Day start MINUS Day notice MINUS 1 AT LEAST 14
+
+§§ `Entitlement (ss 16, 18, 35)`
+
+-- s 16(1) "After the end of each completed 12 months of continuous
+-- employment, an employee is entitled to not less than 4 weeks' paid annual
+-- holidays." (2)(b) the 12 months "does not include any other unpaid leave".
+-- FORK F5: leave not included defers the end of the 12 months by its length.
+@ref s 16(1)-(2)
+GIVEN start IS A DATE, absences IS A LIST OF Absence
+GIVETH A DATE
+`the day the employee becomes entitled to annual holidays, 12 months from` start `, absences` absences MEANS
+    `the day` (sum (map `the days the absence defers the anniversary` absences)) `days after` (`add years` start 1)
+
+-- s 16(1) "not less than 4 weeks' paid annual holidays".
+@ref s 16(1)
+`the annual holidays entitlement in weeks` MEANS 4
+
+-- s 18(1) "An employer must allow an employee to take annual holidays within
+-- 12 months after the date on which the employee's entitlement to the
+-- holidays arose." FORK F6: the first anniversary of that date is the last
+-- day.
+@ref s 18(1)
+GIVEN arose IS A DATE
+GIVETH A DATE
+`the last day by which the employer must allow the holidays, entitlement arising` arose MEANS
+    `add years` arose 1
+
+-- s 19(1) "An employer may require an employee to take annual holidays if—
+-- (a) the employer and employee are unable to reach agreement under section
+-- 18(3) ...; or (b) section 32 (which relates to closedown periods)
+-- applies." (2) "not less than 14 days' notice".
+@ref s 19
+GIVEN start IS A DATE, `no agreement` IS A BOOLEAN, `closedown applies` IS A BOOLEAN, notice IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the employer may require annual holidays from` start `, no agreement under s 18(3):` `no agreement` `, s 32 applies:` `closedown applies` `, notice on` notice IF
+        (`no agreement` OR `closedown applies`)
+    AND `not less than 14 days' notice, given` notice `, for` start
+
+-- s 35 "(1) If an employee is required under section 32(2) to discontinue
+-- his or her work during a closedown period, the employee's 12 months of
+-- continuous employment must ... be treated as commencing on the date on
+-- which the closedown began. (2) However, ... the employer may nominate a
+-- date ... reasonably proximate to the actual beginning of the closedown".
+-- Whether a nominated date is reasonably proximate is an input.
+@ref s 35
+GIVEN began IS A DATE, nominated IS A MAYBE DATE
+GIVETH A DATE
+`the 12 months restart, under s 35, on` began `, nominated` nominated MEANS
+    CONSIDER nominated
+    WHEN JUST n THEN n
+    WHEN NOTHING THEN began
+
+§§ `Annual holiday pay (ss 21, 22)`
+
+-- s 22(2)(b)(ii) "(A) ... if the employee has worked for the employer for
+-- not less than 12 months; or (B) ... for less than 12 months". FORK F7: the
+-- 12 months are counted to the end of the last pay period before the holiday.
+@ref s 22(2)(b)(ii)
+GIVEN h IS AN `Annual holiday`
+GIVETH A BOOLEAN
+DECIDE `the employee has worked 12 months before the holiday` h IF
+    Day (`add years` (h's `employment began on`) 1) MINUS 1 AT MOST Day (h's `last pay period before the holiday ended on`)
+
+-- s 22(3) "the divisor of 52 ... is to be reduced so that it represents the
+-- number of whole or part weeks that the employee worked for the employer in
+-- the period of employment."
+@ref s 22(3)
+GIVEN h IS AN `Annual holiday`
+GIVETH A NUMBER
+`the whole or part weeks of employment before the holiday` h MEANS
+    CEILING ((Day (h's `last pay period before the holiday ended on`) MINUS Day (h's `employment began on`) PLUS 1) DIVIDED BY 7)
+
+-- s 21(2)(b)(ii) "the employee's average weekly earnings for the 12 months
+-- immediately before the end of the last pay period before the annual
+-- holiday"; s 22(2)(b)(ii)(B) "the period of employment before the end of
+-- the last pay period" if less than 12 months.
+@ref ss 21(2)(b)(ii), 22(2)(b)(ii), 22(3), 16(3)
+GIVEN h IS AN `Annual holiday`
+GIVETH A NUMBER
+`the average weekly earnings for the holiday` h MEANS
+    IF      h's `taken in advance of the entitlement`
+        AND NOT `the employee has worked 12 months before the holiday` h
+    THEN    h's `gross earnings over the averaging period` DIVIDED BY `the whole or part weeks of employment before the holiday` h
+    ELSE    `the average weekly earnings over 12 months, gross` (h's `gross earnings over the averaging period`) `, absences` (h's `absences in the averaging period`)
+
+-- s 21(2) "Annual holiday pay must be— (a) for the agreed portion of the
+-- annual holidays entitlement; and (b) at a rate that is based on the
+-- greater of— (i) the employee's ordinary weekly pay as at the beginning of
+-- the annual holiday; or (ii) the employee's average weekly earnings".
+-- s 22(2) is the same for a holiday taken in advance.
+@ref ss 21, 22
+GIVEN h IS AN `Annual holiday`
+GIVETH A NUMBER
+`the weekly rate of annual holiday pay` h MEANS
+    max (`the ordinary weekly pay` (h's `weekly pay at the beginning of the holiday`)) (`the average weekly earnings for the holiday` h)
+
+@ref ss 21, 22
+@export The annual holiday pay for an annual holiday under ss 21 and 22 of the Holidays Act 2003 (NZ): the weeks taken times the greater of ordinary weekly pay at the start of the holiday and average weekly earnings over the 12 months before the end of the last pay period (or, for a holiday in advance in the first 12 months, over the period of employment). DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN h IS AN `Annual holiday`  @desc The holiday: its start, the weeks taken, whether in advance, when the employment began, the weekly pay facts at the start, the end of the last pay period before it, gross earnings over the averaging period, and unpaid leave in that period
+GIVETH A NUMBER
+`the annual holiday pay for` h MEANS
+    h's `portion taken, in weeks` TIMES `the weekly rate of annual holiday pay` h
+
+-- s 27(1) "An employer must pay an employee for an annual holiday before the
+-- holiday is taken unless— (a) the employer and employee agree that the
+-- employee is to be paid in the pay that relates to the period during which
+-- the holiday is taken; or (b) the employee's employment has come to an
+-- end." (2) "in the pay that relates to the employee's final period of
+-- employment". s 28 allows paying it with the employee's pay.
+@ref ss 27, 28
+GIVEN `agreed to pay in the period` IS A BOOLEAN, ended IS A BOOLEAN, `pay as you go` IS A BOOLEAN
+GIVETH A `When payment is due`
+`when annual holiday pay is due, agreed to pay in the period:` `agreed to pay in the period` `, employment ended:` ended `, s 28 applies:` `pay as you go` MEANS
+    BRANCH
+        IF `pay as you go`               THEN `with the employee's pay, as an identifiable component`
+        IF ended                         THEN `in the pay for the final period of employment`
+        IF `agreed to pay in the period` THEN `in the pay for the period in which the holiday is taken`
+        OTHERWISE                             `before the holiday is taken`
+
+§§ `Paying holiday pay with pay (s 28)`
+
+-- s 28(1) "an employer may regularly pay annual holiday pay with the
+-- employee's pay if— (a) the employee— (i) is employed ... on a fixed-term
+-- agreement to work for less than 12 months; or (ii) works for the employer
+-- on a basis that is so intermittent or irregular that it is impracticable
+-- ... to provide the employee with 4 weeks' annual holidays; and (b) the
+-- employee agrees in his or her employment agreement; and (c) the annual
+-- holiday pay is paid as an identifiable component of the employee's pay;
+-- and (d) the annual holiday pay is paid at a rate not less than 8% of the
+-- employee's gross earnings."
+@ref s 28(1)
+GIVEN a IS A `Pay-as-you-go arrangement`
+GIVETH A BOOLEAN
+DECIDE `annual holiday pay may be paid with the employee's pay` a IF
+        NOT a's `basis of the employment` EQUALS `neither`
+    AND a's `the employee agrees in the employment agreement`
+    AND a's `paid as an identifiable component of pay`
+    AND a's `percentage of gross earnings paid` AT LEAST 8
+
+-- s 28(3) "If an employer has incorrectly paid annual holiday pay with an
+-- employee's pay in circumstances where subsection (1) does not apply and
+-- the employee's employment has continued for 12 months or more, then,
+-- despite those payments, the employee becomes entitled to annual holidays
+-- in accordance with section 16 and paid in accordance with this subpart."
+@ref s 28(3)
+GIVEN a IS A `Pay-as-you-go arrangement`, `12 months` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `entitled to paid annual holidays despite payments with pay` a `, employed 12 months or more:` `12 months` IF
+    (NOT `annual holiday pay may be paid with the employee's pay` a) AND `12 months`
+
+-- s 28(2) "If the fixed-term agreement ... is followed by permanent
+-- employment with the same employer, the employee— (a) becomes entitled to
+-- paid annual holidays at the end of 12 months' continuous employment
+-- (including the period of that fixed-term agreement) ...; but (b) the
+-- amount of the holiday pay ... is reduced by the amount that the employee
+-- has already received under subsection (1)."
+@ref s 28(2)
+GIVEN `holiday pay` IS A NUMBER, received IS A NUMBER
+GIVETH A NUMBER
+`the holiday pay after a fixed term becomes permanent, holiday pay` `holiday pay` `, already received` received MEANS
+    max 0 (`holiday pay` MINUS received)
+
+§§ `Cashing up annual holidays (ss 28A-28F)`
+
+-- s 28A(2) "(a) must be in writing; and (b) may be made ... until a maximum
+-- of 1 week of the employee's annual holidays is paid out in each
+-- entitlement year". s 28E(3) "If an employer has a policy under subsection
+-- (1), section 28A does not apply". (4) "An employer— (a) may decline an
+-- employee's request". s 28A(1) pays out "a portion of the employee's
+-- entitlement", so no more than the entitlement not yet taken.
+@ref ss 28A, 28E
+GIVEN r IS A `Payout request`
+GIVETH A BOOLEAN
+DECIDE `the employer may agree to the payout` r IF
+        NOT r's `a policy under s 28E covers that part of the business`
+    AND r's `request made in writing`
+    AND r's `weeks already paid out in the entitlement year` PLUS r's `weeks requested to be paid out` AT MOST 1
+    AND r's `weeks requested to be paid out` AT MOST r's `weeks of current annual holidays entitlement not taken`
+
+-- s 28B(1) "If an employer agrees to pay out a portion ... the employer must
+-- pay the employee for that portion— (a) in accordance with section 21(2);
+-- and (b) as soon as practicable after the employer has agreed". s 21(2)
+-- takes average weekly earnings, so s 16(3) reduces the divisor.
+@ref ss 28A(3), 28B(1), 21(2)
+@export The payment for annual holidays cashed up under ss 28A and 28B of the Holidays Act 2003 (NZ): only on a written request, up to 1 week in each entitlement year, where no s 28E policy applies and the employer agrees; paid at the s 21(2) rate (the greater of ordinary weekly pay and average weekly earnings) as soon as practicable. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN r IS A `Payout request`  @desc Whether the request is in writing, the weeks requested and already paid out in the entitlement year, whether a s 28E policy applies, whether the employer agrees, and the weekly pay facts and 12 months' gross earnings when it agrees
+GIVETH A NUMBER
+`the payout for` r MEANS
+    IF   `the employer may agree to the payout` r AND r's `the employer agrees to the request`
+    THEN r's `weeks requested to be paid out` TIMES max (`the ordinary weekly pay` (r's `weekly pay when the request is agreed`)) (`the average weekly earnings over 12 months, gross` (r's `gross earnings in the 12 months before agreement`) `, absences` (r's `absences in the 12 months before agreement`))
+    ELSE 0
+
+-- s 28B(2) "If an employer has incorrectly paid out a portion ... where the
+-- employee did not make a request for the payment, the employee's
+-- entitlement to take the portion ... remains in force as if the payment had
+-- not been made."
+@ref s 28B(2)
+GIVEN requested IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the entitlement remains after a payout, requested:` requested IF
+    NOT requested
+
+§§ `Ending the employment (ss 23-26)`
+
+-- s 23(2) "An employer must pay the employee 8% of the employee's gross
+-- earnings since the commencement of employment, less any amount— (a) paid
+-- to the employee for annual holidays taken in advance; or (b) paid in
+-- accordance with section 28." FORK F8: if those amounts exceed the 8%,
+-- nothing is owed, and the excess is not recoverable under this Act.
+@ref s 23
+GIVEN e IS AN `End of employment`
+GIVETH A NUMBER
+`the holiday pay under s 23 for` e MEANS
+    max 0 ((e's `gross earnings since commencement or since the last entitlement` TIMES 8 DIVIDED BY 100)
+           MINUS e's `paid for annual holidays taken in advance`
+           MINUS e's `paid with the employee's pay under s 28`)
+
+-- s 24(2) "An employer must pay the employee for the portion of the annual
+-- holidays entitlement not taken at a rate that is based on the greater of—
+-- (a) the employee's ordinary weekly pay as at the date of the end of the
+-- employee's employment; or (b) the employee's average weekly earnings
+-- during the 12 months immediately before the end of the last pay period".
+@ref s 24
+GIVEN e IS AN `End of employment`
+GIVETH A NUMBER
+`the holiday pay under s 24 for` e MEANS
+    e's `weeks of annual holidays entitlement not taken` TIMES
+        max (`the ordinary weekly pay` (e's `weekly pay at the end`))
+            (`the average weekly earnings over 12 months, gross` (e's `gross earnings in the 12 months before the last pay period ended`) `, absences` (e's `absences in those 12 months`))
+
+-- s 25(2) "8% of the employee's gross earnings since the employee last
+-- became entitled to the annual holidays, less any amount— (a) paid ... for
+-- annual holidays taken in advance; or (b) paid in accordance with section
+-- 28." s 26 "(a) gross earnings for the purposes of section 25(2) includes
+-- any payments under section 24(2); and (b) an employee may be entitled to
+-- payments ... under both section 24 and section 25."
+@ref ss 25, 26
+GIVEN e IS AN `End of employment`
+GIVETH A NUMBER
+`the holiday pay under s 25 for` e MEANS
+    max 0 (((e's `gross earnings since commencement or since the last entitlement` PLUS `the holiday pay under s 24 for` e) TIMES 8 DIVIDED BY 100)
+           MINUS e's `paid for annual holidays taken in advance`
+           MINUS e's `paid with the employee's pay under s 28`)
+
+-- ss 23-26: the annual holiday pay owed when the employment ends.
+@ref ss 23-26
+@export The annual holiday pay owed when the employment ends under ss 23-26 of the Holidays Act 2003 (NZ): before the first entitlement, 8% of gross earnings since commencement (s 23); after it, the untaken entitlement at the greater of ordinary weekly pay and average weekly earnings (s 24) plus 8% of gross earnings since the last entitlement, counting the s 24 payment (ss 25, 26); in each case less holiday pay paid in advance or with pay under s 28. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN e IS AN `End of employment`  @desc The end date, whether the employee has ever become entitled, the untaken weeks, weekly pay facts at the end, 12 months' gross earnings and unpaid leave, gross earnings since commencement or the last entitlement, and holiday pay already paid in advance or with pay
+GIVETH A NUMBER
+`the annual holiday pay owed at the end of` e MEANS
+    IF   e's `the employee has become entitled to annual holidays`
+    THEN `the holiday pay under s 24 for` e PLUS `the holiday pay under s 25 for` e
+    ELSE `the holiday pay under s 23 for` e
+
+§§ `Closedowns (ss 29-35)`
+
+DECLARE `Closedown position` HAS
+    `the employer may require the closedown to be taken`   IS A BOOLEAN
+    `weeks taken as annual holidays`                       IS A NUMBER
+    `weeks taken as annual holidays in advance`            IS A NUMBER
+    `holiday pay for the closedown`                        IS A NUMBER
+    `the 12 months restart at the closedown (s 35)`        IS A BOOLEAN
+
+-- s 30(1) "the employer may have only 1 closedown period in any 12-month
+-- period". s 32 "(1) An employee who is entitled to annual holidays at the
+-- commencement of a closedown period must, if required to do so by his or
+-- her employer, take annual holidays during the closedown period ... (2) An
+-- employee who is not yet entitled ... must, if required ..., discontinue
+-- the employee's work ... (3) ... not less than 14 days' notice".
+@ref ss 30, 32
+GIVEN c IS A Closedown
+GIVETH A BOOLEAN
+DECIDE `the employer may require the closedown` c IF
+        NOT c's `another closedown in the same 12 months`
+    AND `not less than 14 days' notice, given` (c's `notice of the closedown given on`) `, for` (c's `closedown begins on`)
+
+-- s 33 "(2) To the extent that the employee has an annual holiday
+-- entitlement, the period of the closedown must be taken by the employee as
+-- annual holidays. (3) If an employee does not have an annual holidays
+-- entitlement that covers the whole period of the closedown, the employer
+-- and employee may agree that the employee— (a) may take some of the
+-- closedown period as annual holidays in advance under section 20; and (b)
+-- be paid for that period in accordance with section 22. (4) ... annual
+-- holiday pay calculated in accordance with section 21."
+-- s 34 "(2) An employer must, in respect of the closedown period, pay the
+-- employee 8% of the employee's gross earnings since the commencement of
+-- the employee's employment or since the employee last became entitled to
+-- annual holidays ..., less any amount— (a) paid ... for annual holidays
+-- taken in advance; or (b) paid in accordance with section 28. ... (4) This
+-- section does not prevent an employer and employee from agreeing that the
+-- employee may take the period of the closedown as annual holidays in
+-- advance under section 20 and be paid ... in accordance with section 22."
+-- FORK F9: the part of a closedown beyond an entitled employee's
+-- entitlement, with no agreement under s 33(3), is unpaid under this Act.
+-- An employee entitled under s 33 has worked 12 months, so the s 22 rate
+-- equals the s 21 rate.
+@ref ss 29-35
+@export The closedown position under ss 29-35 of the Holidays Act 2003 (NZ): whether the employer may require it (one closedown in 12 months, 14 days' notice); for an entitled employee, the closedown taken as annual holidays to the extent of the entitlement and paid at the s 21 rate (s 33), and any agreed remainder in advance; for an employee not yet entitled, 8% of gross earnings since commencement or the last entitlement less earlier holiday pay (s 34), with the 12 months restarting at the closedown (s 35). DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN c IS A Closedown  @desc The closedown: start, notice, whether there was another in the same 12 months, whether the employee was entitled at its start, its length in weeks on working days, the weeks of entitlement available, any agreement to take the rest in advance, weekly pay facts and gross earnings, and holiday pay already paid
+GIVETH A `Closedown position`
+`the closedown position for` c MEANS
+    `Closedown position` WITH
+        `the employer may require the closedown to be taken`   IS `the employer may require the closedown` c
+        `weeks taken as annual holidays`                       IS asHoliday
+        `weeks taken as annual holidays in advance`            IS inAdvance
+        `holiday pay for the closedown`                        IS pay
+        `the 12 months restart at the closedown (s 35)`        IS s35
+    WHERE
+        entitled  MEANS c's `employee entitled to annual holidays at the commencement`
+        weeks     MEANS c's `weeks of closedown on otherwise working days`
+        asHoliday MEANS IF entitled THEN min weeks (c's `weeks of annual holidays entitlement available`) ELSE 0
+        inAdvance MEANS
+            IF   c's `agreed to take the rest in advance (s 33(3))`
+            THEN weeks MINUS asHoliday
+            ELSE 0
+        s35       MEANS (NOT entitled) AND (NOT c's `agreed to take the rest in advance (s 33(3))`)
+        pay       MEANS
+            IF   s35
+            THEN max 0 ((c's `gross earnings since commencement or last entitlement, at the closedown` TIMES 8 DIVIDED BY 100)
+                        MINUS c's `advance holiday pay already paid`
+                        MINUS c's `pay-as-you-go holiday pay already paid`)
+            ELSE (asHoliday PLUS inAdvance) TIMES rate
+        rate MEANS max (`the ordinary weekly pay` (c's `weekly pay at the closedown`)) (`the average weekly earnings over 12 months, gross` (c's `gross earnings in the 12 months before the closedown`) `, absences` (c's `absences in the 12 months before the closedown`))
+
+§§ `Annual holidays and other leave (ss 36-40)`
+
+DECLARE `How the time may be taken` IS ONE OF
+    `as sick leave, if the employer agrees`
+    `as bereavement leave, which the employer must allow`
+    `as family violence leave, which the employer must allow`
+    `as sick, bereavement or family violence leave, which the employer must allow`
+    `not as annual holidays unless the employer agrees to the employee's request`
+
+-- s 36(2) "An employee may, with his or her employer's agreement, take any
+-- period of sickness or injury that the employee would otherwise take as an
+-- annual holiday as sick leave." s 37(2) "The employer must allow". s
+-- 37A(2) "The employer must allow". s 38(2) "The employer must allow the
+-- employee to take— (a) ... as sick leave: (b) ... as bereavement leave: (c)
+-- ... as family violence leave." s 39(2) "The employer— (a) must not require
+-- the employee to take any leave ... as annual holidays; but (b) may agree,
+-- if requested by the employee".
+@ref ss 36-39
+GIVEN c IS A `Clash with annual holidays`
+GIVETH A `How the time may be taken`
+`how the time may be taken under ss 36 to 39` c MEANS
+    CONSIDER c
+    WHEN `s 36 sick or injured, or a spouse, partner or dependant is, during annual holidays` THEN `as sick leave, if the employer agrees`
+    WHEN `s 37 a bereavement during annual holidays` THEN `as bereavement leave, which the employer must allow`
+    WHEN `s 37A family violence leave becomes available during annual holidays` THEN `as family violence leave, which the employer must allow`
+    WHEN `s 38 any of these before scheduled annual holidays` THEN `as sick, bereavement or family violence leave, which the employer must allow`
+    WHEN `s 39 sick, bereavement or family violence leave exhausted` THEN `not as annual holidays unless the employer agrees to the employee's request`
+
+-- s 40(1) "A public holiday that occurs during an employee's annual holidays
+-- must be treated as a public holiday and not as part of the employee's
+-- annual holidays."
+@ref s 40(1)
+GIVEN `working days` IS A NUMBER, `public holidays` IS A NUMBER
+GIVETH A NUMBER
+`the days of annual holidays used, working days in the holiday` `working days` `, public holidays on them` `public holidays` MEANS
+    `working days` MINUS `public holidays`
