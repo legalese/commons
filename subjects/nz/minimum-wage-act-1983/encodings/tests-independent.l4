@@ -1,0 +1,315 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `mwa-types`
+IMPORT `mwa-rates`
+IMPORT `mwa-payment`
+IMPORT `mwa-enforcement`
+IMPORT `mwa-goal`
+
+-- Independent tests: expected values decided from the Act alone
+-- (see independent-expectations.md), before the encoding was read.
+-- A failing assertion is a finding; expected values are not to be changed.
+
+-- The invented Minimum Wage Order:
+--   adult $25.00; class A ages 16-17, < 6 months with current employer, $20.00;
+--   class B ages 16-19, >= 6 months on a specified benefit, 85%;
+--   class C ages 16-19, training contract, $21.00; training rate $20.00.
+
+
+GIVEN x IS A NUMBER
+GIVETH A `Rate form`
+`money` x MEANS `a monetary amount per hour` OF x
+
+GIVEN x IS A NUMBER
+GIVETH A `Rate form`
+`pct` x MEANS `a percentage of the minimum adult rate` OF x
+
+GIVETH A `Starting-out class`
+`class A` MEANS `Starting-out class` OF 16, 17, NOTHING, JUST `the current employer`, FALSE, 6, `money` 20
+
+GIVETH A `Starting-out class`
+`class B` MEANS `Starting-out class` OF 16, 19, JUST 6, NOTHING, FALSE, 6, `pct` 85
+
+GIVETH A `Starting-out class`
+`class C` MEANS `Starting-out class` OF 16, 19, NOTHING, NOTHING, TRUE, 6, `money` 21
+
+GIVETH A `Minimum Wage Order`
+`the order` MEANS `Minimum Wage Order` OF 25, (LIST `class A`, `class B`, `class C`), JUST (`money` 20)
+
+GIVEN c IS A `Starting-out class`
+GIVETH A `Minimum Wage Order`
+`order with only` c MEANS `Minimum Wage Order` OF 25, (LIST c), JUST (`money` 20)
+
+GIVEN t IS A `Rate form`
+GIVETH A `Minimum Wage Order`
+`order with training rate` t MEANS `Minimum Wage Order` OF 25, (LIST `class A`, `class B`, `class C`), JUST t
+
+-- worker: age, supervises, training contract, in Order's training class,
+-- months on jobseeker support, months of employment (all three counts the same)
+-- [Ported by the encoder on 2026-10-15, when the encoding changed from month
+-- counts to first days of employment: "emp months" is now a first day of work
+-- emp months before 1 August 2024, the day `rate of` asks about. No expected
+-- value was changed.]
+GIVEN emp IS A NUMBER
+GIVETH A DATE
+`started months before 1 August 2024` emp MEANS `add months` (Date 1 8 2024) (0 MINUS emp)
+
+GIVEN age IS A NUMBER, sup IS A BOOLEAN, tr IS A BOOLEAN, tc IS A BOOLEAN, ben IS A NUMBER, emp IS A NUMBER
+GIVETH A Worker
+`worker` age sup tr tc ben emp MEANS
+    Worker OF TRUE, age, sup, tr, tc, (`Benefit history` OF (LIST `(da) jobseeker support`), ben), `started months before 1 August 2024` emp, `started months before 1 August 2024` emp, `started months before 1 August 2024` emp, `none of the s 9 classes`, NOTHING
+
+GIVEN age IS A NUMBER, started IS A DATE
+GIVETH A Worker
+`plain, started on` age started MEANS
+    Worker OF TRUE, age, FALSE, FALSE, FALSE, (`Benefit history` OF EMPTY, 0), started, started, started, `none of the s 9 classes`, NOTHING
+
+GIVEN age IS A NUMBER, emp IS A NUMBER
+GIVETH A Worker
+`plain` age emp MEANS `worker` age FALSE FALSE FALSE 0 emp
+
+GIVEN s IS A `Section 9 class`
+GIVETH A Worker
+`s9 worker` s MEANS
+    Worker OF TRUE, 30, FALSE, FALSE, FALSE, (`Benefit history` OF EMPTY, 0), Date 1 8 2022, Date 1 8 2022, Date 1 8 2022, s, NOTHING
+
+GIVEN p IS A Permit
+GIVETH A Worker
+`permit worker` p MEANS
+    Worker OF TRUE, 30, FALSE, FALSE, FALSE, (`Benefit history` OF EMPTY, 0), Date 1 8 2022, Date 1 8 2022, Date 1 8 2022, `none of the s 9 classes`, JUST p
+
+GIVETH A Permit
+`permit` MEANS Permit OF 15, Date 1 7 2024, Date 31 12 2024, NOTHING
+
+GIVETH A Permit
+`revoked permit` MEANS Permit OF 15, Date 1 7 2024, Date 31 12 2024, JUST (Date 1 10 2024)
+
+GIVEN w IS A Worker
+GIVETH A `Rate that governs`
+`rate of` w MEANS `the rate that governs` w `under` `the order` `on` (Date 1 8 2024)
+
+GIVEN w IS A Worker, d IS A DATE
+GIVETH A `Rate that governs`
+`rate of` w `on day` d MEANS `the rate that governs` w `under` `the order` `on` d
+
+-- ===== Which rate governs (ss 4, 4A, 4B) =====
+-- R1 s 4(1)
+#ASSERT `rate of` (`plain` 25 24) EQUALS `the adult rate (s 4)` OF 25
+-- R2 s 4(1)(a): 16 with 6+ months (outside class A by service) -> adult
+#ASSERT `rate of` (`plain` 16 6) EQUALS `the adult rate (s 4)` OF 25
+-- R3 under 16: no prescribed class
+#ASSERT `rate of` (`plain` 15 1) EQUALS `no minimum rate is prescribed for the worker`
+#ASSERT `the hourly minimum under` (`rate of` (`plain` 15 1)) EQUALS NOTHING
+-- R4 s 4A(1)(c)(ii)(B)
+#ASSERT `rate of` (`plain` 17 3) EQUALS `a starting-out rate (s 4A)` OF 20
+-- R4 age edges of class A: 16 in, 18 out
+#ASSERT `rate of` (`plain` 16 3) EQUALS `a starting-out rate (s 4A)` OF 20
+#ASSERT `rate of` (`plain` 18 3) EQUALS `the adult rate (s 4)` OF 25
+-- R5 s 4A(1)(b): supervising -> adult
+#ASSERT `rate of` (`worker` 17 TRUE FALSE FALSE 0 3) EQUALS `the adult rate (s 4)` OF 25
+-- R7 s 4A(4): class A and class B both apply -> highest (85% of 25 = 21.25)
+#ASSERT `rate of` (`worker` 17 FALSE FALSE FALSE 6 3) EQUALS `a starting-out rate (s 4A)` OF 21.25
+-- class B threshold: 5 months on benefit -> not class B, only class A
+#ASSERT `rate of` (`worker` 17 FALSE FALSE FALSE 5 3) EQUALS `a starting-out rate (s 4A)` OF 20
+-- R8 s 4A(1)(c)(iii)
+#ASSERT `rate of` (`worker` 19 FALSE TRUE FALSE 0 3) EQUALS `a starting-out rate (s 4A)` OF 21
+-- R8 + supervising -> adult
+#ASSERT `rate of` (`worker` 19 TRUE TRUE FALSE 0 3) EQUALS `the adult rate (s 4)` OF 25
+-- R9 s 4B(1)
+#ASSERT `rate of` (`worker` 20 FALSE TRUE TRUE 0 3) EQUALS `the training rate (s 4B)` OF 20
+-- R10 s 4B(1)(b)
+#ASSERT `rate of` (`worker` 20 TRUE TRUE TRUE 0 3) EQUALS `the adult rate (s 4)` OF 25
+-- age 20, no training contract -> adult
+#ASSERT `rate of` (`plain` 20 3) EQUALS `the adult rate (s 4)` OF 25
+-- R11 s 4A(3)(a)(ii): age 19 (the day before the 20th birthday) on class B
+#ASSERT `rate of` (`worker` 19 FALSE FALSE FALSE 12 2) EQUALS `a starting-out rate (s 4A)` OF 21.25
+-- R12 on the 20th birthday -> adult
+#ASSERT `rate of` (`worker` 20 FALSE FALSE FALSE 12 2) EQUALS `the adult rate (s 4)` OF 25
+-- R13 s 4A(3)(a)(i): just short of 6 months
+-- [ported: first day 3 Feb 2024, 6 months completed on 2 Aug 2024]
+#ASSERT `rate of` (`plain, started on` 17 (Date 3 2 2024)) EQUALS `a starting-out rate (s 4A)` OF 20
+-- R14 s 4A(3)(b): past 6 months -> adult
+-- [ported: first day 28 Jan 2024, 6 months completed on 27 Jul 2024]
+#ASSERT `rate of` (`plain, started on` 17 (Date 28 1 2024)) EQUALS `the adult rate (s 4)` OF 25
+-- R14a s 4A(3)(a)(i) "only until ... the date on which the worker has completed 6 months" read inclusively (judgment)
+-- [ported: first day 2 Feb 2024, 6 months completed on 1 Aug 2024, the day asked]
+#ASSERT `rate of` (`plain, started on` 17 (Date 2 2 2024)) EQUALS `a starting-out rate (s 4A)` OF 20
+-- class B worker who has completed 6 months' employment since benefit run -> adult (s 4A(3))
+#ASSERT `rate of` (`worker` 19 FALSE FALSE FALSE 12 7) EQUALS `the adult rate (s 4)` OF 25
+-- R15 factor (iii) only: no 6-month limit
+#ASSERT `rate of` (`worker` 19 FALSE TRUE FALSE 0 24) EQUALS `a starting-out rate (s 4A)` OF 21
+
+-- ===== 80% floor and limits on the Order (ss 4A(1)-(2), 4B(2)) =====
+-- F1 exactly 80%
+#ASSERT `the starting-out rate for` (`plain` 17 3) `under` (`order with only` (`Starting-out class` OF 16, 17, NOTHING, JUST `the current employer`, FALSE, 6, `money` 20)) `on` (Date 1 8 2024) EQUALS JUST 20
+-- F2 below 80%
+#ASSERT REFUSED (`the starting-out rate for` (`plain` 17 3) `under` (`order with only` (`Starting-out class` OF 16, 17, NOTHING, JUST `the current employer`, FALSE, 6, `money` 19.99)) `on` (Date 1 8 2024))
+-- F3 percentage 80 / 79
+#ASSERT `the starting-out rate for` (`plain` 17 3) `under` (`order with only` (`Starting-out class` OF 16, 17, NOTHING, JUST `the current employer`, FALSE, 6, `pct` 80)) `on` (Date 1 8 2024) EQUALS JUST 20
+#ASSERT REFUSED (`the starting-out rate for` (`plain` 17 3) `under` (`order with only` (`Starting-out class` OF 16, 17, NOTHING, JUST `the current employer`, FALSE, 6, `pct` 79)) `on` (Date 1 8 2024))
+-- s 4A(1)(c)(i) "not less than 6 months": 6 ok, 5 outside power
+#ASSERT `the starting-out rate for` (`worker` 17 FALSE FALSE FALSE 6 1) `under` (`order with only` (`Starting-out class` OF 16, 19, JUST 6, NOTHING, FALSE, 6, `pct` 85)) `on` (Date 1 8 2024) EQUALS JUST 21.25
+#ASSERT REFUSED (`the starting-out rate for` (`worker` 17 FALSE FALSE FALSE 6 1) `under` (`order with only` (`Starting-out class` OF 16, 19, JUST 5, NOTHING, FALSE, 6, `pct` 85)) `on` (Date 1 8 2024))
+-- s 4A(1)(c)(ii) "not more than 6 months": 7 outside power
+#ASSERT REFUSED (`the starting-out rate for` (`plain` 17 3) `under` (`order with only` (`Starting-out class` OF 16, 17, NOTHING, JUST `the current employer`, FALSE, 7, `money` 20)) `on` (Date 1 8 2024))
+-- s 4A(1)(a): a class reaching age 20 is outside power
+#ASSERT REFUSED (`the starting-out rate for` (`plain` 17 3) `under` (`order with only` (`Starting-out class` OF 16, 20, NOTHING, JUST `the current employer`, FALSE, 6, `money` 20)) `on` (Date 1 8 2024))
+-- F4 s 4B(2) training rate 20 ok / 19.99 refused; 80% ok / 79% refused
+#ASSERT `the training rate for` (`worker` 20 FALSE TRUE TRUE 0 3) `under` (`order with training rate` (`money` 20)) EQUALS JUST 20
+#ASSERT REFUSED (`the training rate for` (`worker` 20 FALSE TRUE TRUE 0 3) `under` (`order with training rate` (`money` 19.99)))
+#ASSERT `the training rate for` (`worker` 20 FALSE TRUE TRUE 0 3) `under` (`order with training rate` (`pct` 80)) EQUALS JUST 20
+#ASSERT REFUSED (`the training rate for` (`worker` 20 FALSE TRUE TRUE 0 3) `under` (`order with training rate` (`pct` 79)))
+
+-- ===== Permits s 8(3)-(5) =====
+-- P1 in force
+#ASSERT `rate of` (`permit worker` `permit`) `on day` (Date 1 8 2024) EQUALS `the rate stated in an exemption permit (s 8(4))` OF 15
+-- P2 start date edges
+#ASSERT `rate of` (`permit worker` `permit`) `on day` (Date 30 6 2024) EQUALS `the adult rate (s 4)` OF 25
+#ASSERT `rate of` (`permit worker` `permit`) `on day` (Date 1 7 2024) EQUALS `the rate stated in an exemption permit (s 8(4))` OF 15
+-- P3 end edges
+#ASSERT `rate of` (`permit worker` `permit`) `on day` (Date 31 12 2024) EQUALS `the rate stated in an exemption permit (s 8(4))` OF 15
+#ASSERT `rate of` (`permit worker` `permit`) `on day` (Date 1 1 2025) EQUALS `the adult rate (s 4)` OF 25
+-- P4 revoked with effect from 1 Oct
+#ASSERT `rate of` (`permit worker` `revoked permit`) `on day` (Date 30 9 2024) EQUALS `the rate stated in an exemption permit (s 8(4))` OF 15
+#ASSERT `rate of` (`permit worker` `revoked permit`) `on day` (Date 1 10 2024) EQUALS `the adult rate (s 4)` OF 25
+-- P5 s 8(1)
+#ASSERT `a Labour Inspector may issue an exemption permit` (`Permit application` OF TRUE, TRUE, TRUE)
+#ASSERT NOT `a Labour Inspector may issue an exemption permit` (`Permit application` OF FALSE, TRUE, TRUE)
+#ASSERT NOT `a Labour Inspector may issue an exemption permit` (`Permit application` OF TRUE, FALSE, TRUE)
+#ASSERT NOT `a Labour Inspector may issue an exemption permit` (`Permit application` OF TRUE, TRUE, FALSE)
+-- s 8(5)
+#ASSERT `a Labour Inspector may revoke the permit` TRUE
+#ASSERT NOT `a Labour Inspector may revoke the permit` FALSE
+
+-- ===== Exclusions s 9 =====
+#ASSERT `rate of` (`s9 worker` `(b) an apprentice bound by an indenture of apprenticeship entered into under an Act`) EQUALS `the Act does not apply to the worker (ss 2, 9)`
+#ASSERT `rate of` (`s9 worker` (`(d) an inmate of a charitable institution who does work in or in connection with it` OF FALSE)) EQUALS `the Act does not apply to the worker (ss 2, 9)`
+#ASSERT `rate of` (`s9 worker` (`(d) an inmate of a charitable institution who does work in or in connection with it` OF TRUE)) EQUALS `the adult rate (s 4)` OF 25
+#ASSERT `the Act applies to` (`s9 worker` `(e) an employee to whom the Home and Community Support (Payment for Travel Between Clients) Settlement Act 2016 applies`)
+#ASSERT NOT `the Act applies to` (Worker OF FALSE, 30, FALSE, FALSE, FALSE, (`Benefit history` OF EMPTY, 0), Date 1 8 2022, Date 1 8 2022, Date 1 8 2022, `none of the s 9 classes`, NOTHING)
+
+-- ===== Payment (ss 6, 7) =====
+GIVEN b IS A `Board and lodging`, paid IS A NUMBER
+GIVETH A `Pay period`
+`period` b paid MEANS `Pay period` OF Date 2 8 2024, 40, EMPTY, 0, b, paid
+
+GIVETH A `Board and lodging`
+`no board` MEANS `Board and lodging` OF FALSE, NOTHING, 0, FALSE, NOTHING, 0
+
+GIVEN w IS A Worker, p IS A `Pay period`
+GIVETH A `Minimum wage position`
+`pos` w p MEANS `the minimum wage position for` (`Wage case` OF w, `the order`, p)
+
+-- A1 arrears: 40h x $25 = $1000
+#ASSERT (`pos` (`plain` 30 24) (`period` `no board` 900))'s `minimum wages for the period` EQUALS JUST 1000
+#ASSERT (`pos` (`plain` 30 24) (`period` `no board` 900))'s `arrears owed` EQUALS JUST 100
+#ASSERT (`pos` (`plain` 30 24) (`period` `no board` 1000))'s `arrears owed` EQUALS JUST 0
+#ASSERT (`pos` (`plain` 30 24) (`period` `no board` 1100))'s `arrears owed` EQUALS JUST 0
+#ASSERT (`pos` (`plain` 30 24) (`period` `no board` 900))'s `the worker or a Labour Inspector may recover the arrears (s 11)`
+#ASSERT NOT (`pos` (`plain` 30 24) (`period` `no board` 1000))'s `the worker or a Labour Inspector may recover the arrears (s 11)`
+-- under 16: NOTHING owed under the Act
+#ASSERT (`pos` (`plain` 15 1) (`period` `no board` 0))'s `arrears owed` EQUALS NOTHING
+-- s 9(b) worker: Act does not apply, nothing owed
+#ASSERT NOT (`pos` (`s9 worker` `(b) an apprentice bound by an indenture of apprenticeship entered into under an Act`) (`period` `no board` 0))'s `the Act applies`
+#ASSERT (`pos` (`s9 worker` `(b) an apprentice bound by an indenture of apprenticeship entered into under an Act`) (`period` `no board` 0))'s `arrears owed` EQUALS NOTHING
+-- D1 fixed cash value $120 board: $120 deduction counts in full; paid 880 -> no arrears
+#ASSERT (`pos` (`plain` 30 24) (`period` (`Board and lodging` OF TRUE, JUST 120, 120, FALSE, NOTHING, 0) 880))'s `arrears owed` EQUALS JUST 0
+-- D1 $121 deducted, fixed $120: only 120 counts; paid 879 -> $1 owed
+#ASSERT (`pos` (`plain` 30 24) (`period` (`Board and lodging` OF TRUE, JUST 120, 121, FALSE, NOTHING, 0) 879))'s `arrears owed` EQUALS JUST 1
+-- D2 not fixed: 15% board = 150
+#ASSERT (`pos` (`plain` 30 24) (`period` (`Board and lodging` OF TRUE, NOTHING, 150, FALSE, NOTHING, 0) 850))'s `arrears owed` EQUALS JUST 0
+#ASSERT (`pos` (`plain` 30 24) (`period` (`Board and lodging` OF TRUE, NOTHING, 160, FALSE, NOTHING, 0) 840))'s `arrears owed` EQUALS JUST 10
+-- D2 lodging 5% = 50
+#ASSERT (`pos` (`plain` 30 24) (`period` (`Board and lodging` OF FALSE, NOTHING, 0, TRUE, NOTHING, 50) 950))'s `arrears owed` EQUALS JUST 0
+#ASSERT (`pos` (`plain` 30 24) (`period` (`Board and lodging` OF FALSE, NOTHING, 0, TRUE, NOTHING, 60) 940))'s `arrears owed` EQUALS JUST 10
+-- D3 both: 150 + 50 = 200
+#ASSERT (`pos` (`plain` 30 24) (`period` (`Board and lodging` OF TRUE, NOTHING, 150, TRUE, NOTHING, 50) 800))'s `board and lodging deductions that count` EQUALS JUST 200
+#ASSERT (`pos` (`plain` 30 24) (`period` (`Board and lodging` OF TRUE, NOTHING, 150, TRUE, NOTHING, 50) 800))'s `arrears owed` EQUALS JUST 0
+-- board deducted but not provided by the employer: counts for nothing
+#ASSERT (`pos` (`plain` 30 24) (`period` (`Board and lodging` OF FALSE, NOTHING, 100, FALSE, NOTHING, 0) 900))'s `arrears owed` EQUALS JUST 100
+-- D4 s 7(2) time lost: default / illness / accident deductible, another reason not
+#ASSERT (`pos` (`plain` 30 24) (`Pay period` OF Date 2 8 2024, 40, (LIST (`Time lost` OF 4, `the default of the worker`)), 0, `no board`, 900))'s `arrears owed` EQUALS JUST 0
+#ASSERT (`pos` (`plain` 30 24) (`Pay period` OF Date 2 8 2024, 40, (LIST (`Time lost` OF 4, `the worker's illness`)), 0, `no board`, 900))'s `arrears owed` EQUALS JUST 0
+#ASSERT (`pos` (`plain` 30 24) (`Pay period` OF Date 2 8 2024, 40, (LIST (`Time lost` OF 4, `an accident suffered by the worker`)), 0, `no board`, 900))'s `arrears owed` EQUALS JUST 0
+#ASSERT (`pos` (`plain` 30 24) (`Pay period` OF Date 2 8 2024, 40, (LIST (`Time lost` OF 4, `another reason`)), 0, `no board`, 900))'s `arrears owed` EQUALS JUST 100
+-- X4/X5 s 9(e): travel between clients excluded, other work at the minimum
+#ASSERT (`pos` (`s9 worker` `(e) an employee to whom the Home and Community Support (Payment for Travel Between Clients) Settlement Act 2016 applies`) (`Pay period` OF Date 2 8 2024, 40, EMPTY, 10, `no board`, 750))'s `arrears owed` EQUALS JUST 0
+#ASSERT (`pos` (`s9 worker` `(e) an employee to whom the Home and Community Support (Payment for Travel Between Clients) Settlement Act 2016 applies`) (`Pay period` OF Date 2 8 2024, 40, EMPTY, 10, `no board`, 700))'s `arrears owed` EQUALS JUST 50
+-- travel hours of a non-(e) worker count in full
+#ASSERT (`pos` (`plain` 30 24) (`Pay period` OF Date 2 8 2024, 40, EMPTY, 10, `no board`, 750))'s `arrears owed` EQUALS JUST 250
+-- starting-out worker's minimum at $20
+#ASSERT (`pos` (`plain` 17 3) (`period` `no board` 700))'s `arrears owed` EQUALS JUST 100
+
+-- ===== Penalties s 10 =====
+#ASSERT `liable to a penalty under s 10` TRUE FALSE FALSE (Date 1 4 2016)
+#ASSERT `liable to a penalty under s 10` FALSE TRUE FALSE (Date 1 4 2016)
+#ASSERT `liable to a penalty under s 10` FALSE FALSE TRUE (Date 1 4 2016)
+#ASSERT NOT `liable to a penalty under s 10` FALSE FALSE FALSE (Date 1 4 2016)
+-- Schedule 1AA: conduct on 31 Mar 2016 is outside the replaced s 10
+#ASSERT REFUSED (`liable to a penalty under s 10` FALSE TRUE FALSE (Date 31 3 2016))
+-- s 10(3)
+#ASSERT `may recover a penalty under s 10` `the worker` `, against the worker's employer:` TRUE
+#ASSERT NOT `may recover a penalty under s 10` `the worker` `, against the worker's employer:` FALSE
+#ASSERT `may recover a penalty under s 10` `a Labour Inspector` `, against the worker's employer:` FALSE
+#ASSERT `may recover a penalty under s 10` `a Labour Inspector` `, against the worker's employer:` TRUE
+#ASSERT NOT `may recover a penalty under s 10` `another person` `, against the worker's employer:` TRUE
+
+-- ===== Recovery s 11 =====
+#ASSERT `s 11 applies` TRUE FALSE
+#ASSERT `s 11 applies` FALSE TRUE
+#ASSERT NOT `s 11 applies` FALSE FALSE
+#ASSERT `may recover the wages under s 11` `the worker` `, s 11 applies:` TRUE `, accepted:` TRUE `, agreed otherwise:` TRUE `, conduct on` (Date 1 8 2024)
+#ASSERT `may recover the wages under s 11` `a Labour Inspector` `, s 11 applies:` TRUE `, accepted:` TRUE `, agreed otherwise:` FALSE `, conduct on` (Date 1 8 2024)
+#ASSERT NOT `may recover the wages under s 11` `another person` `, s 11 applies:` TRUE `, accepted:` FALSE `, agreed otherwise:` FALSE `, conduct on` (Date 1 8 2024)
+#ASSERT NOT `may recover the wages under s 11` `the worker` `, s 11 applies:` FALSE `, accepted:` FALSE `, agreed otherwise:` FALSE `, conduct on` (Date 1 8 2024)
+
+-- ===== s 11AA: unpaid 500, employer able to pay 200 =====
+GIVEN involved IS A BOOLEAN, employer IS A BOOLEAN, leave IS A BOOLEAN, d IS A DATE
+GIVETH AN `Arrears claim against a person involved`
+`claim` involved employer leave d MEANS `Arrears claim against a person involved` OF TRUE, TRUE, involved, employer, leave, 500, 200, d
+
+#ASSERT `the wages recoverable under s 11AA by` `a Labour Inspector` `on` (`claim` TRUE FALSE FALSE (Date 1 4 2016)) EQUALS 300
+#ASSERT `the wages recoverable under s 11AA by` `the worker` `on` (`claim` TRUE FALSE FALSE (Date 1 4 2016)) EQUALS 0
+#ASSERT `the wages recoverable under s 11AA by` `the worker` `on` (`claim` TRUE FALSE TRUE (Date 1 4 2016)) EQUALS 300
+#ASSERT `the wages recoverable under s 11AA by` `a Labour Inspector` `on` (`claim` FALSE FALSE FALSE (Date 1 4 2016)) EQUALS 0
+#ASSERT `the wages recoverable under s 11AA by` `a Labour Inspector` `on` (`claim` TRUE TRUE FALSE (Date 1 4 2016)) EQUALS 0
+#ASSERT `the wages recoverable under s 11AA by` `another person` `on` (`claim` TRUE FALSE TRUE (Date 1 4 2016)) EQUALS 0
+-- employer able to pay everything -> nothing from the person involved
+#ASSERT `the wages recoverable under s 11AA by` `a Labour Inspector` `on` (`Arrears claim against a person involved` OF TRUE, TRUE, TRUE, FALSE, FALSE, 500, 500, Date 1 4 2016) EQUALS 0
+-- employer unable to pay anything -> all 500
+#ASSERT `the wages recoverable under s 11AA by` `a Labour Inspector` `on` (`Arrears claim against a person involved` OF TRUE, TRUE, TRUE, FALSE, FALSE, 500, 0, Date 1 4 2016) EQUALS 500
+-- not due to non-compliance / not entitled
+#ASSERT `the wages recoverable under s 11AA by` `a Labour Inspector` `on` (`Arrears claim against a person involved` OF TRUE, FALSE, TRUE, FALSE, FALSE, 500, 0, Date 1 4 2016) EQUALS 0
+#ASSERT `the wages recoverable under s 11AA by` `a Labour Inspector` `on` (`Arrears claim against a person involved` OF FALSE, TRUE, TRUE, FALSE, FALSE, 500, 0, Date 1 4 2016) EQUALS 0
+-- Schedule 1AA: conduct on 31 Mar 2016 -> s 11AA does not reach it
+#ASSERT `the wages recoverable under s 11AA by` `a Labour Inspector` `on` (`claim` TRUE FALSE FALSE (Date 31 3 2016)) EQUALS 0
+
+-- ===== s 11A =====
+#ASSERT `may commence compliance order proceedings under s 11A` `the worker` `, affected:` TRUE
+#ASSERT `may commence compliance order proceedings under s 11A` `the employer` `, affected:` TRUE
+#ASSERT NOT `may commence compliance order proceedings under s 11A` `the worker` `, affected:` FALSE
+#ASSERT NOT `may commence compliance order proceedings under s 11A` `another person` `, affected:` TRUE
+
+-- ===== s 11B =====
+#ASSERT `the hours clause complies with s 11B` (`Hours clause` OF 40, FALSE)
+#ASSERT NOT `the hours clause complies with s 11B` (`Hours clause` OF 41, FALSE)
+#ASSERT `the hours clause complies with s 11B` (`Hours clause` OF 41, TRUE)
+#ASSERT `the parties must endeavour to fix a week of not more than 5 days` (`Hours clause` OF 40, FALSE)
+#ASSERT NOT `the parties must endeavour to fix a week of not more than 5 days` (`Hours clause` OF 41, TRUE)
+
+-- ===== s 5 =====
+#ASSERT `the review for the year must be done by` 2024 EQUALS Date 31 12 2024
+#ASSERT `the review for` 2024 `was done in time, reviewed on` (Date 31 12 2024)
+#ASSERT NOT `the review for` 2024 `was done in time, reviewed on` (Date 1 1 2025)
+#ASSERT `the Minister may recommend adjustments` TRUE
+
+-- ===== Schedule 1AA =====
+#ASSERT NOT `the 2016 amendments apply to conduct on` (Date 31 3 2016)
+#ASSERT `the 2016 amendments apply to conduct on` (Date 1 4 2016)
+
+-- ===== 2013 Amendment Act s 7 (new entrant 18, highest 16/17 starting-out 20, adult 25) =====
+#ASSERT `the rate for a new entrant under the 2013 transition` 18 20 25 2 199 EQUALS 20
+#ASSERT `the rate for a new entrant under the 2013 transition` 21 20 25 2 199 EQUALS 21
+#ASSERT `the rate for a new entrant under the 2013 transition` 18 20 25 2 200 EQUALS 25
+#ASSERT `the rate for a new entrant under the 2013 transition` 18 20 25 3 50 EQUALS 25
+#ASSERT `the rate for a new entrant under the 2013 transition` 18 20 25 2.9 199.9 EQUALS 20

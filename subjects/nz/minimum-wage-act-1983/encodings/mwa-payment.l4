@@ -1,0 +1,129 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `mwa-types`
+IMPORT `mwa-rates`
+
+-- Minimum Wage Act 1983 — GOAL 2: WHAT MUST BE PAID FOR THE PERIOD?
+--
+--   "At the rate that governs, what is the minimum for the hours the Act
+--    reaches; what may the employer deduct for board, lodging and time lost;
+--    and how much short of the minimum was the worker paid?"
+--
+-- Source: ../source/MWA1983.txt — ss 6, 7, 9(e).
+
+§ `Goal 2 — what must be paid`
+
+§§ `The hours (ss 7(2), 9(e))`
+
+-- s 7(2) "No deduction in respect of time lost by any worker shall be made
+-- from the wages payable to the worker under this Act except for time lost—
+-- (a) by reason of the default of the worker; or (b) by reason of the
+-- worker's illness or of any accident suffered by the worker."
+@ref s 7(2)
+GIVEN r IS A `Reason time was lost`
+GIVETH A BOOLEAN
+DECIDE `time lost for this reason may be deducted` r IF
+    NOT r EQUALS `another reason`
+
+@ref s 7(2)
+GIVEN p IS A `Pay period`
+GIVETH A NUMBER
+`the hours of time lost that may be deducted in` p MEANS
+    sum (map (GIVEN t YIELD t's `hours`)
+             (filter (GIVEN t YIELD `time lost for this reason may be deducted` (t's `reason`)) (p's `time lost`)))
+
+-- s 9(e): the Act does not apply to a Settlement Act employee "in respect of
+-- travel between clients", so those hours fall outside the minimum.
+@ref ss 7(2), 9(e)
+GIVEN w IS A Worker, p IS A `Pay period`
+GIVETH A NUMBER
+`the hours the minimum applies to` w p MEANS
+    max 0 (p's `hours engaged` MINUS `the hours of time lost that may be deducted in` p MINUS travel)
+    WHERE
+        travel MEANS
+            CONSIDER w's `s 9 class`
+            WHEN `(e) an employee to whom the Home and Community Support (Payment for Travel Between Clients) Settlement Act 2016 applies` THEN p's `hours of travel between clients`
+            OTHERWISE 0
+
+§§ `The minimum for the period (s 6(1))`
+
+-- s 6(1) "Notwithstanding anything to the contrary in any enactment, award,
+-- collective agreement, determination, or contract of service, but subject
+-- to sections 7 to 9, every worker who belongs to a class of workers in
+-- respect of whom a minimum rate of wages has been prescribed under this Act,
+-- shall be entitled to receive from his employer payment for his work at not
+-- less than that minimum rate." NOTHING where no minimum rate governs.
+@ref s 6(1)
+GIVEN `hourly minimum` IS A MAYBE NUMBER, hours IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the minimum wages at` `hourly minimum` `for hours` hours MEANS
+    CONSIDER `hourly minimum`
+    WHEN JUST rate THEN JUST (rate TIMES hours)
+    WHEN NOTHING THEN NOTHING
+
+§§ `Board and lodging (s 7(1))`
+
+-- s 7(1) "the deduction in respect thereof by the employer shall not exceed
+-- such amount as will reduce the worker's wage calculated at the appropriate
+-- minimum rate by more than the cash value thereof as fixed by or under any
+-- Act, determination, or agreement relating to the worker's employment, or,
+-- if it is not so fixed, ... by more than 15% for board or by more than 5%
+-- for lodging." FORK F4: board and lodging each have their own ceiling, and
+-- where both are provided the ceilings add.
+@ref s 7(1)
+GIVEN provided IS A BOOLEAN, `fixed value` IS A MAYBE NUMBER, `per cent` IS A NUMBER, `minimum wages` IS A NUMBER
+GIVETH A NUMBER
+`the most that may be deducted, provided:` provided `, fixed value` `fixed value` `, otherwise per cent` `per cent` `of` `minimum wages` MEANS
+    IF NOT provided
+    THEN 0
+    ELSE CONSIDER `fixed value`
+         WHEN JUST v THEN v
+         WHEN NOTHING THEN `minimum wages` TIMES `per cent` DIVIDED BY 100
+
+@ref s 7(1)
+GIVEN b IS A `Board and lodging`, `minimum wages` IS A NUMBER
+GIVETH A NUMBER
+`the most that may be deducted for board under` b `from` `minimum wages` MEANS
+    `the most that may be deducted, provided:` (b's `board provided by the employer`) `, fixed value` (b's `cash value of the board as fixed`) `, otherwise per cent` 15 `of` `minimum wages`
+
+@ref s 7(1)
+GIVEN b IS A `Board and lodging`, `minimum wages` IS A NUMBER
+GIVETH A NUMBER
+`the most that may be deducted for lodging under` b `from` `minimum wages` MEANS
+    `the most that may be deducted, provided:` (b's `lodging provided by the employer`) `, fixed value` (b's `cash value of the lodging as fixed`) `, otherwise per cent` 5 `of` `minimum wages`
+
+-- What the deductions count for against the minimum: what was deducted, up
+-- to each ceiling. A deduction above its ceiling counts only to the ceiling.
+@ref s 7(1)
+GIVEN b IS A `Board and lodging`, `minimum wages` IS A NUMBER
+GIVETH A NUMBER
+`the board and lodging deductions that count, under` b `from` `minimum wages` MEANS
+        min (b's `deducted for board`) (`the most that may be deducted for board under` b `from` `minimum wages`)
+    PLUS min (b's `deducted for lodging`) (`the most that may be deducted for lodging under` b `from` `minimum wages`)
+
+-- s 7(1) "shall not exceed": a deduction above either ceiling is itself a
+-- failure to comply with the Act (s 10(2)(c)), whatever the arrears.
+@ref s 7(1); s 10(2)(c)
+GIVEN b IS A `Board and lodging`, `minimum wages` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `a board or lodging deduction exceeds what s 7(1) allows, under` b `from` `minimum wages` IF
+        b's `deducted for board` GREATER THAN `the most that may be deducted for board under` b `from` `minimum wages`
+    OR  b's `deducted for lodging` GREATER THAN `the most that may be deducted for lodging under` b `from` `minimum wages`
+
+§§ `The arrears (ss 6, 7, 11(1))`
+
+-- s 6(1) with s 7: the worker must receive at least the minimum, counting
+-- money paid and the board and lodging deductions the Act allows. The
+-- arrears are what falls short (s 11(1)(b) "payment has been made at a lower
+-- rate than that prescribed"). NOTHING where no minimum rate governs.
+@ref ss 6(1), 7, 11(1)
+@export What the worker is owed for a pay period under the Minimum Wage Act 1983 (NZ), ss 6 and 7: the minimum for the hours the Act reaches (less time lost by the worker's default, illness or accident, and s 9(e) travel), less the money paid and the board and lodging deductions the Act allows (the cash value fixed, or else 15% for board and 5% for lodging), and never below 0. NOTHING where no minimum rate governs. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN `hourly minimum` IS A MAYBE NUMBER  @desc The minimum rate per hour that governs the worker (from `the rate that governs`), or nothing
+      w IS A Worker  @desc The worker (for the s 9(e) travel exclusion)
+      p IS A `Pay period`  @desc The pay period: hours engaged, time lost, travel between clients, board and lodging, and wages paid in money
+GIVETH A MAYBE NUMBER
+`the arrears at` `hourly minimum` `for` w `in` p MEANS
+    CONSIDER `the minimum wages at` `hourly minimum` `for hours` (`the hours the minimum applies to` w p)
+    WHEN JUST m THEN
+        JUST (max 0 (m MINUS p's `wages paid in money` MINUS `the board and lodging deductions that count, under` (p's `board and lodging`) `from` m))
+    WHEN NOTHING THEN NOTHING

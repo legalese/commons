@@ -1,0 +1,298 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `mwa-types`
+
+-- Minimum Wage Act 1983 — GOAL 1: WHICH MINIMUM RATE GOVERNS THIS WORKER?
+--
+--   "Does the Act apply to the worker; is an exemption permit in force; does
+--    a starting-out rate, the training rate or the adult rate apply; and
+--    what is it per hour?"
+--
+-- Source: ../source/MWA1983.txt — ss 2, 4, 4A, 4B, 8(3)-(4), 9.
+
+§ `Goal 1 — the rate that governs`
+
+§§ `Does the Act apply (ss 2, 9)`
+
+-- s 9 "This Act shall not apply to— (b) apprentices bound by an indenture of
+-- apprenticeship ... under any other Act: (d) inmates of any charitable
+-- institution (not being persons residing on the premises by reason only of
+-- their being employed therein) who, as such inmates, do any work in or in
+-- connection with the institution: (e) employees to whom the Home and
+-- Community Support (Payment for Travel Between Clients) Settlement Act 2016
+-- applies, in respect of travel between clients".
+-- (e) excludes only the travel, not the employee: see `the hours the minimum
+-- applies to` in mwa-payment.l4.
+@ref s 9
+GIVEN c IS A `Section 9 class`
+GIVETH A BOOLEAN
+DECIDE `the worker is outside the Act under s 9` c IF
+    CONSIDER c
+    WHEN `none of the s 9 classes` THEN FALSE
+    WHEN `(b) an apprentice bound by an indenture of apprenticeship entered into under an Act` THEN TRUE
+    WHEN `(d) an inmate of a charitable institution who does work in or in connection with it` `only employed` THEN NOT `only employed`
+    WHEN `(e) an employee to whom the Home and Community Support (Payment for Travel Between Clients) Settlement Act 2016 applies` THEN FALSE
+
+-- s 2 "worker has the same meaning as that given to the term employee by
+-- section 6 of the Employment Relations Act 2000".
+@ref ss 2, 9
+GIVEN w IS A Worker
+GIVETH A BOOLEAN
+DECIDE `the Act applies to` w IF
+        w's `an employee under s 6 of the Employment Relations Act 2000`
+    AND NOT `the worker is outside the Act under s 9` (w's `s 9 class`)
+
+§§ `Rates and the 80% floor (ss 4(2), 4A(2), 4B(2))`
+
+-- ss 4A(2), 4B(2): "(a) a monetary amount; or (b) a percentage of the minimum
+-- adult rate". The percentage is not rounded: the Act says nothing of cents.
+@ref ss 4A(2), 4B(2)
+GIVEN form IS A `Rate form`, `adult rate` IS A NUMBER
+GIVETH A NUMBER
+`the rate per hour under` form `, adult rate` `adult rate` MEANS
+    CONSIDER form
+    WHEN `a monetary amount per hour` dollars THEN dollars
+    WHEN `a percentage of the minimum adult rate` pc THEN `adult rate` TIMES pc DIVIDED BY 100
+
+-- ss 4A(2), 4B(2): "must not be less than 80% of the minimum adult rate
+-- prescribed under section 4".
+@ref ss 4A(2), 4B(2)
+GIVEN form IS A `Rate form`, `adult rate` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the rate is not less than 80% of the adult rate` form `adult rate` IF
+    `the rate per hour under` form `, adult rate` `adult rate` AT LEAST `adult rate` TIMES 80 DIVIDED BY 100
+
+§§ `Starting-out rates (s 4A)`
+
+-- s 4A(6) "specified social security benefit means any of the following".
+@ref s 4A(6)
+GIVEN b IS A Benefit
+GIVETH A BOOLEAN
+DECIDE `a specified social security benefit` b IF
+    NOT b EQUALS `another payment`
+
+-- s 4A(1)(c)(i) "the length of time ... that the workers have been
+-- continuously paid 1 or more specified social security benefits (the
+-- continuous social assistance period)". FORK F1: a run that includes any
+-- payment not on the s 4A(6) list is not a continuous social assistance
+-- period, so its length is 0.
+@ref s 4A(1)(c)(i), (5), (6)
+GIVEN h IS A `Benefit history`
+GIVETH A NUMBER
+`the continuous social assistance period in months` h MEANS
+    IF      NOT null (h's `benefits paid in the run`)
+        AND all (GIVEN b YIELD `a specified social security benefit` b) (h's `benefits paid in the run`)
+    THEN h's `months paid continuously`
+    ELSE 0
+
+GIVEN c IS A `Starting-out class`
+GIVETH A BOOLEAN
+DECIDE `the class uses factor (i)` c IF
+    isJust (c's `factor (i): months continuously on a specified benefit, at least`)
+
+GIVEN c IS A `Starting-out class`
+GIVETH A BOOLEAN
+DECIDE `the class uses factor (ii)` c IF
+    isJust (c's `factor (ii): continuous employment counted with`)
+
+-- s 4A(1)(c), (2), (3)(a)(i): the limits on the Order's power to define a
+-- class and its rate.
+--   (1)(a)  ages 16, 17, 18 or 19;
+--   (1)(c)  "1 or more of the following factors";
+--   (1)(c)(i)  "a period of not less than 6 months" on a benefit;
+--   (1)(c)(ii) "a period of not more than 6 months" of employment;
+--   (3)(a)(i)  "6 months' continuous employment (or any shorter period of
+--              continuous employment specified in the order)";
+--   (2)     the rate not less than 80% of the adult rate.
+@ref s 4A(1), (2), (3)(a)(i)
+GIVEN c IS A `Starting-out class`, `adult rate` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the class and its rate are within s 4A` c `, adult rate` `adult rate` IF
+        c's `youngest age in the class` AT LEAST 16
+    AND c's `oldest age in the class` AT MOST 19
+    AND c's `youngest age in the class` AT MOST c's `oldest age in the class`
+    AND (    `the class uses factor (i)` c
+          OR `the class uses factor (ii)` c
+          OR c's `factor (iii): employed under a training contract`)
+    AND CONSIDER c's `factor (i): months continuously on a specified benefit, at least`
+        WHEN JUST m THEN m AT LEAST 6
+        WHEN NOTHING THEN TRUE
+    AND (    NOT (`the class uses factor (i)` c OR `the class uses factor (ii)` c)
+          OR c's `months of continuous employment that end the rate` AT MOST 6)
+    AND `the rate is not less than 80% of the adult rate` (c's `starting-out rate`) `adult rate`
+
+-- s 4A(1)(c)(ii) "(A) any employer (excluding, if the order defines the class
+-- of workers by reference to the factor specified in subparagraph (i), any
+-- employment undertaken by the worker before the continuous social
+-- assistance period): (B) the worker's current employer". s 4A(3)(a)(i)
+-- counts "with any employer or the worker's current employer (as the case
+-- requires)". FORK F2: a class defined by factor (i) without factor (ii)
+-- counts employment with any employer since the benefit run, by analogy with
+-- (ii)(A).
+@ref s 4A(1)(c)(ii), (3)(a)(i)
+GIVEN w IS A Worker, c IS A `Starting-out class`
+GIVETH A DATE
+`the first day of the continuous employment counted for` w `in class` c MEANS
+    CONSIDER c's `factor (ii): continuous employment counted with`
+    WHEN JUST `the current employer` THEN w's `first day of continuous employment with the current employer`
+    WHEN JUST `any employer` THEN
+        IF `the class uses factor (i)` c
+        THEN w's `first day of continuous employment with any employer since the benefit run`
+        ELSE w's `first day of continuous employment with any employer`
+    WHEN NOTHING THEN w's `first day of continuous employment with any employer since the benefit run`
+
+-- s 4A(3)(a)(i) "the date on which the worker has completed 6 months'
+-- continuous employment (or any shorter period ...)": a period starting on
+-- the first day of work is completed on the day before the same date N
+-- months later.
+@ref s 4A(3)(a)(i), (6) "continuous employment"
+GIVEN w IS A Worker, c IS A `Starting-out class`
+GIVETH A DATE
+`the date the worker completes the employment that ends the rate` w `in class` c MEANS
+    Date (Day (`add months` (`the first day of the continuous employment counted for` w `in class` c) (c's `months of continuous employment that end the rate`)) MINUS 1)
+
+-- s 4A(1)(a)-(c): the worker is in the class; and s 4A(3)(a): where the class
+-- uses factor (i) or (ii), the employer "may pay the worker in accordance with
+-- that rate only until the earlier of— (i) the date on which the worker has
+-- completed 6 months' continuous employment (or any shorter period ...)
+-- (ii) the day before the date on which the worker ceases to satisfy one or
+-- both of the criteria in subsection (1)(a) and (b)". Limb (ii) is met by
+-- testing (1)(a) and (b) on the day asked. FORK F11: "until" includes the
+-- date in limb (i) — the rate may still be paid on the day the 6 months are
+-- completed — because limb (ii) names "the day before" where it means the
+-- last day to be the day before the change.
+@ref s 4A(1), (3)
+GIVEN w IS A Worker, c IS A `Starting-out class`, d IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the starting-out rate of the class may be paid to` w `, class` c `, on` d IF
+        w's `age in years` AT LEAST 16
+    AND w's `age in years` AT MOST 19
+    AND w's `age in years` AT LEAST c's `youngest age in the class`
+    AND w's `age in years` AT MOST c's `oldest age in the class`
+    AND NOT w's `involved in supervising or training other workers`
+    AND CONSIDER c's `factor (i): months continuously on a specified benefit, at least`
+        WHEN JUST m THEN `the continuous social assistance period in months` (w's `benefit history`) AT LEAST m
+        WHEN NOTHING THEN TRUE
+    AND (    NOT c's `factor (iii): employed under a training contract`
+          OR w's `employed under a contract of service requiring training for qualification`)
+    AND (    NOT (`the class uses factor (i)` c OR `the class uses factor (ii)` c)
+          OR d AT MOST `the date the worker completes the employment that ends the rate` w `in class` c)
+
+-- s 4A(4) "if more than 1 minimum starting-out rate prescribed under
+-- subsection (1) applies to a worker, only the higher or the highest rate
+-- applies". NOTHING when no class applies. A class the Order had no power to
+-- make (outside s 4A(1)-(3)) is refused: the Act does not say what follows.
+@ref s 4A(1)-(4)
+GIVEN w IS A Worker, o IS A `Minimum Wage Order`, d IS A DATE
+GIVETH A MAYBE NUMBER
+`the starting-out rate for` w `under` o `on` d MEANS
+    IF null applying
+    THEN NOTHING
+    ELSE IF all (GIVEN c YIELD `the class and its rate are within s 4A` c `, adult rate` (o's `minimum adult rate per hour`)) applying
+         THEN JUST (maximum (map (GIVEN c YIELD `the rate per hour under` (c's `starting-out rate`) `, adult rate` (o's `minimum adult rate per hour`)) applying))
+         ELSE `a starting-out class in the Order is outside s 4A, and the Act does not say what rate then applies`
+    WHERE
+        applying MEANS filter (GIVEN c YIELD `the starting-out rate of the class may be paid to` w `, class` c `, on` d) (o's `starting-out classes`)
+
+@ref s 4A(1)-(3)
+GIVETH A MAYBE NUMBER
+`a starting-out class in the Order is outside s 4A, and the Act does not say what rate then applies` MEANS
+    REFUSE "a starting-out class in the Order is outside s 4A, and the Act does not say what rate then applies"
+
+§§ `The training rate (s 4B)`
+
+-- s 4B(1) "a minimum training rate payable to 1 or more classes of workers
+-- who— (a) are aged 20 years or older; and (b) are not involved in
+-- supervising or training other workers; and (c) are employed under
+-- contracts of service under which they are required to undergo training,
+-- instruction, or examination ... for the purpose of becoming qualified for
+-- the occupation". Which classes the Order names is an input.
+@ref s 4B(1)
+GIVEN w IS A Worker
+GIVETH A BOOLEAN
+DECIDE `the worker is in a class s 4B allows` w IF
+        w's `age in years` AT LEAST 20
+    AND NOT w's `involved in supervising or training other workers`
+    AND w's `employed under a contract of service requiring training for qualification`
+    AND w's `in a class the Order defines for the training rate`
+
+@ref s 4B(1)-(2)
+GIVEN w IS A Worker, o IS A `Minimum Wage Order`
+GIVETH A MAYBE NUMBER
+`the training rate for` w `under` o MEANS
+    IF `the worker is in a class s 4B allows` w
+    THEN CONSIDER o's `minimum training rate`
+         WHEN JUST form THEN
+             IF `the rate is not less than 80% of the adult rate` form (o's `minimum adult rate per hour`)
+             THEN JUST (`the rate per hour under` form `, adult rate` (o's `minimum adult rate per hour`))
+             ELSE `the training rate in the Order is below 80% of the adult rate, and the Act does not say what rate then applies`
+         WHEN NOTHING THEN NOTHING
+    ELSE NOTHING
+
+@ref s 4B(2)
+GIVETH A MAYBE NUMBER
+`the training rate in the Order is below 80% of the adult rate, and the Act does not say what rate then applies` MEANS
+    REFUSE "the training rate in the Order is below 80% of the adult rate, and the Act does not say what rate then applies"
+
+§§ `Exemption permits in force (s 8(3)-(5))`
+
+-- s 8(3) "A permit— (a) comes into force on the date it is issued or any
+-- other date as stated in the permit; and (b) remains in force for the
+-- period stated in the permit". s 8(5): the Inspector "may revoke a permit
+-- at any time". FORK F3: the last day of the stated period is in; a permit
+-- revoked with effect from a date is not in force on that date.
+@ref s 8(3), (5)
+GIVEN p IS A Permit, d IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the permit is in force on` p d IF
+        d AT LEAST p's `comes into force on`
+    AND d AT MOST p's `in force until the end of`
+    AND CONSIDER p's `revoked with effect from`
+        WHEN JUST r THEN d LESS THAN r
+        WHEN NOTHING THEN TRUE
+
+§§ `The rate that governs (ss 4, 4A, 4B, 6, 8(4))`
+
+-- s 8(4) "While a permit remains in force, the rate of wages stated in the
+-- permit is taken to be the minimum rate of wages prescribed under this Act
+-- for the worker." — it displaces every other rate.
+-- s 4(1) the adult rate is for workers "(a) who are aged 16 years or older;
+-- and (b) to whom any other minimum rate of wages prescribed under section 4A
+-- or 4B does not apply".
+-- A worker under 16 with no permit belongs to no prescribed class: no
+-- minimum rate (s 6(1) "every worker who belongs to a class of workers in
+-- respect of whom a minimum rate of wages has been prescribed").
+@ref ss 4, 4A, 4B, 6(1), 8(4), 9
+@export The minimum rate of wages that governs a worker on a day under the Minimum Wage Act 1983 (NZ): none if the Act does not apply (ss 2, 9); the rate in an exemption permit in force (s 8(4)); else the highest starting-out rate that applies (s 4A); else the training rate (s 4B); else, for a worker aged 16 or older, the adult rate (s 4). The rates are the Minimum Wage Order's, supplied by the caller. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN w IS A Worker  @desc The worker: employee status, age, supervision, training contract, benefit history, first days of continuous employment, s 9 class and any exemption permit
+      o IS A `Minimum Wage Order`  @desc The Minimum Wage Order in force: the adult rate, the starting-out classes and rates, and the training rate (per hour)
+      d IS A DATE  @desc The day the question is asked (for whether a permit is in force and whether a starting-out period has ended)
+GIVETH A `Rate that governs`
+`the rate that governs` w `under` o `on` d MEANS
+    BRANCH IF NOT `the Act applies to` w
+                THEN `the Act does not apply to the worker (ss 2, 9)`
+           IF CONSIDER w's `exemption permit`
+              WHEN JUST p THEN `the permit is in force on` p d
+              WHEN NOTHING THEN FALSE
+                THEN CONSIDER w's `exemption permit`
+                     WHEN JUST p THEN `the rate stated in an exemption permit (s 8(4))` (p's `rate of wages per hour stated in the permit`)
+                     WHEN NOTHING THEN `no minimum rate is prescribed for the worker`
+           IF isJust (`the starting-out rate for` w `under` o `on` d)
+                THEN `a starting-out rate (s 4A)` (fromMaybe 0 (`the starting-out rate for` w `under` o `on` d))
+           IF isJust (`the training rate for` w `under` o)
+                THEN `the training rate (s 4B)` (fromMaybe 0 (`the training rate for` w `under` o))
+           IF w's `age in years` AT LEAST 16
+                THEN `the adult rate (s 4)` (o's `minimum adult rate per hour`)
+           OTHERWISE `no minimum rate is prescribed for the worker`
+
+-- The rate per hour, or NOTHING where no minimum rate governs.
+GIVEN r IS A `Rate that governs`
+GIVETH A MAYBE NUMBER
+`the hourly minimum under` r MEANS
+    CONSIDER r
+    WHEN `the Act does not apply to the worker (ss 2, 9)` THEN NOTHING
+    WHEN `no minimum rate is prescribed for the worker` THEN NOTHING
+    WHEN `the rate stated in an exemption permit (s 8(4))` x THEN JUST x
+    WHEN `a starting-out rate (s 4A)` x THEN JUST x
+    WHEN `the training rate (s 4B)` x THEN JUST x
+    WHEN `the adult rate (s 4)` x THEN JUST x

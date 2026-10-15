@@ -15,6 +15,4 @@ encoded rule can be traced to the text it encodes.
 
 ## Status of this deposit
 
-No statute text has been deposited yet. The register's listing pages refuse scripted
-clients; bulk retrieval should go through the PCO API (key from contact@pco.govt.nz), which is
-also how the register id for this Act will be confirmed.
+The text of the version as at 20 December 2023 is deposited at `source/MWA1983.txt` (see `source/PROVENANCE.md`). It was extracted from the PCO PDF the user supplied on 2026-10-15. The PDF is not deposited. The encoding quotes the Act's words in comments and names.
