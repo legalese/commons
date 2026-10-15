@@ -227,6 +227,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`nz/`](nz/) | New Zealand Acts and Bills |
 | [`nz/accident-compensation-act-2001`](nz/accident-compensation-act-2001) | Accident Compensation Act 2001 (NZ) — the whole Act under one top-level goal (is there cover, what class of injury, which Account pays, what weekly compensation follows) and six goals: cover, claims, entitlements, reviews and appeals, levies, offences — row `legalese-aswathy` | `draft` |
 | [`nz/minimum-wage-act-1983`](nz/minimum-wage-act-1983) | Minimum Wage Act 1983 (NZ) — the whole Act under one top-level goal (does the Act apply, which minimum rate governs, what must be paid after the deductions the Act allows, how much is owed) and five goals: the rate, the payment, enforcement, hours, administration — row `legalese-aswathy` | `draft` |
+| [`nz/wages-protection-act-1983`](nz/wages-protection-act-1983) | Wages Protection Act 1983 (NZ) — the whole Act under one top-level goal (were the deductions lawful, were the wages paid in a lawful manner, did the employer contravene the Act, what may be recovered under s 11) and four goals: deductions and overpayments, the manner of payment, recovery, premiums and penalties — row `legalese-aswathy` | `draft` |
 | [`uk/`](uk/) | United Kingdom Acts (Westminster) |
 | [`au/act/`](au/act/) | Australian Capital Territory Acts |
 | [`au/nt/`](au/nt/) | Northern Territory Acts -- conditional permission; confirm before quoting text |

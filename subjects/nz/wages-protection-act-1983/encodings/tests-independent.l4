@@ -1,0 +1,334 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `wpa-types`
+IMPORT `wpa-deductions`
+IMPORT `wpa-payment`
+IMPORT `wpa-enforcement`
+IMPORT `wpa-goal`
+
+-- Independent tests: Wages Protection Act 1983 (NZ), version as at 27 November 2025.
+-- Expected values were fixed from the Act alone (see independent-expectations.md)
+-- before the encoding was opened. A failing assertion is a finding.
+
+§ `Independent tests`
+
+§§ `Fixtures`
+
+-- A deduction: amount, made on, basis, lawful purpose, consulted, unreasonable, withdrawal.
+GIVEN amt IS A NUMBER, made IS A DATE, b IS A `Basis for the deduction`, lp IS A BOOLEAN, cons IS A BOOLEAN, unr IS A BOOLEAN, w IS A MAYBE `Notice of withdrawal`
+GIVETH A Deduction
+mkDed amt made b lp cons unr w MEANS Deduction OF amt, made, b, lp, cons, unr, w
+
+consent MEANS `the worker's written consent` OF FALSE, FALSE
+generalClause MEANS `the worker's written consent` OF TRUE, FALSE
+consentDuress MEANS `the worker's written consent` OF FALSE, TRUE
+request MEANS `the worker's written request` OF FALSE
+requestDuress MEANS `the worker's written request` OF TRUE
+
+d2026 MEANS Date 1 3 2026
+
+-- receipt 1 March 2026, practicable within 2 weeks
+wPract MEANS JUST (`Notice of withdrawal` OF Date 1 3 2026, TRUE, Date 1 3 2026)
+-- receipt 1 March 2026, not practicable within 2 weeks; earliest practicable day 20 March 2026
+wImpract MEANS JUST (`Notice of withdrawal` OF Date 1 3 2026, FALSE, Date 20 3 2026)
+
+-- Overpayment notice: given on, amount, day+actions, working days, method
+GIVEN g IS A DATE, wd IS A NUMBER, meth IS A BOOLEAN
+GIVETH AN `Overpayment notice`
+note g wd meth MEANS `Overpayment notice` OF g, TRUE, TRUE, wd, meth
+
+-- Overpayment paid 1 March 2026, next pay day 10 March 2026, amount 300
+GIVEN r IS A `Reason no wages were payable`, spd IS A BOOLEAN, unav IS A BOOLEAN, wp IS A `Workplace of the worker`, n IS A MAYBE `Overpayment notice`, rec IS A DATE
+GIVETH AN Overpayment
+mkOp r spd unav wp n rec MEANS Overpayment OF 300, r, spd, unav, Date 1 3 2026, Date 10 3 2026, wp, n, rec
+
+absent MEANS `(a) absent from work without the employer's authority`
+other MEANS `(iv) any other case`
+goodNote MEANS JUST (note (Date 5 3 2026) 3 FALSE)
+
+GIVEN o IS AN Overpayment
+GIVETH A BOOLEAN
+mayRecover o MEANS `the employer may recover the overpayment under s 6` o
+
+-- Payment facts: manner, Crown/LA, written consent, withdrawal, absent, s 17, ss 15-16
+GIVEN m IS A `Manner of payment`, crown IS A BOOLEAN, wc IS A BOOLEAN, w IS A MAYBE `Notice of withdrawal`, ab IS A BOOLEAN, s17 IS A BOOLEAN, s1516 IS A BOOLEAN, paid IS A DATE
+GIVETH A `Payment facts`
+mkPay m crown wc w ab s17 s1516 paid MEANS `Payment facts` OF m, 1000, paid, crown, wc, w, ab, s17, s1516
+
+cheque MEANS `a specified cheque (payable to, or to the order of, the worker)`
+postal MEANS `a postal order`
+moneyOrder MEANS `a money order`
+lodgeOwn MEANS `lodgement at a financial institution` OF TRUE
+lodgeOther MEANS `lodgement at a financial institution` OF FALSE
+
+GIVEN p IS A `Payment facts`
+GIVETH A BOOLEAN
+lawfulManner p MEANS `the wages were paid in a lawful manner` p
+
+GIVEN d IS A Deduction
+GIVETH A BOOLEAN
+lawfulD d MEANS `the deduction was lawful` d
+
+GIVEN d IS A Deduction, br IS A DATE
+GIVETH A NUMBER
+rec11 d br MEANS `the amount recoverable under s 11(1)(a) for` d `, action brought` br
+
+brought MEANS Date 1 6 2026
+
+§§ `ss 4, 5, 5A deductions`
+
+-- D2 no consent
+#ASSERT lawfulD (mkDed 100 d2026 `no written consent or request` TRUE TRUE FALSE NOTHING) EQUALS FALSE
+-- D3 written consent
+#ASSERT lawfulD (mkDed 100 d2026 consent TRUE FALSE FALSE NOTHING) EQUALS TRUE
+-- D4 written request
+#ASSERT lawfulD (mkDed 100 d2026 request TRUE FALSE FALSE NOTHING) EQUALS TRUE
+-- D6 purpose not lawful
+#ASSERT lawfulD (mkDed 100 d2026 consent FALSE FALSE FALSE NOTHING) EQUALS FALSE
+#ASSERT lawfulD (mkDed 100 d2026 request FALSE FALSE FALSE NOTHING) EQUALS FALSE
+-- D7, D8 general deductions clause, consulted / not
+#ASSERT lawfulD (mkDed 100 d2026 generalClause TRUE TRUE FALSE NOTHING) EQUALS TRUE
+#ASSERT lawfulD (mkDed 100 d2026 generalClause TRUE FALSE FALSE NOTHING) EQUALS FALSE
+-- D9 unreasonable
+#ASSERT lawfulD (mkDed 100 d2026 consent TRUE FALSE TRUE NOTHING) EQUALS FALSE
+#ASSERT lawfulD (mkDed 100 d2026 request TRUE FALSE TRUE NOTHING) EQUALS FALSE
+-- duress (s 11(1)(a)(ii) - consent so obtained is no consent)
+#ASSERT lawfulD (mkDed 100 d2026 consentDuress TRUE FALSE FALSE NOTHING) EQUALS FALSE
+-- D10, D11 other Act; collective agreement / order
+#ASSERT lawfulD (mkDed 100 d2026 `required or authorised by another Act (s 15)` TRUE FALSE FALSE NOTHING) EQUALS TRUE
+#ASSERT lawfulD (mkDed 100 d2026 `a collective agreement or an order of the Court or Authority (s 16)` TRUE FALSE FALSE NOTHING) EQUALS TRUE
+-- D14, D16 on 1 April 2016 the 2016 amendments (s 5(1A), s 5A) apply
+#ASSERT lawfulD (mkDed 100 (Date 1 4 2016) consent TRUE FALSE TRUE NOTHING) EQUALS FALSE
+#ASSERT lawfulD (mkDed 100 (Date 1 4 2016) generalClause TRUE FALSE FALSE NOTHING) EQUALS FALSE
+#ASSERT lawfulD (mkDed 100 (Date 1 4 2016) generalClause TRUE TRUE FALSE NOTHING) EQUALS TRUE
+-- D13, D15 on 31 March 2016: pre-2016 s 5(1) not in this version
+#ASSERT REFUSED (lawfulD (mkDed 100 (Date 31 3 2016) generalClause TRUE FALSE FALSE NOTHING))
+#ASSERT REFUSED (lawfulD (mkDed 100 (Date 31 3 2016) consent TRUE FALSE TRUE NOTHING))
+-- Schedule cl 2 date edge
+#ASSERT `the 2016 amendments apply to conduct on` (Date 1 4 2016) EQUALS TRUE
+#ASSERT `the 2016 amendments apply to conduct on` (Date 31 3 2016) EQUALS FALSE
+
+§§ `s 5(2) withdrawal (receipt 1 March 2026)`
+
+-- W1/W2 practicable: 15 March covered, 16 March not
+#ASSERT lawfulD (mkDed 100 (Date 15 3 2026) consent TRUE FALSE FALSE wPract) EQUALS TRUE
+#ASSERT lawfulD (mkDed 100 (Date 16 3 2026) consent TRUE FALSE FALSE wPract) EQUALS FALSE
+#ASSERT lawfulD (mkDed 100 (Date 16 3 2026) request TRUE FALSE FALSE wPract) EQUALS FALSE
+-- W3 on day of receipt (still within the 2 weeks)
+#ASSERT lawfulD (mkDed 100 (Date 1 3 2026) consent TRUE FALSE FALSE wPract) EQUALS TRUE
+-- W4/W5 not practicable: as soon as practicable (20 March)
+#ASSERT lawfulD (mkDed 100 (Date 20 3 2026) consent TRUE FALSE FALSE wImpract) EQUALS TRUE
+#ASSERT lawfulD (mkDed 100 (Date 21 3 2026) consent TRUE FALSE FALSE wImpract) EQUALS FALSE
+-- a deduction after the s 5(2) day is not consented to: s 11(1)(a)(i)
+#ASSERT rec11 (mkDed 100 (Date 16 3 2026) consent TRUE FALSE FALSE wPract) brought EQUALS 100
+#ASSERT rec11 (mkDed 100 (Date 15 3 2026) consent TRUE FALSE FALSE wPract) brought EQUALS 0
+
+§§ `s 6 overpayments`
+
+-- O1-O4 each reason
+#ASSERT mayRecover (mkOp absent FALSE TRUE other goodNote (Date 20 3 2026)) EQUALS TRUE
+#ASSERT mayRecover (mkOp `(b) on strike` FALSE TRUE other goodNote (Date 20 3 2026)) EQUALS TRUE
+#ASSERT mayRecover (mkOp `(c) locked out` FALSE TRUE other goodNote (Date 20 3 2026)) EQUALS TRUE
+#ASSERT mayRecover (mkOp `(d) suspended` FALSE TRUE other goodNote (Date 20 3 2026)) EQUALS TRUE
+-- O5 none
+#ASSERT mayRecover (mkOp `none of these` FALSE TRUE other goodNote (Date 20 3 2026)) EQUALS FALSE
+-- O6 reasonably practicable to avoid
+#ASSERT mayRecover (mkOp absent FALSE FALSE other goodNote (Date 20 3 2026)) EQUALS FALSE
+-- O7 no notice
+#ASSERT mayRecover (mkOp absent FALSE TRUE other NOTHING (Date 20 3 2026)) EQUALS FALSE
+-- notice after recovery
+#ASSERT mayRecover (mkOp absent FALSE TRUE other (JUST (note (Date 9 3 2026) 0 FALSE)) (Date 8 3 2026)) EQUALS FALSE
+-- O8/O9 specified pay deduction, 10 working days, method given (either method; one boolean)
+#ASSERT mayRecover (mkOp `(b) on strike` TRUE TRUE other (JUST (note (Date 20 3 2026) 10 TRUE)) (Date 25 3 2026)) EQUALS TRUE
+-- O10 11 working days
+#ASSERT mayRecover (mkOp `(b) on strike` TRUE TRUE other (JUST (note (Date 20 3 2026) 11 TRUE)) (Date 25 3 2026)) EQUALS FALSE
+-- O11 no method
+#ASSERT mayRecover (mkOp `(b) on strike` TRUE TRUE other (JUST (note (Date 20 3 2026) 10 FALSE)) (Date 25 3 2026)) EQUALS FALSE
+-- O12 specified pay deduction: (c) day (next pay day 10 March for (iv)) does not apply
+#ASSERT mayRecover (mkOp `(b) on strike` TRUE TRUE other (JUST (note (Date 13 3 2026) 9 TRUE)) (Date 25 3 2026)) EQUALS TRUE
+-- O13/O14 (i) no fixed workplace: next pay day 10 March, notice 20 / 21 March
+#ASSERT mayRecover (mkOp absent FALSE TRUE `(i) no fixed workplace` (JUST (note (Date 20 3 2026) 0 FALSE)) (Date 25 3 2026)) EQUALS TRUE
+#ASSERT mayRecover (mkOp absent FALSE TRUE `(i) no fixed workplace` (JUST (note (Date 21 3 2026) 0 FALSE)) (Date 25 3 2026)) EQUALS FALSE
+-- O15/O16 (ii) first attendance 16 March
+#ASSERT mayRecover (mkOp absent FALSE TRUE (`(ii) one fixed workplace, not attended during normal hours on the next pay day` OF Date 16 3 2026) (JUST (note (Date 16 3 2026) 0 FALSE)) (Date 25 3 2026)) EQUALS TRUE
+#ASSERT mayRecover (mkOp absent FALSE TRUE (`(ii) one fixed workplace, not attended during normal hours on the next pay day` OF Date 16 3 2026) (JUST (note (Date 17 3 2026) 0 FALSE)) (Date 25 3 2026)) EQUALS FALSE
+-- O17 (iii) first attendance 18 March
+#ASSERT mayRecover (mkOp absent FALSE TRUE (`(iii) 2 or more fixed workplaces, none attended during normal hours on the next pay day` OF Date 18 3 2026) (JUST (note (Date 18 3 2026) 0 FALSE)) (Date 25 3 2026)) EQUALS TRUE
+#ASSERT mayRecover (mkOp absent FALSE TRUE (`(iii) 2 or more fixed workplaces, none attended during normal hours on the next pay day` OF Date 18 3 2026) (JUST (note (Date 19 3 2026) 0 FALSE)) (Date 25 3 2026)) EQUALS FALSE
+-- O18 (iv) next pay day 10 March / 11 March
+#ASSERT mayRecover (mkOp absent FALSE TRUE other (JUST (note (Date 10 3 2026) 0 FALSE)) (Date 25 3 2026)) EQUALS TRUE
+#ASSERT mayRecover (mkOp absent FALSE TRUE other (JUST (note (Date 11 3 2026) 0 FALSE)) (Date 25 3 2026)) EQUALS FALSE
+-- O19 (d) notice 5 March: recovered 5 May / 6 May
+#ASSERT mayRecover (mkOp absent FALSE TRUE other goodNote (Date 5 5 2026)) EQUALS TRUE
+#ASSERT mayRecover (mkOp absent FALSE TRUE other goodNote (Date 6 5 2026)) EQUALS FALSE
+-- O20 month-end: notice 31 December 2025 (no fixed workplace, next pay day 30 Dec 2025 not modelled -> use (i) with pay day 10 Mar? use specified pay deduction route so (c) is out of the way)
+#ASSERT mayRecover (Overpayment OF 300, `(b) on strike`, TRUE, TRUE, Date 24 12 2025, Date 7 1 2026, other, JUST (note (Date 31 12 2025) 4 TRUE), Date 28 2 2026) EQUALS TRUE
+#ASSERT mayRecover (Overpayment OF 300, `(b) on strike`, TRUE, TRUE, Date 24 12 2025, Date 7 1 2026, other, JUST (note (Date 31 12 2025) 4 TRUE), Date 1 3 2026) EQUALS FALSE
+-- O21 s 6(4)(a): no amount, but day and actions
+#ASSERT mayRecover (mkOp absent FALSE TRUE other (JUST (`Overpayment notice` OF Date 5 3 2026, FALSE, TRUE, 3, FALSE)) (Date 20 3 2026)) EQUALS TRUE
+-- D12 a deduction recovering a valid s 6 overpayment is lawful and not recoverable under s 11
+#ASSERT lawfulD (mkDed 300 (Date 20 3 2026) (`recovery of an overpayment under s 6` OF (mkOp absent FALSE TRUE other goodNote (Date 20 3 2026))) TRUE FALSE FALSE NOTHING) EQUALS TRUE
+#ASSERT rec11 (mkDed 300 (Date 20 3 2026) (`recovery of an overpayment under s 6` OF (mkOp absent FALSE TRUE other goodNote (Date 20 3 2026))) TRUE FALSE FALSE NOTHING) brought EQUALS 0
+-- s 6(2) "recover the amount of that overpayment": a deduction of 500 for an overpayment of 300 is not wholly lawful
+#ASSERT lawfulD (mkDed 500 (Date 20 3 2026) (`recovery of an overpayment under s 6` OF (mkOp absent FALSE TRUE other goodNote (Date 20 3 2026))) TRUE FALSE FALSE NOTHING) EQUALS FALSE
+
+§§ `ss 7-10, 15-17 manner of payment (paid 1 March 2026)`
+
+-- M1 money
+#ASSERT lawfulManner (mkPay `money` FALSE FALSE NOTHING FALSE FALSE FALSE d2026) EQUALS TRUE
+-- M2 private employer, specified cheque, no consent
+#ASSERT lawfulManner (mkPay cheque FALSE FALSE NOTHING FALSE FALSE FALSE d2026) EQUALS FALSE
+-- M3/M4 Crown or local authority, specified cheque
+#ASSERT lawfulManner (mkPay cheque TRUE FALSE NOTHING FALSE FALSE FALSE d2026) EQUALS TRUE
+-- M5 Crown, postal order, no consent, not absent
+#ASSERT lawfulManner (mkPay postal TRUE FALSE NOTHING FALSE FALSE FALSE d2026) EQUALS FALSE
+#ASSERT lawfulManner (mkPay lodgeOwn TRUE FALSE NOTHING FALSE FALSE FALSE d2026) EQUALS FALSE
+-- M6 written consent: postal order, money order, specified cheque
+#ASSERT lawfulManner (mkPay postal FALSE TRUE NOTHING FALSE FALSE FALSE d2026) EQUALS TRUE
+#ASSERT lawfulManner (mkPay moneyOrder FALSE TRUE NOTHING FALSE FALSE FALSE d2026) EQUALS TRUE
+#ASSERT lawfulManner (mkPay cheque FALSE TRUE NOTHING FALSE FALSE FALSE d2026) EQUALS TRUE
+-- M7/M8 lodgement to own / joint account
+#ASSERT lawfulManner (mkPay lodgeOwn FALSE TRUE NOTHING FALSE FALSE FALSE d2026) EQUALS TRUE
+-- M9 someone else's account
+#ASSERT lawfulManner (mkPay lodgeOther FALSE TRUE NOTHING FALSE FALSE FALSE d2026) EQUALS FALSE
+-- M10 no written consent
+#ASSERT lawfulManner (mkPay lodgeOwn FALSE FALSE NOTHING FALSE FALSE FALSE d2026) EQUALS FALSE
+-- M11 bearer cheque (some other manner) even with consent
+#ASSERT lawfulManner (mkPay `some other manner` FALSE TRUE NOTHING FALSE FALSE FALSE d2026) EQUALS FALSE
+-- M12 s 9(2) practicable: 15 March / 16 March
+#ASSERT lawfulManner (mkPay lodgeOwn FALSE TRUE wPract FALSE FALSE FALSE (Date 15 3 2026)) EQUALS TRUE
+#ASSERT lawfulManner (mkPay lodgeOwn FALSE TRUE wPract FALSE FALSE FALSE (Date 16 3 2026)) EQUALS FALSE
+-- M13 not practicable: 20 / 21 March
+#ASSERT lawfulManner (mkPay lodgeOwn FALSE TRUE wImpract FALSE FALSE FALSE (Date 20 3 2026)) EQUALS TRUE
+#ASSERT lawfulManner (mkPay lodgeOwn FALSE TRUE wImpract FALSE FALSE FALSE (Date 21 3 2026)) EQUALS FALSE
+-- after withdrawal, money is still lawful
+#ASSERT lawfulManner (mkPay `money` FALSE TRUE wPract FALSE FALSE FALSE (Date 16 3 2026)) EQUALS TRUE
+-- M14 absent: postal, money order, specified cheque
+#ASSERT lawfulManner (mkPay postal FALSE FALSE NOTHING TRUE FALSE FALSE d2026) EQUALS TRUE
+#ASSERT lawfulManner (mkPay moneyOrder FALSE FALSE NOTHING TRUE FALSE FALSE d2026) EQUALS TRUE
+#ASSERT lawfulManner (mkPay cheque FALSE FALSE NOTHING TRUE FALSE FALSE d2026) EQUALS TRUE
+-- M15 absent, lodgement
+#ASSERT lawfulManner (mkPay lodgeOwn FALSE FALSE NOTHING TRUE FALSE FALSE d2026) EQUALS FALSE
+-- M16/M17 ss 15, 16
+#ASSERT lawfulManner (mkPay `some other manner` FALSE FALSE NOTHING FALSE FALSE TRUE d2026) EQUALS TRUE
+-- M18 s 17 saved contract
+#ASSERT lawfulManner (mkPay `some other manner` FALSE FALSE NOTHING FALSE TRUE FALSE d2026) EQUALS TRUE
+
+§§ `s 11 recovery from the employer (action 1 June 2026)`
+
+-- R1 no written consent
+#ASSERT rec11 (mkDed 100 d2026 `no written consent or request` TRUE FALSE FALSE NOTHING) brought EQUALS 100
+-- R2 duress (consent / request)
+#ASSERT rec11 (mkDed 100 d2026 consentDuress TRUE FALSE FALSE NOTHING) brought EQUALS 100
+#ASSERT rec11 (mkDed 100 d2026 requestDuress TRUE FALSE FALSE NOTHING) brought EQUALS 100
+-- R3 general clause, not consulted, on/after 27 Nov 2025
+#ASSERT rec11 (mkDed 100 (Date 27 11 2025) generalClause TRUE FALSE FALSE NOTHING) brought EQUALS 100
+-- R4 unreasonable on/after 27 Nov 2025
+#ASSERT rec11 (mkDed 100 (Date 27 11 2025) consent TRUE FALSE TRUE NOTHING) brought EQUALS 100
+#ASSERT rec11 (mkDed 100 (Date 27 11 2025) request TRUE FALSE TRUE NOTHING) brought EQUALS 100
+-- R5 26 Nov 2025: (iii)/(iv) not in force
+#ASSERT rec11 (mkDed 100 (Date 26 11 2025) generalClause TRUE FALSE FALSE NOTHING) brought EQUALS 0
+#ASSERT rec11 (mkDed 100 (Date 26 11 2025) consent TRUE FALSE TRUE NOTHING) brought EQUALS 0
+-- R7 lawful consented deduction
+#ASSERT rec11 (mkDed 100 d2026 consent TRUE FALSE FALSE NOTHING) brought EQUALS 0
+-- R8 consented, purpose unlawful: no s 11(1)(a) limb
+#ASSERT rec11 (mkDed 100 d2026 consent FALSE FALSE FALSE NOTHING) brought EQUALS 0
+-- s 15 / s 16 deductions not recoverable
+#ASSERT rec11 (mkDed 100 d2026 `required or authorised by another Act (s 15)` TRUE FALSE FALSE NOTHING) brought EQUALS 0
+-- s 6 deduction that does not meet s 6(3) is not "pursuant to section 6"
+#ASSERT rec11 (mkDed 300 (Date 20 3 2026) (`recovery of an overpayment under s 6` OF (mkOp absent FALSE TRUE other NOTHING (Date 20 3 2026))) TRUE FALSE FALSE NOTHING) brought EQUALS 300
+-- R12 s 11(2): cause 1 Jan 2020; 1 Jan 2026 in time, 2 Jan 2026 barred
+#ASSERT `an action under s 11 is in time, cause arose` (Date 1 1 2020) `, brought` (Date 1 1 2026) EQUALS TRUE
+#ASSERT `an action under s 11 is in time, cause arose` (Date 1 1 2020) `, brought` (Date 2 1 2026) EQUALS FALSE
+-- leap day: cause 29 Feb 2020; 28 Feb 2026 in time, 1 Mar 2026 barred
+#ASSERT `an action under s 11 is in time, cause arose` (Date 29 2 2020) `, brought` (Date 28 2 2026) EQUALS TRUE
+#ASSERT `an action under s 11 is in time, cause arose` (Date 29 2 2020) `, brought` (Date 1 3 2026) EQUALS FALSE
+-- through the amount: deduction 1 June 2020, action 1 June 2026 / 2 June 2026
+#ASSERT rec11 (mkDed 100 (Date 1 6 2020) `no written consent or request` TRUE FALSE FALSE NOTHING) (Date 1 6 2026) EQUALS 100
+#ASSERT rec11 (mkDed 100 (Date 1 6 2020) `no written consent or request` TRUE FALSE FALSE NOTHING) (Date 2 6 2026) EQUALS 0
+-- R13/R14 s 11(3): 31 Jan 1982 barred; 1 Feb 1982 not barred by (3) (brought 1 Feb 1988, in time under (2))
+#ASSERT `an action under s 11 is in time, cause arose` (Date 31 1 1982) `, brought` (Date 1 6 1984) EQUALS FALSE
+#ASSERT `an action under s 11 is in time, cause arose` (Date 1 2 1982) `, brought` (Date 1 2 1988) EQUALS TRUE
+-- pre-2016 deduction in time: refuse (old s 5(1) not carried)
+#ASSERT REFUSED (rec11 (mkDed 100 (Date 31 3 2016) `no written consent or request` TRUE FALSE FALSE NOTHING) (Date 1 3 2022))
+
+§§ `Top-level goal`
+
+GIVEN m IS A `Manner of payment`, ds IS A LIST OF Deduction
+GIVETH A `Wage protection position`
+pos m ds MEANS `the wage protection position for` (`Wage payment case` OF 1000, (mkPay m FALSE FALSE NOTHING FALSE FALSE FALSE d2026), brought, ds)
+
+-- R9/R15: paid by specified cheque without consent (private employer), plus one unlawful 100 and one lawful 50
+#ASSERT (pos cheque (LIST (mkDed 100 d2026 `no written consent or request` TRUE FALSE FALSE NOTHING), (mkDed 50 d2026 consent TRUE FALSE FALSE NOTHING)))'s `recoverable from the employer under s 11` EQUALS 1100
+#ASSERT (pos cheque (LIST (mkDed 100 d2026 `no written consent or request` TRUE FALSE FALSE NOTHING), (mkDed 50 d2026 consent TRUE FALSE FALSE NOTHING)))'s `unlawful deductions` EQUALS 100
+#ASSERT (pos cheque (LIST (mkDed 100 d2026 `no written consent or request` TRUE FALSE FALSE NOTHING), (mkDed 50 d2026 consent TRUE FALSE FALSE NOTHING)))'s `the employer contravened ss 4, 5, 5A or 7` EQUALS TRUE
+-- paid in money, lawful deduction only: nothing recoverable, no contravention
+#ASSERT (pos `money` (LIST (mkDed 50 d2026 consent TRUE FALSE FALSE NOTHING)))'s `recoverable from the employer under s 11` EQUALS 0
+#ASSERT (pos `money` (LIST (mkDed 50 d2026 consent TRUE FALSE FALSE NOTHING)))'s `the employer contravened ss 4, 5, 5A or 7` EQUALS FALSE
+-- consented deduction for an unlawful purpose: a contravention, but nothing under s 11(1)(a)
+#ASSERT (pos `money` (LIST (mkDed 50 d2026 consent FALSE FALSE FALSE NOTHING)))'s `the employer contravened ss 4, 5, 5A or 7` EQUALS TRUE
+#ASSERT (pos `money` (LIST (mkDed 50 d2026 consent FALSE FALSE FALSE NOTHING)))'s `recoverable from the employer under s 11` EQUALS 0
+
+§§ `s 11A person involved`
+
+GIVEN inv IS A BOOLEAN, leave IS A BOOLEAN, able IS A NUMBER, conduct IS A DATE
+GIVETH AN `Arrears claim against a person involved`
+arrears inv leave able conduct MEANS `Arrears claim against a person involved` OF TRUE, TRUE, inv, FALSE, leave, 1000, able, conduct
+
+-- A1 Labour Inspector, employer can pay nothing
+#ASSERT `the arrears recoverable under s 11A by` `a Labour Inspector` `on` (arrears TRUE FALSE 0 d2026) EQUALS 1000
+-- A2/A3 worker without / with leave
+#ASSERT `the arrears recoverable under s 11A by` `the worker` `on` (arrears TRUE FALSE 0 d2026) EQUALS 0
+#ASSERT `the arrears recoverable under s 11A by` `the worker` `on` (arrears TRUE TRUE 0 d2026) EQUALS 1000
+-- A4 not involved
+#ASSERT `the arrears recoverable under s 11A by` `a Labour Inspector` `on` (arrears FALSE TRUE 0 d2026) EQUALS 0
+-- A4 not entitled / not due to non-compliance
+#ASSERT `the arrears recoverable under s 11A by` `a Labour Inspector` `on` (`Arrears claim against a person involved` OF FALSE, TRUE, TRUE, FALSE, TRUE, 1000, 0, d2026) EQUALS 0
+#ASSERT `the arrears recoverable under s 11A by` `a Labour Inspector` `on` (`Arrears claim against a person involved` OF TRUE, FALSE, TRUE, FALSE, TRUE, 1000, 0, d2026) EQUALS 0
+-- A5 employer able to pay in full
+#ASSERT `the arrears recoverable under s 11A by` `a Labour Inspector` `on` (arrears TRUE TRUE 1000 d2026) EQUALS 0
+-- A6 able to pay 600
+#ASSERT `the arrears recoverable under s 11A by` `a Labour Inspector` `on` (arrears TRUE TRUE 600 d2026) EQUALS 400
+-- A9 conduct 31 March 2016 / 1 April 2016
+#ASSERT `the arrears recoverable under s 11A by` `a Labour Inspector` `on` (arrears TRUE TRUE 0 (Date 31 3 2016)) EQUALS 0
+#ASSERT `the arrears recoverable under s 11A by` `a Labour Inspector` `on` (arrears TRUE TRUE 0 (Date 1 4 2016)) EQUALS 1000
+-- A7 premium from person involved
+-- [Ported by the encoder on 2026-10-15: s 11A(3) now takes the date of the conduct (Schedule cl 2(2)); 1 July 2024 was added. No expected value was changed.]
+#ASSERT `the premium recoverable from a person involved under s 11A(3) by` `a Labour Inspector` `, involved:` TRUE `, leave:` FALSE `, premium` 500 `, the employer can pay` 0 `, conduct on` (Date 1 7 2024) EQUALS 500
+#ASSERT `the premium recoverable from a person involved under s 11A(3) by` `the worker` `, involved:` TRUE `, leave:` TRUE `, premium` 500 `, the employer can pay` 0 `, conduct on` (Date 1 7 2024) EQUALS 500
+#ASSERT `the premium recoverable from a person involved under s 11A(3) by` `the worker` `, involved:` TRUE `, leave:` FALSE `, premium` 500 `, the employer can pay` 0 `, conduct on` (Date 1 7 2024) EQUALS 0
+#ASSERT `the premium recoverable from a person involved under s 11A(3) by` `the person who paid the premium or from whose wages it was deducted` `, involved:` TRUE `, leave:` TRUE `, premium` 500 `, the employer can pay` 0 `, conduct on` (Date 1 7 2024) EQUALS 500
+#ASSERT `the premium recoverable from a person involved under s 11A(3) by` `the person who paid the premium or from whose wages it was deducted` `, involved:` TRUE `, leave:` FALSE `, premium` 500 `, the employer can pay` 0 `, conduct on` (Date 1 7 2024) EQUALS 0
+#ASSERT `the premium recoverable from a person involved under s 11A(3) by` `a Labour Inspector` `, involved:` TRUE `, leave:` FALSE `, premium` 500 `, the employer can pay` 500 `, conduct on` (Date 1 7 2024) EQUALS 0
+#ASSERT `the premium recoverable from a person involved under s 11A(3) by` `a Labour Inspector` `, involved:` TRUE `, leave:` FALSE `, premium` 500 `, the employer can pay` 200 `, conduct on` (Date 1 7 2024) EQUALS 300
+#ASSERT `the premium recoverable from a person involved under s 11A(3) by` `a Labour Inspector` `, involved:` FALSE `, leave:` FALSE `, premium` 500 `, the employer can pay` 0 `, conduct on` (Date 1 7 2024) EQUALS 0
+
+§§ `s 12, s 12A, s 13`
+
+-- S1-S3
+#ASSERT `s 12 is breached` TRUE FALSE EQUALS TRUE
+#ASSERT `s 12 is breached` FALSE TRUE EQUALS TRUE
+#ASSERT `s 12 is breached` FALSE FALSE EQUALS FALSE
+-- P1, P2, P5
+#ASSERT `s 12A(1) is breached` TRUE FALSE d2026 EQUALS TRUE
+#ASSERT `s 12A(1) is breached` FALSE TRUE d2026 EQUALS TRUE
+#ASSERT `s 12A(1) is breached` FALSE FALSE d2026 EQUALS FALSE
+-- person on behalf: limb added 1 April 2016
+#ASSERT `s 12A(1) is breached` FALSE TRUE (Date 1 4 2016) EQUALS TRUE
+#ASSERT `s 12A(1) is breached` FALSE TRUE (Date 31 3 2016) EQUALS FALSE
+-- P3/P4 s 12A(2)
+#ASSERT `the premium recoverable from the employer under s 12A(2) by` `the person who paid the premium or from whose wages it was deducted` `, received by the employer` 500 EQUALS 500
+#ASSERT `the premium recoverable from the employer under s 12A(2) by` `a Labour Inspector` `, received by the employer` 500 EQUALS 500
+#ASSERT `the premium recoverable from the employer under s 12A(2) by` `another person` `, received by the employer` 500 EQUALS 0
+-- N1, N2, N6
+#ASSERT `liable to a penalty under s 13` TRUE TRUE FALSE d2026 EQUALS TRUE
+#ASSERT `liable to a penalty under s 13` TRUE FALSE TRUE d2026 EQUALS TRUE
+#ASSERT `liable to a penalty under s 13` TRUE FALSE FALSE d2026 EQUALS FALSE
+#ASSERT `liable to a penalty under s 13` FALSE TRUE FALSE d2026 EQUALS FALSE
+-- person involved before 1 April 2016: the 2016 amendment does not apply
+#ASSERT `liable to a penalty under s 13` TRUE FALSE TRUE (Date 1 4 2016) EQUALS TRUE
+-- N3-N5
+#ASSERT `may recover a penalty under s 13` `the worker` `, against the employer:` TRUE EQUALS TRUE
+#ASSERT `may recover a penalty under s 13` `the worker` `, against the employer:` FALSE EQUALS FALSE
+#ASSERT `may recover a penalty under s 13` `a Labour Inspector` `, against the employer:` FALSE EQUALS TRUE
+#ASSERT `may recover a penalty under s 13` `a Labour Inspector` `, against the employer:` TRUE EQUALS TRUE
