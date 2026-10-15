@@ -1,0 +1,377 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `pl-types`
+IMPORT `pl-eligibility`
+IMPORT `pl-leave`
+IMPORT `pl-protection`
+IMPORT `pl-payments`
+IMPORT `pl-goal`
+
+-- Parental Leave and Employment Protection Act 1987 — TESTS.
+-- Expected values are worked from
+-- ../registers/source-bundle/act_public_1987_129.txt, not from the code.
+-- Amounts are made up, except the s 71M maximum ($811.05), the s 30J
+-- penalty and the s 71Z fine.
+
+§ `Tests`
+
+§§ `Helpers`
+
+GIVEN n IS A NUMBER, x IS A NUMBER
+GIVETH A LIST OF NUMBER
+`repeat` n x MEANS
+    IF n AT MOST 0 THEN EMPTY ELSE x FOLLOWED BY `repeat` (n MINUS 1) x
+
+-- A child born to the person: expected date, date of birth, the day the 36th
+-- week would have ended.
+GIVEN edd IS A DATE, dob IS A DATE, w36 IS A DATE
+GIVETH A Child
+`a child due` edd `born` dob `36th week ending` w36 MEANS
+    Child OF TRUE, edd, JUST dob, dob, w36, TRUE
+
+-- A child born at term on 1 August 2025 (due then; 36 weeks ended 4 July).
+`the August child` MEANS `a child due` (Date 1 8 2025) `born` (Date 1 8 2025) `36th week ending` (Date 4 7 2025)
+
+-- A child taken into permanent care on 1 March 2025.
+`the adopted child` MEANS Child OF FALSE, Date 1 3 2025, NOTHING, Date 1 3 2025, Date 1 3 2025, TRUE
+
+`the mother` MEANS `Carer facts` OF TRUE, FALSE, FALSE, FALSE, FALSE, 0, FALSE, FALSE, FALSE
+`the mother's partner` MEANS `Carer facts` OF FALSE, TRUE, FALSE, FALSE, FALSE, 0, FALSE, FALSE, FALSE
+`an adoptive parent` MEANS `Carer facts` OF FALSE, FALSE, FALSE, FALSE, TRUE, 24, FALSE, TRUE, FALSE
+
+`no history` MEANS `Leave history` OF FALSE, FALSE, NOTHING, FALSE, 0, 0, 0, 0
+
+-- Payment facts for an employee: ordinary weekly pay, 52 weeks at 1000 and
+-- 40 hours each.
+GIVEN owp IS A NUMBER
+GIVETH A `Payment facts`
+`employee pay` owp MEANS
+    `Payment facts` OF TRUE, FALSE, owp, 0, 0, FALSE, 0, `the maximum weekly rate stated in s 71M`, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (`repeat` 52 1000)
+
+-- A case: child, carer, partner flag, employment since, spouse's test,
+-- history.
+GIVEN child IS A Child, carer IS A `Carer facts`, spouse IS A BOOLEAN, since IS A DATE, `partner test` IS AN `Employment test`, h IS A `Leave history`
+GIVETH A `Parental leave case`
+`case` child carer spouse since `partner test` h MEANS
+    `Parental leave case` OF child, carer, spouse, JUST (`Employment with the employer` OF since, 30, 30), `partner test`, h, `employee pay` 900, NOTHING
+
+§§ `Goal 1 — eligibility`
+
+#ASSERT `the date the tests look back from, for` `the August child` EQUALS Date 1 8 2025
+#ASSERT `the date the tests look back from, for` `the adopted child` EQUALS Date 1 3 2025
+
+-- Schedule 1AA cl 5
+#ASSERT `this version applies to` (`a child due` (Date 1 7 2020) `born` (Date 25 6 2020) `36th week ending` (Date 3 6 2020)) EQUALS TRUE
+#ASSERT `this version applies to` (`a child due` (Date 30 6 2020) `born` (Date 2 7 2020) `36th week ending` (Date 2 6 2020)) EQUALS TRUE
+#ASSERT `this version applies to` (`a child due` (Date 30 6 2020) `born` (Date 29 6 2020) `36th week ending` (Date 2 6 2020)) EQUALS FALSE
+#ASSERT `this version applies to` (Child OF FALSE, Date 1 7 2020, NOTHING, Date 1 7 2020, Date 1 7 2020, TRUE) EQUALS TRUE
+#ASSERT `this version applies to` (Child OF FALSE, Date 30 6 2020, NOTHING, Date 30 6 2020, Date 30 6 2020, TRUE) EQUALS FALSE
+
+-- s 7
+#ASSERT `the primary carer kind of` `the mother` EQUALS `(a) the biological mother`
+#ASSERT `the primary carer kind of` (`Carer facts` OF FALSE, TRUE, TRUE, FALSE, FALSE, 0, FALSE, FALSE, FALSE) EQUALS `(b)(i) the mother's spouse or partner who has succeeded under s 72B`
+#ASSERT `the primary carer kind of` (`Carer facts` OF FALSE, TRUE, FALSE, TRUE, FALSE, 0, FALSE, FALSE, FALSE) EQUALS `(b)(ii) the mother's spouse or partner to whom she transferred under s 71E`
+#ASSERT `the primary carer kind of` (`Carer facts` OF FALSE, TRUE, FALSE, FALSE, TRUE, 6, FALSE, FALSE, FALSE) EQUALS `(b)(iii) the mother's spouse or partner who took permanent primary responsibility`
+#ASSERT `the primary carer kind of` (`Carer facts` OF FALSE, TRUE, FALSE, FALSE, TRUE, 12, FALSE, FALSE, FALSE) EQUALS `not the primary carer`
+#ASSERT `the primary carer kind of` (`Carer facts` OF FALSE, TRUE, FALSE, FALSE, TRUE, 6, TRUE, FALSE, FALSE) EQUALS `not the primary carer`
+#ASSERT `the primary carer kind of` `an adoptive parent` EQUALS `(c) another person who took permanent primary responsibility`
+#ASSERT `the primary carer kind of` (`Carer facts` OF FALSE, FALSE, FALSE, FALSE, TRUE, 72, FALSE, TRUE, FALSE) EQUALS `not the primary carer`
+-- two people took responsibility; this one is not the nominee
+#ASSERT `the primary carer kind of` (`Carer facts` OF FALSE, FALSE, FALSE, FALSE, TRUE, 24, FALSE, FALSE, TRUE) EQUALS `not the primary carer`
+-- a sole carer needs no nomination (changed after the independent pass, S10b)
+#ASSERT `the primary carer kind of` (`Carer facts` OF FALSE, FALSE, FALSE, FALSE, TRUE, 24, FALSE, FALSE, FALSE) EQUALS `(c) another person who took permanent primary responsibility`
+#ASSERT `the primary carer kind of` `the mother's partner` EQUALS `not the primary carer`
+
+-- s 2BA(1): date 1 July 2025
+#ASSERT `the employment test met by` (`Employment with the employer` OF Date 1 7 2024, 15, 15) `before` (Date 1 7 2025) EQUALS `the 12-month employment test`
+#ASSERT `the employment test met by` (`Employment with the employer` OF Date 2 7 2024, 15, 15) `before` (Date 1 7 2025) EQUALS `the 6-month employment test`
+#ASSERT `the employment test met by` (`Employment with the employer` OF Date 1 1 2025, 15, 15) `before` (Date 1 7 2025) EQUALS `the 6-month employment test`
+#ASSERT `the employment test met by` (`Employment with the employer` OF Date 2 1 2025, 15, 15) `before` (Date 1 7 2025) EQUALS `neither employment test`
+#ASSERT `the employment test met by` (`Employment with the employer` OF Date 1 1 2023, 12, 9) `before` (Date 1 7 2025) EQUALS `the 6-month employment test`
+#ASSERT `the employment test met by` (`Employment with the employer` OF Date 1 1 2023, 9.5, 9) `before` (Date 1 7 2025) EQUALS `neither employment test`
+#ASSERT `the employment test met by` (`Employment with the employer` OF Date 1 1 2023, 10, 10) `before` (Date 1 7 2025) EQUALS `the 12-month employment test`
+
+-- s 2BA(4)
+#ASSERT `averages 10 hours a week over some 26 of the 52 weeks` (`repeat` 26 10) EQUALS TRUE
+#ASSERT `averages 10 hours a week over some 26 of the 52 weeks` (append (`repeat` 26 9.9) (`repeat` 26 0)) EQUALS FALSE
+-- F7 (changed after the independent pass, S36/S41): 26 weeks of employment are needed
+#ASSERT `averages 10 hours a week over some 26 of the 52 weeks` (append (`repeat` 13 20) (`repeat` 39 0)) EQUALS FALSE
+#ASSERT `averages 10 hours a week over some 26 of the 52 weeks` (append (`repeat` 13 19) (`repeat` 39 0)) EQUALS FALSE
+#ASSERT `averages 10 hours a week over some 26 of the 52 weeks` (append (`repeat` 25 40) (`repeat` 27 0)) EQUALS FALSE
+#ASSERT `averages 10 hours a week over some 26 of the 52 weeks` (append (`repeat` 26 9) (`repeat` 26 11)) EQUALS TRUE
+#ASSERT `averages 10 hours a week over some 26 of the 52 weeks` (append (`repeat` 13 20) (`repeat` 13 1)) EQUALS TRUE
+#ASSERT `meets the parental leave payment threshold test` (`employee pay` 900) EQUALS TRUE
+#ASSERT `meets the parental leave payment threshold test` (`Payment facts` OF FALSE, TRUE, 0, 0, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (`repeat` 52 0)) EQUALS FALSE
+#ASSERT `meets the parental leave payment threshold test` (`Payment facts` OF FALSE, TRUE, 0, 0, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 0), (`repeat` 30 12), (`repeat` 52 0)) EQUALS TRUE
+
+-- s 4
+#ASSERT `Parts 1 to 5 apply, other arrangement as favourable:` TRUE `, s 4(2) matters it addresses` 5 EQUALS FALSE
+#ASSERT `Parts 1 to 5 apply, other arrangement as favourable:` TRUE `, s 4(2) matters it addresses` 4 EQUALS TRUE
+#ASSERT `Parts 1 to 5 apply, other arrangement as favourable:` FALSE `, s 4(2) matters it addresses` 5 EQUALS TRUE
+
+-- s 6: previous leave ended 31 January 2025; 6 months from 1 February
+#ASSERT `s 6 bars leave, previous leave for another child ended` (JUST (Date 31 1 2025)) `, leave starting` (Date 31 7 2025) EQUALS TRUE
+#ASSERT `s 6 bars leave, previous leave for another child ended` (JUST (Date 31 1 2025)) `, leave starting` (Date 1 8 2025) EQUALS FALSE
+#ASSERT `s 6 bars leave, previous leave for another child ended` NOTHING `, leave starting` (Date 1 8 2025) EQUALS FALSE
+
+§§ `Goal 2 — leave`
+
+-- s 8
+#ASSERT `may take primary carer leave, case` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`) `, test met` `the 6-month employment test` EQUALS TRUE
+#ASSERT `may take primary carer leave, case` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`) `, test met` `neither employment test` EQUALS FALSE
+#ASSERT `may take primary carer leave, case` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` (`Leave history` OF TRUE, FALSE, NOTHING, FALSE, 0, 0, 0, 0)) `, test met` `the 12-month employment test` EQUALS FALSE
+#ASSERT `may take primary carer leave, case` (`case` `the August child` (`Carer facts` OF FALSE, TRUE, FALSE, FALSE, TRUE, 6, FALSE, FALSE, FALSE) FALSE (Date 1 1 2024) `neither employment test` (`Leave history` OF TRUE, FALSE, NOTHING, FALSE, 0, 0, 0, 0)) `, test met` `the 12-month employment test` EQUALS TRUE
+#ASSERT `may take primary carer leave, case` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` (`Leave history` OF FALSE, FALSE, JUST (Date 1 3 2025), FALSE, 0, 0, 0, 0)) `, test met` `the 12-month employment test` EQUALS FALSE
+#ASSERT `may take primary carer leave, case` (`case` `the August child` `the mother's partner` TRUE (Date 1 1 2024) `neither employment test` `no history`) `, test met` `the 12-month employment test` EQUALS FALSE
+
+-- s 9: started 10 weeks before the due date by certificate: 10 + 20 = 30
+#ASSERT `the most primary carer leave, in weeks, starting` (Date 23 5 2025) `, expected delivery` (Date 1 8 2025) `, begun under s 13 or 14:` TRUE EQUALS 30
+#ASSERT `the most primary carer leave, in weeks, starting` (Date 4 7 2025) `, expected delivery` (Date 1 8 2025) `, begun under s 13 or 14:` TRUE EQUALS 26
+#ASSERT `the most primary carer leave, in weeks, starting` (Date 23 5 2025) `, expected delivery` (Date 1 8 2025) `, begun under s 13 or 14:` FALSE EQUALS 26
+-- s 11: 6 weeks before 1 July 2025
+#ASSERT `the earliest start the employee may choose, from` (Date 1 7 2025) EQUALS Date 20 5 2025
+#ASSERT `the special leave without pay, in days` EQUALS 10
+
+-- ss 17, 19
+#ASSERT `may take partner's leave, case` (`case` `the August child` `the mother's partner` TRUE (Date 1 1 2024) `the 12-month employment test` `no history`) `, test met` `the 12-month employment test` EQUALS TRUE
+#ASSERT `may take partner's leave, case` (`case` `the August child` `the mother's partner` FALSE (Date 1 1 2024) `the 12-month employment test` `no history`) `, test met` `the 12-month employment test` EQUALS FALSE
+#ASSERT `may take partner's leave, case` (`case` `the August child` `the mother's partner` TRUE (Date 1 1 2024) `the 12-month employment test` `no history`) `, test met` `neither employment test` EQUALS FALSE
+#ASSERT `may take partner's leave, case` (`case` `the August child` `the mother's partner` TRUE (Date 1 1 2024) `the 12-month employment test` (`Leave history` OF FALSE, TRUE, NOTHING, FALSE, 0, 0, 0, 0)) `, test met` `the 12-month employment test` EQUALS FALSE
+#ASSERT `may take partner's leave, case` (`case` `the August child` `the mother` TRUE (Date 1 1 2024) `the 12-month employment test` (`Leave history` OF FALSE, FALSE, NOTHING, TRUE, 0, 0, 0, 0)) `, test met` `the 12-month employment test` EQUALS FALSE
+#ASSERT `the partner's leave, in weeks, for` `the 12-month employment test` EQUALS 2
+#ASSERT `the partner's leave, in weeks, for` `the 6-month employment test` EQUALS 1
+#ASSERT `the partner's leave, in weeks, for` `neither employment test` EQUALS 0
+
+-- s 21: due 1 August 2025, born 1 August
+#ASSERT `the first day partner's leave may begin at the employee's option, for` `the August child` `, discharged` NOTHING EQUALS Date 11 7 2025
+#ASSERT `the last day partner's leave may begin at the employee's option, for` `the August child` `, discharged` NOTHING EQUALS Date 22 8 2025
+#ASSERT `the last day partner's leave may begin at the employee's option, for` `the August child` `, discharged` (JUST (Date 5 9 2025)) EQUALS Date 5 9 2025
+#ASSERT `the last day partner's leave may begin at the employee's option, for` `the August child` `, discharged` (JUST (Date 10 8 2025)) EQUALS Date 22 8 2025
+#ASSERT REFUSED (`the last day partner's leave may begin at the employee's option, for` (Child OF TRUE, Date 1 8 2025, NOTHING, Date 1 8 2025, Date 4 7 2025, TRUE) `, discharged` NOTHING)
+#ASSERT `the first day partner's leave may begin at the employee's option, for` `the adopted child` `, discharged` NOTHING EQUALS Date 8 2 2025
+#ASSERT `the last day partner's leave may begin at the employee's option, for` `the adopted child` `, discharged` NOTHING EQUALS Date 22 3 2025
+
+-- s 26
+#ASSERT `the individual extended leave, in weeks, for` `the 12-month employment test` EQUALS 52
+#ASSERT `the individual extended leave, in weeks, for` `the 6-month employment test` EQUALS 26
+#ASSERT `the extended leave pool, in weeks, own test` `the 6-month employment test` `, partner's test` `the 6-month employment test` EQUALS 26
+#ASSERT `the extended leave pool, in weeks, own test` `the 12-month employment test` `, partner's test` `the 12-month employment test` EQUALS 52
+#ASSERT `the extended leave pool, in weeks, own test` `the 6-month employment test` `, partner's test` `the 12-month employment test` EQUALS 52
+#ASSERT `the extended leave pool, in weeks, own test` `the 12-month employment test` `, partner's test` `neither employment test` EQUALS 52
+#ASSERT `the extended leave pool, in weeks, own test` `the 6-month employment test` `, partner's test` `neither employment test` EQUALS 26
+-- s 26(3): 6-month, alone, 26 weeks of primary carer leave: nothing left
+#ASSERT `the extended leave remaining, in weeks, own test` `the 6-month employment test` `, partner's test` `neither employment test` `, history` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 26, 0, 0, 0) EQUALS 0
+-- 12-month, alone, 26 weeks: 26 left; 20 weeks: 32 left
+#ASSERT `the extended leave remaining, in weeks, own test` `the 12-month employment test` `, partner's test` `neither employment test` `, history` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 26, 0, 0, 0) EQUALS 26
+#ASSERT `the extended leave remaining, in weeks, own test` `the 12-month employment test` `, partner's test` `neither employment test` `, history` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 20, 0, 0, 0) EQUALS 32
+-- s 9(2) excess over 26 does not count: 30 weeks taken, 26 left
+#ASSERT `the extended leave remaining, in weeks, own test` `the 12-month employment test` `, partner's test` `neither employment test` `, history` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 30, 0, 0, 0) EQUALS 26
+-- the partner (12-month) of a mother (12-month) who took 26 weeks: 26
+#ASSERT `the extended leave remaining, in weeks, own test` `the 12-month employment test` `, partner's test` `the 12-month employment test` `, history` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 0, 26, 0, 0) EQUALS 26
+-- s 26(2)(c): a 6-month person with a 12-month partner: at most 26
+#ASSERT `the extended leave remaining, in weeks, own test` `the 6-month employment test` `, partner's test` `the 12-month employment test` `, history` `no history` EQUALS 26
+#ASSERT `the extended leave remaining, in weeks, own test` `the 6-month employment test` `, partner's test` `the 12-month employment test` `, history` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 0, 26, 0, 0) EQUALS 26
+-- s 28(2)(b): both 12-month, no primary carer leave, partner took 30: 22 left
+#ASSERT `the extended leave remaining, in weeks, own test` `the 12-month employment test` `, partner's test` `the 12-month employment test` `, history` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 0, 0, 0, 30) EQUALS 22
+#ASSERT `the extended leave remaining, in weeks, own test` `neither employment test` `, partner's test` `the 12-month employment test` `, history` `no history` EQUALS 0
+
+-- s 27(3)
+#ASSERT `the last day of extended leave for` `the August child` `, own test` `the 12-month employment test` `, partner's test` `neither employment test` EQUALS Date 1 8 2026
+#ASSERT `the last day of extended leave for` `the August child` `, own test` `the 6-month employment test` `, partner's test` `the 6-month employment test` EQUALS Date 1 2 2026
+#ASSERT `the last day of extended leave for` `the August child` `, own test` `the 6-month employment test` `, partner's test` `the 12-month employment test` EQUALS Date 1 8 2026
+#ASSERT `the last day of extended leave for` `the adopted child` `, own test` `the 6-month employment test` `, partner's test` `neither employment test` EQUALS Date 1 9 2025
+
+-- Part 3A
+#ASSERT `may request negotiated carer leave, entitled to primary carer leave:` FALSE `, to payments if on leave:` TRUE EQUALS TRUE
+#ASSERT `may request negotiated carer leave, entitled to primary carer leave:` TRUE `, to payments if on leave:` TRUE EQUALS FALSE
+#ASSERT `may request negotiated carer leave, entitled to primary carer leave:` FALSE `, to payments if on leave:` FALSE EQUALS FALSE
+#ASSERT `the last day to request or give notice, for` `the August child` EQUALS Date 1 5 2025
+#ASSERT `the last day to request or give notice, for` `the adopted child` EQUALS Date 14 2 2025
+#ASSERT `the last day for the employer's decision, request received` (Date 15 1 2025) EQUALS Date 15 2 2025
+#ASSERT `the refusal rests on s 30E(2) grounds only, grounds relied on` 2 `, of which in s 30E(2)` 2 EQUALS TRUE
+#ASSERT `the refusal rests on s 30E(2) grounds only, grounds relied on` 2 `, of which in s 30E(2)` 1 EQUALS FALSE
+#ASSERT `the refusal rests on s 30E(2) grounds only, grounds relied on` 0 `, of which in s 30E(2)` 0 EQUALS FALSE
+#ASSERT `the last day to apply to the Authority under s 30I, request received` (Date 1 3 2025) `, refusal notified` (JUST (Date 20 3 2025)) EQUALS Date 20 3 2026
+#ASSERT `the last day to apply to the Authority under s 30I, request received` (Date 1 3 2025) `, refusal notified` (JUST (Date 15 4 2025)) EQUALS Date 1 4 2026
+#ASSERT `the last day to apply to the Authority under s 30I, request received` (Date 1 3 2025) `, refusal notified` NOTHING EQUALS Date 1 4 2026
+#ASSERT `the maximum penalty under s 30J` EQUALS 2000
+
+§§ `Goal 3 — notices, the position, and protection`
+
+-- s 35
+#ASSERT `extended leave may start on` (Date 1 6 2025) `, notice in time:` TRUE `, notice given` (Date 1 5 2025) `, employer agrees:` FALSE EQUALS TRUE
+#ASSERT `extended leave may start on` (Date 1 6 2025) `, notice in time:` FALSE `, notice given` (Date 1 3 2025) `, employer agrees:` FALSE EQUALS TRUE
+#ASSERT `extended leave may start on` (Date 31 5 2025) `, notice in time:` FALSE `, notice given` (Date 1 3 2025) `, employer agrees:` FALSE EQUALS FALSE
+#ASSERT `extended leave may start on` (Date 31 5 2025) `, notice in time:` FALSE `, notice given` (Date 1 3 2025) `, employer agrees:` TRUE EQUALS TRUE
+-- ss 34, 36, 38
+#ASSERT `the last day, within` 7 `days after` (Date 1 3 2025) EQUALS Date 8 3 2025
+#ASSERT `the last day, within` 21 `days after` (Date 1 3 2025) EQUALS Date 22 3 2025
+-- s 37: 21 clear days before 1 June
+#ASSERT `the last day to give 21 days' notice of a day` (Date 1 6 2025) EQUALS Date 10 5 2025
+-- s 39(1)
+#ASSERT `the last day to say whether the employee will return, leave ending` (Date 1 6 2025) EQUALS Date 11 5 2025
+
+-- ss 40, 41
+#ASSERT `the grounds the employer may prove, leave of` 4 `weeks, first period:` TRUE `, notice in time:` TRUE EQUALS `only a redundancy situation (s 40)`
+#ASSERT `the grounds the employer may prove, leave of` 5 `weeks, first period:` TRUE `, notice in time:` TRUE EQUALS `a key position that cannot be temporarily filled, or a redundancy situation (s 41)`
+#ASSERT `the grounds the employer may prove, leave of` 2 `weeks, first period:` FALSE `, notice in time:` TRUE EQUALS `a key position that cannot be temporarily filled, or a redundancy situation (s 41)`
+#ASSERT `the grounds the employer may prove, leave of` 2 `weeks, first period:` TRUE `, notice in time:` FALSE EQUALS `a key position that cannot be temporarily filled, or a redundancy situation (s 41)`
+
+-- s 42
+#ASSERT `annual holiday pay is at average weekly earnings only, entitlement arising` (Date 1 9 2025) `, leave began` (Date 1 8 2025) `, returned` NOTHING EQUALS TRUE
+#ASSERT `annual holiday pay is at average weekly earnings only, entitlement arising` (Date 1 9 2026) `, leave began` (Date 1 8 2025) `, returned` (JUST (Date 1 3 2026)) EQUALS TRUE
+#ASSERT `annual holiday pay is at average weekly earnings only, entitlement arising` (Date 1 4 2027) `, leave began` (Date 1 8 2025) `, returned` (JUST (Date 1 3 2026)) EQUALS FALSE
+#ASSERT `annual holiday pay is at average weekly earnings only, entitlement arising` (Date 1 7 2025) `, leave began` (Date 1 8 2025) `, returned` NOTHING EQUALS FALSE
+
+-- s 45
+#ASSERT `may end the leave early, miscarriage:` TRUE `, stillborn or died:` FALSE `, not or no longer the primary carer:` FALSE `, employer consents:` FALSE EQUALS TRUE
+#ASSERT `may end the leave early, miscarriage:` FALSE `, stillborn or died:` FALSE `, not or no longer the primary carer:` FALSE `, employer consents:` TRUE EQUALS TRUE
+#ASSERT `may end the leave early, miscarriage:` FALSE `, stillborn or died:` FALSE `, not or no longer the primary carer:` FALSE `, employer consents:` FALSE EQUALS FALSE
+#ASSERT `the longest the leave may be extended to, in weeks, primary carer leave:` TRUE `, test met` `the 6-month employment test` EQUALS 26
+#ASSERT `the longest the leave may be extended to, in weeks, primary carer leave:` FALSE `, test met` `the 12-month employment test` EQUALS 2
+#ASSERT `the longest the leave may be extended to, in weeks, primary carer leave:` FALSE `, test met` `the 6-month employment test` EQUALS 1
+
+-- ss 46, 47
+#ASSERT `the employment is deemed ended when the leave began, kept open:` TRUE `, no return without good cause:` TRUE `, said would not return:` FALSE `, refused a similar position without excuse:` FALSE `, agreed otherwise:` FALSE EQUALS TRUE
+#ASSERT `the employment is deemed ended when the leave began, kept open:` TRUE `, no return without good cause:` FALSE `, said would not return:` TRUE `, refused a similar position without excuse:` FALSE `, agreed otherwise:` TRUE EQUALS FALSE
+#ASSERT `the employment is deemed ended when the leave began, kept open:` FALSE `, no return without good cause:` FALSE `, said would not return:` FALSE `, refused a similar position without excuse:` TRUE `, agreed otherwise:` FALSE EQUALS TRUE
+#ASSERT `the employment is deemed ended when the leave began, kept open:` FALSE `, no return without good cause:` TRUE `, said would not return:` FALSE `, refused a similar position without excuse:` FALSE `, agreed otherwise:` FALSE EQUALS FALSE
+
+-- s 49: leave 1 August 2025 to 31 January 2026; 26 weeks after: to 1 August 2026
+#ASSERT `the termination contravenes s 49(1), reason` `(a)(i) her pregnancy` `, on` (Date 1 5 2025) `, leave` (Date 1 8 2025) `to` (Date 31 1 2026) `, consent:` FALSE `, absent without entitlement:` FALSE `, defence proved:` FALSE EQUALS TRUE
+#ASSERT `the termination contravenes s 49(1), reason` `(a)(ii) her state of health, materially affected by causes not related to her pregnancy` `, on` (Date 1 5 2025) `, leave` (Date 1 8 2025) `to` (Date 31 1 2026) `, consent:` FALSE `, absent without entitlement:` FALSE `, defence proved:` FALSE EQUALS FALSE
+#ASSERT `the termination contravenes s 49(1), reason` `(a)(ii) her state of health, materially affected by causes not related to her pregnancy` `, on` (Date 1 10 2025) `, leave` (Date 1 8 2025) `to` (Date 31 1 2026) `, consent:` FALSE `, absent without entitlement:` FALSE `, defence proved:` FALSE EQUALS TRUE
+#ASSERT `the termination contravenes s 49(1), reason` `(a)(ii) her state of health, materially affected by causes not related to her pregnancy` `, on` (Date 1 10 2025) `, leave` (Date 1 8 2025) `to` (Date 31 1 2026) `, consent:` FALSE `, absent without entitlement:` FALSE `, defence proved:` TRUE EQUALS FALSE
+#ASSERT `the termination contravenes s 49(1), reason` `(a)(ii) her state of health, materially affected by causes not related to her pregnancy` `, on` (Date 1 8 2026) `, leave` (Date 1 8 2025) `to` (Date 31 1 2026) `, consent:` FALSE `, absent without entitlement:` FALSE `, defence proved:` FALSE EQUALS TRUE
+#ASSERT `the termination contravenes s 49(1), reason` `(a)(ii) her state of health, materially affected by causes not related to her pregnancy` `, on` (Date 2 8 2026) `, leave` (Date 1 8 2025) `to` (Date 31 1 2026) `, consent:` FALSE `, absent without entitlement:` FALSE `, defence proved:` FALSE EQUALS FALSE
+-- s 54 (changed after the independent pass, S148b/c): a substantial unrelated reason does not contravene s 49
+#ASSERT `the termination contravenes s 49(1), reason` `a substantial reason not related to the pregnancy, the child, or rights under the Act (s 54)` `, on` (Date 1 10 2025) `, leave` (Date 1 8 2025) `to` (Date 31 1 2026) `, consent:` FALSE `, absent without entitlement:` FALSE `, defence proved:` FALSE EQUALS FALSE
+#ASSERT `the termination contravenes s 49(1), reason` `(b)(i) the employee wishing to take parental leave` `, on` (Date 1 5 2025) `, leave` (Date 1 8 2025) `to` (Date 31 1 2026) `, consent:` TRUE `, absent without entitlement:` FALSE `, defence proved:` FALSE EQUALS FALSE
+#ASSERT `the termination contravenes s 49(1), reason` `(b)(ii) the employee or spouse or partner becoming the primary carer` `, on` (Date 1 5 2025) `, leave` (Date 1 8 2025) `to` (Date 31 1 2026) `, consent:` FALSE `, absent without entitlement:` TRUE `, defence proved:` FALSE EQUALS FALSE
+
+-- s 55
+#ASSERT `the last day to apply for an interim order, terminated` (Date 15 1 2025) EQUALS Date 15 3 2025
+-- s 56: arose 1 March 2025; due 1 August 2025; leave ended 31 January 2026:
+-- 30 August 2025, 30 January 2026, 28 March 2026 -> 28 March 2026
+#ASSERT `the last day to make a parental leave complaint, arising` (Date 1 3 2025) `, child` `the August child` `, leave ended` (JUST (Date 31 1 2026)) EQUALS Date 28 3 2026
+-- no leave: 30 August 2025 or 30 January 2026 -> 30 January 2026
+#ASSERT `the last day to make a parental leave complaint, arising` (Date 1 3 2025) `, child` `the August child` `, leave ended` NOTHING EQUALS Date 30 1 2026
+-- arose late: 1 June 2026 + 26 weeks = 30 November 2026
+#ASSERT `the last day to make a parental leave complaint, arising` (Date 1 6 2026) `, child` `the August child` `, leave ended` (JUST (Date 31 1 2026)) EQUALS Date 30 11 2026
+-- s 70C
+#ASSERT `the last day to object, served` (Date 1 3 2025) EQUALS Date 29 3 2025
+
+§§ `Goal 4 — parental leave payments`
+
+-- s 71CAA: 26 weeks of 1000 and 26 of 500: 1000
+#ASSERT `the employee's average weekly income from work` (`Payment facts` OF TRUE, FALSE, 0, 0, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (append (`repeat` 26 500) (`repeat` 26 1000))) EQUALS 1000
+#ASSERT `the employee's average weekly income from work` (`employee pay` 900) EQUALS 1000
+-- 13 weeks of 1300 and 39 of 0: 13 x 1300 / 26 = 650
+#ASSERT `the employee's average weekly income from work` (`Payment facts` OF TRUE, FALSE, 0, 0, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (append (`repeat` 13 1300) (`repeat` 39 0))) EQUALS 650
+-- s 71CBA: 52000 over 12 months, 2 complete weeks not working: 1040
+#ASSERT `the self-employed person's average weekly income from work` (`Payment facts` OF FALSE, TRUE, 0, 52000, 26000, FALSE, 2, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 0), (`repeat` 52 40), (`repeat` 52 0)) EQUALS 1040
+#ASSERT `the self-employed person's average weekly income from work` (`Payment facts` OF FALSE, TRUE, 0, 52000, 26000, TRUE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 0), (`repeat` 52 40), (`repeat` 52 0)) EQUALS 1000
+
+-- s 71M
+#ASSERT `the maximum weekly rate stated in s 71M` EQUALS 811.05
+#ASSERT `the weekly rate of parental leave payment` (`employee pay` 900) EQUALS 811.05
+#ASSERT `the weekly rate of parental leave payment` (`Payment facts` OF TRUE, FALSE, 500, 0, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (`repeat` 52 600)) EQUALS 600
+#ASSERT `the weekly rate of parental leave payment` (`Payment facts` OF TRUE, FALSE, 700, 0, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (`repeat` 52 600)) EQUALS 700
+-- self-employed: AWI 200 below 10 x 23.50 = 235: 235
+#ASSERT `the weekly rate of parental leave payment` (`Payment facts` OF FALSE, TRUE, 0, 10400, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 0), (`repeat` 52 40), (`repeat` 52 0)) EQUALS 235
+-- both: 500 + 235 = 735 (F5); 700 + 300 capped at 811.05
+#ASSERT `the weekly rate of parental leave payment` (`Payment facts` OF TRUE, TRUE, 500, 10400, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 20), (`repeat` 52 20), (`repeat` 52 400)) EQUALS 735
+#ASSERT `the weekly rate of parental leave payment` (`Payment facts` OF TRUE, TRUE, 700, 15600, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 20), (`repeat` 52 20), (`repeat` 52 400)) EQUALS 811.05
+-- a higher maximum in force
+#ASSERT `the weekly rate of parental leave payment` (`Payment facts` OF TRUE, FALSE, 900, 0, 0, FALSE, 0, 850, 23.50, NOTHING, FALSE, FALSE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (`repeat` 52 1000)) EQUALS 850
+
+-- s 71D
+#ASSERT `entitled to parental leave payments` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`) EQUALS TRUE
+#ASSERT `entitled to parental leave payments` (`case` `the August child` `the mother's partner` TRUE (Date 1 1 2024) `neither employment test` `no history`) EQUALS FALSE
+#ASSERT `entitled to parental leave payments` (`Parental leave case` OF `the August child`, `the mother`, FALSE, NOTHING, `neither employment test`, `no history`, (`Payment facts` OF TRUE, FALSE, 900, 0, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, TRUE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (`repeat` 52 1000)), NOTHING) EQUALS FALSE
+#ASSERT `entitled to parental leave payments` (`Parental leave case` OF `the August child`, `the mother`, FALSE, NOTHING, `neither employment test`, `no history`, (`Payment facts` OF TRUE, FALSE, 900, 0, 0, FALSE, 0, 811.05, 23.50, NOTHING, TRUE, FALSE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (`repeat` 52 1000)), NOTHING) EQUALS FALSE
+#ASSERT `entitled to parental leave payments` (`Parental leave case` OF `the August child`, `the mother`, FALSE, NOTHING, `neither employment test`, `no history`, (`Payment facts` OF TRUE, FALSE, 900, 0, 0, FALSE, 0, 811.05, 23.50, NOTHING, FALSE, FALSE, FALSE, (`repeat` 52 40), (`repeat` 52 0), (`repeat` 52 1000)), NOTHING) EQUALS FALSE
+-- s 71F: previous period ended 1 March 2025; 6 months is 1 September, after the due date
+#ASSERT `entitled to parental leave payments` (`Parental leave case` OF `the August child`, `the mother`, FALSE, NOTHING, `neither employment test`, `no history`, (`Payment facts` OF TRUE, FALSE, 900, 0, 0, FALSE, 0, 811.05, 23.50, JUST (Date 1 3 2025), FALSE, FALSE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (`repeat` 52 1000)), NOTHING) EQUALS FALSE
+#ASSERT `entitled to parental leave payments` (`Parental leave case` OF `the August child`, `the mother`, FALSE, NOTHING, `neither employment test`, `no history`, (`Payment facts` OF TRUE, FALSE, 900, 0, 0, FALSE, 0, 811.05, 23.50, JUST (Date 1 1 2025), FALSE, FALSE, TRUE, (`repeat` 52 40), (`repeat` 52 0), (`repeat` 52 1000)), NOTHING) EQUALS TRUE
+#ASSERT REFUSED (`entitled to parental leave payments` (`case` (`a child due` (Date 1 3 2019) `born` (Date 1 3 2019) `36th week ending` (Date 1 2 2019)) `the mother` FALSE (Date 1 1 2017) `neither employment test` `no history`))
+-- s 71E
+#ASSERT `the entitlement may go to the spouse or partner, day-to-day care:` TRUE `, threshold test:` TRUE `, stops working:` TRUE EQUALS TRUE
+#ASSERT `the entitlement may go to the spouse or partner, day-to-day care:` TRUE `, threshold test:` FALSE `, stops working:` TRUE EQUALS FALSE
+
+-- s 71K
+#ASSERT `the day parental leave payments begin, child` `the August child` `, leave starts` (Date 18 7 2025) `, preterm:` FALSE `, paid leave first ending` NOTHING EQUALS Date 18 7 2025
+#ASSERT `the day parental leave payments begin, child` `the August child` `, leave starts` (Date 4 8 2025) `, preterm:` FALSE `, paid leave first ending` NOTHING EQUALS Date 1 8 2025
+#ASSERT `the day parental leave payments begin, child` `the August child` `, leave starts` (Date 4 8 2025) `, preterm:` FALSE `, paid leave first ending` (JUST (Date 15 8 2025)) EQUALS Date 16 8 2025
+#ASSERT `the day parental leave payments begin, child` `the adopted child` `, leave starts` (Date 4 3 2025) `, preterm:` FALSE `, paid leave first ending` NOTHING EQUALS Date 1 3 2025
+-- s 71K(2)(a): preterm, born 1 June, due 1 August, leave from 3 June: 3 June
+#ASSERT `the day parental leave payments begin, child` (`a child due` (Date 1 8 2025) `born` (Date 1 6 2025) `36th week ending` (Date 4 7 2025)) `, leave starts` (Date 3 6 2025) `, preterm:` TRUE `, paid leave first ending` NOTHING EQUALS Date 3 6 2025
+
+-- s 71DA: born 1 June 2025, 36th week ends 4 July: 33 days, 33/7 weeks (F6, changed after the independent pass, S204)
+#ASSERT `the weeks of preterm baby payment for` (`a child due` (Date 1 8 2025) `born` (Date 1 6 2025) `36th week ending` (Date 4 7 2025)) `, entitled to parental leave payments:` TRUE EQUALS 33 DIVIDED BY 7
+#ASSERT `the weeks of preterm baby payment for` (`a child due` (Date 1 8 2025) `born` (Date 6 6 2025) `36th week ending` (Date 4 7 2025)) `, entitled to parental leave payments:` TRUE EQUALS 4
+#ASSERT `the weeks of preterm baby payment for` (`a child due` (Date 1 8 2025) `born` (Date 1 2 2025) `36th week ending` (Date 4 7 2025)) `, entitled to parental leave payments:` TRUE EQUALS 13
+#ASSERT `the weeks of preterm baby payment for` `the August child` `, entitled to parental leave payments:` TRUE EQUALS 0
+#ASSERT `the weeks of preterm baby payment for` (`a child due` (Date 1 8 2025) `born` (Date 1 6 2025) `36th week ending` (Date 4 7 2025)) `, entitled to parental leave payments:` FALSE EQUALS 0
+#ASSERT `the weeks of preterm baby payment for` (Child OF TRUE, Date 1 8 2025, JUST (Date 1 6 2025), Date 1 6 2025, Date 4 7 2025, FALSE) `, entitled to parental leave payments:` TRUE EQUALS 0
+#ASSERT `the weeks of preterm baby payment for` (`a child due` (Date 1 8 2025) `born` (Date 3 7 2025) `36th week ending` (Date 4 7 2025)) `, entitled to parental leave payments:` TRUE EQUALS 1 DIVIDED BY 7
+
+-- s 71L: began 1 July 2025: 26 weeks to 30 December 2025
+#ASSERT `the day parental leave payments end, began` (Date 1 7 2025) `, preterm weeks` 0 `, returned to work` NOTHING `, ceased to be the primary carer` NOTHING `, the biological mother:` TRUE EQUALS Date 30 12 2025
+#ASSERT `the day parental leave payments end, began` (Date 1 7 2025) `, preterm weeks` 5 `, returned to work` NOTHING `, ceased to be the primary carer` NOTHING `, the biological mother:` TRUE EQUALS Date 3 2 2026
+#ASSERT `the day parental leave payments end, began` (Date 1 7 2025) `, preterm weeks` 0 `, returned to work` (JUST (Date 1 10 2025)) `, ceased to be the primary carer` NOTHING `, the biological mother:` TRUE EQUALS Date 1 10 2025
+#ASSERT `the day parental leave payments end, began` (Date 1 7 2025) `, preterm weeks` 0 `, returned to work` NOTHING `, ceased to be the primary carer` (JUST (Date 1 11 2025)) `, the biological mother:` FALSE EQUALS Date 1 11 2025
+#ASSERT `the day parental leave payments end, began` (Date 1 7 2025) `, preterm weeks` 0 `, returned to work` NOTHING `, ceased to be the primary carer` (JUST (Date 1 11 2025)) `, the biological mother:` TRUE EQUALS Date 30 12 2025
+#ASSERT `the weeks of parental leave payment` EQUALS 26
+
+-- ss 71CE, 71DB
+#ASSERT `treated as having returned to work, hours` 64 `, within 28 days of birth:` FALSE `, preterm child:` FALSE `, preterm weeks` 0 EQUALS FALSE
+#ASSERT `treated as having returned to work, hours` 65 `, within 28 days of birth:` FALSE `, preterm child:` FALSE `, preterm weeks` 0 EQUALS TRUE
+#ASSERT `treated as having returned to work, hours` 4 `, within 28 days of birth:` TRUE `, preterm child:` FALSE `, preterm weeks` 0 EQUALS TRUE
+#ASSERT `treated as having returned to work, hours` 4 `, within 28 days of birth:` TRUE `, preterm child:` TRUE `, preterm weeks` 2 EQUALS FALSE
+#ASSERT `treated as having returned to work, hours` 70 `, within 28 days of birth:` FALSE `, preterm child:` TRUE `, preterm weeks` 2 EQUALS FALSE
+#ASSERT `treated as having returned to work, hours` 71 `, within 28 days of birth:` FALSE `, preterm child:` TRUE `, preterm weeks` 2 EQUALS TRUE
+
+-- s 71I
+#ASSERT `the last day to apply for payments, child` `the August child` `, returned to work` NOTHING EQUALS Date 31 7 2026
+#ASSERT `the last day to apply for payments, child` `the August child` `, returned to work` (JUST (Date 1 3 2026)) EQUALS Date 28 2 2026
+#ASSERT `the last day to apply for payments, child` `the adopted child` `, returned to work` NOTHING EQUALS Date 28 2 2026
+#ASSERT REFUSED (`the last day to apply for payments, child` (Child OF TRUE, Date 1 8 2025, NOTHING, Date 1 8 2025, Date 4 7 2025, TRUE) `, returned to work` NOTHING)
+
+-- ss 71X-71ZB, 72C
+#ASSERT `the overpayment the department may recover, paid` 5000 `, entitled to` 3000 `, error not contributed to:` FALSE `, good faith:` TRUE `, position changed:` TRUE EQUALS 2000
+#ASSERT `the overpayment the department may recover, paid` 5000 `, entitled to` 3000 `, error not contributed to:` TRUE `, good faith:` TRUE `, position changed:` TRUE EQUALS 0
+#ASSERT `the overpayment the department may recover, paid` 5000 `, entitled to` 3000 `, error not contributed to:` TRUE `, good faith:` TRUE `, position changed:` FALSE EQUALS 2000
+#ASSERT `the overpayment the department may recover, paid` 3000 `, entitled to` 3000 `, error not contributed to:` FALSE `, good faith:` FALSE `, position changed:` FALSE EQUALS 0
+#ASSERT `the maximum fine under s 71Z` EQUALS 15000
+#ASSERT `the last day to file a charge under s 71Z, known` (Date 1 3 2025) `, should have known` (Date 1 2 2025) EQUALS Date 1 8 2025
+#ASSERT `the last day to apply for a review, decision notified` (Date 1 3 2025) EQUALS Date 1 3 2026
+#ASSERT `the date of succession, death or sole guardianship` (Date 1 3 2025) `, bereavement leave expires` (JUST (Date 4 3 2025)) EQUALS Date 4 3 2025
+#ASSERT `the date of succession, death or sole guardianship` (Date 1 3 2025) `, bereavement leave expires` NOTHING EQUALS Date 1 3 2025
+
+§§ `The top-level goal`
+
+-- the mother: 12-month test (employed since 1 January 2024), payments at the maximum
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`))'s `the employment test met` EQUALS `the 12-month employment test`
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`))'s `primary carer leave, in weeks` EQUALS 26
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`))'s `extended leave still available, in weeks` EQUALS 52
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`))'s `weekly rate of parental leave payment` EQUALS 811.05
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`))'s `weeks of parental leave payment` EQUALS 26
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`))'s `last day to apply for payments` EQUALS JUST (Date 31 7 2026)
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`))'s `may take partner's leave` EQUALS FALSE
+-- the mother, 6-month test (employed since 1 December 2024)
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 12 2024) `neither employment test` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 26, 0, 0, 0)))'s `extended leave still available, in weeks` EQUALS 0
+-- the mother, 3 months' employment: no primary carer leave; may request
+-- negotiated carer leave; payments still due
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 5 2025) `neither employment test` `no history`))'s `may take primary carer leave` EQUALS FALSE
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 5 2025) `neither employment test` `no history`))'s `may request negotiated carer leave` EQUALS TRUE
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother` FALSE (Date 1 5 2025) `neither employment test` `no history`))'s `entitled to parental leave payments` EQUALS TRUE
+-- the partner, 12-month test
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother's partner` TRUE (Date 1 1 2024) `the 12-month employment test` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 0, 26, 0, 0)))'s `partner's leave, in weeks` EQUALS 2
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother's partner` TRUE (Date 1 1 2024) `the 12-month employment test` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 0, 26, 0, 0)))'s `extended leave still available, in weeks` EQUALS 26
+#ASSERT (`the parental leave position for` (`case` `the August child` `the mother's partner` TRUE (Date 1 1 2024) `the 12-month employment test` (`Leave history` OF FALSE, FALSE, NOTHING, FALSE, 0, 26, 0, 0)))'s `entitled to parental leave payments` EQUALS FALSE
+-- preterm: born 1 June 2025
+#ASSERT (`the parental leave position for` (`case` (`a child due` (Date 1 8 2025) `born` (Date 1 6 2025) `36th week ending` (Date 4 7 2025)) `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`))'s `weeks of preterm baby payment` EQUALS 33 DIVIDED BY 7
+-- not yet born: no last day yet
+#ASSERT (`the parental leave position for` (`case` (Child OF TRUE, Date 1 8 2025, NOTHING, Date 1 8 2025, Date 4 7 2025, TRUE) `the mother` FALSE (Date 1 1 2024) `neither employment test` `no history`))'s `last day to apply for payments` EQUALS NOTHING
+#ASSERT REFUSED (`the parental leave position for` (`case` (`a child due` (Date 1 3 2019) `born` (Date 1 3 2019) `36th week ending` (Date 1 2 2019)) `the mother` FALSE (Date 1 1 2017) `neither employment test` `no history`))

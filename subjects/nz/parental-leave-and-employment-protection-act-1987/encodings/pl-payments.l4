@@ -1,0 +1,345 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `pl-types`
+IMPORT `pl-eligibility`
+
+-- Parental Leave and Employment Protection Act 1987 — GOAL 4: PARENTAL LEAVE
+-- PAYMENTS.
+--
+--   "Is the person entitled to parental leave payments; at what weekly rate;
+--    from when, and until when; to how many weeks of preterm baby payments;
+--    has keeping-in-touch work ended them; by when must they apply; and what
+--    follows an overpayment or a false statement?"
+--
+-- Source: ../registers/source-bundle/act_public_1987_129.txt — Part 7A,
+-- ss 71A-71ZB, and ss 72B, 72C.
+
+§ `Goal 4 — parental leave payments`
+
+§§ `Entitlement (ss 71CA, 71CB, 71D, 71E, 71F, 71G)`
+
+-- s 71CA "eligible employee means a person who— (a) is the primary carer in
+-- respect of a child; and (b) meets the parental leave payment threshold
+-- test." s 71CB the same for a self-employed person.
+@ref ss 71CA, 71CB
+GIVEN c IS A `Parental leave case`
+GIVETH A BOOLEAN
+DECIDE `is an eligible employee or self-employed person` c IF
+        `is the primary carer` (c's `the carer facts`)
+    AND `meets the parental leave payment threshold test` (c's `the payment facts`)
+
+-- s 71F "A person is not entitled to a parental leave payment in respect of a
+-- child if— (a) fewer than 6 months have elapsed after the end of the period
+-- for which the person received a parental leave payment for another child".
+-- FORK F4: measured to the day the payments start.
+@ref s 71F(a)
+GIVEN previous IS A MAYBE DATE, from IS A DATE
+GIVETH A BOOLEAN
+DECIDE `s 71F bars payment, previous payment period ended` previous `, measured to` from IF
+    CONSIDER previous
+    WHEN NOTHING THEN FALSE
+    WHEN JUST ended THEN from LESS THAN `add months` ended 6
+
+-- s 71D(1) "A person is entitled to a parental leave payment ... if— (a) the
+-- person is— (i) an eligible employee or an eligible self-employed person;
+-- or (ii) a person to whom all or part of an entitlement ... is transferred
+-- under section 71E; or (iii) a person who succeeds ... under section 72B;
+-- and (b) during the period ... the person— (i) is not employed or
+-- self-employed; or (ii) takes parental leave". (2) not if the person, or
+-- (unless by transfer or succession) their spouse or partner, "has
+-- previously received parental leave payments in respect of that child";
+-- (3) "Subsection (2) does not apply to a person who is a primary carer under
+-- section 7(1)(b)(iii)." (2)(b) excepts an entitlement that "arises from a
+-- transfer under section 71E or by succession under section 72B": the input
+-- does not separate the person's own receipt from the spouse's, so a
+-- (b)(i) or (b)(ii) carer is not barred by it. s 71G: no payment if a parental tax credit has been
+-- received for the child.
+@ref ss 71D, 71F, 71G
+@export Whether a person is entitled to parental leave payments under ss 71D, 71F and 71G of the Parental Leave and Employment Protection Act 1987 (NZ): the primary carer who meets the payment threshold test (or a spouse or partner by transfer or succession), who stops working or takes leave for the payment period, who (with their spouse or partner) has not already received payments for the child, has no parental tax credit for it, and whose last payment period for another child ended at least 6 months before. Children due or arriving before 1 July 2020 are refused. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN c IS A `Parental leave case`  @desc The child, the carer facts, the payment facts (hours, earnings, previous payments, tax credit, whether the person stops working), and the leave history
+GIVETH A BOOLEAN
+DECIDE `entitled to parental leave payments` c IF
+    IF   NOT `this version applies to` (c's `the child concerned`)
+    THEN `a child due, born or taken into care before 1 July 2020 falls under the Act as it stood before the 2017 amendments, which this encoding does not carry`
+    ELSE     `is an eligible employee or self-employed person` c
+         AND p's `stops working or takes leave for the payment period`
+         AND (    NOT p's `the person or spouse has received payments for this child`
+              OR  kind EQUALS `(b)(i) the mother's spouse or partner who has succeeded under s 72B`
+              OR  kind EQUALS `(b)(ii) the mother's spouse or partner to whom she transferred under s 71E`
+              OR  kind EQUALS `(b)(iii) the mother's spouse or partner who took permanent primary responsibility`)
+         AND NOT p's `parental tax credit has been received for the child`
+         AND NOT `s 71F bars payment, previous payment period ended` (p's `previous payment period for another child ended on`) `, measured to` (`the day the leave or payments start, for` (c's `the child concerned`))
+    WHERE
+        p    MEANS c's `the payment facts`
+        kind MEANS `the primary carer kind of` (c's `the carer facts`)
+
+`a child due, born or taken into care before 1 July 2020 falls under the Act as it stood before the 2017 amendments, which this encoding does not carry` MEANS
+    REFUSE "a child due, born or taken into care before 1 July 2020 falls under the Act as it stood before the 2017 amendments, which this encoding does not carry"
+
+-- s 71E(2) the spouse or partner to whom an entitlement may be transferred
+-- "(a) has or intends to have primary responsibility for the day-to-day care
+-- of the child; and (b) meets the parental leave payment threshold test; and
+-- (c) stops working ... for the period in relation to which the
+-- entitlements are transferred." s 72B(3A) succession is on similar terms,
+-- with reasonable notice to the department.
+@ref ss 71E, 72B(3A)
+GIVEN care IS A BOOLEAN, threshold IS A BOOLEAN, stops IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the entitlement may go to the spouse or partner, day-to-day care:` care `, threshold test:` threshold `, stops working:` stops IF
+    care AND threshold AND stops
+
+§§ `Average weekly income (ss 71CAA, 71CBA)`
+
+-- s 71CAA(1) "(a) calculating the sum of the employee's gross weekly
+-- earnings, from all employments, for the 26 weeks out of the relevant
+-- 52-week period in respect of which the highest amounts were earned by the
+-- employee (whether or not those weeks were consecutive); and (b) dividing
+-- the amount calculated in accordance with paragraph (a) by 26."
+@ref s 71CAA
+GIVEN p IS A `Payment facts`
+GIVETH A NUMBER
+`the employee's average weekly income from work` p MEANS
+    `the total of the 26 highest of` (p's `gross earnings in each of the 52 weeks`) DIVIDED BY 26
+
+-- s 71CBA "(2) ... one fifty-second of that person's net income from
+-- self-employment over the 12 months immediately preceding ... (3) ... one
+-- twenty-sixth of that person's net income ... over the 6 months ... (4) The
+-- divisor of 52 ... and the divisor of 26 ... must be reduced by the number
+-- of complete weeks during which the eligible self-employed person was not
+-- working in a circumstance described in section 71CB(2)."
+@ref s 71CBA
+GIVEN p IS A `Payment facts`
+GIVETH A NUMBER
+`the self-employed person's average weekly income from work` p MEANS
+    IF   p's `elects the 6-month period under s 71CBA`
+    THEN p's `net self-employed income over the 6 months` DIVIDED BY (26 MINUS p's `complete weeks not working under s 71CB(2)`)
+    ELSE p's `net self-employed income over the 12 months` DIVIDED BY (52 MINUS p's `complete weeks not working under s 71CB(2)`)
+
+§§ `The weekly rate (ss 71M, 71N)`
+
+-- The rate in the text (s 71M(1)(a), (1A)(a), (1B)); the rate in force
+-- after the s 71N adjustments is an input.
+@ref s 71M
+`the maximum weekly rate stated in s 71M` MEANS 811.05
+
+-- s 71N(4) "a weekly amount that is equivalent to 10 hours' work at the
+-- highest rate of the minimum wage".
+@ref s 71N(4)
+GIVEN p IS A `Payment facts`
+GIVETH A NUMBER
+`the minimum weekly rate for a self-employed person` p MEANS
+    10 TIMES p's `the highest minimum wage rate per hour`
+
+-- s 71M "(1) The rate ... payable to any eligible employee is the lesser of—
+-- (a) $811.05 per week (or any adjusted amount ...); and (b) the greater
+-- of— (i) 100% of the employee's ordinary weekly pay before the commencement
+-- of the parental leave payments; and (ii) 100% of the employee's average
+-- weekly income from work. (1A) ... any eligible self-employed person is the
+-- lesser of— (a) $811.05 ...; and (b) the greater of— (i) 100% of the
+-- self-employed person's average weekly income from work; and (ii) the
+-- minimum amount ... set under section 71N(4). (1B) The rate ... payable to
+-- a person who is eligible ... as an employee and also as a self-employed
+-- person may not exceed $811.05 per week". FORK F5: such a person receives
+-- the two rates added together, up to the maximum.
+@ref ss 71M, 71N
+@export The weekly rate of parental leave payment under s 71M of the Parental Leave and Employment Protection Act 1987 (NZ): for an employee, the greater of ordinary weekly pay and average weekly income (the 26 best of the last 52 weeks' earnings, divided by 26); for a self-employed person, the greater of average weekly income from self-employment and 10 hours at the minimum wage; for a person who is both, the two together; in each case no more than the maximum weekly rate in force. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN p IS A `Payment facts`  @desc Whether the person is paid as an employee, as a self-employed person, or both; ordinary weekly pay; the earnings in each of the 52 weeks; net self-employed income and the period elected; the maximum weekly rate in force and the minimum wage
+GIVETH A NUMBER
+`the weekly rate of parental leave payment` p MEANS
+    min (p's `the maximum weekly rate in force`) (employee PLUS selfEmployed)
+    WHERE
+        employee MEANS
+            IF   p's `an employee for the payment`
+            THEN max (p's `ordinary weekly pay before payments start`) (`the employee's average weekly income from work` p)
+            ELSE 0
+        selfEmployed MEANS
+            IF   p's `self-employed for the payment`
+            THEN max (`the self-employed person's average weekly income from work` p) (`the minimum weekly rate for a self-employed person` p)
+            ELSE 0
+
+§§ `How long (ss 71J, 71K, 71L, 71DA)`
+
+-- s 71J(1) "(a) for 1 continuous period not exceeding 26 weeks; or (b) if
+-- part of the entitlement is transferred under section 71E, for 1
+-- continuous period per person, so long as the 2 continuous periods do not
+-- together exceed 26 weeks."
+@ref s 71J
+`the weeks of parental leave payment` MEANS 26
+
+-- s 71K(1) "(a) in the case of a child born to the person or to the person's
+-- spouse or partner, on the earlier of— (i) the date the person commences
+-- parental leave; and (ii) the date of confinement; and (b) in any other
+-- case, on the date on which the person becomes the primary carer". (2)(a)
+-- for a preterm baby whose payment has not begun, "the earlier of— (i) the
+-- date on which the person commences parental leave: (ii) the original
+-- expected date of delivery". (3) a period of paid leave first: "the day
+-- after the date on which that period of paid leave ends", if the employee
+-- elects. The (b)(iii) and (c) designations in (2)(b)-(c) are inputs to
+-- `leave` here.
+@ref s 71K
+GIVEN c IS A Child, leave IS A DATE, preterm IS A BOOLEAN, `paid leave ends` IS A MAYBE DATE
+GIVETH A DATE
+`the day parental leave payments begin, child` c `, leave starts` leave `, preterm:` preterm `, paid leave first ending` `paid leave ends` MEANS
+    CONSIDER `paid leave ends`
+    WHEN JUST e THEN `the day` 1 `days after` e
+    WHEN NOTHING THEN
+        IF   c's `born to the person or their spouse or partner`
+        THEN IF   preterm
+             THEN earlier leave (c's `expected date of delivery`)
+             ELSE CONSIDER c's `date of birth`
+                  WHEN JUST b THEN earlier leave b
+                  WHEN NOTHING THEN leave
+        ELSE c's `first date the person or their spouse or partner becomes the primary carer`
+    WHERE
+        GIVEN x IS A DATE, y IS A DATE
+        GIVETH A DATE
+        earlier x y MEANS IF x AT MOST y THEN x ELSE y
+
+-- s 71DA(1) "(a) the person is entitled to a parental leave payment ...;
+-- and (b) that child is born alive before the end of the 36th week of
+-- gestation." (2) "A preterm baby payment is payable for 1 continuous period
+-- that corresponds to the number of weeks, up to a maximum of 13, between—
+-- (a) the date of birth of the child; and (b) the date on which the 36th
+-- week of gestation would have ended". FORK F6: the exact number of weeks,
+-- a part week counting as its fraction; (4)(a) ends the payment on the day
+-- the 36th week would have ended, so nothing is paid beyond it.
+@ref s 71DA(1)-(2)
+@export The weeks of preterm baby payment under s 71DA of the Parental Leave and Employment Protection Act 1987 (NZ): for a person entitled to parental leave payments for a child born alive before the end of the 36th week of gestation, the weeks (and part weeks) between the birth and the day the 36th week would have ended, up to 13. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN c IS A Child  @desc The child: whether born alive, the date of birth, and the day the 36th week of gestation would have ended
+      entitled IS A BOOLEAN  @desc Whether the person is entitled to parental leave payments for the child
+GIVETH A NUMBER
+`the weeks of preterm baby payment for` c `, entitled to parental leave payments:` entitled MEANS
+    CONSIDER c's `date of birth`
+    WHEN NOTHING THEN 0
+    WHEN JUST b THEN
+        IF   entitled AND c's `born alive` AND b LESS THAN c's `the day the 36th week of gestation would have ended`
+        THEN min 13 ((Day (c's `the day the 36th week of gestation would have ended`) MINUS Day b) DIVIDED BY 7)
+        ELSE 0
+
+-- s 71L(1) "A parental leave payment is payable ... for a period that ends
+-- on the earlier of— (a) 26 weeks after the date on which parental leave
+-- payments began ...; or (b) the date on which the person returns to work
+-- ...; or (c) the date on which the person ceases to be the primary carer".
+-- (2) "(1)(c) does not apply ... if the person ... is the biological mother".
+-- s 71DA(5)(c) "any week in relation to which a preterm baby payment is made
+-- must not be counted when determining the date on which the parental leave
+-- payment ends under section 71L(1)(a)."
+@ref ss 71L, 71DA(5)
+GIVEN began IS A DATE, preterm IS A NUMBER, returned IS A MAYBE DATE, ceased IS A MAYBE DATE, mother IS A BOOLEAN
+GIVETH A DATE
+`the day parental leave payments end, began` began `, preterm weeks` preterm `, returned to work` returned `, ceased to be the primary carer` ceased `, the biological mother:` mother MEANS
+    earliest (earliest full returned) (IF mother THEN NOTHING ELSE ceased)
+    WHERE
+        full MEANS `the day` (7 TIMES (26 PLUS preterm)) `days after` began
+        GIVEN x IS A DATE, m IS A MAYBE DATE
+        GIVETH A DATE
+        earliest x m MEANS
+            CONSIDER m
+            WHEN NOTHING THEN x
+            WHEN JUST y THEN IF y LESS THAN x THEN y ELSE x
+
+§§ `Keeping-in-touch days (ss 71CE, 71DB)`
+
+-- s 71CE "(1) An employee is not to be treated as having returned to work
+-- because he or she performs 64 hours or fewer of paid work ... on
+-- keeping-in-touch days ... (2)(b) the day is not within 28 days after the
+-- date on which the child ... was born. (3) An employee is treated as having
+-- returned to work ... if the employee— (a) performs paid work for his or
+-- her employer within 28 days after the date of birth of the child; or (b)
+-- performs more than a total of 64 hours of paid work ... (4) Subsections
+-- (2)(b) and (3)(a) do not apply ... in respect of a child born before the
+-- end of the 36th week of gestation." s 71DB(1)(a) adds "up to a total of 3
+-- hours multiplied by the number of weeks in the payment period" of preterm
+-- baby payments.
+@ref ss 71CE, 71DB
+@export Whether keeping-in-touch work ends an employee's parental leave payments under ss 71CE and 71DB of the Parental Leave and Employment Protection Act 1987 (NZ): paid work within 28 days after the birth (unless the child was preterm), or more than 64 hours of paid work in the payment period, plus 3 hours for each week of preterm baby payment, treats the employee as having returned to work. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN hours IS A NUMBER  @desc The total hours of paid work for the employer during the payment period
+      `worked within 28 days of birth` IS A BOOLEAN  @desc Whether any of it was within 28 days after the child's birth
+      `preterm child` IS A BOOLEAN  @desc Whether the child was born before the end of the 36th week of gestation
+      `preterm weeks` IS A NUMBER  @desc The weeks of preterm baby payment received
+GIVETH A BOOLEAN
+DECIDE `treated as having returned to work, hours` hours `, within 28 days of birth:` `worked within 28 days of birth` `, preterm child:` `preterm child` `, preterm weeks` `preterm weeks` IF
+        hours GREATER THAN 64 PLUS (3 TIMES `preterm weeks`)
+    OR  (`worked within 28 days of birth` AND NOT `preterm child`)
+
+§§ `Applying (s 71I)`
+
+-- s 71I(2)(a) the application must "be made ... before the earliest of the
+-- following: (i) the date on which the person returns to work: (ii) the date
+-- on which the child attains the age of 12 months (in the case of a child
+-- born to the person ...): (iii) the date that is the first anniversary of
+-- the first date on which either the person or the person's spouse or
+-- partner became the primary carer ... (in any other case)." s 71IA lets the
+-- department approve a late application (an input).
+@ref s 71I(2)(a)
+@export The last day to apply for parental leave payments under s 71I(2)(a) of the Parental Leave and Employment Protection Act 1987 (NZ): the day before the earliest of the return to work and the child's first birthday (or the first anniversary of becoming the primary carer). DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN c IS A Child  @desc The child: whether born to the person or spouse, the date of birth, and the date of becoming the primary carer
+      returned IS A MAYBE DATE  @desc The date the person returns to work, if they do
+GIVETH A DATE
+`the last day to apply for payments, child` c `, returned to work` returned MEANS
+    `the day` (0 MINUS 1) `days after` earliest
+    WHERE
+        anniversary MEANS
+            IF   c's `born to the person or their spouse or partner`
+            THEN CONSIDER c's `date of birth`
+                 WHEN JUST b THEN `add years` b 1
+                 WHEN NOTHING THEN `the child is not yet born, so the s 71I date is not yet fixed`
+            ELSE `add years` (c's `first date the person or their spouse or partner becomes the primary carer`) 1
+        earliest MEANS
+            CONSIDER returned
+            WHEN JUST r THEN IF r LESS THAN anniversary THEN r ELSE anniversary
+            WHEN NOTHING THEN anniversary
+
+`the child is not yet born, so the s 71I date is not yet fixed` MEANS
+    REFUSE "the child is not yet born, so the s 71I date is not yet fixed"
+
+§§ `Overpayments, offences, review (ss 71X-71ZB)`
+
+-- s 71X(1) an overpayment is a debt if "(a) paid ... in excess of the
+-- amount to which the person is entitled ...; or (b) paid to a person who
+-- has no entitlement". s 71Y "The department may not recover any payment
+-- ... paid as a result of an error not intentionally contributed to by the
+-- recipient if the recipient— (a) received the payment in good faith; and
+-- (b) has so altered his or her position in reliance on the validity of the
+-- payment that it would be inequitable to require repayment."
+@ref ss 71X, 71Y
+GIVEN paid IS A NUMBER, due IS A NUMBER, `error not contributed to` IS A BOOLEAN, `good faith` IS A BOOLEAN, `changed position` IS A BOOLEAN
+GIVETH A NUMBER
+`the overpayment the department may recover, paid` paid `, entitled to` due `, error not contributed to:` `error not contributed to` `, good faith:` `good faith` `, position changed:` `changed position` MEANS
+    IF   `error not contributed to` AND `good faith` AND `changed position`
+    THEN 0
+    ELSE max 0 (paid MINUS due)
+
+-- s 71Z(3) "liable on conviction to a fine not exceeding $15,000". (4) "A
+-- charging document ... may be filed at any time within 6 months after the
+-- earlier of— (a) the date when the alleged offence first became known to
+-- the department; and (b) the date when the alleged offence should
+-- reasonably have become known".
+@ref s 71Z(3)
+`the maximum fine under s 71Z` MEANS 15000
+
+@ref s 71Z(4)
+GIVEN known IS A DATE, `should have known` IS A DATE
+GIVETH A DATE
+`the last day to file a charge under s 71Z, known` known `, should have known` `should have known` MEANS
+    `add months` (IF known LESS THAN `should have known` THEN known ELSE `should have known`) 6
+
+-- s 71ZB(2) "within 12 months after the date on which the decision is
+-- notified".
+@ref s 71ZB(2)
+GIVEN notified IS A DATE
+GIVETH A DATE
+`the last day to apply for a review, decision notified` notified MEANS
+    `add years` notified 1
+
+-- s 72C(1) "The date of succession ... is the later of— (a) the date of the
+-- death of the employee or self-employed person or the date when the spouse
+-- or partner becomes sole guardian ...; and (b) the date on which the
+-- bereavement leave of the spouse or partner expires (if any)."
+@ref s 72C(1)
+GIVEN event IS A DATE, bereavement IS A MAYBE DATE
+GIVETH A DATE
+`the date of succession, death or sole guardianship` event `, bereavement leave expires` bereavement MEANS
+    CONSIDER bereavement
+    WHEN NOTHING THEN event
+    WHEN JUST b THEN IF b GREATER THAN event THEN b ELSE event
