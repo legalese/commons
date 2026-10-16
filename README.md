@@ -1,21 +1,39 @@
-# canon
+# L4 Commons
 
-**A corpus of L4 encodings of existing legal text.**
+**Making the world's laws and contracts understandable by AI.**
 
-Every entry here is a body of law — a statute, a regulation, a contract form — encoded in
+Every entry here is a body of law (a statute, a regulation, a contract form) encoded in
 [L4](https://github.com/legalese/l4-ide), the language for law, together with the evidence
 that the encoding is faithful: section-by-section citations back to the source, scenario
-tests, ambiguity registers recording every interpretive choice, projections to executable
-industry standards (DMN, BPMN), and a signed human review.
+tests, a fork register recording every place the text can reasonably be read two ways, and,
+once someone qualified has checked it, a signed human review.
 
 From the _canons of construction_ to the construction of canon: where the interpretive
 tradition leaves construction implicit in a reader's judgement, an entry here carries its
 construction on its face — which reading was taken at each ambiguous site, on what argument
 or authority, and what turns on the difference.
 
-**Status (2026-08-02): scaffold.** The repository shape below is ruled and fixed
-(single-instruction demo spec, ruling R1); the first subjects arrive with the pipeline's G4
-milestone. Nothing here yet claims to be a reviewed encoding.
+**Status (16 October 2026):** 598 subjects with L4 encodings across ten jurisdictions.
+Every one is `draft`: no subject is yet marked reviewed.
+Most are scoped first passes, covering the provisions behind the most common questions about an Act rather than the whole Act; each row's `NOTES.md` says what it covers and what it leaves out.
+This repository was called `canon` until October 2026; old links redirect here.
+
+## Contributor's guide: add your country's law
+
+1. In [Claude Code](https://claude.com/claude-code), install the L4 plugin:
+   `/plugin marketplace add legalese/l4-plugin`, then `/plugin install l4-computational-law@legalese`.
+2. Point it at a law and ask for the whole job, for example:
+   *"Encode the Interpretation Act of Malaysia for the L4 Commons, solo, with the `encoding-a-subject` skill, and finish with a pull request to legalese/commons."*
+3. That is one session doing the whole job: it installs `l4` (the plugin's `scripts/install-l4.sh`), gathers the official text, writes a brief, encodes the law section by section with citations, tests it, has an independent pass write tests from the source alone, writes `NOTES.md`, and opens a pull request from your fork.
+
+What we care about most in a contribution is **the forks**.
+Wherever the text can reasonably be read two ways (an "and" that might be an "or", an exception that might attach at either level, a deadline that might count calendar or working days), do not quietly pick one:
+
+- record the fork in `NOTES.md`: the readings, the one you took, and the text that licenses each;
+- write a **discriminating example** for it: a concrete scenario whose answer differs under each reading, kept as a test, so that anyone can see exactly what turns on the choice.
+
+A fork with a discriminating example is a question a lawyer can often answer in minutes, and those answers are what turn a `draft` into a `reviewed` encoding.
+Your contribution is welcome as a draft; say in `NOTES.md` what you did not cover.
 
 ## Layout: one class, many instances
 
