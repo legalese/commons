@@ -1,0 +1,285 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `imm-types`
+IMPORT `imm-status`
+IMPORT `imm-deportation`
+IMPORT `imm-employers`
+IMPORT `imm-goal`
+
+-- Independent tests for the Immigration Act 2009 (NZ) encoding.
+-- Every expected value comes from independent-expectations.md, written from
+-- the Act before the encoding was read. Scenario ids refer to that file.
+-- A failing assertion is a finding, not a bug in this file.
+
+§ `Independent tests`
+
+§§ `Shorthands`
+
+-- A conviction for the s 15 scenarios: convicted (and committed) on cd,
+-- sentence sent years, maximum penalty 20 years.
+GIVEN cd IS A DATE, sent IS A NUMBER
+GIVETH A Conviction
+`c15` cd sent MEANS Conviction OF cd, cd, 20, sent, FALSE, FALSE
+
+-- A non-citizen in New Zealand with visa and entry permission and the given
+-- convictions; no other s 15/16 facts; no special direction.
+GIVEN cs IS A LIST OF Conviction
+GIVETH A Person
+`p with convictions` cs MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2015), TRUE, NOTHING, cs, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE
+
+-- The same, with a special direction or s 83.
+GIVEN cs IS A LIST OF Conviction
+GIVETH A Person
+`p special with convictions` cs MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2015), TRUE, NOTHING, cs, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE
+
+GIVETH A Person
+`p prohibited` MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2015), TRUE, NOTHING, EMPTY, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE
+GIVETH A Person
+`p deported prohibited` MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2015), TRUE, NOTHING, EMPTY, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE
+GIVETH A Person
+`p deported other enactment` MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2015), TRUE, NOTHING, EMPTY, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE
+GIVETH A Person
+`p excluded` MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2015), TRUE, NOTHING, EMPTY, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE
+GIVETH A Person
+`p removed abroad` MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2015), TRUE, NOTHING, EMPTY, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE
+GIVETH A Person
+`p s16` MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2015), TRUE, NOTHING, EMPTY, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE
+GIVETH A Person
+`p s16 special` MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2015), TRUE, NOTHING, EMPTY, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE
+
+-- s 9 persons.
+GIVETH A Person
+`p lawful` MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2025), TRUE, NOTHING, EMPTY, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE
+GIVETH A Person
+`p no visa expired 31 Jan 2026` MEANS Person OF FALSE, FALSE, TRUE, (Date 1 1 2025), TRUE, JUST (Date 31 1 2026), EMPTY, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE
+GIVETH A Person
+`p visa no entry permission never lawful` MEANS Person OF FALSE, TRUE, FALSE, (Date 5 3 2026), FALSE, NOTHING, EMPTY, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE
+GIVETH A Person
+`p arrived 5 Mar 2026 never lawful` MEANS Person OF FALSE, FALSE, FALSE, (Date 5 3 2026), FALSE, NOTHING, EMPTY, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE
+GIVETH A Person
+`p cancelled 10 May 2026` MEANS Person OF FALSE, FALSE, TRUE, (Date 1 1 2025), TRUE, JUST (Date 10 5 2026), EMPTY, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE
+GIVETH A Person
+`p expired then new visa` MEANS Person OF FALSE, TRUE, TRUE, (Date 1 1 2025), TRUE, JUST (Date 31 1 2026), EMPTY, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE
+
+-- A conviction for s 161: committed on cd, maximum mx years, sentence sent
+-- years, committed while unlawful / on a temporary visa (ut), s 350/351/351A
+-- offence (emp).
+GIVEN cd IS A DATE, mx IS A NUMBER, sent IS A NUMBER, ut IS A BOOLEAN, emp IS A BOOLEAN
+GIVETH A Conviction
+`c161` cd mx sent ut emp MEANS Conviction OF cd, cd, mx, sent, ut, emp
+
+-- A resident who first held a residence class visa on fh, imprisoned
+-- nd days since, with one conviction.
+GIVEN fh IS A DATE, nd IS A NUMBER, c IS A Conviction
+GIVETH A `Resident facts`
+`res` fh nd c MEANS `Resident facts` OF fh, nd, (LIST c)
+
+GIVEN c IS A Conviction
+GIVETH A BOOLEAN
+`liable 2020` c MEANS `the resident is liable for deportation under s 161` (`res` (Date 1 7 2020) 0 c)
+
+-- s 350 employment facts on 1 Jul 2026.
+GIVEN entitled IS A BOOLEAN, knew IS A BOOLEAN, told IS A MAYBE DATE, np IS A BOOLEAN
+GIVETH A BOOLEAN
+`offence 1 Jul 2026` entitled knew told np MEANS `the employer commits an offence under s 350` (`Employment facts` OF (Date 1 7 2026), entitled, knew, told, np)
+
+§§ `Goal 1 — eligibility (ss 15-17)`
+
+-- E15-01
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 1 1 1990) 5)) `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-02
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 1 1 1990) (59 / 12))) `on` (Date 10 7 2026) EQUALS FALSE
+-- E15-03 (indeterminate sentence capable of 5 years, counted as 5)
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 1 1 1990) 5)) `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-04
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 1 1 2020) 1)) `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-05
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 1 1 2020) (11 / 12))) `on` (Date 10 7 2026) EQUALS FALSE
+-- E15-06
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 1 7 2016) 2)) `on` (Date 10 7 2026) EQUALS FALSE
+-- E15-07
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 15 7 2016) 2)) `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-08 (AMBIGUOUS boundary: anniversary day inside)
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 10 7 2016) 2)) `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-09 (suspended 12-month sentence, counted by caller)
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 1 1 2020) 1)) `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-10 (cumulative 7 + 7 months totalled by caller)
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 1 1 2020) (14 / 12))) `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-11 (indeterminate capable of 12 months+, counted as 1)
+#ASSERT `is barred from a visa` (`p with convictions` (LIST `c15` (Date 1 1 2020) 1)) `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-12
+#ASSERT `is barred from a visa` `p prohibited` `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-13
+#ASSERT `is barred from a visa` `p deported prohibited` `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-14 / E15-15 / E15-16 / E15-17 (s 15(3) exceptions: caller sets the deportation flag FALSE)
+#ASSERT `is barred from a visa` (`p with convictions` EMPTY) `on` (Date 10 7 2026) EQUALS FALSE
+-- E15-18
+#ASSERT `is barred from a visa` `p deported other enactment` `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-19
+#ASSERT `is barred from a visa` `p excluded` `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-20
+#ASSERT `is barred from a visa` `p removed abroad` `on` (Date 10 7 2026) EQUALS TRUE
+-- E15-21
+#ASSERT `is barred from a visa` (`p with convictions` EMPTY) `on` (Date 10 7 2026) EQUALS FALSE
+-- E16-01 .. E16-05 (single s 16 flag)
+#ASSERT `is barred from a visa` `p s16` `on` (Date 10 7 2026) EQUALS TRUE
+-- E16-06
+#ASSERT `is barred from a visa` (`p with convictions` EMPTY) `on` (Date 10 7 2026) EQUALS FALSE
+-- E17-01
+#ASSERT `is barred from a visa` (`p special with convictions` (LIST `c15` (Date 1 1 1990) 5)) `on` (Date 10 7 2026) EQUALS FALSE
+-- E17-02
+#ASSERT `is barred from a visa` `p s16 special` `on` (Date 10 7 2026) EQUALS FALSE
+
+§§ `Goal 2 — unlawful status and work (ss 9, 21, 154, 185)`
+
+-- U9-01
+#ASSERT `is unlawfully in New Zealand` `p lawful` EQUALS FALSE
+-- U9-02
+#ASSERT `is unlawfully in New Zealand` `p no visa expired 31 Jan 2026` EQUALS TRUE
+-- U9-03
+#ASSERT `is unlawfully in New Zealand` `p visa no entry permission never lawful` EQUALS TRUE
+-- U9-05
+#ASSERT `the day unlawful status starts for` `p arrived 5 Mar 2026 never lawful` EQUALS JUST (Date 5 3 2026)
+-- U9-06
+#ASSERT `the day unlawful status starts for` `p no visa expired 31 Jan 2026` EQUALS JUST (Date 1 2 2026)
+-- U9-07
+#ASSERT `the day unlawful status starts for` `p cancelled 10 May 2026` EQUALS JUST (Date 11 5 2026)
+-- U9-10
+#ASSERT `is unlawfully in New Zealand` `p expired then new visa` EQUALS FALSE
+-- U9-10 (no start date for a lawful person)
+#ASSERT `the day unlawful status starts for` `p expired then new visa` EQUALS NOTHING
+-- U21-01
+#ASSERT `is barred from working by s 21` `p no visa expired 31 Jan 2026` EQUALS TRUE
+-- U21-02
+#ASSERT `is barred from working by s 21` `p lawful` EQUALS FALSE
+-- U154-03
+#ASSERT `the last day for a humanitarian appeal by a person unlawful from` (Date 1 2 2026) `, reconsideration confirmed` NOTHING EQUALS Date 15 3 2026
+-- U154-04
+#ASSERT `the last day for a humanitarian appeal by a person unlawful from` (Date 1 3 2026) `, reconsideration confirmed` NOTHING EQUALS Date 12 4 2026
+-- U154-05
+#ASSERT `the last day for a humanitarian appeal by a person unlawful from` (Date 1 2 2026) `, reconsideration confirmed` (JUST (Date 20 2 2026)) EQUALS Date 3 4 2026
+-- U154-06
+#ASSERT `the last day for a humanitarian appeal by a person unlawful from` (Date 1 2 2026) `, reconsideration confirmed` (JUST (Date 10 1 2026)) EQUALS Date 15 3 2026
+-- R185-01
+#ASSERT `a reconsideration may be applied for, notified` (Date 3 3 2026) `, applying on` (Date 17 3 2026) `, still lawful` TRUE EQUALS TRUE
+-- R185-02
+#ASSERT `a reconsideration may be applied for, notified` (Date 3 3 2026) `, applying on` (Date 18 3 2026) `, still lawful` TRUE EQUALS FALSE
+-- R185-03
+#ASSERT `a reconsideration may be applied for, notified` (Date 3 3 2026) `, applying on` (Date 10 3 2026) `, still lawful` FALSE EQUALS FALSE
+
+§§ `Goal 3 — deportation liability (ss 157, 161, 167)`
+
+-- D157-03
+#ASSERT `the last day to give reasons against deportation, notice served` (Date 2 3 2026) EQUALS Date 16 3 2026
+-- D157-06
+#ASSERT `the last day to appeal a deportation liability notice served` (Date 2 3 2026) EQUALS Date 30 3 2026
+-- D161-01
+#ASSERT `liable 2020` (`c161` (Date 1 7 2022) 0.25 0 FALSE FALSE) EQUALS TRUE
+-- D161-02
+#ASSERT `liable 2020` (`c161` (Date 2 7 2022) 1 1 FALSE FALSE) EQUALS FALSE
+-- D161-03
+#ASSERT `liable 2020` (`c161` (Date 1 1 2021) (2 / 12) 0 FALSE FALSE) EQUALS FALSE
+-- D161-04
+#ASSERT `liable 2020` (`c161` (Date 2 7 2022) 2 0 FALSE FALSE) EQUALS TRUE
+-- D161-05
+#ASSERT `liable 2020` (`c161` (Date 1 7 2025) 2 0 FALSE FALSE) EQUALS TRUE
+-- D161-06
+#ASSERT `liable 2020` (`c161` (Date 2 7 2025) 2 1 FALSE FALSE) EQUALS FALSE
+-- D161-07
+#ASSERT `liable 2020` (`c161` (Date 1 1 2024) (23 / 12) 0 FALSE FALSE) EQUALS FALSE
+-- D161-08
+#ASSERT `liable 2020` (`c161` (Date 1 7 2030) 14 5 FALSE FALSE) EQUALS TRUE
+-- D161-09
+#ASSERT `liable 2020` (`c161` (Date 2 7 2030) 14 5 FALSE FALSE) EQUALS FALSE
+-- D161-10
+#ASSERT `liable 2020` (`c161` (Date 1 1 2027) 14 (59 / 12) FALSE FALSE) EQUALS FALSE
+-- D161-11
+#ASSERT `liable 2020` (`c161` (Date 1 1 2027) 14 5 FALSE FALSE) EQUALS TRUE
+-- D161-12 (indeterminate capable of 5 years, counted as 5)
+#ASSERT `liable 2020` (`c161` (Date 1 1 2027) 14 5 FALSE FALSE) EQUALS TRUE
+-- D161-13
+#ASSERT `liable 2020` (`c161` (Date 1 7 2030) 1 0 FALSE TRUE) EQUALS TRUE
+-- D161-14
+#ASSERT `liable 2020` (`c161` (Date 2 7 2030) 1 0 FALSE TRUE) EQUALS FALSE
+-- D161-15
+#ASSERT `liable 2020` (`c161` (Date 1 1 2029) 1 0 FALSE TRUE) EQUALS TRUE
+-- D161-16
+#ASSERT `liable 2020` (`c161` (Date 1 3 2015) 0.25 0 TRUE FALSE) EQUALS TRUE
+-- D161-17
+#ASSERT `liable 2020` (`c161` (Date 1 3 2018) 0.5 0 TRUE FALSE) EQUALS TRUE
+-- D161-18
+#ASSERT `liable 2020` (`c161` (Date 1 3 2015) (2 / 12) 0 TRUE FALSE) EQUALS FALSE
+-- D161-19
+#ASSERT `the resident is liable for deportation under s 161` (`res` (Date 1 7 2020) 100 (`c161` (Date 9 10 2022) 1 0 FALSE FALSE)) EQUALS TRUE
+-- D161-20
+#ASSERT `the resident is liable for deportation under s 161` (`res` (Date 1 7 2020) 100 (`c161` (Date 10 10 2022) 1 0 FALSE FALSE)) EQUALS FALSE
+-- D161-21
+#ASSERT `the resident is liable for deportation under s 161` (`res` (Date 1 7 2020) 0 (`c161` (Date 2 7 2022) 1 0 FALSE FALSE)) EQUALS FALSE
+-- D161-22 (first held = 1 Sep 2020 under s 161(5)(b), supplied by caller)
+#ASSERT `the resident is liable for deportation under s 161` (`res` (Date 1 9 2020) 0 (`c161` (Date 15 8 2022) 0.5 0 FALSE FALSE)) EQUALS TRUE
+-- D161-23
+#ASSERT `the resident is liable for deportation under s 161` (`res` (Date 1 9 2020) 0 (`c161` (Date 2 9 2022) 0.5 0 FALSE FALSE)) EQUALS FALSE
+-- D161-24 (first held reset to 1 Jan 2024 under s 161(5)(c), supplied by caller)
+#ASSERT `the resident is liable for deportation under s 161` (`res` (Date 1 1 2024) 0 (`c161` (Date 1 6 2025) 0.5 0 FALSE FALSE)) EQUALS TRUE
+-- D161-25 (first held stays 1 Jul 2015)
+#ASSERT `the resident is liable for deportation under s 161` (`res` (Date 1 7 2015) 0 (`c161` (Date 1 6 2025) 0.5 0 FALSE FALSE)) EQUALS FALSE
+-- D161-27
+#ASSERT `the last day to appeal a deportation liability notice served` (Date 10 6 2026) EQUALS Date 8 7 2026
+-- D167-01
+#ASSERT `the last day of deportation liability, facts` (`Liability period facts` OF (Date 1 3 2020), 0) EQUALS Date 1 3 2030
+-- D167-02
+#ASSERT (Date 1 3 2030) AT MOST `the last day of deportation liability, facts` (`Liability period facts` OF (Date 1 3 2020), 0)
+-- D167-03
+#ASSERT (Date 2 3 2030) GREATER THAN `the last day of deportation liability, facts` (`Liability period facts` OF (Date 1 3 2020), 0)
+-- D167-04
+#ASSERT `the last day of deportation liability, facts` (`Liability period facts` OF (Date 1 3 2020), 200) EQUALS Date 17 9 2030
+-- D167-05
+#ASSERT `the last day of deportation liability, facts` (`Liability period facts` OF (Date 1 3 2020), 365) EQUALS Date 1 3 2031
+-- D167-06
+#ASSERT `the last day of deportation liability, facts` (`Liability period facts` OF (Date 1 3 2020), 565) EQUALS Date 17 9 2031
+-- D167-07
+#ASSERT (Date 1 7 2030) AT MOST `the last day of deportation liability, facts` (`Liability period facts` OF (Date 1 3 2020), 200)
+
+§§ `Goal 4 — employers (s 350)`
+
+-- S350-01
+#ASSERT `offence 1 Jul 2026` FALSE TRUE NOTHING FALSE EQUALS TRUE
+-- S350-02
+#ASSERT `offence 1 Jul 2026` FALSE FALSE NOTHING FALSE EQUALS FALSE
+-- S350-03
+#ASSERT `offence 1 Jul 2026` FALSE FALSE (JUST (Date 1 9 2025)) FALSE EQUALS TRUE
+-- S350-04
+#ASSERT `offence 1 Jul 2026` FALSE FALSE (JUST (Date 1 6 2025)) FALSE EQUALS FALSE
+-- S350-05 (AMBIGUOUS boundary: anniversary day inside)
+#ASSERT `offence 1 Jul 2026` FALSE FALSE (JUST (Date 1 7 2025)) FALSE EQUALS TRUE
+-- S350-06
+#ASSERT `offence 1 Jul 2026` FALSE FALSE (JUST (Date 10 7 2026)) FALSE EQUALS FALSE
+-- S350-07 (oral notice only: no written notice date)
+#ASSERT `offence 1 Jul 2026` FALSE FALSE NOTHING FALSE EQUALS FALSE
+-- S350-08
+#ASSERT `offence 1 Jul 2026` FALSE TRUE NOTHING TRUE EQUALS FALSE
+-- S350-09
+#ASSERT `offence 1 Jul 2026` FALSE FALSE (JUST (Date 1 9 2025)) TRUE EQUALS FALSE
+-- S350-10
+#ASSERT `offence 1 Jul 2026` FALSE TRUE NOTHING FALSE EQUALS TRUE
+-- S350-11
+#ASSERT `offence 1 Jul 2026` TRUE FALSE NOTHING FALSE EQUALS FALSE
+-- S350-12
+#ASSERT `offence 1 Jul 2026` FALSE TRUE NOTHING FALSE EQUALS TRUE
+
+§§ `Top-level goal`
+
+-- T-01
+#ASSERT (`the immigration position for` `p no visa expired 31 Jan 2026` `, as a resident` NOTHING `, on` (Date 10 7 2026))'s `unlawfully in New Zealand` EQUALS TRUE
+-- T-01
+#ASSERT (`the immigration position for` `p no visa expired 31 Jan 2026` `, as a resident` NOTHING `, on` (Date 10 7 2026))'s `barred from working` EQUALS TRUE
+-- T-01
+#ASSERT (`the immigration position for` `p no visa expired 31 Jan 2026` `, as a resident` NOTHING `, on` (Date 10 7 2026))'s `unlawful since` EQUALS JUST (Date 1 2 2026)
+-- T-01
+#ASSERT (`the immigration position for` `p no visa expired 31 Jan 2026` `, as a resident` NOTHING `, on` (Date 10 7 2026))'s `last day for a humanitarian appeal` EQUALS JUST (Date 15 3 2026)
+-- T-02
+#ASSERT (`the immigration position for` `p lawful` `, as a resident` (JUST (`res` (Date 1 7 2020) 0 (`c161` (Date 1 7 2022) 0.25 0 FALSE FALSE))) `, on` (Date 10 7 2026))'s `liable for deportation under s 161` EQUALS TRUE
+-- T-02
+#ASSERT (`the immigration position for` `p lawful` `, as a resident` (JUST (`res` (Date 1 7 2020) 0 (`c161` (Date 1 7 2022) 0.25 0 FALSE FALSE))) `, on` (Date 10 7 2026))'s `unlawfully in New Zealand` EQUALS FALSE
+-- T-03
+#ASSERT (`the immigration position for` (`p with convictions` (LIST `c15` (Date 1 1 1990) 5)) `, as a resident` NOTHING `, on` (Date 10 7 2026))'s `barred from a visa` EQUALS TRUE
