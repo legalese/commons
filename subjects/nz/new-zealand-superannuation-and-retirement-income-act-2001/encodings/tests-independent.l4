@@ -1,0 +1,328 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `nzs-types`
+IMPORT `nzs-entitlement`
+IMPORT `nzs-overseas`
+IMPORT `nzs-fund`
+IMPORT `nzs-goal`
+
+-- Independent tests: expected values come from independent-expectations.md,
+-- which was written from the Act before the encoding was read. Scenario ids
+-- (A1, B2, ...) refer to that file. Failing assertions are findings.
+
+-- Helpers ---------------------------------------------------------------
+
+-- A non-refugee applicant, ordinarily resident, no election.
+GIVEN dob IS A DATE, ttr IS A NUMBER, nz IS A NUMBER, realm IS A NUMBER, s50 IS A NUMBER, applied IS A DATE
+GIVETH AN Applicant
+mkApp dob ttr nz realm s50 applied MEANS Applicant OF dob, FALSE, TRUE, ttr, nz, realm, s50, FALSE, Date 1 1 1990, applied, NOTHING
+
+-- A refugee applicant first resident and present on `arrived`.
+GIVEN dob IS A DATE, ttr IS A NUMBER, nz IS A NUMBER, s50 IS A NUMBER, arrived IS A DATE
+GIVETH AN Applicant
+mkRefugee dob ttr nz s50 arrived MEANS Applicant OF dob, FALSE, TRUE, ttr, nz, nz, s50, TRUE, arrived, Date 1 1 2026, NOTHING
+
+GIVEN occ IS A BOOLEAN, shr IS A BOOLEAN
+GIVETH A Household
+mkHouse occ shr MEANS Household OF occ, shr
+
+GIVEN st IS A `Relationship status`, h IS A Household, ltrc IS A BOOLEAN, wks IS A NUMBER, funded IS A BOOLEAN, kids IS A BOOLEAN
+GIVETH A `Rate facts`
+mkRF st h ltrc wks funded kids MEANS `Rate facts` OF st, h, ltrc, wks, funded, kids
+
+GIVETH A `Rates in force`
+rates MEANS `Rates in force` OF 600, 550, 450, 300
+
+GIVETH A `Relationship status`
+partnered MEANS `married, in a civil union, or in a de facto relationship`
+
+GIVEN sofar IS A NUMBER, total IS A NUMBER, unforeseen IS A BOOLEAN
+GIVETH AN `Absence facts`
+mkAbs sofar total unforeseen MEANS `Absence facts` OF sofar, total, unforeseen, 0, 0, 0
+
+GIVEN mths IS A NUMBER, dys IS A NUMBER
+GIVETH AN `Absence facts`
+mkRes mths dys MEANS `Absence facts` OF 0, 0, FALSE, mths, dys, 0
+
+GIVEN yrs IS A NUMBER
+GIVETH AN `Absence facts`
+mkYrs yrs MEANS `Absence facts` OF 0, 0, FALSE, 0, 0, yrs
+
+GIVEN a IS AN Applicant, d IS A DATE, rf IS A `Rate facts`
+GIVETH A `Superannuation case`
+mkCase a d rf MEANS `Superannuation case` OF a, d, rf, rates
+
+GIVETH AN Applicant
+fullApp MEANS mkApp (Date 1 1 1961) 20 30 30 15 (Date 1 1 2026)
+
+-- A. Age (s 7) ----------------------------------------------------------
+
+-- A1 65th birthday
+#ASSERT `is entitled to New Zealand superannuation` fullApp `on` (Date 1 1 2026) EQUALS TRUE
+-- A2 day before
+#ASSERT `is entitled to New Zealand superannuation` fullApp `on` (Date 31 12 2025) EQUALS FALSE
+-- A3 born 29 Feb 1960: not yet 65 on 28 Feb 2025 (ambiguous; see expectations)
+#ASSERT `the age of someone born` (Date 29 2 1960) `on` (Date 28 2 2025) EQUALS 64
+-- A3b 65 on 1 Mar 2025
+#ASSERT `the age of someone born` (Date 29 2 1960) `on` (Date 1 3 2025) EQUALS 65
+-- A4 no upper age limit
+#ASSERT `is entitled to New Zealand superannuation` fullApp `on` (Date 1 1 2030) EQUALS TRUE
+-- A5 weekly compensation election
+#ASSERT `is entitled to New Zealand superannuation` (Applicant OF Date 1 1 1960, TRUE, TRUE, 20, 30, 30, 15, FALSE, Date 1 1 1990, Date 1 1 2026, NOTHING) `on` (Date 1 6 2026) EQUALS FALSE
+-- A8 64 with election
+#ASSERT `is entitled to New Zealand superannuation` (Applicant OF Date 1 1 1962, TRUE, TRUE, 20, 30, 30, 15, FALSE, Date 1 1 1990, Date 1 1 2026, NOTHING) `on` (Date 1 6 2026) EQUALS FALSE
+
+-- B. Residence (s 8) ----------------------------------------------------
+
+-- B1
+#ASSERT `meets the residential qualification` (mkApp (Date 1 1 1960) 20 20 20 5 (Date 1 1 2026)) EQUALS TRUE
+-- B2 NZ 10 + realm 10
+#ASSERT `meets the residential qualification` (mkApp (Date 1 1 1960) 20 10 20 5 (Date 1 1 2026)) EQUALS TRUE
+-- B3 NZ 9.9, realm total 24.9
+#ASSERT `meets the residential qualification` (mkApp (Date 1 1 1960) 20 9.9 24.9 5 (Date 1 1 2026)) EQUALS FALSE
+-- B4 total 19.9
+#ASSERT `meets the residential qualification` (mkApp (Date 1 1 1960) 20 15 19.9 5 (Date 1 1 2026)) EQUALS FALSE
+-- B5 s 8 example: TTR 14, NZ 12, Cook 1, Niue 1
+#ASSERT `meets the residential qualification` (mkApp (Date 30 6 1967) 14 12 14 14 (Date 1 7 2036)) EQUALS TRUE
+-- B6
+#ASSERT `meets the residential qualification` (mkApp (Date 30 6 1967) 14 13.99 13.99 13.99 (Date 1 7 2036)) EQUALS FALSE
+-- B7
+#ASSERT `meets the residential qualification` (mkApp (Date 1 1 1960) 10 10 10 5 (Date 1 1 2026)) EQUALS TRUE
+-- B8 since-50 4.99
+#ASSERT `meets the residential qualification` (mkApp (Date 1 1 1960) 20 25 25 4.99 (Date 1 1 2026)) EQUALS FALSE
+-- B9 since-50 exactly 5
+#ASSERT `meets the residential qualification` (mkApp (Date 1 1 1960) 20 25 25 5 (Date 1 1 2026)) EQUALS TRUE
+-- B10 NZ 10 + Samoa 10 (Samoa not counted): realm total stays 10
+#ASSERT `meets the residential qualification` (mkApp (Date 1 1 1960) 20 10 10 5 (Date 1 1 2026)) EQUALS FALSE
+-- B11 not ordinarily resident on application
+#ASSERT `meets the residential qualification` (Applicant OF Date 1 1 1960, FALSE, FALSE, 20, 30, 30, 15, FALSE, Date 1 1 1990, Date 1 1 2026, NOTHING) EQUALS FALSE
+
+-- C. Refugees (s 8A) ----------------------------------------------------
+
+-- C1 aged 44 on relevant date: s 8(4) TTR applies
+#ASSERT `the total time requirement in years for` (mkRefugee (Date 1 1 1981) 20 20 5 (Date 1 1 2025)) EQUALS 20
+-- C2 exactly 45; 20 years to 65th birthday; lesser 20
+#ASSERT `the total time requirement in years for` (mkRefugee (Date 1 1 1980) 20 20 5 (Date 1 1 2025)) EQUALS 20
+-- C3 example: aged 50, 15 years to 65th birthday: 15 years of NZ residence suffices
+#ASSERT `meets the residential qualification` (mkRefugee (Date 1 1 1975) 20 15 15 (Date 1 1 2025)) EQUALS TRUE
+-- C3b and 14 years does not
+#ASSERT `meets the residential qualification` (mkRefugee (Date 1 1 1975) 20 14 14 (Date 1 1 2025)) EQUALS FALSE
+-- C3c the TTR is the 15-year period (5478 days) to the 65th birthday
+#ASSERT `the total time requirement in years for` (mkRefugee (Date 1 1 1975) 20 15 15 (Date 1 1 2025)) EQUALS 15
+-- C4 aged 54: 11 years to 65th birthday: 11 years suffice
+#ASSERT `meets the residential qualification` (mkRefugee (Date 1 1 1971) 20 11 11 (Date 1 1 2025)) EQUALS TRUE
+-- C4b 10.5 years do not
+#ASSERT `meets the residential qualification` (mkRefugee (Date 1 1 1971) 20 10.5 10.5 (Date 1 1 2025)) EQUALS FALSE
+-- C5 exactly 55
+#ASSERT `the total time requirement in years for` (mkRefugee (Date 1 1 1970) 20 10 10 (Date 1 1 2025)) EQUALS 10
+-- C6 aged 70
+#ASSERT `the total time requirement in years for` (mkRefugee (Date 1 1 1955) 20 10 10 (Date 1 1 2025)) EQUALS 10
+-- C7 not a refugee, 55 on arrival
+#ASSERT `the total time requirement in years for` (Applicant OF Date 1 1 1970, FALSE, TRUE, 20, 10, 10, 10, FALSE, Date 1 1 2025, Date 1 1 2036, NOTHING) EQUALS 20
+-- C8 aged 50, s 8(4) TTR 12 is the lesser
+#ASSERT `the total time requirement in years for` (mkRefugee (Date 1 1 1975) 12 12 12 (Date 1 1 2025)) EQUALS 12
+-- C10 refugee aged 55, NZ 10, since 50 10
+#ASSERT `meets the residential qualification` (mkRefugee (Date 1 1 1970) 20 10 10 (Date 1 1 2025)) EQUALS TRUE
+-- C4c aged 54 day before 55th birthday (born 2 Jan 1970): still s 8A(3)
+#ASSERT `meets the residential qualification` (mkRefugee (Date 2 1 1970) 20 10 10 (Date 1 1 2025)) EQUALS FALSE
+
+-- D. Commencement (s 11) ------------------------------------------------
+
+-- D1
+#ASSERT `the day New Zealand superannuation commences for` (mkApp (Date 1 3 1961) 20 30 30 15 (Date 10 3 2026)) EQUALS Date 10 3 2026
+-- D2
+#ASSERT `the day New Zealand superannuation commences for` (mkApp (Date 1 3 1961) 20 30 30 15 (Date 1 2 2026)) EQUALS Date 1 3 2026
+-- D3
+#ASSERT `the day New Zealand superannuation commences for` (mkApp (Date 1 3 1961) 20 30 30 15 (Date 1 3 2026)) EQUALS Date 1 3 2026
+-- D4 s 8 example person (born 30 Jun 1967) meets TTR only on 1 Jul 2036; application received 1 Jan 2036
+-- [Ported by the encoder: Applicant gained `residential qualification first met on, if after 65` (NOTHING in every other call); this call is written out with JUST (Date 1 7 2036), the date the scenario gives.]
+#ASSERT (`the superannuation position for` (mkCase (Applicant OF Date 30 6 1967, FALSE, TRUE, 14, 12, 14, 14, FALSE, Date 1 1 1990, Date 1 1 2036, JUST (Date 1 7 2036)) (Date 1 8 2036) (mkRF `single` (mkHouse TRUE FALSE) FALSE 0 FALSE FALSE)))'s `commences on` EQUALS JUST (Date 1 7 2036)
+
+-- E. Living alone (s 4A) ------------------------------------------------
+
+-- E1
+#ASSERT `is living alone` (mkHouse TRUE FALSE) EQUALS TRUE
+-- E3 adult lodger
+#ASSERT `is living alone` (mkHouse TRUE TRUE) EQUALS FALSE
+-- E15 rest home room: not s 4A(2) accommodation
+#ASSERT `is living alone` (mkHouse FALSE FALSE) EQUALS FALSE
+-- E2 married person alone: married rate, not single living alone
+#ASSERT `the rate category for` (mkRF partnered (mkHouse TRUE FALSE) FALSE 0 FALSE FALSE) EQUALS `the couple rate`
+
+-- F. Rate category ------------------------------------------------------
+
+-- F1
+#ASSERT `the rate category for` (mkRF `single` (mkHouse TRUE FALSE) FALSE 0 FALSE FALSE) EQUALS `the single living alone rate`
+-- F2
+#ASSERT `the rate category for` (mkRF `single` (mkHouse TRUE TRUE) FALSE 0 FALSE FALSE) EQUALS `the single sharing accommodation rate`
+-- F3
+#ASSERT `the rate category for` (mkRF partnered (mkHouse TRUE TRUE) FALSE 0 FALSE FALSE) EQUALS `the couple rate`
+-- F4 partner in long-term care, living alone
+#ASSERT `the rate category for` (mkRF partnered (mkHouse TRUE FALSE) TRUE 0 FALSE FALSE) EQUALS `the single living alone rate`
+-- F5 partner in long-term care, not living alone
+#ASSERT `the rate category for` (mkRF partnered (mkHouse TRUE TRUE) TRUE 0 FALSE FALSE) EQUALS `the single sharing accommodation rate`
+-- F8 hospital exactly 13 weeks
+#ASSERT `the rate category for` (mkRF `single` (mkHouse TRUE FALSE) FALSE 13 FALSE FALSE) EQUALS `the single living alone rate`
+-- F9 hospital 92 days
+#ASSERT `the rate category for` (mkRF `single` (mkHouse TRUE FALSE) FALSE (92 DIVIDED BY 7) FALSE FALSE) EQUALS `the hospital rate`
+-- F10 funded resident assessed as requiring care
+#ASSERT `the rate category for` (mkRF `single` (mkHouse TRUE FALSE) FALSE 20 TRUE FALSE) EQUALS `the single living alone rate`
+-- F11 married with dependent children
+#ASSERT `the rate category for` (mkRF partnered (mkHouse TRUE TRUE) FALSE 20 FALSE TRUE) EQUALS `the couple rate`
+-- F12 married no children, 20 weeks
+#ASSERT `the rate category for` (mkRF partnered (mkHouse TRUE TRUE) FALSE 20 FALSE FALSE) EQUALS `the hospital rate`
+-- F12b single with dependent children, 20 weeks: s 19 applies to any single person
+#ASSERT `the rate category for` (mkRF `single` (mkHouse TRUE TRUE) FALSE 20 FALSE TRUE) EQUALS `the hospital rate`
+-- F1 amount
+#ASSERT `the rate for` `the single living alone rate` `, rates` rates EQUALS 600
+-- F2 amount
+#ASSERT `the rate for` `the single sharing accommodation rate` `, rates` rates EQUALS 550
+-- F3 amount
+#ASSERT `the rate for` `the couple rate` `, rates` rates EQUALS 450
+-- F9 amount
+#ASSERT `the rate for` `the hospital rate` `, rates` rates EQUALS 300
+
+-- G. Temporary absences (ss 21-24) --------------------------------------
+
+-- G1
+#ASSERT `is payable during the temporary absence` (mkAbs 5 10 FALSE) EQUALS TRUE
+-- G2
+#ASSERT `is payable during the temporary absence` (mkAbs 20 30 FALSE) EQUALS TRUE
+-- G2b week 26 of a 30-week absence
+#ASSERT `is payable during the temporary absence` (mkAbs 26 30 FALSE) EQUALS TRUE
+-- G3
+#ASSERT `is payable during the temporary absence` (mkAbs 27 30 FALSE) EQUALS FALSE
+-- G4
+#ASSERT `is payable during the temporary absence` (mkAbs 5 31 FALSE) EQUALS FALSE
+-- G5
+#ASSERT `is payable during the temporary absence` (mkAbs 5 31 TRUE) EQUALS TRUE
+-- G6
+#ASSERT `is payable during the temporary absence` (mkAbs 28 31 TRUE) EQUALS FALSE
+-- G4b absence 30 weeks and 1 day
+#ASSERT `is payable during the temporary absence` (mkAbs 5 (211 DIVIDED BY 7) FALSE) EQUALS FALSE
+-- G8 2 years medical
+#ASSERT `the chief executive may pay during an absence of` 104 `weeks, for medical treatment:` TRUE `, for aid work:` FALSE EQUALS TRUE
+-- G9 2 years + 1 day
+#ASSERT `the chief executive may pay during an absence of` (729 DIVIDED BY 7) `weeks, for medical treatment:` TRUE `, for aid work:` FALSE EQUALS FALSE
+-- G13 156 weeks aid
+#ASSERT `the chief executive may pay during an absence of` 156 `weeks, for medical treatment:` FALSE `, for aid work:` TRUE EQUALS TRUE
+-- G14 157 weeks aid
+#ASSERT `the chief executive may pay during an absence of` 157 `weeks, for medical treatment:` FALSE `, for aid work:` TRUE EQUALS FALSE
+-- G12 neither ground
+#ASSERT `the chief executive may pay during an absence of` 10 `weeks, for medical treatment:` FALSE `, for aid work:` FALSE EQUALS FALSE
+-- G13b 120 weeks medical: over 2 years
+#ASSERT `the chief executive may pay during an absence of` 120 `weeks, for medical treatment:` TRUE `, for aid work:` FALSE EQUALS FALSE
+
+-- H. Overseas proportion (s 26A) ----------------------------------------
+
+-- H1
+#ASSERT `the proportion payable overseas for` (mkRes 540 0) EQUALS 1
+-- H2
+#ASSERT `the proportion payable overseas for` (mkRes 270 0) EQUALS (1 DIVIDED BY 2)
+-- H3
+#ASSERT `the proportion payable overseas for` (mkRes 120 29) EQUALS (120 DIVIDED BY 540)
+-- H4
+#ASSERT `the proportion payable overseas for` (mkRes 120 30) EQUALS (121 DIVIDED BY 540)
+-- H5 two periods 100m20d each
+#ASSERT `the proportion payable overseas for` (mkRes 200 40) EQUALS (201 DIVIDED BY 540)
+-- H6
+#ASSERT `the proportion payable overseas for` (mkRes 120 61) EQUALS (122 DIVIDED BY 540)
+-- H0 no residence
+#ASSERT `the proportion payable overseas for` (mkRes 0 0) EQUALS 0
+-- H7 single, proportion 1/2 of 1(b)
+#ASSERT ((`the proportion payable overseas for` (mkRes 270 0)) TIMES (rates's `single sharing accommodation rate`)) EQUALS 275
+
+-- I. Pacific rate (s 32) ------------------------------------------------
+
+-- I1
+#ASSERT `the Pacific rate for` (mkYrs 20) `, base rate` 550 EQUALS 550
+-- I2
+#ASSERT `the Pacific rate for` (mkYrs 30) `, base rate` 550 EQUALS 550
+-- I3
+#ASSERT `the Pacific rate for` (mkYrs 10) `, base rate` 550 EQUALS 275
+-- I4
+#ASSERT `the Pacific rate for` (mkYrs 15) `, base rate` 550 EQUALS 412.5
+-- I5
+#ASSERT `the Pacific rate for` (mkYrs 15.9) `, base rate` 550 EQUALS 412.5
+-- I6
+#ASSERT `the Pacific rate for` (mkYrs 19.99) `, base rate` 550 EQUALS 522.5
+-- I7 partnered base 450, 12 years
+#ASSERT `the Pacific rate for` (mkYrs 12) `, base rate` 450 EQUALS 270
+-- I8 fewer than 10 years: the Act gives no rate
+#ASSERT REFUSED (`the Pacific rate for` (mkYrs 9) `, base rate` 550)
+-- I11 base reduced by SSA ss 187-191 deduction of 50
+#ASSERT `the Pacific rate for` (mkYrs 20) `, base rate` (550 MINUS 50) EQUALS 500
+
+-- J. Death (ss 29(2), 33(2)) --------------------------------------------
+
+-- J1/J4 latest termination 4 weeks after death
+#ASSERT `the last day overseas payments may run to, died` (Date 1 3 2026) EQUALS Date 29 3 2026
+-- J2/J5 30 Mar is too late
+#ASSERT ((Date 30 3 2026) GREATER THAN (`the last day overseas payments may run to, died` (Date 1 3 2026))) EQUALS TRUE
+
+-- K. s 16 relationships -------------------------------------------------
+
+-- K1 70%
+#ASSERT `the rates meet s 16, couple` 700 `, living alone` 455 `, sharing` 420 `, net average wage` 1000 EQUALS TRUE
+-- K2 66% boundary
+#ASSERT `the rates meet s 16, couple` 660 `, living alone` 429 `, sharing` 396 `, net average wage` 1000 EQUALS TRUE
+-- K3 72.5% boundary
+#ASSERT `the rates meet s 16, couple` 725 `, living alone` 471.25 `, sharing` 435 `, net average wage` 1000 EQUALS TRUE
+-- K4 below
+#ASSERT `the rates meet s 16, couple` 659 `, living alone` 428.35 `, sharing` 395.4 `, net average wage` 1000 EQUALS FALSE
+-- K5 above
+#ASSERT `the rates meet s 16, couple` 726 `, living alone` 471.9 `, sharing` 435.6 `, net average wage` 1000 EQUALS FALSE
+-- K6 living alone not 65%
+#ASSERT `the rates meet s 16, couple` 700 `, living alone` 460 `, sharing` 420 `, net average wage` 1000 EQUALS FALSE
+-- K7 sharing not 60%
+#ASSERT `the rates meet s 16, couple` 700 `, living alone` 455 `, sharing` 425 `, net average wage` 1000 EQUALS FALSE
+
+-- L. Fund (ss 43, 44, 47, 71) -------------------------------------------
+
+-- L1 5% of 400,000 less 15,000
+#ASSERT `the required annual capital contribution, percentage` 5 `, GDP` 400000 `, net cost` 15000 EQUALS 5000
+-- L2
+#ASSERT `the required annual capital contribution, percentage` 3 `, GDP` 400000 `, net cost` 15000 EQUALS (0 MINUS 3000)
+-- L3
+#ASSERT `the required annual capital contribution, percentage` 0 `, GDP` 400000 `, net cost` 0 EQUALS 0
+-- L4
+#ASSERT `the Minister must explain a lesser contribution, required` 5000 `, to be paid` 4000 EQUALS TRUE
+-- L5
+#ASSERT `the Minister must explain a lesser contribution, required` 5000 `, to be paid` 5000 EQUALS FALSE
+-- L6
+#ASSERT `the Minister must explain a lesser contribution, required` (0 MINUS 3000) `, to be paid` 0 EQUALS FALSE
+-- L7
+#ASSERT `the Minister must explain a lesser contribution, required` 0 `, to be paid` 0 EQUALS FALSE
+-- L8
+#ASSERT `the most that may be withdrawn from the Fund, required contribution` (0 MINUS 3000) `, financial year starting` (Date 1 7 2021) EQUALS 3000
+-- L9
+#ASSERT `the most that may be withdrawn from the Fund, required contribution` (0 MINUS 3000) `, financial year starting` (Date 1 7 2019) EQUALS 0
+-- L10
+#ASSERT `the most that may be withdrawn from the Fund, required contribution` (0 MINUS 3000) `, financial year starting` (Date 1 7 2020) EQUALS 3000
+-- L11
+#ASSERT `the most that may be withdrawn from the Fund, required contribution` 5000 `, financial year starting` (Date 1 7 2021) EQUALS 0
+-- L12
+#ASSERT `the most that may be withdrawn from the Fund, required contribution` 0 `, financial year starting` (Date 1 7 2021) EQUALS 0
+-- L14
+#ASSERT `the latest the next performance review may be, last review` (Date 1 7 2020) EQUALS Date 1 7 2025
+-- L15
+#ASSERT ((Date 2 7 2025) GREATER THAN (`the latest the next performance review may be, last review` (Date 1 7 2020))) EQUALS TRUE
+-- L17 last review 29 Feb 2024: 5 years ends 28 Feb 2029
+#ASSERT `the latest the next performance review may be, last review` (Date 29 2 2024) EQUALS Date 28 2 2029
+
+-- M. Overall goal --------------------------------------------------------
+
+-- M1 entitled
+#ASSERT (`the superannuation position for` (mkCase fullApp (Date 1 6 2026) (mkRF `single` (mkHouse TRUE FALSE) FALSE 0 FALSE FALSE)))'s `entitled` EQUALS TRUE
+-- M1b rate 600
+#ASSERT (`the superannuation position for` (mkCase fullApp (Date 1 6 2026) (mkRF `single` (mkHouse TRUE FALSE) FALSE 0 FALSE FALSE)))'s `weekly rate before tax` EQUALS 600
+-- M1c commences on the 65th birthday (application received that day)
+#ASSERT (`the superannuation position for` (mkCase fullApp (Date 1 6 2026) (mkRF `single` (mkHouse TRUE FALSE) FALSE 0 FALSE FALSE)))'s `commences on` EQUALS JUST (Date 1 1 2026)
+-- M2 aged 64
+#ASSERT (`the superannuation position for` (mkCase fullApp (Date 1 6 2025) (mkRF `single` (mkHouse TRUE FALSE) FALSE 0 FALSE FALSE)))'s `entitled` EQUALS FALSE
+-- M2b not entitled: no commencement
+#ASSERT (`the superannuation position for` (mkCase fullApp (Date 1 6 2025) (mkRF `single` (mkHouse TRUE FALSE) FALSE 0 FALSE FALSE)))'s `commences on` EQUALS NOTHING
+-- M3 NZ 9 years
+#ASSERT (`the superannuation position for` (mkCase (mkApp (Date 1 1 1960) 20 9 25 10 (Date 1 1 2026)) (Date 1 6 2026) (mkRF `single` (mkHouse TRUE FALSE) FALSE 0 FALSE FALSE)))'s `entitled` EQUALS FALSE
+-- M5 married, hospital 14 weeks, no children: hospital rate 300
+#ASSERT (`the superannuation position for` (mkCase fullApp (Date 1 6 2026) (mkRF partnered (mkHouse TRUE TRUE) FALSE 14 FALSE FALSE)))'s `weekly rate before tax` EQUALS 300

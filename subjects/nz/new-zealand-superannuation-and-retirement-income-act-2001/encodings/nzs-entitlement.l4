@@ -1,0 +1,169 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `nzs-types`
+
+-- New Zealand Superannuation and Retirement Income Act 2001 — GOAL 1:
+-- ENTITLEMENT.
+--
+--   "Is the person entitled to New Zealand superannuation, from when, and at
+--    which rate?"
+--
+-- Source: ../registers/source-bundle/act_public_2001_84.txt — ss 4A, 7-12,
+-- 17-19, Schedule 1.
+
+§ `Goal 1 — entitlement`
+
+GIVEN n IS A NUMBER, d IS A DATE
+GIVETH A DATE
+`the day` n `days after` d MEANS Date (Day d PLUS n)
+
+-- Completed years of age on a date.
+GIVEN born IS A DATE, d IS A DATE
+GIVETH A NUMBER
+`the age of someone born` born `on` d MEANS
+    IF   `add years` born (DATE_YEAR d MINUS DATE_YEAR born) AT MOST d
+    THEN DATE_YEAR d MINUS DATE_YEAR born
+    ELSE DATE_YEAR d MINUS DATE_YEAR born MINUS 1
+
+§§ `Residence (ss 8, 8A)`
+
+-- s 8A "(3) If A is 45 years of age or older but younger than 55 years of age
+-- on the relevant date, A's total time requirement is the lesser of the
+-- following: (a) the period, calculated in days, that starts on the
+-- relevant date and ends on A's 65th birthday: (b) the total time
+-- requirement calculated under section 8(4). (4) If A is 55 years of age or
+-- older on the relevant date, A's total time requirement is 10 years."
+-- FORK F1: the period in (3)(a) is counted in whole calendar years from the
+-- relevant date, with any remaining days divided by 365.25 (changed after
+-- the independent pass, so that an exact anniversary gives whole years).
+@ref ss 8(4), 8A
+GIVEN a IS AN Applicant
+GIVETH A NUMBER
+`the total time requirement in years for` a MEANS
+    IF   a's `a refugee or protected person` AND age AT LEAST 45
+    THEN IF   age AT LEAST 55
+         THEN 10
+         ELSE min untilSixtyFive (a's `total time requirement from the s 8(4) table, in years`)
+    ELSE a's `total time requirement from the s 8(4) table, in years`
+    WHERE
+        relevant MEANS a's `first resident and present in New Zealand on`
+        age MEANS `the age of someone born` (a's `date of birth`) `on` relevant
+        birthday MEANS `add years` (a's `date of birth`) 65
+        whole MEANS 65 MINUS age MINUS (IF `add years` relevant (65 MINUS age) GREATER THAN birthday THEN 1 ELSE 0)
+        untilSixtyFive MEANS whole PLUS ((Day birthday MINUS Day (`add years` relevant whole)) DIVIDED BY 365.25)
+
+-- s 8 "(1) A person (A) is entitled to New Zealand superannuation only if A—
+-- (a) is ordinarily resident in New Zealand on the date of application ...;
+-- and (b) meets the residency requirements in subsections (2) and (3). (2)
+-- Since reaching the age of 20 years, A must have been both resident and
+-- present for a period or periods totalling not less than the total time
+-- requirement ...— (a) in New Zealand for 10 years of the total time
+-- requirement; and (b) in any 1 or more of New Zealand, the Cook Islands,
+-- Niue, and Tokelau for the remaining time (if any) ... (3) Since reaching
+-- the age of 50 years, A must have been both resident and present in any 1
+-- or more of New Zealand, the Cook Islands, Niue, and Tokelau for ... not
+-- less than 5 years."
+@ref ss 8, 8A
+GIVEN a IS AN Applicant
+GIVETH A BOOLEAN
+DECIDE `meets the residential qualification` a IF
+        a's `ordinarily resident in New Zealand on application`
+    AND a's `years resident and present in New Zealand since 20` AT LEAST min 10 required
+    AND a's `years resident and present in New Zealand, the Cook Islands, Niue or Tokelau since 20` AT LEAST required
+    AND a's `years resident and present in those places since 50` AT LEAST 5
+    WHERE
+        required MEANS `the total time requirement in years for` a
+
+§§ `Entitlement and commencement (ss 7, 11)`
+
+-- s 7 "(1) Every person is entitled to receive New Zealand superannuation who
+-- attains the age of 65 years. (2) However, a person is not entitled ... in
+-- respect of the period for which the person has made an election ... to be
+-- entitled to weekly compensation rather than to New Zealand
+-- superannuation". s 8 the residential qualification.
+@ref ss 7, 8
+@export Whether a person is entitled to New Zealand superannuation on a date under ss 7-8A of the New Zealand Superannuation and Retirement Income Act 2001: aged 65 or more, not having elected weekly compensation instead, ordinarily resident in New Zealand on application, resident and present since 20 for the total time requirement (10 years of it in New Zealand, the rest in New Zealand, the Cook Islands, Niue or Tokelau), and for 5 years since 50. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN a IS AN Applicant  @desc Date of birth, any weekly compensation election, residence on application, the s 8(4) total time requirement, years resident and present since 20 and since 50, refugee status and arrival, and the date the application was received
+      d IS A DATE  @desc The date in question
+GIVETH A BOOLEAN
+DECIDE `is entitled to New Zealand superannuation` a `on` d IF
+        `the age of someone born` (a's `date of birth`) `on` d AT LEAST 65
+    AND NOT a's `elected weekly compensation instead`
+    AND `meets the residential qualification` a
+
+-- s 11(1) "New Zealand superannuation commences on the date on which the
+-- applicant becomes entitled to receive it or the date on which the
+-- application for it is received by the department, whichever is the later
+-- date." Entitlement arrives on the 65th birthday, or later on the day the
+-- residential qualification is first met (changed after the independent
+-- pass).
+@ref s 11(1)
+GIVEN a IS AN Applicant
+GIVETH A DATE
+`the day New Zealand superannuation commences for` a MEANS
+    later entitled (a's `application received on`)
+    WHERE
+        GIVEN x IS A DATE, y IS A DATE
+        GIVETH A DATE
+        later x y MEANS IF x GREATER THAN y THEN x ELSE y
+        entitled MEANS
+            CONSIDER a's `residential qualification first met on, if after 65`
+            WHEN JUST m THEN later m (`add years` (a's `date of birth`) 65)
+            WHEN NOTHING THEN `add years` (a's `date of birth`) 65
+
+§§ `The rate (ss 4A, 12, 17-19, Schedule 1)`
+
+DECLARE `Rate category` IS ONE OF
+    `the single living alone rate`
+    `the single sharing accommodation rate`
+    `the couple rate`
+    `the hospital rate`
+
+-- s 4A "(1) A single person (person A) is living alone only if he or she
+-- meets the 2 conditions ... (2) ... occupies any of the following kinds of
+-- accommodation as person A's principal residence ... (3) ... does not share
+-- that residence with any person 18 years old or older, except a person to
+-- whom subsection (4) or (5) applies" (a dependent child at school, until 31
+-- December of the year they turn 18; a visitor staying less than 13 weeks in
+-- 26).
+@ref s 4A
+GIVEN h IS A Household
+GIVETH A BOOLEAN
+DECIDE `is living alone` h IF
+        h's `occupies accommodation of a s 4A(2) kind as principal residence`
+    AND NOT h's `shares it with someone 18 or over who is not a dependent student child or a short-term visitor`
+
+-- Schedule 1 cl 1: single living alone, single not living alone, married or
+-- in a relationship. s 17(2)(a), 18: a person whose spouse or partner is in
+-- long-term residential care receives "the appropriate rate payable to a
+-- person who is single" (the single living alone rate if living alone). s 19
+-- "(3) The rate ... payable to a person who is a patient in a hospital for a
+-- period of 13 weeks or less is not affected. (4) ... for more than 13 weeks
+-- is, on and after the commencement of the 14th week of hospitalisation, the
+-- rate specified in clause 3 of Schedule 1." (2) only for a person with no
+-- dependent children (if in a relationship) or a single person; (6) not for
+-- a funded resident assessed as requiring care.
+@ref ss 4A, 12, 17, 18, 19; Schedule 1
+@export The rate category of New Zealand superannuation under ss 4A, 12 and 17-19 and Schedule 1 of the New Zealand Superannuation and Retirement Income Act 2001: the hospital rate from the 14th week in hospital (unless a funded resident in care, or a person in a relationship with dependent children); otherwise for a single person (or one whose spouse or partner is in long-term residential care), the living alone or sharing rate; otherwise the couple rate. DRAFT, not reviewed by a New Zealand lawyer.
+GIVEN r IS A `Rate facts`  @desc Relationship status, the household, whether the spouse or partner is in long-term care, weeks in hospital, funded care, and dependent children
+GIVETH A `Rate category`
+`the rate category for` r MEANS
+    BRANCH
+        IF     r's `weeks in hospital` GREATER THAN 13
+           AND NOT r's `a funded resident assessed as requiring care`
+           AND (   r's `relationship status` EQUALS `single`
+                OR NOT r's `has dependent children`)
+            THEN `the hospital rate`
+        IF r's `relationship status` EQUALS `single` OR r's `spouse or partner in long-term residential care`
+            THEN IF `is living alone` (r's `household`) THEN `the single living alone rate` ELSE `the single sharing accommodation rate`
+        OTHERWISE `the couple rate`
+
+@ref s 12; Schedule 1
+GIVEN c IS A `Rate category`, rates IS A `Rates in force`
+GIVETH A NUMBER
+`the rate for` c `, rates` rates MEANS
+    CONSIDER c
+    WHEN `the single living alone rate`          THEN rates's `single living alone rate`
+    WHEN `the single sharing accommodation rate` THEN rates's `single sharing accommodation rate`
+    WHEN `the couple rate`                       THEN rates's `rate for each person in a couple`
+    WHEN `the hospital rate`                     THEN rates's `hospital rate`
