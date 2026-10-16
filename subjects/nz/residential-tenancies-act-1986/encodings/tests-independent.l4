@@ -1,0 +1,462 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `rta-types`
+IMPORT `rta-dates`
+IMPORT `rta-application`
+IMPORT `rta-money`
+IMPORT `rta-termination`
+IMPORT `rta-entry`
+IMPORT `rta-tribunal`
+IMPORT `rta-goal`
+
+-- Independent tests for the Residential Tenancies Act 1986 (NZ) encoding.
+-- Every expected value comes from independent-expectations.md, written from
+-- the Act before the encoding was opened. Scenario ids (A01 ...) refer to
+-- that file. A failing assertion is a finding: do not edit expected values.
+
+§ `Independent tests`
+
+-- Calendars: Matariki 2026 and 2027 always supplied; anniversary day only in calWg.
+calNZ MEANS `Local calendar` OF (LIST (Date 10 7 2026), (Date 25 6 2027)), EMPTY
+calWg MEANS `Local calendar` OF (LIST (Date 10 7 2026), (Date 25 6 2027)), (LIST (Date 25 1 2027))
+
+-- Helpers to build records.
+GIVEN wh IS A `Who gives notice`
+      kd IS A `Kind of tenancy`
+      gr IS A `Ground for notice`
+      sd IS A DATE
+      mv IS A `Means of service`
+      vd IS A DATE
+GIVETH A `Termination notice`
+tn wh kd gr sd mv vd MEANS `Termination notice` OF wh, kd, gr, sd, mv, vd, TRUE, NOTHING
+
+GIVEN wh IS A `Who gives notice`
+      kd IS A `Kind of tenancy`
+      gr IS A `Ground for notice`
+      sd IS A DATE
+      mv IS A `Means of service`
+GIVETH A MAYBE DATE
+earliestT wh kd gr sd mv MEANS `the earliest date to vacate under the notice` (tn wh kd gr sd mv sd) `, calendar` calNZ
+
+GIVEN wd1 IS A DATE
+GIVETH A BOOLEAN
+isWD wd1 MEANS `is a working day under s 2` wd1 calNZ
+
+GIVEN nn IS A NUMBER, dd IS A DATE
+GIVETH A DATE
+nthWD nn dd MEANS `the` nn `th working day after` dd `, calendar` calNZ
+
+-- Tenancy for application tests
+GIVEN ex IS AN `Exclusion from the Act`, agr IS A BOOLEAN
+GIVETH A Tenancy
+ten ex agr MEANS Tenancy OF ex, agr, NOTHING, FALSE, 0
+
+GIVEN ft IS A NUMBER, wr IS A BOOLEAN, tot IS A NUMBER
+GIVETH A Tenancy
+shortTen ft wr tot MEANS Tenancy OF `none of the s 5 exclusions`, FALSE, JUST ft, wr, tot
+
+-- Bond demand helper: kind, amount, weekly rent, keeps pet, agreed, pet bond held, other security
+GIVEN kb IS A `Kind of bond`, amt IS A NUMBER, wk IS A NUMBER, kp IS A BOOLEAN, ag IS A BOOLEAN, held IS A BOOLEAN, sec IS A BOOLEAN
+GIVETH A BOOLEAN
+bondOK kb amt wk kp ag held sec MEANS `the landlord may require the bond` (`Bond demand` OF kb, amt, wk, kp, ag, held, sec)
+
+-- Rent increase helper: given, takes effect, written, commenced, last increase, fixed, permits, boarding, order, new rent
+GIVEN gv IS A DATE, te IS A DATE, wr IS A BOOLEAN, cm IS A DATE, li IS A MAYBE DATE, fx IS A BOOLEAN, pm IS A BOOLEAN, bh IS A BOOLEAN, mo IS A MAYBE NUMBER, nr IS A NUMBER
+GIVETH A `Rent increase notice`
+rin gv te wr cm li fx pm bh mo nr MEANS `Rent increase notice` OF gv, te, wr, cm, li, fx, pm, bh, mo, nr
+
+-- Damage helper: s49B(1), careless, cost, insured, irrecoverable, excess, income-related, rent, market rent
+GIVEN i1 IS A BOOLEAN, ca IS A BOOLEAN, co IS A NUMBER, ins IS A BOOLEAN, irr IS A BOOLEAN, exs IS A NUMBER, irr2 IS A BOOLEAN, rw IS A NUMBER, mr IS A NUMBER
+GIVETH A NUMBER
+dmg i1 ca co ins irr exs irr2 rw mr MEANS `the tenant's liability for the damage` (`Damage facts` OF i1, ca, co, ins, irr, exs, irr2, rw, mr)
+
+-- Occasion helper (unpaid, notice same day as occasion)
+GIVEN od IS A DATE
+GIVETH AN Occasion
+occ od MEANS Occasion OF od, NOTHING, od
+
+-- Termination application helper: filed, periodic, arrears, overdue occasions, asb occasions, content ok, damage, assault, remedied, 55A(3)
+GIVEN fd IS A DATE
+      pr IS A BOOLEAN
+      ar IS A NUMBER
+      ro IS A LIST OF Occasion
+      ao IS A LIST OF Occasion
+      ct IS A BOOLEAN
+GIVETH A `Termination application`
+tapp fd pr ar ro ao ct MEANS `Termination application` OF fd, pr, ar, ro, ao, ct, FALSE, FALSE, FALSE, FALSE
+
+-- Fixed term ending helper
+GIVEN ex2 IS A DATE, ln IS A NUMBER, rn IS A BOOLEAN, ng IS A MAYBE DATE
+GIVETH A BOOLEAN
+contPeriodic ex2 ln rn ng MEANS `the tenancy continues as a periodic tenancy` (`Fixed term ending` OF ex2, ln, rn, FALSE, ng, FALSE)
+
+-- Entry helper: purpose, notice date, notice hour, entry date, entry hour, last inspection, arrears, abandonment belief
+GIVEN pu IS A `Purpose of entry`, nd IS A DATE, nh IS A NUMBER, ed IS A DATE, eh IS A NUMBER, li2 IS A MAYBE DATE, ar2 IS A NUMBER, rc IS A BOOLEAN
+GIVETH A BOOLEAN
+entryOK pu nd nh ed eh li2 ar2 rc MEANS `the landlord may enter` (`Entry notice` OF pu, nd, nh, ed, eh, li2, ar2, rc)
+
+GIVEN nd IS A DATE, nh IS A NUMBER, ed IS A DATE, eh IS A NUMBER
+GIVETH A BOOLEAN
+roomOK nd nh ed eh MEANS `the landlord may enter the boarding room on notice` (`Boarding room entry` OF nd, nh, ed, eh, TRUE)
+
+-- Boarding house notice helper: ground, given date/hour, effect date/hour, arrears period, arrears paid
+GIVEN bg IS A `Boarding house ground`, gd IS A DATE, gh IS A NUMBER, efd IS A DATE, efh IS A NUMBER, ap IS A NUMBER, pd IS A BOOLEAN
+GIVETH A BOOLEAN
+bht bg gd gh efd efh ap pd MEANS `the boarding house termination is lawful` (`Boarding house notice` OF bg, gd, gh, efd, efh, TRUE, ap, pd)
+
+-- Unlawful act application helper: applicant, bond/records flag, committed, terminated, CE aware, made, intentional, retaliatory, just, sought, max
+GIVEN apl IS A `Who applies`, fl IS A BOOLEAN, cmt IS A DATE, trm IS A MAYBE DATE, aw IS A MAYBE DATE, mdd IS A DATE, it IS A BOOLEAN, rt IS A BOOLEAN, js IS A BOOLEAN, sg IS A NUMBER, mx IS A NUMBER
+GIVETH AN `Unlawful act application`
+ua apl fl cmt trm aw mdd it rt js sg mx MEANS `Unlawful act application` OF apl, fl, cmt, trm, aw, mdd, it, rt, js, sg, mx
+
+§§ `Goal 1 — working days and application`
+
+-- A01-A17 working days
+#ASSERT NOT isWD (Date 3 4 2026)
+#ASSERT NOT isWD (Date 7 4 2026)
+#ASSERT isWD (Date 8 4 2026)
+#ASSERT NOT isWD (Date 27 4 2026)
+#ASSERT NOT isWD (Date 6 2 2026)
+#ASSERT NOT isWD (Date 8 2 2027)
+#ASSERT NOT isWD (Date 24 12 2026)
+#ASSERT NOT isWD (Date 3 1 2027)
+#ASSERT isWD (Date 4 1 2027)
+#ASSERT NOT isWD (Date 1 6 2026)
+#ASSERT NOT isWD (Date 10 7 2026)
+#ASSERT NOT isWD (Date 26 10 2026)
+#ASSERT isWD (Date 27 10 2026)
+#ASSERT isWD (Date 23 12 2026)
+#ASSERT NOT isWD (Date 26 3 2027)
+#ASSERT isWD (Date 31 3 2027)
+#ASSERT NOT isWD (Date 26 4 2027)
+#ASSERT NOT isWD (Date 7 6 2027)
+#ASSERT NOT `is a working day under s 2` (Date 25 1 2027) calWg
+#ASSERT isWD (Date 25 1 2027)
+#ASSERT isWD (Date 16 11 2026)
+
+-- A18-A23 nth working day
+#ASSERT nthWD 4 (Date 2 4 2026) EQUALS Date 13 4 2026
+#ASSERT nthWD 2 (Date 18 12 2026) EQUALS Date 22 12 2026
+#ASSERT nthWD 2 (Date 22 12 2026) EQUALS Date 4 1 2027
+#ASSERT nthWD 4 (Date 21 12 2026) EQUALS Date 5 1 2027
+#ASSERT nthWD 2 (Date 25 3 2027) EQUALS Date 1 4 2027
+#ASSERT nthWD 4 (Date 22 6 2027) EQUALS Date 29 6 2027
+-- A18 via s 136 posting
+#ASSERT `the day a notice is deemed given, sent` (Date 2 4 2026) `, served` `by post` `, calendar` calNZ EQUALS Date 13 4 2026
+
+-- A24-A31 application
+#ASSERT `the Act applies to` (ten `none of the s 5 exclusions` FALSE)
+#ASSERT NOT `the Act applies to` (ten `commercial premises` FALSE)
+#ASSERT NOT `the Act applies to` (ten `holiday premises` FALSE)
+#ASSERT NOT `the Act applies to` (ten `premises used principally as the residence of the landlord, owner, or their family` FALSE)
+#ASSERT NOT `the Act applies to` (ten `funded emergency or transitional accommodation` FALSE)
+#ASSERT `the Act applies to` (ten `holiday premises` TRUE)
+#ASSERT NOT `the Act applies to` (ten `a licensed hotel` FALSE)
+
+-- A32-A35 s 7
+#ASSERT NOT `sections 25 to 28 and 51 apply to` (shortTen 90 TRUE 90)
+#ASSERT `sections 25 to 28 and 51 apply to` (shortTen 91 TRUE 91)
+#ASSERT `sections 25 to 28 and 51 apply to` (shortTen 60 FALSE 60)
+#ASSERT `sections 25 to 28 and 51 apply to` (shortTen 60 TRUE 120)
+
+§§ `Goal 2 — bonds and rent`
+
+-- B01-B03 general bond
+#ASSERT bondOK `a general bond` 2400 600 FALSE FALSE FALSE FALSE
+#ASSERT NOT bondOK `a general bond` 2401 600 FALSE FALSE FALSE FALSE
+#ASSERT bondOK `a general bond` 2200 550 FALSE FALSE FALSE FALSE
+#ASSERT NOT bondOK `a general bond` 2201 550 FALSE FALSE FALSE FALSE
+-- B04 further general bond
+#ASSERT `the most further bond after a rent increase, kind` `a general bond` `, weekly rent from` 600 `to` 650 EQUALS 200
+-- B05-B09 pet bonds
+#ASSERT bondOK `a pet bond` 1200 600 TRUE TRUE FALSE FALSE
+#ASSERT NOT bondOK `a pet bond` 1201 600 TRUE TRUE FALSE FALSE
+#ASSERT NOT bondOK `a pet bond` 500 600 FALSE TRUE FALSE FALSE
+#ASSERT NOT bondOK `a pet bond` 500 600 TRUE TRUE TRUE FALSE
+#ASSERT NOT bondOK `a pet bond` 500 600 TRUE FALSE FALSE FALSE
+-- B10 general and pet together (each within its own cap)
+#ASSERT bondOK `a general bond` 2400 600 TRUE TRUE FALSE FALSE AND bondOK `a pet bond` 1200 600 TRUE TRUE FALSE FALSE
+-- B11 credit-card imprint security; B12 guarantee is not security
+#ASSERT NOT bondOK `a general bond` 1000 600 FALSE FALSE FALSE TRUE
+#ASSERT bondOK `a general bond` 1000 600 FALSE FALSE FALSE FALSE
+
+-- B13-B17 lodging within 23 working days
+#ASSERT `the last day to lodge the bond, payment` (`Bond payment` OF (Date 20 3 2026), NOTHING, FALSE, 4) `, calendar` calNZ EQUALS JUST (Date 28 4 2026)
+#ASSERT `the bond was lodged in time` (`Bond payment` OF (Date 20 3 2026), JUST (Date 28 4 2026), FALSE, 4) calNZ
+#ASSERT NOT `the bond was lodged in time` (`Bond payment` OF (Date 20 3 2026), JUST (Date 29 4 2026), FALSE, 4) calNZ
+#ASSERT `the last day to lodge the bond, payment` (`Bond payment` OF (Date 1 12 2026), NOTHING, FALSE, 4) `, calendar` calNZ EQUALS JUST (Date 12 1 2027)
+#ASSERT `the last day to lodge the bond, payment` (`Bond payment` OF (Date 15 6 2026), NOTHING, FALSE, 4) `, calendar` calNZ EQUALS JUST (Date 17 7 2026)
+#ASSERT `the last day to lodge the bond, payment` (`Bond payment` OF (Date 20 1 2027), NOTHING, FALSE, 4) `, calendar` calWg EQUALS JUST (Date 24 2 2027)
+#ASSERT `the last day to lodge the bond, payment` (`Bond payment` OF (Date 20 1 2027), NOTHING, FALSE, 4) `, calendar` calNZ EQUALS JUST (Date 23 2 2027)
+-- B18-B19 boarding house bond
+#ASSERT `the last day to lodge the bond, payment` (`Bond payment` OF (Date 1 12 2026), NOTHING, TRUE, 1) `, calendar` calNZ EQUALS NOTHING
+#ASSERT `a boarding house bond need not be lodged, weeks of rent` 1
+#ASSERT NOT `a boarding house bond need not be lodged, weeks of rent` (201 DIVIDED BY 200)
+#ASSERT `the last day to lodge the bond, payment` (`Bond payment` OF (Date 1 12 2026), NOTHING, TRUE, 201 DIVIDED BY 200) `, calendar` calNZ EQUALS JUST (Date 12 1 2027)
+
+-- B21-B24 rent in advance (rent 500/week: 1000 = 2 weeks, 1001 = 2.002 weeks)
+#ASSERT `the landlord may require the rent in advance` (`Rent demand` OF 2, FALSE, FALSE, FALSE)
+#ASSERT NOT `the landlord may require the rent in advance` (`Rent demand` OF (1001 DIVIDED BY 500), FALSE, FALSE, FALSE)
+#ASSERT NOT `the landlord may require the rent in advance` (`Rent demand` OF 3, FALSE, FALSE, FALSE)
+#ASSERT NOT `the landlord may require the rent in advance` (`Rent demand` OF 1, TRUE, FALSE, FALSE)
+#ASSERT NOT `the landlord may require the rent in advance` (`Rent demand` OF 1, FALSE, TRUE, FALSE)
+
+-- B25-B28 rent increase notice periods
+#ASSERT `the rent increase is lawful` (rin (Date 2 11 2026) (Date 1 1 2027) TRUE (Date 1 1 2025) NOTHING FALSE FALSE FALSE NOTHING 650)
+#ASSERT NOT `the rent increase is lawful` (rin (Date 2 11 2026) (Date 31 12 2026) TRUE (Date 1 1 2025) NOTHING FALSE FALSE FALSE NOTHING 650)
+#ASSERT `the earliest day the increase may take effect, notice` (rin (Date 2 11 2026) (Date 1 1 2027) TRUE (Date 1 1 2025) NOTHING FALSE FALSE FALSE NOTHING 650) EQUALS Date 1 1 2027
+#ASSERT `the rent increase is lawful` (rin (Date 2 11 2026) (Date 30 11 2026) TRUE (Date 1 1 2025) NOTHING FALSE FALSE TRUE NOTHING 650)
+#ASSERT NOT `the rent increase is lawful` (rin (Date 2 11 2026) (Date 29 11 2026) TRUE (Date 1 1 2025) NOTHING FALSE FALSE TRUE NOTHING 650)
+-- B29 posted notice: deemed 6 Nov 2026, earliest 5 Jan 2027
+#ASSERT `the day a notice is deemed given, sent` (Date 2 11 2026) `, served` `by post` `, calendar` calNZ EQUALS Date 6 11 2026
+#ASSERT `the earliest day the increase may take effect, notice` (rin (`the day a notice is deemed given, sent` (Date 2 11 2026) `, served` `by post` `, calendar` calNZ) (Date 5 1 2027) TRUE (Date 1 1 2025) NOTHING FALSE FALSE FALSE NOTHING 650) EQUALS Date 5 1 2027
+-- B30-B31 12 months after commencement (R3: anniversary day is within 12 months)
+#ASSERT NOT `the rent increase is lawful` (rin (Date 1 12 2026) (Date 1 3 2027) TRUE (Date 1 3 2026) NOTHING FALSE FALSE FALSE NOTHING 650)
+#ASSERT `the rent increase is lawful` (rin (Date 1 12 2026) (Date 2 3 2027) TRUE (Date 1 3 2026) NOTHING FALSE FALSE FALSE NOTHING 650)
+-- B32 12 months after last increase
+#ASSERT NOT `the rent increase is lawful` (rin (Date 1 3 2027) (Date 15 5 2027) TRUE (Date 1 1 2025) (JUST (Date 15 5 2026)) FALSE FALSE FALSE NOTHING 650)
+#ASSERT `the rent increase is lawful` (rin (Date 1 3 2027) (Date 16 5 2027) TRUE (Date 1 1 2025) (JUST (Date 15 5 2026)) FALSE FALSE FALSE NOTHING 650)
+-- B33-B34 fixed term
+#ASSERT NOT `the rent increase is lawful` (rin (Date 2 11 2026) (Date 1 1 2027) TRUE (Date 1 1 2025) NOTHING TRUE FALSE FALSE NOTHING 650)
+#ASSERT `the rent increase is lawful` (rin (Date 2 11 2026) (Date 1 1 2027) TRUE (Date 1 1 2025) NOTHING TRUE TRUE FALSE NOTHING 650)
+-- B35 market rent order in force
+#ASSERT NOT `the rent increase is lawful` (rin (Date 2 11 2026) (Date 1 1 2027) TRUE (Date 1 1 2025) NOTHING FALSE FALSE FALSE (JUST 550) 560)
+#ASSERT `the rent increase is lawful` (rin (Date 2 11 2026) (Date 1 1 2027) TRUE (Date 1 1 2025) NOTHING FALSE FALSE FALSE (JUST 550) 550)
+-- B36 not in writing
+#ASSERT NOT `the rent increase is lawful` (rin (Date 2 11 2026) (Date 1 1 2027) FALSE (Date 1 1 2025) NOTHING FALSE FALSE FALSE NOTHING 650)
+
+-- B38-B40 market rent application time
+#ASSERT `the market rent application is in time` (`Market rent application` OF (Date 10 5 2026), TRUE, (Date 10 2 2026), NOTHING, NOTHING)
+#ASSERT NOT `the market rent application is in time` (`Market rent application` OF (Date 11 5 2026), TRUE, (Date 10 2 2026), NOTHING, NOTHING)
+#ASSERT `the market rent application is in time` (`Market rent application` OF (Date 1 11 2026), TRUE, (Date 10 2 2026), JUST (Date 1 8 2026), NOTHING)
+#ASSERT `the market rent application is in time` (`Market rent application` OF (Date 1 9 2029), FALSE, (Date 1 9 2026), NOTHING, NOTHING)
+-- B41-B42 market rent order effective date
+#ASSERT `a market rent order made on` (Date 1 10 2026) `may take effect on` (Date 1 9 2026) `, applied for on` (Date 1 9 2026)
+#ASSERT `a market rent order made on` (Date 1 10 2026) `may take effect on` (Date 31 10 2026) `, applied for on` (Date 1 9 2026)
+#ASSERT NOT `a market rent order made on` (Date 1 10 2026) `may take effect on` (Date 31 8 2026) `, applied for on` (Date 1 9 2026)
+#ASSERT NOT `a market rent order made on` (Date 1 10 2026) `may take effect on` (Date 1 11 2026) `, applied for on` (Date 1 9 2026)
+
+-- B44-B48 receipts
+#ASSERT `the receipt rules were met` (`Rent payment` OF `in cash`, TRUE, NOTHING)
+#ASSERT NOT `the receipt rules were met` (`Rent payment` OF `in cash`, FALSE, JUST 1)
+#ASSERT `the receipt rules were met` (`Rent payment` OF `by another means needing a receipt`, FALSE, JUST 72)
+#ASSERT NOT `the receipt rules were met` (`Rent payment` OF `by another means needing a receipt`, FALSE, JUST 73)
+#ASSERT `the receipt rules were met` (`Rent payment` OF `by automatic payment or non-negotiable cheque from the tenant's account`, FALSE, NOTHING)
+#ASSERT `the receipt rules were met` (`Rent payment` OF `into an account the landlord keeps only for its tenancies`, FALSE, NOTHING)
+#ASSERT `the receipt rules were met` (`Rent payment` OF `by deduction from pay or benefit into the landlord's account`, FALSE, NOTHING)
+
+-- B49-B51 records
+#ASSERT `the last day to keep the record of a payment on` (Date 15 5 2026) EQUALS Date 31 3 2034
+#ASSERT `the last day to keep the record of a payment on` (Date 1 4 2027) EQUALS Date 31 3 2035
+#ASSERT `the last day to keep the record of a payment on` (Date 31 3 2027) EQUALS Date 31 3 2034
+
+-- B52-B61 damage
+#ASSERT dmg FALSE TRUE 3000 TRUE FALSE 500 FALSE 600 0 EQUALS 500
+#ASSERT dmg FALSE TRUE 3000 TRUE FALSE 3000 FALSE 600 0 EQUALS 2400
+#ASSERT dmg FALSE TRUE 3000 FALSE FALSE 0 FALSE 600 0 EQUALS 2400
+#ASSERT dmg FALSE TRUE 300 FALSE FALSE 0 FALSE 600 0 EQUALS 300
+#ASSERT dmg TRUE FALSE 3000 TRUE FALSE 500 FALSE 600 0 EQUALS 3000
+#ASSERT dmg TRUE FALSE 3000 FALSE FALSE 0 FALSE 600 0 EQUALS 3000
+#ASSERT dmg FALSE TRUE 5000 FALSE FALSE 0 TRUE 150 550 EQUALS 2200
+#ASSERT dmg FALSE TRUE 5000 TRUE TRUE 1000 FALSE 600 0 EQUALS 2400
+#ASSERT dmg FALSE FALSE 3000 TRUE FALSE 500 FALSE 600 0 EQUALS 0
+#ASSERT dmg TRUE FALSE 4000 FALSE FALSE 0 FALSE 600 0 EQUALS 4000
+
+-- B62-B64 s 56B rent reduction
+#ASSERT `the rent for the 2 weeks after the withdrawal, rent` 1800 `, tenants before` 3 `, remaining` 2 `, excluded` FALSE EQUALS 1200
+#ASSERT `the rent for the 2 weeks after the withdrawal, rent` 1800 `, tenants before` 3 `, remaining` 2 `, excluded` TRUE EQUALS 1800
+#ASSERT `the rent for the 2 weeks after the withdrawal, rent` 2000 `, tenants before` 4 `, remaining` 1 `, excluded` FALSE EQUALS 500
+
+-- B65-B66 bond application without agreement
+#ASSERT `the last day for a bond application without agreement by` `a landlord` `, tenancy ended` (Date 30 6 2026) EQUALS JUST (Date 30 8 2026)
+#ASSERT `the last day for a bond application without agreement by` `a tenant` `, tenancy ended` (Date 30 6 2026) EQUALS NOTHING
+
+§§ `Goal 3 — termination`
+
+-- C01-C03 personal service
+#ASSERT earliestT `the landlord` `periodic` `s 51(1) the landlord, in any case` (Date 2 3 2026) `personally` EQUALS JUST (Date 31 5 2026)
+#ASSERT earliestT `the landlord` `periodic` `s 51(2)(a) the owner or family will live there` (Date 2 3 2026) `personally` EQUALS JUST (Date 13 4 2026)
+#ASSERT earliestT `the tenant` `periodic` `s 51(2A) the tenant, in any case` (Date 2 3 2026) `personally` EQUALS JUST (Date 23 3 2026)
+-- C04-C10 deemed service
+#ASSERT earliestT `the landlord` `periodic` `s 51(1) the landlord, in any case` (Date 2 3 2026) `by post` EQUALS JUST (Date 4 6 2026)
+#ASSERT earliestT `the tenant` `periodic` `s 51(2A) the tenant, in any case` (Date 29 5 2026) `by delivery to a mailbox or door` EQUALS JUST (Date 24 6 2026)
+#ASSERT earliestT `the landlord` `periodic` `s 51(1) the landlord, in any case` (Date 16 10 2026) `by email or other electronic address, by 5 pm` EQUALS JUST (Date 14 1 2027)
+#ASSERT earliestT `the landlord` `periodic` `s 51(2)(a) the owner or family will live there` (Date 9 7 2026) `by email or other electronic address, after 5 pm` EQUALS JUST (Date 24 8 2026)
+#ASSERT earliestT `the landlord` `periodic` `s 51(1) the landlord, in any case` (Date 4 9 2026) `by post` EQUALS JUST (Date 9 12 2026)
+#ASSERT earliestT `the tenant` `periodic` `s 51(2A) the tenant, in any case` (Date 22 10 2026) `by post` EQUALS JUST (Date 19 11 2026)
+#ASSERT earliestT `the tenant` `periodic` `s 51(2A) the tenant, in any case` (Date 22 12 2026) `by delivery to a mailbox or door` EQUALS JUST (Date 25 1 2027)
+-- C11 date to vacate one day short / exact
+#ASSERT NOT `the termination notice is lawful` (tn `the landlord` `periodic` `s 51(1) the landlord, in any case` (Date 2 3 2026) `personally` (Date 30 5 2026)) calNZ
+#ASSERT `the termination notice is lawful` (tn `the landlord` `periodic` `s 51(1) the landlord, in any case` (Date 2 3 2026) `personally` (Date 31 5 2026)) calNZ
+-- C12-C13 other 42-day grounds
+#ASSERT earliestT `the landlord` `periodic` `s 51(2)(b) an unconditional sale needs vacant possession` (Date 2 3 2026) `personally` EQUALS JUST (Date 13 4 2026)
+#ASSERT earliestT `the landlord` `periodic` `s 51(2)(c) required for employees or contractors, as stated in the agreement` (Date 2 3 2026) `personally` EQUALS JUST (Date 13 4 2026)
+-- C16-C17 s 51 not available on a fixed term
+#ASSERT earliestT `the landlord` `fixed-term` `s 51(1) the landlord, in any case` (Date 2 3 2026) `personally` EQUALS NOTHING
+#ASSERT NOT `the termination notice is lawful` (tn `the landlord` `fixed-term` `s 51(1) the landlord, in any case` (Date 2 3 2026) `personally` (Date 30 6 2026)) calNZ
+#ASSERT earliestT `the tenant` `fixed-term` `s 51(2A) the tenant, in any case` (Date 2 3 2026) `personally` EQUALS NOTHING
+-- C18 s 55AA (fixed term and periodic)
+#ASSERT earliestT `the landlord` `fixed-term` `s 55AA a physical assault for which a charge has been filed` (Date 3 8 2026) `personally` EQUALS JUST (Date 17 8 2026)
+#ASSERT earliestT `the landlord` `periodic` `s 55AA a physical assault for which a charge has been filed` (Date 3 8 2026) `personally` EQUALS JUST (Date 17 8 2026)
+-- C20-C21 service tenancy
+#ASSERT earliestT `the landlord` `periodic` `s 53(1) the service contract has ended or notice of its end was given` (Date 3 8 2026) `personally` EQUALS JUST (Date 17 8 2026)
+#ASSERT earliestT `the tenant` `periodic` `s 53(1) the service contract has ended or notice of its end was given` (Date 3 8 2026) `personally` EQUALS JUST (Date 17 8 2026)
+#ASSERT `the earliest date to vacate under the notice` (`Termination notice` OF `the landlord`, `periodic`, `s 53(1) the service contract has ended or notice of its end was given`, (Date 3 8 2026), `personally`, (Date 24 8 2026), TRUE, JUST (Date 24 8 2026)) `, calendar` calNZ EQUALS JUST (Date 24 8 2026)
+-- C22-C23 service tenant's death
+#ASSERT earliestT `the landlord` `periodic` `s 53(5) the service tenant died and a replacement is urgently needed` (Date 3 8 2026) `personally` EQUALS JUST (Date 8 8 2026)
+#ASSERT earliestT `the landlord` `periodic` `s 53(4) the service tenant died leaving a dependant` (Date 3 8 2026) `personally` EQUALS JUST (Date 17 8 2026)
+-- C24 student tenancy, either party
+#ASSERT earliestT `the tenant` `periodic` `s 53A(2) the tenant is no longer eligible for the student tenancy` (Date 3 8 2026) `personally` EQUALS JUST (Date 17 8 2026)
+#ASSERT earliestT `the landlord` `periodic` `s 53A(2) the tenant is no longer eligible for the student tenancy` (Date 3 8 2026) `personally` EQUALS JUST (Date 17 8 2026)
+-- C25 unlawful residential premises
+#ASSERT earliestT `the tenant` `fixed-term` `s 56A(1) unlawful residential premises` (Date 3 8 2026) `personally` EQUALS JUST (Date 5 8 2026)
+-- C26 family violence withdrawal posted Mon 7 Sep 2026: given on posting (s 56C), withdrawal 9 Sep
+#ASSERT earliestT `the tenant` `fixed-term` `s 56B withdrawal following family violence` (Date 7 9 2026) `by post` EQUALS JUST (Date 9 9 2026)
+-- C29 build-to-rent
+#ASSERT earliestT `the tenant` `fixed-term` `s 58A a build-to-rent fixed term of at least 10 years` (Date 3 8 2026) `personally` EQUALS JUST (Date 28 9 2026)
+-- C31-C32 destroyed premises
+#ASSERT earliestT `the landlord` `periodic` `ss 59, 59A, 59B the premises are destroyed, uninhabitable or contaminated` (Date 3 8 2026) `personally` EQUALS JUST (Date 10 8 2026)
+#ASSERT earliestT `the tenant` `fixed-term` `ss 59, 59A, 59B the premises are destroyed, uninhabitable or contaminated` (Date 3 8 2026) `personally` EQUALS JUST (Date 5 8 2026)
+
+-- C34-C35 s 55(1)(a) arrears
+#ASSERT `the Tribunal must terminate under s 55` (tapp (Date 1 9 2026) TRUE 21 EMPTY EMPTY TRUE) calNZ
+#ASSERT NOT `the Tribunal must terminate under s 55` (tapp (Date 1 9 2026) TRUE 20 EMPTY EMPTY TRUE) calNZ
+-- C36-C41 three occasions
+#ASSERT `the Tribunal must terminate under s 55` (tapp (Date 29 5 2026) TRUE 0 (LIST (occ (Date 1 2 2026)), (occ (Date 15 3 2026)), (occ (Date 1 5 2026))) EMPTY TRUE) calNZ
+#ASSERT NOT `the Tribunal must terminate under s 55` (tapp (Date 29 5 2026) TRUE 0 (LIST (occ (Date 1 2 2026)), (occ (Date 15 3 2026)), (occ (Date 2 5 2026))) EMPTY TRUE) calNZ
+#ASSERT NOT `the Tribunal must terminate under s 55` (tapp (Date 30 5 2026) TRUE 0 (LIST (occ (Date 1 2 2026)), (occ (Date 15 3 2026)), (occ (Date 1 5 2026))) EMPTY TRUE) calNZ
+#ASSERT NOT `the Tribunal must terminate under s 55` (tapp (Date 29 5 2026) FALSE 0 (LIST (occ (Date 1 2 2026)), (occ (Date 15 3 2026)), (occ (Date 1 5 2026))) EMPTY TRUE) calNZ
+#ASSERT NOT `the Tribunal must terminate under s 55` (tapp (Date 29 5 2026) TRUE 0 (LIST (occ (Date 15 3 2026)), (occ (Date 1 5 2026))) EMPTY TRUE) calNZ
+#ASSERT NOT `the Tribunal must terminate under s 55` (tapp (Date 29 5 2026) TRUE 0 (LIST (occ (Date 1 2 2026)), (occ (Date 15 3 2026)), (occ (Date 1 5 2026))) EMPTY FALSE) calNZ
+-- C42-C43 5 working days owing
+#ASSERT `rent was owing for at least 5 working days on` (Occasion OF (Date 3 8 2026), NOTHING, (Date 11 8 2026)) calNZ
+#ASSERT `rent was owing for at least 5 working days on` (Occasion OF (Date 3 8 2026), JUST (Date 11 8 2026), (Date 11 8 2026)) calNZ
+#ASSERT NOT `rent was owing for at least 5 working days on` (Occasion OF (Date 3 8 2026), JUST (Date 10 8 2026), (Date 11 8 2026)) calNZ
+#ASSERT `rent was owing for at least 5 working days on` (Occasion OF (Date 19 10 2026), JUST (Date 28 10 2026), (Date 28 10 2026)) calNZ
+#ASSERT NOT `rent was owing for at least 5 working days on` (Occasion OF (Date 19 10 2026), JUST (Date 27 10 2026), (Date 28 10 2026)) calNZ
+-- C44-C46 anti-social behaviour
+#ASSERT `the Tribunal must terminate for anti-social behaviour` (tapp (Date 29 5 2026) TRUE 0 EMPTY (LIST (occ (Date 1 2 2026)), (occ (Date 15 3 2026)), (occ (Date 1 5 2026))) TRUE)
+#ASSERT NOT `the Tribunal must terminate for anti-social behaviour` (tapp (Date 29 5 2026) FALSE 0 EMPTY (LIST (occ (Date 1 2 2026)), (occ (Date 15 3 2026)), (occ (Date 1 5 2026))) TRUE)
+#ASSERT NOT `the Tribunal must terminate for anti-social behaviour` (`Termination application` OF (Date 29 5 2026), TRUE, 0, EMPTY, (LIST (occ (Date 1 2 2026)), (occ (Date 15 3 2026)), (occ (Date 1 5 2026))), TRUE, FALSE, FALSE, FALSE, TRUE)
+
+-- C47-C52 s 60A
+#ASSERT contPeriodic (Date 31 12 2026) 365 FALSE NOTHING
+#ASSERT NOT contPeriodic (Date 31 12 2026) 365 FALSE (JUST (Date 2 10 2026))
+#ASSERT contPeriodic (Date 31 12 2026) 365 FALSE (JUST (Date 1 10 2026))
+#ASSERT NOT contPeriodic (Date 31 12 2026) 365 FALSE (JUST (Date 10 12 2026))
+#ASSERT contPeriodic (Date 31 12 2026) 365 FALSE (JUST (Date 11 12 2026))
+#ASSERT NOT contPeriodic (Date 31 12 2026) 90 FALSE NOTHING
+#ASSERT NOT contPeriodic (Date 31 12 2026) 365 TRUE NOTHING
+-- C53 s 60B
+#ASSERT `the last day to give notice to renew or extend, expiry` (Date 31 3 2027) EQUALS Date 10 3 2027
+-- C54-C57 s 61
+#ASSERT `the last day of rent after abandonment, tenancy` `periodic` `, landlord aware on` (Date 1 7 2026) `, term expires` (Date 31 12 2026) `, new tenancy starts` NOTHING EQUALS Date 22 7 2026
+#ASSERT `the last day of rent after abandonment, tenancy` `periodic` `, landlord aware on` (Date 1 7 2026) `, term expires` (Date 31 12 2026) `, new tenancy starts` (JUST (Date 15 7 2026)) EQUALS Date 15 7 2026
+#ASSERT `the last day of rent after abandonment, tenancy` `fixed-term` `, landlord aware on` (Date 1 7 2026) `, term expires` (Date 31 12 2026) `, new tenancy starts` (JUST (Date 1 9 2026)) EQUALS Date 1 9 2026
+#ASSERT `the last day of rent after abandonment, tenancy` `fixed-term` `, landlord aware on` (Date 1 7 2026) `, term expires` (Date 31 12 2026) `, new tenancy starts` NOTHING EQUALS Date 31 12 2026
+-- C58 s 62A: may sell from 6 Sep 2026
+#ASSERT `the first day stored goods may be sold, possession taken` (Date 1 8 2026) EQUALS Date 6 9 2026
+-- C61 s 62D
+#ASSERT `the last day to claim the proceeds of sale, sold` (Date 1 10 2026) EQUALS Date 1 10 2027
+-- C62-C63 s 64
+#ASSERT `the last day for a possession order or its filing, from` (Date 30 6 2026) EQUALS Date 28 9 2026
+#ASSERT `the last day for a possession order or its filing, from` (Date 10 7 2026) EQUALS Date 8 10 2026
+-- C64-C66 s 50A
+#ASSERT `the day the tenancy ends after the sole tenant's death, notice of death` (JUST (Date 3 8 2026)) `, notice to vacate` (JUST (Date 5 8 2026)) `, agreed` NOTHING `, Tribunal` NOTHING EQUALS JUST (Date 24 8 2026)
+#ASSERT `the day the tenancy ends after the sole tenant's death, notice of death` (JUST (Date 3 8 2026)) `, notice to vacate` (JUST (Date 5 8 2026)) `, agreed` (JUST (Date 20 8 2026)) `, Tribunal` NOTHING EQUALS JUST (Date 20 8 2026)
+#ASSERT `the day the tenancy ends after the sole tenant's death, notice of death` NOTHING `, notice to vacate` (JUST (Date 5 8 2026)) `, agreed` NOTHING `, Tribunal` NOTHING EQUALS JUST (Date 26 8 2026)
+-- C67 s 56D
+#ASSERT `the last day for a s 56D hardship application, withdrawal on` (Date 9 9 2026) EQUALS Date 8 11 2026
+-- C70 s 60(2): deemed periodic tenancy as from the expiry of the 90 days (termination 30 Jun 2026)
+#ASSERT `the day a periodic tenancy is deemed granted, tenancy ended` (Date 30 6 2026) `, possession order` NOTHING EQUALS Date 28 9 2026
+-- C71 s 7 short fixed term: s 51 notice not lawful (top-level goal)
+#ASSERT NOT (`the tenancy step answer for` (shortTen 90 TRUE 90) `, step` (`a notice to terminate` (tn `the landlord` `periodic` `s 51(1) the landlord, in any case` (Date 2 3 2026) `personally` (Date 30 6 2026))) `, calendar` calNZ)'s `the step is lawful`
+-- top-level goal sanity: ordinary tenancy, C01 notice lawful with key date 31 May 2026
+#ASSERT (`the tenancy step answer for` (ten `none of the s 5 exclusions` FALSE) `, step` (`a notice to terminate` (tn `the landlord` `periodic` `s 51(1) the landlord, in any case` (Date 2 3 2026) `personally` (Date 31 5 2026))) `, calendar` calNZ)'s `the key date` EQUALS JUST (Date 31 5 2026)
+-- A25 via goal: commercial premises, Act does not apply
+#ASSERT NOT (`the tenancy step answer for` (ten `commercial premises` FALSE) `, step` (`a notice to terminate` (tn `the landlord` `periodic` `s 51(1) the landlord, in any case` (Date 2 3 2026) `personally` (Date 31 5 2026))) `, calendar` calNZ)'s `the Act applies`
+
+§§ `Goal 4 — entry and boarding houses`
+
+-- D01-D05 inspection
+#ASSERT entryOK `(2)(b) inspection` (Date 8 6 2026) 10 (Date 10 6 2026) 10 NOTHING 0 FALSE
+#ASSERT NOT entryOK `(2)(b) inspection` (Date 8 6 2026) 10 (Date 10 6 2026) 9 NOTHING 0 FALSE
+#ASSERT entryOK `(2)(b) inspection` (Date 8 6 2026) 10 (Date 22 6 2026) 10 NOTHING 0 FALSE
+#ASSERT NOT entryOK `(2)(b) inspection` (Date 8 6 2026) 10 (Date 23 6 2026) 10 NOTHING 0 FALSE
+#ASSERT NOT entryOK `(2)(b) inspection` (Date 8 6 2026) 10 (Date 12 6 2026) 7.5 NOTHING 0 FALSE
+#ASSERT NOT entryOK `(2)(b) inspection` (Date 8 6 2026) 10 (Date 12 6 2026) 19.5 NOTHING 0 FALSE
+#ASSERT entryOK `(2)(b) inspection` (Date 8 6 2026) 10 (Date 12 6 2026) 19 NOTHING 0 FALSE
+#ASSERT entryOK `(2)(b) inspection` (Date 8 6 2026) 10 (Date 12 6 2026) 8 NOTHING 0 FALSE
+#ASSERT NOT entryOK `(2)(b) inspection` (Date 3 6 2026) 10 (Date 6 6 2026) 10 (JUST (Date 10 5 2026)) 0 FALSE
+#ASSERT entryOK `(2)(b) inspection` (Date 3 6 2026) 10 (Date 7 6 2026) 10 (JUST (Date 10 5 2026)) 0 FALSE
+-- D06-D08 24-hour purposes
+#ASSERT entryOK `(2)(ca)-(cc), (d) smoke alarms, healthy homes, decontamination or necessary repairs` (Date 8 6 2026) 10 (Date 9 6 2026) 10 NOTHING 0 FALSE
+#ASSERT NOT entryOK `(2)(ca)-(cc), (d) smoke alarms, healthy homes, decontamination or necessary repairs` (Date 8 6 2026) 11 (Date 9 6 2026) 10 NOTHING 0 FALSE
+#ASSERT entryOK `(2)(ca)-(cc), (d) smoke alarms, healthy homes, decontamination or necessary repairs` (Date 8 6 2026) 10 (Date 9 6 2026) 18 NOTHING 0 FALSE
+-- D09 emergency
+#ASSERT entryOK `(2)(a) emergency` (Date 8 6 2026) 2 (Date 8 6 2026) 2 NOTHING 0 FALSE
+-- D11 contaminant testing
+#ASSERT entryOK `(2)(ba) contaminant testing` (Date 8 6 2026) 10 (Date 10 6 2026) 10 NOTHING 0 FALSE
+#ASSERT NOT entryOK `(2)(ba) contaminant testing` (Date 8 6 2026) 10 (Date 9 6 2026) 10 NOTHING 0 FALSE
+-- D12-D13 abandonment
+#ASSERT entryOK `(2A)-(2B) confirming abandonment` (Date 8 6 2026) 10 (Date 9 6 2026) 10 NOTHING 14 TRUE
+#ASSERT NOT entryOK `(2A)-(2B) confirming abandonment` (Date 8 6 2026) 10 (Date 9 6 2026) 10 NOTHING 13 TRUE
+
+-- D16-D18 boarding room on notice
+#ASSERT roomOK (Date 8 6 2026) 10 (Date 9 6 2026) 17.5
+#ASSERT NOT roomOK (Date 8 6 2026) 10 (Date 9 6 2026) 18.5
+#ASSERT NOT roomOK (Date 8 6 2026) 11 (Date 9 6 2026) 10
+-- D22-D23 s 66X (date part only)
+#ASSERT `the calendar day` 24 `hours after` (Date 1 7 2026) `at hour` 10 EQUALS Date 2 7 2026
+#ASSERT `the calendar day` 48 `hours after` (Date 3 7 2026) `at hour` 10 EQUALS Date 5 7 2026
+-- D24-D30, D32 boarding house terminations
+#ASSERT bht `s 66U(1)(d) no reason given` (Date 2 3 2026) 10 (Date 30 3 2026) 10 0 FALSE
+#ASSERT NOT bht `s 66U(1)(d) no reason given` (Date 2 3 2026) 10 (Date 29 3 2026) 10 0 FALSE
+#ASSERT NOT bht `s 66U(1)(d) no reason given` (Date 2 3 2026) 10 (Date 22 3 2026) 10 0 FALSE
+#ASSERT bht `s 66U(1)(c) also a service tenancy` (Date 2 3 2026) 10 (Date 16 3 2026) 10 0 FALSE
+#ASSERT NOT bht `s 66U(1)(c) also a service tenancy` (Date 2 3 2026) 10 (Date 15 3 2026) 10 0 FALSE
+#ASSERT bht `s 66U(1)(b)(i) rent arrears unpaid after a notice of at least 10 days` (Date 2 3 2026) 10 (Date 4 3 2026) 10 10 FALSE
+#ASSERT NOT bht `s 66U(1)(b)(i) rent arrears unpaid after a notice of at least 10 days` (Date 2 3 2026) 10 (Date 4 3 2026) 10 9 FALSE
+#ASSERT bht `s 66U(1)(b)(ii) use for an illegal purpose` (Date 2 3 2026) 10 (Date 4 3 2026) 10 0 FALSE
+#ASSERT NOT bht `s 66U(1)(b)(ii) use for an illegal purpose` (Date 2 3 2026) 10 (Date 4 3 2026) 9 0 FALSE
+#ASSERT bht `s 66U(1)(a) serious damage, endangering people or property, or serious disruption` (Date 2 3 2026) 10 (Date 2 3 2026) 10 0 FALSE
+#ASSERT bht `s 66V the tenant's notice` (Date 2 3 2026) 10 (Date 4 3 2026) 10 0 FALSE
+#ASSERT NOT bht `s 66V the tenant's notice` (Date 2 3 2026) 10 (Date 4 3 2026) 9 0 FALSE
+-- D31 s 66W (date part)
+#ASSERT `the calendar day` 48 `hours after` (Date 10 8 2026) `at hour` 14 EQUALS Date 12 8 2026
+
+§§ `Goal 5 — the Tribunal`
+
+-- E01-E03 jurisdiction
+#ASSERT `the Tribunal has jurisdiction over a claim of` 100000 `, excess abandoned` FALSE
+#ASSERT NOT `the Tribunal has jurisdiction over a claim of` 100001 `, excess abandoned` FALSE
+#ASSERT `the Tribunal has jurisdiction over a claim of` 120000 `, excess abandoned` TRUE
+-- E04-E06 s 54(3)
+#ASSERT `the last day to seek a no-effect order against a retaliatory notice received on` (Date 1 9 2026) `, calendar` calNZ EQUALS Date 9 10 2026
+#ASSERT NOT (Date 12 10 2026 AT MOST `the last day to seek a no-effect order against a retaliatory notice received on` (Date 1 9 2026) `, calendar` calNZ)
+#ASSERT `the last day to seek a no-effect order against a retaliatory notice received on` (Date 10 12 2026) `, calendar` calNZ EQUALS Date 28 1 2027
+-- E08 s 108(7)
+#ASSERT `the last day a work order may be enforced without leave, ordered` (Date 1 3 2026) EQUALS Date 1 3 2027
+-- E09 ordinary unlawful act, 12 months after commission
+#ASSERT `the unlawful act application is in time` (ua `a tenant` FALSE (Date 15 4 2026) NOTHING NOTHING (Date 15 4 2027) TRUE FALSE TRUE 1000 4500)
+#ASSERT NOT `the unlawful act application is in time` (ua `a tenant` FALSE (Date 15 4 2026) NOTHING NOTHING (Date 16 4 2027) TRUE FALSE TRUE 1000 4500)
+-- E10-E11 bond lodging / bond records: 12 months after termination
+#ASSERT `the unlawful act application is in time` (ua `a tenant` TRUE (Date 15 1 2025) (JUST (Date 30 11 2026)) NOTHING (Date 30 11 2027) TRUE FALSE TRUE 1000 4500)
+#ASSERT NOT `the unlawful act application is in time` (ua `a tenant` TRUE (Date 15 1 2025) (JUST (Date 30 11 2026)) NOTHING (Date 1 12 2027) TRUE FALSE TRUE 1000 4500)
+-- E12 rent records failure: 12 months after commission
+#ASSERT `the last day to apply about the unlawful act` (ua `a tenant` FALSE (Date 15 1 2026) (JUST (Date 30 11 2026)) NOTHING (Date 1 2 2026) TRUE FALSE TRUE 1000 4500) EQUALS JUST (Date 15 1 2027)
+-- E13 chief executive
+#ASSERT `the unlawful act application is in time` (ua `the chief executive` FALSE (Date 1 1 2026) NOTHING (JUST (Date 1 6 2026)) (Date 1 6 2027) TRUE FALSE TRUE 1000 4500)
+#ASSERT NOT `the unlawful act application is in time` (ua `the chief executive` FALSE (Date 1 1 2026) NOTHING (JUST (Date 1 6 2026)) (Date 2 6 2027) TRUE FALSE TRUE 1000 4500)
+-- E14-E15 Schedule 1A cap (input)
+#ASSERT `the most the Tribunal may award for the unlawful act` (ua `a tenant` FALSE (Date 15 4 2026) NOTHING NOTHING (Date 1 6 2026) TRUE FALSE TRUE 5000 4500) EQUALS 4500
+#ASSERT `the most the Tribunal may award for the unlawful act` (ua `a tenant` FALSE (Date 15 4 2026) NOTHING NOTHING (Date 1 6 2026) TRUE FALSE TRUE 3000 4500) EQUALS 3000
+-- E16-E19 pecuniary penalty
+#ASSERT `the most pecuniary penalty for a landlord of` 6 `tenancies, a boarding house landlord` FALSE `, sought` 50000 EQUALS 50000
+#ASSERT `the most pecuniary penalty for a landlord of` 6 `tenancies, a boarding house landlord` FALSE `, sought` 50001 EQUALS 50000
+#ASSERT `the most pecuniary penalty for a landlord of` 5 `tenancies, a boarding house landlord` FALSE `, sought` 10000 EQUALS 0
+#ASSERT `the most pecuniary penalty for a landlord of` 1 `tenancies, a boarding house landlord` TRUE `, sought` 10000 EQUALS 10000
+-- E23 not intentional: no exemplary damages
+#ASSERT `the most the Tribunal may award for the unlawful act` (ua `a tenant` FALSE (Date 15 4 2026) NOTHING NOTHING (Date 1 6 2026) FALSE FALSE TRUE 3000 4500) EQUALS 0
+-- E24 retaliatory notice (s 109(3A)): intent not needed
+#ASSERT `the most the Tribunal may award for the unlawful act` (ua `a tenant` FALSE (Date 15 4 2026) NOTHING NOTHING (Date 1 6 2026) FALSE TRUE TRUE 3000 4500) EQUALS 3000
