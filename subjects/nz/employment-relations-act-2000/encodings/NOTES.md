@@ -56,16 +56,18 @@ Modules: `era-types.l4` (nouns only), `era-dates.l4`, `era-access.l4`, `era-grie
 
 | module | errors | satisfied | failed |
 | --- | --- | --- | --- |
-| `era-tests.l4` (encoder) | 0 | 38 | 0 |
+| `era-tests.l4` (encoder) | 0 | 41 | 0 |
 | `tests-independent.l4` | 3 | 102 | 3 |
 | the 5 rule modules | 0 | 0 | 0 |
-| **total** | 3 | 140 | 3 |
+| **total** | 3 | 143 | 3 |
 
 **3 failures are expected**, which is why `check.sh` exits non-zero: they are the independent author's reading of the s 103(1) letters (fork F6).
 
 The independent pass (`INDEPENDENT-TEST-REPORT.md`) also found two real errors, both fixed: rounding to even under s 113B, and the end of a 12-month period that begins on 29 February. It also led to a reduction over 100% being refused rather than clamped. **The encoder's test that encoded the clamp was removed** and marked.
 
 **Known limits.** Matariki Observance Days are an input. The grounds, findings and remuneration figures are inputs. A trial provision is assumed to start with the employment.
+
+**Correction after commit (2026-10-16).** The working-day rule for a Sunday 1 January excluded 3 and 4 January; Legislation Act s 13(d) excludes the following Monday and Tuesday (2 and 3 January). Found by the Electricity Industry Act independent pass, fixed here, and covered by regression tests.
 
 ## Open questions for a New Zealand employment lawyer
 

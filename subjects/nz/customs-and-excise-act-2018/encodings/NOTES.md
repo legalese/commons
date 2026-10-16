@@ -55,16 +55,18 @@ Modules: `cea-types.l4` (nouns only), `cea-dates.l4`, `cea-value.l4`, `cea-duty.
 
 | module | errors | satisfied | failed |
 | --- | --- | --- | --- |
-| `cea-tests.l4` (encoder) | 0 | 52 | 0 |
+| `cea-tests.l4` (encoder) | 0 | 55 | 0 |
 | `tests-independent.l4` | 0 | 100 | 0 |
 | the 6 rule modules | 0 | 0 | 0 |
-| **total** | 0 | 152 | 0 |
+| **total** | 0 | 155 | 0 |
 
 The independent pass (`INDEPENDENT-TEST-REPORT.md`) found that the Legislation Act 2019 s 55 extension was missing from s 142 (F3) and that s 124(7) had no payment occasion. Both are fixed; no encoder test had encoded the old reading.
 
 **Known limits.** The cl 6 evidence, the cl 4(4) duty to seek an explanation, and the qualification of comparable values are inputs. The Tariff rates are inputs. Methods 4-6 are refused. Excise under Schedule 3 is not encoded.
 
 **Note for the other New Zealand encodings.** Legislation Act 2019 s 55 (a thing to be done within a period may be done on the next working day when the last day is not one) applies to time limits across New Zealand legislation. This encoding applies it to s 142; the s 124 periods already end on working days.
+
+**Correction after commit (2026-10-16).** The working-day rule for a Sunday 1 January excluded 3 and 4 January; Legislation Act s 13(d) excludes the following Monday and Tuesday (2 and 3 January). Found by the Electricity Industry Act independent pass, fixed here, and covered by regression tests.
 
 ## Open questions for a New Zealand customs specialist
 

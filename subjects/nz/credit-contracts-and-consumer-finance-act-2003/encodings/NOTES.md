@@ -63,14 +63,16 @@ Modules: `cccfa-types.l4` (nouns only), `cccfa-dates.l4`, `cccfa-cancellation.l4
 
 | module | errors | satisfied | failed |
 | --- | --- | --- | --- |
-| `cccfa-tests.l4` (encoder) | 0 | 61 | 0 |
+| `cccfa-tests.l4` (encoder) | 0 | 64 | 0 |
 | `tests-independent.l4` | 0 | 162 | 0 |
 | the 7 rule modules | 0 | 0 | 0 |
-| **total** | 0 | 223 | 0 |
+| **total** | 0 | 226 | 0 |
 
 The independent pass (`INDEPENDENT-TEST-REPORT.md`) found 3 disagreements, all resolved in its favour: the s 56 end of a 6-month period, the s 55(3) 4 months (F6), and the s 57A(2) extension only for a timely request. **The encoder's test that encoded the old F6 reading was changed** and marked.
 
 **Known limits.** Rates in s 39 are fractions; in s 45C they are percentages. The s 45E figure is floored at 0, so no s 48 refund is computed. Matariki Observance Days are an input.
+
+**Correction after commit (2026-10-16).** The working-day rule for a Sunday 1 January excluded 3 and 4 January; Legislation Act s 13(d) excludes the following Monday and Tuesday (2 and 3 January). Found by the Electricity Industry Act independent pass, fixed here, and covered by regression tests.
 
 ## Open questions for a New Zealand lawyer
 
