@@ -1,0 +1,442 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ks-types`
+IMPORT `ks-membership`
+IMPORT `ks-contributions`
+IMPORT `ks-withdrawals`
+IMPORT `ks-goal`
+
+-- Independent tests for the KiwiSaver Act 2006 encoding.
+-- Expected values come from independent-expectations.md (written from the
+-- statute before the modules were read). Scenario ids are in the comments.
+-- A failing assertion is a finding; expected values are never changed to
+-- match the encoding.
+
+§ `Fixtures`
+
+GIVEN dob IS A DATE
+GIVETH A Person
+stdPerson dob MEANS Person OF dob, 65, TRUE, TRUE, FALSE
+
+GIVEN dob IS A DATE, living IS A BOOLEAN, citizen IS A BOOLEAN, member IS A BOOLEAN
+GIVETH A Person
+somePerson dob living citizen member MEANS Person OF dob, 65, living, citizen, member
+
+GIVEN s IS A DATE, k IS A `Kind of employment`
+GIVETH AN Employment
+-- [Ported by the encoder: Employment gained `the short contract continued to the 28th day`, FALSE here.]
+stdJob s k MEANS Employment OF s, k, FALSE, FALSE, FALSE, FALSE, FALSE
+
+GIVEN s IS A DATE, exempt IS A BOOLEAN, secondee IS A BOOLEAN, samebiz IS A BOOLEAN, excl IS A BOOLEAN
+GIVETH AN Employment
+someJob s exempt secondee samebiz excl MEANS Employment OF s, `ordinary employment`, exempt, secondee, samebiz, excl, FALSE
+
+GIVEN hist IS A `Rate history`, chosen IS A MAYBE NUMBER, rr IS A BOOLEAN, susp IS A BOOLEAN, calc IS A DATE, gross IS A NUMBER
+GIVETH A `Contribution facts`
+pay hist chosen rr susp calc gross MEANS `Contribution facts` OF hist, chosen, rr, susp, calc, gross
+
+GIVEN gross IS A NUMBER
+GIVETH A `Contribution facts`
+stdPay gross MEANS `Contribution facts` OF `deductions first applied on or after 1 April 2009`, NOTHING, FALSE, FALSE, (Date 15 5 2026), gross
+
+GIVEN gross IS A NUMBER
+GIVETH A `Contribution facts`
+rrPay gross MEANS `Contribution facts` OF `deductions first applied on or after 1 April 2009`, NOTHING, TRUE, FALSE, (Date 15 5 2026), gross
+
+GIVEN age IS A NUMBER, cl4 IS A BOOLEAN, cong IS A BOOLEAN, db IS A BOOLEAN, ded IS A BOOLEAN, three IS A BOOLEAN, other IS A NUMBER, hybrid IS A NUMBER, grace IS A BOOLEAN
+GIVETH AN `Employer contribution facts`
+emp age cl4 cong db ded three other hybrid grace MEANS `Employer contribution facts` OF age, cl4, cong, db, ded, three, other, hybrid, grace
+
+GIVEN age IS A NUMBER
+GIVETH AN `Employer contribution facts`
+stdEmp age MEANS `Employer contribution facts` OF age, FALSE, FALSE, FALSE, TRUE, FALSE, 0, 0, FALSE
+
+GIVEN other IS A NUMBER, hybrid IS A NUMBER
+GIVETH AN `Employer contribution facts`
+otherEmp other hybrid MEANS `Employer contribution facts` OF 30, FALSE, FALSE, FALSE, TRUE, FALSE, other, hybrid, FALSE
+
+GIVEN acc IS A NUMBER, crown IS A NUMBER, credit IS A NUMBER, aus IS A NUMBER
+GIVETH A `Member account`
+acct acc crown credit aus MEANS `Member account` OF acc, crown, credit, aus
+
+stdAcct MEANS `Member account` OF 50000, 5000, 4000, 8000
+
+-- a withdrawal whose only facts are purpose, age, and the one "ground" switch
+GIVEN pur IS A `Withdrawal purpose`, age IS A NUMBER, ok IS A BOOLEAN
+GIVETH A `Withdrawal facts`
+wSimple pur age ok MEANS `Withdrawal facts` OF pur, age, ok, ok, FALSE, 5, TRUE, TRUE, ok, ok, NOTHING, (Date 1 1 2024), (Date 1 1 2026), 0
+
+GIVEN before IS A BOOLEAN, years IS A NUMBER, residence IS A BOOLEAN, never IS A BOOLEAN
+GIVETH A `Withdrawal facts`
+wHome before years residence never MEANS `Withdrawal facts` OF `cl 8 purchase of a first home`, 35, FALSE, FALSE, before, years, residence, never, TRUE, TRUE, NOTHING, (Date 1 1 2024), (Date 1 1 2026), 0
+
+GIVEN sat IS A BOOLEAN, exhausted IS A BOOLEAN, needed IS A MAYBE NUMBER
+GIVETH A `Withdrawal facts`
+wHardship sat exhausted needed MEANS `Withdrawal facts` OF `cl 10 significant financial hardship`, 40, FALSE, FALSE, FALSE, 5, TRUE, TRUE, sat, exhausted, needed, (Date 1 1 2024), (Date 1 1 2026), 0
+
+GIVEN emig IS A DATE, appl IS A DATE
+GIVETH A `Withdrawal facts`
+wEmig emig appl MEANS `Withdrawal facts` OF `cl 14 permanent emigration (other than to Australia)`, 40, FALSE, FALSE, FALSE, 5, TRUE, TRUE, TRUE, TRUE, NOTHING, emig, appl, 0
+
+GIVEN liab IS A NUMBER
+GIVETH A `Withdrawal facts`
+wTax liab MEANS `Withdrawal facts` OF `cl 14C tax on a foreign superannuation withdrawal`, 40, FALSE, FALSE, FALSE, 5, TRUE, TRUE, TRUE, TRUE, NOTHING, (Date 1 1 2024), (Date 1 1 2026), liab
+
+GIVEN p IS A Person, e IS AN Employment
+GIVETH A `KiwiSaver case`
+caseOf p e MEANS `KiwiSaver case` OF p, e, (stdPay 2000), (stdEmp 30), NOTHING, stdAcct
+
+§ `Part 1 — application (s 6)`
+
+-- M1 citizen living in NZ
+#ASSERT `the Act applies to` (somePerson (Date 1 1 1990) TRUE TRUE FALSE) EQUALS TRUE
+-- M2 resident entitled indefinitely (same input)
+#ASSERT `the Act applies to` (stdPerson (Date 1 1 1985)) EQUALS TRUE
+-- M3 temporary visa
+#ASSERT `the Act applies to` (somePerson (Date 1 1 1990) TRUE FALSE FALSE) EQUALS FALSE
+-- M4 citizen living in Australia
+#ASSERT `the Act applies to` (somePerson (Date 1 1 1990) FALSE TRUE FALSE) EQUALS FALSE
+
+§ `Automatic enrolment (ss 10-14)`
+
+-- M12 aged 30, ordinary new job
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 1 1 1996)) `, employment` (stdJob (Date 1 3 2026) `ordinary employment`) EQUALS TRUE
+-- M13 starts on 18th birthday
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 1 3 2008)) `, employment` (stdJob (Date 1 3 2026) `ordinary employment`) EQUALS TRUE
+-- M14 starts the day before 18th birthday
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 2 3 2008)) `, employment` (stdJob (Date 1 3 2026) `ordinary employment`) EQUALS FALSE
+-- M15 aged 17 at start (turns 18 a week later) - age tested at start
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 8 3 2008)) `, employment` (stdJob (Date 1 3 2026) `ordinary employment`) EQUALS FALSE
+-- M16 starts the day before 65th birthday
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 2 3 1961)) `, employment` (stdJob (Date 1 3 2026) `ordinary employment`) EQUALS TRUE
+-- M17 starts on 65th birthday
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 1 3 1961)) `, employment` (stdJob (Date 1 3 2026) `ordinary employment`) EQUALS FALSE
+-- M18 exempt employer
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 1 1 1986)) `, employment` (someJob (Date 1 3 2026) TRUE FALSE FALSE FALSE) EQUALS FALSE
+-- M19 secondee
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 1 1 1986)) `, employment` (someJob (Date 1 3 2026) FALSE TRUE FALSE FALSE) EQUALS FALSE
+-- M20 contract of 28 continuous days (not continued): temporary, AE does not apply
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 1 1 1996)) `, employment` (stdJob (Date 1 3 2026) `a contract of service for 28 continuous days or less`) EQUALS FALSE
+-- M22 28-day contract: temporary on day 27 after start, not temporary on the 28th day after
+#ASSERT `the employment is temporary on` (Date 28 3 2026) `, employment` (stdJob (Date 1 3 2026) `a contract of service for 28 continuous days or less`) EQUALS TRUE
+#ASSERT `the employment is temporary on` (Date 29 3 2026) `, employment` (stdJob (Date 1 3 2026) `a contract of service for 28 continuous days or less`) EQUALS FALSE
+-- M21 ordinary (29-day or longer) employment is not temporary
+#ASSERT `the employment is temporary on` (Date 2 3 2026) `, employment` (stdJob (Date 1 3 2026) `ordinary employment`) EQUALS FALSE
+-- M23 casual agricultural worker (while one): temporary, no AE
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 1 1 1996)) `, employment` (stdJob (Date 1 3 2026) `casual agricultural work`) EQUALS FALSE
+#ASSERT `the employment is temporary on` (Date 2 3 2026) `, employment` (stdJob (Date 1 3 2026) `casual agricultural work`) EQUALS TRUE
+-- M24 Holidays Act s 28(1)(a)(ii)
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 1 1 1996)) `, employment` (stdJob (Date 1 3 2026) `intermittent or irregular work under s 28(1)(a)(ii) of the Holidays Act 2003`) EQUALS FALSE
+-- M25-M27 same payroll / same business / end of secondment
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 1 1 1986)) `, employment` (someJob (Date 1 3 2026) FALSE FALSE TRUE FALSE) EQUALS FALSE
+-- M28-M34 s 14(1) exclusions
+#ASSERT `automatic enrolment applies to` (stdPerson (Date 1 1 1986)) `, employment` (someJob (Date 1 3 2026) FALSE FALSE FALSE TRUE) EQUALS FALSE
+-- M35 already a member
+#ASSERT `automatic enrolment applies to` (somePerson (Date 1 1 1986) TRUE TRUE TRUE) `, employment` (stdJob (Date 1 3 2026) `ordinary employment`) EQUALS FALSE
+-- M37 Act does not apply (s 6)
+#ASSERT `automatic enrolment applies to` (somePerson (Date 1 1 1986) TRUE FALSE FALSE) `, employment` (stdJob (Date 1 3 2026) `ordinary employment`) EQUALS FALSE
+#ASSERT `automatic enrolment applies to` (somePerson (Date 1 1 1986) FALSE TRUE FALSE) `, employment` (stdJob (Date 1 3 2026) `ordinary employment`) EQUALS FALSE
+
+§ `Opting out (ss 16-18)`
+
+-- M38 window for start 1 March 2026
+#ASSERT `the first day to opt out, employment started` (Date 1 3 2026) EQUALS Date 14 3 2026
+#ASSERT `the last day to opt out, employment started` (Date 1 3 2026) EQUALS Date 25 4 2026
+-- M39 notice on the 12th day: too early
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 13 3 2026) `, s 18 ground:` FALSE `, first contribution received` (JUST (Date 10 4 2026)) `, Commissioner accepts:` FALSE EQUALS FALSE
+-- M40 day 13
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 14 3 2026) `, s 18 ground:` FALSE `, first contribution received` (JUST (Date 10 4 2026)) `, Commissioner accepts:` FALSE EQUALS TRUE
+-- M41 day 55
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 25 4 2026) `, s 18 ground:` FALSE `, first contribution received` (JUST (Date 10 4 2026)) `, Commissioner accepts:` FALSE EQUALS TRUE
+-- M42 day 56, no ground
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 26 4 2026) `, s 18 ground:` FALSE `, first contribution received` (JUST (Date 10 4 2026)) `, Commissioner accepts:` FALSE EQUALS FALSE
+-- M44 given within time to the Commissioner (20 Apr)
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 20 4 2026) `, s 18 ground:` FALSE `, first contribution received` (JUST (Date 10 4 2026)) `, Commissioner accepts:` FALSE EQUALS TRUE
+-- M43 effect: received by employer 20 Mar
+#ASSERT `the day the opt-out takes effect, employment started` (Date 1 3 2026) `, notice accepted or received` (Date 20 3 2026) EQUALS Date 20 3 2026
+-- M44 effect: accepted by Commissioner 30 Apr
+#ASSERT `the day the opt-out takes effect, employment started` (Date 1 3 2026) `, notice accepted or received` (Date 30 4 2026) EQUALS Date 30 4 2026
+-- M45 effect: received on the 13th day itself
+#ASSERT `the day the opt-out takes effect, employment started` (Date 1 3 2026) `, notice accepted or received` (Date 14 3 2026) EQUALS Date 14 3 2026
+-- s 17(4)(a) floor: received earlier still takes effect no earlier than day 13
+#ASSERT `the day the opt-out takes effect, employment started` (Date 1 3 2026) `, notice accepted or received` (Date 5 3 2026) EQUALS Date 14 3 2026
+-- M48 late, ground, accepted, 1 May
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 1 5 2026) `, s 18 ground:` TRUE `, first contribution received` (JUST (Date 10 4 2026)) `, Commissioner accepts:` TRUE EQUALS TRUE
+-- M49 late on first + 92 (11 Jul)
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 11 7 2026) `, s 18 ground:` TRUE `, first contribution received` (JUST (Date 10 4 2026)) `, Commissioner accepts:` TRUE EQUALS TRUE
+-- M50 late on first + 93 (12 Jul)
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 12 7 2026) `, s 18 ground:` TRUE `, first contribution received` (JUST (Date 10 4 2026)) `, Commissioner accepts:` TRUE EQUALS FALSE
+-- M51 late, no ground
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 1 5 2026) `, s 18 ground:` FALSE `, first contribution received` (JUST (Date 10 4 2026)) `, Commissioner accepts:` TRUE EQUALS FALSE
+-- M48b late with ground but Commissioner does not accept (discretion)
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 1 5 2026) `, s 18 ground:` TRUE `, first contribution received` (JUST (Date 10 4 2026)) `, Commissioner accepts:` FALSE EQUALS FALSE
+-- late with ground, no contribution yet received: the s 18(2) period has not ended
+#ASSERT `the opt-out is in time, employment started` (Date 1 3 2026) `, notice given` (Date 1 5 2026) `, s 18 ground:` TRUE `, first contribution received` NOTHING `, Commissioner accepts:` TRUE EQUALS TRUE
+
+§ `Opting in (ss 33-35)` -- dates checked on 1 June 2026
+
+-- M55 aged 30
+#ASSERT `who may opt in` (stdPerson (Date 1 1 1996)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` FALSE `, has an Oranga Tamariki guardian:` FALSE EQUALS `the person alone`
+-- M56 already a member
+#ASSERT `who may opt in` (somePerson (Date 1 1 1996) TRUE TRUE TRUE) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` FALSE `, has an Oranga Tamariki guardian:` FALSE EQUALS `may not opt in`
+-- M57 subject to AE
+#ASSERT `who may opt in` (stdPerson (Date 1 1 1996)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` TRUE `, has a guardian:` FALSE `, has an Oranga Tamariki guardian:` FALSE EQUALS `may not opt in`
+-- M58 18th birthday that day
+#ASSERT `who may opt in` (stdPerson (Date 1 6 2008)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` TRUE `, has an Oranga Tamariki guardian:` FALSE EQUALS `the person alone`
+-- M59 aged 15 with a guardian
+#ASSERT `who may opt in` (stdPerson (Date 1 1 2011)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` TRUE `, has an Oranga Tamariki guardian:` FALSE EQUALS `a guardian in the person's name`
+-- M61 aged 16 with a guardian: jointly
+#ASSERT `who may opt in` (stdPerson (Date 1 1 2010)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` TRUE `, has an Oranga Tamariki guardian:` FALSE EQUALS `the person jointly with a guardian`
+-- M61b day before 16th birthday: still a guardian alone
+#ASSERT `who may opt in` (stdPerson (Date 2 6 2010)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` TRUE `, has an Oranga Tamariki guardian:` FALSE EQUALS `a guardian in the person's name`
+-- M62 aged 17 with a guardian: jointly, not alone
+#ASSERT `who may opt in` (stdPerson (Date 1 1 2009)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` TRUE `, has an Oranga Tamariki guardian:` FALSE EQUALS `the person jointly with a guardian`
+-- M62b day before 18th birthday, with guardian: still jointly
+#ASSERT `who may opt in` (stdPerson (Date 2 6 2008)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` TRUE `, has an Oranga Tamariki guardian:` FALSE EQUALS `the person jointly with a guardian`
+-- M63 aged 17, no guardian
+#ASSERT `who may opt in` (stdPerson (Date 1 1 2009)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` FALSE `, has an Oranga Tamariki guardian:` FALSE EQUALS `the person alone, having no guardian`
+-- M65 aged 12 with an Oranga Tamariki guardian
+#ASSERT `who may opt in` (stdPerson (Date 1 1 2014)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` FALSE `, has an Oranga Tamariki guardian:` TRUE EQUALS `an Oranga Tamariki guardian in the person's name`
+-- M73 aged 17 whose only guardian is an Oranga Tamariki guardian: jointly (s 35(3))
+#ASSERT `who may opt in` (stdPerson (Date 1 1 2009)) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` FALSE `, has an Oranga Tamariki guardian:` TRUE EQUALS `the person jointly with a guardian`
+-- s 6 fails: cannot opt in
+#ASSERT `who may opt in` (somePerson (Date 1 1 1996) TRUE FALSE FALSE) `on` (Date 1 6 2026) `, subject to automatic enrolment:` FALSE `, has a guardian:` FALSE `, has an Oranga Tamariki guardian:` FALSE EQUALS `may not opt in`
+
+§ `Information packs and allocation (ss 42, 51)`
+
+-- M67
+#ASSERT `the last day to give the information pack, employment started` (Date 1 3 2026) EQUALS Date 8 3 2026
+-- M68 opt-in by employer notice on 10 May (same 7 days)
+#ASSERT `the last day to give the information pack, employment started` (Date 10 5 2026) EQUALS Date 17 5 2026
+-- M69 final allocation date: 62nd day after first contribution 10 Apr 2026
+#ASSERT `the day allocation completes, notice received` (Date 10 4 2026) EQUALS Date 11 6 2026
+
+§ `Contribution rate and deduction (ss 62-66)`
+
+-- C1 default 3.5%, $70 on $2,000
+#ASSERT `the contribution rate for` (stdPay 2000) EQUALS 3.5
+#ASSERT `the deduction from the pay` (stdPay 2000) EQUALS 70
+-- C2/C4 first applied before 1 April 2009: 4%, $80
+#ASSERT `the contribution rate for` (pay `deductions first applied before 1 April 2009` NOTHING FALSE FALSE (Date 15 5 2026) 2000) EQUALS 4
+#ASSERT `the deduction from the pay` (pay `deductions first applied before 1 April 2009` NOTHING FALSE FALSE (Date 15 5 2026) 2000) EQUALS 80
+-- C5 chose 6%
+#ASSERT `the contribution rate for` (pay `deductions first applied on or after 1 April 2009` (JUST 6) FALSE FALSE (Date 15 5 2026) 2000) EQUALS 6
+#ASSERT `the deduction from the pay` (pay `deductions first applied on or after 1 April 2009` (JUST 6) FALSE FALSE (Date 15 5 2026) 2000) EQUALS 120
+-- C6 chose 10%
+#ASSERT `the deduction from the pay` (pay `deductions first applied on or after 1 April 2009` (JUST 10) FALSE FALSE (Date 15 5 2026) 2000) EQUALS 200
+-- C7 chose 8%
+#ASSERT `the deduction from the pay` (pay `deductions first applied on or after 1 April 2009` (JUST 8) FALSE FALSE (Date 15 5 2026) 2000) EQUALS 160
+-- C8 post-2009 starter chose 4%
+#ASSERT `the contribution rate for` (pay `deductions first applied on or after 1 April 2009` (JUST 4) FALSE FALSE (Date 15 5 2026) 2000) EQUALS 4
+-- C8b pre-2009 starter chose 3.5%
+#ASSERT `the contribution rate for` (pay `deductions first applied before 1 April 2009` (JUST 3.5) FALSE FALSE (Date 15 5 2026) 2000) EQUALS 3.5
+-- C9 purported 5%: not a s 64(2) notice, default 3.5% continues
+#ASSERT `the contribution rate for` (pay `deductions first applied on or after 1 April 2009` (JUST 5) FALSE FALSE (Date 15 5 2026) 2000) EQUALS 3.5
+-- C73 on a 2% chosen rate before 1 April 2013: 3.5% (s 64(1)(a)(iii))
+#ASSERT `the contribution rate for` (pay `deductions first applied on or after 1 April 2009` (JUST 2) FALSE FALSE (Date 15 5 2026) 2000) EQUALS 3.5
+-- C10 rate reduction, pay calculated 1 April 2026: 3%, $60
+#ASSERT `the contribution rate for` (pay `deductions first applied on or after 1 April 2009` NOTHING TRUE FALSE (Date 1 4 2026) 2000) EQUALS 3
+#ASSERT `the deduction from the pay` (pay `deductions first applied on or after 1 April 2009` NOTHING TRUE FALSE (Date 1 4 2026) 2000) EQUALS 60
+-- C11 rate-reduction flag but pay calculated 31 March 2026: not 3%; text in force gives 3.5%
+#ASSERT `the contribution rate for` (pay `deductions first applied on or after 1 April 2009` NOTHING TRUE FALSE (Date 31 3 2026) 2000) EQUALS 3.5
+-- C12 rate reduction overrides chosen 8%
+#ASSERT `the contribution rate for` (pay `deductions first applied on or after 1 April 2009` (JUST 8) TRUE FALSE (Date 15 5 2026) 2000) EQUALS 3
+-- C12b rate reduction for a pre-2009 4% member
+#ASSERT `the contribution rate for` (pay `deductions first applied before 1 April 2009` NOTHING TRUE FALSE (Date 15 5 2026) 2000) EQUALS 3
+-- C15 pre-2009 starter with 8% notice
+#ASSERT `the contribution rate for` (pay `deductions first applied before 1 April 2009` (JUST 8) FALSE FALSE (Date 15 5 2026) 2000) EQUALS 8
+-- C17/C18 savings suspension or non-deduction notice: no deduction
+#ASSERT `the deduction from the pay` (pay `deductions first applied on or after 1 April 2009` NOTHING FALSE TRUE (Date 15 5 2026) 2000) EQUALS 0
+#ASSERT `the deduction from the pay` (pay `deductions first applied on or after 1 April 2009` (JUST 10) FALSE TRUE (Date 15 5 2026) 2000) EQUALS 0
+-- C20 no rounding rule: 1234.56 x 3.5% = 43.2096
+#ASSERT `the deduction from the pay` (stdPay 1234.56) EQUALS 43.2096
+-- zero pay, zero deduction
+#ASSERT `the deduction from the pay` (stdPay 0) EQUALS 0
+
+§ `92-day rules (ss 64(4), 101S(2), 108, 112B(3))`
+
+-- C21 rate change 91 days later, no agreement
+#ASSERT `the change is at least 92 days after the last, last` (Date 1 1 2026) `, next` (Date 2 4 2026) `, employer agrees:` FALSE EQUALS FALSE
+-- C22 92 days later
+#ASSERT `the change is at least 92 days after the last, last` (Date 1 1 2026) `, next` (Date 3 4 2026) `, employer agrees:` FALSE EQUALS TRUE
+-- C23 91 days with employer agreement
+#ASSERT `the change is at least 92 days after the last, last` (Date 1 1 2026) `, next` (Date 2 4 2026) `, employer agrees:` TRUE EQUALS TRUE
+-- C53 rate reduction revoked after 91 days
+#ASSERT `the change is at least 92 days after the last, last` (Date 1 4 2026) `, next` (Date 1 7 2026) `, employer agrees:` FALSE EQUALS FALSE
+-- C54 after 92 days
+#ASSERT `the change is at least 92 days after the last, last` (Date 1 4 2026) `, next` (Date 2 7 2026) `, employer agrees:` FALSE EQUALS TRUE
+-- C55 after 30 days with agreement
+#ASSERT `the change is at least 92 days after the last, last` (Date 1 4 2026) `, next` (Date 1 5 2026) `, employer agrees:` TRUE EQUALS TRUE
+-- C67 savings suspension revoked after 91 days
+#ASSERT `the change is at least 92 days after the last, last` (Date 1 6 2026) `, next` (Date 31 8 2026) `, employer agrees:` FALSE EQUALS FALSE
+-- C68 after 92 days
+#ASSERT `the change is at least 92 days after the last, last` (Date 1 6 2026) `, next` (Date 1 9 2026) `, employer agrees:` FALSE EQUALS TRUE
+-- C71 (s 112B(3) day 92) not expressible separately: the encoding reuses the s 64(4) helper (see C22)
+-- C72 day 93: permitted
+#ASSERT `the change is at least 92 days after the last, last` (Date 1 1 2026) `, next` (Date 4 4 2026) `, employer agrees:` FALSE EQUALS TRUE
+
+§ `Compulsory employer contributions (ss 101C-101FC)`
+
+-- C25 aged 30, $2,000, nothing else: $70
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (stdEmp 30) EQUALS 70
+-- C26 aged 16
+#ASSERT `the compulsory employer contribution for` (stdPay 1000) `and` (stdEmp 16) EQUALS 35
+-- C27 aged 15
+#ASSERT `the compulsory employer contribution for` (stdPay 1000) `and` (stdEmp 15) EQUALS 0
+-- C28 aged 64, lock-in not ended
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (stdEmp 64) EQUALS 70
+-- C29 aged 65, may withdraw under cl 4
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (emp 65 TRUE FALSE FALSE TRUE FALSE 0 0 FALSE) EQUALS 0
+-- C30 made a cl 12B withdrawal
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (emp 30 FALSE TRUE FALSE TRUE FALSE 0 0 FALSE) EQUALS 0
+-- C31 defined benefit scheme member
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (emp 30 FALSE FALSE TRUE TRUE FALSE 0 0 FALSE) EQUALS 0
+-- C32 no deduction made or required
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (emp 30 FALSE FALSE FALSE FALSE FALSE 0 0 FALSE) EQUALS 0
+-- C33 other contributions $30: $40
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (otherEmp 30 0) EQUALS 40
+-- C34 other contributions $100: floored at 0
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (otherEmp 100 0) EQUALS 0
+-- C34b other exactly $70: 0
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (otherEmp 70 0) EQUALS 0
+-- C35 rate reduction and employer chooses 3%: $60
+#ASSERT `the compulsory employer contribution for` (rrPay 2000) `and` (emp 30 FALSE FALSE FALSE TRUE TRUE 0 0 FALSE) EQUALS 60
+-- C36 rate reduction, employer does not choose 3%: $70
+#ASSERT `the compulsory employer contribution for` (rrPay 2000) `and` (stdEmp 30) EQUALS 70
+-- C37 no rate reduction, employer would like 3%: $70
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (emp 30 FALSE FALSE FALSE TRUE TRUE 0 0 FALSE) EQUALS 70
+-- C38 hybrid schemes amount $20: $50
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (otherEmp 0 20) EQUALS 50
+-- C39 other $30 + hybrid $20: $20
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (otherEmp 30 20) EQUALS 20
+-- C40 de minimis: other contributions = 3.5% of salary: none
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (otherEmp 70 0) EQUALS 0
+-- C41 other = 3.4% of salary ($68): $2
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (otherEmp 68 0) EQUALS 2
+-- C42 grace period, no deductions
+#ASSERT `the compulsory employer contribution for` (stdPay 2000) `and` (emp 30 FALSE FALSE FALSE TRUE FALSE 0 0 TRUE) EQUALS 0
+-- C47 complying fund deadline: 1 month after the pay
+#ASSERT `the last day to pay a complying fund, salary paid` (Date 15 3 2026) EQUALS Date 15 4 2026
+
+§ `Rate reductions (s 101L)`
+
+-- C74 92 days counted inclusively (1 Apr - 1 Jul 2026): granted
+#ASSERT `a rate reduction must be granted, starting` (Date 1 4 2026) `, ending` (Date 1 7 2026) EQUALS TRUE
+-- C75 91 days inclusive (1 Apr - 30 Jun 2026): not granted
+#ASSERT `a rate reduction must be granted, starting` (Date 1 4 2026) `, ending` (Date 30 6 2026) EQUALS FALSE
+-- C48 clearly short (60 days)
+#ASSERT `a rate reduction must be granted, starting` (Date 1 4 2026) `, ending` (Date 31 5 2026) EQUALS FALSE
+-- C76 exactly 1 year (1 Apr 2026 - 31 Mar 2027)
+#ASSERT `a rate reduction must be granted, starting` (Date 1 4 2026) `, ending` (Date 31 3 2027) EQUALS TRUE
+-- C77 1 year and 1 day (1 Apr 2026 - 1 Apr 2027): not granted
+#ASSERT `a rate reduction must be granted, starting` (Date 1 4 2026) `, ending` (Date 1 4 2027) EQUALS FALSE
+-- C51 clearly too long (18 months)
+#ASSERT `a rate reduction must be granted, starting` (Date 1 4 2026) `, ending` (Date 1 10 2027) EQUALS FALSE
+-- C50 6 months
+#ASSERT `a rate reduction must be granted, starting` (Date 1 5 2026) `, ending` (Date 31 10 2026) EQUALS TRUE
+
+§ `Savings suspensions (ss 102-104)`
+
+-- C57 hardship, after the first contribution
+#ASSERT `may apply for a savings suspension, first contribution` (Date 1 4 2025) `, applying` (Date 1 6 2025) `, in financial hardship:` TRUE EQUALS TRUE
+-- C58 hardship, before any contribution received
+#ASSERT `may apply for a savings suspension, first contribution` (Date 1 4 2025) `, applying` (Date 1 3 2025) `, in financial hardship:` TRUE EQUALS FALSE
+-- C59 no hardship, 31 Mar 2026
+#ASSERT `may apply for a savings suspension, first contribution` (Date 1 4 2025) `, applying` (Date 31 3 2026) `, in financial hardship:` FALSE EQUALS FALSE
+-- C60 no hardship, 2 Apr 2026
+#ASSERT `may apply for a savings suspension, first contribution` (Date 1 4 2025) `, applying` (Date 2 4 2026) `, in financial hardship:` FALSE EQUALS TRUE
+-- C61 anniversary (ambiguous; my reading: not yet)
+#ASSERT `may apply for a savings suspension, first contribution` (Date 1 4 2025) `, applying` (Date 1 4 2026) `, in financial hardship:` FALSE EQUALS FALSE
+-- C62 earliest date is first complying fund membership 1 Jan 2020
+#ASSERT `may apply for a savings suspension, first contribution` (Date 1 1 2020) `, applying` (Date 1 6 2026) `, in financial hardship:` FALSE EQUALS TRUE
+-- C63 hardship: 92 days
+#ASSERT `the days of savings suspension granted, hardship:` TRUE `, days asked` 200 `, longer period the Commissioner agrees` 0 EQUALS 92
+-- C63b hardship, Commissioner agrees 150
+#ASSERT `the days of savings suspension granted, hardship:` TRUE `, days asked` 150 `, longer period the Commissioner agrees` 150 EQUALS 150
+-- C64 non-hardship, asked 60
+#ASSERT `the days of savings suspension granted, hardship:` FALSE `, days asked` 60 `, longer period the Commissioner agrees` 0 EQUALS 92
+-- C65 non-hardship, asked 200
+#ASSERT `the days of savings suspension granted, hardship:` FALSE `, days asked` 200 `, longer period the Commissioner agrees` 0 EQUALS 200
+-- C66 non-hardship, asked 500: 1 year
+#ASSERT `the days of savings suspension granted, hardship:` FALSE `, days asked` 500 `, longer period the Commissioner agrees` 0 EQUALS 365
+-- non-hardship, asked exactly 92 / 365
+#ASSERT `the days of savings suspension granted, hardship:` FALSE `, days asked` 92 `, longer period the Commissioner agrees` 0 EQUALS 92
+#ASSERT `the days of savings suspension granted, hardship:` FALSE `, days asked` 365 `, longer period the Commissioner agrees` 0 EQUALS 365
+
+§ `Schedule 1 withdrawals` -- account: $50,000; Crown $5,000 ($4,000 tax credits); Australian $8,000
+
+-- W1 reached qualification age
+#ASSERT `the most the member may withdraw, facts` (wSimple `cl 4 reaching the New Zealand superannuation qualification age` 65 TRUE) `, account` stdAcct EQUALS 50000
+-- W2 not yet reached
+#ASSERT `the most the member may withdraw, facts` (wSimple `cl 4 reaching the New Zealand superannuation qualification age` 64 FALSE) `, account` stdAcct EQUALS 0
+-- W3 aged 70
+#ASSERT `the most the member may withdraw, facts` (wSimple `cl 4 reaching the New Zealand superannuation qualification age` 70 TRUE) `, account` stdAcct EQUALS 50000
+-- W4 cl 4B aged 60, retired
+#ASSERT `the most the member may withdraw, facts` (wSimple `cl 4B amounts from an Australian scheme at 60 and retired` 60 TRUE) `, account` stdAcct EQUALS 8000
+-- W5 aged 59, retired
+#ASSERT `the most the member may withdraw, facts` (wSimple `cl 4B amounts from an Australian scheme at 60 and retired` 59 TRUE) `, account` stdAcct EQUALS 0
+-- W6 aged 60, not retired
+#ASSERT `the most the member may withdraw, facts` (wSimple `cl 4B amounts from an Australian scheme at 60 and retired` 60 FALSE) `, account` stdAcct EQUALS 0
+-- W7 first home: 50,000 - 1,000 - 8,000
+#ASSERT `the most the member may withdraw, facts` (wHome FALSE 3 TRUE TRUE) `, account` stdAcct EQUALS 41000
+-- W8 no Australian amount
+#ASSERT `the most the member may withdraw, facts` (wHome FALSE 5 TRUE TRUE) `, account` (acct 50000 5000 4000 0) EQUALS 49000
+-- W8b first home: Crown contribution is not deducted
+#ASSERT `the most the member may withdraw, facts` (wHome FALSE 5 TRUE TRUE) `, account` (acct 20000 3000 2000 0) EQUALS 19000
+-- W9 accumulation $900
+#ASSERT `the most the member may withdraw, facts` (wHome FALSE 5 TRUE TRUE) `, account` (acct 900 0 0 0) EQUALS 0
+-- W10 accumulation exactly $1,000
+#ASSERT `the most the member may withdraw, facts` (wHome FALSE 5 TRUE TRUE) `, account` (acct 1000 0 0 0) EQUALS 0
+-- W10b accumulation $1,001
+#ASSERT `the most the member may withdraw, facts` (wHome FALSE 5 TRUE TRUE) `, account` (acct 1001 0 0 0) EQUALS 1
+-- W11 previous first-home withdrawal
+#ASSERT `the most the member may withdraw, facts` (wHome TRUE 5 TRUE TRUE) `, account` stdAcct EQUALS 0
+-- W12 under 3 years (2.9)
+#ASSERT `the most the member may withdraw, facts` (wHome FALSE 2.9 TRUE TRUE) `, account` stdAcct EQUALS 0
+-- W13 3 years combined membership
+#ASSERT `the most the member may withdraw, facts` (wHome FALSE 3 TRUE TRUE) `, account` (acct 10000 0 0 0) EQUALS 9000
+-- W14 held an estate before, no other route
+#ASSERT `the most the member may withdraw, facts` (wHome FALSE 5 TRUE FALSE) `, account` stdAcct EQUALS 0
+-- W19 not principal residence
+#ASSERT `the most the member may withdraw, facts` (wHome FALSE 5 FALSE TRUE) `, account` stdAcct EQUALS 0
+-- W23 death
+#ASSERT `the most the member may withdraw, facts` (wSimple `cl 9 death` 50 TRUE) `, account` stdAcct EQUALS 50000
+-- W24 hardship: 50,000 - 5,000 (all Crown contribution)
+#ASSERT `the most the member may withdraw, facts` (wHardship TRUE TRUE NOTHING) `, account` stdAcct EQUALS 45000
+-- W25 limited to $10,000
+#ASSERT `the most the member may withdraw, facts` (wHardship TRUE TRUE (JUST 10000)) `, account` stdAcct EQUALS 10000
+-- W25b limit above the cap
+#ASSERT `the most the member may withdraw, facts` (wHardship TRUE TRUE (JUST 48000)) `, account` stdAcct EQUALS 45000
+-- W26 alternatives not exhausted
+#ASSERT `the most the member may withdraw, facts` (wHardship TRUE FALSE NOTHING) `, account` stdAcct EQUALS 0
+-- W26b supervisor not satisfied
+#ASSERT `the most the member may withdraw, facts` (wHardship FALSE TRUE NOTHING) `, account` stdAcct EQUALS 0
+-- W27 serious illness
+#ASSERT `the most the member may withdraw, facts` (wSimple `cl 12 serious illness` 45 TRUE) `, account` stdAcct EQUALS 50000
+#ASSERT `the most the member may withdraw, facts` (wSimple `cl 12 serious illness` 45 FALSE) `, account` stdAcct EQUALS 0
+-- W28 congenital condition
+#ASSERT `the most the member may withdraw, facts` (wSimple `cl 12B a life-shortening congenital condition` 30 TRUE) `, account` stdAcct EQUALS 50000
+-- W29 emigration, exactly 1 year after: 50,000 - 4,000 - 8,000 (kick-start not deducted)
+#ASSERT `the most the member may withdraw, facts` (wEmig (Date 1 3 2025) (Date 1 3 2026)) `, account` stdAcct EQUALS 38000
+-- W30 364 days after
+#ASSERT `the most the member may withdraw, facts` (wEmig (Date 2 3 2025) (Date 1 3 2026)) `, account` stdAcct EQUALS 0
+-- W29b two years after
+#ASSERT `the most the member may withdraw, facts` (wEmig (Date 1 3 2024) (Date 1 3 2026)) `, account` stdAcct EQUALS 38000
+-- W34 cl 14C student loan $1,200
+#ASSERT `the most the member may withdraw, facts` (wTax 1200) `, account` stdAcct EQUALS 1200
+-- W35 cl 14C liability $60,000: capped at 45,000
+#ASSERT `the most the member may withdraw, facts` (wTax 60000) `, account` stdAcct EQUALS 45000
+
+§ `Top-level goal`
+
+-- M12 via the goal: enrolled, window 14 Mar - 25 Apr 2026
+#ASSERT (`the KiwiSaver position for` (caseOf (stdPerson (Date 1 1 1996)) (stdJob (Date 1 3 2026) `ordinary employment`)))'s `automatic enrolment applies` EQUALS TRUE
+#ASSERT (`the KiwiSaver position for` (caseOf (stdPerson (Date 1 1 1996)) (stdJob (Date 1 3 2026) `ordinary employment`)))'s `first day to opt out` EQUALS JUST (Date 14 3 2026)
+#ASSERT (`the KiwiSaver position for` (caseOf (stdPerson (Date 1 1 1996)) (stdJob (Date 1 3 2026) `ordinary employment`)))'s `last day to opt out` EQUALS JUST (Date 25 4 2026)
+#ASSERT (`the KiwiSaver position for` (caseOf (stdPerson (Date 1 1 1996)) (stdJob (Date 1 3 2026) `ordinary employment`)))'s `deduction from the pay` EQUALS 70
+#ASSERT (`the KiwiSaver position for` (caseOf (stdPerson (Date 1 1 1996)) (stdJob (Date 1 3 2026) `ordinary employment`)))'s `compulsory employer contribution` EQUALS 70
+#ASSERT (`the KiwiSaver position for` (caseOf (stdPerson (Date 1 1 1996)) (stdJob (Date 1 3 2026) `ordinary employment`)))'s `most that may be withdrawn` EQUALS NOTHING
+-- M17 via the goal: not enrolled, no window
+#ASSERT (`the KiwiSaver position for` (caseOf (stdPerson (Date 1 3 1961)) (stdJob (Date 1 3 2026) `ordinary employment`)))'s `first day to opt out` EQUALS NOTHING
+-- M20g 28-day contract not continued: no window
+#ASSERT (`the KiwiSaver position for` (caseOf (stdPerson (Date 1 1 1996)) (stdJob (Date 1 3 2026) `a contract of service for 28 continuous days or less`)))'s `first day to opt out` EQUALS NOTHING
