@@ -1,0 +1,264 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `taa-types`
+IMPORT `taa-dates`
+IMPORT `taa-reporting`
+IMPORT `taa-returns`
+IMPORT `taa-penalties`
+IMPORT `taa-goal`
+
+-- Independent tests: Tax Administration Act 1994 (NZ). Expected values come
+-- from independent-expectations.md, written before the encoding was opened.
+
+GIVETH A LIST OF DATE
+mdays MEANS LIST Date 10 7 2026, Date 25 6 2027
+
+-- Employer helpers: (electronic, PAYE+ESCT, new, s 23G exemption, started, twice-monthly)
+GIVEN amt IS A NUMBER
+GIVETH AN Employer
+paper amt MEANS Employer OF FALSE, amt, FALSE, FALSE, NOTHING, FALSE
+
+GIVETH AN Employer
+onlineEmp MEANS Employer OF TRUE, 100000, FALSE, FALSE, NOTHING, FALSE
+
+GIVETH AN Employer
+paperEmp MEANS Employer OF FALSE, 10000, FALSE, FALSE, NOTHING, FALSE
+
+GIVETH AN Employer
+twiceEmp MEANS Employer OF FALSE, 10000, FALSE, FALSE, NOTHING, TRUE
+
+GIVEN pd IS A DATE
+GIVETH A DATE
+onl pd MEANS `the last day to deliver employment income information, employer` onlineEmp `, payday` pd `, Matariki days` mdays
+
+GIVEN pd IS A DATE
+GIVETH A DATE
+pap pd MEANS `the last day to deliver employment income information, employer` paperEmp `, payday` pd `, Matariki days` mdays
+
+GIVEN pd IS A DATE
+GIVETH A DATE
+twm pd MEANS `the last day to deliver employment income information, employer` twiceEmp `, payday` pd `, Matariki days` mdays
+
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+wd d MEANS `is a working day` d `, Matariki days` mdays
+
+-- Filer helper: (tax year ending 31 March, exempt only, approved year end, filed, net)
+GIVEN ty IS A NUMBER
+      ends IS A MAYBE DATE
+GIVETH A Filer
+filer ty ends MEANS Filer OF ty, FALSE, ends, NOTHING, 50000
+
+-- Late payment helper: $10,000, given default date, never paid, s 139B applies (prior late payment)
+GIVEN dd IS A DATE
+      excl IS A BOOLEAN
+GIVETH A `Late payment facts`
+lp dd excl MEANS `Late payment facts` OF 10000, dd, NOTHING, FALSE, TRUE, NOTHING, NOTHING, excl
+
+-- Shortfall helper: no cap date in range (determined 1 Jan 2030, annual return due 7 Jul 2027)
+GIVEN c IS A Culpability
+      amt IS A NUMBER
+      vd IS A `Voluntary disclosure`
+      adq IS A BOOLEAN
+      temp IS A NUMBER
+      clean IS A BOOLEAN
+      obs IS A BOOLEAN
+GIVETH A NUMBER
+-- [Ported by the encoder: `Shortfall facts` gained `the tax is income tax` and `total tax figure for the return period` (s 141B(1D)), given as TRUE and 0 in every construction; no expected value changed.]
+sp c amt vd adq temp clean obs MEANS `the shortfall penalty for` (`Shortfall facts` OF amt, c, FALSE, vd, adq, temp, clean, obs, Date 1 1 2030, Date 7 7 2027, 12, TRUE, 0)
+
+-- Shortfall helper for s 141JAA: RC, disqualified, no temporary part, no adequate disclosure
+GIVEN c IS A Culpability
+      amt IS A NUMBER
+      vd IS A `Voluntary disclosure`
+      obs IS A BOOLEAN
+      det IS A DATE
+      due IS A DATE
+      period IS A NUMBER
+GIVETH A NUMBER
+cap c amt vd obs det due period MEANS `the shortfall penalty for` (`Shortfall facts` OF amt, c, FALSE, vd, FALSE, 0, FALSE, obs, det, due, period, TRUE, 0)
+
+-- ===== Goal 1: working days =====
+#ASSERT NOT wd (Date 6 2 2026) -- WD1
+#ASSERT NOT wd (Date 8 2 2027) -- WD2
+#ASSERT wd (Date 9 2 2027) -- WD3
+#ASSERT NOT wd (Date 27 4 2026) -- WD4
+#ASSERT NOT wd (Date 25 4 2028) -- WD5
+#ASSERT NOT wd (Date 1 6 2026) -- WD6
+#ASSERT NOT wd (Date 10 7 2026) -- WD7
+#ASSERT NOT wd (Date 26 10 2026) -- WD8
+#ASSERT wd (Date 24 12 2026) -- WD9
+#ASSERT NOT wd (Date 25 12 2026) -- WD10
+#ASSERT NOT wd (Date 15 1 2027) -- WD11
+#ASSERT wd (Date 18 1 2027) -- WD12
+#ASSERT (NOT wd (Date 3 4 2026)) AND (NOT wd (Date 6 4 2026)) -- WD13
+#ASSERT wd (Date 7 4 2026) -- WD14
+#ASSERT NOT wd (Date 17 10 2026) -- WD15
+
+-- ===== Goal 1: employer groups =====
+#ASSERT `the employer group of` (paper 49999) `on` (Date 15 10 2026) EQUALS `the non-electronic group` -- EG1
+#ASSERT `the employer group of` (paper 50000) `on` (Date 15 10 2026) EQUALS `the online group` -- EG2
+#ASSERT `the last day to deliver employment income information, employer` (paper 50000) `, payday` (Date 14 10 2026) `, Matariki days` mdays EQUALS Date 16 10 2026 -- EG2 (2 working days)
+#ASSERT `the last day to deliver employment income information, employer` (paper 49999) `, payday` (Date 14 10 2026) `, Matariki days` mdays EQUALS Date 29 10 2026 -- EG1 (10 working days)
+#ASSERT `the employer group of` (Employer OF TRUE, 20000, FALSE, FALSE, NOTHING, FALSE) `on` (Date 15 10 2026) EQUALS `the online group` -- EG3
+#ASSERT `the employer group of` (Employer OF FALSE, 80000, FALSE, TRUE, NOTHING, FALSE) `on` (Date 15 10 2026) EQUALS `the non-electronic group` -- EG4
+#ASSERT `the employer group of` (paper 80000) `on` (Date 15 10 2026) EQUALS `the online group` -- EG5
+#ASSERT `the employer group of` (Employer OF FALSE, 10000, TRUE, FALSE, JUST (Date 1 8 2026), FALSE) `on` (Date 15 10 2026) EQUALS `the new group, delivering non-electronically` -- EG6
+#ASSERT `the last day to deliver employment income information, employer` (Employer OF FALSE, 10000, TRUE, FALSE, JUST (Date 1 8 2026), FALSE) `, payday` (Date 15 10 2026) `, Matariki days` mdays EQUALS Date 30 10 2026 -- EG6 (10 working days)
+#ASSERT `the employer group of` (Employer OF TRUE, 10000, TRUE, FALSE, JUST (Date 1 8 2026), FALSE) `on` (Date 15 10 2026) EQUALS `the online group` -- EG7
+#ASSERT `the last day to deliver employment income information, employer` (Employer OF FALSE, 10000, TRUE, FALSE, JUST (Date 1 8 2026), FALSE) `, payday` (Date 31 1 2027) `, Matariki days` mdays EQUALS Date 15 2 2027 -- EG9
+#ASSERT `the employer group of` (Employer OF FALSE, 60000, TRUE, FALSE, JUST (Date 1 8 2026), FALSE) `on` (Date 1 2 2027) EQUALS `the online group` -- EG10
+#ASSERT `the last day to deliver employment income information, employer` (Employer OF FALSE, 60000, TRUE, FALSE, JUST (Date 1 8 2026), FALSE) `, payday` (Date 1 2 2027) `, Matariki days` mdays EQUALS Date 3 2 2027 -- EG10
+
+-- ===== Goal 1: due dates for employment income information =====
+#ASSERT onl (Date 14 10 2026) EQUALS Date 16 10 2026 -- DL1
+#ASSERT onl (Date 15 10 2026) EQUALS Date 19 10 2026 -- DL2
+#ASSERT onl (Date 23 10 2026) EQUALS Date 28 10 2026 -- DL3
+#ASSERT onl (Date 22 12 2026) EQUALS Date 24 12 2026 -- DL4
+#ASSERT onl (Date 23 12 2026) EQUALS Date 18 1 2027 -- DL5
+#ASSERT onl (Date 15 1 2027) EQUALS Date 19 1 2027 -- DL6
+#ASSERT onl (Date 25 3 2027) EQUALS Date 31 3 2027 -- DL7
+#ASSERT onl (Date 23 4 2027) EQUALS Date 28 4 2027 -- DL8
+#ASSERT onl (Date 24 4 2026) EQUALS Date 29 4 2026 -- DL9
+#ASSERT onl (Date 9 7 2026) EQUALS Date 14 7 2026 -- DL10
+#ASSERT onl (Date 29 5 2026) EQUALS Date 3 6 2026 -- DL11
+#ASSERT onl (Date 5 2 2027) EQUALS Date 10 2 2027 -- DL12
+#ASSERT onl (Date 5 2 2026) EQUALS Date 10 2 2026 -- DL13
+#ASSERT pap (Date 15 10 2026) EQUALS Date 30 10 2026 -- DL14
+#ASSERT pap (Date 9 12 2026) EQUALS Date 23 12 2026 -- DL15
+#ASSERT pap (Date 10 12 2026) EQUALS Date 24 12 2026 -- DL16
+#ASSERT pap (Date 11 12 2026) EQUALS Date 18 1 2027 -- DL17
+#ASSERT pap (Date 18 12 2026) EQUALS Date 25 1 2027 -- DL18
+#ASSERT pap (Date 15 3 2027) EQUALS Date 31 3 2027 -- DL19
+
+-- ===== Goal 1: twice-monthly payday =====
+#ASSERT twm (Date 3 11 2026) EQUALS Date 27 11 2026 -- TM1
+#ASSERT twm (Date 15 11 2026) EQUALS Date 27 11 2026 -- TM2
+#ASSERT twm (Date 16 11 2026) EQUALS Date 14 12 2026 -- TM3
+#ASSERT twm (Date 1 12 2026) EQUALS Date 20 1 2027 -- TM4
+#ASSERT twm (Date 20 2 2027) EQUALS Date 12 3 2027 -- TM5
+#ASSERT twm (Date 15 7 2026) EQUALS Date 29 7 2026 -- TM6a
+#ASSERT twm (Date 31 7 2026) EQUALS Date 14 8 2026 -- TM6b
+#ASSERT pap (Date 3 11 2026) EQUALS Date 17 11 2026 -- TM7
+
+-- ===== Goal 1: s 23M =====
+#ASSERT `the last day to notify that employment has ended, stopped on` (Date 13 11 2026) `, Matariki days` mdays EQUALS Date 18 1 2027 -- CE1
+#ASSERT `the last day to notify that employment has ended, stopped on` (Date 20 11 2026) `, Matariki days` mdays EQUALS Date 25 1 2027 -- CE2
+#ASSERT `the last day to notify that employment has ended, stopped on` (Date 31 3 2027) `, Matariki days` mdays EQUALS Date 13 5 2027 -- CE3
+#ASSERT `the last day to notify that employment has ended, stopped on` (Date 30 6 2027) `, Matariki days` mdays EQUALS Date 11 8 2027 -- CE4
+
+-- ===== Goal 1: s 24E =====
+#ASSERT NOT `has a non-notified tax code` (Employee OF TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) -- NN1
+#ASSERT `has a non-notified tax code` (Employee OF TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) -- NN2
+#ASSERT `has a non-notified tax code` (Employee OF FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) -- NN3
+#ASSERT NOT `has a non-notified tax code` (Employee OF FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) -- NN4
+#ASSERT NOT `has a non-notified tax code` (Employee OF FALSE, FALSE, FALSE, FALSE, TRUE, FALSE) -- NN5
+#ASSERT NOT `has a non-notified tax code` (Employee OF FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) -- NN6
+#ASSERT `has a non-notified tax code` (Employee OF FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) -- NN7
+
+-- ===== Goal 2: s 33 =====
+#ASSERT NOT `must file a return of income` (Filer OF 2027, TRUE, NOTHING, NOTHING, 0) -- RF1
+#ASSERT `must file a return of income` (Filer OF 2027, FALSE, NOTHING, NOTHING, 50000) -- RF2
+
+-- ===== Goal 2: s 37(1) due dates =====
+#ASSERT `the due date for the return of` (filer 2027 NOTHING) EQUALS Date 7 7 2027 -- RD1
+#ASSERT `the due date for the return of` (filer 2028 NOTHING) EQUALS Date 7 7 2028 -- RD2
+#ASSERT `the due date for the return of` (filer 2028 (JUST (Date 30 9 2027))) EQUALS Date 7 1 2028 -- RD3
+#ASSERT `the due date for the return of` (filer 2028 (JUST (Date 30 6 2027))) EQUALS Date 7 10 2027 -- RD4
+#ASSERT `the due date for the return of` (filer 2028 (JUST (Date 30 4 2027))) EQUALS Date 7 8 2027 -- RD5
+#ASSERT `the due date for the return of` (filer 2028 (JUST (Date 31 8 2027))) EQUALS Date 7 12 2027 -- RD6
+#ASSERT `the due date for the return of` (filer 2027 (JUST (Date 31 12 2026))) EQUALS Date 7 7 2027 -- RD7
+#ASSERT `the due date for the return of` (filer 2027 (JUST (Date 31 10 2026))) EQUALS Date 7 7 2027 -- RD8
+#ASSERT `the due date for the return of` (filer 2027 (JUST (Date 30 9 2026))) EQUALS Date 7 1 2027 -- RD9
+
+-- ===== Goal 2: s 37(5) extension limits =====
+#ASSERT `the latest extended due date for the return of` (filer 2027 NOTHING) EQUALS Date 31 3 2028 -- EX1
+#ASSERT `the latest extended due date for the return of` (filer 2027 (JUST (Date 31 12 2026))) EQUALS Date 31 3 2028 -- EX2
+#ASSERT `the latest extended due date for the return of` (filer 2027 (JUST (Date 30 9 2026))) EQUALS Date 31 3 2027 -- EX3
+#ASSERT `the latest extended due date for the return of` (filer 2027 (JUST (Date 31 10 2026))) EQUALS Date 31 3 2028 -- EX4
+#ASSERT `the latest extended due date for the return of` (filer 2028 (JUST (Date 30 6 2027))) EQUALS Date 31 3 2028 -- EX5
+#ASSERT `the latest extended due date for the return of` (filer 2028 (JUST (Date 30 4 2027))) EQUALS Date 31 3 2028 -- EX6
+#ASSERT `the latest extended due date for the return of` (filer 2027 (JUST (Date 28 2 2027))) EQUALS Date 31 3 2028 -- EX7
+
+-- ===== Goal 2: s 108 =====
+#ASSERT `the last day to increase the assessment, return provided` (Date 15 6 2027) `, fraud or omission` FALSE EQUALS JUST (Date 31 3 2032) -- TB1
+#ASSERT `the last day to increase the assessment, return provided` (Date 31 3 2027) `, fraud or omission` FALSE EQUALS JUST (Date 31 3 2031) -- TB2
+#ASSERT `the last day to increase the assessment, return provided` (Date 1 4 2027) `, fraud or omission` FALSE EQUALS JUST (Date 31 3 2032) -- TB3
+#ASSERT `the last day to increase the assessment, return provided` (Date 15 6 2027) `, fraud or omission` TRUE EQUALS NOTHING -- TB5/TB6
+#ASSERT (`the administration position for` (Filer OF 2027, FALSE, NOTHING, NOTHING, 50000) `, penalty notified` FALSE `, unpaid tax` NOTHING `, shortfall` NOTHING `, fraud or omission` FALSE `, as at` (Date 1 1 2030))'s `last day to increase the assessment` EQUALS NOTHING -- TB7
+
+-- ===== Goal 3: s 139A =====
+#ASSERT `the late filing penalty for` `an annual tax return` `, net income` 99999 `, late` TRUE `, notified` TRUE EQUALS 50 -- LF1
+#ASSERT `the late filing penalty for` `an annual tax return` `, net income` 100000 `, late` TRUE `, notified` TRUE EQUALS 250 -- LF2
+#ASSERT `the late filing penalty for` `an annual tax return` `, net income` 1000000 `, late` TRUE `, notified` TRUE EQUALS 250 -- LF3
+#ASSERT `the late filing penalty for` `an annual tax return` `, net income` 1000001 `, late` TRUE `, notified` TRUE EQUALS 500 -- LF4
+#ASSERT `the late filing penalty for` `an annual tax return` `, net income` 0 `, late` TRUE `, notified` TRUE EQUALS 50 -- LF5
+#ASSERT `the late filing penalty for` `an annual tax return` `, net income` 50000 `, late` TRUE `, notified` FALSE EQUALS 0 -- LF6
+#ASSERT `the late filing penalty for` `an annual tax return` `, net income` 50000 `, late` FALSE `, notified` TRUE EQUALS 0 -- LF7
+#ASSERT `the late filing penalty for` `an annual ICA return, reconciliation statement, employment income information or RLWT statement` `, net income` 0 `, late` TRUE `, notified` TRUE EQUALS 250 -- LF8/LF12
+
+-- ===== Goal 3: s 139B =====
+#ASSERT `the late payment penalty on` (lp (Date 20 1 2027) FALSE) `, as at` (Date 20 1 2027) EQUALS 0 -- LP1
+#ASSERT `the late payment penalty on` (lp (Date 20 1 2027) FALSE) `, as at` (Date 21 1 2027) EQUALS 100 -- LP2
+#ASSERT `the late payment penalty on` (lp (Date 20 1 2027) FALSE) `, as at` (Date 26 1 2027) EQUALS 100 -- LP3
+#ASSERT `the late payment penalty on` (lp (Date 20 1 2027) FALSE) `, as at` (Date 28 1 2027) EQUALS 504 -- LP4
+#ASSERT `the late payment penalty on` (lp (Date 20 1 2027) FALSE) `, as at` (Date 20 2 2027) EQUALS 504 -- LP5
+#ASSERT `the late payment penalty on` (lp (Date 20 1 2027) FALSE) `, as at` (Date 21 2 2027) EQUALS 609.04 -- LP6
+#ASSERT `the late payment penalty on` (lp (Date 20 1 2027) FALSE) `, as at` (Date 21 3 2027) EQUALS 715.1304 -- LP7
+#ASSERT `the late payment penalty on` (lp (Date 20 1 2027) TRUE) `, as at` (Date 21 3 2027) EQUALS 504 -- LP8
+#ASSERT `the late payment penalty on` (lp (Date 28 1 2027) FALSE) `, as at` (Date 27 2 2027) EQUALS 504 -- LP9
+#ASSERT `the late payment penalty on` (lp (Date 28 1 2027) FALSE) `, as at` (Date 28 2 2027) EQUALS 609.04 -- LP10
+#ASSERT NOT `section 139B applies to` (`Late payment facts` OF 10000, Date 20 1 2027, NOTHING, FALSE, FALSE, NOTHING, NOTHING, FALSE) -- LP11
+#ASSERT `section 139B applies to` (`Late payment facts` OF 10000, Date 20 1 2027, NOTHING, FALSE, FALSE, JUST (Date 1 2 2027), JUST (Date 15 2 2027), FALSE) -- LP12
+#ASSERT NOT `section 139B applies to` (`Late payment facts` OF 10000, Date 20 1 2027, JUST (Date 28 2 2027), FALSE, FALSE, JUST (Date 1 2 2027), JUST (Date 15 3 2027), FALSE) -- LP13
+#ASSERT `section 139B applies to` (`Late payment facts` OF 10000, Date 20 1 2027, JUST (Date 1 3 2027), FALSE, FALSE, JUST (Date 1 2 2027), JUST (Date 15 3 2027), FALSE) -- LP14
+#ASSERT `section 139B applies to` (`Late payment facts` OF 10000, Date 20 1 2027, NOTHING, FALSE, TRUE, NOTHING, NOTHING, FALSE) -- LP15
+#ASSERT `section 139B applies to` (`Late payment facts` OF 10000, Date 20 1 2027, NOTHING, TRUE, FALSE, NOTHING, NOTHING, FALSE) -- LP16
+
+-- ===== Goal 4: shortfall penalties =====
+#ASSERT sp `s 141A not taking reasonable care` 10000 `no voluntary disclosure` FALSE 0 FALSE FALSE EQUALS 2000 -- SP1
+#ASSERT sp `s 141A not taking reasonable care` 10000 `no voluntary disclosure` FALSE 0 TRUE FALSE EQUALS 1000 -- SP2
+#ASSERT sp `s 141B an unacceptable tax position` 10000 `no voluntary disclosure` FALSE 0 FALSE FALSE EQUALS 0 -- SP3
+#ASSERT sp `s 141B an unacceptable tax position` 60000 `no voluntary disclosure` FALSE 0 FALSE FALSE EQUALS 12000 -- SP4
+#ASSERT sp `s 141B an unacceptable tax position` 60000 `no voluntary disclosure` FALSE 0 TRUE FALSE EQUALS 6000 -- SP5
+#ASSERT sp `s 141B an unacceptable tax position` 50000 `no voluntary disclosure` FALSE 0 FALSE FALSE EQUALS 0 -- SP6
+#ASSERT sp `s 141C gross carelessness` 10000 `no voluntary disclosure` FALSE 0 FALSE FALSE EQUALS 4000 -- SP9
+#ASSERT sp `s 141C gross carelessness` 10000 `no voluntary disclosure` FALSE 0 TRUE FALSE EQUALS 2000 -- SP10
+#ASSERT sp `s 141D an abusive tax position` 10000 `no voluntary disclosure` FALSE 0 FALSE FALSE EQUALS 10000 -- SP11
+#ASSERT sp `s 141D an abusive tax position` 10000 `no voluntary disclosure` FALSE 0 TRUE FALSE EQUALS 5000 -- SP12
+#ASSERT `the shortfall penalty for` (`Shortfall facts` OF 10000, `s 141D an abusive tax position`, TRUE, `no voluntary disclosure`, FALSE, 0, FALSE, FALSE, Date 1 1 2030, Date 7 7 2027, 12, TRUE, 0) EQUALS 2000 -- SP13
+#ASSERT sp `s 141E evasion or a similar act` 10000 `no voluntary disclosure` FALSE 0 FALSE FALSE EQUALS 15000 -- SP14
+#ASSERT sp `s 141E evasion or a similar act` 10000 `no voluntary disclosure` FALSE 0 TRUE FALSE EQUALS 7500 -- SP15
+#ASSERT sp `s 141A not taking reasonable care` 10000 `before notification of an audit or investigation` FALSE 0 FALSE FALSE EQUALS 0 -- SP16
+#ASSERT sp `s 141B an unacceptable tax position` 60000 `before notification of an audit or investigation` FALSE 0 FALSE FALSE EQUALS 0 -- SP17
+#ASSERT sp `s 141C gross carelessness` 10000 `before notification of an audit or investigation` FALSE 0 FALSE FALSE EQUALS 1000 -- SP18
+#ASSERT sp `s 141E evasion or a similar act` 10000 `before notification of an audit or investigation` FALSE 0 FALSE FALSE EQUALS 3750 -- SP19
+#ASSERT sp `s 141A not taking reasonable care` 10000 `after notification but before the audit or investigation starts` FALSE 0 FALSE FALSE EQUALS 1200 -- SP20
+#ASSERT sp `s 141C gross carelessness` 10000 `after notification but before the audit or investigation starts` FALSE 0 FALSE FALSE EQUALS 2400 -- SP21
+#ASSERT sp `s 141E evasion or a similar act` 10000 `after notification but before the audit or investigation starts` FALSE 0 FALSE FALSE EQUALS 9000 -- SP22
+#ASSERT sp `s 141B an unacceptable tax position` 60000 `no voluntary disclosure` TRUE 0 FALSE FALSE EQUALS 3000 -- SP23
+#ASSERT sp `s 141D an abusive tax position` 10000 `no voluntary disclosure` TRUE 0 FALSE FALSE EQUALS 2500 -- SP24
+#ASSERT sp `s 141C gross carelessness` 10000 `no voluntary disclosure` TRUE 0 FALSE FALSE EQUALS 4000 -- SP25
+#ASSERT sp `s 141A not taking reasonable care` 10000 `no voluntary disclosure` FALSE 10000 FALSE FALSE EQUALS 500 -- SP26
+#ASSERT sp `s 141C gross carelessness` 10000 `no voluntary disclosure` FALSE 10000 FALSE FALSE EQUALS 1000 -- SP27
+#ASSERT sp `s 141A not taking reasonable care` 10000 `before notification of an audit or investigation` FALSE 10000 FALSE FALSE EQUALS 0 -- SP28
+#ASSERT sp `s 141C gross carelessness` 10000 `before notification of an audit or investigation` FALSE 10000 FALSE FALSE EQUALS 1000 -- SP29
+#ASSERT sp `s 141A not taking reasonable care` 10000 `after notification but before the audit or investigation starts` FALSE 10000 FALSE FALSE EQUALS 500 -- SP30
+#ASSERT sp `s 141E evasion or a similar act` 10000 `after notification but before the audit or investigation starts` FALSE 10000 FALSE FALSE EQUALS 3750 -- SP31
+#ASSERT sp `s 141C gross carelessness` 10000 `no voluntary disclosure` FALSE 0 FALSE TRUE EQUALS 5000 -- SP32
+#ASSERT sp `s 141E evasion or a similar act` 10000 `no voluntary disclosure` FALSE 0 TRUE TRUE EQUALS 9375 -- SP33
+#ASSERT sp `s 141C gross carelessness` 10000 `after notification but before the audit or investigation starts` FALSE 0 TRUE FALSE EQUALS 1200 -- SP34
+
+-- ===== Goal 4: s 141JAA cap =====
+#ASSERT cap `s 141A not taking reasonable care` 500000 `no voluntary disclosure` FALSE (Date 1 12 2027) (Date 7 7 2027) 12 EQUALS 50000 -- SP35
+#ASSERT cap `s 141A not taking reasonable care` 500000 `no voluntary disclosure` FALSE (Date 7 1 2028) (Date 7 7 2027) 12 EQUALS 50000 -- SP36
+#ASSERT cap `s 141A not taking reasonable care` 500000 `no voluntary disclosure` FALSE (Date 8 1 2028) (Date 7 7 2027) 12 EQUALS 100000 -- SP37
+#ASSERT cap `s 141A not taking reasonable care` 500000 `after notification but before the audit or investigation starts` FALSE (Date 1 12 2027) (Date 7 7 2027) 12 EQUALS 50000 -- SP38
+#ASSERT cap `s 141A not taking reasonable care` 500000 `after notification but before the audit or investigation starts` FALSE (Date 8 1 2028) (Date 7 7 2027) 12 EQUALS 60000 -- SP39
+#ASSERT cap `s 141A not taking reasonable care` 500000 `no voluntary disclosure` TRUE (Date 1 12 2027) (Date 7 7 2027) 12 EQUALS 125000 -- SP40
+#ASSERT cap `s 141C gross carelessness` 500000 `no voluntary disclosure` FALSE (Date 1 12 2027) (Date 7 7 2027) 12 EQUALS 200000 -- SP41
+#ASSERT cap `s 141B an unacceptable tax position` 300000 `no voluntary disclosure` FALSE (Date 1 12 2027) (Date 7 7 2027) 12 EQUALS 50000 -- SP42
+#ASSERT cap `s 141A not taking reasonable care` 500000 `no voluntary disclosure` FALSE (Date 20 5 2027) (Date 20 2 2027) 1 EQUALS 50000 -- SP43a
+#ASSERT cap `s 141A not taking reasonable care` 500000 `no voluntary disclosure` FALSE (Date 21 5 2027) (Date 20 2 2027) 1 EQUALS 100000 -- SP43b
+#ASSERT cap `s 141A not taking reasonable care` 500000 `no voluntary disclosure` FALSE (Date 28 5 2027) (Date 28 2 2027) 2 EQUALS 50000 -- SP44a
+#ASSERT cap `s 141A not taking reasonable care` 500000 `no voluntary disclosure` FALSE (Date 29 5 2027) (Date 28 2 2027) 2 EQUALS 100000 -- SP44b
