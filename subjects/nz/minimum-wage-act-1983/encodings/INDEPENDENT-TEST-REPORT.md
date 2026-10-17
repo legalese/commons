@@ -25,3 +25,7 @@ Run on 2026-10-15 by a fresh session that had not seen the encoding being writte
 ## After the fixes
 
 The independent file's worker helpers were ported to the new date inputs (marked `[ported …]`; no expected value changed). `check.sh`: `tests-independent.l4` 126 satisfied, 0 failed; all 7 modules 257 satisfied, 0 failed, 0 errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the Minister's annual review (s 5(1)), which read literally may then be done on the first working day of the following January. 2 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 124 satisfied, 2 failed.

@@ -103,3 +103,11 @@ How the rate is chosen (`the rate that governs`):
 2. F6: does s 7(2) reach a worker paid only for hours actually worked?
 3. F7: if an Order's starting-out or training rate is below 80% of the adult rate, is the rate void (so the adult rate applies), or does the Order stand until set aside?
 4. s 8(4): does a permit's rate govern a worker under 16, for whom no rate is otherwise prescribed?
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the Minister's annual review (s 5(1)), which read literally may then be done on the first working day of the following January. The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `mwa-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 258 satisfied (134 encoder, 124 independent), 2 failed (2 independent assertions written before the s 55 change). The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.
+
+**Open question (s 55).** Does Legislation Act s 55 really let the s 5(1) review "in each year ending on 31 December" be done in the following January? Read literally it does, since 31 December is never a working day; the encoding applies it at the user's direction.
