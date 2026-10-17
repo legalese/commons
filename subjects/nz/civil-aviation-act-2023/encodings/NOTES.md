@@ -61,3 +61,9 @@ The independent pass (`INDEPENDENT-TEST-REPORT.md`) failed no assertion. It foun
 ## Open questions for a New Zealand lawyer
 
 1. F4: does the 10 times limit in s 277 leave a passenger on a free ticket with no compensation for delay?
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the 2-year limits for actions against carriers (s 283) and for contribution proceedings (s 281(2)). The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `caa-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 99 satisfied (32 encoder, 67 independent), 9 failed (9 independent assertions written before the s 55 change). The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.

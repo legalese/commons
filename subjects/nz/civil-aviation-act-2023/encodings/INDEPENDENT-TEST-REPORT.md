@@ -20,3 +20,7 @@ s 278(4) (C-16, C-17); s 273(b) per carrier (C-18); the limbs folded into single
 ## After the review
 
 `Carrier facts` gained `carriage by successive carriers`; the independent file's constructions were ported (FALSE, marked `[Ported …]`; no expected value changed). `check.sh`: `tests-independent.l4` 76 satisfied; `caa-tests.l4` 30 satisfied; 5 modules, 106 satisfied, 0 failed, 0 other errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the 2-year limits for actions against carriers (s 283) and for contribution proceedings (s 281(2)). 9 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 67 satisfied, 9 failed.
