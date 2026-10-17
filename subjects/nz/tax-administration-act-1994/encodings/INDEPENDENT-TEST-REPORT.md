@@ -26,3 +26,7 @@ PAYE intermediaries (EG8); s 23M's "intending that the cessation is permanent" (
 ## After the fixes
 
 The `Shortfall facts` constructions in the independent file were ported to the two new fields (TRUE and 0, marked `[Ported …]`; no expected value changed). The encoder's test of a $10,000 unacceptable tax position was changed and marked, and tests of the threshold added. `check.sh`: `tests-independent.l4` 157 satisfied, 0 failed; `taa-tests.l4` 97 satisfied; 8 modules, 254 satisfied, 0 failed, 0 other errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the s 37 return due date and the latest extended due date, the s 108 time bar, and the s 141JAA disclosure limit; the deadlines counted in working days (ss 23E-23M) already end on working days. 1 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 156 satisfied, 1 failed.

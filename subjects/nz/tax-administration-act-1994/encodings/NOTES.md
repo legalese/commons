@@ -73,3 +73,9 @@ The independent pass (`INDEPENDENT-TEST-REPORT.md`) found one gap, causing 2 fai
 1. F1: does s 24E(1)(a) give a non-notified code when any one of name, tax file number and tax code is missing?
 2. F3: from which day do the s 139B(4) monthly intervals run?
 3. F5 and F6: how do the s 141G, 141H, 141I and 141J reductions combine, and in what order do s 141FB and s 141K apply?
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the s 37 return due date and the latest extended due date, the s 108 time bar, and the s 141JAA disclosure limit; the deadlines counted in working days (ss 23E-23M) already end on working days. The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `taa-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 256 satisfied (100 encoder, 156 independent), 1 failed (1 independent assertion written before the s 55 change). The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.
