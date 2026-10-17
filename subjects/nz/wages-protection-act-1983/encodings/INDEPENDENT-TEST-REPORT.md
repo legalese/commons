@@ -26,3 +26,7 @@ The author agreed with forks F1-F10 as encoded.
 ## After the fixes
 
 The s 11A(3) calls in the independent file were ported to the new date input (marked `[Ported …]`; no expected value changed). `check.sh`: `tests-independent.l4` 144 satisfied, 0 failed; all 7 modules 284 satisfied, 0 failed, 0 errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the employer's 2 weeks to act on a withdrawal of consent or a request (ss 5(2), 9(2)) and the last day for notice of an overpayment (s 6(3)(c)). 4 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 140 satisfied, 4 failed.

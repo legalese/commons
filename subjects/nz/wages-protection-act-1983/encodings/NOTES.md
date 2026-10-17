@@ -95,3 +95,9 @@ Remarks not acted on, kept as limits of the model:
 2. F8: is a consented deduction for an unlawful purpose recoverable under s 11, or only through the Employment Relations Act?
 3. s 5(1A): what does "consulting" require? The encoding takes it as a yes/no input.
 4. s 6(3)(ba)(i): the "working days" for a specified pay deduction are an input; which definition applies (ERA s 5)?
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the employer's 2 weeks to act on a withdrawal of consent or a request (ss 5(2), 9(2)) and the last day for notice of an overpayment (s 6(3)(c)). The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `wpa-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 281 satisfied (141 encoder, 140 independent), 4 failed (4 independent assertions written before the s 55 change). The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.
