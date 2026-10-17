@@ -18,3 +18,7 @@ Run on 2026-10-16 by a fresh session that had not seen the encoding being writte
 The s 15(3) and s 16 limbs (single inputs); s 17(2)-(4); status on a given day under s 9, s 9(2)(c)-(d); s 154(1), (5) and s 167(3); the s 185(1) preconditions; s 157(1), (3) and the (4) visa types; whether the person holds a residence class visa and s 161(2)(b); the s 161(5) first-held date (an input).
 
 `check.sh`: `tests-independent.l4` 93 satisfied; `imm-tests.l4` 46 satisfied; 7 modules, 139 satisfied, 0 failed, 0 other errors. No change was made after the pass.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the deadlines for a humanitarian appeal (s 154), for reconsideration (s 185(2)), for giving reasons against deportation (s 157(2)) and for appealing a deportation liability notice (ss 157(4), 161(2)). 5 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 88 satisfied, 5 failed.

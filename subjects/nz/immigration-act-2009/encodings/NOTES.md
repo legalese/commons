@@ -54,9 +54,15 @@ Modules: `imm-types.l4` (nouns only), `imm-status.l4`, `imm-deportation.l4`, `im
 
 The independent pass (`INDEPENDENT-TEST-REPORT.md`) failed no assertion. Its noted differences are recorded as known limits below.
 
-**Known limits.** The days imprisoned under s 161(3) are one input for all windows: the caller must give the days within the relevant window. The top-level appeal deadline assumes no s 185 reconsideration and no s 154(5) exclusion. The s 350 subsection numbers (deemed knowledge as (3), the notice-period defence as (4)) need checking against the PCO's numbering, since the converted text lost paragraph labels. Legislation Act 2019 s 55 (a time limit ending on a non-working day runs to the next working day) is not applied to the 14-, 28- and 42-day periods.
+**Known limits.** The days imprisoned under s 161(3) are one input for all windows: the caller must give the days within the relevant window. The top-level appeal deadline assumes no s 185 reconsideration and no s 154(5) exclusion. The s 350 subsection numbers (deemed knowledge as (3), the notice-period defence as (4)) need checking against the PCO's numbering, since the converted text lost paragraph labels. Legislation Act 2019 s 55 now applies to the 14-, 28- and 42-day periods (2026-10-17).
 
 ## Open questions for a New Zealand lawyer
 
 1. F1: is the anniversary inside "the preceding 10 years" in s 15(1)(b)?
 2. Does s 55 of the Legislation Act extend the s 154 and s 161 appeal periods when they end on a weekend?
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the deadlines for a humanitarian appeal (s 154), for reconsideration (s 185(2)), for giving reasons against deportation (s 157(2)) and for appealing a deportation liability notice (ss 157(4), 161(2)). The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `imm-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 139 satisfied (51 encoder, 88 independent), 5 failed (5 independent assertions written before the s 55 change). The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.
