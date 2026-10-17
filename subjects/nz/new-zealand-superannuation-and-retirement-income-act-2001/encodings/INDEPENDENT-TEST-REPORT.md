@@ -20,3 +20,7 @@ The limbs of s 4A; s 17(2)(b)-(c); s 19(1), (5), (7)-(9); s 22's exclusion of pe
 ## After the fixes
 
 The `Applicant` constructions in the independent file were ported to the new field (NOTHING, and the date the D4 scenario gives in that one call, marked `[Ported …]`; no expected value changed). The encoder's tests that encoded the rejected readings (the refugee years, the Pacific rate below 10 years) were changed and marked. `check.sh`: `tests-independent.l4` 115 satisfied, 1 failed (the F6 disagreement); `nzs-tests.l4` 78 satisfied; all 7 modules 193 satisfied, 1 failed, 0 other errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the latest date for the Fund's next performance review (s 71(3)). No independent assertion was affected. `check.sh`: `tests-independent.l4` 115 satisfied, 1 failed.

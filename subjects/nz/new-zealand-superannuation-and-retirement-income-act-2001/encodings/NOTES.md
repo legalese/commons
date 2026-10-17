@@ -83,3 +83,9 @@ The independent pass (`INDEPENDENT-TEST-REPORT.md`) found 3 other disagreements,
 1. Confirm the s 8(4) table, the s 32(1)(b) and s 43 formulas, and the Schedule 1 rates against the official print.
 2. F1: how is the s 8A(3)(a) period in days compared with a requirement in years?
 3. F6: when does a person born on 29 February attain 65?
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the latest date for the Fund's next performance review (s 71(3)). The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `nzs-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 194 satisfied (79 encoder, 115 independent), 1 failed (the fork F6 disagreement on a 29 February birthday). The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.
