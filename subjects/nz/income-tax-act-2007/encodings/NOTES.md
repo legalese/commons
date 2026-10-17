@@ -79,3 +79,7 @@ The independent pass (`INDEPENDENT-TEST-REPORT.md`) failed no assertion but foun
 
 1. F2: what are the LC 13-LC 15 formulas? The converted text lost them.
 2. F1: does Schedule 1 tax only whole dollars, ignoring cents?
+
+## Legislation Act 2019 s 55 (reviewed 2026-10-17)
+
+At the user's direction, every New Zealand encoding was reviewed for Legislation Act 2019 s 55 (a thing to be done on a day or within a period may be done on the next working day if that day is not a working day). The provisions encoded here compute residence, income, liability and credits; none sets a day or period for doing something (the filing and payment dates are in the Tax Administration Act encoding, where s 55 is applied). Nothing changed.
