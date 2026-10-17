@@ -27,3 +27,8 @@ The s 40(2) 28-day continuation (SL-20); the s 32(2)-(3) priority and court-orde
 ## After the fixes
 
 The `Supported living facts` and `Commencement facts` constructions in the independent file were ported to the new fields (FALSE and TRUE, marked `[Ported …]`; no expected value changed). The encoder's test of sole parent support applied for late was removed (the refusal cannot be asserted) and marked; tests of both new inputs were added. `check.sh`: `tests-independent.l4` 126 satisfied, 0 failed, 2 refused as expected; `ss-tests.l4` 66 satisfied; 8 modules, 192 satisfied, 0 failed, 0 other errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the 28 days within which an application must be received for a listed benefit to start after the stand-down (s 316(2)). No independent assertion was affected. `check.sh`: `tests-independent.l4` 127 satisfied, 0 failed.
+Effect on the 2 refused assertions: CM-21's application now falls within 28 days that s 55 extends past a weekend, so the encoding gives a commencement date instead of refusing; the author's assertion ("not the s 316(3) date") happens to be satisfied, though the author expected a refusal. CM-20 is still refused. `tests-independent.l4`: 127 satisfied, 0 failed, 1 refused.

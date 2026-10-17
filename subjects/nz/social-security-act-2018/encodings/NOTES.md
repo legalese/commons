@@ -74,3 +74,9 @@ The independent pass (`INDEPENDENT-TEST-REPORT.md`) found the s 316 gap (F1), no
 
 1. F1: when does sole parent support, the supported living payment, or a listed kind of jobseeker support commence if the application comes more than 28 days after entitlement?
 2. The Schedule 4 Part 1 and Part 3 rates, and their income tests, are lost in the converted text.
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the 28 days within which an application must be received for a listed benefit to start after the stand-down (s 316(2)). The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `ss-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 194 satisfied (67 encoder, 127 independent), 0 failed; 1 independent assertion (CM-20) is still refused as its author expected, and CM-21 now passes because s 55 brings its application within the 28 days. The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.
