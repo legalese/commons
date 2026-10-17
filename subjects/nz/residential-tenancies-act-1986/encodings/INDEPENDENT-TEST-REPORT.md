@@ -19,3 +19,7 @@ Grounds whose underlying facts are folded into an input constructor (C14, C15, C
 ## After the fixes
 
 The encoder's tests that encoded the rejected reading of s 24(1)(d)-(e) were changed and marked; two s 56C tests were added. `check.sh`: `tests-independent.l4` 246 satisfied, 0 failed; `rta-tests.l4` 191 satisfied; 10 modules, 437 satisfied, 0 failed, 0 other errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the deadlines for a landlord's bond application (s 22A(3)), a market rent application (s 25(2)-(2A)), remedying a breach (s 56), a hardship application (s 56D), claiming proceeds of sale (s 62D), possession orders and their filing (s 64), enforcing a work order (s 108(7)) and unlawful act applications (s 109); not earliest dates, effects of termination, the s 60B notice counted back from expiry, or periods already counted in working days. 3 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 243 satisfied, 3 failed.

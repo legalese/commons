@@ -121,3 +121,9 @@ The independent pass (`INDEPENDENT-TEST-REPORT.md`) found 3 disagreements, all r
 3. F2: is a rent increase on the anniversary of the start of the tenancy, or of the last increase, within the 12 months of s 24(1)(d)-(e)?
 4. F1: does s 136A make n days' notice given on day G expire with the close of day G + n, so that the tenant may be required to vacate on that day?
 5. The Schedule 1A and 1B amounts are lost in the conversion and are inputs here.
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the deadlines for a landlord's bond application (s 22A(3)), a market rent application (s 25(2)-(2A)), remedying a breach (s 56), a hardship application (s 56D), claiming proceeds of sale (s 62D), possession orders and their filing (s 64), enforcing a work order (s 108(7)) and unlawful act applications (s 109); not earliest dates, effects of termination, the s 60B notice counted back from expiry, or periods already counted in working days. The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `rta-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 438 satisfied (195 encoder, 243 independent), 3 failed (3 independent assertions written before the s 55 change). The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.
