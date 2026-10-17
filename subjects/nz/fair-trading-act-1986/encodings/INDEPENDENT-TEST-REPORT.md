@@ -31,3 +31,7 @@ The author agreed with the encoding on the remaining 237 assertions, including i
 ## After the fixes
 
 `check.sh`: `tests-independent.l4` 239 satisfied, 0 failed; `fta-tests.l4` 162 satisfied; all 8 modules 401 satisfied, 0 failed, 0 errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the 3-year limit for applying for orders under s 43 (s 43A); the deadlines already counted in working days (ss 31A, 36Q-36R, 36ZF) end on working days. 1 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 238 satisfied, 1 failed.

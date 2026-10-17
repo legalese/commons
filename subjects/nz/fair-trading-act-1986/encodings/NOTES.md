@@ -107,3 +107,9 @@ The independent pass (`INDEPENDENT-TEST-REPORT.md`) found 2 disagreements, both 
 
 1. F1: which days are working days for Part 4A and s 33D?
 2. Is s 26A or 26B conduct (using an unfair contract term) an offence under s 40(1), as the words of s 40(1) suggest?
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the 3-year limit for applying for orders under s 43 (s 43A); the deadlines already counted in working days (ss 31A, 36Q-36R, 36ZF) end on working days. The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `fta-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 402 satisfied (164 encoder, 238 independent), 1 failed (1 independent assertion written before the s 55 change). The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.
