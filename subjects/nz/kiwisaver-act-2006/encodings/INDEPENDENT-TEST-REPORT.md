@@ -26,3 +26,7 @@ Run on 2026-10-16 by a fresh session that had not seen the encoding being writte
 ## After the fixes
 
 The `Employment` constructions in the independent file were ported to the new field (marked `[Ported …]`; no expected value changed). The encoder's tests that encoded the rejected readings (the rate-reduction days, the 5% refusal) were changed and marked, and tests were added for the other fixes. `check.sh`: `tests-independent.l4` 167 satisfied, 0 failed; `ks-tests.l4` 119 satisfied; all 7 modules 286 satisfied, 0 failed, 0 errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the deadlines to opt out (s 16), to give the information pack (s 42(1)(a)) and to pay a complying fund (s 101F(2)). 5 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 162 satisfied, 5 failed.
