@@ -29,3 +29,7 @@ Run on 2026-10-15 by a fresh session that had not seen the encoding being writte
 ## After the fixes
 
 The `Carer facts` calls in the independent file were ported to the new field (marked `[Ported …]`; no expected value changed). The encoder's own tests that had encoded the readings now rejected (s 7(2), F7, s 54, F6) were changed, each marked in `pl-tests.l4`. `check.sh`: `tests-independent.l4` 262 satisfied, 2 failed (the F3 disagreements); `pl-tests.l4` 217 satisfied; all 8 modules 479 satisfied, 2 failed, 0 other errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the deadlines to decide or challenge a flexible-leave request (ss 30D, 30I), to apply for parental leave payments (s 71I), to file a charge (s 71Z), to apply for a review (s 71ZB), to act within n days after an event (ss 34, 36, 38), to apply for an interim order (s 55), to complain (s 70) and to object (s 70C) — not deadlines counted back from an event. 4 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 258 satisfied, 6 failed.

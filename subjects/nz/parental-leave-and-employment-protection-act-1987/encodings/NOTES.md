@@ -108,3 +108,9 @@ The independent pass (`INDEPENDENT-TEST-REPORT.md`) found 12 other disagreements
 4. F7: does the payment threshold test require 26 weeks of employment, or only 260 hours across the busiest 26 weeks?
 5. F3: are "at least 14 days" and "not less than 21 days' notice" counted in clear days?
 6. Preterm baby payments (s 71DA) carry no transitional provision in Schedule 1AA; from which children do they apply?
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the deadlines to decide or challenge a flexible-leave request (ss 30D, 30I), to apply for parental leave payments (s 71I), to file a charge (s 71Z), to apply for a review (s 71ZB), to act within n days after an event (ss 34, 36, 38), to apply for an interim order (s 55), to complain (s 70) and to object (s 70C) — not deadlines counted back from an event. The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `pl-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 478 satisfied (220 encoder, 258 independent), 6 failed (the 2 clear-days assertions under fork F3, and 4 written before the s 55 change). The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.
