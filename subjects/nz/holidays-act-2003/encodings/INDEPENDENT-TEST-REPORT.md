@@ -32,3 +32,7 @@ The author agreed with the other forks as encoded, including F1, F3, F5, F7, F8,
 ## After the fixes
 
 `Payout request` and `Closedown` calls in the independent file were ported to the new fields (marked `[Ported …]`; no expected value changed). `check.sh`: `tests-independent.l4` 295 satisfied, 3 failed (the F4 disagreements); all 9 modules 587 satisfied, 3 failed, 0 other errors.
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the deadline for allowing annual holidays (s 18) and for commencing penalty actions (s 76). 3 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 292 satisfied, 6 failed.
