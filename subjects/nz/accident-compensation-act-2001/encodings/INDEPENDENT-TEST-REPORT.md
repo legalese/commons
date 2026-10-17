@@ -119,3 +119,7 @@ All seven disagreements were accepted as encoding errors and fixed. After the fi
 | "misses" 2 (cl 34 applied to every employee) | not changed; stated in NOTES §1 and as an open question |
 | "misses" 3-9 | left as declared simplifications or caller inputs; F1 and F7 were already forks |
 | REFUSE items | indexed and regulated figures stay caller inputs, as the brief states |
+
+## Change after the pass: Legislation Act s 55 (2026-10-17)
+
+At the user's direction the encoder applied Legislation Act 2019 s 55 to the deadlines for lodging a claim (s 53), deciding claims (ss 54-57), deciding the need for a rehabilitation plan (s 75), applying for review (s 135), the review decision (s 144), paying review costs (s 148), appealing (s 151) and seeking leave (s 162), the Corporation's list for the Registrar (s 152), recovering levies (s 226), a ceasing employer's notice (s 232), laying a charge (s 336) and an estate's application (s 120); not the s 146 deemed decision, whose date is tied to the 3 months. 4 of the independent author's assertions, written before that change, expect the unextended date where the deadline falls on a non-working day; they now fail by design and are counted as expected failures. No expected value was edited. `check.sh`: `tests-independent.l4` 311 satisfied, 4 failed.

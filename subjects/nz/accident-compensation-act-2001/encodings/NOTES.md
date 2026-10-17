@@ -96,3 +96,9 @@ The independent report's other observations are listed in `INDEPENDENT-TEST-REPO
 ## 6. Checks
 
 See `encoding.json` → `checks`.
+
+## Legislation Act 2019 s 55 (added 2026-10-17)
+
+At the user's direction, the next-working-day rule in s 55 of the Legislation Act 2019 ("A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day") now applies to the deadlines for lodging a claim (s 53), deciding claims (ss 54-57), deciding the need for a rehabilitation plan (s 75), applying for review (s 135), the review decision (s 144), paying review costs (s 148), appealing (s 151) and seeking leave (s 162), the Corporation's list for the Registrar (s 152), recovering levies (s 226), a ceasing employer's notice (s 232), laying a charge (s 336) and an estate's application (s 120); not the s 146 deemed decision, whose date is tied to the 3 months. The working day is the Legislation Act s 13 meaning, because s 55 is in that Act; the Matariki Observance Days are the statutory dates in Schedule 1 of the Te Kāhui o Matariki Public Holiday Act 2022 (to 2052; later years are refused). The rule lives in `acc-s55.l4`. Dates of entitlement, earliest days and periods of liability are not deadlines for doing something, and are not moved (fork S55).
+
+`check.sh` on 2026-10-17: 549 satisfied (238 encoder, 311 independent), 4 failed (4 independent assertions written before the s 55 change). The encoder's tests whose deadlines moved were changed and marked; tests of the rule were added.
