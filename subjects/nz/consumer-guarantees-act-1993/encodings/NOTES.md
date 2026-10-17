@@ -84,3 +84,7 @@ The independent pass (`INDEPENDENT-TEST-REPORT.md`) found 8 disagreements, all r
 
 1. F1: is a remediable failure of a substantial character subject to the supplier's right to remedy first?
 2. F3: may a consumer claim consequential loss from a manufacturer without first requiring repair under an express guarantee?
+
+## Legislation Act 2019 s 55 (reviewed 2026-10-17)
+
+At the user's direction, every New Zealand encoding was reviewed for Legislation Act 2019 s 55 (a thing to be done on a day or within a period may be done on the next working day if that day is not a working day). This Act sets no fixed day or period for doing anything in the encoded provisions: its time limits are "a reasonable time" (for example ss 20, 23, 32, 35), and the one date computed — when a cancellation takes effect (s 37) — is not a deadline. Nothing changed.
