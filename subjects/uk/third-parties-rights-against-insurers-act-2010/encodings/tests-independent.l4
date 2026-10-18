@@ -1,0 +1,264 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `tprai-types`
+IMPORT `tprai-transfer`
+IMPORT `tprai-recovery`
+IMPORT `tprai-information`
+IMPORT `tprai-goal`
+
+-- Independent tests for the Third Parties (Rights against Insurers) Act 2010.
+-- Expected values come from independent-expectations.md, written from the Act
+-- before the encoding was read. A failing assertion is a finding.
+
+§ `Helpers`
+
+GIVEN ev IS A `Relevant person event`, ed IS A DATE, ld IS A DATE
+GIVETH A `Transfer facts`
+tf ev ed ld MEANS `Transfer facts` OF ev, ed, ld, TRUE, FALSE, FALSE
+
+GIVEN ev IS A `Relevant person event`, ed IS A DATE, ld IS A DATE, ins IS A BOOLEAN, re IS A BOOLEAN, old IS A BOOLEAN
+GIVETH A `Transfer facts`
+tfx ev ed ld ins re old MEANS `Transfer facts` OF ev, ed, ld, ins, re, old
+
+GIVEN est IS A BOOLEAN, owed IS A NUMBER, cover IS A NUMBER, setoff IS A NUMBER, shortI IS A NUMBER, elig IS A BOOLEAN, claimed IS A BOOLEAN, paid IS A NUMBER, fund IS A NUMBER
+GIVETH A `Money facts`
+mf est owed cover setoff shortI elig claimed paid fund MEANS
+    `Money facts` OF est, owed, cover, setoff, shortI, elig, claimed, paid, fund
+
+GIVEN owed IS A NUMBER, cover IS A NUMBER, setoff IS A NUMBER
+GIVETH A `Money facts`
+simple owed cover setoff MEANS mf TRUE owed cover setoff 0 FALSE FALSE 0 0
+
+GIVEN k IS A `Condition kind`, who IS AN `Insured kind`, mar IS A BOOLEAN, pi IS A BOOLEAN
+GIVETH A `Condition facts`
+cf k who mar pi MEANS `Condition facts` OF k, who, mar, pi
+
+GIVEN b1 IS A BOOLEAN, b2 IS A BOOLEAN, w IS A BOOLEAN, d IS A DATE
+GIVETH A `Notice facts`
+nf b1 b2 w d MEANS `Notice facts` OF b1, b2, w, d
+
+GIVEN p IS A BOOLEAN, r IS A BOOLEAN, pc IS A BOOLEAN, d IS A DATE
+GIVETH A `Disclosure notice facts`
+df p r pc d MEANS `Disclosure notice facts` OF p, r, pc, d
+
+GIVEN t IS A `Transfer facts`
+GIVETH A BOOLEAN
+xfer t MEANS `the rights are transferred under` t
+
+GIVEN t IS A `Transfer facts`
+GIVETH A BOOLEAN
+routeA t MEANS `route (a) applies to` t
+
+GIVEN m IS A `Money facts`
+GIVETH A NUMBER
+due m MEANS `the amount due from the insurer under` m
+
+GIVEN m IS A `Money facts`
+GIVETH A NUMBER
+vsInsured m MEANS `the amount still enforceable against the insured under` m
+
+GIVEN m IS A `Money facts`
+GIVETH A NUMBER
+recov m MEANS `the amount recoverable from the insurer for s 14 under` m
+
+GIVEN c IS A `Condition facts`
+GIVETH A BOOLEAN
+binds c MEANS `the condition binds the transferred rights under` c
+
+GIVEN n IS A `Notice facts`
+GIVETH A MAYBE DATE
+infoDay n MEANS `the last day to provide information under` n
+
+GIVEN n IS A `Disclosure notice facts`
+GIVETH A MAYBE DATE
+listDay n MEANS `the last day to serve a list of documents under` n
+
+§ `Goal 1 — transfer`
+
+-- T1 bankruptcy order, liability first: route (b), transfers
+#ASSERT xfer (tf `an insolvency event` (Date 1 3 2024) (Date 1 2 2024))
+#ASSERT NOT (routeA (tf `an insolvency event` (Date 1 3 2024) (Date 1 2 2024)))
+-- T2 relevant person first: route (a), transfers
+#ASSERT xfer (tf `an insolvency event` (Date 1 3 2024) (Date 10 3 2024))
+#ASSERT routeA (tf `an insolvency event` (Date 1 3 2024) (Date 10 3 2024))
+-- T3 same day: route (a)
+#ASSERT routeA (tf `an insolvency event` (Date 1 3 2024) (Date 1 3 2024))
+#ASSERT xfer (tf `an insolvency event` (Date 1 3 2024) (Date 1 3 2024))
+-- T4 winding up, liability the day before
+#ASSERT xfer (tf `an insolvency event` (Date 1 6 2024) (Date 31 5 2024))
+#ASSERT NOT (routeA (tf `an insolvency event` (Date 1 6 2024) (Date 31 5 2024)))
+-- T5 administration same day
+#ASSERT xfer (tf `an insolvency event` (Date 15 7 2024) (Date 15 7 2024))
+-- T6 DRO, liability first
+#ASSERT xfer (tf `a debt relief order` (Date 1 3 2024) (Date 1 2 2024))
+-- T7 DRO, liability after
+#ASSERT NOT (xfer (tf `a debt relief order` (Date 1 3 2024) (Date 2 3 2024)))
+-- T8 DRO same day: route (a), so nothing
+#ASSERT NOT (xfer (tf `a debt relief order` (Date 1 3 2024) (Date 1 3 2024)))
+-- T9 NI DRO, liability after
+#ASSERT NOT (xfer (tf `a debt relief order` (Date 1 3 2024) (Date 2 3 2024)))
+-- T10 NI DRO, liability first (leap-year February)
+#ASSERT xfer (tf `a debt relief order` (Date 1 3 2024) (Date 29 2 2024))
+-- T11 died insolvent, liability first
+#ASSERT xfer (tf `died insolvent` (Date 10 1 2025) (Date 1 1 2025))
+-- T12 died insolvent same day
+#ASSERT NOT (xfer (tf `died insolvent` (Date 10 1 2025) (Date 10 1 2025)))
+-- T13 died insolvent, liability after
+#ASSERT NOT (xfer (tf `died insolvent` (Date 10 1 2025) (Date 11 1 2025)))
+-- T14 dissolved body corporate, not restored
+#ASSERT xfer (tf (`dissolved` FALSE FALSE) (Date 1 9 2024) (Date 1 8 2024))
+-- T15 dissolved and restored
+#ASSERT NOT (xfer (tf (`dissolved` TRUE FALSE) (Date 1 9 2024) (Date 1 8 2024)))
+-- T16 partnership not a body corporate
+#ASSERT NOT (xfer (tf (`dissolved` FALSE TRUE) (Date 1 9 2024) (Date 1 8 2024)))
+-- T17 LLP (a body corporate), T18 unincorporated non-partnership
+#ASSERT xfer (tf (`dissolved` FALSE FALSE) (Date 1 9 2024) (Date 1 8 2024))
+-- T19 compromise transferring the liability away
+#ASSERT NOT (xfer (tf (`a sanctioned compromise or arrangement` TRUE TRUE) (Date 1 9 2024) (Date 1 8 2024)))
+-- T20 compromise, liability kept, third party bound
+#ASSERT xfer (tf (`a sanctioned compromise or arrangement` FALSE TRUE) (Date 1 9 2024) (Date 1 8 2024))
+-- T21 compromise, third party not bound
+#ASSERT NOT (xfer (tf (`a sanctioned compromise or arrangement` FALSE FALSE) (Date 1 9 2024) (Date 1 8 2024)))
+-- T22 reinsurance
+#ASSERT NOT (xfer (tfx `an insolvency event` (Date 1 3 2024) (Date 1 2 2024) TRUE TRUE FALSE))
+-- T23 1930 Act case
+#ASSERT NOT (xfer (tfx `an insolvency event` (Date 1 3 2024) (Date 1 2 2024) TRUE FALSE TRUE))
+-- T24 not insured
+#ASSERT NOT (xfer (tfx `an insolvency event` (Date 1 3 2024) (Date 1 2 2024) FALSE FALSE FALSE))
+-- T26 sequestration across the year end
+#ASSERT xfer (tf `an insolvency event` (Date 1 1 2024) (Date 31 12 2023))
+#ASSERT NOT (routeA (tf `an insolvency event` (Date 1 1 2024) (Date 31 12 2023)))
+-- T27 voluntary winding-up 29 Feb 2028, liability 28 Feb 2028
+#ASSERT xfer (tf `an insolvency event` (Date 29 2 2028) (Date 28 2 2028))
+#ASSERT NOT (routeA (tf `an insolvency event` (Date 29 2 2028) (Date 28 2 2028)))
+-- no relevant-person event
+#ASSERT NOT (xfer (tf `none` (Date 1 3 2024) (Date 1 2 2024)))
+
+§ `Goal 2 — recovery and enforcement`
+
+-- R1 s 8: liability below cover
+#ASSERT due (simple 100000 150000 0) EQUALS 100000
+#ASSERT vsInsured (simple 100000 150000 0) EQUALS 0
+-- R2 cover below liability
+#ASSERT due (simple 100000 60000 0) EQUALS 60000
+#ASSERT vsInsured (simple 100000 60000 0) EQUALS 40000
+-- R3 equal
+#ASSERT due (simple 50000 50000 0) EQUALS 50000
+#ASSERT vsInsured (simple 50000 50000 0) EQUALS 0
+-- R4 set-off
+#ASSERT due (simple 100000 150000 10000) EQUALS 90000
+#ASSERT vsInsured (simple 100000 150000 10000) EQUALS 10000
+-- R5 cover cap and set-off
+#ASSERT due (simple 100000 60000 5000) EQUALS 55000
+#ASSERT vsInsured (simple 100000 60000 5000) EQUALS 45000
+-- R6 insurer insolvent, shortfall 30,000, not FSCS-eligible
+#ASSERT recov (mf TRUE 100000 100000 0 30000 FALSE FALSE 0 0) EQUALS 70000
+#ASSERT vsInsured (mf TRUE 100000 100000 0 30000 FALSE FALSE 0 0) EQUALS 30000
+-- R8 FSCS-eligible, no claim made: (6)(a) does not apply
+#ASSERT vsInsured (mf TRUE 100000 100000 0 30000 TRUE FALSE 0 0) EQUALS 0
+-- R9 claim made, FSCS paid 20,000
+#ASSERT recov (mf TRUE 100000 100000 0 30000 TRUE TRUE 20000 0) EQUALS 90000
+#ASSERT vsInsured (mf TRUE 100000 100000 0 30000 TRUE TRUE 20000 0) EQUALS 10000
+-- R10 FSCS paid the whole shortfall
+#ASSERT vsInsured (mf TRUE 100000 100000 0 30000 TRUE TRUE 30000 0) EQUALS 0
+-- R11 fund limit shortfall
+#ASSERT vsInsured (mf TRUE 100000 100000 0 0 FALSE FALSE 0 25000) EQUALS 25000
+-- R12 fund limit, FSCS-eligible but no claim: (7)(a) gates only (6)(a)
+#ASSERT vsInsured (mf TRUE 100000 100000 0 0 TRUE FALSE 0 25000) EQUALS 25000
+-- R13 everything together
+#ASSERT due (mf TRUE 80000 50000 10000 0 FALSE FALSE 0 5000) EQUALS 40000
+#ASSERT recov (mf TRUE 80000 50000 10000 0 FALSE FALSE 0 5000) EQUALS 35000
+#ASSERT vsInsured (mf TRUE 80000 50000 10000 0 FALSE FALSE 0 5000) EQUALS 45000
+-- R14-R18 established (existence and amount)
+#ASSERT `the third party may enforce the transferred rights under` (mf TRUE 100000 100000 0 0 FALSE FALSE 0 0)
+-- R15, R19 not established
+#ASSERT NOT (`the third party may enforce the transferred rights under` (mf FALSE 100000 100000 0 0 FALSE FALSE 0 0))
+
+-- s 9
+-- R20 dead individual, info/assistance
+#ASSERT NOT (binds (cf `to provide information or assistance` `a deceased individual` FALSE FALSE))
+-- R21/R22 dissolved body corporate (restored or not)
+#ASSERT NOT (binds (cf `to provide information or assistance` `a body corporate, dissolved` FALSE FALSE))
+-- R24 unincorporated non-partnership dissolved
+#ASSERT NOT (binds (cf `to provide information or assistance` `an unincorporated body other than a partnership, dissolved` FALSE FALSE))
+-- R23 dissolved partnership (another insured)
+#ASSERT binds (cf `to provide information or assistance` `another insured` FALSE FALSE)
+-- R25 living individual
+#ASSERT binds (cf `to provide information or assistance` `a living individual` FALSE FALSE)
+-- R26 notify a claim, dead insured
+#ASSERT binds (cf `to notify the insurer of a claim` `a deceased individual` FALSE FALSE)
+-- R27 prior discharge, non-marine
+#ASSERT NOT (binds (cf `prior discharge of the liability by the insured` `a living individual` FALSE FALSE))
+-- R28/R30 marine, death or personal injury
+#ASSERT NOT (binds (cf `prior discharge of the liability by the insured` `a living individual` TRUE TRUE))
+-- R29 marine, property damage
+#ASSERT binds (cf `prior discharge of the liability by the insured` `a living individual` TRUE FALSE)
+-- non-marine personal injury: still not bound
+#ASSERT NOT (binds (cf `prior discharge of the liability by the insured` `a body corporate, dissolved` FALSE TRUE))
+
+§ `Goal 3 — information and disclosure`
+
+-- I1 para 1(1)
+#ASSERT `a notice requesting information may be given under` (nf TRUE FALSE TRUE (Date 1 3 2024))
+-- I2 no para 1(1) belief, no para 1(2) belief
+#ASSERT NOT (`a notice requesting information may be given under` (nf FALSE FALSE TRUE (Date 1 3 2024)))
+-- I3 para 1(2)
+#ASSERT `a notice requesting information may be given under` (nf FALSE TRUE TRUE (Date 1 3 2024))
+-- I5 receipt 1 Mar 2024
+#ASSERT infoDay (nf TRUE FALSE TRUE (Date 1 3 2024)) EQUALS JUST (Date 28 3 2024)
+-- I6 receipt 2 Feb 2028
+#ASSERT infoDay (nf TRUE FALSE TRUE (Date 2 2 2028)) EQUALS JUST (Date 29 2 2028)
+-- I7 receipt 3 Feb 2028
+#ASSERT infoDay (nf FALSE TRUE TRUE (Date 3 2 2028)) EQUALS JUST (Date 1 3 2028)
+-- I8 receipt 2 Feb 2027
+#ASSERT infoDay (nf TRUE FALSE TRUE (Date 2 2 2027)) EQUALS JUST (Date 1 3 2027)
+-- I9 receipt 1 Feb 2027
+#ASSERT infoDay (nf TRUE FALSE TRUE (Date 1 2 2027)) EQUALS JUST (Date 28 2 2027)
+-- I10 receipt 15 Dec 2027
+#ASSERT infoDay (nf TRUE FALSE TRUE (Date 15 12 2027)) EQUALS JUST (Date 11 1 2028)
+-- I11 receipt 31 Jan 2028
+#ASSERT infoDay (nf TRUE FALSE TRUE (Date 31 1 2028)) EQUALS JUST (Date 27 2 2028)
+-- I12 receipt Saturday 4 Apr 2026: no roll
+#ASSERT infoDay (nf TRUE FALSE TRUE (Date 4 4 2026)) EQUALS JUST (Date 1 5 2026)
+-- no valid notice
+#ASSERT infoDay (nf FALSE FALSE TRUE (Date 4 4 2026)) EQUALS NOTHING
+-- I13/I16/I17 para 3 notice; I19 receipt 2 Feb 2028
+#ASSERT listDay (df TRUE TRUE TRUE (Date 2 2 2028)) EQUALS JUST (Date 29 2 2028)
+-- I20 receipt 31 Dec 2027
+#ASSERT listDay (df TRUE TRUE TRUE (Date 31 12 2027)) EQUALS JUST (Date 27 1 2028)
+-- I14/I15/I21 no proceedings, or not a dissolved non-partnership body
+#ASSERT listDay (df FALSE TRUE TRUE (Date 2 2 2028)) EQUALS NOTHING
+-- I18 recipient outside para 3(2)
+#ASSERT listDay (df TRUE FALSE TRUE (Date 2 2 2028)) EQUALS NOTHING
+-- receipt 29 Feb 2028
+#ASSERT listDay (df TRUE TRUE TRUE (Date 29 2 2028)) EQUALS JUST (Date 27 3 2028)
+
+§ `Top-level goal`
+
+GIVEN t IS A `Transfer facts`, m IS A `Money facts`, ni IS A MAYBE `Notice facts`, nd IS A MAYBE `Disclosure notice facts`
+GIVETH A `Third party position`
+pos t m ni nd MEANS `the third party position for` (`Third party case` OF t, m, ni, nd)
+
+-- Transferred via route (b); established; cover 60,000; set-off 5,000
+p1 MEANS pos (tf `an insolvency event` (Date 1 3 2024) (Date 1 2 2024)) (simple 100000 60000 5000) (JUST (nf TRUE FALSE TRUE (Date 2 2 2028))) NOTHING
+#ASSERT p1's `rights transferred`
+#ASSERT p1's `may enforce against the insurer now`
+#ASSERT p1's `amount due from the insurer` EQUALS 55000
+#ASSERT p1's `amount still enforceable against the insured` EQUALS 45000
+#ASSERT p1's `last day to provide information` EQUALS JUST (Date 29 2 2028)
+#ASSERT p1's `last day to serve a list of documents` EQUALS NOTHING
+
+-- DRO same day: nothing transferred; whole liability against the insured
+p2 MEANS pos (tf `a debt relief order` (Date 1 3 2024) (Date 1 3 2024)) (simple 100000 60000 0) NOTHING (JUST (df TRUE TRUE TRUE (Date 31 1 2028)))
+#ASSERT NOT (p2's `rights transferred`)
+#ASSERT NOT (p2's `may enforce against the insurer now`)
+#ASSERT p2's `amount due from the insurer` EQUALS 0
+#ASSERT p2's `amount still enforceable against the insured` EQUALS 100000
+#ASSERT p2's `last day to serve a list of documents` EQUALS JUST (Date 27 2 2028)
+
+-- Transferred but not yet established: may sue, may not enforce
+p3 MEANS pos (tf `died insolvent` (Date 10 1 2025) (Date 1 1 2025)) (mf FALSE 20000 50000 0 0 FALSE FALSE 0 0) NOTHING NOTHING
+#ASSERT p3's `rights transferred`
+#ASSERT NOT (p3's `may enforce against the insurer now`)
+#ASSERT p3's `amount due from the insurer` EQUALS 20000
+#ASSERT p3's `amount still enforceable against the insured` EQUALS 0

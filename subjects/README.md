@@ -250,6 +250,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`uk/insurance-act-2015`](uk/insurance-act-2015) | Insurance Act 2015 — application, the duty of fair presentation and the insurer's remedies, warranties, risk-reducing terms and fraudulent claims, and the amount payable on a claim — row `legalese-aswathy` | `draft` |
 | [`uk/national-minimum-wage-act-1998`](uk/national-minimum-wage-act-1998) | National Minimum Wage Act 1998 (UK) — who qualifies, s 17 arrears and access to records under one top-level goal (qualifies, additional remuneration owed, records production and complaint deadlines, the s 11 award) — row `legalese-aswathy` | `draft` |
 | [`uk/protection-from-eviction-act-1977`](uk/protection-from-eviction-act-1977) | Protection from Eviction Act 1977 — court proceedings to recover possession, notices to quit (both versions of s 5), the s 1 offence and the s 1A financial penalty with its Schedule A1 dates — row `legalese-aswathy` | `draft` |
+| [`uk/third-parties-rights-against-insurers-act-2010`](uk/third-parties-rights-against-insurers-act-2010) | Third Parties (Rights against Insurers) Act 2010 — transfer of an insolvent insured's rights, recovery from the insurer and against the insured, binding conditions, and Schedule 1 information deadlines — row `legalese-aswathy` | `draft` |
 | [`uk/`](uk/) | United Kingdom Acts (Westminster) |
 | [`au/act/`](au/act/) | Australian Capital Territory Acts |
 | [`au/nt/`](au/nt/) | Northern Territory Acts -- conditional permission; confirm before quoting text |
