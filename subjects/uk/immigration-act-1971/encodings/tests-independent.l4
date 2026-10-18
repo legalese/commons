@@ -1,0 +1,270 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ia71-types`
+IMPORT `ia71-status`
+IMPORT `ia71-offences`
+IMPORT `ia71-goal`
+
+-- Independent tests for the Immigration Act 1971 encoding. Expected values
+-- come from independent-expectations.md, written from the Act before the
+-- encoding was read. Scenario numbers (#n) refer to that file.
+
+§ `Helpers`
+
+GIVEN bc IS A BOOLEAN, cw IS A BOOLEAN, still IS A BOOLEAN, ir IS A BOOLEAN, excl IS A BOOLEAN, loc IS A BOOLEAN
+GIVETH A `Person facts`
+mkP bc cw still ir excl loc MEANS `Person facts` OF bc, cw, still, ir, excl, loc
+
+GIVEN ex IS A DATE, ap IS A DATE, dec IS A MAYBE DATE, rts IS A MAYBE DATE, lft IS A MAYBE DATE
+GIVETH A `Leave extension facts`
+mkL ex ap dec rts lft MEANS `Leave extension facts` OF ex, ap, dec, rts, lft
+
+GIVEN o IS AN `Offence`, dt IS A DATE, j IS A `Jurisdiction`, gl IS A NUMBER, bgl IS A BOOLEAN, b281 IS A BOOLEAN, ev IS A MAYBE DATE, arr IS A MAYBE DATE
+GIVETH AN `Offence facts`
+mkO o dt j gl bgl b281 ev arr MEANS `Offence facts` OF o, dt, j, gl, bgl, b281, ev, arr
+
+-- an offence in a jurisdiction, after both commencements, general limit 12
+GIVEN o IS AN `Offence`, j IS A `Jurisdiction`
+GIVETH AN `Offence facts`
+oj o j MEANS mkO o (Date 1 6 2025) j 12 FALSE FALSE NOTHING NOTHING
+
+-- an offence in England and Wales with a certified evidence date
+GIVEN o IS AN `Offence`, dt IS A DATE, ev IS A DATE
+GIVETH AN `Offence facts`
+oev o dt ev MEANS mkO o dt `England and Wales` 12 FALSE FALSE (JUST ev) NOTHING
+
+-- a bail-condition offence with a first arrest date
+GIVEN dt IS A DATE, arr IS A DATE
+GIVETH AN `Offence facts`
+oarr dt arr MEANS mkO `breaching an immigration bail condition (1)(h)` dt `England and Wales` 12 FALSE FALSE NOTHING (JUST arr)
+
+GIVEN o IS AN `Offence facts`
+GIVETH A `Maximum term`
+ind o MEANS `the maximum on indictment for` o
+
+GIVEN o IS AN `Offence facts`
+GIVETH A `Maximum term`
+summ o MEANS `the maximum on summary conviction for` o
+
+GIVEN o IS AN `Offence facts`
+GIVETH A MAYBE DATE
+lastDay o MEANS `the last day to lay an information for` o
+
+GIVEN f IS A `Leave extension facts`, d IS A DATE
+GIVETH A BOOLEAN
+ext f d MEANS `the leave is extended by s 3C under` f `on` d
+
+GIVEN p IS A `Person facts`
+GIVETH A BOOLEAN
+roa p MEANS `has the right of abode` p
+
+GIVEN p IS A `Person facts`
+GIVETH A BOOLEAN
+needs p MEANS `requires leave to enter` p
+
+§ `Goal 1 — right of abode (s 2(1))`
+
+-- #1 British citizen
+#ASSERT roa (mkP TRUE FALSE FALSE FALSE FALSE FALSE)
+-- #2 pre-1983 Commonwealth right, still a Commonwealth citizen
+#ASSERT roa (mkP FALSE TRUE TRUE FALSE FALSE FALSE)
+-- #3 ceased to be a Commonwealth citizen in the meanwhile
+#ASSERT NOT (roa (mkP FALSE TRUE FALSE FALSE FALSE FALSE))
+-- #4 Commonwealth citizen without the pre-1983 right
+#ASSERT NOT (roa (mkP FALSE FALSE TRUE FALSE FALSE FALSE))
+-- #5 Irish citizen only
+#ASSERT NOT (roa (mkP FALSE FALSE FALSE TRUE FALSE FALSE))
+-- #6 foreign national
+#ASSERT NOT (roa (mkP FALSE FALSE FALSE FALSE FALSE FALSE))
+
+§ `Goal 1 — need for leave (ss 1(3), 3(1), 3ZA)`
+
+-- #7 British citizen
+#ASSERT NOT (needs (mkP TRUE FALSE FALSE FALSE FALSE FALSE))
+-- #8 pre-1983 Commonwealth citizen with the right of abode (s 2(2))
+#ASSERT NOT (needs (mkP FALSE TRUE TRUE FALSE FALSE FALSE))
+-- #9 Irish citizen outside s 3ZA(2)-(4)
+#ASSERT NOT (needs (mkP FALSE FALSE FALSE TRUE FALSE FALSE))
+-- #10, #11, #14 Irish citizen within s 3ZA(2)-(4)
+#ASSERT needs (mkP FALSE FALSE FALSE TRUE TRUE FALSE)
+-- #15 Irish citizen within (2)-(4) on a local journey: s 3ZA(5)
+#ASSERT needs (mkP FALSE FALSE FALSE TRUE TRUE TRUE)
+-- #16 Irish citizen outside (2)-(4) on a local journey
+#ASSERT NOT (needs (mkP FALSE FALSE FALSE TRUE FALSE TRUE))
+-- #17 foreign national on a local journey (s 1(3))
+#ASSERT NOT (needs (mkP FALSE FALSE FALSE FALSE FALSE TRUE))
+-- #18 foreign national, not a local journey
+#ASSERT needs (mkP FALSE FALSE FALSE FALSE FALSE FALSE)
+-- #19 Commonwealth citizen without the right of abode
+#ASSERT needs (mkP FALSE FALSE TRUE FALSE FALSE FALSE)
+-- #3 variant: lost the s 2(1)(b) right by ceasing, not local
+#ASSERT needs (mkP FALSE TRUE FALSE FALSE FALSE FALSE)
+-- #20 British and Irish, deportation facts set
+#ASSERT NOT (needs (mkP TRUE FALSE FALSE TRUE TRUE FALSE))
+
+§ `Goal 2 — s 3C`
+
+-- base: expires 31 Mar 2025, applied 20 Mar, decided 10 Jun, rights to 24 Jun
+GIVETH A `Leave extension facts`
+base MEANS mkL (Date 31 3 2025) (Date 20 3 2025) (JUST (Date 10 6 2025)) (JUST (Date 24 6 2025)) NOTHING
+
+-- #21
+#ASSERT ext base (Date 15 4 2025)
+-- #22 expiry day: original leave, not extended
+#ASSERT NOT (ext base (Date 31 3 2025))
+-- #23
+#ASSERT ext base (Date 1 4 2025)
+-- #24 decision day, rights running
+#ASSERT ext base (Date 10 6 2025)
+-- #25 last day of rights
+#ASSERT ext base (Date 24 6 2025)
+-- #26 day after
+#ASSERT NOT (ext base (Date 25 6 2025))
+-- #27 applied on the expiry day
+#ASSERT ext (mkL (Date 31 3 2025) (Date 31 3 2025) (JUST (Date 10 6 2025)) (JUST (Date 24 6 2025)) NOTHING) (Date 15 4 2025)
+-- #28 applied the day after expiry
+#ASSERT NOT (ext (mkL (Date 31 3 2025) (Date 1 4 2025) (JUST (Date 10 6 2025)) (JUST (Date 24 6 2025)) NOTHING) (Date 15 4 2025))
+-- #29 decided before expiry, rights after expiry
+#ASSERT NOT (ext (mkL (Date 31 3 2025) (Date 20 3 2025) (JUST (Date 25 3 2025)) (JUST (Date 8 4 2025)) NOTHING) (Date 2 4 2025))
+-- #30 decided on the expiry day
+#ASSERT NOT (ext (mkL (Date 31 3 2025) (Date 20 3 2025) (JUST (Date 31 3 2025)) (JUST (Date 14 4 2025)) NOTHING) (Date 5 4 2025))
+-- #31-#33 departure 1 May 2025
+GIVETH A `Leave extension facts`
+leftMay MEANS mkL (Date 31 3 2025) (Date 20 3 2025) (JUST (Date 10 6 2025)) (JUST (Date 24 6 2025)) (JUST (Date 1 5 2025))
+#ASSERT NOT (ext leftMay (Date 1 5 2025))
+#ASSERT ext leftMay (Date 30 4 2025)
+#ASSERT NOT (ext leftMay (Date 15 5 2025))
+-- #34-#35 decided 10 Jun, no appeal or review rights
+GIVETH A `Leave extension facts`
+noRights MEANS mkL (Date 31 3 2025) (Date 20 3 2025) (JUST (Date 10 6 2025)) NOTHING NOTHING
+#ASSERT NOT (ext noRights (Date 10 6 2025))
+#ASSERT ext noRights (Date 9 6 2025)
+-- #36 still undecided
+#ASSERT ext (mkL (Date 31 3 2025) (Date 20 3 2025) NOTHING NOTHING NOTHING) (Date 1 1 2026)
+-- #37 departure after rights end
+#ASSERT ext (mkL (Date 31 3 2025) (Date 20 3 2025) (JUST (Date 10 6 2025)) (JUST (Date 24 6 2025)) (JUST (Date 1 7 2025))) (Date 20 6 2025)
+-- #38 leap-day expiry, applied that day
+#ASSERT ext (mkL (Date 29 2 2024) (Date 29 2 2024) NOTHING NOTHING NOTHING) (Date 1 3 2024)
+-- #39 leap-day expiry, applied the day after
+#ASSERT NOT (ext (mkL (Date 29 2 2024) (Date 1 3 2024) NOTHING NOTHING NOTHING) (Date 2 3 2024))
+
+§ `Goal 3 — maximum on indictment (s 24(F1)(d), 24(1), 24B(3))`
+
+-- #54
+#ASSERT ind (oj `entering in breach of a deportation order (A1)` `England and Wales`) EQUALS `months` 60
+-- #55-#58
+#ASSERT ind (oj `entering without leave (B1)` `England and Wales`) EQUALS `months` 48
+#ASSERT ind (oj `overstaying (C1)` `Scotland`) EQUALS `months` 48
+#ASSERT ind (oj `arriving without entry clearance (D1)` `Northern Ireland`) EQUALS `months` 48
+#ASSERT ind (oj `arriving without an ETA (E1)` `England and Wales`) EQUALS `months` 48
+-- #59-#60
+#ASSERT ind (oj `endangering life on a journey by water, with an (A1) offence (E1A)` `England and Wales`) EQUALS `months` 72
+#ASSERT ind (oj `endangering life on a journey by water, with a (B1), (D1) or (E1) offence (E1A)` `England and Wales`) EQUALS `months` 60
+-- #67, #71 summary only
+#ASSERT ind (oj `failing to observe a condition of leave (1)(b)` `England and Wales`) EQUALS `not triable on indictment`
+#ASSERT ind (oj `remaining beyond the time allowed by s 8(1) (1)(c)` `England and Wales`) EQUALS `not triable on indictment`
+#ASSERT ind (oj `illegal working (24B)` `England and Wales`) EQUALS `not triable on indictment`
+
+§ `Goal 3 — maximum on summary conviction`
+
+-- #61 A1 E&W after commencement: the general limit (12)
+#ASSERT summ (oj `entering in breach of a deportation order (A1)` `England and Wales`) EQUALS `months` 12
+-- #62 A1 E&W before commencement (G1): six months
+#ASSERT summ (mkO `entering in breach of a deportation order (A1)` (Date 1 1 2020) `England and Wales` 12 TRUE FALSE NOTHING NOTHING) EQUALS `months` 6
+-- general limit as an input other than 12
+#ASSERT summ (mkO `overstaying (C1)` (Date 1 6 2023) `England and Wales` 6 FALSE FALSE NOTHING NOTHING) EQUALS `months` 6
+-- #63-#64
+#ASSERT summ (oj `entering without leave (B1)` `Scotland`) EQUALS `months` 12
+#ASSERT summ (oj `entering without leave (B1)` `Northern Ireland`) EQUALS `months` 6
+#ASSERT summ (oj `entering in breach of a deportation order (A1)` `Scotland`) EQUALS `months` 12
+-- G1 is E&W only: Scotland stays 12 even for an offence before commencement
+#ASSERT summ (mkO `overstaying (C1)` (Date 1 1 2020) `Scotland` 12 TRUE FALSE NOTHING NOTHING) EQUALS `months` 12
+-- #65 E1A E&W, Scotland, NI
+#ASSERT summ (oj `endangering life on a journey by water, with an (A1) offence (E1A)` `England and Wales`) EQUALS `months` 12
+#ASSERT summ (oj `endangering life on a journey by water, with a (B1), (D1) or (E1) offence (E1A)` `Scotland`) EQUALS `months` 12
+#ASSERT summ (oj `endangering life on a journey by water, with a (B1), (D1) or (E1) offence (E1A)` `Northern Ireland`) EQUALS `months` 6
+-- #66 s 24(1)(b), (c): six months everywhere
+#ASSERT summ (oj `failing to observe a condition of leave (1)(b)` `England and Wales`) EQUALS `months` 6
+#ASSERT summ (oj `failing to observe a condition of leave (1)(b)` `Scotland`) EQUALS `months` 6
+#ASSERT summ (oj `remaining beyond the time allowed by s 8(1) (1)(c)` `Northern Ireland`) EQUALS `months` 6
+-- #68 24B E&W, s 281(5) in force
+#ASSERT summ (oj `illegal working (24B)` `England and Wales`) EQUALS `weeks` 51
+-- #69 24B E&W before s 281(5)
+#ASSERT summ (mkO `illegal working (24B)` (Date 1 6 2025) `England and Wales` 12 FALSE TRUE NOTHING NOTHING) EQUALS `months` 6
+-- #70 24B Scotland, NI
+#ASSERT summ (oj `illegal working (24B)` `Scotland`) EQUALS `months` 6
+#ASSERT summ (oj `illegal working (24B)` `Northern Ireland`) EQUALS `months` 6
+
+§ `Goal 3 — s 28(1)(a) last day`
+
+-- #72
+#ASSERT lastDay (oev `entering without leave (B1)` (Date 15 1 2024) (Date 1 3 2024)) EQUALS JUST (Date 15 7 2024)
+-- #73
+#ASSERT lastDay (oev `entering without leave (B1)` (Date 15 1 2024) (Date 10 6 2025)) EQUALS JUST (Date 10 8 2025)
+-- #74
+#ASSERT lastDay (oev `entering in breach of a deportation order (A1)` (Date 15 1 2024) (Date 1 12 2026)) EQUALS JUST (Date 15 1 2027)
+-- #75
+#ASSERT lastDay (oev `arriving without entry clearance (D1)` (Date 15 1 2024) (Date 15 11 2026)) EQUALS JUST (Date 15 1 2027)
+-- #76
+#ASSERT lastDay (oev `arriving without an ETA (E1)` (Date 15 1 2024) (Date 14 11 2026)) EQUALS JUST (Date 14 1 2027)
+-- #77
+#ASSERT lastDay (oev `entering without leave (B1)` (Date 15 1 2024) (Date 20 12 2026)) EQUALS JUST (Date 15 1 2027)
+-- #78
+#ASSERT lastDay (oev `entering without leave (B1)` (Date 31 8 2025) (Date 31 12 2025)) EQUALS JUST (Date 28 2 2026)
+-- #79
+#ASSERT lastDay (oev `entering without leave (B1)` (Date 31 8 2023) (Date 1 9 2023)) EQUALS JUST (Date 29 2 2024)
+-- #80
+#ASSERT lastDay (oev `endangering life on a journey by water, with an (A1) offence (E1A)` (Date 29 2 2024) (Date 1 1 2027)) EQUALS JUST (Date 28 2 2027)
+-- #81
+#ASSERT lastDay (oev `endangering life on a journey by water, with a (B1), (D1) or (E1) offence (E1A)` (Date 29 2 2024) (Date 31 12 2026)) EQUALS JUST (Date 28 2 2027)
+-- #82
+#ASSERT lastDay (oev `entering without leave (B1)` (Date 30 6 2025) (Date 31 10 2025)) EQUALS JUST (Date 31 12 2025)
+-- #83
+#ASSERT lastDay (oev `entering without leave (B1)` (Date 1 6 2023) (Date 31 12 2023)) EQUALS JUST (Date 29 2 2024)
+-- #85 s 24(1)(c) has the extended limit
+#ASSERT lastDay (oev `remaining beyond the time allowed by s 8(1) (1)(c)` (Date 15 1 2024) (Date 10 6 2025)) EQUALS JUST (Date 10 8 2025)
+-- #84 no extended limit: C1, (1)(b), 24B
+#ASSERT lastDay (oev `overstaying (C1)` (Date 15 1 2024) (Date 10 6 2025)) EQUALS NOTHING
+#ASSERT lastDay (oev `failing to observe a condition of leave (1)(b)` (Date 15 1 2024) (Date 10 6 2025)) EQUALS NOTHING
+#ASSERT lastDay (oev `illegal working (24B)` (Date 15 1 2024) (Date 10 6 2025)) EQUALS NOTHING
+
+§ `Goal 3 — s 28(1A)(a) last day`
+
+-- #86
+#ASSERT lastDay (oarr (Date 15 1 2025) (Date 1 3 2025)) EQUALS JUST (Date 14 7 2025)
+-- #87
+#ASSERT lastDay (oarr (Date 15 1 2025) (Date 1 6 2025)) EQUALS JUST (Date 31 8 2025)
+-- #88
+#ASSERT lastDay (oarr (Date 15 1 2025) (Date 15 4 2025)) EQUALS JUST (Date 14 7 2025)
+-- #89
+#ASSERT lastDay (oarr (Date 15 1 2025) (Date 16 4 2025)) EQUALS JUST (Date 15 7 2025)
+-- #90
+#ASSERT lastDay (oarr (Date 31 8 2025) (Date 1 9 2025)) EQUALS JUST (Date 28 2 2026)
+-- #91
+#ASSERT lastDay (oarr (Date 1 9 2023) (Date 2 9 2023)) EQUALS JUST (Date 29 2 2024)
+-- #92
+#ASSERT lastDay (oarr (Date 1 7 2023) (Date 30 11 2023)) EQUALS JUST (Date 29 2 2024)
+-- #93
+#ASSERT lastDay (oarr (Date 1 7 2024) (Date 30 11 2024)) EQUALS JUST (Date 28 2 2025)
+-- #94
+#ASSERT lastDay (oarr (Date 1 3 2024) (Date 1 3 2024)) EQUALS JUST (Date 31 8 2024)
+
+§ `Top-level goal`
+
+GIVETH AN `Immigration position`
+pos MEANS `the immigration position for` (`Immigration case` OF (mkP FALSE FALSE FALSE FALSE FALSE FALSE), JUST base, (Date 15 4 2025), JUST (oev `entering without leave (B1)` (Date 15 1 2024) (Date 10 6 2025)))
+
+#ASSERT NOT (pos's `right of abode`)
+#ASSERT pos's `requires leave to enter`
+#ASSERT pos's `leave extended by s 3C on the day` EQUALS JUST TRUE
+#ASSERT pos's `maximum on indictment` EQUALS JUST (`months` 48)
+#ASSERT pos's `maximum on summary conviction` EQUALS JUST (`months` 12)
+#ASSERT pos's `last day to lay an information` EQUALS JUST (Date 10 8 2025)
+
+GIVETH AN `Immigration position`
+pos2 MEANS `the immigration position for` (`Immigration case` OF (mkP TRUE FALSE FALSE FALSE FALSE FALSE), NOTHING, (Date 15 4 2025), NOTHING)
+
+#ASSERT pos2's `right of abode`
+#ASSERT NOT (pos2's `requires leave to enter`)
+#ASSERT pos2's `leave extended by s 3C on the day` EQUALS NOTHING
+#ASSERT pos2's `last day to lay an information` EQUALS NOTHING
