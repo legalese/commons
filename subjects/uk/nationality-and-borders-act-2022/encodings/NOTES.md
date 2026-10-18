@@ -49,7 +49,7 @@ Dates are computed as the Act words them. The UK has no general next-working-day
 - **F5, s 37(2).** The "without delay" test depends on where the person became a refugee and, if in the United Kingdom, on whether their presence was then lawful.
 - **F6, "on or after the PRN cut-off date".** Material provided on the cut-off date is late.
 - **F7, s 21(1).** The notice stays in force until the end of the 12 months beginning with the later of the cut-off date and the day appeal rights were exhausted. That period ends on the day before the corresponding date, or on the last day of the month where that month has no corresponding date.
-- **F8, s 22 and s 26.** Credibility damage (s 22) applies only to priority removal notices and needs a relevant decision. Minimal weight (s 26) applies to both kinds of notice. Both yield to good reasons for the lateness.
+- **F8, s 22 and s 26.** Credibility damage (s 22) applies only to priority removal notices and needs a relevant decision. Minimal weight (s 26) applies to both kinds of notice and needs the evidence to fall to be considered in a determination (the relevant-decision input; changed after the independent pass). Both yield to good reasons for the lateness.
 - **Known limits (from the independent pass).**
   - Under a priority removal notice, s 26(5)(a) covers only evidence supporting the reasons-and-grounds statement; there is no input for what the material was.
   - The findings for s 31(1)(c) and s 34 are separate inputs and can be set inconsistently.
