@@ -1,0 +1,264 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `pa08-types`
+IMPORT `pa08-status`
+IMPORT `pa08-penalties`
+IMPORT `pa08-goal`
+
+-- Independent tests for the Pensions Act 2008 encoding. The expected values
+-- were fixed from the Act in independent-expectations.md before the encoding
+-- was read. Scenario ids (S, Q, C, P) refer to that file. A failing assertion
+-- is a finding: expected values were not adjusted to match the code.
+
+§ `Helpers`
+
+GIVEN dob IS A DATE, pad IS A DATE, gb IS A BOOLEAN, ex IS A BOOLEAN, qs IS A BOOLEAN, nine IS A BOOLEAN
+GIVETH A `Worker facts`
+mkw dob pad gb ex qs nine MEANS `Worker facts` OF dob, pad, gb, ex, qs, nine
+
+-- a plain worker in GB with no exceptions and no scheme membership
+GIVEN dob IS A DATE, pad IS A DATE
+GIVETH A `Worker facts`
+plain dob pad MEANS mkw dob pad TRUE FALSE FALSE FALSE
+
+GIVEN fd IS A DATE, mo IS A NUMBER, ge IS A NUMBER
+GIVETH A `Pay reference period`
+mkp fd mo ge MEANS `Pay reference period` OF fd, mo, ge
+
+GIVEN er IS A NUMBER, jh IS A NUMBER
+GIVETH A `Contributions`
+mkc er jh MEANS `Contributions` OF er, jh, TRUE
+
+GIVEN iss IS A DATE, amt IS A NUMBER, rv IS A BOOLEAN, tr IS A BOOLEAN, st IS A DATE, rate IS A NUMBER, cd IS A DATE
+GIVETH A `Penalty facts`
+mkf iss amt rv tr st rate cd MEANS `Penalty facts` OF iss, amt, rv, tr, st, rate, cd
+
+-- the base worker: born 10 May 1990, pensionable age 10 May 2057
+base MEANS plain (Date 10 5 1990) (Date 10 5 2057)
+start MEANS Date 1 6 2026
+
+GIVEN ge IS A NUMBER
+GIVETH A `Pay reference period`
+annual ge MEANS mkp start 12 ge
+
+GIVEN ge IS A NUMBER
+GIVETH A `Pay reference period`
+monthly ge MEANS mkp start 1 ge
+
+GIVEN ge IS A NUMBER
+GIVETH A `Pay reference period`
+weekly ge MEANS mkp start (12 DIVIDED BY 52) ge
+
+GIVEN ge IS A NUMBER
+GIVETH A `Pay reference period`
+halfyear ge MEANS mkp start 6 ge
+
+GIVEN w IS A `Worker facts`, p IS A `Pay reference period`
+GIVETH A `Pension status`
+stat w p MEANS `the pension status of` w `in` p
+
+GIVEN p IS A `Pay reference period`
+GIVETH A NUMBER
+qe p MEANS `the qualifying earnings in` p
+
+GIVEN p IS A `Pay reference period`, c IS A `Contributions`
+GIVETH A BOOLEAN
+meets p c MEANS `the contributions meet the quality requirement in` p `with` c
+
+GIVEN f IS A `Penalty facts`
+GIVETH A NUMBER
+esc f MEANS `the escalating penalty under` f
+
+GIVEN f IS A `Penalty facts`
+GIVETH A DATE
+epd f MEANS `the earliest payment date for` f
+
+GIVEN f IS A `Penalty facts`
+GIVETH A BOOLEAN
+fixedok f MEANS `the fixed penalty is within the limit in` f
+
+GIVEN f IS A `Penalty facts`
+GIVETH A BOOLEAN
+mayissue f MEANS `an escalating penalty notice may be issued under` f
+
+-- a fixed penalty notice issued on iss, nothing pending
+GIVEN iss IS A DATE
+GIVETH A `Penalty facts`
+fpn iss MEANS mkf iss 1000 FALSE FALSE iss 100 iss
+
+-- an escalating penalty with nothing pending, given issue, start, rate, compliance
+GIVEN iss IS A DATE, st IS A DATE, rate IS A NUMBER, cd IS A DATE
+GIVETH A `Penalty facts`
+escf iss st rate cd MEANS mkf iss 1000 FALSE FALSE st rate cd
+
+§ `Goal 1 — status`
+
+-- S1-S6: 12-month period, base worker
+#ASSERT stat base (annual 30000) EQUALS `to be automatically enrolled`
+#ASSERT stat base (annual 10000) EQUALS `a jobholder who may opt in`
+#ASSERT stat base (annual 10000.01) EQUALS `to be automatically enrolled`
+#ASSERT stat base (annual 6240) EQUALS `a worker who may ask to join under s 9`
+#ASSERT stat base (annual 6240.01) EQUALS `a jobholder who may opt in`
+#ASSERT stat base (annual 0) EQUALS `a worker who may ask to join under s 9`
+
+-- S7-S10: monthly
+#ASSERT stat base (monthly 833) EQUALS `a jobholder who may opt in`
+#ASSERT stat base (monthly 834) EQUALS `to be automatically enrolled`
+#ASSERT stat base (monthly 520) EQUALS `a worker who may ask to join under s 9`
+#ASSERT stat base (monthly 520.01) EQUALS `a jobholder who may opt in`
+
+-- S11-S13: weekly (12/52 months)
+#ASSERT stat base (weekly 192) EQUALS `a jobholder who may opt in`
+#ASSERT stat base (weekly 193) EQUALS `to be automatically enrolled`
+#ASSERT stat base (weekly 120) EQUALS `a worker who may ask to join under s 9`
+
+-- S14-S15: six months
+#ASSERT stat base (halfyear 5000) EQUALS `a jobholder who may opt in`
+#ASSERT stat base (halfyear 5000.01) EQUALS `to be automatically enrolled`
+
+-- S16-S18: the 16th birthday (period starts 1 June 2026)
+#ASSERT stat (plain (Date 1 6 2010) (Date 1 6 2077)) (annual 30000) EQUALS `a jobholder who may opt in`
+#ASSERT stat (plain (Date 2 6 2010) (Date 2 6 2077)) (annual 30000) EQUALS `not within the duties`
+#ASSERT stat (plain (Date 2 6 2010) (Date 2 6 2077)) (annual 5000) EQUALS `not within the duties`
+
+-- S19-S20: the 22nd birthday
+#ASSERT stat (plain (Date 1 6 2004) (Date 1 6 2071)) (annual 30000) EQUALS `to be automatically enrolled`
+#ASSERT stat (plain (Date 2 6 2004) (Date 2 6 2071)) (annual 30000) EQUALS `a jobholder who may opt in`
+
+-- S21-S22: pensionable age
+#ASSERT stat (plain (Date 1 6 1960) (Date 1 6 2026)) (annual 30000) EQUALS `a jobholder who may opt in`
+#ASSERT stat (plain (Date 1 6 1960) (Date 2 6 2026)) (annual 30000) EQUALS `to be automatically enrolled`
+
+-- S23: aged 74, past pensionable age
+#ASSERT stat (plain (Date 1 1 1952) (Date 1 1 2018)) (annual 30000) EQUALS `a jobholder who may opt in`
+
+-- S24-S26: the 75th birthday
+#ASSERT stat (plain (Date 1 6 1951) (Date 1 6 2017)) (annual 30000) EQUALS `not within the duties`
+#ASSERT stat (plain (Date 2 6 1951) (Date 2 6 2017)) (annual 5000) EQUALS `a worker who may ask to join under s 9`
+#ASSERT stat (plain (Date 1 6 1951) (Date 1 6 2017)) (annual 5000) EQUALS `not within the duties`
+
+-- S27-S28: not working in Great Britain
+#ASSERT stat (mkw (Date 10 5 1990) (Date 10 5 2057) FALSE FALSE FALSE FALSE) (annual 30000) EQUALS `not within the duties`
+#ASSERT stat (mkw (Date 10 5 1990) (Date 10 5 2057) FALSE FALSE FALSE FALSE) (annual 5000) EQUALS `not within the duties`
+
+-- S29: s 3(3), already an active member of a qualifying scheme: s 3(2) does
+-- not apply and s 7(1) fails, so neither duty nor right applies.
+#ASSERT stat (mkw (Date 10 5 1990) (Date 10 5 2057) TRUE TRUE TRUE FALSE) (annual 30000) EQUALS `not within the duties`
+
+-- S30: s 3(4), ceased by own act and not now a member: no arrangements are
+-- required (s 7(2)(a) does not bar), and s 7(1) holds, so they may opt in.
+#ASSERT stat (mkw (Date 10 5 1990) (Date 10 5 2057) TRUE TRUE FALSE FALSE) (annual 30000) EQUALS `a jobholder who may opt in`
+
+-- S31: under 22 and an active member of a qualifying scheme
+#ASSERT stat (mkw (Date 2 6 2004) (Date 2 6 2071) TRUE FALSE TRUE FALSE) (annual 30000) EQUALS `not within the duties`
+
+-- S32: no qualifying earnings, already in a s 9 scheme
+#ASSERT stat (mkw (Date 10 5 1990) (Date 10 5 2057) TRUE FALSE FALSE TRUE) (annual 5000) EQUALS `not within the duties`
+
+-- S33: the trigger is on gross earnings, not on qualifying earnings
+#ASSERT stat base (annual 10001) EQUALS `to be automatically enrolled`
+#ASSERT qe (annual 10001) EQUALS 3761
+
+§ `Goal 2 — qualifying earnings`
+
+#ASSERT qe (annual 30000) EQUALS 23760
+#ASSERT qe (annual 6240) EQUALS 0
+#ASSERT qe (annual 6241) EQUALS 1
+#ASSERT qe (annual 50270) EQUALS 44030
+#ASSERT qe (annual 60000) EQUALS 44030
+#ASSERT qe (annual 0) EQUALS 0
+#ASSERT qe (monthly 2000) EQUALS 1480
+#ASSERT qe (monthly 5000) EQUALS 50270 DIVIDED BY 12 MINUS 520
+#ASSERT qe (monthly 520) EQUALS 0
+#ASSERT qe (halfyear 20000) EQUALS 16880
+#ASSERT qe (halfyear 30000) EQUALS 22015
+#ASSERT qe (halfyear 3000) EQUALS 0
+#ASSERT qe (weekly 500) EQUALS 380
+#ASSERT qe (weekly 2000) EQUALS 50270 DIVIDED BY 52 MINUS 120
+
+§ `Goal 2 — minimum contributions (through the top-level goal)`
+
+GIVEN p IS A `Pay reference period`
+GIVETH A `Workplace pension position`
+posn p MEANS `the workplace pension position for` (`Workplace pension case` OF base, p, NOTHING, NOTHING)
+
+pos30k MEANS posn (annual 30000)
+pos60k MEANS posn (annual 60000)
+
+-- C1-C3
+#ASSERT pos30k's `minimum employer contribution` EQUALS 712.8
+#ASSERT pos30k's `minimum total contribution` EQUALS 1900.8
+#ASSERT pos60k's `minimum employer contribution` EQUALS 1320.9
+#ASSERT pos60k's `minimum total contribution` EQUALS 3522.4
+#ASSERT pos30k's `qualifying earnings` EQUALS 23760
+#ASSERT pos30k's `status` EQUALS `to be automatically enrolled`
+#ASSERT pos30k's `contributions meet the quality requirement` EQUALS NOTHING
+
+§ `Goal 2 — s 20 quality requirement`
+
+-- C4-C10
+#ASSERT meets (annual 30000) (mkc 712.8 1188)
+#ASSERT NOT (meets (annual 30000) (mkc 712.79 1500))
+#ASSERT NOT (meets (annual 30000) (mkc 712.8 1187.99))
+#ASSERT meets (annual 30000) (mkc 1900.8 0)
+#ASSERT NOT (meets (annual 30000) (mkc 0 5000))
+#ASSERT NOT (meets (annual 6000) (mkc 0 0))
+#ASSERT meets (annual 6000) (mkc 1 0)
+
+-- C11-C12: monthly, QE 1480
+#ASSERT meets (monthly 2000) (mkc 44.4 74)
+#ASSERT NOT (meets (monthly 2000) (mkc 44.39 100))
+
+-- through the top-level goal
+posc MEANS `the workplace pension position for` (`Workplace pension case` OF base, annual 30000, JUST (mkc 712.8 1188), NOTHING)
+#ASSERT posc's `contributions meet the quality requirement` EQUALS JUST TRUE
+
+§ `Goal 3 — fixed penalty notices`
+
+-- P1-P3
+#ASSERT `the maximum fixed penalty` EQUALS 50000
+#ASSERT fixedok (mkf (Date 15 1 2026) 50000 FALSE FALSE (Date 15 1 2026) 0 (Date 15 1 2026))
+#ASSERT NOT (fixedok (mkf (Date 15 1 2026) 50000.01 FALSE FALSE (Date 15 1 2026) 0 (Date 15 1 2026)))
+
+-- P4-P7: earliest payment date = issue + 28 days
+#ASSERT epd (fpn (Date 15 1 2026)) EQUALS Date 12 2 2026
+#ASSERT epd (fpn (Date 10 2 2026)) EQUALS Date 10 3 2026
+#ASSERT epd (fpn (Date 10 2 2024)) EQUALS Date 9 3 2024
+#ASSERT epd (fpn (Date 20 12 2026)) EQUALS Date 17 1 2027
+
+-- through the top-level goal
+posf MEANS `the workplace pension position for` (`Workplace pension case` OF base, annual 30000, NOTHING, JUST (fpn (Date 15 1 2026)))
+#ASSERT posf's `earliest fixed penalty payment date` EQUALS JUST (Date 12 2 2026)
+#ASSERT posf's `fixed penalty within the limit` EQUALS JUST TRUE
+
+§ `Goal 3 — escalating penalty notices`
+
+-- P10, P11, P14, P15 (the encoding has no input for the kind of underlying
+-- notice, so P12 and P13 cannot be expressed; see the report)
+#ASSERT mayissue (mkf (Date 15 1 2026) 1000 FALSE FALSE (Date 12 2 2026) 100 (Date 20 2 2026))
+#ASSERT NOT (mayissue (mkf (Date 15 1 2026) 1000 TRUE FALSE (Date 12 2 2026) 100 (Date 20 2 2026)))
+#ASSERT NOT (mayissue (mkf (Date 15 1 2026) 1000 FALSE TRUE (Date 12 2 2026) 100 (Date 20 2 2026)))
+
+-- P16-P17: daily rate limit (rate 10000 allowed; rate 10000.01 is not a
+-- lawful notice, so the encoding must not charge days x rate)
+#ASSERT esc (escf (Date 1 12 2025) (Date 1 3 2026) 10000 (Date 2 3 2026)) EQUALS 10000
+#ASSERT NOT (esc (escf (Date 1 12 2025) (Date 1 3 2026) 10000.01 (Date 2 3 2026)) EQUALS 10000.01)
+
+-- P19-P20: the start date against the s 40(5)(b) date (FPN issued 15 Jan
+-- 2026, so 12 Feb 2026)
+#ASSERT esc (escf (Date 15 1 2026) (Date 12 2 2026) 100 (Date 22 2 2026)) EQUALS 1000
+#ASSERT NOT (esc (escf (Date 15 1 2026) (Date 11 2 2026) 100 (Date 22 2 2026)) EQUALS 1100)
+
+-- P21-P28: day counting
+#ASSERT esc (escf (Date 1 12 2025) (Date 1 3 2026) 1 (Date 11 3 2026)) EQUALS 10
+#ASSERT esc (escf (Date 1 12 2025) (Date 1 3 2026) 500 (Date 11 3 2026)) EQUALS 5000
+#ASSERT esc (escf (Date 1 12 2025) (Date 1 3 2026) 500 (Date 1 3 2026)) EQUALS 0
+#ASSERT esc (escf (Date 1 12 2025) (Date 1 3 2026) 500 (Date 20 2 2026)) EQUALS 0
+#ASSERT esc (escf (Date 1 1 2024) (Date 28 2 2024) 1 (Date 1 3 2024)) EQUALS 2
+#ASSERT esc (escf (Date 1 12 2025) (Date 28 2 2026) 1 (Date 1 3 2026)) EQUALS 1
+#ASSERT esc (escf (Date 1 12 2025) (Date 1 3 2026) 10000 (Date 31 3 2026)) EQUALS 300000
+#ASSERT esc (escf (Date 1 11 2026) (Date 15 12 2026) 250 (Date 5 1 2027)) EQUALS 5250
+
+-- through the top-level goal
+pose MEANS `the workplace pension position for` (`Workplace pension case` OF base, annual 30000, NOTHING, JUST (escf (Date 1 12 2025) (Date 1 3 2026) 500 (Date 11 3 2026)))
+#ASSERT pose's `escalating penalty` EQUALS JUST 5000
