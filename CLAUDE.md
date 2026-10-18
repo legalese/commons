@@ -26,6 +26,25 @@ If `/skills` does not list `encoding-a-subject`, the installed plugin predates i
 A binary older than the skills rejects constructs the skills tell you exist, and the error reads like your mistake.
 Leave `JL4_LIBRARY_PATH` unset.
 
+## Whose seat, and the other design choices (ruled 2026-10-18)
+
+**Every encoding is written from the seat of the individual to whom the law is applied** — the employee, the vehicle owner, the accused, the heir, the applicant — never the regulator, the court, the insurer or the department.
+Decisions are phrased as that person would ask them ("Must I …?", "Am I …?", "What can I be made to pay?"), and the facts are ones that person could state.
+Where a provision addresses only an official, encode what it means for the individual: what may be done to them, what they must be given, by when.
+Record the seat in the encoding's NOTES.md.
+
+**Every other design choice takes the recommended default**, the one Legalese Studio's Design stage would recommend:
+
+- the Act alone, with the instruments that set its numbers or dates brought in;
+- the actors the text names;
+- a judgment the law hands to someone else answered conditionally ("X, if the officer is satisfied that …"), never guessed;
+- the Act's own definitions worked out from facts, borrowed terms asked as facts;
+- one case is the text's natural unit (one employment, one vehicle, one act);
+- the Act's own terms, each with a plain gloss;
+- the operative sections in scope; the machinery (boards, powers to make regulations, commencement) out.
+
+These rulings exist so that any row here can be taken into Legalese Studio and run through Resolve, Refine and Test with the owner confirming the design rather than remaking it.
+
 ## Where things go
 
 The layout is ruled in [`docs/directory-conventions.md`](docs/directory-conventions.md) (rulings of 2026-08-05; the ISO spelling ruled again 2026-09-26).
