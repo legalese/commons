@@ -1,0 +1,93 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `wra-types`
+IMPORT `wra-universal-credit`
+IMPORT `wra-pip`
+IMPORT `wra-cap`
+IMPORT `wra-goal`
+
+-- Welfare Reform Act 2012 (UK) — the encoder's tests. Expected values are
+-- worked by hand from the Act.
+
+§ `Tests`
+
+GIVEN dob IS A DATE
+GIVETH A `Claimant`
+`a claimant born` dob MEANS `Claimant` OF dob, Date 1 1 2060, TRUE, FALSE, TRUE
+
+GIVEN cs IS A LIST OF `Claimant`
+GIVETH A `Universal credit claim`
+`a claim on 1 June 2026 by` cs MEANS
+    `Universal credit claim` OF cs, Date 1 6 2026, 5000, 16000, 5, 400, 300, 500, 0, 200, 100
+
+adult MEANS `a claimant born` (Date 1 1 1990)
+
+§§ `Goal 1 — universal credit`
+
+-- £400 + £300 + £500 + £0 − £200 − £100 = £900.
+#ASSERT `the universal credit award for` (`a claim on 1 June 2026 by` (LIST adult)) EQUALS 900
+#ASSERT `is entitled to universal credit` (`a claim on 1 June 2026 by` (LIST adult))
+-- 18 on 1 June 2026, or the next day.
+#ASSERT `is entitled to universal credit` (`a claim on 1 June 2026 by` (LIST (`a claimant born` (Date 1 6 2008))))
+#ASSERT NOT (`is entitled to universal credit` (`a claim on 1 June 2026 by` (LIST (`a claimant born` (Date 2 6 2008)))))
+-- Joint claimants: each must meet the basic conditions.
+#ASSERT NOT (`is entitled to universal credit` (`a claim on 1 June 2026 by` (LIST adult, (`Claimant` OF Date 1 1 1990, Date 1 1 2060, TRUE, TRUE, TRUE))))
+#ASSERT NOT (`is entitled to universal credit` (`a claim on 1 June 2026 by` (LIST (`Claimant` OF Date 1 1 1960, Date 1 6 2026, TRUE, FALSE, TRUE))))
+#ASSERT NOT (`is entitled to universal credit` (`a claim on 1 June 2026 by` (LIST (`Claimant` OF Date 1 1 1990, Date 1 1 2060, FALSE, FALSE, TRUE))))
+#ASSERT NOT (`is entitled to universal credit` (`a claim on 1 June 2026 by` (LIST (`Claimant` OF Date 1 1 1990, Date 1 1 2060, TRUE, FALSE, FALSE))))
+-- s 5: capital over the limit; award below the minimum.
+#ASSERT NOT (`is entitled to universal credit` (`Universal credit claim` OF (LIST adult), Date 1 6 2026, 16001, 16000, 5, 400, 300, 500, 0, 200, 100))
+#ASSERT `is entitled to universal credit` (`Universal credit claim` OF (LIST adult), Date 1 6 2026, 16000, 16000, 5, 400, 300, 500, 0, 200, 100)
+#ASSERT NOT (`is entitled to universal credit` (`Universal credit claim` OF (LIST adult), Date 1 6 2026, 0, 16000, 5, 400, 0, 0, 0, 397, 0))
+#ASSERT `the universal credit award for` (`Universal credit claim` OF (LIST adult), Date 1 6 2026, 0, 16000, 5, 400, 0, 0, 0, 500, 0) EQUALS 0
+
+§§ `Goal 2 — personal independence payment`
+
+-- Fields: dob, pensionable age, day, daily living, mobility, DL period,
+-- mobility period, mobility age, terminal, Scottish.
+GIVEN dl IS A `Limitation`, mob IS A `Limitation`, terminal IS A BOOLEAN, day IS A DATE
+GIVETH A `PIP facts`
+`PIP: daily living` dl `, mobility` mob `, terminal` terminal `, on` day MEANS
+    `PIP facts` OF Date 1 1 1980, Date 1 1 2047, day, dl, mob, TRUE, TRUE, TRUE, terminal, FALSE
+
+june MEANS Date 1 6 2026
+#ASSERT `the daily living component for` (`PIP: daily living` `limited` `, mobility` `not limited` `, terminal` FALSE `, on` june) EQUALS `the standard rate`
+#ASSERT `the daily living component for` (`PIP: daily living` `severely limited` `, mobility` `not limited` `, terminal` FALSE `, on` june) EQUALS `the enhanced rate`
+#ASSERT `the daily living component for` (`PIP: daily living` `not limited` `, mobility` `not limited` `, terminal` TRUE `, on` june) EQUALS `the enhanced rate`
+#ASSERT `the mobility component for` (`PIP: daily living` `not limited` `, mobility` `severely limited` `, terminal` FALSE `, on` june) EQUALS `the enhanced rate`
+#ASSERT `the mobility component for` (`PIP: daily living` `not limited` `, mobility` `not limited` `, terminal` FALSE `, on` june) EQUALS `no award`
+-- Required period not met: no award, except mobility for the terminally ill.
+#ASSERT `the daily living component for` (`PIP facts` OF Date 1 1 1980, Date 1 1 2047, june, `limited`, `limited`, FALSE, FALSE, TRUE, FALSE, FALSE) EQUALS `no award`
+#ASSERT `the mobility component for` (`PIP facts` OF Date 1 1 1980, Date 1 1 2047, june, `limited`, `limited`, FALSE, FALSE, TRUE, TRUE, FALSE) EQUALS `the standard rate`
+#ASSERT `the mobility component for` (`PIP facts` OF Date 1 1 1980, Date 1 1 2047, june, `limited`, `limited`, FALSE, FALSE, TRUE, FALSE, FALSE) EQUALS `no award`
+-- s 83: the relevant age is the later of pensionable age (1 January 2047)
+-- and 65 (1 January 2045): entitled on 1 January 2047, not on 2 January.
+#ASSERT `the daily living component for` (`PIP: daily living` `limited` `, mobility` `not limited` `, terminal` FALSE `, on` (Date 1 1 2047)) EQUALS `the standard rate`
+#ASSERT `the daily living component for` (`PIP: daily living` `limited` `, mobility` `not limited` `, terminal` FALSE `, on` (Date 2 1 2047)) EQUALS `no award`
+-- Pensionable age at 60 (say): 65 governs.
+#ASSERT `the daily living component for` (`PIP facts` OF Date 1 1 1980, Date 1 1 2040, Date 1 1 2045, `limited`, `limited`, TRUE, TRUE, TRUE, FALSE, FALSE) EQUALS `the standard rate`
+#ASSERT `the daily living component for` (`PIP facts` OF Date 1 1 1980, Date 1 1 2040, Date 2 1 2045, `limited`, `limited`, TRUE, TRUE, TRUE, FALSE, FALSE) EQUALS `no award`
+-- s 77(4); mobility age.
+#ASSERT `the daily living component for` (`PIP facts` OF Date 1 1 1980, Date 1 1 2047, june, `limited`, `limited`, TRUE, TRUE, TRUE, FALSE, TRUE) EQUALS `no award`
+#ASSERT `the mobility component for` (`PIP facts` OF Date 1 1 1980, Date 1 1 2047, june, `limited`, `limited`, TRUE, TRUE, FALSE, FALSE, FALSE) EQUALS `no award`
+
+§§ `Goal 3 — the benefit cap`
+
+-- Outside London, higher limit £22,020; a 365-day period; benefits £25,000:
+-- reduction £2,980.
+#ASSERT `the benefit cap reduction for` (`Cap facts` OF FALSE, TRUE, 365, 25000) EQUALS 2980
+#ASSERT `the benefit cap reduction for` (`Cap facts` OF FALSE, TRUE, 365, 20000) EQUALS 0
+#ASSERT `the benefit cap reduction for` (`Cap facts` OF TRUE, TRUE, 365, 26000) EQUALS 677
+#ASSERT `the benefit cap reduction for` (`Cap facts` OF TRUE, FALSE, 365, 17000) EQUALS 33
+#ASSERT `the benefit cap reduction for` (`Cap facts` OF FALSE, FALSE, 365, 15000) EQUALS 247
+-- A 73-day period: £22,020 × 73/365 = £4,404.
+#ASSERT `the relevant amount for` (`Cap facts` OF FALSE, TRUE, 73, 5000) EQUALS 4404
+#ASSERT `the benefit cap reduction for` (`Cap facts` OF FALSE, TRUE, 73, 5000) EQUALS 596
+
+§§ `The top-level goal`
+
+pos MEANS `the welfare position for` (`Welfare case` OF JUST (`a claim on 1 June 2026 by` (LIST adult)), NOTHING, JUST (`Cap facts` OF FALSE, TRUE, 365, 25000))
+#ASSERT pos's `entitled to universal credit` EQUALS JUST TRUE
+#ASSERT pos's `universal credit award` EQUALS JUST 900
+#ASSERT pos's `PIP daily living component` EQUALS NOTHING
+#ASSERT pos's `benefit cap reduction` EQUALS JUST 2980

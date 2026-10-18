@@ -262,6 +262,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`uk/protection-from-eviction-act-1977`](uk/protection-from-eviction-act-1977) | Protection from Eviction Act 1977 — court proceedings to recover possession, notices to quit (both versions of s 5), the s 1 offence and the s 1A financial penalty with its Schedule A1 dates — row `legalese-aswathy` | `draft` |
 | [`uk/renters-rights-act-2025`](uk/renters-rights-act-2025) | Renters' Rights Act 2025 — periodic tenancies and rent periods, rent in advance, and rental bidding penalties — row `legalese-aswathy` | `draft` |
 | [`uk/third-parties-rights-against-insurers-act-2010`](uk/third-parties-rights-against-insurers-act-2010) | Third Parties (Rights against Insurers) Act 2010 — transfer of an insolvent insured's rights, recovery from the insurer and against the insured, binding conditions, and Schedule 1 information deadlines — row `legalese-aswathy` | `draft` |
+| [`uk/welfare-reform-act-2012`](uk/welfare-reform-act-2012) | Welfare Reform Act 2012 — universal credit entitlement and award, personal independence payment components, and the benefit cap — row `legalese-aswathy` | `draft` |
 | [`uk/`](uk/) | United Kingdom Acts (Westminster) |
 | [`au/act/`](au/act/) | Australian Capital Territory Acts |
 | [`au/nt/`](au/nt/) | Northern Territory Acts -- conditional permission; confirm before quoting text |

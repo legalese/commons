@@ -1,0 +1,296 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `wra-types`
+IMPORT `wra-universal-credit`
+IMPORT `wra-pip`
+IMPORT `wra-cap`
+IMPORT `wra-goal`
+
+-- Independent tests: expected values decided from the Act and BRIEF.md
+-- before the encoding was read. See independent-expectations.md.
+
+§ `Helpers`
+
+GIVEN x1 IS A DATE, x2 IS A DATE, x3 IS A BOOLEAN, x4 IS A BOOLEAN, x5 IS A BOOLEAN
+GIVETH A `Claimant`
+mkc x1 x2 x3 x4 x5 MEANS `Claimant` OF x1, x2, x3, x4, x5
+
+-- an ordinary claimant: in GB, not in education, commitment accepted
+GIVEN x1 IS A DATE, x2 IS A DATE
+GIVETH A `Claimant`
+okc x1 x2 MEANS mkc x1 x2 TRUE FALSE TRUE
+
+alice MEANS okc (Date 15 3 1990) (Date 15 3 2056)
+bob   MEANS okc (Date 20 8 1985) (Date 20 8 2052)
+teen  MEANS okc (Date 2 7 2008) (Date 2 7 2075)
+
+GIVEN d IS A DATE, k IS A NUMBER, kl IS A NUMBER, mn IS A NUMBER,
+      s IS A NUMBER, ch IS A NUMBER, h IS A NUMBER, o IS A NUMBER, e IS A NUMBER, ue IS A NUMBER,
+      cs IS A LIST OF `Claimant`
+GIVETH A `Universal credit claim`
+mku d k kl mn s ch h o e ue cs MEANS `Universal credit claim` OF cs, d, k, kl, mn, s, ch, h, o, e, ue
+
+-- Base: day 1 Jul 2026, capital 5000, limit 16000, minimum 0.01,
+-- elements 400.14 + 339 + 600 + 0 = 1339.14, deductions 200 + 100.
+GIVEN cs IS A LIST OF `Claimant`
+GIVETH A `Universal credit claim`
+baseu cs MEANS mku (Date 1 7 2026) 5000 16000 0.01 400.14 339 600 0 200 100 cs
+
+GIVEN k IS A NUMBER, cs IS A LIST OF `Claimant`
+GIVETH A `Universal credit claim`
+capu k cs MEANS mku (Date 1 7 2026) k 16000 0.01 400.14 339 600 0 200 100 cs
+
+GIVEN p IS A `Claimant`, d IS A DATE
+GIVETH A BOOLEAN
+basic p d MEANS `the claimant` p `meets the basic conditions on` d
+
+GIVEN u IS A `Universal credit claim`
+GIVETH A BOOLEAN
+ent u MEANS `is entitled to universal credit` u
+
+GIVEN u IS A `Universal credit claim`
+GIVETH A NUMBER
+awd u MEANS `the universal credit award for` u
+
+-- PIP
+GIVEN x1 IS A DATE, x2 IS A DATE, x3 IS A DATE, x4 IS A `Limitation`, x5 IS A `Limitation`,
+      x6 IS A BOOLEAN, x7 IS A BOOLEAN, x8 IS A BOOLEAN, x9 IS A BOOLEAN, x10 IS A BOOLEAN
+GIVETH A `PIP facts`
+mkp x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 MEANS `PIP facts` OF x1, x2, x3, x4, x5, x6, x7, x8, x9, x10
+
+-- Pat: born 1 Jan 1980, pensionable age 1 Jan 2047, day 1 Jul 2026,
+-- mobility age met, not terminal, no Scottish payment.
+GIVEN dl IS A `Limitation`, mb IS A `Limitation`, r1 IS A BOOLEAN, r2 IS A BOOLEAN
+GIVETH A `PIP facts`
+pat dl mb r1 r2 MEANS mkp (Date 1 1 1980) (Date 1 1 2047) (Date 1 7 2026) dl mb r1 r2 TRUE FALSE FALSE
+
+GIVEN dl IS A `Limitation`, mb IS A `Limitation`, r1 IS A BOOLEAN, r2 IS A BOOLEAN, ag IS A BOOLEAN
+GIVETH A `PIP facts`
+term dl mb r1 r2 ag MEANS mkp (Date 1 1 1980) (Date 1 1 2047) (Date 1 7 2026) dl mb r1 r2 ag TRUE FALSE
+
+-- severely limited on both, required periods met, at a given day
+GIVEN b IS A DATE, pa IS A DATE, d IS A DATE
+GIVETH A `PIP facts`
+sevr b pa d MEANS mkp b pa d `severely limited` `severely limited` TRUE TRUE TRUE FALSE FALSE
+
+GIVEN f IS A `PIP facts`
+GIVETH A `Component rate`
+dlc f MEANS `the daily living component for` f
+
+GIVEN f IS A `PIP facts`
+GIVETH A `Component rate`
+mbc f MEANS `the mobility component for` f
+
+-- Cap
+GIVEN x1 IS A BOOLEAN, x2 IS A BOOLEAN, x3 IS A NUMBER, x4 IS A NUMBER
+GIVETH A `Cap facts`
+mkcap x1 x2 x3 x4 MEANS `Cap facts` OF x1, x2, x3, x4
+
+GIVEN f IS A `Cap facts`
+GIVETH A NUMBER
+lim f MEANS `the annual limit for` f
+
+GIVEN f IS A `Cap facts`
+GIVETH A NUMBER
+rel f MEANS `the relevant amount for` f
+
+GIVEN f IS A `Cap facts`
+GIVETH A NUMBER
+red f MEANS `the benefit cap reduction for` f
+
+§ `Universal credit — basic conditions, s 4(1)`
+
+-- U1
+#ASSERT basic alice (Date 1 7 2026)
+-- U2: 18th birthday
+#ASSERT basic (okc (Date 1 7 2008) (Date 1 7 2075)) (Date 1 7 2026)
+-- U3: day before the 18th birthday
+#ASSERT NOT (basic (okc (Date 1 7 2008) (Date 1 7 2075)) (Date 30 6 2026))
+-- U4
+#ASSERT NOT (basic teen (Date 1 7 2026))
+-- U5: day before the qualifying age
+#ASSERT basic (okc (Date 1 7 1960) (Date 1 7 2026)) (Date 30 6 2026)
+-- U6: on the qualifying age
+#ASSERT NOT (basic (okc (Date 1 7 1960) (Date 1 7 2026)) (Date 1 7 2026))
+-- U7
+#ASSERT NOT (basic (okc (Date 1 7 1960) (Date 1 7 2026)) (Date 2 7 2026))
+-- U8 not in GB
+#ASSERT NOT (basic (mkc (Date 15 3 1990) (Date 15 3 2056) FALSE FALSE TRUE) (Date 1 7 2026))
+-- U9 receiving education
+#ASSERT NOT (basic (mkc (Date 15 3 1990) (Date 15 3 2056) TRUE TRUE TRUE) (Date 1 7 2026))
+-- U10 commitment not accepted
+#ASSERT NOT (basic (mkc (Date 15 3 1990) (Date 15 3 2056) TRUE FALSE FALSE) (Date 1 7 2026))
+-- U11 leap-day birth: 18 by 1 March of a non-leap year (either reading)
+#ASSERT basic (okc (Date 29 2 2008) (Date 1 3 2075)) (Date 1 3 2026)
+
+§ `Universal credit — entitlement, ss 3, 5`
+
+-- U12
+#ASSERT ent (baseu (LIST alice))
+-- U13 capital equal to the limit
+#ASSERT ent (capu 16000 (LIST alice))
+-- U14 capital a penny over
+#ASSERT NOT (ent (capu 16000.01 (LIST alice)))
+-- U15 award equal to the minimum (500 - 400 = 100, minimum 100)
+#ASSERT ent (mku (Date 1 7 2026) 0 16000 100 500 0 0 0 400 0 (LIST alice))
+-- U16 award 99.99 below minimum 100
+#ASSERT NOT (ent (mku (Date 1 7 2026) 0 16000 100 500 0 0 0 400 0.01 (LIST alice)))
+-- U17 deductions exceed the maximum, minimum 0.01
+#ASSERT NOT (ent (mku (Date 1 7 2026) 0 16000 0.01 500 0 0 0 600 0 (LIST alice)))
+-- U18 single, under 18
+#ASSERT NOT (ent (baseu (LIST teen)))
+-- U19 joint, both meet basic conditions, combined capital 10000
+#ASSERT ent (capu 10000 (LIST alice, bob))
+-- U20 joint, second is 17
+#ASSERT NOT (ent (baseu (LIST alice, teen)))
+-- U21 joint, first has reached the qualifying age
+#ASSERT NOT (ent (baseu (LIST (okc (Date 1 7 1960) (Date 1 7 2026)), bob)))
+-- U22 joint, combined capital 8000 + 8000.01
+#ASSERT NOT (ent (capu 16000.01 (LIST alice, bob)))
+-- U23 joint, combined award below minimum
+#ASSERT NOT (ent (mku (Date 1 7 2026) 0 16000 100 500 0 0 0 450 0 (LIST alice, bob)))
+
+§ `Universal credit — award, s 8`
+
+-- U24/U28 no deductions: award = maximum 1339.14
+#ASSERT awd (mku (Date 1 7 2026) 0 16000 0 400.14 339 600 0 0 0 (LIST alice)) EQUALS 1339.14
+-- U25
+#ASSERT awd (baseu (LIST alice)) EQUALS 1039.14
+-- U26 deductions equal the maximum
+#ASSERT awd (mku (Date 1 7 2026) 0 16000 0 400.14 339 600 0 1000 339.14 (LIST alice)) EQUALS 0
+-- U27 deductions exceed the maximum
+#ASSERT awd (mku (Date 1 7 2026) 0 16000 0 400.14 339 600 0 1000 1000 (LIST alice)) EQUALS 0
+-- U29
+#ASSERT awd (mku (Date 1 7 2026) 0 16000 0 400.14 0 0 0 50.5 0 (LIST alice)) EQUALS 349.64
+-- other elements counted
+#ASSERT awd (mku (Date 1 7 2026) 0 16000 0 400 0 0 416.19 0 0 (LIST alice)) EQUALS 816.19
+
+§ `PIP — rates, ss 78, 79, 81`
+
+-- P1
+#ASSERT dlc (pat `limited` `limited` TRUE TRUE) EQUALS `the standard rate`
+#ASSERT mbc (pat `limited` `limited` TRUE TRUE) EQUALS `the standard rate`
+-- P2
+#ASSERT dlc (pat `severely limited` `severely limited` TRUE TRUE) EQUALS `the enhanced rate`
+#ASSERT mbc (pat `severely limited` `severely limited` TRUE TRUE) EQUALS `the enhanced rate`
+-- P3
+#ASSERT dlc (pat `limited` `limited` FALSE FALSE) EQUALS `no award`
+#ASSERT mbc (pat `limited` `limited` FALSE FALSE) EQUALS `no award`
+-- P4
+#ASSERT dlc (pat `severely limited` `severely limited` FALSE FALSE) EQUALS `no award`
+#ASSERT mbc (pat `severely limited` `severely limited` FALSE FALSE) EQUALS `no award`
+-- P5
+#ASSERT dlc (pat `not limited` `not limited` TRUE TRUE) EQUALS `no award`
+#ASSERT mbc (pat `not limited` `not limited` TRUE TRUE) EQUALS `no award`
+-- P6
+#ASSERT dlc (pat `severely limited` `limited` TRUE TRUE) EQUALS `the enhanced rate`
+#ASSERT mbc (pat `severely limited` `limited` TRUE TRUE) EQUALS `the standard rate`
+-- P7
+#ASSERT dlc (pat `limited` `severely limited` TRUE FALSE) EQUALS `the standard rate`
+#ASSERT mbc (pat `limited` `severely limited` TRUE FALSE) EQUALS `no award`
+-- P8
+#ASSERT dlc (pat `not limited` `severely limited` FALSE TRUE) EQUALS `no award`
+#ASSERT mbc (pat `not limited` `severely limited` FALSE TRUE) EQUALS `the enhanced rate`
+-- P9 mobility age condition not met
+#ASSERT dlc (mkp (Date 1 1 1980) (Date 1 1 2047) (Date 1 7 2026) `severely limited` `severely limited` TRUE TRUE FALSE FALSE FALSE) EQUALS `the enhanced rate`
+#ASSERT mbc (mkp (Date 1 1 1980) (Date 1 1 2047) (Date 1 7 2026) `severely limited` `severely limited` TRUE TRUE FALSE FALSE FALSE) EQUALS `no award`
+
+§ `PIP — terminal illness, s 82; Scottish payments, s 77(4)`
+
+-- P10
+#ASSERT dlc (term `not limited` `severely limited` FALSE FALSE TRUE) EQUALS `the enhanced rate`
+#ASSERT mbc (term `not limited` `severely limited` FALSE FALSE TRUE) EQUALS `the enhanced rate`
+-- P11
+#ASSERT dlc (term `limited` `limited` FALSE FALSE TRUE) EQUALS `the enhanced rate`
+#ASSERT mbc (term `limited` `limited` FALSE FALSE TRUE) EQUALS `the standard rate`
+-- P12 terminal, mobility not limited
+#ASSERT mbc (term `not limited` `not limited` FALSE FALSE TRUE) EQUALS `no award`
+#ASSERT dlc (term `not limited` `not limited` FALSE FALSE TRUE) EQUALS `the enhanced rate`
+-- P13 terminally ill but not claimed on that ground: ordinary rules (the
+-- input folds both limbs; FALSE means s 82 does not apply)
+#ASSERT dlc (pat `not limited` `limited` FALSE FALSE) EQUALS `no award`
+-- P14 terminal, mobility age condition not met
+#ASSERT mbc (term `severely limited` `severely limited` FALSE FALSE FALSE) EQUALS `no award`
+#ASSERT dlc (term `severely limited` `severely limited` FALSE FALSE FALSE) EQUALS `the enhanced rate`
+-- P15 Scottish payment
+#ASSERT dlc (mkp (Date 1 1 1980) (Date 1 1 2047) (Date 1 7 2026) `severely limited` `severely limited` TRUE TRUE TRUE FALSE TRUE) EQUALS `no award`
+#ASSERT mbc (mkp (Date 1 1 1980) (Date 1 1 2047) (Date 1 7 2026) `severely limited` `severely limited` TRUE TRUE TRUE FALSE TRUE) EQUALS `no award`
+-- P16 terminal and Scottish payment
+#ASSERT dlc (mkp (Date 1 1 1980) (Date 1 1 2047) (Date 1 7 2026) `severely limited` `severely limited` TRUE TRUE TRUE TRUE TRUE) EQUALS `no award`
+#ASSERT mbc (mkp (Date 1 1 1980) (Date 1 1 2047) (Date 1 7 2026) `severely limited` `severely limited` TRUE TRUE TRUE TRUE TRUE) EQUALS `no award`
+
+§ `PIP — the relevant age, s 83`
+
+-- P17-P19: pensionable age 1 Jan 2027 (67) is above 65; relevant age 1 Jan 2027
+#ASSERT dlc (sevr (Date 1 1 1960) (Date 1 1 2027) (Date 31 12 2026)) EQUALS `the enhanced rate`
+#ASSERT dlc (sevr (Date 1 1 1960) (Date 1 1 2027) (Date 1 1 2027)) EQUALS `the enhanced rate`
+#ASSERT mbc (sevr (Date 1 1 1960) (Date 1 1 2027) (Date 1 1 2027)) EQUALS `the enhanced rate`
+#ASSERT dlc (sevr (Date 1 1 1960) (Date 1 1 2027) (Date 2 1 2027)) EQUALS `no award`
+#ASSERT mbc (sevr (Date 1 1 1960) (Date 1 1 2027) (Date 2 1 2027)) EQUALS `no award`
+-- the 65th birthday (1 Jan 2025) is not the relevant age when pensionable age is higher
+#ASSERT dlc (sevr (Date 1 1 1960) (Date 1 1 2027) (Date 2 1 2025)) EQUALS `the enhanced rate`
+-- P20-P23: pensionable age 6 Nov 2011 (61) is below 65; relevant age 6 Mar 2015
+#ASSERT dlc (sevr (Date 6 3 1950) (Date 6 11 2011) (Date 1 1 2013)) EQUALS `the enhanced rate`
+#ASSERT mbc (sevr (Date 6 3 1950) (Date 6 11 2011) (Date 7 11 2011)) EQUALS `the enhanced rate`
+#ASSERT dlc (sevr (Date 6 3 1950) (Date 6 11 2011) (Date 6 3 2015)) EQUALS `the enhanced rate`
+#ASSERT dlc (sevr (Date 6 3 1950) (Date 6 11 2011) (Date 7 3 2015)) EQUALS `no award`
+#ASSERT mbc (sevr (Date 6 3 1950) (Date 6 11 2011) (Date 7 3 2015)) EQUALS `no award`
+-- P24: pensionable age equals the 65th birthday
+#ASSERT dlc (sevr (Date 1 6 1955) (Date 1 6 2020) (Date 1 6 2020)) EQUALS `the enhanced rate`
+#ASSERT dlc (sevr (Date 1 6 1955) (Date 1 6 2020) (Date 2 6 2020)) EQUALS `no award`
+-- P25: terminally ill, the day after the relevant age
+#ASSERT dlc (mkp (Date 1 1 1960) (Date 1 1 2027) (Date 2 1 2027) `severely limited` `severely limited` TRUE TRUE TRUE TRUE FALSE) EQUALS `no award`
+#ASSERT mbc (mkp (Date 1 1 1960) (Date 1 1 2027) (Date 2 1 2027) `severely limited` `severely limited` TRUE TRUE TRUE TRUE FALSE) EQUALS `no award`
+
+§ `Benefit cap, s 96`
+
+-- C1-C4 annual limits
+#ASSERT lim (mkcap TRUE TRUE 7 0) EQUALS 25323
+#ASSERT lim (mkcap TRUE FALSE 7 0) EQUALS 16967
+#ASSERT lim (mkcap FALSE TRUE 7 0) EQUALS 22020
+#ASSERT lim (mkcap FALSE FALSE 7 0) EQUALS 14753
+-- C5-C9 relevant amounts
+#ASSERT rel (mkcap FALSE TRUE 365 0) EQUALS 22020
+#ASSERT rel (mkcap FALSE TRUE 7 0) EQUALS 22020 TIMES 7 DIVIDED BY 365
+#ASSERT rel (mkcap TRUE TRUE 30 0) EQUALS 25323 TIMES 30 DIVIDED BY 365
+#ASSERT rel (mkcap FALSE FALSE 28 0) EQUALS 14753 TIMES 28 DIVIDED BY 365
+#ASSERT rel (mkcap TRUE FALSE 1 0) EQUALS 16967 DIVIDED BY 365
+-- C10 exactly at the limit
+#ASSERT red (mkcap FALSE TRUE 365 22020) EQUALS 0
+-- C11
+#ASSERT red (mkcap FALSE TRUE 365 23000) EQUALS 980
+-- C12
+#ASSERT red (mkcap FALSE TRUE 365 20000) EQUALS 0
+-- C13
+#ASSERT red (mkcap TRUE TRUE 7 600) EQUALS 600 MINUS 25323 TIMES 7 DIVIDED BY 365
+-- C14 exactly at a partial-period relevant amount
+#ASSERT red (mkcap FALSE FALSE 30 (14753 TIMES 30 DIVIDED BY 365)) EQUALS 0
+-- C15
+#ASSERT red (mkcap TRUE FALSE 365 17000) EQUALS 33
+-- C16
+#ASSERT red (mkcap FALSE FALSE 365 15000) EQUALS 247
+-- C17
+#ASSERT red (mkcap TRUE TRUE 365 25324) EQUALS 1
+-- weekly below the relevant amount
+#ASSERT red (mkcap FALSE TRUE 7 422) EQUALS 0
+
+§ `Top-level goal`
+
+GIVEN u IS A MAYBE `Universal credit claim`, f IS A MAYBE `PIP facts`, k IS A MAYBE `Cap facts`
+GIVETH A `Welfare position`
+pos u f k MEANS `the welfare position for` (`Welfare case` OF u, f, k)
+
+g1 MEANS pos (JUST (baseu (LIST alice))) (JUST (pat `limited` `severely limited` TRUE TRUE)) (JUST (mkcap FALSE TRUE 365 23000))
+#ASSERT g1's `entitled to universal credit` EQUALS JUST TRUE
+#ASSERT g1's `universal credit award` EQUALS JUST 1039.14
+#ASSERT g1's `PIP daily living component` EQUALS JUST `the standard rate`
+#ASSERT g1's `PIP mobility component` EQUALS JUST `the enhanced rate`
+#ASSERT g1's `benefit cap reduction` EQUALS JUST 980
+
+g2 MEANS pos NOTHING NOTHING NOTHING
+#ASSERT g2's `entitled to universal credit` EQUALS NOTHING
+#ASSERT g2's `PIP mobility component` EQUALS NOTHING
+#ASSERT g2's `benefit cap reduction` EQUALS NOTHING
+
+g3 MEANS pos (JUST (baseu (LIST teen))) NOTHING NOTHING
+#ASSERT g3's `entitled to universal credit` EQUALS JUST FALSE
