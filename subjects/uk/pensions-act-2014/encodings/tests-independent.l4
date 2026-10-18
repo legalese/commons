@@ -1,0 +1,242 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `pa14-types`
+IMPORT `pa14-state-pension`
+IMPORT `pa14-deferral`
+IMPORT `pa14-bereavement`
+IMPORT `pa14-goal`
+
+-- Independent tests: Pensions Act 2014 (UK). Expected values were fixed in
+-- independent-expectations.md from the Act text before the encoding was read.
+-- Full rate 6 April 2016 = 140; full rate at pensionable age = 175;
+-- revaluing percentage = 10; minimum qualifying years = 10.
+
+§ `Helpers`
+
+GIVEN pa IS A DATE, np IS A NUMBER, nq IS A NUMBER, mn IS A NUMBER, r16 IS A NUMBER, rpa IS A NUMBER, od IS A NUMBER, co IS A NUMBER, rv IS A NUMBER
+GIVETH A `Pension facts`
+mkp pa np nq mn r16 rpa od co rv MEANS
+    `Pension facts` OF pa, np, nq, mn, r16, rpa, od, co, rv
+
+-- Standard person: pensionable age 1 June 2030.
+GIVEN np IS A NUMBER, nq IS A NUMBER, od IS A NUMBER, co IS A NUMBER
+GIVETH A `Pension facts`
+std np nq od co MEANS mkp (Date 1 6 2030) np nq 10 140 175 od co 10
+
+GIVEN pa IS A DATE, np IS A NUMBER, nq IS A NUMBER
+GIVETH A `Pension facts`
+atpa pa np nq MEANS mkp pa np nq 10 140 175 0 0 10
+
+GIVEN p IS A `Pension facts`
+GIVETH A `Kind of state pension`
+kindof p MEANS `the kind of state pension for` p
+
+GIVEN p IS A `Pension facts`
+GIVETH A NUMBER
+rateof p MEANS `the weekly state pension for` p
+
+GIVEN d1 IS A DATE, d2 IS A DATE, wr IS A NUMBER, pc IS A NUMBER
+GIVETH A `Deferral facts`
+mkd d1 d2 wr pc MEANS `Deferral facts` OF d1, d2, wr, pc
+
+GIVEN f IS A `Deferral facts`
+GIVETH A NUMBER
+wk f MEANS `the whole weeks deferred in` f
+
+GIVEN f IS A `Deferral facts`
+GIVETH A NUMBER
+inc f MEANS `the weekly increase for deferral in` f
+
+GIVEN pd IS A BOOLEAN, ef IS A NUMBER, lel IS A NUMBER
+GIVETH A `Contribution year`
+cy pd ef lel MEANS `Contribution year` OF pd, ef, lel
+
+GIVEN rel IS A `Relationship`
+      dd IS A DATE
+      pg IS A BOOLEAN
+      cpa IS A DATE
+      res IS A BOOLEAN
+      ys IS A LIST OF `Contribution year`
+      ind IS A BOOLEAN
+      bf IS A BOOLEAN
+GIVETH A `Bereavement facts`
+mkb rel dd pg cpa res ys ind bf MEANS
+    `Bereavement facts` OF rel, dd, pg, cpa, res, ys, ind, bf
+
+GIVETH A LIST OF `Contribution year`
+goodyears MEANS LIST (cy TRUE 3000 100)
+
+GIVEN ys IS A LIST OF `Contribution year`
+GIVETH A `Bereavement facts`
+withyears ys MEANS mkb `spouse` (Date 1 6 2025) FALSE (Date 1 6 2040) TRUE ys FALSE FALSE
+
+GIVEN b IS A `Bereavement facts`
+GIVETH A BOOLEAN
+bsp b MEANS `is entitled to bereavement support payment` b
+
+§ `Goal 1 — entitlement kind`
+
+-- E1, E2: s 1(2) "before 6 April 2016"
+#ASSERT kindof (atpa (Date 5 4 2016) 0 40) EQUALS `none under this Part (old state pension instead)`
+#ASSERT kindof (atpa (Date 5 4 2016) 35 0) EQUALS `none under this Part (old state pension instead)`
+-- E3: on 6 April 2016 is not "before"
+#ASSERT kindof (atpa (Date 6 4 2016) 35 0) EQUALS `transitional rate`
+-- E4-E8
+#ASSERT kindof (std 0 35 0 0) EQUALS `full rate`
+#ASSERT kindof (std 0 40 0 0) EQUALS `full rate`
+#ASSERT kindof (std 0 34 0 0) EQUALS `reduced rate`
+#ASSERT kindof (std 0 10 0 0) EQUALS `reduced rate`
+#ASSERT kindof (std 0 9 0 0) EQUALS `none (too few qualifying years)`
+-- E9-E11: s 4(1), (3)
+#ASSERT kindof (std 1 9 3 0) EQUALS `transitional rate`
+#ASSERT kindof (std 1 8 3 0) EQUALS `none (too few qualifying years)`
+#ASSERT kindof (std 1 40 3 0) EQUALS `transitional rate`
+-- E12: minimum 7
+#ASSERT kindof (mkp (Date 1 6 2030) 0 7 7 140 175 0 0 10) EQUALS `reduced rate`
+-- E13
+#ASSERT kindof (std 0 0 0 0) EQUALS `none (too few qualifying years)`
+
+§ `Goal 1 — full and reduced rates`
+
+#ASSERT rateof (std 0 20 0 0) EQUALS 100
+#ASSERT rateof (std 0 10 0 0) EQUALS 50
+#ASSERT rateof (std 0 34 0 0) EQUALS 170
+#ASSERT rateof (std 0 35 0 0) EQUALS 175
+#ASSERT rateof (std 0 40 0 0) EQUALS 175
+-- R7: 12/35 of 200
+#ASSERT rateof (mkp (Date 1 6 2030) 0 12 10 140 200 0 0 10) EQUALS 12 TIMES 200 DIVIDED BY 35
+
+§ `Goal 1 — transitional rate`
+
+-- T1
+#ASSERT rateof (std 35 0 120 0) EQUALS 175
+-- T2: contracting-out deduction
+#ASSERT rateof (std 35 0 120 20) EQUALS 150
+-- T3 and its components
+#ASSERT rateof (std 28 5 100 10) EQUALS 152.5
+#ASSERT `the new-system rate for` (std 28 5 100 10) EQUALS 102
+#ASSERT `the amount for pre-commencement qualifying years for` (std 28 5 100 10) EQUALS 127.5
+#ASSERT `the amount for post-commencement qualifying years for` (std 28 5 100 10) EQUALS 25
+-- T4: Step 1 higher than Step 2
+#ASSERT rateof (std 20 10 90 0) EQUALS 162.5
+#ASSERT `the new-system rate for` (std 20 10 90 0) EQUALS 80
+-- T5: foundation above the 2016 full rate; s 5(1)(b)
+#ASSERT rateof (std 35 0 160 10) EQUALS 197
+#ASSERT `the amount for pre-commencement qualifying years for` (std 35 0 160 10) EQUALS 197
+-- T6
+#ASSERT rateof (std 35 3 160 10) EQUALS 197
+-- T7: cap at the full rate
+#ASSERT rateof (std 30 10 0 0) EQUALS 175
+-- T8
+#ASSERT rateof (std 1 9 3 0) EQUALS 50
+-- T9: Step 2 negative after deduction
+#ASSERT rateof (std 10 5 50 50) EQUALS 87.5
+#ASSERT `the new-system rate for` (std 10 5 50 50) EQUALS -10
+-- T10: 35 post-commencement years
+#ASSERT rateof (std 5 35 20 0) EQUALS 175
+#ASSERT `the amount for post-commencement qualifying years for` (std 5 35 20 0) EQUALS 175
+-- T11: 40 pre-commencement years, para 4(2)
+#ASSERT rateof (std 40 0 100 0) EQUALS 175
+#ASSERT `the new-system rate for` (std 40 0 100 0) EQUALS 140
+-- T12
+#ASSERT rateof (std 35 0 150 0) EQUALS 186
+-- T13
+#ASSERT rateof (std 14 0 50 0) EQUALS 70
+-- T14: no rise in full rate (FPA = 140)
+#ASSERT rateof (mkp (Date 1 6 2030) 35 0 10 140 140 150 0 10) EQUALS 151
+-- T15
+#ASSERT rateof (std 10 3 30 0) EQUALS 65
+
+§ `Goal 2 — whole weeks (s 17(3))`
+
+#ASSERT wk (mkd (Date 1 1 2025) (Date 7 1 2025) 175 0.2) EQUALS 1
+#ASSERT wk (mkd (Date 1 1 2025) (Date 6 1 2025) 175 0.2) EQUALS 0
+#ASSERT wk (mkd (Date 1 1 2025) (Date 1 1 2025) 175 0.2) EQUALS 0
+#ASSERT wk (mkd (Date 1 1 2025) (Date 31 12 2025) 175 0.2) EQUALS 52
+#ASSERT wk (mkd (Date 1 1 2024) (Date 31 12 2024) 175 0.2) EQUALS 52
+#ASSERT wk (mkd (Date 1 2 2024) (Date 28 2 2024) 175 0.2) EQUALS 4
+#ASSERT wk (mkd (Date 1 2 2024) (Date 29 2 2024) 175 0.2) EQUALS 4
+#ASSERT wk (mkd (Date 1 3 2025) (Date 14 3 2025) 175 0.2) EQUALS 2
+#ASSERT wk (mkd (Date 1 3 2025) (Date 13 3 2025) 175 0.2) EQUALS 1
+#ASSERT wk (mkd (Date 6 4 2030) (Date 5 4 2031) 175 0.2) EQUALS 52
+#ASSERT wk (mkd (Date 1 1 2025) (Date 4 1 2027) 175 0.2) EQUALS 104
+
+§ `Goal 2 — increase (s 17(1), (2), (4))`
+
+-- I1
+#ASSERT inc (mkd (Date 1 1 2025) (Date 31 12 2025) 175 0.2) EQUALS 18.2
+-- I2: 1.4 < 1% of 175
+#ASSERT inc (mkd (Date 1 2 2024) (Date 28 2 2024) 175 0.2) EQUALS 0
+-- I3: exactly 1%
+#ASSERT inc (mkd (Date 1 1 2025) (Date 4 2 2025) 175 0.2) EQUALS 1.75
+-- I4: 9 weeks at 1/9 % = exactly 1%
+#ASSERT inc (mkd (Date 1 1 2025) (Date 4 3 2025) 175 (1 DIVIDED BY 9)) EQUALS 1.75
+-- I5: 8 weeks at 1/9 %
+#ASSERT inc (mkd (Date 1 1 2025) (Date 25 2 2025) 175 (1 DIVIDED BY 9)) EQUALS 0
+-- I6
+#ASSERT inc (mkd (Date 1 1 2025) (Date 31 12 2025) 175 (1 DIVIDED BY 9)) EQUALS 91 DIVIDED BY 9
+-- I7
+#ASSERT inc (mkd (Date 1 1 2025) (Date 6 1 2025) 175 0.2) EQUALS 0
+-- I8
+#ASSERT inc (mkd (Date 1 1 2025) (Date 4 1 2027) 200 (1 DIVIDED BY 9)) EQUALS 208 DIVIDED BY 9
+
+§ `Goal 3 — bereavement support payment`
+
+-- B1 / B6
+#ASSERT bsp (withyears goodyears)
+-- B2
+#ASSERT bsp (mkb `civil partner` (Date 1 6 2025) FALSE (Date 1 6 2040) TRUE goodyears FALSE FALSE)
+-- B3
+#ASSERT NOT (bsp (mkb `cohabiting partner` (Date 1 6 2025) FALSE (Date 1 6 2040) TRUE goodyears FALSE FALSE))
+-- B4 / B5
+#ASSERT bsp (mkb `cohabiting partner` (Date 1 6 2025) TRUE (Date 1 6 2040) TRUE goodyears FALSE FALSE)
+-- B7: pensionable age on the day of death
+#ASSERT NOT (bsp (mkb `spouse` (Date 1 6 2025) FALSE (Date 1 6 2025) TRUE goodyears FALSE FALSE))
+-- B8
+#ASSERT bsp (mkb `spouse` (Date 1 6 2025) FALSE (Date 2 6 2025) TRUE goodyears FALSE FALSE)
+-- B9
+#ASSERT NOT (bsp (mkb `spouse` (Date 1 6 2025) FALSE (Date 1 1 2025) TRUE goodyears FALSE FALSE))
+-- B10 / B11 (resident flag covers GB or specified territory)
+#ASSERT NOT (bsp (mkb `spouse` (Date 1 6 2025) FALSE (Date 1 6 2040) FALSE goodyears FALSE FALSE))
+-- B12: exactly 25 x LEL
+#ASSERT bsp (withyears (LIST (cy TRUE 2500 100)))
+-- B13
+#ASSERT NOT (bsp (withyears (LIST (cy TRUE 2499 100))))
+-- B14: not actually paid
+#ASSERT NOT (bsp (withyears (LIST (cy FALSE 3000 100))))
+-- B16
+#ASSERT bsp (withyears (LIST (cy TRUE 2000 100), (cy TRUE 2600 100)))
+-- B17
+#ASSERT NOT (bsp (withyears (LIST (cy TRUE 2400 100), (cy FALSE 5000 100))))
+-- B18 / B19: industrial death of an employed earner, no contributions
+#ASSERT bsp (mkb `spouse` (Date 1 6 2025) FALSE (Date 1 6 2040) TRUE (LIST) TRUE FALSE)
+-- B20 / B21: no contributions, no industrial death as an employed earner
+#ASSERT NOT (bsp (mkb `spouse` (Date 1 6 2025) FALSE (Date 1 6 2040) TRUE (LIST) FALSE FALSE))
+-- B22: death 5 April 2017, before s 30 fully in force (flag set per reading 16)
+#ASSERT NOT (bsp (mkb `spouse` (Date 5 4 2017) FALSE (Date 1 6 2040) TRUE goodyears FALSE TRUE))
+-- B23: death 6 April 2017
+#ASSERT bsp (mkb `spouse` (Date 6 4 2017) FALSE (Date 1 6 2040) TRUE goodyears FALSE FALSE)
+-- B24: LEL per tax year
+#ASSERT bsp (withyears (LIST (cy TRUE 3000 130), (cy TRUE 2000 80)))
+#ASSERT NOT (bsp (withyears (LIST (cy TRUE 3000 130))))
+-- B25
+#ASSERT NOT (bsp (mkb `cohabiting partner` (Date 1 6 2025) TRUE (Date 1 6 2040) TRUE (LIST (cy TRUE 2499 100)) FALSE FALSE))
+
+§ `Top-level goal`
+
+GIVETH A `Pension position`
+pos1 MEANS `the pension position for` (`Pension case` OF (std 28 5 100 10), (JUST (mkd (Date 1 1 2025) (Date 31 12 2025) 175 0.2)), (JUST (withyears goodyears)))
+
+#ASSERT pos1's `kind of state pension` EQUALS `transitional rate`
+#ASSERT pos1's `weekly state pension` EQUALS 152.5
+#ASSERT pos1's `whole weeks deferred` EQUALS JUST 52
+#ASSERT pos1's `weekly increase for deferral` EQUALS JUST 18.2
+#ASSERT pos1's `entitled to bereavement support payment` EQUALS JUST TRUE
+
+GIVETH A `Pension position`
+pos2 MEANS `the pension position for` (`Pension case` OF (std 0 20 0 0), NOTHING, NOTHING)
+
+#ASSERT pos2's `kind of state pension` EQUALS `reduced rate`
+#ASSERT pos2's `weekly state pension` EQUALS 100
+#ASSERT pos2's `whole weeks deferred` EQUALS NOTHING
+#ASSERT pos2's `entitled to bereavement support payment` EQUALS NOTHING
