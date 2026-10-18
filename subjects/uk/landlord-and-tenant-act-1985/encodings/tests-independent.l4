@@ -1,0 +1,310 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `lta-types`
+IMPORT `lta-repair`
+IMPORT `lta-service-charges`
+IMPORT `lta-information`
+IMPORT `lta-goal`
+
+-- Independent tests for the Landlord and Tenant Act 1985 encoding.
+-- Expected values were fixed in independent-expectations.md from the Act and
+-- the brief before the encoding was read. Scenario ids (R, F, S, I, A, L, P)
+-- match that file. A failing assertion is a finding; no expected value has
+-- been changed to match the code.
+
+§ `Helpers`
+
+-- A lease in England, let wholly or mainly for human habitation, with no
+-- special features, s 9A commencement 20 March 2019.
+GIVEN g IS A DATE, e IS A DATE
+GIVETH A `Lease`
+`plain lease` g e MEANS
+    `Lease` OF `England`, TRUE, g, e, FALSE, FALSE, FALSE,
+               `an ordinary lease`, `no exception`, FALSE,
+               FALSE, FALSE, FALSE, FALSE, Date 20 3 2019
+
+GIVEN g IS A DATE, e IS A DATE, st IS A `Special tenancy`
+GIVETH A `Lease`
+`special lease` g e st MEANS
+    `Lease` OF `England`, TRUE, g, e, FALSE, FALSE, FALSE,
+               st, `no exception`, FALSE,
+               FALSE, FALSE, FALSE, FALSE, Date 20 3 2019
+
+GIVEN g IS A DATE, e IS A DATE, ex IS A `Section 14 exception`
+GIVETH A `Lease`
+`excepted lease` g e ex MEANS
+    `Lease` OF `England`, TRUE, g, e, FALSE, FALSE, FALSE,
+               `an ordinary lease`, ex, FALSE,
+               FALSE, FALSE, FALSE, FALSE, Date 20 3 2019
+
+GIVEN brk IS A BOOLEAN, renew IS A BOOLEAN, g IS A DATE, e IS A DATE
+GIVETH A `Lease`
+`optioned lease` brk renew g e MEANS
+    `Lease` OF `England`, TRUE, g, e, FALSE, brk, renew,
+               `an ordinary lease`, `no exception`, FALSE,
+               FALSE, FALSE, FALSE, FALSE, Date 20 3 2019
+
+-- s 9B transitional lease: periodic flag, agreement-before, existing
+-- periodic/secure, arose-on-expiry, renewed, commencement date.
+GIVEN g IS A DATE, e IS A DATE, per IS A BOOLEAN, agr IS A BOOLEAN,
+      ex9 IS A BOOLEAN, arose IS A BOOLEAN, ren IS A BOOLEAN, cd IS A DATE
+GIVETH A `Lease`
+`fitness lease` g e per agr ex9 arose ren cd MEANS
+    `Lease` OF `England`, TRUE, g, e, per, FALSE, FALSE,
+               `an ordinary lease`, `no exception`, FALSE,
+               agr, ex9, arose, ren, cd
+
+GIVEN amt IS A NUMBER, rsn IS A NUMBER, inc IS A DATE
+GIVETH A `Cost item`
+`simple item` amt rsn inc MEANS
+    `Cost item` OF amt, rsn, inc, NOTHING, FALSE, 0
+
+GIVEN amt IS A NUMBER, rsn IS A NUMBER, inc IS A DATE, ntc IS A DATE
+GIVETH A `Cost item`
+`notified item` amt rsn inc ntc MEANS
+    `Cost item` OF amt, rsn, inc, JUST ntc, FALSE, 0
+
+GIVEN amt IS A NUMBER, rsn IS A NUMBER, inc IS A DATE, nocon IS A BOOLEAN, appr IS A NUMBER
+GIVETH A `Cost item`
+`works item` amt rsn inc nocon appr MEANS
+    `Cost item` OF amt, rsn, inc, NOTHING, nocon, appr
+
+GIVEN srv IS A DATE
+      its IS A LIST OF `Cost item`
+      summ IS A BOOLEAN
+GIVETH A `Service charge demand`
+`demand` srv its summ MEANS
+    `Service charge demand` OF srv, its, summ
+
+GIVEN nn IS A MAYBE DATE, oo IS A MAYBE DATE
+GIVETH A `Landlord information facts`
+`notice facts` nn oo MEANS
+    `Landlord information facts` OF NOTHING, JUST (Date 1 3 2025), Date 1 4 2025, nn, oo, NOTHING, NOTHING
+
+§ `Goal 1a — s 11 application`
+
+-- R1 3-year term
+#ASSERT `section 11 applies to` (`plain lease` (Date 1 1 2020) (Date 31 12 2022))
+-- R2 one day short of seven years
+#ASSERT `section 11 applies to` (`plain lease` (Date 1 1 2020) (Date 30 12 2026))
+-- R3 exactly seven years: not "less than seven years"
+#ASSERT NOT (`section 11 applies to` (`plain lease` (Date 1 1 2020) (Date 31 12 2026)))
+-- R4 ten years
+#ASSERT NOT (`section 11 applies to` (`plain lease` (Date 1 1 2020) (Date 31 12 2029)))
+-- R5 grant 29 Feb 2020: seven years end 28 Feb 2027
+#ASSERT `section 11 applies to` (`plain lease` (Date 29 2 2020) (Date 27 2 2027))
+-- R6
+#ASSERT NOT (`section 11 applies to` (`plain lease` (Date 29 2 2020) (Date 28 2 2027)))
+-- R7 s 13(2)(a): term before grant ignored (granted 1 Jun 2020, ends 31 Dec 2026)
+#ASSERT `section 11 applies to` (`plain lease` (Date 1 6 2020) (Date 31 12 2026))
+-- R8 s 13(2)(b): 10 years with lessor break
+#ASSERT `section 11 applies to` (`optioned lease` TRUE FALSE (Date 1 1 2020) (Date 31 12 2029))
+-- R9 s 13(2)(c): 3 years + lessee renewal to 7 or more
+#ASSERT NOT (`section 11 applies to` (`optioned lease` FALSE TRUE (Date 1 1 2020) (Date 31 12 2022)))
+-- R10 renewal option short of 7 years: flag false, 3-year term
+#ASSERT `section 11 applies to` (`optioned lease` FALSE FALSE (Date 1 1 2020) (Date 31 12 2022))
+-- R11 both: (b) wins over (c)
+#ASSERT `section 11 applies to` (`optioned lease` TRUE TRUE (Date 1 1 2020) (Date 31 12 2022))
+-- R12 granted 23 Oct 1961
+#ASSERT NOT (`section 11 applies to` (`plain lease` (Date 23 10 1961) (Date 22 10 1964)))
+-- R13 granted 24 Oct 1961
+#ASSERT `section 11 applies to` (`plain lease` (Date 24 10 1961) (Date 23 10 1964))
+-- R14 Wales, occupation contract
+#ASSERT NOT (`section 11 applies to` (`Lease` OF `Wales`, TRUE, Date 1 1 2020, Date 31 12 2022, FALSE, FALSE, FALSE, `an ordinary lease`, `no exception`, TRUE, FALSE, FALSE, FALSE, FALSE, Date 20 3 2019))
+-- R15 Wales, no occupation contract
+#ASSERT `section 11 applies to` (`Lease` OF `Wales`, TRUE, Date 1 1 2020, Date 31 12 2022, FALSE, FALSE, FALSE, `an ordinary lease`, `no exception`, FALSE, FALSE, FALSE, FALSE, FALSE, Date 20 3 2019)
+-- R16 s 13(1ZC): 10-year assured tenancy by a private landlord
+#ASSERT NOT (`section 11 applies to` (`special lease` (Date 1 1 2020) (Date 31 12 2029) `an assured tenancy within s 13(1ZC)`))
+-- R17/R21 s 13(1AA): 10-year PRP tenancy
+#ASSERT `section 11 applies to` (`special lease` (Date 1 1 2020) (Date 31 12 2029) `a long private registered provider tenancy under s 13(1AA)`)
+-- R18 s 13(1A): 10-year secure tenancy
+#ASSERT `section 11 applies to` (`special lease` (Date 1 1 2020) (Date 31 12 2029) `a long secure tenancy under s 13(1A)`)
+-- R19 s 13(1A): exactly 7 years ("seven years or more")
+#ASSERT `section 11 applies to` (`special lease` (Date 1 1 2020) (Date 31 12 2026) `a long secure tenancy under s 13(1A)`)
+-- R22/R23 not within (1AA) (shared ownership / private landlord): ordinary 10-year lease
+#ASSERT NOT (`section 11 applies to` (`special lease` (Date 1 1 2020) (Date 31 12 2029) `an ordinary lease`))
+-- (1A)/(1AA) are England only
+#ASSERT NOT (`section 11 applies to` (`Lease` OF `Wales`, TRUE, Date 1 1 2020, Date 31 12 2029, FALSE, FALSE, FALSE, `a long secure tenancy under s 13(1A)`, `no exception`, FALSE, FALSE, FALSE, FALSE, FALSE, Date 20 3 2019))
+-- R25 s 14(1)
+#ASSERT NOT (`section 11 applies to` (`excepted lease` (Date 1 1 2020) (Date 31 12 2022) `a new lease to a tenant whose previous lease was outside s 11`))
+-- R26 previous lease within s 11: no exception
+#ASSERT `section 11 applies to` (`excepted lease` (Date 1 1 2020) (Date 31 12 2022) `no exception`)
+-- R28 s 14(3)
+#ASSERT NOT (`section 11 applies to` (`excepted lease` (Date 1 1 2020) (Date 31 12 2022) `an agricultural holding or farm business tenancy`))
+-- R29 / R32 s 14(4)-(5)
+#ASSERT NOT (`section 11 applies to` (`excepted lease` (Date 1 1 2020) (Date 31 12 2022) `a lease to a body listed in s 14(4) or (5)`))
+-- s 14 exceptions also defeat (1A)
+#ASSERT NOT (`section 11 applies to` (`Lease` OF `England`, TRUE, Date 1 1 2020, Date 31 12 2029, FALSE, FALSE, FALSE, `a long secure tenancy under s 13(1A)`, `a lease to a body listed in s 14(4) or (5)`, FALSE, FALSE, FALSE, FALSE, FALSE, Date 20 3 2019))
+-- periodic tenancy: no term of seven years
+#ASSERT `section 11 applies to` (`fitness lease` (Date 1 1 2020) (Date 1 1 2020) TRUE FALSE FALSE FALSE FALSE (Date 20 3 2019))
+
+§ `Goal 1b — s 9A and the first day it bites`
+
+-- F1 granted on the commencement date
+#ASSERT `section 9A applies to` (`plain lease` (Date 20 3 2019) (Date 19 3 2020))
+#ASSERT `the first day the fitness covenant bites for` (`plain lease` (Date 20 3 2019) (Date 19 3 2020)) EQUALS JUST (Date 20 3 2019)
+-- F2 granted the day before
+#ASSERT NOT (`section 9A applies to` (`plain lease` (Date 19 3 2019) (Date 18 3 2020)))
+#ASSERT `the first day the fitness covenant bites for` (`plain lease` (Date 19 3 2019) (Date 18 3 2020)) EQUALS NOTHING
+-- F4 granted after, under an agreement before
+#ASSERT NOT (`section 9A applies to` (`fitness lease` (Date 1 5 2019) (Date 30 4 2020) FALSE TRUE FALSE FALSE FALSE (Date 20 3 2019)))
+-- F5 periodic tenancy granted 2015, in existence on commencement: bites 20 Mar 2020
+#ASSERT `section 9A applies to` (`fitness lease` (Date 1 1 2015) (Date 1 1 2015) TRUE FALSE TRUE FALSE FALSE (Date 20 3 2019))
+#ASSERT `the first day the fitness covenant bites for` (`fitness lease` (Date 1 1 2015) (Date 1 1 2015) TRUE FALSE TRUE FALSE FALSE (Date 20 3 2019)) EQUALS JUST (Date 20 3 2020)
+-- F6 secure tenancy (not flagged periodic) granted 2000, existing on commencement
+#ASSERT `the first day the fitness covenant bites for` (`fitness lease` (Date 1 1 2000) (Date 31 12 2001) FALSE FALSE TRUE FALSE FALSE (Date 20 3 2019)) EQUALS JUST (Date 20 3 2020)
+-- F7 hypothetical commencement 31 Jan 2019: bites 31 Jan 2020
+#ASSERT `the first day the fitness covenant bites for` (`fitness lease` (Date 1 1 2015) (Date 1 1 2015) TRUE FALSE TRUE FALSE FALSE (Date 31 1 2019)) EQUALS JUST (Date 31 1 2020)
+-- F7b hypothetical commencement 29 Feb 2020: 12 months end 28 Feb 2021, bites 1 Mar 2021
+#ASSERT `the first day the fitness covenant bites for` (`fitness lease` (Date 1 1 2015) (Date 1 1 2015) TRUE FALSE TRUE FALSE FALSE (Date 29 2 2020)) EQUALS JUST (Date 1 3 2021)
+-- F8 s 9B(5): periodic tenancy arising 1 Jan 2020 on expiry of a 2018 lease
+#ASSERT `the first day the fitness covenant bites for` (`fitness lease` (Date 1 1 2020) (Date 1 1 2020) TRUE FALSE FALSE TRUE FALSE (Date 20 3 2019)) EQUALS JUST (Date 1 1 2020)
+-- F9 s 9B(6): fixed term granted 1 Jan 2018, renewed on/after commencement.
+-- The covenant cannot bite before the renewal, which is on or after the
+-- commencement date; in particular not on the original 2018 grant date.
+#ASSERT `section 9A applies to` (`fitness lease` (Date 1 1 2018) (Date 31 12 2018) FALSE FALSE FALSE FALSE TRUE (Date 20 3 2019))
+#ASSERT NOT (`the first day the fitness covenant bites for` (`fitness lease` (Date 1 1 2018) (Date 31 12 2018) FALSE FALSE FALSE FALSE TRUE (Date 20 3 2019)) EQUALS JUST (Date 1 1 2018))
+-- F10 Wales
+#ASSERT NOT (`section 9A applies to` (`Lease` OF `Wales`, TRUE, Date 1 1 2020, Date 31 12 2020, FALSE, FALSE, FALSE, `an ordinary lease`, `no exception`, FALSE, FALSE, FALSE, FALSE, FALSE, Date 20 3 2019))
+-- F11 not let for human habitation
+#ASSERT NOT (`section 9A applies to` (`Lease` OF `England`, FALSE, Date 1 1 2020, Date 31 12 2020, FALSE, FALSE, FALSE, `an ordinary lease`, `no exception`, FALSE, FALSE, FALSE, FALSE, FALSE, Date 20 3 2019))
+-- F12 10-year lease
+#ASSERT NOT (`section 9A applies to` (`plain lease` (Date 1 1 2020) (Date 31 12 2029)))
+-- F13 10-year lease, lessor break
+#ASSERT `section 9A applies to` (`optioned lease` TRUE FALSE (Date 1 1 2020) (Date 31 12 2029))
+#ASSERT `the first day the fitness covenant bites for` (`optioned lease` TRUE FALSE (Date 1 1 2020) (Date 31 12 2029)) EQUALS JUST (Date 1 1 2020)
+-- F14 renewal option to 7+
+#ASSERT NOT (`section 9A applies to` (`optioned lease` FALSE TRUE (Date 1 1 2020) (Date 31 12 2022)))
+-- F15 s 13(1A) kind
+#ASSERT `section 9A applies to` (`special lease` (Date 1 1 2020) (Date 31 12 2029) `a long secure tenancy under s 13(1A)`)
+-- F15b s 13(1AA) kind
+#ASSERT `section 9A applies to` (`special lease` (Date 1 1 2020) (Date 31 12 2029) `a long private registered provider tenancy under s 13(1AA)`)
+-- F16 s 14(4) kind
+#ASSERT NOT (`section 9A applies to` (`excepted lease` (Date 1 1 2020) (Date 31 12 2020) `a lease to a body listed in s 14(4) or (5)`))
+-- F17 s 14(1) kind
+#ASSERT NOT (`section 9A applies to` (`excepted lease` (Date 1 1 2020) (Date 31 12 2020) `a new lease to a tenant whose previous lease was outside s 11`))
+-- F18 exactly seven years
+#ASSERT NOT (`section 9A applies to` (`plain lease` (Date 1 1 2020) (Date 31 12 2026)))
+-- seven years less a day
+#ASSERT `section 9A applies to` (`plain lease` (Date 1 1 2020) (Date 30 12 2026))
+
+§ `Goal 2 — service charges`
+
+-- S1 s 19
+#ASSERT (`the payable part of` (`simple item` 1000 800 (Date 1 1 2025)) `in a demand served on` (Date 1 2 2025)) EQUALS 800
+-- S2
+#ASSERT `the service charge payable on` (`demand` (Date 1 2 2025) (LIST `simple item` 1000 1000 (Date 1 1 2025), `simple item` 500 300 (Date 1 1 2025)) TRUE) EQUALS 1300
+-- S3 incurred 15 Jan 2023, demand 14 Jul 2024: not barred
+#ASSERT (`the payable part of` (`simple item` 1000 1000 (Date 15 1 2023)) `in a demand served on` (Date 14 7 2024)) EQUALS 1000
+-- S4 demand 15 Jul 2024: barred
+#ASSERT (`the payable part of` (`simple item` 1000 1000 (Date 15 1 2023)) `in a demand served on` (Date 15 7 2024)) EQUALS 0
+-- S5 notice 14 Jul 2024 saves
+#ASSERT (`the payable part of` (`notified item` 1000 1000 (Date 15 1 2023) (Date 14 7 2024)) `in a demand served on` (Date 15 7 2024)) EQUALS 1000
+-- S6 notice 15 Jul 2024 too late
+#ASSERT (`the payable part of` (`notified item` 1000 1000 (Date 15 1 2023) (Date 15 7 2024)) `in a demand served on` (Date 15 7 2024)) EQUALS 0
+-- S7 incurred 31 Aug 2023, demand 28 Feb 2025: not barred
+#ASSERT (`the payable part of` (`simple item` 600 600 (Date 31 8 2023)) `in a demand served on` (Date 28 2 2025)) EQUALS 600
+-- S8 demand 1 Mar 2025: barred
+#ASSERT (`the payable part of` (`simple item` 600 600 (Date 31 8 2023)) `in a demand served on` (Date 1 3 2025)) EQUALS 0
+-- S9 notice 28 Feb 2025 saves
+#ASSERT (`the payable part of` (`notified item` 600 600 (Date 31 8 2023) (Date 28 2 2025)) `in a demand served on` (Date 1 3 2025)) EQUALS 600
+-- S10 incurred 28 Aug 2023: period ends 27 Feb 2025, demand 28 Feb 2025 barred
+#ASSERT (`the payable part of` (`simple item` 600 600 (Date 28 8 2023)) `in a demand served on` (Date 28 2 2025)) EQUALS 0
+#ASSERT (`the payable part of` (`simple item` 600 600 (Date 28 8 2023)) `in a demand served on` (Date 27 2 2025)) EQUALS 600
+-- S11 incurred 29 Feb 2024: period ends 28 Aug 2025
+#ASSERT (`the payable part of` (`simple item` 600 600 (Date 29 2 2024)) `in a demand served on` (Date 28 8 2025)) EQUALS 600
+#ASSERT (`the payable part of` (`simple item` 600 600 (Date 29 2 2024)) `in a demand served on` (Date 29 8 2025)) EQUALS 0
+-- S12 incurred 30 Aug 2023: period ends 28 Feb 2025
+#ASSERT (`the payable part of` (`simple item` 600 600 (Date 30 8 2023)) `in a demand served on` (Date 28 2 2025)) EQUALS 600
+#ASSERT (`the payable part of` (`simple item` 600 600 (Date 30 8 2023)) `in a demand served on` (Date 1 3 2025)) EQUALS 0
+-- incurred 1 Mar 2023: period ends 31 Aug 2024
+#ASSERT (`the payable part of` (`simple item` 600 600 (Date 1 3 2023)) `in a demand served on` (Date 31 8 2024)) EQUALS 600
+#ASSERT (`the payable part of` (`simple item` 600 600 (Date 1 3 2023)) `in a demand served on` (Date 1 9 2024)) EQUALS 0
+-- S13 one stale item, one fresh
+#ASSERT `the service charge payable on` (`demand` (Date 1 3 2025) (LIST `simple item` 1000 1000 (Date 1 1 2023), `simple item` 500 500 (Date 1 1 2025)) TRUE) EQUALS 500
+-- S14 qualifying works, no consultation: capped at 250
+#ASSERT (`the payable part of` (`works item` 2000 2000 (Date 1 1 2025) TRUE 250) `in a demand served on` (Date 1 2 2025)) EQUALS 250
+-- S15/S16 consultation complied with or dispensed with
+#ASSERT (`the payable part of` (`works item` 2000 2000 (Date 1 1 2025) FALSE 250) `in a demand served on` (Date 1 2 2025)) EQUALS 2000
+-- S17 contribution equals the appropriate amount
+#ASSERT (`the payable part of` (`works item` 250 250 (Date 1 1 2025) TRUE 250) `in a demand served on` (Date 1 2 2025)) EQUALS 250
+-- S18 s 19 then s 20
+#ASSERT (`the payable part of` (`works item` 3000 2000 (Date 1 1 2025) TRUE 250) `in a demand served on` (Date 1 2 2025)) EQUALS 250
+-- S19 cap not binding
+#ASSERT (`the payable part of` (`works item` 300 200 (Date 1 1 2025) TRUE 250) `in a demand served on` (Date 1 2 2025)) EQUALS 200
+-- S20 qualifying works barred by s 20B
+#ASSERT (`the payable part of` (`works item` 2000 2000 (Date 1 1 2023) TRUE 250) `in a demand served on` (Date 1 3 2025)) EQUALS 0
+-- S21 ordinary item + capped works
+#ASSERT `the service charge payable on` (`demand` (Date 1 2 2025) (LIST `simple item` 400 400 (Date 1 1 2025), `works item` 2000 2000 (Date 1 1 2025) TRUE 250) TRUE) EQUALS 650
+-- S22 with summary: may not withhold
+#ASSERT NOT (`the tenant may withhold payment of` (`demand` (Date 1 2 2025) (LIST `simple item` 400 400 (Date 1 1 2025)) TRUE))
+-- S23 without summary: may withhold
+#ASSERT `the tenant may withhold payment of` (`demand` (Date 1 2 2025) (LIST `simple item` 400 400 (Date 1 1 2025)) FALSE)
+-- S24 no items
+#ASSERT `the service charge payable on` (`demand` (Date 1 2 2025) (LIST) TRUE) EQUALS 0
+
+§ `Goal 3 — information about the landlord`
+
+-- I1-I4 s 1(1): 21 days beginning with receipt
+#ASSERT `the last day to disclose the landlord's identity after a request received on` (Date 1 3 2025) EQUALS Date 21 3 2025
+#ASSERT `the last day to disclose the landlord's identity after a request received on` (Date 15 2 2024) EQUALS Date 6 3 2024
+#ASSERT `the last day to disclose the landlord's identity after a request received on` (Date 25 12 2025) EQUALS Date 14 1 2026
+#ASSERT `the last day to disclose the landlord's identity after a request received on` (Date 10 2 2025) EQUALS Date 2 3 2025
+-- A1 rent day within two months: end of the two months
+#ASSERT `the last day for notice of an assignment on` (Date 10 1 2025) `with next rent day` (Date 1 2 2025) EQUALS Date 10 3 2025
+-- A2 rent day on the corresponding date
+#ASSERT `the last day for notice of an assignment on` (Date 10 1 2025) `with next rent day` (Date 10 3 2025) EQUALS Date 10 3 2025
+-- A3 rent day the day after
+#ASSERT `the last day for notice of an assignment on` (Date 10 1 2025) `with next rent day` (Date 11 3 2025) EQUALS Date 11 3 2025
+-- A4
+#ASSERT `the last day for notice of an assignment on` (Date 10 1 2025) `with next rent day` (Date 1 6 2025) EQUALS Date 1 6 2025
+-- A5 assignment 31 Dec 2024: two months end 28 Feb 2025
+#ASSERT `the last day for notice of an assignment on` (Date 31 12 2024) `with next rent day` (Date 1 1 2025) EQUALS Date 28 2 2025
+-- A6
+#ASSERT `the last day for notice of an assignment on` (Date 31 12 2024) `with next rent day` (Date 1 3 2025) EQUALS Date 1 3 2025
+-- A7 leap year
+#ASSERT `the last day for notice of an assignment on` (Date 31 12 2023) `with next rent day` (Date 1 1 2024) EQUALS Date 29 2 2024
+-- A8
+#ASSERT `the last day for notice of an assignment on` (Date 31 12 2024) `with next rent day` (Date 28 2 2025) EQUALS Date 28 2 2025
+-- A9
+#ASSERT `the last day for notice of an assignment on` (Date 30 4 2025) `with next rent day` (Date 1 5 2025) EQUALS Date 30 6 2025
+-- L1 s 3(3B): whichever happens first
+#ASSERT `the end of the old landlord's liability under` (`notice facts` (JUST (Date 1 5 2025)) (JUST (Date 15 4 2025))) EQUALS JUST (Date 15 4 2025)
+#ASSERT `the end of the old landlord's liability under` (`notice facts` (JUST (Date 10 4 2025)) (JUST (Date 15 4 2025))) EQUALS JUST (Date 10 4 2025)
+-- L2 only the new landlord's notice
+#ASSERT `the end of the old landlord's liability under` (`notice facts` (JUST (Date 1 5 2025)) NOTHING) EQUALS JUST (Date 1 5 2025)
+-- only the old landlord's notice
+#ASSERT `the end of the old landlord's liability under` (`notice facts` NOTHING (JUST (Date 20 3 2025))) EQUALS JUST (Date 20 3 2025)
+-- L3 no notice
+#ASSERT `the end of the old landlord's liability under` (`notice facts` NOTHING NOTHING) EQUALS NOTHING
+-- P1-P3 s 22(2)
+#ASSERT `the last day to request inspection after a summary obtained on` (Date 15 3 2025) EQUALS Date 15 9 2025
+#ASSERT `the last day to request inspection after a summary obtained on` (Date 31 8 2025) EQUALS Date 28 2 2026
+#ASSERT `the last day to request inspection after a summary obtained on` (Date 31 8 2023) EQUALS Date 29 2 2024
+-- P4-P6 s 22(4)
+#ASSERT `the latest start of the inspection facilities after a request on` (Date 15 1 2025) EQUALS Date 15 2 2025
+#ASSERT `the latest start of the inspection facilities after a request on` (Date 31 1 2025) EQUALS Date 28 2 2025
+#ASSERT `the latest start of the inspection facilities after a request on` (Date 31 1 2024) EQUALS Date 29 2 2024
+
+§ `Top-level goal`
+
+GIVEN x IS A NUMBER
+GIVETH A `Lease case`
+`sample case` x MEANS
+    `Lease case` OF
+        (`plain lease` (Date 1 1 2020) (Date 31 12 2022)),
+        (JUST (`demand` (Date 1 3 2025) (LIST `simple item` 1000 1000 (Date 1 1 2023), `simple item` 500 400 (Date 1 1 2025)) FALSE)),
+        (`Landlord information facts` OF JUST (Date 1 3 2025), JUST (Date 31 12 2024), Date 1 1 2025, JUST (Date 1 2 2025), NOTHING, JUST (Date 31 8 2025), JUST (Date 31 1 2025))
+
+`sample position` MEANS `the lease position for` (`sample case` 0)
+
+#ASSERT `sample position`'s `repairing covenant implied (s 11)`
+#ASSERT `sample position`'s `fitness covenant implied (s 9A)`
+#ASSERT `sample position`'s `first day the fitness covenant bites` EQUALS JUST (Date 1 1 2020)
+#ASSERT `sample position`'s `service charge payable` EQUALS JUST 400
+#ASSERT `sample position`'s `service charge may be withheld` EQUALS JUST TRUE
+#ASSERT `sample position`'s `last day to disclose the landlord's identity` EQUALS JUST (Date 21 3 2025)
+#ASSERT `sample position`'s `last day for notice of the assignment` EQUALS JUST (Date 28 2 2025)
+#ASSERT `sample position`'s `end of the old landlord's liability` EQUALS JUST (Date 1 2 2025)
+#ASSERT `sample position`'s `last day to request inspection of accounts` EQUALS JUST (Date 28 2 2026)
+#ASSERT `sample position`'s `latest start of the inspection facilities` EQUALS JUST (Date 28 2 2025)
