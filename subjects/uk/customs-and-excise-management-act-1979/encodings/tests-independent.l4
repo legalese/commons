@@ -1,0 +1,241 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cema-types`
+IMPORT `cema-forfeiture`
+IMPORT `cema-penalties`
+IMPORT `cema-time-limits`
+IMPORT `cema-goal`
+
+-- Independent tests for the CEMA 1979 encoding. Expected values were fixed in
+-- independent-expectations.md from the Act and BRIEF.md before the encoding
+-- was read. Scenario ids (F1, C3, ...) refer to that file.
+
+-- helpers ---------------------------------------------------------------
+
+GIVEN sdate IS A DATE, pres IS A BOOLEAN, ownk IS A BOOLEAN, nsd IS A MAYBE DATE, ncl IS A MAYBE DATE, pfour IS A BOOLEAN
+GIVETH A `Seizure facts`
+mkSeizure sdate pres ownk nsd ncl pfour MEANS `Seizure facts` OF sdate, pres, ownk, nsd, ncl, pfour
+
+GIVEN knd IS A `Kind of goods`, val IS A NUMBER, kad IS A BOOLEAN, intn IS A BOOLEAN, kcon IS A BOOLEAN, corr IS A BOOLEAN, fsum IS A NUMBER
+GIVETH AN `Evasion facts`
+mkEvasion knd val kad intn kcon corr fsum MEANS `Evasion facts` OF knd, val, kad, intn, kcon, corr, fsum
+
+-- goods of a kind, value, guilty under s 170(1), fixed sum
+GIVEN knd IS A `Kind of goods`, val IS A NUMBER, fsum IS A NUMBER
+GIVETH A `Maximum penalties`
+pens knd val fsum MEANS `the maximum penalties under s 170 for` (mkEvasion knd val TRUE TRUE FALSE FALSE fsum)
+
+GIVEN cdate IS A DATE, ind IS A BOOLEAN, edate IS A DATE
+GIVETH A DATE
+lastDay cdate ind edate MEANS `the last day to commence proceedings for` (`Offence timing` OF cdate, ind, edate)
+
+-- seizure with no claim, owner known
+GIVEN sdate IS A DATE, nsd IS A MAYBE DATE
+GIVETH A DATE
+claimBy sdate nsd MEANS `the last day for a notice of claim for` (mkSeizure sdate FALSE TRUE nsd NOTHING TRUE)
+
+GIVEN sdate IS A DATE, nsd IS A MAYBE DATE, ncl IS A MAYBE DATE, pfour IS A BOOLEAN
+GIVETH A `Condemnation outcome`
+outcome sdate nsd ncl pfour MEANS `the condemnation outcome for` (mkSeizure sdate FALSE TRUE nsd ncl pfour)
+
+-- Goal 1: notice of seizure (Sch 3 para 1) -------------------------------
+
+-- F1 nobody present, owner known: notice required
+#ASSERT `notice of seizure must be given for` (mkSeizure (Date 10 3 2025) FALSE TRUE NOTHING NOTHING TRUE)
+-- F2-F7, F9, F11 a qualifying person present: not required
+#ASSERT NOT (`notice of seizure must be given for` (mkSeizure (Date 10 3 2025) TRUE TRUE NOTHING NOTHING TRUE))
+-- para 1(1): notice only to an owner known to the Commissioners
+#ASSERT NOT (`notice of seizure must be given for` (mkSeizure (Date 10 3 2025) FALSE FALSE NOTHING NOTHING TRUE))
+
+-- Goal 1: last day for a notice of claim (Sch 3 para 3) -----------------
+
+-- C1 runs from the notice of seizure
+#ASSERT claimBy (Date 10 3 2025) (JUST (Date 15 3 2025)) EQUALS Date 15 4 2025
+-- C2 no notice: from the seizure
+#ASSERT claimBy (Date 10 3 2025) NOTHING EQUALS Date 10 4 2025
+-- C3 31 Jan non-leap
+#ASSERT claimBy (Date 20 1 2025) (JUST (Date 31 1 2025)) EQUALS Date 28 2 2025
+-- C4 31 Jan leap
+#ASSERT claimBy (Date 20 1 2024) (JUST (Date 31 1 2024)) EQUALS Date 29 2 2024
+-- C5
+#ASSERT claimBy (Date 31 1 2023) NOTHING EQUALS Date 28 2 2023
+-- C6
+#ASSERT claimBy (Date 30 1 2024) NOTHING EQUALS Date 29 2 2024
+-- C7
+#ASSERT claimBy (Date 25 3 2025) (JUST (Date 31 3 2025)) EQUALS Date 30 4 2025
+-- C8
+#ASSERT claimBy (Date 10 12 2025) (JUST (Date 15 12 2025)) EQUALS Date 15 1 2026
+-- C9
+#ASSERT claimBy (Date 30 8 2025) (JUST (Date 31 8 2025)) EQUALS Date 30 9 2025
+-- C10
+#ASSERT claimBy (Date 29 2 2024) NOTHING EQUALS Date 29 3 2024
+
+-- Goal 1: deemed condemnation or proceedings (paras 5, 6) ---------------
+
+-- D1 claim on the last day, para 4 met: proceedings
+#ASSERT outcome (Date 10 3 2025) (JUST (Date 15 3 2025)) (JUST (Date 15 4 2025)) TRUE EQUALS `the Commissioners must take condemnation proceedings`
+-- D2 claim the day after: deemed condemned
+#ASSERT outcome (Date 10 3 2025) (JUST (Date 15 3 2025)) (JUST (Date 16 4 2025)) TRUE EQUALS `deemed condemned as forfeited`
+-- D3 no claim
+#ASSERT outcome (Date 10 3 2025) (JUST (Date 15 3 2025)) NOTHING TRUE EQUALS `deemed condemned as forfeited`
+-- D4 in time, para 4 not met
+#ASSERT outcome (Date 10 3 2025) (JUST (Date 15 3 2025)) (JUST (Date 1 4 2025)) FALSE EQUALS `deemed condemned as forfeited`
+-- D5 no notice, seizure 31 Jan, claim 28 Feb
+#ASSERT outcome (Date 31 1 2025) NOTHING (JUST (Date 28 2 2025)) TRUE EQUALS `the Commissioners must take condemnation proceedings`
+-- D6 no notice, seizure 31 Jan, claim 1 Mar
+#ASSERT outcome (Date 31 1 2025) NOTHING (JUST (Date 1 3 2025)) TRUE EQUALS `deemed condemned as forfeited`
+-- D7 leap
+#ASSERT outcome (Date 20 1 2024) (JUST (Date 31 1 2024)) (JUST (Date 29 2 2024)) TRUE EQUALS `the Commissioners must take condemnation proceedings`
+-- D8 claim before the notice is served
+#ASSERT outcome (Date 10 3 2025) (JUST (Date 15 3 2025)) (JUST (Date 10 3 2025)) TRUE EQUALS `the Commissioners must take condemnation proceedings`
+-- D9 late and para 4 not met
+#ASSERT outcome (Date 10 3 2025) (JUST (Date 15 3 2025)) (JUST (Date 20 4 2025)) FALSE EQUALS `deemed condemned as forfeited`
+
+-- Goal 2: the offence (s 170(1), (2), (5)) ------------------------------
+
+-- O1 / O4 / O5 knowingly acquires or deals, with intent
+#ASSERT `an offence under s 170 is made out by` (mkEvasion `ordinary goods` 1000 TRUE TRUE FALSE FALSE 20000)
+-- O2 no intent
+#ASSERT NOT (`an offence under s 170 is made out by` (mkEvasion `ordinary goods` 1000 TRUE FALSE FALSE FALSE 20000))
+-- O3 intent but not knowing
+#ASSERT NOT (`an offence under s 170 is made out by` (mkEvasion `ordinary goods` 1000 FALSE TRUE FALSE FALSE 20000))
+-- O6 / O7 / O11 knowingly concerned in fraudulent evasion or attempt
+#ASSERT `an offence under s 170 is made out by` (mkEvasion `ordinary goods` 1000 FALSE FALSE TRUE FALSE 20000)
+-- O8 s 170(5) corresponding offence with its own penalty
+#ASSERT NOT (`an offence under s 170 is made out by` (mkEvasion `ordinary goods` 1000 FALSE FALSE TRUE TRUE 20000))
+#ASSERT NOT (`an offence under s 170 is made out by` (mkEvasion `ordinary goods` 1000 TRUE TRUE FALSE TRUE 20000))
+-- O10 nothing knowing
+#ASSERT NOT (`an offence under s 170 is made out by` (mkEvasion `ordinary goods` 1000 FALSE FALSE FALSE FALSE 20000))
+
+-- Goal 2: maximum penalties (s 170(3)-(4B), Sch 1) ----------------------
+
+-- P1 ordinary, 3 x 5,000 < 20,000
+p1 MEANS pens `ordinary goods` 5000 20000
+#ASSERT p1's `summary penalty` EQUALS 20000
+#ASSERT p1's `summary imprisonment, months` EQUALS 6
+#ASSERT p1's `penalty on indictment` EQUALS NOTHING
+#ASSERT p1's `imprisonment on indictment` EQUALS `imprisonment for months` 168
+-- P2 ordinary, 3 x 10,000 beats 20,000
+p2 MEANS pens `ordinary goods` 10000 20000
+#ASSERT p2's `summary penalty` EQUALS 30000
+-- P3
+p3 MEANS pens `ordinary goods` 8000 20000
+#ASSERT p3's `summary penalty` EQUALS 24000
+-- P4 fixed sum 1,000
+p4 MEANS pens `ordinary goods` 1000 1000
+#ASSERT p4's `summary penalty` EQUALS 3000
+-- P5 value nil
+p5 MEANS pens `ordinary goods` 0 20000
+#ASSERT p5's `summary penalty` EQUALS 20000
+-- P6 Class A, high value
+p6 MEANS pens `a Class A drug` 100000 20000
+#ASSERT p6's `summary penalty` EQUALS 300000
+#ASSERT p6's `summary imprisonment, months` EQUALS 6
+#ASSERT p6's `penalty on indictment` EQUALS NOTHING
+#ASSERT p6's `imprisonment on indictment` EQUALS `imprisonment for life`
+-- P7 Class A, low value
+p7 MEANS pens `a Class A drug` 2000 20000
+#ASSERT p7's `summary penalty` EQUALS 20000
+#ASSERT p7's `imprisonment on indictment` EQUALS `imprisonment for life`
+-- P8 Class B
+p8 MEANS pens `a Class B drug or temporary class drug` 50000 20000
+#ASSERT p8's `summary penalty` EQUALS 150000
+#ASSERT p8's `summary imprisonment, months` EQUALS 6
+#ASSERT p8's `imprisonment on indictment` EQUALS `imprisonment for months` 168
+-- P9 temporary class drug, low value
+p9 MEANS pens `a Class B drug or temporary class drug` 1000 20000
+#ASSERT p9's `summary penalty` EQUALS 20000
+-- P10 Class C, £500 floor
+p10 MEANS pens `a Class C drug` 100 20000
+#ASSERT p10's `summary penalty` EQUALS 500
+#ASSERT p10's `summary imprisonment, months` EQUALS 3
+#ASSERT p10's `penalty on indictment` EQUALS NOTHING
+#ASSERT p10's `imprisonment on indictment` EQUALS `imprisonment for months` 168
+-- P11
+p11 MEANS pens `a Class C drug` 200 20000
+#ASSERT p11's `summary penalty` EQUALS 600
+-- P12
+p12 MEANS pens `a Class C drug` 10000 20000
+#ASSERT p12's `summary penalty` EQUALS 30000
+-- P13 Class C ignores the fixed sum
+p13 MEANS pens `a Class C drug` 1000 20000
+#ASSERT p13's `summary penalty` EQUALS 3000
+-- P14
+p14 MEANS pens `a Class C drug` 0 20000
+#ASSERT p14's `summary penalty` EQUALS 500
+-- P15 s 170(4A) weapons
+p15 MEANS pens `a prohibited weapon within s 170(4A)` 1000 20000
+#ASSERT p15's `summary penalty` EQUALS 20000
+#ASSERT p15's `summary imprisonment, months` EQUALS 6
+#ASSERT p15's `imprisonment on indictment` EQUALS `imprisonment for life`
+-- P16
+p16 MEANS pens `a prohibited weapon within s 170(4A)` 50000 20000
+#ASSERT p16's `summary penalty` EQUALS 150000
+-- P17 seal skins, fixed sum only
+p17 MEANS pens `seal skins` 100000 20000
+#ASSERT p17's `summary penalty` EQUALS 20000
+#ASSERT p17's `summary imprisonment, months` EQUALS 3
+#ASSERT p17's `penalty on indictment` EQUALS NOTHING
+#ASSERT p17's `imprisonment on indictment` EQUALS `imprisonment for months` 24
+-- P18
+p18 MEANS pens `seal skins` 1000 20000
+#ASSERT p18's `summary penalty` EQUALS 20000
+-- P19 s 149(1)
+#ASSERT `the maximum aggregate imprisonment on summary conviction and default, months` EQUALS 15
+
+-- Goal 3: time limits (s 146A) -----------------------------------------
+
+-- T1-T6 indictable, 20 years
+#ASSERT lastDay (Date 1 3 2010) TRUE (Date 1 3 2010) EQUALS Date 28 2 2030
+#ASSERT lastDay (Date 15 6 2005) TRUE (Date 15 6 2005) EQUALS Date 14 6 2025
+#ASSERT lastDay (Date 1 1 2000) TRUE (Date 1 1 2000) EQUALS Date 31 12 2019
+#ASSERT lastDay (Date 29 2 2004) TRUE (Date 29 2 2004) EQUALS Date 28 2 2024
+#ASSERT lastDay (Date 29 2 2000) TRUE (Date 29 2 2000) EQUALS Date 28 2 2020
+#ASSERT lastDay (Date 1 3 2004) TRUE (Date 1 3 2004) EQUALS Date 29 2 2024
+-- S1 six months earlier
+#ASSERT lastDay (Date 1 1 2020) FALSE (Date 1 3 2020) EQUALS Date 1 9 2020
+-- S2 three years earlier
+#ASSERT lastDay (Date 1 1 2020) FALSE (Date 1 10 2022) EQUALS Date 31 12 2022
+-- S3
+#ASSERT lastDay (Date 1 1 2020) FALSE (Date 30 6 2022) EQUALS Date 30 12 2022
+-- S4
+#ASSERT lastDay (Date 1 1 2020) FALSE (Date 1 7 2022) EQUALS Date 31 12 2022
+-- S5 clamp to 29 Feb
+#ASSERT lastDay (Date 10 5 2021) FALSE (Date 31 8 2023) EQUALS Date 29 2 2024
+-- S6 clamp to 28 Feb
+#ASSERT lastDay (Date 10 5 2021) FALSE (Date 31 8 2022) EQUALS Date 28 2 2023
+-- S7
+#ASSERT lastDay (Date 1 3 2021) FALSE (Date 1 9 2023) EQUALS Date 29 2 2024
+-- S8 offence on 29 Feb (ambiguity 3)
+#ASSERT lastDay (Date 29 2 2020) FALSE (Date 15 12 2022) EQUALS Date 28 2 2023
+-- S9
+#ASSERT lastDay (Date 1 1 2020) FALSE (Date 1 1 2020) EQUALS Date 1 7 2020
+-- S10 evidence after the 3 years
+#ASSERT lastDay (Date 1 1 2020) FALSE (Date 1 2 2023) EQUALS Date 31 12 2022
+-- S11
+#ASSERT lastDay (Date 31 3 2019) FALSE (Date 31 8 2019) EQUALS Date 29 2 2020
+
+-- Top-level goal ---------------------------------------------------------
+
+GIVEN ev IS AN `Evasion facts`
+GIVETH A `Customs position`
+posFor ev MEANS `the customs position for` (`Customs case` OF NOTHING, JUST ev, NOTHING)
+
+-- no offence: no penalties
+g1 MEANS posFor (mkEvasion `ordinary goods` 1000 TRUE FALSE FALSE FALSE 20000)
+#ASSERT g1's `offence under s 170` EQUALS JUST FALSE
+#ASSERT g1's `maximum penalties` EQUALS NOTHING
+#ASSERT g1's `notice of seizure required` EQUALS NOTHING
+
+-- full case
+fullCase MEANS
+  `Customs case` OF
+    (JUST (mkSeizure (Date 31 1 2024) FALSE TRUE NOTHING (JUST (Date 29 2 2024)) TRUE)),
+    (JUST (mkEvasion `a Class C drug` 100 FALSE FALSE TRUE FALSE 20000)),
+    (JUST (`Offence timing` OF (Date 31 3 2019), FALSE, (Date 31 8 2019)))
+g2 MEANS `the customs position for` fullCase
+#ASSERT g2's `notice of seizure required` EQUALS JUST TRUE
+#ASSERT g2's `last day for a notice of claim` EQUALS JUST (Date 29 2 2024)
+#ASSERT g2's `condemnation outcome` EQUALS JUST `the Commissioners must take condemnation proceedings`
+#ASSERT g2's `offence under s 170` EQUALS JUST TRUE
+#ASSERT g2's `last day to commence proceedings` EQUALS JUST (Date 29 2 2020)
