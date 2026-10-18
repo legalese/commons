@@ -52,7 +52,6 @@ As the user asked, this covers only the sections those goals need. The Act has n
 - **F5, para 2(b).** The premiums the insurer need not return are all of them except any part it would be unfair to keep, which is an input amount.
 - **F6, para 9.** The notice and termination rights are given only for a careless misrepresentation where para 6 or 7 would apply, so not where the insurer would not have contracted at all (para 5 already lets it avoid). Termination is barred for contracts wholly or mainly of life insurance (para 9(5)).
 - **F7, no rounding.** The proportionate reduction is not rounded. The Act states none.
-
 - **F8, para 9(6).** After the insurer's notice under 9(4)(a), the consumer may terminate. The life-insurance bar does not apply to this. This was added after the independent pass. Paras 9(7)-(8) are not computed.
 - **F9, commencement (s 12(2)-(4)).** The Act does not name its commencement day (an order fixed it), so "entered into after the Act came into force" is an input.
 - **F10, the exported helpers.** `is a qualifying misrepresentation …` and `the insurer's remedy for …` do not check that the Act applies; only the top-level goal does.
