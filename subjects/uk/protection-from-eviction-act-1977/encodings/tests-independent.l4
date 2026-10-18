@@ -1,0 +1,379 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `pea-types`
+IMPORT `pea-eviction`
+IMPORT `pea-notice-to-quit`
+IMPORT `pea-penalty`
+IMPORT `pea-goal`
+
+-- Independent tests for the Protection from Eviction Act 1977 encoding.
+-- Expected values were fixed in independent-expectations.md from the Act and
+-- the brief before the encoding was read. Scenario ids (E, N, P, D) refer to
+-- that file. A failing assertion is a finding; expected values are not to be
+-- edited to match the code.
+
+§ `Helpers`
+
+noExcl MEANS `Exclusion facts` OF FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE
+
+-- one exclusion at a time, by position 1..8 in `Exclusion facts`
+GIVEN i IS A NUMBER
+GIVETH AN `Exclusion facts`
+exclAt i MEANS
+    `Exclusion facts` OF (i EQUALS 1), (i EQUALS 2), (i EQUALS 3), (i EQUALS 4), (i EQUALS 5), (i EQUALS 6), (i EQUALS 7), (i EQUALS 8)
+
+-- a dwelling occupancy, not statutorily protected, no forfeiture clause
+GIVEN k IS A `Kind of occupancy`
+      pre IS A BOOLEAN
+      ex IS AN `Exclusion facts`
+      ended IS A BOOLEAN
+      resides IS A BOOLEAN
+GIVETH AN `Occupancy`
+mkOcc k pre ex ended resides MEANS
+    `Occupancy` OF k, TRUE, FALSE, pre, ex, ended, resides, FALSE, FALSE
+
+GIVEN k IS A `Kind of occupancy`
+      ex IS AN `Exclusion facts`
+GIVETH AN `Occupancy`
+endedOcc k ex MEANS mkOcc k FALSE ex TRUE TRUE
+
+GIVETH AN `Occupancy`
+protectedOcc MEANS `Occupancy` OF `a tenancy`, TRUE, TRUE, FALSE, noExcl, TRUE, TRUE, FALSE, FALSE
+
+GIVEN residing IS A BOOLEAN
+GIVETH AN `Occupancy`
+forfeitOcc residing MEANS `Occupancy` OF `a tenancy`, TRUE, FALSE, FALSE, noExcl, FALSE, residing, TRUE, residing
+
+GIVEN o IS AN `Occupancy`
+GIVETH A BOOLEAN
+court o MEANS `court proceedings are required to recover possession from` o
+
+-- notices
+GIVEN v IS A `Section 5 version`
+      who IS A `Who gives notice`
+      periodic IS A BOOLEAN
+      written IS A BOOLEAN
+      g IS A DATE
+      e IS A DATE
+      assured IS A BOOLEAN
+      agreed IS A MAYBE NUMBER
+      allT IS A BOOLEAN
+GIVETH A `Notice to quit`
+mkN v who periodic written g e assured agreed allT MEANS
+    `Notice to quit` OF v, who, periodic, written, g, e, assured, agreed, allT, FALSE
+
+orig MEANS `before the Renters' Rights Act 2025`
+rra MEANS `as amended by the Renters' Rights Act 2025`
+tenantN MEANS `the tenant or licensee`
+landlordN MEANS `the landlord or licensor`
+
+plainTenancy MEANS endedOcc `a tenancy` noExcl
+plainLicence MEANS endedOcc `a licence` noExcl
+
+-- tenant's notice under an assured tenancy, RRA version, given g, effect e
+GIVEN g IS A DATE
+      e IS A DATE
+      agreed IS A MAYBE NUMBER
+      allT IS A BOOLEAN
+GIVETH A `Notice to quit`
+assuredN g e agreed allT MEANS mkN rra tenantN FALSE TRUE g e TRUE agreed allT
+
+GIVEN o IS AN `Occupancy`
+      n IS A `Notice to quit`
+GIVETH A DATE
+earliest o n MEANS `the earliest day the notice can take effect for` o `and` n
+
+GIVEN o IS AN `Occupancy`
+      n IS A `Notice to quit`
+GIVETH A BOOLEAN
+meets o n MEANS `the notice meets s 5 for` o `and` n
+
+GIVEN o IS AN `Occupancy`
+      n IS A `Notice to quit`
+GIVETH A BOOLEAN
+applies o n MEANS `s 5 applies to` o `and` n
+
+-- original-version tenant's notice on a plain tenancy given g
+GIVEN g IS A DATE
+      e IS A DATE
+GIVETH A `Notice to quit`
+origN g e MEANS mkN orig tenantN FALSE TRUE g e FALSE NOTHING FALSE
+
+-- conduct: residential occupier, deprived, belief, acts, services, intent, landlord, knew, grounds
+GIVEN c IS A `Conduct`
+GIVETH A BOOLEAN
+offence c MEANS `an offence under s 1 is made out by` c
+
+eviction MEANS `Conduct` OF TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE
+
+-- penalty facts
+GIVEN eng IS A BOOLEAN
+      brd IS A BOOLEAN
+      conv IS A BOOLEAN
+      pend IS A BOOLEAN
+      acq IS A BOOLEAN
+GIVETH A `Penalty facts`
+pf eng brd conv pend acq MEANS
+    `Penalty facts` OF eng, brd, conv, pend, acq, (Date 1 3 2027), FALSE, NOTHING, NOTHING, NOTHING
+
+GIVEN c IS A `Conduct`
+      p IS A `Penalty facts`
+GIVETH A BOOLEAN
+penalty c p MEANS `a financial penalty may be imposed for` c `with` p
+
+GIVEN first IS A DATE
+      cont IS A BOOLEAN
+      lastc IS A MAYBE DATE
+      noi IS A MAYBE DATE
+      fin IS A MAYBE DATE
+GIVETH A `Penalty dates`
+dates first cont lastc noi fin MEANS
+    `the penalty dates for` pfx
+    WHERE
+        pfx MEANS `Penalty facts` OF TRUE, TRUE, FALSE, FALSE, FALSE, first, cont, lastc, noi, fin
+
+GIVEN first IS A DATE
+GIVETH A MAYBE DATE
+noiLast first MEANS
+    pd's `last day for the notice of intent`
+    WHERE
+        pd MEANS dates first FALSE NOTHING NOTHING NOTHING
+
+GIVEN noi IS A DATE
+GIVETH A `Penalty dates`
+afterNoi noi MEANS dates (Date 1 1 2027) FALSE NOTHING (JUST noi) NOTHING
+
+GIVEN fin IS A DATE
+GIVETH A `Penalty dates`
+afterFinal fin MEANS dates (Date 1 1 2027) FALSE NOTHING NOTHING (JUST fin)
+
+§ `Goal 1 — court proceedings`
+
+-- E1
+#ASSERT court plainTenancy
+-- E2
+#ASSERT NOT (court (mkOcc `a tenancy` FALSE noExcl TRUE FALSE))
+-- E3
+#ASSERT NOT (court (mkOcc `a tenancy` FALSE noExcl FALSE TRUE))
+-- E4-E6 (statutorily protected: not required under s 3)
+#ASSERT NOT (court protectedOcc)
+-- E7 resident landlord sharing (s 3A(2))
+#ASSERT NOT (court (endedOcc `a tenancy` (exclAt 1)))
+#ASSERT `is excluded` (endedOcc `a tenancy` (exclAt 1))
+-- E10 family member + landlord in building (s 3A(3))
+#ASSERT NOT (court (endedOcc `a tenancy` (exclAt 2)))
+-- E13 trespasser
+#ASSERT NOT (court (endedOcc `a tenancy` (exclAt 3)))
+-- E14 holiday
+#ASSERT NOT (court (endedOcc `a tenancy` (exclAt 4)))
+-- E15 not for money
+#ASSERT NOT (court (endedOcc `a licence` (exclAt 5)))
+-- E16 asylum
+#ASSERT NOT (court (endedOcc `a tenancy` (exclAt 6)))
+-- E17 immigration-barred RTA
+#ASSERT NOT (court (endedOcc `a tenancy` (exclAt 7)))
+-- E18 (condition not met -> boolean false -> plain tenancy)
+#ASSERT court (endedOcc `a tenancy` noExcl)
+-- E19 hostel licence from listed body
+#ASSERT NOT (court (endedOcc `a licence` (exclAt 8)))
+#ASSERT `is excluded` (endedOcc `a licence` (exclAt 8))
+-- E20 hostel tenancy: (8) excludes licences only
+#ASSERT court (endedOcc `a tenancy` (exclAt 8))
+#ASSERT NOT (`is excluded` (endedOcc `a tenancy` (exclAt 8)))
+-- E21 non-listed hostel provider -> boolean false
+#ASSERT court plainLicence
+-- E22/E23 pre-1989 resident-landlord tenancy: (2C) saving
+#ASSERT court (mkOcc `a tenancy` TRUE (exclAt 1) TRUE TRUE)
+#ASSERT NOT (`is excluded` (mkOcc `a tenancy` TRUE (exclAt 1) TRUE TRUE))
+-- E25 rent varied after 1989 -> treated as new -> pre-1988 flag FALSE -> excluded
+#ASSERT NOT (court (mkOcc `a tenancy` FALSE (exclAt 1) TRUE TRUE))
+-- E27 licence, not excluded
+#ASSERT court plainLicence
+-- E28 pre-1989 excluded licence stays excluded (R6)
+#ASSERT NOT (court (mkOcc `a licence` TRUE (exclAt 1) TRUE TRUE))
+#ASSERT `is excluded` (mkOcc `a licence` TRUE (exclAt 1) TRUE TRUE)
+-- E29 service occupier deemed tenant (s 8(2))
+#ASSERT court (endedOcc `exclusive possession under employment` noExcl)
+-- E30 forfeiture with someone lawfully residing (s 2)
+#ASSERT court (forfeitOcc TRUE)
+-- E31 forfeiture, nobody residing
+#ASSERT NOT (court (forfeitOcc FALSE))
+-- E30 also when the letting is statutorily protected (s 2 does not care)
+#ASSERT court (`Occupancy` OF `a tenancy`, TRUE, TRUE, FALSE, noExcl, FALSE, TRUE, TRUE, TRUE)
+
+§ `Goal 2 — notices to quit`
+
+-- N1-N5 original version, 4 weeks
+#ASSERT earliest plainTenancy (origN (Date 1 2 2027) (Date 1 3 2027)) EQUALS Date 1 3 2027
+#ASSERT earliest plainTenancy (origN (Date 1 2 2028) (Date 1 3 2028)) EQUALS Date 29 2 2028
+#ASSERT earliest plainTenancy (origN (Date 10 2 2028) (Date 1 4 2028)) EQUALS Date 9 3 2028
+#ASSERT earliest plainTenancy (origN (Date 10 2 2027) (Date 1 4 2027)) EQUALS Date 10 3 2027
+#ASSERT earliest plainTenancy (origN (Date 15 12 2026) (Date 1 2 2027)) EQUALS Date 12 1 2027
+-- original version, assured tenancy, tenant: still 4 weeks
+#ASSERT earliest plainTenancy (mkN orig tenantN FALSE TRUE (Date 1 2 2027) (Date 1 3 2027) TRUE NOTHING FALSE) EQUALS Date 1 3 2027
+-- N6, N7
+#ASSERT NOT (meets plainTenancy (origN (Date 1 1 2027) (Date 28 1 2027)))
+#ASSERT meets plainTenancy (origN (Date 1 1 2027) (Date 29 1 2027))
+-- N8/N9 not in writing / no prescribed information
+#ASSERT NOT (meets plainTenancy (mkN orig tenantN FALSE FALSE (Date 1 1 2027) (Date 1 3 2027) FALSE NOTHING FALSE))
+-- N10-N16, N36, N37 RRA, two months, no agreement
+#ASSERT earliest plainTenancy (assuredN (Date 31 12 2026) (Date 1 4 2027) NOTHING FALSE) EQUALS Date 28 2 2027
+#ASSERT earliest plainTenancy (assuredN (Date 31 12 2027) (Date 1 4 2028) NOTHING FALSE) EQUALS Date 29 2 2028
+#ASSERT earliest plainTenancy (assuredN (Date 30 12 2027) (Date 1 4 2028) NOTHING FALSE) EQUALS Date 29 2 2028
+#ASSERT earliest plainTenancy (assuredN (Date 29 12 2026) (Date 1 4 2027) NOTHING FALSE) EQUALS Date 28 2 2027
+#ASSERT earliest plainTenancy (assuredN (Date 31 7 2027) (Date 1 11 2027) NOTHING FALSE) EQUALS Date 30 9 2027
+#ASSERT earliest plainTenancy (assuredN (Date 15 3 2027) (Date 1 6 2027) NOTHING FALSE) EQUALS Date 15 5 2027
+#ASSERT earliest plainTenancy (assuredN (Date 29 2 2028) (Date 1 6 2028) NOTHING FALSE) EQUALS Date 29 4 2028
+#ASSERT earliest plainTenancy (assuredN (Date 30 4 2027) (Date 1 8 2027) NOTHING FALSE) EQUALS Date 30 6 2027
+#ASSERT earliest plainTenancy (assuredN (Date 31 10 2026) (Date 1 2 2027) NOTHING FALSE) EQUALS Date 31 12 2026
+-- N17, N18
+#ASSERT NOT (meets plainTenancy (assuredN (Date 31 12 2026) (Date 27 2 2027) NOTHING FALSE))
+#ASSERT meets plainTenancy (assuredN (Date 31 12 2026) (Date 28 2 2027) NOTHING FALSE)
+-- N12 validity edge: 28 Feb 2028 is a day short
+#ASSERT NOT (meets plainTenancy (assuredN (Date 30 12 2027) (Date 28 2 2028) NOTHING FALSE))
+-- N19d, N20d agreed 30 days (sole tenant = all tenants)
+#ASSERT earliest plainTenancy (assuredN (Date 31 1 2027) (Date 1 4 2027) (JUST 30) TRUE) EQUALS Date 2 3 2027
+#ASSERT earliest plainTenancy (assuredN (Date 15 3 2027) (Date 1 6 2027) (JUST 30) TRUE) EQUALS Date 14 4 2027
+#ASSERT meets plainTenancy (assuredN (Date 15 3 2027) (Date 14 4 2027) (JUST 30) TRUE)
+-- N21d joint, not all tenants agreed (1ZB)
+#ASSERT earliest plainTenancy (assuredN (Date 15 3 2027) (Date 1 6 2027) (JUST 30) FALSE) EQUALS Date 15 5 2027
+#ASSERT NOT (meets plainTenancy (assuredN (Date 15 3 2027) (Date 14 4 2027) (JUST 30) FALSE))
+-- N22d joint, all agreed
+#ASSERT earliest plainTenancy (assuredN (Date 15 3 2027) (Date 1 6 2027) (JUST 30) TRUE) EQUALS Date 14 4 2027
+-- N24d agreed more than two months -> two months (R5)
+#ASSERT earliest plainTenancy (assuredN (Date 15 3 2027) (Date 1 7 2027) (JUST 70) TRUE) EQUALS Date 15 5 2027
+-- N24e exactly two months
+#ASSERT earliest plainTenancy (assuredN (Date 15 3 2027) (Date 1 7 2027) (JUST 61) TRUE) EQUALS Date 15 5 2027
+-- N24f 59 days from 31 Dec 2026 = 28 Feb 2027
+#ASSERT earliest plainTenancy (assuredN (Date 31 12 2026) (Date 1 7 2027) (JUST 59) TRUE) EQUALS Date 28 2 2027
+-- N26 landlord, non-assured tenancy, RRA
+#ASSERT earliest plainTenancy (mkN rra landlordN FALSE TRUE (Date 1 2 2027) (Date 1 3 2027) FALSE NOTHING FALSE) EQUALS Date 1 3 2027
+-- N27 tenant, non-assured, RRA
+#ASSERT earliest plainTenancy (mkN rra tenantN FALSE TRUE (Date 1 2 2027) (Date 1 3 2027) FALSE NOTHING FALSE) EQUALS Date 1 3 2027
+-- N28 landlord, assured, RRA -> (1ZA)(b)
+#ASSERT earliest plainTenancy (mkN rra landlordN FALSE TRUE (Date 1 2 2027) (Date 1 3 2027) TRUE NOTHING FALSE) EQUALS Date 1 3 2027
+-- N29 periodic licence, both versions, 4 weeks
+#ASSERT earliest plainLicence (mkN orig landlordN TRUE TRUE (Date 1 2 2028) (Date 1 3 2028) FALSE NOTHING FALSE) EQUALS Date 29 2 2028
+#ASSERT earliest plainLicence (mkN rra landlordN TRUE TRUE (Date 1 2 2028) (Date 1 3 2028) FALSE NOTHING FALSE) EQUALS Date 29 2 2028
+#ASSERT applies plainLicence (mkN rra landlordN TRUE TRUE (Date 1 2 2028) (Date 1 3 2028) FALSE NOTHING FALSE)
+-- N30 fixed-term licence: s 5(1A) not engaged
+#ASSERT NOT (applies plainLicence (mkN rra landlordN FALSE TRUE (Date 1 2 2028) (Date 1 3 2028) FALSE NOTHING FALSE))
+-- N31 excluded tenancy entered after 1989
+#ASSERT NOT (applies (endedOcc `a tenancy` (exclAt 1)) (origN (Date 1 2 2027) (Date 2 2 2027)))
+-- N32/N33 excluded tenancy entered before 1989 (or under earlier contract): s 5 applies
+#ASSERT applies (mkOcc `a tenancy` TRUE (exclAt 1) TRUE TRUE) (origN (Date 1 2 2027) (Date 2 2 2027))
+#ASSERT NOT (meets (mkOcc `a tenancy` TRUE (exclAt 1) TRUE TRUE) (origN (Date 1 2 2027) (Date 2 2 2027)))
+-- N34 excluded licence, even pre-1989
+#ASSERT NOT (applies (mkOcc `a licence` TRUE (exclAt 1) TRUE TRUE) (mkN orig landlordN TRUE TRUE (Date 1 2 2027) (Date 2 2 2027) FALSE NOTHING FALSE))
+-- N35 Wales occupation contract
+#ASSERT NOT (applies plainTenancy (`Notice to quit` OF orig, tenantN, FALSE, TRUE, (Date 1 2 2027), (Date 2 2 2027), FALSE, NOTHING, FALSE, TRUE))
+-- N38 service occupier (s 8(2) deeming is for Part I only), not a periodic licence
+#ASSERT NOT (applies (endedOcc `exclusive possession under employment` noExcl) (origN (Date 1 2 2027) (Date 2 2 2027)))
+
+§ `Goal 3 — offences`
+
+-- P1/P2 unlawful deprivation (or attempt)
+#ASSERT offence eviction
+-- P3 belief + reasonable cause proved
+#ASSERT NOT (offence (`Conduct` OF TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
+-- P5/P6 acts + intent (non-landlord)
+#ASSERT offence (`Conduct` OF TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE)
+-- P7 acts, no intent, not landlord
+#ASSERT NOT (offence (`Conduct` OF TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))
+-- P8 withholding services with intent
+#ASSERT offence (`Conduct` OF TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE)
+-- P9/P12 landlord or agent, knowledge, no intent
+#ASSERT offence (`Conduct` OF TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE)
+-- P10 (3B) reasonable grounds proved
+#ASSERT NOT (offence (`Conduct` OF TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE))
+-- (3B) is no defence to s 1(3) where intent is shown
+#ASSERT offence (`Conduct` OF TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE)
+-- P11 stranger with knowledge but no intent
+#ASSERT NOT (offence (`Conduct` OF TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE))
+-- P13 landlord without knowledge or reasonable cause
+#ASSERT NOT (offence (`Conduct` OF TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE))
+
+§ `Goal 3 — penalty`
+
+-- P14
+#ASSERT penalty eviction (pf TRUE TRUE FALSE FALSE FALSE)
+-- P15 not satisfied beyond reasonable doubt
+#ASSERT NOT (penalty eviction (pf TRUE FALSE FALSE FALSE FALSE))
+-- P16 Wales
+#ASSERT NOT (penalty eviction (pf FALSE TRUE FALSE FALSE FALSE))
+-- P17-P19
+#ASSERT NOT (penalty eviction (pf TRUE TRUE TRUE FALSE FALSE))
+#ASSERT NOT (penalty eviction (pf TRUE TRUE FALSE TRUE FALSE))
+#ASSERT NOT (penalty eviction (pf TRUE TRUE FALSE FALSE TRUE))
+-- P24 no offence
+#ASSERT NOT (penalty (`Conduct` OF TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) (pf TRUE TRUE FALSE FALSE FALSE))
+-- P20
+#ASSERT `the maximum financial penalty` EQUALS 40000
+
+§ `Goal 3 — Schedule A1 dates`
+
+-- D1-D10 para 1(1)
+#ASSERT noiLast (Date 15 1 2027) EQUALS JUST (Date 14 7 2027)
+#ASSERT noiLast (Date 1 3 2027) EQUALS JUST (Date 31 8 2027)
+#ASSERT noiLast (Date 31 8 2026) EQUALS JUST (Date 28 2 2027)
+#ASSERT noiLast (Date 31 8 2027) EQUALS JUST (Date 29 2 2028)
+#ASSERT noiLast (Date 29 8 2027) EQUALS JUST (Date 28 2 2028)
+#ASSERT noiLast (Date 30 8 2027) EQUALS JUST (Date 29 2 2028)
+#ASSERT noiLast (Date 29 8 2026) EQUALS JUST (Date 28 2 2027)
+#ASSERT noiLast (Date 31 3 2027) EQUALS JUST (Date 30 9 2027)
+#ASSERT noiLast (Date 31 12 2026) EQUALS JUST (Date 30 6 2027)
+#ASSERT noiLast (Date 30 12 2026) EQUALS JUST (Date 29 6 2027)
+
+-- D11 continuing, last conduct 10 May 2027
+d11 MEANS dates (Date 1 3 2027) TRUE (JUST (Date 10 5 2027)) NOTHING NOTHING
+#ASSERT d11's `last day for the notice of intent` EQUALS JUST (Date 9 11 2027)
+-- D12 continuing, last conduct 31 Aug 2027
+d12 MEANS dates (Date 1 3 2027) TRUE (JUST (Date 31 8 2027)) NOTHING NOTHING
+#ASSERT d12's `last day for the notice of intent` EQUALS JUST (Date 29 2 2028)
+-- D13 conduct not continuing beyond the evidence day
+d13 MEANS dates (Date 1 3 2027) FALSE (JUST (Date 1 3 2027)) NOTHING NOTHING
+#ASSERT d13's `last day for the notice of intent` EQUALS JUST (Date 31 8 2027)
+
+-- D14-D17 representations (para 4(2))
+d14 MEANS afterNoi (Date 1 2 2027)
+#ASSERT d14's `last day for representations` EQUALS JUST (Date 1 3 2027)
+d15 MEANS afterNoi (Date 1 2 2028)
+#ASSERT d15's `last day for representations` EQUALS JUST (Date 29 2 2028)
+d16 MEANS afterNoi (Date 31 1 2027)
+#ASSERT d16's `last day for representations` EQUALS JUST (Date 28 2 2027)
+d17 MEANS afterNoi (Date 15 12 2026)
+#ASSERT d17's `last day for representations` EQUALS JUST (Date 12 1 2027)
+-- D22, D23 earliest final notice (para 5)
+#ASSERT d14's `earliest day for the final notice` EQUALS JUST (Date 2 3 2027)
+#ASSERT d15's `earliest day for the final notice` EQUALS JUST (Date 1 3 2028)
+
+-- D18-D21 payment and appeal
+d18 MEANS afterFinal (Date 10 2 2028)
+#ASSERT d18's `last day for payment` EQUALS JUST (Date 9 3 2028)
+#ASSERT d18's `last day to appeal` EQUALS JUST (Date 9 3 2028)
+d19 MEANS afterFinal (Date 10 2 2027)
+#ASSERT d19's `last day for payment` EQUALS JUST (Date 10 3 2027)
+d21 MEANS afterFinal (Date 31 12 2026)
+#ASSERT d21's `last day to appeal` EQUALS JUST (Date 28 1 2027)
+#ASSERT d21's `last day for payment` EQUALS JUST (Date 28 1 2027)
+
+§ `Top-level goal`
+
+-- E1 + N1 + P14 through the default export
+caseAll MEANS `Eviction case` OF plainTenancy, JUST (origN (Date 1 2 2027) (Date 1 3 2027)), JUST eviction, JUST (pf TRUE TRUE FALSE FALSE FALSE)
+posAll MEANS `the eviction position for` caseAll
+#ASSERT posAll's `court proceedings required`
+#ASSERT NOT (posAll's `excluded tenancy or licence`)
+#ASSERT posAll's `notice to quit meets s 5` EQUALS JUST TRUE
+#ASSERT posAll's `earliest day the notice can take effect` EQUALS JUST (Date 1 3 2027)
+#ASSERT posAll's `offence under s 1` EQUALS JUST TRUE
+#ASSERT posAll's `financial penalty may be imposed` EQUALS JUST TRUE
+#ASSERT posAll's `maximum financial penalty` EQUALS 40000
+
+-- excluded letting, no notice, no conduct
+caseEx MEANS `Eviction case` OF (endedOcc `a tenancy` (exclAt 4)), NOTHING, NOTHING, NOTHING
+posEx MEANS `the eviction position for` caseEx
+#ASSERT NOT (posEx's `court proceedings required`)
+#ASSERT posEx's `excluded tenancy or licence`
+#ASSERT posEx's `notice to quit meets s 5` EQUALS NOTHING
+#ASSERT posEx's `offence under s 1` EQUALS NOTHING
