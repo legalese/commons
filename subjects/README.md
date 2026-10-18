@@ -258,6 +258,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`uk/pensions-act-2008`](uk/pensions-act-2008) | Pensions Act 2008 — automatic enrolment status, qualifying earnings and minimum contributions, and penalty notices — row `legalese-aswathy` | `draft` |
 | [`uk/pensions-act-2014`](uk/pensions-act-2014) | Pensions Act 2014 — the new state pension (entitlement, full, reduced and transitional rates), deferral increments, and bereavement support payment — row `legalese-aswathy` | `draft` |
 | [`uk/protection-from-eviction-act-1977`](uk/protection-from-eviction-act-1977) | Protection from Eviction Act 1977 — court proceedings to recover possession, notices to quit (both versions of s 5), the s 1 offence and the s 1A financial penalty with its Schedule A1 dates — row `legalese-aswathy` | `draft` |
+| [`uk/renters-rights-act-2025`](uk/renters-rights-act-2025) | Renters' Rights Act 2025 — periodic tenancies and rent periods, rent in advance, and rental bidding penalties — row `legalese-aswathy` | `draft` |
 | [`uk/third-parties-rights-against-insurers-act-2010`](uk/third-parties-rights-against-insurers-act-2010) | Third Parties (Rights against Insurers) Act 2010 — transfer of an insolvent insured's rights, recovery from the insurer and against the insured, binding conditions, and Schedule 1 information deadlines — row `legalese-aswathy` | `draft` |
 | [`uk/`](uk/) | United Kingdom Acts (Westminster) |
 | [`au/act/`](au/act/) | Australian Capital Territory Acts |

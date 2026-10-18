@@ -1,0 +1,256 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `rra-types`
+IMPORT `rra-tenancy`
+IMPORT `rra-bidding`
+IMPORT `rra-goal`
+
+-- Independent tests for the Renters' Rights Act 2025 encoding.
+-- Expected values were fixed in independent-expectations.md before any .l4
+-- module was read. A failing assertion is a finding; never edit an expected
+-- value to match the code.
+
+§ `Helpers`
+
+GIVEN assured IS A BOOLEAN
+      fixedTerm IS A BOOLEAN
+      differ IS A BOOLEAN
+      kind IS A `Rent period kind`
+      preComm IS A BOOLEAN
+      excepted IS A BOOLEAN
+      entered IS A DATE
+      firstDay IS A DATE
+GIVETH A `Tenancy terms`
+mkT assured fixedTerm differ kind preComm excepted entered firstDay MEANS
+    `Tenancy terms` OF assured, fixedTerm, differ, kind, preComm, excepted, entered, firstDay
+
+-- Standard: assured, entered into 20 May 2026, first day 1 June 2026.
+GIVEN kind IS A `Rent period kind`
+GIVETH A `Tenancy terms`
+std kind MEANS mkT TRUE FALSE FALSE kind FALSE FALSE (Date 20 5 2026) (Date 1 6 2026)
+
+GIVETH A `Tenancy terms`
+weeklyT MEANS std (`periods of days` 7)
+
+GIVETH A `Tenancy terms`
+monthlyT MEANS std `monthly`
+
+GIVEN b IS A DATE
+      e IS A DATE
+      dueD IS A DATE
+      reg IS A MAYBE DATE
+GIVETH A `Rent period`
+mkR b e dueD reg MEANS `Rent period` OF b, e, dueD, reg
+
+GIVEN rel IS A BOOLEAN
+      writ IS A BOOLEAN
+      sign IS A BOOLEAN
+      stated IS A BOOLEAN
+      above IS A BOOLEAN
+      sat IS A BOOLEAN
+GIVETH A `Letting conduct`
+mkL rel writ sign stated above sat MEANS
+    `Letting conduct` OF rel, writ, sign, stated, above, sat
+
+GIVEN dd IS A DATE
+      same IS A BOOLEAN
+      wq IS A BOOLEAN
+GIVETH AN `Earlier penalty`
+mkE dd same wq MEANS `Earlier penalty` OF dd, same, wq
+
+GIVEN tt IS A `Tenancy terms`
+      rp IS A `Rent period`
+GIVETH A BOOLEAN
+noEffect tt rp MEANS `the term for rent due in advance is of no effect for` tt `in` rp
+
+GIVEN tt IS A `Tenancy terms`
+      rp IS A `Rent period`
+GIVETH A DATE
+dueDay tt rp MEANS `the day the rent is due for` tt `in` rp
+
+GIVEN tt IS A `Tenancy terms`
+      rp IS A `Rent period`
+GIVETH A BOOLEAN
+isInitial tt rp MEANS `the rent is initial rent for` tt `in` rp
+
+GIVEN dd IS A DATE
+      tt IS A `Tenancy terms`
+GIVETH A BOOLEAN
+isProhibited dd tt MEANS `a payment of rent on` dd `is prohibited for` tt
+
+GIVEN dd IS A DATE
+      ee IS AN `Earlier penalty`
+GIVETH A BOOLEAN
+addlOK dd ee MEANS `an additional penalty may be imposed on` dd `after` ee
+
+GIVEN tt IS A `Tenancy terms`
+GIVETH A BOOLEAN
+isPermitted tt MEANS `the rent periods are permitted in` tt
+
+GIVEN tt IS A `Tenancy terms`
+GIVETH A BOOLEAN
+voidFixed tt MEANS `fixed-term or period terms are of no effect in` tt
+
+GIVEN ll IS A `Letting conduct`
+GIVETH A BOOLEAN
+penaltyOK ll MEANS `a rental bidding penalty may be imposed for` ll
+
+§ `Goal 1 — s 4A`
+
+-- A1 fixed term: of no effect.
+#ASSERT voidFixed (mkT TRUE TRUE FALSE `monthly` FALSE FALSE (Date 20 5 2026) (Date 1 6 2026))
+-- A2 neither fixed term nor different periods.
+#ASSERT NOT (voidFixed monthlyT)
+-- A3 tenancy periods differ from rent periods.
+#ASSERT voidFixed (mkT TRUE FALSE TRUE (`periods of days` 7) FALSE FALSE (Date 20 5 2026) (Date 1 6 2026))
+-- A21 fixed term with monthly periods: fixed term void, periods stand.
+#ASSERT voidFixed (mkT TRUE TRUE FALSE `monthly` FALSE FALSE (Date 20 5 2026) (Date 1 6 2026))
+#ASSERT isPermitted (mkT TRUE TRUE FALSE `monthly` FALSE FALSE (Date 20 5 2026) (Date 1 6 2026))
+-- A4-A7 28 days or shorter.
+#ASSERT isPermitted weeklyT
+#ASSERT isPermitted (std (`periods of days` 1))
+#ASSERT isPermitted (std (`periods of days` 14))
+#ASSERT isPermitted (std (`periods of days` 28))
+-- A8-A9 29 and 30 days, not monthly.
+#ASSERT NOT (isPermitted (std (`periods of days` 29)))
+#ASSERT NOT (isPermitted (std (`periods of days` 30)))
+-- A10 monthly.
+#ASSERT isPermitted monthlyT
+-- A14-A16 quarterly, annual, two-monthly.
+#ASSERT NOT (isPermitted (std `longer periods, such as quarterly or yearly`))
+
+§ `Goal 2 — s 4B`
+
+-- B1-B3 due on first day, within, last day: not in advance.
+#ASSERT NOT (noEffect weeklyT (mkR (Date 8 6 2026) (Date 14 6 2026) (Date 8 6 2026) NOTHING))
+#ASSERT NOT (noEffect weeklyT (mkR (Date 8 6 2026) (Date 14 6 2026) (Date 10 6 2026) NOTHING))
+#ASSERT NOT (noEffect weeklyT (mkR (Date 8 6 2026) (Date 14 6 2026) (Date 14 6 2026) NOTHING))
+-- B4 later weekly period due the day before: of no effect.
+#ASSERT noEffect weeklyT (mkR (Date 29 6 2026) (Date 5 7 2026) (Date 28 6 2026) NOTHING)
+-- B5 monthly July period due 30 June.
+#ASSERT noEffect monthlyT (mkR (Date 1 7 2026) (Date 31 7 2026) (Date 30 6 2026) NOTHING)
+-- B6-B8 first period, due in PPTP (inside, entered-into day, day before first day).
+#ASSERT NOT (noEffect weeklyT (mkR (Date 1 6 2026) (Date 7 6 2026) (Date 25 5 2026) NOTHING))
+#ASSERT NOT (noEffect weeklyT (mkR (Date 1 6 2026) (Date 7 6 2026) (Date 20 5 2026) NOTHING))
+#ASSERT NOT (noEffect weeklyT (mkR (Date 1 6 2026) (Date 7 6 2026) (Date 31 5 2026) NOTHING))
+-- B9 first period due the day before entry.
+#ASSERT noEffect weeklyT (mkR (Date 1 6 2026) (Date 7 6 2026) (Date 19 5 2026) NOTHING)
+-- B10 period ending on day 28 (28 June), due in PPTP: initial, effective.
+#ASSERT isInitial weeklyT (mkR (Date 22 6 2026) (Date 28 6 2026) (Date 25 5 2026) NOTHING)
+#ASSERT NOT (noEffect weeklyT (mkR (Date 22 6 2026) (Date 28 6 2026) (Date 25 5 2026) NOTHING))
+-- B11 period ending 5 July, due in PPTP: not initial, no effect.
+#ASSERT NOT (isInitial weeklyT (mkR (Date 29 6 2026) (Date 5 7 2026) (Date 25 5 2026) NOTHING))
+#ASSERT noEffect weeklyT (mkR (Date 29 6 2026) (Date 5 7 2026) (Date 25 5 2026) NOTHING)
+-- B12 initial period due after the tenancy began but before the period.
+#ASSERT noEffect weeklyT (mkR (Date 8 6 2026) (Date 14 6 2026) (Date 1 6 2026) NOTHING)
+-- B13 pre-commencement tenancy.
+#ASSERT NOT (noEffect (mkT TRUE FALSE FALSE (`periods of days` 7) TRUE FALSE (Date 20 5 2026) (Date 1 6 2026)) (mkR (Date 29 6 2026) (Date 5 7 2026) (Date 28 6 2026) NOTHING))
+-- B14 excepted tenancy.
+#ASSERT NOT (noEffect (mkT TRUE FALSE FALSE (`periods of days` 7) FALSE TRUE (Date 20 5 2026) (Date 1 6 2026)) (mkR (Date 29 6 2026) (Date 5 7 2026) (Date 28 6 2026) NOTHING))
+-- B15-B16 14-day periods.
+#ASSERT NOT (noEffect (std (`periods of days` 14)) (mkR (Date 15 6 2026) (Date 28 6 2026) (Date 30 5 2026) NOTHING))
+#ASSERT noEffect (std (`periods of days` 14)) (mkR (Date 29 6 2026) (Date 12 7 2026) (Date 30 5 2026) NOTHING)
+-- B17 monthly first period due 31 May.
+#ASSERT NOT (noEffect monthlyT (mkR (Date 1 6 2026) (Date 30 6 2026) (Date 31 5 2026) NOTHING))
+-- B18 monthly second period due 31 May.
+#ASSERT noEffect monthlyT (mkR (Date 1 7 2026) (Date 31 7 2026) (Date 31 5 2026) NOTHING)
+-- B19 28-day second period due 31 May.
+#ASSERT noEffect (std (`periods of days` 28)) (mkR (Date 29 6 2026) (Date 26 7 2026) (Date 31 5 2026) NOTHING)
+-- First 28-day period is itself initial rent.
+#ASSERT isInitial (std (`periods of days` 28)) (mkR (Date 1 6 2026) (Date 28 6 2026) (Date 31 5 2026) NOTHING)
+
+-- B21-B22 substitute rent day with a regular rent day.
+#ASSERT dueDay weeklyT (mkR (Date 29 6 2026) (Date 5 7 2026) (Date 28 6 2026) (JUST (Date 29 6 2026))) EQUALS Date 29 6 2026
+#ASSERT dueDay monthlyT (mkR (Date 1 7 2026) (Date 31 7 2026) (Date 30 6 2026) (JUST (Date 15 7 2026))) EQUALS Date 15 7 2026
+-- B23-B24 no regular pattern: first day of the period.
+#ASSERT dueDay weeklyT (mkR (Date 29 6 2026) (Date 5 7 2026) (Date 28 6 2026) NOTHING) EQUALS Date 29 6 2026
+#ASSERT dueDay monthlyT (mkR (Date 1 7 2026) (Date 31 7 2026) (Date 30 6 2026) NOTHING) EQUALS Date 1 7 2026
+-- B25 effective term: rent due as the terms say.
+#ASSERT dueDay weeklyT (mkR (Date 8 6 2026) (Date 14 6 2026) (Date 10 6 2026) (JUST (Date 8 6 2026))) EQUALS Date 10 6 2026
+#ASSERT dueDay weeklyT (mkR (Date 1 6 2026) (Date 7 6 2026) (Date 25 5 2026) NOTHING) EQUALS Date 25 5 2026
+
+§ `TFA 2019 Sch 1 para 1(1A)`
+
+-- C1 payable the day before entry.
+#ASSERT isProhibited (Date 19 5 2026) weeklyT
+-- C2 payable on the day of entry.
+#ASSERT NOT (isProhibited (Date 20 5 2026) weeklyT)
+-- C3 long before.
+#ASSERT isProhibited (Date 1 3 2026) weeklyT
+-- C4 not assured.
+#ASSERT NOT (isProhibited (Date 19 5 2026) (mkT FALSE FALSE FALSE (`periods of days` 7) FALSE FALSE (Date 20 5 2026) (Date 1 6 2026)))
+-- C5 after entry, before first day.
+#ASSERT NOT (isProhibited (Date 25 5 2026) weeklyT)
+
+§ `Goal 3 — ss 56-57`
+
+-- mkL relevant-letting written sign specific-stated above-offer satisfied
+-- D1 written, specific rent stated.
+#ASSERT NOT (`s 56(2) is breached by` (mkL TRUE TRUE FALSE TRUE FALSE TRUE))
+-- D2/D3 written, no specific rent stated.
+#ASSERT `s 56(2) is breached by` (mkL TRUE TRUE FALSE FALSE FALSE TRUE)
+-- D4 sign at the dwelling.
+#ASSERT NOT (`s 56(2) is breached by` (mkL TRUE TRUE TRUE FALSE FALSE TRUE))
+-- D5 not in writing.
+#ASSERT NOT (`s 56(2) is breached by` (mkL TRUE FALSE FALSE FALSE FALSE TRUE))
+-- D8 not a relevant tenancy.
+#ASSERT NOT (`s 56(2) is breached by` (mkL FALSE TRUE FALSE FALSE FALSE TRUE))
+-- E1/E2 invited or accepted above stated rent.
+#ASSERT `s 56(3) is breached by` (mkL TRUE TRUE FALSE TRUE TRUE TRUE)
+-- E3-E5 no above-rent offer invited or accepted.
+#ASSERT NOT (`s 56(3) is breached by` (mkL TRUE TRUE FALSE TRUE FALSE TRUE))
+#ASSERT NOT (`s 56(3) is breached by` (mkL FALSE TRUE FALSE TRUE TRUE TRUE))
+-- F1-F3 penalty may be imposed.
+#ASSERT penaltyOK (mkL TRUE TRUE FALSE FALSE FALSE TRUE)
+#ASSERT penaltyOK (mkL TRUE TRUE FALSE TRUE TRUE TRUE)
+#ASSERT NOT (penaltyOK (mkL TRUE TRUE FALSE TRUE FALSE TRUE))
+-- not satisfied on the balance of probabilities.
+#ASSERT NOT (penaltyOK (mkL TRUE TRUE FALSE FALSE TRUE FALSE))
+-- F4 / G15 maximum £7,000.
+#ASSERT `the maximum rental bidding penalty` EQUALS 7000
+
+-- G1-G4 five-year window ending 10 March 2031.
+#ASSERT addlOK (Date 10 3 2031) (mkE (Date 11 3 2026) TRUE FALSE)
+#ASSERT NOT (addlOK (Date 10 3 2031) (mkE (Date 10 3 2026) TRUE FALSE))
+#ASSERT addlOK (Date 10 3 2031) (mkE (Date 10 3 2031) TRUE FALSE)
+#ASSERT NOT (addlOK (Date 10 3 2031) (mkE (Date 9 3 2026) TRUE FALSE))
+-- G5-G6 new penalty on 29 Feb 2032: window from 1 Mar 2027.
+#ASSERT addlOK (Date 29 2 2032) (mkE (Date 1 3 2027) TRUE FALSE)
+#ASSERT NOT (addlOK (Date 29 2 2032) (mkE (Date 28 2 2027) TRUE FALSE))
+-- G7 previous 29 Feb 2028, new 28 Feb 2031.
+#ASSERT addlOK (Date 28 2 2031) (mkE (Date 29 2 2028) TRUE FALSE)
+-- G8 new 28 Feb 2033: window from 29 Feb 2028.
+#ASSERT addlOK (Date 28 2 2033) (mkE (Date 29 2 2028) TRUE FALSE)
+-- G9 new 1 Mar 2033: window from 2 Mar 2028.
+#ASSERT NOT (addlOK (Date 1 3 2033) (mkE (Date 29 2 2028) TRUE FALSE))
+-- G10 different subsection.
+#ASSERT NOT (addlOK (Date 10 3 2031) (mkE (Date 1 1 2030) FALSE FALSE))
+-- G11/G12 withdrawn or quashed.
+#ASSERT NOT (addlOK (Date 10 3 2031) (mkE (Date 1 1 2030) TRUE TRUE))
+-- G13 earlier penalty dated after the new one.
+#ASSERT NOT (addlOK (Date 10 3 2031) (mkE (Date 11 3 2031) TRUE FALSE))
+
+§ `Top-level goal`
+
+GIVETH A `Renting case`
+caseA MEANS `Renting case` OF weeklyT, (JUST (mkR (Date 29 6 2026) (Date 5 7 2026) (Date 28 6 2026) (JUST (Date 29 6 2026)))), (JUST (mkL TRUE TRUE FALSE FALSE FALSE TRUE))
+
+GIVETH A `Renting position`
+posA MEANS `the renting position for` caseA
+
+#ASSERT posA's `runs as a periodic tenancy`
+#ASSERT posA's `rent periods permitted`
+#ASSERT posA's `advance-rent term of no effect` EQUALS JUST TRUE
+#ASSERT posA's `rent due on` EQUALS JUST (Date 29 6 2026)
+#ASSERT posA's `rental bidding penalty may be imposed` EQUALS JUST TRUE
+#ASSERT posA's `maximum rental bidding penalty` EQUALS 7000
+
+GIVETH A `Renting case`
+caseB MEANS `Renting case` OF (std `longer periods, such as quarterly or yearly`), NOTHING, NOTHING
+
+GIVETH A `Renting position`
+posB MEANS `the renting position for` caseB
+
+#ASSERT NOT (posB's `rent periods permitted`)
+#ASSERT posB's `advance-rent term of no effect` EQUALS NOTHING
+#ASSERT posB's `rental bidding penalty may be imposed` EQUALS NOTHING
