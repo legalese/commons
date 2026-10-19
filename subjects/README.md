@@ -302,6 +302,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/papua-new-guinea-members-of-the-forces-benefits-act-1957`](au/papua-new-guinea-members-of-the-forces-benefits-act-1957) | Papua New Guinea (Members of the Forces Benefits) Act 1957 (Cth) — who is a member of the Forces and when the Commonwealth is liable for war-service incapacity or death — row `legalese-aswathy` | `draft` |
 | [`au/maintenance-orders-commonwealth-officers-act-1966`](au/maintenance-orders-commonwealth-officers-act-1966) | Maintenance Orders (Commonwealth Officers) Act 1966 (Cth) — attachment of Commonwealth pay for maintenance orders and their priority — row `legalese-aswathy` | `draft` |
 | [`au/customs-securities-penalties-act-1981`](au/customs-securities-penalties-act-1981) | Customs Securities (Penalties) Act 1981 (Cth) — the penalty for failing to give security after a tender is accepted — row `legalese-aswathy` | `draft` |
+| [`au/customs-undertakings-penalties-act-1981`](au/customs-undertakings-penalties-act-1981) | Customs Undertakings (Penalties) Act 1981 (Cth) — the penalty for breaching a Customs undertaking, with the reduction for partial compliance — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
