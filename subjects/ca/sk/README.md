@@ -2,9 +2,9 @@
 
 Saskatchewan (Canada) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the Office of the King's Printer for Saskatchewan - Publications Centre (Freelaw); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text has been deposited and nothing is encoded yet.
+The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the Office of the King's Printer for Saskatchewan - Publications Centre (Freelaw); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. Statute and regulation text has since been deposited for three of them, on personal income tax and on social security and benefits (below), and one subject was added for the Seniors Income Plan; nothing is encoded yet.
 
-**Licence category: unclear.** **Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
+**Licence category: conditions (non-commercial reproduction).** The Government of Saskatchewan's terms (https://www.saskatchewan.ca/copyright, read 2026-10-20) say: "Unless otherwise noted, materials may be reproduced for non-commercial purposes. The materials must be reproduced accurately, and the reproduction must not be represented as an official version." Commercial reproduction needs the advance written permission of the Government of Saskatchewan, through the Office of the King's Printer; adaptation is not addressed. Crown copyright is to be acknowledged as "© 2026, Government of Saskatchewan." **Owner's ruling, 20 Oct 2026: Legalese Commons counts as non-commercial use, so these texts may be deposited.** Every deposited text opens with that attribution and an "unofficial version" notice. Subjects without a deposited text remain metadata only. Whether an L4 encoding that quotes a text is covered by a grant of reproduction (rather than adaptation) is still a human decision, as for the federal set.
 
 ## Register access
 
@@ -14,3 +14,54 @@ Fetched over HTTPS with curl and python-urllib identifying themselves as 'canon-
 
 - **Passenger compensation**: Federal matter: compensation for denied boarding, delay, cancellation and lost baggage is set by the Air Passenger Protection Regulations, SOR/2019-150, made under the Canada Transportation Act, S.C. 1996, c. 10; interprovincial rail and bus carriage is federal too. No provincial statute provides a passenger-compensation scheme.
 - **Customs/duties**: Federal matter: customs and tariffs are exclusively federal under s. 91(2)-(3) of the Constitution Act, 1867 - the Customs Act, R.S.C. 1985, c. 1 (2nd Supp.) and the Customs Tariff, S.C. 1997, c. 36. No provincial statute governs it.
+
+## Sourced: personal income tax, and social security and benefits (2026-10-20)
+
+Three Acts and five regulations, chosen so that a member of the public in Saskatchewan can be told how much provincial income tax they owe and which provincial credits and income-support benefits they can get, and so that each connects to the federal Income Tax Act, Employment Insurance Act, Canada Pension Plan, Old Age Security Act and Canada Disability Benefit Act deposited under [`subjects/ca/`](../README.md). Each regulation is deposited in its Act's subject, beside the Act, as in the federal set. Each subject's `SOURCE-LICENSE.md` records the terms read and the owner's ruling; each `registers/source-bundle/<id>.meta.json` the register record, the download URL, dates, page and byte counts, and the sha256 of download and text.
+
+| Subject | Instrument | Citation | Last update posted | Characters |
+|---|---|---|---|---|
+| `the-income-tax-act-2000` | The Income Tax Act, 2000 | S.S. 2000, c. I-2.01 | 16 Sep 2026 | 400,439 |
+| | The Income Tax Indexation Regulations | R.R.S. c. I-2.01 Reg 3 | 10 Jan 2007 | 2,403 |
+| | The Saskatchewan Low-income Tax Credit Regulations | R.R.S. c. I-2.01 Reg 7 | 13 Jan 2026 | 2,609 |
+| `the-saskatchewan-assistance-act` | The Saskatchewan Assistance Act | R.S.S. 1978, c. S-8 | 22 Aug 2024 | 31,958 |
+| | The Saskatchewan Income Support Regulations | R.R.S. c. S-8 Reg 13 | 9 Sep 2026 | 81,573 |
+| | The Saskatchewan Assured Income for Disability Regulations, 2012 | R.R.S. c. S-8 Reg 11 | 9 Sep 2026 | 125,741 |
+| `the-saskatchewan-income-plan-act` (new) | The Saskatchewan Income Plan Act | S.S. 1986, c. S-25.1 | 26 Oct 2018 | 6,752 |
+| | The Seniors Income Plan Regulations | R.R.S. c. S-25.1 Reg 3 | 9 June 2023 | 8,446 |
+
+659,921 characters in all. Each text is the King's Printer consolidation PDF, English, downloaded on 2026-10-20 through the Publications Centre's own download path, `/api/v1/products/<id>/formats/<format>/download` (the link the site itself offers for each free PDF format; the format ids come from the public product record `/api/v1/products/<id>`, and the regulations were found through the register's own `/api/v1/products/<act id>/related` list). The register gives no "current to" date; its "Last update posted" date is recorded as the version.
+
+### Register access (2026-10-20)
+
+User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`; at least 3 seconds between requests; 26 requests in all, each logged with time, status, size and sha256. robots.txt and the terms page were re-read before anything else was fetched: https://publications.saskatchewan.ca/robots.txt and https://www.saskatchewan.ca/robots.txt both return 404, so nothing is disallowed. Three requests returned 404: the two robots.txt files and one probe (`/api/v1/products/583/relations`), after which the site's JavaScript bundle was read once to find the real `/related` and `/download` paths rather than guessing. The other 23 returned 200. No 403, no 429, no CAPTCHA or bot challenge.
+
+### Conversion
+
+pdftotext text in reading order, page by page; running heads, page numbers and the printer's colophon removed; paragraphs re-joined across page and column breaks; non-breaking hyphens and typographic spaces normalised. Part, Division and section headings and numbers, marginal headings, amendment-history lines and the King's Printer's own "this consolidation is not official" note are kept. The one set of ruled tables (section 4 of Table 2 of the Appendix to the SAID Regulations, the benefit types) is given as `| Column 1 | Column 2 | Column 3 |` rows. Formulas typeset as fractions lose their layout in text extraction: 31 are shown as positioned on the page under a bracketed marker, and 2 in The Income Tax Act, 2000 (the formula for D in s. 39(6), and the credit-union formula in s. 56.3) are flagged for checking against the PDF.
+
+### Why these connect
+
+To each other:
+
+- **The Income Tax Act, 2000** imposes Saskatchewan's personal income tax: s. 7 takes the individual's taxable income as computed under Part I of the federal Act; s. 8 sets the rates (10.5%, 12.5% and 14.5% bands, with the dollar thresholds indexed under s. 51); Division 2 gives the non-refundable credits (basic personal, spousal, age, pension, senior supplementary, the EI and CPP contributions credit and others); Division 4 the refundable credits, among them the **Saskatchewan low-income tax credit** (s. 39) and the active families benefit (s. 39.3). The Saskatchewan child benefit (s. 38) ended on 30 June 2006 (s. 38(4)).
+- **The Saskatchewan Low-income Tax Credit Regulations** set, for 2026, the income-tested reduction C in the s. 39(4) formula (3.029% of adjusted income above an amount D).
+- **The Income Tax Indexation Regulations** prescribe the indexation factor for 2005 to 2007 only; for later years s. 51(2) applies subsections 117.1(3) and (4) of the federal Act.
+- **The Saskatchewan Assistance Act** is the enabling Act for income assistance; **SIS** (Saskatchewan Income Support) and **SAID** (Saskatchewan Assured Income for Disability) are made under it as regulations. Both set eligibility, an income test with listed exemptions, and benefit types whose amounts are mostly "determined in accordance with the schedule of rates established by the minister".
+- **The Saskatchewan Income Plan Act** and **The Seniors Income Plan Regulations** pay the Seniors Income Plan, a monthly top-up separate from the assistance programs.
+
+To the federal set (each read in the deposited texts unless marked otherwise):
+
+- **Income Tax Act (Canada)**: the provincial tax base is federal taxable income (s. 7); the Government of Canada collects the tax under a collection agreement (s. 68); the low-income tax credit borrows "adjusted income", "eligible individual", "qualified dependant" and "return of income" from s. 122.5 of the federal Act, the GST/HST credit section (s. 39(1)); indexation follows federal s. 117.1 (s. 51(2)). SIS and SAID both exempt the **Canada Child Benefit** from income (SIS s. 2-7(2)(d); SAID Appendix, Table 1, subsection (2)(y)), and pay a children's benefit in limited cases where the Canada Child Benefit is not being received.
+- **Canada Pension Plan and Employment Insurance**: the Income Tax Act, 2000 gives an EI and CPP contributions credit (s. 28). SIS deducts CPP and EI premiums from earned income (s. 2-7(3)). Under SIS s. 2-7(2) and SAID s. 13(2) with Table 1 of its Appendix, income from all sources counts unless exempted; CPP and EI benefits are not among SIS's exemptions, and SAID exempts only CPP payments to the children of disabled or deceased contributors (Table 1, (2)(xx)). That CPP disability benefits and EI benefits are in practice deducted dollar for dollar from SIS and SAID is unverified (general knowledge); the result also depends on the minister's rate schedules, which are not in the regulations.
+- **Old Age Security Act**: the Seniors Income Plan is payable only to a resident who receives both the OAS pension and the Guaranteed Income Supplement (Act s. 4, with "pension" and "supplement" defined by the OAS Act in s. 2), stops when the GIS stops (s. 7), and is reduced by fixed amounts for every $1 reduction in the GIS under the federal Table of Rates (Regulations s. 5). SAID excludes the GIS top-up benefit (OAS Act s. 12.1) from income for those receiving both on 31 August 2016 (Table 1, (10)), and likewise a Seniors Income Plan payment (Table 1, (9)). That SIS applicants aged 65 or over are expected to apply for OAS and GIS first is unverified (general knowledge).
+- **Canada Disability Benefit Act**: SIS (s. 2-7(2)(u.1)) and SAID (Appendix, Table 1, (2)(ll.1)) both exempt the Canada Disability Benefit from income.
+
+### Gaps
+
+- **Benefit amounts for SIS and SAID are not in the regulations.** Both leave the amounts of most benefits to a "schedule of rates established by the minister", published as policy by the Ministry of Social Services, not on the register. Telling a person how much they would receive needs those schedules; they were not sourced.
+- **The plan's "Income Tax Regulations, 2001 (R.R.S. c. I-2.01 Reg 1)" is not on the register.** The products the register relates to the Act are Regs 2 to 7 under c. I-2.01 and two regulations under the earlier c. I-2. The Income Tax Indexation Regulations (Reg 3) and the Low-income Tax Credit Regulations (Reg 7) were brought in instead.
+- **Related on the register but not sourced**: The Saskatchewan Affordability Tax Credit Regulations (I-2.01 Reg 6); The Saskatchewan Employment Incentive Regulations (S-8 Reg 14, for low-income working families); The Saskatchewan Assistance Regulations, 2014 (S-8 Reg 12); the rental and disability housing supplement regulations (S-8 Regs 7 and 8); The Personal Care Home Benefit Regulations (S-8 Reg 10); and The Active Families Benefit Act, 2021, to which s. 39.3 of The Income Tax Act, 2000 refers.
+- **Currency**: The Saskatchewan Income Plan Act was last updated on the register on 26 October 2018, the Seniors Income Plan Regulations on 9 June 2023 (the $360 / $325 maxima date from SR 39/2023) and the Indexation Regulations on 10 January 2007. Amendments not yet consolidated would not be reflected.
+- **Source defect**: the register's PDF of the Low-income Tax Credit Regulations carries the running heads of The Minimum Wage Regulations, 2014 ("MINIMUM WAGE, 2014", "S-15.1 REG 3"); they were removed with the other running heads, and the body is the low-income tax credit text.
+- **Formulas**: check the two flagged formulas, and any formula shown "as positioned on the page", against the PDF before encoding.

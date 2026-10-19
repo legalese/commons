@@ -1,22 +1,36 @@
 # Source license
 
-The text of **The Income Tax Act, 2000** is published on the [Office of the King's Printer for Saskatchewan - Publications Centre (Freelaw)](https://publications.saskatchewan.ca/#/freelaw).
+The text of **The Income Tax Act, 2000** and the regulations deposited beside it is published on the [Office of the King's Printer for Saskatchewan - Publications Centre (Freelaw)](https://publications.saskatchewan.ca/#/freelaw).
 
-- **Terms**: Crown copyright. The Government of Saskatchewan permits reproduction for non-commercial purposes only, provided the material is reproduced accurately and the reproduction is not represented as an official version. Reproduction for commercial purposes requires advance written permission, and requests concerning legislation in particular must be directed to the Office of the King's Printer for Saskatchewan, Ministry of Justice. Adaptation, modification and derivative works are not permitted - the grant is reproduction only, and even that is confined to non-commercial use. Not an open licence on either limb of the test.
-- **Terms checked**: 2026-09-23, at https://www.saskatchewan.ca/copyright
+- **Terms**: Crown copyright. The Government of Saskatchewan permits reproduction for non-commercial purposes, provided the material is reproduced accurately and the reproduction is not represented as an official version. Reproduction for commercial purposes requires the advance written permission of the Government of Saskatchewan; requests concerning legislation go to the Office of the King's Printer for Saskatchewan, Ministry of Justice. The terms do not address adaptation.
+- **Terms checked**: 2026-10-20, at https://www.saskatchewan.ca/copyright (first checked 2026-09-23). The Publications Centre has no terms page of its own.
 - **From the terms**: "Unless otherwise noted, materials may be reproduced for non-commercial purposes. The materials must be reproduced accurately, and the reproduction must not be represented as an official version."
-- **Reuse and adaptation permitted, per the index check**: no, or not established
-- **Attribution required**: (c) 2026, Government of Saskatchewan.
+- **Attribution required**: the terms ask that Crown copyright be acknowledged as "© 2026, Government of Saskatchewan."
+- **robots.txt**: none. https://publications.saskatchewan.ca/robots.txt and https://www.saskatchewan.ca/robots.txt both returned 404 on 2026-10-20.
 - **Source**: https://publications.saskatchewan.ca/#/products/583
+
+## Owner's ruling
+
+**20 Oct 2026: Legalese Commons counts as non-commercial use, so these texts may be deposited.** The deposit below rests on that ruling. Commercial use of these texts (for example inside a paid product) would need the King's Printer's advance written permission and is not covered.
+
+## Required notice and attribution
+
+Not an official version. Each deposited text opens with a notice that it is an unofficial reproduction, made for non-commercial use, of the King's Printer consolidation, with "© 2026, Government of Saskatchewan.", the download URL and the register's "Last update posted" date. The King's Printer's own note that its consolidation is not official is kept in the text. Any encoding or projection that quotes these texts must keep that notice and must not present the text as official.
 
 ## Consequence for this subject
 
-**Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
+The terms grant reproduction; they are silent on adaptation. Whether an L4 encoding that quotes this text is covered by the non-commercial reproduction grant is a human decision to record here before an encoding quotes it.
 
 ## Language
 
-English. Saskatchewan's consolidated statutes are published in English; every King's Printer product record retrieved for the Acts below carried a null 'nameFrench', and the register offers no French consolidation of them.
+English. The King's Printer records for these instruments carry no French name, and the register offers no French consolidation of them.
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+Text deposited 2026-10-20 from the register's own download path, `/api/v1/products/<id>/formats/<format>/download` (the link the Publications Centre itself offers for the free PDF format), fetched as `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)` with at least 3 seconds between requests:
+
+- `registers/source-bundle/S.S.-2000-c.-I-2.01.txt` -- The Income Tax Act, 2000 (S.S. 2000, c. I-2.01), King's Printer consolidation, last update posted 16 Sep 2026; 400,439 characters. Converted from https://publications.saskatchewan.ca/api/v1/products/583/formats/806/download (174 pages, 1,038,190 bytes; sha256 of the download `ea60d22a777ca65a8236c1451e26846c16b6a1d750969283f94e36e5b34625a1`; sha256 of the text `fc32e0ad22361cd0100fb4ee36ba48bd9bf98516b6f43df1425f05bedae045d4`).
+- `registers/source-bundle/R.R.S.-c.-I-2.01-Reg-3.txt` -- The Income Tax Indexation Regulations (R.R.S. c. I-2.01 Reg 3), King's Printer consolidation, last update posted 10 Jan 2007; 2,403 characters. Converted from https://publications.saskatchewan.ca/api/v1/products/9520/formats/14416/download (4 pages, 107,533 bytes; sha256 of the download `bcc9b84e3dabbb16149ffb2b0099fbd07501b0553039bb412af2e512ca34d6b1`; sha256 of the text `c0dcd9524a472f0fa1b6f42e8abae2167d1c47ad001d38c7bc13703159dd717e`).
+- `registers/source-bundle/R.R.S.-c.-I-2.01-Reg-7.txt` -- The Saskatchewan Low-income Tax Credit Regulations (R.R.S. c. I-2.01 Reg 7), King's Printer consolidation, last update posted 13 Jan 2026; 2,609 characters. Converted from https://publications.saskatchewan.ca/api/v1/products/127937/formats/153143/download (4 pages, 257,242 bytes; sha256 of the download `4123a9fa3b7ac5dd00116ebd95fb9ff2a10e2e9256e2f0c7daefd3b8ae1a66f8`; sha256 of the text `7abc61dc97ff72419a7a70b7cf192797ab576c3084afb96d910c26f826402ea1`).
+
+Running heads, page numbers and the printer's colophon are removed; Part, Division and section headings and numbers, marginal headings, amendment-history lines and the King's Printer's notes are kept; ruled tables are given as `| a | b | c |` rows. Formulas typeset as fractions lose their layout in text extraction: they are shown as positioned on the page under a bracketed marker, or flagged where no reliable layout was found. Check the PDF before relying on any formula. Each `registers/source-bundle/<id>.meta.json` records the register record, dates, sizes and hashes.
