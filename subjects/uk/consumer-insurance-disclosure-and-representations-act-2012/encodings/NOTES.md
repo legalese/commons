@@ -18,6 +18,18 @@ Three goals sit under it:
 
 As the user asked, this covers only the sections those goals need. The Act has no periods to compute: "reasonable notice" in para 9 is evaluative.
 
+## Seat
+
+The encoding is written from the seat of **the consumer policyholder**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "I made a mistake on my insurance application. Does the Act protect me; was my mistake careless or deliberate; and what can the insurer do to me — refuse my claim, keep my premiums, cut my claim or cancel my policy?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The remedy record (`Remedy`) is phrased as what the insurer "may" do. For the consumer, it is the most the insurer can do to them: the claim paid is the least they will receive, and a refund of premiums is money owed back to them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

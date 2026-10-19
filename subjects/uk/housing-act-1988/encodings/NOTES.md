@@ -25,6 +25,16 @@ The revised text runs together the text before, and the text after, the Renters'
 
 Section 21 is encoded as printed.
 
+## Seat
+
+The encoding is written from the seat of **the assured tenant**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "My landlord has served notice. When can they start court proceedings at the earliest, and when is it too late; is a section 21 notice valid; and if I was unlawfully evicted, what damages can I get?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

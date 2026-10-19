@@ -22,6 +22,16 @@ As the user asked, this covers only the sections those goals need.
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule.
 
+## Seat
+
+The encoding is written from the seat of **the third party (the person owed money by an insolvent insured)**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "The person who owes me is insolvent. Can I claim directly against their insurer; how much can I recover from the insurer, and how much can I still pursue against the insured; which policy conditions bind me; and by when must people answer my requests for information?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

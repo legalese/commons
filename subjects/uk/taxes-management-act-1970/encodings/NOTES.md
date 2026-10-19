@@ -18,6 +18,18 @@ Three goals sit under it:
 
 A tax year is written as the calendar year it begins in (2024 for 2024-25). Dates are computed as the Act words them. The UK has no general next-working-day rule.
 
+## Seat
+
+The encoding is written from the seat of **the individual taxpayer**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "By when must I tell HMRC, file and amend my return; until when can HMRC open an enquiry into it; what must I pay on account and at the end, and when; and until when can HMRC still assess me?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The enquiry and assessment deadlines state HMRC's powers. For the taxpayer, they are the dates after which HMRC can no longer enquire or assess.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

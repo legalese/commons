@@ -16,6 +16,16 @@ The rules are in `ssaa-rules.l4`:
 2. **Offences:** ss 111A(1)-(1B), (3)-(4) and 112(1)-(1B), (2).
 3. **Penalty as an alternative to prosecution:** s 115A(1), (1A), (2)-(3A) and (5).
 
+## Seat
+
+The encoding is written from the seat of **the claimant who has been overpaid**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "I was overpaid benefit. Must I pay it back; could I be prosecuted, and for how long; and if I am offered a penalty instead, how much is it and how long do I have to change my mind?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

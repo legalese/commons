@@ -19,6 +19,18 @@ Three goals sit under it:
 
 The amounts are those printed in this version: £10,000 (s 3), £6,240 and £50,270 (s 13), £50,000 (s 40) and £10,000 a day (s 41).
 
+## Seat
+
+The encoding is written from the seat of **the worker (and, for penalties, the employer)**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "Must my employer enrol me in a workplace pension, or can I opt in or ask to join; what are my qualifying earnings and the least that must be paid in; and (for an employer) what penalty can the Regulator impose?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The worker's seat governs the status and contribution goals. The penalty goal is written from the seat of the employer, the person penalised.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

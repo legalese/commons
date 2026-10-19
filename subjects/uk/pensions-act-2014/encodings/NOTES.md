@@ -18,6 +18,16 @@ Three goals sit under it:
 
 As the user asked, this covers only the sections those goals need. The rates are inputs, because the Act prescribes none.
 
+## Seat
+
+The encoding is written from the seat of **the pensioner or bereaved claimant**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "Which state pension do I get and how much a week; how much more if I put it off; and can I get bereavement support payment?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

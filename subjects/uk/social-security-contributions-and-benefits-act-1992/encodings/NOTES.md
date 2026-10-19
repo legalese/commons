@@ -18,6 +18,18 @@ The rules are in `sscba-rules.l4`:
 
 The thresholds, the lower earnings limit and the prescribed SMP rate are set by regulations, so they are inputs. The percentages and the SSP cap are printed in this version and are used as written: 8%, 2%, 15% and £123.25.
 
+## Seat
+
+The encoding is written from the seat of **the employee**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "What National Insurance is due on my pay; what statutory sick pay do I get; and am I entitled to statutory maternity pay, from when and how much?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The secondary Class 1 contribution is the employer's. It is shown because it is charged on the employee's earnings.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

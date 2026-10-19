@@ -20,6 +20,18 @@ Each finding of fact is an input. The encoding applies the order and structure t
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule.
 
+## Seat
+
+The encoding is written from the seat of **the asylum seeker**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "Am I a refugee as the decision-maker must decide it; can I rely on immunity from penalties for how I entered; and if I gave evidence late, will it count against me, and until when does a priority removal notice apply to me?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The refugee test is the decision-maker's structure. For the asylum seeker, it tells them which finding their claim turns on.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

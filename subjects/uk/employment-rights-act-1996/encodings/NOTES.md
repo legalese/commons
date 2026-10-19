@@ -39,6 +39,16 @@ As the user asked, this covers only the sections those goals need. The rest of t
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule, so no date moves for a weekend or bank holiday.
 
+## Seat
+
+The encoding is written from the seat of **the employee**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "My job has ended. What notice was I owed; can I claim unfair dismissal and by when; what basic award would I get; and am I owed a redundancy payment, and how much?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

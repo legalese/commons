@@ -18,6 +18,16 @@ Three goals sit under it:
 
 The amounts of the elements, deductions, PIP rates and capital limits are set by regulations, so they are inputs. The benefit cap annual limits are printed in s 96(5A) and are used as written.
 
+## Seat
+
+The encoding is written from the seat of **the claimant**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "Am I entitled to universal credit and how much; which personal independence payment components do I get; and will the benefit cap cut my benefits?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

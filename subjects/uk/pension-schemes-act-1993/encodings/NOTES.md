@@ -17,6 +17,18 @@ Two goals sit under it:
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule.
 
+## Seat
+
+The encoding is written from the seat of **the scheme member leaving early**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "I have left my job before pension age. Am I entitled to a preserved pension, or can I take a transfer or a refund, and how much; and if I transfer, by when must I apply and by when must the trustees pay out?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The trustees' deadline and the duty to tell the Regulator state the trustees' duties. For the member, they are the dates by which the transfer must reach them, and the point at which a delay must be reported.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

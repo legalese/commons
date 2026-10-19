@@ -31,6 +31,16 @@ The rates are inputs, because the Act prescribes none: the national minimum wage
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule, so no date moves for a weekend or bank holiday.
 
+## Seat
+
+The encoding is written from the seat of **the worker**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "Do I qualify for the minimum wage; how much back pay am I owed; and if I ask to see my pay records, by when must my employer show them, by when must I complain, and what will I be awarded?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

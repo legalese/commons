@@ -21,6 +21,16 @@ Three goals sit under it:
 
 Whether goods or a service conform to the contract (ss 9-18, 49-53) is an input. Dates are computed as the Act words them. The UK has no general next-working-day rule.
 
+## Seat
+
+The encoding is written from the seat of **the consumer**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "The goods or service I bought are faulty. Until when can I reject them; will the fault be presumed to have been there from the start; can I now reject them for good or get money off, and how much will I get back and by when; and for a service, can I insist it is redone or get a reduction?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

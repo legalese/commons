@@ -30,6 +30,18 @@ As the user asked, this covers only the sections those goals need. The rest of t
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule, so no date moves for a weekend or bank holiday.
 
+## Seat
+
+The encoding is written from the seat of **the residential occupier (tenant or licensee)**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "Can I be evicted without a court order; is the notice to quit I was given (or want to give) valid, and from when; and if my landlord evicted or harassed me, can the council fine them, up to how much, and when?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The penalty goal (s 1A, Sch A1) states the council's powers and deadlines. For the occupier these are the remedies available against the landlord, and the dates by which they must be used.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

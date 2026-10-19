@@ -16,6 +16,16 @@ Three goals sit in `era25-rules.l4`:
 2. **The unfair dismissal qualifying period**: s 25, amending ERA 1996 s 108; s 124 is omitted.
 3. **Guaranteed-hours complaint time limits**: ERA 1996 s 27BH, inserted by s 1, with ERA 1996 s 207B.
 
+## Seat
+
+The encoding is written from the seat of **the worker**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "What sick pay do I get and from which day; do I have enough service to claim unfair dismissal; and by when must I bring a guaranteed-hours complaint?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

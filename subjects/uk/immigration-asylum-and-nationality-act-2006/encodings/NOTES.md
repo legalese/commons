@@ -18,6 +18,16 @@ Three goals sit under it:
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule.
 
+## Seat
+
+The encoding is written from the seat of **the employer**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "I employed someone. Was it illegal working; what penalty must I pay, by when, and by when can I appeal; and could I be prosecuted, and for how long?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

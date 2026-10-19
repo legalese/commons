@@ -17,6 +17,16 @@ The rules are in `tcta-rules.l4`:
 2. **Persons liable:** s 6(1)-(4), (7).
 3. **Amount and notification:** ss 7 and 16(2)-(3), and Sch 6 paras 1 and 4.
 
+## Seat
+
+The encoding is written from the seat of **the importer (or other person who may be liable for import duty)**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "I am bringing goods in. Do I owe import duty, and from when; am I one of the people liable; how much is it; and until when can HMRC still notify me of it?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

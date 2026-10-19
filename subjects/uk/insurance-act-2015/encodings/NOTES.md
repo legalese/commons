@@ -26,6 +26,18 @@ As the user asked, this covers only the sections those goals need. The rest of t
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule.
 
+## Seat
+
+The encoding is written from the seat of **the business policyholder (the insured)**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "I have claimed for a loss. Did I present the risk fairly; if not, what can the insurer do; does a breached warranty or term, or fraud, stop my claim; and how much will I be paid?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The remedy and the s 10-12 answers are phrased from the insurer's side ("may avoid", "suspends liability"). For the insured, they are the reasons the payout may be reduced or refused. The amount payable is what the insured will receive.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

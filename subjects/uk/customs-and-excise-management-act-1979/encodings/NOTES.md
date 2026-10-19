@@ -18,6 +18,16 @@ Three goals sit under it:
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule.
 
+## Seat
+
+The encoding is written from the seat of **the owner of the seized goods, or the person accused of fraudulent evasion**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "My goods were seized. Must I be told; by when must I claim them back; will they be forfeited automatically; what is the most I could be fined or jailed for evasion; and by when must I be prosecuted, if at all?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

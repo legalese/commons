@@ -18,6 +18,16 @@ Three goals sit under it:
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule.
 
+## Seat
+
+The encoding is written from the seat of **the residential tenant**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "Must my landlord repair the property and keep it fit to live in, and from when; how much of my service charge must I pay, and can I withhold it; and by when must I be told who my landlord is, or that the landlord has changed?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

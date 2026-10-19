@@ -18,6 +18,16 @@ Three goals sit under it:
 
 The text prints the sections it inserts into other Acts, so they are encoded from it. The formula in s 4A(6) is lost in the conversion, so the substitute monthly rent is not computed.
 
+## Seat
+
+The encoding is written from the seat of **the tenant (and prospective tenant)**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "Is my tenancy periodic, with lawful rent periods; can my landlord make me pay rent in advance, or before I sign, and when is rent really due; and if a landlord ran a bidding war or hid the rent, can they be fined?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |

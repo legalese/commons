@@ -18,6 +18,16 @@ Three goals sit under it:
 
 Dates are computed as the Act words them. The UK has no general next-working-day rule.
 
+## Seat
+
+The encoding is written from the seat of **the person seeking to enter or remain**, the person the law is applied to (the repo's `CLAUDE.md` rule of 2026-10-18).
+
+**The top-level question, in their words:** "Do I have the right of abode or need leave; is my leave still running while my application is decided; and if I am accused of an immigration offence, what is the maximum sentence and by when must I be prosecuted?"
+
+The facts it asks for are ones that person can state, or findings made about them.
+
+The function names were written before the rule and have not been renamed.
+
 ## Coverage
 
 | Provision | Disposition |
