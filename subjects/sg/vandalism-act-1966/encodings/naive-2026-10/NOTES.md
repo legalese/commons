@@ -84,3 +84,25 @@ Asserted.
   wording suggests.
 - No case law on authorised destruction of public property or on the delible /
   indelible line was searched.
+
+
+## Seat
+
+The seat is **the person accused of vandalism**: the one who did, tried to do, or caused someone else to do the act,
+and the person the Act is applied to. `va-seat.l4` phrases the rules in `va-vandalism.l4` as that person's questions
+("Is what I did vandalism", "Must I be caned", "Do I have to hand it over") and changes none of them; each question
+is marked `@export` so it can be deployed to Legalese Cloud and asked from a form. `va-cases-seat.l4` checks every
+question against the existing hand-checked values (31 assertions).
+
+The defaults ruled on 2026-10-18:
+- **The Act alone:** followed; no subsidiary legislation is needed for its numbers.
+- **The actors the text names:** followed (owners, the s 4(1) officers, the court).
+- **Judgments handed to others answered conditionally:** followed; the officer's reasonable belief (s 5) and the
+  Criminal Procedure Code exclusions from caning are asked as facts.
+- **The Act's definitions worked out:** followed (act of vandalism, public property, s 4(1) person).
+- **One case is the natural unit:** followed; one act.
+- **The Act's terms with plain glosses:** glosses are in the seat layer's comments and the form's wording.
+- **Operative sections in, machinery out:** followed, with one departure: ss 7-8 address a receiver of stolen public
+  property and the court, not the accused vandal; they stay in the rules underneath but are not asked in the seat layer.
+
+19 October 2026.
