@@ -292,6 +292,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/parliamentary-retiring-allowances-increases-act-1967`](au/parliamentary-retiring-allowances-increases-act-1967) | Parliamentary Retiring Allowances (Increases) Act 1967 (Cth) — the 1967 increases in parliamentary pensions and widows' rates — row `legalese-aswathy` | `draft` |
 | [`au/commonwealth-entities-payment-surcharges-act-2024`](au/commonwealth-entities-payment-surcharges-act-2024) | Commonwealth Entities (Payment Surcharges) Act 2024 (Cth) — when a Commonwealth entity may surcharge a payment, from the payer's seat — row `legalese-aswathy` | `draft` |
 | [`au/superannuation-distribution-of-surplus-act-1974`](au/superannuation-distribution-of-surplus-act-1974) | Superannuation (Distribution of Surplus) Act 1974 (Cth) — who shares in the 1972 surplus of the Superannuation Fund — row `legalese-aswathy` | `draft` |
+| [`au/superannuation-pension-increases-act-1961`](au/superannuation-pension-increases-act-1961) | Superannuation (Pension Increases) Act 1961 (Cth) — the 1961 increases in Commonwealth superannuation pensions — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
