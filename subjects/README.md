@@ -304,6 +304,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/customs-securities-penalties-act-1981`](au/customs-securities-penalties-act-1981) | Customs Securities (Penalties) Act 1981 (Cth) — the penalty for failing to give security after a tender is accepted — row `legalese-aswathy` | `draft` |
 | [`au/customs-undertakings-penalties-act-1981`](au/customs-undertakings-penalties-act-1981) | Customs Undertakings (Penalties) Act 1981 (Cth) — the penalty for breaching a Customs undertaking, with the reduction for partial compliance — row `legalese-aswathy` | `draft` |
 | [`au/removal-of-prisoners-territories-act-1923`](au/removal-of-prisoners-territories-act-1923) | Removal of Prisoners (Territories) Act 1923 (Cth) — removal of Territory prisoners, review of conviction, free return, and escape — row `legalese-aswathy` | `draft` |
+| [`au/united-states-naval-communication-station-civilian-employees-act-1968`](au/united-states-naval-communication-station-civilian-employees-act-1968) | United States Naval Communication Station (Civilian Employees) Act 1968 (Cth) — compensation and damages for civilian employees at the Station — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
