@@ -20,3 +20,20 @@ The Northwest Territories has eleven official languages, but statutes are authen
 ## Status of this deposit
 
 No statute text has been deposited yet.
+
+## Superseded status
+
+The "Metadata only until resolved" consequence and the "No statute text has been deposited yet" status above are superseded by the ruling below; they are kept as the record of 2026-09-23.
+
+## Owner's ruling (2026-10-20) and deposit
+
+- **Terms re-read**: 2026-10-20, at https://www.justice.gov.nt.ca/en/terms-of-use/page/2/ (copyright) and https://www.justice.gov.nt.ca/en/terms-of-use/ (disclaimer). Unchanged from the record above: "Material may not be used or reproduced for commercial purposes without the prior written consent arranged by the Department's Communications Unit. If it is reproduced or redistributed for non-commercial purposes, the Government of the Northwest Territories copyright is to be acknowledged."
+- **robots.txt** (https://www.justice.gov.nt.ca/robots.txt, read 2026-10-20): `User-agent: *` disallows `*.ind`, `/app/`, `/wp/wp-admin/`, `/wp/wp-login.php` and the French duplicate paths `/fr/fichiers/legislation/`, `/fr/fichiers/projets-de-loi/`, `/fr/fichiers/recueils-annuels/`. `/en/files/legislation/` is allowed. No crawl-delay.
+- **Owner's ruling, 2026-10-20**: Legalese Commons counts as non-commercial use, so the texts may be deposited. Each deposited text acknowledges the Government of the Northwest Territories copyright and carries an "unofficial version" notice at its top.
+- **Attribution used**: (c) Government of the Northwest Territories. The Government of the Northwest Territories copyright is acknowledged.
+- **Not covered**: commercial use of these texts needs the prior written consent of the Department of Justice's Communications Unit. Adaptation is not addressed by the terms; the ruling treats the plain-text conversion and any encoding in this repository as part of the same non-commercial use.
+- **Official status**: the consolidations are "not an official statement of the law"; the authoritative texts are the Revised Statutes and Revised Regulations of the Northwest Territories, the Annual Volumes of the Statutes and Part II of the Northwest Territories Gazette.
+
+Text deposited 2026-10-20 (English version only; the French version is equally authoritative):
+
+- `registers/source-bundle/social-assistance.a.2018-11-21.txt` (with `social-assistance.a.2018-11-21.meta.json`)
