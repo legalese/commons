@@ -16,3 +16,42 @@ Verified, but only through the site's own client-side rendering. iga.in.gov is a
 - **Passenger compensation**: Federal, and preempted. Air passenger rights come from US DOT rules (14 CFR Parts 250, 259, 260) and the Airline Deregulation Act (49 U.S.C. 41713) preempts state regulation of airline prices, routes and services. Indiana has no passenger-compensation statute.
 - **Customs/duties**: Federal, and constitutionally exclusive. U.S. Const. art. I, sec. 10, cl. 2 bars a state from laying imposts or duties on imports or exports; customs law is 19 U.S.C., administered by CBP.
 - **Work permits/immigration**: Federal. Work authorisation and immigration status are governed by the Immigration and Nationality Act, 8 U.S.C., and 8 C.F.R. Indiana legislates only at the edges (for example IC 22-4-39.5, 'Chapter 39.5. Reimbursements by Employers of Unauthorized Aliens', seen in the register's Title 22 data, and E-Verify duties in IC 22-5-1.7), which is enforcement and not the grant of work authorisation.
+
+## Benefits and personal income tax sample (2026-10-20): index only
+
+This entry is part of the Priority 3 US-states sample, which aims at a connected set of Indiana statutes on personal income tax and benefits. **No text could be deposited**, because no permitted non-browser route to the Indiana Code was found:
+
+- Every path on iga.in.gov, sent with the commons User-Agent, returned the same 691-byte app shell, served as CloudFront's error document (`X-Cache: Error from cloudfront`, HTTP 200). That held for the Code pages, the static data files the app reads (`/ic/2026/Title_<n>.json`), and even the app's own JavaScript bundle.
+- robots.txt is absent: the path returns the shell.
+- The documented API, api.iga.in.gov, requires an `x-api-key`, and getting one means registering an account.
+- www.in.gov timed out on connect.
+
+Nothing was worked around and no browser automation was used. 8 requests were made on 2026-10-20: 7 through the logged fetcher, and 1 HEAD request with curl, same User-Agent, to read the response headers.
+
+The planned instruments are indexed, so a later fetch knows its targets:
+
+| Instrument | Subject | Status |
+|---|---|---|
+| Adjusted Gross Income Tax, IC 6-3 (incl. the unified elderly credit, IC 6-3-3-9) | `indiana-code-title-6-article-3-state-income-taxes` (existing) | indexed 2026-09-23 |
+| Local income tax, IC 6-3.6 | `indiana-code-title-6-article-3-6-local-income-taxes` (new) | indexed; citation unverified |
+| Earned income tax credit, IC 6-3.1-21 | `indiana-code-title-6-article-3-1-chapter-21-earned-income-tax-credit` (new) | indexed; citation unverified |
+| Unemployment Compensation System, IC 22-4 | `indiana-code-title-22-article-4-unemployment-compensation-system` (new) | indexed; chapters verified 2026-09-23 from the register's Title 22 data file |
+| TANF, IC 12-14 | `indiana-code-title-12-article-14-family-assistance-services` (existing) | indexed 2026-09-23 |
+| Over-65 property tax deduction, IC 6-1.1-12-9, and the circuit breaker credit, IC 6-1.1-20.6-8.5 | `indiana-code-title-6-article-1-1-chapter-12-over-65-property-tax` (new) | indexed; citations unverified |
+
+**How they connect.** None of these links was read in a deposited text, so all are unverified (general knowledge):
+
+- The state tax starts from federal adjusted gross income (IRC subject), with Indiana add-backs and deductions.
+- The county local income tax uses the same base.
+- The state EITC is a percentage of the federal credit under 26 U.S.C. s 32.
+- UI benefits are federally taxable under 26 U.S.C. s 85.
+- TANF is the state's plan under SSA Title IV-A.
+- Indiana excludes Social Security benefits that are taxable federally under 26 U.S.C. s 86.
+
+**To unblock.** Any one of these would do:
+
+- a human requests an IGA API key for Legalese Commons;
+- the owner approves a rendering-browser read of the app's own static Title JSON files, as the index check of 2026-09-23 did;
+- the access check is re-run from a US egress.
+
+Each new subject's `SOURCE-LICENSE.md` records the access check in full.
