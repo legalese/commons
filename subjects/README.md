@@ -306,6 +306,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/removal-of-prisoners-territories-act-1923`](au/removal-of-prisoners-territories-act-1923) | Removal of Prisoners (Territories) Act 1923 (Cth) — removal of Territory prisoners, review of conviction, free return, and escape — row `legalese-aswathy` | `draft` |
 | [`au/united-states-naval-communication-station-civilian-employees-act-1968`](au/united-states-naval-communication-station-civilian-employees-act-1968) | United States Naval Communication Station (Civilian Employees) Act 1968 (Cth) — compensation and damages for civilian employees at the Station — row `legalese-aswathy` | `draft` |
 | [`au/commonwealth-motor-vehicles-liability-act-1959`](au/commonwealth-motor-vehicles-liability-act-1959) | Commonwealth Motor Vehicles (Liability) Act 1959 (Cth) — the driver presumed the Commonwealth's agent, and the jury rule — row `legalese-aswathy` | `draft` |
+| [`au/australian-veterans-recognition-putting-veterans-and-their-families-first-act-2019`](au/australian-veterans-recognition-putting-veterans-and-their-families-first-act-2019) | Australian Veterans' Recognition (Putting Veterans and their Families First) Act 2019 (Cth) — who is a veteran, and the 90-day decision commitment — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
