@@ -42,3 +42,15 @@ The plan gave the top rate as 5.9%. The deposited 15-30-2103 (temporary version)
 **Currency.** Montana Code Annotated 2025 (the 2025 session), with the site marked "Updated August 2026". Sections marked "(Temporary)" are deposited as published; where the register shows a later "(Effective ...)" version on the same page, both are kept.
 
 **Gaps.** Not sourced: the other parts of the three chapters (withholding, administration, employer contributions, claims procedure, extended benefits, TANF training part 7) and the Administrative Rules of Montana.
+
+## Administrative rules: sourcing attempt 2026-10-20 (nothing deposited; index only, flagged)
+
+Montana's TANF benefit standards and other assistance amounts are set by the Department of Public Health and Human Services in the Administrative Rules of Montana (ARM), Title 37. Chapter 37.78 covers TANF (unverified (general knowledge)). Nothing was deposited.
+
+- **Host.** The ARM is published by the Secretary of State at https://rules.mt.gov. The page is a JavaScript application on a vendor platform: its HTML describes itself as "Esper ... cloud-based platform to help governments proactively manage public policy". Rule text is served only through the vendor's API (`/api/policy-library`, addressed by collection, section and policy UUIDs), and the application also posts viewing metrics (`/api/consumption-metrics`).
+- **robots.txt.** https://rules.mt.gov/robots.txt, read 2026-10-19 (UTC): `User-agent: *` with an empty `Disallow:`, so everything is allowed.
+- **Terms.** The site footer's "Disclaimer" link points to a vendor-hosted PDF, https://app.public.staging.esper.com/assets/DisclaimerForARM.pdf, which answered **HTTP 403** (an XML error body). It could not be read, and that host was not tried again. The State's general disclaimer, https://mt.gov/discover/disclaimer (read 2026-10-19), covers accuracy and endorsement only.
+- **Verdict: index only, flagged.** The rules carry no copyright, since they are edicts of government. But the text sits behind a vendor's API, and the vendor's own terms for that site are unreadable. Under the brief's rule for vendor hosts, no rule text was taken. To unblock, read or obtain the Esper/SOS terms for rules.mt.gov, or written confirmation from the Secretary of State that automated reading of the public ARM is permitted.
+
+**Remaining gaps.**
+- TANF benefit standards (ARM 37.78), the state SSI supplement, if any, and the UI weekly maximum (set each year by the Department of Labor and Industry under Title 39 ch. 51) are all not sourced.

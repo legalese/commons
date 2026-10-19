@@ -53,3 +53,21 @@ Verdict: **clean**. Statute text carries no copyright (*Georgia v. Public.Resour
 - Benefit amounts and payment standards are set by rule or appropriation and are not sourced: FIP payment standards (IAC 441-41), state supplementary assistance amounts, and the Department of Revenue's inflation factors.
 - Iowa Administrative Code rules are not sourced.
 - Chapter 422's administration provisions for individual returns are in the deposit, but chapter 421 (the Department of Revenue) is not.
+
+## Administrative rules deposited 2026-10-20: benefit amounts
+
+Two new subjects from the Iowa Administrative Code (IAC), taken from the publication of 10/14/2026, the official edition current when fetched. The text was converted from the Legislature's word-processing download. The official edition is the chapter PDF, and its sha256 is recorded in each `.meta.json`.
+
+| Subject | Text | What it sets | Characters |
+| --- | --- | --- | --- |
+| `iowa-administrative-code-441-chapters-40-41-family-investment-program-need-standards` (new; made under ch. 239B) | IAC 441—40.21 (definitions), 441—41.27 (income), 441—41.28 (need standards), whole rules | FIP: the **Schedule of Needs** by household size. The schedule of basic needs is the payment standard: 1 person $183, 2 $361, 3 $426, 4 $495, 5 $548 ... 10 $865, each additional person $87. Also set: the schedule of living costs (standard of need), 185% of living costs (gross income test), the 20% earned income deduction and 58% work incentive disregard (41.27(2)), and the grant = payment standard minus countable net income (41.27, 41.27(9)) | 68,343 |
+| `iowa-administrative-code-441-chapter-52-state-supplementary-assistance-payment` (new; made under ch. 249) | IAC 441—52 (rule 52.1, assistance standards), whole chapter | State supplementary assistance: blind recipient not receiving another type of SSA $22 a month (52.1(4)); Medicare/Medicaid supplement $1 a month (52.1(7)). The other standards are "published on the department's website" and move each January 1 with the SSA COLA | 17,912 |
+
+**Amounts that now come from deposited text.** The FIP payment standard, standard of need and 185% test by household size, the earned income deduction and disregard, and the grant formula are now in commons. With chapter 239B already deposited, an FIP grant can be computed for a family of any size. For state supplementary assistance, only the two fixed amounts above are in commons.
+
+**Terms.** These are the same as for the statutes: https://www.legis.iowa.gov/law/disclaimer restricts reuse only for photographs, and robots.txt disallows only /chambers/. Verdict: **clean**. Every request returned HTTP 200.
+
+**Remaining gaps.**
+- The state supplementary assistance standards the department publishes on its website (dependent relative, residential care per diem, family-life home and personal allowances) are not sourced. They are not rule text.
+- The unemployment insurance maximum weekly benefit for the current benefit year is computed by Iowa Workforce Development from the statewide average weekly wage (96.3). No official notice was located. The host workforce.iowa.gov allows crawling, but no page was guessed at.
+- IAC 871 (Workforce Development) UI rules and the Department of Revenue's inflation factors are not sourced.

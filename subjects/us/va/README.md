@@ -43,3 +43,20 @@ Statute text was deposited on 2026-10-20 for a Priority 3 sample: personal incom
 **Terms**: clean. law.lis.virginia.gov has no robots.txt (404). The register says its online database "excludes material copyrighted by the publisher, Michie" (annotations and revisors' notes); the footer reads "(c) Copyright Commonwealth of Virginia ... All rights reserved.", read as covering the website, not the law. No terms of use restrict reuse. Details in each subject's `SOURCE-LICENSE.md`.
 
 **Gaps**: the Benefit Tables in s 60.2-602 are printed online only as "SEE PRINTED BILL FOR TABLES", so the weekly benefit amount table is missing (4 places). Local ordinances under ch. 32 art. 2 are not here. Virginia's auxiliary grant (state supplement for SSI recipients in assisted living, Title 51.5 / 63.2) was not sourced. The individual income tax articles went into a new subject because the existing `code-of-virginia-title-58-1-taxation-chapter-3-income-tax` is scoped to art. 16 (withholding) in its `subject.json`.
+
+## Administrative rules deposited 2026-10-20: benefit formulas (amounts set elsewhere)
+
+| Subject | Text | What it sets | Characters |
+| --- | --- | --- | --- |
+| `virginia-administrative-code-22vac40-295-tanf-income-and-payment` (new; made under Title 63.2 ch. 6) | 22VAC40-295-10 (definitions), 22VAC40-295-50 (income eligibility), whole sections | TANF: payment = standard of assistance minus net income (50 I). Disregards include the first $50 of child or spousal support, and for earnings the SNAP standard deduction plus 20% of the remainder (50 C). The "standard of assistance" is the dollar amount by family size "established by the State Board of Social Services" (10) | 17,349 |
+| `virginia-administrative-code-22vac30-80-auxiliary-grants-program` (new) | 22VAC30-80-10 (definitions), -40 (personal needs allowance), -50 (establishment of rate), whole sections | Auxiliary Grant, Virginia's state supplement for SSI recipients in assisted living, adult foster care or supportive housing: payment = rate "as set forth in the appropriation act" + personal needs allowance (amount "established by the Virginia General Assembly") - countable income | 14,381 |
+
+**Amounts that now come from deposited text.** Only the formulas and the small fixed amounts named above. The dollar figures sit outside the Administrative Code and are **not sourced**: the TANF standards of assistance (State Board) and the AG rate and personal needs allowance (Appropriation Act).
+
+**Terms.** Same register as the statutes (law.lis.virginia.gov). robots.txt is 404. Pages say the Administrative Code "is provided online by the Virginia General Assembly". The footer copyright notice is read as covering the website. Verdict: **clean**.
+
+**Remaining gaps.**
+- TANF standards of assistance by family size and locality group: not in the VAC and not sourced.
+- The Auxiliary Grant rate and personal needs allowance: in the Appropriation Act (budget.lis.virginia.gov), not sourced.
+- The UI weekly benefit table in s 60.2-602: still missing ("SEE PRINTED BILL FOR TABLES"). No Virginia Employment Commission notice was sourced.
+- Code of Virginia Title 51.5 (the AG enabling statute) is not in commons.

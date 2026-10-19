@@ -49,3 +49,21 @@ The plan named "17b-600 ff." for the state supplement; the register shows the st
 **Access note.** The host's TLS chain does not verify against Python's certifi bundle, so pages were fetched with curl using the Windows trust store, with the same User-Agent.
 
 **Gaps.** The Regulations of Connecticut State Agencies were not sourced: no UI or TFA regulations, and no DRS income tax regulations. Chapter 229 also covers withholding, pass-through entities and tax preparers, which matter less here.
+
+## Administrative rules deposited 2026-10-20: benefit amounts
+
+| Subject | Text | What it sets | Characters |
+| --- | --- | --- | --- |
+| `regulations-of-connecticut-state-agencies-17b-198-state-administered-general-assistance` (new; made under Title 17b) | Conn. Agencies Regs. 17b-198-2 (definitions), -9 (income restrictions), -10 (calculation of benefits), -19 (benefit levels maintained), whole sections, effective October 11, 2016 | SAGA cash assistance: benefit = payment standard minus applied income, rounded down. Payment standard: **$219 a month** if unemployable, or transitional and paying shelter costs; **$55** if transitional with no shelter costs or living in an emergency shelter. Couples get twice the single figure or the sum of two. Residents of rated housing or residential care homes get the facility rate. The standards rise each year under CGS 17b-104 (17b-198-10(b)(2)) | 32,029 |
+
+**Amounts that now come from deposited text.**
+- SAGA: the payment standards as the regulation states them, the income rules and the benefit formula. The current CPI-adjusted figures under 17b-104(b) are **not** sourced. The increases are capped at 5%, and the statute lists frozen years.
+- Temporary Family Assistance: no rule text is needed for the formula. The deposited statute sets it: standard of need = 55% of the federal poverty level (17b-104(a)), payment standard = 73% of the standard of need (17b-104(c)), and an annual COLA from July 1, 2023 (17b-112(g)). The poverty guideline figure itself is federal and not in commons.
+
+**Terms.** The Connecticut eRegulations System (https://eregulations.ct.gov) is "the official version of the Regulations of Connecticut State Agencies" from July 1, 2017. It has no terms of use, and robots.txt is 404. Verdict: **clean**.
+
+**Looked at, not deposited.** The DSS Uniform Policy Manual on portal.ct.gov: robots.txt allows /dss/. Section 4510.15 prints "AFDC Standards of Need" by region and unit size, dated 7-01-07 (3 persons: Region A $899, B $768, C $758). The TFA standard is now fixed by 17b-104(a) at 55% FPL, so the table appears superseded for TFA and was not deposited. The UPM's policy transmittals list stops at 2019. An `http://` link to portal.ct.gov timed out; the same page was then read over https.
+
+**Remaining gaps.**
+- The current SAGA payment standard after CPI adjustment, the TFA payment standard table, and the AABD (state supplement) standards (CGS 17b-600 ff., UPM 4520) are not sourced.
+- The UI maximum weekly benefit is set each year by the Labor Commissioner (CGS 31-231a). No notice was sourced.

@@ -40,3 +40,15 @@ Statute text was deposited on 2026-10-20 for a Priority 3 sample: personal incom
 **Terms**: clean. mgaleg.maryland.gov has no robots.txt (404) and states no copyright, licence or terms of use; it serves the bare Code, not the LexisNexis or West annotated editions. The About page says the Session Laws are the official law and the Code is evidence of it. Details in each subject's `SOURCE-LICENSE.md`.
 
 **Gaps**: Maryland supplements federal SSI only through programmes outside this sample (no State supplementary payment statute was sourced). The county income tax rates each county sets by local law are not here; s 10-106 gives only the limits. COMAR (regulations) was not used: dsd.maryland.gov answered 403 to robots.txt at set-up. The register's section pages have no catchlines or subtitle headings; the files group sections by subtitle number only.
+
+## Administrative rules: sourcing attempt 2026-10-20 (nothing deposited)
+
+Maryland sets the Temporary Cash Assistance (TCA) benefit levels, the Temporary Disability Assistance and Public Assistance to Adults amounts, and the state supplement in COMAR, mainly Title 07 (Department of Human Services; COMAR 07.03.03 for TCA, unverified (general knowledge)). Those regulations were **not deposited**.
+
+- **COMAR host blocked.** The official COMAR host is the Division of State Documents, https://dsd.maryland.gov. On 2026-10-19 at 18:45 UTC it answered **HTTP 403** to a request for `/robots.txt` with the commons User-Agent, as it did at set-up. Under the access rules, an unreadable robots.txt counts as a disallow, so the host was stopped. No other request was made to it, and no mirror, vendor copy or other identity was tried. **Index only; flagged.**
+- **Agency pages.** https://dhs.maryland.gov allows crawling (robots.txt read 2026-10-19). Its TCA page says only that income "cannot exceed the benefit level paid for the assistance unit size" and gives no figures. The DHS manuals page linked no TCA manual, and the transmittals pages were not searched. No official notice of current TCA benefit levels was found, so nothing was deposited.
+
+**Remaining gaps.**
+- TCA, TDAP and PAA benefit levels (COMAR Title 07) are not in commons.
+- The UI weekly benefit amounts come from the schedule of benefits in Labor and Employment 8-803, which is already deposited as rows, so no rule is needed for them.
+- To unblock COMAR: ask the Division of State Documents for access or written permission for the commons fetcher. Alternatively, accept text from the Maryland Register in print.

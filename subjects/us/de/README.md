@@ -45,3 +45,19 @@ The plan's "Rates; EITC" item (30 Del. C. 1102, 1117) is inside chapter 11 and i
 - The Division of Revenue's tax tables and regulations were not sourced.
 - 14 Del. C. ch. 19, subchapter II (mobile homes) was left out.
 - Delaware has no state SSP statute in this set.
+
+## Administrative rules deposited 2026-10-20: benefit amounts
+
+| Subject | Text | What it sets | Characters |
+| --- | --- | --- | --- |
+| `delaware-administrative-code-title-16-dssm-4000-financial-responsibility` (new; made under 31 Del. C. ch. 5) | Delaware Social Services Manual 4000, Financial Responsibility (16 Del. Admin. Code 4000), sections 4000-4011 as published; latest amendment cited 29 DE Reg. 530 (12/01/25) | TANF and General Assistance: budget group, resources, income and disregards (4001-4006); standards of need and payment standard (4007). GA payment standard equals its standard of need, set by Division notice (4007.1). TANF Fill the Gap table (4007.2), by number of people: payment standard 1 $201, 2 $270, **3 $338**, 4 $407, 5 $475, 6 $544, 7 $612, 8 $681, plus $69 for each person above eight; standard of need (75% FPL) and 185% of it. TANF and GA eligibility and grant computation (4008-4010) | 64,936 |
+
+**Amounts that now come from deposited text.** The TANF payment standard, standard of need and 185% gross-income limit by family size, the disregards, and the grant computation. **Caution:** the 4007.2 table is headed "Current for 10/2002 - 9/30/2003". Sections 4007 and 4007.1 point to a Division of Social Services "COLA Administrative Notice" for current standards. That notice is not in the Administrative Code and was not sourced, so it is unverified whether the 4007.2 figures are still the amounts paid. The GA standard of need is set only by that notice, so no GA dollar figure is in commons.
+
+**Terms.** https://regulations.delaware.gov is a State host and a single-page application. Its text was read through the site's own API (`/api/AdminCode/regulation`), the same request the page makes, with no browser automation. The site's About text calls the Administrative Code "the official version of the regulations for the State of Delaware". No copyright notice or terms of use were found. robots.txt answers with the application's HTML shell, so it was treated as absent. Verdict: **clean**.
+
+**Remaining gaps.**
+- The Division's current COLA Administrative Notice (TANF and GA standards).
+- A Delaware state supplement to SSI, if one exists: not sourced, unverified.
+- The UI weekly maximum in 19 Del. C. 3313 is statutory and already deposited. No rule was needed.
+- Division of Revenue regulations: not sourced.

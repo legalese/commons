@@ -46,3 +46,24 @@ Five chapters of Minnesota Statutes were deposited as unofficial plain text, for
 - The inflation-adjusted bracket amounts and credit thresholds for the current tax year are set by the commissioner (290.06, subd. 2d) and are not sourced.
 - The chapters these programs share or cross-refer to are not deposited: ch. 256P (income and asset rules for MFIP and GA), ch. 289A (filing and administration), ch. 268B (paid leave).
 - Minnesota Rules (agency regulations) are not sourced.
+
+## Administrative rules and notices deposited 2026-10-20: benefit amounts
+
+Two new subjects bring in the texts that set amounts the statutes leave to the agency. Both are unofficial plain text with a header naming source and currency.
+
+| Subject | Text | What it sets | Characters |
+| --- | --- | --- | --- |
+| `minnesota-rules-chapter-9500-general-assistance-standards` (new; made under ch. 256D) | Minn. R. 9500.1206 (definitions), 9500.1231 (assistance standards), 9500.1233 (financial eligibility tests), 9500.1237 (amount of payment), whole parts | General Assistance: the rule's standards ($203 a month for a single individual; filing units with a minor child, first adult $187, second adult $73, first child $250 ... each additional child $53); payment = standard minus countable income (9500.1237, subp. 1) | 36,090 |
+| `minnesota-state-register-mfip-transitional-standard-2026` (new; made under ch. 142G) | DCYF notice, 51 SR 472 (5 October 2026) | MFIP Transitional Standard effective October 1, 2026, by family size 1-10 and over 10, split into cash and food portions (family of 3: $1,470, cash $799, food $671) | 3,002 |
+
+**Amounts that now come from deposited text.**
+- MFIP: the Transitional Standard and its cash and food portions for October 2026 (51 SR 472). With the statute already deposited, the family wage level is 110% of it (142G.17, subd. 7), so the MFIP payment can now be worked out in figures for a family with no income or with earnings.
+- General Assistance: the rule's standards and the payment formula (9500.1231, 9500.1237). The statute, 256D.06, subd. 1, sets $350 a month for a single adult or childless couple from October 1, 2024, CPI-adjusted each October 1. The rule's $203 is older (last published electronically October 16, 2013), and where the two differ the statute governs. The CPI-adjusted figure for October 2025 and October 2026 is **not** sourced.
+
+**Terms.** Minnesota Rules: https://www.revisor.mn.gov/rules/info/ says the rules information on the site "is intended for personal, not commercial, use" and the Revisor "does not authorize further dissemination of this material for sale or any commercial purpose". Deposited in reliance on the owner's ruling of 2026-10-20 that Legalese Commons is non-commercial use. The State Register issue carries "Copyright (c) 2026 Communications Division, Department of Administration" and states no licence. Only the one notice, an official act required by 142G.17, subd. 6 and essentially a table of figures, is reproduced. It is **flagged** for the owner. The issue PDF is served from mn.gov, whose robots.txt carries a non-standard `Visit-time: 0000-1200` line. Seven requests reached mn.gov at 18:31-18:32 UTC, outside that window, before the line was noticed: five issue PDFs by redirect, robots.txt and the Bookstore register page. None followed. Details are in each SOURCE-LICENSE.md.
+
+**Remaining gaps.**
+- Unemployment insurance weekly maximum: DEED sets it each October (268.035, subd. 23; 268.07, subd. 2a), but it is not sourced. www.uimn.org timed out on robots.txt, so the host was treated as disallowed and left alone.
+- Minnesota Supplemental Aid: the standards are in statute (256D.44), but the current-year figures DHS publishes are not sourced.
+- The General Assistance standard after CPI adjustment (October 2025, October 2026) is not sourced. Nothing was found in State Register vol. 51, issues 12-16.
+- The 2026 session laws are still not applied. The MFIP notice cites 142G.17, subd. 5c, which the 2025 edition does not contain.

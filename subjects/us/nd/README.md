@@ -44,3 +44,19 @@ Statute text was deposited for five chapters of the North Dakota Century Code, s
 **Format.** The register serves statute text only as chapter PDFs. Texts were converted with poppler `pdftotext -layout` and a scratch script that drops page footers, rejoins paragraphs at section headings and list markers, and renders the rate schedules as `| a | b |` rows. Each text carries an unofficial-version notice; each `.meta.json` has the source URL, retrieval time, hashes and character count. Spot-check the paragraph joins against the PDF before encoding (a wrapped line that begins with a number and a full stop could be read as a new list item).
 
 **Gaps.** No North Dakota Administrative Code (the TANF, AABD and UI rules) was sourced. Chapter 57-38 also contains the corporate income tax and many business credits; only the individual parts matter for this sample.
+
+## Administrative rules deposited 2026-10-20: TANF income rules and fixed amounts
+
+| Subject | Text | What it sets | Characters |
+| --- | --- | --- | --- |
+| `north-dakota-administrative-code-chapter-75-02-01-2-tanf-income-and-standards` (new; made under ch. 50-09) | N.D. Admin. Code 75-02-01.2-01 (definitions), -22 (asset limits), -42 (whole dollars), -43 (under $10 not paid), -47 (budgeting), -48 (net income test), -50 (earned income considerations), -51 (disregarded income), whole sections; chapter amended effective as late as April 1, 2026 | TANF: asset limits of $9,000 for one person, $15,000 for two, plus $500 for each additional person. Standard employment expense allowance: the greater of $180 or 27% of gross earnings. Time-limited employment incentive: at least 50% of net earnings disregarded in months 1-6, 35% in months 7-9, 25% in months 10-12. Income is matched against the standard of need. No benefit under $10 is paid | 27,150 |
+
+**Amounts that now come from deposited text.** The asset limits, the earned-income allowance and disregards, the grant rounding and the $10 minimum. The **standard of need** by household size, which is the amount actually paid, is set by the department and appears nowhere in chapter 75-02-01.2. It is not sourced.
+
+**Terms.** Same register and disclaimer as the Century Code: https://ndlegis.gov/disclaimer covers accuracy and privacy only. robots.txt (Drupal defaults) allows /information/acdata/. Verdict: **clean**.
+
+**Remaining gaps.**
+- The TANF standard of need table, set by the department (e.g. its policy manual), is not sourced.
+- The AABD rules (state supplement and basic care, under ch. 50-24.5) are not sourced.
+- The UI weekly benefit maximum, computed each year by Job Service North Dakota under ch. 52-06, has no notice sourced.
+- Sections 75-02-01.2-56 and -57 (payment computation) were repealed effective April 1, 2026. How the payment is now computed beyond the net income test (section 48) is not stated in the deposited sections.
