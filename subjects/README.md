@@ -278,6 +278,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`uk/`](uk/) | United Kingdom Acts (Westminster) |
 | [`au/act/`](au/act/) | Australian Capital Territory Acts |
 | [`au/nt/`](au/nt/) | Northern Territory Acts -- conditional permission; confirm before quoting text |
+| [`au/death-penalty-abolition-act-1973`](au/death-penalty-abolition-act-1973) | Death Penalty Abolition Act 1973 (Cth) — whether death may be imposed and the penalty in its place, from the seat of the person charged — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
