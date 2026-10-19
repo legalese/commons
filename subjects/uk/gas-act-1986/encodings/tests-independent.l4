@@ -1,0 +1,258 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `gas-types`
+IMPORT `gas-connection`
+IMPORT `gas-cutoff`
+IMPORT `gas-redress`
+IMPORT `gas-goal`
+
+-- Independent tests for the Gas Act 1986 encoding. Expected values are taken
+-- from independent-expectations.md, written from BRIEF.md and the source text
+-- before the modules were read. Scenario ids (C1, D8, R17 ...) refer to it.
+-- An expected value is never changed to fit the code.
+
+§ `Independent tests`
+
+§§ `Connection`
+
+-- Helper: notice served 1 Mar 2026 naming 1 Jun 2026.
+GIVEN pArea IS A BOOLEAN, pNear IS A BOOLEAN, pOwn IS A BOOLEAN, pConnected IS A BOOLEAN,
+      pReasonable IS A BOOLEAN, pTherms IS A NUMBER, pPrevented IS A BOOLEAN, pDanger IS A BOOLEAN,
+      pUnfit IS A BOOLEAN, pNewWorks IS A BOOLEAN, pContract IS A BOOLEAN, pSecurity IS A BOOLEAN
+GIVETH A `Connection request`
+`req` pArea pNear pOwn pConnected pReasonable pTherms pPrevented pDanger pUnfit pNewWorks pContract pSecurity MEANS
+    `Connection request` OF pArea, pNear, pOwn, pConnected, JUST (Date 1 3 2026), JUST (Date 1 6 2026),
+        pReasonable, pTherms, pPrevented, pDanger, pUnfit, pNewWorks, pContract, pSecurity
+
+-- C1 / C2: within 23 m (the input stands for "within", 23 m included).
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `must connect`
+-- C3: 23.5 m, no own pipe.
+#ASSERT `must the transporter connect` (`req` TRUE FALSE FALSE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `the duty does not cover my premises`
+-- C4: own pipe.
+#ASSERT `must the transporter connect` (`req` TRUE FALSE TRUE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `must connect`
+-- C5: outside authorised area.
+#ASSERT `must the transporter connect` (`req` FALSE TRUE FALSE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `the duty does not cover my premises`
+-- C6: exactly 75,000 therms.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 75000 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `must connect`
+-- C7: 75,001 therms.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 75001 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `need not: over 75,000 therms`
+-- C8: already connected and still required.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE TRUE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `must maintain the connection`
+-- C10: already connected, 80,000 therms.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE TRUE TRUE 80000 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `need not: over 75,000 therms`
+-- C11: prevented by circumstances outside control.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 500 TRUE FALSE FALSE FALSE FALSE FALSE) EQUALS `need not: circumstances under s 10(9)`
+-- C12: danger, reasonable steps taken.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 500 FALSE TRUE FALSE FALSE FALSE FALSE) EQUALS `need not: circumstances under s 10(9)`
+-- C13: danger but reasonable steps not taken (the combined input is FALSE).
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `must connect`
+-- C14: own pipe not fit.
+#ASSERT `must the transporter connect` (`req` TRUE FALSE TRUE FALSE TRUE 500 FALSE FALSE TRUE FALSE FALSE FALSE) EQUALS `need not: circumstances under s 10(9)`
+-- C15: day named earlier than a reasonable time.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE FALSE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `no valid notice yet`
+-- C15b: no notice at all.
+#ASSERT `must the transporter connect` (`Connection request` OF TRUE, TRUE, FALSE, FALSE, NOTHING, NOTHING, TRUE, 500, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) EQUALS `no valid notice yet`
+-- C16: new supply, 3,000 therms, new main, no contract.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 3000 FALSE FALSE FALSE TRUE FALSE FALSE) EQUALS `may refuse until a written contract is made`
+-- C17: as C16 with a written contract.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 3000 FALSE FALSE FALSE TRUE TRUE FALSE) EQUALS `must connect`
+-- C18: exactly 2,500 therms.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 2500 FALSE FALSE FALSE TRUE FALSE FALSE) EQUALS `must connect`
+-- C19: 3,000 therms but no new works.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 3000 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `must connect`
+-- C20: (2)(a) premises: the pipe cost may be charged.
+#ASSERT `the connection charge for` (`req` TRUE TRUE FALSE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `the cost of supplying and laying the pipe`
+-- C22: (2)(b) premises: the connection cost.
+#ASSERT `the connection charge for` (`req` TRUE FALSE TRUE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS `the cost of making the connection`
+-- C23: own pipe vests in the transporter on connection.
+#ASSERT `my pipe vests in the transporter on connection for` (`req` TRUE FALSE TRUE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS TRUE
+-- C23b: no vesting for (2)(a) premises (transporter's own pipe).
+#ASSERT `my pipe vests in the transporter on connection for` (`req` TRUE TRUE FALSE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS FALSE
+-- C24: (2)(a) pipe, security not given.
+#ASSERT `must the transporter connect` (`req` TRUE TRUE FALSE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE TRUE) EQUALS `may refuse to lay the pipe until security is given`
+-- C25: own-pipe case, security not given: s 11 does not apply.
+#ASSERT `must the transporter connect` (`req` TRUE FALSE TRUE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE TRUE) EQUALS `must connect`
+-- C26: interest on a security deposit for (2)(a) premises.
+#ASSERT `interest is payable on a security deposit for` (`req` TRUE TRUE FALSE FALSE TRUE 500 FALSE FALSE FALSE FALSE FALSE FALSE) EQUALS TRUE
+
+§§ `Cut-off for debt`
+
+GIVEN pDemand IS A DATE, pPaid IS A MAYBE DATE
+GIVETH A `Payment demand`
+`dem` pDemand pPaid MEANS `Payment demand` OF pDemand, pPaid, FALSE
+
+GIVEN pRequest IS A DATE, pGiven IS A MAYBE DATE
+GIVETH A `Deposit request`
+`dep` pRequest pGiven MEANS `Deposit request` OF pRequest, pGiven, FALSE
+
+-- A demand case, current supplier, given notice day and act day.
+GIVEN pD IS A `Payment demand`, pNotice IS A MAYBE DATE, pAct IS A DATE
+GIVETH A `Cut-off case`
+`dcase` pD pNotice pAct MEANS
+    `Cut-off case` OF JUST pD, NOTHING, TRUE, FALSE, pNotice, pAct, NOTHING, NOTHING
+
+GIVEN pQ IS A `Deposit request`, pNotice IS A MAYBE DATE, pAct IS A DATE
+GIVETH A `Cut-off case`
+`qcase` pQ pNotice pAct MEANS
+    `Cut-off case` OF NOTHING, JUST pQ, TRUE, FALSE, pNotice, pAct, NOTHING, NOTHING
+
+-- D1: demand 1 Mar 2026 unpaid: applies from 30 Mar 2026.
+#ASSERT `the day para 7(1) applies from for` (`dem` (Date 1 3 2026) NOTHING) EQUALS JUST (Date 30 3 2026)
+-- D2: paid 29 Mar 2026: in time.
+#ASSERT `the day para 7(1) applies from for` (`dem` (Date 1 3 2026) (JUST (Date 29 3 2026))) EQUALS NOTHING
+-- D3: paid 30 Mar 2026: late, para 7(1) conditions met.
+#ASSERT `the day para 7(1) applies from for` (`dem` (Date 1 3 2026) (JUST (Date 30 3 2026))) EQUALS JUST (Date 30 3 2026)
+-- D3 (consequence, literal reading): paid late on 30 Mar, notice 30 Mar, cut off 6 Apr: earliest day 6 Apr 2026.
+#ASSERT `the earliest day my supply can be cut off for` (`dcase` (`dem` (Date 1 3 2026) (JUST (Date 30 3 2026))) (JUST (Date 30 3 2026)) (Date 6 4 2026)) EQUALS JUST (Date 6 4 2026)
+-- D4: leap year, demand 1 Feb 2024 paid 29 Feb 2024: in time.
+#ASSERT `the day para 7(1) applies from for` (`dem` (Date 1 2 2024) (JUST (Date 29 2 2024))) EQUALS NOTHING
+-- D5: leap year, unpaid: from 1 Mar 2024.
+#ASSERT `the day para 7(1) applies from for` (`dem` (Date 1 2 2024) NOTHING) EQUALS JUST (Date 1 3 2024)
+-- D6: non-leap, demand 1 Feb 2025 paid 1 Mar 2025: in time; unpaid: from 2 Mar 2025.
+#ASSERT `the day para 7(1) applies from for` (`dem` (Date 1 2 2025) (JUST (Date 1 3 2025))) EQUALS NOTHING
+#ASSERT `the day para 7(1) applies from for` (`dem` (Date 1 2 2025) NOTHING) EQUALS JUST (Date 2 3 2025)
+-- D7: demand 31 Jan 2026 unpaid: from 1 Mar 2026.
+#ASSERT `the day para 7(1) applies from for` (`dem` (Date 31 1 2026) NOTHING) EQUALS JUST (Date 1 3 2026)
+-- D8: notice 30 Mar 2026: earliest 6 Apr 2026.
+#ASSERT `the earliest day my supply can be cut off for` (`dcase` (`dem` (Date 1 3 2026) NOTHING) (JUST (Date 30 3 2026)) (Date 6 4 2026)) EQUALS JUST (Date 6 4 2026)
+-- D9: acting 5 Apr 2026 not permitted.
+#ASSERT `my supply may be cut off on the day for` (`dcase` (`dem` (Date 1 3 2026) NOTHING) (JUST (Date 30 3 2026)) (Date 5 4 2026)) EQUALS FALSE
+-- D10: acting 6 Apr 2026 permitted.
+#ASSERT `my supply may be cut off on the day for` (`dcase` (`dem` (Date 1 3 2026) NOTHING) (JUST (Date 30 3 2026)) (Date 6 4 2026)) EQUALS TRUE
+-- D11: notice 10 Mar 2026 before the power arose (brief's reading): no power.
+#ASSERT `the earliest day my supply can be cut off for` (`dcase` (`dem` (Date 1 3 2026) NOTHING) (JUST (Date 10 3 2026)) (Date 6 4 2026)) EQUALS NOTHING
+-- D11b: no notice at all: no power.
+#ASSERT `my supply may be cut off on the day for` (`dcase` (`dem` (Date 1 3 2026) NOTHING) NOTHING (Date 6 4 2026)) EQUALS FALSE
+-- D12: deposit request 10 Jun 2026 unmet: from 18 Jun 2026; notice then: earliest 25 Jun.
+#ASSERT `the day para 7(2) applies from for` (`dep` (Date 10 6 2026) NOTHING) EQUALS JUST (Date 18 6 2026)
+#ASSERT `the earliest day my supply can be cut off for` (`qcase` (`dep` (Date 10 6 2026) NOTHING) (JUST (Date 18 6 2026)) (Date 25 6 2026)) EQUALS JUST (Date 25 6 2026)
+-- D13: deposit given 17 Jun 2026: in time.
+#ASSERT `the day para 7(2) applies from for` (`dep` (Date 10 6 2026) (JUST (Date 17 6 2026))) EQUALS NOTHING
+-- D14: prepayment agreed 15 Jun 2026.
+#ASSERT `the day para 7(2) applies from for` (`dep` (Date 10 6 2026) (JUST (Date 15 6 2026))) EQUALS NOTHING
+-- D15: demand genuinely in dispute.
+#ASSERT `the earliest day my supply can be cut off for` (`Cut-off case` OF JUST (`Payment demand` OF (Date 1 3 2026), NOTHING, TRUE), NOTHING, TRUE, FALSE, JUST (Date 30 3 2026), (Date 6 4 2026), NOTHING, NOTHING) EQUALS NOTHING
+-- D16: deposit genuinely in dispute.
+#ASSERT `the day para 7(2) applies from for` (`Deposit request` OF (Date 10 6 2026), NOTHING, TRUE) EQUALS NOTHING
+-- D17 / D19: supplier no longer relevant, no assignment.
+#ASSERT `the earliest day my supply can be cut off for` (`Cut-off case` OF JUST (`dem` (Date 1 3 2026) NOTHING), NOTHING, FALSE, FALSE, JUST (Date 30 3 2026), (Date 6 4 2026), NOTHING, NOTHING) EQUALS NOTHING
+-- D18: debt assigned to the current supplier.
+#ASSERT `the earliest day my supply can be cut off for` (`Cut-off case` OF JUST (`dem` (Date 1 3 2026) NOTHING), NOTHING, FALSE, TRUE, JUST (Date 30 3 2026), (Date 6 4 2026), NOTHING, NOTHING) EQUALS JUST (Date 6 4 2026)
+
+§§ `Restoration`
+
+-- D20: restored without consent: offence.
+#ASSERT `restoring the supply myself is an offence for` (`Restoration facts` OF FALSE, FALSE, FALSE, FALSE) EQUALS TRUE
+-- D21: restored with the consent of an incoming supplier: no offence.
+#ASSERT `restoring the supply myself is an offence for` (`Restoration facts` OF FALSE, FALSE, FALSE, TRUE) EQUALS FALSE
+
+-- A lawful para 7(3) cut-off on 6 Apr 2026.
+GIVETH A `Cut-off case`
+`lawful cut-off` MEANS `dcase` (`dem` (Date 1 3 2026) NOTHING) (JUST (Date 30 3 2026)) (Date 6 4 2026)
+
+-- D23: arrears paid, expenses not: may refuse.
+#ASSERT `the supplier may refuse to restore for` `lawful cut-off` `with` (`Restoration facts` OF FALSE, TRUE, FALSE, FALSE) EQUALS TRUE
+-- D24: arrears and expenses paid: may not refuse.
+#ASSERT `the supplier may refuse to restore for` `lawful cut-off` `with` (`Restoration facts` OF FALSE, TRUE, TRUE, FALSE) EQUALS FALSE
+-- D25: no longer owner or occupier: may not refuse.
+#ASSERT `the supplier may refuse to restore for` `lawful cut-off` `with` (`Restoration facts` OF TRUE, FALSE, FALSE, FALSE) EQUALS FALSE
+
+§§ `Entry`
+
+-- D26: all conditions met.
+#ASSERT `the officer may enter to cut off for` `lawful cut-off` `with` (`Entry facts` OF 24, TRUE, TRUE, TRUE) EQUALS TRUE
+-- D27: 23 hours' notice.
+#ASSERT `the officer may enter to cut off for` `lawful cut-off` `with` (`Entry facts` OF 23, TRUE, TRUE, TRUE) EQUALS FALSE
+-- D28: no document.
+#ASSERT `the officer may enter to cut off for` `lawful cut-off` `with` (`Entry facts` OF 24, TRUE, FALSE, TRUE) EQUALS FALSE
+-- D29: no steps on fitness.
+#ASSERT `the officer may enter to cut off for` `lawful cut-off` `with` (`Entry facts` OF 24, TRUE, TRUE, FALSE) EQUALS FALSE
+
+§§ `Redress orders`
+
+GIVEN pOn IS A DATE, pPrior IS A MAYBE `Prior order`, pI IS A MAYBE DATE, pS IS A MAYBE DATE, pMade IS A DATE
+GIVETH A `Contravention facts`
+`ktr` pOn pPrior pI pS pMade MEANS
+    `Contravention facts` OF pOn, TRUE, TRUE, FALSE, pPrior, pI, pS, pMade
+
+-- R1: last day of the five years.
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 15 3 2020) NOTHING NOTHING NOTHING (Date 15 3 2025)) EQUALS TRUE
+-- R2: the day after.
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 15 3 2020) NOTHING NOTHING NOTHING (Date 16 3 2025)) EQUALS FALSE
+-- R3: 30I(1) notice on the last day.
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 15 3 2020) NOTHING (JUST (Date 15 3 2025)) NOTHING (Date 16 3 2025)) EQUALS TRUE
+-- R4: s 38(1) notice within the period.
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 15 3 2020) NOTHING NOTHING (JUST (Date 1 1 2025)) (Date 1 6 2025)) EQUALS TRUE
+-- R5: 30I(1) notice the day after.
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 15 3 2020) NOTHING (JUST (Date 16 3 2025)) NOTHING (Date 1 6 2025)) EQUALS FALSE
+-- R6: leap-day contravention: 28 Feb 2029 yes, 1 Mar 2029 no.
+#ASSERT `the end of the five years for` (`ktr` (Date 29 2 2024) NOTHING NOTHING NOTHING (Date 28 2 2029)) EQUALS Date 28 2 2029
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 29 2 2024) NOTHING NOTHING NOTHING (Date 28 2 2029)) EQUALS TRUE
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 29 2 2024) NOTHING NOTHING NOTHING (Date 1 3 2029)) EQUALS FALSE
+-- R7 / R8: final order 30 Nov 2025: notice 28 Feb 2026 yes, 1 Mar 2026 no.
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 1 6 2025) (JUST (`a final order` (Date 30 11 2025))) (JUST (Date 28 2 2026)) NOTHING (Date 1 6 2026)) EQUALS TRUE
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 1 6 2025) (JUST (`a final order` (Date 30 11 2025))) (JUST (Date 1 3 2026)) NOTHING (Date 1 6 2026)) EQUALS FALSE
+-- R9: provisional order confirmed 31 Jan 2026: 30 Apr yes, 1 May no.
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 1 6 2025) (JUST (`a confirmed provisional order` (Date 31 1 2026))) (JUST (Date 30 4 2026)) NOTHING (Date 1 8 2026)) EQUALS TRUE
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 1 6 2025) (JUST (`a confirmed provisional order` (Date 31 1 2026))) (JUST (Date 1 5 2026)) NOTHING (Date 1 8 2026)) EQUALS FALSE
+-- R10: unconfirmed provisional order 31 Aug 2027: 29 Feb 2028 yes, 1 Mar 2028 no.
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 1 6 2027) (JUST (`an unconfirmed provisional order` (Date 31 8 2027))) (JUST (Date 29 2 2028)) NOTHING (Date 1 6 2028)) EQUALS TRUE
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 1 6 2027) (JUST (`an unconfirmed provisional order` (Date 31 8 2027))) (JUST (Date 1 3 2028)) NOTHING (Date 1 6 2028)) EQUALS FALSE
+-- R11: unconfirmed provisional order 15 Jan 2026: 15 Jul yes, 16 Jul no.
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 1 6 2025) (JUST (`an unconfirmed provisional order` (Date 15 1 2026))) (JUST (Date 15 7 2026)) NOTHING (Date 1 9 2026)) EQUALS TRUE
+#ASSERT `a consumer redress order can be made for` (`ktr` (Date 1 6 2025) (JUST (`an unconfirmed provisional order` (Date 15 1 2026))) (JUST (Date 16 7 2026)) NOTHING (Date 1 9 2026)) EQUALS FALSE
+-- R12: Competition Act 1998 most appropriate.
+#ASSERT `a consumer redress order can be made for` (`Contravention facts` OF (Date 15 3 2020), TRUE, TRUE, TRUE, NOTHING, NOTHING, NOTHING, (Date 1 3 2025)) EQUALS FALSE
+-- R13: contravention in 2012, before Sch 14 to the Energy Act 2013.
+#ASSERT `a consumer redress order can be made for` (`Contravention facts` OF (Date 1 6 2012), TRUE, FALSE, FALSE, NOTHING, NOTHING, NOTHING, (Date 1 3 2016)) EQUALS FALSE
+
+GIVEN pServed IS A DATE, pDue IS A DATE, pAppeal IS A MAYBE DATE, pDetermined IS A MAYBE DATE, pPaidOn IS A MAYBE DATE
+GIVETH A `Redress order facts`
+`ord` pServed pDue pAppeal pDetermined pPaidOn MEANS
+    `Redress order facts` OF pServed, pDue, pAppeal, pDetermined, pPaidOn, 10000000, 0
+
+-- R14 / R15: served 1 Mar 2026: 8 Mar lawful, 7 Mar not.
+#ASSERT `the compliance date is lawful for` (`ord` (Date 1 3 2026) (Date 8 3 2026) NOTHING NOTHING NOTHING) EQUALS TRUE
+#ASSERT `the compliance date is lawful for` (`ord` (Date 1 3 2026) (Date 7 3 2026) NOTHING NOTHING NOTHING) EQUALS FALSE
+-- R16: served 28 Feb 2026: 7 Mar lawful, 6 Mar not.
+#ASSERT `the compliance date is lawful for` (`ord` (Date 28 2 2026) (Date 7 3 2026) NOTHING NOTHING NOTHING) EQUALS TRUE
+#ASSERT `the compliance date is lawful for` (`ord` (Date 28 2 2026) (Date 6 3 2026) NOTHING NOTHING NOTHING) EQUALS FALSE
+-- R17-R19: last day to appeal.
+#ASSERT `the supplier's last day to appeal for` (`ord` (Date 1 3 2026) (Date 8 3 2026) NOTHING NOTHING NOTHING) EQUALS Date 12 4 2026
+#ASSERT `the supplier's last day to appeal for` (`ord` (Date 31 12 2027) (Date 31 1 2028) NOTHING NOTHING NOTHING) EQUALS Date 11 2 2028
+#ASSERT `the supplier's last day to appeal for` (`ord` (Date 20 1 2024) (Date 31 1 2024) NOTHING NOTHING NOTHING) EQUALS Date 2 3 2024
+-- R20: appeal made in time, undetermined: suspended.
+#ASSERT `compliance is suspended by an appeal for` (`ord` (Date 1 3 2026) (Date 31 3 2026) (JUST (Date 12 4 2026)) NOTHING NOTHING) EQUALS TRUE
+-- R21: no appeal: not suspended.
+#ASSERT `compliance is suspended by an appeal for` (`ord` (Date 1 3 2026) (Date 31 3 2026) NOTHING NOTHING NOTHING) EQUALS FALSE
+-- R22: due 31 Mar 2026, unpaid: interest from 1 Apr 2026.
+#ASSERT `interest on my compensation runs from` (`ord` (Date 1 3 2026) (Date 31 3 2026) NOTHING NOTHING NOTHING) EQUALS JUST (Date 1 4 2026)
+-- R23: paid on the due date: no interest.
+#ASSERT `interest on my compensation runs from` (`ord` (Date 1 3 2026) (Date 31 3 2026) NOTHING NOTHING (JUST (Date 31 3 2026))) EQUALS NOTHING
+-- R24: due 28 Feb 2028 unpaid: from 29 Feb 2028.
+#ASSERT `interest on my compensation runs from` (`ord` (Date 1 2 2028) (Date 28 2 2028) NOTHING NOTHING NOTHING) EQUALS JUST (Date 29 2 2028)
+
+-- R25-R27: the s 30O cap.
+#ASSERT `the most compensation for the contravention under` (`Redress order facts` OF (Date 1 3 2026), (Date 31 3 2026), NOTHING, NOTHING, NOTHING, 10000000, 0) EQUALS 1000000
+#ASSERT `the most compensation for the contravention under` (`Redress order facts` OF (Date 1 3 2026), (Date 31 3 2026), NOTHING, NOTHING, NOTHING, 10000000, 400000) EQUALS 600000
+#ASSERT `the most compensation for the contravention under` (`Redress order facts` OF (Date 1 3 2026), (Date 31 3 2026), NOTHING, NOTHING, NOTHING, 10000000, 1000000) EQUALS 0
+
+§§ `Resale (s 37)`
+
+-- R28: 1,200 paid, maximum 1,000: 200.
+#ASSERT `what I can recover on resale under` (`Resale facts` OF 1200, 1000, NOTHING, 0, FALSE) EQUALS JUST 200
+-- R29: below maximum: 0.
+#ASSERT `what I can recover on resale under` (`Resale facts` OF 900, 1000, NOTHING, 0, FALSE) EQUALS JUST 0
+-- R30: information not given, maximum reduced by 10 per cent to 900: 300.
+#ASSERT `what I can recover on resale under` (`Resale facts` OF 1200, 1000, JUST 900, 0, FALSE) EQUALS JUST 300
+-- R31: substituted maximum 800: 400.
+#ASSERT `what I can recover on resale under` (`Resale facts` OF 1200, 1000, JUST 800, 0, FALSE) EQUALS JUST 400
+-- R32: motor vehicle fuel: s 37 does not apply.
+#ASSERT `what I can recover on resale under` (`Resale facts` OF 1200, 1000, NOTHING, 0, TRUE) EQUALS NOTHING
+-- R33: interest under the direction (15) added to the excess of 200.
+#ASSERT `what I can recover on resale under` (`Resale facts` OF 1200, 1000, NOTHING, 15, FALSE) EQUALS JUST 215
+
+§§ `Top-level goal`
+
+#ASSERT (`the gas consumer position for` (`Gas consumer case` OF NOTHING, JUST `lawful cut-off`, NOTHING, NOTHING, NOTHING))'s `earliest day the supply can be cut off` EQUALS JUST (Date 6 4 2026)
+#ASSERT (`the gas consumer position for` (`Gas consumer case` OF NOTHING, NOTHING, NOTHING, NOTHING, NOTHING))'s `connection` EQUALS NOTHING
