@@ -1,0 +1,636 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Customs Act 1960 (Singapore) -- what the customs law means for the traveller crossing Singapore's border with goods,
+-- and for the owner of goods or a vehicle that customs seizes.
+--
+-- SEAT: the traveller crossing Singapore's border (and, after a seizure, the owner of the goods or vehicle seized).
+--
+-- Provisions covered: s 93 (declaring at the border, the Red and Green Channels, the presumption), s 109 (search of
+-- persons arriving), s 129 (questions from an officer, and the privilege in s 129(3)), ss 128, 128B, 128E, 128I, 128J
+-- and 128KA (the offences a traveller or vehicle owner meets), s 128L (the penalty scales, deemed knowledge, specified
+-- offences), ss 115 and 115A (burden of proof and presumed possession), s 110(3) and (4) (notice of seizure), s 124
+-- (unclaimed seizures), s 126(2) (what composition releases), s 127 (costs and damages after a seizure), s 119
+-- (imprisonment in default of a fine), ss 19 and 20 (refunds and short levies), s 136 (leaving by car with too little
+-- fuel).
+--
+-- Edition: 2020 Revised Edition, informal consolidation, version in force from 30 September 2026 (amendments to Act 16
+-- of 2026), as deposited at ../../registers/source-bundle/CA1960.txt.
+--
+-- NOT ENCODED: officers and their appointment (Part 2), valuation and the levying machinery (Part 3 beyond ss 19, 20),
+-- import and export procedure (Part 4), vessels, warehousing, manufacture, drawback, duty-free shops and composite
+-- licences (Parts 5 to 11), most of Part 12, search warrants, arrest and computer inspection (Part 13 beyond ss 109
+-- and 110(3), (4)), ss 128A, 128C, 128D, 128F to 128H, 128K, 130 to 135 and 137 onwards. No subsidiary legislation is
+-- deposited: the duty rates, the duty free allowances, the list of compoundable offences (s 126) and the fuel order
+-- (s 136) are not here, so each figure they would set is an input to this encoding, and said so where it is used.
+--
+-- BASELINE ENCODING. Written straight from the deposited text with the writing-l4-rules skill, from the seat of the
+-- individual to whom the law is applied, with the design defaults ruled on 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Customs Act 1960 -- the traveller`
+
+DECLARE `Where to declare` IS ONE OF
+    `nothing to declare`                                       -- no goods beyond the allowance
+    `at the Red Channel`                                       -- s 93(2): a point of entry with both channels
+    `to the proper officer of customs at the customs station`  -- s 93(1): any other point of entry
+
+-- "duty free allowance" is not defined in the Act; the allowances are set outside it and none is deposited, so whether
+-- my goods exceed my allowance is a fact I state, not something worked out here.
+-- "dutiable goods" (s 3(1)): goods subject to customs or excise duty "and on which customs duty or excise duty has not
+-- been paid".
+DECLARE Arrival HAS
+    `I carry dutiable goods beyond my duty free allowance`      IS A BOOLEAN
+    `I carry dutiable goods for which no allowance is granted`  IS A BOOLEAN
+    `the point of entry has a Red Channel and a Green Channel`  IS A BOOLEAN
+    `I paid the duty before I proceeded`                        IS A BOOLEAN
+    `I went through the Green Channel`                          IS A BOOLEAN
+
+§§ `93 -- declaring at the border`
+
+-- s 93(1): every person arriving "must -- (a) declare to the proper officer of customs at the customs station all
+-- dutiable goods in his or her possession ... (i) which exceed his or her duty free allowance; or (ii) for which no duty
+-- free allowance is granted; and (b) pay the customs duty or excise duty leviable thereon before he or she proceeds".
+-- (2): where the point of entry "has a Red Channel and a Green Channel", the person must "proceed to the Red Channel to
+-- declare".
+GIVEN `my arrival` IS AN Arrival
+GIVETH A BOOLEAN
+DECIDE `Must I declare and pay duty before I proceed` IF
+        `my arrival`'s `I carry dutiable goods beyond my duty free allowance`
+    OR  `my arrival`'s `I carry dutiable goods for which no allowance is granted`
+
+GIVEN `my arrival` IS AN Arrival
+GIVETH A `Where to declare`
+`Where must I declare` MEANS
+    IF NOT `Must I declare and pay duty before I proceed` `my arrival`
+    THEN `nothing to declare`
+    ELSE IF `my arrival`'s `the point of entry has a Red Channel and a Green Channel`
+         THEN `at the Red Channel`
+         ELSE `to the proper officer of customs at the customs station`
+
+-- s 93(3): "Where a passenger or person fails to pay any customs duty or excise duty on any dutiable goods in accordance
+-- with subsection (1) or (2), those dutiable goods are deemed to be uncustomed goods."
+-- "uncustomed goods" (s 3(1)): "goods in respect of which a breach of the provisions of this Act has been committed".
+GIVEN `my arrival` IS AN Arrival
+GIVETH A BOOLEAN
+DECIDE `Are my goods deemed uncustomed` IF
+        `Must I declare and pay duty before I proceed` `my arrival`
+    AND NOT `my arrival`'s `I paid the duty before I proceeded`
+
+-- s 93(4): a person "who proceeds to the Green Channel with dutiable goods which exceed his or her duty free allowance,
+-- or any goods for which no duty free allowance is granted ... is presumed, until the contrary is proved, to be in
+-- possession of uncustomed goods". (The text says "any goods" in the second limb; this encoding reads it with the
+-- dutiable goods of subsection (1). That is an inference.)
+GIVEN `my arrival` IS AN Arrival
+GIVETH A BOOLEAN
+DECIDE `Am I presumed to possess uncustomed goods because I took the Green Channel` IF
+        `Must I declare and pay duty before I proceed` `my arrival`
+    AND `my arrival`'s `I went through the Green Channel`
+
+-- The same duty as a regulative rule. The text's deadline is "before he or she proceeds", which has no clock: WITHIN 0
+-- stands for "at the customs station, before going on".
+DECLARE `Person at the border` IS ONE OF `I, the traveller`
+DECLARE `Act at the border` IS ONE OF `declare the goods and pay the duty`
+
+GIVEN `my arrival` IS AN Arrival
+GIVETH A DEONTIC `Person at the border` `Act at the border`
+`my duty at the customs station` MEANS
+    IF `Must I declare and pay duty before I proceed` `my arrival`
+    THEN PARTY `I, the traveller`
+         MUST  `declare the goods and pay the duty`
+         WITHIN 0
+         HENCE FULFILLED
+         LEST  BREACH BY `I, the traveller`
+    ELSE FULFILLED
+
+§§ `109 and 93(5) -- being searched`
+
+-- s 109(1): a person landing from a vessel or aircraft, or "entering or having recently entered Singapore by road or
+-- rail must, on demand by any proper officer of customs -- (a) permit his or her person, goods and baggage to be
+-- searched". s 93(5): "it is the duty of the person in charge of the baggage to produce, open, unpack and repack the
+-- baggage". What I may insist on:
+-- (2): a person "who requests that his or her person be searched in the presence of a senior officer of customs must not
+-- be searched except in the presence of and under the supervision of that officer" (but may be detained until the
+-- officer arrives).
+-- (3): goods and baggage of a person "who requests to be present when they are searched and so presents himself or
+-- herself within a reasonable time must not be searched except in his or her presence".
+-- (4): "A woman must not be searched except by a woman."
+DECLARE `My search` HAS
+    `I asked to be searched before a senior officer of customs`  IS A BOOLEAN
+    `a senior officer of customs is present`                     IS A BOOLEAN
+    `I am a woman`                                               IS A BOOLEAN
+    `the searching officer is a woman`                           IS A BOOLEAN
+    `I asked to be present when my baggage is searched`          IS A BOOLEAN
+    `I presented myself within a reasonable time`                IS A BOOLEAN
+    `I am present`                                               IS A BOOLEAN
+
+GIVEN `the search` IS A `My search`
+GIVETH A BOOLEAN
+DECIDE `May my person be searched now` IF
+        NOT (    `the search`'s `I asked to be searched before a senior officer of customs`
+             AND NOT `the search`'s `a senior officer of customs is present`)
+    AND NOT (    `the search`'s `I am a woman`
+             AND NOT `the search`'s `the searching officer is a woman`)
+
+GIVEN `the search` IS A `My search`
+GIVETH A BOOLEAN
+DECIDE `May my baggage be searched now` IF
+    NOT (    `the search`'s `I asked to be present when my baggage is searched`
+         AND `the search`'s `I presented myself within a reasonable time`
+         AND NOT `the search`'s `I am present`)
+
+§§ `129 -- questions from an officer`
+
+-- s 129(1): a person "being required by this Act to answer any question put to the person by any proper officer of
+-- customs ... and which it is in the person's power to give" who refuses commits an offence ($5,000 or 12 months).
+-- (3): "Nothing in this section obliges a person to answer any question which would have a tendency to expose the person
+-- to a criminal charge or to a penalty or forfeiture."
+GIVEN `the Act requires me to answer`             IS A BOOLEAN
+      `the answer is in my power to give`         IS A BOOLEAN
+      `the answer would tend to expose me to a criminal charge, penalty or forfeiture` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Must I answer the officer's question` IF
+        `the Act requires me to answer`
+    AND `the answer is in my power to give`
+    AND NOT `the answer would tend to expose me to a criminal charge, penalty or forfeiture`
+
+§§ `128 to 128KA, 129, 136 -- what I did, and which section it falls under`
+
+DECLARE Conduct IS ONE OF
+    `denying I have dutiable goods that are then found on me`
+    `having uncustomed goods in my possession`
+    `giving away my duty free allowance goods to someone in Singapore`
+    `selling my duty free allowance goods to someone in Singapore`
+    `failing to declare dutiable goods I bring in`
+    `making an untrue declaration to customs`
+    `refusing to answer an officer's question`
+    `letting someone use my vehicle to carry smuggled goods, without due care`
+    `leaving Singapore by car without the prescribed fuel`
+    `consuming my own duty free allowance`
+    `declaring my excess goods and paying the duty`
+
+DECLARE Provision IS ONE OF
+    `section 128`    -- untrue, incorrect or incomplete declarations
+    `section 128B`   -- failure to make declarations
+    `section 128E`   -- goods found after denial
+    `section 128I`   -- possession, storage, conveying, harbouring
+    `section 128J`   -- duty-free allowances
+    `section 128KA`  -- owner or hirer of land or vehicle used for specified goods
+    `section 129`    -- refusing to answer or giving false information
+    `section 136`    -- vehicle leaving without prescribed fuel
+    `no offence under this Act`
+
+-- s 128E: "Any person who after he or she denies having, is found to have, any dutiable or prohibited goods in the
+-- person's baggage or upon his or her person" commits an offence.
+-- s 128I(1)(a): one who "stores, keeps or has in the person's possession any -- (i) dutiable or prohibited goods, except
+-- under customs control; or (ii) uncustomed goods".
+-- s 128J: "Any person who sells, exchanges or gives away, or offers to sell, exchange or give away, to any person in
+-- Singapore goods which are the person's duty-free allowances in Singapore".
+-- s 128B(1)(a): one who, "being required by this Act to do so -- (a) fails to make a declaration of dutiable goods which
+-- are imported".
+-- s 128(1)(a): one who makes "any declaration ... required by this Act, which is untrue or incorrect in any particular
+-- or which is incomplete".
+-- s 128KA(2): the owner or hirer of a vehicle who "permits or allows any other person to use the vehicle to store or
+-- keep, or convey, any goods" that are "specified goods", "unless the owner or hirer has exercised due care".
+GIVEN `what I did` IS A Conduct
+GIVETH A Provision
+`Which section makes what I did an offence` MEANS
+    CONSIDER `what I did`
+    WHEN `denying I have dutiable goods that are then found on me`                    THEN `section 128E`
+    WHEN `having uncustomed goods in my possession`                                   THEN `section 128I`
+    WHEN `giving away my duty free allowance goods to someone in Singapore`           THEN `section 128J`
+    WHEN `selling my duty free allowance goods to someone in Singapore`               THEN `section 128J`
+    WHEN `failing to declare dutiable goods I bring in`                               THEN `section 128B`
+    WHEN `making an untrue declaration to customs`                                    THEN `section 128`
+    WHEN `refusing to answer an officer's question`                                   THEN `section 129`
+    WHEN `letting someone use my vehicle to carry smuggled goods, without due care`   THEN `section 128KA`
+    WHEN `leaving Singapore by car without the prescribed fuel`                       THEN `section 136`
+    OTHERWISE                                                                              `no offence under this Act`
+
+-- s 128L(7): "'specified offence' means an offence under section 128D, 128E, 128F, 128G, 128H, 128I, 128J or 128K."
+-- Section 128KA (added by Act 6 of 2025) is not in the list.
+GIVEN `the section` IS A Provision
+GIVETH A BOOLEAN
+DECIDE `Is it a specified offence` IF
+    CONSIDER `the section`
+    WHEN `section 128E` THEN TRUE
+    WHEN `section 128I` THEN TRUE
+    WHEN `section 128J` THEN TRUE
+    OTHERWISE FALSE
+
+DECLARE `What I can say for myself` IS ONE OF
+    `nothing: the Act says inadvertence or lack of intent is no defence`
+    `I am deemed to have known, unless I prove I did not`
+    `that I exercised due care to find out what the goods were`
+    `the Act does not say`
+    `no offence, so nothing needs saying`
+
+-- s 128(2), s 128B(2), s 129(2): "it is no defence to allege" that it was done "inadvertently or without criminal or
+-- fraudulent intent" (s 128B(2) adds "or that it was not known that such a declaration is required to be made").
+-- s 128L(6): in a prosecution "for committing, attempting or abetting an offence under sections 128D to 128K", the goods
+-- "are deemed to be dutiable, uncustomed or prohibited goods to the person's knowledge, unless the contrary is proved by
+-- the person". s 128KA(2): "unless the owner or hirer has exercised due care to ascertain that the goods are not
+-- specified goods".
+GIVEN `the section` IS A Provision
+GIVETH A `What I can say for myself`
+`Can I say I did not mean it or did not know` MEANS
+    CONSIDER `the section`
+    WHEN `section 128`   THEN `nothing: the Act says inadvertence or lack of intent is no defence`
+    WHEN `section 128B`  THEN `nothing: the Act says inadvertence or lack of intent is no defence`
+    WHEN `section 129`   THEN `nothing: the Act says inadvertence or lack of intent is no defence`
+    WHEN `section 128E`  THEN `I am deemed to have known, unless I prove I did not`
+    WHEN `section 128I`  THEN `I am deemed to have known, unless I prove I did not`
+    WHEN `section 128J`  THEN `I am deemed to have known, unless I prove I did not`
+    WHEN `section 128KA` THEN `that I exercised due care to find out what the goods were`
+    WHEN `section 136`   THEN `the Act does not say`
+    OTHERWISE                 `no offence, so nothing needs saying`
+
+§§ `128L, 128(1), 128KA(3), 129, 136 -- what I can be made to pay or serve`
+
+-- "relevant tobacco products" (s 128L(7)): "any cigarette, cigar, cheroot or cigarillo or any other form of tobacco",
+-- including mixtures and smokable tobacco substitutes.
+-- The duty is an input: no rates are deposited. NOTHING means "the amount of customs duty or excise duty cannot be
+-- ascertained" (s 128L(2)).
+DECLARE `My case` HAS
+    `what I did`                                                     IS A Conduct
+    `the duty evaded or payable`                                     IS A MAYBE NUMBER
+    `the goods include relevant tobacco products`                    IS A BOOLEAN
+    `kilogrammes of tobacco products`                                IS A NUMBER
+    `I have a previous conviction for a specified offence`           IS A BOOLEAN
+    `that conviction involved relevant tobacco products`             IS A BOOLEAN
+    `that conviction involved over 2 kg of relevant tobacco products` IS A BOOLEAN
+
+DECLARE `Penalty scale` IS ONE OF
+    `s 128L(2) and (2A): first specified offence`
+    `s 128L(3) and (3A): repeat specified offence`
+    `s 128L(4): over 2 kg of tobacco products`
+    `s 128L(5): repeat tobacco offence`
+    `s 128L(5A): repeat offence over 2 kg of tobacco products`
+
+GIVEN `p` IS A NUMBER, `q` IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` MEANS
+    IF `p` LESS THAN `q` THEN `p` ELSE `q`
+
+GIVEN `p` IS A NUMBER, `q` IS A NUMBER
+GIVETH A NUMBER
+`the greater of` MEANS
+    IF `p` GREATER THAN `q` THEN `p` ELSE `q`
+
+-- s 128L(4): a specified offence "involving goods consisting wholly or partly of relevant tobacco products shall, if such
+-- tobacco products exceed 2 kilogrammes in weight", carry the heavier scale.
+-- s 128L(5): a specified offence (committed on or after 1 January 2012) involving tobacco products by one previously
+-- convicted of a specified offence "involving such goods". (5A): "Despite subsection (5)", where both the present and the
+-- previous offence involved tobacco products "exceeding 2 kilogrammes in weight".
+-- s 128L(3): one convicted "on a previous occasion of ... that or any other specified offence".
+-- The Act does not say which of (3) and (4) governs a repeat offender whose earlier offence did not involve tobacco and
+-- whose present one involves more than 2 kg. This encoding takes (4), the heavier scale. That is an inference.
+-- Every offence is taken to be committed after 1 January 2012.
+GIVEN `my case` IS A `My case`
+GIVETH A `Penalty scale`
+`Which penalty scale applies to me` MEANS
+    BRANCH IF `repeat over 2 kg` THEN `s 128L(5A): repeat offence over 2 kg of tobacco products`
+           IF `repeat tobacco`   THEN `s 128L(5): repeat tobacco offence`
+           IF `over 2 kg`        THEN `s 128L(4): over 2 kg of tobacco products`
+           IF `my case`'s `I have a previous conviction for a specified offence`
+                                 THEN `s 128L(3) and (3A): repeat specified offence`
+           OTHERWISE                  `s 128L(2) and (2A): first specified offence`
+    WHERE
+        `over 2 kg` MEANS
+                `my case`'s `the goods include relevant tobacco products`
+            AND `my case`'s `kilogrammes of tobacco products` GREATER THAN 2
+        `repeat tobacco` MEANS
+                `my case`'s `the goods include relevant tobacco products`
+            AND `my case`'s `I have a previous conviction for a specified offence`
+            AND `my case`'s `that conviction involved relevant tobacco products`
+        `repeat over 2 kg` MEANS
+                `repeat tobacco`
+            AND `over 2 kg`
+            AND `my case`'s `that conviction involved over 2 kg of relevant tobacco products`
+
+-- s 128L(2)(a): "not less than 10 times the amount of the customs duty ... evaded ... or $5,000, whichever is the lesser
+-- amount, subject to a minimum of $1,000 where the specified offence involves goods consisting wholly or partly of
+-- relevant tobacco products". "where the amount of customs duty or excise duty cannot be ascertained, the penalty may
+-- amount to a fine not exceeding $10,000, subject to a minimum of $1,000" for tobacco products.
+-- (4)(a)(i): "not less than 15 times ... subject to a minimum of $1,000". (5)(c)(i), (5A)(c)(i): "not less than 30 times
+-- ... subject to a minimum of $2,000".
+-- Under (4), (5) and (5A) the fine is a multiple of the duty, and the Act gives no figure where the duty cannot be
+-- ascertained: this encoding answers NOTHING there (not covered).
+GIVEN `my case` IS A `My case`
+GIVETH A MAYBE NUMBER
+`the least fine for a specified offence` MEANS
+    CONSIDER `my case`'s `the duty evaded or payable`
+    WHEN NOTHING THEN
+        IF `on the basic scale` THEN JUST `the tobacco floor` ELSE NOTHING
+    WHEN JUST `duty` THEN
+        CONSIDER `Which penalty scale applies to me` `my case`
+        WHEN `s 128L(4): over 2 kg of tobacco products`                 THEN JUST (`the greater of` (15 TIMES `duty`) 1000)
+        WHEN `s 128L(5): repeat tobacco offence`                         THEN JUST (`the greater of` (30 TIMES `duty`) 2000)
+        WHEN `s 128L(5A): repeat offence over 2 kg of tobacco products`  THEN JUST (`the greater of` (30 TIMES `duty`) 2000)
+        OTHERWISE JUST (`the greater of` (`the lesser of` (10 TIMES `duty`) 5000) `the tobacco floor`)
+    WHERE
+        `the tobacco floor` MEANS
+            IF `my case`'s `the goods include relevant tobacco products` THEN 1000 ELSE 0
+        `on the basic scale` MEANS
+                `Which penalty scale applies to me` `my case` EQUALS `s 128L(2) and (2A): first specified offence`
+            OR  `Which penalty scale applies to me` `my case` EQUALS `s 128L(3) and (3A): repeat specified offence`
+
+-- s 128L(2)(b): "not more than 20 times the amount ... or $5,000, whichever is the greater amount"; $10,000 where the
+-- duty cannot be ascertained. (4)(a)(ii): "not more than 20 times ... or $10,000, whichever is the greater amount".
+-- (5)(c)(ii), (5A)(c)(ii): "not more than 40 times ... or $20,000, whichever is the greater amount".
+GIVEN `my case` IS A `My case`
+GIVETH A MAYBE NUMBER
+`the most fine for a specified offence` MEANS
+    CONSIDER `my case`'s `the duty evaded or payable`
+    WHEN NOTHING THEN
+        CONSIDER `Which penalty scale applies to me` `my case`
+        WHEN `s 128L(2) and (2A): first specified offence`  THEN JUST 10000
+        WHEN `s 128L(3) and (3A): repeat specified offence` THEN JUST 10000
+        OTHERWISE NOTHING
+    WHEN JUST `duty` THEN
+        CONSIDER `Which penalty scale applies to me` `my case`
+        WHEN `s 128L(4): over 2 kg of tobacco products`                 THEN JUST (`the greater of` (20 TIMES `duty`) 10000)
+        WHEN `s 128L(5): repeat tobacco offence`                         THEN JUST (`the greater of` (40 TIMES `duty`) 20000)
+        WHEN `s 128L(5A): repeat offence over 2 kg of tobacco products`  THEN JUST (`the greater of` (40 TIMES `duty`) 20000)
+        OTHERWISE JUST (`the greater of` (20 TIMES `duty`) 5000)
+
+-- Fines for the offences that are not specified offences, and no minimum is stated for any of them:
+-- s 128L(1): ss 128(1), 128B(1) -- "a fine not exceeding $10,000, or the equivalent of the amount of the customs duty ...
+-- payable, whichever is the greater amount, or to imprisonment for a term not exceeding 12 months, or to both". Where
+-- the duty payable is not known, the ceiling is at least $10,000 but cannot be stated: NOTHING (not covered).
+-- s 128KA(3): "a fine not exceeding $10,000". s 129(1): "a fine not exceeding $5,000 or to imprisonment for a term not
+-- exceeding 12 months or to both". s 136(1): "a fine not exceeding $500".
+-- Where there is no offence the answer is 0: nothing can be imposed under this Act.
+GIVEN `my case` IS A `My case`
+GIVETH A MAYBE NUMBER
+`What is the least I can be fined` MEANS
+    IF `Is it a specified offence` (`Which section makes what I did an offence` (`my case`'s `what I did`))
+    THEN `the least fine for a specified offence` `my case`
+    ELSE JUST 0
+
+GIVEN `my case` IS A `My case`
+GIVETH A MAYBE NUMBER
+`What is the most I can be fined` MEANS
+    CONSIDER `Which section makes what I did an offence` (`my case`'s `what I did`)
+    WHEN `section 128E`  THEN `the most fine for a specified offence` `my case`
+    WHEN `section 128I`  THEN `the most fine for a specified offence` `my case`
+    WHEN `section 128J`  THEN `the most fine for a specified offence` `my case`
+    WHEN `section 128`   THEN `the declaration ceiling`
+    WHEN `section 128B`  THEN `the declaration ceiling`
+    WHEN `section 128KA` THEN JUST 10000
+    WHEN `section 129`   THEN JUST 5000
+    WHEN `section 136`   THEN JUST 500
+    OTHERWISE JUST 0
+    WHERE
+        `the declaration ceiling` MEANS
+            CONSIDER `my case`'s `the duty evaded or payable`
+            WHEN NOTHING     THEN NOTHING
+            WHEN JUST `duty` THEN JUST (`the greater of` 10000 `duty`)
+
+-- Imprisonment, in months: s 128L(2A) 12; (3A) 2 years; (4)(b) 3 years; (5)(d) and (5A)(d) 6 years; ss 128(1), 128B(1)
+-- and 129: 12 months; ss 128KA and 136: a fine only.
+GIVEN `my case` IS A `My case`
+GIVETH A NUMBER
+`For how many months at most can I be imprisoned` MEANS
+    CONSIDER `Which section makes what I did an offence` (`my case`'s `what I did`)
+    WHEN `section 128`  THEN 12
+    WHEN `section 128B` THEN 12
+    WHEN `section 129`  THEN 12
+    WHEN `section 128E` THEN `months on the scale`
+    WHEN `section 128I` THEN `months on the scale`
+    WHEN `section 128J` THEN `months on the scale`
+    OTHERWISE 0
+    WHERE
+        `months on the scale` MEANS
+            CONSIDER `Which penalty scale applies to me` `my case`
+            WHEN `s 128L(2) and (2A): first specified offence`                THEN 12
+            WHEN `s 128L(3) and (3A): repeat specified offence`               THEN 24
+            WHEN `s 128L(4): over 2 kg of tobacco products`                   THEN 36
+            WHEN `s 128L(5): repeat tobacco offence`                          THEN 72
+            WHEN `s 128L(5A): repeat offence over 2 kg of tobacco products`   THEN 72
+
+-- s 128L(5A): "the person shall be punished with -- (c) a fine ... and (d) imprisonment for a term not exceeding 6 years"
+-- -- "and", where (4) and (5) say "or to both". Only (5A) makes the fine and the prison term both mandatory.
+GIVEN `my case` IS A `My case`
+GIVETH A BOOLEAN
+DECIDE `Must the court both fine and imprison me` IF
+        `Is it a specified offence` (`Which section makes what I did an offence` (`my case`'s `what I did`))
+    AND `Which penalty scale applies to me` `my case` EQUALS `s 128L(5A): repeat offence over 2 kg of tobacco products`
+
+§§ `115, 115A, 128L(6) -- what is presumed against me`
+
+-- s 115A(1): a person "proved to have had in the person's possession or custody or under the person's control -- (a) any
+-- thing containing any dutiable, prohibited or uncustomed goods; (b) the keys of any thing containing" them; "(c) the
+-- keys of any place or premises ... in which [they] are found; or (d) a document of title" to them "is, until the
+-- contrary is proved, presumed to have had those ... goods in the person's possession".
+-- (3): goods "found in any vehicle" are "presumed to be in the possession of the owner of the vehicle and of the person
+-- in charge of the vehicle for the time being". "owner" (s 3(1)) "includes a hirer under a hire-purchase agreement".
+DECLARE Find HAS
+    `I had the thing containing the goods`                      IS A BOOLEAN
+    `I had the keys of the thing containing the goods`          IS A BOOLEAN
+    `I had the keys of the premises where the goods were found` IS A BOOLEAN
+    `I had a document of title to the goods`                    IS A BOOLEAN
+    `the goods were found in a vehicle`                         IS A BOOLEAN
+    `I own the vehicle or have it on hire-purchase`             IS A BOOLEAN
+    `I was in charge of the vehicle at the time`                IS A BOOLEAN
+
+GIVEN `the find` IS A Find
+GIVETH A BOOLEAN
+DECIDE `Am I presumed to possess the goods until I prove otherwise` IF
+        `the find`'s `I had the thing containing the goods`
+    OR  `the find`'s `I had the keys of the thing containing the goods`
+    OR  `the find`'s `I had the keys of the premises where the goods were found`
+    OR  `the find`'s `I had a document of title to the goods`
+    OR  (    `the find`'s `the goods were found in a vehicle`
+         AND (   `the find`'s `I own the vehicle or have it on hire-purchase`
+              OR `the find`'s `I was in charge of the vehicle at the time`))
+
+-- s 115: in a prosecution about seized goods, where a dispute arises "(a) whether the customs duties or excise duties have
+-- been paid ...; (b) whether they have been lawfully imported ...; (c) whether any goods are exempt ...; (d) concerning
+-- the place from where those goods were brought; or (e) whether drawback has been lawfully claimed, in every such case
+-- the burden of proof thereof shall lie on the defendant". s 124(6) applies it to a claimant of seized goods.
+DECLARE Dispute IS ONE OF
+    `whether duty was paid`
+    `whether the goods were lawfully imported`
+    `whether the goods were exempt`
+    `where the goods came from`
+    `whether drawback was lawfully claimed`
+    `any other question in the prosecution`
+
+GIVEN `the dispute` IS A Dispute
+GIVETH A BOOLEAN
+DECIDE `Must I prove it` IF
+    CONSIDER `the dispute`
+    WHEN `any other question in the prosecution` THEN FALSE
+    OTHERWISE TRUE
+
+-- s 128L(6): see above. Only for prosecutions under ss 128D to 128K.
+GIVEN `the section` IS A Provision
+      `I proved I did not know` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Am I deemed to have known what the goods were` IF
+        `Is it a specified offence` `the section`
+    AND NOT `I proved I did not know`
+
+§§ `128KA -- my vehicle used to carry smuggled goods`
+
+-- s 128KA(2): "The owner of a vehicle or, if the vehicle is hired out by the owner to another person (called the hirer),
+-- the hirer who -- (a) uses the vehicle to store or keep, or convey, any goods; or (b) permits or allows any other person
+-- to use the vehicle to store or keep, or convey, any goods, shall be guilty of an offence if the goods are specified
+-- goods, unless the owner or hirer has exercised due care to ascertain that the goods are not specified goods."
+-- "specified goods" (s 128KA(4)): goods in respect of which an offence under s 128D, 128F, 128G, 128H, 128I or 128K is
+-- committed. Whether such an offence was committed is asked as a fact.
+DECLARE `My vehicle` HAS
+    `I am the owner`                                         IS A BOOLEAN
+    `I had hired it out to someone else`                     IS A BOOLEAN
+    `I am the hirer`                                         IS A BOOLEAN
+    `I used it, or let someone use it, to keep or carry the goods` IS A BOOLEAN
+    `the goods are specified goods`                          IS A BOOLEAN
+    `I exercised due care to find out they were not`         IS A BOOLEAN
+
+GIVEN `the vehicle` IS A `My vehicle`
+GIVETH A BOOLEAN
+DECIDE `Am I guilty because smuggled goods were carried in my vehicle` IF
+        (   (`the vehicle`'s `I am the owner` AND NOT `the vehicle`'s `I had hired it out to someone else`)
+         OR `the vehicle`'s `I am the hirer`)
+    AND `the vehicle`'s `I used it, or let someone use it, to keep or carry the goods`
+    AND `the vehicle`'s `the goods are specified goods`
+    AND NOT `the vehicle`'s `I exercised due care to find out they were not`
+
+§§ `110(3), (4), 124, 126(2), 127 -- when my goods are seized`
+
+-- s 110(3): "the seizing officer must immediately give written notice of the seizure and the grounds thereof to the
+-- owner ..., if known". (4): not required "where the seizure is made on the person, or in the presence of the offender
+-- or the owner or the owner's agent".
+GIVEN `the officer knows who owns the goods`                           IS A BOOLEAN
+      `the goods were seized on me or in the presence of me or my agent` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Must I be given written notice of the seizure and its grounds` IF
+        `the officer knows who owns the goods`
+    AND NOT `the goods were seized on me or in the presence of me or my agent`
+
+-- s 124(1): "If there is no prosecution with regard to any goods seized under this Act, the goods are to be taken and
+-- deemed to be forfeited at the expiry of one month from the date of seizure unless a claim thereto is made before that
+-- date". (2): the owner, personally or by an agent authorised in writing, gives "written notice to a senior officer of
+-- customs that the person claims the goods".
+-- One month is counted to the same day of the next month. A seizure on the 29th, 30th or 31st of a month whose next month
+-- is shorter rolls into the month after (the daydate library's Date does this); the Act says nothing about it.
+GIVEN `the date of seizure` IS A DATE
+GIVETH A DATE
+`By what date must my written claim be made` MEANS
+    Date (DATE_DAY `the date of seizure`) (DATE_MONTH `the date of seizure` PLUS 1) (DATE_YEAR `the date of seizure`)
+
+GIVEN `the date of seizure`             IS A DATE
+      `there is a prosecution`          IS A BOOLEAN
+      `the date I gave written notice of my claim` IS A MAYBE DATE
+GIVETH A BOOLEAN
+DECIDE `Will my seized goods be forfeited without a court order` IF
+        NOT `there is a prosecution`
+    AND NOT `I claimed in time`
+    WHERE
+        `I claimed in time` MEANS
+            CONSIDER `the date I gave written notice of my claim`
+            WHEN NOTHING THEN FALSE
+            WHEN JUST `the claim date` THEN `the claim date` LESS THAN `By what date must my written claim be made` `the date of seizure`
+
+-- s 126(1): a senior officer "may compound any offence ... prescribed to be a compoundable offence by collecting ... a
+-- sum not exceeding $5,000" (the list of compoundable offences is not deposited). (2): on payment "any properties seized
+-- must be released ... unless the property consists of goods the import of which is absolutely prohibited under section
+-- 38 or of goods manufactured in Singapore without a licence ..., in which case the goods are to be forfeited".
+GIVEN `I paid the composition sum`                          IS A BOOLEAN
+      `the goods are absolutely prohibited imports under s 38` IS A BOOLEAN
+      `the goods were made in Singapore without a licence`  IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Will my seized property be released when I compound` IF
+        `I paid the composition sum`
+    AND NOT `the goods are absolutely prohibited imports under s 38`
+    AND NOT `the goods were made in Singapore without a licence`
+
+-- s 127: no person is entitled "to the costs of the proceedings or to any damages or other relief other than an order
+-- for the return of the goods or the payment of their value unless the seizure was made without reasonable or probable
+-- cause". Whether there was reasonable or probable cause is the court's judgment, asked as an input.
+GIVEN `the court finds the seizure was made without reasonable or probable cause` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Can I recover costs or damages for the seizure` IF
+    `the court finds the seizure was made without reasonable or probable cause`
+
+§§ `119 -- prison if I do not pay the fine`
+
+-- s 119: the term for non-payment "must not exceed in any case the maximum fixed by the following scale: does not exceed
+-- $50: 2 months; exceeds $50 but does not exceed $100: 4 months; exceeds $100 but does not exceed $200: 6 months; with
+-- one additional month for every $100 after the first $200 of the fine until a maximum period of 6 years is reached".
+-- "for every $100" is read as every whole $100 beyond $200 (a part of $100 adds nothing). That is an inference.
+GIVEN `the fine` IS A NUMBER
+GIVETH A NUMBER
+`For how many months at most can I be imprisoned if I do not pay the fine` MEANS
+    BRANCH IF `the fine` AT MOST  50  THEN 2
+           IF `the fine` AT MOST  100 THEN 4
+           IF `the fine` AT MOST  200 THEN 6
+           OTHERWISE `the lesser of` (6 PLUS FLOOR ((`the fine` MINUS 200) DIVIDED BY 100)) 72
+
+§§ `19, 20 -- refunds and short levies`
+
+-- s 19(2), (3): a refund "may be made only if -- (a) the person makes the claim within 5 years after the overpayment ...
+-- and (b) the Director-General is satisfied of the overpayment". The Director-General's satisfaction is an input.
+-- Five years is counted to the same day five years on (29 February rolls to 1 March).
+GIVEN `the date I overpaid`                          IS A DATE
+      `the date of my written claim`                 IS A DATE
+      `the Director-General is satisfied I overpaid` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Can I get my overpaid duty refunded` IF
+        `the date of my written claim` AT MOST
+            Date (DATE_DAY `the date I overpaid`) (DATE_MONTH `the date I overpaid`) (DATE_YEAR `the date I overpaid` PLUS 5)
+    AND `the Director-General is satisfied I overpaid`
+
+-- s 20(1): the person who should have paid "must pay the deficiency ... on a valid demand being made". (1A): a demand is
+-- valid if "(a) it is in writing; (b) it is made within 5 years after the date of payment ...; (c) it specifies -- (i) the
+-- amount ... or (ii) the circumstances or the goods". (1B): "(1A)(b) does not apply if the short levy ... was the result
+-- of fraud or evasion on the part of the person liable".
+DECLARE Demand HAS
+    `it is in writing`                              IS A BOOLEAN
+    `the date I paid the duty`                      IS A DATE
+    `the date of the demand`                        IS A DATE
+    `it states the amount or the circumstances`     IS A BOOLEAN
+    `the short levy came from my fraud or evasion`  IS A BOOLEAN
+
+GIVEN `the demand` IS A Demand
+GIVETH A BOOLEAN
+DECIDE `Must I pay the short levy demanded` IF
+        `the demand`'s `it is in writing`
+    AND (   `the demand`'s `the short levy came from my fraud or evasion`
+         OR `the demand`'s `the date of the demand` AT MOST
+                Date (DATE_DAY (`the demand`'s `the date I paid the duty`))
+                     (DATE_MONTH (`the demand`'s `the date I paid the duty`))
+                     (DATE_YEAR (`the demand`'s `the date I paid the duty`) PLUS 5))
+    AND `the demand`'s `it states the amount or the circumstances`
+
+§§ `136 -- leaving by car with too little fuel`
+
+-- s 136(1): "Except with the written permission of the Director-General or an officer of customs authorised ..., any
+-- person, being in charge of a motor vehicle registered under the Road Traffic Act 1961, who leaves or attempts to leave
+-- Singapore in that motor vehicle ... without such minimum amount of motor fuel ... as the Minister may by order
+-- prescribe shall be guilty of an offence" (fine up to $500).
+-- (2)(a): driving "past the Customs gantry before the departure bay" is presumed, "until the contrary is proved", an
+-- attempt to leave. (2)(b): the fuel gauge is, until the contrary is proved, evidence of the amount.
+-- (3): permission may be given after the attempt "without affecting any liability of the person for such attempt".
+-- The Minister's order is not deposited: the prescribed minimum is an input, in the same unit as the fuel in the tank.
+DECLARE Departure HAS
+    `the vehicle is registered under the Road Traffic Act 1961`  IS A BOOLEAN
+    `I am in charge of the vehicle`                              IS A BOOLEAN
+    `I left or tried to leave Singapore in it`                   IS A BOOLEAN
+    `I drove past the Customs gantry before the departure bay`   IS A BOOLEAN
+    `I proved I was not trying to leave`                         IS A BOOLEAN
+    `the fuel in the tank`                                       IS A NUMBER
+    `the minimum the Minister's order prescribes`                IS A NUMBER
+    `I had written permission before I tried to leave`           IS A BOOLEAN
+
+GIVEN `the departure` IS A Departure
+GIVETH A BOOLEAN
+DECIDE `Have I committed the fuel offence` IF
+        `the departure`'s `the vehicle is registered under the Road Traffic Act 1961`
+    AND `the departure`'s `I am in charge of the vehicle`
+    AND (   `the departure`'s `I left or tried to leave Singapore in it`
+         OR (    `the departure`'s `I drove past the Customs gantry before the departure bay`
+             AND NOT `the departure`'s `I proved I was not trying to leave`))
+    AND `the departure`'s `the fuel in the tank` LESS THAN `the departure`'s `the minimum the Minister's order prescribes`
+    AND NOT `the departure`'s `I had written permission before I tried to leave`
