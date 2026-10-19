@@ -817,3 +817,28 @@ s 396 gang-robbery with murder, s 397 (deadly weapon), and ss 398–402. The row
 four sections above.
 
 The row now has a `projections/` directory; it still has no `registers/`, `report/` or `gates/`.
+
+## Seat
+
+*19 October 2026.*
+
+**The seat is the accused person**: the individual whose acts are measured against an offence and who may be charged and punished under it.
+The Penal Code is applied to that person and to no one else; the victim, the police, the Public Prosecutor and the court are actors in it, but none of them is the one the law is applied to.
+
+`penal-code-seat.l4` phrases the existing rules as that person's questions (20 of them, in five groups: taking or keeping property; property entrusted to me; deceiving or threatening someone; someone hurt or killed; what I can be charged with).
+Each question takes the same facts record as the rule it wraps and calls that rule; none of the existing modules, facts records, charge builders or assertions is changed.
+`penal-code-cases-seat.l4` asserts every question at least once (39 assertions), with fixtures and expected values copied from the existing modules' assertions.
+
+The defaults ruled on 2026-10-18, and where this encoding stands on each:
+
+- **The Act alone, with the instruments that set its numbers or dates.** Departs. The scope is a selection of offences (ss 22–25, 301, 321, 323A, 378–380, 383–384, 390–394, 403, 405–409, 415, 417, 420, 503, 506), not every operative section; and the charge machinery of the Criminal Procedure Code 2010 ss 123–126 (the form of a charge, and the refusal under s 123(5)) is brought in from another Act.
+- **The actors the text names.** Follows: the accused ("whoever"), the person deceived, threatened, robbed or entrusting, the public servant, the employee, the director.
+- **A judgment the law hands to someone else answered conditionally.** Departs. The states of mind the court finds — intention, knowledge, dishonest or fraudulent intent, good faith — are taken as facts the record states, not answered as "…, if the court finds that …". The encoding was written from the prosecutor's seat, whose case asserts those facts.
+- **The Act's own definitions worked out from facts; borrowed terms asked as facts.** Follows: "wrongful gain", "wrongful loss", "dishonestly" and "fraudulently" (ss 23–25), theft, extortion, robbery, criminal breach of trust, cheating, criminal intimidation and voluntarily causing hurt are each worked out from their elements.
+- **One case is the text's natural unit.** Follows: one facts record is one alleged offence; `Complaint` gathers one record per offence family for the charge sheet.
+- **The Act's own terms, each with a plain gloss.** Follows: the rules keep the Code's words, and the seat layer glosses each term in the comment above its question.
+- **The operative sections in, the machinery out.** Follows for the Code itself (no machinery is encoded); the CPC charge builder is the departure noted under the first default.
+- **The seat.** The existing modules were written from the prosecutor's seat — their outputs are charges and refusals to frame them. The seat layer is the correction for the individual; the charge builders stay as they are, and two questions ("What can I be made to suffer …") read the punishment off them.
+
+Checked on 19 October 2026 with the `l4` shipped in the l4-vscode 1.6.98 extension: all 39 seat assertions satisfied, zero errors, and every existing module's count unchanged and satisfied.
+The `l4` then installed under `AppData/Local/Programs/l4` rejects `concat (LIST` at the parser in ten of the twelve existing modules; that is a binary matter, not a fault in the encoding, and the existing modules were not touched.
