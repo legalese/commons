@@ -60,3 +60,22 @@ Unannotated statute text was deposited on 2026-10-20 for a connected set on pers
   - the Kentucky Administrative Regulations (921 KAR), which set K-TAP payment standards and SSP amounts.
 - Ky. Const. sec. 170, which grants the homestead exemption, is not deposited.
 - An incident during the fetch: one connection was dropped by the server, then local DNS failures followed. The fetcher stopped and resumed at 8 s spacing. Every deposited file is from an HTTP 200 response.
+
+## Administrative regulations deposited 2026-10-20
+
+The question was where Kentucky sets the **amounts** a person gets: the K-TAP grant, the state SSI supplement, and the UI maximum weekly benefit.
+
+**Added:** `kentucky-administrative-regulations-921-kar-2-015-and-2-016-state-supplementation-and-ktap-standards` (new). It holds two files, both downloaded from the LRC's Kentucky Administrative Regulations pages (apps.legislature.ky.gov) on 2026-10-19 UTC. Each was checked word by word against the LRC's engrossed PDF of the same regulation (at least 99.8% match).
+
+| File | Regulation | Key amounts | Currency | Characters |
+| --- | --- | --- | --- | --- |
+| `921-kar-2-016-ktap-standards-of-need-and-amount` | 921 KAR 2:016, KTAP standards of need and amount | Payment maximum / standard of need by eligible persons: 1 $372 / $481, 2 $450 / $552, 3 $524 / $631, 4 $656 / $710, 5 $766 / $790, 6 $864 / $869, 7+ $964 / $948. Gross income limits $890 to $1,754. 45% ratable reduction: the payment is the lesser of 55% of the deficit and the payment maximum (s 9). | eff. 2-16-2023; 7-year expiration 2/16/2030 | 46,705 |
+| `921-kar-2-015-state-supplementation` | 921 KAR 2:015, supplemental programs for persons who are aged, blind, or have a disability (the state SSI supplement under KRS 205.245) | Standard of need (s 9): personal care home $1,409; family care home $965; caretaker services $855 single, $1,251 couple with one needing care, $1,305 couple with both needing care; private residence with SMI $1,313. Personal needs allowance $60 (personal care home) or $40 (family care home). Resource limit $2,000 / $3,000. | eff. 7-30-2024; 7-year expiration 7/30/2031 | 31,175 |
+
+**Read with care:** both regulations add to these figures "cost of living adjustments determined by the Social Security Administration", from 2021 for 2:015 and from 2023 for 2:016, "to the extent funds are available". The dollar amounts in the texts are base figures. The current paid amounts are those figures plus COLAs, and no deposited text states the COLA-adjusted amounts.
+
+**Terms.** Pages carry "Copyright (c) 2024 Kentucky Legislative Research Commission"; the formal disclaimer on legislature.ky.gov is still unread (that host answered HTTP 403 to robots.txt). Regulations are law and carry no copyright. robots.txt on apps.legislature.ky.gov: none (404). Verdict: conditions, met for the regulation text, the same as the KRS deposit above.
+
+**Not sourced:** the UI weekly maximum. It is computed under KRS ch. 341 (deposited) from the state average weekly wage, and no official current-year notice was fetched. Also not deposited: the KTAP technical-requirements regulation (921 KAR 2:006) and the income rules that feed the deficit.
+
+**Remaining gaps:** the COLA-adjusted current amounts for KTAP and state supplementation; the UI weekly maximum figure; 921 KAR 2:006.

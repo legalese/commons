@@ -41,3 +41,16 @@ Texas has **no personal income tax**, confirmed in the deposited text: Tex. Cons
 - Statutes changed by the 89th Legislature's 2025 called sessions may not all be reflected in the LA files (dated 2026-05-14).
 - The TANF grant amounts and the UI maximum weekly benefit are set by rule or administrative figure, not in the deposited chapters; Texas Administrative Code (titles 1 and 40) is not sourced.
 - Labor Code ch. 208 (claims and appeals), Tax Code ch. 23 (the 10% homestead appraisal cap, s 23.23) and Hum. Res. Code ch. 33 (SNAP) are not deposited.
+
+## Administrative rules and official standards checked 2026-10-20
+
+The question was where Texas sets the **amounts** a person gets: the TANF grant, a state SSI supplement, and the UI maximum weekly benefit.
+
+**Added (index only, no text):** `texas-works-handbook-appendix-c-110-tanf-budgetary-allowances`. The TANF maximum grant table is not in the Texas Administrative Code. It is in HHSC's Texas Works Handbook, Appendix C-110 (C-111, Revision 26-4, effective Oct. 1, 2026), read on the register 2026-10-19T18:30:34Z (UTC). It gives budgetary needs, recognizable needs and the maximum grant by family size from 1 to 15, for three case types. For example, a caretaker case without a second parent gets at most $162 for 1 person, $336 for 2, $388 for 3 and $466 for 4, plus $89 for each person over 15. These figures were read on the register; they are **not** in deposited text. HHSC's website terms allow non-commercial copying only if "The content remains unaltered", so under the sourcing brief the page is indexed and flagged, not deposited. The page's sha256 is recorded so it can be deposited if the owner allows a verbatim copy.
+
+**Not sourced, and why:**
+- **Texas Administrative Code** (titles 1 and 40). The Secretary of State's old TAC viewer (texreg.sos.state.tx.us) now only redirects to a JavaScript app on texas-sos.appianportalsgov.com, which serves no rule text in its HTML. www.sos.state.tx.us answered HTTP 403 when its site-policies page was requested, so the fetcher stopped using that host.
+- **UI maximum weekly benefit.** The Texas Workforce Commission (www.twc.texas.gov) answered HTTP 403 to robots.txt. The host was not used further. The formula is in the deposited Lab. Code s 207.002; the current dollar maximum is not sourced.
+- **State SSI supplement.** None found. Texas pays no general optional state supplement: unverified (general knowledge).
+
+**Remaining gaps:** the UI weekly maximum figure; TAC rule text; deposit of the C-110 table, which is waiting on a ruling about HHSC's "unaltered" condition.

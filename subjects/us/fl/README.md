@@ -48,3 +48,26 @@ Florida levies **no personal income tax**. The deposited Constitution says why: 
 - The Save Our Homes assessment cap (Fla. Stat. s 193.155) and the senior "granny flat" and deferral provisions (ch. 197) are not deposited; ch. 193 is too large for this sample.
 - The OSS base rate is set by the department within appropriations (s 409.212(2)) and is not in statute. Florida Administrative Code (flrules.org) was not reachable for the plan (HTTP 522 at robots.txt) and is not sourced.
 - The 2026 edition is the Legislature's annual compilation; laws from the 2026 session that take effect later may not be reflected.
+
+## Administrative rules and official standards checked 2026-10-20
+
+The question was where Florida sets the **amounts** a person gets: the TCA grant, the state SSI supplement (OSS), and the UI maximum weekly benefit.
+
+**Added:** `florida-dcf-ess-program-policy-manual-appendix-a-5-and-a-12-cash-assistance-and-oss-standards` (new). It holds two appendices of the Department of Children and Families' ESS Program Policy Manual, deposited as unofficial text from the DCF PDFs, downloaded 2026-10-19 UTC.
+
+| File | What it sets | Currency | Characters |
+| --- | --- | --- | --- |
+| `fl-ess-appendix-a-12-state-funded-programs-standards` | **Optional State Supplementation** (OSS). "Protected" cases (RTF not enrolled for ACS, and the 2001 "Gap" group): income standard and provider rate $1,179 for an individual / $2,261 for a couple; personal needs allowance $160; asset limit $2,000 / $3,000; **maximum OSS payment $345 / $690**. "Redesign" cases (ALF, AFCH, and RTF enrolled for ACS): income standard $1,072.40 / $2,047.80; provider rate $1,018.40 / $1,939.80; **maximum OSS payment $184.40 / $386.80**. Also Home Care for Disabled Adults limits and the SSI federal benefit rate ($994 / $1,491). | headed 01/01/2026; columns for January 2025 and January 2026 | 2,676 |
+| `fl-ess-appendix-a-5-tca-income-standards` | **Temporary Cash Assistance**: the gross income limit (185% of FPL) and the consolidated need standard (100% of FPL), both effective April 2026; the Tier I/II/III payment standards (July 1996) by filing-unit size from 0.5 to 24, with the add-person increments | April 2026 / July 1996 | 3,924 |
+
+**Which amounts now come from deposited text:**
+- The OSS amounts. Fla. Stat. s 409.212(2) leaves the base rate to the department "within funds appropriated"; Appendix A-12 gives the figures. Read with care: the arithmetic Maximum OSS Payment = provider rate + $160 personal needs allowance - $994 federal benefit rate holds for both columns ($1,179 + $160 - $994 = $345), but that relationship is inferred, not stated in the appendix.
+- The TCA payment standards were already in deposited statute (s 414.095(10); 1 person: $95 / $153 / $180). Appendix A-5 adds the current income tests and the half-person (Family Cap) rows. The two agree for sizes 1-10 as read.
+- The UI maximum, $275 a week, is in the deposited statute, s 443.111(3).
+
+**Terms.** DCF publishes no terms of use, copyright notice or licence on the pages read, and the PDFs carry none. Florida public-records law is generally taken to bar agency copyright without statutory authority: unverified (general knowledge). robots.txt: none on www.myflfamilies.com or ffic.myflfamilies.com (404). Verdict: clean.
+
+**Not sourced:**
+- **Florida Administrative Code** (flrules.org, incl. ch. 65A-1 and 65A-2). Its robots.txt returned HTTP 522 on 2026-10-19, so it was treated as disallowing everything; the same thing happened in the 2026-10-19 statute pass. FloridaCommerce (floridajobs.org) answered HTTP 403 to robots.txt and was not used.
+
+**Remaining gaps:** the rule text of 65A-1 and 65A-2 F.A.C.; any mental-health supplement to the OSS amounts (s 409.212(2) and s 429.075), which A-12 does not show.

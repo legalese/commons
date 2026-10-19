@@ -47,3 +47,25 @@ Wyoming has **no personal income tax**, confirmed in the deposited text: Title 3
 - The PDFs state no as-at date; the creation dates (title 27 and 42: 2026-05-08, after the 2026 budget session; title 39: 2026-10-14) are the best currency evidence.
 - The POWER payment table in the text is labelled "for the year 2008"; current payment levels are set by rule. The state SSI payment amount is set in the budget. The UI statewide weekly wage is computed annually. Wyoming Administrative Rules (rules.wyo.gov) are not sourced.
 - Conversion from PDF loses indentation; in a few places two enumerated items run together in one paragraph where the PDF gave no line break (e.g. 27-3-320(a)(iii)-(iv)).
+
+## Administrative rules checked 2026-10-20
+
+The question was where Wyoming sets the **amounts** a person gets: the POWER payment, the state SSI supplement, and the UI maximum weekly benefit.
+
+**Added:** `wyoming-administrative-rules-049-0030-chapter-1-power-program` (new). It is the Department of Family Services' POWER rule, Chapter 1 (Reference 049.0030.1.01122018, in effect from 01/12/2018 and current on 2026-10-19), from the Secretary of State's Administrative Rules system, rules.wyo.gov. The text comes from the site's HTML rule viewer; the rule's PDF was checked against it and matches word for word apart from page headers. The file is `wy-rules-049-0030-ch1-power`, 112,364 characters.
+
+**What the rule supplies, as read in the deposited text:**
+- How a POWER payment is worked out: the shelter qualified and shelter disqualified maximum payment (s 9), the $600 earned income disregard (or $1,200 for a married couple with a child in common), the maximum payment test, and the earned income incentive at 50% of the maximum payment level.
+- The $5,000 asset limit, and the asset and income treatment tables (ss 12-13).
+- Sanctions and the 5-year limit.
+
+**What the rule does not supply: the dollar maximum payment table.** The earlier note that "current payment levels are set by rule" was wrong. The levels come from the deposited statute: W.S. 42-2-103(e)(iii) has the 2008 table and adjusts it each year from July 1, 2009 by the Wyoming cost-of-living index. The current-year figures are not published as a rule. DFS's website gives only two examples: a family of three with no income "could receive" $781 under the POWER work program, and a caretaker relative with one child $259. That page carries "Copyright © 2026 Wyoming Department of Family Services" and no reuse grant, so it was read, not deposited (read 2026-10-19T18:42:39Z UTC).
+
+**Terms.** rules.wyo.gov states no terms of use or copyright claim, has no robots.txt (404), and itself quotes *Doidge v. State Board of Charities and Reform* (Wyo. 1990): rules "have the force and effect of law". Verdict: clean, under the government-edicts doctrine.
+
+**Not sourced:**
+- **State SSI supplement.** No current DFS rule program for it was listed; W.S. 42-2-103(d) leaves the amount to the budget.
+- **UI weekly maximum.** The current DWS Unemployment Insurance rules (program 053.0018, chapters 1-37, listed) do not set the maximum; W.S. 27-3-303 computes it from the statewide average weekly wage each year. The current figure is not sourced.
+- **General Assistance.** Its rule chapter (049.0018) is listed as repealed.
+
+**Remaining gaps:** the current-year POWER maximum payment table after the cost-of-living adjustment; the state SSI supplement amount; the UI weekly maximum figure.

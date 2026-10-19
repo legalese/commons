@@ -52,3 +52,20 @@ Total: 9 files, 178 sections, 488,667 characters.
 - **Homestead exemption and income tax.** The over-65 and disability exemption in s 40-9-21 is tested against "net annual taxable income of twelve thousand dollars"; its catchline calls this net annual federally taxable income, which links it to the IRC. Section 40-9-19 tests a related exemption against "an annual adjusted gross income of less than $12,000 as reflected on the most recent state income tax return", which links it to Chapter 18.
 
 **Gaps.** Alabama has no state earned income credit (none appears in Article 1, and Article 4B was not deposited). The Department of Human Resources' TANF payment standards are in the Alabama Administrative Code, which was not fetched. Constitutional homestead provisions and county local acts are not deposited. The plan's "Rates" instrument (s 40-18-5 and the dependent exemption in s 40-18-19) sits inside Article 1 and so has no file of its own.
+
+## Administrative rules deposited 2026-10-20
+
+The question was where Alabama sets the **amounts** a person gets: the Family Assistance (TANF) grant, the state SSI supplement, and the UI maximum weekly benefit.
+
+**Added:** `alabama-administrative-code-660-2-2-and-660-2-4-family-assistance-payment-and-state-supplementation` (new). It holds one file, `ala-admin-code-660-2-2-and-660-2-4` (9,913 characters), with seven Department of Human Resources rules from the Alabama Administrative Code (admincode.legislature.state.al.us), read 2026-10-19 UTC through the site's own public GraphQL endpoint:
+- 660-2-2-.10 (amount of assistance payment), -.27 (need requirement), -.31 (payment standard) and -.32 (computation of grant);
+- 660-2-4-.10 (amount of State Supplementation payment), -.19 (need requirement), and Appendix A attachments to chapter 660-2-4.
+
+**What the deposited text settles, and what it does not:**
+- **Family Assistance.** The payment is "the appropriate payment standard (as established by the Department based on availability of funds) minus the rounded total net available income", with a minimum grant of $10 and first-month proration (-.10, -.32). The standard "varies by family size" (-.31). **There is no dollar table in the current rules.** The attachment that held it, Attachment 660-2-2-.31 "Standards for Family Assistance (FA) Families", is listed in Appendix A as repealed 9/21/18. So the current FA payment standard is not in rule text. It remains unsourced.
+- **State Supplementation.** The payment depends on "the kind of care he needs, subject to the funds available", and the person must be an SSI recipient (-.10, -.19). Attachment 660-2-4-.19a gives the special-needs amounts. For each payment it shows a "Monthly Amount To Be" and a "Maximum Budgeted" figure: FCMP nursing care $100 / $60; nursing care supplement $60 / $60; personal care supplement $60 (level A) or $56 (level B); personal or nursing care in foster care $110; care in a cerebral palsy treatment center $196. Attachment .19b gives the basic requirements for nursing-home cases. The appendix also carries a 1995 federal benefit rate chart marked "Reference Only"; it is not current.
+- **UI maximum.** No rule is needed. The deposited statute, Code of Ala. s 25-4-72(5) (`ala-code-25-4-art4`), sets the weekly maximum at $275 for benefit years beginning on or after January 1, 2020.
+
+**Terms.** The site has no terms of use. Its footer reads "Copyright (c) Alabama Legislative Services Agency. All rights reserved." and names LSA as "official publisher of the Alabama Administrative Code". Rules are law and carry no copyright. robots.txt: the path serves the HTML shell (treated as absent), and the page declares robots "all". Verdict: clean for the rule text. **Flag:** the footer's general "All rights reserved" claim may deserve a human ruling, as for Kentucky.
+
+**Remaining gaps:** the current Family Assistance payment standard by family size (DHR sets it outside the Code); the current base State Supplementation amounts beyond the special-needs table.

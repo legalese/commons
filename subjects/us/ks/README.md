@@ -57,3 +57,27 @@ Unannotated statute text was deposited on 2026-10-20 for a connected set on pers
   - the medical-assistance and child-support sections of ch. 39 art. 7;
   - the Kansas Administrative Regulations (K.A.R.), which set TANF payment standards.
 - Kansas has no state supplementary payment statute in this set.
+
+## Administrative regulations checked 2026-10-20
+
+The question was where Kansas sets the **amounts** a person gets: the TANF grant, a state SSI supplement, and the UI maximum weekly benefit.
+
+**Added:** `kansas-administrative-regulations-30-4-100-to-30-4-102-tanf-payment-standards` (new). It holds K.A.R. 30-4-100, 30-4-100w, 30-4-101, 30-4-102, and the history note of 30-4-120, which was revoked May 3, 2019. The text comes from the Secretary of State's 2022 Kansas Administrative Regulations, Volume 3 (PDF), downloaded 2026-10-19 UTC. The file is `kar-30-4-100-to-30-4-102-tanf-payment-standards`, 9,822 characters.
+
+**Which amounts now come from deposited text:**
+- **TANF basic standard** (30-4-101(a)): $132 for 1 person in the plan, $217 for 2, $294 for 3, $362 for 4, plus $61 for each additional person. The figures include an $18 per person energy supplement.
+- **TANF shelter standard by county** (30-4-101(b)): Group I $92 (83 counties), Group II $97 (Franklin, Gray, Kiowa, Morton, Pawnee, Seward, Sherman), Group III $109 (incl. Sedgwick, Shawnee, Wyandotte, Riley, Reno), Group IV $135 (Douglas, Harvey, Johnson).
+- **How they combine** (30-4-100): the benefit amount is built from the basic standard plus the shelter standard. The shelter standard is cut by 60% for 1 person in the plan, falling to 20% for 6 or more, when people outside the plan live in the home. Those exceptions are listed in (b)(1).
+- So a family of 3 in Johnson County, with everyone in the plan, has a standard of $294 + $135 = $429 before income is counted. That sum is arithmetic from the deposited text; how countable income is subtracted is in other regulations (30-4-110 ff.), which were not deposited.
+
+**Currency.** The 2022 volumes hold regulations filed through 31 December 2021. The latest amendment credited in these texts is May 3, 2019. Any later change would be in the Kansas Register, which was not checked.
+
+**Terms.** sos.ks.gov has a generic site footer, "(c) 2025 Kansas Secretary of State", and no terms of use or reuse restriction on the K.A.R. pages. Regulations are law and carry no copyright. robots.txt allows /publications/. Verdict: clean.
+
+**Not sourced, and why:**
+- **Online K.A.R.** (rules.ks.gov): a JavaScript app on a vendor policy-library platform. Its /api/context answered HTTP 403, so the host was dropped.
+- **DCF's KEESM manual** (www.dcf.ks.gov, content.dcf.ks.gov): robots.txt timed out on both hosts, so they were dropped.
+- **UI weekly maximum**: the Kansas Department of Labor (www.dol.ks.gov) answered HTTP 403 to robots.txt. The figure is computed under K.S.A. 44-704 from the state average weekly wage: unverified (general knowledge).
+- **State SSI supplement**: none found in K.A.R. 30-4. Kansas pays no general optional state supplement: unverified (general knowledge).
+
+**Remaining gaps:** K.A.R. 30-4-110 to 30-4-113 (income and its treatment); any Kansas Register amendment after 2021; the UI weekly maximum.

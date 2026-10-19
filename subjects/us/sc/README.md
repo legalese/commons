@@ -55,3 +55,15 @@ Code text was deposited on 2026-10-20 for a connected set on personal income tax
 - Chapters 41-37 (employer coverage) and 41-41 (offences) were fetched but not deposited.
 - The South Carolina Code of Regulations (DSS regulations, ch. 114) was not sourced. It sets Family Independence payment amounts.
 - Ch. 12-6 is deposited whole (about 510,000 characters), including corporate provisions.
+
+## Administrative regulations checked 2026-10-20 (nothing deposited)
+
+The question was where South Carolina sets the **amounts** a person gets: the Family Independence grant, the state SSI supplement (Optional State Supplementation), and the UI maximum weekly benefit.
+
+**Terms read.** The South Carolina Code of Regulations index (https://www.scstatehouse.gov/coderegs/statmast.php, read 2026-10-19 UTC) says the unannotated Code of Regulations, "consisting only of Regulation text, numbering, and history, may be copied from this website at the reader's expense and effort without need for permission". It says the files are "current through State Register Volume 50, Issue 3, effective March 27, 2026", and that the online version "is not official". The site disclaimer says the information "is intended for personal, not commercial, uses", which the owner's ruling of 20 Oct 2026 meets (Legalese Commons is non-commercial use). robots.txt allows /coderegs/. Verdict: **clean**. Chapter 114 (Department of Social Services) is offered only as PDF and Word; its HTML link is commented out.
+
+**Why nothing was deposited:**
+- The Chapter 114 PDF (https://www.scstatehouse.gov/coderegs/Chapter%20114.pdf) returned **HTTP 522** (origin timeout) at 2026-10-19T18:54:57Z. Under the access rules a timeout stops the host, so www.scstatehouse.gov was not used again in this pass, and the Word version was not tried.
+- The Department of Social Services (dss.sc.gov) timed out on robots.txt, and the Department of Health and Human Services (www.scdhhs.gov, which runs OSS) answered HTTP 403 to robots.txt. Both hosts were dropped.
+
+**Remaining gaps (unchanged):** the Family Independence payment amounts; the OSS amount; the UI weekly maximum. It is unverified (general knowledge) whether Chapter 114 sets Family Independence dollar amounts at all; they may sit in the DSS policy manual instead. A later pass should retry the Chapter 114 PDF on a fresh day.
