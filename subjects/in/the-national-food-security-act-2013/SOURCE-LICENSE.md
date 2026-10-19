@@ -20,4 +20,39 @@ English is authoritative. Under Article 348(1)(b) of the Constitution, the autho
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+No statute text has been deposited yet. (See the update of 2026-10-19 below: two Schedule I notifications are now deposited, and the Act is staged.)
+
+## Update of 2026-10-19: the Gazette text
+
+The text of this Act was downloaded from the e-Gazette, egazette.gov.in, as published in the Gazette of India. India Code (indiacode.nic.in) refused access again (403). See `registers/source-bundle/*.meta.json` for the URL, the checksums and the character count.
+
+## Terms and access checks of 2026-10-19
+
+Every request used the User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`, starting with the first one. Where a site had no robots.txt, at least 2 seconds were left between requests (3 seconds for the Gazette PDFs).
+
+| Site | What was read (approx. UTC, 2026-10-19) | Result |
+|---|---|---|
+| India Code, `https://www.indiacode.nic.in/robots.txt` | 13:19 | **403 Access Denied** (Akamai). Use of the site stopped there, and no other route around the block was tried. |
+| Legislative Department, `https://legislative.gov.in/robots.txt` | 13:19 | **403 Access Denied** (Akamai). Stopped. |
+| Income Tax Department, `https://incometaxindia.gov.in/robots.txt` and `https://www.incometaxindia.gov.in/robots.txt` | 13:20 | Connection reset, then **403 Access Denied** (Akamai). Stopped. |
+| EPFO, `https://www.epfindia.gov.in/robots.txt` (redirects to `www.epfo.gov.in`) | 13:20 | **403** "Request blocked" (CloudFront). Stopped. |
+| Ministry of Labour, `https://labour.gov.in/robots.txt` | 13:20 | **403 Access Denied** (Akamai). Stopped. |
+| ESIC, `https://esic.gov.in/robots.txt` | 13:20 | Connection timed out after 30 s. Not retried and not used. |
+| e-Gazette, `https://egazette.gov.in/robots.txt` | 13:19 | 404: the site has no robots.txt, so it sets no Disallow and no Crawl-delay. |
+| e-Gazette, `https://egazette.gov.in/Disclaimer.aspx` and home page | 13:22 | The Disclaimer page shows only a "page not found" image and no terms. The home-page footer says: "Contents are provided, uploaded and approved by Dept. of Publication, M/o Housing and Urban Affairs, Government of India" and "This site is Designed, Developed and Hosted by National Informatics Centre". **No copyright, licence or re-use statement was found.** |
+| Internet Archive, `https://archive.org/robots.txt` | 13:20 | `User-agent: *` disallows only `/control/` and `/report/`. Only `advancedsearch.php` and `/metadata/` were used, to find Gazette IDs in the `gazetteofindia` collection (a mirror of e-Gazette uploaded by Indian Kanoon). No text was taken from archive.org. Its terms page (`/about/terms.php`) returned only a JavaScript application shell, so the terms text was not read. |
+
+**The statutory position.** India publishes no open licence for Gazette matter or Acts. Under the Copyright Act 1957, s.52(1)(q)(i), reproducing or publishing "any matter which has been published in any Official Gazette except an Act of a Legislature" does not infringe copyright. Under s.52(1)(q)(ii), an Act of a Legislature may be reproduced or published only "together with any commentary thereon or any other original matter". These provisions are cited from the 2026-09-22 record (made from India Code's PDF, via the Wayback Machine) and from knowledge; they were not fetched again on 2026-10-19, because India Code refuses access.
+
+**The rule applied.**
+
+- **Deposited:** Gazette matter other than Acts, which s.52(1)(q)(i) clearly permits. These are the Social Security (Central) Rules, 2026 and the two notifications under Schedule I to the National Food Security Act.
+- **Not deposited:** Acts of Parliament, because reproducing them is conditional rather than clearly permitted. They are converted and staged outside the repository, and their meta files record the checksums. Whether a deposit that sits beside commentary and encodings meets the s.52(1)(q)(ii) condition is a **human decision**.
+- **Attribution:** none is required. The Gazette source is acknowledged at the top of each text.
+
+**The Act's text is not deposited in the repository.** Gazette `E_29_2013_429` (as enacted, 10 September 2013) is converted and staged outside the repository, pending the s.52(1)(q)(ii) decision.
+
+**Deposited** (Gazette matter other than an Act, s.52(1)(q)(i)):
+
+- `CG-DL-E-30122022-241510.txt`: S.O. 6148(E) of 30 December 2022. Foodgrains are free of cost for eligible households under s.3, from 1 January 2023.
+- `CG-DL-E-11122023-250548.txt`: S.O. 5241(E) of 4 December 2023. It extends that period to 31 December 2028.
