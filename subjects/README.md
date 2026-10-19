@@ -283,6 +283,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/carer-recognition-act-2010`](au/carer-recognition-act-2010) | Carer Recognition Act 2010 (Cth) — who is a carer, what agencies must do, and that it is not enforceable, from the carer's seat — row `legalese-aswathy` | `draft` |
 | [`au/damage-by-aircraft-act-1999`](au/damage-by-aircraft-act-1999) | Damage by Aircraft Act 1999 (Cth) — strict liability for harm caused by aircraft, who is liable, and contributory negligence, from the seat of the person on the ground — row `legalese-aswathy` | `draft` |
 | [`au/privy-council-limitation-of-appeals-act-1968`](au/privy-council-limitation-of-appeals-act-1968) | Privy Council (Limitation of Appeals) Act 1968 (Cth) — when leave to appeal to the Privy Council may be asked, from the litigant's seat — row `legalese-aswathy` | `draft` |
+| [`au/privy-council-appeals-from-the-high-court-act-1975`](au/privy-council-appeals-from-the-high-court-act-1975) | Privy Council (Appeals from the High Court) Act 1975 (Cth) — the end of special leave to appeal from the High Court, from the litigant's seat — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
