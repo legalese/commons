@@ -284,6 +284,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/damage-by-aircraft-act-1999`](au/damage-by-aircraft-act-1999) | Damage by Aircraft Act 1999 (Cth) — strict liability for harm caused by aircraft, who is liable, and contributory negligence, from the seat of the person on the ground — row `legalese-aswathy` | `draft` |
 | [`au/privy-council-limitation-of-appeals-act-1968`](au/privy-council-limitation-of-appeals-act-1968) | Privy Council (Limitation of Appeals) Act 1968 (Cth) — when leave to appeal to the Privy Council may be asked, from the litigant's seat — row `legalese-aswathy` | `draft` |
 | [`au/privy-council-appeals-from-the-high-court-act-1975`](au/privy-council-appeals-from-the-high-court-act-1975) | Privy Council (Appeals from the High Court) Act 1975 (Cth) — the end of special leave to appeal from the High Court, from the litigant's seat — row `legalese-aswathy` | `draft` |
+| [`au/human-rights-sexual-conduct-act-1994`](au/human-rights-sexual-conduct-act-1994) | Human Rights (Sexual Conduct) Act 1994 (Cth) — protection of private sexual conduct between consenting adults from arbitrary interference — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
