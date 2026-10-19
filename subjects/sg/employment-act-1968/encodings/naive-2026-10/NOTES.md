@@ -320,3 +320,58 @@ the supplied facts that `ea-part12-retrenchment.l4` left open.
 - The regulations, which carry every prescribed period and the Fifth Schedule.
 - The Employment Claims Act 2016, which s 14(2) routes the remedy through.
 - No case law was searched, and no human gate has been sought.
+
+
+## Seat
+
+**Seat: the employee** -- one person, in one employment with one employer.
+The Employment Act is applied, first and last, to the employee: it fixes the
+notice they are owed, when they must be paid and what may be taken from their
+pay, their rest days, hours, overtime and leave, their maternity protection,
+and when they may be dismissed or suspended. The employer, the Commissioner and
+the Minister appear only as the people who must act towards them.
+
+`ea-seat.l4` phrases the existing rules as that person's questions --
+"How many days of notice am I owed", "Can I claim for wrongful dismissal",
+"Was I paid late", "How many days of annual leave do I get", "Must my employer
+report my retrenchment to the Commissioner" -- 20 questions in six groups.
+Each calls an existing rule with the same parameters; **no existing rule,
+module or test was changed**. `ea-cases-seat.l4` asserts every question (59
+assertions), with fixtures and expected values copied from the existing,
+hand-checked case files.
+
+The defaults ruled on 2026-10-18, and where this encoding stands:
+
+- **The Act alone, with the instruments that set its numbers or dates.**
+  Partly departs. The Employment (Retrenchment Reporting) Notification 2019 is
+  brought in; the regulations that set record retention, pay slip timing, the
+  Fifth Schedule reckoning and the s 95A minimum period were not retrieved, so
+  those numbers are supplied facts.
+- **The actors the text names.** Follows: employer, employee, workman,
+  Commissioner, Minister, principal and contractor, as the Act names them.
+- **A judgment handed to someone else answered conditionally, never guessed.**
+  Departs. Judgments the Act leaves to the employer, the Commissioner or a
+  court are taken as plain facts rather than stated as conditions: "reasonable
+  excuse" (s 13(2)), "due inquiry" and "misconduct" (s 14(1)), "immediate"
+  danger (s 15), "light work suited to the child's capacity" (s 68(3)). The
+  Commissioner's permission under s 29 is a fact too, though there the result
+  reads naturally as conditional on it.
+- **The Act's own definitions worked out from facts, borrowed terms asked as
+  facts.** Mostly follows. The exception is length of service for s 10(3),
+  which is asked band by band rather than worked out from dates (observation 2
+  above explains why).
+- **One case is the text's natural unit.** Follows: one employment. The
+  retrenchment reporting rules count notices across the workforce, which is
+  the Notification's own unit.
+- **The Act's own terms, each with a plain gloss.** Follows for the terms;
+  the plain glosses were missing from the modules and are now given beside
+  each question in `ea-seat.l4`.
+- **The operative sections in, the machinery out.** Departs in part. Parts
+  13 to 16 are out, but the s 96A administrative penalties, contravention
+  notices, reconsideration and directions (ss 126A-126D), the secrecy rules in
+  ss 101-102, and the s 82 offence are encoded beside the operative rules.
+  Most rules in the modules are also phrased from the employer's side ("the
+  employer has complied with section 95(1)", "section 38(1)(a) was
+  contravened"); the seat layer re-phrases the main ones and leaves the rest.
+
+Light pass, 19 October 2026.
