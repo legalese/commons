@@ -290,6 +290,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/territories-stolen-generations-redress-scheme-facilitation-act-2021`](au/territories-stolen-generations-redress-scheme-facilitation-act-2021) | Territories Stolen Generations Redress Scheme (Facilitation) Act 2021 (Cth) — how redress payments are treated for benefits, compensation and assets, and their inalienability — row `legalese-aswathy` | `draft` |
 | [`au/not-for-profit-sector-freedom-to-advocate-act-2013`](au/not-for-profit-sector-freedom-to-advocate-act-2013) | Not-for-profit Sector Freedom to Advocate Act 2013 (Cth) — gag clauses in Commonwealth agreements with not-for-profits — row `legalese-aswathy` | `draft` |
 | [`au/parliamentary-retiring-allowances-increases-act-1967`](au/parliamentary-retiring-allowances-increases-act-1967) | Parliamentary Retiring Allowances (Increases) Act 1967 (Cth) — the 1967 increases in parliamentary pensions and widows' rates — row `legalese-aswathy` | `draft` |
+| [`au/commonwealth-entities-payment-surcharges-act-2024`](au/commonwealth-entities-payment-surcharges-act-2024) | Commonwealth Entities (Payment Surcharges) Act 2024 (Cth) — when a Commonwealth entity may surcharge a payment, from the payer's seat — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
