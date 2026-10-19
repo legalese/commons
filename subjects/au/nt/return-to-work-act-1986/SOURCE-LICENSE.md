@@ -6,11 +6,13 @@ The text of **Return to Work Act 1986** is published on the [Northern Territory 
 - **Terms checked**: 2026-09-22, at https://legislation.nt.gov.au/en/Footer/Terms-of-Use
 - **From the terms**: "The Northern Territory grants permission to any person to publish or deal with any legislation of the Northern Territory in accordance with the following conditions"
 - **Attribution required**: none required, but the publication must not indicate directly or indirectly that it is an official version, and must not use the Northern Territory arms
+- **Terms re-read**: 2026-10-19 (UTC) before the text was fetched; unchanged.
+- **robots.txt** (https://legislation.nt.gov.au/robots.txt, read 2026-10-19): disallows only the Siteimprove crawlers; no Crawl-delay. Fetched at 3 s or more between requests.
 - **Source**: https://legislation.nt.gov.au/en/Legislation/RETURN-TO-WORK-ACT-1986
 
 ## Consequence for this subject
 
-Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Confirm before depositing text or quoting it in an encoding** -- a human decision recorded here.
+Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Verbatim deposit is within the permission; confirm before quoting it in an encoding** -- a human decision recorded here.
 
 ## Language
 
@@ -18,4 +20,6 @@ English is the only language of NT legislation; there are no other official or a
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+Text deposited 2026-10-19T17:06:11Z (UTC): reprint **REPR050**, as in force at 25 March 2024, converted from the register's Word reprint, at `registers/source-bundle/Return-to-Work-Act-1986-NT-current-reprint-REPR050.txt`. The text opens with an unofficial-copy notice as the policy's first condition requires; the sidecar `.meta.json` records the download and text sha256, character count and converter.
+
+Verbatim reproduction is within the policy ("publish or deal with"). Whether an L4 encoding that paraphrases or restructures the text is also within it (the policy does not expressly mention adaptation) remains the open question above; record the human decision here before an encoding quotes the text.

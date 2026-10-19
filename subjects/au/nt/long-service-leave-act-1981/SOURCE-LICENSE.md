@@ -10,7 +10,7 @@ The text of **Long Service Leave Act 1981** is published on the [Northern Territ
 
 ## Consequence for this subject
 
-Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Confirm before depositing text or quoting it in an encoding** -- a human decision recorded here.
+Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Verbatim deposit is within the permission; confirm before quoting it in an encoding** -- a human decision recorded here.
 
 ## Language
 
