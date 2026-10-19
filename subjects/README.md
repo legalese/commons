@@ -287,6 +287,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/human-rights-sexual-conduct-act-1994`](au/human-rights-sexual-conduct-act-1994) | Human Rights (Sexual Conduct) Act 1994 (Cth) — protection of private sexual conduct between consenting adults from arbitrary interference — row `legalese-aswathy` | `draft` |
 | [`au/common-informers-parliamentary-disqualifications-act-1975`](au/common-informers-parliamentary-disqualifications-act-1975) | Common Informers (Parliamentary Disqualifications) Act 1975 (Cth) — the sum payable for sitting in Parliament while disqualified, from the seat of the member sued — row `legalese-aswathy` | `draft` |
 | [`au/first-home-super-saver-tax-act-2017`](au/first-home-super-saver-tax-act-2017) | First Home Super Saver Tax Act 2017 (Cth) — the 20% tax on assessable FHSS released amounts — row `legalese-aswathy` | `draft` |
+| [`au/territories-stolen-generations-redress-scheme-facilitation-act-2021`](au/territories-stolen-generations-redress-scheme-facilitation-act-2021) | Territories Stolen Generations Redress Scheme (Facilitation) Act 2021 (Cth) — how redress payments are treated for benefits, compensation and assets, and their inalienability — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
