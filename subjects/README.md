@@ -291,6 +291,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/not-for-profit-sector-freedom-to-advocate-act-2013`](au/not-for-profit-sector-freedom-to-advocate-act-2013) | Not-for-profit Sector Freedom to Advocate Act 2013 (Cth) — gag clauses in Commonwealth agreements with not-for-profits — row `legalese-aswathy` | `draft` |
 | [`au/parliamentary-retiring-allowances-increases-act-1967`](au/parliamentary-retiring-allowances-increases-act-1967) | Parliamentary Retiring Allowances (Increases) Act 1967 (Cth) — the 1967 increases in parliamentary pensions and widows' rates — row `legalese-aswathy` | `draft` |
 | [`au/commonwealth-entities-payment-surcharges-act-2024`](au/commonwealth-entities-payment-surcharges-act-2024) | Commonwealth Entities (Payment Surcharges) Act 2024 (Cth) — when a Commonwealth entity may surcharge a payment, from the payer's seat — row `legalese-aswathy` | `draft` |
+| [`au/superannuation-distribution-of-surplus-act-1974`](au/superannuation-distribution-of-surplus-act-1974) | Superannuation (Distribution of Surplus) Act 1974 (Cth) — who shares in the 1972 surplus of the Superannuation Fund — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
