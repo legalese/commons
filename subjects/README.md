@@ -281,6 +281,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/death-penalty-abolition-act-1973`](au/death-penalty-abolition-act-1973) | Death Penalty Abolition Act 1973 (Cth) — whether death may be imposed and the penalty in its place, from the seat of the person charged — row `legalese-aswathy` | `draft` |
 | [`au/commonwealth-volunteers-protection-act-2003`](au/commonwealth-volunteers-protection-act-2003) | Commonwealth Volunteers Protection Act 2003 (Cth) — the volunteer's protection from civil liability, who bears it, and the duty to assist, from the volunteer's seat — row `legalese-aswathy` | `draft` |
 | [`au/carer-recognition-act-2010`](au/carer-recognition-act-2010) | Carer Recognition Act 2010 (Cth) — who is a carer, what agencies must do, and that it is not enforceable, from the carer's seat — row `legalese-aswathy` | `draft` |
+| [`au/damage-by-aircraft-act-1999`](au/damage-by-aircraft-act-1999) | Damage by Aircraft Act 1999 (Cth) — strict liability for harm caused by aircraft, who is liable, and contributory negligence, from the seat of the person on the ground — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
