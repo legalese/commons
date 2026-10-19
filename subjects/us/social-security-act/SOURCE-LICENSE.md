@@ -48,3 +48,49 @@ Deposited 2026-10-19 from the OLRC USLM XML at release point Public Law 119-121 
 
 - `registers/source-bundle/fr-2025-19763-ssa-cola-2026.txt` -- Social Security Administration, Cost-of-Living Increase and Other Determinations for 2026, 90 FR 49047 (3 November 2025), FR Doc. 2025-19763: 2.8 percent COLA, SSI federal benefit rates, contribution and benefit base, retirement earnings test exempt amounts, PIA and maximum family benefit bend points, quarter of coverage, SGA amounts. 40,974 characters; sha256 of the download `48f2b220ff8ad647772f10f3c029237ff3c70c3e0df492aaa60383ac44a66433`.
 - `registers/source-bundle/fr-2025-20251-cms-part-b-2026.txt` -- Centers for Medicare & Medicaid Services, Medicare Part B Monthly Actuarial Rates, Premium Rates, and Annual Deductible Beginning January 1, 2026, 90 FR 52063 (19 November 2025), FR Doc. 2025-20251: standard Part B premium, deductible, income-related monthly adjustment amounts. 81,546 characters; sha256 of the download `529325bd9353a73dce3e6b97cb43fc710e1e25aeaab28f4ea25cf4c0e7cbb35e`.
+
+## Second deposit of 2026-10-19 (UTC): Title IV Part A (TANF) and Title III (UI administration)
+
+Terms re-read on 2026-10-19 between 18:07 and 18:08 UTC. Requests identified themselves as `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)` and were spaced at least 3 seconds apart. The pages read:
+
+- https://uscode.house.gov/robots.txt: unchanged, `User-agent: Slurp` / `Disallow: /`, with no Crawl-delay.
+- https://uscode.house.gov/download.html: current release point still "Public Law 119-121 (10/09/2026)".
+- https://uscode.house.gov/about_code.html: the 1 U.S.C. 204 statement quoted above is unchanged.
+
+No refusal or challenge was met. Copyright position: as above (17 U.S.C. 105).
+
+`xml_usc42@119-121.zip` was downloaded once more (2026-10-19T18:07:42Z). It was byte-identical to the file used on 2026-10-19 (sha256 `c07443d18b301bf72ae208579fbce5d880928844a1ed595a041df8ed283ed8f3`, 18,162,768 bytes). The zip and the XML are not kept in the repository.
+
+**Statute text added**:
+
+- `registers/source-bundle/usc42-ch7-schIV-ptA.txt` covers 42 U.S.C. ch. 7, subch. IV, part A (ss 601-619), which is Social Security Act Title IV Part A, Block Grants to States for Temporary Assistance for Needy Families. It contains:
+  - state plans (s 602);
+  - the family assistance grant (s 603);
+  - use of grants (s 604);
+  - work requirements and participation rates (s 607);
+  - prohibitions and requirements, including the 60-month limit in s 608(a)(7);
+  - penalties (s 609);
+  - tribal programmes (s 612);
+  - definitions, including "assistance" and "adult" (s 619).
+
+  23 section headings, two of them only "Transferred" (s 603a) or "Repealed" (s 614). 249,601 characters. **One statutory note is kept as operative text.** It is the note under s 601 setting out Pub. L. 119-75, div. J, title III, s 6304 (Feb. 3, 2026, 140 Stat. 686). That provision continues Part A (other than ss 603(c) and 618) and s 1308(b) "through December 31, 2026, in the manner authorized for fiscal year 2025", with an appropriation. The codified text of s 603(a)(1) still speaks of "fiscal years 2017 and 2018". Without the note, the reader could not tell that TANF is funded in 2026.
+- `registers/source-bundle/usc42-ch7-schIII.txt` covers 42 U.S.C. ch. 7, subch. III (ss 501-506), which is Social Security Act Title III, Grants to States for Unemployment Compensation Administration. It contains:
+  - the conditions a State's UI law must meet to receive administrative grants (s 503(a)). These include payment through public employment offices, "Opportunity for a fair hearing, before an impartial tribunal" for denied claimants (s 503(a)(3)), and the able, available and actively seeking work condition (s 503(a)(12));
+  - disclosure and income verification (s 503(d)-(f), (h), (i));
+  - recovery of overpayments (s 503(g));
+  - worker profiling (s 503(j));
+  - drug testing (s 503(l));
+  - judicial review (s 504);
+  - demonstration projects (s 505);
+  - reemployment services grants (s 506).
+
+  The request asked for ss 501-504. Sections 505 and 506 complete the subchapter and are included. 6 sections, 55,236 characters.
+
+Each file has a `.meta.json` beside it. Conversion is as described above. In-text footnotes ("So in original", "See References in Text") are also dropped, with their markers.
+
+**Considered and not deposited**:
+
+- **Title IX** (42 U.S.C. 1101-1111, 11 sections, about 239 KB of XML). It covers the Unemployment Trust Fund accounts, the employment security administration account and Reed Act distributions to State accounts.
+- **Title XII** (42 U.S.C. 1321-1324, 4 sections, about 58 KB of XML). It covers advances (loans) from the federal account to insolvent State UI funds.
+
+Title XII is short, but neither Title decides whether an individual gets unemployment compensation or how much. They govern money moving between federal and State accounts. Title XII loans reach employers through the FUTA credit reduction in 26 U.S.C. 3302(c)(2), which is deposited with the Internal Revenue Code. A State law's use of Reed Act money is cross-referenced from 26 U.S.C. 3304(a)(4)(B) to s 903 of the Act (42 U.S.C. 1103), which is not deposited. That is a known gap if an encoding ever needs it.

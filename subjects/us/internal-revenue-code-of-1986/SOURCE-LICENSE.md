@@ -51,3 +51,23 @@ Deposited 2026-10-19 from the OLRC USLM XML at release point Public Law 119-121 
 **Annually set figures** (official publications, not statute; key values recorded as sourced facts in `registers/annual-figures.json`):
 
 - `registers/source-bundle/irs-rev-proc-2025-32.txt` -- Rev. Proc. 2025-32 (Internal Revenue Bulletin 2025-45): 2026 inflation-adjusted items -- tax rate tables under s 1(j)(2), Child Tax Credit (s 24), Earned Income Credit (s 32), standard deduction (s 63), AMT exemption (s 55), qualifying-relative gross income limit (s 152(d)(1)(B)) and others, for taxable years beginning in 2026. 66,960 characters; sha256 of the download `e9ada115fb43a4af5ea326ca91edd40ab0bf29b9be01d2c13d7b8fa96214635b`.
+
+## Second deposit of 2026-10-19 (UTC): chapter 23, the Federal Unemployment Tax Act
+
+Terms were re-read on 2026-10-19 between 18:07 and 18:08 UTC. Requests identified themselves as `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`, at least 3 seconds apart. The pages re-read were robots.txt (unchanged: `User-agent: Slurp` / `Disallow: /`), download.html (release point still Public Law 119-121, 10/09/2026) and about_code.html (the 1 U.S.C. 204 statement is unchanged). No refusal or challenge was met. Copyright: none (17 U.S.C. 105).
+
+`xml_usc26@119-121.zip` was downloaded once more (2026-10-19T18:07:59Z). It is byte-identical to the file of the earlier deposit (sha256 `5d3633536e1d289992d676cb9520b6816529e15e837d09af2e5c8d9100ca9d3a`, 8,292,644 bytes). It is not kept in the repository.
+
+**Statute text added**:
+
+- `registers/source-bundle/usc26-ch23.txt` -- 26 U.S.C. subtitle C, chapter 23 (ss 3301-3311), the Federal Unemployment Tax Act (short title, s 3311). It contains:
+  - the 6 percent tax on wages (s 3301);
+  - the credits for State contributions, capped at 90 percent of the tax, and the credit reduction for States with outstanding Title XII advances (s 3302);
+  - the conditions for additional credit (s 3303);
+  - the requirements for approving a State law (s 3304(a)), including payment through public employment offices, the extended benefits requirement in (a)(11) and the pregnancy non-discrimination requirement in (a)(12);
+  - the definitions of wages, including the $7,000 wage base in s 3306(b)(1), and of employment and employer (s 3306);
+  - nonprofit and governmental coverage (s 3309).
+
+  11 sections, 121,989 characters. All notes are dropped. The note under s 3304 that sets out the Federal-State Extended Unemployment Compensation Act of 1970 is deposited as its own subject, `../federal-state-extended-unemployment-compensation-act-of-1970/`, because that Act is not classified to the Code and the note is its only Code text.
+
+Chapter 23A (Railroad Unemployment Repayment Tax) is not deposited.
