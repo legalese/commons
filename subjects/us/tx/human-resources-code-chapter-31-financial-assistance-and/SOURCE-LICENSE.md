@@ -20,4 +20,8 @@ English only. Texas statutes are enacted and published in English, and no other 
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+Unannotated statute text deposited 2026-10-19 by legalese-commons-source-fetcher/1.0, from the Council's own download:
+
+- `registers/source-bundle/tex-hum-res-code-ch31.txt` (the whole chapter)
+
+Each file starts with an unofficial-version notice; provenance (URL, file date, retrieval time, sha256, characters) is in the matching `.meta.json`.

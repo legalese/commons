@@ -21,4 +21,10 @@ English is the sole language of the Wyoming Statutes; they are enacted and publi
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+Unannotated text deposited 2026-10-19 by legalese-commons-source-fetcher/1.0, from the LSO title PDF:
+
+- `registers/source-bundle/wy-stat-42-ch02.txt` (the whole chapter)
+
+Each file starts with an unofficial-version notice; provenance (URL, PDF creation date, retrieval time, sha256, characters) is in the matching `.meta.json`.
+
+Basis: the 2026-10-20 sample brief. The LSO states no terms that need permission or forbid modification. Where an earlier section of this file says 'Metadata only until resolved', that line predates this deposit and awaits the owner's confirmation.

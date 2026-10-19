@@ -21,4 +21,10 @@ English is the sole official language of the statutes; Florida's Constitution, a
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+Unannotated text deposited 2026-10-19 by legalese-commons-source-fetcher/1.0, from Online Sunshine:
+
+- `registers/source-bundle/fla-stat-ch414.txt` (the whole chapter)
+
+Each file starts with an unofficial-version notice; provenance (URL, edition, retrieval time, sha256, characters) is in the matching `.meta.json`.
+
+Basis: the 2026-10-20 sample brief. The footer copyright notice is not a term that needs written permission or forbids modification, and the text is uncopyrightable. Where an earlier section of this file says 'Metadata only until resolved', that line predates this deposit and awaits the owner's confirmation.

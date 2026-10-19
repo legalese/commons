@@ -20,4 +20,9 @@ English only. Texas statutes are enacted and published in English, and no other 
 
 ## Status of this deposit
 
-No statute text has been deposited yet.
+Unannotated statute text deposited 2026-10-19 by legalese-commons-source-fetcher/1.0, from the Council's own download:
+
+- `registers/source-bundle/tex-lab-code-ch201-general-provisions.txt` (ch. 201, general provisions and definitions)
+- `registers/source-bundle/tex-lab-code-ch207-benefits.txt` (ch. 207, benefits)
+
+Each file starts with an unofficial-version notice; provenance (URL, file date, retrieval time, sha256, characters) is in the matching `.meta.json`.
