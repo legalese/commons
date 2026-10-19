@@ -19,3 +19,14 @@ English is not the only authoritative language in principle. Constitution s 82 (
 ## Status of this deposit
 
 No statute text has been deposited yet.
+
+## Check of 2026-10-19: still no text deposited
+
+The Income Tax Act was looked at again for the South Africa social security and personal income tax sample, and no text was deposited.
+
+- The gov.za page (https://www.gov.za/documents/income-tax-act-29-may-1962-0000) offers only the 1962 Gazette as enacted (`act-58-1962s.pdf`, 26 MB scan). It lists more than forty amending Acts, up to Revenue Laws Amendment Act 6 of 2025. A 1962 text is no use for working out tax today, so it was not fetched.
+- For a consolidation, gov.za points to SARS (https://sars.mylexisnexis.co.za/). The SARS terms (https://www.sars.gov.za/terms-and-conditions/, clause 4.1) allow personal or non-commercial use only and add: "No further reproduction or any form of distribution of the material and content is allowed." Clause 4.8.2 forbids crawlers. Nothing was fetched from SARS.
+- SAFLII returned a Cloudflare bot challenge (HTTP 403) to robots.txt and was not used.
+- lawlibrary.org.za is CC BY-NC 4.0, prohibits scraping, and signals `ai-input=no`. It was not used.
+
+Consequence: the rates table is now deposited, in subject `rates-and-monetary-amounts-and-amendment-of-revenue-laws-act-3-of-2026`. The rebates (s 6), the definitions of gross and taxable income, the exemptions (s 10), PAYE (Fourth Schedule) and the retirement lump-sum tables (Second Schedule) are not. A permitted consolidated source is needed before the personal income tax question can be answered from deposited text.
