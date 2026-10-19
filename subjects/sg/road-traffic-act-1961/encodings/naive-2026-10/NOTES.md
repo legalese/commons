@@ -179,3 +179,42 @@ figures `rta-speeding.l4` held as illustrative inputs; that module and its cases
 **Still outside the deposit:** the expressway speed limit (rules under s 63(1) or a notification under s 63(2)); the sum
 actually offered on composition (no scale is in R 29; presumably an administrative scale -- an inference, nothing deposited says so); the
 Road Traffic (New Drivers) Rules (R 32) for the new-driver revocation threshold under s 35A.
+
+## Seat
+
+**Seat: the driver (or rider) of a motor vehicle on a Singapore road.** Every provision encoded here -- the licence
+offence, dangerous and careless driving, phones, drink-driving, forfeiture, the duties after an accident, speeding,
+composition and demerit points -- is applied to the person at the wheel. Where the Act addresses the court, the Public
+Prosecutor or the Deputy Commissioner of Police, it is still the driver who is jailed, disqualified, loses the car or has
+the licence suspended.
+
+`rta-seat.l4` phrases the existing rules as that person's questions ("What is the longest I can be jailed for my
+driving", "Must I report the accident to the police", "Can my licence be suspended for demerit points") without changing
+them: each of its 20 questions takes the same parameters as the rule it wraps and only calls it. `rta-cases-seat.l4`
+holds 47 assertions, every fixture and expected value copied from the existing case files (the minimum term is asserted
+only on fixtures where one of its two hand-checked parts is 0). The four existing modules and case files are unchanged;
+all checks: 326 assertions satisfied, 0 errors, 0 warnings.
+
+The defaults ruled on 2026-10-18, and this encoding against each:
+
+- **The Act alone, with the instruments that set its numbers or dates.** Follows: the Act with R 29 and R 25, which set
+  the composition and points figures. The speed-limit rules, the composition scale and R 32 (the new-driver revocation
+  threshold) are not deposited, so those figures are inputs.
+- **The actors the text names.** Follows: the driver, the owner, the court, the Public Prosecutor, the Deputy
+  Commissioner of Police.
+- **A judgment handed to someone else answered conditionally, never guessed.** Partly departs. s 65AA(2)'s "other good
+  reasons" and s 84's "reasonable steps" are asked as facts. But the mandatory disqualification under ss 64(9), 65(9)
+  leaves out the court's "special reasons" escape and states the minimum flatly, and where a driver is both repeat and
+  serious the encoding takes the longer period, a reading the text does not make.
+- **The Act's own definitions worked out from facts, borrowed terms asked as facts.** Partly departs: "repeat offender"
+  (s 64(11)) is asked as a flag on the driver rather than worked out (its speeding limb is worked out separately in
+  `rta-speeding.l4`); the forfeiture record's harm is a string, not the `Harm` type.
+- **One case is the text's natural unit.** Follows, by topic: one driver record per driving offence, one accident, one
+  speeding record or rider record.
+- **The Act's own terms, each with a plain gloss.** Follows in the modules; the seat layer adds a gloss before each
+  question.
+- **Operative sections in, machinery out.** Mostly follows; some machinery addressed to officials is encoded (who may
+  compound under R 29 rule 2, the half-threshold warning, the seized-vehicle release, the owner's presumption in
+  s 81(1B)). The seat layer does not ask about these.
+
+Seat layer added 19 October 2026.
