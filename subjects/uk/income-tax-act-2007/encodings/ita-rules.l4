@@ -1,0 +1,263 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ita-types`
+
+-- Income Tax Act 2007 (UK) — THE THREE GOALS.
+-- Source: ../registers/source-bundle/ukpga-2007-3.txt.
+
+§ `Rules`
+
+GIVEN a IS A NUMBER, b IS A NUMBER
+GIVETH A NUMBER
+`the smaller of` a `and` b MEANS IF a AT MOST b THEN a ELSE b
+
+GIVEN a IS A NUMBER
+GIVETH A NUMBER
+`at least nil` a MEANS IF a GREATER THAN 0 THEN a ELSE 0
+
+GIVEN x IS A NUMBER
+GIVETH A NUMBER
+`rounded up to a whole pound` x MEANS 0 MINUS FLOOR (0 MINUS x)
+
+-- The part of the slice of income from `lo` to `hi` that falls between `a`
+-- and `b`.
+GIVEN lo IS A NUMBER, hi IS A NUMBER, a IS A NUMBER, b IS A NUMBER
+GIVETH A NUMBER
+`the part from` lo `to` hi `between` a `and` b MEANS
+    `at least nil` (`the smaller of` hi `and` b MINUS (IF lo GREATER THAN a THEN lo ELSE a))
+
+§§ `Goal 1 — personal allowance (ss 35, 58)`
+
+-- s 415, 58(2): "grossed up by reference to the basic rate".
+@ref ss 58(2), 415
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`the grossed up Gift Aid of` t MEANS
+    t's `Gift Aid paid` TIMES 100 DIVIDED BY (100 MINUS t's `rates`'s `basic rate`)
+
+-- s 58(1): net income, less the grossed-up Gift Aid (Step 2) and the gross
+-- relief-at-source pension contributions (Step 3).
+@ref s 58(1)
+@export My adjusted net income under s 58 of the Income Tax Act 2007 (UK): my net income less the grossed-up amount of my Gift Aid donations and the gross amount of my relief-at-source pension contributions. DRAFT, not reviewed by a UK lawyer.
+GIVEN t IS A `Taxpayer`  @desc My income, Gift Aid and pension contributions, and the basic rate
+GIVETH A NUMBER
+`my adjusted net income` t MEANS
+        t's `non-savings income` PLUS t's `savings income` PLUS t's `dividend income`
+    MINUS `the grossed up Gift Aid of` t
+    MINUS t's `gross pension contributions`
+
+-- s 55B(4)-(5): 10% of the s 35(1) allowance, rounded up to a multiple of
+-- £10.
+@ref s 55B(4)-(5)
+`the transferable amount` MEANS 10 TIMES (`rounded up to a whole pound` (12570 DIVIDED BY 10 DIVIDED BY 10))
+
+-- s 35(1)-(3): £12,570, reduced by one-half of the excess of adjusted net
+-- income over £100,000, rounded up to a multiple of £1. s 55B(6): reduced by
+-- the transferable amount where I elected to transfer it.
+@ref ss 35, 55B(6)
+@export My personal allowance under s 35 of the Income Tax Act 2007 (UK): £12,570, less half the amount by which my adjusted net income exceeds £100,000 (rounded up to a whole pound, not below nil), and less the transferable amount if I have elected to transfer it to my spouse or civil partner (s 55B(6)). DRAFT, not reviewed by a UK lawyer.
+GIVEN t IS A `Taxpayer`  @desc My income, Gift Aid, pension contributions and any marriage allowance election
+GIVETH A NUMBER
+`my personal allowance` t MEANS
+    IF t's `marriage allowance` EQUALS `I elected to transfer my allowance`
+    THEN `at least nil` (tapered MINUS `the transferable amount`)
+    ELSE tapered
+    WHERE
+        excess MEANS `at least nil` (`my adjusted net income` t MINUS 100000)
+        tapered MEANS `at least nil` (`rounded up to a whole pound` (12570 MINUS excess DIVIDED BY 2))
+
+§§ `Goal 2 — income tax liability (ss 10-16, 23)`
+
+-- s 10(5), (5A), (6), 414(2)(b): the basic rate limit £37,700 and the higher
+-- rate limit (2 × £12,570 + £100,000), each increased by the grossed-up Gift
+-- Aid and the gross pension contributions.
+@ref ss 10(5)-(6), 414(2)
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`my basic rate limit` t MEANS 37700 PLUS `the grossed up Gift Aid of` t PLUS t's `gross pension contributions`
+
+@ref ss 10(5A)-(6), 414(2)
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`my higher rate limit` t MEANS (2 TIMES 12570) PLUS 100000 PLUS `the grossed up Gift Aid of` t PLUS t's `gross pension contributions`
+
+-- s 23 Step 3, s 25(3A): the allowance comes off non-savings income first.
+-- Between savings and dividends, s 25(2): "in the way which will result in
+-- the greatest reduction in the taxpayer's liability" — both orders are
+-- worked out and the one giving less tax is taken (F1, changed after the
+-- independent pass). `df` is TRUE where the rest of the allowance goes
+-- against dividends before savings.
+@ref ss 23, 25(2), (3A)
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`my taxable non-savings income` t MEANS `at least nil` (t's `non-savings income` MINUS `my personal allowance` t)
+
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`the allowance left after non-savings income for` t MEANS `at least nil` (`my personal allowance` t MINUS t's `non-savings income`)
+
+GIVEN t IS A `Taxpayer`, df IS A BOOLEAN
+GIVETH A NUMBER
+`my taxable savings income` t `ordered` df MEANS
+    IF df
+    THEN `at least nil` (t's `savings income` MINUS `at least nil` (left MINUS t's `dividend income`))
+    ELSE `at least nil` (t's `savings income` MINUS left)
+    WHERE
+        left MEANS `the allowance left after non-savings income for` t
+
+GIVEN t IS A `Taxpayer`, df IS A BOOLEAN
+GIVETH A NUMBER
+`my taxable dividend income` t `ordered` df MEANS
+    IF df
+    THEN `at least nil` (t's `dividend income` MINUS left)
+    ELSE `at least nil` (t's `dividend income` MINUS `at least nil` (left MINUS t's `savings income`))
+    WHERE
+        left MEANS `the allowance left after non-savings income for` t
+
+-- The total taxable income is the same in either order.
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`my taxable income` t MEANS `my taxable non-savings income` t PLUS `my taxable savings income` t `ordered` FALSE PLUS `my taxable dividend income` t `ordered` FALSE
+
+-- Tax on the slice of income from `lo` to `hi` at three rates by band.
+GIVEN t IS A `Taxpayer`, lo IS A NUMBER, hi IS A NUMBER, r1 IS A NUMBER, r2 IS A NUMBER, r3 IS A NUMBER
+GIVETH A NUMBER
+`tax for` t `on the slice from` lo `to` hi `at` r1 `,` r2 `,` r3 MEANS
+    (     `the part from` lo `to` hi `between` 0 `and` brl TIMES r1
+     PLUS `the part from` lo `to` hi `between` brl `and` hrl TIMES r2
+     PLUS (IF hi GREATER THAN hrl THEN (hi MINUS (IF lo GREATER THAN hrl THEN lo ELSE hrl)) ELSE 0) TIMES r3)
+    DIVIDED BY 100
+    WHERE
+        brl MEANS `my basic rate limit` t
+        hrl MEANS `my higher rate limit` t
+
+-- s 12: the starting rate for savings (0%) on income up to £5,000 so far as
+-- it is savings income, savings being above non-savings income (s 16).
+@ref ss 12, 16
+GIVEN t IS A `Taxpayer`, df IS A BOOLEAN
+GIVETH A NUMBER
+`my savings at the starting rate` t `ordered` df MEANS
+    `at least nil` (`the smaller of` (`my taxable savings income` t `ordered` df) `and` (5000 MINUS `my taxable non-savings income` t))
+
+-- s 12B: £1,000 with no higher-rate income, £500 with higher-rate but no
+-- additional-rate income, nil with additional-rate income (income that would
+-- be so charged but for the nil rates counts; savings in the savings higher
+-- and additional bands count as higher-rate and additional-rate income, F5).
+@ref s 12B
+@export My savings allowance under s 12B of the Income Tax Act 2007 (UK): £1,000 if none of my income is higher-rate income, £500 if some is but none is additional-rate income, and nil if some is additional-rate income. DRAFT, not reviewed by a UK lawyer.
+GIVEN t IS A `Taxpayer`  @desc My income and the limits
+GIVETH A NUMBER
+`my savings allowance` t MEANS
+    BRANCH
+        IF `my taxable income` t GREATER THAN `my higher rate limit` t THEN 0
+        IF `my taxable income` t GREATER THAN `my basic rate limit` t  THEN 500
+        OTHERWISE                                                         1000
+
+-- s 12A: the savings nil rate on so much of the savings above the starting
+-- rate limit as does not exceed the savings allowance.
+@ref s 12A
+GIVEN t IS A `Taxpayer`, df IS A BOOLEAN
+GIVETH A NUMBER
+`my savings at the savings nil rate` t `ordered` df MEANS
+    `the smaller of` (`my taxable savings income` t `ordered` df MINUS `my savings at the starting rate` t `ordered` df) `and` (`my savings allowance` t)
+
+@ref ss 10, 11D, 12, 12A, 13, 13A, 16, 23 Steps 4-5
+GIVEN t IS A `Taxpayer`, df IS A BOOLEAN
+GIVETH A NUMBER
+`my tax before reductions` t `ordered` df MEANS
+        `tax for` t `on the slice from` 0 `to` n `at` (r's `basic rate`) `,` (r's `higher rate`) `,` (r's `additional rate`)
+    PLUS `tax for` t `on the slice from` (n PLUS `my savings at the starting rate` t `ordered` df PLUS `my savings at the savings nil rate` t `ordered` df) `to` (n PLUS s) `at` (r's `savings basic rate`) `,` (r's `savings higher rate`) `,` (r's `savings additional rate`)
+    PLUS `tax for` t `on the slice from` (n PLUS s PLUS `the smaller of` d `and` 500) `to` (n PLUS s PLUS d) `at` 10.75 `,` 35.75 `,` 39.35
+    WHERE
+        r MEANS t's `rates`
+        n MEANS `my taxable non-savings income` t
+        s MEANS `my taxable savings income` t `ordered` df
+        d MEANS `my taxable dividend income` t `ordered` df
+
+-- s 25(2): the order giving the greatest reduction.
+@ref s 25(2)
+GIVEN t IS A `Taxpayer`
+GIVETH A BOOLEAN
+DECIDE `dividends first is better for` t IF
+    `my tax before reductions` t `ordered` TRUE LESS THAN `my tax before reductions` t `ordered` FALSE
+
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`my taxable savings income` t MEANS `my taxable savings income` t `ordered` (`dividends first is better for` t)
+
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`my taxable dividend income` t MEANS `my taxable dividend income` t `ordered` (`dividends first is better for` t)
+
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`my savings at the starting rate` t MEANS `my savings at the starting rate` t `ordered` (`dividends first is better for` t)
+
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`my savings at the savings nil rate` t MEANS `my savings at the savings nil rate` t `ordered` (`dividends first is better for` t)
+
+@ref ss 10, 11D, 12, 12A, 13, 13A, 16, 23 Steps 4-5, 25(2)
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`my tax before reductions` t MEANS `my tax before reductions` t `ordered` (`dividends first is better for` t)
+
+@ref ss 10, 11D, 12, 12A, 13, 13A, 16, 23 Steps 4-6
+@export My income tax liability for the year under the Income Tax Act 2007 (UK): the allowance set against non-savings income first and then against savings or dividends in whichever order gives less tax; non-savings income, then savings, then dividends, taxed through the bands (the basic rate limit £37,700 and higher rate limit £125,140, each extended by grossed-up Gift Aid and gross pension contributions), with the starting rate for savings on up to £5,000, the savings allowance and the first £500 of dividends at nil rates (still using up the bands), dividends at 10.75%, 35.75% and 39.35%, less any marriage allowance tax reduction. The basic, higher and additional rates (and the savings rates) are those set by Parliament for the year. DRAFT, not reviewed by a UK lawyer.
+GIVEN t IS A `Taxpayer`  @desc The rates, my income, Gift Aid, pension contributions and any marriage allowance election
+GIVETH A NUMBER
+`my income tax liability` t MEANS
+    `at least nil` (`my tax before reductions` t MINUS `my marriage allowance reduction` t)
+
+§§ `Goal 3 — marriage allowance (ss 55B-55C)`
+
+-- The same taxpayer with a different marriage allowance position.
+GIVEN t IS A `Taxpayer`, m IS A `Marriage allowance role`
+GIVETH A `Taxpayer`
+`the taxpayer` t `with the role` m MEANS
+    `Taxpayer` OF t's `rates`, t's `non-savings income`, t's `savings income`, t's `dividend income`, t's `Gift Aid paid`, t's `gross pension contributions`, m
+
+-- ss 55B(2)(b)-(ba), 55C(1)(c)-(ca): not liable at any rate other than the
+-- basic rate and the rates listed, which include the savings nil rate and
+-- the dividend nil rate; but dividends that would be at the upper or
+-- additional rate but for the dividend nil rate count against it. So:
+-- non-savings income within the basic rate limit; no savings charged above it
+-- except at the starting or savings nil rate; and no dividends above it (F6,
+-- changed after the independent pass).
+@ref ss 55B(2)(b)-(ba), 55C(1)(c)-(ca)
+GIVEN t IS A `Taxpayer`
+GIVETH A BOOLEAN
+DECIDE `I pay no more than the basic rate` t IF
+        n AT MOST brl
+    AND (n PLUS s) AT MOST (IF brl GREATER THAN chargedFrom THEN brl ELSE chargedFrom)
+    AND (d EQUALS 0 OR n PLUS s PLUS d AT MOST brl)
+    WHERE
+        brl MEANS `my basic rate limit` t
+        n MEANS `my taxable non-savings income` t
+        s MEANS `my taxable savings income` t
+        d MEANS `my taxable dividend income` t
+        chargedFrom MEANS n PLUS `my savings at the starting rate` t PLUS `my savings at the savings nil rate` t
+
+-- s 55C(1)(b)-(c): entitled to a personal allowance and, with it reduced by
+-- the transferable amount, liable at no rate above the basic rate. (The
+-- net-income condition in s 55C(2) applies only to those resident under
+-- s 56(3), outside this encoding's seat.)
+@ref s 55C(1)
+@export May I elect to transfer part of my personal allowance to my spouse or civil partner, under s 55C of the Income Tax Act 2007 (UK)? Yes if I am entitled to a personal allowance and, with it reduced by the transferable amount, I would pay tax at no rate above the basic rate. DRAFT, not reviewed by a UK lawyer.
+GIVEN t IS A `Taxpayer`  @desc My income, assumed with the election in force
+GIVETH A BOOLEAN
+DECIDE `I may elect to transfer my allowance` t IF
+        `my personal allowance` (`the taxpayer` t `with the role` `no election`) GREATER THAN 0
+    AND `I pay no more than the basic rate` (`the taxpayer` t `with the role` `I elected to transfer my allowance`)
+
+-- s 55B(1)-(4): the gaining party's tax reduction is the basic rate of the
+-- transferable amount, if it pays no more than the basic rate; given at
+-- Step 6, so not more than the tax before it.
+@ref s 55B(1)-(4)
+@export My marriage allowance tax reduction as the gaining party under s 55B of the Income Tax Act 2007 (UK): the basic rate of the transferable amount (£1,260), if my spouse or civil partner has elected and I pay no more than the basic rate; not more than my tax before it. DRAFT, not reviewed by a UK lawyer.
+GIVEN t IS A `Taxpayer`  @desc My income, the basic rate and whether my spouse or civil partner elected
+GIVETH A NUMBER
+`my marriage allowance reduction` t MEANS
+    IF t's `marriage allowance` EQUALS `my spouse or civil partner elected to transfer to me` AND `I pay no more than the basic rate` t
+    THEN `the smaller of` (`the transferable amount` TIMES t's `rates`'s `basic rate` DIVIDED BY 100) `and` (`my tax before reductions` t)
+    ELSE 0
