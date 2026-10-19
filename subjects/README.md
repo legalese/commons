@@ -300,6 +300,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/defence-force-retirement-and-death-benefits-pension-increases-act-1974`](au/defence-force-retirement-and-death-benefits-pension-increases-act-1974) | Defence Force Retirement and Death Benefits (Pension Increases) Act 1974 (Cth) — the 1974 indexed increases in DFRB pensions and DFRDB pension benefits — row `legalese-aswathy` | `draft` |
 | [`au/defence-forces-retirement-benefits-pension-increases-act-1971`](au/defence-forces-retirement-benefits-pension-increases-act-1971) | Defence Forces Retirement Benefits (Pension Increases) Act 1971 (Cth) — the 1971 increases in DFRB pensions — row `legalese-aswathy` | `draft` |
 | [`au/papua-new-guinea-members-of-the-forces-benefits-act-1957`](au/papua-new-guinea-members-of-the-forces-benefits-act-1957) | Papua New Guinea (Members of the Forces Benefits) Act 1957 (Cth) — who is a member of the Forces and when the Commonwealth is liable for war-service incapacity or death — row `legalese-aswathy` | `draft` |
+| [`au/maintenance-orders-commonwealth-officers-act-1966`](au/maintenance-orders-commonwealth-officers-act-1966) | Maintenance Orders (Commonwealth Officers) Act 1966 (Cth) — attachment of Commonwealth pay for maintenance orders and their priority — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
