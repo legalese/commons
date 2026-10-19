@@ -1,6 +1,6 @@
 # Taxation (Cross-border Trade) Act 2018 (UK) — encoding notes (row `legalese-aswathy`)
 
-DRAFT. No UK lawyer has read this encoding against the Act, and **no independent test pass has been completed** (see INDEPENDENT-TEST-REPORT.md).
+DRAFT. No UK lawyer has read this encoding against the Act.
 
 ## What is encoded
 
@@ -51,10 +51,18 @@ The function names were written before the rule and have not been renamed.
 - **F3, s 6(2).** Possession or control on entry makes a person liable only for s 5 liabilities, that is, goods not presented or not declared.
 - **F4, Sch 6 para 4.** The notification must come before the end of the 3 years (or 20 years) beginning with the day the liability was incurred. That period ends on the day before the corresponding date, or on the last day of the month if it has none.
 - **F5.** The top-level duty amount is 0 where no liability is incurred. Only the first liability's notification date is reported.
+- **F6, s 6 (changed after the independent pass).** No one is liable where no liability is incurred.
+- **Known limits (from the independent pass).**
+  - "Jointly and severally" (s 6(7)) is not an output; the goal returns the list of persons.
+  - The s 6(4) knowledge test is one input.
+  - A notification dated before the liability was incurred is not rejected.
+  - Goods not presented with no forfeiture date, and a breach under authorised use or temporary admission with no acceptance date, give no liability rather than a refusal.
+  - The s 4(4)(d) further liability is not computed as an amount, and only the first liability's notification limit is reported.
+  - One offence flag applies the 20-year limit to every liability in the case.
 
 ## Checks
 
-`L4=~/.local/bin/l4 ./check.sh` (l4 built from l4-ide unstable at 7768812fa), run on 2026-10-18: 4 modules: 23 assertions satisfied, 0 failed, 0 other errors — 23 the encoder's (`tcta-tests.l4`), 0 independent (`tests-independent.l4`). No assertion is expected to fail. No independent pass has been completed.
+`L4=~/.local/bin/l4 ./check.sh` (l4 built from l4-ide unstable at 7768812fa), run on 2026-10-19: 5 modules: 85 assertions satisfied, 0 failed, 0 other errors — 23 the encoder's (`tcta-tests.l4`), 62 independent (`tests-independent.l4`). No assertion is expected to fail.
 
 ## Open questions for a UK lawyer
 

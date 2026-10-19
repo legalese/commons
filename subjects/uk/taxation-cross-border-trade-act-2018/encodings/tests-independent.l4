@@ -1,0 +1,190 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `tcta-types`
+IMPORT `tcta-rules`
+IMPORT `tcta-goal`
+
+-- Independent tests for TCTA 2018 Part 1, written from BRIEF.md and the
+-- source text (see independent-expectations.md). Expected values were fixed
+-- before the encoding was read and are not adjusted to fit it.
+
+§ `Helpers`
+
+GIVEN dom IS A BOOLEAN, pr IS A `Procedure`, ent IS A BOOLEAN, dm IS A DATE, da IS A MAYBE DATE, br IS A MAYBE DATE, fo IS A MAYBE DATE
+GIVETH A `Goods facts`
+mkGoods dom pr ent dm da br fo MEANS `Goods facts` OF dom, pr, ent, dm, da, br, fo
+
+GIVEN pr IS A `Procedure`, ent IS A BOOLEAN, dm IS A DATE, da IS A MAYBE DATE, br IS A MAYBE DATE
+GIVETH A `Goods facts`
+declared pr ent dm da br MEANS mkGoods FALSE pr ent dm da br NOTHING
+
+GIVEN fo IS A DATE
+GIVETH A `Goods facts`
+undeclaredGoods fo MEANS mkGoods FALSE `not presented or not declared` FALSE (Date 1 1 2000) NOTHING NOTHING (JUST fo)
+
+GIVEN g IS A `Goods facts`
+GIVETH A LIST OF `Liability`
+liabs g MEANS `the import duty liabilities for` g
+
+GIVEN d IS A DATE, b IS A `Rate basis`
+GIVETH A `Liability`
+lia d b MEANS `Liability` OF d, b
+
+GIVEN nm IS A STRING, inName IS A BOOLEAN, poss IS A BOOLEAN, behalf IS A BOOLEAN, other IS A BOOLEAN
+GIVETH A `Person`
+person nm inName poss behalf other MEANS `Person` OF nm, inName, poss, behalf, other
+
+GIVEN g IS A `Goods facts`, ps IS A LIST OF `Person`
+GIVETH A LIST OF STRING
+liableOf g ps MEANS `the persons liable for` g `among` ps
+
+GIVEN r IS A NUMBER, v IS A NUMBER
+GIVETH A NUMBER
+duty r v MEANS `the import duty for` (`Duty facts` OF r, v, FALSE, NOTHING)
+
+GIVEN off IS A BOOLEAN, nt IS A MAYBE DATE
+GIVETH A `Duty facts`
+dfacts off nt MEANS `Duty facts` OF 10, 1000, off, nt
+
+GIVEN inc IS A DATE, off IS A BOOLEAN
+GIVETH A DATE
+lastDay inc off MEANS `the last day to notify a liability incurred on` inc `with` (dfacts off NOTHING)
+
+GIVEN inc IS A DATE, off IS A BOOLEAN, nt IS A MAYBE DATE
+GIVETH A BOOLEAN
+enforceable inc off nt MEANS `a liability incurred on` inc `is enforceable with` (dfacts off nt)
+
+-- Fixed facts
+a10Mar MEANS JUST (Date 10 3 2026)
+
+§ `Goal 1 — when liability is incurred`
+
+-- L1 domestic goods are not chargeable
+#ASSERT liabs (mkGoods TRUE `free-circulation procedure` TRUE (Date 10 3 2026) a10Mar NOTHING NOTHING) EQUALS EMPTY
+-- L2 free circulation: at acceptance
+#ASSERT liabs (declared `free-circulation procedure` TRUE (Date 9 3 2026) a10Mar NOTHING) EQUALS (LIST (lia (Date 10 3 2026) `the applicable rate`))
+-- L3 free circulation, not accepted: no liability under s 4(1)
+#ASSERT liabs (declared `free-circulation procedure` TRUE (Date 10 3 2026) NOTHING NOTHING) EQUALS EMPTY
+-- L4-L6 storage, transit, inward processing: entitled, no breach
+#ASSERT liabs (declared `storage procedure` TRUE (Date 10 3 2026) a10Mar NOTHING) EQUALS EMPTY
+#ASSERT liabs (declared `transit procedure` TRUE (Date 10 3 2026) a10Mar NOTHING) EQUALS EMPTY
+#ASSERT liabs (declared `inward processing procedure` TRUE (Date 10 3 2026) a10Mar NOTHING) EQUALS EMPTY
+-- L7 storage, unentitled: at the (purported) declaration
+#ASSERT liabs (declared `storage procedure` FALSE (Date 5 4 2026) (JUST (Date 6 4 2026)) NOTHING) EQUALS (LIST (lia (Date 5 4 2026) `the applicable rate`))
+-- L8 transit, breach
+#ASSERT liabs (declared `transit procedure` TRUE (Date 1 6 2026) (JUST (Date 1 6 2026)) (JUST (Date 20 6 2026))) EQUALS (LIST (lia (Date 20 6 2026) `the applicable rate`))
+-- L9 inward processing, breach on 31 Dec
+#ASSERT liabs (declared `inward processing procedure` TRUE (Date 1 6 2026) (JUST (Date 1 6 2026)) (JUST (Date 31 12 2026))) EQUALS (LIST (lia (Date 31 12 2026) `the applicable rate`))
+-- L10 storage, unentitled and later breach: incurred at the declaration
+#ASSERT liabs (declared `storage procedure` FALSE (Date 5 4 2026) NOTHING (JUST (Date 1 5 2026))) EQUALS (LIST (lia (Date 5 4 2026) `the applicable rate`))
+-- L11 authorised use, entitled: at acceptance, reduced rate
+#ASSERT liabs (declared `authorised use procedure` TRUE (Date 31 1 2026) (JUST (Date 1 2 2026)) NOTHING) EQUALS (LIST (lia (Date 1 2 2026) `the reduced rate for the procedure`))
+-- L12 temporary admission, unentitled: at acceptance, normal rate
+#ASSERT liabs (declared `temporary admission procedure` FALSE (Date 31 1 2026) (JUST (Date 1 2 2026)) NOTHING) EQUALS (LIST (lia (Date 1 2 2026) `the applicable rate`))
+-- L13 authorised use, entitled, later breach: two liabilities
+#ASSERT liabs (declared `authorised use procedure` TRUE (Date 31 1 2026) (JUST (Date 1 2 2026)) (JUST (Date 1 8 2026))) EQUALS (LIST (lia (Date 1 2 2026) `the reduced rate for the procedure`), (lia (Date 1 8 2026) `the normal rate, less any earlier liability`))
+-- L14 not presented: at importation / forfeiture
+#ASSERT liabs (undeclaredGoods (Date 3 3 2026)) EQUALS (LIST (lia (Date 3 3 2026) `the applicable rate`))
+-- L15 presented, not declared: when liable to forfeiture
+#ASSERT liabs (undeclaredGoods (Date 17 3 2026)) EQUALS (LIST (lia (Date 17 3 2026) `the applicable rate`))
+-- L16 domestic goods not presented
+#ASSERT liabs (mkGoods TRUE `not presented or not declared` FALSE (Date 1 1 2026) NOTHING NOTHING (JUST (Date 3 3 2026))) EQUALS EMPTY
+-- L17 domestic goods, storage unentitled
+#ASSERT liabs (mkGoods TRUE `storage procedure` FALSE (Date 5 4 2026) NOTHING NOTHING NOTHING) EQUALS EMPTY
+
+§ `Goal 2 — persons liable`
+
+fcGoods MEANS declared `free-circulation procedure` TRUE (Date 9 3 2026) a10Mar NOTHING
+pA MEANS person "A" TRUE FALSE FALSE FALSE
+pB MEANS person "B" FALSE FALSE TRUE FALSE
+pC MEANS person "C" FALSE TRUE FALSE FALSE
+pD MEANS person "D" FALSE FALSE FALSE TRUE
+pE MEANS person "E" FALSE FALSE FALSE TRUE
+-- F was involved but without knowledge: not otherwise liable under s 6(3)-(4)
+pF MEANS person "F" FALSE FALSE FALSE FALSE
+pAA MEANS person "A" TRUE FALSE TRUE FALSE
+
+-- P1
+#ASSERT liableOf fcGoods (LIST pA) EQUALS (LIST "A")
+-- P2 agent A on behalf of B: both, jointly and severally (two or more)
+#ASSERT liableOf fcGoods (LIST pA, pB) EQUALS (LIST "A", "B")
+-- P3 not presented: whoever was in possession on entry
+#ASSERT liableOf (undeclaredGoods (Date 3 3 2026)) (LIST pC) EQUALS (LIST "C")
+-- P4 not presented; C in possession; D knowingly participated
+#ASSERT liableOf (undeclaredGoods (Date 3 3 2026)) (LIST pC, pD) EQUALS (LIST "C", "D")
+-- P5 A declarant; E gave false information knowingly
+#ASSERT liableOf fcGoods (LIST pA, pE) EQUALS (LIST "A", "E")
+-- P6 F without knowledge is not liable
+#ASSERT liableOf fcGoods (LIST pA, pF) EQUALS (LIST "A")
+-- P7 A declares on own behalf: one person
+#ASSERT liableOf fcGoods (LIST pAA) EQUALS (LIST "A")
+-- P8 no liability incurred: no one is liable
+#ASSERT liableOf (declared `storage procedure` TRUE (Date 10 3 2026) a10Mar NOTHING) (LIST pA, pB) EQUALS EMPTY
+-- P9
+#ASSERT liableOf fcGoods (LIST pA, pB, pD) EQUALS (LIST "A", "B", "D")
+-- P3b a person in possession on entry is not liable where a declaration was made (s 6(2) applies only to s 5 liabilities)
+#ASSERT liableOf fcGoods (LIST pA, pC) EQUALS (LIST "A")
+
+§ `Goal 3 — amount`
+
+#ASSERT duty 12 10000 EQUALS 1200
+#ASSERT duty 0 50000 EQUALS 0
+#ASSERT duty (5/2) 3333 EQUALS 83325/1000
+#ASSERT duty 100 1 EQUALS 1
+
+§ `Goal 3 — last day for notification`
+
+-- N1, N2
+#ASSERT lastDay (Date 15 3 2026) FALSE EQUALS Date 14 3 2029
+#ASSERT lastDay (Date 15 3 2026) TRUE EQUALS Date 14 3 2046
+-- N3, N4 leap day
+#ASSERT lastDay (Date 29 2 2024) FALSE EQUALS Date 28 2 2027
+#ASSERT lastDay (Date 29 2 2024) TRUE EQUALS Date 28 2 2044
+-- N5 1 Mar into a leap year
+#ASSERT lastDay (Date 1 3 2025) FALSE EQUALS Date 29 2 2028
+-- N6-N9 month and year ends
+#ASSERT lastDay (Date 1 1 2026) FALSE EQUALS Date 31 12 2028
+#ASSERT lastDay (Date 31 1 2026) FALSE EQUALS Date 30 1 2029
+#ASSERT lastDay (Date 31 12 2026) FALSE EQUALS Date 30 12 2029
+#ASSERT lastDay (Date 1 3 2024) FALSE EQUALS Date 28 2 2027
+
+§ `Goal 3 — enforceability`
+
+-- E1-E4
+#ASSERT enforceable (Date 15 3 2026) FALSE (JUST (Date 13 3 2029))
+#ASSERT enforceable (Date 15 3 2026) FALSE (JUST (Date 14 3 2029))
+#ASSERT NOT (enforceable (Date 15 3 2026) FALSE (JUST (Date 15 3 2029)))
+#ASSERT NOT (enforceable (Date 15 3 2026) FALSE NOTHING)
+-- E5-E7 offence: 20 years
+#ASSERT enforceable (Date 15 3 2026) TRUE (JUST (Date 15 3 2029))
+#ASSERT enforceable (Date 15 3 2026) TRUE (JUST (Date 14 3 2046))
+#ASSERT NOT (enforceable (Date 15 3 2026) TRUE (JUST (Date 15 3 2046)))
+-- E8-E10 leap edges
+#ASSERT enforceable (Date 29 2 2024) FALSE (JUST (Date 28 2 2027))
+#ASSERT NOT (enforceable (Date 29 2 2024) FALSE (JUST (Date 1 3 2027)))
+#ASSERT enforceable (Date 1 3 2025) FALSE (JUST (Date 29 2 2028))
+#ASSERT NOT (enforceable (Date 1 3 2025) FALSE (JUST (Date 1 3 2028)))
+-- E11 notified on the day of incurrence
+#ASSERT enforceable (Date 15 3 2026) FALSE (JUST (Date 15 3 2026))
+
+§ `End to end`
+
+GIVEN nt IS A MAYBE DATE
+GIVETH AN `Import position`
+t1 nt MEANS `the import position for` (`Import case` OF fcGoods, (LIST pA, pB), (`Duty facts` OF 10, 20000, FALSE, nt))
+
+t1in MEANS t1 (JUST (Date 9 3 2029))
+t1late MEANS t1 (JUST (Date 10 3 2029))
+
+#ASSERT t1in's `liabilities` EQUALS (LIST (lia (Date 10 3 2026) `the applicable rate`))
+#ASSERT t1in's `persons liable` EQUALS (LIST "A", "B")
+#ASSERT t1in's `import duty at the applicable rate` EQUALS 2000
+#ASSERT t1in's `last day to notify the first liability` EQUALS JUST (Date 9 3 2029)
+#ASSERT t1in's `first liability enforceable` EQUALS JUST TRUE
+#ASSERT t1late's `first liability enforceable` EQUALS JUST FALSE
+
+t3 MEANS `the import position for` (`Import case` OF (declared `storage procedure` TRUE (Date 10 3 2026) a10Mar NOTHING), (LIST pA), (`Duty facts` OF 10, 20000, FALSE, NOTHING))
+#ASSERT t3's `liabilities` EQUALS EMPTY
+#ASSERT t3's `import duty at the applicable rate` EQUALS 0
+#ASSERT t3's `last day to notify the first liability` EQUALS NOTHING
+#ASSERT t3's `persons liable` EQUALS EMPTY
