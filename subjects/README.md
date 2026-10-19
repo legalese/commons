@@ -297,6 +297,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/superannuation-pension-increases-act-1967`](au/superannuation-pension-increases-act-1967) | Superannuation (Pension Increases) Act 1967 (Cth) — the 1967 increases in Commonwealth superannuation pensions — row `legalese-aswathy` | `draft` |
 | [`au/transferred-officers-allowances-act-1948`](au/transferred-officers-allowances-act-1948) | Transferred Officers' Allowances Act 1948 (Cth) — allowances on the pensions of officers transferred from State to Commonwealth service — row `legalese-aswathy` | `draft` |
 | [`au/parliamentary-retiring-allowances-increases-act-1971`](au/parliamentary-retiring-allowances-increases-act-1971) | Parliamentary Retiring Allowances (Increases) Act 1971 (Cth) — the 1971 increases in parliamentary and office-holders' pensions and widows' rates — row `legalese-aswathy` | `draft` |
+| [`au/defence-force-retirement-and-death-benefits-pension-increases-act-1974`](au/defence-force-retirement-and-death-benefits-pension-increases-act-1974) | Defence Force Retirement and Death Benefits (Pension Increases) Act 1974 (Cth) — the 1974 indexed increases in DFRB pensions and DFRDB pension benefits — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
