@@ -1,0 +1,147 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Immigration (Education) Act 1971 (Cth) — THE NOUNS, THE RULES AND THE
+-- TOP-LEVEL GOAL. Source: ../registers/source-bundle/C1971A00003.txt
+-- (compilation No. 11, 19 April 2021). The migrant asks: "Am I eligible for
+-- free English tuition (the Adult Migrant English Program); must it be given
+-- to me; by when must I register and start, and when does my eligibility
+-- end?"
+
+§ `Nouns`
+
+-- s 4A(1)(a).
+DECLARE `My status` IS ONE OF
+    `in Australia on a permanent visa`
+    `in Australia on a specified temporary visa`
+    `a former permanent visa or entry permit holder who became a citizen`
+    `in Australia, under 18, with a parent who holds or held a permanent visa or entry permit`
+    `none of these`
+
+DECLARE `English case` HAS
+    `my status`                                                     IS A `My status`
+    `I have vocational English`                                     IS A BOOLEAN
+    `my date of birth`                                              IS A DATE
+    -- s 3 visa commencement day: the first day in Australia on or after
+    -- the visa came into effect
+    `my visa commencement day`                                      IS A DATE
+    -- s 4B(1)(c)-(e)
+    `I paid, or am exempt from, the visa application charge`        IS A BOOLEAN
+    `I held another permanent visa in Australia before`             IS A BOOLEAN
+    `the regulations exclude me from s 4B`                          IS A BOOLEAN
+    -- s 4C(2)
+    `I registered with a provider on`                               IS A MAYBE DATE
+    `I started an approved course on`                               IS A MAYBE DATE
+    -- ss 4C(5), 4D(5): extensions granted, in days
+    `extra days granted to register`                                IS A NUMBER
+    `extra days granted to start`                                   IS A NUMBER
+    `extra days granted for tuition`                                IS A NUMBER
+    `the day asked about`                                           IS A DATE
+
+DECLARE `English position` HAS
+    `I am eligible under s 4A`                                      IS A BOOLEAN
+    `the Minister must provide me tuition`                          IS A BOOLEAN
+    `the last day to register`                                      IS A MAYBE DATE
+    `the last day to start a course`                                IS A MAYBE DATE
+    `the last day of eligibility`                                   IS A MAYBE DATE
+
+§ `Rules`
+
+-- ss 4C(1A), 4D(1A): the time limits apply only to a visa commencement day
+-- after 1 October 2020.
+@ref ss 4C(1A), 4D(1A)
+GIVEN c IS A `English case`
+GIVETH A BOOLEAN
+DECIDE `the time limits apply` c IF
+        c's `my visa commencement day` GREATER THAN Date 1 10 2020
+    AND (   c's `my status` EQUALS `in Australia on a permanent visa`
+         OR c's `my status` EQUALS `in Australia on a specified temporary visa`
+         OR c's `my status` EQUALS `a former permanent visa or entry permit holder who became a citizen`)
+
+GIVEN c IS A `English case`
+GIVETH A BOOLEAN
+DECIDE `I was 18 on my visa commencement day` c IF
+    `add months` (c's `my date of birth`) 216 AT MOST c's `my visa commencement day`
+
+-- A period of n months starting on a day ends on the day before the
+-- corresponding day, or on the month's last day where there is none.
+GIVEN n IS A NUMBER, d IS A DATE
+GIVETH A DATE
+`the end of` n `months starting on` d MEANS
+    IF DATE_DAY (`add months` d n) LESS THAN DATE_DAY d
+    THEN `add months` d n
+    ELSE `the day before` (`add months` d n)
+
+-- s 4C(2)(a): register within 12 months (under 18) or 6 months (18 or over)
+-- starting on the visa commencement day; (b): start within 12 months.
+@ref s 4C(2)
+GIVEN c IS A `English case`
+GIVETH A MAYBE DATE
+`the last registration day for` c MEANS
+    IF NOT (`the time limits apply` c)
+    THEN NOTHING
+    ELSE JUST (`the end of` (IF `I was 18 on my visa commencement day` c THEN 6 ELSE 12) `months starting on` (c's `my visa commencement day`)
+               PLUS c's `extra days granted to register`)
+
+@ref s 4C(2)(b)
+GIVEN c IS A `English case`
+GIVETH A MAYBE DATE
+`the last start day for` c MEANS
+    IF NOT (`the time limits apply` c)
+    THEN NOTHING
+    ELSE JUST (`the end of` 12 `months starting on` (c's `my visa commencement day`) PLUS c's `extra days granted to start`)
+
+-- s 4D(2): eligibility stops at the end of 5 years starting on the visa
+-- commencement day.
+@ref s 4D(2)
+GIVEN c IS A `English case`
+GIVETH A MAYBE DATE
+`the last eligible day for` c MEANS
+    IF NOT (`the time limits apply` c)
+    THEN NOTHING
+    ELSE JUST (`the end of` 60 `months starting on` (c's `my visa commencement day`) PLUS c's `extra days granted for tuition`)
+
+GIVEN deadline IS A MAYBE DATE, done IS A MAYBE DATE, asked IS A DATE
+GIVETH A BOOLEAN
+DECIDE `still in time` deadline `having acted` done `asked on` asked IF
+    CONSIDER deadline
+    WHEN NOTHING THEN TRUE
+    WHEN JUST lastday THEN
+        CONSIDER done
+        WHEN JUST d THEN d AT MOST lastday
+        WHEN NOTHING THEN asked AT MOST lastday
+
+-- s 4A(1): in Australia with a listed status, without vocational English,
+-- and not ineligible under ss 4C-4D.
+@ref ss 4A, 4C, 4D
+GIVEN c IS A `English case`
+GIVETH A BOOLEAN
+DECIDE `I am eligible` c IF
+        NOT (c's `my status` EQUALS `none of these`)
+    AND NOT (c's `I have vocational English`)
+    AND `still in time` (`the last registration day for` c) `having acted` (c's `I registered with a provider on`) `asked on` (c's `the day asked about`)
+    AND `still in time` (`the last start day for` c) `having acted` (c's `I started an approved course on`) `asked on` (c's `the day asked about`)
+    AND (CONSIDER `the last eligible day for` c
+         WHEN NOTHING THEN TRUE
+         WHEN JUST lastday THEN c's `the day asked about` AT MOST lastday)
+
+-- s 4B(1): the Minister must provide tuition to an eligible adult permanent
+-- visa holder.
+@ref s 4B(1)
+GIVEN c IS A `English case`
+GIVETH A BOOLEAN
+DECIDE `the Minister must provide tuition` c IF
+        `I am eligible` c
+    AND c's `my status` EQUALS `in Australia on a permanent visa`
+    AND `I was 18 on my visa commencement day` c
+    AND c's `I paid, or am exempt from, the visa application charge`
+    AND NOT (c's `I held another permanent visa in Australia before`)
+    AND NOT (c's `the regulations exclude me from s 4B`)
+
+@ref ss 3, 4A-4D
+@export default The position of a migrant under the Immigration (Education) Act 1971 (Cth): whether they are eligible for English tuition (in Australia on a permanent or specified temporary visa, a former permanent resident now a citizen, or a child of a permanent resident; without vocational English: s 4A); whether the Minister must provide it (an adult permanent visa holder who paid or is exempt from the charge and held no earlier permanent visa here: s 4B); and, for a visa commencement day after 1 October 2020, the last day to register with a provider (6 months, or 12 if under 18, starting on that day), to start a course (12 months), and of eligibility (5 years), each plus any extension (ss 4C, 4D). DRAFT, not reviewed by an Australian lawyer.
+GIVEN c IS A `English case`  @desc My visa status, English level, date of birth, visa commencement day, charge and earlier visas, registration and course start, extensions, and the day asked about
+GIVETH A `English position`
+`the English position for` c MEANS
+    `English position` OF `I am eligible` c, `the Minister must provide tuition` c, `the last registration day for` c,
+                          `the last start day for` c, `the last eligible day for` c
