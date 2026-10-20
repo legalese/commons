@@ -322,6 +322,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/civil-dispute-resolution-act-2011`](au/civil-dispute-resolution-act-2011) | Civil Dispute Resolution Act 2011 (Cth) — genuine steps statements in federal civil proceedings — row `legalese-aswathy` | `draft` |
 | [`au/trusts-hague-convention-act-1991`](au/trusts-hague-convention-act-1991) | Trusts (Hague Convention) Act 1991 (Cth) — the law governing trusts and their recognition — row `legalese-aswathy` | `draft` |
 | [`au/control-of-naval-waters-act-1918`](au/control-of-naval-waters-act-1918) | Control of Naval Waters Act 1918 (Cth) — directions, removal and sale of craft in naval waters — row `legalese-aswathy` | `draft` |
+| [`au/explosives-act-1961`](au/explosives-act-1961) | Explosives Act 1961 (Cth) — the reach of the Commonwealth's explosives regulations and the penalty for breach — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
