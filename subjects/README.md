@@ -313,6 +313,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/judges-long-leave-payments-act-1979`](au/judges-long-leave-payments-act-1979) | Judges (Long Leave Payments) Act 1979 (Cth) — the long leave payment on a federal Judge's retirement or death — row `legalese-aswathy` | `draft` |
 | [`au/defence-forces-retirement-benefits-pension-increases-act-1967`](au/defence-forces-retirement-benefits-pension-increases-act-1967) | Defence Forces Retirement Benefits (Pension Increases) Act 1967 (Cth) — the 1967 increase in DFRB pensions — row `legalese-aswathy` | `draft` |
 | [`au/epidemiological-studies-confidentiality-act-1981`](au/epidemiological-studies-confidentiality-act-1981) | Epidemiological Studies (Confidentiality) Act 1981 (Cth) — secrecy of prescribed studies such as the Vietnam Veterans Study — row `legalese-aswathy` | `draft` |
+| [`au/diplomatic-and-consular-missions-act-1978`](au/diplomatic-and-consular-missions-act-1978) | Diplomatic and Consular Missions Act 1978 (Cth) — false claims of diplomatic or consular status — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
