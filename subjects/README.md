@@ -309,6 +309,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/australian-veterans-recognition-putting-veterans-and-their-families-first-act-2019`](au/australian-veterans-recognition-putting-veterans-and-their-families-first-act-2019) | Australian Veterans' Recognition (Putting Veterans and their Families First) Act 2019 (Cth) — who is a veteran, and the 90-day decision commitment — row `legalese-aswathy` | `draft` |
 | [`au/scout-association-act-1924`](au/scout-association-act-1924) | Scout Association Act 1924 (Cth) — the offences of misusing the Scout name and badges — row `legalese-aswathy` | `draft` |
 | [`au/charities-act-2013`](au/charities-act-2013) | Charities Act 2013 (Cth) — whether an entity is a charity — row `legalese-aswathy` | `draft` |
+| [`au/domicile-act-1982`](au/domicile-act-1982) | Domicile Act 1982 (Cth) — independent domicile, children's domicile and domicile of choice — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
