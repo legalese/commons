@@ -1,0 +1,825 @@
+IMPORT prelude
+
+-- Social Security Act 1991 (Cth) -- the claimant's questions: have I reached pension age (s 23(5A)-(5D)); do I have 10 years
+-- qualifying Australian residence (s 7(5)); am I qualified for the age pension and is it payable to me (ss 43, 44), at what rate
+-- under the ordinary income and assets tests of Pension Rate Calculator A (s 1064, Modules A, E, G); am I qualified for a
+-- Commonwealth seniors health card (s 1061ZG, with the income test of s 1071); am I qualified for the disability support pension
+-- (ss 94, 103); am I qualified for jobseeker payment and how long must I wait (ss 593, 14A, 598); am I qualified for youth
+-- allowance as a full-time student and what does my parents' income do to it (ss 540, 543, 543A, 543B, 1067G); am I qualified for
+-- carer allowance (ss 954, 954A, 957A, 23(14)) or carer payment (ss 197, 198) for the adult I care for; and what does a
+-- compensation payment do to my payment (Part 3.14: ss 17, 1166, 1167, 1169, 1170, 1173).
+--
+-- SEAT: the claimant -- the pensioner, the jobseeker, the person with a disability, the student, the carer -- asking "Am I
+-- qualified, and at what rate will I be paid?". Every decision is phrased as that person would ask it, on facts that person could
+-- state; what the Secretary decides is asked as a fact ("if the Secretary is satisfied that ...").
+--
+-- Provisions covered: s 7(5); s 17(1) (compensation affected payment), (2), (2A), (2B), (3), (4A); s 23(5A)-(5D), (14);
+-- s 43(1)(a)-(c); s 44(1); s 94(1)(a)-(e), (ea), (2), (3A), (3B), (6); s 103(2); s 197(1) (disabled adult); s 198(2)(a), (3), (4),
+-- (5), (7); ss 540(1), 543, 543A(1), (2), (2AA), 543B(1); s 593(1)(a), (b), (g), (i); s 14A (liquid assets, maximum reserve);
+-- s 598(1), (2A), (2B), (4A), (6); s 954(1); s 954A(1), (2); s 957A; s 1061ZG(1), (2); points 1064-A1 Steps 1-11, 1064-E, 1064-G5,
+-- G7 and Table G-1; points 1067G-A1 Step 13, 1067G-F1, F3, F26-F29; points 1071-1, 1071-11; ss 1166, 1167, 1169, 1170, 1173.
+--
+-- Edition: Compilation No. 232, compilation date 1 July 2026, includes amendments up to Act No. 17, 2025 (register id C2026C00336,
+-- in 6 volumes), as deposited at ../../registers/source-bundle/C2004A04121.txt. The deposit's metadata warns that the version in
+-- force from 20 September 2026 has no registered compilation yet, so amendments commencing on or after that date may be missing.
+-- Instruments: the Impairment Tables (Social Security (Tables for the Assessment of Work-related Impairment for Disability Support
+-- Pension) Determination 2023) and the Adult Disability Assessment Tool are NOT deposited -- the rating and the scores are inputs.
+-- The indexed figures (Part 3.16) are not in the text -- every rate, limit and free area in force on a given day is an input.
+--
+-- INPUTS, because the deposit does not give the figure: maximum payment rates; the assets value limits, income free areas and the
+-- seniors health card income limit in force (Tables G-1, E-1 and 1071-12 print base figures, indexed since); the parental income
+-- free area (Family Assistance Act); the income cut-out amount (s 17(8)); and -- THE DEPOSIT HAS LOST THEM, being typeset as
+-- equations -- the reduction formulas of point 1064-E10 and Table G-2 column 3, the formula of point 1067G-F28, the formula of
+-- s 598(2A) and the formula of s 1170(4). Where the surviving words fix the shape of a lost formula, that shape is used and marked
+-- as an INFERENCE.
+--
+-- NOT ENCODED: the rest of a 6-volume Act. In particular: indexation (ss 1190-1194); rent assistance and the supplements; the work
+-- bonus; deeming (ss 1076, 1077) and what counts as income or as an asset (Parts 3.10, 3.12); the homeowner definition (s 11);
+-- financial hardship (ss 1129, 1130); the other jobseeker waiting periods and preclusions; employment pathway plans and compliance
+-- (Administration Act); independence for youth allowance (s 1067A) and the maintenance income test (Module GA); carer allowance for
+-- children and its rate; carer payment for children, for an adult and child (s 198(2)(d)), the short-term and hospital rules
+-- (ss 198AA-198AC), and carer payment's own rate and income and assets tests (ss 198A, 198D are inputs); compensation recovery
+-- beyond the provisions listed (ss 1164, 1165, 1171, 1172, 1174-1184K, the s 17(4) repayment adjustment); review and appeal (Social
+-- Security (Administration) Act 1999, not deposited); the machinery of the Act.
+--
+-- BASELINE ENCODING. Written straight from the deposited text with the writing-l4-rules skill, from the seat of the individual to
+-- whom the law is applied, with the design defaults ruled on 2026-10-18. No pipeline, no coverage table, no independent test pass,
+-- no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Social Security Act 1991 -- the claimant's questions`
+
+§§ `Dates, ages and arithmetic`
+
+-- Dates are numbers written YYYYMMDD. A person "turns" an age on the anniversary of birth; age is counted in completed months.
+-- (A birthday on 29 February is not handled.)
+@desc The year of a date written YYYYMMDD
+GIVEN `d` IS A NUMBER @desc A date written YYYYMMDD
+GIVETH A NUMBER
+`the year of` MEANS FLOOR (`d` DIVIDED BY 10000)
+
+@desc The month of a date written YYYYMMDD
+GIVEN `d` IS A NUMBER @desc A date written YYYYMMDD
+GIVETH A NUMBER
+`the month of` MEANS FLOOR (`d` DIVIDED BY 100) MINUS (`the year of` `d` TIMES 100)
+
+@desc The day of the month of a date written YYYYMMDD
+GIVEN `d` IS A NUMBER @desc A date written YYYYMMDD
+GIVETH A NUMBER
+`the day of` MEANS `d` MINUS (FLOOR (`d` DIVIDED BY 100) TIMES 100)
+
+@desc Completed months of age on a day
+GIVEN `born` IS A NUMBER @desc Date of birth, YYYYMMDD
+      `today` IS A NUMBER @desc The day in question, YYYYMMDD
+GIVETH A NUMBER
+`completed months of age` MEANS
+        ((`the year of` `today` MINUS `the year of` `born`) TIMES 12)
+    PLUS (`the month of` `today` MINUS `the month of` `born`)
+    MINUS (IF `the day of` `today` LESS THAN `the day of` `born` THEN 1 ELSE 0)
+
+@desc The lower of two amounts
+GIVEN `a` IS A NUMBER @desc First amount
+      `b` IS A NUMBER @desc Second amount
+GIVETH A NUMBER
+`the lower of` MEANS IF `a` LESS THAN `b` THEN `a` ELSE `b`
+
+@desc An amount, or nil if it is negative
+GIVEN `a` IS A NUMBER @desc The amount
+GIVETH A NUMBER
+`not below nil` MEANS IF `a` LESS THAN 0 THEN 0 ELSE `a`
+
+@desc The 50/50 share of a couple's amount (points 1064-A2, E2, G2; 1071-11)
+GIVEN `own` IS A NUMBER @desc My amount
+      `partner's` IS A NUMBER @desc My partner's amount
+GIVETH A NUMBER
+`the couple's 50/50 share` MEANS (`own` PLUS `partner's`) DIVIDED BY 2
+
+§§ `23(5A)-(5D) -- pension age`
+
+-- (5A) "Table--Pension age for men": "On or before 30 June 1952" 65 years; "1 July 1952 to 31 December 1953" 65 years and 6
+-- months; "1 January 1954 to 30 June 1955" 66 years; "1 July 1955 to 31 December 1956" 66 years and 6 months; "On or after
+-- 1 January 1957" 67 years. (5B) "A woman born before 1 July 1935 reaches pension age when she turns 60." (5C) women born
+-- "From 1 July 1935 to 31 December 1936" 60 years and 6 months, rising 6 months for each 18-month band to "From 1 July 1947 to
+-- 31 December 1948" 64 years and 6 months. (5D) women born from 1 January 1949: the same steps as men, from 65 years.
+-- The tables as data, in months; the first matching row wins.
+@export What is my pension age, in months, under s 23(5A)-(5D)?
+GIVEN `I am a man` IS A BOOLEAN @desc Whether you are a man (the tables differ for women born before 1949)
+      `born` IS A NUMBER @desc Your date of birth, YYYYMMDD
+GIVETH A NUMBER
+`What is my pension age in months` MEANS
+    BRANCH
+      IF `born` AT MOST 19520630 AND (`I am a man` OR `born` AT LEAST 19490101) THEN 780
+      IF `born` AT LEAST 19570101                                               THEN 804
+      IF `born` AT LEAST 19550701                                               THEN 798
+      IF `born` AT LEAST 19540101                                               THEN 792
+      IF `born` AT LEAST 19520701                                               THEN 786
+      IF `born` LESS THAN 19350701                                              THEN 720
+      IF `born` AT MOST 19361231                                                THEN 726
+      IF `born` AT MOST 19380630                                                THEN 732
+      IF `born` AT MOST 19391231                                                THEN 738
+      IF `born` AT MOST 19410630                                                THEN 744
+      IF `born` AT MOST 19421231                                                THEN 750
+      IF `born` AT MOST 19440630                                                THEN 756
+      IF `born` AT MOST 19451231                                                THEN 762
+      IF `born` AT MOST 19470630                                                THEN 768
+      OTHERWISE                                                                      774
+
+@export Have I reached pension age on a given day (s 23(5A)-(5D))?
+GIVEN `I am a man` IS A BOOLEAN @desc Whether you are a man
+      `born` IS A NUMBER @desc Your date of birth, YYYYMMDD
+      `today` IS A NUMBER @desc The day in question, YYYYMMDD
+GIVETH A BOOLEAN
+DECIDE `Have I reached pension age` IF
+    `completed months of age` `born` `today` AT LEAST `What is my pension age in months` `I am a man` `born`
+
+§§ `7(5) -- 10 years qualifying Australian residence`
+
+-- s 7(5): "(a) the person has, at any time, been an Australian resident for a continuous period of not less than 10 years; or
+-- (b) the person has been an Australian resident during more than one period and: (i) at least one of those periods is 5 years or
+-- more; and (ii) the aggregate of those periods exceeds 10 years." One period of exactly 10 years is enough; several periods
+-- totalling exactly 10 years are not.
+@export Do I have 10 years qualifying Australian residence (s 7(5))?
+GIVEN `my longest period in years` IS A NUMBER @desc Your longest continuous period as an Australian resident, in years
+      `my number of periods` IS A NUMBER @desc How many separate periods of Australian residence you have had
+      `my aggregate in years` IS A NUMBER @desc All your periods of Australian residence added together, in years
+GIVETH A BOOLEAN
+DECIDE `Do I have 10 years qualifying Australian residence` IF
+        `my longest period in years` AT LEAST 10
+    OR  (    `my number of periods` GREATER THAN 1
+         AND `my longest period in years` AT LEAST 5
+         AND `my aggregate in years` GREATER THAN 10)
+
+§§ `43, 44, 1064 -- age pension`
+
+-- s 43(1): "A person is qualified for an age pension if the person has reached pension age and any of the following applies:
+-- (a) the person has 10 years qualifying Australian residence; (b) the person has a qualifying residence exemption for an age
+-- pension; (c) the person was receiving a widow B pension, a widow allowance, a mature age allowance or a partner allowance,
+-- immediately before reaching that age". Paragraph (d) (before 20 March 1997) and subsections (1A)-(4) (widows and former wife
+-- pensioners) are not encoded.
+DECLARE `My age pension claim` HAS
+    `I am a man`                                   IS A BOOLEAN  -- for the pension age tables
+    `my date of birth`                             IS A NUMBER   -- YYYYMMDD
+    `I have 10 years qualifying Australian residence` IS A BOOLEAN  -- s 7(5); see the decision above
+    `I have a qualifying residence exemption`      IS A BOOLEAN  -- s 7(6): e.g. a refugee or a scheduled agreement
+    `I was receiving a widow B pension, widow allowance, mature age allowance or partner allowance just before pension age` IS A BOOLEAN
+
+@export Am I qualified for the age pension on a given day (s 43(1))?
+GIVEN `my claim` IS A `My age pension claim` @desc Your sex, date of birth, and residence or prior-payment facts
+      `today` IS A NUMBER @desc The day in question, YYYYMMDD
+GIVETH A BOOLEAN
+DECIDE `Am I qualified for the age pension` IF
+        `Have I reached pension age` (`my claim`'s `I am a man`) (`my claim`'s `my date of birth`) `today`
+    AND (    `my claim`'s `I have 10 years qualifying Australian residence`
+         OR  `my claim`'s `I have a qualifying residence exemption`
+         OR  `my claim`'s `I was receiving a widow B pension, widow allowance, mature age allowance or partner allowance just before pension age`)
+
+-- Pension Rate Calculator A, point 1064-A1: maximum payment rate (Steps 1-4); "Apply the ordinary income test using MODULE E"
+-- giving "the income reduced rate" (Steps 5-8); "Apply the assets test using MODULE G" giving "the assets reduced rate" (Steps 9,
+-- 10); "Step 11. Compare the income reduced rate and the assets reduced rate: the lower of the 2 rates, or the income reduced rate if
+-- the rates are equal, is the provisional annual payment rate." Step 12's deductions are not modelled.
+-- Points 1064-A2, E2, G2: members of a couple are treated as having income and assets on a 50/50 basis.
+-- Module E: the income excess is ordinary income above the ordinary income free area. Point 1064-E10, "A person's reduction for
+-- ordinary income is:", is followed by NOTHING in the deposit: the reduction per dollar of excess is an INPUT.
+-- Module G: the assets excess is the value of assets above the assets value limit; 1064-G7: "disregard any part of the excess that
+-- is not a multiple of $250". Table G-2 column 3 (the reduction) is EMPTY in the deposit: the reduction per dollar is an INPUT.
+DECLARE `My income and assets` HAS
+    `I am a member of a couple`                   IS A BOOLEAN
+    `my maximum payment rate per year`            IS A NUMBER  -- Module B, indexed: an input
+    `my ordinary income per year`                 IS A NUMBER
+    `my partner's ordinary income per year`       IS A NUMBER  -- 0 if single
+    `my ordinary income free area`                IS A NUMBER  -- Table E-1 as indexed: an input
+    `the income reduction per dollar of excess`   IS A NUMBER  -- point 1064-E10, lost: an input
+    `the value of my assets`                      IS A NUMBER
+    `the value of my partner's assets`            IS A NUMBER  -- 0 if single
+    `my assets value limit`                       IS A NUMBER  -- Table G-1 as indexed: an input
+    `the assets reduction per dollar of excess`   IS A NUMBER  -- Table G-2 column 3, lost: an input
+
+@desc My ordinary income for the test: my own, or half the couple's (point 1064-E2)
+GIVEN `m` IS A `My income and assets` @desc Your income and assets
+GIVETH A NUMBER
+`my assessed ordinary income` MEANS
+    IF `m`'s `I am a member of a couple`
+    THEN `the couple's 50/50 share` (`m`'s `my ordinary income per year`) (`m`'s `my partner's ordinary income per year`)
+    ELSE `m`'s `my ordinary income per year`
+
+@desc My assets for the test: my own, or half the couple's (point 1064-G2)
+GIVEN `m` IS A `My income and assets` @desc Your income and assets
+GIVETH A NUMBER
+`my assessed assets` MEANS
+    IF `m`'s `I am a member of a couple`
+    THEN `the couple's 50/50 share` (`m`'s `the value of my assets`) (`m`'s `the value of my partner's assets`)
+    ELSE `m`'s `the value of my assets`
+
+@export What is my assets excess under point 1064-G5 and G7, in dollars?
+GIVEN `m` IS A `My income and assets` @desc Your income and assets, and the limit in force
+GIVETH A NUMBER
+`What is my assets excess` MEANS
+    IF `my assessed assets` `m` AT MOST `m`'s `my assets value limit` THEN 0
+    ELSE FLOOR ((`my assessed assets` `m` MINUS `m`'s `my assets value limit`) DIVIDED BY 250) TIMES 250
+
+@desc The income reduced rate (Module E)
+GIVEN `m` IS A `My income and assets` @desc Your income and assets
+GIVETH A NUMBER
+`my income reduced rate` MEANS
+    `not below nil` (`m`'s `my maximum payment rate per year`
+                     MINUS (`not below nil` (`my assessed ordinary income` `m` MINUS `m`'s `my ordinary income free area`)
+                            TIMES `m`'s `the income reduction per dollar of excess`))
+
+@desc The assets reduced rate (Module G)
+GIVEN `m` IS A `My income and assets` @desc Your income and assets
+GIVETH A NUMBER
+`my assets reduced rate` MEANS
+    `not below nil` (`m`'s `my maximum payment rate per year` MINUS (`What is my assets excess` `m` TIMES `m`'s `the assets reduction per dollar of excess`))
+
+@export What annual rate of age pension do I get, before Step 12 deductions (point 1064-A1 Step 11)?
+GIVEN `m` IS A `My income and assets` @desc Your income and assets, with the maximum rate, free area, limit and reductions in force
+GIVETH A NUMBER
+`What annual rate of age pension do I get` MEANS `the lower of` (`my income reduced rate` `m`) (`my assets reduced rate` `m`)
+
+-- s 44(1): "an age pension is not payable to a person if the person's age pension rate would be nil" (subsection (2), the
+-- quarterly supplement elections, is not modelled).
+@export Is the age pension payable to me on a given day (ss 43, 44, 1064)?
+GIVEN `my claim` IS A `My age pension claim` @desc Your sex, date of birth, and residence facts
+      `today` IS A NUMBER @desc The day in question, YYYYMMDD
+      `m` IS A `My income and assets` @desc Your income and assets, with the figures in force
+GIVETH A BOOLEAN
+DECIDE `Is the age pension payable to me` IF
+        `Am I qualified for the age pension` `my claim` `today`
+    AND `What annual rate of age pension do I get` `m` GREATER THAN 0
+
+-- Table G-1, as printed: not a member of a couple $250,000 (homeowner) / $450,000 (not a homeowner); each member of a couple
+-- $187,500 / $287,500. Section 1192(5C)-(5E) shows these are the figures "immediately before" 1 July 2017, indexed every year
+-- since. They are NOT the limits in force on any scenario date.
+@export What assets value limit does Table G-1 print for me (the pre-indexation base figure)?
+GIVEN `I am a member of a couple` IS A BOOLEAN @desc Whether you are a member of a couple
+      `I am a homeowner` IS A BOOLEAN @desc Whether you (or your couple) own your home
+GIVETH A NUMBER
+`What base assets value limit does Table G-1 print for me` MEANS
+    IF `I am a member of a couple`
+    THEN (IF `I am a homeowner` THEN 187500 ELSE 287500)
+    ELSE (IF `I am a homeowner` THEN 250000 ELSE 450000)
+
+§§ `1061ZG, 1071 -- Commonwealth seniors health card`
+
+-- s 1061ZG(1): qualified on a day if the person "(a) has reached pension age; and (b) is an Australian resident or a special
+-- category visa holder residing in Australia; and (c) is in Australia; and (d) satisfies the seniors health card income test; and
+-- (e) is not receiving a social security pension or benefit; and (f) is not receiving a service pension, income support supplement
+-- or a veteran payment; and (g) is not subject to a newly arrived resident's waiting period". (2): not qualified if the person failed
+-- to comply with s 1061ZJ, holds the Veterans' Entitlements Act card, or did not give the notice of assessment within 52 weeks.
+-- s 1071, 1071-1: "Step 4. If the amount at step 1B is less than the person's seniors health card income limit, the person satisfies
+-- the seniors health card income test"; Step 5: "equal to or exceeds" fails. Step 1B is adjusted taxable income plus any deemed
+-- income amount (an INPUT, via ss 1076, 1077). 1071-11: a member of a couple must "add the couple's adjusted taxable incomes for the
+-- reference tax year and divide by 2". The limit in force (1071-12, indexed every 20 September) is an INPUT.
+DECLARE `My seniors health card claim` HAS
+    `I am a man`                                   IS A BOOLEAN
+    `my date of birth`                             IS A NUMBER
+    `I am an Australian resident or a special category visa holder residing in Australia` IS A BOOLEAN
+    `I am in Australia`                            IS A BOOLEAN
+    `I am a member of a couple`                    IS A BOOLEAN
+    `my adjusted taxable income`                   IS A NUMBER
+    `my partner's adjusted taxable income`         IS A NUMBER
+    `my deemed income amount`                      IS A NUMBER
+    `my seniors health card income limit`          IS A NUMBER
+    `I am receiving a social security pension or benefit` IS A BOOLEAN
+    `I am receiving a service pension, income support supplement or veteran payment` IS A BOOLEAN
+    `I am subject to a newly arrived resident's waiting period` IS A BOOLEAN
+    `a subsection (2) disqualification applies to me` IS A BOOLEAN
+
+@export Do I satisfy the seniors health card income test (s 1071)?
+GIVEN `c` IS A `My seniors health card claim` @desc Your incomes and the income limit in force
+GIVETH A BOOLEAN
+DECIDE `Do I satisfy the seniors health card income test` IF
+    (    (IF `c`'s `I am a member of a couple`
+          THEN `the couple's 50/50 share` (`c`'s `my adjusted taxable income`) (`c`'s `my partner's adjusted taxable income`)
+          ELSE `c`'s `my adjusted taxable income`)
+     PLUS `c`'s `my deemed income amount`)
+    LESS THAN `c`'s `my seniors health card income limit`
+
+@export Am I qualified for a Commonwealth seniors health card on a given day (s 1061ZG)?
+GIVEN `c` IS A `My seniors health card claim` @desc Your age, residence, incomes and current payments
+      `today` IS A NUMBER @desc The day in question, YYYYMMDD
+GIVETH A BOOLEAN
+DECIDE `Am I qualified for a seniors health card` IF
+        `Have I reached pension age` (`c`'s `I am a man`) (`c`'s `my date of birth`) `today`
+    AND `c`'s `I am an Australian resident or a special category visa holder residing in Australia`
+    AND `c`'s `I am in Australia`
+    AND `Do I satisfy the seniors health card income test` `c`
+    AND NOT `c`'s `I am receiving a social security pension or benefit`
+    AND NOT `c`'s `I am receiving a service pension, income support supplement or veteran payment`
+    AND NOT `c`'s `I am subject to a newly arrived resident's waiting period`
+    AND NOT `c`'s `a subsection (2) disqualification applies to me`
+
+§§ `94, 103 -- disability support pension`
+
+-- s 94(1): qualified if "(a) the person has a physical, intellectual or psychiatric impairment; and (b) the person's impairment is of
+-- 20 points or more under the Impairment Tables; and (c) one of the following applies: (i) the person has a continuing inability to
+-- work; (ii) the Secretary is satisfied that the person is participating in ... the supported wage system; and (d) the person has
+-- turned 16; and (da)" for a person under 35 (or a reviewed 2008-2011 DSP starter) able to work 8 hours a week, "the person meets any
+-- participation requirements that apply to the person under section 94A"; (e) a residence condition when (c) is first satisfied;
+-- (ea) a current residence condition. (e) and (ea) are asked as facts.
+-- (2): a continuing inability to work "if the Secretary is satisfied that: (aa) in a case where the person's impairment is not a
+-- severe impairment ... or the person is a reviewed 2008-2011 DSP starter who has had an opportunity to participate in a program of
+-- support -- the person has actively participated in a program of support"; "(a) in all cases -- the impairment is of itself
+-- sufficient to prevent the person from doing any work independently of a program of support within the next 2 years; and (b) in all
+-- cases -- either: (i) the impairment is of itself sufficient to prevent the person from undertaking a training activity during the
+-- next 2 years; or (ii)" training "is unlikely (because of the impairment) to enable the person to do any work independently of a
+-- program of support within the next 2 years".
+-- (3A): when a person "is receiving disability support pension" and is given "a notice under subsection 63(2) or (4) of the
+-- Administration Act", and "is not a reviewed 2008-2011 DSP starter", "paragraph (2)(aa) of this section does not apply in relation
+-- to that assessment".
+-- (3B): "a severe impairment if the person's impairment is of 20 points or more under the Impairment Tables, of which 20 points or
+-- more are under a single Impairment Table".
+-- (6): not qualified on the basis of a continuing inability to work "if the person brought about the inability with a view to
+-- obtaining a disability support pension".
+-- The rating under the Impairment Tables (a legislative instrument, not deposited) is an INPUT: who rates a borderline case is not
+-- in this Act.
+DECLARE `My disability support pension claim` HAS
+    `my age in years`                              IS A NUMBER
+    `I have a physical, intellectual or psychiatric impairment` IS A BOOLEAN
+    `my impairment points in total`                IS A NUMBER  -- the Impairment Tables rating: an input
+    `my highest points under a single Impairment Table` IS A NUMBER
+    `I have actively participated in a program of support` IS A BOOLEAN
+    `the Secretary is satisfied my impairment prevents work independently of a program of support within 2 years` IS A BOOLEAN
+    `the Secretary is satisfied my impairment prevents a training activity within 2 years` IS A BOOLEAN
+    `the Secretary is satisfied training is unlikely to enable me to work within 2 years` IS A BOOLEAN
+    `the Secretary is satisfied I participate in the supported wage system` IS A BOOLEAN
+    `I fail participation requirements that apply to me under section 94A` IS A BOOLEAN
+    `I meet the residence condition of paragraph (e)` IS A BOOLEAN
+    `I meet the residence condition of paragraph (ea)` IS A BOOLEAN
+    `I brought about the inability with a view to obtaining the pension` IS A BOOLEAN
+    `this is a reassessment of me as a recipient on a section 63 notice` IS A BOOLEAN
+    `I am a reviewed 2008-2011 DSP starter`        IS A BOOLEAN
+
+@export Do I have a severe impairment under s 94(3B)?
+GIVEN `p` IS A `My disability support pension claim` @desc Your Impairment Tables rating
+GIVETH A BOOLEAN
+DECIDE `Do I have a severe impairment` IF
+        `p`'s `my impairment points in total` AT LEAST 20
+    AND `p`'s `my highest points under a single Impairment Table` AT LEAST 20
+
+@desc Whether paragraph 94(2)(aa) (the program of support) applies to my assessment, given s 94(3A)
+GIVEN `p` IS A `My disability support pension claim` @desc Your claim
+GIVETH A BOOLEAN
+DECIDE `paragraph (2)(aa) applies to me` IF
+        (    NOT `Do I have a severe impairment` `p`
+         OR  `p`'s `I am a reviewed 2008-2011 DSP starter`)
+    AND (    NOT `p`'s `this is a reassessment of me as a recipient on a section 63 notice`
+         OR  `p`'s `I am a reviewed 2008-2011 DSP starter`)
+
+@export Do I have a continuing inability to work under s 94(2), (3A) and (6)?
+GIVEN `p` IS A `My disability support pension claim` @desc Your rating and what the Secretary is satisfied of
+GIVETH A BOOLEAN
+DECIDE `Do I have a continuing inability to work` IF
+        (NOT `paragraph (2)(aa) applies to me` `p` OR `p`'s `I have actively participated in a program of support`)
+    AND `p`'s `the Secretary is satisfied my impairment prevents work independently of a program of support within 2 years`
+    AND (    `p`'s `the Secretary is satisfied my impairment prevents a training activity within 2 years`
+         OR  `p`'s `the Secretary is satisfied training is unlikely to enable me to work within 2 years`)
+    AND NOT `p`'s `I brought about the inability with a view to obtaining the pension`
+
+@export Am I qualified for the disability support pension (s 94(1))?
+GIVEN `p` IS A `My disability support pension claim` @desc Your age, rating, residence and what the Secretary is satisfied of
+GIVETH A BOOLEAN
+DECIDE `Am I qualified for the disability support pension` IF
+        `p`'s `I have a physical, intellectual or psychiatric impairment`
+    AND `p`'s `my impairment points in total` AT LEAST 20
+    AND (`Do I have a continuing inability to work` `p` OR `p`'s `the Secretary is satisfied I participate in the supported wage system`)
+    AND `p`'s `my age in years` AT LEAST 16
+    AND NOT `p`'s `I fail participation requirements that apply to me under section 94A`
+    AND `p`'s `I meet the residence condition of paragraph (e)`
+    AND `p`'s `I meet the residence condition of paragraph (ea)`
+
+-- s 103(2): "If: (a) a person is receiving a disability support pension; and (b) another social security pension, a social security
+-- benefit, a service pension or a veteran payment becomes payable to the person; the disability support pension is not payable".
+-- Note 1: "Another payment type will generally not become payable to the person until the person claims it." Nothing in ss 94-103
+-- ends the pension at pension age.
+@export Does my disability support pension stay payable (s 103(2))?
+GIVEN `I am receiving disability support pension` IS A BOOLEAN @desc Whether you are receiving the disability support pension
+      `another pension or benefit has become payable to me` IS A BOOLEAN @desc Whether another social security pension or benefit (for example the age pension, once claimed) or a service pension or veteran payment has become payable to you
+GIVETH A BOOLEAN
+DECIDE `Does my disability support pension stay payable` IF
+        `I am receiving disability support pension`
+    AND NOT `another pension or benefit has become payable to me`
+
+§§ `593, 14A, 598 -- jobseeker payment`
+
+-- s 593(1): "Subject to sections 596, 596A, 597 and 598", qualified for a period if "(a) the person satisfies the Secretary that:
+-- (i) throughout the period the person is unemployed; or (ii) subsection (1A) applies" (temporary incapacity with a job to return
+-- to); "(b) throughout the period the person satisfies subsection (1AC)" (the employment pathway plan requirements, and willingness
+-- "to actively seek and to accept and undertake paid work in Australia", or an exemption); "(g) throughout the period the person:
+-- (i) is at least 22 years of age and has not reached the pension age; and (ii) is an Australian resident or is exempt from the
+-- residence requirement"; "(i) the person was not in receipt of a youth allowance during the period".
+DECLARE `My jobseeker claim` HAS
+    `I am a man`                                   IS A BOOLEAN
+    `my date of birth`                             IS A NUMBER
+    `the Secretary is satisfied I am unemployed or temporarily incapacitated under subsection (1A)` IS A BOOLEAN
+    `I satisfy subsection (1AC)`                   IS A BOOLEAN  -- the mutual obligation
+    `I am an Australian resident or exempt`        IS A BOOLEAN
+    `I received youth allowance during the period` IS A BOOLEAN
+    `my liquid assets`                             IS A NUMBER   -- s 14A, with my partner's
+    `I am a member of a couple`                    IS A BOOLEAN
+    `I have a dependent child`                     IS A BOOLEAN
+    `I or my partner served a waiting period that started in the preceding 12 months` IS A BOOLEAN
+    `I come from a continuous period of income support payments` IS A BOOLEAN
+
+@export Am I qualified for jobseeker payment on a given day (s 593(1))?
+GIVEN `j` IS A `My jobseeker claim` @desc Your age, work situation, mutual obligation and residence
+      `today` IS A NUMBER @desc The day in question, YYYYMMDD
+GIVETH A BOOLEAN
+DECIDE `Am I qualified for jobseeker payment` IF
+        `j`'s `the Secretary is satisfied I am unemployed or temporarily incapacitated under subsection (1A)`
+    AND `j`'s `I satisfy subsection (1AC)`
+    AND `completed months of age` (`j`'s `my date of birth`) `today` AT LEAST 264
+    AND NOT `Have I reached pension age` (`j`'s `I am a man`) (`j`'s `my date of birth`) `today`
+    AND `j`'s `I am an Australian resident or exempt`
+    AND NOT `j`'s `I received youth allowance during the period`
+
+-- s 14A(1): liquid assets include "(c) amounts due, and able to be paid, to the person by, or on behalf of, a former employer of the
+-- person" -- so redundancy pay owed counts; (2) a partner's are included. "maximum reserve ... (a) if the person is not a member of a
+-- couple and does not have a dependent child -- $5,000; or (b) in any other case -- $10,000."
+@desc The maximum reserve under s 14A
+GIVEN `j` IS A `My jobseeker claim` @desc Your claim
+GIVETH A NUMBER
+`my maximum reserve` MEANS
+    IF NOT `j`'s `I am a member of a couple` AND NOT `j`'s `I have a dependent child` THEN 5000 ELSE 10000
+
+-- s 598(2A): "Work out the number of formula weeks (disregarding any fractions of a week) ... using the formula:" -- the FORMULA IS
+-- LOST in the deposit; its terms survive: "liquid assets", "maximum reserve amount", and "divisor ... (a) if the person is not a
+-- member of a couple and does not have a dependent child -- $500; or (b) otherwise -- $1,000". INFERENCE: (liquid assets - maximum
+-- reserve) / divisor, the only arrangement of those three terms that gives weeks. (2B): "If the number of formula weeks is equal to
+-- or greater than 13 weeks, the liquid assets test waiting period in relation to the claim is 13 weeks." (1): it applies only if
+-- liquid assets exceed the maximum reserve; (4A): not if the person or partner served a waiting period that started in the preceding
+-- 12 months; (6): not on becoming qualified at the end of a continuous period of income support payments. (5), severe financial
+-- hardship, is the Secretary's discretion and is not modelled.
+@desc The divisor under s 598(2A)
+GIVEN `j` IS A `My jobseeker claim` @desc Your claim
+GIVETH A NUMBER
+`my divisor` MEANS
+    IF NOT `j`'s `I am a member of a couple` AND NOT `j`'s `I have a dependent child` THEN 500 ELSE 1000
+
+@export How many weeks is my liquid assets test waiting period for jobseeker payment (ss 14A, 598)?
+GIVEN `j` IS A `My jobseeker claim` @desc Your liquid assets, couple and children, and earlier waiting periods
+GIVETH A NUMBER
+`How many weeks is my liquid assets waiting period` MEANS
+    IF     `j`'s `my liquid assets` AT MOST `my maximum reserve` `j`
+        OR `j`'s `I or my partner served a waiting period that started in the preceding 12 months`
+        OR `j`'s `I come from a continuous period of income support payments`
+    THEN 0
+    ELSE `the lower of` 13 (FLOOR ((`j`'s `my liquid assets` MINUS `my maximum reserve` `j`) DIVIDED BY `my divisor` `j`))
+
+§§ `540, 543, 543A, 543B -- youth allowance: study and age`
+
+-- s 540(1): qualified if the person "is undertaking full-time study" (or another limb), "is of youth allowance age", and "is an
+-- Australian resident" or exempt. s 543: youth allowance age = the minimum age attained and the maximum age not. s 543A(1): minimum
+-- age "(a) is at least 16 years old; or (b) is 15 years old and is independent"; (2): under 18 also requires the final year of school
+-- completed, or "(b) is undertaking full-time study" (or other limbs not modelled); (2AA): full-time SECONDARY study at 16 or 17 does
+-- not count unless an exception applies (one fact here). s 543B(1)(c): maximum age for a full-time student "is at least 25 years
+-- old"; 22 for others not apprentices. s 543B(2) and the other limbs are not modelled.
+DECLARE `My youth allowance claim` HAS
+    `my age in years`                              IS A NUMBER
+    `I am independent`                             IS A BOOLEAN  -- s 1067A, asked as a fact
+    `I am undertaking full-time study`             IS A BOOLEAN
+    `my study is a secondary course`               IS A BOOLEAN
+    `an exception in subsection 543A(2AA) applies to me` IS A BOOLEAN
+    `I have completed the final year of secondary school` IS A BOOLEAN
+    `I am an Australian resident or exempt`        IS A BOOLEAN
+
+@desc Whether I have attained the minimum age for youth allowance (s 543A)
+GIVEN `s` IS A `My youth allowance claim` @desc Your claim
+GIVETH A BOOLEAN
+DECIDE `I have attained the minimum age` IF
+        (`s`'s `my age in years` AT LEAST 16 OR (`s`'s `my age in years` AT LEAST 15 AND `s`'s `I am independent`))
+    AND (    `s`'s `my age in years` AT LEAST 18
+         OR  `s`'s `I have completed the final year of secondary school`
+         OR  (    `s`'s `I am undertaking full-time study`
+              AND (NOT `s`'s `my study is a secondary course` OR `s`'s `an exception in subsection 543A(2AA) applies to me`)))
+
+@desc Whether I have attained the maximum age for youth allowance (s 543B(1))
+GIVEN `s` IS A `My youth allowance claim` @desc Your claim
+GIVETH A BOOLEAN
+DECIDE `I have attained the maximum age` IF
+    IF `s`'s `I am undertaking full-time study` THEN `s`'s `my age in years` AT LEAST 25 ELSE `s`'s `my age in years` AT LEAST 22
+
+@export Am I qualified for youth allowance as a full-time student (ss 540, 543, 543A, 543B)?
+GIVEN `s` IS A `My youth allowance claim` @desc Your age, study and residence
+GIVETH A BOOLEAN
+DECIDE `Am I qualified for youth allowance as a full-time student` IF
+        `s`'s `I am undertaking full-time study`
+    AND `I have attained the minimum age` `s`
+    AND NOT `I have attained the maximum age` `s`
+    AND `s`'s `I am an Australian resident or exempt`
+
+§§ `1067G -- youth allowance: the parental income test`
+
+-- Module F, 1067G-F1: if a parent is exempt (F3: a parent "is receiving a payment of pension, benefit, allowance or compensation
+-- referred to in Module L") or "the person's combined parental income does not exceed the person's parental income free area", the
+-- result is nil. F20 reduces combined parental income by maintenance a parent pays. F22: the free area is the Family Assistance Act's
+-- -- an INPUT.
+-- F27 (no parental income in common): the FORMULA IS LOST; its Note survives: "Dividing by 130 is equivalent to dividing by 26 (for
+-- 26 fortnights in a year) and dividing again by 5 (so that the parental income test result is only 20 cents for each dollar of the
+-- excess)". INFERENCE from the Note: (combined parental income - free area) / 130, per fortnight. F29: round "to the nearest 10 cents
+-- (rounding a multiple of 5 cents upwards)".
+-- F28 (parental income in common -- F26: a parent is also a parent of another person the test applies to; F31 deems an FTB child of
+-- a parent to be one): the formula is LOST and no Note gives its shape; its result is an INPUT.
+DECLARE `My parents' income` HAS
+    `my combined parental income`                  IS A NUMBER  -- 1067G-F10, per year
+    `maintenance my parents pay`                   IS A NUMBER  -- 1067G-F20, per year
+    `my parental income free area`                 IS A NUMBER  -- set by the Family Assistance Act: an input
+    `a parent of mine receives a Module L payment` IS A BOOLEAN
+    `my parents share parental income with another child of theirs` IS A BOOLEAN  -- F26, F31
+    `the F28 result supplied`                      IS A NUMBER  -- the lost F28 formula's result, per fortnight
+
+@desc Round to the nearest 10 cents, a multiple of 5 cents upwards (1067G-F29)
+GIVEN `x` IS A NUMBER @desc An amount in dollars
+GIVETH A NUMBER
+`rounded to the nearest 10 cents` MEANS FLOOR ((`x` TIMES 10) PLUS 0.5) DIVIDED BY 10
+
+@export What is my parental income test result, per fortnight (1067G Module F)?
+GIVEN `p` IS A `My parents' income` @desc Your parents' combined income, maintenance, the free area in force, and exemptions
+GIVETH A NUMBER
+`What is my parental income test result` MEANS
+    IF     `p`'s `a parent of mine receives a Module L payment`
+        OR (`p`'s `my combined parental income` MINUS `p`'s `maintenance my parents pay`) AT MOST `p`'s `my parental income free area`
+    THEN 0
+    ELSE IF `p`'s `my parents share parental income with another child of theirs`
+         THEN `p`'s `the F28 result supplied`
+         ELSE `rounded to the nearest 10 cents`
+                  (((`p`'s `my combined parental income` MINUS `p`'s `maintenance my parents pay`) MINUS `p`'s `my parental income free area`) DIVIDED BY 130)
+
+-- Module A, 1067G-A1 Step 13: take away "the greatest of" the reduction for parental income and the income reduction; "If that
+-- rate is nil because of the taking away of a reduction described in paragraph (a) then youth allowance is not payable to the
+-- person." The maximum rate (Modules B-D, indexed) and the person's own income reduction (Module H) are INPUTS.
+@export What fortnightly youth allowance do I get, before the later steps (1067G-A1 Step 13)?
+GIVEN `maximum payment rate per fortnight` IS A NUMBER @desc Your maximum fortnightly youth allowance rate in force
+      `reduction for parental income` IS A NUMBER @desc Your parental income test result, per fortnight
+      `my own income reduction` IS A NUMBER @desc The reduction for your own income (Module H), per fortnight
+GIVETH A NUMBER
+`What fortnightly youth allowance do I get` MEANS
+    `not below nil` (`maximum payment rate per fortnight`
+                     MINUS (IF `reduction for parental income` AT LEAST `my own income reduction`
+                            THEN `reduction for parental income` ELSE `my own income reduction`))
+
+@export Is youth allowance payable to me as a full-time student, after the parental income test?
+GIVEN `s` IS A `My youth allowance claim` @desc Your age, study and residence
+      `p` IS A `My parents' income` @desc Your parents' income
+      `maximum payment rate per fortnight` IS A NUMBER @desc Your maximum fortnightly youth allowance rate in force
+      `my own income reduction` IS A NUMBER @desc The reduction for your own income (Module H), per fortnight
+GIVETH A BOOLEAN
+DECIDE `Is youth allowance payable to me` IF
+        `Am I qualified for youth allowance as a full-time student` `s`
+    AND `What fortnightly youth allowance do I get` `maximum payment rate per fortnight` (`What is my parental income test result` `p`) `my own income reduction` GREATER THAN 0
+
+§§ `954, 954A, 957A, 23(14) -- carer allowance for a disabled adult`
+
+-- s 954(1): qualified for carer allowance for a disabled adult if "(a) the care receiver is an Australian resident; and (b) the care
+-- receiver is a family member of the person or is a person approved in writing by the Secretary"; "(c) the care receiver has been
+-- assessed and rated under the Adult Disability Assessment Tool and given a score under that assessment tool of at least 30, being a
+-- score calculated on the basis of a professional questionnaire score of at least 12"; "(d) ... receives care and attention on a
+-- daily basis from the person ... in a private home that is the residence of the person and the care receiver"; "(f) the person is
+-- an Australian resident"; "(g) the person satisfies the carer allowance income test under section 957A".
+-- s 23(14): "(a) the partner or a parent of the relevant person; (b) a sister, brother or child of the relevant person; (c) any other
+-- person who, in the opinion of the Secretary, should be treated" as one.
+-- s 954A: where the home is NOT shared, the care must be on a daily basis for at least 20 hours a week of care for bodily functions
+-- or sustaining life (subsection (2)); "(f) the person's work in providing the care and attention is not on wages that are at or above
+-- the relevant minimum wage"; "(g) neither the person nor anyone else is qualified for carer allowance for the care receiver under
+-- section 954".
+-- s 957A Step 6: "The person satisfies the carer allowance income test if the amount at step 5 is less than $250,000" -- the person's
+-- and any partner's adjusted taxable incomes ADDED (not halved), plus any deemed income amount (an INPUT).
+DECLARE `Who the care receiver is to me` IS ONE OF
+    `my partner`
+    `my parent`
+    `my sister or brother`
+    `my child`
+    `someone else`
+
+DECLARE `My carer allowance claim` HAS
+    `the care receiver is an Australian resident`  IS A BOOLEAN
+    `the care receiver is`                         IS A `Who the care receiver is to me`
+    `the Secretary treats or approves the care receiver` IS A BOOLEAN  -- s 23(14)(c), s 954(1)(b)
+    `the care receiver's ADAT score`               IS A NUMBER   -- Adult Disability Assessment Tool: an input
+    `the care receiver's professional questionnaire score` IS A NUMBER
+    `I share a home with the care receiver`        IS A BOOLEAN
+    `I give care and attention daily`              IS A BOOLEAN
+    `my hours of care a week`                      IS A NUMBER
+    `the care is for bodily functions or sustaining life` IS A BOOLEAN
+    `I am paid at or above the minimum wage for the care` IS A BOOLEAN
+    `someone is qualified under section 954 for the care receiver` IS A BOOLEAN
+    `I am an Australian resident`                  IS A BOOLEAN
+    `my adjusted taxable income`                   IS A NUMBER
+    `my partner's adjusted taxable income`         IS A NUMBER
+    `my deemed income amount`                      IS A NUMBER
+
+@export Is the person I care for my family member (s 23(14))?
+GIVEN `c` IS A `My carer allowance claim` @desc Who the care receiver is to you
+GIVETH A BOOLEAN
+DECIDE `Is the care receiver my family member` IF
+    CONSIDER `c`'s `the care receiver is`
+    WHEN `someone else` THEN `c`'s `the Secretary treats or approves the care receiver`
+    OTHERWISE TRUE
+
+@export Do I satisfy the carer allowance income test (s 957A)?
+GIVEN `c` IS A `My carer allowance claim` @desc Your and your partner's adjusted taxable incomes
+GIVETH A BOOLEAN
+DECIDE `Do I satisfy the carer allowance income test` IF
+    `c`'s `my adjusted taxable income` PLUS `c`'s `my partner's adjusted taxable income` PLUS `c`'s `my deemed income amount` LESS THAN 250000
+
+@export Am I qualified for carer allowance for the disabled adult I care for (ss 954, 954A)?
+GIVEN `c` IS A `My carer allowance claim` @desc The care receiver, their ADAT scores, the care you give, and your income
+GIVETH A BOOLEAN
+DECIDE `Am I qualified for carer allowance` IF
+        `c`'s `the care receiver is an Australian resident`
+    AND (`Is the care receiver my family member` `c` OR `c`'s `the Secretary treats or approves the care receiver`)
+    AND `c`'s `the care receiver's ADAT score` AT LEAST 30
+    AND `c`'s `the care receiver's professional questionnaire score` AT LEAST 12
+    AND `c`'s `I am an Australian resident`
+    AND `Do I satisfy the carer allowance income test` `c`
+    AND `c`'s `I give care and attention daily`
+    AND (    `c`'s `I share a home with the care receiver`
+         OR  (    `c`'s `my hours of care a week` AT LEAST 20
+              AND `c`'s `the care is for bodily functions or sustaining life`
+              AND NOT `c`'s `I am paid at or above the minimum wage for the care`
+              AND NOT `c`'s `someone is qualified under section 954 for the care receiver`))
+
+§§ `197, 198 -- carer payment for a disabled adult`
+
+-- s 197(1): "disabled adult means a person aged 16 or more who: (a) has a physical, intellectual or psychiatric disability; and
+-- (b) is likely to suffer from that disability permanently or for an extended period."
+-- s 198(2): "The person must personally provide constant care for: (a) either: (i) if the person is the only person providing the
+-- constant care -- a disabled adult ... given a score under that assessment tool of at least 25, being a score calculated on the basis
+-- of a total professional questionnaire score of at least 10; or (ii) if not -- ... of at least 80, ... at least 32". (3): "The care
+-- must be provided in a private residence that is the home of the care receiver". (4): "The person must be an Australian resident"
+-- (the scheduled agreement exception is not modelled). (5): the care receiver must "(b) ... be Australian residents; and (c) ...
+-- pass the income test under section 198A; and (d) ... pass the assets test under section 198D" (both INPUTS). (7): "Paragraphs (5)(c)
+-- and (d) do not apply if the care receiver is the higher ADAT score adult ... and the adult: (a) is receiving a social security pension
+-- or benefit, a service pension, income support supplement or a veteran payment". "Constant care" is not defined: asked as a fact.
+-- Paragraph (2)(d) (an adult and a dependent child), s 198(6), and carer payment's own rate and means tests are not encoded.
+DECLARE `My carer payment claim` HAS
+    `I personally provide constant care`           IS A BOOLEAN
+    `I am the only person providing the constant care` IS A BOOLEAN
+    `the care receiver's age in years`             IS A NUMBER
+    `the care receiver has a physical, intellectual or psychiatric disability likely to be permanent or for an extended period` IS A BOOLEAN
+    `the care receiver's ADAT score`               IS A NUMBER
+    `the care receiver's total professional questionnaire score` IS A NUMBER
+    `the care is in a private residence that is the care receiver's home` IS A BOOLEAN
+    `I am an Australian resident`                  IS A BOOLEAN
+    `the care receiver is an Australian resident`  IS A BOOLEAN
+    `the care receiver is receiving a social security pension or benefit, service pension, income support supplement or veteran payment` IS A BOOLEAN
+    `the care receiver passes the section 198A income test and section 198D assets test` IS A BOOLEAN
+
+@export Is the person I care for a disabled adult (s 197(1))?
+GIVEN `c` IS A `My carer payment claim` @desc The care receiver's age and disability
+GIVETH A BOOLEAN
+DECIDE `Is the care receiver a disabled adult` IF
+        `c`'s `the care receiver's age in years` AT LEAST 16
+    AND `c`'s `the care receiver has a physical, intellectual or psychiatric disability likely to be permanent or for an extended period`
+
+@export Does the person I care for meet the ADAT score for carer payment (s 198(2)(a))?
+GIVEN `c` IS A `My carer payment claim` @desc The care receiver's ADAT scores and whether you are the only carer
+GIVETH A BOOLEAN
+DECIDE `Does the care receiver meet the ADAT score for carer payment` IF
+    IF `c`'s `I am the only person providing the constant care`
+    THEN `c`'s `the care receiver's ADAT score` AT LEAST 25 AND `c`'s `the care receiver's total professional questionnaire score` AT LEAST 10
+    ELSE `c`'s `the care receiver's ADAT score` AT LEAST 80 AND `c`'s `the care receiver's total professional questionnaire score` AT LEAST 32
+
+@export Am I qualified for carer payment for the disabled adult I care for (s 198)?
+GIVEN `c` IS A `My carer payment claim` @desc The care you give, the care receiver's scores, residence and payments
+GIVETH A BOOLEAN
+DECIDE `Am I qualified for carer payment` IF
+        `c`'s `I personally provide constant care`
+    AND `Is the care receiver a disabled adult` `c`
+    AND `Does the care receiver meet the ADAT score for carer payment` `c`
+    AND `c`'s `the care is in a private residence that is the care receiver's home`
+    AND `c`'s `I am an Australian resident`
+    AND `c`'s `the care receiver is an Australian resident`
+    AND (    `c`'s `the care receiver is receiving a social security pension or benefit, service pension, income support supplement or veteran payment`
+         OR  `c`'s `the care receiver passes the section 198A income test and section 198D assets test`)
+
+§§ `Part 3.14 -- compensation recovery`
+
+-- s 17(1): "compensation affected payment means: (aa) an age pension; or (a) a disability support pension; or (b) a parenting
+-- payment; or (c) a social security benefit; or (f) a carer payment" (and others not modelled). s 23(1): "social security benefit
+-- means: (aab) youth allowance; or (aac) austudy payment; or (a) jobseeker payment; or (d) special benefit" (and others). Carer
+-- allowance is not on the list.
+DECLARE `My payment` IS ONE OF
+    `age pension`
+    `disability support pension`
+    `parenting payment`
+    `jobseeker payment`
+    `youth allowance`
+    `austudy payment`
+    `special benefit`
+    `carer payment`
+    `carer allowance`
+    `seniors health card`
+
+@export Is my payment a compensation affected payment (s 17(1))?
+GIVEN `the payment` IS A `My payment` @desc The payment you receive or claim
+GIVETH A BOOLEAN
+DECIDE `Is my payment compensation affected` IF
+    CONSIDER `the payment`
+    WHEN `carer allowance`     THEN FALSE
+    WHEN `seniors health card` THEN FALSE
+    OTHERWISE TRUE
+
+-- s 17(2): "compensation means: (a) a payment of damages; or (b) a payment under a scheme of insurance or compensation under a
+-- Commonwealth, State or Territory law ...; or (c) a payment ... in settlement of a claim for damages or a claim under such an
+-- insurance scheme; or (d) any other compensation or damages payment; (whether the payment is in the form of a lump sum or in the
+-- form of a series of periodic payments ...) that is made wholly or partly in respect of lost earnings or lost capacity to earn
+-- resulting from personal injury." (2A): (d) does not apply where the recipient contributed (e.g. premiums) and the agreement has no,
+-- or was not applied with, a reduction for social security payments. (2B): "A payment under a law ... that provides for the payment
+-- of compensation for a criminal injury does not constitute compensation".
+-- s 17(3): the compensation part of a lump sum is "(a) 50% of the payment if ... (i) the payment is made (either with or without
+-- admission of liability) in settlement of a claim that is, in whole or in part, related to a disease, injury or condition; and (ii)
+-- the claim was settled"; "(ab) 50%" where periodic compensation from a settled claim is taken as a lump sum; "(b) if those
+-- circumstances do not apply -- so much of the payment as is, in the Secretary's opinion, in respect of lost earnings or lost capacity
+-- to earn". (4A): "a payment of arrears of periodic compensation payments is not a lump sum compensation payment". The (4) adjustment
+-- for repaid periodic compensation is not modelled.
+DECLARE `My compensation` HAS
+    `it is damages, a statutory insurance or compensation scheme payment, a settlement, or another compensation payment` IS A BOOLEAN
+    `it is made wholly or partly for lost earnings or lost capacity to earn from personal injury` IS A BOOLEAN
+    `it falls only under paragraph (2)(d) and subsection (2A) takes it out` IS A BOOLEAN
+    `it is criminal injuries compensation`         IS A BOOLEAN
+    `it is a lump sum`                             IS A BOOLEAN
+    `it is only arrears of periodic compensation`  IS A BOOLEAN
+    `the amount`                                   IS A NUMBER
+    `it settled a claim related to a disease, injury or condition` IS A BOOLEAN  -- s 17(3)(a)
+    `it is periodic compensation from a settled claim that I chose to take as a lump sum` IS A BOOLEAN  -- s 17(3)(ab)
+    `the part the Secretary considers is for lost earnings or lost capacity to earn` IS A NUMBER  -- s 17(3)(b)
+    `my income cut-out amount`                     IS A NUMBER  -- s 17(8), formula lost: an input, per week
+
+@export Is what I received compensation under s 17(2), (2A) and (2B)?
+GIVEN `x` IS A `My compensation` @desc What the payment was and what it was for
+GIVETH A BOOLEAN
+DECIDE `Is what I received compensation` IF
+        `x`'s `it is damages, a statutory insurance or compensation scheme payment, a settlement, or another compensation payment`
+    AND `x`'s `it is made wholly or partly for lost earnings or lost capacity to earn from personal injury`
+    AND NOT `x`'s `it falls only under paragraph (2)(d) and subsection (2A) takes it out`
+    AND NOT `x`'s `it is criminal injuries compensation`
+
+@export What is the compensation part of my lump sum, in dollars (s 17(3), (4A))?
+GIVEN `x` IS A `My compensation` @desc The lump sum, how it was paid, and the Secretary's opinion of the lost-earnings part
+GIVETH A NUMBER
+`What is the compensation part of my lump sum` MEANS
+    BRANCH
+      IF NOT `Is what I received compensation` `x`                         THEN 0
+      IF NOT `x`'s `it is a lump sum`                                      THEN 0
+      IF `x`'s `it is only arrears of periodic compensation`               THEN 0
+      IF `x`'s `it settled a claim related to a disease, injury or condition` THEN `x`'s `the amount` TIMES 0.5
+      IF `x`'s `it is periodic compensation from a settled claim that I chose to take as a lump sum` THEN `x`'s `the amount` TIMES 0.5
+      OTHERWISE `x`'s `the part the Secretary considers is for lost earnings or lost capacity to earn`
+
+-- s 1170(4): "The number of weeks in the lump sum preclusion period in relation to a person is the number worked out using the
+-- formula:" -- the FORMULA IS LOST in the deposit and no terms survive. (5): "If the number ... is not a whole number, the number is
+-- to be rounded down". INFERENCE: compensation part / income cut-out amount, the two quantities s 17 defines for Part 3.14 (the
+-- compensation part in dollars, the income cut-out amount supplied here as a weekly figure). Not read in the deposit.
+@export How many weeks is my lump sum preclusion period (s 1170(4), (5))?
+GIVEN `x` IS A `My compensation` @desc The lump sum and your income cut-out amount per week
+GIVETH A NUMBER
+`How many weeks is my lump sum preclusion period` MEANS
+    IF `What is the compensation part of my lump sum` `x` AT MOST 0 OR `x`'s `my income cut-out amount` AT MOST 0
+    THEN 0
+    ELSE FLOOR (`What is the compensation part of my lump sum` `x` DIVIDED BY `x`'s `my income cut-out amount`)
+
+-- s 1169(1): "If: (a) a person receives or claims a compensation affected payment; and (b) the person receives a lump sum
+-- compensation payment; the compensation affected payment is not payable to the person in relation to any day or days in the lump
+-- sum preclusion period." s 1170(1)-(3) say when the period begins (after the last periodic payments period; when a commuted
+-- periodic payment is first reduced; otherwise "the day on which the loss of earnings or loss of capacity to earn began"). The number
+-- of days from that start to the day asked about is an input.
+@export Is my payment stopped on a given day by my lump sum compensation (s 1169)?
+GIVEN `the payment` IS A `My payment` @desc The payment you receive or claim
+      `x` IS A `My compensation` @desc The lump sum compensation you received
+      `days since the preclusion period began` IS A NUMBER @desc Days from the start of the preclusion period under s 1170(1)-(3) to the day in question (0 is the first day)
+GIVETH A BOOLEAN
+DECIDE `Is my payment stopped by my lump sum` IF
+        `Is my payment compensation affected` `the payment`
+    AND `days since the preclusion period began` AT LEAST 0
+    AND `days since the preclusion period began` LESS THAN (`How many weeks is my lump sum preclusion period` `x` TIMES 7)
+
+-- s 1166 lets the Secretary require a person to take reasonable action to claim or obtain compensation; s 1167(1): "the compensation
+-- affected payment is not payable to the person or is not to be granted, as the case may be, unless the person complies with the
+-- requirement".
+@export Can my payment be withheld because I have not taken the action the Secretary required to obtain compensation (ss 1166, 1167)?
+GIVEN `the payment` IS A `My payment` @desc The payment you receive or claim
+      `the Secretary required me to take action to claim or obtain compensation` IS A BOOLEAN @desc Whether you were given a s 1166 requirement
+      `I have complied` IS A BOOLEAN @desc Whether you have done what the requirement asked
+GIVETH A BOOLEAN
+DECIDE `Can my payment be withheld for not pursuing compensation` IF
+        `Is my payment compensation affected` `the payment`
+    AND `the Secretary required me to take action to claim or obtain compensation`
+    AND NOT `I have complied`
+
+-- s 1173(1): if a person receives periodic compensation, "was not, at the time of the event that gave rise to the entitlement ...
+-- qualified for, and receiving, a compensation affected payment", and claims one for days in the periodic payments period, (2): "The
+-- person's daily rate of compensation affected payment is reduced by the amount of the person's daily rate of periodic compensation",
+-- (3): the total periodic payments divided by the days in the periodic payments period. (4): if the person WAS receiving one at the
+-- event, the periodic payments are instead "treated as ordinary income" (the income test then applies; not computed here).
+@export By how much is my daily rate reduced for periodic compensation, in dollars a day (s 1173)?
+GIVEN `the payment` IS A `My payment` @desc The payment you claim for days in the periodic payments period
+      `total periodic compensation` IS A NUMBER @desc The total of the periodic compensation payments
+      `days in the periodic payments period` IS A NUMBER @desc The number of days those payments relate to
+      `I was qualified for and receiving a compensation affected payment at the time of the event` IS A BOOLEAN @desc Whether you were already on such a payment when the accident happened or the condition became apparent
+GIVETH A NUMBER
+`By how much is my daily rate reduced for periodic compensation` MEANS
+    IF     NOT `Is my payment compensation affected` `the payment`
+        OR `I was qualified for and receiving a compensation affected payment at the time of the event`
+        OR `days in the periodic payments period` AT MOST 0
+    THEN 0
+    ELSE `total periodic compensation` DIVIDED BY `days in the periodic payments period`
