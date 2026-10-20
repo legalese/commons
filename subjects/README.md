@@ -320,6 +320,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/parliamentary-privileges-act-1987`](au/parliamentary-privileges-act-1987) | Parliamentary Privileges Act 1987 (Cth) — contempt, witness protection and immunity from court — row `legalese-aswathy` | `draft` |
 | [`au/advance-australia-logo-protection-act-1984`](au/advance-australia-logo-protection-act-1984) | Advance Australia Logo Protection Act 1984 (Cth) — the monopoly in the Advance Australia logo — row `legalese-aswathy` | `draft` |
 | [`au/civil-dispute-resolution-act-2011`](au/civil-dispute-resolution-act-2011) | Civil Dispute Resolution Act 2011 (Cth) — genuine steps statements in federal civil proceedings — row `legalese-aswathy` | `draft` |
+| [`au/trusts-hague-convention-act-1991`](au/trusts-hague-convention-act-1991) | Trusts (Hague Convention) Act 1991 (Cth) — the law governing trusts and their recognition — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
