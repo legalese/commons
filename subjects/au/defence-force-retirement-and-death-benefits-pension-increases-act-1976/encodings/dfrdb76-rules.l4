@@ -1,0 +1,146 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Defence Force Retirement and Death Benefits (Pension Increases) Act 1976
+-- (Cth). Source: ../registers/source-bundle/C2004A01465.txt (compilation No.
+-- 1, 10 December 2015). Part II is deemed to have commenced on 1 July 1973,
+-- Part III on 1 July 1975. Seat: the pensioner, widow or child.
+
+§ `Nouns`
+
+DECLARE `Scheme` IS ONE OF
+    -- Part II, ss 6-7
+    `a DFRB pension`
+    -- ss 6(1), 7(1): excluded
+    `a DFRB pension for an eligible child`
+    -- Part III, ss 19-21
+    `a DFRDB pension benefit`
+
+-- Part II: the increase for 1973-74 (s 6), or a prescribed year (s 7).
+DECLARE `Increase year` IS ONE OF
+    `1973-74`
+    `1974-75`
+    `1975-76`
+
+-- ss 10, 11, 21: whether the increase is scaled by months, and from when.
+DECLARE `Period kind` IS ONE OF
+    `not scaled`
+    `counted from the day after the retirement or death`
+    `counted from the day the pension became payable`
+
+DECLARE `Pension 1976` HAS
+    `scheme`                                            IS A `Scheme`
+    `increase year`                                     IS A `Increase year`
+    -- ss 6(3), 7(3), 18(2): A and B (CPI), C and D (average weekly earnings)
+    `A`                                                 IS A NUMBER
+    `B`                                                 IS A NUMBER
+    `C`                                                 IS A NUMBER
+    `D`                                                 IS A NUMBER
+    -- ss 6(2), 7(2): the non-contributory portion (s 8); s 20(2), 21(4): the
+    -- annual pension benefit (for a child, the additional pension)
+    `the amount the percentage applies to`              IS A NUMBER
+    `period kind`                                       IS A `Period kind`
+    `the retirement, death or first payment was on`     IS A DATE
+    -- ss 10(3), 11(3), 21(1)
+    `it became payable on`                              IS A DATE
+
+§ `Rules`
+
+-- ss 5(4), 18(4): a fraction of a tenth of 1% under one-half is disregarded,
+-- otherwise treated as a tenth.
+@ref ss 5(4), 18(4)
+GIVEN x IS A NUMBER
+GIVETH A NUMBER
+`rounded to a tenth` x MEANS FLOOR (x TIMES 10 PLUS 1/2) DIVIDED BY 10
+
+-- ss 6(3), 7(3): the lower of 1.4 times the CPI rise and the earnings rise,
+-- each as a percentage. s 18(2): Part III uses the CPI rise alone.
+@ref ss 6(3), 7(3), 18(2)
+GIVEN p IS A `Pension 1976`
+GIVETH A NUMBER
+`the prescribed percentage for` p MEANS
+    IF p's `scheme` EQUALS `a DFRDB pension benefit`
+    THEN `rounded to a tenth` cpi
+    ELSE `rounded to a tenth` (IF 14/10 TIMES cpi AT MOST awe THEN 14/10 TIMES cpi ELSE awe)
+    WHERE
+        cpi MEANS (p's `A` MINUS p's `B`) TIMES 100 DIVIDED BY p's `B`
+        awe MEANS (p's `C` MINUS p's `D`) TIMES 100 DIVIDED BY p's `D`
+
+-- ss 6(1), 7(1): both indices rose; s 19: the CPI rose.
+@ref ss 6(1), 7(1), 19
+GIVEN p IS A `Pension 1976`
+GIVETH A BOOLEAN
+DECIDE `the indices rose` p IF
+        p's `A` GREATER THAN p's `B`
+    AND (p's `scheme` EQUALS `a DFRDB pension benefit` OR p's `C` GREATER THAN p's `D`)
+
+-- The 30 June that ends the counted period: 1973 for s 10, 1974 for s 11 in
+-- 1974-75, 1975 for s 11 in 1975-76 and for s 21.
+GIVEN p IS A `Pension 1976`
+GIVETH A DATE
+`the day after the period ends for` p MEANS
+    IF p's `scheme` EQUALS `a DFRDB pension benefit`
+    THEN Date 1 7 1975
+    ELSE CONSIDER p's `increase year`
+         WHEN `1973-74` THEN Date 1 7 1973
+         WHEN `1974-75` THEN Date 1 7 1974
+         WHEN `1975-76` THEN Date 1 7 1975
+
+-- ss 10(2), 11(2), 21(3): over 21 months for s 10, 12 otherwise.
+GIVEN p IS A `Pension 1976`
+GIVETH A NUMBER
+`the divisor for` p MEANS
+    IF p's `scheme` EQUALS `a DFRB pension` AND p's `increase year` EQUALS `1973-74` THEN 21 ELSE 12
+
+GIVEN s IS A DATE, e IS A DATE, k IS A NUMBER
+GIVETH A NUMBER
+`whole months from` s `to` e `counted` k MEANS
+    IF `add months` s (k PLUS 1) AT MOST e
+    THEN `whole months from` s `to` e `counted` (k PLUS 1)
+    ELSE k
+
+-- ss 10(2), (4)-(5), 11(2), (4)-(5), 21(3), (5)-(6): whole months, a part
+-- month of at least half its days counting as one, and at least 1.
+@ref ss 10(4)-(5), 11(4)-(5), 21(5)-(6)
+GIVEN p IS A `Pension 1976`
+GIVETH A NUMBER
+`the months for` p MEANS
+    IF counted LESS THAN 1 THEN 1 ELSE counted
+    WHERE
+        e MEANS `the day after the period ends for` p
+        start MEANS
+            IF p's `period kind` EQUALS `counted from the day after the retirement or death`
+            THEN p's `the retirement, death or first payment was on` PLUS 1
+            ELSE p's `the retirement, death or first payment was on`
+        m MEANS `whole months from` start `to` e `counted` 0
+        partStart MEANS `add months` start m
+        partDays MEANS Day e MINUS Day partStart
+        monthDays MEANS Day (`add months` start (m PLUS 1)) MINUS Day partStart
+        counted MEANS IF partDays TIMES 2 AT LEAST monthDays AND partDays GREATER THAN 0 THEN m PLUS 1 ELSE m
+
+-- ss 10(3), 11(3): no increase for an s 82ZB pension (counted from the day it
+-- became payable) that became payable after 15 June before the period ends;
+-- s 21(1): for any scaled Part III benefit (changed after the independent
+-- pass).
+@ref ss 10(3), 11(3), 21(1)
+GIVEN p IS A `Pension 1976`
+GIVETH A BOOLEAN
+DECIDE `it came too late` p IF
+        (   p's `period kind` EQUALS `counted from the day the pension became payable`
+         OR (    p's `scheme` EQUALS `a DFRDB pension benefit`
+             AND NOT (p's `period kind` EQUALS `not scaled`)))
+    AND p's `it became payable on` GREATER THAN (`the day after the period ends for` p MINUS 16)
+
+@ref ss 6-11, 18-21
+@export default The increase in my annual pension under the Defence Force Retirement and Death Benefits (Pension Increases) Act 1976 (Cth): for a DFRB pension (Part II), in 1973-74 (s 6) and each of 1974-75 and 1975-76 (s 7), if both the CPI and average weekly earnings rose, the lower of 1.4 times the CPI rise and the earnings rise, rounded to a tenth of 1%, applied to the non-contributory portion of the pension (s 8), scaled by months for a pension that began recently (ss 10, 11: over 21 months to 30 June 1973, or 12); for a DFRDB pension benefit (Part III), the CPI rise from March 1974 to March 1975 applied to the annual benefit, scaled by months for a retirement or death from 1 July 1974 (ss 19-21). Nil for a DFRB child's pension, or a pension that became payable after 15 June of the year. DRAFT, not reviewed by an Australian lawyer.
+GIVEN p IS A `Pension 1976`  @desc The scheme and year, the index numbers, the amount, and any recent start
+GIVETH A NUMBER
+`my 1976 Act increase for` p MEANS
+    BRANCH
+        IF p's `scheme` EQUALS `a DFRB pension for an eligible child` THEN 0
+        IF NOT (`the indices rose` p) THEN 0
+        IF `it came too late` p THEN 0
+        IF p's `period kind` EQUALS `not scaled` THEN full
+        OTHERWISE full TIMES `the months for` p DIVIDED BY `the divisor for` p
+    WHERE
+        full MEANS `the prescribed percentage for` p DIVIDED BY 100 TIMES p's `the amount the percentage applies to`

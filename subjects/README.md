@@ -326,6 +326,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/superannuation-pension-increases-act-1971`](au/superannuation-pension-increases-act-1971) | Superannuation (Pension Increases) Act 1971 (Cth) — the 1971 increase in Superannuation Act 1922 pensions — row `legalese-aswathy` | `draft` |
 | [`au/crimes-biological-weapons-act-1976`](au/crimes-biological-weapons-act-1976) | Crimes (Biological Weapons) Act 1976 (Cth) — biological and toxin weapons offences — row `legalese-aswathy` | `draft` |
 | [`au/defence-forces-special-retirement-benefits-act-1960`](au/defence-forces-special-retirement-benefits-act-1960) | Defence Forces Special Retirement Benefits Act 1960 (Cth) — benefits for soldiers discharged in the 1961 reduction — row `legalese-aswathy` | `draft` |
+| [`au/defence-force-retirement-and-death-benefits-pension-increases-act-1976`](au/defence-force-retirement-and-death-benefits-pension-increases-act-1976) | Defence Force Retirement and Death Benefits (Pension Increases) Act 1976 (Cth) — the 1973-76 DFRB and DFRDB pension increases — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
