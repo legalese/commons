@@ -1,0 +1,131 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Weapons of Mass Destruction (Prevention of Proliferation) Act 1995 (Cth) —
+-- THE NOUNS, THE RULES AND THE TOP-LEVEL GOAL. Source:
+-- ../registers/source-bundle/C2004A04891.txt (compilation No. 8, 6 November
+-- 2018). The person who supplies or exports goods, or provides services, asks:
+-- "Is what I do an offence; what is the most I can get; are my goods
+-- forfeited; until when does a Minister's prohibition notice bind me?"
+
+§ `Nouns`
+
+-- ss 9-11.
+DECLARE `Dealing` IS ONE OF
+    `supplying goods to another person`
+    `exporting goods that are not prohibited exports under the Customs Act`
+    `providing services to another person`
+
+-- s 6(3).
+DECLARE `Who and where` IS ONE OF
+    `acting in Australia or an external Territory`
+    `abroad, an Australian citizen, resident or body incorporated in Australia`
+    `abroad, anyone else`
+
+-- s 14(2).
+DECLARE `Section 14 notice` IS ONE OF
+    `no notice`
+    `a notice prohibiting the dealing`
+    `a notice allowing it only on conditions`
+
+DECLARE `WMD case` HAS
+    `my dealing`                                                    IS A `Dealing`
+    `who and where`                                                 IS A `Who and where`
+    -- ss 9(1)(b), 10(1)(b), 11(1)(b)
+    `I believe or suspect on reasonable grounds it may help a WMD program` IS A BOOLEAN
+    -- ss 9(1)(c), 13
+    `a permit authorises it and I keep its conditions`              IS A BOOLEAN
+    -- s 12
+    `the Minister told me in writing there is no reason to believe or suspect so` IS A BOOLEAN
+    -- s 14
+    `the section 14 notice`                                         IS A `Section 14 notice`
+    `I comply with the notice's conditions`                         IS A BOOLEAN
+    `I know of the contravention`                                   IS A BOOLEAN
+    `the notice was given on`                                       IS A MAYBE DATE
+    `the notice was revoked`                                        IS A BOOLEAN
+    `the day I deal`                                                IS A DATE
+
+DECLARE `WMD position` HAS
+    `I commit an offence under ss 9-11`                             IS A BOOLEAN
+    `I commit an offence under s 14(6)`                             IS A BOOLEAN
+    `maximum imprisonment in years`                                 IS A NUMBER
+    `goods are forfeited`                                           IS A BOOLEAN
+    `the notice's last day in force`                                IS A MAYBE DATE
+
+§ `Rules`
+
+@ref s 6(3)
+GIVEN c IS A `WMD case`
+GIVETH A BOOLEAN
+DECIDE `the Act reaches me` c IF
+    NOT (c's `who and where` EQUALS `abroad, anyone else`)
+
+-- s 14(4): in force for 12 months beginning on the day given, unless revoked;
+-- the period ends on the day before the corresponding day, or at the month's
+-- end where there is none (changed after the independent pass).
+@ref s 14(4)
+GIVEN c IS A `WMD case`
+GIVETH A MAYBE DATE
+`the notice end for` c MEANS
+    CONSIDER c's `the notice was given on`
+    WHEN JUST d THEN JUST (IF DATE_DAY (`add months` d 12) LESS THAN DATE_DAY d THEN `add months` d 12 ELSE `the day before` (`add months` d 12))
+    WHEN NOTHING THEN NOTHING
+
+GIVEN c IS A `WMD case`
+GIVETH A BOOLEAN
+DECIDE `the notice is in force` c IF
+        NOT (c's `the section 14 notice` EQUALS `no notice`)
+    AND NOT (c's `the notice was revoked`)
+    AND (CONSIDER c's `the notice was given on`
+         WHEN NOTHING THEN FALSE
+         WHEN JUST d THEN
+                 c's `the day I deal` AT LEAST d
+             AND (CONSIDER `the notice end for` c
+                  WHEN JUST e THEN c's `the day I deal` AT MOST e
+                  WHEN NOTHING THEN FALSE))
+
+-- ss 9(2), 10(2), 11(2): compliance with a s 14(2) notice's conditions.
+GIVEN c IS A `WMD case`
+GIVETH A BOOLEAN
+DECIDE `I comply with a conditional notice` c IF
+        `the notice is in force` c
+    AND c's `the section 14 notice` EQUALS `a notice allowing it only on conditions`
+    AND c's `I comply with the notice's conditions`
+
+-- ss 9(1), 10(1), 11(1): 8 years.
+@ref ss 9-11
+GIVEN c IS A `WMD case`
+GIVETH A BOOLEAN
+DECIDE `the ss 9-11 offence` c IF
+        `the Act reaches me` c
+    AND c's `I believe or suspect on reasonable grounds it may help a WMD program`
+    AND NOT (c's `a permit authorises it and I keep its conditions`)
+    AND NOT (c's `the Minister told me in writing there is no reason to believe or suspect so`)
+    AND NOT (`I comply with a conditional notice` c)
+
+-- s 14(6): knowingly contravening a notice or its conditions; 8 years.
+@ref s 14(6)
+GIVEN c IS A `WMD case`
+GIVETH A BOOLEAN
+DECIDE `the s 14 offence` c IF
+        `the Act reaches me` c
+    AND `the notice is in force` c
+    AND NOT (`I comply with a conditional notice` c)
+    AND c's `I know of the contravention`
+
+-- s 17(1): goods supplied or exported in contravention of the Act.
+@ref s 17(1)
+GIVEN c IS A `WMD case`
+GIVETH A BOOLEAN
+DECIDE `the goods are forfeited` c IF
+        NOT (c's `my dealing` EQUALS `providing services to another person`)
+    AND (`the ss 9-11 offence` c OR `the s 14 offence` c)
+
+@ref ss 6, 9-14, 17
+@export default The position of a person who supplies goods, exports goods (other than prohibited exports) or provides services, under the Weapons of Mass Destruction (Prevention of Proliferation) Act 1995 (Cth): whether it is an offence (ss 9-11: believing or suspecting on reasonable grounds that it may help a WMD program, without a permit or the Minister's written all-clear under s 12, and not in compliance with a conditional s 14 notice; s 14(6): knowingly contravening a s 14 notice in force), reaching citizens, residents and Australian bodies abroad (s 6(3)); the most that can be imposed (8 years); whether goods are forfeited (s 17); and the last day a s 14 notice is in force (12 months beginning on the day given). DRAFT, not reviewed by an Australian lawyer.
+GIVEN c IS A `WMD case`  @desc My dealing, who and where I am, my belief or suspicion, any permit, the Minister's notices, and the day
+GIVETH A `WMD position`
+`the WMD position for` c MEANS
+    `WMD position` OF `the ss 9-11 offence` c, `the s 14 offence` c,
+                      (IF `the ss 9-11 offence` c OR `the s 14 offence` c THEN 8 ELSE 0),
+                      `the goods are forfeited` c, `the notice end for` c

@@ -336,6 +336,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/crimes-overseas-act-1964`](au/crimes-overseas-act-1964) | Crimes (Overseas) Act 1964 (Cth) — Australian criminal law for Australians abroad — row `legalese-aswathy` | `draft` |
 | [`au/public-and-educational-lending-rights-better-income-for-authors-act-2026`](au/public-and-educational-lending-rights-better-income-for-authors-act-2026) | Public and Educational Lending Rights (Better Income for Authors) Act 2026 (Cth) — who the lending rights scheme pays, and review — row `legalese-aswathy` | `draft` |
 | [`au/crimes-hostages-act-1989`](au/crimes-hostages-act-1989) | Crimes (Hostages) Act 1989 (Cth) — hostage-taking offences — row `legalese-aswathy` | `draft` |
+| [`au/weapons-of-mass-destruction-prevention-of-proliferation-act-1995`](au/weapons-of-mass-destruction-prevention-of-proliferation-act-1995) | Weapons of Mass Destruction (Prevention of Proliferation) Act 1995 (Cth) — supplying goods and services to WMD programs — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
