@@ -11,3 +11,55 @@ The subjects here were laid out on 2026-09-22 for the legislation governing twel
 - **Passenger compensation**: Air passenger rights are federal (DOT rules under 49 U.S.C., with state regulation preempted by the Airline Deregulation Act). California has no passenger-compensation statute comparable to EU261.
 - **Customs/duties**: Customs and import duties are exclusively federal (U.S. Const. art. I §§8 and 10; 19 U.S.C.). California has no customs statute.
 - **Work permits/immigration**: Immigration and work authorisation are federal (8 U.S.C., INA). California has only peripheral provisions, e.g. Lab. Code §§1019-1019.4 (unfair immigration-related practices) and §§2811-2814 (E-Verify limits). None of these governs permits.
+
+## Priority 3 sample: personal income tax, and social security and benefits (deposited 2026-10-20)
+
+Statute text for California's personal income tax and its main cash benefits was deposited on 2026-10-20 from the **Office of Legislative Counsel's official bulk database export**, with the owner's approval of that route on 20 October 2026.
+
+**Why the bulk route.** leginfo.legislature.ca.gov answered HTTP 403 when this fetcher asked for its robots.txt, so it was not used at all. The bulk host https://downloads.leginfo.legislature.ca.gov/ has no robots.txt (HTTP 404). Its readme (`pubinfo_Readme.pdf`, 2021-05-21) and news file describe the tables but state no terms. The licence rests on Gov. Code 10248.5 (public domain, as recorded from leginfo in the 2026-09-22 index check) and on *Georgia v. Public.Resource.Org* (2020). Verdict: **conditions, met**.
+
+**How it was fetched.** One file was downloaded: `pubinfo_2025.zip`, the 2025-2026 session export and the only file that carries the code tables. It is 1,291,985,079 bytes, sha256 `b0b614a2061dd16d468cddbd4921604365f052a5c21ea18056b2606136e04ec1`, Last-Modified Mon, 19 Oct 2026 04:26:10 GMT.
+- The connection broke twice because of a network failure on our side.
+- The same file was completed with HTTP Range requests checked against its ETag.
+- No 403, 429 or challenge occurred.
+- The zip was deleted after extraction.
+
+The files under "Bulk deposit" in each `SOURCE-LICENSE.md` give the details.
+
+**Currency.** The code tables were last updated 2026-10-03 and include 2026 statutes, for example Stats. 2026, Ch. 236 (SB 1435), effective 2026-09-14. That act amended the CalEITC (17052) and the IRC conformity section (17024.5). Where the database holds more than one version of a section (one operative until a date, one from it), every version is kept. Every text is marked as an unofficial version.
+
+| Subject | File | What | Section versions | Characters |
+| --- | --- | --- | --- | --- |
+| `revenue-and-taxation-code-division-2-part-10-personal-income-tax` (existing) | `ca-rtc-div2-part10-ch1-general-provisions-definitions-2026-10` | Ch. 1: definitions, residence (17014-17016), IRC conformity date (17024.5), "net tax" (17039) | 61 | 73,019 |
+| same | `ca-rtc-div2-part10-ch2-imposition-of-tax-rates-credits-2026-10` | Ch. 2: rates (17041), mental health surcharge (17043), CalEITC (17052), Young Child Tax Credit (17052.1), renter's credit (17053.5), exemption credits (17054) and the other credits | 50 | 547,546 |
+| same | `ca-rtc-div2-part10-ch3-arts1-3-gross-income-inclusions-exclusions-2026-10` | Ch. 3 arts. 1-3: gross income and AGI by reference to the IRC (17071-17078), items included, items excluded (17081-17158.5) | 112 | 148,882 |
+| `unemployment-insurance-code-division-1-part-1-unemployment` (existing) | `ca-uic-div1-part1-ch5-unemployment-compensation-benefits-2026-10` | Ch. 5 whole: eligibility and disqualification, weekly benefit table (1280), duration, claims, overpayments | 115 | 167,334 |
+| `welfare-and-institutions-code-division-9-part-3-chapter-2` (existing) | `ca-wic-div9-part3-ch2-arts1-2-5-general-definitions-eligibility-2026-10` | CalWORKs arts. 1-2.5: general, definitions, eligibility | 93 | 136,194 |
+| same | `ca-wic-div9-part3-ch2-arts3-2-4-7-welfare-to-work-kinship-2026-10` | arts. 3.2-4.7: welfare-to-work, housing support, Cal-Learn, kinship guardianship | 145 | 342,719 |
+| same | `ca-wic-div9-part3-ch2-arts5-6-foster-care-computation-payment-of-aid-2026-10` | arts. 5-6: AFDC-Foster Care; computation and payment of aid, maximum aid payments (11450), income disregards (11451.5) | 133 | 473,853 |
+| same | `ca-wic-div9-part3-ch2-arts7-9-7-enforcement-family-violence-evaluation-2026-10` | arts. 7-9.7: enforcement, family violence option, evaluation | 52 | 107,731 |
+| `welfare-and-institutions-code-division-9-part-3-chapter-3-state-supplementary-program` (new) | `ca-wic-div9-part3-ch3-arts1-6-state-supplementary-program-2026-10` | SSP arts. 1-6: general, definitions, administration, eligibility, payment of aid (12200 ff.), services | 45 | 46,399 |
+| same | `ca-wic-div9-part3-ch3-arts7-8-in-home-supportive-services-relatives-2026-10` | arts. 7-8: In-Home Supportive Services, relatives' responsibility | 91 | 276,200 |
+
+Total: 10 texts, 897 section versions, 2,319,877 characters.
+
+**How the pieces connect.** These connections were read in the deposited text:
+- "Internal Revenue Code" in Part 10 means Title 26 as enacted on a specified date for each taxable year (17024.5).
+- Adjusted gross income follows IRC § 62 except as otherwise provided (17072). So the federal subject `subjects/us/internal-revenue-code-of-1986` is the starting point, frozen at California's conformity date.
+- IRC § 86 (Social Security benefits) does not apply (17087), so Social Security is not taxed by California.
+- IRC § 85 (unemployment compensation) does not apply (17083), so UI benefits under UIC ch. 5 are not taxed by California.
+- The CalEITC is "an amount determined in accordance with Section 32 of the Internal Revenue Code", as modified and multiplied by an adjustment factor (17052).
+- The Young Child Tax Credit is $1,176 times the same adjustment factor (17052.1).
+- SSP pays an aged, blind or disabled person an amount which, added to the federal benefit under Part A of Title XVI of the Social Security Act and other income, reaches the state payment standard (12200). That ties it to `subjects/us/social-security-act`.
+
+These links were not read in deposited text and are unverified (general knowledge):
+- CalWORKs is California's TANF programme under SSA Title IV-A.
+- UI is the federal-state programme under SSA Titles III and IX and FUTA.
+- UI benefits are federally taxable under IRC § 85.
+- CalFresh/SNAP is federal (`subjects/us/food-and-nutrition-act-of-2008`).
+
+**Gaps.**
+- Part 10 chapters 2.1 and 4-14 (AMT, deferred compensation, trusts, partnerships, LLC taxes, nonresidents' gross income, credit for taxes paid, capital gains) are not deposited. Neither is ch. 3 art. 6 (deductions) or art. 9 (nonresidents and part-year residents), which is the next to add for the standard and itemised deductions.
+- Withholding (UIC Division 6) is indexed only.
+- The California Code of Regulations (Westlaw-hosted, HTTP 403) and CDSS/EDD annual figures (CalWORKs MAP levels set by budget acts, SSP payment levels) were not sourced.
+- The CA README line "No statute text has been deposited" above dates from 2026-09-22 and is superseded for these subjects.

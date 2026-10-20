@@ -1,5 +1,7 @@
 # Source license
 
+*The bullets directly below record the index check of 2026-09-23; the bulk deposit of 2026-10-20 follows.*
+
 The text of **Code of the District of Columbia, Title 4 (Public Care Systems), Chapter 2 - Public Assistance** is published on the [D.C. Law Library - Code of the District of Columbia (Council of the District of Columbia, published with the non-profit Open Law Library)](https://code.dccouncil.gov/us/dc/council/code).
 
 - **Terms**: Open. The Council's own site states flatly that the material is in the public domain, on every page footer, and offers bulk HTML and XML downloads - so reuse AND adaptation are permitted. This matches the US government edicts doctrine (Georgia v. Public.Resource.Org, 590 U.S. 255 (2020)): the text of the D.C. Code as enacted by the Council is not copyrightable. No attribution condition, no non-commercial condition and no share-alike condition is stated anywhere on the register. Two caveats a human should keep in mind. First, the site pairs the public-domain statement with a request - 'Please do not scrape. Instead, bulk download the HTML or XML.' - which is a conduct request rather than a copyright restriction, and its robots.txt disallows named AI crawlers and signals ai-train=no (see access_notes). Second, the free Council/Open Law Library edition at code.dccouncil.gov is the unannotated text; the printed and commercially-hosted ANNOTATED 'D.C. Official Code' is produced by a commercial publisher under contract with the Council, and that publisher's annotations, notes and editorial apparatus carry the publisher's own copyright even though the statutory text does not. Which publisher holds that contract today was NOT verified in this session - check before reusing anything from an annotated edition.
@@ -11,14 +13,29 @@ The text of **Code of the District of Columbia, Title 4 (Public Care Systems), C
 
 In the United States the text of a statute is not copyrightable: it is an edict of government (*Georgia v. Public.Resource.Org*, 590 U.S. 255 (2020)). A register's copyright notice can still cover a publisher's annotations, headnotes and numbering, which this corpus does not reproduce.
 
-## Consequence for this subject
+## Bulk deposit of 20 October 2026
 
-**Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
+- **Route used: the bulk download the Council itself offers.** The Council's site, code.dccouncil.gov, says on every page: "The codes and laws on this website are in the public domain. Please do not scrape. Instead, bulk download the HTML or XML." Its robots.txt (as recorded in the plan read on 2026-10-20) carries `Content-signal: search=yes,ai-train=no`, allows `/` for `*`, and disallows `/` by name for AI crawlers including ClaudeBot, GPTBot, CCBot, Google-Extended, Amazonbot, Applebot-Extended, Bytespider and meta-externalagent. **No page of code.dccouncil.gov was fetched for this deposit.** The text was taken instead from the bulk XML the site points to, with the owner's approval of 20 October 2026: the Council's GitHub repository [DCCouncil/law-xml-codified](https://github.com/DCCouncil/law-xml-codified) ("the code fully supplemented"; the Code's own `index.xml` lists `https://github.com/dccouncil/law-xml` as its xml-bulk URL, and law-xml's README names law-xml-codified as the supplemented code).
+- **How it was fetched.** One repository archive (zip) of publication branch `publication/2026-05-23` at commit `9c950ac5f53283bdf32c1150a45a9245f930dedd`, through the documented GitHub REST API (`api.github.com/repos/DCCouncil/law-xml-codified/zipball/<sha>`, which redirects to codeload.github.com), on 2026-10-19T23:38:30Z: 70,317,370 bytes, sha256 `fb9dbdaa494735fc4d662285bfd2bfc4dac92df68963679ceb79af04e34287cc`. No git command and no clone. github.com's robots.txt disallows `/*/archive/` and `*/zipball/` on the website and points crawlers to its API instead; api.github.com, codeload.github.com and raw.githubusercontent.com have no robots.txt (HTTP 404). About 20 small API and raw requests (repository metadata, branch lists, READMEs) preceded the download, all HTTP 200, at least 3 seconds apart, with the User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`. The zip was deleted from the scratchpad after the sections were extracted.
+- **Licence as the repository states it.** The repository itself carries no LICENSE file (the GitHub API reports `license: null`). The Council's DC-Law project repository ([DCCouncil/dc-law](https://github.com/DCCouncil/dc-law), README read 2026-10-19T23:38:15Z) says: "All repositories are licensed under [CC0](https://creativecommons.org/publicdomain/zero/1.0/)." The site footer says the codes and laws are in the public domain, and statutory text carries no copyright in any case (*Georgia v. Public.Resource.Org*, 590 U.S. 255 (2020)). No reliance on the owner's non-commercial ruling of 2026-10-20 was needed.
+- **ai-train=no.** The Council's site signals that its content is not to be used for AI training. Legalese Commons deposits this text for public reference and for encoding the law as rules; it is not deposited for model training, and should not be used as training data.
+- **What is deposited.** Unannotated statutory text only: each section's `<annotations>` block (history credits, editor's notes, short-title notes, cross-references) is dropped. The free Council edition is not the commercially annotated D.C. Official Code; nothing is taken from a commercial publisher.
+- **Currency.** The Code's recency block reads "through 2026-09-26" (last codified D.C. Law 26-187; last codified emergency D.C. Act 26-416; last codified federal law Pub. L. 115-334); the build and codified date of the archive is 2026-10-07.
+- **Official status.** The deposit is an unofficial plain-text conversion by Legalese Commons; compare with the Code at code.dccouncil.gov before relying on it for a legal result.
+- **Verdict:** conditions (do not scrape; bulk download; ai-train=no), met: bulk route, no scraping, reference and encoding use only.
+- **Attribution (courtesy)**: "Code of the District of Columbia, Council of the District of Columbia (bulk XML, github.com/DCCouncil)."
 
 ## Language
 
-English is the sole language of the Code of the District of Columbia. D.C. laws are enacted and codified in English only; there is no second authentic language version.
+English is the sole language of the Code of the District of Columbia; there is no second authentic language version.
 
-## Status of this deposit
+## Consequence for this subject
 
-No statute text has been deposited yet.
+Statute text may be deposited and quoted in an encoding, for reference and encoding, not for model training. (The index check of 2026-09-23 had marked this subject "metadata only until resolved"; the owner approved the bulk route on 2026-10-20.)
+
+## Status of this deposit (2026-10-20)
+
+Statute text may be deposited and quoted in an encoding. Deposited as unofficial plain text from the Council's bulk XML, current through 2026-09-26. Each `.meta.json` gives the archive URL, its sha256 and size, the commit, the retrieval time (UTC), and the sha256 and character count of the text.
+
+- `registers/source-bundle/dc-code-4-ch2-subch-i-iv-a-definitions-programs-medicaid-2026-10.txt` -- Code of the District of Columbia, Title 4 (Public Care Systems), Chapter 2 (Public Assistance), Subchapters I to IV-A (D.C. Code ss 4-201.01 to 4-204.91). Definitions, establishment of programs, crisis management of children, Medicaid program administration (including Interim Disability Assistance for SSI applicants, 4-204.07) and the (not funded) District workers with disabilities program. 46 sections; 39,026 characters.
+- `registers/source-bundle/dc-code-4-ch2-subch-v-xxi-public-assistance-programs-2026-10.txt` -- Code of the District of Columbia, Title 4 (Public Care Systems), Chapter 2 (Public Assistance), Subchapters V to XXI (D.C. Code ss 4-205.01 to 4-221.01). Public assistance programs: TANF eligibility, need standards, the time limit, work requirements and sanctions, General Assistance for Children, POWER, the payment standards (4-205.52), the District supplement for SSI recipients in community residence facilities and assisted living (4-205.49(c)), emergency assistance, payment, hearings, foster care and the remaining subchapters. 188 sections; 204,194 characters.
