@@ -45,6 +45,14 @@ Record the seat in the encoding's NOTES.md.
 
 These rulings exist so that any row here can be taken into Legalese Studio and run through Resolve, Refine and Test with the owner confirming the design rather than remaking it.
 
+## Longer encodings stay, and get a seat layer (ruled 2026-10-21)
+
+**A seat encoding never replaces a longer one.** Where an Act already has a longer encoding (a whole-Act or multi-module encoding, a first pass, a named encoding), keep it.
+Meet the seat rule by adding a **seat layer** in the same encoding folder: a `<prefix>-seat.l4` module that IMPORTs the longer modules and asks the individual's questions, with `@export` and `@desc` on each, as the Employment Act, Road Traffic Act and Penal Code encodings in `subjects/sg/` do.
+A layer has to live in the same folder, because the stable `l4` resolves IMPORT only within the importing file's folder and the libraries.
+Write a separate shorter baseline (`encodings/baseline-<date>/`) only where no longer encoding exists. Where both already exist, both stay: neither deletes the other.
+Legalese Commons' Interact form needs seat questions with `@export`/`@desc`, from a baseline or a seat layer.
+
 ## Where things go
 
 The layout is ruled in [`docs/directory-conventions.md`](docs/directory-conventions.md) (rulings of 2026-08-05; the ISO spelling ruled again 2026-09-26).
