@@ -1,0 +1,646 @@
+IMPORT prelude
+
+-- Bankruptcy Act 1966 (Commonwealth) -- Part IX, debt agreements, from the debtor's seat: may I give a debt agreement proposal
+-- (s 185C(1), (4), (4A), (4C), (5), with s 5(2)-(3) "insolvent"); how long may my payments run (s 185C(2AA)-(2AC)); what may the
+-- Official Receiver do with my proposal (s 185E(2), (2AA), (2AB), (3)); the applicable deadline (s 185); the creditors' vote and lapse
+-- (ss 185EC, 185G(b)); when my agreement is made (s 185H); what my creditors may do to me while it is processed and while it is in
+-- force (ss 185F, 185K); whether a creditor may petition to make me bankrupt (ss 40(1)(g), (ha)-(hd), 44(1), 185K(1)); what each
+-- creditor gets (s 185C(2)(d), (e)); arrears defaults and termination (ss 185LB(3), 185LC(3), 185QA, 185R); how far a variation may
+-- extend my payments (s 185M(1D)-(1DB)); the end of my agreement and my release (ss 185N(1), (2), 185NA, with s 153(2)); how long it
+-- stays on the National Personal Insolvency Index (Bankruptcy Regulations 2021 ss 82, 83); and how long it bars another proposal
+-- (s 185C(4)(a)).
+--
+-- SEAT: the debtor -- "May I propose a debt agreement instead of bankruptcy; what does it bind me to, and when am I released?"
+--
+-- Edition: Compilation No. 97, compilation date 21 May 2026 (includes amendments up to Act No. 47, 2026), Federal Register of
+-- Legislation register id C2026C00215, as deposited at ../../registers/source-bundle/C1966A00033.txt. Regulations: Bankruptcy
+-- Regulations 2021, Compilation No. 5, compilation date 1 July 2026 (register id F2026C00537), as deposited at
+-- ../../../bankruptcy-regulations-2021/registers/source-bundle/F2021L00261.txt -- s 10A (the statutory minimum, $10,000) and
+-- ss 82, 83 (removal from the Index). The Regulations prescribe no greater amount for s 185C(4)(b)(ii).
+--
+-- NOT ENCODED: the s 185C(4)(e) payment-to-income formula (the deposit prints "the following formula" and then none), so whether it
+-- is exceeded is an INPUT; the threshold amount itself (7 times a Social Security Act 1991 rate that is indexed), an INPUT; the
+-- Minister's s 185C(4B) percentage and low income debtor amount; approved forms, the statement of affairs (s 185D) and explanatory
+-- statement; cancellation of acceptance (s 185ED); voting on variations and terminations (ss 185MA-185PD); termination and voiding
+-- by the Court (ss 185Q, 185T-185V) beyond their effect on the Index; s 185EC(3) (debts assigned to a related entity); administrators'
+-- duties, registration and remuneration beyond what reaches the debtor; Part X; the credit file (Privacy Act 1988 Part IIIA).
+-- Bankruptcy itself is in bda-bankruptcy.l4.
+--
+-- BASELINE ENCODING. Written with the writing-l4-rules skill from the seat of the individual to whom the law is applied, with the
+-- design defaults ruled on 2026-10-18. No pipeline, no coverage table, no independent test pass, no human gate. Not for public use
+-- as advice. See NOTES.md.
+
+§ `Bankruptcy Act 1966 Part IX -- debt agreements, from the debtor's seat`
+
+§§ `helpers`
+
+-- A date is given as year, month and day and compared by a single key (YYYYMMDD).
+GIVEN `year` IS A NUMBER, `month` IS A NUMBER, `day` IS A NUMBER
+GIVETH A NUMBER
+`date key` MEANS `year` TIMES 10000 PLUS `month` TIMES 100 PLUS `day`
+
+GIVEN `first amount` IS A NUMBER, `second amount` IS A NUMBER
+GIVETH A NUMBER
+`the higher of` MEANS
+    IF `first amount` GREATER THAN `second amount` THEN `first amount` ELSE `second amount`
+
+-- The same day N years later, as a key. (A 29 February start is not handled.)
+GIVEN `a date` IS A NUMBER, `years` IS A NUMBER
+GIVETH A NUMBER
+`the same day years later` MEANS `a date` PLUS `years` TIMES 10000
+
+-- "N years beginning on the day the agreement is made" ends at the end of the day before the Nth anniversary, so a payment falls
+-- after that period if it is due on or after the anniversary. (Inference from the words.)
+GIVEN `made` IS A NUMBER, `last payment` IS A NUMBER, `years` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the last payment falls after the period of years` IF
+    `last payment` AT LEAST `the same day years later` `made` `years`
+
+§§ `185C(2AB) -- my home`
+
+-- s 185C(2AB): applies "if at the time the debtor gives the debt agreement proposal ... the debtor has an interest in real property
+-- in Australia that is a dwelling and is the debtor's principal place of residence, being an interest: (a) that is an interest under
+-- a long-term lease; or (b) that is any other legal or equitable estate or interest, except: (i) an interest under a lease (other
+-- than a long-term lease); or (ii) an interest under a licence; or (iii) a life interest; or (iv) an interest in an easement; or (v)
+-- an interest held on trust for another person; or (vi) an interest of a kind determined in an instrument under subsection (2AD)".
+-- s 185C(5): "long-term lease" -- a lease granted by the Commonwealth, a State or a Territory for a term "reasonably likely ... to
+-- exceed 20 years"; "lease includes a sublease".
+DECLARE `Home interest` IS ONE OF
+    `no interest in a dwelling`
+    `a lease other than a long-term lease`
+    `a long-term lease`
+    `a licence`
+    `a life interest`
+    `an interest in an easement`
+    `an interest held on trust for another person`
+    `a kind determined by the Minister's instrument`
+    `any other legal or equitable estate or interest`
+
+@export Does the home rule in s 185C(2AB) apply to me (which lets my payments run up to 5 years)?
+GIVEN `my interest` IS A `Home interest` @desc The kind of interest you hold in the home you live in (a rented home is "a lease other than a long-term lease"; a home you own is "any other legal or equitable estate or interest")
+      `it is my principal place of residence in Australia` IS A BOOLEAN @desc Whether that home is a dwelling in Australia and your principal place of residence
+GIVETH A BOOLEAN
+DECIDE `Does the home rule apply to me` IF
+        `it is my principal place of residence in Australia`
+    AND CONSIDER `my interest`
+        WHEN `a long-term lease` THEN TRUE
+        WHEN `any other legal or equitable estate or interest` THEN TRUE
+        OTHERWISE FALSE
+
+§§ `185C(1), (4), (4A), (4C), (5) -- may I give a proposal`
+
+-- s 185C(1): "A debtor who is insolvent may give the Official Receiver a written proposal for a debt agreement." s 5(3): "A person
+-- who is not solvent is insolvent"; s 5(2): solvent "if, and only if, the person is able to pay all the person's debts, as and when
+-- they become due and payable".
+-- s 185C(4): a debtor "cannot" give a proposal if (a) "at any time in the 10 years immediately before the proposal time" the debtor
+-- "(i) has been a bankrupt; or (ii) has been a party (as debtor) to a debt agreement; or (iii) has given an authority under section
+-- 188"; (b) unsecured debts "total more than (i) the threshold amount; or (ii) if the regulations prescribe a greater amount ... the
+-- amount prescribed" (the 2021 Regulations prescribe none); (c) divisible property "is more than twice the threshold amount"; (d)
+-- after tax income in the year beginning at the proposal time "is likely to exceed three-quarters of the threshold amount"; (e) if
+-- (2AB) does not apply, the formula percentage exceeds the Minister's percentage "(unless subsection (4C) applies to the debtor)".
+-- (4A): (a)(i) does not apply to a bankruptcy "annulled under section 153B". (4C): applies if the formula exceeds and the proposed
+-- administrator certifies the debtor "is likely to be able to discharge the obligations created by the agreement as and when they
+-- fall due". s 185C(2E): "A debt agreement proposal must not be given jointly by 2 or more debtors."
+-- s 185C(5): "threshold amount ... means 7 times the amount that, at that time, is specified in column 3, item 2, Table B, point
+-- 1064-B1, Pension Rate Calculator A, in the Social Security Act 1991"; "unsecured debt includes the amount by which the value of a
+-- debt exceeds the value of a security given for the debt"; "after tax income" -- likely taxable income less income tax and the
+-- Medicare levy.
+-- "Insolvent" is the Act's own term but turns on facts about every debt; it is asked as a fact.
+DECLARE Debtor HAS
+    `is insolvent` IS A BOOLEAN
+    `was a bankrupt in the previous 10 years` IS A BOOLEAN
+    `that bankruptcy was annulled under s 153B` IS A BOOLEAN
+    `was a party as debtor to a debt agreement in the previous 10 years` IS A BOOLEAN
+    `gave an authority under s 188 in the previous 10 years` IS A BOOLEAN
+    `unsecured debts` IS A NUMBER
+    `property divisible among creditors if bankrupt` IS A NUMBER
+    `likely after tax income in the next year` IS A NUMBER
+    `interest in the home` IS A `Home interest`
+    `the home is a dwelling in Australia and the principal place of residence` IS A BOOLEAN
+    `the s 185C(4)(e) formula exceeds the Minister's percentage` IS A BOOLEAN
+    `the proposed administrator gave a s 185C(4C)(b) certificate` IS A BOOLEAN
+    `gives the proposal jointly with another debtor` IS A BOOLEAN
+
+GIVEN `the Social Security Act rate` IS A NUMBER
+GIVETH A NUMBER
+`the threshold amount` MEANS 7 TIMES `the Social Security Act rate`
+
+GIVEN `the debtor` IS A Debtor
+GIVETH A BOOLEAN
+DECIDE `the home rule applies to the debtor` IF
+    `Does the home rule apply to me` (`the debtor`'s `interest in the home`) (`the debtor`'s `the home is a dwelling in Australia and the principal place of residence`)
+
+DECLARE Eligibility IS ONE OF
+    `I may give a debt agreement proposal`
+    `no -- I am not insolvent`
+    `no -- I was bankrupt, in a debt agreement or gave a s 188 authority in the last 10 years`
+    `no -- my unsecured debts are more than the threshold amount`
+    `no -- my divisible property is more than twice the threshold amount`
+    `no -- my likely after tax income is more than three-quarters of the threshold amount`
+    `no -- my payments would exceed the Minister's percentage of my income`
+    `no -- a proposal cannot be given jointly`
+
+@export May I give the Official Receiver a debt agreement proposal, and if not, why not (s 185C(1), (2E), (4))?
+GIVEN `me` IS A Debtor @desc Your circumstances at the time you would give the proposal
+      `threshold` IS A NUMBER @desc The threshold amount at that time, in dollars (7 times the Social Security Act 1991 point 1064-B1 Table B item 2 rate)
+GIVETH AN Eligibility
+DECIDE `May I give a debt agreement proposal` IS
+    BRANCH
+        IF NOT `me`'s `is insolvent`
+            THEN `no -- I am not insolvent`
+        IF     (`me`'s `was a bankrupt in the previous 10 years` AND (NOT `me`'s `that bankruptcy was annulled under s 153B`))
+            OR `me`'s `was a party as debtor to a debt agreement in the previous 10 years`
+            OR `me`'s `gave an authority under s 188 in the previous 10 years`
+            THEN `no -- I was bankrupt, in a debt agreement or gave a s 188 authority in the last 10 years`
+        IF `me`'s `unsecured debts` GREATER THAN `threshold`
+            THEN `no -- my unsecured debts are more than the threshold amount`
+        IF `me`'s `property divisible among creditors if bankrupt` GREATER THAN 2 TIMES `threshold`
+            THEN `no -- my divisible property is more than twice the threshold amount`
+        IF `me`'s `likely after tax income in the next year` GREATER THAN `threshold` TIMES 3 DIVIDED BY 4
+            THEN `no -- my likely after tax income is more than three-quarters of the threshold amount`
+        IF     (NOT `the home rule applies to the debtor` `me`)
+           AND `me`'s `the s 185C(4)(e) formula exceeds the Minister's percentage`
+           AND (NOT `me`'s `the proposed administrator gave a s 185C(4C)(b) certificate`)
+            THEN `no -- my payments would exceed the Minister's percentage of my income`
+        IF `me`'s `gives the proposal jointly with another debtor`
+            THEN `no -- a proposal cannot be given jointly`
+        OTHERWISE `I may give a debt agreement proposal`
+
+GIVEN `me` IS A Debtor, `threshold` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `I am eligible` IF
+    `May I give a debt agreement proposal` `me` `threshold` EQUALS `I may give a debt agreement proposal`
+
+-- s 185C(4)(a)(ii), (i): "at any time in the 10 years immediately before the proposal time" the debtor "has been a party (as debtor)
+-- to a debt agreement" or "has been a bankrupt". A debtor remains a party until the agreement ends, and a bankrupt until discharge,
+-- so the 10 years run from the END of the earlier agreement or bankruptcy, not its start. (Inference from the words.)
+@export Does an earlier debt agreement or bankruptcy still bar me from giving a new proposal (s 185C(4)(a))?
+GIVEN `the day it ended` IS A NUMBER @desc The day your earlier debt agreement ended or you were discharged from bankruptcy, as YYYYMMDD
+      `the day I would give the new proposal` IS A NUMBER @desc The day you would give the new proposal, as YYYYMMDD
+GIVETH A BOOLEAN
+DECIDE `Does an earlier agreement or bankruptcy still bar me` IF
+    `the day I would give the new proposal` AT MOST `the same day years later` `the day it ended` 10
+
+§§ `185C(2AA), (2AC) -- how long my payments may run`
+
+-- s 185C(2AA): a proposal "must not provide for the debtor to make payments under the agreement, in respect of provable debts ...,
+-- after: (a) 3 years beginning on the day the agreement is made; or (b) if subsection (2AB) applies to the debtor -- 5 years".
+-- (2AC): if the payments run after 3 but not after 5 years, the property to be dealt with "must not include any interest covered by
+-- subsection (2AB)".
+@export What is the longest, in years, my debt agreement payments may run (s 185C(2AA))?
+GIVEN `me` IS A Debtor @desc Your circumstances when you give the proposal
+GIVETH A NUMBER
+DECIDE `How many years may my payments run` IS
+    IF `the home rule applies to the debtor` `me` THEN 5 ELSE 3
+
+DECLARE Proposal HAS
+    `the proposing debtor` IS A Debtor
+    `day the agreement would be made` IS A NUMBER
+    `day of the last payment` IS A NUMBER
+    `the property to be dealt with includes the home interest` IS A BOOLEAN
+    `the other requirements of s 185C(2), (2A), (2B), (2D), (2DA) and (2F) are met` IS A BOOLEAN
+    `days from signing to giving it to the Official Receiver` IS A NUMBER
+
+@export Does my proposal's payment term comply with s 185C(2AA) and (2AC)?
+GIVEN `my proposal` IS A Proposal @desc Your proposal: when the agreement would be made, the last payment, and whether it deals with your home
+GIVETH A BOOLEAN
+DECIDE `Does my payment term comply` IF
+        (NOT `the last payment falls after the period of years` (`my proposal`'s `day the agreement would be made`) (`my proposal`'s `day of the last payment`) (`How many years may my payments run` (`my proposal`'s `the proposing debtor`)))
+    AND (    (NOT `the last payment falls after the period of years` (`my proposal`'s `day the agreement would be made`) (`my proposal`'s `day of the last payment`) 3)
+          OR (NOT `my proposal`'s `the property to be dealt with includes the home interest`))
+
+§§ `185E -- what the Official Receiver may do with my proposal`
+
+-- s 185E(2): the Official Receiver "may accept the proposal for processing if (a) the Official Receiver is satisfied that subsections
+-- 185C(2), (2AA), (2AC), (2A), (2B), (2D), (2DA), (2E) and (4) have been complied with; ... (e) ... satisfied that the statement of
+-- affairs accompanying the proposal is in order". (2AA): "must not accept ... unless the proposal was given ... within 14 days after
+-- the day on which the debtor signed the proposal". (2AB): "may refuse ... if the Official Receiver reasonably believes that
+-- complying with the agreement would cause undue hardship to the debtor". (3): "must not accept ... if the Official Receiver thinks
+-- that the creditors' interests would be better served by not accepting". (4): the debtor may apply to the Administrative Review
+-- Tribunal for review.
+-- The Official Receiver's judgments are the Official Receiver's: they are asked as inputs, and the answer is conditional on them.
+DECLARE `Processing decision` IS ONE OF
+    `the Official Receiver cannot accept it for processing`
+    `the Official Receiver must not accept it for processing`
+    `the Official Receiver may accept it, or may refuse it for undue hardship`
+    `the Official Receiver may accept it for processing`
+
+@export What may the Official Receiver do with my debt agreement proposal (s 185E)?
+GIVEN `my proposal` IS A Proposal @desc Your proposal
+      `threshold` IS A NUMBER @desc The threshold amount at the time, in dollars
+      `the Official Receiver is satisfied my statement of affairs is in order` IS A BOOLEAN @desc Whether the Official Receiver is satisfied that your statement of affairs is in order
+      `the Official Receiver thinks creditors are better served by not accepting` IS A BOOLEAN @desc Whether the Official Receiver thinks your creditors' interests would be better served by not accepting the proposal
+      `the Official Receiver believes it would cause me undue hardship` IS A BOOLEAN @desc Whether the Official Receiver reasonably believes complying with the agreement would cause you undue hardship
+GIVETH A `Processing decision`
+DECIDE `What may the Official Receiver do with my proposal` IS
+    BRANCH
+        IF     (NOT `I am eligible` (`my proposal`'s `the proposing debtor`) `threshold`)
+            OR (NOT `Does my payment term comply` `my proposal`)
+            OR (NOT `my proposal`'s `the other requirements of s 185C(2), (2A), (2B), (2D), (2DA) and (2F) are met`)
+            OR (NOT `the Official Receiver is satisfied my statement of affairs is in order`)
+            THEN `the Official Receiver cannot accept it for processing`
+        IF     `my proposal`'s `days from signing to giving it to the Official Receiver` GREATER THAN 14
+            OR `the Official Receiver thinks creditors are better served by not accepting`
+            THEN `the Official Receiver must not accept it for processing`
+        IF `the Official Receiver believes it would cause me undue hardship`
+            THEN `the Official Receiver may accept it, or may refuse it for undue hardship`
+        OTHERWISE `the Official Receiver may accept it for processing`
+
+§§ `185 -- the applicable deadline`
+
+-- s 185 "applicable deadline: (a) in relation to a debt agreement proposal, means: (i) if Official Receiver accepted the proposal for
+-- processing in December -- the end of the 42nd day after the acceptance; or (ii) otherwise -- the end of the 35th day after".
+@export How many days after my proposal is accepted for processing do my creditors have to reply (s 185 applicable deadline)?
+GIVEN `accepted for processing in December` IS A BOOLEAN @desc Whether the Official Receiver accepted your proposal for processing in December
+GIVETH A NUMBER
+DECIDE `How many days do my creditors have to reply` IS
+    IF `accepted for processing in December` THEN 42 ELSE 35
+
+§§ `185EC, 185G(b) -- my creditors' vote`
+
+-- s 185EC(1): "A debt agreement proposal is accepted if: (a) the Official Receiver writes to affected creditors ...; and (b) a
+-- majority in value of the creditors who reply before the applicable deadline state that the proposal should be accepted." (1A):
+-- disregard an affected creditor who "is the proposed administrator" or "was, on becoming an affected creditor, a related entity of
+-- the proposed administrator". (2): "taken to be accepted at the applicable deadline". (4): value "assessed as at the time when the
+-- acceptance ... for processing was recorded on the National Personal Insolvency Index". (5): "a secured creditor is taken to be a
+-- creditor only to the extent (if any) by which the amount of the debt owing to the creditor exceeds the value of the creditor's
+-- security".
+-- s 185G: the proposal lapses if "(b) the Official Receiver accepts the proposal for processing and writes to affected creditors
+-- about it, but no replies are received before the applicable deadline".
+-- "Majority" is read as more than half of the value of the counted replies; a tie is not a majority. A reply from a disregarded
+-- creditor still prevents a lapse under s 185G(b), which speaks of "no replies" (inference from the words).
+DECLARE Creditor HAS
+    `debt owing when acceptance for processing was recorded` IS A NUMBER
+    `value of the creditor's security` IS A NUMBER
+    `is the proposed administrator or was its related entity on becoming a creditor` IS A BOOLEAN
+    `replied before the applicable deadline` IS A BOOLEAN
+    `stated the proposal should be accepted` IS A BOOLEAN
+
+GIVEN `the creditor` IS A Creditor
+GIVETH A NUMBER
+`the value of the creditor` MEANS
+    IF `the creditor`'s `debt owing when acceptance for processing was recorded` GREATER THAN `the creditor`'s `value of the creditor's security`
+    THEN `the creditor`'s `debt owing when acceptance for processing was recorded` MINUS `the creditor`'s `value of the creditor's security`
+    ELSE 0
+
+GIVEN `the creditor` IS A Creditor
+GIVETH A BOOLEAN
+DECIDE `the creditor's reply counts` IF
+        `the creditor`'s `replied before the applicable deadline`
+    AND (NOT `the creditor`'s `is the proposed administrator or was its related entity on becoming a creditor`)
+
+GIVEN `the creditors` IS A LIST OF Creditor
+GIVETH A NUMBER
+`value of counted replies` MEANS
+    CONSIDER `the creditors`
+    WHEN EMPTY THEN 0
+    WHEN `one creditor` FOLLOWED BY `the others` THEN
+        (IF `the creditor's reply counts` `one creditor` THEN `the value of the creditor` `one creditor` ELSE 0)
+        PLUS `value of counted replies` `the others`
+
+GIVEN `the creditors` IS A LIST OF Creditor
+GIVETH A NUMBER
+`value of counted replies in favour` MEANS
+    CONSIDER `the creditors`
+    WHEN EMPTY THEN 0
+    WHEN `one creditor` FOLLOWED BY `the others` THEN
+        (IF `the creditor's reply counts` `one creditor` AND `one creditor`'s `stated the proposal should be accepted`
+         THEN `the value of the creditor` `one creditor` ELSE 0)
+        PLUS `value of counted replies in favour` `the others`
+
+GIVEN `the creditors` IS A LIST OF Creditor
+GIVETH A BOOLEAN
+DECIDE `any creditor replied` IF
+    CONSIDER `the creditors`
+    WHEN EMPTY THEN FALSE
+    WHEN `one creditor` FOLLOWED BY `the others` THEN
+        `one creditor`'s `replied before the applicable deadline` OR `any creditor replied` `the others`
+
+DECLARE `Vote outcome` IS ONE OF
+    `my proposal is accepted`
+    `my proposal is not accepted`
+    `my proposal lapses`
+
+@export What happens to my proposal on my creditors' vote (ss 185EC, 185G)?
+GIVEN `my creditors` IS A LIST OF Creditor @desc Each affected creditor: the debt owed when acceptance for processing was recorded, any security, whether it is the proposed administrator or its related entity, whether it replied in time, and how it voted
+GIVETH A `Vote outcome`
+DECIDE `What happens to my proposal on the vote` IS
+    BRANCH
+        IF NOT `any creditor replied` `my creditors`
+            THEN `my proposal lapses`
+        IF 2 TIMES `value of counted replies in favour` `my creditors` GREATER THAN `value of counted replies` `my creditors`
+            THEN `my proposal is accepted`
+        OTHERWISE `my proposal is not accepted`
+
+§§ `185H, 185I -- when my agreement is made, and with whom`
+
+-- s 185H(2): if a proposal is accepted and is not conditional, "the Official Receiver must enter details of the debt agreement ... on
+-- the National Personal Insolvency Index; and (d) the debt agreement is made in the terms of the proposal when those details are so
+-- entered". (3): a conditional proposal likewise, but only if "the event occurs within that period". s 185C(2F): the period "must not
+-- be longer than 7 days". s 185I: the parties are "(a) the debtor; and (b) the creditors to whom the debtor owed provable debts" --
+-- including those who voted no or did not reply.
+@export Is my debt agreement made (s 185H)?
+GIVEN `my proposal was accepted` IS A BOOLEAN @desc Whether your creditors accepted the proposal
+      `it was conditional` IS A BOOLEAN @desc Whether the proposal was subject to a specified event within a specified period
+      `the event occurred within the period` IS A BOOLEAN @desc For a conditional proposal, whether the event occurred within the period
+      `details are entered on the Index` IS A BOOLEAN @desc Whether the Official Receiver has entered the agreement's details on the National Personal Insolvency Index
+GIVETH A BOOLEAN
+DECIDE `Is my debt agreement made` IF
+        `my proposal was accepted`
+    AND `details are entered on the Index`
+    AND ((NOT `it was conditional`) OR `the event occurred within the period`)
+
+@export Is a creditor who voted against my proposal, or did not reply, bound by my debt agreement (s 185I)?
+GIVEN `the creditor was owed a provable debt` IS A BOOLEAN @desc Whether you owed that creditor a provable debt
+GIVETH A BOOLEAN
+DECIDE `Is a creditor who voted no bound` IF `the creditor was owed a provable debt`
+
+§§ `185F, 185K -- what my creditors may do to me`
+
+-- s 185 "frozen debt" is a debt owed by a debtor whose proposal has been accepted for processing that "would be a provable debt ...
+-- but does not include a debt arising under a maintenance agreement or maintenance order". "provable debt" -- "a debt that would
+-- have been provable in bankruptcy if the debtor had become a bankrupt when the acceptance of the relevant debt agreement proposal for
+-- processing was recorded in the National Personal Insolvency Index".
+-- s 185F(1), from the recording of acceptance for processing until the deadline or the agreement: (a) a creditor cannot "apply for
+-- enforcement of, or enforce, a remedy against the debtor's person or property in respect of a frozen debt"; (b) a sheriff must not
+-- execute process to enforce payment of a frozen debt; (c) a person entitled to retain or deduct money owing to the debtor "must not
+-- retain or deduct money". (2): a creditor may still start a legal proceeding or take a fresh step "(except to enforce a judgment)".
+-- (3): proceeds of crime liabilities may be enforced.
+-- s 185K(1): while the agreement is in force and on the Index, a creditor cannot (a) present a creditor's petition, (b) proceed with
+-- one already presented, or "(c) enforce a remedy against the debtor's person or property, or start or take a fresh step in legal
+-- proceedings, in respect of a provable debt". (2): (1)(c) does not prevent enforcing a remedy for "(a) a maintenance agreement; (b)
+-- a maintenance order; (c) a proceeds of crime law". (3): "(a) a sheriff must not ... enforce payment of a provable debt ...; and (b)
+-- a person who is entitled under a law of the Commonwealth, or of a State or Territory, to retain or deduct money from money that is
+-- or will be owing or payable to the debtor must not retain or deduct money."
+-- s 185K(3)(b) and s 185F(1)(c) are not limited to any kind of debt; encoded on their words (NOTES.md finding 4).
+-- Whether a maintenance or proceeds of crime liability is itself provable is not decided: for the proceedings limbs it is treated as
+-- provable (an assumption). A debt incurred after acceptance for processing was recorded is not provable (from the s 185 definition).
+DECLARE `Debt kind` IS ONE OF
+    `an ordinary provable debt`
+    `a debt incurred by fraud`
+    `a liability under a maintenance agreement or maintenance order`
+    `a liability under a proceeds of crime law`
+    `a debt incurred after acceptance for processing was recorded`
+
+DECLARE `Creditor action` IS ONE OF
+    `enforce a remedy against my person or property`
+    `start legal proceedings`
+    `take a fresh step in proceedings other than to enforce a judgment`
+    `have a sheriff execute court process`
+    `retain or deduct money owing to me`
+
+GIVEN `the debt` IS A `Debt kind`
+GIVETH A BOOLEAN
+DECIDE `the debt is provable` IF
+    CONSIDER `the debt`
+    WHEN `a debt incurred after acceptance for processing was recorded` THEN FALSE
+    OTHERWISE TRUE
+
+GIVEN `the debt` IS A `Debt kind`
+GIVETH A BOOLEAN
+DECIDE `the debt is frozen` IF
+    CONSIDER `the debt`
+    WHEN `a liability under a maintenance agreement or maintenance order` THEN FALSE
+    WHEN `a debt incurred after acceptance for processing was recorded` THEN FALSE
+    OTHERWISE TRUE
+
+@export While my debt agreement proposal is being processed, may a creditor take this action against me (s 185F)?
+GIVEN `the action` IS A `Creditor action` @desc What the creditor wants to do
+      `the debt` IS A `Debt kind` @desc The kind of debt it is for
+GIVETH A BOOLEAN
+DECIDE `May a creditor act against me while my proposal is processed` IF
+    CONSIDER `the action`
+    WHEN `enforce a remedy against my person or property` THEN
+            (NOT `the debt is frozen` `the debt`)
+         OR (`the debt` EQUALS `a liability under a proceeds of crime law`)
+    WHEN `start legal proceedings` THEN TRUE
+    WHEN `take a fresh step in proceedings other than to enforce a judgment` THEN TRUE
+    WHEN `have a sheriff execute court process` THEN NOT `the debt is frozen` `the debt`
+    WHEN `retain or deduct money owing to me` THEN FALSE
+
+@export While my debt agreement is in force, may a creditor take this action against me (s 185K)?
+GIVEN `the action` IS A `Creditor action` @desc What the creditor wants to do
+      `the debt` IS A `Debt kind` @desc The kind of debt it is for
+GIVETH A BOOLEAN
+DECIDE `May a creditor act against me while my agreement is in force` IF
+    CONSIDER `the action`
+    WHEN `enforce a remedy against my person or property` THEN
+            (NOT `the debt is provable` `the debt`)
+         OR (`the debt` EQUALS `a liability under a maintenance agreement or maintenance order`)
+         OR (`the debt` EQUALS `a liability under a proceeds of crime law`)
+    WHEN `start legal proceedings` THEN NOT `the debt is provable` `the debt`
+    WHEN `take a fresh step in proceedings other than to enforce a judgment` THEN NOT `the debt is provable` `the debt`
+    WHEN `have a sheriff execute court process` THEN NOT `the debt is provable` `the debt`
+    WHEN `retain or deduct money owing to me` THEN FALSE
+
+§§ `40(1), 44(1), 185K(1) -- may a creditor petition to make me bankrupt`
+
+-- s 40(1): a debtor commits an act of bankruptcy "(g)" on failing to comply with a bankruptcy notice served after a final judgment;
+-- "(ha) if the debtor gives the Official Receiver a debt agreement proposal; (hb) if a debt agreement proposal given by the debtor
+-- ... is accepted by the debtor's creditors; (hc) if the debtor breaches a debt agreement; (hd) if a debt agreement to which the
+-- debtor was a party (as a debtor) is terminated under section 185P, 185Q or 185QA".
+-- s 44(1): a creditor's petition "shall not be presented" unless (a) the debt or debts owed to the petitioning creditor or creditors
+-- "amount to the statutory minimum"; (b) each is "a liquidated sum" payable immediately or at a certain future time; and (c) "the
+-- act of bankruptcy on which the petition is founded was committed within 6 months before the presentation of the petition". (2): a
+-- secured creditor counts only its shortfall unless it offers to surrender its security (3).
+-- s 5(1) "statutory minimum means: (a) if an amount greater than $5,000 is prescribed -- the prescribed amount; or (b) otherwise --
+-- $5,000"; Bankruptcy Regulations 2021 s 10A: "the amount prescribed is $10,000".
+-- s 185K(1)(a), (b): while the agreement is in force and on the Index a creditor cannot present or proceed with a petition.
+-- s 185F does not stop a petition while the proposal is being processed, and giving the proposal is itself an act of bankruptcy.
+-- Whether the Court then makes a sequestration order (s 43, s 52) is the Court's and is not encoded.
+DECLARE `Act of bankruptcy` IS ONE OF
+    `failing to comply with a bankruptcy notice`
+    `giving a debt agreement proposal`
+    `my creditors accepting my debt agreement proposal`
+    `breaching my debt agreement`
+    `my debt agreement being terminated under s 185P, 185Q or 185QA`
+    `no act of bankruptcy`
+
+-- s 5(1) "statutory minimum", with Bankruptcy Regulations 2021 s 10A.
+GIVETH A NUMBER
+`the statutory minimum` MEANS `the higher of` 5000 10000
+
+@export May a creditor present a bankruptcy petition against me (ss 40, 44(1), 185K(1))?
+GIVEN `the act` IS AN `Act of bankruptcy` @desc The act of bankruptcy the creditor relies on
+      `months since the act` IS A NUMBER @desc How many months before the petition the act of bankruptcy happened
+      `liquidated debts owed to the petitioning creditors` IS A NUMBER @desc The liquidated, unsecured debts you owe to the creditor or creditors petitioning, in dollars
+      `my debt agreement is in force and on the Index` IS A BOOLEAN @desc Whether you have a debt agreement in force and entered on the National Personal Insolvency Index
+GIVETH A BOOLEAN
+DECIDE `May a creditor petition to make me bankrupt` IF
+        (NOT `my debt agreement is in force and on the Index`)
+    AND (NOT `the act` EQUALS `no act of bankruptcy`)
+    AND `months since the act` AT MOST 6
+    AND `liquidated debts owed to the petitioning creditors` AT LEAST `the statutory minimum`
+
+§§ `185C(2)(d), (e) -- what each creditor gets`
+
+-- s 185C(2)(d): the proposal must provide that "all provable debts ... rank equally" and, if the total paid "is insufficient to meet
+-- those provable debts in full, those provable debts are to be paid proportionately"; (e) "a creditor is not entitled to receive, in
+-- respect of a provable debt, more than the amount of the debt". The administrator's remuneration (s 185C(3A)) is paid in addition
+-- and is not modelled.
+@export How much will this creditor receive under my debt agreement (s 185C(2)(d), (e))?
+GIVEN `this creditor's provable debt` IS A NUMBER @desc The provable debt you owe this creditor, in dollars
+      `all provable debts` IS A NUMBER @desc All provable debts under the agreement, in dollars
+      `total I pay towards provable debts` IS A NUMBER @desc The total you will pay under the agreement towards provable debts (not the administrator's fee), in dollars
+GIVETH A NUMBER
+DECIDE `How much will this creditor receive` IS
+    IF `total I pay towards provable debts` AT LEAST `all provable debts`
+    THEN `this creditor's provable debt`
+    ELSE `total I pay towards provable debts` TIMES `this creditor's provable debt` DIVIDED BY `all provable debts`
+
+§§ `185LB(3), 185LC(3), 185QA, 185R -- if I fall behind`
+
+-- s 185LB(3): a 3-month arrears default occurs at the test time if (a) payments became due at the start of the 3-month period ending
+-- immediately before it; (b) "throughout that 3-month period, the debtor was in arrears"; and (c) "(i) the total amount that the
+-- debtor was so in arrears exceeds $300, or 20% of the total of all of the due payments at the beginning of that 3-month period,
+-- whichever is higher; or (ii) if the total of all of the due payments at the beginning of that 3-month period was $300 or less -- no
+-- payment was made in that period to reduce any of the due payments". (1): the administrator must notify each creditor within 10
+-- business days. The default does not by itself end the agreement.
+@export Have I committed a 3-month arrears default, so that my creditors must be told (s 185LB)?
+GIVEN `in arrears throughout the 3 months` IS A BOOLEAN @desc Whether you were behind throughout the 3 months
+      `total arrears` IS A NUMBER @desc How much you are behind, in dollars
+      `total due at the start of the 3 months` IS A NUMBER @desc The total of the payments that were due at the start of the 3 months, in dollars
+      `I made a payment in the period to reduce them` IS A BOOLEAN @desc Whether you paid anything in the 3 months to reduce the arrears
+GIVETH A BOOLEAN
+DECIDE `Have I committed a 3-month arrears default` IF
+        `in arrears throughout the 3 months`
+    AND (    `total arrears` GREATER THAN `the higher of` 300 (`total due at the start of the 3 months` TIMES 20 DIVIDED BY 100)
+          OR (`total due at the start of the 3 months` AT MOST 300 AND (NOT `I made a payment in the period to reduce them`)))
+
+-- s 185LC(3): a designated 6-month arrears default occurs at the test time if "(a) ... (i) before the test time, one or more payments
+-- ... became due and payable ...; (ii) at no time during the 6-month period ending immediately before the test time were any
+-- obligations in respect of those payments discharged; or (b) ... (i) at the test time, the obligations created by the debt agreement
+-- have not been discharged; (ii) the last of those obligations should have been discharged at a time 6 months before the test time".
+-- Months are whole months; "at a time 6 months before" is read as "6 months or more before" (inference).
+@export Have I committed a designated 6-month arrears default (s 185LC(3))?
+GIVEN `a payment had fallen due` IS A BOOLEAN @desc Whether any payment under the agreement has fallen due
+      `months since I paid anything towards those payments` IS A NUMBER @desc Whole months since you last paid anything towards the payments that had fallen due
+      `I have finished all my obligations` IS A BOOLEAN @desc Whether you have discharged every obligation under the agreement
+      `months since my last obligation fell due` IS A NUMBER @desc Whole months since your last obligation should have been discharged (0 if it is not yet due)
+GIVETH A BOOLEAN
+DECIDE `Have I committed a designated 6-month arrears default` IF
+        (`a payment had fallen due` AND `months since I paid anything towards those payments` AT LEAST 6)
+    OR  ((NOT `I have finished all my obligations`) AND `months since my last obligation fell due` AT LEAST 6)
+
+-- s 185LC(1): the administrator "must notify, in writing, the Official Receiver ... within 10 business days". s 185QA(1): if the
+-- administrator notifies and "the Official Receiver is satisfied that the designated 6-month arrears default has occurred", the
+-- Official Receiver "must (c) declare in writing that the agreement is terminated; and (d) record the declaration on the National
+-- Personal Insolvency Index". (2): terminated "when the declaration is recorded". s 185R: "A debt agreement is terminated if the
+-- debtor becomes a bankrupt." Termination under s 185QA is itself an act of bankruptcy (s 40(1)(hd)).
+@export Is my debt agreement terminated (ss 185QA, 185R)?
+GIVEN `the administrator notified a designated 6-month arrears default` IS A BOOLEAN @desc Whether your administrator has told the Official Receiver of a designated 6-month arrears default
+      `the Official Receiver is satisfied it occurred` IS A BOOLEAN @desc Whether the Official Receiver is satisfied the default occurred
+      `the declaration is recorded on the Index` IS A BOOLEAN @desc Whether the Official Receiver's declaration of termination has been recorded on the Index
+      `I have become a bankrupt` IS A BOOLEAN @desc Whether you have become a bankrupt
+GIVETH A BOOLEAN
+DECIDE `Is my debt agreement terminated` IF
+        `I have become a bankrupt`
+    OR  (    `the administrator notified a designated 6-month arrears default`
+         AND `the Official Receiver is satisfied it occurred`
+         AND `the declaration is recorded on the Index`)
+
+@export Must the Official Receiver declare my debt agreement terminated (s 185QA(1))?
+GIVEN `the administrator notified a designated 6-month arrears default` IS A BOOLEAN @desc Whether your administrator has told the Official Receiver of a designated 6-month arrears default
+      `the Official Receiver is satisfied it occurred` IS A BOOLEAN @desc Whether the Official Receiver is satisfied the default occurred
+GIVETH A BOOLEAN
+DECIDE `Must the Official Receiver terminate my agreement` IF
+    `the administrator notified a designated 6-month arrears default` AND `the Official Receiver is satisfied it occurred`
+
+§§ `185M(1D)-(1DB) -- how far a variation may extend my payments`
+
+-- s 185M(1D): a proposal to vary "must not seek to vary the agreement so that the agreement would provide for the debtor to make
+-- payments ... after: (a) 3 years beginning on the day the agreement was made; or (b) if subsection (1DA) or (1DB) applies -- 5
+-- years". (1DA): s 185C(2AB) applied to the debtor when the proposal was given. (1DB): the administrator certifies reasonable grounds
+-- to believe "(i) that the debtor has suffered a substantial change in circumstances after the agreement was made that was not
+-- foreseen ...; and (ii) that the debtor is not likely to be able to discharge the obligations ... because of that change"; and "(b)
+-- the proposal does not increase the total of the payments".
+@export If my debt agreement is varied, what is the longest, in years, my payments may then run (s 185M(1D))?
+GIVEN `the home rule applied when I gave the proposal` IS A BOOLEAN @desc Whether s 185C(2AB) (your home) applied to you when you gave the original proposal
+      `the administrator certifies an unforeseen substantial change` IS A BOOLEAN @desc Whether your administrator certifies an unforeseen substantial change in your circumstances that means you cannot keep up
+      `the variation does not increase the total payments` IS A BOOLEAN @desc Whether the variation leaves the total you must pay the same or lower
+GIVETH A NUMBER
+DECIDE `How many years may a variation let my payments run` IS
+    IF     `the home rule applied when I gave the proposal`
+        OR (`the administrator certifies an unforeseen substantial change` AND `the variation does not increase the total payments`)
+    THEN 5
+    ELSE 3
+
+§§ `185N, 185NA, 153(2) -- the end of my agreement and my release`
+
+-- s 185N(1): "A debt agreement ends when all the obligations that it created have been discharged, unless the agreement has been
+-- terminated earlier under section 185P, 185Q, 185QA or 185R." (2): the debtor "is entitled to any property that was subject to the
+-- debt agreement but that was not required by the agreement to be distributed to creditors" (Example: Rhea sells her boat and car
+-- for $16,000, pays her creditors the $15,000 required, and keeps $1,000). (3): the Official Receiver "must give the debtor a
+-- certificate". (5): the administrator notifies the Official Receiver within 5 business days.
+@export Has my debt agreement ended on completion (s 185N(1))?
+GIVEN `I have discharged all my obligations` IS A BOOLEAN @desc Whether you have done everything the agreement required
+      `it was terminated earlier` IS A BOOLEAN @desc Whether the agreement was terminated earlier under s 185P, 185Q, 185QA or 185R
+GIVETH A BOOLEAN
+DECIDE `Has my debt agreement ended` IF
+    `I have discharged all my obligations` AND (NOT `it was terminated earlier`)
+
+@export When my debt agreement ends, how much of the property it covered do I keep (s 185N(2))?
+GIVEN `realised from the property` IS A NUMBER @desc What the property dealt with under the agreement brought in, in dollars
+      `required to be distributed` IS A NUMBER @desc What the agreement required to be paid to creditors from it, in dollars
+GIVETH A NUMBER
+DECIDE `How much do I keep` IS
+    IF `realised from the property` GREATER THAN `required to be distributed`
+    THEN `realised from the property` MINUS `required to be distributed`
+    ELSE 0
+
+-- s 185NA(1): when the agreement ends under s 185N(1), "the debtor is released from provable debts from which the debtor would have
+-- been released if the debtor had been discharged from bankruptcy immediately after the acceptance of the relevant debt agreement
+-- proposal for processing was recorded". (2): the release "ceases to operate if the debt agreement is declared void by the Court".
+-- (3): it does not release a joint debtor or a guarantor.
+-- s 153(2): discharge does not release (b) "a debt incurred by means of fraud" or (c) "subject to any order of the Court made under
+-- subsection (2A)", a liability under a maintenance agreement or maintenance order. s 153 Note: a pecuniary penalty order is not
+-- provable (s 82(3A)). A proceeds of crime liability is treated as not released on that note (inference).
+@export When my debt agreement ends, am I released from this debt (s 185NA)?
+GIVEN `the debt` IS A `Debt kind` @desc The kind of debt
+      `my agreement ended on completion` IS A BOOLEAN @desc Whether the agreement ended under s 185N(1) by your completing it
+      `my agreement was declared void` IS A BOOLEAN @desc Whether the Court has declared the agreement void
+GIVETH A BOOLEAN
+DECIDE `Am I released from the debt` IF
+        `my agreement ended on completion`
+    AND (NOT `my agreement was declared void`)
+    AND CONSIDER `the debt`
+        WHEN `an ordinary provable debt` THEN TRUE
+        OTHERWISE FALSE
+
+@export Does my release also release someone who owes the debt with me, or my guarantor (s 185NA(3))?
+GIVEN `I was released` IS A BOOLEAN @desc Whether you were released from the debt
+GIVETH A BOOLEAN
+DECIDE `Is my co-debtor or guarantor released` IF FALSE
+
+§§ `Bankruptcy Regulations 2021 ss 82, 83 -- how long it stays on the Index`
+
+-- Regs s 82(1): if a debt agreement "ends under section 185N", the Official Receiver "must remove all information relating to the debt
+-- agreement from the Index within 1 month after the later of the following days: (a) 5 years after the day on which the debt
+-- agreement was made; (b) the day on which the debt agreement ends". (2): if terminated under s 185P, 185Q, 185QA or 185R -- the later
+-- of 5 years after it was made and "2 years after the day on which the debt agreement is terminated". (3): if declared wholly void
+-- under s 185U -- the later of 5 years after it was made and "2 years after the day on which the order is made".
+-- Regs s 83: information about a proposal that is withdrawn, not accepted, cancelled or lapses is removed "within 1 year after the
+-- day on which any of the following occurs".
+-- The answer is the day from which the month runs; removal must be done within 1 month after it.
+DECLARE `How my agreement finished` IS ONE OF
+    `it ended on completion under s 185N`
+    `it was terminated under s 185P, 185Q, 185QA or 185R`
+    `it was declared wholly void under s 185U`
+
+@export From what day does the one month run within which my debt agreement must come off the National Personal Insolvency Index (Regulations s 82)?
+GIVEN `how it finished` IS A `How my agreement finished` @desc How the agreement came to an end
+      `the day it was made` IS A NUMBER @desc The day the agreement was made (entered on the Index), as YYYYMMDD
+      `the day it finished` IS A NUMBER @desc The day it ended, was terminated, or was declared void, as YYYYMMDD
+GIVETH A NUMBER
+DECIDE `From when must my agreement come off the Index` IS
+    CONSIDER `how it finished`
+    WHEN `it ended on completion under s 185N` THEN
+        `the higher of` (`the same day years later` `the day it was made` 5) `the day it finished`
+    OTHERWISE
+        `the higher of` (`the same day years later` `the day it was made` 5) (`the same day years later` `the day it finished` 2)
+
+@export If my proposal does not become an agreement, by what day must it come off the National Personal Insolvency Index (Regulations s 83)?
+GIVEN `the day it was withdrawn, rejected, cancelled or lapsed` IS A NUMBER @desc The day the proposal was withdrawn, not accepted, had its acceptance for processing cancelled, or lapsed, as YYYYMMDD
+GIVETH A NUMBER
+DECIDE `By when must my proposal come off the Index` IS
+    `the same day years later` `the day it was withdrawn, rejected, cancelled or lapsed` 1
