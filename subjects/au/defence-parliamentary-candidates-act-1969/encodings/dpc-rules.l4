@@ -1,0 +1,158 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Defence (Parliamentary Candidates) Act 1969 (Cth) — THE NOUNS, THE RULES AND
+-- THE TOP-LEVEL GOAL. Source: ../registers/source-bundle/C1969A00060.txt
+-- (compilation No. 9, 1 July 2016). The Defence member who wants to stand for
+-- Parliament asks: "How do I leave to stand; by when must I apply to come
+-- back; what if I do not; must I repay my gratuity?"
+
+§ `Nouns`
+
+-- ss 7-9: the member's position.
+DECLARE `My service` IS ONE OF
+    `an officer of the Permanent Navy, Regular Army or Permanent Air Force`
+    `an enlisted member of the Permanent Navy, Regular Army or Permanent Air Force`
+    `a Reserve member on continuous full-time service`
+    `another member`
+
+DECLARE `Route` IS ONE OF
+    `transfer to the appropriate Reserve (s 7)`
+    `discharge (s 8)`
+    `termination of continuous full-time service (s 9)`
+    `no route under this Act`
+
+DECLARE `Candidate case` HAS
+    `my service`                                                    IS A `My service`
+    -- ss 7(b), 8(b), 9(b): the intention to stand at a specified election
+    `the Chief is satisfied I intend to stand`                      IS A BOOLEAN
+    `I have left under the Act`                                     IS A BOOLEAN
+    -- s 6: the day the Minister's notice is published
+    `the declared date`                                             IS A MAYBE DATE
+    `I was elected`                                                 IS A BOOLEAN
+    `I applied for reinstatement on`                                IS A MAYBE DATE
+    `the Chief allowed a further period in special circumstances`   IS A BOOLEAN
+    -- ss 13-14
+    `the Chief served notice requiring me to apply on`              IS A MAYBE DATE
+    -- ss 10-12, 17
+    `I have been reinstated`                                        IS A BOOLEAN
+    `the gratuity or bounty paid to me on leaving`                  IS A NUMBER
+
+DECLARE `Candidate position` HAS
+    `my route out`                                                  IS A `Route`
+    `the last day to apply for reinstatement`                       IS A MAYBE DATE
+    `my application is in time`                                     IS A MAYBE BOOLEAN
+    `the last day the Chief may serve notice requiring me to apply` IS A MAYBE DATE
+    `I am deemed to have applied on`                                IS A MAYBE DATE
+    `I am deemed re-enlisted that day`                              IS A BOOLEAN
+    `the time away counts for long service leave`                   IS A BOOLEAN
+    `the amount I must repay`                                       IS A NUMBER
+
+§ `Rules`
+
+-- ss 7-9: the Chief of the Defence Force "may" transfer, discharge or
+-- terminate, if satisfied of the intention to stand.
+@ref ss 7-9
+GIVEN c IS A `Candidate case`
+GIVETH A `Route`
+`my route for` c MEANS
+    IF NOT (c's `the Chief is satisfied I intend to stand`)
+    THEN `no route under this Act`
+    ELSE CONSIDER c's `my service`
+         WHEN `an officer of the Permanent Navy, Regular Army or Permanent Air Force` THEN `transfer to the appropriate Reserve (s 7)`
+         WHEN `an enlisted member of the Permanent Navy, Regular Army or Permanent Air Force` THEN `discharge (s 8)`
+         WHEN `a Reserve member on continuous full-time service` THEN `termination of continuous full-time service (s 9)`
+         WHEN `another member` THEN `no route under this Act`
+
+-- ss 10(1), 11(1), 12(1): "not later than two months after" the declared
+-- date: the corresponding day two months later.
+@ref ss 10(1), 11(1), 12(1)
+GIVEN c IS A `Candidate case`
+GIVETH A MAYBE DATE
+`the last day to apply for` c MEANS
+    IF NOT (c's `I have left under the Act`)
+    THEN NOTHING
+    ELSE CONSIDER c's `the declared date`
+         WHEN JUST d THEN JUST (`add months` d 2)
+         WHEN NOTHING THEN NOTHING
+
+@ref ss 10(1), 11(1), 12(1)
+GIVEN c IS A `Candidate case`
+GIVETH A MAYBE BOOLEAN
+`is my application in time for` c MEANS
+    CONSIDER c's `I applied for reinstatement on`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST a THEN
+        CONSIDER `the last day to apply for` c
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST lastday THEN JUST (a AT MOST lastday OR c's `the Chief allowed a further period in special circumstances`)
+
+-- ss 13(1), 14(1): notice "before the expiration of a period of one month
+-- after" the declared date, to an unsuccessful officer or enlisted member.
+@ref ss 13(1), 14(1)
+GIVEN c IS A `Candidate case`
+GIVETH A BOOLEAN
+DECIDE `compulsory reinstatement can apply to` c IF
+        c's `I have left under the Act`
+    AND NOT (c's `I was elected`)
+    AND (   c's `my service` EQUALS `an officer of the Permanent Navy, Regular Army or Permanent Air Force`
+         OR c's `my service` EQUALS `an enlisted member of the Permanent Navy, Regular Army or Permanent Air Force`)
+
+@ref ss 13(1), 14(1)
+GIVEN c IS A `Candidate case`
+GIVETH A MAYBE DATE
+`the last notice day for` c MEANS
+    IF NOT (`compulsory reinstatement can apply to` c)
+    THEN NOTHING
+    ELSE CONSIDER c's `the declared date`
+         WHEN JUST d THEN JUST (`add months` d 1)
+         WHEN NOTHING THEN NOTHING
+
+-- ss 13(2), 14(2): with a notice served in time and no application by the end
+-- of the two months, I am deemed to apply on its last day (and an enlisted
+-- member is deemed re-enlisted).
+@ref ss 13(2), 14(2)
+GIVEN c IS A `Candidate case`
+GIVETH A MAYBE DATE
+`the deemed application day for` c MEANS
+    CONSIDER `the last notice day for` c
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST lastnotice THEN
+        CONSIDER c's `the Chief served notice requiring me to apply on`
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST served THEN
+            IF served AT MOST lastnotice AND c's `I applied for reinstatement on` EQUALS NOTHING
+            THEN `the last day to apply for` c
+            ELSE NOTHING
+
+@ref s 14(2)
+GIVEN c IS A `Candidate case`
+GIVETH A BOOLEAN
+DECIDE `I am deemed re-enlisted` c IF
+        c's `my service` EQUALS `an enlisted member of the Permanent Navy, Regular Army or Permanent Air Force`
+    AND NOT (`the deemed application day for` c EQUALS NOTHING)
+
+-- ss 10(4), 11(5), 12(3): on reinstatement, the time away (leave without pay)
+-- counts for long service leave.
+@ref ss 10(2)-(4), 11(2)-(5), 12(2)-(3)
+GIVEN c IS A `Candidate case`
+GIVETH A BOOLEAN
+DECIDE `I am reinstated` c IF
+        c's `I have been reinstated`
+    OR  `I am deemed re-enlisted` c
+
+-- s 17: on reinstatement, the gratuity or bounty paid on leaving is repaid.
+@ref s 17
+GIVEN c IS A `Candidate case`
+GIVETH A NUMBER
+`the repayment for` c MEANS
+    IF `I am reinstated` c THEN c's `the gratuity or bounty paid to me on leaving` ELSE 0
+
+@ref ss 6-17
+@export default The position of a member of the Defence Force who wants to stand for a Commonwealth, State, Northern Territory or prescribed Territory legislature, under the Defence (Parliamentary Candidates) Act 1969 (Cth): how they may leave to stand (a permanent officer by transfer to the Reserve, an enlisted member by discharge, a Reserve member by ending continuous full-time service, if the Chief of the Defence Force is satisfied of the intention: ss 7-9); the last day to apply for reinstatement at the same rank (two months after the Minister's declared date, or later if the Chief allows: ss 10-12); for an unsuccessful candidate, the last day the Chief may serve notice requiring an application (one month after the declared date), and the day they are then deemed to apply, or be re-enlisted (ss 13-14); that the time away counts for long service leave; and the gratuity to be repaid on reinstatement (s 17). DRAFT, not reviewed by an Australian lawyer.
+GIVEN c IS A `Candidate case`  @desc My service, the Chief's satisfaction, the declared date, the election result, my application, any notice, and the gratuity paid on leaving
+GIVETH A `Candidate position`
+`the candidate position for` c MEANS
+    `Candidate position` OF `my route for` c, `the last day to apply for` c, `is my application in time for` c,
+                            `the last notice day for` c, `the deemed application day for` c, `I am deemed re-enlisted` c,
+                            `I am reinstated` c, `the repayment for` c
