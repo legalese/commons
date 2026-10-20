@@ -1,0 +1,157 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Protection of Cultural Objects on Loan Act 2013 (Cth) — THE NOUNS, THE RULES
+-- AND THE TOP-LEVEL GOAL. Source: ../registers/source-bundle/C2013A00012.txt
+-- (compilation No. 2, 14 October 2024). The foreign lender asks: "Is my object
+-- protected while on loan in Australia, and until when; can I be sued over it;
+-- can it be seized or forfeited?"
+
+§ `Nouns`
+
+-- s 5 lender (a).
+DECLARE `Lender kind` IS ONE OF
+    `an individual not ordinarily resident in Australia`
+    `a corporation incorporated under a foreign law`
+    `a body politic of a foreign country or part of one`
+    `another person`
+
+-- ss 9, 10: what is brought against me or the object.
+DECLARE `Proceeding` IS ONE OF
+    `a claim against me personally about the object`
+    `a claim against the object itself`
+    `proceedings under the Proceeds of Crime Act 2002 or prescribed`
+    `none`
+
+-- ss 11-12: the power relied on.
+DECLARE `Power` IS ONE OF
+    `an ordinary statutory power`
+    `Part IAA of the Crimes Act 1914`
+    `the Proceeds of Crime Act 2002`
+    `a seizure power given only to police`
+    `a prescribed law`
+
+DECLARE `Loan case` HAS
+    `I am`                                                  IS A `Lender kind`
+    -- s 8(1)(a)-(f)
+    `imported on loan under a temporary loan arrangement with the exhibiting institution or facilitator` IS A BOOLEAN
+    `imported only or mainly for temporary public exhibition` IS A BOOLEAN
+    `the institution was approved when it was imported`     IS A BOOLEAN
+    `one of the constitutional connections in s 8(1)(d) exists` IS A BOOLEAN
+    `the import contravenes a prescribed Commonwealth law`  IS A BOOLEAN
+    `it is a Class A object`                                IS A BOOLEAN
+    `the institution's notice excluded it`                  IS A BOOLEAN
+    -- s 8(2)
+    `it was imported on`                                    IS A DATE
+    `it was exported on`                                    IS A MAYBE DATE
+    `the Minister declared protection to end on`            IS A MAYBE DATE
+    `the day asked about`                                   IS A DATE
+    -- ss 9-12
+    `the proceeding`                                        IS A `Proceeding`
+    `the power relied on`                                   IS A `Power`
+
+DECLARE `Loan position` HAS
+    `Part 2 applies to my object under s 8(1)`               IS A BOOLEAN
+    `protection ends on`                                    IS A MAYBE DATE
+    `it is protected on the day asked about`                IS A BOOLEAN
+    `the proceeding is barred by ss 9-10`                    IS A BOOLEAN
+    `it can be seized despite s 11`                          IS A BOOLEAN
+    `it can be forfeited despite s 12`                       IS A BOOLEAN
+
+§ `Rules`
+
+@ref s 5 lender
+GIVEN c IS A `Loan case`
+GIVETH A BOOLEAN
+DECIDE `I am a lender` c IF
+    NOT (c's `I am` EQUALS `another person`)
+
+-- s 8(1).
+@ref s 8(1)
+GIVEN c IS A `Loan case`
+GIVETH A BOOLEAN
+DECIDE `Part 2 applies` c IF
+        `I am a lender` c
+    AND c's `imported on loan under a temporary loan arrangement with the exhibiting institution or facilitator`
+    AND c's `imported only or mainly for temporary public exhibition`
+    AND c's `the institution was approved when it was imported`
+    AND c's `one of the constitutional connections in s 8(1)(d) exists`
+    AND NOT (c's `the import contravenes a prescribed Commonwealth law`)
+    AND NOT (c's `it is a Class A object`)
+    AND NOT (c's `the institution's notice excluded it`)
+
+-- s 8(2)(a)(i): "the end of 24 months starting on the day the object is
+-- imported": the day before the corresponding day 24 months later (the
+-- month's last day where there is none). (b): a later day the Minister
+-- declares. (a)(ii): export, if earlier.
+@ref s 8(2)
+GIVEN c IS A `Loan case`
+GIVETH A DATE
+`the 24 months end for` c MEANS
+    IF DATE_DAY (`add months` d 24) LESS THAN DATE_DAY d
+    THEN `add months` d 24
+    ELSE `the day before` (`add months` d 24)
+    WHERE
+        d MEANS c's `it was imported on`
+
+GIVEN c IS A `Loan case`
+GIVETH A MAYBE DATE
+`protection ends for` c MEANS
+    IF NOT (`Part 2 applies` c)
+    THEN NOTHING
+    ELSE JUST (CONSIDER c's `it was exported on`
+               WHEN JUST x THEN IF x LESS THAN natural THEN x ELSE natural
+               WHEN NOTHING THEN natural)
+    WHERE
+        natural MEANS
+            CONSIDER c's `the Minister declared protection to end on`
+            WHEN JUST m THEN IF m GREATER THAN `the 24 months end for` c THEN m ELSE `the 24 months end for` c
+            WHEN NOTHING THEN `the 24 months end for` c
+
+GIVEN c IS A `Loan case`
+GIVETH A BOOLEAN
+DECIDE `it is protected then` c IF
+    CONSIDER `protection ends for` c
+    WHEN NOTHING THEN FALSE
+    WHEN JUST e THEN
+            c's `the day asked about` AT LEAST c's `it was imported on`
+        AND c's `the day asked about` AT MOST e
+
+-- ss 9(1)-(2), (4), 10(1), (4): claims in personam against a protected person,
+-- and in rem, cannot be started or enforced; not Proceeds of Crime or
+-- prescribed proceedings.
+@ref ss 9, 10
+GIVEN c IS A `Loan case`
+GIVETH A BOOLEAN
+DECIDE `the proceeding is barred` c IF
+        `it is protected then` c
+    AND (   c's `the proceeding` EQUALS `a claim against me personally about the object`
+         OR c's `the proceeding` EQUALS `a claim against the object itself`)
+
+-- s 11: no seizure, except under Crimes Act Part IAA, Proceeds of Crime Part
+-- 3-5, a police-only power, or a prescribed law.
+@ref s 11
+GIVEN c IS A `Loan case`
+GIVETH A BOOLEAN
+DECIDE `it can be seized` c IF
+        NOT (`it is protected then` c)
+    OR  NOT (c's `the power relied on` EQUALS `an ordinary statutory power`)
+
+-- s 12: no forfeiture, except under Crimes Act Part IAA, Proceeds of Crime
+-- Parts 2-2, 2-3, or a prescribed law (police-only powers are not excepted).
+@ref s 12
+GIVEN c IS A `Loan case`
+GIVETH A BOOLEAN
+DECIDE `it can be forfeited` c IF
+        NOT (`it is protected then` c)
+    OR  c's `the power relied on` EQUALS `Part IAA of the Crimes Act 1914`
+    OR  c's `the power relied on` EQUALS `the Proceeds of Crime Act 2002`
+    OR  c's `the power relied on` EQUALS `a prescribed law`
+
+@ref ss 5, 8-12
+@export default The position of a foreign lender of an object on loan for exhibition in Australia under the Protection of Cultural Objects on Loan Act 2013 (Cth): whether Part 2 protects the object (imported on a temporary loan arrangement with an approved institution or facilitator, mainly for public exhibition, with a constitutional connection, not a Class A object, not excluded by the institution's notice or by a prescribed law: s 8(1)); the day protection ends (24 months from import, or a later day the Minister declares, or export if earlier: s 8(2)); whether a claim against the lender or the object is barred (ss 9-10); and whether the object can be seized or forfeited (only under the Crimes Act Part IAA, the Proceeds of Crime Act, a police-only seizure power, or a prescribed law: ss 11-12). DRAFT, not reviewed by an Australian lawyer.
+GIVEN c IS A `Loan case`  @desc Who I am, the loan and import facts, the dates, and the proceeding or power in question
+GIVETH A `Loan position`
+`the loan position for` c MEANS
+    `Loan position` OF `Part 2 applies` c, `protection ends for` c, `it is protected then` c,
+                       `the proceeding is barred` c, `it can be seized` c, `it can be forfeited` c
