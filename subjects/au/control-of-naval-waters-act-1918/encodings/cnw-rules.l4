@@ -1,0 +1,136 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Control of Naval Waters Act 1918 (Cth) — THE NOUNS, THE RULES AND THE
+-- TOP-LEVEL GOAL. Source: ../registers/source-bundle/C1918A00028.txt
+-- (compilation No. 6, 21 October 2016). The master or owner of a vessel,
+-- aircraft or vehicle asks: "Must I obey the superintendent's direction; must
+-- I pay for the removal; when can my property be sold, and what do I get back
+-- or still owe?"
+
+§ `Nouns`
+
+-- s 2(1)-(2) exempt vessel.
+DECLARE `Kind of craft` IS ONE OF
+    `a vessel of the Commonwealth or the Australian Navy`
+    `a foreign naval vessel declared exempt`
+    `another vessel`
+    `an aircraft`
+    `a vehicle`
+
+-- ss 6, 6A: where the craft is (naval waters are declared by Proclamation, s 3B).
+DECLARE `Place` IS ONE OF
+    `within naval waters`
+    `on the foreshore of naval waters`
+    `elsewhere`
+
+DECLARE `Naval case` HAS
+    `my craft`                                              IS A `Kind of craft`
+    `where it is`                                           IS A `Place`
+    -- ss 6(1), 6A(1)
+    `I am in command or charge of it`                       IS A BOOLEAN
+    `the superintendent gave me a direction about it`       IS A BOOLEAN
+    `I complied with the direction`                         IS A BOOLEAN
+    -- s 8
+    `the superintendent moved or removed it under s 6(3), 6A(3) or 7` IS A BOOLEAN
+    `the Commonwealth's expenses`                           IS A NUMBER
+    `the demand for payment was made on`                    IS A MAYBE DATE
+    `the expenses have been paid`                           IS A BOOLEAN
+    `the sale proceeds`                                     IS A NUMBER
+    `the expenses of the sale`                              IS A NUMBER
+
+DECLARE `Naval position` HAS
+    `my craft is exempt`                                    IS A BOOLEAN
+    `failing the direction is an offence`                   IS A BOOLEAN
+    `maximum penalty units`                                 IS A NUMBER
+    `I must pay the removal expenses on demand`             IS A BOOLEAN
+    `the earliest day it may be sold at auction`            IS A MAYBE DATE
+    `the surplus paid to me after a sale`                   IS A NUMBER
+    `the deficiency I still owe after a sale`               IS A NUMBER
+
+§ `Rules`
+
+-- s 2(1) exempt vessel; s 2(2): references to a vessel exclude exempt vessels.
+@ref s 2
+GIVEN c IS A `Naval case`
+GIVETH A BOOLEAN
+DECIDE `my craft is exempt` c IF
+        c's `my craft` EQUALS `a vessel of the Commonwealth or the Australian Navy`
+    OR  c's `my craft` EQUALS `a foreign naval vessel declared exempt`
+
+-- s 6(1)-(2): a vessel within naval waters, its master. s 6A(1)-(2): an
+-- aircraft, vehicle or vessel on the foreshore, the person in command or
+-- charge. 10 penalty units; s 6(2A): strict liability.
+@ref ss 6(1)-(2A), 6A(1)-(2)
+GIVEN c IS A `Naval case`
+GIVETH A BOOLEAN
+DECIDE `the direction could lawfully be given` c IF
+        NOT (`my craft is exempt` c)
+    AND (   (    c's `where it is` EQUALS `within naval waters`
+             AND c's `my craft` EQUALS `another vessel`)
+         OR c's `where it is` EQUALS `on the foreshore of naval waters`)
+
+@ref ss 6(2), 6A(2)
+GIVEN c IS A `Naval case`
+GIVETH A BOOLEAN
+DECIDE `failing it is an offence` c IF
+        `the direction could lawfully be given` c
+    AND c's `I am in command or charge of it`
+    AND c's `the superintendent gave me a direction about it`
+    AND NOT (c's `I complied with the direction`)
+
+-- s 8(1): the owner must pay the expenses on demand.
+@ref s 8(1)
+GIVEN c IS A `Naval case`
+GIVETH A BOOLEAN
+DECIDE `I must pay the expenses` c IF
+        NOT (`my craft is exempt` c)
+    AND c's `the superintendent moved or removed it under s 6(3), 6A(3) or 7`
+
+-- s 8(3): "after the expiration of 3 months after the making of a demand":
+-- the 3 months end on the corresponding day (the month's last day where there
+-- is none), and a sale may be made from the next day.
+@ref s 8(3)
+GIVEN c IS A `Naval case`
+GIVETH A MAYBE DATE
+`the earliest sale day for` c MEANS
+    IF (NOT (`I must pay the expenses` c)) OR c's `the expenses have been paid`
+    THEN NOTHING
+    ELSE CONSIDER c's `the demand for payment was made on`
+         WHEN JUST d THEN JUST (`add months` d 3 PLUS 1)
+         WHEN NOTHING THEN NOTHING
+
+GIVEN c IS A `Naval case`
+GIVETH A NUMBER
+`the total recoverable for` c MEANS
+    c's `the Commonwealth's expenses` PLUS c's `the expenses of the sale`
+
+-- s 8(5): any surplus is paid to the owner on demand; s 8(6): a deficiency is
+-- recoverable as a debt.
+@ref s 8(5)-(6)
+GIVEN c IS A `Naval case`
+GIVETH A NUMBER
+`the surplus for` c MEANS
+    IF `the earliest sale day for` c EQUALS NOTHING
+    THEN 0
+    ELSE IF c's `the sale proceeds` GREATER THAN `the total recoverable for` c
+         THEN c's `the sale proceeds` MINUS `the total recoverable for` c
+         ELSE 0
+
+@ref s 8(6)
+GIVEN c IS A `Naval case`
+GIVETH A NUMBER
+`the deficiency for` c MEANS
+    IF `the earliest sale day for` c EQUALS NOTHING
+    THEN 0
+    ELSE IF `the total recoverable for` c GREATER THAN c's `the sale proceeds`
+         THEN `the total recoverable for` c MINUS c's `the sale proceeds`
+         ELSE 0
+
+@ref ss 2, 6, 6A, 8
+@export default The position of the master, person in charge or owner of a vessel, aircraft or vehicle in or on the foreshore of naval waters under the Control of Naval Waters Act 1918 (Cth): whether the craft is exempt (Commonwealth, Navy or declared foreign naval vessels, s 2); whether failing to comply with the superintendent's direction about mooring, placing or removing it is an offence (ss 6(2), 6A(2): 10 penalty units, strict liability); whether the owner must pay the expenses of the superintendent moving or removing it (s 8(1)); the earliest day it may be sold at auction if unpaid 3 months after demand (s 8(3)); and the surplus paid back to the owner, or the deficiency still owed, after a sale (s 8(5)-(6)). DRAFT, not reviewed by an Australian lawyer.
+GIVEN c IS A `Naval case`  @desc My craft and where it is, any direction and whether I complied, and any removal, demand and sale
+GIVETH A `Naval position`
+`the naval position for` c MEANS
+    `Naval position` OF `my craft is exempt` c, `failing it is an offence` c, (IF `failing it is an offence` c THEN 10 ELSE 0),
+                        `I must pay the expenses` c, `the earliest sale day for` c, `the surplus for` c, `the deficiency for` c
