@@ -333,6 +333,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/defence-parliamentary-candidates-act-1969`](au/defence-parliamentary-candidates-act-1969) | Defence (Parliamentary Candidates) Act 1969 (Cth) — leaving and returning to the Defence Force to stand for Parliament — row `legalese-aswathy` | `draft` |
 | [`au/statutory-declarations-act-1959`](au/statutory-declarations-act-1959) | Statutory Declarations Act 1959 (Cth) — making and using a Commonwealth statutory declaration — row `legalese-aswathy` | `draft` |
 | [`au/air-accidents-commonwealth-government-liability-act-1963`](au/air-accidents-commonwealth-government-liability-act-1963) | Air Accidents (Commonwealth Government Liability) Act 1963 (Cth) — Commonwealth liability to air passengers — row `legalese-aswathy` | `draft` |
+| [`au/crimes-overseas-act-1964`](au/crimes-overseas-act-1964) | Crimes (Overseas) Act 1964 (Cth) — Australian criminal law for Australians abroad — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
