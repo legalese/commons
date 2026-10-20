@@ -343,6 +343,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/war-gratuity-act-1945`](au/war-gratuity-act-1945) | War Gratuity Act 1945 (Cth) — the Second World War service gratuity — row `legalese-aswathy` | `draft` |
 | [`au/adelaide-airport-curfew-act-2000`](au/adelaide-airport-curfew-act-2000) | Adelaide Airport Curfew Act 2000 (Cth) — the night curfew at Adelaide Airport — row `legalese-aswathy` | `draft` |
 | [`au/immigration-education-act-1971`](au/immigration-education-act-1971) | Immigration (Education) Act 1971 (Cth) — migrant English tuition (AMEP) eligibility and time limits — row `legalese-aswathy` | `draft` |
+| [`au/federal-proceedings-costs-act-1981`](au/federal-proceedings-costs-act-1981) | Federal Proceedings (Costs) Act 1981 (Cth) — costs certificates for litigants in federal appeals — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
