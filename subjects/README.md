@@ -318,6 +318,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/protection-of-word-anzac-act-1920`](au/protection-of-word-anzac-act-1920) | Protection of Word "Anzac" Act 1920 (Cth) — penalties for misusing the word Anzac — row `legalese-aswathy` | `draft` |
 | [`au/circuit-layouts-act-1989`](au/circuit-layouts-act-1989) | Circuit Layouts Act 1989 (Cth) — EL rights in integrated circuit layouts — row `legalese-aswathy` | `draft` |
 | [`au/parliamentary-privileges-act-1987`](au/parliamentary-privileges-act-1987) | Parliamentary Privileges Act 1987 (Cth) — contempt, witness protection and immunity from court — row `legalese-aswathy` | `draft` |
+| [`au/advance-australia-logo-protection-act-1984`](au/advance-australia-logo-protection-act-1984) | Advance Australia Logo Protection Act 1984 (Cth) — the monopoly in the Advance Australia logo — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
