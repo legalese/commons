@@ -1,0 +1,572 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Child Support (Assessment) Act 1989 (Commonwealth of Australia) -- how much child support must I pay, and when can the
+-- assessment be changed: which children (s 24, s 22 with reg 6); the basic formula in a single child support case with no
+-- non-parent carer (Formula 1, s 35): child support income (ss 41(1), (5), 42, 43(1), 45), percentage of care (ss 54A, 54D),
+-- income percentage (s 55B), cost percentage (s 55C), child support percentage (s 55D), the costs of the children and of the
+-- child (ss 55G, 55H, Schedule 1), nil rates (ss 40C, 40D); low income parents (s 65A) and the minimum annual rate (s 66);
+-- rounding (s 156); and changing the assessment: changes of care (s 75(2)), income estimates (s 60(1)), amended tax
+-- assessments (s 56(2A), (2B)), post-separation income (s 44(1), (3)), departure in special circumstances (ss 98B, 98C,
+-- 98SA, 117(2), (2B), (2C), (3A), (3B)) and how far back a departure can reach (ss 98S(3B), 111).
+--
+-- SEAT: the parent assessed -- the liable parent who pays (in Jake's life, the father of Ruby after separating from Tahlia in
+-- June 2038). "How much child support must I pay, and when can that change?" The Registrar's satisfactions and choices are
+-- asked as facts or answered conditionally.
+--
+-- Edition: Compilation register id C2026C00269, as deposited at ../../registers/source-bundle/C2004A03872.txt (retrieved
+-- 2026-10-13). Child Support (Assessment) Regulations 2018, Compilation No. 2, compilation date 14 October 2024 (register id
+-- F2024C01070), as deposited at ../../../child-support-assessment-regulations-2018/registers/source-bundle/F2018L00307.txt:
+-- only reg 6 (WA and SA child welfare law) is used; reg 14 (daily rate) survives without its formula.
+--
+-- FORMULAS LOST FROM THE DEPOSIT. The deposited text drops every formula set as an image: s 35 step 8, ss 41(1)-(4), 45,
+-- 55B, 55D(1), 55E(2), 65A(4), 66(6), 66A(3), (3A), 153A(2) and reg 14(1). What is encoded for them is RECONSTRUCTED from the
+-- surviving words and each reconstruction is marked INFERENCE where it is used. The self-support amount (s 45), the
+-- annualised MTAWE figure (s 5A), the indexed minimum annual rate (s 66(5), $320 as indexed under s 153A), the indexed low
+-- income rate (s 65A(2), $1060 as indexed) and the pension PP (single) maximum basic amount (a Social Security Act figure)
+-- are INPUTS: each is published or indexed outside the deposited text.
+--
+-- NOT ENCODED. Formulas 2 to 6 (non-parent carers, multiple child support cases, one parent's income only); the relevant
+-- dependent child amount and multi-case allowance (ss 41(2)-(4), 46, 47, 55E, 55HA); different care for different children
+-- in one case (one percentage of care is taken for all of them); the Registrar's care determinations and interim periods
+-- (ss 49-54L -- care is worked out from nights, s 54A); offsetting (s 67A); reconciliation and penalties for underestimates
+-- (ss 64-64AH); reduction of a minimum rate to nil (s 66A, its formulas lost) and the 28-day tail of s 66(4); the daily rate
+-- (s 69, reg 14 -- its formula lost); child support agreements (Part 6); court orders (Part 7) other than the leave periods;
+-- the content of a departure determination (s 98S(1)) and the s 117(4) matters.
+--
+-- BASELINE ENCODING. Written with the writing-l4-rules skill from the individual's seat with the 2026-10-18 defaults. No
+-- pipeline, no coverage table, no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Child Support (Assessment) Act 1989 -- the parent assessed`
+
+§§ `s 156 -- rounding`
+
+-- s 156(1): an amount "not ... a number of whole dollars ... is to be rounded to the nearest whole dollar"; (2) "whole dollars
+-- and 50c ... rounded up". (3): not for the conversion of an annual rate into a daily rate. Every amount here is non-negative.
+GIVEN x IS A NUMBER
+GIVETH A NUMBER
+DECIDE `rounded to the nearest dollar` x IS TRUNC (x PLUS 0.5) 0
+
+-- s 55B: the income percentage is "worked out to 2 decimal places, rounding up if the third decimal place is 5 or more".
+GIVEN x IS A NUMBER
+GIVETH A NUMBER
+DECIDE `rounded to 2 decimal places` x IS TRUNC (x PLUS 0.005) 2
+
+GIVEN a IS A NUMBER, b IS A NUMBER
+GIVETH A NUMBER
+DECIDE `the lesser of` a b IS IF a AT MOST b THEN a ELSE b
+
+GIVEN a IS A NUMBER, b IS A NUMBER
+GIVETH A NUMBER
+DECIDE `the greater of` a b IS IF a AT LEAST b THEN a ELSE b
+
+§§ `ss 22, 24 and reg 6 -- can child support be assessed for my child`
+
+-- s 24(1): application may be made "only if: (a) the child is: (i) an eligible child; and (ii) under 18 years of age; and
+-- (iii) not a member of a couple; and (b) ... (i) the child is present in Australia on the day on which the application is
+-- made; (ii) the child is an Australian citizen, or ordinarily resident in Australia, on that day" (s 24(2) reciprocating
+-- jurisdiction cases not encoded). s 22(1): the regulations may provide that children "under the care (however described) of
+-- a person under a child welfare law are not eligible children". Reg 6: children "in the custody of, or under the
+-- guardianship, care and control or supervision of, a person under a child welfare law of: (a) Western Australia; or (b) South
+-- Australia" are not eligible children. Eligibility under ss 19-21 (born or parents separated after the commencing day, or a
+-- sibling of an eligible child) is asked as a fact.
+DECLARE `My child` HAS
+    `is an eligible child under sections 19 to 21` IS A BOOLEAN
+    `is under 18` IS A BOOLEAN
+    `is a member of a couple` IS A BOOLEAN
+    `is in care under a child welfare law of Western Australia or South Australia` IS A BOOLEAN
+    `is present in Australia, or an Australian citizen or ordinarily resident in Australia` IS A BOOLEAN
+
+@export Can an administrative assessment of child support be applied for in respect of my child (s 24(1), s 22 and reg 6)?
+GIVEN `the child` IS A `My child` @desc Facts about the child on the day of the application: eligibility under ss 19-21, age, whether a member of a couple, any WA or SA child welfare custody or guardianship, presence or residence in Australia
+GIVETH A BOOLEAN
+DECIDE `Can child support be assessed for my child` IF
+        `the child`'s `is an eligible child under sections 19 to 21`
+    AND (NOT `the child`'s `is in care under a child welfare law of Western Australia or South Australia`)
+    AND `the child`'s `is under 18`
+    AND (NOT `the child`'s `is a member of a couple`)
+    AND `the child`'s `is present in Australia, or an Australian citizen or ordinarily resident in Australia`
+
+§§ `ss 41, 42, 43, 45 -- my child support income`
+
+-- s 43(1): adjusted taxable income is the total of "(a) the parent's taxable income for the last relevant year of income ...
+-- (b) ... reportable fringe benefits total ... (c) ... target foreign income ... (d) ... total net investment loss ... (e) ...
+-- tax free pensions or benefits ... (f) ... reportable superannuation contributions". The total is asked as a fact.
+-- s 41(1): for a parent in "only one child support case" with no "relevant dependent child", child support income is "the
+-- amount worked out using the formula:" -- THE FORMULA IS LOST. INFERENCE from the surviving words: s 40E says the income "might
+-- be reduced by ... (a) the self-support amount", and s 46 step 1 takes "the difference between the parent's adjusted taxable
+-- income ... and the parent's self-support amount". So child support income = adjusted taxable income MINUS self-support
+-- amount. s 41(5): "taken to be nil if the amount worked out ... is negative". s 45: the self-support amount "is:" -- THE
+-- FORMULA IS LOST; it is an INPUT (s 58(2B) separately uses "one-third of the annualised MTAWE figure", not encoded as s 45).
+@export What is my child support income (ss 41(1), (5), 43, 45)? (INFERENCE: adjusted taxable income less the self-support amount; the s 41 formula is lost from the deposited text)
+GIVEN `my adjusted taxable income` IS A NUMBER @desc Your adjusted taxable income in dollars: taxable income for the last relevant year of income plus reportable fringe benefits, target foreign income, net investment losses, tax free pensions or benefits and reportable superannuation contributions (s 43(1))
+      `the self-support amount` IS A NUMBER @desc The self-support amount for the child support period in dollars, as published (s 45; an input here)
+GIVETH A NUMBER
+DECIDE `What is my child support income` IS
+    `rounded to the nearest dollar` (`the greater of` 0 (`my adjusted taxable income` MINUS `the self-support amount`))
+
+§§ `ss 54A, 54D -- my percentage of care`
+
+-- s 50(3): the percentage "must be a percentage that corresponds with the actual care of the child"; s 54A(1): actual care "may
+-- be worked out based on the number of nights that the Registrar is satisfied that the child was, or is likely to be, in the
+-- care of the person during the care period"; (3) "a child cannot be in the care of more than one person at the same time".
+-- INFERENCE: the percentage is my nights over all the nights of the care period. s 54D: if not a whole percentage, "(a) if
+-- the percentage is greater than 50%--... rounded up ...; (b) if ... less than 50%--... rounded down".
+GIVEN `nights in my care` IS A NUMBER, `nights in the care period` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `the percentage of care for` `nights in my care` `nights in the care period` IS
+    IF `nights in the care period` AT MOST 0 THEN 0
+    ELSE BRANCH
+            IF `the raw percentage` GREATER THAN 50 AND (NOT (`the whole part` EQUALS `the raw percentage`)) THEN `the whole part` PLUS 1
+            OTHERWISE `the whole part`
+    WHERE
+        `the raw percentage` MEANS `nights in my care` TIMES 100 DIVIDED BY `nights in the care period`
+        `the whole part` MEANS TRUNC `the raw percentage` 0
+
+@export What is my percentage of care for my child, from the nights the child is in my care (ss 50(3), 54A, 54D)?
+GIVEN `nights in my care` IS A NUMBER @desc Number of nights the child is, or is likely to be, in your care in the care period
+      `nights in the care period` IS A NUMBER @desc Total number of nights in the care period (for a year, 365 or 366)
+GIVETH A NUMBER
+DECIDE `What is my percentage of care` IS `the percentage of care for` `nights in my care` `nights in the care period`
+
+§§ `ss 5(2), (3) -- regular care and shared care`
+
+-- s 5(2): "regular care ... if the person's percentage of care ... is at least 14% but less than 35%"; (3) "shared care ... at
+-- least 35% but not more than 65%". "At least regular care" and "at least shared care" are read as at least 14% and at least
+-- 35%.
+GIVEN `care` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `has at least regular care` IF `care` AT LEAST 14
+
+GIVEN `care` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `has at least shared care` IF `care` AT LEAST 35
+
+§§ `s 55C -- my cost percentage`
+
+-- s 55C table, "Percentage of care" -> "Cost percentage": 1 "0 to less than 14%" Nil; 2 "14% to less than 35%" 24%; 3 "35% to
+-- less than 48%" "25% plus 2% for each percentage point over 35%"; 4 "48% to 52%" 50%; 5 "more than 52% to 65%" "51% plus 2%
+-- for each percentage point over 53%"; 6 "more than 65% to 86%" 76%; 7 "more than 86% to 100%" 100%. Percentages of care are
+-- whole numbers after s 54D, so item 5 begins at 53%.
+@export What is my cost percentage, from my percentage of care (s 55C)? Returns a whole-number percentage, e.g. 24 for 24%
+GIVEN `my percentage of care` IS A NUMBER @desc Your percentage of care for the child as a whole number from 0 to 100
+GIVETH A NUMBER
+DECIDE `What is my cost percentage` IS
+    BRANCH
+        IF `my percentage of care` LESS THAN 14 THEN 0
+        IF `my percentage of care` LESS THAN 35 THEN 24
+        IF `my percentage of care` LESS THAN 48 THEN 25 PLUS 2 TIMES (`my percentage of care` MINUS 35)
+        IF `my percentage of care` AT MOST 52 THEN 50
+        IF `my percentage of care` AT MOST 65 THEN 51 PLUS 2 TIMES (`my percentage of care` MINUS 53)
+        IF `my percentage of care` AT MOST 86 THEN 76
+        OTHERWISE 100
+
+§§ `ss 55G, 55H, Schedule 1 -- the costs of the children`
+
+-- Schedule 1 clause 1, the Costs of the Children Table. Columns, "Fraction of MTAWE": 0 to 0.5 | 0.5 to 1 | 1 to 1.5 | 1.5 to 2
+-- | 2 to 2.5 | Over 2.5 (the last column has no percentages). Rows: all children aged 0-12; all aged 13+; at least one of each.
+DECLARE `Costs of the Children Table row` HAS
+    `0 to 0.5` IS A NUMBER
+    `0.5 to 1` IS A NUMBER
+    `1 to 1.5` IS A NUMBER
+    `1.5 to 2` IS A NUMBER
+    `2 to 2.5` IS A NUMBER
+
+-- s 55G(3): "Identify the number of children (the child support children) in the child support case"; (4) "If there are
+-- more than 3 child support children, use the ages of the 3 oldest children"; (5) identify the item "that covers that number
+-- of child support children of those ages". The arguments are the children counted, at most 3, the oldest first.
+GIVEN `aged 0 to 12` IS A NUMBER, `aged 13 or over` IS A NUMBER
+GIVETH A `Costs of the Children Table row`
+DECIDE `the Costs of the Children Table row for` `aged 0 to 12` `aged 13 or over` IS
+    --                                                                                                  0-0.5, 0.5-1, 1-1.5, 1.5-2, 2-2.5
+    BRANCH
+        IF `aged 13 or over` EQUALS 0 AND `aged 0 to 12` EQUALS 1 THEN `Costs of the Children Table row` OF 17%,   15%,   12%,   10%,   7%
+        IF `aged 13 or over` EQUALS 0 AND `aged 0 to 12` EQUALS 2 THEN `Costs of the Children Table row` OF 24%,   23%,   20%,   18%,   10%
+        IF `aged 13 or over` EQUALS 0 AND `aged 0 to 12` EQUALS 3 THEN `Costs of the Children Table row` OF 27%,   26%,   25%,   24%,   18%
+        IF `aged 0 to 12` EQUALS 0 AND `aged 13 or over` EQUALS 1 THEN `Costs of the Children Table row` OF 23%,   22%,   12%,   10%,   9%
+        IF `aged 0 to 12` EQUALS 0 AND `aged 13 or over` EQUALS 2 THEN `Costs of the Children Table row` OF 29%,   28%,   25%,   20%,   13%
+        IF `aged 0 to 12` EQUALS 0 AND `aged 13 or over` EQUALS 3 THEN `Costs of the Children Table row` OF 32%,   31%,   30%,   29%,   20%
+        IF `aged 0 to 12` PLUS `aged 13 or over` EQUALS 2           THEN `Costs of the Children Table row` OF 26.5%, 25.5%, 22.5%, 19%,   11.5%
+        IF `aged 0 to 12` PLUS `aged 13 or over` EQUALS 3           THEN `Costs of the Children Table row` OF 29.5%, 28.5%, 27.5%, 26.5%, 19%
+        OTHERWISE                                                        `Costs of the Children Table row` OF 0,     0,     0,     0,     0
+
+-- Schedule 1 clause 2(3): the second dollar amount in each column (other than the last) is "the second fraction specified in
+-- that column" times "the annualised MTAWE figure for the relevant June quarter"; (2) the first amount in a column is the
+-- second amount of the previous column plus one dollar. Clause 3(2): in the first column, the costs are "the percentage
+-- specified in that item of the parents' combined child support income"; (3) in a later column, the first column's percentage
+-- times the first column's top, plus each intervening column's percentage times that column's width, plus the relevant
+-- column's percentage times the income above the previous column's top; (4) in the last column, the total of the previous
+-- columns in full. Each column top is an amount rounded under s 156.
+GIVEN `the income` IS A NUMBER, `the annualised MTAWE figure` IS A NUMBER, `the row` IS A `Costs of the Children Table row`
+GIVETH A NUMBER
+DECIDE `the costs of the children under clause 3 of Schedule 1` `the income` `the annualised MTAWE figure` `the row` IS
+    BRANCH
+        IF `the income` AT MOST `top 1` THEN `the row`'s `0 to 0.5` TIMES `the income`
+        IF `the income` AT MOST `top 2` THEN `in full 1` PLUS `the row`'s `0.5 to 1` TIMES (`the income` MINUS `top 1`)
+        IF `the income` AT MOST `top 3` THEN `in full 1` PLUS `in full 2` PLUS `the row`'s `1 to 1.5` TIMES (`the income` MINUS `top 2`)
+        IF `the income` AT MOST `top 4` THEN `in full 1` PLUS `in full 2` PLUS `in full 3` PLUS `the row`'s `1.5 to 2` TIMES (`the income` MINUS `top 3`)
+        IF `the income` AT MOST `top 5` THEN `in full 1` PLUS `in full 2` PLUS `in full 3` PLUS `in full 4` PLUS `the row`'s `2 to 2.5` TIMES (`the income` MINUS `top 4`)
+        OTHERWISE `in full 1` PLUS `in full 2` PLUS `in full 3` PLUS `in full 4` PLUS `in full 5`
+    WHERE
+        `top 1` MEANS `rounded to the nearest dollar` (0.5 TIMES `the annualised MTAWE figure`)
+        `top 2` MEANS `rounded to the nearest dollar` (1 TIMES `the annualised MTAWE figure`)
+        `top 3` MEANS `rounded to the nearest dollar` (1.5 TIMES `the annualised MTAWE figure`)
+        `top 4` MEANS `rounded to the nearest dollar` (2 TIMES `the annualised MTAWE figure`)
+        `top 5` MEANS `rounded to the nearest dollar` (2.5 TIMES `the annualised MTAWE figure`)
+        `in full 1` MEANS `the row`'s `0 to 0.5` TIMES `top 1`
+        `in full 2` MEANS `the row`'s `0.5 to 1` TIMES (`top 2` MINUS `top 1`)
+        `in full 3` MEANS `the row`'s `1 to 1.5` TIMES (`top 3` MINUS `top 2`)
+        `in full 4` MEANS `the row`'s `1.5 to 2` TIMES (`top 4` MINUS `top 3`)
+        `in full 5` MEANS `the row`'s `2 to 2.5` TIMES (`top 5` MINUS `top 4`)
+
+@export What are the costs of the children in my child support case, a year, under the Costs of the Children Table (ss 55G, Schedule 1)?
+GIVEN `the combined child support income` IS A NUMBER @desc Both parents' child support incomes added together, in dollars (s 42)
+      `the annualised MTAWE figure` IS A NUMBER @desc The annualised MTAWE figure for the relevant June quarter, in dollars, as published by the Secretary (s 5A, s 155)
+      `children aged 0 to 12` IS A NUMBER @desc Number of children in the child support case aged 0 to 12 on the day
+      `children aged 13 or over` IS A NUMBER @desc Number of children in the child support case aged 13 or over on the day
+GIVETH A NUMBER
+DECIDE `What are the costs of the children` IS
+    IF `children aged 0 to 12` PLUS `children aged 13 or over` EQUALS 0 THEN 0
+    ELSE `rounded to the nearest dollar`
+            (`the costs of the children under clause 3 of Schedule 1` `the combined child support income` `the annualised MTAWE figure`
+                (`the Costs of the Children Table row for` `the younger counted` `the older counted`))
+    WHERE
+        `the older counted` MEANS `the lesser of` `children aged 13 or over` 3
+        `the younger counted` MEANS `the lesser of` `children aged 0 to 12` (3 MINUS `the older counted`)
+
+-- s 55H: "the costs of a child ... is: (a) if there is only one child support child--the costs of the children; and (b)
+-- otherwise--the costs of the children divided by the number of child support children".
+@export What are the costs of each child in my child support case, a year (s 55H)?
+GIVEN `the combined child support income` IS A NUMBER @desc Both parents' child support incomes added together, in dollars (s 42)
+      `the annualised MTAWE figure` IS A NUMBER @desc The annualised MTAWE figure for the relevant June quarter, in dollars (s 5A)
+      `children aged 0 to 12` IS A NUMBER @desc Number of children in the child support case aged 0 to 12 on the day
+      `children aged 13 or over` IS A NUMBER @desc Number of children in the child support case aged 13 or over on the day
+GIVETH A NUMBER
+DECIDE `What are the costs of the child` IS
+    IF `the number of children` EQUALS 0 THEN 0
+    ELSE `rounded to the nearest dollar`
+            (`What are the costs of the children` `the combined child support income` `the annualised MTAWE figure` `children aged 0 to 12` `children aged 13 or over`
+                DIVIDED BY `the number of children`)
+    WHERE
+        `the number of children` MEANS `children aged 0 to 12` PLUS `children aged 13 or over`
+
+§§ `ss 35, 40C, 40D, 55B, 55D, 65A, 66 -- how much must I pay`
+
+-- One child support case, the two parents, no non-parent carer, no relevant dependent child, no other case (Formula 1). The
+-- same nights of care are taken for every child in the case.
+DECLARE `My child support case` HAS
+    `my adjusted taxable income` IS A NUMBER
+    `the other parent's adjusted taxable income` IS A NUMBER
+    `the self-support amount` IS A NUMBER
+    `the annualised MTAWE figure` IS A NUMBER
+    `nights the children are in my care` IS A NUMBER
+    `nights the children are in the other parent's care` IS A NUMBER
+    `children aged 0 to 12` IS A NUMBER
+    `children aged 13 or over` IS A NUMBER
+    `I received an income support payment in the last relevant year of income` IS A BOOLEAN
+    `the pension PP (single) maximum basic amount` IS A NUMBER
+    `the minimum annual rate of child support` IS A NUMBER
+    `the low income annual rate` IS A NUMBER
+    `the Registrar has determined that section 65A does not apply to me` IS A BOOLEAN
+    `a departure determination, departure order or child support agreement sets the rate` IS A BOOLEAN
+
+GIVEN `the case` IS A `My child support case`
+GIVETH A NUMBER
+DECIDE `the number of children in` `the case` IS `the case`'s `children aged 0 to 12` PLUS `the case`'s `children aged 13 or over`
+
+GIVEN `the case` IS A `My child support case`
+GIVETH A NUMBER
+DECIDE `my care in` `the case` IS
+    `the percentage of care for` (`the case`'s `nights the children are in my care`)
+        (`the case`'s `nights the children are in my care` PLUS `the case`'s `nights the children are in the other parent's care`)
+
+GIVEN `the case` IS A `My child support case`
+GIVETH A NUMBER
+DECIDE `the other parent's care in` `the case` IS
+    `the percentage of care for` (`the case`'s `nights the children are in the other parent's care`)
+        (`the case`'s `nights the children are in my care` PLUS `the case`'s `nights the children are in the other parent's care`)
+
+GIVEN `the case` IS A `My child support case`
+GIVETH A NUMBER
+DECIDE `my child support income in` `the case` IS
+    `What is my child support income` (`the case`'s `my adjusted taxable income`) (`the case`'s `the self-support amount`)
+
+GIVEN `the case` IS A `My child support case`
+GIVETH A NUMBER
+DECIDE `the combined child support income in` `the case` IS
+    `my child support income in` `the case`
+        PLUS `What is my child support income` (`the case`'s `the other parent's adjusted taxable income`) (`the case`'s `the self-support amount`)
+
+-- s 55B: "Work out each parent's income percentage ... using the formula (worked out to 2 decimal places ...):" -- THE FORMULA
+-- IS LOST. INFERENCE from s 35 steps 1-3 and the s 55A outline ("A parent's income percentage represents the parent's capacity
+-- to meet the costs of the child"): my child support income as a percentage of the combined child support income. Where the
+-- combined income is nil the formula cannot be applied; 0 is returned (the costs of the children are then nil as well).
+@export What is my income percentage (s 55B)? (INFERENCE: my child support income as a percentage of the combined child support income; the formula is lost from the deposited text)
+GIVEN `the case` IS A `My child support case` @desc Your child support case: both parents' adjusted taxable incomes, the published figures, the nights of care and the children's ages
+GIVETH A NUMBER
+DECIDE `What is my income percentage` IS
+    IF `the combined child support income in` `the case` AT MOST 0 THEN 0
+    ELSE `rounded to 2 decimal places` (`my child support income in` `the case` TIMES 100 DIVIDED BY `the combined child support income in` `the case`)
+
+-- s 55D(1): the child support percentage is worked out "using the formula:" -- LOST. The s 55A outline survives: "A parent's
+-- child support percentage is the difference between the parent's income percentage and his or her cost percentage". (2):
+-- "taken to be nil if the amount worked out using the formula is negative".
+@export What is my child support percentage (s 55D)? Income percentage less cost percentage, never below nil
+GIVEN `the case` IS A `My child support case` @desc Your child support case: both parents' adjusted taxable incomes, the published figures, the nights of care and the children's ages
+GIVETH A NUMBER
+DECIDE `What is my child support percentage` IS
+    `the greater of` 0 (`What is my income percentage` `the case` MINUS `What is my cost percentage` (`my care in` `the case`))
+
+-- s 35 step 8: "If a parent has a positive child support percentage under step 6, the annual rate ... is worked out using the
+-- formula:" -- LOST. The s 55A outline survives: "if the parent has a positive child support percentage, the annual rate of
+-- child support payable by the parent is that percentage of the costs of the child". Rounded per child (s 156) and multiplied
+-- by the number of children.
+GIVEN `the case` IS A `My child support case`
+GIVETH A NUMBER
+DECIDE `the formula rate for all the children in` `the case` IS
+    `the number of children in` `the case` TIMES
+        `rounded to the nearest dollar`
+            (`What is my child support percentage` `the case` DIVIDED BY 100
+                TIMES `What are the costs of the child` (`the combined child support income in` `the case`) (`the case`'s `the annualised MTAWE figure`)
+                        (`the case`'s `children aged 0 to 12`) (`the case`'s `children aged 13 or over`))
+
+-- s 40C: nil if worked out under s 35 and "the other parent's percentage of care ... is less than 35%". s 40D: nil "if the
+-- parent's child support percentage for the child for the day is nil".
+GIVEN `the case` IS A `My child support case`
+GIVETH A NUMBER
+DECIDE `the rate under Part 5 Division 2 for all the children in` `the case` IS
+    IF `the other parent's care in` `the case` LESS THAN 35 THEN 0
+    ELSE `the formula rate for all the children in` `the case`
+
+-- s 65A(1): the Registrar "must assess" the s 65A(2) rate if "(a) the parent did not receive an income support payment during
+-- the last relevant year of income; and (b) [the parent's adjusted taxable income] is less than the pension PP (single) maximum
+-- basic amount; and (c) the parent does not have at least shared care of the child". (2): "$1060", indexed (s 153A) -- an
+-- INPUT. (3): the total must not be "more than 3 times the rate". (4) for more than 3 children: formula LOST; INFERENCE that the
+-- total is then 3 times the rate. s 65B(4): the Registrar may determine that s 65A not apply (asked as a fact).
+GIVEN `the case` IS A `My child support case`
+GIVETH A BOOLEAN
+DECIDE `I am assessed as a low income parent in` `the case` IF
+        (NOT `the case`'s `I received an income support payment in the last relevant year of income`)
+    AND `the case`'s `my adjusted taxable income` LESS THAN `the case`'s `the pension PP (single) maximum basic amount`
+    AND (NOT `has at least shared care` (`my care in` `the case`))
+    AND (NOT `the case`'s `the Registrar has determined that section 65A does not apply to me`)
+    AND `the number of children in` `the case` GREATER THAN 0
+
+-- s 66(1): the Registrar "must assess the total ... as the minimum annual rate" if "(a) the parent does not have at least
+-- regular care of at least one of the children ...; and (b) the total ... would (apart from this section) be assessed as less
+-- than the minimum annual rate". (2): not where s 65A could apply unless s 65B has disapplied it (here s 65A is decided first).
+-- (5): "$320", indexed -- an INPUT. (8): not where a departure determination, departure order or agreement sets the rate.
+GIVEN `the case` IS A `My child support case`
+GIVETH A BOOLEAN
+DECIDE `I am assessed at the minimum annual rate in` `the case` IF
+        (NOT `has at least regular care` (`my care in` `the case`))
+    AND `the rate under Part 5 Division 2 for all the children in` `the case` LESS THAN `the case`'s `the minimum annual rate of child support`
+    AND `the number of children in` `the case` GREATER THAN 0
+
+DECLARE `How my rate is worked out` IS ONE OF
+    `by the formula (s 35)`
+    `nil because the other parent has less than 35% care (s 40C)`
+    `nil because my child support percentage is nil (s 40D)`
+    `as a low income parent not on income support (s 65A)`
+    `at the minimum annual rate (s 66)`
+    `outside this encoding: a departure determination, departure order or child support agreement sets the rate (s 35C)`
+
+DECLARE `My assessment` HAS
+    `how it is worked out` IS A `How my rate is worked out`
+    `my annual rate for all the children` IS A NUMBER
+
+-- s 35C: Part 5 applies "subject to" departure determinations, departure orders and agreements; when one sets the rate this
+-- encoding gives no figure, and returns 0 with a route that says so.
+@export How much child support must I pay a year for all the children in my child support case, and how is it worked out (ss 35, 40C, 40D, 65A, 66)?
+GIVEN `the case` IS A `My child support case` @desc Your child support case: both parents' adjusted taxable incomes (s 43), the published self-support amount and annualised MTAWE figure, nights of care for you and the other parent, the children's ages, whether you received an income support payment last year, the pension PP (single) maximum basic amount, the indexed minimum annual rate and low income rate, any s 65B determination, and whether a departure or agreement sets the rate
+GIVETH A `My assessment`
+DECIDE `How much child support must I pay` IS
+    BRANCH
+        IF `the case`'s `a departure determination, departure order or child support agreement sets the rate`
+            THEN `My assessment` WITH `how it is worked out` IS `outside this encoding: a departure determination, departure order or child support agreement sets the rate (s 35C)`
+                                      `my annual rate for all the children` IS 0
+        IF `I am assessed as a low income parent in` `the case`
+            THEN `My assessment` WITH `how it is worked out` IS `as a low income parent not on income support (s 65A)`
+                                      `my annual rate for all the children` IS `the case`'s `the low income annual rate` TIMES (`the lesser of` (`the number of children in` `the case`) 3)
+        IF `I am assessed at the minimum annual rate in` `the case`
+            THEN `My assessment` WITH `how it is worked out` IS `at the minimum annual rate (s 66)`
+                                      `my annual rate for all the children` IS `the case`'s `the minimum annual rate of child support`
+        IF `the other parent's care in` `the case` LESS THAN 35
+            THEN `My assessment` WITH `how it is worked out` IS `nil because the other parent has less than 35% care (s 40C)`
+                                      `my annual rate for all the children` IS 0
+        IF `What is my child support percentage` `the case` EQUALS 0
+            THEN `My assessment` WITH `how it is worked out` IS `nil because my child support percentage is nil (s 40D)`
+                                      `my annual rate for all the children` IS 0
+        OTHERWISE `My assessment` WITH `how it is worked out` IS `by the formula (s 35)`
+                                       `my annual rate for all the children` IS `the formula rate for all the children in` `the case`
+
+§ `When can my assessment be changed`
+
+§§ `s 75(2) -- a change in care`
+
+-- s 75(1): the Registrar "may, at any time, amend any administrative assessment"; (2) "However, if the amendment relates to a
+-- responsible person's percentage of care for a child, the Registrar must not amend ... unless: (a) the amendment ... would
+-- cause the person's cost percentage for the child to change". s 74A: the altered rate applies "on and from the first day in
+-- a child support period to which the responsible person's percentage of care under the later determination applies".
+@export Can a change in my care of the child change my assessment -- does it change my cost percentage (s 75(2)(a))?
+GIVEN `my percentage of care before` IS A NUMBER @desc Your percentage of care used in the current assessment, a whole number 0-100
+      `my percentage of care after` IS A NUMBER @desc Your new percentage of care, a whole number 0-100
+GIVETH A BOOLEAN
+DECIDE `Can a change in my care change my assessment` IF
+    NOT (`What is my cost percentage` `my percentage of care before` EQUALS `What is my cost percentage` `my percentage of care after`)
+
+§§ `s 60(1) -- estimating my income`
+
+-- s 60(1): a parent "may, before a year of income starts or during a year of income, elect" an estimate if "(b) the amount ...
+-- is not more than 85% of: (i) the total of the parent's adjusted taxable income determined in accordance with section 43 for
+-- the last relevant year of income" (or a declared amount the Registrar accepts). (6): not "if an income amount order is in
+-- force". s 63AA: the Registrar may refuse to accept an election (not encoded).
+@export May I elect to have my child support worked out on an estimate of this year's income (s 60(1), (6))?
+GIVEN `my estimate` IS A NUMBER @desc Your estimate of your adjusted taxable income for the year, in dollars
+      `my adjusted taxable income for the last relevant year` IS A NUMBER @desc The adjusted taxable income used in your assessment (last relevant year of income), in dollars
+      `an income amount order is in force` IS A BOOLEAN @desc Whether a court's income amount order is in force for you for the period
+GIVETH A BOOLEAN
+DECIDE `May I elect to estimate my income` IF
+        `my estimate` AT MOST 85% TIMES `my adjusted taxable income for the last relevant year`
+    AND (NOT `an income amount order is in force`)
+
+§§ `s 56(2A), (2B) -- an amended tax assessment`
+
+-- s 56(2): if a tax assessment is amended, "the Registrar may amend the administrative assessment". (2A): the amendment is "on
+-- the basis that the parent's adjusted taxable income for that year of income is, and has always been, the amount" if "(a)
+-- [it] is higher than the parent's previous adjusted taxable income; or (b) the parent applied for the amendment ... on or
+-- before: (i) the day by which the parent was required to lodge his or her income tax return ...; or (ii) the end of 28 days
+-- after the parent was given the tax assessment ...; or (iii) the end of 28 days after the parent becomes aware that the tax
+-- assessment is not correct if [prevented by] circumstances beyond the knowledge or control of the parent; or (c) ... the
+-- Registrar is satisfied that special circumstances exist". (2B): otherwise only "for each later day in the period".
+DECLARE `My amended tax assessment` HAS
+    `my adjusted taxable income went up` IS A BOOLEAN
+    `I applied for the amendment by my tax return lodgement day` IS A BOOLEAN
+    `I applied within 28 days after being given the tax assessment` IS A BOOLEAN
+    `I applied within 28 days after becoming aware it was wrong, having been kept from it by circumstances beyond my knowledge or control` IS A BOOLEAN
+    `the Registrar is satisfied that special circumstances exist` IS A BOOLEAN
+
+@export If my tax assessment is amended and the Registrar amends my child support to match, does that apply from the start of the year as if always so (s 56(2A)) rather than only for later days (s 56(2B))?
+GIVEN `the amendment` IS A `My amended tax assessment` @desc Whether the amendment raised your income, when you applied for it, and whether the Registrar is satisfied special circumstances exist
+GIVETH A BOOLEAN
+DECIDE `Does my amended tax assessment apply from the start` IF
+        `the amendment`'s `my adjusted taxable income went up`
+    OR  `the amendment`'s `I applied for the amendment by my tax return lodgement day`
+    OR  `the amendment`'s `I applied within 28 days after being given the tax assessment`
+    OR  `the amendment`'s `I applied within 28 days after becoming aware it was wrong, having been kept from it by circumstances beyond my knowledge or control`
+    OR  `the amendment`'s `the Registrar is satisfied that special circumstances exist`
+
+§§ `s 44 -- income earned after separation`
+
+-- s 44(1): a parent may apply to amend the assessment if "(a) the applicant and the other parent ... lived together on a
+-- genuine domestic basis for at least 6 months; and (b) the separation ... occurred: (i) within the last 3 years; and (ii)
+-- before the application for administrative assessment ...; and (c) ... remain separated; and (d) ... the applicant earns ...
+-- income: (i) in accordance with a pattern ... established after the applicant and the other parent first separate; and (ii)
+-- that is of a kind that it is reasonable to expect would not have been earned ... in the ordinary course of events".
+DECLARE `My income after separation` HAS
+    `we lived together on a genuine domestic basis for at least 6 months` IS A BOOLEAN
+    `we separated within the last 3 years` IS A BOOLEAN
+    `we separated before the application for assessment was made` IS A BOOLEAN
+    `we remain separated` IS A BOOLEAN
+    `the income follows a pattern established after we first separated` IS A BOOLEAN
+    `the income is of a kind not reasonably expected in the ordinary course of events` IS A BOOLEAN
+
+@export May I apply to have income I have earned since separating left out of my adjusted taxable income (s 44(1))?
+GIVEN `the facts` IS AN `My income after separation` @desc How long you lived together, when you separated, whether you remain separated, and the pattern and kind of the extra income
+GIVETH A BOOLEAN
+DECIDE `May I apply to exclude post-separation income` IF
+        `the facts`'s `we lived together on a genuine domestic basis for at least 6 months`
+    AND `the facts`'s `we separated within the last 3 years`
+    AND `the facts`'s `we separated before the application for assessment was made`
+    AND `the facts`'s `we remain separated`
+    AND `the facts`'s `the income follows a pattern established after we first separated`
+    AND `the facts`'s `the income is of a kind not reasonably expected in the ordinary course of events`
+
+-- s 44(3): the Registrar may make the determination only if it "(a) reduces the applicant's adjusted taxable income ... by 30%
+-- or less; and (b) applies in respect of a day ... that is less than 3 years after the last separation".
+@export What is the lowest my adjusted taxable income can be set at by a post-separation income determination (s 44(3)(a))?
+GIVEN `my adjusted taxable income` IS A NUMBER @desc Your adjusted taxable income before the determination, in dollars
+GIVETH A NUMBER
+DECIDE `What is the lowest my income can be set at for post-separation income` IS
+    `rounded to the nearest dollar` (70% TIMES `my adjusted taxable income`)
+
+§§ `ss 98B, 98C, 98SA, 117 -- a departure in special circumstances`
+
+-- s 98B(1): "at any time when an administrative assessment is in force", the liable parent who "is of the view that, because
+-- of special circumstances ... the provisions of this Act relating to administrative assessment ... should be departed from"
+-- may "by written application, ask the Registrar to make a determination". s 98C(1): the Registrar "may make the
+-- determination" if satisfied "(i) that one, or more than one, of the grounds for departure [in s 117(2)] exists; and (ii)
+-- that it would be: (A) just and equitable as regards the child, the liable parent, and the carer entitled to child support;
+-- and (B) otherwise proper". s 98SA: not below the minimum annual rate "unless the liable parent has at least regular care of
+-- at least one of the children".
+DECLARE `My departure application` HAS
+    `an administrative assessment is in force` IS A BOOLEAN
+    `the Registrar is satisfied a ground for departure in s 117(2) exists` IS A BOOLEAN
+    `the Registrar is satisfied it would be just and equitable and otherwise proper` IS A BOOLEAN
+    `the rate sought is below the minimum annual rate` IS A BOOLEAN
+    `my percentage of care` IS A NUMBER
+
+@export Can the Registrar depart from the formula for me in special circumstances, on my application (ss 98B, 98C, 98SA)?
+GIVEN `the application` IS A `My departure application` @desc Whether an assessment is in force, whether the Registrar is satisfied of a s 117(2) ground and that departing is just, equitable and proper, whether the rate sought is below the minimum annual rate, and your percentage of care
+GIVETH A BOOLEAN
+DECIDE `Can the Registrar depart from the formula for me` IF
+        `the application`'s `an administrative assessment is in force`
+    AND `the application`'s `the Registrar is satisfied a ground for departure in s 117(2) exists`
+    AND `the application`'s `the Registrar is satisfied it would be just and equitable and otherwise proper`
+    AND (NOT (`the application`'s `the rate sought is below the minimum annual rate` AND (NOT `has at least regular care` (`the application`'s `my percentage of care`))))
+
+-- s 117(2)(a)(iv) and (b)(i): high costs of enabling a parent to spend time with or communicate with a child. (2B): high
+-- "only ... if the costs ... during a child support period, total more than 5% of the amount worked out by: (a) dividing the
+-- parent's adjusted taxable income for the period by 365; and (b) multiplying the quotient by the number of days in the
+-- period". (2C): "If a parent has at least regular care of a child, then the only costs that can be taken into account ...
+-- are costs related to travel".
+@export Are my costs of spending time with or communicating with my child high enough to be a ground for departure (s 117(2)(b)(i), (2B), (2C))?
+GIVEN `my travel costs` IS A NUMBER @desc Costs of travel to spend time with or communicate with the child in the child support period, in dollars
+      `my other contact costs` IS A NUMBER @desc Other costs of spending time with or communicating with the child in the period, in dollars
+      `my adjusted taxable income` IS A NUMBER @desc Your adjusted taxable income, in dollars
+      `days in the period` IS A NUMBER @desc Number of days in the child support period
+      `my percentage of care` IS A NUMBER @desc Your percentage of care for the child, a whole number 0-100
+GIVETH A BOOLEAN
+DECIDE `Are my contact costs high` IF
+    `the costs counted` GREATER THAN 5% TIMES (`my adjusted taxable income` DIVIDED BY 365 TIMES `days in the period`)
+    WHERE
+        `the costs counted` MEANS
+            IF `has at least regular care` `my percentage of care` THEN `my travel costs`
+            ELSE `my travel costs` PLUS `my other contact costs`
+
+-- s 117(3A): the high child care costs ground "is taken not to exist unless: (a) the costs are incurred by a parent or a
+-- non-parent carer; and (b) the child is younger than 12 at the start of the child support period". (3B): for a parent, high
+-- only if more than 5% of the same amount as (2B).
+@export Are my child care costs high enough to be a ground for departure (s 117(2)(b)(ib), (3A), (3B))?
+GIVEN `my child care costs` IS A NUMBER @desc Child care costs you have incurred or will incur for the child in the child support period, in dollars
+      `the child was younger than 12 at the start of the period` IS A BOOLEAN @desc Whether the child was under 12 at the start of the child support period
+      `my adjusted taxable income` IS A NUMBER @desc Your adjusted taxable income, in dollars
+      `days in the period` IS A NUMBER @desc Number of days in the child support period
+GIVETH A BOOLEAN
+DECIDE `Are my child care costs high` IF
+        `the child was younger than 12 at the start of the period`
+    AND `my child care costs` GREATER THAN 5% TIMES (`my adjusted taxable income` DIVIDED BY 365 TIMES `days in the period`)
+
+§§ `ss 98S(3B), 111 -- how far back a departure can reach`
+
+-- s 98S(3B): the Registrar "may only make a determination ... in respect of a day ... more than 18 months earlier than ... the
+-- day on which the application for the determination is made ... if a court has granted leave under section 112". s 111(1):
+-- leave may be sought for "a day that is more than 18 months, and less than 7 years, earlier than the day on which the
+-- application under this section is made".
+DECLARE `How far back a departure can reach` IS ONE OF
+    `within 18 months: no leave needed`
+    `more than 18 months but less than 7 years: only with a court's leave (ss 98S(3B), 111, 112)`
+    `7 years or more: not at all (s 111)`
+
+@export Can a departure determination reach back to a given day, and do I need a court's leave (ss 98S(3B), 111)?
+GIVEN `the day` IS A DATE @desc The earlier day you want the change to apply from, ISO 8601
+      `the day I apply` IS A DATE @desc The day you make the application, ISO 8601
+GIVETH A `How far back a departure can reach`
+DECIDE `How far back can a departure reach` IS
+    BRANCH
+        IF `18 months after the day` AT LEAST `the day I apply` THEN `within 18 months: no leave needed`
+        IF `7 years after the day` GREATER THAN `the day I apply` THEN `more than 18 months but less than 7 years: only with a court's leave (ss 98S(3B), 111, 112)`
+        OTHERWISE `7 years or more: not at all (s 111)`
+    WHERE
+        `18 months after the day` MEANS Date (DATE_DAY `the day`) (DATE_MONTH `the day` PLUS 18) (DATE_YEAR `the day`)
+        `7 years after the day` MEANS Date (DATE_DAY `the day`) (DATE_MONTH `the day`) (DATE_YEAR `the day` PLUS 7)
