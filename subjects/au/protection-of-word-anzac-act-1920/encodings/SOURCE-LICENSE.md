@@ -1,0 +1,25 @@
+# Source license
+
+The quoted text of **Protection of Word "Anzac" Act 1920** is sourced from the [Federal Register of Legislation](https://www.legislation.gov.au/).
+
+- **Copyright owner**: Commonwealth of Australia.
+- **License**: [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+- **Terms checked**: 2026-10-13, at https://www.legislation.gov.au/terms-of-use
+- **Source**: https://www.legislation.gov.au/C1920A00054/latest/text
+- **Excluded from the license**: coats of arms, logos and trade marks on the source site,
+  and any material marked otherwise.
+
+## Required attribution
+
+Sourced from the Federal Register of Legislation at 2026-10-13: "Protection of Word "Anzac" Act 1920", Commonwealth of Australia, licensed under CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/).
+
+If this encoding modifies or adapts the quoted text (rather than reproducing it verbatim),
+the attribution must instead read "Based on content from the Federal Register of Legislation ...", per the CC BY 4.0
+terms.
+
+## Status of this deposit
+
+Statute text deposited 2026-10-13: `../registers/source-bundle/C1920A00054.txt`, converted to plain text from
+https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C1920A00054',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
+(compilation register id: C2014C00072). sha256 of the download: `7219db6573d46c6dff4ec7e636acffdb70ffba5bc0de811d573e06d15819905a`.
