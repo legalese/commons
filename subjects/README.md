@@ -328,6 +328,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/defence-forces-special-retirement-benefits-act-1960`](au/defence-forces-special-retirement-benefits-act-1960) | Defence Forces Special Retirement Benefits Act 1960 (Cth) — benefits for soldiers discharged in the 1961 reduction — row `legalese-aswathy` | `draft` |
 | [`au/defence-force-retirement-and-death-benefits-pension-increases-act-1976`](au/defence-force-retirement-and-death-benefits-pension-increases-act-1976) | Defence Force Retirement and Death Benefits (Pension Increases) Act 1976 (Cth) — the 1973-76 DFRB and DFRDB pension increases — row `legalese-aswathy` | `draft` |
 | [`au/asbestos-related-claims-management-of-commonwealth-liabilities-act-2005`](au/asbestos-related-claims-management-of-commonwealth-liabilities-act-2005) | Asbestos-related Claims (Management of Commonwealth Liabilities) Act 2005 (Cth) — Commonwealth asbestos liabilities transferred to Comcare — row `legalese-aswathy` | `draft` |
+| [`au/services-trust-funds-act-1947`](au/services-trust-funds-act-1947) | Services Trust Funds Act 1947 (Cth) — the Navy, Army and Air Force relief trust funds — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
