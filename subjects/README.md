@@ -340,6 +340,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`au/immigration-guardianship-of-children-act-1946`](au/immigration-guardianship-of-children-act-1946) | Immigration (Guardianship of Children) Act 1946 (Cth) — the Minister's guardianship of unaccompanied non-citizen children — row `legalese-aswathy` | `draft` |
 | [`au/protection-of-cultural-objects-on-loan-act-2013`](au/protection-of-cultural-objects-on-loan-act-2013) | Protection of Cultural Objects on Loan Act 2013 (Cth) — immunity from seizure for objects on loan for exhibition — row `legalese-aswathy` | `draft` |
 | [`au/war-crimes-act-1945`](au/war-crimes-act-1945) | War Crimes Act 1945 (Cth) — Second World War crimes in Europe — row `legalese-aswathy` | `draft` |
+| [`au/war-gratuity-act-1945`](au/war-gratuity-act-1945) | War Gratuity Act 1945 (Cth) — the Second World War service gratuity — row `legalese-aswathy` | `draft` |
 | [`us/`](us/) | United States federal Acts (public domain) |
 | [`us/ca/`](us/ca/) | California code divisions (public domain) |
 | [`us/ny/`](us/ny/) | New York Consolidated Laws articles |
