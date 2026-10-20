@@ -89,7 +89,7 @@ The consumer is the account-holder of a private number, so cl 4(1) is the limb t
 **Consistency with the Privacy Act baseline.** That encoding asks, as a fact under APP 7.8, whether "the Do Not Call
 Register Act or Spam Act applies". `Does this Act reach the call` is that fact for a call: true for a telemarketing call
 (s 5). The two encodings then agree on Chloe's c044 call: APP 7 does not reach it, and her protection is s 11. Neither
-encoding decides the text message: that belongs to the Spam Act 2003, which has no baseline yet.
+encoding decides the text message: that belongs to the Spam Act 2003, which has its own baseline (subjects/au/spam-act-2003); the two are listed together in docs/au-baseline-links.md.
 
 ## What the Act turns out to say
 
