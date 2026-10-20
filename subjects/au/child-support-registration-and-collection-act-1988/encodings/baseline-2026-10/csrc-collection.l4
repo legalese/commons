@@ -1,0 +1,577 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Child Support (Registration and Collection) Act 1988 (Commonwealth) -- how child support is collected from the paying parent:
+-- whether the Registrar collects or the parents deal privately (ss 17, 24, 24A, 25, 30, 37B, 38, 38A, 38B, 39); employer
+-- withholding from my pay (ss 43, 44, 45, 46, 47(1)-(2), 49, 50, 57, 65AA); when my debts fall due and the late payment penalty
+-- (ss 66, 67, 68); credits for payments I make other than to the Registrar (ss 71, 71C); collection from my tax refund, from
+-- people who hold my money and from my Centrelink payment (ss 72, 72A, 72AA); departure prohibition orders (ss 72D, 72E, 72F,
+-- 72I, 72L); recovery in court (ss 113, 113A); and where this Act stands when I am in a debt agreement or my employer is bankrupt.
+--
+-- SEAT: the paying parent -- "How can child support be collected from me?"
+--
+-- Edition: Compilation No. 77, compilation date 1 July 2026 (includes amendments up to Act No. 17, 2025), Federal Register of
+-- Legislation register id C2026C00287, as deposited at ../../registers/source-bundle/C2004A03596.txt. The Child Support
+-- (Registration and Collection) Regulations 2018 are NOT deposited: the protected earnings rate (s 4(1)), the prescribed periodic
+-- deduction from a social security payment (s 72AA), the kinds of payment credited under s 71C and the satisfactory payment record
+-- (s 38B) are INPUTS. The general interest charge rate (Taxation Administration Act 1953 s 8AAD(1)) that s 67 borrows is an
+-- INPUT. Penalties are given in penalty units; their dollar value is set by the Crimes Act 1914 s 4AA, not read.
+--
+-- NOT ENCODED: the amount of child support (Child Support (Assessment) Act 1989); registration of overseas liabilities (s 18A),
+-- transferred liabilities (ss 20-22) and s 17A/s 18 liabilities; the content of the Register (ss 26-29) beyond the payment period;
+-- the s 37B low-income period's start and end days; s 39A arrears after re-enforcement; s 39B; employers' records, penalties and
+-- offences (ss 47(3)-(4), 48, 51-56, 58-63) except as they reach the payer; s 69 (judgment interest), s 69A (lump sums), s 69B
+-- (carer debts), s 70, ss 71AA, 71AB, 71A, 71B, 71D (beyond an input), 71E; deductions from family tax benefit, veterans' payments
+-- and parental leave pay (ss 72AB-72AD); ss 72B, 72C; departure procedure (ss 72G, 72H, 72J, 72K, 72M-72Y); the Account (Part VI);
+-- suspension (Part VIA); objections, ART review and appeals (Parts VII-VIII); secrecy, regulations and administration.
+--
+-- BASELINE ENCODING. Written with the writing-l4-rules skill from the seat of the individual to whom the law is applied, with the
+-- design defaults ruled on 2026-10-18. No pipeline, no coverage table, no independent test pass, no human gate. Not for public use
+-- as advice. See NOTES.md.
+
+§ `Child Support (Registration and Collection) Act 1988 -- collection, from the paying parent's seat`
+
+§§ `helpers`
+
+GIVEN `first amount` IS A NUMBER, `second amount` IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` MEANS
+    IF `first amount` LESS THAN `second amount` THEN `first amount` ELSE `second amount`
+
+GIVEN `an amount` IS A NUMBER
+GIVETH A NUMBER
+`not below nil` MEANS
+    IF `an amount` LESS THAN 0 THEN 0 ELSE `an amount`
+
+§§ `ss 17, 24, 24A, 25 -- is my liability registered`
+
+-- s 17(1): a "registrable maintenance liability" is a parent's liability "to pay a periodic amount ... for the maintenance of the
+-- child" that "(i) arises under a court order or court registered maintenance agreement; (ii) ... is a collection agency
+-- maintenance liability". s 17(2): also a liability "if it arises under a child support assessment".
+-- (Gloss: "registrable" means the Registrar may take it over; "registered" means the Registrar has.)
+DECLARE `Liability basis` IS ONE OF
+    `a child support assessment`
+    `a court order or court registered maintenance agreement`
+    `a collection agency maintenance liability`
+
+-- s 24A(1): on making a child support assessment the Registrar "must immediately register the liability". s 24A(2): not if "(b)
+-- the payee elected in the relevant application ... not to have the liability enforced under this Act; or (c) the application
+-- giving rise to the child support assessment was made by the parent by whom child support is payable".
+-- s 23(2), s 24(1): for a court order or agreement the payee must notify the Registrar within 14 days, and the Registrar "shall,
+-- within 28 days after receipt of the notice, register the liability"; s 23(3): unless the payee "elects ... not to have the
+-- registrable maintenance liability enforced under this Act".
+-- s 25(1), (2): the payee of a liability "that is not registered under this Act may apply"; the Registrar "must, within 28 days
+-- after receiving the application, register the liability".
+-- s 24(2) (registration although the payee never notified) is a power, not modelled; transferred collection agency liabilities
+-- (ss 20-22) are not modelled, so such a liability is registered here only on a s 25 application.
+@export Is my child support liability registered for collection by the Child Support Registrar?
+GIVEN `the basis` IS A `Liability basis` @desc What the liability arises under: an assessment, a court order or court registered agreement, or a State collection agency liability
+      `the payee elected not to have it enforced under this Act` IS A BOOLEAN @desc Whether the other parent (the payee) chose, in the assessment application or within 14 days of the order, private collection
+      `I made the application for assessment` IS A BOOLEAN @desc Whether you, the paying parent, applied for the child support assessment
+      `the payee notified the Registrar of the order` IS A BOOLEAN @desc For a court order or agreement: whether the payee gave the Registrar the s 23(2) notice
+      `the payee applied to register it` IS A BOOLEAN @desc Whether the payee has applied to the Registrar under s 25 to register the liability (the Registrar then has 28 days)
+GIVETH A BOOLEAN
+DECIDE `Is my liability registered` IF
+        `the payee applied to register it`
+    OR  CONSIDER `the basis`
+        WHEN `a child support assessment` THEN
+                (NOT `the payee elected not to have it enforced under this Act`) AND (NOT `I made the application for assessment`)
+        WHEN `a court order or court registered maintenance agreement` THEN
+                `the payee notified the Registrar of the order` AND (NOT `the payee elected not to have it enforced under this Act`)
+        OTHERWISE FALSE
+
+§§ `ss 30, 38, 38A, 38B, 39 -- who collects`
+
+-- s 30(1): once registered, the amounts payable "are debts due to the Commonwealth by the payer". s 38: the Registrar "must vary
+-- the particulars ... so that the liability is no longer enforced under this Act if: (a) the payee ... makes an election under
+-- section 38A; or (b) the payee and payer ... jointly make an election under section 38A; or (c) the Registrar makes a decision
+-- under section 38B". s 39(1): the payee "may apply to the Registrar for the liability to again become enforceable".
+-- I cannot end Registrar collection alone: s 38A gives the election to the payee, or the payee and payer jointly.
+DECLARE `Collection route` IS ONE OF
+    `privately -- my liability is not registered, so this Act does not collect it`
+    `privately -- my liability is registered but no longer enforced under this Act`
+    `by the Registrar -- the amounts are debts I owe the Commonwealth`
+
+@export Who collects my child support -- the Child Support Registrar, or is it private collection?
+GIVEN `my liability is registered` IS A BOOLEAN @desc Whether the liability is registered under this Act
+      `a s 38A election or s 38B decision has taken effect` IS A BOOLEAN @desc Whether the payee (alone or with you) elected, or the Registrar decided on your payment record, that the Registrar stop enforcing it, and the terminating day has come
+      `a s 39 application to collect again has taken effect` IS A BOOLEAN @desc Whether, after that, the payee's application for the Registrar to collect again was granted and its day has come
+GIVETH A `Collection route`
+DECIDE `How is my child support collected` IS
+    BRANCH
+        IF NOT `my liability is registered`
+            THEN `privately -- my liability is not registered, so this Act does not collect it`
+        IF `a s 38A election or s 38B decision has taken effect` AND (NOT `a s 39 application to collect again has taken effect`)
+            THEN `privately -- my liability is registered but no longer enforced under this Act`
+        OTHERWISE `by the Registrar -- the amounts are debts I owe the Commonwealth`
+
+-- s 39(3): no application "during a period that is a low-income non-enforcement period under section 37B". s 39(5): "The
+-- Registrar must grant the application unless the Registrar is satisfied that: (a) the payer ... has been complying with his or
+-- her child support obligations ...; or (b) the payer ... has satisfactorily explained and rectified a failure to comply ...; or
+-- (c) there are special circumstances ...". s 39(4): decided within 28 days; s 39(6)(a): enforceable again from a day "not later
+-- than 60 days after the day on which the Registrar received the application".
+DECLARE `Return to Registrar collection` IS ONE OF
+    `the Registrar must grant it`
+    `the Registrar may refuse it`
+    `the payee cannot apply during my low-income non-enforcement period`
+
+@export If the other parent asks the Registrar to collect from me again, must it be granted?
+GIVEN `it is my low-income non-enforcement period` IS A BOOLEAN @desc Whether a s 37B low-income non-enforcement period is running for the liability
+      `the Registrar is satisfied I have been complying` IS A BOOLEAN @desc Whether the Registrar is satisfied you have been complying with your child support obligations to the payee
+      `the Registrar is satisfied I explained and rectified a failure` IS A BOOLEAN @desc Whether the Registrar is satisfied you have satisfactorily explained and put right a failure to comply
+      `the Registrar is satisfied there are special circumstances` IS A BOOLEAN @desc Whether the Registrar is satisfied special circumstances make refusal appropriate
+GIVETH A `Return to Registrar collection`
+DECIDE `Must the payee's application to collect again be granted` IS
+    BRANCH
+        IF `it is my low-income non-enforcement period`
+            THEN `the payee cannot apply during my low-income non-enforcement period`
+        IF     `the Registrar is satisfied I have been complying`
+            OR `the Registrar is satisfied I explained and rectified a failure`
+            OR `the Registrar is satisfied there are special circumstances`
+            THEN `the Registrar may refuse it`
+        OTHERWISE `the Registrar must grant it`
+
+@export If the payee's application is granted, what is the latest day the Registrar can start collecting from me again?
+GIVEN `the day the Registrar received the application` IS A DATE @desc The day the Registrar received the payee's s 39 application
+GIVETH A DATE
+`the latest day Registrar collection starts again` MEANS `the day the Registrar received the application` PLUS 60
+
+-- s 38A(3)(b): if the payee, or the payee and payer jointly, "have elected to have amounts payable ... that are unpaid on the
+-- terminating day also no longer enforced under this Act", the Registrar varies the Register "so as to ensure that, in spite of
+-- section 30, those amounts cease to be debts due by the payer to the Commonwealth". Nothing else in the Act cancels arrears when
+-- enforcement ends; s 45(4)(c) keeps a wage notice in force for "any liability of the payer ... to pay a child support debt that
+-- relates to the registered maintenance liability" after it "ceases to be enforceable". Whether arrears dropped under s 38A(3)(b)
+-- become payable to the payee is not said, except for overseas liabilities (s 38C).
+DECLARE `How enforcement ended` IS ONE OF
+    `a s 38A election that includes the unpaid amounts`
+    `a s 38A election that does not include the unpaid amounts`
+    `a Registrar decision under s 38B`
+
+DECLARE `Arrears outcome` IS ONE OF
+    `my arrears stay debts to the Commonwealth and the Registrar can still collect them`
+    `my arrears cease to be debts to the Commonwealth`
+
+@export When the Registrar stops collecting, what happens to the child support I have not yet paid?
+GIVEN `how it ended` IS A `How enforcement ended` @desc How Registrar enforcement ended: the payee's (or a joint) s 38A election, with or without the unpaid amounts, or a Registrar decision under s 38B
+GIVETH A `Arrears outcome`
+DECIDE `What happens to my arrears when Registrar collection ends` IS
+    CONSIDER `how it ended`
+        WHEN `a s 38A election that includes the unpaid amounts` THEN `my arrears cease to be debts to the Commonwealth`
+        OTHERWISE `my arrears stay debts to the Commonwealth and the Registrar can still collect them`
+
+-- s 37B(2): "If the payer of an enforceable maintenance liability covered by subsection 17(1) ... (a) is in receipt of a social
+-- security pension or a social security benefit; or (b) has made a claim for [one] ... the payer may apply to the Registrar ...
+-- to have the liability no longer enforced under this Act." s 37B(3): not if the liability is under a court order or agreement
+-- that "provides ... for the reduction of amounts payable ... during periods when: (i) the payer is unemployed; or (ii) the
+-- payer's income is substantially reduced". Subsection 17(1) is the court order route: an assessment (s 17(2)) is not covered.
+-- (Whether the period then starts turns on the regulations' income test, s 37B(4): not encoded.)
+@export May I apply to stop Registrar enforcement because I am on, or have claimed, a Centrelink pension or benefit?
+GIVEN `the basis` IS A `Liability basis` @desc What the liability arises under
+      `I receive or have claimed a social security pension or benefit` IS A BOOLEAN @desc Whether you are paid, or have claimed, a social security pension or benefit (Social Security Act 1991 meanings)
+      `the order provides for reduction if I am unemployed or my income falls` IS A BOOLEAN @desc For a court order or agreement: whether it already reduces the amount while you are unemployed or your income is substantially reduced
+GIVETH A BOOLEAN
+DECIDE `May I apply for low-income non-enforcement` IF
+        `I receive or have claimed a social security pension or benefit`
+    AND CONSIDER `the basis`
+        WHEN `a child support assessment` THEN FALSE
+        WHEN `a court order or court registered maintenance agreement` THEN NOT `the order provides for reduction if I am unemployed or my income falls`
+        OTHERWISE TRUE
+
+§ `Part IV -- collection from my pay`
+
+§§ `ss 43, 65AA -- employer withholding`
+
+-- s 43(1): applies if "an amount payable under or in relation to ... (i) an enforceable maintenance liability; (ii) a liability to
+-- pay a child support debt; (iii) ... a child support related debt; (iv) a carer liability ... is due by the payer to the
+-- Commonwealth; and (b) the payer is an employee". s 43(2): "The Registrar must, as far as practicable, collect amounts due ... by
+-- deduction from the salary or wages of the payer under this Part." s 43(3): not if the Register says "employer withholding does
+-- not apply". s 4(1): "employee ... means a person who receives, or is entitled to receive, work and income support related
+-- withholding payments" (a Taxation Administration Act 1953 term: asked as a fact). s 65AA: "This Part applies to a person ...
+-- engaged under a contract for services as if ... a reference to an employee includes a reference to the independent contractor".
+@export Can child support be taken from my pay -- am I someone Part IV reaches?
+GIVEN `I receive pay subject to PAYG withholding` IS A BOOLEAN @desc Whether you receive, or are entitled to, payments from which tax must be withheld (wages, director's fees, and so on)
+      `I am engaged under a contract for services` IS A BOOLEAN @desc Whether you work as an independent contractor for someone who engages you
+GIVETH A BOOLEAN
+DECIDE `Am I an employee for Part IV` IF
+    `I receive pay subject to PAYG withholding` OR `I am engaged under a contract for services`
+
+-- s 44(1): on the payer's election, if "the Registrar is satisfied that the payer is likely to make timely payments", the Register
+-- is varied to say employer withholding does not apply. s 44(6): likewise in "special circumstances" where it "would not be an
+-- efficient method". s 44(5), (7): if "the payer does not make timely payments ... the Registrar must vary those particulars so
+-- that they contain a statement that employer withholding applies", unless (s 44(5A), (7A)) the Registrar is satisfied withholding
+-- "would not be an efficient method" or "the payer is likely to recommence timely payments ... in the near future". s 44(8): a
+-- special-circumstances statement goes when the Registrar "becomes satisfied" withholding would be efficient. s 44(10): if the
+-- period at which amounts are payable "exceeds one calendar month or one month, the Registrar shall include ... a statement that
+-- employer withholding does not apply".
+@export Does employer withholding apply to my child support?
+GIVEN `the liability's period is longer than a month` IS A BOOLEAN @desc Whether the order or assessment makes amounts payable at a period longer than a month
+      `my election to pay the Registrar directly was accepted` IS A BOOLEAN @desc Whether you elected under s 44(1) or (2) that employer withholding not apply and the Registrar accepted it
+      `the Registrar made a special-circumstances statement` IS A BOOLEAN @desc Whether the Registrar decided under s 44(6) that withholding would not be efficient for you
+      `I have since failed to make timely payments` IS A BOOLEAN @desc Whether, since that statement, you have not paid the Registrar on time
+      `the Registrar is satisfied withholding is inefficient or I will soon pay on time again` IS A BOOLEAN @desc Whether the Registrar is satisfied withholding would not be efficient or that you are likely to resume timely payments soon
+      `the Registrar has become satisfied withholding would be efficient` IS A BOOLEAN @desc For a special-circumstances statement: whether the Registrar is now satisfied withholding would be efficient
+GIVETH A BOOLEAN
+DECIDE `Does employer withholding apply` IF
+        (NOT `the liability's period is longer than a month`)
+    AND (    ((NOT `my election to pay the Registrar directly was accepted`) AND (NOT `the Registrar made a special-circumstances statement`))
+         OR  (`I have since failed to make timely payments` AND (NOT `the Registrar is satisfied withholding is inefficient or I will soon pay on time again`))
+         OR  (`the Registrar made a special-circumstances statement` AND `the Registrar has become satisfied withholding would be efficient`))
+
+@export Must the Registrar collect my child support by deduction from my pay?
+GIVEN `an amount is due from me to the Commonwealth` IS A BOOLEAN @desc Whether an amount under an enforceable liability, a child support debt, a late payment penalty or a carer liability is due from you
+      `I am an employee for Part IV` IS A BOOLEAN @desc Whether you are an employee or contractor Part IV reaches
+      `employer withholding applies` IS A BOOLEAN @desc Whether the Register does not say employer withholding does not apply
+GIVETH A BOOLEAN
+DECIDE `Must the Registrar collect from my pay` IF
+    `an amount is due from me to the Commonwealth` AND `I am an employee for Part IV` AND `employer withholding applies`
+
+-- s 44(7B): no election "if, within the previous 6 months, employer withholding started to apply ... because of a variation made
+-- under subsection (5) or (7)". s 44(7C): none "within 2 months after" a rejected election. s 44(1): it takes effect only if the
+-- Registrar "is satisfied that the payer is likely to make timely payments".
+DECLARE `Opt-out answer` IS ONE OF
+    `I may elect -- it takes effect if the Registrar is satisfied I am likely to pay on time`
+    `not yet -- withholding restarted for missed payments less than 6 months ago`
+    `not yet -- my last election was rejected less than 2 months ago`
+
+@export May I elect to stop deductions from my pay and pay the Registrar myself?
+GIVEN `withholding restarted under s 44(5) or (7)` IS A BOOLEAN @desc Whether withholding started again because you missed timely payments
+      `months since it restarted` IS A NUMBER @desc Whole months since withholding restarted (ignored if it did not)
+      `my last election was rejected` IS A BOOLEAN @desc Whether the Registrar rejected an earlier election
+      `months since the rejection` IS A NUMBER @desc Whole months since that rejection (ignored if none)
+GIVETH A `Opt-out answer`
+DECIDE `May I elect that employer withholding not apply` IS
+    BRANCH
+        IF `withholding restarted under s 44(5) or (7)` AND `months since it restarted` LESS THAN 6
+            THEN `not yet -- withholding restarted for missed payments less than 6 months ago`
+        IF `my last election was rejected` AND `months since the rejection` LESS THAN 2
+            THEN `not yet -- my last election was rejected less than 2 months ago`
+        OTHERWISE `I may elect -- it takes effect if the Registrar is satisfied I am likely to pay on time`
+
+§§ `s 46 -- how much my employer deducts`
+
+-- s 46(2): "the amount of the deduction is the amount ascertained by applying the weekly deduction rate specified in the notice to
+-- the period in relation to which the salary or wages are paid". s 46(4): "Where the amount of the salary or wages exceeds the
+-- amount of the deduction ... by less than the amount (the protected earnings amount) ascertained by applying the protected
+-- earnings rate to the period ..., the amount of the deduction is the amount by which the amount of the salary or wages exceeds the
+-- protected earnings amount." s 46(8): salary or wages are taken "after amounts (if any) that are required to be withheld" as PAYG.
+-- s 4(1): "protected earnings rate means a weekly rate prescribed" -- the Regulations are not deposited, so it is an INPUT.
+-- The rate is applied to the period as days divided by 7 (s 46(6)(c) divides longer periods into weeks by days). Where pay is below
+-- the protected earnings amount, s 46(4) read literally does not apply (pay does not "exceed" the deduction) and s 46(2) would take
+-- the full rate; this encoding takes nothing, reading (4) and (4B) together. (Inference from the words.)
+@export How much child support can my employer deduct from this pay?
+GIVEN `the weekly deduction rate` IS A NUMBER @desc The weekly rate in the Registrar's notice to your employer
+      `days in the pay period` IS A NUMBER @desc How many days this pay covers (7 weekly, 14 fortnightly)
+      `my pay after tax withheld` IS A NUMBER @desc Your salary or wages for the period after PAYG tax is withheld
+      `the protected earnings rate` IS A NUMBER @desc The weekly protected earnings rate prescribed by the Regulations (not deposited: give the current figure)
+GIVETH A NUMBER
+DECIDE `How much can my employer deduct from this pay` IS
+    IF `my pay after tax withheld` MINUS `the full deduction` LESS THAN `the protected earnings amount`
+    THEN `not below nil` (`my pay after tax withheld` MINUS `the protected earnings amount`)
+    ELSE `the full deduction`
+    WHERE
+        `the full deduction` MEANS `the weekly deduction rate` TIMES `days in the pay period` DIVIDED BY 7
+        `the protected earnings amount` MEANS `the protected earnings rate` TIMES `days in the pay period` DIVIDED BY 7
+
+§§ `ss 47, 49, 50 -- after the deduction`
+
+-- s 47(1): an employer who "has during any calendar month made deductions ... shall, not later than the seventh day of the
+-- following calendar month: (a) pay to the Registrar the amounts so deducted". s 47(2): on each payment the employer "shall notify
+-- the employee, in writing: (a) of the amount of the deduction ...; or (b) that no deduction has been made".
+@export By when must my employer pay what it deducted from me to the Registrar?
+GIVEN `the day of the deduction` IS A DATE @desc The pay day on which the deduction was made
+GIVETH A DATE
+`By when must my employer remit my deduction` MEANS
+    IF DATE_MONTH `the day of the deduction` EQUALS 12
+    THEN Date 7 1 (DATE_YEAR `the day of the deduction` PLUS 1)
+    ELSE Date 7 (DATE_MONTH `the day of the deduction` PLUS 1) (DATE_YEAR `the day of the deduction`)
+
+-- s 49: "Where an employer deducts an amount ... (a) the payer is, to the extent of the amount deducted, discharged from the
+-- payer's liability to make payments to the Registrar". The discharge happens at deduction, whether or not the employer remits.
+-- s 50(1)-(2): if the employer's property passes to "a trustee", the trustee "is liable to pay the amount to the Registrar", with
+-- priority. So my employer's late remittance or bankruptcy leaves me discharged.
+@export After my employer deducts child support from my pay, how much do I still owe?
+GIVEN `what I owed` IS A NUMBER @desc The amount due from you before the deduction
+      `what my employer deducted` IS A NUMBER @desc The amount deducted from your pay (whether or not your employer has paid it over)
+GIVETH A NUMBER
+`How much do I still owe after the deduction` MEANS `not below nil` (`what I owed` MINUS `what my employer deducted`)
+
+§§ `s 57 -- my employer must not punish me for it`
+
+-- s 57(1): an employer who "(a) refuses to employ, or to pay salary or wages to, another person; (b) dismisses, or threatens to
+-- dismiss ...; (c) terminates ... the payment of salary or wages ...; (d) prejudices ... another person in the other person's
+-- employment ...; or (e) intimidates or coerces, imposes any pecuniary or other penalty on, or takes any other disciplinary action"
+-- because the person "(f) is the payer of a registrable maintenance liability or any other deductible liability; or (g) is an
+-- employee in relation to whom a notice has been given ... under subsection 45(1)" commits an offence, "a fine not exceeding 20
+-- penalty units". s 57(2): no need to prove the reason, but a defence if the employer proves "the action was not motivated (either
+-- in whole or in part)" by it. s 57(3): the court may order compensation to me.
+@export If my employer sacks or penalises me, does it commit an offence because of my child support?
+GIVEN `my employer took an action listed in s 57(1)` IS A BOOLEAN @desc Whether your employer refused to employ or pay you, dismissed or threatened you, prejudiced you, or disciplined you
+      `the employer proves child support played no part in it` IS A BOOLEAN @desc Whether the employer proves, on the balance of probabilities, the action was not motivated even in part by your child support liability or the deduction notice
+GIVETH A BOOLEAN
+DECIDE `Does my employer commit an offence by acting against me` IF
+    `my employer took an action listed in s 57(1)` AND (NOT `the employer proves child support played no part in it`)
+
+`the most my employer can be fined under s 57, in penalty units` MEANS 20
+
+§ `Part V -- when I must pay, penalties and recovery`
+
+§§ `s 66 -- when my debt is due`
+
+-- s 66(1): a child support debt "in respect of a day in an initial period is due and payable on the seventh day of the calendar
+-- month following that day". s 66(2): one "in respect of a payment period is due and payable on the seventh day after the end of
+-- the period". (s 66(3) and s 67A, lump sums and initial periods, are not encoded.)
+@export When is my child support debt due?
+GIVEN `it is for a day in an initial period` IS A BOOLEAN @desc Whether the debt is for a day in the initial period entered in the Register (otherwise it is for a payment period)
+      `the day, or the last day of the payment period` IS A DATE @desc The day the debt is for, or the last day of the payment period
+GIVETH A DATE
+`When is my child support debt due` MEANS
+    IF `it is for a day in an initial period`
+    THEN `By when must my employer remit my deduction` `the day, or the last day of the payment period`
+    ELSE `the day, or the last day of the payment period` PLUS 7
+
+§§ `ss 67, 68 -- late payment penalty`
+
+-- s 4(1): "payment period ... means one of the following periods: (a) a week; (b) a fortnight; (c) a 4 week period; (d) a month;
+-- (e) a calendar month."
+DECLARE `Payment period` IS ONE OF
+    `a week`
+    `a fortnight`
+    `a 4 week period`
+    `a month`
+    `a calendar month`
+
+-- s 67(1): if a child support debt "remains unpaid after the time when it became due and payable", the person is liable to a
+-- penalty "(a) if the payment period is a week -- ... on the balance outstanding each week at a weekly rate equal to 1/52 of the
+-- relevant annual rate; (b) ... a fortnight -- ... 1/26 ...; (c) ... a 4 week period -- ... 4/52 ...; (d) ... a month or a calendar
+-- month -- ... 1/12 of the relevant annual rate". s 67(1A): "the balance outstanding is the total amount of one or more child
+-- support debts remaining unpaid". s 67(3): "relevant annual rate means the rate that is from time to time the general interest
+-- charge rate under subsection 8AAD(1) of the Taxation Administration Act 1953" -- an INPUT, as a fraction (0.11 for 11%).
+GIVEN `the period` IS A `Payment period`
+GIVETH A NUMBER
+`the share of the annual rate for one period` MEANS
+    CONSIDER `the period`
+        WHEN `a week` THEN 1 DIVIDED BY 52
+        WHEN `a fortnight` THEN 1 DIVIDED BY 26
+        WHEN `a 4 week period` THEN 4 DIVIDED BY 52
+        OTHERWISE 1 DIVIDED BY 12
+
+@export What late payment penalty can I be charged for one payment period?
+GIVEN `my payment period` IS A `Payment period` @desc The payment period entered in the Register for your liability
+      `the balance outstanding` IS A NUMBER @desc The total of your child support debts unpaid after their due dates
+      `the general interest charge rate` IS A NUMBER @desc The annual general interest charge rate for the period, as a fraction (0.11 for 11%)
+GIVETH A NUMBER
+`What late payment penalty for one period` MEANS
+    `the balance outstanding` TIMES `the general interest charge rate` TIMES `the share of the annual rate for one period` `my payment period`
+
+-- s 68(1): the Registrar "may remit" the penalty if satisfied "(a) ... the circumstances that contributed to the delay ... were not
+-- due to ... an act or omission of the person; and (ii) the person has taken reasonable action to mitigate"; or "(b) ... were due
+-- to ... an act or omission of the person; and ... has taken reasonable action to mitigate ...; and (iii) ... it would be fair and
+-- reasonable to remit"; or "(c) ... there are special circumstances by reason of which it would be fair and reasonable". s 68(2),
+-- (3): a refusal or part remission must be notified in writing with my right to object and then to the ART.
+@export Can the Registrar let me off the late payment penalty?
+GIVEN `the delay was not my doing` IS A BOOLEAN @desc Whether the Registrar is satisfied the circumstances causing the delay were not caused by your act or omission
+      `I took reasonable action to mitigate` IS A BOOLEAN @desc Whether the Registrar is satisfied you took reasonable action to mitigate those circumstances or their effects
+      `it would be fair and reasonable to remit` IS A BOOLEAN @desc Whether the Registrar is satisfied, given those circumstances, it would be fair and reasonable to remit
+      `there are special circumstances` IS A BOOLEAN @desc Whether the Registrar is satisfied special circumstances make remission fair and reasonable
+GIVETH A BOOLEAN
+DECIDE `May the Registrar remit my late payment penalty` IF
+        (`the delay was not my doing` AND `I took reasonable action to mitigate`)
+    OR  ((NOT `the delay was not my doing`) AND `I took reasonable action to mitigate` AND `it would be fair and reasonable to remit`)
+    OR  `there are special circumstances`
+
+§§ `ss 71, 71C -- payments that count although not made to the Registrar`
+
+-- s 71(1): if the payee "receives from the payer an amount intended by both the payer and the payee to be paid in complete or
+-- partial satisfaction of an amount payable under the liability ...; and (b) the payer or the payee applies to the Registrar to
+-- have the amount ... treated as having been paid to the Registrar; the Registrar must ... credit the amount". "Subject to section
+-- 71D" (refusal in special circumstances: an input).
+@export Will money I paid straight to the other parent be credited against my child support?
+GIVEN `the amount paid to the payee` IS A NUMBER @desc What you paid the payee directly
+      `we both intended it as child support` IS A BOOLEAN @desc Whether you and the payee both intended it to satisfy amounts payable under the liability
+      `one of us applied to the Registrar to credit it` IS A BOOLEAN @desc Whether you or the payee applied to have it treated as paid to the Registrar
+      `the Registrar refused under s 71D` IS A BOOLEAN @desc Whether the Registrar refused to credit it in special circumstances under s 71D
+GIVETH A NUMBER
+`How much of a direct payment must be credited` MEANS
+    IF `we both intended it as child support` AND `one of us applied to the Registrar to credit it` AND (NOT `the Registrar refused under s 71D`)
+    THEN `the amount paid to the payee`
+    ELSE 0
+
+-- s 71C(1): if the payer "has made one or more payments to the payee ... or to another person"; "the payment is a payment of the
+-- kind specified in the regulations" (not deposited: an input); and the payer does not "have at least regular care of any of the
+-- children", the Registrar "must ... credit the excess amount ... up to a maximum of 30% of the amount payable". s 71C(3): no
+-- credit for a period for which the payer "has not paid to the Commonwealth an amount equal to the difference" between the amount
+-- payable and the credit (s 71C(4) lets a late payment of the difference revive it). The "excess over earlier credits" in s
+-- 71C(1)(c) is taken as the payments given here.
+@export How much of my payments for school fees and the like (prescribed payments) must be credited this period?
+GIVEN `the amount payable for the period` IS A NUMBER @desc The child support payable by you for the payment period
+      `my prescribed payments for the period` IS A NUMBER @desc Payments you made of a kind the Regulations specify, not already credited
+      `I have at least regular care of one of the children` IS A BOOLEAN @desc Whether you have at least regular care of any child the assessment covers
+      `I paid the Commonwealth the rest` IS A BOOLEAN @desc Whether you have paid the Commonwealth the amount payable less the credit
+GIVETH A NUMBER
+`How much of my prescribed payments must be credited` MEANS
+    IF (NOT `I have at least regular care of one of the children`) AND `I paid the Commonwealth the rest`
+    THEN `the lesser of` `my prescribed payments for the period` (0.3 TIMES `the amount payable for the period`)
+    ELSE 0
+
+§§ `ss 72, 72A, 72AA -- collection from my refund, from people holding my money, from my Centrelink payment`
+
+-- s 72(1): if the Commissioner "would be required ... to refund an amount" to a person who "owes a relevant debt", the Registrar
+-- may require the Commissioner to pay the Registrar "an amount not exceeding the lesser of the refund amount and the debt".
+@export How much of my tax refund can be taken for my child support debt?
+GIVEN `my tax refund` IS A NUMBER @desc The refund the Commissioner of Taxation would pay you
+      `my child support debt` IS A NUMBER @desc Your unpaid child support debts and related penalties
+GIVETH A NUMBER
+`How much of my tax refund can be taken` MEANS `the lesser of` `my tax refund` `my child support debt`
+
+-- s 72A(1): the Registrar may give written notice to a person who owes, holds or may hold money for a relevant debtor, requiring
+-- payment of the money, or "an amount equal to the maximum notified deduction total" if the money is more. s 72A(1B): that total
+-- "does not exceed the relevant debt". s 72A(5): I must be given a copy.
+@export How much can my bank (or anyone who owes or holds money for me) be made to pay towards my child support debt?
+GIVEN `the money held for me` IS A NUMBER @desc The money the person owes you or holds for you
+      `the total in the notice` IS A NUMBER @desc The maximum notified deduction total in the Registrar's notice
+      `my child support debt` IS A NUMBER @desc Your unpaid child support debts and related penalties
+GIVETH A NUMBER
+`How much can a third person be made to pay` MEANS
+    `the lesser of` `the money held for me` (`the lesser of` `the total in the notice` `my child support debt`)
+
+-- s 72AA(1): if the payer of a liability "covered by subsection 17(2)" (an assessment) "is in receipt of a social security pension
+-- or a social security benefit", the Registrar may instruct the Secretary "to make the prescribed periodic deduction". s 72AA(2):
+-- if a person "by whom a child support debt ... is due ... has not paid the debt" and receives such a payment, the Registrar may
+-- instruct "(i) the prescribed periodic deduction ... until the debt is paid; or (ii) if the Registrar is satisfied the person is
+-- in financial hardship -- ... the specified lesser periodic deduction". The prescribed amount is in the Regulations (not deposited).
+DECLARE `Centrelink deduction` IS ONE OF
+    `the prescribed periodic deduction may be taken`
+    `only a lesser deduction may be taken -- financial hardship`
+    `no deduction under s 72AA`
+
+@export Can child support be deducted from my Centrelink pension or benefit?
+GIVEN `I receive a social security pension or benefit` IS A BOOLEAN @desc Whether you are paid a social security pension or benefit
+      `the basis` IS A `Liability basis` @desc What the liability arises under
+      `I have an unpaid child support debt` IS A BOOLEAN @desc Whether a child support debt due from you is unpaid
+      `the Registrar is satisfied I am in financial hardship` IS A BOOLEAN @desc Whether the Registrar is satisfied you are in financial hardship
+GIVETH A `Centrelink deduction`
+DECIDE `What can be deducted from my Centrelink payment` IS
+    BRANCH
+        IF NOT `I receive a social security pension or benefit`
+            THEN `no deduction under s 72AA`
+        IF `I have an unpaid child support debt` AND `the Registrar is satisfied I am in financial hardship`
+            THEN `only a lesser deduction may be taken -- financial hardship`
+        IF `I have an unpaid child support debt` OR `the basis` EQUALS `a child support assessment`
+            THEN `the prescribed periodic deduction may be taken`
+        OTHERWISE `no deduction under s 72AA`
+
+§§ `ss 72D-72L -- departure prohibition orders`
+
+-- s 72E: "a person has a child support liability if: (a) the person has a registrable maintenance liability of a kind mentioned in
+-- section 17 ...; (b) an amount payable under [it] is a child support debt; and (c) the day on which the debt became due and payable
+-- under section 66 has passed, and the debt remains unpaid in whole or in part."
+-- s 72D(1): the Registrar "may make an order ... prohibiting a person from departing from Australia for a foreign country if: (a)
+-- the person has a child support liability ...; (b) the person has not made arrangements satisfactory to the Registrar for the
+-- liability to be wholly discharged; (c) the Registrar is satisfied that the person has persistently and without reasonable grounds
+-- failed to pay ... child support debts ...; and (d) the Registrar believes on reasonable grounds that it is desirable to make the
+-- order" so I do not leave without paying or arranging to pay. s 72D(2) lists what the Registrar weighs for (c).
+@export Can the Registrar stop me leaving Australia over my child support?
+GIVEN `I have an overdue unpaid child support debt` IS A BOOLEAN @desc Whether a child support debt from a registered liability is past its due date and unpaid in whole or part
+      `I have made arrangements satisfactory to the Registrar` IS A BOOLEAN @desc Whether you have made arrangements the Registrar accepts for the liability to be wholly paid
+      `the Registrar is satisfied I persistently failed to pay without reasonable grounds` IS A BOOLEAN @desc Whether the Registrar is satisfied you persistently, and without reasonable grounds, failed to pay
+      `the Registrar believes an order is desirable` IS A BOOLEAN @desc Whether the Registrar believes on reasonable grounds an order is desirable so you do not leave without paying or arranging to pay
+GIVETH A BOOLEAN
+DECIDE `Can a departure prohibition order be made against me` IF
+        `I have an overdue unpaid child support debt`
+    AND (NOT `I have made arrangements satisfactory to the Registrar`)
+    AND `the Registrar is satisfied I persistently failed to pay without reasonable grounds`
+    AND `the Registrar believes an order is desirable`
+
+-- s 72I(1): "The Registrar must revoke a departure prohibition order ... if: (a) the person no longer has a child support liability
+-- ...; or (b) ... arrangements satisfactory to the Registrar have been made for the liability to be wholly discharged; or (c) ...
+-- the Registrar is satisfied that the liability is completely irrecoverable." s 72I(2): not if the Registrar considers a further
+-- liability may arise from past matters, unless satisfied it too will be discharged, arranged for or irrecoverable.
+@export Must my departure prohibition order be revoked?
+GIVEN `I no longer have a child support liability` IS A BOOLEAN @desc Whether you have no overdue unpaid child support debt left
+      `I have made arrangements satisfactory to the Registrar` IS A BOOLEAN @desc Whether arrangements the Registrar accepts have been made to pay it all
+      `the Registrar is satisfied it is completely irrecoverable` IS A BOOLEAN @desc Whether the Registrar is satisfied the liability is completely irrecoverable
+      `a further liability may arise and is not provided for` IS A BOOLEAN @desc Whether the Registrar considers a later liability may arise from past matters and is not satisfied it will be paid, arranged for or irrecoverable
+GIVETH A BOOLEAN
+DECIDE `Must my departure prohibition order be revoked` IF
+        (`I no longer have a child support liability` OR `I have made arrangements satisfactory to the Registrar` OR `the Registrar is satisfied it is completely irrecoverable`)
+    AND (NOT `a further liability may arise and is not provided for`)
+
+-- s 72L(2): the Registrar "must issue the departure authorisation certificate if ... satisfied: (a) that ... (i) it is likely that
+-- the person will depart from Australia and return ... within a period that the Registrar considers appropriate; and (ii) it is
+-- likely that ... the Registrar will be required by subsection 72I(1) to revoke the [order]; and (b) that it is not necessary for
+-- the person to give security". s 72L(3): otherwise must issue if "(a) ... (i) [revocation is likely] and (ii) the person has given
+-- security under section 72M"; or "(b) ... (i) ... the certificate should be issued on humanitarian grounds; or (ii) ... refusing
+-- ... will be detrimental to Australia's interests".
+@export Must I be given a certificate letting me travel despite the order?
+GIVEN `the Registrar thinks I will leave and return in time` IS A BOOLEAN @desc Whether the Registrar is satisfied you are likely to leave and come back within an appropriate period
+      `the Registrar thinks the order will soon have to be revoked` IS A BOOLEAN @desc Whether the Registrar is satisfied it will likely have to revoke the order under s 72I(1) within an appropriate period
+      `the Registrar thinks security is unnecessary` IS A BOOLEAN @desc Whether the Registrar is satisfied you need not give security for your return
+      `I have given security for my return` IS A BOOLEAN @desc Whether you have given the security the Registrar considers appropriate (bond, deposit or otherwise)
+      `humanitarian grounds or Australia's interests` IS A BOOLEAN @desc Whether the Registrar is satisfied the certificate should issue on humanitarian grounds or refusing would be detrimental to Australia's interests
+GIVETH A BOOLEAN
+DECIDE `Must I be given a departure authorisation certificate` IF
+        (`the Registrar thinks I will leave and return in time` AND `the Registrar thinks the order will soon have to be revoked` AND `the Registrar thinks security is unnecessary`)
+    OR  (`the Registrar thinks the order will soon have to be revoked` AND `I have given security for my return`)
+    OR  `humanitarian grounds or Australia's interests`
+
+-- s 72F: "A person must not depart from Australia for a foreign country if: (a) a departure prohibition order ... is in force, and
+-- the person knows that the order is in force, or is reckless ...; and (b) the person's departure is not authorised by a departure
+-- authorisation certificate, and the person knows [that] ... or is reckless .... Penalty: 60 penalty units or imprisonment for 12
+-- months, or both." s 72H(2): an order "is not in force during any period when a deportation order ... is in force".
+@export Do I commit an offence if I leave Australia while a departure prohibition order is in force?
+GIVEN `an order is in force and I know it or am reckless about it` IS A BOOLEAN @desc Whether a departure prohibition order is in force and you know, or are reckless as to whether, it is
+      `I have a departure authorisation certificate for this trip` IS A BOOLEAN @desc Whether a certificate authorises this departure
+GIVETH A BOOLEAN
+DECIDE `Do I commit an offence by leaving Australia` IF
+    `an order is in force and I know it or am reckless about it` AND (NOT `I have a departure authorisation certificate for this trip`)
+
+`the most I can be fined for leaving, in penalty units` MEANS 60
+`the most I can be imprisoned for leaving, in months` MEANS 12
+
+§§ `ss 30(3), 113, 113A -- can the other parent sue me`
+
+-- s 30(3): once registered, "the payee ... is not entitled to, and may not enforce payment of, amounts payable under the liability
+-- other than by instituting a proceeding under section 113A". s 113(1)(b): the debt "may be sued for and recovered by: (i) the
+-- Registrar ...; or (ii) the payee ... suing in accordance with section 113A". s 113A(1): the payee may sue "if the payee notifies
+-- the Registrar in writing of his or her intention ...: (a) at least 14 days before instituting the proceeding; or (b) in
+-- exceptional circumstances -- within such shorter period as the court allows".
+DECLARE `Payee suit` IS ONE OF
+    `this Act does not limit it -- my liability is not registered`
+    `yes -- by a s 113A proceeding, the Registrar having been told in time`
+    `not yet -- the payee must first give the Registrar 14 days' written notice`
+
+@export Can the other parent take me to court for unpaid child support?
+GIVEN `my liability is registered` IS A BOOLEAN @desc Whether the liability is registered under this Act
+      `days' notice the payee gave the Registrar` IS A NUMBER @desc How many days before suing the payee told the Registrar in writing
+      `the court allowed a shorter period for exceptional circumstances` IS A BOOLEAN @desc Whether the court allowed a shorter notice period in exceptional circumstances
+GIVETH A `Payee suit`
+DECIDE `Can the payee sue me` IS
+    BRANCH
+        IF NOT `my liability is registered`
+            THEN `this Act does not limit it -- my liability is not registered`
+        IF `days' notice the payee gave the Registrar` AT LEAST 14 OR `the court allowed a shorter period for exceptional circumstances`
+            THEN `yes -- by a s 113A proceeding, the Registrar having been told in time`
+        OTHERWISE `not yet -- the payee must first give the Registrar 14 days' written notice`
+
+§ `Debt agreements and bankruptcy`
+
+-- This Act's deposit mentions bankruptcy once: s 50(3), about the trustee of a bankrupt EMPLOYER. It has no provision stopping or
+-- suspending collection from a payer who has a debt agreement under Part IX of the Bankruptcy Act 1966 or is bankrupt: s 43(2)
+-- ("must, as far as practicable, collect ... by deduction") and s 46(1) (the employer "shall ... make a deduction") are unqualified.
+-- The Bankruptcy Act 1966 s 185F(1)(c) (while a proposal is processed) and s 185K(3)(b) (while an agreement is in force) say "a
+-- person who is entitled under a law of the Commonwealth ... to retain or deduct money from money that is or will be owing or
+-- payable to the debtor must not retain or deduct money", without limiting it to provable debts (read in the Bankruptcy Act
+-- baseline encoding, finding 4). Whether that bar reaches an employer deducting under s 46 is a question of the Bankruptcy Act read
+-- against this Act, not answered by either text; it is an INPUT, so this encoding stays consistent with that encoding.
+DECLARE `Deductions during a debt agreement` IS ONE OF
+    `deductions continue -- this Act has no exception for a debt agreement`
+    `this Act still requires them, but the Bankruptcy Act bar read literally forbids them`
+
+@export While I have a debt agreement, do child support deductions from my pay continue?
+GIVEN `a debt agreement proposal is being processed or an agreement is in force` IS A BOOLEAN @desc Whether acceptance of your proposal for processing is recorded on the National Personal Insolvency Index, or your agreement is in force and on it
+      `the Bankruptcy Act bar is taken to reach child support deductions` IS A BOOLEAN @desc Whether Bankruptcy Act s 185F(1)(c) / s 185K(3)(b) is read literally, so that it reaches deductions under this Act
+GIVETH A `Deductions during a debt agreement`
+DECIDE `Do my child support deductions continue during my debt agreement` IS
+    IF `a debt agreement proposal is being processed or an agreement is in force` AND `the Bankruptcy Act bar is taken to reach child support deductions`
+    THEN `this Act still requires them, but the Bankruptcy Act bar read literally forbids them`
+    ELSE `deductions continue -- this Act has no exception for a debt agreement`
