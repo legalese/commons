@@ -1,0 +1,160 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Maternity Leave (Commonwealth Employees) Act 1973 (Cth) — THE NOUNS, THE
+-- RULES AND THE TOP-LEVEL GOAL. Source:
+-- ../registers/source-bundle/C2004A00024.txt (compilation No. 10, 1 September
+-- 2021). The pregnant Commonwealth employee asks: "When must I be away from
+-- work; how long may my leave last; which weeks are paid?"
+
+§ `Nouns`
+
+DECLARE `Maternity case` HAS
+    -- s 5
+    `the Act applies to me`                                         IS A BOOLEAN
+    -- s 3 confinement
+    `the expected date of birth`                                    IS A DATE
+    `I was confined on`                                             IS A MAYBE DATE
+    -- s 7(1): permission to continue duty until a date
+    `I may continue duty until`                                     IS A MAYBE DATE
+    -- s 7(3): permission to resume duty on a date
+    `I may resume duty on`                                          IS A MAYBE DATE
+    -- s 6(4): the day my continuous qualifying service first exceeds 12 months
+    `my service first exceeds 12 months on`                         IS A DATE
+    -- s 6(4C)
+    `I was on unauthorised absence just before, without extenuating circumstances` IS A BOOLEAN
+    -- s 6(4F)
+    `I am on unpaid leave of over 6 weeks and the Agency Head has not determined otherwise` IS A BOOLEAN
+
+DECLARE `Maternity position` HAS
+    `the compulsory absence starts on`                              IS A MAYBE DATE
+    `the compulsory absence ends on`                                IS A MAYBE DATE
+    `my leave may last until`                                       IS A MAYBE DATE
+    `paid absence starts on`                                        IS A MAYBE DATE
+    `paid absence ends on`                                          IS A MAYBE DATE
+
+§ `Rules`
+
+-- s 3 confinement: a birth or other end of pregnancy not earlier than 20
+-- weeks before the expected date of birth.
+@ref s 3 confinement
+GIVEN c IS A `Maternity case`
+GIVETH A BOOLEAN
+DECIDE `there was a confinement` c IF
+    CONSIDER c's `I was confined on`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST d THEN d AT LEAST c's `the expected date of birth` MINUS 140
+
+GIVEN d IS A DATE
+GIVETH A DATE
+`six weeks before` d MEANS d MINUS 42
+
+-- s 6(1)(b), s 7(2): the compulsory absence starts 6 weeks before the
+-- expected date of birth (or the day after a s 7(1) date), or on an earlier
+-- confinement.
+@ref ss 6(1)(b), 7(1)-(2)
+GIVEN c IS A `Maternity case`
+GIVETH A MAYBE DATE
+`the start for` c MEANS
+    IF (NOT (c's `the Act applies to me`)) OR ((NOT (c's `I was confined on` EQUALS NOTHING)) AND (NOT (`there was a confinement` c)))
+    THEN NOTHING
+    ELSE JUST (CONSIDER c's `I was confined on`
+               WHEN JUST conf THEN
+                   IF conf LESS THAN `six weeks before` (c's `the expected date of birth`) OR `confined before the permitted date` c conf
+                   THEN conf
+                   ELSE usual
+               WHEN NOTHING THEN usual)
+    WHERE
+        usual MEANS
+            CONSIDER c's `I may continue duty until`
+            WHEN JUST x THEN x PLUS 1
+            WHEN NOTHING THEN `six weeks before` (c's `the expected date of birth`)
+
+-- s 6(1)(b)(i)-(ii): until the end of 6 weeks commencing on the confinement;
+-- s 7(3): earlier if permitted to resume.
+@ref ss 6(1)(b), 7(3)
+GIVEN c IS A `Maternity case`
+GIVETH A MAYBE DATE
+`the end for` c MEANS
+    IF (NOT (c's `the Act applies to me`)) OR NOT (`there was a confinement` c)
+    THEN NOTHING
+    ELSE CONSIDER c's `I was confined on`
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST conf THEN
+             CONSIDER c's `I may resume duty on`
+             WHEN JUST r THEN IF r MINUS 1 LESS THAN conf PLUS 41 THEN JUST (r MINUS 1) ELSE JUST (conf PLUS 41)
+             WHEN NOTHING THEN JUST (conf PLUS 41)
+
+-- s 7(2)(b): confined "before the date so specified" (strictly before).
+GIVEN c IS A `Maternity case`, conf IS A DATE
+GIVETH A BOOLEAN
+DECIDE `confined before the permitted date` c conf IF
+    CONSIDER c's `I may continue duty until`
+    WHEN JUST x THEN conf LESS THAN x
+    WHEN NOTHING THEN FALSE
+
+-- s 6(1)(a), (c): permission for up to 52 weeks commencing on the start of the
+-- compulsory absence. s 6(2): none after a pregnancy ends otherwise than by
+-- confinement.
+@ref s 6(1)(a), (c), (2)
+GIVEN c IS A `Maternity case`
+GIVETH A MAYBE DATE
+`the leave limit for` c MEANS
+    IF (NOT (c's `I was confined on` EQUALS NOTHING)) AND NOT (`there was a confinement` c)
+    THEN NOTHING
+    ELSE IF c's `I was on unauthorised absence just before, without extenuating circumstances`
+         THEN `the end for` c
+         ELSE `52 weeks from the start for` c
+
+GIVEN c IS A `Maternity case`
+GIVETH A MAYBE DATE
+`52 weeks from the start for` c MEANS
+    CONSIDER `the start for` c
+    WHEN JUST s THEN JUST (s PLUS 363)
+    WHEN NOTHING THEN NOTHING
+
+-- s 6(3)-(4): pay for the first 12 weeks of absence, but not for absence
+-- before continuous service first exceeds 12 months. s 6(4C), (4F): none.
+@ref s 6(3)-(4), (4C), (4F)
+GIVEN c IS A `Maternity case`
+GIVETH A BOOLEAN
+DECIDE `pay is barred` c IF
+        NOT (`there was a confinement` c)
+    OR  c's `I was on unauthorised absence just before, without extenuating circumstances`
+    OR  c's `I am on unpaid leave of over 6 weeks and the Agency Head has not determined otherwise`
+
+-- s 6(3)(b): an absence shorter than 12 weeks is paid in whole; resuming
+-- under s 7(3) ends it (changed after the independent pass).
+GIVEN c IS A `Maternity case`, s IS A DATE
+GIVETH A DATE
+`the last paid day for` c s MEANS
+    CONSIDER c's `I may resume duty on`
+    WHEN JUST r THEN IF r MINUS 1 LESS THAN s PLUS 83 THEN r MINUS 1 ELSE s PLUS 83
+    WHEN NOTHING THEN s PLUS 83
+
+GIVEN c IS A `Maternity case`
+GIVETH A MAYBE DATE
+`the paid end for` c MEANS
+    IF `pay is barred` c THEN NOTHING
+    ELSE CONSIDER `the start for` c
+         WHEN JUST s THEN
+             IF c's `my service first exceeds 12 months on` GREATER THAN `the last paid day for` c s THEN NOTHING ELSE JUST (`the last paid day for` c s)
+         WHEN NOTHING THEN NOTHING
+
+GIVEN c IS A `Maternity case`
+GIVETH A MAYBE DATE
+`the paid start for` c MEANS
+    IF `the paid end for` c EQUALS NOTHING THEN NOTHING
+    ELSE CONSIDER `the start for` c
+         WHEN JUST s THEN
+             IF c's `my service first exceeds 12 months on` GREATER THAN s
+             THEN JUST (c's `my service first exceeds 12 months on`)
+             ELSE JUST s
+         WHEN NOTHING THEN NOTHING
+
+@ref ss 3, 5, 6, 7
+@export default The position of a pregnant Commonwealth employee under the Maternity Leave (Commonwealth Employees) Act 1973 (Cth): when the compulsory absence starts (6 weeks before the expected date of birth, the day after a date to which a medical certificate lets her keep working, or an earlier confinement) and ends (6 weeks commencing on the confinement, or earlier if certified fit to resume: ss 6(1)(b), 7); how long her leave may last (52 weeks from the start of the compulsory absence: s 6(1)(a), (c)); and which days are paid (the first 12 weeks of absence, but not before her continuous service exceeds 12 months, and none after an unexcused unauthorised absence or long unpaid leave: s 6(3)-(4F)). A pregnancy ending more than 20 weeks before the expected date of birth is not a confinement. DRAFT, not reviewed by an Australian lawyer.
+GIVEN c IS A `Maternity case`  @desc Whether the Act applies, the expected date of birth, the confinement, any certificates, the 12-months service day, and the absence and unpaid leave facts
+GIVETH A `Maternity position`
+`the maternity position for` c MEANS
+    `Maternity position` OF `the start for` c, `the end for` c, `the leave limit for` c, `the paid start for` c, `the paid end for` c
