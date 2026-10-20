@@ -53,6 +53,10 @@ A layer has to live in the same folder, because the stable `l4` resolves IMPORT 
 Write a separate shorter baseline (`encodings/baseline-<date>/`) only where no longer encoding exists. Where both already exist, both stay: neither deletes the other.
 Legalese Commons' Interact form needs seat questions with `@export`/`@desc`, from a baseline or a seat layer.
 
+**More than one seat (ruled 2026-10-21).** The individual's seat comes first and is required. Further seat layers are welcome for any other party the text puts duties or liabilities on — the employer, the landlord, the seller, the business — each as its own module beside the first (`<prefix>-seat-<party>.l4`), drawing on the same longer modules so the seats cannot disagree about the law.
+Officials still get no seat: not the regulator, the court or the department.
+Each seat layer keeps its own names (two layers must never define the same one) and records its seat in NOTES.md. The first example is `subjects/sg/employment-act-1968/encodings/naive-2026-10/` (employee and employer).
+
 ## Where things go
 
 The layout is ruled in [`docs/directory-conventions.md`](docs/directory-conventions.md) (rulings of 2026-08-05; the ISO spelling ruled again 2026-09-26).
