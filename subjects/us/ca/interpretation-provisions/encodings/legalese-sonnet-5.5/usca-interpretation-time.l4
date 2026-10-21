@@ -1,0 +1,808 @@
+@lang en
+IMPORT prelude
+IMPORT daydate
+
+-- California interpretation provisions: the time rules, as functions other encodings can call.
+--
+-- Sources: Gov. Code §§ 6800-6808 (computation of time), §§ 9600, 9602 (when statutes and resolutions take
+-- effect), Civ. Code §§ 2, 10, 11, 14(b)(4), Code Civ. Proc. §§ 2, 12, 12a, 12b, 12c, 13, 13a, 13b, 17(b)(4),
+-- and Gov. Code §§ 6706, 6707.  The quotation lines are copied by script from the converter-made plain-text
+-- rendering of the sections (not the official text) and checked against it by srcrefs.py.
+--
+-- Rest days and holidays are never computed here.  Every function that needs them takes the calendar as an
+-- input, `FUNCTION FROM DATE TO BOOLEAN`.  A case the text does not answer is a named REFUSE, never a default.
+-- Target: unstable (REFUSE).  Imports: prelude and daydate only.
+
+§ `Nouns of this module`
+
+-- Gov. Code § 6806 and Civ. Code § 2: the moment within a day is a day and a count of seconds after the midnight
+-- that begins it.  The midnight instant that ends one day and begins the next is represented as the beginning of
+-- the later day (0 seconds); the text does not say which day owns that instant, so this is a representation
+-- chosen here (fork F-midnight in NOTES), not a rule of the text.
+DECLARE Moment HAS
+    `the day`                IS A DATE
+    `seconds after midnight` IS A NUMBER
+
+-- The kind of enactment a time word or a rest-day rule is being read for (selectors in § `Which section governs`).
+DECLARE `Kind of enactment` IS ONE OF
+    `a provision of the Civil Code`
+    `a provision of the Code of Civil Procedure`
+    `a provision of the Government Code`
+    `a provision of another State statute`
+    `an ordinance, rule or regulation`
+
+§ `Weekdays`
+
+-- daydate's `Weekday of` gives 0 for Sunday to 6 for Saturday.  Gov. Code § 6801 says time is computed by the
+-- Gregorian calendar, which is what daydate's day numbers are.
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`is a Sunday` d MEANS `Weekday of` d EQUALS 0
+
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`is a Saturday` d MEANS `Weekday of` d EQUALS 6
+
+§ `Leap years`
+
+-- src:GOV-ss-6800-6808:10 | 6801. Time is computed according to the Gregorian or new style; and January 1st, in every year, after 1752 is reckoned as the first day of the year.
+-- src:GOV-ss-6800-6808:12 | 6802. The years 1900, 2100, 2200, 2300, or any other future hundredth year, of which the year 2000 is the first, except only every fourth hundredth year, are not leap years, but common years of 365 days. The years 2000, 2400, 2800, and every other fourth hundredth year after 2000 and every fourth year, except as provided in this section, which, by usage in this State is considered a leap year, is a leap year consisting of 366 days.
+@ref Gov. Code § 6801, § 6802 (src:GOV-ss-6800-6808:10, src:GOV-ss-6800-6808:12)
+GIVEN year IS A NUMBER
+GIVETH A BOOLEAN
+`is a leap year under section 6802` year MEANS
+    BRANCH
+        IF year MODULO 100 EQUALS 0 AND year LESS THAN 1900
+            THEN REFUSE "Gov. Code § 6802 names 1900 and later hundredth years, and says every fourth year is a leap year by usage; for an earlier hundredth year it does not say whether the Gregorian exception of § 6801 applies"
+        IF year MODULO 400 EQUALS 0 THEN TRUE
+        IF year MODULO 100 EQUALS 0 THEN FALSE
+        OTHERWISE year MODULO 4 EQUALS 0
+
+§ `Counting a period`
+
+GIVEN n IS A NUMBER
+GIVETH A BOOLEAN
+`n is a whole number of at least one` n MEANS
+    n AT LEAST 1 AND FLOOR n EQUALS n
+
+-- Gov. Code § 6800, Civ. Code § 10, Code Civ. Proc. § 12: exclude the first day, include the last.
+-- The first day is the day the period is counted from (fork F-from in NOTES: the text does not say whether
+-- that is the day of the event or the day after it; this module takes the day it is given as the excluded
+-- first day).  A period of a day, a week or any number of them therefore ends n days (7n days) later.
+-- src:GOV-ss-6800-6808:8 | 6800. The time in which any act provided by law is to be done is computed by excluding the first day, and including the last, unless the last day is a holiday, and then it is also excluded.
+-- src:CIV-ss-1-23.6:49 | 10. The time in which any act provided by law is to be done is computed by excluding the first day and including the last, unless the last day is a holiday, and then it is also excluded.
+-- src:CCP-ss-1-34:34 | 12. The time in which any act provided by law is to be done is computed by excluding the first day, and including the last, unless the last day is a holiday, and then it is also excluded.
+@ref Gov. Code § 6800, Civ. Code § 10, Code Civ. Proc. § 12 (src:GOV-ss-6800-6808:8, src:CIV-ss-1-23.6:49, src:CCP-ss-1-34:34)
+GIVEN n IS A NUMBER
+      firstDay IS A DATE
+GIVETH A DATE
+`before the rest-day rule, the last day of` n `days counted from` firstDay MEANS
+    IF `n is a whole number of at least one` n
+    THEN firstDay PLUS n
+    ELSE REFUSE "Gov. Code § 6800 counts whole days, excluding the first and including the last, so a period of no days or of part of a day has no last day in the text"
+
+-- src:GOV-ss-6800-6808:18 | 6805. A week consists of seven consecutive days.
+@ref Gov. Code § 6805 (src:GOV-ss-6800-6808:18)
+GIVEN n IS A NUMBER
+      firstDay IS A DATE
+GIVETH A DATE
+`before the rest-day rule, the last day of` n `weeks counted from` firstDay MEANS
+    IF `n is a whole number of at least one` n
+    THEN `before the rest-day rule, the last day of` (7 TIMES n) `days counted from` firstDay
+    ELSE REFUSE "Gov. Code § 6805 says a week consists of seven consecutive days; the text does not count part of a week"
+
+-- Gov. Code § 6804 says a month is a calendar month and nothing more.  Counting n months from a day is read
+-- here as arriving at the day of the month with the same number, n calendar months on (fork F-month in NOTES:
+-- the text does not state that corresponding-day rule).  Where the month reached has no day with that number,
+-- the text does not say what the last day is, and the answer is a refusal.
+-- src:GOV-ss-6800-6808:16 | 6804. “Month” means a calendar month, unless otherwise expressed.
+@ref Gov. Code § 6804, § 6800 (src:GOV-ss-6800-6808:16)
+GIVEN n IS A NUMBER
+      firstDay IS A DATE
+GIVETH A DATE
+`before the rest-day rule, the last day of` n `months counted from` firstDay MEANS
+    BRANCH
+        IF NOT `n is a whole number of at least one` n
+            THEN REFUSE "Gov. Code § 6804 says a month is a calendar month; the text does not count part of a month"
+        IF DATE_DAY firstDay GREATER THAN `Days in month` reachedMonth reachedYear
+            THEN REFUSE "the month reached has no day with the start day's number: Gov. Code § 6804 says only that a month is a calendar month and § 6800 excludes the first day and includes the last, so the text does not say what the last day is (daydate's add months would give the last day of the month, Date would roll into the next month, and the text licenses neither)"
+        OTHERWISE YMD reachedYear reachedMonth (DATE_DAY firstDay)
+    WHERE
+        monthsSinceYearZero MEANS DATE_YEAR firstDay TIMES 12 PLUS DATE_MONTH firstDay MINUS 1 PLUS n
+        reachedYear MEANS FLOOR (monthsSinceYearZero DIVIDED BY 12)
+        reachedMonth MEANS monthsSinceYearZero MODULO 12 PLUS 1
+
+§ `Year, half year and quarter of a year: fixed lengths with the leap-day pair`
+
+-- Gov. Code § 6803.  A year is 365 days, a half year 182 and a quarter of a year 91.  The added day of a leap
+-- year (29 February) and the day immediately preceding it (28 February), "if they occur in any such period",
+-- are reckoned together as one day.  So the count of days is made on a calendar in which each such pair
+-- counts once, and the last day is the first day on which the count reaches the length of the period.
+--
+-- Fork F-pair in NOTES: does the pair "occur in" the period when the preceding day, 28 February, is the first
+-- day, which § 6800 excludes?  `the pair needs both days counted` says no (the literal reading, taken by the
+-- functions without a reading in their names); `the pair needs only its added day counted` says yes.
+-- src:GOV-ss-6800-6808:14 | 6803. “Year” means a period of 365 days; “half year,” 182 days; “quarter of a year,” 91 days. The added day of a leap year, and the day immediately preceding, if they occur in any such period, shall be reckoned together as one day.
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVEN firstDay IS A DATE
+      endDay IS A DATE
+      y IS A NUMBER
+      `the 28 February may be the excluded first day` IS A BOOLEAN
+GIVETH A BOOLEAN
+`leap-day pair of the year lies in the period` firstDay endDay y `the 28 February may be the excluded first day` MEANS
+    IF `is a leap year under section 6802` y
+    THEN (IF `the 28 February may be the excluded first day`
+          THEN Day (YMD y 2 28) AT LEAST Day firstDay
+          ELSE Day (YMD y 2 28) GREATER THAN Day firstDay)
+         AND Day (YMD y 2 29) AT MOST Day endDay
+    ELSE FALSE
+
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVEN firstDay IS A DATE
+      endDay IS A DATE
+      y IS A NUMBER
+      lastYear IS A NUMBER
+      `the 28 February may be the excluded first day` IS A BOOLEAN
+GIVETH A NUMBER
+`count of leap-day pairs in the period` firstDay endDay y lastYear `the 28 February may be the excluded first day` MEANS
+    IF y GREATER THAN lastYear
+    THEN 0
+    ELSE (IF `leap-day pair of the year lies in the period` firstDay endDay y `the 28 February may be the excluded first day`
+          THEN 1 ELSE 0)
+         PLUS `count of leap-day pairs in the period` firstDay endDay (y PLUS 1) lastYear `the 28 February may be the excluded first day`
+
+-- The end day number E must satisfy: (E minus the first day's number) minus (the pairs in the period) = the
+-- length.  Starting from E = first + length and adding the pairs found each round reaches the least such E.
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVEN firstDay IS A DATE
+      units IS A NUMBER
+      `the 28 February may be the excluded first day` IS A BOOLEAN
+      candidate IS A NUMBER
+GIVETH A NUMBER
+`day number on which a count of units ends` firstDay units `the 28 February may be the excluded first day` candidate MEANS
+    IF next EQUALS candidate
+    THEN candidate
+    ELSE `day number on which a count of units ends` firstDay units `the 28 February may be the excluded first day` next
+    WHERE
+        next MEANS Day firstDay PLUS units PLUS `count of leap-day pairs in the period` firstDay (Date candidate) (DATE_YEAR firstDay) (DATE_YEAR (Date candidate)) `the 28 February may be the excluded first day`
+
+@ref Gov. Code § 6803, § 6800 (src:GOV-ss-6800-6808:14)
+GIVEN units IS A NUMBER
+      firstDay IS A DATE
+      `the 28 February may be the excluded first day` IS A BOOLEAN
+GIVETH A DATE
+`last day of a count of units in which the leap-day pair counts once` units firstDay `the 28 February may be the excluded first day` MEANS
+    Date (`day number on which a count of units ends` firstDay units `the 28 February may be the excluded first day` (Day firstDay PLUS units))
+
+GIVEN n IS A NUMBER
+      unitLength IS A NUMBER
+      firstDay IS A DATE
+      `the 28 February may be the excluded first day` IS A BOOLEAN
+GIVETH A DATE
+`last day of n periods of fixed length` n unitLength firstDay `the 28 February may be the excluded first day` MEANS
+    IF `n is a whole number of at least one` n
+    THEN `last day of a count of units in which the leap-day pair counts once` (n TIMES unitLength) firstDay `the 28 February may be the excluded first day`
+    ELSE REFUSE "Gov. Code § 6803 defines year, half year and quarter of a year as whole lengths; the text does not count part of one"
+
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVEN n IS A NUMBER
+      firstDay IS A DATE
+GIVETH A DATE
+`before the rest-day rule, the last day of` n `years counted from` firstDay MEANS
+    `last day of n periods of fixed length` n 365 firstDay FALSE
+
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVEN n IS A NUMBER
+      firstDay IS A DATE
+GIVETH A DATE
+`before the rest-day rule, the last day of` n `half years counted from` firstDay MEANS
+    `last day of n periods of fixed length` n 182 firstDay FALSE
+
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVEN n IS A NUMBER
+      firstDay IS A DATE
+GIVETH A DATE
+`before the rest-day rule, the last day of` n `quarters of a year counted from` firstDay MEANS
+    `last day of n periods of fixed length` n 91 firstDay FALSE
+
+-- The same counts on the purposive reading of the pair (fork F-pair): 28 February may be the excluded first day.
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVEN n IS A NUMBER
+      firstDay IS A DATE
+GIVETH A DATE
+`on the purposive reading of the leap-day pair, before the rest-day rule, the last day of` n `years counted from` firstDay MEANS
+    `last day of n periods of fixed length` n 365 firstDay TRUE
+
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVEN n IS A NUMBER
+      firstDay IS A DATE
+GIVETH A DATE
+`on the purposive reading of the leap-day pair, before the rest-day rule, the last day of` n `half years counted from` firstDay MEANS
+    `last day of n periods of fixed length` n 182 firstDay TRUE
+
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVEN n IS A NUMBER
+      firstDay IS A DATE
+GIVETH A DATE
+`on the purposive reading of the leap-day pair, before the rest-day rule, the last day of` n `quarters of a year counted from` firstDay MEANS
+    `last day of n periods of fixed length` n 91 firstDay TRUE
+
+§ `The last day of a period when it falls on a holiday`
+
+-- The caller supplies the calendar: `holiday` is true of a date the caller treats as a holiday for the purpose
+-- in hand.  Which days are holidays is the subject of fork F-holiday in NOTES; Gov. Code § 6700, Civ. Code § 7,
+-- Code Civ. Proc. §§ 10, 12a(a) and 12b each say, and `usca-holidays.l4` offers each as a candidate calendar.
+
+-- Code Civ. Proc. § 12a(a): the period is "extended to and including the next day that is not a holiday".
+-- This is the reading that carries on past several holidays in a row (fork F-run in NOTES).  A calendar in
+-- which more than a year of days in a row are holidays is refused rather than looped over.
+-- src:CCP-ss-1-34:36 | 12a. (a) If the last day for the performance of any act provided or required by law to be performed within a specified period of time is a holiday, then that period is hereby extended to and including the next day that is not a holiday. For purposes of this section, “holiday” means all day on Saturdays, all holidays specified in Section 135 and, to the extent provided in Section 12b, all days that by terms of Section 12b are required to be considered as holidays.
+-- src:CCP-ss-1-34:37 | (b) This section
+-- src:CCP-ss-1-34:38 | applies to Sections 659, 659a, and 921, and to all other provisions of law providing or requiring an act to be performed on a particular day or within a specified period of time, whether expressed in this or any other code or statute, ordinance, rule, or regulation.
+@ref Code Civ. Proc. § 12a(a), (b) (src:CCP-ss-1-34:36-38)
+GIVEN holiday IS A FUNCTION FROM DATE TO BOOLEAN
+      d IS A DATE
+      daysSoFar IS A NUMBER
+GIVETH A DATE
+`next day from the date that is not a holiday, counting days so far` holiday d daysSoFar MEANS
+    BRANCH
+        IF NOT holiday d THEN d
+        IF daysSoFar AT LEAST 366 THEN REFUSE "the calendar supplied makes more than 366 consecutive days holidays, so there is no next day that is not a holiday to extend to"
+        OTHERWISE `next day from the date that is not a holiday, counting days so far` holiday (d PLUS 1) (daysSoFar PLUS 1)
+
+@ref Code Civ. Proc. § 12a(a), (b) (src:CCP-ss-1-34:36-38)
+GIVEN holiday IS A FUNCTION FROM DATE TO BOOLEAN
+      d IS A DATE
+GIVETH A DATE
+`extended to the next day that is not a holiday` holiday d MEANS
+    `next day from the date that is not a holiday, counting days so far` holiday d 0
+
+-- Gov. Code § 6800, Civ. Code § 10, Code Civ. Proc. § 12: "unless the last day is a holiday, and then it is also
+-- excluded".  Read once, the day is dropped and the day after it becomes the last day, whatever that day is
+-- (fork F-run in NOTES: the other reading is that the same text applies again to the new last day, and
+-- reaches the same answer as § 12a(a)).
+@ref Gov. Code § 6800, Civ. Code § 10, Code Civ. Proc. § 12 (src:GOV-ss-6800-6808:8, src:CIV-ss-1-23.6:49, src:CCP-ss-1-34:34)
+GIVEN holiday IS A FUNCTION FROM DATE TO BOOLEAN
+      d IS A DATE
+GIVETH A DATE
+`with a holiday last day also excluded, once` holiday d MEANS
+    IF holiday d THEN d PLUS 1 ELSE d
+
+-- The text does not distinguish periods counted in days from periods counted in months or years: § 6800,
+-- Civ. § 10 and CCP § 12 speak of "any act provided by law", and § 12a(a) of "a specified period of time".
+-- So the same rule is applied to every unit (fork F-unit in NOTES).
+DECLARE `Unit of time` IS ONE OF
+    days
+    weeks
+    months
+    years
+    `half years`
+    `quarters of a year`
+
+GIVEN n IS A NUMBER
+      u IS A `Unit of time`
+      firstDay IS A DATE
+GIVETH A DATE
+`before the rest-day rule, the last day of a period of` n u `counted from` firstDay MEANS
+    CONSIDER u
+    WHEN days THEN `before the rest-day rule, the last day of` n `days counted from` firstDay
+    WHEN weeks THEN `before the rest-day rule, the last day of` n `weeks counted from` firstDay
+    WHEN months THEN `before the rest-day rule, the last day of` n `months counted from` firstDay
+    WHEN years THEN `before the rest-day rule, the last day of` n `years counted from` firstDay
+    WHEN `half years` THEN `before the rest-day rule, the last day of` n `half years counted from` firstDay
+    WHEN `quarters of a year` THEN `before the rest-day rule, the last day of` n `quarters of a year counted from` firstDay
+
+@ref Gov. Code § 6800, Code Civ. Proc. § 12a(a) (src:GOV-ss-6800-6808:8, src:CCP-ss-1-34:36-38)
+GIVEN n IS A NUMBER
+      u IS A `Unit of time`
+      firstDay IS A DATE
+      holiday IS A FUNCTION FROM DATE TO BOOLEAN
+GIVETH A DATE
+`the last day of a period of` n u `counted from` firstDay `under the calendar` holiday MEANS
+    `extended to the next day that is not a holiday` holiday (`before the rest-day rule, the last day of a period of` n u `counted from` firstDay)
+
+@ref Gov. Code § 6800, Civ. Code § 10, Code Civ. Proc. § 12 (src:GOV-ss-6800-6808:8, src:CIV-ss-1-23.6:49, src:CCP-ss-1-34:34)
+GIVEN n IS A NUMBER
+      u IS A `Unit of time`
+      firstDay IS A DATE
+      holiday IS A FUNCTION FROM DATE TO BOOLEAN
+GIVETH A DATE
+`the last day of a period of` n u `counted from` firstDay `with a holiday last day excluded once under the calendar` holiday MEANS
+    `with a holiday last day also excluded, once` holiday (`before the rest-day rule, the last day of a period of` n u `counted from` firstDay)
+
+§ `Whether a date is inside a period`
+
+-- Gov. Code § 6800: the first day is excluded and the last day is included, so the first day is outside the
+-- period and the last day is inside it.  `lastDay` is the last day after the rest-day rule, so the days added by
+-- that rule are inside as well.
+@ref Gov. Code § 6800, Civ. Code § 10, Code Civ. Proc. § 12 (src:GOV-ss-6800-6808:8, src:CIV-ss-1-23.6:49, src:CCP-ss-1-34:34)
+GIVEN d IS A DATE
+      firstDay IS A DATE
+      lastDay IS A DATE
+GIVETH A BOOLEAN
+`the date` d `falls inside the period after` firstDay `through` lastDay MEANS
+    d GREATER THAN firstDay AND d AT MOST lastDay
+
+@ref Gov. Code § 6800, Code Civ. Proc. § 12a(a) (src:GOV-ss-6800-6808:8, src:CCP-ss-1-34:36-38)
+GIVEN d IS A DATE
+      n IS A NUMBER
+      u IS A `Unit of time`
+      firstDay IS A DATE
+      holiday IS A FUNCTION FROM DATE TO BOOLEAN
+GIVETH A BOOLEAN
+`the date` d `falls inside a period of` n u `counted from` firstDay `under the calendar` holiday MEANS
+    `the date` d `falls inside the period after` firstDay `through` (`the last day of a period of` n u `counted from` firstDay `under the calendar` holiday)
+
+§ `The lengths the text gives to the time words`
+
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVETH A NUMBER
+`days in a year under section 6803` MEANS 365
+
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVETH A NUMBER
+`days in a half year under section 6803` MEANS 182
+
+@ref Gov. Code § 6803 (src:GOV-ss-6800-6808:14)
+GIVETH A NUMBER
+`days in a quarter of a year under section 6803` MEANS 91
+
+@ref Gov. Code § 6805 (src:GOV-ss-6800-6808:18)
+GIVETH A NUMBER
+`days in a week under section 6805` MEANS 7
+
+§ `A day, a moment, daytime and nighttime`
+
+-- Gov. Code § 6806: a day is the period between any midnight and the midnight following.  A moment is counted
+-- in seconds from the beginning of day number 0, so that two moments can be compared across days.
+GIVEN m IS A Moment
+GIVETH A NUMBER
+`seconds since the beginning of day number 0 at` m MEANS
+    Day (m's `the day`) TIMES 86400 PLUS m's `seconds after midnight`
+
+-- src:GOV-ss-6800-6808:20 | 6806. A day is the period of time between any midnight and the midnight following.
+@ref Gov. Code § 6806 (src:GOV-ss-6800-6808:20)
+GIVEN d IS A DATE
+GIVETH A Moment
+`the midnight that begins the day` d MEANS
+    Moment WITH `the day` IS d, `seconds after midnight` IS 0
+
+@ref Gov. Code § 6806 (src:GOV-ss-6800-6808:20)
+GIVEN d IS A DATE
+GIVETH A Moment
+`the midnight that ends the day` d MEANS
+    Moment WITH `the day` IS d PLUS 1, `seconds after midnight` IS 0
+
+@ref Gov. Code § 6806 (src:GOV-ss-6800-6808:20)
+GIVEN m IS A Moment
+      d IS A DATE
+GIVETH A BOOLEAN
+`the moment` m `falls within the day` d MEANS
+        `seconds since the beginning of day number 0 at` m AT LEAST `seconds since the beginning of day number 0 at` (`the midnight that begins the day` d)
+    AND `seconds since the beginning of day number 0 at` m LESS THAN `seconds since the beginning of day number 0 at` (`the midnight that ends the day` d)
+
+GIVEN a IS A Moment
+      b IS A Moment
+GIVETH A BOOLEAN
+`the moment` a `is not before the moment` b MEANS
+    `seconds since the beginning of day number 0 at` a AT LEAST `seconds since the beginning of day number 0 at` b
+
+DECLARE `Part of the day` IS ONE OF
+    daytime
+    nighttime
+
+-- Gov. Code § 6807.  Sunrise and sunset are not computed by the text; the caller supplies them, as seconds after
+-- midnight on the same civil day.  The text says "between", so the instants of sunrise and of sunset themselves
+-- belong to neither period as far as the text goes, and are refused (fork F-daytime in NOTES).
+-- src:GOV-ss-6800-6808:22 | 6807. “Daytime” is the period of time between sunrise and sunset. “Nighttime” is the period of time between sunset and sunrise.
+@ref Gov. Code § 6807 (src:GOV-ss-6800-6808:22)
+GIVEN t IS A NUMBER
+      sunrise IS A NUMBER
+      sunset IS A NUMBER
+GIVETH A `Part of the day`
+`the part of the day at` t `given sunrise at` sunrise `and sunset at` sunset MEANS
+    BRANCH
+        IF sunrise AT LEAST sunset
+            THEN REFUSE "Gov. Code § 6807 defines daytime as the period between sunrise and sunset; a civil day on which sunset does not follow sunrise is not covered by the text"
+        IF t EQUALS sunrise OR t EQUALS sunset
+            THEN REFUSE "Gov. Code § 6807 says daytime is between sunrise and sunset and nighttime between sunset and sunrise; the text does not say which the instant of sunrise or of sunset belongs to"
+        IF t GREATER THAN sunrise AND t LESS THAN sunset THEN daytime
+        OTHERWISE nighttime
+
+§ `Standard time and daylight saving time`
+
+-- Gov. Code § 6808(a), (b).  Weekday 0 is Sunday.
+-- src:GOV-ss-6800-6808:24 | 6808. (a) The standard time within the state is that of the fifth zone designated by federal law as Pacific standard time (15 U.S.C. Secs. 261 and 263).
+-- src:GOV-ss-6800-6808:25 | (b) The standard time within the state shall advance by one hour during the daylight saving time period commencing at 2 a.m. on the second Sunday of March of each year and ending at 2 a.m. on the first Sunday of November of each year.
+-- src:GOV-ss-6800-6808:26 | (c) Notwithstanding subdivision (b), the Legislature may amend this section by a two-thirds vote to change the dates and times of the daylight saving time period, consistent with federal law, and, if federal law authorizes the state to provide for the year-round application of daylight saving time, the
+-- src:GOV-ss-6800-6808:27 | Legislature may amend this section by a two-thirds vote to provide for that application.
+@ref Gov. Code § 6808(b) (src:GOV-ss-6800-6808:24-27)
+GIVEN y IS A NUMBER
+GIVETH A DATE
+`the second Sunday of March of` y MEANS
+    YMD y 3 1 PLUS ((7 MINUS `Weekday of` (YMD y 3 1)) MODULO 7) PLUS 7
+
+@ref Gov. Code § 6808(b) (src:GOV-ss-6800-6808:24-27)
+GIVEN y IS A NUMBER
+GIVETH A DATE
+`the first Sunday of November of` y MEANS
+    YMD y 11 1 PLUS ((7 MINUS `Weekday of` (YMD y 11 1)) MODULO 7)
+
+-- The clock reading is read on the clock then in force.  Daylight saving time commences at 2 a.m. on the second
+-- Sunday of March, when the clock then advances to 3 a.m., so readings from 2 a.m. up to 3 a.m. on that day do not
+-- occur.  It ends at 2 a.m. on the first Sunday of November, taken here as 2 a.m. on the daylight saving clock
+-- (the text does not say which clock; fork F-dst in NOTES), so readings from 1 a.m. up to 2 a.m. on that day occur
+-- twice, once on each side of the change, and a reading alone cannot say which.
+@ref Gov. Code § 6808(b) (src:GOV-ss-6800-6808:24-27)
+GIVEN secs IS A NUMBER
+GIVETH A BOOLEAN
+`daylight saving time at a clock reading on the day it commences` secs MEANS
+    BRANCH
+        IF secs LESS THAN 7200 THEN FALSE
+        IF secs LESS THAN 10800 THEN REFUSE "Gov. Code § 6808(b): daylight saving time commences at 2 a.m., when the clock advances one hour, so the clock does not read between 2 a.m. and 3 a.m. that day"
+        OTHERWISE TRUE
+
+@ref Gov. Code § 6808(b) (src:GOV-ss-6800-6808:24-27)
+GIVEN secs IS A NUMBER
+GIVETH A BOOLEAN
+`daylight saving time at a clock reading on the day it ends` secs MEANS
+    BRANCH
+        IF secs LESS THAN 3600 THEN TRUE
+        IF secs LESS THAN 7200 THEN REFUSE "Gov. Code § 6808(b): daylight saving time ends at 2 a.m., so the clock reads between 1 a.m. and 2 a.m. twice that day; the text does not say which of the two a bare reading means, nor whether 2 a.m. there is read on the daylight clock or the standard one"
+        OTHERWISE FALSE
+
+@ref Gov. Code § 6808(a), (b) (src:GOV-ss-6800-6808:24-27)
+GIVEN m IS A Moment
+GIVETH A BOOLEAN
+`daylight saving time is in effect at the clock reading` m MEANS
+    BRANCH
+        IF d LESS THAN springDay OR d GREATER THAN autumnDay THEN FALSE
+        IF d EQUALS springDay THEN `daylight saving time at a clock reading on the day it commences` secs
+        IF d EQUALS autumnDay THEN `daylight saving time at a clock reading on the day it ends` secs
+        OTHERWISE TRUE
+    WHERE
+        d MEANS m's `the day`
+        secs MEANS m's `seconds after midnight`
+        springDay MEANS `the second Sunday of March of` (DATE_YEAR d)
+        autumnDay MEANS `the first Sunday of November of` (DATE_YEAR d)
+
+@ref Gov. Code § 6808(b) (src:GOV-ss-6800-6808:24-27)
+GIVEN m IS A Moment
+GIVETH A NUMBER
+`hours the clock is advanced from standard time at` m MEANS
+    IF `daylight saving time is in effect at the clock reading` m THEN 1 ELSE 0
+
+§ `An act due a number of days before a hearing`
+
+-- Code Civ. Proc. § 12c(a): count backward from the hearing date, excluding the day of the hearing; (b): days added
+-- for a particular method of service are counted backward from the day (a) gives.  The text does not say which
+-- way a last day that falls on a holiday moves (§ 12a(a) moves a last day forward to the next day that is not a
+-- holiday, which here is toward the hearing, while § 12 excludes it, which counted backward is earlier), and it
+-- does not say whether the day (a) gives is itself checked against the calendar before (b) is counted
+-- (fork F-backward in NOTES).  The first is refused when it arises; the second is not checked.
+-- src:CCP-ss-1-34:42 | 12c. (a) Where any law requires an act to be performed no later than a specified number of days before a hearing date, the last day to perform that act shall be determined by counting backward from the hearing date, excluding the day of the hearing as provided by Section 12.
+-- src:CCP-ss-1-34:43 | (b) Any additional days added to the specified number of days because of a particular method of service shall be computed by counting
+-- src:CCP-ss-1-34:44 | backward from the day determined in accordance with subdivision (a).
+@ref Code Civ. Proc. § 12c (src:CCP-ss-1-34:42-44)
+GIVEN n IS A NUMBER
+      hearing IS A DATE
+      addedDays IS A NUMBER
+      holiday IS A FUNCTION FROM DATE TO BOOLEAN
+GIVETH A DATE
+`the last day to act, when the act is due` n `days before the hearing on` hearing `with` addedDays `added days for the method of service, under the calendar` holiday MEANS
+    BRANCH
+        IF NOT `n is a whole number of at least one` n
+            THEN REFUSE "Code Civ. Proc. § 12c(a) speaks of a specified number of days before a hearing date; the text does not count part of a day or no days"
+        IF addedDays LESS THAN 0 OR NOT (FLOOR addedDays EQUALS addedDays)
+            THEN REFUSE "Code Civ. Proc. § 12c(b) speaks of additional days added because of a method of service; the text does not count part of a day"
+        IF holiday lastDay
+            THEN REFUSE "Code Civ. Proc. § 12c counts backward from the hearing date, and § 12a(a) moves a last day that is a holiday forward, to the next day that is not a holiday, while § 12 excludes it; the text does not say which way a backward-counted last day moves when it falls on a holiday"
+        OTHERWISE lastDay
+    WHERE
+        lastDay MEANS hearing MINUS n MINUS addedDays
+
+§ `An act appointed for a particular day, and a filing with a state agency`
+
+GIVEN businessDay IS A FUNCTION FROM DATE TO BOOLEAN
+      d IS A DATE
+      daysSoFar IS A NUMBER
+GIVETH A DATE
+`next business day after the date, counting days so far` businessDay d daysSoFar MEANS
+    BRANCH
+        IF businessDay (d PLUS 1) THEN d PLUS 1
+        IF daysSoFar AT LEAST 366 THEN REFUSE "the calendar supplied makes more than 366 consecutive days not business days, so there is no next business day"
+        OTHERWISE `next business day after the date, counting days so far` businessDay (d PLUS 1) (daysSoFar PLUS 1)
+
+GIVEN d IS A DATE
+      businessDay IS A FUNCTION FROM DATE TO BOOLEAN
+GIVETH A DATE
+`the next business day after` d `under the business days` businessDay MEANS
+    `next business day after the date, counting days so far` businessDay d 0
+
+-- Gov. Code § 6706, Civ. Code § 11, Code Civ. Proc. § 13: an act "of a secular nature, other than a work of
+-- necessity or mercy" appointed "by law or contract to be performed upon a particular day" that falls on a
+-- holiday "may be performed upon the next business day with the same effect".  It is a permission, so the answer
+-- is the latest day on which the act may be performed with the same effect.  An act that is not of that kind gets
+-- no later day from this rule, which is not to say the act may not be performed later by some other rule.
+-- Fork F-overlap in NOTES: CCP § 12a(b) also extends a particular day to the next day that is not a holiday, and
+-- the two reach different days where Saturday is a holiday under one and a business day under the other.
+-- src:GOV-ss-6700-6736:55 | 6706. Whenever any act of a secular nature, other than a work of necessity or mercy, is appointed by law or contract to be performed upon a particular day which falls upon a holiday, such act may be performed upon the next business day with the same effect as if it had been performed upon the day appointed.
+-- src:CIV-ss-1-23.6:51 | 11. Whenever any act of a secular nature, other than a work of necessity or mercy, is appointed by law or contract to be performed upon a particular day, which day falls upon a holiday, it may be performed upon the next business day, with the same effect as if it had been performed upon the day appointed.
+-- src:CCP-ss-1-34:46 | 13. Whenever any act of a secular nature, other than a work of necessity or mercy, is appointed by law or contract to be performed upon a particular day, which day falls upon a holiday, such act may be performed upon the next business day with the same effect as if it had been performed upon the day appointed.
+@ref Gov. Code § 6706, Civ. Code § 11, Code Civ. Proc. § 13 (src:GOV-ss-6700-6736:55, src:CIV-ss-1-23.6:51, src:CCP-ss-1-34:46)
+GIVEN appointedDay IS A DATE
+      `the act is secular and not a work of necessity or mercy` IS A BOOLEAN
+      holiday IS A FUNCTION FROM DATE TO BOOLEAN
+      businessDay IS A FUNCTION FROM DATE TO BOOLEAN
+GIVETH A DATE
+`the latest day on which an act appointed for` appointedDay `may be performed with the same effect, given that it is secular:` `the act is secular and not a work of necessity or mercy` `and given the holidays` holiday `and the business days` businessDay MEANS
+    IF `the act is secular and not a work of necessity or mercy` AND holiday appointedDay
+    THEN `the next business day after` appointedDay `under the business days` businessDay
+    ELSE appointedDay
+
+-- Gov. Code § 6707: the last day for filing a document with a state agency falls on a Saturday or a holiday.
+-- src:GOV-ss-6700-6736:57 | 6707. When the last day for filing any instrument or other document with a state agency falls upon a Saturday or holiday, such act may be performed upon the next business day with the same effect as if it had been performed upon the day appointed.
+@ref Gov. Code § 6707 (src:GOV-ss-6700-6736:57)
+GIVEN lastDayForFiling IS A DATE
+      holiday IS A FUNCTION FROM DATE TO BOOLEAN
+      businessDay IS A FUNCTION FROM DATE TO BOOLEAN
+GIVETH A DATE
+`the latest day for filing with a state agency, when the last day is` lastDayForFiling `, given the holidays` holiday `and the business days` businessDay MEANS
+    IF `is a Saturday` lastDayForFiling OR holiday lastDayForFiling
+    THEN `the next business day after` lastDayForFiling `under the business days` businessDay
+    ELSE lastDayForFiling
+
+§ `Performing an act on a Saturday or a special holiday`
+
+DECLARE `Kind of day for performing an act` IS ONE OF
+    `a Saturday`
+    `a special holiday`
+    `a Sunday or another holiday that is not a special holiday`
+
+-- Code Civ. Proc. § 13a covers "a special holiday as that term is used in Section 6705 of the Government Code", and
+-- § 13b a Saturday; each says "may be performed (but is not hereby required to be performed)".  The text has no
+-- rule on performing an act on a Sunday or on any other holiday.
+-- src:CCP-ss-1-34:48 | 13a. Any act required by law to be performed on a particular day or within a specified period of time may be performed (but is not hereby required to be performed) on a special holiday as that term is used in Section 6705 of the Government Code, with like effect as if performed on a day which is not a holiday.
+-- src:CCP-ss-1-34:50 | 13b. Any act required by law to be performed on a particular day or within a specified period may be performed (but is not hereby required to be performed) on a Saturday, with like effect as if performed on a day which is not a holiday.
+@ref Code Civ. Proc. § 13a, § 13b (src:CCP-ss-1-34:48, src:CCP-ss-1-34:50)
+GIVEN kind IS A `Kind of day for performing an act`
+GIVETH A BOOLEAN
+`an act required by law on a day or within a period may be performed on` kind MEANS
+    CONSIDER kind
+    WHEN `a Saturday` THEN TRUE
+    WHEN `a special holiday` THEN TRUE
+    WHEN `a Sunday or another holiday that is not a special holiday` THEN REFUSE "Code Civ. Proc. §§ 13a and 13b say an act may be performed on a special holiday or on a Saturday; the text does not say whether an act may be performed on a Sunday or on another holiday (§ 13 and Civ. Code § 11 give the next business day for an act appointed for a particular day, which is a different question)"
+
+§ `When an enactment goes into effect`
+
+DECLARE `Session of enactment` IS ONE OF
+    `a regular session`
+    `a special session`
+
+-- The facts Gov. Code § 9600 turns on.  `the moment of enactment` carries the "date of enactment"; the text does not
+-- say whether that is the day a bill is passed, signed or published (fork F-enactment in NOTES), so the caller
+-- supplies the one it means.
+DECLARE `Enactment of a statute` HAS
+    `the session`                                                            IS A `Session of enactment`
+    `the moment of enactment`                                                IS A Moment
+    `the special session adjourned on`                                       IS A MAYBE DATE
+    `calls an election`                                                      IS A BOOLEAN
+    `provides for a tax levy`                                                IS A BOOLEAN
+    `provides for appropriations for the usual current expenses of the state` IS A BOOLEAN
+    `is an urgency statute`                                                  IS A BOOLEAN
+    `names its own day of effect`                                            IS A MAYBE DATE
+
+-- src:GOV-ss-9600-9612:8 | 9600. (a) Except as provided in subdivision (b), a statute enacted at a regular session shall go into effect on January 1 next following a 90-day period from the date of enactment of the statute and a statute enacted at a special session shall go into effect on the 91st day after adjournment of the special session at which the bill was passed.
+-- src:GOV-ss-9600-9612:9 | (b) Statutes calling elections, statutes providing for tax levies or appropriations for the usual current expenses of the state, and urgency statutes shall go into effect immediately upon their enactment.
+@ref Gov. Code § 9600(b) (src:GOV-ss-9600-9612:8-9)
+GIVEN enactment IS AN `Enactment of a statute`
+GIVETH A BOOLEAN
+`a statute is of a kind that goes into effect immediately upon its enactment` enactment MEANS
+        enactment's `calls an election`
+    OR enactment's `provides for a tax levy`
+    OR enactment's `provides for appropriations for the usual current expenses of the state`
+    OR enactment's `is an urgency statute`
+
+-- § 9600(a), regular session: "January 1 next following a 90-day period from the date of enactment".  The period is
+-- counted under § 6800, so the day of enactment is excluded and the 90th day is 90 days on (fork F-commence in
+-- NOTES: § 6800 speaks of acts to be done, and this is not one).  The January 1 next following that day is the
+-- January 1 after it; when the 90th day is itself a January 1 (enactment on 3 October), the text does not say whether
+-- the period ends on that January 1, which is then followed by the next, or on the day before.
+@ref Gov. Code § 9600(a), § 6800 (src:GOV-ss-9600-9612:8-9, src:GOV-ss-6800-6808:8)
+GIVEN dayOfEnactment IS A DATE
+GIVETH A DATE
+`the day a regular-session statute goes into effect when enacted on` dayOfEnactment MEANS
+    IF DATE_MONTH ninetieth EQUALS 1 AND DATE_DAY ninetieth EQUALS 1
+    THEN REFUSE "Gov. Code § 9600(a) says January 1 next following a 90-day period from the date of enactment; when the 90th day is itself a January 1 the text does not say whether that day is part of the period (so the next January 1 follows it) or the period ends the day before (so that January 1 is the next following)"
+    ELSE YMD (DATE_YEAR ninetieth PLUS 1) 1 1
+    WHERE
+        ninetieth MEANS dayOfEnactment PLUS 90
+
+-- § 9600(a), special session: "the 91st day after adjournment of the special session at which the bill was passed".
+@ref Gov. Code § 9600(a) (src:GOV-ss-9600-9612:8-9)
+GIVEN adjourned IS A MAYBE DATE
+GIVETH A DATE
+`the day a special-session statute goes into effect, the special session having adjourned on` adjourned MEANS
+    CONSIDER adjourned
+    WHEN JUST adjournment THEN adjournment PLUS 91
+    WHEN NOTHING THEN REFUSE "Gov. Code § 9600(a) counts from the adjournment of the special session at which the bill was passed, and no adjournment date was supplied"
+
+-- Gov. Code § 9600 has no exception for a statute that names its own day, so a statute that does is refused
+-- (fork F-own-day in NOTES).  A caller who takes the day a statute names to govern can say so with the function
+-- below, which is that assumption and nothing else.
+@ref Gov. Code § 9600 (src:GOV-ss-9600-9612:8-9)
+GIVEN enactment IS AN `Enactment of a statute`
+GIVETH A DATE
+`the day a statute goes into effect` enactment MEANS
+    CONSIDER enactment's `names its own day of effect`
+    WHEN JUST named THEN REFUSE "Gov. Code § 9600 does not say what happens when a statute names its own day of effect: the exceptions in (b) are elections, tax levies, appropriations for the usual current expenses of the state and urgency statutes; the text neither lets the statute's own day displace (a) nor forbids it"
+    WHEN NOTHING THEN
+        BRANCH
+            IF `a statute is of a kind that goes into effect immediately upon its enactment` enactment
+                THEN enactment's `the moment of enactment`'s `the day`
+            IF enactment's `the session` EQUALS `a special session`
+                THEN `the day a special-session statute goes into effect, the special session having adjourned on` (enactment's `the special session adjourned on`)
+            OTHERWISE `the day a regular-session statute goes into effect when enacted on` (enactment's `the moment of enactment`'s `the day`)
+
+@ref Gov. Code § 9600 (src:GOV-ss-9600-9612:8-9)
+GIVEN enactment IS AN `Enactment of a statute`
+GIVETH A DATE
+`the day a statute goes into effect, taking the day it names itself to govern` enactment MEANS
+    CONSIDER enactment's `names its own day of effect`
+    WHEN JUST named THEN named
+    WHEN NOTHING THEN `the day a statute goes into effect` enactment
+
+-- § 9600(b): "immediately upon their enactment" is the moment of enactment.  Under (a) the text names a day and no
+-- moment of it, and § 6806 (a day runs from midnight to midnight) is the nearest text, which does not say from
+-- which moment within the day a statute binds (fork F-moment in NOTES).
+@ref Gov. Code § 9600(b), § 6806 (src:GOV-ss-9600-9612:8-9, src:GOV-ss-6800-6808:20)
+GIVEN enactment IS AN `Enactment of a statute`
+GIVETH A Moment
+`the moment a statute goes into effect` enactment MEANS
+    CONSIDER enactment's `names its own day of effect`
+    WHEN JUST named THEN REFUSE "Gov. Code § 9600 does not say what happens when a statute names its own day of effect, and names no moment of that day"
+    WHEN NOTHING THEN
+        IF `a statute is of a kind that goes into effect immediately upon its enactment` enactment
+        THEN enactment's `the moment of enactment`
+        ELSE REFUSE "Gov. Code § 9600(a) names the day a statute goes into effect and no moment of it; § 6806 says only that a day runs from one midnight to the next, and Civ. Code § 2 and Code Civ. Proc. § 2 (noon) speak of those codes alone"
+
+-- The caller who reads a statute to take effect from the midnight that begins its day (the reading § 6806 invites) can
+-- say so with the function below; it is that assumption and nothing else.
+@ref Gov. Code § 6806, § 9600 (src:GOV-ss-6800-6808:20, src:GOV-ss-9600-9612:8-9)
+GIVEN enactment IS AN `Enactment of a statute`
+GIVETH A Moment
+`the moment a statute goes into effect, taking it to bind from the midnight that begins its day` enactment MEANS
+    CONSIDER enactment's `names its own day of effect`
+    WHEN JUST named THEN REFUSE "Gov. Code § 9600 does not say what happens when a statute names its own day of effect"
+    WHEN NOTHING THEN
+        IF `a statute is of a kind that goes into effect immediately upon its enactment` enactment
+        THEN enactment's `the moment of enactment`
+        ELSE `the midnight that begins the day` (`the day a statute goes into effect` enactment)
+
+@ref Gov. Code § 9600, § 6806 (src:GOV-ss-9600-9612:8-9, src:GOV-ss-6800-6808:20)
+GIVEN d IS A DATE
+      enactment IS AN `Enactment of a statute`
+GIVETH A BOOLEAN
+`the statute is in effect on the day` d `given its enactment` enactment MEANS
+    d AT LEAST `the day a statute goes into effect` enactment
+
+@ref Gov. Code § 9600, § 6806 (src:GOV-ss-9600-9612:8-9, src:GOV-ss-6800-6808:20)
+GIVEN m IS A Moment
+      enactment IS AN `Enactment of a statute`
+GIVETH A BOOLEAN
+`the statute binds at the moment` m `given its enactment` enactment MEANS
+    `the moment` m `is not before the moment` (`the moment a statute goes into effect` enactment)
+
+-- Gov. Code § 9602: a concurrent or joint resolution "takes effect upon the filing of it with the Secretary of State".
+-- src:GOV-ss-9600-9612:11 | 9602. Every concurrent and joint resolution takes effect upon the filing of it with the Secretary of State.
+@ref Gov. Code § 9602 (src:GOV-ss-9600-9612:11)
+GIVEN filed IS A Moment
+GIVETH A Moment
+`the moment a concurrent or joint resolution takes effect, having been filed with the Secretary of State at` filed MEANS filed
+
+-- Subordinate legislation (regulations, rules, orders): § 9600 speaks of statutes and § 9602 of resolutions, and
+-- no other deposited section says when subordinate legislation takes effect.
+@ref Gov. Code § 9600, § 9602 (src:GOV-ss-9600-9612:8-9, src:GOV-ss-9600-9612:11)
+GIVEN madeOn IS A DATE
+GIVETH A DATE
+`the day silent subordinate legislation comes into force, when made on` madeOn MEANS
+    REFUSE "no deposited section says when subordinate legislation (a regulation, rule or order) takes effect: Gov. Code § 9600 speaks of statutes and § 9602 of concurrent and joint resolutions"
+
+-- The codes themselves: Civ. Code § 2 and Code Civ. Proc. § 2.  The Government Code's own day is not in the deposit
+-- (Gov. Code §§ 1-26 do not give it).
+-- src:CIV-ss-1-23.6:14 | 2. This Code takes effect at twelve o'clock noon, on the first day of January, eighteen hundred and seventy-three.
+@ref Civ. Code § 2 (src:CIV-ss-1-23.6:14)
+GIVETH A Moment
+`the moment the Civil Code takes effect` MEANS
+    Moment WITH `the day` IS YMD 1873 1 1, `seconds after midnight` IS 43200
+
+-- src:CCP-ss-1-34:14 | 2. This Code takes effect at twelve o'clock noon, on the first day of January, eighteen hundred and seventy-three.
+@ref Code Civ. Proc. § 2 (src:CCP-ss-1-34:14)
+GIVETH A Moment
+`the moment the Code of Civil Procedure takes effect` MEANS
+    Moment WITH `the day` IS YMD 1873 1 1, `seconds after midnight` IS 43200
+
+@ref Gov. Code §§ 1-26 (no section gives the day the Government Code takes effect)
+GIVETH A Moment
+`the moment the Government Code takes effect` MEANS
+    REFUSE "no deposited section gives the day or the moment the Government Code itself took effect: Gov. Code § 4 refers to 'this code takes effect' without saying when"
+
+§ `Which section governs`
+
+-- Fork F-governs in NOTES.  The three definitions of "month" (Gov. § 6804, Civ. § 14(b)(4), CCP § 17(b)(4)) say the same
+-- thing in the same words, "a calendar month, unless otherwise expressed".  The Civil Code and the Code of Civil Procedure
+-- give theirs "in this code" and "unless otherwise apparent from the context" as well; § 6804 has no limit of its own.
+-- src:CIV-ss-1-23.6:57 | 14. (a) Words used in this code in the present tense include the future as well as the present; words used in the masculine gender include the feminine and neuter; the singular number includes the plural, and the plural the singular; the word person includes a corporation as well as a natural person; county includes city and county; writing includes printing and typewriting; oath includes affirmation or
+-- src:CIV-ss-1-23.6:58 | declaration; and every mode of oral statement, under oath or affirmation, is embraced by the term “testify,” and every written one in the term “depose”; signature or subscription includes mark, when the person cannot write, his name being written near it, by a person who writes his own name as a witness; provided, that when a signature is by mark it must in order that the same may be acknowledged or may serve as the signature to any sworn statement be witnessed by two persons who must subscribe their own names as witnesses thereto.
+-- src:CIV-ss-1-23.6:59 | (b) The following words have in this code the signification attached to them in this section, unless otherwise apparent from the context:
+-- src:CIV-ss-1-23.6:60 | (1) The word “property” includes property real and personal.
+-- src:CIV-ss-1-23.6:61 | (2) The words “real property” are coextensive with lands, tenements, and
+-- src:CIV-ss-1-23.6:62 | hereditaments.
+-- src:CIV-ss-1-23.6:63 | (3) The words “personal property” include money, goods, chattels, things in action, and evidences of debt.
+-- src:CIV-ss-1-23.6:64 | (4) The word “month” means a calendar month, unless otherwise expressed.
+-- src:CIV-ss-1-23.6:65 | (5) The word “will” includes codicil.
+-- src:CIV-ss-1-23.6:66 | (6) The word “section” whenever hereinafter employed refers to a section of this code, unless some other code or statute is expressly mentioned.
+-- src:CIV-ss-1-23.6:67 | (7) The word “spouse” includes a registered domestic partner, as required by Section 297.5 of the Family Code.
+-- src:CCP-ss-1-34:58 | 17. (a) Words used in this code in the present tense include the future as well as the present. Words used in the masculine gender include the feminine and neuter. The singular number includes the plural and the plural number includes the singular.
+-- src:CCP-ss-1-34:59 | (b) As used in this code, the following words have the following meanings, unless otherwise apparent
+-- src:CCP-ss-1-34:60 | from the context:
+-- src:CCP-ss-1-34:61 | (1) “Affinity” signifies the connection existing in consequence of marriage, between each of the married persons and the blood relatives of the other when applied to the marriage relation.
+-- src:CCP-ss-1-34:62 | (2) “County” includes “city and county.”
+-- src:CCP-ss-1-34:63 | (3) “Electronic signature” means an electronic sound, symbol, or process attached to or logically associated with an electronic record and executed or adopted by a person with the intent to sign the electronic record.
+-- src:CCP-ss-1-34:64 | (4) “Month” means a calendar month, unless otherwise expressed.
+-- src:CCP-ss-1-34:65 | (5) “Oath” includes an affirmation or declaration.
+-- src:CCP-ss-1-34:66 | (A) “Depose” includes any written statement made
+-- src:CCP-ss-1-34:67 | under oath or affirmation.
+-- src:CCP-ss-1-34:68 | (B) “Testify” includes any mode of oral statement made under oath or affirmation.
+-- src:CCP-ss-1-34:69 | (6) “Person” includes a corporation as well as a natural person.
+-- src:CCP-ss-1-34:70 | (7) “Process” signifies a writ or summons issued in the course of a judicial proceeding.
+-- src:CCP-ss-1-34:71 | (8) “Property” includes both personal and real property.
+-- src:CCP-ss-1-34:72 | (A) “Personal property” includes money, goods, chattels, things in action, and evidences of debt.
+-- src:CCP-ss-1-34:73 | (B) “Real property” is coextensive with lands, tenements, and hereditaments.
+-- src:CCP-ss-1-34:74 | (9) “Section” refers to a section of this code, unless some other code or
+-- src:CCP-ss-1-34:75 | statute is expressly mentioned.
+-- src:CCP-ss-1-34:76 | (10) “Sheriff” includes marshal.
+-- src:CCP-ss-1-34:77 | (11) “Signature” or “subscription” includes a mark of a person’s name, if the person cannot write, with his or her name being written near it by a person who writes his or her own name as a witness. In order that a mark may be acknowledged or serve as the signature to any sworn statement, it shall be witnessed by two persons who shall subscribe their own names as witnesses thereto.
+-- src:CCP-ss-1-34:78 | (12) “Spouse” includes “registered domestic partner,” as required by Section 297.5 of the Family Code.
+-- src:CCP-ss-1-34:79 | (13) “State” includes the District of Columbia and the territories when applied to the different parts of the United States, and the words “United States” may include the district and territories.
+-- src:CCP-ss-1-34:80 | (14) “Will” includes codicil.
+-- src:CCP-ss-1-34:81 | (15) “Writ” means an order or precept in writing, issued in the name of the people, or of a court or judicial officer.
+-- src:CCP-ss-1-34:82 | (16) “Writing” includes printing and typewriting.
+@ref Gov. Code § 6804, Civ. Code § 14(b)(4), Code Civ. Proc. § 17(b)(4) (src:GOV-ss-6800-6808:16, src:CIV-ss-1-23.6:57-67, src:CCP-ss-1-34:58-82)
+GIVEN kind IS A `Kind of enactment`
+GIVETH A STRING
+`the section that defines month for` kind MEANS
+    CONSIDER kind
+    WHEN `a provision of the Civil Code` THEN "Civ. Code § 14(b)(4)"
+    WHEN `a provision of the Code of Civil Procedure` THEN "Code Civ. Proc. § 17(b)(4)"
+    WHEN `a provision of the Government Code` THEN "Gov. Code § 6804"
+    WHEN `a provision of another State statute` THEN "Gov. Code § 6804"
+    WHEN `an ordinance, rule or regulation` THEN REFUSE "Gov. Code § 6804 does not say whether it reaches an ordinance, rule or regulation; the text names those only in Code Civ. Proc. § 12a(b), which concerns the last day of a period"
+
+-- The section that moves the last day of a period off a holiday, for every kind of enactment: CCP § 12a(b) says the
+-- section "applies to Sections 659, 659a, and 921, and to all other provisions of law providing or requiring an act to
+-- be performed on a particular day or within a specified period of time, whether expressed in this or any other code or
+-- statute, ordinance, rule, or regulation".  Gov. Code § 6800 says the same of "any act provided by law" in fewer words.
+@ref Code Civ. Proc. § 12a(b) (src:CCP-ss-1-34:36-38)
+GIVEN kind IS A `Kind of enactment`
+GIVETH A STRING
+`the section that extends a last day falling on a holiday for` kind MEANS
+    CONSIDER kind
+    WHEN `a provision of the Civil Code` THEN "Code Civ. Proc. § 12a(a), by § 12a(b); Civ. Code § 10 also excludes the day"
+    WHEN `a provision of the Code of Civil Procedure` THEN "Code Civ. Proc. § 12a(a); § 12 also excludes the day"
+    WHEN `a provision of the Government Code` THEN "Code Civ. Proc. § 12a(a), by § 12a(b); Gov. Code § 6800 also excludes the day"
+    WHEN `a provision of another State statute` THEN "Code Civ. Proc. § 12a(a), by § 12a(b); Gov. Code § 6800 also excludes the day"
+    WHEN `an ordinance, rule or regulation` THEN "Code Civ. Proc. § 12a(a), by § 12a(b)"
+
+-- The section that says which days are holidays.  Each code says its own; Gov. § 6700 says "the holidays in this
+-- state" without limit.  For § 12a the question is answered by § 12a(a) itself ("For purposes of this section").
+@ref Gov. Code § 6700(a), Civ. Code § 7, Code Civ. Proc. §§ 10, 12a(a)
+GIVEN kind IS A `Kind of enactment`
+GIVETH A STRING
+`the section that says which days are holidays for` kind MEANS
+    CONSIDER kind
+    WHEN `a provision of the Civil Code` THEN "Civ. Code § 7"
+    WHEN `a provision of the Code of Civil Procedure` THEN "Code Civ. Proc. § 10"
+    WHEN `a provision of the Government Code` THEN "Gov. Code § 6700(a)"
+    WHEN `a provision of another State statute` THEN "Gov. Code § 6700(a)"
+    WHEN `an ordinance, rule or regulation` THEN REFUSE "no deposited section says which holiday list governs an ordinance, rule or regulation; Gov. Code § 6700(a) says only 'the holidays in this state', and Gov. Code §§ 6700(a)(20)(B), 6702 and 6704 give cities, counties and districts their own rules for some days"
