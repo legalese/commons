@@ -30,10 +30,17 @@ be missing. Neither of the two instruments the plan names is deposited:
 So the impairment rating and the ADAT scores are inputs. The indexed rates,
 limits and free areas are not in the Act's text either, so they are inputs too.
 
+The formulas the text deposit lost (points 1064-E10, 1064-G4 Table G-2, 1067G-F27,
+1067G-F28, ss 17(4), 17(8), 598(2A), 1170(4)) are transcribed by hand on 2026-10-21
+in `../../registers/source-bundle/C2004A04121.formulas.md`, from the Word rendering
+of the later compilation C2026C00449 (the Register no longer serves C2026C00336 as
+its latest); the words around each formula were checked identical to the deposit.
+
 **Checks:** one module (`ssa-claims.l4`) and one case file
 (`ssa-cases-claims.l4`, built by the scratchpad generator
-`gen_social-security-act-1991_baseline.py`). Result: 68 assertions satisfied,
-0 errors, 0 warnings, with the stable `l4` of VS Code extension 1.6.98. A
+`gen_social-security-act-1991_baseline.py`). Result: 70 assertions satisfied,
+0 errors, 0 warnings, with the stable `l4` of VS Code extension 1.6.98 (re-run
+2026-10-21 after the lost formulas were encoded). A
 deliberately wrong assertion, added to a scratch copy, was reported as failed.
 
 ## Seat
@@ -159,28 +166,27 @@ Jake's events asks for it.
 
 ## What the Act turns out to say
 
-1. **The deposit has lost six formulas.** The `.txt` conversion dropped every
-   formula typeset as an equation:
-   - point 1064-E10, "A person's reduction for ordinary income is:", with
-     nothing after it;
-   - Table G-2 column 3, the reduction for assets;
-   - point 1067G-F28;
-   - s 598(2A);
-   - s 1170(4), the length of the lump sum preclusion period;
-   - s 17(8), the income cut-out amount, whose defined terms survive but not
-     their arrangement.
+1. **The six formulas the text deposit lost are now in hand, and the three
+   inferred shapes were right.** From the sidecar `C2004A04121.formulas.md`:
+   - point 1064-E10: the reduction for ordinary income is the ordinary income
+     excess × 0.5;
+   - Table G-2 column 3: the reduction for assets is assets excess × 19.5 / 250
+     a year, the same for every family situation (a member of a couple applies
+     both tapers to a 50/50 share, so the first pass's illustrative 25c and 3.9c
+     for couples were not the Act's);
+   - point 1067G-F28: (the excess / 130) × (the person's maximum payment rate /
+     the total of the maximum payment rates of everyone with the parental income
+     in common);
+   - s 17(8): the income cut-out amount is [2 × (maximum basic rate + pension
+     supplement component + energy supplement component) + ordinary free area
+     limit] / 52 a week, from four indexed single-person figures (inputs);
+   - F27 ((the excess) / 130), s 598(2A) ((liquid assets − maximum reserve) /
+     divisor) and s 1170(4) (compensation part / income cut-out amount) are the
+     forms the first pass had inferred.
 
-   The two pension tapers, the F28 result and the income cut-out amount are
-   inputs. Three shapes are **inferences**:
-   - F27 is taken from its surviving Note as (combined parental income − free
-     area) / 130;
-   - s 598's formula weeks are taken as (liquid assets − maximum reserve) /
-     divisor;
-   - the preclusion period is taken as compensation part / income cut-out
-     amount, rounded down as s 1170(5) says. This last is the weakest of the
-     three: no term of the formula survives in the deposit.
-
-   Asserted through these inputs and inferences.
+   A single person $1,000 over the assets limit loses $78 a year; illustrative
+   components of $23,000, $1,800, $366 and $1,668 give a cut-out amount of $1,000
+   a week. Asserted.
 
 2. **The Table G-1 dollar figures are base figures from 2017.** Section
    1192(5C)–(5E) shows that $250,000, $450,000, $187,500 and $287,500 were the
@@ -225,7 +231,7 @@ Jake's events asks for it.
    from 22 to pension age. Section 14A(1)(c) counts amounts "due, and able to be
    paid ... by ... a former employer" as liquid assets. For a single person with
    no children, $20,000 gives the 13-week cap and $8,000 gives 6 weeks. Asserted,
-   on the inferred formula in finding 1.
+   on the s 598(2A) formula in finding 1.
 
 8. **Carer allowance and carer payment use different ADAT thresholds, and
    Jake's pension helps Ruby.**
@@ -262,18 +268,18 @@ Jake's events asks for it.
     - d020 is dated 2014, but this is the 2026 text. The encoding applies 2026
       law to Daniel's 2014 claim.
     - Daniel's sister Sofia, 14, is taken to be an FTB child of their parents
-      (an inference). If she is, F31 sends Daniel to the lost F28 formula, whose
-      result is an input. Under Step 13, a nil rate makes youth allowance not
-      payable. Asserted on a supplied figure.
+      (an inference). If she is, F31 sends Daniel to the F28 formula, sharing
+      the excess in proportion to maximum payment rates (illustrative $450 of
+      $700: $469.80 a fortnight). Under Step 13, a nil rate makes youth allowance
+      not payable. Asserted on illustrative rates.
     - Under s 543A(2AA), a 16- or 17-year-old in full-time *secondary* study does
       not reach the minimum age unless an exception applies. Daniel, at
       university, does. Asserted.
 
 ## What would need doing before this is worth anything
 
-- Recover the six lost formulas from the PDF and replace the inputs and
-  inferences: 1064-E10, Table G-2, 1067G-F28, s 598(2A), s 1170(4), and
-  s 17(8), the income cut-out amount.
+- Work out the F31(b) sibling rate (14/365 of the parent's FTB maximum rate,
+  point 1067G-F32) rather than asking for the F28 total.
 - Supply the indexed rates, limits and free areas for each scenario date, either
   from the Act's indexation machinery or from published figures.
 - Encode what counts as income and as an asset (deeming, the principal home,
