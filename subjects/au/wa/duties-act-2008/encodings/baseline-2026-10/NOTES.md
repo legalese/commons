@@ -29,11 +29,11 @@ The compilation of the Duties Act 2008 (No. 11 of 2008) deposited at `../../regi
 - The deposit gives no compilation number or date.
 - Its compilation table ends with the Help to Buy (Commonwealth Powers) Act 2025 Pt. 4 Div. 1, in operation 19 Dec 2025.
 - The rates and thresholds are in the Act itself (Schedule 2, s 142(1)(b), s 266L). No regulation is used.
-- **Two sets of formulas are missing from the `.txt` deposit:** R in s 236(2)(b), and X, Y, Z, A and B in s 266L(2), (3), (3A), (5) and (6). Each is an input here.
+- **Formulas lost from the `.txt` deposit, recovered.** R in s 236(2)(b) (an image) and X, Y, Z, A and B in s 266L(2), (3), (3A), (5) and (6) (Word equations) did not survive conversion. They, and the other formulas of the Act, are transcribed by hand from the authorised Word rendering of the same document (mrdoc 49812, fetched 2026-10-21) in `../../registers/source-bundle/mrdoc_49812.formulas.md`, and R and the s 266L formulas are encoded.
 
 ## Checks
 
-Two case files, **70 assertions satisfied** (62 in `da-cases-property.l4`, 8 in `da-cases-vehicles.l4`), 0 errors, 0 warnings, with the stable `l4` (VS Code extension 1.6.98).
+Two case files, **74 assertions satisfied** (63 in `da-cases-property.l4`, 11 in `da-cases-vehicles.l4`), 0 errors, 0 warnings, with the stable `l4` (VS Code extension 1.6.98).
 
 A copy with one expected value altered was run as a control. The runner reported the failure.
 
@@ -68,14 +68,13 @@ How each 2026-10-18 default was applied:
 **Departures:**
 
 - Dates in Chapter 6A are entered as YYYYMMDD numbers, not dates, so that the window tests are simple comparisons.
-- The middle-band concession percentages, and R for vehicles, are inputs, because the deposit lost their formulas.
 
 ## The lives
 
 | Event | Decision asked | Answer in the encoding |
 |---|---|---|
 | Chloe **c051** (2028), Byford house-and-land package, $620,000 | `What transfer duty must I pay`, `Is my purchase a first home owner concessional transaction` | Concessional, but **$16,356**, not nil, if the $620,000 is land that includes a home |
-| Chloe **c074** (2034), $28,000 used car | `What vehicle licence duty must I pay` | Depends on R (formula missing); $770 only if R = 2.75 |
+| Chloe **c074** (2034), $28,000 used car | `What vehicle licence duty must I pay` | **$896**: R = 3.20, not the life's $770 |
 | Chloe **c081** (2040), Baldivis townhouse, $1,300,000 | `What transfer duty must I pay` | **$58,065.50** |
 | Chloe **c094** (2070), Mandurah strata apartment, no price stated | `What transfer duty must I pay` (general rate) | Asserted at an assumed $800,000: $32,315.50 |
 | Daniel **d037** (2028), East Perth, $1,600,000, citizen and permanent resident | `What transfer duty must I pay`, `What foreign transfer duty must I pay`, `Am I a foreign individual` | $73,515.50; no foreign transfer duty |
@@ -107,8 +106,8 @@ The plan named Chapter 6A as bearing on k074, so it is in. Everything else in th
    - A foreign buyer of a $600,000 lot in April 2025 pays no transfer duty, and $14,515 of the $42,000 foreign duty.
 
    Asserted.
-5. **The formulas for the middle bands are missing from the deposit.** These are X, Y, Z (s 266L(2), (3), (3A)) and A, B (s 266L(5), (6)), and also R for vehicles (s 236(2)(b)). The `.txt` keeps only "where — V is the dutiable value". Each is an input, and the illustrative values used in the cases are labelled as such.
-6. **c074's $770 is a flat 2.75%, which the text allows only up to $25,000.** Above that, the rate is R% "rounded to 2 decimal places", then 6.5% above $50,000. The result is "rounded down to the nearest 5 cents". Asserted on illustrative R.
+5. **The off-the-plan concession tapers in the middle bands.** The recovered formulas (`mrdoc_49812.formulas.md`) take the low-band percentage and subtract, for every $100 of dutiable value above the band, 0.05 of a percentage point before construction (X, Y, Z: 100 to 50 over $100,000) or 0.0375 during it (A, B: 75 to 37.5). An $800,000 preconstruction agreement entered on 1 April 2025 gets Z = 75%, so $8,078.875 transfer duty on $32,315.50; under construction on 1 October 2025 it gets B = 56.25%, a concession of $18,177.46875. The Act states no rounding for the concession. Asserted.
+6. **c074's $770 is a flat 2.75%, which the text allows only up to $25,000; the duty is $896.** Above $25,000 the rate is R% with R = 2.75 + [(DV − 25000) / 6666.66] "rounded to 2 decimal places" (s 236(2)(b), recovered), rising to 6.50 at $50,000, then 6.5% above $50,000. A $28,000 car gives R = 3.20 and $896. The result is "rounded down to the nearest 5 cents". R is rounded half up (an inference: the Act names no rule). Asserted.
 7. **Dutiable value is the greater of the price and the unencumbered value (s 27(b)(iii)), and the first home owner cap tests the unencumbered value (s 142(1)(b)).** A first home bought for $690,000 but worth $710,000 loses the concession and pays $27,740 at the general rate. Asserted.
 8. **A permanent resident is not a foreign individual (s 205A).** Neither is a New Zealand citizen on a special category visa. So d037 owes no foreign transfer duty. Foreign transfer duty is 7% (s 205O), and joint tenants are treated as tenants in common in equal shares (s 205L). The encoding infers that the 7% falls on each foreign buyer's share: one temporary-visa holder with a citizen at $1,600,000 owes $56,000. Asserted.
 9. **Shares are not dutiable property (s 15).** A share purchase attracts duty only as landholder duty, where all of these hold:
@@ -128,7 +127,7 @@ The plan named Chapter 6A as bearing on k074, so it is in. Everything else in th
 
 ## What would need doing before this is worth anything
 
-- Recover R (s 236(2)(b)) and X, Y, Z, A, B (s 266L) from the PDF or DOCX, and re-test c074 and the middle bands.
+- Correct the c074 facts ($770) to $896.
 - Encode the FHOG Act test for "concessional first home owner" and its meaning of "home", or link to an encoding of that Act. Settle how a house-and-land package is split between land and building.
 - Add further concessional transactions and the s 145 clawback. Add the off-the-plan replacement, multi-lot and aggregation rules.
 - Add linked entities, relevant arrangements and the s 189 reduction to landholder duty. Add foreign landholder duty, and foreign corporations and trusts.
