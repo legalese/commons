@@ -86,9 +86,9 @@ The current breadth-and-depth chart is at https://claude.ai/artifact/KSy93JyfrV1
 | Jurisdictions | Where it is now | Where it is going |
 |---|---|---|
 | Singapore | All Acts and relevant regulations | All Acts, regulations and relevant cases |
-| Commonwealth of Australia, Western Australia, New Zealand | Everything the three WA lives hit, including regulations (New Zealand is behind) | All Acts, regulations and relevant cases |
+| Commonwealth of Australia, Western Australia, South Australia, New Zealand | Everything the three WA lives hit, including regulations (South Australia and New Zealand are behind) | All Acts, regulations and relevant cases |
 | UK, US federal, California, Canada federal, British Columbia, Ireland | Sources sampled; little encoded | The 20 categories |
-| The remaining Australian states and territories, US states and Canadian provinces, and the other English-language jurisdictions | Samples | Tax and benefits |
+| The other Australian states and territories (not WA or SA), the US states and Canadian provinces, and the other English-language jurisdictions | Samples | Tax and benefits |
 | Every other jurisdiction recognised by the UN | Mostly nothing | One Act |
 
 **The 20 categories** are:
@@ -138,7 +138,7 @@ A question goes in the ledger of the law that answers it. Refer across ledgers b
 5. If it cannot be done (not law, no source deposited, the instrument doesn't exist), set `declined` with a reason. Never delete, renumber or reorder entries, and never move another entry's priority to put your own first.
 6. When an Act leaves the answer to a regulation, an order or a case, **raise a new entry** for it (`raised.by: "encoder"`). Use priority 1 if a scenario needs it, otherwise 2.
 
-**Running scenarios in a jurisdiction.** The cradle-to-grave lives are kept in the private `legalese/workbench` repository under `scenarios/<jurisdiction>/` (for example `scenarios/sg/cradle-to-grave-simone/`, and `scenarios/au/wa/cradle-to-grave-{chloe,jake,daniel}/`). Each life has `SCENARIO.md`, `facts.json`, `GAPS.md` and `ABRIDGED.md`. Its author changes them; an encoding session does not. If you run a scenario against Commons:
+**Running scenarios in a jurisdiction.** Michael runs the scenarios; their requirements come into these Commons ledgers, and an encoding session works them from here. The cradle-to-grave lives are kept in the private `legalese/workbench` repository under `scenarios/<jurisdiction>/` (for example `scenarios/sg/cradle-to-grave-simone/`, and `scenarios/au/wa/cradle-to-grave-{chloe,jake,daniel}/`). Each life has `SCENARIO.md`, `facts.json`, `GAPS.md` and `ABRIDGED.md`. Its author changes them; an encoding session does not. If you run a scenario against Commons:
 - every question the law cannot answer becomes a **priority-1 entry** in the ledger of the law that should answer it, with the life's facts and the answer the life expected;
 - an encoding written for a life includes at least one case per life event it answers, in that life's facts, naming the event id (for example `c074`) in a comment;
 - where an encoding finds that a life cites the wrong section or states a wrong figure, say so in the encoding's NOTES.md, under a finding that ends "Asserted." where the case asserts it. Report it to the scenario's author, or, if you have access and are asked, record it in the life's corrections file. Never change an encoding to agree with a life the text contradicts.

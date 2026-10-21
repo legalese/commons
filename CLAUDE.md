@@ -6,6 +6,8 @@ The tools — the L4 language, the `l4` binary, the pipeline — live in [`legal
 
 ## Before you encode anything
 
+**Read [`docs/ENCODING-GUIDE.md`](docs/ENCODING-GUIDE.md)** after this file: seats, seat layers, the stable-`l4` rules, priorities, the requirement ledgers, sources and commits, in one place.
+
 **Load the L4 skills.** They do not live in this repository, so a session started here has neither unless the L4 plugin is installed:
 
 ```
