@@ -1,0 +1,298 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cards-domain`
+
+§ `Arithmetic and answer-building shared by the issuer modules`
+
+-- ===========================================================================
+-- A SECOND SHARED MODULE, BESIDE THE ONTOLOGY, AND WHY.
+-- The ontology module is nouns only. Four small pieces of machinery are the
+-- same in every issuer module and would otherwise be typed fourteen times and
+-- drift: rounding down to a multiple, building an `Earn answer`, reading a
+-- MAYBE MCC, and merging a worst-case and a best-case evaluation into one
+-- answer with a floor and a ceiling. Nothing here states a rate, a cap or an
+-- exclusion; those are the issuers' and live in the issuer modules. This is
+-- an engineering decision of the encoder's, not a ruling (NOTES.md,
+-- "Assumed, not ruled").
+--
+-- THE FLOOR AND THE CEILING. Where a purchase waits on a fact the cardholder
+-- cannot yet state (an MCC she has not seen, an indicator the acquirer has not
+-- sent, a month-end condition), an issuer module evaluates the purchase
+-- twice, once on the worst reading of the unknown and once on the best, and
+-- `bracketed from ... to ... with ...` joins the two. The floor is the worst
+-- evaluation's `units certain`, the ceiling the best evaluation's
+-- `units at best`, and the conditions are named only when the two differ.
+-- ===========================================================================
+
+
+§§ `Rounding`
+
+GIVEN n IS A NUMBER, unit IS A NUMBER
+GIVETH A NUMBER
+`rounded down to a multiple of` n unit MEANS
+    (FLOOR (n DIVIDED BY unit)) TIMES unit
+
+GIVEN n IS A NUMBER
+GIVETH A NUMBER
+`rounded down to a whole number` n MEANS
+    FLOOR n
+
+-- Never negative: a cap that is already over-spent leaves room 0, not less.
+GIVEN n IS A NUMBER
+GIVETH A NUMBER
+`at least nothing` n MEANS
+    max n 0
+
+
+§§ `UOB's "per S$5" rewards, on two readings`
+
+-- UOB writes every rate as "UNI$X for every S$5". Reading 1 (whole blocks,
+-- fork F-uob-per-five): only each complete S$5 earns,
+-- so S$4.99 earns nothing and S$9 earns as S$5. Reading 2 (pro rata): the
+-- rate is X/5 per dollar. Both then round the transaction's UNI$ down to a
+-- whole figure (VS cl.4(i); PRVI cl.1(iv)). The two agree on every multiple of
+-- S$5. The UOB modules take Reading 1 as the floor, Reading 2 as the ceiling,
+-- and name the open reading when they differ. ASSUMED, NOT RULED.
+GIVEN amount IS A NUMBER, perFive IS A NUMBER
+GIVETH A NUMBER
+`UNI$ by whole S$5 blocks` amount perFive MEANS
+    FLOOR ((FLOOR (amount DIVIDED BY 5)) TIMES perFive)
+
+GIVEN amount IS A NUMBER, perFive IS A NUMBER
+GIVETH A NUMBER
+`UNI$ pro rata` amount perFive MEANS
+    FLOOR ((amount TIMES perFive) DIVIDED BY 5)
+
+
+§§ `Reading a MAYBE category code`
+
+-- TRUE iff she knows the code and it is in the list. An unknown code is not in
+-- any list: callers that need the other reading evaluate again with a stand-in.
+GIVEN p IS A Purchase, codes IS A LIST OF NUMBER
+GIVETH A BOOLEAN
+`the code is among` p codes MEANS
+    CONSIDER p's mcc
+    WHEN NOTHING THEN FALSE
+    WHEN JUST n  THEN elem n codes
+
+GIVEN p IS A Purchase, low IS A NUMBER, high IS A NUMBER
+GIVETH A BOOLEAN
+`the code is from` p low high MEANS
+    CONSIDER p's mcc
+    WHEN NOTHING THEN FALSE
+    WHEN JUST n  THEN n AT LEAST low AND n AT MOST high
+
+GIVEN p IS A Purchase
+GIVETH A BOOLEAN
+`the code is unknown for` p MEANS
+    CONSIDER p's mcc
+    WHEN NOTHING THEN TRUE
+    WHEN JUST n  THEN FALSE
+
+-- The same purchase with a stand-in code, for the worst-case and best-case
+-- evaluations. Only the code changes.
+GIVEN p IS A Purchase, code IS A NUMBER
+GIVETH A Purchase
+`recoded purchase` p code MEANS
+    Purchase WITH
+        `amount in SGD`      IS p's `amount in SGD`
+        `date charged`       IS p's `date charged`
+        `date posted`        IS p's `date posted`
+        `posting status`     IS p's `posting status`
+        `charge kind`        IS p's `charge kind`
+        currency             IS p's currency
+        gateway              IS p's gateway
+        `store location`     IS p's `store location`
+        presentation         IS p's presentation
+        `merchant indicator` IS p's `merchant indicator`
+        merchant             IS p's merchant
+        outlet               IS p's outlet
+        item                 IS p's item
+        mcc                  IS JUST code
+        descriptor           IS p's descriptor
+        `later reversed`     IS p's `later reversed`
+
+-- The same purchase with a stand-in indicator.
+GIVEN p IS A Purchase, flag IS A `Merchant indicator`
+GIVETH A Purchase
+`reflagged purchase` p flag MEANS
+    Purchase WITH
+        `amount in SGD`      IS p's `amount in SGD`
+        `date charged`       IS p's `date charged`
+        `date posted`        IS p's `date posted`
+        `posting status`     IS p's `posting status`
+        `charge kind`        IS p's `charge kind`
+        currency             IS p's currency
+        gateway              IS p's gateway
+        `store location`     IS p's `store location`
+        presentation         IS p's presentation
+        `merchant indicator` IS flag
+        merchant             IS p's merchant
+        outlet               IS p's outlet
+        item                 IS p's item
+        mcc                  IS p's mcc
+        descriptor           IS p's descriptor
+        `later reversed`     IS p's `later reversed`
+
+-- The same purchase with a stand-in gateway.
+GIVEN p IS A Purchase, gate IS A Gateway
+GIVETH A Purchase
+`rerouted purchase` p gate MEANS
+    Purchase WITH
+        `amount in SGD`      IS p's `amount in SGD`
+        `date charged`       IS p's `date charged`
+        `date posted`        IS p's `date posted`
+        `posting status`     IS p's `posting status`
+        `charge kind`        IS p's `charge kind`
+        currency             IS p's currency
+        gateway              IS gate
+        `store location`     IS p's `store location`
+        presentation         IS p's presentation
+        `merchant indicator` IS p's `merchant indicator`
+        merchant             IS p's merchant
+        outlet               IS p's outlet
+        item                 IS p's item
+        mcc                  IS p's mcc
+        descriptor           IS p's descriptor
+        `later reversed`     IS p's `later reversed`
+
+
+§§ `Building an answer`
+
+GIVEN c IS A Card
+      cur IS A `Reward currency`
+      certain IS A NUMBER
+      best IS A NUMBER
+      wanted IS A NUMBER
+      perUnit IS A MAYBE NUMBER
+      excl IS A BOOLEAN
+      thePot IS A Pot
+      deps IS A LIST OF Condition
+      cl IS A STRING
+GIVETH AN `Earn answer`
+`an answer for` c `in` cur `of` certain `to` best `wanting` wanted `at` perUnit `excluded` excl `drawing on` thePot `depending on` deps `per` cl MEANS
+    `Earn answer` WITH
+        card                     IS c
+        `reward currency`        IS cur
+        `units certain`          IS certain
+        `units at best`          IS best
+        `bonus units before cap` IS wanted
+        `miles certain`          IS `miles from units` certain perUnit
+        `miles at best`          IS `miles from units` best perUnit
+        `cash value certain`     IS NOTHING
+        `cash value at best`     IS NOTHING
+        excluded                 IS excl
+        pot                      IS thePot
+        `depends on`             IS deps
+        clause                   IS cl
+
+GIVEN units IS A NUMBER, perUnit IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`miles from units` units perUnit MEANS
+    CONSIDER perUnit
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST k  THEN JUST (units TIMES k)
+
+-- An answer that earns nothing for a stated reason.
+GIVEN c IS A Card, cur IS A `Reward currency`, cl IS A STRING
+GIVETH AN `Earn answer`
+`nothing is earned on` c `in` cur `per` cl MEANS
+    `an answer for` c `in` cur `of` 0 `to` 0 `wanting` 0 `at` (JUST 0) `excluded` TRUE `drawing on` `No pot` `depending on` EMPTY `per` cl
+
+
+-- The same answer with a Singapore-dollar cash value per unit, for the
+-- cash-rebate programmes (the Smart card, the yuu Point).
+GIVEN ans IS AN `Earn answer`
+      dollarsPerUnit IS A NUMBER
+GIVETH AN `Earn answer`
+`the answer` ans `valued in dollars at` dollarsPerUnit MEANS
+    `Earn answer` WITH
+        card                     IS ans's card
+        `reward currency`        IS ans's `reward currency`
+        `units certain`          IS ans's `units certain`
+        `units at best`          IS ans's `units at best`
+        `bonus units before cap` IS ans's `bonus units before cap`
+        `miles certain`          IS ans's `miles certain`
+        `miles at best`          IS ans's `miles at best`
+        `cash value certain`     IS JUST ((ans's `units certain`) TIMES dollarsPerUnit)
+        `cash value at best`     IS JUST ((ans's `units at best`) TIMES dollarsPerUnit)
+        excluded                 IS ans's excluded
+        pot                      IS ans's pot
+        `depends on`             IS ans's `depends on`
+        clause                   IS ans's clause
+
+
+-- Two answers for the same purchase that add: a card's own earn plus an uplift
+-- that a second document grants on top of it (the Lady's Savings Account
+-- uplift on the Lady's card). Units add; miles and cash add only where both
+-- sides state them; the conditions join; the pot is the first answer's.
+GIVEN first IS AN `Earn answer`
+      second IS AN `Earn answer`
+GIVETH AN `Earn answer`
+`the answers added` first second MEANS
+    `Earn answer` WITH
+        card                     IS first's card
+        `reward currency`        IS first's `reward currency`
+        `units certain`          IS (first's `units certain`) PLUS (second's `units certain`)
+        `units at best`          IS (first's `units at best`) PLUS (second's `units at best`)
+        `bonus units before cap` IS (first's `bonus units before cap`) PLUS (second's `bonus units before cap`)
+        `miles certain`          IS `the maybe sum of` (first's `miles certain`) (second's `miles certain`)
+        `miles at best`          IS `the maybe sum of` (first's `miles at best`) (second's `miles at best`)
+        `cash value certain`     IS `the maybe sum of` (first's `cash value certain`) (second's `cash value certain`)
+        `cash value at best`     IS `the maybe sum of` (first's `cash value at best`) (second's `cash value at best`)
+        excluded                 IS (first's excluded) AND (second's excluded)
+        pot                      IS first's pot
+        `depends on`             IS nub (append (first's `depends on`) (second's `depends on`))
+        clause                   IS first's clause
+
+GIVEN first IS A MAYBE NUMBER
+      second IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`the maybe sum of` first second MEANS
+    CONSIDER first
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST x THEN
+        CONSIDER second
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST y THEN JUST (x PLUS y)
+
+
+§§ `Joining the worst and the best evaluation`
+
+-- The floor is the worst evaluation's certain units; the ceiling is the best
+-- evaluation's best units. The named conditions appear only if the two differ,
+-- so an answer that does not turn on the unknown does not name it.
+GIVEN lo IS AN `Earn answer`
+      hi IS AN `Earn answer`
+      extra IS A LIST OF Condition
+GIVETH A LIST OF Condition
+`the conditions joining` lo hi extra MEANS
+    IF lo's `units certain` EQUALS hi's `units at best`
+    THEN EMPTY
+    ELSE nub (append (append (lo's `depends on`) (hi's `depends on`)) extra)
+
+GIVEN lo IS AN `Earn answer`
+      hi IS AN `Earn answer`
+      extra IS A LIST OF Condition
+GIVETH AN `Earn answer`
+`bracketed from` lo `to` hi `adding` extra MEANS
+    `Earn answer` WITH
+        card                     IS hi's card
+        `reward currency`        IS hi's `reward currency`
+        `units certain`          IS lo's `units certain`
+        `units at best`          IS hi's `units at best`
+        `bonus units before cap` IS hi's `bonus units before cap`
+        `miles certain`          IS lo's `miles certain`
+        `miles at best`          IS hi's `miles at best`
+        `cash value certain`     IS lo's `cash value certain`
+        `cash value at best`     IS hi's `cash value at best`
+        excluded                 IS lo's excluded AND hi's excluded
+        pot                      IS hi's pot
+        `depends on`             IS `the conditions joining` lo hi extra
+        clause                   IS hi's clause
+
+-- A flat 0 / 1 test used throughout.
+GIVEN b IS A BOOLEAN
+GIVETH A NUMBER
+`one if` b MEANS
+    IF b THEN 1 ELSE 0
