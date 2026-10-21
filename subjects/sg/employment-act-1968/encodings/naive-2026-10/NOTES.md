@@ -334,7 +334,7 @@ the Minister appear only as the people who must act towards them.
 `ea-seat.l4` phrases the existing rules as that person's questions --
 "How many days of notice am I owed", "Can I claim for wrongful dismissal",
 "Was I paid late", "How many days of annual leave do I get", "Must my employer
-report my retrenchment to the Commissioner" -- 20 questions in six groups.
+report my retrenchment to the Commissioner" -- 21 questions in six groups.
 Each calls an existing rule with the same parameters; **no existing rule,
 module or test was changed**. `ea-cases-seat.l4` asserts every question (59
 assertions), with fixtures and expected values copied from the existing,
@@ -375,3 +375,119 @@ The defaults ruled on 2026-10-18, and where this encoding stands:
   contravened"); the seat layer re-phrases the main ones and leaves the rest.
 
 Light pass, 19 October 2026.
+
+
+## Seats
+
+Two seat layers sit over the same modules (ruling of 21 October 2026, "More
+than one seat"). Neither changes a rule; both IMPORT the modules and call
+their decisions, so where they ask about the same facts they cannot disagree.
+
+**1. The employee** -- `ea-seat.l4`, 21 questions, `ea-cases-seat.l4` (59
+assertions). The required seat, described in the section above. On
+21 October 2026 every question gained `@export` (the question in plain words,
+with its section) and an `@desc` on every input; the GIVEN lists were laid out
+one input to a line to carry them. No rule, name or test changed.
+
+**2. The employer** -- `ea-seat-employer.l4`, 46 questions,
+`ea-cases-seat-employer.l4` (60 assertions). Seat: the employer, an individual
+or a company that employs someone under a contract of service, asking about one
+employment (or, for retrenchment reporting, one exercise of giving notices).
+It covers, in the employer's words ("How many days of notice must I give",
+"May I make this deduction", "What is the most I can be fined"):
+
+- whom the Act covers and which Parts apply: "employee" (s 2(1)), Part 4
+  coverage by the workman and salary thresholds (s 35), employing a child
+  (s 68);
+- notice: the days I must give (ss 8, 10), pay in lieu (s 11(1)), whether the
+  notice I gave is long enough (s 10), ending the contract for wilful breach
+  (s 11(2)), the employee's deemed breach by absence (s 13(2)) and mine by not
+  paying (s 13(1)), the employee leaving for danger (s 15);
+- dismissal: summary dismissal after due inquiry (s 14(1)), suspension without
+  pay (s 14(1)(b)), who can claim wrongful dismissal against me (s 14(2A)),
+  continuity across a change of employer (ss 18, 18A);
+- pay: the days I have to pay and whether I paid late (ss 21-23), salary for
+  an incomplete month (s 20A);
+- deductions: whether I may make one (ss 26-27), damage or loss (s 29), the
+  most for absence (s 28(2)), accommodation (s 30), the 50% cap (s 32);
+- rest days, hours and overtime: the rest day (s 36), rest day pay (s 37),
+  overtime pay and the hours that attract it (s 38(1), (4)), the 6-hour and
+  72-hour limits (s 38(1)(a), (5));
+- holidays and leave: public holidays (s 88), annual leave (s 88A), sick leave
+  (s 89), the s 45 bar on a retrenchment benefit;
+- maternity: whether and how much I must pay (ss 76, 83), notice of dismissal
+  around the absence (s 81), the s 82 offence;
+- records: employee records (s 95(1), (3)), key employment terms (s 95A), pay
+  slips (s 96);
+- retrenchment reporting: whether I must report (s 96A, Notification para 3),
+  the last day (para 4), compliance (s 96A(2));
+- what I can be penalised for: the most the administrative penalties could
+  total (ss 126A, 126B), the s 126D(2) offence, its maximum fine ($5,000) and
+  imprisonment (6 months).
+
+Every name in the employer layer begins "As the employer, ", so it cannot clash
+with the employee layer's. `ea-cases-seat-employer.l4` imports both layers
+together, which is the test that they define no name twice.
+
+**Mirror cases.** 26 of the 60 employer assertions ask the same facts from both
+seats and assert both hand-worked answers in one line (both true, both false,
+or both equal to the same number). They pair 21 questions:
+
+| Employer asks | Employee asks | Case |
+|---|---|---|
+| must I apply Part 4 | do the Part 4 rules cover me | workman at $4,500: both yes; manager at $1,000: both no |
+| how many days of notice must I give | how many days am I owed | 1-day contract, 10 years: both 28 |
+| how much in lieu must I pay | how much must I be paid in lieu | $200 x 28: both $5,600 |
+| is my employee treated as having broken the contract by absence | am I | 3 days, no leave, no excuse: both yes |
+| may my employee leave for danger | may I leave for danger | both yes |
+| may I dismiss for misconduct | can my employer dismiss me | inquiry held: both yes |
+| may I suspend without pay | is my suspension lawful | 7 days: both yes |
+| can the employee I dismissed claim | can I claim | manager, under 6 months, with notice: both no |
+| did I pay late | was I paid late | 4 days after dismissal: both yes |
+| may I make this deduction (x2) | can my employer make it | withdrawn consent for accommodation: both no; absence: both yes |
+| may I deduct for damage or loss | can my employer | $400 of $900, cause shown: both yes |
+| what must I pay for rest day work (x2) | what must I be paid | 4 h own request: $50; 10 h employer's request: $237.50 |
+| how much overtime must I pay | what is my overtime pay | 2 h at $12.50: $37.50 |
+| how much annual leave must I give | how much do I get | first full year: 7 |
+| how much sick leave must I allow | how much can I take | hospitalised 10 days: 24 |
+| does short service bar a retrenchment benefit | am I barred | 1.5 years: both yes |
+| must I pay maternity (x2) | am I entitled | 3 months: both yes; worked elsewhere: both no |
+| how much maternity pay | how much do I get | $100 a day: $5,600 |
+| would my s 81 notice be unlawful | is the notice I was given unlawful | expiring during the absence: both yes |
+| have I failed to give key terms in time | has my employer | day 15: both yes |
+| must I report this retrenchment (x2) | must my employer report it | 40 employees: both yes; 9: both no |
+
+The agreement is guaranteed by construction, because both questions call one
+rule; what the mirror cases guard is the layers, so that neither seat can drift
+from the other by re-stating a rule instead of calling it.
+
+**Left out of the employer seat for want of a decision.** The modules do not
+decide these, so the seat layer does not answer them (writing them there would
+be new law):
+
+- the penalty for most offences: the Parts' own offence provisions (ss 19,
+  53, 90 and 101 among them), the Act's general penalty for an offence with no
+  penalty of its own (which is what s 82 would draw), and ss 72-75 for
+  children and young persons; only s 126D(2) carries a maximum fine and term in
+  the modules;
+- the amount of an administrative penalty (prescribed; taken as a fact);
+- how to work out the hourly basic rate of pay and the gross rate of pay for a
+  day from a monthly salary (the Act's formulae are not encoded; both are taken
+  as facts), so "at what rate" is answered only once the rate is supplied;
+- whether I may require work beyond the hour limits (s 38(2) circumstances are
+  taken as a fact) and the s 38(2)(f) exemptions;
+- pay for working on a public holiday, and what annual leave must be paid or
+  paid out on termination;
+- childcare leave (s 87A), dismissal before confinement (ss 84, 84A), and
+  confinements before 22 August 2015;
+- the content of the key employment terms, the record particulars, the pay slip
+  timing and the record retention period (all prescribed; taken as facts);
+- the amount of any retrenchment benefit: s 45 only bars one under 2 years; the
+  Act fixes none above it.
+
+Decided by the modules but not asked in the employer seat, to keep it to the
+main duties: the weekly overtime hours, the s 36(4) roster, s 37(1) compelled
+rest day work, the s 38(8) 12-hour limit, s 40 shift averaging, s 46, s 69,
+the s 10(2) equal-length rule, s 16, s 18A(5)-(6), s 20(2), s 25, s 31, s 33,
+Parts 5 to 7, s 95(2), the report's form and particulars, s 126C(6), and
+ss 101(3) and 102(5). Each can be added as a question without new law.
