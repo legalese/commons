@@ -23,6 +23,7 @@ Dates are now calendar dates rather than YYYYMMDD numbers.
 ## Edition
 
 - **The Act:** Compilation No. 226, compilation date 27 August 2026, including amendments up to Act No. 79, 2026 and Act No. 82, 2026 (register id C2026C00393, four volumes in one file), as deposited at `../../registers/source-bundle/C1953A00001.txt`.
+- **The formulas the text deposit dropped:** ss 45-110(1), 45-114(1), 45-115(1)(a), 45-320(1) and 284-85(2), transcribed by hand on 2026-10-21 in `../../registers/source-bundle/C1953A00001.formulas.md` from the Word rendering of the later compilation C2026C00468 (volume 2). The Register no longer serves C2026C00393 as its latest; the words of each of those sections in the download were checked identical to the deposit.
 - **The Regulations:** Taxation Administration Regulations 2017, Compilation No. 17, compilation date 27 August 2026, including amendments up to Act No. 82, 2026 (register id F2026C00849), as deposited at `../../../taxation-administration-regulations-2017/registers/source-bundle/F2017L01227.txt`. Used: s 5 ("top rate"), s 26 (rounding), s 38 (no-ABN withholding) and s 56 (new declarations).
 - **Brought in for the "top rate":** the Income Tax Rates Act 1986, Compilation No. 66, 1 July 2026 (register id C2026C00300), Schedule 7 Part I, top rate 45%; and the Medicare Levy Act 1986, Compilation No. 53, 1 July 2026 (register id C2026C00295), s 6(1), 2%. Both are restated, with citations, rather than imported.
 - **Cited, not computed:** Crimes Act 1914 s 4AA (Compilation No. 167, 27 August 2026, register id C2026C00368). It gives "$330 (subject to indexation under subsection (3))". The indexed value is published by notifiable instrument, so the penalty unit is an input.
@@ -30,7 +31,7 @@ Dates are now calendar dates rather than YYYYMMDD numbers.
 
 ## Checks
 
-Three modules and three case files: 70 assertions satisfied, 0 errors, 0 warnings.
+Three modules and three case files: 70 assertions satisfied (instalments 20, review and penalties 22, withholding 28), 0 errors, 0 warnings (re-run 2026-10-21 after the formulas were encoded; two redundant instalment cases gave way to the new ones).
 
 | Module | Case file | Assertions |
 |---|---|---|
@@ -96,7 +97,7 @@ The Act runs to four volumes, about 2 million characters. This baseline keeps to
 **Left out:**
 
 - **Withholding, beyond the payee's side:** Subdivisions 12-C to 12-J, Divisions 13 and 14, refunds (Subdivision 18-B), and part-year payment summaries.
-- **Instalments, beyond the individual:** notional tax and the rate formula, GDP adjustment, benchmark tax, varying the rate, monthly payers, companies, trusts, partnerships and consolidated groups.
+- **Instalments, beyond the individual:** notional tax (the s 45-320 rate formula itself is encoded, from two inputs), GDP adjustment, benchmark tax, varying the rate, monthly payers, companies, trusts, partnerships and consolidated groups.
 - **Objections:** amended assessments, private rulings and the special objection periods.
 - **Penalties:** scheme penalties, the reasonably arguable position, significant global entities, the shortfall interest charge, and the other administrative penalties (Division 288).
 - **Ancillary funds:** public ancillary funds, community charity trusts, and acting trustees.
@@ -109,7 +110,7 @@ The Act runs to four volumes, about 2 million characters. This baseline keeps to
 3. **Wages must have tax withheld whatever the employee's age, and whether or not a TFN was quoted.** Section 12-35 asks neither question (c020, d012, c041). The amount comes from the withholding schedules (s 15-10), which must have regard to HELP repayments (s 15-30). The HECS line on Chloe's payslip therefore comes from the schedule, not from this Act. Asserted.
 4. **A sole trader whose ABN is not quoted has 47% withheld.** Regulations s 38 sets the amount at "the top rate" times the payment. Section 5 defines the top rate as the top Rates Act rate (45%) plus the Medicare levy rate (2%). Both figures are rounded down to whole dollars (s 26). So $400 gives $188. With his ABN on the invoice, nothing is withheld; at $50 or less, nothing is withheld either (s 12-190(4)(b)). Asserted.
 5. **Jake owes no instalments until the Commissioner gives him a rate** (ss 45-15(2), 45-50(4)). Nothing is due for a quarter that ended before the rate was given (s 45-125(2)(a)). Because he is not registered for GST, he may choose to pay annually if his notified notional tax is "less than $8,000" (s 45-140). Chloe, on wages alone, is never given a rate (Note 2 to s 45-15). Asserted.
-6. **Four formulas did not survive into the deposit.** They are in ss 45-110(1), 45-115(1)(a), 45-320(1) and 284-85(2); in each the text goes straight from "as follows" or "use this formula:" to the next words. The quarterly instalment is inferred from the Guide (s 45-1). The penalty after increase and reduction is inferred from the defined terms: BPA plus BPA × increase %, less BPA × reduction %. Asserted (the inferred results).
+6. **The four formulas lost from the text deposit say what the first pass inferred.** From the sidecar: a quarterly instalment is the applicable instalment rate × instalment income for the quarter (s 45-110(1)); an annual instalment on the Commissioner's rate is that rate × instalment income for the year (s 45-115(1)(a)); the Commissioner's rate is notional tax / base assessment instalment income × 100, to 2 places, and nil if either is nil (s 45-320(1)); the penalty is BPA + [BPA × (increase % − reduction %)] (s 284-85(2)), which is the inferred form rearranged. $7,750 at 8% gives $620; $31,000 at 8% gives $2,480 a year; notional tax of $2,500 on $31,000 gives 8.06%. Asserted (the nil rate is encoded, not asserted).
 7. **When the employer pays over what it withheld depends on its size.** "Exceeded $25,000" makes a medium withholder, which pays by the 21st of the next month. A small withholder pays by the 21st of the month after the quarter. Deferred BAS payers get the 28th. Asserted.
 8. **Single touch payroll displaces the annual payment summary.** Section 389-20 relieves the payer of s 16-155 "to the extent that it would relate to an amount that the entity has notified" under s 389-5. Chloe in 2024 is owed no payment summary if her pay was so reported. Asserted.
 9. **Objection periods.**
@@ -143,7 +144,7 @@ The Act runs to four volumes, about 2 million characters. This baseline keeps to
 - **The PAF Guidelines.** Deposit the Taxation Administration (Private Ancillary Fund) Guidelines 2019 and encode the minimum distribution, the responsible person requirement and the penalty amounts. d072 and d091 cannot be fully answered without them.
 - **The ITAA 1936 Part VA.** Encode it (TFN issue, TFN declarations, s 202CB) to answer c020, k020 and d012 fully. The plan notes it is deposited as its own subject.
 - **The withholding schedules.** Deposit them, so the amounts withheld from Chloe's and Daniel's pay, including the no-TFN amount and the HELP component, can be computed.
-- **The missing formulas.** Recover ss 45-110, 45-115, 45-320 and 284-85(2) from the authorised compilation.
+- **Notional tax.** Encode s 45-325 and the base assessment, so that the s 45-320 rate is worked out from the assessment rather than from two inputs.
 - **Inputs from outside the Act.** Supply the indexed penalty unit and the published base interest rate, with sources.
 - **Earlier and later law.** d012 (2012) and c020 (2018) need the compilations then in force. d072 (2051) and d091 (2076) are read on the 2026 text.
 - **Wider sources.** No ATO ruling, guidance or case law was read.
