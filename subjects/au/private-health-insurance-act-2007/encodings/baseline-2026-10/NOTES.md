@@ -20,6 +20,12 @@ Private Health Insurance Act 2007, Compilation No. 42, compilation date 19 Septe
 2026, includes amendments up to Act No. 90, 2026 (Register id C2026C00412), as
 deposited at `../../registers/source-bundle/C2007A00031.txt`.
 
+The formulas the text deposit lost (ss 22-40(4), 22-45(4), 34-1(2), 34-5(2)) are
+transcribed by hand from the Word rendering of the same compilation, fetched from the
+Federal Register of Legislation on 2026-10-21, in
+`../../registers/source-bundle/C2007A00031.formulas.md`. The encoding uses all but
+s 22-45(4), which needs index numbers that are not deposited.
+
 Two instruments are not deposited:
 
 - the Private Health Insurance (Lifetime Health Cover) Rules 2015;
@@ -33,7 +39,8 @@ So everything they settle is an input:
 
 ## Checks
 
-- `phi-cases-cover.l4`: 50 assertions written, 50 satisfied, 0 errors, 0 warnings.
+- `phi-cases-cover.l4`: 55 assertions written, 55 satisfied, 0 errors, 0 warnings
+  (50 before the formulas were recovered on 2026-10-21).
 - `phi-cover.l4`: checks with no errors or warnings.
 - Both were run with the stable `l4` from VS Code extension 1.6.98.
 
@@ -89,13 +96,11 @@ The 2026-10-18 defaults:
 - **One case is the text's natural unit.** Followed: one adult and their hospital
   cover. Joint cover (s 37-20) is for two adults on one policy.
 - **The Act's own terms, each with a plain gloss.** Followed in the comments.
-- **Operative sections in; machinery out.** Followed. There are two departures, both
-  because the deposit drops a formula:
-  - **The ss 34-1(2) and 34-5(2) formulas are missing.** They are read as 2% of the
-    base rate a year. This is an INFERENCE, kept in one place
-    (`the loading per year, in percent`).
-  - **The s 22-40(4) child increase and the s 22-45(4) indexation factor are
-    missing.** They are inputs, as in the Medicare Levy Act baseline.
+- **Operative sections in; machinery out.** Followed. The ss 34-1(2), 34-5(2) and
+  22-40(4) formulas are encoded from the sidecar transcription (the 2% a year, which
+  the first pass had inferred, is confirmed). The s 22-45(4) indexation factor is
+  transcribed but the AWOTE index numbers are not deposited, so the indexed tier
+  thresholds stay inputs.
 
 ## The lives
 
@@ -155,10 +160,11 @@ Left out:
    s 34-1(2), "lifetime health cover age" is "the adult's age on the 1 July before the
    day on which the adult took out the hospital cover". Cover taken out on 1 July
    itself is measured from the year before. Asserted.
-3. **The deposit drops the loading formulas.** Sections 34-1(2) and 34-5(2) read
-   "worked out as follows:" and then nothing. The encoding infers 2% of the base rate
-   a year, which fits the deposit's defined terms and the s 37-15 cap. Every loading
-   percentage asserted depends on this inference. Asserted, as an inference.
+3. **The loading is 2% of the base rate a year.** The text deposit drops the
+   formulas; the authorised rendering gives s 34-1(2) as (Lifetime health cover age -
+   30) x 2% x Base rate and s 34-5(2) as Years without hospital cover x 2% x Base
+   rate. That is what the first pass had inferred from the defined terms and the
+   s 37-15 cap, so no loading figure changed. Asserted.
 4. **The 70% cap.** Section 37-15: "any increase under this Part" may not exceed
    "70% of the base rate". Asserted: 72% capped at 70%, and $1,400 on a $2,000 base
    rate.
@@ -191,7 +197,10 @@ Left out:
     22-30(1)(b) brings in a person who "contributes in a substantial way to the
     maintenance of" a dependent child or sibling. The Medicare Levy Act s 3A(3)
     replaces that with having any dependant. The tables then double the singles
-    thresholds (s 22-40). Asserted.
+    thresholds (s 22-40). With two or more dependent children, every family threshold
+    rises by $1,500 x (children - 1) (s 22-40(4), recovered from the authorised
+    rendering; the Act's example adds $3,000 for three). That $1,500 is not indexed.
+    Asserted.
 13. **Community rating forbids pricing or refusing by health, claims, occupation or
     risky pastimes.** It allows the lifetime health cover loading, the exclusions of
     restricted access insurers, employer-group discounts, closing products and pilot
@@ -201,8 +210,8 @@ Left out:
 
 ## What would need doing before this is worth anything
 
-- Retrieve the authoritative text of the ss 34-1(2), 34-5(2), 22-40(4) and 22-45(4)
-  formulas. Confirm or replace the 2% inference.
+- Deposit the AWOTE index numbers so that the s 22-45 indexation (formula now
+  transcribed) can be worked out.
 - Deposit the Private Health Insurance (Lifetime Health Cover) Rules 2015, for
   suspension days, Rules classes and the s 34-20(2) exclusions. Deposit the Incentives
   Rules, for the adjustment factor.
