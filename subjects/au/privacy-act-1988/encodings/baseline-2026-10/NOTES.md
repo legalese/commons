@@ -5,12 +5,14 @@ individual to whom the law is applied, with the design defaults ruled on 2026-10
 table, no independent test pass, no human gate. Not for public use as advice.
 
 **Edition:** Compilation No. 104, compilation date 4 June 2026, includes amendments to Act No. 75, 2025 (register id
-C2026C00227), as deposited at `../../registers/source-bundle/C2004A03712.txt` (retrieved 13 October 2026).
+C2026C00227), as deposited at `../../registers/source-bundle/C2004A03712.txt` (retrieved 13 October 2026), with the
+s 6DA(2) formula from `../../registers/source-bundle/C2004A03712.formulas.md`, transcribed by hand on 21 October 2026
+from the Word rendering of the same compilation (the text deposit had lost it).
 The Privacy Regulation 2013 and the Privacy (Credit Reporting) Code 2014 are **not deposited**. The one number they could
 set that this encoding needs, a default amount higher than $150 (s 6Q(1)(d)(ii)), is an input. The matters they add to
 notices (APP 12.9(c), 13.3(c), ss 21C, 21P) and the manner of access to a credit report (s 20R(4)) are not encoded.
 
-**Checks:** one module (`pa-individual.l4`, 29 exported questions), one case file (`pa-cases-individual.l4`). 69 assertions
+**Checks:** one module (`pa-individual.l4`, 31 exported questions), one case file (`pa-cases-individual.l4`). 77 assertions
 satisfied, 0 errors, 0 warnings, with the stable `l4` from VS Code extension 1.6.98.
 
 This encoding replaces the first-pass encoding `naive-2026-10`. It covers everything that encoding covered, reuses its
@@ -38,8 +40,8 @@ The 2026-10-18 defaults:
   respondent first (s 40(1A)). Each is an input.
 - **The Act's own definitions worked out; borrowed terms asked as facts.** Followed for small business, small business
   operator, organisation, APP entity, credit information, default information, eligible data breach and at risk.
-  Departure: annual turnover (s 6DA) is a dollar input, because it is the holder's accounting figure and the part-year
-  formula is missing from the deposit. Whether the Do Not Call Register Act 2006 or the Spam Act 2003 applies is asked as
+  Departure: annual turnover (s 6DA(1)) is a dollar input, because it is the holder's accounting figure. The s 6DA(2)
+  part-year formula is encoded on its own (from the formula sidecar), taking the amount earned in the part and the days. Whether the Do Not Call Register Act 2006 or the Spam Act 2003 applies is asked as
   a fact (APP 7.8).
 - **One case is the text's natural unit.** Followed: one holder, one request, one overdue payment, one debt agreement, one
   incident, one complaint. Simplification: one business per holder.
@@ -91,9 +93,12 @@ encoding.
    turnover of more than $3,000,000 for a financial year that has ended" since it started. Jarrah, above the line in
    2036, stays bound when turnover falls back to $2.5 million, although its business is again a "small business" under
    s 6D(1). Exactly $3,000,000 is still small. Asserted.
-2. **Jarrah's first year is judged on the current year, and the formula is missing.** s 6D(2) applies when the business
-   was not carried on in the previous year. The s 6DA(2) part-year formula is not in the deposit ("worked out using the
-   formula:" runs straight into s 6E). Part-year turnover is an input. Asserted (d044).
+2. **Jarrah's first year is judged on the current year, annualised.** s 6D(2) applies when the business was not carried
+   on in the previous year. The s 6DA(2) formula, lost from the text deposit and now transcribed from the Word rendering,
+   is the amount the business would have turned over had the part been a whole year, times the days in the whole year
+   over the days in the part. A business started on 1 February 2031 (an assumption: 150 days) that earns $150,000 has an
+   annual turnover of $365,000; $600,000 in 73 days is exactly $3,000,000 and still small; $600,001 is not. The holder
+   fixtures still take the current-year figure as an input. Asserted (d044).
 3. **The employees get nothing from the Act even once Jarrah is bound.** s 7B(3) exempts an employer's act "directly
    related to" the employment relationship and an employee record. Jarrah's staff are outside the APPs in 2031 because
    Jarrah is a small business operator. In 2036 they are outside them because of s 7B(3). Asserted.
@@ -133,8 +138,7 @@ encoding.
 
 ## What would need doing before this is worth anything
 
-- Recover the s 6DA(2) part-year formula from the authorised compilation. It was lost when the deposit was converted to
-  text.
+- Wire the s 6DA(2) annualisation into the holder fixtures (today the current-year turnover is entered already annualised).
 - Deposit the Privacy Regulation 2013 (any prescribed higher default amount; matters prescribed for refusal notices;
   s 6E prescriptions) and the registered CR code (manner of access; extra notice matters).
 - Encode the APP 12.3 grounds one by one, and the rest of APP 1-11 that an individual can rely on (collection notices in
