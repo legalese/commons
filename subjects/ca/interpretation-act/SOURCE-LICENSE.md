@@ -26,8 +26,10 @@ English is not the only authoritative language. Federal Acts are enacted in both
 
 ## Status of this deposit
 
-Statute text deposited 2026-10-21 as a stub (no encoding yet), from repository commit `0507465393c224c0491fc8c17c88340217acc656` ("Laws Site Update 2026-10-15", Acts and regulations current to 2026-09-30):
+Statute text deposited 2026-10-21 as a stub, from repository commit `0507465393c224c0491fc8c17c88340217acc656` ("Laws Site Update 2026-10-15", Acts and regulations current to 2026-09-30):
 
 - `registers/source-bundle/R.S.C.-1985-c.-I-21.txt` -- Interpretation Act (R.S.C., 1985, c. I-21), current to 2026-09-30, last amended 2024-11-27; 53,666 characters. Converted from https://raw.githubusercontent.com/justicecanada/laws-lois-xml/0507465393c224c0491fc8c17c88340217acc656/eng/acts/I-21.xml (131,343 bytes; sha256 of the download `1e0d75e708e8f79751c982ba2ba48a1da3215885ee74adc41d5601ec87df0097`; sha256 of the text `ea96eac51e21b630b96c0fb210492d9d6cda355e9dfb9e0afd84730bafb98c15`).
 
 Historical (amendment-citation) notes, footnotes and the Recent Amendments list are omitted; Part, Division and section headings and numbers, marginal notes, formulas, tables (cells joined by " | "), schedules, Related Provisions and Amendments Not in Force are kept.
+
+The first encoding of this Act is in `encodings/legalese-sonnet-5.5/`.
