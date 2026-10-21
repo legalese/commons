@@ -22,11 +22,13 @@ Act No. 17, 2025), register id C2026C00297, deposited at
 
 No regulation or guideline is deposited. The repayment thresholds and rates are the Act's own
 (ss 154-10, 154-20). Section 154-25 indexes them for each income year after 2025-26, so for
-later years the indexed figures are inputs. The deposit drops the formulas that the Register
-prints as images: ss 93-5(1), 140-25(1), 140-26(2) and 154-25(2).
+later years the AWE figures that index them are inputs. The text deposit drops the formulas that the
+Register prints as images: ss 93-5(1), 140-25(1), 140-26(2) and 154-25(2). They are transcribed by hand
+from the Word rendering of the same compilation (fetched 2026-10-21) in
+`../../registers/source-bundle/C2004A01234.formulas.md`, and encoded.
 
-**Checks:** one module (`hesa-help.l4`) and one case file (`hesa-cases-help.l4`). 67
-assertions satisfied, 0 errors, 0 warnings. A deliberately wrong expected value ($676 for
+**Checks:** one module (`hesa-help.l4`) and one case file (`hesa-cases-help.l4`). 70
+assertions satisfied, 0 errors, 0 warnings (re-run 2026-10-21 after the formulas were encoded). A deliberately wrong expected value ($676 for
 $675) was run as a check, and it failed as it should.
 
 ## Seat
@@ -101,13 +103,15 @@ Left out, because no event asks it and it is machinery or another loan scheme:
 10. **Death discharges the debt but not the repayments already owed.** Under s 137-20 a HELP debt is "taken to have been paid". Under s 140-40(1) the accumulated debt is "discharged". Section 140-40(2) keeps compulsory repayment amounts, "whether or not those amounts were assessed before the person's death". Asserted.
 11. **A debtor leaving Australia for 183 days or more must tell the Commissioner within 7 days** (s 154-18(1)), unless the Overseas Debtors Repayment Guidelines except them. The Guidelines are not deposited. Asserted.
 12. **Without a student identifier, Chloe would not be Commonwealth supported at all.** Sections 36-10(1)(f) and 104-1(1)(ga) require one for census dates in 2021-22 where the course began in 2021 or later, and for every census date from 2023. Daniel's 2014 enrolment is outside the requirement. Asserted.
-13. **The text is the 2026 text.** Daniel's 2014 and 2017 answers apply today's text to past facts, including the Student Learning Entitlement and student identifier conditions added later (endnotes record amendments to ss 36-5 and 36-10 in 2020, 2022 and 2024). That is the right shape, but it is not the law as it stood. Not asserted as history.
+13. **The four lost formulas say what the first pass inferred, and a little more.** From the sidecar: a unit's student contribution amount is the amount for a place times the unit's EFTSL value, rounded down (s 93-5(1), (4)); the accumulated HELP debt is former debt + debts incurred − repayments − the location-preferred reduction (s 140-25(1), the first pass's inference, now confirmed); for 2024-25 only the net new debt is cut to 80% (s 140-26(2)); and each repayment threshold after 2025-26 is the 2025-26 amount times AWE for the year over AWE for 2025-26, rounded down (s 154-25(2), (3)). $16,992 × 0.0833 gives $1,415; Lorraine's cut debt with $3,000 incurred and $500 repaid gives $12,691 on 1 June 2025; $67,000 at AWE 2,000/1,900 gives $70,526 (hypothetical AWE). Asserted.
+
+14. **The text is the 2026 text.** Daniel's 2014 and 2017 answers apply today's text to past facts, including the Student Learning Entitlement and student identifier conditions added later (endnotes record amendments to ss 36-5 and 36-10 in 2020, 2022 and 2024). That is the right shape, but it is not the law as it stood. Not asserted as history.
 
 ## What would need doing before this is worth anything
 
 - Deposit the 2023-24 and 2024-25 text of Division 154 (or the application provisions of the 2025 amending Act), so that c045 and c048 can be answered as the law stood. Do the same for the 2014 and 2017 texts for Daniel.
 - Deposit the indexation instruments: the loan limit, the maximum contributions, and the thresholds from 2026-27.
-- Recover the image formulas (ss 93-5, 140-25, 140-26(2), 154-25) from the Register. Section 140-25 is rebuilt here from its outline and the Paula example.
+- Deposit the published AWE figures, so that the thresholds from 2026-27 are worked out rather than asked.
 - Encode s 8 of the Medicare Levy Act 1986 and the tax-law components of repayment income, so that they stop being inputs.
 - Deposit the Overseas Debtors Repayment Guidelines and the Higher Education Provider Guidelines (genuine-student matters).
 - Check the census-date boundary reading in finding 7 against departmental guidance.
