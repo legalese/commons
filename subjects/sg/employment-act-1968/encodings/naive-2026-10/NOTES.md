@@ -335,10 +335,11 @@ the Minister appear only as the people who must act towards them.
 "How many days of notice am I owed", "Can I claim for wrongful dismissal",
 "Was I paid late", "How many days of annual leave do I get", "Must my employer
 report my retrenchment to the Commissioner" -- 21 questions in six groups.
-Each calls an existing rule with the same parameters; **no existing rule,
-module or test was changed**. `ea-cases-seat.l4` asserts every question (59
-assertions), with fixtures and expected values copied from the existing,
-hand-checked case files.
+Each calls an existing rule, building the records it expects from plain,
+seat-worded answers (see "Seats" below); **no existing rule, module or test
+was changed**. `ea-cases-seat.l4` asserts every question (59 assertions), with
+the facts and expected values copied from the existing, hand-checked case
+files.
 
 The defaults ruled on 2026-10-18, and where this encoding stands:
 
@@ -383,11 +384,58 @@ Two seat layers sit over the same modules (ruling of 21 October 2026, "More
 than one seat"). Neither changes a rule; both IMPORT the modules and call
 their decisions, so where they ask about the same facts they cannot disagree.
 
+**Plain, seat-worded inputs (21 October 2026).** Both layers now ask every
+question through plain inputs -- yes/no, numbers, and the modules' own
+choices (the payment occasion, the kind of deduction, the way maternity
+absence is taken) -- one for each fact the person states, in the order they
+would be asked, each with an `@desc` in that seat's own words. The employee is
+asked "Does your contract say how much notice must be given?", "How many
+complete months have you worked for this employer?", "Did you tell your
+employer, or try to, why you were absent?"; the employer is asked "Does the
+contract say how much notice must be given?", "How many complete months has
+this employee worked for you?", "Did the employee tell you, or try to, why
+they were absent?". Before this, the questions took the modules' records
+(`ContractTerms`, `ServiceLength`, `Absence`, `LeaveService` ...) as inputs,
+and the website's Interact form showed each record's field names as the
+questions -- third person, in the encoding's terms ("the employee informed or
+attempted to inform the employer of the excuse"), and the same for both seats.
+
+Each question now builds the module's records itself, in a `WHERE`, from the
+plain answers, and calls the same module rule as before; no rule is restated
+or copied, and the law stays in the shared modules. A record field that the
+rule called never reads is given a fixed placeholder in the `WHERE`, with a
+comment saying the rule does not read it (for example the s 10(2) equal-length
+field when asking the notice period, the s 69 declaration when asking about
+s 68, the `HoursWorked` fields the 6-hour rule ignores). Every field a rule
+does read is asked, with one exception.
+
+**The seats assume the Act's figures.** The modules carry the figures the
+Minister may substitute as supplied facts: the s 29 and s 30 proportions (one
+quarter), the s 32 percentage (50%), the s 35 salary thresholds ($4,500 for a
+workman, $2,600 for others), and the s 95A deadline (14 days, unless another
+is prescribed). Neither an employee nor an employer can state these, so the
+seats do not ask them: they pass the modules' own constants, `the proportions
+as the Act states them` and `the caps as the Act states them`, and take s 95A
+with no other deadline prescribed. A later Ministerial substitution would
+change these answers; the seats would then need the new figure, while the
+modules already accept it.
+
+This was done for two reasons: so the website asks each person in their own
+words, and so the query planner and the form see each fact separately, rather
+than one opaque record that has to be filled in all at once (and with fields
+no answer depends on). The employee seat now has 83 plain inputs across its
+21 questions (before: 31 inputs, 22 of them records, which the form expanded
+into 103 field questions); the employer seat has 161 across 46 (before: 76
+inputs, 37 of them records, expanded into 229). No answer changed: the case
+files pass the same facts directly instead of through record fixtures, with
+every expected value kept, and the 26 mirror cases still agree.
+
 **1. The employee** -- `ea-seat.l4`, 21 questions, `ea-cases-seat.l4` (59
 assertions). The required seat, described in the section above. On
 21 October 2026 every question gained `@export` (the question in plain words,
 with its section) and an `@desc` on every input; the GIVEN lists were laid out
-one input to a line to carry them. No rule, name or test changed.
+one input to a line to carry them. No rule, name or test changed. Later the
+same day its inputs became plain and seat-worded (above).
 
 **2. The employer** -- `ea-seat-employer.l4`, 46 questions,
 `ea-cases-seat-employer.l4` (60 assertions). Seat: the employer, an individual
