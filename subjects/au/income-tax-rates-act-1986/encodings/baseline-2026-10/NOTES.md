@@ -26,12 +26,20 @@ Income Tax Rates Act 1986, Compilation No. 66, compilation date 1 July 2026,
 includes amendments up to Act No. 50, 2026 (Register id C2026C00300), as deposited
 at `../../registers/source-bundle/C2004A03348.txt`.
 
+The formulas the text deposit lost (ss 12(7), (8), 12AA, 12A, 13(10), 14(3), 15(8),
+20(1), (2), Schedule 7 Parts I and II clauses 2 and 3, Schedule 11 clause 3) are
+transcribed by hand from the Word rendering of the same compilation, fetched from the
+Federal Register of Legislation on 2026-10-21, in
+`../../registers/source-bundle/C2004A03348.formulas.md`. The encoding uses s 20(1)
+and Schedule 7 Parts I and II clause 2.
+
 No regulation sets these numbers. The rates are in the Act's own text, and each
 Budget changes them by amending Act.
 
 ## Checks
 
-- `itra-cases-rates.l4`: 68 assertions written, 68 satisfied, 0 errors, 0 warnings.
+- `itra-cases-rates.l4`: 73 assertions written, 73 satisfied, 0 errors, 0 warnings
+  (68 before the formulas were recovered on 2026-10-21).
 - `itra-rates.l4`: checks with no errors or warnings.
 - Both were run with the stable `l4` from VS Code extension 1.6.98.
 
@@ -75,12 +83,13 @@ The 2026-10-18 defaults:
 - **One case is the text's natural unit.** Followed: one taxpayer and one year of
   income, or one company and one year of income.
 - **The Act's own terms, each with a plain gloss.** Followed in the comments.
-- **Operative sections in; machinery out.** Followed. Two departures, each because
-  the text cannot be applied:
-  - The **s 20(1) pro-rating formula** is missing from the deposit, so the pro-rated
-    threshold is an input rather than worked out.
-  - **Schedule 7 clauses 2 and 3** (abnormal income) need formulas the deposit lacks,
-    so a taxpayer with an abnormal income amount gets `Not in the deposited text`.
+- **Operative sections in; machinery out.** Followed. The s 20(1) pro-rating formula
+  and Schedule 7 clause 2 (abnormal income, Parts I and II) are encoded from the
+  sidecar transcription; the number of months in the part-year residency period and
+  the abnormal income amount (ITAA 1997 Division 405) are asked. Clause 3 (Division 16
+  or Division 392 averaging, which needs the s 392-45 "average income"), and a special
+  income component met together with a superannuation or termination remainder or with
+  working holiday income, get `Not covered by this encoding`.
 
 ## The lives
 
@@ -165,8 +174,11 @@ A company of a kind left out gets `Not covered by this encoding`.
    45%, outside the table.** Asserted.
 8. **A part-year resident's threshold is pro-rated, but not an eligible pensioner's.**
    s 18(2)(a) takes the eligible pensioner out of part-year residency, so the full
-   $18,200 applies. The pro-rating formula itself is missing from the deposit. The
-   October 2024 arrival case uses an assumed $13,650. Asserted.
+   $18,200 applies. The s 20(1) formula (recovered from the authorised rendering) is
+   ($18,200 - $4,736) + $4,736 x months / 12: $13,464 for anyone with a part-year
+   residency period, plus $394.67 a month. s 18(1) counts the whole month of arrival,
+   so an October 2024 arrival has 9 months, a $17,016 threshold and $2,077.44 tax on
+   $30,000. Asserted.
 9. **The company rate has no year limits.** Under s 23(2), a base rate entity pays
    25% and any other company 30%. s 23AA sets two tests:
    - passive income must be "no more than 80%" of assessable income, so exactly 80%
@@ -193,17 +205,24 @@ A company of a kind left out gets `Not covered by this encoding`.
 
     A not-for-profit whose constitution allows distributions is not a "non-profit
     company". Asserted.
-12. **The deposit drops every formula set as an image.** "In accordance with the
-    following formula:" is followed by nothing in:
-    - s 20(1);
-    - Schedule 7 clauses 2 and 3;
-    - ss 12(7), (8), 12AA, 12A;
-    - the phase-out limits in ss 13(10), 14(3) and 15(8).
+12. **The text deposit drops every formula set as an image**, in ss 12(7), (8),
+    12AA, 12A, 13(10), 14(3), 15(8), 20(1), (2) and Schedules 7 and 11. All are now
+    transcribed in the sidecar. Those outside the seat's scope (the s 94 further tax,
+    minimum tax capital gains, primary producers, Division 6AA phase-out limits,
+    trustees, Schedule 11) are transcribed but not encoded.
+13. **Abnormal income is taxed at five times the tax on a fifth of it.** Schedule 7
+    clause 2 sets a rate per dollar of (A + B) / C: A is the clause 1 tax on the
+    reduced taxable income, B is five times the extra tax on adding 20% of the special
+    income component, and C is the taxable income in whole dollars. An author with a
+    $100,000 abnormal income amount in $150,000 pays $35,788 rather than $36,838. For a
+    non-resident whose income all falls in the 30% band it changes nothing ($18,000 on
+    $60,000). Asserted.
 
 ## What would need doing before this is worth anything
 
-- Retrieve the s 20(1) formula and the clause 2 and 3 formulas from the PDF or Word
-  original, and encode them.
+- Encode Schedule 7 clause 3 with the ITAA 1997 s 392-45 average income, and the
+  special income component where there are remainders (s 3 "special income
+  component" (b)) or working holiday income (clause 4(c)).
 - Retrieve the 2023-24 rates from an earlier compilation so that c045 can be
   answered, and consider keeping one encoded table per vintage.
 - Reconcile c048's $12,842 with the text, and correct whichever side is wrong.
