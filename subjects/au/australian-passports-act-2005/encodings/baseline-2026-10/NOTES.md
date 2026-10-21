@@ -40,14 +40,19 @@ Finding 6 corrects an omission.
   - s 6 (additional fees);
   - s 7 (indexation).
 
-  The s 7 formula is an image the deposit does not carry, and the CPI numbers are not
-  deposited, so the yearly indexation factors are **inputs**.
+  The s 7 formula is an image the text deposit does not carry. It is transcribed by hand
+  from the Word rendering of the same compilation (fetched 2026-10-21) in
+  `subjects/au/australian-passports-application-fees-determination-2015/registers/source-bundle/F2015L01222.formulas.md`
+  and encoded as `What is the indexation factor for the calendar year`. The CPI numbers are
+  not deposited, so the September-year sums are **inputs** to it, and the fee question
+  still takes the yearly factors.
 
 ## Checks
 
 - One module (`apa-passports.l4`) and one case file (`apa-cases-passports.l4`).
 - **70 assertions satisfied, 0 errors, 0 warnings**, with the stable `l4` from VS
-  Code extension 1.6.98.
+  Code extension 1.6.98 (re-run 2026-10-21 after the s 7 formula was encoded; one
+  redundant fee-item case gave way to the indexation-factor case).
 - The case file is built by `gen_australian-passports-act-2005_baseline.py` in the
   session scratchpad. Every expected value was written by hand from the text.
 
@@ -228,12 +233,18 @@ Left out:
     is barred.** Determination s 28A excludes s 27(1)(l), s 27(2) and s 28. The other
     waiver grounds, such as (a) and (k), remain. Asserted for (l).
 
+13. **The fee indexation factor is a ratio of two CPI years, to three places.** Fees
+    Determination s 7(1), from the sidecar: index number for the most recent September
+    year / index number for the past September year, each the sum of four quarterly All
+    Groups CPI numbers; (2) works it to 3 decimal places, rounding up from 5. Illustrative
+    sums of 552.2 and 534.0 give 1.034. Asserted.
+
 ## What would need doing before this is worth anything
 
 - Retrieve the s 11 text in force in June 2011 and the Australian Passports
   Determination 2005, and re-run c013 against them.
-- Retrieve the published indexation factors (or the CPI numbers and the s 7 formula),
-  so that the fees for 2025 onward are amounts, not inputs.
+- Deposit the CPI index numbers (the s 7 formula is now in hand), so that the fees for
+  2025 onward are amounts, not inputs.
 - Retrieve the fee amounts in force in 2011 and 2016.
 - Join this encoding to the citizenship baseline, so that the date of Anjali's approval
   decides s 8 instead of an input.
