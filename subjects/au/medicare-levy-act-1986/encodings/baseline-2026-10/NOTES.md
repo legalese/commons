@@ -20,6 +20,11 @@ Medicare Levy Act 1986, Compilation No. 53, compilation date 1 July 2026, includ
 amendments up to Act No. 58, 2026 (Register id C2026C00295), as deposited at
 `../../registers/source-bundle/C2004A03351.txt`.
 
+The formulas the text deposit lost (ss 8(2), 8B(2)(b), 8C(3)(b), 8D(4), and the trustee
+sections 8E-8G) are transcribed by hand from the Word rendering of the same compilation,
+fetched from the Federal Register of Legislation on 2026-10-21, in
+`../../registers/source-bundle/C2004A03351.formulas.md`. The encoding uses them.
+
 No instrument sets the Act's numbers. The low-income figures are in its own text
 (ss 3, 8 and 8D), and an amending Act changes them each year.
 
@@ -35,7 +40,8 @@ as facts, so that Act is not encoded.
 
 ## Checks
 
-- `mla-cases-levy.l4`: 68 assertions written, 68 satisfied, 0 errors, 0 warnings.
+- `mla-cases-levy.l4`: 75 assertions written, 75 satisfied, 0 errors, 0 warnings
+  (68 before the formulas were recovered on 2026-10-21).
 - `mla-levy.l4`: checks with no errors or warnings.
 - Both were run with the stable `l4` from VS Code extension 1.6.98.
 
@@ -81,15 +87,16 @@ The 2026-10-18 defaults:
 - **One case is the text's natural unit.** Followed: one taxpayer and one year of
   income.
 - **The Act's own terms, each with a plain gloss.** Followed in the comments.
-- **Operative sections in; machinery out.** Followed. There are three departures,
-  each because the deposit drops a formula or a figure:
-  - **The s 8(2) reduction formula** is missing ("calculated in accordance with the
-    formula:" is followed by nothing). The reduction is therefore an input, and the
-    encoding applies s 8(3) and (4) to it.
-  - **The part-year surcharge formulas** in ss 8B(2)(b), 8C(3)(b) and 8D(4) are
-    missing. A part-year surcharge is therefore `Not in the deposited text`.
-  - **The PHI Act's indexed tier thresholds** are not deposited, and nor is its
-    s 22-40(4) formula for two or more children. All of these are inputs.
+- **Operative sections in; machinery out.** Followed, with these limits:
+  - **The s 8(2) reduction** and **the part-year surcharge formulas** (ss 8B(2)(b),
+    8C(3)(b), 8D(4)) are encoded from the sidecar transcription. A part-year surcharge
+    is worked out only where no day of the year is a prescribed-person day (the overlap
+    of uncovered and prescribed days is not asked) and only one surcharge section
+    applies all year; otherwise it is `Not covered by this encoding`.
+  - **The PHI Act's indexed tier thresholds** are not deposited, so they are inputs.
+    Its s 22-40(4) increase for two or more children, $1,500 x (children - 1), is
+    transcribed in the PHI Act's formulas sidecar and worked out in that baseline;
+    here the increase is still an input.
 
 ## The lives
 
@@ -162,8 +169,19 @@ c045 and c048, and both find 2023-24 outside their deposits.
     for 2021-22 and 2022-23, and indexation never lowers it (PHI Act ss 22-35,
     22-45(3), (3A)). So an income at or under $90,000 attracts no surcharge in any
     later year. Asserted for c048.
-11. **The deposit drops every formula:** s 8(2), and the part-year formulas in
-    ss 8B, 8C and 8D. Asserted, as inputs and as `Not in the deposited text`.
+11. **The s 8(2) reduction leaves exactly 10% of the excess.** The formula (recovered
+    from the authorised rendering) is 2% of the family income threshold less 0.08 x
+    (family income - threshold), and nil once that is negative ("if any"). With the 2%
+    levy, a single parent on $50,000 against a $47,238 threshold pays $1,000 - $723.80 =
+    $276.20, which is 10% of the $2,762 excess, the same shading-in as s 7(2). The
+    reduction runs out when family income passes 1.25 times the threshold. Under s 8(3)
+    a married person's share is cut by the spouse's share of family income ($723.80 ->
+    $289.52 on $20,000 and $30,000), and s 8(4) passes the unused part to the spouse.
+    Asserted.
+11a. **The part-year surcharge is the whole-year rate pro rata by days.** ss 8B(2)(b),
+    8C(3)(b) and 8D(4) all read (1% of taxable income) x (number of those days / number
+    of days in the year), the 1% raised by 0.25 or 0.5 of a point for tier 2 and 3: $200
+    for 73 uncovered days on $100,000; $600 for 146 days on $120,000. Asserted.
 12. **c045 cannot be checked against the scenario.** The scenario says Chloe's
     2023-24 levy is "nil under the threshold". That cannot be checked from this
     deposit, because the 2023-24 threshold is not in it. Under the deposited figures,
@@ -175,9 +193,11 @@ c045 and c048, and both find 2023-24 outside their deposits.
   2025), so that the 2023-24 and 2024-25 figures for c045 and c048 can be encoded.
   Confirm from Act No. 58, 2026's application item which year the current figures
   are for.
-- Obtain the s 8(2) and part-year surcharge formulas from the authoritative text, so
-  that they can replace the input and the `Not in the deposited text` answers.
+- Ask, for a part-year surcharge, the days on which each surcharge section applies
+  (married or not, dependants or not, uncovered, not prescribed), so that a year with
+  more than one section, or with prescribed days, can be worked out.
 - Deposit the indexed PHI Act tier thresholds for each year (they are published,
-  not legislated), and the s 22-40(4) formula.
+  not legislated), and work out the s 22-40(4) increase from the number of
+  dependent children, as the PHI Act baseline now does.
 - Encode s 9A, and the trustee provisions if a trustee seat is wanted.
 - An independent test pass and a human gate.
