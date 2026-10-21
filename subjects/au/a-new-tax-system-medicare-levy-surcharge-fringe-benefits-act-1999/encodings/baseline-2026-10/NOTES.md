@@ -22,6 +22,11 @@ No. 42, compilation date 1 July 2026, includes amendments up to Act No. 58, 2026
 (Register id C2026C00288), as deposited at
 `../../registers/source-bundle/C2004A00412.txt`.
 
+The part-year formulas the text deposit lost (ss 12(3), 13(4), 16(4)) are transcribed
+by hand from the Word rendering of the same compilation, fetched from the Federal
+Register of Legislation on 2026-10-21, in
+`../../registers/source-bundle/C2004A00412.formulas.md`. The encoding uses them.
+
 No instrument sets the Act's numbers. Its one figure, $28,011 (ss 15(1)(c),
 16(2)(c)), is in its own text.
 
@@ -33,8 +38,8 @@ s 4 borrows its excess limits.
 
 ## Checks
 
-- `mlsfb-cases-surcharge.l4`: 37 assertions written, 37 satisfied, 0 errors, 0
-  warnings.
+- `mlsfb-cases-surcharge.l4`: 39 assertions written, 39 satisfied, 0 errors, 0
+  warnings (37 before the formulas were recovered on 2026-10-21).
 - `mlsfb-surcharge.l4`: checks with no errors or warnings.
 - Both were run with the stable `l4` from VS Code extension 1.6.98.
 
@@ -88,17 +93,20 @@ The 2026-10-18 defaults:
 - **The Act's own terms, each with a plain gloss.** Followed in the comments.
 - **Operative sections in; machinery out.** Followed. There are two departures,
   each because the deposit drops a formula or a figure:
-  - **The part-year formulas** in ss 12(3), 13(4) and 16(4) are missing ("the amount
-    worked out using the formula:" is followed by nothing). A part-year surcharge is
-    therefore `Not in the deposited text`, as in the Medicare Levy Act baseline.
-  - **The PHI Act's indexed tier thresholds** are not deposited, and nor is its
-    s 22-40(4) formula for two or more children. All of these are inputs.
+  - **The part-year formulas** in ss 12(3), 13(4) and 16(4) are encoded from the
+    sidecar transcription. A part-year amount is worked out only where no day is a
+    prescribed-person day (the overlap is not asked) and one Division applies all
+    year; otherwise it is `Not covered by this encoding`.
+  - **The PHI Act's indexed tier thresholds** are not deposited, so they are inputs.
+    Its s 22-40(4) increase for two or more children, $1,500 x (children - 1), is
+    transcribed in the PHI Act's formulas sidecar and worked out in that baseline;
+    here the increase is still an input.
 
 ## The lives
 
 | Event | Decision it asks | Answer here |
 |---|---|---|
-| chloe c073 (2034-04-01), turns 31; hospital cover taken out before 1 July to avoid the loading | `Must I pay the surcharge on my fringe benefits`, `How much surcharge do I pay on my fringe benefits` | For 2033-34, uncovered until 1 April 2034, with Chloe on $110,000 and Liam on $60,000: no surcharge. The couple's $170,000 does not exceed the family tier 1 threshold of $180,000 (the stand-in). If Liam earned $80,000, the s 16(2) test would be met. Division 4 would then apply for only part of the year, so the amount is `Not in the deposited text`. For 2034-35, covered all year: nil. |
+| chloe c073 (2034-04-01), turns 31; hospital cover taken out before 1 July to avoid the loading | `Must I pay the surcharge on my fringe benefits`, `How much surcharge do I pay on my fringe benefits` | For 2033-34, uncovered until 1 April 2034, with Chloe on $110,000 and Liam on $60,000: no surcharge. The couple's $170,000 does not exceed the family tier 1 threshold of $180,000 (the stand-in). If Liam earned $80,000, the s 16(2) test would be met. Division 4 would then apply for only part of the year: s 16(4) gives (1% x $3,000) x 274 / 365 = $22.52. For 2034-35, covered all year: nil. |
 
 The scenario states that Chloe is married to Liam, that Oliver and Ella are their
 children, and that she earns $110,000 from February 2034. It does not state:
@@ -186,23 +194,25 @@ borrows them from here. This encoding works "married" out (s 7).
    2023-24 year is `Not in the deposited text`, while a single person's 2023-24 year
    is answered. This is narrower than the Medicare Levy Act baseline, which gates
    every surcharge answer on the year. Asserted.
-9. **The deposit drops every formula:** the part-year formulas in ss 12(3), 13(4)
-   and 16(4). Section 16(4)'s "where: number of applicable days ..." survives, which
-   suggests the formula is a proportion by days. That is an inference, and it is not
-   encoded. Asserted, as `Not in the deposited text`.
+9. **The part-year surcharge is the whole-year rate pro rata by days.** The formulas
+   recovered from the authorised rendering (ss 12(3), 13(4), 16(4)) all read (1% of
+   the reportable fringe benefits total) x (number of those days, or applicable days,
+   / number of days in the year), the 1% raised for tier 2 and 3 as for a whole year.
+   $8,000 of fringe benefits uncovered for 73 days costs $16. Asserted.
 10. **c073: hospital cover taken out part-way through the year leaves a part-year
     case.** If Chloe and Liam's income were over the family threshold, Chloe would
-    owe surcharge for 1 July 2033 to 31 March 2034 under s 16. The amount needs the
-    missing s 16(4) formula. On the assumed incomes there is none. Asserted.
+    owe surcharge for 1 July 2033 to 31 March 2034 under s 16: 1% of an assumed $3,000
+    for 274 of 365 days, $22.52. On the assumed incomes there is none. Asserted.
 
 ## What would need doing before this is worth anything
 
-- Obtain the part-year formulas (ss 12(3), 13(4), 16(4)) from the authoritative
-  text, so that they can replace the `Not in the deposited text` answers.
+- Ask the days on which each Division applies, so that a year with more than one
+  Division, or with prescribed days, can be worked out under the part-year formulas.
 - Confirm from Act No. 58, 2026's application item which year the $28,011 is for.
   Retrieve earlier compilations for earlier years.
 - Deposit the indexed PHI Act tier thresholds for each year (they are published,
-  not legislated), and the s 22-40(4) formula.
+  not legislated), and work out the s 22-40(4) increase from the number of
+  dependent children, as the PHI Act baseline now does.
 - State Chloe's reportable fringe benefits total, Liam's income and the cover date
   in the scenario.
 - Encode the Lifetime Health Cover loading (PHI Act Division 34), which is what
