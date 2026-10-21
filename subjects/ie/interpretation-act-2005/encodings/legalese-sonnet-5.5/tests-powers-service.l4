@@ -1,0 +1,91 @@
+@lang en
+-- Tests of ie-powers-and-service.l4: s 22(3) and s 25 (service by post).
+-- Section 25 turns on five facts about the posting and one input (the time the letter would be delivered in the ordinary course of post).
+-- Every fact is varied alone; the order in which the two refusals are checked is tested; and the date of a time near midnight is read in UTC,
+-- with an offset time showing that the same instant gives a different date on a different clock.
+
+IMPORT prelude
+IMPORT daydate
+IMPORT `ie-interpretation-time`
+IMPORT `ie-powers-and-service`
+
+§ `Helpers`
+
+GIVEN s IS A STRING
+GIVETH A DATETIME
+`the time` s MEANS
+    CONSIDER TODATETIME s
+    WHEN JUST t   THEN t
+    WHEN NOTHING  THEN REFUSE "the test supplied a string that is not a date and time"
+
+GIVEN authorised IS A BOOLEAN
+      addressed IS A BOOLEAN
+      required IS A BOOLEAN
+      prepaid IS A BOOLEAN
+      posted IS A BOOLEAN
+GIVETH A `A document sent by post`
+`a posting` authorised addressed required prepaid posted MEANS
+    `A document sent by post` WITH
+        `an enactment authorises or requires the document to be served by post, by the word serve, give, deliver, send or any other word` IS authorised
+        `the letter was properly addressed`                                       IS addressed
+        `prepayment is required`                                                  IS required
+        `the letter was prepaid`                                                  IS prepaid
+        `a letter containing the document was posted`                             IS posted
+
+§ `Section 22(3): a power to make a statutory instrument includes the power to repeal, amend and (where required) replace it`
+
+#ASSERT `a power to make a statutory instrument is read as including the power` `to make the statutory instrument` `, where` FALSE
+#ASSERT `a power to make a statutory instrument is read as including the power` `to repeal a statutory instrument made under the power` `, where` FALSE
+#ASSERT `a power to make a statutory instrument is read as including the power` `to amend a statutory instrument made under the power` `, where` FALSE
+#ASSERT `a power to make a statutory instrument is read as including the power` `to make another statutory instrument in place of one so repealed` `, where` TRUE
+#ASSERT NOT `a power to make a statutory instrument is read as including the power` `to make another statutory instrument in place of one so repealed` `, where` FALSE
+#ASSERT REFUSED `a power to make a statutory instrument is read as including the power` `to do something else` `, where` TRUE BECAUSE "section 22(3) names only the inclusions it lists, so whether the power includes another act is not answered"
+
+§ `Section 25: when service by post may be effected`
+
+#ASSERT     `service by post may be effected under section 25` (`a posting` TRUE TRUE FALSE FALSE TRUE)
+#ASSERT     `service by post may be effected under section 25` (`a posting` TRUE TRUE TRUE  TRUE  TRUE)
+-- prepayment required and not made
+#ASSERT NOT `service by post may be effected under section 25` (`a posting` TRUE TRUE TRUE  FALSE TRUE)
+-- prepayment not required: whether it was made does not matter
+#ASSERT     `service by post may be effected under section 25` (`a posting` TRUE TRUE FALSE TRUE  TRUE)
+-- each other fact missing in turn
+#ASSERT NOT `service by post may be effected under section 25` (`a posting` FALSE TRUE FALSE FALSE TRUE)
+#ASSERT NOT `service by post may be effected under section 25` (`a posting` TRUE FALSE FALSE FALSE TRUE)
+#ASSERT NOT `service by post may be effected under section 25` (`a posting` TRUE TRUE FALSE FALSE FALSE)
+
+§ `Section 25: the time at which service is deemed to have been effected`
+
+#ASSERT `the time at which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2026-03-12T09:30:00Z") FALSE EQUALS `the time` "2026-03-12T09:30:00Z"
+#ASSERT `the time at which service is deemed to have been effected` (`a posting` TRUE TRUE TRUE TRUE TRUE) (`the time` "2026-03-12T09:30:00Z") FALSE EQUALS `the time` "2026-03-12T09:30:00Z"
+-- a different delivery time gives a different answer (so the assertions above are not satisfied by accident)
+#ASSERT NOT (`the time at which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2026-03-12T09:30:00Z") FALSE EQUALS `the time` "2026-03-12T09:31:00Z")
+-- the contrary is proved: the section says nothing about what time then applies
+#ASSERT REFUSED `the time at which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2026-03-12T09:30:00Z") TRUE BECAUSE "section 25 deems the time of service only unless the contrary is proved, and does not say what time of service applies once it is"
+-- the letter was not posted as the section describes: no deemed time
+#ASSERT REFUSED `the time at which service is deemed to have been effected` (`a posting` TRUE FALSE FALSE FALSE TRUE) (`the time` "2026-03-12T09:30:00Z") FALSE BECAUSE "section 25 deems a time of service only where the letter was posted as the section describes"
+#ASSERT REFUSED `the time at which service is deemed to have been effected` (`a posting` TRUE TRUE TRUE FALSE TRUE) (`the time` "2026-03-12T09:30:00Z") FALSE
+#ASSERT REFUSED `the time at which service is deemed to have been effected` (`a posting` FALSE TRUE FALSE FALSE TRUE) (`the time` "2026-03-12T09:30:00Z") FALSE
+-- both failures at once: the posting is checked first
+#ASSERT REFUSED `the time at which service is deemed to have been effected` (`a posting` TRUE FALSE FALSE FALSE TRUE) (`the time` "2026-03-12T09:30:00Z") TRUE BECAUSE "section 25 deems a time of service only where the letter was posted as the section describes"
+
+§ `Section 25: the date of the deemed time, read in UTC (the Act names no time zone)`
+
+#ASSERT `the date in UTC on which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2026-03-10T23:59:59Z") FALSE EQUALS YMD 2026 3 10
+#ASSERT `the date in UTC on which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2026-03-11T00:00:00Z") FALSE EQUALS YMD 2026 3 11
+#ASSERT `the date in UTC on which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2026-03-10T00:00:00Z") FALSE EQUALS YMD 2026 3 10
+-- the same instant written on a clock one hour ahead of UTC: 00:30 on 11 March is 23:30 UTC on 10 March
+#ASSERT `the date in UTC on which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2026-03-11T00:30:00+01:00") FALSE EQUALS YMD 2026 3 10
+-- month end, year end and the leap day
+#ASSERT `the date in UTC on which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2024-02-29T12:00:00Z") FALSE EQUALS YMD 2024 2 29
+#ASSERT `the date in UTC on which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2025-12-31T23:59:59Z") FALSE EQUALS YMD 2025 12 31
+-- refusals carry through to the date
+#ASSERT REFUSED `the date in UTC on which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2026-03-10T23:59:59Z") TRUE
+#ASSERT REFUSED `the date in UTC on which service is deemed to have been effected` (`a posting` FALSE TRUE FALSE FALSE TRUE) (`the time` "2026-03-10T23:59:59Z") FALSE
+
+§ `Section 25 with section 18(h): a period of days that runs from the day of deemed service`
+
+-- served by post, deemed delivered on 2026-03-10 (UTC); thirty days from that day end on 2026-04-08 (day 1 is 10 March; 22 days to 31 March; 8 more to 8 April)
+#ASSERT `the last day of a period of` 30 `days beginning on or reckoned from` (`the date in UTC on which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2026-03-10T23:59:59Z") FALSE) EQUALS YMD 2026 4 8
+-- the same letter delivered one second later falls on the next day, and the period moves with it
+#ASSERT `the last day of a period of` 30 `days beginning on or reckoned from` (`the date in UTC on which service is deemed to have been effected` (`a posting` TRUE TRUE FALSE FALSE TRUE) (`the time` "2026-03-11T00:00:00Z") FALSE) EQUALS YMD 2026 4 9
