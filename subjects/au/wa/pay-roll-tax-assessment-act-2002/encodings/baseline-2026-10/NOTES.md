@@ -14,7 +14,7 @@ Every decision is exported for Legalese Cloud with `@export`, and each input has
 
 - **The Act:** Pay-roll Tax Assessment Act 2002 (No. 48 of 2002), WA consolidation
   deposited at `../../registers/source-bundle/mrdoc_42096.txt` (retrieved 2026-09-07).
-- **Pay-roll Tax Act 2002** (No. 47 of 2002), s 5 and Part 3 Table item 1 (the rate).
+- **Pay-roll Tax Act 2002** (No. 47 of 2002), s 5 and Part 3 ss 6 and 10 (the rate, with the sliding scale).
   Deposited at `subjects/au/wa/pay-roll-tax-act-2002/registers/source-bundle/mrdoc_38731.txt`
   (retrieved 2026-09-07). The two Acts and the Taxation Administration Act 2003 are
   "to be read ... as if they formed a single Act" (s 3).
@@ -23,19 +23,27 @@ Every decision is exported for Legalese Cloud with `@export`, and each input has
   Deposited at `subjects/au/wa/pay-roll-tax-assessment-regulations-2003/registers/source-bundle/mrdoc_45213.txt`
   (retrieved 2026-10-20). The thresholds are in the Act itself (s 8), not the
   regulations.
-- **The formulas are missing.** The deposited text drops the formula images in
-  ss 8(4), 10(2), 10(4), 11A(1)-(2), 12 and 17(3A), (5), and the rate formulas in
-  Pay-roll Tax Act ss 6-11. Only their "where --" glosses survive. See finding 1.
+- **The formulas.** The deposited `.txt` drops every formula of the Act (Word
+  equation markup in the original), leaving only the "where --" glosses. All 25 are
+  transcribed by hand from the authorised Word rendering of the same document
+  (mrdoc 42096, fetched 2026-10-21) in
+  `../../registers/source-bundle/mrdoc_42096.formulas.md`; those of ss 8(4), 10(2),
+  10(4), 11A and 17(3A) are encoded. The rate formulas of the Pay-roll Tax Act
+  ss 6-11 (the 2018-2023 sliding scale), also missing from that Act's deposit, are
+  transcribed the same way from its Word rendering (mrdoc 38731, fetched 2026-10-21) in
+  `subjects/au/wa/pay-roll-tax-act-2002/registers/source-bundle/mrdoc_38731.formulas.md`;
+  the annual ones (ss 6(2), (3) and 10(3), (4)) are encoded. See findings 1 and 5.
 
 ## Checks
 
 - One module (`prt-payroll.l4`) and one case file (`prt-cases-payroll.l4`).
-- **44 assertions satisfied, 0 errors, 0 warnings**, with the stable `l4` from VS
-  Code extension 1.6.98.
+- **46 assertions satisfied, 0 errors, 0 warnings**, with the stable `l4` from VS
+  Code extension 1.6.98 (re-run 2026-10-21 after the Assessment Act formulas, and again
+  after the Pay-roll Tax Act sliding-scale formulas, were recovered).
 - The case file is built by `gen_wa_pay-roll-tax-assessment-act-2002_baseline.py`
   in the session scratchpad. Every expected value was written by hand from the text,
-  or from the inferred formula where the text drops one (those cases say
-  INFERRED FORMULA).
+  or from the recovered formula where the `.txt` drops one (those cases say
+  FORMULA).
 - An expected value was deliberately altered in a scratch copy (41,250 to 41,251,
   two assertions). The runner reported both as failing (42 of 44), so it does catch
   a wrong expectation.
@@ -118,15 +126,15 @@ Jarrah is a single-State employer far under the threshold in the life.
 
 ## What the Act turns out to say
 
-1. **The deposit drops every formula.** The formula images in ss 8(4), 10(2), 10(4),
-   11A and 17(3A) did not survive conversion, leaving only "where -- AT is the
-   annual threshold amount ...". The encoding uses inferred formulas, labelled in
-   the module: tapering value = AT / (UT - AT); deductable amount =
-   AT - ((W - AT) x TV); apportioned amounts = amount x P / Y; and for a group, its
-   WA share (W / TW) of AT - ((TW - AT) x TV). They are the simple forms the glosses
-   allow, and each makes the deduction reach nil exactly at the upper threshold,
-   where s 10(1)(b) takes over. They must be checked against the gazetted text.
-   Asserted (as inferences).
+1. **The taper, from the recovered formulas.** The `.txt` lost every formula; the
+   authorised Word text (`mrdoc_42096.formulas.md`) gives tapering value =
+   AT / (UT − AT) (s 8(4)); deductable amount = AT − [(W − AT) × TV] (s 10(2)), or
+   AAT − [(W − AAT) × TV] for a part-year (s 10(4)); apportioned amounts AT × (P / Y)
+   and UT × (P / Y) (s 11A); and for a group (AT − [(TW − AT) × TV]) × (W / TW)
+   (s 17(3A)). These are the forms the first version of this baseline had inferred.
+   The deduction reaches nil exactly at the upper threshold, where s 10(1)(b) takes
+   over. The s 13(3), (5) and s 17(3A), (5) equations are printed with an unmatched
+   closing bracket; the only reading that parses is used. Asserted.
 2. **WA payroll tax has no general contractor provisions.** "Wages" reaches a
    contractor only through s 9AA(1)(c), a class of contract prescribed by
    regulation. The only class prescribed (reg 5) is a ship or boat builder's
@@ -143,10 +151,15 @@ Jarrah is a single-State employer far under the threshold in the life.
    threshold it is the rate on every dollar. Asserted.
 5. **The rate is 5.5% for wages paid on or after 1 July 2023** (Pay-roll Tax Act
    s 5(4)). In the sliding scale period (1 July 2018 to 30 June 2023) it was also
-   5.5% for wages up to $100 million, scaled for a part-year. Asserted.
+   5.5% for wages up to $100 million, scaled for a part-year. Above that the Pay-roll
+   Tax Act s 6(2), (3) (s 10(3), (4) for a group) give, from the sidecar,
+   [(5 500 000 × Y) + 0.06 (W − 100 000 000 × Y)] / W × 100 up to $1.5 billion × Y and
+   [(89 500 000 × Y) + 0.065 (W − 1 500 000 000 × Y)] / W × 100 above, "to 4 decimal
+   places" (read as rounding half up, an inference). $200 million in 2021-22 gives
+   5.75% ($11,500,000 of tax); $3 billion gives 6.2333%. Asserted.
 6. **A group tests its Australia-wide wages against one threshold, and pays WA tax
-   only on its WA share** (s 17(2)). Above the upper threshold the rate falls on all
-   the group's WA wages. Asserted (the taper by inference, finding 1).
+   only on its WA share** (s 17(2), (3A)). Above the upper threshold the rate falls
+   on all the group's WA wages. Asserted.
 7. **Common control groups businesses, and a sole owner controls.** Two businesses
    with the same person holding more than 50% of each (s 33) constitute a group
    (s 32(2)). Daniel's 70% of Jarrah and a practice he owns outright would be
@@ -167,9 +180,8 @@ Jarrah is a single-State employer far under the threshold in the life.
 
 ## What would need doing before this is worth anything
 
-- Recover the formula images (ss 8(4), 10(2), (4), 11A, 12, 17(3A), (5), and the
-  Pay-roll Tax Act ss 6-11) from the gazetted or authorised PDF and replace the
-  inferences.
+- Encode the sliding-scale rates for progressive return periods (Pay-roll Tax Act
+  ss 7, 9, 11; the s 7 formulas are transcribed in the sidecar).
 - Check the tapered amounts against a RevenueWA calculator or ruling.
 - Encode interstate nongroup employers (ss 13-16), the monthly progressive
   calculation (ss 11, 12, 19) and annual reconciliation (ss 16, 20).
