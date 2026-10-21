@@ -18,7 +18,11 @@ There was no first-pass encoding of this Act to replace.
 
 A New Tax System (Goods and Services Tax) Act 1999, Compilation No. 96, compilation
 date 1 January 2026, includes amendments up to Act No. 72, 2025 (Register id
-C2026C00081), as deposited at `../../registers/source-bundle/C2004A00446.txt`.
+C2026C00081), as deposited at `../../registers/source-bundle/C2004A00446.txt`, with the
+formulas in ss 9-75(1), 11-30(3) and 17-5(1) from
+`../../registers/source-bundle/C2004A00446.formulas.md`, transcribed by hand on 21
+October 2026 from the Word rendering of volume 1 of the same compilation (the text
+deposit had lost them).
 
 The A New Tax System (Goods and Services Tax) Regulations 2019 set the higher
 registration turnover threshold that s 23-15(1)(b) allows ("such higher amount as
@@ -87,10 +91,10 @@ The 2026-10-18 defaults:
   month, which is the frame s 188-15 and s 188-20 use. One supply, or one
   acquisition, for the supply rules.
 - **The Act's own terms, each with a plain gloss.** Followed in the comments.
-- **Operative sections in; machinery out.** Followed. There is one departure, a
-  reconstruction rather than an omission. The deposit drops three formulas that are
-  set as images: s 9-75(1), s 11-30(3) and s 17-5(1). Each is rebuilt from what
-  survives, and each is labelled INFERENCE (see findings 4 to 6).
+- **Operative sections in; machinery out.** Followed. The text deposit drops three
+  formulas that are set as images: s 9-75(1), s 11-30(3) and s 17-5(1). They are
+  transcribed from the Word rendering of the same compilation in
+  `../../registers/source-bundle/C2004A00446.formulas.md` (see findings 4 to 6).
 
 ## The lives
 
@@ -153,10 +157,11 @@ Left out, as not needed by the seat or the events:
    forward one is below (s 188-10(1)). Input taxed and offshore supplies are left
    out. A capital asset sale, or winding down, is left out of the projection only
    (s 188-25). Asserted.
-4. **Value is price x 10/11 (INFERENCE).** The deposit drops the s 9-75(1)
-   formula, but the section's example survives: a $22,000 car has a value of
-   $20,000 and GST of $2,000. GST is therefore one eleventh of a GST-inclusive
-   price. Asserted.
+4. **Value is price x 10/11.** The text deposit drops the s 9-75(1) formula; the
+   Word rendering shows it as "Price x 10/11", and the section's example as
+   "$22,000 x 10/11 = $20,000". GST is therefore one eleventh of a GST-inclusive
+   price. (The first baseline had inferred this from the example; it is now
+   transcribed.) Asserted.
 5. **A supply that bears no GST counts at its full price in turnover.** Section
    188-30 takes it at "11/10 of what would be the value of the supply if it were a
    taxable supply", which is 11/10 of 10/11 of the price. So the same $77,000 of
@@ -166,13 +171,13 @@ Left out, as not needed by the seat or the events:
    registered" (s 9-5(d)), and that depends on turnover. The encoding breaks the
    circle by treating an unregistered person's supplies as not taxable for the test
    (INFERENCE). Asserted.
-6. **The partly creditable formula and the net amount formula are dropped
-   (INFERENCE).** Section 11-30(3) defines "full input tax credit", "extent of
-   creditable purpose" and "extent of consideration", but its formula is an image.
-   It is taken as the product of the three: a $1,100 phone used 60% for the
-   business gives $60. Section 17-5's formula is also an image. It is taken as GST
-   minus input tax credits, because s 7-5 says they are "set off against each
-   other". A negative result is a refund. Asserted.
+6. **The partly creditable formula and the net amount formula.** Both are images
+   the text deposit drops; both are now transcribed. Section 11-30(3) is "Full input
+   tax credit x Extent of creditable purpose x Extent of consideration": a $1,100
+   phone used 60% for the business gives $60. Section 17-5(1) is "GST - Input tax
+   credits", which s 7-5 describes as setting them "off against each other". A
+   negative result is a refund. Both match what the first baseline had inferred.
+   Asserted.
 7. **A company needs no expectation of profit to carry on an enterprise.** The
    s 9-20(2)(c) exclusion, "without a reasonable expectation of profit or gain",
    applies only to individuals and partnerships of individuals. Asserted.
@@ -198,8 +203,6 @@ All arithmetic in the module is fully parenthesised for readability.
 - Deposit the A New Tax System (Goods and Services Tax) Regulations 2019, and read
   the reg 23-15.01 threshold (and the s 29-70 and s 29-80 amounts) from them
   instead of taking them as inputs.
-- Recover the three dropped formulas (ss 9-75(1), 11-30(3), 17-5(1)) from an
-  edition that carries them, and check the reconstructions.
 - Decide whether to encode Divisions 38 and 40, so that "GST-free" and "input
   taxed" are worked out rather than asked.
 - Settle the s 9-5(d) / s 188-30 circle against ATO practice or case law, and the
