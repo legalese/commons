@@ -1,0 +1,207 @@
+# Evidence Act 1893 — encoding notes
+
+Row `legalese-aswathy`. Status `draft`. **No domain expert has read this against the source.** An independent test pass was run on 2026-10-01 (section 9): it found three encoding errors, now fixed, and left two assertions failing on purpose (F15, F16).
+
+## 1. What is encoded and what is not
+
+The Evidence Act 1893 as printed in Singapore Statutes Online's PDF, current version as at 01 Oct 2026: Parts 1 to 4, section 177 and the First and Second Schedules. **Not encoded: ss 117 to 119 (estoppel)** — a gap in coverage, not a judgement that they are irrelevant. The Act has no single "goal per section"; the rules are organised by the evidentiary question they answer.
+
+| module | the question | covers |
+| --- | --- | --- |
+| `ea-types.l4` | — | every noun (DECLARE only) |
+| `ea-cpc-interface.l4` | — | the interface to the Criminal Procedure Code subject; **identical in both rows** (section 4) |
+| `ea-relevancy.l4` | May evidence be given of this fact? | ss 2, 3(3) to (5), 5 to 16, 106, 138 |
+| `ea-statements.l4` | Is this statement relevant, and so admissible? | ss 17 to 23, 31 to 33 (admissions, confessions, the s 32 hearsay framework, earlier testimony) |
+| `ea-records-opinion-character.l4` | what else makes a fact, record, opinion or character relevant | ss 34 to 57 (records, judgments, convictions, opinion, character) |
+| `ea-proof.l4` | What need not be proved; how are the contents of a document proved? | ss 58 to 80B, 67A, 68A |
+| `ea-presumptions-burden.l4` | Does the court presume it? Who bears the burden? | ss 4, 81 to 92, 103 to 114, 116, 116A |
+| `ea-parol-evidence.l4` | When does a document exclude oral evidence? | ss 93 to 102 |
+| `ea-witnesses-privilege.l4` | Who may testify; what can a witness not be made to disclose? | ss 120 to 136 |
+| `ea-examination.l4` | How is a witness examined; what do previous statements prove; what corroborates? | ss 137 to 169 |
+| `ea-bankers-schedules.l4` | How are bankers' books proved; which offences are "child abuse" or "sexual"? | ss 170 to 177, both Schedules |
+| `ea-goals.l4` | the principal questions, exported; the conclusions the Act hands the Code | assembles the above |
+| `ea-tests-*.l4` (9 files) | — | 806 assertions, **generated** by `generators/ea_tests_*.py` from `ea-types.l4` |
+| `ea-tests-scenario-tan.l4` | the Evidence Act's part of the case *Public Prosecutor v Tan*: an accused's offer to an officer as an admission (ss 17 to 23), and the s 107 burden | 5 assertions, **generated** by `scenarios/public-prosecutor-v-tan/` (SCENARIO.md; `build.py` writes the four per-Act files); the case runs through the Criminal Procedure Code, Prevention of Corruption Act and Misuse of Drugs Act rows too; nothing here feeds them |
+
+**Shape.** Each rule is a `BOOLEAN` (or a `MAYBE`, an enumeration, or a named `REFUSE`) over a record of facts a witness could testify to; the Act's illustrations are the test cases. Where the Act says the court "may" or "is to" do something, the rule says whether the condition for the power or duty is met, never what the court decides in its discretion. Presumptions return the strength the Act gives them (`the court may presume`, `the court is to presume`, `conclusive proof`) or `NOTHING`.
+
+## 2. Coverage table
+
+Disposition: `encoded` (a rule in the module named), `inert` (read, adds no condition or answer; the reason is given), `refuse` (the Act delegates and nothing supplies the answer: a named `REFUSE`), `repealed`, `deferred` (not encoded; says so).
+
+| provision | heading | disposition | where |
+| --- | --- | --- | --- |
+| 1 | Short title | inert | — |
+| 2(1) | Application of Parts 1, 2 and 3 | encoded | relevancy |
+| 2(2) | repeal of inconsistent common-law rules | inert: a repeal, not a rule of decision | relevancy (comment) |
+| 3(1) "fact in issue", "relevant", "proved", "disproved", "not proved" ((2) to (5)) | Interpretation | encoded | relevancy |
+| 3(1) "child abuse offence", "sexual offence" | | encoded with the First Schedule | bankers-schedules |
+| 3(1) "document", "electronic record", "copy of a document", "evidence", "fact", "court" | | inert: used in field names; "copy of a document" and "document" feed s 64 and s 65 | proof |
+| 3(6), 3(7) | "advocate or solicitor", "legal counsel" | inert: who counts is a fact | — |
+| 4 | Presumptions | encoded | presumptions-burden |
+| 5 to 16 | Relevancy of facts (same transaction, cause or effect, motive and conduct, explanation, conspiracy, inconsistent facts, damages, right or custom, state of mind, accident, course of business) | encoded | relevancy |
+| 17 | Admission and confession defined | encoded | statements |
+| 18 to 20 | Whose statements are admissions | encoded | statements |
+| 21 to 23 | Proof of admissions; oral admissions as to documents; civil cases | encoded | statements |
+| 24 to 30 | | repealed (Act 15 of 2010) | — |
+| 31 | Admissions not conclusive proof | inert: weight and estoppel | statements (comment) |
+| 32(1)(a) to (k), (2), (3), (4), (6), (7) | Statements of relevant facts by persons not called | encoded | statements |
+| 32(5) | weight | inert | statements (comment) |
+| 32A, 32B, 32C | utterances; opinion; credibility of the absent maker | encoded (32C(3), (4) stated as extensions) | statements |
+| 33 | Earlier testimony | encoded (fork F4) | statements |
+| 34, 37 to 40 | books of accounts, public records, maps, recitals, law books | encoded | records-opinion-character |
+| 35, 36 | | repealed (Act 4 of 2012) | — |
+| 36A | rules for electronic filing | inert: a rule-making power | — |
+| 41 | How much of a statement is proved | encoded | records-opinion-character |
+| 42 to 46 | Judgments, orders and decrees | encoded | records-opinion-character |
+| 45A | Convictions and acquittals | encoded (fork F5) | records-opinion-character |
+| 47 to 53 | Opinions | encoded | records-opinion-character |
+| 54 to 57 | Character | encoded | records-opinion-character |
+| 58 to 60 | Judicial notice; admitted facts | encoded | proof |
+| 61, 62 | Oral evidence must be direct | encoded | proof |
+| 62A | Video link | encoded; (6A) encoded; (9) rules inert | proof |
+| 63 to 68 | Primary and secondary evidence; notice | encoded | proof |
+| 67A, 68A | statements in documents; summaries | encoded | proof |
+| 69 to 75 | Signatures, attestation, comparison | encoded (fork F8) | proof |
+| 76 to 80A | Public documents; certified copies; film prints | encoded | proof |
+| 80B | Apostille Act | inert: non-effect statement | — |
+| 81 to 92 | Presumptions as to documents | encoded (fork F6) | presumptions-burden |
+| 93 to 102 | Oral by documentary evidence | encoded | parol-evidence |
+| 103 to 113 | Burden of proof | encoded (fork F7) | presumptions-burden |
+| 114 | Paternity | encoded | presumptions-burden |
+| 115 | | repealed (Act 8 of 1996) | — |
+| 116 | Presumptions of fact | encoded; the nine illustrations are inert | presumptions-burden |
+| 116A | Electronic records | encoded; (5) regulations and (7) affidavit inert | presumptions-burden |
+| **117, 118, 119** | **Estoppel** | **deferred: not encoded** | — |
+| 120, 121 | Who may testify; dumb witnesses | encoded | witnesses-privilege |
+| 122 | Parties and spouses; the accused as a witness; cross-examination of the accused | encoded (fork F10) | witnesses-privilege |
+| 123 to 133 | Privileges | encoded | witnesses-privilege |
+| 134 | Self-incrimination | encoded | witnesses-privilege |
+| 135, 136 | Accomplice; number of witnesses | encoded | witnesses-privilege |
+| 137 | order of witnesses | inert: sent to other procedure law | — |
+| 138 | Court decides admissibility | encoded ((1), (2)); (3) inert | relevancy |
+| 139, 140(2), (3), 143 to 145 | Examination; leading questions | encoded | examination |
+| 140(1), (4), 141, 142 | order, recall, document-producers, character witnesses | inert | — |
+| 146, 147 | Matters in writing; previous statements | encoded; 147(6) weight inert | examination |
+| 148 to 155 | Questions in cross-examination; 154A | encoded; 152 inert; 154A(2) refuse | examination |
+| 156 | Own witness | inert: discretion | — |
+| 157 to 163 | Credit; corroboration; refreshing memory | encoded | examination |
+| 164 to 167 | Production; judge's power | encoded | examination |
+| 168 | assessors | inert | — |
+| 169 | Improper admission or rejection | encoded | examination |
+| 170 to 174 | Bankers' books | encoded | bankers-schedules |
+| 175, 176 | inspection order; costs | inert: discretion | — |
+| 177 | Amendment of Schedules | inert: orders after 01 Oct 2026 are not applied | — |
+| First Schedule | Child abuse and sexual offences | encoded as data | bankers-schedules |
+| Second Schedule | Specified statutory bodies | encoded as data (23 rows) | bankers-schedules |
+
+## 3. How a rule reads: the three kinds of answer
+
+- a fact record in, `BOOLEAN` out: `the statement falls within section 32(1)(j)`;
+- a strength out: `the presumption under section 116A(2)` is `JUST \`the court is to presume\`` or `NOTHING`;
+- `REFUSE "…"` where the Act delegates or the facts contradict: `the question is permitted by the section 154A rules`; `the finding on the fact` where the same facts make it proved and disproved.
+
+## 4. Relationship to the Criminal Procedure Code 2010
+
+`l4` resolves an `IMPORT` only to a module in the importing file's own directory (or the project root, `JL4_LIBRARY_PATH` or the embedded library), so a rule in one subject cannot import a module from another. The two subjects therefore meet at **`ea-cpc-interface.l4`**, a DECLARE-only file carried **byte-identically** here and in `sg/criminal-procedure-code-2010/encodings/` (checked with `cmp`). Its records are the conclusions each Act hands the other, each field named for the provision that asks it. No rule of either Act is copied into the other.
+
+**Two Acts keep their own rules of proof beside this one**, in their own rows, and import nothing from here: the Prevention of Corruption Act 1960 (`sg/prevention-of-corruption-act-1960`: s 8 presumption of corruption, s 23 custom, s 24 disproportionate resources as corroboration, s 25 an accomplice who paid is not presumed unworthy of credit by reason only, s 36 informers) and the Misuse of Drugs Act 1973 (`sg/misuse-of-drugs-act-1973`: ss 15 to 16 certificates, ss 17 to 22 presumptions, ss 22A and 22B proof of a psychoactive substance, s 23 informers). The points where they meet this Act: the Evidence Act s 3's "proved" (the standard each Act's "until the contrary is proved" takes), s 116 illustration (b) (the caution about an accomplice, which PCA s 25 qualifies), ss 126 and 127 (public officers and information as to the commission of offences, beside PCA s 36 and MDA s 23). They are listed in each Act's NOTES.md section 4; no interface record is needed because neither Act asks this Act for a computed answer.
+
+**From the Evidence Act to the Code** (`Evidence Act Conclusions`, computed by `what the Evidence Act concludes for the Criminal Procedure Code` in `ea-goals.l4`):
+
+| field | the Code asks it at | the Evidence Act answers it from |
+| --- | --- | --- |
+| admitted under s 147 | s 259(1)(a) (a witness's investigation statement) | s 147(1) to (5) |
+| used to impeach under s 157 | s 259(1)(b) | s 157 |
+| made admissible by another provision of the Act | s 259(1)(c) | ss 17 to 23, 32, 33, 147, 159 |
+| within s 32(1)(a) | s 259(1)(e) | s 32(1)(a) |
+| admissible as evidence of a fact stated | s 268 (hearsay in criminal proceedings) | ss 17 to 23, 32, 33, 147(3), (5) |
+| opinion of an expert admissible | s 269(1) | s 47 |
+| entitled to refuse to answer under s 122(4) | s 291(5)(a) | s 122(4) to (8), s 56 |
+
+**From the Code to the Evidence Act** (`Code Conclusions`): s 32(4)(a) (the notice requirements prescribed under CPC s 428) and s 122(5) (evidence admissible by CPC s 265 or 266). Also pointing at the Code and not applied: s 32(7) (committal hearings before 17 September 2018) is a fact.
+
+**Limitation to report.** The cross-reference is through a copied interface, not a cross-subject import. The Code's Part 14 is not yet encoded, so the Code side of each row above has no consumer yet. Where the Act or the Code distinguishes kinds of statement, the interface carries the distinction as an enumeration (`Kind of Report or Statement`): the fact that an offence was reported (relevant as conduct, s 8(2) illustrations (j) and (k), and as corroboration, s 159), the content of a first information report (CPC s 260), a witness's investigation statement (CPC s 259), an accused's statement (CPC s 258 and EA ss 17(2), 21), a conditioned statement (CPC s 264), a recorded statement (CPC s 264A), an affidavit (CPC s 262), a report of a qualified person (CPC s 263), a document produced as evidence (EA ss 63 to 68), and a deposition. The enumeration is declared and not yet used by a rule.
+
+## 5. The Schedules
+
+The First Schedule (child abuse offences, sexual offences) is encoded as four lists of section numbers and `the class of the offence under the First Schedule`, which also applies s 3(1)'s inclusion of attempts, abetments and conspiracies (the caller says the offence is ancillary; the class is the underlying offence's). The Second Schedule (23 statutory bodies) is `the specified statutory bodies`, used by s 80A. Both are as printed on 01 Oct 2026; s 177 lets the Minister amend them.
+
+## 6. What `check.sh` prints
+
+Run with `l4` build `unstable-20260926-c76e6b0` (win32-x64), 2026-10-01: 23 modules, 1763 assertions satisfied, **2 failed, both expected** (806 in the nine `ea-tests-*` files, 5 in the scenario file, 952 satisfied and 2 failed in `tests-independent.l4`); `check.sh` therefore exits 1.
+
+```
+ea-tests-examination.l4                      0       105       0
+ea-tests-parol-evidence.l4                   0        26       0
+ea-tests-presumptions-burden.l4              0        83       0
+ea-tests-proof.l4                            0       149       0
+ea-tests-records-opinion-character.l4        0        70       0
+ea-tests-relevancy.l4                        0        50       0
+ea-tests-scenario-tan.l4                      0         5       0
+ea-tests-schedules-goals.l4                  0       136       0
+ea-tests-statements.l4                       0        89       0
+ea-tests-witnesses-privilege.l4              0        95       0
+tests-independent.l4                           2       952       2
+TOTAL (23 modules)                           2      1763       2
+```
+
+**Two assertions are expected to fail**, both in `tests-independent.l4`: B13e (s 4(3)) and X11e (s 161(3)); they are forks F15 and F16 and are kept failing so that both readings stay visible. Every other assertion is expected to pass. A deliberately wrong assertion was run once, to check the harness reports it (it did), and not kept.
+
+## 7. Fork register
+
+| fork | the readings | taken | why |
+| --- | --- | --- | --- |
+| F1 | s 3(3) to (5): facts that make a fact both proved and disproved | `REFUSE` | the Act defines "not proved" as neither; it does not resolve a contradiction |
+| F2 | s 8(2) Explanation 2: is the statement affecting relevant conduct itself "conduct"? | no: relevant on its own | Explanation 1 (statements are not conduct) would otherwise defeat Explanation 2; a test caught the first draft doing this |
+| F3 | s 32(1)(b) "in particular ... (i) to (iv)" | illustrations, not conditions | "in particular" |
+| F4 | s 33 Explanation "a criminal trial or inquiry is deemed to be a proceeding between the prosecutor and the accused" | the same-parties limb is met where both are criminal proceedings between the same prosecutor and accused | the deeming |
+| F5 | s 45A(2) lists exceptions for "a conviction" | applied to a conviction only | the text; an acquittal that is under appeal is still admissible under (1) |
+| F6 | s 83: "if such document is kept substantially in the form required by law and is produced from proper custody" | applies to the second class only | grammar; the Explanation to s 92 says it applies "also to section 83" for custody |
+| F7 | ss 109 and 110 both made out | s 110 governs | "shifted" |
+| F8 | ss 70 and 71 where no attesting witness is alive | s 71's proof is required | a first draft treated "none alive" as enough, and a test showed that contradicts s 71 |
+| F9 | s 32B(2) | opinion is relevant under s 32(1) only if admissible as direct oral evidence | the text |
+| F10 | s 122(5) refers to the Evidence Act, the CPC and "any other written law" | EA and other-law limbs are facts here; the CPC's limb is a field of `Code Conclusions` | one rule is not copied across subjects |
+| F11 | s 62A(1) excludes "proceedings in a criminal matter" | encoded; the criminal equivalent is CPC s 281, not encoded | |
+| F12 | s 124(2): "relevant in criminal proceedings in respect of a specified offence" | the rule takes the Boolean as a parameter; `the offence is a specified offence` is a separate rule over its own record | the definition has five limbs |
+| F13 | s 128(1) and 128A(1): whether the "advice" limb survives the 128(2) exceptions | the exceptions subtract from every limb | 128(2) says "nothing in this section protects" |
+| F14 | s 59(1)(a) to (n) | one field: the fourteen kinds of judicially noticed fact have one effect (s 58) | no difference in effect; the list is in a comment |
+| F15 | s 4(3): "When one fact is declared by this Act to be conclusive proof of another, the court is, on proof of the one fact, to regard the other as proved, and is not to allow evidence to be given for the purpose of disproving it": two consequences | `the treatment of a presumed fact` returns `regarded as proved`; the second consequence is the separate rule `evidence may be given to disprove the presumed fact` (FALSE for conclusive proof) | the enumeration can carry one value; both consequences are encoded, in two rules | independent pass B13e expects the enumeration itself to say `evidence to disprove it is not allowed`, and fails. Probably a test-author expectation; left failing |
+| F16 | s 161(3): a witness may "with the permission of the court, refer to a copy ... if the court is satisfied that there is sufficient reason for the non-production of the original" | the rule asks whether the writing qualifies for refreshing memory (made at the time, or read at the time or soon after); whether a copy may be used is not asked | a rule per question the section answers | independent pass X11e expects FALSE when the writing qualifies but the witness refers to a copy without sufficient reason, and fails. Low severity; left failing |
+
+## 8. Open questions for a domain expert
+
+- ss 117 to 119 (estoppel) are not encoded.
+- s 32(1)(k) with s 32(6): is "the accused or any of the co-accused is represented by an advocate" tested when the agreement is made, as encoded, or at trial?
+- s 116 illustrations (recent possession of stolen goods; the accomplice caution) are inert here; whether they should be encoded as conditions with CPC ss 265 and 266 is a modelling choice.
+- the interface's `Kind of Report or Statement` enumeration has no rule yet; it belongs with the Code's Part 14.
+
+## 9. The independent test pass, 2026-10-01
+
+A fresh agent that had not seen the encoding decided its expected answers from the source text and wrote them to `independent-pass-answers.md` before opening any `.l4` file, then wrote `tests-independent.l4`. It did read the rule modules for names and signatures, so it was not blind to the logic. It was told not to open this file, `encoding.json`, the existing tests or the generators. Run by `check.sh` with the rest of the row.
+
+**Result.** 954 assertions. First run 948 satisfied, 6 failed. The agent had fixed 11 of its own fixtures after its first run (938 satisfied, 18 failed) and removed two assertions of its own (R1, W11h); no expected value was changed to match the code.
+
+| id | provision | what the encoding did | disposition |
+| --- | --- | --- | --- |
+| O3c | s 49 and its Explanation | read only "acquainted"; the field carrying the Explanation's routes (has seen the person write, received answers, habitually received documents) was not read | **encoding error, fixed**: `the opinion on handwriting is relevant under section 49` now needs both |
+| K4 | ss 170, 171 | `the company is a bank` was defined and not used; an unlicensed company's copy was received | **encoding error, fixed**: s 171's rule now needs `the company is a bank`; regression assertion added in `ea-tests-schedules-goals.l4` |
+| D24c, D24e | s 80A(1), (2), (5) | a film "in the possession of the Government or any specified statutory body": the record could not tell the two, so a body outside the Second Schedule passed s 80A(1) and a Government-held film's certificate failed s 80A(2) | **encoding error, fixed**: `Film Print Facts` gained `the document is in the possession of the Government`; both rules need it or the Second Schedule entry. The independent file's ten positional `Film Print Facts` fixtures got a ninth argument (FALSE, and TRUE for D24e's Government-held film); regression assertions added in `ea-tests-proof.l4` |
+| B13e | s 4(3) | `regarded as proved` | F15; left failing |
+| X11e | s 161(3) | the writing qualifies, so TRUE | F16; left failing |
+
+Three assertions were added to the generated tests so the fixes are held by the row's own tests (`generators/ea_tests_2.py`, `ea_tests_3.py`). After the fixes: 952 of 954 satisfied.
+
+**Not testable with the records** (so nothing tests them): s 177 (amendment of the Schedules by Gazette order) has no rule; s 154A is left to the Minister's rules; s 59(3) and s 138(3) have no rule; s 175's three clear days' service has no field; the time limits (30 years, 7 years, 280 days, age 18 or 16) are BOOLEANs, so their boundaries are not tested; s 124 cannot separate a communication made before the marriage from one made during it; s 128 cannot hold a communication and a separately observed fact in one record; a person's own opinion by words versus by conduct is tested for s 52 only.
+
+## Returned to Commons 2026-10-21
+
+Moved back from `legalese/solutions` (Litigate.4/sg/evidence-act-1893/legalese-aswathy, where it had been kept unchanged since 19 October 2026) into this Act's `encodings/legalese-aswathy/`, beside `baseline-2026-10`. It was flat in `encodings/` before; it is now one folder per encoding. Checked with the stable `l4` of VS Code extension 1.6.98, `JL4_LIBRARY_PATH` unset.
+
+**What changed.**
+- `REFUSE` rewritten as an explicit 'not covered' value, in three places: `the finding on the fact` (s 3(3)-(5)) returns a new constructor of `Kind of Finding on a Fact`, `contradictory: not covered, the Act does not resolve it`, where the same facts make the fact both proved and disproved; `the effect of a section 43 judgment` is MAYBE `Kind of Presumption` (`JUST` `conclusive proof`, or `NOTHING` where the judgment is not within s 43(1)); `the question is permitted by the section 154A rules` is MAYBE BOOLEAN and gives `NOTHING` (the Minister's rules are not encoded). Each carries the original reason as a comment.
+- The 3 `#ASSERT REFUSED` (one with `BECAUSE`) became ordinary assertions that the not-covered value comes back; the 2 assertions on a s 43 judgment's effect now say `EQUALS JUST` `conclusive proof`.
+- Every `NOT` operand was parenthesised (`NOT a AND b` -> `(NOT a) AND b`), because the stable `l4` gives `NOT` a wider scope than the pre-release build these files were written for. No other expression was changed.
+- `check.sh`: the interface comparison path updated as in the Criminal Procedure Code encoding.
+
+**Check results.** 23 modules, 0 errors other than the two expected failures: 1,765 assertions written, 1,763 satisfied. The nine `ea-tests-*` files and the scenario file all pass (811/811); `tests-independent.l4` 952/954, the two failures being B13e and X11e (forks F15, F16), left failing on purpose as recorded above.
