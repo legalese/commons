@@ -22,8 +22,24 @@ it stands.
   (assent 19 December 2005, commencement 1 January 2006). **No amendment is
   compiled.** So the deposit has none of the 2021 model reforms: no s 10A (serious
   harm), no ss 12A-12B (concerns notice as a precondition to suing), no s 29A
-  (public interest defence). Whether WA has enacted those reforms since is not
-  something the deposit shows; if it has, the deposit is out of date.
+  (public interest defence).
+- **Checked on 21 October 2026: WA has not amended the Act, so the deposit is the
+  current text.** On legislation.wa.gov.au:
+  - the Act's page (`law_a9415.html`) and its list of all versions
+    (`law_a9415_currencies.html`) show one consolidated version only: suffix
+    00-a0-10, in force from 1 January 2006, "Current", mrdoc 602;
+  - the history table (`law_a9415_table1.docx`) lists only "Defamation Act 2005,
+    2005/044, 19 Dec 2005, 1 Jan 2006";
+  - the "Acts as passed" index for D lists no Defamation Amendment Act, only the
+    Defamation Act 2005;
+  - mrdoc 602 fetched again that day has the same words as the deposit (word for
+    word, apart from hyphenation).
+
+  So none of the 2021 or later national reforms is law in WA. These are the
+  serious harm element, the concerns notice precondition, the public interest
+  defence, the single publication rule and the digital intermediaries changes.
+  The deposit's `mrdoc_602.meta.json` records the check under `currency_checked`.
+  No new file was deposited, because there is no newer version.
 - **The Limitation Act 2005 (WA)** (No. 19 of 2005), ss 15 and 40, as deposited at
   `../../../limitation-act-2005/registers/source-bundle/mrdoc_47979.txt` (mrdoc
   47979, retrieved 7 September 2026). The Defamation Act sets no time limit; the
@@ -109,8 +125,9 @@ Each 2026-10-18 default:
   - `Am I in time to sue`: within one year of 30 June 2040.
 
   "Is it defamatory?" is the general law's question, so it is asked as a fact.
-  The life's citations of s 10A and ss 12A-12B point to provisions that are not
-  in the deposited text.
+  The life's citations of s 10A and ss 12A-12B point to provisions that WA has
+  not enacted (checked on legislation.wa.gov.au, 21 October 2026). They are in
+  the other States' Acts, not in WA's.
 
 ## Why this scope
 
@@ -135,8 +152,9 @@ Left out, each for a reason:
 
 1. **The deposited edition is the 2005 Act unamended.** No serious harm element,
    no precondition notice, no public interest defence. The plan flagged s 10A and
-   ss 12A-12B as not found: they are not there, because the compilation table
-   lists no amending Act.
+   ss 12A-12B as not found. They are not there, and they are not law in WA: as at
+   21 October 2026 legislation.wa.gov.au shows no amending Act and no later
+   version (see Edition).
 2. **A for-profit company can sue only if it has fewer than 10 full-time-equivalent
    employees and is unrelated to another company, and is not a public body.** Ten
    is not fewer than 10: eight full-timers and four half-timers make 10, so no.
@@ -181,10 +199,10 @@ Left out, each for a reason:
 
 ## What would need doing before this is worth anything
 
-- Confirm whether WA has enacted the 2021 model amendments (serious harm, the
-  concerns notice precondition, the public interest defence, digital
-  intermediaries) and, if so, deposit the current compilation and re-encode
-  ss 10A, 12A-12B, 14, 29A and 35.
+- Watch for WA enacting the 2021 model amendments. As of 21 October 2026 it has
+  not. These are serious harm, the concerns notice precondition, the public
+  interest defence and digital intermediaries. If WA enacts them, deposit the new
+  version beside mrdoc 602 and re-encode ss 10A, 12A-12B, 14, 29A and 35.
 - Deposit the Minister's current s 35(3) order so the cap is a number, not an
   input.
 - Encode the privilege and fair report defences (ss 27-30) and innocent
