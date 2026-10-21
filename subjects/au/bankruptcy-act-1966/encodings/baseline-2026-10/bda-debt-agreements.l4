@@ -16,11 +16,12 @@ IMPORT prelude
 -- Legislation register id C2026C00215, as deposited at ../../registers/source-bundle/C1966A00033.txt. Regulations: Bankruptcy
 -- Regulations 2021, Compilation No. 5, compilation date 1 July 2026 (register id F2026C00537), as deposited at
 -- ../../../bankruptcy-regulations-2021/registers/source-bundle/F2021L00261.txt -- s 10A (the statutory minimum, $10,000) and
--- ss 82, 83 (removal from the Index). The Regulations prescribe no greater amount for s 185C(4)(b)(ii).
+-- ss 82, 83 (removal from the Index). The Regulations prescribe no greater amount for s 185C(4)(b)(ii). The s 185C(4)(e) and
+-- s 185M(1E) formulas, images the text deposit lost, are taken from ../../registers/source-bundle/C1966A00033.formulas.md
+-- (transcribed by hand on 21 October 2026 from the Word rendering of the same compilation).
 --
--- NOT ENCODED: the s 185C(4)(e) payment-to-income formula (the deposit prints "the following formula" and then none), so whether it
--- is exceeded is an INPUT; the threshold amount itself (7 times a Social Security Act 1991 rate that is indexed), an INPUT; the
--- Minister's s 185C(4B) percentage and low income debtor amount; approved forms, the statement of affairs (s 185D) and explanatory
+-- NOT ENCODED: the threshold amount itself (7 times a Social Security Act 1991 rate that is indexed), an INPUT; the Minister's
+-- s 185C(4B) percentage and low income debtor amount, which the formulas use, are INPUTS (the instrument is not deposited); approved forms, the statement of affairs (s 185D) and explanatory
 -- statement; cancellation of acceptance (s 185ED); voting on variations and terminations (ss 185MA-185PD); termination and voiding
 -- by the Court (ss 185Q, 185T-185V) beyond their effect on the Index; s 185EC(3) (debts assigned to a related entity); administrators'
 -- duties, registration and remuneration beyond what reaches the debtor; Part X; the credit file (Privacy Act 1988 Part IIIA).
@@ -117,9 +118,51 @@ DECLARE Debtor HAS
     `likely after tax income in the next year` IS A NUMBER
     `interest in the home` IS A `Home interest`
     `the home is a dwelling in Australia and the principal place of residence` IS A BOOLEAN
-    `the s 185C(4)(e) formula exceeds the Minister's percentage` IS A BOOLEAN
+    `total of the payments I would be required to make under the agreement` IS A NUMBER
+    `the low income debtor amount` IS A NUMBER
+    `the Minister's s 185C(4B) percentage` IS A NUMBER
     `the proposed administrator gave a s 185C(4C)(b) certificate` IS A BOOLEAN
     `gives the proposal jointly with another debtor` IS A BOOLEAN
+
+-- s 185C(4)(e): "the amount worked out using the following formula (expressed as a percentage)". The formula, transcribed in
+-- C1966A00033.formulas.md:
+--     (Total of the payments that the debtor would be required to make under the agreement + Low income debtor amount
+--        (see subsection (5)))
+--     / The debtor's after tax income (see subsection (5)) in the year beginning at the proposal time
+-- s 185C(5): "low income debtor amount means the amount determined in an instrument under subsection (4B)". Both the amount and
+-- the percentage are set by that instrument, which is not deposited: they are inputs.
+@export What is my s 185C(4)(e) payments-to-income percentage?
+GIVEN `total payments` IS A NUMBER @desc The total of the payments you would be required to make under the agreement, in dollars
+      `low income debtor amount` IS A NUMBER @desc The low income debtor amount set by the Minister's s 185C(4B) instrument, in dollars
+      `after tax income` IS A NUMBER @desc Your after tax income in the year beginning when you give the proposal, in dollars
+GIVETH A NUMBER
+DECIDE `What is my payments to income percentage` IS
+    IF `after tax income` AT MOST 0
+    THEN 0
+    ELSE (`total payments` PLUS `low income debtor amount`) TIMES 100 DIVIDED BY `after tax income`
+
+-- With no after tax income the formula divides by nothing; any payment then exceeds every percentage (an encoding choice, as
+-- the text does not say).
+@export Does the s 185C(4)(e) formula exceed the Minister's percentage?
+GIVEN `total payments` IS A NUMBER @desc The total of the payments you would be required to make under the agreement, in dollars
+      `low income debtor amount` IS A NUMBER @desc The low income debtor amount set by the Minister's s 185C(4B) instrument, in dollars
+      `after tax income` IS A NUMBER @desc Your after tax income in the year beginning when you give the proposal, in dollars
+      `the Minister's percentage` IS A NUMBER @desc The percentage set by the Minister's s 185C(4B) instrument
+GIVETH A BOOLEAN
+DECIDE `Do my payments exceed the Minister's percentage` IF
+    IF `after tax income` AT MOST 0
+    THEN `total payments` PLUS `low income debtor amount` GREATER THAN 0
+    ELSE `What is my payments to income percentage` `total payments` `low income debtor amount` `after tax income`
+             GREATER THAN `the Minister's percentage`
+
+GIVEN `the debtor` IS A Debtor
+GIVETH A BOOLEAN
+DECIDE `the s 185C(4)(e) formula exceeds the Minister's percentage` IF
+    `Do my payments exceed the Minister's percentage`
+        (`the debtor`'s `total of the payments I would be required to make under the agreement`)
+        (`the debtor`'s `the low income debtor amount`)
+        (`the debtor`'s `likely after tax income in the next year`)
+        (`the debtor`'s `the Minister's s 185C(4B) percentage`)
 
 GIVEN `the Social Security Act rate` IS A NUMBER
 GIVETH A NUMBER
@@ -159,7 +202,7 @@ DECIDE `May I give a debt agreement proposal` IS
         IF `me`'s `likely after tax income in the next year` GREATER THAN `threshold` TIMES 3 DIVIDED BY 4
             THEN `no -- my likely after tax income is more than three-quarters of the threshold amount`
         IF     (NOT `the home rule applies to the debtor` `me`)
-           AND `me`'s `the s 185C(4)(e) formula exceeds the Minister's percentage`
+           AND `the s 185C(4)(e) formula exceeds the Minister's percentage` `me`
            AND (NOT `me`'s `the proposed administrator gave a s 185C(4C)(b) certificate`)
             THEN `no -- my payments would exceed the Minister's percentage of my income`
         IF `me`'s `gives the proposal jointly with another debtor`
@@ -564,6 +607,29 @@ DECIDE `How many years may a variation let my payments run` IS
         OR (`the administrator certifies an unforeseen substantial change` AND `the variation does not increase the total payments`)
     THEN 5
     ELSE 3
+
+§§ `185M(1E) -- how much a variation may ask me to pay`
+
+-- s 185M(1E): if "(a) subsection 185C(2AB) did not apply to the debtor at the time (the proposal time) the relevant debt
+-- agreement proposal was given" and "(b) a person did not give a certificate under paragraph 185C(4C)(b)", the proposal to vary
+-- "must not seek to vary the agreement so that the amount worked out using the following formula (expressed as a percentage)
+-- exceeds the percentage in effect under an instrument under subsection 185C(4B) at the proposal time". The formula, transcribed
+-- in C1966A00033.formulas.md:
+--     (Total of the payments that the debtor would be required to make under the agreement (as proposed to be varied)
+--        + Low income debtor amount (within the meaning of section 185C) at the proposal time)
+--     / The debtor's after tax income (within the meaning of section 185C) in the year beginning at the proposal time
+@export May a proposed variation of my debt agreement ask me to pay this much (s 185M(1E))?
+GIVEN `the home rule applied when I gave the proposal` IS A BOOLEAN @desc Whether s 185C(2AB) (your home) applied to you when you gave the original proposal
+      `a s 185C(4C)(b) certificate was given` IS A BOOLEAN @desc Whether the proposed administrator gave a s 185C(4C)(b) certificate with the original proposal
+      `total payments as varied` IS A NUMBER @desc The total of the payments you would be required to make under the agreement as proposed to be varied, in dollars
+      `low income debtor amount` IS A NUMBER @desc The low income debtor amount at the original proposal time, in dollars
+      `after tax income` IS A NUMBER @desc Your after tax income in the year beginning at the original proposal time, in dollars
+      `the Minister's percentage` IS A NUMBER @desc The s 185C(4B) percentage in effect at the original proposal time
+GIVETH A BOOLEAN
+DECIDE `May the variation ask me to pay this much` IF
+        `the home rule applied when I gave the proposal`
+    OR  `a s 185C(4C)(b) certificate was given`
+    OR  (NOT `Do my payments exceed the Minister's percentage` `total payments as varied` `low income debtor amount` `after tax income` `the Minister's percentage`)
 
 §§ `185N, 185NA, 153(2) -- the end of my agreement and my release`
 
