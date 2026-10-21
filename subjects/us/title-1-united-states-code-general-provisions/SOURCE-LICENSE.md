@@ -27,7 +27,8 @@ Requests identified themselves as `legalese-commons/1.0 (+https://github.com/leg
 
 ## Status of this deposit
 
-Deposited 2026-10-21 as a stub (no encoding yet) from the OLRC USLM XML at release point Public Law 119-121 (current through 9 October 2026). The file is plain text converted from the XML: title, part, chapter, subchapter and section numbers and headings, the section text at every level, and each section's source credit are kept; tables of contents and the editorial and statutory notes (including each title's enactment note and the cross-reference notes after sections) are omitted. Footnotes inside section text are kept as `[Footnote: ...]`. The `.meta.json` beside the file gives the download URL, the sha256 of the downloaded zip and of the text, and a section count checked against the XML.
+Deposited 2026-10-21 as a stub from the OLRC USLM XML at release point Public Law 119-121 (current through 9 October 2026). The file is plain text converted from the XML: title, part, chapter, subchapter and section numbers and headings, the section text at every level, and each section's source credit are kept; tables of contents and the editorial and statutory notes (including each title's enactment note and the cross-reference notes after sections) are omitted. Footnotes inside section text are kept as `[Footnote: ...]`. The `.meta.json` beside the file gives the download URL, the sha256 of the downloaded zip and of the text, and a section count checked against the XML.
+The first encoding of it is in `encodings/legalese-sonnet-5.5/`.
 
 **Statute text deposited**:
 
