@@ -21,12 +21,12 @@ Conventions: a rating year runs 1 July to 30 June and is named by the calendar y
 
 - **The Act.** The compilation of the Rates and Charges (Rebates and Deferments) Act 1992 (No. 31 of 1992) deposited at `../../registers/source-bundle/mrdoc_47938.txt` (legislation.wa.gov.au mrdoc 47938, retrieved 2026-09-07). The latest amendment noted in the deposit is No. 42 of 2024 s 58 (s 29A).
 - **The Regulations.** The Rates and Charges (Rebates and Deferments) Regulations 1992, version 04-h0-02 (currency from 13 Jun 2018), deposited at `subjects/au/wa/rates-and-charges-rebates-and-deferments-regulations-1992/registers/source-bundle/mrdoc_40959.txt` (mrdoc 40959, retrieved 2026-10-20). They hold only r 1 (citation), r 3 (seniors' limits) and r 4 (pensioners' limits). The plan listed them as not deposited; they now are, and their limits are used, not asked.
-- **Missing from the deposit.** The equations in s 40(5), (6) and (7) are images in the original and did not survive conversion; only the symbols and glosses did. The formulas used are inferred (see finding 10).
+- **The equations.** The equations in s 40(5), (6) and (7) are images in the original and did not survive conversion into the `.txt`. They are transcribed by hand from the authorised Word rendering of the same document (mrdoc 47938, fetched 2026-10-21) in `../../registers/source-bundle/mrdoc_47938.formulas.md`, and encoded from there (see finding 10).
 - The charges used in the cases (council rates of $1,800, a levy of $90, a water supply charge of $250) are **illustrative**.
 
 ## Checks
 
-One case file: **43 assertions satisfied**, 0 errors, 0 warnings, with the stable `l4` (VS Code extension 1.6.98). `l4 run rcrd-rebates.l4` reports "Checking succeeded" with no diagnostics.
+One case file: **43 assertions satisfied**, 0 errors, 0 warnings (re-run 2026-10-21 after encoding the recovered s 40(5)–(7) equations), with the stable `l4` (VS Code extension 1.6.98). `l4 run rcrd-rebates.l4` reports "Checking succeeded" with no diagnostics.
 
 As a control, a copy with two expected values altered (360 to 361, 1050 to 1051) was run. The runner reported both failures.
 
@@ -79,7 +79,7 @@ Left out, because no ratepayer in the lives meets them: administration and revie
 7. **Arrears block the rebate, but not registration.** Registration happens "even if arrears ... remain payable" (s 32(3)), but no rebate or deferment is allowed while arrears are due (s 33(3)). The exception is a pensioner with an agreed arrears arrangement who keeps to it (s 33(6)–(7)). Seniors have no such exception. Asserted.
 8. **The rebate is 50% for pensioners and 25% for seniors, held to the Regulations' limits.** Pensioners: rates $750, water $108.86, sewerage $436.15, drainage $54.99, with no limit on the emergency services levy or the underground electricity charge (r 4(1A), (2)). Seniors: rates $100, water $18.14, sewerage $72.69, drainage $9.17, underground electricity $100 (r 3(2)). Asserted for rates, the levy and water.
 9. **No limit is prescribed for a senior's rebate on the emergency services levy.** Section 40(9)(a) caps it only "up to such limit as is prescribed", and r 3(2) prescribes none for the levy. So a senior's levy rebate is an uncapped 25% (inference). Not asserted as an amount.
-10. **The proration equations are missing from the deposit.** The s 40(5)–(7) equations are images that were not converted. The encoding uses R = (PCS × DS + PCP × DP) / CY, inferred from the glosses. Whether a prescribed limit applies before or after apportionment for shared ownership is also not stated; it is applied after. Asserted under these inferences.
+10. **The rebate is prorated by days registered.** The s 40(5)–(7) equations, recovered from the authorised Word text (`mrdoc_47938.formulas.md`), are R = PC × (DS / CY) for a senior, R = PC × (DP / CY) for a pensioner, and R = (PCS × (DS / CY)) + (PCP × (DP / CY)) for someone who is each for part of the period. They confirm the formula the first version of this baseline had inferred from the glosses. Whether a prescribed limit applies before or after apportionment for shared ownership is not stated; it is applied after (inference). Asserted.
 11. **A resident partner's share counts as yours** (s 27(5)). A couple who own their home together get the full 50% on the whole charge. With any other co-owner, the charge and the rebate are apportioned by share and by residential use (s 28), and never above 50% (s 28(3)). Asserted for a half share.
 12. **Pay the rebated amount by the end of the rating year**, which is 30 June for rates and the levy (s 40(2)(b)). A Water Corporation charge must be paid by the "final payment day": the 50th day after the notice, extendable by up to 70 more (s 3(1)). Paying in time ends the liability (s 41). Asserted.
 13. **A pensioner who misses the day is deferred automatically, not pursued.** The pensioner then owes the full charge without rebate, but the authority "shall not seek to recover" it, and it may be deferred (s 44(1)). A senior has no equivalent and owes the full charge (inference from s 40(2)). Asserted.
@@ -90,7 +90,6 @@ Left out, because no ratepayer in the lives meets them: administration and revie
 
 ## What would need doing before this is worth anything
 
-- Recover the s 40(5)–(7) equations from the authorised PDF or Word text and check the inferred formulas.
 - Bring in the earlier limit tables (rating years 2002/03 to 2017/18) if any earlier year is needed.
 - Encode s 31 (separation), s 32A (surviving partner), s 42 (back-dated charges) and the detail of ss 29–29C.
 - Link `Am I entitled to a rebate or deferment` to the `I am entitled to a rebate or deferment` inputs in the Local Government Act 1995 and Emergency Services Levy baselines.
