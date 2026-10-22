@@ -1,0 +1,288 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `oas-core`
+IMPORT `oas-core-measures`
+IMPORT `oa3-helpers`
+
+-- Old Age Security Regulations (C.R.C., c. 1246), Part II: regulation 48, interest on amounts owing to Her Majesty (debts under
+-- section 37(2) of the Act on which a penalty was imposed under section 44.1, and debts under section 37(2.02)).
+--
+-- Interest runs by the day. The module decides, for a debt and a day, whether interest accrues on that day (48(2), (3), (5) and
+-- (6)), counts the accruing days of a month, and prices them at the rate of 48(4). Everything the Regulations leave to the day-count
+-- or to the facts of the debt is stated where it is used and listed in NOTES.md:
+--   * "ceases on" a day is read as the LAST day on which interest accrues (fork F-48(6)); accrual "begins on the due date" so the due
+--     date itself accrues (fork F-48(3)).
+--   * the daily rate is the annual rate over the number of days in the calendar year of the month, 365 or 366 (fork F-48(4)); the
+--     Regulations say "calculated daily" and give no divisor.
+--   * nothing is rounded: the Regulations state no rounding of interest.
+--   * the rules apply to a debt or to "a portion of the debt" (48(6)): a debt paid by a payment schedule is several portions, each with
+--     its own due date and its own last accrual day, so the caller runs one debt record per portion.
+
+§ `PART II Reconsiderations`
+
+§§ `Interest on Amounts Owing to Her Majesty`
+
+-- 48(1): the definitions. "average bank rate" is the simple arithmetic mean of the bank rates established during the month BEFORE the
+-- month for which interest is calculated; a month with no bank rate has no average (not covered).
+-- src:343 | 48 (1) The following definitions apply in this section.
+-- src:344 | average bank rate means the simple arithmetic mean of the bank rates that are established during the month before the month in respect of which interest is being calculated. (taux d’escompte moyen)
+-- src:345 | bank rate means the rate of interest established weekly by the Bank of Canada as the minimum rate at which the Bank of Canada makes short-term advances to members of the Canadian Payments Association. (taux d’escompte)
+@ref C.R.C., c. 1246, reg 48(1) "average bank rate" (src:344)
+GIVEN `the bank rates that are established during the month before the month in respect of which interest is being calculated` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+`reg 48(1): the average bank rate` `the bank rates that are established during the month before the month in respect of which interest is being calculated` MEANS
+    IF count `the bank rates that are established during the month before the month in respect of which interest is being calculated` EQUALS 0
+    THEN NOTHING
+    ELSE JUST ((sum `the bank rates that are established during the month before the month in respect of which interest is being calculated`) DIVIDED BY (count `the bank rates that are established during the month before the month in respect of which interest is being calculated`))
+
+@ref C.R.C., c. 1246, reg 48(1) "bank rate" (src:345)
+GIVEN `the rate is the rate of interest established weekly by the Bank of Canada as the minimum rate at which the Bank of Canada makes short-term advances to members of the Canadian Payments Association` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 48(1): the rate is a bank rate` `the rate is the rate of interest established weekly by the Bank of Canada as the minimum rate at which the Bank of Canada makes short-term advances to members of the Canadian Payments Association` MEANS
+    `the rate is the rate of interest established weekly by the Bank of Canada as the minimum rate at which the Bank of Canada makes short-term advances to members of the Canadian Payments Association`
+
+-- src:346 | debt means
+-- src:347 | (a) a debt due under subsection 37(2) of the Act in respect of which a penalty has been imposed under section 44.1 of the Act; or
+-- src:348 | (b) a debt due under subsection 37(2.02) of the Act. (créance)
+@ref C.R.C., c. 1246, reg 48(1) "debt" (src:346-348)
+GIVEN `the amount is a debt due under subsection 37(2) of the Act` IS A BOOLEAN
+      `a penalty has been imposed in respect of the debt under section 44.1 of the Act` IS A BOOLEAN
+      `the amount is a debt due under subsection 37(2.02) of the Act` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 48(1): the amount is a debt` `the amount is a debt due under subsection 37(2) of the Act` `a penalty has been imposed in respect of the debt under section 44.1 of the Act` `the amount is a debt due under subsection 37(2.02) of the Act` MEANS
+        (    `the amount is a debt due under subsection 37(2) of the Act`
+         AND `a penalty has been imposed in respect of the debt under section 44.1 of the Act`)
+    OR  `the amount is a debt due under subsection 37(2.02) of the Act`
+
+-- src:349 | demand for payment means a demand for payment in writing and includes a notification of a decision to impose a penalty under section 44.1 of the Act or of the amount of a penalty imposed under that section. (demande de paiement)
+@ref C.R.C., c. 1246, reg 48(1) "demand for payment" (src:349)
+GIVEN `the document is a demand for payment in writing` IS A BOOLEAN
+      `the document is a notification of a decision to impose a penalty under section 44.1 of the Act` IS A BOOLEAN
+      `the document is a notification of the amount of a penalty imposed under section 44.1 of the Act` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 48(1): the document is a demand for payment` `the document is a demand for payment in writing` `the document is a notification of a decision to impose a penalty under section 44.1 of the Act` `the document is a notification of the amount of a penalty imposed under section 44.1 of the Act` MEANS
+        `the document is a demand for payment in writing`
+    OR  `the document is a notification of a decision to impose a penalty under section 44.1 of the Act`
+    OR  `the document is a notification of the amount of a penalty imposed under section 44.1 of the Act`
+
+-- "due date": where a payment schedule has been established, any day on which a scheduled payment is to be made (so several); where
+-- none has, the day that is 120 days after the day a demand for payment was issued (so one, or none if no demand has been issued).
+-- src:350 | due date means, in respect of a debt,
+-- src:351 | (a) where a payment schedule has been established, any day on which a scheduled payment is to be made; or
+-- src:352 | (b) where no payment schedule has been established, the day that is 120 days after the day on which a demand for payment was issued. (date d’exigibilité)
+@ref C.R.C., c. 1246, reg 48(1) "due date" (src:350-352)
+GIVEN `a payment schedule has been established` IS A BOOLEAN
+      `the days on which scheduled payments are to be made` IS A LIST OF DATE
+      `the day on which a demand for payment was issued` IS A MAYBE DATE
+GIVETH A LIST OF DATE
+`reg 48(1): the due dates of the debt` `a payment schedule has been established` `the days on which scheduled payments are to be made` `the day on which a demand for payment was issued` MEANS
+    IF `a payment schedule has been established`
+    THEN `the days on which scheduled payments are to be made`
+    ELSE CONSIDER `the day on which a demand for payment was issued`
+         WHEN NOTHING THEN EMPTY
+         WHEN JUST issued THEN LIST (`the day that is` (`a limit in days` 120) `after` issued)
+
+-- 48(2): interest is payable on all debts recoverable on or after the day this section comes into force. The Regulations do not state
+-- that day (it is the day of the amending order), so it is an input; a debt still recoverable has no last day (NOTHING).
+-- src:353 | (2) Interest is payable on all debts that are recoverable on or after the day on which this section comes into force.
+@ref C.R.C., c. 1246, reg 48(2) (src:353)
+GIVEN `the amount is a debt` IS A BOOLEAN
+      `the last day on which the debt is recoverable` IS A MAYBE DATE
+      `the day on which this section comes into force` IS A DATE -- out of range: the order that made section 48
+GIVETH A BOOLEAN
+`reg 48(2): interest is payable on the debt` `the amount is a debt` `the last day on which the debt is recoverable` `the day on which this section comes into force` MEANS
+        `the amount is a debt`
+    AND `the debt is recoverable on or after the day this section comes into force`
+    WHERE
+        `the debt is recoverable on or after the day this section comes into force` MEANS
+            CONSIDER `the last day on which the debt is recoverable`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST last THEN last AT LEAST `the day on which this section comes into force`
+
+-- 48(3): the accrual of interest begins on the due date.
+-- src:354 | (3) The accrual of interest on a debt, at the rate set out in subsection (4), begins on the due date.
+@ref C.R.C., c. 1246, reg 48(3) (src:354)
+GIVEN `the due date of the debt or portion of the debt` IS A DATE
+GIVETH A DATE
+`reg 48(3): the first day on which interest accrues` `the due date of the debt or portion of the debt` MEANS
+    `the due date of the debt or portion of the debt`
+
+-- 48(4): interest accrues at a rate calculated daily and compounded monthly at the average bank rate plus three per cent. The rate is
+-- per cent a year; NOTHING when the month has no bank rate to average.
+-- src:355 | (4) Interest accrues on a debt at a rate that is calculated daily and compounded monthly at the average bank rate plus three per cent.
+@ref C.R.C., c. 1246, reg 48(4) (src:355)
+GIVEN `the bank rates that are established during the month before the month in respect of which interest is being calculated` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+`reg 48(4): the rate of interest for the month, in per cent a year` `the bank rates that are established during the month before the month in respect of which interest is being calculated` MEANS
+    CONSIDER `reg 48(1): the average bank rate` `the bank rates that are established during the month before the month in respect of which interest is being calculated`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST average THEN JUST (average PLUS 3)
+
+-- 48(5): no interest accrues on a debt during the period in which a reconsideration under 27.1(2), an appeal under 28(1) or under
+-- section 55 of the Department of Employment and Social Development Act, or a judicial review under the Federal Courts Act is pending
+-- in respect of that debt. The periods are Calendar spans, both ends included.
+-- src:356 | (5) Interest does not accrue on a debt during the period in which a reconsideration under subsection 27.1(2) of the Act, an appeal under subsection 28(1) of the Act or section 55 of the Department of Employment and Social Development Act or a judicial review under the Federal Courts Act is pending in respect of that debt.
+-- The facts about one debt (or one portion of a debt) that decide on which days interest accrues. Every field is a fact; the rules
+-- below do the deciding.
+@ref C.R.C., c. 1246, reg 48(5) (src:356)
+DECLARE `reg 48: Facts about the accrual of interest on a debt` HAS
+    `interest is payable on the debt`                                             IS A BOOLEAN
+    `the due date of the debt or portion of the debt`                             IS A DATE
+    `the periods during which a proceeding is pending in respect of the debt`     IS A LIST OF `Calendar span`
+    `the day on which the accrual of interest ceases`                             IS A MAYBE DATE
+
+-- Does interest accrue on this day? It is payable (48(2)), the day is the due date or later (48(3)), no reconsideration, appeal or
+-- judicial review is pending on it (48(5)), and the accrual has not ceased before it (48(6): the ceasing day is the last day).
+@ref C.R.C., c. 1246, reg 48(3) (src:354)
+@ref C.R.C., c. 1246, reg 48(5) (src:356)
+GIVEN facts IS A `reg 48: Facts about the accrual of interest on a debt`
+      day IS A DATE
+GIVETH A BOOLEAN
+`reg 48: interest accrues on the debt on the day` facts day MEANS
+        facts's `interest is payable on the debt`
+    AND day AT LEAST facts's `the due date of the debt or portion of the debt`
+    AND (NOT `a proceeding is pending on the day`)
+    AND `the accrual has not ceased before the day`
+    WHERE
+        `a period including the day` span MEANS
+            (day AT LEAST span's `first day`) AND (day AT MOST span's `last day`)
+        `a proceeding is pending on the day` MEANS
+            count (filter `a period including the day` (facts's `the periods during which a proceeding is pending in respect of the debt`)) GREATER THAN 0
+        `the accrual has not ceased before the day` MEANS
+            CONSIDER facts's `the day on which the accrual of interest ceases`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST ceased THEN day AT MOST ceased
+
+-- How many days of a month interest accrues on the debt: every day of the month for which the question above is answered yes.
+@ref C.R.C., c. 1246, reg 48(4) (src:355)
+GIVEN facts IS A `reg 48: Facts about the accrual of interest on a debt`
+      `any day of the month` IS A DATE
+GIVETH A NUMBER
+`reg 48: the number of days of the month on which interest accrues on the debt` facts `any day of the month` MEANS
+    `the accruing days from` (`the first day of the month containing` `any day of the month`)
+    WHERE
+        `the accruing days from` day MEANS
+            IF day GREATER THAN (`the last day of the month containing` `any day of the month`)
+            THEN 0
+            ELSE (IF `reg 48: interest accrues on the debt on the day` facts day THEN 1 ELSE 0) PLUS `the accruing days from` (day PLUS 1)
+
+-- The interest accrued in a month: the debt at the start of the month, at the rate for the year, for the days of the month on which it
+-- accrues, over the days of the calendar year (365 or 366: fork F-48(4)). Nothing is rounded.
+@ref C.R.C., c. 1246, reg 48(4) (src:355)
+GIVEN `the amount of the debt at the start of the month, with interest already compounded` IS A NUMBER
+      `the rate of interest, in per cent a year` IS A NUMBER
+      facts IS A `reg 48: Facts about the accrual of interest on a debt`
+      `any day of the month` IS A DATE
+GIVETH A NUMBER
+`reg 48(4): the interest accrued on the debt in the month` `the amount of the debt at the start of the month, with interest already compounded` `the rate of interest, in per cent a year` facts `any day of the month` MEANS
+        `the amount of the debt at the start of the month, with interest already compounded`
+    TIMES (`the rate of interest, in per cent a year` DIVIDED BY 100)
+    TIMES ((`reg 48: the number of days of the month on which interest accrues on the debt` facts `any day of the month`) DIVIDED BY `the number of days in the calendar year`)
+    WHERE
+        `the number of days in the calendar year` MEANS
+            Day (Date 1 1 (DATE_YEAR `any day of the month` PLUS 1)) MINUS Day (Date 1 1 (DATE_YEAR `any day of the month`))
+
+-- Compounded monthly: at the end of the month the interest accrued is added to the debt, and the next month's interest runs on the sum.
+@ref C.R.C., c. 1246, reg 48(4) (src:355)
+GIVEN `the amount of the debt at the start of the month, with interest already compounded` IS A NUMBER
+      `the rate of interest, in per cent a year` IS A NUMBER
+      facts IS A `reg 48: Facts about the accrual of interest on a debt`
+      `any day of the month` IS A DATE
+GIVETH A NUMBER
+`reg 48(4): the amount of the debt at the end of the month, with the interest of the month compounded` `the amount of the debt at the start of the month, with interest already compounded` `the rate of interest, in per cent a year` facts `any day of the month` MEANS
+        `the amount of the debt at the start of the month, with interest already compounded`
+    PLUS `reg 48(4): the interest accrued on the debt in the month` `the amount of the debt at the start of the month, with interest already compounded` `the rate of interest, in per cent a year` facts `any day of the month`
+
+-- 48(6): the accrual of interest ceases on the earliest of: (a) the day before a scheduled payment or full payment is received; (b) the
+-- day the debt or portion is remitted under 37(4); (c) the day the penalty is reduced or the decision imposing it rescinded, under (i)
+-- 44.1(4) or (ii) the latest of the decisions of the Minister under 27.1(2) and on appeal or judicial review; (d) the day the accrued
+-- interest is remitted under (7); (e) the day the debtor dies. Each is optional; with none the accrual does not cease (NOTHING).
+-- src:357 | (6) The accrual of interest on a debt or on a portion of the debt, as applicable, ceases on
+-- src:358 | (a) the day before the day on which a scheduled payment in respect of the debt or a payment of the debt in full is received by Her Majesty;
+-- src:359 | (b) the day on which the debt or the portion of the debt is remitted under subsection 37(4) of the Act;
+-- src:360 | (c) the day on which the penalty that constitutes the debt is reduced or the decision imposing that penalty is rescinded under
+-- src:361 | (i) subsection 44.1(4) of the Act, or
+-- src:362 | (ii) the latest of the following decisions in respect of a decision or determination of the Minister under section 44.1 of the Act:
+-- src:363 | (A) a decision of the Minister under subsection 27.1(2) of the Act, and
+-- src:364 | (B) a decision on an appeal under subsection 28(1) of the Act or section 55 of the Department of Employment and Social Development Act or a judicial review under the Federal Courts Act;
+-- src:365 | (d) the day on which the accrued interest is remitted under subsection (7); or
+-- src:366 | (e) the day on which the debtor dies.
+@ref C.R.C., c. 1246, reg 48(6) (src:357-366)
+GIVEN `the day on which a scheduled payment in respect of the debt or a payment of the debt in full is received by Her Majesty` IS A MAYBE DATE
+      `the day on which the debt or the portion of the debt is remitted under subsection 37(4) of the Act` IS A MAYBE DATE
+      `the day on which the penalty that constitutes the debt is reduced or the decision imposing that penalty is rescinded under subsection 44.1(4) of the Act` IS A MAYBE DATE
+      `the penalty is reduced or the decision rescinded under the latest of the decisions in respect of a decision or determination of the Minister under section 44.1 of the Act` IS A BOOLEAN
+      `the day of a decision of the Minister under subsection 27.1(2) of the Act` IS A MAYBE DATE
+      `the day of a decision on an appeal under subsection 28(1) of the Act or section 55 of the Department of Employment and Social Development Act or a judicial review under the Federal Courts Act` IS A MAYBE DATE
+      `the day on which the accrued interest is remitted under subsection (7)` IS A MAYBE DATE
+      `the day on which the debtor dies` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`reg 48(6): the day on which the accrual of interest ceases` `the day on which a scheduled payment in respect of the debt or a payment of the debt in full is received by Her Majesty` `the day on which the debt or the portion of the debt is remitted under subsection 37(4) of the Act` `the day on which the penalty that constitutes the debt is reduced or the decision imposing that penalty is rescinded under subsection 44.1(4) of the Act` `the penalty is reduced or the decision rescinded under the latest of the decisions in respect of a decision or determination of the Minister under section 44.1 of the Act` `the day of a decision of the Minister under subsection 27.1(2) of the Act` `the day of a decision on an appeal under subsection 28(1) of the Act or section 55 of the Department of Employment and Social Development Act or a judicial review under the Federal Courts Act` `the day on which the accrued interest is remitted under subsection (7)` `the day on which the debtor dies` MEANS
+    `the earliest of` (append `the day of paragraph (a)` (append `the day of paragraph (b)` (append `the day of paragraph (c)(i)` (append `the day of paragraph (c)(ii)` (append `the day of paragraph (d)` `the day of paragraph (e)`)))))
+    WHERE
+        `the day of paragraph (a)` MEANS
+            CONSIDER `the day on which a scheduled payment in respect of the debt or a payment of the debt in full is received by Her Majesty`
+            WHEN NOTHING THEN EMPTY
+            WHEN JUST received THEN LIST (received MINUS 1)
+        `the day of paragraph (b)` MEANS
+            CONSIDER `the day on which the debt or the portion of the debt is remitted under subsection 37(4) of the Act`
+            WHEN NOTHING THEN EMPTY
+            WHEN JUST remitted THEN LIST remitted
+        `the day of paragraph (c)(i)` MEANS
+            CONSIDER `the day on which the penalty that constitutes the debt is reduced or the decision imposing that penalty is rescinded under subsection 44.1(4) of the Act`
+            WHEN NOTHING THEN EMPTY
+            WHEN JUST reduced THEN LIST reduced
+        `the day of paragraph (c)(ii)` MEANS
+            IF `the penalty is reduced or the decision rescinded under the latest of the decisions in respect of a decision or determination of the Minister under section 44.1 of the Act`
+            THEN `the latest of` (append `the day of the decision under (A)` `the day of the decision under (B)`)
+            ELSE EMPTY
+        `the day of the decision under (A)` MEANS
+            CONSIDER `the day of a decision of the Minister under subsection 27.1(2) of the Act`
+            WHEN NOTHING THEN EMPTY
+            WHEN JUST decided THEN LIST decided
+        `the day of the decision under (B)` MEANS
+            CONSIDER `the day of a decision on an appeal under subsection 28(1) of the Act or section 55 of the Department of Employment and Social Development Act or a judicial review under the Federal Courts Act`
+            WHEN NOTHING THEN EMPTY
+            WHEN JUST decided THEN LIST decided
+        `the day of paragraph (d)` MEANS
+            CONSIDER `the day on which the accrued interest is remitted under subsection (7)`
+            WHEN NOTHING THEN EMPTY
+            WHEN JUST remitted THEN LIST remitted
+        `the day of paragraph (e)` MEANS
+            CONSIDER `the day on which the debtor dies`
+            WHEN NOTHING THEN EMPTY
+            WHEN JUST died THEN LIST died
+        `the earliest of` days MEANS
+            CONSIDER days
+            WHEN EMPTY THEN NOTHING
+            WHEN first FOLLOWED BY rest THEN JUST (`the earlier of the first and` first rest)
+        `the earlier of the first and` first rest MEANS
+            CONSIDER rest
+            WHEN EMPTY THEN first
+            WHEN next FOLLOWED BY more THEN `the earlier of the first and` (`oa3: the earlier of` first next) more
+        `the latest of` days MEANS
+            CONSIDER days
+            WHEN EMPTY THEN EMPTY
+            WHEN first FOLLOWED BY rest THEN LIST (`the later of the first and` first rest)
+        `the later of the first and` first rest MEANS
+            CONSIDER rest
+            WHEN EMPTY THEN first
+            WHEN next FOLLOWED BY more THEN `the later of the first and` (`oa3: the later of` first next) more
+
+-- 48(7): the conditions under which the Minister may remit the interest in whole or in part: all four.
+-- src:367 | (7) The conditions under which the Minister may remit in whole or in part the interest payable under this section are that
+-- src:368 | (a) the interest has ceased to accrue in accordance with paragraph (6)(c);
+-- src:369 | (b) the interest cannot be collected within the reasonably foreseeable future;
+-- src:370 | (c) the administrative costs of collecting the interest would exceed the amount of that interest; and
+-- src:371 | (d) the payment of the interest would result in undue hardship to the debtor.
+@ref C.R.C., c. 1246, reg 48(7) (src:367-371)
+GIVEN `the interest has ceased to accrue in accordance with paragraph (6)(c)` IS A BOOLEAN
+      `the interest cannot be collected within the reasonably foreseeable future` IS A BOOLEAN
+      `the administrative costs of collecting the interest would exceed the amount of that interest` IS A BOOLEAN
+      `the payment of the interest would result in undue hardship to the debtor` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 48(7): the Minister may remit the interest payable under this section in whole or in part` `the interest has ceased to accrue in accordance with paragraph (6)(c)` `the interest cannot be collected within the reasonably foreseeable future` `the administrative costs of collecting the interest would exceed the amount of that interest` `the payment of the interest would result in undue hardship to the debtor` MEANS
+        `the interest has ceased to accrue in accordance with paragraph (6)(c)`
+    AND `the interest cannot be collected within the reasonably foreseeable future`
+    AND `the administrative costs of collecting the interest would exceed the amount of that interest`
+    AND `the payment of the interest would result in undue hardship to the debtor`

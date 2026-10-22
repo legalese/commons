@@ -1,0 +1,771 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `oas-core`
+IMPORT `oas-core-measures`
+IMPORT `oa3-part1-amounts`
+IMPORT `oa3-part1-applications`
+IMPORT `oa3-part1-income`
+IMPORT `oa3-part1-evidence`
+IMPORT `oa3-part1-residence`
+IMPORT `oa3-part1-agreements`
+IMPORT `oa3-part1-payments`
+IMPORT `oa3-part2-reconsiderations`
+IMPORT `oa3-part2-interest`
+
+-- Old Age Security Regulations (C.R.C., c. 1246) -- THE SEAT LAYER (piece oa3).
+--
+-- SEAT: a person who is 65 or older, or approaching it, asking whether they qualify for the Old Age Security pension, the Guaranteed
+-- Income Supplement or an Allowance, how much they would receive, and what they must do or tell the Minister. There is no seat for the
+-- Minister or any official: what an official must or may do is asked here as what is owed to the person or can be done to them.
+--
+-- The questions follow the order of the Regulations. Each takes plain inputs (yes/no, numbers, dates, a choice or a name), one for each fact
+-- the person can state, each with an @desc worded for the person, builds the layer-1 records inside the question from those answers, and
+-- calls the same layer-1 rule; no rule is restated here. Where a layer-1 input is a judgment the text hands to the Minister ("it appears to
+-- him", "satisfied", "reasonable grounds"), the person is asked whether the Minister holds that view, as a fact about the other party.
+-- Facts that the Act decides (whether the person is qualified for a pension, the day they became entitled to an allowance) are asked as
+-- facts the person can state; the Act's own provisions are in oa1 and oa2. Nothing here is new law.
+--
+-- The names of the questions carry the regulation number, so that they cannot collide with the questions of the pieces that encode the Act.
+-- A choice the person makes for the question on regulation 13: which kind of loss of income it was.
+DECLARE `Kind of loss of income in reg 13` IS ONE OF
+    `I stopped holding an office or employment`
+    `I stopped carrying on a business`
+    `my pension income ended or was reduced`
+
+§ `Applying for a benefit`
+
+-- Everyone who applies asks these. The questions about a waiver or a deemed application arise only if the Minister has waived or deemed one (the form can ask 'Has the Minister waived or deemed your application?' first).
+
+-- 3(1): a form is needed only where the Minister requires one.
+@export Is my application on the form the Minister requires (reg 3(1))?
+GIVEN `the Minister requires an application form` IS A BOOLEAN @desc Has the Minister required you to make your application on an application form?
+      `I made my application on an application form` IS A BOOLEAN @desc Did you make your application on an application form?
+GIVETH A BOOLEAN
+DECIDE `Is my application on the form the Minister requires (reg 3(1))` IF
+    `reg 3(1): the application has the form the Minister requires` `the Minister requires an application form` `I made my application on an application form`
+
+-- 3(2): an application counts as made when a completed form is received, unless the Act deems it made.
+@export Is my application treated as made yet (reg 3(2))?
+GIVEN `the Minister has received an application form completed by me or on my behalf` IS A BOOLEAN @desc Has the Minister received an application form completed by you or on your behalf?
+      `the Act deems my application to have been made` IS A BOOLEAN @desc Does the Act itself deem your application to have been made (section 5(2) or 11(3))?
+GIVETH A BOOLEAN
+DECIDE `Is my application treated as made yet (reg 3(2))` IF
+    `reg 3(2): the application is deemed to have been made` `the Minister has received an application form completed by me or on my behalf` `the Act deems my application to have been made`
+
+-- 4(1): a person or agency may act for you if the Minister considers you unable to.
+@export Can a responsible person or agency act for me if I cannot (reg 4(1))?
+GIVEN `the Minister considers I am unable, for a sufficient reason, to act for myself` IS A BOOLEAN @desc Does the Minister consider that you are unable, for a sufficient reason, to make a request for reconsideration, an appeal, an application, a statement or a notice yourself?
+GIVETH A BOOLEAN
+DECIDE `Can a responsible person or agency act for me if I cannot (reg 4(1))` IF
+    `reg 4(1): a responsible person or agency may make the request, appeal, application, statement or notice on the person's behalf` `the Minister considers I am unable, for a sufficient reason, to act for myself`
+
+-- 4(2): the provincial authority may apply for a pension (only) for someone who is or has been on either assistance.
+@export Can my province's authority apply for my pension for me (reg 4(2))?
+GIVEN `this is an application for a pension` IS A BOOLEAN @desc Is this an application for a pension (not a supplement or an allowance)?
+      `I am or have been on assistance under the Unemployment Assistance Act` IS A BOOLEAN @desc Are you, or have you been, in receipt of assistance under the Unemployment Assistance Act?
+      `I am or have been on assistance under the Canada Assistance Plan` IS A BOOLEAN @desc Are you, or have you been, in receipt of assistance under the Canada Assistance Plan?
+GIVETH A BOOLEAN
+DECIDE `Can my province's authority apply for my pension for me (reg 4(2))` IF
+    `reg 4(2): the appropriate provincial authority may make the application on the person's behalf` `this is an application for a pension` `I am or have been on assistance under the Unemployment Assistance Act` `I am or have been on assistance under the Canada Assistance Plan`
+
+-- 5(1) and (2): the day the approval is effective.
+@export From what day will my pension take effect (reg 5)?
+GIVEN `the Minister is satisfied I am qualified for a pension` IS A BOOLEAN @desc Is the Minister satisfied that you are qualified for a pension under sections 3 to 5 of the Act?
+      `my date of birth` IS A DATE @desc What is your date of birth?
+      `the day the Minister approves my application` IS A DATE @desc On what day does (or will) the Minister approve your application?
+      `the day the Minister received my application` IS A DATE @desc On what day did the Minister receive your application?
+      `the day I became qualified for a pension` IS A DATE @desc On what day did you become qualified for a pension (for example the day you met the residence requirement)?
+      `I asked in writing for a particular start date` IS A BOOLEAN @desc Did you ask in writing for the pension to start on a particular date?
+      `the start date I asked for` IS A DATE @desc What start date did you ask for? (any date if you did not ask for one)
+GIVETH A MAYBE DATE
+DECIDE `From what day will my pension take effect (reg 5)` IS
+    `reg 5: the day on which the Minister's approval of the application for a pension is effective` `the Minister is satisfied I am qualified for a pension` `the day the Minister approves my application` `the day the Minister received my application` `the day I attain 65` `the day I became qualified for a pension` `the date I specified`
+    WHERE
+        `the day I attain 65` MEANS
+            `the day on which a person born on` `my date of birth` `attains the age of` 65
+        `the date I specified` MEANS
+            IF `I asked in writing for a particular start date` THEN JUST `the start date I asked for` ELSE NOTHING
+
+-- 5(3) and (4): the approval is effective on the day the person attains 65.
+@export From what day does my pension take effect if the Minister deems my application made, or waives the need for one (regs 5(3) and 5(4))?
+GIVEN `the Minister deems my application made and approved` IS A BOOLEAN @desc Has the Minister deemed your application to have been made and approved under section 5(2) or 11(3) of the Act?
+      `the Minister waives the need for my application` IS A BOOLEAN @desc Has the Minister waived the requirement for an application in your case under section 5(4) of the Act?
+      `my date of birth` IS A DATE @desc What is your date of birth?
+GIVETH A MAYBE DATE
+DECIDE `From what day does my pension take effect if the Minister deems my application made, or waives the need for one (regs 5(3) and 5(4))` IS
+    CONSIDER `reg 5(3): the day on which the Minister's approval of the deemed application is effective` `the Minister deems my application made and approved` `the day I attain 65`
+        WHEN JUST day THEN JUST day
+        WHEN NOTHING THEN `reg 5(4): the day on which the Minister's approval is effective where the requirement for an application is waived` `the Minister waives the need for my application` `the day I attain 65`
+    WHERE
+        `the day I attain 65` MEANS
+            `the day on which a person born on` `my date of birth` `attains the age of` 65
+
+-- 10.1: effective on the day the person attains 65.
+@export From what day does my supplement take effect if the Minister waives the need for an application (reg 10.1)?
+GIVEN `the Minister waives the need for my supplement application` IS A BOOLEAN @desc Has the Minister waived the requirement for an application for a supplement in your case under section 11(3.1) of the Act?
+      `my date of birth` IS A DATE @desc What is your date of birth?
+GIVETH A MAYBE DATE
+DECIDE `From what day does my supplement take effect if the Minister waives the need for an application (reg 10.1)` IS
+    `reg 10.1: the day on which the Minister's approval of the supplement is effective where the requirement for an application is waived` `the Minister waives the need for my supplement application` (`the day on which a person born on` `my date of birth` `attains the age of` 65)
+
+-- 10: the Minister's duty to approve.
+@export Must the Minister approve my application for a supplement (reg 10)?
+GIVEN `the Minister is satisfied I am eligible for a supplement` IS A BOOLEAN @desc Is the Minister satisfied that you are eligible for a supplement under section 11 of the Act?
+GIVETH A BOOLEAN
+DECIDE `Must the Minister approve my application for a supplement (reg 10)` IF
+    `reg 10: the Minister must approve the application for a supplement by the pensioner in accordance with section 11 of the Act` `the Minister is satisfied I am eligible for a supplement`
+
+-- 11: the Minister's duty to approve an allowance for a person entitled to one.
+@export Must the Minister approve my application for an allowance (reg 11)?
+GIVEN `I am entitled to an allowance under section 19 or 21 of the Act` IS A BOOLEAN @desc Are you (the spouse, common-law partner or survivor) entitled to an allowance under section 19 or 21 of the Act?
+GIVETH A BOOLEAN
+DECIDE `Must the Minister approve my application for an allowance (reg 11)` IF
+    `reg 11: the Minister must approve the application for an allowance` `I am entitled to an allowance under section 19 or 21 of the Act`
+
+-- 12(1) to (3): the day the allowance approval is effective. Subsection (2) applies to a spouse or common-law partner, (3) to a survivor.
+@export From what day will my allowance take effect (reg 12)?
+GIVEN `I am a survivor` IS A BOOLEAN @desc Are you a survivor (rather than the spouse or common-law partner of a pensioner)?
+      `the day the Minister approves my application` IS A DATE @desc On what day does (or will) the Minister approve your application?
+      `the day the Minister received my application` IS A DATE @desc On what day did the Minister receive your application?
+      `my date of birth` IS A DATE @desc What is your date of birth? (not used if you are a survivor)
+      `the day I became entitled to an allowance` IS A DATE @desc On what day did you become entitled to an allowance under section 19 (a spouse or common-law partner) or section 21 (a survivor) of the Act?
+GIVETH A MAYBE DATE
+DECIDE `From what day will my allowance take effect (reg 12)` IS
+    `reg 12: the day on which the Minister's approval of the application for an allowance is effective` `the kind of applicant` `the day the Minister approves my application` `the day the Minister received my application` `the day I attain 60` `the day I became entitled to an allowance`
+    WHERE
+        `the kind of applicant` MEANS
+            IF `I am a survivor` THEN `reg 12(3): a survivor` ELSE `reg 12(2): the spouse or common-law partner of a pensioner`
+        `the day I attain 60` MEANS
+            -- A survivor's birth date is not read: subsection (3) has no age condition.
+            `the day on which a person born on` `my date of birth` `attains the age of` 60
+
+§ `How my amounts are worked out`
+
+-- Everyone who is paid asks these. They are arithmetic rules of the Regulations (regs 6 to 9).
+
+-- 6: an allowance of more than nothing and at most $2 is raised to $2.
+@export What allowance will I be paid each month if my entitlement is $2 or less (reg 6)?
+GIVEN `the monthly allowance I am entitled to` IS A NUMBER @desc What monthly amount of allowance are you entitled to under Part III of the Act, in dollars?
+GIVETH A NUMBER
+DECIDE `What allowance will I be paid each month if my entitlement is $2 or less (reg 6)` IS
+    `reg 6: the monthly allowance payable` `the monthly allowance I am entitled to`
+
+-- 7: dropped-digit rounding of a partial monthly pension.
+@export What is my partial monthly pension rounded off to (reg 7)?
+GIVEN `my partial monthly pension before rounding` IS A NUMBER @desc What is your partial monthly pension before rounding, in dollars (including any increase for deferring)?
+GIVETH A NUMBER
+DECIDE `What is my partial monthly pension rounded off to (reg 7)` IS
+    `reg 7: the amount of a partial monthly pension rounded off` `my partial monthly pension before rounding`
+
+-- 8: the adjusted amount.
+@export What is my benefit after the quarterly adjustment (reg 8)?
+GIVEN `the provision of the Act under which my benefit is adjusted` IS A `reg 8(1): Provision of the Act under which a benefit is adjusted quarterly` @desc Under which provision of the Act is your benefit adjusted each quarter?
+      `my benefit before the adjustment` IS A NUMBER @desc What is your benefit before the quarterly adjustment, in dollars?
+      `the Consumer Price Index for the first adjustment quarter` IS A NUMBER @desc What is the Consumer Price Index for the first adjustment quarter?
+      `the Consumer Price Index for the second adjustment quarter` IS A NUMBER @desc What is the Consumer Price Index for the second adjustment quarter?
+      `my pension was increased because I deferred it` IS A BOOLEAN @desc Was your pension increased because you deferred it (section 7.1(1))?
+      `the increase for deferral, as a decimal` IS A NUMBER @desc What is the increase for deferring, as a decimal (0.036 for 3.6 per cent)? (0 if none)
+GIVETH A MAYBE NUMBER
+DECIDE `What is my benefit after the quarterly adjustment (reg 8)` IS
+    CONSIDER `reg 8(3): the ratio of the Consumer Price Index for the first adjustment quarter to that for the second, expressed as a decimal number` `the Consumer Price Index for the first adjustment quarter` `the Consumer Price Index for the second adjustment quarter`
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST ratio THEN JUST (`reg 8(2): the amount of a benefit as adjusted quarterly` `the provision of the Act under which my benefit is adjusted` `my benefit before the adjustment` ratio `the deferral increase`)
+    WHERE
+        `the deferral increase` MEANS
+            IF `my pension was increased because I deferred it` THEN JUST `the increase for deferral, as a decimal` ELSE NOTHING
+
+-- 9: the average index for three months, to one decimal place.
+@export What Consumer Price Index figure applies to an adjustment quarter (reg 9)?
+GIVEN `the Consumer Price Index for the first month` IS A NUMBER @desc What is the Consumer Price Index for Canada for the first month of the quarter?
+      `the Consumer Price Index for the second month` IS A NUMBER @desc What is it for the second month?
+      `the Consumer Price Index for the third month` IS A NUMBER @desc What is it for the third month?
+GIVETH A NUMBER
+DECIDE `What Consumer Price Index figure applies to an adjustment quarter (reg 9)` IS
+    `reg 9: the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` `the Consumer Price Index for the first month` `the Consumer Price Index for the second month` `the Consumer Price Index for the third month`
+
+§ `Loss of income and pension income`
+
+-- Asked only by someone whose income has dropped (the form can ask 'Has your income dropped?' first).
+
+-- 13: the month is the month containing the day.
+@export In which month is my loss of income treated as occurring (reg 13)?
+GIVEN `the kind of loss of income` IS A `Kind of loss of income in reg 13` @desc Which kind of loss of income was it?
+      `the day that decides the month` IS A DATE @desc For a job: the last day for which you received income from it. For a business: the last day you actively carried it on. For pension income: the day it ended or was reduced.
+GIVETH A DATE
+DECIDE `In which month is my loss of income treated as occurring (reg 13)` IS
+    CONSIDER `the kind of loss of income`
+        WHEN `I stopped holding an office or employment` THEN `reg 13(a)(i): the month in which the person ceases to hold an office or employment` `the day that decides the month`
+        WHEN `I stopped carrying on a business` THEN `reg 13(a)(ii): the month in which the person ceases to carry on a business` `the day that decides the month`
+        WHEN `my pension income ended or was reduced` THEN `reg 13(b): the month in which the person suffers a loss of income due to termination or reduction of pension income` `the day that decides the month`
+
+-- 14: pension income is the sum of the nine kinds of amounts, less the two carve-outs.
+@export How much pension income do I have (reg 14)?
+GIVEN `annuity payments` IS A NUMBER @desc How much did you receive as annuity payments, in dollars?
+      `alimony and maintenance payments` IS A NUMBER @desc How much did you receive as alimony and maintenance payments?
+      `employment insurance benefits` IS A NUMBER @desc How much did you receive as employment insurance benefits?
+      `disability benefits from a private insurance plan` IS A NUMBER @desc How much did you receive as disability benefits from a private insurance plan?
+      `benefits under the Canada Pension Plan or a provincial pension plan` IS A NUMBER @desc How much did you receive in benefits under the Canada Pension Plan or a provincial pension plan, death benefits included?
+      `of which death benefits` IS A NUMBER @desc How much of that was a death benefit?
+      `superannuation or pension payments` IS A NUMBER @desc How much did you receive as superannuation or pension payments, benefits under the Old Age Security Act included?
+      `of which benefits under the Act or similar provincial payments` IS A NUMBER @desc How much of that was a benefit under the Old Age Security Act or a similar payment under a provincial law?
+      `workers' compensation` IS A NUMBER @desc How much did you receive as compensation under a federal or provincial employee's or worker's compensation law?
+      `income assistance under a section 33(1) agreement` IS A NUMBER @desc How much did you receive as income assistance benefits under an agreement referred to in section 33(1) of the Department of Human Resources Development Act?
+      `income assistance under a workforce adjustment program` IS A NUMBER @desc How much did you receive as income assistance benefits under the Plant Workers' Adjustment Program, the Fisheries Early Retirement Program or the Northern Cod Adjustment and Recovery Program?
+GIVETH A NUMBER
+DECIDE `How much pension income do I have (reg 14)` IS
+    `reg 14: pension income` `my amounts`
+    WHERE
+        `my amounts` MEANS `reg 14: Amounts received` WITH
+            `reg 14(a): annuity payments` IS `annuity payments`
+            `reg 14(b): alimony and maintenance payments` IS `alimony and maintenance payments`
+            `reg 14(c): employment insurance benefits` IS `employment insurance benefits`
+            `reg 14(d): disability benefits deriving from a private insurance plan` IS `disability benefits from a private insurance plan`
+            `reg 14(e): benefits under the Canada Pension Plan or a provincial pension plan as defined in the Canada Pension Plan` IS `benefits under the Canada Pension Plan or a provincial pension plan`
+            `reg 14(e): of which a death benefit` IS `of which death benefits`
+            `reg 14(f): superannuation or pension payments` IS `superannuation or pension payments`
+            `reg 14(f): of which a benefit received pursuant to the Act or any similar payment received pursuant to a law of a provincial legislature` IS `of which benefits under the Act or similar provincial payments`
+            `reg 14(g): compensation under a federal or provincial employee's or worker's compensation law in respect of an injury, disability or death` IS `workers' compensation`
+            `reg 14(h): income assistance benefits under an agreement referred to in subsection 33(1) of the Department of Human Resources Development Act by reason of a permanent reduction in the work force as described in that subsection` IS `income assistance under a section 33(1) agreement`
+            `reg 14(i): income assistance benefits under the Plant Workers' Adjustment Program, the Fisheries Early Retirement Program or the Northern Cod Adjustment and Recovery Program by reason of a permanent reduction in the work force` IS `income assistance under a workforce adjustment program`
+
+§ `Social Insurance Number and proof`
+
+-- The Minister's powers over the person: what the Minister may ask for, and what the person must give.
+
+-- 15.
+@export May the Minister give me a Social Insurance Number (reg 15)?
+GIVEN `no Social Insurance Number has been assigned to me or to my spouse or common-law partner` IS A BOOLEAN @desc Has no Social Insurance Number been assigned to you, or to your spouse or common-law partner?
+GIVETH A BOOLEAN
+DECIDE `May the Minister give me a Social Insurance Number (reg 15)` IF
+    `reg 15: the Minister may assign or cause to be assigned a Social Insurance Number` `no Social Insurance Number has been assigned to me or to my spouse or common-law partner`
+
+-- 16(1): the Minister may require one document, by kind of relationship.
+@export Which document may the Minister ask me for to show my relationship with my spouse or partner (reg 16(1))?
+GIVEN `the Minister has not received the information needed to determine my relationship` IS A BOOLEAN @desc Has the Minister not yet received the information needed to determine your relationship with your spouse or common-law partner?
+      `my partner and I are married` IS A BOOLEAN @desc Are you and your partner married (rather than common-law partners)?
+GIVETH A MAYBE `reg 16(1): Document the Minister may require`
+DECIDE `Which document may the Minister ask me for to show my relationship with my spouse or partner (reg 16(1))` IS
+    `reg 16(1): the document of which the Minister may require submission` `the Minister has not received the information needed to determine my relationship` `our relationship`
+    WHERE
+        `our relationship` MEANS
+            IF `my partner and I are married` THEN `reg 16(1)(a): spouses` ELSE `reg 16(1)(b): common-law partners`
+
+-- 16(2): the original certificate of marriage may be required where the copy is doubted.
+@export May the Minister ask me for the original of my marriage certificate (reg 16(2))?
+GIVEN `there are reasonable grounds to doubt the copy of my marriage certificate` IS A BOOLEAN @desc Are there reasonable grounds to doubt the validity of the copy of your certificate or act of marriage?
+GIVETH A BOOLEAN
+DECIDE `May the Minister ask me for the original of my marriage certificate (reg 16(2))` IF
+    `reg 16(2): the Minister may require the original certificate of marriage or, if applicable, a copy of the act of marriage issued by the competent authority` `there are reasonable grounds to doubt the copy of my marriage certificate`
+
+-- 16(3): a statutory declaration may be accepted where no marriage document is available.
+@export May the Minister accept my own declaration about my marriage (reg 16(3))?
+GIVEN `there are reasonable grounds to believe that no marriage document is available` IS A BOOLEAN @desc Are there reasonable grounds to believe that none of the documents that show a marriage (a certificate, a copy of it or a copy of the act of marriage) are available?
+GIVETH A BOOLEAN
+DECIDE `May the Minister accept my own declaration about my marriage (reg 16(3))` IF
+    `reg 16(3): the Minister may determine the relationship on the basis of a statutory declaration or other evidence of the marriage` `there are reasonable grounds to believe that no marriage document is available`
+
+-- 17: the tax return may be used where the application was waived and the evidence is insufficient.
+@export May the Minister use my tax return to decide whether I have a spouse or partner (reg 17)?
+GIVEN `the Minister waived the need for my supplement application` IS A BOOLEAN @desc Did the Minister waive the need for your supplement application under section 11(3.1) of the Act?
+      `the Minister lacks the evidence about a spouse or partner` IS A BOOLEAN @desc Does the Minister lack sufficient evidence or information to decide whether you have a spouse or common-law partner?
+GIVETH A BOOLEAN
+DECIDE `May the Minister use my tax return to decide whether I have a spouse or partner (reg 17)` IF
+    `reg 17: the Minister may use the person's tax return filed with the Minister of National Revenue` `the Minister waived the need for my supplement application` `the Minister lacks the evidence about a spouse or partner`
+
+-- 17: the most recent calendar year whose filing due date has passed.
+@export Which year's tax return may the Minister use (reg 17)?
+GIVEN `the day I am asking` IS A DATE @desc What is today's date?
+      `the filing due date of last year's tax return` IS A DATE @desc What is the filing due date of the income tax return for last calendar year (30 April, or 15 June if you are self-employed)?
+GIVETH A NUMBER
+DECIDE `Which year's tax return may the Minister use (reg 17)` IS
+    `reg 17: the most recent calendar year for which the filing due date has passed` `the day I am asking` `the filing due date of last year's tax return`
+
+-- 18(1): either basis is enough.
+@export Can the Minister work out my age and identity from my birth certificate or from the Employment Insurance Commission (reg 18(1))?
+GIVEN `a birth certificate, a copy of one or a copy of an act of birth is available` IS A BOOLEAN @desc Is a birth certificate, a copy of one or a copy of an act of birth available?
+      `the Employment Insurance Commission has made information available` IS A BOOLEAN @desc Has the Canada Employment Insurance Commission made information about your age and identity available to the Minister?
+GIVETH A BOOLEAN
+DECIDE `Can the Minister work out my age and identity from my birth certificate or from the Employment Insurance Commission (reg 18(1))` IF
+    `reg 18(1): the Minister can determine the applicant's age and identity on the basis of paragraph (a) or (b)` `a birth certificate, a copy of one or a copy of an act of birth is available` `the Employment Insurance Commission has made information available`
+
+-- 18(2): the original birth certificate may be required where the copy is doubted.
+@export May the Minister ask me for the original of my birth certificate (reg 18(2))?
+GIVEN `there are reasonable grounds to doubt the copy of my birth certificate` IS A BOOLEAN @desc Are there reasonable grounds to doubt the validity of the copy of your birth certificate or act of birth?
+GIVETH A BOOLEAN
+DECIDE `May the Minister ask me for the original of my birth certificate (reg 18(2))` IF
+    `reg 18(2): the Minister may require the original birth certificate or, if applicable, a copy of the act of birth issued by the competent authority` `there are reasonable grounds to doubt the copy of my birth certificate`
+
+-- 18(3).
+@export May the Minister use other evidence of my age and identity (reg 18(3))?
+GIVEN `there are reasonable grounds to believe none of my birth documents is available` IS A BOOLEAN @desc Are there reasonable grounds to believe that none of your birth certificate, copy or act of birth is available?
+GIVETH A BOOLEAN
+DECIDE `May the Minister use other evidence of my age and identity (reg 18(3))` IF
+    `reg 18(3): the Minister may determine the applicant's age and identity on the basis of any other information or evidence` `there are reasonable grounds to believe none of my birth documents is available`
+
+-- 18(4).
+@export May the Minister use Statistics Canada census information about my age (reg 18(4))?
+GIVEN `the Minister cannot determine my age and identity any other way` IS A BOOLEAN @desc Is the Minister unable to determine your age and identity from your documents, the Commission's information or other evidence?
+      `it is possible to determine it from Statistics Canada information` IS A BOOLEAN @desc Is it possible to determine them from information Statistics Canada can supply under section 6 of the Act?
+GIVETH A BOOLEAN
+DECIDE `May the Minister use Statistics Canada census information about my age (reg 18(4))` IF
+    `reg 18(4): the Minister may determine the applicant's age and identity on the basis of information obtained from Statistics Canada` `the Minister cannot determine my age and identity any other way` `it is possible to determine it from Statistics Canada information`
+
+-- 18.1: the conditions on a request to Statistics Canada about my age: the form, my signed consent and the specific information; and the confidentiality and limited use of what is supplied.
+@export Are the conditions for a request to Statistics Canada about my age met (reg 18.1)?
+GIVEN `the request is made in the form prescribed by the Chief Statistician` IS A BOOLEAN @desc Is the request made in a form prescribed by the Chief Statistician of Canada?
+      `the request bears my signed consent` IS A BOOLEAN @desc Does the request bear your signed consent?
+      `the request includes the specific information needed to search the census records` IS A BOOLEAN @desc Does the request include the specific information that is necessary for searching the census records?
+      `the information supplied is kept confidential` IS A BOOLEAN @desc Is the information that Statistics Canada supplies kept confidential?
+      `the information supplied is used for another purpose` IS A BOOLEAN @desc Is the information that Statistics Canada supplies used for a purpose other than determining your age as the Act or the Canada Pension Plan requires?
+GIVETH A BOOLEAN
+DECIDE `Are the conditions for a request to Statistics Canada about my age met (reg 18.1)` IF
+    `reg 18.1: the conditions for the purposes of section 6 of the Act are met` `the request meets paragraph (a)` `the information is handled as paragraph (b) requires`
+    WHERE
+        `the request meets paragraph (a)` MEANS `reg 18.1(a): the request to Statistics Canada meets the conditions` `the request is made in the form prescribed by the Chief Statistician` `the request bears my signed consent` `the request includes the specific information needed to search the census records`
+        `the information is handled as paragraph (b) requires` MEANS `reg 18.1(b): the information supplied by Statistics Canada is handled as the condition requires` `the information supplied is kept confidential` `the information supplied is used for another purpose`
+
+-- 19: an age already determined under the Canada Pension Plan may be accepted.
+@export May the Minister accept my age as determined under the Canada Pension Plan (reg 19)?
+GIVEN `my age has been determined under the Canada Pension Plan` IS A BOOLEAN @desc Has your age been determined under the Canada Pension Plan?
+GIVETH A BOOLEAN
+DECIDE `May the Minister accept my age as determined under the Canada Pension Plan (reg 19)` IF
+    `reg 19: the Minister may accept the determination of the applicant's age made under the Canada Pension Plan` `my age has been determined under the Canada Pension Plan`
+
+-- 20(1) and (2): the duty to give a residence statement, and when it is excused.
+@export Must I give the Minister a statement of my residence and absences (reg 20)?
+GIVEN `the Minister is working out whether I meet the residence requirement` IS A BOOLEAN @desc Is the Minister working out whether you meet the residence requirement?
+      `my circumstances are ones for which the Act excuses a statement` IS A BOOLEAN @desc Are you in one of the circumstances in which the Act excuses a statement (sections 5(2) or (5), 11(3) or (4), 19(4.1), 21(5) or (5.1))?
+      `the Minister requires a statement anyway` IS A BOOLEAN @desc Has the Minister required a statement of you anyway under the Act?
+GIVETH A BOOLEAN
+DECIDE `Must I give the Minister a statement of my residence and absences (reg 20)` IF
+    `reg 20(1): the person or someone acting on the person's behalf must provide a statement giving full particulars of all periods of residence in Canada and of all absences from Canada that are relevant to that eligibility` `the Minister is working out whether I meet the residence requirement` `my circumstances are ones for which the Act excuses a statement` `the Minister requires a statement anyway`
+
+-- 23(1): the Minister may require more from any of the four.
+@export Can the Minister require me to give more information or evidence (reg 23(1))?
+GIVEN `I am the applicant` IS A BOOLEAN @desc Are you the applicant?
+      `I applied on the applicant's behalf` IS A BOOLEAN @desc Did you apply on the applicant's behalf?
+      `I am the beneficiary` IS A BOOLEAN @desc Are you the beneficiary?
+      `I receive payment on the applicant's behalf` IS A BOOLEAN @desc Do you receive payment on the applicant's behalf?
+GIVETH A BOOLEAN
+DECIDE `Can the Minister require me to give more information or evidence (reg 23(1))` IF
+    `reg 23(1): the Minister may require the person to make available or allow to be made available further information or evidence regarding the eligibility of the applicant or the beneficiary for a benefit` `I am the applicant` `I applied on the applicant's behalf` `I am the beneficiary` `I receive payment on the applicant's behalf`
+
+-- 23(2): the Minister may investigate eligibility at any time; the text names no condition.
+@export May the Minister investigate whether I am eligible to be paid a benefit (reg 23(2))?
+GIVETH A BOOLEAN
+DECIDE `May the Minister investigate whether I am eligible to be paid a benefit (reg 23(2))` IS
+    `reg 23(2): the Minister may at any time make an investigation into the eligibility of a person to receive a benefit`
+
+§ `Residence`
+
+-- Everyone asks these if the residence requirement is in question.
+
+-- 21(1)(a), (2), (2.1), (4) and (5.3), put together by the composite rule of reg 21; the periods counted under (3), (5.1) and (5.2) have their own questions (the last argument, those periods, is FALSE here).
+@export Do I count as residing in Canada, setting aside regs 21(3), 21(5.1) and 21(5.2) which are asked separately (reg 21)?
+GIVEN `I make my home in Canada` IS A BOOLEAN @desc Do you make your home in Canada?
+      `I ordinarily live in Canada` IS A BOOLEAN @desc Do you ordinarily live in Canada?
+      `I live on a ship outside Canadian waters` IS A BOOLEAN @desc Do you live on a ship outside the territorial waters of Canada?
+      `I am a Canadian citizen or a permanent resident` IS A BOOLEAN @desc Are you a Canadian citizen or a permanent resident of Canada?
+      `I am present in Canada` IS A BOOLEAN @desc Are you physically present in Canada?
+      `I am in Canada as a diplomat, a visiting military member, or their family or staff` IS A BOOLEAN @desc Are you in Canada as a diplomat, consular officer or official of another country, the United Nations or an international organization, as a member of a military force present in Canada, or as their family or staff?
+      `I am subject to another country's legislation by an agreement` IS A BOOLEAN @desc Are you subject to another country's social security legislation by an agreement under section 40(1) of the Act?
+      `I was resident in Canada before a period of absence` IS A BOOLEAN @desc Were you resident in Canada before a period of absence?
+      `the absence was temporary` IS A BOOLEAN @desc Was the absence of a temporary nature?
+      `the first day I was away` IS A DATE @desc What was the first day of the absence? (any date if you were not away)
+      `the last day I was away` IS A DATE @desc What was the last day of the absence? (any date if you were not away)
+      `I was away to attend school or university` IS A BOOLEAN @desc Were you away to attend a school or university?
+      `my absence was for a reason listed in section 21(5)` IS A BOOLEAN @desc Was your absence for one of the reasons listed in section 21(5) (for example employment out of Canada by the United Nations, NATO or the Government of Canada, missionary work, or accompanying a spouse so employed)?
+GIVETH A BOOLEAN
+DECIDE `Do I count as residing in Canada, setting aside regs 21(3), 21(5.1) and 21(5.2) which are asked separately (reg 21)` IF
+    `reg 21: the person resides in Canada for the purposes of the Act and these Regulations` `my home` `my ship` `my purpose rule` `my foreign` `my absence` FALSE
+    WHERE
+        `my home` MEANS `reg 21(1)(a): the person resides in Canada` `I make my home in Canada` `I ordinarily live in Canada`
+        `my ship` MEANS `reg 21(2): the person is deemed not to be living in any part of Canada` `I live on a ship outside Canadian waters`
+        `my purpose rule` MEANS `reg 21(2.1): the person does not reside in Canada during the period` `I am a Canadian citizen or a permanent resident` `I am present in Canada` `my purpose`
+        `my foreign` MEANS `reg 21(5.3): the person is deemed not to be resident in Canada` `I am subject to another country's legislation by an agreement`
+        `my absence` MEANS `reg 21(4): the interval of absence is deemed not to have interrupted the person's residence or presence in Canada` `I was resident in Canada before a period of absence` `the absence was temporary` `the first day I was away` `the last day I was away` `I was away to attend school or university` `my absence was for a reason listed in section 21(5)`
+        `my purpose` MEANS `reg 21(2.1): Purpose for which a person is present in Canada` WITH
+            -- One yes/no stands for paragraphs (a) to (d) together. The rule reads (a) AND (b OR c OR d), then (e), (f) and (g) alone: the
+            -- first field takes the answer, the second is TRUE so that it does not block it, and (e), (f) and (g) are FALSE.
+            `carrying out his duties as a properly accredited diplomat, consular officer, representative or official` IS `I am in Canada as a diplomat, a visiting military member, or their family or staff`
+            `of a country other than Canada` IS TRUE
+            `of the United Nations or any of its agencies` IS FALSE
+            `of any intergovernmental organization in which Canada participates` IS FALSE
+            `as a member of a military force present in Canada for training or for any other purpose in connection with the defence or security interests of Canada or under any treaty or agreement between Canada and another country` IS FALSE
+            `as the spouse, common-law partner or dependant of a person referred to in paragraph (a) or (b), or the dependant of that person's spouse or common-law partner` IS FALSE
+            `as a member of the staff of or as a person otherwise accompanying a person referred to in paragraph (a), (b) or (c)` IS FALSE
+
+-- 21(3): a period outside Canada counts as residence if the person returns in time or attains pension age.
+@export Is my time outside Canada counted as residence because I joined a resident who was abroad (reg 21(3))?
+GIVEN `I became the spouse or common-law partner of a resident who was abroad` IS A BOOLEAN @desc Did you become the spouse or common-law partner of a person residing in Canada while that person was abroad for a reason listed in section 21(5)(a) or (b)?
+      `I have returned to Canada` IS A BOOLEAN @desc Have you returned to Canada?
+      `the day I returned` IS A DATE @desc On what day did you return? (any date if you have not)
+      `my spouse or partner has returned to Canada` IS A BOOLEAN @desc Has the person residing in Canada returned to Canada?
+      `the day my spouse or partner returned` IS A DATE @desc On what day did they return? (any date if they have not)
+      `my spouse or partner died while abroad` IS A BOOLEAN @desc Did that person die while abroad?
+      `the day my spouse or partner died` IS A DATE @desc On what day did they die? (any date if they did not)
+      `I attained pension age while outside Canada` IS A BOOLEAN @desc Did you attain an age at which you were eligible to be paid a pension under the Act while outside Canada?
+GIVETH A BOOLEAN
+DECIDE `Is my time outside Canada counted as residence because I joined a resident who was abroad (reg 21(3))` IF
+    `reg 21(3): the period outside Canada is considered a period of residence and presence in Canada` `I became the spouse or common-law partner of a resident who was abroad` `I returned in time` `I attained pension age while outside Canada`
+    WHERE
+        `I returned in time` MEANS `reg 21(3)(a): the person returns to Canada before or within six months after the return of the other person, or within six months after that person's death` `my return` `their return` `their death`
+        `my return` MEANS IF `I have returned to Canada` THEN JUST `the day I returned` ELSE NOTHING
+        `their return` MEANS IF `my spouse or partner has returned to Canada` THEN JUST `the day my spouse or partner returned` ELSE NOTHING
+        `their death` MEANS IF `my spouse or partner died while abroad` THEN JUST `the day my spouse or partner died` ELSE NOTHING
+
+-- 21(5.1): under an agreement, an absence abroad with the person is not an interruption, for an allowance.
+@export Is my absence abroad with my spouse or dependants counted as time in Canada for an allowance (reg 21(5.1))?
+GIVEN `I am subject to the Act while living abroad by an agreement` IS A BOOLEAN @desc Are you (or is the person you are asking about) subject to the Old Age Security Act while residing in another country, because of an agreement under section 40(1) of the Act?
+      `the person who was away lives with the person subject to the Act in that country` IS A BOOLEAN @desc Is the person who was away that person, or their spouse, common-law partner or a dependant of either, residing with them in that country?
+      `I am asking about an allowance` IS A BOOLEAN @desc Are you asking about an allowance (and not a pension)?
+GIVETH A BOOLEAN
+DECIDE `Is my absence abroad with my spouse or dependants counted as time in Canada for an allowance (reg 21(5.1))` IF
+    `reg 21(5.1): the absence is not considered to have interrupted the residence or presence in Canada` `I am subject to the Act while living abroad by an agreement` `the person who was away lives with the person subject to the Act in that country` `I am asking about an allowance`
+
+-- 21(5.2): under an agreement, a spouse's or dependant's pensionable employment is a period of residence in Canada.
+@export Does my spouse's or dependant's pensionable employment count as my residence in Canada (reg 21(5.2))?
+GIVEN `I am resident in Canada and subject to another country's legislation by an agreement` IS A BOOLEAN @desc Are you resident in Canada but subject to the legislation of another country because of an agreement under section 40(1) of the Act?
+      `my spouse, partner or dependant is in pensionable employment under a Canadian plan` IS A BOOLEAN @desc Is your spouse, common-law partner, or a dependant of yours or theirs, engaged in pensionable employment under the Canada Pension Plan or a provincial comprehensive pension plan?
+GIVETH A BOOLEAN
+DECIDE `Does my spouse's or dependant's pensionable employment count as my residence in Canada (reg 21(5.2))` IF
+    `reg 21(5.2): the period of pensionable employment is considered a period of residence in Canada` `I am resident in Canada and subject to another country's legislation by an agreement` `my spouse, partner or dependant is in pensionable employment under a Canadian plan`
+
+-- 22(1): three ways to be legally resident.
+@export Am I legally resident in Canada (reg 22(1))?
+GIVEN `I am or was lawfully in Canada under the immigration laws on the day that counts` IS A BOOLEAN @desc On the day that counts for this question, were you lawfully in Canada under Canada's immigration laws?
+      `I am or was a resident of Canada and am or was absent` IS A BOOLEAN @desc Were you a resident of Canada and absent from Canada on that day?
+      `my absence is deemed not to have interrupted my residence` IS A BOOLEAN @desc Is your absence deemed not to have interrupted your residence (section 21(4) or (5), or an agreement under section 40(1) of the Act)?
+      `I was lawfully in Canada just before the absence began` IS A BOOLEAN @desc Were you lawfully in Canada under the immigration laws immediately before the absence began?
+      `I am not or was not a resident of Canada` IS A BOOLEAN @desc Were you not a resident of Canada on that day?
+      `I am deemed to be or have been resident in Canada` IS A BOOLEAN @desc Are you deemed to be or to have been resident in Canada (section 21(3), or an agreement under section 40(1) of the Act)?
+GIVETH A BOOLEAN
+DECIDE `Am I legally resident in Canada (reg 22(1))` IF
+    `reg 22(1): the person is legally resident in Canada` `I am or was lawfully in Canada under the immigration laws on the day that counts` `I am or was a resident of Canada and am or was absent` `my absence is deemed not to have interrupted my residence` `I was lawfully in Canada just before the absence began` `I am not or was not a resident of Canada` `I am deemed to be or have been resident in Canada`
+
+§ `International agreements and sponsors`
+
+-- The first two questions arise only if you lived or worked in a country with which Canada has an agreement; the last only if you were sponsored.
+
+-- 22.01: the Schedule's agreements apply to common-law partners as to spouses.
+@export Does the agreement with my country extend spouse treatment to my common-law partner (reg 22.01)?
+GIVEN `the country named in the agreement` IS A STRING @desc Which country is the agreement with? (write the name as the Schedule prints it, for example 'Austria (Republic of)' or 'United States of America')
+GIVETH A BOOLEAN
+DECIDE `Does the agreement with my country extend spouse treatment to my common-law partner (reg 22.01)` IF
+    `reg 22.01: the treatment afforded to spouses is extended to common-law partners under the agreement with the country` `the country named in the agreement`
+
+-- 22.01 and the Schedule.
+@export Which agreements does the Schedule list for my country (reg 22.01)?
+GIVEN `the country named in the agreement` IS A STRING @desc Which country are you asking about? (write the name as the Schedule prints it)
+GIVETH A LIST OF STRING
+DECIDE `Which agreements does the Schedule list for my country (reg 22.01)` IS
+    `reg 22.01: the agreements of the Schedule with the country, as printed` `the country named in the agreement`
+
+-- 22.1(2): the sponsor's undertaking was in effect, and an event occurred, on or after 7 March 1996.
+@export Does the sponsorship rule apply to my sponsor (reg 22.1)?
+GIVEN `my sponsor's undertaking is still in effect` IS A BOOLEAN @desc Is your sponsor's undertaking still in effect?
+      `the last day my sponsor's undertaking was in effect` IS A DATE @desc If it is no longer in effect, what was the last day it was in effect? (any date if it still is)
+      `an event has happened to my sponsor` IS A BOOLEAN @desc Has any of these happened to your sponsor: death, conviction of a Criminal Code offence relating to you, a finding of bankruptcy, a sentence of imprisonment of more than six months?
+      `the day it happened` IS A DATE @desc On what day did it happen? (any date if none has)
+GIVETH A BOOLEAN
+DECIDE `Does the sponsorship rule apply to my sponsor (reg 22.1)` IF
+    `reg 22.1(2): subsection (1) applies to the sponsor` `the last day of the undertaking` `the days of events`
+    WHERE
+        `the last day of the undertaking` MEANS IF `my sponsor's undertaking is still in effect` THEN NOTHING ELSE JUST `the last day my sponsor's undertaking was in effect`
+        `the days of events` MEANS IF `an event has happened to my sponsor` THEN LIST `the day it happened` ELSE EMPTY
+
+§ `Payments, notices and what I must tell the Minister`
+
+-- Who is paid, what I must tell the Minister and by when, and what can be done to my payments.
+
+-- 24(1): the Minister may direct payment to an authorized person or agency, failing that to an appointee.
+@export To whom may the Minister direct my benefit if I cannot manage my own affairs (reg 24(1))?
+GIVEN `evidence has been provided that I am incapable of managing my affairs` IS A BOOLEAN @desc Has a person or agency provided evidence satisfactory to the Minister that you are incapable of managing your own affairs?
+      `the Minister is satisfied someone is authorized by law to manage my affairs` IS A BOOLEAN @desc Is the Minister satisfied that a person or agency is authorized by a law of Canada or of a province to manage your affairs?
+      `an appointee has an agreement with the Minister` IS A BOOLEAN @desc Is there a person or agency the Minister may appoint that has an agreement with the Minister to administer and expend your benefit?
+GIVETH A `reg 24(1): Whom the Minister may direct the benefit to be paid to on behalf of the beneficiary`
+DECIDE `To whom may the Minister direct my benefit if I cannot manage my own affairs (reg 24(1))` IS
+    `reg 24(1): the person or agency to whom the Minister may direct the benefit to be paid on behalf of the beneficiary` `evidence has been provided that I am incapable of managing my affairs` `the Minister is satisfied someone is authorized by law to manage my affairs` `an appointee has an agreement with the Minister`
+
+-- 24(4): where a benefit is paid to another to manage, that person gives the notices of regulation 25.
+@export Who must give the Minister the notices of regulation 25 if my benefit is paid to someone else to manage (reg 24(4))?
+GIVEN `my benefit is paid to a person or agency to manage for me` IS A BOOLEAN @desc Is your benefit paid to a person or agency to be administered and spent for you?
+GIVETH A Party
+DECIDE `Who must give the Minister the notices of regulation 25 if my benefit is paid to someone else to manage (reg 24(4))` IS
+    `reg 24(4): the party who must give the notices required by regulation 25` `my benefit is paid to a person or agency to manage for me`
+
+-- 24(5).
+@export To whom may a benefit payment be made after I die (reg 24(5))?
+GIVEN `an amount is payable to me as a benefit` IS A BOOLEAN @desc Is an amount payable as a benefit to the person who has died?
+      `a payment made to or for me was returned after my death` IS A BOOLEAN @desc Was a benefit payment made to the person or for them returned to the Minister after their death?
+      `there is an estate` IS A BOOLEAN @desc Is there an estate of the person who has died?
+GIVETH A MAYBE Party
+DECIDE `To whom may a benefit payment be made after I die (reg 24(5))` IS
+    `reg 24(5): the party to whom a benefit payment may be made after the beneficiary's death` `an amount is payable to me as a benefit` `a payment made to or for me was returned after my death` `there is an estate`
+
+-- 25(1): an absence in excess of one month; the duty to give notice forthwith arises on the first day it is.
+@export Have I been away from Canada for more than a month (reg 25(1))?
+GIVEN `the day I left Canada` IS A DATE @desc On what day did you leave Canada?
+      `the day my absence ended, or today if it has not` IS A DATE @desc On what day did your absence end? (today's date if you are still away)
+GIVETH A BOOLEAN
+DECIDE `Have I been away from Canada for more than a month (reg 25(1))` IF
+    `reg 25(1): the applicant or beneficiary has absented himself from Canada for a period in excess of one month` `the day I left Canada` `the day my absence ended, or today if it has not`
+
+-- 25(1): within one month of the return.
+@export By what day must I notify the Minister that I have returned to Canada (reg 25(1))?
+GIVEN `the day I returned to Canada` IS A DATE @desc On what day did you return to Canada?
+GIVETH A DATE
+DECIDE `By what day must I notify the Minister that I have returned to Canada (reg 25(1))` IS
+    `reg 25(1): the last day on which the Minister may be notified of the return` `the day I returned to Canada`
+
+-- 25(1): notice of a long absence, and of the return within a month.
+@export Have I given the notices the Regulations require after a long absence (reg 25(1))?
+GIVEN `the day I left Canada` IS A DATE @desc On what day did you leave Canada?
+      `the day I returned to Canada` IS A DATE @desc On what day did you return to Canada?
+      `I gave notice of the absence forthwith` IS A BOOLEAN @desc Did you give the Minister notice of the absence forthwith?
+      `I have notified the Minister of my return` IS A BOOLEAN @desc Have you notified the Minister of your return?
+      `the day I notified the Minister of my return` IS A DATE @desc On what day did you notify the Minister of your return? (any date if you have not)
+GIVETH A BOOLEAN
+DECIDE `Have I given the notices the Regulations require after a long absence (reg 25(1))` IF
+    `reg 25(1): the applicant or beneficiary has given the notices` `my absence was long` `I gave notice of the absence forthwith` `the day I returned to Canada` `my notice of the return`
+    WHERE
+        `my absence was long` MEANS `reg 25(1): the applicant or beneficiary has absented himself from Canada for a period in excess of one month` `the day I left Canada` `the day I returned to Canada`
+        `my notice of the return` MEANS IF `I have notified the Minister of my return` THEN JUST `the day I notified the Minister of my return` ELSE NOTHING
+
+-- 25(2): applicants and beneficiaries must tell the Minister their address and, forthwith, any change.
+@export Must I tell the Minister straight away if my address changes (reg 25(2))?
+GIVEN `I am an applicant or a beneficiary` IS A BOOLEAN @desc Are you an applicant or a beneficiary?
+      `the address to which my benefit is sent has changed` IS A BOOLEAN @desc Has the address to which your benefit is sent changed?
+GIVETH A BOOLEAN
+DECIDE `Must I tell the Minister straight away if my address changes (reg 25(2))` IF
+    `reg 25(2): the person must forthwith notify the Minister of a change of the address to which the benefit is to be sent` `I am an applicant or a beneficiary` `the address to which my benefit is sent has changed`
+
+-- 25(3): joint applicants for an allowance who separate: the beneficiary and the pensioner must immediately notify.
+@export Who must tell the Minister straight away if joint applicants for an allowance separate (reg 25(3))?
+GIVEN `we have become separated` IS A BOOLEAN @desc Have you and your spouse or common-law partner, who applied jointly for an allowance, become separated?
+GIVETH A LIST OF Party
+DECIDE `Who must tell the Minister straight away if joint applicants for an allowance separate (reg 25(3))` IS
+    `reg 25(3): the parties who must immediately notify the Minister of the separation` `we have become separated`
+
+-- 25(4): the beneficiary of an allowance dies: the pensioner must immediately notify.
+@export Who must tell the Minister straight away if the beneficiary of an allowance dies (reg 25(4))?
+GIVEN `the beneficiary of the allowance has died` IS A BOOLEAN @desc Has the beneficiary of the allowance died?
+GIVETH A LIST OF Party
+DECIDE `Who must tell the Minister straight away if the beneficiary of an allowance dies (reg 25(4))` IS
+    `reg 25(4): the parties who must immediately notify the Minister of the death` `the beneficiary of the allowance has died`
+
+-- 26(1): the Minister must suspend where I appear ineligible and may where inquiry is needed.
+@export Can the Minister suspend my payments (reg 26(1))?
+GIVEN `it appears to the Minister that I am ineligible` IS A BOOLEAN @desc Does it appear to the Minister that you are ineligible for payment of the benefit?
+      `it appears to the Minister that further inquiry into my eligibility is necessary` IS A BOOLEAN @desc Does it appear to the Minister that further inquiry into your eligibility is necessary?
+GIVETH A `reg 26(1): Suspension of payment`
+DECIDE `Can the Minister suspend my payments (reg 26(1))` IS
+    `reg 26(1): whether the Minister must or may suspend the payment of the benefit` `it appears to the Minister that I am ineligible` `it appears to the Minister that further inquiry into my eligibility is necessary`
+
+-- 26(2): payment for the part of the suspension in which I was eligible.
+@export For how many days of a suspension will I be paid once payment resumes (reg 26(2))?
+GIVEN `payment has been resumed` IS A BOOLEAN @desc Has payment of your benefit been resumed?
+      `the first day of the suspension` IS A DATE @desc What was the first day of the suspension?
+      `the last day of the suspension` IS A DATE @desc What was the last day of the suspension?
+      `the first day I was eligible during the suspension` IS A DATE @desc On what day did you first become eligible during the suspension?
+      `the last day I was eligible during the suspension` IS A DATE @desc What was the last day you were eligible during the suspension?
+GIVETH A NUMBER
+DECIDE `For how many days of a suspension will I be paid once payment resumes (reg 26(2))` IS
+    `reg 26(2): the number of days of the period of suspension for which the Minister must pay the benefit` `payment has been resumed` `the suspension` (LIST `my eligibility`)
+    WHERE
+        `the suspension` MEANS `Calendar span` WITH `first day` IS `the first day of the suspension`, `last day` IS `the last day of the suspension`
+        `my eligibility` MEANS `Calendar span` WITH `first day` IS `the first day I was eligible during the suspension`, `last day` IS `the last day I was eligible during the suspension`
+
+-- 26.1(1): in writing, no later than six months after payment begins.
+@export By what day must I ask to cancel my pension or supplement (reg 26.1(1))?
+GIVEN `the day payment of my pension or supplement began` IS A DATE @desc On what day did payment of your pension or supplement begin?
+GIVETH A DATE
+DECIDE `By what day must I ask to cancel my pension or supplement (reg 26.1(1))` IS
+    `reg 26.1(1): the last day on which a request for cancellation may be made` `the day payment of my pension or supplement began`
+
+-- 26.1(1).
+@export Is my request to cancel in time (reg 26.1(1))?
+GIVEN `I made the request to the Minister in writing` IS A BOOLEAN @desc Did you make the request to the Minister in writing?
+      `the day I made the request` IS A DATE @desc On what day did you make the request?
+      `the day payment began` IS A DATE @desc On what day did payment begin?
+GIVETH A BOOLEAN
+DECIDE `Is my request to cancel in time (reg 26.1(1))` IF
+    `reg 26.1(1): the request for cancellation is made in time` `I made the request to the Minister in writing` `the day I made the request` `the day payment began`
+
+-- 26.1(2) and (3): repay no later than six months after the request is granted.
+@export By what day must I repay once my request to cancel is granted (reg 26.1(2) and (3))?
+GIVEN `I cancelled my pension` IS A BOOLEAN @desc Did you cancel your pension (rather than only a supplement)?
+      `the day my request was granted` IS A DATE @desc On what day was your request granted?
+GIVETH A DATE
+DECIDE `By what day must I repay once my request to cancel is granted (reg 26.1(2) and (3))` IS
+    IF `I cancelled my pension` THEN `reg 26.1(2): the last day on which the amount of the pension and related supplement or allowance must be repaid` `the day my request was granted` ELSE `reg 26.1(3): the last day on which the amount of the supplement and related allowance must be repaid` `the day my request was granted`
+
+-- 27: the least of the debt, the benefit and what avoids undue hardship.
+@export How much can be deducted from my benefit to recover what I owe (reg 27)?
+GIVEN `the amount of indebtedness that is owing` IS A NUMBER @desc How much do you owe, in dollars?
+      `the amount of benefit payable to me` IS A NUMBER @desc How much benefit is payable to you or your estate under this Act or another Act or program the Minister administers, in dollars?
+      `the largest amount that does not cause me undue hardship` IS A NUMBER @desc What is the most that could be deducted without causing you undue hardship, in dollars?
+GIVETH A NUMBER
+DECIDE `How much can be deducted from my benefit to recover what I owe (reg 27)` IS
+    `reg 27: the largest amount that may be deducted and retained out of the benefit` `the amount of indebtedness that is owing` `the amount of benefit payable to me` `the largest amount that does not cause me undue hardship`
+
+-- 28.1(1): all four conditions.
+@export May the Minister deduct from my benefit what a province or municipality advanced me (reg 28.1(1))?
+GIVEN `the authority submitted a record and my signed irrevocable consent` IS A BOOLEAN @desc Did the provincial or municipal authority that paid you the advance, assistance or welfare payments submit a record of the payment to the Minister with your signed, irrevocable consent to the deduction?
+      `the day I signed the consent` IS A DATE @desc On what day did you sign the consent?
+      `the day the Minister received the record and consent` IS A DATE @desc On what day did the Minister receive the record and consent?
+      `the Minister and the authority have an agreement on the procedure` IS A BOOLEAN @desc Have the Minister and the authority concluded an agreement on the procedure for submitting records and consents?
+      `the amount to be deducted` IS A NUMBER @desc How much would be deducted, in dollars?
+GIVETH A BOOLEAN
+DECIDE `May the Minister deduct from my benefit what a province or municipality advanced me (reg 28.1(1))` IF
+    `reg 28.1(1): the Minister may make a deduction from a benefit` `the authority submitted a record and my signed irrevocable consent` `the day I signed the consent` `the day the Minister received the record and consent` `the Minister and the authority have an agreement on the procedure` `the amount to be deducted`
+
+-- 28.1(2): barred where no deduction was made, or one for less than might have been paid.
+@export Is the Minister barred from authorizing another such deduction (reg 28.1(2))?
+GIVEN `no deduction has been made` IS A BOOLEAN @desc Has no deduction been made?
+      `a deduction was made for less than might have been paid` IS A BOOLEAN @desc Was a deduction and payment made for an amount less than might have been paid under section 36(2) of the Act?
+GIVETH A BOOLEAN
+DECIDE `Is the Minister barred from authorizing another such deduction (reg 28.1(2))` IF
+    `reg 28.1(2): the Minister is barred from authorizing any other deduction and payment` `no deduction has been made` `a deduction was made for less than might have been paid`
+
+§ `Reconsideration, appeals and interest`
+
+-- Asked only by someone who is asking for a reconsideration, appealing, or who owes a debt on which interest runs.
+
+-- 29: in writing, conveyed to the Minister, with the particulars and the grounds and facts.
+@export Is my request for reconsideration complete (reg 29)?
+GIVEN `my request is in writing` IS A BOOLEAN @desc Is your request for reconsideration in writing?
+      `my request was conveyed to the Minister` IS A BOOLEAN @desc Was your request conveyed to the Minister?
+      `it sets out my name` IS A BOOLEAN @desc Does it set out your name?
+      `it sets out my address` IS A BOOLEAN @desc Does it set out your address?
+      `it sets out my Social Insurance Number` IS A BOOLEAN @desc Does it set out your Social Insurance Number?
+      `it sets out my Account Number` IS A BOOLEAN @desc Does it set out your Account Number?
+      `it sets out the grounds` IS A BOOLEAN @desc Does it set out the grounds for the request?
+      `it sets out a statement of the facts` IS A BOOLEAN @desc Does it set out a statement of the facts that form the basis of the request?
+GIVETH A BOOLEAN
+DECIDE `Is my request for reconsideration complete (reg 29)` IF
+    `reg 29: the request for a reconsideration under section 27.1 of the Act is made as the Regulations require` `my request is in writing` `my request was conveyed to the Minister` `reg 29(a) particulars` `reg 29(b) grounds`
+    WHERE
+        `reg 29(a) particulars` MEANS `reg 29(a): the request sets out the particulars of the person` `it sets out my name` `it sets out my address` `it sets out my Social Insurance Number` `it sets out my Account Number`
+        `reg 29(b) grounds` MEANS `reg 29(b): the request sets out its grounds and the facts` `it sets out the grounds` `it sets out a statement of the facts`
+
+-- 29.1: the Minister may allow longer; after 365 days or on a second application the Minister must also be satisfied of a chance of success and no prejudice.
+@export May the Minister give me a longer period to ask for reconsideration (reg 29.1)?
+GIVEN `there is a reasonable explanation for the delay` IS A BOOLEAN @desc Is there a reasonable explanation for requesting a longer period (in the Minister's view)?
+      `I demonstrated a continuing intention to ask for reconsideration` IS A BOOLEAN @desc Have you demonstrated a continuing intention to request a reconsideration?
+      `the day I made the request` IS A DATE @desc On what day did you make (or will you make) the request?
+      `the day I was notified in writing of the decision` IS A DATE @desc On what day were you notified in writing of the decision or determination?
+      `I applied again for the same benefit` IS A BOOLEAN @desc Have you applied again for the same benefit?
+      `the request has a reasonable chance of success` IS A BOOLEAN @desc Does the request have a reasonable chance of success (in the Minister's view)?
+      `no prejudice would be caused` IS A BOOLEAN @desc Would no prejudice be caused to the Minister or a party by allowing a longer period (in the Minister's view)?
+GIVETH A BOOLEAN
+DECIDE `May the Minister give me a longer period to ask for reconsideration (reg 29.1)` IF
+    `reg 29.1: the Minister may allow a longer period to make the request for reconsideration` `there is a reasonable explanation for the delay` `I demonstrated a continuing intention to ask for reconsideration` `my request needs subsection (2)` `the request has a reasonable chance of success` `no prejudice would be caused`
+    WHERE
+        `my request needs subsection (2)` MEANS `reg 29.1(2): the request for reconsideration is one that needs the further satisfaction of subsection (2)` `the day I made the request` `the day I was notified in writing of the decision` `I applied again for the same benefit`
+
+-- 29.1(3): the Minister may take any necessary steps to obtain information to decide on a longer period; the text names no condition.
+@export May the Minister take steps to get the information needed to decide on a longer period (reg 29.1(3))?
+GIVETH A BOOLEAN
+DECIDE `May the Minister take steps to get the information needed to decide on a longer period (reg 29.1(3))` IS
+    `reg 29.1(3): the Minister may take any necessary steps to obtain information required to decide whether to allow a longer period`
+
+-- 38(a): when a ground of the appeal is referred to the Tax Court, the Tribunal must notify the appellant and the Minister.
+@export Must the Social Security Tribunal tell me that a ground of my appeal has been referred to the Tax Court (reg 38)?
+GIVEN `a ground of my appeal under section 28(2) of the Act is set out in an appeal under section 28(1)` IS A BOOLEAN @desc Is a ground of appeal under section 28(2) of the Act (one the Tax Court decides) set out in your appeal under section 28(1)?
+GIVETH A BOOLEAN
+DECIDE `Must the Social Security Tribunal tell me that a ground of my appeal has been referred to the Tax Court (reg 38)` IF
+    elem `reg 38: the appellant` (`reg 38(a): the persons the Social Security Tribunal must notify that the appeal on that ground has been referred to the Court` `a ground of my appeal under section 28(2) of the Act is set out in an appeal under section 28(1)`)
+
+-- 40(2): the hearing is held where the appellant ordinarily lives unless the appellant consents in writing to another place.
+@export May the hearing of my reference be held at this place (reg 40(2))?
+GIVEN `the place where the hearing is to be held` IS A STRING @desc In what city, town or village is the hearing to be held?
+      `the place where I ordinarily live, or the nearest town to it` IS A STRING @desc In what city, town or village do you ordinarily live (or which is nearest to where you live)?
+      `I have consented in writing to the hearing being held at some other place` IS A BOOLEAN @desc Have you consented in writing to the hearing being held at some other place?
+GIVETH A BOOLEAN
+DECIDE `May the hearing of my reference be held at this place (reg 40(2))` IF
+    `reg 40(2): the hearing of the reference may be held at that place` `the place where the hearing is to be held` `the place where I ordinarily live, or the nearest town to it` `I have consented in writing to the hearing being held at some other place`
+
+-- 40(3): once the date, time and place are fixed, the Registrar must notify the appellant by registered mail. Whether another person was added as a party does not change whether I am notified, so it is passed as FALSE.
+@export Will the Registrar notify me by registered mail of the date, place and time of the hearing (reg 40(3))?
+GIVEN `the date, time and place of the hearing have been fixed` IS A BOOLEAN @desc Have the date, time and place of the hearing of the reference been fixed?
+GIVETH A BOOLEAN
+DECIDE `Will the Registrar notify me by registered mail of the date, place and time of the hearing (reg 40(3))` IF
+    elem `reg 38: the appellant` (`reg 40(3): the persons the Registrar of the Court must notify by registered mail of the date, place and time fixed for the hearing` `the date, time and place of the hearing have been fixed` FALSE)
+
+-- 41(1): proceedings before the Court are informal and in a summary manner.
+@export Will the proceedings before the Court on my reference be informal and summary (reg 41(1))?
+GIVEN `my proceedings are proceedings before the Court` IS A BOOLEAN @desc Are your proceedings proceedings before the Tax Court of Canada?
+GIVETH A BOOLEAN
+DECIDE `Will the proceedings before the Court on my reference be informal and summary (reg 41(1))` IF
+    `reg 41(1): the proceedings must be informal and conducted in a summary manner` `my proceedings are proceedings before the Court`
+
+-- 41(2): the judge determines the procedure at the hearing, subject to the right of all parties or their representatives to be heard.
+@export Must the judge hear me before determining the procedure for my hearing (reg 41(2))?
+GIVEN `a judge of the Court has been appointed to hear my reference` IS A BOOLEAN @desc Has a judge of the Court been appointed to hear your reference?
+GIVETH A BOOLEAN
+DECIDE `Must the judge hear me before determining the procedure for my hearing (reg 41(2))` IF
+    `reg 41(2): the judge must determine the procedure to be followed at the hearing, subject to the right of all parties or their representatives to be heard` `a judge of the Court has been appointed to hear my reference`
+
+-- 42: the judge may require written submissions with the appellant's consent. Whether another person was added as a party does not change whether I may be required to file, so it is passed as FALSE.
+@export May the judge require me to file written submissions (reg 42)?
+GIVEN `I consent to written submissions` IS A BOOLEAN @desc Do you consent to the judge requiring written submissions in addition to or in place of an oral hearing?
+GIVETH A BOOLEAN
+DECIDE `May the judge require me to file written submissions (reg 42)` IF
+    elem `reg 38: the appellant` (`reg 42: the persons from whom the judge may require written submissions` `I consent to written submissions` FALSE)
+
+-- 44(2): after the judge has advised the Registrar of the decision, the Registrar must forward a certified copy to the appellant. Whether another person was added as a party does not change whether I am sent one, so it is passed as FALSE.
+@export Will I be sent a certified copy of the Court's decision (reg 44(2))?
+GIVEN `the judge has advised the Registrar of the decision` IS A BOOLEAN @desc Has the judge advised the Registrar of the Court of the decision?
+GIVETH A BOOLEAN
+DECIDE `Will I be sent a certified copy of the Court's decision (reg 44(2))` IF
+    elem `reg 38: the appellant` (`reg 44(2): the persons to whom the Registrar of the Court must forward a certified copy of the decision` `the judge has advised the Registrar of the decision` FALSE)
+
+-- 45: no costs are awarded and no fees are charged to the appellant on a reference.
+@export Am I free of costs and fees on a reference to the Tax Court (reg 45)?
+GIVEN `my matter is the disposition of a reference` IS A BOOLEAN @desc Is the matter the disposition of a reference to the Tax Court?
+GIVETH A BOOLEAN
+DECIDE `Am I free of costs and fees on a reference to the Tax Court (reg 45)` IF
+    `reg 45: no costs may be awarded and no fees may be charged to the appellant by the Court` `my matter is the disposition of a reference`
+
+-- 47: a notice, request or other document is addressed to the person's last known address.
+@export To what address must a notice to me be sent (reg 47)?
+GIVEN `my last known address` IS A STRING @desc What is your last known address?
+GIVETH A STRING
+DECIDE `To what address must a notice to me be sent (reg 47)` IS
+    `reg 47: the address to which the notice, request or other document must be addressed` `my last known address`
+
+-- 48(2) to (6): the interest of a month on the debt at the average bank rate plus three per cent a year. The average the person gives is carried as the one bank rate of the month before; the mean of one rate is that rate.
+@export How much interest accrues on my debt in a month (reg 48(4))?
+GIVEN `the amount of the debt at the start of the month` IS A NUMBER @desc What is the debt at the start of the month, in dollars (with interest of earlier months already added)?
+      `the average bank rate for the month before` IS A NUMBER @desc What is the average of the bank rates established during the month before, in per cent a year?
+      `interest is payable on the debt` IS A BOOLEAN @desc Is interest payable on the debt (it is a debt under section 37(2) with a penalty, or under 37(2.02), recoverable on or after the day section 48 came into force)?
+      `the due date` IS A DATE @desc What is the due date of the debt or of the scheduled payment?
+      `a reconsideration, appeal or judicial review is pending` IS A BOOLEAN @desc Is a reconsideration, an appeal or a judicial review pending in respect of the debt?
+      `the first day it was pending` IS A DATE @desc On what day did it become pending? (any date if none is)
+      `the last day it was pending` IS A DATE @desc On what day did it stop being pending, or the last day of the month if it still is? (any date if none is)
+      `interest has stopped accruing` IS A BOOLEAN @desc Has interest stopped accruing on the debt (a payment received, the debt remitted, the penalty reduced, or you died)?
+      `the last day interest accrued` IS A DATE @desc What was the last day on which interest accrued? (any date if it has not stopped)
+      `a day in the month` IS A DATE @desc Which month is it for? (any day in it)
+GIVETH A MAYBE NUMBER
+DECIDE `How much interest accrues on my debt in a month (reg 48(4))` IS
+    CONSIDER `reg 48(4): the rate of interest for the month, in per cent a year` (LIST `the average bank rate for the month before`)
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST rate THEN JUST (`reg 48(4): the interest accrued on the debt in the month` `the amount of the debt at the start of the month` rate `my debt` `a day in the month`)
+    WHERE
+        `my debt` MEANS `reg 48: Facts about the accrual of interest on a debt` WITH
+            `interest is payable on the debt` IS `interest is payable on the debt`
+            `the due date of the debt or portion of the debt` IS `the due date`
+            `the periods during which a proceeding is pending in respect of the debt` IS IF `a reconsideration, appeal or judicial review is pending` THEN LIST (`Calendar span` WITH `first day` IS `the first day it was pending`, `last day` IS `the last day it was pending`) ELSE EMPTY
+            `the day on which the accrual of interest ceases` IS IF `interest has stopped accruing` THEN JUST `the last day interest accrued` ELSE NOTHING
+
+-- 48(7): all four conditions.
+@export May the Minister remit the interest I owe (reg 48(7))?
+GIVEN `the interest has stopped accruing because the penalty was reduced or rescinded` IS A BOOLEAN @desc Has interest ceased to accrue because the penalty was reduced or the decision imposing it rescinded?
+      `the interest cannot be collected in the foreseeable future` IS A BOOLEAN @desc Can the interest not be collected within the reasonably foreseeable future?
+      `the cost of collecting it would exceed it` IS A BOOLEAN @desc Would the administrative costs of collecting the interest exceed the interest?
+      `paying it would cause me undue hardship` IS A BOOLEAN @desc Would paying the interest cause you undue hardship?
+GIVETH A BOOLEAN
+DECIDE `May the Minister remit the interest I owe (reg 48(7))` IF
+    `reg 48(7): the Minister may remit the interest payable under this section in whole or in part` `the interest has stopped accruing because the penalty was reduced or rescinded` `the interest cannot be collected in the foreseeable future` `the cost of collecting it would exceed it` `paying it would cause me undue hardship`
+

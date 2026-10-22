@@ -1,0 +1,208 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `oas-core`
+IMPORT `oas-core-measures`
+
+-- Old Age Security Act, section 2: "income of a person for a calendar year".
+--
+-- The Act starts from the person's income "computed in accordance with the Income Tax Act" and then
+-- deducts and adds what paragraphs (a) to (e) say. The Income Tax Act is not part of this encoding, so the
+-- amounts that Act computes are facts the person states (the figures on their tax return): see
+-- `Income facts`. Everything the Act itself does with those amounts is a rule below, one rule per paragraph.
+--
+-- Which paragraphs apply depends on the MONTH for which the benefit is payable ("benefits payable in respect
+-- of any month before July 2008", "after June 2020", "after June 2022"). Every rule that depends on it is
+-- given a date in that month. A rule is called once for the applicant and once for the spouse or common-law
+-- partner, each with their own Income facts.
+--
+-- Amounts are dollars (NUMBER). The result is not rounded and not limited to zero: the definition says
+-- neither.
+
+DECLARE `Income facts` HAS
+    -- the starting point: "the person's income for the year, computed in accordance with the Income Tax Act"
+    `income computed in accordance with the Income Tax Act` IS A NUMBER
+    -- paragraph (a): employment
+    `income from office or employment` IS A NUMBER
+    `employee's premiums paid under the Employment Insurance Act` IS A NUMBER
+    `employee's contributions made under the Canada Pension Plan or a provincial pension plan` IS A NUMBER
+    -- paragraph (b): self-employment
+    `self-employment earnings` IS A NUMBER
+    `contributions made in respect of self-employed earnings under the Canada Pension Plan or a provincial pension plan` IS A NUMBER
+    `premium paid under Part VII.1 of the Employment Insurance Act` IS A NUMBER
+    -- paragraph (c): amounts that "have been included in computing that income".
+    -- (c)(iii) is a social assistance payment made on the basis of a means, a needs or an income test by a registered
+    -- charity, or under a program of an Act of Parliament or of a provincial legislature that is neither a program
+    -- prescribed under the Income Tax Act nor one under which the benefits of (c)(i) are paid.
+    `benefits under this Act and similar payments under a law of a provincial legislature, included in the income` IS A NUMBER
+    `payment under the program referred to in section 275 of the Budget Implementation Act, 2021, No. 1, included in the income` IS A NUMBER
+    `death benefits under the Canada Pension Plan or a provincial pension plan, included in the income` IS A NUMBER
+    `social assistance payments described in subparagraph (c)(iii) of the definition, included in the income` IS A NUMBER
+    -- paragraph (c.1)
+    `payments under the Canada Emergency Response Benefit Act, Part VIII.4 of the Employment Insurance Act, the Canada Recovery Benefits Act and the Canada Worker Lockdown Benefit Act` IS A NUMBER
+    -- paragraph (d)
+    `total of the amounts that may be deducted under section 121 of the Income Tax Act in computing the tax payable for the year` IS A NUMBER
+    `tax for the year otherwise payable under this Part (Income Tax Act, subsection 126(7))` IS A NUMBER
+    -- paragraph (e)
+    `amounts included under paragraph 56(1)(q.1) or subsection 56(6) of the Income Tax Act` IS A NUMBER
+    `amounts that may be deducted under paragraph 60(y) or (z) of the Income Tax Act` IS A NUMBER
+
+-- ---------------------------------------------------------------------------------------------
+-- (a) deducted from the person's income from office or employment
+-- Subparagraph (i) gives a single amount for a month before July 2020 and nothing for a later month (fork F3 in
+-- NOTES.md): paragraph (b.1) takes over from there. "No amount given" is NOTHING here and not zero, and the rule
+-- for paragraph (a) as a whole says in terms what it does with it.
+-- src:30 | (a) there shall be deducted from the person’s income from office or employment for the year
+-- src:31 | (i) a single amount in respect of all offices and employments of that person equal to
+-- src:32 | (A) for the purpose of determining benefits payable in respect of any month before July 2008, the lesser of $500 and one fifth of the person’s income from office or employment for the year, or
+-- src:33 | (B) for the purpose of determining benefits payable in respect of any month after June 2008 but before July 2020, the lesser of $3,500 and the person’s income from office or employment for the year,
+-- src:34 | (ii) the amount of employee’s premiums paid by the person during the year under the Employment Insurance Act, and
+-- src:35 | (iii) the amount of employee’s contributions made by the person during the year under the Canada Pension Plan or a provincial pension plan as defined in section 3 of that Act,
+@ref R.S.C., 1985, c. O-9, s 2 "income", paragraph (a)(i) (src:31-33)
+GIVEN month IS A DATE
+      facts IS A `Income facts`
+GIVETH A MAYBE NUMBER
+`the single amount deducted under subparagraph (a)(i) of the definition of income` month facts MEANS
+    BRANCH
+        -- (A) a month before July 2008: the lesser of $500 and one fifth of the income from office or employment
+        IF `the first day of the month containing` month LESS THAN (YMD 2008 7 1)
+        THEN JUST (min 500 ((facts's `income from office or employment`) DIVIDED BY 5))
+        -- (B) a month after June 2008 but before July 2020: the lesser of $3,500 and the income from office or employment
+        IF `the first day of the month containing` month LESS THAN (YMD 2020 7 1)
+        THEN JUST (min 3500 (facts's `income from office or employment`))
+        -- a month after June 2020: the subparagraph gives no amount
+        OTHERWISE NOTHING
+
+@ref R.S.C., 1985, c. O-9, s 2 "income", paragraph (a) (src:30-35)
+GIVEN month IS A DATE
+      facts IS A `Income facts`
+GIVETH A NUMBER
+`the deduction from income from office or employment under paragraph (a) of the definition of income` month facts MEANS
+        singleAmount
+    PLUS facts's `employee's premiums paid under the Employment Insurance Act`
+    PLUS facts's `employee's contributions made under the Canada Pension Plan or a provincial pension plan`
+    WHERE
+        -- where (i) gives no amount, nothing is deducted under it; (ii) and (iii) are deducted all the same
+        singleAmount MEANS
+            CONSIDER `the single amount deducted under subparagraph (a)(i) of the definition of income` month facts
+            WHEN JUST amount THEN amount
+            WHEN NOTHING THEN 0
+
+-- (b) deducted from the person's self-employment earnings
+-- src:36 | (b) there shall be deducted from the person’s self-employment earnings for the year
+-- src:37 | (i) the amount of contributions made in respect of those self-employed earnings by the person during the year under the Canada Pension Plan or a provincial pension plan as defined in section 3 of that Act, and
+-- src:38 | (ii) the amount of premium paid by the person during the year under Part VII.1 of the Employment Insurance Act,
+@ref R.S.C., 1985, c. O-9, s 2 "income", paragraph (b) (src:36-38)
+GIVEN facts IS A `Income facts`
+GIVETH A NUMBER
+`the deduction from self-employment earnings under paragraph (b) of the definition of income` facts MEANS
+        facts's `contributions made in respect of self-employed earnings under the Canada Pension Plan or a provincial pension plan`
+    PLUS facts's `premium paid under Part VII.1 of the Employment Insurance Act`
+
+-- (b.1) for a month after June 2020: a deduction from the "combined amount", which is the income from office or
+-- employment as reduced under (a) plus the self-employment earnings as reduced under (b) "if those reduced
+-- self-employment earnings are greater than zero".
+-- FORK F1 (NOTES.md): the condition is read as applying to the self-employment component, which is left out of the
+-- combined amount unless it is greater than zero. The other reading (no combined amount at all unless the reduced
+-- self-employment earnings are greater than zero) would give a person with employment income only no deduction.
+-- src:39 | (b.1) for the purpose of determining benefits payable in respect of any month after June 2020, there shall be deducted from a person’s combined amount — which is equal to the aggregate of the person’s income from office or employment for the year, as reduced in accordance with paragraph (a), and the person’s self-employment earnings for the year, as reduced in accordance with paragraph (b), if those reduced self-employment earnings are greater than zero — an amount that is equal to the aggregate of
+-- src:40 | (i) the lesser of $5,000 and the combined amount, and
+-- src:41 | (ii) if the combined amount is greater than $5,000, the lesser of $5,000 and half of the amount by which the combined amount exceeds $5,000,
+@ref R.S.C., 1985, c. O-9, s 2 "income", paragraph (b.1) (src:39-41)
+GIVEN month IS A DATE
+      facts IS A `Income facts`
+GIVETH A NUMBER
+`the combined amount under paragraph (b.1) of the definition of income` month facts MEANS
+    employment PLUS (IF selfEmployment GREATER THAN 0 THEN selfEmployment ELSE 0)
+    WHERE
+        employment MEANS
+                facts's `income from office or employment`
+            MINUS `the deduction from income from office or employment under paragraph (a) of the definition of income` month facts
+        selfEmployment MEANS
+                facts's `self-employment earnings`
+            MINUS `the deduction from self-employment earnings under paragraph (b) of the definition of income` facts
+
+@ref R.S.C., 1985, c. O-9, s 2 "income", paragraph (b.1) (src:39-41)
+GIVEN month IS A DATE
+      facts IS A `Income facts`
+GIVETH A NUMBER
+`the deduction under paragraph (b.1) of the definition of income` month facts MEANS
+    IF `the first day of the month containing` month LESS THAN (YMD 2020 7 1)
+    THEN 0
+    ELSE
+        -- (i) the lesser of $5,000 and the combined amount
+            min 5000 combined
+        -- (ii) if the combined amount is greater than $5,000, the lesser of $5,000 and half of the amount by which it exceeds $5,000
+        PLUS (IF combined GREATER THAN 5000 THEN min 5000 ((combined MINUS 5000) DIVIDED BY 2) ELSE 0)
+    WHERE
+        combined MEANS `the combined amount under paragraph (b.1) of the definition of income` month facts
+
+-- (c) deducted from the person's income, to the extent those amounts have been included in computing it
+-- src:42 | (c) there shall be deducted from the person’s income for the year, to the extent that those amounts have been included in computing that income,
+-- src:43 | (i) the amount of any benefit under this Act and any similar payment under a law of a provincial legislature,
+-- src:44 | (i.1) the amount of the payment under the program referred to in section 275 of the Budget Implementation Act, 2021, No. 1,
+-- src:45 | (ii) the amount of any death benefit under the Canada Pension Plan or a provincial pension plan as defined in section 3 of that Act, and
+-- src:46 | (iii) the amount of any social assistance payment made on the basis of a means, a needs or an income test by a registered charity as defined in subsection 248(1) of the Income Tax Act or under a program provided for by an Act of Parliament or a provincial legislature that is neither a program prescribed under the Income Tax Act nor a program under which the amounts referred to in subparagraph (i) are paid,
+@ref R.S.C., 1985, c. O-9, s 2 "income", paragraph (c) (src:42-46)
+GIVEN facts IS A `Income facts`
+GIVETH A NUMBER
+`the deduction under paragraph (c) of the definition of income` facts MEANS
+        facts's `benefits under this Act and similar payments under a law of a provincial legislature, included in the income`
+    PLUS facts's `payment under the program referred to in section 275 of the Budget Implementation Act, 2021, No. 1, included in the income`
+    PLUS facts's `death benefits under the Canada Pension Plan or a provincial pension plan, included in the income`
+    PLUS facts's `social assistance payments described in subparagraph (c)(iii) of the definition, included in the income`
+
+-- (c.1) for a month after June 2022: the amount of any payment under the four named Acts
+-- src:47 | (c.1) for the purpose of determining benefits payable in respect of any month after June 2022, there shall be deducted from the person’s income for the year the amount of any payment under
+-- src:48 | (i) the Canada Emergency Response Benefit Act,
+-- src:49 | (ii) Part VIII.4 of the Employment Insurance Act,
+-- src:50 | (iii) the Canada Recovery Benefits Act, and
+-- src:51 | (iv) the Canada Worker Lockdown Benefit Act,
+@ref R.S.C., 1985, c. O-9, s 2 "income", paragraph (c.1) (src:47-51)
+GIVEN month IS A DATE
+      facts IS A `Income facts`
+GIVETH A NUMBER
+`the deduction under paragraph (c.1) of the definition of income` month facts MEANS
+    IF `the first day of the month containing` month LESS THAN (YMD 2022 7 1)
+    THEN 0
+    ELSE facts's `payments under the Canada Emergency Response Benefit Act, Part VIII.4 of the Employment Insurance Act, the Canada Recovery Benefits Act and the Canada Worker Lockdown Benefit Act`
+
+-- (d) three times the amount, if any, by which the total of the section 121 amounts exceeds the tax otherwise payable
+-- src:52 | (d) there shall be deducted from the person’s income for the year three times the amount, if any, by which
+-- src:53 | (i) the total of any amounts that may be deducted under section 121 of the Income Tax Act in computing the person’s tax payable for the year
+-- src:54 | exceeds
+-- src:55 | (ii) the person’s “tax for the year otherwise payable under this Part” (within the meaning assigned by subsection 126(7) of the Income Tax Act for the purposes of paragraph 126(1)(b) of that Act) for the year, and
+@ref R.S.C., 1985, c. O-9, s 2 "income", paragraph (d) (src:52-55)
+GIVEN facts IS A `Income facts`
+GIVETH A NUMBER
+`the deduction under paragraph (d) of the definition of income` facts MEANS
+    3 TIMES (max 0 (  facts's `total of the amounts that may be deducted under section 121 of the Income Tax Act in computing the tax payable for the year`
+                    MINUS facts's `tax for the year otherwise payable under this Part (Income Tax Act, subsection 126(7))`))
+
+-- (e) deducted: any amount included under paragraph 56(1)(q.1) or subsection 56(6); included (added): any amount
+-- that may be deducted under paragraph 60(y) or (z). The answer is the net deduction, which is negative when the
+-- amounts added are the larger.
+-- src:56 | (e) there shall be deducted from the person’s income for the year any amount included under paragraph 56(1)(q.1) or subsection 56(6) of the Income Tax Act and there shall be included in the person’s income for the year any amount that may be deducted under paragraph 60(y) or (z) of that Act; (revenu)
+@ref R.S.C., 1985, c. O-9, s 2 "income", paragraph (e) (src:56)
+GIVEN facts IS A `Income facts`
+GIVETH A NUMBER
+`the net deduction under paragraph (e) of the definition of income` facts MEANS
+        facts's `amounts included under paragraph 56(1)(q.1) or subsection 56(6) of the Income Tax Act`
+    MINUS facts's `amounts that may be deducted under paragraph 60(y) or (z) of the Income Tax Act`
+
+-- ---------------------------------------------------------------------------------------------
+-- "income of a person for a calendar year means the person's income for the year, computed in accordance with
+-- the Income Tax Act, except that" the deductions and additions of paragraphs (a) to (e) are made.
+-- src:29 | income of a person for a calendar year means the person’s income for the year, computed in accordance with the Income Tax Act, except that
+@ref R.S.C., 1985, c. O-9, s 2 "income" (src:29)
+GIVEN month IS A DATE
+      facts IS A `Income facts`
+GIVETH A NUMBER
+`the income of a person for a calendar year` month facts MEANS
+        facts's `income computed in accordance with the Income Tax Act`
+    MINUS `the deduction from income from office or employment under paragraph (a) of the definition of income` month facts
+    MINUS `the deduction from self-employment earnings under paragraph (b) of the definition of income` facts
+    MINUS `the deduction under paragraph (b.1) of the definition of income` month facts
+    MINUS `the deduction under paragraph (c) of the definition of income` facts
+    MINUS `the deduction under paragraph (c.1) of the definition of income` month facts
+    MINUS `the deduction under paragraph (d) of the definition of income` facts
+    MINUS `the net deduction under paragraph (e) of the definition of income` facts

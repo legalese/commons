@@ -1,0 +1,86 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `oas-core`
+IMPORT `oas-core-measures`
+
+-- Old Age Security Act, Parts II and III. SHARED HELPER (piece oa2): one quarterly indexation step.
+--
+-- Four places in the Act index an amount from quarter to quarter in the same way:
+-- ss 12(2)-(4) (the maximum supplement), 12.1(3)-(5) (the additional amounts), 22(4.2)-(4.4) (the supplement
+-- equivalent for the survivor) and 22.1(4)-(6) (the additional amounts under Part III). Each states the same three
+-- things: the new amount is the amount for the previous quarter multiplied by the ratio of the Consumer Price Index
+-- for the first adjustment quarter to that for the second; it is never less than the previous amount; and after a
+-- quarter in which the first index is lower than the second there is no adjustment until a later quarter's first
+-- index is higher than that earlier quarter's second index, which then is "deemed to be" the second index of the
+-- later quarter.
+--
+-- This module is that arithmetic and nothing else. It is not a provision of the Act, so it carries no @ref (like
+-- the rounding helpers of the keel), and the four sections each wrap it in a rule of their own that cites them.
+-- The amounts are NOT rounded here: the rounding of an indexed amount to the cent and of the ratio to three
+-- decimals is in Regulations s 8, which is piece oa3's.
+--
+-- The previous amount and the two index figures are inputs: the Consumer Price Index series is published data
+-- and is not in the text, so the encoding takes one step at a time (NOTES.md, fork F-INDEX-1).
+
+-- The result of one quarter: the amount, and the index that is still "deemed to be the second adjustment quarter"
+-- if an earlier fall in the index has not yet been made up (NOTHING if none).
+DECLARE `oa2 indexation: Outcome of a payment quarter` HAS
+    `the amount for the payment quarter` IS A NUMBER
+    `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS A MAYBE NUMBER
+
+-- One step.
+--   previous    the amount for any month in the three-month period immediately before the payment quarter
+--   first       the Consumer Price Index for the first adjustment quarter that relates to the payment quarter
+--   second      the Consumer Price Index for the second adjustment quarter that relates to the payment quarter
+--   carried     JUST the second-quarter index that an earlier unmatched fall left deemed to apply, or NOTHING
+-- With nothing carried: a fall (first lower than second) means no adjustment and carries the second index
+-- forward; otherwise the amount is multiplied by first / second and is never less than the previous amount.
+-- With an index carried: no adjustment until first is HIGHER than the carried index, and then the amount is
+-- multiplied by first / carried (the carried index being deemed to be the second index) and the carry ends.
+-- A later fall while an earlier one is still unmatched leaves the earlier index in force (fork F-INDEX-2).
+GIVEN previous IS A NUMBER
+      first IS A NUMBER
+      second IS A NUMBER
+      carried IS A MAYBE NUMBER
+GIVETH A `oa2 indexation: Outcome of a payment quarter`
+`oa2 indexation: the outcome for a payment quarter` previous first second carried MEANS
+    CONSIDER carried
+    WHEN JUST base THEN
+        IF first GREATER THAN base
+        THEN `oa2 indexation: Outcome of a payment quarter` WITH
+                 `the amount for the payment quarter` IS max previous (previous TIMES (first DIVIDED BY base))
+                 `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS NOTHING
+        ELSE `oa2 indexation: Outcome of a payment quarter` WITH
+                 `the amount for the payment quarter` IS previous
+                 `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS JUST base
+    WHEN NOTHING THEN
+        IF first LESS THAN second
+        THEN `oa2 indexation: Outcome of a payment quarter` WITH
+                 `the amount for the payment quarter` IS previous
+                 `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS JUST second
+        ELSE `oa2 indexation: Outcome of a payment quarter` WITH
+                 `the amount for the payment quarter` IS max previous (previous TIMES (first DIVIDED BY second))
+                 `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS NOTHING
+
+-- Quarter after quarter: the outcome after a run of quarters, each given as its two index figures, oldest first.
+-- This is the same step applied again and again with the carry passed along, so that the "deemed to be the second
+-- adjustment quarter" paragraphs can be tested over several quarters.
+DECLARE `oa2 indexation: Index figures of one payment quarter` HAS
+    `the Consumer Price Index for the first adjustment quarter` IS A NUMBER
+    `the Consumer Price Index for the second adjustment quarter` IS A NUMBER
+
+GIVEN previous IS A `oa2 indexation: Outcome of a payment quarter`
+      quarter IS A `oa2 indexation: Index figures of one payment quarter`
+GIVETH A `oa2 indexation: Outcome of a payment quarter`
+`oa2 indexation: the outcome after one more quarter` previous quarter MEANS
+    `oa2 indexation: the outcome for a payment quarter`
+        (previous's `the amount for the payment quarter`)
+        (quarter's `the Consumer Price Index for the first adjustment quarter`)
+        (quarter's `the Consumer Price Index for the second adjustment quarter`)
+        (previous's `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`)
+
+GIVEN start IS A `oa2 indexation: Outcome of a payment quarter`
+      quarters IS A LIST OF `oa2 indexation: Index figures of one payment quarter`
+GIVETH A `oa2 indexation: Outcome of a payment quarter`
+`oa2 indexation: the outcome after the quarters` start quarters MEANS
+    foldl `oa2 indexation: the outcome after one more quarter` start quarters
