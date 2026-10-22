@@ -32,18 +32,22 @@ Not for public use as advice.
   `../../../public-trustee-regulations-1942/registers/source-bundle/mrdoc_7511.txt`
   (retrieved 20 October 2026). Used: reg 10A ($1 500 for s 45(2)) and Forms 3, 3A, 3B
   and 4 (the s 14 election and its revocation).
-- **Not deposited, so inputs:**
-  - the s 14 prescribed amount. By s 14(6) it is the amount prescribed for Trustee
-    Companies Act 1987 s 10, set by regulations under that Act;
-  - the Public Trustee's scale of fees, which s 38A requires to be published in the
-    Gazette.
+- **The Trustee Companies Regulations 1988:** version 01-b0-06, in force from
+  5 January 2013, deposited at
+  `../../../trustee-companies-regulations-1988/registers/source-bundle/mrdoc_24509.txt`
+  (legislation.wa.gov.au law_s4830, retrieved 21 October 2026). Used: reg 4, "For the
+  purposes of section 10 of the Act the amount prescribed is $50 000", which s 14(6)
+  makes the s 14 prescribed amount. Added 21 October 2026; until then the amount was an
+  input.
+- **Not deposited, so an input:** the Public Trustee's scale of fees, which s 38A
+  requires to be published in the Gazette.
 
 ## Checks
 
 With the stable l4 from VS Code extension 1.6.98:
 
-- `l4 run pta-cases-small-estates.l4`: 44 assertions written, 44 satisfied, 0 errors,
-  0 warnings.
+- `l4 run pta-cases-small-estates.l4`: 48 assertions written, 48 satisfied, 0 errors,
+  0 warnings (44 before the Trustee Companies Regulations were deposited).
 - `l4 run pta-small-estates.l4`: 0 errors, 0 warnings.
 
 `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read.
@@ -65,8 +69,8 @@ The 2026-10-18 defaults:
 
 - **The Act alone, with the instruments that set its numbers.** Followed. The Public
   Trustee Regulations 1942 are used for reg 10A. They do not set the s 14 amount (see
-  finding 2), and the instrument that does is not deposited, so it is an input. The
-  fee scale is an input too.
+  finding 2); the Trustee Companies Regulations 1988 do, in reg 4, and are used for
+  it. The fee scale is not deposited and is an input.
 - **The actors the text names.** Followed: the Public Trustee, the Court, the executor,
   "the person first entitled to the administration", the persons entitled to obtain
   administration, a creditor, the next of kin, a parent or carer of an infant, and a
@@ -102,10 +106,11 @@ The 2026-10-18 defaults:
     - with Ruby's authority: s 12;
     - after 3 months with no application: s 10(1)(c);
     - if Ruby lived overseas: s 10(1)(ab).
-  - `May the Public Trustee administer without a grant` (s 14):
-    - yes with Ruby's authority, if the prescribed amount is at least $638,000;
-    - no if it is a dollar less;
-    - no without a ground to apply, however high the amount;
+  - `May the Public Trustee administer without a grant` (s 14, reg 4):
+    - no: the $638,000 estate is over $50 000, even with Ruby's authority or after
+      3 months;
+    - for the $38,000 alone: yes with Ruby's authority, or after 3 months with no
+      application; no a fortnight on without her authority;
     - no once Ruby has taken out letters of administration.
   - `May the Court grant administration to me instead`: yes for Ruby in WA.
   - Ruby would be a client (s 2) if the Public Trustee administered the estate.
@@ -148,10 +153,10 @@ Out:
    amount means the amount prescribed for the purposes of section 10 of the Trustee
    Companies Act 1987". The Public Trustee Regulations 1942 prescribe only one amount.
    That is reg 10A, $1 500, and it is for s 45(2), the advertising of unclaimed money.
-   The s 14 figure sits in regulations under the Trustee Companies Act, which are not
-   deposited. Whether Jake's estate is small enough therefore cannot be answered from
-   the deposit. With the apartment the estate is $638,000 on the encoder's figure; the
-   cash alone is $38,000. Asserted at the boundary.
+   The s 14 figure sits in the Trustee Companies Regulations 1988 (not "1987", the
+   Act's year), reg 4: $50 000. So Jake's estate, $638,000 with the apartment on the
+   encoder's figure, cannot be taken over by election; the cash alone, $38,000, could
+   be. Exactly $50 000 is within ("does not ... exceed"); $50 001 is not. Asserted.
 3. **The election needs a ground to apply.** s 14(1) is available only "in all cases
    where he is entitled to apply for an order to administer". With Ruby in WA, willing
    and not consenting, the Public Trustee has no ground during the first 3 months.
@@ -191,11 +196,17 @@ Out:
 9. **Unclaimed money goes to the State after 6 years** with no knowledge of anyone
    entitled (s 45(1)). If it is $1 500 or more (reg 10A) it must first be advertised
    twice, 14 days apart, in a Perth newspaper (s 45(2)). Asserted.
+10. **The $50 000 has not moved since 1988.** Reg 4 carries no amendment note, and the
+    compilation table lists no amendment touching it, so the amount has stood since
+    the Regulations commenced on 1 September 1988. s 14(6) takes the amount "for the
+    relevant time", so an election in 2079 (k098) uses whatever reg 4 then says; the
+    encoding uses the deposited $50 000. Asserted for the deposited figure.
 
 ## What would need doing before this is worth anything
 
-- Deposit the Trustee Companies Regulations and read the s 10 amount in force. Then
-  answer k098 outright rather than at the boundary.
+- Re-check reg 4 of the Trustee Companies Regulations 1988 when the deposit is
+  refreshed: the $50 000 is a constant here, and replacing the input with it changed
+  the inputs of the two s 14 questions (a breaking change for any deployment).
 - Deposit the Public Trustee's current gazetted scale of fees and encode it as a
   table.
 - Settle the s 12 "any person or the majority" reading against case law or practice.
