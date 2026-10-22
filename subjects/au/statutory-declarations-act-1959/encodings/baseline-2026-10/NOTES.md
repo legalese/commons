@@ -17,13 +17,18 @@ Every decision is exported for Legalese Cloud with `@export`, and each input has
   `../../registers/source-bundle/C1959A00052.txt` (retrieved 2026-10-13). This is
   the text as rewritten by the Statutory Declarations Amendment Act 2023, which
   commenced on 1 January 2024 (Endnote 3).
-- **Statutory Declarations Regulations 2023:** **not deposited.** Everything they
-  settle is an input:
-  - who is a prescribed person (s 4);
-  - which digital service is an approved online platform (s 9A(2)) or an approved
-    identity service (s 9A(3));
-  - the identity-verification conditions (s 9A(1)(b)(ii));
-  - the platform information a digital declaration must carry (s 9A(1)(c)(ii)).
+- **Statutory Declarations Regulations 2023** (F2023L01753, made 7 December 2023, in
+  force from 1 January 2024): deposited 21 October 2026 at
+  `../../../statutory-declarations-regulations-2023/registers/source-bundle/F2023L01753.txt`.
+  The Register serves the instrument as made as its current text: it has not been
+  amended or compiled. Used:
+  - reg 6 and Schedule 1: who is a prescribed person (s 4);
+  - reg 7: the identity-verification condition, at least 2 government documents of
+    the listed kinds (s 9A(1)(b)(ii));
+  - reg 8: the five items of platform information (s 9A(1)(c)(ii));
+  - reg 9: myGov is the approved online platform (s 9A(2));
+  - reg 10: myGovID, "by whatever name called from time to time", is the approved
+    identity service (s 9A(3)).
 - **Approved forms (s 15):** not deposited. Whether a declaration is "in the approved
   form" is an input.
 - **Criminal Code Chapter 2** (applied by s 5A): not deposited. The fault element for
@@ -32,14 +37,15 @@ Every decision is exported for Legalese Cloud with `@export`, and each input has
 ## Checks
 
 - One module (`sda-declarations.l4`) and one case file (`sda-cases-declarations.l4`).
-- **45 assertions satisfied, 0 errors, 0 warnings**, with the stable `l4` from VS
-  Code extension 1.6.98.
+- **60 assertions written, 60 satisfied, 0 errors, 0 warnings** (45 before the
+  Regulations were deposited), with the stable `l4` from VS Code extension 1.6.98.
 - The case file is built by `gen_statutory-declarations-act-1959_baseline.py` in the
   session scratchpad. Every expected value was written by hand from the text.
 
 One fact the life does not state is an **assumption**, labelled in the case file:
-that a legal practitioner holding a practising certificate is a prescribed person
-under the Regulations. Daniel's clients are the encoder's illustrations.
+that Daniel, holding a practising certificate, is enrolled on the roll of the Supreme
+Court of Western Australia as a legal practitioner. From that, reg 6(a) makes him a
+prescribed person. Daniel's clients are the encoder's illustrations.
 
 ## Seat
 
@@ -63,8 +69,7 @@ offence in s 11. The decisions are phrased as these two people ask them:
 The 2026-10-18 defaults:
 
 - **The Act alone, with the instruments that set its numbers:** followed. The
-  instrument that matters, the Regulations, is not deposited, so what it settles is
-  an input.
+  Regulations are deposited and used for who may witness and for the digital route.
 - **The actors the text names:** the declarant, the prescribed person, the provider
   of an approved online platform. Courts (s 12) and the Minister (ss 14-16) are
   machinery and are left out.
@@ -74,7 +79,11 @@ The 2026-10-18 defaults:
   (s 7A(2)(b)).
 - **The Act's own definitions worked out, borrowed terms asked:** "declarant",
   "video link" and the two approved services follow s 4 and s 9A. "Prescribed
-  person" is defined by reference to the Regulations, so it is asked.
+  person" is worked out from reg 6 and Schedule 1. Each Schedule 1 Part 2 item is
+  offered with its own condition (5 years' service, a membership, a registration),
+  and the witness says which fits: those conditions are borrowed facts. In the record
+  a declarant states about a finished declaration, whether its witness was prescribed
+  is still asked.
 - **One case:** one declaration.
 - **The Act's own terms, each with a plain gloss:** followed.
 - **Operative sections in, machinery out:** followed.
@@ -87,8 +96,8 @@ The 2026-10-18 defaults:
   prescribed person who watches the declarant sign, in person or by video link, and
   then signs. The encoding answers `May I witness this declaration` and `What must I
   sign as the witness`. It also checks that declarations Daniel witnesses in person
-  and by video link are made under s 9. Whether a lawyer is a prescribed person is in
-  the Regulations, which are not deposited, so the encoding takes it as an input. The
+  and by video link are made under s 9. `Why am I a prescribed person` answers reg 6(a)
+  for him, as an enrolled legal practitioner. The
   WA side of d034 belongs to the WA Oaths, Affidavits and Statutory Declarations Act
   2005 encoding.
 
@@ -101,9 +110,13 @@ saving (s 3), the platform's annual report (s 9B(2)-(5)), the courts' jurisdicti
 
 ## What the Act turns out to say
 
-1. **The Act names no witness.** Who may witness is wholly a matter for the
-   Regulations ("prescribed person", s 4), which are not deposited. The Act alone
-   cannot answer d034. Asserted (as an input).
+1. **The Act names no witness; the Regulations do.** Who may witness is wholly a
+   matter for the Regulations ("prescribed person", s 4). Reg 6 prescribes (a) anyone
+   enrolled on a Supreme Court or High Court roll as a legal practitioner, (b) anyone
+   currently licensed or registered in one of 17 occupations in Schedule 1 Part 1, and
+   (c) the 40 kinds of person in Part 2. Daniel is prescribed under (a); a lawyer is
+   also listed in Part 1, but only while licensed or registered, whereas (a) needs only
+   enrolment. A nurse whose registration has lapsed is not prescribed. Asserted.
 2. **There are exactly two ways to make a declaration (s 8).** One is observation by
    a prescribed person (s 9). The other is digital verification on an approved
    online platform (s 9A). A declaration signed with no-one watching and no platform
@@ -112,7 +125,7 @@ saving (s 3), the platform's annual report (s 9B(2)-(5)), the courts' jurisdicti
    either the declaration itself or a copy they are satisfied is a true copy,
    "whether or not the copy includes the declarant's signature" (s 9(c)(ii)). A
    witness who watched in person must sign the declaration itself. Asserted.
-4. **The Act does not name myGov.** A digital declaration needs four things (s 9A):
+4. **The Act does not name myGov; reg 9 does.** A digital declaration needs four things (s 9A):
    - a platform prescribed by the Regulations;
    - identity verification by a prescribed identity service;
    - verification under prescribed conditions;
@@ -146,14 +159,29 @@ saving (s 3), the platform's annual report (s 9B(2)-(5)), the courts' jurisdicti
    not in an external Territory unless s 13 extends it there. It extends to Norfolk
    Island, and Endnote 5 records Proclamations for six other external Territories.
    Asserted.
+10. **The digital route in the Regulations.** Reg 9 prescribes myGov and nothing else;
+    reg 10 the identity service once called myGovID, "by whatever name called from
+    time to time". Reg 7 requires identity verified with at least 2 documents issued by
+    an Australian government (driver's licence, current passport, birth certificate,
+    Medicare card, citizenship certificate, visa, convention travel document, evidence
+    of immigration status). Reg 8 requires five items of platform information,
+    including a means (such as a QR code) of checking the declaration has not been
+    changed. Asserted.
+11. **Schedule 1 Part 2 item 32 reaches into State law.** Anyone before whom a
+    statutory declaration may be made under the law of the State or Territory where
+    it is made is also prescribed. For WA that is the Oaths, Affidavits and Statutory
+    Declarations Act 2005 (its own baseline); here it is asked as a fact. Asserted.
 
 ## What would need doing before this is worth anything
 
-- Deposit the Statutory Declarations Regulations 2023. Encode Schedule 1, the
-  prescribed persons, as a table, so that d034 is answered from the text rather than
-  from an assumed input. Encode the approved online platform and identity service
-  (whether myGov is prescribed), the verification conditions and the platform
-  information.
+- The Regulations are now encoded. `May I witness this declaration` and `What must I
+  sign as the witness` now take the witness's facts instead of a yes/no "prescribed
+  person" input (a breaking change for any deployment). The Declaration record's
+  booleans for the platform, the verification and the platform information are kept;
+  the new questions (`Is this an approved online platform`, `Did my verification meet
+  the prescribed condition`, `Does it carry the prescribed platform information`)
+  answer them, but are not yet wired into `Is my declaration made under the Act`.
+- Re-read the Regulations when they are amended (none yet).
 - Deposit the approved forms (s 15).
 - Deposit Criminal Code Chapter 2 and settle the fault element for the falsity in
   s 11. Deposit the Crimes Act 1914 rule that converts a prison term into a fine.
