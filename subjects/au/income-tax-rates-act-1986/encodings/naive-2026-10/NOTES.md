@@ -2,16 +2,19 @@
 
 **Method: naive.** Straight from the deposited text, written with the
 `writing-l4-rules` skill: a first pass that did not use the skill, conformed to it
-on 14 October 2026 (see the last section). No pipeline, no coverage table, no
-independent test pass, no human gate. Not for public use.
+on 14 October 2026, then brought into line with section 5 of
+`docs/ENCODING-GUIDE.md` (what the stable `l4` accepts) on 22 October 2026 (see the
+last two sections). No pipeline, no coverage table, no independent test pass, no
+human gate. Not for public use.
 
 **Edition:** Compilation No. 66, compilation date 1 July 2026, includes amendments
 up to Act No. 50, 2026 (register id C2026C00300), as deposited at
 `../../registers/source-bundle/C2004A03348.txt`.
 
-**Checks:** one case file (`itra-cases-rates.l4`), 66 assertions satisfied, 0 errors, 0 warnings,
-plus 9 refusals typed with `#CHECK` (the last section says why they are not yet
-`#ASSERT REFUSED`). Run with the `l4` bundled in the L4 VS Code extension 1.6.93.
+**Checks:** `l4 run` on both files with the stable `l4` (the one bundled in the L4
+VS Code extension 1.6.98), `JL4_LIBRARY_PATH` unset: 0 errors, 0 warnings on each.
+The case file (`itra-cases-rates.l4`) has 75 assertions written and 75 satisfied:
+the first pass's 66, and 9 that assert a `not covered` answer.
 
 ## Why this Act, and why scoped
 
@@ -55,8 +58,8 @@ Schedule 7 Part I has three tables:
 - "for the 2027-28 year of income or a later year of income".
 
 Nothing covers 2023-24 or earlier. So this compilation cannot answer Chloe's first
-return. The first pass returned `NOTHING` for it. The conformed encoding refuses, by
-name: "the deposited compilation has no Schedule 7 table for a year of income
+return. The first pass returned `NOTHING` for it. The encoding now answers
+`not covered`, with the reason "the deposited compilation has no Schedule 7 table for a year of income
 before 2024-25". The scenario's answer of nil tax
 also relies on the low income tax offset, which is outside this Act.
 
@@ -157,15 +160,14 @@ part-year residency period and keeps the full $18,200. Asserted.
 
 The first pass was written without the skill. This pass rewrote both `.l4` files to
 the skill's standard. It kept the scope (the same provisions), the quoted statutory
-text and every expected value. Both files are now written by a new generator,
-`gen_income-tax-rates-act-1986-conform.py` (scratchpad). The old generator, which
-wrote only the case file, is untouched.
+text and every expected value. (Both files were laid out by a generator in a
+scratchpad at the time. It is retired: the files are edited directly.)
 
 ### What changed
 
-- **Refusals instead of `NOTHING`.** There are seven named refusals. Each is a
-  definition whose name is its message, with an `@ref` above it, at any type
-  (`GIVEN a IS A TYPE`), and each is returned rather than stored:
+- **Named refusals instead of `NOTHING`.** There were seven, each a definition
+  whose name was its message. (Since 22 October 2026 they are the seven reasons of
+  `Why not covered`; see the last section.)
   - a year of income before 2024-25 (Schedule 7 has no table for it in this compilation);
   - a special income component (Schedule 7 clauses 2 and 3: the formula was not deposited);
   - a part-year residency period with no pro-rated threshold supplied (s 20(1));
@@ -179,7 +181,7 @@ wrote only the case file, is untouched.
 - **The Schedule 7 tables are data.** There is one row type, `Schedule 7 item`,
   with columns for the item, "exceeds", "does not exceed", the rate and the table.
   The three Part I tables are one twelve-row list; Part II and Part III are lists
-  of their own. The generator lays them all out with positional `OF`, a ruler
+  of their own. They are laid out with positional `OF`, a ruler
   comment, and ditto on the constructor, `OF`, `JUST` and the table name.
   - Item 1 of Part I keeps "the tax-free threshold" as a parameter, because s 20(1)
     replaces it.
@@ -243,34 +245,48 @@ wrote only the case file, is untouched.
     for; s 23(2) does not, and the compilation is the law as at 1 July 2026. The
     first pass answered 25% for a company in any year, including years when other
     rates applied. The conformed encoding answers from 2024-25, the first year this
-    compilation's own tables cover, and refuses before it. That boundary is the
+    compilation's own tables cover, and answers `not covered` before it. That boundary is the
     encoder's, not the Act's.
-13. **The tools on this machine are older than the skill.** Neither `l4` installed
-    on 14 October 2026 has `REFUSE`, `#ASSERT REFUSED` or `BECAUSE`. These landed
-    in l4-ide at 75e08b55e on 5 September 2026. The `l4` on `PATH` (April 2026)
-    lacks them, and so does the one in the VS Code extension 1.6.93 (13 October
-    2026). As a result:
-    - the deposited files carry each refusal's body as the prelude's `TBD`, which
-      is a refusal on a current `l4` and an assumed term here;
-    - each refusal is tested with `#CHECK`, which types the path without running it;
-    - `python gen_income-tax-rates-act-1986-conform.py --refuse` writes the skill's
-      form, `REFUSE "<name>"` and `#ASSERT REFUSED ... BECAUSE "<name>"`. On the
-      installed binary its only errors are the seven unknown `REFUSE`s and the
-      unparsed `BECAUSE`, so it has not been run.
-
-    The `l4` on `PATH` has two further defects:
-    - it rejects `_` digit separators, so none are used;
-    - given a bare file name, it silently fails to import the prelude. The first
-      pass passed only because it used no prelude names.
-
-    Every check here was run with the extension's binary. The `PATH` binary also
-    passes when it is given a path that includes a directory.
+13. **Superseded.** On 14 October 2026 neither `l4` installed here had `REFUSE`,
+    so the refusals were carried as the prelude's `TBD` and typed with `#CHECK`.
+    The stable `l4` still has no `REFUSE`, and the encoding guide rules it out; the
+    refusals are now `not covered` answers, asserted (last section). The `l4` on
+    `PATH` is older than the stable one, rejects `_` digit separators, and fails to
+    import the prelude when given a bare file name; it was not used.
 
 ### Still short of the skill
 
-- The refusals are not yet `REFUSE`, and are not yet asserted (finding 13).
-- There is no `@export` or `@desc`. On the installed binary `TBD` is an `ASSUME`,
-  which an export would publish as a parameter.
+- There is no `@export` or `@desc`, and no seat layer. The encoding is not yet a
+  seat encoding under CLAUDE.md's ruling of 2026-10-21.
 - Months of residency are not validated: a month of 13 is not rejected as invalid
   input. A person who ceased to be a resident and later commenced again in the same
   year has no constructor.
+
+## Brought into line with the stable `l4` (22 October 2026)
+
+Section 5 of `docs/ENCODING-GUIDE.md` rules out `REFUSE`, `#ASSERT REFUSED` and
+`BECAUSE`, and says a case outside the encoding returns an explicit "not covered"
+value that the case file asserts. This pass did that, and nothing else of
+substance.
+
+- **`Why not covered`** lists the seven reasons, each worded as the first pass's
+  named refusal. **`Answer`** is either `answered` with a value or `not covered`
+  with one of those reasons.
+- The rules that can reach a gap now give an `Answer`: the Part I, II and III table
+  for the year; the second and third resident personal tax rates; the tax-free
+  threshold that applies (s 20(1)); the clause 1(b) table tax; the tax under
+  Schedule 7; the resident tax convenience; the s 23(2) rate; and the company's tax
+  before offsets. The `TBD` stand-ins are gone.
+- The 9 `#CHECK` lines are now `#ASSERT`s that the answer EQUALS `not covered` with the reason:
+  - the Part I table for 2023-24, the resident tax for 2023-24 and Chloe's 2023-24
+    return (c045): no Schedule 7 table before 2024-25;
+  - the October arrival with no pro-rated threshold supplied: the s 20(1) formula;
+  - the resident with a special income component: clauses 2 and 3;
+  - a company's 2023-24 return: no company rate stated before 2024-25;
+  - the RSA provider: s 23(3) to (5) and s 23A;
+  - the company acting as trustee: s 23(1);
+  - the recognised medium credit union's tax: s 23(7).
+- **Expected values.** No amount, rate or table changed. 46 assertions on the
+  rules above changed in form only: the value v became `answered` v (a rate is
+  bracketed, as in `answered` (25%)).
+- Every `NOT` is parenthesised, in the rules and in the `#ASSERT NOT` lines.
