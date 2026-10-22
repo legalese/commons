@@ -1,14 +1,17 @@
 # Income Tax Rates Act 1986 — naive encoding
 
-**Method: naive.** Straight from the deposited text with the `writing-l4-rules`
-conventions and nothing else. No pipeline, no coverage table, no independent test
-pass, no human gate. Not for public use.
+**Method: naive.** Straight from the deposited text, written with the
+`writing-l4-rules` skill: a first pass that did not use the skill, conformed to it
+on 14 October 2026 (see the last section). No pipeline, no coverage table, no
+independent test pass, no human gate. Not for public use.
 
 **Edition:** Compilation No. 66, compilation date 1 July 2026, includes amendments
 up to Act No. 50, 2026 (register id C2026C00300), as deposited at
 `../../registers/source-bundle/C2004A03348.txt`.
 
-**Checks:** one case file (`itra-cases-rates.l4`), 54 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** one case file (`itra-cases-rates.l4`), 66 assertions satisfied, 0 errors, 0 warnings,
+plus 9 refusals typed with `#CHECK` (the last section says why they are not yet
+`#ASSERT REFUSED`). Run with the `l4` bundled in the L4 VS Code extension 1.6.93.
 
 ## Why this Act, and why scoped
 
@@ -52,7 +55,9 @@ Schedule 7 Part I has three tables:
 - "for the 2027-28 year of income or a later year of income".
 
 Nothing covers 2023-24 or earlier. So this compilation cannot answer Chloe's first
-return. The encoding returns `NOTHING` for it. The scenario's answer of nil tax
+return. The first pass returned `NOTHING` for it. The conformed encoding refuses, by
+name: "the deposited compilation has no Schedule 7 table for a year of income
+before 2024-25". The scenario's answer of nil tax
 also relies on the low income tax offset, which is outside this Act.
 
 For comparison only: the 2024-25 table would put tax on $27,500 at $1,488 before
@@ -147,3 +152,125 @@ part-year residency period and keeps the full $18,200. Asserted.
 - Encode s 23AB, so that base rate entity passive income is computed rather than taken as an input.
 - Rounding to whole dollars, and the interaction with offsets in the Income Tax
   Assessment Act 1997 s 4-10, are not modelled.
+
+## Conformed to the writing-l4-rules skill (14 October 2026)
+
+The first pass was written without the skill. This pass rewrote both `.l4` files to
+the skill's standard. It kept the scope (the same provisions), the quoted statutory
+text and every expected value. Both files are now written by a new generator,
+`gen_income-tax-rates-act-1986-conform.py` (scratchpad). The old generator, which
+wrote only the case file, is untouched.
+
+### What changed
+
+- **Refusals instead of `NOTHING`.** There are seven named refusals. Each is a
+  definition whose name is its message, with an `@ref` above it, at any type
+  (`GIVEN a IS A TYPE`), and each is returned rather than stored:
+  - a year of income before 2024-25 (Schedule 7 has no table for it in this compilation);
+  - a special income component (Schedule 7 clauses 2 and 3: the formula was not deposited);
+  - a part-year residency period with no pro-rated threshold supplied (s 20(1));
+  - a company's year of income before 2024-25 (s 23 names no year; see finding 12);
+  - a company in the capacity of a trustee (s 23(1));
+  - an RSA provider, a PDF or a life insurance company (s 23(3) to (5), s 23A);
+  - the tax of a recognised medium credit union (s 23(7)).
+
+  The first pass could not reach the last six at all. It had no input for them, and
+  answered as if they did not exist.
+- **The Schedule 7 tables are data.** There is one row type, `Schedule 7 item`,
+  with columns for the item, "exceeds", "does not exceed", the rate and the table.
+  The three Part I tables are one twelve-row list; Part II and Part III are lists
+  of their own. The generator lays them all out with positional `OF`, a ruler
+  comment, and ditto on the constructor, `OF`, `JUST` and the table name.
+  - Item 1 of Part I keeps "the tax-free threshold" as a parameter, because s 20(1)
+    replaces it.
+  - The Part II rates are "the second resident personal tax rate" and "the third
+    resident personal tax rate". They are parameters supplied from s 3, which now
+    reads them out of the applicable Part I table instead of hard-coding 30% and 37%.
+  - One marginal fold serves all five tables. Clause 4 is applied directly, as "the
+    part above the working holiday taxable income", instead of as the difference
+    of two cumulative taxes.
+  - The `no upper limit` sentinel (10^12) is gone: an open top band is `NOTHING`.
+- **Domain types.**
+  - `Residency in the year of income` is one type with five alternatives, after
+    s 18(1)(a)-(c). It replaces the flag "became or ceased to be a resident during
+    the year".
+  - `Payments in the year of income` has one field for each of limbs (a), (b) and
+    (ba), and limb (c) split in two. It replaces the single flag for veterans',
+    military and social security payments. `an eligible pensioner` is now computed
+    from it under s 16, instead of being an input.
+  - `Kind of company` names the kinds that s 23(1) to (7) and s 23A tell apart.
+  - The pro-rated threshold is a `MAYBE`.
+- **Shape.** The encoding now uses:
+  - `BRANCH` for the choice of table by year and for the two-limb company rules;
+  - `CONSIDER` for residency and the `MAYBE`s;
+  - percent literals (`16%`, `25%`, `55%`);
+  - the prelude's `min`, `max`, `sum` and `filter` instead of hand-written helpers;
+  - `@ref` above every rule;
+  - labels such as `"(a)" ...` on limb chains.
+- **Expected values.** No amount changed. Some changed in form, because the model
+  changed:
+  - 22 `JUST n` became `n`, because the tax is no longer a `MAYBE`;
+  - the 4 company rates `25` and `30` became `25%` and `30%`;
+  - the 5 "has a resident table" booleans became the table that applies (4) and a refusal (1);
+  - the 3 `NOTHING`s became refusals.
+
+  15 assertions and 6 refusal checks are new.
+
+### New findings
+
+9. **The two payment lists differ in one limb.** "Prescribed non-resident" (s 3)
+   and "eligible pensioner" (s 16) list the same payments, except that s 16's (c)
+   leaves out Parts 2.11, 2.12 and 2.15 of the Social Security Act 1991. A payment
+   under one of those Parts therefore has two effects:
+   - it makes a person who was a non-resident all year a resident taxpayer: $1,888
+     on $30,000, not $9,000;
+   - it does not make an arrival an eligible pensioner, so the arrival keeps a
+     part-year residency period and a pro-rated threshold: $2,616 on $30,000, with
+     an assumed threshold of $13,650.
+
+   Asserted.
+10. **A July arrival gets the full threshold.** Under s 18(1)(b) the period runs
+    "from the beginning of that month". A person who commences to be a resident
+    during July therefore has a period that is the whole year, and s 18(2)(b) says
+    that is not a part-year residency period. The same holds for a departure during
+    June. Asserted for the July arrival.
+11. **A July departure is outside s 18(1)(a) on its words.** Paragraph (a) needs the
+    person to cease to be a resident "during a subsequent month", which is a month
+    after the first. A resident who leaves during July has no part-year residency
+    period and keeps the full $18,200. Whether the ATO reads it that way was not
+    checked. Asserted.
+12. **Section 23 names no year of income.** Schedule 7 says which year each table is
+    for; s 23(2) does not, and the compilation is the law as at 1 July 2026. The
+    first pass answered 25% for a company in any year, including years when other
+    rates applied. The conformed encoding answers from 2024-25, the first year this
+    compilation's own tables cover, and refuses before it. That boundary is the
+    encoder's, not the Act's.
+13. **The tools on this machine are older than the skill.** Neither `l4` installed
+    on 14 October 2026 has `REFUSE`, `#ASSERT REFUSED` or `BECAUSE`. These landed
+    in l4-ide at 75e08b55e on 5 September 2026. The `l4` on `PATH` (April 2026)
+    lacks them, and so does the one in the VS Code extension 1.6.93 (13 October
+    2026). As a result:
+    - the deposited files carry each refusal's body as the prelude's `TBD`, which
+      is a refusal on a current `l4` and an assumed term here;
+    - each refusal is tested with `#CHECK`, which types the path without running it;
+    - `python gen_income-tax-rates-act-1986-conform.py --refuse` writes the skill's
+      form, `REFUSE "<name>"` and `#ASSERT REFUSED ... BECAUSE "<name>"`. On the
+      installed binary its only errors are the seven unknown `REFUSE`s and the
+      unparsed `BECAUSE`, so it has not been run.
+
+    The `l4` on `PATH` has two further defects:
+    - it rejects `_` digit separators, so none are used;
+    - given a bare file name, it silently fails to import the prelude. The first
+      pass passed only because it used no prelude names.
+
+    Every check here was run with the extension's binary. The `PATH` binary also
+    passes when it is given a path that includes a directory.
+
+### Still short of the skill
+
+- The refusals are not yet `REFUSE`, and are not yet asserted (finding 13).
+- There is no `@export` or `@desc`. On the installed binary `TBD` is an `ASSUME`,
+  which an export would publish as a parameter.
+- Months of residency are not validated: a month of 13 is not rejected as invalid
+  input. A person who ceased to be a resident and later commenced again in the same
+  year has no constructor.
