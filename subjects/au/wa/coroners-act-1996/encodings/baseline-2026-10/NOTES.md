@@ -20,18 +20,24 @@ is exported with `@export` and `@desc` for Legalese Cloud.
     Repeal Act 2023 s 27 (in force 15 November 2023).
   - The State Superannuation (Transitional and Consequential Provisions) Act 2000
     s 36(2) is listed as uncommenced. It is not reflected.
-- **Regulations:** none. The Coroners Regulations 1997 are not deposited, so three
-  things are handled without them:
-  - "prescribed circumstances" for a reportable death (s 3 limb (d)) are an input;
-  - "prescribed circumstances" for an inquest (s 22(1)(f)) are an input;
-  - any prescribed change to who is "senior next of kin" (s 37(5), "unless otherwise
-    prescribed") is not applied.
+- **Regulations:** the Coroners Regulations 1997, version 03-v0-00 in force from
+  1 July 2026 (legislation.wa.gov.au law_s4371), deposited at
+  `../../../coroners-regulations-1997/registers/source-bundle/mrdoc_49623.txt`
+  (retrieved 21 October 2026). Added 21 October 2026. Until then the three points
+  below were inputs or not applied; now they are read from the Regulations:
+  - "prescribed circumstances" for a reportable death (s 3 limb (d)): none prescribed;
+  - "prescribed circumstances" for an inquest (s 22(1)(f)): none prescribed;
+  - a prescribed change to who is "senior next of kin" (s 37(5), "unless otherwise
+    prescribed"): none.
+  Also used: reg 15 (a request for an inquest), reg 17 (interested persons for
+  s 44(3)), and regs 22, 22A and 23B with Schedule 3 item 2 (copies of the record of
+  investigation).
 
 ## Checks
 
 `l4 run cor-cases-deaths.l4` with the stable `l4` of VS Code extension 1.6.98:
-**45 assertions satisfied, 0 errors, 0 warnings.** The module alone also runs with no
-errors or warnings.
+**58 assertions satisfied, 0 errors, 0 warnings** (45 before the Regulations were
+deposited). The module alone also runs with no errors or warnings.
 
 ## Seat
 
@@ -44,8 +50,9 @@ Coroner, doctors or carers. Each is encoded as what it means for the family.
 The 2026-10-18 defaults:
 
 - **The Act alone, with the instruments that set its numbers.** Followed, so far as the
-  deposit allows. The Act sets its own penalties and periods. The regulations, which
-  would set prescribed circumstances, are not deposited, so those are inputs.
+  deposit allows. The Act sets its own penalties and periods. The Coroners Regulations
+  1997 are used: they prescribe no circumstances and do not vary the next-of-kin
+  order, and they set the interested persons and the fees for copies.
 - **The actors the text names.** Followed: the coroner, the State Coroner, the Attorney
   General, the Supreme Court, the doctor present at or soon after the death, the person
   under whose care the deceased was held, a member of the Police Force, the pathologist,
@@ -162,8 +169,8 @@ What is left out is machinery or the coroner's own conduct of the case:
 7. **The family has no right to an inquest, only to ask for one, and then to go to the
    Supreme Court.**
    - An inquest is compulsory only for a death in care, a death caused by police action
-     or caused while in care, a death in prescribed circumstances, or on a direction
-     (s 22(1), s 23(2)).
+     or caused while in care, or on a direction (s 22(1), s 23(2)). Section 22(1)(f),
+     "prescribed circumstances", adds nothing: the Regulations prescribe none.
    - Otherwise anyone may ask in writing with reasons (s 24(1a)). The coroner may refuse
      with written reasons.
    - The applicant then has 7 days from notice of the refusal to apply to the Supreme
@@ -209,17 +216,44 @@ What is left out is machinery or the coroner's own conduct of the case:
       (s 29(3)).
 
     Asserted.
+12. **The Regulations prescribe no circumstances at all.** Section 3 limb (d) ("a death
+    that occurs in prescribed circumstances") and s 22(1)(f) ("the death occurred in
+    prescribed circumstances") point to regulations, but none of regs 1-25 or the
+    Schedules of the Coroners Regulations 1997 prescribes any circumstances, and none
+    varies the s 37(5) order "unless otherwise prescribed". Both limbs are left out of
+    the encoding, and the questions they used to ask are gone. Asserted (the cases that
+    turn on reportability and the inquest duty no longer take those inputs).
+13. **The family are interested persons, and so is a child under 18.** Reg 17 lists, for
+    s 44(3), "a spouse, de facto partner, child, parent or other personal
+    representative" (a), "any of the deceased person's next of kin under section 37(5)"
+    (b) and a beneficiary of insurance on the deceased's life (c). An interested person
+    may appear, be represented and question witnesses (s 44(1)) and must be heard before
+    an adverse finding (s 44(2)). "Child" in reg 17(a) has no age limit, so a son of 16
+    is an interested person though he is not next of kin under s 37(5)(c). The list "is
+    not a conclusive list" (s 44(3)), so a person off it is left to the coroner, not
+    refused. Asserted.
+14. **The family's first copy of the record of investigation is free.** Schedule 3
+    item 2: one free copy for a person within reg 17(a) or (b); further copies, and any
+    copy for anyone else, cost $2.25 a page, or $0.70 for an eligible individual
+    (reg 23B: a Centrelink or DVA concession card, youth allowance, AUSTUDY or ABSTUDY,
+    legal aid, or a coroner's direction). No fee at all for a person under 18
+    (reg 22A(b)). Asserted.
+15. **Reg 15 repeats s 24(1a).** A request for an inquest "is to be made in writing and
+    is to specify the reason why the inquest is sought"; the encoding already asked for
+    that. Noted in the module.
 
 ## What would need doing before this is worth anything
 
-- The Coroners Regulations 1997 should be deposited and read. They set prescribed
-  circumstances, may vary "senior next of kin", and contain Form 4, which the Cremation
-  Regulations accept.
+- The Coroners Regulations 1997 are now deposited and used. Removing the two
+  "prescribed circumstances" inputs changed the inputs of `Is this a reportable death`,
+  `Must an inquest be held` and the questions built on them (the Death and Directions
+  records lost a field each): a breaking change for any deployment. Re-read the
+  Regulations when they are amended; Form 4 (the disposal certificate) and the other
+  Schedule 3 fees (transcripts, item 4) are not encoded.
 - A lawyer's view on findings 1-3 (limb (i), the circle with BDM s 44(5), and
   cremation after a coroner's case). This should be taken together with the Cremation
   Act baseline's finding 5.
-- Exhumation (s 38) and the inquest rights of an interested person (s 44) would
-  complete the family's rights.
+- Exhumation (s 38, with regs 10-11) would complete the family's rights.
 - "Person held in care" could be worked out from its eleven categories rather than
   asked.
 - No case law was searched. There has been no independent test pass and no human gate.
