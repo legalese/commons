@@ -16,14 +16,16 @@
 # A script that greps the Message line alone undercounts the first and never sees the
 # second; a refusing assertion then looks green.
 #
+# EXTENDED for this encoding (spr-): two more columns, `warn` (DiagnosticSeverity_Warning lines) and `written` (lines that
+# begin #ASSERT), and two more ways to be red: any warning, and a module whose written assertions are not all accounted for as
+# satisfied + failed + refused (an assertion that is written but never reported is silently skipped).
+#
 # Usage:  check.sh [DIR]          (DIR defaults to the directory this script is in)
 # Env:    L4   the l4 binary      (default: `l4` on PATH)
 #
 # Exit status: 0 only when no module has an error other than its expected failed
-# assertions, no assertion refused, each module fails exactly as often as
-# expected_failed says, and (added for this encoding) the number of #ASSERT lines
-# written in the module equals satisfied + failed + refused, so that an assertion
-# the evaluator never reached cannot hide.
+# assertions, no assertion refused, and each module fails exactly as often as
+# expected_failed says.
 set -u
 DIR="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 L4="${L4:-l4}"
@@ -42,8 +44,8 @@ if ! command -v "$L4" >/dev/null 2>&1; then
   exit 2
 fi
 
-status=0 total_err=0 total_ok=0 total_bad=0 total_ref=0 total_wr=0 n=0
-printf '%-40s %7s %9s %7s %8s %9s %8s\n' module errors satisfied failed refused expected written
+status=0 total_err=0 total_warn=0 total_wr=0 total_ok=0 total_bad=0 total_ref=0 n=0
+printf '%-40s %7s %5s %7s %9s %7s %8s %9s\n' module errors warn written satisfied failed refused expected
 for f in "$DIR"/*.l4; do
   [ -e "$f" ] || { echo "check.sh: no .l4 files in $DIR" >&2; exit 2; }
   m="$(basename "$f")"
@@ -53,13 +55,13 @@ for f in "$DIR"/*.l4; do
   ok=$(printf '%s\n' "$msgs" | grep -cE 'assertion satisfied')
   bad=$(printf '%s\n' "$msgs" | grep -cE 'assertion failed|assertion could not be evaluated')
   ref=$(printf '%s\n' "$msgs" | grep -cE 'assertion refused')
-  exp=$(expected_failed "$m")
+  warn=$(printf '%s\n' "$out" | grep -c 'DiagnosticSeverity_Warning')
   wr=$(grep -c '^#ASSERT' "$f")
-  printf '%-40s %7d %9d %7d %8d %9d %8d\n' "$m" "$err" "$ok" "$bad" "$ref" "$exp" "$wr"
-  [ $((err - bad)) -eq 0 ] && [ "$ref" -eq 0 ] && [ "$bad" -eq "$exp" ] || status=1
-  [ "$wr" -eq $((ok + bad + ref)) ] || { echo "check.sh: $m has $wr #ASSERT lines but $((ok + bad + ref)) outcomes" >&2; status=1; }
-  total_err=$((total_err + err)) total_ok=$((total_ok + ok)) total_bad=$((total_bad + bad)) total_ref=$((total_ref + ref)) total_wr=$((total_wr + wr)) n=$((n + 1))
+  exp=$(expected_failed "$m")
+  printf '%-40s %7d %5d %7d %9d %7d %8d %9d\n' "$m" "$err" "$warn" "$wr" "$ok" "$bad" "$ref" "$exp"
+  [ $((err - bad)) -eq 0 ] && [ "$warn" -eq 0 ] && [ "$ref" -eq 0 ] && [ "$bad" -eq "$exp" ] && [ "$wr" -eq $((ok + bad + ref)) ] || status=1
+  total_err=$((total_err + err)) total_warn=$((total_warn + warn)) total_wr=$((total_wr + wr)) total_ok=$((total_ok + ok)) total_bad=$((total_bad + bad)) total_ref=$((total_ref + ref)) n=$((n + 1))
 done
-printf '%-40s %7d %9d %7d %8d %9s %8d\n' "TOTAL ($n modules)" "$total_err" "$total_ok" "$total_bad" "$total_ref" "" "$total_wr"
-echo "(a failed assertion is also an error; any other error, or any refused assertion, makes the run red)"
+printf '%-40s %7d %5d %7d %9d %7d %8d\n' "TOTAL ($n modules)" "$total_err" "$total_warn" "$total_wr" "$total_ok" "$total_bad" "$total_ref"
+echo "(a failed assertion is also an error; any other error, any warning, any refused assertion, or any written assertion not reported makes the run red)"
 exit $status
