@@ -8,11 +8,11 @@ pass, no human gate. **Not for public use.**
 amendments up to Act No. 79, 2026 (register id C2026C00400, 12 volumes), as deposited at
 `../../registers/source-bundle/C2004A05138.txt`.
 
-**Checks:** four modules and four case files, 57 assertions satisfied, 0 errors, 0 warnings:
+**Checks:** four modules and four case files, 58 assertions satisfied, 0 errors, 0 warnings:
 
 | Module | Case file | Assertions |
 |---|---|---|
-| `itaa-income.l4` | `itaa-cases-income.l4` | 16 |
+| `itaa-income.l4` | `itaa-cases-income.l4` | 17 |
 | `itaa-business.l4` | `itaa-cases-business.l4` | 11 |
 | `itaa-cgt.l4` | `itaa-cases-cgt.l4` | 15 |
 | `itaa-super.l4` | `itaa-cases-super.l4` | 15 |
@@ -200,3 +200,14 @@ Asserted.
   - The bring-forward of the non-concessional cap.
   - When the working Australians tax offset applies.
 - No ATO ruling, regulation or case law was retrieved.
+
+## c045 corrected (22 October 2026, REQ-0056)
+
+The first pass asserted that c045 owes nil, taking a nil basic liability from the scenario
+("nil under the tax-free threshold"). That is wrong. Chloe's $27,500 is above the $18,200
+threshold. On the 2023-24 rates (Rates Act Compilation No. 62, now deposited as
+`../../../income-tax-rates-act-1986/registers/source-bundle/C2004A03348.2024-04-01.txt`) the
+basic liability is $1,767, and after the $700 Low Income tax offset $1,067 is owed. The case
+file now asserts `the income tax owed` 1767 700 = 1067 for c045. It keeps the nil-in, nil-out
+assertion as a plain case of the rule. The liability is still an input here; the baseline
+(`../baseline-2026-10`) computes it.

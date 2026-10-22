@@ -23,3 +23,11 @@ terms.
 Statute text deposited 2026-10-13: `registers/source-bundle/C2004A03348.txt`, converted to plain text from
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A03348',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
 (compilation register id: C2026C00300). sha256 of the download: `016a9943c6d8cffd926d663407f469e95c08edb47b6fbb1f2e53ddb483963c75`.
+
+Historical compilation deposited 2026-10-22 beside it, from the same Register and under the same licence
+(CC BY 4.0, as above):
+
+- `registers/source-bundle/C2004A03348.2024-04-01.txt`: Compilation No. 62 (register id C2024C00132), in force from 1 April 2024, the compilation in force at the end of the 2023-24 year of income; converted from
+  https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A03348',asat=2024-06-30T00:00:00Z,type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
+  sha256 of the download: `f094716daa229a440fc2b8b09e91a3ffcf6669b47da393ff1fe5c6e9ac674639`. Its lost formulas are transcribed in
+  `registers/source-bundle/C2004A03348.2024-04-01.formulas.md`.

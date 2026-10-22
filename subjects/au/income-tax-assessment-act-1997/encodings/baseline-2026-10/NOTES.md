@@ -16,15 +16,16 @@ This baseline replaces the first-pass encoding `naive-2026-10`. It covers everyt
 
 - **The Act:** Compilation No. 267, compilation date 27 August 2026, including amendments up to Act No. 79, 2026 (register id C2026C00400, 12 volumes), as deposited at `../../registers/source-bundle/C2004A05138.txt`.
 - **The rates:** Income Tax Rates Act 1986, Compilation No. 66, compilation date 1 July 2026, including amendments up to Act No. 50, 2026 (register id C2026C00300), as deposited at `../../../income-tax-rates-act-1986/registers/source-bundle/C2004A03348.txt`. Used for s 3 (the $18,200 tax-free threshold), Schedule 7 Part I (the resident tables) and ss 23(2) and 23AA (the company rate). The rates are restated in `itaa-income.l4` with their citations, rather than imported, so that this encoding stands alone.
+- **The rates for 2023-24 (dated arm, REQ-0056, 22 October 2026):** Income Tax Rates Act 1986, Compilation No. 62, compilation date 1 April 2024, including amendments up to Act No. 3, 2024 (register id C2024C00132), the compilation in force at the end of the 2023-24 year of income, as deposited at `../../../income-tax-rates-act-1986/registers/source-bundle/C2004A03348.2024-04-01.txt`. Its Schedule 7 Part I table "for the 2020-21, 2021-22, 2022-23 or 2023-24 year of income" (19% to $45,000, 32.5% to $120,000, 37% to $180,000, then 45%) is restated in `itaa-income.l4` for 2023-24 only. The 1997 Act is deposited only as at 2026. For 2023-24 its Low Income tax offset is read from that text, because s 61-110 applies "for the 2020-21 income year or a later income year". That reading assumes ss 61-110 and 61-115 read the same in 2023-24; the 2023-24 compilation of the 1997 Act is not deposited.
 - **Not used:** the Income Tax Assessment (1997 Act) Regulations 2021. None of the provisions encoded here takes a number from them. The indexed caps (ss 291-20, 292-85, 294-35) are published by the Commissioner and are not in the deposit, so they are inputs.
 
 ## Checks
 
-Four modules and four case files: 70 assertions satisfied, 0 errors, 0 warnings.
+Four modules and four case files: 77 assertions satisfied, 0 errors, 0 warnings (70 before the 2023-24 arm of 22 October 2026).
 
 | Module | Case file | Assertions |
 |---|---|---|
-| `itaa-income.l4` | `itaa-cases-income.l4` | 23 |
+| `itaa-income.l4` | `itaa-cases-income.l4` | 30 |
 | `itaa-business.l4` | `itaa-cases-business.l4` | 12 |
 | `itaa-cgt.l4` | `itaa-cases-cgt.l4` | 19 |
 | `itaa-super.l4` | `itaa-cases-super.l4` | 16 |
@@ -60,7 +61,7 @@ Each event below is asserted on that life's facts. Where the scenario does not g
 
 | Event | Question asked of this Act | Answer in this encoding |
 |---|---|---|
-| chloe c045 | Tax on $27,500 for 2023-24 | Taxable income $27,500; Low Income offset $700; basic liability **NOTHING**, because the deposited Rates Act has no 2023-24 table |
+| chloe c045 | Tax on $27,500 for 2023-24 | Taxable income $27,500; basic liability $1,767 (Rates Act Compilation No. 62); Low Income offset $700; income tax owed **$1,067**, not the scenario's nil (finding 9) |
 | chloe c048 | Tax on $71,500 for 2024-25 | $12,238 before offsets; no Low Income offset; $12,238 owed |
 | chloe c057 | Spouse contribution offset | $540 on $3,000 if Liam's income is $30,000 (hypothetical); nil at $40,000 |
 | chloe c072, daniel d04b | Start-up ESS interests | Concession applies at a 10% discount (hypothetical); nothing assessable; fails at 20% or for a company incorporated 12 years |
@@ -124,7 +125,7 @@ In its place, s 110-36(1A) indexes the cost base of an individual's or a trust's
 
 Daniel's Jarrah shares (d071, held from 2031) and Chloe's ESS shares (c085, from 2034) are both sold on 30 June 2050. On this compilation, each gain is proceeds less an indexed cost base, with no discount. d071 expects `cgt_discount: 0.5`; that is wrong on this text. Asserted.
 
-### 2. The deposited Rates Act cannot answer Chloe's first return
+### 2. The deposited Rates Act cannot answer Chloe's first return (superseded 22 October 2026 by finding 9)
 
 The Rates Act compilation of 1 July 2026 has resident tables only for 2024-25 onward. Chloe's 2023-24 return (c045) therefore has no rate in the deposit, and the encoding answers NOTHING.
 
@@ -183,6 +184,12 @@ Adult children who were not dependent are not dependants: Oliver and Ella (c098)
 - **Benefits at 60 or over:** "not assessable income and is not *exempt income" (s 301-10), covering c092 and d083. Asserted.
 - **Non-concessional cap:** 4 times the concessional cap, and nil once the total super balance reaches the general transfer balance cap. Jake's $100,000 (k089) fits a cap of at least $25,000. Asserted.
 
+### 9. Chloe's 2023-24 income tax is $1,067, not nil (c045)
+
+Rates Act Compilation No. 62, in force for 2023-24, taxes a full-year resident at 19% on taxable income above the $18,200 threshold, up to $45,000. On $27,500 the basic income tax liability is 9,300 x 19% = $1,767. The Low Income tax offset is the full $700 at that income (s 61-115 item 1: taxable income not over $37,500). The working Australians offset (Subdiv 61-E, inserted in 2026) does not apply to 2023-24. So `How much income tax do I owe` 2023 gives $1,067.
+
+The scenario expects nil tax on the 2023-24 return. That is wrong on the law then in force: the offset of $700 does not cover $1,767. The Medicare levy of $150 (Medicare Levy Act baseline, REQ-0024) and any HELP repayment are on top. The audit's unchecked recollection of $1,767 and $1,067 matches the deposited text. This is for the scenario's author. Asserted.
+
 ## What would need doing before this is worth anything
 
 - **CGT after 1 July 2027:**
@@ -191,7 +198,7 @@ Adult children who were not dependent are not dependants: Oliver and Ella (c098)
   - encode the cost base elements.
 
   Then correct d071 and c085 in the scenarios.
-- **Rates for 2023-24:** retrieve them from an earlier Rates Act compilation for c045.
+- **Rates for 2023-24:** done (REQ-0056), from Rates Act Compilation No. 62. Earlier years need their own compilations, of the Rates Act and of this Act (the low and middle income tax offset ran to 2021-22).
 - **Subdiv 61-E:** read the application provision of Act No. 49, 2026.
 - **Indexed caps:** supply the concessional, non-concessional and transfer balance caps for each year from the Commissioner's published figures, with sources.
 - **The rest of Div 152, Subdiv 83A-C and Subdiv 30-DB.** The last of these spreads Daniel's $2,000,000 deduction.

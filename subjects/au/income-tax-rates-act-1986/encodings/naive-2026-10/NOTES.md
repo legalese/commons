@@ -9,12 +9,16 @@ human gate. Not for public use.
 
 **Edition:** Compilation No. 66, compilation date 1 July 2026, includes amendments
 up to Act No. 50, 2026 (register id C2026C00300), as deposited at
-`../../registers/source-bundle/C2004A03348.txt`.
+`../../registers/source-bundle/C2004A03348.txt`. For the 2023-24 year of income only
+(22 October 2026, REQ-0056): Compilation No. 62, compilation date 1 April 2024,
+includes amendments up to Act No. 3, 2024 (register id C2024C00132), as deposited at
+`../../registers/source-bundle/C2004A03348.2024-04-01.txt` (see the last section).
 
 **Checks:** `l4 run` on both files with the stable `l4` (the one bundled in the L4
 VS Code extension 1.6.98), `JL4_LIBRARY_PATH` unset: 0 errors, 0 warnings on each.
-The case file (`itra-cases-rates.l4`) has 75 assertions written and 75 satisfied:
-the first pass's 66, and 9 that assert a `not covered` answer.
+The case file (`itra-cases-rates.l4`) has 92 assertions written and 92 satisfied.
+Before the 2023-24 arm it had 75: the first pass's 66, and 9 that assert a
+`not covered` answer.
 
 ## Why this Act, and why scoped
 
@@ -49,7 +53,7 @@ Acts. The loss carry-forward d04a also asks about is in the Income Tax Assessmen
 
 ## What the Act turns out to say
 
-### 1. The deposited compilation has no rates for 2023-24, the year c045 asks about
+### 1. The deposited compilation has no rates for 2023-24, the year c045 asks about (superseded 22 October 2026: see finding 14)
 
 Schedule 7 Part I has three tables:
 
@@ -148,9 +152,8 @@ part-year residency period and keeps the full $18,200. Asserted.
 
 - Retrieve the s 20 formula and the clause 2 and 3 formulas from the PDF or Word
   original, and encode them.
-- Retrieve the 2023-24 rates from an earlier compilation, so that c045 can be
-  answered. The endnotes would name the amending Act that replaced the table; they
-  were not read for this encoding.
+- Done 22 October 2026 (REQ-0056): the 2023-24 rates come from Compilation No. 62.
+  Years before 2023-24 still need the compilations in force for them.
 - Reconcile c048's $12,842 with the text, and correct whichever side is wrong.
 - Encode s 23AB, so that base rate entity passive income is computed rather than taken as an input.
 - Rounding to whole dollars, and the interaction with offsets in the Income Tax
@@ -290,3 +293,43 @@ substance.
   rules above changed in form only: the value v became `answered` v (a rate is
   bracketed, as in `answered` (25%)).
 - Every `NOT` is parenthesised, in the rules and in the `#ASSERT NOT` lines.
+
+## A dated arm for 2023-24 (22 October 2026, REQ-0056)
+
+Compilation No. 62 of the Act (register id C2024C00132, compilation date 1 April 2024,
+includes amendments up to Act No. 3, 2024) is deposited beside the current text as
+`../../registers/source-bundle/C2004A03348.2024-04-01.txt`. The Federal Register of
+Legislation returned it as the version in force on 30 June 2024, the last day of the
+2023-24 year of income. Its Schedule 7 Parts I, II and III each have a table "for the
+2020-21, 2021-22, 2022-23 or 2023-24 year of income". Those three tables are added to
+the encoding as rows of their own, and the "which table applies" rules pick them for
+2023 (the 2023-24 year of income).
+
+- The reason `the deposited compilation has no Schedule 7 table for a year of income
+  before 2024-25` became `the deposited compilations have no Schedule 7 table for a
+  year of income before 2023-24`. 2022-23 and earlier still answer `not covered`.
+  Compilation No. 62's tables name those years too, but it is not the compilation
+  that was in force for them.
+- Part II's 2023-24 table has its own rows (`the Part II table for 2023-24`). Its item
+  2 reads "37%", not "the third resident personal tax rate".
+- The company rate keeps its own boundary (finding 12): 2023-24 is still `not covered`
+  for a company. That is the encoder's choice, not the text's.
+- The three assertions that expected `not covered` for 2023-24 now expect the answers.
+  17 more were added: 2023-24 and 2022-23 cases. 11 assertions now expect
+  `not covered` (9 before).
+
+### 14. Chloe's 2023-24 tax before offsets is $1,767, not nil (c045)
+
+The 2023-24 resident table taxes ordinary taxable income above the $18,200
+tax-free threshold at 19%, up to $45,000. On $27,500 that is 9,300 x 19% = $1,767. The
+scenario expects nil for the 2023-24 return. The Low Income tax offset (ITAA 1997
+ss 61-110, 61-115) is $700 at that income, which leaves $1,067 of income tax, before
+the Medicare levy. Nil is wrong on the law then in force. Asserted.
+
+### 15. Compilation No. 62's s 16 leaves out one more Part
+
+In Compilation No. 62, s 16 "eligible pensioner" (c) reads "other than Part 2.11,
+2.12, 2.15 or 3.15A" of the Social Security Act 1991. Compilation No. 66 leaves out
+only Parts 2.11, 2.12 and 2.15. The `Payments in the year of income` record cannot
+mark a Part 3.15A payment. Such a payment in 2023-24 would count, wrongly, as making
+the person an eligible pensioner. That case is not modelled.

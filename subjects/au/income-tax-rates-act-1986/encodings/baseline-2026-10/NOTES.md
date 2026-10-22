@@ -36,10 +36,39 @@ and Schedule 7 Parts I and II clause 2.
 No regulation sets these numbers. The rates are in the Act's own text, and each
 Budget changes them by amending Act.
 
+**Dated arm for 2023-24 (REQ-0056, 22 October 2026).** Compilation No. 62,
+compilation date 1 April 2024, includes amendments up to Act No. 3, 2024 (Register id
+C2024C00132), deposited beside the current text at
+`../../registers/source-bundle/C2004A03348.2024-04-01.txt`. The Register returned it as
+the version in force on 30 June 2024, the last day of the 2023-24 year of income. Its
+lost formulas are in `C2004A03348.2024-04-01.formulas.md` and are the same as
+Compilation No. 66's. Schedule 7 Parts I, II and III each have a table "for the
+2020-21, 2021-22, 2022-23 or 2023-24 year of income":
+
+- resident: 19% above the tax-free threshold to $45,000, 32.5% to $120,000, 37% to
+  $180,000, then 45%;
+- non-resident: the second resident personal tax rate (32.5%) to $120,000, 37% to
+  $180,000, then 45%;
+- working holiday makers: 15% to $45,000, 32.5% to $120,000, 37% to $180,000, then 45%.
+
+The encoding uses these tables for 2023-24 only. Compilation No. 62 is not the
+compilation that was in force for 2020-21 to 2022-23, so those years stay
+`Not in the deposited text`.
+
+Compared line by line with Compilation No. 66, the provisions encoded here read the
+same: the $18,200 threshold, s 20(1)'s $4,736, and clauses 2 and 4. The one
+difference is s 16 "eligible pensioner" (c), which in Compilation No. 62 also leaves
+out Part 3.15A of the Social Security Act 1991. Being an eligible pensioner is asked
+as a fact, so only that question's wording changes.
+
 ## Checks
 
-- `itra-cases-rates.l4`: 73 assertions written, 73 satisfied, 0 errors, 0 warnings
-  (68 before the formulas were recovered on 2026-10-21).
+- `itra-cases-rates.l4`: 94 assertions written, 94 satisfied, 0 errors, 0 warnings
+  (73 before the 2023-24 arm of 2026-10-22; 68 before the formulas were recovered on
+  2026-10-21). When the arm was added, the four assertions that had expected
+  `Not in the deposited text` for 2023-24 were the only ones to fail. They now assert
+  the 2023-24 answers, and 2022-23 cases assert `Not in the deposited text` in their
+  place.
 - `itra-rates.l4`: checks with no errors or warnings.
 - Both were run with the stable `l4` from VS Code extension 1.6.98.
 
@@ -95,7 +124,7 @@ The 2026-10-18 defaults:
 
 | Event | Decision asked | Answer |
 |---|---|---|
-| chloe c045, first return for 2023-24, $27,500 | `How much tax is on my taxable income`; `What is my marginal rate` | `Not in the deposited text`: the compilation has no table for 2023-24. For comparison only, the 2024-25 table gives $1,488. |
+| chloe c045, first return for 2023-24, $27,500 | `How much tax is on my taxable income`; `What is my marginal rate` | $1,767 before offsets ((27,500 - 18,200) x 19%, from Compilation No. 62), at a marginal rate of 19%. Not the nil the scenario expects (finding 14). For comparison, the 2024-25 table gives $1,488. |
 | chloe c048, second return for 2024-25, $71,500 | `How much tax is on my taxable income`; `What is my marginal rate` | $12,238 before offsets, at a marginal rate of 30% |
 | daniel d04a, Jarrah's first company return | `Is my company a base rate entity`; `At what rate is my company taxed`; `How much tax must my company pay` | A base rate entity at 25%; nil tax in a loss year |
 
@@ -142,7 +171,9 @@ A company of a kind left out gets `Not covered by this encoding`.
 
 ## What the Act turns out to say
 
-1. **The deposited text covers 2024-25 onwards, and nothing earlier.** Schedule 7
+1. **(Superseded on 2026-10-22 by finding 14: 2023-24 is now answered from
+   Compilation No. 62.) The deposited text covers 2024-25 onwards, and nothing
+   earlier.** Schedule 7
    Part I has tables "for the 2024-25 or 2025-26 year of income", "for the 2026-27
    year of income" and "for the 2027-28 year of income or a later year of income".
    Parts II and III each have one table, "for the 2024-25 year of income or a later
@@ -217,14 +248,30 @@ A company of a kind left out gets `Not covered by this encoding`.
     $100,000 abnormal income amount in $150,000 pays $35,788 rather than $36,838. For a
     non-resident whose income all falls in the 30% band it changes nothing ($18,000 on
     $60,000). Asserted.
+14. **Chloe's 2023-24 tax before offsets is $1,767, not nil (c045).** Compilation
+    No. 62, in force for 2023-24, taxes a resident at 19% on ordinary taxable income
+    above the $18,200 tax-free threshold up to $45,000. On $27,500 that is 9,300 x 19% =
+    $1,767. The scenario expects nil tax for the 2023-24 return. Nil would need offsets
+    of at least $1,767, but the Low Income tax offset (ITAA 1997 ss 61-110, 61-115) is
+    $700 at that income. That leaves $1,067 of income tax (asserted in the ITAA 1997
+    baseline), before the Medicare levy of $150 (Medicare Levy Act baseline, REQ-0024).
+    The audit's recollection of $1,767 and $1,067 matches the deposited text. This is
+    for the scenario's author. Asserted.
+15. **The 2023-24 table ends its bands lower: $120,000 and $180,000, not $135,000 and
+    $190,000.** So $130,000 is taxed at a marginal 37% in 2023-24 but 30% in 2024-25,
+    and $185,000 at 45% rather than 37%. In 2023-24 the non-resident table's item 2 is a
+    plain "37%", where from 2024-25 it is "the third resident personal tax rate". Both
+    are 37%, so one rule serves both years. Asserted.
 
 ## What would need doing before this is worth anything
 
 - Encode Schedule 7 clause 3 with the ITAA 1997 s 392-45 average income, and the
   special income component where there are remainders (s 3 "special income
   component" (b)) or working holiday income (clause 4(c)).
-- Retrieve the 2023-24 rates from an earlier compilation so that c045 can be
-  answered, and consider keeping one encoded table per vintage.
+- 2023-24 is answered (REQ-0056). For 2020-21 to 2022-23, deposit the compilations
+  in force for those years. Compilation No. 62's table names them, but it is not
+  their compilation, and the 1997 Act's offsets differed then (the low and middle
+  income tax offset).
 - Reconcile c048's $12,842 with the text, and correct whichever side is wrong.
 - Model rounding to whole dollars, and the step from this Act's tax to tax payable
   after offsets (ITAA 1997 s 4-10).
