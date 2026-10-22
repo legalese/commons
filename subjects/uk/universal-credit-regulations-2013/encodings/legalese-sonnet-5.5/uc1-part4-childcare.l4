@@ -1,0 +1,552 @@
+IMPORT prelude
+IMPORT `uc-core`
+IMPORT `uc1-common`
+IMPORT `uc1-part3-awards`
+IMPORT `uc1-part4-amounts`
+
+-- The Universal Credit Regulations 2013 (S.I. 2013/376), Part 4, particular needs or circumstances, childcare costs:
+-- regulations 31 to 35.
+-- Source: ../../registers/source-bundle/uksi-2013-376.txt, a plain-text rendering of the revised text (legislation.gov.uk, version 2026-07-16)
+-- made by a converter script. It is not the official text. Every `-- src:N | ...` line copies line N of that file.
+-- Target: the stable build 1.6.98. Seat: a person who claims or receives Universal Credit, alone or as one of a couple.
+--
+-- WHAT IS HERE: when an award includes the childcare costs element (regulation 31), the work condition (regulation 32),
+-- the childcare costs condition (regulation 33), the amount (regulation 34), which charges belong to which assessment period
+-- (regulation 34A) and what counts as relevant childcare (regulation 35). The maximum amount is regulation 36's
+-- (uc1-part4-amounts.l4). Late reporting of a change of circumstances (regulation 36 of the Decisions and Appeals Regulations)
+-- is outside this instrument and is a plain input, commented "out of range".
+-- A "paid work" fact and a "close relative" fact are taken as plain inputs: the seat passes in the result of the core's
+-- `reg 2 — paid work` and `reg 2 — close relative`.
+-- Money is a NUMBER of pounds.
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Assessment periods, counted from the first date of entitlement. Regulation 34A(3) counts the months before the award began.
+
+-- Position 0 is the first assessment period; position 1 the second; position -1 the month that begins on the same day as the
+-- assessment periods, before the award, ending the day before the first date of entitlement (regulation 34A(3), and the "month
+-- immediately preceding the commencement of the award" of regulation 32(2)(a)(iii): fork F-32-MONTH, assumed and not ruled).
+-- src:679 | (3) In this regulation, a reference to an assessment period in which charges are paid, or in respect of which charges are paid, includes any month preceding the commencement of the award that begins on the same day as each assessment period in relation to a claimant's current award.
+@ref reg 34A(3) (src:679)
+GIVEN `first date of entitlement` IS A DATE
+      day IS A DATE
+GIVETH A NUMBER
+`uc1 — the position of the assessment period containing a day, counting months before the award` `first date of entitlement` day MEANS
+    IF (`reg 21(2) — the first day of an assessment period` `first date of entitlement` `months between the first date and the day`) AT MOST day
+    THEN `months between the first date and the day`
+    ELSE `months between the first date and the day` MINUS 1
+    WHERE
+        `months between the first date and the day` MEANS
+            (((DATE_YEAR day) MINUS (DATE_YEAR `first date of entitlement`)) TIMES 12)
+            PLUS ((DATE_MONTH day) MINUS (DATE_MONTH `first date of entitlement`))
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 31: the element is included for an assessment period in which both conditions are met.
+-- src:628 | An award of universal credit is to include an amount in respect of childcare costs (“the childcare costs element”) in respect of an assessment period in which the claimant meets both—
+-- src:629 | (a) the work condition (see regulation 32); and
+-- src:630 | (b) the childcare costs condition (see regulation 33).
+@ref reg 31 (src:628-630)
+GIVEN `the work condition is met` IS A BOOLEAN
+      `the childcare costs condition is met` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 31 — the award includes the childcare costs element for the assessment period` `the work condition is met` `the childcare costs condition is met` MEANS
+    (`the work condition is met`) AND (`the childcare costs condition is met`)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 32: the work condition.
+
+-- (2)(a) A claimant who has ceased paid work in the assessment period in question, in the previous one, or (for the first or second
+-- assessment period of an award) in the month immediately preceding the award's commencement, is treated as in paid work.
+-- src:638 | (2) For the purposes of meeting the work condition in relation to an assessment period a claimant is to be treated as being in paid work if—
+-- src:639 | (a) the claimant has ceased paid work—
+-- src:640 | (i) in that assessment period,
+-- src:641 | (ii) in the previous assessment period, or
+-- src:642 | (iii) if the assessment period in question is the first or second assessment period in relation to an award, in that assessment period or in the month immediately preceding the commencement of the award; or
+@ref reg 32(2)(a) (src:638-642)
+GIVEN `first date of entitlement` IS A DATE
+      `a day in the assessment period in question` IS A DATE
+      `day on which the claimant ceased paid work` IS A DATE
+GIVETH A BOOLEAN
+`reg 32(2)(a) — a day of ceasing paid work counts` `first date of entitlement` `a day in the assessment period in question` `day on which the claimant ceased paid work` MEANS
+    (`position of the period of the cessation` EQUALS `position of the period in question`)
+    OR (`position of the period of the cessation` EQUALS (`position of the period in question` MINUS 1))
+    OR ((`position of the period in question` AT MOST 1) AND (`position of the period of the cessation` EQUALS (0 MINUS 1)))
+    WHERE
+        `position of the period of the cessation` MEANS
+            `uc1 — the position of the assessment period containing a day, counting months before the award` `first date of entitlement` `day on which the claimant ceased paid work`
+        `position of the period in question` MEANS
+            `uc1 — the position of the assessment period containing a day, counting months before the award` `first date of entitlement` `a day in the assessment period in question`
+
+-- src:638 | (2) For the purposes of meeting the work condition in relation to an assessment period a claimant is to be treated as being in paid work if—
+-- src:639 | (a) the claimant has ceased paid work—
+-- src:640 | (i) in that assessment period,
+-- src:641 | (ii) in the previous assessment period, or
+-- src:642 | (iii) if the assessment period in question is the first or second assessment period in relation to an award, in that assessment period or in the month immediately preceding the commencement of the award; or
+@ref reg 32(2)(a) (src:638-642)
+GIVEN `first date of entitlement` IS A DATE
+      `a day in the assessment period in question` IS A DATE
+      `day on which the claimant ceased paid work` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`reg 32(2)(a) — the claimant ceased paid work in time to be treated as in paid work` `first date of entitlement` `a day in the assessment period in question` `day on which the claimant ceased paid work` MEANS
+    CONSIDER `day on which the claimant ceased paid work`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST ceased THEN `reg 32(2)(a) — a day of ceasing paid work counts` `first date of entitlement` `a day in the assessment period in question` ceased
+
+-- (2)(b) A claimant receiving statutory sick pay, statutory maternity pay, statutory paternity pay, statutory adoption pay,
+-- statutory shared parental pay, statutory parental bereavement pay, statutory neonatal care pay or a maternity allowance.
+-- src:638 | (2) For the purposes of meeting the work condition in relation to an assessment period a claimant is to be treated as being in paid work if—
+-- src:643 | (b) the claimant is receiving statutory sick pay, statutory maternity pay, ... statutory paternity pay, ... statutory adoption pay , statutory shared parental pay , statutory parental bereavement pay , statutory neonatal care pay or a maternity allowance.
+@ref reg 32(2)(b) (src:638-643)
+GIVEN receiving IS A LIST OF Benefit
+GIVETH A BOOLEAN
+`reg 32(2)(b) — the claimant is receiving a payment that treats them as in paid work` receiving MEANS
+    (elem `statutory sick pay` receiving)
+    OR (elem `statutory maternity pay` receiving)
+    OR (elem `statutory paternity pay` receiving)
+    OR (elem `statutory adoption pay` receiving)
+    OR (elem `statutory shared parental pay` receiving)
+    OR (elem `statutory parental bereavement pay` receiving)
+    OR (elem `statutory neonatal care pay` receiving)
+    OR (elem `maternity allowance` receiving)
+
+-- (2) Treated as being in paid work.
+-- src:638 | (2) For the purposes of meeting the work condition in relation to an assessment period a claimant is to be treated as being in paid work if—
+-- src:639 | (a) the claimant has ceased paid work—
+-- src:640 | (i) in that assessment period,
+-- src:641 | (ii) in the previous assessment period, or
+-- src:642 | (iii) if the assessment period in question is the first or second assessment period in relation to an award, in that assessment period or in the month immediately preceding the commencement of the award; or
+-- src:643 | (b) the claimant is receiving statutory sick pay, statutory maternity pay, ... statutory paternity pay, ... statutory adoption pay , statutory shared parental pay , statutory parental bereavement pay , statutory neonatal care pay or a maternity allowance.
+@ref reg 32(2) (src:638-643)
+GIVEN `ceased paid work in time` IS A BOOLEAN
+      `receiving a payment that treats them as in paid work` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 32(2) — the claimant is treated as being in paid work` `ceased paid work in time` `receiving a payment that treats them as in paid work` MEANS
+    (`ceased paid work in time`) OR (`receiving a payment that treats them as in paid work`)
+
+-- (1) The work condition: the claimant is in paid work (or treated as, under paragraph (2)) or has an offer of paid work due to start
+-- before the end of the next assessment period; and, for a member of a couple (whether claiming jointly or as a single person),
+-- the other member is in paid work or is unable to provide childcare because of one of three reasons.
+-- src:632 | (1) The work condition is met in respect of an assessment period if —
+-- src:633 | (a) the claimant is in paid work or has an offer of paid work that is due to start before the end of the next assessment period; and
+-- src:634 | (b) if the claimant is a member of a couple (whether claiming jointly or as a single person), the other member is either in paid work or is unable to provide childcare because that person—
+-- src:635 | (i) has limited capability for work,
+-- src:636 | (ii) has regular and substantial caring responsibilities for a severely disabled person, or
+-- src:637 | (iii) is temporarily absent from the claimant's household.
+@ref reg 32(1) (src:632-637)
+DECLARE `Facts for the work condition` HAS
+    `the claimant is in paid work`                                                                                          IS A BOOLEAN
+    `the claimant is treated as being in paid work under paragraph (2)`                                                      IS A BOOLEAN
+    `the claimant has an offer of paid work that is due to start before the end of the next assessment period`              IS A BOOLEAN
+    `the claimant is a member of a couple, whether claiming jointly or as a single person`                                   IS A BOOLEAN
+    `the other member is in paid work`                                                                                       IS A BOOLEAN
+    `the other member is unable to provide childcare because they have limited capability for work`                          IS A BOOLEAN  -- out of range: Part 5 (piece uc4)
+    `the other member is unable to provide childcare because they have regular and substantial caring responsibilities for a severely disabled person`  IS A BOOLEAN
+    `the other member is unable to provide childcare because they are temporarily absent from the claimant's household`     IS A BOOLEAN
+
+-- src:632 | (1) The work condition is met in respect of an assessment period if —
+-- src:633 | (a) the claimant is in paid work or has an offer of paid work that is due to start before the end of the next assessment period; and
+-- src:634 | (b) if the claimant is a member of a couple (whether claiming jointly or as a single person), the other member is either in paid work or is unable to provide childcare because that person—
+-- src:635 | (i) has limited capability for work,
+-- src:636 | (ii) has regular and substantial caring responsibilities for a severely disabled person, or
+-- src:637 | (iii) is temporarily absent from the claimant's household.
+@ref reg 32(1) (src:632-637)
+GIVEN facts IS A `Facts for the work condition`
+GIVETH A BOOLEAN
+`reg 32(1) — the work condition is met` facts MEANS
+    `limb (a)` AND `limb (b)`
+    WHERE
+        `limb (a)` MEANS
+            (facts's `the claimant is in paid work`)
+            OR (facts's `the claimant is treated as being in paid work under paragraph (2)`)
+            OR (facts's `the claimant has an offer of paid work that is due to start before the end of the next assessment period`)
+        `limb (b)` MEANS
+            (NOT (facts's `the claimant is a member of a couple, whether claiming jointly or as a single person`))
+            OR (facts's `the other member is in paid work`)
+            OR (facts's `the other member is unable to provide childcare because they have limited capability for work`)
+            OR (facts's `the other member is unable to provide childcare because they have regular and substantial caring responsibilities for a severely disabled person`)
+            OR (facts's `the other member is unable to provide childcare because they are temporarily absent from the claimant's household`)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 33: the childcare costs condition.
+
+-- (3) The relevant notification period ends on the last day of the assessment period that follows the one in which the charges were paid.
+-- src:655 | (3) For the purposes of paragraph (2), “the relevant notification period” in regulation 36 of the Universal Credit, Personal Independence Payment, Jobseeker’s Allowance and Employment and Support Allowance (Decisions and Appeals) Regulations 2013 means a period of time ending on the last day of the assessment period that follows the assessment period in which the charges for relevant childcare were paid.
+@ref reg 33(3) (src:655)
+GIVEN `first date of entitlement` IS A DATE
+      `day on which the charges were paid` IS A DATE
+GIVETH A DATE
+`reg 33(3) — the last day of the relevant notification period` `first date of entitlement` `day on which the charges were paid` MEANS
+    (`reg 21(1) — an assessment period`
+        `first date of entitlement`
+        ((`uc1 — the position of the assessment period containing a day, counting months before the award` `first date of entitlement` `day on which the charges were paid`) PLUS 1))'s `last day`
+
+-- (za) The claimant has paid charges attributable to the assessment period (see regulation 34A) and has reported them before the end
+-- of the assessment period that follows the one in which they were paid. "Before the end" is read as on or before that period's
+-- last day, as paragraph (3) does ("a period of time ending on the last day"): fork F-33-REPORT, assumed and not ruled.
+-- (2) A late report may be accepted in the same circumstances as under regulation 36 of the Decisions and Appeals Regulations.
+-- src:646 | (za) the claimant has paid charges for relevant childcare that are attributable to that assessment period (see regulation 34A) and those charges have been reported to the Secretary of State before the end of the assessment period that follows the assessment period in which they were paid;
+-- src:654 | (2) The late reporting of charges for relevant childcare may be accepted in the same circumstances as late notification of a change of circumstances may be accepted under regulation 36 of the Universal Credit, Personal Independence Payment, Jobseeker's Allowance and Employment and Support Allowance (Decisions and Appeals) Regulations 2013 and, in such cases, subject to regulation 34A below, all or part of any such charges may be taken into account in any assessment period to which they relate.
+-- src:655 | (3) For the purposes of paragraph (2), “the relevant notification period” in regulation 36 of the Universal Credit, Personal Independence Payment, Jobseeker’s Allowance and Employment and Support Allowance (Decisions and Appeals) Regulations 2013 means a period of time ending on the last day of the assessment period that follows the assessment period in which the charges for relevant childcare were paid.
+@ref reg 33(1)(za), (2) and (3) (src:646-655)
+GIVEN `first date of entitlement` IS A DATE
+      `the claimant has paid charges for relevant childcare that are attributable to the assessment period` IS A BOOLEAN
+      `day on which the charges were paid` IS A DATE
+      `day on which the charges were reported to the Secretary of State` IS A DATE
+      `late reporting is accepted under regulation 36 of the Decisions and Appeals Regulations` IS A BOOLEAN  -- out of range: regulation 36 of the Decisions and Appeals Regulations (another instrument)
+GIVETH A BOOLEAN
+`reg 33(1)(za) — the charges have been paid and reported in time` `first date of entitlement` `the claimant has paid charges for relevant childcare that are attributable to the assessment period` `day on which the charges were paid` `day on which the charges were reported to the Secretary of State` `late reporting is accepted under regulation 36 of the Decisions and Appeals Regulations` MEANS
+    (`the claimant has paid charges for relevant childcare that are attributable to the assessment period`)
+    AND ((`day on which the charges were reported to the Secretary of State`
+            AT MOST (`reg 33(3) — the last day of the relevant notification period` `first date of entitlement` `day on which the charges were paid`))
+         OR `late reporting is accepted under regulation 36 of the Decisions and Appeals Regulations`)
+
+-- (a) The charges are in respect of a child, or a qualifying young person who has not reached the 1st September following their 16th
+-- birthday, for whom the claimant is responsible. The young person's age is read on the first day of the assessment period.
+-- src:647 | (a) the charges are in respect of—
+-- src:648 | (i) a child, or
+-- src:649 | (ii) a qualifying young person who has not reached the 1st September following their 16th birthday,
+-- src:650 | for whom the claimant is responsible; and
+@ref reg 33(1)(a) (src:647-650)
+DECLARE `Person for whom childcare charges are paid` HAS
+    `the person is a child`                                                  IS A BOOLEAN
+    `the person is a qualifying young person`                                IS A BOOLEAN
+    `date of birth`                                                          IS A DATE
+    `the claimant is responsible for the person`                             IS A BOOLEAN
+    `first day of the assessment period`                                      IS A DATE
+
+-- src:647 | (a) the charges are in respect of—
+-- src:648 | (i) a child, or
+-- src:649 | (ii) a qualifying young person who has not reached the 1st September following their 16th birthday,
+-- src:650 | for whom the claimant is responsible; and
+@ref reg 33(1)(a) (src:647-650)
+GIVEN person IS A `Person for whom childcare charges are paid`
+GIVETH A BOOLEAN
+`reg 33(1)(a) — the charges are in respect of a child or qualifying young person for whom the claimant is responsible` person MEANS
+    (person's `the claimant is responsible for the person`)
+    AND ((person's `the person is a child`)
+         OR ((person's `the person is a qualifying young person`)
+             AND ((person's `first day of the assessment period`)
+                  LESS THAN (`uc1 — the 1st September following a birthday` (person's `date of birth`) 16))))
+
+-- (b) The charges are for childcare arrangements (i) to enable the claimant to take up or continue paid work, or (ii) where the
+-- claimant is treated as being in paid work by virtue of regulation 32(2), to enable the claimant to maintain arrangements in place
+-- when they ceased paid work or began to receive those benefits.
+-- src:651 | (b) the charges are for childcare arrangements—
+-- src:652 | (i) that are to enable the claimant to take up paid work or to continue in paid work, or
+-- src:653 | (ii) where the claimant is treated as being in paid work by virtue of regulation 32(2), that are to enable the claimant to maintain childcare arrangements that were in place when the claimant ceased paid work or began to receive those benefits.
+@ref reg 33(1)(b) (src:651-653)
+GIVEN `the arrangements enable the claimant to take up paid work or to continue in paid work` IS A BOOLEAN
+      `the claimant is treated as being in paid work by virtue of regulation 32(2)` IS A BOOLEAN
+      `the arrangements enable the claimant to maintain arrangements that were in place when the claimant ceased paid work or began to receive those benefits` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 33(1)(b) — the charges are for qualifying childcare arrangements` `the arrangements enable the claimant to take up paid work or to continue in paid work` `the claimant is treated as being in paid work by virtue of regulation 32(2)` `the arrangements enable the claimant to maintain arrangements that were in place when the claimant ceased paid work or began to receive those benefits` MEANS
+    (`the arrangements enable the claimant to take up paid work or to continue in paid work`)
+    OR ((`the claimant is treated as being in paid work by virtue of regulation 32(2)`)
+        AND (`the arrangements enable the claimant to maintain arrangements that were in place when the claimant ceased paid work or began to receive those benefits`))
+
+-- (1) The childcare costs condition: limbs (za), (a) and (b) together.
+-- src:645 | (1) The childcare costs condition is met in respect of an assessment period if—
+-- src:646 | (za) the claimant has paid charges for relevant childcare that are attributable to that assessment period (see regulation 34A) and those charges have been reported to the Secretary of State before the end of the assessment period that follows the assessment period in which they were paid;
+-- src:647 | (a) the charges are in respect of—
+-- src:648 | (i) a child, or
+-- src:649 | (ii) a qualifying young person who has not reached the 1st September following their 16th birthday,
+-- src:650 | for whom the claimant is responsible; and
+-- src:651 | (b) the charges are for childcare arrangements—
+-- src:652 | (i) that are to enable the claimant to take up paid work or to continue in paid work, or
+-- src:653 | (ii) where the claimant is treated as being in paid work by virtue of regulation 32(2), that are to enable the claimant to maintain childcare arrangements that were in place when the claimant ceased paid work or began to receive those benefits.
+@ref reg 33(1) (src:645-653)
+GIVEN `the charges have been paid and reported in time` IS A BOOLEAN
+      `the charges are in respect of a child or qualifying young person for whom the claimant is responsible` IS A BOOLEAN
+      `the charges are for qualifying childcare arrangements` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 33(1) — the childcare costs condition is met` `the charges have been paid and reported in time` `the charges are in respect of a child or qualifying young person for whom the claimant is responsible` `the charges are for qualifying childcare arrangements` MEANS
+    (`the charges have been paid and reported in time`)
+    AND (`the charges are in respect of a child or qualifying young person for whom the claimant is responsible`)
+    AND (`the charges are for qualifying childcare arrangements`)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 34A: which charges are attributable to which assessment period.
+
+-- (1) Charges are attributable to an assessment period where they are paid in it for care in respect of it or any earlier period, or
+-- were paid in either of the two previous periods for care in respect of it. The periods are regulation 21's; paragraph (3) adds the
+-- months before the award began (fork F-34A-3).
+-- src:670 | (1) Charges paid for relevant childcare are attributable to an assessment period where—
+-- src:671 | (a) those charges are paid in that assessment period for relevant childcare in respect of that assessment period; or
+-- src:672 | (b) those charges are paid in that assessment period for relevant childcare in respect of a previous assessment period;or
+-- src:673 | (c) those charges were paid in either of the two previous assessment periods for relevant childcare in respect of that assessment period.
+@ref reg 34A(1) (src:670-673)
+GIVEN `first date of entitlement` IS A DATE
+      `day on which the charges were paid` IS A DATE
+      `a day in the period for which the childcare was provided` IS A DATE
+      `a day in the assessment period in question` IS A DATE
+GIVETH A BOOLEAN
+`reg 34A(1) — the charges are attributable to the assessment period` `first date of entitlement` `day on which the charges were paid` `a day in the period for which the childcare was provided` `a day in the assessment period in question` MEANS
+    ((`position of the period of payment` EQUALS `position of the period in question`)
+     AND (`position of the period of the care` AT MOST `position of the period in question`))
+    OR ((`position of the period of the care` EQUALS `position of the period in question`)
+        AND ((`position of the period of payment` EQUALS (`position of the period in question` MINUS 1))
+             OR (`position of the period of payment` EQUALS (`position of the period in question` MINUS 2))))
+    WHERE
+        `position of the period of payment` MEANS
+            `uc1 — the position of the assessment period containing a day, counting months before the award` `first date of entitlement` `day on which the charges were paid`
+        `position of the period of the care` MEANS
+            `uc1 — the position of the assessment period containing a day, counting months before the award` `first date of entitlement` `a day in the period for which the childcare was provided`
+        `position of the period in question` MEANS
+            `uc1 — the position of the assessment period containing a day, counting months before the award` `first date of entitlement` `a day in the assessment period in question`
+
+-- (2) Charges paid in advance: Step 2's formula is missing from this text; the three terms PA, D and AP are defined but nothing
+-- combines them, so no amount is returned (fork F-FORMULA, the same as regulation 21A(2)(b)).
+-- src:674 | (2) For the purposes of paragraph (1)(c), where a claimant pays charges for relevant childcare in advance, the amount which they have paid in respect of any assessment period is to be calculated as follows: Step 1 Take the total amount of the advance payment (leaving out of account any amount referred to in regulation 34(2)). Step 2 Apply the formula—
+-- src:675 | Where—
+-- src:676 | PA is the amount resulting from step 1;
+-- src:677 | D is the total number of days covered by the payment referred to in step 1, and
+-- src:678 | AP is the number of days covered by the payment which also fall within the assessment period in question.
+@ref reg 34A(2) (src:674-678)
+GIVEN `the amount resulting from step 1` IS A NUMBER
+      `the total number of days covered by the payment` IS A NUMBER
+      `the number of days covered by the payment that also fall within the assessment period in question` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`reg 34A(2) — the amount paid in advance in respect of an assessment period` `the amount resulting from step 1` `the total number of days covered by the payment` `the number of days covered by the payment that also fall within the assessment period in question` MEANS NOTHING
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 34: the amount of the childcare costs element.
+
+-- (3) "Other relevant support": payments out of funds provided by the Secretary of State or by Scottish or Welsh Ministers in
+-- connection with the claimant's participation in work-related activity or training, other than payments made by the Secretary of
+-- State where (a) the claimant has taken up, or will take up, paid work or has increased, or will increase, their hours, (b) the
+-- claimant must pay the charges before receiving a payment of universal credit that reflects the increase in earned income, and
+-- (c) not taking the payment into account will make the claimant less likely to keep the work or the increased hours.
+-- src:663 | (3) “Other relevant support” means payments out of funds provided by the Secretary of State or by Scottish or Welsh Ministers in connection with the claimant’s participation in work-related activity or training but does not include payments made by the Secretary of State where—
+-- src:664 | (a) the claimant—
+-- src:665 | (i) has taken up, or is due to take up, paid work; or
+-- src:666 | (ii) has increased, or is due to increase, their hours of paid work;
+-- src:667 | (b) the claimant is required to pay the charges for relevant childcare before they receive a payment of universal credit that reflects the increase in the claimant’s earned income as a result of sub-paragraph (a); and
+-- src:668 | (c) if the payment is not taken into account in determining the charges paid by the claimant for childcare the claimant will be less likely to continue in paid work or maintain the increase in hours of paid work.
+@ref reg 34(3) (src:663-668)
+DECLARE `Payment that may be other relevant support` HAS
+    `the payment is out of funds provided by the Secretary of State or by Scottish or Welsh Ministers in connection with the claimant's participation in work-related activity or training`  IS A BOOLEAN
+    `the payment is made by the Secretary of State`                                                                                                  IS A BOOLEAN
+    `the claimant has taken up, or is due to take up, paid work, or has increased, or is due to increase, their hours of paid work`                    IS A BOOLEAN
+    `the claimant is required to pay the charges for relevant childcare before they receive a payment of universal credit that reflects the increase in the claimant's earned income`  IS A BOOLEAN
+    `if the payment is not taken into account the claimant will be less likely to continue in paid work or maintain the increase in hours of paid work`  IS A BOOLEAN
+
+-- src:663 | (3) “Other relevant support” means payments out of funds provided by the Secretary of State or by Scottish or Welsh Ministers in connection with the claimant’s participation in work-related activity or training but does not include payments made by the Secretary of State where—
+-- src:664 | (a) the claimant—
+-- src:665 | (i) has taken up, or is due to take up, paid work; or
+-- src:666 | (ii) has increased, or is due to increase, their hours of paid work;
+-- src:667 | (b) the claimant is required to pay the charges for relevant childcare before they receive a payment of universal credit that reflects the increase in the claimant’s earned income as a result of sub-paragraph (a); and
+-- src:668 | (c) if the payment is not taken into account in determining the charges paid by the claimant for childcare the claimant will be less likely to continue in paid work or maintain the increase in hours of paid work.
+@ref reg 34(3) (src:663-668)
+GIVEN payment IS A `Payment that may be other relevant support`
+GIVETH A BOOLEAN
+`reg 34(3) — the payment is other relevant support` payment MEANS
+    (payment's `the payment is out of funds provided by the Secretary of State or by Scottish or Welsh Ministers in connection with the claimant's participation in work-related activity or training`)
+    AND (NOT `an excluded payment of the Secretary of State`)
+    WHERE
+        `an excluded payment of the Secretary of State` MEANS
+            (payment's `the payment is made by the Secretary of State`)
+            AND (payment's `the claimant has taken up, or is due to take up, paid work, or has increased, or is due to increase, their hours of paid work`)
+            AND (payment's `the claimant is required to pay the charges for relevant childcare before they receive a payment of universal credit that reflects the increase in the claimant's earned income`)
+            AND (payment's `if the payment is not taken into account the claimant will be less likely to continue in paid work or maintain the increase in hours of paid work`)
+
+-- (2) In determining the charges paid, any amount that the Secretary of State considers excessive, and any amount that is met or
+-- reimbursed by an employer or another person or covered by other relevant support, is left out of account. The two amounts must not
+-- overlap (fork F-34-2); what is left cannot be less than nothing.
+-- src:660 | (2) In determining the amount of charges paid for relevant childcare, there is to be left out of account any amount—
+-- src:661 | (a) that the Secretary of State considers excessive having regard to the extent to which the claimant (or, if the claimant is a member of a couple, the other member) is engaged in paid work; or
+-- src:662 | (b) that is met or reimbursed by an employer or some other person or is covered by other relevant support.
+@ref reg 34(2) (src:660-662)
+GIVEN `charges paid for relevant childcare attributable to the assessment period` IS A NUMBER
+      `amount that the Secretary of State considers excessive` IS A NUMBER
+      `amount met or reimbursed by an employer or some other person or covered by other relevant support` IS A NUMBER
+GIVETH A NUMBER
+`reg 34(2) — the charges paid after amounts are left out of account` `charges paid for relevant childcare attributable to the assessment period` `amount that the Secretary of State considers excessive` `amount met or reimbursed by an employer or some other person or covered by other relevant support` MEANS
+    IF `charges less the amounts left out` LESS THAN 0
+    THEN 0
+    ELSE `charges less the amounts left out`
+    WHERE
+        `charges less the amounts left out` MEANS
+            (`charges paid for relevant childcare attributable to the assessment period`
+                MINUS `amount that the Secretary of State considers excessive`)
+            MINUS `amount met or reimbursed by an employer or some other person or covered by other relevant support`
+
+-- (1) The amount is the lesser of 85% of the charges paid (after paragraph (2)) and the maximum amount in regulation 36's table, which
+-- depends on the number of children. With no children there is no maximum, and no amount (NOTHING).
+-- src:657 | (1) The amount of the childcare costs element for an assessment period is the lesser of—
+-- src:658 | (a) 85% of the charges paid for relevant childcare that are attributable to that assessment period; or
+-- src:659 | (b) the maximum amount specified in the table in regulation 36.
+@ref reg 34(1) (src:657-659)
+GIVEN `charges paid after amounts are left out of account` IS A NUMBER
+      `number of children in respect of whom childcare charges are paid` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`reg 34(1) — the amount of the childcare costs element for an assessment period` `charges paid after amounts are left out of account` `number of children in respect of whom childcare charges are paid` MEANS
+    CONSIDER `reg 36(1) — the maximum amount of the childcare costs element` `number of children in respect of whom childcare charges are paid`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST maximum THEN
+        JUST (IF `85% of the charges, to the nearest penny` LESS THAN maximum THEN `85% of the charges, to the nearest penny` ELSE maximum)
+    WHERE
+        `85% of the charges, to the nearest penny` MEANS
+            `core — an amount rounded to the nearest penny` (`charges paid after amounts are left out of account` TIMES 85%)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 35: relevant childcare.
+
+-- (6)(a) The proprietor of a school is the governing body incorporated under section 19 of the Education Act 2002 or, if there is none,
+-- the person or body of persons responsible for the management of the school.
+-- src:701 | (6) In paragraphs (2)(b) and (4)(d)—
+-- src:702 | (a) “proprietor”, in relation to a school, means—
+-- src:703 | (i) the governing body incorporated under section 19 of the Education Act 2002 , or
+-- src:704 | (ii) if there is no such governing body, the person or body of persons responsible for the management of the school; and
+@ref reg 35(6)(a) (src:701-704)
+GIVEN `the care is by or under the direction of the governing body incorporated under section 19 of the Education Act 2002` IS A BOOLEAN  -- out of range: other Acts and Regulations (not a piece)
+      `the school has no such governing body` IS A BOOLEAN
+      `the care is by or under the direction of the person or body of persons responsible for the management of the school` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 35(6)(a) — the care is by or under the direction of the proprietor of the school` `the care is by or under the direction of the governing body incorporated under section 19 of the Education Act 2002` `the school has no such governing body` `the care is by or under the direction of the person or body of persons responsible for the management of the school` MEANS
+    (`the care is by or under the direction of the governing body incorporated under section 19 of the Education Act 2002`)
+    OR ((`the school has no such governing body`)
+        AND (`the care is by or under the direction of the person or body of persons responsible for the management of the school`))
+
+-- The places in which care is provided, which paragraphs (2) to (5) tell apart.
+-- src:682 | (2) Care provided in England for a child—
+-- src:688 | (3) Care provided in Scotland for a child—
+-- src:692 | (4) Care provided in Wales for a child—
+-- src:699 | (5) Care provided anywhere outside Great Britain by a childcare provider approved by an organisation accredited by the Secretary of State.
+@ref reg 35(2) to (5) (src:682-699)
+DECLARE `Place where childcare is provided` IS ONE OF
+    `in England`
+    `in Scotland`
+    `in Wales`
+    `anywhere outside Great Britain`
+
+-- What the care is, in the terms the paragraphs use. A field is true when the care is of that description.
+-- src:681 | (1) “Relevant childcare” means any of the care described in paragraphs (2) to (5) other than care excluded by paragraph (7) or (8).
+-- src:706 | (7) The following are not relevant childcare—
+-- src:707 | (a) care provided for a child by a close relative of the child, wholly or mainly in the child's home; and
+-- src:708 | (b) care provided by a person who is a foster parent of the child.
+-- src:709 | (8) Care is not within paragraph (2)(a) if it is provided in breach of a requirement to register under Part 3 of the Childcare Act 2006.
+@ref reg 35(1), (7) and (8) (src:681-709)
+DECLARE `Care that may be relevant childcare` HAS
+    `where the care is provided`                                                                        IS A `Place where childcare is provided`
+    `the person cared for is a child, or a qualifying young person mentioned in regulation 33(1)(a)(ii)`  IS A BOOLEAN
+    `the care is by a person registered under Part 3 of the Childcare Act 2006`                          IS A BOOLEAN  -- out of range: other Acts and Regulations (not a piece)
+    `the care is provided in breach of a requirement to register under Part 3 of the Childcare Act 2006`  IS A BOOLEAN  -- out of range: other Acts and Regulations (not a piece)
+    `the care is provided as part of the school's activities`  IS A BOOLEAN
+    `the school is one that the Chief Inspector of Education, Children's Services and Skills is, or may be, required to inspect`  IS A BOOLEAN
+    `the care is out of school hours`                                                                     IS A BOOLEAN
+    `the child has reached compulsory school age`                                                         IS A BOOLEAN
+    `the care is by a domiciliary care provider registered with the Care Quality Commission in accordance with the requirements of the Health and Social Care Act 2008`  IS A BOOLEAN  -- out of range: other Acts and Regulations (not a piece)
+    `the care is by a person whose care service consists of child minding or of day care of children within the meaning of schedule 12 to the Public Services Reform (Scotland) Act 2010 and is registered under Part 5 of that Act`  IS A BOOLEAN  -- out of range: other Acts and Regulations (not a piece)
+    `the care is by a childcare agency whose care service consists of or includes supplying, or introducing to persons who use the service, childcarers within the meaning of paragraph 5 of schedule 12 to that Act`  IS A BOOLEAN
+    `the care is by a local authority whose care service consists of child minding or of day care of children within the meaning of schedule 12 to that Act and is registered under Part 5 of that Act`  IS A BOOLEAN
+    `the care is by a person registered under Part 2 of the Children and Families (Wales) Measure 2010`  IS A BOOLEAN  -- out of range: other Acts and Regulations (not a piece)
+    `but for article 11, 12 or 14 of the Child Minding and Day Care Exceptions (Wales) Order 2010 the care would be day care for the purposes of Part 2 of the Children and Families (Wales) Measure 2010`  IS A BOOLEAN  -- out of range: other Acts and Regulations (not a piece)
+    `the care is by a childcare provider approved in accordance with a scheme made under section 12(5) of the Tax Credits Act 2002 or under section 60 of the Government of Wales Act 2006`  IS A BOOLEAN  -- out of range: other Acts and Regulations (not a piece)
+    `the care is by a school on school premises, meaning premises that may be inspected as part of an inspection of the school`  IS A BOOLEAN
+    `the care is by a local authority`                                                                    IS A BOOLEAN
+    `the care is by a person employed, or engaged under a contract for services, to provide care and support by the provider of a domiciliary support service within the meaning of Part 1 of the Regulation and Inspection of Social Care (Wales) Act 2016`  IS A BOOLEAN  -- out of range: other Acts and Regulations (not a piece)
+    `the care is by a foster parent in relation to a child other than one whom the foster parent is fostering, and would be child minding or day care for the purposes of Part 2 of the Children and Families (Wales) Measure 2010 but for the fact that the child is over the age of the children to whom that Measure applies`  IS A BOOLEAN  -- out of range: other Acts and Regulations (not a piece)
+    `the care is by a childcare provider approved by an organisation accredited by the Secretary of State`  IS A BOOLEAN
+    `the care is provided by a close relative of the child, wholly or mainly in the child's home`          IS A BOOLEAN
+    `the care is provided by a person who is a foster parent of the child`                                IS A BOOLEAN
+
+-- (2) Care provided in England.
+-- src:682 | (2) Care provided in England for a child—
+-- src:683 | (a) by a person registered under Part 3 of the Childcare Act 2006 ; or
+-- src:684 | (b) by or under the direction of the proprietor of a school as part of the school's activities—
+-- src:685 | (i) out of school hours, where a child has reached compulsory school age, or
+-- src:686 | (ii) at any time, where a child has not yet reached compulsory school age; or
+-- src:687 | (c) by a domiciliary care provider registered with the Care Quality Commission in accordance with the requirements of the Health and Social Care Act 2008 .
+@ref reg 35(2) (src:682-687)
+GIVEN care IS A `Care that may be relevant childcare`
+      `proprietor of the school directs the care` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 35(2) — care provided in England for a child` care `proprietor of the school directs the care` MEANS
+    (care's `where the care is provided` EQUALS `in England`)
+    AND (`limb (a)` OR `limb (b)` OR `limb (c)`)
+    WHERE
+        `limb (a)` MEANS
+            (care's `the care is by a person registered under Part 3 of the Childcare Act 2006`)
+            AND (NOT (care's `the care is provided in breach of a requirement to register under Part 3 of the Childcare Act 2006`))
+        `limb (b)` MEANS
+            `proprietor of the school directs the care`
+            AND (care's `the care is provided as part of the school's activities`)
+            AND (care's `the school is one that the Chief Inspector of Education, Children's Services and Skills is, or may be, required to inspect`)
+            AND (((care's `the child has reached compulsory school age`) AND (care's `the care is out of school hours`))
+                 OR (NOT (care's `the child has reached compulsory school age`)))
+        `limb (c)` MEANS
+            care's `the care is by a domiciliary care provider registered with the Care Quality Commission in accordance with the requirements of the Health and Social Care Act 2008`
+
+-- (3) Care provided in Scotland.
+-- src:688 | (3) Care provided in Scotland for a child—
+-- src:689 | (a) by a person in circumstances in which the care service provided by the person consists of child minding or of day care of children within the meaning of schedule 12 to the Public Services Reform (Scotland) Act 2010 and is registered under Part 5 of that Act; or
+-- src:690 | (b) by a childcare agency where the care service consists of or includes supplying, or introducing to persons who use the service, childcarers within the meaning of paragraph 5 of schedule 12 to the Public Services Reform (Scotland) Act 2010; or
+-- src:691 | (c) by a local authority in circumstances in which the care service provided by the local authority consists of child minding or of day care of children within the meaning of schedule 12 to the Public Services Reform (Scotland) Act 2010 and is registered under Part 5 of that Act
+@ref reg 35(3) (src:688-691)
+GIVEN care IS A `Care that may be relevant childcare`
+GIVETH A BOOLEAN
+`reg 35(3) — care provided in Scotland for a child` care MEANS
+    (care's `where the care is provided` EQUALS `in Scotland`)
+    AND ((care's `the care is by a person whose care service consists of child minding or of day care of children within the meaning of schedule 12 to the Public Services Reform (Scotland) Act 2010 and is registered under Part 5 of that Act`)
+         OR (care's `the care is by a childcare agency whose care service consists of or includes supplying, or introducing to persons who use the service, childcarers within the meaning of paragraph 5 of schedule 12 to that Act`)
+         OR (care's `the care is by a local authority whose care service consists of child minding or of day care of children within the meaning of schedule 12 to that Act and is registered under Part 5 of that Act`))
+
+-- (4) Care provided in Wales. Limb (d) "out of school hours, by a school on school premises or by a local authority" is read with
+-- "out of school hours" applying to both the school and the local authority (fork F-35-4D, assumed and not ruled); "school premises"
+-- is paragraph (6)(b)'s meaning, premises that may be inspected as part of an inspection of the school.
+-- src:692 | (4) Care provided in Wales for a child—
+-- src:693 | (a) by a person registered under Part 2 of the Children and Families (Wales) Measure 2010 ;
+-- src:694 | (b) in circumstances in which, but for article 11, 12 or 14 of the Child Minding and Day Care Exceptions (Wales) Order 2010 , the care would be day care for the purposes of Part 2 of the Children and Families (Wales) Measure 2010;
+-- src:695 | (c) by a childcare provider approved in accordance with a scheme made by the National Assembly for Wales under section 12(5) of the Tax Credits Act 2002 or made by the Welsh Ministers under section 60 (promotion etc. of well-being) of the Government of Wales Act 2006;
+-- src:696 | (d) out of school hours, by a school on school premises or by a local authority;
+-- src:697 | (e) by a person who is employed, or engaged under a contract for services, to provide care and support by the provider of a domiciliary support service within the meaning of Part 1 of the Regulation and Inspection of Social Care (Wales) Act 2016; or
+-- src:698 | (f) by a foster parent in relation to the child (other than one whom the foster parent is fostering) in circumstances in which the care would be child minding or day care for the purposes of Part 2 of the Children and Families (Wales) Measure 2010 but for the fact that the child is over the age of the children to whom that Measure applies.
+@ref reg 35(4) (src:692-698)
+GIVEN care IS A `Care that may be relevant childcare`
+GIVETH A BOOLEAN
+`reg 35(4) — care provided in Wales for a child` care MEANS
+    (care's `where the care is provided` EQUALS `in Wales`)
+    AND ((care's `the care is by a person registered under Part 2 of the Children and Families (Wales) Measure 2010`)
+         OR (care's `but for article 11, 12 or 14 of the Child Minding and Day Care Exceptions (Wales) Order 2010 the care would be day care for the purposes of Part 2 of the Children and Families (Wales) Measure 2010`)
+         OR (care's `the care is by a childcare provider approved in accordance with a scheme made under section 12(5) of the Tax Credits Act 2002 or under section 60 of the Government of Wales Act 2006`)
+         OR ((care's `the care is out of school hours`)
+             AND ((care's `the care is by a school on school premises, meaning premises that may be inspected as part of an inspection of the school`)
+                  OR (care's `the care is by a local authority`)))
+         OR (care's `the care is by a person employed, or engaged under a contract for services, to provide care and support by the provider of a domiciliary support service within the meaning of Part 1 of the Regulation and Inspection of Social Care (Wales) Act 2016`)
+         OR (care's `the care is by a foster parent in relation to a child other than one whom the foster parent is fostering, and would be child minding or day care for the purposes of Part 2 of the Children and Families (Wales) Measure 2010 but for the fact that the child is over the age of the children to whom that Measure applies`))
+
+-- (5) Care provided anywhere outside Great Britain.
+-- src:699 | (5) Care provided anywhere outside Great Britain by a childcare provider approved by an organisation accredited by the Secretary of State.
+@ref reg 35(5) (src:699)
+GIVEN care IS A `Care that may be relevant childcare`
+GIVETH A BOOLEAN
+`reg 35(5) — care provided outside Great Britain for a child` care MEANS
+    (care's `where the care is provided` EQUALS `anywhere outside Great Britain`)
+    AND (care's `the care is by a childcare provider approved by an organisation accredited by the Secretary of State`)
+
+-- (7) Care by a close relative of the child, wholly or mainly in the child's home, and care by a person who is a foster parent
+-- of the child, is not relevant childcare.
+-- src:706 | (7) The following are not relevant childcare—
+-- src:707 | (a) care provided for a child by a close relative of the child, wholly or mainly in the child's home; and
+-- src:708 | (b) care provided by a person who is a foster parent of the child.
+@ref reg 35(7) (src:706-708)
+GIVEN care IS A `Care that may be relevant childcare`
+GIVETH A BOOLEAN
+`reg 35(7) — the care is excluded` care MEANS
+    (care's `the care is provided by a close relative of the child, wholly or mainly in the child's home`)
+    OR (care's `the care is provided by a person who is a foster parent of the child`)
+
+-- (1) and (9) Relevant childcare is care described in paragraphs (2) to (5), other than care excluded by paragraph (7) or (8); (8) is
+-- part of the description of paragraph (2)(a) above. "Child" includes a qualifying young person mentioned in regulation 33(1)(a)(ii).
+-- src:681 | (1) “Relevant childcare” means any of the care described in paragraphs (2) to (5) other than care excluded by paragraph (7) or (8).
+-- src:710 | (9) In this regulation “child” includes a qualifying young person mentioned in regulation 33(1)(a)(ii).
+@ref reg 35(1) and (9) (src:681-710)
+GIVEN care IS A `Care that may be relevant childcare`
+      `proprietor of the school directs the care` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 35(1) — the care is relevant childcare` care `proprietor of the school directs the care` MEANS
+    (care's `the person cared for is a child, or a qualifying young person mentioned in regulation 33(1)(a)(ii)`)
+    AND ((`reg 35(2) — care provided in England for a child` care `proprietor of the school directs the care`)
+         OR (`reg 35(3) — care provided in Scotland for a child` care)
+         OR (`reg 35(4) — care provided in Wales for a child` care)
+         OR (`reg 35(5) — care provided outside Great Britain for a child` care))
+    AND (NOT (`reg 35(7) — the care is excluded` care))

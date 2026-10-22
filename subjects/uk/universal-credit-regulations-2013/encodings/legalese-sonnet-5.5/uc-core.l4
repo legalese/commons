@@ -1,0 +1,275 @@
+IMPORT prelude
+IMPORT daydate
+
+-- The Universal Credit Regulations 2013 (S.I. 2013/376): the shared vocabulary of the encoding.
+-- Source: ../../registers/source-bundle/uksi-2013-376.txt, a plain-text rendering of the revised text (legislation.gov.uk, version 2026-07-16)
+-- made by a converter script. It is not the official text. Every `-- src:N | ...` line copies line N of that file.
+-- Target: the stable build 1.6.98. Seat: a person who claims or receives Universal Credit, alone or as one of a couple.
+--
+-- WHAT IS HERE: only what two or more pieces need. The kinds the text names (how a claim is made, the nations of Great
+-- Britain, the benefits regulation 2 lists, the elements of an award, the groups of claimants subject to work-related
+-- requirements, what Part 5 decides about capability for work), the assessment period, a time limit, a payment interval,
+-- the YMD shim, and the helpers for rounding and for a monthly equivalent. NOTES.md says how names are chosen.
+--
+-- UNITS, in one place (NOTES.md, "Naming conventions", has the full list):
+--   money      a NUMBER of pounds sterling; 338.58 is three hundred and thirty-eight pounds and 58 pence. No currency type.
+--   percentage a NUMBER written with the % literal: 55% is 0.55.
+--   fraction   a NUMBER where 1 is the whole; never a count of percentage points.
+--   days       a NUMBER of whole days. A longer period is a `Time limit`, never turned into days by hand.
+--   age        a NUMBER of complete years at the date the provision speaks of.
+--   date       a DATE, written with YMD year month day.
+
+-- The stable prelude has no YMD. This is the shim; it is the only definition of YMD in the encoding.
+GIVEN y IS A NUMBER
+      m IS A NUMBER
+      d IS A NUMBER
+GIVETH A DATE
+YMD y m d MEANS Date d m y
+
+-- ---------------------------------------------------------------------------------------------------------
+-- How a claim is made. A person who is a member of a couple (the Act's section 39, a stated input) claims
+-- jointly with the other member, or may claim as a single person in the cases listed in regulation 3(3).
+-- src:123 | (3) A person who is a member of a couple may make a claim as a single person if the other member of the couple—
+-- src:474 | (3) In the case of an award where the claimant is a member of a couple, but makes a claim as a single person, the amount to be deducted from the maximum amount in accordance with section 8(3) of the Act is the same as the amount that would be deducted in accordance with paragraph (1) if the couple were joint claimants.
+-- src:1268 | (2) In this Part “couple” means—
+-- src:1269 | (a) joint claimants; or
+-- src:1270 | (b) a single claimant who is a member of a couple within the meaning of section 39 of the Act and the other member of that couple,
+@ref reg 3(3); reg 22(3); reg 78(2) (src:123) (src:474) (src:1268-1270)
+DECLARE `Claim basis` IS ONE OF
+    `a single claimant`
+    `joint claimants`
+    `a single claimant who is a member of a couple`
+
+-- The three nations of Great Britain, by which the text sorts several of its definitions.
+-- src:49 | (a) in relation to England, a person with whom a child is placed under the Care Planning, Placement and Case Review (England) Regulations 2010;
+-- src:50 | (b) in relation to Wales, a person with whom a child is placed under the Care Planning, Placement and Case Review (Wales) Regulations 2015;
+-- src:51 | (c) in relation to Scotland, a foster carer or kinship carer with whom a child is placed under the Looked After Children (Scotland) Regulations 2009 ;
+@ref reg 2 "foster parent" (src:49-51)
+DECLARE `Nation of Great Britain` IS ONE OF
+    England
+    Wales
+    Scotland
+
+-- ---------------------------------------------------------------------------------------------------------
+-- The benefits and payments that regulation 2 names. A fact such as "the person is entitled to" or "is receiving" is a
+-- LIST OF Benefit; each piece says in its own field name which verb its provision uses. Most definitions point to
+-- another Act or instrument that is not among the inputs, so whether a payment IS that benefit is a stated input.
+-- The limbs of "attendance allowance" and "war disablement pension" are in uc-core-payments.l4.
+-- src:17 | “adult disability payment” has the meaning given in regulation 2 of the Disability Assistance for Working Age People (Scotland) Regulations 2022;
+-- src:18 | “attendance allowance” means—
+-- src:28 | “carer's allowance” means a carer's allowance under section 70 of the Contributions and Benefits Act ;
+-- src:30 | “carer support payment” means the carer support payment component of carer support given in accordance with the Carer’s Assistance (Carer Support Payment) (Scotland) Regulations 2023;
+-- src:31 | “child disability payment” has the meaning given in regulation 2 of the DACYP Regulations;
+-- src:41 | “disability living allowance” means an allowance under section 71 of the Contributions and Benefits Act;
+-- src:44 | “employment and support allowance” means an allowance under Part 1 of the Welfare Reform Act 2007 as amended by Schedule 3 and Part 1 of Schedule 14 to the Welfare Reform Act 2012 (removing references to an income-related allowance);
+-- src:59 | “industrial injuries benefit” means a benefit under Part 5 of the Contributions and Benefits Act;
+-- src:61 | “jobseeker's allowance” means an allowance under the Jobseekers Act 1995 as amended by Part 1 of Schedule 14 to the Act (removing references to an income-based allowance);
+-- src:75 | “maternity allowance” means a maternity allowance under section 35 or 35B of the Contributions and Benefits Act;
+-- src:80 | “Scottish adult disability living allowance” has the meaning given in regulation 2 of the Disability Assistance (Scottish Adult Disability Living Allowance) Regulations 2025;
+-- src:81 | “... statutory paternity pay” means ... statutory paternity pay under Part 12ZA of the Contributions and Benefits Act;
+-- src:84 | “pension age disability payment” has the meaning given in regulation 2 of the Disability Assistance for Older People (Scotland) Regulations 2024;
+-- src:85 | “personal independence payment” means an allowance under Part 4 of the Welfare Reform Act 2012;
+-- src:98 | “statutory adoption pay” means a payment under Part 12ZB of the Contributions Benefits Act ;
+-- src:99 | “statutory maternity pay” means a payment under Part 12 of the Contributions and Benefits Act;
+-- src:100 | “statutory neonatal care pay” means a payment under Part 12ZE of the Contributions and Benefits Act;
+-- src:101 | “statutory parental bereavement pay” means statutory parental bereavement pay payable in accordance with Part 12ZD of the Contributions and Benefits Act;
+-- src:102 | “statutory shared parental pay” means statutory shared parental pay payable in accordance with Part 12ZC of the Contributions and Benefits Act;
+-- src:103 | “statutory sick pay” means a payment under Part 11 of the Contributions and Benefits Act;
+-- src:112 | “war disablement pension” means any retired pay, pension or allowance payable in respect of disablement under an instrument specified in section 639(2) of ITEPA;
+-- src:114 | “widowed mother's allowance” means an allowance under section 37 of the Contributions and Benefits Act;
+-- src:115 | “widowed parent's allowance” means an allowance under section 39A of the Contributions and Benefits Act ;
+-- src:116 | “widow's pension” means a pension under section 39 of the Contributions and Benefits Act.
+@ref reg 2 "adult disability payment" to "widow's pension" (src:17-116)
+DECLARE Benefit IS ONE OF
+    `adult disability payment`
+    `attendance allowance`
+    `carer's allowance`
+    `carer support payment`
+    `child disability payment`
+    `disability living allowance`
+    `employment and support allowance`
+    `industrial injuries benefit`
+    `jobseeker's allowance`
+    `maternity allowance`
+    `Scottish adult disability living allowance`
+    `statutory paternity pay`
+    `pension age disability payment`
+    `personal independence payment`
+    `statutory adoption pay`
+    `statutory maternity pay`
+    `statutory neonatal care pay`
+    `statutory parental bereavement pay`
+    `statutory shared parental pay`
+    `statutory sick pay`
+    `war disablement pension`
+    `widowed mother's allowance`
+    `widowed parent's allowance`
+    `widow's pension`
+
+-- ---------------------------------------------------------------------------------------------------------
+-- The amounts that make up an award. Regulation 2 defines four of these terms by pointing to regulations 24, 25, 27, 29
+-- and 31 (uc1); regulation 23 names them.
+-- src:499 | (1) This Part contains provisions about the amounts (“the elements”) under—
+-- src:500 | (a) section 9 (the standard allowance);
+-- src:501 | (b) section 10 (responsibility for children and young persons);
+-- src:502 | (c) section 11 (housing costs); and
+-- src:503 | (d) section 12 (particular needs and circumstances),
+-- src:506 | (a) ... the LCWRA element (see regulations 27 to 28);
+-- src:507 | (b) the carer element (see regulations 29 and 30); and
+-- src:508 | (c) the childcare costs element (see regulations 31 to 35).
+@ref reg 23(1) and (2) (src:499-508)
+DECLARE `Element of an award` IS ONE OF
+    `standard allowance`
+    `child element`
+    `housing costs element`
+    `LCWRA element`
+    `carer element`
+    `childcare costs element`
+
+-- The groups of claimants that sections 19 to 22 of the Act sort claimants into, named as regulation 90 names them.
+-- Used by three pieces: regulation 12 (uc1) and regulation 62 (uc2) ask whether a claimant falls within section 22; regulation 90 (uc4) names all four.
+-- src:330 | (ii) is attended by a claimant falling within section 22 of the Act as a work preparation requirement or as voluntary work preparation, and
+-- src:1061 | (b) would, apart from this regulation or regulation 90, fall within section 22 of the Act (claimants subject to all work-related requirements).
+-- src:1412 | (1) A claimant falls within section 19 of the Act (claimants subject to no work-related requirements) if the claimant's monthly earnings are equal to or exceed the claimant's individual threshold.
+-- src:1414 | (a) 16 hours per week, in the case of a claimant who would otherwise fall within section 20 (claimants subject to work-focused interview requirement only) or section 21 (claimants subject to work-preparation requirement) of the Act; or
+-- src:1415 | (b) the expected number of hours per week in the case of a claimant who would otherwise fall within section 22 of the Act (claimants subject to all work-related requirements),
+@ref reg 12 (src:330); reg 62 (src:1061); reg 90(1) and (2) (src:1412-1415)
+DECLARE `Work-related group` IS ONE OF
+    `subject to no work-related requirements`
+    `subject to work-focused interview requirement only`
+    `subject to work-preparation requirement`
+    `subject to all work-related requirements`
+
+-- What Part 5 decides about a claimant. Part 5 is encoded by uc4; the other pieces read these three facts as inputs.
+-- src:745 | The question whether a claimant has limited capability for work, or for work and work-related activity, or is a severe conditions criteria claimant, is to be determined for the purposes of the Act and these Regulations in accordance with this Part.
+-- src:747 | (1) A claimant has limited capability for work if—
+-- src:765 | (1) A claimant has limited capability for work and work-related activity if—
+-- src:785 | (1) A claimant is a “severe conditions criteria claimant” if it has been determined that the claimant is a severe conditions criteria claimant on the basis of an assessment under this Part.
+@ref reg 38; reg 39(1); reg 40(1); reg 40A(1) (src:745-785)
+DECLARE `Capability for work` HAS
+    `limited capability for work`                            IS A BOOLEAN
+    `limited capability for work and work-related activity`  IS A BOOLEAN
+    `severe conditions criteria claimant`                    IS A BOOLEAN
+
+-- ---------------------------------------------------------------------------------------------------------
+-- The assessment period: the month for which an award is worked out. Regulation 21 (uc1) says how one is found; the other
+-- pieces take one as given. `last day` is the final day of the period and is itself inside it.
+-- src:432 | (1) An assessment period is... a period of one month beginning with the first date of entitlement and each subsequent period of one month during which entitlement subsists.
+@ref reg 21(1) (src:432)
+DECLARE `Assessment period` HAS
+    `first day`  IS A DATE
+    `last day`   IS A DATE
+
+-- src:432 | (1) An assessment period is... a period of one month beginning with the first date of entitlement and each subsequent period of one month during which entitlement subsists.
+@ref reg 21(1) (src:432)
+GIVEN period IS AN `Assessment period`
+GIVETH A NUMBER
+`core — the number of days in an assessment period` period MEANS
+    (Day (period's `last day`) MINUS Day (period's `first day`)) PLUS 1
+
+-- ---------------------------------------------------------------------------------------------------------
+-- A time limit is a number of days, weeks, months or years: "6 months" is the pair (6, months), never 180.
+-- src:149 | (a) the absence is expected to exceed, or does exceed, 6 months; or
+-- src:289 | (i) the absence is not expected to exceed, and does not exceed, one month, or
+@ref reg 4 (src:149) and reg 11 (src:289)
+DECLARE `Unit of time` IS ONE OF
+    days
+    weeks
+    months
+    years
+
+DECLARE `Time limit` HAS
+    quantity  IS A NUMBER
+    unit      IS A `Unit of time`
+
+-- The date reached by adding a time limit to a date. This is addition and nothing more: whether the last day of a "within
+-- 6 months" period is the day before or the same day is for the provision that uses it. Months and years use `add months`
+-- and `add years`, which move the day of the month back to the last day of a shorter month (31 August plus 6 months is 28 February).
+-- src:149 | (a) the absence is expected to exceed, or does exceed, 6 months; or
+@ref reg 4 (src:149)
+GIVEN start IS A DATE
+      limit IS A `Time limit`
+GIVETH A DATE
+`core — the date reached by adding a time limit to a date` start limit MEANS
+    CONSIDER limit's unit
+    WHEN days   THEN start PLUS limit's quantity
+    WHEN weeks  THEN start PLUS (limit's quantity TIMES 7)
+    WHEN months THEN `add months` start (limit's quantity)
+    WHEN years  THEN `add years` start (limit's quantity)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- How often a payment is made, and what it comes to in a month. The same table appears three times in the text.
+-- Regulation 73(2) omits "two-weekly"; the two schedules include it. The table here includes it for all three users.
+-- src:1189 | (a) weekly payments are multiplied by 52 and divided by 12;
+-- src:1190 | (b) four weekly payments are multiplied by 13 and divided 12;
+-- src:1191 | (c) three monthly payments are multiplied by 4 and divided by 12; and
+-- src:1192 | (d) annual payments are divided by 12.
+-- src:2195 | (a) weekly payments are multiplied by 52 and divided by 12;
+-- src:2196 | (aa) two-weekly payments are multiplied by 26 and divided by 12;
+-- src:2197 | (b) four-weekly payments are multiplied by 13 and divided by 12;
+-- src:2198 | (c) three-monthly payments are multiplied by 4 and divided by 12; and
+-- src:2199 | (d) annual payments are divided by 12.
+-- src:2684 | (a) weekly payments are multiplied by 52 and divided by 12;
+-- src:2685 | (aa) two-weekly payments are multiplied by 26 and divided by 12;
+-- src:2686 | (b) four-weekly payments are multiplied by 13 and divided by 12;
+-- src:2687 | (c) three-monthly payments are multiplied by 4 and divided by 12; and
+-- src:2688 | (d) annual payments are divided by 12.
+@ref reg 73(2) (src:1189-1192); Sch 4 para 7(2) (src:2195-2199); Sch 5 para 13(3) (src:2684-2688)
+DECLARE `Payment interval` IS ONE OF
+    `weekly payments`
+    `two-weekly payments`
+    `four-weekly payments`
+    `monthly payments`
+    `three-monthly payments`
+    `annual payments`
+
+-- src:1189 | (a) weekly payments are multiplied by 52 and divided by 12;
+-- src:1190 | (b) four weekly payments are multiplied by 13 and divided 12;
+-- src:1191 | (c) three monthly payments are multiplied by 4 and divided by 12; and
+-- src:1192 | (d) annual payments are divided by 12.
+-- src:2195 | (a) weekly payments are multiplied by 52 and divided by 12;
+-- src:2196 | (aa) two-weekly payments are multiplied by 26 and divided by 12;
+-- src:2197 | (b) four-weekly payments are multiplied by 13 and divided by 12;
+-- src:2198 | (c) three-monthly payments are multiplied by 4 and divided by 12; and
+-- src:2199 | (d) annual payments are divided by 12.
+-- src:2684 | (a) weekly payments are multiplied by 52 and divided by 12;
+-- src:2685 | (aa) two-weekly payments are multiplied by 26 and divided by 12;
+-- src:2686 | (b) four-weekly payments are multiplied by 13 and divided by 12;
+-- src:2687 | (c) three-monthly payments are multiplied by 4 and divided by 12; and
+-- src:2688 | (d) annual payments are divided by 12.
+@ref reg 73(2) (src:1189-1192); Sch 4 para 7(2) (src:2195-2199); Sch 5 para 13(3) (src:2684-2688)
+GIVEN amount IS A NUMBER
+      interval IS A `Payment interval`
+GIVETH A NUMBER
+`core — the monthly equivalent of a payment` amount interval MEANS
+    CONSIDER interval
+    WHEN `weekly payments`        THEN (amount TIMES 52) DIVIDED BY 12
+    WHEN `two-weekly payments`    THEN (amount TIMES 26) DIVIDED BY 12
+    WHEN `four-weekly payments`   THEN (amount TIMES 13) DIVIDED BY 12
+    WHEN `monthly payments`       THEN amount
+    WHEN `three-monthly payments` THEN (amount TIMES 4) DIVIDED BY 12
+    WHEN `annual payments`        THEN amount DIVIDED BY 12
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Rounding (regulation 6, which uc1 encodes; supplied here because the other pieces compute amounts too).
+-- Half a penny or more counts as a penny; a smaller fraction is disregarded. A negative amount is rounded on its size and
+-- keeps its sign: the text speaks only of "a fraction of a penny" (fork F1 in NOTES.md, assumed and not ruled).
+-- src:172 | (1) Where the calculation of an amount for the purposes of these Regulations results in a fraction of a penny, that fraction is to be disregarded if it is less than half a penny and otherwise it is to be treated as a penny.
+@ref reg 6(1) (src:172)
+GIVEN amount IS A NUMBER
+GIVETH A NUMBER
+`core — an amount rounded to the nearest penny` amount MEANS
+    IF amount AT LEAST 0
+    THEN (FLOOR ((amount TIMES 100) PLUS 0.5)) DIVIDED BY 100
+    ELSE 0 MINUS ((FLOOR (((0 MINUS amount) TIMES 100) PLUS 0.5)) DIVIDED BY 100)
+
+-- A fraction of a pound disregarded: the amount to the pound below it (regulation 6(1A), for regulations 82(1)(a), 90 and 99(6)).
+-- src:173 | (1A) Where the calculation of an amount for the purposes of the following provisions results in a fraction of a pound, that fraction is to be disregarded—
+-- src:174 | (za) regulation 82(1)(a) (exceptions – earnings);
+-- src:175 | (a) regulation 90 (claimants subject to no work-related requirements – the earnings thresholds); and
+-- src:176 | (b) regulation 99(6) (circumstances in which requirements must not be imposed); ...
+@ref reg 6(1A) (src:173-176)
+GIVEN amount IS A NUMBER
+GIVETH A NUMBER
+`core — an amount with any fraction of a pound disregarded` amount MEANS
+    TRUNC amount 0

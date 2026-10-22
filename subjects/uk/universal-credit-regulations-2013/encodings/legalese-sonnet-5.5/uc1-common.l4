@@ -1,0 +1,114 @@
+IMPORT prelude
+IMPORT `uc-core`
+
+-- The Universal Credit Regulations 2013 (S.I. 2013/376), piece uc1: helpers for counting that several of uc1's modules share.
+-- Source: ../../registers/source-bundle/uksi-2013-376.txt, a plain-text rendering of the revised text (legislation.gov.uk, version 2026-07-16)
+-- made by a converter script. It is not the official text. Every `-- src:N | ...` line copies line N of that file.
+-- Target: the stable build 1.6.98. Seat: a person who claims or receives Universal Credit, alone or as one of a couple.
+--
+-- WHAT IS HERE: no provision of the text is encoded in this module. It holds three small pieces of arithmetic that the
+-- text takes for granted and that more than one regulation of uc1 needs: an age in complete years on a date, the last day of
+-- a calendar month, and the comparison of an absence with a limit ("expected to exceed, or does exceed, 6 months").
+-- Each rule names the line of the text that needs it. Names begin `uc1 —`, which keeps them apart from the other pieces' names.
+--
+-- COUNTING CONVENTION for an absence (fork F-ABS in NOTES.md, assumed and not ruled): an absence that began on a day lasts
+-- longer than N months if the day to which it has lasted is later than the day N months after it began (31 August plus 6 months
+-- is 28 February, by the core). An absence that ends on the day N months after it began does not exceed N months.
+
+-- Age in complete years on a date. The text speaks of "the age of 16" and "aged under 25" without saying how an age is
+-- counted; the usual count of complete years is taken (fork F-AGE in NOTES.md). A birthday on 29 February is reached in a
+-- year that is not a leap year on 1 March, because the month and day are compared.
+-- src:160 | (1) A person who has reached the age of 16 but not the age of 20 is a qualifying young person for the purposes of Part 1 of the Act and these Regulations—
+@ref reg 5(1) (src:160)
+GIVEN `date of birth` IS A DATE
+      `the date on which the age is asked` IS A DATE
+GIVETH A NUMBER
+`uc1 — the age in complete years on a date` `date of birth` `the date on which the age is asked` MEANS
+    ((DATE_YEAR `the date on which the age is asked`) MINUS (DATE_YEAR `date of birth`))
+    MINUS (IF (((DATE_MONTH `the date on which the age is asked`) TIMES 100) PLUS (DATE_DAY `the date on which the age is asked`))
+                LESS THAN (((DATE_MONTH `date of birth`) TIMES 100) PLUS (DATE_DAY `date of birth`))
+           THEN 1
+           ELSE 0)
+
+-- A leap year, which regulation 21(2)(b) names ("or, in a leap year, the 28th day").
+-- src:436 | (b) if the first date of entitlement falls on the 29th or 30th day of a month, each assessment period begins on the 29th or 30th day of the month (as above) except in February when it begins on the 27th day or, in a leap year, the 28th day.
+@ref reg 21(2)(b) (src:436)
+GIVEN year IS A NUMBER
+GIVETH A BOOLEAN
+`uc1 — a leap year` year MEANS
+    ((year MODULO 4) EQUALS 0)
+    AND ((NOT ((year MODULO 100) EQUALS 0)) OR ((year MODULO 400) EQUALS 0))
+
+-- The last day of a calendar month, as a day of the month (28 to 31). Regulation 21(2)(a) needs it ("the last day of the month").
+-- src:435 | (a) if the first date of entitlement falls on the 31st day of a month, each assessment period begins on the last day of the month; and
+@ref reg 21(2)(a) (src:435)
+GIVEN month IS A NUMBER
+      year IS A NUMBER
+GIVETH A NUMBER
+`uc1 — the last day of a calendar month` month year MEANS
+    DATE_DAY ((Date 1 (month PLUS 1) year) MINUS 1)
+
+-- An absence from a person's household or from Great Britain, as the text measures it: when it began, the day to which it has
+-- lasted (the day the question is asked, if the person is still away; otherwise the day the person came back) and the day on
+-- which it is expected to end.
+-- src:135 | (6) Where the claimant is a member of a couple, and the other member is temporarily absent from the claimant's household, they cease to be treated as a couple if that absence is expected to exceed, or does exceed, 6 months.
+-- src:289 | (i) the absence is not expected to exceed, and does not exceed, one month, or
+@ref reg 3(6) (src:135); reg 11(1)(b)(i) (src:289)
+DECLARE `Absence that is measured against a limit` HAS
+    `first day of the absence`                IS A DATE
+    `day to which the absence has lasted`     IS A DATE
+    `expected last day of the absence`        IS A DATE
+
+-- The absence has lasted longer than the period that ends on a given day (the limit day).
+-- src:135 | (6) Where the claimant is a member of a couple, and the other member is temporarily absent from the claimant's household, they cease to be treated as a couple if that absence is expected to exceed, or does exceed, 6 months.
+@ref reg 3(6) (src:135)
+GIVEN absence IS AN `Absence that is measured against a limit`
+      `limit day` IS A DATE
+GIVETH A BOOLEAN
+`uc1 — the absence has lasted beyond a day` absence `limit day` MEANS
+    (absence's `day to which the absence has lasted`) GREATER THAN `limit day`
+
+-- The absence is expected to last beyond the limit day.
+-- src:135 | (6) Where the claimant is a member of a couple, and the other member is temporarily absent from the claimant's household, they cease to be treated as a couple if that absence is expected to exceed, or does exceed, 6 months.
+@ref reg 3(6) (src:135)
+GIVEN absence IS AN `Absence that is measured against a limit`
+      `limit day` IS A DATE
+GIVETH A BOOLEAN
+`uc1 — the absence is expected to last beyond a day` absence `limit day` MEANS
+    (absence's `expected last day of the absence`) GREATER THAN `limit day`
+
+-- "expected to exceed, or does exceed" a time limit counted from the first day of the absence.
+-- src:135 | (6) Where the claimant is a member of a couple, and the other member is temporarily absent from the claimant's household, they cease to be treated as a couple if that absence is expected to exceed, or does exceed, 6 months.
+@ref reg 3(6) (src:135)
+GIVEN absence IS AN `Absence that is measured against a limit`
+      limit IS A `Time limit`
+GIVETH A BOOLEAN
+`uc1 — the absence is expected to exceed or does exceed a time limit` absence limit MEANS
+    (`uc1 — the absence is expected to last beyond a day` absence
+         (`core — the date reached by adding a time limit to a date` (absence's `first day of the absence`) limit))
+    OR (`uc1 — the absence has lasted beyond a day` absence
+         (`core — the date reached by adding a time limit to a date` (absence's `first day of the absence`) limit))
+
+-- "not expected to exceed, and does not exceed" a time limit counted from the first day of the absence.
+-- src:289 | (i) the absence is not expected to exceed, and does not exceed, one month, or
+@ref reg 11(1)(b)(i) (src:289)
+GIVEN absence IS AN `Absence that is measured against a limit`
+      limit IS A `Time limit`
+GIVETH A BOOLEAN
+`uc1 — the absence is not expected to exceed and does not exceed a time limit` absence limit MEANS
+    NOT (`uc1 — the absence is expected to exceed or does exceed a time limit` absence limit)
+
+-- The 1st September following a birthday (regulation 5(1)(a) and (b) name the 16th and the 19th; regulation 33(1)(a)(ii) the 16th).
+-- A birthday that falls on or after 1 September has its following 1 September in the next calendar year, and one that falls
+-- on 1 September itself is not followed by that same 1 September (fork F-5-SEPT, assumed and not ruled). Only the month and the
+-- day are compared, so a birth on 29 February needs no special case.
+-- src:161 | (a) up to, but not including, the 1st September following their 16th birthday; and
+@ref reg 5(1)(a) (src:161)
+GIVEN `date of birth` IS A DATE
+      `the birthday reached` IS A NUMBER
+GIVETH A DATE
+`uc1 — the 1st September following a birthday` `date of birth` `the birthday reached` MEANS
+    Date 1 9
+        ((DATE_YEAR `date of birth`)
+         PLUS `the birthday reached`
+         PLUS (IF (((DATE_MONTH `date of birth`) TIMES 100) PLUS (DATE_DAY `date of birth`)) LESS THAN 901 THEN 0 ELSE 1))

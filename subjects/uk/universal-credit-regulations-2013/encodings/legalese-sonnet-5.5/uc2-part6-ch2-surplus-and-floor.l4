@@ -1,0 +1,457 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `uc-core`
+
+-- The Universal Credit Regulations 2013 (S.I. 2013/376), Part 6, Chapter 2 (EARNED INCOME): surplus earnings (regulation 54A),
+-- and the minimum income floor, the start-up period and gainful self-employment (regulations 62 to 64).
+-- Source: ../../registers/source-bundle/uksi-2013-376.txt (lines 914-945 and 1057-1084), a plain-text rendering made by a converter script; it is not the
+-- official text. Target: the stable build 1.6.98. Money is a NUMBER of pounds; a calculated amount is rounded once, at the end,
+-- with the keel's `core — an amount rounded to the nearest penny` (regulation 6(1)).
+--
+-- Two things in regulations 54A and 62 are decided elsewhere. The nil UC threshold of regulation 54A(6) is given in this text by
+-- a formula that did not survive the conversion: the text prints "expressed by the following formula—" and then "where—", with
+-- nothing between; no [formula: ...] marker marks the gap. The threshold is therefore a stated input and the formula is not
+-- reconstructed (fork F-A1). The individual and couple thresholds of regulation 62(4) are those of regulation 90(2) and (3),
+-- which belong to another piece (uc4), and are stated inputs too.
+
+§ `Part 6, Chapter 2 -- Surplus earnings, minimum income floor, start-up period, gainful self-employment`
+
+§§ `Regulation 54A -- Surplus earnings`
+
+-- Paragraph (6): the relevant threshold is the nil UC threshold plus 300 pounds.
+-- src:938 | (6) In this regulation—
+-- src:939 | “total earned income” is the earned income of the claimant or, if the claimant is a member of a couple, the couple’s combined earned income, but does not include any amount a claimant would be treated as having by virtue of regulation 62 (the minimum income floor);
+-- src:940 | “the nil UC threshold” is the amount of total earned income above which there would be no entitlement to universal credit, expressed by the following formula—
+-- src:941 | where—
+-- src:942 | M is the maximum amount of an award of universal credit;
+-- src:943 | U is unearned income;
+-- src:944 | WA is the work allowance; and
+-- src:945 | “the relevant threshold” is the nil UC threshold plus £300.
+@ref reg 54A(6) (src:938-945)
+GIVEN `nil UC threshold` IS A NUMBER
+GIVETH A NUMBER
+`reg 54A(6) — the relevant threshold` `nil UC threshold` MEANS
+    `nil UC threshold` PLUS 300
+
+-- Paragraph (1): the regulation applies to a claim where (a) the claimant, or either of joint claimants, had an old award that
+-- terminated within the 6 months ending on the first day in respect of which the claim is made; (b) the claimant has not, or
+-- neither of joint claimants has, been entitled to universal credit since it terminated; and (c) the total earned income in the
+-- month that would have been the final assessment period for the old award, had it not terminated, exceeded the relevant threshold.
+-- src:914 | 54A Surplus earnings
+-- src:915 | (1) This regulation applies in relation to a claim for universal credit where—
+-- src:916 | (a) the claimant, or either of joint claimants, had an award of universal credit (the “old award”) that terminated within the 6 months ending on the first day in respect of which the claim is made;
+-- src:917 | (b) the claimant has not, or neither of joint claimants has, been entitled to universal credit since the old award terminated; and
+-- src:918 | (c) the total earned income in the month that would have been the final assessment period for the old award, had it not terminated, exceeded the relevant threshold.
+@ref reg 54A(1) (src:914-918)
+DECLARE `Claim considered under regulation 54A` HAS
+    `the claimant, or either of joint claimants, had an award of universal credit (the old award)`  IS A BOOLEAN
+    `date on which the old award terminated`                                                     IS A DATE
+    `first day in respect of which the claim is made`                                            IS A DATE
+    `the claimant has not, or neither of joint claimants has, been entitled to universal credit since the old award terminated`  IS A BOOLEAN
+    `total earned income in the month that would have been the final assessment period for the old award, had it not terminated`  IS A NUMBER
+    `nil UC threshold`                                                                           IS A NUMBER
+    `total earned income in the month that would have been the first assessment period in relation to each earlier claim since the old award terminated`  IS A LIST OF NUMBER
+    `the claimant has, or had at the time the old award terminated, recently been a victim of domestic violence`  IS A BOOLEAN
+    `first joint claim by members of a couple each of whom had an old award`                     IS A BOOLEAN
+    `surplus earnings of each member of the couple that would have been treated as earned income had they each claimed as a single person`  IS A LIST OF NUMBER
+    `single claim after an award or claim as a joint claimant, or joint claim after an award or claim as a member of a different couple`  IS A BOOLEAN
+    `portion of the original surplus or adjusted surplus apportioned to the claim by the Secretary of State`  IS A MAYBE NUMBER
+
+-- src:916 | (a) the claimant, or either of joint claimants, had an award of universal credit (the “old award”) that terminated within the 6 months ending on the first day in respect of which the claim is made;
+@ref reg 54A(1)(a) (src:916)
+GIVEN claim IS A `Claim considered under regulation 54A`
+GIVETH A BOOLEAN
+`reg 54A(1)(a) — the old award terminated within the 6 months ending on the first day of the claim` claim MEANS
+        (claim's `the claimant, or either of joint claimants, had an award of universal credit (the old award)`)
+    AND (claim's `date on which the old award terminated` AT MOST claim's `first day in respect of which the claim is made`)
+    AND (claim's `first day in respect of which the claim is made` AT MOST (`core — the date reached by adding a time limit to a date` (claim's `date on which the old award terminated`) (`Time limit` WITH quantity IS 6, unit IS months)))
+
+-- src:918 | (c) the total earned income in the month that would have been the final assessment period for the old award, had it not terminated, exceeded the relevant threshold.
+@ref reg 54A(1)(c) (src:918)
+GIVEN claim IS A `Claim considered under regulation 54A`
+GIVETH A BOOLEAN
+`reg 54A(1)(c) — the total earned income in the final month exceeded the relevant threshold` claim MEANS
+    claim's `total earned income in the month that would have been the final assessment period for the old award, had it not terminated` GREATER THAN `reg 54A(6) — the relevant threshold` (claim's `nil UC threshold`)
+
+-- src:914 | 54A Surplus earnings
+-- src:915 | (1) This regulation applies in relation to a claim for universal credit where—
+-- src:916 | (a) the claimant, or either of joint claimants, had an award of universal credit (the “old award”) that terminated within the 6 months ending on the first day in respect of which the claim is made;
+-- src:917 | (b) the claimant has not, or neither of joint claimants has, been entitled to universal credit since the old award terminated; and
+-- src:918 | (c) the total earned income in the month that would have been the final assessment period for the old award, had it not terminated, exceeded the relevant threshold.
+@ref reg 54A(1) (src:914-918)
+GIVEN claim IS A `Claim considered under regulation 54A`
+GIVETH A BOOLEAN
+`reg 54A(1) — this regulation applies to the claim` claim MEANS
+        (`reg 54A(1)(a) — the old award terminated within the 6 months ending on the first day of the claim` claim)
+    AND (claim's `the claimant has not, or neither of joint claimants has, been entitled to universal credit since the old award terminated`)
+    AND (`reg 54A(1)(c) — the total earned income in the final month exceeded the relevant threshold` claim)
+
+-- Paragraph (3): the surplus earnings. For the first claim since the old award terminated, the excess of (1)(c) (the original
+-- surplus). For the second, third, fourth and fifth claims, the amount (if any) by which the previous surplus plus the total earned
+-- income in the month that would have been the first assessment period of the previous claim exceeded the relevant threshold (the
+-- adjusted surplus). The text provides for no claim after the fifth (fork F-A2), so there the result is NOTHING.
+-- src:920 | (3) Surplus earnings are—
+-- src:921 | (a) if the claim in question is the first since the termination of the old award, the amount of the excess referred to in paragraph (1)(c) (“the original surplus”);
+-- src:922 | (b) if the claim in question is the second since the termination of the old award, the amount, if any, by which—
+-- src:923 | (i) the original surplus, plus
+-- src:924 | (ii) the total earned income in the month that would have been the first assessment period in relation to the first claim,
+-- src:925 | exceeded the relevant threshold (“the adjusted surplus”);
+-- src:926 | (c) if the claim in question is the third since the termination of the old award, the amount, if any, by which—
+-- src:927 | (i) the adjusted surplus from the second claim, plus
+-- src:928 | (ii) the total earned income in the month that would have been the first assessment period in relation to the second claim,
+-- src:929 | exceeded the relevant threshold;
+-- src:930 | (d) if the claim in question is the fourth or fifth since the termination of the old award, an amount calculated in the same manner as for the third claim (that is by taking the adjusted surplus from the previous claim).
+@ref reg 54A(3) (src:920-930)
+GIVEN surplus IS A NUMBER
+      `later claims` IS A LIST OF NUMBER
+      threshold IS A NUMBER
+GIVETH A NUMBER
+`reg 54A(3) — the surplus carried through the claims` surplus `later claims` threshold MEANS
+    CONSIDER `later claims`
+    WHEN EMPTY THEN surplus
+    WHEN total FOLLOWED BY rest THEN
+        `reg 54A(3) — the surplus carried through the claims` (max 0 ((surplus PLUS total) MINUS threshold)) rest threshold
+
+-- src:920 | (3) Surplus earnings are—
+-- src:921 | (a) if the claim in question is the first since the termination of the old award, the amount of the excess referred to in paragraph (1)(c) (“the original surplus”);
+-- src:922 | (b) if the claim in question is the second since the termination of the old award, the amount, if any, by which—
+-- src:923 | (i) the original surplus, plus
+-- src:924 | (ii) the total earned income in the month that would have been the first assessment period in relation to the first claim,
+-- src:925 | exceeded the relevant threshold (“the adjusted surplus”);
+-- src:926 | (c) if the claim in question is the third since the termination of the old award, the amount, if any, by which—
+-- src:927 | (i) the adjusted surplus from the second claim, plus
+-- src:928 | (ii) the total earned income in the month that would have been the first assessment period in relation to the second claim,
+-- src:929 | exceeded the relevant threshold;
+-- src:930 | (d) if the claim in question is the fourth or fifth since the termination of the old award, an amount calculated in the same manner as for the third claim (that is by taking the adjusted surplus from the previous claim).
+@ref reg 54A(3) (src:920-930)
+GIVEN claim IS A `Claim considered under regulation 54A`
+GIVETH A MAYBE NUMBER
+`reg 54A(3) — the surplus earnings for the claim` claim MEANS
+    IF count (claim's `total earned income in the month that would have been the first assessment period in relation to each earlier claim since the old award terminated`) GREATER THAN 4
+    THEN NOTHING
+    ELSE JUST (`core — an amount rounded to the nearest penny`
+                (`reg 54A(3) — the surplus carried through the claims`
+                    ((claim's `total earned income in the month that would have been the final assessment period for the old award, had it not terminated`) MINUS (`reg 54A(6) — the relevant threshold` (claim's `nil UC threshold`)))
+                    (claim's `total earned income in the month that would have been the first assessment period in relation to each earlier claim since the old award terminated`)
+                    (`reg 54A(6) — the relevant threshold` (claim's `nil UC threshold`))))
+
+-- Paragraph (2) with (4) and (5): any surplus earnings determined under (3) are treated as earned income. Where regulation 54A
+-- does not apply, there are none. Under (5) none are taken into account for a victim of domestic violence (regulation 98 is another
+-- piece's; the fact is a stated input). Under (4)(a), the first joint claim by members of a couple each of whom had an old award adds
+-- together the amounts each would have had as a single person. Under (4)(b), the surplus is apportioned as the Secretary of State
+-- determines; until that is determined the result is NOTHING.
+-- src:919 | (2) Where this regulation applies in relation to a claim, any surplus earnings determined in accordance with paragraph (3) are to be treated as earned income for the purposes of determining whether there is entitlement to a new award and, if there is entitlement, calculating the amount of the award.
+-- src:920 | (3) Surplus earnings are—
+-- src:921 | (a) if the claim in question is the first since the termination of the old award, the amount of the excess referred to in paragraph (1)(c) (“the original surplus”);
+-- src:922 | (b) if the claim in question is the second since the termination of the old award, the amount, if any, by which—
+-- src:923 | (i) the original surplus, plus
+-- src:924 | (ii) the total earned income in the month that would have been the first assessment period in relation to the first claim,
+-- src:925 | exceeded the relevant threshold (“the adjusted surplus”);
+-- src:926 | (c) if the claim in question is the third since the termination of the old award, the amount, if any, by which—
+-- src:927 | (i) the adjusted surplus from the second claim, plus
+-- src:928 | (ii) the total earned income in the month that would have been the first assessment period in relation to the second claim,
+-- src:929 | exceeded the relevant threshold;
+-- src:930 | (d) if the claim in question is the fourth or fifth since the termination of the old award, an amount calculated in the same manner as for the third claim (that is by taking the adjusted surplus from the previous claim).
+-- src:931 | (4) For the purposes of paragraph (3)—
+-- src:932 | (a) if the claim in question is the first joint claim by members of a couple, each of whom had an old award (because each was previously entitled to universal credit as a single person or as a member of a different couple), the amounts of any surplus earnings from the old award or from a previous claim that would have been treated as earned income if they had each claimed as a single person are to be aggregated; and
+-- src:933 | (b) if the claim in question is—
+-- src:934 | (i) a single claim where the claimant had an old award, or made a subsequent claim, as a joint claimant, or
+-- src:935 | (ii) a joint claim where either claimant had an old award, or made a subsequent claim, as a member of a different couple,
+-- src:936 | the original surplus, or any adjusted surplus, in relation to the old award is to be apportioned in the manner determined by the Secretary of State.
+-- src:937 | (5) No amount of surplus earnings is to be taken into account in respect of a claimant who has, or had at the time the old award terminated, recently been a victim of domestic violence (within the meaning given by regulation 98).
+@ref reg 54A(2), (4) and (5) (src:919-937)
+GIVEN claim IS A `Claim considered under regulation 54A`
+GIVETH A MAYBE NUMBER
+`reg 54A — the surplus earnings treated as earned income` claim MEANS
+    IF NOT (`reg 54A(1) — this regulation applies to the claim` claim)
+    THEN JUST 0
+    ELSE (IF claim's `the claimant has, or had at the time the old award terminated, recently been a victim of domestic violence`
+          THEN JUST 0
+          ELSE (IF claim's `first joint claim by members of a couple each of whom had an old award`
+                THEN JUST (`core — an amount rounded to the nearest penny` (sum (claim's `surplus earnings of each member of the couple that would have been treated as earned income had they each claimed as a single person`)))
+                ELSE (IF claim's `single claim after an award or claim as a joint claimant, or joint claim after an award or claim as a member of a different couple`
+                      THEN (CONSIDER claim's `portion of the original surplus or adjusted surplus apportioned to the claim by the Secretary of State`
+                            WHEN JUST portion THEN JUST (`core — an amount rounded to the nearest penny` portion)
+                            WHEN NOTHING THEN NOTHING)
+                      ELSE `reg 54A(3) — the surplus earnings for the claim` claim)))
+
+-- Paragraph (6): "total earned income" is the earned income of the claimant or, for a member of a couple, the couple's combined
+-- earned income, excluding any amount treated as earned income by the minimum income floor of regulation 62.
+-- src:939 | “total earned income” is the earned income of the claimant or, if the claimant is a member of a couple, the couple’s combined earned income, but does not include any amount a claimant would be treated as having by virtue of regulation 62 (the minimum income floor);
+@ref reg 54A(6) (src:939)
+GIVEN `earned income of the claimant` IS A NUMBER
+      `earned income of the claimant's partner` IS A MAYBE NUMBER
+      `amount the claimant would be treated as having by virtue of regulation 62` IS A NUMBER
+GIVETH A NUMBER
+`reg 54A(6) — total earned income` `earned income of the claimant` `earned income of the claimant's partner` `amount the claimant would be treated as having by virtue of regulation 62` MEANS
+    `core — an amount rounded to the nearest penny`
+        (   (`earned income of the claimant` MINUS `amount the claimant would be treated as having by virtue of regulation 62`)
+          PLUS (CONSIDER `earned income of the claimant's partner`
+                WHEN JUST partner THEN partner
+                WHEN NOTHING THEN 0))
+
+§§ `Gainful self-employment: cross-heading`
+-- src:1057 | Gainful self-employment
+
+§§ `Regulation 64 -- Meaning of "gainful self-employment"`
+
+-- src:1080 | 64 Meaning of “gainful self-employment”
+-- src:1081 | A claimant is in gainful self-employment for the purposes of regulations 62 and 63 where the Secretary of State has determined that—
+-- src:1082 | (a) the claimant is carrying on a trade, profession or vocation as their main employment;
+-- src:1083 | (b) their earnings from that trade, profession or vocation are self-employed earnings; and
+-- src:1084 | (c) the trade, profession or vocation is organised, developed, regular and carried on in expectation of profit.
+@ref reg 64 (src:1080-1084)
+DECLARE `Claimant who may be in gainful self-employment` HAS
+    `the Secretary of State has determined the matters in sub-paragraphs (a) to (c)`           IS A BOOLEAN
+    `the claimant is carrying on a trade, profession or vocation as their main employment`     IS A BOOLEAN
+    `their earnings from that trade, profession or vocation are self-employed earnings`        IS A BOOLEAN
+    `the trade, profession or vocation is organised, developed, regular and carried on in expectation of profit`  IS A BOOLEAN
+
+-- src:1080 | 64 Meaning of “gainful self-employment”
+-- src:1081 | A claimant is in gainful self-employment for the purposes of regulations 62 and 63 where the Secretary of State has determined that—
+-- src:1082 | (a) the claimant is carrying on a trade, profession or vocation as their main employment;
+-- src:1083 | (b) their earnings from that trade, profession or vocation are self-employed earnings; and
+-- src:1084 | (c) the trade, profession or vocation is organised, developed, regular and carried on in expectation of profit.
+@ref reg 64 (src:1080-1084)
+GIVEN claimant IS A `Claimant who may be in gainful self-employment`
+GIVETH A BOOLEAN
+`reg 64 — the claimant is in gainful self-employment` claimant MEANS
+        (claimant's `the Secretary of State has determined the matters in sub-paragraphs (a) to (c)`)
+    AND (claimant's `the claimant is carrying on a trade, profession or vocation as their main employment`)
+    AND (claimant's `their earnings from that trade, profession or vocation are self-employed earnings`)
+    AND (claimant's `the trade, profession or vocation is organised, developed, regular and carried on in expectation of profit`)
+
+§§ `Regulation 63 -- Start-up period`
+
+-- src:1072 | 63 Start-up period
+-- src:1073 | (1) A “start-up period” is a period of 12 months and applies from the beginning of the assessment period in which the Secretary of State determines that a claimant is in gainful self-employment where—
+-- src:1074 | (a) regulation 62 (minimum income floor) has not previously applied to the claimant in relation to the trade, profession or vocation which is currently the claimant's main employment (whether in relation to the current award or a previous award); and
+-- src:1075 | (b) the claimant is taking active steps to increase their earnings from that employment to the level of the claimant's individual threshold (see regulation 90).
+@ref reg 63(1) (src:1072-1075)
+DECLARE `Start-up period considered under regulation 63` HAS
+    `assessment period in which the Secretary of State determines that the claimant is in gainful self-employment`  IS AN `Assessment period`
+    `regulation 62 has previously applied to the claimant in relation to the trade, profession or vocation which is currently the claimant's main employment`  IS A BOOLEAN
+    `the claimant is taking active steps to increase their earnings from that employment to the level of the claimant's individual threshold`  IS A BOOLEAN
+    `a start-up period has previously applied in relation to the claimant`                      IS A BOOLEAN
+    `date on which that previous start-up period began`                                         IS A MAYBE DATE
+    `that previous start-up period applied in relation to a different trade, profession or vocation which the claimant has ceased to carry on`  IS A BOOLEAN
+    `date on which the Secretary of State terminated the start-up period`                       IS A MAYBE DATE
+
+DECLARE `Start-up period` HAS
+    `first day of the start-up period`   IS A DATE
+    `last day of the start-up period`    IS A DATE
+
+-- Paragraph (2): no start-up period where one has previously applied, unless that one began more than 5 years before the beginning
+-- of the assessment period of paragraph (1) and applied to a different trade that the claimant has ceased to carry on.
+-- src:1076 | (2) But no start-up period may apply in relation to a claimant where a start-up period has previously applied in relation to that claimant, whether in relation to the current award or any previous award of universal credit, unless that previous start-up period—
+-- src:1077 | (a) began more than 5 years before the beginning of assessment period referred to in paragraph (1); and
+-- src:1078 | (b) applied in relation to a different trade, profession or vocation which the claimant has ceased to carry on.
+@ref reg 63(2) (src:1076-1078)
+GIVEN period IS A `Start-up period considered under regulation 63`
+GIVETH A BOOLEAN
+`reg 63(2) — an earlier start-up period does not bar a new one` period MEANS
+    IF period's `a start-up period has previously applied in relation to the claimant`
+    THEN (CONSIDER period's `date on which that previous start-up period began`
+          WHEN NOTHING THEN FALSE
+          WHEN JUST began THEN
+                  (`core — the date reached by adding a time limit to a date` began (`Time limit` WITH quantity IS 5, unit IS years) LESS THAN (period's `assessment period in which the Secretary of State determines that the claimant is in gainful self-employment`)'s `first day`)
+              AND (period's `that previous start-up period applied in relation to a different trade, profession or vocation which the claimant has ceased to carry on`))
+    ELSE TRUE
+
+-- Paragraph (1): a start-up period of 12 months applies from the beginning of the assessment period in which the Secretary of State
+-- determines that the claimant is in gainful self-employment, where regulation 62 has not previously applied to the claimant in
+-- relation to the trade that is currently their main employment and the claimant is taking active steps to increase their earnings
+-- to the level of their individual threshold. The twelve months end the day before the anniversary of the first day (fork F-A3).
+-- src:1072 | 63 Start-up period
+-- src:1073 | (1) A “start-up period” is a period of 12 months and applies from the beginning of the assessment period in which the Secretary of State determines that a claimant is in gainful self-employment where—
+-- src:1074 | (a) regulation 62 (minimum income floor) has not previously applied to the claimant in relation to the trade, profession or vocation which is currently the claimant's main employment (whether in relation to the current award or a previous award); and
+-- src:1075 | (b) the claimant is taking active steps to increase their earnings from that employment to the level of the claimant's individual threshold (see regulation 90).
+@ref reg 63(1) (src:1072-1075)
+GIVEN period IS A `Start-up period considered under regulation 63`
+GIVETH A BOOLEAN
+`reg 63(1) — a start-up period applies` period MEANS
+        (NOT (period's `regulation 62 has previously applied to the claimant in relation to the trade, profession or vocation which is currently the claimant's main employment`))
+    AND (period's `the claimant is taking active steps to increase their earnings from that employment to the level of the claimant's individual threshold`)
+    AND (`reg 63(2) — an earlier start-up period does not bar a new one` period)
+
+-- Paragraph (3): the Secretary of State may terminate a start-up period at any time if the person is no longer in gainful
+-- self-employment or is no longer taking the steps. The termination is the Secretary of State's, so it is a conditional input:
+-- when given, the start-up period ends on that day if that is earlier than the end of the twelve months.
+-- src:1079 | (3) The Secretary of State may terminate a start-up period at any time if the person is no longer in gainful self-employment or is no longer taking the steps referred to in paragraph (1)(b).
+@ref reg 63(3) (src:1079)
+GIVEN period IS A `Start-up period considered under regulation 63`
+GIVETH A MAYBE `Start-up period`
+`reg 63 — the start-up period` period MEANS
+    IF `reg 63(1) — a start-up period applies` period
+    THEN JUST (`Start-up period` WITH
+            `first day of the start-up period` IS (period's `assessment period in which the Secretary of State determines that the claimant is in gainful self-employment`)'s `first day`
+            `last day of the start-up period` IS
+                (CONSIDER period's `date on which the Secretary of State terminated the start-up period`
+                 WHEN NOTHING THEN `core — the date reached by adding a time limit to a date` ((period's `assessment period in which the Secretary of State determines that the claimant is in gainful self-employment`)'s `first day`) (`Time limit` WITH quantity IS 12, unit IS months) PLUS (0 MINUS 1)
+                 WHEN JUST terminated THEN
+                     (IF terminated AT MOST (`core — the date reached by adding a time limit to a date` ((period's `assessment period in which the Secretary of State determines that the claimant is in gainful self-employment`)'s `first day`) (`Time limit` WITH quantity IS 12, unit IS months) PLUS (0 MINUS 1))
+                      THEN terminated
+                      ELSE `core — the date reached by adding a time limit to a date` ((period's `assessment period in which the Secretary of State determines that the claimant is in gainful self-employment`)'s `first day`) (`Time limit` WITH quantity IS 12, unit IS months) PLUS (0 MINUS 1))))
+    ELSE NOTHING
+
+§§ `Regulation 62 -- Minimum income floor`
+
+-- src:1058 | 62 Minimum income floor
+-- src:1059 | (1) This regulation applies to a claimant who—
+-- src:1060 | (a) is in gainful self-employment (see regulation 64); and
+-- src:1061 | (b) would, apart from this regulation or regulation 90, fall within section 22 of the Act (claimants subject to all work-related requirements).
+@ref reg 62(1) (src:1058-1061)
+DECLARE `Claimant considered under regulation 62` HAS
+    `claimant in gainful self-employment`                                                      IS A BOOLEAN
+    `work-related group the claimant would fall within, apart from regulation 62 or regulation 90`  IS A `Work-related group`
+    `basis of the claim`                                                                       IS A `Claim basis`
+    `earned income of the claimant for the assessment period`                                  IS A NUMBER
+    `earned income of the claimant's partner for the assessment period`                        IS A NUMBER
+    `individual threshold (regulation 90(2))`                                                  IS A NUMBER
+    `couple threshold (regulation 90(3))`                                                      IS A NUMBER
+    `amount for income tax and national insurance contributions that the Secretary of State considers appropriate to deduct from the individual threshold`  IS A NUMBER
+    `amount for income tax and national insurance contributions that the Secretary of State considers appropriate to deduct from the couple threshold`  IS A NUMBER
+    `surplus earnings treated as earned income under regulation 54A`                           IS A NUMBER
+    `assessment period`                                                                        IS AN `Assessment period`
+    `start-up period`                                                                          IS A MAYBE `Start-up period`
+
+-- src:1058 | 62 Minimum income floor
+-- src:1059 | (1) This regulation applies to a claimant who—
+-- src:1060 | (a) is in gainful self-employment (see regulation 64); and
+-- src:1061 | (b) would, apart from this regulation or regulation 90, fall within section 22 of the Act (claimants subject to all work-related requirements).
+@ref reg 62(1) (src:1058-1061)
+GIVEN claimant IS A `Claimant considered under regulation 62`
+GIVETH A BOOLEAN
+`reg 62(1) — this regulation applies to the claimant` claimant MEANS
+        (claimant's `claimant in gainful self-employment`)
+    AND (claimant's `work-related group the claimant would fall within, apart from regulation 62 or regulation 90` EQUALS `subject to all work-related requirements`)
+
+-- Paragraph (4): the thresholds are the amounts of regulation 90(2) and (3), converted to net amounts by deducting such amount for
+-- income tax and national insurance contributions as the Secretary of State considers appropriate ((a) is a run of dots in this text).
+-- src:1067 | (4) In this regulation, references to the claimant’s individual threshold and to the couple threshold are to the amounts set out in regulation 90(2) and 90(3) respectively, converted to net ... amounts by—
+-- src:1068 | (a) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-- src:1069 | (b) deducting such amount for income tax and national insurance contributions as the Secretary of State considers appropriate.
+@ref reg 62(4) (src:1067-1069)
+GIVEN `threshold in regulation 90` IS A NUMBER
+      `amount the Secretary of State considers appropriate for income tax and national insurance contributions` IS A NUMBER
+GIVETH A NUMBER
+`reg 62(4) — the net amount of a threshold` `threshold in regulation 90` `amount the Secretary of State considers appropriate for income tax and national insurance contributions` MEANS
+    `core — an amount rounded to the nearest penny` (`threshold in regulation 90` MINUS `amount the Secretary of State considers appropriate for income tax and national insurance contributions`)
+
+-- src:1067 | (4) In this regulation, references to the claimant’s individual threshold and to the couple threshold are to the amounts set out in regulation 90(2) and 90(3) respectively, converted to net ... amounts by—
+-- src:1068 | (a) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-- src:1069 | (b) deducting such amount for income tax and national insurance contributions as the Secretary of State considers appropriate.
+@ref reg 62(4) (src:1067-1069)
+GIVEN claimant IS A `Claimant considered under regulation 62`
+GIVETH A NUMBER
+`reg 62(4) — the claimant's net individual threshold` claimant MEANS
+    `reg 62(4) — the net amount of a threshold` (claimant's `individual threshold (regulation 90(2))`) (claimant's `amount for income tax and national insurance contributions that the Secretary of State considers appropriate to deduct from the individual threshold`)
+
+-- src:1067 | (4) In this regulation, references to the claimant’s individual threshold and to the couple threshold are to the amounts set out in regulation 90(2) and 90(3) respectively, converted to net ... amounts by—
+-- src:1068 | (a) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-- src:1069 | (b) deducting such amount for income tax and national insurance contributions as the Secretary of State considers appropriate.
+@ref reg 62(4) (src:1067-1069)
+GIVEN claimant IS A `Claimant considered under regulation 62`
+GIVETH A NUMBER
+`reg 62(4) — the net couple threshold` claimant MEANS
+    `reg 62(4) — the net amount of a threshold` (claimant's `couple threshold (regulation 90(3))`) (claimant's `amount for income tax and national insurance contributions that the Secretary of State considers appropriate to deduct from the couple threshold`)
+
+-- Paragraph (2): a single claimant whose earned income is less than their individual threshold is treated as having earned income
+-- equal to that threshold. Paragraph (3): a claimant who is a member of a couple, whose earned income is less than their individual
+-- threshold while the couple's combined earned income is less than the couple threshold, is treated as having earned income equal to
+-- their individual threshold minus any amount by which that amount of earned income combined with their partner's earned income
+-- would exceed the couple threshold. "A single claimant" in (2) is read as the keel's `a single claimant`; the other two claim
+-- bases are claimants who are members of a couple (fork F-A4).
+-- src:1062 | (2) Where this regulation applies to a single claimant, for any assessment period in respect of which the claimant’s earned income is less than their individual threshold, the claimant is to be treated as having earned income equal to that threshold.
+-- src:1063 | (3) Where this regulation applies to a claimant who is a member of a couple, for any assessment period in respect of which—
+-- src:1064 | (a) the claimant’s earned income is less than their individual threshold; and
+-- src:1065 | (b) the couple’s combined earned income is less than the couple threshold,
+-- src:1066 | the claimant is to be treated as having earned income equal to their individual threshold minus any amount by which that amount of earned income combined with their partner’s earned income would exceed the couple threshold.
+@ref reg 62(2) and (3) (src:1062-1066)
+GIVEN `earned income of the claimant` IS A NUMBER
+      `earned income of the claimant's partner` IS A NUMBER
+      `net individual threshold` IS A NUMBER
+      `net couple threshold` IS A NUMBER
+      basis IS A `Claim basis`
+GIVETH A NUMBER
+`reg 62(2) and (3) — the earned income the claimant is treated as having` `earned income of the claimant` `earned income of the claimant's partner` `net individual threshold` `net couple threshold` basis MEANS
+    CONSIDER basis
+    WHEN `a single claimant` THEN
+        IF `earned income of the claimant` LESS THAN `net individual threshold`
+        THEN `net individual threshold`
+        ELSE `earned income of the claimant`
+    OTHERWISE
+        IF     (`earned income of the claimant` LESS THAN `net individual threshold`)
+           AND ((`earned income of the claimant` PLUS `earned income of the claimant's partner`) LESS THAN `net couple threshold`)
+        THEN `core — an amount rounded to the nearest penny`
+                (`net individual threshold` MINUS (max 0 ((`net individual threshold` PLUS `earned income of the claimant's partner`) MINUS `net couple threshold`)))
+        ELSE `earned income of the claimant`
+
+-- Paragraph (4A): where surplus earnings are treated as earned income under regulation 54A for the assessment period, that amount
+-- is added to the claimant's earned income before regulation 62 is applied and, for joint claimants, to the earned income of either
+-- member so as to produce the lowest possible combined earned income after regulation 62 is applied. The text compares the two
+-- ways of adding it; a tie is resolved in favour of adding it to the claimant. The partner's earned income is taken as stated
+-- (the partner's own floor, if any, is not worked out here: fork F-A5).
+-- src:1070 | (4A) Where this regulation applies in respect of an assessment period in which surplus earnings are treated as an amount of earned income under regulation 54A (surplus earnings), that amount is to be added to the claimant’s earned income before this regulation is applied and, in the case of joint claimants, it is to be added to the earned income of either member of the couple so as to produce the lowest possible amount of combined earned income after this regulation is applied.
+@ref reg 62(4A) (src:1070)
+GIVEN claimant IS A `Claimant considered under regulation 62`
+      `surplus added to the claimant` IS A BOOLEAN
+GIVETH A NUMBER
+`reg 62(4A) — the earned income the claimant is treated as having, with surplus earnings added to one member` claimant `surplus added to the claimant` MEANS
+    `reg 62(2) and (3) — the earned income the claimant is treated as having`
+        ((claimant's `earned income of the claimant for the assessment period`) PLUS (IF `surplus added to the claimant` THEN claimant's `surplus earnings treated as earned income under regulation 54A` ELSE 0))
+        ((claimant's `earned income of the claimant's partner for the assessment period`) PLUS (IF `surplus added to the claimant` THEN 0 ELSE claimant's `surplus earnings treated as earned income under regulation 54A`))
+        (`reg 62(4) — the claimant's net individual threshold` claimant)
+        (`reg 62(4) — the net couple threshold` claimant)
+        (claimant's `basis of the claim`)
+
+-- src:1070 | (4A) Where this regulation applies in respect of an assessment period in which surplus earnings are treated as an amount of earned income under regulation 54A (surplus earnings), that amount is to be added to the claimant’s earned income before this regulation is applied and, in the case of joint claimants, it is to be added to the earned income of either member of the couple so as to produce the lowest possible amount of combined earned income after this regulation is applied.
+@ref reg 62(4A) (src:1070)
+GIVEN claimant IS A `Claimant considered under regulation 62`
+GIVETH A BOOLEAN
+`reg 62(4A) — the surplus earnings are added to the claimant` claimant MEANS
+    CONSIDER claimant's `basis of the claim`
+    WHEN `a single claimant` THEN TRUE
+    OTHERWISE
+        (`reg 62(4A) — the earned income the claimant is treated as having, with surplus earnings added to one member` claimant TRUE)
+        AT MOST ((`reg 62(4A) — the earned income the claimant is treated as having, with surplus earnings added to one member` claimant FALSE) PLUS (claimant's `surplus earnings treated as earned income under regulation 54A`))
+
+-- Paragraph (5): an assessment period that falls wholly within a start-up period, or begins or ends in one, is not an assessment
+-- period to which regulation 62 refers.
+-- src:1071 | (5) An assessment period referred to in this regulation does not include an assessment period which falls wholly within a start-up period or begins or ends in a start-up period.
+@ref reg 62(5) (src:1071)
+GIVEN claimant IS A `Claimant considered under regulation 62`
+GIVETH A BOOLEAN
+`reg 62(5) — the assessment period is within or touches a start-up period` claimant MEANS
+    CONSIDER claimant's `start-up period`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST startup THEN
+        CONSIDER
+            ((startup's `first day of the start-up period` AT MOST (claimant's `assessment period`)'s `first day`) AND ((claimant's `assessment period`)'s `first day` AT MOST startup's `last day of the start-up period`))
+        WHEN TRUE THEN TRUE
+        WHEN FALSE THEN ((startup's `first day of the start-up period` AT MOST (claimant's `assessment period`)'s `last day`) AND ((claimant's `assessment period`)'s `last day` AT MOST startup's `last day of the start-up period`))
+
+-- The earned income of the claimant for the assessment period under regulation 62: the surplus earnings are added first; the
+-- floor then applies unless the claimant is outside regulation 62(1) or the assessment period is excluded by (5).
+-- src:1058 | 62 Minimum income floor
+-- src:1059 | (1) This regulation applies to a claimant who—
+-- src:1060 | (a) is in gainful self-employment (see regulation 64); and
+-- src:1061 | (b) would, apart from this regulation or regulation 90, fall within section 22 of the Act (claimants subject to all work-related requirements).
+-- src:1062 | (2) Where this regulation applies to a single claimant, for any assessment period in respect of which the claimant’s earned income is less than their individual threshold, the claimant is to be treated as having earned income equal to that threshold.
+-- src:1063 | (3) Where this regulation applies to a claimant who is a member of a couple, for any assessment period in respect of which—
+-- src:1064 | (a) the claimant’s earned income is less than their individual threshold; and
+-- src:1065 | (b) the couple’s combined earned income is less than the couple threshold,
+-- src:1066 | the claimant is to be treated as having earned income equal to their individual threshold minus any amount by which that amount of earned income combined with their partner’s earned income would exceed the couple threshold.
+-- src:1067 | (4) In this regulation, references to the claimant’s individual threshold and to the couple threshold are to the amounts set out in regulation 90(2) and 90(3) respectively, converted to net ... amounts by—
+-- src:1068 | (a) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-- src:1069 | (b) deducting such amount for income tax and national insurance contributions as the Secretary of State considers appropriate.
+-- src:1070 | (4A) Where this regulation applies in respect of an assessment period in which surplus earnings are treated as an amount of earned income under regulation 54A (surplus earnings), that amount is to be added to the claimant’s earned income before this regulation is applied and, in the case of joint claimants, it is to be added to the earned income of either member of the couple so as to produce the lowest possible amount of combined earned income after this regulation is applied.
+-- src:1071 | (5) An assessment period referred to in this regulation does not include an assessment period which falls wholly within a start-up period or begins or ends in a start-up period.
+@ref reg 62 (src:1058-1071)
+GIVEN claimant IS A `Claimant considered under regulation 62`
+GIVETH A NUMBER
+`reg 62 — the earned income the claimant is treated as having for the assessment period` claimant MEANS
+    IF     (`reg 62(1) — this regulation applies to the claimant` claimant)
+       AND (NOT (`reg 62(5) — the assessment period is within or touches a start-up period` claimant))
+    THEN `reg 62(4A) — the earned income the claimant is treated as having, with surplus earnings added to one member` claimant (`reg 62(4A) — the surplus earnings are added to the claimant` claimant)
+    ELSE `core — an amount rounded to the nearest penny` ((claimant's `earned income of the claimant for the assessment period`) PLUS (claimant's `surplus earnings treated as earned income under regulation 54A`))
