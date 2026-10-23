@@ -68,7 +68,7 @@ The 2026-10-18 defaults:
 
 ## Raised in the ledger
 
-- **Judiciary Act 1903 s 79** (`subjects/au/requirements.jsonl`, raised by this encoder): which State or Territory law of evidence governs a Commonwealth prosecution tried in a State or Territory court. Finding 1 turns on it.
+- **Judiciary Act 1903 s 79** (`subjects/au/requirements.jsonl`, raised by this encoder): which State or Territory law of evidence governs a Commonwealth prosecution tried in a State or Territory court. Finding 1 turns on it. Satisfied on 2026-10-23 by the Judiciary Act's accused seat (`subjects/au/judiciary-act-1903/encodings/baseline-2026-10/`, `Which evidence law governs question`): the evidence law of that State or Territory, except where a Commonwealth law (such as this Act's ss 5, 131B, 128(12)–(14), 185–187) otherwise provides. This encoding still answers `not covered` for a State or Territory court, because the State's or Territory's evidence law itself is not encoded; the link cannot be joined in L4 across folders.
 
 ## What would need doing before this is worth relying on
 
