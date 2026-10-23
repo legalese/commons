@@ -12,6 +12,7 @@ encoding at all, which the `what it encodes` column says plainly.
 | subject | what it encodes | status |
 | --- | --- | --- |
 | [`uk/child-benefit-rates-regulations-2006`](uk/child-benefit-rates-regulations-2006) | Child Benefit (Rates) Regulations 2006 (S.I. 2006/965) — the whole text as deposited, as a law layer and a seat for a person who claims Child Benefit — encoding `legalese-sonnet-5.5` | `draft` |
+| [`uk/social-security-benefits-up-rating-order-2026`](uk/social-security-benefits-up-rating-order-2026) | Social Security Benefits Up-rating Order 2026 (S.I. 2026/148) — the whole text as deposited (the amounts it sets), as a law layer and a seat for a person who receives a UK social security benefit — encoding `legalese-sonnet-5.5` | `draft` |
 | [`sg/succession`](sg/succession) | Wills Act 1838, Intestate Succession Act 1967, Probate and Administration Act 1934 — three Acts against one ontology | `draft` |
 | [`sg/child-support`](sg/child-support) | the SG Child Support Package announced at the National Day Rally on 23 August 2026, and childcare leave under the Child Development Co-Savings Act 2001 | `draft` |
 | [`sg/pdpa-2012`](sg/pdpa-2012) | Personal Data Protection Act 2012, Part VIA (data breach notification) | `draft` |
