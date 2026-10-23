@@ -10,13 +10,17 @@ No pipeline, no coverage table, no independent test pass, no human gate.
 
 It satisfies `REQ-0072` in `subjects/au/requirements.jsonl` (a scheduled priority-2 entry for the 20 topics: pensions and retirement savings). There was no earlier encoding of this Act to keep. No scenario life raised it, so the people in the case file (Ron, Rita, Mia, Lena) and every date are the encoder's, hypothetical.
 
-Fifteen questions are exported, each with `@export` and a `@desc` on every input, grouped under `§§` headings in the Act's order.
+**Added 23 October 2026 (REQ-0086):** `sumlma-regulations.l4`, a module beside `sumlma-member.l4` that IMPORTs it, brings in the Superannuation (Unclaimed Money and Lost Members) Regulations 2019: the prescribed eligibility age (reg 5) and the s 12 test at that age, the excluded visas (reg 7), the KiwiSaver matters (reg 20), the interest rate and interest for a financial year (reg 9), the s 24NA(2)(c) prescribed period (reg 13) and the s 24NA(3) choice of fund (reg 14): nine more exported questions. Nothing in `sumlma-member.l4` was changed; its questions that ask these as facts stay.
+
+Fifteen questions are exported from `sumlma-member.l4`, each with `@export` and a `@desc` on every input, grouped under `§§` headings in the Act's order.
 
 ## Edition
 
 Compilation No. 42, compilation date 28 September 2022, includes amendments up to Act No. 127, 2021 (register id **C2022C00273**), as deposited at `../../registers/source-bundle/C2004A00518.txt` (retrieved 13 October 2026 as the current compilation).
 
-No instrument is deposited. What the Act leaves to an instrument is handled this way:
+`sumlma-regulations.l4` reads the **Superannuation (Unclaimed Money and Lost Members) Regulations 2019**, F2019L01617, compilation F2025C00752 (Compilation No. 6, compilation date 25 July 2025, includes amendments up to F2025L00865; retrieved 23 October 2026), deposited at `../../../superannuation-unclaimed-money-and-lost-members-regulations-2019/registers/source-bundle/F2019L01617.txt`, with the formula of regs 8(5) and 9(5) (an image in the download) transcribed in `F2019L01617.formulas.md` beside it.
+
+In `sumlma-member.l4`, which brings in no instrument, what the Act leaves to an instrument is handled this way:
 
 - **Unclaimed money days and scheduled statement days** (the Commissioner's legislative instruments under ss 15A and 20B): inputs, as dates.
 - **Interest** the Commissioner pays with a refund "worked out in accordance with the regulations": the encoding says whether interest is due, not how much.
@@ -28,8 +32,9 @@ No instrument is deposited. What the Act leaves to an instrument is handled this
 | Module | Case file | Assertions |
 |---|---|---|
 | `sumlma-member.l4` | `sumlma-cases-member.l4` | 90 written, 90 satisfied |
+| `sumlma-regulations.l4` | `sumlma-cases-regulations.l4` | 26 written, 26 satisfied |
 
-`l4 run` on both files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
+`l4 run` on every file: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
 
 ## Seat
 
@@ -99,9 +104,14 @@ The general interest charge and the Taxation Administration Act machinery the no
 10. **A New Zealand citizen is never a former temporary resident.** Section 20AA(1)(c)(ii) excludes Australian and New Zealand citizens. The 6 months run from the later of the visa ceasing and departure. Asserted.
 11. **Under s 20H, a direction to a super fund works only for a citizen or permanent resident.** Section 20H(2)(b) needs the Commissioner to be satisfied that the person is an Australian or New Zealand citizen, or holds a permanent (or prescribed) visa. Otherwise payment is to the person under (a), subject to departing Australia superannuation payment withholding (s 20H(6)). That withholding is not encoded. Asserted.
 
+12. **The Regulations in force are the 2019 Regulations.** REQ-0086 named the Superannuation (Unclaimed Money and Lost Members) Regulations 1999; they were repealed and replaced by the 2019 Regulations (F2019L01617), which are deposited and used. Not asserted (a finding about the sources).
+13. **The prescribed eligibility age is 65 for everyone, or the fund's higher age.** Reg 5 prescribes, "for the purposes of paragraphs 10(1)(a) and (b)", the greater of 65 and any higher age the fund's rules make a benefit payable at. That displaces the Act's own 60 for a woman (finding 1): a woman of 62 whom `sumlma-member.l4` treats as having reached eligibility age has not, under the Regulations. Asserted.
+14. **Interest is CPI-linked, rounded upwards, never negative.** Reg 9(5) works interest out year by year by the formula Amount × Days interest payable × Interest rate / Days in the financial year (from the image, `F2019L01617.formulas.md`), each year's interest added to the amount for the next. The rate is the percentage change between the two March-quarter CPI numbers most recently published before the year began, "rounded up to 4 decimal places", and nil if negative. "Rounded up" is read as upward rounding (a ceiling) at the fourth place, not rounding half up; the percentage is applied as a rate. The CPI numbers are inputs: the ABS series is not deposited. Asserted (on stated CPI numbers).
+15. **The KiwiSaver matters, the visas and the s 24NA rules are now prescribed facts, not guesses.** Reg 7 excludes only the Subclass 405 and 410 visas from s 20AA; reg 20 lists six KiwiSaver matters (the last, that no element untaxed in the fund be paid, is negative); reg 13 makes the s 24NA(2)(c) period run from the start of the financial year before the payment's to the day before the payment; reg 14 picks among several qualifying funds by four tiers ending in the Commissioner's choice. Asserted.
+
 ## What would need doing before this is worth relying on
 
-- **The Superannuation (Unclaimed Money and Lost Members) Regulations 1999**, deposited and brought in. They hold the eligibility age (if another is prescribed), the interest rates, prescribed visas, the s 24NA(2)(c) period and the s 24NA(3) allocation, and the KiwiSaver matters. Raised as `REQ-0086`.
+- **The Superannuation (Unclaimed Money and Lost Members) Regulations** (the 2019 Regulations are now deposited and brought in by `sumlma-regulations.l4`; reg 8, the pre-2013 interest, and Part 7, public sector schemes, are not encoded; the ABS CPI numbers reg 9 uses are inputs). Originally: They hold the eligibility age (if another is prescribed), the interest rates, prescribed visas, the s 24NA(2)(c) period and the s 24NA(3) allocation, and the KiwiSaver matters. Raised as `REQ-0086`.
 - **The Commissioner's s 15A and s 20B instruments** setting the unclaimed money days and scheduled statement days, so that a due day can be computed rather than supplied. Raised as `REQ-0087`.
 - **A formulas sidecar** for s 17(1A) and the death-beneficiary formulas (finding 9).
 - **The SIS and RSA Regulations' definitions of "lost member"** and the conditions of release prescribed for s 20QA, which are asked as facts here.
