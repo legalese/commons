@@ -10,21 +10,26 @@ No pipeline, no coverage table, no independent test pass, no human gate.
 
 It satisfies `REQ-0066` in `subjects/au/requirements.jsonl` (priority 2, the 20 topics: losing a job). No scenario life raised it, so every case is hypothetical. There was no earlier encoding of this Act to keep.
 
+**Added 23 October 2026 (REQ-0088):** `feg-maximum-weekly-wage.l4`, a module beside `feg-employee.l4` that IMPORTs it, works the maximum weekly wage out for a financial year under the deposited Fair Entitlements Guarantee (Indexation of Maximum Weekly Wage) Regulations 2023 and the Australian Statistician's estimates deposited beside them, and asks the advance question again with that figure in place of the input (two more exported questions; three in all). Nothing in `feg-employee.l4` was changed: its question with the maximum weekly wage as an input stays, for a year this module does not reach.
+
 Every question is a function named as the former employee would ask it, with `@export` and a `@desc` on every input, grouped under `§§` headings in the Act's order, so it can be deployed to Legalese Cloud.
 
 ## Edition
 
 Compilation No. 5, compilation date 21 February 2025, includes amendments up to Act No. 14, 2025 (register id **C2025C00164**, Federal Register of Legislation, retrieved 22 September 2026), as deposited at `../../registers/source-bundle/C2012A00159.txt`.
 
-Nothing else is brought in. The **maximum weekly wage** (s 5) is $2,364.00 in the Act "or the result of indexation ... in accordance with the regulations"; the Fair Entitlements Guarantee Regulations 2012 are not deposited, so the figure in force is an input. The PAYG withholding s 24 deducts comes from the withholding schedules (not deposited) and is an input too.
+`feg-maximum-weekly-wage.l4` also reads the **Fair Entitlements Guarantee (Indexation of Maximum Weekly Wage) Regulations 2023**, register id F2023L00381 (made 30 March 2023, commenced 31 March 2023, unamended; retrieved 23 October 2026), deposited at `../../../fair-entitlements-guarantee-indexation-of-maximum-weekly-wage-regulations-2023/registers/source-bundle/F2023L00381.txt`, and, beside it, the ABS *Average Weekly Earnings, Australia* releases for November 2021 to November 2025 (CC BY 4.0), whose full-time adult AWOTE figures the Regulations index by.
+
+In `feg-employee.l4` the **maximum weekly wage** (s 5) is still an input: $2,364.00 in the Act "or the result of indexation ... in accordance with the regulations". The PAYG withholding s 24 deducts comes from the withholding schedules (not deposited) and is an input too.
 
 ## Checks
 
 | Module | Case file | Assertions |
 |---|---|---|
 | `feg-employee.l4` | `feg-cases-employee.l4` | 70 written, 70 satisfied |
+| `feg-maximum-weekly-wage.l4` | `feg-cases-maximum-weekly-wage.l4` | 17 written, 17 satisfied |
 
-`l4 run` on both files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
+`l4 run` on all four files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
 
 ## Seat
 
@@ -36,7 +41,7 @@ No second seat. The Act puts no duty on the employer (which is insolvent) and no
 
 The 2026-10-18 defaults:
 
-- **The Act alone.** No instrument is deposited; the indexed maximum weekly wage and the PAYG amount are inputs.
+- **The Act, with the instrument that sets its number.** The indexation Regulations are brought in by `feg-maximum-weekly-wage.l4`; the PAYG amount is still an input.
 - **The actors the text names:** me, my employer, the insolvency practitioner (liquidator, administrator, bankruptcy trustee), the Secretary, a transferee of the business, the Administrative Review Tribunal.
 - **Judgments handed to others are answered conditionally.** Section 10 makes eligibility turn on what "the Secretary is satisfied" of; the answer is "eligible, if the Secretary is satisfied of the facts I have given". The Secretary's satisfaction under ss 12(1)(c) and 27(4), and the Secretary's discretionary reductions under ss 17 and 18, are inputs.
 - **The Act's own definitions are worked out from facts:** wages (s 7), the wages entitlement period (s 5), insolvency event (s 5), the employment entitlements and their basic amounts (ss 6, 19 to 24, 26, 27). Borrowed terms are asked as facts: an "excluded employee" under Corporations Act s 556, "relative", permanent and special category visas, PAYG withholding.
@@ -63,11 +68,14 @@ The 2026-10-18 defaults:
 9. **The "offer of similar work" exclusion is closed for every insolvency from 1 July 2014.** Section 16(2) leaves notice and redundancy out where a transferee offers the same work within 14 days, but s 16(4) disapplies it for insolvency events on or after 1 July 2014, and s 16(3) undoes it if the transferee later makes the job redundant or becomes insolvent. Asserted.
 10. **The reductions are the Secretary's, and one of them the Tribunal cannot touch.** Section 17 lets the Secretary reduce the advance by up to the person's debts to the employer; s 18 lets the Secretary reduce it to nil where the liquidator or trustee expects to pay in full within 112 days. Both are inputs. The Tribunal "cannot review the exercise of" the s 17 power (s 41), and it reviews only decisions that have been through the Secretary's review on application (s 40(1)), which must be sought within 28 days of the notice (s 38(2)). Asserted.
 11. **A later payment from the liquidator creates no debt; one from anyone else does, capped at what is still unrecovered.** Section 34 makes the person owe the Commonwealth the lesser of the later amount and the advance less what the Commonwealth has recovered in the winding up and less earlier s 34 debts, but only where the later payer is not the Commonwealth, the liquidator or trustee, or the intermediary that paid the advance. Asserted.
-12. **The ledger entry's question cannot be answered in dollars from the Act alone.** "How much will I get" turns on the maximum weekly wage as indexed under the Regulations and on the PAYG amount from the withholding schedules; the encoding computes the advance from both as inputs. A new ledger entry asks for the Regulations. Not asserted (a finding about the sources).
+12. **The ledger entry's question cannot be answered in dollars from the Act alone.** "How much will I get" turns on the maximum weekly wage as indexed under the Regulations and on the PAYG amount from the withholding schedules; the encoding computes the advance from both as inputs. A new ledger entry asks for the Regulations. Not asserted (a finding about the sources). Since 23 October 2026 the maximum weekly wage is worked out (findings 13 to 15).
+13. **The indexation is in the 2023 Regulations, not the "Fair Entitlements Guarantee Regulations 2012".** REQ-0088 named the 2012 Regulations; on the Register they are repealed, and the indexation was in the Fair Entitlements Guarantee (Indexation of Maximum Weekly Wage) Regulation 2013, itself repealed by the Fair Entitlements Guarantee (Indexation of Maximum Weekly Wage) Regulations 2023. Section 6(2) of the 2023 Regulations fixes 2022-23 at $2,585; s 6(3) indexes each later year by the ratio of the last two AWOTE estimates published before 1 July, rounded to 3 places and never below 1, and rounds to the dollar. Section 7 saves the indexation done under the 2013 Regulation, so 2013-14 to 2021-22 answer `not covered` (that instrument is not deposited); 2012-13 is the Act's $2,364. Worked by hand: 2023-24 $2,673, 2024-25 $2,793, 2025-26 $2,921, 2026-27 $3,032. Asserted.
+14. **The "seasonally adjusted" estimate the Regulations' notes point to is not seasonally adjusted.** Steps 1 and 2 take "the last assessment of current average weekly ordinary time earnings published by the Australian Statistician before 1 July"; the notes say the seasonally adjusted full-time adult figure. Each deposited release marks that row "(a) This component is not seasonally adjusted", repeating the original figure, so there is only one figure to take. The last estimate published before each 1 July is the previous November's, released in February (the May estimate comes in August). Not asserted (a finding about the sources).
+15. **The cap is the rate "at the end of the employment".** Sections 26 and 27 apply the maximum weekly wage rate at the end of the employment (or of the wages entitlement period, which ends no later); the module takes the financial year in which the employment ended. An employment ending on 30 June 2026 is capped at $2,921, one ending on 1 July 2026 at $3,032. Asserted.
 
 ## What would need doing before this is worth relying on
 
-- **The Fair Entitlements Guarantee Regulations 2012**, for the indexation of the maximum weekly wage (raised in the Commonwealth ledger).
+- **The indexation for 2013-14 to 2021-22** (the repealed 2013 Regulation and its amendments, which paused indexation for some years), if an employment that ended then matters; and each February's AWOTE release, deposited, to carry the maximum weekly wage past 2026-27.
 - **The PAYG withholding schedules**, so s 24's deduction can be computed rather than asked.
 - **Partnerships and s 49 administrations**, if a case needs them.
 - **Wider sources.** No departmental guideline, AAT or ART decision or case law was read; findings 3, 4, 5 and 7 are interpretive choices.
