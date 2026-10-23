@@ -10,7 +10,7 @@ No pipeline, no coverage table, no independent test pass, no human gate.
 
 It satisfies `REQ-0082` in `subjects/au/requirements.jsonl`. There was no earlier encoding of this Act to keep.
 
-Every question is a function named as the accused would ask it, with `@export` and a `@desc` on every input. There are 18 exported questions, grouped under `§§` headings: whether Chapter 2 applies, what the prosecution must prove, the Part 2.3 defences (each heading naming its situation: "if you were a child", "if you were intoxicated", "if you made a mistake", "if someone else made you do it, or you were defending yourself"), who must prove what, and the two offences.
+Every question is a function named as the accused would ask it, with `@export` and a `@desc` on every input. There are 20 exported questions, grouped under `§§` headings: whether Chapter 2 applies, what the prosecution must prove, the Part 2.3 defences (each heading naming its situation: "if you were a child", "if you were intoxicated", "if you made a mistake", "if someone else made you do it, or you were defending yourself"), who must prove what, and the two offences.
 
 ## Edition
 
@@ -22,7 +22,7 @@ Nothing else is brought in. "Carriage service" takes its meaning from the Teleco
 
 | Module | Case file | Assertions |
 |---|---|---|
-| `cc-accused.l4` | `cc-cases-accused.l4` | 90 written, 90 satisfied |
+| `cc-accused.l4` | `cc-cases-accused.l4` | 99 written, 99 satisfied (90 before fork F1 was added on 2026-10-23, all unchanged) |
 
 `l4 run` on both files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
 
@@ -59,13 +59,22 @@ The 2026-10-18 defaults:
 7. **Ignorance of an Act is no excuse; ignorance of an unpublished instrument is** — if it had not been made available to the public or to those likely to be affected so that due diligence would have found it (s 9.4(2)(c)). Asserted.
 8. **Self-defence is judged on the person's actual belief and the circumstances as they perceived them** (s 10.4(2)), but never covers intentionally inflicting death or really serious injury to protect property or deal with a trespasser (s 10.4(3)), nor resisting conduct the person knew was lawful (s 10.4(4)). Defending a person is not limited by s 10.4(3). Duress and sudden emergency, by contrast, need reasonable beliefs (ss 10.2(2), 10.3(2)). Asserted.
 9. **The accused bears only an evidential burden for a defence or an exception** (s 13.3) — pointing to evidence of a reasonable possibility, which may come from the prosecution's case — after which the prosecution must disprove it beyond reasonable doubt (s 13.1(2)). A legal burden on the accused arises only where the law says so expressly (s 13.4), and is on the balance of probabilities (s 13.5). Mental impairment is proved on the balance of probabilities by whichever side relies on it (s 7.3(3)), and a child's knowledge of wrongness is for the prosecution (s 7.2(2)). Asserted.
-10. **Section 474.17 states no fault element, and which default applies to "in a way ... that reasonable persons would regard as ... menacing, harassing or offensive" is an interpretive choice.** This encoding reads it as a circumstance, so recklessness applies (s 5.6(2)): the person must have been aware of a substantial risk that reasonable persons would so regard it. Whether reasonable persons would so regard it is the tribunal's, with the s 473.4 matters. The maximum is 5 years. Asserted on the encoding's reading. Raised in the ledger as a case-law question.
+10. **Section 474.17 states no fault element, and which default applies to "in a way ... that reasonable persons would regard as ... menacing, harassing or offensive" is an interpretive choice.** This encoding reads it as a circumstance, so recklessness applies (s 5.6(2)): the person must have been aware of a substantial risk that reasonable persons would so regard it. Whether reasonable persons would so regard it is the tribunal's, with the s 473.4 matters. The maximum is 5 years. Asserted on the encoding's reading. Raised in the ledger as a case-law question (`REQ-0103`), and recorded as fork F1 below, with the other reading selectable and asserted.
 11. **General dishonesty does not require knowing that the victim was a Commonwealth entity** (s 135.1(2), (4)); for the s 135.1(5) form that element is of absolute liability (s 135.1(6)). "Dishonest" has two limbs — dishonest by ordinary standards, and known by the defendant to be so (s 130.3) — so a person who honestly believed they were entitled is not dishonest. The maximum is 10 years. Asserted.
 12. **The age of criminal responsibility is 10, with a rebuttable bar to 14** (ss 7.1, 7.2). Asserted.
 
+## Forks (interpretive choices)
+
+- **F1, s 474.17(1)(b): which fault element.** Recorded 2026-10-23 for `REQ-0103`. Section 474.17 states no fault element, so s 5.6 supplies one according to the kind of physical element (s 4.1(1): conduct, a result of conduct, or "a circumstance in which conduct, or a result of conduct, occurs").
+  - **(a) A circumstance, carrying recklessness (s 5.6(2)) — the default.** That the way of use is one "reasonable persons would regard as being, in all the circumstances, menacing, harassing or offensive" is a circumstance of the conduct of using a carriage service. The prosecution must prove the person was aware of a substantial risk that reasonable persons would so regard it, and that taking the risk was unjustifiable (s 5.4(1), (3)), or that they knew or intended it (s 5.4(4)). This is finding 10's reading, and what `Have I committed the s 474.17 offence question` answers.
+  - **(b) Part of the conduct, carrying intention (s 5.6(1)).** "Uses a carriage service ... in a way" is read as one conduct element. The prosecution must prove only that the person meant to use the service in the way they did (meant to send what they sent, by that method). Whether reasonable persons would regard that way as menacing, harassing or offensive is then for the tribunal of fact alone, with no awareness of it required.
+  - **Where they part:** a person who meant to send the messages, which the court finds offensive, but who was not aware of any risk that they would be so regarded. Reading (a): not guilty. Reading (b): guilty. Asserted both ways.
+  - **In the encoding:** `Reading of s 474.17(1)(b)` is an input to `Have I committed the s 474.17 offence on a reading question` and to `What must be proved about my state of mind under s 474.17 question` (both exported). The original question calls the first with reading (a), so its five inputs and its five tests are unchanged.
+  - **Not resolved.** No decision on s 474.17 is deposited in Commons, and none was read. The fork is closed by depositing a decision that settles it, then asserting the reading it adopts. Until then neither reading is preferred on authority; (a) stays the default because it is the one finding 10 adopted, not because it has been confirmed.
+
 ## Raised in the ledger
 
-- **The fault element for s 474.17(1)(b)** (case law): whether the "reasonable persons would regard" element is a circumstance carrying recklessness, and what awareness that requires. Finding 10 turns on it.
+- **The fault element for s 474.17(1)(b)** (case law): whether the "reasonable persons would regard" element is a circumstance carrying recklessness, and what awareness that requires. Finding 10 turns on it. Recorded on 2026-10-23 as fork F1 (above), with both readings selectable and asserted. The entry is declined until a decision is deposited, because its closing condition is a deposited decision settling the point (see its `resolution.reason`).
 
 ## What would need doing before this is worth relying on
 
