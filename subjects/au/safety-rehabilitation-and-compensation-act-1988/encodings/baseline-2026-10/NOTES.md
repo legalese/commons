@@ -20,7 +20,7 @@ Nothing else is brought in. The approved Guide to the Assessment of the Degree o
 
 | Module | Case file | Assertions |
 |---|---|---|
-| `src-employee.l4` (12 questions) | `src-cases-employee.l4` | 60 written, 60 satisfied |
+| `src-employee.l4` (11 questions) | `src-cases-employee.l4` | 60 written, 60 satisfied |
 
 `l4 run` on both files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
 
