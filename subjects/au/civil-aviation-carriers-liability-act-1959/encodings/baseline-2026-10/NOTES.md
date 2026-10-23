@@ -68,3 +68,15 @@ The 2026-10-18 defaults:
 - **Parts IIIA and IIIC**, s 33, successive and combined carriage, jurisdiction, and the personal representative's claim.
 - **Case law.** No decision was read. The meaning of "accident" (Art 17), "embarking or disembarking", and the readings in findings 6 and 7 are settled, if at all, by cases.
 - **State law** for flights within one State (for WA, the Civil Aviation (Carriers' Liability) Act 1961 (WA)), which applies Part IV by reference.
+
+## The Regulations brought in (added 2026-10-23, REQ-0089)
+
+**Module:** `cacl-regulations.l4`, beside `cacl-passenger.l4`, which it imports; cases in `cacl-cases-regulations.l4` (20 written, 20 satisfied; `l4 run` 0 errors, 0 warnings on both new files, and `cacl-cases-passenger.l4` still 85 of 85). Same seat (the air passenger), same defaults.
+
+**Instrument:** the Civil Aviation (Carriers' Liability) Regulations 2019 as made (register id F2019L01172, unamended, in force 1 October 2019), deposited as their own subject at `subjects/au/civil-aviation-carriers-liability-regulations-2019/` with `parent_act` this Act. They repealed the 1991 Regulations that REQ-0089 named.
+
+**What the module computes:** the Part IV limits for death or injury (s 31(1), (1A)) and for baggage (s 31(2), (3)) with the prescribed figures read from regs 6 and 7, the Act's figure, and a higher contract figure; and whether the Regulations raise or displace any limit for the passenger's regime.
+
+11. **The Regulations prescribe exactly the Act's figures, so they change nothing.** Regs 6 and 7 prescribe $925,000, 480,000 SDRs, $3,000 and $300, the same as s 31(1AA), (1B), (2A) and (4). Paragraph (b) of each subsection applies only to a prescribed figure "higher than" the Act's, so it never takes over. There is no indexation regulation, no SDR figure for an Australian international carrier (ss 9C, 11A(1)(b), 21A(1)(b)), no ticket or baggage check provision under s 40 that could displace a s 31 limit, and no family member class under s 5(2)(f). The baseline's figures for Part IV are therefore the figures in force. Asserted.
+12. **The Article 24 revisions are not deposited, for a licence reason.** The revised Montreal limits are notified by ICAO. ICAO's website terms (read 2026-10-23, https://www.icao.int/terms-and-conditions) grant use "for the User's personal, non-commercial use, without any right to resell or redistribute them or to compile or create derivative works therefrom", which is the kind of term the encoding guide sends to Michael before anything is deposited. The Register holds no s 9K notice of a revision. So the Montreal answers in `cacl-passenger.l4` stay on the Convention text's 100 000, 4 150 and 1 000 SDRs, and may be understated. Raised as a new ledger entry. Not asserted beyond the module's answer that the Regulations do not touch the Montreal limits.
+13. **Reg 8(2) cites a paragraph the deposited compilation of the Act does not have.** It prescribes 480,000 SDRs "for the purposes of paragraph 41C(3)(aa)"; s 41C(3) in Compilation No. 30 has paragraphs (a), (b) and (c) only. The insurance provisions are out of this seat's scope, so this is recorded, not encoded.
