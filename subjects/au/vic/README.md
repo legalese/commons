@@ -141,3 +141,52 @@ A version page also lists a bookmarked PDF for the State Concessions Act, which 
 - The Transport Accident Act's indexed amounts for 1 July 2026 were not found in the Gazette (see Sourcing). The workers' compensation notice is now indexed and deposited.
 - Not indexed, considered: the Housing Act 1983 (public housing rent is set by policy rather than in the Act); the Taxation Administration Regulations 2017 (SR 111/2017, version 002, 3 June 2026); the Accident Compensation Act 1985, which still governs older workplace injuries.
 - Commonwealth law is the larger half of both topics; ask questions there first.
+
+## Encodings (2026-10-24)
+
+One encoding was made on 2026-10-24, because the Gazette notice is the only Victorian text deposited: every Act and statutory rule in the set still waits to be saved by hand (see [Sourcing, 2026-10-24](#sourcing-2026-10-24)).
+It is a baseline from the seat of the individual, at `encodings/baseline-2026-10/` in its subject's folder.
+Its seat-neutral core holds the notice's amounts in the notice's own words, one module for each Act's notice (`wcin-wirc-2013.l4` and `wcin-aca-1985.l4`), and two seat layers ask the individual's questions and restate no rule.
+It has no regulative rules: the notice prints amounts and states no "must", "may" or deadline, and the duties that use the amounts are in the Acts.
+It was checked with the stable `l4` of VS Code extension 1.6.98 (`JL4_LIBRARY_PATH` unset): 0 errors, 0 warnings, every assertion satisfied.
+It was independently verified on 2026-10-24. All five issues the verifier raised held and were fixed the same day; no figure changed (`NOTES.md` finding 16).
+There was no pipeline, coverage table or human gate. It is a draft and not for public use as advice.
+Its `NOTES.md` gives the method, edition, scope, every finding, and what would be needed before relying on it.
+
+| Subject | Encoding | Seats | Questions | Regulative rules | Assertions | What a resident would most want to know |
+|---|---|---|---|---|---|---|
+| Workers' compensation amounts indexed from 1 July 2026 (Victoria Government Gazette S 363 of 30 June 2026: the Workplace Injury Rehabilitation and Compensation Act 2013 notice and the Accident Compensation Act 1985 notice) | [`workers-compensation-annual-indexation-notice/encodings/baseline-2026-10/`](workers-compensation-annual-indexation-notice/encodings/baseline-2026-10/) | the injured worker, with a claim under the 2013 Act or, for an older claim, the 1985 Act; the dependants and close family of a worker who dies (and the family of a severely injured worker, for hospital travel) | 32 (18 worker, 14 family) | 0 | 364 / 364 (229 worker, 135 family, 7 of them mirror cases) | The maximum weekly payment is $3,000 from 1 July 2026 ($2,930 before), or less for a 1985 Act claim made before 5 April 2010 ($2,200, or $1,740 before 12 November 1997). But under the 2013 Act a worker's payments are indexed on the anniversary of the entitlement, not on 1 July: one last indexed on 1 September 2025 still has the $2,930 maximum in August 2026 (a reading the Act must settle; finding 4). On a worker's death the lump sum is $783,000 ($759,510 before), and the two Acts split it differently: with five dependent children, each child gets $39,170 and the partner $587,150 under the 2013 Act, but each child $39,146 and the partner $587,270 under the 1985 Act (finding 6). |
+
+Two findings to check against the published Gazette before relying on any figure.
+The amounts indexed by the CPI rose by the printed 3.093%, though the index numbers the notice prints (98.0 to 101.0) give 3.061% (finding 1).
+Some amounts did not move by indexation at all, among them the weekly pension for more than four dependent children, $976 to $1,500 under the 2013 Act (finding 2).
+The encoding uses the printed figures throughout and recomputes none.
+
+### Still inputs, because they are not deposited
+
+**The parent Acts.** The Workplace Injury Rehabilitation and Compensation Act 2013 and its Regulations 2024 are indexed here but not deposited; the Accident Compensation Act 1985 is not indexed.
+They decide every fact the notice's amounts are used with, so each of these is an input:
+
+- which Act governs the claim, and the day of the claim;
+- the day that counts for an amount: for weekly payments, the day they were last indexed or, for a worker not yet indexed, the day the entitlement began (finding 4);
+- pre-injury average weekly earnings, the entitlement periods and their percentages, current work capacity, a serious injury, and the approval of an application under s 165(1) or s 93CD(1). So the uncapped weekly payment or pension is an input, and the encoding applies the printed maximum to it;
+- the impairment benefit rating and how it is described, 'T' and 'P', and the formula that combines the amounts printed for a band of ratings. So a lump sum is given only above 80%, or above 70% as the lesser of the formula amount and the printed maximum; for a lower rating the encoding gives the printed amounts and answers `not covered` for the sum (finding 3);
+- who is a dependent partner, a dependent child, an orphan, another dependant, a close family member or a non-dependent family member, and whether a worker is severely injured;
+- whether the no-disadvantage provision (s 221) applies and the Schedule 4 total, and which of s 134AB and s 135A governs a 1985 Act damages claim.
+
+**The next notice.** Only the notice for 1 July 2026 is deposited, so a day outside 1 July 2025 to 30 June 2027 answers `not covered`.
+The notice for 1 July 2027 (due about 30 June 2027) goes beside it as a new file.
+
+**Deposited but not encoded:** the Workers Compensation Act 1958 notice in the same Gazette; the amounts that fall on employers, insurers and self-insurers; and the indexation arithmetic itself (the figures are encoded as printed, because the rounding rules are in the Acts).
+
+**Not encoded at all:** the fourteen instruments of the set (victims of crime financial assistance, transport accident benefits, state concessions, land tax, transfer duty with its home buyer concessions, the first home owner grant, the emergency services and volunteers fund levy, and taxation administration), until they are saved by hand and deposited.
+Transport accident benefits will also need their indexed amounts for 1 July 2026, which were not found in the Gazette.
+
+### The Commonwealth encodings it links to
+
+The stable `l4` cannot IMPORT across encoding folders, so the links are recorded in the encoding's `NOTES.md` ("Read with"), not in code.
+
+- **[Social Security Act 1991](../social-security-act-1991/encodings/baseline-2026-10/)**: compensation (s 17) and its preclusion and recovery (Part 3.14). The weekly payments and the dependants' weekly pensions are periodic compensation; the death lump sum, the non-economic loss lump sum and damages are lump sums. Its questions *Is what I received compensation under s 17(2), (2A) and (2B)?*, *Is my payment a compensation affected payment (s 17(1))?*, *What is the compensation part of my lump sum, in dollars (s 17(3), (4A))?* and *By how much is my daily rate reduced for periodic compensation, in dollars a day (s 1173)?* take these amounts.
+- **[Income Tax Assessment Act 1997](../income-tax-assessment-act-1997/encodings/baseline-2026-10/)**: weekly payments replace earnings and are ordinary income (*Is this ordinary income part of my assessable income (s 6-5)?*). Whether a lump sum here is income or capital is answered by neither encoding.
+
+Within Victoria, an encoding of the 2013 Act, once it is deposited, would take its figures from this encoding's tables.
