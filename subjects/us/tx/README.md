@@ -54,3 +54,13 @@ The question was where Texas sets the **amounts** a person gets: the TANF grant,
 - **State SSI supplement.** None found. Texas pays no general optional state supplement: unverified (general knowledge).
 
 **Remaining gaps:** the UI weekly maximum figure; TAC rule text; deposit of the C-110 table, which is waiting on a ruling about HHSC's "unaltered" condition.
+
+## Encodings (tax and benefits baseline, 2026-10-24)
+
+| Encoding | Seat | Questions | Regulative rules | Assertions |
+| --- | --- | --- | --- | --- |
+| `texas-constitution-article-8-taxation-and-revenue/encodings/baseline-2026-10/` (no income, capital gains, wealth or death tax, art. VIII ss 24-a, 24-b, 25, 26) | the individual | 5 | 4 (the legislature's prohibitions) | 14 / 14 |
+| `human-resources-code-chapter-31-financial-assistance-and/encodings/baseline-2026-10/` (TANF) | the applicant for or recipient of TANF | 14 | 3 (immunization proof in 180 days; report more income immediately; good cause hearing in 13 days) | 46 / 46 |
+| `labor-code-title-4-subtitle-a-texas-unemployment-compensation/encodings/baseline-2026-10/` (unemployment benefits, chs. 201 and 207) | the unemployed claimant | 6 | 0 (ch. 207 states conditions, not duties) | 35 / 35 |
+
+All three are baselines from the deposited Council text, checked with the stable `l4` 1.6.98. The TANF grant amount (Texas Works Handbook C-110, not deposited) and the UI maximum and minimum weekly amounts (set by the commission) are not encoded or are inputs.

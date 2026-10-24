@@ -1,0 +1,288 @@
+IMPORT prelude
+
+-- Texas Unemployment Compensation Act (Tex. Lab. Code Title 4, Subtitle A) -- the claimant's questions about benefits:
+-- the weekly benefit amount (s 207.002), partial benefits (s 207.003, with s 201.091), the most payable in a benefit year
+-- (s 207.005), rounding (s 207.006), the eligibility conditions (s 207.021(a)), the permanently disabled part-time worker
+-- (s 207.0211), and the main disqualifications and how long they last (ss 207.044, 207.045, 207.047, 207.049, 207.050).
+--
+-- SEAT: the unemployed individual claiming benefits. "Am I eligible? How much a week? How much in total? I left / was let
+-- go / earn a little / get a pension: what happens?" The Texas Workforce Commission's determinations are encoded for what
+-- they mean to the claimant; the commission's own judgments (good cause, misconduct, suitable work) are asked as facts.
+--
+-- Edition: Tex. Lab. Code chs. 201 and 207 as deposited at ../../registers/source-bundle/tex-lab-code-ch201-general-
+-- provisions.txt and tex-lab-code-ch207-benefits.txt (Texas Legislative Council chapter files dated 2026-05-14,
+-- retrieved 2026-10-19).
+--
+-- The maximum and minimum weekly benefit amounts are figures the commission computes each year from the average weekly
+-- wage (s 207.002(b)-(d)); they are not in the deposited text and are inputs.
+--
+-- NOT ENCODED: claims and appeals (ch. 208); the base period's alternative for injury or illness (s 201.011(1)(B)) beyond
+-- the input wording; training (ss 207.022, 207.023); drug testing (s 207.026); educational institutions, athletes, aliens
+-- (ss 207.041 to 207.043); labor disputes (s 207.048); sale of business (s 207.051); s 207.053; child support and tax
+-- withholding (ss 207.091 to 207.114); employer chargebacks and taxes.
+--
+-- BASELINE ENCODING. Written from the claimant's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Texas Unemployment Compensation Act -- the claimant's benefits`
+
+§§ `ss 207.002, 207.006 -- my weekly benefit amount`
+
+-- s 207.006: "If a benefit rate or benefit payable computed under this chapter is not a multiple of $1, the benefit rate or
+-- benefit payable is increased to the next multiple of $1."
+GIVEN x IS A NUMBER
+GIVETH A NUMBER
+`raised to the next whole dollar` x MEANS
+    IF x EQUALS (FLOOR x) THEN x ELSE (FLOOR x) PLUS 1
+
+-- s 207.002(a): "the rate of 1/25 of the wages received by the individual from employment by employers during that quarter
+-- in the individual's base period in which wages were highest." (a-2): not more than the maximum weekly benefit amount nor
+-- less than the minimum, "computed under Subsection (b)" (47.6% and 7.6% of the average weekly wage, rounded to the dollar
+-- under (c), set by the commission each 1 October: inputs).
+-- s 201.011(1)(A): the base period is "the four consecutive completed calendar quarters, prescribed by the commission, in
+-- the five consecutive completed calendar quarters preceding the first day of an individual's benefit year".
+GIVEN `base period quarters` IS A LIST OF NUMBER
+      `maximum weekly benefit amount` IS A NUMBER
+      `minimum weekly benefit amount` IS A NUMBER
+GIVETH A NUMBER
+`the benefit amount` MEANS
+    min `maximum weekly benefit amount`
+        (max `minimum weekly benefit amount`
+             (`raised to the next whole dollar` ((maximum1 0 `base period quarters`) DIVIDED BY 25)))
+
+@export How much is my weekly unemployment benefit in Texas (Tex. Lab. Code s 207.002)?
+GIVEN `my wages in each base period quarter` IS A LIST OF NUMBER @desc Your wages in US dollars in each of the four quarters of your base period (usually the first four of the last five completed calendar quarters before you claimed), one number per quarter
+      `the current maximum weekly benefit` IS A NUMBER @desc The maximum weekly benefit amount the Texas Workforce Commission has set for benefit years beginning in this period (47.6% of the state average weekly wage)
+      `the current minimum weekly benefit` IS A NUMBER @desc The minimum weekly benefit amount the commission has set (7.6% of the state average weekly wage)
+GIVETH A NUMBER
+`How much is my weekly benefit` MEANS
+    `the benefit amount` `my wages in each base period quarter` `the current maximum weekly benefit` `the current minimum weekly benefit`
+
+§§ `s 207.005 -- the most I can be paid in a benefit year`
+
+-- s 207.005: "may not exceed the lesser of: (1) 26 times the individual's benefit amount; or (2) 27 percent of the
+-- individual's benefit wage credits." s 207.004: benefit wage credits are the base-period wages. Rounded up under s 207.006.
+@export What is the most unemployment benefit I can be paid in my Texas benefit year (Tex. Lab. Code s 207.005)?
+GIVEN `my wages in each base period quarter` IS A LIST OF NUMBER @desc Your wages in US dollars in each of the four quarters of your base period, one number per quarter
+      `the current maximum weekly benefit` IS A NUMBER @desc The maximum weekly benefit amount set by the commission
+      `the current minimum weekly benefit` IS A NUMBER @desc The minimum weekly benefit amount set by the commission
+GIVETH A NUMBER
+`What is the most I can be paid this benefit year` MEANS
+    `raised to the next whole dollar`
+        (min (26 TIMES (`the benefit amount` `my wages in each base period quarter` `the current maximum weekly benefit` `the current minimum weekly benefit`))
+             (27% TIMES (sum `my wages in each base period quarter`)))
+
+§§ `ss 201.091, 207.003 -- a week of partial work`
+
+DECLARE `My week` IS ONE OF
+    -- s 201.091(a): no services "for wages in excess of the greater of: (1) $5; or (2) 25 percent of the benefit amount"
+    `totally unemployed`
+    -- s 201.091(b): less than full-time work, and wages "less than the sum of" the benefit amount and the greater of $5 or 25%
+    `partially unemployed`
+    `not unemployed`
+
+GIVEN `benefit amount` IS A NUMBER
+      `wages this week` IS A NUMBER
+      `I worked less than full time` IS A BOOLEAN
+GIVETH A `My week`
+`what kind of week` MEANS
+    IF `wages this week` AT MOST (max 5 (25% TIMES `benefit amount`))
+    THEN `totally unemployed`
+    ELSE IF `I worked less than full time` AND `wages this week` LESS THAN (`benefit amount` PLUS (max 5 (25% TIMES `benefit amount`)))
+         THEN `partially unemployed`
+         ELSE `not unemployed`
+
+-- s 207.003(b): "(1) adding the individual's benefit amount and the greater of $5 or 25 percent of the benefit amount; and
+-- (2) subtracting the amount of the wages earned by the individual during the benefit period". For a totally unemployed
+-- week the full benefit amount is paid (s 207.002(a)).
+@export How much unemployment benefit do I get for a week in which I earned some wages (Tex. Lab. Code ss 201.091, 207.003)?
+GIVEN `my weekly benefit amount` IS A NUMBER @desc Your weekly benefit amount in US dollars, as set on your claim
+      `what I earned that week` IS A NUMBER @desc The wages you earned in the benefit week (Sunday to Saturday), in US dollars
+      `I worked less than full time that week` IS A BOOLEAN @desc Whether the work you did that week was less than full-time work
+GIVETH A NUMBER
+`How much for a week with some earnings` MEANS
+    CONSIDER `what kind of week` `my weekly benefit amount` `what I earned that week` `I worked less than full time that week`
+    WHEN `totally unemployed` THEN `my weekly benefit amount`
+    WHEN `partially unemployed` THEN
+        `raised to the next whole dollar`
+            ((`my weekly benefit amount` PLUS (max 5 (25% TIMES `my weekly benefit amount`))) MINUS `what I earned that week`)
+    WHEN `not unemployed` THEN 0
+
+§§ `ss 207.021, 207.0211 -- am I eligible`
+
+-- s 207.021(a): an unemployed individual is eligible for a benefit period if the individual (1) has registered for work
+-- and continued to report; (2) has made a claim under s 208.001; (3) is able to work; (4) is available for work; (5) is
+-- actively seeking work; (6) for the base period has benefit wage credits "(A) in at least two calendar quarters; and (B) in
+-- an amount not less than 37 times the individual's benefit amount"; (7) after the beginning of the most recent prior
+-- benefit year, if any, "earned wages in an amount equal to not less than six times the individual's benefit amount"; (8)
+-- has been unemployed "for a waiting period of at least seven consecutive days"; (9) participates in reemployment services
+-- if the commission has required it, unless reasonable cause.
+-- s 207.0211: a permanently disabled individual "is considered to be able to work ... and available for work" if, because of
+-- the disability, the individual (1) cannot work full-time, (2) worked part-time during a substantial part of the base
+-- period, (3) seeks part-time work consistent with the disability, and (4) receives disability insurance benefits under
+-- 42 U.S.C. s 423.
+DECLARE `Why not eligible` IS ONE OF
+    `not registered for work or not reporting as required (s 207.021(a)(1))`
+    `no claim made (s 207.021(a)(2))`
+    `not able to work (s 207.021(a)(3))`
+    `not available for work (s 207.021(a)(4))`
+    `not actively seeking work (s 207.021(a)(5))`
+    `base period wages in fewer than two quarters (s 207.021(a)(6)(A))`
+    `base period wages less than 37 times the benefit amount (s 207.021(a)(6)(B))`
+    `not enough wages since the last benefit year began: less than 6 times the benefit amount (s 207.021(a)(7))`
+    `the seven-day waiting period is not served (s 207.021(a)(8))`
+    `not taking part in required reemployment services (s 207.021(a)(9))`
+
+DECLARE `Eligibility` IS ONE OF
+    `eligible for this benefit period, unless disqualified`
+    `not eligible` HAS `because` IS A `Why not eligible`
+
+GIVEN `base period quarters` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`quarters with wages` MEANS sum (map (GIVEN q YIELD IF q GREATER THAN 0 THEN 1 ELSE 0) `base period quarters`)
+
+GIVEN `registered and reporting` IS A BOOLEAN
+      `claim made` IS A BOOLEAN
+      `able to work` IS A BOOLEAN
+      `available for work` IS A BOOLEAN
+      `permanently disabled part-time worker under s 207.0211` IS A BOOLEAN
+      `actively seeking work` IS A BOOLEAN
+      `base period quarters` IS A LIST OF NUMBER
+      `benefit amount` IS A NUMBER
+      `I had a prior benefit year` IS A BOOLEAN
+      `wages earned since the prior benefit year began` IS A NUMBER
+      `waiting period served` IS A BOOLEAN
+      `required reemployment services not taken up without reasonable cause` IS A BOOLEAN
+GIVETH AN `Eligibility`
+`the eligibility` MEANS
+    BRANCH
+        IF (NOT `registered and reporting`) THEN `not eligible` `not registered for work or not reporting as required (s 207.021(a)(1))`
+        IF (NOT `claim made`) THEN `not eligible` `no claim made (s 207.021(a)(2))`
+        IF (NOT (`able to work` OR `permanently disabled part-time worker under s 207.0211`)) THEN `not eligible` `not able to work (s 207.021(a)(3))`
+        IF (NOT (`available for work` OR `permanently disabled part-time worker under s 207.0211`)) THEN `not eligible` `not available for work (s 207.021(a)(4))`
+        IF (NOT `actively seeking work`) THEN `not eligible` `not actively seeking work (s 207.021(a)(5))`
+        IF `quarters with wages` `base period quarters` LESS THAN 2 THEN `not eligible` `base period wages in fewer than two quarters (s 207.021(a)(6)(A))`
+        IF sum `base period quarters` LESS THAN (37 TIMES `benefit amount`) THEN `not eligible` `base period wages less than 37 times the benefit amount (s 207.021(a)(6)(B))`
+        IF `I had a prior benefit year` AND `wages earned since the prior benefit year began` LESS THAN (6 TIMES `benefit amount`) THEN `not eligible` `not enough wages since the last benefit year began: less than 6 times the benefit amount (s 207.021(a)(7))`
+        IF (NOT `waiting period served`) THEN `not eligible` `the seven-day waiting period is not served (s 207.021(a)(8))`
+        IF `required reemployment services not taken up without reasonable cause` THEN `not eligible` `not taking part in required reemployment services (s 207.021(a)(9))`
+        OTHERWISE `eligible for this benefit period, unless disqualified`
+
+-- s 207.0211 worked out from its four facts.
+GIVEN `I am permanently disabled` IS A BOOLEAN
+      `because of it I cannot work full time` IS A BOOLEAN
+      `I worked part time for a substantial part of my base period` IS A BOOLEAN
+      `I am seeking part-time work within my limitations` IS A BOOLEAN
+      `I receive Social Security disability insurance benefits` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 207.0211 applies` IF
+        `I am permanently disabled`
+    AND `because of it I cannot work full time`
+    AND `I worked part time for a substantial part of my base period`
+    AND `I am seeking part-time work within my limitations`
+    AND `I receive Social Security disability insurance benefits`
+
+@export Am I eligible for Texas unemployment benefits for a benefit week (Tex. Lab. Code ss 207.021, 207.0211)?
+GIVEN `I have registered for work and keep reporting` IS A BOOLEAN @desc Whether you have registered for work with the Texas Workforce Commission and continue to report as its rules require
+      `I have filed a claim` IS A BOOLEAN @desc Whether you have made a claim for benefits
+      `I am able to work` IS A BOOLEAN @desc Whether you are able to work
+      `I am available for work` IS A BOOLEAN @desc Whether you are available for work
+      `I am permanently disabled` IS A BOOLEAN @desc Whether you are permanently disabled
+      `because of it I cannot work full time` IS A BOOLEAN @desc If so, whether because of your disability you cannot work full time
+      `I worked part time for much of my base period` IS A BOOLEAN @desc If so, whether you worked part time during a substantial part of your base period
+      `I am seeking part-time work within my limitations` IS A BOOLEAN @desc If so, whether you are seeking part-time work consistent with your disability's limits
+      `I receive Social Security disability benefits` IS A BOOLEAN @desc If so, whether you receive disability insurance benefits under 42 U.S.C. s 423 (SSDI)
+      `I am actively seeking work` IS A BOOLEAN @desc Whether you are actively seeking work as the commission's rules require
+      `my wages in each base period quarter` IS A LIST OF NUMBER @desc Your wages in US dollars in each of the four quarters of your base period, one number per quarter
+      `the current maximum weekly benefit` IS A NUMBER @desc The maximum weekly benefit amount set by the commission
+      `the current minimum weekly benefit` IS A NUMBER @desc The minimum weekly benefit amount set by the commission
+      `I had an earlier benefit year` IS A BOOLEAN @desc Whether you had an earlier benefit year (an earlier claim)
+      `what I have earned since that earlier benefit year began` IS A NUMBER @desc If so, the wages you have earned since the start of that earlier benefit year, in US dollars
+      `I have served the waiting week` IS A BOOLEAN @desc Whether you have been unemployed for a waiting period of at least seven consecutive days after filing your claim
+      `I was told to attend reemployment services and have not, without reasonable cause` IS A BOOLEAN @desc Whether the commission required you to take part in reemployment services (such as job search help) and you have not, without reasonable cause
+GIVETH AN `Eligibility`
+`Am I eligible for unemployment benefits` MEANS
+    `the eligibility`
+        `I have registered for work and keep reporting`
+        `I have filed a claim`
+        `I am able to work`
+        `I am available for work`
+        (`s 207.0211 applies` `I am permanently disabled` `because of it I cannot work full time` `I worked part time for much of my base period` `I am seeking part-time work within my limitations` `I receive Social Security disability benefits`)
+        `I am actively seeking work`
+        `my wages in each base period quarter`
+        (`the benefit amount` `my wages in each base period quarter` `the current maximum weekly benefit` `the current minimum weekly benefit`)
+        `I had an earlier benefit year`
+        `what I have earned since that earlier benefit year began`
+        `I have served the waiting week`
+        `I was told to attend reemployment services and have not, without reasonable cause`
+
+§§ `ss 207.044 to 207.047 -- disqualification for how I left work (only if I left work or refused work)`
+
+-- s 207.044: "discharged for misconduct connected with the individual's last work". s 207.045(a): "left the individual's last
+-- work voluntarily without good cause connected with the individual's work". s 207.047: failed without good cause to apply
+-- for or accept suitable work, or return to customary self-employment, when directed. Each "continues until the individual
+-- has returned to employment and: (1) worked for six weeks; or (2) earned wages equal to six times the individual's benefit
+-- amount." s 207.045(c): leaving to move with a spouse: "not less than six benefit periods and not more than 25", as the
+-- commission decides. s 207.045(d): not disqualified, if available to work, for leaving because of medically verified
+-- illness of the individual or minor child (with (e)), injury, disability, pregnancy, an involuntary separation under
+-- s 207.046, or a military spouse's move. (f): not reenlisting is not leaving voluntarily.
+DECLARE `How I left` IS ONE OF
+    `laid off or let go, not for misconduct`
+    `discharged for misconduct connected with my last work`
+    `quit with good cause connected with the work`
+    `quit for a reason in s 207.045(d) or an involuntary separation under s 207.046`
+    `quit to move with my spouse`
+    `quit without good cause connected with the work`
+    `did not reenlist in the military`
+
+DECLARE `Disqualification` IS ONE OF
+    `not disqualified for how I left`
+    `disqualified until I return to work and work six weeks or earn six times my benefit amount (ss 207.044(b), 207.045(b), 207.047(b))`
+    `disqualified for six to 25 benefit periods after a valid claim, as the commission decides (s 207.045(c))`
+
+@export Am I disqualified from Texas unemployment benefits because of how my last job ended, or because I refused suitable work (Tex. Lab. Code ss 207.044 to 207.047)?
+GIVEN `how my last job ended` IS A `How I left` @desc How your last work ended: "laid off or let go, not for misconduct"; "discharged for misconduct connected with my last work"; "quit with good cause connected with the work"; "quit for a reason in s 207.045(d) or an involuntary separation under s 207.046" (your own or your minor child's medically verified illness, injury, disability, pregnancy, a military spouse's move, or a reason that made leaving urgent, compelling and necessary); "quit to move with my spouse"; "quit without good cause connected with the work"; or "did not reenlist in the military"
+      `I am available to work` IS A BOOLEAN @desc Whether you are available to work now (needed for the s 207.045(d) protection)
+      `I refused suitable work without good cause this benefit year` IS A BOOLEAN @desc Whether, during this benefit year, you failed without good cause to apply for suitable work when the commission directed you, to accept suitable work offered to you, or to return to your customary self-employment when directed
+      `since then I have worked six weeks or earned six times my benefit amount` IS A BOOLEAN @desc Whether, since that happened, you have returned to employment and worked for six weeks or earned wages equal to six times your weekly benefit amount
+GIVETH A `Disqualification`
+`Am I disqualified for how I left` MEANS
+    IF `since then I have worked six weeks or earned six times my benefit amount`
+    THEN `not disqualified for how I left`
+    ELSE IF `I refused suitable work without good cause this benefit year`
+         THEN `disqualified until I return to work and work six weeks or earn six times my benefit amount (ss 207.044(b), 207.045(b), 207.047(b))`
+         ELSE CONSIDER `how my last job ended`
+              WHEN `discharged for misconduct connected with my last work` THEN `disqualified until I return to work and work six weeks or earn six times my benefit amount (ss 207.044(b), 207.045(b), 207.047(b))`
+              WHEN `quit without good cause connected with the work` THEN `disqualified until I return to work and work six weeks or earn six times my benefit amount (ss 207.044(b), 207.045(b), 207.047(b))`
+              WHEN `quit to move with my spouse` THEN `disqualified for six to 25 benefit periods after a valid claim, as the commission decides (s 207.045(c))`
+              WHEN `quit for a reason in s 207.045(d) or an involuntary separation under s 207.046` THEN
+                  IF `I am available to work`
+                  THEN `not disqualified for how I left`
+                  ELSE `disqualified until I return to work and work six weeks or earn six times my benefit amount (ss 207.044(b), 207.045(b), 207.047(b))`
+              OTHERWISE `not disqualified for how I left`
+
+§§ `ss 207.049, 207.050 -- severance, workers' compensation and pensions (only if I receive them)`
+
+-- s 207.049(a): disqualified "for a benefit period for which the individual is receiving or has received" wages in lieu of
+-- notice, severance pay, or workers' compensation for temporary partial, temporary total, or total and permanent disability.
+-- (b): "severance pay" excludes payments under a release or settlement of a civil rights or employment claim, or a written
+-- contract negotiated before separation.
+-- s 207.050(a): disqualified for a benefit period for which a pension, retirement pay, annuity or similar periodic payment
+-- based on previous work is reasonably attributable; (b): a Social Security payment "may not reduce the weekly benefit
+-- amount"; (c): if the payment is "less than the benefits that the individual would otherwise be eligible to receive, the
+-- individual is entitled to receive benefits for the benefit period that are reduced by the amount of the remuneration,
+-- adjusted as provided by Section 207.006".
+@export How much unemployment benefit do I get for a week in which I receive severance pay, workers' compensation or a pension (Tex. Lab. Code ss 207.049, 207.050)?
+GIVEN `my weekly benefit amount` IS A NUMBER @desc Your weekly benefit amount in US dollars
+      `I receive pay in lieu of notice, severance pay or workers' compensation disability benefits for the week` IS A BOOLEAN @desc Whether for this week you receive or received wages in lieu of notice, severance pay (not a settlement of a claim, nor a payment under a contract negotiated before you left), or workers' compensation for temporary partial, temporary total or total and permanent disability
+      `the weekly pension or annuity based on my past work` IS A NUMBER @desc The part of any pension, retirement pay, annuity or similar periodic payment based on your past work that is attributable to this week, in US dollars (0 if none)
+      `that pension is Social Security` IS A BOOLEAN @desc Whether that periodic payment is a Social Security benefit
+GIVETH A NUMBER
+`How much for a week with other payments` MEANS
+    IF `I receive pay in lieu of notice, severance pay or workers' compensation disability benefits for the week`
+    THEN 0
+    ELSE IF `that pension is Social Security` OR `the weekly pension or annuity based on my past work` EQUALS 0
+         THEN `my weekly benefit amount`
+         ELSE IF `the weekly pension or annuity based on my past work` LESS THAN `my weekly benefit amount`
+              THEN `raised to the next whole dollar` (`my weekly benefit amount` MINUS `the weekly pension or annuity based on my past work`)
+              ELSE 0
