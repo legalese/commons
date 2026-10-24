@@ -11,8 +11,10 @@ up to Act No. 17, 2025 (register id C2026C00336, in 6 volumes), deposited at
 version in force from 20 September 2026 has no registered compilation yet, so
 amendments commencing on or after that date may be missing.
 
-**Checks:** one module (`ssa-payments.l4`) and one case file (`ssa-cases-payments.l4`):
-49 assertions satisfied, 0 errors, 0 warnings.
+**Checks:** two modules (`ssa-payments.l4`, and `ssa-payments-formulas.l4` added 2026-10-24)
+and two case files (`ssa-cases-payments.l4`, 49 assertions; `ssa-cases-payments-formulas.l4`,
+14 assertions): 63 assertions satisfied, 0 errors, 0 warnings in every file, with the stable
+`l4` of VS Code extension 1.6.98 (2026-10-24).
 
 ## Why this Act, and why scoped
 
@@ -185,10 +187,36 @@ rate, is outside this scope. Asserted.
   study does not meet the minimum age unless an exception applies. Daniel, at university,
   does. Asserted.
 
+### 10. The lost formulas, recovered: the tapers and F28 are now computed (2026-10-24)
+
+The sidecar `../../registers/source-bundle/C2004A04121.formulas.md` transcribes the formulas
+finding 1 lists. `ssa-payments-formulas.l4` IMPORTs `ssa-payments.l4`, leaves it unchanged,
+and computes what the first pass asked for:
+
+- **Point 1064-E10:** the reduction for ordinary income is the excess × 0.5.
+- **Table G-2 column 3:** the reduction for assets is the excess × 19.5 / 250 a year (7.8c a
+  dollar), the same in all three family situations.
+- **Point 1067G-F28:** (the excess / 130) × (the person's maximum payment rate / the total of
+  the maximum payment rates of everyone with the parental income in common). Point 1067G-F31(b)
+  counts a sibling who is an FTB child at 14/365 of the parent's FTB maximum rate (F32), once
+  only (F35); that rate stays an input.
+- **F27 and s 598(2A)** are as the first pass inferred them, so nothing about them changes.
+
+**Finding: the first pass's supplied couple tapers were not the Act's.** `ssa-cases-payments.l4`
+gives Graham, Chloe and Daniel (each a member of a couple, on a 50/50 share) 25c a dollar of
+income excess and 3.9c a dollar of assets excess. The Act applies the same 50c and 7.8c to the
+50/50 share. On Graham's figures the income reduced rate is $5,910, not the $10,455 the
+supplied 25c gives. None of the old assertions changes, because each of the three is refused
+on assets either way (nil assets reduced rate), and Jake, single, was already on 50c and 7.8c.
+The old case file is left as it was; the new case file asserts the Act's figures.
+
+Formulas left for later in this encoding: none of finding 1's. The other recovered formulas are
+taken up by the baseline (`../baseline-2026-10/ssa-formulas.l4`).
+
 ## What would need doing before this is worth anything
 
-- Recover the four lost formulas (1064-E10, Table G-2, 1067G-F28, s 598(2A)) from the PDF
-  and replace the inputs and inferences.
+- ~~Recover the four lost formulas (1064-E10, Table G-2, 1067G-F28, s 598(2A))~~ done
+  2026-10-24 (finding 10).
 - Supply the indexed rates, limits and free areas for each scenario date. That means
   either the Act's indexation machinery (ss 1190–1194) or published figures.
 - Encode what counts as an asset and as income: deeming, the principal home, superannuation

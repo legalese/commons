@@ -36,12 +36,12 @@ in `../../registers/source-bundle/C2004A04121.formulas.md`, from the Word render
 of the later compilation C2026C00449 (the Register no longer serves C2026C00336 as
 its latest); the words around each formula were checked identical to the deposit.
 
-**Checks:** one module (`ssa-claims.l4`) and one case file
-(`ssa-cases-claims.l4`, built by the scratchpad generator
-`gen_social-security-act-1991_baseline.py`). Result: 70 assertions satisfied,
-0 errors, 0 warnings, with the stable `l4` of VS Code extension 1.6.98 (re-run
-2026-10-21 after the lost formulas were encoded). A
-deliberately wrong assertion, added to a scratch copy, was reported as failed.
+**Checks:** two modules (`ssa-claims.l4`, and `ssa-formulas.l4` added 2026-10-24) and two
+case files (`ssa-cases-claims.l4`, 70 assertions, built by the scratchpad generator
+`gen_social-security-act-1991_baseline.py`; `ssa-cases-formulas.l4`, 29 assertions, written by
+hand). Result: 99 assertions satisfied, 0 errors, 0 warnings in every file, with the stable `l4`
+of VS Code extension 1.6.98 (2026-10-24). A deliberately wrong assertion, added to a scratch
+copy, was reported as failed.
 
 ## Seat
 
@@ -276,10 +276,48 @@ Jake's events asks for it.
       not reach the minimum age unless an exception applies. Daniel, at
       university, does. Asserted.
 
+## Amounts computed from the formulas recovered on 2026-10-24
+
+The sidecar's "Further entries, recovered 2026-10-24" transcribe every other formula image in
+the deposited compilation C2026C00336. `ssa-formulas.l4` IMPORTs `ssa-claims.l4` (unchanged) and
+computes, from those formulas, figures the claimant was asked to supply or that were out of
+scope for want of the formula:
+
+- **Indexation** (ss 1192(2), 1193, 1194): the indexation factor from two CPI index numbers
+  (3 places, raised by 0.001 when the 4th place is over 4, never below 1) and the indexed amount
+  rounded to the rounding base (half way rounds up). The CPI numbers stay inputs.
+- **The pension assets value limits** after a 1 July indexation (s 1191 items 18-20, rounding
+  base $250), with the single non-homeowner limit set by **s 1203**: single homeowner + 2 ×
+  (partnered non-homeowner − partnered homeowner). On the Table G-1 base figures s 1203 gives
+  $450,000, the printed fourth figure, so the table is consistent with the formula. Asserted.
+- **Deemed income of a member of a pensioner couple** (s 1077(3), (3A), (3B), (4)): half the
+  couple's deemed income, weekly and yearly. The deeming threshold and rates stay inputs
+  (ss 1081, 1082).
+- **The youth allowance liquid assets test waiting period** (ss 549A(1), (2), 549C): the same
+  formula, reserve and divisors as jobseeker payment's s 598, capped at 13 weeks.
+- **The F28 total with a relevant sibling** (points 1067G-F31(b), F32, F35): the person's rate
+  plus 14/365 of the parent's FTB maximum rate, so the parental income test result is computed
+  from the parent's FTB rate instead of a supplied total (Daniel, d020: $468.40 a fortnight on
+  illustrative rates).
+- **A lump sum after repaid periodic compensation** (s 17(4)): LSP − RPCP, carried through the
+  s 17(3) compensation part and the s 1170(4) preclusion period.
+
+No computed value disagrees with an existing assertion of `ssa-cases-claims.l4`.
+
+**Left for later** (formulas now in the sidecar, not yet encoded): the work bonus (s 1073AA);
+the rent increased payment rates (ss 1070L-1070R); pension bonus (ss 92V, 93G, 93J); the
+student start-up and financial supplement loan formulas (ss 1061ZVEC-1061ZZFD); the income
+stream rules (ss 9A-9BA, 1099-1099DAB, 1119-1120AB); the maintenance income free area (point
+1067G-GA6); advance payments (ss 1061ED-1061JC); the carer allowance training-day reduction
+(s 974(3)); and the other benefit AVL and allowance adjustments (ss 1204-1206B). The rate
+calculators' own reductions for youth allowance and jobseeker payment (Module H of point 1067G,
+point 1068-G) are in the text, not lost; the sidecar entries there are worked examples, so they
+are not taken up here.
+
 ## What would need doing before this is worth anything
 
-- Work out the F31(b) sibling rate (14/365 of the parent's FTB maximum rate,
-  point 1067G-F32) rather than asking for the F28 total.
+- ~~Work out the F31(b) sibling rate~~ done 2026-10-24 in `ssa-formulas.l4`; the parent's
+  FTB maximum rate (point 1067G-F32) is still an input.
 - Supply the indexed rates, limits and free areas for each scenario date, either
   from the Act's indexation machinery or from published figures.
 - Encode what counts as income and as an asset (deeming, the principal home,

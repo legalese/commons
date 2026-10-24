@@ -1,0 +1,236 @@
+IMPORT prelude
+IMPORT `ssa-claims`
+
+-- Social Security Act 1991 (Cth) -- amounts computed from the formulas the text deposit lost, beside ssa-claims.l4. Where
+-- ssa-claims.l4 asks the claimant for a figure that one of the formulas in the sidecar now gives, this module computes it:
+--   * the indexation factor (s 1193(1)-(3)) and the indexed amount (s 1192(2), s 1194) of an amount in the CPI Indexation Table,
+--     with the assets value limits (items 18-20, rounding base $250) as the first use;
+--   * the pension "single" non-homeowner assets value limit, which s 1203 sets from the other three each 1 July;
+--   * the deemed income of each member of a pensioner couple from the couple's financial assets (s 1077(3), (3A), (3B), (4));
+--   * the youth allowance liquid assets test waiting period (ss 549A(1), (2), 549C(1), (2));
+--   * the F28 total of maximum payment rates where the person with parental income in common is a relevant sibling who is an
+--     FTB child (point 1067G-F31(b), F32, F35), so the parental income test result is computed rather than supplied in part;
+--   * the amount of a lump sum after repaid periodic compensation (s 17(4)), carried into the compensation part and the lump sum
+--     preclusion period.
+--
+-- Formulas: ../../registers/source-bundle/C2004A04121.formulas.md ("Further entries, recovered 2026-10-24": s 1193(1), s 1203,
+-- s 1077(4), s 549C(2); and the 2026-10-21 entries: s 17(4), point 1067G-F28). The index numbers (CPI quarters), the current
+-- figures, the deeming thresholds and rates (ss 1081, 1082, set by the Minister's determination) and the parent's FTB maximum rate
+-- (Family Assistance Act) are not in the deposit: they are inputs.
+--
+-- SEAT: the claimant, as in ssa-claims.l4. Edition: as ssa-claims.l4 (compilation C2026C00336). BASELINE. See NOTES.md.
+
+§ `Social Security Act 1991 -- amounts computed from the recovered formulas`
+
+§§ `1192-1194, 1203 -- indexation and the assets value limits`
+
+-- s 1193(1), formula (sidecar): index number for most recent reference quarter / index number for base quarter, "worked out to 3
+-- decimal places". (2): "If an indexation factor worked out under subsection (1) would, if it were worked out to 4 decimal places, end
+-- in a number that is greater than 4, the indexation factor is to be increased by 0.001." (3): "If an indexation factor worked out
+-- under subsections (1) and (2) would be less than 1, the indexation factor is to be increased to 1." The CPI index numbers are
+-- INPUTS (published by the Australian Statistician, not deposited); the reference and base quarters are those of the s 1191 table.
+@export What is the indexation factor for an amount indexed on an indexation day (s 1193)?
+GIVEN `index number for most recent reference quarter` IS A NUMBER @desc The CPI index number for the reference quarter (s 1191 table, column 4)
+      `index number for base quarter` IS A NUMBER @desc The CPI index number for the base quarter (s 1191 table, column 5)
+GIVETH A NUMBER
+`What is the indexation factor` MEANS
+    IF `raised` LESS THAN 1 THEN 1 ELSE `raised`
+    WHERE
+        `ratio` MEANS `index number for most recent reference quarter` DIVIDED BY `index number for base quarter`
+        `to 3 places` MEANS FLOOR (`ratio` TIMES 1000) DIVIDED BY 1000
+        `fourth place` MEANS FLOOR (`ratio` TIMES 10000) MINUS (FLOOR (`ratio` TIMES 1000) TIMES 10)
+        `raised` MEANS IF `fourth place` GREATER THAN 4 THEN `to 3 places` PLUS 0.001 ELSE `to 3 places`
+
+-- s 1192(2) Steps 2-4: the current figure times the indexation factor is the provisional indexed amount, rounded under s 1194:
+-- (1) a multiple of the rounding base stands; (2) otherwise "rounded up or down to the nearest multiple of the rounding base"; (3) a
+-- multiple of half the rounding base is "rounded up". (3A), (6), (7) (CP income ceiling, pharmaceutical and telephone allowance) are
+-- not modelled. The rounding base is column 6 of the s 1191 table ($250 for the assets value limits, items 18-20).
+@export What is the indexed amount, given the current figure, the indexation factor and the rounding base (ss 1192(2), 1194)?
+GIVEN `current figure` IS A NUMBER @desc The current figure for the amount immediately before the indexation day
+      `indexation factor` IS A NUMBER @desc The indexation factor under s 1193
+      `rounding base` IS A NUMBER @desc Column 6 of the CPI Indexation Table for the amount
+GIVETH A NUMBER
+`What is the indexed amount` MEANS
+    FLOOR ((`current figure` TIMES `indexation factor` DIVIDED BY `rounding base`) PLUS 0.5) TIMES `rounding base`
+
+-- s 1203, formula (sidecar): "single" homeowner AVL + 2 x ("partnered" non-homeowner AVL - "partnered" homeowner AVL), each "the
+-- current figure, as at that 1 July". With the Table G-1 base figures it gives $450,000, the printed fourth figure.
+@export What is the pension "single" non-homeowner assets value limit, from the other three (s 1203)?
+GIVEN `single homeowner AVL` IS A NUMBER @desc The current pension "single" homeowner assets value limit
+      `partnered non-homeowner AVL` IS A NUMBER @desc The current pension "partnered" non-homeowner assets value limit
+      `partnered homeowner AVL` IS A NUMBER @desc The current pension "partnered" homeowner assets value limit
+GIVETH A NUMBER
+`What is the single non-homeowner AVL` MEANS
+    `single homeowner AVL` PLUS (2 TIMES (`partnered non-homeowner AVL` MINUS `partnered homeowner AVL`))
+
+-- My pension assets value limit after one 1 July indexation: the three indexed limits (items 18-20, rounding base $250), with the
+-- single non-homeowner limit then set by s 1203 from the three indexed figures.
+@export What is my pension assets value limit after a 1 July indexation (ss 1191 items 18-20, 1192, 1193, 1194, 1203)?
+GIVEN `I am a member of a couple` IS A BOOLEAN @desc Whether you are a member of a couple
+      `I am a homeowner` IS A BOOLEAN @desc Whether you (or your couple) own your home
+      `single homeowner AVL before` IS A NUMBER @desc The pension "single" homeowner limit immediately before 1 July
+      `partnered homeowner AVL before` IS A NUMBER @desc The pension "partnered" homeowner limit immediately before 1 July
+      `partnered non-homeowner AVL before` IS A NUMBER @desc The pension "partnered" non-homeowner limit immediately before 1 July
+      `December quarter index number` IS A NUMBER @desc The CPI index number for the most recent December quarter
+      `base quarter index number` IS A NUMBER @desc The CPI index number for the highest earlier December quarter (s 1191 column 5)
+GIVETH A NUMBER
+`What is my indexed pension assets value limit` MEANS
+    IF `I am a member of a couple`
+    THEN (IF `I am a homeowner` THEN `ph` ELSE `pn`)
+    ELSE (IF `I am a homeowner` THEN `sh` ELSE `What is the single non-homeowner AVL` `sh` `pn` `ph`)
+    WHERE
+        `f`  MEANS `What is the indexation factor` `December quarter index number` `base quarter index number`
+        `sh` MEANS `What is the indexed amount` `single homeowner AVL before` `f` 250
+        `ph` MEANS `What is the indexed amount` `partnered homeowner AVL before` `f` 250
+        `pn` MEANS `What is the indexed amount` `partnered non-homeowner AVL before` `f` 250
+
+§§ `1077 -- deemed income of a member of a pensioner couple`
+
+-- s 1077(3): if the couple's financial assets are "equal to or less than the couple's deeming threshold", the income per year is the
+-- value "multiplied by the below threshold rate"; (3A): otherwise the threshold times the below threshold rate, plus the remainder
+-- times the above threshold rate. (3B): home-sale proceeds held under s 1118(2) are left out of (3)/(3A) and deemed at the below
+-- threshold rate (paragraph (d)). (4), formula (sidecar): each member is taken to receive weekly (Sum of the amount calculated under
+-- subsection (3) or (3A) and the amount (if any) calculated under paragraph (3B)(d) / 52) x 0.5. The deeming threshold (s 1081(2))
+-- and the two rates (s 1082) are INPUTS. The answer is given per year (the weekly amount x 52) to fit the age pension's annual
+-- ordinary income in ssa-claims.l4.
+@export What weekly ordinary income am I deemed to receive from my couple's financial assets (s 1077)?
+GIVEN `the couple's financial assets` IS A NUMBER @desc The total value of the couple's financial assets, leaving out home-sale proceeds held under s 1118(2)
+      `home-sale proceeds held under s 1118(2)` IS A NUMBER @desc Proceeds of selling the principal home that s 1118(2) still covers (0 if none)
+      `the couple's deeming threshold` IS A NUMBER @desc The pensioner couple deeming threshold in force (s 1081(2))
+      `below threshold rate` IS A NUMBER @desc The below threshold rate in force, as a fraction (s 1082(1))
+      `above threshold rate` IS A NUMBER @desc The above threshold rate in force, as a fraction (s 1082(2))
+GIVETH A NUMBER
+`What weekly income am I deemed to receive` MEANS
+    ((`under (3) or (3A)` PLUS `under (3B)(d)`) DIVIDED BY 52) TIMES 0.5
+    WHERE
+        `under (3) or (3A)` MEANS
+            IF `the couple's financial assets` AT MOST `the couple's deeming threshold`
+            THEN `the couple's financial assets` TIMES `below threshold rate`
+            ELSE (`the couple's deeming threshold` TIMES `below threshold rate`)
+                 PLUS ((`the couple's financial assets` MINUS `the couple's deeming threshold`) TIMES `above threshold rate`)
+        `under (3B)(d)` MEANS `home-sale proceeds held under s 1118(2)` TIMES `below threshold rate`
+
+@export What yearly ordinary income am I deemed to receive from my couple's financial assets (s 1077(4), x 52)?
+GIVEN `the couple's financial assets` IS A NUMBER @desc The total value of the couple's financial assets, leaving out home-sale proceeds held under s 1118(2)
+      `home-sale proceeds held under s 1118(2)` IS A NUMBER @desc Proceeds of selling the principal home that s 1118(2) still covers (0 if none)
+      `the couple's deeming threshold` IS A NUMBER @desc The pensioner couple deeming threshold in force (s 1081(2))
+      `below threshold rate` IS A NUMBER @desc The below threshold rate in force, as a fraction (s 1082(1))
+      `above threshold rate` IS A NUMBER @desc The above threshold rate in force, as a fraction (s 1082(2))
+GIVETH A NUMBER
+`What yearly income am I deemed to receive` MEANS
+    `What weekly income am I deemed to receive` `the couple's financial assets` `home-sale proceeds held under s 1118(2)`
+        `the couple's deeming threshold` `below threshold rate` `above threshold rate`
+    TIMES 52
+
+§§ `549A, 549C -- youth allowance: the liquid assets test waiting period`
+
+-- s 549A(1): subject to a waiting period if liquid assets are "more than the person's maximum reserve" (s 14A: $5,000 single without
+-- a dependent child, otherwise $10,000) on the day of qualifying or claiming, and the person "is not a transferee to a youth
+-- allowance"; (2): not if a waiting period was served that started in the preceding 12 months. s 549C(2), formula (sidecar):
+-- (Liquid assets - Maximum reserve amount) / Divisor, the divisor $500 for a single person without a dependent child, otherwise
+-- $1,000; (1): 13 weeks if the result is 13 or more whole weeks, otherwise the whole weeks. (Hardship, s 549A(3)-(7) exceptions
+-- other than (2) and the transferee exception, are not modelled.)
+@export How many weeks is my liquid assets test waiting period for youth allowance (ss 14A, 549A, 549C)?
+GIVEN `my liquid assets` IS A NUMBER @desc Your liquid assets (and your partner's) on the day you qualified or claimed (s 14A)
+      `I am a member of a couple` IS A BOOLEAN @desc Whether you are a member of a couple
+      `I have a dependent child` IS A BOOLEAN @desc Whether you have a dependent child
+      `I am a transferee to youth allowance` IS A BOOLEAN @desc Whether you are transferring to youth allowance from another payment
+      `I served a waiting period that started in the preceding 12 months` IS A BOOLEAN @desc Whether you served a liquid assets waiting period that started in the last 12 months
+GIVETH A NUMBER
+`How many weeks is my youth allowance liquid assets waiting period` MEANS
+    IF     `my liquid assets` AT MOST `reserve`
+        OR `I am a transferee to youth allowance`
+        OR `I served a waiting period that started in the preceding 12 months`
+    THEN 0
+    ELSE `the lower of` 13 (FLOOR ((`my liquid assets` MINUS `reserve`) DIVIDED BY `divisor`))
+    WHERE
+        `single and childless` MEANS NOT `I am a member of a couple` AND NOT `I have a dependent child`
+        `reserve` MEANS IF `single and childless` THEN 5000 ELSE 10000
+        `divisor` MEANS IF `single and childless` THEN 500 ELSE 1000
+
+§§ `1067G-F28, F31-F35 -- the parental income test with a sibling who is an FTB child`
+
+-- Point 1067G-F31: a parent's FTB child who is not receiving youth allowance (a "relevant sibling") is treated as having parental
+-- income in common with the recipient, and "(b) in using the formula in point 1067G-F28 for the recipient, the maximum payment rate
+-- for relevant siblings is 14/365 of the amount worked out under point 1067G-F32" -- the parent's FTB maximum rate (Family
+-- Assistance Act, an INPUT, per year). F34: for one parent only. F35: counted "once only ... regardless of how many relevant
+-- siblings the recipient has". So the F28 total is the person's own maximum payment rate plus 14/365 of that amount (plus the
+-- maximum payment rates of any other youth allowance recipients with the parental income in common, an input, 0 if none).
+@export What is the F28 total of maximum payment rates, with a relevant sibling who is an FTB child (1067G-F28, F31(b), F35)?
+GIVEN `my maximum payment rate under Module A` IS A NUMBER @desc Your maximum fortnightly payment rate under Module A
+      `my parent's FTB maximum rate for the relevant siblings` IS A NUMBER @desc The parent's FTB maximum rate worked out under point 1067G-F32 (one parent only)
+      `other recipients' maximum payment rates` IS A NUMBER @desc The fortnightly maximum rates of any other youth allowance recipients sharing the parental income (0 if none)
+GIVETH A NUMBER
+`What is my F28 total with a relevant sibling` MEANS
+    `my maximum payment rate under Module A`
+    PLUS ((`my parent's FTB maximum rate for the relevant siblings` TIMES 14) DIVIDED BY 365)
+    PLUS `other recipients' maximum payment rates`
+
+@export What is my parental income test result per fortnight, where a sibling is an FTB child (1067G-F28, F31(b))?
+GIVEN `my combined parental income` IS A NUMBER @desc Your parents' combined income for the year (1067G-F10)
+      `maintenance my parents pay` IS A NUMBER @desc Maintenance your parents pay, per year (1067G-F20)
+      `my parental income free area` IS A NUMBER @desc The parental income free area in force
+      `a parent of mine receives a Module L payment` IS A BOOLEAN @desc Whether a parent receives a pension, benefit or allowance in Module L
+      `my maximum payment rate under Module A` IS A NUMBER @desc Your maximum fortnightly payment rate under Module A
+      `my parent's FTB maximum rate for the relevant siblings` IS A NUMBER @desc The parent's FTB maximum rate worked out under point 1067G-F32 (one parent only)
+      `other recipients' maximum payment rates` IS A NUMBER @desc The fortnightly maximum rates of any other youth allowance recipients sharing the parental income (0 if none)
+GIVETH A NUMBER
+`What is my parental income test result with a relevant sibling` MEANS
+    `What is my parental income test result` (`My parents' income` WITH
+        `my combined parental income`                  IS `my combined parental income`
+        `maintenance my parents pay`                   IS `maintenance my parents pay`
+        `my parental income free area`                 IS `my parental income free area`
+        `a parent of mine receives a Module L payment` IS `a parent of mine receives a Module L payment`
+        `my parents share parental income with another child of theirs` IS TRUE
+        `my maximum payment rate under Module A`       IS `my maximum payment rate under Module A`
+        `the total maximum payment rate of everyone with that parental income in common` IS
+            `What is my F28 total with a relevant sibling` `my maximum payment rate under Module A`
+                `my parent's FTB maximum rate for the relevant siblings` `other recipients' maximum payment rates`)
+
+§§ `17(4) -- a lump sum after repaid periodic compensation`
+
+-- s 17(4): where a person "(a) has received periodic compensation payments; and (b) after receiving those payments, receives a lump
+-- sum compensation payment (... the LSP); and (c) because of receiving the LSP, becomes liable to repay an amount (... RPCP) equal to
+-- the periodic compensation payments received; then, for the purposes of subsection (3), the amount of the lump sum compensation
+-- payment is:" (sidecar) LSP - RPCP. The compensation part (s 17(3)) and the preclusion period (s 1170(4)) are then worked out on
+-- that amount, by the rules in ssa-claims.l4.
+@desc My compensation, with the lump sum reduced by the repaid periodic compensation (s 17(4))
+GIVEN `x` IS A `My compensation` @desc The lump sum (the LSP as `the amount`) and the rest of your compensation facts
+      `repaid periodic compensation` IS A NUMBER @desc The periodic compensation you must repay because of the lump sum (the RPCP; 0 if none)
+GIVETH A `My compensation`
+`my compensation after repaid periodic compensation` MEANS
+    `My compensation` WITH
+        `it is damages, a statutory insurance or compensation scheme payment, a settlement, or another compensation payment` IS
+            `x`'s `it is damages, a statutory insurance or compensation scheme payment, a settlement, or another compensation payment`
+        `it is made wholly or partly for lost earnings or lost capacity to earn from personal injury` IS
+            `x`'s `it is made wholly or partly for lost earnings or lost capacity to earn from personal injury`
+        `it falls only under paragraph (2)(d) and subsection (2A) takes it out` IS
+            `x`'s `it falls only under paragraph (2)(d) and subsection (2A) takes it out`
+        `it is criminal injuries compensation`         IS `x`'s `it is criminal injuries compensation`
+        `it is a lump sum`                             IS `x`'s `it is a lump sum`
+        `it is only arrears of periodic compensation`  IS `x`'s `it is only arrears of periodic compensation`
+        `the amount`                                   IS `not below nil` (`x`'s `the amount` MINUS `repaid periodic compensation`)
+        `it settled a claim related to a disease, injury or condition` IS
+            `x`'s `it settled a claim related to a disease, injury or condition`
+        `it is periodic compensation from a settled claim that I chose to take as a lump sum` IS
+            `x`'s `it is periodic compensation from a settled claim that I chose to take as a lump sum`
+        `the part the Secretary considers is for lost earnings or lost capacity to earn` IS
+            `x`'s `the part the Secretary considers is for lost earnings or lost capacity to earn`
+        `maximum basic rate`                           IS `x`'s `maximum basic rate`
+        `pension supplement component`                 IS `x`'s `pension supplement component`
+        `energy supplement component`                  IS `x`'s `energy supplement component`
+        `ordinary free area limit`                     IS `x`'s `ordinary free area limit`
+
+@export What is the compensation part of my lump sum after repaid periodic compensation (s 17(3), (4))?
+GIVEN `x` IS A `My compensation` @desc The lump sum (the LSP) and the rest of your compensation facts
+      `repaid periodic compensation` IS A NUMBER @desc The periodic compensation you must repay because of the lump sum (the RPCP; 0 if none)
+GIVETH A NUMBER
+`What is the compensation part of my lump sum after repayment` MEANS
+    `What is the compensation part of my lump sum` (`my compensation after repaid periodic compensation` `x` `repaid periodic compensation`)
+
+@export How many weeks is my lump sum preclusion period after repaid periodic compensation (ss 17(4), 1170(4))?
+GIVEN `x` IS A `My compensation` @desc The lump sum (the LSP) and the rates that make up your income cut-out amount
+      `repaid periodic compensation` IS A NUMBER @desc The periodic compensation you must repay because of the lump sum (the RPCP; 0 if none)
+GIVETH A NUMBER
+`How many weeks is my preclusion period after repayment` MEANS
+    `How many weeks is my lump sum preclusion period` (`my compensation after repaid periodic compensation` `x` `repaid periodic compensation`)
