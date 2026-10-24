@@ -1,0 +1,633 @@
+IMPORT prelude
+IMPORT daydate
+
+-- General Statutes of Connecticut, Title 12, Chapter 229 (Income Tax) -- the personal income tax of a RESIDENT individual for
+-- a taxable year that is a calendar year from 2024: who is a "resident of this state" (s 12-701(a)(1)); Connecticut taxable
+-- income (s 12-701(a)(8)); the personal exemption (s 12-702); the tax (s 12-700(a)(10), the rate schedules with their
+-- phase-out of the 2% bracket and the three recapture amounts); the credit based on adjusted gross income (s 12-703); the
+-- earned income tax credit and its additional $250 (s 12-704e, 2026 Supplement); the date to file and pay (s 12-719(a)); the
+-- late-payment and no-return additions (s 12-735(a), (b)); and the refund claim (s 12-732(a)(1)).
+--
+-- SEAT: the individual taxpayer. "Am I a resident? How much Connecticut income tax do I owe, or how much do I get back? What
+-- is my credit? By when must I file and pay, and what happens if I pay late? Until when can I claim a refund?"
+-- The Commissioner of Revenue Services appears only as what the Commissioner must or may do to the taxpayer.
+--
+-- Edition: General Statutes of Connecticut revised to January 1, 2025, chapter 229, as deposited at
+-- ../../registers/source-bundle/cgs-chap-229-rev2025.txt, read with the 2026 Supplement (revised to January 1, 2026) at
+-- ../../registers/source-bundle/cgs-chap-229-sup2026.txt. Where a section is in both (12-701, 12-704e here), the Supplement
+-- text is the one encoded.
+--
+-- Read with the Internal Revenue Code baseline (../../../../internal-revenue-code-of-1986/encodings/baseline-2026-10/):
+-- federal adjusted gross income (IRC s 62), the federal filing status (IRC s 2) and the federal earned income credit
+-- (IRC s 32) are INPUTS here. Connecticut adjusted gross income (s 12-701(a)(20): federal AGI with the Connecticut
+-- modifications, including the Social Security subtraction) is an INPUT too: the modifications are not encoded.
+-- Cross-folder IMPORT is not possible in the stable l4, so the link is recorded here and in NOTES.md.
+--
+-- NOT ENCODED: nonresidents and part-year residents (s 12-700(b), (c), s 12-711, s 12-717); trusts and estates; taxable years
+-- before 2024 and fiscal (non-calendar) years; the s 12-701(a)(20) modifications; the alternative minimum tax (s 12-700a);
+-- credits other than s 12-703 and s 12-704e (other states' tax s 12-704, property tax s 12-704c, and the rest); withholding
+-- and estimated tax (ss 12-705 to 12-707, 12-722); pass-through entities; s 12-702a (innocent spouse); extensions (s 12-723,
+-- regulations not deposited); assessments and appeals (ss 12-728 to 12-730). Where a question can reach one of these gaps it
+-- answers `not covered`.
+--
+-- BASELINE ENCODING. Written from the taxpayer's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Connecticut income tax -- a resident individual`
+
+§§ `Questions this encoding does not cover`
+
+DECLARE `Why not covered` IS ONE OF
+    `the tax on a nonresident or part-year resident (s 12-700(b), (c)) is not encoded`
+    `only taxable years beginning on or after January 1, 2024 are encoded (s 12-700(a)(10))`
+    `chapter 229 does not say who must file a return: s 12-740(c) leaves it to the Commissioner's regulations or notice, which are not deposited`
+
+GIVEN a IS A TYPE
+GIVETH A TYPE
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+§§ `The taxpayer and the taxable year`
+
+-- The filing status is the one the person uses "under the federal income tax for such taxable year" (ss 12-700(a)(10),
+-- 12-702, 12-703): a borrowed term, asked as a fact. s 12-702(c)(1): spouses who file jointly for federal purposes must file
+-- jointly here, and spouses who file separately must file separately (the resident/nonresident exceptions are out of scope).
+DECLARE `Federal filing status` IS ONE OF
+    `unmarried individual`
+    `head of household`
+    `married filing jointly, or surviving spouse`
+    `married filing separately`
+
+DECLARE `Connecticut taxpayer` HAS
+    `taxable year`                                 IS A NUMBER    -- the calendar year the taxable year covers
+    `filing status`                                IS A `Federal filing status`
+    `resident for the whole taxable year`          IS A BOOLEAN
+    `Connecticut adjusted gross income`            IS A NUMBER    -- s 12-701(a)(20); an input
+    `federal earned income credit claimed and allowed` IS A NUMBER -- IRC s 32; an input
+    `has at least one qualifying child for federal income tax purposes` IS A BOOLEAN
+    `filed a joint federal return but must file separately here` IS A BOOLEAN
+    `own federal adjusted gross income on the separate Connecticut return` IS A NUMBER
+    `federal adjusted gross income on the joint federal return` IS A NUMBER
+
+§§ `s 12-701(a)(1) -- resident of this state`
+
+-- s 12-701(a)(1): "'Resident of this state' means any natural person (A) who is domiciled in this state, unless (i) the
+-- person maintains no permanent place of abode in this state, maintains a permanent place of abode elsewhere and spends in the
+-- aggregate not more than thirty days of the taxable year in this state, or (ii) within any period of five hundred forty-eight
+-- consecutive days the person is present in a foreign country or countries for at least four hundred fifty days, and ...
+-- [the further conditions of (ii)], or (B) who is not domiciled in this state but maintains a permanent place of abode in
+-- this state and is in this state for an aggregate of more than one hundred eighty-three days of the taxable year, unless
+-- such person, not being domiciled in this state, is in active service in the armed forces of the United States."
+-- Domicile is a borrowed term, asked as a fact. The 548-day foreign-presence exception (ii) has several day counts of its
+-- own; whether all of them are met is asked as one fact.
+GIVEN `domiciled in this state` IS A BOOLEAN
+      `maintains a permanent place of abode in this state` IS A BOOLEAN
+      `maintains a permanent place of abode elsewhere` IS A BOOLEAN
+      `days in this state in the taxable year` IS A NUMBER
+      `meets every condition of the 548-day foreign presence exception in (A)(ii)` IS A BOOLEAN
+      `in active service in the armed forces of the United States` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a resident of this state` IF
+        "(A)" ... (    `domiciled in this state`
+                   AND (NOT "(i)" ... (    (NOT `maintains a permanent place of abode in this state`)
+                                       AND `maintains a permanent place of abode elsewhere`
+                                       AND `days in this state in the taxable year` AT MOST 30))
+                   AND (NOT "(ii)" ... `meets every condition of the 548-day foreign presence exception in (A)(ii)`))
+    OR  "(B)" ... (    (NOT `domiciled in this state`)
+                   AND `maintains a permanent place of abode in this state`
+                   AND `days in this state in the taxable year` GREATER THAN 183
+                   AND (NOT `in active service in the armed forces of the United States`))
+
+§§ `Arithmetic the sections share`
+
+-- "for each [step], or fraction thereof, by which ... exceeds [the threshold]": the number of steps, a whole number, rounded
+-- up; none if the income does not exceed the threshold.
+GIVEN `the step` IS A NUMBER
+      `the amount` IS A NUMBER
+      `the threshold` IS A NUMBER
+GIVETH A NUMBER
+`the steps, or fractions of a step, of` `the step` `by which` `the amount` `exceeds` `the threshold` MEANS
+    IF   `the amount` GREATER THAN `the threshold`
+    THEN CEILING ((`the amount` MINUS `the threshold`) DIVIDED BY `the step`)
+    ELSE 0
+
+§§ `s 12-702 -- the personal exemption`
+
+-- s 12-702(a)(2)(I) (unmarried, from 2016): "fifteen thousand dollars ... exceeds thirty thousand dollars"; (a)(1) (married
+-- filing separately): "twelve thousand dollars ... exceeds twentyfour thousand dollars"; (b) (head of household): "nineteen
+-- thousand dollars ... exceeds thirty-eight thousand dollars"; (c) (joint or surviving spouse): "a single personal exemption
+-- of twentyfour thousand dollars ... exceeds forty-eight thousand dollars". In each: "the exemption amount shall be reduced by
+-- one thousand dollars for each one thousand dollars, or fraction thereof, by which the taxpayer's Connecticut adjusted gross
+-- income for the taxable year exceeds said amount. In no event shall the reduction exceed one hundred per cent of the
+-- exemption."
+GIVEN `the status` IS A `Federal filing status`
+GIVETH A NUMBER
+`the full personal exemption for` `the status` MEANS
+    CONSIDER `the status`
+    WHEN `unmarried individual`                        THEN 15000   -- (a)(2)(I)
+    WHEN `head of household`                           THEN 19000   -- (b)(1)
+    WHEN `married filing jointly, or surviving spouse` THEN 24000   -- (c)(1)
+    WHEN `married filing separately`                   THEN 12000   -- (a)(1)(A)
+
+GIVEN `the status` IS A `Federal filing status`
+GIVETH A NUMBER
+`the exemption phase-out threshold for` `the status` MEANS
+    CONSIDER `the status`
+    WHEN `unmarried individual`                        THEN 30000   -- (a)(2)(I)
+    WHEN `head of household`                           THEN 38000   -- (b)(2)
+    WHEN `married filing jointly, or surviving spouse` THEN 48000   -- (c)(2)
+    WHEN `married filing separately`                   THEN 24000   -- (a)(1)(B)
+
+GIVEN `the status` IS A `Federal filing status`
+      `the Connecticut adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`the personal exemption for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income` MEANS
+    max 0 (`the full` MINUS `the reduction`)
+    WHERE
+        `the full` MEANS `the full personal exemption for` `the status`
+        `the reduction` MEANS
+            min `the full`
+                (1000 TIMES (`the steps, or fractions of a step, of` 1000 `by which` `the Connecticut adjusted gross income`
+                                 `exceeds` (`the exemption phase-out threshold for` `the status`)))
+
+§§ `s 12-701(a)(8) -- Connecticut taxable income of a resident`
+
+-- s 12-701(a)(8): "'Connecticut taxable income of a resident' means the Connecticut adjusted gross income of a natural person
+-- with respect to any taxable year reduced by the amount of the exemption provided in section 12-702." Never below nil: the
+-- exemption cannot make income negative (the text does not say; NOTES.md finding 3).
+GIVEN `the status` IS A `Federal filing status`
+      `the Connecticut adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`the Connecticut taxable income for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income` MEANS
+    max 0 (`the Connecticut adjusted gross income`
+           MINUS (`the personal exemption for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income`))
+
+§§ `s 12-700(a)(10) -- the tax, for taxable years commencing on or after January 1, 2024`
+
+-- Each row of a schedule: "Over $X but not over $Y: $B, plus R% of the excess over $X". The first row ("Not over $10,000:
+-- 2.0%") is X = 0, B = 0. The base amounts are the ones printed in the schedule.
+DECLARE `Schedule row` HAS
+    `over`           IS A NUMBER
+    `base amount`    IS A NUMBER
+    `rate`           IS A NUMBER
+
+-- (A)(i) unmarried; (D)(i) married filing separately (the same figures).
+GIVETH A LIST OF `Schedule row`
+`the schedule in (A)(i) and (D)(i)` MEANS
+    LIST (`Schedule row` OF 0,      0,     2.0%)
+       , (`Schedule row` OF 10000,  200,   4.5%)
+       , (`Schedule row` OF 50000,  2000,  5.5%)
+       , (`Schedule row` OF 100000, 4750,  6.0%)
+       , (`Schedule row` OF 200000, 10750, 6.5%)
+       , (`Schedule row` OF 250000, 14000, 6.9%)
+       , (`Schedule row` OF 500000, 31250, 6.99%)
+
+-- (B)(i) head of household.
+GIVETH A LIST OF `Schedule row`
+`the schedule in (B)(i)` MEANS
+    LIST (`Schedule row` OF 0,      0,     2.0%)
+       , (`Schedule row` OF 16000,  320,   4.5%)
+       , (`Schedule row` OF 80000,  3200,  5.5%)
+       , (`Schedule row` OF 160000, 7600,  6.0%)
+       , (`Schedule row` OF 320000, 17200, 6.5%)
+       , (`Schedule row` OF 400000, 22400, 6.9%)
+       , (`Schedule row` OF 800000, 50000, 6.99%)
+
+-- (C)(i) married filing jointly, or surviving spouse.
+GIVETH A LIST OF `Schedule row`
+`the schedule in (C)(i)` MEANS
+    LIST (`Schedule row` OF 0,       0,     2.0%)
+       , (`Schedule row` OF 20000,   400,   4.5%)
+       , (`Schedule row` OF 100000,  4000,  5.5%)
+       , (`Schedule row` OF 200000,  9500,  6.0%)
+       , (`Schedule row` OF 400000,  21500, 6.5%)
+       , (`Schedule row` OF 500000,  28000, 6.9%)
+       , (`Schedule row` OF 1000000, 62500, 6.99%)
+
+GIVEN `the status` IS A `Federal filing status`
+GIVETH A LIST OF `Schedule row`
+`the rate schedule for` `the status` MEANS
+    CONSIDER `the status`
+    WHEN `unmarried individual`                        THEN `the schedule in (A)(i) and (D)(i)`
+    WHEN `married filing separately`                   THEN `the schedule in (A)(i) and (D)(i)`
+    WHEN `head of household`                           THEN `the schedule in (B)(i)`
+    WHEN `married filing jointly, or surviving spouse` THEN `the schedule in (C)(i)`
+
+-- The row that applies is the last one whose "over" figure the income exceeds (the first row for income not over its top).
+GIVEN `the rows` IS A LIST OF `Schedule row`
+      `the income` IS A NUMBER
+GIVETH A NUMBER
+`the tax under the schedule` `the rows` `on` `the income` MEANS
+    foldl `take the row if it applies` 0 `the rows`
+    WHERE
+        `take the row if it applies` `so far` `row` MEANS
+            IF   `row`'s `over` EQUALS 0 OR `the income` GREATER THAN `row`'s `over`
+            THEN `row`'s `base amount` PLUS (`row`'s `rate` TIMES (max 0 (`the income` MINUS `row`'s `over`)))
+            ELSE `so far`
+
+-- (ii) in each schedule: "for each taxpayer whose Connecticut adjusted gross income exceeds [T], the amount of the taxpayer's
+-- Connecticut taxable income to which the two-per-cent tax rate applies shall be reduced by [U] for each [S], or fraction
+-- thereof, by which the taxpayer's Connecticut adjusted gross income exceeds said amount. Any such amount ... to which ... the
+-- two-per-cent tax rate does not apply shall be an amount to which the four-and-one-half-per-cent tax rate shall apply."
+-- (A)(ii): T 56,500, U 1,000, S 5,000. (B)(ii): T 78,500, U 1,600, S 4,000. (C)(ii): T 100,500, U 2,000, S 5,000.
+-- (D)(ii): T 50,250, U 1,000, S 2,500.
+DECLARE `Phase-out of the 2% bracket` HAS
+    `threshold`        IS A NUMBER
+    `reduction`        IS A NUMBER
+    `step`             IS A NUMBER
+    `top of 2% bracket` IS A NUMBER
+
+GIVEN `the status` IS A `Federal filing status`
+GIVETH A `Phase-out of the 2% bracket`
+`the (ii) phase-out for` `the status` MEANS
+    CONSIDER `the status`
+    WHEN `unmarried individual`                        THEN `Phase-out of the 2% bracket` OF 56500,  1000, 5000, 10000
+    WHEN `head of household`                           THEN `Phase-out of the 2% bracket` OF 78500,  1600, 4000, 16000
+    WHEN `married filing jointly, or surviving spouse` THEN `Phase-out of the 2% bracket` OF 100500, 2000, 5000, 20000
+    WHEN `married filing separately`                   THEN `Phase-out of the 2% bracket` OF 50250,  1000, 2500, 10000
+
+-- The amount moved from 2% to 4.5%: no more than the income actually in the 2% bracket.
+GIVEN `the status` IS A `Federal filing status`
+      `the Connecticut adjusted gross income` IS A NUMBER
+      `the Connecticut taxable income` IS A NUMBER
+GIVETH A NUMBER
+`the (ii) addition for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income` `and taxable income` `the Connecticut taxable income` MEANS
+    (4.5% MINUS 2.0%) TIMES `the amount moved`
+    WHERE
+        `p` MEANS `the (ii) phase-out for` `the status`
+        `the income in the 2% bracket` MEANS min `the Connecticut taxable income` (`p`'s `top of 2% bracket`)
+        `the amount moved` MEANS
+            min `the income in the 2% bracket`
+                ((`p`'s `reduction`) TIMES (`the steps, or fractions of a step, of` (`p`'s `step`) `by which`
+                                               `the Connecticut adjusted gross income` `exceeds` (`p`'s `threshold`)))
+
+-- (iii), (iv), (v) in each schedule: "Each taxpayer whose Connecticut adjusted gross income exceeds [T] shall pay, in
+-- addition to the tax computed under [the preceding subparagraphs], an amount equal to [A] for each [S], or fraction thereof,
+-- by which the taxpayer's Connecticut adjusted gross income exceeds [T], up to a maximum payment of [M]."
+DECLARE `Recapture` HAS
+    `threshold`       IS A NUMBER
+    `amount per step` IS A NUMBER
+    `step`            IS A NUMBER
+    `maximum`         IS A NUMBER
+
+GIVEN `the status` IS A `Federal filing status`
+GIVETH A LIST OF `Recapture`
+`the (iii) to (v) recaptures for` `the status` MEANS
+    CONSIDER `the status`
+    WHEN `unmarried individual` THEN
+        LIST (`Recapture` OF 105000, 25, 5000, 250)      -- (A)(iii)
+           , (`Recapture` OF 200000, 90, 5000, 2700)     -- (A)(iv)
+           , (`Recapture` OF 500000, 50, 5000, 450)      -- (A)(v)
+    WHEN `head of household` THEN
+        LIST (`Recapture` OF 168000, 40,  8000, 400)     -- (B)(iii)
+           , (`Recapture` OF 320000, 140, 8000, 4200)    -- (B)(iv)
+           , (`Recapture` OF 800000, 80,  8000, 720)     -- (B)(v)
+    WHEN `married filing jointly, or surviving spouse` THEN
+        LIST (`Recapture` OF 210000,  50,  10000, 500)   -- (C)(iii)
+           , (`Recapture` OF 400000,  180, 10000, 5400)  -- (C)(iv)
+           , (`Recapture` OF 1000000, 100, 10000, 900)   -- (C)(v)
+    WHEN `married filing separately` THEN
+        LIST (`Recapture` OF 105000, 25, 5000, 250)      -- (D)(iii)
+           , (`Recapture` OF 200000, 90, 5000, 2700)     -- (D)(iv)
+           , (`Recapture` OF 500000, 50, 5000, 450)      -- (D)(v)
+
+GIVEN `the status` IS A `Federal filing status`
+      `the Connecticut adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`the (iii) to (v) additions for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income` MEANS
+    sum (map `this recapture` (`the (iii) to (v) recaptures for` `the status`))
+    WHERE
+        `this recapture` `r` MEANS
+            min (`r`'s `maximum`)
+                ((`r`'s `amount per step`) TIMES (`the steps, or fractions of a step, of` (`r`'s `step`) `by which`
+                                                     `the Connecticut adjusted gross income` `exceeds` (`r`'s `threshold`)))
+
+-- The tax imposed by s 12-700(a) on the Connecticut taxable income of a resident, for a taxable year from 2024.
+GIVEN `the status` IS A `Federal filing status`
+      `the Connecticut adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`the s 12-700(a)(10) tax for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income` MEANS
+          (`the tax under the schedule` (`the rate schedule for` `the status`) `on` `the taxable income`)
+    PLUS  (`the (ii) addition for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income`
+               `and taxable income` `the taxable income`)
+    PLUS  (`the (iii) to (v) additions for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income`)
+    WHERE
+        `the taxable income` MEANS
+            `the Connecticut taxable income for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income`
+
+§§ `s 12-703 -- the credit based on adjusted gross income`
+
+-- Each schedule row: "Over $X but not over $Y: P%". (a)(1) married filing separately; (a)(2)(I) unmarried, from 2016; (b)
+-- head of household; (c) joint or surviving spouse. A Connecticut AGI not over the first X, or over the last Y, gets no
+-- credit. The column is headed "Amount of Credit" and gives a percentage without saying of what: this encoding applies it to
+-- the s 12-700 tax (NOTES.md finding 4).
+DECLARE `Credit row` HAS
+    `over`       IS A NUMBER
+    `not over`   IS A NUMBER
+    `percentage` IS A NUMBER
+
+GIVEN `the status` IS A `Federal filing status`
+GIVETH A LIST OF `Credit row`
+`the s 12-703 schedule for` `the status` MEANS
+    CONSIDER `the status`
+    WHEN `married filing separately` THEN                                                   -- (a)(1)
+        LIST (`Credit row` OF 12000, 15000, 75%), (`Credit row` OF 15000, 15500, 70%), (`Credit row` OF 15500, 16000, 65%)
+           , (`Credit row` OF 16000, 16500, 60%), (`Credit row` OF 16500, 17000, 55%), (`Credit row` OF 17000, 17500, 50%)
+           , (`Credit row` OF 17500, 18000, 45%), (`Credit row` OF 18000, 18500, 40%), (`Credit row` OF 18500, 20000, 35%)
+           , (`Credit row` OF 20000, 20500, 30%), (`Credit row` OF 20500, 21000, 25%), (`Credit row` OF 21000, 21500, 20%)
+           , (`Credit row` OF 21500, 25000, 15%), (`Credit row` OF 25000, 25500, 14%), (`Credit row` OF 25500, 26000, 13%)
+           , (`Credit row` OF 26000, 26500, 12%), (`Credit row` OF 26500, 27000, 11%), (`Credit row` OF 27000, 48000, 10%)
+           , (`Credit row` OF 48000, 48500, 9%),  (`Credit row` OF 48500, 49000, 8%),  (`Credit row` OF 49000, 49500, 7%)
+           , (`Credit row` OF 49500, 50000, 6%),  (`Credit row` OF 50000, 50500, 5%),  (`Credit row` OF 50500, 51000, 4%)
+           , (`Credit row` OF 51000, 51500, 3%),  (`Credit row` OF 51500, 52000, 2%),  (`Credit row` OF 52000, 52500, 1%)
+    WHEN `unmarried individual` THEN                                                        -- (a)(2)(I)
+        LIST (`Credit row` OF 15000, 18800, 75%), (`Credit row` OF 18800, 19300, 70%), (`Credit row` OF 19300, 19800, 65%)
+           , (`Credit row` OF 19800, 20300, 60%), (`Credit row` OF 20300, 20800, 55%), (`Credit row` OF 20800, 21300, 50%)
+           , (`Credit row` OF 21300, 21800, 45%), (`Credit row` OF 21800, 22300, 40%), (`Credit row` OF 22300, 25000, 35%)
+           , (`Credit row` OF 25000, 25500, 30%), (`Credit row` OF 25500, 26000, 25%), (`Credit row` OF 26000, 26500, 20%)
+           , (`Credit row` OF 26500, 31300, 15%), (`Credit row` OF 31300, 31800, 14%), (`Credit row` OF 31800, 32300, 13%)
+           , (`Credit row` OF 32300, 32800, 12%), (`Credit row` OF 32800, 33300, 11%), (`Credit row` OF 33300, 60000, 10%)
+           , (`Credit row` OF 60000, 60500, 9%),  (`Credit row` OF 60500, 61000, 8%),  (`Credit row` OF 61000, 61500, 7%)
+           , (`Credit row` OF 61500, 62000, 6%),  (`Credit row` OF 62000, 62500, 5%),  (`Credit row` OF 62500, 63000, 4%)
+           , (`Credit row` OF 63000, 63500, 3%),  (`Credit row` OF 63500, 64000, 2%),  (`Credit row` OF 64000, 64500, 1%)
+    WHEN `head of household` THEN                                                           -- (b)
+        LIST (`Credit row` OF 19000, 24000, 75%), (`Credit row` OF 24000, 24500, 70%), (`Credit row` OF 24500, 25000, 65%)
+           , (`Credit row` OF 25000, 25500, 60%), (`Credit row` OF 25500, 26000, 55%), (`Credit row` OF 26000, 26500, 50%)
+           , (`Credit row` OF 26500, 27000, 45%), (`Credit row` OF 27000, 27500, 40%), (`Credit row` OF 27500, 34000, 35%)
+           , (`Credit row` OF 34000, 34500, 30%), (`Credit row` OF 34500, 35000, 25%), (`Credit row` OF 35000, 35500, 20%)
+           , (`Credit row` OF 35500, 44000, 15%), (`Credit row` OF 44000, 44500, 14%), (`Credit row` OF 44500, 45000, 13%)
+           , (`Credit row` OF 45000, 45500, 12%), (`Credit row` OF 45500, 46000, 11%), (`Credit row` OF 46000, 74000, 10%)
+           , (`Credit row` OF 74000, 74500, 9%),  (`Credit row` OF 74500, 75000, 8%),  (`Credit row` OF 75000, 75500, 7%)
+           , (`Credit row` OF 75500, 76000, 6%),  (`Credit row` OF 76000, 76500, 5%),  (`Credit row` OF 76500, 77000, 4%)
+           , (`Credit row` OF 77000, 77500, 3%),  (`Credit row` OF 77500, 78000, 2%),  (`Credit row` OF 78000, 78500, 1%)
+    WHEN `married filing jointly, or surviving spouse` THEN                                 -- (c)
+        LIST (`Credit row` OF 24000, 30000, 75%), (`Credit row` OF 30000, 30500, 70%), (`Credit row` OF 30500, 31000, 65%)
+           , (`Credit row` OF 31000, 31500, 60%), (`Credit row` OF 31500, 32000, 55%), (`Credit row` OF 32000, 32500, 50%)
+           , (`Credit row` OF 32500, 33000, 45%), (`Credit row` OF 33000, 33500, 40%), (`Credit row` OF 33500, 40000, 35%)
+           , (`Credit row` OF 40000, 40500, 30%), (`Credit row` OF 40500, 41000, 25%), (`Credit row` OF 41000, 41500, 20%)
+           , (`Credit row` OF 41500, 50000, 15%), (`Credit row` OF 50000, 50500, 14%), (`Credit row` OF 50500, 51000, 13%)
+           , (`Credit row` OF 51000, 51500, 12%), (`Credit row` OF 51500, 52000, 11%), (`Credit row` OF 52000, 96000, 10%)
+           , (`Credit row` OF 96000, 96500, 9%),  (`Credit row` OF 96500, 97000, 8%),  (`Credit row` OF 97000, 97500, 7%)
+           , (`Credit row` OF 97500, 98000, 6%),  (`Credit row` OF 98000, 98500, 5%),  (`Credit row` OF 98500, 99000, 4%)
+           , (`Credit row` OF 99000, 99500, 3%),  (`Credit row` OF 99500, 100000, 2%), (`Credit row` OF 100000, 100500, 1%)
+
+GIVEN `the status` IS A `Federal filing status`
+      `the Connecticut adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`the s 12-703 credit percentage for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income` MEANS
+    sum (map `its percentage` (filter `the row that applies` (`the s 12-703 schedule for` `the status`)))
+    WHERE
+        `the row that applies` `row` MEANS
+                `the Connecticut adjusted gross income` GREATER THAN `row`'s `over`
+            AND `the Connecticut adjusted gross income` AT MOST `row`'s `not over`
+        `its percentage` `row` MEANS `row`'s `percentage`
+
+GIVEN `the status` IS A `Federal filing status`
+      `the Connecticut adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`the tax after the s 12-703 credit for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income` MEANS
+    `the tax` MINUS (`the tax` TIMES `the s 12-703 credit percentage for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income`)
+    WHERE
+        `the tax` MEANS `the s 12-700(a)(10) tax for` `the status` `with Connecticut adjusted gross income` `the Connecticut adjusted gross income`
+
+§§ `s 12-704e -- the earned income tax credit (2026 Supplement)`
+
+-- (a): "Any resident of this state ... who is subject to the tax imposed under this chapter for any taxable year shall be
+-- allowed a credit against the tax otherwise due ... in an amount equal to the applicable percentage of the earned income
+-- credit claimed and allowed for the same taxable year under Section 32 of the Internal Revenue Code"; "(3) forty per cent
+-- for taxable years commencing on or after January 1, 2023".
+-- (b): "If the amount of the credit ... exceeds the taxpayer's liability ..., the Commissioner ... shall treat such excess as
+-- an overpayment and ... shall refund the amount of such excess, without interest ... If the taxpayer is eligible for the
+-- credit under this section and has at least one qualifying child for federal income tax purposes, such taxpayer shall be
+-- allowed an additional two hundred fifty dollars for the amount of the credit."
+-- (c): a married individual who filed a joint federal return but must file separately here gets the applicable percentage of
+-- the federal credit "multiplied by a fraction, the numerator of which is such individual's federal adjusted gross income, as
+-- reported on such individual's separate return under this chapter, and the denominator of which is the federal adjusted gross
+-- income, as reported on the joint federal income tax return".
+GIVEN `t` IS A `Connecticut taxpayer`
+GIVETH A NUMBER
+`the s 12-704e credit for` `t` MEANS
+    IF   `eligible`
+    THEN `the percentage part` PLUS `the additional amount`
+    ELSE 0
+    WHERE
+        `eligible` MEANS
+                `t`'s `resident for the whole taxable year`
+            AND `t`'s `federal earned income credit claimed and allowed` GREATER THAN 0
+        `the fraction` MEANS
+            IF   `t`'s `filed a joint federal return but must file separately here`
+                 AND `t`'s `federal adjusted gross income on the joint federal return` GREATER THAN 0
+            THEN `t`'s `own federal adjusted gross income on the separate Connecticut return`
+                     DIVIDED BY `t`'s `federal adjusted gross income on the joint federal return`
+            ELSE 1
+        `the percentage part` MEANS 40% TIMES `t`'s `federal earned income credit claimed and allowed` TIMES `the fraction`
+        `the additional amount` MEANS
+            IF   `t`'s `has at least one qualifying child for federal income tax purposes`
+            THEN 250
+            ELSE 0
+
+§§ `Putting it together -- the tax due, or the refund`
+
+-- The tax under s 12-700(a), less the s 12-703 credit, less the s 12-704e credit. A negative result is the s 12-704e excess
+-- that s 12-704e(b) refunds. Other credits, withholding and estimated payments are not encoded.
+GIVEN `t` IS A `Connecticut taxpayer`
+GIVETH AN `Answer` NUMBER
+`the balance of Connecticut income tax for` `t` MEANS
+    IF   NOT (`t`'s `resident for the whole taxable year`)
+    THEN `not covered` `the tax on a nonresident or part-year resident (s 12-700(b), (c)) is not encoded`
+    ELSE IF   `t`'s `taxable year` LESS THAN 2024
+         THEN `not covered` `only taxable years beginning on or after January 1, 2024 are encoded (s 12-700(a)(10))`
+         ELSE `answered` ((`the tax after the s 12-703 credit for` (`t`'s `filing status`) `with Connecticut adjusted gross income`
+                                (`t`'s `Connecticut adjusted gross income`))
+                          MINUS `the s 12-704e credit for` `t`)
+
+§§ `s 12-719(a), s 12-735 -- filing the return and paying`
+
+DECLARE `Income tax party` IS ONE OF
+    `the taxpayer`
+    `the Commissioner of Revenue Services`
+
+DECLARE `Income tax action` IS ONE OF
+    `file the return and pay the tax due on it`
+    `file a written claim for refund`
+    `determine whether the refund claim is valid`
+
+-- s 12-719(a): "The income tax return required under this chapter shall be filed on or before the fifteenth day of the fourth
+-- month following the close of the taxpayer's taxable year. A person required to make and file a return shall, without
+-- assessment, notice or demand, pay any tax due thereon ... on or before the date fixed for filing such return, determined
+-- without regard to any extension of time for filing the return." For a calendar year: 15 April of the next year.
+GIVEN `the taxable year` IS A NUMBER
+GIVETH A DATE
+`the s 12-719(a) due date for the calendar taxable year` `the taxable year` MEANS Date 15 4 (`the taxable year` PLUS 1)
+
+-- s 12-735(a): "If any person fails to pay the amount of tax reported to be due on his return within the time specified ...
+-- there shall be imposed a penalty equal to ten per cent of such amount due and unpaid. Such amount shall bear interest at
+-- the rate of one per cent per month or fraction thereof, from the due date of such tax until the date of payment."
+-- s 12-735(b): "If any person has not made a return within three months after the time specified ..., the commissioner may
+-- make such return at any time thereafter ... To the tax imposed upon the basis of such return, there shall be added an
+-- amount equal to ten per cent of such tax or fifty dollars, whichever is greater." "(c) ... the commissioner may waive all or
+-- part of the penalties ... [for] reasonable cause". "No taxpayer shall be subject to a penalty under both subsections (a)
+-- and (b) ... in relation to the same tax period."
+-- Days are counted from 1 January of the year after the taxable year (the day after its close).
+GIVEN `the taxable year` IS A NUMBER
+GIVETH A DEONTIC `Income tax party` `Income tax action`
+`the duty to file the return and pay` `the taxable year` MEANS
+    PARTY  `the taxpayer`
+    MUST   `file the return and pay the tax due on it`
+    WITHIN `days to the due date`
+    HENCE  FULFILLED
+    LEST   BREACH BY `the taxpayer` BECAUSE "return not filed or tax not paid by the due date: 10% of the tax reported due and unpaid, with interest at 1% a month or fraction (s 12-735(a)); with no return within three months, the Commissioner may make the return and add 10% of the tax or $50, whichever is greater (s 12-735(b))"
+    WHERE
+        `the close of the year` MEANS Date 1 1 (`the taxable year` PLUS 1)
+        `days to the due date` MEANS
+            Day (`the s 12-719(a) due date for the calendar taxable year` `the taxable year`) MINUS Day `the close of the year`
+
+-- s 12-735(a) in figures: the 10% penalty on the amount reported and unpaid, and the interest of 1% "per month or fraction
+-- thereof". The whole months, or fractions of a month, elapsed are an input.
+GIVEN `the amount reported due and unpaid` IS A NUMBER
+      `months, or fractions of a month, since the due date` IS A NUMBER
+GIVETH A NUMBER
+`the s 12-735(a) penalty and interest on` `the amount reported due and unpaid` `after` `months, or fractions of a month, since the due date` MEANS
+        (10% TIMES `the amount reported due and unpaid`)
+    PLUS (1% TIMES `the amount reported due and unpaid` TIMES (CEILING `months, or fractions of a month, since the due date`))
+
+-- s 12-735(b) in figures.
+GIVEN `the tax on the Commissioner's return` IS A NUMBER
+GIVETH A NUMBER
+`the s 12-735(b) addition to` `the tax on the Commissioner's return` MEANS
+    max (10% TIMES `the tax on the Commissioner's return`) 50
+
+§§ `s 12-732(a)(1) -- claiming a refund`
+
+-- s 12-732(a)(1): "If any tax has been overpaid, the taxpayer may file a claim for refund in writing with the commissioner
+-- within three years from the due date for which such overpayment was made ... Not later than ninety days following receipt of
+-- such claim for refund the commissioner shall determine whether such claim is valid". The extension case (three years from
+-- the filing of the return or the extended due date, whichever is earlier) is not encoded.
+GIVEN `the taxable year` IS A NUMBER
+GIVETH A DATE
+`the last day to claim a refund for the calendar taxable year` `the taxable year` MEANS Date 15 4 (`the taxable year` PLUS 4)
+
+-- "may file": written as DO ... LEST FULFILLED, because in the stable l4 the HENCE of a MAY also fires when its time runs out
+-- unused, which would start the Commissioner's ninety days on a claim never made. A claim not made is no breach.
+GIVEN `the taxable year` IS A NUMBER
+GIVETH A DEONTIC `Income tax party` `Income tax action`
+`the right to claim a refund` `the taxable year` MEANS
+    PARTY  `the taxpayer`
+    DO     `file a written claim for refund`
+    WITHIN `days in the three years`
+    HENCE
+        PARTY  `the Commissioner of Revenue Services`
+        MUST   `determine whether the refund claim is valid`
+        WITHIN 90
+        HENCE  FULFILLED
+        LEST   BREACH BY `the Commissioner of Revenue Services` BECAUSE "no determination of the refund claim within ninety days of receipt (s 12-732(a)(1))"
+    LEST   FULFILLED
+    WHERE
+        `days in the three years` MEANS
+            Day (`the last day to claim a refund for the calendar taxable year` `the taxable year`)
+            MINUS Day (`the s 12-719(a) due date for the calendar taxable year` `the taxable year`)
+
+§ `Questions for the taxpayer`
+
+§§ `Am I a resident?`
+
+@export Am I a "resident of this state" for Connecticut income tax for the year (s 12-701(a)(1))?
+GIVEN `I am domiciled in Connecticut` IS A BOOLEAN @desc Whether Connecticut is your domicile (your permanent legal home, where you intend to return)
+      `I keep a permanent place of abode in Connecticut` IS A BOOLEAN @desc Whether you keep a permanent home of your own in Connecticut during the year
+      `I keep a permanent place of abode outside Connecticut` IS A BOOLEAN @desc Whether you keep a permanent home of your own outside Connecticut
+      `days I spent in Connecticut this year` IS A NUMBER @desc How many days (or parts of days) of the taxable year you spent in Connecticut
+      `I meet the 548-day foreign presence exception` IS A BOOLEAN @desc Whether, in a period of 548 consecutive days, you were abroad for at least 450 days, in Connecticut for no more than 90, and met the other conditions of s 12-701(a)(1)(A)(ii)
+      `I am on active service in the US armed forces` IS A BOOLEAN @desc Whether you are on active service in the armed forces of the United States
+GIVETH A BOOLEAN
+DECIDE `Am I a resident of Connecticut for income tax` IF
+    `a resident of this state` `I am domiciled in Connecticut` `I keep a permanent place of abode in Connecticut`
+        `I keep a permanent place of abode outside Connecticut` `days I spent in Connecticut this year`
+        `I meet the 548-day foreign presence exception` `I am on active service in the US armed forces`
+
+§§ `Must I file?`
+
+@export Must I file a Connecticut income tax return?
+GIVEN `I was a Connecticut resident for the whole year` IS A BOOLEAN @desc Whether you were a resident of Connecticut for the whole taxable year
+GIVETH AN `Answer` BOOLEAN
+`Must I file a Connecticut income tax return` MEANS
+    `not covered` `chapter 229 does not say who must file a return: s 12-740(c) leaves it to the Commissioner's regulations or notice, which are not deposited`
+
+§§ `How much tax?`
+
+@export What is my Connecticut personal exemption (s 12-702)?
+GIVEN `my federal filing status` IS A `Federal filing status` @desc Your federal filing status for the year: unmarried individual, head of household, married filing jointly or surviving spouse, or married filing separately
+      `my Connecticut adjusted gross income` IS A NUMBER @desc Your Connecticut adjusted gross income for the year in US dollars (federal adjusted gross income with the Connecticut additions and subtractions)
+GIVETH A NUMBER
+`What is my Connecticut personal exemption` MEANS
+    `the personal exemption for` `my federal filing status` `with Connecticut adjusted gross income` `my Connecticut adjusted gross income`
+
+@export What is my Connecticut income tax before credits, for a year from 2024 (s 12-700(a)(10))?
+GIVEN `my federal filing status` IS A `Federal filing status` @desc Your federal filing status for the year: unmarried individual, head of household, married filing jointly or surviving spouse, or married filing separately
+      `my Connecticut adjusted gross income` IS A NUMBER @desc Your Connecticut adjusted gross income for the year in US dollars
+GIVETH A NUMBER
+`What is my Connecticut income tax before credits` MEANS
+    `the s 12-700(a)(10) tax for` `my federal filing status` `with Connecticut adjusted gross income` `my Connecticut adjusted gross income`
+
+@export What percentage of my Connecticut income tax is taken off by the personal credit (s 12-703)?
+GIVEN `my federal filing status` IS A `Federal filing status` @desc Your federal filing status for the year
+      `my Connecticut adjusted gross income` IS A NUMBER @desc Your Connecticut adjusted gross income for the year in US dollars
+GIVETH A NUMBER
+`What is my Connecticut personal credit percentage` MEANS
+    `the s 12-703 credit percentage for` `my federal filing status` `with Connecticut adjusted gross income` `my Connecticut adjusted gross income`
+
+@export How much Connecticut earned income tax credit do I get (s 12-704e)?
+GIVEN `I was a Connecticut resident for the whole year` IS A BOOLEAN @desc Whether you were a resident of Connecticut for the whole taxable year
+      `my federal earned income credit` IS A NUMBER @desc The federal earned income credit claimed and allowed for the year under IRC s 32, in US dollars (0 if none)
+      `I have a qualifying child` IS A BOOLEAN @desc Whether you have at least one qualifying child for federal income tax purposes
+      `I filed jointly federally but must file separately in Connecticut` IS A BOOLEAN @desc Whether you filed a joint federal return but must file a separate Connecticut return
+      `my own federal AGI on my separate Connecticut return` IS A NUMBER @desc If so, your own federal adjusted gross income as reported on your separate Connecticut return (otherwise 0)
+      `the federal AGI on the joint federal return` IS A NUMBER @desc If so, the federal adjusted gross income on the joint federal return (otherwise 0)
+GIVETH A NUMBER
+`How much Connecticut earned income tax credit do I get` MEANS
+    `the s 12-704e credit for` (`Connecticut taxpayer` OF 2025, `unmarried individual`, `I was a Connecticut resident for the whole year`, 0,
+                                 `my federal earned income credit`, `I have a qualifying child`,
+                                 `I filed jointly federally but must file separately in Connecticut`,
+                                 `my own federal AGI on my separate Connecticut return`, `the federal AGI on the joint federal return`)
+    -- the year, filing status and Connecticut AGI fields are not read by s 12-704e: fixed placeholders
+
+@export How much Connecticut income tax do I owe after the personal credit and the earned income tax credit (negative means a refund)?
+GIVEN `the taxable year` IS A NUMBER @desc The calendar year of the tax return, for example 2025 (2024 or later)
+      `I was a Connecticut resident for the whole year` IS A BOOLEAN @desc Whether you were a resident of Connecticut for the whole taxable year
+      `my federal filing status` IS A `Federal filing status` @desc Your federal filing status for the year
+      `my Connecticut adjusted gross income` IS A NUMBER @desc Your Connecticut adjusted gross income for the year in US dollars
+      `my federal earned income credit` IS A NUMBER @desc The federal earned income credit claimed and allowed for the year, in US dollars (0 if none)
+      `I have a qualifying child` IS A BOOLEAN @desc Whether you have at least one qualifying child for federal income tax purposes
+GIVETH AN `Answer` NUMBER
+`How much Connecticut income tax do I owe` MEANS
+    `the balance of Connecticut income tax for`
+        (`Connecticut taxpayer` OF `the taxable year`, `my federal filing status`, `I was a Connecticut resident for the whole year`,
+                                   `my Connecticut adjusted gross income`, `my federal earned income credit`, `I have a qualifying child`,
+                                   FALSE, 0, 0)
+    -- the s 12-704e(c) separate-return proration is asked only in the earned income tax credit question
+
+§§ `When must I file and pay?`
+
+@export By what date must I file my Connecticut return and pay the tax, for a calendar taxable year (s 12-719(a))?
+GIVEN `the taxable year` IS A NUMBER @desc The calendar year of the tax return, for example 2025
+GIVETH A DATE
+`By when must I file and pay` MEANS `the s 12-719(a) due date for the calendar taxable year` `the taxable year`
+
+@export If I pay the tax shown on my return late, what penalty and interest are added (s 12-735(a))?
+GIVEN `the tax reported due and unpaid` IS A NUMBER @desc The amount of tax shown as due on your return that you did not pay by the due date, in US dollars
+      `months late` IS A NUMBER @desc How many months (count a part of a month as a whole month) from the due date to the date you pay
+GIVETH A NUMBER
+`What penalty and interest for paying late` MEANS
+    `the s 12-735(a) penalty and interest on` `the tax reported due and unpaid` `after` `months late`
+
+@export If I file no return within three months after the due date and the Commissioner makes one for me, what is added to the tax (s 12-735(b))?
+GIVEN `the tax on the Commissioner's return` IS A NUMBER @desc The tax on the return the Commissioner makes for you, in US dollars
+GIVETH A NUMBER
+`What is added if the Commissioner makes my return` MEANS `the s 12-735(b) addition to` `the tax on the Commissioner's return`
+
+§§ `Refunds`
+
+@export Until what date may I claim a refund of overpaid Connecticut income tax for a calendar taxable year (s 12-732(a)(1)), if I had no extension?
+GIVEN `the taxable year` IS A NUMBER @desc The calendar year of the tax return, for example 2025
+GIVETH A DATE
+`Until when may I claim a refund` MEANS `the last day to claim a refund for the calendar taxable year` `the taxable year`
