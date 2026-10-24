@@ -20,3 +20,11 @@ English and French are both official for Manitoba legislation (s. 23 of the Mani
 ## Status of this deposit
 
 No statute text has been deposited yet.
+
+## Re-check, 24 Oct 2026: still not deposited; goes to Michael
+
+The terms were read again on 2026-10-24 at https://manitoba.ca/legal/mb_laws.html (HTTP 200), for the tax-and-benefits round. The Manitoba Laws copyright notification is unchanged: "You may, without charge and without requesting permission, make copies of all or part of any Act or regulation for study or research, or for use in legal proceedings or for providing legal advice. You must not make copies for any other purpose without first obtaining the written consent of King's Printer." The page links a "Permission Request Form".
+
+This is not a grant of reproduction that is silent on adaptation (the 24 Oct 2026 ruling), and not a non-commercial grant (the 20 Oct 2026 ruling). It permits copies only for listed purposes and needs the King's Printer's written consent for any other. Under the rulings that is a term needing permission, so **nothing is deposited and nothing is encoded**. It is for Michael to decide whether Commons falls within "study or research", to ask the King's Printer for consent (copyright@gov.mb.ca is named in the earlier note), or to rely on the OpenMB licence if Manitoba confirms that it reaches the consolidated statutes.
+
+robots.txt, read 2026-10-24: https://manitoba.ca/robots.txt (HTTP 200) has a group for `GPTBot`, `ChatGPT-User`, `Google-Extended`, `CCBot`, `anthropic-ai`, `ClaudeBot`, `PerplexityBot`, `cohere-ai`, `Amazonbot`, `Claude-Web` and others with `Disallow: /`. The `*` group does not disallow `/legal/`. https://web2.gov.mb.ca/robots.txt redirects (HTTP 302) to a 404 page. The re-check was made under the User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)` (robots.txt, then the terms page: two requests to manitoba.ca, one to web2.gov.mb.ca). Because the site excludes AI agents by name, further fetching from manitoba.ca by an AI-driven session should wait for Michael too. No statute page on web2.gov.mb.ca was fetched.

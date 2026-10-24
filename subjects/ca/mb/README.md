@@ -14,3 +14,11 @@ Fetched over HTTPS with curl and python-urllib identifying themselves as 'canon-
 
 - **Passenger compensation**: Federal matter: compensation for denied boarding, delay, cancellation and lost baggage is set by the Air Passenger Protection Regulations, SOR/2019-150, made under the Canada Transportation Act, S.C. 1996, c. 10; interprovincial rail and bus carriage is federal too. No provincial statute provides a passenger-compensation scheme.
 - **Customs/duties**: Federal matter: customs and tariffs are exclusively federal under s. 91(2)-(3) of the Constitution Act, 1867 - the Customs Act, R.S.C. 1985, c. 1 (2nd Supp.) and the Customs Tariff, S.C. 1997, c. 36. No provincial statute governs it.
+
+## Tax and benefits round, 24 Oct 2026: not sourced, referred to Michael
+
+The round was to source and encode The Income Tax Act (C.C.S.M. c. I10) and The Manitoba Assistance Act (C.C.S.M. c. A150) with its regulation. Nothing was deposited or encoded, because the terms need permission:
+
+- **Terms** (https://manitoba.ca/legal/mb_laws.html, re-read 2026-10-24, unchanged since 2026-09-23): "You may, without charge and without requesting permission, make copies of all or part of any Act or regulation for study or research, or for use in legal proceedings or for providing legal advice. You must not make copies for any other purpose without first obtaining the written consent of King's Printer." This is a purpose-limited grant with a consent requirement, which neither the 20 Oct 2026 ruling (non-commercial terms are fine) nor the 24 Oct 2026 ruling (reproduction permitted, adaptation not addressed) covers.
+- **robots.txt** (https://manitoba.ca/robots.txt, 2026-10-24): `Disallow: /` for a named group of AI agents, among them `anthropic-ai`, `ClaudeBot` and `Claude-Web`. The `*` group does not cover `/legal/`. Only robots.txt and the terms page were fetched; no statute text.
+- **For Michael**: whether Commons is "study or research"; or a request to the King's Printer (the register links a Permission Request Form); or written confirmation that the OpenMB Information and Data Use Licence reaches the consolidated statutes. Each subject's `SOURCE-LICENSE.md` has the detail.
