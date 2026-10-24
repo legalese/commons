@@ -69,3 +69,15 @@ The question was where Wyoming sets the **amounts** a person gets: the POWER pay
 - **General Assistance.** Its rule chapter (049.0018) is listed as repealed.
 
 **Remaining gaps:** the current-year POWER maximum payment table after the cost-of-living adjustment; the state SSI supplement amount; the UI weekly maximum figure.
+
+## Encodings added 2026-10-24: tax and benefits baselines
+
+Three baseline encodings, written from the individual's seat with the 2026-10-18 defaults and checked with the stable `l4` (1.6.98). Each folder's `NOTES.md` has the method, scope and findings.
+
+| Encoding | Seat | Questions | Regulative rules | Assertions |
+| --- | --- | --- | --- | --- |
+| [`wyoming-statutes-title-39-taxation-and-revenue-chapters-7-and-12-income-tax/encodings/baseline-2026-10`](wyoming-statutes-title-39-taxation-and-revenue-chapters-7-and-12-income-tax/encodings/baseline-2026-10) | the individual | do I owe Wyoming income tax (no: 39-7-101 repealed); may my county, city or town tax my wages (no: preempted, 39-12-101) | none (no duty stated) | 5 / 5 |
+| [`wyoming-statutes-title-39-taxation-and-revenue-chapter-11-administration/encodings/baseline-2026-10`](wyoming-statutes-title-39-taxation-and-revenue-chapter-11-administration/encodings/baseline-2026-10) | the resident 65 or over or totally disabled | do I qualify for the refund of state taxes (39-11-109(c)(i), (ii), (vii)); how much ((c)(ii), (viii)) | 2 (apply by the last working day in August; the department mails the warrant by December 20, (c)(iii)-(iv)) | 20 / 20 |
+| [`wyoming-statutes-title-42-welfare-chapter-2-public-assistance/encodings/baseline-2026-10`](wyoming-statutes-title-42-welfare-chapter-2-public-assistance/encodings/baseline-2026-10) | the caretaker relative applying for POWER (and the SSI recipient) | dependent child (42-2-104(b)); asset limit (rule s 6); the 2008 maximum and the performance payment (42-2-103(e)(iii)-(iv), rule s 9); the earned income incentive; the five-year limit (42-2-103(e)(i)); the state SSI supplement (42-2-103(d)); burial assistance (42-2-103(c)) | 2 (report a change within 10 days, 42-2-109(b); verifications within 10 days, rule s 9(a)(vii)(G)) | 35 / 35 |
+
+Inputs, not deposited: the current indexed maximum POWER payment, the indexed asset ceiling for the elderly and disabled refund and its appropriation fraction.
