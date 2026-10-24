@@ -81,3 +81,11 @@ The question was where Kansas sets the **amounts** a person gets: the TANF grant
 - **State SSI supplement**: none found in K.A.R. 30-4. Kansas pays no general optional state supplement: unverified (general knowledge).
 
 **Remaining gaps:** K.A.R. 30-4-110 to 30-4-113 (income and its treatment); any Kansas Register amendment after 2021; the UI weekly maximum.
+
+## Encodings, 24 October 2026: tax and benefits
+
+| Encoding | Seat | What it answers | Assertions |
+| --- | --- | --- | --- |
+| [`kansas-statutes-chapter-79-article-32-income-tax/encodings/baseline-2026-10/`](kansas-statutes-chapter-79-article-32-income-tax/encodings/baseline-2026-10/) | the individual taxpayer | residence (79-32,109(b)); Kansas AGI from federal AGI with the main modifications, including the full social security subtraction (79-32,117); the standard or itemized deduction and the 2025 exemptions (79-32,118 to 79-32,121b); the 5.2% / 5.58% schedule and the nonresident ratio (79-32,110); the 50% care credit, the 17% refundable EITC and the SAFESR senior credit (79-32,111c, 79-32,205, 79-32,263); who must file, and when the return and the tax are due (79-3220, 79-3221, 79-3225) | 46 / 46 |
+
+Baselines: a seat-neutral core in the statute's terms with regulative rules for the duties, and a seat layer with `@export` questions. Federal figures are inputs, answered by `subjects/us/internal-revenue-code-of-1986/`. Each NOTES.md lists its findings and what is `not covered`.

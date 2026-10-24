@@ -1,0 +1,334 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Kansas income tax act (K.S.A. chapter 79, article 32), the individual income tax -- the seat-neutral core.
+--
+-- Written in the act's own actors and terms: the "resident individual" and "nonresident individual" (79-32,109(b)),
+-- "Kansas adjusted gross income" (79-32,117), the "Kansas deduction" (79-32,118 to 79-32,120), the "Kansas personal
+-- exemptions" (79-32,121, 79-32,121b), "Kansas taxable income" (79-32,116), the tax (79-32,110), the credits (79-32,111c,
+-- 79-32,205, 79-32,263), the return (79-3220, 79-3221) and payment (79-3225), and the director of taxation.
+--
+-- Edition: Kansas Statutes as published online by the Office of Revisor of Statutes on 2026-10-20 ("amendments and new
+-- laws enacted during the 2025 legislative session"), deposited at ../../registers/source-bundle/
+-- ksa-79-32-individual-income-tax.txt and ksa-79-32-individual-credits-eitc-safesr-food.txt (retrieved 2026-10-19 UTC).
+--
+-- Federal figures (federal adjusted gross income, whether a federal return is required, the number of federal additional
+-- standard deductions, federal dependents, the federal earned income credit under IRC s32, the federal child and dependent
+-- care credit under IRC s21, the federal poverty level) are borrowed terms and enter as inputs, answered by
+-- subjects/us/internal-revenue-code-of-1986/ (cross-folder IMPORT is not possible in the stable l4; NOTES.md names it).
+--
+-- The taxpayer's seat questions are in ks-income-tax-seat.l4.
+--
+-- BASELINE ENCODING. No pipeline, no coverage table, no independent test pass, no human gate. Not advice. See NOTES.md.
+
+§ `Kansas income tax act -- individuals`
+
+§§ `Answers this encoding does not give`
+
+DECLARE `Why not covered` IS ONE OF
+    `tax years before 2025 are not encoded: the 2025 exemption amounts of 79-32,121 and 79-32,121b are the ones encoded`
+    `a married person filing a separate return is not encoded: 79-32,119(c)(2) gives one standard deduction for "married filing status" and does not say how it applies to a separate return`
+    `the credit for income tax paid to another state (79-32,111(a)) is not encoded`
+    `a rate reduction certified and published by the secretary of revenue under 79-32,110c is not encoded: the rates would be those the secretary published`
+    `the additional exemption of a 100% disabled veteran is not encoded: 79-32,121(b) gives $2,250 and 79-32,121b(b)(2) gives $2,320 for the same person, and the two 2025 Acts are not reconciled in the deposited text`
+
+GIVEN a IS A TYPE
+GIVETH A TYPE
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+§§ `79-32,109(b) -- resident individual`
+
+-- "'Resident individual' means a natural person who is domiciled in this state. A natural person who spends in the
+-- aggregate more than six months of the taxable year within this state shall be presumed to be a resident for purposes of
+-- this act in absence of proof to the contrary. A nonresident individual means an individual other than a resident
+-- individual." Whether the presumption is rebutted is a judgment, an input.
+GIVEN `domiciled in Kansas` IS A BOOLEAN
+      `spent more than six months of the taxable year in Kansas` IS A BOOLEAN
+      `proof to the contrary` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a resident individual` IF
+        `domiciled in Kansas`
+    OR  (`spent more than six months of the taxable year in Kansas` AND (NOT `proof to the contrary`))
+
+§§ `Filing status`
+
+-- The act follows the federal return: 79-32,115 (husband and wife), 79-32,121 ("filing status of single, head of
+-- household or married filing separate").
+DECLARE `Filing status` IS ONE OF
+    `single`
+    `married filing jointly`
+    `married filing separately`
+    `head of household`
+
+§§ `79-32,117 -- Kansas adjusted gross income`
+
+-- (a): "such individual's federal adjusted gross income for the taxable year, with the modifications specified in this
+-- section". The modifications most people meet are worked out; the rest are one input each way.
+DECLARE `Kansas adjusted gross income facts` HAS
+    `federal adjusted gross income`                           IS A NUMBER  -- a borrowed term
+    `interest on other states' and their subdivisions' obligations not in federal AGI` IS A NUMBER  -- (b)(i), added
+    `interest on United States obligations in federal AGI`    IS A NUMBER  -- (c)(i), subtracted
+    `federal civil service and military retirement benefits`  IS A NUMBER  -- (c)(vii), subtracted
+    `social security benefits in federal AGI`                 IS A NUMBER  -- (c)(xviii)(B), subtracted from 2024
+    `amounts exempt from Kansas income tax under other Kansas laws` IS A NUMBER  -- (c)(ii), e.g. KPERS benefits; subtracted
+    `other additions`                                         IS A NUMBER
+    `other subtractions`                                      IS A NUMBER
+
+GIVEN f IS A `Kansas adjusted gross income facts`
+GIVETH A NUMBER
+`Kansas adjusted gross income` f MEANS
+    (f's `federal adjusted gross income`
+        PLUS f's `interest on other states' and their subdivisions' obligations not in federal AGI`
+        PLUS f's `other additions`)
+    MINUS (f's `interest on United States obligations in federal AGI`
+        PLUS f's `federal civil service and military retirement benefits`
+        PLUS f's `social security benefits in federal AGI`
+        PLUS f's `amounts exempt from Kansas income tax under other Kansas laws`
+        PLUS f's `other subtractions`)
+
+§§ `79-32,118 to 79-32,120 -- the Kansas deduction`
+
+-- 79-32,119(c)(2): "For tax year 2024, and all tax years thereafter, the standard deduction amount ... Single individual
+-- filing status, $3,605; married filing status, $8,240; and head of household filing status, $6,180." (b): "the
+-- additional standard deduction amount ... Single individual and head of household filing status, $850; and married
+-- filing status, $700", (a) "for each such deduction allowable ... under the federal internal revenue code".
+GIVEN status IS A `Filing status`
+      `number of federal additional standard deductions` IS A NUMBER
+GIVETH A NUMBER
+`Kansas standard deduction` MEANS
+    base PLUS (extra TIMES `number of federal additional standard deductions`)
+    WHERE
+        base MEANS
+            CONSIDER status
+            WHEN `married filing jointly`    THEN 8240
+            WHEN `married filing separately` THEN 8240
+            WHEN `head of household`         THEN 6180
+            OTHERWISE 3605
+        extra MEANS
+            CONSIDER status
+            WHEN `married filing jointly`    THEN 700
+            WHEN `married filing separately` THEN 700
+            OTHERWISE 850
+
+-- 79-32,120(a)(1)(B): from 2021 an individual "may elect to deduct the Kansas itemized deduction in lieu of the Kansas
+-- standard deduction, regardless of whether" they itemize federally. (a)(5): "100% of charitable contributions ...
+-- section 170; ... 100% of expenses for medical care allowable as deductions in section 213; ... 100% of the amount of
+-- qualified residence interest ... section 163(h); and ... 100% of the amount of taxes on real and personal property ...
+-- section 164(a)". (b): reduced by income taxes deducted in the federal itemized deductions.
+GIVEN `charitable contributions under section 170` IS A NUMBER
+      `medical care expenses allowable under section 213` IS A NUMBER
+      `qualified residence interest under section 163(h)` IS A NUMBER
+      `real and personal property taxes under section 164(a)` IS A NUMBER
+      `income taxes included in federal itemized deductions` IS A NUMBER
+GIVETH A NUMBER
+`Kansas itemized deduction` MEANS
+    max 0 ((`charitable contributions under section 170`
+                PLUS `medical care expenses allowable under section 213`
+                PLUS `qualified residence interest under section 163(h)`
+                PLUS `real and personal property taxes under section 164(a)`)
+            MINUS `income taxes included in federal itemized deductions`)
+
+-- 79-32,118: "the Kansas standard deduction unless such individual elects to deduct ... Kansas itemized deductions".
+GIVEN `elects to itemize` IS A BOOLEAN
+      `the standard deduction` IS A NUMBER
+      `the itemized deduction` IS A NUMBER
+GIVETH A NUMBER
+`Kansas deduction` MEANS IF `elects to itemize` THEN `the itemized deduction` ELSE `the standard deduction`
+
+§§ `79-32,121, 79-32,121b -- Kansas personal exemptions`
+
+-- Both sections were enacted in 2025 (L. 2025, ch. 112, § 6 and ch. 123, § 9) and give the same base amounts:
+-- "(1) ... married individuals filing a joint return, a personal exemption of $18,320; (2) ... single, head of household
+-- or married filing separate, a personal exemption of $9,160; (3) ... $2,320 for each dependent". They differ in their
+-- additions: 79-32,121(a)(4) adds $2,320 for an unborn child (a dependent born in the year, or a stillbirth with a
+-- certificate); 79-32,121b(b)(1) adds $2,320 for a head of household. The base is counted once and each addition is
+-- applied (NOTES.md finding 2).
+GIVEN status IS A `Filing status`
+      `number of federal dependents` IS A NUMBER
+      `number of those dependents born in the year` IS A NUMBER
+      `number of stillbirths with a certificate issued in the year` IS A NUMBER
+GIVETH A NUMBER
+`Kansas personal exemptions` MEANS
+    base
+        PLUS (2320 TIMES `number of federal dependents`)
+        PLUS (2320 TIMES `number of those dependents born in the year`)
+        PLUS (2320 TIMES `number of stillbirths with a certificate issued in the year`)
+        PLUS hoh
+    WHERE
+        base MEANS
+            CONSIDER status
+            WHEN `married filing jointly` THEN 18320
+            OTHERWISE 9160
+        hoh MEANS
+            CONSIDER status
+            WHEN `head of household` THEN 2320
+            OTHERWISE 0
+
+§§ `79-32,116 -- Kansas taxable income`
+
+-- "his or her Kansas adjusted gross income less his or her Kansas deductions and Kansas personal exemptions".
+GIVEN `the Kansas adjusted gross income` IS A NUMBER
+      `the Kansas deduction` IS A NUMBER
+      `the Kansas personal exemptions` IS A NUMBER
+GIVETH A NUMBER
+`Kansas taxable income` MEANS
+    max 0 (`the Kansas adjusted gross income` MINUS `the Kansas deduction` MINUS `the Kansas personal exemptions`)
+
+§§ `79-32,110 -- the tax`
+
+-- (a)(1)(B) "Married individuals filing joint returns ... For tax year 2024, and all tax years thereafter: Not over
+-- $46,000: 5.2% of Kansas taxable income; Over $46,000: $2,392 plus 5.58% of excess over $46,000". (a)(2)(B) "All other
+-- individuals": "Not over $23,000: 5.2% ...; Over $23,000: $1,196 plus 5.58% of excess over $23,000". 79-32,110b sets
+-- the same individual schedules.
+GIVEN status IS A `Filing status`
+      `the Kansas taxable income` IS A NUMBER
+GIVETH A NUMBER
+`tax under the 79-32,110(a) schedule` MEANS
+    IF `the Kansas taxable income` AT MOST band
+    THEN `the Kansas taxable income` TIMES 0.052
+    ELSE (band TIMES 0.052) PLUS ((`the Kansas taxable income` MINUS band) TIMES 0.0558)
+    WHERE
+        band MEANS
+            CONSIDER status
+            WHEN `married filing jointly` THEN 46000
+            OTHERWISE 23000
+
+-- (b): a nonresident's tax is "the tax computed under subsection (a) as if the nonresident were a resident multiplied by
+-- the ratio of modified Kansas source income to Kansas adjusted gross income". 79-32,128(b): a part-year resident may
+-- compute as a nonresident, with all income of the resident period in modified Kansas source income.
+GIVEN `the resident tax` IS A NUMBER
+      `modified Kansas source income` IS A NUMBER
+      `the Kansas adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`nonresident tax` MEANS
+    IF `the Kansas adjusted gross income` AT MOST 0
+    THEN 0
+    ELSE `the resident tax` TIMES (min 1 (max 0 (`modified Kansas source income` DIVIDED BY `the Kansas adjusted gross income`)))
+
+§§ `79-32,111c, 79-32,205, 79-32,263, 79-32,265 -- credits`
+
+-- 79-32,265: "no credit provided under the Kansas income tax act ... shall be allowed for: (a) Any individual who fails to
+-- provide a valid social security number issued to such individual, the individual's spouse and dependents ... or (b)
+-- any individual who has not been issued a valid social security number for the entire taxable year ..., except ... an
+-- individual whose spouse possesses a valid social security number for the entire taxable year and whose filing status
+-- ... is married filing jointly." (79-32,111c(c) repeats it for the care credit.)
+GIVEN `valid social security numbers given for me, my spouse and dependents` IS A BOOLEAN
+      `I had a valid social security number for the whole year` IS A BOOLEAN
+      `my spouse had one for the whole year and we file jointly` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `credits are allowed under 79-32,265` IF
+        `valid social security numbers given for me, my spouse and dependents`
+    AND (`I had a valid social security number for the whole year` OR `my spouse had one for the whole year and we file jointly`)
+
+-- 79-32,205: "an amount equal to ... 17% for tax year 2013, and all tax years thereafter, of the amount of the earned
+-- income credit allowed against such taxpayer's federal income tax liability pursuant to section 32"; (b) the excess
+-- over liability "shall be refunded". For "a resident individual".
+GIVEN `the federal earned income credit` IS A NUMBER
+GIVETH A NUMBER
+`Kansas earned income credit` MEANS 0.17 TIMES (max 0 `the federal earned income credit`)
+
+-- 79-32,111c(a): "50% for tax year 2024, and all tax years thereafter, of the amount of the credit allowed against such
+-- taxpayer's federal income tax liability pursuant to 26 U.S.C. § 21"; (b) not more than the tax "reduced by the sum of
+-- any other credits allowable". For "a resident individual". Not refundable.
+GIVEN `the federal child and dependent care credit allowed` IS A NUMBER
+GIVETH A NUMBER
+`Kansas child and dependent care credit before the limit` MEANS 0.5 TIMES (max 0 `the federal child and dependent care credit allowed`)
+
+-- 79-32,263(b) SAFESR: "75% of the amount of property and ad valorem taxes actually and timely paid by a taxpayer who is
+-- 65 years of age or older and who has household income equal to or less than 120% of the federal poverty level for two
+-- persons if such taxes were paid upon real or personal property used for residential purposes of such taxpayer which is
+-- the taxpayer's principal place of residence". "A taxpayer shall not take the credit ... if such taxpayer has received a
+-- homestead property tax refund ... for such property for such tax year." The excess "shall be refunded".
+GIVEN `age` IS A NUMBER
+      `household income` IS A NUMBER
+      `federal poverty level for two persons` IS A NUMBER
+      `property taxes timely paid on my principal residence` IS A NUMBER
+      `received a homestead property tax refund for the property for the year` IS A BOOLEAN
+GIVETH A NUMBER
+`SAFESR credit` MEANS
+    IF     `age` AT LEAST 65
+       AND `household income` AT MOST (1.2 TIMES `federal poverty level for two persons`)
+       AND (NOT `received a homestead property tax refund for the property for the year`)
+    THEN 0.75 TIMES (max 0 `property taxes timely paid on my principal residence`)
+    ELSE 0
+
+-- 79-32,271 (food sales tax credit) applies only to taxable years "ending prior to January 1, 2025": not for 2025.
+
+-- The tax after credits. The non-refundable care credit is applied first, up to the tax; the refundable credits then
+-- reduce the result below zero (NOTES.md finding 4 on the order).
+GIVEN `the tax` IS A NUMBER
+      `the care credit` IS A NUMBER
+      `the refundable credits` IS A NUMBER
+GIVETH A NUMBER
+`tax after credits` MEANS
+    (`the tax` MINUS (min `the care credit` (max 0 `the tax`))) MINUS `the refundable credits`
+
+§§ `79-3220 -- who must make a return`
+
+-- (a)(1): "Each individual required to file a federal income tax return and any other individual whose gross income
+-- exceeds the sum of such individual's applicable Kansas standard deduction amount and Kansas personal exemption amount
+-- shall each make and sign a return ... all individuals not required to file a Kansas income tax return hereunder shall
+-- not be liable for any tax". (a)(3): a nonresident whose only Kansas income is from an electing pass-through entity
+-- under the SALT parity act need not file.
+GIVEN `required to file a federal return` IS A BOOLEAN
+      `gross income` IS A NUMBER
+      `the applicable standard deduction` IS A NUMBER
+      `the applicable personal exemption` IS A NUMBER
+      `a nonresident whose only Kansas income is from an electing pass-through entity` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `shall make a return` IF
+        (NOT `a nonresident whose only Kansas income is from an electing pass-through entity`)
+    AND (    `required to file a federal return`
+         OR  `gross income` GREATER THAN (`the applicable standard deduction` PLUS `the applicable personal exemption`))
+
+§§ `79-3221, 79-3225 -- when the return and the tax are due`
+
+-- 79-3221(b): "All returns shall be filed ... on or before the 15th day of the fourth month following the close of the
+-- taxable year"; (c)(3): a return other than a corporate one is to be filed "not later than the due date established
+-- under the federal internal revenue code, including any applicable extensions granted by the internal revenue service".
+-- 79-3225(a): "All taxes ... shall be paid on the 15th day of the fourth month following the close of the taxable year.
+-- When the tax as shown to be due on a return is less than $5, such tax shall be canceled". (b): the director "may extend
+-- the time for payment ... for a reasonable period of time not to exceed six months" (more if abroad), with interest.
+GIVEN `month the taxable year closes` IS A NUMBER
+      `year the taxable year closes` IS A NUMBER
+GIVETH A DATE
+`the 15th day of the fourth month following` MEANS
+    DATE_FROM_DMY 15 m4 y4
+    WHERE
+        m4 MEANS IF (`month the taxable year closes` PLUS 4) GREATER THAN 12 THEN `month the taxable year closes` PLUS 4 MINUS 12 ELSE `month the taxable year closes` PLUS 4
+        y4 MEANS IF (`month the taxable year closes` PLUS 4) GREATER THAN 12 THEN `year the taxable year closes` PLUS 1 ELSE `year the taxable year closes`
+
+GIVEN `the tax shown due` IS A NUMBER
+GIVETH A NUMBER
+`tax to be paid after the 79-3225(a) cancellation` MEANS
+    IF `the tax shown due` GREATER THAN 0 AND `the tax shown due` LESS THAN 5 THEN 0 ELSE `the tax shown due`
+
+DECLARE `Party` IS ONE OF
+    `the individual`           -- the individual required to make a return
+    `the director of taxation`
+
+DECLARE `Act` IS ONE OF
+    `file the return`
+    `pay the tax`
+
+-- The two duties, in days from the close of the taxable year. Filing and paying have separate clocks: a federal extension
+-- moves the filing date (79-3221(c)(3)) but not the payment date (79-3225(a)); only the director extends payment.
+GIVEN `days to the filing due date` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the 79-3220 and 79-3221 duty to file the return` IS
+    PARTY  `the individual`
+    MUST   `file the return`
+    WITHIN `days to the filing due date`
+    HENCE  FULFILLED
+    LEST   BREACH BY `the individual` BECAUSE "the return was not filed by the 15th day of the fourth month after the taxable year, or the federal due date as extended by the IRS (79-3221(b), (c)(3))"
+
+GIVEN `days to the payment date` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the 79-3225 duty to pay the tax` IS
+    PARTY  `the individual`
+    MUST   `pay the tax`
+    WITHIN `days to the payment date`
+    HENCE  FULFILLED
+    LEST   BREACH BY `the individual` BECAUSE "the tax was not paid on the 15th day of the fourth month after the taxable year, or by the date the director extended it to (79-3225(a), (b))"
