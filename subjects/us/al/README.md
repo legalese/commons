@@ -2,7 +2,7 @@
 
 Alabama (US state) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the ALISON - Alabama Legislature Official Information System, Code of Alabama 1975; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text was deposited then; see the 2026-10-20 sample below for the text now deposited. Nothing is encoded yet.
+The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the ALISON - Alabama Legislature Official Information System, Code of Alabama 1975; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text was deposited then; see the 2026-10-20 sample below for the text now deposited. Three encodings were added on 2026-10-24 (see the last section).
 
 **Licence category: unclear.** **Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
 
@@ -69,3 +69,15 @@ The question was where Alabama sets the **amounts** a person gets: the Family As
 **Terms.** The site has no terms of use. Its footer reads "Copyright (c) Alabama Legislative Services Agency. All rights reserved." and names LSA as "official publisher of the Alabama Administrative Code". Rules are law and carry no copyright. robots.txt: the path serves the HTML shell (treated as absent), and the page declares robots "all". Verdict: clean for the rule text. **Flag:** the footer's general "All rights reserved" claim may deserve a human ruling, as for Kentucky.
 
 **Remaining gaps:** the current Family Assistance payment standard by family size (DHR sets it outside the Code); the current base State Supplementation amounts beyond the special-needs table.
+
+## Encodings: tax and benefits (2026-10-24)
+
+Three baseline encodings, each written from the seat of the individual and checked with the stable `l4` (1.6.98): 0 errors, 0 warnings, every assertion satisfied.
+
+| Encoding | Seat | Questions | Assertions |
+|---|---|---|---|
+| [`code-of-alabama-1975-title-40-chapter-18-income-taxes/encodings/baseline-2026-10`](code-of-alabama-1975-title-40-chapter-18-income-taxes/encodings/baseline-2026-10) | the individual taxpayer | residence, must I file, standard deduction, exemptions, severance exemption, tax owed (tax years from 2022, residents), wage statement date | 43 |
+| [`code-of-alabama-1975-title-25-chapter-4-unemployment/encodings/baseline-2026-10`](code-of-alabama-1975-title-25-chapter-4-unemployment/encodings/baseline-2026-10) | the unemployed worker | weekly benefit amount, base-period test, maximum total, partial-week payment, weekly eligibility, disqualification for how the job ended, requalifying, unsuitable work, pension offset, appeal days | 49 |
+| [`code-of-alabama-1975-title-38-chapters-1-and-4-public-assistance/encodings/baseline-2026-10`](code-of-alabama-1975-title-38-chapters-1-and-4-public-assistance/encodings/baseline-2026-10) | the applicant for Family Assistance | eligibility, monthly grant, first-month grant, fair hearing | 27 |
+
+What a person still cannot get from the deposited law: the Family Assistance payment standard (set by DHR outside any rule now in force, so an input), and the effect of Acts 2026-551 and 2026-604 on ss 40-18-14 and 40-18-15 (not deposited). Each encoding's NOTES.md lists its findings.

@@ -1,0 +1,269 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Alabama Family Assistance (TANF cash assistance): Code of Alabama 1975, Title 38, Chapters 1, 4 and 11A, with the
+-- Department of Human Resources' grant rules in the Alabama Administrative Code, chapter 660-2-2.
+--
+-- Edition:
+--   ../../registers/source-bundle/ala-code-38-1.txt, ala-code-38-4.txt, ala-code-38-11a.txt -- the Code as ALISON served
+--   it on 2026-10-20 (no 'current through' date published);
+--   ../../../alabama-administrative-code-660-2-2-and-660-2-4-family-assistance-payment-and-state-supplementation/
+--   registers/source-bundle/ala-admin-code-660-2-2-and-660-2-4.txt -- rules 660-2-2-.10, -.27, -.31, -.32 as the
+--   Administrative Code showed them on 2026-10-19.
+--
+-- In: s 38-4-1(a), (d) (aid to dependent children: who it is payable for); s 38-4-2(a) (written notice of the action
+-- taken); s 38-4-4(a) (the duty to report new income or resources), (b) (federal Title IV-A standards govern; the 60-month
+-- limit of 42 U.S.C. 608(a)(7) is asked as a fact); s 38-4-5 (appeal for a fair hearing); s 38-11A-2(b), (c) (three job
+-- applications; quitting or refusing work); s 38-1-8 (drug felony offenders); r 660-2-2-.10, -.27, -.31, -.32 (need test,
+-- grant, $10 minimum, first-month proration).
+--
+-- Not in the deposited text, so INPUTS: the payment standard for the family's size (r 660-2-2-.31 says the Department set
+-- one; the attachment that held it was repealed in 2018, and no current table is deposited: ADMIN-POLICY), and the family's
+-- rounded total net countable income (the income disregards are DHR policy, not deposited).
+--
+-- Out: old age pensions, aid to the blind and to the permanently and totally disabled (s 38-4-1(b), (c), (e)); the State
+-- Supplementation rules (660-2-4); SNAP (federal: subjects/us/food-and-nutrition-act-of-2008); s 38-4-14, s 38-4-15
+-- (spending limits on benefits); sanctions under rr 660-2-2-.18 and -.23 (not deposited); recoupment.
+--
+-- BASELINE ENCODING, from the seat of the applicant (the parent or caretaker relative applying for a needy child).
+-- Expected values in the case file are hand-written. No pipeline, no independent test pass, no human gate. NOT ADVICE.
+
+§ `Alabama Family Assistance (TANF cash assistance)`
+
+§§ `s 38-4-1(d) -- for whom aid to dependent children is payable`
+
+DECLARE `Application` HAS
+    -- s 38-4-1(d): "a dependent child as defined in the Federal Social Security Act" (42 U.S.C. 606, as it stood; now
+    -- the Title IV-A rules): a borrowed term, asked as a fact
+    `the child is a dependent child under the Social Security Act`  IS A BOOLEAN
+    `the child makes his or her home in Alabama`                   IS A BOOLEAN
+    `property was disposed of to qualify`                          IS A BOOLEAN
+    `receiving another federally matched public assistance`        IS A BOOLEAN
+    -- s 38-4-1(a): no assistance to an inmate of a public institution (exceptions where federal matching allows)
+    `the child is an inmate of a public institution`               IS A BOOLEAN
+    -- s 38-11A-2(b)
+    `unsubsidized jobs applied for before completing the application` IS A NUMBER
+    `complying with the required work activities`                  IS A BOOLEAN
+    -- s 38-11A-2(c)
+    `quit or refused employment without good cause while receiving` IS A BOOLEAN
+    -- s 38-1-8
+    `convicted of a drug-related felony`                           IS A BOOLEAN
+    `completed the sentence`                                       IS A BOOLEAN
+    `satisfactorily serving probation`                             IS A BOOLEAN
+    -- s 38-4-4(b) and 42 U.S.C. 608(a)(7): months of assistance already received as an adult; a hardship exemption is
+    -- the state's to grant
+    `months of TANF assistance already received as an adult`       IS A NUMBER
+    `granted a hardship exemption from the 60-month limit`         IS A BOOLEAN
+    -- r 660-2-2-.27, -.31: both inputs (see the header)
+    `rounded total net countable income`                           IS A NUMBER
+    `payment standard for the family's size`                       IS A NUMBER
+
+§§ `rr 660-2-2-.10, -.27, -.32 -- need and the amount`
+
+-- r 660-2-2-.32: "The grant amount is computed by subtracting rounded total net income from the payment standard."
+GIVEN a IS AN `Application`
+GIVETH A NUMBER
+`the deficit` MEANS
+    a's `payment standard for the family's size` MINUS a's `rounded total net countable income`
+
+-- r 660-2-2-.10: "The minimum grant is $10." r 660-2-2-.27: the family "must not have total net countable income equal to
+-- or in excess of the appropriate payment standard subject to the minimum payment regulations of Rule No. 660-2-2-.10".
+-- Read as: the deficit must be at least $10 (NOTES.md finding 3).
+GIVEN a IS AN `Application`
+GIVETH A BOOLEAN
+DECIDE `needy under the payment standard` IF
+    `the deficit` a AT LEAST 10
+
+§§ `s 38-1-8 -- drug felony offenders`
+
+-- "a person convicted of a drug related felony who is otherwise ineligible ... shall be eligible for the aid upon
+-- completion of his or her sentence or if the person is satisfactorily serving a sentence of a period of probation".
+GIVEN a IS AN `Application`
+GIVETH A BOOLEAN
+DECIDE `not barred as a drug felony offender` IF
+        NOT (a's `convicted of a drug-related felony`)
+    OR  a's `completed the sentence`
+    OR  a's `satisfactorily serving probation`
+
+§§ `Eligibility`
+
+-- s 38-4-1(d)(1)-(4), s 38-4-1(a), s 38-11A-2(b), (c), s 38-1-8, s 38-4-4(b) with 42 U.S.C. 608(a)(7), r 660-2-2-.27.
+GIVEN a IS AN `Application`
+GIVETH A BOOLEAN
+DECIDE `eligible for Family Assistance` IF
+        a's `the child is a dependent child under the Social Security Act`
+    AND `needy under the payment standard` a
+    AND a's `the child makes his or her home in Alabama`
+    AND (NOT (a's `property was disposed of to qualify`))
+    AND (NOT (a's `receiving another federally matched public assistance`))
+    AND (NOT (a's `the child is an inmate of a public institution`))
+    AND a's `unsubsidized jobs applied for before completing the application` AT LEAST 3
+    AND a's `complying with the required work activities`
+    AND (NOT (a's `quit or refused employment without good cause while receiving`))
+    AND `not barred as a drug felony offender` a
+    AND (a's `months of TANF assistance already received as an adult` LESS THAN 60 OR a's `granted a hardship exemption from the 60-month limit`)
+
+-- r 660-2-2-.10: the deficit "is to be the grant amount subject to the minimum payment requirement, except when the
+-- initial payment is authorized for the month of the application and is prorated from the date the application was
+-- received". r 660-2-2-.32: the prorated amount is the full month's amount "multiplied by the ratio of the number of days in
+-- the month including and following the date of application to 30 days". So a prorated first payment is not held to the
+-- $10 minimum (finding 4). No rounding of the prorated amount is stated.
+GIVEN `date of application` IS A DATE
+GIVETH A NUMBER
+`the days in the month from the date of application` MEANS
+    `the first day of the next month` `date of application` MINUS `date of application`
+
+GIVEN `d` IS A DATE
+GIVETH A DATE
+`the first day of the next month` MEANS
+    IF DATE_MONTH `d` EQUALS 12
+    THEN Date 1 1 (DATE_YEAR `d` PLUS 1)
+    ELSE Date 1 (DATE_MONTH `d` PLUS 1) (DATE_YEAR `d`)
+
+GIVEN a IS AN `Application`
+GIVETH A NUMBER
+`the monthly grant` MEANS
+    IF `eligible for Family Assistance` a
+    THEN `the deficit` a
+    ELSE 0
+
+GIVEN a IS AN `Application`, `date of application` IS A DATE
+GIVETH A NUMBER
+`the grant for the month of application` MEANS
+    IF `eligible for Family Assistance` a
+    THEN `the deficit` a TIMES (`the days in the month from the date of application` `date of application` DIVIDED BY 30)
+    ELSE 0
+
+§§ `Duties and rights`
+
+DECLARE `Party` IS ONE OF
+    `the recipient`
+    `the applicant`
+    `the county director`
+
+DECLARE `Act` IS ONE OF
+    `notify the county department of the new income or resources`
+    `give the applicant written notice of the action taken`
+    `appeal to the state department for a fair hearing`
+
+-- s 38-4-4(a): if the recipient, spouse or cohabiting partner "shall become possessed of any income or resources in excess
+-- of that owned or being received at the date of the application, it shall be the duty of the recipient immediately to
+-- notify the county department". "Immediately" is taken as within one day (finding 6). The county department then must
+-- "continue, reduce or cancel" the grant "as the facts may warrant", subject to appeal.
+GIVEN `who` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the duty to report new income` `who` MEANS
+    PARTY `who`
+    MUST  `notify the county department of the new income or resources`
+    WITHIN 1
+    HENCE FULFILLED
+    LEST  BREACH BY `who` BECAUSE "s 38-4-4(a): new income or resources not reported immediately"
+
+-- s 38-4-2(a): "The county director shall give notice in writing to the applicant of the action taken on his application
+-- or any subsequent change in payments." No time is stated (the investigation is to be "promptly made").
+GIVEN `director` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the duty to give written notice` `director` MEANS
+    PARTY `director`
+    MUST  `give the applicant written notice of the action taken`
+
+-- s 38-4-5: a person denied the right to apply, whose application "is not acted upon with reasonable promptness or is
+-- denied", whose assistance is not granted promptly, or who deems the amount or terms unjust, "may appeal to the state
+-- department for a hearing". No time limit is in the statute (finding 7), so no WITHIN.
+GIVEN `who` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the right to a fair hearing` `who` MEANS
+    PARTY `who`
+    MAY   `appeal to the state department for a fair hearing`
+
+GIVEN `denied the right to apply` IS A BOOLEAN
+      `not acted upon with reasonable promptness` IS A BOOLEAN
+      `denied` IS A BOOLEAN
+      `not granted promptly after eligibility was established` IS A BOOLEAN
+      `the amount or terms deemed unjust` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `may appeal for a fair hearing` IF
+        `denied the right to apply`
+    OR  `not acted upon with reasonable promptness`
+    OR  `denied`
+    OR  `not granted promptly after eligibility was established`
+    OR  `the amount or terms deemed unjust`
+
+-- =====================================================================================================================
+§ `Questions for the applicant`
+-- The seat: the parent or caretaker relative who applies for Family Assistance for a needy child, and later the recipient.
+
+§§ `Can I get Family Assistance?`
+
+@export Is my family eligible for Alabama Family Assistance (TANF cash assistance) (Ala. Code ss 38-4-1(d), 38-11A-2, 38-1-8; Ala. Admin. Code r 660-2-2-.27)?
+GIVEN `my child is a dependent child` IS A BOOLEAN @desc Is your child a "dependent child" under the federal TANF rules (generally, a child under 18, or under 19 in secondary school, living with a parent or caretaker relative)?
+      `my child lives in Alabama` IS A BOOLEAN @desc Does your child make his or her home in Alabama?
+      `I gave away property to qualify` IS A BOOLEAN @desc Did you or the child give away or get rid of property in order to qualify?
+      `we get other federally matched assistance` IS A BOOLEAN @desc Is the child receiving any other public assistance that the federal government matches?
+      `my child is in a public institution` IS A BOOLEAN @desc Is the child an inmate of a public institution?
+      `jobs I applied for` IS A NUMBER @desc How many unsubsidized jobs did you apply for before completing the application?
+      `I am doing the required work activities` IS A BOOLEAN @desc Are you complying with the job search, education and other employment activities DHR requires?
+      `I quit or refused work without good cause` IS A BOOLEAN @desc While receiving assistance, did you quit a job or refuse employment without good cause?
+      `I have a drug felony conviction` IS A BOOLEAN @desc Have you been convicted of a drug-related felony?
+      `I have completed my sentence` IS A BOOLEAN @desc If so, have you completed your sentence?
+      `I am satisfactorily on probation` IS A BOOLEAN @desc If so, are you satisfactorily serving a period of probation?
+      `months of TANF I have had` IS A NUMBER @desc How many months of TANF assistance have you already received as an adult (in any state)?
+      `I have a hardship exemption` IS A BOOLEAN @desc Has DHR granted you a hardship exemption from the 60-month limit?
+      `our rounded net countable income` IS A NUMBER @desc Your assistance group's rounded total net countable monthly income, as DHR counts it, in US dollars
+      `the payment standard for my family` IS A NUMBER @desc DHR's monthly payment standard for a family of your size, in US dollars
+GIVETH A BOOLEAN
+`Is my family eligible for Family Assistance` MEANS
+    `eligible for Family Assistance` (`the application from` `my child is a dependent child` `my child lives in Alabama` `I gave away property to qualify` `we get other federally matched assistance` `my child is in a public institution` `jobs I applied for` `I am doing the required work activities` `I quit or refused work without good cause` `I have a drug felony conviction` `I have completed my sentence` `I am satisfactorily on probation` `months of TANF I have had` `I have a hardship exemption` `our rounded net countable income` `the payment standard for my family`)
+
+§§ `How much would I get?`
+
+@export How much Alabama Family Assistance would my family get for a full month (Ala. Admin. Code rr 660-2-2-.10, -.32)? 0 means not eligible.
+GIVEN `our rounded net countable income` IS A NUMBER @desc Your assistance group's rounded total net countable monthly income, as DHR counts it, in US dollars
+      `the payment standard for my family` IS A NUMBER @desc DHR's monthly payment standard for a family of your size, in US dollars
+      `we meet the other conditions` IS A BOOLEAN @desc Do you meet every other condition of eligibility (dependent child, Alabama home, three job applications, work activities, no disqualification, under 60 months)?
+GIVETH A NUMBER
+-- The other conditions are folded into the first argument; the remaining eligibility slots get fixed passing values.
+`How much Family Assistance would we get a month` MEANS
+    `the monthly grant` (`the application from` `we meet the other conditions` TRUE FALSE FALSE FALSE 3 TRUE FALSE FALSE FALSE FALSE 0 FALSE `our rounded net countable income` `the payment standard for my family`)
+
+@export How much Alabama Family Assistance would my family get for the month in which I applied (Ala. Admin. Code r 660-2-2-.32)?
+GIVEN `our rounded net countable income` IS A NUMBER @desc Your assistance group's rounded total net countable monthly income, as DHR counts it, in US dollars
+      `the payment standard for my family` IS A NUMBER @desc DHR's monthly payment standard for a family of your size, in US dollars
+      `we meet the other conditions` IS A BOOLEAN @desc Do you meet every other condition of eligibility?
+      `the day I applied` IS A DATE @desc The date DHR received your application
+GIVETH A NUMBER
+`How much would we get for the month I applied` MEANS
+    `the grant for the month of application` (`the application from` `we meet the other conditions` TRUE FALSE FALSE FALSE 3 TRUE FALSE FALSE FALSE FALSE 0 FALSE `our rounded net countable income` `the payment standard for my family`) `the day I applied`
+
+§§ `If DHR turns me down or I disagree`
+
+@export Can I appeal to the Alabama Department of Human Resources for a fair hearing about my assistance (Ala. Code s 38-4-5)?
+GIVEN `I was not allowed to apply` IS A BOOLEAN @desc Were you denied the right to apply?
+      `my application was not acted on promptly` IS A BOOLEAN @desc Was your application not acted on with reasonable promptness?
+      `my application was denied` IS A BOOLEAN @desc Was your application denied?
+      `payment did not start promptly` IS A BOOLEAN @desc Was assistance not granted promptly after you were found eligible?
+      `I think the amount is unjust` IS A BOOLEAN @desc Do you consider the amount or terms of your award, or a change to it, unjust?
+GIVETH A BOOLEAN
+`Can I appeal for a fair hearing` MEANS
+    `may appeal for a fair hearing` `I was not allowed to apply` `my application was not acted on promptly` `my application was denied` `payment did not start promptly` `I think the amount is unjust`
+
+-- Builds the application record from plain inputs, in the order of the record.
+GIVEN `dependent child` IS A BOOLEAN, `home in Alabama` IS A BOOLEAN, `disposed` IS A BOOLEAN, `other assistance` IS A BOOLEAN, `inmate` IS A BOOLEAN, `jobs` IS A NUMBER, `work activities` IS A BOOLEAN, `quit` IS A BOOLEAN, `felony` IS A BOOLEAN, `completed` IS A BOOLEAN, `probation` IS A BOOLEAN, `months` IS A NUMBER, `hardship` IS A BOOLEAN, `income` IS A NUMBER, `standard` IS A NUMBER
+GIVETH AN `Application`
+`the application from` MEANS
+    `Application` WITH
+        `the child is a dependent child under the Social Security Act`  IS `dependent child`
+        `the child makes his or her home in Alabama`                   IS `home in Alabama`
+        `property was disposed of to qualify`                          IS `disposed`
+        `receiving another federally matched public assistance`        IS `other assistance`
+        `the child is an inmate of a public institution`               IS `inmate`
+        `unsubsidized jobs applied for before completing the application` IS `jobs`
+        `complying with the required work activities`                  IS `work activities`
+        `quit or refused employment without good cause while receiving` IS `quit`
+        `convicted of a drug-related felony`                           IS `felony`
+        `completed the sentence`                                       IS `completed`
+        `satisfactorily serving probation`                             IS `probation`
+        `months of TANF assistance already received as an adult`       IS `months`
+        `granted a hardship exemption from the 60-month limit`         IS `hardship`
+        `rounded total net countable income`                           IS `income`
+        `payment standard for the family's size`                       IS `standard`
