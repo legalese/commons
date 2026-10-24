@@ -2,7 +2,7 @@
 
 California (US state) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-22 for the legislation governing twelve everyday topics. Each was checked against the California Legislative Information (leginfo.legislature.ca.gov), published by the Office of Legislative Counsel, California Codes; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text has been deposited and nothing is encoded yet.
+The subjects here were laid out on 2026-09-22 for the legislation governing twelve everyday topics. Each was checked against the California Legislative Information (leginfo.legislature.ca.gov), published by the Office of Legislative Counsel, California Codes; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text had been deposited then; see the later sections (text deposited 2026-10-20, two encodings 2026-10-24).
 
 **Licence category: open.** Statute text may be deposited and quoted in an encoding, subject to the attribution above.
 
@@ -76,3 +76,16 @@ The Transparency in Frontier Artificial Intelligence Act (SB 53, Stats. 2025, ch
 | same | `ca-time-computation-holidays-2026-10` | Code Civ. Proc. §§ 12b, 135; Gov. Code § 6700 (the holidays § 12a refers to; deposited, not computed) | 3 | 5,063 |
 
 Encoded as row `solo-2026-10` (critical safety incident reporting, frontier developer's seat; draft).
+
+## Encodings: tax and benefits (2026-10-24)
+
+Two baseline encodings, each from the seat of the individual and checked with the stable `l4` (1.6.98): 0 errors, 0 warnings, every assertion satisfied.
+
+| Encoding | Seat | Questions | Assertions |
+|---|---|---|---|
+| [`revenue-and-taxation-code-division-2-part-10-personal-income-tax/encodings/baseline-2026-10`](revenue-and-taxation-code-division-2-part-10-personal-income-tax/encodings/baseline-2026-10) | the individual taxpayer (full-year resident) | resident, exemption credits after the phase-out, renter's credit, tax owed for 2025 before the CalEITC and other credits | 30 |
+| [`unemployment-insurance-code-division-1-part-1-unemployment/encodings/baseline-2026-10`](unemployment-insurance-code-division-1-part-1-unemployment/encodings/baseline-2026-10) | the unemployed worker | weekly benefit amount, base-period test, maximum award, a week with wages, pension offset, weekly eligibility, disqualification for how the job ended, requalifying | 43 |
+
+**Annual figures deposited.** Most Personal Income Tax Law amounts are recomputed by the Franchise Tax Board each year, so the FTB's 2025 California Tax Rate Schedules and 2025 Form 540 booklet were deposited on 2026-10-24 (public domain under the State's conditions of use) in `revenue-and-taxation-code-division-2-part-10-personal-income-tax/registers/source-bundle/`, and the figures used are recorded in that subject's `registers/annual-figures.json`.
+
+**Not yet encoded:** the CalEITC and Young Child Tax Credit (they turn on a Budget Act adjustment factor and form FTB 3514, not deposited); CalWORKs maximum aid payments and SSP payment standards (recomputed annually, the current figures not deposited). The renter's credit for 2026 onward is $250/$500 only if a Budget Act bill says so, and otherwise stays $60/$120 (Rev. & Tax. Code 17053.5(k)).
