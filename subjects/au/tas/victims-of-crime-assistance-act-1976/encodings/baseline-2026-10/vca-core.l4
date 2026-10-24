@@ -1,0 +1,935 @@
+IMPORT prelude
+
+-- Victims of Crime Assistance Act 1976 (Tas), with the Victims of Crime Assistance Regulations 2021 (Tas).
+-- SEAT-NEUTRAL CORE. The rules use the Act's own actors and terms: "a person", "a primary victim", "a secondary
+-- victim", "a related victim", "the applicant", "the Commissioner" (a Criminal Injuries Compensation Commissioner, s
+-- 2A). The Commissioner is an official, so never a seat: what the Commissioner "shall not" or "must not" award is the
+-- outcome of a function for the person applying, and the Commissioner's duties with a period (to determine an
+-- application within 3 years, never to award more than the Act allows) are the party of a regulative rule. Awards are
+-- "within the discretion of the Commissioner" (s 5(1)), so the amount awarded is always an input; this module decides
+-- who may be awarded compensation, under which heads, what excludes it, the most that may be awarded and the time
+-- limits. The questions are in vca-seat.l4, which IMPORTs this module and restates no rule.
+--
+-- PROVISIONS COVERED. Act: s 2 (primary, secondary and related victim; offence; criminal conduct; injury; dependant);
+-- s 4(1)-(4) (basis of awards and the heads open to each kind of victim), with s 4(1A)-(1B) (funeral expenses); s
+-- 5(2), (3A), (4), (9) and (10) (conditions; law at lodgement; the greater of the maxima); s 6 (exclusions); s 6A
+-- (limits); s 6B (deductions); s 7(1A)-(1D), (8) and (9) (time limits); s 12 (conduct before commencement); s 40B.
+-- Regulations: reg 4 (prescribed maxima, indexed by the Hobart CPI) and reg 5 (what an application must contain, as
+-- a checklist).
+-- OUT: Part 3 (orders over property) and the victims fund (s 38); s 7A (recovery from the offender); procedure and
+-- publicity (s 7(2)-(7), (10), s 8); s 9 (other remedies), s 10, s 11 (the Fund); ss 2A, 3, 40A, 41 (machinery).
+--
+-- Edition: Act, consolidated version published 2023-12-08 (last amendment applied 27 November 2023, No. 32 of 2023);
+-- Regulations, consolidated version published 2021-12-14 (in effect from 15 December 2021); both current on
+-- www.legislation.tas.gov.au at point in time 2026-10-20. Based on material from the Tasmanian Legislation website at
+-- 20 October 2026 (CC BY 4.0, State of Tasmania). For the latest information on Tasmanian Government legislation please
+-- go to www.legislation.tas.gov.au.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Victims of Crime Assistance Act 1976 (Tas) -- seat-neutral core`
+
+§§ `Small helpers`
+
+GIVEN `a` IS A NUMBER
+      `b` IS A NUMBER
+GIVETH A NUMBER
+`the larger of` `a` `and` `b` MEANS IF `a` AT LEAST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER
+      `b` IS A NUMBER
+GIVETH A NUMBER
+`the smaller of` `a` `and` `b` MEANS IF `a` AT MOST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER
+GIVETH A NUMBER
+`not below zero` `a` MEANS `the larger of` 0 `and` `a`
+
+-- A one-item list if the condition holds, else an empty one.
+GIVEN `t`        IS A TYPE
+      `the item` IS A `t`
+      `when`     IS A BOOLEAN
+GIVETH A LIST OF `t`
+`the item` `included if` `when` MEANS IF `when` THEN LIST `the item` ELSE EMPTY
+
+-- The days in month `m` of year `y`.
+GIVEN `m` IS A NUMBER
+      `y` IS A NUMBER
+GIVETH A NUMBER
+`the days in month` `m` `of` `y` MEANS
+    DATE_SERIAL `the first of the next month` MINUS DATE_SERIAL (DATE_FROM_DMY 1 `m` `y`)
+    WHERE
+        `the first of the next month` MEANS
+            IF `m` EQUALS 12
+            THEN DATE_FROM_DMY 1 1 (`y` PLUS 1)
+            ELSE DATE_FROM_DMY 1 (`m` PLUS 1) `y`
+
+-- The same day `n` years later. READING: from 29 February to a year that has none, 28 February (the last day of that
+-- month). The Act does not say how a period of years is counted; the Acts Interpretation Act 1931, which may, is not
+-- deposited (NOTES.md finding 20).
+GIVEN `n`       IS A NUMBER
+      `the day` IS A DATE
+GIVETH A DATE
+`the date` `n` `years after` `the day` MEANS
+    DATE_FROM_DMY (`the smaller of` (DATE_DAY `the day`) `and` (`the days in month` (DATE_MONTH `the day`) `of` `the year`)) (DATE_MONTH `the day`) `the year`
+    WHERE
+        `the year` MEANS DATE_YEAR `the day` PLUS `n`
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is on or before` `a` `b` IF DATE_SERIAL `a` AT MOST DATE_SERIAL `b`
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is before` `a` `b` IF DATE_SERIAL `a` LESS THAN DATE_SERIAL `b`
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A NUMBER
+`the days from` `a` `to` `b` MEANS DATE_SERIAL `b` MINUS DATE_SERIAL `a`
+
+§§ `s 2 -- offence, criminal conduct and injury`
+
+-- s 2(1): "offence means an offence that involves violence by one person against another and includes a crime under
+-- section 127, 127A, 185, 186, 191A or 192 of the Criminal Code". s 4(1)(a): compensation may be awarded where a
+-- person is killed or suffers injury "as a result of the act of another person that constitutes an offence or would
+-- have constituted an offence, but for the fact that that other person had not attained a specified age, or was
+-- insane, or had other grounds of excuse or justification at law for his or her act". "criminal conduct means (a) an
+-- act referred to in section 4(1)(a); or (b) any act of a person referred to in section 4(1)(b) as a result of which
+-- an award may be made". "Violence", "excuse or justification at law" and the Criminal Code's crimes are borrowed
+-- terms: facts.
+DECLARE `Criminal conduct` HAS
+    `it is an act of another person that is an offence, or would have been but for the person's age, insanity or other excuse or justification at law` IS A BOOLEAN
+    `it involves violence by one person against another`                                IS A BOOLEAN
+    `it is a crime under section 127, 127A, 185, 186, 191A or 192 of the Criminal Code` IS A BOOLEAN
+    `the date of the offence`                                                           IS A DATE
+
+GIVEN `the conduct` IS A `Criminal conduct`
+GIVETH A BOOLEAN
+DECIDE `is an offence within s 2, or would have been but for an excuse (s 4(1)(a))` `the conduct` IF
+        `the conduct`'s `it is an act of another person that is an offence, or would have been but for the person's age, insanity or other excuse or justification at law`
+    AND (    `the conduct`'s `it involves violence by one person against another`
+          OR `the conduct`'s `it is a crime under section 127, 127A, 185, 186, 191A or 192 of the Criminal Code`)
+
+-- s 2(2): "references to an injury shall be construed as including references to any impairment of bodily or mental
+-- health, and also to becoming pregnant".
+GIVEN `an impairment of bodily or mental health` IS A BOOLEAN
+      `becoming pregnant`                        IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is an injury (s 2(2))` `an impairment of bodily or mental health` `becoming pregnant` IF
+    `an impairment of bodily or mental health` OR `becoming pregnant`
+
+§§ `s 2 -- primary, secondary and related victims`
+
+-- The relationships s 2 names. "Spouse", "guardian" and "personal relationship, within the meaning of the
+-- Relationships Act 2003" are borrowed terms: facts.
+DECLARE `Relationship to the primary victim` IS ONE OF
+    `none of the relationships s 2 names`
+    `spouse`
+    `child`
+    `stepchild`
+    `brother`
+    `sister`
+    `stepbrother`
+    `stepsister`
+    `parent`
+    `step-parent`
+    `guardian`
+    `in a personal relationship within the meaning of the Relationships Act 2003`
+
+DECLARE `The applicant` HAS
+    `the offence was committed against the applicant`                                    IS A BOOLEAN
+    `the applicant was injured in assisting a police officer to arrest a person or to prevent the commission of a crime` IS A BOOLEAN
+    `the applicant suffered an impairment of bodily or mental health as a result`        IS A BOOLEAN
+    `the applicant became pregnant as a result`                                          IS A BOOLEAN
+    `the applicant's injury resulted from witnessing the offence`                        IS A BOOLEAN
+    `the applicant's relationship to the primary victim`                                 IS A `Relationship to the primary victim`
+    `the applicant incurred, or is reasonably likely to incur, the primary victim's funeral expenses` IS A BOOLEAN
+    `the applicant was dependent on the primary victim`                                  IS A BOOLEAN
+
+DECLARE `The primary victim` HAS
+    `was under 18 years of age at the time of the offence` IS A BOOLEAN
+    `was killed or suffered injury as a result`            IS A BOOLEAN
+    `died as a result`                                     IS A BOOLEAN
+
+GIVEN `the applicant` IS A `The applicant`
+GIVETH A BOOLEAN
+DECIDE `the applicant suffered injury` `the applicant` IF
+    `is an injury (s 2(2))` (`the applicant`'s `the applicant suffered an impairment of bodily or mental health as a result`) (`the applicant`'s `the applicant became pregnant as a result`)
+
+GIVEN `r` IS A `Relationship to the primary victim`
+GIVETH A BOOLEAN
+DECIDE `is a parent, step-parent or guardian` `r` IF
+    `r` EQUALS `parent` OR `r` EQUALS `step-parent` OR `r` EQUALS `guardian`
+
+-- related victim (a): "the spouse or a child, stepchild, brother, sister, stepbrother or stepsister of a primary
+-- victim"; (c): "in a personal relationship, within the meaning of the Relationships Act 2003, with a primary victim".
+GIVEN `r` IS A `Relationship to the primary victim`
+GIVETH A BOOLEAN
+DECIDE `is a relationship in paragraph (a) or (c) of "related victim"` `r` IF
+        `r` EQUALS `spouse`
+    OR  `r` EQUALS `child`
+    OR  `r` EQUALS `stepchild`
+    OR  `r` EQUALS `brother`
+    OR  `r` EQUALS `sister`
+    OR  `r` EQUALS `stepbrother`
+    OR  `r` EQUALS `stepsister`
+    OR  `r` EQUALS `in a personal relationship within the meaning of the Relationships Act 2003`
+
+-- s 2: "primary victim means a person against whom an offence is committed". READING: an act that "would have
+-- constituted an offence" but for an excuse (s 4(1)(a)) is read in, or s 4(1)(a)'s extension would found no award at
+-- all, since ss 4(2)-(4) speak only of the three kinds of victim (NOTES.md finding 2).
+GIVEN `the conduct`   IS A `Criminal conduct`
+      `the applicant` IS A `The applicant`
+GIVETH A BOOLEAN
+DECIDE `is a primary victim (s 2)` `the conduct` `the applicant` IF
+        `is an offence within s 2, or would have been but for an excuse (s 4(1)(a))` `the conduct`
+    AND `the applicant`'s `the offence was committed against the applicant`
+
+-- s 2: "secondary victim means (a) a person who suffers injury as a result of witnessing an offence; or (b) a parent,
+-- step-parent or guardian of a primary victim who was under 18 years of age at the time of the offence."
+GIVEN `the conduct`   IS A `Criminal conduct`
+      `the applicant` IS A `The applicant`
+GIVETH A BOOLEAN
+DECIDE `is a secondary victim by witnessing (s 2, para (a))` `the conduct` `the applicant` IF
+        `is an offence within s 2, or would have been but for an excuse (s 4(1)(a))` `the conduct`
+    AND `the applicant suffered injury` `the applicant`
+    AND `the applicant`'s `the applicant's injury resulted from witnessing the offence`
+
+GIVEN `the conduct`        IS A `Criminal conduct`
+      `the applicant`      IS A `The applicant`
+      `the primary victim` IS A `The primary victim`
+GIVETH A BOOLEAN
+DECIDE `is a secondary victim as parent, step-parent or guardian (s 2, para (b))` `the conduct` `the applicant` `the primary victim` IF
+        `is an offence within s 2, or would have been but for an excuse (s 4(1)(a))` `the conduct`
+    AND `is a parent, step-parent or guardian` (`the applicant`'s `the applicant's relationship to the primary victim`)
+    AND `the primary victim`'s `was under 18 years of age at the time of the offence`
+
+-- s 2: "related victim means a person who is (a) the spouse or a child, stepchild, brother, sister, stepbrother or
+-- stepsister of a primary victim; or (b) a parent or step-parent of a primary victim who was over 18 years of age at
+-- the time of the offence; or (c) in a personal relationship ... with a primary victim". READING: "over 18 years of
+-- age" is read as not "under 18 years of age", so a parent of a primary victim aged 18 is a related victim and the two
+-- definitions leave no gap (NOTES.md finding 3). A guardian of a primary victim aged 18 or more is neither.
+GIVEN `the conduct`        IS A `Criminal conduct`
+      `the applicant`      IS A `The applicant`
+      `the primary victim` IS A `The primary victim`
+GIVETH A BOOLEAN
+DECIDE `is a related victim (s 2)` `the conduct` `the applicant` `the primary victim` IF
+        `is an offence within s 2, or would have been but for an excuse (s 4(1)(a))` `the conduct`
+    AND (    `is a relationship in paragraph (a) or (c) of "related victim"` `the relationship`
+          OR (    (`the relationship` EQUALS `parent` OR `the relationship` EQUALS `step-parent`)
+              AND (NOT (`the primary victim`'s `was under 18 years of age at the time of the offence`))))
+    WHERE
+        `the relationship` MEANS `the applicant`'s `the applicant's relationship to the primary victim`
+
+§§ `s 4(1)-(1B) -- who may be awarded compensation`
+
+-- The kinds of applicant the Act provides heads and a maximum for.
+DECLARE `Kind of applicant` IS ONE OF
+    `a primary victim (s 2)`
+    `a secondary victim injured by witnessing the offence (s 2, para (a))`
+    `a secondary victim as parent, step-parent or guardian of a primary victim under 18 (s 2, para (b))`
+    `a related victim (s 2)`
+    `a person who incurred a primary victim's funeral expenses (s 4(1A))`
+
+`every kind of applicant` MEANS
+    LIST `a primary victim (s 2)`,
+         `a secondary victim injured by witnessing the offence (s 2, para (a))`,
+         `a secondary victim as parent, step-parent or guardian of a primary victim under 18 (s 2, para (b))`,
+         `a related victim (s 2)`,
+         `a person who incurred a primary victim's funeral expenses (s 4(1A))`
+
+-- s 4(1B): funeral expenses "only ... where the criminal conduct, which resulted in the death of the primary victim,
+-- occurred on or after the day on which that subsection commenced". The day is from the deposit's history note on s
+-- 4(1A) and (1B): "inserted by No. 27 of 2015, s. 4, Applied:01 Nov 2015".
+`the day s 4(1A) and (1B) commenced` MEANS DATE_FROM_DMY 1 11 2015
+
+-- s 4(1): compensation "may be awarded under this Act where a person is killed or suffers injury" as a result of the
+-- offence (a), or in assisting a police officer (b). s 4(2): "In respect of the injury of a primary victim"; s 4(3)
+-- and (4): "In respect of the death or injury of a person" to a secondary or related victim. READING: for a secondary
+-- victim under para (b) and a related victim, the death or injury is the primary victim's or the applicant's own.
+-- s 4(1A): "in respect of the death of a primary victim as a result of criminal conduct, compensation may be awarded
+-- ... to a person for funeral expenses actually and reasonably incurred, or reasonably likely to be incurred, by the
+-- person in relation to the death of the primary victim". "A person" need not be a victim.
+GIVEN `the kind`           IS A `Kind of applicant`
+      `the conduct`        IS A `Criminal conduct`
+      `the applicant`      IS A `The applicant`
+      `the primary victim` IS A `The primary victim`
+GIVETH A BOOLEAN
+DECIDE `may be awarded compensation as` `the kind` `the conduct` `the applicant` `the primary victim` IF
+    CONSIDER `the kind`
+    WHEN `a primary victim (s 2)` THEN
+            `is a primary victim (s 2)` `the conduct` `the applicant`
+        AND `the applicant suffered injury` `the applicant`
+    WHEN `a secondary victim injured by witnessing the offence (s 2, para (a))` THEN
+        `is a secondary victim by witnessing (s 2, para (a))` `the conduct` `the applicant`
+    WHEN `a secondary victim as parent, step-parent or guardian of a primary victim under 18 (s 2, para (b))` THEN
+            `is a secondary victim as parent, step-parent or guardian (s 2, para (b))` `the conduct` `the applicant` `the primary victim`
+        AND `there is a death or injury in respect of which an award may be made`
+    WHEN `a related victim (s 2)` THEN
+            `is a related victim (s 2)` `the conduct` `the applicant` `the primary victim`
+        AND `there is a death or injury in respect of which an award may be made`
+    WHEN `a person who incurred a primary victim's funeral expenses (s 4(1A))` THEN
+            `is an offence within s 2, or would have been but for an excuse (s 4(1)(a))` `the conduct`
+        AND `the primary victim`'s `died as a result`
+        AND `the applicant`'s `the applicant incurred, or is reasonably likely to incur, the primary victim's funeral expenses`
+        AND (NOT (`is before` (`the conduct`'s `the date of the offence`) `the day s 4(1A) and (1B) commenced`))
+    WHERE
+        `there is a death or injury in respect of which an award may be made` MEANS
+            `the primary victim`'s `was killed or suffered injury as a result` OR `the applicant suffered injury` `the applicant`
+
+GIVEN `the conduct`        IS A `Criminal conduct`
+      `the applicant`      IS A `The applicant`
+      `the primary victim` IS A `The primary victim`
+GIVETH A LIST OF `Kind of applicant`
+`the kinds of applicant the person may be awarded compensation as` `the conduct` `the applicant` `the primary victim` MEANS
+    filter (GIVEN `k` YIELD `may be awarded compensation as` `k` `the conduct` `the applicant` `the primary victim`) `every kind of applicant`
+
+-- The answer to "may I be awarded compensation, and as which kind?". A person injured in assisting a police officer
+-- (s 4(1)(b)) against whom no offence was committed fits none of the kinds: ss 4(2)-(4) set heads only for primary,
+-- secondary and related victims, and reg 4 sets maxima only for them, so the encoding answers "not covered" (NOTES.md
+-- finding 1).
+DECLARE `Application answer` IS ONE OF
+    `may apply as` HAS `the kinds` IS A LIST OF `Kind of applicant`
+    `not covered: injured in assisting a police officer, with no offence against me (s 4(1)(b)); ss 4(2)-(4) and reg 4 set no heads or maximum for me`
+    `no award: there was no offence within s 2, nor an act that would have been one but for an excuse (s 4(1)(a))`
+    `no award: I am within s 2, but there is no death or injury in respect of which compensation may be awarded to me (s 4(1)-(4))`
+    `no award: funeral expenses may be awarded only for criminal conduct on or after 1 November 2015 (s 4(1B))`
+    `no award: I am not a primary, secondary or related victim, nor a person who incurred a primary victim's funeral expenses`
+
+GIVEN `the conduct`        IS A `Criminal conduct`
+      `the applicant`      IS A `The applicant`
+      `the primary victim` IS A `The primary victim`
+GIVETH AN `Application answer`
+`the s 4 answer for` `the conduct` `the applicant` `the primary victim` MEANS
+    IF NOT (null `the kinds`)
+    THEN `may apply as` `the kinds`
+    ELSE IF `the applicant`'s `the applicant was injured in assisting a police officer to arrest a person or to prevent the commission of a crime`
+         THEN `not covered: injured in assisting a police officer, with no offence against me (s 4(1)(b)); ss 4(2)-(4) and reg 4 set no heads or maximum for me`
+         ELSE IF NOT (`is an offence within s 2, or would have been but for an excuse (s 4(1)(a))` `the conduct`)
+              THEN `no award: there was no offence within s 2, nor an act that would have been one but for an excuse (s 4(1)(a))`
+              ELSE IF     `is a primary victim (s 2)` `the conduct` `the applicant`
+                       OR `is a secondary victim as parent, step-parent or guardian (s 2, para (b))` `the conduct` `the applicant` `the primary victim`
+                       OR `is a related victim (s 2)` `the conduct` `the applicant` `the primary victim`
+                   THEN `no award: I am within s 2, but there is no death or injury in respect of which compensation may be awarded to me (s 4(1)-(4))`
+                   ELSE IF     `the primary victim`'s `died as a result`
+                           AND `the applicant`'s `the applicant incurred, or is reasonably likely to incur, the primary victim's funeral expenses`
+                        THEN `no award: funeral expenses may be awarded only for criminal conduct on or after 1 November 2015 (s 4(1B))`
+                        ELSE `no award: I am not a primary, secondary or related victim, nor a person who incurred a primary victim's funeral expenses`
+    WHERE
+        `the kinds` MEANS `the kinds of applicant the person may be awarded compensation as` `the conduct` `the applicant` `the primary victim`
+
+§§ `s 4(1A)-(4) -- the heads of compensation`
+
+-- The matters for which compensation "may be awarded". The paragraphs are named in each comment.
+DECLARE `Head of compensation` IS ONE OF
+    -- s 4(2)(a), (3)(a), (4)(a)
+    `expenses actually and reasonably incurred as a result of my own injury`
+    -- s 4(3)(b) (a parent, step-parent or guardian only), (4)(b)
+    `expenses, other than funeral expenses, actually and reasonably incurred as a result of the death or injury of the primary victim`
+    -- s 4(2)(b) (primary victim only: it alone names dental services)
+    `the cost of medical, dental, psychological or counselling services I will require in the future`
+    -- s 4(3)(c), (4)(c)
+    `the cost of medical, psychological or counselling services I will require in the future`
+    -- s 4(2)(c), (3)(d)(i), (4)(d)(i)
+    `loss of wages or salary from my total or partial incapacity for work arising from my own injury`
+    -- s 4(3)(d)(ii), (4)(d)(ii)
+    `loss of wages or salary from my total or partial inability to work while providing care to the primary victim`
+    -- s 4(2)(d), (3)(e), (4)(e)
+    `pain and suffering arising from my own injury`
+    -- s 4(4)(f)
+    `financial loss, if the primary victim died and I was dependent on the primary victim`
+    -- s 4(2)(e), (3)(f), (4)(g)
+    `expenses reasonably incurred in claiming compensation`
+    -- s 4(1A)
+    `funeral expenses actually and reasonably incurred, or reasonably likely to be incurred, in relation to the death of the primary victim`
+
+-- s 4(4)(f): "if the primary victim dies, financial loss if the related victim was dependent on the primary victim".
+-- READING: "dependent" is the adjective, not the s 2 term "dependant" ("wholly or mainly dependent"), which since the
+-- 2005 substitution of s 4 no provision in Part 2 uses; dependence is a fact (NOTES.md finding 5).
+GIVEN `the kind`           IS A `Kind of applicant`
+      `the applicant`      IS A `The applicant`
+      `the primary victim` IS A `The primary victim`
+GIVETH A LIST OF `Head of compensation`
+`the heads open to` `the kind` `the applicant` `the primary victim` MEANS
+    CONSIDER `the kind`
+    WHEN `a primary victim (s 2)` THEN
+        -- s 4(2)(a)-(e)
+        LIST `expenses actually and reasonably incurred as a result of my own injury`,
+             `the cost of medical, dental, psychological or counselling services I will require in the future`,
+             `loss of wages or salary from my total or partial incapacity for work arising from my own injury`,
+             `pain and suffering arising from my own injury`,
+             `expenses reasonably incurred in claiming compensation`
+    WHEN `a secondary victim injured by witnessing the offence (s 2, para (a))` THEN `the s 4(3) heads`
+    WHEN `a secondary victim as parent, step-parent or guardian of a primary victim under 18 (s 2, para (b))` THEN `the s 4(3) heads`
+    WHEN `a related victim (s 2)` THEN
+        -- s 4(4)(a)-(g)
+        concat (LIST (`expenses actually and reasonably incurred as a result of my own injury` `included if` `my own injury`),
+                     (LIST `expenses, other than funeral expenses, actually and reasonably incurred as a result of the death or injury of the primary victim`),
+                     (LIST `the cost of medical, psychological or counselling services I will require in the future`),
+                     (`loss of wages or salary from my total or partial incapacity for work arising from my own injury` `included if` `my own injury`),
+                     (LIST `loss of wages or salary from my total or partial inability to work while providing care to the primary victim`),
+                     (`pain and suffering arising from my own injury` `included if` `my own injury`),
+                     (`financial loss, if the primary victim died and I was dependent on the primary victim` `included if` (`the primary victim`'s `died as a result` AND `the applicant`'s `the applicant was dependent on the primary victim`)),
+                     (LIST `expenses reasonably incurred in claiming compensation`))
+    WHEN `a person who incurred a primary victim's funeral expenses (s 4(1A))` THEN
+        LIST `funeral expenses actually and reasonably incurred, or reasonably likely to be incurred, in relation to the death of the primary victim`
+    WHERE
+        `my own injury` MEANS `the applicant suffered injury` `the applicant`
+        -- s 4(3)(a)-(f). (b): "if the secondary victim is a parent, step-parent or guardian of the primary victim,
+        -- expenses (other than funeral expenses) actually and reasonably incurred ... as a result of the death or injury
+        -- of the primary victim". (b) sets no age, so a secondary victim by witnessing who is a parent of an adult
+        -- primary victim has it too.
+        `the s 4(3) heads` MEANS
+            concat (LIST (`expenses actually and reasonably incurred as a result of my own injury` `included if` `my own injury`),
+                         (`expenses, other than funeral expenses, actually and reasonably incurred as a result of the death or injury of the primary victim` `included if` (`is a parent, step-parent or guardian` (`the applicant`'s `the applicant's relationship to the primary victim`))),
+                         (LIST `the cost of medical, psychological or counselling services I will require in the future`),
+                         (`loss of wages or salary from my total or partial incapacity for work arising from my own injury` `included if` `my own injury`),
+                         (LIST `loss of wages or salary from my total or partial inability to work while providing care to the primary victim`),
+                         (`pain and suffering arising from my own injury` `included if` `my own injury`),
+                         (LIST `expenses reasonably incurred in claiming compensation`))
+
+-- s 6A(4): "Any amount awarded under section 4(2)(b), section 4(3)(c) or section 4(4)(c) may be paid in addition to
+-- the prescribed maximum if the Commissioner so determines."
+GIVEN `the head` IS A `Head of compensation`
+GIVETH A BOOLEAN
+DECIDE `may be paid in addition to the prescribed maximum (s 6A(4))` `the head` IF
+        `the head` EQUALS `the cost of medical, dental, psychological or counselling services I will require in the future`
+    OR  `the head` EQUALS `the cost of medical, psychological or counselling services I will require in the future`
+
+§§ `ss 5(2), 5(3A), 6 and 12 -- when compensation is not to be awarded`
+
+-- s 6(1): "Compensation must not be awarded under this Act (a) in respect of a death or injury caused by or arising out
+-- of the use of a motor vehicle within the meaning of the Vehicle and Traffic Act 1999; or (b) by way of exemplary or
+-- vindictive damages or by way of aggravated damages; or (c) for loss of, or damage to, property; or (d) in relation to
+-- any matter referred to in section 4(2), (3) or (4) for which compensation has been paid, or is payable, under a
+-- compensation law; or (e) for expenses claimable (i) under Part II of the Health Insurance Act 1973 of the
+-- Commonwealth; or (ii) from a health benefits organisation registered under the National Health Act 1953 of the
+-- Commonwealth." (2): "compensation law means any other law of the State or any law of another State, a Territory of
+-- the Commonwealth or the Commonwealth that relates to the payment of compensation by an employer in respect of the
+-- death or injury of persons employed by the employer". "Motor vehicle" (Vehicle and Traffic Act 1999), what is paid
+-- or payable under a compensation law, and what is claimable from Medicare or a fund are facts.
+-- s 5(2): the Commissioner "shall not make an award ... unless he is satisfied, on a balance of probabilities, that
+-- the death or injury was the result of criminal conduct". s 5(3A): "shall not make an award to a person if that
+-- person has failed to do any act or thing which, in the opinion of the Commissioner, that person should reasonably
+-- have done to assist in the identification, apprehension, or prosecution of any person alleged to have committed the
+-- criminal conduct". s 12: "No award shall be made in respect of criminal conduct occurring before the commencement
+-- of this Act" (a date fixed by proclamation, s 1(2), not in the deposit: a fact). The Commissioner's satisfaction
+-- and opinion are inputs, so the answer is conditional on them.
+DECLARE `Exclusion facts` HAS
+    `the Commissioner is satisfied on the balance of probabilities that the death or injury was the result of criminal conduct` IS A BOOLEAN
+    `in the Commissioner's opinion the applicant failed to do what they reasonably should have to assist in the identification, apprehension or prosecution of the offender` IS A BOOLEAN
+    `the death or injury was caused by or arose out of the use of a motor vehicle`  IS A BOOLEAN
+    `exemplary, vindictive or aggravated damages are claimed`                        IS A BOOLEAN
+    `loss of or damage to property is claimed`                                       IS A BOOLEAN
+    `the heads claimed`                                                              IS A LIST OF `Head of compensation`
+    `the heads paid, or payable, under a compensation law`                           IS A LIST OF `Head of compensation`
+    `expenses claimable under Medicare or from a registered health benefits organisation are claimed` IS A BOOLEAN
+    `the criminal conduct occurred before the Act commenced`                         IS A BOOLEAN
+
+DECLARE `Exclusion` IS ONE OF
+    `s 5(2): the Commissioner is not satisfied, on the balance of probabilities, that the death or injury was the result of criminal conduct`
+    `s 5(3A): I failed to do what I reasonably should have done to help identify, apprehend or prosecute the offender`
+    `s 6(1)(a): the death or injury was caused by or arose out of the use of a motor vehicle`
+    `s 6(1)(b): exemplary, vindictive or aggravated damages`
+    `s 6(1)(c): loss of or damage to property`
+    `s 6(1)(d): matters paid, or payable, under a workers compensation law`
+    `s 6(1)(e): expenses claimable under Medicare or from a registered health fund`
+    `s 12: criminal conduct before the Act commenced`
+
+DECLARE `Exclusion answer` IS ONE OF
+    `not excluded`
+    `partly excluded` HAS
+        `the heads still open` IS A LIST OF `Head of compensation`
+        `the exclusions`       IS A LIST OF `Exclusion`
+    `wholly excluded` HAS
+        `the exclusions that apply` IS A LIST OF `Exclusion`
+
+-- s 6(1)(d) excludes only "any matter referred to in section 4(2), (3) or (4)" for which compensation has been paid or
+-- is payable. Funeral expenses are a s 4(1A) matter, so (d) does not reach them (NOTES.md finding 7).
+GIVEN `the facts` IS AN `Exclusion facts`
+GIVETH A LIST OF `Head of compensation`
+`the heads still open after s 6(1)(d)` `the facts` MEANS
+    filter (GIVEN `h` YIELD     `h` EQUALS `funeral expenses actually and reasonably incurred, or reasonably likely to be incurred, in relation to the death of the primary victim`
+                            OR  (NOT (elem `h` (`the facts`'s `the heads paid, or payable, under a compensation law`))))
+           (`the facts`'s `the heads claimed`)
+
+GIVEN `the facts` IS AN `Exclusion facts`
+GIVETH AN `Exclusion answer`
+`the s 5, s 6 and s 12 answer for` `the facts` MEANS
+    IF NOT (null `the bars on the whole claim`)
+    THEN `wholly excluded` (concat (LIST `the bars on the whole claim`, `the bars on parts`))
+    ELSE IF NOT (null `the bars on parts`)
+         THEN `partly excluded` `the heads left` `the bars on parts`
+         ELSE `not excluded`
+    WHERE
+        `the heads left` MEANS `the heads still open after s 6(1)(d)` `the facts`
+        `every head claimed is excluded by s 6(1)(d)` MEANS
+            (NOT (null (`the facts`'s `the heads claimed`))) AND null `the heads left`
+        `some head claimed is excluded by s 6(1)(d)` MEANS
+            count `the heads left` LESS THAN count (`the facts`'s `the heads claimed`)
+        `the bars on the whole claim` MEANS
+            concat (LIST (`s 5(2): the Commissioner is not satisfied, on the balance of probabilities, that the death or injury was the result of criminal conduct` `included if` (NOT (`the facts`'s `the Commissioner is satisfied on the balance of probabilities that the death or injury was the result of criminal conduct`))),
+                         (`s 5(3A): I failed to do what I reasonably should have done to help identify, apprehend or prosecute the offender` `included if` (`the facts`'s `in the Commissioner's opinion the applicant failed to do what they reasonably should have to assist in the identification, apprehension or prosecution of the offender`)),
+                         (`s 6(1)(a): the death or injury was caused by or arose out of the use of a motor vehicle` `included if` (`the facts`'s `the death or injury was caused by or arose out of the use of a motor vehicle`)),
+                         (`s 6(1)(d): matters paid, or payable, under a workers compensation law` `included if` `every head claimed is excluded by s 6(1)(d)`),
+                         (`s 12: criminal conduct before the Act commenced` `included if` (`the facts`'s `the criminal conduct occurred before the Act commenced`)))
+        `the bars on parts` MEANS
+            concat (LIST (`s 6(1)(b): exemplary, vindictive or aggravated damages` `included if` (`the facts`'s `exemplary, vindictive or aggravated damages are claimed`)),
+                         (`s 6(1)(c): loss of or damage to property` `included if` (`the facts`'s `loss of or damage to property is claimed`)),
+                         (`s 6(1)(d): matters paid, or payable, under a workers compensation law` `included if` (`some head claimed is excluded by s 6(1)(d)` AND (NOT `every head claimed is excluded by s 6(1)(d)`))),
+                         (`s 6(1)(e): expenses claimable under Medicare or from a registered health fund` `included if` (`the facts`'s `expenses claimable under Medicare or from a registered health benefits organisation are claimed`)))
+
+-- Where an excluded matter is to be claimed instead. s 6(1)(a) points to the use of a motor vehicle, which the Motor
+-- Accidents (Liabilities and Compensation) Act 1973 covers (the MAIB scheme); s 6(1)(d) to an employer's compensation
+-- law (in Tasmania, the Workers Rehabilitation and Compensation Act 1988); s 6(1)(e) to Medicare (Health Insurance Act
+-- 1973, Part II) or a registered health fund. This Act names none of the other schemes as the place to claim; the
+-- answer is the scheme the excluded matter points to, not a finding that the scheme will pay.
+DECLARE `Other scheme` IS ONE OF
+    `the MAIB scheme under the Motor Accidents (Liabilities and Compensation) Act 1973`
+    `workers compensation under the compensation law that pays or must pay it`
+    `Medicare or the registered health fund`
+
+GIVEN `the facts` IS AN `Exclusion facts`
+GIVETH A LIST OF `Other scheme`
+`the other schemes the exclusions point to` `the facts` MEANS
+    concat (LIST (`the MAIB scheme under the Motor Accidents (Liabilities and Compensation) Act 1973` `included if` (`the facts`'s `the death or injury was caused by or arose out of the use of a motor vehicle`)),
+                 (`workers compensation under the compensation law that pays or must pay it` `included if` (count (`the heads still open after s 6(1)(d)` `the facts`) LESS THAN count (`the facts`'s `the heads claimed`))),
+                 (`Medicare or the registered health fund` `included if` (`the facts`'s `expenses claimable under Medicare or from a registered health benefits organisation are claimed`)))
+
+-- True when nothing in ss 5(2), 5(3A), 6(1)(a), 6(1)(d) or 12 bars the whole claim.
+GIVEN `the facts` IS AN `Exclusion facts`
+GIVETH A BOOLEAN
+DECIDE `an award may be made at all` `the facts` IF
+    CONSIDER `the s 5, s 6 and s 12 answer for` `the facts`
+    WHEN `wholly excluded` `x` THEN FALSE
+    OTHERWISE TRUE
+
+§§ `s 5(4) -- a civil remedy`
+
+-- s 5(4): the Commissioner "may refuse to make an award to any person in respect of any criminal conduct if he is
+-- satisfied that that person has, or had, an adequate remedy in civil proceedings in respect of that conduct, and in
+-- determining the amount of any such award he shall take into account any amount recovered by or for the benefit of
+-- that person, by way of damages or compensation arising from the criminal conduct, or would, in the opinion of the
+-- Commissioner, be likely to be so recovered, if proper action was taken". How it is "taken into account" is not
+-- said: not necessarily dollar for dollar, so the encoding reports the amount and does not deduct it.
+DECLARE `Civil remedy answer` HAS
+    `the Commissioner may refuse an award because I have, or had, an adequate civil remedy (s 5(4))` IS A BOOLEAN
+    `the damages or compensation the Commissioner must take into account in fixing the amount (s 5(4))` IS A NUMBER
+
+GIVEN `the Commissioner is satisfied the person has, or had, an adequate remedy in civil proceedings` IS A BOOLEAN
+      `the amount recovered, or that in the Commissioner's opinion would likely be recovered by proper action` IS A NUMBER
+GIVETH A `Civil remedy answer`
+`the s 5(4) answer for` `the Commissioner is satisfied the person has, or had, an adequate remedy in civil proceedings` `the amount recovered, or that in the Commissioner's opinion would likely be recovered by proper action` MEANS
+    `Civil remedy answer` WITH
+        `the Commissioner may refuse an award because I have, or had, an adequate civil remedy (s 5(4))` IS `the Commissioner is satisfied the person has, or had, an adequate remedy in civil proceedings`
+        `the damages or compensation the Commissioner must take into account in fixing the amount (s 5(4))` IS `not below zero` `the amount recovered, or that in the Commissioner's opinion would likely be recovered by proper action`
+
+§§ `reg 4 -- the prescribed maxima, indexed by the Hobart CPI`
+
+-- reg 4(2)(a): "the prescribed maximum for the financial year ending on 30 June 2022 is (i) $30 000 for a primary victim
+-- where there is a single offence; and (ii) $50 000 for a primary victim where there is more than one offence; and
+-- (iii) $20 000 for a secondary victim; and (iv) $10 000 for a related victim". reg 4(3)(a): for s 6A(1A) (funeral
+-- expenses), "$10 000".
+DECLARE `Class of maximum` IS ONE OF
+    `a primary victim where there is a single offence (reg 4(2)(a)(i))`
+    `a primary victim where there is more than one offence (reg 4(2)(a)(ii))`
+    `a secondary victim (reg 4(2)(a)(iii))`
+    `a related victim (reg 4(2)(a)(iv))`
+    `funeral expenses (reg 4(3))`
+
+GIVEN `the class` IS A `Class of maximum`
+GIVETH A NUMBER
+`the prescribed maximum for the financial year ending 30 June 2022 for` `the class` MEANS
+    CONSIDER `the class`
+    WHEN `a primary victim where there is a single offence (reg 4(2)(a)(i))`        THEN 30000
+    WHEN `a primary victim where there is more than one offence (reg 4(2)(a)(ii))` THEN 50000
+    WHEN `a secondary victim (reg 4(2)(a)(iii))`                                    THEN 20000
+    WHEN `a related victim (reg 4(2)(a)(iv))`                                       THEN 10000
+    WHEN `funeral expenses (reg 4(3))`                                              THEN 10000
+
+-- s 6A(2)-(3): "particular criminal conduct" is "(a) a single offence; or (b) a series of offences committed by the
+-- same offender; or (c) a series of offences committed simultaneously or consecutively by offenders acting in concert",
+-- and "A different maximum amount may be prescribed for a primary victim in respect of a series of offences". A
+-- secondary or related victim has one maximum whether there was one offence or a series.
+GIVEN `the kind`                                                 IS A `Kind of applicant`
+      `the number of offences in the particular criminal conduct` IS A NUMBER
+GIVETH A `Class of maximum`
+`the class of maximum for` `the kind` `with` `the number of offences in the particular criminal conduct` MEANS
+    CONSIDER `the kind`
+    WHEN `a primary victim (s 2)` THEN
+        IF `the number of offences in the particular criminal conduct` GREATER THAN 1
+        THEN `a primary victim where there is more than one offence (reg 4(2)(a)(ii))`
+        ELSE `a primary victim where there is a single offence (reg 4(2)(a)(i))`
+    WHEN `a secondary victim injured by witnessing the offence (s 2, para (a))` THEN `a secondary victim (reg 4(2)(a)(iii))`
+    WHEN `a secondary victim as parent, step-parent or guardian of a primary victim under 18 (s 2, para (b))` THEN `a secondary victim (reg 4(2)(a)(iii))`
+    WHEN `a related victim (s 2)` THEN `a related victim (reg 4(2)(a)(iv))`
+    WHEN `a person who incurred a primary victim's funeral expenses (s 4(1A))` THEN `funeral expenses (reg 4(3))`
+
+-- A financial year is named here by the calendar year in which it starts on 1 July: the financial year ending on 30
+-- June 2022 is 2021.
+GIVEN `the day` IS A DATE
+GIVETH A NUMBER
+`the financial year starting in` `the day` MEANS
+    IF DATE_MONTH `the day` AT LEAST 7 THEN DATE_YEAR `the day` ELSE DATE_YEAR `the day` MINUS 1
+
+-- reg 4(1): "CPI figure for Hobart means the Consumer Price Index (All Groups) Number for Hobart published by the
+-- Australian Statistician"; "percentage change, in relation to a financial year, means the percentage change between
+-- (a) the average of the CPI figures for Hobart in respect of the 4 quarters ending on 31 December immediately
+-- preceding the financial year; and (b) the average of the CPI figures for Hobart in respect of the 4 quarters ending on
+-- 31 December immediately preceding the 4 quarters referred to in paragraph (a)". The figures are not in the deposit,
+-- so they are an input: a list of the quarterly figures, the March quarter 2020 first, then June, September and
+-- December 2020, and so on. The first subsequent financial year (1 July 2022) needs the 2020 and 2021 quarters.
+`the first calendar year of the CPI figures` MEANS 2020
+
+GIVEN `the year`    IS A NUMBER
+      `the figures` IS A LIST OF NUMBER
+GIVETH A BOOLEAN
+DECIDE `the figures cover the 4 quarters ending 31 December` `the year` `in` `the figures` IF
+        `the year` AT LEAST `the first calendar year of the CPI figures`
+    AND count `the figures` AT LEAST ((`the year` MINUS `the first calendar year of the CPI figures` PLUS 1) TIMES 4)
+
+GIVEN `the year`    IS A NUMBER
+      `the figures` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the average Hobart CPI for the 4 quarters ending 31 December` `the year` `from` `the figures` MEANS
+    (at `the figures` `the first` PLUS at `the figures` (`the first` PLUS 1) PLUS at `the figures` (`the first` PLUS 2) PLUS at `the figures` (`the first` PLUS 3)) DIVIDED BY 4
+    WHERE
+        `the first` MEANS (`the year` MINUS `the first calendar year of the CPI figures`) TIMES 4
+
+-- The percentage change for the financial year starting on 1 July of `the year`: (a) is the calendar year before it,
+-- (b) the calendar year before that. READING: the change from (b) to (a), as a percentage of (b); reg 4 says neither
+-- how to round it nor how to round the maximum, so neither is rounded (NOTES.md finding 15).
+GIVEN `the year`    IS A NUMBER
+      `the figures` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the percentage change for the financial year starting 1 July` `the year` `from` `the figures` MEANS
+    ((`the later average` MINUS `the earlier average`) DIVIDED BY `the earlier average`) TIMES 100
+    WHERE
+        `the later average`   MEANS `the average Hobart CPI for the 4 quarters ending 31 December` (`the year` MINUS 1) `from` `the figures`
+        `the earlier average` MEANS `the average Hobart CPI for the 4 quarters ending 31 December` (`the year` MINUS 2) `from` `the figures`
+
+-- reg 4(2)(b) and (3)(b): for a subsequent financial year, "(i) the amount calculated by increasing the prescribed
+-- maximum ... for the immediately preceding financial year by the percentage change for the subsequent financial year;
+-- or (ii) if a prescribed maximum calculated under subparagraph (i) for a financial year is less than the prescribed
+-- maximum for the immediately preceding financial year, the prescribed maximum for the immediately preceding financial
+-- year." So a maximum never falls; and after a fall in the CPI the next rise is applied to the maximum that was held,
+-- not to the one that would have followed the CPI (NOTES.md finding 13). Needs the figures through the December
+-- quarter before the year.
+GIVEN `the class`   IS A `Class of maximum`
+      `the year`    IS A NUMBER
+      `the figures` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the prescribed maximum for` `the class` `in the financial year starting 1 July` `the year` `from` `the figures` MEANS
+    IF `the year` AT MOST 2021
+    THEN `the prescribed maximum for the financial year ending 30 June 2022 for` `the class`
+    ELSE IF `the increased amount` LESS THAN `the preceding maximum`
+         THEN `the preceding maximum`
+         ELSE `the increased amount`
+    WHERE
+        `the preceding maximum` MEANS `the prescribed maximum for` `the class` `in the financial year starting 1 July` (`the year` MINUS 1) `from` `the figures`
+        `the increased amount`  MEANS `the preceding maximum` TIMES (1 PLUS (`the percentage change for the financial year starting 1 July` `the year` `from` `the figures` DIVIDED BY 100))
+
+-- The Regulations took effect on 15 December 2021 (reg 2). A maximum in force before then was set by earlier
+-- regulations, which are not deposited.
+`the day the Regulations took effect` MEANS DATE_FROM_DMY 15 12 2021
+
+GIVEN `the day`     IS A DATE
+      `the figures` IS A LIST OF NUMBER
+GIVETH A BOOLEAN
+DECIDE `the figures reach the financial year of` `the day` `in` `the figures` IF
+        `the financial year starting in` `the day` AT MOST 2021
+    OR  `the figures cover the 4 quarters ending 31 December` (`the financial year starting in` `the day` MINUS 1) `in` `the figures`
+
+GIVEN `the class`   IS A `Class of maximum`
+      `the day`     IS A DATE
+      `the figures` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the prescribed maximum for` `the class` `on` `the day` `from` `the figures` MEANS
+    `the prescribed maximum for` `the class` `in the financial year starting 1 July` (`the financial year starting in` `the day`) `from` `the figures`
+
+-- s 5(9): "this Act, as in force at the time the claim was lodged, applies". s 5(10): "Despite subsection (9), the
+-- total amount that may be awarded to a person in respect of an application ... is the greater of (a) the relevant
+-- prescribed maximum under section 6A, that applied to the person in respect of the application, at the time the
+-- application was lodged; (b) the relevant prescribed maximum ... at the time the application was determined by the
+-- Commissioner." s 40B(1): the 2023 amendments (which inserted s 5(10)) apply to every determination, whenever the
+-- application was made. s 6A(1): "the total amount ... awarded to a primary victim, a secondary victim or a related
+-- victim in respect of any particular criminal conduct must not exceed the prescribed maximum"; (1A)-(1B): the
+-- funeral maximum is for "the total amount ... awarded to all such persons taken together". So what has already been
+-- awarded for the same criminal conduct (to the person; for a funeral, to anyone) comes off.
+DECLARE `Maximum answer` IS ONE OF
+    `the most that may be awarded` HAS
+        `dollars` IS A NUMBER
+        `future medical, dental, psychological or counselling costs may be paid on top, if the Commissioner so determines (s 6A(4))` IS A BOOLEAN
+    `at least this much: the maximum when I lodged, before 15 December 2021, was set by earlier regulations that are not deposited (s 5(10)(a))` HAS
+        `dollars` IS A NUMBER
+        `future medical, dental, psychological or counselling costs may be paid on top, if the Commissioner so determines (s 6A(4))` IS A BOOLEAN
+    `not covered: determined before 15 December 2021, under regulations that are not deposited`
+    `not covered: the Hobart CPI figures given do not reach the financial year needed`
+
+GIVEN `the kind`                                                  IS A `Kind of applicant`
+      `the number of offences in the particular criminal conduct` IS A NUMBER
+      `the date the application was lodged`                       IS A DATE
+      `the date the application was, or will be, determined`      IS A DATE
+      `the figures`                                               IS A LIST OF NUMBER
+      `the amount already awarded for the same criminal conduct`  IS A NUMBER
+GIVETH A `Maximum answer`
+`the ss 5(10) and 6A answer for` `the kind` `the number of offences in the particular criminal conduct` `the date the application was lodged` `the date the application was, or will be, determined` `the figures` `the amount already awarded for the same criminal conduct` MEANS
+    IF `is before` `the date the application was, or will be, determined` `the day the Regulations took effect`
+    THEN `not covered: determined before 15 December 2021, under regulations that are not deposited`
+    ELSE IF     (NOT (`the figures reach the financial year of` `the date the application was, or will be, determined` `in` `the figures`))
+            OR  (NOT (`the figures reach the financial year of` `the date the application was lodged` `in` `the figures`))
+         THEN `not covered: the Hobart CPI figures given do not reach the financial year needed`
+         ELSE IF `is before` `the date the application was lodged` `the day the Regulations took effect`
+              THEN `at least this much: the maximum when I lodged, before 15 December 2021, was set by earlier regulations that are not deposited (s 5(10)(a))` (`left after` `the maximum at determination`) `on top`
+              ELSE `the most that may be awarded` (`left after` (`the larger of` `the maximum at lodgement` `and` `the maximum at determination`)) `on top`
+    WHERE
+        `the class` MEANS `the class of maximum for` `the kind` `with` `the number of offences in the particular criminal conduct`
+        `the maximum at lodgement`    MEANS `the prescribed maximum for` `the class` `on` `the date the application was lodged` `from` `the figures`
+        `the maximum at determination` MEANS `the prescribed maximum for` `the class` `on` `the date the application was, or will be, determined` `from` `the figures`
+        `on top` MEANS NOT (`the class` EQUALS `funeral expenses (reg 4(3))`)
+        GIVEN `m` IS A NUMBER
+        GIVETH A NUMBER
+        `left after` `m` MEANS `not below zero` (`m` MINUS `the amount already awarded for the same criminal conduct`)
+
+-- The dollar figure of a maximum answer, 0 where not covered.
+GIVEN `the answer` IS A `Maximum answer`
+GIVETH A NUMBER
+`the dollars in` `the answer` MEANS
+    CONSIDER `the answer`
+    WHEN `the most that may be awarded` `d` `f` THEN `d`
+    WHEN `at least this much: the maximum when I lodged, before 15 December 2021, was set by earlier regulations that are not deposited (s 5(10)(a))` `d` `f` THEN `d`
+    OTHERWISE 0
+
+§§ `ss 6A(4) and 6B -- what is paid on an award`
+
+-- s 6A(4): future medical, dental, psychological or counselling costs "may be paid in addition to the prescribed
+-- maximum if the Commissioner so determines". s 6B(1): "The Commissioner may deduct from an award to a person any one or
+-- more of the following amounts: (a) any pecuniary penalty imposed on the person and owing to the Crown; (b) any
+-- compensation levy payable by the person under the Victims of Crime Compensation Act 1994; (c) any unpaid
+-- compensation order made against the person under section 68 of the Sentencing Act 1997; (d) any compensation order
+-- made against the person under section 7A of this Act." (2): each is "treated as paid" or "discharged" to the extent
+-- of the deduction. The deduction is from "an award", so after the cap (NOTES.md finding 18). Whether to deduct is the
+-- Commissioner's choice: the amount chosen is an input.
+DECLARE `Payment answer` HAS
+    `the award`                                                        IS A NUMBER
+    `deducted for penalties, levies and compensation orders I owe, which are treated as paid to that extent (s 6B)` IS A NUMBER
+    `paid to me`                                                       IS A NUMBER
+
+GIVEN `the most that may be awarded`                                      IS A NUMBER
+      `the amount assessed under the other heads`                          IS A NUMBER
+      `the amount assessed for future medical, dental, psychological or counselling services` IS A NUMBER
+      `the Commissioner determines the future services amount is paid in addition to the maximum` IS A BOOLEAN
+      `the amounts the Commissioner deducts under s 6B`                    IS A NUMBER
+GIVETH A `Payment answer`
+`the s 6A and s 6B payment for` `the most that may be awarded` `the amount assessed under the other heads` `the amount assessed for future medical, dental, psychological or counselling services` `the Commissioner determines the future services amount is paid in addition to the maximum` `the amounts the Commissioner deducts under s 6B` MEANS
+    `Payment answer` WITH
+        `the award`                                                        IS `the award`
+        `deducted for penalties, levies and compensation orders I owe, which are treated as paid to that extent (s 6B)` IS `the deduction`
+        `paid to me`                                                       IS `the award` MINUS `the deduction`
+    WHERE
+        `the award` MEANS
+            IF `the Commissioner determines the future services amount is paid in addition to the maximum`
+            THEN (`the smaller of` `the amount assessed under the other heads` `and` `the most that may be awarded`) PLUS `the amount assessed for future medical, dental, psychological or counselling services`
+            ELSE `the smaller of` (`the amount assessed under the other heads` PLUS `the amount assessed for future medical, dental, psychological or counselling services`) `and` `the most that may be awarded`
+        `the deduction` MEANS `the smaller of` (`not below zero` `the amounts the Commissioner deducts under s 6B`) `and` `the award`
+
+§§ `s 7(1A)-(1D) -- the time to apply`
+
+-- s 7(1A): "Subject to subsections (1B), (1C) and (1D), an application for an award is to be made within 3 years after
+-- the date of the relevant offence." (1B): "If a primary victim, secondary victim or related victim is less than 18
+-- years old at the time of the relevant offence, his or her application for an award must be made no later than 3
+-- years after he or she turns 18." (1C): "The Commissioner may extend the 3-year period referred to in subsection (1A)
+-- or (1B) if satisfied that there are special circumstances which justify the extension." (1D): "Subsections (1A) and
+-- (1B) do not apply in respect of an application for an award that involves an allegation of child sexual abuse."
+-- "Child sexual abuse" is not defined: a fact. (1B) turns on the applicant's own age, and only a primary, secondary or
+-- related victim has it; a person who only paid for the funeral has (1A) (NOTES.md findings 10-11).
+DECLARE `Period to apply` IS ONE OF
+    `no time limit: the application involves an allegation of child sexual abuse (s 7(1D))`
+    `within 3 years after the date of the offence (s 7(1A))` HAS
+        `the last day` IS A DATE
+    `no later than 3 years after I turn 18 (s 7(1B))` HAS
+        `the last day` IS A DATE
+    `as extended by the Commissioner for special circumstances (s 7(1C))` HAS
+        `the last day` IS A DATE
+
+GIVEN `the date of the offence`                                         IS A DATE
+      `the applicant's date of birth`                                   IS A DATE
+      `the applicant is a primary, secondary or related victim`         IS A BOOLEAN
+      `the application involves an allegation of child sexual abuse`    IS A BOOLEAN
+      `the Commissioner has extended the period for special circumstances` IS A BOOLEAN
+      `the last day of the extended period`                             IS A DATE
+GIVETH A `Period to apply`
+`the s 7 period to apply for` `the date of the offence` `the applicant's date of birth` `the applicant is a primary, secondary or related victim` `the application involves an allegation of child sexual abuse` `the Commissioner has extended the period for special circumstances` `the last day of the extended period` MEANS
+    IF `the application involves an allegation of child sexual abuse`
+    THEN `no time limit: the application involves an allegation of child sexual abuse (s 7(1D))`
+    ELSE IF `the Commissioner has extended the period for special circumstances`
+         THEN `as extended by the Commissioner for special circumstances (s 7(1C))` `the last day of the extended period`
+         ELSE IF     `the applicant is a primary, secondary or related victim`
+                 AND `is before` `the date of the offence` `the day I turn 18`
+              THEN `no later than 3 years after I turn 18 (s 7(1B))` (`the date` 3 `years after` `the day I turn 18`)
+              ELSE `within 3 years after the date of the offence (s 7(1A))` (`the date` 3 `years after` `the date of the offence`)
+    WHERE
+        `the day I turn 18` MEANS `the date` 18 `years after` `the applicant's date of birth`
+
+DECLARE `In time answer` IS ONE OF
+    `in time (s 7(1A)-(1D))`
+    `in time, within the period as the Commissioner extended it (s 7(1C))`
+    `out of time: no award unless the Commissioner extends the period for special circumstances (s 7(1C))`
+    `not covered: lodged before 20 April 2023, when s 7 was in an earlier form (s 5(9)) that is not deposited`
+
+-- No. 2 of 2023, s 45, amended s 7(1A) and inserted s 7(1D), (11) and (12) ("Applied:20 Apr 2023" in the deposit's
+-- history notes); s 5(9) applies the Act as in force when the claim was lodged, and the earlier text is not
+-- deposited.
+`the day s 7 took its present form` MEANS DATE_FROM_DMY 20 4 2023
+
+GIVEN `the period`                            IS A `Period to apply`
+      `the date the application is lodged`    IS A DATE
+GIVETH AN `In time answer`
+`the s 7 in-time answer for` `the period` `the date the application is lodged` MEANS
+    IF `is before` `the date the application is lodged` `the day s 7 took its present form`
+    THEN `not covered: lodged before 20 April 2023, when s 7 was in an earlier form (s 5(9)) that is not deposited`
+    ELSE CONSIDER `the period`
+         WHEN `no time limit: the application involves an allegation of child sexual abuse (s 7(1D))` THEN `in time (s 7(1A)-(1D))`
+         WHEN `within 3 years after the date of the offence (s 7(1A))` `d` THEN `by` `d`
+         WHEN `no later than 3 years after I turn 18 (s 7(1B))` `d` THEN `by` `d`
+         WHEN `as extended by the Commissioner for special circumstances (s 7(1C))` `d` THEN
+             IF `is on or before` `the date the application is lodged` `d`
+             THEN `in time, within the period as the Commissioner extended it (s 7(1C))`
+             ELSE `out of time: no award unless the Commissioner extends the period for special circumstances (s 7(1C))`
+    WHERE
+        GIVEN `d` IS A DATE
+        GIVETH AN `In time answer`
+        `by` `d` MEANS
+            IF `is on or before` `the date the application is lodged` `d`
+            THEN `in time (s 7(1A)-(1D))`
+            ELSE `out of time: no award unless the Commissioner extends the period for special circumstances (s 7(1C))`
+
+§§ `s 7(8)-(9) -- the time to determine`
+
+-- s 7(8): "An application for an award is to be determined within 3 years of the date of the application." (9): "The
+-- Commissioner may extend the 3-year period referred to in subsection (8) if satisfied that there are special
+-- circumstances which justify the extension." A duty on the Commissioner: for the applicant it is the date by which a
+-- decision is due.
+DECLARE `Period to determine` IS ONE OF
+    `within 3 years of the date of the application (s 7(8))`
+    `as extended by the Commissioner for special circumstances (s 7(9))` HAS
+        `the extended last day` IS A DATE
+
+GIVEN `the date of the application` IS A DATE
+      `the period`                  IS A `Period to determine`
+GIVETH A DATE
+`the last day to determine an application made on` `the date of the application` `under` `the period` MEANS
+    CONSIDER `the period`
+    WHEN `within 3 years of the date of the application (s 7(8))` THEN `the date` 3 `years after` `the date of the application`
+    WHEN `as extended by the Commissioner for special circumstances (s 7(9))` `d` THEN `d`
+
+§§ `Regulative rules -- the application, its determination, and the limits on an award`
+
+DECLARE `VCA party` IS ONE OF
+    `the applicant`
+    `the Commissioner`
+
+DECLARE `VCA action` IS ONE OF
+    `lodge an application for an award` HAS
+        `the date of the application` IS A DATE
+    `determine the application, awarding` HAS
+        `dollars` IS A NUMBER
+
+-- The most the Commissioner may lawfully award on the application: nothing, if ss 5(2), 5(3A), 6(1)(a), 6(1)(d) or 12
+-- bar the whole claim; otherwise the maximum left (s 5(10), s 6A(1)-(1B)), plus any future services amount the
+-- Commissioner determines to pay on top (s 6A(4)).
+GIVEN `the facts`                                IS AN `Exclusion facts`
+      `the maximum left`                         IS A NUMBER
+      `the future services amount paid on top`   IS A NUMBER
+GIVETH A NUMBER
+`the most the Commissioner may award` `the facts` `the maximum left` `the future services amount paid on top` MEANS
+    IF `an award may be made at all` `the facts`
+    THEN `the maximum left` PLUS `the future services amount paid on top`
+    ELSE 0
+
+-- s 7(8)-(9), s 6, s 6A: once the application is made, the Commissioner must determine it within 3 years (or the
+-- extended period), and must not award more than the Act allows. Determining it with an award of 0 is a refusal. The
+-- prohibition runs for the same period, so a trace that ends FULFILLED waits until the period has passed. Clock: days;
+-- this rule starts on the date of the application.
+GIVEN `the date of the application`   IS A DATE
+      `the period`                    IS A `Period to determine`
+      `the most`                      IS A NUMBER
+GIVETH A DEONTIC `VCA party` `VCA action`
+`ss 6, 6A, 7(8)-(9) -- the Commissioner is to determine the application within 3 years, awarding no more than the Act allows` `the date of the application` `the period` `the most` MEANS
+        (PARTY `the Commissioner`
+         MUST  `determine the application, awarding` `any amount`
+         WITHIN `the days to determine`
+         LEST  BREACH BY `the Commissioner` BECAUSE "s 7(8): the application was not determined within 3 years of the date of the application, nor within a period the Commissioner extended under s 7(9)")
+    RAND
+        (PARTY `the Commissioner`
+         SHANT `determine the application, awarding` `the amount` PROVIDED `the amount` GREATER THAN `the most`
+         WITHIN `the days to determine`
+         LEST  BREACH BY `the Commissioner` BECAUSE "ss 5(2), 5(3A), 5(10), 6, 6A: the award is more than the Act allows (the prescribed maximum left, plus any s 6A(4) amount; nothing where the claim is excluded)")
+    WHERE
+        `the days to determine` MEANS `the days from` `the date of the application` `to` (`the last day to determine an application made on` `the date of the application` `under` `the period`)
+
+-- s 7(1A)-(1D): the applicant may make the application within the period; then the rule above. READING: the period
+-- is a condition of an award, not a duty; missing it is shown as a breach by the applicant, whose consequence is that
+-- no award is made unless the Commissioner extends the period (s 7(1C)). With no time limit (s 7(1D)) there is no
+-- WITHIN. Clock: days, starting on the date of the offence.
+GIVEN `the date of the offence`       IS A DATE
+      `the period to apply`           IS A `Period to apply`
+      `the period to determine`       IS A `Period to determine`
+      `the most`                      IS A NUMBER
+GIVETH A DEONTIC `VCA party` `VCA action`
+`s 7 -- apply within the period; the Commissioner then determines` `the date of the offence` `the period to apply` `the period to determine` `the most` MEANS
+    CONSIDER `the period to apply`
+    WHEN `no time limit: the application involves an allegation of child sexual abuse (s 7(1D))` THEN
+        PARTY `the applicant`
+        DO    `lodge an application for an award` `the date lodged`
+        HENCE `ss 6, 6A, 7(8)-(9) -- the Commissioner is to determine the application within 3 years, awarding no more than the Act allows` `the date lodged` `the period to determine` `the most`
+    WHEN `within 3 years after the date of the offence (s 7(1A))` `d` THEN `within the period ending` `d`
+    WHEN `no later than 3 years after I turn 18 (s 7(1B))` `d` THEN `within the period ending` `d`
+    WHEN `as extended by the Commissioner for special circumstances (s 7(1C))` `d` THEN `within the period ending` `d`
+    WHERE
+        GIVEN `the last day` IS A DATE
+        GIVETH A DEONTIC `VCA party` `VCA action`
+        `within the period ending` `the last day` MEANS
+            PARTY `the applicant`
+            DO    `lodge an application for an award` `the date lodged`
+            WITHIN `the days from` `the date of the offence` `to` `the last day`
+            HENCE `ss 6, 6A, 7(8)-(9) -- the Commissioner is to determine the application within 3 years, awarding no more than the Act allows` `the date lodged` `the period to determine` `the most`
+            LEST  BREACH BY `the applicant` BECAUSE "s 7(1A)-(1C): the application was not made within the period, so no award can be made unless the Commissioner extends the period for special circumstances"
+
+§§ `reg 5 -- what an application must contain`
+
+-- reg 5: a checklist of the subregulations that apply. (1): lodged with the Victim Assistance Unit (VAU) with the
+-- particulars in (1)(a)-(k); (2) funeral expenses; (3) an application on behalf of another person; (4) a related or
+-- secondary victim's application, with the primary victim's details; (5) an injury from witnessing an offence; (6) an
+-- application because of a death; (7) an injury in assisting a police officer; (8)-(9) the statutory declaration in
+-- Schedule 1. (10) (other evidence) is optional.
+DECLARE `Application requirement` IS ONE OF
+    `reg 5(1): lodge it with the Victim Assistance Unit, with the particulars in reg 5(1)(a)-(k)`
+    `reg 5(2): details of the funeral expenses actually and reasonably incurred, or reasonably likely to be incurred`
+    `reg 5(3): the claimant's details, your relationship, why you apply for them and, if asked, their consent`
+    `reg 5(4): the primary victim's details, your relationship, and what is known of their claim for damages and injuries`
+    `reg 5(5): a statement of the circumstances in which you witnessed the offence`
+    `reg 5(6): the deceased's details, your relationship, the expenses from the death and, if a dependant, your other financial loss`
+    `reg 5(7): the police officer's name and rank, the circumstances and the assistance given`
+    `reg 5(8)-(9): a statutory declaration in the form in Schedule 1`
+
+GIVEN `the kind`                                         IS A `Kind of applicant`
+      `the application is made on behalf of another person` IS A BOOLEAN
+      `the application is made as a result of a death`  IS A BOOLEAN
+      `the injury was incurred in assisting a police officer` IS A BOOLEAN
+GIVETH A LIST OF `Application requirement`
+`the reg 5 requirements for` `the kind` `the application is made on behalf of another person` `the application is made as a result of a death` `the injury was incurred in assisting a police officer` MEANS
+    concat (LIST (LIST `reg 5(1): lodge it with the Victim Assistance Unit, with the particulars in reg 5(1)(a)-(k)`),
+                 (`reg 5(2): details of the funeral expenses actually and reasonably incurred, or reasonably likely to be incurred` `included if` (`the kind` EQUALS `a person who incurred a primary victim's funeral expenses (s 4(1A))`)),
+                 (`reg 5(3): the claimant's details, your relationship, why you apply for them and, if asked, their consent` `included if` `the application is made on behalf of another person`),
+                 (`reg 5(4): the primary victim's details, your relationship, and what is known of their claim for damages and injuries` `included if` (    `the kind` EQUALS `a secondary victim injured by witnessing the offence (s 2, para (a))`
+                                                                                                                                                          OR `the kind` EQUALS `a secondary victim as parent, step-parent or guardian of a primary victim under 18 (s 2, para (b))`
+                                                                                                                                                          OR `the kind` EQUALS `a related victim (s 2)`)),
+                 (`reg 5(5): a statement of the circumstances in which you witnessed the offence` `included if` (`the kind` EQUALS `a secondary victim injured by witnessing the offence (s 2, para (a))`)),
+                 (`reg 5(6): the deceased's details, your relationship, the expenses from the death and, if a dependant, your other financial loss` `included if` `the application is made as a result of a death`),
+                 (`reg 5(7): the police officer's name and rank, the circumstances and the assistance given` `included if` `the injury was incurred in assisting a police officer`),
+                 (LIST `reg 5(8)-(9): a statutory declaration in the form in Schedule 1`))
