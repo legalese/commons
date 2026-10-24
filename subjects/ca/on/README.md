@@ -52,17 +52,6 @@ Claims below cite the deposited text where they were read there; anything not re
   - ODSP: persons receiving **CPP disability benefits** are a prescribed class for s. 3 (1) of the ODSP Act -- O. Reg. 222/98 s. 4 (1) para. 6.
 - **GAINS** (Ontario Guaranteed Annual Income Act + regulations) tops up low-income seniors and is built on the federal **Old Age Security Act**: "allowance" is the OAS Part III allowance (Act s. 1 (1)), and "basic monthly income" is computed from the OAS pension and Guaranteed Income Supplement a person receives and from 12 or 24 times the maximum OAS pension and supplement (Act s. 1 (1)). **O. Reg. 357/96** s. 2 sets the guaranteed income limit at $996 plus 12 times the maximum monthly pension plus 12 times the maximum monthly supplement for the quarter, "pension" and "supplement" being the OAS Part I pension and Part II Guaranteed Income Supplement (Act s. 1 (1)). **R.R.O. 1990, Reg. 874** s. 1 (1) counts CPP survivor and disability pensions and unemployment insurance benefits as "private pension income", and excludes OAS benefits. That GAINS is paid automatically to OAS/GIS recipients on CRA income data: *unverified (general knowledge)*.
 
-## Encoded: tax and benefits (2026-10-24)
-
-Two baseline encodings, each a seat-neutral core with a seat layer for the individual, checked with the stable `l4` 1.6.98 (0 errors, 0 warnings):
-
-| Encoding | Seat | Questions | Regulative rules | Assertions |
-|---|---|---|---|---|
-| `taxation-act-2007/encodings/baseline-2026-10/` — 2026 personal income tax (s 6 rates, s 9 credits, s 16 surtax, s 20 tax reduction, s 21.1 LIFT, s 24 Health Premium), s 115 instalments, the Ontario child benefit (s 104) and the Ontario sales tax credit (s 103.8), July 2026 to June 2027 | the individual resident in Ontario | 12 | 2 | 87 / 87 |
-| `ontario-works-act-1997/encodings/baseline-2026-10/` — eligibility, asset limit, budgetary requirements, earnings exemption, amount of assistance, internal review and appeal | the applicant or recipient | 8 | 1 | 52 / 52 |
-
-The Taxation Act's indexed amounts (s 23) are not in the Act; the 2026 and 2026-27 figures come from two Canada Revenue Agency pages deposited beside the Act (`cra-t4127-jan-2026.txt`, `cra-ontario-programs-2026-10.txt`, under the canada.ca non-commercial reproduction terms). The remaining indexed credit amounts (spouse, age, pension, disability) are inputs: the CRA forms that print them are under a robots.txt-disallowed path, and ontario.ca's own pages may be reproduced only "if no changes are made", a no-modification term not used. The ODSP and GAINS subjects are sourced but not yet encoded.
-
 ### Currency
 
 e-Laws currency date 2026-10-14 (from the e-Laws API, read 2026-10-20). The Taxation Act consolidation runs from 2026-07-01, so it includes the 2026 budget amendments enacted by 2026, c. 2. O. Reg. 134/98 and O. Reg. 222/98 were last amended on 2026-08-13 (O. Reg. 276/26, 277/26). O. Reg. 37/09 is consolidated from 2023-08-24; the ODSP Act from 2023-10-26; the GAINS Act from 2023-05-18; its regulations from 2000 and 1996. The Ontario Works Act carries not-yet-in-force amendments (2021, c. 25, Sched. 21: "employment and life stabilization assistance"), printed in the text as notes.
@@ -75,3 +64,14 @@ e-Laws currency date 2026-10-14 (from the e-Laws API, read 2026-10-20). The Taxa
 - **French versions.** Only English is deposited; the Acts and O. Reg. 134/98 and 222/98 are bilingual and the French is equally authoritative.
 - **O. Reg. 357/96** came from the e-Laws API text, not a Word download (none exists; the Word URL answered 403 and was not retried); see the GAINS subject's `SOURCE-LICENSE.md`.
 - **Existing subjects not touched**: the other eleven Ontario subjects remain metadata only.
+
+## Encoded: tax and benefits (2026-10-24)
+
+Two baseline encodings, each a seat-neutral core with a seat layer for the individual, checked with the stable `l4` 1.6.98 (0 errors, 0 warnings):
+
+| Encoding | Seat | Questions | Regulative rules | Assertions |
+|---|---|---|---|---|
+| `taxation-act-2007/encodings/baseline-2026-10/` — 2026 personal income tax (s 6 rates, s 9 credits, s 16 surtax, s 20 tax reduction, s 21.1 LIFT, s 24 Health Premium), s 115 instalments, the Ontario child benefit (s 104) and the Ontario sales tax credit (s 103.8), July 2026 to June 2027 | the individual resident in Ontario | 12 | 2 | 87 / 87 |
+| `ontario-works-act-1997/encodings/baseline-2026-10/` — eligibility, asset limit, budgetary requirements, earnings exemption, amount of assistance, internal review and appeal | the applicant or recipient | 8 | 1 | 52 / 52 |
+
+The Taxation Act's indexed amounts (s 23) are not in the Act; the 2026 and 2026-27 figures come from two Canada Revenue Agency pages deposited beside the Act (`cra-t4127-jan-2026.txt`, `cra-ontario-programs-2026-10.txt`, under the canada.ca non-commercial reproduction terms). The remaining indexed credit amounts (spouse, age, pension, disability) are inputs: the CRA forms that print them are under a robots.txt-disallowed path, and ontario.ca's own pages may be reproduced only "if no changes are made", a no-modification term not used. The ODSP and GAINS subjects are sourced but not yet encoded.
