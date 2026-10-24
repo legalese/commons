@@ -30,3 +30,14 @@ Washington levies **no personal income tax** on wages: none of the deposited cha
 **Terms**: the Legislature's disclaimer says the Statute Law Committee "claims copyright" for the RCW and asks anyone "intending to obtain the Revised Code of Washington ... for the purpose of selling the same" to contact it; it sets no other condition. Commons is non-commercial (ruled 2026-10-20), so the text is deposited. app.leg.wa.gov has no robots.txt (404). Details in each subject's `SOURCE-LICENSE.md`.
 
 **Gaps**: RCW 74.08.025 (the general eligibility conditions RCW 74.12.030 refers to), RCW 82.32 (administration, penalties for late payment), the payment standards and need standards (set by the Department of Social and Health Services in WAC 388-478, not deposited), and the Department of Revenue's published annual capital gains amounts (RCW 82.87.150) are not here. Unemployment compensation (Title 50) is still indexed only.
+
+## Encodings added 2026-10-24: tax and benefits baselines
+
+Two baseline encodings, written from the individual's seat with the 2026-10-18 defaults and checked with the stable `l4` (1.6.98). Each folder's `NOTES.md` has the method, scope and findings.
+
+| Encoding | Seat | Questions | Regulative rules | Assertions |
+| --- | --- | --- | --- | --- |
+| [`revised-code-of-washington-chapter-82-87-capital-gains-tax/encodings/baseline-2026-10`](revised-code-of-washington-chapter-82-87-capital-gains-tax/encodings/baseline-2026-10) | the individual who sells long-term capital assets | does Washington tax my wages (no); am I a resident (82.87.020(11)); is the sale exempt (82.87.050); is the gain allocated to Washington (82.87.100(1)); how much tax (82.87.040-.080, .100(2), .160); must I file, jointly (82.87.110(1), .120); the late-filing penalty (82.87.110(6)) | 3 (file by the federal due date or matched extension; pay by the original date; amend within 90 days of a final federal change, 82.87.110) | 37 / 37 |
+| [`revised-code-of-washington-chapters-74-12-and-74-08a-temporary-assistance-for-needy-families/encodings/baseline-2026-10`](revised-code-of-washington-chapters-74-12-and-74-08a-temporary-assistance-for-needy-families/encodings/baseline-2026-10) | the parent or relative applying for TANF | dependent child (74.12.010, .035); countable earnings and the grant (74.08A.230, .035, .039); the 60-month limit and exemptions (74.08A.010); transitional food assistance (74.08A.010(6)); good cause (74.08A.270); the work sanction (74.08A.260); diversion assistance (74.08A.210) | 1 (engage in work activities within two months, or by month twelve before termination, 74.08A.260(4)) | 42 / 42 |
+
+Inputs, not deposited: the Department of Revenue's annual capital gains amounts and the DSHS payment standard and maximum earned income level.

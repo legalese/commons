@@ -1,0 +1,320 @@
+IMPORT prelude
+
+-- Washington Temporary Assistance for Needy Families (TANF) and WorkFirst, chapters 74.12 and 74.08A RCW -- what a family
+-- meets: who is a dependent child (RCW 74.12.010, 74.12.035), the earnings the family keeps and the earned income cutoff
+-- (74.08A.230), SSI and passed-through child support not counted (74.08A.039, 74.08A.035), the grant against the payment
+-- standard, the 60-month limit, its exemptions and the 52-month rule (74.08A.010(1)-(5)), transitional food assistance
+-- (74.08A.010(6)), the work-activity sanction (74.08A.260(4), (5), (8)), good cause (74.08A.270), and diversion assistance
+-- (74.08A.210).
+--
+-- SEAT: the parent or relative applying for or receiving TANF for a child ("Is my child a dependent child? How much of our
+-- earnings do we keep, and what will the grant be? Have we used up the 60 months? What happens if I do not take part in
+-- WorkFirst? Can we get diversion assistance instead?"). Provisions addressed to the Department of Social and Health Services
+-- are encoded as what they mean for that person.
+--
+-- Edition: chapters 74.12 and 74.08A RCW as printed on app.leg.wa.gov (full-chapter pages), retrieved 2026-10-24 (UTC), as
+-- deposited at ../../registers/source-bundle/rcw-74-12.txt and rcw-74-08a.txt (unofficial).
+--
+-- AMOUNTS SET BY RULE. The payment standard and the maximum earned income level ("as set by the department", 74.08A.230(2))
+-- are in the Department's rules (WAC chapter 388-478), not deposited: INPUTS. The grant computed as the payment standard less
+-- countable income is the reading of 74.08A.230(1) ("In addition to their monthly benefit payment, a family may earn and keep
+-- the first $500 ... in addition to one-half of the family's remaining earnings") (NOTES.md finding 1).
+--
+-- NOT ENCODED. RCW 74.08.025 (general eligibility; not deposited: asked as a fact); immigrants (74.08A.100-.130); teen parents
+-- (74.12.255, 74.08A.380) except as facts; the hardship criteria the Department sets by rule; the diaper subsidy (74.12.470);
+-- individual development accounts, contracting, outcome measures, the oversight task force; the Department's duties to report.
+--
+-- BASELINE ENCODING. Written from the individual's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Washington TANF and WorkFirst -- chapters 74.12 and 74.08A RCW`
+
+§§ `The parties and the actions`
+
+DECLARE `Party` IS ONE OF
+    `the recipient`
+    `the department`
+
+DECLARE `Action` IS ONE OF
+    `engage in the work and work activities the department requires`
+
+§§ `RCW 74.12.010, 74.12.035 -- dependent child`
+
+-- 74.12.010: "'dependent child' means any child in need under the age of eighteen years who is living with a relative as
+-- specified under federal temporary assistance for needy families program requirements, in a place of residence maintained by
+-- one or more of such relatives as his or her or their homes" (the relative is asked as a fact). 74.12.035(1): "Children over
+-- eighteen years of age and under nineteen years of age who are full-time students reasonably expected to complete a program of
+-- secondary school, or the equivalent level of vocational or technical training, before reaching nineteen". (2): "Children with
+-- disabilities who are eighteen years of age and under twenty-one years of age and who are full-time students whose education is
+-- being provided in accordance with RCW 28A.155.020". The placement limb of 74.12.010 (foster care after a judicial
+-- determination) is asked as one fact.
+GIVEN `age` IS A NUMBER
+      `lives with a qualifying relative in a home the relative maintains` IS A BOOLEAN
+      `in a placement within the second sentence of RCW 74.12.010` IS A BOOLEAN
+      `full-time student expected to complete secondary school or equivalent before 19` IS A BOOLEAN
+      `a child with a disability in full-time special education under RCW 28A.155.020` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a dependent child for TANF` IF
+        (`lives with a qualifying relative in a home the relative maintains` OR `in a placement within the second sentence of RCW 74.12.010`)
+    AND (    `age` LESS THAN 18
+         OR (`age` LESS THAN 19 AND `full-time student expected to complete secondary school or equivalent before 19`)
+         OR (`age` LESS THAN 21 AND `a child with a disability in full-time special education under RCW 28A.155.020`))
+
+§§ `RCW 74.08A.230, .035, .039 -- income and the grant`
+
+-- 74.08A.230(1): "a family may earn and keep the first $500 of the family's earnings in addition to one-half of the family's
+-- remaining earnings". The other half of the remaining earnings counts.
+GIVEN `monthly earnings` IS A NUMBER
+GIVETH A NUMBER
+`the countable earnings` `monthly earnings` MEANS
+    (max 0 (`monthly earnings` MINUS 500)) DIVIDED BY 2
+
+-- 74.08A.230(2): "In no event may a family be eligible ... if its monthly gross earned income exceeds the maximum earned income
+-- level as set by the department. In calculating a household's gross earnings, the department shall disregard the earnings of a
+-- minor child who is: (a) A full-time student; or (b) A part-time student carrying at least half the normal school load and
+-- working fewer than 35 hours per week." (The person leaves those earnings out.)
+-- 74.08A.039: "the department shall not count the federal supplemental security income received by a household member."
+-- 74.08A.035 (effective July 1, 2029): "disregard and not count as income any amount of current child support passed through".
+DECLARE `Grant outcome` IS ONE OF
+    `not eligible: gross earned income exceeds the department's maximum earned income level (RCW 74.08A.230(2))`
+    `not eligible: countable income is not below the payment standard`
+    `a monthly grant of` HAS `dollars` IS A NUMBER
+
+GIVEN `payment standard` IS A NUMBER
+      `maximum earned income level` IS A NUMBER
+      `monthly gross earnings` IS A NUMBER
+      `child support passed through` IS A NUMBER
+      `on or after 1 July 2029` IS A BOOLEAN
+      `other countable unearned income` IS A NUMBER
+GIVETH A `Grant outcome`
+`the TANF grant` `payment standard` `maximum earned income level` `monthly gross earnings` `child support passed through` `on or after 1 July 2029` `other countable unearned income` MEANS
+    BRANCH
+        IF `monthly gross earnings` GREATER THAN `maximum earned income level`
+        THEN `not eligible: gross earned income exceeds the department's maximum earned income level (RCW 74.08A.230(2))`
+        IF `countable` AT LEAST `payment standard`
+        THEN `not eligible: countable income is not below the payment standard`
+        OTHERWISE `a monthly grant of` (`payment standard` MINUS `countable`)
+    WHERE
+        `support counted` MEANS IF `on or after 1 July 2029` THEN 0 ELSE `child support passed through`
+        `countable`       MEANS sum (LIST `the countable earnings` `monthly gross earnings`, `support counted`, `other countable unearned income`)
+
+§§ `RCW 74.08A.010 -- the 60 months`
+
+DECLARE `Time limit outcome` IS ONE OF
+    `within the 60 months (RCW 74.08A.010(1))`
+    `past 60 months, exempt under RCW 74.08A.010(4)`
+    `past 60 months and not exempt: no further TANF (RCW 74.08A.010(1))`
+
+-- 74.08A.010(1): "A family that includes an adult who has received temporary assistance for needy families for 60 months after
+-- July 27, 1997, shall be ineligible". (2): every month an adult received a TANF cash grant counts "unless the assistance was
+-- provided when the adult family member was a minor child and not the head of the household or married to the head of the
+-- household". (4): the Department "shall exempt a recipient and the recipient's family" (a) by reason of hardship, including a
+-- homeless child or youth (McKinney-Vento), months of receipt from March 2020 when unemployment was 7 percent or more (an
+-- extension of that many months), or, from July 1, 2022, a current unemployment rate of 7 percent or more; (b) family violence;
+-- (c) a parent of a child under two who qualifies for an infant, toddler or postpartum exemption. (5): "The department shall not
+-- exempt ... until after the recipient has received 52 months of assistance". Hardship by rule is asked as a fact.
+GIVEN `months of TANF received as an adult` IS A NUMBER
+      `the family includes a homeless child or youth` IS A BOOLEAN
+      `months received since March 2020 while unemployment was 7 percent or more` IS A NUMBER
+      `the latest state unemployment rate is 7 percent or more` IS A BOOLEAN
+      `the family violence option applies` IS A BOOLEAN
+      `I have a child under two at home with an infant, toddler or postpartum exemption` IS A BOOLEAN
+      `another hardship under the department's rules applies` IS A BOOLEAN
+GIVETH A `Time limit outcome`
+`the 60-month limit` `months of TANF received as an adult` `the family includes a homeless child or youth` `months received since March 2020 while unemployment was 7 percent or more` `the latest state unemployment rate is 7 percent or more` `the family violence option applies` `I have a child under two at home with an infant, toddler or postpartum exemption` `another hardship under the department's rules applies` MEANS
+    BRANCH
+        IF `months of TANF received as an adult` LESS THAN 60
+        THEN `within the 60 months (RCW 74.08A.010(1))`
+        IF `exempt`
+        THEN `past 60 months, exempt under RCW 74.08A.010(4)`
+        OTHERWISE `past 60 months and not exempt: no further TANF (RCW 74.08A.010(1))`
+    WHERE
+        `the pandemic extension covers me` MEANS
+            `months of TANF received as an adult` LESS THAN (60 PLUS `months received since March 2020 while unemployment was 7 percent or more`)
+        `exempt` MEANS
+                `months of TANF received as an adult` AT LEAST 52
+            AND (   `the family includes a homeless child or youth`
+                 OR `the pandemic extension covers me`
+                 OR `the latest state unemployment rate is 7 percent or more`
+                 OR `the family violence option applies`
+                 OR `I have a child under two at home with an infant, toddler or postpartum exemption`
+                 OR `another hardship under the department's rules applies`)
+
+-- 74.08A.010(6): "The department shall provide transitional food assistance for a period of five months to a household that
+-- ceases to receive temporary assistance for needy families assistance and is not in full-family sanction status."
+GIVEN `our TANF has ended` IS A BOOLEAN
+      `we are in full-family sanction status` IS A BOOLEAN
+GIVETH A NUMBER
+`months of transitional food assistance` `our TANF has ended` `we are in full-family sanction status` MEANS
+    IF `our TANF has ended` AND NOT (`we are in full-family sanction status`) THEN 5 ELSE 0
+
+§§ `RCW 74.08A.260, .270 -- work activities, sanctions and good cause`
+
+-- 74.08A.270(1): good cause where "(a) The recipient is a parent or other relative personally providing care for a child under
+-- the age of six years, and ... child care ... is necessary ..., and such care is not available, and the department fails to
+-- provide such care; (b) the recipient is a parent with a child under the age of two years; or (c) the recipient is experiencing
+-- a hardship as defined by the department in rule." (5): (b) is available "for a maximum total of 24 months over the parent's
+-- lifetime".
+GIVEN `I personally care for a child under six` IS A BOOLEAN
+      `the child care I need is unavailable and the department has not provided it` IS A BOOLEAN
+      `I am a parent with a child under two` IS A BOOLEAN
+      `months of good cause already used for a child under two` IS A NUMBER
+      `a hardship under the department's rules applies` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `I have good cause under RCW 74.08A.270` IF
+       (`I personally care for a child under six` AND `the child care I need is unavailable and the department has not provided it`)
+    OR (`I am a parent with a child under two` AND `months of good cause already used for a child under two` LESS THAN 24)
+    OR `a hardship under the department's rules applies`
+
+-- 74.08A.260(4): "If a recipient refuses to engage in work and work activities required by the department, after two months of
+-- continuous noncompliance, the family's grant shall be reduced by the recipient's share or by forty percent, whichever is
+-- greater, and must be terminated after twelve months of continuous noncompliance." (5): waived on a finding of good cause.
+-- (8): (2) to (6) "are suspended for a recipient who is a parent or other relative personally providing care for a child under
+-- the age of two years".
+DECLARE `Sanction outcome` IS ONE OF
+    `no sanction: good cause, or the requirement is suspended for a carer of a child under two`
+    `no reduction yet: fewer than two months of continuous noncompliance`
+    `the grant is reduced to` HAS `dollars` IS A NUMBER
+    `the grant is terminated: twelve months of continuous noncompliance`
+
+GIVEN `grant` IS A NUMBER
+      `the recipient's share of the grant` IS A NUMBER
+      `months of continuous noncompliance` IS A NUMBER
+      `good cause` IS A BOOLEAN
+      `I personally care for a child under two` IS A BOOLEAN
+GIVETH A `Sanction outcome`
+`the work sanction` `grant` `the recipient's share of the grant` `months of continuous noncompliance` `good cause` `I personally care for a child under two` MEANS
+    BRANCH
+        IF `good cause` OR `I personally care for a child under two`
+        THEN `no sanction: good cause, or the requirement is suspended for a carer of a child under two`
+        IF `months of continuous noncompliance` AT LEAST 12
+        THEN `the grant is terminated: twelve months of continuous noncompliance`
+        IF `months of continuous noncompliance` AT LEAST 2
+        THEN `the grant is reduced to` (max 0 (`grant` MINUS (max `the recipient's share of the grant` (`grant` TIMES 40%))))
+        OTHERWISE `no reduction yet: fewer than two months of continuous noncompliance`
+
+-- The same as a rule with deadlines, counted in months: engage within two months or the grant is reduced; then engage within the
+-- next ten (to month twelve) or it is terminated.
+GIVETH A DEONTIC `Party` `Action`
+`my WorkFirst participation duty` MEANS
+    PARTY  `the recipient`
+    MUST   `engage in the work and work activities the department requires`
+    WITHIN 2
+    HENCE  FULFILLED
+    LEST   PARTY  `the recipient`
+           MUST   `engage in the work and work activities the department requires`
+           WITHIN 10
+           HENCE  FULFILLED
+           LEST   BREACH BY `the recipient` BECAUSE "twelve months of continuous noncompliance: the grant must be terminated (RCW 74.08A.260(4))"
+
+§§ `RCW 74.08A.210 -- diversion assistance`
+
+-- 74.08A.210: diversion assistance for "families in crisis whose income and assets would otherwise qualify them"; "(3) ...
+-- available once in each 12-month period for each adult applicant"; "(4) ... may not exceed $2,000 for each instance"; "(5) ...
+-- a family must otherwise be eligible for temporary assistance for needy families"; "(6) Families ineligible ... due to
+-- sanction, noncompliance, the lump sum income rule, or any other reason are not eligible"; "(7) Families must provide evidence
+-- showing that a bona fide need exists" for child care, housing, transportation, food, medical costs or employment expenses.
+GIVEN `we are otherwise eligible for TANF` IS A BOOLEAN
+      `I have had diversion assistance in the last 12 months` IS A BOOLEAN
+      `we can show a bona fide need of a listed kind` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `diversion assistance is available` IF
+        `we are otherwise eligible for TANF`
+    AND (NOT (`I have had diversion assistance in the last 12 months`))
+    AND `we can show a bona fide need of a listed kind`
+
+GIVEN `the need` IS A NUMBER
+GIVETH A NUMBER
+`the most diversion assistance pays` `the need` MEANS
+    min `the need` 2000
+
+§ `Questions for the applicant`
+
+§§ `Is my child eligible?`
+
+@export Is my child a "dependent child" for Washington TANF (RCW 74.12.010, 74.12.035)?
+GIVEN `my child's age` IS A NUMBER @desc The child's age in whole years
+      `my child lives with a qualifying relative in that relative's home` IS A BOOLEAN @desc Whether the child lives with a parent or other relative recognised by federal TANF rules, in a home that relative maintains
+      `my child is in a court-ordered placement under RCW 74.12.010` IS A BOOLEAN @desc Whether the child was removed from a relative's home by a court and placed in licensed foster care or a child care institution, in the circumstances RCW 74.12.010 describes
+      `my child, 18, is a full-time student expected to finish secondary school before 19` IS A BOOLEAN @desc For an 18-year-old: whether the child is a full-time student reasonably expected to complete secondary school or equivalent vocational or technical training before turning 19
+      `my child has a disability and is in full-time special education` IS A BOOLEAN @desc For an 18- to 20-year-old: whether the child has a disability and is a full-time student whose education is provided under RCW 28A.155.020
+GIVETH A BOOLEAN
+DECIDE `Is my child a dependent child for Washington TANF` IF
+    `is a dependent child for TANF` `my child's age` `my child lives with a qualifying relative in that relative's home` `my child is in a court-ordered placement under RCW 74.12.010` `my child, 18, is a full-time student expected to finish secondary school before 19` `my child has a disability and is in full-time special education`
+
+§§ `How much will we get?`
+
+@export How much of our monthly earnings counts against our Washington TANF grant (RCW 74.08A.230(1))?
+GIVEN `our monthly earnings` IS A NUMBER @desc The family's gross monthly earnings, in US dollars
+GIVETH A NUMBER
+`How much of our earnings counts` `our monthly earnings` MEANS
+    `the countable earnings` `our monthly earnings`
+
+@export What is our monthly Washington TANF grant (RCW 74.08A.230, .035, .039)?
+GIVEN `our payment standard` IS A NUMBER @desc The monthly TANF payment standard for your family size under the department's rules (WAC 388-478), in US dollars (not in the statute)
+      `the maximum earned income level` IS A NUMBER @desc The department's maximum monthly gross earned income level for your family size, in US dollars (not in the statute)
+      `our monthly gross earnings` IS A NUMBER @desc The family's gross monthly earnings, in US dollars; leave out earnings of a minor child who is a full-time student, or a part-time student on at least half the normal load working under 35 hours a week
+      `current child support passed through to us` IS A NUMBER @desc Current child support passed through to you by the Division of Child Support each month, in US dollars
+      `this is a month from July 2029 on` IS A BOOLEAN @desc Whether the month is on or after 1 July 2029, when passed-through child support stops counting
+      `our other countable unearned income` IS A NUMBER @desc Other monthly unearned income the department counts, in US dollars; leave out SSI received by anyone in the household
+GIVETH A `Grant outcome`
+`What is our Washington TANF grant` `our payment standard` `the maximum earned income level` `our monthly gross earnings` `current child support passed through to us` `this is a month from July 2029 on` `our other countable unearned income` MEANS
+    `the TANF grant` `our payment standard` `the maximum earned income level` `our monthly gross earnings` `current child support passed through to us` `this is a month from July 2029 on` `our other countable unearned income`
+
+§§ `Have we used up the 60 months?`
+
+@export Can our family still receive Washington TANF under the 60-month limit (RCW 74.08A.010)?
+GIVEN `months of TANF an adult in the family has received` IS A NUMBER @desc How many months an adult in your family has received a TANF cash grant (not counting months received as a minor child who was not head of household or married to the head)
+      `our family includes a homeless child or youth` IS A BOOLEAN @desc Whether the family includes a child or youth without a fixed, regular and adequate nighttime residence (McKinney-Vento)
+      `months we received TANF since March 2020 while unemployment was 7 percent or more` IS A NUMBER @desc How many months since 1 March 2020 you received TANF while Washington's unemployment rate was 7 percent or more
+      `the latest state unemployment rate is 7 percent or more` IS A BOOLEAN @desc Whether the most recently published Washington unemployment rate is 7 percent or more
+      `the family violence option applies to someone in our family` IS A BOOLEAN @desc Whether someone in the family meets the family violence option of the federal TANF law
+      `I have a child under two at home and an infant, toddler or postpartum exemption` IS A BOOLEAN @desc Whether you are the parent or legal guardian of a child under two in the household and qualify for an infant, toddler or postpartum WorkFirst exemption
+      `another hardship under the department's rules applies` IS A BOOLEAN @desc Whether another hardship extension in the department's rules applies to you
+GIVETH A `Time limit outcome`
+`Can we still receive Washington TANF` `months of TANF an adult in the family has received` `our family includes a homeless child or youth` `months we received TANF since March 2020 while unemployment was 7 percent or more` `the latest state unemployment rate is 7 percent or more` `the family violence option applies to someone in our family` `I have a child under two at home and an infant, toddler or postpartum exemption` `another hardship under the department's rules applies` MEANS
+    `the 60-month limit` `months of TANF an adult in the family has received` `our family includes a homeless child or youth` `months we received TANF since March 2020 while unemployment was 7 percent or more` `the latest state unemployment rate is 7 percent or more` `the family violence option applies to someone in our family` `I have a child under two at home and an infant, toddler or postpartum exemption` `another hardship under the department's rules applies`
+
+@export How many months of transitional food assistance do we get when our TANF ends (RCW 74.08A.010(6))?
+GIVEN `our TANF has ended` IS A BOOLEAN @desc Whether your household has stopped receiving TANF
+      `we are in full-family sanction status` IS A BOOLEAN @desc Whether the whole family was under sanction when TANF ended
+GIVETH A NUMBER
+`How many months of transitional food assistance` `our TANF has ended` `we are in full-family sanction status` MEANS
+    `months of transitional food assistance` `our TANF has ended` `we are in full-family sanction status`
+
+§§ `If I do not take part in WorkFirst`
+
+-- Situation: only for a recipient the department has required to engage in work activities.
+
+@export Do I have good cause for not taking part in WorkFirst (RCW 74.08A.270)?
+GIVEN `I personally care for a child under six` IS A BOOLEAN @desc Whether you are a parent or other relative personally caring for a child under six
+      `the child care I need is unavailable and the department has not provided it` IS A BOOLEAN @desc Whether child care (or day care for an incapacitated household member) is needed for you to take part, is not available, and the department has not provided it
+      `I am a parent with a child under two` IS A BOOLEAN @desc Whether you are a parent with a child under two
+      `months of under-two good cause I have used` IS A NUMBER @desc How many months of good cause for a child under two you have already used in your lifetime
+      `a hardship under the department's rules applies` IS A BOOLEAN @desc Whether you are experiencing a hardship as the department defines it in rule
+GIVETH A BOOLEAN
+DECIDE `Do I have good cause for not taking part` IF
+    `I have good cause under RCW 74.08A.270` `I personally care for a child under six` `the child care I need is unavailable and the department has not provided it` `I am a parent with a child under two` `months of under-two good cause I have used` `a hardship under the department's rules applies`
+
+@export What happens to our Washington TANF grant if I do not engage in required work activities (RCW 74.08A.260(4), (5), (8))?
+GIVEN `our monthly grant` IS A NUMBER @desc Your family's monthly TANF grant before any sanction, in US dollars
+      `my share of the grant` IS A NUMBER @desc The part of the grant that is for you (the recipient's share), in US dollars
+      `months of continuous noncompliance` IS A NUMBER @desc For how many consecutive months you have not engaged in the required work activities
+      `I have good cause` IS A BOOLEAN @desc Whether the department has found that you had good cause (RCW 74.08A.270)
+      `I personally care for a child under two` IS A BOOLEAN @desc Whether you are a parent or other relative personally caring for a child under two (the work requirements are suspended)
+GIVETH A `Sanction outcome`
+`What happens if I do not engage in work activities` `our monthly grant` `my share of the grant` `months of continuous noncompliance` `I have good cause` `I personally care for a child under two` MEANS
+    `the work sanction` `our monthly grant` `my share of the grant` `months of continuous noncompliance` `I have good cause` `I personally care for a child under two`
+
+§§ `Diversion assistance instead of TANF`
+
+@export Can we get diversion assistance, and up to how much (RCW 74.08A.210)? Answers 0 if not available.
+GIVEN `we would otherwise be eligible for TANF` IS A BOOLEAN @desc Whether your family's income and assets would qualify you for TANF and you are not ineligible for any reason (including a sanction or the lump sum rule)
+      `I have had diversion assistance in the last 12 months` IS A BOOLEAN @desc Whether you, as an adult applicant, received diversion assistance of any kind in the last 12 months
+      `we can show a bona fide need` IS A BOOLEAN @desc Whether you can give evidence of a real need for child care, housing, transportation, food, medical costs for your immediate family, or expenses needed to keep or get a job
+      `the cost of the need` IS A NUMBER @desc What meeting that need would cost, in US dollars
+GIVETH A NUMBER
+`How much diversion assistance can we get` `we would otherwise be eligible for TANF` `I have had diversion assistance in the last 12 months` `we can show a bona fide need` `the cost of the need` MEANS
+    IF `diversion assistance is available` `we would otherwise be eligible for TANF` `I have had diversion assistance in the last 12 months` `we can show a bona fide need`
+    THEN `the most diversion assistance pays` `the cost of the need`
+    ELSE 0
