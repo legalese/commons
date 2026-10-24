@@ -1,0 +1,296 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `on-pit`
+IMPORT `on-pit-dates`
+
+-- Taxation Act, 2007 -- the individual's questions: "Am I liable for Ontario tax? How much Ontario income tax do I owe for
+-- 2026? Do I get the Ontario tax reduction, the LIFT credit, the Ontario child benefit, the Ontario sales tax credit? When
+-- are my instalments due? Must I repay an overpaid child benefit?" Every question calls the rules in on-pit.l4 and
+-- on-pit-dates.l4; nothing is restated. Plain inputs, one per fact the person can state.
+--
+-- Indexed amounts. The 2026 bracket limits ($53,891, $107,785), basic personal amount ($12,989), surtax thresholds
+-- ($5,818, $7,446) and tax reduction amounts ($300, $554) are those in the CRA's T4127 Payroll Deductions Formulas, 122nd
+-- edition (January 2026), Table 8.1 and 8.2 and the Ontario factor S, deposited at
+-- ../../registers/source-bundle/cra-t4127-jan-2026.txt. The July 2026 to June 2027 Ontario child benefit ($146.66 a month
+-- a child, so A = $1,760: NOTES.md finding 6; threshold $26,865) and Ontario sales tax credit ($378 a person; thresholds
+-- $29,047 and $36,309) are those on the CRA's "Province of Ontario" programs page, deposited at
+-- ../../registers/source-bundle/cra-ontario-programs-2026-10.txt. The other indexed credit amounts (spouse, age, pension,
+-- disability) are not in a deposited text and are asked as inputs, from Form ON428 for 2026.
+--
+-- Federal figures (taxable income, net income, adjusted income, s 118.7 contributions) come from the person's federal
+-- return; see subjects/ca/income-tax-act/.
+-- © King's Printer for Ontario, 2007. NOT AN OFFICIAL VERSION (see SOURCE-LICENSE.md).
+-- BASELINE ENCODING. Not advice. See NOTES.md.
+
+-- The 2026 amounts: deposited figures, with the four s 9 amounts the T4127 does not give taken from the person.
+GIVEN `spouse amount` IS A NUMBER, `spouse floor` IS A NUMBER, `age amount` IS A NUMBER, `age threshold` IS A NUMBER
+      `pension maximum` IS A NUMBER, `disability amount` IS A NUMBER
+GIVETH AN `Ontario amounts`
+`the 2026 Ontario amounts with` `spouse amount` `spouse floor` `age amount` `age threshold` `pension maximum` `disability amount` MEANS
+    `Ontario amounts` WITH
+        `first bracket limit`        IS 53891
+        `second bracket limit`       IS 107785
+        `personal amount base`       IS 12989
+        `spouse amount base`         IS `spouse amount`
+        `spouse income floor`        IS `spouse floor`
+        `age amount base`            IS `age amount`
+        `age income threshold`       IS `age threshold`
+        `pension amount maximum`     IS `pension maximum`
+        `impairment amount base`     IS `disability amount`
+        `first surtax threshold`     IS 5818
+        `second surtax threshold`    IS 7446
+        `basic reduction amount`     IS 300
+        `dependant reduction amount` IS 554
+
+-- Where a question reads none of the four person-supplied amounts, they are filled with the Act's written figures; no
+-- rule that question calls reads them.
+`the 2026 Ontario amounts` MEANS `the 2026 Ontario amounts with` 7541 754 4336 32280 1228 7175
+
+`the OCB amounts for July 2026 to June 2027` MEANS
+    `OCB amounts` WITH
+        `amount per qualified dependant` IS 1760
+        `income threshold`               IS 26865
+
+`the OSTC amounts for July 2026 to June 2027` MEANS
+    `OSTC amounts` WITH
+        `amount per person` IS 378
+        `single threshold`  IS 29047
+        `family threshold`  IS 36309
+
+GIVEN `month` IS A NUMBER, `year` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a month from July 2026 to June 2027` IF
+        (`year` EQUALS 2026 AND `month` AT LEAST 7 AND `month` AT MOST 12)
+    OR  (`year` EQUALS 2027 AND `month` AT LEAST 1 AND `month` AT MOST 6)
+
+§ `Am I liable for Ontario income tax`
+
+@export Which paragraph of s 4 (1) of Ontario's Taxation Act, 2007 makes me liable for Ontario personal income tax for the year, if any?
+GIVEN `I was resident in Ontario on December 31` IS A BOOLEAN @desc Whether you lived (were resident) in Ontario on the last day of the tax year, usually December 31
+      `I had income earned outside Ontario` IS A BOOLEAN @desc Whether any of your income for the year was earned outside Ontario (for example business income from a permanent establishment in another province)
+      `I had income earned in Ontario` IS A BOOLEAN @desc Whether you had income earned in Ontario in the year (matters only if you were not resident in Ontario on December 31)
+GIVETH A `Liability under s 4 (1)`
+`Which paragraph of s 4 (1) applies to me` MEANS
+    `the s 4 (1) paragraph that applies` `I was resident in Ontario on December 31` `I had income earned outside Ontario` `I had income earned in Ontario`
+
+§ `How much Ontario income tax do I owe for 2026`
+
+@export What is my Ontario basic personal income tax for the tax year under s 6 (1) of the Taxation Act, 2007, before credits?
+GIVEN `the tax year` IS A NUMBER @desc The calendar tax year; only 2026 is covered
+      `my taxable income` IS A NUMBER @desc Your taxable income for the year from your federal return (line 26000), in Canadian dollars
+GIVETH AN `Answer` NUMBER
+`What is my Ontario basic tax` MEANS
+    IF `the tax year` EQUALS 2026
+    THEN `answered` (`the basic personal income tax` `the 2026 Ontario amounts` `my taxable income`)
+    ELSE `not covered` `only the 2026 taxation year has deposited indexed amounts (T4127, January 2026)`
+
+@export What are my Ontario non-refundable tax credits for 2026 under s 9 of the Taxation Act, 2007 (in dollars of tax)?
+GIVEN `the tax year` IS A NUMBER @desc The calendar tax year; only 2026 is covered
+      `I can claim for my spouse or common-law partner` IS A BOOLEAN @desc Whether you claim the federal spouse or common-law partner amount (Income Tax Act s 118 (1) (a)) for the year
+      `my spouse's net income` IS A NUMBER @desc Your spouse's or common-law partner's net income for the year in dollars (0 if no spouse claim)
+      `I can claim for an eligible dependant` IS A BOOLEAN @desc Whether you claim the federal amount for an eligible (wholly dependent) person (Income Tax Act s 118 (1) (b)), for example a single parent for a child
+      `my dependant's net income` IS A NUMBER @desc That dependant's net income for the year in dollars (0 if no claim)
+      `I was 65 or older at the end of the year` IS A BOOLEAN @desc Whether you were 65 or older on December 31 (entitled to the federal age amount, Income Tax Act s 118 (2))
+      `my net income` IS A NUMBER @desc Your net income for the year from your federal return (line 23600), in dollars
+      `my CPP contributions and EI premiums` IS A NUMBER @desc The CPP (base) contributions and EI premiums you claim as federal credits under Income Tax Act s 118.7 (the amounts on your T4 slips), in dollars
+      `I can claim the pension amount` IS A BOOLEAN @desc Whether you have eligible pension income for the federal pension amount (Income Tax Act s 118 (3))
+      `my eligible pension income` IS A NUMBER @desc Your eligible pension income for the year in dollars (0 if none)
+      `I can claim the disability amount` IS A BOOLEAN @desc Whether you, being 18 or older, are entitled to the federal disability amount for yourself (Income Tax Act s 118.3 (1); a disability tax credit certificate)
+      `I was under 18 and claim the disability amount` IS A BOOLEAN @desc Whether you claim the disability amount and were under 18 at the end of the year (not covered)
+      `my other Ontario non-refundable credits` IS A NUMBER @desc The Ontario credits you claim for anything else in s 9 (medical expenses, donations, tuition, caregiver, adoption, transfers), already in dollars of credit as on Form ON428; 0 if none
+      `the 2026 Ontario spouse amount` IS A NUMBER @desc The maximum 2026 Ontario spouse or common-law partner amount printed on Form ON428 (the indexed $7,541 of s 9 (3)); 0 if no spouse or dependant claim
+      `the 2026 Ontario spouse income floor` IS A NUMBER @desc The 2026 indexed figure for the $754 in s 9 (3) (the base amount on ON428 minus the maximum spouse amount); 0 if no spouse or dependant claim
+      `the 2026 Ontario age amount` IS A NUMBER @desc The 2026 Ontario age amount printed on Form ON428 (the indexed $4,336 of s 9 (8)); 0 if under 65
+      `the 2026 Ontario age income threshold` IS A NUMBER @desc The 2026 net income threshold for the Ontario age amount printed on Form ON428 (the indexed $32,280 of s 9 (8)); 0 if under 65
+      `the 2026 Ontario pension amount maximum` IS A NUMBER @desc The 2026 maximum Ontario pension income amount printed on Form ON428 (the indexed $1,228 of s 9 (10)); 0 if no pension claim
+      `the 2026 Ontario disability amount` IS A NUMBER @desc The 2026 Ontario disability amount printed on Form ON428 (the indexed $7,175 of s 9 (12)); 0 if no disability claim
+GIVETH AN `Answer` NUMBER
+`What are my Ontario non-refundable credits` MEANS
+    IF (NOT (`the tax year` EQUALS 2026))
+    THEN `not covered` `only the 2026 taxation year has deposited indexed amounts (T4127, January 2026)`
+    ELSE IF `I was under 18 and claim the disability amount`
+         THEN `not covered` `the disability supplement for an individual under 18 (s 9 (12) (a)) is not encoded`
+         ELSE LET `amounts` MEANS `the 2026 Ontario amounts with` `the 2026 Ontario spouse amount` `the 2026 Ontario spouse income floor` `the 2026 Ontario age amount` `the 2026 Ontario age income threshold` `the 2026 Ontario pension amount maximum` `the 2026 Ontario disability amount`
+                  `facts` MEANS `Credit facts` WITH
+                      `entitled to the basic personal deduction`      IS TRUE
+                      `claims for a spouse`                           IS `I can claim for my spouse or common-law partner`
+                      `income of the spouse`                          IS `my spouse's net income`
+                      `claims for a wholly dependent person`          IS `I can claim for an eligible dependant`
+                      `income of the wholly dependent person`         IS `my dependant's net income`
+                      `entitled to the age deduction`                 IS `I was 65 or older at the end of the year`
+                      `net income for the age credit`                 IS `my net income`
+                      `CPP contributions and EI premiums under 118.7` IS `my CPP contributions and EI premiums`
+                      `entitled to the pension deduction`             IS `I can claim the pension amount`
+                      `pension income for the credit`                 IS `my eligible pension income`
+                      `entitled to the disability deduction`          IS `I can claim the disability amount`
+                      `impairment supplement`                         IS 0
+                      `other Ontario non-refundable credits`          IS `my other Ontario non-refundable credits`
+              IN  `answered` (`the non-refundable tax credits` `amounts` `facts`)
+
+@export What is my Ontario surtax for 2026 under s 16 of the Taxation Act, 2007?
+GIVEN `the tax year` IS A NUMBER @desc The calendar tax year; only 2026 is covered
+      `my taxable income` IS A NUMBER @desc Your taxable income for the year from your federal return (line 26000), in dollars
+      `my Ontario non-refundable credits` IS A NUMBER @desc Your Ontario non-refundable tax credits in dollars of tax (see the non-refundable credits question)
+GIVETH AN `Answer` NUMBER
+`What is my Ontario surtax` MEANS
+    IF `the tax year` EQUALS 2026
+    THEN `answered` (`the Ontario surtax` `the 2026 Ontario amounts` (`the gross tax amount` (`the basic personal income tax` `the 2026 Ontario amounts` `my taxable income`) `my Ontario non-refundable credits` 0))
+    ELSE `not covered` `only the 2026 taxation year has deposited indexed amounts (T4127, January 2026)`
+
+@export Do I qualify for the Ontario low-income individuals and families tax credit (LIFT) under s 21.1 (1) and (2) of the Taxation Act, 2007?
+GIVEN `I was resident in Canada at the start of the year` IS A BOOLEAN @desc Whether you were resident in Canada on January 1 of the tax year
+      `I was resident in Ontario on December 31` IS A BOOLEAN @desc Whether you were resident in Ontario on the last day of the tax year
+      `I was bankrupt during the year` IS A BOOLEAN @desc Whether you were a bankrupt at any time in the calendar year
+      `a trustee in bankruptcy files my return` IS A BOOLEAN @desc Whether your return for the year is filed by a trustee in bankruptcy
+      `I was in prison from last December 31 through the first 179 days of this year` IS A BOOLEAN @desc Whether you were confined to a prison or similar institution for a period including December 31 of the previous year and the first 179 days of this tax year
+GIVETH A BOOLEAN
+DECIDE `Do I qualify for LIFT` IF
+    `is an eligible individual for LIFT` `I was resident in Canada at the start of the year` TRUE `I was resident in Ontario on December 31` `I was bankrupt during the year` `a trustee in bankruptcy files my return` `I was in prison from last December 31 through the first 179 days of this year`
+
+@export How much is my Ontario LIFT credit under s 21.1 (3.1) of the Taxation Act, 2007 (before it is limited to the tax otherwise payable)?
+GIVEN `I qualify for LIFT` IS A BOOLEAN @desc Whether you are an eligible individual for LIFT (see the LIFT eligibility question)
+      `my employment income` IS A NUMBER @desc Your income from an office or employment for the year (employment income on your T4 slips), in dollars
+      `my own adjusted net income` IS A NUMBER @desc Your adjusted net income for the year as if you had no spouse or common-law partner (your own net income, adjusted as for the Canada child benefit), in dollars
+      `my family adjusted net income` IS A NUMBER @desc Your adjusted family net income for the year (yours plus your cohabiting spouse's or partner's, as for the Canada child benefit), in dollars
+GIVETH A NUMBER
+`What is my LIFT credit` MEANS
+    `the LIFT credit` `I qualify for LIFT` `my employment income` `my own adjusted net income` `my family adjusted net income`
+
+@export How much Ontario Health Premium must I pay under s 24 of the Taxation Act, 2007?
+GIVEN `I was resident in Ontario on December 31` IS A BOOLEAN @desc Whether you were resident in Ontario on the last day of the tax year
+      `my taxable income` IS A NUMBER @desc Your taxable income for the year from your federal return (line 26000), in dollars
+GIVETH A NUMBER
+`What is my Ontario Health Premium` MEANS
+    `the Ontario Health Premium payable` (`the s 4 (1) paragraph that applies` `I was resident in Ontario on December 31` FALSE FALSE) `my taxable income`
+
+@export How much Ontario income tax (personal income tax plus the Ontario Health Premium) do I owe for 2026 under the Taxation Act, 2007, after the Ontario tax reduction and LIFT?
+GIVEN `the tax year` IS A NUMBER @desc The calendar tax year; only 2026 is covered
+      `I was resident in Ontario on December 31` IS A BOOLEAN @desc Whether you were resident in Ontario on the last day of the tax year
+      `I had income earned outside Ontario` IS A BOOLEAN @desc Whether any of your income for the year was earned outside Ontario (not covered)
+      `I have split income` IS A BOOLEAN @desc Whether you have split income taxed under the tax on split income (TOSI) for the year (not covered)
+      `I pay federal minimum tax` IS A BOOLEAN @desc Whether your federal tax for the year is the alternative minimum tax (not covered)
+      `I claim the overseas employment or minimum tax carryover credit` IS A BOOLEAN @desc Whether you claim an Ontario overseas employment credit or minimum tax carryover (not covered)
+      `my taxable income` IS A NUMBER @desc Your taxable income for the year from your federal return (line 26000), in dollars
+      `my Ontario non-refundable credits` IS A NUMBER @desc Your Ontario non-refundable tax credits in dollars of tax (see the non-refundable credits question)
+      `my Ontario dividend tax credit` IS A NUMBER @desc Your Ontario dividend tax credit under s 19.1 (from Form ON428), in dollars; 0 if no dividends
+      `my Ontario foreign tax credit` IS A NUMBER @desc Your Ontario foreign tax credit under s 21 (Form T2036), in dollars; 0 if none
+      `my children under 18 for the tax reduction` IS A NUMBER @desc How many dependants under 18 for whom you or your cohabiting spouse received the Canada child benefit at the end of the year
+      `my infirm dependants for the tax reduction` IS A NUMBER @desc How many dependants with a mental or physical infirmity you claim an Ontario credit for (and no one else counts)
+      `I lived with a spouse or partner on December 31` IS A BOOLEAN @desc Whether you lived with a cohabiting spouse or common-law partner on December 31
+      `my net income` IS A NUMBER @desc Your net income for the year (federal line 23600), in dollars
+      `my spouse's net income` IS A NUMBER @desc Your cohabiting spouse's or partner's net income for the year, in dollars (0 if none)
+      `I was resident in Canada at the start of the year` IS A BOOLEAN @desc Whether you were resident in Canada on January 1 of the tax year
+      `I was bankrupt during the year` IS A BOOLEAN @desc Whether you were a bankrupt at any time in the calendar year
+      `a trustee in bankruptcy files my return` IS A BOOLEAN @desc Whether your return for the year is filed by a trustee in bankruptcy
+      `I was in prison from last December 31 through the first 179 days of this year` IS A BOOLEAN @desc Whether you were confined to a prison for a period including December 31 of the previous year and the first 179 days of this tax year
+      `my employment income` IS A NUMBER @desc Your income from an office or employment for the year, in dollars
+      `my own adjusted net income` IS A NUMBER @desc Your adjusted net income as if you had no spouse or partner, in dollars
+      `my family adjusted net income` IS A NUMBER @desc Your adjusted family net income (yours plus your cohabiting spouse's or partner's), in dollars
+GIVETH AN `Answer` NUMBER
+`How much Ontario tax do I owe` MEANS
+    BRANCH
+        IF (NOT `I was resident in Ontario on December 31`)
+            THEN `not covered` `only an individual resident in Ontario on the last day of the year is encoded (s 4 (1) para 1)`
+        IF `I had income earned outside Ontario`
+            THEN `not covered` `income earned outside Ontario brings in the Ontario allocation factor (s 4 (1) para 2, s 6 (2)), which is not encoded`
+        IF (NOT (`the tax year` EQUALS 2026))
+            THEN `not covered` `only the 2026 taxation year has deposited indexed amounts (T4127, January 2026)`
+        IF `I have split income`
+            THEN `not covered` `split income (s 12.1) is not encoded`
+        IF `I pay federal minimum tax`
+            THEN `not covered` `minimum tax (s 19.2) is not encoded`
+        IF `I claim the overseas employment or minimum tax carryover credit`
+            THEN `not covered` `the overseas employment and minimum tax carryover credits (ss 14, 15) are not encoded`
+        OTHERWISE
+            -- The credit facts are set so that `the non-refundable tax credits` returns exactly the person's own total
+            -- (every other credit FALSE or 0, the total in `other Ontario non-refundable credits`).
+            LET `facts` MEANS `Tax facts` WITH
+                    `tax base`                         IS `my taxable income`
+                    `credits`                          IS `Credit facts` WITH
+                        `entitled to the basic personal deduction`      IS FALSE
+                        `claims for a spouse`                           IS FALSE
+                        `income of the spouse`                          IS 0
+                        `claims for a wholly dependent person`          IS FALSE
+                        `income of the wholly dependent person`         IS 0
+                        `entitled to the age deduction`                 IS FALSE
+                        `net income for the age credit`                 IS 0
+                        `CPP contributions and EI premiums under 118.7` IS 0
+                        `entitled to the pension deduction`             IS FALSE
+                        `pension income for the credit`                 IS 0
+                        `entitled to the disability deduction`          IS FALSE
+                        `impairment supplement`                         IS 0
+                        `other Ontario non-refundable credits`          IS `my Ontario non-refundable credits`
+                    `subdivision d credit amount`      IS 0
+                    `Ontario dividend tax credit`      IS `my Ontario dividend tax credit`
+                    `Ontario foreign tax credit`       IS `my Ontario foreign tax credit`
+                    `under-18 dependants counted`      IS `my children under 18 for the tax reduction`
+                    `infirm dependants counted`        IS `my infirm dependants for the tax reduction`
+                    `cohabiting spouse on December 31` IS `I lived with a spouse or partner on December 31`
+                    `individual's net income`          IS `my net income`
+                    `spouse's net income`              IS `my spouse's net income`
+                    `tax reduction excepted`           IS `the s 20 (9) exception applies` `I was resident in Canada at the start of the year` TRUE TRUE `I was bankrupt during the year` `a trustee in bankruptcy files my return`
+                    `LIFT eligible`                    IS `is an eligible individual for LIFT` `I was resident in Canada at the start of the year` TRUE TRUE `I was bankrupt during the year` `a trustee in bankruptcy files my return` `I was in prison from last December 31 through the first 179 days of this year`
+                    `employment income`                IS `my employment income`
+                    `personal adjusted income`         IS `my own adjusted net income`
+                    `adjusted income`                  IS `my family adjusted net income`
+                `division B` MEANS `the personal income tax payable under Division B` `the 2026 Ontario amounts` `facts`
+                `premium` MEANS `the Ontario Health Premium payable` `paragraph 1 -- resident on the last day, no income earned outside Ontario` `my taxable income`
+            IN  `answered` (`the tax payable under Part II` `division B` `premium`)
+
+§ `When are my Ontario instalments due`
+
+@export On what dates must I pay instalments of Ontario tax for the year under s 115 (1) (a) and (7) of the Taxation Act, 2007?
+GIVEN `the tax year` IS A NUMBER @desc The calendar tax year, for example 2026
+      `I am not required to pay federal instalments` IS A BOOLEAN @desc Whether you are relieved of federal instalments by Income Tax Act s 156.1 (for most people, because the tax owing on filing is $3,000 or less; the CRA's instalment reminder says)
+GIVETH A LIST OF DATE
+`When are my Ontario instalments due` MEANS
+    `the Ontario instalment due dates` `the tax year` `I am not required to pay federal instalments`
+
+§ `The Ontario child benefit` -- for a parent who gets the Canada child benefit
+
+@export How much Ontario child benefit can I get for a month from July 2026 to June 2027 under s 104 of the Taxation Act, 2007?
+GIVEN `the benefit month` IS A NUMBER @desc The month (1 = January ... 12 = December) of the benefit payment
+      `the benefit year` IS A NUMBER @desc The calendar year of that month (2026 or 2027)
+      `I get the Canada child benefit for the month` IS A BOOLEAN @desc Whether you are the eligible individual for one or more children under 18 at the start of the month and entitled to the Canada child benefit for that month
+      `I lived in Ontario on the first day of the month` IS A BOOLEAN @desc Whether you were resident in Ontario on the first day of the month
+      `my returns are filed for the base year` IS A BOOLEAN @desc Whether you (and, if asked, your cohabiting spouse or partner) filed income tax returns for the base taxation year (2025 for July 2026 to June 2027)
+      `the number of my children` IS A NUMBER @desc How many qualified dependants (children under 18) you are the eligible individual for on the first day of the month
+      `of whom in shared custody` IS A NUMBER @desc How many of those children you have in shared custody (living with you at least 40% of the time, or about equally); 0 if none
+      `my adjusted family net income for the base year` IS A NUMBER @desc Your adjusted family net income for the base taxation year (2025 for July 2026 to June 2027), in dollars
+GIVETH AN `Answer` NUMBER
+`How much Ontario child benefit a month` MEANS
+    IF `is a month from July 2026 to June 2027` `the benefit month` `the benefit year`
+    THEN LET `conditions` MEANS `the s 104 (4) conditions are met` `I get the Canada child benefit for the month` `I get the Canada child benefit for the month` `I lived in Ontario on the first day of the month` `my returns are filed for the base year`
+         IN  `answered` (`the Ontario child benefit for the month` `the OCB amounts for July 2026 to June 2027` `conditions` `the number of my children` `of whom in shared custody` `my adjusted family net income for the base year`)
+    ELSE `not covered` `only benefit months from July 2026 to June 2027 have deposited indexed amounts`
+
+@export How much Ontario child benefit must I repay for a 12-month benefit period under s 104 (8) and (9) of the Taxation Act, 2007?
+GIVEN `what I received for the period` IS A NUMBER @desc The total Ontario child benefit you received for the 12-month period beginning July 1, in dollars
+      `what I was entitled to for the period` IS A NUMBER @desc The total Ontario child benefit you were entitled to for that period (as redetermined), in dollars
+GIVETH A NUMBER
+`How much Ontario child benefit must I repay` MEANS
+    `the Ontario child benefit to repay` `what I received for the period` `what I was entitled to for the period`
+
+§ `The Ontario sales tax credit (part of the Ontario Trillium Benefit)`
+
+@export How much Ontario sales tax credit (part of the Ontario Trillium Benefit) can I get for a month from July 2026 to June 2027 under s 103.8 of the Taxation Act, 2007?
+GIVEN `the benefit month` IS A NUMBER @desc The month (1 = January ... 12 = December) of the payment
+      `the benefit year` IS A NUMBER @desc The calendar year of that month (2026 or 2027)
+      `I lived in Ontario at the start of the month` IS A BOOLEAN @desc Whether you were resident in Ontario at the beginning of the month
+      `I am eligible for the federal GST/HST credit` IS A BOOLEAN @desc Whether you are an eligible individual for the federal GST/HST credit (Income Tax Act s 122.5 (1)) at the start of the month: generally 19 or older, or with a spouse, partner or child
+      `my returns are filed for the base year` IS A BOOLEAN @desc Whether you (and, if asked, your spouse or partner) filed income tax returns for the base taxation year (2025 for July 2026 to June 2027)
+      `I have a spouse or common-law partner` IS A BOOLEAN @desc Whether you have a cohabiting spouse or common-law partner (a qualified relation) for the month
+      `the number of my children` IS A NUMBER @desc How many qualified dependants (your children under 19 living with you, as for the GST/HST credit) you have for the month
+      `of whom in shared custody` IS A NUMBER @desc How many of those children you have in shared custody; 0 if none
+      `I was 65 or older at the end of the base year` IS A BOOLEAN @desc Whether you were 65 or older on December 31 of the base taxation year (matters only with a spouse, partner or child: not covered)
+      `my adjusted family net income for the base year` IS A NUMBER @desc Your adjusted (family) net income for the base taxation year, in dollars
+GIVETH AN `Answer` NUMBER
+`How much Ontario sales tax credit a month` MEANS
+    BRANCH
+        IF (NOT (`is a month from July 2026 to June 2027` `the benefit month` `the benefit year`))
+            THEN `not covered` `only benefit months from July 2026 to June 2027 have deposited indexed amounts`
+        IF `I was 65 or older at the end of the base year` AND (`I have a spouse or common-law partner` OR `the number of my children` GREATER THAN 0)
+            THEN `not covered` `the seniors' income threshold of s 103.8 (5) is not encoded`
+        OTHERWISE
+            LET `eligible` MEANS `is eligible for the Ontario sales tax credit` `I lived in Ontario at the start of the month` `I am eligible for the federal GST/HST credit` `my returns are filed for the base year`
+            IN  `answered` (`the Ontario sales tax credit for the month` `the OSTC amounts for July 2026 to June 2027` `eligible` `I have a spouse or common-law partner` `the number of my children` `of whom in shared custody` `my adjusted family net income for the base year`)
