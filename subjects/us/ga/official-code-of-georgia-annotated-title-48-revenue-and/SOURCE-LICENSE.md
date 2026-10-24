@@ -26,3 +26,14 @@ No statute text has been deposited yet.
 ## In-force status
 
 UNCLEAR -- in_force 'unclear' for the same CAPTCHA reason.
+
+## Session laws deposited, 2026-10-24
+
+The O.C.G.A. text is still not deposited. What has been deposited is two Acts of 2026 that amend or add to Chapter 7, taken from the Georgia General Assembly's own site instead of the LexisNexis platform:
+
+- `registers/source-bundle/ga-2026-act-465-hb-463-ap.txt`: HB 463 as passed by the House and Senate (Act 465, signed 2026-05-11), from https://www.legis.ga.gov/api/legislation/document/20252026/249080. Its strike-through and underlining are recorded in `ga-2026-act-465-hb-463-ap.formulas.md`.
+- `registers/source-bundle/ga-2026-act-374-hb-1000-ap.txt`: HB 1000 as passed (Act 374, effective 2026-03-20), from https://www.legis.ga.gov/api/legislation/document/20252026/246128.
+
+**Terms.** www.legis.ga.gov is a JavaScript application. It has no robots.txt (that path returns the application shell) and no terms of use page. Its footer reads "COPYRIGHT © 2026 THE GEORGIA GENERAL ASSEMBLY". A bill passed by the General Assembly is the work of legislators acting in their legislative capacity, and under *Georgia v. Public.Resource.Org*, 590 U.S. 255 (2020), no copyright subsists in it. The footer can cover the site, not the Acts. No "no modification", "personal use only" or permission term was found. Checked 2026-10-24. The footer is reported to Michael with the deposit.
+
+**Access.** The bill PDFs are public at `/api/legislation/document/<session>/<id>`. Each was fetched once with curl, with the User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`. The document ids were read from the legislature's own bill pages, rendered in a browser. The site's data API (`/api/legislation/detail`, `/api/legislation/html`, `/api/sessions`) answers 401 to a scripted client and was not used. Requests to legis.ga.gov in this pass: 9 by curl, at least 3 seconds apart: the robots path, a guessed document id that answered 500, two API probes that answered 401, a House calendar PDF and an earlier HB 1437 (2022) substitute (both used only to confirm that documents are public), the Legislative Counsel's 2026 Summary of General Statutes, and the two bill PDFs. There were also page views in a browser. LexisNexis was not contacted.
