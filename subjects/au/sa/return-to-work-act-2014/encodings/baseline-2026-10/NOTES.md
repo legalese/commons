@@ -1,0 +1,158 @@
+# Return to Work Act 2014 (SA): baseline encoding for the injured worker and the employer
+
+> **The texts are the Open Australian Legal Corpus versions of the Act and the Regulations as at 2024-12-01 (scraped 2025-03-10).** They are not the official text and may be out of date: check legislation.sa.gov.au before relying on anything here. **Every indexed amount after that date is an input**, and so is every indexed amount at all, because the Adelaide CPI figures that index them are not deposited.
+
+## Method
+
+**Baseline.** Written straight from the deposited text with the `writing-l4-rules` skill, from the seat of the individual to whom the law is applied, with the design defaults ruled on 2026-10-18.
+There is no REFUSE in it. A case the text does not answer returns an explicit `not covered` value, and tests assert it.
+It was checked with the stable `l4` of VS Code extension 1.6.98, with `JL4_LIBRARY_PATH` unset.
+No pipeline, no coverage table, no independent test pass, no human gate.
+**Not for public use as advice.**
+
+It is written in layers, following the seat-neutral core and seat layer pattern of `subjects/us/food-and-nutrition-act-of-2008/encodings/baseline-2026-10/` and the scope of `subjects/au/wa/workers-compensation-and-injury-management-act-2023/encodings/baseline-2026-10/`:
+
+- **`rtw-dates.l4`**: the calendar arithmetic (business days, month periods, designated periods, ages), on the built-in date functions only, so that no module imports the slow daydate library.
+- **`rtw-core.l4`**: the seat-neutral core, in the Act's own actors and terms ("the worker", "the employer", "the pre-injury employer", "the Corporation"). Computations (average weekly earnings, the weekly payment, the lump sums, the shares on death, the deadlines) are functions. Where the text says "must" or sets a period, there is a regulative rule (`DEONTIC`): 11 rules and 5 consequences they share.
+- **`rtw-seat.l4`**: the injured worker's seat (and, on a death, the family's). 47 questions, each with `@export` and a `@desc` on every input, under `§§` headings. It builds the core's records from plain answers and restates no rule.
+- **`rtw-seat-employer.l4`**: the employer's seat, 16 questions. Its names differ from the worker seat's, so a case file can import both.
+
+No earlier encoding of this Act existed to keep. No requirement ledger covers South Australia, so no ledger line is closed.
+
+## Edition
+
+- **Act:** Return to Work Act 2014 (SA), the Open Australian Legal Corpus text, corpus version_id `south_australian_legislation:2024-12-01/2014.16.un`, **as at 2024-12-01, scraped 2025-03-10**, as deposited at `../../registers/source-bundle/return-to-work-act-2014.txt` (478,930 characters). Its legislative history ends with the Return to Work (Employment and Progressive Injuries) Amendment Act 2024 (No 50 of 2024, in operation 1 December 2024 except some provisions, "uncommenced—not incorporated": among them changes to s 5(2), (16), new s 5(2a)-(2c), (17), (18), s 42(2) and s 22(7)(a)(ii), (7a)). Three formulas are missing (`../../registers/source-bundle/return-to-work-act-2014.formulas.md`); this encoding meets two of them (ss 5(12)(b), 56(4)); the third (s 142, premiums) is out of scope.
+- **Regulations:** Return to Work Regulations 2015 (SA), corpus version_id `south_australian_legislation:2024-12-01/2015.29.un`, **as at 2024-12-01, scraped 2025-03-10**, as deposited at `../../../return-to-work-regulations-2015/registers/source-bundle/return-to-work-regulations-2015.txt`. They are grouped with the Act because they set its numbers: indexation (regs 4, 8), who is a worker (regs 5, 6), the minimum wage pro rata (reg 7), average weekly earnings (reg 9), notice (reg 11), costs (reg 12), the certificate (reg 19), medical expenses (reg 23), property (reg 25), supplementary income support (reg 26), the minimum wage date (reg 27), interest (reg 28), the non-economic loss table (reg 34, Schedule 1) and death (reg 35).
+
+**Inputs, because the deposit does not hold them:**
+
+- the Adelaide CPI (All groups) for the September quarters that index every "(indexed)" sum (s 4(17), regs 4, 8), and for the quarters reg 26 compares. The cases use an illustrative factor of 1.254 (125.4 over 100);
+- State average weekly earnings (s 4(9)); the Federal minimum wage (s 4(8), reg 7); the prime bank rate (reg 3); the age pension age (Social Security Act 1991 (Cth));
+- the overtime component of average weekly earnings (the s 5(12)(b) formula is missing, finding 5);
+- each degree of whole person impairment (assessed under s 22), and whether the final examination was on or after the 2022 designated day (finding 10);
+- South Australia's public holidays (for business days), as a count of weekday holidays in the period;
+- every judgment the Act hands to the Corporation, the Tribunal or a practitioner (practicable, prejudiced, reasonable cause, established onus, suitable employment).
+
+## Checks
+
+| Module | Case file | Assertions | Traces |
+|---|---|---|---|
+| `rtw-dates.l4`, `rtw-core.l4` | `rtw-cases-core.l4` | 175 written, 175 satisfied | 9 |
+| `rtw-seat.l4` | `rtw-cases-worker.l4` | 153 written, 153 satisfied | 0 |
+| `rtw-seat-employer.l4` (with mirror cases against `rtw-seat.l4`) | `rtw-cases-employer.l4` | 65 written, 65 satisfied | 2 |
+
+393 assertions in all, every one satisfied. `l4 run` on all seven files: 0 errors, 0 warnings (2026-10-24). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read.
+
+The 11 `#TRACE`s each carry an `-- expect:` line: 6 breaches (s 16(6); s 30(5), in the core and the employer file; the s 30(1)(b) time bar; s 20 after notice and without notice) and 5 obligations still open (the worker's notice under s 16(1); the Corporation's offer of interim payments under s 32(2); the employer's suitable work under s 18, in the core and the employer file; the Corporation's continued payments under s 48(9)). Each was read and matches its expectation. A breached trace satisfies neither `EQUALS FULFILLED` nor its negation on the stable `l4`, so breaches are checked this way; 29 `EVALTRACE` assertions check the fulfilled paths.
+
+Every expected value was written by hand from the deposited text, with the arithmetic in the comment above the assertion (dates and fractions were cross-checked with an independent calculator, never with the encoding). The cases follow illustrative people: Mia, a full-time storeperson injured on Monday 2 March 2026; a delivery rider, a carpenter, a cleaner, an owner-driver, a minister, a footballer and a boxer; Peter, injured at 65; and Ben, who dies of a work injury. The employer case file asks Mia's facts from her employer's side: **33 mirror cases** assert that the two seats agree (31 direct comparisons of the same question from both seats, and two day counts, for forwarding the claim and answering the s 18(3) notice), and the s 30 claim-forwarding rule and the s 18 suitable-work rules are traced on the day counts both seats give.
+
+## Seats
+
+**1. The injured worker** (`rtw-seat.l4`), and, after a death from a work injury, the worker's partner, children and the person who paid for the funeral. They ask: "Am I a worker? Is my injury a work injury?", "By when must I give notice, and claim?", "What weekly payment do I get, and until when?", "Am I a seriously injured worker?", "What lump sum do I get?", "Must my employer give me work, or notice before ending my job?", "May I sue my employer?", "By when must I go to the Tribunal?".
+
+**2. The employer** (`rtw-seat-employer.l4`), the pre-injury employer in s 18, a small business or a company. The text puts real duties on it:
+
+- send ReturnToWorkSA a copy of a notice of injury within 5 business days (s 16(6), maximum penalty $1 500);
+- forward the claim and a statement in the designated form within 5 business days (s 30(5), $1 500);
+- furnish the information ReturnToWorkSA reasonably requires (s 30(6), $1 500);
+- provide suitable employment (s 18(1)), and answer the worker's subsection (3) notice in writing within 1 month (s 18(4b));
+- give the worker and ReturnToWorkSA at least 28 days notice before ending an injured worker's employment (s 20; no penalty is stated).
+
+None of ss 16(6), 30(5), 30(6) binds a self-insured employer; a self-insured employer's functions as compensating authority (s 134) are not encoded.
+
+**No seat for ReturnToWorkSA** (the Corporation), an official body. Its duties appear only as what they mean to the worker: the day by which it should try to decide an income support claim (s 31(4)), its duty then to offer interim payments (s 32(2)), the notice it must give before cutting payments (s 48(6), (7)), and the payments it must keep making after a timely election (s 48(9)). It is a party to two core rules so that those can be traced.
+
+The 2026-10-18 defaults:
+
+- **The Act alone, with the instrument that sets its numbers.** Followed: the Regulations come in (see Edition).
+- **The actors the text names:** the worker, the employer and pre-injury employer, the principal and contractor (s 4(4)), the host employer (s 18(3)), the Corporation, the Tribunal, the accredited medical practitioner.
+- **A judgment left to someone else is answered conditionally, as an input.** Examples: "if practicable" and "as soon as practicable" (s 16(2)); "not been substantially prejudiced" and "other reasonable cause" (s 30(3)); "the onus of establishing that lies on the employer" (s 18(2)(a), (ca)); suitable employment (s 4(1)); the Corporation's acceptance of later surgery (s 33(21)); the Tribunal's satisfaction (s 100(2)); the degree of impairment (s 22).
+- **The Act's own definitions are worked out from facts:** worker and contract of service (s 4(1), (2), regs 5, 6), average weekly earnings (s 5), work injury (s 7), current work capacity (s 36), seriously injured worker (s 21), retiring age (s 44), child (ss 59(5), 61(1)), business day (s 4(1)). Borrowed terms are asked as facts: an award or industrial agreement, the Federal minimum wage, the age pension age, a recognised health practitioner.
+- **One case:** one worker, one injury, one claim; on a death, one deceased worker and that worker's family.
+- **The Act's own terms**, quoted in the comment above each rule.
+- **Machinery out:** the Corporation, registration, premiums, self-insurance, the Tribunal's procedure.
+
+**Departures:** none of substance. Two seat inputs bundle a few facts the Act lists separately (the s 7(8)(b) places; the s 43(2) "reasonable period" folded into each waiting fact).
+
+## Scope
+
+**In:**
+
+- **Coverage:** s 4(1) (worker, employer, contract of service, business day, notional weekly earnings and the other terms used), s 4(2), (4), (9), (17); regs 5, 6, 8; s 7(1), (2), (4), (7)-(10).
+- **Notice and claim:** s 16(1)-(4), (6) with reg 11; s 30(1)-(6), (10) with reg 19; s 31(4); s 32(2).
+- **Weekly payments:** s 5(1), (3)-(6) as inputs, (12)-(16) with regs 7, 9; ss 36-39; s 40 with reg 26; s 41; s 42 with reg 27; s 43; s 44; s 48(1)-(10), (12) with reg 28.
+- **Seriously injured workers:** s 21(2), (3), (5), (8); the WPI assessment under s 22 as an input.
+- **Suitable work and termination:** s 18(1)-(4e), (6), (7) with reg 12; s 20.
+- **Medical expenses and property:** s 33(20), (21) with reg 23; s 35 with reg 25.
+- **Lump sums:** ss 55, 56 with Schedules 6 and 7 (the s 56(4) formula is missing, so the lump sum is `not covered`, with the s 56(11) ceiling); ss 57, 58 with reg 34, Schedule 8 of the Act and Schedule 1 of the Regulations.
+- **Death:** s 59(1), (5)-(7); s 61 with reg 35(2); s 62 with reg 35(3).
+- **Common law and review:** s 72(1), (3); s 100.
+
+**Out:**
+
+- Part 3 service standards in detail (ss 13-15, 17, 23-29, Schedule 5), except as they bear on the duties above.
+- Redemptions (ss 53, 54); s 56A elections (except that an election takes a seriously injured worker out of "prescribed seriously injured worker"); s 56(6) reductions for an earlier entitlement.
+- s 8 (misconduct), s 9 and Schedules 2 and 3 (presumptions), ss 10-12 (connection with the State), s 34 (transport for initial treatment), ss 45-47, 49-52, s 60 (reviews), s 63, ss 64-69.
+- The s 33(1), (2) costs themselves: the scales and protocols are Gazette notices, not deposited. Only how long the entitlement lasts (s 33(20), (21)) is encoded.
+- Part 5 beyond s 72; Tribunal procedure (Part 6 beyond s 100); Parts 7 onward (registration, premiums including the s 142 formula, self-insurance, the Corporation).
+- Volunteers beyond the one Schedule 1 fact; labour hire beyond the s 18(3)(a)(iii) statement; self-employed workers beyond the s 175 fact.
+
+## Regulative rules (in `rtw-core.l4`)
+
+| Rule | Party | Clock starts | Consequence on failure |
+|---|---|---|---|
+| s 16(1), (2): notice within 24 hours if practicable | worker | the injury (hours) | none: the duty stays open (finding 3) |
+| s 16(6): copy of the notice within 5 business days | employer (not self-insured) | receipt of the notice | breach; maximum $1 500 |
+| s 30(1), (3)(b), (10): claim within 6 months | worker | the day the entitlement arises | barred, unless s 30(3)(b) excuses it |
+| s 30(5): forward the claim and statement within 5 business days | employer (not self-insured) | receipt of the claim | breach; maximum $1 500 |
+| s 30(6): furnish information | employer (not self-insured) | the Corporation's request | breach; maximum $1 500 |
+| ss 31(4), 32(2): decide within 10 business days, or offer interim payments | the Corporation | receipt of the claim | the offer of interim payments falls due (no breach) |
+| s 18(1), (2): provide suitable employment | pre-injury employer | while the duty applies | open (no period) |
+| s 18(4b)-(4e): written reply within 1 month; the worker's month for the Tribunal | pre-injury employer, then worker | receipt of the s 18(3) notice | the worker may go to the Tribunal |
+| s 20: no termination without 28 days notice | employer | the notice, or none | breach (no penalty stated) |
+| s 43(1): reasonable efforts to return to work | worker (current work capacity) | none | a ground to discontinue (s 48(2)(f), (3)(e)) |
+| s 48(9): apply and elect within 1 month; payments continue | worker, then the Corporation | receipt of the notice | none (a choice) |
+
+Business-day and month periods are given to a rule as the calendar days they span in the case (from `rtw-dates.l4`); the seat questions give the dates themselves. A rule under `LEST` starts when the trace first notices that the deadline has passed.
+
+## Commonwealth and other links
+
+The stable `l4` cannot IMPORT across encoding folders, so these links are recorded here and not in code.
+
+- **Age pension age.** s 44(1)(b) adopts "the age at which the worker would ... be eligible to receive an age pension under the Social Security Act 1991 of the Commonwealth". `What is my pension age in months` in `subjects/au/social-security-act-1991/encodings/baseline-2026-10/ssa-claims.l4` answers this encoding's `my age pension age in months` input.
+- **Income tax and Centrelink.** That weekly payments are assessable income under `subjects/au/income-tax-assessment-act-1997/` and are "compensation" under the Social Security Act 1991 Part 3.14 (which can reduce or preclude a Centrelink payment) is **unverified (general knowledge, not from the texts)**. The Social Security Act baseline's compensation recovery questions (`Is my payment compensation affected` and the others) take it from there.
+- **Victims of crime.** Victims of Crime Act 2001 (SA) s 17(5)(b): a person "is not entitled to statutory compensation if the person has received, or is entitled to receive, a payment or damages in respect of death or non-economic loss for the same harm under the Return to Work Act 2014". This encoding's s 58 and ss 59-62 answers are that input for the victims of crime encoding (the fifth South Australian encoding), which takes it as an input.
+- **Motor accidents.** Motor accident claims (Motor Vehicles Act 1959 Part 4, Civil Liability Act 1936 Part 8) are a separate encoding; "motor accident damages" (s 4(1)) and the journey rule in s 7(8) are where the two schemes meet.
+- **Other states.** The Western Australian model, `subjects/au/wa/workers-compensation-and-injury-management-act-2023/encodings/baseline-2026-10/`, sets a 15% threshold for common law against the employer; South Australia's is 35% physical or 30% psychiatric (s 72). The Northern Territory baseline, `subjects/au/nt/return-to-work-act-1986/encodings/baseline-2026-10/`, has the same two seats.
+
+## What the Act turns out to say
+
+1. **A delivery rider is a worker by regulation.** Reg 5(1)(e) prescribes "driving or riding for fee or reward a vehicle, other than a commercial motor vehicle, for the purpose of transporting by road goods or materials", where the rider works personally for another's business, employs no one, supplies at most $120 (indexed) of materials, does not "simultaneously own or operate more than 1 vehicle for work purposes", and the goods are not his or the business's. A food delivery rider on a bicycle or in a car is then a worker under paragraph (b) of "contract of service", whatever the contract says; running two vehicles at once takes him out. Asserted.
+2. **An employee who drives his own truck is not covered at all.** Reg 6(4) excludes "a person (the driver) who is employed or engaged by another" to carry goods in a commercial motor vehicle he owns, leases or hires, unless the principal (or someone related to it) supplies the vehicle or the goods are his or the principal's. The exclusion reaches an employee as well as a contractor. Asserted (own van: not a worker; the employer's van: a worker).
+3. **Notice "should" be given within 24 hours; it "must" be given.** s 16(1) says notice "must be given"; s 16(2) says it "should be given ... if practicable within 24 hours". The rule treats the 24 hours (or what was practicable) as a target whose miss is not a breach: the duty stays open. The consequence is s 30(2) (no claim "unless notice of the injury has been given as required"), which a late notice arguably meets, and s 30(3)(a) excuses even no notice where the claim is not substantially prejudiced or there was ignorance, mistake, absence or other reasonable cause. Asserted (notice at 30 hours: fulfilled; none: open; the claim answers).
+4. **The journey rule: a READING.** In s 7(8) the words "and there is a real and substantial connection between the employment and the journey" stand at the margin after paragraph (b), so they are read as qualifying both (a), a journey in the course of duties, and (b), the commute; and s 7(8) is read as the whole test for a journey ("if (and only if)"). s 7(9) makes an accident on the way to or from work not enough by itself. Asserted.
+5. **The overtime formula is missing.** s 5(12)(b) says the overtime component "will be an amount calculated as follows:"; the formula did not survive conversion, and only its terms remain (C the component, A the overtime paid in the relevant period, B the weeks worked or on paid leave). The component is an input; nothing is guessed. Average weekly earnings are otherwise worked out: the period's average, plus prescribed non-cash benefits not retained (reg 9), plus the overtime component if overtime was reasonably expected, then the award floor, the minimum wage floor (pro rata to 1 decimal point, reg 7(2)) and the cap at twice State average weekly earnings (s 5(15)). Asserted ($1 400; $1 300 without overtime; $3 800 at the cap; $481.7634 pro rata).
+6. **The economic loss lump sum cannot be computed.** The s 56(4) formula is missing too (its terms LS, PS, AF, HWF remain). The encoding answers `not covered`, with the ceiling s 56(11) sets ("the prescribed sum adjusted by the age factor"): 20% at age 35 gives at most $173 010.60 on the illustrative CPI. The conditions are encoded: nothing for a seriously injured worker who has not elected under s 56A, under 5% physical impairment, noise induced hearing loss, a psychiatric injury, or after death. Asserted.
+7. **Regulation 12 still cites s 18(3) for Tribunal applications.** Since 1 December 2024 (Act No 50 of 2024) s 18(3) is the worker's written notice to the employer, and the application to the Tribunal is under s 18(4d). Reg 12(1)(a) and (b), amended by regulation 109 of 2024 from the same day, still speak of "an application to the Tribunal under section 18(3)". The limits are encoded for the s 18(4d) application. Asserted ($505, $935, $3 090 on the illustrative CPI; 85% of the Supreme Court scale after a pre-hearing conference).
+8. **Suitable work: a month to answer, then a month for the Tribunal.** s 18(4b) gives the pre-injury employer 1 month from receiving the worker's s 18(3) notice to say in writing whether it will provide work; the worker then has 1 month from the written reply, or, with no reply, 1 month after the employer's month ends (s 18(4d)); a worker who had ceased to be incapacitated loses the Tribunal route if the notice came more than 6 months after (s 18(4e)). READING: the (4d)(b) month is added to the end of the first, so a notice received on 31 January 2027 gives 28 February, then 28 March (not 31 March). Asserted, from both seats.
+9. **The 80% step-down never bites on the minimum wage.** s 42 raises the "combined amount" (compensation plus current earnings) to the Federal minimum wage. Since s 5(15)(b) makes the minimum wage the floor of average weekly earnings, a worker at that floor gets 100% in the second 52 weeks as well: $915.90 at 80% is $732.72, raised to $915.90; with $400 of earnings, $412.72 is raised to $515.90. The s 42 pro rata adjustment is read with reg 7(2), which names only s 5(15)(b). Asserted.
+10. **The 2022 thresholds hang on a day the deposit does not give.** The 35% physical threshold for a seriously injured worker (s 21(2)(b), (8)), the 35% common law threshold (s 72(1)(a)) and the Schedule 7 sums came with the Return to Work (Scheme Sustainability) Amendment Act 2022, whose Schedule 1 clause 2 applies them only where the accredited medical practitioner's final examination was "on or after the designated day", a day appointed by proclamation. Neither the day nor the earlier thresholds are in the deposit, so a physical injury examined earlier answers `not covered`. Psychiatric injuries are outside clause 2. Asserted.
+11. **s 44(3) can carry weekly payments past retiring age.** Retiring age is the lesser of any normal retiring age and the age pension age (s 44(1)). A worker who becomes incapacitated while still employed within 2 years of it, or above it, is paid for incapacity within 104 weeks of the first incapacity, past retiring age if need be: Peter (retiring age 67, on 1 July 2027) is paid to 27 February 2028, $1 200 on 1 August 2027. For a seriously injured worker the same rule ends payments at 104 weeks. Asserted.
+12. **Indexation changes who is a worker.** The reg 5 materials caps ($120, $60, and $18 988 for a tool) are "(indexed)" under reg 4 from the September quarter of 2014. With no CPI figures deposited, the caps are inputs: a cleaner supplying $140 a month of materials is a worker at a factor of 1.254 and not at 1. Reg 4 indexes every regulation sum from 2014, whenever it was inserted (reg 12 was varied in 2018 and 2024). Asserted.
+13. **The non-economic loss table tops out above the prescribed sum.** Schedule 1 of the Regulations (reg 34) gives $482 014 (indexed) for 50% or more; s 57's prescribed sum is $472 000 (indexed). Both are indexed from the September quarter of 2014 (reg 4; s 4(17), with s 57 unamended since the Act's Part 4 commenced on 1 July 2015, per the deposit's legislative history). s 58(4) calls the lump sum "a portion of the prescribed sum", and s 58(6)(b) caps two or more combined impairments at the prescribed sum, so read literally one impairment at 50% gets $604 446 and two combined at 50% get $591 888 (illustrative CPI). The table's amounts at 5%, 10%, 30% and 50% are each about 1.0212 times the Act's Schedule 8 minimums, which they therefore meet. Asserted.
+14. **The death lump sum does not ask about dependency.** s 61 pays the prescribed sum (less any s 58 lump sum already paid to the worker) to "partners" and "children" as defined, with no dependency test, unlike the s 59 weekly payments. One child takes 10%; two to five take 5% each; six or more share 25%, so with six children each child gets $24 662 against $29 594.40 each with five (on $591 888). With no partner or child, the Corporation "may" pay dependants up to the sum. Asserted.
+15. **Weekly death benefits are capped at a seriously injured worker's rate.** s 59(7) reduces the aggregate proportionately to what the worker would have had as a seriously injured worker with no current work capacity: 100% of notional weekly earnings in the first 52 weeks, 80% after. Five orphans at 25% each (125%) get $320 each, then $256; a partner and four children (100%) get $640 and $160 each after 52 weeks. Asserted.
+16. **Medical expenses end 12 months after weekly payments do.** For a worker who is not seriously injured and whose weekly payments end at 104 weeks (28 February 2028), costs incurred after 28 February 2029 are not compensable unless s 33(21) or reg 23 applies (a therapeutic appliance to maintain capacity, accepted later surgery, the reg 23(1) cancers and silica injuries, travel to an impairment assessment). READING: for a worker never entitled to weekly payments, the 12 months run from the injury. Asserted.
+17. **ReturnToWorkSA's 10 business days are an endeavour; the interim payments are a duty.** s 31(4) says the Corporation "must, wherever practicable, endeavour to determine the claim within 10 business days"; s 32(2) says it "must offer to make interim payments" if it fails to, with no time for the offer. Encoded as a DO (no breach) whose consequence is an open MUST. Asserted (Mia's claim received 17 March 2026: 31 March).
+18. **The 6 months for a claim include their first day.** "The period of 6 months commencing on the day on which the entitlement to make the claim arises" (s 30(10)). READING: it ends the day before the same date 6 months later (3 March to 2 September 2026), or on the last day of a shorter month (31 August 2026 to 28 February 2027). The Acts Interpretation Act 1915 (SA), which may say otherwise, is not deposited. Asserted.
+
+## Before relying on it
+
+- Replace both corpus texts with the current official text from legislation.sa.gov.au and check every provision used against it, including the 2024 amendments the corpus marks "uncommenced—not incorporated" (ss 5(2)-(2c), (16)-(18), 22(7)(a)(ii), (7a), 42(2)).
+- Transcribe the s 5(12)(b) and s 56(4) formulas from the authorised version into the `.formulas.md` sidecar; then replace the overtime input and the `not covered` lump sum (findings 5, 6).
+- Find the designated day under the 2022 amending Act and the thresholds and sums that applied before it (finding 10).
+- Fill the inputs from their published sources: the Adelaide CPI series (or ReturnToWorkSA's published indexed amounts each 1 January), State average weekly earnings, the Federal minimum wage, the prime bank rate, South Australian public holidays, and the Acts Interpretation Act's rules for periods.
+- Resolve the readings in findings 4, 8, 16 and 18, and the reg 12 cross-reference (finding 7); the case law was not searched.
+- Encode what is out: s 8, ss 10-12, s 33(1), (2) with the Minister's scales, s 34, ss 45-47, 49-54, s 56A, s 60, ss 64-69, Part 5 beyond s 72, the self-insured employer as compensating authority.
+- An independent test pass, and a human gate. Deployment names within 36 characters, if deployed: `au-sa-return-to-work-act-worker` and `au-sa-return-to-work-act-employer`.

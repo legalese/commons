@@ -1,0 +1,150 @@
+IMPORT prelude
+
+-- Return to Work Act 2014 (SA) -- the calendar arithmetic of this encoding, in one small module.
+--
+-- It uses only the built-in date functions (DATE_FROM_DMY, DATE_SERIAL, DATE_FROM_SERIAL, DATE_DAY, DATE_MONTH,
+-- DATE_YEAR), not the daydate library, which makes the stable l4 slow to check the larger modules that import it.
+-- DATE_SERIAL counts days; a serial MODULO 7 gives the weekday, 0 for Sunday to 6 for Saturday (checked: Monday
+-- 26 October 2026 has serial 740279, and 740279 MODULO 7 is 1).
+--
+-- READINGS, none of them stated by the Act:
+--   * s 4(1): "business day means any day except Saturday, Sunday or a public holiday". South Australia's public
+--     holidays are not deposited, so the caller says how many weekday public holidays fall in the period; each one
+--     adds a day.
+--   * "within N business days after" a day: the last day is the Nth business day after it, the day itself not counted.
+--   * "within 1 month after" a day (ss 18(4d), 48(9), 100(1)), and "within 1 month of" receiving a notice (s 18(4b)):
+--     the same day of the next month, or that month's last day where it is shorter (31 January plus 1 month is
+--     28 or 29 February).
+--   * "the period of 6 months commencing on the day" (s 30(10)) and "a continuous period of 12 months" (s 33(20)):
+--     the period includes its first day and ends on the day before the same-numbered day N months later; where that
+--     month has no such day, it ends on that month's last day.
+--   * "the period of 52 weeks from the date on which the incapacity for work first occurs" (ss 39, 41): that date is
+--     day 0, and the 52 weeks are days 0 to 363; the second 52 weeks are days 364 to 727; "after the end of the
+--     period of 104 weeks" (s 39(3)) is day 728 onwards.
+--   * A person "reaches" an age given in months on the day that many months after the day of birth (the same
+--     month reading; a person born on 29 February turns a whole number of years on 28 February in a common year).
+--
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Dates for the Return to Work Act 2014 (SA)`
+
+-- A date from day, month and year, so that the case files can write dates without the daydate library.
+GIVEN d IS A NUMBER, m IS A NUMBER, y IS A NUMBER
+GIVETH A DATE
+`the calendar date` d m y MEANS DATE_FROM_DMY d m y
+
+GIVEN `the day` IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the day` `plus days` n MEANS DATE_FROM_SERIAL (DATE_SERIAL `the day` PLUS n)
+
+GIVEN `the first day` IS A DATE, `the second day` IS A DATE
+GIVETH A NUMBER
+`days from` `the first day` `to` `the second day` MEANS DATE_SERIAL `the second day` MINUS DATE_SERIAL `the first day`
+
+GIVEN `the first day` IS A DATE, `the second day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the first day` `is on or before` `the second day` IF DATE_SERIAL `the first day` AT MOST DATE_SERIAL `the second day`
+
+GIVEN `the first day` IS A DATE, `the second day` IS A DATE
+GIVETH A DATE
+`the earlier of` `the first day` `and` `the second day` MEANS
+    IF `the first day` `is on or before` `the second day` THEN `the first day` ELSE `the second day`
+
+GIVEN `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is a Monday to Friday` `the day` IF
+        (DATE_SERIAL `the day` MODULO 7) AT LEAST 1
+    AND (DATE_SERIAL `the day` MODULO 7) AT MOST 5
+
+-- The Nth Monday to Friday after a day, the day itself not counted.
+GIVEN n IS A NUMBER, `the day` IS A DATE
+GIVETH A DATE
+`the weekday` n `after` `the day` MEANS
+    IF n AT MOST 0
+    THEN `the day`
+    ELSE IF `is a Monday to Friday` (`the day` `plus days` 1)
+         THEN `the weekday` (n MINUS 1) `after` (`the day` `plus days` 1)
+         ELSE `the weekday` n `after` (`the day` `plus days` 1)
+
+-- READING (above): the last of N business days after a day, with the given number of weekday public holidays in the period.
+GIVEN n IS A NUMBER, `the day` IS A DATE, `weekday public holidays in the period` IS A NUMBER
+GIVETH A DATE
+`the last of` n `business days after` `the day` `with public holidays` `weekday public holidays in the period` MEANS
+    `the weekday` (n PLUS `weekday public holidays in the period`) `after` `the day`
+
+GIVEN m IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the number of days in month` m `of` y MEANS
+    IF m EQUALS 12
+    THEN 31
+    ELSE DATE_SERIAL (DATE_FROM_DMY 1 (m PLUS 1) y) MINUS DATE_SERIAL (DATE_FROM_DMY 1 m y)
+
+GIVEN a IS A NUMBER, b IS A NUMBER
+GIVETH A NUMBER
+`the smaller number of` a `and` b MEANS IF a AT MOST b THEN a ELSE b
+
+-- The month and year N months on from a day, as a count of months since year 0.
+GIVEN `the day` IS A DATE, n IS A NUMBER
+GIVETH A NUMBER
+`the month count of` `the day` `plus` n MEANS (DATE_YEAR `the day` TIMES 12) PLUS (DATE_MONTH `the day` MINUS 1) PLUS n
+
+GIVEN c IS A NUMBER
+GIVETH A NUMBER
+`the year of month count` c MEANS FLOOR (c DIVIDED BY 12)
+
+GIVEN c IS A NUMBER
+GIVETH A NUMBER
+`the month of month count` c MEANS (c MINUS (`the year of month count` c TIMES 12)) PLUS 1
+
+-- READING (above): the same day of the month N months later, or that month's last day where it is shorter.
+GIVEN `the day` IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the day` `plus months` n MEANS
+    DATE_FROM_DMY (`the smaller number of` (DATE_DAY `the day`) `and` (`the number of days in month` `the new month` `of` `the new year`)) `the new month` `the new year`
+    WHERE
+        `the count`     MEANS `the month count of` `the day` `plus` n
+        `the new year`  MEANS `the year of month count` `the count`
+        `the new month` MEANS `the month of month count` `the count`
+
+-- READING (above): the last day of a period of N months commencing on a day.
+GIVEN n IS A NUMBER, `the first day` IS A DATE
+GIVETH A DATE
+`the last day of the period of` n `months commencing on` `the first day` MEANS
+    IF DATE_DAY `the first day` AT MOST `the days in the new month`
+    THEN DATE_FROM_SERIAL (DATE_SERIAL (DATE_FROM_DMY (DATE_DAY `the first day`) `the new month` `the new year`) MINUS 1)
+    ELSE DATE_FROM_DMY `the days in the new month` `the new month` `the new year`
+    WHERE
+        `the count`              MEANS `the month count of` `the first day` `plus` n
+        `the new year`           MEANS `the year of month count` `the count`
+        `the new month`          MEANS `the month of month count` `the count`
+        `the days in the new month` MEANS `the number of days in month` `the new month` `of` `the new year`
+
+-- READING (above): the day a person reaches an age given in months.
+GIVEN `the date of birth` IS A DATE, `the age in months` IS A NUMBER
+GIVETH A DATE
+`the day a person born on` `the date of birth` `reaches an age in months of` `the age in months` MEANS
+    `the date of birth` `plus months` `the age in months`
+
+-- A person's age in whole years on a day.
+GIVEN `the date of birth` IS A DATE, `the day` IS A DATE
+GIVETH A NUMBER
+`the age in whole years of a person born on` `the date of birth` `on` `the day` MEANS
+    IF (DATE_MONTH `the day` GREATER THAN DATE_MONTH `the date of birth`)
+       OR (DATE_MONTH `the day` EQUALS DATE_MONTH `the date of birth` AND DATE_DAY `the day` AT LEAST DATE_DAY `the date of birth`)
+    THEN DATE_YEAR `the day` MINUS DATE_YEAR `the date of birth`
+    ELSE DATE_YEAR `the day` MINUS DATE_YEAR `the date of birth` MINUS 1
+
+-- READING (above): which of the designated periods of ss 39 and 41 a day falls in, counted from the day the incapacity
+-- for work first occurs (day 0). 1 = the first 52 weeks, 2 = the next 52 weeks, 3 = after 104 weeks, 0 = before.
+GIVEN `the day` IS A DATE, `the day incapacity first occurred` IS A DATE
+GIVETH A NUMBER
+`the designated period of` `the day` `counted from` `the day incapacity first occurred` MEANS
+    IF `the days` LESS THAN 0
+    THEN 0
+    ELSE IF `the days` AT MOST 363
+         THEN 1
+         ELSE IF `the days` AT MOST 727
+              THEN 2
+              ELSE 3
+    WHERE
+        `the days` MEANS `days from` `the day incapacity first occurred` `to` `the day`
