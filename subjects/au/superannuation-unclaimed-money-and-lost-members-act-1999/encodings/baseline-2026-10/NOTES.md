@@ -12,6 +12,8 @@ It satisfies `REQ-0072` in `subjects/au/requirements.jsonl` (a scheduled priorit
 
 **Added 23 October 2026 (REQ-0086):** `sumlma-regulations.l4`, a module beside `sumlma-member.l4` that IMPORTs it, brings in the Superannuation (Unclaimed Money and Lost Members) Regulations 2019: the prescribed eligibility age (reg 5) and the s 12 test at that age, the excluded visas (reg 7), the KiwiSaver matters (reg 20), the interest rate and interest for a financial year (reg 9), the s 24NA(2)(c) prescribed period (reg 13) and the s 24NA(3) choice of fund (reg 14): nine more exported questions. Nothing in `sumlma-member.l4` was changed; its questions that ask these as facts stay.
 
+**Added 23 October 2026 (REQ-0087):** `sumlma-statement-days.l4`, a module beside `sumlma-member.l4` that IMPORTs it, works out the unclaimed money days and scheduled statement days from the Commissioner's two deposited instruments (s 15A and s 20B) and asks the due-day question with the days worked out instead of supplied (one more exported question). Nothing in `sumlma-member.l4` was changed.
+
 Fifteen questions are exported from `sumlma-member.l4`, each with `@export` and a `@desc` on every input, grouped under `§§` headings in the Act's order.
 
 ## Edition
@@ -19,6 +21,8 @@ Fifteen questions are exported from `sumlma-member.l4`, each with `@export` and 
 Compilation No. 42, compilation date 28 September 2022, includes amendments up to Act No. 127, 2021 (register id **C2022C00273**), as deposited at `../../registers/source-bundle/C2004A00518.txt` (retrieved 13 October 2026 as the current compilation).
 
 `sumlma-regulations.l4` reads the **Superannuation (Unclaimed Money and Lost Members) Regulations 2019**, F2019L01617, compilation F2025C00752 (Compilation No. 6, compilation date 25 July 2025, includes amendments up to F2025L00865; retrieved 23 October 2026), deposited at `../../../superannuation-unclaimed-money-and-lost-members-regulations-2019/registers/source-bundle/F2019L01617.txt`, with the formula of regs 8(5) and 9(5) (an image in the download) transcribed in `F2019L01617.formulas.md` beside it.
+
+`sumlma-statement-days.l4` reads the Commissioner's **Unclaimed Money Days and Scheduled Statement Days** (F2009L04037, made 16 October 2009 under s 15A, registered 28 October 2009) and **Temporary Residents' Superannuation Measure – Scheduled Statement Days 2009 year and onwards** (F2009L01210, made 25 March 2009 under s 20B), both as made, retrieved 23 October 2026 and deposited at `../../../unclaimed-money-days-and-scheduled-statement-days/` and `../../../temporary-residents-superannuation-measure-scheduled-statement-days-2009/` (the Register serves both as legacy `.doc`; the EPUB renderings, which have no tables, were converted).
 
 In `sumlma-member.l4`, which brings in no instrument, what the Act leaves to an instrument is handled this way:
 
@@ -33,6 +37,7 @@ In `sumlma-member.l4`, which brings in no instrument, what the Act leaves to an 
 |---|---|---|
 | `sumlma-member.l4` | `sumlma-cases-member.l4` | 90 written, 90 satisfied |
 | `sumlma-regulations.l4` | `sumlma-cases-regulations.l4` | 26 written, 26 satisfied |
+| `sumlma-statement-days.l4` | `sumlma-cases-statement-days.l4` | 15 written, 15 satisfied |
 
 `l4 run` on every file: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
 
@@ -109,10 +114,13 @@ The general interest charge and the Taxation Administration Act machinery the no
 14. **Interest is CPI-linked, rounded upwards, never negative.** Reg 9(5) works interest out year by year by the formula Amount × Days interest payable × Interest rate / Days in the financial year (from the image, `F2019L01617.formulas.md`), each year's interest added to the amount for the next. The rate is the percentage change between the two March-quarter CPI numbers most recently published before the year began, "rounded up to 4 decimal places", and nil if negative. "Rounded up" is read as upward rounding (a ceiling) at the fourth place, not rounding half up; the percentage is applied as a rate. The CPI numbers are inputs: the ABS series is not deposited. Asserted (on stated CPI numbers).
 15. **The KiwiSaver matters, the visas and the s 24NA rules are now prescribed facts, not guesses.** Reg 7 excludes only the Subclass 405 and 410 visas from s 20AA; reg 20 lists six KiwiSaver matters (the last, that no element untaxed in the fund be paid, is negative); reg 13 makes the s 24NA(2)(c) period run from the start of the financial year before the payment's to the day before the payment; reg 14 picks among several qualifying funds by four tiers ending in the Commissioner's choice. Asserted.
 
+16. **The unclaimed money days are 30 June and 31 December; the payment is due 31 October or 30 April.** F2009L04037 sets those days, with 31 October for a 30 June day and 30 April (the next year) for a 31 December day. Money that qualifies on a day is reported for the first unclaimed money day on or after it (the statements are "as at the end of the day") and is due at the end of that day's scheduled statement day. The instrument was made in 2009 for s 15A when it spoke of Part 3 alone; s 15A now specifies days "for the purposes of this Part and Parts 3B and 4A", and the instrument is read as supplying them for inactive low-balance and lost member accounts too. Money that qualified before 28 October 2009 answers `not covered`. Asserted.
+17. **For a former temporary resident, the days are each 30 April and 31 October (first 15 June 2009).** F2009L01210 sets them under s 20B. Under s 20F(1) the fund pays by the next of those days after the notice, or the one after it if the notice came less than 28 days before; the 2019 Regulations identify no later day for s 20F(1)(c), so (c) never applies. A notice on 30 April itself is not "before" that day: the next day after it is 31 October. Asserted.
+
 ## What would need doing before this is worth relying on
 
 - **The Superannuation (Unclaimed Money and Lost Members) Regulations** (the 2019 Regulations are now deposited and brought in by `sumlma-regulations.l4`; reg 8, the pre-2013 interest, and Part 7, public sector schemes, are not encoded; the ABS CPI numbers reg 9 uses are inputs). Originally: They hold the eligibility age (if another is prescribed), the interest rates, prescribed visas, the s 24NA(2)(c) period and the s 24NA(3) allocation, and the KiwiSaver matters. Raised as `REQ-0086`.
-- **The Commissioner's s 15A and s 20B instruments** setting the unclaimed money days and scheduled statement days, so that a due day can be computed rather than supplied. Raised as `REQ-0087`.
+- **The Commissioner's s 15A and s 20B instruments** setting the unclaimed money days and scheduled statement days, so that a due day can be computed rather than supplied. Raised as `REQ-0087`; done 23 October 2026 (`sumlma-statement-days.l4`).
 - **A formulas sidecar** for s 17(1A) and the death-beneficiary formulas (finding 9).
 - **The SIS and RSA Regulations' definitions of "lost member"** and the conditions of release prescribed for s 20QA, which are asked as facts here.
 - **Wider sources.** No ATO guidance, ruling or case was read. Findings 4 and 5 are readings of the text alone.
