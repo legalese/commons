@@ -2,7 +2,7 @@
 
 Arizona (US state) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the Arizona State Legislature - Arizona Revised Statutes; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text has been deposited and nothing is encoded yet.
+The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the Arizona State Legislature - Arizona Revised Statutes; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text was deposited then; see the later sections. Two encodings were added on 2026-10-24.
 
 **Licence category: unclear.** **Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
 
@@ -54,3 +54,16 @@ Whole chapters were out of reach. azleg.gov sets `Crawl-delay: 120` and publishe
 - **The plan's "senior property valuation protection" citation (A.R.S. 42-17301 ff.) was wrong.** 42-17301 ff. is the *residential property tax deferral* for owners aged 70 or older, which is deposited instead. The Title 42 index shows no statutory article for the senior valuation protection option, which rests on Ariz. Const. art. IX, s 18. The Constitution was not fetched.
 - The inflation-adjusted standard deduction and other dollar amounts the department adjusts are not sourced.
 - The Arizona Administrative Code (DES rules on cash assistance and UI) is not sourced: apps.azsos.gov answered 403 to this user agent in the set-up check.
+
+## Encodings: tax and benefits (2026-10-24)
+
+Two baseline encodings, each from the seat of the individual and checked with the stable `l4` (1.6.98): 0 errors, 0 warnings, every assertion satisfied.
+
+| Encoding | Seat | Questions | Assertions |
+|---|---|---|---|
+| [`arizona-revised-statutes-title-43-taxation-of-income/encodings/baseline-2026-10`](arizona-revised-statutes-title-43-taxation-of-income/encodings/baseline-2026-10) | the individual taxpayer (full-year resident) | resident, must I file, when to pay, exemptions, dependent credit, excise tax credit, tax owed after credits | 39 |
+| [`arizona-revised-statutes-title-46-chapter-2-article-5-temporary-assistance-for-needy-families/encodings/baseline-2026-10`](arizona-revised-statutes-title-46-chapter-2-article-5-temporary-assistance-for-needy-families/encodings/baseline-2026-10) | the applicant for cash assistance | conditions (incl. the 12- and 60-month limits), counted earnings, dependent care disregard, the 130% child-only test, the statutory floor, diversion, sanctions | 38 |
+
+**Rate settled in part.** The gap the 2026-10-20 deposit recorded (s 43-243 missing) is closed: ss 43-243, 43-301 and 43-501 were fetched on 2026-10-24 (4 requests, 125 seconds apart, all HTTP 200) and deposited as `arizona-revised-statutes-title-43-taxation-of-income/registers/source-bundle/az-ars-43-ss243-301-501-2026-10-24.txt`. Section 43-243 makes the flat 2.5% apply from the year after a revenue notice is received; the deposited law does not say when (or whether) it was, so the encoding asks for that year.
+
+**Still missing for a person's full answer:** the department's inflation-adjusted standard deduction and brackets; the DES cash assistance amount by family size; DES rules on resources and work activities (s 46-299). The Arizona Administrative Code host (apps.azsos.gov) answered 403 in the 2026-10-19 set-up check and was not retried.

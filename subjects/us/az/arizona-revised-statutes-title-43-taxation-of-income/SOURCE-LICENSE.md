@@ -24,3 +24,11 @@ This subject was first laid out on 2026-09-23 as metadata only (the earlier sour
 
 - `registers/source-bundle/az-ars-43-ch1-general-provisions-sel-2026.txt` -- A.R.S. 43-102 (intent: Arizona adjusted gross income is federal AGI subject only to the title's modifications), 43-104 (definitions) and 43-105 (the Internal Revenue Code as in effect on January 1, 2026 for taxable years from 2026, and earlier conformity dates for earlier years). 3 sections; 16,116 characters.
 - `registers/source-bundle/az-ars-43-ch10-individuals-sel-2026.txt` -- A.R.S. title 43, chapter 10, selected sections on individuals: definitions (43-1001, 43-1002), the tax rates in both versions the register prints (43-1011), additions and subtractions, including the subtraction of Social Security benefits included in federal AGI under IRC s86 (43-1021, 43-1022), exemptions for age 65 and blindness (43-1023), the standard and itemized deductions (43-1041, 43-1042), the credit for taxes paid to other states (43-1071), the property tax credit for residents 65 or over or receiving SSI (43-1072), the increased excise tax credit (43-1072.01), the family income tax credit (43-1073) and the dependent tax credit (43-1073.01). 14 sections; 76,610 characters.
+
+## Further sections deposited 2026-10-24
+
+Three more sections were fetched on 2026-10-24 (UTC 02:52 to 02:56) and deposited as `registers/source-bundle/az-ars-43-ss243-301-501-2026-10-24.txt`, with its `.meta.json`: s 43-243 (the revenue notices that decide which s 43-1011 rate table applies; the 2026-10-20 deposit left the rate open because this section was missing), s 43-301 (who must file an individual return) and s 43-501 (when tax is payable).
+
+- **Terms**: re-read the same day; unchanged ("(c) 2026 Arizona State Legislature. All Rights Reserved" footer; the register's unofficial-version statement). Verdict unchanged: conditions, met.
+- **robots.txt** (read 2026-10-24T02:50:02Z): `Crawl-delay: 120`; `/ars/` is not disallowed. Requests were 125 seconds or more apart.
+- **Access**: User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`; 4 requests (robots.txt and three section pages), all HTTP 200; no challenge.

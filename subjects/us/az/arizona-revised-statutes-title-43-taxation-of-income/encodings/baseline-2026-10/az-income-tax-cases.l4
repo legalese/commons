@@ -1,0 +1,108 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `az-income-tax`
+
+-- A.R.S. Title 43 -- worked cases, from the seat of the individual taxpayer.
+-- Every expected value was worked out by hand from the deposited text, never copied from the encoding's output.
+-- The taxpayers are HYPOTHETICAL. Two inputs are ASSUMED, not deposited: that the s 43-243(B)(2) notice was received in
+-- 2022 (so the flat 2.5% applies from 2023), and a 2026 head-of-household standard deduction of $24,150.
+
+-- -------------------------------------------------------------------------------------------------------------------
+-- s 43-104(19): resident.
+#ASSERT `Am I an Arizona resident` TRUE FALSE 0 FALSE
+#ASSERT `Am I an Arizona resident` FALSE TRUE 2 FALSE
+-- ten months: presumed resident; presumption overcome: not; nine months exactly: no presumption.
+#ASSERT `Am I an Arizona resident` FALSE FALSE 10 FALSE
+#ASSERT (NOT (`Am I an Arizona resident` FALSE FALSE 10 TRUE))
+#ASSERT (NOT (`Am I an Arizona resident` FALSE FALSE 9 FALSE))
+
+-- s 43-301(A): gross income above the standard deduction.
+#ASSERT `Must I file an Arizona return` 16000 15750
+#ASSERT (NOT (`Must I file an Arizona return` 15750 15750))
+
+-- s 43-501: tax for 2025 is payable on 15 April 2026.
+#ASSERT `By when must I pay my Arizona tax` 2025 EQUALS Date 15 4 2026
+
+-- -------------------------------------------------------------------------------------------------------------------
+-- s 43-1023: one blind person, one person 65 or older, one older person in paid care, one parent at home:
+-- $1,500 + $2,100 + $2,300 + $10,000 = $15,900.
+#ASSERT `What are my Arizona exemptions` 1 1 1 0 1 EQUALS 15900
+#ASSERT `What are my Arizona exemptions` 0 2 0 1 0 EQUALS 6500
+
+-- s 43-1073.01: two children under 17, single, federal AGI $150,000: $250.
+#ASSERT `What is my dependent tax credit` `single` 150000 2 0 EQUALS 250
+-- at exactly $200,000: subsection C applies but the excess is nil: $250.
+#ASSERT `What is my dependent tax credit` `single` 200000 2 0 EQUALS 250
+-- $210,500: $10,500 over is 11 thousands "or fraction thereof"; 55% off: $250 x 45% = $112.50.
+#ASSERT `What is my dependent tax credit` `single` 210500 2 0 EQUALS 112.5
+-- $230,000: 30 thousands, 150% off: nothing.
+#ASSERT `What is my dependent tax credit` `single` 230000 2 0 EQUALS 0
+-- joint $410,000, one under 17 and one older: $150 less 50% = $75.
+#ASSERT `What is my dependent tax credit` `married filing jointly` 410000 1 1 EQUALS 75
+
+-- s 43-1072.01: single at $12,500: $25; at $12,501: nothing; a family of five: capped at $100.
+#ASSERT `What is my excise tax credit` `single` 12500 FALSE FALSE 1 EQUALS 25
+#ASSERT `What is my excise tax credit` `single` 12501 FALSE FALSE 1 EQUALS 0
+#ASSERT `What is my excise tax credit` `married filing jointly` 24000 FALSE FALSE 5 EQUALS 100
+#ASSERT `What is my excise tax credit` `single` 9000 TRUE FALSE 1 EQUALS 0
+#ASSERT `What is my excise tax credit` `single` 9000 FALSE TRUE 1 EQUALS 0
+
+-- -------------------------------------------------------------------------------------------------------------------
+-- How much do I owe? Arguments: year, resident, status, federal AGI, additions, blind, 65+, older in care, stillbirths,
+-- parents at home, public pension, taxable Social Security, military retired pay, other subtractions, standard deduction?,
+-- itemized, charitable, department's standard deduction, year of the (B)(2) notice, dependents under 17, dependents 17+,
+-- claimed as a dependent, in custody 60 days, residents for the excise credit.
+
+-- A. Single, 2025, federal AGI $60,000. Standard deduction $15,750; taxable $44,250; 2.5% = $1,106.25. No credits.
+#ASSERT `How much Arizona income tax do I owe` 2025 TRUE `single` 60000 0 0 0 0 0 0 0 0 0 0 TRUE 0 0 0 2022 0 0 FALSE FALSE 1 EQUALS `answered` 1106.25
+
+-- B. Joint, 2025, federal AGI $80,000, two children under 17, $6,000 of Social Security in federal AGI, a $3,000 state
+--    pension ($2,500 subtracted). Arizona AGI $71,500; less $31,500 = $40,000; 2.5% = $1,000; less $250: $750.
+#ASSERT `How much Arizona income tax do I owe` 2025 TRUE `married filing jointly` 80000 0 0 0 0 0 0 3000 6000 0 0 TRUE 0 0 0 2022 2 0 FALSE FALSE 4 EQUALS `answered` 750
+
+-- C. Head of household, 2026, federal AGI $18,000, one child under 17, $500 to charity, the department's standard
+--    deduction taken as $24,150 (assumed), plus $500: taxable income nil, no tax. Excise credit for two residents, $50,
+--    refunded: -$50.
+#ASSERT `How much Arizona income tax do I owe` 2026 TRUE `head of household` 18000 0 0 0 0 0 0 0 0 0 0 TRUE 0 500 24150 2022 1 0 FALSE FALSE 2 EQUALS `answered` -50
+
+-- D. Single, 66, 2025, federal AGI $40,000 including $10,000 of Social Security. Subtractions $10,000 + $2,100 = $12,100;
+--    Arizona AGI $27,900; less $15,750 = $12,150; 2.5% = $303.75. Family credit: $30,000 is over $10,000.
+#ASSERT `How much Arizona income tax do I owe` 2025 TRUE `single` 40000 0 0 1 0 0 0 0 10000 0 0 TRUE 0 0 0 2022 0 0 FALSE FALSE 1 EQUALS `answered` 303.75
+
+-- E. Joint, 2025, federal AGI $19,000, one child under 17, itemizing $5,000. Taxable $14,000; tax $350. Dependent credit
+--    $125. Family credit: $19,000 is within $20,000; three persons x $40 = $120. $350 - $125 - $120 = $105. Excise credit
+--    three residents x $25 = $75, refundable: $30.
+#ASSERT `How much Arizona income tax do I owe` 2025 TRUE `married filing jointly` 19000 0 0 0 0 0 0 0 0 0 0 FALSE 5000 0 0 2022 1 0 FALSE FALSE 3 EQUALS `answered` 30
+
+-- F. Military retired pay of $30,000 in a single filer's $60,000 federal AGI, 2025: Arizona AGI $30,000; less $15,750 =
+--    $14,250; 2.5% = $356.25.
+#ASSERT `How much Arizona income tax do I owe` 2025 TRUE `single` 60000 0 0 0 0 0 0 0 0 30000 0 TRUE 0 0 0 2022 0 0 FALSE FALSE 1 EQUALS `answered` 356.25
+
+-- G. Outside the encoding.
+-- no (B)(2) notice: paragraph 7 or 8 brackets.
+#ASSERT `How much Arizona income tax do I owe` 2025 TRUE `single` 60000 0 0 0 0 0 0 0 0 0 0 TRUE 0 0 0 0 0 0 FALSE FALSE 1 EQUALS `not covered` `the s 43-1011 paragraph 7 or 8 brackets apply, and their inflation-adjusted amounts are not deposited`
+-- notice received in 2025: paragraph 9 only from 2026.
+#ASSERT `How much Arizona income tax do I owe` 2025 TRUE `single` 60000 0 0 0 0 0 0 0 0 0 0 TRUE 0 0 0 2025 0 0 FALSE FALSE 1 EQUALS `not covered` `the s 43-1011 paragraph 7 or 8 brackets apply, and their inflation-adjusted amounts are not deposited`
+-- 2026 without the department's standard deduction.
+#ASSERT `How much Arizona income tax do I owe` 2026 TRUE `single` 60000 0 0 0 0 0 0 0 0 0 0 TRUE 0 0 0 2022 0 0 FALSE FALSE 1 EQUALS `not covered` `the department's inflation-adjusted standard deduction for this year was not supplied`
+-- 2025, standard deduction, with charitable gifts.
+#ASSERT `How much Arizona income tax do I owe` 2025 TRUE `single` 60000 0 0 0 0 0 0 0 0 0 0 TRUE 0 100 0 2022 0 0 FALSE FALSE 1 EQUALS `not covered` `the 2025 charitable increase to the standard deduction uses a percentage the department adjusts, not deposited`
+-- a part-year resident; a 2021 return.
+#ASSERT `How much Arizona income tax do I owe` 2025 FALSE `single` 60000 0 0 0 0 0 0 0 0 0 0 TRUE 0 0 0 2022 0 0 FALSE FALSE 1 EQUALS `not covered` `the tax of a nonresident or part-year resident is not encoded`
+#ASSERT `How much Arizona income tax do I owe` 2021 TRUE `single` 60000 0 0 0 0 0 0 0 0 0 0 TRUE 0 0 0 2022 0 0 FALSE FALSE 1 EQUALS `not covered` `this encoding computes the tax for taxable years from 2022 only`
+
+-- -------------------------------------------------------------------------------------------------------------------
+-- s 43-1041(G): when the standard deduction election may be changed.
+#ASSERT `may change the standard deduction election` FALSE FALSE FALSE
+#ASSERT (NOT (`may change the standard deduction election` TRUE FALSE FALSE))
+#ASSERT `may change the standard deduction election` TRUE TRUE FALSE
+#ASSERT (NOT (`may change the standard deduction election` FALSE FALSE TRUE))
+
+-- The duties, traced (days from the close of the year).
+#ASSERT EVALTRACE (`the duty to file` `the taxpayer`) 0 (LIST EVENT `the taxpayer` `file a return with the department` 60) EQUALS FULFILLED
+#ASSERT EVALTRACE (`the duty to pay` `the taxpayer` 105) 0 (LIST EVENT `the taxpayer` `pay the tax` 100) EQUALS FULFILLED
+-- expect: BREACH BY `the taxpayer` BECAUSE "s 43-501: tax not paid by 15 April"
+#TRACE `the duty to pay` `the taxpayer` 105 AT 0 WITH
+    (WAITUNTIL 106)
+-- the standard deduction elected on the return, then changed after filing (s 43-1041(C), (F)).
+#ASSERT EVALTRACE (`the standard deduction election` `the taxpayer` TRUE) 0 (LIST EVENT `the taxpayer` `elect the standard deduction on the return` 60, EVENT `the taxpayer` `change the election after filing` 200) EQUALS FULFILLED
