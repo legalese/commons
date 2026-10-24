@@ -6,23 +6,23 @@
 
 **Baseline.** Written straight from the deposited texts with the `writing-l4-rules` skill, from the seat of the individual the law is applied to. It follows the design defaults ruled on 2026-10-18 and the brief for the Australian tax-and-benefits encodings of 24 October 2026. It uses no REFUSE. It was checked with the stable `l4` from VS Code extension 1.6.98, with `JL4_LIBRARY_PATH` unset.
 
-There was no pipeline, no coverage table, no independent test pass and no human gate. Not for public use as advice.
+There was no pipeline, no coverage table and no human gate. An independent verifier reviewed the encoding on 2026-10-24; its five issues and what was done about each are under "Corrections after verification". Not for public use as advice.
 
 There was no earlier encoding of this Act. The Taxation Administration Act subject holds no encoding either.
 
 The encoding has two layers:
 
 - **A seat-neutral core**, in the Acts' own actors and terms: the owner, a natural person, the taxpayer, the objector, the Minister and the Commissioner. Where the text says "must" or sets a deadline, the rule is regulative (`DEONTIC`, `PARTY ... MUST/DO/MAY ... WITHIN ... HENCE ... LEST`). Computations (the exemption, the taxable value, the scale, the waiver amounts, interest and penalty tax) are functions.
-- **A seat layer** (`lta-seat.l4`) that asks the owner's questions with plain inputs. It builds the core's records and restates no rule. Its deadline dates are the core's own day counts added to the date the owner gives.
+- **A seat layer** (`lta-seat.l4`) that asks the owner's questions with plain inputs. It builds the core's records and restates no rule. Its deadline dates are the core's own day counts added to the date the owner gives. After the independent verification of 2026-10-24, the conditions the seat had stated itself (the s 5(1) grant, the thresholds' not-covered tests, the s 5(7) condition, ss 15 and 5(10c), and the appeal) were moved into core functions it now calls (see "Corrections after verification").
 
 The Taxation Administration Act 1996 is brought in as its own module (`taa-procedure.l4`) in the same folder. The Land Tax Act s 3 says it "should be read together with the Taxation Administration Act 1996", which holds the objection, appeal, interest and penalty tax provisions the Land Tax Act leaves to it. Cross-folder IMPORT does not work.
 
 | File | What it holds |
 |---|---|
 | `lta-common.l4` | Arithmetic and date helpers, the `not covered` answers, and the parties and acts of every regulative rule (shared by both Acts) |
-| `lta-core.l4` | Core: Land Tax Act ss 2, 4, 5 (residential land exemption and neighbours; s 5(7) regulative), 5AA, 5A, 6, 7, 8A, Schedule 1 Part 2, 8B, 9, 14-17, 19 (s 19(1) regulative, and with TAA s 91) |
-| `taa-procedure.l4` | Core: TAA ss 25-27, 30-33 (s 33 regulative), 84, 86, 87, 91-95 (Part 10 regulative) |
-| `lta-seat.l4` | Seat layer: 43 exported questions, each with `@desc` on every input, under `§` headings |
+| `lta-core.l4` | Core: Land Tax Act ss 2, 4, 5 (residential land exemption and neighbours; s 5(4), (7), (8) regulative), 5AA, 5A (s 5A(5) regulative), 6, 7, 8A, Schedule 1 Part 2, 8B, 9, 14-17, 19 (s 19(1) regulative, and with TAA s 91); the `not covered` answer for trust and build-to-rent land (ss 7A, 8A(1a), 11-13E) |
+| `taa-procedure.l4` | Core: TAA ss 25-27, 30-33 (s 33 regulative), 84, 86, 87, 91-95 (ss 92-95 together for an appeal on a given day; Part 10 regulative) |
+| `lta-seat.l4` | Seat layer: 44 exported questions, each with `@desc` on every input, under `§` headings |
 | `lta-cases-core.l4`, `taa-cases.l4` | Cases for the two core modules |
 | `lta-cases-seat.l4` | Cases for the seat layer, asked with plain answers |
 
@@ -46,17 +46,17 @@ The texts are CC BY 4.0: State of South Australia, through the Open Australian L
 
 ## Checks
 
-`l4 run` on every `.l4` in the folder: **0 errors, 0 warnings**, and **248 assertions written, 248 satisfied**.
+`l4 run` on every `.l4` in the folder: **0 errors, 0 warnings**, and **314 assertions written, 314 satisfied** (re-run 2026-10-24 after the fixes below; before them, 248 of 248).
 
 | Case file | Assertions | `#TRACE`s (each with an `-- expect:` line, read and as expected) |
 |---|---|---|
-| `lta-cases-core.l4` | 135 | 3: breach by the owner (s 5(7), notified on day 22); breach by the taxpayer (s 19(1), only $3 000 of $3 501 paid); breach by the taxpayer (s 19(1) with TAA s 91, objected but did not pay) |
-| `taa-cases.l4` | 40 | 3: breach by the taxpayer (s 33, paid on day 31); the objector's appeal still open after a determination; the Minister's notice still pending (20 days left) |
-| `lta-cases-seat.l4` | 73 | none |
+| `lta-cases-core.l4` | 166 | 6: breach by the owner (s 5(7), notified on day 22); the s 5(8) duty still open a year after the change (no WITHIN); breach by the applicant (s 5(4)); breach by the applicant (s 5A(5)); breach by the taxpayer (s 19(1), only $3 000 of $3 501 paid); breach by the taxpayer (s 19(1) with TAA s 91, objected but did not pay) |
+| `taa-cases.l4` | 57 | 3: breach by the taxpayer (s 33, paid on day 31); the objector's appeal still open after a determination; the Minister's notice still pending (20 days left) |
+| `lta-cases-seat.l4` | 91 | none |
 
 The four modules (`lta-common`, `taa-procedure`, `lta-core`, `lta-seat`) also run clean on their own.
 
-As a control, a copy of `lta-cases-core.l4` with one expected value altered ($3 501 to $3 502) was run. The runner reported 1 assertion failed and 134 satisfied.
+As a control, a copy of `lta-cases-core.l4` with one expected value altered ($3 501 to $3 502) was run. The runner reported 1 assertion failed and 134 satisfied. After the fixes, a copy of `lta-cases-seat.l4` with one expected value altered (a 3% co-owner's home with the Commissioner satisfied: nil to $1) reported 1 failed and 90 satisfied.
 
 Expected values were worked by hand from the deposited texts. Every threshold in the cases, other than those the Act states, is assumed and labelled so; so is every market rate. No value was copied from the encoding's output.
 
@@ -100,6 +100,7 @@ How each 2026-10-18 default was applied:
 
 - Each piece of land is one case, so a home's exemption and the owner's other land are entered as separate numbers. The seat's all-in-one question takes one home and the total site value of the other land owned alone.
 - Where the Act states a threshold, that amount is used, whatever is supplied (finding 6).
+- The s 5(8) duty to inform the Commissioner "forthwith" is a regulative rule with no WITHIN, because the text names no number of days (finding 21). This replaces the first version's departure from the brief, which wrote it as a yes/no answer only.
 - Readings the text leaves open are recorded under the findings:
   - the 50% gap in s 5AA (finding 3);
   - the year asked about counts toward the 2- and 3-year limits (finding 9);
@@ -108,7 +109,8 @@ How each 2026-10-18 default was applied:
   - "allowed in full" means not dissatisfied (finding 13);
   - the penalty tax adjustments (finding 15);
   - interest on a 365-day year (finding 15);
-  - (e) and (f) taken as whole exemptions (finding 16).
+  - (e) and (f) taken as whole exemptions (finding 16);
+  - the 14 days' notice before an appeal on an undetermined objection (finding 19).
 
 ## Scope
 
@@ -127,15 +129,15 @@ How each 2026-10-18 default was applied:
   - s 5(10)(f): relocatable homes;
   - s 5(10)(h) and (12a): special disability trust land;
   - s 5(10c): waiver or refund for a building year;
-  - s 5(4), (6)-(9): notices, penalties; s 5(7) is a regulative rule (notify within 21 days of receipt);
-- s 5AA: a minor interest disregarded;
-- s 5A: waiver or refund for residential land, its criteria (1), (2), (6a), amounts (3) and time limit (4)(c);
+  - s 5(4), (6)-(9): notices, penalties; regulative rules for s 5(4) (no false or misleading statement in an application), s 5(7) (notify within 21 days of receipt) and s 5(8)-(9) (inform the Commissioner in writing forthwith);
+- s 5AA: a minor interest disregarded, for every ground from s 5(10)(a) to (bb), the building-work grounds (ab), (ac), (ad) included;
+- s 5A: waiver or refund for residential land, its criteria (1), (2), (6a), amounts (3) and time limit (4)(c); s 5A(5) as a regulative rule (no false or misleading statement);
 - s 6: minimum tax ($20);
 - s 7: taxable value is the site value, a valuation input;
 - s 8A(1), (2), (3a), (7), (8): the scale years, the stated thresholds, thresholds otherwise an input, and rounding;
 - Schedule 1 Part 1 and Part 2 clauses 2 and 3: the scales, as tables over Thresholds A-D using LT (TB), LT (TC) and LT (TD);
 - s 8B: aggregation and apportionment;
-- s 9(1), (2), (4), (6), (8), (9): more than one owner (the s 9(8) deduction an input);
+- s 9(1), (2), (4), (6), (8), (9), (10): more than one owner (the s 9(8) deduction an input; s 9(10) keeps a co-owner's trust out of the joint assessment);
 - ss 14-17: the person liable, change of ownership, joint and several liability, the burden shared;
 - s 19(1): pay within 30 days after service (regulative), also run beside TAA s 91;
 - s 19(2), (3): a tax default from wrong or missing information.
@@ -143,14 +145,14 @@ How each 2026-10-18 default was applied:
 *Taxation Administration Act 1996:*
 
 - Part 5: ss 25, 26 (the market rate an input, plus 8%), 27, 30, 31, 32, and s 33 (regulative);
-- Part 10: ss 84, 86 (objection within 60 days), 87, 91, 92, 93, 94 (appeal within 60 days, or on 14 days' notice after 90 undetermined days), 95, with Part 10 as a regulative rule.
+- Part 10: ss 84, 86 (objection within 60 days), 87, 91, 92, 93, 94 (appeal within 60 days, or on 14 days' notice after 90 undetermined days), 95, with ss 92-95 together for an appeal on a given day, and Part 10 as a regulative rule.
 
-**Out**, as the task directs:
+**Out**, as the task directs. Where the owner says the land is of the first two kinds, the tax questions answer `not covered` (finding 20):
 
-- trusts (ss 11-13F, Schedule 1 Part 3, the s 13D trustee notices), except the special disability trust;
-- related corporations (ss 13G-13J);
+- trusts (ss 8A(1a), 11-13F, Schedule 1 Part 3, the s 13D trustee notices), except the special disability trust exemption: land owned as trustee, and land the owner is deemed to own as a beneficiary, unitholder or designated beneficiary;
 - build-to-rent (s 7A);
-- strata and community plan assessment (s 10);
+- related corporations (ss 13G-13J), which an individual owner does not meet;
+- strata and community plan assessment (s 10), which needs no rule from this seat: the unit or lot is assessed on its own site value, and the common property is not assessed against the lot owner (finding 20);
 - primary production and the other non-residential exemptions (s 4(1) other than (n), and s 5(10)(c), (ca), (cb), (d), (g));
 - enforcement (ss 18, 20-24).
 
@@ -194,8 +196,8 @@ Also out:
 
     READING: an objection allowed in full leaves the objector not "dissatisfied" (s 92(a)). Asserted.
 14. **Telling the Commissioner:**
-    - an error in the factual basis of an exemption notice must be notified within 21 days after receipt (s 5(7); $5 000, expiation $315);
-    - a change that ends or reduces an exemption must be notified "forthwith" (s 5(8)). That names no number of days, so it is a yes/no duty, not a deadline;
+    - an error in the factual basis of an exemption notice must be notified within 21 days after receipt (s 5(7); $5 000, expiation $315). Unlike s 5(8), s 5(7) does not say "in writing" (finding 18);
+    - a change that ends or reduces an exemption must be notified in writing "forthwith" (s 5(8), (9); $5 000, expiation $315). That names no number of days, so the rule has no WITHIN (finding 21);
     - a failure to inform that leads to too little being assessed is a tax default (s 19(2)), with interest from the day the exemption applied (s 19(3)).
 
     Asserted.
@@ -203,6 +205,57 @@ Also out:
 
     Penalty tax is 25% of the unpaid tax, or 75% if the default was deliberate (s 31(1)). It is nil if the Commissioner is satisfied the default was neither deliberate nor careless (s 30(2)). It is cut by 80% for a disclosure before an audit and by 20% for one during an audit. The Commissioner may raise it by 20% for obstruction. Nothing is payable under $20 (s 32). READING: "reduced by 80 per cent" takes 80% of the penalty off, and a reduction and an increase together are multiplied. Asserted.
 16. **The retirement village and relocatable home park exemptions run to whoever owns the land** (s 5(10)(e), (f)): the village or park owner. READING: a resident holding only a residence contract or a site licence is not an "owner" under s 2(1), whose paragraph (a) excludes leasehold interests. This owner seat meets (e) and (f) only as an individual who owns such land. The text says "may be exempted" without "wholly"; the land they describe is taken as wholly exempt. Asserted for the exemption grounds only.
+17. **Section 5AA reaches the building-work grounds too.** Section 5AA(1)(b) and (6)(a) reach "section 5(10)(a) to (bb) (inclusive)". In the order of s 5(10) that is (a), (ab), (ac), (ad), (b), (ba) and (bb). So a resident co-owner whose minor interest is disregarded is "taken not to be ... an owner" for the destroyed, rebuilt, renovated and new-home grounds, as well as for the home grounds.
+    - **Correction.** The first version applied s 5AA only to (a), (b), (ba) and (bb). It answered a 3% co-owner building a home "wholly exempt under s 5(10)(ad)". It now answers "no exemption" unless the Commissioner is satisfied under s 5AA(2).
+    - The taxable-value question skipped s 5AA as well. It now applies it: a 3% co-owner's $800 000 home is taxable at $800 000, not nil, unless the Commissioner is satisfied.
+
+    Asserted.
+18. **Section 5(7) does not require writing.** Section 5(7) says "notify the Commissioner of the error or inaccuracy"; s 5(8) says "inform the Commissioner in writing". **Correction.** The seat's answer read "notify the Commissioner in writing by". It now reads "notify the Commissioner of the error or inaccuracy by". The date is unchanged: 21 days after receipt. Asserted.
+19. **An appeal must be in time as well as open.** Three sections govern it:
+    - s 92 gives the right;
+    - s 93 requires 50% of the tax to be paid first;
+    - s 94 sets the time: within 60 days after service of the determination (s 94(1)), or up to 12 months after service with the Supreme Court's leave (s 95). If the Minister has not decided within 90 days, the appeal may be made at any time on not less than 14 days' written notice to the Commissioner (s 94(2)).
+
+    **Correction.** "Can I appeal to the Supreme Court now" checked only ss 92 and 93. It answered yes for an objector whose 60 days had run out (decision served 1 December 2025, asking on 1 March 2026), and for one who had not given the s 94(2) notice. It now takes the dates. It answers no in both cases, and yes on 1 March 2026 only with the Court's leave. READING: the appeal may be made on or after the 14th day after the notice, as the existing date question already counted. Asserted.
+20. **Land held on trust, and build-to-rent land, are on rules this encoding does not hold.**
+    - Land "owned by a person as trustee of a trust" is taxed on the Schedule 1 Part 3 scale (s 8A(1a)). It is assessed "as if the land were the only land owned by the trustee" (s 11; s 13E for an implied, constructive or resulting trust).
+    - A beneficiary, unitholder or designated beneficiary may be "deemed ... to be the owner" of part of a trust's land. That land is assessed with the person's own land, less a deduction (ss 12(5), (6), 13(5), (6), 13A(9), (11), 13B).
+    - Build-to-rent land has its taxable value halved (s 7A).
+
+    **Correction.** The questions that work out an owner's tax applied the Schedule 1 Part 2 scale to whatever was entered. They now ask about these facts and answer `not covered` when any applies.
+
+    Two cases need no such question:
+    - the joint assessment, because s 9(10) disregards a co-owner's trust there and s 9(4)(b) leaves out other land;
+    - strata and community land. Section 10 assesses each unit or lot on its own site value. The common property is not assessed against the lot owner (s 10(2), (4)), and community common property that is not incidental to the lots is taxed to the community corporation (s 10(3)). So the Valuer-General's site value of the unit or lot is the right input, and the site-value `@desc`s now say so.
+
+    Asserted for the trust and build-to-rent answers.
+21. **Duties the text states, now written as rules.**
+    - Section 5(8): "the owner must forthwith inform the Commissioner in writing", an offence under s 5(9). This is a MUST with no WITHIN. "Forthwith" names no number of days, so the rule never breaches by the clock alone, and whether a delay is a breach is for a court. Traced: still open a year on.
+    - Sections 5(4) and 5A(5): a person "must not make any false or misleading statement or representation" in an application (maximum $10 000). These are SHANT rules: making such a statement is the breach. Traced: breach.
+    - Before this, s 5(8) was only a yes/no answer and the prohibitions only a $10 000 figure.
+
+## Corrections after verification (2026-10-24)
+
+An independent verifier raised five issues. Each was checked against the deposited texts before anything was changed.
+
+1. **s 5AA was not applied to the building-work grounds.** Fixed. The core has `the building work exemption after s 5AA`, and the building-work question takes the four s 5AA facts. The taxable-value question applies s 5AA too (finding 17).
+2. **The seat stated rules itself.** Fixed. The core now holds each of these, and the seat calls it:
+   - the s 5(1)(b), (2)(b) grant (`the exemption in force under s 5(1) or (2)`);
+   - the thresholds' three `not covered` tests (`the thresholds answer for`, which the scale also uses);
+   - the s 5(7) condition and date (`the s 5(7) duty to notify arises`, used by the rule and by `the s 5(7) deadline`).
+
+   On a second read, four more were moved the same way:
+   - s 15 (`the owner remains liable for the year after a change of ownership during it`);
+   - s 5(10c)(a) with (b) (`a s 5(10c) waiver or refund is open to the owner`);
+   - the 5-year date (`the last day to apply, 5 years after the assessment`);
+   - the s 87 and s 95 12-month dates.
+3. **The s 5(8) duty and the s 5(4), 5A(5) prohibitions were not regulative rules.** Fixed: s 5(8)-(9) is a MUST with no WITHIN, and s 5(4) and s 5A(5) are SHANT rules (finding 21). The departure recorded in the first version is withdrawn.
+4. **"Can I appeal to the Supreme Court now" ignored s 94.** Fixed. The core has `the appeal is made in time under s 94 or s 95` and `the objector may appeal to the Supreme Court on that day`. The question takes the dates, the s 94(2) notice and the s 95 leave (finding 19).
+5. **Out-of-scope land was computed on the wrong scale.** Fixed for trusts and build-to-rent: those answers are now `not covered` (finding 20).
+
+   **Rejected for s 10.** Strata and community land is not computed on a wrong scale. Section 10 decides which land is assessed (the unit or lot, not the common property), and the lot owner's tax is the Schedule 1 Part 2 scale on the Valuer-General's site value of the unit or lot, which is the input. The `@desc`s now say so.
+
+One correction beyond the five: the s 5(7) answer no longer says "in writing" (finding 18).
 
 ## Commonwealth and other links
 
@@ -227,6 +280,6 @@ Cross-folder IMPORT does not work, so these are links, not code.
 - Replace both texts with the current official versions from legislation.sa.gov.au (4.12.2025 or later), and check every finding against them.
 - Restore the s 8A(2a), (3), (3b) and s 9(8) formulas from the authorised version into `land-tax-act-1936.formulas.md`. Then compute the thresholds and the deduction instead of asking for them.
 - Deposit the Commissioner's Gazette notices of thresholds for 2023/2024 onward, and the Land Tax Regulations 2010, and bring them in.
-- Check the readings in findings 3, 9, 11, 12, 13, 15 and 16 against RevenueSA practice or a decision.
-- Add the trust provisions (ss 11-13F, Schedule 1 Part 3) and community and strata plan assessment (s 10) if an owner in a scenario meets them.
+- Check the readings in findings 3, 9, 11, 12, 13, 15, 16 and 19 against RevenueSA practice or a decision. For finding 21, check how promptly RevenueSA expects a s 5(8) notice.
+- Add the trust provisions (ss 8A(1a), 11-13F, Schedule 1 Part 3) and build-to-rent (s 7A) if an owner in a scenario meets them. Until then those questions answer `not covered`.
 - Run the Legalese Studio stages this baseline skipped: Resolve, Refine and Test, an independent test pass, and the human gates.
