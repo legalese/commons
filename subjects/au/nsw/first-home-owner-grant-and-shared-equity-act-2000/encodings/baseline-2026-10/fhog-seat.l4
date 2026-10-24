@@ -1,0 +1,729 @@
+IMPORT prelude
+IMPORT `fhog-core`
+
+-- First Home Owner Grant and Shared Equity Act 2000 (NSW) -- the first home owner grant, from the seat of the applicant.
+--
+-- SEAT: the applicant for the first home owner grant: a person buying or building a first home in New South Wales, with
+-- or without one other person (a spouse or de facto partner, or a co-applicant). "Am I eligible? Is this home an eligible
+-- transaction under the cap? How much is the grant? By when must I apply? What must I do, and by when, if a condition
+-- fails, and what can be recovered?" Every question is phrased as that person asks it, on facts that person could state.
+-- The rules are in fhog-core.l4; this module builds the core's records from plain answers and restates no rule.
+--
+-- The questions take their inputs in one order: the transaction, then you, then the other person, then the other owners.
+-- A question that involves other people answers `not covered` if there is a further applicant, or another spouse or de
+-- facto partner of either of you: the core takes any number, but these questions ask about two people.
+--
+-- Edition: act-2000-021 (corpus version 2023-09-04), from the Open Australian Legal Corpus as at 10 March 2025. NOT THE
+-- CURRENT OFFICIAL TEXT AND MAY BE OUT OF DATE. The eligibility caps are the s 13A(2) figures unless you say a regulation
+-- under s 13A(4) sets another (none is deposited); a regulation would change the answers.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `The first home owner grant -- the applicant's questions`
+
+§§ `Plain answers, and the records built from them`
+
+-- One question about the past, asked of you or of the other person. Pick New South Wales if it happened there and also
+-- elsewhere.
+DECLARE `What happened` IS ONE OF
+    `no`
+    `yes, in New South Wales`
+    `yes, in another State or a Territory, and it counts under that place's law`
+    `yes, in another State or a Territory, and I am not sure whether it counts under that place's law`
+
+GIVEN `w` IS A `What happened`
+GIVETH A BOOLEAN
+DECIDE `it happened in New South Wales` IF
+    CONSIDER `w`
+    WHEN `yes, in New South Wales` THEN TRUE
+    OTHERWISE FALSE
+
+GIVEN `w` IS A `What happened`
+GIVETH AN `Interstate fact`
+`the interstate part of` `w` MEANS
+    CONSIDER `w`
+    WHEN `yes, in another State or a Territory, and it counts under that place's law` THEN `applies under the corresponding law`
+    WHEN `yes, in another State or a Territory, and I am not sure whether it counts under that place's law` THEN `depends on the corresponding law`
+    OTHERWISE `does not apply`
+
+GIVEN `earlier grant` IS A `What happened`
+      `paid back` IS A BOOLEAN
+      `interest before 1 July 2000` IS A `What happened`
+      `interest and 6 months' residence` IS A `What happened`
+GIVETH AN `Earlier history`
+`a history from` `earlier grant` `paid back` `interest before 1 July 2000` `interest and 6 months' residence` MEANS
+    `Earlier history` WITH
+        `a party to an earlier application under this Act on which a grant was paid`            IS `it happened in New South Wales` `earlier grant`
+        `a party to an earlier application under a corresponding law on which a grant was paid` IS `the interstate part of` `earlier grant`
+        `every such grant was paid back with any penalty payable under s 45`                    IS `paid back`
+        `held a relevant interest in residential property in New South Wales before 1 July 2000` IS `it happened in New South Wales` `interest before 1 July 2000`
+        `held a relevant interest in residential property elsewhere in Australia before 1 July 2000` IS `the interstate part of` `interest before 1 July 2000`
+        `held a relevant interest in residential property in New South Wales and lived in it for 6 continuous months` IS `it happened in New South Wales` `interest and 6 months' residence`
+        `held a relevant interest in residential property elsewhere in Australia and lived in it for 6 continuous months` IS `the interstate part of` `interest and 6 months' residence`
+
+GIVEN `lives there` IS A BOOLEAN
+      `began on` IS A DATE
+      `months` IS A NUMBER
+      `later start approved` IS A BOOLEAN
+      `shorter stay approved` IS A BOOLEAN
+      `exempted` IS A BOOLEAN
+GIVETH A `Residence`
+`a residence from` `lives there` `began on` `months` `later start approved` `shorter stay approved` `exempted` MEANS
+    `Residence` WITH
+        `occupies the home as principal place of residence`                            IS `lives there`
+        `the date occupation began`                                                    IS `began on`
+        `continuous months of occupation`                                              IS `months`
+        `the Chief Commissioner approved the later start`                              IS `later start approved`
+        `the Chief Commissioner approved the shorter period`                           IS `shorter stay approved`
+        `the Chief Commissioner exempted the applicant from the residence requirement` IS `exempted`
+
+-- The relationship between you and the other person, as s 6 asks it. Listed as a partner only if married or de facto;
+-- the core decides whether that makes a spouse (s 6(2)).
+GIVEN `married` IS A BOOLEAN, `de facto` IS A BOOLEAN, `apart` IS A BOOLEAN, `their history` IS AN `Earlier history`
+GIVETH A LIST OF `Partner`
+`the partners from` `married` `de facto` `apart` `their history` MEANS
+    IF `married` OR `de facto`
+    THEN LIST (`Partner` WITH
+                  `is legally married to the applicant on the commencement date`          IS `married`
+                  `is the applicant's de facto partner on the commencement date`          IS `de facto`
+                  `the Chief Commissioner is satisfied that they were not cohabiting and will not resume` IS `apart`
+                  `the partner's history`                                                 IS `their history`)
+    ELSE EMPTY
+
+-- `is a natural person` is TRUE: the seat is an individual (s 8 is tested in the core cases).
+GIVEN `age` IS A NUMBER
+      `age exemption` IS A BOOLEAN
+      `status` IS A `Status on the commencement date`
+      `history` IS AN `Earlier history`
+      `partners` IS A LIST OF `Partner`
+      `residence` IS A `Residence`
+GIVETH AN `Applicant`
+`an applicant from` `age` `age exemption` `status` `history` `partners` `residence` MEANS
+    `Applicant` WITH
+        `is a natural person`               IS TRUE
+        `age when applying`                 IS `age`
+        `exempted from the age requirement` IS `age exemption`
+        `status`                            IS `status`
+        `the applicant's history`           IS `history`
+        `the applicant's partners`          IS `partners`
+        `the applicant's residence`         IS `residence`
+
+-- The transaction, from the answers about it.
+GIVEN `kind` IS A `Kind of transaction`
+      `in NSW` IS A BOOLEAN
+      `commencement` IS A DATE
+      `completion` IS A DATE
+      `completed` IS A BOOLEAN
+      `origin` IS AN `Origin of the home`
+      `occupied or sold` IS A BOOLEAN
+      `demolished premises occupied` IS A BOOLEAN
+      `owner of the land` IS A BOOLEAN
+      `old option` IS A BOOLEAN
+      `replaces` IS A `Replaced contract`
+      `transitional option` IS A BOOLEAN
+      `consideration` IS A NUMBER
+      `unencumbered value` IS A NUMBER
+      `land consideration` IS A NUMBER
+      `land unencumbered value` IS A NUMBER
+      `regulation` IS A BOOLEAN
+      `regulation cap` IS A NUMBER
+      `already paid` IS A BOOLEAN
+GIVETH A `Transaction`
+`a transaction from` `kind` `in NSW` `commencement` `completion` `completed` `origin` `occupied or sold` `demolished premises occupied` `owner of the land` `old option` `replaces` `transitional option` `consideration` `unencumbered value` `land consideration` `land unencumbered value` `regulation` `regulation cap` `already paid` MEANS
+    `Transaction` WITH
+        `kind`                                                           IS `kind`
+        `the home is in New South Wales`                                 IS `in NSW`
+        `the commencement date`                                          IS `commencement`
+        `the completion date`                                            IS `completion`
+        `has been completed`                                             IS `completed`
+        `origin of the home`                                             IS `origin`
+        `the home has been previously occupied or sold as a place of residence` IS `occupied or sold`
+        `the owner occupied the demolished premises`                     IS `demolished premises occupied`
+        `the person building is or will on completion be the owner of the land` IS `owner of the land`
+        `an option or right granted before 1 July 2000 applies`          IS `old option`
+        `replaced contract`                                              IS `replaces`
+        `made pursuant to an option granted in the transitional period`  IS `transitional option`
+        `the consideration`                                              IS `consideration`
+        `the unencumbered value of the property or home`                 IS `unencumbered value`
+        `the consideration for the land`                                 IS `land consideration`
+        `the unencumbered value of the land`                             IS `land unencumbered value`
+        `cap regulation`                                                 IS `the cap regulation from` `regulation` `regulation cap`
+        `a grant has already been paid for this transaction`             IS `already paid`
+
+-- s 13A(4): a regulation's cap, if you know it; 0 if you know there is one but not its amount.
+GIVEN `regulation` IS A BOOLEAN, `regulation cap` IS A NUMBER
+GIVETH A `Cap regulation`
+`the cap regulation from` `regulation` `regulation cap` MEANS
+    IF `regulation`
+    THEN IF `regulation cap` GREATER THAN 0
+         THEN `a regulation under s 13A(4) prescribes` `regulation cap`
+         ELSE `a regulation under s 13A(4) applies but its amount is not known`
+    ELSE `no regulation under s 13A(4) applies`
+
+-- The two people: you, and (if there is one) the other person. Each is the other's partner when married or de facto.
+GIVEN `me` IS AN `Applicant`, `the other person` IS AN `Applicant`, `the other person applies` IS A BOOLEAN
+GIVETH A LIST OF `Applicant`
+`the applicants from` `me` `the other person` `the other person applies` MEANS
+    IF `the other person applies`
+    THEN LIST `me`, `the other person`
+    ELSE LIST `me`
+
+-- A question about two people answers `not covered` if there is someone further.
+GIVEN a IS A TYPE, `someone else` IS A BOOLEAN, `the answer` IS AN `Answer` a
+GIVETH AN `Answer` a
+`unless there is someone else` `someone else` `the answer` MEANS
+    IF `someone else`
+    THEN `not covered` `the application has more applicants, spouses or de facto partners than this question asks about`
+    ELSE `the answer`
+
+§§ `s 6, s 4A, s 5, s 15 -- who and what counts`
+
+@export Is this person my spouse for the first home owner grant (s 6)?
+GIVEN `the other person is legally married to me on the commencement date` IS A BOOLEAN @desc Whether you and the other person are legally married on the commencement date (the day the contract is made, or the day the foundations are begun for an owner build)
+      `the other person is my de facto partner on the commencement date` IS A BOOLEAN @desc Whether the other person is your de facto partner on the commencement date (as defined in s 21C of the Interpretation Act 1987)
+      `the Chief Commissioner is satisfied we were not living together and will not resume` IS A BOOLEAN @desc Only if you are legally married: whether the Chief Commissioner is satisfied that you were not living together on the commencement date, are not now, and do not intend to resume (s 6(2))
+GIVETH A BOOLEAN
+DECIDE `Is this person my spouse for the grant` IF
+    `they are spouses` `the other person is legally married to me on the commencement date` `the other person is my de facto partner on the commencement date` `the Chief Commissioner is satisfied we were not living together and will not resume`
+
+@export Is the home a new home for the first home owner grant (s 4A)?
+GIVEN `how the home came to be` IS AN `Origin of the home` @desc Whether the home is an ordinary home, a substantially renovated home (all or substantially all of a building removed or replaced), or a home built to replace demolished premises on the same land
+      `the home has been occupied or sold as a place of residence` IS A BOOLEAN @desc Whether the home, as it now stands (as renovated, or as rebuilt), has ever been lived in or sold as a place of residence
+      `an owner of the home lived in the demolished premises` IS A BOOLEAN @desc Only for a home built to replace demolished premises: whether the owner lived in the old home as a place of residence before it was demolished
+GIVETH A BOOLEAN
+DECIDE `Is my home a new home` IF
+    `it is a new home` `how the home came to be` `the home has been occupied or sold as a place of residence` `an owner of the home lived in the demolished premises`
+
+@export Is my interest in the land a relevant interest, so that I am an owner of the home (s 5)?
+GIVEN `my interest in the land` IS A `Kind of interest in land` @desc What you hold or will hold in the land: usually an estate in fee simple (freehold, including a strata lot); choose an option that needs the Chief Commissioner only if the Chief Commissioner has approved, is satisfied, or is of that opinion
+      `I will have a right to immediate occupation within 12 months` IS A BOOLEAN @desc Whether you have, or will have within 12 months (or a longer time the Chief Commissioner allows), a right to move in straight away
+      `I hold it on trust for someone else` IS A BOOLEAN @desc Whether you hold the interest subject to a trust (as a trustee)
+GIVETH A BOOLEAN
+DECIDE `Is my interest a relevant interest` IF
+    `it is a relevant interest` `my interest in the land` `I will have a right to immediate occupation within 12 months` `I hold it on trust for someone else`
+
+@export Can my application go ahead without the owners who are not applying (s 15)?
+GIVEN `the largest share held by an owner who is not applying` IS A NUMBER @desc The largest ownership share, in per cent, of any person who will own part of the home but is not applying (0 if every owner applies); leave out the NSW Land and Housing Corporation and an approved shared equity partner
+      `the total share of all owners with 5% or less` IS A NUMBER @desc The total ownership share, in per cent, of every owner (applying or not) whose own share is 5% or less
+GIVETH A BOOLEAN
+DECIDE `Can my application go ahead without the other owners` IF
+    `every owner who is not applying is excluded from being an interested person` `the largest share held by an owner who is not applying` `the total share of all owners with 5% or less`
+
+§§ `ss 13, 13AA, 13A, 13B -- my transaction`
+
+@export Is my purchase, building contract or owner build an eligible transaction (s 13)?
+GIVEN `what I am doing` IS A `Kind of transaction` @desc Whether you are buying a home under a contract (including off the plan), having a home built under a comprehensive home building contract, or building it yourself as an owner builder
+      `the home is in New South Wales` IS A BOOLEAN @desc Whether the home is in New South Wales
+      `the commencement date` IS A DATE @desc The day the contract was made, or for an owner build the day laying the foundations began
+      `how the home came to be` IS AN `Origin of the home` @desc Whether the home is an ordinary home, a substantially renovated home, or a home built to replace demolished premises on the same land
+      `the home has been occupied or sold as a place of residence` IS A BOOLEAN @desc Whether the home, as it now stands, has ever been lived in or sold as a place of residence
+      `an owner of the home lived in the demolished premises` IS A BOOLEAN @desc Only for a home built to replace demolished premises: whether the owner lived in the old home before it was demolished
+      `I am or will be the owner of the land` IS A BOOLEAN @desc For a building contract or an owner build: whether you own the land, or will own it when the contract is completed
+      `an option granted before 1 July 2000 applies` IS A BOOLEAN @desc Whether the contract was made under an option, or a right to require it, granted before 1 July 2000
+      `the Chief Commissioner is satisfied it replaces an earlier contract` IS A `Replaced contract` @desc Whether the Chief Commissioner is satisfied the contract replaces an earlier one for the same home (or a substantially similar home), and when that earlier contract was made
+GIVETH AN `Answer` BOOLEAN
+DECIDE `Is my transaction an eligible transaction` IS
+    `is an eligible transaction` (`a transaction from` `what I am doing` `the home is in New South Wales` `the commencement date` `the commencement date` FALSE `how the home came to be` `the home has been occupied or sold as a place of residence` `an owner of the home lived in the demolished premises` `I am or will be the owner of the land` `an option granted before 1 July 2000 applies` `the Chief Commissioner is satisfied it replaces an earlier contract` FALSE 0 0 0 0 FALSE 0 FALSE)
+    -- The completion date, completion, transitional option, values, regulation and earlier grant are not read by s 13:
+    -- fixed placeholders.
+
+@export Which first home owner grant is available for my transaction: the builder's grant or the purchaser's grant (s 13AA)?
+GIVEN `what I am doing` IS A `Kind of transaction` @desc Whether you are buying a home under a contract, having a home built under a comprehensive home building contract, or building it yourself as an owner builder
+GIVETH A `Type of grant`
+DECIDE `Which grant is available for my transaction` IS
+    `the type of grant available for` (`a transaction from` `what I am doing` TRUE (DATE_FROM_DMY 1 7 2017) (DATE_FROM_DMY 1 7 2017) FALSE `neither renovated nor built to replace demolished premises` FALSE FALSE TRUE FALSE `it replaces no earlier contract` FALSE 0 0 0 0 FALSE 0 FALSE)
+    -- Only the kind is read by s 13AA: the rest are fixed placeholders.
+
+@export What is the eligibility cap for my transaction (s 13A)?
+GIVEN `what I am doing` IS A `Kind of transaction` @desc Whether you are buying a home under a contract, having a home built under a comprehensive home building contract, or building it yourself as an owner builder
+      `the commencement date` IS A DATE @desc The day the contract was made, or for an owner build the day laying the foundations began
+      `the Chief Commissioner is satisfied it replaces an earlier contract` IS A `Replaced contract` @desc Whether the Chief Commissioner is satisfied the contract replaces an earlier one for the same home (or a substantially similar home), and when that earlier contract was made
+      `a regulation sets a different cap` IS A BOOLEAN @desc Whether a regulation under s 13A(4) sets a different eligibility cap for your transaction (if unsure, answer no: the Act's figures are then used)
+      `the cap that regulation sets` IS A NUMBER @desc The cap that regulation sets, in dollars (0 if you do not know it)
+GIVETH AN `Answer` NUMBER
+DECIDE `What is the eligibility cap for my transaction` IS
+    `the eligibility cap for` (`a transaction from` `what I am doing` TRUE `the commencement date` `the commencement date` FALSE `neither renovated nor built to replace demolished premises` FALSE FALSE TRUE FALSE `the Chief Commissioner is satisfied it replaces an earlier contract` FALSE 0 0 0 0 `a regulation sets a different cap` `the cap that regulation sets` FALSE)
+    -- Only the kind, commencement date, replacement and regulation are read by s 13A: the rest are fixed placeholders.
+
+@export What is the total value of my transaction, the figure tested against the cap (s 13B)?
+GIVEN `what I am doing` IS A `Kind of transaction` @desc Whether you are buying a home under a contract, having a home built under a comprehensive home building contract, or building it yourself as an owner builder
+      `the consideration` IS A NUMBER @desc The price under the contract; for a building contract the total price of the building work; for an owner build your actual costs, leaving out any allowance for your own labour (dollars)
+      `the unencumbered value of the home` IS A NUMBER @desc For a purchase, the full value of the property on the day the contract was made; for an owner build, the full value of the home when it is ready to live in; ignoring any mortgage or other encumbrance and any arrangement to lower the value (dollars; 0 for a building contract)
+      `what I paid or must pay for the land` IS A NUMBER @desc For a building contract or an owner build, what you paid or must pay for the land (dollars; 0 for a purchase)
+      `the unencumbered value of the land` IS A NUMBER @desc For a building contract, the land's full value on the day the contract was made; for an owner build, on the day the home is ready to live in (dollars; 0 for a purchase)
+GIVETH A NUMBER
+DECIDE `What is the total value of my transaction` IS
+    `the total value of` (`a transaction from` `what I am doing` TRUE (DATE_FROM_DMY 1 7 2017) (DATE_FROM_DMY 1 7 2017) FALSE `neither renovated nor built to replace demolished premises` FALSE FALSE TRUE FALSE `it replaces no earlier contract` FALSE `the consideration` `the unencumbered value of the home` `what I paid or must pay for the land` `the unencumbered value of the land` FALSE 0 FALSE)
+    -- Only the kind and the values are read by s 13B: the rest are fixed placeholders.
+
+@export Is the total value of my transaction within the eligibility cap (ss 7(1)(c), 13A, 13B)?
+GIVEN `what I am doing` IS A `Kind of transaction` @desc Whether you are buying a home under a contract, having a home built under a comprehensive home building contract, or building it yourself as an owner builder
+      `the commencement date` IS A DATE @desc The day the contract was made, or for an owner build the day laying the foundations began
+      `the Chief Commissioner is satisfied it replaces an earlier contract` IS A `Replaced contract` @desc Whether the Chief Commissioner is satisfied the contract replaces an earlier one for the same home (or a substantially similar home), and when that earlier contract was made
+      `the consideration` IS A NUMBER @desc The price under the contract; for a building contract the total price of the building work; for an owner build your actual costs, leaving out any allowance for your own labour (dollars)
+      `the unencumbered value of the home` IS A NUMBER @desc For a purchase, the full value of the property on the day the contract was made; for an owner build, the full value of the home when it is ready to live in (dollars; 0 for a building contract)
+      `what I paid or must pay for the land` IS A NUMBER @desc For a building contract or an owner build, what you paid or must pay for the land (dollars; 0 for a purchase)
+      `the unencumbered value of the land` IS A NUMBER @desc For a building contract, the land's full value on the day the contract was made; for an owner build, on the day the home is ready to live in (dollars; 0 for a purchase)
+      `a regulation sets a different cap` IS A BOOLEAN @desc Whether a regulation under s 13A(4) sets a different eligibility cap for your transaction (if unsure, answer no)
+      `the cap that regulation sets` IS A NUMBER @desc The cap that regulation sets, in dollars (0 if you do not know it)
+GIVETH AN `Answer` BOOLEAN
+DECIDE `Is my transaction within the cap` IS
+    `the total value is within the eligibility cap for` (`a transaction from` `what I am doing` TRUE `the commencement date` `the commencement date` FALSE `neither renovated nor built to replace demolished premises` FALSE FALSE TRUE FALSE `the Chief Commissioner is satisfied it replaces an earlier contract` FALSE `the consideration` `the unencumbered value of the home` `what I paid or must pay for the land` `the unencumbered value of the land` `a regulation sets a different cap` `the cap that regulation sets` FALSE)
+    -- The other facts are not read by s 13A or s 13B: fixed placeholders.
+
+§§ `Part 2 Division 2 -- am I eligible`
+
+@export Am I old enough for the first home owner grant (s 8A)?
+GIVEN `my age` IS A NUMBER @desc Your age in years when you apply
+      `the Chief Commissioner exempted me from the age requirement` IS A BOOLEAN @desc Whether the Chief Commissioner has exempted you from having to be 18 (s 8A(2))
+GIVETH A BOOLEAN
+DECIDE `Am I old enough` IF
+    `criterion 1A is met by` (`an applicant from` `my age` `the Chief Commissioner exempted me from the age requirement` `none of these` (`a history from` `no` FALSE `no` `no`) EMPTY (`a residence from` FALSE (DATE_FROM_DMY 1 7 2017) 0 FALSE FALSE FALSE))
+    -- Only the age and exemption are read by s 8A: the rest are fixed placeholders.
+
+@export Do I meet the citizenship or permanent residence criterion (s 9)?
+GIVEN `my status on the commencement date` IS A `Status on the commencement date` @desc Whether, on the commencement date, you were an Australian citizen, held a permanent visa, or were a New Zealand citizen holding a special category visa
+      `the other person is applying with me` IS A BOOLEAN @desc Whether another person is applying for the grant with you
+      `the other person's status on the commencement date` IS A `Status on the commencement date` @desc If so, the other person's status on the commencement date
+      `there is someone else` IS A BOOLEAN @desc Whether there is a further applicant, or another spouse or de facto partner of you or the other person
+GIVETH AN `Answer` BOOLEAN
+DECIDE `Do I meet the citizenship or residency criterion` IS
+    `unless there is someone else` `there is someone else`
+        (`known` (`criterion 2 is met by` `me` `among` (`the applicants from` `me` `the other person` `the other person is applying with me`)))
+    WHERE
+        `me` MEANS `an applicant from` 18 FALSE `my status on the commencement date` `a clean history` EMPTY `no residence`
+        `the other person` MEANS `an applicant from` 18 FALSE `the other person's status on the commencement date` `a clean history` EMPTY `no residence`
+        `a clean history` MEANS `a history from` `no` FALSE `no` `no`
+        `no residence` MEANS `a residence from` FALSE (DATE_FROM_DMY 1 7 2017) 0 FALSE FALSE FALSE
+        -- Only the statuses are read by s 9: age, history and residence are fixed placeholders.
+
+@export Am I free of the bar on a second grant -- has no earlier grant been paid to me or my spouse and not paid back (s 10)?
+GIVEN `an earlier grant was paid on an application I was party to` IS A `What happened` @desc Whether a first home owner grant was ever paid on an earlier application you were a party to, under this Act (New South Wales) or another State's or Territory's first home owner grant law
+      `I paid that grant back with any penalty` IS A BOOLEAN @desc Whether every such grant was later paid back, with any penalty under s 45
+      `the other person is legally married to me on the commencement date` IS A BOOLEAN @desc Whether you and the other person are legally married on the commencement date
+      `the other person is my de facto partner on the commencement date` IS A BOOLEAN @desc Whether the other person is your de facto partner on the commencement date
+      `the Chief Commissioner is satisfied we were not living together and will not resume` IS A BOOLEAN @desc Only if you are legally married: whether the Chief Commissioner is satisfied of the s 6(2) separation
+      `an earlier grant was paid on an application the other person was party to` IS A `What happened` @desc The same question about the other person
+      `the other person paid that grant back with any penalty` IS A BOOLEAN @desc Whether every such grant to the other person was paid back, with any penalty under s 45
+      `there is someone else` IS A BOOLEAN @desc Whether there is a further applicant, or another spouse or de facto partner of you or the other person
+GIVETH AN `Answer` BOOLEAN
+DECIDE `Am I free of the second grant bar` IS
+    `unless there is someone else` `there is someone else` (`criterion 3 is met by` `me`)
+    WHERE
+        `me` MEANS `an applicant from` 18 FALSE `an Australian citizen` (`a history from` `an earlier grant was paid on an application I was party to` `I paid that grant back with any penalty` `no` `no`) (`the partners from` `the other person is legally married to me on the commencement date` `the other person is my de facto partner on the commencement date` `the Chief Commissioner is satisfied we were not living together and will not resume` (`a history from` `an earlier grant was paid on an application the other person was party to` `the other person paid that grant back with any penalty` `no` `no`)) `no residence`
+        `no residence` MEANS `a residence from` FALSE (DATE_FROM_DMY 1 7 2017) 0 FALSE FALSE FALSE
+        -- s 10 reads only the earlier grants and who is a spouse: the rest are fixed placeholders.
+
+@export Have neither I nor my spouse held a home that counts against a first home owner (s 11)?
+GIVEN `I held a relevant interest in residential property before 1 July 2000` IS A `What happened` @desc Whether you ever held, before 1 July 2000, a relevant interest (such as freehold) in land with a home on it, anywhere in Australia, whether or not you lived there
+      `I held a relevant interest in residential property and lived in it for 6 continuous months` IS A `What happened` @desc Whether, before the commencement date, you held a relevant interest in land with a home on it and lived there for at least 6 months in a row (ignore any delay in moving in because it was leased)
+      `the other person is legally married to me on the commencement date` IS A BOOLEAN @desc Whether you and the other person are legally married on the commencement date
+      `the other person is my de facto partner on the commencement date` IS A BOOLEAN @desc Whether the other person is your de facto partner on the commencement date
+      `the Chief Commissioner is satisfied we were not living together and will not resume` IS A BOOLEAN @desc Only if you are legally married: whether the Chief Commissioner is satisfied of the s 6(2) separation
+      `the other person held a relevant interest in residential property before 1 July 2000` IS A `What happened` @desc The same question about the other person
+      `the other person held a relevant interest in residential property and lived in it for 6 continuous months` IS A `What happened` @desc The same question about the other person
+      `there is someone else` IS A BOOLEAN @desc Whether there is a further applicant, or another spouse or de facto partner of you or the other person
+GIVETH AN `Answer` BOOLEAN
+DECIDE `Have I never held a home that counts` IS
+    `unless there is someone else` `there is someone else` (`criterion 4 is met by` `me`)
+    WHERE
+        `me` MEANS `an applicant from` 18 FALSE `an Australian citizen` (`a history from` `no` FALSE `I held a relevant interest in residential property before 1 July 2000` `I held a relevant interest in residential property and lived in it for 6 continuous months`) (`the partners from` `the other person is legally married to me on the commencement date` `the other person is my de facto partner on the commencement date` `the Chief Commissioner is satisfied we were not living together and will not resume` (`a history from` `no` FALSE `the other person held a relevant interest in residential property before 1 July 2000` `the other person held a relevant interest in residential property and lived in it for 6 continuous months`)) `no residence`
+        `no residence` MEANS `a residence from` FALSE (DATE_FROM_DMY 1 7 2017) 0 FALSE FALSE FALSE
+        -- s 11 reads only the earlier interests and who is a spouse: the rest are fixed placeholders.
+
+@export Do I meet the residence requirement -- moving in within 12 months of completion and living there 12 months in a row (s 12)?
+GIVEN `the completion date` IS A DATE @desc The day the transaction is (or is expected to be) completed: for a purchase, when you are entitled to possession and your title is registered; for building, when the home is ready to live in
+      `I live, or will live, in the home as my principal place of residence` IS A BOOLEAN @desc Whether you have moved in, or will move in, to live in the home as your main home
+      `the day I began, or will begin, living there` IS A DATE @desc The day you began, or will begin, living in the home as your main home
+      `the continuous months I lived, or will live, there` IS A NUMBER @desc How many months in a row you have lived, or will live, in the home as your main home
+      `the Chief Commissioner approved my later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved your moving in more than 12 months after completion (s 12(3)(a))
+      `the Chief Commissioner approved my shorter stay` IS A BOOLEAN @desc Whether the Chief Commissioner approved your living there for less than 12 months (s 12(3)(b))
+      `the Chief Commissioner exempted me from the residence requirement` IS A BOOLEAN @desc Whether the Chief Commissioner exempted you from the residence requirement (s 12(4))
+      `the other person is applying with me` IS A BOOLEAN @desc Whether another person is applying for the grant with you
+      `the other person lives, or will live, in the home` IS A BOOLEAN @desc If so, whether the other person has moved in, or will move in, as their main home
+      `the day the other person began, or will begin, living there` IS A DATE @desc The day the other person began, or will begin, living in the home
+      `the continuous months the other person lived, or will live, there` IS A NUMBER @desc How many months in a row the other person has lived, or will live, there
+      `the Chief Commissioner approved the other person's later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved the other person's later start
+      `the Chief Commissioner approved the other person's shorter stay` IS A BOOLEAN @desc Whether the Chief Commissioner approved the other person's shorter stay
+      `the Chief Commissioner exempted the other person from the residence requirement` IS A BOOLEAN @desc Whether the Chief Commissioner exempted the other person from the residence requirement
+      `there is someone else` IS A BOOLEAN @desc Whether there is a further applicant, or another spouse or de facto partner of you or the other person
+GIVETH AN `Answer` BOOLEAN
+DECIDE `Do I meet the residence requirement` IS
+    `unless there is someone else` `there is someone else`
+        (`known` (`criterion 5 is met by` `me` `among` (`the applicants from` `me` `the other person` `the other person is applying with me`) `completing on` `the completion date`))
+    WHERE
+        `me` MEANS `an applicant from` 18 FALSE `an Australian citizen` `a clean history` EMPTY (`a residence from` `I live, or will live, in the home as my principal place of residence` `the day I began, or will begin, living there` `the continuous months I lived, or will live, there` `the Chief Commissioner approved my later start` `the Chief Commissioner approved my shorter stay` `the Chief Commissioner exempted me from the residence requirement`)
+        `the other person` MEANS `an applicant from` 18 FALSE `an Australian citizen` `a clean history` EMPTY (`a residence from` `the other person lives, or will live, in the home` `the day the other person began, or will begin, living there` `the continuous months the other person lived, or will live, there` `the Chief Commissioner approved the other person's later start` `the Chief Commissioner approved the other person's shorter stay` `the Chief Commissioner exempted the other person from the residence requirement`)
+        `a clean history` MEANS `a history from` `no` FALSE `no` `no`
+        -- s 12 reads only the residence facts: age, status and history are fixed placeholders.
+
+§§ `ss 7 and 18 -- is the grant payable, and how much`
+
+-- The whole application from the plain answers: the transaction, you, the other person, the other owners.
+GIVEN `what I am doing` IS A `Kind of transaction`
+      `the home is in New South Wales` IS A BOOLEAN
+      `the commencement date` IS A DATE
+      `the completion date` IS A DATE
+      `the transaction has been completed` IS A BOOLEAN
+      `how the home came to be` IS AN `Origin of the home`
+      `the home has been occupied or sold as a place of residence` IS A BOOLEAN
+      `an owner of the home lived in the demolished premises` IS A BOOLEAN
+      `I am or will be the owner of the land` IS A BOOLEAN
+      `an option granted before 1 July 2000 applies` IS A BOOLEAN
+      `the Chief Commissioner is satisfied it replaces an earlier contract` IS A `Replaced contract`
+      `it was made under an option granted in the transitional period` IS A BOOLEAN
+      `the consideration` IS A NUMBER
+      `the unencumbered value of the home` IS A NUMBER
+      `what I paid or must pay for the land` IS A NUMBER
+      `the unencumbered value of the land` IS A NUMBER
+      `a regulation sets a different cap` IS A BOOLEAN
+      `the cap that regulation sets` IS A NUMBER
+      `a grant has already been paid for this transaction` IS A BOOLEAN
+      `my age` IS A NUMBER
+      `the Chief Commissioner exempted me from the age requirement` IS A BOOLEAN
+      `my status on the commencement date` IS A `Status on the commencement date`
+      `an earlier grant was paid on an application I was party to` IS A `What happened`
+      `I paid that grant back with any penalty` IS A BOOLEAN
+      `I held a relevant interest in residential property before 1 July 2000` IS A `What happened`
+      `I held a relevant interest in residential property and lived in it for 6 continuous months` IS A `What happened`
+      `I live, or will live, in the home as my principal place of residence` IS A BOOLEAN
+      `the day I began, or will begin, living there` IS A DATE
+      `the continuous months I lived, or will live, there` IS A NUMBER
+      `the Chief Commissioner approved my later start` IS A BOOLEAN
+      `the Chief Commissioner approved my shorter stay` IS A BOOLEAN
+      `the Chief Commissioner exempted me from the residence requirement` IS A BOOLEAN
+      `the other person is legally married to me on the commencement date` IS A BOOLEAN
+      `the other person is my de facto partner on the commencement date` IS A BOOLEAN
+      `the Chief Commissioner is satisfied we were not living together and will not resume` IS A BOOLEAN
+      `the other person is applying with me` IS A BOOLEAN
+      `the other person's age` IS A NUMBER
+      `the Chief Commissioner exempted the other person from the age requirement` IS A BOOLEAN
+      `the other person's status on the commencement date` IS A `Status on the commencement date`
+      `an earlier grant was paid on an application the other person was party to` IS A `What happened`
+      `the other person paid that grant back with any penalty` IS A BOOLEAN
+      `the other person held a relevant interest in residential property before 1 July 2000` IS A `What happened`
+      `the other person held a relevant interest in residential property and lived in it for 6 continuous months` IS A `What happened`
+      `the other person lives, or will live, in the home` IS A BOOLEAN
+      `the day the other person began, or will begin, living there` IS A DATE
+      `the continuous months the other person lived, or will live, there` IS A NUMBER
+      `the Chief Commissioner approved the other person's later start` IS A BOOLEAN
+      `the Chief Commissioner approved the other person's shorter stay` IS A BOOLEAN
+      `the Chief Commissioner exempted the other person from the residence requirement` IS A BOOLEAN
+      `the largest share held by an owner who is not applying` IS A NUMBER
+      `the total share of all owners with 5% or less` IS A NUMBER
+      `the Chief Commissioner authorised payment before completion` IS A BOOLEAN
+GIVETH AN `Application`
+`the application from my answers` MEANS
+    `Application` WITH
+        `the applicants`                                                  IS `the applicants from` `me` `the other person` `the other person is applying with me`
+        `the transaction`                                                 IS `the transaction`
+        `the largest ownership share of an owner who is not applying`     IS `the largest share held by an owner who is not applying`
+        `the total ownership share of all small interest holders`         IS `the total share of all owners with 5% or less`
+        `the Chief Commissioner has authorised payment before completion` IS `the Chief Commissioner authorised payment before completion`
+    WHERE
+        `the transaction` MEANS `a transaction from` `what I am doing` `the home is in New South Wales` `the commencement date` `the completion date` `the transaction has been completed` `how the home came to be` `the home has been occupied or sold as a place of residence` `an owner of the home lived in the demolished premises` `I am or will be the owner of the land` `an option granted before 1 July 2000 applies` `the Chief Commissioner is satisfied it replaces an earlier contract` `it was made under an option granted in the transitional period` `the consideration` `the unencumbered value of the home` `what I paid or must pay for the land` `the unencumbered value of the land` `a regulation sets a different cap` `the cap that regulation sets` `a grant has already been paid for this transaction`
+        `my history` MEANS `a history from` `an earlier grant was paid on an application I was party to` `I paid that grant back with any penalty` `I held a relevant interest in residential property before 1 July 2000` `I held a relevant interest in residential property and lived in it for 6 continuous months`
+        `the other person's history` MEANS `a history from` `an earlier grant was paid on an application the other person was party to` `the other person paid that grant back with any penalty` `the other person held a relevant interest in residential property before 1 July 2000` `the other person held a relevant interest in residential property and lived in it for 6 continuous months`
+        `me` MEANS `an applicant from` `my age` `the Chief Commissioner exempted me from the age requirement` `my status on the commencement date` `my history` (`the partners from` `the other person is legally married to me on the commencement date` `the other person is my de facto partner on the commencement date` `the Chief Commissioner is satisfied we were not living together and will not resume` `the other person's history`) (`a residence from` `I live, or will live, in the home as my principal place of residence` `the day I began, or will begin, living there` `the continuous months I lived, or will live, there` `the Chief Commissioner approved my later start` `the Chief Commissioner approved my shorter stay` `the Chief Commissioner exempted me from the residence requirement`)
+        `the other person` MEANS `an applicant from` `the other person's age` `the Chief Commissioner exempted the other person from the age requirement` `the other person's status on the commencement date` `the other person's history` (`the partners from` `the other person is legally married to me on the commencement date` `the other person is my de facto partner on the commencement date` `the Chief Commissioner is satisfied we were not living together and will not resume` `my history`) (`a residence from` `the other person lives, or will live, in the home` `the day the other person began, or will begin, living there` `the continuous months the other person lived, or will live, there` `the Chief Commissioner approved the other person's later start` `the Chief Commissioner approved the other person's shorter stay` `the Chief Commissioner exempted the other person from the residence requirement`)
+
+§§ `ss 7, 8 to 12 and 18 -- am I eligible, is the grant payable, and how much`
+
+-- Every criterion in Part 2 Division 2, for you (s 7(1)(a), (2)). It reads the people and the completion date.
+@export Am I eligible for the first home owner grant -- do I meet every eligibility criterion (ss 8 to 12)?
+GIVEN `the completion date` IS A DATE @desc The day the transaction is (or is expected to be) completed: for a purchase, when you are entitled to possession and your title is registered; for building, when the home is ready to live in
+      `my age` IS A NUMBER @desc Your age in years when you apply
+      `the Chief Commissioner exempted me from the age requirement` IS A BOOLEAN @desc Whether the Chief Commissioner has exempted you from having to be 18 (s 8A(2))
+      `my status on the commencement date` IS A `Status on the commencement date` @desc Whether, on the commencement date, you were an Australian citizen, held a permanent visa, or were a New Zealand citizen holding a special category visa
+      `an earlier grant was paid on an application I was party to` IS A `What happened` @desc Whether a first home owner grant was ever paid on an earlier application you were a party to, under this Act (New South Wales) or another State's or Territory's first home owner grant law
+      `I paid that grant back with any penalty` IS A BOOLEAN @desc Whether every such grant was later paid back, with any penalty under s 45
+      `I held a relevant interest in residential property before 1 July 2000` IS A `What happened` @desc Whether you ever held, before 1 July 2000, a relevant interest (such as freehold) in land with a home on it, whether or not you lived there
+      `I held a relevant interest in residential property and lived in it for 6 continuous months` IS A `What happened` @desc Whether, before the commencement date, you held a relevant interest in land with a home on it and lived there for at least 6 months in a row (ignore any delay in moving in because it was leased)
+      `I live, or will live, in the home as my principal place of residence` IS A BOOLEAN @desc Whether you have moved in, or will move in, to live in the home as your main home
+      `the day I began, or will begin, living there` IS A DATE @desc The day you began, or will begin, living in the home as your main home
+      `the continuous months I lived, or will live, there` IS A NUMBER @desc How many months in a row you have lived, or will live, in the home as your main home
+      `the Chief Commissioner approved my later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved your moving in more than 12 months after completion (s 12(3)(a))
+      `the Chief Commissioner approved my shorter stay` IS A BOOLEAN @desc Whether the Chief Commissioner approved your living there for less than 12 months (s 12(3)(b))
+      `the Chief Commissioner exempted me from the residence requirement` IS A BOOLEAN @desc Whether the Chief Commissioner exempted you from the residence requirement (s 12(4))
+      `the other person is legally married to me on the commencement date` IS A BOOLEAN @desc Whether you and the other person (if there is one) are legally married on the commencement date
+      `the other person is my de facto partner on the commencement date` IS A BOOLEAN @desc Whether the other person is your de facto partner on the commencement date (as defined in s 21C of the Interpretation Act 1987)
+      `the Chief Commissioner is satisfied we were not living together and will not resume` IS A BOOLEAN @desc Only if you are legally married: whether the Chief Commissioner is satisfied that you were not living together on the commencement date, are not now, and do not intend to resume (s 6(2))
+      `the other person is applying with me` IS A BOOLEAN @desc Whether the other person is applying for the grant with you
+      `the other person's age` IS A NUMBER @desc The other person's age in years when applying
+      `the Chief Commissioner exempted the other person from the age requirement` IS A BOOLEAN @desc Whether the Chief Commissioner has exempted the other person from having to be 18
+      `the other person's status on the commencement date` IS A `Status on the commencement date` @desc The other person's citizenship or visa status on the commencement date
+      `an earlier grant was paid on an application the other person was party to` IS A `What happened` @desc Whether a first home owner grant was ever paid on an earlier application the other person was a party to, in New South Wales or elsewhere
+      `the other person paid that grant back with any penalty` IS A BOOLEAN @desc Whether every such grant to the other person was paid back, with any penalty under s 45
+      `the other person held a relevant interest in residential property before 1 July 2000` IS A `What happened` @desc Whether the other person ever held, before 1 July 2000, a relevant interest in land with a home on it
+      `the other person held a relevant interest in residential property and lived in it for 6 continuous months` IS A `What happened` @desc Whether, before the commencement date, the other person held a relevant interest in land with a home on it and lived there for at least 6 months in a row
+      `the other person lives, or will live, in the home` IS A BOOLEAN @desc Whether the other person has moved in, or will move in, to live in the home as their main home
+      `the day the other person began, or will begin, living there` IS A DATE @desc The day the other person began, or will begin, living in the home
+      `the continuous months the other person lived, or will live, there` IS A NUMBER @desc How many months in a row the other person has lived, or will live, there
+      `the Chief Commissioner approved the other person's later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved the other person's moving in more than 12 months after completion
+      `the Chief Commissioner approved the other person's shorter stay` IS A BOOLEAN @desc Whether the Chief Commissioner approved the other person's living there for less than 12 months
+      `the Chief Commissioner exempted the other person from the residence requirement` IS A BOOLEAN @desc Whether the Chief Commissioner exempted the other person from the residence requirement
+      `there is someone else` IS A BOOLEAN @desc Whether there is a further applicant, or another spouse or de facto partner of you or the other person (these questions then answer not covered)
+GIVETH AN `Answer` BOOLEAN
+DECIDE `Am I eligible` IS
+    `unless there is someone else` `there is someone else` (`the eligibility criteria are met by` `me` `on` `the application`)
+    WHERE
+        `the application` MEANS `the application from my answers` `a contract for the purchase of a home` TRUE `the completion date` `the completion date` TRUE `neither renovated nor built to replace demolished premises` FALSE FALSE TRUE FALSE `it replaces no earlier contract` FALSE 0 0 0 0 FALSE 0 FALSE `my age` `the Chief Commissioner exempted me from the age requirement` `my status on the commencement date` `an earlier grant was paid on an application I was party to` `I paid that grant back with any penalty` `I held a relevant interest in residential property before 1 July 2000` `I held a relevant interest in residential property and lived in it for 6 continuous months` `I live, or will live, in the home as my principal place of residence` `the day I began, or will begin, living there` `the continuous months I lived, or will live, there` `the Chief Commissioner approved my later start` `the Chief Commissioner approved my shorter stay` `the Chief Commissioner exempted me from the residence requirement` `the other person is legally married to me on the commencement date` `the other person is my de facto partner on the commencement date` `the Chief Commissioner is satisfied we were not living together and will not resume` `the other person is applying with me` `the other person's age` `the Chief Commissioner exempted the other person from the age requirement` `the other person's status on the commencement date` `an earlier grant was paid on an application the other person was party to` `the other person paid that grant back with any penalty` `the other person held a relevant interest in residential property before 1 July 2000` `the other person held a relevant interest in residential property and lived in it for 6 continuous months` `the other person lives, or will live, in the home` `the day the other person began, or will begin, living there` `the continuous months the other person lived, or will live, there` `the Chief Commissioner approved the other person's later start` `the Chief Commissioner approved the other person's shorter stay` `the Chief Commissioner exempted the other person from the residence requirement` 0 0 FALSE
+        `me` MEANS `an applicant from` `my age` `the Chief Commissioner exempted me from the age requirement` `my status on the commencement date` (`a history from` `an earlier grant was paid on an application I was party to` `I paid that grant back with any penalty` `I held a relevant interest in residential property before 1 July 2000` `I held a relevant interest in residential property and lived in it for 6 continuous months`) (`the partners from` `the other person is legally married to me on the commencement date` `the other person is my de facto partner on the commencement date` `the Chief Commissioner is satisfied we were not living together and will not resume` (`a history from` `an earlier grant was paid on an application the other person was party to` `the other person paid that grant back with any penalty` `the other person held a relevant interest in residential property before 1 July 2000` `the other person held a relevant interest in residential property and lived in it for 6 continuous months`)) (`a residence from` `I live, or will live, in the home as my principal place of residence` `the day I began, or will begin, living there` `the continuous months I lived, or will live, there` `the Chief Commissioner approved my later start` `the Chief Commissioner approved my shorter stay` `the Chief Commissioner exempted me from the residence requirement`)
+        -- Only the people and the completion date are read by ss 8 to 12: the other facts are fixed placeholders.
+
+@export Is the first home owner grant payable on my application (s 7)?
+GIVEN `what I am doing` IS A `Kind of transaction` @desc Whether you are buying a home under a contract (including off the plan), having a home built under a comprehensive home building contract, or building it yourself as an owner builder
+      `the home is in New South Wales` IS A BOOLEAN @desc Whether the home is in New South Wales
+      `the commencement date` IS A DATE @desc The day the contract was made, or for an owner build the day laying the foundations began
+      `the completion date` IS A DATE @desc The day the transaction is (or is expected to be) completed: for a purchase, when you are entitled to possession and your title is registered; for building, when the home is ready to live in
+      `the transaction has been completed` IS A BOOLEAN @desc Whether that day has come and the transaction is completed
+      `how the home came to be` IS AN `Origin of the home` @desc Whether the home is an ordinary home, a substantially renovated home (all or substantially all of a building removed or replaced), or a home built to replace demolished premises on the same land
+      `the home has been occupied or sold as a place of residence` IS A BOOLEAN @desc Whether the home, as it now stands (as renovated, or as rebuilt), has ever been lived in or sold as a place of residence
+      `an owner of the home lived in the demolished premises` IS A BOOLEAN @desc Only for a home built to replace demolished premises: whether the owner lived in the old home as a place of residence before it was demolished
+      `I am or will be the owner of the land` IS A BOOLEAN @desc For a building contract or an owner build: whether you own the land, or will own it when the contract is completed
+      `an option granted before 1 July 2000 applies` IS A BOOLEAN @desc Whether the contract was made under an option, or a right to require it, granted before 1 July 2000
+      `the Chief Commissioner is satisfied it replaces an earlier contract` IS A `Replaced contract` @desc Whether the Chief Commissioner is satisfied the contract replaces an earlier one for the same home (or a substantially similar home), and when that earlier contract was made
+      `it was made under an option granted in the transitional period` IS A BOOLEAN @desc Whether a purchase or building contract was made under an option or right granted in the 2012 transitional period (from the day the 2012 Budget Measures Bill was introduced to 30 September 2012)
+      `the consideration` IS A NUMBER @desc The price under the contract; for a building contract the total price of the building work; for an owner build your actual costs, leaving out any allowance for your own labour (dollars)
+      `the unencumbered value of the home` IS A NUMBER @desc For a purchase, the full value of the property on the day the contract was made; for an owner build, the full value of the home when it is ready to live in; ignoring any mortgage or other encumbrance and any arrangement to lower the value (dollars; 0 for a building contract)
+      `what I paid or must pay for the land` IS A NUMBER @desc For a building contract or an owner build, what you paid or must pay for the land (dollars; 0 for a purchase)
+      `the unencumbered value of the land` IS A NUMBER @desc For a building contract, the land's full value on the day the contract was made; for an owner build, on the day the home is ready to live in (dollars; 0 for a purchase)
+      `a regulation sets a different cap` IS A BOOLEAN @desc Whether a regulation under s 13A(4) sets a different eligibility cap for your transaction (if unsure, answer no: the Act's figures are then used)
+      `the cap that regulation sets` IS A NUMBER @desc The cap that regulation sets, in dollars (0 if you do not know it)
+      `a grant has already been paid for this transaction` IS A BOOLEAN @desc Whether a first home owner grant has already been paid for this same purchase or building (only one grant is payable for a transaction)
+      `my age` IS A NUMBER @desc Your age in years when you apply
+      `the Chief Commissioner exempted me from the age requirement` IS A BOOLEAN @desc Whether the Chief Commissioner has exempted you from having to be 18 (s 8A(2))
+      `my status on the commencement date` IS A `Status on the commencement date` @desc Whether, on the commencement date, you were an Australian citizen, held a permanent visa, or were a New Zealand citizen holding a special category visa
+      `an earlier grant was paid on an application I was party to` IS A `What happened` @desc Whether a first home owner grant was ever paid on an earlier application you were a party to, under this Act (New South Wales) or another State's or Territory's first home owner grant law
+      `I paid that grant back with any penalty` IS A BOOLEAN @desc Whether every such grant was later paid back, with any penalty under s 45
+      `I held a relevant interest in residential property before 1 July 2000` IS A `What happened` @desc Whether you ever held, before 1 July 2000, a relevant interest (such as freehold) in land with a home on it, whether or not you lived there
+      `I held a relevant interest in residential property and lived in it for 6 continuous months` IS A `What happened` @desc Whether, before the commencement date, you held a relevant interest in land with a home on it and lived there for at least 6 months in a row (ignore any delay in moving in because it was leased)
+      `I live, or will live, in the home as my principal place of residence` IS A BOOLEAN @desc Whether you have moved in, or will move in, to live in the home as your main home
+      `the day I began, or will begin, living there` IS A DATE @desc The day you began, or will begin, living in the home as your main home
+      `the continuous months I lived, or will live, there` IS A NUMBER @desc How many months in a row you have lived, or will live, in the home as your main home
+      `the Chief Commissioner approved my later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved your moving in more than 12 months after completion (s 12(3)(a))
+      `the Chief Commissioner approved my shorter stay` IS A BOOLEAN @desc Whether the Chief Commissioner approved your living there for less than 12 months (s 12(3)(b))
+      `the Chief Commissioner exempted me from the residence requirement` IS A BOOLEAN @desc Whether the Chief Commissioner exempted you from the residence requirement (s 12(4))
+      `the other person is legally married to me on the commencement date` IS A BOOLEAN @desc Whether you and the other person (if there is one) are legally married on the commencement date
+      `the other person is my de facto partner on the commencement date` IS A BOOLEAN @desc Whether the other person is your de facto partner on the commencement date (as defined in s 21C of the Interpretation Act 1987)
+      `the Chief Commissioner is satisfied we were not living together and will not resume` IS A BOOLEAN @desc Only if you are legally married: whether the Chief Commissioner is satisfied that you were not living together on the commencement date, are not now, and do not intend to resume (s 6(2))
+      `the other person is applying with me` IS A BOOLEAN @desc Whether the other person is applying for the grant with you
+      `the other person's age` IS A NUMBER @desc The other person's age in years when applying
+      `the Chief Commissioner exempted the other person from the age requirement` IS A BOOLEAN @desc Whether the Chief Commissioner has exempted the other person from having to be 18
+      `the other person's status on the commencement date` IS A `Status on the commencement date` @desc The other person's citizenship or visa status on the commencement date
+      `an earlier grant was paid on an application the other person was party to` IS A `What happened` @desc Whether a first home owner grant was ever paid on an earlier application the other person was a party to, in New South Wales or elsewhere
+      `the other person paid that grant back with any penalty` IS A BOOLEAN @desc Whether every such grant to the other person was paid back, with any penalty under s 45
+      `the other person held a relevant interest in residential property before 1 July 2000` IS A `What happened` @desc Whether the other person ever held, before 1 July 2000, a relevant interest in land with a home on it
+      `the other person held a relevant interest in residential property and lived in it for 6 continuous months` IS A `What happened` @desc Whether, before the commencement date, the other person held a relevant interest in land with a home on it and lived there for at least 6 months in a row
+      `the other person lives, or will live, in the home` IS A BOOLEAN @desc Whether the other person has moved in, or will move in, to live in the home as their main home
+      `the day the other person began, or will begin, living there` IS A DATE @desc The day the other person began, or will begin, living in the home
+      `the continuous months the other person lived, or will live, there` IS A NUMBER @desc How many months in a row the other person has lived, or will live, there
+      `the Chief Commissioner approved the other person's later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved the other person's moving in more than 12 months after completion
+      `the Chief Commissioner approved the other person's shorter stay` IS A BOOLEAN @desc Whether the Chief Commissioner approved the other person's living there for less than 12 months
+      `the Chief Commissioner exempted the other person from the residence requirement` IS A BOOLEAN @desc Whether the Chief Commissioner exempted the other person from the residence requirement
+      `there is someone else` IS A BOOLEAN @desc Whether there is a further applicant, or another spouse or de facto partner of you or the other person (these questions then answer not covered)
+      `the largest share held by an owner who is not applying` IS A NUMBER @desc The largest ownership share, in per cent, of any person who will own part of the home but is not applying (0 if every owner applies); leave out the NSW Land and Housing Corporation and an approved shared equity partner
+      `the total share of all owners with 5% or less` IS A NUMBER @desc The total ownership share, in per cent, of every owner (applying or not) whose own share is 5% or less
+      `the Chief Commissioner authorised payment before completion` IS A BOOLEAN @desc Whether the Chief Commissioner has authorised payment of the grant before completion (s 20(1)(a))
+GIVETH AN `Answer` BOOLEAN
+DECIDE `Is the grant payable on my application` IS
+    `unless there is someone else` `there is someone else` (`the grant is payable on` (`the application from my answers` `what I am doing` `the home is in New South Wales` `the commencement date` `the completion date` `the transaction has been completed` `how the home came to be` `the home has been occupied or sold as a place of residence` `an owner of the home lived in the demolished premises` `I am or will be the owner of the land` `an option granted before 1 July 2000 applies` `the Chief Commissioner is satisfied it replaces an earlier contract` `it was made under an option granted in the transitional period` `the consideration` `the unencumbered value of the home` `what I paid or must pay for the land` `the unencumbered value of the land` `a regulation sets a different cap` `the cap that regulation sets` `a grant has already been paid for this transaction` `my age` `the Chief Commissioner exempted me from the age requirement` `my status on the commencement date` `an earlier grant was paid on an application I was party to` `I paid that grant back with any penalty` `I held a relevant interest in residential property before 1 July 2000` `I held a relevant interest in residential property and lived in it for 6 continuous months` `I live, or will live, in the home as my principal place of residence` `the day I began, or will begin, living there` `the continuous months I lived, or will live, there` `the Chief Commissioner approved my later start` `the Chief Commissioner approved my shorter stay` `the Chief Commissioner exempted me from the residence requirement` `the other person is legally married to me on the commencement date` `the other person is my de facto partner on the commencement date` `the Chief Commissioner is satisfied we were not living together and will not resume` `the other person is applying with me` `the other person's age` `the Chief Commissioner exempted the other person from the age requirement` `the other person's status on the commencement date` `an earlier grant was paid on an application the other person was party to` `the other person paid that grant back with any penalty` `the other person held a relevant interest in residential property before 1 July 2000` `the other person held a relevant interest in residential property and lived in it for 6 continuous months` `the other person lives, or will live, in the home` `the day the other person began, or will begin, living there` `the continuous months the other person lived, or will live, there` `the Chief Commissioner approved the other person's later start` `the Chief Commissioner approved the other person's shorter stay` `the Chief Commissioner exempted the other person from the residence requirement` `the largest share held by an owner who is not applying` `the total share of all owners with 5% or less` `the Chief Commissioner authorised payment before completion`))
+
+@export How much first home owner grant will be paid on my application (ss 7 and 18)?
+GIVEN `what I am doing` IS A `Kind of transaction` @desc Whether you are buying a home under a contract (including off the plan), having a home built under a comprehensive home building contract, or building it yourself as an owner builder
+      `the home is in New South Wales` IS A BOOLEAN @desc Whether the home is in New South Wales
+      `the commencement date` IS A DATE @desc The day the contract was made, or for an owner build the day laying the foundations began
+      `the completion date` IS A DATE @desc The day the transaction is (or is expected to be) completed: for a purchase, when you are entitled to possession and your title is registered; for building, when the home is ready to live in
+      `the transaction has been completed` IS A BOOLEAN @desc Whether that day has come and the transaction is completed
+      `how the home came to be` IS AN `Origin of the home` @desc Whether the home is an ordinary home, a substantially renovated home (all or substantially all of a building removed or replaced), or a home built to replace demolished premises on the same land
+      `the home has been occupied or sold as a place of residence` IS A BOOLEAN @desc Whether the home, as it now stands (as renovated, or as rebuilt), has ever been lived in or sold as a place of residence
+      `an owner of the home lived in the demolished premises` IS A BOOLEAN @desc Only for a home built to replace demolished premises: whether the owner lived in the old home as a place of residence before it was demolished
+      `I am or will be the owner of the land` IS A BOOLEAN @desc For a building contract or an owner build: whether you own the land, or will own it when the contract is completed
+      `an option granted before 1 July 2000 applies` IS A BOOLEAN @desc Whether the contract was made under an option, or a right to require it, granted before 1 July 2000
+      `the Chief Commissioner is satisfied it replaces an earlier contract` IS A `Replaced contract` @desc Whether the Chief Commissioner is satisfied the contract replaces an earlier one for the same home (or a substantially similar home), and when that earlier contract was made
+      `it was made under an option granted in the transitional period` IS A BOOLEAN @desc Whether a purchase or building contract was made under an option or right granted in the 2012 transitional period (from the day the 2012 Budget Measures Bill was introduced to 30 September 2012)
+      `the consideration` IS A NUMBER @desc The price under the contract; for a building contract the total price of the building work; for an owner build your actual costs, leaving out any allowance for your own labour (dollars)
+      `the unencumbered value of the home` IS A NUMBER @desc For a purchase, the full value of the property on the day the contract was made; for an owner build, the full value of the home when it is ready to live in; ignoring any mortgage or other encumbrance and any arrangement to lower the value (dollars; 0 for a building contract)
+      `what I paid or must pay for the land` IS A NUMBER @desc For a building contract or an owner build, what you paid or must pay for the land (dollars; 0 for a purchase)
+      `the unencumbered value of the land` IS A NUMBER @desc For a building contract, the land's full value on the day the contract was made; for an owner build, on the day the home is ready to live in (dollars; 0 for a purchase)
+      `a regulation sets a different cap` IS A BOOLEAN @desc Whether a regulation under s 13A(4) sets a different eligibility cap for your transaction (if unsure, answer no: the Act's figures are then used)
+      `the cap that regulation sets` IS A NUMBER @desc The cap that regulation sets, in dollars (0 if you do not know it)
+      `a grant has already been paid for this transaction` IS A BOOLEAN @desc Whether a first home owner grant has already been paid for this same purchase or building (only one grant is payable for a transaction)
+      `my age` IS A NUMBER @desc Your age in years when you apply
+      `the Chief Commissioner exempted me from the age requirement` IS A BOOLEAN @desc Whether the Chief Commissioner has exempted you from having to be 18 (s 8A(2))
+      `my status on the commencement date` IS A `Status on the commencement date` @desc Whether, on the commencement date, you were an Australian citizen, held a permanent visa, or were a New Zealand citizen holding a special category visa
+      `an earlier grant was paid on an application I was party to` IS A `What happened` @desc Whether a first home owner grant was ever paid on an earlier application you were a party to, under this Act (New South Wales) or another State's or Territory's first home owner grant law
+      `I paid that grant back with any penalty` IS A BOOLEAN @desc Whether every such grant was later paid back, with any penalty under s 45
+      `I held a relevant interest in residential property before 1 July 2000` IS A `What happened` @desc Whether you ever held, before 1 July 2000, a relevant interest (such as freehold) in land with a home on it, whether or not you lived there
+      `I held a relevant interest in residential property and lived in it for 6 continuous months` IS A `What happened` @desc Whether, before the commencement date, you held a relevant interest in land with a home on it and lived there for at least 6 months in a row (ignore any delay in moving in because it was leased)
+      `I live, or will live, in the home as my principal place of residence` IS A BOOLEAN @desc Whether you have moved in, or will move in, to live in the home as your main home
+      `the day I began, or will begin, living there` IS A DATE @desc The day you began, or will begin, living in the home as your main home
+      `the continuous months I lived, or will live, there` IS A NUMBER @desc How many months in a row you have lived, or will live, in the home as your main home
+      `the Chief Commissioner approved my later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved your moving in more than 12 months after completion (s 12(3)(a))
+      `the Chief Commissioner approved my shorter stay` IS A BOOLEAN @desc Whether the Chief Commissioner approved your living there for less than 12 months (s 12(3)(b))
+      `the Chief Commissioner exempted me from the residence requirement` IS A BOOLEAN @desc Whether the Chief Commissioner exempted you from the residence requirement (s 12(4))
+      `the other person is legally married to me on the commencement date` IS A BOOLEAN @desc Whether you and the other person (if there is one) are legally married on the commencement date
+      `the other person is my de facto partner on the commencement date` IS A BOOLEAN @desc Whether the other person is your de facto partner on the commencement date (as defined in s 21C of the Interpretation Act 1987)
+      `the Chief Commissioner is satisfied we were not living together and will not resume` IS A BOOLEAN @desc Only if you are legally married: whether the Chief Commissioner is satisfied that you were not living together on the commencement date, are not now, and do not intend to resume (s 6(2))
+      `the other person is applying with me` IS A BOOLEAN @desc Whether the other person is applying for the grant with you
+      `the other person's age` IS A NUMBER @desc The other person's age in years when applying
+      `the Chief Commissioner exempted the other person from the age requirement` IS A BOOLEAN @desc Whether the Chief Commissioner has exempted the other person from having to be 18
+      `the other person's status on the commencement date` IS A `Status on the commencement date` @desc The other person's citizenship or visa status on the commencement date
+      `an earlier grant was paid on an application the other person was party to` IS A `What happened` @desc Whether a first home owner grant was ever paid on an earlier application the other person was a party to, in New South Wales or elsewhere
+      `the other person paid that grant back with any penalty` IS A BOOLEAN @desc Whether every such grant to the other person was paid back, with any penalty under s 45
+      `the other person held a relevant interest in residential property before 1 July 2000` IS A `What happened` @desc Whether the other person ever held, before 1 July 2000, a relevant interest in land with a home on it
+      `the other person held a relevant interest in residential property and lived in it for 6 continuous months` IS A `What happened` @desc Whether, before the commencement date, the other person held a relevant interest in land with a home on it and lived there for at least 6 months in a row
+      `the other person lives, or will live, in the home` IS A BOOLEAN @desc Whether the other person has moved in, or will move in, to live in the home as their main home
+      `the day the other person began, or will begin, living there` IS A DATE @desc The day the other person began, or will begin, living in the home
+      `the continuous months the other person lived, or will live, there` IS A NUMBER @desc How many months in a row the other person has lived, or will live, there
+      `the Chief Commissioner approved the other person's later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved the other person's moving in more than 12 months after completion
+      `the Chief Commissioner approved the other person's shorter stay` IS A BOOLEAN @desc Whether the Chief Commissioner approved the other person's living there for less than 12 months
+      `the Chief Commissioner exempted the other person from the residence requirement` IS A BOOLEAN @desc Whether the Chief Commissioner exempted the other person from the residence requirement
+      `there is someone else` IS A BOOLEAN @desc Whether there is a further applicant, or another spouse or de facto partner of you or the other person (these questions then answer not covered)
+      `the largest share held by an owner who is not applying` IS A NUMBER @desc The largest ownership share, in per cent, of any person who will own part of the home but is not applying (0 if every owner applies); leave out the NSW Land and Housing Corporation and an approved shared equity partner
+      `the total share of all owners with 5% or less` IS A NUMBER @desc The total ownership share, in per cent, of every owner (applying or not) whose own share is 5% or less
+      `the Chief Commissioner authorised payment before completion` IS A BOOLEAN @desc Whether the Chief Commissioner has authorised payment of the grant before completion (s 20(1)(a))
+GIVETH AN `Answer` NUMBER
+DECIDE `How much grant will be paid on my application` IS
+    `unless there is someone else` `there is someone else` (`the grant payable on` (`the application from my answers` `what I am doing` `the home is in New South Wales` `the commencement date` `the completion date` `the transaction has been completed` `how the home came to be` `the home has been occupied or sold as a place of residence` `an owner of the home lived in the demolished premises` `I am or will be the owner of the land` `an option granted before 1 July 2000 applies` `the Chief Commissioner is satisfied it replaces an earlier contract` `it was made under an option granted in the transitional period` `the consideration` `the unencumbered value of the home` `what I paid or must pay for the land` `the unencumbered value of the land` `a regulation sets a different cap` `the cap that regulation sets` `a grant has already been paid for this transaction` `my age` `the Chief Commissioner exempted me from the age requirement` `my status on the commencement date` `an earlier grant was paid on an application I was party to` `I paid that grant back with any penalty` `I held a relevant interest in residential property before 1 July 2000` `I held a relevant interest in residential property and lived in it for 6 continuous months` `I live, or will live, in the home as my principal place of residence` `the day I began, or will begin, living there` `the continuous months I lived, or will live, there` `the Chief Commissioner approved my later start` `the Chief Commissioner approved my shorter stay` `the Chief Commissioner exempted me from the residence requirement` `the other person is legally married to me on the commencement date` `the other person is my de facto partner on the commencement date` `the Chief Commissioner is satisfied we were not living together and will not resume` `the other person is applying with me` `the other person's age` `the Chief Commissioner exempted the other person from the age requirement` `the other person's status on the commencement date` `an earlier grant was paid on an application the other person was party to` `the other person paid that grant back with any penalty` `the other person held a relevant interest in residential property before 1 July 2000` `the other person held a relevant interest in residential property and lived in it for 6 continuous months` `the other person lives, or will live, in the home` `the day the other person began, or will begin, living there` `the continuous months the other person lived, or will live, there` `the Chief Commissioner approved the other person's later start` `the Chief Commissioner approved the other person's shorter stay` `the Chief Commissioner exempted the other person from the residence requirement` `the largest share held by an owner who is not applying` `the total share of all owners with 5% or less` `the Chief Commissioner authorised payment before completion`))
+
+@export How much is the first home owner grant for my transaction, if it is payable (s 18)?
+GIVEN `what I am doing` IS A `Kind of transaction` @desc Whether you are buying a home under a contract (including off the plan), having a home built under a comprehensive home building contract, or building it yourself as an owner builder
+      `the commencement date` IS A DATE @desc The day the contract was made, or for an owner build the day laying the foundations began
+      `the Chief Commissioner is satisfied it replaces an earlier contract` IS A `Replaced contract` @desc Whether the Chief Commissioner is satisfied the contract replaces an earlier one for the same home (or a substantially similar home), and when that earlier contract was made
+      `it was made under an option granted in the transitional period` IS A BOOLEAN @desc Whether a purchase or building contract was made under an option or right granted in the 2012 transitional period (from the day the 2012 Budget Measures Bill was introduced to 30 September 2012)
+      `the consideration` IS A NUMBER @desc The price under the contract; for a building contract the total price of the building work; for an owner build your actual costs, leaving out any allowance for your own labour (dollars)
+GIVETH AN `Answer` NUMBER
+DECIDE `How much is the grant for my transaction` IS
+    `the amount of the grant for` (`a transaction from` `what I am doing` TRUE `the commencement date` `the commencement date` TRUE `neither renovated nor built to replace demolished premises` FALSE FALSE TRUE FALSE `the Chief Commissioner is satisfied it replaces an earlier contract` `it was made under an option granted in the transitional period` `the consideration` 0 0 0 FALSE 0 FALSE)
+    -- Only the kind, commencement date, replacement, transitional option and consideration are read by s 18: the
+    -- other facts are fixed placeholders.
+
+§§ `s 14(5), (6) -- when I may apply`
+
+@export By when must I apply for the first home owner grant (s 14(5))?
+GIVEN `the completion date` IS A DATE @desc The day the transaction is (or is expected to be) completed: for a purchase, when you are entitled to possession and your title is registered; for building, when the home is ready to live in
+GIVETH A DATE
+DECIDE `By when must I apply` IS
+    `the application period ends on` (`a transaction from` `a contract for the purchase of a home` TRUE `the completion date` `the completion date` TRUE `neither renovated nor built to replace demolished premises` FALSE FALSE TRUE FALSE `it replaces no earlier contract` FALSE 0 0 0 0 FALSE 0 FALSE)
+    -- Only the completion date is read by s 14(5)(b): the other facts are fixed placeholders.
+
+@export Is my application for the first home owner grant made in time (s 14(5), (6))?
+GIVEN `the commencement date` IS A DATE @desc The day the contract was made, or for an owner build the day laying the foundations began
+      `the completion date` IS A DATE @desc The day the transaction is (or is expected to be) completed
+      `the day I apply` IS A DATE @desc The day you make (or made) the application
+      `the Chief Commissioner allows my application outside the period` IS A BOOLEAN @desc Whether the Chief Commissioner has used the s 14(6) discretion to allow your application before or after the application period
+GIVETH A BOOLEAN
+DECIDE `Is my application in time` IF
+    `the application may be made on` `the day I apply` `for` (`a transaction from` `a contract for the purchase of a home` TRUE `the commencement date` `the completion date` TRUE `neither renovated nor built to replace demolished premises` FALSE FALSE TRUE FALSE `it replaces no earlier contract` FALSE 0 0 0 0 FALSE 0 FALSE) `if allowed` `the Chief Commissioner allows my application outside the period`
+    -- Only the two dates are read by s 14(5): the other facts are fixed placeholders.
+
+§§ `ss 20 and 21 -- if I was paid early and a condition fails`
+
+-- These questions arise only if the grant was paid to you in advance: before completion (s 20(2)), in anticipation of the
+-- eligibility cap (s 20(2A)), or before you had met the residence requirement (s 20(3)). The form can ask "Was your grant
+-- paid in advance?" first. With joint applicants, any one of you giving the notice and repaying counts for all (s 21(3)).
+
+@export Must I give the Chief Commissioner notice and repay the grant because my transaction was not completed in time (s 20(2))?
+GIVEN `the grant was paid to me before completion` IS A BOOLEAN @desc Whether the grant was paid before the transaction was completed
+      `the commencement date` IS A DATE @desc The day the contract was made, or for an owner build the day laying the foundations began
+      `the transaction has been completed` IS A BOOLEAN @desc Whether the transaction has now been completed
+      `the completion date` IS A DATE @desc The day it was completed (any day if it has not been)
+      `the Chief Commissioner allowed a longer period` IS A BOOLEAN @desc Whether the Chief Commissioner allowed longer than 12 months from the commencement date for completion
+      `the longer period ends on` IS A DATE @desc If so, the last day of that longer period
+GIVETH A BOOLEAN
+DECIDE `Must I repay because my transaction was not completed in time` IF
+        `the grant was paid to me before completion`
+    AND `it was not completed within the period in` `the transaction` `or` `the longer period`
+    WHERE
+        `the transaction` MEANS `a transaction from` `a contract for the purchase of a home` TRUE `the commencement date` `the completion date` `the transaction has been completed` `neither renovated nor built to replace demolished premises` FALSE FALSE TRUE FALSE `it replaces no earlier contract` FALSE 0 0 0 0 FALSE 0 FALSE
+        `the longer period` MEANS IF `the Chief Commissioner allowed a longer period` THEN JUST `the longer period ends on` ELSE NOTHING
+        -- Only the dates and completion are read by s 20(2): the other facts are fixed placeholders.
+
+@export By what day must I give notice and repay if my transaction is not completed in time (s 20(2))?
+GIVEN `the commencement date` IS A DATE @desc The day the contract was made, or for an owner build the day laying the foundations began
+      `the Chief Commissioner allowed a longer period` IS A BOOLEAN @desc Whether the Chief Commissioner allowed longer than 12 months from the commencement date for completion
+      `the longer period ends on` IS A DATE @desc If so, the last day of that longer period
+GIVETH A DATE
+DECIDE `By when must I repay if my transaction is not completed in time` IS
+    `the last day to give notice and repay after` (`the period for completion ends on` `the transaction` `or` `the longer period`)
+    WHERE
+        `the transaction` MEANS `a transaction from` `a contract for the purchase of a home` TRUE `the commencement date` `the commencement date` FALSE `neither renovated nor built to replace demolished premises` FALSE FALSE TRUE FALSE `it replaces no earlier contract` FALSE 0 0 0 0 FALSE 0 FALSE
+        `the longer period` MEANS IF `the Chief Commissioner allowed a longer period` THEN JUST `the longer period ends on` ELSE NOTHING
+        -- Only the commencement date is read: the other facts are fixed placeholders.
+
+@export By what day must I give notice and repay after learning that the total value is over the eligibility cap (s 20(2A))?
+GIVEN `the day I became aware the total value exceeds or will exceed the cap` IS A DATE @desc The day you became aware that the total value of the transaction is, or will be, more than the eligibility cap (this applies if the grant was paid before the cap could be checked)
+GIVETH A DATE
+DECIDE `By when must I repay because my transaction is over the cap` IS
+    `the last day to give notice and repay after` `the day I became aware the total value exceeds or will exceed the cap`
+
+@export Must I give the Chief Commissioner notice and repay the grant because the residence requirement was not met (s 20(3))?
+GIVEN `the grant was paid to me before I met the residence requirement` IS A BOOLEAN @desc Whether the grant was paid in anticipation of your living in the home for the required period
+      `the completion date` IS A DATE @desc The day the transaction was completed
+      `I live, or will live, in the home as my principal place of residence` IS A BOOLEAN @desc Whether you moved in to live in the home as your main home
+      `the day I began, or will begin, living there` IS A DATE @desc The day you began living in the home as your main home
+      `the continuous months I lived, or will live, there` IS A NUMBER @desc How many months in a row you lived in the home as your main home
+      `the Chief Commissioner approved my later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved your moving in more than 12 months after completion (s 12(3)(a))
+      `the Chief Commissioner approved my shorter stay` IS A BOOLEAN @desc Whether the Chief Commissioner approved your living there for less than 12 months (s 12(3)(b))
+      `the Chief Commissioner exempted me from the residence requirement` IS A BOOLEAN @desc Whether the Chief Commissioner exempted you from the residence requirement (s 12(4))
+      `the other person is applying with me` IS A BOOLEAN @desc Whether another person applied for the grant with you
+      `the other person lives, or will live, in the home` IS A BOOLEAN @desc If so, whether the other person moved in as their main home
+      `the day the other person began, or will begin, living there` IS A DATE @desc The day the other person began living in the home
+      `the continuous months the other person lived, or will live, there` IS A NUMBER @desc How many months in a row the other person lived there
+      `the Chief Commissioner approved the other person's later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved the other person's later start
+      `the Chief Commissioner approved the other person's shorter stay` IS A BOOLEAN @desc Whether the Chief Commissioner approved the other person's shorter stay
+      `the Chief Commissioner exempted the other person from the residence requirement` IS A BOOLEAN @desc Whether the Chief Commissioner exempted the other person from the residence requirement
+      `there is someone else` IS A BOOLEAN @desc Whether there was a further applicant
+GIVETH AN `Answer` BOOLEAN
+DECIDE `Must I repay because I did not meet the residence requirement` IS
+    `unless there is someone else` `there is someone else`
+        (`known` (`the grant was paid to me before I met the residence requirement` AND `the residence requirement is not complied with by` (`the applicants from` `me` `the other person` `the other person is applying with me`) `completing on` `the completion date`))
+    WHERE
+        `me` MEANS `an applicant from` 18 FALSE `an Australian citizen` `a clean history` EMPTY (`a residence from` `I live, or will live, in the home as my principal place of residence` `the day I began, or will begin, living there` `the continuous months I lived, or will live, there` `the Chief Commissioner approved my later start` `the Chief Commissioner approved my shorter stay` `the Chief Commissioner exempted me from the residence requirement`)
+        `the other person` MEANS `an applicant from` 18 FALSE `an Australian citizen` `a clean history` EMPTY (`a residence from` `the other person lives, or will live, in the home` `the day the other person began, or will begin, living there` `the continuous months the other person lived, or will live, there` `the Chief Commissioner approved the other person's later start` `the Chief Commissioner approved the other person's shorter stay` `the Chief Commissioner exempted the other person from the residence requirement`)
+        `a clean history` MEANS `a history from` `no` FALSE `no` `no`
+        -- s 12 reads only the residence facts: age, status and history are fixed placeholders.
+
+@export By what day must I give notice and repay if I do not meet the residence requirement (s 20(3))?
+GIVEN `the completion date` IS A DATE @desc The day the transaction was completed
+      `I live, or will live, in the home as my principal place of residence` IS A BOOLEAN @desc Whether you moved in to live in the home as your main home
+      `the day I began, or will begin, living there` IS A DATE @desc The day you began living in the home as your main home
+      `the Chief Commissioner approved my later start` IS A BOOLEAN @desc Whether the Chief Commissioner approved your moving in more than 12 months after completion (s 12(3)(a))
+GIVETH A DATE
+DECIDE `By when must I repay if I do not meet the residence requirement` IS
+    `the last day to give notice and repay after` (`the period allowed for compliance with the residence requirement ends on` `the completion date` (`a residence from` `I live, or will live, in the home as my principal place of residence` `the day I began, or will begin, living there` 0 `the Chief Commissioner approved my later start` FALSE FALSE))
+    -- The months lived, the shorter-stay approval and the exemption do not move the end of the period: placeholders.
+
+@export What is the most I can be fined, in penalty units, for not giving the notice or not repaying as a condition requires (ss 20(4), 21(4))?
+GIVETH A NUMBER
+DECIDE `What is the most I can be fined for breaking a condition` IS
+    `the maximum fine, in penalty units, for failing to comply with a condition of the grant`
+
+§§ `s 45 -- what can be recovered from me`
+
+-- These questions arise only if the Chief Commissioner may want the grant back.
+
+@export Can the Chief Commissioner require me to repay the first home owner grant (ss 20, 45(1))?
+GIVEN `the grant was paid in error` IS A BOOLEAN @desc Whether the grant was paid to you in error
+      `the Chief Commissioner reversed the decision to pay it` IS A BOOLEAN @desc Whether the Chief Commissioner has reversed the decision under which the grant was paid, for another reason
+      `a condition of the grant requires me to repay` IS A BOOLEAN @desc Whether a condition of the grant (s 20 or one the Chief Commissioner imposed) now requires you to repay it
+GIVETH A BOOLEAN
+DECIDE `Can I be made to repay the grant` IF
+    `repayment can be required` `the grant was paid in error` `the Chief Commissioner reversed the decision to pay it` `a condition of the grant requires me to repay`
+
+@export What is the most that can be recovered from me: the grant repaid, and the largest penalty on top (s 45)?
+GIVEN `the grant paid to me` IS A NUMBER @desc The amount of the grant that was paid, in dollars
+      `the grant was paid in error` IS A BOOLEAN @desc Whether the grant was paid to you in error
+      `the Chief Commissioner reversed the decision to pay it` IS A BOOLEAN @desc Whether the Chief Commissioner has reversed the decision under which the grant was paid, for another reason
+      `a condition of the grant requires me to repay` IS A BOOLEAN @desc Whether a condition of the grant (s 20 or one the Chief Commissioner imposed) now requires you to repay it
+      `it was paid as a result of dishonesty by an applicant` IS A BOOLEAN @desc Whether the grant was paid because of dishonesty by you or another applicant
+      `I have not made a repayment that was required` IS A BOOLEAN @desc Whether you have failed to make a repayment required by the Chief Commissioner's notice or by a condition of the grant
+GIVETH A NUMBER
+DECIDE `What is the most that can be recovered from me` IS
+    `the amount to repay` PLUS `the most penalty under s 45(2)` `the amount to repay` `it was paid as a result of dishonesty by an applicant` `I have not made a repayment that was required`
+    WHERE
+        `the amount to repay` MEANS
+            IF `repayment can be required` `the grant was paid in error` `the Chief Commissioner reversed the decision to pay it` `a condition of the grant requires me to repay`
+            THEN `the grant paid to me`
+            ELSE 0
