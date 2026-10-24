@@ -60,3 +60,12 @@ These links were not read in deposited text and are unverified (general knowledg
 - The rest of Title 47 ch. 8 (real property tax rates, special districts) is not deposited.
 - DC Municipal Regulations (TANF payment levels set by rule, the UI maximum weekly benefit set each year by the Director under 51-107(b)(3)) were not sourced.
 - The standard deduction and personal exemption follow the IRC by cross-reference in 47-1801.04 and 47-1806.02. Check them when encoding.
+
+## Tax and benefits encodings (2026-10-24)
+
+| Encoding | Seat | What it answers | Assertions |
+|---|---|---|---|
+| `code-of-the-district-of-columbia-title-47-taxation-licensing/encodings/baseline-2026-10/` | the resident taxpayer | residence (47-1801.04(42)); who must file (47-1805.02); the rate table (47-1806.03(a)(11)); exemption phase-out (47-1806.02); DC EITC with and without a child, and monthly payment (47-1806.04(f)); the 2025 child tax credit (47-1806.17); 15 April; extensions; deficiency in 10 days; appeal in 6 months | 52 / 52 |
+| `code-of-the-district-of-columbia-title-4-public-care-systems/encodings/baseline-2026-10/` | the TANF applicant or recipient | the gross income test; the payment from the standards table; child support disregard; 60 months; 45 days to decide; notice and benefits pending a hearing; 90 days to ask for a hearing | 32 / 32 |
+
+Federal figures (standard deduction, exemption amount), DC AGI, the Mayor's TANF deductions and the current inflation-adjusted payment level are inputs. **The deposited Title 4 prints three provisions "[Applicable on October 1, 2026.]" with no text** (ss 4-205.11a(a-1), (g), 4-205.52(c-4)); a re-deposit from a later publication branch is needed.
