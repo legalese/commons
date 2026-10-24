@@ -8,7 +8,7 @@ pass, no human gate. **Not for public use.**
 amendments up to Act No. 79, 2026 (register id C2026C00400, 12 volumes), as deposited at
 `../../registers/source-bundle/C2004A05138.txt`.
 
-**Checks:** four modules and four case files, 58 assertions satisfied, 0 errors, 0 warnings:
+**Checks:** five modules and five case files, 68 assertions satisfied, 0 errors, 0 warnings (58 before `itaa-formulas.l4` of 24 October 2026):
 
 | Module | Case file | Assertions |
 |---|---|---|
@@ -16,6 +16,7 @@ amendments up to Act No. 79, 2026 (register id C2026C00400, 12 volumes), as depo
 | `itaa-business.l4` | `itaa-cases-business.l4` | 11 |
 | `itaa-cgt.l4` | `itaa-cases-cgt.l4` | 15 |
 | `itaa-super.l4` | `itaa-cases-super.l4` | 15 |
+| `itaa-formulas.l4` (imports `itaa-income.l4`, `itaa-super.l4`) | `itaa-cases-formulas.l4` | 10 |
 
 ## Why this Act, and why scoped
 
@@ -56,6 +57,13 @@ to answer them:
 - preservation age
 
 The Medicare levy and HELP repayments asked in c045 and c048 belong to other Acts.
+
+**Inputs now computed (24 October 2026).** The Act's formulas, which the text deposit lost, are now transcribed in `../../registers/source-bundle/C2004A05138.formulas.md`. `itaa-formulas.l4` uses them to work out three of the inputs above, calling the existing rules without changing them:
+
+- net labour income (s 61-155(2), labour amounts less labour deductions), for `the working Australians tax offset`;
+- the concessional contributions cap and the general transfer balance cap for 2017-18 or later (ss 291-20(2), 294-35(3), indexed under s 960-285), for `the non-concessional contributions cap` and `the transfer balance cap on first having an account`.
+
+The AWOTE and CPI index numbers they are worked out from stay inputs: they are published figures, not deposited. The rates, the threshold and the notional liability stay inputs too, since they come from the Rates Act, not from a formula. The baseline (`../baseline-2026-10/`) carries the same formulas and more, with seat questions.
 
 ## What the Act turns out to say
 
