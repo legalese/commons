@@ -82,6 +82,22 @@ In the s 202CF question, the pension exemption (s 202EA(2)) and the s 202CE noti
 8. **The ledger entry's expected answer agrees with the text, with three additions.** The REQ-0055 assertion is borne out. The text adds that issue is subject to s 202BA(3) (an existing TFN or an interim notice in force requires refusal); that a declaration is also taken to state the TFN while an interim notice to the payer is in force (s 202CB(4)), or where it says the person has a number but does not know it (s 202CB(2)(b)), or is a listed pensioner's (s 202EA(2)); and that s 202CF does not apply if the Commissioner disclosed the TFN to the payer within the 14 days (s 202CF(1A)). Asserted.
 9. **The lives cite this Act correctly.** The corrected SCENARIO.md tables for c020, k020 and d012 cite "Income Tax Assessment Act 1936 (Cth) (TFNs)" (CORRECTIONS-2026-10-21 Chloe #9, Jake #4, Daniel #4). Nothing in the lives' facts is contradicted by the text. Not asserted (a finding about the citation).
 
+## The formulas sidecar (checked 24 October 2026)
+
+The text deposit lost every formula image of the Act. They are now transcribed in `../../registers/source-bundle/C1936A00027.formulas.md` (128 entries: 109 formulas, 19 pictures; recovered 2026-10-24). This encoding was checked against it, and nothing changes:
+
+- **Part VA has no formula.** No entry falls in ss 202 to 202F, and no rule here takes as an input, or answers `not covered` for, anything a formula gives.
+- **No Part III offset or Part VIIB Medicare formula.** The sidecar has none in Part III's offsets (s 159N-type and s 160AAAA rebates) or in Part VIIB: those provisions are in words, and the deposit kept them.
+- **No other encoding takes an amount these formulas give.** The Medicare Levy Act, the Medicare levy surcharge (fringe benefits) Act, the Rates Act and the FBT Act encodings borrow the 1936 Act's terms ("married", "dependant", "resident", "associate", s 160AAAA) as facts. None uses a formula.
+
+Formulas an individual meets, for when this encoding is extended beyond Part VA:
+
+- s 23AG(3), (4): tax on other income when overseas employment income is exempt;
+- s 27H(2): the deductible amount of an annuity;
+- s 82KZM(1)(c)(ii): spreading prepaid expenditure;
+- s 26AJ(2)(d): investment-related lottery winnings;
+- s 156(5)(b): the primary producer averaging rebate of a trustee.
+
 ## What would need doing before this is worth relying on
 
 - **The withholding schedules** under TAA Schedule 1 s 15-25, including the no-TFN amount, so the cost of not quoting can be computed. No ledger entry yet names them.
