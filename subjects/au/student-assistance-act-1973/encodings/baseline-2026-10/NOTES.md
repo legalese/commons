@@ -125,11 +125,29 @@ The 2026-10-18 defaults:
 11. **There is no time limit on recovery.** Section 42B: "any action ... for the recovery of a debt may be taken at any time". Not asserted (no question turns on it).
 12. **Failing to report a prescribed event is an offence with 12 months' imprisonment.** Section 49(1) sets the penalty, subject to reasonable excuse (s 49(1A)), for not notifying within 14 days (s 48). Which events are prescribed is for the regulations, which are not deposited. Raised as `REQ-0096`. Asserted (the 14 days).
 
+## The repayment amounts, computed from the recovered formulas (added 2026-10-24)
+
+**Module:** `saa-formulas.l4`, beside `saa-student.l4`, which it imports and leaves unchanged; cases in `saa-cases-formulas.l4` (16 assertions written, 16 satisfied; `l4 run` 0 errors, 0 warnings in every file; `saa-cases-student.l4` still 79 of 79, `saa-cases-regulations.l4` 16 of 16). Seat: the student, as above.
+
+The sidecar `../../registers/source-bundle/C2004A00058.formulas.md` transcribes the formulas finding 6 lists. The module computes:
+
+- **The accumulated ABSTUDY SSL debt** (ss 9C(1), 9CA(2), 9D): the former accumulated debt plus the debts incurred July to December, less voluntary repayments against them; for 2024-25, those two net of each other and reduced by 20%. Cents are dropped, and under $1 counts as nil. Asserted.
+- **How much compulsory repayment** (ss 10F, 10G for ABSTUDY SSL; ss 12ZK, 12ZLB, 12ZLC for FS): the applicable repayable amount less the relevant income-contingent loans liability. The applicable repayable amount is the least of the HESA s 154-20(2) amount, 10% of repayment income and the repayable debt. The answer is nil when the formula gives zero or less, and nil in the three cases of finding 7. Asserted.
+- **The present value of an unpaid debt** (s 43E(6)), and whether an offer reaches it (s 43E(5)(b)). The Act's own example gives $4,548.94, which the Act states as $4,548. Asserted (to the dollar).
+
+16. **The compulsory repayment adopts the HELP marginal rates, so it is restated here.** Sections 10F(1) and 12ZLC(1) take "the amount worked out under subsection 154-20(2) of the Higher Education Support Act 2003": 15% of repayment income above the minimum repayment income up to $125,000, and 17% above that (both thresholds indexed under HESA s 154-25). That subsection is text in the deposited HESA, and the module restates it, with the two thresholds as inputs. This departs from "borrowed terms asked as facts", so that the student gets an amount. The other loans' repayments (HESA, VET Student Loans, Social Security Act) are inputs. Asserted.
+17. **The repayment is capped by three things, and other loans come first.** On $80,000 against an illustrative $67,000 minimum, the HESA amount is $1,950. A HELP repayment of the same $1,950 leaves nothing to pay on the ABSTUDY debt. Asserted.
+18. **Financial Supplement income years before 2019-20 are not covered.** Section 12ZLC(1) speaks only of "the 2019-20 income year; or a later income year". For earlier years the amount answers `NOTHING`. Asserted.
+
+`saa-student.l4`'s `Must I make a compulsory repayment` still answers `not covered` for the amount. Its cases assert that, and they stand. The new question gives the amount. No computed value disagrees with an existing assertion.
+
+**Left for later:** the Financial Supplement contract formulas (ss 12U, 12V, 12X, 12Y, 12ZA, 12ZF, 12ZFA): amounts outstanding, discounts, indexation factors and the FS debt. The scheme closed in 2006.
+
 ## What would need doing before this is worth relying on
 
 - **The ABSTUDY Scheme** (the ABSTUDY Policy Manual), as an "as published" source, for Living Allowance eligibility, approved scholarship courses and relocation help. Raised as `REQ-0095`.
 - **The regulations and the Minister's instruments**: the s 48 prescribed events, and the s 38A(2) and s 41D(2) determinations. Raised as `REQ-0096`.
-- **A formulas sidecar** for ss 9C(1), 9CA(2), 10F(1), 12ZLC(1) and 43E(6) (finding 6), and the Higher Education Support Act s 154-20(2) amount the formulas use.
+- ~~A formulas sidecar for ss 9C(1), 9CA(2), 10F(1), 12ZLC(1) and 43E(6)~~ done 2026-10-24 (`saa-formulas.l4`, findings 16-18).
 - **Wider sources.** No guidance, ruling or case was read. Findings 4 and 9 are readings of the text alone.
 
 ## The Student Assistance Regulations brought in (added 2026-10-24, REQ-0096)
