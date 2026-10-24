@@ -1,0 +1,320 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Iowa Code chapter 239B (family investment program, Iowa's TANF cash assistance) with the need standards and income
+-- rules that set its numbers, IAC 441-40.21, 441-41.27 and 441-41.28 -- the seat-neutral core.
+--
+-- Written in the chapter's own actors and terms: the "applicant", the "participant", the "family", the "child", the
+-- "specified relative", the "department" (of health and human services), the "eligible group", the "payment standard"
+-- and the "standard of need".
+--
+-- Edition: Iowa Code 2026 (Legislative Services Agency; laws through the 2025 regular session), chapter 239B as deposited
+-- at ../../registers/source-bundle/ia-code-ch-239B-2026.txt (retrieved 2026-10-19); and the Iowa Administrative Code,
+-- publication of 10/14/2026, rules 441-40.21, 41.27, 41.28, as deposited in the sibling subject
+-- ../../../iowa-administrative-code-441-chapters-40-41-family-investment-program-need-standards/registers/source-bundle/
+-- ia-iac-441-40-21-41-27-41-28-fip.txt (retrieved 2026-10-19).
+--
+-- The applicant's seat questions are in ia-fip-seat.l4.
+--
+-- BASELINE ENCODING. No pipeline, no coverage table, no independent test pass, no human gate. Not advice. See NOTES.md.
+
+§ `Iowa Code chapter 239B -- family investment program`
+
+§§ `239B.1 -- child, family, specified relative`
+
+-- 239B.1(3): "'Child' means an unmarried person who is less than eighteen years of age or an unmarried person who is
+-- eighteen years of age and is engaged full-time in completing high school graduation or equivalency requirements in a
+-- manner which is reasonably expected to result in completion of the requirements prior to the person reaching nineteen".
+GIVEN `age` IS A NUMBER
+      `married` IS A BOOLEAN
+      `full-time in high school or equivalency, expected to finish before 19` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a child` IF
+        (NOT `married`)
+    AND (    `age` LESS THAN 18
+         OR (`age` EQUALS 18 AND `full-time in high school or equivalency, expected to finish before 19`))
+
+-- 239B.1(13): "'Specified relative' means a person who is, or was at any time, one of the following relatives of an
+-- applicant or participant child, by means of blood relationship, marriage, or adoption, or is a spouse of one of the
+-- following relatives: a. Parent ... n. Second cousin."
+DECLARE `Relationship to the child` IS ONE OF
+    `parent`
+    `grandparent`
+    `great-grandparent`
+    `great-great-grandparent`
+    `stepparent`                     -- "but not the parent of the stepparent"
+    `sibling`
+    `stepsibling`
+    `half sibling`
+    `uncle or aunt`                  -- "by at least the half blood"
+    `great-uncle or great-aunt`
+    `great-great-uncle or great-great-aunt`
+    `first cousin`
+    `nephew or niece`
+    `second cousin`
+    `spouse of one of these relatives`
+    `another relationship, or none`
+
+GIVEN r IS A `Relationship to the child`
+GIVETH A BOOLEAN
+DECIDE `is a specified relative` IF
+    CONSIDER r
+    WHEN `another relationship, or none` THEN FALSE
+    OTHERWISE TRUE
+
+-- 239B.1(6): "'Family' means a family unit that includes at least one child and at least one parent or other specified
+-- relative of the child."
+GIVEN `number of children` IS A NUMBER
+      `a parent or other specified relative is in the unit` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a family` IF
+        `number of children` AT LEAST 1
+    AND `a parent or other specified relative is in the unit`
+
+§§ `239B.2 -- conditions of eligibility`
+
+-- "At a minimum, a family shall meet all of the following conditions of eligibility": 1 application "made by the
+-- specified relative with whom the child resides or will reside"; 2 income and resources (below); 4 the written
+-- statement or family investment agreement, unless exempt; 5 providing requested information; 6 cooperation with child
+-- support services "as provided in 42 U.S.C. §608(a)(2) unless the applicant or participant qualifies for good cause or
+-- other exception as determined by the department" (a judgment, an input). Subsection 3 (unemployed parent) and 7
+-- (periodic reviews) are not separate tests here.
+DECLARE `Conditions` HAS
+    `the application is made by the specified relative with whom the child resides or will reside` IS A BOOLEAN
+    `the family meets the income guidelines`                   IS A BOOLEAN
+    `the family meets the resource guidelines`                 IS A BOOLEAN
+    `the family commits to the written statement or is exempt` IS A BOOLEAN
+    `the family provides the requested information`           IS A BOOLEAN
+    `cooperation with child support is given, or the department finds good cause or another exception` IS A BOOLEAN
+
+GIVEN c IS A `Conditions`
+GIVETH A BOOLEAN
+DECIDE `meets the 239B.2 conditions` IF
+        c's `the application is made by the specified relative with whom the child resides or will reside`
+    AND c's `the family meets the income guidelines`
+    AND c's `the family meets the resource guidelines`
+    AND c's `the family commits to the written statement or is exempt`
+    AND c's `the family provides the requested information`
+    AND c's `cooperation with child support is given, or the department finds good cause or another exception`
+
+-- 239B.2(6): "An applicant or participant shall cooperate with child support services and the department as provided in
+-- 42 U.S.C. §608(a)(2) unless the applicant or participant qualifies for good cause or other exception as determined by
+-- the department". No time is stated.
+GIVEN `the department finds good cause or another exception` IS A BOOLEAN
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the 239B.2(6) duty to cooperate with child support` IS
+    IF `the department finds good cause or another exception`
+    THEN FULFILLED
+    ELSE `the duty`
+    WHERE
+      `the duty` MEANS
+        PARTY  `the specified relative`
+        MUST   `cooperate with child support services and the department`
+        HENCE  FULFILLED
+
+§§ `239B.7 -- resources`
+
+-- 239B.7(7): "a. The resource limitation for an applicant family ... shall be two thousand dollars. b. The resource
+-- limitation for a participant family shall be five thousand dollars. c. The department shall disregard not more than
+-- ten thousand dollars of a self-employed individual's tools of the trade or capital assets". (6): "The department shall
+-- disregard the value of one motor vehicle. The countable equity value of any additional motor vehicle shall apply to the
+-- resource limitation". (8): an individual development account's earnings and balance are disregarded (not asked).
+GIVEN `participant family` IS A BOOLEAN
+GIVETH A NUMBER
+`the resource limitation` MEANS IF `participant family` THEN 5000 ELSE 2000
+
+GIVEN `cash, bank accounts and other countable resources` IS A NUMBER
+      `equity in motor vehicles other than one` IS A NUMBER
+      `tools of the trade or capital assets of self-employment` IS A NUMBER
+GIVETH A NUMBER
+`countable resources` MEANS
+    `cash, bank accounts and other countable resources`
+        PLUS `equity in motor vehicles other than one`
+        PLUS (max 0 (`tools of the trade or capital assets of self-employment` MINUS 10000))
+
+GIVEN `participant family` IS A BOOLEAN
+      `the countable resources` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is within the resource limitation` IF
+    `the countable resources` AT MOST `the resource limitation` `participant family`
+
+§§ `IAC 441-41.28 -- the eligible group and the schedule of needs`
+
+-- 41.28(1): the eligible group is "all eligible people ... living together, except when one or more of these people
+-- receive supplemental security income"; "The unborn child is not considered a member". 239B.2C: "An individual family
+-- member who is absent from the home for more than three months because the individual is incarcerated ... shall not be
+-- included in the family unit".
+-- 41.28(2), SCHEDULE OF NEEDS, by number of persons 1 to 10, then "Each Additional Person":
+--   185% of Living Costs     675.25 1330.15 1570.65 1824.10 2020.20 2249.60 2469.75 2695.45 2915.60 3189.40 +320.05
+--   Schedule of Living Costs 365    719     849     986     1092    1216    1335    1457    1576    1724    +173
+--   Schedule of Basic Needs  183    361     426     495     548     610     670     731     791     865     +87
+GIVEN n IS A NUMBER
+      `the ten figures` IS A LIST OF NUMBER
+      `each additional person` IS A NUMBER
+GIVETH A NUMBER
+`from the schedule` MEANS
+    IF n AT MOST 0
+    THEN 0
+    ELSE IF n AT MOST 10
+         THEN pick n `the ten figures`
+         ELSE (pick 10 `the ten figures`) PLUS ((n MINUS 10) TIMES `each additional person`)
+    WHERE
+        GIVEN k IS A NUMBER, xs IS A LIST OF NUMBER
+        GIVETH A NUMBER
+        pick k xs MEANS
+            CONSIDER xs
+            WHEN EMPTY THEN 0
+            WHEN x FOLLOWED BY rest THEN IF k AT MOST 1 THEN x ELSE pick (k MINUS 1) rest
+
+GIVEN n IS A NUMBER
+GIVETH A NUMBER
+`185 percent of living costs` n MEANS
+    `from the schedule` n (LIST 675.25, 1330.15, 1570.65, 1824.10, 2020.20, 2249.60, 2469.75, 2695.45, 2915.60, 3189.40) 320.05
+
+GIVEN n IS A NUMBER
+GIVETH A NUMBER
+`schedule of living costs` n MEANS
+    `from the schedule` n (LIST 365, 719, 849, 986, 1092, 1216, 1335, 1457, 1576, 1724) 173
+
+GIVEN n IS A NUMBER
+GIVETH A NUMBER
+`schedule of basic needs` n MEANS
+    `from the schedule` n (LIST 183, 361, 426, 495, 548, 610, 670, 731, 791, 865) 87
+
+-- 441-40.21: "'Payment standard' means the total needs of a group as determined by adding need according to the schedule
+-- of basic needs ... to any allowable special need"; "'Standard of need' means the total needs ... according to the
+-- schedule of living costs ... to any allowable special need". Special needs (41.28(3)) are an input.
+GIVEN n IS A NUMBER, `special needs` IS A NUMBER
+GIVETH A NUMBER
+`payment standard` n `special needs` MEANS `schedule of basic needs` n PLUS `special needs`
+
+GIVEN n IS A NUMBER, `special needs` IS A NUMBER
+GIVETH A NUMBER
+`standard of need` n `special needs` MEANS `schedule of living costs` n PLUS `special needs`
+
+§§ `239B.7(1), (2); IAC 441-41.27 -- income`
+
+-- 239B.7(1), IAC 41.27(2)"a": "a work expense deduction equal to twenty percent of the earned income".
+-- 239B.7(2), IAC 41.27(2)"c": "a work-and-earn incentive ... equal to fifty-eight percent of the amount of earned income
+-- remaining after all other deductions are applied". Both are per person and proportional, so they are applied to the
+-- group's total earned income. Diversions (41.27(4), (8)) are an input taken off earned income before the 58%.
+DECLARE `Monthly income` HAS
+    `gross nonexempt earned income`   IS A NUMBER  -- wages, tips, commissions, net self-employment profit (41.27(2))
+    `nonexempt unearned income`       IS A NUMBER  -- after withheld taxes and income-producing costs (41.27(1))
+    `income diversions`               IS A NUMBER  -- 41.27(4), (8): e.g. support paid for children outside the home
+
+GIVEN i IS A `Monthly income`
+GIVETH A NUMBER
+`countable gross income` i MEANS i's `gross nonexempt earned income` PLUS i's `nonexempt unearned income`
+
+GIVEN i IS A `Monthly income`
+GIVETH A NUMBER
+`earned income after the work expense deduction and diversions` i MEANS
+    max 0 ((i's `gross nonexempt earned income` TIMES 0.8) MINUS i's `income diversions`)
+
+-- Countable net income before the work incentive disregard (41.27(9)"a"(2): "without application of the work incentive
+-- disregard").
+GIVEN i IS A `Monthly income`
+GIVETH A NUMBER
+`countable net income before the disregard` i MEANS
+    `earned income after the work expense deduction and diversions` i PLUS i's `nonexempt unearned income`
+
+-- Countable net income after it: 42% of the earned remainder is counted.
+GIVEN i IS A `Monthly income`
+GIVETH A NUMBER
+`countable net income` i MEANS
+    (`earned income after the work expense deduction and diversions` i TIMES 0.42) PLUS i's `nonexempt unearned income`
+
+-- IAC 41.27, numbered paragraph 1: "Initial eligibility will be granted only when (1) the countable gross nonexempt
+-- unearned and earned income ... is no more than 185 percent of the standard of need ...; (2) the countable net unearned
+-- and earned income is less than the standard of need ...; and (3) the countable net unearned and earned income, after
+-- applying allowable disregards, is less than the payment standard". Paragraph 2 (continuing): "(1) ... does not exceed
+-- 185 percent of the standard of need ...; and (2) countable net unearned and earned income is less than the payment
+-- standard". The 185% figure is the schedule's (41.28(2)); special needs are not added to it.
+DECLARE `Income test result` IS ONE OF
+    `meets the income tests`
+    `gross income is more than 185 percent of the standard of need (IAC 41.27(1), 41.27(9)a(2))`
+    `net income before the work incentive disregard is not less than the standard of need (IAC 41.27(2), 41.27(9)a(2))`
+    `net income after the disregards is not less than the payment standard (IAC 41.27(3), 41.27(9)a(3))`
+
+GIVEN n IS A NUMBER, `special needs` IS A NUMBER, i IS A `Monthly income`, `participant family` IS A BOOLEAN
+GIVETH AN `Income test result`
+`the income tests` MEANS
+    IF `countable gross income` i GREATER THAN `185 percent of living costs` n
+    THEN `gross income is more than 185 percent of the standard of need (IAC 41.27(1), 41.27(9)a(2))`
+    ELSE IF (NOT `participant family`) AND `countable net income before the disregard` i AT LEAST `standard of need` n `special needs`
+         THEN `net income before the work incentive disregard is not less than the standard of need (IAC 41.27(2), 41.27(9)a(2))`
+         ELSE IF `countable net income` i AT LEAST `payment standard` n `special needs`
+              THEN `net income after the disregards is not less than the payment standard (IAC 41.27(3), 41.27(9)a(3))`
+              ELSE `meets the income tests`
+
+-- IAC 41.27, numbered paragraph 3: "The amount of the FIP grant will be determined by subtracting countable net income
+-- from the payment standard for the eligible group." 239B.3(2): calculated and paid "on a monthly basis".
+GIVEN n IS A NUMBER, `special needs` IS A NUMBER, i IS A `Monthly income`
+GIVETH A NUMBER
+`the FIP grant` MEANS max 0 (`payment standard` n `special needs` MINUS `countable net income` i)
+
+§§ `239B.3 -- notice of decision; funeral expenses`
+
+-- 239B.3(1)(b): "within thirty days of the date of an application, the department shall authorize issuance of notice of
+-- the department's decision to the specified relative."
+DECLARE `Party` IS ONE OF
+    `the department`
+    `the participant`
+    `the specified relative`
+
+DECLARE `Act` IS ONE OF
+    `authorize issuance of notice of the decision`
+    `respond to the reminder letter`
+    `cooperate with child support services and the department`
+
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the 239B.3(1)(b) duty to decide within thirty days` IS
+    PARTY  `the department`
+    MUST   `authorize issuance of notice of the decision`
+    WITHIN 30
+    HENCE  FULFILLED
+    LEST   BREACH BY `the department` BECAUSE "notice of the decision was not authorized within thirty days of the date of the application (239B.3(1)(b))"
+
+-- 239B.3(4): "The department may pay ... a maximum of four hundred dollars toward funeral expenses on the death of a child
+-- who is a participant ..., provided both of the following conditions apply: a. The decedent does not leave an estate
+-- which may be probated with sufficient proceeds ... b. Payments which are due the decedent's estate or beneficiary by
+-- reason of ... life insurance, ... social security, railroad retirement, or veterans' benefits ... are deducted from the
+-- department's payment". "May" and "from funds appropriated": the department is not bound to pay; this is the most it may.
+GIVEN `the estate can pay the funeral expenses` IS A BOOLEAN
+      `insurance, social security, railroad retirement or veterans' death payments due` IS A NUMBER
+GIVETH A NUMBER
+`the most the department may pay toward funeral expenses` MEANS
+    IF `the estate can pay the funeral expenses`
+    THEN 0
+    ELSE max 0 (400 MINUS `insurance, social security, railroad retirement or veterans' death payments due`)
+
+§§ `239B.9 -- the limited benefit plan`
+
+-- 239B.9(3)(a): "A participant who does not establish an orientation appointment with the JOBS program or who fails to
+-- keep or reschedule an orientation appointment shall receive a reminder letter ... A participant who chooses not to
+-- respond to the reminder letter within ten calendar days from the mailing date shall receive notice establishing the
+-- effective date of the limited benefit plan." Not responding is not a breach of a duty but a choice the Code deems made;
+-- the LEST branch names that consequence.
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the 239B.9(3)(a) reminder letter` IS
+    PARTY  `the participant`
+    MUST   `respond to the reminder letter`
+    WITHIN 10
+    HENCE  FULFILLED
+    LEST   BREACH BY `the participant` BECAUSE "no response to the reminder letter within ten calendar days of its mailing: the participant is considered to have chosen a limited benefit plan (239B.9(3)(a))"
+
+-- 239B.9(1)(b)(1), (2), (4): "A first limited benefit plan shall provide for continuing ineligibility for assistance until
+-- the individual participant completes significant contact with or action in regard to the JOBS program"; a subsequent
+-- one for "a specified period of ineligibility of six months or less ... and continuing indefinitely following the
+-- specified period until" that contact. "(4) a. A participant who chooses a first limited benefit plan may reconsider at any
+-- time following the effective date ... b. A participant who chooses a subsequent limited benefit plan may reconsider ...
+-- at any time following the period of ineligibility".
+GIVEN `first limited benefit plan` IS A BOOLEAN
+      `days since the effective date` IS A NUMBER
+      `the specified period of ineligibility in days` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `may reconsider the limited benefit plan` IF
+    IF `first limited benefit plan`
+    THEN `days since the effective date` AT LEAST 0
+    ELSE `days since the effective date` AT LEAST `the specified period of ineligibility in days`
