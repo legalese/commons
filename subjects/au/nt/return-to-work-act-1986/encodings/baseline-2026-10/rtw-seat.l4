@@ -1,0 +1,532 @@
+IMPORT prelude
+IMPORT `rtw-dates`
+IMPORT `rtw-core`
+
+-- Return to Work Act 1986 (NT) -- the injured worker's questions (and, on a death, the dependants' questions).
+--
+-- SEAT: the injured worker; where the worker has died, the worker's dependants and the person who pays for the funeral.
+-- "Am I covered? What will I be paid each week, and until when? What lump sum for my impairment, or for a death? What must
+-- my employer do, and by when, and what if it does not? When must I act?" Every question is phrased as that person asks
+-- it, on facts that person could state. The rules are in rtw-core.l4 and the dates in rtw-dates.l4; this module builds the
+-- core's records from plain answers and restates no rule. The employer's questions are in rtw-seat-employer.l4.
+--
+-- FIGURES the person must give: average weekly earnings (s 3(1): the Australian Statistician's NT full-time adult
+-- ordinary time earnings, last published before 1 January); the indexed normal weekly earnings (s 65(3): the formula in
+-- s 65(3A) is missing from the deposited text); the future pension age (Social Security Act 1991 (Cth) s 23: the
+-- Commonwealth encoding's `What is my pension age in months` answers it); the Territory public holidays in a period.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Return to Work Act -- the injured worker's questions`
+
+-- The record builders: one input per fact, worded from the worker's seat.
+GIVEN a1 IS A BOOLEAN, a2 IS A BOOLEAN, a3 IS A BOOLEAN, a4 IS A BOOLEAN, a5 IS A BOOLEAN, a6 IS A BOOLEAN, a7 IS A BOOLEAN
+      a8 IS A BOOLEAN, a9 IS A BOOLEAN, a10 IS A BOOLEAN, a11 IS A BOOLEAN, a12 IS A BOOLEAN, a13 IS A NUMBER
+      a14 IS A `Prescribed class`
+GIVETH A `Worker facts`
+`my worker facts` a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 MEANS
+    `Worker facts` WITH
+        `works for another person under a contract`                                              IS a1
+        `is an employee under the PAYG provisions, or should be`                                  IS a2
+        `is employed by the Commonwealth`                                                         IS a3
+        `employs another person in the work`                                                      IS a4
+        `is engaged other than for the purposes of the employer's trade, business or enterprise`  IS a5
+        `the employer makes PAYG withholding payments for the person`                             IS a6
+        `is a prescribed family member of the employer and lives with the employer`               IS a7
+        `is a director of the body corporate that employs the person`                              IS a8
+        `PAYG is withheld from the director's remuneration`                                       IS a9
+        `the person's details were disclosed to the employer's insurer as s 3B(4) or (6)(b) requires` IS a10
+        `is employed or engaged by a householder`                                                 IS a11
+        `is under the contract a contestant in a sporting or athletic activity, or training or travelling for one` IS a12
+        `yearly remuneration`                                                                     IS a13
+        `prescribed class`                                                                        IS a14
+
+GIVEN c1 IS A `Jurisdiction`, c2 IS A `Jurisdiction`, c3 IS A `Jurisdiction`, c4 IS A BOOLEAN, c5 IS A BOOLEAN
+GIVETH A `Connection facts`
+`my connection facts` c1 c2 c3 c4 c5 MEANS
+    `Connection facts` WITH
+        `where the worker usually works in the employment`                      IS c1
+        `where the worker is usually based for the employment`                  IS c2
+        `where the employer's principal place of business in Australia is`      IS c3
+        `the worker was in the Territory when injured`                          IS c4
+        `a place outside Australia may compensate the worker for the same matter` IS c5
+
+GIVEN i1 IS A BOOLEAN, i2 IS A BOOLEAN, i3 IS A BOOLEAN, i4 IS A BOOLEAN, i5 IS A BOOLEAN, i6 IS A BOOLEAN, i7 IS A BOOLEAN
+      i8 IS A BOOLEAN, i9 IS A BOOLEAN, i10 IS A BOOLEAN, i11 IS A BOOLEAN, i12 IS A NUMBER, i13 IS A BOOLEAN
+      i14 IS A BOOLEAN, i15 IS A BOOLEAN
+GIVETH AN `Injury facts`
+`my injury facts` i1 i2 i3 i4 i5 i6 i7 i8 i9 i10 i11 i12 i13 i14 i15 MEANS
+    `Injury facts` WITH
+        `arose out of or in the course of the employment`                                         IS i1
+        `is a mental injury caused wholly or primarily by reasonable management action`           IS i2
+        `was sustained in a motor accident that s 4(2A) takes out of the employment`               IS i3
+        `resulted in or materially contributed to death, impairment or incapacity`                IS i4
+        `is a heart attack or stroke injury`                                                      IS i5
+        `the employment materially contributed to the heart attack or stroke`                     IS i6
+        `was deliberately self-inflicted`                                                         IS i7
+        `is attributable to the worker's serious and wilful misconduct`                           IS i8
+        `resulted in death or permanent or long-term incapacity`                                  IS i9
+        `was sustained while the worker was driving a motor vehicle`                              IS i10
+        `the worker had consumed alcoholic liquor`                                                IS i11
+        `the worker's alcohol concentration, in grams per 100 millilitres of blood or per 210 litres of breath` IS i12
+        `the consumption is found to have materially contributed to the accident`                 IS i13
+        `the contrary of the s 60(2) presumption is proved`                                       IS i14
+        `the worker was under the influence of a drug`                                            IS i15
+
+§§ `Am I covered?`
+
+@export Am I a worker under the Return to Work Act 1986 (NT) (s 3B, regs 3A, 4, 4A, 5)?
+GIVEN `I work for another person under a contract` IS A BOOLEAN @desc Whether you do work or a service of any kind for another person (your employer) under a contract, written or not
+      `I am an employee for PAYG withholding, or should be` IS A BOOLEAN @desc Whether, for this work, you are an employee for PAYG withholding under the Taxation Administration Act 1953 (Cth), or should be treated as one even if your employer does not (having an ABN does not decide it)
+      `I am employed by the Commonwealth` IS A BOOLEAN @desc Whether you are employed by the Commonwealth (Commonwealth employees are covered by Commonwealth law instead)
+      `I employ someone else in this work` IS A BOOLEAN @desc Whether you yourself employ another person to do the work or service in question
+      `I am engaged other than for my employer's business` IS A BOOLEAN @desc Whether you are engaged other than for the purposes of your employer's trade, business or enterprise (for example, privately)
+      `my employer withholds PAYG tax for me` IS A BOOLEAN @desc Whether your employer makes PAYG withholding payments for you
+      `I am a close family member of my employer and live with them` IS A BOOLEAN @desc Whether you are your employer's spouse, parent, step-parent, grandparent, child, stepchild, grandchild, brother or sister (including half and step), and live with your employer
+      `I am a director of the company that employs me` IS A BOOLEAN @desc Whether you are a director of the body corporate that employs you
+      `PAYG is withheld from my director's pay` IS A BOOLEAN @desc If you are a director, whether PAYG tax is withheld from what the company pays you
+      `my details were given to my employer's insurer` IS A BOOLEAN @desc If you are a family member living with your employer, or a director, whether your name, the nature of your work and your estimated pay were disclosed to your employer's insurer when you started (or when the insurance began) and at each renewal
+      `I work for a householder` IS A BOOLEAN @desc Whether you are employed or engaged by a householder (for example as a nanny, cleaner or gardener in a private home)
+      `I am paid as a sports contestant` IS A BOOLEAN @desc Whether your contract is to take part as a contestant in a sporting or athletic activity, or to train or travel for one
+      `my yearly pay` IS A NUMBER @desc What you are paid in a year for this work, or the yearly equivalent of your rate of pay, in Australian dollars
+      `my prescribed class` IS A `Prescribed class` @desc Whether the regulations name your kind of work: "prescribed as a worker by reg 3A(1)" (St John Ambulance operations member, juror, racing club authorised person, taxi, hire car, limousine or bus driver for an accredited and approved operator), "prescribed as not a worker by reg 3A(2)" (fishing crew paid by a share of the catch, approved direct selling agent, foster or kinship carer, paid child carer in your own home), or "in neither prescribed class"
+      `average weekly earnings` IS A NUMBER @desc The NT average weekly earnings figure in force (full-time adult ordinary time earnings for the Northern Territory, last published by the Australian Statistician before 1 January), in dollars
+GIVETH A BOOLEAN
+DECIDE `Am I a worker under the Return to Work Act` IF
+    `the person is a worker under s 3B` (`my worker facts` `I work for another person under a contract` `I am an employee for PAYG withholding, or should be` `I am employed by the Commonwealth` `I employ someone else in this work` `I am engaged other than for my employer's business` `my employer withholds PAYG tax for me` `I am a close family member of my employer and live with them` `I am a director of the company that employs me` `PAYG is withheld from my director's pay` `my details were given to my employer's insurer` `I work for a householder` `I am paid as a sports contestant` `my yearly pay` `my prescribed class`) `average weekly earnings`
+
+@export Is my injury compensable under the Return to Work Act 1986 (NT), and if not, why not (ss 3A, 3B, 4, 53, 53AA, 57, 58, 60)?
+GIVEN `I work for another person under a contract` IS A BOOLEAN @desc Whether you do work or a service of any kind for another person (your employer) under a contract, written or not
+      `I am an employee for PAYG withholding, or should be` IS A BOOLEAN @desc Whether, for this work, you are an employee for PAYG withholding, or should be treated as one even if your employer does not
+      `I am employed by the Commonwealth` IS A BOOLEAN @desc Whether you are employed by the Commonwealth
+      `I employ someone else in this work` IS A BOOLEAN @desc Whether you yourself employ another person to do the work in question
+      `I am engaged other than for my employer's business` IS A BOOLEAN @desc Whether you are engaged other than for the purposes of your employer's trade, business or enterprise
+      `my employer withholds PAYG tax for me` IS A BOOLEAN @desc Whether your employer makes PAYG withholding payments for you
+      `I am a close family member of my employer and live with them` IS A BOOLEAN @desc Whether you are your employer's spouse, parent, grandparent, child, grandchild, brother or sister (including step and half relations) and live with your employer
+      `I am a director of the company that employs me` IS A BOOLEAN @desc Whether you are a director of the body corporate that employs you
+      `PAYG is withheld from my director's pay` IS A BOOLEAN @desc If you are a director, whether PAYG tax is withheld from what the company pays you
+      `my details were given to my employer's insurer` IS A BOOLEAN @desc If you are a family member living with your employer, or a director, whether your details were disclosed to your employer's insurer at the start and at each renewal
+      `I work for a householder` IS A BOOLEAN @desc Whether you are employed or engaged by a householder
+      `I am paid as a sports contestant` IS A BOOLEAN @desc Whether your contract is to take part as a contestant in a sporting or athletic activity, or to train or travel for one
+      `my yearly pay` IS A NUMBER @desc What you are paid in a year for this work, or its yearly equivalent, in dollars
+      `my prescribed class` IS A `Prescribed class` @desc Whether reg 3A names your kind of work as a worker, as not a worker, or neither
+      `where I usually work` IS A `Jurisdiction` @desc Where you usually work in this employment, looking at the last 12 months and what you and your employer intend, ignoring a temporary stint elsewhere of 6 months or less: "the Territory", "another State or Territory", or "no one jurisdiction"
+      `where I am usually based` IS A `Jurisdiction` @desc Where you are usually based for this employment (the work location in your contract, where you collect materials or report, where your wages are paid from)
+      `where my employer's main place of business in Australia is` IS A `Jurisdiction` @desc Where your employer's principal place of business in Australia is (the ABN address; "no one jurisdiction" if it has none in Australia)
+      `I was in the Territory when I was injured` IS A BOOLEAN @desc Whether you were in the Northern Territory when you were injured
+      `a country outside Australia may compensate me for this` IS A BOOLEAN @desc Whether the law of a place outside Australia may entitle you to compensation for the same injury
+      `my injury arose out of or in the course of my work` IS A BOOLEAN @desc Whether your physical or mental injury (including a disease, or making an earlier one worse) arose out of or in the course of your employment, including at work, on a work break, at required training, at medical appointments for the injury, or travelling by the shortest route between home and work (s 4)
+      `it is a mental injury caused mainly by reasonable management action` IS A BOOLEAN @desc Whether it is a mental injury caused wholly or mainly by reasonable management action taken reasonably by your employer (appraisal, discipline, transfer, dismissal and the like), a reasonable decision about such action, or your expectation of it
+      `it happened in a motor accident on my way to or from work or on a break` IS A BOOLEAN @desc Whether it happened in a motor accident while on a break, or travelling between home and your usual workplace (unless your employer asked you to travel to another workplace or to work outside your normal hours), or to training or a medical appointment; such accidents are left to the Motor Accidents (Compensation) Act
+      `it caused my death, impairment or incapacity` IS A BOOLEAN @desc Whether the injury resulted in, or materially contributed to, death, an impairment, or an inability (full or partial) to do paid work
+      `it is a heart attack or stroke` IS A BOOLEAN @desc Whether it is a heart attack or stroke injury (to the heart or brain or a blood vessel supplying them)
+      `my work materially contributed to the heart attack or stroke` IS A BOOLEAN @desc If it is a heart attack or stroke, whether your employment was the real, proximate or effective cause of it
+      `I deliberately injured myself` IS A BOOLEAN @desc Whether the injury was deliberately self-inflicted
+      `it was caused by my serious and wilful misconduct` IS A BOOLEAN @desc Whether the injury is attributable to your serious and wilful misconduct
+      `it caused death or permanent or long-term incapacity` IS A BOOLEAN @desc Whether the injury resulted in death or a permanent or long-term inability to work
+      `I was driving a motor vehicle when injured` IS A BOOLEAN @desc Whether you were driving a motor vehicle when injured
+      `I had been drinking alcohol` IS A BOOLEAN @desc Whether you had consumed alcohol before driving
+      `my blood alcohol reading` IS A NUMBER @desc Your blood alcohol concentration in grams per 100 millilitres (or breath alcohol in grams per 210 litres); 0 if none was measured
+      `the alcohol is found to have materially contributed to the accident` IS A BOOLEAN @desc Whether it has been found that your drinking materially contributed to the accident
+      `it is proved that the alcohol did not contribute` IS A BOOLEAN @desc If your reading was 0.08 or more, whether you have proved that the alcohol did not materially contribute to the accident
+      `I was under the influence of a drug` IS A BOOLEAN @desc Whether you were driving under the influence of a drug
+      `average weekly earnings` IS A NUMBER @desc The NT average weekly earnings figure in force, in dollars
+GIVETH A `Coverage answer`
+`Is my injury compensable under the Return to Work Act` MEANS
+    `whether the injury is compensable`
+        (`my worker facts` `I work for another person under a contract` `I am an employee for PAYG withholding, or should be` `I am employed by the Commonwealth` `I employ someone else in this work` `I am engaged other than for my employer's business` `my employer withholds PAYG tax for me` `I am a close family member of my employer and live with them` `I am a director of the company that employs me` `PAYG is withheld from my director's pay` `my details were given to my employer's insurer` `I work for a householder` `I am paid as a sports contestant` `my yearly pay` `my prescribed class`)
+        (`my connection facts` `where I usually work` `where I am usually based` `where my employer's main place of business in Australia is` `I was in the Territory when I was injured` `a country outside Australia may compensate me for this`)
+        (`my injury facts` `my injury arose out of or in the course of my work` `it is a mental injury caused mainly by reasonable management action` `it happened in a motor accident on my way to or from work or on a break` `it caused my death, impairment or incapacity` `it is a heart attack or stroke` `my work materially contributed to the heart attack or stroke` `I deliberately injured myself` `it was caused by my serious and wilful misconduct` `it caused death or permanent or long-term incapacity` `I was driving a motor vehicle when injured` `I had been drinking alcohol` `my blood alcohol reading` `the alcohol is found to have materially contributed to the accident` `it is proved that the alcohol did not contribute` `I was under the influence of a drug`)
+        `average weekly earnings`
+
+-- For the Motor Accidents (Compensation) Act 1979 s 10A(b), which excludes motor accident benefits for an injury that would
+-- be compensable here but for self-infliction or serious and wilful misconduct. The other inputs are taken as a worker
+-- whose employment is connected with the Territory and whose injury arose in the course of employment and caused
+-- incapacity; only the s 57 facts are asked.
+@export Would my injury be compensable under the Return to Work Act but for s 57 (self-inflicted, or serious and wilful misconduct)? For the Motor Accidents (Compensation) Act s 10A(b)
+GIVEN `I am a worker under the Return to Work Act` IS A BOOLEAN @desc Your answer to "Am I a worker under the Return to Work Act"
+      `my employment is connected with the Territory` IS A BOOLEAN @desc Whether you usually work, or are usually based, in the Northern Territory for this employment (s 53AA)
+      `my injury arose out of or in the course of my work, and s 4(2A) does not take it out` IS A BOOLEAN @desc Whether the injury arose out of or in the course of your employment, and was not a motor accident on a break or on a journey that s 4(2A) leaves to the motor accidents scheme
+      `I deliberately injured myself` IS A BOOLEAN @desc Whether the injury was deliberately self-inflicted
+      `it was caused by my serious and wilful misconduct` IS A BOOLEAN @desc Whether the injury is attributable to your serious and wilful misconduct
+      `it caused death or permanent or long-term incapacity` IS A BOOLEAN @desc Whether the injury resulted in death or a permanent or long-term inability to work
+GIVETH A BOOLEAN
+DECIDE `Would my injury be compensable but for s 57` IF
+    `the injury would be compensable but for s 57`
+        (`my worker facts` `I am a worker under the Return to Work Act` `I am a worker under the Return to Work Act` FALSE FALSE FALSE TRUE FALSE FALSE FALSE FALSE FALSE FALSE 0 `in neither prescribed class`)
+        (`my connection facts` (IF `my employment is connected with the Territory` THEN `the Territory` ELSE `another State or Territory`) `no one jurisdiction` `no one jurisdiction` FALSE FALSE)
+        (`my injury facts` `my injury arose out of or in the course of my work, and s 4(2A) does not take it out` FALSE FALSE TRUE FALSE FALSE `I deliberately injured myself` `it was caused by my serious and wilful misconduct` `it caused death or permanent or long-term incapacity` FALSE FALSE 0 FALSE FALSE FALSE)
+        1
+
+@export Can proceedings on my claim be maintained, given when I gave notice and claimed (s 182)?
+GIVEN `the day of my injury` IS A DATE @desc The day of the injury (for a disease, the day the incapacity from it began; for a death claim, the day you received advice of the death)
+      `the day I made my claim` IS A DATE @desc The day the claim (with its medical certificate of capacity, where one is needed) was given to the employer
+      `I gave notice before I voluntarily left that job` IS A BOOLEAN @desc Whether you gave notice of the injury before you voluntarily left the job in which you were injured (answer yes if you have not left, or left only because the injury stopped you doing the job)
+      `my employer was not prejudiced, or I had a reasonable cause for not giving notice` IS A BOOLEAN @desc If notice was late or missing, whether it is found that your employer was not prejudiced by that, or that it was caused by mistake, absence from the Territory or other reasonable cause
+      `my late claim had a reasonable cause` IS A BOOLEAN @desc If the claim was more than 6 months late, whether it is found that the delay was caused by mistake, ignorance of a disease, absence from the Territory or other reasonable cause
+      `I was paid what I thought was compensation, or my employer led me to believe I would be paid or was not entitled` IS A BOOLEAN @desc Whether you received a payment you believed was compensation, or your employer or its insurer led you to believe compensation would be paid, or that you were not entitled to it
+GIVETH A `Claim time answer`
+`Can proceedings on my claim be maintained` MEANS
+    `whether proceedings on the claim are maintainable under s 182`
+        (`Claim time facts` WITH
+            `the day of the injury, or of the incapacity from a disease, or the day advice of the death was received` IS `the day of my injury`
+            `the day the claim was made`                                                    IS `the day I made my claim`
+            `notice of the injury was given before the worker voluntarily left the employment` IS `I gave notice before I voluntarily left that job`
+            `the employer is not prejudiced, or the want of notice had a reasonable cause`   IS `my employer was not prejudiced, or I had a reasonable cause for not giving notice`
+            `the late claim is found to have been occasioned by mistake, ignorance of a disease, absence from the Territory or other reasonable cause` IS `my late claim had a reasonable cause`
+            `the claimant was paid what they believed was compensation, or the employer or insurer led them to believe compensation would be paid or was not available` IS `I was paid what I thought was compensation, or my employer led me to believe I would be paid or was not entitled`)
+
+§§ `What will I be paid each week, and until when?`
+-- Situation: the injury stops you working, fully or partly.
+
+@export What are my normal weekly earnings under s 49A?
+GIVEN `my ordinary weekly pay from the employer liable` IS A NUMBER @desc Your gross weekly pay from the employer liable to compensate you, before tax, leaving out superannuation, overtime, allowances and non-cash benefits (if it varied, your average over the last 12 months of paid weeks), in dollars
+      `my ordinary weekly pay from my other regular employers` IS A NUMBER @desc Your gross weekly pay, worked out the same way, from any other employer you had worked for for at least 6 weeks and still worked for when compensation began, in dollars
+      `my weekly regular overtime` IS A NUMBER @desc Your weekly pay for overtime worked in a regular and established pattern (over the last 6 months if you had been there that long), in dollars
+      `my weekly over-award payments` IS A NUMBER @desc Over-award payments you receive each week, in dollars
+      `my weekly listed allowances` IS A NUMBER @desc Climate, district, leading hand, qualification and regular shift allowances, and service grants, you receive each week, in dollars
+      `the weekly value of electricity, meals or accommodation my employer provides` IS A NUMBER @desc The weekly value of electricity, meals or accommodation your employer provides other than as money, in dollars
+      `I am a fly-in fly-out or drive-in drive-out worker` IS A BOOLEAN @desc Whether you are a fly-in fly-out or drive-in drive-out worker (as for fringe benefits tax); if so, non-cash benefits are not counted
+      `average weekly earnings` IS A NUMBER @desc The NT average weekly earnings figure in force, in dollars
+GIVETH A NUMBER
+`What are my normal weekly earnings` MEANS
+    `the normal weekly earnings under s 49A`
+        (`Earnings facts` WITH
+            `weekly ordinary remuneration from the employer liable to compensate`               IS `my ordinary weekly pay from the employer liable`
+            `weekly ordinary remuneration from other employers the worker ordinarily works for` IS `my ordinary weekly pay from my other regular employers`
+            `weekly wages for overtime worked in a regular and established pattern`             IS `my weekly regular overtime`
+            `weekly over-award payments`                                                        IS `my weekly over-award payments`
+            `weekly climate, district, leading hand, qualification or regular shift allowances and service grants` IS `my weekly listed allowances`
+            `weekly value of electricity, meals or accommodation provided other than in money`  IS `the weekly value of electricity, meals or accommodation my employer provides`
+            `is a fly-in fly-out or drive-in drive-out worker`                                  IS `I am a fly-in fly-out or drive-in drive-out worker`)
+        `average weekly earnings`
+
+@export How much weekly compensation do I get for this week (ss 64, 65, 65A, 65B, 61A)?
+GIVEN `the weeks I have already been paid weekly compensation for this injury` IS A NUMBER @desc How many weeks of weekly compensation you have already been paid for this injury, in total (a part week counts as a week); 0 for your first week
+      `a doctor certifies me unfit for work this week` IS A BOOLEAN @desc Whether a medical practitioner certifies that you are totally or partly incapacitated for work this week because of the injury (needed in the first 26 weeks)
+      `my whole person impairment is 15% or more` IS A BOOLEAN @desc Whether your permanent impairment, assessed as for s 72 and leaving out a psychological impairment that follows a physical injury, is 15% or more of the whole person
+      `my normal weekly earnings` IS A NUMBER @desc Your normal weekly earnings immediately before compensation began (see "What are my normal weekly earnings"), in dollars
+      `what I actually earned from work this week` IS A NUMBER @desc What you actually earned in employment this week, in dollars (0 if nothing)
+      `my indexed normal weekly earnings` IS A NUMBER @desc After 26 weeks: your normal weekly earnings indexed under s 65(3) to average weekly earnings now, in dollars (the formula is missing from the deposited text: ask your employer or insurer, or see the flagged reading question)
+      `what I could reasonably earn in a week` IS A NUMBER @desc After 26 weeks: what you are reasonably capable of earning in a week in the most profitable work reasonably available to you (in the first 104 weeks) or that you could do, available or not (after 104 weeks), in dollars; 0 if you cannot earn anything
+      `my spouse is wholly or mainly dependent on me` IS A BOOLEAN @desc Whether your spouse or de facto partner was wholly or mainly dependent on you when you were injured, and still is
+      `how many prescribed children I have` IS A NUMBER @desc How many of your children (or children you stand in place of a parent to) are under 16, or 16 to 20 and studying full time or physically or mentally handicapped, and not married or in a de facto relationship
+      `my spouse's normal weekly earnings` IS A NUMBER @desc Your spouse's normal weekly earnings, worked out as for you, in dollars (0 if none or no spouse)
+      `I am in prison` IS A BOOLEAN @desc Whether you are a prisoner (or detained, or in like circumstances, outside the Territory) and someone is liable to maintain you
+      `I live outside Australia` IS A BOOLEAN @desc Whether you now live outside Australia
+      `I give my employer the reg 6A declarations` IS A BOOLEAN @desc If you live outside Australia, whether you give your employer the declarations in the approved form, by you and a doctor, that reg 6A requires
+      `my employer is satisfied I am still incapacitated` IS A BOOLEAN @desc If you live outside Australia, whether your employer is satisfied that you remain incapacitated
+      `the Court has extended my payments abroad` IS A BOOLEAN @desc If you live outside Australia and have been paid 104 weeks, whether the Work Health Court has ordered an extension that covers this week
+      `average weekly earnings` IS A NUMBER @desc The NT average weekly earnings figure in force, in dollars
+GIVETH A `Weekly compensation answer`
+`How much weekly compensation do I get this week` MEANS
+    `the weekly compensation for the week`
+        (`Week facts` WITH
+            `the weeks of weekly payments already paid for the injury`                         IS `the weeks I have already been paid weekly compensation for this injury`
+            `a medical practitioner certifies the worker incapacitated for the week`           IS `a doctor certifies me unfit for work this week`
+            `the worker's relevant permanent impairment is 15% or more`                        IS `my whole person impairment is 15% or more`
+            `normal weekly earnings`                                                           IS `my normal weekly earnings`
+            `the amount the worker actually earned in employment during the week`              IS `what I actually earned from work this week`
+            `the worker is a prisoner, or detained outside the Territory, and someone is liable to maintain the worker` IS `I am in prison`
+            `the worker lives outside Australia`                                               IS `I live outside Australia`
+            `the worker gives the reg 6A declarations`                                         IS `I give my employer the reg 6A declarations`
+            `the employer is satisfied about the worker's continued incapacity`                IS `my employer is satisfied I am still incapacitated`
+            `a Court order under s 65B(4) extends the entitlement for the week`                IS `the Court has extended my payments abroad`
+            `long-term facts`                                                                  IS
+                `Long-term incapacity facts` WITH
+                    `indexed normal weekly earnings`                                   IS `my indexed normal weekly earnings`
+                    `the amount the worker is reasonably capable of earning in a week`  IS `what I could reasonably earn in a week`
+                    `the worker's spouse is wholly or mainly dependent on the worker`   IS `my spouse is wholly or mainly dependent on me`
+                    `the number of the worker's prescribed children`                    IS `how many prescribed children I have`
+                    `the worker's spouse's normal weekly earnings`                      IS `my spouse's normal weekly earnings`)
+        `average weekly earnings`
+
+@export READING ONLY: what are my indexed normal weekly earnings if s 65(3A) is N x A / C? (The formula is missing from the deposited text; this is not the Act's wording.)
+GIVEN `my normal weekly earnings before compensation began` IS A NUMBER @desc N: your normal weekly earnings immediately before the first compensation date, in dollars
+      `average weekly earnings now` IS A NUMBER @desc A: the NT average weekly earnings figure at the date in question, in dollars
+      `average weekly earnings when compensation began` IS A NUMBER @desc C: the NT average weekly earnings figure that applied on the first compensation date, in dollars
+GIVETH A NUMBER
+`What are my indexed normal weekly earnings on the N x A / C reading` MEANS
+    `the indexed normal weekly earnings on the flagged reading N x A / C` `my normal weekly earnings before compensation began` `average weekly earnings now` `average weekly earnings when compensation began`
+
+@export Until when will my weekly compensation be paid (s 65(1BA), (1D))?
+GIVEN `my date of birth` IS A DATE @desc Your date of birth
+      `the day of my injury` IS A DATE @desc The date of the injury that caused (or contributed to) your incapacity
+      `my pension age in months` IS A NUMBER @desc Your age pension age under the Social Security Act 1991 (Cth) s 23, in months (804 for 67 years; the Commonwealth encoding's "What is my pension age in months" works it out)
+      `the usual retiring age in my industry, in months` IS A NUMBER @desc The age at which workers in your industry or occupation usually retire, in months (for example 816 for 68 years)
+      `my whole person impairment is 15% or more` IS A BOOLEAN @desc Whether your permanent impairment, assessed as for s 72 and leaving out a psychological impairment that follows a physical injury, is 15% or more of the whole person
+GIVETH A `Payment period answer`
+`Until when will my weekly compensation be paid` MEANS
+    `the period of s 65 compensation under s 65(1D)`
+        (`Period facts` WITH
+            `the worker's date of birth`                                          IS `my date of birth`
+            `the injury date`                                                     IS `the day of my injury`
+            `the worker's future pension age, in months`                          IS `my pension age in months`
+            `the normal retiring age in the worker's industry or occupation, in months` IS `the usual retiring age in my industry, in months`
+            `the worker's relevant permanent impairment is 15% or more`           IS `my whole person impairment is 15% or more`)
+
+@export When does a change to my weekly compensation take effect after my employer's notice (s 61B(4))?
+GIVEN `the day my employer gave or posted the notice` IS A DATE @desc The day your employer's written notice of the change was given to you or posted to you
+      `the day of the change` IS A DATE @desc The day the event the notice is about happens (the end of the first 26 weeks, of the 260 weeks, or of the 104 weeks, or the day you reach retiring age or pension age)
+GIVETH A DATE
+`When does a change to my weekly compensation take effect` MEANS
+    `the day the change takes effect under s 61B(4)` `the day my employer gave or posted the notice` `the day of the change`
+
+@export After my 260 weeks of weekly compensation, until when can costs I incur still be paid (s 61A(2)(a)(ii))?
+GIVEN `the last day of my 260 weeks` IS A DATE @desc The last day of the last of the 260 weeks of weekly compensation paid to you
+GIVETH A DATE
+`Until when can my costs still be paid after the 260 weeks` MEANS
+    `the last day a cost may be incurred under s 61A(2)(a)(ii)` `the last day of my 260 weeks`
+
+@export How many weeks late was my weekly payment, for the s 89 late-payment interest?
+GIVEN `the day the payment was due` IS A DATE @desc The last day on which the weekly payment should have been made (normally 7 days after the end of the week it is for)
+      `the day it was paid` IS A DATE @desc The day it was actually paid
+GIVETH A NUMBER
+`How many weeks late was my weekly payment` MEANS
+    `B, the weeks late under s 89(1)` `the day the payment was due` `the day it was paid`
+
+§§ `What lump sum do I get for a permanent impairment?`
+-- Situation: your permanent impairment has been assessed.
+
+@export How much compensation do I get for my permanent impairment (ss 70, 71)?
+GIVEN `my assessed whole person impairment, in per cent` IS A NUMBER @desc Your permanent impairment as assessed under the approved guides, as a percentage of the whole person (14 for 14%)
+      `average weekly earnings` IS A NUMBER @desc The NT average weekly earnings figure at the time of payment, in dollars
+GIVETH AN `Impairment lump sum answer`
+`How much do I get for my permanent impairment` MEANS
+    `the permanent impairment compensation under s 71` `my assessed whole person impairment, in per cent` `average weekly earnings`
+
+@export By when must I apply for a reassessment of my permanent impairment (s 72(3))?
+GIVEN `the day I was notified of the assessment` IS A DATE @desc The day you were told of the medical practitioner's assessment of your permanent impairment
+GIVETH A DATE
+`By when must I apply for a reassessment` MEANS
+    `the last day to apply for a reassessment under s 72(3)` `the day I was notified of the assessment`
+
+@export By when must my permanent impairment compensation be paid (s 71(4))?
+GIVEN `the day I was notified of the assessment` IS A DATE @desc The day you were told of the medical practitioner's assessment
+      `I applied for a reassessment` IS A BOOLEAN @desc Whether you (or another aggrieved person) applied for a reassessment within the 28 days
+      `the day I was notified of the reassessment` IS A DATE @desc If you applied, the day you were notified of the panel's reassessment (otherwise any date)
+GIVETH A DATE
+`By when must my permanent impairment compensation be paid` MEANS
+    IF `I applied for a reassessment`
+    THEN `the last day to pay under s 71(4)(b)` `the day I was notified of the reassessment`
+    ELSE `the last day to pay under s 71(4)(a)` `the day I was notified of the assessment`
+
+§§ `What is paid when a worker dies?`
+-- Situation: the worker has died of the injury. Asked by a dependant, or by the person who pays for the funeral.
+
+@export What funeral benefit is paid for the worker's funeral (s 62(1)(a), reg 6)?
+GIVEN `the cost of the funeral` IS A NUMBER @desc What the funeral cost, in dollars
+      `average weekly earnings` IS A NUMBER @desc The NT average weekly earnings figure in force, in dollars
+GIVETH A NUMBER
+`What funeral benefit is paid` MEANS
+    `the funeral benefit under s 62(1)(a)` `the cost of the funeral` `average weekly earnings`
+
+@export What is the worker's dependant spouse's share of the death lump sum of 364 times average weekly earnings (s 62(1)(b), (3))?
+GIVEN `the worker left a dependant spouse` IS A BOOLEAN @desc Whether the worker left a spouse or de facto partner who was wholly or partly dependent on the worker's earnings
+      `how many dependant children the worker left` IS A NUMBER @desc How many of the worker's children were wholly or partly dependent on the worker's earnings
+      `the worker left other dependants` IS A BOOLEAN @desc Whether the worker left any other dependant (a parent, grandchild, other family member, or someone in place of a parent) who was wholly or partly dependent on the worker's earnings
+      `average weekly earnings` IS A NUMBER @desc The NT average weekly earnings figure at the time of payment, in dollars
+GIVETH A `Death share answer`
+`What is the spouse's share of the death lump sum` MEANS
+    `the death share from` (`the spouse's proportion under the s 62(3) Table` (`Dependants` WITH `there is a dependant spouse` IS `the worker left a dependant spouse`, `the number of dependant children` IS `how many dependant children the worker left`, `there are other dependants` IS `the worker left other dependants`)) `average weekly earnings`
+
+@export What is each dependant child's share of the death lump sum of 364 times average weekly earnings (s 62(1)(b), (3))?
+GIVEN `the worker left a dependant spouse` IS A BOOLEAN @desc Whether the worker left a spouse or de facto partner who was wholly or partly dependent on the worker's earnings
+      `how many dependant children the worker left` IS A NUMBER @desc How many of the worker's children were wholly or partly dependent on the worker's earnings
+      `the worker left other dependants` IS A BOOLEAN @desc Whether the worker left any other dependant (a parent, grandchild, other family member, or someone in place of a parent)
+      `average weekly earnings` IS A NUMBER @desc The NT average weekly earnings figure at the time of payment, in dollars
+GIVETH A `Death share answer`
+`What is each child's share of the death lump sum` MEANS
+    `the death share from` (`each child's proportion under the s 62(3) Table` (`Dependants` WITH `there is a dependant spouse` IS `the worker left a dependant spouse`, `the number of dependant children` IS `how many dependant children the worker left`, `there are other dependants` IS `the worker left other dependants`)) `average weekly earnings`
+
+@export Is a child's share of the death lump sum paid to the Public Trustee (s 62(4))?
+GIVEN `the child's age` IS A NUMBER @desc The child's age in years
+      `the Court has ordered otherwise` IS A BOOLEAN @desc Whether the Work Health Court has ordered that the share be paid some other way
+GIVETH A BOOLEAN
+DECIDE `Is the child's share paid to the Public Trustee` IF
+    `the child's share is paid to the Public Trustee under s 62(4)` `the child's age` `the Court has ordered otherwise`
+
+@export Is this child a prescribed child, for the weekly children's benefit after a death (s 63(3)) or the low-earner floor (s 65(13))?
+GIVEN `the child is the worker's child or one the worker stood in place of a parent to` IS A BOOLEAN @desc Whether the child is a child of the worker, or one the worker stood in loco parentis to
+      `the child's age` IS A NUMBER @desc The child's age in whole years
+      `the child is a full-time student or physically or mentally handicapped` IS A BOOLEAN @desc Whether the child is studying full time, or is physically or mentally handicapped
+      `the child is married or in a de facto relationship` IS A BOOLEAN @desc Whether the child is the spouse or de facto partner of another person
+GIVETH A BOOLEAN
+DECIDE `Is this child a prescribed child` IF
+    `the child is a prescribed child under ss 63(3) and 65(13)`
+        (`Child facts` WITH
+            `is a child of the worker or one the worker stood in loco parentis to` IS `the child is the worker's child or one the worker stood in place of a parent to`
+            `age in years`                                                       IS `the child's age`
+            `is a full-time student, or physically or mentally handicapped`       IS `the child is a full-time student or physically or mentally handicapped`
+            `is the spouse of another person`                                    IS `the child is married or in a de facto relationship`)
+
+@export What weekly benefit is paid for each prescribed child of a worker who died (s 63)?
+GIVEN `how many prescribed children the worker left` IS A NUMBER @desc How many prescribed children the worker left (under 16, or 16 to 20 and studying full time or handicapped)
+      `average weekly earnings` IS A NUMBER @desc The NT average weekly earnings figure at the time of payment, in dollars
+GIVETH A NUMBER
+`What weekly benefit is paid for each prescribed child` MEANS
+    `the weekly benefit for each prescribed child under s 63` `how many prescribed children the worker left` `average weekly earnings`
+
+@export How much of our counselling and financial advice costs is paid after the worker's death (s 62(1)(c), reg 6AA)?
+GIVEN `our reasonable costs of counselling and expert financial advice` IS A NUMBER @desc The reasonable costs, in total, of counselling by a doctor, psychologist, social worker or recognised counsellor for the dependants, and of licensed financial advice, in dollars
+GIVETH A NUMBER
+`How much of our counselling and financial advice costs is paid` MEANS
+    `the counselling and financial advice costs payable under s 62(1)(c)` `our reasonable costs of counselling and expert financial advice` NOTHING
+
+§§ `What must my employer do, and by when, and what if it does not?`
+-- Situation: you have made a claim.
+
+@export By when must my employer forward my claim (s 84(1))? If it does not, you may lodge it with the insurer or the Authority yourself (s 84(3))
+GIVEN `the day my employer received my claim` IS A DATE @desc The day your employer received your claim
+      `weekday public holidays in the next 3 working days` IS A NUMBER @desc How many Territory public holidays fall on a Monday to Friday in the days after that, before the deadline (usually 0)
+GIVETH A DATE
+`By when must my employer forward my claim` MEANS
+    `the last day to forward the claim under s 84(1)` `the day my employer received my claim` `weekday public holidays in the next 3 working days`
+
+@export By when must my employer tell me whether it accepts, defers or disputes my claim (s 85(1))? If it does not, it is taken to have accepted (s 87)
+GIVEN `the day my employer received my claim` IS A DATE @desc The day your employer received your claim
+      `weekday public holidays in the next 10 working days` IS A NUMBER @desc How many Territory public holidays fall on a Monday to Friday in the two weeks or so after that (usually 0)
+GIVETH A DATE
+`By when must my employer decide my claim` MEANS
+    `the last day to notify a decision under s 85(1)` `the day my employer received my claim` `weekday public holidays in the next 10 working days`
+
+@export By when must my weekly payments start, after my employer accepts or defers my claim (s 85(2), (4)(b))?
+GIVEN `the day my employer accepted or deferred` IS A DATE @desc The day your employer decided to accept, or to defer accepting, your claim for weekly payments
+      `weekday public holidays in the next 3 working days` IS A NUMBER @desc How many Territory public holidays fall on a Monday to Friday in the days after that (usually 0)
+GIVETH A DATE
+`By when must my weekly payments start` MEANS
+    `the last day to commence weekly payments under s 85(2) or (4)(b)` `the day my employer accepted or deferred` `weekday public holidays in the next 3 working days`
+
+@export Until when can my employer defer accepting my claim (s 85(4)(a))?
+GIVEN `the day my employer's deferral notice was given or posted` IS A DATE @desc The day your employer's written notice that it defers accepting liability was given to you or posted
+GIVETH A DATE
+`Until when can my employer defer my claim` MEANS
+    `the last day of a deferral under s 85(4)(a)` `the day my employer's deferral notice was given or posted`
+
+@export Is my employer taken to have accepted my claim because it did not decide in time (s 87)?
+GIVEN `the day my employer received my claim` IS A DATE @desc The day your employer received your claim
+      `weekday public holidays in the next 10 working days` IS A NUMBER @desc How many Territory public holidays fall on a Monday to Friday in the two weeks or so after that (usually 0)
+      `my employer has told me its decision` IS A BOOLEAN @desc Whether your employer has notified you in writing that it accepts, defers or disputes your claim
+      `the day it told me` IS A DATE @desc The day that notice was given to you or posted (any date if none)
+      `its decision` IS A `Liability decision` @desc What it decided: "accept liability", "defer accepting liability", "dispute liability, with the s 85(8) statement" (a statement in the approved form giving full reasons and your mediation and Court rights), or "dispute liability, without the s 85(8) statement"
+      `after deferring, it has accepted or properly disputed` IS A BOOLEAN @desc If it deferred, whether it has since notified you that it accepts, or disputes with the s 85(8) statement
+      `the day it told me that` IS A DATE @desc The day that later notice was given or posted (any date if none)
+      `today` IS A DATE @desc Today's date
+GIVETH A `Deemed acceptance answer`
+`Is my employer taken to have accepted my claim` MEANS
+    `whether liability is deemed accepted under s 87`
+        (`Decision facts` WITH
+            `the day the employer received the claim`                         IS `the day my employer received my claim`
+            `weekday public holidays in the 10 working days`                  IS `weekday public holidays in the next 10 working days`
+            `the employer has notified a decision`                            IS `my employer has told me its decision`
+            `the day the decision was notified or posted`                     IS `the day it told me`
+            `the decision`                                                    IS `its decision`
+            `after deferring, the employer has notified acceptance or a dispute with the s 85(8) statement` IS `after deferring, it has accepted or properly disputed`
+            `the day that later decision was notified or posted`              IS `the day it told me that`
+            `today`                                                           IS `today`)
+
+@export By when must my employer make a weekly payment (s 88(1))? A late payment carries interest (s 89)
+GIVEN `the last day of the week the payment is for` IS A DATE @desc The last day of the week (or of your normal longer pay period) the payment is for
+GIVETH A DATE
+`By when must my employer make this weekly payment` MEANS
+    `the last day to make the weekly payment under s 88(1)` `the last day of the week the payment is for`
+
+@export By when must my employer give me the information about my weekly earnings I asked for (s 85A)?
+GIVEN `the day my employer received my request` IS A DATE @desc The day your employer received your request for information about your weekly earnings
+GIVETH A DATE
+`By when must my employer give me my earnings information` MEANS
+    `the last day to give earnings information under s 85A(2)` `the day my employer received my request`
+
+@export By when must my employer decide my application to increase or decrease my weekly payments (s 86)?
+GIVEN `the day my employer received my application` IS A DATE @desc The day your employer received your application to change the level of your weekly payments
+GIVETH A DATE
+`By when must my employer decide my application to change my weekly payments` MEANS
+    `the last day to decide an application to alter weekly payments under s 86(2)` `the day my employer received my application`
+
+@export Would my employer commit an offence by dismissing me while I am incapacitated (s 65C)?
+GIVEN `I am unable to work, fully or partly, because of the injury` IS A BOOLEAN @desc Whether you are totally or partially incapacitated for work as a result of the injury
+      `the reason is my serious misconduct` IS A BOOLEAN @desc Whether the reason for the dismissal is your serious misconduct (wilful conduct inconsistent with your contract, serious risk to health, safety or the business, theft, fraud, assault, intoxication at work, or refusing a reasonable instruction)
+      `the day of my injury` IS A DATE @desc The day you were injured
+      `the day of the dismissal` IS A DATE @desc The day of the dismissal (including leaving because of an unreasonable condition designed to make you leave)
+GIVETH A `Dismissal answer`
+`Would my employer commit an offence by dismissing me` MEANS
+    `whether a dismissal is an offence under s 65C` `I am unable to work, fully or partly, because of the injury` `the reason is my serious misconduct` `the day of my injury` `the day of the dismissal`
+
+@export Can my employer or its insurer recover an overpayment from me (s 74)?
+GIVEN `the overpayment came from their own miscalculation` IS A BOOLEAN @desc Whether the employer or insurer that paid you calculated the benefit incorrectly
+      `the last day of the period the payment was for` IS A DATE @desc The last day of the period the overpaid amount was paid for
+      `the day they sought to recover it` IS A DATE @desc The day the employer or insurer first sought to recover the overpaid amount
+GIVETH AN `Overpayment answer`
+`Can an overpayment be recovered from me` MEANS
+    `whether the overpayment can be recovered under s 74` `the overpayment came from their own miscalculation` `the last day of the period the payment was for` `the day they sought to recover it`
+
+@export What is the most my employer can be fined for an offence about my claim or my payments (ss 65C, 84(5), 85A, 86, 88), in penalty units?
+GIVEN `the offence` IS AN `Employer offence` @desc Which offence
+      `my employer is a company or other body corporate` IS A BOOLEAN @desc Whether your employer is a body corporate rather than an individual
+GIVETH A NUMBER
+`What is the most my employer can be fined` MEANS
+    `the maximum penalty in penalty units for` `the offence` `my employer is a company or other body corporate`
+
+@export Does my employer's notice disputing my claim meet s 85(8) and (9), so that it counts as a decision (s 87(3))?
+GIVEN `it is in the approved form` IS A BOOLEAN @desc Whether the statement is in the approved form
+      `it gives reasons I can fully understand` IS A BOOLEAN @desc Whether it sets out the reasons in enough detail for you to understand fully why the employer disputes liability
+      `it says I may apply for mediation within 90 days` IS A BOOLEAN @desc Whether it says you may apply to the Authority for mediation within 90 days of receiving it
+      `it says I may go to the Court if mediation fails` IS A BOOLEAN @desc Whether it says you may start proceedings in the Court if mediation does not resolve the dispute
+      `it says I must lodge with the Court within 28 days of the mediator's certificate` IS A BOOLEAN @desc Whether it says a Court application must be lodged within 28 days after the mediator's certificate
+      `it says I may go to the Court only after mediation fails` IS A BOOLEAN @desc Whether it says proceedings may be started only after an unsuccessful attempt at mediation
+      `it says I may seek an interim determination once I apply for mediation` IS A BOOLEAN @desc Whether it says you may ask the Court for an interim determination any time after applying for mediation
+      `it came with the notice of the dispute` IS A BOOLEAN @desc Whether the statement was given at the same time as the notice that the employer disputes liability
+GIVETH A BOOLEAN
+DECIDE `Does my employer's dispute notice meet s 85(8)` IF
+    `the statement meets s 85(8) and (9)`
+        (`Dispute statement facts` WITH
+            `is in the approved form`                                                             IS `it is in the approved form`
+            `sets out the reasons in enough detail for the claimant to understand fully why`      IS `it gives reasons I can fully understand`
+            `says the claimant may apply to the Authority for mediation within 90 days`           IS `it says I may apply for mediation within 90 days`
+            `says the claimant may go to the Court if mediation does not resolve the dispute`     IS `it says I may go to the Court if mediation fails`
+            `says a Court application must be lodged within 28 days after the mediator's certificate` IS `it says I must lodge with the Court within 28 days of the mediator's certificate`
+            `says proceedings may be started only after an unsuccessful mediation`                IS `it says I may go to the Court only after mediation fails`
+            `says an interim determination may be sought once mediation is applied for`           IS `it says I may seek an interim determination once I apply for mediation`
+            `was given at the same time as the notice of the dispute`                             IS `it came with the notice of the dispute`
+            `came with a copy of the statement and the approved information bulletin on mediation` IS TRUE)
+
+§§ `When must I act?`
+
+@export By when must I make my claim (s 182(1))?
+GIVEN `the day of my injury` IS A DATE @desc The day of the injury (for a disease, the day the incapacity from it began; for a death claim, the day you received advice of the death)
+GIVETH A DATE
+`By when must I make my claim` MEANS
+    `the last day to claim under s 182(1)` `the day of my injury`
+
+@export By when must I give my employer the second of my claim form and medical certificate of capacity (s 82(2))?
+GIVEN `the day I gave the first of them` IS A DATE @desc The day you gave your employer the claim form or the medical certificate of capacity, whichever came first
+GIVETH A DATE
+`By when must I give the second claim document` MEANS
+    `the last day to give the remaining claim document under s 82(2)` `the day I gave the first of them`
+
+@export Until when does my medical certificate of capacity have effect (s 82(6), reg 12(2))?
+GIVEN `who issued it` IS A `Certificate issuer` @desc Who issued it: "a medical practitioner", "a prescribed person who consulted a medical practitioner" (a nurse or Aboriginal and Torres Strait Islander health practitioner in an isolated place who consulted a doctor by radio or phone), or "a prescribed person who did not consult a medical practitioner"
+      `the day it was issued` IS A DATE @desc The day the certificate was issued
+GIVETH A DATE
+`Until when does my medical certificate have effect` MEANS
+    `the last day a certificate has effect` `who issued it` `the day it was issued`
+
+@export By when must I apply for mediation, after my employer disputes my claim or cuts my payments (s 103D(1A))?
+GIVEN `the day I received the employer's statement` IS A DATE @desc The day you received your employer's statement disputing liability (s 85(8)) or cancelling or reducing your compensation (s 69(1)(b))
+GIVETH A DATE
+`By when must I apply for mediation` MEANS
+    `the last day to apply for mediation under s 103D(1A)` `the day I received the employer's statement`
+
+@export By when must I start proceedings in the Work Health Court after an unsuccessful mediation (s 104(3))?
+GIVEN `the day I received the mediator's certificate` IS A DATE @desc The day you received the mediator's certificate under s 103J(2)
+GIVETH A DATE
+`By when must I start Court proceedings` MEANS
+    `the last day to commence proceedings under s 104(3)` `the day I received the mediator's certificate`
+
+@export Can my weekly compensation now be reduced or cancelled because I did not undertake treatment, rehabilitation or an assessment (ss 75B, 69)?
+GIVEN `my failure or refusal was unreasonable` IS A BOOLEAN @desc Whether it is found that you unreasonably failed to undertake reasonable treatment, rehabilitation training or a return to work program, or unreasonably refused an assessment your employer required
+      `days since my employer gave notice of the cut` IS A NUMBER @desc How many days ago your employer gave you written notice that it intends to reduce or cancel your compensation (0 if none)
+      `my employer gave me the s 69 statement` IS A BOOLEAN @desc Whether your employer also gave you a statement in the approved form with its reasons and your right to mediation within 90 days
+GIVETH A BOOLEAN
+DECIDE `Can my weekly compensation be cut for not undertaking treatment` IF
+    `weekly compensation may now be reduced or cancelled under ss 75B and 69` `my failure or refusal was unreasonable` `days since my employer gave notice of the cut` `my employer gave me the s 69 statement`

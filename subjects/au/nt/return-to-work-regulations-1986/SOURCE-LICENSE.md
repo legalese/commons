@@ -11,7 +11,7 @@ The text of **Return to Work Regulations 1986** is published on the [Northern Te
 
 ## Consequence for this subject
 
-Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Confirm before quoting it in an encoding** -- a human decision recorded here.
+Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Ruling of 2026-10-24 (Michael):** the NT terms permit reproduction but are silent on adaptation; as for Canada, the texts may be quoted in L4 encodings in Commons, keeping the NT attribution (copyright in Northern Territory legislation is owned by the Northern Territory; reproduced under the NT copyright policy of 8 October 1996, not as an official version, without the NT arms) and the unofficial-copy notice that opens the deposited text.
 
 ## Language
 
@@ -21,4 +21,4 @@ English is the only language of NT legislation; there are no other official or a
 
 Text deposited 2026-10-19T17:06:17Z (UTC): reprint **REPR050R2**, as in force at 1 July 2024, converted from the register's Word reprint, at `registers/source-bundle/Return-to-Work-Regulations-1986-NT-current-reprint-REPR050R2.txt`. The text opens with an unofficial-copy notice as the policy's first condition requires; the sidecar `.meta.json` records the download and text sha256, character count and converter.
 
-Verbatim reproduction is within the policy ("publish or deal with"). Whether an L4 encoding that paraphrases or restructures the text is also within it (the policy does not expressly mention adaptation) remains the open question above; record the human decision here before an encoding quotes the text.
+Verbatim reproduction is within the policy ("publish or deal with"). Whether an L4 encoding that paraphrases or restructures the text is also within it (the policy does not expressly mention adaptation) is answered by the ruling of 2026-10-24 above: the text may be quoted in an encoding, keeping the attribution and the unofficial-copy notice.
