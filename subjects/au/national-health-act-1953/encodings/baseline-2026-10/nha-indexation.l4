@@ -1,0 +1,107 @@
+IMPORT prelude
+IMPORT `nha-patient`
+
+-- National Health Act 1953 (Cth), s 99G -- the 1 January indexation of the PBS charges and the general patient safety net,
+-- computed from the formulas recovered in ../../registers/source-bundle/C1953A00095.formulas.md, beside nha-patient.l4
+-- (unchanged, whose questions take the amounts in force as inputs).
+--
+-- Formulas (sidecar): s 99G(3) indexed amount = Current figure x Indexation factor; s 99G(4) indexation factor = Most recent
+-- index number / previous index number. From the text: s 99G(1) (the five amounts, indexed each 1 January on the September
+-- quarter, "rounding to the nearest multiple of 10 cents", a multiple of 5 cents "increased by 5 cents"); (1A) no indexation of the
+-- general patient charge on 1 January 2026; (1B) none of the general patient reduced charge and the concessional beneficiary
+-- charge on 1 January 2025 to 2029; (3) "current figure" (the amount, or the amount most recently substituted); (4) "where:" the
+-- most recent index number is the September quarter's before the indexation day, the previous index number that of the September
+-- quarter immediately before it; (5)-(7) to 3 decimal places, raised by 0.001 if the 4th place "is greater than 4", never below 1.
+--
+-- INPUTS: the CPI index numbers (the Australian Statistician's; not deposited) and the current figure the chain starts from. The
+-- published amounts in force are NOT used: REQ-0104 in ../../../requirements.jsonl, which asked for them, was declined because the
+-- Department's site (pbs.gov.au) allows personal use only; it is not reopened here. Whether the printed figures are themselves the
+-- current figures on some day is a question of the amending Acts' history, not answered here.
+--
+-- SEAT: the patient, as in nha-patient.l4. Edition: as nha-patient.l4. BASELINE. See NOTES.md.
+
+§ `National Health Act 1953 -- the s 99G indexation of the PBS amounts`
+
+DECLARE `PBS amount` IS ONE OF
+    `the general patient charge`                         -- s 99G(1) item 1 (s 84(1))
+    `the general patient reduced charge`                 -- item 2
+    `the concessional beneficiary charge`                -- item 3
+    `the general patient safety net`                     -- item 4 (s 99F)
+    `the increased discounting upper Commonwealth price` -- item 5
+
+-- s 99G(1A), (1B): the freezes.
+GIVEN `which` IS A `PBS amount`, `year` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is not indexed on 1 January of` `which` `year` IF
+    CONSIDER `which`
+    WHEN `the general patient charge`         THEN `year` EQUALS 2026
+    WHEN `the general patient reduced charge` THEN `year` AT LEAST 2025 AND `year` AT MOST 2029
+    WHEN `the concessional beneficiary charge` THEN `year` AT LEAST 2025 AND `year` AT MOST 2029
+    OTHERWISE FALSE
+
+@export What is the s 99G indexation factor for a 1 January (s 99G(4)-(7))?
+GIVEN `most recent index number` IS A NUMBER @desc The CPI index number for the September quarter before the 1 January
+      `previous index number` IS A NUMBER @desc The CPI index number for the September quarter a year earlier
+GIVETH A NUMBER
+`What is the PBS indexation factor` MEANS
+    IF `raised` LESS THAN 1 THEN 1 ELSE `raised`
+    WHERE
+        `ratio` MEANS `most recent index number` DIVIDED BY `previous index number`
+        `to 3 places` MEANS FLOOR (`ratio` TIMES 1000) DIVIDED BY 1000
+        `fourth place` MEANS FLOOR (`ratio` TIMES 10000) MINUS (FLOOR (`ratio` TIMES 1000) TIMES 10)
+        `raised` MEANS IF `fourth place` GREATER THAN 4 THEN `to 3 places` PLUS 0.001 ELSE `to 3 places`
+
+@export What does a PBS charge or the safety net become on 1 January of a year (s 99G(1)-(7))?
+GIVEN `which` IS A `PBS amount` @desc Which amount: a charge, the general patient safety net, or the increased discounting upper price
+      `year` IS A NUMBER @desc The year of the 1 January indexation day
+      `current figure` IS A NUMBER @desc The amount in force just before that 1 January, in dollars
+      `most recent index number` IS A NUMBER @desc The CPI index number for the September quarter of the year before
+      `previous index number` IS A NUMBER @desc The CPI index number for the September quarter two years before
+GIVETH A NUMBER
+`What does the PBS amount become on 1 January` MEANS
+    IF `is not indexed on 1 January of` `which` `year`
+    THEN `current figure`
+    ELSE FLOOR ((`current figure` TIMES `What is the PBS indexation factor` `most recent index number` `previous index number` TIMES 10) PLUS 0.5) DIVIDED BY 10
+
+@desc The item at a position in a list of numbers (0 for the first), or NOTHING if the list is too short
+GIVEN `xs` IS A LIST OF NUMBER @desc The list
+      `n` IS A NUMBER @desc The position, 0 for the first
+GIVETH A MAYBE NUMBER
+`the index number at` MEANS
+    CONSIDER `xs`
+    WHEN EMPTY THEN NOTHING
+    WHEN `x` FOLLOWED BY `rest` THEN IF `n` AT MOST 0 THEN JUST `x` ELSE `the index number at` `rest` (`n` MINUS 1)
+
+-- Each 1 January from (start year + 1) to the year asked, in turn. The September index numbers are listed from the September
+-- quarter of (start year - 1), one a year: the 1 January of year Y uses items (Y - start year) and (Y - start year - 1).
+@export What is a PBS charge or the safety net in force from 1 January of a year, indexed from a known figure (s 99G)?
+GIVEN `which` IS A `PBS amount` @desc Which amount
+      `the known figure` IS A NUMBER @desc The amount in force on 1 January of the start year, in dollars
+      `start year` IS A NUMBER @desc The year from whose 1 January the known figure was in force
+      `year` IS A NUMBER @desc The year asked about (its 1 January)
+      `september index numbers` IS A LIST OF NUMBER @desc CPI index numbers for the September quarters, from the year before the start year, one a year in order
+GIVETH A MAYBE NUMBER
+`What is the PBS amount in force from 1 January` MEANS
+    BRANCH IF `year` LESS THAN `start year` THEN NOTHING
+           IF `year` EQUALS `start year` THEN JUST `the known figure`
+           OTHERWISE CONSIDER `What is the PBS amount in force from 1 January` `which` `the known figure` `start year` (`year` MINUS 1) `september index numbers`
+              WHEN NOTHING THEN NOTHING
+              WHEN JUST `before` THEN
+                  CONSIDER `the index number at` `september index numbers` (`year` MINUS `start year`)
+                  WHEN NOTHING THEN NOTHING
+                  WHEN JUST `recent` THEN
+                      CONSIDER `the index number at` `september index numbers` (`year` MINUS `start year` MINUS 1)
+                      WHEN NOTHING THEN NOTHING
+                      WHEN JUST `previous` THEN JUST (`What does the PBS amount become on 1 January` `which` `year` `before` `recent` `previous`)
+
+-- s 99F: the concessional beneficiary safety net is 36 times the concessional beneficiary charge, so it follows the charge.
+@export What is the concessional beneficiary safety net from 1 January of a year, indexed from a known charge (ss 99F, 99G)?
+GIVEN `the known charge` IS A NUMBER @desc The concessional beneficiary charge in force on 1 January of the start year, in dollars
+      `start year` IS A NUMBER @desc The year from whose 1 January that charge was in force
+      `year` IS A NUMBER @desc The year asked about
+      `september index numbers` IS A LIST OF NUMBER @desc CPI index numbers for the September quarters, from the year before the start year
+GIVETH A MAYBE NUMBER
+`What is the concessional safety net from 1 January` MEANS
+    CONSIDER `What is the PBS amount in force from 1 January` `the concessional beneficiary charge` `the known charge` `start year` `year` `september index numbers`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST `charge` THEN JUST (`charge` TIMES 36)
