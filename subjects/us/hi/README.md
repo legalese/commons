@@ -15,3 +15,30 @@ BLOCKED — the register could not be read at all. Every request to www.capitol.
 - **Passenger compensation**: No state statute identified, and the register was blocked so this could not be checked exhaustively. Airline delay, cancellation and denied-boarding compensation is federal and preempts state regulation (Airline Deregulation Act, 49 U.S.C. § 41713; 14 C.F.R. part 250). Interisland carriers are regulated by the PUC under HRS ch. 271G as to certification and rates, not passenger compensation.
 - **Customs/duties**: Federal matter. Import duties and customs are exclusively federal (U.S. Const. art. I, § 10, cl. 2; Tariff Act of 1930, 19 U.S.C. ch. 4).
 - **Work permits/immigration**: Federal matter. Admission and work authorisation are governed by the Immigration and Nationality Act, 8 U.S.C. ch. 12, and employment verification by 8 U.S.C. § 1324a. Hawaii's HRS ch. 390 (Child Labor Law) requires a 'work permit' — a child labor certificate for working minors until age 18, per the DLIR Wage Standards Division page — but that is a different subject and confers no immigration permission.
+
+## Tax and benefits sample (2026-10-24): not deposited, terms bar automated access
+
+A tax and benefits pass was tried on 2026-10-24 and found no route that may be used. **Nothing was deposited or encoded.**
+
+**The register.** www.capitol.hawaii.gov (robots.txt, `/hrscurrent/` section pages) and data.capitol.hawaii.gov still return HTTP 403 behind Cloudflare's "Attention Required!" page. That was 4 requests, with the User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`.
+
+**State agency copies.** The Department of Human Services publishes the Hawaii Administrative Rules for its programmes as PDFs at https://humanservices.hawaii.gov/admin-rules-2/admin-rules-for-programs/. Among them:
+- HAR ch. 17-656.1, Temporary Assistance for Needy Families;
+- ch. 17-655, General Eligibility Requirements;
+- ch. 17-676, Income;
+- ch. 17-678, Financial Assistance Standards, amended and adopted 26 January 2025, which sets the payment standard;
+- ch. 17-659, General Assistance.
+
+The Department of Taxation (tax.hawaii.gov) answered too. Both hosts' robots.txt set only `Crawl-delay: 10`.
+
+**The terms rule it out.** The State of Hawaiʻi Terms of Use were read in a browser on 2026-10-24 at https://portal.ehawaii.gov/page/terms-of-use/. They define "web site" as any official State site, including pages whose addresses contain "hawaii.gov". They also say: "You specifically agree not to access, or attempt to access, ... any of the Services through any automated means (including, but not limited to, use of scripts, web crawlers or screen scrapers)". That is a bar on scripted access to every hawaii.gov host, including the DHS and Taxation sites, and it goes to Michael under the deposit rules. The DHS rules page also carries "Copyright © 2026, State of Hawaii. All rights reserved."
+
+Before the terms were read, five scripted requests had gone to those agency hosts, 3-10 seconds apart: tax.hawaii.gov robots.txt and its Law & Guidance page, and humanservices.hawaii.gov robots.txt, its sitemap index, its page sitemap and its administrative rules page. No rule or statute file was downloaded. lrb.hawaii.gov's robots.txt was also read; that site hosts no statute text.
+
+**Indexed for a later pass.** These would give Hawaii a tax and benefits sample once a permitted route exists, for example a human download with the State's permission, or a licence decision by Michael:
+- HRS ch. 235 (income tax law), already a subject here;
+- HRS ch. 346 (Department of Human Services), already a subject here;
+- HAR ch. 17-656.1 (TANF) and ch. 17-678 (financial assistance standards), at the DHS addresses above;
+- HRS ch. 383 (employment security), not yet a subject.
+
+The text under each item is a government edict and is not copyrightable (*Georgia v. Public.Resource.Org*, 590 U.S. 255 (2020)). The bar is on the delivery channel.
