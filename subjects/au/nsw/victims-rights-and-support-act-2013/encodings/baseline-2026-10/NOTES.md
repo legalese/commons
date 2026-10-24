@@ -10,19 +10,19 @@ It is written in two layers, after the SNAP baseline (`subjects/us/food-and-nutr
 
 - **`vrsa-core.l4`**, the seat-neutral core, in the Act's own actors and terms ("the act", "a primary victim", "a secondary victim", "a family victim", "a parent, step-parent or guardian who is caring for a child", "the applicant", "the Commissioner"). The definitions (ss 19-22) are worked out from facts. Computations (financial assistance, funeral expenses, recognition payments, counselling hours and payments, time limits) are functions. Where the text says "must" or sets a period there is a regulative rule (`DEONTIC`), four in all:
   - s 40(1)-(3), (5), (7): the application for financial support or a recognition payment must be duly made in time (no rule has a time limit under s 40(7));
-  - s 43(1): the Commissioner must determine a duly made application and give written notice;
+  - s 43(1), (4): the Commissioner must determine a duly made application and give written notice;
   - s 40(6): claims may be made under the application for 5 years, or until the total maximum is given, and no claim after that;
   - s 54(2): the Commissioner must pay a claim.
 
   Dates use only the prelude's built-in DATE functions; daydate is not imported.
-- **`vrsa-seat.l4`**, the victim's seat: 17 questions, each with `@export` and a `@desc` on every input, under `§§` headings in the Act's order. It builds the core's records from plain answers and restates no rule. The same fact has the same input name and wording in every question, so a form can ask it once.
+- **`vrsa-seat.l4`**, the victim's seat: 17 questions, each with `@export` and a `@desc` on every input, under `§§` headings in the Act's order. It builds the core's records from plain answers and restates no rule (since finding 25, the recognition question takes the primary victim from the core's s 20 rule). The same fact has the same input name and wording in every question, so a form can ask it once.
 
 Case files:
 
 - `vrsa-cases-core.l4` tests the core: dates, the kinds of act, the classes of victim and the exclusions, the support, every amount, the recognition categories and payments, counselling, evidence, time limits and the regulative rules.
 - `vrsa-cases-victim.l4` tests the seat's questions on plain answers.
 
-Both are formatted from tables by the scratchpad generators `au-nsw-6/gen_vrsa_cases.py` and `au-nsw-6/gen_vrsa_seat_cases.py`, with every expected value written by hand.
+Both are formatted from tables by the scratchpad generators `gen_vrsa_cases.py` and `gen_vrsa_seat_cases.py` (written in `au-nsw-6`, updated in `au-nsw-6-f` for the corrections of findings 24-28), with every expected value written by hand.
 
 This is the first encoding of this Act; there was none to keep. NSW has no requirement ledger, so no ledger line is closed.
 
@@ -48,8 +48,8 @@ This is the first encoding of this Act; there was none to keep. NSW has no requi
 
 | Module | Case file | Assertions |
 |---|---|---|
-| `vrsa-core.l4` | `vrsa-cases-core.l4` | 287 written, 287 satisfied |
-| `vrsa-core.l4`, `vrsa-seat.l4` | `vrsa-cases-victim.l4` | 69 written, 69 satisfied |
+| `vrsa-core.l4` | `vrsa-cases-core.l4` | 296 written, 296 satisfied |
+| `vrsa-core.l4`, `vrsa-seat.l4` | `vrsa-cases-victim.l4` | 73 written, 73 satisfied |
 
 In addition, 6 `#TRACE`s in `vrsa-cases-core.l4` carry an `-- expect:` line. Each was read, and each matches its expectation with the expected party and reason:
 
@@ -62,7 +62,7 @@ In addition, 6 `#TRACE`s in `vrsa-cases-core.l4` carry an `-- expect:` line. Eac
   - the Commissioner's s 43 determination;
   - the s 54(2) payment of a claim.
 
-`l4 run` on all four files: 0 errors, 0 warnings (2026-10-24). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. As a control, a copy of `vrsa-cases-core.l4` was run with four expected values changed ($18,800 to $18,801, and three category B payments of $10,000 to $9,999). The runner reported 4 assertions failed and 283 satisfied.
+`l4 run` on all four files: 0 errors, 0 warnings (2026-10-24, and again after the corrections of findings 24-28). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. As a control, a copy of `vrsa-cases-core.l4` was run with four expected values changed ($18,800 to $18,801, and three category B payments of $10,000 to $9,999). The runner reported 4 assertions failed and 283 satisfied. After the corrections, a copy of `vrsa-cases-victim.l4` with two of the new expected values changed (the forced-labour category D payment of $1,500 to $1,501, and the $2,400 clean-up to $2,399) reported 2 failed and 71 satisfied.
 
 Every expected value was worked by hand from the deposited texts, with the reasoning or arithmetic in the comment above the assertion. The amounts claimed in the cases (expenses, weekly rates, fees) are made up. They are not taken from any real claim.
 
@@ -111,7 +111,7 @@ The 2026-10-18 defaults:
 
 - Part 4, Division 1:
   - s 18 (injury, financial support);
-  - s 19: act of violence, its elements as facts, with s 19(3A) and the s 19(8) definition quoted in `@desc`;
+  - s 19: act of violence, its elements as facts; s 19(3A) is worked out in the rule (finding 2), and the s 19(3) and (8) meaning of violent conduct (sexual assault and domestic violence) is glossed in the violent-conduct `@desc` (finding 24);
   - s 19A: act of modern slavery;
   - s 19AB: road crime;
   - s 20: primary victim, including rescuers;
@@ -125,13 +125,13 @@ The 2026-10-18 defaults:
   - ss 26-29A: counselling, immediate needs, economic loss, funeral expenses and recognition payments, with the cross-reductions in ss 26(2) and 27(2);
   - s 30(2): no assistance for loss already paid for;
   - s 30A: each type of support once.
-- Division 5: ss 34-36 (categories A-D, the recipients of category A, one payment per series).
+- Division 5: ss 34-36 (categories A-D, given only in respect of an act of violence or act of modern slavery, the recipients of category A, one payment per series).
 - s 53: a recognition payment is suspended pending review by the Tribunal, as a fact.
 - Division 6:
   - s 38 (who may apply);
   - s 39 (documentary evidence, with police or agency reports and medical reports as facts);
   - s 40 (time limits, and claims under an application);
-  - s 43(1) (determination, as a regulative rule);
+  - s 43(1) and (4) (determination, and written notice of it to the applicant, as one regulative rule; finding 27);
   - s 47 (funeral and clean-up expenses of persons other than family victims).
 - Division 8: s 54(2) (payment, as a regulative rule).
 - Regulation:
@@ -157,7 +157,7 @@ The 2026-10-18 defaults:
 - Part 5, restitution orders against offenders. That is the offender's liability, not a benefit, and so there is no offender seat;
 - Part 6, court compensation, except as the s 25(1) exclusion;
 - ss 41, 41A (withdrawal and lapsing);
-- s 42, and s 43(2)-(7) except the determination itself;
+- s 42, and s 43(2), (3) and (5)-(7): deferral, the conditions for approval, the contents of the notice and its amendment (finding 27);
 - s 44, the Commissioner's reasons for refusing or reducing support, and the postponements in s 44(5)-(7);
 - ss 45, 46 and 48: set-off against restitution, to whom a payment is made, and the conditions of approval, including the duties to notify and repay;
 - ss 49-53, the review procedure, except s 53 as a fact;
@@ -183,7 +183,7 @@ The stable `l4` cannot IMPORT across encoding folders, so the links are recorded
 ## What the Act turns out to say
 
 1. **Section 19 states no place.** An act of modern slavery must be "committed in New South Wales" (s 19A(1)), and so must a road crime (s 19AB(1)(a)). The deposited s 19 has no such words, so the encoding asks no place for an act of violence, and an assault in Melbourne is an act of violence. Asserted. Whether the Scheme reaches acts outside NSW by some other rule (the Interpretation Act 1987, not deposited) is not answered by the deposited text.
-2. **A road crime is not an act of violence, except in the s 25(2A) and (2B) circumstances (s 19(3A)).** So for a death by dangerous driving, the family are family victims of a road crime and get counselling only (s 29A). An injured survivor of the same crash is no victim at all: a primary victim needs an act of violence or an act of modern slavery (s 20). Asserted.
+2. **A road crime is not an act of violence, except in the s 25(2A) and (2B) circumstances (s 19(3A)).** So for a death by dangerous driving, the family are family victims of a road crime and get counselling only (s 29A), and no recognition payment (finding 25). An injured survivor of the same crash is no victim at all: a primary victim needs an act of violence or an act of modern slavery (s 20). Asserted.
 3. **A vehicle death with an identified, living offender who has not been charged is not a road crime.** Section 19AB(1)(b) requires charges, or an offender who has died or cannot be identified. Such a death falls back to being an act of violence that is a motor accident. Section 25(2) then excludes the family, unless someone is charged with murder (s 25(2A)) or it was a terrorist act (s 25(2B)). The family get nothing, not even counselling, until charges are laid. Asserted. The deposited Regulation prescribes no s 19AB(1)(b)(iii) circumstances.
 4. **Family victims exist only for acts of violence and road crimes.** Section 22(1) defines a family victim of an act of violence, and (1A) of a road crime. Yet s 36(1)(a) pays category A to family victims where the death was "as a result of an act of violence or act of modern slavery", and s 43(3)(a)(i) speaks of a "family victim of an act of violence or act of modern slavery". The family of a person killed by an act of modern slavery that is not also an act of violence have no s 29 support. Asserted.
 5. **The offence exclusion speaks only of an act of violence.** Section 25(3)(a) applies "in relation to an act of violence", and s 25(2) likewise. A victim of an act of modern slavery who was made to commit offences is not excluded, and this holds even where the act is also an act of violence, because the support can rest on the act of modern slavery. Asserted.
@@ -206,6 +206,11 @@ The stable `l4` cannot IMPORT across encoding folders, so the links are recorded
 10. **The funeral payment is not reduced by s 30(2).** Section 30(2) makes "financial assistance" not payable for loss already paid for. Section 18 lists funeral expenses under s 29(1)(c) as a separate kind of financial support, and s 29(1)(c) calls it "a payment". READING: s 30(2) does not reduce it, though the Commissioner must still have regard to other amounts received (s 44(4), out of scope).
 11. **A s 47 reimbursement comes out of the family's funeral and immediate-needs amounts.** Section 47(4)(a) says it "is to be paid from the amount" for which the family victims are eligible, and s 29(1)(b), (c) and (2) deduct it from them.
     - READING: a friend's funeral reimbursement is capped both by cl 13(b) ($9,500) and by what the family victims have left of their $9,500. Where the family have had $6,000, the friend can get $3,500. Asserted.
+    - READING: a clean-up reimbursement is capped by cl 13(a) ($5,000) alone, not by what the family victims have left of their immediate needs. The two halves differ because their maximums differ (finding 28):
+      - the funeral maximum is one total for all the family victims (s 29(2); cl 12(2), "$9,500 in total"), the same $9,500 as cl 13(b), so what is left of it is one figure the claimant can state;
+      - the immediate needs maximum is $5,000 for each family victim (cl 12(1), "payable to a family victim"), and s 47(1)(b) needs only damage caused by an act of violence, not a death, so there may be no family victim at all. Capping the clean-up at what the family victims have left would then pay nothing.
+
+      For the clean-up, s 47(4)(a) and (5) are read as taking the payment off the family victims' immediate needs (s 29(1)(b)), not as capping it. A clean-up after an assault in which no one died is paid in full up to $5,000. Asserted.
     - The family victim's own immediate needs and funeral questions deduct any s 47 amount. Asserted.
 12. **The recognition categories overlap, and s 36 does not say which one a primary victim gets.**
     - Section 35(3)(a) excludes from category C only a sexual assault "referred to in subsection (2)(b)". A sexual assault with a weapon is therefore category B under (2)(a) and also C.
@@ -241,11 +246,37 @@ The stable `l4` cannot IMPORT across encoding folders, so the links are recorded
 22. **Counselling outside Australia has two limits in different units.** Regulation cl 5(5) caps payments at "22 hours or a maximum of $5,500, whichever is the lesser". The encoding takes the dollar limit as the lesser of 22 hours at the counsellor's fee and $5,500, less what has been paid, and gives the hours that buys. At $256 an hour that is $5,500, or 21.48 hours. Asserted. Regulation cl 7 (ongoing counselling for child abuse) overrides it. Asserted.
 23. **Out-of-pocket expenses and lost earnings are alternatives.** Regulation cl 10(3)(b) gives "$5,000 for out-of-pocket expenses" only "if the victim cannot demonstrate actual loss of earnings". READING: a victim who shows lost earnings gets nothing for out-of-pocket expenses under (b). Asserted.
 
+### Corrections after the independent check (24 October 2026)
+
+An independent verifier raised five minor issues. Each was checked against the deposited texts, and each was real. One changed a rule and a question's inputs (finding 25). The others corrected a `@desc`, the notes or a comment, and finding 28 added a case. No earlier expected value changed; 13 assertions were added (9 in the core cases, 4 in the victim's).
+
+24. **The scope overstated what the questions quote.** The scope said s 19(3A) and the s 19(8) definition were "quoted in `@desc`". Neither was.
+    - Section 19(3A) is worked out in the rule `is an act of violence` (finding 2), not quoted.
+    - The violent-conduct `@desc` said only "violent conduct includes sexual assault and domestic violence" (s 19(3)). So a person answering it was never told what s 19(8)(f) makes domestic violence: an act causing injury in a personal violence offence against a spouse, partner, household member, relative, or someone dependent on the offender's care.
+
+    The `@desc` of `it involved violent conduct against someone` now glosses s 19(8)(a)-(f), in all four questions that ask it. The scope now says which part is in the rule and which in the `@desc`. No rule or expected value changed.
+25. **The recognition question restated s 20 and dropped the act.** The seat set `is a primary victim who suffered injury` to "injured as a direct result of it, or injured trying to stop it, help or rescue someone, or arrest the offender". That is s 20(1), (2) restated, without its condition that the act be an act of violence or act of modern slavery.
+    - The question now asks the act's 13 answers, with the same names and wording as the other questions, and takes the primary victim from the core's `is a primary victim of`.
+    - The same check found the gap in the core, for every category. Section 35(1)-(4) define each category as "a payment given in respect of an act of violence or act of modern slavery", and s 36(1) pays each for such an act. But `the recognition payments for` never looked at the act. So the dependent spouse of a person killed by a driver charged with manslaughter, answering "homicide", was paid category A ($15,000). Yet that act is a road crime only (s 19(3A)), whose family victims get counselling only (s 29A).
+    - A new core function, `the s 36 recognition payments for`, answers `no recognition payment` for any other act, and the question calls it.
+
+    Asserted: that spouse, and an injured survivor of the same crash, get none. These are still paid: a victim of forced labour in NSW who was beaten (category D, $1,500), and the families after a deliberate killing with a murder charge (s 25(2A)) and a vehicle terrorist attack (s 25(2B)), under category A. The ten earlier recognition cases keep their answers. The question's inputs changed (13 added in front), so a deployment of the seat must be updated under the same name.
+26. **The tier 2 gloss left out the Masters degree.** The `@desc` of `my counsellor is` described tier 2 as "a qualified psychologist or social worker with over 3 years' approved counselling and specialist skills". Regulation cl 4 requires all four of:
+    - (a) registration as a psychologist, or eligibility for membership (other than student membership) of the Australian Association of Social Workers;
+    - (b) more than 3 consecutive years of approved counselling under the Act;
+    - (c) a Masters degree or higher in social work, clinical psychology, clinical neuropsychology, counselling psychology or forensic psychology;
+    - (d) the Commissioner's opinion that the person's specialist skills justify the tier 2 rate.
+
+    A counsellor without (c) is tier 1, paid $120 an hour, not $144 (cl 8). The `@desc` now states all four, and the core's comment quotes cl 4. The tier is still asked as one fact, because (d) is the Commissioner's judgment. No expected value changed.
+27. **The scope and the s 43 rule disagreed.** The scope put "s 43(2)-(7) except the determination itself" out. But the s 43 rule also encodes the s 43(4) written notice ("determine the application and give the applicant written notice"), as `encoding.json` said. The scope, the method and the core's header now say s 43(1) and (4) are in, and s 42 and s 43(2), (3), (5)-(7) are out. The rule is unchanged.
+28. **Finding 11 did not say why the clean-up half differs.** The s 47 rule caps a funeral reimbursement at what the family victims have left of their $9,500, but caps a clean-up only at $5,000 (cl 13(a)). Finding 11 stated only the funeral reading. The difference is now stated and justified, in finding 11 and in the core's comment: the funeral maximum is one total, the immediate needs maximum is per family victim, and a clean-up needs no death. The rule is unchanged. A new case, in the core and in the seat, asserts a clean-up after an assault in which no one died: $2,400, paid in full.
+
 ## Before relying on it
 
 - **Replace both texts** with the official ones from legislation.nsw.gov.au once it can be fetched, and re-check every amount in cl 5, 8 and 10-14 against the current Regulation.
 - **Deposit the pre-2012 Workers Compensation Act 1987 s 37** and the indexed amounts, so that the cl 9 weekly rate can be computed (finding 9).
 - **Deposit the Interpretation Act 1987**, which settles the period readings in finding 16 and the territorial question in finding 1.
-- **An independent test pass**, in particular of the readings in findings 8, 10-12, 14 and 15.
+- **An independent test pass**, in particular of the readings in findings 8, 10-12, 14 and 15. (An independent check of the notes and the seat was made on 24 October 2026: findings 24-28.)
+- **Update any deployment of the seat** under the same name: the recognition question's inputs changed (finding 25).
 - **Encode s 44** (reductions for the victim's conduct and for other payments) and **s 48** (the duties to notify and repay), which bear on how much is actually paid.
 - **Verify the Commonwealth treatment** of recognition payments and financial assistance under the Social Security Act 1991 and the ITAA 1997. It is unverified here.
