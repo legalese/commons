@@ -17,10 +17,10 @@ The shape follows the seat-neutral core and seat layer pattern of
 - `nsw-wc-core.l4` is the **seat-neutral core**. It holds the rules in the Acts' own actors and terms ("the worker",
   "the employer", "the insurer", "the dependants", "the worker's legal personal representative"). Computations (the
   weekly payment, pre-injury average weekly earnings, the medical compensation period, lump sums, dates) are functions.
-  Duties and deadlines are **12 regulative rules** (`DEONTIC`): 1998 Act s 44(2); s 44 (the worker's notice, then the
+  Duties and deadlines are **13 regulative rules** (`DEONTIC`): 1998 Act s 44(2); s 44 (the worker's notice, then the
   employer's 48 hours); s 261; s 264(1); s 264(2); ss 267-269; s 274; ss 48 and 48A; s 49; 1987 Act s 38(4)(b) (a
-  recursive 2-yearly duty); s 38(4)-(5); and Regulation cl 35(3). The acting party is a parameter, so the seats share
-  one rule.
+  recursive 2-yearly duty); s 38(4)-(5); Regulation cl 35(2) (keeping the records 5 years: finding 18); and cl 35(3).
+  The acting party is a parameter, so the seats share one rule.
 - `nsw-wc-seat.l4` is the **worker's seat layer** (25 questions, `@export` and `@desc` on every input). On the worker's
   death the dependants ask the questions in the group "If the worker has died".
 - `nsw-wc-seat-insurer.l4` is the **insurer's seat layer** (9 questions), and `nsw-wc-seat-employer.l4` the
@@ -47,7 +47,8 @@ Legislation website; attribution in `SOURCE-LICENSE.md`.
 ## Checks
 
 Run with the stable `l4` of VS Code extension 1.6.98 (`l4.exe run <file>` from this folder), with `JL4_LIBRARY_PATH`
-unset. `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. On 2026-10-24:
+unset. `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. On 2026-10-24, re-run after
+the corrections of findings 16-19 (the first run, before them, had 260 assertions, all satisfied):
 
 | File | Errors | Warnings | Assertions written | Assertions satisfied |
 |---|---|---|---|---|
@@ -55,11 +56,11 @@ unset. `l4 run` exits 0 even when an assertion fails, so the diagnostics are wha
 | `nsw-wc-seat.l4` | 0 | 0 | 0 | 0 |
 | `nsw-wc-seat-insurer.l4` | 0 | 0 | 0 | 0 |
 | `nsw-wc-seat-employer.l4` | 0 | 0 | 0 | 0 |
-| `nsw-wc-cases-worker.l4` | 0 | 0 | 184 | 184 |
-| `nsw-wc-cases-insurer.l4` | 0 | 0 | 44 | 44 |
-| `nsw-wc-cases-employer.l4` | 0 | 0 | 32 | 32 |
+| `nsw-wc-cases-worker.l4` | 0 | 0 | 194 | 194 |
+| `nsw-wc-cases-insurer.l4` | 0 | 0 | 49 | 49 |
+| `nsw-wc-cases-employer.l4` | 0 | 0 | 37 | 37 |
 
-In all, 260 assertions are satisfied. There are also 22 `#TRACE`s with an `-- expect:` line: 16 breaches and 6
+In all, 280 assertions are satisfied. There are also 24 `#TRACE`s with an `-- expect:` line: 18 breaches and 6
 obligations or permissions still open. Each was read and was as expected. The stable `l4` cannot assert a breached or
 pending trace, so those are traced, not asserted.
 
@@ -99,7 +100,9 @@ asked as facts, and the answers are conditional on them.
   legal personal representative.
 - **A judgment handed to someone else is answered conditionally.** Followed (see *Seats*).
 - **The Acts' own definitions worked out; borrowed terms asked.** Worked out: first and second entitlement periods,
-  worker with high needs and with highest needs (s 32A), current weekly earnings (Sch 3 cl 8), secondary surgery
+  worker with high needs and with highest needs (s 32A, in every question that turns on them: the weekly payment, s 38
+  after week 130, s 59A medical expenses and the insurer's s 38(4), (5) assessments; finding 16), current weekly
+  earnings (Sch 3 cl 8), secondary surgery
   (s 59A(7)), dependent child and student (s 25(5)), the retiring age date arithmetic (s 52). Asked: current work
   capacity and suitable employment (Sch 3 cl 9 and s 32A rest on assessment), the degree of
   permanent impairment (s 65), the age pension age (Social Security Act 1991 (Cth) s 23(5A)-(5D)), and the gross
@@ -211,6 +214,11 @@ and insurer licensing; coal miners; injuries before 21 October 2019 under Regula
   date 2 years later in the date question.
 - s 261 on the regulative clock: the late-claim rule starts at the first event after the 6 months, so the trace's
   3-year limit can run a day or so long; the date questions are exact.
+- s 59A(1)-(2): where s 59A(2) states no compensation period (a degree assessed at more than 20% for a worker who is not
+  one with high needs, which only contradictory facts can give: finding 16), none can expire, so treatment on any day
+  is paid for; the period question says so explicitly.
+- Regulation cl 35(2): "keep for at least 5 years after the notification is given" is a prohibition on disposing of the
+  records up to and including the same date 5 years later (day 1826 or 1827 on the rule's clock, a parameter).
 
 ## What the Acts turn out to say
 
@@ -263,6 +271,44 @@ and insurer licensing; coal miners; injuries before 21 October 2019 under Regula
 15. **s 38(5) displaces s 38(4) for a worker with highest needs.** The insurer "must ... ensure" an assessment in the
     last 52 weeks and every 2 years, yet "is not to conduct" one of a worker with highest needs unless it thinks it
     appropriate and the worker asks. The rule makes s 38(4) apply only to other workers. Traced.
+
+### Corrections after an independent verification (24 October 2026)
+
+An independent verifier read the encoding against the deposited texts and raised four minor issues. Each was checked
+against the texts, found real, and corrected. No asserted value was wrong.
+
+16. **"Worker with high needs" was asked, not worked out, and s 59A(2)(b) was read past 20%.** The worker's two s 59A
+    questions (how long medical expenses are paid; whether treatment on a day is paid for) and the s 38 question (after
+    week 130), and the insurer's s 38(4), (5) question, asked high or highest needs as one yes or no, although the
+    defaults above say the s 32A definitions are worked out and the s 59A questions already asked the assessed degree.
+    And the core gave a 5-year compensation period for any degree assessed at more than 10%, where s 59A(2)(b) covers
+    only "more than 10% but not more than 20%". Together, a worker assessed at 25% who answered "no" to high needs was
+    told medical expenses run 5 years, to 30 December 2030; s 32A para (a) makes that worker one with high needs, and
+    s 59A(5) takes the limit away. Now each of these questions asks the s 32A facts (permanent impairment, assessed,
+    degree, assessment pending for MMI, the insurer satisfied of more than 20% and of more than 30%) and works the
+    definition out through the core's `is a worker with high needs` or `is a worker with highest needs`; the core's
+    s 59A facts carry the s 32A facts, so the core works it out itself; and s 59A(2) gives 2 years under (a), 5 under
+    (b), and for a degree above 20% without high needs (only on contradictory facts: no permanent impairment, yet an
+    assessed degree) the explicit answer "no compensation period: s 59A(2) states none ...". Asserted (cases W6, W9,
+    I5, with mirror cases for highest needs).
+17. **Two seat layers restated a rule.** The worker's `By what day must I make my claim` worked the s 261(1) day out
+    itself (`months after 6`), and the employer's `Did I notify my insurer in time` wrote its own s 44(2) hours
+    comparison. Both now call core functions, `the last day to claim within 6 months (1998 Act s 261(1))` (which the
+    core's own s 261 test also uses, with `the last day of the 3 years (1998 Act s 261(4)(a), (5))`) and `the employer
+    notified the insurer within the time s 44(2) allows`. The other deadline days a seat gave by adding a core constant
+    to a date (ss 267(1) and 268, s 264(2), Regulation cl 35(3)) are core functions too. The answers are unchanged.
+    Asserted as before (cases W13, E1, E2, E3, I1).
+18. **Regulation cl 35(2) was only a date.** The employer "must make and keep for at least 5 years after the
+    notification is given" the records of the injury, the notification and any acknowledgment: a duty with a time,
+    encoded until now only as the date `the records must be kept until at least`. It is now also a regulative rule: the
+    employer SHANT dispose of the records within the 5 years (the days a parameter), LEST a breach and the cl 35
+    offence (20 penalty units), with its own `Duty` and consequence (no penalty notice: finding 14). Making the records
+    has no time of its own and is not separately traced. Asserted (the 5 years from 3 November 2026 are 1826 days;
+    disposal on day 1827, or none, is fulfilled) and traced (disposal on day 1000, and on day 1826, the last day,
+    breaches) (cases E2, E5, E6).
+19. **A comment named the wrong Act.** The core's comment over the work capacity assessment answers read "1998 Act
+    s 38(4)-(5) of the 1987 Act"; s 38(4)-(5) is in the 1987 Act (`act-1987-070.txt`), as the rule's BECAUSE text and
+    these notes already said. The comment now reads "1987 Act s 38(4)-(5)".
 
 ## Before relying on it
 

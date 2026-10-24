@@ -530,13 +530,13 @@ DECLARE `Treatment kind` IS ONE OF
     `surgery`
     `other treatment, service or assistance`
 
+-- The impairment facts are the s 32A ones: s 59A(5) reads "worker with high needs (as defined in Division 2)", worked out
+-- here from them, and s 59A(2) reads the assessed degree.
 DECLARE `Medical facts` HAS
     `the kind of treatment`                                                      IS A `Treatment kind`
     `the surgery is directly consequential on earlier surgery and affects the same part of the body` IS A BOOLEAN
     `the insurer approved it within 2 years after approving the earlier surgery, or later on a dispute raised within them` IS A BOOLEAN
-    `a worker with high needs`                                                   IS A BOOLEAN
-    `the degree of permanent impairment has been assessed`                       IS A BOOLEAN
-    `the assessed degree of permanent impairment`                                IS A NUMBER
+    `the impairment`                                                             IS AN `Impairment facts`
     `weekly payments are or have been paid or payable`                           IS A BOOLEAN
     `weekly payments are still payable`                                          IS A BOOLEAN
     `the day the claim was first made`                                           IS A DATE
@@ -547,6 +547,7 @@ DECLARE `Medical compensation period` IS ONE OF
     `no time limit for this kind of treatment (s 59A(6))`
     `the compensation period has not begun: it will run for this many years from the day weekly payments cease (s 59A(2))` HAS `years` IS A NUMBER
     `payable for treatment given up to and including` HAS `the last day` IS A DATE, `years` IS A NUMBER
+    `no compensation period: s 59A(2) states none for a degree assessed at more than 20% (s 32A makes such a worker one with high needs, s 59A(5))`
     `the medical compensation period is not covered` HAS `because` IS A `Why not covered`
 
 GIVEN `the facts` IS A `Medical facts`
@@ -560,26 +561,36 @@ DECIDE `the treatment is outside s 59A` `the facts` IF
         AND `the facts`'s `the insurer approved it within 2 years after approving the earlier surgery, or later on a dispute raised within them`
     OTHERWISE FALSE
 
+-- s 59A(2) has two paragraphs: (a) a degree "assessed ... to be 10% or less, or ... not been assessed": 2 years; (b) "more
+-- than 10% but not more than 20%": 5 years. It states no period for a degree assessed at more than 20%, because such a
+-- worker is one with high needs (s 32A para (a)), to whom the section does not apply (s 59A(5)). NOTHING where neither
+-- paragraph applies; on consistent facts that is never reached, as the s 59A(5) test comes first.
 GIVEN `the facts` IS A `Medical facts`
-GIVETH A NUMBER
+GIVETH A MAYBE NUMBER
 `the years of the compensation period` `the facts` MEANS
-    IF      `the facts`'s `the degree of permanent impairment has been assessed`
-        AND `the facts`'s `the assessed degree of permanent impairment` GREATER THAN 10
-    THEN 5
-    ELSE 2
+    BRANCH IF NOT (`the impairment`'s `the degree of permanent impairment has been assessed`) THEN JUST 2
+           IF `the impairment`'s `the assessed degree of permanent impairment` AT MOST 10 THEN JUST 2
+           IF `the impairment`'s `the assessed degree of permanent impairment` AT MOST 20 THEN JUST 5
+           OTHERWISE NOTHING
+    WHERE
+        `the impairment` MEANS `the facts`'s `the impairment`
 
 GIVEN `the facts` IS A `Medical facts`
 GIVETH A `Medical compensation period`
 `the medical compensation period` `the facts` MEANS
-    BRANCH IF `the facts`'s `a worker with high needs`
+    BRANCH IF `is a worker with high needs` (`the facts`'s `the impairment`)
            THEN `no time limit: s 59A does not apply to a worker with high needs (s 59A(5))`
            IF `the treatment is outside s 59A` `the facts`
            THEN `no time limit for this kind of treatment (s 59A(6))`
-           IF `the facts`'s `weekly payments are or have been paid or payable` AND `the facts`'s `weekly payments are still payable`
-           THEN `the compensation period has not begun: it will run for this many years from the day weekly payments cease (s 59A(2))` (`the years of the compensation period` `the facts`)
-           IF `the facts`'s `weekly payments are or have been paid or payable`
-           THEN `payable for treatment given up to and including` (`days after` (-1) (`years after` (`the years of the compensation period` `the facts`) (`the facts`'s `the day weekly payments ceased to be payable`))) (`the years of the compensation period` `the facts`)
-           OTHERWISE `payable for treatment given up to and including` (`days after` (-1) (`years after` (`the years of the compensation period` `the facts`) (`the facts`'s `the day the claim was first made`))) (`the years of the compensation period` `the facts`)
+           OTHERWISE
+               CONSIDER `the years of the compensation period` `the facts`
+               WHEN NOTHING THEN `no compensation period: s 59A(2) states none for a degree assessed at more than 20% (s 32A makes such a worker one with high needs, s 59A(5))`
+               WHEN JUST `years` THEN
+                   BRANCH IF `the facts`'s `weekly payments are or have been paid or payable` AND `the facts`'s `weekly payments are still payable`
+                          THEN `the compensation period has not begun: it will run for this many years from the day weekly payments cease (s 59A(2))` `years`
+                          IF `the facts`'s `weekly payments are or have been paid or payable`
+                          THEN `payable for treatment given up to and including` (`days after` (-1) (`years after` `years` (`the facts`'s `the day weekly payments ceased to be payable`))) `years`
+                          OTHERWISE `payable for treatment given up to and including` (`days after` (-1) (`years after` `years` (`the facts`'s `the day the claim was first made`))) `years`
 
 GIVEN `the scope` IS A MAYBE `Why not covered`, `the facts` IS A `Medical facts`
 GIVETH A `Medical compensation period`
@@ -589,7 +600,8 @@ GIVETH A `Medical compensation period`
     WHEN NOTHING THEN `the medical compensation period` `the facts`
 
 -- Whether treatment given on a day falls inside: within the period, or (s 59A(3)) during a period for which weekly payments
--- are payable again.
+-- are payable again. Where there is no time limit, or s 59A(2) states no compensation period (so none can expire under
+-- s 59A(1)), treatment on any day is paid for.
 DECLARE `Treatment day answer` IS ONE OF
     `compensation is payable for treatment on that day`
     `compensation is payable for treatment on that day, as weekly payments are payable again (s 59A(3))`
@@ -857,15 +869,29 @@ DECLARE `Claim time answer` IS ONE OF
     `late, but no bar: the insurer determined to accept it (s 261(5))`
     `late, and compensation cannot be recovered (s 261(1))`
 
+`the months to make a claim (1998 Act s 261(1))` MEANS 6
+`the years to make a late claim (1998 Act s 261(4)(a), (5))` MEANS 3
+
+-- The last day of the 6 months of s 261(1), and of the 3 years of s 261(4)(a) and (5), from the day time runs from.
+GIVEN `the day it runs from` IS A DATE
+GIVETH A DATE
+`the last day to claim within 6 months (1998 Act s 261(1))` `the day it runs from` MEANS
+    `months after` `the months to make a claim (1998 Act s 261(1))` `the day it runs from`
+
+GIVEN `the day it runs from` IS A DATE
+GIVETH A DATE
+`the last day of the 3 years (1998 Act s 261(4)(a), (5))` `the day it runs from` MEANS
+    `years after` `the years to make a late claim (1998 Act s 261(4)(a), (5))` `the day it runs from`
+
 GIVEN `the facts` IS A `Claim time facts`
 GIVETH A BOOLEAN
 DECIDE `the claim is made within 6 months` `the facts` IF
-    (`the facts`'s `the day the claim was made`) `is on or before` (`months after` 6 (`the facts`'s `the day time runs from`))
+    (`the facts`'s `the day the claim was made`) `is on or before` (`the last day to claim within 6 months (1998 Act s 261(1))` (`the facts`'s `the day time runs from`))
 
 GIVEN `the facts` IS A `Claim time facts`
 GIVETH A BOOLEAN
 DECIDE `the claim is made within 3 years` `the facts` IF
-    (`the facts`'s `the day the claim was made`) `is on or before` (`years after` 3 (`the facts`'s `the day time runs from`))
+    (`the facts`'s `the day the claim was made`) `is on or before` (`the last day of the 3 years (1998 Act s 261(4)(a), (5))` (`the facts`'s `the day time runs from`))
 
 -- s 261(5), second sentence: may the insurer determine to accept the late claim?
 GIVEN `the facts` IS A `Claim time facts`
@@ -927,7 +953,24 @@ GIVETH A `Deadline answer`
     THEN `the deadline position` `the 7th day` TRUE `the day they started` `the day in question`
     ELSE `the deadline position` `the 7th day` `written notice of a reasonable excuse has been given` `the day the excuse notice was given` `the day in question`
     WHERE
-        `the 7th day` MEANS `days after` `the days to start provisional weekly payments (1998 Act s 267(1))` `the day of the initial notification`
+        `the 7th day` MEANS `the day to act on the initial notification by (1998 Act ss 267(1), 268)` `the day of the initial notification`
+
+-- The days by which the duties of ss 267(1) and 268, s 264(2) and Regulation cl 35(3) fall due (both ss 267(1) and 268
+-- give 7 days from the initial notification).
+GIVEN `the day of the initial notification` IS A DATE
+GIVETH A DATE
+`the day to act on the initial notification by (1998 Act ss 267(1), 268)` `the day of the initial notification` MEANS
+    `days after` `the days to start provisional weekly payments (1998 Act s 267(1))` `the day of the initial notification`
+
+GIVEN `the day the request was received` IS A DATE
+GIVETH A DATE
+`the day to give the requested information by (1998 Act s 264(2))` `the day the request was received` MEANS
+    `days after` `the days to give requested information (1998 Act s 264(2))` `the day the request was received`
+
+GIVEN `the day of the request` IS A DATE
+GIVETH A DATE
+`the day to make the notification records available by (Regulation cl 35(3))` `the day of the request` MEANS
+    `days after` `the days to make the notification records available (Regulation cl 35(3))` `the day of the request`
 
 GIVEN `the insurer has a reasonable excuse under the Guidelines` IS A BOOLEAN
 GIVETH A `Duty`
@@ -951,6 +994,16 @@ GIVEN `the employer is a self-insurer` IS A BOOLEAN
 GIVETH A MAYBE NUMBER
 `the hours to notify the insurer, if any` `the employer is a self-insurer` MEANS
     IF `the employer is a self-insurer` THEN NOTHING ELSE JUST `the hours to notify the insurer (1998 Act s 44(2))`
+
+-- 1998 Act s 44(2), (4): whether the employer notified within the 48 hours after becoming aware of the workplace injury.
+-- A self-insurer has no such duty, so it cannot be late.
+GIVEN `the employer is a self-insurer` IS A BOOLEAN
+      `the hours from becoming aware to notifying` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the employer notified the insurer within the time s 44(2) allows` `the employer is a self-insurer` `the hours from becoming aware to notifying` IF
+    CONSIDER `the hours to notify the insurer, if any` `the employer is a self-insurer`
+    WHEN NOTHING THEN TRUE
+    WHEN JUST `the hours allowed` THEN `the hours from becoming aware to notifying` AT MOST `the hours allowed`
 
 GIVEN `the employer is a self-insurer` IS A BOOLEAN, `the day the claim was received` IS A DATE
 GIVETH A MAYBE DATE
@@ -1071,7 +1124,7 @@ DECIDE `the employer must provide suitable employment` `the facts` IF
     AND `the facts`'s `the worker has asked the employer for suitable employment`
     AND (NOT (`an exception in s 49(3) applies` `the facts`))
 
--- 1998 Act s 38(4)-(5) of the 1987 Act, for the insurer's work capacity assessments: (4) "An insurer must ... ensure
+-- 1987 Act s 38(4)-(5), for the insurer's work capacity assessments: (4) "An insurer must ... ensure
 -- that a work capacity assessment of the worker is conducted -- (a) during the last 52 weeks of the second entitlement
 -- period, and (b) thereafter at least once every 2 years." (5) "An insurer is not to conduct a work capacity assessment of
 -- a worker with highest needs unless the insurer thinks it appropriate to do so and the worker requests it."
@@ -1097,7 +1150,8 @@ GIVETH A `Work capacity assessment answer`
            OTHERWISE `conduct one during the last 52 weeks of the second entitlement period, between` (`days after` (0 MINUS `the last day of the last 52 weeks, counted from their first day`) `the last day of the second entitlement period`) `the last day of the second entitlement period`
 
 -- Regulation cl 35(2): the employer "must make and keep for at least 5 years after the notification is given" the records
--- of the injury, of the notification and of any acknowledgment.
+-- of the injury, of the notification and of any acknowledgment. The day they must be kept to; the duty itself is the
+-- regulative rule `Regulation cl 35(2) -- ...` below.
 GIVEN `the day the notification was given` IS A DATE
 GIVETH A DATE
 `the records must be kept until at least` `the day the notification was given` MEANS
@@ -1113,6 +1167,7 @@ DECLARE `Duty` IS ONE OF
     `the employer's duty to forward a claim within 7 days (1998 Act s 264(1))`
     `the employer's duty to give requested information within 7 days (1998 Act s 264(2))`
     `the employer's duty to provide suitable work (1998 Act s 49)`
+    `the employer's duty to keep notification records for at least 5 years (Regulation cl 35(2))`
     `the employer's duty to make notification records available within 7 days (Regulation cl 35(3))`
     `the insurer's duty to start provisional weekly payments within 7 days (1998 Act s 267)`
     `the insurer's duty to give notice of a reasonable excuse within 7 days (1998 Act s 268)`
@@ -1148,6 +1203,11 @@ GIVETH A `Consequence`
             `maximum penalty in penalty units` IS 50
             `penalty notice amount in dollars` IS 0
             `what else follows`                IS "s 49(1): an offence (50 penalty units). Schedule 5 lists no penalty notice for it. No duty where s 49(3) applies."
+    WHEN `the employer's duty to keep notification records for at least 5 years (Regulation cl 35(2))` THEN
+        `Consequence` WITH
+            `maximum penalty in penalty units` IS 20
+            `penalty notice amount in dollars` IS 0
+            `what else follows`                IS "Regulation cl 35: an offence (20 penalty units). Schedule 5 lists no penalty notice for it."
     WHEN `the employer's duty to make notification records available within 7 days (Regulation cl 35(3))` THEN
         `Consequence` WITH
             `maximum penalty in penalty units` IS 20
@@ -1202,6 +1262,7 @@ DECLARE `WC act` IS ONE OF
     `request suitable employment`
     `provide suitable employment`
     `conduct a work capacity assessment`
+    `dispose of the notification records`
     `make the notification records available`
 
 -- 1998 Act s 44(2), (4). Clock: hours, from the employer becoming aware of the workplace injury. "The employer of an
@@ -1422,6 +1483,21 @@ DECIDE `s 38(4), (5) -- the insurer must ensure work capacity assessments, excep
          WITHIN `the last day of the last 52 weeks, counted from their first day`
          HENCE (`s 38(4)(b) -- the insurer must ensure a work capacity assessment at least once every 2 years`)
          LEST  BREACH BY `the insurer` BECAUSE "1987 Act s 38(4)(a): the insurer must ensure a work capacity assessment during the last 52 weeks of the second entitlement period"
+
+-- Regulation cl 35(2). Clock: days, from the s 44(2) notification being given. "An employer who gives a notification under
+-- section 44(2) of the 1998 Act must make and keep for at least 5 years after the notification is given" the records of
+-- the injury, of the notification and of any acknowledgment. Keeping them for at least 5 years is a prohibition on
+-- disposing of them within those 5 years; the days in the 5 years are a parameter (1826 or 1827, by the 29 Februarys
+-- they span; `the records must be kept until at least` gives the last day). Making the records has no time of its own:
+-- they can be kept from the notification only if they are made then. Maximum penalty -- 20 penalty units (cl 35);
+-- Schedule 5 lists no penalty notice for it.
+GIVEN `the days in the 5 years` IS A NUMBER
+GIVETH A DEONTIC `WC party` `WC act`
+DECIDE `Regulation cl 35(2) -- the employer must keep its notification records for at least 5 years after the notification` IS
+    PARTY `the employer`
+    SHANT `dispose of the notification records`
+    WITHIN `the days in the 5 years`
+    LEST  BREACH BY `the employer` BECAUSE "Regulation cl 35(2): an employer who notifies the insurer under s 44(2) must make and keep the records of the injury, of the notification and of any acknowledgment for at least 5 years after the notification is given; an offence (20 penalty units)"
 
 -- Regulation cl 35(3). Clock: days, from the request by an inspector (s 238 of the 1998 Act) or an authorised employee
 -- representative. The employer "must make the records kept under subclause (2) available for inspection ... no later than
