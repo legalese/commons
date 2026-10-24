@@ -1,0 +1,403 @@
+IMPORT prelude
+IMPORT daydate
+
+-- General Statutes of Connecticut, Title 17b, Chapter 319s (Financial Assistance) -- temporary family assistance (TFA),
+-- Connecticut's cash assistance for families under the federal TANF programme: the dependent child (s 17b-75); the
+-- Commissioner's investigation of an application and the hearing if it is not acted on (s 17b-80(a)); the student-earnings
+-- disregard (s 17b-80(b)); the duty to report income and changes (s 17b-85); the standard of need and payment standard
+-- (s 17b-104(a), (c), (d)); and, in s 17b-112, the 36-month and 60-month limits, the exemptions and the extensions ((a) to
+-- (c)), the gross-earnings test and its six-month disregard to 230% of the poverty level ((d)(1), (2)), the $6,000 asset
+-- limit and the child-support disregard ((d)(1)), cooperation with child support ((e)), and the hearing ((h)).
+--
+-- SEAT: the applicant, the parent or other caretaker relative who applies for the family. "Does my family qualify? Are our
+-- earnings or savings too high? How long can we get it, and can we get more time? What is the payment standard for my family,
+-- and roughly what would we get? How long can the Department take on my application? What must I report, and by when?"
+-- The Commissioner of Social Services appears only as what the Commissioner must or may do to the family.
+--
+-- Edition: General Statutes of Connecticut revised to January 1, 2025, chapter 319s, as deposited at
+-- ../../registers/source-bundle/cgs-chap-319s-rev2025.txt, read with the 2026 Supplement (revised to January 1, 2026) at
+-- ../../registers/source-bundle/cgs-chap-319s-sup2026.txt. Sections 17b-80, 17b-104 and 17b-112 are encoded from the
+-- Supplement; ss 17b-75 and 17b-85 from the 2025 revision.
+--
+-- INPUTS, not in the deposited text: the federal poverty level for the family's size (a federal figure, published each year
+-- by the US Department of Health and Human Services; not in commons), and the family's monthly income figures.
+--
+-- NOT ENCODED: the Uniform Policy Manual (benefit computation, unearned-income rules, the definition of "advanced age" and
+-- "incapacitated"; not deposited); s 17b-112c (eligibility of non-citizens); ss 17b-112a, 17b-112b (domestic violence
+-- standards, beyond the 60-month exception); s 17b-112g (diversion assistance); Jobs First employment services; the
+-- cost-of-living adjustment of s 17b-112(g) (it depends on lapsed appropriations: NOTES.md finding 4); the state supplement
+-- (ss 17b-104 first sentence, 17b-106) and SAGA (in its own subject).
+--
+-- BASELINE ENCODING. Written from the applicant's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Connecticut temporary family assistance`
+
+§§ `s 17b-75 -- dependent child`
+
+-- s 17b-75: "'dependent child' means a needy child under the age of eighteen, or under the age of nineteen and in full-time
+-- attendance in a secondary school or in the equivalent level of vocational or technical training if, before he attains age
+-- nineteen, he may reasonably be expected to complete the program ... and who is living with his father, mother, grandfather,
+-- grandmother, brother, sister, stepfather, stepmother, stepbrother, stepsister, uncle or aunt, or any other relative
+-- approved by the commissioner in a place of residence maintained by one or more of such relatives as his or their own home".
+-- "needy" is the whole of the tests below; here the age, school and home limbs.
+GIVEN `the child's age` IS A NUMBER
+      `in full-time attendance in a secondary school or equivalent training` IS A BOOLEAN
+      `may reasonably be expected to complete it before age nineteen` IS A BOOLEAN
+      `lives with a listed relative, or one the commissioner approves, in a home that relative maintains` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a dependent child, as to age, school and home` IF
+        (    `the child's age` LESS THAN 18
+         OR  (    `the child's age` LESS THAN 19
+              AND `in full-time attendance in a secondary school or equivalent training`
+              AND `may reasonably be expected to complete it before age nineteen`))
+    AND `lives with a listed relative, or one the commissioner approves, in a home that relative maintains`
+
+§§ `s 17b-104 -- standard of need and payment standard`
+
+-- s 17b-104(a): "The standard of need for the temporary family assistance program shall be fifty-five per cent of the federal
+-- poverty level." (c): "On and after July 1, 2022, the payment standards for families receiving assistance under the temporary
+-- family assistance program shall be equal to seventy-three per cent of the standards of need established for said program
+-- under subsection (a)". (d): "For a family living in subsidized housing, income shall be attributed to such family which
+-- shall be eight per cent of the payment standard for such family."
+-- The federal poverty level is a monthly amount for the family's size, an input.
+GIVEN `the monthly federal poverty level for the family` IS A NUMBER
+GIVETH A NUMBER
+`the TFA standard of need` `the monthly federal poverty level for the family` MEANS
+    55% TIMES `the monthly federal poverty level for the family`
+
+GIVEN `the monthly federal poverty level for the family` IS A NUMBER
+GIVETH A NUMBER
+`the TFA payment standard` `the monthly federal poverty level for the family` MEANS
+    73% TIMES `the TFA standard of need` `the monthly federal poverty level for the family`
+
+GIVEN `the monthly federal poverty level for the family` IS A NUMBER
+      `the family lives in subsidized housing` IS A BOOLEAN
+GIVETH A NUMBER
+`the income attributed for subsidized housing` `the monthly federal poverty level for the family` `the family lives in subsidized housing` MEANS
+    IF   `the family lives in subsidized housing`
+    THEN 8% TIMES `the TFA payment standard` `the monthly federal poverty level for the family`
+    ELSE 0
+
+§§ `s 17b-112(d) -- earnings and assets`
+
+-- One month of the family's circumstances.
+DECLARE `TFA family month` HAS
+    `monthly federal poverty level for the family`             IS A NUMBER
+    `total gross earnings of the family`                       IS A NUMBER
+    `earnings of a child who is a student`                     IS A NUMBER  -- s 17b-80(b)
+    `first month earnings exceed the poverty level, or a following month within six consecutive months` IS A BOOLEAN
+    `assets of the family`                                     IS A NUMBER
+    `current child support received`                           IS A NUMBER
+    `other countable unearned income`                          IS A NUMBER
+    `lives in subsidized housing`                              IS A BOOLEAN
+
+-- s 17b-80(b) (2026 Supp.): "The commissioner shall disregard any earned income of a child who is a student in determining the
+-- eligibility, standard of need and amount of assistance of a family in the TFA program."
+GIVEN `f` IS A `TFA family month`
+GIVETH A NUMBER
+`the gross earnings counted` `f` MEANS
+    max 0 (`f`'s `total gross earnings of the family` MINUS `f`'s `earnings of a child who is a student`)
+
+-- s 17b-112(d)(1): "no family shall be eligible that has total gross earnings exceeding the federal poverty level".
+-- (d)(2): "on and after January 1, 2024, in the first month in which a family's total gross earnings exceed one hundred per
+-- cent of the federal poverty level and for a period not to exceed six consecutive months, the department shall disregard,
+-- for purposes of eligibility, a family's total gross earnings in an amount not to exceed two hundred thirty per cent of the
+-- federal poverty level." So in those months the test is 230%, not 100%. Whether the month is one of them is a fact.
+GIVEN `f` IS A `TFA family month`
+GIVETH A BOOLEAN
+DECIDE `the family passes the gross earnings test` IF
+    IF   `f`'s `first month earnings exceed the poverty level, or a following month within six consecutive months`
+    THEN `the gross earnings counted` `f` AT MOST 230% TIMES `f`'s `monthly federal poverty level for the family`
+    ELSE `the gross earnings counted` `f` AT MOST `f`'s `monthly federal poverty level for the family`
+
+-- (d)(2): "If a family's total gross earnings are an amount between one hundred seventy-one per cent and two hundred thirty per
+-- cent of the federal poverty level, the department shall reduce the household's benefit by twenty per cent for the months in
+-- which earnings are between" those figures. "between" is read inclusively (NOTES.md finding 3).
+GIVEN `f` IS A `TFA family month`
+GIVETH A BOOLEAN
+DECIDE `the benefit is reduced by twenty per cent` IF
+        `f`'s `first month earnings exceed the poverty level, or a following month within six consecutive months`
+    AND `the gross earnings counted` `f` AT LEAST 171% TIMES `f`'s `monthly federal poverty level for the family`
+    AND `the gross earnings counted` `f` AT MOST 230% TIMES `f`'s `monthly federal poverty level for the family`
+
+-- (d)(1): "On and after October 1, 2023, the commissioner shall not deny a family assistance under said program on the basis of
+-- such family's assets unless such assets exceed six thousand dollars."
+GIVEN `f` IS A `TFA family month`
+GIVETH A BOOLEAN
+DECIDE `the family's assets are within the limit` IF
+    `f`'s `assets of the family` AT MOST 6000
+
+§§ `s 17b-112(a) to (c) -- the time limits`
+
+DECLARE `TFA time limit facts` HAS
+    `months of time-limited benefits received`                IS A NUMBER  -- counting months since 1 January 1996
+    `a section 17b-112(b) exemption applies`                  IS A BOOLEAN
+    `six-month extensions already granted`                    IS A NUMBER
+    `months of time-limited benefits received since 1 October 1996, not counting the COVID-19 emergency` IS A NUMBER
+    `the family experiences domestic violence`                IS A BOOLEAN
+
+-- (a): "benefits shall be provided to a family for not longer than thirty-six months, except as provided in subsections (b)
+-- and (c)". (b): "The Commissioner ... shall exempt a family from such time-limited benefits for circumstances including, but
+-- not limited to: (1) [an incapacitated or aged caretaker relative] ... (7) minor parents attending and satisfactorily
+-- completing high school". The (b) list is open ("including, but not limited to") and several limbs turn on the
+-- Commissioner's judgment, so whether an exemption applies is asked as one fact.
+-- (c): each extension is six months; the 60-month limit stands "unless that family experiences domestic violence".
+GIVEN `t` IS A `TFA time limit facts`
+GIVETH A BOOLEAN
+DECIDE `the family is within the time limits` IF
+        (    `t`'s `a section 17b-112(b) exemption applies`
+         OR  `t`'s `months of time-limited benefits received` LESS THAN (36 PLUS (6 TIMES `t`'s `six-month extensions already granted`)))
+    AND (    `t`'s `months of time-limited benefits received since 1 October 1996, not counting the COVID-19 emergency` LESS THAN 60
+         OR  `t`'s `the family experiences domestic violence`)
+
+DECLARE `Extension facts` HAS
+    `six-month extensions already granted`                         IS A NUMBER
+    `made a good faith effort to comply with the program`          IS A BOOLEAN
+    `total family income`                                          IS A NUMBER
+    `earned income in the total family income`                     IS A NUMBER
+    `monthly federal poverty level for the family`                 IS A NUMBER
+    `circumstances preventing employment, such as domestic violence or others beyond the family's control` IS A BOOLEAN
+    `each adult meets a criterion in (c)(A) to (C)`                 IS A BOOLEAN
+
+DECLARE `What the Commissioner does with my extension petition` IS ONE OF
+    `the Commissioner shall grant a six-month extension (s 17b-112(c))`
+    `the Commissioner may grant a further six-month extension, because each adult meets a criterion in s 17b-112(c)(A) to (C)`
+    `s 17b-112(c) does not require an extension on these facts`
+
+-- (c): "A family who is subject to time-limited benefits may petition ... for six-month extensions. The commissioner shall
+-- grant not more than two extensions to such family who has made a good faith effort to comply with the requirements of the
+-- program and despite such effort has a total family income below one hundred per cent of the federal poverty level, or has
+-- encountered circumstances preventing employment including, but not limited to: (1) Domestic violence or physical harm to
+-- such family's children; or (2) other circumstances beyond such family's control. The commissioner shall disregard ninety
+-- dollars of earned income in determining applicable family income. The commissioner may grant a subsequent six-month
+-- extension if each adult in the family meets one or more of the following criteria: (A) ... (B) ... (C) ..."
+-- Read: the good-faith effort is required for both limbs (NOTES.md finding 5).
+GIVEN `e` IS AN `Extension facts`
+GIVETH A `What the Commissioner does with my extension petition`
+`the s 17b-112(c) answer to a petition` `e` MEANS
+    IF   `e`'s `six-month extensions already granted` LESS THAN 2
+         AND `e`'s `made a good faith effort to comply with the program`
+         AND (    `the applicable family income` LESS THAN `e`'s `monthly federal poverty level for the family`
+              OR  `e`'s `circumstances preventing employment, such as domestic violence or others beyond the family's control`)
+    THEN `the Commissioner shall grant a six-month extension (s 17b-112(c))`
+    ELSE IF   `e`'s `six-month extensions already granted` AT LEAST 2
+              AND `e`'s `each adult meets a criterion in (c)(A) to (C)`
+         THEN `the Commissioner may grant a further six-month extension, because each adult meets a criterion in s 17b-112(c)(A) to (C)`
+         ELSE `s 17b-112(c) does not require an extension on these facts`
+    WHERE
+        `the applicable family income` MEANS
+            `e`'s `total family income` MINUS (min 90 (`e`'s `earned income in the total family income`))
+
+§§ `s 17b-112 -- eligibility, and the amount`
+
+-- (e): "A family receiving assistance under said program shall cooperate with child support enforcement, under title IV-D of
+-- the Social Security Act. A family shall be ineligible for benefits for failure to cooperate with child support
+-- enforcement."
+GIVEN `the family includes a dependent child, or is one the commissioner has covered` IS A BOOLEAN
+      `f` IS A `TFA family month`
+      `t` IS A `TFA time limit facts`
+      `the family cooperates with child support enforcement` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the family is eligible for temporary family assistance, on the tests encoded` IF
+        `the family includes a dependent child, or is one the commissioner has covered`
+    AND `the family passes the gross earnings test` `f`
+    AND `the family's assets are within the limit` `f`
+    AND `the family is within the time limits` `t`
+    AND `the family cooperates with child support enforcement`
+
+-- The amount. s 17b-80(a): aid "in such amount, determined in accordance with levels of payments established by the
+-- commissioner, as is needed ... taking into consideration any available income". The deposited text does not say how income
+-- is netted against the payment standard (NOTES.md finding 2). This encoding's reading: the payment standard, less the
+-- s 17b-104(d) attributed income, less the countable unearned income, less child support counted in calculating benefits;
+-- earned income is "disregarded up to the federal poverty level" ((d)(1)), so earnings not above the poverty level reduce
+-- nothing (in a (d)(2) month, up to 230%); then the (d)(2) 20% reduction. Child support: "the first fifty dollars per month ... [is disregarded] in
+-- determining eligibility and benefit levels"; collected support above $50 "shall not be considered when calculating
+-- benefits" unless it exceeds the award plus $50 (then it is paid to the family): that last case is not modelled here.
+GIVEN `f` IS A `TFA family month`
+GIVETH A NUMBER
+`the monthly TFA amount, on this encoding's reading` `f` MEANS
+    IF   `the benefit is reduced by twenty per cent` `f`
+    THEN 80% TIMES `before the reduction`
+    ELSE `before the reduction`
+    WHERE
+        `the payment standard` MEANS `the TFA payment standard` (`f`'s `monthly federal poverty level for the family`)
+        -- In a month of the (d)(2) six-month disregard, earnings up to 230% of the poverty level are disregarded in the amount
+        -- too; otherwise the 20% reduction for earnings of 171% to 230% could never bite (NOTES.md finding 3).
+        `the earnings disregarded` MEANS
+            IF   `f`'s `first month earnings exceed the poverty level, or a following month within six consecutive months`
+            THEN 230% TIMES `f`'s `monthly federal poverty level for the family`
+            ELSE `f`'s `monthly federal poverty level for the family`
+        `earned income counted` MEANS
+            max 0 (`the gross earnings counted` `f` MINUS `the earnings disregarded`)
+        `before the reduction` MEANS
+            max 0 (   `the payment standard`
+                   MINUS `the income attributed for subsidized housing` (`f`'s `monthly federal poverty level for the family`) (`f`'s `lives in subsidized housing`)
+                   MINUS `f`'s `other countable unearned income`
+                   MINUS `earned income counted`)
+
+§§ `Duties and deadlines`
+
+DECLARE `TFA party` IS ONE OF
+    `the applicant or beneficiary`
+    `the Commissioner of Social Services`
+
+DECLARE `TFA action` IS ONE OF
+    `complete the investigation and act on the application`
+    `notify the commissioner of the property, income or change`
+    `reinvestigate the case`
+
+-- s 17b-80(a) (2026 Supp.): "The commissioner, upon receipt of an application for aid, shall promptly and with due diligence
+-- make an investigation, such investigation to be completed within forty-five days after receipt of the application or within
+-- sixty days after receipt of the application in the case of an application in which a determination of disability must be
+-- made. If an application for an award is not acted on within forty-five days ..., or within sixty days ..., the applicant may
+-- apply to the commissioner for a hearing in accordance with sections 17b-60 and 17b-61." Days from receipt.
+GIVEN `a determination of disability must be made` IS A BOOLEAN
+GIVETH A NUMBER
+`the s 17b-80(a) days` `a determination of disability must be made` MEANS
+    IF `a determination of disability must be made` THEN 60 ELSE 45
+
+GIVEN `a determination of disability must be made` IS A BOOLEAN
+GIVETH A DEONTIC `TFA party` `TFA action`
+`the Commissioner's duty to act on the application` `a determination of disability must be made` MEANS
+    PARTY  `the Commissioner of Social Services`
+    MUST   `complete the investigation and act on the application`
+    WITHIN `the s 17b-80(a) days` `a determination of disability must be made`
+    HENCE  FULFILLED
+    LEST   BREACH BY `the Commissioner of Social Services` BECAUSE "application not acted on within the s 17b-80(a) period: the applicant may apply for a hearing under ss 17b-60 and 17b-61"
+
+-- s 17b-85: a person receiving an award, or a beneficiary, who "receives property, wages, income or resources of any kind ...
+-- within ten days after obtaining knowledge of or receiving such property, wages, income or resources, shall notify the
+-- commissioner thereof, orally or in writing, unless good cause is established for failure to provide such notice, as
+-- determined by the commissioner." And "any change in the information which has been furnished on an application form or a
+-- redetermination of eligibility form shall also be reported ... within ten days of the occurrence of such change", with the
+-- same good-cause proviso. The ten days run from the receipt, the knowledge or the change. Good cause is the Commissioner's
+-- judgment, answered in the breach message.
+GIVETH A DEONTIC `TFA party` `TFA action`
+`the duty to report income or a change` MEANS
+    PARTY  `the applicant or beneficiary`
+    MUST   `notify the commissioner of the property, income or change`
+    WITHIN 10
+    HENCE  FULFILLED
+    LEST   BREACH BY `the applicant or beneficiary` BECAUSE "not reported within ten days (s 17b-85), unless the commissioner finds good cause"
+
+-- s 17b-104(a) (2026 Supp.): "The commissioner shall make a reinvestigation, at least every twelve months, of all cases
+-- receiving aid from the state". The unit here is months.
+GIVETH A DEONTIC `TFA party` `TFA action`
+`the reinvestigation of my case` MEANS
+    PARTY  `the Commissioner of Social Services`
+    MUST   `reinvestigate the case`
+    WITHIN 12
+    HENCE  FULFILLED
+    LEST   BREACH BY `the Commissioner of Social Services` BECAUSE "no reinvestigation within twelve months (s 17b-104(a))"
+
+§ `Questions for the applicant`
+
+§§ `Does my family qualify?`
+
+@export Is this child a "dependent child" for temporary family assistance, as to age, school and home (s 17b-75)?
+GIVEN `the child's age` IS A NUMBER @desc The child's age in whole years
+      `the child is in full-time secondary school or equivalent training` IS A BOOLEAN @desc Whether the child is in full-time attendance at a secondary school or the equivalent level of vocational or technical training
+      `the child is expected to finish it before turning 19` IS A BOOLEAN @desc Whether the child may reasonably be expected to complete that school or training before age 19
+      `the child lives with me in my home and I am a listed relative` IS A BOOLEAN @desc Whether the child lives in a home you maintain and you are the child's parent, grandparent, sibling, step-parent, step-sibling, uncle or aunt, or another relative the Commissioner approves
+GIVETH A BOOLEAN
+DECIDE `Is this child a dependent child` IF
+    `a dependent child, as to age, school and home` `the child's age` `the child is in full-time secondary school or equivalent training`
+        `the child is expected to finish it before turning 19` `the child lives with me in my home and I am a listed relative`
+
+@export Is my family eligible for temporary family assistance this month, on the earnings, assets, time-limit and child-support tests (s 17b-112)?
+GIVEN `my family includes a dependent child` IS A BOOLEAN @desc Whether your family includes a dependent child (see the dependent-child question), or is a family the Commissioner has otherwise covered
+      `the monthly federal poverty level for my family` IS A NUMBER @desc The federal poverty guideline for your family's size, as a monthly amount in US dollars
+      `my family's gross earnings this month` IS A NUMBER @desc The total gross earnings of everyone in the family this month, in US dollars
+      `earnings of children who are students` IS A NUMBER @desc The part of those earnings earned by children who are students, in US dollars
+      `this is a month of the six-month earnings disregard` IS A BOOLEAN @desc Whether this month is the first month (on or after 1 January 2024) your family's gross earnings went over the poverty level, or one of the next five consecutive months
+      `my family's assets` IS A NUMBER @desc The value of your family's assets, in US dollars
+      `months of TFA already received` IS A NUMBER @desc How many months of time-limited TFA (and earlier AFDC time-limited aid since January 1996) your family has received
+      `my family has a time-limit exemption` IS A BOOLEAN @desc Whether the Commissioner exempts your family from the time limit under s 17b-112(b) (for example an incapacitated caretaker, a baby under one, a minor parent in high school)
+      `extensions already granted` IS A NUMBER @desc How many six-month extensions your family has been granted
+      `months of TFA counted toward the 60-month limit` IS A NUMBER @desc Months of time-limited assistance since 1 October 1996, from Connecticut or another state, not counting months during the COVID-19 public health emergency
+      `my family experiences domestic violence` IS A BOOLEAN @desc Whether your family experiences domestic violence
+      `my family cooperates with child support enforcement` IS A BOOLEAN @desc Whether your family cooperates with child support enforcement
+GIVETH A BOOLEAN
+DECIDE `Is my family eligible for TFA` IF
+    `the family is eligible for temporary family assistance, on the tests encoded` `my family includes a dependent child`
+        (`TFA family month` OF `the monthly federal poverty level for my family`, `my family's gross earnings this month`,
+                              `earnings of children who are students`, `this is a month of the six-month earnings disregard`,
+                              `my family's assets`, 0, 0, FALSE)
+        (`TFA time limit facts` OF `months of TFA already received`, `my family has a time-limit exemption`, `extensions already granted`,
+                                  `months of TFA counted toward the 60-month limit`, `my family experiences domestic violence`)
+        `my family cooperates with child support enforcement`
+    -- child support received, unearned income and subsidized housing do not enter the tests encoded: fixed placeholders
+
+@export If my family asks for a six-month extension of TFA, must the Commissioner grant it (s 17b-112(c))?
+GIVEN `extensions already granted` IS A NUMBER @desc How many six-month extensions your family has been granted
+      `we made a good faith effort to comply` IS A BOOLEAN @desc Whether your family has made a good faith effort to comply with the requirements of the program
+      `our total monthly family income` IS A NUMBER @desc Your family's total monthly income, in US dollars
+      `the earned part of that income` IS A NUMBER @desc The part of that income that is earned income, in US dollars
+      `the monthly federal poverty level for my family` IS A NUMBER @desc The federal poverty guideline for your family's size, as a monthly amount in US dollars
+      `we face circumstances preventing employment` IS A BOOLEAN @desc Whether your family has met circumstances preventing employment, such as domestic violence, physical harm to your children, or other circumstances beyond your control
+      `each adult meets one of the further criteria` IS A BOOLEAN @desc For a third or later extension: whether each adult is kept from work by domestic violence or another reason beyond their control, has two or more substantiated barriers to employment, or works under 35 hours a week because of a medical impairment or caring for a disabled household member
+GIVETH A `What the Commissioner does with my extension petition`
+`Must the Commissioner grant my extension` MEANS
+    `the s 17b-112(c) answer to a petition`
+        (`Extension facts` OF `extensions already granted`, `we made a good faith effort to comply`, `our total monthly family income`,
+                             `the earned part of that income`, `the monthly federal poverty level for my family`,
+                             `we face circumstances preventing employment`, `each adult meets one of the further criteria`)
+
+§§ `How much?`
+
+@export What is the TFA standard of need for my family each month (s 17b-104(a))?
+GIVEN `the monthly federal poverty level for my family` IS A NUMBER @desc The federal poverty guideline for your family's size, as a monthly amount in US dollars
+GIVETH A NUMBER
+`What is the TFA standard of need for my family` MEANS `the TFA standard of need` `the monthly federal poverty level for my family`
+
+@export What is the TFA payment standard for my family each month, before any cost-of-living adjustment (s 17b-104(c))?
+GIVEN `the monthly federal poverty level for my family` IS A NUMBER @desc The federal poverty guideline for your family's size, as a monthly amount in US dollars
+GIVETH A NUMBER
+`What is the TFA payment standard for my family` MEANS `the TFA payment standard` `the monthly federal poverty level for my family`
+
+@export Roughly how much TFA would my family get this month, on this encoding's reading of how income is counted (s 17b-104, s 17b-112(d))?
+GIVEN `the monthly federal poverty level for my family` IS A NUMBER @desc The federal poverty guideline for your family's size, as a monthly amount in US dollars
+      `my family's gross earnings this month` IS A NUMBER @desc The total gross earnings of everyone in the family this month, in US dollars
+      `earnings of children who are students` IS A NUMBER @desc The part of those earnings earned by children who are students, in US dollars
+      `this is a month of the six-month earnings disregard` IS A BOOLEAN @desc Whether this month is the first month your family's gross earnings went over the poverty level, or one of the next five consecutive months
+      `other unearned income counted` IS A NUMBER @desc Other income that is not earnings and is counted (for example unemployment benefits), in US dollars; leave out the first $50 of child support and child support the Department collects
+      `we live in subsidized housing` IS A BOOLEAN @desc Whether your family lives in subsidized housing
+GIVETH A NUMBER
+`Roughly how much TFA would my family get` MEANS
+    `the monthly TFA amount, on this encoding's reading`
+        (`TFA family month` OF `the monthly federal poverty level for my family`, `my family's gross earnings this month`,
+                              `earnings of children who are students`, `this is a month of the six-month earnings disregard`,
+                              0, 0, `other unearned income counted`, `we live in subsidized housing`)
+    -- assets and child support do not enter the amount: fixed placeholders
+
+§§ `Deadlines`
+
+@export By what date must the Department of Social Services act on my application (s 17b-80(a))?
+GIVEN `the day the Department received my application` IS A DATE @desc The day the Department received your application
+      `my application needs a disability determination` IS A BOOLEAN @desc Whether a determination of disability must be made on your application
+GIVETH A DATE
+`By when must the Department act on my application` MEANS
+    `the day the Department received my application` PLUS (`the s 17b-80(a) days` `my application needs a disability determination`)
+
+@export If the Department has not acted on my application, may I ask for a hearing now (s 17b-80(a))?
+GIVEN `the day the Department received my application` IS A DATE @desc The day the Department received your application
+      `my application needs a disability determination` IS A BOOLEAN @desc Whether a determination of disability must be made on your application
+      `today` IS A DATE @desc Today's date
+      `the Department has acted on it` IS A BOOLEAN @desc Whether the Department has acted on your application
+GIVETH A BOOLEAN
+DECIDE `May I ask for a hearing because my application has not been acted on` IF
+        (NOT `the Department has acted on it`)
+    AND `today` GREATER THAN `By when must the Department act on my application` `the day the Department received my application` `my application needs a disability determination`
+
+@export By what date must I tell the Department about new income or property, or a change in what I told them (s 17b-85)?
+GIVEN `the day I received it, learned of it, or the change happened` IS A DATE @desc The day you received the property or income, learned of it, or the change in your information happened
+GIVETH A DATE
+`By when must I report it` MEANS `the day I received it, learned of it, or the change happened` PLUS 10
+
+@export If the Department decides against me on TFA, may I have a hearing (s 17b-112(h))?
+GIVEN `I am adversely affected by a decision of the Commissioner` IS A BOOLEAN @desc Whether a decision of the Commissioner of Social Services on your temporary family assistance goes against you
+GIVETH A BOOLEAN
+-- s 17b-112(h): "An applicant or recipient ... who is adversely affected by a decision of the Commissioner ... may request and
+-- shall be provided a hearing in accordance with section 17b-60."
+DECIDE `May I have a hearing on a TFA decision` IF `I am adversely affected by a decision of the Commissioner`
