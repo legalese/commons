@@ -11,7 +11,14 @@ There was no pipeline, no coverage table, no independent test pass and no human 
 The encoding has two layers:
 
 - **A seat-neutral core** in the Acts' own actors and terms: the purchasers, the person who executed the instrument, the applicant for the grant, the objector, the Commissioner, the Treasurer and the Minister. Where the text says "must" or sets a deadline, the rule is regulative (`DEONTIC`, `PARTY ... MUST ... WITHIN ... HENCE ... LEST`). Computations are functions: the duty scale, the s 72 surcharge, the grant amount, the vehicle scale, interest and penalty tax.
-- **A seat layer** (`sda-seat.l4`) that asks the buyer's questions with plain inputs. It builds the core's records and restates no rule.
+- **A seat layer** (`sda-seat.l4`) that asks the buyer's questions with plain inputs. It builds the core's records and restates no rule: each question calls one core function.
+
+**Fix of 24 October 2026.** An independent verifier raised five issues. Each was checked against the deposited texts and all five were found real. The fixes are findings 22 to 28:
+- s 42BA and s 71DB now return their `not covered` answers, and cases assert them.
+- s 71DD(9a) is answered conditionally.
+- FHOG s 18BB(1)(b) is a sum.
+- TAA s 33 and SDA s 42B(1a), (2) are regulative rules.
+- The surcharge, vehicle and grant questions each call one core function.
 
 Five instruments are brought into one encoding, as the task directs. The Act's s 71DD(12) and (13) adopt the First Home and Housing Construction Grants Act's "relevant interest", "home" and "new home". Section 71DD(3)(b)-(e) repeats the grant's criteria in ss 8A-11, and both Acts carry the same residence requirement of six months beginning within 12 months (s 71DD(4), FHOG s 12). It is the same buyer in the same transaction. The Stamp Duties Regulations 2013 set the concession card class Schedule 2 uses. The Taxation Administration Act 1996 supplies s 71DE's interest and penalty tax and the objection and appeal deadlines. Cross-folder IMPORT does not work, so all modules live in this folder.
 
@@ -19,15 +26,15 @@ Five instruments are brought into one encoding, as the task directs. The Act's s
 |---|---|
 | `sda-common.l4` | Arithmetic and date helpers, the "not covered" answers, and the parties and acts of the duty rules |
 | `fhog-terms.l4` | FHOG Act ss 3-6 (home, new home, residential property, relevant interest, owner, spouse, domestic partner), shared by the relief and the grant; the parties and acts of the grant rules |
-| `taa-procedure.l4` | Core: TAA ss 25-27, 29-34, 82, 86, 87, 89, 92-95 |
-| `sda-home.l4` | Core: s 2 (spouse, foreign person), s 20, s 60A, Schedule 2 clause 3(1)(b), s 71CB, s 71DD, s 71DE, s 72 |
+| `taa-procedure.l4` | Core: TAA ss 25-27, 29-34 (s 33 as a rule), 82, 86, 87, 89, 92-95 |
+| `sda-home.l4` | Core: s 2 (spouse, foreign person), s 20, s 60A, Schedule 2 clause 3(1)(b), s 71CB, s 71DB(1), (7) (when it applies), s 71DD (with (9a)), s 71DE, s 72 |
 | `fhog-grant.l4` | Core: FHOG ss 7-15, 17, 18, 18BB, 18C, 20, 21, 24, 25, 27, 28, 39, 40; Regulations 2015 reg 6 |
-| `sda-vehicles.l4` | Core: ss 42A, 42B, Schedule 2 clause 2(1)-(4); Stamp Duties Regulations 2013 reg 14 |
+| `sda-vehicles.l4` | Core: ss 42A, 42B (with (1a) and (2) as a rule), 42BA, s 71CB applied to vehicles, Schedule 2 clause 2(1)-(4); Stamp Duties Regulations 2013 reg 14 |
 | `sda-seat.l4` | Seat layer: 25 exported questions, each with `@desc` on every input, under `§` headings |
 | `sda-cases-home.l4`, `fhog-cases.l4`, `sda-cases-vehicles.l4`, `taa-cases.l4` | Cases for the core modules |
 | `sda-cases-seat.l4` | Cases for the seat layer, asked with plain answers |
 
-The seat layer and its case file were written by two generator scripts, `gen_seat.py` and `gen_seat_cases.py`, in the session scratchpad (`au-sa-1/`). The scripts only spell out the long argument lists. The expected values were typed into them by hand.
+The seat layer and its case file were written by two generator scripts, `gen_seat.py` and `gen_seat_cases.py`, in the session scratchpad (`au-sa-1/`). The scripts only spell out the long argument lists. The expected values were typed into them by hand. The fix of 24 October 2026 edited both files with `au-sa-1-f/edit_seat.py` and `edit_seat_cases.py`, which do the same. The core modules and their case files were edited with the other `edit_*.py` scripts there. The new expected values were worked by hand from the deposited texts, and none was copied from the encoding's output.
 
 ## Edition
 
@@ -39,7 +46,13 @@ Every text is the Open Australian Legal Corpus text (version 7.1.0), not the off
 - **Stamp Duties Regulations 2013**: as at **2022-09-29** (scraped 2024-09-13), `south_australian_legislation:2022-09-29/2013.209.un`.
 - **Taxation Administration Act 1996**: as at **2019-10-03** (scraped 2024-09-13), `south_australian_legislation:2019-10-03/1996.80.un`. The Current Titles list gives version 4.12.2025, so a later version exists.
 
-The duty scale and the grant amounts are encoded as the deposited text states them. Nine formulas are missing from the Stamp Duties Act deposit and four from the FHOG Act deposit (each has a `.formulas.md` sidecar). Where a question needs one, the answer is an explicit `not covered`, and a case asserts it. These are the s 71DD(7) reduction, the s 71DB off-the-plan dutiable value, the s 42BA continuing-owner concession and the FHOG bonus grants.
+The duty scale and the grant amounts are encoded as the deposited text states them. Nine formulas are missing from the Stamp Duties Act deposit and four from the FHOG Act deposit (each has a `.formulas.md` sidecar). Where a question needs one, the answer is an explicit `not covered`, and a case asserts it. These are:
+- the s 71DD(7) reduction, both for the duty and for whether it reaches the surcharge;
+- the s 71DB off-the-plan concession, for a contract up to 30 June 2017 that the Commissioner accepts;
+- the s 42BA continuing-owner concession;
+- the FHOG bonus grants.
+
+The relief that a s 71DD(9a) determination carries over from the original contract also answers `not covered`, because it turns on facts of the original contract that the encoding does not take.
 
 **Inputs where the deposit is silent:**
 
@@ -53,17 +66,17 @@ CC BY 4.0, under the owner's ruling of 2026-10-24 ("On NT, Vic and SA, yes pleas
 
 ## Checks
 
-`l4 run` on every `.l4` in the folder gives **0 errors and 0 warnings**, with **375 assertions written and 375 satisfied**.
+`l4 run` on every `.l4` in the folder gives **0 errors and 0 warnings**, with **446 assertions written and 446 satisfied** (after the fix of 24 October 2026; 375 before it).
 
 | Case file | Assertions | `#TRACE`s (each with an `-- expect:` line, read and as expected) |
 |---|---|---|
-| `sda-cases-home.l4` | 129 | 4: breaches by the person who executed the instrument (s 20) and by the purchasers (s 71DE); the Commissioner's advice and the purchasers' payment pending; the Commissioner's s 72(5) refund pending |
-| `fhog-cases.l4` | 102 | 5: the Commissioner's decision pending; breaches by the applicant (s 20(2), criterion 5, s 39); the Treasurer's decision pending |
-| `sda-cases-vehicles.l4` | 48 | none |
-| `taa-cases.l4` | 39 | 2: the Minister's determination pending; the appeal still open |
-| `sda-cases-seat.l4` | 57 | none |
+| `sda-cases-home.l4` | 153 | 4: breaches by the person who executed the instrument (s 20) and by the purchasers (s 71DE); the Commissioner's advice and the purchasers' payment pending; the Commissioner's s 72(5) refund pending |
+| `fhog-cases.l4` | 115 | 5: the Commissioner's decision pending; breaches by the applicant (s 20(2), criterion 5, s 39); the Treasurer's decision pending |
+| `sda-cases-vehicles.l4` | 63 | 1: a breach by the applicant (s 42B(2), paid a day after applying) |
+| `taa-cases.l4` | 42 | 3: a breach by the taxpayer (s 33, penalty tax unpaid after the period); the Minister's determination pending; the appeal still open |
+| `sda-cases-seat.l4` | 73 | none |
 
-The seven modules also run clean on their own. A copy of `sda-cases-home.l4` with one expected value altered was run as a control, and the runner reported that assertion as failed.
+The seven modules also run clean on their own. A copy of `sda-cases-home.l4` with one expected value altered was run as a control, and the runner reported that assertion as failed. In the fix, a copy of `sda-cases-vehicles.l4` with one new expected value altered was run the same way, and that assertion failed (62 of 63 satisfied).
 
 Expected values were worked by hand from the deposited texts. The arithmetic of the Schedule 2 clause 3(1)(b) and 2(1) scales, s 72(3) and TAA ss 25-27 and 30-32 was also done in an independent calculator, `au-sa-1/hand.py`, written from the statutory words. Dates were counted on a calendar. No value was copied from the encoding's output.
 
@@ -86,7 +99,8 @@ How each default was applied:
 - **The Act alone, with the instruments that set its numbers.** Departed from, as the task directs: the FHOG Act, both Regulations and the Taxation Administration Act are brought in for the reasons given under Method.
 - **The actors the text names.** Followed.
 - **A judgment handed to someone else is answered conditionally.** Followed. Each of these is a fact the buyer states, and the answer holds if it is so:
-  - the Commissioner's satisfaction or opinion (s 60A(2), s 71CB(3), s 71DD(5), (6), (9), FHOG ss 4(b), 7(1a) through s 18BB, 8A(2), 13(3), 14(6), 20(1));
+  - the Commissioner's satisfaction or opinion (s 60A(2), s 71CB(3), s 71DB(1), s 71DD(5), (6), (9), (9a), FHOG ss 4(b), 7(1a) through s 18BB(1)(a)(ii), (b)(i)(B), 8A(2), 13(3), 14(6), 20(1));
+  - the Commissioner's s 71DD(9a) determination that a replacing contract keeps the original contract's relief, and the Commissioner's determination of market values and actual building costs under FHOG s 18BB;
   - the Commissioner's approval of a shorter residence period or a longer completion period;
   - the Commissioner's determination that land is residential land (s 72(8));
   - the Commissioner's discretion to charge interest and penalty tax (s 71DE(2)(f));
@@ -113,9 +127,14 @@ How each default was applied:
 - Schedule 2 clause 3(1)(b): the general scale, nine bands per $100 or part, as a table;
 - s 71CB: a transfer of a shared residence, or of a vehicle's registration, between spouses or domestic partners, current or former;
 - s 71DD(1)-(3), (6), (8), (9), (11), (11a), (12), (13): the relief on a new home or vacant land to build on;
+- s 71DD(9a): the Commissioner's determination, as an input. Without it, a replacing contract has no relief. With it, the original contract's relief answers `not covered`;
+- s 71DB(1) and the dates in s 71DB(7): whether the off-the-plan concession applies (a contract up to 30 June 2017 that the Commissioner accepts). Where it applies, the duty answers `not covered`;
 - s 71DD(4), (5) with s 71DE: the residence requirement as a regulative rule, and the duty, the s 20(2) deadline, and interest and penalty tax when the relief ends;
-- s 72(1)-(5), (8): the 7% foreign ownership surcharge, with its refund as a regulative rule;
-- ss 42A, 42B and Schedule 2 clause 2(1)-(4): the registration component as two tables (non-commercial; commercial or trailer) with the $5 minimum; exemptions 4, 6 and 11; the policy of insurance component with exemptions 2, 6 and 8.
+- s 72(1)-(5), (8): the 7% foreign ownership surcharge, with its refund as a regulative rule, and with s 71DD(11a) as one core answer;
+- ss 42A, 42B and Schedule 2 clause 2(1)-(4): the registration component as two tables (non-commercial; commercial or trailer) with the $5 minimum; exemptions 4, 6 and 11; the policy of insurance component with exemptions 2, 6 and 8;
+- s 42B(1a), (2): state the value and pay the duty to the Registrar when applying, as a regulative rule;
+- s 42BA: a transfer of registration where a registered owner continues. It answers `not covered` because its formula is missing, unless an exemption leaves no duty (s 42BA(2));
+- s 71CB(2)(a)(ii), (b), (3), applied to vehicles ahead of ss 42B and 42BA.
 
 *Stamp Duties Regulations 2013:* reg 14 (the State concession card class).
 
@@ -128,7 +147,7 @@ How each default was applied:
 - s 13: eligible transaction, commencement date, completion and consideration;
 - s 14(5), (6) with ss 17 and 24: the application period, as a regulative rule;
 - s 15: all interested persons join;
-- s 18(1), (4a), s 18BB and s 18C: the amount;
+- s 18(1), (4a), s 18BB(1)(a)-(c), (6) and s 18C: the amount, and the market value for the s 7(1a) cap;
 - s 21(2)-(4): conditions;
 - s 25 with ss 27 and 28: objection within 60 days and review within 60 days, as a regulative rule;
 - s 39: repayment and penalty, as a regulative rule;
@@ -139,14 +158,15 @@ How each default was applied:
 *Taxation Administration Act 1996:*
 
 - ss 25-27, 29: interest, with the market rate an input;
-- ss 30-34: penalty tax;
+- ss 30-34: penalty tax, with s 33 (payment within the period in the assessment) as a regulative rule;
 - ss 82, 86, 87, 89 and ss 92-95: objection and appeal, as a regulative rule, with the s 93 payment condition.
 
 **Out.**
 
-- s 71DB, off-the-plan apartments (its dutiable value formula is missing; `not covered`).
-- s 42BA, transfers to or from a continuing owner (its formula is missing; `not covered`).
-- s 71DD(7) reductions (formula missing; `not covered`), and s 71DD(9a).
+- The s 71DB concessions themselves, s 71DB(2)-(6): off-the-plan apartments. The (3)(a) dutiable value formula is missing; `not covered` where s 71DB applies.
+- The s 42BA(1) amount (its formula is missing; `not covered`).
+- s 71DD(7) reductions (formula missing; `not covered`). The relief a s 71DD(9a) determination carries over (`not covered`).
+- s 42B(1b), (1c), (4)-(6); FHOG s 18BB(2), (3) (genuine farms, s 5(4) interests).
 - Landholder duty (Part 4); ss 71C-71CC, 71CBA, 71D-71DC, 71E-71F.
 - s 72(6), (7): trusts, and becoming a foreign person later.
 - Corporations and trusts as foreign persons.
@@ -207,10 +227,57 @@ Cross-folder IMPORT does not work. These are links in the notes only.
 20. **Reading: the s 72(5) refund's "not more than 12 months after the acquisition" includes the anniversary.** No time is set for applying, or for the Commissioner to refund once an application is made. A permanent visa granted 11 or 12 months after acquiring, while still holding the interest, brings a refund; one granted 12 months and a day after does not. Asserted.
 21. **To appeal against a duty assessment to the Supreme Court, at least half the duty must first be paid, unless the Minister permits (TAA s 93).** The appeal must be made within 60 days of service of the determination (s 94(1)). Alternatively, if the objection is undetermined after 90 days, an appeal may be made at any time on 14 days' notice to the Commissioner (s 94(2)). Asserted.
 
+Findings 22 to 28 come from the fix of 24 October 2026. Each corrects an answer the encoding gave before.
+
+22. **Corrected: a transfer of registration where a registered owner stays on (s 42BA) now answers `not covered`.** Before, the vehicle question had no input for it. Adding or removing a co-owner was charged the full Schedule 2 clause 2(1) registration component. The s 42BA(1) formula is missing from the deposit (formulas sidecar, line 624). D is defined from A (the duty apart from the section), B (the persons added or removed) and C (the owners before or after, whichever is more), but the formula itself cannot be guessed.
+    - Reading: s 42BA(2) ("does not derogate from any other provision conferring an exemption") keeps an exemption whole. So where exemptions 4, 6 or 11, or s 71CB, leave no duty, the answer is nil.
+    - Adding my adult son as co-owner of my $17,000 car is `not covered`, where it was $620 before. With $300 of ad valorem duty already paid, also `not covered`. With $1,000 paid, nil. Adding my wife is nil under s 71CB.
+
+    Asserted.
+23. **Corrected: a contract made on or after 6 June 2024 that replaces one made before then is answered under s 71DD(9a).** Before, the answer was a flat "no relief". The Commissioner's (9a) determination is now an input.
+    - Without the determination, (9)(b) bars the relief and the full duty is payable: $29,030 on a $640,000 new home in 2026.
+    - With it, the conveyance gets "the relief that the conveyance or transfer under the original contract would have qualified for". That turns on the original contract's date, market value and purchasers, which the encoding does not take, so the answer is `not covered`.
+    - (9a) reaches only contracts from 6 June 2024. A replacing contract of 5 June 2024 is barred by (9)(a) either way. Every owner must still join the application (s 71DD(8)).
+    - The qualify question now returns the kind of relief (none, nil duty, a s 71DD(7) reduction, or the original contract's relief) instead of yes or no, so that it cannot contradict (9a).
+
+    Asserted.
+24. **Corrected: on a contract before the relevant day, the foreign ownership surcharge is `not covered` where the s 71DD relief is a s 71DD(7) reduction or a (9a) carry-over.** Before, the seat charged the full 7% whenever the relief was not nil. Under finding 4's reading, relief before the relevant day reaches the surcharge. How far a reduction does so needs the missing (7) formula.
+    - A foreign co-buyer of half of a $680,000 new home contracted on 10 January 2024: `not covered`.
+    - A citizen in the same purchase owes no surcharge: nil.
+    - From the relevant day, s 71DD(11a) leaves the full surcharge: $22,400 on a $320,000 half interest.
+
+    Asserted.
+25. **Corrected: for a comprehensive home building contract, the FHOG market value for the s 7(1a) cap is a sum (s 18BB(1)(b)).** It adds (i) the building contract's consideration, or the actual costs as the Commissioner determines them if the Commissioner considers the price may be less, and (ii) the Commissioner's market value of the property on which the home is to be built when the contract is made. Before, the encoding used one Commissioner figure for land and home together.
+    - A building contract commencing on 1 January 2024 (cap $650,000) for $400,000, on land worth $300,000, is $700,000 and gets no grant. Before, if the buyer gave the land value as the Commissioner's figure, it was paid $15,000.
+    - $300,000 on the same land is $600,000 and gets $15,000.
+    - $300,000 with actual costs put at $380,000 is $680,000 and gets no grant.
+    - Exactly $650,000 is within the cap, which bites only where the value "exceeds" it.
+    - This matters for building contracts commencing from 17 September 2010 to 5 June 2024. After that there is no cap (finding 8).
+
+    Asserted.
+26. **s 71DB, the off-the-plan concession, reaches only contracts entered into up to 30 June 2017 (s 71DB(7)).** Where the Commissioner accepts a qualifying off-the-plan contract, the duty answers `not covered`. Before, the `not covered` value was declared but never returned. The duty after relief now takes that fact. A $450,000 apartment under a contract of 1 March 2016 is `not covered` if accepted, and $18,830 if not (no s 71DD relief before 15 June 2023). For a 2026 contract the answer is s 71DD's. s 71DB and s 71DD never meet. Asserted.
+27. **Two duties with a deadline are now regulative rules.**
+    - TAA s 33: penalty tax "must be paid ... within the period specified for that purpose in an assessment". It is a rule on the taxpayer, with the period as an input. Unpaid, it is a tax default on which interest runs (s 25(2)). Paid on day 30 of 30, fulfilled; unpaid on day 31, a breach.
+    - SDA s 42B(1a), (2): the applicant must state the vehicle's value, and must pay the duty to the Registrar "at the time of making the application". It is a rule with `WITHIN 0`, so paying on the day is fulfilled and paying a day later is a breach.
+
+    Both asserted, with the breaches traced.
+28. **Corrected: the seat layer now builds records only.** The surcharge question applied s 71DD(11a) and s 72 by an IF in the seat. The vehicle question applied s 71CB ahead of s 42B in the seat. The grant question gated s 18 on s 7 in the seat. Each now calls one core function: `the foreign ownership surcharge after any s 71DD relief (ss 71DD(11a), 72)`, `the duty on the vehicle application (ss 42B, 42BA, 71CB)` and `the first home owner grant payable on the application (ss 7, 18)`.
+    - The vehicle question used to pass `spouses or domestic partners` and FALSE in all cases. A "yes" from a former partner therefore skipped the s 71CB(3) test, the Commissioner's satisfaction about the breakdown.
+    - It now asks the relationship and that satisfaction as the home question does. A registration transferred from a former spouse is exempt if the Commissioner is satisfied, and otherwise costs $620 on a $17,000 car.
+
+    Asserted.
+
 ## What would need doing before this is worth relying on
 
 - Replace every text with the current official one from legislation.sa.gov.au, including the FHOG Act and Taxation Administration Act versions of 4.12.2025. Restore the s 71DD(7), s 71DB and s 42BA formulas from the authorised rendering, and recheck every figure.
 - Settle the "relevant day" of each Act from the official record (finding 3), and confirm the readings in findings 4, 6, 11, 13, 14, 15, 16, 17 and 20 with the owner or RevenueSA practice.
 - Deposit the Acts Interpretation Act 1915 (periods of months), and the current market rate notices.
-- Encode the out-of-scope parts a buyer can meet: s 71DB, s 42BA, s 72(7), corporations and trusts as foreign persons, and the remaining vehicle exemptions.
+- Encode the out-of-scope parts a buyer can meet:
+  - s 71DB, once the formula is restored;
+  - s 42BA, once the formula is restored;
+  - the s 71DD(9a) carry-over, which needs the original contract's date, market value and purchasers as inputs;
+  - s 72(7);
+  - corporations and trusts as foreign persons;
+  - the remaining vehicle exemptions.
+- Confirm the reading of s 42BA(2) in finding 22.
 - Check against RevenueSA's calculators and guidance; none were consulted.
