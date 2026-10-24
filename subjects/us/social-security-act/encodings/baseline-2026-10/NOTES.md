@@ -46,9 +46,9 @@ The 2027 determinations were not in the Federal Register on 2026-10-19. News cov
 | File | Assertions written | Satisfied |
 |---|---|---|
 | `ssa-cases-worker-retiree.l4` | 83 | 83 |
-| `ssa-cases-survivor-disabled.l4` | 66 | 66 |
+| `ssa-cases-survivor-disabled.l4` | 68 | 68 |
 | `ssa-cases-ssi-medicare.l4` | 75 | 75 |
-| **Total** | **224** | **224** |
+| **Total** | **226** | **226** |
 
 `l4 run` on all nine `.l4` files gives 0 errors and 0 warnings (2026-10-24). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read; a deliberate `#ASSERT 1 EQUALS 2` was run once to confirm that a failure shows as `assertion failed`, `DiagnosticSeverity_Error`.
 
@@ -105,7 +105,7 @@ The stable `l4` cannot IMPORT across subject folders, so the link is recorded he
   - The family maximum formula (s 403(a)(1)).
   - Old-age entitlement, its first month and retroactivity (s 402(a), (j)(1), (j)(4)(A)).
   - The early-retirement reduction (s 402(q)(1), (6), (7) as one input, (8), (9)) and the delayed-retirement increase (s 402(w)(1), (2), (6)).
-  - Widow's and widower's benefits (s 402(e)(1)(A)–(D), (e)(2)(A), (C), (D), (e)(3), (e)(4); s 402(f) mirrors (e)), with s 416(c), (d), (g), (k).
+  - Widow's and widower's benefits (s 402(e)(1)(A)–(D), (F)(i), (e)(2)(A), (C), (D), (e)(3), (e)(4), (e)(5)(A); s 402(f) mirrors (e)), with s 416(c), (d), (g), (k).
   - Child's benefits (s 402(d)(1)–(2)).
   - The lump-sum death payment and its two-year limit (s 402(i)).
   - Disability benefits: entitlement, the waiting period, ALS, retroactivity and amount (s 423(a)(1)–(2), (b), (c)(2)), and the blind SGA amount (s 423(d)(4)(A)).
@@ -132,7 +132,7 @@ The stable `l4` cannot IMPORT across subject folders, so the link is recorded he
   - Spouse's benefits (s 402(b), (c)), mother's and father's (s 402(g)) and parent's (s 402(h)) benefits, except where they appear as conditions.
   - The s 402(q)(3) combined reduction, (q)(5) certificates and (q)(10)–(11).
   - The s 402(e)(2)(B) re-indexing for a worker who died before 62.
-  - The disabled widow's waiting period (s 402(e)(5)): see "Before relying on it".
+  - In the disabled widow's waiting period, the counting of SSI months (s 402(e)(5)(B)) and re-entitlement without a new waiting period ((e)(1)(F)(ii)).
   - The (e)(1)(C)(ii)–(iii) conversions and the (e)(4)(B)–(C) later starts of the disability period.
   - Re-entitlement within 60 months (s 423(a)(1)(iii)), insured status after an earlier young-worker period of disability (s 423(c)(1)(B)(iii), answered `not covered`), and the disability determination itself (s 421, s 423(d)(2)–(5), (f)).
   - Trial work and the extended period of eligibility (s 422).
@@ -182,7 +182,7 @@ The stable `l4` cannot IMPORT across subject folders, so the link is recorded he
 
 ## Before relying on it
 
-- **The disabled widow's five-month waiting period** (s 402(e)(1)(F), (e)(5)) is not applied. For a widow aged 50 to 59, "entitled for the month" can answer yes for up to five months too early. Encode (e)(5) before using the disabled-widow cases.
+- **The disabled widow's waiting period** is applied (s 402(e)(1)(F)(i), (e)(5)(A)), but the person states the first full month of disability. Months of SSI eligibility, which count toward it under (e)(5)(B), are not counted. A widow on SSI may therefore be told her entitlement starts later than it does.
 - An independent test pass, with cases written by someone who has not read the encoding, especially for the s 402(q) and (w) arithmetic and the SSI income order.
 - The 2027 Federal Register notices, deposited and added to `the figures for`, once they are published. Earlier years' notices are needed if earlier PIAs and earnings-test years are wanted.
 - The national average wage index series (s 409(k)), so AIME can be computed from an earnings record rather than asked.
