@@ -1,0 +1,523 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `pb-core`
+
+-- pb2-salario-de-beneficio.l4: Lei nº 8.213/1991, Título III, Capítulo II, Seção III, Subseção I,
+-- "Do Salário-de-Benefício" (arts. 28 to 32), as printed in the plain-text rendering of Planalto's
+-- compilation (lines 455-555 of lei-8213-1991.pt.txt; not the official text, not verified against it).
+--
+-- LAYER 1: the law, objectively, from the text alone; no seat. Rule names begin with the citation
+-- of the provision they encode (keel convention). Struck wording (the "STRUCK" wrappers) is never
+-- encoded. Provisions with no live wording in this text are not given a rule:
+--   art. 28 §§ 1-4 (lines 461-464, revoked by Lei nº 9.032/1995); art. 29 § 1 (line 469, revoked by
+--   Lei nº 9.876/1999); art. 29 § 6, I and II (lines 477-480, revoked by Lei nº 11.718/2008);
+--   art. 29 §§ 11-13 (lines 491-493, vetoed); art. 29-C § 5 (line 526, vetoed); arts. 30 and 31's
+--   former wording (lines 527-530); art. 32, I to III (lines 536-549, revoked by Lei nº 13.846/2019).
+--
+-- WHAT THE TEXT DOES NOT SUPPLY, and so is an input here (NOTES.md lists each):
+--   * the fator previdenciário (art. 29 § 7 sends its formula to an Anexo that is not in the text);
+--   * the expectativa de sobrevida of the IBGE table (art. 29 § 8);
+--   * the INPC variation (arts. 29-B, 41-A), the INSS's and the Regulamento's criteria (art. 29-A);
+--   * the salário mínimo and the limite máximo do salário-de-contribuição (the core's `Valores de referência`).
+
+§ `Lei nº 8.213/1991, Título III, Capítulo II, Seção III, Subseção I: do salário-de-benefício`
+
+§§ `Art. 28 — as prestações que se calculam com base no salário-de-benefício`
+
+-- Which benefits are calculated on the salário-de-benefício. "Benefício de prestação continuada" is
+-- not defined in the text; the exception names two, so the other benefits of art. 18 (the four
+-- aposentadorias, auxílio-doença, auxílio-acidente, pensão por morte, auxílio-reclusão) are read as
+-- inside the class (fork F-PB2-01). The services and the abono de permanência are not benefits of
+-- prestação continuada that this article speaks of, so the text does not answer for them: NOTHING.
+-- src:460 | Art. 28. O valor do benefício de prestação continuada, inclusive o regido por norma especial e o decorrente de acidente do trabalho, exceto o salário-família e o salário-maternidade, será calculado com base no salário-de-benefício. (Redação dada pela Lei nº 9.032, de 1995)
+@ref art. 28 (src:460)
+GIVEN `a prestação` IS A Prestação
+GIVETH A MAYBE BOOLEAN
+`art. 28 — a prestação é calculada com base no salário-de-benefício` `a prestação` MEANS
+    CONSIDER `a prestação`
+    WHEN `salário-família`                        THEN JUST FALSE
+    WHEN `salário-maternidade`                    THEN JUST FALSE
+    WHEN `aposentadoria por invalidez`            THEN JUST TRUE
+    WHEN `aposentadoria por idade`                THEN JUST TRUE
+    WHEN `aposentadoria por tempo de contribuição` THEN JUST TRUE
+    WHEN `aposentadoria especial`                 THEN JUST TRUE
+    WHEN `auxílio-doença`                         THEN JUST TRUE
+    WHEN `auxílio-acidente`                       THEN JUST TRUE
+    WHEN `pensão por morte`                       THEN JUST TRUE
+    WHEN `auxílio-reclusão`                       THEN JUST TRUE
+    OTHERWISE NOTHING
+
+§§ `Art. 29 — o que é o salário-de-benefício`
+
+-- Art. 29, I and II: the two ways the salário-de-benefício is built. Both start from "a média
+-- aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de
+-- todo o período contributivo"; inciso I multiplies it by the fator previdenciário.
+DECLARE `Inciso do art. 29` IS ONE OF
+    `inciso I do art. 29`      -- alíneas b and c of art. 18, I: aposentadoria por idade, por tempo de contribuição
+    `inciso II do art. 29`     -- alíneas a, d, e and h of art. 18, I: invalidez, especial, auxílio-doença, auxílio-acidente
+
+-- src:466 | Art. 29. O salário-de-benefício consiste: (Redação dada pela Lei nº 9.876, de 26.11.99)
+-- src:467 | I - para os benefícios de que tratam as alíneas b e c do inciso I do art. 18, na média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de todo o período contributivo, multiplicada pelo fator previdenciário; (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:468 | II - para os benefícios de que tratam as alíneas a, d, e e h do inciso I do art. 18, na média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de todo o período contributivo. (Incluído pela Lei nº 9.876, de 26.11.99)
+@ref art. 29, caput, I e II (src:466-468)
+GIVEN `a prestação` IS A Prestação
+GIVETH A MAYBE `Inciso do art. 29`
+`art. 29 — inciso que se aplica ao salário-de-benefício da prestação` `a prestação` MEANS
+    CONSIDER `a prestação`
+    WHEN `aposentadoria por idade`                 THEN JUST `inciso I do art. 29`
+    WHEN `aposentadoria por tempo de contribuição` THEN JUST `inciso I do art. 29`
+    WHEN `aposentadoria por invalidez`             THEN JUST `inciso II do art. 29`
+    WHEN `aposentadoria especial`                  THEN JUST `inciso II do art. 29`
+    WHEN `auxílio-doença`                          THEN JUST `inciso II do art. 29`
+    WHEN `auxílio-acidente`                        THEN JUST `inciso II do art. 29`
+    OTHERWISE NOTHING
+
+-- "oitenta por cento de todo o período contributivo": the text does not say how to round 80% of a
+-- number of months that is not a multiple of five (fork F-PB2-02). Read here as the whole number
+-- of months that does not exceed 80% of the period (FLOOR), so that the highest salaries chosen
+-- never cover more than 80% of it.
+-- src:467 | I - para os benefícios de que tratam as alíneas b e c do inciso I do art. 18, na média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de todo o período contributivo, multiplicada pelo fator previdenciário; (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:468 | II - para os benefícios de que tratam as alíneas a, d, e e h do inciso I do art. 18, na média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de todo o período contributivo. (Incluído pela Lei nº 9.876, de 26.11.99)
+@ref art. 29, I e II (src:467-468)
+GIVEN `os salários-de-contribuição do período contributivo` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`art. 29 — quantos salários-de-contribuição correspondem a oitenta por cento do período contributivo` `os salários-de-contribuição do período contributivo` MEANS
+    FLOOR (80% TIMES (count `os salários-de-contribuição do período contributivo`))
+
+-- The mean of the highest salaries-de-contribuição. The list holds the salário-de-contribuição of
+-- each month of the whole contributory period, already corrected (art. 29-B) and already net of
+-- what §§ 3 and 4 leave out; NOTHING when no month falls inside the 80% (a period of one month or none).
+-- src:467 | I - para os benefícios de que tratam as alíneas b e c do inciso I do art. 18, na média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de todo o período contributivo, multiplicada pelo fator previdenciário; (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:468 | II - para os benefícios de que tratam as alíneas a, d, e e h do inciso I do art. 18, na média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de todo o período contributivo. (Incluído pela Lei nº 9.876, de 26.11.99)
+@ref art. 29, I e II (src:467-468)
+GIVEN `os salários-de-contribuição do período contributivo` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+`art. 29 — média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento do período contributivo, em reais` `os salários-de-contribuição do período contributivo` MEANS
+    IF `quantos entram na média` EQUALS 0
+    THEN NOTHING
+    ELSE JUST (sum `os maiores` DIVIDED BY `quantos entram na média`)
+    WHERE
+        `quantos entram na média` MEANS
+            `art. 29 — quantos salários-de-contribuição correspondem a oitenta por cento do período contributivo` `os salários-de-contribuição do período contributivo`
+        `os maiores` MEANS take `quantos entram na média` (reverse (sort `os salários-de-contribuição do período contributivo`))
+
+-- src:467 | I - para os benefícios de que tratam as alíneas b e c do inciso I do art. 18, na média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de todo o período contributivo, multiplicada pelo fator previdenciário; (Incluído pela Lei nº 9.876, de 26.11.99)
+@ref art. 29, I (src:467)
+GIVEN `a média dos maiores salários-de-contribuição em reais` IS A NUMBER
+      `o fator previdenciário (art. 29, § 7º)` IS A NUMBER
+GIVETH A NUMBER
+`art. 29, inciso I — salário-de-benefício com o fator previdenciário, em reais` `a média dos maiores salários-de-contribuição em reais` `o fator previdenciário (art. 29, § 7º)` MEANS
+    `a média dos maiores salários-de-contribuição em reais` TIMES `o fator previdenciário (art. 29, § 7º)`
+
+-- src:468 | II - para os benefícios de que tratam as alíneas a, d, e e h do inciso I do art. 18, na média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de todo o período contributivo. (Incluído pela Lei nº 9.876, de 26.11.99)
+@ref art. 29, II (src:468)
+GIVEN `a média dos maiores salários-de-contribuição em reais` IS A NUMBER
+GIVETH A NUMBER
+`art. 29, inciso II — salário-de-benefício sem o fator previdenciário, em reais` `a média dos maiores salários-de-contribuição em reais` MEANS
+    `a média dos maiores salários-de-contribuição em reais`
+
+-- The salário-de-benefício of a benefit, before the limits of § 2: the inciso that applies to the
+-- benefit decides whether the fator previdenciário is used. NOTHING for a benefit that neither
+-- inciso names (salário-família, salário-maternidade, pensão por morte, auxílio-reclusão, the
+-- services): the text of art. 29 does not give them a salário-de-benefício.
+-- src:466 | Art. 29. O salário-de-benefício consiste: (Redação dada pela Lei nº 9.876, de 26.11.99)
+-- src:467 | I - para os benefícios de que tratam as alíneas b e c do inciso I do art. 18, na média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de todo o período contributivo, multiplicada pelo fator previdenciário; (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:468 | II - para os benefícios de que tratam as alíneas a, d, e e h do inciso I do art. 18, na média aritmética simples dos maiores salários-de-contribuição correspondentes a oitenta por cento de todo o período contributivo. (Incluído pela Lei nº 9.876, de 26.11.99)
+@ref art. 29, caput, I e II (src:466-468)
+GIVEN `a prestação` IS A Prestação
+      `a média dos maiores salários-de-contribuição em reais` IS A NUMBER
+      `o fator previdenciário (art. 29, § 7º)` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`art. 29 — salário-de-benefício da prestação antes dos limites do § 2º, em reais` `a prestação` `a média dos maiores salários-de-contribuição em reais` `o fator previdenciário (art. 29, § 7º)` MEANS
+    CONSIDER `art. 29 — inciso que se aplica ao salário-de-benefício da prestação` `a prestação`
+    WHEN JUST `inciso I do art. 29`  THEN JUST (`art. 29, inciso I — salário-de-benefício com o fator previdenciário, em reais` `a média dos maiores salários-de-contribuição em reais` `o fator previdenciário (art. 29, § 7º)`)
+    WHEN JUST `inciso II do art. 29` THEN JUST (`art. 29, inciso II — salário-de-benefício sem o fator previdenciário, em reais` `a média dos maiores salários-de-contribuição em reais`)
+    WHEN NOTHING                     THEN NOTHING
+
+-- § 2: a floor and a cap. The reference values are those "na data de início do benefício".
+-- src:470 | § 2º O valor do salário-de-benefício não será inferior ao de um salário mínimo, nem superior ao do limite máximo do salário-de-contribuição na data de início do benefício.
+@ref art. 29, § 2º (src:470)
+GIVEN `o salário-de-benefício calculado em reais` IS A NUMBER
+      `os valores de referência` IS A `Valores de referência`
+GIVETH A NUMBER
+`art. 29, § 2º — salário-de-benefício entre o salário mínimo e o limite máximo do salário-de-contribuição, em reais` `o salário-de-benefício calculado em reais` `os valores de referência` MEANS
+    min (max `o salário-de-benefício calculado em reais` (`os valores de referência`'s `salário mínimo`))
+        (`os valores de referência`'s `limite máximo do salário-de-contribuição`)
+
+-- § 3: which earnings of an employee count. The class is: habitual earnings, under any title, in
+-- currency or in utilities, on which social security contribution was levied. The décimo-terceiro
+-- is the one thing the paragraph takes out of that class. The paragraph speaks of the "segurado
+-- empregado"; art. 35 writes "segurado empregado, inclusive o doméstico" when it means both, so the
+-- `segurado empregado` category alone is read here (fork F-PB2-03). Outside the class, or for
+-- another category, § 3 does not answer: NOTHING.
+-- src:472 | § 3º Serão considerados para cálculo do salário-de-benefício os ganhos habituais do segurado empregado, a qualquer título, sob forma de moeda corrente ou de utilidades, sobre os quais tenha incidido contribuições previdenciárias, exceto o décimo-terceiro salário (gratificação natalina). (Redação dada pela Lei nº 8.870, de 1994)
+@ref art. 29, § 3º (src:472)
+GIVEN `o segurado` IS A Segurado
+      `o ganho é habitual` IS A BOOLEAN
+      `o ganho foi pago em moeda corrente ou em utilidades` IS A BOOLEAN
+      `incidiu contribuição previdenciária sobre o ganho` IS A BOOLEAN
+      `o ganho é décimo terceiro salário (gratificação natalina)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`art. 29, § 3º — o ganho é considerado no cálculo do salário-de-benefício` `o segurado` `o ganho é habitual` `o ganho foi pago em moeda corrente ou em utilidades` `incidiu contribuição previdenciária sobre o ganho` `o ganho é décimo terceiro salário (gratificação natalina)` MEANS
+    IF     `o segurado`'s `categoria` EQUALS `segurado empregado`
+       AND `o ganho é habitual`
+       AND `o ganho foi pago em moeda corrente ou em utilidades`
+       AND `incidiu contribuição previdenciária sobre o ganho`
+    THEN JUST (NOT `o ganho é décimo terceiro salário (gratificação natalina)`)
+    ELSE NOTHING
+
+-- § 4: what is NOT counted. An increase of the salário-de-contribuição is left out when it exceeds
+-- the legal limit, and when it was granted voluntarily in the 36 months before the benefit began,
+-- unless one of four things applies to it. The "salvo se" is read as qualifying the voluntary
+-- increase only (fork F-PB2-04); an increase above the legal limit is left out whatever its source.
+-- src:473 | § 4º Não será considerado, para o cálculo do salário-de-benefício, o aumento dos salários-de-contribuição que exceder o limite legal, inclusive o voluntariamente concedido nos 36 (trinta e seis) meses imediatamente anteriores ao início do benefício, salvo se homologado pela Justiça do Trabalho, resultante de promoção regulada por normas gerais da empresa, admitida pela legislação do trabalho, de sentença normativa ou de reajustamento salarial obtido pela categoria respectiva.
+@ref art. 29, § 4º (src:473)
+GIVEN `o aumento excede o limite legal do salário-de-contribuição` IS A BOOLEAN
+      `o aumento foi concedido voluntariamente nos 36 meses imediatamente anteriores ao início do benefício` IS A BOOLEAN
+      `o aumento foi homologado pela Justiça do Trabalho` IS A BOOLEAN
+      `o aumento resultou de promoção regulada por normas gerais da empresa, admitida pela legislação do trabalho` IS A BOOLEAN
+      `o aumento resultou de sentença normativa` IS A BOOLEAN
+      `o aumento resultou de reajustamento salarial obtido pela categoria respectiva` IS A BOOLEAN
+GIVETH A BOOLEAN
+`art. 29, § 4º — o aumento do salário-de-contribuição não é considerado no cálculo do salário-de-benefício` `o aumento excede o limite legal do salário-de-contribuição` `o aumento foi concedido voluntariamente nos 36 meses imediatamente anteriores ao início do benefício` `o aumento foi homologado pela Justiça do Trabalho` `o aumento resultou de promoção regulada por normas gerais da empresa, admitida pela legislação do trabalho` `o aumento resultou de sentença normativa` `o aumento resultou de reajustamento salarial obtido pela categoria respectiva` MEANS
+        `o aumento excede o limite legal do salário-de-contribuição`
+    OR  (    `o aumento foi concedido voluntariamente nos 36 meses imediatamente anteriores ao início do benefício`
+         AND (NOT (    `o aumento foi homologado pela Justiça do Trabalho`
+                    OR `o aumento resultou de promoção regulada por normas gerais da empresa, admitida pela legislação do trabalho`
+                    OR `o aumento resultou de sentença normativa`
+                    OR `o aumento resultou de reajustamento salarial obtido pela categoria respectiva`)))
+
+-- § 5: a month on which an incapacity benefit was received counts toward the basic period, and its
+-- salário-de-contribuição is the salário-de-benefício that was the base of the monthly income,
+-- readjusted "nas mesmas épocas e bases dos benefícios em geral", and never below one salário
+-- mínimo. The readjusted amount is an input (art. 41-A is the readjustment); NOTHING for a month
+-- on which no incapacity benefit was received (the paragraph does not apply to it).
+-- src:474 | § 5º Se, no período básico de cálculo, o segurado tiver recebido benefícios por incapacidade, sua duração será contada, considerando-se como salário-de-contribuição, no período, o salário-de-benefício que serviu de base para o cálculo da renda mensal, reajustado nas mesmas épocas e bases dos benefícios em geral, não podendo ser inferior ao valor de 1 (um) salário mínimo.
+@ref art. 29, § 5º (src:474)
+GIVEN `o mês é de gozo de benefício por incapacidade no período básico de cálculo` IS A BOOLEAN
+      `o salário-de-benefício reajustado que serviu de base à renda mensal em reais` IS A NUMBER
+      `os valores de referência` IS A `Valores de referência`
+GIVETH A MAYBE NUMBER
+`art. 29, § 5º — salário-de-contribuição do mês de gozo de benefício por incapacidade, em reais` `o mês é de gozo de benefício por incapacidade no período básico de cálculo` `o salário-de-benefício reajustado que serviu de base à renda mensal em reais` `os valores de referência` MEANS
+    IF `o mês é de gozo de benefício por incapacidade no período básico de cálculo`
+    THEN JUST (max `o salário-de-benefício reajustado que serviu de base à renda mensal em reais` (`os valores de referência`'s `salário mínimo`))
+    ELSE NOTHING
+
+-- § 6: the salário-de-benefício of the segurado especial is one salário mínimo, "ressalvado o
+-- disposto no inciso II do art. 39 e nos §§ 3º e 4º do art. 48". The exceptions send the amount to
+-- other rules (art. 39, II: contribution as a facultativo, benefits calculated as the Law
+-- specifies; art. 48 §§ 3 and 4: the retirement by age of the rural worker with periods under
+-- other categories), so this paragraph does not give it: NOTHING. Another category: NOTHING.
+-- src:476 | § 6o O salário-de-benefício do segurado especial consiste no valor equivalente ao salário-mínimo, ressalvado o disposto no inciso II do art. 39 e nos §§ 3o e 4o do art. 48 desta Lei. (Redação dada pela Lei nº 11.718, de 2008)
+@ref art. 29, § 6º (src:476)
+GIVEN `o segurado` IS A Segurado
+      `o segurado especial contribui facultativamente (art. 39, II)` IS A BOOLEAN
+      `a aposentadoria por idade é a do art. 48, §§ 3º e 4º` IS A BOOLEAN
+      `os valores de referência` IS A `Valores de referência`
+GIVETH A MAYBE NUMBER
+`art. 29, § 6º — salário-de-benefício do segurado especial, em reais` `o segurado` `o segurado especial contribui facultativamente (art. 39, II)` `a aposentadoria por idade é a do art. 48, §§ 3º e 4º` `os valores de referência` MEANS
+    IF     `o segurado`'s `categoria` EQUALS `segurado especial`
+       AND (NOT `o segurado especial contribui facultativamente (art. 39, II)`)
+       AND (NOT `a aposentadoria por idade é a do art. 48, §§ 3º e 4º`)
+    THEN JUST (`os valores de referência`'s `salário mínimo`)
+    ELSE NOTHING
+
+-- §§ 7 to 9: the fator previdenciário. The text lists what it is calculated from (age, life
+-- expectancy at that age from the IBGE table, and contribution time) and sends the formula to an
+-- Anexo that is not in the text, so the factor itself is an input wherever it is used (see
+-- inciso I above). What the text does decide is § 9, the years added to the contribution time.
+-- src:481 | § 7o O fator previdenciário será calculado considerando-se a idade, a expectativa de sobrevida e o tempo de contribuição do segurado ao se aposentar, segundo a fórmula constante do Anexo desta Lei. (Incluído pela Lei nº 9.876, de 26.11.99) (Vide Decreto nº 3.266, de 1.999)
+-- src:482 | § 8o Para efeito do disposto no § 7o, a expectativa de sobrevida do segurado na idade da aposentadoria será obtida a partir da tábua completa de mortalidade construída pela Fundação Instituto Brasileiro de Geografia e Estatística - IBGE, considerando-se a média nacional única para ambos os sexos. (Incluído pela Lei nº 9.876, de 26.11.99)
+@ref art. 29, §§ 7º e 8º (src:481-482)
+DECLARE `Elementos do fator previdenciário` HAS
+    `idade do segurado em anos completos`                 IS A NUMBER
+    `expectativa de sobrevida do segurado em anos`        IS A NUMBER   -- art. 29, § 8: from the IBGE table (outside the text)
+    `tempo de contribuição para o fator em meses completos` IS A NUMBER -- art. 29, § 9: with the years added
+
+-- § 9: five years for a woman; five years for a teacher who proves only time of teaching in
+-- infant, fundamental and middle education; ten years for a woman teacher. For a woman teacher the
+-- text gives ten (inciso III) and does not add inciso I to it (fork F-PB2-05); for a man who is a
+-- teacher, five (inciso II).
+-- src:483 | § 9o Para efeito da aplicação do fator previdenciário, ao tempo de contribuição do segurado serão adicionados: (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:484 | I - cinco anos, quando se tratar de mulher; (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:485 | II - cinco anos, quando se tratar de professor que comprove exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio; (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:486 | III - dez anos, quando se tratar de professora que comprove exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio. (Incluído pela Lei nº 9.876, de 26.11.99)
+@ref art. 29, § 9º (src:483-486)
+GIVEN `o segurado` IS A Segurado
+      `o tempo de contribuição do segurado em meses completos` IS A NUMBER
+      `o segurado comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio` IS A BOOLEAN
+GIVETH A NUMBER
+`art. 29, § 9º — tempo de contribuição acrescido para o fator previdenciário, em meses completos` `o segurado` `o tempo de contribuição do segurado em meses completos` `o segurado comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio` MEANS
+    `o tempo de contribuição do segurado em meses completos` PLUS `os meses acrescentados`
+    WHERE
+        `os meses acrescentados` MEANS
+            IF `o segurado comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio`
+            THEN (IF `o segurado`'s `sexo` EQUALS feminino THEN 10 TIMES 12 ELSE 5 TIMES 12)
+            ELSE (IF `o segurado`'s `sexo` EQUALS feminino THEN 5 TIMES 12 ELSE 0)
+
+-- src:481 | § 7o O fator previdenciário será calculado considerando-se a idade, a expectativa de sobrevida e o tempo de contribuição do segurado ao se aposentar, segundo a fórmula constante do Anexo desta Lei. (Incluído pela Lei nº 9.876, de 26.11.99) (Vide Decreto nº 3.266, de 1.999)
+-- src:482 | § 8o Para efeito do disposto no § 7o, a expectativa de sobrevida do segurado na idade da aposentadoria será obtida a partir da tábua completa de mortalidade construída pela Fundação Instituto Brasileiro de Geografia e Estatística - IBGE, considerando-se a média nacional única para ambos os sexos. (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:483 | § 9o Para efeito da aplicação do fator previdenciário, ao tempo de contribuição do segurado serão adicionados: (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:484 | I - cinco anos, quando se tratar de mulher; (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:485 | II - cinco anos, quando se tratar de professor que comprove exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio; (Incluído pela Lei nº 9.876, de 26.11.99)
+-- src:486 | III - dez anos, quando se tratar de professora que comprove exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio. (Incluído pela Lei nº 9.876, de 26.11.99)
+@ref art. 29, §§ 7º a 9º (src:481-486)
+GIVEN `o segurado` IS A Segurado
+      `a expectativa de sobrevida do segurado em anos` IS A NUMBER
+      `o tempo de contribuição do segurado em meses completos` IS A NUMBER
+      `o segurado comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio` IS A BOOLEAN
+GIVETH A `Elementos do fator previdenciário`
+`art. 29, § 7º — elementos de que o fator previdenciário é calculado` `o segurado` `a expectativa de sobrevida do segurado em anos` `o tempo de contribuição do segurado em meses completos` `o segurado comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio` MEANS
+    `Elementos do fator previdenciário` WITH
+        `idade do segurado em anos completos` IS `o segurado`'s `idade em anos completos`
+        `expectativa de sobrevida do segurado em anos` IS `a expectativa de sobrevida do segurado em anos`
+        `tempo de contribuição para o fator em meses completos` IS
+            `art. 29, § 9º — tempo de contribuição acrescido para o fator previdenciário, em meses completos` `o segurado` `o tempo de contribuição do segurado em meses completos` `o segurado comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio`
+
+-- § 10: the auxílio-doença cannot exceed the mean of the last 12 salaries-de-contribuição, or of
+-- those that exist if there are fewer than 12. The list is ordered from the most recent month
+-- backwards, so its first 12 entries are the last 12 months. NOTHING when there are none.
+-- src:490 | § 10. O auxílio-doença não poderá exceder a média aritmética simples dos últimos 12 (doze) salários-de-contribuição, inclusive em caso de remuneração variável, ou, se não alcançado o número de 12 (doze), a média aritmética simples dos salários-de-contribuição existentes. (Incluído pela Lei nº 13.135, de 2015)
+@ref art. 29, § 10 (src:490)
+GIVEN `o valor calculado do auxílio-doença em reais` IS A NUMBER
+      `os salários-de-contribuição, do mês mais recente para o mais antigo` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+`art. 29, § 10 — valor do auxílio-doença limitado à média dos últimos 12 salários-de-contribuição, em reais` `o valor calculado do auxílio-doença em reais` `os salários-de-contribuição, do mês mais recente para o mais antigo` MEANS
+    IF `quantos são` EQUALS 0
+    THEN NOTHING
+    ELSE JUST (min `o valor calculado do auxílio-doença em reais` (sum `os últimos` DIVIDED BY `quantos são`))
+    WHERE
+        `os últimos` MEANS take 12 `os salários-de-contribuição, do mês mais recente para o mais antigo`
+        `quantos são` MEANS count `os últimos`
+
+§§ `Art. 29-A — as informações do Cadastro Nacional de Informações Sociais (CNIS)`
+
+-- The purposes for which the INSS uses the CNIS data on links and remunerations.
+DECLARE `Finalidade do uso das informações do CNIS (art. 29-A)` IS ONE OF
+    `cálculo do salário-de-benefício`
+    `comprovação de filiação ao Regime Geral de Previdência Social`
+    `comprovação de tempo de contribuição`
+    `comprovação de relação de emprego`
+
+-- src:495 | Art. 29-A. O INSS utilizará as informações constantes no Cadastro Nacional de Informações Sociais – CNIS sobre os vínculos e as remunerações dos segurados, para fins de cálculo do salário-de-benefício, comprovação de filiação ao Regime Geral de Previdência Social, tempo de contribuição e relação de emprego. (Redação dada pela Lei Complementar nº 128, de 2008)
+@ref art. 29-A, caput (src:495)
+GIVEN `a finalidade` IS A `Finalidade do uso das informações do CNIS (art. 29-A)`
+GIVETH A BOOLEAN
+`art. 29-A — o INSS utiliza as informações do CNIS sobre vínculos e remunerações para a finalidade` `a finalidade` MEANS
+    CONSIDER `a finalidade`
+    WHEN `cálculo do salário-de-benefício`                              THEN TRUE
+    WHEN `comprovação de filiação ao Regime Geral de Previdência Social` THEN TRUE
+    WHEN `comprovação de tempo de contribuição`                          THEN TRUE
+    WHEN `comprovação de relação de emprego`                             THEN TRUE
+
+-- § 1: the INSS has "até 180 (cento e oitenta) dias, contados a partir da solicitação do pedido".
+-- Counted as the core counts a time limit in days (F-9): the last day in time is the request date
+-- plus 180 days. The party bound is the INSS, which the paragraph names.
+-- src:496 | § 1o O INSS terá até 180 (cento e oitenta) dias, contados a partir da solicitação do pedido, para fornecer ao segurado as informações previstas no caput deste artigo. (Incluído pela Lei nº 10.403, de 8.1.2002)
+@ref art. 29-A, § 1º (src:496)
+GIVEN `a data da solicitação do pedido` IS A DATE
+GIVETH A DATE
+`art. 29-A, § 1º — último dia em que o INSS deve fornecer as informações do CNIS` `a data da solicitação do pedido` MEANS
+    `o dia em que termina` (`prazo em dias` 180) `contado de` `a data da solicitação do pedido`
+
+-- src:496 | § 1o O INSS terá até 180 (cento e oitenta) dias, contados a partir da solicitação do pedido, para fornecer ao segurado as informações previstas no caput deste artigo. (Incluído pela Lei nº 10.403, de 8.1.2002)
+@ref art. 29-A, § 1º (src:496)
+GIVEN `a data da solicitação do pedido` IS A DATE
+      `a data em que o INSS forneceu as informações` IS A DATE
+GIVETH A BOOLEAN
+`art. 29-A, § 1º — o INSS forneceu as informações do CNIS no prazo` `a data da solicitação do pedido` `a data em que o INSS forneceu as informações` MEANS
+    `a data em que o INSS forneceu as informações` AT MOST `art. 29-A, § 1º — último dia em que o INSS deve fornecer as informações do CNIS` `a data da solicitação do pedido`
+
+-- § 2: the insured may ask, "a qualquer momento" (no date is read), for the inclusion, exclusion or
+-- rectification of CNIS data, by presenting documents that prove the divergent data, "conforme
+-- critérios definidos pelo INSS" (an input: the INSS's criteria are not in the text).
+-- src:498 | § 2o O segurado poderá solicitar, a qualquer momento, a inclusão, exclusão ou retificação de informações constantes do CNIS, com a apresentação de documentos comprobatórios dos dados divergentes, conforme critérios definidos pelo INSS.
+@ref art. 29-A, § 2º (src:498)
+GIVEN `o segurado apresenta documentos comprobatórios dos dados divergentes` IS A BOOLEAN
+      `os documentos atendem aos critérios definidos pelo INSS` IS A BOOLEAN
+GIVETH A BOOLEAN
+`art. 29-A, § 2º — o segurado pode solicitar a inclusão, exclusão ou retificação de informações do CNIS` `o segurado apresenta documentos comprobatórios dos dados divergentes` `os documentos atendem aos critérios definidos pelo INSS` MEANS
+        `o segurado apresenta documentos comprobatórios dos dados divergentes`
+    AND `os documentos atendem aos critérios definidos pelo INSS`
+
+-- § 4: a document or a rectification is "extemporânea" when presented after the time limits the
+-- regulation sets (an input: the regulation is not in the text). Presented on the last day is in time.
+-- src:501 | § 4o Considera-se extemporânea a inserção de dados decorrentes de documento inicial ou de retificação de dados anteriormente informados, quando o documento ou a retificação, ou a informação retificadora, forem apresentados após os prazos estabelecidos em regulamento. (Incluído pela Lei Complementar nº 128, de 2008)
+@ref art. 29-A, § 4º (src:501)
+GIVEN `a data da apresentação do documento ou da retificação` IS A DATE
+      `a data-limite estabelecida em regulamento` IS A DATE
+GIVETH A BOOLEAN
+`art. 29-A, § 4º — a inserção de dados no CNIS é extemporânea` `a data da apresentação do documento ou da retificação` `a data-limite estabelecida em regulamento` MEANS
+    `a data da apresentação do documento ou da retificação` GREATER THAN `a data-limite estabelecida em regulamento`
+
+-- § 3: acceptance of extemporaneous data "fica condicionada à comprovação dos dados ou das
+-- divergências apontadas, conforme critérios definidos em regulamento". The paragraph makes proof
+-- a condition of acceptance; it does not say proof alone makes the data accepted, so the rule says
+-- whether the condition is met. For data that is not extemporaneous the paragraph is silent: NOTHING.
+-- src:500 | § 3o A aceitação de informações relativas a vínculos e remunerações inseridas extemporaneamente no CNIS, inclusive retificações de informações anteriormente inseridas, fica condicionada à comprovação dos dados ou das divergências apontadas, conforme critérios definidos em regulamento. (Incluído pela Lei Complementar nº 128, de 2008)
+@ref art. 29-A, § 3º (src:500)
+GIVEN `a inserção de dados no CNIS é extemporânea` IS A BOOLEAN
+      `os dados ou as divergências foram comprovados conforme os critérios definidos em regulamento` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`art. 29-A, § 3º — a condição para aceitar a informação extemporânea no CNIS está cumprida` `a inserção de dados no CNIS é extemporânea` `os dados ou as divergências foram comprovados conforme os critérios definidos em regulamento` MEANS
+    IF `a inserção de dados no CNIS é extemporânea`
+    THEN JUST `os dados ou as divergências foram comprovados conforme os critérios definidos em regulamento`
+    ELSE NOTHING
+
+-- § 5: where there is doubt about the regularity of a link entered in the CNIS and no information
+-- on remunerations and contributions, the INSS "exigirá a apresentação dos documentos que serviram
+-- de base à anotação, sob pena de exclusão do período".
+-- src:502 | § 5o Havendo dúvida sobre a regularidade do vínculo incluído no CNIS e inexistência de informações sobre remunerações e contribuições, o INSS exigirá a apresentação dos documentos que serviram de base à anotação, sob pena de exclusão do período. (Incluído pela Lei Complementar nº 128, de 2008)
+@ref art. 29-A, § 5º (src:502)
+GIVEN `há dúvida sobre a regularidade do vínculo incluído no CNIS` IS A BOOLEAN
+      `há informações sobre remunerações e contribuições do vínculo` IS A BOOLEAN
+GIVETH A BOOLEAN
+`art. 29-A, § 5º — o INSS exige a apresentação dos documentos que serviram de base à anotação do vínculo` `há dúvida sobre a regularidade do vínculo incluído no CNIS` `há informações sobre remunerações e contribuições do vínculo` MEANS
+        `há dúvida sobre a regularidade do vínculo incluído no CNIS`
+    AND (NOT `há informações sobre remunerações e contribuições do vínculo`)
+
+-- src:502 | § 5o Havendo dúvida sobre a regularidade do vínculo incluído no CNIS e inexistência de informações sobre remunerações e contribuições, o INSS exigirá a apresentação dos documentos que serviram de base à anotação, sob pena de exclusão do período. (Incluído pela Lei Complementar nº 128, de 2008)
+@ref art. 29-A, § 5º (src:502)
+GIVEN `há dúvida sobre a regularidade do vínculo incluído no CNIS` IS A BOOLEAN
+      `há informações sobre remunerações e contribuições do vínculo` IS A BOOLEAN
+      `o segurado apresentou os documentos que serviram de base à anotação` IS A BOOLEAN
+GIVETH A BOOLEAN
+`art. 29-A, § 5º — o período do vínculo é excluído do CNIS` `há dúvida sobre a regularidade do vínculo incluído no CNIS` `há informações sobre remunerações e contribuições do vínculo` `o segurado apresentou os documentos que serviram de base à anotação` MEANS
+        `art. 29-A, § 5º — o INSS exige a apresentação dos documentos que serviram de base à anotação do vínculo` `há dúvida sobre a regularidade do vínculo incluído no CNIS` `há informações sobre remunerações e contribuições do vínculo`
+    AND (NOT `o segurado apresentou os documentos que serviram de base à anotação`)
+
+§§ `Art. 29-B — a correção dos salários-de-contribuição`
+
+-- "corrigidos mês a mês de acordo com a variação integral do INPC": the factor is the product of
+-- (1 + the month's variation) over the months; the variations are inputs (IBGE publishes them, the
+-- text does not). A variation is a fraction: 0.5% is 0.005. The months are those from each
+-- salário-de-contribuição to the benefit, which the article does not state: the list is the caller's.
+-- src:503 | Art. 29-B. Os salários-de-contribuição considerados no cálculo do valor do benefício serão corrigidos mês a mês de acordo com a variação integral do Índice Nacional de Preços ao Consumidor - INPC, calculado pela Fundação Instituto Brasileiro de Geografia e Estatística - IBGE. (Incluído pela Lei nº 10.877, de 2004)
+@ref art. 29-B (src:503)
+GIVEN `as variações mensais do INPC` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`art. 29-B — fator de correção pela variação integral do INPC` `as variações mensais do INPC` MEANS
+    product (map (GIVEN `a variação` YIELD 1 PLUS `a variação`) `as variações mensais do INPC`)
+
+-- src:503 | Art. 29-B. Os salários-de-contribuição considerados no cálculo do valor do benefício serão corrigidos mês a mês de acordo com a variação integral do Índice Nacional de Preços ao Consumidor - INPC, calculado pela Fundação Instituto Brasileiro de Geografia e Estatística - IBGE. (Incluído pela Lei nº 10.877, de 2004)
+@ref art. 29-B (src:503)
+GIVEN `o salário-de-contribuição do mês em reais` IS A NUMBER
+      `as variações mensais do INPC` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`art. 29-B — salário-de-contribuição corrigido, em reais` `o salário-de-contribuição do mês em reais` `as variações mensais do INPC` MEANS
+    `o salário-de-contribuição do mês em reais` TIMES `art. 29-B — fator de correção pela variação integral do INPC` `as variações mensais do INPC`
+
+§§ `Art. 29-C — a opção pela não incidência do fator previdenciário`
+
+-- § 2: the sums are raised by one point "em" each of five dates. Read as taking effect on that
+-- date, inclusive (fork F-PB2-06): on 31 December 2018 the man's sum is 96.
+-- src:514 | Art. 29-C. O segurado que preencher o requisito para a aposentadoria por tempo de contribuição poderá optar pela não incidência do fator previdenciário no cálculo de sua aposentadoria, quando o total resultante da soma de sua idade e de seu tempo de contribuição, incluídas as frações, na data de requerimento da aposentadoria, for: (Incluído pela Lei nº 13.183, de 2015)
+-- src:515 | I - igual ou superior a noventa e cinco pontos, se homem, observando o tempo mínimo de contribuição de trinta e cinco anos; ou (Incluído pela Lei nº 13.183, de 2015)
+-- src:516 | II - igual ou superior a oitenta e cinco pontos, se mulher, observado o tempo mínimo de contribuição de trinta anos. (Incluído pela Lei nº 13.183, de 2015)
+-- src:518 | § 2⟦STRUCK: º⟧ As somas de idade e de tempo de contribuição previstas no caput serão majoradas em um ponto em: (Incluído pela Lei nº 13.183, de 2015)
+-- src:519 | I - 31 de dezembro de 2018; (Incluído pela Lei nº 13.183, de 2015)
+-- src:520 | II - 31 de dezembro de 2020; (Incluído pela Lei nº 13.183, de 2015)
+-- src:521 | III - 31 de dezembro de 2022; (Incluído pela Lei nº 13.183, de 2015)
+-- src:522 | IV - 31 de dezembro de 2024; e (Incluído pela Lei nº 13.183, de 2015)
+-- src:523 | V - 31 de dezembro de 2026. (Incluído pela Lei nº 13.183, de 2015)
+@ref art. 29-C, caput, I, II e § 2º (src:514-523)
+GIVEN `o segurado` IS A Segurado
+      `a data` IS A DATE
+GIVETH A NUMBER
+`art. 29-C, § 2º — pontuação exigida na data, em pontos` `o segurado` `a data` MEANS
+    `a pontuação do caput` PLUS `as majorações já ocorridas`
+    WHERE
+        `a pontuação do caput` MEANS IF `o segurado`'s `sexo` EQUALS masculino THEN 95 ELSE 85
+        `as majorações já ocorridas` MEANS
+            count (filter `já ocorreu` (LIST (YMD 2018 12 31), (YMD 2020 12 31), (YMD 2022 12 31), (YMD 2024 12 31), (YMD 2026 12 31)))
+        `já ocorreu` `a data da majoração` MEANS `a data` AT LEAST `a data da majoração`
+
+-- Caput, § 1, § 3 and § 4. The sum of age and contribution time is taken in complete months (§ 1),
+-- so a person at 30 years 6 months of contribution and 65 years 6 months of age has 96 points and
+-- 1,152 months. The minimum contribution time is 35 years (man) and 30 years (woman), and for a
+-- teacher who proves only teaching in infant, fundamental and middle education 30 years (professor)
+-- and 25 years (professora) with five points added to the sum (§ 3). A person who reached the
+-- requirement and did not ask keeps the points of the date they reached it (§ 4): the date is a
+-- fact the person states, and this rule does not check it against their age and time on that date.
+-- The requirement for the aposentadoria por tempo de contribuição (art. 52) is an input here;
+-- the seat layer supplies it by calling the art. 52 rule.
+-- src:514 | Art. 29-C. O segurado que preencher o requisito para a aposentadoria por tempo de contribuição poderá optar pela não incidência do fator previdenciário no cálculo de sua aposentadoria, quando o total resultante da soma de sua idade e de seu tempo de contribuição, incluídas as frações, na data de requerimento da aposentadoria, for: (Incluído pela Lei nº 13.183, de 2015)
+-- src:515 | I - igual ou superior a noventa e cinco pontos, se homem, observando o tempo mínimo de contribuição de trinta e cinco anos; ou (Incluído pela Lei nº 13.183, de 2015)
+-- src:516 | II - igual ou superior a oitenta e cinco pontos, se mulher, observado o tempo mínimo de contribuição de trinta anos. (Incluído pela Lei nº 13.183, de 2015)
+-- src:517 | § 1⟦STRUCK: º⟧ Para os fins do disposto no caput, serão somadas as frações em meses completos de tempo de contribuição e idade. (Incluído pela Lei nº 13.183, de 2015)
+-- src:524 | § 3⟦STRUCK: º⟧ Para efeito de aplicação do disposto no caput e no § 2⟦STRUCK: º⟧, o tempo mínimo de contribuição do professor e da professora que comprovarem exclusivamente tempo de efetivo exercício de magistério na educação infantil e no ensino fundamental e médio será de, respectivamente, trinta e vinte e cinco anos, e serão acrescidos cinco pontos à soma da idade com o tempo de contribuição. (Incluído pela Lei nº 13.183, de 2015)
+-- src:525 | § 4⟦STRUCK: º⟧ Ao segurado que alcançar o requisito necessário ao exercício da opção de que trata o caput e deixar de requerer aposentadoria será assegurado o direito à opção com a aplicação da pontuação exigida na data do cumprimento do requisito nos termos deste artigo. (Incluído pela Lei nº 13.183, de 2015)
+@ref art. 29-C, caput, §§ 1º, 3º e 4º (src:514-525)
+GIVEN `o segurado` IS A Segurado
+      `a idade do segurado em meses completos` IS A NUMBER
+      `o tempo de contribuição do segurado em meses completos` IS A NUMBER
+      `a data do requerimento` IS A DATE
+      `a data em que o segurado alcançou o requisito da opção` IS A MAYBE DATE
+      `o segurado comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio` IS A BOOLEAN
+      `o segurado preenche o requisito para a aposentadoria por tempo de contribuição (art. 52)` IS A BOOLEAN
+GIVETH A BOOLEAN
+`art. 29-C — o segurado pode optar pela não incidência do fator previdenciário` `o segurado` `a idade do segurado em meses completos` `o tempo de contribuição do segurado em meses completos` `a data do requerimento` `a data em que o segurado alcançou o requisito da opção` `o segurado comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio` `o segurado preenche o requisito para a aposentadoria por tempo de contribuição (art. 52)` MEANS
+        `o segurado preenche o requisito para a aposentadoria por tempo de contribuição (art. 52)`
+    AND `o tempo de contribuição do segurado em meses completos` AT LEAST `o tempo mínimo de contribuição em meses`
+    AND `a soma da idade e do tempo de contribuição em meses` AT LEAST (`a pontuação exigida` TIMES 12)
+    WHERE
+        `o tempo mínimo de contribuição em meses` MEANS
+            IF `o segurado comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio`
+            THEN (IF `o segurado`'s `sexo` EQUALS masculino THEN 30 TIMES 12 ELSE 25 TIMES 12)
+            ELSE (IF `o segurado`'s `sexo` EQUALS masculino THEN 35 TIMES 12 ELSE 30 TIMES 12)
+        `a soma da idade e do tempo de contribuição em meses` MEANS
+            `a idade do segurado em meses completos` PLUS `o tempo de contribuição do segurado em meses completos` PLUS `os pontos do magistério em meses`
+        `os pontos do magistério em meses` MEANS
+            IF `o segurado comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio`
+            THEN 5 TIMES 12
+            ELSE 0
+        `a data em que se mede a pontuação` MEANS
+            CONSIDER `a data em que o segurado alcançou o requisito da opção`
+            WHEN JUST `a data do cumprimento` THEN (IF `a data do cumprimento` AT MOST `a data do requerimento` THEN `a data do cumprimento` ELSE `a data do requerimento`)
+            WHEN NOTHING                      THEN `a data do requerimento`
+        `a pontuação exigida` MEANS
+            `art. 29-C, § 2º — pontuação exigida na data, em pontos` `o segurado` `a data em que se mede a pontuação`
+
+§§ `Art. 31 — o auxílio-acidente no cálculo das aposentadorias`
+
+-- "O valor mensal do auxílio-acidente integra o salário-de-contribuição, para fins de cálculo do
+-- salário-de-benefício de qualquer aposentadoria". The article also says "observado, no que couber,
+-- o disposto no art. 29 e no art. 86, § 5º"; in this text art. 86 § 5º is struck and marked
+-- "(Revogado pela Lei nº 9.032, de 1995)" (line 1154), so there is nothing live to observe there.
+-- NOTHING for a benefit that is not an aposentadoria: the article does not speak of it.
+-- src:531 | Art. 31. O valor mensal do auxílio-acidente integra o salário-de-contribuição, para fins de cálculo do salário-de-benefício de qualquer aposentadoria, observado, no que couber, o disposto no art. 29 e no art. 86, § 5º. (Restabelecido com nova redação pela Lei nº 9.528, de 1997)
+@ref art. 31 (src:531)
+GIVEN `a prestação` IS A Prestação
+      `o salário-de-contribuição do mês em reais` IS A NUMBER
+      `o valor mensal do auxílio-acidente em reais` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`art. 31 — salário-de-contribuição do mês com o valor do auxílio-acidente, para o cálculo da aposentadoria, em reais` `a prestação` `o salário-de-contribuição do mês em reais` `o valor mensal do auxílio-acidente em reais` MEANS
+    CONSIDER `a prestação`
+    WHEN `aposentadoria por invalidez`             THEN JUST (`o salário-de-contribuição do mês em reais` PLUS `o valor mensal do auxílio-acidente em reais`)
+    WHEN `aposentadoria por idade`                 THEN JUST (`o salário-de-contribuição do mês em reais` PLUS `o valor mensal do auxílio-acidente em reais`)
+    WHEN `aposentadoria por tempo de contribuição` THEN JUST (`o salário-de-contribuição do mês em reais` PLUS `o valor mensal do auxílio-acidente em reais`)
+    WHEN `aposentadoria especial`                  THEN JUST (`o salário-de-contribuição do mês em reais` PLUS `o valor mensal do auxílio-acidente em reais`)
+    OTHERWISE NOTHING
+
+§§ `Art. 32 — atividades concomitantes`
+
+-- The salário-de-benefício of the insured who contributes for concomitant activities is "calculado
+-- com base na soma dos salários de contribuição das atividades exercidas na data do requerimento
+-- ou do óbito, ou no período básico de cálculo, observado o disposto no art. 29". §§ 1 and 2 take
+-- out the insured who, obeying the maximum limit, contributed for only one of the activities, and
+-- the insured whose salários-de-contribuição were reduced by that limit. When either applies the
+-- article does not apply, and the text does not say what does: NOTHING. Incisos I to III are
+-- revoked (lines 536-549).
+-- src:533 | Art. 32. O salário de benefício do segurado que contribuir em razão de atividades concomitantes será calculado com base na soma dos salários de contribuição das atividades exercidas na data do requerimento ou do óbito, ou no período básico de cálculo, observado o disposto no art. 29 desta Lei.
+-- src:551 | § 1º O disposto neste artigo não se aplica ao segurado que, em obediência ao limite máximo do salário de contribuição, contribuiu apenas por uma das atividades concomitantes.
+-- src:554 | § 2º Não se aplica o disposto neste artigo ao segurado que tenha sofrido redução do salário de contribuição das atividades concomitantes em respeito ao limite máximo desse salário.
+@ref art. 32, caput e §§ 1º e 2º (src:533-554)
+GIVEN `os salários-de-contribuição das atividades concomitantes` IS A LIST OF NUMBER
+      `o segurado, em obediência ao limite máximo do salário-de-contribuição, contribuiu apenas por uma das atividades concomitantes` IS A BOOLEAN
+      `o segurado sofreu redução do salário-de-contribuição das atividades concomitantes em respeito ao limite máximo desse salário` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`art. 32 — soma dos salários-de-contribuição das atividades concomitantes que serve de base ao salário-de-benefício, em reais` `os salários-de-contribuição das atividades concomitantes` `o segurado, em obediência ao limite máximo do salário-de-contribuição, contribuiu apenas por uma das atividades concomitantes` `o segurado sofreu redução do salário-de-contribuição das atividades concomitantes em respeito ao limite máximo desse salário` MEANS
+    IF     (NOT `o segurado, em obediência ao limite máximo do salário-de-contribuição, contribuiu apenas por uma das atividades concomitantes`)
+       AND (NOT `o segurado sofreu redução do salário-de-contribuição das atividades concomitantes em respeito ao limite máximo desse salário`)
+    THEN JUST (sum `os salários-de-contribuição das atividades concomitantes`)
+    ELSE NOTHING

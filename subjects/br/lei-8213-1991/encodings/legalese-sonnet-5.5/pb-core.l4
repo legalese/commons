@@ -1,0 +1,309 @@
+IMPORT prelude
+IMPORT daydate
+
+-- pb-core.l4: the shared vocabulary for the encoding of Lei nº 8.213, de 24 de julho de 1991
+-- (Planos de Benefícios da Previdência Social), written for the stable l4 (1.6.98, target main).
+--
+-- WHAT IS HERE. Nouns (types and enumerations), units, the dates of the Law, and a few small
+-- helpers for dates and time limits. No rule of the Law is encoded here: the Law has no
+-- interpretation section, so the keel owns no provision. Every piece (pb1 to pb4) imports this
+-- module, and a type, a constructor or a helper that two or more pieces need is declared here
+-- once, so that the four pieces do not invent four spellings of the same thing.
+--
+-- RESERVED NAMES. Every name declared below belongs to this module. A piece must not declare a
+-- second one with the same name (two definitions of one name cannot be used at all, measured on
+-- 1.6.98 for `YMD`), and must not call one of its own fields, inputs or rules after a constructor
+-- below. NOTES.md lists them, and has the naming rules and the inputs the pieces share.
+--
+-- LANGUAGE. Identifiers are Brazilian Portuguese, spelled properly, accents kept. Comments are
+-- English. A quoted `-- src:N |` line is copied from the plain-text rendering of the Law (a
+-- script's output from Planalto's compilation; it is not the official text), by srcrefs.py.
+
+§ `Lei nº 8.213/1991: vocabulário comum`
+
+§§ `Datas e prazos`
+
+-- YMD is missing from the stable prelude. This is the one shim, and the pieces use it instead of
+-- writing their own (a second definition makes every use an error). It is Date with the year
+-- first, so YMD 1991 7 24 is Date 24 7 1991. Unlike the YMD of later builds it does not refuse an
+-- out-of-range month or day: Date rolls such a value over, so a day that does not exist is
+-- never passed to it here.
+GIVEN y IS A NUMBER
+      m IS A NUMBER
+      d IS A NUMBER
+GIVETH A DATE
+YMD y m d MEANS Date d m y
+
+-- The date of the Law is the date in its title. It is a fact about the text, not a fact about a
+-- case, so it is a constant and not an input.
+-- src:5 | LEI Nº 8.213, DE 24 DE JULHO DE 1991
+@ref título da Lei nº 8.213 (src:5)
+GIVETH A DATE
+`a data da Lei nº 8.213` MEANS YMD 1991 7 24
+
+-- The Law says when it enters into force by a rule (the date of its publication) and does not
+-- print that date. 25 July 1991 is the date of the Diário Oficial da União edition that the footer
+-- of Planalto's compilation names (line 1765). That footer is Planalto's note and not the Law's
+-- text, so it is not quoted here. FORK F-1 in NOTES.md: if that date is not accepted, change this
+-- one constant, or take the date as an input. Art. 142 names 24 July 1991 itself, so a piece that
+-- needs that day writes the date out.
+-- src:1760 | Art. 155. Esta Lei entra em vigor na data de sua publicação.
+@ref art. 155 (src:1760)
+GIVETH A DATE
+`a data de publicação da Lei nº 8.213 no Diário Oficial da União` MEANS YMD 1991 7 25
+
+@ref art. 155 (src:1760)
+GIVETH A DATE
+`a data de entrada em vigor da Lei nº 8.213` MEANS
+    `a data de publicação da Lei nº 8.213 no Diário Oficial da União`
+
+-- A time limit is a quantity and a unit. The Law counts in days, in months and in years, and a
+-- bare NUMBER does not say which (art. 49: "90 (noventa) dias"; art. 15: "12 (doze) meses"; art.
+-- 103: "10 (dez) anos"). Business days (art. 22, "primeiro dia útil seguinte") need a holiday
+-- calendar that no library supplies, so they have no unit here: the piece takes the date as an input.
+-- src:727 | a) da data do desligamento do emprego, quando requerida até essa data ou até 90 (noventa) dias depois dela; ou
+-- src:249 | II - até 12 (doze) meses após a cessação das contribuições, o segurado que deixar de exercer atividade remunerada …
+-- src:1304 | Art. 103. O prazo de decadência do direito ou da ação do segurado ou beneficiário para a revisão do ato de concessão …
+@ref arts. 49, I, a; 15, II; 103 (src:727) (src:249) (src:1304)
+DECLARE `Unidade de prazo` IS ONE OF
+    `em dias`
+    `em meses`
+    `em anos`
+
+@ref arts. 49, I, a; 15, II; 103 (src:727) (src:249) (src:1304)
+DECLARE Prazo HAS
+    `quantidade` IS A NUMBER
+    `unidade`    IS A `Unidade de prazo`
+
+@ref arts. 49, I, a; 15, II; 103 (src:727) (src:249) (src:1304)
+GIVEN n IS A NUMBER
+GIVETH A Prazo
+`prazo em dias` n MEANS Prazo WITH `quantidade` IS n, `unidade` IS `em dias`
+
+@ref arts. 49, I, a; 15, II; 103 (src:727) (src:249) (src:1304)
+GIVEN n IS A NUMBER
+GIVETH A Prazo
+`prazo em meses` n MEANS Prazo WITH `quantidade` IS n, `unidade` IS `em meses`
+
+@ref arts. 49, I, a; 15, II; 103 (src:727) (src:249) (src:1304)
+GIVEN n IS A NUMBER
+GIVETH A Prazo
+`prazo em anos` n MEANS Prazo WITH `quantidade` IS n, `unidade` IS `em anos`
+
+-- The last day on which an act is still in time, counting the time limit from a date. "Até 90
+-- dias depois" (art. 49, I, a) is the date plus 90 days, and the act on that day is in time, so
+-- a rule compares with AT MOST. Months and years are calendar months and years: `add months` and
+-- `add years` keep the day of the month and, where the month is shorter, stop at its last day
+-- (31 August plus 6 months is 28 February). That month-end rule comes from the daydate library,
+-- not from the Law (FORK F-2 in NOTES.md).
+@ref arts. 49, I, a; 15, II; 103 (src:727) (src:249) (src:1304)
+GIVEN `o prazo` IS A Prazo
+      `a data de partida` IS A DATE
+GIVETH A DATE
+`o dia em que termina` `o prazo` `contado de` `a data de partida` MEANS
+    CONSIDER `o prazo`'s `unidade`
+    WHEN `em dias`  THEN Date (Day `a data de partida` PLUS `o prazo`'s `quantidade`)
+    WHEN `em meses` THEN `add months` `a data de partida` (`o prazo`'s `quantidade`)
+    WHEN `em anos`  THEN `add years` `a data de partida` (`o prazo`'s `quantidade`)
+
+§§ `Pessoas e órgãos`
+
+-- The categories of insured person. Art. 11 lists them by inciso, and art. 13 adds the optional
+-- insured. Incisos III (empresário) and IV (trabalhador autônomo) of art. 11 are revoked in this
+-- text (Lei nº 9.876/1999), so they have no constructor: those persons are contribuintes
+-- individuais under inciso V. The constructors say "segurado" first, as the operative articles
+-- do ("segurado empregado", art. 60; "segurado especial", art. 11, VII).
+-- src:101 | Art. 11. São segurados obrigatórios da Previdência Social as seguintes pessoas físicas: (Redação dada pela Lei nº 8.647, de 1993)
+-- src:103 | I - como empregado: (Redação dada pela Lei nº 8.647, de 1993)
+-- src:114 | II - como empregado doméstico: aquele que presta serviço de natureza contínua a pessoa ou família, no âmbito residencial desta, em atividades sem …
+-- src:129 | V - como contribuinte individual: (Redação dada pela Lei nº 9.876, de 26.11.99)
+-- src:140 | VI - como trabalhador avulso: quem presta, a diversas empresas, sem vínculo empregatício, serviço de natureza urbana ou rural definidos no …
+-- src:142 | VII – como segurado especial: a pessoa física residente no imóvel rural ou em aglomerado urbano ou rural próximo a ele que, individualmente ou em …
+-- src:229 | Art. 13. É segurado facultativo o maior de 14 (quatorze) anos que se filiar ao Regime Geral de Previdência Social, mediante contribuição, desde que …
+@ref art. 11, I, II, V, VI e VII; art. 13 (src:101) (src:103) (src:114) (src:129) (src:140) (src:142) (src:229)
+DECLARE `Categoria de segurado` IS ONE OF
+    `segurado empregado`                  -- art. 11, I
+    `segurado empregado doméstico`        -- art. 11, II
+    `segurado contribuinte individual`    -- art. 11, V
+    `segurado trabalhador avulso`         -- art. 11, VI
+    `segurado especial`                   -- art. 11, VII
+    `segurado facultativo`                -- art. 13
+
+-- Sex. The Law turns on it for the age and the length of service ("se homem", "se mulher": art.
+-- 48, 29 § 9; "do sexo masculino", "do sexo feminino": arts. 51, 52, 97, 98). Homem and
+-- sexo masculino are the same constructor, mulher and sexo feminino the other.
+-- src:718 | Art. 48. A aposentadoria por idade será devida ao segurado que, cumprida a carência exigida nesta Lei, completar 65 (sessenta e cinco) anos de idade, se homem, e 60 (sessenta), se mulher. (Redação dada pela Lei nº 9.032, de 1995)
+-- src:731 | Art. 51. A aposentadoria por idade pode ser requerida pela empresa, desde que o segurado empregado tenha cumprido o período de carência e completado 70 (setenta) anos de idade, se do sexo masculino, ou 65 (sessenta e cinco) anos, se do sexo feminino, sendo compulsória, caso em que será garantida ao …
+-- src:734 | Art. 52. A aposentadoria por tempo de serviço será devida, cumprida a carência exigida nesta Lei, ao segurado que completar 25 (vinte e cinco) anos de serviço, se do sexo feminino, ou 30 (trinta) anos, se do sexo masculino.
+@ref arts. 48, 51 e 52 (src:718) (src:731) (src:734)
+DECLARE Sexo IS ONE OF
+    masculino
+    feminino
+
+-- The regimes of social security the Law names: art. 9 (the general and the complementary
+-- optional), and the regimes próprios of the servants and the military, which exclude a person
+-- from the general regime (art. 12) and take part in the reciprocal counting of time (art. 94).
+-- src:87 | Art. 9º A Previdência Social compreende:
+-- src:88 | I - o Regime Geral de Previdência Social;
+-- src:89 | II - o Regime Facultativo Complementar de Previdência Social.
+-- src:226 | Art. 12. O servidor civil ocupante de cargo efetivo ou o militar da União, dos Estados, do Distrito Federal ou dos Municípios, bem como o das …
+-- src:1216 | Art. 94. Para efeito dos benefícios previstos no Regime Geral de Previdência Social ou no serviço público é assegurada a contagem recíproca do tempo …
+@ref arts. 9, 12 e 94 (src:87-89) (src:226) (src:1216)
+DECLARE `Regime de previdência` IS ONE OF
+    `Regime Geral de Previdência Social`                     -- art. 9, I (RGPS)
+    `Regime Facultativo Complementar de Previdência Social`  -- art. 9, II
+    `regime próprio de previdência social`                   -- arts. 12, 94
+
+-- The relationships that make a person a dependant of the insured (art. 16). The enteado, the
+-- menor sob tutela and the menor sob guarda judicial are treated as a child on the insured's
+-- declaration, under conditions (art. 16 § 2), so each is its own kind and not a filho.
+-- src:264 | I - o cônjuge, a companheira, o companheiro e o filho não emancipado, de qualquer condição, menor de 21 (vinte e um) anos ou inválido ou que tenha …
+-- src:265 | II - os pais;
+-- src:271 | III - o irmão não emancipado, de qualquer condição, menor de 21 (vinte e um) anos ou inválido ou que tenha deficiência intelectual ou mental ou …
+-- src:277 | § 2º O enteado, o menor sob tutela e o menor sob guarda judicial equiparam-se a filho, mediante declaração do segurado e desde que não possuam …
+-- src:278 | § 3º Considera-se companheira ou companheiro a pessoa que, sem ser casada, mantém união estável com o segurado ou com a segurada, de acordo com o § …
+-- src:279 | § 4º A dependência econômica das pessoas indicadas no inciso I é presumida e a das demais deve ser comprovada
+@ref art. 16, I a III e §§ 2º a 4º (src:264-265) (src:271) (src:277-279)
+DECLARE `Parentesco com o segurado` IS ONE OF
+    `cônjuge`                      -- art. 16, I
+    `companheiro ou companheira`   -- art. 16, I and § 3
+    `filho`                        -- art. 16, I
+    `enteado`                      -- art. 16, § 2
+    `menor sob tutela`             -- art. 16, § 2
+    `menor sob guarda judicial`    -- art. 16, § 2
+    `pai ou mãe`                   -- art. 16, II ("os pais")
+    `irmão`                        -- art. 16, III
+
+-- The three classes of dependant. A dependant of one class excludes those of the following
+-- classes from the benefits (art. 16 § 1). The Law numbers the classes by the incisos.
+-- src:273 | § 1º A existência de dependente de qualquer das classes deste artigo exclui do direito às prestações os das classes seguintes.
+@ref art. 16, § 1º (src:273)
+DECLARE `Classe de dependente` IS ONE OF
+    `classe do inciso I do art. 16`      -- cônjuge, companheiro, filho
+    `classe do inciso II do art. 16`     -- os pais
+    `classe do inciso III do art. 16`    -- o irmão
+
+-- The bodies and persons on whom the Law lays a duty or to whom it gives a power. A regulative
+-- rule uses these as its parties (PARTY segurado MUST ...). The seat of the encoding is the
+-- insured and the dependant; the INSS, the Previdência Social and the others appear only as what
+-- they must do for them. The names carry no article, so that they never meet the inputs a piece
+-- names `o segurado` and `o dependente` (the records below).
+-- src:231 | I - empresa - a firma individual ou sociedade que assume o risco de atividade econômica urbana ou rural, com fins lucrativos ou não, bem como os …
+-- src:232 | II - empregador doméstico - a pessoa ou família que admite a seu serviço, sem finalidade lucrativa, empregado doméstico.
+-- src:390 | Art. 22. A empresa ou o empregador doméstico deverão comunicar o acidente do trabalho à Previdência Social até o primeiro dia útil seguinte …
+-- src:1547 | Art. 125-A. Compete ao Instituto Nacional do Seguro Social – INSS realizar, por meio dos seus próprios agentes, quando designados, todos os atos e …
+@ref arts. 14, 22 e 125-A (src:231-232) (src:390) (src:1547)
+DECLARE Parte IS ONE OF
+    segurado                     -- the insured (art. 10)
+    dependente                   -- the dependant (art. 10)
+    empresa                      -- art. 14, I and sole paragraph
+    `empregador doméstico`       -- art. 14, II
+    INSS                         -- Instituto Nacional do Seguro Social
+    `Previdência Social`
+
+-- The insured person, with the three facts that nearly every provision reads. A fact only one
+-- piece reads is that piece's own input, not a field here. The age is in whole years on the date
+-- the rule being applied asks about (the date of the request, of the death, of the birth ...);
+-- a rule that needs the age on another date takes it as a separate input.
+-- src:97 | Art. 10. Os beneficiários do Regime Geral de Previdência Social classificam-se como segurados e dependentes, nos termos das Seções I e II deste …
+@ref art. 10 (src:97)
+DECLARE Segurado HAS
+    `categoria`                IS A `Categoria de segurado`
+    `sexo`                     IS A Sexo
+    `idade em anos completos`  IS A NUMBER
+
+-- The dependant, with the facts that art. 16 reads to decide who is one. Names start at the
+-- complement ("inválido", not "é inválido"): the genitive 's already supplies the verb. The
+-- conditions are stated positively: "emancipado" is the fact, and "filho não emancipado" is
+-- the rule that uses it. The age is in whole years on the date the rule asks about, as for the
+-- insured (art. 16 reads "menor de 21 anos" on the date of the death or of the imprisonment).
+-- src:264 | I - o cônjuge, a companheira, o companheiro e o filho não emancipado, de qualquer condição, menor de 21 (vinte e um) anos ou inválido ou que tenha …
+-- src:271 | III - o irmão não emancipado, de qualquer condição, menor de 21 (vinte e um) anos ou inválido ou que tenha deficiência intelectual ou mental ou …
+-- src:279 | § 4º A dependência econômica das pessoas indicadas no inciso I é presumida e a das demais deve ser comprovada
+@ref art. 16, I e III e § 4º (src:264) (src:271) (src:279)
+DECLARE Dependente HAS
+    `parentesco`                                                   IS A `Parentesco com o segurado`
+    `idade em anos completos`                                      IS A NUMBER
+    `emancipado`                                                   IS A BOOLEAN
+    `inválido`                                                     IS A BOOLEAN
+    `deficiência intelectual ou mental ou deficiência grave`       IS A BOOLEAN
+    `dependência econômica comprovada`                             IS A BOOLEAN
+
+§§ `Prestações`
+
+-- The benefits and services of the general regime: the list of art. 18, in its order (inciso I,
+-- the insured; II, the dependant; III, both), live items only. The Law also uses other names for
+-- some of them (FORK F-3 in NOTES.md): "aposentadoria por incapacidade permanente" is
+-- `aposentadoria por invalidez`, "auxílio por incapacidade temporária" is `auxílio-doença`, and
+-- the "aposentadoria por tempo de serviço" of arts. 52 to 56 and 97 is
+-- `aposentadoria por tempo de contribuição`. `abono de permanência em serviço` is not on the
+-- list (art. 18, I, i, is revoked) but arts. 80 and 124, III still name it, and two pieces need
+-- it. The abono anual of art. 40 is a payment that follows from these benefits, not one of them.
+-- src:309 | Art. 18. O Regime Geral de Previdência Social compreende as seguintes prestações, devidas inclusive em razão de eventos decorrentes de acidente do …
+-- src:310 | I - quanto ao segurado:
+-- src:311 | a) aposentadoria por invalidez;
+-- src:312 | b) aposentadoria por idade;
+-- src:314 | c) aposentadoria por tempo de contribuição;
+-- src:316 | d) aposentadoria especial;
+-- src:317 | e) auxílio-doença;
+-- src:318 | f) salário-família;
+-- src:319 | g) salário-maternidade;
+-- src:320 | h) auxílio-acidente;
+-- src:322 | II - quanto ao dependente:
+-- src:323 | a) pensão por morte;
+-- src:324 | b) auxílio-reclusão;
+-- src:325 | III - quanto ao segurado e dependente:
+-- src:333 | b) serviço social;
+-- src:334 | c) reabilitação profissional.
+-- src:1087 | de aposentadoria ou de abono de permanência em serviço.
+-- src:1486 | III - aposentadoria e abono de permanência em serviço;
+@ref art. 18, I a III; art. 80; art. 124, III (src:309-314) (src:316-325) (src:333-334) (src:1087) (src:1486)
+DECLARE `Prestação` IS ONE OF
+    `aposentadoria por invalidez`                -- art. 18, I, a
+    `aposentadoria por idade`                    -- art. 18, I, b
+    `aposentadoria por tempo de contribuição`    -- art. 18, I, c
+    `aposentadoria especial`                     -- art. 18, I, d
+    `auxílio-doença`                             -- art. 18, I, e
+    `salário-família`                            -- art. 18, I, f
+    `salário-maternidade`                        -- art. 18, I, g
+    `auxílio-acidente`                           -- art. 18, I, h
+    `pensão por morte`                           -- art. 18, II, a
+    `auxílio-reclusão`                           -- art. 18, II, b
+    `serviço social`                             -- art. 18, III, b
+    `reabilitação profissional`                  -- art. 18, III, c
+    `abono de permanência em serviço`            -- arts. 80, 124, III (art. 18, I, i, revoked)
+
+-- How long a benefit lasts, which the Law gives in four shapes. A fixed period ("durante 120
+-- dias", art. 71; "4 (quatro) meses", art. 77 § 2, V, b); until a date that the facts fix ("ao
+-- completar vinte e um anos de idade", art. 77 § 2, II); for as long as a condition lasts
+-- ("enquanto permanecer nesta condição", art. 42; "enquanto ele permanecer incapaz", art. 60);
+-- and for life ("vitalícia", art. 77 § 2, V, c, 6).
+-- src:672 | e ser-lhe-á paga enquanto permanecer nesta condição.
+-- src:809 | Art. 60. O auxílio-doença será devido ao segurado empregado a contar do décimo sexto dia do afastamento da atividade, e, no caso dos demais segurados, a contar da data do início da incapacidade e enquanto ele permanecer incapaz. (Redação dada pela Lei nº 9.876, de 26.11.99)
+-- src:915 | Art. 71. O salário-maternidade é devido à segurada da Previdência Social, durante 120 (cento e vinte) dias, com início no período entre 28 (vinte e …
+-- src:1030 | II - para o filho, a pessoa a ele equiparada ou o irmão, de ambos os sexos, ao completar vinte e um anos de idade, salvo se for inválido ou tiver …
+-- src:1044 | b) em 4 (quatro) meses, se o óbito ocorrer sem que o segurado tenha vertido 18 (dezoito) contribuições …
+-- src:1051 | 6) vitalícia, com 44 (quarenta e quatro) ou mais anos de idade. (Incluído pela Lei nº 13.135, de 2015)
+@ref arts. 42, 60, 71 e 77, § 2º (src:672) (src:809) (src:915) (src:1030) (src:1044) (src:1051)
+DECLARE `Duração do benefício` IS ONE OF
+    `por prazo certo`      HAS `o prazo` IS A Prazo
+    `até uma data certa`   HAS `a data` IS A DATE
+    `enquanto persistir a condição que o justifica`
+    `vitalícia`
+
+§§ `Valores de referência`
+
+-- Three amounts that the Law uses and does not fix. They are set outside the Law and move over
+-- time (art. 134 readjusts the money values in the Law with the benefits), so a rule takes them
+-- as an input. All three are in reais, per month. The "menor benefício de prestação continuada"
+-- of art. 11 § 9 is not here: only art. 11 reads it, and the Law does not say it equals the
+-- salário mínimo.
+-- src:390 | sob pena de multa variável entre o limite mínimo e o limite máximo do salário de contribuição
+-- src:470 | § 2º O valor do salário-de-benefício não será inferior ao de um salário mínimo, nem superior ao do limite máximo do salário-de-contribuição na data de início do benefício.
+-- src:558 | Art. 33. A renda mensal do benefício de prestação continuada que substituir o salário-de-contribuição ou o rendimento do trabalho do segurado não terá valor inferior ao do salário-mínimo, nem superior ao do limite máximo do salário-de-contribuição, ressalvado o disposto no art. 45 desta Lei.
+-- src:724 | considerando-se como salário-de-contribuição mensal do período como segurado especial o limite mínimo de salário-de-contribuição da Previdência Social.
+@ref arts. 22; 29, § 2º; 33; 48, § 4º (src:390) (src:470) (src:558) (src:724)
+DECLARE `Valores de referência` HAS
+    `salário mínimo`                              IS A NUMBER
+    `limite máximo do salário-de-contribuição`    IS A NUMBER
+    `limite mínimo do salário-de-contribuição`    IS A NUMBER
