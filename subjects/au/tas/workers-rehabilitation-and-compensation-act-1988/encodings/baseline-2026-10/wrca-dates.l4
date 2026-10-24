@@ -1,0 +1,127 @@
+IMPORT prelude
+
+-- Workers Rehabilitation and Compensation Act 1988 (Tas) -- the calendar arithmetic of this encoding, in one small module.
+--
+-- It uses only the built-in date functions (DATE_FROM_DMY, DATE_SERIAL, DATE_FROM_SERIAL, DATE_DAY, DATE_MONTH,
+-- DATE_YEAR), not the daydate library, which makes the stable l4 slow to check the larger modules that import it.
+-- DATE_SERIAL counts days; a serial MODULO 7 gives the weekday, 0 for Sunday to 6 for Saturday (asserted in
+-- wrca-cases-core.l4: Monday 26 October 2026).
+--
+-- READINGS, none of them stated by the Act:
+--   * "working day, in relation to a worker's place of employment, means any day on which work is normally carried on at
+--     that place" (s 3(1)). Which days those are is a fact about the workplace: the caller names its normal working week
+--     (Monday to Friday, Monday to Saturday, or every day) and how many days in the period the place is closed although
+--     the day is in its normal week (public holidays, a shutdown); each closure day adds a day.
+--   * "within N working days of / after receiving" a claim: the last day is the Nth working day after the day of receipt,
+--     that day itself not counted.
+--   * "within N days" of a day: the last day is N days after it.
+--   * "within 6 months after" a day, and "N years after" a day: the same day of the month that many months later, or that
+--     month's last day where it is shorter (31 August plus 6 months is 28 or 29 February; 29 February plus a year is
+--     28 February).
+--   * A person "attains" an age on the day that many years after the day of birth (the same reading).
+--
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Dates for the Workers Rehabilitation and Compensation Act`
+
+-- A date from day, month and year, so that the case files can write dates without the daydate library.
+GIVEN d IS A NUMBER, m IS A NUMBER, y IS A NUMBER
+GIVETH A DATE
+`the calendar date` d m y MEANS DATE_FROM_DMY d m y
+
+GIVEN `the day` IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the day` `plus days` n MEANS DATE_FROM_SERIAL (DATE_SERIAL `the day` PLUS n)
+
+GIVEN `the first day` IS A DATE, `the second day` IS A DATE
+GIVETH A NUMBER
+`days from` `the first day` `to` `the second day` MEANS DATE_SERIAL `the second day` MINUS DATE_SERIAL `the first day`
+
+GIVEN `the first day` IS A DATE, `the second day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the first day` `is on or before` `the second day` IF DATE_SERIAL `the first day` AT MOST DATE_SERIAL `the second day`
+
+GIVEN `the first day` IS A DATE, `the second day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the first day` `is before` `the second day` IF DATE_SERIAL `the first day` LESS THAN DATE_SERIAL `the second day`
+
+GIVEN `the first day` IS A DATE, `the second day` IS A DATE
+GIVETH A DATE
+`the earlier of` `the first day` `and` `the second day` MEANS
+    IF `the first day` `is on or before` `the second day` THEN `the first day` ELSE `the second day`
+
+GIVEN `the first day` IS A DATE, `the second day` IS A DATE
+GIVETH A DATE
+`the later of` `the first day` `and` `the second day` MEANS
+    IF `the first day` `is on or before` `the second day` THEN `the second day` ELSE `the first day`
+
+-- 0 for Sunday, 1 for Monday ... 6 for Saturday.
+GIVEN `the day` IS A DATE
+GIVETH A NUMBER
+`the weekday number of` `the day` MEANS DATE_SERIAL `the day` MODULO 7
+
+§§ `Working days`
+
+-- The normal working week of the worker's place of employment (s 3(1) "working day").
+DECLARE `Working week` IS ONE OF
+    `Monday to Friday`
+    `Monday to Saturday`
+    `every day of the week`
+
+GIVEN week IS A `Working week`, `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is in the normal working week` week `the day` IF
+    CONSIDER week
+    WHEN `Monday to Friday`      THEN (`the weekday number of` `the day`) AT LEAST 1 AND (`the weekday number of` `the day`) AT MOST 5
+    WHEN `Monday to Saturday`    THEN (`the weekday number of` `the day`) AT LEAST 1
+    WHEN `every day of the week` THEN TRUE
+
+-- The Nth day of the normal working week after a day, the day itself not counted.
+GIVEN week IS A `Working week`, n IS A NUMBER, `the day` IS A DATE
+GIVETH A DATE
+`the working day` week n `after` `the day` MEANS
+    IF n AT MOST 0
+    THEN `the day`
+    ELSE IF `is in the normal working week` week (`the day` `plus days` 1)
+         THEN `the working day` week (n MINUS 1) `after` (`the day` `plus days` 1)
+         ELSE `the working day` week n `after` (`the day` `plus days` 1)
+
+-- READING (above): the last of N working days after a day, with the number of days in the period on which the place of
+-- employment is closed although the day is in its normal working week.
+GIVEN n IS A NUMBER, `the day` IS A DATE, week IS A `Working week`, `closure days in the period` IS A NUMBER
+GIVETH A DATE
+`the last of` n `working days after` `the day` `in a` week `with closure days` `closure days in the period` MEANS
+    `the working day` week (n PLUS `closure days in the period`) `after` `the day`
+
+§§ `Months and years`
+
+GIVEN m IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the number of days in month` m `of` y MEANS
+    IF m EQUALS 12
+    THEN 31
+    ELSE DATE_SERIAL (DATE_FROM_DMY 1 (m PLUS 1) y) MINUS DATE_SERIAL (DATE_FROM_DMY 1 m y)
+
+GIVEN a IS A NUMBER, b IS A NUMBER
+GIVETH A NUMBER
+`the smaller number of` a `and` b MEANS IF a AT MOST b THEN a ELSE b
+
+-- READING (above): the same day of the month N months later, or that month's last day where it is shorter.
+GIVEN `the day` IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the day` `plus months` n MEANS
+    DATE_FROM_DMY (`the smaller number of` (DATE_DAY `the day`) `and` (`the number of days in month` `the new month` `of` `the new year`)) `the new month` `the new year`
+    WHERE
+        `the month count` MEANS (DATE_YEAR `the day` TIMES 12) PLUS (DATE_MONTH `the day` MINUS 1) PLUS n
+        `the new year`    MEANS FLOOR (`the month count` DIVIDED BY 12)
+        `the new month`   MEANS (`the month count` MINUS (`the new year` TIMES 12)) PLUS 1
+
+GIVEN `the day` IS A DATE, n IS A NUMBER
+GIVETH A DATE
+`the day` `plus years` n MEANS `the day` `plus months` (n TIMES 12)
+
+-- READING (above): the day a person attains an age in whole years.
+GIVEN `the date of birth` IS A DATE, `the age in years` IS A NUMBER
+GIVETH A DATE
+`the day a person born on` `the date of birth` `attains the age of` `the age in years` MEANS
+    `the date of birth` `plus years` `the age in years`

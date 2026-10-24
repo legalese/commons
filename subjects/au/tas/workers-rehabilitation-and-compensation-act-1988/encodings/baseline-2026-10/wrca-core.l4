@@ -1,0 +1,1135 @@
+IMPORT prelude
+IMPORT `wrca-dates`
+
+-- Workers Rehabilitation and Compensation Act 1988 (Tas) -- the seat-neutral core.
+--
+-- In the Act's own actors and terms: the worker, the employer, the employer's licensed insurer, the dependants. Computations
+-- (basic salary units, normal weekly earnings, the weekly payment and its step-downs, the cessation date, the impairment and
+-- death lump sums, the expense caps, the deadlines) are functions. Where the text says "must" or "shall" or sets a period,
+-- there is a regulative rule (DEONTIC) with the worker, the employer or the insurer as party. The worker's questions are in
+-- wrca-seat.l4 and the employer's in wrca-seat-employer.l4; they call these rules and restate none.
+--
+-- Edition: the consolidation published 2025-12-01, current at 2026-10-20, deposited at
+-- ../../registers/source-bundle/act-1988-004.txt; with the Workers Rehabilitation and Compensation Regulations 2021,
+-- consolidation published 2022-02-18, current at 2026-10-20, deposited at
+-- ../../../workers-rehabilitation-and-compensation-regulations-2021/registers/source-bundle/sr-2021-049.txt.
+--
+-- INPUTS the deposit does not hold: the basic salary for a year (s 3(1), gazetted under s 66); the worker's pension age
+-- (Social Security Act 1991 (Cth), s 87(1AA)); the commencement of the Workers Rehabilitation and Compensation Amendment
+-- Act 2022 is read from the history note "Applied:01 Mar 2023"; the State Service Award travel rates (s 76(3), reg 22).
+--
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Workers Rehabilitation and Compensation Act 1988 -- the seat-neutral core`
+
+§§ `Helpers, and the answer for a case the deposit cannot decide`
+
+GIVEN a IS A NUMBER, b IS A NUMBER
+GIVETH A NUMBER
+`the greater of` a `and` b MEANS IF a AT LEAST b THEN a ELSE b
+
+GIVEN a IS A NUMBER, b IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` a `and` b MEANS IF a AT MOST b THEN a ELSE b
+
+-- Half up, for reg 20 ("rounded to the nearest whole number"; the text does not say which way a half goes).
+GIVEN x IS A NUMBER
+GIVETH A NUMBER
+`rounded to the nearest whole number` x MEANS FLOOR (x PLUS 0.5)
+
+DECLARE `Why not covered` IS ONE OF
+    `s 87 as in force before 1 March 2023 governs an injury before that day, and that version is not deposited`
+    `s 67(2) does not say how the lump sum is paid where the only dependants are not a spouse, caring partner or child`
+    `s 67(2) does not say how the lump sum is paid where some children are wholly and some partially dependent and there is no dependent spouse or caring partner`
+
+§§ `ss 3, 65, 66 -- basic salary, units and child`
+
+-- s 3(1) "basic salary means (a) during the year beginning 1 January 1991, $311.30; and (b) during any subsequent year
+-- beginning 1 January, the basic salary for the previous year as varied by the relevant percentage". s 65 "relevant
+-- percentage": the change in Tasmanian adult average weekly ordinary full-time earnings between the two Mays before the
+-- year, from the Australian Statistician. s 66: the Minister gazettes the figure before each 1 January. The current
+-- figure is not in the deposited text, so the basic salary for a year is an INPUT, never computed from the 1991 figure.
+`the basic salary for 1991` MEANS 311.30
+
+-- s 65: "unit means the amount represented by the basic salary". The death and impairment maximum is 415 units.
+`the s 67 and s 71 maximum in units` MEANS 415
+
+GIVEN n IS A NUMBER, bs IS A NUMBER
+GIVETH A NUMBER
+`the dollars in` n `units at a basic salary of` bs MEANS n TIMES bs
+
+-- s 65: "child means a person who (a) is under the age of 16 years; or (b) is 16 years or more, but less than 21 years
+-- and is a full-time student"; "dependent child means a child who is a dependant".
+GIVEN age IS A NUMBER, `is a full-time student` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a person aged` age `is a child under s 65, being a full-time student or not` `is a full-time student` IF
+        age LESS THAN 16
+    OR  (age AT LEAST 16 AND age LESS THAN 21 AND `is a full-time student`)
+
+-- The age in whole years on a day, on the reading in wrca-dates.l4 of when an age is attained.
+GIVEN dob IS A DATE, d IS A DATE
+GIVETH A NUMBER
+`the age in whole years of a person born on` dob `on` d MEANS
+    IF (`the day a person born on` dob `attains the age of` `the year difference`) `is on or before` d
+    THEN `the year difference`
+    ELSE `the year difference` MINUS 1
+    WHERE
+        `the year difference` MEANS DATE_YEAR d MINUS DATE_YEAR dob
+
+§§ `s 25 -- the employer's liability`
+
+-- s 25(1): "If in any employment (a) a worker suffers an injury, not being a disease, arising out of or in the course of
+-- his employment; or (b) a worker suffers an injury, which is a disease and to which his employment contributed to a
+-- substantial degree, within the meaning of section 3(2A) -- his employer is ... liable to pay compensation". s 3(2A):
+-- "employment contributed to a disease to a substantial degree only if it is the major or most significant factor".
+-- s 3(1) "worker": a person under a contract of service or training contract with an employer. Taken as facts, with the
+-- exclusions that turn the same facts: s 25(1A) (a mental disease from reasonable management action), s 25(2)(a)
+-- (serious and wilful misconduct unless death or serious and permanent incapacity; intentional self-injury) and s 25(6)
+-- (journeys, temporary absences and off-site activities without the employer's request, direction or authority).
+DECLARE `Liability facts` HAS
+    `the person works for the employer under a contract of service or a training contract`                          IS A BOOLEAN
+    `the injury is a disease`                                                                                      IS A BOOLEAN
+    `the injury arose out of or in the course of the employment`                                                   IS A BOOLEAN
+    `the injury occurred in circumstances that s 25(6) says do not arise from the employment`                     IS A BOOLEAN
+    `the employment was the major or most significant factor contributing to the disease`                         IS A BOOLEAN
+    `the disease is an illness or disorder of the mind arising substantially from reasonable management action`  IS A BOOLEAN
+    `the injury is attributable to the worker's serious and wilful misconduct`                                    IS A BOOLEAN
+    `the injury resulted in the death or serious and permanent incapacity of the worker`                          IS A BOOLEAN
+    `the injury was intentionally self-inflicted`                                                                  IS A BOOLEAN
+
+DECLARE `Liability answer` IS ONE OF
+    `the employer is liable to pay compensation (s 25(1))`
+    `not liable: the person is not the employer's worker (s 3(1))`
+    `not liable: the injury did not arise out of or in the course of the employment (s 25(1)(a), (6))`
+    `not liable: the employment was not the major or most significant factor in the disease (s 25(1)(b), s 3(2A))`
+    `not liable: a mental disease arising substantially from reasonable management action (s 25(1A))`
+    `not liable: the injury is attributable to the worker's serious and wilful misconduct (s 25(2)(a)(i))`
+    `not liable: an intentional self-inflicted injury (s 25(2)(a)(ii))`
+
+GIVEN f IS A `Liability facts`
+GIVETH A `Liability answer`
+`the employer's liability under s 25` f MEANS
+    BRANCH
+        IF NOT (f's `the person works for the employer under a contract of service or a training contract`)
+            THEN `not liable: the person is not the employer's worker (s 3(1))`
+        IF (NOT (f's `the injury is a disease`)) AND ((NOT (f's `the injury arose out of or in the course of the employment`)) OR f's `the injury occurred in circumstances that s 25(6) says do not arise from the employment`)
+            THEN `not liable: the injury did not arise out of or in the course of the employment (s 25(1)(a), (6))`
+        IF f's `the injury is a disease` AND (NOT (f's `the employment was the major or most significant factor contributing to the disease`))
+            THEN `not liable: the employment was not the major or most significant factor in the disease (s 25(1)(b), s 3(2A))`
+        IF f's `the injury is a disease` AND f's `the disease is an illness or disorder of the mind arising substantially from reasonable management action`
+            THEN `not liable: a mental disease arising substantially from reasonable management action (s 25(1A))`
+        IF f's `the injury is attributable to the worker's serious and wilful misconduct` AND (NOT (f's `the injury resulted in the death or serious and permanent incapacity of the worker`))
+            THEN `not liable: the injury is attributable to the worker's serious and wilful misconduct (s 25(2)(a)(i))`
+        IF f's `the injury was intentionally self-inflicted`
+            THEN `not liable: an intentional self-inflicted injury (s 25(2)(a)(ii))`
+        OTHERWISE `the employer is liable to pay compensation (s 25(1))`
+
+GIVEN f IS A `Liability facts`
+GIVETH A BOOLEAN
+DECIDE `the employer is liable under s 25` f IF
+    CONSIDER `the employer's liability under s 25` f
+    WHEN `the employer is liable to pay compensation (s 25(1))` THEN TRUE
+    OTHERWISE FALSE
+
+§§ `ss 32, 34, 37, 38 -- notice of injury and the time for a claim`
+
+-- s 32(1): no entitlement "unless (a) notice of the injury has, as soon as practicable after the occurrence of the injury
+-- and before the worker has voluntarily left the employment in which he suffered the injury, been given to the employer
+-- ...; and (b) a claim for compensation ... has been made within 6 months after the date of the occurrence of the injury,
+-- or where the injury results in the death of the worker, within 6 months after the date of the death." (2): not for
+-- industrial deafness, whose claim must be made "while the worker is still in the employment of the employer or within
+-- 6 months after the termination of that employment". (3): a claim received counts as notice. s 34(2): a claim is not
+-- made until both the claim and the medical certificate have been given. READING: "within 6 months after" a day ends on
+-- the same day of the month 6 months later (wrca-dates.l4).
+DECLARE `Claim timing facts` HAS
+    `the day of the injury`                           IS A DATE
+    `the injury resulted in the death of the worker`  IS A BOOLEAN
+    `the day of the death`                            IS A DATE
+    `the injury is industrial deafness`               IS A BOOLEAN
+    `the worker is still employed by the employer`    IS A BOOLEAN
+    `the day the employment ended`                    IS A DATE
+
+`the s 32 months` MEANS 6
+
+DECLARE `Claim deadline` IS ONE OF
+    `the claim must be made on or before` HAS `the last day` IS A DATE
+    `no deadline yet: an industrial deafness claim may be made while the worker is still employed by the employer (s 32(2))`
+
+GIVEN f IS A `Claim timing facts`
+GIVETH A `Claim deadline`
+`the s 32 deadline for the claim` f MEANS
+    IF f's `the injury is industrial deafness`
+    THEN IF f's `the worker is still employed by the employer`
+         THEN `no deadline yet: an industrial deafness claim may be made while the worker is still employed by the employer (s 32(2))`
+         ELSE `the claim must be made on or before` ((f's `the day the employment ended`) `plus months` `the s 32 months`)
+    ELSE IF f's `the injury resulted in the death of the worker`
+         THEN `the claim must be made on or before` ((f's `the day of the death`) `plus months` `the s 32 months`)
+         ELSE `the claim must be made on or before` ((f's `the day of the injury`) `plus months` `the s 32 months`)
+
+DECLARE `Claim time answer` IS ONE OF
+    `the claim is in time (s 32)`
+    `the claim is late but valid: the failure was occasioned by mistake, absence from the State or other reasonable cause (s 38)`
+    `the claim is out of time: no entitlement to compensation (s 32(1)(b))`
+    `the claim is out of time: proceedings for industrial deafness are not maintainable (s 32(2))`
+
+-- s 38(1): a late claim stays valid "if the failure was occasioned by mistake, absence from the State of the worker, or
+-- other reasonable cause"; (2)(aa) counts as reasonable cause the employer's failure to comply with s 33A. Whether the
+-- failure was so occasioned is a judgment (the Tribunal decides a dispute, s 38(3)): two INPUTS.
+GIVEN f IS A `Claim timing facts`, `the day the claim was made` IS A DATE
+      `the lateness was occasioned by the employer's failure to give the s 33A notice` IS A BOOLEAN
+      `the lateness was occasioned by mistake, absence from the State or other reasonable cause` IS A BOOLEAN
+GIVETH A `Claim time answer`
+`whether the claim is in time under s 32` f `the day the claim was made` `the lateness was occasioned by the employer's failure to give the s 33A notice` `the lateness was occasioned by mistake, absence from the State or other reasonable cause` MEANS
+    CONSIDER `the s 32 deadline for the claim` f
+    WHEN `no deadline yet: an industrial deafness claim may be made while the worker is still employed by the employer (s 32(2))` THEN `the claim is in time (s 32)`
+    WHEN `the claim must be made on or before` last THEN
+        IF `the day the claim was made` `is on or before` last
+        THEN `the claim is in time (s 32)`
+        ELSE IF `the lateness was occasioned by the employer's failure to give the s 33A notice` OR `the lateness was occasioned by mistake, absence from the State or other reasonable cause`
+             THEN `the claim is late but valid: the failure was occasioned by mistake, absence from the State or other reasonable cause (s 38)`
+             ELSE IF f's `the injury is industrial deafness`
+                  THEN `the claim is out of time: proceedings for industrial deafness are not maintainable (s 32(2))`
+                  ELSE `the claim is out of time: no entitlement to compensation (s 32(1)(b))`
+
+DECLARE `Notice answer` IS ONE OF
+    `the notice requirement does not apply to industrial deafness (s 32(2))`
+    `notice was given as s 32(1)(a) requires`
+    `notice was late or missing, but s 37 excuses it`
+    `notice was not given as s 32(1)(a) requires: no entitlement to compensation`
+
+-- "As soon as practicable" is a judgment: an INPUT. s 37(1): a failure in the notice does not affect the right to claim
+-- if it "was occasioned by mistake, absence from the State of the worker or other reasonable cause" and the employer's
+-- defence is found not to be prejudiced: one INPUT, the finding.
+GIVEN `the injury is industrial deafness` IS A BOOLEAN
+      `notice of the injury, or a claim, was given to the employer as soon as practicable after the injury` IS A BOOLEAN
+      `it was given before the worker voluntarily left the employment` IS A BOOLEAN
+      `the failure had a reasonable cause and the employer's defence is not prejudiced` IS A BOOLEAN
+GIVETH A `Notice answer`
+`whether notice of the injury was given under s 32(1)(a)` `the injury is industrial deafness` `notice of the injury, or a claim, was given to the employer as soon as practicable after the injury` `it was given before the worker voluntarily left the employment` `the failure had a reasonable cause and the employer's defence is not prejudiced` MEANS
+    BRANCH
+        IF `the injury is industrial deafness`
+            THEN `the notice requirement does not apply to industrial deafness (s 32(2))`
+        IF `notice of the injury, or a claim, was given to the employer as soon as practicable after the injury` AND `it was given before the worker voluntarily left the employment`
+            THEN `notice was given as s 32(1)(a) requires`
+        IF `the failure had a reasonable cause and the employer's defence is not prejudiced`
+            THEN `notice was late or missing, but s 37 excuses it`
+        OTHERWISE `notice was not given as s 32(1)(a) requires: no entitlement to compensation`
+
+§§ `ss 69(2), (2A), (14) and 70(2) -- normal weekly earnings`
+
+-- s 70(2)(ab) and s 69B(2D) use the same four conditions for counting overtime or excess hours.
+DECLARE `Overtime facts` HAS
+    `the overtime or excess hours were a requirement of the contract of employment`                       IS A BOOLEAN
+    `they were worked in a regular and established pattern and in accordance with a roster`               IS A BOOLEAN
+    `the pattern was substantially uniform as to the number of hours`                                     IS A BOOLEAN
+    `the worker would have continued to work them in that pattern if not incapacitated`                   IS A BOOLEAN
+
+GIVEN o IS AN `Overtime facts`
+GIVETH A BOOLEAN
+DECIDE `the overtime counts under s 70(2)(ab) and s 69B(2D)` o IF
+        o's `the overtime or excess hours were a requirement of the contract of employment`
+    AND o's `they were worked in a regular and established pattern and in accordance with a roster`
+    AND o's `the pattern was substantially uniform as to the number of hours`
+    AND o's `the worker would have continued to work them in that pattern if not incapacitated`
+
+-- s 70(2)(b), (d): with contracts of service with 2 or more employers, the earnings are added up; but "where one of the
+-- contracts ... is a full-time contract of service, the normal weekly earnings ... shall be computed by reference only
+-- to the full-time contract of service".
+DECLARE `Full-time contract` IS ONE OF
+    `none of the contracts is full-time`
+    `the contract with this employer is full-time`
+    `a contract with another employer is full-time` HAS `the average weekly earnings in it` IS A NUMBER
+
+DECLARE `Earnings facts` HAS
+    `the day the incapacity began`                                                                      IS A DATE
+    `the day continuous employment with the employer began`                                             IS A DATE
+    `everything the employer paid for work in the relevant period`                                      IS A NUMBER
+    `the part of it paid for overtime or excess hours`                                                  IS A NUMBER
+    `overtime`                                                                                          IS AN `Overtime facts`
+    `the part of it paid at the employer's discretion as a bonus, gratuity or similar payment`          IS A NUMBER
+    `the part of it paid for special expenses of the employment or as travel, meal or accommodation allowances` IS A NUMBER
+    `the worker had contracts of service with 2 or more employers when the incapacity began`            IS A BOOLEAN
+    `the average weekly earnings in the other employments, added together`                              IS A NUMBER
+    `which contract is full-time`                                                                       IS A `Full-time contract`
+    `there is another worker of the employer doing comparable work`                                     IS A BOOLEAN
+    `that worker's normal weekly earnings`                                                              IS A NUMBER
+    `the hourly rate of pay, without overtime or shift or other allowances`                             IS A NUMBER
+    `the hours a week the worker agreed or was rostered to work in the pay period of the incapacity`    IS A NUMBER
+
+-- s 69(2): "if the period of employment is 14 days or less". READING: the days of employment before the day the
+-- incapacity began.
+`the s 69(2) days` MEANS 14
+
+GIVEN e IS AN `Earnings facts`
+GIVETH A BOOLEAN
+DECIDE `the period of employment is 14 days or less` e IF
+    (`days from` (e's `the day continuous employment with the employer began`) `to` (e's `the day the incapacity began`)) AT MOST `the s 69(2) days`
+
+-- s 69(14) "relevant period": the 12 months before the incapacity, if continuously employed by the same employer for 12
+-- months or more; otherwise the period of employment before it.
+GIVEN e IS AN `Earnings facts`
+GIVETH A NUMBER
+`the days in the relevant period under s 69(14)` e MEANS
+    IF (e's `the day continuous employment with the employer began`) `is on or before` `twelve months before`
+    THEN `days from` `twelve months before` `to` (e's `the day the incapacity began`)
+    ELSE `days from` (e's `the day continuous employment with the employer began`) `to` (e's `the day the incapacity began`)
+    WHERE
+        `twelve months before` MEANS (e's `the day the incapacity began`) `plus months` (0 MINUS 12)
+
+-- s 70(2)(ab), (ac), (f), (fa): overtime counts only on the four conditions; discretionary bonuses, special-expense sums
+-- and travel, meal and accommodation allowances are left out.
+GIVEN e IS AN `Earnings facts`
+GIVETH A NUMBER
+`the earnings counted under s 70(2)` e MEANS
+    (e's `everything the employer paid for work in the relevant period`)
+        MINUS (e's `the part of it paid for overtime or excess hours`)
+        MINUS (e's `the part of it paid at the employer's discretion as a bonus, gratuity or similar payment`)
+        MINUS (e's `the part of it paid for special expenses of the employment or as travel, meal or accommodation allowances`)
+        PLUS `the overtime counted`
+    WHERE
+        `the overtime counted` MEANS
+            IF `the overtime counts under s 70(2)(ab) and s 69B(2D)` (e's `overtime`)
+            THEN e's `the part of it paid for overtime or excess hours`
+            ELSE 0
+
+-- s 69(14) "normal weekly earnings": "the average weekly earnings of the worker during the relevant period".
+GIVEN e IS AN `Earnings facts`
+GIVETH A NUMBER
+`the average weekly earnings in this employment` e MEANS
+    (`the earnings counted under s 70(2)` e) DIVIDED BY ((`the days in the relevant period under s 69(14)` e) DIVIDED BY 7)
+
+-- s 69(2), (2A): for employment of 14 days or less, the normal weekly earnings of a comparable worker of the same employer,
+-- or else the expected weekly salary at the hourly rate (contract or industrial instrument, without overtime and shift
+-- or other allowances) for the hours agreed or rostered in the pay period of the incapacity.
+GIVEN e IS AN `Earnings facts`
+GIVETH A NUMBER
+`the normal weekly earnings` e MEANS
+    IF `the period of employment is 14 days or less` e
+    THEN IF e's `there is another worker of the employer doing comparable work`
+         THEN e's `that worker's normal weekly earnings`
+         ELSE (e's `the hourly rate of pay, without overtime or shift or other allowances`) TIMES (e's `the hours a week the worker agreed or was rostered to work in the pay period of the incapacity`)
+    ELSE IF e's `the worker had contracts of service with 2 or more employers when the incapacity began`
+         THEN CONSIDER e's `which contract is full-time`
+              WHEN `none of the contracts is full-time` THEN (`the average weekly earnings in this employment` e) PLUS (e's `the average weekly earnings in the other employments, added together`)
+              WHEN `the contract with this employer is full-time` THEN `the average weekly earnings in this employment` e
+              WHEN `a contract with another employer is full-time` x THEN x
+         ELSE `the average weekly earnings in this employment` e
+
+§§ `s 69(1), (3) -- the weekly payment`
+
+DECLARE `Incapacity facts` HAS
+    `the incapacity is supported by a certificate in the approved form`                                   IS A BOOLEAN
+    `the incapacity is total`                                                                             IS A BOOLEAN
+    `the ordinary hourly rate of pay immediately before the incapacity`                                   IS A NUMBER
+    `the ordinary hours a week the worker was engaged for immediately before the incapacity`             IS A NUMBER
+    `the change in the ordinary hourly rate under the contract or industrial instrument since then`       IS A NUMBER
+    `what the worker is earning or could earn a week in suitable employment or business`                  IS A NUMBER
+
+-- s 69(1)(a)(ii): "the ordinary time rate of pay of the worker for the work in which, and for the hours during which, the
+-- worker was engaged immediately before the period of incapacity", as a weekly amount.
+GIVEN i IS AN `Incapacity facts`
+GIVETH A NUMBER
+`the ordinary time rate of pay for a week` i MEANS
+    (i's `the ordinary hourly rate of pay immediately before the incapacity`) TIMES (i's `the ordinary hours a week the worker was engaged for immediately before the incapacity`)
+
+-- s 69(3): if the ordinary hourly rate for that work and those hours rises or falls under the contract or industrial
+-- instrument, "the weekly payment ... is to be increased or decreased by the like amount". READING: by the change in the
+-- hourly rate times those hours.
+GIVEN i IS AN `Incapacity facts`
+GIVETH A NUMBER
+`the s 69(3) adjustment` i MEANS
+    (i's `the change in the ordinary hourly rate under the contract or industrial instrument since then`) TIMES (i's `the ordinary hours a week the worker was engaged for immediately before the incapacity`)
+
+-- s 69(1)(a): total incapacity, "the normal weekly earnings of the worker; or the ordinary time rate of pay ...
+-- whichever is the greater".
+GIVEN nwe IS A NUMBER, i IS AN `Incapacity facts`
+GIVETH A NUMBER
+`the s 69(1)(a) weekly payment for normal weekly earnings of` nwe i MEANS
+    (`the greater of` nwe `and` (`the ordinary time rate of pay for a week` i)) PLUS (`the s 69(3) adjustment` i)
+
+DECLARE `Weekly payment answer` IS ONE OF
+    `a weekly payment of` HAS `dollars` IS A NUMBER
+    `no weekly payment: the incapacity is not supported by a certificate in the form the Board approved (s 69(1))`
+    `no weekly payment: the entitlement has ceased (s 69B(2E), s 87)`
+    `not covered` HAS `because` IS A `Why not covered`
+
+-- s 69(1): payable "where the existence of such total or partial incapacity is supported by a certificate in a form
+-- approved by the Board signed by a medical practitioner or accredited person"; (b) partial incapacity: "the difference
+-- between the worker's weekly payment calculated in accordance with paragraph (a) and the amount that the worker is
+-- earning or would be able to earn in suitable employment or business". What the worker could earn is a judgment: INPUT.
+GIVEN nwe IS A NUMBER, i IS AN `Incapacity facts`
+GIVETH A `Weekly payment answer`
+`the weekly payment under s 69 for normal weekly earnings of` nwe i MEANS
+    IF NOT (i's `the incapacity is supported by a certificate in the approved form`)
+    THEN `no weekly payment: the incapacity is not supported by a certificate in the form the Board approved (s 69(1))`
+    ELSE IF i's `the incapacity is total`
+         THEN `a weekly payment of` (`the s 69(1)(a) weekly payment for normal weekly earnings of` nwe i)
+         ELSE `a weekly payment of` (`the greater of` 0 `and` ((`the s 69(1)(a) weekly payment for normal weekly earnings of` nwe i) MINUS (i's `what the worker is earning or could earn a week in suitable employment or business`)))
+
+-- The same, with the normal weekly earnings worked out from the earnings facts.
+GIVEN e IS AN `Earnings facts`, i IS AN `Incapacity facts`
+GIVETH A `Weekly payment answer`
+`the weekly payment under s 69` e i MEANS
+    `the weekly payment under s 69 for normal weekly earnings of` (`the normal weekly earnings` e) i
+
+§§ `s 87 and s 69B(1)(c), (2E) -- when the weekly payments stop`
+
+-- s 87(1): the entitlement to weekly payments under s 69 ceases "(a) if the injury occurs 2 years or more before the date
+-- on which the worker attains the pension age -- on the date on which the worker attains the pension age; or (b) if the
+-- injury occurs less than 2 years before [that date] -- on the date 2 years after the injury occurs". (1AA): pension age
+-- is the pension age within the meaning of the Social Security Act 1991 (Cth): an INPUT, in years. (4): an injury before
+-- the commencement of the Workers Rehabilitation and Compensation Amendment Act 2022 follows s 87 as in force before it,
+-- which is not deposited. READING: that Act commenced on 1 March 2023 (history notes "Applied:01 Mar 2023").
+`the commencement of the 2022 amendments to s 87` MEANS `the calendar date` 1 3 2023
+`the s 87 years` MEANS 2
+
+DECLARE `Cessation facts` HAS
+    `the worker's date of birth`                         IS A DATE
+    `the worker's pension age in years`                  IS A NUMBER
+    `the day of the injury`                              IS A DATE
+    `the day of the initial incapacity`                  IS A DATE
+    `the permanent impairment has been assessed`         IS A BOOLEAN
+    `the whole person impairment, as a percentage`       IS A NUMBER
+
+DECLARE `Cessation reason` IS ONE OF
+    `9 years after the initial incapacity (s 69B(1)(c)(i), (2E)(a))`
+    `12 years after the initial incapacity (s 69B(1)(c)(ii), (2E)(b))`
+    `20 years after the initial incapacity (s 69B(1)(c)(iii), (2E)(c))`
+    `the worker attains the pension age (s 87(1)(a))`
+    `2 years after the injury (s 87(1)(b))`
+
+DECLARE `Cessation answer` IS ONE OF
+    `the entitlement to weekly payments ceases on` HAS `the day` IS A DATE, `the reason` IS A `Cessation reason`
+    `the cessation date is not covered` HAS `because` IS A `Why not covered`
+
+GIVEN f IS A `Cessation facts`
+GIVETH A DATE
+`the day the worker attains the pension age` f MEANS
+    `the day a person born on` (f's `the worker's date of birth`) `attains the age of` (f's `the worker's pension age in years`)
+
+GIVEN f IS A `Cessation facts`
+GIVETH A `Cessation answer`
+`the s 87 cessation` f MEANS
+    IF (f's `the day of the injury`) `is before` `the commencement of the 2022 amendments to s 87`
+    THEN `the cessation date is not covered` `s 87 as in force before 1 March 2023 governs an injury before that day, and that version is not deposited`
+    ELSE IF ((f's `the day of the injury`) `plus years` `the s 87 years`) `is on or before` (`the day the worker attains the pension age` f)
+         THEN `the entitlement to weekly payments ceases on` (`the day the worker attains the pension age` f) `the worker attains the pension age (s 87(1)(a))`
+         ELSE `the entitlement to weekly payments ceases on` ((f's `the day of the injury`) `plus years` `the s 87 years`) `2 years after the injury (s 87(1)(b))`
+
+-- s 69B(1)(c): the four impairment bands. "(i) ... less than 15% or is not assessed".
+DECLARE `Impairment band` IS ONE OF
+    `less than 15%, or not assessed`
+    `15% or more but less than 20%`
+    `20% or more but less than 30%`
+    `30% or more`
+
+GIVEN assessed IS A BOOLEAN, wpi IS A NUMBER
+GIVETH AN `Impairment band`
+`the s 69B(1)(c) band` assessed wpi MEANS
+    BRANCH
+        IF (NOT assessed) OR wpi LESS THAN 15
+            THEN `less than 15%, or not assessed`
+        IF wpi LESS THAN 20
+            THEN `15% or more but less than 20%`
+        IF wpi LESS THAN 30
+            THEN `20% or more but less than 30%`
+        OTHERWISE `30% or more`
+
+-- s 69B(2E): "Subject to section 87", the entitlement ceases on the expiration of 9, 12 or 20 years after the date of the
+-- initial incapacity, or for 30% or more on the s 87 day. The earlier of the s 69B day and the s 87 day governs.
+-- READING: the date named is the day the entitlement ceases; a week that begins on or after it is not paid (NOTES.md).
+GIVEN f IS A `Cessation facts`
+GIVETH A `Cessation answer`
+`the day the entitlement to weekly payments ceases` f MEANS
+    CONSIDER `the s 87 cessation` f
+    WHEN `the cessation date is not covered` r THEN `the cessation date is not covered` r
+    WHEN `the entitlement to weekly payments ceases on` `the s 87 day` `the s 87 reason` THEN
+        CONSIDER `the s 69B(1)(c) band` (f's `the permanent impairment has been assessed`) (f's `the whole person impairment, as a percentage`)
+        WHEN `less than 15%, or not assessed` THEN `the earlier cessation` 9 `9 years after the initial incapacity (s 69B(1)(c)(i), (2E)(a))` `the s 87 day` `the s 87 reason`
+        WHEN `15% or more but less than 20%`  THEN `the earlier cessation` 12 `12 years after the initial incapacity (s 69B(1)(c)(ii), (2E)(b))` `the s 87 day` `the s 87 reason`
+        WHEN `20% or more but less than 30%`  THEN `the earlier cessation` 20 `20 years after the initial incapacity (s 69B(1)(c)(iii), (2E)(c))` `the s 87 day` `the s 87 reason`
+        WHEN `30% or more`                    THEN `the entitlement to weekly payments ceases on` `the s 87 day` `the s 87 reason`
+    WHERE
+        GIVEN years IS A NUMBER, `the band reason` IS A `Cessation reason`, `the other day` IS A DATE, `the other reason` IS A `Cessation reason`
+        GIVETH A `Cessation answer`
+        `the earlier cessation` years `the band reason` `the other day` `the other reason` MEANS
+            IF ((f's `the day of the initial incapacity`) `plus years` years) `is before` `the other day`
+            THEN `the entitlement to weekly payments ceases on` ((f's `the day of the initial incapacity`) `plus years` years) `the band reason`
+            ELSE `the entitlement to weekly payments ceases on` `the other day` `the other reason`
+
+§§ `s 69B -- the step-downs and the floor`
+
+-- s 69B(1): 100% for the first 26 weeks of the period of incapacity; 90% (95% if (2) applies) for the period exceeding 26
+-- but not exceeding 78 weeks; 80% (85% if (2) applies) after that until the cessation. (6): the period of incapacity
+-- counts separate periods of incapacity from the same injury together. READING: a week is placed by its number in the
+-- period of incapacity so counted.
+`the s 69B first band weeks`  MEANS 26
+`the s 69B second band weeks` MEANS 78
+
+DECLARE `Week facts` HAS
+    `the week of the period of incapacity`                                                               IS A NUMBER
+    `the first day of the week`                                                                          IS A DATE
+    `there is medical evidence the worker cannot perform the usual duties with the employer`             IS A BOOLEAN
+    `there is medical evidence the worker can return to suitable alternative duties with the employer`   IS A BOOLEAN
+    `the employer does not enable the worker to undertake suitable alternative duties`                   IS A BOOLEAN
+    `the hours worked in the week under an approved return-to-work or injury management plan`            IS A NUMBER
+    `the worker's earnings in the week`                                                                  IS A NUMBER
+
+-- s 69B(2B)-(2D): normal weekly hours, for (2A).
+DECLARE `Normal hours facts` HAS
+    `the worker was employed by the employer for more than 14 days before the initial incapacity`        IS A BOOLEAN
+    `the average ordinary hours a week the worker was employed for`                                      IS A NUMBER
+    `the hours a week the worker agreed to work in the pay period of the incapacity`                     IS A NUMBER
+    `the hours a week the worker was rostered to work in that pay period`                                IS A NUMBER
+    `the average overtime or excess hours a week`                                                        IS A NUMBER
+    `overtime`                                                                                           IS AN `Overtime facts`
+
+-- s 69B(3), (4): the floor uses the basic salary, pro-rated for a part-time or casual worker.
+DECLARE `Floor facts` HAS
+    `the basic salary`                                                                                   IS A NUMBER
+    `the worker was working part-time or casually at the time of the injury`                             IS A BOOLEAN
+    `the hours a week the worker was engaged for immediately before the incapacity`                      IS A NUMBER
+    `the hours a week of full-time employment`                                                           IS A NUMBER
+
+-- s 69B(2): applies in a week in which there is medical evidence that the worker cannot perform the usual duties with the
+-- employer, and can return to suitable alternative duties with the employer, and the employer does not enable the worker
+-- to undertake them.
+GIVEN w IS A `Week facts`
+GIVETH A BOOLEAN
+DECIDE `s 69B(2) applies in the week` w IF
+        w's `there is medical evidence the worker cannot perform the usual duties with the employer`
+    AND w's `there is medical evidence the worker can return to suitable alternative duties with the employer`
+    AND w's `the employer does not enable the worker to undertake suitable alternative duties`
+
+-- s 69B(2B), (2C), (2D).
+GIVEN h IS A `Normal hours facts`
+GIVETH A NUMBER
+`the normal weekly hours under s 69B(2B) to (2D)` h MEANS
+    `the hours before overtime` PLUS `the overtime counted`
+    WHERE
+        `the hours before overtime` MEANS
+            IF h's `the worker was employed by the employer for more than 14 days before the initial incapacity`
+            THEN h's `the average ordinary hours a week the worker was employed for`
+            ELSE `the greater of` (h's `the hours a week the worker agreed to work in the pay period of the incapacity`) `and` (h's `the hours a week the worker was rostered to work in that pay period`)
+        `the overtime counted` MEANS
+            IF `the overtime counts under s 70(2)(ab) and s 69B(2D)` (h's `overtime`)
+            THEN h's `the average overtime or excess hours a week`
+            ELSE 0
+
+-- s 69B(2A): no reduction "in respect of any week in which the worker engages in work, for 50% or more of the worker's
+-- normal weekly hours, under the worker's approved return-to-work plan, or approved injury management plan".
+GIVEN w IS A `Week facts`, h IS A `Normal hours facts`
+GIVETH A BOOLEAN
+DECIDE `s 69B(2A) prevents a reduction in the week` w h IF
+        `the normal weekly hours under s 69B(2B) to (2D)` h GREATER THAN 0
+    AND (w's `the hours worked in the week under an approved return-to-work or injury management plan`) AT LEAST ((`the normal weekly hours under s 69B(2B) to (2D)` h) TIMES 0.5)
+
+GIVEN w IS A `Week facts`, h IS A `Normal hours facts`
+GIVETH A NUMBER
+`the s 69B percentage for the week` w h MEANS
+    BRANCH
+        IF (w's `the week of the period of incapacity`) AT MOST `the s 69B first band weeks`
+            THEN 100%
+        IF `s 69B(2A) prevents a reduction in the week` w h
+            THEN 100%
+        IF (w's `the week of the period of incapacity`) AT MOST `the s 69B second band weeks`
+            THEN IF `s 69B(2) applies in the week` w THEN 95% ELSE 90%
+        OTHERWISE IF `s 69B(2) applies in the week` w THEN 85% ELSE 80%
+
+-- s 69B(4): for a worker who was part-time or casual at the time of injury, the basic salary is taken in the proportion
+-- that the hours engaged immediately before the incapacity bore to full-time employment.
+GIVEN fl IS A `Floor facts`
+GIVETH A NUMBER
+`the basic salary for the s 69B(3) floor` fl MEANS
+    IF fl's `the worker was working part-time or casually at the time of the injury`
+    THEN (fl's `the basic salary`) TIMES ((fl's `the hours a week the worker was engaged for immediately before the incapacity`) DIVIDED BY (fl's `the hours a week of full-time employment`))
+    ELSE fl's `the basic salary`
+
+-- s 69B(3): "An amount payable under subsection (1)(b) or (c), when taken together with a worker's earnings, is not to be
+-- less than 70% of the basic salary or the weekly payment determined under section 69, whichever is the lesser."
+-- READING (NOTES.md finding 3): the floor is the lesser of 70% of the basic salary and the weekly payment. The other
+-- grammatical reading, 70% of the lesser of the two, would never exceed the 80% step-down and so would have no effect.
+GIVEN wp IS A NUMBER, fl IS A `Floor facts`
+GIVETH A NUMBER
+`the s 69B(3) floor` wp fl MEANS
+    `the lesser of` ((`the basic salary for the s 69B(3) floor` fl) TIMES 70%) `and` wp
+
+-- The amount for one week, from the s 69 weekly payment.
+GIVEN wp IS A NUMBER, w IS A `Week facts`, h IS A `Normal hours facts`, fl IS A `Floor facts`
+GIVETH A NUMBER
+`the s 69B amount for the week` wp w h fl MEANS
+    IF `the s 69B percentage for the week` w h EQUALS 100%
+    THEN wp
+    ELSE `the greater of` (wp TIMES (`the s 69B percentage for the week` w h)) `and` ((`the s 69B(3) floor` wp fl) MINUS (w's `the worker's earnings in the week`))
+
+-- The weekly payment for a week: nothing once the entitlement has ceased; otherwise the s 69B amount.
+GIVEN s69 IS A `Weekly payment answer`, w IS A `Week facts`, h IS A `Normal hours facts`, fl IS A `Floor facts`, c IS A `Cessation answer`
+GIVETH A `Weekly payment answer`
+`the weekly payment for the week under s 69B` s69 w h fl c MEANS
+    CONSIDER s69
+    WHEN `a weekly payment of` wp THEN
+        CONSIDER c
+        WHEN `the cessation date is not covered` r THEN `not covered` r
+        WHEN `the entitlement to weekly payments ceases on` `the cessation day` why THEN
+            IF (w's `the first day of the week`) `is before` `the cessation day`
+            THEN `a weekly payment of` (`the s 69B amount for the week` wp w h fl)
+            ELSE `no weekly payment: the entitlement has ceased (s 69B(2E), s 87)`
+    OTHERWISE s69
+
+-- The days on which the 27th and 79th weeks begin, for an incapacity that runs without a break from the initial
+-- incapacity (s 69B(6)): 26 and 78 weeks after it.
+GIVEN `the initial incapacity day` IS A DATE
+GIVETH A DATE
+`the first day of week 27 after an initial incapacity on` `the initial incapacity day` MEANS
+    `the initial incapacity day` `plus days` (`the s 69B first band weeks` TIMES 7)
+
+GIVEN `the initial incapacity day` IS A DATE
+GIVETH A DATE
+`the first day of week 79 after an initial incapacity on` `the initial incapacity day` MEANS
+    `the initial incapacity day` `plus days` (`the s 69B second band weeks` TIMES 7)
+
+§§ `ss 71, 72A, 73 and reg 20 -- the lump sum for permanent impairment`
+
+DECLARE `Impairment kind` IS ONE OF
+    `a physical impairment`
+    `a physical impairment that is the loss of part or all of a finger or toe`
+    `a psychiatric impairment`
+
+-- s 71(1)(b), (2)(b): "{18 + [6.1 x (WPI - 5)]} x BS", where WPI is the percentage of whole person impairment and BS is the
+-- basic salary. The formula is an image in the source; the deposited transcription was checked against
+-- https://www.legislation.tas.gov.au/image/wrcam09.gif on 2026-10-24 and matches. The same formula, with "- 5", is used
+-- for psychiatric impairment, although its threshold is 10%.
+GIVEN wpi IS A NUMBER, bs IS A NUMBER
+GIVETH A NUMBER
+`the s 71 formula amount for` wpi `at a basic salary of` bs MEANS
+    (18 PLUS (6.1 TIMES (wpi MINUS 5))) TIMES bs
+
+-- s 71(1)(d): "3.2 x BS x WPI" for the loss of part or all of a finger or toe assessed at less than 5% (checked against
+-- https://www.legislation.tas.gov.au/image/Wkcomam2.gif on 2026-10-24; matches).
+GIVEN wpi IS A NUMBER, bs IS A NUMBER
+GIVETH A NUMBER
+`the s 71(1)(d) amount for` wpi `at a basic salary of` bs MEANS
+    3.2 TIMES bs TIMES wpi
+
+-- s 71(1): physical impairment, "calculated as at the date of the injury": under 5% nothing except a finger or toe; 5% to
+-- 70% inclusive the formula; more than 70%, 415 units. s 71(3), (4): the loss of a foetus carried for at least 16 weeks
+-- is taken to be a permanent impairment of 20%, "in addition to any other degree of impairment". READING: added to the
+-- assessed percentage. s 71(2): psychiatric impairment, under 10% nothing, 10% to 70% the formula, more than 70% 415
+-- units. "As at the date of the injury": the basic salary is the one for the year of the injury, an INPUT.
+GIVEN kind IS AN `Impairment kind`, wpi IS A NUMBER
+      `the injury includes the loss of a foetus carried for at least 16 weeks` IS A BOOLEAN
+      `the basic salary for the year of the injury` IS A NUMBER
+GIVETH A NUMBER
+`the s 71 lump sum` kind wpi `the injury includes the loss of a foetus carried for at least 16 weeks` `the basic salary for the year of the injury` MEANS
+    CONSIDER kind
+    WHEN `a psychiatric impairment` THEN
+        BRANCH
+            IF wpi LESS THAN 10 THEN 0
+            IF wpi AT MOST 70 THEN `the s 71 formula amount for` wpi `at a basic salary of` `the basic salary for the year of the injury`
+            OTHERWISE `the dollars in` `the s 67 and s 71 maximum in units` `units at a basic salary of` `the basic salary for the year of the injury`
+    OTHERWISE
+        BRANCH
+            IF `the physical percentage` LESS THAN 5 THEN
+                CONSIDER kind
+                WHEN `a physical impairment that is the loss of part or all of a finger or toe` THEN `the s 71(1)(d) amount for` `the physical percentage` `at a basic salary of` `the basic salary for the year of the injury`
+                OTHERWISE 0
+            IF `the physical percentage` AT MOST 70 THEN `the s 71 formula amount for` `the physical percentage` `at a basic salary of` `the basic salary for the year of the injury`
+            OTHERWISE `the dollars in` `the s 67 and s 71 maximum in units` `units at a basic salary of` `the basic salary for the year of the injury`
+    WHERE
+        `the physical percentage` MEANS
+            IF `the injury includes the loss of a foetus carried for at least 16 weeks`
+            THEN wpi PLUS 20
+            ELSE wpi
+
+-- reg 20(3), for s 73(4): binaural hearing impairment (BHI) of 5% or less is 0% whole person impairment; more than 5% is
+-- "5 + [0.278 (BHI-5)] (rounded to the nearest whole number)".
+GIVEN bhi IS A NUMBER
+GIVETH A NUMBER
+`the reg 20 whole person impairment for a binaural hearing impairment of` bhi MEANS
+    IF bhi AT MOST 5
+    THEN 0
+    ELSE `rounded to the nearest whole number` (5 PLUS (0.278 TIMES (bhi MINUS 5)))
+
+-- s 72A(3): compensation for industrial deafness "which exceeds 5% binaural hearing impairment"; (5): calculated under
+-- s 71(1). The BHI is the one left after s 73(2) takes out loss not from industrial deafness, contracted outside the
+-- State, or already compensated: an INPUT.
+GIVEN bhi IS A NUMBER, `the basic salary for the year of the injury` IS A NUMBER
+GIVETH A NUMBER
+`the industrial deafness lump sum for a binaural hearing impairment of` bhi `at a basic salary of` `the basic salary for the year of the injury` MEANS
+    IF bhi AT MOST 5
+    THEN 0
+    ELSE `the s 71 lump sum` `a physical impairment` (`the reg 20 whole person impairment for a binaural hearing impairment of` bhi) FALSE `the basic salary for the year of the injury`
+
+§§ `ss 67, 67A, 67B -- death`
+
+DECLARE `Dependency` IS ONE OF `wholly dependent`, `partially dependent`, `not dependent`
+
+-- s 3(1) "dependants": members of the family (spouse, caring partner, parents, grandparents, step-parents, children,
+-- grandchildren, step-children, brothers, sisters, half-siblings, and a person to whom the worker stood in loco parentis)
+-- dependent wholly or in part on the worker's earnings at death, or who would have been but for the incapacity. s 65:
+-- "dependent child", a child (under 16, or 16 to 20 and a full-time student) who is a dependant. Dependency and its
+-- degree are facts (the Tribunal decides a dispute, s 68).
+DECLARE `Death facts` HAS
+    `the spouse or caring partner`                                                                       IS A `Dependency`
+    `wholly dependent children`                                                                          IS A NUMBER
+    `partially dependent children`                                                                       IS A NUMBER
+    `of those, the children who are not children of the spouse or caring partner`                        IS A NUMBER
+    `other dependants`                                                                                   IS A NUMBER
+    `the worker was contributing to the maintenance of the home of members of the family`                IS A BOOLEAN
+
+DECLARE `Death lump sum answer` IS ONE OF
+    `415 units, to the spouse or caring partner (s 67(2)(a))` HAS `dollars` IS A NUMBER
+    `415 units, divided equally between the wholly dependent children (s 67(2)(c))` HAS `dollars for each child` IS A NUMBER
+    `for each dependant, an amount reasonable and proportionate to the degree of dependency, 415 units at most in all (s 67(2)(ab), (b), (ba), (d), (3))` HAS `at most, in dollars` IS A NUMBER
+    `for each member of the family, as partial dependants, an amount reasonable and proportionate to the degree of dependency (s 67(4), (3))` HAS `at most, in dollars` IS A NUMBER
+    `no lump sum: the worker left no dependants and was not maintaining a family home (s 67)`
+    `the death lump sum is not covered` HAS `because` IS A `Why not covered`
+
+-- s 67(1): "a lump sum not exceeding 415 units, together with any weekly payment payable under section 67A". (2): (a) a
+-- wholly dependent spouse or caring partner where (ab) does not apply, 415 units to them; (ab) a wholly dependent spouse
+-- or caring partner "and one or more children, who are not children of the spouse or partner and each of whom is wholly
+-- or partially dependent", (3) amounts to each; (b) a partially dependent spouse or partner and no dependent children,
+-- (3); (ba) a partially dependent spouse or partner and one or more dependent children, (3) to each; (c) no dependent
+-- spouse or partner and wholly dependent children, 415 units divided equally; (d) no dependent spouse or partner and
+-- partially dependent children, (3) to each. (3): "such amount, not exceeding 415 units, as is reasonable and
+-- proportionate to the degree of dependency". (4): no dependants but contributing to the maintenance of the home of
+-- members of the family: they are taken to be partial dependants, and (3) applies. Which amounts are reasonable and
+-- proportionate is for agreement or the Tribunal (s 68): the answer gives the cap. "Basic salary": an INPUT, the figure
+-- for the year of payment (s 67 does not say "as at the date of the injury"; NOTES.md finding 8).
+GIVEN f IS A `Death facts`, bs IS A NUMBER
+GIVETH A `Death lump sum answer`
+`the s 67 lump sum` f bs MEANS
+    CONSIDER f's `the spouse or caring partner`
+    WHEN `wholly dependent` THEN
+        IF (f's `of those, the children who are not children of the spouse or caring partner`) GREATER THAN 0
+        THEN `for each dependant, an amount reasonable and proportionate to the degree of dependency, 415 units at most in all (s 67(2)(ab), (b), (ba), (d), (3))` `415 units`
+        ELSE `415 units, to the spouse or caring partner (s 67(2)(a))` `415 units`
+    WHEN `partially dependent` THEN
+        `for each dependant, an amount reasonable and proportionate to the degree of dependency, 415 units at most in all (s 67(2)(ab), (b), (ba), (d), (3))` `415 units`
+    WHEN `not dependent` THEN
+        BRANCH
+            IF (f's `wholly dependent children`) GREATER THAN 0 AND (f's `partially dependent children`) GREATER THAN 0
+                THEN `the death lump sum is not covered` `s 67(2) does not say how the lump sum is paid where some children are wholly and some partially dependent and there is no dependent spouse or caring partner`
+            IF (f's `wholly dependent children`) GREATER THAN 0
+                THEN `415 units, divided equally between the wholly dependent children (s 67(2)(c))` (`415 units` DIVIDED BY (f's `wholly dependent children`))
+            IF (f's `partially dependent children`) GREATER THAN 0
+                THEN `for each dependant, an amount reasonable and proportionate to the degree of dependency, 415 units at most in all (s 67(2)(ab), (b), (ba), (d), (3))` `415 units`
+            IF (f's `other dependants`) GREATER THAN 0
+                THEN `the death lump sum is not covered` `s 67(2) does not say how the lump sum is paid where the only dependants are not a spouse, caring partner or child`
+            IF f's `the worker was contributing to the maintenance of the home of members of the family`
+                THEN `for each member of the family, as partial dependants, an amount reasonable and proportionate to the degree of dependency (s 67(4), (3))` `415 units`
+            OTHERWISE `no lump sum: the worker left no dependants and was not maintaining a family home (s 67)`
+    WHERE
+        `415 units` MEANS `the dollars in` `the s 67 and s 71 maximum in units` `units at a basic salary of` bs
+
+-- s 67A(1)(a): a wholly or partially dependent spouse or caring partner gets weekly payments from the date of death, "at
+-- the same rate as the deceased worker would have been entitled to had he or she become totally incapacitated"; (2)
+-- 100% for the first 26 weeks following the date of death, 90% to 78 weeks, 80% to 2 years; (3) if the worker died, as
+-- a result of injuries for which compensation was being received, more than 78 weeks after receiving them, 80%; (4) the
+-- entitlement under (3) ends on the expiration of 2 years after the death. s 67B(3): payable from the later of the date
+-- of death and 28 days before the claim was given to the employer; (4): with more than one claim, divided equally.
+-- READING: the rate on a day is placed by the days from the death to that day (under 182 days, the first 26 weeks;
+-- under 546, to 78 weeks; before the day 2 years after the death, to 2 years).
+`the s 67B(3) days` MEANS 28
+`the s 67A years` MEANS 2
+
+DECLARE `Spouse weekly facts` HAS
+    `the day of the death`                                                                               IS A DATE
+    `the day the claim was given to the employer`                                                        IS A DATE
+    `the weekly payment the worker would have had for total incapacity`                                  IS A NUMBER
+    `the worker died more than 78 weeks after the injury, while receiving compensation for it`           IS A BOOLEAN
+    `the number of claims for these weekly payments`                                                     IS A NUMBER
+
+DECLARE `Dependant weekly answer` IS ONE OF
+    `a weekly rate, for each claimant, of` HAS `dollars` IS A NUMBER
+    `nothing on this day: it is before the payments are payable (s 67A(1)(b), s 67B(3))`
+    `nothing on this day: the entitlement ended 2 years after the death (s 67A(2)(c), (4))`
+    `nothing on this day: the person is no longer a dependent child (s 65, s 67A(1)(b))`
+
+GIVEN f IS A `Spouse weekly facts`
+GIVETH A DATE
+`the day the spouse's weekly payments are payable from` f MEANS
+    `the later of` (f's `the day of the death`) `and` ((f's `the day the claim was given to the employer`) `plus days` (0 MINUS `the s 67B(3) days`))
+
+GIVEN f IS A `Spouse weekly facts`, `the day in question` IS A DATE
+GIVETH A `Dependant weekly answer`
+`the s 67A weekly rate payable to the spouse or caring partner on` f `the day in question` MEANS
+    BRANCH
+        IF `the day in question` `is before` (`the day the spouse's weekly payments are payable from` f)
+            THEN `nothing on this day: it is before the payments are payable (s 67A(1)(b), s 67B(3))`
+        IF NOT (`the day in question` `is before` ((f's `the day of the death`) `plus years` `the s 67A years`))
+            THEN `nothing on this day: the entitlement ended 2 years after the death (s 67A(2)(c), (4))`
+        OTHERWISE `a weekly rate, for each claimant, of` (((f's `the weekly payment the worker would have had for total incapacity`) TIMES `the percentage`) DIVIDED BY (f's `the number of claims for these weekly payments`))
+    WHERE
+        `the days after the death` MEANS `days from` (f's `the day of the death`) `to` `the day in question`
+        `the percentage` MEANS
+            BRANCH
+                IF f's `the worker died more than 78 weeks after the injury, while receiving compensation for it` THEN 80%
+                IF `the days after the death` LESS THAN (26 TIMES 7) THEN 100%
+                IF `the days after the death` LESS THAN (78 TIMES 7) THEN 90%
+                OTHERWISE 80%
+
+-- s 67A(1)(b): "a dependent child of the deceased worker is entitled to weekly payments of 15% of the basic salary,
+-- commencing on the expiration of 13 weeks after the date of death." No end is stated beyond the child's ceasing to be a
+-- dependent child (s 65; NOTES.md finding 9). READING: payable on a day after the day 13 weeks after the death.
+`the s 67A(1)(b) weeks` MEANS 13
+
+GIVEN `the death day` IS A DATE, `the day in question` IS A DATE, bs IS A NUMBER, `the person is still a dependent child` IS A BOOLEAN
+GIVETH A `Dependant weekly answer`
+`the s 67A weekly rate payable to a dependent child` `the death day` `the day in question` bs `the person is still a dependent child` MEANS
+    BRANCH
+        IF `the day in question` `is on or before` (`the death day` `plus days` (`the s 67A(1)(b) weeks` TIMES 7))
+            THEN `nothing on this day: it is before the payments are payable (s 67A(1)(b), s 67B(3))`
+        IF NOT `the person is still a dependent child`
+            THEN `nothing on this day: the person is no longer a dependent child (s 65, s 67A(1)(b))`
+        OTHERWISE `a weekly rate, for each claimant, of` (bs TIMES 15%)
+
+§§ `ss 75, 76 with regs 21, 22 -- expenses`
+
+-- reg 21(1): for s 75(1)(b)(i), burial or cremation, "the prescribed amount is $9,500"; (2): for s 75(1)(b)(ii),
+-- counselling of members of the family, $4,000 in all.
+`the reg 21(1) burial or cremation maximum` MEANS 9500
+`the reg 21(2) counselling maximum` MEANS 4000
+
+-- s 75(1)(b)(i): "the reasonable expenses, not being more than the amount prescribed by regulations, of the worker's
+-- burial or cremation". The employer must have accepted or be taken to have accepted liability, or be found liable
+-- (s 75(1AA)): these answers assume it.
+GIVEN `the reasonable expenses of the burial or cremation` IS A NUMBER
+GIVETH A NUMBER
+`the s 75(1)(b)(i) amount for burial or cremation expenses of` `the reasonable expenses of the burial or cremation` MEANS
+    `the lesser of` `the reasonable expenses of the burial or cremation` `and` `the reg 21(1) burial or cremation maximum`
+
+GIVEN `the reasonable costs of counselling for members of the family` IS A NUMBER
+GIVETH A NUMBER
+`the s 75(1)(b)(ii) amount for counselling costs of` `the reasonable costs of counselling for members of the family` MEANS
+    `the lesser of` `the reasonable costs of counselling for members of the family` `and` `the reg 21(2) counselling maximum`
+
+-- s 76(1): "the lesser of (a) the reasonable expenses necessarily incurred by the worker for travelling and maintenance
+-- [for a s 90A(2) examination, or medical, hospital or rehabilitation services]; or (b) such amount as may be
+-- prescribed". (3): the use of a private motor vehicle is costed at the occasional-user rate of the Tasmanian State
+-- Service Award. reg 22: the prescribed amount is at the same rate and on the same terms as the Award's equivalent
+-- travelling expenses. Neither the Award nor its rates are deposited: INPUTS.
+GIVEN `the reasonable expenses other than the use of a private car` IS A NUMBER, `the kilometres driven in a private car` IS A NUMBER
+      `the Award occasional-user rate per kilometre` IS A NUMBER, `the amount prescribed by reg 22 for the travel` IS A NUMBER
+GIVETH A NUMBER
+`the s 76(1) travelling compensation` `the reasonable expenses other than the use of a private car` `the kilometres driven in a private car` `the Award occasional-user rate per kilometre` `the amount prescribed by reg 22 for the travel` MEANS
+    `the lesser of` (`the reasonable expenses other than the use of a private car` PLUS (`the kilometres driven in a private car` TIMES `the Award occasional-user rate per kilometre`)) `and` `the amount prescribed by reg 22 for the travel`
+
+§§ `ss 33A, 36, 39, 81, 81A, 81AB -- what the employer must do, and by when`
+
+`the s 33A days`             MEANS 14
+`the s 36(1AA) working days` MEANS 3
+`the s 36(1)(b) working days` MEANS 5
+`the s 39 days`              MEANS 28
+`the s 81 days`              MEANS 14
+`the s 81A days`             MEANS 84
+
+-- s 33A(1): "An employer who is informed by a worker of an injury to the worker must, within 14 days, inform the worker,
+-- in the prescribed form, that the worker may have a right to make a claim for compensation". (2): not where the employer
+-- is informed of the injury by the service of a claim. reg 19: the form is Schedule 1.
+DECLARE `Right-to-claim notice answer` IS ONE OF
+    `the employer must inform the worker of the right to claim, in the Schedule 1 form, on or before` HAS `the last day` IS A DATE
+    `no notice is needed: the employer was informed of the injury by the service of a claim (s 33A(2))`
+
+GIVEN `the day the employer was informed of the injury` IS A DATE, `the employer was informed by the service of a claim` IS A BOOLEAN
+GIVETH A `Right-to-claim notice answer`
+`the s 33A notice` `the day the employer was informed of the injury` `the employer was informed by the service of a claim` MEANS
+    IF `the employer was informed by the service of a claim`
+    THEN `no notice is needed: the employer was informed of the injury by the service of a claim (s 33A(2))`
+    ELSE `the employer must inform the worker of the right to claim, in the Schedule 1 form, on or before` (`the day the employer was informed of the injury` `plus days` `the s 33A days`)
+
+-- s 36(1AA): "An employer must, within 3 working days of receiving a claim for compensation under section 35, notify the
+-- employer's insurer of the claim." (1)(b): "within 5 working days after receiving the claim, forward the completed claim
+-- and a copy of the claim to his or her licensed insurer, if any". A self-insurer has no insurer to notify.
+DECLARE `Insurer deadline answer` IS ONE OF
+    `on or before` HAS `the last day` IS A DATE
+    `not applicable: the employer has no licensed insurer`
+
+-- The workplace facts the working-day deadlines need.
+DECLARE `Workplace days` HAS
+    `the normal working week of the place of employment`                                                 IS A `Working week`
+    `closure days in the first week after the claim was received`                                        IS A NUMBER
+
+GIVEN `the day the claim was received` IS A DATE, `the employer has a licensed insurer` IS A BOOLEAN, wd IS A `Workplace days`
+GIVETH AN `Insurer deadline answer`
+`the s 36(1AA) deadline to notify the insurer` `the day the claim was received` `the employer has a licensed insurer` wd MEANS
+    IF `the employer has a licensed insurer`
+    THEN `on or before` (`the last of` `the s 36(1AA) working days` `working days after` `the day the claim was received` `in a` (wd's `the normal working week of the place of employment`) `with closure days` (wd's `closure days in the first week after the claim was received`))
+    ELSE `not applicable: the employer has no licensed insurer`
+
+GIVEN `the day the claim was received` IS A DATE, `the employer has a licensed insurer` IS A BOOLEAN, wd IS A `Workplace days`
+GIVETH AN `Insurer deadline answer`
+`the s 36(1)(b) deadline to forward the claim` `the day the claim was received` `the employer has a licensed insurer` wd MEANS
+    IF `the employer has a licensed insurer`
+    THEN `on or before` (`the last of` `the s 36(1)(b) working days` `working days after` `the day the claim was received` `in a` (wd's `the normal working week of the place of employment`) `with closure days` (wd's `closure days in the first week after the claim was received`))
+    ELSE `not applicable: the employer has no licensed insurer`
+
+-- s 36(4), (5): if the employer does not notify the insurer within the 3 working days, the insurer is not liable to
+-- indemnify it for the weekly payments for the period that "begins on the day, after the 3 working days" and "ends on,
+-- and includes, all of the day on which the employer notifies the insurer of the claim".
+DECLARE `Indemnity gap answer` IS ONE OF
+    `no gap: the insurer was notified within the 3 working days`
+    `the insurer need not indemnify the weekly payments for the days` HAS `from` IS A DATE, `to` IS A DATE
+    `not applicable: the employer has no licensed insurer`
+
+GIVEN `the day the claim was received` IS A DATE, `the day the insurer was notified` IS A DATE, `the employer has a licensed insurer` IS A BOOLEAN, wd IS A `Workplace days`
+GIVETH AN `Indemnity gap answer`
+`the s 36(4) period` `the day the claim was received` `the day the insurer was notified` `the employer has a licensed insurer` wd MEANS
+    CONSIDER `the s 36(1AA) deadline to notify the insurer` `the day the claim was received` `the employer has a licensed insurer` wd
+    WHEN `not applicable: the employer has no licensed insurer` THEN `not applicable: the employer has no licensed insurer`
+    WHEN `on or before` last THEN
+        IF `the day the insurer was notified` `is on or before` last
+        THEN `no gap: the insurer was notified within the 3 working days`
+        ELSE `the insurer need not indemnify the weekly payments for the days` (last `plus days` 1) `the day the insurer was notified`
+
+-- s 39(1): "If an employer receives a claim for compensation from a worker under section 35, the employer or the
+-- employer's insurer, within 28 days (a) must notify the worker in writing as to whether a decision has been made to
+-- accept, or not to accept, liability ...; and (b) if no decision has been made, must specify in the notice the reasons
+-- ... and the steps [to be taken] before making the decision." (2): one of them complying is enough.
+GIVEN `the day the claim was received` IS A DATE
+GIVETH A DATE
+`the s 39 deadline for the status notice` `the day the claim was received` MEANS
+    `the day the claim was received` `plus days` `the s 39 days`
+
+-- s 81(1): with the worker's first pay day after receipt of the claim "(a) not later than 14 days after the receipt of
+-- that claim, the employer must (i) if it is reasonably practicable to do so, commence making weekly payments to the
+-- worker on the first pay day; or (ii) in any other case, ... not later than 14 days after receipt ...; or (b) later than
+-- 14 days after the receipt of that claim, the employer must commence making weekly payments of compensation on that pay
+-- day." (4): "pay day means the day on which the worker would normally receive salary or wages". Whether it was
+-- reasonably practicable is a judgment: an INPUT.
+GIVEN `the day the claim was received` IS A DATE, `the worker's first pay day after receipt of the claim` IS A DATE
+      `it is reasonably practicable to start on that pay day` IS A BOOLEAN
+GIVETH A DATE
+`the s 81 deadline to commence weekly payments` `the day the claim was received` `the worker's first pay day after receipt of the claim` `it is reasonably practicable to start on that pay day` MEANS
+    IF `the worker's first pay day after receipt of the claim` `is on or before` `fourteen days after receipt`
+    THEN IF `it is reasonably practicable to start on that pay day`
+         THEN `the worker's first pay day after receipt of the claim`
+         ELSE `fourteen days after receipt`
+    ELSE `the worker's first pay day after receipt of the claim`
+    WHERE
+        `fourteen days after receipt` MEANS `the day the claim was received` `plus days` `the s 81 days`
+
+-- s 81(3): "Weekly payments payable under this section are payable from (a) the date of the incapacity; or (b) 14 days
+-- before the date on which the claim for compensation was given to the employer under section 34 -- whichever is the
+-- later."
+GIVEN `the incapacity day` IS A DATE, `the claim day` IS A DATE
+GIVETH A DATE
+`the day weekly payments are payable from under s 81(3)` `the incapacity day` `the claim day` MEANS
+    `the later of` `the incapacity day` `and` (`the claim day` `plus days` (0 MINUS `the s 81 days`))
+
+-- s 81A(1): an employer who disputes liability for weekly payments or Division 2 benefits "must, within 84 days of
+-- receiving the claim ... (a) serve the worker with written notice that the employer disputes liability ...; and (b)
+-- inform the worker of the reasons for disputing liability; and (c) refer the matter to the Tribunal." s 81AB: if it does
+-- not dispute in accordance with s 81A, "the employer is taken to have accepted liability in respect of that claim".
+DECLARE `Acceptance answer` IS ONE OF
+    `liability is taken to have been accepted (s 81AB)`
+    `liability is disputed in accordance with s 81A`
+    `not yet decided: the employer may still dispute liability on or before` HAS `the last day` IS A DATE
+
+GIVEN `the day the claim was received` IS A DATE
+GIVETH A DATE
+`the s 81A deadline to dispute liability` `the day the claim was received` MEANS
+    `the day the claim was received` `plus days` `the s 81A days`
+
+GIVEN `the day the claim was received` IS A DATE
+      `the employer has served notice of dispute with reasons and referred the matter to the Tribunal` IS A BOOLEAN
+      `the day the last of those three steps was taken` IS A DATE
+      `today` IS A DATE
+GIVETH AN `Acceptance answer`
+`whether liability is taken to have been accepted under s 81AB` `the day the claim was received` `the employer has served notice of dispute with reasons and referred the matter to the Tribunal` `the day the last of those three steps was taken` `today` MEANS
+    BRANCH
+        IF `the employer has served notice of dispute with reasons and referred the matter to the Tribunal` AND (`the day the last of those three steps was taken` `is on or before` (`the s 81A deadline to dispute liability` `the day the claim was received`))
+            THEN `liability is disputed in accordance with s 81A`
+        IF `today` `is on or before` (`the s 81A deadline to dispute liability` `the day the claim was received`)
+            THEN `not yet decided: the employer may still dispute liability on or before` (`the s 81A deadline to dispute liability` `the day the claim was received`)
+        OTHERWISE `liability is taken to have been accepted (s 81AB)`
+
+-- Whether a duty with a last day has been met: done on or before it, missed (done late, or not done and the day passed),
+-- or still open.
+DECLARE `Duty status` IS ONE OF
+    `met`
+    `missed: a breach of the Act`
+    `still open, on or before` HAS `the last day` IS A DATE
+    `not required`
+
+GIVEN `the deadline` IS A DATE, `it has been done` IS A BOOLEAN, `the day it was done` IS A DATE, `today` IS A DATE
+GIVETH A `Duty status`
+`the status of a duty with last day` `the deadline` `it has been done` `the day it was done` `today` MEANS
+    BRANCH
+        IF `it has been done` AND (`the day it was done` `is on or before` `the deadline`) THEN `met`
+        IF `it has been done` THEN `missed: a breach of the Act`
+        IF `today` `is on or before` `the deadline` THEN `still open, on or before` `the deadline`
+        OTHERWISE `missed: a breach of the Act`
+
+§§ `ss 33A, 36(3), 39, 81 with reg 28 and Schedule 2 -- the employer's offences`
+
+DECLARE `Employer offence` IS ONE OF
+    `not informing the worker of the right to claim (s 33A(1))`
+    `refusing to receive a claim, hindering a claim, or dismissing a worker for claiming (s 36(3))`
+    `not notifying the worker of the status of the claim (s 39(1))`
+    `not commencing weekly payments as s 81(1) requires (s 81(2))`
+
+-- s 33A(1): 10 penalty units. s 36(3): 50. s 39(1): 10. s 81(2): 20, and for a continuing offence 5 more for each day.
+GIVEN offence IS AN `Employer offence`, `the days the offence continues` IS A NUMBER
+GIVETH A NUMBER
+`the maximum fine in penalty units for` offence `continuing for` `the days the offence continues` MEANS
+    CONSIDER offence
+    WHEN `not informing the worker of the right to claim (s 33A(1))` THEN 10
+    WHEN `refusing to receive a claim, hindering a claim, or dismissing a worker for claiming (s 36(3))` THEN 50
+    WHEN `not notifying the worker of the status of the claim (s 39(1))` THEN 10
+    WHEN `not commencing weekly payments as s 81(1) requires (s 81(2))` THEN 20 PLUS (5 TIMES `the days the offence continues`)
+
+-- reg 28 and Schedule 2: infringement notice penalties, natural person / body corporate: s 33A(1) 2 / 5; s 39(1) 2 / 5;
+-- s 81(2) 2 / 5. s 36(3) is not listed.
+DECLARE `Infringement answer` IS ONE OF
+    `an infringement notice penalty, in penalty units, of` HAS `penalty units` IS A NUMBER
+    `not an infringement notice offence (reg 28, Schedule 2)`
+
+GIVEN offence IS AN `Employer offence`, `the employer is a body corporate` IS A BOOLEAN
+GIVETH AN `Infringement answer`
+`the infringement notice penalty for` offence `by a body corporate or not` `the employer is a body corporate` MEANS
+    CONSIDER offence
+    WHEN `refusing to receive a claim, hindering a claim, or dismissing a worker for claiming (s 36(3))` THEN `not an infringement notice offence (reg 28, Schedule 2)`
+    OTHERWISE `an infringement notice penalty, in penalty units, of` (IF `the employer is a body corporate` THEN 5 ELSE 2)
+
+§§ `Regulative rules -- the worker, the employer and its insurer`
+
+-- Clock: days, counted from the day the rule starts (named in each rule). Working-day periods are given to a rule as the
+-- calendar days they span (worked out with `the last of` ... `working days after` in wrca-dates.l4).
+DECLARE `WRCA party` IS ONE OF `the worker`, `the employer`, `the employer's licensed insurer`
+
+DECLARE `WRCA act` IS ONE OF
+    `give notice of the injury`
+    `make the claim for compensation`
+    `inform the worker of the right to claim, in the Schedule 1 form`
+    `notify the insurer of the claim`
+    `forward the completed claim and a copy to the licensed insurer`
+    `notify the worker in writing of the decision on liability, or why none has been made`
+    `commence weekly payments`
+    `serve notice disputing liability, give the reasons and refer the matter to the Tribunal`
+    `refuse to receive the claim`
+    `hinder or prevent the worker from claiming`
+    `dismiss the worker for giving a claim`
+
+-- s 32(1)(a), from the day of the injury. What was practicable is a judgment: an INPUT, in days. A claim counts as
+-- notice (s 32(3)): a trace records it as notice.
+GIVEN `the days within which notice was practicable` IS A NUMBER
+GIVETH A DEONTIC `WRCA party` `WRCA act`
+DECIDE `s 32(1)(a) -- the worker must give notice of the injury as soon as practicable` `the days within which notice was practicable` IS
+    PARTY `the worker`
+    MUST  `give notice of the injury`
+    WITHIN `the days within which notice was practicable`
+    LEST  BREACH BY `the worker` BECAUSE "s 32(1)(a): no entitlement to compensation unless notice of the injury was given to the employer as soon as practicable and before the worker voluntarily left the employment; a claim counts as notice (s 32(3)), and s 37 excuses a failure with a reasonable cause that does not prejudice the employer's defence"
+
+-- s 32(1)(b), from the day of the injury (or the death): the days to the last day, from `the s 32 deadline for the claim`.
+GIVEN `the days to the last day to claim` IS A NUMBER
+GIVETH A DEONTIC `WRCA party` `WRCA act`
+DECIDE `s 32(1)(b) -- the worker must make the claim within 6 months` `the days to the last day to claim` IS
+    PARTY `the worker`
+    MUST  `make the claim for compensation`
+    WITHIN `the days to the last day to claim`
+    LEST  BREACH BY `the worker` BECAUSE "s 32(1)(b): no entitlement to compensation unless the claim (with its medical certificate, s 34(2)) is made within 6 months after the injury or the death; s 38 keeps a late claim valid if the failure was occasioned by mistake, absence from the State or other reasonable cause, including the employer's failure to give the s 33A notice"
+
+-- s 33A, from the day the employer is informed of the injury.
+GIVEN `the employer was informed by the service of a claim` IS A BOOLEAN
+GIVETH A DEONTIC `WRCA party` `WRCA act`
+DECIDE `s 33A -- the employer must inform the worker of the right to claim within 14 days` `the employer was informed by the service of a claim` IS
+    IF `the employer was informed by the service of a claim`
+    THEN FULFILLED
+    ELSE PARTY `the employer`
+         MUST  `inform the worker of the right to claim, in the Schedule 1 form`
+         WITHIN `the s 33A days`
+         LEST  BREACH BY `the employer` BECAUSE "s 33A(1): the employer must, within 14 days of being informed of the injury, inform the worker in the Schedule 1 form of the right to claim (fine up to 10 penalty units; infringement notice 2, or 5 for a body corporate); the failure is reasonable cause for a late claim (s 38(2)(aa))"
+
+-- The calendar days that the working-day and pay-day deadlines span in a given case, from the day the claim is received.
+DECLARE `Claim duty spans` HAS
+    `calendar days to the last day to notify the insurer`                                                IS A NUMBER
+    `calendar days to the last day to forward the claim`                                                 IS A NUMBER
+    `calendar days to the last day to commence weekly payments`                                          IS A NUMBER
+
+-- s 36(1AA), (1)(b), from the day the claim is received.
+GIVEN `the employer has a licensed insurer` IS A BOOLEAN, spans IS A `Claim duty spans`
+GIVETH A DEONTIC `WRCA party` `WRCA act`
+DECIDE `s 36 -- the employer must notify the insurer within 3 working days and forward the claim within 5` `the employer has a licensed insurer` spans IS
+    IF `the employer has a licensed insurer`
+    THEN    (PARTY `the employer`
+             MUST  `notify the insurer of the claim`
+             WITHIN spans's `calendar days to the last day to notify the insurer`
+             LEST  BREACH BY `the employer` BECAUSE "s 36(1AA): the employer must notify its insurer of the claim within 3 working days of receiving it; the insurer is then not liable to indemnify the employer for the weekly payments from the day after those 3 working days to the day of notification (s 36(4), (5))")
+        RAND
+            (PARTY `the employer`
+             MUST  `forward the completed claim and a copy to the licensed insurer`
+             WITHIN spans's `calendar days to the last day to forward the claim`
+             LEST  BREACH BY `the employer` BECAUSE "s 36(1)(b): the employer must forward the completed claim and a copy to its licensed insurer within 5 working days after receiving it")
+    ELSE FULFILLED
+
+-- s 39(1), (2), from the day the claim is received: the employer or its insurer.
+GIVEN `the employer has a licensed insurer` IS A BOOLEAN
+GIVETH A DEONTIC `WRCA party` `WRCA act`
+DECIDE `s 39 -- the employer or its insurer must notify the status of the claim within 28 days` `the employer has a licensed insurer` IS
+    IF `the employer has a licensed insurer`
+    THEN    (PARTY `the employer`
+             MUST  `notify the worker in writing of the decision on liability, or why none has been made`
+             WITHIN `the s 39 days`
+             LEST  BREACH BY `the employer` BECAUSE "s 39(1): within 28 days of receiving the claim, the employer or its insurer must notify the worker in writing whether liability is accepted or not, or why no decision has been made and what steps will be taken (fine up to 10 penalty units; infringement notice 2, or 5 for a body corporate)")
+        ROR
+            (PARTY `the employer's licensed insurer`
+             MUST  `notify the worker in writing of the decision on liability, or why none has been made`
+             WITHIN `the s 39 days`
+             LEST  BREACH BY `the employer's licensed insurer` BECAUSE "s 39(1): within 28 days of receiving the claim, the employer or its insurer must notify the worker in writing whether liability is accepted or not, or why no decision has been made and what steps will be taken")
+    ELSE PARTY `the employer`
+         MUST  `notify the worker in writing of the decision on liability, or why none has been made`
+         WITHIN `the s 39 days`
+         LEST  BREACH BY `the employer` BECAUSE "s 39(1): within 28 days of receiving the claim, the employer must notify the worker in writing whether liability is accepted or not, or why no decision has been made and what steps will be taken (fine up to 10 penalty units; infringement notice 2, or 5 for a body corporate)"
+
+-- s 81(1), (2), from the day the claim is received.
+GIVEN `the claim is for weekly payments` IS A BOOLEAN, spans IS A `Claim duty spans`
+GIVETH A DEONTIC `WRCA party` `WRCA act`
+DECIDE `s 81 -- the employer must commence weekly payments on the first pay day or within 14 days` `the claim is for weekly payments` spans IS
+    IF `the claim is for weekly payments`
+    THEN PARTY `the employer`
+         MUST  `commence weekly payments`
+         WITHIN spans's `calendar days to the last day to commence weekly payments`
+         LEST  BREACH BY `the employer` BECAUSE "s 81(1), (2): the employer must commence weekly payments on the worker's first pay day after receiving the claim (or within 14 days, if that was not reasonably practicable, or on a later first pay day); an offence, up to 20 penalty units and 5 more for each day it continues (infringement notice 2, or 5 for a body corporate); the payments are not an admission of liability (s 81AA)"
+    ELSE FULFILLED
+
+-- Every duty that runs from the day the claim is received, together.
+GIVEN `the employer has a licensed insurer` IS A BOOLEAN, `the claim is for weekly payments` IS A BOOLEAN, spans IS A `Claim duty spans`
+GIVETH A DEONTIC `WRCA party` `WRCA act`
+DECIDE `ss 36, 39, 81 -- the employer's duties on receiving a claim` `the employer has a licensed insurer` `the claim is for weekly payments` spans IS
+        `s 36 -- the employer must notify the insurer within 3 working days and forward the claim within 5` `the employer has a licensed insurer` spans
+    RAND
+        `s 39 -- the employer or its insurer must notify the status of the claim within 28 days` `the employer has a licensed insurer`
+    RAND
+        `s 81 -- the employer must commence weekly payments on the first pay day or within 14 days` `the claim is for weekly payments` spans
+
+-- s 81A(1), s 81AB, from the day the claim is received: only an employer that disputes liability has this duty, and its
+-- failure is not punished but turned into acceptance.
+GIVEN `the employer disputes liability` IS A BOOLEAN
+GIVETH A DEONTIC `WRCA party` `WRCA act`
+DECIDE `s 81A -- an employer who disputes liability must serve notice with reasons and refer it within 84 days` `the employer disputes liability` IS
+    IF `the employer disputes liability`
+    THEN PARTY `the employer`
+         MUST  `serve notice disputing liability, give the reasons and refer the matter to the Tribunal`
+         WITHIN `the s 81A days`
+         LEST  BREACH BY `the employer` BECAUSE "s 81A(1), s 81AB: liability was not disputed in accordance with s 81A within 84 days of receiving the claim, so the employer is taken to have accepted liability; the Tribunal may order weekly payments and Division 2 expenses (s 81AC)"
+    ELSE FULFILLED
+
+-- s 36(3): no period is stated: the prohibition is traced over the given number of days.
+GIVEN `the days considered` IS A NUMBER
+GIVETH A DEONTIC `WRCA party` `WRCA act`
+DECIDE `s 36(3) -- the employer must not refuse a claim, hinder a claim or dismiss the worker for claiming` `the days considered` IS
+        (PARTY `the employer`
+         SHANT `refuse to receive the claim`
+         WITHIN `the days considered`
+         LEST  BREACH BY `the employer` BECAUSE "s 36(3)(a): refusing to receive a claim is an offence (fine up to 50 penalty units)")
+    RAND
+        (PARTY `the employer`
+         SHANT `hinder or prevent the worker from claiming`
+         WITHIN `the days considered`
+         LEST  BREACH BY `the employer` BECAUSE "s 36(3)(ab): hindering or preventing a worker from obtaining a claim form or making or pursuing a claim is an offence (fine up to 50 penalty units)")
+    RAND
+        (PARTY `the employer`
+         SHANT `dismiss the worker for giving a claim`
+         WITHIN `the days considered`
+         LEST  BREACH BY `the employer` BECAUSE "s 36(3)(b): dismissing a worker only for giving or trying to give a claim is an offence (fine up to 50 penalty units)")
