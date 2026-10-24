@@ -15,3 +15,14 @@ BLOCKED at the network level. Every attempt to reach nslegislature.ca - the only
 - **Passenger compensation**: No provincial passenger-compensation statute identified. Air, rail and marine passenger rights are federal: Canada Transportation Act, SC 1996 c 10, and the Air Passenger Protection Regulations, SOR/2019-150. Nova Scotia's Motor Carrier Act licenses intra-provincial passenger carriers but is not a compensation statute, and it could not be checked on the register in any event.
 - **Customs/duties**: Federal matter: Customs Act, RSC 1985 c 1 (2nd Supp), and Customs Tariff, SC 1997 c 36.
 - **Work permits/immigration**: Federal matter: Immigration and Refugee Protection Act, SC 2001 c 27. The Nova Scotia Nominee Program and the Atlantic Immigration Program operate under federal-provincial agreements, not under a provincial statute.
+
+## Tax and benefits: not sourced (2026-10-24)
+
+The aim on 2026-10-24 was the **Income Tax Act** (R.S.N.S. 1989, c. 217) for personal income tax and the **Employment Support and Income Assistance Act** (S.N.S. 2000, c. 27) with its Regulations (N.S. Reg. 195/2019) for income assistance. **Nothing was deposited**, for two reasons:
+
+1. **The statutes are still unreachable.** A request for https://nslegislature.ca/robots.txt with the user agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)` failed to connect after 21 seconds ("Could not connect to server"). A host that hangs is a no; nothing else was tried.
+2. **The regulations carry terms that go to Michael.** The Office of the Registrar of Regulations (novascotia.ca/just/regulations, robots.txt read, not disallowed) is reachable, but:
+   - the Government of Nova Scotia's copyright page, https://novascotia.ca/copyright (read 2026-10-24), permits non-commercial reproduction only if, among other things, "materials must not be modified and the reproduction must be accurate";
+   - every consolidation carries the Registrar's disclaimer, which "must not be removed" (https://novascotia.ca/just/regulations/consregs.htm, read 2026-10-24), including: "This electronic version is copyright © [year], Province of Nova Scotia, all rights reserved. It is for your personal use and may not be copied for the purposes of resale in this or any other form." The Employment Support and Income Assistance Regulations page (https://novascotia.ca/just/regulations/regs/esiaregs.htm, consolidated to O.I.C. 2026-315, N.S. Reg. 200/2026, effective September 3, 2026) carries it word for word.
+
+   A no-modification term and a personal-use term are outside the rulings of 20 and 24 October 2026, so the regulations are **reported to Michael** and not deposited. Five requests were made to novascotia.ca (robots.txt, the copyright page, the regulations home and index, the disclaimer page, the ESIA Regulations page), at least 3 s apart.
