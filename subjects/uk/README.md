@@ -61,3 +61,9 @@ For the Acts deposited on 2026-09-22, the register's current version date has no
 - SSAA 1992: 21 (latest 2020).
 - WRA 2012: 15 (all from the 2012 commencement order).
 - Pensions Act 2014: none.
+
+## Incident notification: the NIS Regulations (added 2026-10-24)
+
+| Subject | Why | Text |
+|---|---|---|
+| `network-and-information-systems-regulations-2018` (S.I. 2018/506) | The UK's in-force incident-notification duties for operators of essential services and relevant digital service providers (72 hours), encoded from the seat of an AI model provider because no UK AI-specific incident duty was found; not an AI law | **aid**: the revised text as re-served by the Lex API (i.AI), valid 2026-09-30, retrieved 2026-10-24; legislation.gov.uk served a bot challenge, so the deposit was not checked against the official text |
