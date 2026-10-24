@@ -1,0 +1,205 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Kentucky Transitional Assistance Program (KTAP, Kentucky's TANF cash assistance): KRS 205.193, 205.200 and 205.210 with
+-- the standards of need and amount in 921 KAR 2:016 -- the seat-neutral core.
+--
+-- Written in the texts' own actors and terms: the "applicant" and "recipient", the "needy child", the "benefit group",
+-- the "cabinet" (for health and family services), the "payment maximum", "standard of need" and "gross income limit", the
+-- "ratable reduction", the "work expense standard deduction".
+--
+-- Edition: Kentucky Revised Statutes (LRC; enactments through the 2026 Regular Session; database updated 10/19/2026),
+-- deposited at ../../registers/source-bundle/krs-205-public-assistance-ktap-ssp.txt (retrieved 2026-10-19 UTC); and
+-- 921 KAR 2:016 as current on the LRC register on 2026-10-19 (eff. 2-16-2023), deposited in the sibling subject
+-- ../../../kentucky-administrative-regulations-921-kar-2-015-and-2-016-state-supplementation-and-ktap-standards/
+-- registers/source-bundle/921-kar-2-016-ktap-standards-of-need-and-amount.txt.
+--
+-- The applicant's seat questions are in ky-ktap-seat.l4.
+--
+-- BASELINE ENCODING. No pipeline, no coverage table, no independent test pass, no human gate. Not advice. See NOTES.md.
+
+§ `KTAP`
+
+§§ `921 KAR 2:016 Section 9 -- the standards`
+
+-- Section 9(2)(a): "Number of Eligible Persons | Payment Maximum | Standard of Need": 1 $372 $481; 2 $450 $552; 3 $524
+-- $631; 4 $656 $710; 5 $766 $790; 6 $864 $869; 7 or more $964 $948. (2)(b) "Maximum Gross Income Limits": 1 $890;
+-- 2 $1,021; 3 $1,169; 4 $1,315; 5 $1,462; 6 $1,608; 7 or more $1,754.
+-- Section 9(6): "To the extent funds are available, the payment maximum, gross income limit, and standard of need shall
+-- be the amount established in this section in addition to cost of living adjustments determined by the Social Security
+-- Administration that have taken place beginning in 2023". The adjustments are not deposited; the cabinet's factor is an
+-- input (1 for the printed figures).
+GIVEN n IS A NUMBER
+      f1 IS A NUMBER, f2 IS A NUMBER, f3 IS A NUMBER, f4 IS A NUMBER, f5 IS A NUMBER, f6 IS A NUMBER, f7 IS A NUMBER
+GIVETH A NUMBER
+`by group size` MEANS
+    BRANCH
+        IF n AT MOST 0 THEN 0
+        IF n EQUALS 1 THEN f1
+        IF n EQUALS 2 THEN f2
+        IF n EQUALS 3 THEN f3
+        IF n EQUALS 4 THEN f4
+        IF n EQUALS 5 THEN f5
+        IF n EQUALS 6 THEN f6
+        OTHERWISE f7
+
+GIVEN n IS A NUMBER, `adjustment factor` IS A NUMBER
+GIVETH A NUMBER
+`payment maximum` n `adjustment factor` MEANS `adjustment factor` TIMES (`by group size` n 372 450 524 656 766 864 964)
+
+GIVEN n IS A NUMBER, `adjustment factor` IS A NUMBER
+GIVETH A NUMBER
+`standard of need` n `adjustment factor` MEANS `adjustment factor` TIMES (`by group size` n 481 552 631 710 790 869 948)
+
+GIVEN n IS A NUMBER, `adjustment factor` IS A NUMBER
+GIVETH A NUMBER
+`gross income limit` n `adjustment factor` MEANS `adjustment factor` TIMES (`by group size` n 890 1021 1169 1315 1462 1608 1754)
+
+§§ `921 KAR 2:016 Section 3 -- resources`
+
+-- Section 3(2): "The total amount of resources reserved by a benefit group shall not be in excess of $10,000 in liquid
+-- assets", excluding the resources listed in (3).
+GIVEN `countable liquid assets` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is within the resource limitation` IF `countable liquid assets` AT MOST 10000
+
+§§ `921 KAR 2:016 Sections 4 and 5 -- income`
+
+-- Section 5(3): "(a) Work expense standard deduction of 175 dollars for full-time and part-time employment; (b) [a
+-- dependent care disregard of not more than $175 a month per individual for full-time employment, $150 for part-time,
+-- $200 for a child under two, where the caregiver is not the parent, guardian or in the benefit group]; (c), (d) [child
+-- support received and retained before notice of eligibility, or assigned and forwarded to the cabinet]; (e) For six (6)
+-- months, the first fifty (50) percent of earned income not already deducted for each member of the benefit group". (4):
+-- the (a), (b) and (e) deductions do not apply for a month the individual reduced, ended or refused employment in the
+-- prior 30 days without good cause, or failed to report an increase in earnings within ten days without good cause.
+DECLARE `Monthly income` HAS
+    `gross earned income`                           IS A NUMBER
+    `employed members of the benefit group`         IS A NUMBER
+    `dependent care disregard`                      IS A NUMBER  -- (3)(b), within its caps
+    `in the six months of the fifty percent disregard` IS A BOOLEAN -- (3)(e)
+    `earnings deductions lost under Section 5(4)`   IS A BOOLEAN
+    `gross unearned income`                         IS A NUMBER
+    `child support deducted under Section 5(3)(c) or (d)` IS A NUMBER
+    `excluded income under Section 5(2)`            IS A NUMBER
+
+-- Section 4(1): "The total gross non-KTAP income shall not exceed the gross income limitation standard", with the
+-- Section 5 exclusions applied.
+GIVEN i IS A `Monthly income`
+GIVETH A NUMBER
+`gross non-KTAP income` i MEANS
+    max 0 ((i's `gross earned income` PLUS i's `gross unearned income`) MINUS i's `excluded income under Section 5(2)`)
+
+GIVEN i IS A `Monthly income`
+GIVETH A NUMBER
+`countable earned income` i MEANS
+    IF i's `earnings deductions lost under Section 5(4)`
+    THEN max 0 (i's `gross earned income`)
+    ELSE IF i's `in the six months of the fifty percent disregard`
+         THEN afterExpenses TIMES 0.5
+         ELSE afterExpenses
+    WHERE
+        afterExpenses MEANS max 0 (i's `gross earned income` MINUS (175 TIMES i's `employed members of the benefit group`) MINUS i's `dependent care disregard`)
+
+GIVEN i IS A `Monthly income`
+GIVETH A NUMBER
+`countable income` i MEANS
+    max 0 (`countable earned income` i
+               PLUS (max 0 (i's `gross unearned income` MINUS i's `excluded income under Section 5(2)`))
+               MINUS i's `child support deducted under Section 5(3)(c) or (d)`)
+
+§§ `KRS 205.200(2); 921 KAR 2:016 Section 9(3) to (5) -- the payment`
+
+-- 205.200(2): the secretary shall "allow for between a forty percent (40%) and a forty-five percent (45%) ratable
+-- reduction ... In no instance shall grants to families with no income be less than the appropriate grant maximum".
+-- Section 9(3): "a forty-five (45) percent ratable reduction shall be applied to the deficit between the family's
+-- countable income and the standard of need". (4)(a): "The assistance payment shall be the lesser amount of either: 1.
+-- Fifty-five (55) percent of the deficit ...; or 2. The payment maximum"; (b): for a family with no income it "shall be
+-- calculated pursuant to KRS 205.200(2)" -- the payment maximum. (5): "If a benefit group's assistance payment equals zero
+-- (0), the benefit group shall be ineligible". Section 4(2)(b): ineligible if countable income "exceeds the standard of
+-- need".
+DECLARE `KTAP result` IS ONE OF
+    `a monthly KTAP payment of` HAS `dollars` IS A NUMBER
+    `ineligible: resources over $10,000 (921 KAR 2:016 Section 3(2))`
+    `ineligible: gross income over the gross income limit (Section 4(1)(c))`
+    `ineligible: countable income over the standard of need (Section 4(2)(b))`
+    `ineligible: the payment would be zero (Section 9(5))`
+
+GIVEN n IS A NUMBER
+      `adjustment factor` IS A NUMBER
+      i IS A `Monthly income`
+GIVETH A NUMBER
+`the assistance payment` MEANS
+    IF `gross non-KTAP income` i EQUALS 0
+    THEN `payment maximum` n `adjustment factor`
+    ELSE min (`payment maximum` n `adjustment factor`) (max 0 (0.55 TIMES (`standard of need` n `adjustment factor` MINUS `countable income` i)))
+
+GIVEN n IS A NUMBER
+      `adjustment factor` IS A NUMBER
+      `countable liquid assets` IS A NUMBER
+      i IS A `Monthly income`
+GIVETH A `KTAP result`
+`the KTAP determination` MEANS
+    IF NOT (`is within the resource limitation` `countable liquid assets`)
+    THEN `ineligible: resources over $10,000 (921 KAR 2:016 Section 3(2))`
+    ELSE IF `gross non-KTAP income` i GREATER THAN `gross income limit` n `adjustment factor`
+         THEN `ineligible: gross income over the gross income limit (Section 4(1)(c))`
+         ELSE IF `countable income` i GREATER THAN `standard of need` n `adjustment factor`
+              THEN `ineligible: countable income over the standard of need (Section 4(2)(b))`
+              ELSE IF `the assistance payment` n `adjustment factor` i AT MOST 0
+                   THEN `ineligible: the payment would be zero (Section 9(5))`
+                   ELSE `a monthly KTAP payment of` (`the assistance payment` n `adjustment factor` i)
+
+§§ `KRS 205.200(7) -- refusing work`
+
+-- "No person shall be eligible for public assistance payments if, after having been determined to be potentially
+-- responsible, and afforded notice and opportunity for hearing, he or she refuses without good cause: (a) To register for
+-- employment with the state employment service, (b) To accept suitable training, or (c) To accept suitable employment."
+GIVEN `determined potentially responsible and given notice and a hearing` IS A BOOLEAN
+      `refused to register for employment, accept suitable training, or accept suitable employment` IS A BOOLEAN
+      `good cause` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is barred by 205.200(7)` IF
+        `determined potentially responsible and given notice and a hearing`
+    AND `refused to register for employment, accept suitable training, or accept suitable employment`
+    AND (NOT `good cause`)
+
+§§ `Duties`
+
+DECLARE `Party` IS ONE OF
+    `the recipient`
+    `the cabinet`
+
+DECLARE `Act` IS ONE OF
+    `report the increase in earnings`
+    `use cash withdrawn with the EBT card other than for goods and services necessary for the welfare of the family`
+
+-- 921 KAR 2:016 Section 5(4)(b): the earnings deductions are lost for a month in which the individual "Fails to report an
+-- increase in earnings, that impacts eligibility, within ten (10) days of the change, unless good cause exists". Counted
+-- in days from the change.
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the Section 5(4)(b) report of an increase in earnings` IS
+    PARTY  `the recipient`
+    MUST   `report the increase in earnings`
+    WITHIN 10
+    HENCE  FULFILLED
+    LEST   BREACH BY `the recipient` BECAUSE "the increase in earnings was not reported within ten days of the change: the work expense, dependent care and fifty percent deductions do not apply for that month, unless good cause exists (921 KAR 2:016 Section 5(4)(b))"
+
+-- KRS 205.193(2): cash withdrawn with the EBT card "may only be used for goods and services necessary for the welfare of
+-- the family, including but not limited to food, clothing, housing, utilities, child care, transportation, medicine, and
+-- medical supplies". (3): recoupment, and the cabinet "may" fine up to $500 and disqualify for up to 1 month, 3 months,
+-- 1 year.
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the 205.193(2) restriction on cash withdrawn` IS
+    PARTY  `the recipient`
+    SHANT  `use cash withdrawn with the EBT card other than for goods and services necessary for the welfare of the family`
+    LEST   BREACH BY `the recipient` BECAUSE "cash withdrawn with the EBT card was used other than for goods and services necessary for the welfare of the family (KRS 205.193(2)); the cabinet seeks recoupment and may fine up to $500 and disqualify (205.193(3))"
+
+-- 205.193(3)(b): the most the cabinet may disqualify for, by violation: 1 month, 3 months, 1 year (12 months).
+GIVEN `which violation` IS A NUMBER
+GIVETH A NUMBER
+`the most months of disqualification under 205.193(3)` MEANS
+    BRANCH
+        IF `which violation` AT MOST 0 THEN 0
+        IF `which violation` EQUALS 1 THEN 1
+        IF `which violation` EQUALS 2 THEN 3
+        OTHERWISE 12
