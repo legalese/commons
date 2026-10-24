@@ -24,3 +24,7 @@ No statute text has been deposited yet.
 ## In-force status
 
 UNCLEAR -- Quebec is the only province that administers and collects its own personal income tax rather than relying on a federal collection agreement, so source withholding for Quebec employees is governed here and by the Loi sur l'administration fiscale, RLRQ c. A-6.002, and administered by Revenu Quebec - unlike Alberta, Saskatchewan and Manitoba, where withholding runs through the federal Income Tax Act.
+
+## 24 October 2026
+
+Not deposited. LegisQuebec answered HTTP 403 (CloudFront "Request blocked") on 2026-10-24 to the honest User-Agent, and the Government of Quebec's terms (https://www.quebec.ca/droit-auteur, re-read 2026-10-24) still forbid reproducing or adapting statutes and regulations "sans autorisation préalable". The ruling of 24 Oct 2026 (texts that permit reproduction but are silent on adaptation may be quoted in encodings) does not reach terms that forbid reproduction; these go to Michael. See `../README.md`.

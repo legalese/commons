@@ -24,3 +24,7 @@ No statute text has been deposited yet.
 ## In-force status
 
 UNCLEAR -- Quebec's social-assistance statute (aide sociale, solidarite sociale, Programme de revenu de base). Employment Insurance is federal, but note that Quebec runs its own parental insurance plan under the Loi sur l'assurance parentale, RLRQ c. A-29.011.
+
+## 24 October 2026
+
+Not deposited. LegisQuebec answered HTTP 403 (CloudFront "Request blocked") on 2026-10-24 to the honest User-Agent, and the Government of Quebec's terms (https://www.quebec.ca/droit-auteur, re-read 2026-10-24) still forbid reproducing or adapting statutes and regulations "sans autorisation préalable". The ruling of 24 Oct 2026 (texts that permit reproduction but are silent on adaptation may be quoted in encodings) does not reach terms that forbid reproduction; these go to Michael. See `../README.md`.
