@@ -1,0 +1,1268 @@
+IMPORT prelude
+
+-- Land Tax Act 2010 (Queensland), with the Land Tax Regulation 2021 and the Taxation Administration Act 2001 as they
+-- apply to land tax -- SEAT-NEUTRAL CORE.
+--
+-- The rules are written in the Acts' own actors and terms: "the owner", "the taxpayer", "a person", "the commissioner",
+-- "taxable land", "exempt land". The individual land owner's questions are in qlt-seat.l4, which IMPORTs this module and
+-- restates no rule. Where the text states a duty with a deadline, the rule is regulative (DEONTIC), so that the party
+-- is a parameter of the rule and not of the question.
+--
+-- PROVISIONS COVERED. Land Tax Act 2010: ss 6-8 (land tax; liability at midnight on 30 June; the owner is liable); s 9
+-- (taxable land); ss 10, 11, 13, 14 (owner; seller and buyer; mortgagee; life estates); ss 16-18 (taxable value; the
+-- averaging factor is an input, see s 18(2) below); s 19 (aggregation); s 22(1)-(3) (co-owners); s 23 (deceased
+-- estates); s 31 (absentee); s 32(1)(a), (c) with Schedule 1 and Schedule 3 (as tables); s 34 (employee absent longer
+-- than 5 years); Part 6 Division 1: ss 36-42B (home), ss 44, 44A (notices after a s 38, 42A or 42B assessment); s 53
+-- with Regulation s 2 (primary production); ss 59, 60 (debt and first charge); ss 70-74 with Regulation s 4
+-- (instalments); ss 76, 77, 77A (exemption application and notices); s 81 (restricted grounds of objection).
+-- Taxation Administration Act 2001 (TAA): s 28 (advise an under-assessment; read with s 58(3)); s 30(1)(e), (2)
+-- (payment by the date in the notice); s 54 (unpaid tax interest; the prescribed rate is an input); s 58 (penalty
+-- tax); ss 63-65 (objections); ss 67-69 (decision; appeal or review within 60 days after paying).
+--
+-- Editions: Land Tax Act 2010 (act-2010-015) in force from 2025-08-01, deposited at
+-- ../../registers/source-bundle/act-2010-015.txt; Land Tax Regulation 2021 (sl-2021-0019) in force from 2023-07-01,
+-- deposited at ../../../land-tax-regulation-2021/registers/source-bundle/sl-2021-0019.txt; Taxation Administration Act
+-- 2001 (act-2001-072) in force from 2025-02-28, deposited at
+-- ../../../taxation-administration-act-2001/registers/source-bundle/act-2001-072.txt. All retrieved 2026-10-20.
+--
+-- INPUTS THE DEPOSIT DOES NOT SUPPLY: the s 18(2) averaging factor (the formula was lost in the deposited text); the
+-- Land Valuation Act values; the TAA "prescribed rate" for interest and the prescribed weekday for late payment interest
+-- (Taxation Administration Regulation 2022, not deposited).
+--
+-- Conventions. Money is in Australian dollars. A regulative rule's clock counts days from the event named in the rule's
+-- comment (day 0). A financial year is named by the calendar year in which it STARTS: the 2026-27 year is 2026.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Land Tax Act 2010 (Qld) -- seat-neutral core`
+
+§§ `Arithmetic`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` `a` `and` `b` MEANS
+    IF `a` AT MOST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the greater of` `a` `and` `b` MEANS
+    IF `a` AT LEAST `b` THEN `a` ELSE `b`
+
+-- s 73(2): "rounded to 2 decimal places". READING: half away from zero. (Where the tax is a whole number of cents, a
+-- third of it never ends in exactly half a cent, so the choice of rule does not matter there.)
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`rounded to the cent` `x` MEANS
+    FLOOR ((`x` TIMES 100) PLUS 0.5) DIVIDED BY 100
+
+-- A factor named in a list of factors, if it is present.
+GIVEN `present` IS A BOOLEAN, `the text` IS A STRING
+GIVETH A LIST OF STRING
+`listed if` `present` `the text` MEANS
+    IF `present` THEN LIST `the text` ELSE EMPTY
+
+§§ `Part 2 -- ss 6 to 8: land tax, when the liability arises, who is liable`
+
+-- s 6(1): "This Act imposes land tax, for each financial year, on all taxable land." (2): "on the taxable value".
+-- s 7: "A liability for land tax for a financial year arises at midnight on 30 June immediately preceding the financial
+-- year." The financial year starting 1 July of year Y: midnight on 30 June of year Y.
+GIVEN `the year the financial year starts` IS A NUMBER
+GIVETH A DATE
+`the liability date for the financial year starting in` `the year the financial year starts` MEANS
+    DATE_FROM_DMY 30 6 `the year the financial year starts`
+
+§§ `Part 3 Division 1 -- s 9: taxable land`
+
+-- s 9: "Taxable land is land in Queensland that-- (a) has been alienated from the State for an estate in fee simple;
+-- and (b) is not exempt land."
+GIVEN `in Queensland`                         IS A BOOLEAN
+      `alienated for an estate in fee simple` IS A BOOLEAN
+      `exempt land`                           IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `it is taxable land (s 9)` IF
+        `in Queensland`
+    AND `alienated for an estate in fee simple`
+    AND (NOT `exempt land`)
+
+§§ `Part 3 Division 2 -- ss 10, 11, 13, 14: who is the owner`
+
+-- s 10(1): "The owner of land includes-- (a) a person jointly or severally entitled to a freehold estate in the land
+-- who is in possession; (b) a person jointly or severally entitled to receive rents and profits from the land; (c) a
+-- person taken to be the owner of the land under this Act."
+-- s 11(1): if an agreement has been made for the sale of land "(a) the seller is taken to be the owner of the land until
+-- the buyer is in possession of it; and (b) the buyer is taken to be the owner of the land as soon as the buyer is in
+-- possession of it." (2): "whether or not the agreement has been completed".
+-- s 13: "a mortgagee of land is taken not to be the owner of the land ... even if the mortgagee is in possession".
+-- s 14: a person "entitled to a life estate in possession" is the owner (s 10(1)(a), per the note); "(2) A person
+-- entitled to the fee simple interest in reversion or remainder is taken not to be the owner of the land."
+DECLARE `Position in relation to the land` IS ONE OF
+    `entitled to a freehold estate in the land, alone or with others, and in possession`
+    `entitled to receive rents and profits from the land`
+    `the seller under an agreement for sale, the buyer not yet in possession`
+    `the seller under an agreement for sale, the buyer in possession`
+    `the buyer under an agreement for sale, in possession`
+    `the buyer under an agreement for sale, not yet in possession`
+    `entitled to a life estate in possession`
+    `entitled to the fee simple in reversion or remainder after a life estate`
+    `a mortgagee, whether or not in possession`
+    `none of these`
+
+GIVEN `the position` IS A `Position in relation to the land`
+GIVETH A BOOLEAN
+DECIDE `the person is the owner (ss 10, 11, 13, 14)` IF
+    CONSIDER `the position`
+    WHEN `entitled to a freehold estate in the land, alone or with others, and in possession` THEN TRUE
+    WHEN `entitled to receive rents and profits from the land` THEN TRUE
+    WHEN `the seller under an agreement for sale, the buyer not yet in possession` THEN TRUE
+    WHEN `the seller under an agreement for sale, the buyer in possession` THEN FALSE
+    WHEN `the buyer under an agreement for sale, in possession` THEN TRUE
+    WHEN `the buyer under an agreement for sale, not yet in possession` THEN FALSE
+    WHEN `entitled to a life estate in possession` THEN TRUE
+    WHEN `entitled to the fee simple in reversion or remainder after a life estate` THEN FALSE
+    WHEN `a mortgagee, whether or not in possession` THEN FALSE
+    WHEN `none of these` THEN FALSE
+
+-- s 8: "The owner of taxable land when a liability for land tax arises is liable to pay the tax."
+GIVEN `the position at the liability date` IS A `Position in relation to the land`
+      `the land is taxable land`           IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the person is liable to pay land tax on the land (s 8)` IF
+        `the person is the owner (ss 10, 11, 13, 14)` `the position at the liability date`
+    AND `the land is taxable land`
+
+§§ `Part 3 Division 3 -- ss 16 to 18: taxable value`
+
+-- s 17: the Land Valuation Act value "is its value under the Land Valuation Act when a liability for land tax arises"
+-- (a FACT: the Valuer-General's valuation).
+-- s 18(1): the averaged value is "(a) if there are Land Valuation Act values of the land for the financial year and the
+-- previous 2 financial years--the amount that is the average of those 3 values; or (b) otherwise--the amount equal to
+-- the Land Valuation Act value of the land for the financial year multiplied by the averaging factor for the year."
+-- s 18(2): the averaging factor "is the number calculated to 2 decimal places using the following formula--" and the
+-- formula itself is NOT in the deposited text (only its T and V are defined). The factor is therefore an INPUT.
+GIVEN `this year's value`                          IS A NUMBER
+      `there are values for the previous 2 years`  IS A BOOLEAN
+      `last year's value`                          IS A NUMBER
+      `the value for the year before last`         IS A NUMBER
+      `the averaging factor`                       IS A NUMBER
+GIVETH A NUMBER
+`the averaged value (s 18)` `this year's value` `there are values for the previous 2 years` `last year's value` `the value for the year before last` `the averaging factor` MEANS
+    IF `there are values for the previous 2 years`
+    THEN (`this year's value` PLUS `last year's value` PLUS `the value for the year before last`) DIVIDED BY 3
+    ELSE `this year's value` TIMES `the averaging factor`
+
+-- s 16(1): "The taxable value, of land for a financial year, is the lesser of-- (a) the Land Valuation Act value of the
+-- land for the financial year; or (b) the averaged value of the land for the financial year." (s 16(2) and s 18A, the
+-- 2011-12 cap, are spent and not encoded.)
+GIVEN `this year's value`                          IS A NUMBER
+      `there are values for the previous 2 years`  IS A BOOLEAN
+      `last year's value`                          IS A NUMBER
+      `the value for the year before last`         IS A NUMBER
+      `the averaging factor`                       IS A NUMBER
+GIVETH A NUMBER
+`the taxable value (s 16)` `this year's value` `there are values for the previous 2 years` `last year's value` `the value for the year before last` `the averaging factor` MEANS
+    `the lesser of` `this year's value` `and` (`the averaged value (s 18)` `this year's value` `there are values for the previous 2 years` `last year's value` `the value for the year before last` `the averaging factor`)
+
+§§ `Part 4 -- ss 19 and 22: aggregation and co-owners`
+
+-- s 22(1): "A co-owner of land-- (a) is taken to own part of the land in proportion to the co-owner's interest in the
+-- land; and (b) subject to section 19, must be severally assessed." (2): "co-owners who hold their interests as joint
+-- tenants are taken to hold equal interests in the land."
+GIVEN `joint tenants`                       IS A BOOLEAN
+      `how many co-owners`                  IS A NUMBER
+      `the interest held as a tenant in common, as a percentage` IS A NUMBER
+GIVETH A NUMBER
+`the co-owner's share, as a fraction (s 22(1), (2))` `joint tenants` `how many co-owners` `the interest held as a tenant in common, as a percentage` MEANS
+    IF `joint tenants`
+    THEN 1 DIVIDED BY `how many co-owners`
+    ELSE `the interest held as a tenant in common, as a percentage` DIVIDED BY 100
+
+-- One parcel as it counts for one owner: the parcel's taxable value, the owner's share of it, and the fraction of that
+-- share that is exempt for that owner (s 22(3): a co-owner who does not meet Part 6's owner requirements gets none).
+DECLARE `Holding` HAS
+    `taxable value of the parcel`        IS A NUMBER
+    `the owner's share, as a fraction`   IS A NUMBER
+    `the exempt fraction of that share`  IS A NUMBER
+
+GIVEN `the holding` IS A `Holding`
+GIVETH A NUMBER
+`the taxable part of the holding` `the holding` MEANS
+    `the holding`'s `taxable value of the parcel`
+        TIMES `the holding`'s `the owner's share, as a fraction`
+        TIMES (1 MINUS `the holding`'s `the exempt fraction of that share`)
+
+-- s 19(1): "A taxpayer's liability for land tax must be assessed on the total taxable value of all taxable land owned
+-- by the taxpayer when the liability arises." Example: two properties of $500,000 each are assessed on $1,000,000.
+GIVEN `the holdings` IS A LIST OF `Holding`
+GIVETH A NUMBER
+`the total taxable value (s 19)` `the holdings` MEANS
+    CONSIDER `the holdings`
+    WHEN EMPTY THEN 0
+    WHEN `h` FOLLOWED BY `rest` THEN (`the taxable part of the holding` `h`) PLUS (`the total taxable value (s 19)` `rest`)
+
+§§ `Part 5 -- s 31: absentee`
+
+-- s 31(1): "An absentee is a person who does not ordinarily reside in Australia." (2): includes a person who "(a) can
+-- not satisfy the commissioner that he or she ordinarily resides in Australia; and (b) when ownership of the person's
+-- land is decided ... (i) is absent from Australia; or (ii) has been absent from Australia for more than half of the 12
+-- month period ending when the ownership is decided." (3): not "(a) a public officer of the Commonwealth or of a State
+-- who is absent in the performance of the officer's duty; or (b) an individual ... employed by an employer in Australia
+-- for a continuous period of 1 year immediately before the employee's absence, if the commissioner is satisfied that--
+-- (i) the employee is absent in the performance of the employee's duty for his or her employer; and (ii) the
+-- employee's absence will not be longer than 5 years; or (c) an Australian citizen; or (d) the holder of a permanent
+-- visa under the Migration Act 1958 (Cwlth), section 30(1)." (4): (3)(b) "stops applying ... as soon as it is longer
+-- than 5 years". (5): Australia includes an external Territory.
+DECLARE `Residence facts` HAS
+    `is an Australian citizen`                                                       IS A BOOLEAN
+    `holds a permanent visa`                                                         IS A BOOLEAN
+    `ordinarily resides in Australia`                                                IS A BOOLEAN
+    `is absent from Australia at the liability date`                                 IS A BOOLEAN
+    `was absent from Australia for more than half of the 12 months to the liability date` IS A BOOLEAN
+    `is a Commonwealth or State public officer absent on duty`                       IS A BOOLEAN
+    `is absent on duty for an employer in Australia who employed them continuously for 1 year before the absence` IS A BOOLEAN
+    `the absence has lasted longer than 5 years`                                     IS A BOOLEAN
+
+DECLARE `Absentee answer` IS ONE OF
+    `not an absentee: an Australian citizen (s 31(3)(c))`
+    `not an absentee: the holder of a permanent visa (s 31(3)(d))`
+    `not an absentee: a public officer absent on duty (s 31(3)(a))`
+    `not an absentee, if the Commissioner is satisfied the absence is on the employer's duty and will not be longer than 5 years (s 31(3)(b))`
+    `an absentee: does not ordinarily reside in Australia (s 31(1))`
+    `an absentee, unless the Commissioner is satisfied the person ordinarily resides in Australia (s 31(2))`
+    `not an absentee: ordinarily resides in Australia`
+
+GIVEN `the facts` IS A `Residence facts`
+GIVETH AN `Absentee answer`
+`the absentee status (s 31)` `the facts` MEANS
+    IF `the facts`'s `is an Australian citizen`
+    THEN `not an absentee: an Australian citizen (s 31(3)(c))`
+    ELSE IF `the facts`'s `holds a permanent visa`
+         THEN `not an absentee: the holder of a permanent visa (s 31(3)(d))`
+         ELSE IF `the facts`'s `is a Commonwealth or State public officer absent on duty`
+              THEN `not an absentee: a public officer absent on duty (s 31(3)(a))`
+              ELSE IF     `the facts`'s `is absent on duty for an employer in Australia who employed them continuously for 1 year before the absence`
+                      AND (NOT (`the facts`'s `the absence has lasted longer than 5 years`))
+                   THEN `not an absentee, if the Commissioner is satisfied the absence is on the employer's duty and will not be longer than 5 years (s 31(3)(b))`
+                   ELSE IF (NOT (`the facts`'s `ordinarily resides in Australia`))
+                        THEN `an absentee: does not ordinarily reside in Australia (s 31(1))`
+                        ELSE IF     `the facts`'s `is absent from Australia at the liability date`
+                                 OR `the facts`'s `was absent from Australia for more than half of the 12 months to the liability date`
+                             THEN `an absentee, unless the Commissioner is satisfied the person ordinarily resides in Australia (s 31(2))`
+                             ELSE `not an absentee: ordinarily resides in Australia`
+
+§§ `Part 5 -- s 32 with Schedules 1 and 3: the rates, as tables`
+
+-- Each schedule is a table of rows "$X or more but less than $Y | $B plus Cc for each $1 more than $Z". A value equal to
+-- a row's lower figure belongs to that row ("or more"). READING: "for each $1 more than" counts whole dollars.
+DECLARE `Rate row` HAS
+    `total taxable value at least`  IS A NUMBER
+    `tax on the first part`         IS A NUMBER
+    `cents for each $1`             IS A NUMBER
+    `more than`                     IS A NUMBER
+
+-- Schedule 1 -- "Rate of land tax--individuals other than absentees and trustees" (s 32(1)(a)). Highest row first;
+-- "less than $600,000 | nil" is the fall-through.
+`Schedule 1` MEANS
+    LIST `Rate row` OF 10000000, 150000, 2.25, 10000000
+         `Rate row` OF 5000000,  62500,  1.75, 5000000
+         `Rate row` OF 3000000,  37500,  1.25, 3000000
+         `Rate row` OF 1000000,  4500,   1.65, 1000000
+         `Rate row` OF 600000,   500,    1.0,  600000
+
+-- Schedule 3 Part 1 -- "Rate generally" for absentees (s 32(1)(c)(i)); "less than $350,000 | nil".
+`Schedule 3 Part 1` MEANS
+    LIST `Rate row` OF 10000000, 175000, 2.5, 10000000
+         `Rate row` OF 5000000,  75000,  2.0, 5000000
+         `Rate row` OF 2250000,  33750,  1.5, 2250000
+         `Rate row` OF 350000,   1450,   1.7, 350000
+
+-- Schedule 3 Part 2 -- "Surcharge rate" (s 32(1)(c)(ii)): "less than $350,000 | nil"; "$350,000 or more | 3.0c for each
+-- $1 more than $349,999".
+`Schedule 3 Part 2` MEANS
+    LIST `Rate row` OF 350000, 0, 3.0, 349999
+
+GIVEN `the schedule` IS A LIST OF `Rate row`
+      `the total taxable value` IS A NUMBER
+GIVETH A NUMBER
+`the tax under` `the schedule` `on` `the total taxable value` MEANS
+    CONSIDER `the schedule`
+    WHEN EMPTY THEN 0
+    WHEN `row` FOLLOWED BY `rest` THEN
+        IF `the total taxable value` AT LEAST `row`'s `total taxable value at least`
+        THEN `row`'s `tax on the first part`
+             PLUS ((`row`'s `cents for each $1`) TIMES FLOOR (`the total taxable value` MINUS `row`'s `more than`) DIVIDED BY 100)
+        ELSE `the tax under` `rest` `on` `the total taxable value`
+
+-- s 32(1): "Land tax is imposed on the total taxable value of the taxable land owned by a taxpayer at the following
+-- rate-- (a) for an individual other than an absentee or trustee--the rate provided for under schedule 1; ... (c) for an
+-- absentee--(i) the general rate provided for under schedule 3, part 1; and (ii) the surcharge rate provided for under
+-- schedule 3, part 2." Trustees and companies (s 32(1)(b), Schedule 2, s 33) are not encoded.
+GIVEN `the total taxable value` IS A NUMBER
+      `an absentee`             IS A BOOLEAN
+GIVETH A NUMBER
+`the land tax of an individual (s 32(1)(a), (c))` `the total taxable value` `an absentee` MEANS
+    IF `an absentee`
+    THEN (`the tax under` `Schedule 3 Part 1` `on` `the total taxable value`)
+         PLUS (`the tax under` `Schedule 3 Part 2` `on` `the total taxable value`)
+    ELSE `the tax under` `Schedule 1` `on` `the total taxable value`
+
+§§ `Part 6 Division 1 Subdivision 2 -- ss 36 to 38: land used as a home`
+
+-- s 36(1): "Land is used as the home, of a person for a financial year, only if-- (a) that land, and no other land, has
+-- been continuously used by the person for residential purposes, whether alone or with another person, for the 6 month
+-- period (the 6 month residency period) ending when a liability for land tax arises for the financial year; or (b) the
+-- land is taken to be used as the person's home under section 37 or 38; or (c) otherwise--the commissioner is satisfied
+-- the land is used as the person's principal place of residence ... when a liability for land tax arises".
+--
+-- s 37 (a person who receives care): (1) applies if "(a) the person who owns the land received care for all or part of
+-- the 6 month residency period; and (b) the person used the land for a qualifying residential use before the person
+-- started to receive care; and (c) the person has used the land for a qualifying residential use continuously for a
+-- period of at least 6 consecutive months; and (d) subsection (6) does not prevent" it. (2): care is residing "at a
+-- hospital as an inpatient", receiving "residential care at a residential care service", or residing "on other land
+-- that is not owned by the person and is under the care of someone else". (4): not "if income was derived from use of
+-- the land during the 1 year period ending when the liability for land tax arises". (5): but income may be derived from
+-- "a lease, licence or other arrangement under which a person has a right to occupy the land, if-- (a) the right of
+-- occupation is for not more than 6 months in the 1 year period; or (b) the income is not more than is reasonably
+-- required to cover ... rates and other charges levied ... by the local government ... and maintenance expenses". (6):
+-- "The maximum period ... is 6 years from the end of the last period of at least 6 consecutive months during which the
+-- land was used by the person for a qualifying residential use."
+--
+-- s 38 (demolition or renovations): taken to be used as the home "if-- (a) the commissioner is satisfied that the person
+-- is temporarily residing elsewhere, when a liability for land tax arises ..., because-- (i) a residence on the land has
+-- been or is being demolished and a new residence is being or will be constructed; or (ii) a residence on the land is
+-- being renovated to an extent requiring it to be vacated; and (b) the land was used as the principal place of
+-- residence of the person at some time during the 6 month residency period; and (c) the person intends to resume using
+-- the land as the person's principal place of residence before a liability for land tax arises for the next financial
+-- year."
+DECLARE `Home use facts` HAS
+    `used this land, and no other land, for residential purposes continuously for the 6 months ending at the liability date` IS A BOOLEAN
+    `uses this land as their principal place of residence at the liability date`             IS A BOOLEAN
+    `received care during all or part of those 6 months`                                     IS A BOOLEAN
+    `used this land, and no other land, as their residence before starting to receive care`  IS A BOOLEAN
+    `has used this land, and no other land, as their residence for at least 6 consecutive months` IS A BOOLEAN
+    `months from the end of the last such 6 months to the liability date`                    IS A NUMBER
+    `income was derived from use of the land in the year ending at the liability date`       IS A BOOLEAN
+    `all of that income was from a lease, licence or other right to occupy the land`         IS A BOOLEAN
+    `the right to occupy was for no more than 6 months of that year`                         IS A BOOLEAN
+    `the income was no more than reasonably needed for council rates and charges and maintenance` IS A BOOLEAN
+    `is temporarily living elsewhere at the liability date because of demolition and rebuilding, or renovation requiring the home to be vacated` IS A BOOLEAN
+    `used this land as their principal place of residence at some time in those 6 months`     IS A BOOLEAN
+    `intends to resume using it as their principal place of residence before the next 30 June` IS A BOOLEAN
+
+-- s 37(6): 6 years, counted in months.
+`the most months a person in care can be taken to use the land as a home (s 37(6))` MEANS 72
+
+GIVEN `the facts` IS A `Home use facts`
+GIVETH A BOOLEAN
+DECIDE `the land is taken to be used as the home of a person who receives care (s 37)` IF
+        `the facts`'s `received care during all or part of those 6 months`
+    AND `the facts`'s `used this land, and no other land, as their residence before starting to receive care`
+    AND `the facts`'s `has used this land, and no other land, as their residence for at least 6 consecutive months`
+    AND `the facts`'s `months from the end of the last such 6 months to the liability date` AT MOST `the most months a person in care can be taken to use the land as a home (s 37(6))`
+    AND (NOT `the income bars s 37`)
+    WHERE
+        `the income bars s 37` MEANS
+                `the facts`'s `income was derived from use of the land in the year ending at the liability date`
+            AND (NOT (    `the facts`'s `all of that income was from a lease, licence or other right to occupy the land`
+                      AND (    `the facts`'s `the right to occupy was for no more than 6 months of that year`
+                           OR `the facts`'s `the income was no more than reasonably needed for council rates and charges and maintenance`)))
+
+-- s 38(b) and (c) are facts; s 38(a) is the Commissioner's satisfaction, so the answer is conditional on it.
+GIVEN `the facts` IS A `Home use facts`
+GIVETH A BOOLEAN
+DECIDE `s 38(b) and (c) are met and s 38(a) is for the Commissioner` IF
+        `the facts`'s `is temporarily living elsewhere at the liability date because of demolition and rebuilding, or renovation requiring the home to be vacated`
+    AND `the facts`'s `used this land as their principal place of residence at some time in those 6 months`
+    AND `the facts`'s `intends to resume using it as their principal place of residence before the next 30 June`
+
+DECLARE `Use as a home` IS ONE OF
+    `used as the home: the 6 month residency test (s 36(1)(a))`
+    `taken to be used as the home: the owner receives care (s 37)`
+    `taken to be used as the home, if the Commissioner is satisfied the owner is temporarily living elsewhere because of the demolition or renovation (s 38)`
+    `used as the home, if the Commissioner is satisfied it is the owner's principal place of residence (s 36(1)(c))`
+    `not used as the home (s 36)`
+
+GIVEN `the facts` IS A `Home use facts`
+GIVETH A `Use as a home`
+`the use of the land as a home (ss 36 to 38)` `the facts` MEANS
+    IF `the facts`'s `used this land, and no other land, for residential purposes continuously for the 6 months ending at the liability date`
+    THEN `used as the home: the 6 month residency test (s 36(1)(a))`
+    ELSE IF `the land is taken to be used as the home of a person who receives care (s 37)` `the facts`
+         THEN `taken to be used as the home: the owner receives care (s 37)`
+         ELSE IF `s 38(b) and (c) are met and s 38(a) is for the Commissioner` `the facts`
+              THEN `taken to be used as the home, if the Commissioner is satisfied the owner is temporarily living elsewhere because of the demolition or renovation (s 38)`
+              ELSE IF `the facts`'s `uses this land as their principal place of residence at the liability date`
+                   THEN `used as the home, if the Commissioner is satisfied it is the owner's principal place of residence (s 36(1)(c))`
+                   ELSE `not used as the home (s 36)`
+
+-- s 36(2): "For deciding whether land is used as the person's principal place of residence under subsection (1)(c), the
+-- commissioner may have regard to the following-- (a) the length of time the person has occupied a residence on the
+-- land; (b) the place of residence of the person's family; (c) whether the person has moved his or her personal
+-- belongings into a residence on the land; (d) the person's address on the electoral roll; (e) whether services such as
+-- telephone, electricity and gas are connected to the land; (f) whether the person acquired the land with an intention
+-- to occupy a residence on the land as his or her principal place of residence; (g) any other relevant matter." The
+-- factors are facts; the weighing is the Commissioner's. This lists the factors that point to the land.
+DECLARE `Principal place of residence factors` HAS
+    `months the person has occupied a residence on the land`      IS A NUMBER
+    `the person's family lives there`                              IS A BOOLEAN
+    `the person has moved their personal belongings in`            IS A BOOLEAN
+    `the person's electoral roll address is the land`              IS A BOOLEAN
+    `telephone, electricity, gas or similar services are connected` IS A BOOLEAN
+    `the person acquired the land intending to occupy it as their principal place of residence` IS A BOOLEAN
+
+GIVEN `the factors` IS A `Principal place of residence factors`
+GIVETH A LIST OF STRING
+`the s 36(2) factors that point to the land` `the factors` MEANS
+    concat (LIST (`listed if` (`the factors`'s `months the person has occupied a residence on the land` GREATER THAN 0) (CONCAT "s 36(2)(a): has occupied a residence on the land for ", TOSTRING (`the factors`'s `months the person has occupied a residence on the land`), " months"))
+                 (`listed if` (`the factors`'s `the person's family lives there`) "s 36(2)(b): the person's family lives there")
+                 (`listed if` (`the factors`'s `the person has moved their personal belongings in`) "s 36(2)(c): personal belongings have been moved in")
+                 (`listed if` (`the factors`'s `the person's electoral roll address is the land`) "s 36(2)(d): the electoral roll address is the land")
+                 (`listed if` (`the factors`'s `telephone, electricity, gas or similar services are connected`) "s 36(2)(e): services such as telephone, electricity and gas are connected")
+                 (`listed if` (`the factors`'s `the person acquired the land intending to occupy it as their principal place of residence`) "s 36(2)(f): the land was acquired intending to occupy it as the principal place of residence"))
+
+§§ `Part 6 Division 1 Subdivision 2 -- ss 39 and 40: non-exempt purpose, allowable lettings, work from home`
+
+-- s 39(2): "The commissioner may decide the land is used for a non-exempt purpose if-- (a) the commissioner is satisfied
+-- that, when a liability for land tax arises ..., the land is being used for any purpose other than as the home of the
+-- principal resident; and (b) the commissioner is satisfied that use ... is substantial; and (c) section 40 does not
+-- apply."
+-- s 40(1): "The commissioner may not decide land is used for a non-exempt purpose if-- (a) the land is used as the home
+-- of a person (the principal resident) ...; and (b) when a liability for land tax arises ..., either or both of the
+-- following apply-- (i) there is a permitted number of allowable lettings for the land; (ii) a person who resides on the
+-- land carries out work on the land, other than excluded work, as an employee under an arrangement with the person's
+-- employer; and (c) the commissioner is satisfied the land is used only for the purposes mentioned in paragraphs (a) and
+-- (b)". (c) is read as a fact the owner can state: the land is used for nothing else.
+-- s 40(2): an allowable letting is a right "to occupy a residential area on the land ... under a tenancy agreement"
+-- where "(b) the leased area is not more than 50% of the total floor area of all residential areas on the land; and (c)
+-- the leased area is not a residential area that-- (i) is 1 of 3 or more flats in a building; and (ii) is not used for
+-- residential purposes by the principal resident; and (d) the leased area is used by the occupant for residential
+-- purposes; and (e) the occupant has not given the right to occupy any part of the area to another person ...; and (f)
+-- the rent payable for the leased area is not more than the market rent". (3): the permitted number is "(a) 1 allowable
+-- letting; or (b) 2 allowable lettings, if-- (i) at least 1 of the lettings is a family letting; and (ii) the total
+-- floor area of the leased areas for the lettings is not more than 50% of the total floor area of all residential
+-- areas". (4): a family letting is to "a member of the principal resident's family" (Schedule 4: spouse, parents,
+-- grandparents, siblings, nephews, nieces, children, stepchildren, grandchildren and certain of their spouses).
+-- (5): "excluded work means work involving use of the land for a purpose for which, or in a way in which, residential
+-- land is not ordinarily used" (e.g. manufacturing in a shed; not office work in a home study).
+-- "Tenancy agreement" (Schedule 4) includes a lease or licence, and boarding or lodging.
+DECLARE `Other use facts` HAS
+    `number of lettings`                                                                   IS A NUMBER
+    `each letting is of a residential area the occupant lives in, not sublet, at no more than market rent, and not 1 of 3 or more flats in a building the principal resident does not live in` IS A BOOLEAN
+    `the let areas together are no more than 50% of the floor area of all residential areas` IS A BOOLEAN
+    `at least 1 letting is to a member of the principal resident's family`                  IS A BOOLEAN
+    `a person who lives there works there as an employee under an arrangement with their employer` IS A BOOLEAN
+    `that work is of a kind for which residential land is ordinarily used`                  IS A BOOLEAN
+    `the land is used for any other purpose`                                                IS A BOOLEAN
+
+GIVEN `the uses` IS A `Other use facts`
+GIVETH A BOOLEAN
+DECIDE `there is a permitted number of allowable lettings (s 40(2), (3))` IF
+        `the uses`'s `each letting is of a residential area the occupant lives in, not sublet, at no more than market rent, and not 1 of 3 or more flats in a building the principal resident does not live in`
+    AND `the uses`'s `the let areas together are no more than 50% of the floor area of all residential areas`
+    AND (   `the uses`'s `number of lettings` EQUALS 1
+         OR (`the uses`'s `number of lettings` EQUALS 2 AND `the uses`'s `at least 1 letting is to a member of the principal resident's family`))
+
+GIVEN `the uses` IS A `Other use facts`
+GIVETH A BOOLEAN
+DECIDE `there is work from home other than excluded work (s 40(1)(b)(ii))` IF
+        `the uses`'s `a person who lives there works there as an employee under an arrangement with their employer`
+    AND `the uses`'s `that work is of a kind for which residential land is ordinarily used`
+
+-- Any use beyond the home that s 40 does not cover: lettings that are not a permitted number of allowable lettings,
+-- excluded work, or another purpose.
+GIVEN `the uses` IS A `Other use facts`
+GIVETH A BOOLEAN
+DECIDE `there is a use that s 40 does not cover` IF
+        (`the uses`'s `number of lettings` GREATER THAN 0 AND (NOT (`there is a permitted number of allowable lettings (s 40(2), (3))` `the uses`)))
+    OR  (`the uses`'s `a person who lives there works there as an employee under an arrangement with their employer` AND (NOT (`the uses`'s `that work is of a kind for which residential land is ordinarily used`)))
+    OR  `the uses`'s `the land is used for any other purpose`
+
+DECLARE `Non-exempt purpose answer` IS ONE OF
+    `no non-exempt purpose: the land is used for nothing but the home (s 39(2)(a))`
+    `no non-exempt purpose: only allowable lettings or working from home, so the Commissioner may not decide one (s 40)`
+    `a non-exempt purpose, if the Commissioner is satisfied the other use is substantial (s 39(2))`
+
+GIVEN `the uses` IS A `Other use facts`
+GIVETH A `Non-exempt purpose answer`
+`the non-exempt purpose question (ss 39, 40)` `the uses` MEANS
+    IF `there is a use that s 40 does not cover` `the uses`
+    THEN `a non-exempt purpose, if the Commissioner is satisfied the other use is substantial (s 39(2))`
+    ELSE IF    `there is a permitted number of allowable lettings (s 40(2), (3))` `the uses`
+            OR `there is work from home other than excluded work (s 40(1)(b)(ii))` `the uses`
+         THEN `no non-exempt purpose: only allowable lettings or working from home, so the Commissioner may not decide one (s 40)`
+         ELSE `no non-exempt purpose: the land is used for nothing but the home (s 39(2)(a))`
+
+-- s 39(3): "For deciding whether use of the land ... is substantial, the commissioner must have regard to each of the
+-- following factors-- (a) whether a person other than the principal resident has been given a right to occupy part of
+-- the land under a tenancy agreement; (b) whether a person, other than the principal resident or a member of the
+-- principal resident's family who uses the land as his or her home, carries out work on the land as an employee or
+-- contractor, other than work related to the land itself or a building located on the land; (c) the extent to which a
+-- person uses the land, or has set the land aside for use, for purposes mentioned in subsection (2)(a); ... (d) whether
+-- the gross income generated during the financial year immediately before the relevant financial year from business or
+-- an income producing activity on the land is more than-- (i) an amount prescribed under a regulation; or (ii) if no
+-- amount is prescribed under a regulation--$30,000; (e) any other relevant matter."
+-- The deposited Land Tax Regulation 2021 prescribes no amount, so (d)(ii)'s $30,000 applies.
+`the s 39(3)(d) income figure` MEANS 30000
+
+DECLARE `Substantial use factors` HAS
+    `someone other than the principal resident has a right to occupy part of the land under a tenancy agreement` IS A BOOLEAN
+    `someone other than the principal resident or a resident family member works on the land as an employee or contractor, not on the land or its buildings` IS A BOOLEAN
+    `part of the land is used or set aside for the other purpose`                          IS A BOOLEAN
+    `gross income from business or an income producing activity on the land last financial year` IS A NUMBER
+
+GIVEN `the factors` IS A `Substantial use factors`
+GIVETH A LIST OF STRING
+`the s 39(3) factors that point to substantial use` `the factors` MEANS
+    concat (LIST (`listed if` (`the factors`'s `someone other than the principal resident has a right to occupy part of the land under a tenancy agreement`) "s 39(3)(a): someone other than the principal resident has a right to occupy part of the land")
+                 (`listed if` (`the factors`'s `someone other than the principal resident or a resident family member works on the land as an employee or contractor, not on the land or its buildings`) "s 39(3)(b): an employee or contractor who does not live there works on the land")
+                 (`listed if` (`the factors`'s `part of the land is used or set aside for the other purpose`) "s 39(3)(c): part of the land is used or set aside for the other purpose")
+                 (`listed if` (`the factors`'s `gross income from business or an income producing activity on the land last financial year` GREATER THAN `the s 39(3)(d) income figure`) "s 39(3)(d): last year's gross income from the land was more than $30,000"))
+
+§§ `Part 6 Division 1 Subdivision 3 -- ss 41 and 42, read with s 22(3): the home exemption`
+
+-- s 41(1): applies to land "(a) comprised in 1 parcel; and (b) either-- (i) owned by a person, other than a trustee or
+-- the manager of a time-sharing scheme, and used as the person's home; or (ii) owned by a trustee ...; and (c) not used
+-- for a non-exempt purpose." (2): "The land is exempt land."
+-- s 42(1): the same, but "(c) used for a non-exempt purpose." (2): "The part of the land used as a home is exempt land."
+-- (3): the commissioner "must apportion the taxable value" by "(a) the proportion of the land used for each purpose;
+-- and (b) the extent to which each proportion is used". (4): "if there is not more than 1 family letting for the land,
+-- the family letting is taken to be included in the use of the land as a home."
+-- s 22(3): "Part 6 does not confer a benefit on a co-owner of land if-- (a) requirements about the owner of exempt land
+-- are provided for under the part; and (b) the co-owner does not satisfy the requirements." So each co-owner is tested
+-- on their own use: there is no spouse rule.
+-- One case is one parcel, owned by an individual alone or as a co-owner. Trustees (s 41(1)(b)(ii), s 43), companies and
+-- time-sharing managers are not covered; nor is a home spread over more than one parcel.
+DECLARE `Commissioner condition` IS ONE OF
+    `no further condition`
+    `if the Commissioner is satisfied the land is the owner's principal place of residence (s 36(1)(c))`
+    `if the Commissioner is satisfied the owner is temporarily living elsewhere because of the demolition or renovation (s 38(a))`
+
+DECLARE `Home exemption answer` IS ONE OF
+    `wholly exempt as the owner's home (s 41)` HAS `condition` IS A `Commissioner condition`
+    `wholly exempt as the owner's home (s 41), unless the Commissioner decides the other use is substantial: then only the part used as the home is exempt (ss 39, 42)` HAS `condition` IS A `Commissioner condition`
+    `not exempt: the land is not used as the owner's home (s 36)`
+    `not exempt for this co-owner, who does not use the land as their home (s 22(3))`
+    `not covered: land owned as a trustee, by a company or by a time-sharing manager`
+    `not covered: a home on more than one parcel`
+
+GIVEN `the use` IS A `Use as a home`
+GIVETH A `Commissioner condition`
+`the condition the home use carries` `the use` MEANS
+    CONSIDER `the use`
+    WHEN `taken to be used as the home, if the Commissioner is satisfied the owner is temporarily living elsewhere because of the demolition or renovation (s 38)` THEN `if the Commissioner is satisfied the owner is temporarily living elsewhere because of the demolition or renovation (s 38(a))`
+    WHEN `used as the home, if the Commissioner is satisfied it is the owner's principal place of residence (s 36(1)(c))` THEN `if the Commissioner is satisfied the land is the owner's principal place of residence (s 36(1)(c))`
+    OTHERWISE `no further condition`
+
+GIVEN `owned by a trustee, company or time-sharing manager` IS A BOOLEAN
+      `the home extends over more than one parcel`         IS A BOOLEAN
+      `a co-owner`                                          IS A BOOLEAN
+      `the home facts`                                      IS A `Home use facts`
+      `the other uses`                                      IS A `Other use facts`
+GIVETH A `Home exemption answer`
+`the home exemption (ss 22(3), 41, 42)` `owned by a trustee, company or time-sharing manager` `the home extends over more than one parcel` `a co-owner` `the home facts` `the other uses` MEANS
+    IF `owned by a trustee, company or time-sharing manager`
+    THEN `not covered: land owned as a trustee, by a company or by a time-sharing manager`
+    ELSE IF `the home extends over more than one parcel`
+         THEN `not covered: a home on more than one parcel`
+         ELSE CONSIDER `the use of the land as a home (ss 36 to 38)` `the home facts`
+              WHEN `not used as the home (s 36)` THEN
+                  IF `a co-owner`
+                  THEN `not exempt for this co-owner, who does not use the land as their home (s 22(3))`
+                  ELSE `not exempt: the land is not used as the owner's home (s 36)`
+              OTHERWISE
+                  CONSIDER `the non-exempt purpose question (ss 39, 40)` `the other uses`
+                  WHEN `a non-exempt purpose, if the Commissioner is satisfied the other use is substantial (s 39(2))` THEN
+                      `wholly exempt as the owner's home (s 41), unless the Commissioner decides the other use is substantial: then only the part used as the home is exempt (ss 39, 42)` (`the condition the home use carries` (`the use of the land as a home (ss 36 to 38)` `the home facts`))
+                  OTHERWISE
+                      `wholly exempt as the owner's home (s 41)` (`the condition the home use carries` (`the use of the land as a home (ss 36 to 38)` `the home facts`))
+
+§§ `Part 6 Division 1 Subdivision 3 -- ss 42A and 42B: moving between homes`
+
+-- s 42A(1): applies if "(a) a person is the owner of land (the current home)-- (i) that, on the liability date for the
+-- current financial year, is exempt or partially exempt land under section 41 or 42; and (ii) of which, on the liability
+-- date for the ... previous financial year ..., the person was not the owner; and (b) the person is also the owner of
+-- land (the old home)-- (i) of which the person has continuously been the owner since the liability date for the
+-- previous financial year; and (ii) that, on the liability date for the previous financial year, was exempt or partially
+-- exempt land for the person ...; and (iii) of which, on the liability date for the financial year immediately following
+-- the current financial year, the person is no longer the owner." (2): the old home "is exempt land for the current
+-- financial year, to the extent that the old home was exempt or partially exempt ... on the liability date for the
+-- previous financial year." (3): not "if the person receives rents or profits from-- (a) the current home before it is
+-- used as the home of the person, other than to the extent provided for under subsection (4); or (b) the old home after
+-- it is used as the home of the person." (4): rents may be received from the current home if it "was acquired ... subject
+-- to a lease" and "the lessee gave vacant possession ... on the earlier of-- (i) the end of the term of the lease; or
+-- (ii) within 6 months after the day the person acquired the current home."
+-- READING: "after it is used as the home" in s 42A(3)(b) and s 42B(3)(a) means after the person stops using it as the
+-- home. (b)(iii) looks a year ahead: the answer takes the owner's expectation, and s 44A deals with it not happening.
+DECLARE `Old home facts` HAS
+    `the current home is exempt or partly exempt for the person under s 41 or 42 at this liability date` IS A BOOLEAN
+    `the person did not own the current home at the previous liability date`         IS A BOOLEAN
+    `the person has owned the old home continuously since the previous liability date` IS A BOOLEAN
+    `the old home was exempt or partly exempt for the person under s 41 or 42 at the previous liability date` IS A BOOLEAN
+    `the person will no longer own the old home at the next liability date`          IS A BOOLEAN
+    `the person received rents or profits from the current home before living in it` IS A BOOLEAN
+    `the current home was bought subject to a lease and the tenant gave vacant possession by the end of the lease or within 6 months of the purchase, whichever was earlier` IS A BOOLEAN
+    `the person received rents or profits from the old home after they stopped living in it` IS A BOOLEAN
+
+DECLARE `Old home answer` IS ONE OF
+    `the old home is exempt for the current financial year, to the extent it was exempt at the previous liability date (s 42A(2))`
+    `not exempt under s 42A: the conditions of s 42A(1) are not met`
+    `not exempt under s 42A: rents or profits were received (s 42A(3))`
+
+GIVEN `the facts` IS A `Old home facts`
+GIVETH AN `Old home answer`
+`the old home exemption (s 42A)` `the facts` MEANS
+    IF (NOT (    `the facts`'s `the current home is exempt or partly exempt for the person under s 41 or 42 at this liability date`
+             AND `the facts`'s `the person did not own the current home at the previous liability date`
+             AND `the facts`'s `the person has owned the old home continuously since the previous liability date`
+             AND `the facts`'s `the old home was exempt or partly exempt for the person under s 41 or 42 at the previous liability date`
+             AND `the facts`'s `the person will no longer own the old home at the next liability date`))
+    THEN `not exempt under s 42A: the conditions of s 42A(1) are not met`
+    ELSE IF    (`the facts`'s `the person received rents or profits from the current home before living in it` AND (NOT (`the facts`'s `the current home was bought subject to a lease and the tenant gave vacant possession by the end of the lease or within 6 months of the purchase, whichever was earlier`)))
+            OR `the facts`'s `the person received rents or profits from the old home after they stopped living in it`
+         THEN `not exempt under s 42A: rents or profits were received (s 42A(3))`
+         ELSE `the old home is exempt for the current financial year, to the extent it was exempt at the previous liability date (s 42A(2))`
+
+-- s 42B(1): applies if "(a) a person is the owner of land (the current home)-- (i) that, on the liability date for the
+-- current financial year, is exempt or partially exempt land under section 41 or 42, other than because the land is
+-- taken to be used as a home under section 38; and (ii) of which, on the liability date for the ... next financial year
+-- ..., the person is no longer the owner; and (b) the person is also the owner of land (the new home)-- (i) of which, on
+-- the liability date for the financial year occurring immediately before the current financial year, the person was not
+-- the owner; and (ii) that, on the liability date for the current financial year, is capable of being used by a person
+-- for residential purposes ...; and (iii) that, on the liability date for the next financial year, is exempt or partially
+-- exempt land under section 41 or 42 for the person; and (iv) of which, on the liability date for the next financial
+-- year, the person is still the owner." (2): the new home is exempt "to the extent that the person's current home is
+-- exempt or partially exempt ... on the liability date for the current financial year." (3), (4): as in s 42A, with the
+-- roles of the homes reversed.
+DECLARE `New home facts` HAS
+    `the current home is exempt or partly exempt for the person under s 41 or 42 at this liability date, other than under s 38` IS A BOOLEAN
+    `the person will no longer own the current home at the next liability date`       IS A BOOLEAN
+    `the person did not own the new home at the previous liability date`              IS A BOOLEAN
+    `the new home can be lived in at this liability date`                             IS A BOOLEAN
+    `the new home will be exempt or partly exempt for the person under s 41 or 42 at the next liability date` IS A BOOLEAN
+    `the person will still own the new home at the next liability date`               IS A BOOLEAN
+    `the person received rents or profits from the current home after they stopped living in it` IS A BOOLEAN
+    `the person received rents or profits from the new home before living in it`     IS A BOOLEAN
+    `the new home was bought subject to a lease and the tenant gave vacant possession by the end of the lease or within 6 months of the purchase, whichever was earlier` IS A BOOLEAN
+
+DECLARE `New home answer` IS ONE OF
+    `the new home is exempt for the current financial year, to the extent the current home is exempt at this liability date (s 42B(2))`
+    `not exempt under s 42B: the conditions of s 42B(1) are not met`
+    `not exempt under s 42B: rents or profits were received (s 42B(3))`
+
+GIVEN `the facts` IS A `New home facts`
+GIVETH A `New home answer`
+`the new home exemption (s 42B)` `the facts` MEANS
+    IF (NOT (    `the facts`'s `the current home is exempt or partly exempt for the person under s 41 or 42 at this liability date, other than under s 38`
+             AND `the facts`'s `the person will no longer own the current home at the next liability date`
+             AND `the facts`'s `the person did not own the new home at the previous liability date`
+             AND `the facts`'s `the new home can be lived in at this liability date`
+             AND `the facts`'s `the new home will be exempt or partly exempt for the person under s 41 or 42 at the next liability date`
+             AND `the facts`'s `the person will still own the new home at the next liability date`))
+    THEN `not exempt under s 42B: the conditions of s 42B(1) are not met`
+    ELSE IF    `the facts`'s `the person received rents or profits from the current home after they stopped living in it`
+            OR (`the facts`'s `the person received rents or profits from the new home before living in it` AND (NOT (`the facts`'s `the new home was bought subject to a lease and the tenant gave vacant possession by the end of the lease or within 6 months of the purchase, whichever was earlier`)))
+         THEN `not exempt under s 42B: rents or profits were received (s 42B(3))`
+         ELSE `the new home is exempt for the current financial year, to the extent the current home is exempt at this liability date (s 42B(2))`
+
+§§ `Part 4 Division 3 -- s 23: deceased estates`
+
+-- s 23(1): applies "if an estate administrator owns land in that capacity when a liability for land tax arises". (2):
+-- the administrator "may give the commissioner a request, in the approved form, to assess the relevant beneficiaries as
+-- if they were the owners". (3): if so "and the commissioner is satisfied this section applies", each relevant
+-- beneficiary "is taken to be the owner of part of the land in proportion to the beneficiary's interest" and the
+-- administrator is not. (4): otherwise, "until the administration of the estate is complete-- (a) the deceased person is
+-- taken to be the owner of the land; and (b) the estate administrator is taken not to be the owner".
+DECLARE `Deceased estate owner` IS ONE OF
+    `each relevant beneficiary, for their interest, if the Commissioner is satisfied s 23 applies (s 23(3))`
+    `the deceased person, until the administration of the estate is complete (s 23(4))`
+    `s 23 does not apply: the estate administrator does not own the land in that capacity at the liability date, or the administration is complete`
+
+GIVEN `the administrator owns the land in that capacity at the liability date` IS A BOOLEAN
+      `the administration of the estate is complete`                          IS A BOOLEAN
+      `the administrator has asked for the beneficiaries to be assessed`      IS A BOOLEAN
+GIVETH A `Deceased estate owner`
+`who is taken to own a deceased estate's land (s 23(3), (4))` `the administrator owns the land in that capacity at the liability date` `the administration of the estate is complete` `the administrator has asked for the beneficiaries to be assessed` MEANS
+    IF     (NOT `the administrator owns the land in that capacity at the liability date`)
+        OR `the administration of the estate is complete`
+    THEN `s 23 does not apply: the estate administrator does not own the land in that capacity at the liability date, or the administration is complete`
+    ELSE IF `the administrator has asked for the beneficiaries to be assessed`
+         THEN `each relevant beneficiary, for their interest, if the Commissioner is satisfied s 23 applies (s 23(3))`
+         ELSE `the deceased person, until the administration of the estate is complete (s 23(4))`
+
+-- s 23(5): land taken to be owned by the deceased person under (4)(a) "is exempt land, for the purpose of assessing a
+-- liability for land tax arising on the next 30 June after the date of death, if-- (a) as at the last 30 June before the
+-- date of death, the land or part was exempt land; and (b) as at the next 30 June after the date of death-- (i) the land
+-- or part is not being used and has not been used since the date of death; or (ii) the land or part is being used, and
+-- has been used since the date of death, only for a purpose for which it was being used on the last 30 June before the
+-- date of death." (6): "if the date of death is 30 June", the next 30 June "is ... that day".
+GIVEN `the date of death` IS A DATE
+GIVETH A DATE
+`the next 30 June after the date of death (s 23(5), (6))` `the date of death` MEANS
+    IF DATE_MONTH `the date of death` AT MOST 6
+    THEN DATE_FROM_DMY 30 6 (DATE_YEAR `the date of death`)
+    ELSE DATE_FROM_DMY 30 6 (DATE_YEAR `the date of death` PLUS 1)
+
+DECLARE `Use since the death` IS ONE OF
+    `not used since the death`
+    `used since the death only for the purpose it was used for at the last 30 June before the death`
+    `used since the death for another purpose`
+
+GIVEN `exempt at the last 30 June before the death` IS A BOOLEAN
+      `the use since the death`                    IS A `Use since the death`
+GIVETH A BOOLEAN
+DECIDE `the deceased person's land is exempt at the next 30 June after the death (s 23(5))` IF
+        `exempt at the last 30 June before the death`
+    AND (   `the use since the death` EQUALS `not used since the death`
+         OR `the use since the death` EQUALS `used since the death only for the purpose it was used for at the last 30 June before the death`)
+
+§§ `Part 6 Division 3 -- s 53 and Regulation s 2: primary production`
+
+-- s 53(1): applies to land, or a part, "used solely for the business of primary production, but only if the land or the
+-- part of land is used for an activity prescribed by regulation that is carried on for the business." (2): exempt if
+-- owned by "(a) an individual, other than a trustee or absentee" (or the trusts, companies and charities in (b)-(d), not
+-- encoded). (3): "if part of the land is exempt land, the commissioner must apportion the taxable value".
+-- Regulation s 2 prescribes: "(a) maintaining animals for the purpose of selling the animals or their bodily produce,
+-- including their natural increase; (b) cultivating land for the purpose of selling produce; (c) propagating or
+-- cultivating plants or mushrooms, for the purpose of selling the plants or mushrooms or produce from the plants, whether
+-- ... grown-- (i) in sand, gravel or liquid, without soil and with added nutrients; or (ii) in the ground or in pots, bags
+-- or containers; (d) planting or tending trees in a plantation or forest for the purpose of selling the trees or produce
+-- from the trees; (e) an activity, other than an activity mentioned in paragraph (a), (b), (c) or (d), that is
+-- agriculture, dairy farming or pasturage; (f) an activity that is-- (i) directly related to, and carried out to
+-- support, an activity mentioned in any of paragraphs (a) to (e); and (ii) carried on for the same business".
+-- "Business of primary production" is not defined: a FACT.
+DECLARE `Primary production activity` IS ONE OF
+    `maintaining animals to sell them or their bodily produce, including natural increase (r 2(a))`
+    `cultivating land to sell produce (r 2(b))`
+    `propagating or cultivating plants or mushrooms to sell them or their produce, in soil, containers or hydroponically (r 2(c))`
+    `planting or tending trees in a plantation or forest to sell the trees or their produce (r 2(d))`
+    `other agriculture, dairy farming or pasturage (r 2(e))`
+    `an activity directly related to and supporting one of these, for the same business (r 2(f))`
+    `none of these activities`
+
+DECLARE `Extent of primary production use` IS ONE OF
+    `all of the land is used solely for the business of primary production`
+    `part of the land is used solely for the business of primary production`
+    `none of the land is used solely for the business of primary production`
+
+DECLARE `Primary production answer` IS ONE OF
+    `exempt: land used for primary production by an individual (s 53)`
+    `the part used for primary production is exempt; the Commissioner apportions the taxable value (s 53(3))`
+    `not exempt: the land is not used solely for a business of primary production`
+    `not exempt: the activity is not one prescribed by Regulation s 2`
+    `not exempt: an absentee or trustee owner (s 53(2)(a))`
+
+GIVEN `the extent` IS A `Extent of primary production use`
+      `the activity` IS A `Primary production activity`
+      `the owner is an absentee or trustee` IS A BOOLEAN
+GIVETH A `Primary production answer`
+`the primary production exemption (s 53, Regulation s 2)` `the extent` `the activity` `the owner is an absentee or trustee` MEANS
+    IF `the extent` EQUALS `none of the land is used solely for the business of primary production`
+    THEN `not exempt: the land is not used solely for a business of primary production`
+    ELSE IF `the activity` EQUALS `none of these activities`
+         THEN `not exempt: the activity is not one prescribed by Regulation s 2`
+         ELSE IF `the owner is an absentee or trustee`
+              THEN `not exempt: an absentee or trustee owner (s 53(2)(a))`
+              ELSE IF `the extent` EQUALS `all of the land is used solely for the business of primary production`
+                   THEN `exempt: land used for primary production by an individual (s 53)`
+                   ELSE `the part used for primary production is exempt; the Commissioner apportions the taxable value (s 53(3))`
+
+§§ `Part 7 -- ss 59 and 60: unpaid land tax is a debt and a first charge`
+
+-- s 59(1): "Despite a disposition of taxable land on which land tax is imposed, the commissioner may recover unpaid land
+-- tax from the owner of the land for the time being as a debt." (2): not "if-- (a) the unpaid land tax was imposed
+-- before the owner purchased the land; and (b) the owner obtained a clearance certificate stating that, at the time of
+-- the purchase, there was no unpaid land tax on the land."
+-- "Unpaid land tax" includes unpaid tax interest and penalty tax (Schedule 4).
+GIVEN `the tax was imposed before the owner purchased the land`                         IS A BOOLEAN
+      `the owner obtained a clearance certificate stating no unpaid land tax at the purchase` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `unpaid land tax can be recovered from the owner for the time being (s 59)` IF
+    NOT (    `the tax was imposed before the owner purchased the land`
+         AND `the owner obtained a clearance certificate stating no unpaid land tax at the purchase`)
+
+-- s 60(1): "Unpaid land tax is a first charge on the land on which the tax is imposed" (subject only to a windfall tax
+-- charge). (4): "The charge is not affected by a disposition of the land." (5): it "has no effect against-- (a) a
+-- purchaser for value and in good faith who obtains a clearance certificate stating that, at the time of purchase, there
+-- was no unpaid land tax on the land; or (b) a person who obtains a clearance certificate stating that security is held
+-- under section 61 for payment of the unpaid land tax."
+GIVEN `a purchaser for value and in good faith`                                    IS A BOOLEAN
+      `obtained a clearance certificate stating no unpaid land tax at the purchase` IS A BOOLEAN
+      `obtained a clearance certificate stating that security is held under s 61`   IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the first charge has effect against the person (s 60)` IF
+    NOT (   (`a purchaser for value and in good faith` AND `obtained a clearance certificate stating no unpaid land tax at the purchase`)
+         OR `obtained a clearance certificate stating that security is held under s 61`)
+
+§§ `Part 9 Division 2 -- s 76: when an application for exemption is needed`
+
+-- s 76(1): "An application for land to be exempt land for a financial year must be made in the approved form." (2): not
+-- needed if "(a) the land was exempt land for the previous financial year; and (b) the ownership of the land has not
+-- changed; and (c) the land continues to be exempt land under the same provision". (3): nor if the commissioner,
+-- believing the land exempt under s 41 or partly under s 42, "has given the owner of the land a notice" saying so.
+GIVEN `exempt last financial year`                       IS A BOOLEAN
+      `the ownership has not changed`                    IS A BOOLEAN
+      `still exempt under the same provision`            IS A BOOLEAN
+      `the Commissioner has given notice believing it exempt under s 41 or 42` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `an application in the approved form is needed (s 76)` IF
+    NOT (   (`exempt last financial year` AND `the ownership has not changed` AND `still exempt under the same provision`)
+         OR `the Commissioner has given notice believing it exempt under s 41 or 42`)
+
+§§ `Part 6 Division 1 Subdivision 4 -- s 44A: the relevant matters after a s 42A or s 42B assessment`
+
+-- s 44A(1): where the old home was assessed exempt under s 42A but "(a) on the liability date mentioned in section
+-- 42A(1)(b)(iii), the person is still the owner of the old home; or (b) the old home is not exempt under section 42A(2)
+-- because the person has received rents or profits". (2): where the new home was assessed exempt under s 42B but "(a) ...
+-- the person is still the owner of the current home ...; or (b) ... the new home is not exempt or partially exempt land
+-- under section 41 or 42 for the person; or (c) ... the person is not the owner of the new home; or (d) the new home is
+-- not exempt under section 42B(2) because the person has received rents or profits". (3): each is "a relevant matter".
+DECLARE `Relevant matter` IS ONE OF
+    `none: the move went as assessed`
+    `s 44A(1)(a): the person still owns the old home at the next liability date`
+    `s 44A(1)(b): rents or profits were received in the way s 42A(3) describes`
+    `s 44A(2)(a): the person still owns the former home at the next liability date`
+    `s 44A(2)(b): the new home is not exempt or partly exempt for the person at the next liability date`
+    `s 44A(2)(c): the person does not own the new home at the next liability date`
+    `s 44A(2)(d): rents or profits were received in the way s 42B(3) describes`
+
+§§ `Regulative rules -- the owner's, the taxpayer's and the Commissioner's duties`
+
+-- The parties are the actors the texts name. "The owner" (ss 77, 77A) and "the person" or "the taxpayer" (ss 34, 44, 44A)
+-- are the individual; TAA ss 28, 30, 65, 69 and Land Tax Act ss 71-74 say "the taxpayer". The Commissioner appears only
+-- where the text puts a duty on the Commissioner that the taxpayer is owed (TAA ss 67, 68).
+DECLARE `Land tax party` IS ONE OF `the owner`, `the taxpayer`, `the Commissioner`
+
+DECLARE `Land tax act` IS ONE OF
+    `give notice that the land is no longer exempt land`
+    `give notice of the change to the part of the land that is exempt`
+    `give notice that the land is not being used as the principal place of residence`
+    `give notice of the details of the relevant matter`
+    `give notice that the absence from Australia has passed 5 years`
+    `advise the Commissioner that the assessed liability is too low`
+    `pay the land tax in full` HAS `amount` IS A NUMBER
+    `elect to pay by instalments by giving a direct debit authority`
+    `pay the first instalment by direct debit`
+    `pay the second instalment by direct debit`
+    `pay the third instalment by direct debit`
+    `lodge an objection` HAS `on the ground that the Land Valuation Act value is excessive` IS A BOOLEAN
+                             `in writing, stating the grounds in detail, with copies of the relevant material` IS A BOOLEAN
+    `decide the objection and give written notice of the decision` HAS `the objection is allowed completely` IS A BOOLEAN
+    `appeal to the Supreme Court or apply to QCAT for a review` HAS `the tax and late payment interest have been paid in full` IS A BOOLEAN
+
+-- THE CLOCKS (days; day 0 is the event named).
+-- ss 77(3), 77A(3): "within 1 month after the start of the next financial year". Day 0 is 1 July. READING: the month is
+-- July, so the last day is 31 July (day 30). The Acts Interpretation Act 1954, which might move it to 1 August, is not
+-- deposited.
+`days after 1 July to give a s 77 or s 77A notice` MEANS 30
+-- s 34(2) (day 0: the day 5 years of absence are reached), s 44(3) (day 0: the day the next liability arises, 30 June),
+-- s 44A(5) (day 0: the day the relevant matter happens): "within 28 days after".
+`days to give a s 34, s 44 or s 44A notice` MEANS 28
+-- TAA s 28(2): "within 30 days after becoming aware". Day 0: the day of becoming aware.
+`days to advise an under-assessment (TAA s 28(2))` MEANS 30
+-- TAA s 30(2): the date stated for payment "must be at least 30 days after the assessment notice ... is given".
+`the fewest days from the notice to the date for payment (TAA s 30(2))` MEANS 30
+-- s 71(4): "the stated date for payment of the 3 instalments must be 45, 90 and 150 days, respectively, after the
+-- assessment notice is given". Day 0: the day the notice is given.
+`days from the notice to the first instalment (s 71(4))` MEANS 45
+`days from the notice to the second instalment (s 71(4))` MEANS 90
+`days from the notice to the third instalment (s 71(4))` MEANS 150
+-- Regulation s 4(a): the period to elect is "(i) 35 days after the assessment notice ... is given to the taxpayer; or
+-- (ii) a longer period allowed by the commissioner". Day 0: the day the notice is given.
+`days from the notice to elect to pay by instalments (Regulation s 4(a)(i))` MEANS 35
+-- TAA s 65(1)(d): an objection must "be lodged within 60 days after" the assessment notice is given. Day 0: that day.
+`days from the notice to lodge an objection (TAA s 65(1)(d))` MEANS 60
+-- TAA s 69(2): "within 60 days after notice is given to the taxpayer of the commissioner's decision on the objection".
+`days from the decision to appeal or apply for review (TAA s 69(2))` MEANS 60
+
+-- s 77(1): applies if "(a) land is exempt land for a financial year; and (b) when a liability for land tax arises for
+-- the next financial year, the land is no longer exempt land; and (c) the ownership of the land has not changed." (2):
+-- "The owner of the land must give the commissioner notice that the land is no longer exempt land." The note: a
+-- lodgement requirement, failure an offence under TAA s 121 (maximum 100 penalty units). Day 0: 1 July of the next year.
+GIVEN `exempt land for the financial year`                IS A BOOLEAN
+      `no longer exempt land at the next liability date`  IS A BOOLEAN
+      `the ownership has not changed`                     IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 77 applies` IF
+        `exempt land for the financial year`
+    AND `no longer exempt land at the next liability date`
+    AND `the ownership has not changed`
+
+GIVEN `exempt land for the financial year`                IS A BOOLEAN
+      `no longer exempt land at the next liability date`  IS A BOOLEAN
+      `the ownership has not changed`                     IS A BOOLEAN
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+DECIDE `s 77 -- the owner must tell the Commissioner, by the end of July, that the land is no longer exempt` IS
+    IF `s 77 applies` `exempt land for the financial year` `no longer exempt land at the next liability date` `the ownership has not changed`
+    THEN PARTY `the owner`
+         MUST  `give notice that the land is no longer exempt land`
+         WITHIN `days after 1 July to give a s 77 or s 77A notice`
+         LEST  BREACH BY `the owner` BECAUSE "s 77(2), (3): notice that the land is no longer exempt land was not given within 1 month after the start of the financial year; an offence under TAA s 121 (up to 100 penalty units), and the Commissioner may make a default assessment carrying penalty tax of 75% (TAA ss 13(1)(a)(ii), 58(1)(a), (2)(a))"
+    ELSE FULFILLED
+
+-- s 77A(1): applies if "(a) a part of land is exempt land for a financial year under section 42, 53 or 55 ...; and (b)
+-- when a liability for land tax arises for the next financial year, there is a change to the part of the land that is
+-- exempt ...; and (c) the owner of the land is not required to give notice of the change under section 77; and (d) the
+-- ownership of the land has not changed." (2): the owner "must give the commissioner notice". Day 0: 1 July.
+GIVEN `part of the land was exempt under s 42, 53 or 55 for the financial year` IS A BOOLEAN
+      `the exempt part has changed at the next liability date`                 IS A BOOLEAN
+      `s 77 requires a notice of the change`                                   IS A BOOLEAN
+      `the ownership has not changed`                                           IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 77A applies` IF
+        `part of the land was exempt under s 42, 53 or 55 for the financial year`
+    AND `the exempt part has changed at the next liability date`
+    AND (NOT `s 77 requires a notice of the change`)
+    AND `the ownership has not changed`
+
+GIVEN `part of the land was exempt under s 42, 53 or 55 for the financial year` IS A BOOLEAN
+      `the exempt part has changed at the next liability date`                 IS A BOOLEAN
+      `s 77 requires a notice of the change`                                   IS A BOOLEAN
+      `the ownership has not changed`                                           IS A BOOLEAN
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+DECIDE `s 77A -- the owner must tell the Commissioner, by the end of July, of a change to the exempt part of the land` IS
+    IF `s 77A applies` `part of the land was exempt under s 42, 53 or 55 for the financial year` `the exempt part has changed at the next liability date` `s 77 requires a notice of the change` `the ownership has not changed`
+    THEN PARTY `the owner`
+         MUST  `give notice of the change to the part of the land that is exempt`
+         WITHIN `days after 1 July to give a s 77 or s 77A notice`
+         LEST  BREACH BY `the owner` BECAUSE "s 77A(2), (3): notice of the change to the exempt part was not given within 1 month after the start of the financial year; an offence under TAA s 121 (up to 100 penalty units)"
+    ELSE FULFILLED
+
+-- s 44(1): applies if "(a) a person's liability ... for a financial year ... is assessed on the basis that land is taken
+-- to be used as a person's home under section 38; and (b) the person does not resume using the land as the person's
+-- principal place of residence before a liability for land tax arises for the next financial year." (2): "The person
+-- must give notice to the commissioner stating the person is not using the land as his or her principal place of
+-- residence." (3): "within 28 days after the day the liability mentioned in subsection (1)(b) arises." (4): the
+-- Commissioner must reassess "on the basis that the land was not exempt land". Day 0: that 30 June.
+GIVEN `assessed on the basis of s 38`                                       IS A BOOLEAN
+      `resumed living there as the principal place of residence before the next liability date` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 44 applies` IF
+        `assessed on the basis of s 38`
+    AND (NOT `resumed living there as the principal place of residence before the next liability date`)
+
+GIVEN `assessed on the basis of s 38`                                       IS A BOOLEAN
+      `resumed living there as the principal place of residence before the next liability date` IS A BOOLEAN
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+DECIDE `s 44 -- after a renovation exemption, the owner must tell the Commissioner within 28 days if they have not moved back` IS
+    IF `s 44 applies` `assessed on the basis of s 38` `resumed living there as the principal place of residence before the next liability date`
+    THEN PARTY `the owner`
+         MUST  `give notice that the land is not being used as the principal place of residence`
+         WITHIN `days to give a s 34, s 44 or s 44A notice`
+         LEST  BREACH BY `the owner` BECAUSE "s 44(2), (3): notice that the land is not the principal place of residence was not given within 28 days after the next liability date; an offence under TAA s 121, and the year is reassessed as not exempt (s 44(4))"
+    ELSE FULFILLED
+
+-- s 44A(4): "The person must give notice to the commissioner stating the details of the relevant matter." (5): "within
+-- 28 days after the day the relevant matter happens, or the circumstances comprising the relevant matter arise." (6):
+-- reassessment "on the basis that the land was not exempt land". Day 0: the day the relevant matter happens.
+GIVEN `the relevant matter` IS A `Relevant matter`
+GIVETH A BOOLEAN
+DECIDE `s 44A applies` IF
+    NOT (`the relevant matter` EQUALS `none: the move went as assessed`)
+
+GIVEN `the relevant matter` IS A `Relevant matter`
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+DECIDE `s 44A -- after a moving exemption, the owner must tell the Commissioner within 28 days of a relevant matter` IS
+    IF `s 44A applies` `the relevant matter`
+    THEN PARTY `the owner`
+         MUST  `give notice of the details of the relevant matter`
+         WITHIN `days to give a s 34, s 44 or s 44A notice`
+         LEST  BREACH BY `the owner` BECAUSE "s 44A(4), (5): the details of the relevant matter were not given within 28 days after it happened; an offence under TAA s 121, and the year is reassessed as not exempt (s 44A(6))"
+    ELSE FULFILLED
+
+-- s 34(1): applies if "(a) a taxpayer's liability for land tax for a financial year is assessed on the basis that the
+-- taxpayer is not an absentee under section 31(3)(b); and (b) the taxpayer's absence from Australia is longer than 5
+-- years." (2): the taxpayer "must, within 28 days after the day on which the taxpayer has been absent from Australia for
+-- 5 years, give notice to the commissioner that this section applies." (3): reassessment as an absentee. Day 0: the day
+-- 5 years of absence are reached.
+GIVEN `assessed as not an absentee under s 31(3)(b)` IS A BOOLEAN
+      `the absence is longer than 5 years`           IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 34 applies` IF
+    `assessed as not an absentee under s 31(3)(b)` AND `the absence is longer than 5 years`
+
+GIVEN `assessed as not an absentee under s 31(3)(b)` IS A BOOLEAN
+      `the absence is longer than 5 years`           IS A BOOLEAN
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+DECIDE `s 34 -- an owner working abroad must tell the Commissioner within 28 days after 5 years of absence` IS
+    IF `s 34 applies` `assessed as not an absentee under s 31(3)(b)` `the absence is longer than 5 years`
+    THEN PARTY `the owner`
+         MUST  `give notice that the absence from Australia has passed 5 years`
+         WITHIN `days to give a s 34, s 44 or s 44A notice`
+         LEST  BREACH BY `the owner` BECAUSE "s 34(2): notice was not given within 28 days after 5 years of absence; an offence under TAA s 121, and the year is reassessed at the absentee rate (s 34(3))"
+    ELSE FULFILLED
+
+-- TAA s 28(1): "A taxpayer must advise the commissioner if the taxpayer becomes aware that-- (a) an assessment of the
+-- taxpayer's liability for tax was not, or is no longer, correct; and (b) the correct liability for tax is more than
+-- the amount stated in the assessment." (2): "within 30 days after becoming aware". s 58(3)(a): failure lets the
+-- Commissioner increase penalty tax by up to 20%. Day 0: the day of becoming aware.
+GIVEN `aware the assessment is not, or no longer, correct and the correct liability is more` IS A BOOLEAN
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+DECIDE `TAA s 28 -- the taxpayer must tell the Commissioner within 30 days of learning the assessment is too low` IS
+    IF `aware the assessment is not, or no longer, correct and the correct liability is more`
+    THEN PARTY `the taxpayer`
+         MUST  `advise the Commissioner that the assessed liability is too low`
+         WITHIN `days to advise an under-assessment (TAA s 28(2))`
+         LEST  BREACH BY `the taxpayer` BECAUSE "TAA s 28: the under-assessment was not advised within 30 days after becoming aware; penalty tax may be increased by up to 20% (TAA s 58(3)(a))"
+    ELSE FULFILLED
+
+-- TAA s 30(1): tax "must be paid-- ... (e) otherwise--by the date stated in the assessment notice as the date by which
+-- the tax must be paid." (2): "the stated date must be at least 30 days after the assessment notice ... is given". s 54:
+-- unpaid tax interest accrues from the start date, the day after the due date (s 54(5)(c)(i)). Day 0: the day the notice
+-- is given; `days to the date stated` is how many days after it the stated date falls.
+GIVEN `the land tax`          IS A NUMBER
+      `days to the date stated` IS A NUMBER
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+DECIDE `TAA s 30(1)(e) -- the taxpayer must pay the land tax by the date stated in the assessment notice` IS
+    PARTY `the taxpayer`
+    MUST  `pay the land tax in full` (EXACTLY `the land tax`)
+    WITHIN `days to the date stated`
+    LEST  BREACH BY `the taxpayer` BECAUSE "TAA s 30(1)(e): the land tax was not paid by the date stated in the assessment notice; unpaid tax interest accrues from the day after (TAA s 54)"
+
+-- s 74(2): if an instalment is missed, "the outstanding land tax is no longer payable by instalments and must be paid in
+-- full by the later of the following dates-- (a) the date by which the land tax would have been payable if the taxpayer
+-- had not elected to pay the tax by instalments; (b) the date on which the failure to pay the instalment happens." (3):
+-- for TAA s 54 "the start date is the day after the date mentioned in subsection (2)(a)." (4): the outstanding land tax
+-- includes "any later instalment". The rule starts when the missed instalment date has passed.
+GIVEN `the outstanding land tax`         IS A NUMBER
+      `days left to the later date`      IS A NUMBER
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+`s 74 -- after a missed instalment, the outstanding land tax must be paid in full` `the outstanding land tax` `days left to the later date` MEANS
+    PARTY `the taxpayer`
+    MUST  `pay the land tax in full` (EXACTLY `the outstanding land tax`)
+    WITHIN `days left to the later date`
+    LEST  BREACH BY `the taxpayer` BECAUSE "s 74(2), (3): the outstanding land tax was not paid in full after an instalment was missed; unpaid tax interest runs from the day after the date the tax would have been payable without instalments"
+
+-- s 73(2): "the amount of each instalment is the amount of the tax divided by 3 and rounded to 2 decimal places." s 71(5):
+-- "The amount payable for each instalment is the amount stated in the assessment notice."
+GIVEN `the land tax` IS A NUMBER
+GIVETH A NUMBER
+`each instalment (s 73(2))` `the land tax` MEANS
+    `rounded to the cent` (`the land tax` DIVIDED BY 3)
+
+-- s 71(4): the n-th instalment's stated date, in days after the notice.
+GIVEN `which instalment` IS A NUMBER
+GIVETH A NUMBER
+`days from the notice to instalment` `which instalment` MEANS
+    IF `which instalment` EQUALS 1
+    THEN `days from the notice to the first instalment (s 71(4))`
+    ELSE IF `which instalment` EQUALS 2
+         THEN `days from the notice to the second instalment (s 71(4))`
+         ELSE `days from the notice to the third instalment (s 71(4))`
+
+-- s 74(4): "outstanding land tax means the unpaid land tax payable by the taxpayer at the time the taxpayer fails to pay
+-- the instalment, including any later instalment". Missing the n-th instalment leaves the tax less the n - 1 paid.
+GIVEN `which instalment` IS A NUMBER
+      `the land tax`     IS A NUMBER
+GIVETH A NUMBER
+`the outstanding land tax after missing instalment` `which instalment` `of` `the land tax` MEANS
+    `the land tax` MINUS ((`which instalment` MINUS 1) TIMES `each instalment (s 73(2))` `the land tax`)
+
+-- s 74(2): the later of (a) the date for payment without instalments and (b) the day the instalment is missed, counted
+-- from the missed instalment's date.
+GIVEN `which instalment`        IS A NUMBER
+      `days to the date stated` IS A NUMBER
+GIVETH A NUMBER
+`days from missing instalment` `which instalment` `to the later date, with the date stated at` `days to the date stated` MEANS
+    `the greater of` 0 `and` (`days to the date stated` MINUS `days from the notice to instalment` `which instalment`)
+
+-- s 71(3): each instalment "must be paid-- (a) by the date ... stated in the assessment notice ...; and (b) ... by direct
+-- debit." The direct debit for an instalment is taken on its stated date, so each instalment's period runs from the
+-- previous one's stated date (READING: an instalment debited early would start the next period early).
+GIVEN `the land tax`            IS A NUMBER
+      `days to the date stated` IS A NUMBER
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+`ss 71, 74 -- the three instalments by direct debit` `the land tax` `days to the date stated` MEANS
+    PARTY `the taxpayer`
+    MUST  `pay the first instalment by direct debit`
+    WITHIN `days from the notice to the first instalment (s 71(4))`
+    HENCE (PARTY `the taxpayer`
+           MUST  `pay the second instalment by direct debit`
+           WITHIN (`days from the notice to the second instalment (s 71(4))` MINUS `days from the notice to the first instalment (s 71(4))`)
+           HENCE (PARTY `the taxpayer`
+                  MUST  `pay the third instalment by direct debit`
+                  WITHIN (`days from the notice to the third instalment (s 71(4))` MINUS `days from the notice to the second instalment (s 71(4))`)
+                  LEST  (`s 74 -- after a missed instalment, the outstanding land tax must be paid in full` (`the outstanding land tax after missing instalment` 3 `of` `the land tax`) (`days from missing instalment` 3 `to the later date, with the date stated at` `days to the date stated`)))
+           LEST  (`s 74 -- after a missed instalment, the outstanding land tax must be paid in full` (`the outstanding land tax after missing instalment` 2 `of` `the land tax`) (`days from missing instalment` 2 `to the later date, with the date stated at` `days to the date stated`)))
+    LEST  (`s 74 -- after a missed instalment, the outstanding land tax must be paid in full` (`the outstanding land tax after missing instalment` 1 `of` `the land tax`) (`days from missing instalment` 1 `to the later date, with the date stated at` `days to the date stated`))
+
+-- s 71(1): "Despite the Administration Act, section 30, land tax to which this division applies may be paid by the
+-- taxpayer in 3 instalments." (2): "only if the taxpayer elects to do so under section 72." s 72: the taxpayer elects
+-- "by giving the commissioner, within the period prescribed under a regulation, the documents prescribed". Regulation s
+-- 4: 35 days after the notice, or longer if the Commissioner allows; the document is a direct debit authority on an
+-- account held in Australia. s 70: only for an assessment "other than a default assessment, self assessment or
+-- reassessment" (see the seat). So the taxpayer either pays in full by the stated date (TAA s 30), or elects in time
+-- and pays the three instalments. Day 0: the day the notice is given.
+GIVEN `the land tax`            IS A NUMBER
+      `days to the date stated` IS A NUMBER
+      `days allowed to elect`   IS A NUMBER
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+DECIDE `ss 71 to 74 and Regulation s 4 -- the taxpayer pays in full by the stated date, or elects within 35 days and pays 3 instalments` IS
+       (`TAA s 30(1)(e) -- the taxpayer must pay the land tax by the date stated in the assessment notice` `the land tax` `days to the date stated`)
+   ROR
+       (    (PARTY `the taxpayer`
+             DO    `elect to pay by instalments by giving a direct debit authority`
+             WITHIN `days allowed to elect`
+             LEST  BREACH BY `the taxpayer` BECAUSE "s 72 and Regulation s 4: no election to pay by instalments within the prescribed period, and the land tax was not paid in full by the stated date")
+       RAND (`ss 71, 74 -- the three instalments by direct debit` `the land tax` `days to the date stated`))
+
+-- TAA s 63(1): "A taxpayer who is dissatisfied with an original assessment, other than a compromise assessment, may
+-- object". s 64(1): "on any grounds", but Land Tax Act s 81(1): "An objection may not be made against an assessment on
+-- prohibited grounds", "the grounds that the Land Valuation Act value of an area of land is excessive" (s 81(5)). s
+-- 65(1): the objection "must-- (a) be in writing; and (b) state in detail the grounds ...; and (c) be accompanied by
+-- copies of all material relevant ...; and (d) be lodged within 60 days after" the assessment notice is given; (2) the
+-- commissioner may extend the time. s 67(1): "The commissioner must allow the objection completely or partly or
+-- disallow it." s 68(1): "must give written notice to the objector". s 69(1)-(2): a taxpayer dissatisfied with the
+-- decision who "has paid the whole of the amount of the tax and late payment interest payable under the assessment" may
+-- "within 60 days after notice is given ... of the commissioner's decision on the objection-- (a) appeal to the Supreme
+-- Court; or (b) apply ... to QCAT for a review". Objecting and appealing are choices, so not doing either is no breach
+-- (DO ... LEST FULFILLED). Day 0: the day the assessment notice is given; the appeal period runs from the decision.
+GIVEN `days allowed to object` IS A NUMBER
+GIVETH A DEONTIC `Land tax party` `Land tax act`
+DECIDE `TAA ss 63 to 69 and s 81 -- objecting within 60 days, the Commissioner's decision, and appeal or review within 60 days after paying` IS
+    PARTY `the taxpayer`
+    DO    `lodge an objection` `valuation ground` `properly made` PROVIDED ((NOT `valuation ground`) AND `properly made`)
+    WITHIN `days allowed to object`
+    HENCE (PARTY `the Commissioner`
+           MUST  `decide the objection and give written notice of the decision` `allowed completely`
+           HENCE (IF `allowed completely`
+                  THEN FULFILLED
+                  ELSE (PARTY `the taxpayer`
+                        DO    `appeal to the Supreme Court or apply to QCAT for a review` `paid` PROVIDED `paid`
+                        WITHIN `days from the decision to appeal or apply for review (TAA s 69(2))`
+                        LEST  FULFILLED)))
+    LEST  FULFILLED
+
+§§ `s 70: which land tax may be paid by instalments`
+
+-- s 70(1): "This division applies to land tax payable under an assessment other than a default assessment, self
+-- assessment or reassessment."
+DECLARE `Kind of land tax assessment` IS ONE OF
+    `an assessment by the Commissioner that is not a default assessment or a reassessment`
+    `a default assessment`
+    `a self assessment`
+    `a reassessment of land tax`
+
+GIVEN `the kind` IS A `Kind of land tax assessment`
+GIVETH A BOOLEAN
+DECIDE `the land tax may be paid by instalments (s 70)` IF
+    `the kind` EQUALS `an assessment by the Commissioner that is not a default assessment or a reassessment`
+
+§§ `TAA ss 63, 64 and s 81: the right to object`
+
+-- TAA s 63(1): "A taxpayer who is dissatisfied with an original assessment, other than a compromise assessment, may
+-- object". (2): also "(a) a reassessment increasing the taxpayer's liability for tax; (b) a reassessment under section
+-- 18(b) decreasing a taxpayer's liability for tax". (3): "the right of objection to the reassessment is limited to the
+-- changes for the particular matters for which the reassessment is made." s 64(1): "on any grounds". Land Tax Act s
+-- 81(1), (5): not "on prohibited grounds", "the grounds that the Land Valuation Act value of an area of land is
+-- excessive" (the note: objections to valuations are made under the Land Valuation Act).
+DECLARE `Assessment objected to` IS ONE OF
+    `an original assessment, not a compromise assessment`
+    `a compromise assessment`
+    `a reassessment increasing the liability`
+    `a reassessment under TAA s 18(b) decreasing the liability`
+    `another reassessment`
+
+DECLARE `Objection answer` IS ONE OF
+    `yes: an objection may be made on any ground other than that the Land Valuation Act value is excessive (TAA s 64(1); s 81)`
+    `yes, but only about the changes the reassessment made (TAA s 63(3))`
+    `no: not on the ground that the Land Valuation Act value is excessive; that is objected to under the Land Valuation Act 2010 (s 81)`
+    `no: a compromise assessment cannot be objected to (TAA s 63(1))`
+    `no: this kind of reassessment cannot be objected to (TAA s 63(2))`
+
+GIVEN `the assessment`                                              IS AN `Assessment objected to`
+      `the ground is that the Land Valuation Act value is excessive` IS A BOOLEAN
+GIVETH AN `Objection answer`
+`the right to object (TAA ss 63, 64; s 81)` `the assessment` `the ground is that the Land Valuation Act value is excessive` MEANS
+    IF `the assessment` EQUALS `a compromise assessment`
+    THEN `no: a compromise assessment cannot be objected to (TAA s 63(1))`
+    ELSE IF `the assessment` EQUALS `another reassessment`
+         THEN `no: this kind of reassessment cannot be objected to (TAA s 63(2))`
+         ELSE IF `the ground is that the Land Valuation Act value is excessive`
+              THEN `no: not on the ground that the Land Valuation Act value is excessive; that is objected to under the Land Valuation Act 2010 (s 81)`
+              ELSE IF `the assessment` EQUALS `an original assessment, not a compromise assessment`
+                   THEN `yes: an objection may be made on any ground other than that the Land Valuation Act value is excessive (TAA s 64(1); s 81)`
+                   ELSE `yes, but only about the changes the reassessment made (TAA s 63(3))`
+
+§§ `TAA s 54: unpaid tax interest`
+
+-- s 54(1): "A taxpayer must pay interest (unpaid tax interest) on the amount of primary tax payable by the taxpayer and
+-- unpaid". (2): it "accrues daily at the prescribed rate on the unpaid primary tax for the period starting on the start
+-- date and ending on the date the primary tax is paid in full, both dates inclusive." (5)(c): the start date is the day
+-- after "(i) the due date for the assessment; or (ii) if the taxpayer has not complied with 1 or more information or
+-- lodgement requirements for the assessment--the date that is the same number of days before the due date ... as the
+-- number of days in the periods of noncompliance". (6)(b): the day of compliance is counted in the noncompliance.
+-- The prescribed rate is set by the Taxation Administration Regulation 2022, NOT deposited: an INPUT, per year.
+-- READING: a year's rate accrues over 365 days, as in the s 54(7) example ("10% per year" on $10,000 for 13 to 24 April
+-- is $32.87, which is the exact figure 32.8767... cut to the cent). (3)(b): for land tax, late payment interest accrues
+-- weekly on a prescribed weekday; that weekday is not deposited, so the daily figure is given.
+GIVEN `the due date`                    IS A DATE
+      `days of noncompliance`           IS A NUMBER
+GIVETH A DATE
+`the start date for unpaid tax interest (TAA s 54(5)(c))` `the due date` `days of noncompliance` MEANS
+    DATE_FROM_SERIAL ((DATE_SERIAL `the due date`) MINUS `days of noncompliance` PLUS 1)
+
+GIVEN `the start date`   IS A DATE
+      `the date paid`    IS A DATE
+GIVETH A NUMBER
+`the days of interest, both dates inclusive (TAA s 54(2))` `the start date` `the date paid` MEANS
+    `the greater of` 0 `and` ((DATE_SERIAL `the date paid`) MINUS (DATE_SERIAL `the start date`) PLUS 1)
+
+GIVEN `the unpaid primary tax`                  IS A NUMBER
+      `the prescribed rate, percent per year`   IS A NUMBER
+      `the days of interest`                    IS A NUMBER
+GIVETH A NUMBER
+`the unpaid tax interest (TAA s 54)` `the unpaid primary tax` `the prescribed rate, percent per year` `the days of interest` MEANS
+    `the unpaid primary tax` TIMES (`the prescribed rate, percent per year` DIVIDED BY 100) TIMES (`the days of interest` DIVIDED BY 365)
+
+§§ `TAA s 58: penalty tax`
+
+-- s 58(1): liable "if-- (a) the commissioner makes a default assessment under section 13(1)(a) or (b); or (b) the
+-- commissioner makes a reassessment and the original assessment was a default assessment under section 13(1)(a) or (b);
+-- or (c) the primary tax assessed on a reassessment, other than under a reassessment mentioned in paragraph (b), is more
+-- than the primary tax assessed on the original assessment or an earlier reassessment." (2): "(a) ... 75% of the primary
+-- tax assessed; (b) ... 75% of the reassessed primary tax; (c) if subsection (1)(c) applies and the primary tax assessed
+-- on the last reassessment is more than the primary tax assessed on the original assessment--... 75% of the difference
+-- ...; (d) if subsection (1)(c) applies and the primary tax assessed on the last reassessment is less than the primary
+-- tax assessed on the original assessment but more than the primary tax assessed on an earlier reassessment--... 75% of
+-- the difference between the primary tax assessed on the last reassessment and the lowest primary tax assessed on an
+-- earlier reassessment." (3): the commissioner "may increase the amount of the penalty tax by not more than 20%" if
+-- satisfied the taxpayer "(a) has not complied with section 28; or (b) has hindered or prevented the commissioner from
+-- becoming aware of the nature and extent of the taxpayer's liability". s 60: the commissioner may remit it.
+-- TAA s 13(1)(a)(ii): a default assessment may be made where "the taxpayer does not give information required ... under
+-- an information requirement or lodge a document required ... under a lodgement requirement" (such as a s 77 notice).
+DECLARE `Assessment kind` IS ONE OF
+    `an original assessment that is not a default assessment`
+    `a default assessment under TAA s 13(1)(a) or (b)`
+    `a reassessment of a default assessment under TAA s 13(1)(a) or (b)`
+    `a reassessment of another assessment`
+
+`the penalty tax rate (TAA s 58(2))` MEANS 75%
+`the most the penalty tax can be increased by (TAA s 58(3))` MEANS 20%
+
+GIVEN `the kind`                                       IS AN `Assessment kind`
+      `the primary tax on this assessment`             IS A NUMBER
+      `the primary tax on the original assessment`     IS A NUMBER
+      `the lowest primary tax on an earlier reassessment` IS A NUMBER
+GIVETH A NUMBER
+`the penalty tax (TAA s 58(1), (2))` `the kind` `the primary tax on this assessment` `the primary tax on the original assessment` `the lowest primary tax on an earlier reassessment` MEANS
+    CONSIDER `the kind`
+    WHEN `an original assessment that is not a default assessment` THEN 0
+    WHEN `a default assessment under TAA s 13(1)(a) or (b)` THEN `the penalty tax rate (TAA s 58(2))` TIMES `the primary tax on this assessment`
+    WHEN `a reassessment of a default assessment under TAA s 13(1)(a) or (b)` THEN `the penalty tax rate (TAA s 58(2))` TIMES `the primary tax on this assessment`
+    WHEN `a reassessment of another assessment` THEN
+        IF `the primary tax on this assessment` GREATER THAN `the primary tax on the original assessment`
+        THEN `the penalty tax rate (TAA s 58(2))` TIMES (`the primary tax on this assessment` MINUS `the primary tax on the original assessment`)
+        ELSE IF     `the primary tax on this assessment` LESS THAN `the primary tax on the original assessment`
+                AND `the primary tax on this assessment` GREATER THAN `the lowest primary tax on an earlier reassessment`
+             THEN `the penalty tax rate (TAA s 58(2))` TIMES (`the primary tax on this assessment` MINUS `the lowest primary tax on an earlier reassessment`)
+             ELSE 0
+
+-- s 58(3): the commissioner "may increase the amount of the penalty tax by not more than 20%" if satisfied the taxpayer
+-- did not comply with s 28 or hindered the commissioner. The most it can be.
+GIVEN `the penalty tax`                                                  IS A NUMBER
+      `the Commissioner is satisfied of a s 28 failure or of hindrance`  IS A BOOLEAN
+GIVETH A NUMBER
+`the most penalty tax (TAA s 58(3))` `the penalty tax` `the Commissioner is satisfied of a s 28 failure or of hindrance` MEANS
+    IF `the Commissioner is satisfied of a s 28 failure or of hindrance`
+    THEN `the penalty tax` TIMES (1 PLUS `the most the penalty tax can be increased by (TAA s 58(3))`)
+    ELSE `the penalty tax`
