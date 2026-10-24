@@ -42,3 +42,11 @@ Deposited 2026-10-20 (UTC retrieval 2026-10-19).
 Each file is plain text converted from the register's per-section HTML pages; each starts with its source, currency date and an unofficial-version notice. Each `.meta.json` beside it lists every page fetched (URL, UTC retrieval time, bytes, sha256), the text sha256 and character count. `subject.json` and the earlier index record in `registers/source-bundle/` are left as they were.
 
 **Deliberately out**: Subtitles 3-6 (allocation and apportionment, corporations, fiduciaries, pass-through entities), Subtitle 7 credits that are business or programme credits (ss 10-701.1, 10-702, 10-703.2, 10-704.1 to 10-704.8, 10-710, 10-714, 10-715, 10-717, 10-720 to 10-739.1, 10-741 to 10-750, 10-752, 10-753, 10-755 to 10-757, 10-759), Subtitle 8 (returns and payment) and Subtitle 9 (withholding).
+
+## Deposit of 2026-10-24: Subtitle 8 (returns)
+
+Added for the baseline encoding of 24 October 2026, so that who must file and by when come from deposited text.
+
+- `registers/source-bundle/tax-general-title-10-subtitle-8-returns.txt` -- Md. Code, Tax-Gen. ss 10-804 to 10-823 (Title 10, Subtitle 8): who must file (s 10-805 residents, s 10-806 nonresidents), joint returns (s 10-807), estimated tax (s 10-815), due dates (s 10-820), extensions (s 10-823) and the rest of the subtitle as served. 20 sections, 27,100 characters; text sha256 `3d4d2ccd2f6b3e923e122c26fc91b615d863f95d49a39ade870068dd4d9ec95b`. Sections 10-801 to 10-803 were requested and the register answered "File Not Found" (the subtitle begins at s 10-804).
+- **Terms read again 2026-10-24**: https://mgaleg.maryland.gov/robots.txt still answers HTTP 404 (no robots rules). The section pages carry no copyright line or terms-of-use link. Verdict unchanged: clean.
+- **Requests**: 23 section pages and robots.txt, one at a time, 3 seconds apart, with the User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`, on 2026-10-24 (UTC 02:26:43 to 02:28:14). No block, challenge or rate limit. Same conversion and the same 'include enactments of the last session: Yes' option as the 2026-10-20 deposit, so the text is the Code as in effect on 1 October 2026.

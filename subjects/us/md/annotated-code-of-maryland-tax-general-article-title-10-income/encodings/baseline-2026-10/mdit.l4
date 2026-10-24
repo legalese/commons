@@ -1,0 +1,655 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Annotated Code of Maryland, Tax - General Article, Title 10 (income tax): what a full-year Maryland resident owes and
+-- gets back. Who is a resident (s 10-101(k)); Maryland adjusted gross income from federal adjusted gross income (s 10-203,
+-- additions s 10-204 and subtractions ss 10-207 to 10-210 as inputs, except the Social Security and Railroad Retirement
+-- subtraction of s 10-207(j), worked out); exemptions (s 10-211); the standard deduction and itemized deductions
+-- (ss 10-217, 10-218); Maryland taxable income (ss 10-101(i), 10-201); the State rates and the 2% addition on net capital
+-- gain (s 10-105(a)); the county income tax at the county's rate (ss 10-103, 10-106); the earned income credit (s 10-704),
+-- the poverty-level credit (s 10-709) and the child tax credit (s 10-751); who must file (s 10-805), joint returns
+-- (s 10-807) and the due date (s 10-820(a)).
+--
+-- SEAT: the individual Maryland resident (or the married couple on a joint return) who asks "Must I file? What State and
+-- county income tax do I owe, and what credits do I get back?". Provisions addressed to the Comptroller or a county are
+-- encoded for what they mean to that person: the county's rate is a fact the person can look up; the Comptroller's
+-- cost-of-living adjustment for 2026 is an input.
+--
+-- Edition: the Code as in effect on 1 October 2026 (mgaleg.maryland.gov, 'include enactments of the last session'), as
+-- deposited at ../../registers/source-bundle/tax-general-title-10-subtitles-1-2-rates-and-maryland-taxable-income.txt,
+-- tax-general-title-10-subtitle-7-individual-credits.txt and tax-general-title-10-subtitle-8-returns.txt.
+--
+-- Federal terms (federal adjusted gross income, the federal earned income credit under IRC s 32, the IRC s 152 dependant,
+-- the IRC s 6012(a) filing thresholds, filing status under IRC s 2) are borrowed and asked as facts. The federal encoding is
+-- subjects/us/internal-revenue-code-of-1986/ (cross-folder IMPORT is not possible in the stable l4; NOTES.md names the link).
+--
+-- NOT ENCODED (answers `not covered` where a question can reach it): nonresidents and part-year residents (ss 10-105(d),
+-- 10-219, 10-704(e), 10-709(e)); fiduciaries and personal representatives; an individual claimed as an exemption on another
+-- taxpayer's return; counties that tax on a bracket basis (s 10-106(c)); taxable years beginning before 2025 or after 2026;
+-- the individual additions and subtractions other than s 10-207(j) (inputs as totals); credits other than ss 10-704, 10-709
+-- and 10-751; withholding and estimated tax (ss 10-815 to 10-822); interest and penalties.
+--
+-- BASELINE ENCODING. Written from the individual's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Maryland income tax -- Tax-General Title 10`
+
+§§ `Questions this encoding does not cover`
+
+DECLARE `Why not covered` IS ONE OF
+    `a nonresident or part-year resident is not encoded (ss 10-105(d), 10-219, 10-704(e))`
+    `an individual who is claimed as an exemption on another taxpayer's return is not encoded`
+    `a county that applies its income tax on a bracket basis (s 10-106(c)) is not encoded`
+    `only taxable years beginning in 2025 or 2026 are encoded`
+
+GIVEN a IS A TYPE
+GIVETH A TYPE
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+§§ `Filing status`
+
+-- Filing status is the federal one (IRC s 2, s 6013), borrowed. s 10-807(a): a couple who file a joint federal return
+-- "shall file a joint Maryland income tax return", subject to (b).
+DECLARE `Filing status` IS ONE OF
+    `single`
+    `married filing separately`
+    `married filing jointly`
+    `head of household`
+    `surviving spouse`
+
+-- s 10-105(a)(2), s 10-211(c)(2), s 10-217(b)(2), (3): "spouses filing a joint return or ... a surviving spouse or head of
+-- household as defined in s 2 of the Internal Revenue Code" share one set of figures; everyone else takes the other.
+GIVEN `status` IS A `Filing status`
+GIVETH A BOOLEAN
+DECIDE `takes the joint, head of household and surviving spouse figures` IF
+    CONSIDER `status`
+    WHEN `married filing jointly` THEN TRUE
+    WHEN `head of household`      THEN TRUE
+    WHEN `surviving spouse`       THEN TRUE
+    OTHERWISE FALSE
+
+GIVEN `text` IS A STRING
+GIVETH A `Filing status`
+`the filing status named` MEANS
+    BRANCH
+        IF `text` EQUALS "married filing jointly"    THEN `married filing jointly`
+        IF `text` EQUALS "married filing separately" THEN `married filing separately`
+        IF `text` EQUALS "head of household"         THEN `head of household`
+        IF `text` EQUALS "surviving spouse"          THEN `surviving spouse`
+        OTHERWISE `single`
+
+§§ `s 10-101(k) -- am I a resident`
+
+-- s 10-101(k)(1)(i): "an individual, other than a fiduciary, who: 1. is domiciled in this State on the last day of the
+-- taxable year; or 2. for more than 6 months of the taxable year, maintained a place of abode in this State, whether
+-- domiciled in this State or not". (k)(2) makes a mover a resident for part of the year only; that part-year case is out.
+GIVEN `domiciled in Maryland on the last day of the taxable year` IS A BOOLEAN
+      `months of the taxable year I maintained a place of abode in Maryland` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `I am a resident for the whole taxable year` IF
+        `domiciled in Maryland on the last day of the taxable year`
+    OR  `months of the taxable year I maintained a place of abode in Maryland` GREATER THAN 6
+
+@export Am I a Maryland resident for income tax purposes for this taxable year (s 10-101(k)(1)(i))?
+GIVEN `domiciled on the last day` IS A BOOLEAN @desc Whether Maryland was your domicile (your permanent home) on the last day of the taxable year (31 December for most people)
+      `months with a place of abode` IS A NUMBER @desc How many months of the taxable year you kept a place to live in Maryland, whether or not Maryland was your domicile
+GIVETH A BOOLEAN
+DECIDE `Am I a Maryland resident` IF
+    `I am a resident for the whole taxable year` `domiciled on the last day` `months with a place of abode`
+
+§§ `ss 10-203 to 10-210 -- Maryland adjusted gross income`
+
+-- s 10-203: "the Maryland adjusted gross income of an individual is the individual's federal adjusted gross income for the
+-- taxable year as adjusted under this Part II". s 10-204(a): amounts "excluded from federal adjusted gross income ... are
+-- added"; s 10-207(a): amounts "included in federal adjusted gross income ... are subtracted", including (j) "a payment
+-- received: (1) under Title II of the Social Security Act; or (2) as a benefit under the Railroad Retirement Act".
+GIVEN `federal adjusted gross income` IS A NUMBER
+      `additions under s 10-204` IS A NUMBER
+      `Social Security and Railroad Retirement benefits included in federal adjusted gross income` IS A NUMBER
+      `other subtractions under ss 10-207 to 10-210` IS A NUMBER
+GIVETH A NUMBER
+`Maryland adjusted gross income` MEANS
+          `federal adjusted gross income`
+    PLUS  `additions under s 10-204`
+    MINUS `Social Security and Railroad Retirement benefits included in federal adjusted gross income`
+    MINUS `other subtractions under ss 10-207 to 10-210`
+
+§§ `s 10-211 -- exemptions`
+
+-- s 10-211(b)(1): "$3,200 for each exemption"; (c)(1) for an individual other than one in (c)(2), with federal adjusted
+-- gross income over $100,000: $1,600 up to $125,000, $800 up to $150,000, $0 above; (c)(2) for a joint return, a head of
+-- household or a surviving spouse over $150,000: $1,600 up to $175,000, $800 up to $200,000, $0 above.
+GIVEN `status` IS A `Filing status`
+      `federal adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`the amount for each exemption` MEANS
+    IF `takes the joint, head of household and surviving spouse figures` `status`
+    THEN BRANCH
+            IF `federal adjusted gross income` AT MOST 150000 THEN 3200
+            IF `federal adjusted gross income` AT MOST 175000 THEN 1600
+            IF `federal adjusted gross income` AT MOST 200000 THEN 800
+            OTHERWISE 0
+    ELSE BRANCH
+            IF `federal adjusted gross income` AT MOST 100000 THEN 3200
+            IF `federal adjusted gross income` AT MOST 125000 THEN 1600
+            IF `federal adjusted gross income` AT MOST 150000 THEN 800
+            OTHERWISE 0
+
+-- s 10-211(a): an exemption for "(1) the taxpayer", "(2) the spouse" on a separate return if the spouse "has no gross
+-- income and is not a dependent of another taxpayer", and "(3) each individual who is a dependent, as defined in s 152".
+-- On a joint return each spouse is counted as a taxpayer (NOTES.md finding 3). (b)(2): "an additional $3,200 for each
+-- dependent ... who is at least 65 years old" (limited by (c) like (b)(1)); (b)(3), (4): "an additional $1,000" if the
+-- individual is at least 65, and another if blind, on the last day of the taxable year (not limited by (c)).
+GIVEN `status` IS A `Filing status`
+      `federal adjusted gross income` IS A NUMBER
+      `my spouse has no gross income and is not anyone's dependent` IS A BOOLEAN
+      `number of my s 152 dependants` IS A NUMBER
+      `number of those dependants at least 65` IS A NUMBER
+      `number of us at least 65` IS A NUMBER
+      `number of us blind` IS A NUMBER
+GIVETH A NUMBER
+`the exemptions under s 10-211` MEANS
+        (`the number of exemptions under s 10-211(a)` PLUS `number of those dependants at least 65`)
+          TIMES `the amount for each exemption` `status` `federal adjusted gross income`
+    PLUS 1000 TIMES `number of us at least 65`
+    PLUS 1000 TIMES `number of us blind`
+    WHERE
+        `the number of exemptions under s 10-211(a)` MEANS
+            CONSIDER `status`
+            WHEN `married filing jointly` THEN 2 PLUS `number of my s 152 dependants`
+            WHEN `married filing separately` THEN
+                IF `my spouse has no gross income and is not anyone's dependent`
+                THEN 2 PLUS `number of my s 152 dependants`
+                ELSE 1 PLUS `number of my s 152 dependants`
+            OTHERWISE 1 PLUS `number of my s 152 dependants`
+
+§§ `ss 10-217, 10-218 -- the standard deduction or itemized deductions`
+
+-- s 10-217(b): "$3,350" for an individual other than (2) and (3); "$6,700" for a head of household, a surviving spouse, or
+-- spouses on a joint return. (c): "For each taxable year beginning after December 31, 2025", increased by the base times
+-- the cost-of-living adjustment "as determined by the Comptroller", rounded down to a multiple of $50. The Comptroller's
+-- adjustment for 2026 is not deposited: it is an input (a fraction, e.g. 0.03 for 3%).
+GIVEN `status` IS A `Filing status`
+      `taxable year` IS A NUMBER
+      `the Comptroller's cost-of-living adjustment for the year` IS A NUMBER
+GIVETH A NUMBER
+`the standard deduction` MEANS
+    IF `taxable year` AT LEAST 2026
+    THEN `the base` PLUS (FLOOR ((`the base` TIMES `the Comptroller's cost-of-living adjustment for the year`) DIVIDED BY 50) TIMES 50)
+    ELSE `the base`
+    WHERE
+        `the base` MEANS
+            IF `takes the joint, head of household and surviving spouse figures` `status` THEN 6700 ELSE 3350
+
+-- s 10-218(a): "Only an individual who itemizes deductions on the individual's federal income tax return may elect to
+-- itemize"; (b): the federal itemized deductions "(3) further reduced by the amount claimed as taxes on income paid to a
+-- state or political subdivision" (net of the s 68 share; asked as one figure); (c): where federal adjusted gross income
+-- exceeds the "applicable amount" ($100,000 married filing separately, $200,000 all others), reduced by "7.5% of the
+-- excess". s 10-217(a)(1): the standard deduction may be elected "whether or not the individual itemizes" federally. The
+-- encoding takes whichever is larger (NOTES.md: the election is the person's).
+GIVEN `status` IS A `Filing status`
+      `federal adjusted gross income` IS A NUMBER
+      `federal itemized deductions less income taxes paid to a state or locality` IS A NUMBER
+GIVETH A NUMBER
+`the itemized deductions under s 10-218` MEANS
+    `the larger of` 0 (`federal itemized deductions less income taxes paid to a state or locality` MINUS `the s 10-218(c) reduction`)
+    WHERE
+        `the applicable amount` MEANS
+            IF `status` EQUALS `married filing separately` THEN 100000 ELSE 200000
+        `the s 10-218(c) reduction` MEANS
+            7.5% TIMES (`the larger of` 0 (`federal adjusted gross income` MINUS `the applicable amount`))
+
+GIVEN `x` IS A NUMBER, `y` IS A NUMBER
+GIVETH A NUMBER
+`the larger of` MEANS IF `x` AT LEAST `y` THEN `x` ELSE `y`
+
+GIVEN `x` IS A NUMBER, `y` IS A NUMBER
+GIVETH A NUMBER
+`the smaller of` MEANS IF `x` AT MOST `y` THEN `x` ELSE `y`
+
+§§ `s 10-105(a) -- the State income tax`
+
+-- The part of `x` that falls in the band from `low` to `high`.
+GIVEN `x` IS A NUMBER, `low` IS A NUMBER, `high` IS A NUMBER
+GIVETH A NUMBER
+`the part of` MEANS `the larger of` 0 ((`the smaller of` `x` `high`) MINUS `low`)
+
+-- s 10-105(a)(1), for an individual other than one in (2): 2% of $1-$1,000; 3% to $2,000; 4% to $3,000; 4.75% to
+-- $100,000; 5% to $125,000; 5.25% to $150,000; 5.5% to $250,000; 5.75% to $500,000; 6.25% to $1,000,000; "6.50% of
+-- Maryland taxable income in excess of $1,000,000".
+GIVEN `income` IS A NUMBER
+GIVETH A NUMBER
+`the s 10-105(a)(1) rates` MEANS
+    sum (LIST
+        (2% TIMES (`the part of` `income` 0 1000)),
+        (3% TIMES (`the part of` `income` 1000 2000)),
+        (4% TIMES (`the part of` `income` 2000 3000)),
+        (4.75% TIMES (`the part of` `income` 3000 100000)),
+        (5% TIMES (`the part of` `income` 100000 125000)),
+        (5.25% TIMES (`the part of` `income` 125000 150000)),
+        (5.5% TIMES (`the part of` `income` 150000 250000)),
+        (5.75% TIMES (`the part of` `income` 250000 500000)),
+        (6.25% TIMES (`the part of` `income` 500000 1000000)),
+        (6.5% TIMES (`the part of` `income` 1000000 1000000000000)))
+
+-- s 10-105(a)(2), for spouses on a joint return, a surviving spouse or a head of household: the same rates, with the 4.75%
+-- band to $150,000; 5% to $175,000; 5.25% to $225,000; 5.5% to $300,000; 5.75% to $600,000; 6.25% to $1,200,000; 6.50% above.
+GIVEN `income` IS A NUMBER
+GIVETH A NUMBER
+`the s 10-105(a)(2) rates` MEANS
+    sum (LIST
+        (2% TIMES (`the part of` `income` 0 1000)),
+        (3% TIMES (`the part of` `income` 1000 2000)),
+        (4% TIMES (`the part of` `income` 2000 3000)),
+        (4.75% TIMES (`the part of` `income` 3000 150000)),
+        (5% TIMES (`the part of` `income` 150000 175000)),
+        (5.25% TIMES (`the part of` `income` 175000 225000)),
+        (5.5% TIMES (`the part of` `income` 225000 300000)),
+        (5.75% TIMES (`the part of` `income` 300000 600000)),
+        (6.25% TIMES (`the part of` `income` 600000 1200000)),
+        (6.5% TIMES (`the part of` `income` 1200000 1000000000000)))
+
+-- s 10-105(a)(3), (4): where federal adjusted gross income exceeds $350,000 and Maryland adjusted gross income includes net
+-- capital gain, "an additional 2% of the amount of net capital gain included", leaving out the gains listed in (3)(ii)
+-- (a primary residence sold for under $1,500,000, retirement plan assets, and the rest). The gain net of (3)(ii) is an input.
+GIVEN `status` IS A `Filing status`
+      `Maryland taxable income` IS A NUMBER
+      `federal adjusted gross income` IS A NUMBER
+      `net capital gain subject to the additional 2%` IS A NUMBER
+GIVETH A NUMBER
+`the State income tax` MEANS
+        `the rates on Maryland taxable income`
+    PLUS `the additional 2% on net capital gain`
+    WHERE
+        `the rates on Maryland taxable income` MEANS
+            IF `takes the joint, head of household and surviving spouse figures` `status`
+            THEN `the s 10-105(a)(2) rates` `Maryland taxable income`
+            ELSE `the s 10-105(a)(1) rates` `Maryland taxable income`
+        `the additional 2% on net capital gain` MEANS
+            IF `federal adjusted gross income` GREATER THAN 350000
+            THEN 2% TIMES (`the larger of` 0 `net capital gain subject to the additional 2%`)
+            ELSE 0
+
+§§ `ss 10-704, 10-709, 10-751 -- the credits`
+
+-- s 10-704(c)(1), (2), for an individual with a qualifying child: a credit against the State tax of the lesser of "50% of
+-- the earned income credit allowable ... under s 32" and the State tax, and a refund of the amount by which "45% ... for a
+-- taxable year beginning after December 31, 2019" exceeds the State tax. (c)(3): for an individual without a qualifying
+-- child, the federal credit is "calculated without regard to" the s 32 minimum age and s 32(m) (an input as the person's
+-- figure), the State credit "is equal to 100%" of it, and any excess over "the total tax otherwise payable" is refunded
+-- (read as the State income tax: NOTES.md finding 5).
+GIVEN `federal earned income credit` IS A NUMBER
+      `I have a qualifying child` IS A BOOLEAN
+      `State income tax` IS A NUMBER
+GIVETH A NUMBER
+`the s 10-704 credit against the State tax` MEANS
+    IF `I have a qualifying child`
+    THEN `the smaller of` (50% TIMES `federal earned income credit`) `State income tax`
+    ELSE `the smaller of` `federal earned income credit` `State income tax`
+
+GIVEN `federal earned income credit` IS A NUMBER
+      `I have a qualifying child` IS A BOOLEAN
+      `State income tax` IS A NUMBER
+GIVETH A NUMBER
+`the s 10-704 refund` MEANS
+    IF `I have a qualifying child`
+    THEN `the larger of` 0 ((45% TIMES `federal earned income credit`) MINUS `State income tax`)
+    ELSE `the larger of` 0 (`federal earned income credit` MINUS `State income tax`)
+
+-- s 10-704(d)(1): against the county tax, the lesser of the federal credit "multiplied by 10 times the applicable county
+-- income tax rate" and the county tax. (d)(2)(iii): where the county "provides, by law, for a refundable county earned
+-- income credit", a refund of the amount by which the federal credit times "5 times the applicable county income tax
+-- rate" exceeds the county tax.
+GIVEN `federal earned income credit` IS A NUMBER
+      `county rate` IS A NUMBER
+      `county income tax` IS A NUMBER
+GIVETH A NUMBER
+`the s 10-704 credit against the county tax` MEANS
+    `the smaller of` (`federal earned income credit` TIMES 10 TIMES `county rate`) `county income tax`
+
+GIVEN `federal earned income credit` IS A NUMBER
+      `county rate` IS A NUMBER
+      `county income tax` IS A NUMBER
+      `my county provides a refundable county earned income credit` IS A BOOLEAN
+GIVETH A NUMBER
+`the s 10-704 county refund` MEANS
+    IF `my county provides a refundable county earned income credit`
+    THEN `the larger of` 0 ((`federal earned income credit` TIMES 5 TIMES `county rate`) MINUS `county income tax`)
+    ELSE 0
+
+-- s 10-709(a)(3): an "eligible low income taxpayer" is one (i) whose federal adjusted gross income as modified under
+-- ss 10-204 to 10-206 and (ii) whose earned income (IRC s 32(c)(2)) do not exceed "the applicable poverty income level"
+-- (the HHS guideline for the number of s 10-211(b)(1) exemptions, an input), (iii) "who is not claimed as an exemption on
+-- another individual's tax return", and (iv) "for whom the credit allowed under s 10-704(a)(1) ... is less than the State
+-- income tax" (s 10-704(a)(1) is a definitions paragraph; read as s 10-704(b)(1): NOTES.md finding 4).
+GIVEN `federal adjusted gross income as modified under ss 10-204 to 10-206` IS A NUMBER
+      `earned income` IS A NUMBER
+      `the applicable poverty income level` IS A NUMBER
+      `the s 10-704 State credit` IS A NUMBER
+      `State income tax` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `I am an eligible low income taxpayer` IF
+        `federal adjusted gross income as modified under ss 10-204 to 10-206` AT MOST `the applicable poverty income level`
+    AND `earned income` AT MOST `the applicable poverty income level`
+    AND `the s 10-704 State credit` LESS THAN `State income tax`
+
+-- s 10-709(c): against the State tax, the lesser of the State tax after the s 10-704(b)(1) credit and "5% of the eligible
+-- low income taxpayer's earned income"; (d): against the county tax, the lesser of the county tax after the s 10-704(d)
+-- credit and "the county income tax rate multiplied times" the earned income.
+
+-- s 10-751(a)(2): a "qualified child" is a s 152 dependant (as in effect on 31 December 2024) who is under 6, or under 17
+-- and a child with a disability (Education Article s 8-401). (b): "A taxpayer who is a resident and has federal adjusted
+-- gross income lower than the threshold amount of $15,000 may claim a credit ... for each qualified child in an amount equal
+-- to $500." (c): reduced "by $50 for each $1,000, or fraction thereof, by which the taxpayer's federal adjusted gross income
+-- exceeds the threshold amount". (d): any excess over the State tax is refunded. Because (b) admits only incomes below
+-- $15,000, the (c) reduction can never apply (NOTES.md finding 1); it is encoded as written.
+GIVEN `federal adjusted gross income` IS A NUMBER
+      `number of qualified children` IS A NUMBER
+GIVETH A NUMBER
+`the s 10-751 child tax credit` MEANS
+    IF `federal adjusted gross income` LESS THAN 15000
+    THEN `the larger of` 0 ((500 TIMES `number of qualified children`) MINUS `the s 10-751(c) reduction`)
+    ELSE 0
+    WHERE
+        `the s 10-751(c) reduction` MEANS
+            50 TIMES CEILING ((`the larger of` 0 (`federal adjusted gross income` MINUS 15000)) DIVIDED BY 1000)
+
+§§ `The whole return`
+
+DECLARE `My Maryland return` HAS
+    `the taxable year`                                 IS A NUMBER
+    `filing status`                                    IS A `Filing status`
+    `federal adjusted gross income`                    IS A NUMBER
+    `additions`                                        IS A NUMBER
+    `Social Security and Railroad Retirement benefits` IS A NUMBER
+    `other subtractions`                               IS A NUMBER
+    `spouse has no income and is no one's dependent`   IS A BOOLEAN
+    `dependants`                                       IS A NUMBER
+    `dependants at least 65`                           IS A NUMBER
+    `filers at least 65`                               IS A NUMBER
+    `filers blind`                                     IS A NUMBER
+    `itemized federally`                               IS A BOOLEAN
+    `federal itemized deductions less income taxes`    IS A NUMBER
+    `cost-of-living adjustment`                        IS A NUMBER
+    `net capital gain subject to 2%`                   IS A NUMBER
+    `county rate`                                      IS A NUMBER
+    `refundable county earned income credit`           IS A BOOLEAN
+    `federal earned income credit`                     IS A NUMBER
+    `qualifying child for the earned income credit`    IS A BOOLEAN
+    `earned income`                                    IS A NUMBER
+    `poverty income level`                             IS A NUMBER
+    `qualified children`                               IS A NUMBER
+
+DECLARE `My Maryland tax` HAS
+    `Maryland adjusted gross income`   IS A NUMBER
+    `exemptions`                       IS A NUMBER
+    `deduction`                        IS A NUMBER
+    `Maryland taxable income`          IS A NUMBER
+    `State income tax`                 IS A NUMBER
+    `county income tax`                IS A NUMBER
+    `credits against the State tax`    IS A NUMBER
+    `credits against the county tax`   IS A NUMBER
+    `refundable amounts`               IS A NUMBER
+    `net tax after credits and refunds` IS A NUMBER
+
+GIVEN `r` IS A `My Maryland return`
+GIVETH A `My Maryland tax`
+`the tax on my return` MEANS
+    `My Maryland tax` WITH
+        `Maryland adjusted gross income`   IS `MAGI`
+        `exemptions`                       IS `exemption total`
+        `deduction`                        IS `deduction amount`
+        `Maryland taxable income`          IS `MTI`
+        `State income tax`                 IS `State tax`
+        `county income tax`                IS `county tax`
+        `credits against the State tax`    IS `State credits`
+        `credits against the county tax`   IS `county credits`
+        `refundable amounts`               IS `refunds`
+        `net tax after credits and refunds` IS (`State tax` MINUS `State credits`) PLUS (`county tax` MINUS `county credits`) MINUS `refunds`
+    WHERE
+        `FAGI` MEANS `r`'s `federal adjusted gross income`
+        `MAGI` MEANS `Maryland adjusted gross income` `FAGI` (`r`'s `additions`) (`r`'s `Social Security and Railroad Retirement benefits`) (`r`'s `other subtractions`)
+        `exemption total` MEANS `the exemptions under s 10-211` (`r`'s `filing status`) `FAGI` (`r`'s `spouse has no income and is no one's dependent`) (`r`'s `dependants`) (`r`'s `dependants at least 65`) (`r`'s `filers at least 65`) (`r`'s `filers blind`)
+        `standard` MEANS `the standard deduction` (`r`'s `filing status`) (`r`'s `the taxable year`) (`r`'s `cost-of-living adjustment`)
+        `itemized` MEANS
+            IF `r`'s `itemized federally`
+            THEN `the itemized deductions under s 10-218` (`r`'s `filing status`) `FAGI` (`r`'s `federal itemized deductions less income taxes`)
+            ELSE 0
+        `deduction amount` MEANS `the larger of` `standard` `itemized`
+        `MTI` MEANS `the larger of` 0 (`MAGI` MINUS `exemption total` MINUS `deduction amount`)
+        `State tax` MEANS `the State income tax` (`r`'s `filing status`) `MTI` `FAGI` (`r`'s `net capital gain subject to 2%`)
+        `county tax` MEANS (`r`'s `county rate`) TIMES `MTI`
+        `EIC` MEANS `r`'s `federal earned income credit`
+        `child` MEANS `r`'s `qualifying child for the earned income credit`
+        `EIC State` MEANS `the s 10-704 credit against the State tax` `EIC` `child` `State tax`
+        `EIC county` MEANS `the s 10-704 credit against the county tax` `EIC` (`r`'s `county rate`) `county tax`
+        `low income` MEANS `I am an eligible low income taxpayer` (`FAGI` PLUS `r`'s `additions`) (`r`'s `earned income`) (`r`'s `poverty income level`) `EIC State` `State tax`
+        `poverty State` MEANS
+            IF `low income` THEN `the smaller of` (`State tax` MINUS `EIC State`) (5% TIMES `r`'s `earned income`) ELSE 0
+        `poverty county` MEANS
+            IF `low income` THEN `the larger of` 0 (`the smaller of` (`county tax` MINUS `EIC county`) ((`r`'s `county rate`) TIMES `r`'s `earned income`)) ELSE 0
+        `CTC` MEANS `the s 10-751 child tax credit` `FAGI` (`r`'s `qualified children`)
+        `CTC against the tax` MEANS `the smaller of` `CTC` (`State tax` MINUS `EIC State` MINUS `poverty State`)
+        `State credits` MEANS `EIC State` PLUS `poverty State` PLUS `CTC against the tax`
+        `county credits` MEANS `EIC county` PLUS `poverty county`
+        `refunds` MEANS
+                `the s 10-704 refund` `EIC` `child` `State tax`
+            PLUS `the s 10-704 county refund` `EIC` (`r`'s `county rate`) `county tax` (`r`'s `refundable county earned income credit`)
+            PLUS (`CTC` MINUS `CTC against the tax`)
+
+-- The questions that can reach a gap.
+GIVEN `the taxable year` IS A NUMBER
+      `resident for the whole year` IS A BOOLEAN
+      `claimed as an exemption by another taxpayer` IS A BOOLEAN
+      `county taxes on a bracket basis` IS A BOOLEAN
+GIVETH A MAYBE `Why not covered`
+`the gap this return falls into` MEANS
+    BRANCH
+        IF (NOT `resident for the whole year`) THEN JUST `a nonresident or part-year resident is not encoded (ss 10-105(d), 10-219, 10-704(e))`
+        IF `claimed as an exemption by another taxpayer` THEN JUST `an individual who is claimed as an exemption on another taxpayer's return is not encoded`
+        IF `county taxes on a bracket basis` THEN JUST `a county that applies its income tax on a bracket basis (s 10-106(c)) is not encoded`
+        IF `the taxable year` LESS THAN 2025 OR `the taxable year` GREATER THAN 2026 THEN JUST `only taxable years beginning in 2025 or 2026 are encoded`
+        OTHERWISE NOTHING
+
+§§ `Questions for the taxpayer -- what I owe`
+
+@export How much Maryland State and county income tax do I owe for the year, after the earned income, poverty-level and child tax credits, as a full-year resident?
+GIVEN `taxable year` IS A NUMBER @desc The calendar year the taxable year begins in (2025 or 2026)
+      `resident all year` IS A BOOLEAN @desc Whether you were a Maryland resident for the whole year (domiciled in Maryland on 31 December, or kept a place to live in Maryland for more than 6 months, and did not move in or out)
+      `claimed by someone else` IS A BOOLEAN @desc Whether someone else claims you as an exemption or dependant on their tax return
+      `filing status` IS A STRING @desc Your federal filing status. One of: "single", "married filing separately", "married filing jointly", "head of household", "surviving spouse"
+      `federal AGI` IS A NUMBER @desc Your federal adjusted gross income for the year, in US dollars (the figure on your federal return)
+      `additions` IS A NUMBER @desc The total of the Maryland additions that apply to you (for example interest on other states' bonds), in US dollars; 0 if none
+      `Social Security in federal AGI` IS A NUMBER @desc The part of your Social Security (Title II) and Railroad Retirement benefits that is included in your federal adjusted gross income, in US dollars
+      `other subtractions` IS A NUMBER @desc The total of the other Maryland subtractions you claim (for example the pension exclusion or US bond interest), in US dollars; 0 if none
+      `spouse has no income` IS A BOOLEAN @desc Married filing separately only: whether your spouse had no gross income for the year and is not anyone's dependant
+      `dependants` IS A NUMBER @desc How many dependants (as defined in s 152 of the Internal Revenue Code) you claim
+      `dependants 65 or over` IS A NUMBER @desc How many of those dependants were 65 or older on the last day of the year
+      `filers 65 or over` IS A NUMBER @desc How many of you on the return (you, and your spouse on a joint return) were 65 or older on the last day of the year
+      `filers blind` IS A NUMBER @desc How many of you on the return were blind on the last day of the year
+      `itemized federally` IS A BOOLEAN @desc Whether you itemized deductions on your federal return
+      `itemized less income taxes` IS A NUMBER @desc If you itemized federally: your federal itemized deductions after federal limits, less the state and local income taxes included in them, in US dollars; else 0
+      `cost-of-living adjustment` IS A NUMBER @desc For 2026 only: the Comptroller's cost-of-living adjustment for the standard deduction, as a fraction (for example 0.025 for 2.5%); 0 for 2025
+      `net capital gain` IS A NUMBER @desc Your net capital gain included in Maryland adjusted gross income, leaving out a primary residence sold for under $1,500,000, retirement plan assets and the other gains s 10-105(a)(3)(ii) lists, in US dollars
+      `county rate` IS A NUMBER @desc Your county's income tax rate as a fraction (for example 0.032 for 3.2%), for the county where you lived on the last day of the year
+      `county taxes on brackets` IS A BOOLEAN @desc Whether your county applies its income tax on a bracket basis rather than one flat rate
+      `county refundable EIC` IS A BOOLEAN @desc Whether your county provides by law for a refundable county earned income credit
+      `federal EIC` IS A NUMBER @desc Your federal earned income credit under s 32 of the Internal Revenue Code, before the s 32(m) limit; with no qualifying child, worked out without the federal minimum age; in US dollars
+      `qualifying child` IS A BOOLEAN @desc Whether you have a qualifying child for the federal earned income credit
+      `earned income` IS A NUMBER @desc Your earned income as defined in s 32(c)(2) of the Internal Revenue Code (mostly wages and self-employment earnings), in US dollars
+      `poverty income level` IS A NUMBER @desc The latest US Department of Health and Human Services poverty guideline, available on 1 July of the year, for a household the size of your number of exemptions, in US dollars
+      `qualified children` IS A NUMBER @desc How many of your dependants are under 6, or under 17 and have a disability, at the end of the year
+GIVETH AN `Answer` `My Maryland tax`
+`How much Maryland income tax do I owe` MEANS
+    CONSIDER `the gap this return falls into` `taxable year` `resident all year` `claimed by someone else` `county taxes on brackets`
+    WHEN JUST `reason` THEN `not covered` `reason`
+    WHEN NOTHING THEN `answered` (`the tax on my return` (`My Maryland return` WITH
+        `the taxable year`                                 IS `taxable year`
+        `filing status`                                    IS `the filing status named` `filing status`
+        `federal adjusted gross income`                    IS `federal AGI`
+        `additions`                                        IS `additions`
+        `Social Security and Railroad Retirement benefits` IS `Social Security in federal AGI`
+        `other subtractions`                               IS `other subtractions`
+        `spouse has no income and is no one's dependent`   IS `spouse has no income`
+        `dependants`                                       IS `dependants`
+        `dependants at least 65`                           IS `dependants 65 or over`
+        `filers at least 65`                               IS `filers 65 or over`
+        `filers blind`                                     IS `filers blind`
+        `itemized federally`                               IS `itemized federally`
+        `federal itemized deductions less income taxes`    IS `itemized less income taxes`
+        `cost-of-living adjustment`                        IS `cost-of-living adjustment`
+        `net capital gain subject to 2%`                   IS `net capital gain`
+        `county rate`                                      IS `county rate`
+        `refundable county earned income credit`           IS `county refundable EIC`
+        `federal earned income credit`                     IS `federal EIC`
+        `qualifying child for the earned income credit`    IS `qualifying child`
+        `earned income`                                    IS `earned income`
+        `poverty income level`                             IS `poverty income level`
+        `qualified children`                               IS `qualified children`))
+
+@export What is my Maryland standard deduction for the year (s 10-217)?
+GIVEN `filing status` IS A STRING @desc Your federal filing status. One of: "single", "married filing separately", "married filing jointly", "head of household", "surviving spouse"
+      `taxable year` IS A NUMBER @desc The calendar year the taxable year begins in (2025 or 2026)
+      `cost-of-living adjustment` IS A NUMBER @desc For 2026 only: the Comptroller's cost-of-living adjustment, as a fraction (for example 0.025 for 2.5%); 0 for 2025
+GIVETH A NUMBER
+`What is my standard deduction` MEANS
+    `the standard deduction` (`the filing status named` `filing status`) `taxable year` `cost-of-living adjustment`
+
+@export How much may I deduct for exemptions on my Maryland return (s 10-211)?
+GIVEN `filing status` IS A STRING @desc Your federal filing status. One of: "single", "married filing separately", "married filing jointly", "head of household", "surviving spouse"
+      `federal AGI` IS A NUMBER @desc Your federal adjusted gross income for the year, in US dollars
+      `spouse has no income` IS A BOOLEAN @desc Married filing separately only: whether your spouse had no gross income and is not anyone's dependant
+      `dependants` IS A NUMBER @desc How many s 152 dependants you claim
+      `dependants 65 or over` IS A NUMBER @desc How many of those dependants were 65 or older on the last day of the year
+      `filers 65 or over` IS A NUMBER @desc How many of you on the return were 65 or older on the last day of the year
+      `filers blind` IS A NUMBER @desc How many of you on the return were blind on the last day of the year
+GIVETH A NUMBER
+`How much may I deduct for exemptions` MEANS
+    `the exemptions under s 10-211` (`the filing status named` `filing status`) `federal AGI` `spouse has no income` `dependants` `dependants 65 or over` `filers 65 or over` `filers blind`
+
+@export How much State income tax is charged on a Maryland taxable income, before credits (s 10-105(a))?
+GIVEN `filing status` IS A STRING @desc Your federal filing status. One of: "single", "married filing separately", "married filing jointly", "head of household", "surviving spouse"
+      `Maryland taxable income` IS A NUMBER @desc Your Maryland taxable income, in US dollars
+      `federal AGI` IS A NUMBER @desc Your federal adjusted gross income, in US dollars (the 2% capital gain addition applies only above $350,000)
+      `net capital gain` IS A NUMBER @desc Net capital gain included in your Maryland adjusted gross income, less the gains s 10-105(a)(3)(ii) leaves out, in US dollars
+GIVETH A NUMBER
+`What State income tax is charged on my income` MEANS
+    `the State income tax` (`the filing status named` `filing status`) `Maryland taxable income` `federal AGI` `net capital gain`
+
+§§ `Questions for the taxpayer -- credits`
+
+@export How much Maryland child tax credit (s 10-751) can I claim? The part above my State tax is refunded.
+GIVEN `resident` IS A BOOLEAN @desc Whether you were a Maryland resident for the year
+      `federal AGI` IS A NUMBER @desc Your federal adjusted gross income (on a joint return, the couple's), in US dollars
+      `qualified children` IS A NUMBER @desc How many of your s 152 dependants are under 6, or under 17 and have a disability (Education Article s 8-401)
+GIVETH A NUMBER
+`How much child tax credit can I claim` MEANS
+    IF `resident` THEN `the s 10-751 child tax credit` `federal AGI` `qualified children` ELSE 0
+
+§§ `ss 10-805, 10-807, 10-820 -- filing the return`
+
+-- s 10-805(a): "each resident shall file an income tax return if, after exclusion of Social Security and railroad retirement
+-- benefits that are included in federal gross income, the resident: (1) would be required to file a federal income tax
+-- return under s 6012(a) ...; or (2) would have federal gross income that exceeds the amount specified in s 6012(a) ...
+-- after the federal gross income is increased by the modifications in ss 10-204 and 10-205". (b): "A resident dependent shall
+-- file" if the dependant's gross income, modified under Part II, exceeds the s 6012(a)(1)(A)(i) amount. The s 6012(a)
+-- amounts are federal (an input).
+GIVEN `I am a dependent of another taxpayer` IS A BOOLEAN
+      `I would have to file a federal return under s 6012(a), leaving out Social Security and railroad retirement benefits` IS A BOOLEAN
+      `federal gross income without Social Security and railroad retirement benefits` IS A NUMBER
+      `additions under ss 10-204 and 10-205` IS A NUMBER
+      `the s 6012(a) amount for me` IS A NUMBER
+      `subtractions under Part II` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `I must file a Maryland return` IF
+    IF `I am a dependent of another taxpayer`
+    THEN (`federal gross income without Social Security and railroad retirement benefits` PLUS `additions under ss 10-204 and 10-205` MINUS `subtractions under Part II`) GREATER THAN `the s 6012(a) amount for me`
+    ELSE     `I would have to file a federal return under s 6012(a), leaving out Social Security and railroad retirement benefits`
+         OR  (`federal gross income without Social Security and railroad retirement benefits` PLUS `additions under ss 10-204 and 10-205`) GREATER THAN `the s 6012(a) amount for me`
+
+@export Must I file a Maryland income tax return for the year, as a full-year resident (s 10-805)?
+GIVEN `I am someone's dependant` IS A BOOLEAN @desc Whether you are a dependant of another taxpayer for the year
+      `federal return required` IS A BOOLEAN @desc Whether you would have to file a federal income tax return under s 6012(a) of the Internal Revenue Code if your Social Security and railroad retirement benefits were left out of gross income
+      `gross income without Social Security` IS A NUMBER @desc Your federal gross income for the year, leaving out Social Security and railroad retirement benefits, in US dollars
+      `Maryland additions` IS A NUMBER @desc Your Maryland additions under ss 10-204 and 10-205, in US dollars; 0 if none
+      `federal filing threshold` IS A NUMBER @desc The gross income amount in s 6012(a) of the Internal Revenue Code that applies to you for the year (for a dependant, the s 6012(a)(1)(A)(i) amount), in US dollars
+      `Maryland subtractions` IS A NUMBER @desc Dependants only: your Maryland subtractions under Part II of Subtitle 2, in US dollars; 0 if none
+GIVETH A BOOLEAN
+DECIDE `Must I file a Maryland return` IF
+    `I must file a Maryland return` `I am someone's dependant` `federal return required` `gross income without Social Security` `Maryland additions` `federal filing threshold` `Maryland subtractions`
+
+-- s 10-807: "(a) ... a married couple who files a joint federal income tax return shall file a joint Maryland income tax
+-- return. (b) A married couple who files a joint federal income tax return may file separate State income tax returns if:
+-- (1) one spouse is a resident and the other spouse is a nonresident; (2) the spouses are domiciled, or maintain principal
+-- places of abode, in different counties on the last day of the taxable year; (3) the spouses have different taxable
+-- periods; or (4) the Comptroller determines circumstances warrant."
+DECLARE `How we must file` IS ONE OF
+    `we must file a joint Maryland return (s 10-807(a))`
+    `we may file a joint Maryland return or separate returns (s 10-807(b))`
+    `s 10-807 does not apply: we did not file a joint federal return`
+
+@export We filed a joint federal return: must we file a joint Maryland return (s 10-807)?
+GIVEN `joint federal return` IS A BOOLEAN @desc Whether you and your spouse file a joint federal income tax return for the year
+      `one of us is a nonresident` IS A BOOLEAN @desc Whether one of you is a Maryland resident and the other a nonresident
+      `different counties` IS A BOOLEAN @desc Whether, on the last day of the taxable year, you were domiciled in, or kept your main homes in, different counties
+      `different taxable periods` IS A BOOLEAN @desc Whether you and your spouse have different taxable periods
+      `the Comptroller allows separate returns` IS A BOOLEAN @desc Whether the Comptroller has determined that your circumstances warrant separate returns
+GIVETH A `How we must file`
+`How must we file` MEANS
+    IF (NOT `joint federal return`)
+    THEN `s 10-807 does not apply: we did not file a joint federal return`
+    ELSE IF `one of us is a nonresident` OR `different counties` OR `different taxable periods` OR `the Comptroller allows separate returns`
+         THEN `we may file a joint Maryland return or separate returns (s 10-807(b))`
+         ELSE `we must file a joint Maryland return (s 10-807(a))`
+
+-- s 10-820(a)(1): "an individual ... required under Part II of this subtitle to file a return for a taxable year shall
+-- complete and file with the Comptroller an income tax return: (i) on or before April 15th of the next taxable year". (3):
+-- where the federal electronic due date is later, it is the due date for an individual who files electronically and pays
+-- any balance electronically. s 10-823: the Comptroller "may extend the time ... up to 6 months for an individual" on good
+-- cause (an input: the extension granted, in months, is not modelled; NOTES.md).
+DECLARE `Taxpayer party` IS ONE OF `the resident required to file`
+DECLARE `Taxpayer act` IS ONE OF `complete and file a Maryland income tax return with the Comptroller`
+
+GIVEN `y` IS A NUMBER, `m` IS A NUMBER, `d` IS A NUMBER
+GIVETH A DATE
+`YMD` MEANS Date `d` `m` `y`
+
+GIVEN `taxable year` IS A NUMBER
+      `the later federal electronic due date, if any` IS A MAYBE DATE
+      `I file and pay electronically` IS A BOOLEAN
+GIVETH A DATE
+`the s 10-820 due date` MEANS
+    CONSIDER `the later federal electronic due date, if any`
+    WHEN JUST `federal date` THEN
+        IF `I file and pay electronically` AND `federal date` GREATER THAN `April 15`
+        THEN `federal date`
+        ELSE `April 15`
+    WHEN NOTHING THEN `April 15`
+    WHERE
+        `April 15` MEANS `YMD` (`taxable year` PLUS 1) 4 15
+
+@export By what date must I file my Maryland return for a calendar taxable year (s 10-820(a))?
+GIVEN `taxable year` IS A NUMBER @desc The calendar year of the return (for example 2026; the return is due in the next year)
+      `federal e-file due date is later` IS A BOOLEAN @desc Whether the federal due date for an electronically filed return is later than 15 April of the next year
+      `federal e-file due date` IS A DATE @desc That later federal due date, if there is one (otherwise any date)
+      `filing and paying electronically` IS A BOOLEAN @desc Whether you file the Maryland return electronically and pay any balance due electronically
+GIVETH A DATE
+`By what date must I file` MEANS
+    `the s 10-820 due date` `taxable year` (IF `federal e-file due date is later` THEN JUST `federal e-file due date` ELSE NOTHING) `filing and paying electronically`
+
+-- The same duty as a regulative rule, counted in days from 1 January of the year after the taxable year (day 0).
+GIVEN `taxable year` IS A NUMBER
+GIVETH A NUMBER
+`days from 1 January to 15 April` MEANS
+    Day (`YMD` (`taxable year` PLUS 1) 4 15) MINUS Day (`YMD` (`taxable year` PLUS 1) 1 1)
+
+GIVEN `taxable year` IS A NUMBER
+GIVETH A DEONTIC `Taxpayer party` `Taxpayer act`
+`s 10-805, s 10-820(a)(1) -- a resident required to file must file by 15 April` MEANS
+    PARTY  `the resident required to file`
+    MUST   `complete and file a Maryland income tax return with the Comptroller`
+    WITHIN `days from 1 January to 15 April` `taxable year`
+    HENCE  FULFILLED
+    LEST   BREACH BY `the resident required to file` BECAUSE "no Maryland return filed by 15 April of the next year (s 10-820(a)(1)(i))"
