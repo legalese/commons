@@ -1,0 +1,102 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ky-income-tax`
+IMPORT `ky-income-tax-seat`
+
+-- KRS chapter 141 -- worked cases from the taxpayer's seat. Expected values worked by hand from the deposited text (KRS,
+-- enactments through the 2026 Regular Session) before the encoding was run. The poverty guideline figures (15,650 for one
+-- person, 5,500 for each extra person) and the standard deduction (3,270) are stated facts for the cases, not deposited
+-- figures. Each assertion is a claim about the encoding on those facts, not about the law.
+
+§ `Cases`
+
+§§ `141.010(32) -- resident`
+
+#ASSERT `Am I a Kentucky resident` TRUE FALSE 0 EQUALS TRUE
+#ASSERT `Am I a Kentucky resident` FALSE TRUE 200 EQUALS TRUE
+#ASSERT `Am I a Kentucky resident` FALSE TRUE 183 EQUALS FALSE
+#ASSERT `Am I a Kentucky resident` FALSE FALSE 300 EQUALS FALSE
+
+§§ `141.019(1) -- Kentucky AGI`
+
+-- Federal AGI 80,000 + 1,000 other states' bond interest - 15,000 social security - 31,110 (my 40,000 of pension,
+-- capped) - 10,000 (my spouse's pension, under the cap) = 24,890.
+#ASSERT `What is my Kentucky adjusted gross income` 80000 1000 15000 40000 10000 0 0 0 0 EQUALS 24890
+-- Active duty pay of 35,000 comes out: 50,000 - 35,000 = 15,000.
+#ASSERT `What is my Kentucky adjusted gross income` 50000 0 0 0 0 35000 0 0 0 EQUALS 15000
+
+§§ `141.066(1)(e) -- family size`
+
+#ASSERT `What family size is used for my threshold` TRUE 1 EQUALS 3
+#ASSERT `What family size is used for my threshold` FALSE 0 EQUALS 1
+#ASSERT `What family size is used for my threshold` FALSE 5 EQUALS 4
+#ASSERT `What family size is used for my threshold` TRUE 3 EQUALS 4
+
+§§ `141.180(2) -- must I file`
+
+-- Single resident, no children: threshold 15,650. 15,000 does not exceed it; 16,000 does.
+#ASSERT `Must I file a Kentucky return` TRUE FALSE 0 15000 0 FALSE 15000 15650 5500 EQUALS FALSE
+#ASSERT `Must I file a Kentucky return` TRUE FALSE 0 16000 0 FALSE 16000 15650 5500 EQUALS TRUE
+-- Married couple with two children: family size 4, threshold 15,650 + 3 x 5,500 = 32,150. 32,000: no return.
+#ASSERT `Must I file a Kentucky return` TRUE TRUE 2 32000 0 FALSE 32000 15650 5500 EQUALS FALSE
+-- Self-employment gross income of 20,000 requires a return even with modified gross income of 10,000.
+#ASSERT `Must I file a Kentucky return` TRUE FALSE 0 10000 20000 FALSE 20000 15650 5500 EQUALS TRUE
+-- A nonresident with Kentucky-source income and 50,000 of total gross income: a return. Without Kentucky income: none.
+#ASSERT `Must I file a Kentucky return` FALSE FALSE 0 50000 0 TRUE 50000 15650 5500 EQUALS TRUE
+#ASSERT `Must I file a Kentucky return` FALSE FALSE 0 50000 0 FALSE 50000 15650 5500 EQUALS FALSE
+
+§§ `141.160, 141.220 -- when it is due`
+
+#ASSERT `When are my Kentucky return and tax due` 12 2025 EQUALS (DATE_FROM_DMY 15 4 2026)
+#ASSERT `When are my Kentucky return and tax due` 6 2026 EQUALS (DATE_FROM_DMY 15 10 2026)
+
+-- Days from 31 December 2025: 15 April 2026 is day 105; an extension to 15 October 2026 is day 288.
+`day 105` MEANS 105
+`day 288` MEANS 288
+#ASSERT EVALTRACE (`the 141.180 and 141.160 duty to file` 105) 0 (LIST (EVENT `the individual` `file the return` 100)) EQUALS FULFILLED
+#ASSERT EVALTRACE (`the 141.220 duty to pay` 105) 0 (LIST (EVENT `the individual` `pay the full amount of the unpaid tax` 105)) EQUALS FULFILLED
+-- With an extension the return filed on day 200 is in time.
+#ASSERT EVALTRACE (`the 141.180 and 141.160 duty to file` 288) 0 (LIST (EVENT `the individual` `file the return` 200)) EQUALS FULFILLED
+-- expect: BREACH BY the individual, "the unpaid tax was not paid at the time prescribed for filing the return, without regard to any extension (141.220)" (paid with the extended return on day 200)
+#TRACE `the 141.220 duty to pay` `day 105` AT 0 WITH
+    PARTY `the individual` DOES `pay the full amount of the unpaid tax` AT 200
+-- expect: BREACH BY the individual, "the return was not made by April 15 ..." (no extension, filed day 110)
+#TRACE `the 141.180 and 141.160 duty to file` `day 105` AT 0 WITH
+    PARTY `the individual` DOES `file the return` AT 110
+
+§§ `What I owe or get back`
+
+-- Inputs: year, rate cut, resident all year, tax to another state, Kentucky AGI, standard deduction?, standard deduction,
+-- itemized, aged 65+, blind, Guard, couple, single qualifying, children, modified gross income, guideline base, guideline
+-- increment, federal tuition credit, separate return, federal care credit, withheld.
+
+-- A. 2025, single, Kentucky AGI 50,000, standard deduction 3,270: net income 46,730; 4% = 1,869.20. Modified gross
+-- income 50,000 is far above 133% of 15,650. Withheld 2,000: refund 130.80.
+#ASSERT `What do I owe or get back in Kentucky` 2025 FALSE TRUE FALSE 50000 TRUE 3270 0 0 0 0 FALSE TRUE 0 50000 15650 5500 0 FALSE 0 2000 EQUALS `answered` (-130.8)
+-- B. The same in 2026 at 3.5%: 1,635.55; refund 364.45.
+#ASSERT `What do I owe or get back in Kentucky` 2026 FALSE TRUE FALSE 50000 TRUE 3270 0 0 0 0 FALSE TRUE 0 50000 15650 5500 0 FALSE 0 2000 EQUALS `answered` (-364.45)
+-- B2. 2027 with no Act of the General Assembly: the 3.5% rate stays (141.020(2)(g)2.c.ii.).
+#ASSERT `What do I owe or get back in Kentucky` 2027 FALSE TRUE FALSE 50000 TRUE 3270 0 0 0 0 FALSE TRUE 0 50000 15650 5500 0 FALSE 0 2000 EQUALS `answered` (-364.45)
+-- C. 2025, a single parent with one child: threshold for 2 is 21,150. Modified gross income 22,000 is 104.02% of it:
+-- 80% credit. Net 22,000 - 3,270 = 18,730; tax 749.20; family size credit 599.36 leaves 149.84; care credit 20% of
+-- 600 = 120: 29.84 owed.
+#ASSERT `What do I owe or get back in Kentucky` 2025 FALSE TRUE FALSE 22000 TRUE 3270 0 0 0 0 FALSE TRUE 1 22000 15650 5500 0 FALSE 600 0 EQUALS `answered` 29.84
+-- D. 2025, single, modified gross income 15,000, at or below 15,650: the family size credit equals the tax. The 300
+-- withheld comes back.
+#ASSERT `What do I owe or get back in Kentucky` 2025 FALSE TRUE FALSE 15000 TRUE 3270 0 0 0 0 FALSE TRUE 0 15000 15650 5500 0 FALSE 0 300 EQUALS `answered` (-300)
+-- E. 2025, a married couple both over 65, Kentucky AGI 24,890, modified gross income 81,000 (federal AGI 80,000 plus
+-- 1,000): net 21,620, tax 864.80; two $40 age credits: 784.80. Withheld 500: 284.80 owed.
+#ASSERT `What do I owe or get back in Kentucky` 2025 FALSE TRUE FALSE 24890 TRUE 3270 0 2 0 0 TRUE FALSE 0 81000 15650 5500 0 FALSE 0 500 EQUALS `answered` 284.8
+-- Not covered.
+#ASSERT `What do I owe or get back in Kentucky` 2023 FALSE TRUE FALSE 50000 TRUE 3270 0 0 0 0 FALSE TRUE 0 50000 15650 5500 0 FALSE 0 0 EQUALS `not covered` `taxable years before 2024 are not encoded`
+#ASSERT `What do I owe or get back in Kentucky` 2027 TRUE TRUE FALSE 50000 TRUE 3270 0 0 0 0 FALSE TRUE 0 50000 15650 5500 0 FALSE 0 0 EQUALS `not covered` `a rate reduction enacted by the General Assembly for taxable years from 2027 (141.020(2)(g)) is not encoded`
+#ASSERT `What do I owe or get back in Kentucky` 2025 FALSE FALSE FALSE 50000 TRUE 3270 0 0 0 0 FALSE TRUE 0 50000 15650 5500 0 FALSE 0 0 EQUALS `not covered` `the tax of a nonresident or part-year resident is not encoded: 141.020(4) and (6) tax only Kentucky-source income for the nonresident period, and the method of computing it is not stated in the deposited text`
+#ASSERT `What do I owe or get back in Kentucky` 2025 FALSE TRUE TRUE 50000 TRUE 3270 0 0 0 0 FALSE TRUE 0 50000 15650 5500 0 FALSE 0 0 EQUALS `not covered` `the credit for income tax paid to another state (141.070) is not encoded`
+
+§§ `141.066, 141.069 -- the credits alone`
+
+-- Single parent, one child, modified gross income 27,000: 127.66% of 21,150, so 20%.
+#ASSERT `What share does the family size credit take` 27000 FALSE 1 15650 5500 EQUALS 0.2
+#ASSERT `What share does the family size credit take` 28200 FALSE 1 15650 5500 EQUALS 0
+#ASSERT `the 141.069 tuition credit` 1000 FALSE EQUALS 250
+#ASSERT `the 141.069 tuition credit` 1000 TRUE EQUALS 0

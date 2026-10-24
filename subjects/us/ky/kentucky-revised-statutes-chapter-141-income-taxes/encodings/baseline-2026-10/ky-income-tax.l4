@@ -1,0 +1,283 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Kentucky Revised Statutes chapter 141, the individual income tax -- the seat-neutral core.
+--
+-- Written in the chapter's own actors and terms: the "resident" and "nonresident" (141.010(25), (32)), "adjusted gross
+-- income" and "net income" (141.019), "modified gross income" and the "threshold amount" (141.010(23), 141.066), the tax
+-- (141.020), the credits (141.020(3), 141.066, 141.067, 141.069) in the order of 141.0205, the return (141.160, 141.180)
+-- and payment (141.220), and the department (of revenue).
+--
+-- Edition: Kentucky Revised Statutes, Legislative Research Commission, "enactments through the 2026 Regular Session"
+-- (database updated 10/19/2026), deposited at ../../registers/source-bundle/krs-141-individual-income-tax.txt
+-- (retrieved 2026-10-19 UTC).
+--
+-- Federal figures (federal AGI under IRC s62, the federal credits under IRC s21 and s25A, IRC s152(c) qualifying
+-- children, the HHS poverty guidelines) are borrowed terms and enter as inputs, answered by
+-- subjects/us/internal-revenue-code-of-1986/ (cross-folder IMPORT is not possible in the stable l4; NOTES.md names it).
+-- The standard deduction is indexed each year by the CPI-U (141.081(2)) and the department's figure is not deposited:
+-- an input.
+--
+-- The taxpayer's seat questions are in ky-income-tax-seat.l4.
+--
+-- BASELINE ENCODING. No pipeline, no coverage table, no independent test pass, no human gate. Not advice. See NOTES.md.
+
+§ `KRS chapter 141 -- the individual income tax`
+
+§§ `Answers this encoding does not give`
+
+DECLARE `Why not covered` IS ONE OF
+    `taxable years before 2024 are not encoded`
+    `a rate reduction enacted by the General Assembly for taxable years from 2027 (141.020(2)(g)) is not encoded`
+    `the tax of a nonresident or part-year resident is not encoded: 141.020(4) and (6) tax only Kentucky-source income for the nonresident period, and the method of computing it is not stated in the deposited text`
+    `the credit for income tax paid to another state (141.070) is not encoded`
+
+GIVEN a IS A TYPE
+GIVETH A TYPE
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+§§ `141.010(32) -- resident`
+
+-- "'Resident' means an individual domiciled within this state or an individual who is not domiciled in this state, but
+-- maintains a place of abode in this state and spends in the aggregate more than one hundred eighty-three (183) days of
+-- the taxable year in this state". (25): "'Nonresident' means any individual not a resident of this state".
+GIVEN `domiciled in Kentucky` IS A BOOLEAN
+      `maintains a place of abode in Kentucky` IS A BOOLEAN
+      `days spent in Kentucky in the taxable year` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a resident` IF
+        `domiciled in Kentucky`
+    OR  (`maintains a place of abode in Kentucky` AND `days spent in Kentucky in the taxable year` GREATER THAN 183)
+
+§§ `141.019(1) -- adjusted gross income`
+
+-- "Adjusted gross income shall be calculated by subtracting from the gross income ... the deductions allowed individuals
+-- by Section 62 of the Internal Revenue Code and adjusting as follows" -- that is, from federal AGI. Worked out: (c)
+-- include sister-state interest; (e) "Exclude Social Security and railroad retirement benefits subject to federal income
+-- tax"; (g)1.b. "exclude up to thirty-one thousand one hundred ten dollars ($31,110) of total distributions from pension
+-- plans, annuity contracts, profit-sharing plans, retirement plans, or employee savings plans"; (l) "Exclude all military
+-- pay received by members of the Armed Forces while on active duty"; 141.021 (federal and local government retirement
+-- annuities accrued before 1998, an input). The pension exclusion is read per individual (NOTES.md finding 3).
+`the pension exclusion limit` MEANS 31110
+
+GIVEN `distributions from pension and retirement plans` IS A NUMBER
+GIVETH A NUMBER
+`the 141.019(1)(g) exclusion` MEANS min `the pension exclusion limit` (max 0 `distributions from pension and retirement plans`)
+
+DECLARE `Adjusted gross income facts` HAS
+    `federal adjusted gross income`                      IS A NUMBER
+    `interest from sister states' obligations`           IS A NUMBER  -- (c), included
+    `social security and railroad retirement benefits subject to federal tax` IS A NUMBER  -- (e), excluded
+    `pension exclusion of the taxpayer`                  IS A NUMBER  -- (g)
+    `pension exclusion of the spouse on the return`      IS A NUMBER  -- (g)
+    `active duty military pay`                           IS A NUMBER  -- (l), excluded
+    `government retirement annuities excluded by 141.021` IS A NUMBER -- excluded
+    `other inclusions`                                   IS A NUMBER
+    `other exclusions`                                   IS A NUMBER
+
+GIVEN f IS AN `Adjusted gross income facts`
+GIVETH A NUMBER
+`Kentucky adjusted gross income` f MEANS
+    (f's `federal adjusted gross income` PLUS f's `interest from sister states' obligations` PLUS f's `other inclusions`)
+    MINUS (f's `social security and railroad retirement benefits subject to federal tax`
+        PLUS f's `pension exclusion of the taxpayer`
+        PLUS f's `pension exclusion of the spouse on the return`
+        PLUS f's `active duty military pay`
+        PLUS f's `government retirement annuities excluded by 141.021`
+        PLUS f's `other exclusions`)
+
+§§ `141.019(2), 141.081 -- net income`
+
+-- 141.019(2): "Net income shall be calculated by subtracting from adjusted gross income all the deductions allowed
+-- individuals by Chapter 1 of the Internal Revenue Code ..., except" taxes (s164), most losses, medical care (s213),
+-- moving, miscellaneous, personal exemptions and others; "(i) A taxpayer may elect to claim the standard deduction allowed
+-- by KRS 141.081 instead of itemized deductions". 141.081(2): the standard deduction is "equal to the standard deduction
+-- for the prior taxable year multiplied by the greater of" a CPI-U ratio or one -- the department's figure is an input.
+-- 141.081(4): "In the case of a husband and wife living together, the standard deduction ... shall not be allowed to
+-- either if the net income of one (1) of the spouses is determined without regard to the standard deduction."
+GIVEN `the adjusted gross income` IS A NUMBER
+      `elects the standard deduction` IS A BOOLEAN
+      `the standard deduction for the year` IS A NUMBER
+      `the Kentucky itemized deductions` IS A NUMBER
+GIVETH A NUMBER
+`net income` MEANS
+    max 0 (`the adjusted gross income` MINUS (IF `elects the standard deduction` THEN `the standard deduction for the year` ELSE `the Kentucky itemized deductions`))
+
+§§ `141.020(2) -- the rate`
+
+-- "(e) For taxable years beginning on or after January 1, 2024, but before January 1, 2026, the tax shall be four percent
+-- (4%) of net income. (f) For taxable years beginning on or after January 1, 2026, the tax shall be three and one-half
+-- percent (3.5%) of net income." (g): from 2027 the rate "may be reduced" only by "action by the General Assembly"
+-- ((g)4.b.: "The department shall not implement an income tax rate reduction without an action by the General
+-- Assembly").
+GIVEN `taxable year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the 141.020(2) rate` MEANS
+    IF `taxable year` LESS THAN 2024 THEN NOTHING
+    ELSE IF `taxable year` LESS THAN 2026 THEN JUST 0.04
+         ELSE JUST 0.035
+
+§§ `141.020(3) -- the individual credits`
+
+-- (3)(a): items 1 to 3 (the $10 or $20 personal and dependent credits) apply only to years before 2018. Items 4 to 8 have
+-- no end date: "4. An additional forty dollars ($40) credit if the taxpayer has attained the age of sixty-five (65) before
+-- the close of the taxable year; 5. ... for taxpayer's spouse if a separate return is made ... and ... the taxpayer's
+-- spouse has attained the age of sixty-five (65) ... and ... has no Kentucky gross income and is not the dependent of
+-- another taxpayer; 6. An additional forty dollars ($40) credit if the taxpayer is blind ...; 7. [the same for a blind
+-- spouse on a separate return]; and 8. An additional twenty dollars ($20) credit ... if the taxpayer is a member of the
+-- Kentucky National Guard at the close of the taxable year." On a joint return both spouses are taxpayers.
+GIVEN `number of taxpayers on the return aged 65 or older` IS A NUMBER
+      `number of taxpayers on the return who are blind` IS A NUMBER
+      `number of taxpayers on the return in the Kentucky National Guard` IS A NUMBER
+      `a spouse on a separate return qualifies for item 5` IS A BOOLEAN
+      `a spouse on a separate return qualifies for item 7` IS A BOOLEAN
+GIVETH A NUMBER
+`the 141.020(3) credits` MEANS
+    (40 TIMES `number of taxpayers on the return aged 65 or older`)
+        PLUS (40 TIMES `number of taxpayers on the return who are blind`)
+        PLUS (20 TIMES `number of taxpayers on the return in the Kentucky National Guard`)
+        PLUS (IF `a spouse on a separate return qualifies for item 5` THEN 40 ELSE 0)
+        PLUS (IF `a spouse on a separate return qualifies for item 7` THEN 40 ELSE 0)
+
+§§ `141.066 -- the family size tax credit`
+
+-- (1)(c) "Qualifying individual": "filing status is single or married filing separately if during the taxable year the
+-- individual's spouse is not a member of the household"; (d) "Qualifying married couple": "a husband and wife living
+-- together who file a joint return or separately on a combined return". (e) "Threshold amount": the federal poverty level
+-- for a family unit of 1 (individual, no children), 2 (individual with one child, or couple with none), 3 (individual with
+-- two, or couple with one), 4 (individual with three or more, or couple with two or more).
+GIVEN `a qualifying married couple` IS A BOOLEAN
+      `number of qualifying dependent children` IS A NUMBER
+GIVETH A NUMBER
+`the family unit size for the threshold` MEANS
+    min 4 ((IF `a qualifying married couple` THEN 2 ELSE 1) PLUS (max 0 `number of qualifying dependent children`))
+
+-- (3): "qualifying taxpayers whose modified gross income is below one hundred thirty-three percent (133%) of the threshold
+-- amount shall be entitled to a nonrefundable family size tax credit"; (b) at or below 100%, "equal to the taxpayer's tax
+-- liability"; (c) above 100%, the liability times 90% (to 104%), 80% (108%), 70% (112%), 60% (116%), 50% (120%),
+-- 40% (124%), 30% (127%), 20% (130%), 10% (133%), and zero above 133%.
+GIVEN `modified gross income` IS A NUMBER
+      `threshold amount` IS A NUMBER
+GIVETH A NUMBER
+`the family size credit percentage` MEANS
+    BRANCH
+        IF `modified gross income` AT MOST `threshold amount` THEN 1
+        IF `modified gross income` AT MOST (`threshold amount` TIMES 1.04) THEN 0.9
+        IF `modified gross income` AT MOST (`threshold amount` TIMES 1.08) THEN 0.8
+        IF `modified gross income` AT MOST (`threshold amount` TIMES 1.12) THEN 0.7
+        IF `modified gross income` AT MOST (`threshold amount` TIMES 1.16) THEN 0.6
+        IF `modified gross income` AT MOST (`threshold amount` TIMES 1.20) THEN 0.5
+        IF `modified gross income` AT MOST (`threshold amount` TIMES 1.24) THEN 0.4
+        IF `modified gross income` AT MOST (`threshold amount` TIMES 1.27) THEN 0.3
+        IF `modified gross income` AT MOST (`threshold amount` TIMES 1.30) THEN 0.2
+        IF `modified gross income` AT MOST (`threshold amount` TIMES 1.33) THEN 0.1
+        OTHERWISE 0
+
+-- 141.010(23): "'Modified gross income' means the greater of: (a) Adjusted gross income as defined in 26 U.S.C. sec. 62
+-- ... adjusted as follows: 1. Include interest income derived from obligations of sister states ...; 2. Include lump-sum
+-- pension distributions taxed under the special transition rules ...; or (b) Adjusted gross income as defined in
+-- subsection (1) of this section [Kentucky AGI] and adjusted to include" those lump sums. Lump sums are an input.
+GIVEN `federal adjusted gross income` IS A NUMBER
+      `interest from sister states' obligations` IS A NUMBER
+      `Kentucky adjusted gross income` IS A NUMBER
+      `transition-rule lump-sum pension distributions` IS A NUMBER
+GIVETH A NUMBER
+`modified gross income from` MEANS
+    max (`federal adjusted gross income` PLUS `interest from sister states' obligations` PLUS `transition-rule lump-sum pension distributions`)
+        (`Kentucky adjusted gross income` PLUS `transition-rule lump-sum pension distributions`)
+
+§§ `141.067, 141.069 -- care and tuition credits`
+
+-- 141.067: "twenty percent (20%) of the federal credit allowed under Section 21". 141.069(2): "twenty-five percent (25%) of
+-- the federal credit allowable under Section 25A", (3) not for graduate study, (4) not on married separate returns.
+GIVEN `the federal credit under section 21` IS A NUMBER
+GIVETH A NUMBER
+`the 141.067 care credit` MEANS 0.2 TIMES (max 0 `the federal credit under section 21`)
+
+GIVEN `the federal credit under section 25A for undergraduate study at a Kentucky institution` IS A NUMBER
+      `married filing separate returns` IS A BOOLEAN
+GIVETH A NUMBER
+`the 141.069 tuition credit` MEANS
+    IF `married filing separate returns` THEN 0 ELSE 0.25 TIMES (max 0 `the federal credit under section 25A for undergraduate study at a Kentucky institution`)
+
+§§ `141.0205(2) -- the nonrefundable credits in order`
+
+-- "(a) The individual credits permitted by KRS 141.020(3); (b) The credit permitted by KRS 141.066; (c) The tuition credit
+-- ...; (d) The household and dependent care credit". Each is taken against what is left; none takes the tax below zero.
+-- The family size credit is a percentage of "the taxpayer's tax liability calculated under KRS 141.020", read as the tax
+-- after the (3) credits, since 141.020(1) defines the tax as the rate applied "and subtracting allowable tax credits
+-- provided in subsection (3)".
+GIVEN `tax at the rate` IS A NUMBER
+      `the individual credits` IS A NUMBER
+      `the family size percentage` IS A NUMBER
+      `the tuition credit` IS A NUMBER
+      `the care credit` IS A NUMBER
+GIVETH A NUMBER
+`tax after the nonrefundable credits` MEANS
+    max 0 (afterFamily MINUS `the tuition credit` MINUS `the care credit`)
+    WHERE
+        after3 MEANS max 0 (`tax at the rate` MINUS `the individual credits`)
+        afterFamily MEANS after3 MINUS (after3 TIMES `the family size percentage`)
+
+§§ `141.180(2) -- who must file`
+
+-- "(a) ... every individual having for the taxable year a modified gross income exceeding the threshold amount ..., and
+-- every married couple living together with a combined modified gross income exceeding the threshold amount ..., shall
+-- file a return ... (b) ... an individual having ... gross income from self-employment exceeding the threshold amount ...
+-- (c) Any nonresident individual with gross income from Kentucky sources and a total gross income exceeding the threshold
+-- amount". 141.180(3): "A husband and wife not living together shall make separate returns."
+GIVEN `resident` IS A BOOLEAN
+      `the modified gross income` IS A NUMBER
+      `gross income from self-employment` IS A NUMBER
+      `has gross income from Kentucky sources` IS A BOOLEAN
+      `total gross income` IS A NUMBER
+      `the threshold amount` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `shall file a return` IF
+        (`resident` AND `the modified gross income` GREATER THAN `the threshold amount`)
+    OR  `gross income from self-employment` GREATER THAN `the threshold amount`
+    OR  ((NOT `resident`) AND `has gross income from Kentucky sources` AND `total gross income` GREATER THAN `the threshold amount`)
+
+§§ `141.160, 141.220 -- when the return and the tax are due`
+
+-- 141.160(1): "All returns of income for the preceding taxable year shall be made by April 15 in each year, except returns
+-- made on the basis of a fiscal year, which shall be made by the fifteenth day of the fourth month following the close of
+-- the fiscal year." 141.220: "The full amount of the unpaid tax ... shall be paid ... at the time prescribed for filing the
+-- income tax return, determined without regard to any extension of time for filing the return."
+GIVEN `month the taxable year closes` IS A NUMBER
+      `year the taxable year closes` IS A NUMBER
+GIVETH A DATE
+`the 141.160 due date` MEANS
+    DATE_FROM_DMY 15 m4 y4
+    WHERE
+        m4 MEANS IF (`month the taxable year closes` PLUS 4) GREATER THAN 12 THEN `month the taxable year closes` PLUS 4 MINUS 12 ELSE `month the taxable year closes` PLUS 4
+        y4 MEANS IF (`month the taxable year closes` PLUS 4) GREATER THAN 12 THEN `year the taxable year closes` PLUS 1 ELSE `year the taxable year closes`
+
+DECLARE `Party` IS ONE OF
+    `the individual`
+    `the department`
+
+DECLARE `Act` IS ONE OF
+    `file the return`
+    `pay the full amount of the unpaid tax`
+
+-- Days from the close of the taxable year. The return's date can move with an extension; the payment's cannot.
+GIVEN `days to the return due date, with any extension` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the 141.180 and 141.160 duty to file` IS
+    PARTY  `the individual`
+    MUST   `file the return`
+    WITHIN `days to the return due date, with any extension`
+    HENCE  FULFILLED
+    LEST   BREACH BY `the individual` BECAUSE "the return was not made by April 15 (or the fifteenth day of the fourth month after a fiscal year), or by the extended date (141.160(1))"
+
+GIVEN `days to the return due date, without any extension` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the 141.220 duty to pay` IS
+    PARTY  `the individual`
+    MUST   `pay the full amount of the unpaid tax`
+    WITHIN `days to the return due date, without any extension`
+    HENCE  FULFILLED
+    LEST   BREACH BY `the individual` BECAUSE "the unpaid tax was not paid at the time prescribed for filing the return, without regard to any extension (141.220)"

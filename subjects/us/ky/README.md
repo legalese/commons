@@ -79,3 +79,11 @@ The question was where Kentucky sets the **amounts** a person gets: the K-TAP gr
 **Not sourced:** the UI weekly maximum. It is computed under KRS ch. 341 (deposited) from the state average weekly wage, and no official current-year notice was fetched. Also not deposited: the KTAP technical-requirements regulation (921 KAR 2:006) and the income rules that feed the deficit.
 
 **Remaining gaps:** the COLA-adjusted current amounts for KTAP and state supplementation; the UI weekly maximum figure; 921 KAR 2:006.
+
+## Encodings, 24 October 2026: tax and benefits
+
+| Encoding | Seat | What it answers | Assertions |
+| --- | --- | --- | --- |
+| [`kentucky-revised-statutes-chapter-141-income-taxes/encodings/baseline-2026-10/`](kentucky-revised-statutes-chapter-141-income-taxes/encodings/baseline-2026-10/) | the individual taxpayer | residence (141.010(32)); Kentucky AGI with the social security, $31,110 pension and active-duty exclusions (141.019); net income with the standard deduction as an input; the 4% (2024-25) and 3.5% (2026 on) rate (141.020(2)); the $40 age and blindness and $20 Guard credits (141.020(3)); the family size credit on the poverty guidelines (141.066); care and tuition credits (141.067, 141.069) in the 141.0205 order; who must file (141.180(2)); when the return and tax are due (141.160, 141.220) | 35 / 35 |
+
+Baselines: a seat-neutral core in the statute's terms with regulative rules for the duties, and a seat layer with `@export` questions. Federal figures are inputs, answered by `subjects/us/internal-revenue-code-of-1986/`. Each NOTES.md lists its findings and what is `not covered`.
