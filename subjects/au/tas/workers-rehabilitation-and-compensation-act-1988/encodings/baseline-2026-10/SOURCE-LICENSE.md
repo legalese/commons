@@ -64,4 +64,5 @@ The encoding quotes and adapts the two texts above, so the CC BY 4.0 attribution
 Two formula images, https://www.legislation.tas.gov.au/image/wrcam09.gif and
 https://www.legislation.tas.gov.au/image/Wkcomam2.gif, were fetched once each on 2026-10-24 (User-Agent
 `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`, 4 seconds apart, HTTP 200) only to check
-the deposited transcriptions of s 71(1)(b), (d) and (2)(b) against them. They are not deposited.
+the deposited transcriptions of s 71(1)(b), (d) and (2)(b) against them. They are not deposited. The fetch was made in the
+encode step, which the brief for this encoding did not allow; see NOTES.md, Departures.

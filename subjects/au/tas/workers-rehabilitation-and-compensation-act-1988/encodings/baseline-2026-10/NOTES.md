@@ -11,9 +11,9 @@ No pipeline, no coverage table, no independent test pass, no human gate.
 It is written in layers:
 
 - **`wrca-dates.l4`**: the calendar arithmetic (working days by the workplace's normal week, months, years, ages), on the built-in date functions only, so that no module imports the slow daydate library.
-- **`wrca-core.l4`**: the seat-neutral core, in the Act's own actors and terms ("the worker", "the employer", "the employer's licensed insurer", "dependants"). Computations (basic salary units, normal weekly earnings, the weekly payment, the step-downs and the floor, the cessation date, the impairment and death lump sums, the expense caps, the deadlines) are functions. Where the text says "must" or "shall" or sets a period, there is a regulative rule (`DEONTIC`): 9 definitions, 8 rules and one composition of three of them.
+- **`wrca-core.l4`**: the seat-neutral core, in the Act's own actors and terms ("the worker", "the employer", "the employer's licensed insurer", "dependants"). Computations (basic salary units, normal weekly earnings, the weekly payment, the step-downs and the floor, the cessation date, the impairment and death lump sums, the expense caps, the deadlines) are functions. Where the text says "must" or "shall" or sets a period, there is a regulative rule (`DEONTIC`): 9 definitions, 8 rules and one composition of three of them. Beside each of the employer's dated duties there is a status function (met, missed, still open, not required) built from the same condition and deadline as the duty's rule.
 - **`wrca-seat.l4`**: the injured worker's seat (and the dependants' on a death). It asks 26 questions, each with `@export` and a `@desc` on every input, under `§§` headings. It builds the core's records from plain answers and restates no rule.
-- **`wrca-seat-employer.l4`**: the employer's seat, 16 questions. Its names differ from the worker seat's, so a case file can import both.
+- **`wrca-seat-employer.l4`**: the employer's seat, 16 questions. Its names differ from the worker seat's, so a case file can import both. "Have I met my duties on this claim" reads each status from the core's status functions. It cannot read them from the `DEONTIC` rules: on the stable `l4`, the `EVALTRACE` result of a breached rule cannot be compared with anything ("Trying to check equality on types that do not support it", checked 2026-10-24), so a question built on it would fail just when a duty is missed. The rules are exercised by the traces in the case files.
 
 The scope was cut, as the task set it, to the payment rules and the claim deadlines: the Act is 511,000 characters.
 
@@ -23,7 +23,7 @@ No earlier encoding of this Act existed to keep. No requirement ledger covers Ta
 
 - **Act:** Workers Rehabilitation and Compensation Act 1988 (Tas), the consolidation **published 2025-12-01 and current on the site at 2026-10-20**, as deposited at `../../registers/source-bundle/act-1988-004.txt` (retrieved 2026-10-19T17:09:43Z). Uncommenced amendments are not in a consolidation, and the site's uncommenced-legislation feed was not checked.
 - **Regulations:** Workers Rehabilitation and Compensation Regulations 2021, the consolidation **published 2022-02-18 and current at 2026-10-20**, as deposited at `../../../workers-rehabilitation-and-compensation-regulations-2021/registers/source-bundle/sr-2021-049.txt`. They supply reg 19 and Schedule 1 (the right-to-claim notice), reg 20 (the hearing-loss table), reg 21 (the funeral and counselling caps, $9,500 and $4,000), reg 22 (the travel amount) and reg 28 with Schedule 2 (infringement notice penalties).
-- **Formulas.** The s 71 formulas are images in the source. The deposited transcriptions, `{18 + [6.1 × (WPI - 5)]} × BS` and `3.2 × BS × WPI`, were checked on 2026-10-24 against https://www.legislation.tas.gov.au/image/wrcam09.gif and https://www.legislation.tas.gov.au/image/Wkcomam2.gif, fetched once each for that purpose and not deposited. They match.
+- **Formulas.** The s 71 formulas are images in the source. The encoding uses the deposited transcriptions, `{18 + [6.1 × (WPI - 5)]} × BS` and `3.2 × BS × WPI`. In the encode step they were also checked, on 2026-10-24, against https://www.legislation.tas.gov.au/image/wrcam09.gif and https://www.legislation.tas.gov.au/image/Wkcomam2.gif, fetched once each for that purpose and not deposited. They match. That fetch departed from the brief (see Departures).
 
 **Inputs, because the deposit does not hold them:**
 
@@ -38,11 +38,11 @@ No earlier encoding of this Act existed to keep. No requirement ledger covers Ta
 
 | Module | Case file | Assertions | Traces |
 |---|---|---|---|
-| `wrca-dates.l4`, `wrca-core.l4` | `wrca-cases-core.l4` | 207 written, 207 satisfied | 8 |
-| `wrca-seat.l4` | `wrca-cases-worker.l4` | 66 written, 66 satisfied | 0 |
-| `wrca-seat-employer.l4` (with 16 mirror cases against `wrca-seat.l4`) | `wrca-cases-employer.l4` | 59 written, 59 satisfied | 1 |
+| `wrca-dates.l4`, `wrca-core.l4` | `wrca-cases-core.l4` | 238 written, 238 satisfied | 8 |
+| `wrca-seat.l4` | `wrca-cases-worker.l4` | 82 written, 82 satisfied | 0 |
+| `wrca-seat-employer.l4` (with 18 mirror cases against `wrca-seat.l4`) | `wrca-cases-employer.l4` | 63 written, 63 satisfied | 1 |
 
-332 assertions in all, every one satisfied. `l4 run` on all seven files: 0 errors, 0 warnings (2026-10-24). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read.
+383 assertions in all, every one satisfied. `l4 run` on all seven files: 0 errors, 0 warnings (2026-10-24, after the fixes listed under "Corrections after the independent verification"). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read.
 
 The 9 `#TRACE`s each carry an `-- expect:` line, and every one ends in the breach it expects:
 
@@ -61,12 +61,13 @@ Every expected value was written by hand from the deposited text, with the arith
 
 - **Mia**, a full-time storeperson at a Hobart warehouse, injured on Monday 2 March 2026, with her claim received on Wednesday 11 March 2026;
 - **Sam**, a casual on 20 of 38 hours, and **Ivy**, a full-time low earner, for the floor;
+- a **police officer** on Mia's figures, for s 69B(2DA);
 - **Ray**, born 1960, for the s 87 cut-off;
 - **Tom**, a delivery driver who dies on 1 June 2026, leaving **Leo** (his wholly dependent partner) and **Ava** (born 2012).
 
-The employer case file asks Mia's facts from her employer's side. Its **16 mirror cases** assert that the two seats give the same answer on the same facts:
+The employer case file asks Mia's facts from her employer's side. Its **18 mirror cases** assert that the two seats give the same answer on the same facts:
 
-- liability;
+- liability (including the s 25(2)(b) and (c) exclusions);
 - the s 33A, s 39 and s 81 deadlines;
 - the s 81(3) start date;
 - deemed acceptance;
@@ -111,6 +112,7 @@ The 2026-10-18 defaults:
   - whether it was "reasonably practicable" to start on the first pay day (s 81(1)(a));
   - the degree of dependency, and what is "reasonable and proportionate" to it (s 67(3)): the answer gives the cap;
   - medical evidence of usual and suitable duties (s 69B(2));
+  - whether, had the worker not been a police officer, it is unlikely the worker would have been in the circumstances of the injury (s 69B(2DA));
   - the whole person impairment, as assessed (s 72).
 - **The Act's own definitions are worked out from facts:**
   - normal weekly earnings and the relevant period (ss 69(2), (2A), (14), 70(2));
@@ -120,19 +122,21 @@ The 2026-10-18 defaults:
   - working day (s 3(1)), from the workplace's normal week;
   - the reg 20 whole person impairment, from the binaural hearing impairment.
 
-  Borrowed terms are asked as facts: worker (a contract of service or training contract), disease, injury arising out of or in the course of employment, pension age.
+  Borrowed terms are asked as facts: worker (a contract of service or training contract), disease, injury arising out of or in the course of employment, pension age, police officer, an entitlement under the Workers' (Occupational Diseases) Relief Fund Act 1954.
 - **One case:** one worker, one injury, one claim. On a death, one deceased worker and that worker's dependants.
 - **The Act's own terms**, quoted in the comment above each rule.
 - **Machinery out:** the Board, the Tribunal's procedure, licensing, the Nominal Insurer and the Fund.
 
 **Departures:** none from the defaults. The s 25 exclusions are asked as facts, one per exclusion, not worked out.
 
+**Departure from the brief.** The brief says no new law is fetched in the encode, verify or fix steps. The encode step nevertheless fetched the two s 71 formula images (wrcam09.gif and Wkcomam2.gif, see Edition) to check the deposited transcriptions. Nothing in the encoding rests on the fetch: the rules use the deposited transcriptions, and the images were not deposited. If the check is to be relied on, a sourcing step should deposit the images, or a `act-1988-004.formulas.md` sidecar citing them, and record it in the subject's register.
+
 ## Scope
 
 **In:**
 
 - **Basic salary and units:** s 3(1) "basic salary" (the 1991 figure, as a constant only), s 65 (unit, child, dependent spouse, child and caring partner), s 66 (as the reason the figure is an input).
-- **Liability:** s 25(1), as facts, with the exclusions in s 25(1A), (2)(a) and (6).
+- **Liability:** s 25(1), as facts, with the exclusions in s 25(1A), (2)(a), (2)(b), (2)(ba), (2)(c), (6) and (8).
 - **The worker's claim:** s 32(1), (2), (3) with s 34(2); s 37 and s 38 (as inputs). Regulative: notice as soon as practicable, and a claim within 6 months.
 - **The employer's duties**, all regulative, with the employer as party:
   - s 33A with reg 19 and Sch 1;
@@ -141,7 +145,7 @@ The 2026-10-18 defaults:
   - s 81(1)-(4);
   - s 81A(1), with s 81AB.
 - **Weekly payment:** s 69(1), (2), (2A), (3), (14); s 70(2), (3).
-- **Step-downs:** s 69B(1), (2), (2A)-(2D), (2E), (3), (4), (6).
+- **Step-downs:** s 69B(1), (2), (2A)-(2D), (2DA) with s 164BB, (2E), (3), (4), (6).
 - **Cessation:** s 87(1AA), (1), (4).
 - **Death:** s 67(1)-(5); s 67A; s 67B(3), (4).
 - **Permanent impairment:** s 71(1)-(4); ss 72A(3), (5), 73(1), (4) with reg 20.
@@ -159,7 +163,9 @@ The 2026-10-18 defaults:
 - Medical services under Division 2, beyond the regulation caps (s 75(1)(a), (2)-(9)).
 - s 86 termination procedure; s 88 review; ss 82-84B (prisoners, residence abroad, holidays and leave).
 - s 69(4)-(13): the Tribunal's adjustments, regard to other payments (s 69(4)(a)), and late certificates.
-- s 69B(2DA) (police officers) and s 69B(5).
+- s 69B(5) (the 2004 amendments' transitional rule: any injury it reaches is before 1 March 2023, and is already `not covered` through s 87(4)).
+- The employer's undated or record-keeping duties in the sections that are in: s 33(2) (record a notice of injury), s 36(1)(a) (complete the employer's report section of the claim form "immediately" on receiving it) and s 36(1)(c) (keep a copy of the claim). They set no countable period, carry no penalty of their own, and change nothing the worker is paid or must do, so they are left out rather than given an invented deadline.
+- s 36(2): the licensed insurer's duty to forward a copy of the claim to the Board within 5 working days. It is owed to an official, and puts nothing on the worker or the employer.
 - s 87(2), (3) (the Tribunal's extension beyond the cessation date).
 - ss 67B(1), (2), 67C-67G (the employer's duties on a death claim, their timing and disputes).
 - s 72 (how impairment is assessed), s 73(2), (3) and s 73A, beyond inputs.
@@ -180,7 +186,7 @@ Cross-folder IMPORT does not work, so these are links, not code:
 ## What the Act turns out to say
 
 1. **The current basic salary is not in the text.** s 3(1) gives $311.30 for 1991 and varies it each 1 January by the "relevant percentage" (s 65), and s 66 has the Minister gazette it. Every lump sum (ss 67, 71), the s 69B(3) floor and the child's weekly payment (s 67A(1)(b)) turn on it. It is an input, never computed from 1991. The cases use an illustrative $1,200. Asserted (415 units = $498,000).
-2. **The s 71 formulas, transcribed from images, check out against the images** (wrcam09.gif, Wkcomam2.gif, 2026-10-24). The scale is continuous at the top: 70% gives 414.5 units, more than 70% gives 415 units. The psychiatric scale (s 71(2)(b)) uses the same "(WPI - 5)" although its threshold is 10%. So the first compensable psychiatric impairment, 10%, is worth 48.5 units, while the first physical one, 5%, is worth 18. Asserted.
+2. **The s 71 formulas, transcribed from images, check out against the images** (wrcam09.gif, Wkcomam2.gif, 2026-10-24; a fetch that departed from the brief, see Departures). The scale is continuous at the top: 70% gives 414.5 units, more than 70% gives 415 units. The psychiatric scale (s 71(2)(b)) uses the same "(WPI - 5)" although its threshold is 10%. So the first compensable psychiatric impairment, 10%, is worth 48.5 units, while the first physical one, 5%, is worth 18. Asserted.
 3. **The s 69B(3) floor is ambiguous.** It reads: "not to be less than 70% of the basic salary or the weekly payment ..., whichever is the lesser". Read here as the lesser of (70% of the basic salary) and (the weekly payment). The other reading, 70% of the lesser of the two, can never exceed the 80% step-down, so it would give the subsection no effect. On the reading taken, a full-time worker whose weekly payment is at or below 70% of the basic salary is never stepped down. Asserted: Ivy, $700 against a $840 floor, keeps $700 in week 80.
 4. **The step-down bands mix two measures.** s 69B(1) counts weeks "of the period of incapacity", which adds separate periods together (s 69B(6)), but says "from the date of the initial incapacity". s 69B(2E) ends the entitlement in years after that date. Read here: the band by the week's number in the aggregated period; the cessation by calendar date.
 5. **Whether the named last day is paid is not settled.** s 69B(2E) ends the entitlement "on the expiration of 9 years after the date of the initial incapacity"; s 87 says "on the date on which the worker attains the pension age". Read here: a week beginning on or after the named date is not paid. Asserted (Ray, 2 March 2028).
@@ -200,12 +206,35 @@ Cross-folder IMPORT does not work, so these are links, not code:
 15. **The s 81 duty to start weekly payments runs from the receipt of a claim, whether or not liability is accepted.** s 81AA makes the payments no admission. Only a Tribunal determination under s 81A(3)(c) stops them. Encoded for a claim for weekly payments.
 16. **Industrial deafness has its own claim rules.** There is no notice requirement, and no deadline while the worker stays in the employment (s 32(2)). There is a cliff at 5% binaural hearing impairment: at 5% nothing is paid, but at 6% reg 20 gives 5% whole person impairment, and s 71(1)(b) pays 18 units for that. reg 20 does not say which way a half rounds; read half up. Asserted.
 17. **s 71(3), (4): the loss of a foetus counts as 20% "in addition to" any other impairment.** Read here as added to the assessed percentage, not combined through the AMA tables. Asserted (3% + 20% = 23%: 127.8 units).
+18. **Every s 67A period is counted from the day after the death.** s 67A(2)(a) pays 100% "for the first 26 weeks following the date of death", so the day of death is not one of those weeks. s 67A(1)(b) starts a child's payments "on the expiration of 13 weeks after the date of death". The same count is used for "78 weeks from the date of death" ((2)(b)), "not exceeding 2 years from the date of death" ((2)(c)) and "on the expiration of 2 years after the date of death" ((4)).
+    - The day of death itself is paid at 100%: the spouse's payments run "from the date of the worker's death" (s 67A(1)(a), s 67B(3)(a)), and that day comes before the 90% period.
+    - For a death on Monday 1 June 2026: 100% to 30 November 2026 (182 days after the death); 90% from 1 December 2026 to 29 November 2027 (546 days after); 80% from 30 November 2027 to 1 June 2028; nothing from 2 June 2028. A child's 15% runs from 1 September 2026 (the 13 weeks are 2 June to 31 August).
+    - s 69B is counted differently, because its text differs: s 69B(6)(a) defines the period of incapacity as "starting on the date of the initial incapacity", so its weeks include that day. s 67A has no such definition.
+    - Read the same way, s 69B(2E)'s "on the expiration of 9 years after the date of the initial incapacity" would make the anniversary itself the last day paid. Finding 5 takes a week-by-week reading (a week that begins on the named day is not paid) and is left as it is; the two should be settled together.
+    - The Acts Interpretation Act 1931 (Tas) is not deposited, so its rule for reckoning periods was not checked against this.
+
+    **Corrected** after the independent verification: the first version counted the spouse's periods with the day of death as day 0 (30 November 2026 at 90%, $1,260; 1 June 2028 nothing) and the child's from the day after. Asserted: 30 November 2026 $1,400, 1 December 2026 $1,260, 29 November 2027 $1,260, 30 November 2027 $1,120, 1 June 2028 $1,120, 2 June 2028 nothing.
+19. **s 25(2)(b), (ba), (c) and s 25(8) are further exclusions.** No compensation is payable for undulant fever or brucellosis without a medical practitioner's written certificate on a blood examination ((2)(b)); for coronary heart disease, a diseased heart valve or an aortic or cerebral aneurism unless the employment contributed to it to a substantial degree ((2)(ba)); for a disease the worker wilfully and falsely denied in writing on entering the employment ((2)(c)); or for a disease compensable under the Workers' (Occupational Diseases) Relief Fund Act 1954 ((8), asked as a fact). "To a substantial degree" is the s 3(2A) test, "only if it is the major or most significant factor", so for a condition given as a disease (ba) adds nothing to s 25(1)(b); it bites where the condition is given as an injury that is not a disease. No injury is prescribed for (ba) in the deposited Regulations. **Corrected** after the independent verification: the first version did not ask these facts, so a case they exclude came back "liable". Asserted, with mirror cases.
+20. **s 69B(2DA): a police officer's weekly payment is not stepped down** where, had the person not been a police officer, it is unlikely the person would have been in the circumstances of the injury. Whether that is unlikely is a judgment: an input. s 164BB disapplies (2DA) for a claim made before the Workers Rehabilitation and Compensation Amendment Act 2019 came into force (2 September 2019 by the history note). Any such claim is for an injury before 1 March 2023, which this encoding already answers as `not covered` (finding 6), so s 164BB changes no answer here. **Corrected** after the independent verification: the first version listed (2DA) as out of scope but still gave a police officer the 90% and 80% step-downs. Asserted (1,400 in weeks 30, 80 and 105; 1,260 and 1,120 where (2DA) does not apply).
+
+## Corrections after the independent verification (2026-10-24)
+
+An independent verifier found seven issues. Each was checked against the deposited text before it was fixed.
+
+1. **s 67A counting** (major): the spouse's and the child's periods used opposite conventions. Fixed: one count for all of s 67A, finding 18. Four expected values changed, and cases now sit on both sides of every s 67A boundary.
+2. **Cross-reference**: the comment on the child's weekly payment named finding 9. Fixed: finding 10.
+3. **Citations in an answer**: one "nothing on this day" answer served both the spouse and the child, and cited s 67A(1)(b) and s 67B(3) for both. Fixed: two answers, s 67A(1)(a) with s 67B(3) for the spouse, s 67A(1)(b) alone for the child.
+4. **Scope**: s 69B(2DA) and the s 25(2)(b), (ba), (c) exclusions gave definite wrong answers (findings 19, 20). Fixed by encoding them, and s 25(8) with them. s 33(2), s 36(1)(a), (1)(c) and (2) are now listed as out, with reasons.
+5. **A seat restating a rule**: the employer seat had its own test of whether the claim is for weekly payments, and its own mappings of the core's answers to a duty status. Fixed: the status functions are now in the core, beside the rules they mirror. The verifier's wider point, that no seat question uses the `DEONTIC` rules, cannot be met on the stable `l4` (see Method).
+6. **Fetch in the encode step**: named as a departure from the brief (Departures).
+7. **Week dates in the cases**: week 106 of an incapacity from 2 March 2026 begins on 6 March 2028, not 2 March; and the week beginning 5 March 2035 is week 471, not 470. Fixed, with the date arithmetic asserted. The answers did not change. The boundary case the old date was testing (a week that begins on the cessation day) is kept, as a week 105 after a 3-day break.
 
 ## What would need doing before relying on it
 
 - Take the **gazetted basic salary** for each year in issue (and for the year of the injury, for s 71), and the current State Service Award travel rates.
 - Check the s 87 commencement date (finding 6) against the proclamation, and deposit s 87 as in force before 1 March 2023 for older injuries.
-- Settle findings 3, 4, 5, 10 and 11 with someone who knows how the Tribunal and WorkSafe Tasmania apply them.
+- Settle findings 3, 4, 5, 10, 11 and 18 with someone who knows how the Tribunal and WorkSafe Tasmania apply them (5 and 18 together), and deposit the Acts Interpretation Act 1931 (Tas) to check finding 18 against its rule for periods.
+- Deposit the s 71 formula images or a formulas sidecar (Departures).
 - Check the consolidation against the authorised version, and the uncommenced-legislation feed.
 - Run an independent test pass, and the human gates.
 - Encode the out-of-scope parts a real claim meets:
