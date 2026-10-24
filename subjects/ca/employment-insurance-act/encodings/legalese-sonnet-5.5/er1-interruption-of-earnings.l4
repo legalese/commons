@@ -1,0 +1,268 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+
+-- Employment Insurance Regulations (SOR/96-332), regulations 14 and 14.01: Interruption of Earnings. Piece er1, layer 1.
+-- Text: the unofficial plain-text rendering of the Justice Laws consolidation current to 2026-09-30
+-- (../../registers/source-bundle/SOR-96-332.txt). Nothing here is verified against the official text. `src:N` is a line of that file.
+-- Instrument: the Regulations. The Act's s 2(1) defines "interruption of earnings" as an interruption "in circumstances
+-- determined by the regulations" (the core records this: KEEL-NOTES.md "Defined terms"); these regulations determine them.
+-- The Act's provisions that refer back (s 10(1), the start of a benefit period; ss 11(3) and 11(4), the leaves of paragraphs
+-- 14(3) and (6); subsections 23(1), 23.1(2); 152.05(1), 152.06(1), 152.07(1)(c)) are outside this piece and are inputs.
+--
+-- Shape. Reg 14(1), (2), (5) and (7) each say when an interruption occurs; (3), (4) and (6) say when none occurs. A rule that
+-- states a time returns MAYBE DATE: JUST the day the interruption occurs, NOTHING when that route does not apply. Reg 14(1) states
+-- no time ("an interruption of earnings occurs where ..."), so its rule is a BOOLEAN and the text does not say on which day it
+-- occurs (fork F12 in NOTES.md). A week is the Act's week, beginning on a Sunday (core: `s 2(1) the Sunday that begins the week
+-- containing`). `reg 14 an interruption of earnings has occurred` combines the routes.
+
+§ `The reasons for ceasing to work`
+
+-- The circumstances of reg 14(2) and reg 14.01 are listed by the text. They are alternatives: a person who ceases to work by
+-- reason of any one of them is within the regulation, so an input names the reason that applies.
+-- src:211 | (2) An interruption of earnings from an employment occurs in respect of an insured person at the beginning of a week in which a reduction in earnings that is more than 40% of the insured person’s normal weekly earnings occurs because the insured person ceases to work in that employment by reason of illness, injury or quarantine, pregnancy, the need to care for a child or children referred to in subsection 23(1) of the Act or the need to provide care or support to a family member referred to in subsection 23.1(2) of the Act, to a critically ill child or to a critically ill adult.
+@ref Employment Insurance Regulations reg 14(2) (src:211)
+DECLARE `er1 Reason an insured person ceases to work` IS ONE OF
+    `er1 illness, injury or quarantine`
+    `er1 pregnancy`
+    `er1 the need to care for a child or children referred to in subsection 23(1) of the Act`
+    `er1 the need to provide care or support to a family member referred to in subsection 23.1(2) of the Act`
+    `er1 the need to provide care or support to a critically ill child`
+    `er1 the need to provide care or support to a critically ill adult`
+    `er1 another reason`
+
+-- src:223 | 14.01 An interruption of earnings of a self-employed person referred to in paragraph 152.07(1)(c) of the Act occurs at the beginning of the week in which the person declares having reduced the time devoted to their business activities by more than 40% of the normal level because the person ceases to work by reason of illness, injury or quarantine, pregnancy, the need to care for a child or children referred to in subsection 152.05(1) of the Act or the need to provide care or support to a family member referred to in subsection 152.06(1) of the Act, to a critically ill child or to a critically ill adult.
+@ref Employment Insurance Regulations reg 14.01 (src:223)
+DECLARE `er1 Reason a self-employed person ceases to work` IS ONE OF
+    `er1 self-employed illness, injury or quarantine`
+    `er1 self-employed pregnancy`
+    `er1 self-employed need to care for a child or children referred to in subsection 152.05(1) of the Act`
+    `er1 self-employed need to provide care or support to a family member referred to in subsection 152.06(1) of the Act`
+    `er1 self-employed need to provide care or support to a critically ill child`
+    `er1 self-employed need to provide care or support to a critically ill adult`
+    `er1 self-employed another reason`
+
+-- src:211 | (2) An interruption of earnings from an employment occurs in respect of an insured person at the beginning of a week in which a reduction in earnings that is more than 40% of the insured person’s normal weekly earnings occurs because the insured person ceases to work in that employment by reason of illness, injury or quarantine, pregnancy, the need to care for a child or children referred to in subsection 23(1) of the Act or the need to provide care or support to a family member referred to in subsection 23.1(2) of the Act, to a critically ill child or to a critically ill adult.
+@ref Employment Insurance Regulations reg 14(2) (src:211)
+GIVEN reason IS A `er1 Reason an insured person ceases to work`
+GIVETH A BOOLEAN
+DECIDE `reg 14(2) the reason is a circumstance listed in subsection (2)` IS
+    CONSIDER reason
+    WHEN `er1 another reason` THEN FALSE
+    OTHERWISE TRUE
+
+-- src:223 | 14.01 An interruption of earnings of a self-employed person referred to in paragraph 152.07(1)(c) of the Act occurs at the beginning of the week in which the person declares having reduced the time devoted to their business activities by more than 40% of the normal level because the person ceases to work by reason of illness, injury or quarantine, pregnancy, the need to care for a child or children referred to in subsection 152.05(1) of the Act or the need to provide care or support to a family member referred to in subsection 152.06(1) of the Act, to a critically ill child or to a critically ill adult.
+@ref Employment Insurance Regulations reg 14.01 (src:223)
+GIVEN reason IS A `er1 Reason a self-employed person ceases to work`
+GIVETH A BOOLEAN
+DECIDE `reg 14.01 the reason is a circumstance listed in regulation 14.01` IS
+    CONSIDER reason
+    WHEN `er1 self-employed another reason` THEN FALSE
+    OTHERWISE TRUE
+
+§ `Regulation 14(1) - lay-off or separation`
+
+-- src:210 | 14 (1) Subject to subsections (2) to (7), an interruption of earnings occurs where, following a period of employment with an employer, an insured person is laid off or separated from that employment and has a period of seven or more consecutive days during which no work is performed for that employer and in respect of which no earnings that arise from that employment, other than earnings described in subsection 36(13), are payable or allocated.
+@ref Employment Insurance Regulations reg 14(1) (src:210)
+-- Plain gloss: after a period of work for an employer, the insured person is laid off or leaves that job and then goes seven or
+-- more days in a row with no work for that employer and no earnings from that job payable or allocated (other than the earnings
+-- of reg 36(13), piece er3). Subject to (2) to (7): the combining rule applies them. The number of days is the length of the
+-- run of days that meet both tests.
+GIVEN `the person is an insured person` IS A BOOLEAN
+      `this follows a period of employment with an employer` IS A BOOLEAN
+      `the insured person is laid off` IS A BOOLEAN
+      `the insured person is separated from that employment` IS A BOOLEAN
+      `the number of consecutive days during which no work is performed for that employer and in respect of which no earnings that arise from that employment, other than earnings described in subsection 36(13), are payable or allocated` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `reg 14(1) an interruption of earnings occurs on lay-off or separation` IF
+        `the person is an insured person`
+    AND `this follows a period of employment with an employer`
+    AND (   `the insured person is laid off`
+         OR `the insured person is separated from that employment`)
+    AND `the number of consecutive days during which no work is performed for that employer and in respect of which no earnings that arise from that employment, other than earnings described in subsection 36(13), are payable or allocated` AT LEAST 7
+
+§ `Regulation 14(2) - a reduction in earnings of more than 40%`
+
+-- src:211 | (2) An interruption of earnings from an employment occurs in respect of an insured person at the beginning of a week in which a reduction in earnings that is more than 40% of the insured person’s normal weekly earnings occurs because the insured person ceases to work in that employment by reason of illness, injury or quarantine, pregnancy, the need to care for a child or children referred to in subsection 23(1) of the Act or the need to provide care or support to a family member referred to in subsection 23.1(2) of the Act, to a critically ill child or to a critically ill adult.
+@ref Employment Insurance Regulations reg 14(2) (src:211)
+-- Plain gloss: normal weekly earnings less what was earned in the week is the reduction; it must be more than 40 per cent of the
+-- normal weekly earnings (exactly 40 per cent is not more). A normal weekly earnings figure that is not above zero leaves nothing
+-- to reduce, so the answer is no.
+GIVEN `the insured person's normal weekly earnings` IS A NUMBER
+      `the insured person's earnings for the week` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `reg 14(2) a reduction in earnings that is more than 40% of the insured person's normal weekly earnings` IF
+        `the insured person's normal weekly earnings` GREATER THAN 0
+    AND (`the insured person's normal weekly earnings` MINUS `the insured person's earnings for the week`) GREATER THAN ((40%) TIMES `the insured person's normal weekly earnings`)
+
+-- src:211 | (2) An interruption of earnings from an employment occurs in respect of an insured person at the beginning of a week in which a reduction in earnings that is more than 40% of the insured person’s normal weekly earnings occurs because the insured person ceases to work in that employment by reason of illness, injury or quarantine, pregnancy, the need to care for a child or children referred to in subsection 23(1) of the Act or the need to provide care or support to a family member referred to in subsection 23.1(2) of the Act, to a critically ill child or to a critically ill adult.
+@ref Employment Insurance Regulations reg 14(2) (src:211)
+-- Plain gloss: the interruption begins on the Sunday of the week in which the reduction occurs because the person stops working in
+-- that job for one of the listed reasons. NOTHING when the reduction is 40 per cent or less, the reason is not listed, or the person
+-- did not stop working in that job. The day given is any day of that week.
+GIVEN `the person is an insured person` IS A BOOLEAN
+      `a day in the week in which the reduction in earnings occurs` IS A DATE
+      `the insured person's normal weekly earnings` IS A NUMBER
+      `the insured person's earnings for the week` IS A NUMBER
+      `the reduction occurs because the insured person ceases to work in that employment` IS A BOOLEAN
+      reason IS A `er1 Reason an insured person ceases to work`
+GIVETH A MAYBE DATE
+DECIDE `reg 14(2) the day on which an interruption of earnings occurs because of a reduction in earnings` IS
+    IF     `the person is an insured person`
+       AND `reg 14(2) a reduction in earnings that is more than 40% of the insured person's normal weekly earnings` `the insured person's normal weekly earnings` `the insured person's earnings for the week`
+       AND `the reduction occurs because the insured person ceases to work in that employment`
+       AND `reg 14(2) the reason is a circumstance listed in subsection (2)` reason
+    THEN JUST (`s 2(1) the Sunday that begins the week containing` `a day in the week in which the reduction in earnings occurs`)
+    ELSE NOTHING
+
+§ `Regulation 14(3), (4) and (6) - leaves and long pay periods: no interruption`
+
+-- src:212 | (3) A period of leave referred to in subsection 11(4) of the Act does not constitute an interruption of earnings, regardless of whether the person is remunerated for that period of leave.
+@ref Employment Insurance Regulations reg 14(3) (src:212)
+-- Plain gloss: a leave the Act's subsection 11(4) speaks of (piece ei1) is not an interruption of earnings, paid or not.
+GIVEN `the period is a period of leave referred to in subsection 11(4) of the Act` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 14(3) a period of leave referred to in subsection 11(4) of the Act does not constitute an interruption of earnings` IF
+    `the period is a period of leave referred to in subsection 11(4) of the Act`
+
+-- src:213 | (4) Where an insured person is employed under a contract of employment under which the usual remuneration is payable in respect of a period greater than a week, no interruption of earnings occurs during that period, regardless of the amount of work performed in the period and regardless of the time at which or the manner in which the remuneration is paid.
+@ref Employment Insurance Regulations reg 14(4) (src:213)
+-- Plain gloss: if the contract says the usual pay is for a period longer than a week, no interruption occurs during that period,
+-- however much work was done and however and whenever the pay is paid. A period of exactly seven days is a week, not longer.
+GIVEN `the insured person is employed under a contract of employment` IS A BOOLEAN
+      `the number of days in the period in respect of which the usual remuneration is payable under the contract` IS A NUMBER
+      `the time in question falls during that period` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 14(4) no interruption of earnings occurs during a period greater than a week for which the usual remuneration is payable` IF
+        `the insured person is employed under a contract of employment`
+    AND `the number of days in the period in respect of which the usual remuneration is payable under the contract` GREATER THAN 7
+    AND `the time in question falls during that period`
+
+-- src:221 | (6) A period of leave referred to in subsection 11(3) of the Act does not constitute an interruption of earnings, regardless of the time at which or the manner in which remuneration is paid.
+@ref Employment Insurance Regulations reg 14(6) (src:221)
+-- Plain gloss: a leave the Act's subsection 11(3) speaks of (piece ei1) is not an interruption of earnings, whenever and however paid.
+GIVEN `the period is a period of leave referred to in subsection 11(3) of the Act` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 14(6) a period of leave referred to in subsection 11(3) of the Act does not constitute an interruption of earnings` IF
+    `the period is a period of leave referred to in subsection 11(3) of the Act`
+
+§ `Regulation 14(5) - commission earners`
+
+-- src:214 | (5) An interruption of earnings in respect of an insured person occurs
+-- src:215 | (a) in the case of an insured person who is employed in the sale or purchase of real estate on a commission basis and holds a licence to sell real estate issued by a provincial authority, when
+-- src:216 | (i) the licence of the insured person is surrendered, suspended or revoked, or
+-- src:217 | (ii) the insured person ceases to work in that employment by reason of a circumstance referred to in subsection (2); and
+@ref Employment Insurance Regulations reg 14(5)(a) (src:214-217)
+-- Plain gloss: a real estate salesperson on commission with a provincial licence has an interruption on the day the licence is
+-- surrendered, suspended or revoked, or on the day they stop working in that job for a reason listed in reg 14(2). The answer is
+-- that day; NOTHING otherwise.
+GIVEN `the insured person is employed in the sale or purchase of real estate on a commission basis` IS A BOOLEAN
+      `the insured person holds a licence to sell real estate issued by a provincial authority` IS A BOOLEAN
+      `the licence of the insured person is surrendered, suspended or revoked` IS A BOOLEAN
+      `the insured person ceases to work in that employment by reason of a circumstance referred to in subsection (2)` IS A BOOLEAN
+      `the day on which that happens` IS A DATE
+GIVETH A MAYBE DATE
+DECIDE `reg 14(5)(a) the day on which an interruption of earnings occurs for a real estate salesperson on commission` IS
+    IF     `the insured person is employed in the sale or purchase of real estate on a commission basis`
+       AND `the insured person holds a licence to sell real estate issued by a provincial authority`
+       AND (   `the licence of the insured person is surrendered, suspended or revoked`
+            OR `the insured person ceases to work in that employment by reason of a circumstance referred to in subsection (2)`)
+    THEN JUST `the day on which that happens`
+    ELSE NOTHING
+
+-- src:214 | (5) An interruption of earnings in respect of an insured person occurs
+-- src:218 | (b) in the case of an insured person who is employed under a contract of employment and whose earnings from that employment consist mainly of commissions, when
+-- src:219 | (i) the insured person's contract of employment is terminated, or
+-- src:220 | (ii) the insured person ceases to work in that employment by reason of a circumstance referred to in subsection (2).
+@ref Employment Insurance Regulations reg 14(5)(b) (src:218-220)
+-- Plain gloss: a person on a contract of employment whose earnings are mainly commissions has an interruption on the day the contract
+-- is terminated, or on the day they stop working in that job for a reason listed in reg 14(2). Whether the earnings are "mainly"
+-- commissions is a fact the person states.
+GIVEN `the insured person is employed under a contract of employment` IS A BOOLEAN
+      `the earnings of the insured person from that employment consist mainly of commissions` IS A BOOLEAN
+      `the insured person's contract of employment is terminated` IS A BOOLEAN
+      `the insured person ceases to work in that employment by reason of a circumstance referred to in subsection (2)` IS A BOOLEAN
+      `the day on which that happens` IS A DATE
+GIVETH A MAYBE DATE
+DECIDE `reg 14(5)(b) the day on which an interruption of earnings occurs for a person whose earnings are mainly commissions` IS
+    IF     `the insured person is employed under a contract of employment`
+       AND `the earnings of the insured person from that employment consist mainly of commissions`
+       AND (   `the insured person's contract of employment is terminated`
+            OR `the insured person ceases to work in that employment by reason of a circumstance referred to in subsection (2)`)
+    THEN JUST `the day on which that happens`
+    ELSE NOTHING
+
+§ `Regulation 14(7) - less remunerative work with a wage supplement`
+
+-- src:222 | (7) Where an insured person accepts less remunerative work with their employer and as a consequence receives a wage supplement under a provincial law intended to provide indemnity payments where the continuation of a person's work represents a physical danger to them, to their unborn child or to the child they are breast-feeding, an interruption of earnings occurs on the insured person's last day of work before the beginning of the less remunerative work.
+@ref Employment Insurance Regulations reg 14(7) (src:222)
+-- Plain gloss: if the person takes less well paid work with their employer because staying in the old work would be a physical danger
+-- to them, their unborn child or the child they are breast-feeding, and as a result gets a wage supplement under a provincial law for
+-- that, the interruption occurs on their last day of work before the new work begins.
+GIVEN `the insured person accepts less remunerative work with their employer` IS A BOOLEAN
+      `as a consequence the insured person receives a wage supplement under a provincial law intended to provide indemnity payments where the continuation of a person's work represents a physical danger to them, to their unborn child or to the child they are breast-feeding` IS A BOOLEAN
+      `the insured person's last day of work before the beginning of the less remunerative work` IS A DATE
+GIVETH A MAYBE DATE
+DECIDE `reg 14(7) the day on which an interruption of earnings occurs when less remunerative work is accepted` IS
+    IF     `the insured person accepts less remunerative work with their employer`
+       AND `as a consequence the insured person receives a wage supplement under a provincial law intended to provide indemnity payments where the continuation of a person's work represents a physical danger to them, to their unborn child or to the child they are breast-feeding`
+    THEN JUST `the insured person's last day of work before the beginning of the less remunerative work`
+    ELSE NOTHING
+
+§ `Regulation 14 - the routes together`
+
+-- src:210 | 14 (1) Subject to subsections (2) to (7), an interruption of earnings occurs where, following a period of employment with an employer, an insured person is laid off or separated from that employment and has a period of seven or more consecutive days during which no work is performed for that employer and in respect of which no earnings that arise from that employment, other than earnings described in subsection 36(13), are payable or allocated.
+-- src:212 | (3) A period of leave referred to in subsection 11(4) of the Act does not constitute an interruption of earnings, regardless of whether the person is remunerated for that period of leave.
+-- src:213 | (4) Where an insured person is employed under a contract of employment under which the usual remuneration is payable in respect of a period greater than a week, no interruption of earnings occurs during that period, regardless of the amount of work performed in the period and regardless of the time at which or the manner in which the remuneration is paid.
+-- src:214 | (5) An interruption of earnings in respect of an insured person occurs
+-- src:221 | (6) A period of leave referred to in subsection 11(3) of the Act does not constitute an interruption of earnings, regardless of the time at which or the manner in which remuneration is paid.
+@ref Employment Insurance Regulations reg 14 (src:210) (src:212) (src:213) (src:214) (src:221)
+-- Plain gloss: an interruption of earnings has occurred if it occurs under reg 14(1), (2), (5) or (7), unless reg 14(3), (4) or (6) says
+-- the period is not an interruption. Reg 14(1) is "Subject to subsections (2) to (7)"; (3), (4) and (6) say that the leave or period
+-- "does not constitute" an interruption, or that none "occurs during that period", in general terms, and are applied to every route
+-- (fork F12 in NOTES.md). This is the BOOLEAN the core takes as the input `an interruption of earnings has occurred` (s 2(1)
+-- "interruption of earnings", piece er1).
+GIVEN `the answer under reg 14(1)` IS A BOOLEAN
+      `the answer under reg 14(2)` IS A MAYBE DATE
+      `the answer under reg 14(5)(a)` IS A MAYBE DATE
+      `the answer under reg 14(5)(b)` IS A MAYBE DATE
+      `the answer under reg 14(7)` IS A MAYBE DATE
+      `the answer under reg 14(3)` IS A BOOLEAN
+      `the answer under reg 14(4)` IS A BOOLEAN
+      `the answer under reg 14(6)` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 14 an interruption of earnings has occurred` IF
+        (   `the answer under reg 14(1)`
+         OR isJust `the answer under reg 14(2)`
+         OR isJust `the answer under reg 14(5)(a)`
+         OR isJust `the answer under reg 14(5)(b)`
+         OR isJust `the answer under reg 14(7)`)
+    AND NOT (`the answer under reg 14(3)`)
+    AND NOT (`the answer under reg 14(4)`)
+    AND NOT (`the answer under reg 14(6)`)
+
+§ `Regulation 14.01 - the self-employed person`
+
+-- src:223 | 14.01 An interruption of earnings of a self-employed person referred to in paragraph 152.07(1)(c) of the Act occurs at the beginning of the week in which the person declares having reduced the time devoted to their business activities by more than 40% of the normal level because the person ceases to work by reason of illness, injury or quarantine, pregnancy, the need to care for a child or children referred to in subsection 152.05(1) of the Act or the need to provide care or support to a family member referred to in subsection 152.06(1) of the Act, to a critically ill child or to a critically ill adult.
+@ref Employment Insurance Regulations reg 14.01 (src:223)
+-- Plain gloss: the self-employed person's interruption of earnings (paragraph 152.07(1)(c) of the Act, piece ei5) occurs at the beginning of
+-- the week in which they declare having cut the time they give to their business by more than 40 per cent of the normal level
+-- because they stop working for one of the listed reasons. The reduction is the normal weekly time less the time given in the
+-- week; exactly 40 per cent is not more. The day given is any day of the week in which the person makes the declaration.
+GIVEN `the person is a self-employed person referred to in paragraph 152.07(1)(c) of the Act` IS A BOOLEAN
+      `a day in the week in which the person declares the reduction` IS A DATE
+      `the normal level of time devoted to the person's business activities, in hours per week` IS A NUMBER
+      `the time devoted to the person's business activities, in hours, in the week of the reduction` IS A NUMBER
+      `the person declares having reduced the time devoted to their business activities` IS A BOOLEAN
+      `the person ceases to work` IS A BOOLEAN
+      reason IS A `er1 Reason a self-employed person ceases to work`
+GIVETH A MAYBE DATE
+DECIDE `reg 14.01 the day on which an interruption of earnings of a self-employed person occurs` IS
+    IF     `the person is a self-employed person referred to in paragraph 152.07(1)(c) of the Act`
+       AND `the person declares having reduced the time devoted to their business activities`
+       AND `the normal level of time devoted to the person's business activities, in hours per week` GREATER THAN 0
+       AND (`the normal level of time devoted to the person's business activities, in hours per week` MINUS `the time devoted to the person's business activities, in hours, in the week of the reduction`) GREATER THAN ((40%) TIMES `the normal level of time devoted to the person's business activities, in hours per week`)
+       AND `the person ceases to work`
+       AND `reg 14.01 the reason is a circumstance listed in regulation 14.01` reason
+    THEN JUST (`s 2(1) the Sunday that begins the week containing` `a day in the week in which the person declares the reduction`)
+    ELSE NOTHING

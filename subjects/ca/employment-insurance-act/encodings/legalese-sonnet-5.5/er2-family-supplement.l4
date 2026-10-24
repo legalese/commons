@@ -1,0 +1,292 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `er2-common`
+
+-- Employment Insurance Regulations (SOR/96-332), regulation 34: the family supplement, an increase of the rate of weekly benefits for a
+-- claimant whose family receives the Canada child benefit. Piece er2 (Sonnet 5.5), LAYER 1: the law, objectively.
+-- Every src:N is a line of SOR-96-332.txt, an unofficial plain-text rendering; nothing here is verified against the official text.
+--
+-- The two tables of subsections (5) and (7) are emitted from the raw file by a script that reads lines 522 to 527 and 536 to 538 (the
+-- ladders below are not typed by hand), with the column names written once in a ruler comment and each band's printed heading at the end
+-- of its line. The script checks that each band starts one dollar above the end of the one before.
+-- Money is Canadian dollars. Family income is asked in WHOLE dollars because the tables' bands leave no room for cents (fork F13).
+
+§ `Regulation 34(1), (2) - meanings`
+
+-- src:514 | 34 (1) For the purposes of this section, cohabitating spouse or common-law partner has the same meaning as in section 122.6 of the Income Tax Act.
+@ref Employment Insurance Regulations reg 34(1) (src:514)
+GIVEN `the person is a cohabitating spouse or common-law partner within the meaning of section 122.6 of the Income Tax Act` IS A BOOLEAN
+GIVETH A BOOLEAN
+-- out of range: section 122.6 of the Income Tax Act (not deposited), taken as a fact. The core's `s 2(1) common-law partner` is the Act's
+-- own definition and is not the one this section adopts.
+DECIDE `reg 34(1) cohabitating spouse or common-law partner` IF
+    `the person is a cohabitating spouse or common-law partner within the meaning of section 122.6 of the Income Tax Act`
+
+-- src:515 | (2) For the purposes of this section, a Canada child benefit is deemed to be an overpayment under Subdivision a.1 of Division E of Part I of the Income Tax Act.
+@ref Employment Insurance Regulations reg 34(2) (src:515)
+GIVEN `the payment is a Canada child benefit` IS A BOOLEAN
+GIVETH A BOOLEAN
+-- out of range: Subdivision a.1 of Division E of Part I of the Income Tax Act (not deposited). A deeming "for the purposes of this section":
+-- it adds a fact to the Income Tax Act's own reading of family income and child benefit; here it says only that a Canada child benefit counts.
+DECIDE `reg 34(2) the Canada child benefit is deemed to be an overpayment under Subdivision a.1 of Division E of Part I of the Income Tax Act` IF
+    `the payment is a Canada child benefit`
+
+-- src:516 | (2.1) [Repealed, SOR/99-290, s. 1]
+@ref Employment Insurance Regulations reg 34(2.1) (src:516)
+`regulation 34(2.1) - repealed, and therefore not encoded` MEANS "(2.1) [Repealed, SOR/99-290, s. 1]"
+
+§ `Regulation 34(3), (4) - when the rate is increased`
+
+-- "for the month preceding the Sunday of the week in respect of which the claimant makes a claim": the calendar month before the month in
+-- which that week's Sunday falls (so for the week of Sunday 1 March it is February).
+-- src:517 | (3) If a claimant establishes, in the manner directed by the Commission under section 16 or 152.17 of the Act, that the claimant or the claimant’s cohabiting spouse or common-law partner is in receipt of a Canada child benefit for the month preceding the Sunday of the week in respect of which the claimant makes a claim for benefits, the claimant’s rate of weekly benefits for that week shall be increased by the amount of a family supplement determined in accordance with this section.
+@ref Employment Insurance Regulations reg 34(3) (src:517)
+GIVEN `a day in the week in respect of which the claimant makes a claim for benefits` IS A DATE
+GIVETH A `Period of days`
+DECIDE `reg 34(3) the month preceding the Sunday of the week` IS
+    `Period of days` OF (YMD `the year of the preceding month` `the preceding month` 1), (Date ((Day (YMD `the year of the Sunday` `the month of the Sunday` 1)) MINUS 1))
+    WHERE
+        `the Sunday` MEANS `s 2(1) the Sunday that begins the week containing` `a day in the week in respect of which the claimant makes a claim for benefits`
+        `the year of the Sunday` MEANS DATE_YEAR `the Sunday`
+        `the month of the Sunday` MEANS DATE_MONTH `the Sunday`
+        `the preceding month` MEANS IF `the month of the Sunday` EQUALS 1 THEN 12 ELSE `the month of the Sunday` MINUS 1
+        `the year of the preceding month` MEANS IF `the month of the Sunday` EQUALS 1 THEN `the year of the Sunday` MINUS 1 ELSE `the year of the Sunday`
+
+@ref Employment Insurance Regulations reg 34(3) (src:517)
+GIVEN `the claimant establishes, in the manner directed by the Commission under section 16 or 152.17 of the Act, that the claimant or the claimant's cohabiting spouse or common-law partner is in receipt of a Canada child benefit for the month preceding the Sunday of the week` IS A BOOLEAN
+GIVETH A BOOLEAN
+-- out of range: sections 16 (piece ei1) and 152.17 (piece ei5) of the Act. The month is `reg 34(3) the month preceding the Sunday of the week`.
+DECIDE `reg 34(3) the claimant's rate of weekly benefits for the week is to be increased by a family supplement` IF
+    `the claimant establishes, in the manner directed by the Commission under section 16 or 152.17 of the Act, that the claimant or the claimant's cohabiting spouse or common-law partner is in receipt of a Canada child benefit for the month preceding the Sunday of the week`
+
+-- src:518 | (4) The claimant’s rate of weekly benefits for a week shall not be increased under this section if benefits are also payable to the claimant’s cohabiting spouse or common law partner for that week at a rate increased under this section.
+@ref Employment Insurance Regulations reg 34(4) (src:518)
+GIVEN `benefits are also payable to the claimant's cohabiting spouse or common-law partner for that week at a rate increased under this section` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 34(4) the claimant's rate of weekly benefits for the week shall not be increased` IF
+    `benefits are also payable to the claimant's cohabiting spouse or common-law partner for that week at a rate increased under this section`
+
+§ `Regulation 34(5) - the family supplement`
+
+-- One row per income range. Fork F13 in NOTES.md: the bands run "$20,921 to $21,250", "$21,251 to $21,500", ... with no band for an income
+-- between $21,250 and $21,251, so an income with cents is NOT covered; and the table ends at $25,921, so a higher income is NOT covered.
+DECLARE `er2 Family supplement for an income range` HAS
+    `er2 supplement for one child`                    IS A NUMBER
+    `er2 supplement for two children`                 IS A NUMBER
+    `er2 supplement for three children`               IS A NUMBER
+    `er2 top-up for each additional child`            IS A NUMBER
+    `er2 age supplement for each child under 7 years old` IS A NUMBER
+
+-- src:519 | (5) The family supplement is the amount determined in accordance with the following table, taking into account the family income and the number and ages of the children for which the claimant or the claimant’s cohabiting spouse or common-law partner receives a Canada child benefit:
+-- src:520 | TABLE
+-- src:521 | Family Income Range
+-- src:522 | Number of Children | <$20,921 | $20,921to$21,250 | $21,251to$21,500 | $21,501to$21,750 | $21,751to$22,000 | $22,001to$22,250 | $22,251to$22,500 | $22,501to$22,750 | $22,751to$23,000 | $23,001to$23,250 | $23,251to$23,500 | $23,501to$23,750 | $23,751to$24,000 | $24,001to$24,250 | $24,251to$24,500 | $24,501to$24,750 | $24,751to$25,000 | $25,001to$25,250 | $25,251to$25,500 | $25,501to$25,750 | $25,751to$25,921
+-- src:523 | 1 | $ 31.30 | $ 31.25 | $ 28.50 | $ 26.45 | $ 24.45 | $ 22.55 | $ 20.70 | $ 18.90 | $ 17.15 | $ 15.45 | $ 13.80 | $ 12.25 | $ 10.70 | $ 9.25 | $ 7.85 | $ 6.55 | $ 5.25 | $ 4.00 | $ 2.85 | $ 1.75 | $ 0.70
+-- src:524 | 2 | $ 58.70 | $ 58.60 | $ 53.60 | $ 49.90 | $ 46.25 | $ 42.70 | $ 39.30 | $ 35.95 | $ 32.70 | $ 29.55 | $ 26.50 | $ 23.55 | $ 20.70 | $ 17.95 | $ 15.30 | $ 12.75 | $ 10.25 | $ 7.90 | $ 5.65 | $ 3.45 | $ 1.40
+-- src:525 | 3 | $ 86.10 | $ 86.00 | $ 78.80 | $ 73.45 | $ 68.20 | $ 63.15 | $ 58.15 | $ 53.30 | $ 48.60 | $ 44.00 | $ 39.55 | $ 35.25 | $ 31.05 | $ 26.95 | $ 23.05 | $ 19.20 | $ 15.55 | $ 12.00 | $ 8.55 | $ 5.25 | $ 2.10
+-- src:526 | Top-up for each additional child | $ 27.45 | $ 27.40 | $ 25.60 | $ 24.25 | $ 22.85 | $ 21.50 | $ 20.15 | $ 18.75 | $ 17.40 | $ 16.00 | $ 14.65 | $ 13.30 | $ 11.90 | $ 10.55 | $ 9.15 | $ 7.80 | $ 6.45 | $ 5.05 | $ 3.70 | $ 2.30 | $ 0.95
+-- src:527 | Age supplement for each child under 7 years old | $ 4.15 | $ 4.10 | $ 3.85 | $ 3.65 | $ 3.45 | $ 3.25 | $ 3.05 | $ 2.80 | $ 2.60 | $ 2.40 | $ 2.20 | $ 2.00 | $ 1.80 | $ 1.60 | $ 1.40 | $ 1.20 | $ 1.00 | $ 0.75 | $ 0.55 | $ 0.35 | $ 0.15
+@ref Employment Insurance Regulations reg 34(5) (src:519-527)
+GIVEN income IS A NUMBER
+GIVETH A MAYBE (`er2 Family supplement for an income range`)
+`reg 34(5) the table row for a family income in whole dollars` MEANS
+  --                                                     1 child, 2 children, 3 children, top-up per additional child, age supplement per child under 7
+  BRANCH IF income LESS THAN 20_921        THEN JUST (`er2 Family supplement for an income range` OF  31.30,  58.70,  86.10,  27.45,   4.15)   -- <$20,921
+         IF income AT MOST 21_250          THEN JUST (`er2 Family supplement for an income range` OF  31.25,  58.60,  86.00,  27.40,   4.10)   -- $20,921to$21,250
+         IF income AT MOST 21_500          THEN JUST (`er2 Family supplement for an income range` OF  28.50,  53.60,  78.80,  25.60,   3.85)   -- $21,251to$21,500
+         IF income AT MOST 21_750          THEN JUST (`er2 Family supplement for an income range` OF  26.45,  49.90,  73.45,  24.25,   3.65)   -- $21,501to$21,750
+         IF income AT MOST 22_000          THEN JUST (`er2 Family supplement for an income range` OF  24.45,  46.25,  68.20,  22.85,   3.45)   -- $21,751to$22,000
+         IF income AT MOST 22_250          THEN JUST (`er2 Family supplement for an income range` OF  22.55,  42.70,  63.15,  21.50,   3.25)   -- $22,001to$22,250
+         IF income AT MOST 22_500          THEN JUST (`er2 Family supplement for an income range` OF  20.70,  39.30,  58.15,  20.15,   3.05)   -- $22,251to$22,500
+         IF income AT MOST 22_750          THEN JUST (`er2 Family supplement for an income range` OF  18.90,  35.95,  53.30,  18.75,   2.80)   -- $22,501to$22,750
+         IF income AT MOST 23_000          THEN JUST (`er2 Family supplement for an income range` OF  17.15,  32.70,  48.60,  17.40,   2.60)   -- $22,751to$23,000
+         IF income AT MOST 23_250          THEN JUST (`er2 Family supplement for an income range` OF  15.45,  29.55,  44.00,  16.00,   2.40)   -- $23,001to$23,250
+         IF income AT MOST 23_500          THEN JUST (`er2 Family supplement for an income range` OF  13.80,  26.50,  39.55,  14.65,   2.20)   -- $23,251to$23,500
+         IF income AT MOST 23_750          THEN JUST (`er2 Family supplement for an income range` OF  12.25,  23.55,  35.25,  13.30,   2.00)   -- $23,501to$23,750
+         IF income AT MOST 24_000          THEN JUST (`er2 Family supplement for an income range` OF  10.70,  20.70,  31.05,  11.90,   1.80)   -- $23,751to$24,000
+         IF income AT MOST 24_250          THEN JUST (`er2 Family supplement for an income range` OF   9.25,  17.95,  26.95,  10.55,   1.60)   -- $24,001to$24,250
+         IF income AT MOST 24_500          THEN JUST (`er2 Family supplement for an income range` OF   7.85,  15.30,  23.05,   9.15,   1.40)   -- $24,251to$24,500
+         IF income AT MOST 24_750          THEN JUST (`er2 Family supplement for an income range` OF   6.55,  12.75,  19.20,   7.80,   1.20)   -- $24,501to$24,750
+         IF income AT MOST 25_000          THEN JUST (`er2 Family supplement for an income range` OF   5.25,  10.25,  15.55,   6.45,   1.00)   -- $24,751to$25,000
+         IF income AT MOST 25_250          THEN JUST (`er2 Family supplement for an income range` OF   4.00,   7.90,  12.00,   5.05,   0.75)   -- $25,001to$25,250
+         IF income AT MOST 25_500          THEN JUST (`er2 Family supplement for an income range` OF   2.85,   5.65,   8.55,   3.70,   0.55)   -- $25,251to$25,500
+         IF income AT MOST 25_750          THEN JUST (`er2 Family supplement for an income range` OF   1.75,   3.45,   5.25,   2.30,   0.35)   -- $25,501to$25,750
+         IF income AT MOST 25_921          THEN JUST (`er2 Family supplement for an income range` OF   0.70,   1.40,   2.10,   0.95,   0.15)   -- $25,751to$25,921
+         OTHERWISE NOTHING
+
+@ref Employment Insurance Regulations reg 34(5) (src:520-522)
+GIVEN income IS A NUMBER
+GIVETH A MAYBE (`er2 Family supplement for an income range`)
+`reg 34(5) the table row for the family income` MEANS
+    IF   FLOOR income EQUALS income
+    THEN `reg 34(5) the table row for a family income in whole dollars` income
+    ELSE NOTHING
+
+-- The amount for the children: the column for one, two or three children; for more than three, the three-child amount plus the top-up for
+-- each additional child; plus the age supplement for each child under 7. NOTHING if there is no child, or more children under 7 than children.
+@ref Employment Insurance Regulations reg 34(5) (src:523-527)
+GIVEN row IS AN `er2 Family supplement for an income range`
+      `the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit` IS A NUMBER
+      `the number of those children who are under 7 years old` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 34(5) the amount in a table row for the number and ages of the children` IS
+    IF   `the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit` LESS THAN 1
+         OR `the number of those children who are under 7 years old` LESS THAN 0
+         OR `the number of those children who are under 7 years old` GREATER THAN `the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit`
+    THEN NOTHING
+    ELSE JUST (`the amount for the number of children` PLUS (`the number of those children who are under 7 years old` TIMES row's `er2 age supplement for each child under 7 years old`))
+    WHERE
+        `the amount for the number of children` MEANS
+            BRANCH IF `the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit` EQUALS 1 THEN row's `er2 supplement for one child`
+                   IF `the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit` EQUALS 2 THEN row's `er2 supplement for two children`
+                   IF `the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit` EQUALS 3 THEN row's `er2 supplement for three children`
+                   OTHERWISE row's `er2 supplement for three children` PLUS ((`the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit` MINUS 3) TIMES row's `er2 top-up for each additional child`)
+
+@ref Employment Insurance Regulations reg 34(5) (src:519-527)
+GIVEN `the family income` IS A NUMBER
+      `the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit` IS A NUMBER
+      `the number of those children who are under 7 years old` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 34(5) the family supplement` IS
+    CONSIDER `reg 34(5) the table row for the family income` `the family income`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST row THEN `reg 34(5) the amount in a table row for the number and ages of the children` row `the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit` `the number of those children who are under 7 years old`
+
+§ `Regulation 34(6) - the ceiling on the family supplement`
+
+-- src:528 | (6) The amount of the family supplement shall not exceed the following percentage of the claimant’s weekly insurable earnings:
+-- src:529 | (a) for benefit periods established in 1997, 10%;
+-- src:530 | (b) for benefit periods established in 1998, 15%;
+-- src:531 | (c) for benefit periods established in 1999, 20%; and
+-- src:532 | (d) for benefit periods established in 2000 or later, 25%.
+@ref Employment Insurance Regulations reg 34(6) (src:528-532)
+GIVEN `the year in which the benefit period was established` IS A NUMBER
+GIVETH A MAYBE NUMBER
+-- NOTHING for a benefit period established before 1997: the paragraphs begin with 1997.
+DECIDE `reg 34(6) the percentage of the claimant's weekly insurable earnings that the family supplement shall not exceed` IS
+    BRANCH IF `the year in which the benefit period was established` EQUALS 1997 THEN JUST (10%)
+           IF `the year in which the benefit period was established` EQUALS 1998 THEN JUST (15%)
+           IF `the year in which the benefit period was established` EQUALS 1999 THEN JUST (20%)
+           IF `the year in which the benefit period was established` AT LEAST 2000 THEN JUST (25%)
+           OTHERWISE NOTHING
+
+-- The ceiling is a percentage of the weekly insurable earnings. The rounding rule of s 6(2) of the Act speaks of "this Part" (Part I of the
+-- Act) and is not applied to a regulation's ceiling (fork F14 in NOTES.md).
+@ref Employment Insurance Regulations reg 34(6) (src:528)
+GIVEN `the family supplement under subsection (5)` IS A NUMBER
+      `the percentage of the claimant's weekly insurable earnings that the family supplement shall not exceed` IS A NUMBER
+      `the claimant's weekly insurable earnings` IS A NUMBER
+GIVETH A NUMBER
+-- out of range: weekly insurable earnings are section 14(2) of the Act (piece ei1)
+DECIDE `reg 34(6) the family supplement after the ceiling` IS
+    min `the family supplement under subsection (5)` (`the percentage of the claimant's weekly insurable earnings that the family supplement shall not exceed` TIMES `the claimant's weekly insurable earnings`)
+
+§ `Regulation 34(7) - the additional amount for older children`
+
+-- src:533 | (7) Where the application of subsection (5) in respect of benefit periods established before August 1, 1999 results in a reduction of the amount of the family supplement payable to the claimant for a week of unemployment falling on or after August 1, 1999, the amount of the family supplement so calculated will be increased for each child for whom the claimant is entitled to receive a Canada child benefit by an additional amount determined in accordance with the following table, taking into account the family income and the number and ages of the children, for the duration of the benefit period:
+-- src:534 | TABLE
+-- src:535 | Family Income Range
+-- src:536 | Age of Children | <$20,921 | $20,921to$21,250 | $21,251to$21,500 | $21,501to$21,750 | $21,751to$22,000 | $22,001to$22,250 | $22,251to$22,500 | $22,501to$22,750 | $22,751to$23,000 | $23,001to$23,250 | $23,251to$23,500 | $23,501to$23,750 | $23,751to$24,000 | $24,001to$24,250 | $24,251to$24,500 | $24,501to$24,750 | $24,751to$25,000 | $25,001to$25,250 | $25,251to$25,500 | $25,501to$25,750 | $25,751to$25,921
+-- src:537 | 12 to 15 years old | $ 2.25 | $ 2.20 | $ 2.05 | $ 1.95 | $ 1.85 | $ 1.70 | $ 1.60 | $ 1.50 | $ 1.40 | $ 1.30 | $ 1.20 | $ 1.05 | $ 0.95 | $ 0.85 | $ 0.75 | $ 0.65 | $ 0.55 | $ 0.40 | $ 0.30 | $ 0.20 | $ 0.10
+-- src:538 | 16 and 17 years | $ 3.60 | $ 3.55 | $ 3.30 | $ 3.15 | $ 3.00 | $ 2.80 | $ 2.65 | $ 2.45 | $ 2.30 | $ 2.10 | $ 1.90 | $ 1.75 | $ 1.55 | $ 1.40 | $ 1.20 | $ 1.05 | $ 0.85 | $ 0.65 | $ 0.50 | $ 0.30 | $ 0.15
+@ref Employment Insurance Regulations reg 34(7) (src:533-538)
+DECLARE `er2 Additional family supplement for an income range` HAS
+    `er2 additional amount for a child 12 to 15 years old` IS A NUMBER
+    `er2 additional amount for a child 16 or 17 years old` IS A NUMBER
+
+@ref Employment Insurance Regulations reg 34(7) (src:534-538)
+GIVEN income IS A NUMBER
+GIVETH A MAYBE (`er2 Additional family supplement for an income range`)
+`reg 34(7) the table row for a family income in whole dollars` MEANS
+  --                                                     child 12 to 15, child 16 or 17
+  BRANCH IF income LESS THAN 20_921        THEN JUST (`er2 Additional family supplement for an income range` OF   2.25,   3.60)   -- <$20,921
+         IF income AT MOST 21_250          THEN JUST (`er2 Additional family supplement for an income range` OF   2.20,   3.55)   -- $20,921to$21,250
+         IF income AT MOST 21_500          THEN JUST (`er2 Additional family supplement for an income range` OF   2.05,   3.30)   -- $21,251to$21,500
+         IF income AT MOST 21_750          THEN JUST (`er2 Additional family supplement for an income range` OF   1.95,   3.15)   -- $21,501to$21,750
+         IF income AT MOST 22_000          THEN JUST (`er2 Additional family supplement for an income range` OF   1.85,   3.00)   -- $21,751to$22,000
+         IF income AT MOST 22_250          THEN JUST (`er2 Additional family supplement for an income range` OF   1.70,   2.80)   -- $22,001to$22,250
+         IF income AT MOST 22_500          THEN JUST (`er2 Additional family supplement for an income range` OF   1.60,   2.65)   -- $22,251to$22,500
+         IF income AT MOST 22_750          THEN JUST (`er2 Additional family supplement for an income range` OF   1.50,   2.45)   -- $22,501to$22,750
+         IF income AT MOST 23_000          THEN JUST (`er2 Additional family supplement for an income range` OF   1.40,   2.30)   -- $22,751to$23,000
+         IF income AT MOST 23_250          THEN JUST (`er2 Additional family supplement for an income range` OF   1.30,   2.10)   -- $23,001to$23,250
+         IF income AT MOST 23_500          THEN JUST (`er2 Additional family supplement for an income range` OF   1.20,   1.90)   -- $23,251to$23,500
+         IF income AT MOST 23_750          THEN JUST (`er2 Additional family supplement for an income range` OF   1.05,   1.75)   -- $23,501to$23,750
+         IF income AT MOST 24_000          THEN JUST (`er2 Additional family supplement for an income range` OF   0.95,   1.55)   -- $23,751to$24,000
+         IF income AT MOST 24_250          THEN JUST (`er2 Additional family supplement for an income range` OF   0.85,   1.40)   -- $24,001to$24,250
+         IF income AT MOST 24_500          THEN JUST (`er2 Additional family supplement for an income range` OF   0.75,   1.20)   -- $24,251to$24,500
+         IF income AT MOST 24_750          THEN JUST (`er2 Additional family supplement for an income range` OF   0.65,   1.05)   -- $24,501to$24,750
+         IF income AT MOST 25_000          THEN JUST (`er2 Additional family supplement for an income range` OF   0.55,   0.85)   -- $24,751to$25,000
+         IF income AT MOST 25_250          THEN JUST (`er2 Additional family supplement for an income range` OF   0.40,   0.65)   -- $25,001to$25,250
+         IF income AT MOST 25_500          THEN JUST (`er2 Additional family supplement for an income range` OF   0.30,   0.50)   -- $25,251to$25,500
+         IF income AT MOST 25_750          THEN JUST (`er2 Additional family supplement for an income range` OF   0.20,   0.30)   -- $25,501to$25,750
+         IF income AT MOST 25_921          THEN JUST (`er2 Additional family supplement for an income range` OF   0.10,   0.15)   -- $25,751to$25,921
+         OTHERWISE NOTHING
+
+@ref Employment Insurance Regulations reg 34(7) (src:534-538)
+GIVEN income IS A NUMBER
+GIVETH A MAYBE (`er2 Additional family supplement for an income range`)
+`reg 34(7) the table row for the family income` MEANS
+    IF   FLOOR income EQUALS income
+    THEN `reg 34(7) the table row for a family income in whole dollars` income
+    ELSE NOTHING
+
+-- The increase applies where (5), for a benefit period established before August 1, 1999, reduces the supplement for a week that falls on or
+-- after that date; then each child for whom the claimant is entitled to receive the benefit adds the amount of the table for the child's age.
+-- Children under 12 are not in the table and add nothing. The reduction is a comparison with the supplement payable before 1 August 1999
+-- under rules this text does not give, so it is an input (fork F15 in NOTES.md). JUST 0: subsection (7) does not apply.
+-- NOTHING: it applies but the family income has no band.
+@ref Employment Insurance Regulations reg 34(7) (src:533)
+GIVEN `the day on which the benefit period was established` IS A DATE
+      `the week of unemployment` IS A DATE
+      `the application of subsection (5) results in a reduction of the family supplement payable for the week` IS A BOOLEAN
+      `the family income` IS A NUMBER
+      `the number of children 12 to 15 years old for whom the claimant is entitled to receive a Canada child benefit` IS A NUMBER
+      `the number of children 16 or 17 years old for whom the claimant is entitled to receive a Canada child benefit` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 34(7) the additional amount for the week` IS
+    IF   `the day on which the benefit period was established` LESS THAN `reg 34(7) August 1, 1999`
+         AND `the week of unemployment` AT LEAST `reg 34(7) August 1, 1999`
+         AND `the application of subsection (5) results in a reduction of the family supplement payable for the week`
+    THEN CONSIDER `reg 34(7) the table row for the family income` `the family income`
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST row THEN JUST ((`the number of children 12 to 15 years old for whom the claimant is entitled to receive a Canada child benefit` TIMES row's `er2 additional amount for a child 12 to 15 years old`) PLUS (`the number of children 16 or 17 years old for whom the claimant is entitled to receive a Canada child benefit` TIMES row's `er2 additional amount for a child 16 or 17 years old`))
+    ELSE JUST 0
+
+@ref Employment Insurance Regulations reg 34(7) (src:533)
+GIVETH A DATE
+`reg 34(7) August 1, 1999` MEANS YMD 1999 8 1
+
+§ `Regulation 34 - the increase of the rate of weekly benefits`
+
+-- (3) opens the door and (4) shuts it; (5) gives the amount, (6) caps it and (7) adds to it. Fork F16 in NOTES.md: the addition of (7) is
+-- made after the ceiling of (6), not inside it.
+@ref Employment Insurance Regulations reg 34(3), (4), (5), (6), (7) (src:517) (src:518) (src:519) (src:528) (src:533)
+GIVEN `the claimant establishes, in the manner directed by the Commission under section 16 or 152.17 of the Act, that the claimant or the claimant's cohabiting spouse or common-law partner is in receipt of a Canada child benefit for the month preceding the Sunday of the week` IS A BOOLEAN
+      `benefits are also payable to the claimant's cohabiting spouse or common-law partner for that week at a rate increased under this section` IS A BOOLEAN
+      `the family income` IS A NUMBER
+      `the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit` IS A NUMBER
+      `the number of those children who are under 7 years old` IS A NUMBER
+      `the claimant's weekly insurable earnings` IS A NUMBER
+      `the day on which the benefit period was established` IS A DATE
+      `the week of unemployment` IS A DATE
+      `the application of subsection (5) results in a reduction of the family supplement payable for the week` IS A BOOLEAN
+      `the number of children 12 to 15 years old for whom the claimant is entitled to receive a Canada child benefit` IS A NUMBER
+      `the number of children 16 or 17 years old for whom the claimant is entitled to receive a Canada child benefit` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 34 the amount by which the rate of weekly benefits for the week is increased` IS
+    IF   (NOT (`reg 34(3) the claimant's rate of weekly benefits for the week is to be increased by a family supplement` `the claimant establishes, in the manner directed by the Commission under section 16 or 152.17 of the Act, that the claimant or the claimant's cohabiting spouse or common-law partner is in receipt of a Canada child benefit for the month preceding the Sunday of the week`))
+         OR (`reg 34(4) the claimant's rate of weekly benefits for the week shall not be increased` `benefits are also payable to the claimant's cohabiting spouse or common-law partner for that week at a rate increased under this section`)
+    THEN JUST 0
+    ELSE CONSIDER `reg 34(5) the family supplement` `the family income` `the number of children for whom the claimant or the claimant's cohabiting spouse or common-law partner receives a Canada child benefit` `the number of those children who are under 7 years old`
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST supplement THEN `the supplement under (5) with the ceiling and the addition` supplement
+    WHERE
+        `the supplement under (5) with the ceiling and the addition` supplement MEANS
+            CONSIDER `reg 34(6) the percentage of the claimant's weekly insurable earnings that the family supplement shall not exceed` (DATE_YEAR `the day on which the benefit period was established`)
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST percentage THEN `with the addition` (`reg 34(6) the family supplement after the ceiling` supplement percentage `the claimant's weekly insurable earnings`)
+        `with the addition` capped MEANS
+            CONSIDER `reg 34(7) the additional amount for the week` `the day on which the benefit period was established` `the week of unemployment` `the application of subsection (5) results in a reduction of the family supplement payable for the week` `the family income` `the number of children 12 to 15 years old for whom the claimant is entitled to receive a Canada child benefit` `the number of children 16 or 17 years old for whom the claimant is entitled to receive a Canada child benefit`
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST addition THEN JUST (capped PLUS addition)

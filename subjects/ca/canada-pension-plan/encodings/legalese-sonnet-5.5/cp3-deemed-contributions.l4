@@ -1,0 +1,389 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cpp-core-age`
+IMPORT `cp3-nouns`
+
+-- Canada Pension Plan Act, Part II -- THE EARNINGS FOR WHICH A CONTRIBUTION IS DEEMED TO HAVE BEEN MADE
+-- FOR A MONTH (sections 52, 52.1 and 52.2).
+--
+-- The Act keeps a contributor's earnings by year (the unadjusted pensionable earnings of
+-- sections 53 to 53.2) but works out the pension from earnings by month. These three sections
+-- turn the earnings of a year into earnings of a month: a year's earnings are spread over the months
+-- of the year, or over fewer months in the year a contributor turns 18, turns 70, dies, starts a
+-- retirement pension, has a disability pension stop, or has months excluded by reason of disability.
+-- The same three sections say when a contribution is deemed to have been made for a year.
+--
+-- Ages go through section 2(2) of the Act (the core's cpp-core-age.l4). A month is the DATE of its
+-- first day. "The months of a year after / before an event" are the months that start after / before
+-- the month that contains the event.
+
+§ `Part II -- Division B -- earnings for which a contribution is deemed to have been made (sections 52 to 52.2)`
+
+§§ `Calendar helpers of this module`
+
+-- Not a provision: the twelve months of a calendar year, each as the date of its first day.
+GIVEN year IS A NUMBER
+GIVETH A LIST OF DATE
+`cp3 — the twelve months of a calendar year` year MEANS
+    LIST (YMD year 1 1), (YMD year 2 1), (YMD year 3 1), (YMD year 4 1), (YMD year 5 1), (YMD year 6 1),
+         (YMD year 7 1), (YMD year 8 1), (YMD year 9 1), (YMD year 10 1), (YMD year 11 1), (YMD year 12 1)
+
+-- Not a provision: whether a month is among a list of months (each compared by its first day).
+GIVEN month IS A DATE
+      months IS A LIST OF DATE
+GIVETH A BOOLEAN
+`cp3 — a month is among a list of months` month months MEANS
+    any (GIVEN m YIELD `the month of a date` m EQUALS `the month of a date` month) months
+
+§§ `52 -- the base contribution`
+
+-- src:1311 | 52 (1) For the purpose of calculating the pensionable earnings of a contributor for a month in any year for which they have made a base contribution, the base contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their base unadjusted pensionable earnings for the year by 12, except that
+-- src:1312 | (a) for a year in which the contributor reaches 18 years of age or in which a disability pension ceases to be payable to them under this Act or under a provincial pension plan, the base contribution is deemed to have been made for earnings for the months in the year after they reached that age or after the pension ceased to be payable, as the case may be, and
+-- src:1313 | (b) for a year in which the contributor reaches 70 years of age or dies, in which a retirement pension becomes payable to them under this Act or under a provincial pension plan or in which any month is excluded from their contributory period under this Act or under a provincial pension plan by reason of disability, the base contribution is deemed to have been made for earnings for the months in the year before the contributor reached 70 years of age or died, before the retirement pension became payable or that were not so excluded, as the case may be.
+-- src:1314 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a base contribution for each such month are an amount calculated by dividing the contributor’s base unadjusted pensionable earnings for that year by the number of those months.
+@ref Act s 52(1) (src:1311-1314)
+GIVEN month IS A DATE
+      events IS A `cp3 Life events of a contributor`
+GIVETH A BOOLEAN
+-- Plain gloss: the base contribution of a year is deemed made for every month of the year, except
+-- that in the year the contributor turns 18, or a disability pension stops, only the months after
+-- that (paragraph (a)); and in the year the contributor turns 70, dies, starts a retirement pension,
+-- or has a month excluded by reason of disability, only the months before the 70th birthday, the
+-- death, the retirement pension or that were not excluded (paragraph (b)).
+-- If paragraphs (a) and (b) both bear on one year the text does not say how they combine: a month
+-- must satisfy every limb that applies (NOTES.md, fork register).
+`s 52(1) — a month is one for which the base contribution is deemed to have been made` month events MEANS
+        `the limb of paragraph (a) about turning 18`
+    AND `the limb of paragraph (a) about a disability pension that ceased`
+    AND `the limb of paragraph (b) about turning 70`
+    AND `the limb of paragraph (b) about the death`
+    AND `the limb of paragraph (b) about the retirement pension`
+    AND NOT `cp3 — a month is among a list of months` month (events's `the months excluded from the contributory period by reason of disability`)
+    WHERE
+        year MEANS DATE_YEAR month
+        `the month turning 18 is deemed to occur` MEANS
+            `s 2(2) — the date a person is treated as reaching a specified age for a provision` `any other provision` (events's `the contributor's date of birth`) 18
+        `the month turning 70 is deemed to occur` MEANS
+            `s 2(2) — the date a person is treated as reaching a specified age for a provision` `any other provision` (events's `the contributor's date of birth`) 70
+        `the limb of paragraph (a) about turning 18` MEANS
+            (NOT (DATE_YEAR `the month turning 18 is deemed to occur` EQUALS year))
+            OR `the month of a date` month AT LEAST `the month of a date` `the month turning 18 is deemed to occur`
+        `the limb of paragraph (a) about a disability pension that ceased` MEANS
+            CONSIDER events's `the month in which a disability pension ceased to be payable, if it did`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST ceased THEN (NOT (DATE_YEAR ceased EQUALS year)) OR `the month of a date` month GREATER THAN `the month of a date` ceased
+        `the limb of paragraph (b) about turning 70` MEANS
+            (NOT (DATE_YEAR `the month turning 70 is deemed to occur` EQUALS year))
+            OR `the month of a date` month LESS THAN `the month of a date` `the month turning 70 is deemed to occur`
+        `the limb of paragraph (b) about the death` MEANS
+            CONSIDER events's `the day the contributor died, if the contributor has died`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST died THEN (NOT (DATE_YEAR died EQUALS year)) OR `the month of a date` month LESS THAN `the month of a date` died
+        `the limb of paragraph (b) about the retirement pension` MEANS
+            CONSIDER events's `the month with which a retirement pension becomes payable, if it does`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST started THEN (NOT (DATE_YEAR started EQUALS year)) OR `the month of a date` month LESS THAN `the month of a date` started
+
+-- src:1311 | 52 (1) For the purpose of calculating the pensionable earnings of a contributor for a month in any year for which they have made a base contribution, the base contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their base unadjusted pensionable earnings for the year by 12, except that
+-- src:1312 | (a) for a year in which the contributor reaches 18 years of age or in which a disability pension ceases to be payable to them under this Act or under a provincial pension plan, the base contribution is deemed to have been made for earnings for the months in the year after they reached that age or after the pension ceased to be payable, as the case may be, and
+-- src:1313 | (b) for a year in which the contributor reaches 70 years of age or dies, in which a retirement pension becomes payable to them under this Act or under a provincial pension plan or in which any month is excluded from their contributory period under this Act or under a provincial pension plan by reason of disability, the base contribution is deemed to have been made for earnings for the months in the year before the contributor reached 70 years of age or died, before the retirement pension became payable or that were not so excluded, as the case may be.
+-- src:1314 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a base contribution for each such month are an amount calculated by dividing the contributor’s base unadjusted pensionable earnings for that year by the number of those months.
+@ref Act s 52(1) (src:1311-1314)
+GIVEN year IS A NUMBER
+      events IS A `cp3 Life events of a contributor`
+GIVETH A LIST OF DATE
+-- Plain gloss: the months of the year for which the base contribution is deemed to have been made;
+-- twelve of them unless paragraph (a) or (b) cuts the year short.
+`s 52(1) — the months of a year for which the base contribution is deemed to have been made` year events MEANS
+    filter (GIVEN month YIELD `s 52(1) — a month is one for which the base contribution is deemed to have been made` month events) (`cp3 — the twelve months of a calendar year` year)
+
+-- src:1311 | 52 (1) For the purpose of calculating the pensionable earnings of a contributor for a month in any year for which they have made a base contribution, the base contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their base unadjusted pensionable earnings for the year by 12, except that
+-- src:1312 | (a) for a year in which the contributor reaches 18 years of age or in which a disability pension ceases to be payable to them under this Act or under a provincial pension plan, the base contribution is deemed to have been made for earnings for the months in the year after they reached that age or after the pension ceased to be payable, as the case may be, and
+-- src:1313 | (b) for a year in which the contributor reaches 70 years of age or dies, in which a retirement pension becomes payable to them under this Act or under a provincial pension plan or in which any month is excluded from their contributory period under this Act or under a provincial pension plan by reason of disability, the base contribution is deemed to have been made for earnings for the months in the year before the contributor reached 70 years of age or died, before the retirement pension became payable or that were not so excluded, as the case may be.
+-- src:1314 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a base contribution for each such month are an amount calculated by dividing the contributor’s base unadjusted pensionable earnings for that year by the number of those months.
+-- src:1315 | If no base contribution made
+@ref Act s 52(1) (src:1311-1315)
+GIVEN year IS A NUMBER
+      events IS A `cp3 Life events of a contributor`
+      `the base unadjusted pensionable earnings of the contributor for the year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+-- Plain gloss: the earnings for which the base contribution is deemed made for each of those months
+-- are the year's base unadjusted pensionable earnings divided by twelve, or, if paragraph (a) or (b)
+-- cut the year short, divided by the number of the months left (the closing words of subsection (1)).
+-- NOTHING means no month of the year is left.
+`s 52(1) — the earnings for which the base contribution is deemed to have been made for each month of a year` year events `the base unadjusted pensionable earnings of the contributor for the year` MEANS
+    IF `the number of those months` EQUALS 0
+    THEN NOTHING
+    ELSE JUST (`the base unadjusted pensionable earnings of the contributor for the year` DIVIDED BY `the number of those months`)
+    WHERE
+        `the number of those months` MEANS count (`s 52(1) — the months of a year for which the base contribution is deemed to have been made` year events)
+
+-- src:1316 | (2) For the purpose of calculating the pensionable earnings of a contributor for a month in any year for which the contributor made no base contribution, the amount of the earnings for which a base contribution is deemed to have been made for any month in the year is deemed to be zero.
+@ref Act s 52(2) (src:1316)
+GIVETH A NUMBER
+-- Plain gloss: for a year in which no base contribution was made, the earnings for which a base
+-- contribution is deemed made for any month of the year are zero.
+`s 52(2) — the earnings for which a base contribution is deemed to have been made for a month of a year with no base contribution` MEANS 0
+
+-- src:1318 | (3) For the purposes of this Part,
+-- src:1319 | (a) a contributor is deemed to have made a base contribution for any year for which their base unadjusted pensionable earnings exceed their basic exemption for the year, and is deemed to have made no base contribution for any year for which their base unadjusted pensionable earnings do not exceed their basic exemption for the year; and
+@ref Act s 52(3), (3)(a) (src:1318-1319)
+GIVEN `the base unadjusted pensionable earnings of the contributor for the year` IS A NUMBER
+      `the contributor's basic exemption for the year` IS A NUMBER
+GIVETH A BOOLEAN
+-- Plain gloss: the contributor is deemed to have made a base contribution for a year if, and only
+-- if, the year's base unadjusted pensionable earnings exceed the contributor's basic exemption for
+-- the year (equal is not enough). Section 53(2) says what the basic exemption is in the year a
+-- retirement pension begins.
+`s 52(3)(a) — a base contribution is deemed to have been made for a year` `the base unadjusted pensionable earnings of the contributor for the year` `the contributor's basic exemption for the year` MEANS
+    `the base unadjusted pensionable earnings of the contributor for the year` GREATER THAN `the contributor's basic exemption for the year`
+
+-- src:1320 | (b) a contributor is deemed to have made a base contribution for earnings for any month for which a base contribution is deemed by subsection (1) to have been made by them.
+@ref Act s 52(3)(b) (src:1320)
+GIVEN month IS A DATE
+      events IS A `cp3 Life events of a contributor`
+GIVETH A BOOLEAN
+-- Plain gloss: the contributor is deemed to have made a base contribution for earnings for every
+-- month for which subsection (1) deems it made.
+`s 52(3)(b) — a base contribution is deemed to have been made for earnings for a month` month events MEANS
+    `s 52(1) — a month is one for which the base contribution is deemed to have been made` month events
+
+-- src:1310 | Earnings for which base contribution deemed to have been made for month
+-- src:1311 | 52 (1) For the purpose of calculating the pensionable earnings of a contributor for a month in any year for which they have made a base contribution, the base contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their base unadjusted pensionable earnings for the year by 12, except that
+-- src:1312 | (a) for a year in which the contributor reaches 18 years of age or in which a disability pension ceases to be payable to them under this Act or under a provincial pension plan, the base contribution is deemed to have been made for earnings for the months in the year after they reached that age or after the pension ceased to be payable, as the case may be, and
+-- src:1313 | (b) for a year in which the contributor reaches 70 years of age or dies, in which a retirement pension becomes payable to them under this Act or under a provincial pension plan or in which any month is excluded from their contributory period under this Act or under a provincial pension plan by reason of disability, the base contribution is deemed to have been made for earnings for the months in the year before the contributor reached 70 years of age or died, before the retirement pension became payable or that were not so excluded, as the case may be.
+-- src:1314 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a base contribution for each such month are an amount calculated by dividing the contributor’s base unadjusted pensionable earnings for that year by the number of those months.
+-- src:1315 | If no base contribution made
+-- src:1316 | (2) For the purpose of calculating the pensionable earnings of a contributor for a month in any year for which the contributor made no base contribution, the amount of the earnings for which a base contribution is deemed to have been made for any month in the year is deemed to be zero.
+@ref Act s 52(1), (2), (3)(a) (src:1310-1319)
+GIVEN month IS A DATE
+      events IS A `cp3 Life events of a contributor`
+      `the base unadjusted pensionable earnings of the contributor for the year` IS A NUMBER
+      `the contributor's basic exemption for the year` IS A NUMBER
+GIVETH A NUMBER
+-- Plain gloss: the earnings for which a base contribution is deemed made for one month, which is
+-- the "A" of section 51(1)(a). In a year with no base contribution (subsection (3)(a)) it is zero
+-- (subsection (2)). In a year with one, it is the year's earnings spread over the months of
+-- subsection (1); a month that subsection (1) does not reach has no earnings deemed for it, which
+-- is taken as zero (NOTHING in the share rule means no month is left to spread over, so also zero).
+`s 52 — the earnings for which a base contribution is deemed to have been made for a month` month events `the base unadjusted pensionable earnings of the contributor for the year` `the contributor's basic exemption for the year` MEANS
+    IF NOT `s 52(3)(a) — a base contribution is deemed to have been made for a year` `the base unadjusted pensionable earnings of the contributor for the year` `the contributor's basic exemption for the year`
+    THEN `s 52(2) — the earnings for which a base contribution is deemed to have been made for a month of a year with no base contribution`
+    ELSE IF `s 52(1) — a month is one for which the base contribution is deemed to have been made` month events
+         THEN fromMaybe 0 (`s 52(1) — the earnings for which the base contribution is deemed to have been made for each month of a year` (DATE_YEAR month) events `the base unadjusted pensionable earnings of the contributor for the year`)
+         ELSE 0
+
+§§ `52.1 and 52.2 -- the first and the second additional contribution`
+
+-- Not a provision: sections 52.1(1) and 52.2(1) are the same rule for the two additional tiers, so the
+-- month test is written once. Paragraph (a) is the 18th year only, and paragraph (b) is the year of
+-- the 70th birthday, of the death or of the start of a retirement pension. Months excluded by
+-- reason of disability and a disability pension that ceased are not limbs of these two sections.
+GIVEN month IS A DATE
+      events IS A `cp3 Life events of a contributor`
+GIVETH A BOOLEAN
+`cp3 — a month is one for which an additional contribution is deemed to have been made` month events MEANS
+        `the limb of paragraph (a) about turning 18`
+    AND `the limb of paragraph (b) about turning 70`
+    AND `the limb of paragraph (b) about the death`
+    AND `the limb of paragraph (b) about the retirement pension`
+    WHERE
+        year MEANS DATE_YEAR month
+        `the month turning 18 is deemed to occur` MEANS
+            `s 2(2) — the date a person is treated as reaching a specified age for a provision` `any other provision` (events's `the contributor's date of birth`) 18
+        `the month turning 70 is deemed to occur` MEANS
+            `s 2(2) — the date a person is treated as reaching a specified age for a provision` `any other provision` (events's `the contributor's date of birth`) 70
+        `the limb of paragraph (a) about turning 18` MEANS
+            (NOT (DATE_YEAR `the month turning 18 is deemed to occur` EQUALS year))
+            OR `the month of a date` month AT LEAST `the month of a date` `the month turning 18 is deemed to occur`
+        `the limb of paragraph (b) about turning 70` MEANS
+            (NOT (DATE_YEAR `the month turning 70 is deemed to occur` EQUALS year))
+            OR `the month of a date` month LESS THAN `the month of a date` `the month turning 70 is deemed to occur`
+        `the limb of paragraph (b) about the death` MEANS
+            CONSIDER events's `the day the contributor died, if the contributor has died`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST died THEN (NOT (DATE_YEAR died EQUALS year)) OR `the month of a date` month LESS THAN `the month of a date` died
+        `the limb of paragraph (b) about the retirement pension` MEANS
+            CONSIDER events's `the month with which a retirement pension becomes payable, if it does`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST started THEN (NOT (DATE_YEAR started EQUALS year)) OR `the month of a date` month LESS THAN `the month of a date` started
+
+-- Not a provision: the share of a year's earnings that sections 52.1(1) and 52.2(1) give each month.
+GIVEN year IS A NUMBER
+      events IS A `cp3 Life events of a contributor`
+      `the additional unadjusted pensionable earnings of the contributor for the year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`cp3 — the earnings for which an additional contribution is deemed to have been made for each month of a year` year events `the additional unadjusted pensionable earnings of the contributor for the year` MEANS
+    IF `the number of those months` EQUALS 0
+    THEN NOTHING
+    ELSE JUST (`the additional unadjusted pensionable earnings of the contributor for the year` DIVIDED BY `the number of those months`)
+    WHERE
+        `the number of those months` MEANS count (filter (GIVEN month YIELD `cp3 — a month is one for which an additional contribution is deemed to have been made` month events) (`cp3 — the twelve months of a calendar year` year))
+
+-- src:1322 | 52.1 (1) For the purpose of calculating the first additional pensionable earnings of a contributor for a month in any year for which they have made a first additional contribution, that contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their first additional unadjusted pensionable earnings for the year by 12, except that
+-- src:1323 | (a) for a year in which the contributor reaches 18 years of age, the first additional contribution is deemed to have been made for earnings for the months in the year after they reached that age; and
+-- src:1324 | (b) for a year in which the contributor reaches 70 years of age or dies or in which a retirement pension becomes payable to them under this Act or under a provincial pension plan, the first additional contribution is deemed to have been made for earnings for the months in the year before they reached 70 years of age or died or before the retirement pension became payable, as the case may be.
+-- src:1325 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a first additional contribution for each such month are an amount calculated by dividing their first additional unadjusted pensionable earnings for that year by the number of those months.
+@ref Act s 52.1(1) (src:1322-1325)
+GIVEN month IS A DATE
+      events IS A `cp3 Life events of a contributor`
+GIVETH A BOOLEAN
+-- Plain gloss: the first additional contribution of a year is deemed made for every month of the
+-- year, except that in the year the contributor turns 18 only the months after that, and in the year
+-- the contributor turns 70, dies or starts a retirement pension only the months before.
+`s 52.1(1) — a month is one for which the first additional contribution is deemed to have been made` month events MEANS
+    `cp3 — a month is one for which an additional contribution is deemed to have been made` month events
+
+-- src:1322 | 52.1 (1) For the purpose of calculating the first additional pensionable earnings of a contributor for a month in any year for which they have made a first additional contribution, that contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their first additional unadjusted pensionable earnings for the year by 12, except that
+-- src:1323 | (a) for a year in which the contributor reaches 18 years of age, the first additional contribution is deemed to have been made for earnings for the months in the year after they reached that age; and
+-- src:1324 | (b) for a year in which the contributor reaches 70 years of age or dies or in which a retirement pension becomes payable to them under this Act or under a provincial pension plan, the first additional contribution is deemed to have been made for earnings for the months in the year before they reached 70 years of age or died or before the retirement pension became payable, as the case may be.
+-- src:1325 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a first additional contribution for each such month are an amount calculated by dividing their first additional unadjusted pensionable earnings for that year by the number of those months.
+@ref Act s 52.1(1) (src:1322-1325)
+GIVEN year IS A NUMBER
+      events IS A `cp3 Life events of a contributor`
+GIVETH A LIST OF DATE
+`s 52.1(1) — the months of a year for which the first additional contribution is deemed to have been made` year events MEANS
+    filter (GIVEN month YIELD `s 52.1(1) — a month is one for which the first additional contribution is deemed to have been made` month events) (`cp3 — the twelve months of a calendar year` year)
+
+-- src:1322 | 52.1 (1) For the purpose of calculating the first additional pensionable earnings of a contributor for a month in any year for which they have made a first additional contribution, that contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their first additional unadjusted pensionable earnings for the year by 12, except that
+-- src:1323 | (a) for a year in which the contributor reaches 18 years of age, the first additional contribution is deemed to have been made for earnings for the months in the year after they reached that age; and
+-- src:1324 | (b) for a year in which the contributor reaches 70 years of age or dies or in which a retirement pension becomes payable to them under this Act or under a provincial pension plan, the first additional contribution is deemed to have been made for earnings for the months in the year before they reached 70 years of age or died or before the retirement pension became payable, as the case may be.
+-- src:1325 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a first additional contribution for each such month are an amount calculated by dividing their first additional unadjusted pensionable earnings for that year by the number of those months.
+-- src:1326 | If no first additional contribution made
+-- src:1327 | (2) For the purpose of calculating the first additional pensionable earnings of a contributor for a month in any year for which the contributor made no first additional contribution, the amount of the earnings for which that contribution is deemed to have been made for any month in the year is deemed to be zero.
+@ref Act s 52.1(1) (src:1322-1327)
+GIVEN year IS A NUMBER
+      events IS A `cp3 Life events of a contributor`
+      `the first additional unadjusted pensionable earnings of the contributor for the year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+-- Plain gloss: each such month gets the year's first additional unadjusted pensionable earnings
+-- divided by the number of the months left. NOTHING means no month of the year is left.
+`s 52.1(1) — the earnings for which the first additional contribution is deemed to have been made for each month of a year` year events `the first additional unadjusted pensionable earnings of the contributor for the year` MEANS
+    `cp3 — the earnings for which an additional contribution is deemed to have been made for each month of a year` year events `the first additional unadjusted pensionable earnings of the contributor for the year`
+
+-- src:1327 | (2) For the purpose of calculating the first additional pensionable earnings of a contributor for a month in any year for which the contributor made no first additional contribution, the amount of the earnings for which that contribution is deemed to have been made for any month in the year is deemed to be zero.
+@ref Act s 52.1(2) (src:1327)
+GIVETH A NUMBER
+`s 52.1(2) — the earnings for which a first additional contribution is deemed to have been made for a month of a year with no first additional contribution` MEANS 0
+
+-- src:1329 | (3) For the purposes of this Part,
+-- src:1330 | (a) a contributor is deemed to have made a first additional contribution for any year for which their first additional unadjusted pensionable earnings exceed their basic exemption for the year, and is deemed to have made no first additional contribution for any year for which their first additional unadjusted pensionable earnings do not exceed their basic exemption for the year; and
+@ref Act s 52.1(3), (3)(a) (src:1329-1330)
+GIVEN `the first additional unadjusted pensionable earnings of the contributor for the year` IS A NUMBER
+      `the contributor's basic exemption for the year` IS A NUMBER
+GIVETH A BOOLEAN
+-- Plain gloss: a first additional contribution is deemed made for a year if the year's first
+-- additional unadjusted pensionable earnings exceed the contributor's basic exemption (the basic
+-- exemption, not an additional one: the text says "their basic exemption for the year").
+`s 52.1(3)(a) — a first additional contribution is deemed to have been made for a year` `the first additional unadjusted pensionable earnings of the contributor for the year` `the contributor's basic exemption for the year` MEANS
+    `the first additional unadjusted pensionable earnings of the contributor for the year` GREATER THAN `the contributor's basic exemption for the year`
+
+-- src:1331 | (b) a contributor is deemed to have made a first additional contribution for earnings for any month for which a first additional contribution is deemed by subsection (1) to have been made by them.
+@ref Act s 52.1(3)(b) (src:1331)
+GIVEN month IS A DATE
+      events IS A `cp3 Life events of a contributor`
+GIVETH A BOOLEAN
+`s 52.1(3)(b) — a first additional contribution is deemed to have been made for earnings for a month` month events MEANS
+    `s 52.1(1) — a month is one for which the first additional contribution is deemed to have been made` month events
+
+-- src:1321 | Earnings for which first additional contribution deemed for month
+-- src:1322 | 52.1 (1) For the purpose of calculating the first additional pensionable earnings of a contributor for a month in any year for which they have made a first additional contribution, that contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their first additional unadjusted pensionable earnings for the year by 12, except that
+-- src:1323 | (a) for a year in which the contributor reaches 18 years of age, the first additional contribution is deemed to have been made for earnings for the months in the year after they reached that age; and
+-- src:1324 | (b) for a year in which the contributor reaches 70 years of age or dies or in which a retirement pension becomes payable to them under this Act or under a provincial pension plan, the first additional contribution is deemed to have been made for earnings for the months in the year before they reached 70 years of age or died or before the retirement pension became payable, as the case may be.
+-- src:1325 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a first additional contribution for each such month are an amount calculated by dividing their first additional unadjusted pensionable earnings for that year by the number of those months.
+-- src:1326 | If no first additional contribution made
+-- src:1327 | (2) For the purpose of calculating the first additional pensionable earnings of a contributor for a month in any year for which the contributor made no first additional contribution, the amount of the earnings for which that contribution is deemed to have been made for any month in the year is deemed to be zero.
+@ref Act s 52.1(1), (2), (3)(a) (src:1321-1330)
+GIVEN month IS A DATE
+      events IS A `cp3 Life events of a contributor`
+      `the first additional unadjusted pensionable earnings of the contributor for the year` IS A NUMBER
+      `the contributor's basic exemption for the year` IS A NUMBER
+GIVETH A NUMBER
+-- Plain gloss: the earnings for which a first additional contribution is deemed made for one month,
+-- the "A" of section 51(1)(b); zero in a year with no first additional contribution, and zero for a
+-- month that subsection (1) does not reach (as for the base contribution).
+`s 52.1 — the earnings for which a first additional contribution is deemed to have been made for a month` month events `the first additional unadjusted pensionable earnings of the contributor for the year` `the contributor's basic exemption for the year` MEANS
+    IF NOT `s 52.1(3)(a) — a first additional contribution is deemed to have been made for a year` `the first additional unadjusted pensionable earnings of the contributor for the year` `the contributor's basic exemption for the year`
+    THEN `s 52.1(2) — the earnings for which a first additional contribution is deemed to have been made for a month of a year with no first additional contribution`
+    ELSE IF `s 52.1(1) — a month is one for which the first additional contribution is deemed to have been made` month events
+         THEN fromMaybe 0 (`s 52.1(1) — the earnings for which the first additional contribution is deemed to have been made for each month of a year` (DATE_YEAR month) events `the first additional unadjusted pensionable earnings of the contributor for the year`)
+         ELSE 0
+
+-- src:1333 | 52.2 (1) For the purpose of calculating the second additional pensionable earnings of a contributor for a month in any year for which they have made a second additional contribution, that contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their second additional unadjusted pensionable earnings for the year by 12, except that
+-- src:1334 | (a) for a year in which the contributor reaches 18 years of age, the second additional contribution is deemed to have been made for earnings for the months in the year after they reached that age; and
+-- src:1335 | (b) for a year in which the contributor reaches 70 years of age or dies or in which a retirement pension becomes payable to them under this Act or under a provincial pension plan, the second additional contribution is deemed to have been made for earnings for the months in the year before they reached 70 years of age or died or before the retirement pension became payable, as the case may be.
+-- src:1336 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a second additional contribution for each such month are an amount calculated by dividing their second additional unadjusted pensionable earnings for that year by the number of those months.
+@ref Act s 52.2(1) (src:1333-1336)
+GIVEN month IS A DATE
+      events IS A `cp3 Life events of a contributor`
+GIVETH A BOOLEAN
+`s 52.2(1) — a month is one for which the second additional contribution is deemed to have been made` month events MEANS
+    `cp3 — a month is one for which an additional contribution is deemed to have been made` month events
+
+-- src:1333 | 52.2 (1) For the purpose of calculating the second additional pensionable earnings of a contributor for a month in any year for which they have made a second additional contribution, that contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their second additional unadjusted pensionable earnings for the year by 12, except that
+-- src:1334 | (a) for a year in which the contributor reaches 18 years of age, the second additional contribution is deemed to have been made for earnings for the months in the year after they reached that age; and
+-- src:1335 | (b) for a year in which the contributor reaches 70 years of age or dies or in which a retirement pension becomes payable to them under this Act or under a provincial pension plan, the second additional contribution is deemed to have been made for earnings for the months in the year before they reached 70 years of age or died or before the retirement pension became payable, as the case may be.
+-- src:1336 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a second additional contribution for each such month are an amount calculated by dividing their second additional unadjusted pensionable earnings for that year by the number of those months.
+@ref Act s 52.2(1) (src:1333-1336)
+GIVEN year IS A NUMBER
+      events IS A `cp3 Life events of a contributor`
+GIVETH A LIST OF DATE
+`s 52.2(1) — the months of a year for which the second additional contribution is deemed to have been made` year events MEANS
+    filter (GIVEN month YIELD `s 52.2(1) — a month is one for which the second additional contribution is deemed to have been made` month events) (`cp3 — the twelve months of a calendar year` year)
+
+-- src:1333 | 52.2 (1) For the purpose of calculating the second additional pensionable earnings of a contributor for a month in any year for which they have made a second additional contribution, that contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their second additional unadjusted pensionable earnings for the year by 12, except that
+-- src:1334 | (a) for a year in which the contributor reaches 18 years of age, the second additional contribution is deemed to have been made for earnings for the months in the year after they reached that age; and
+-- src:1335 | (b) for a year in which the contributor reaches 70 years of age or dies or in which a retirement pension becomes payable to them under this Act or under a provincial pension plan, the second additional contribution is deemed to have been made for earnings for the months in the year before they reached 70 years of age or died or before the retirement pension became payable, as the case may be.
+-- src:1336 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a second additional contribution for each such month are an amount calculated by dividing their second additional unadjusted pensionable earnings for that year by the number of those months.
+-- src:1337 | If no second additional contribution made
+-- src:1338 | (2) For the purpose of calculating the second additional pensionable earnings of a contributor for a month in any year for which the contributor made no second additional contribution, the amount of the earnings for which that contribution is deemed to have been made for any month in the year is deemed to be zero.
+@ref Act s 52.2(1) (src:1333-1338)
+GIVEN year IS A NUMBER
+      events IS A `cp3 Life events of a contributor`
+      `the second additional unadjusted pensionable earnings of the contributor for the year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 52.2(1) — the earnings for which the second additional contribution is deemed to have been made for each month of a year` year events `the second additional unadjusted pensionable earnings of the contributor for the year` MEANS
+    `cp3 — the earnings for which an additional contribution is deemed to have been made for each month of a year` year events `the second additional unadjusted pensionable earnings of the contributor for the year`
+
+-- src:1338 | (2) For the purpose of calculating the second additional pensionable earnings of a contributor for a month in any year for which the contributor made no second additional contribution, the amount of the earnings for which that contribution is deemed to have been made for any month in the year is deemed to be zero.
+@ref Act s 52.2(2) (src:1338)
+GIVETH A NUMBER
+`s 52.2(2) — the earnings for which a second additional contribution is deemed to have been made for a month of a year with no second additional contribution` MEANS 0
+
+-- src:1340 | (3) For the purposes of this Part, a contributor is deemed to have made a second additional contribution for earnings for any month for which a second additional contribution is deemed by subsection (1) to have been made by them.
+@ref Act s 52.2(3) (src:1340)
+GIVEN month IS A DATE
+      events IS A `cp3 Life events of a contributor`
+GIVETH A BOOLEAN
+-- Plain gloss: a second additional contribution is deemed made for earnings for every month for which
+-- subsection (1) deems it made. Unlike sections 52(3)(a) and 52.1(3)(a), section 52.2(3) has no
+-- paragraph (a): it does not say that a year's second additional contribution is deemed made when the
+-- year's earnings exceed the basic exemption (finding 4).
+`s 52.2(3) — a second additional contribution is deemed to have been made for earnings for a month` month events MEANS
+    `s 52.2(1) — a month is one for which the second additional contribution is deemed to have been made` month events
+
+-- src:1332 | Earnings for which second additional contribution deemed for month
+-- src:1333 | 52.2 (1) For the purpose of calculating the second additional pensionable earnings of a contributor for a month in any year for which they have made a second additional contribution, that contribution is deemed to have been made for all months in the year, and the earnings for which the contributor is deemed to have made that contribution for each month in the year are an amount calculated by dividing their second additional unadjusted pensionable earnings for the year by 12, except that
+-- src:1334 | (a) for a year in which the contributor reaches 18 years of age, the second additional contribution is deemed to have been made for earnings for the months in the year after they reached that age; and
+-- src:1335 | (b) for a year in which the contributor reaches 70 years of age or dies or in which a retirement pension becomes payable to them under this Act or under a provincial pension plan, the second additional contribution is deemed to have been made for earnings for the months in the year before they reached 70 years of age or died or before the retirement pension became payable, as the case may be.
+-- src:1336 | If paragraph (a) or (b) applies, the earnings for which the contributor is deemed to have made a second additional contribution for each such month are an amount calculated by dividing their second additional unadjusted pensionable earnings for that year by the number of those months.
+-- src:1337 | If no second additional contribution made
+-- src:1338 | (2) For the purpose of calculating the second additional pensionable earnings of a contributor for a month in any year for which the contributor made no second additional contribution, the amount of the earnings for which that contribution is deemed to have been made for any month in the year is deemed to be zero.
+@ref Act s 52.2(1), (2) (src:1332-1338)
+GIVEN month IS A DATE
+      events IS A `cp3 Life events of a contributor`
+      `a second additional contribution was made for the year` IS A BOOLEAN
+      `the second additional unadjusted pensionable earnings of the contributor for the year` IS A NUMBER
+GIVETH A NUMBER
+-- Plain gloss: the earnings for which a second additional contribution is deemed made for one month,
+-- the "A" of section 51(1)(c). Section 52.2 has no rule that deems a contribution made for a year
+-- from the earnings, so whether one was made is a fact (the input); in a year with none the earnings
+-- are zero (subsection (2)).
+`s 52.2 — the earnings for which a second additional contribution is deemed to have been made for a month` month events `a second additional contribution was made for the year` `the second additional unadjusted pensionable earnings of the contributor for the year` MEANS
+    IF NOT `a second additional contribution was made for the year`
+    THEN `s 52.2(2) — the earnings for which a second additional contribution is deemed to have been made for a month of a year with no second additional contribution`
+    ELSE IF `s 52.2(1) — a month is one for which the second additional contribution is deemed to have been made` month events
+         THEN fromMaybe 0 (`s 52.2(1) — the earnings for which the second additional contribution is deemed to have been made for each month of a year` (DATE_YEAR month) events `the second additional unadjusted pensionable earnings of the contributor for the year`)
+         ELSE 0

@@ -1,0 +1,626 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `er6-nouns`
+IMPORT `er6-schedule-i-regions`
+
+-- Tests of er6-schedule-i-regions. Expected values come from reading Schedule I (SOR-96-332.txt lines 1758-1926):
+--   * the first group is generated from the lists the Schedule gives: for every limb of every region, a place that has what
+--     the limb requires is in that region and in no other; and for every "not part of" limb, a place that has the excluded
+--     part is not in that region. Census division numbers and subdivision numbers that the limb does not mention are 0,
+--     which is no real number, so another region cannot claim the place by accident;
+--   * the second group is written by hand from the sentences of the Schedule that need a human to read them: the portions,
+--     the split of Census Division No. 34 east of London, Ottawa on one side of the river and Hull on the other, and the
+--     census subdivisions of Newfoundland.
+
+§ `test helpers`
+
+GIVEN province IS AN `er6 Province or territory`
+      cd IS A NUMBER
+      csd IS A NUMBER
+      cma IS AN `er6 Census Metropolitan Area or none`
+      ca IS AN `er6 Census Agglomeration or none`
+      east IS A BOOLEAN
+GIVETH A `er6 Place`
+`er6 test place` province cd csd cma ca east MEANS
+    `er6 Place` WITH
+        `province or territory` IS province
+        `census division` IS cd
+        `census subdivision` IS csd
+        `census metropolitan area` IS cma
+        `census agglomeration` IS ca
+        `east of the Census Metropolitan Area of London` IS east
+
+-- How many of the 62 regions the place is in: the Schedule's regions must not overlap, so this is 1 for a place in Canada
+-- that the Schedule covers and 0 for one it does not.
+GIVEN place IS A `er6 Place`
+GIVETH A NUMBER
+DECIDE `er6 test number of Schedule I regions the place is in` IS
+    sum (map (GIVEN b YIELD IF b THEN 1 ELSE 0) (LIST
+        `Regs Sch I s 2(1) the place is in the region of Ottawa` place
+      , `Regs Sch I s 2(1.1) the place is in the region of Kingston` place
+      , `Regs Sch I s 2(1.2) the place is in the region of Central Ontario` place
+      , `Regs Sch I s 2(2) the place is in the region of Eastern Ontario` place
+      , `Regs Sch I s 2(3) the place is in the region of Northern Ontario` place
+      , `Regs Sch I s 2(4) the place is in the region of Oshawa` place
+      , `Regs Sch I s 2(5) the place is in the region of Toronto` place
+      , `Regs Sch I s 2(6) the place is in the region of Hamilton` place
+      , `Regs Sch I s 2(7) the place is in the region of St. Catharines` place
+      , `Regs Sch I s 2(8) the place is in the region of London` place
+      , `Regs Sch I s 2(9) the place is in the region of Niagara` place
+      , `Regs Sch I s 2(10) the place is in the region of Windsor` place
+      , `Regs Sch I s 2(11) the place is in the region of Kitchener` place
+      , `Regs Sch I s 2(12) the place is in the region of Huron` place
+      , `Regs Sch I s 2(13) the place is in the region of South Central Ontario` place
+      , `Regs Sch I s 2(14) the place is in the region of Sudbury` place
+      , `Regs Sch I s 2(15) the place is in the region of Thunder Bay` place
+      , `Regs Sch I s 3(1) the place is in the region of Gaspésie-Îles-de-la-Madeleine` place
+      , `Regs Sch I s 3(2) the place is in the region of Quebec` place
+      , `Regs Sch I s 3(3) the place is in the region of Central Quebec` place
+      , `Regs Sch I s 3(4) the place is in the region of Trois-Rivières` place
+      , `Regs Sch I s 3(5) the place is in the region of South Central Quebec` place
+      , `Regs Sch I s 3(6) the place is in the region of Sherbrooke` place
+      , `Regs Sch I s 3(7) the place is in the region of Montérégie` place
+      , `Regs Sch I s 3(8) the place is in the region of Montreal` place
+      , `Regs Sch I s 3(9) the place is in the region of North Western Quebec` place
+      , `Regs Sch I s 3(10) the place is in the region of Hull` place
+      , `Regs Sch I s 3(11) the place is in the region of Lower Saint Lawrence and North Shore` place
+      , `Regs Sch I s 3(12) the place is in the region of Chicoutimi — Jonquière` place
+      , `Regs Sch I s 4(1) the place is in the region of Eastern Nova Scotia` place
+      , `Regs Sch I s 4(2) the place is in the region of Halifax` place
+      , `Regs Sch I s 4(3) the place is in the region of Western Nova Scotia` place
+      , `Regs Sch I s 5(1) the place is in the region of Fredericton — Moncton — Saint John` place
+      , `Regs Sch I s 5(2) the place is in the region of Madawaska — Charlotte` place
+      , `Regs Sch I s 5(3) the place is in the region of Restigouche — Albert` place
+      , `Regs Sch I s 6(1) the place is in the region of Winnipeg` place
+      , `Regs Sch I s 6(2) the place is in the region of Southern Manitoba` place
+      , `Regs Sch I s 6(3) the place is in the region of Northern Manitoba` place
+      , `Regs Sch I s 7(1) the place is in the region of Southern Interior British Columbia` place
+      , `Regs Sch I s 7(2) the place is in the region of Vancouver` place
+      , `Regs Sch I s 7(3) the place is in the region of Victoria` place
+      , `Regs Sch I s 7(4) the place is in the region of Southern Coastal British Columbia` place
+      , `Regs Sch I s 7(4.1) the place is in the region of Abbotsford` place
+      , `Regs Sch I s 7(5) the place is in the region of Northern British Columbia` place
+      , `Regs Sch I s 8(1) the place is in the region of Charlottetown` place
+      , `Regs Sch I s 8(2) the place is in the region of Prince Edward Island` place
+      , `Regs Sch I s 9(1) the place is in the region of Regina` place
+      , `Regs Sch I s 9(2) the place is in the region of Saskatoon` place
+      , `Regs Sch I s 9(3) the place is in the region of Southern Saskatchewan` place
+      , `Regs Sch I s 9(4) the place is in the region of Northern Saskatchewan` place
+      , `Regs Sch I s 10(1) the place is in the region of Calgary` place
+      , `Regs Sch I s 10(2) the place is in the region of Edmonton` place
+      , `Regs Sch I s 10(3) the place is in the region of Southern Alberta` place
+      , `Regs Sch I s 10(4) the place is in the region of Northern Alberta` place
+      , `Regs Sch I s 11(1) the place is in the region of St. John’s` place
+      , `Regs Sch I s 11(2) the place is in the region of Newfoundland/Labrador` place
+      , `Regs Sch I s 12(1) the place is in the region of Whitehorse` place
+      , `Regs Sch I s 12(2) the place is in the region of Yukon` place
+      , `Regs Sch I s 13(1) the place is in the region of Yellowknife` place
+      , `Regs Sch I s 13(2) the place is in the region of the Northwest Territories` place
+      , `Regs Sch I s 14(1) the place is in the region of Iqaluit` place
+      , `Regs Sch I s 14(2) the place is in the region of Nunavut` place
+    ))
+
+§ `generated from the lists in ss 2 to 14`
+
+-- s 2(1), the region of Ottawa
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Ottawa — Hull CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Ottawa`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Ottawa — Hull CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(1.1), the region of Kingston
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 no Census Metropolitan Area` `er6 Kingston CA` FALSE) EQUALS JUST `er6 the region of Kingston`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 no Census Metropolitan Area` `er6 Kingston CA` FALSE) EQUALS 1
+-- s 2(1.2), the region of Central Ontario
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 11 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 11 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(1.2) the place is in the region of Central Ontario` (`er6 test place` `er6 Ontario` 11 0 `er6 no Census Metropolitan Area` `er6 Kingston CA` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 18 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 18 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(1.2) the place is in the region of Central Ontario` (`er6 test place` `er6 Ontario` 18 0 `er6 Oshawa CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT NOT (`Regs Sch I s 2(1.2) the place is in the region of Central Ontario` (`er6 test place` `er6 Ontario` 18 0 `er6 Toronto CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 43 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 43 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(1.2) the place is in the region of Central Ontario` (`er6 test place` `er6 Ontario` 43 0 `er6 Toronto CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 46 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 46 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(2), the region of Eastern Ontario
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 2 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Eastern Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 2 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 7 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Eastern Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 7 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(2) the place is in the region of Eastern Ontario` (`er6 test place` `er6 Ontario` 2 0 `er6 Ottawa — Hull CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 10 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Eastern Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 10 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(2) the place is in the region of Eastern Ontario` (`er6 test place` `er6 Ontario` 10 0 `er6 no Census Metropolitan Area` `er6 Kingston CA` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Eastern Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 47 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Eastern Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 47 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(3), the region of Northern Ontario
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 52 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 52 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 53 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 53 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(3) the place is in the region of Northern Ontario` (`er6 test place` `er6 Ontario` 52 0 `er6 Sudbury CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 58 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 58 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(3) the place is in the region of Northern Ontario` (`er6 test place` `er6 Ontario` 58 0 `er6 Thunder Bay CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 48 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 48 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 60 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 60 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(4), the region of Oshawa
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Oshawa CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Oshawa`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Oshawa CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(5), the region of Toronto
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Toronto CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Toronto`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Toronto CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(6), the region of Hamilton
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Hamilton CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Hamilton`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Hamilton CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(7), the region of St. Catharines
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 St. Catharines — Niagara CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of St. Catharines`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 St. Catharines — Niagara CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(8), the region of London
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 London CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of London`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 London CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(9), the region of Niagara
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 26 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Niagara`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 26 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(9) the place is in the region of Niagara` (`er6 test place` `er6 Ontario` 26 0 `er6 Hamilton CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT NOT (`Regs Sch I s 2(9) the place is in the region of Niagara` (`er6 test place` `er6 Ontario` 26 0 `er6 St. Catharines — Niagara CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 34 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` TRUE) EQUALS JUST `er6 the region of Niagara`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 34 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` TRUE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(9) the place is in the region of Niagara` (`er6 test place` `er6 Ontario` 34 0 `er6 London CMA` `er6 no Census Agglomeration` TRUE))
+#ASSERT NOT (`Regs Sch I s 2(9) the place is in the region of Niagara` (`er6 test place` `er6 Ontario` 34 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 28 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Niagara`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 28 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 29 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Niagara`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 29 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(10), the region of Windsor
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Windsor CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Windsor`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Windsor CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(11), the region of Kitchener
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Kitchener CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Kitchener`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Kitchener CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(12), the region of Huron
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 34 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Huron`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 34 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(12) the place is in the region of Huron` (`er6 test place` `er6 Ontario` 34 0 `er6 London CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 37 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Huron`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 37 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(12) the place is in the region of Huron` (`er6 test place` `er6 Ontario` 37 0 `er6 Windsor CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 36 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Huron`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 36 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 38 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Huron`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 38 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(13), the region of South Central Ontario
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 22 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of South Central Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 22 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(13) the place is in the region of South Central Ontario` (`er6 test place` `er6 Ontario` 22 0 `er6 Toronto CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 30 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of South Central Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 30 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(13) the place is in the region of South Central Ontario` (`er6 test place` `er6 Ontario` 30 0 `er6 Kitchener CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 39 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of South Central Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 39 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 2(13) the place is in the region of South Central Ontario` (`er6 test place` `er6 Ontario` 39 0 `er6 London CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 23 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of South Central Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 23 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 40 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of South Central Ontario`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 40 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(14), the region of Sudbury
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Sudbury CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Sudbury`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Sudbury CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 2(15), the region of Thunder Bay
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Thunder Bay CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Thunder Bay`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Thunder Bay CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(1), the region of Gaspésie-Îles-de-la-Madeleine
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Gaspésie-Îles-de-la-Madeleine`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 98 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Gaspésie-Îles-de-la-Madeleine`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 98 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(2), the region of Quebec
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Quebec City CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Quebec City CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(3), the region of Central Quebec
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 21 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 21 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 22 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 22 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 3(3) the place is in the region of Central Quebec` (`er6 test place` `er6 Quebec` 21 0 `er6 Quebec City CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 37 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 37 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 38 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 38 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 3(3) the place is in the region of Central Quebec` (`er6 test place` `er6 Quebec` 37 0 `er6 Trois-Rivières CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 41 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 41 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 45 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 45 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 3(3) the place is in the region of Central Quebec` (`er6 test place` `er6 Quebec` 41 0 `er6 Sherbrooke CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 52 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 52 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 76 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 76 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 3(3) the place is in the region of Central Quebec` (`er6 test place` `er6 Quebec` 52 0 `er6 Montreal CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 82 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 82 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 3(3) the place is in the region of Central Quebec` (`er6 test place` `er6 Quebec` 82 0 `er6 Ottawa — Hull CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 31 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 31 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 90 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 90 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(4), the region of Trois-Rivières
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Trois-Rivières CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Trois-Rivières`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Trois-Rivières CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(5), the region of South Central Quebec
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 19 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of South Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 19 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 24 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of South Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 24 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 3(5) the place is in the region of South Central Quebec` (`er6 test place` `er6 Quebec` 19 0 `er6 Quebec City CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 26 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of South Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 26 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 30 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of South Central Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 30 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(6), the region of Sherbrooke
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Sherbrooke CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Sherbrooke`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Sherbrooke CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(7), the region of Montérégie
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 55 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Montérégie`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 55 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 71 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Montérégie`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 71 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 3(7) the place is in the region of Montérégie` (`er6 test place` `er6 Quebec` 55 0 `er6 Montreal CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 46 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Montérégie`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 46 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 69 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Montérégie`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 69 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(8), the region of Montreal
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Montreal CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Montreal`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Montreal CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(9), the region of North Western Quebec
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 79 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of North Western Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 79 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 99 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of North Western Quebec`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 99 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(10), the region of Hull
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Ottawa — Hull CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Hull`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Ottawa — Hull CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(11), the region of Lower Saint Lawrence and North Shore
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 94 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Lower Saint Lawrence and North Shore`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 94 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 3(11) the place is in the region of Lower Saint Lawrence and North Shore` (`er6 test place` `er6 Quebec` 94 0 `er6 Chicoutimi — Jonquière CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 9 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Lower Saint Lawrence and North Shore`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 9 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 97 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Lower Saint Lawrence and North Shore`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 97 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 3(12), the region of Chicoutimi — Jonquière
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Chicoutimi — Jonquière CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Chicoutimi — Jonquière`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Chicoutimi — Jonquière CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 4(1), the region of Eastern Nova Scotia
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Nova Scotia` 13 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Eastern Nova Scotia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Nova Scotia` 13 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Nova Scotia` 18 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Eastern Nova Scotia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Nova Scotia` 18 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Nova Scotia` 9 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Eastern Nova Scotia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Nova Scotia` 9 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 4(1) the place is in the region of Eastern Nova Scotia` (`er6 test place` `er6 Nova Scotia` 9 0 `er6 Halifax CMA` `er6 no Census Agglomeration` FALSE))
+-- s 4(2), the region of Halifax
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Nova Scotia` 0 0 `er6 Halifax CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Halifax`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Nova Scotia` 0 0 `er6 Halifax CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 4(3), the region of Western Nova Scotia
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Nova Scotia` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Western Nova Scotia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Nova Scotia` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Nova Scotia` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Western Nova Scotia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Nova Scotia` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 5(1), the region of Fredericton — Moncton — Saint John
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 5 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 5 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 2 0 `er6 Saint John CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 2 0 `er6 Saint John CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1303001 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1303001 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1303016 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1303016 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 4 0 `er6 Saint John CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 4 0 `er6 Saint John CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 6 0 `er6 no Census Metropolitan Area` `er6 Moncton CA` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 6 0 `er6 no Census Metropolitan Area` `er6 Moncton CA` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1307019 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1307019 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1307045 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1307045 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 10 0 `er6 no Census Metropolitan Area` `er6 Fredericton CA` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 10 0 `er6 no Census Metropolitan Area` `er6 Fredericton CA` FALSE) EQUALS 1
+-- s 5(2), the region of Madawaska — Charlotte
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 2 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Madawaska — Charlotte`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 2 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 5(2) the place is in the region of Madawaska — Charlotte` (`er6 test place` `er6 New Brunswick` 2 0 `er6 Saint John CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 11 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Madawaska — Charlotte`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 11 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 13 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Madawaska — Charlotte`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 13 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1310004 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Madawaska — Charlotte`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1310004 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1310054 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Madawaska — Charlotte`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1310054 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 5(3), the region of Restigouche — Albert
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 8 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 8 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 15 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 15 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1303014 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1303014 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1303018 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1303018 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 4 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 4 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 5(3) the place is in the region of Restigouche — Albert` (`er6 test place` `er6 New Brunswick` 4 0 `er6 Saint John CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 6 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 6 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 5(3) the place is in the region of Restigouche — Albert` (`er6 test place` `er6 New Brunswick` 6 0 `er6 no Census Metropolitan Area` `er6 Moncton CA` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1307001 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1307001 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1307052 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1307052 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1310036 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1310036 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 0 1310037 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 New Brunswick` 0 1310037 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 6(1), the region of Winnipeg
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Manitoba` 0 0 `er6 Winnipeg CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Winnipeg`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Manitoba` 0 0 `er6 Winnipeg CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 6(2), the region of Southern Manitoba
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Manitoba` 2 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Manitoba`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Manitoba` 2 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Manitoba` 14 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Manitoba`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Manitoba` 14 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 6(2) the place is in the region of Southern Manitoba` (`er6 test place` `er6 Manitoba` 2 0 `er6 Winnipeg CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Manitoba` 3 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Manitoba`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Manitoba` 3 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Manitoba` 20 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Manitoba`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Manitoba` 20 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 6(3), the region of Northern Manitoba
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Manitoba` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Manitoba`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Manitoba` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 6(3) the place is in the region of Northern Manitoba` (`er6 test place` `er6 Manitoba` 12 0 `er6 Winnipeg CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Manitoba` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Manitoba`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Manitoba` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Manitoba` 23 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Manitoba`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Manitoba` 23 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 7(1), the region of Southern Interior British Columbia
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Interior British Columbia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 39 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Interior British Columbia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 39 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 7(2), the region of Vancouver
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 0 0 `er6 Vancouver CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Vancouver`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 0 0 `er6 Vancouver CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 7(3), the region of Victoria
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 0 0 `er6 Victoria CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Victoria`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 0 0 `er6 Victoria CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 7(4), the region of Southern Coastal British Columbia
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 17 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Coastal British Columbia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 17 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 7(4) the place is in the region of Southern Coastal British Columbia` (`er6 test place` `er6 British Columbia` 17 0 `er6 Victoria CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 9 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Coastal British Columbia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 9 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 7(4) the place is in the region of Southern Coastal British Columbia` (`er6 test place` `er6 British Columbia` 9 0 `er6 no Census Metropolitan Area` `er6 Abbotsford CA` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 19 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Coastal British Columbia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 19 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 31 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Coastal British Columbia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 31 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 7(4.1), the region of Abbotsford
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 0 0 `er6 no Census Metropolitan Area` `er6 Abbotsford CA` FALSE) EQUALS JUST `er6 the region of Abbotsford`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 0 0 `er6 no Census Metropolitan Area` `er6 Abbotsford CA` FALSE) EQUALS 1
+-- s 7(5), the region of Northern British Columbia
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 41 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern British Columbia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 41 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 59 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern British Columbia`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 British Columbia` 59 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 8(1), the region of Charlottetown
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Prince Edward Island` 0 0 `er6 no Census Metropolitan Area` `er6 Charlottetown CA` FALSE) EQUALS JUST `er6 the region of Charlottetown`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Prince Edward Island` 0 0 `er6 no Census Metropolitan Area` `er6 Charlottetown CA` FALSE) EQUALS 1
+-- s 8(2), the region of Prince Edward Island
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Prince Edward Island` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Prince Edward Island`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Prince Edward Island` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 8(2) the place is in the region of Prince Edward Island` (`er6 test place` `er6 Prince Edward Island` 0 0 `er6 no Census Metropolitan Area` `er6 Charlottetown CA` FALSE))
+-- s 9(1), the region of Regina
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 0 0 `er6 Regina CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Regina`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Saskatchewan` 0 0 `er6 Regina CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 9(2), the region of Saskatoon
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 0 0 `er6 Saskatoon CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Saskatoon`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Saskatchewan` 0 0 `er6 Saskatoon CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 9(3), the region of Southern Saskatchewan
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 6 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Saskatchewan`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Saskatchewan` 6 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 9(3) the place is in the region of Southern Saskatchewan` (`er6 test place` `er6 Saskatchewan` 6 0 `er6 Regina CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 11 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Saskatchewan`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Saskatchewan` 11 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 9(3) the place is in the region of Southern Saskatchewan` (`er6 test place` `er6 Saskatchewan` 11 0 `er6 Saskatoon CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Saskatchewan`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Saskatchewan` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 9(3) the place is in the region of Southern Saskatchewan` (`er6 test place` `er6 Saskatchewan` 12 0 `er6 Saskatoon CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT NOT (`Regs Sch I s 9(3) the place is in the region of Southern Saskatchewan` (`er6 test place` `er6 Saskatchewan` 12 0 `er6 no Census Metropolitan Area` `er6 North Battleford CA` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Saskatchewan`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Saskatchewan` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 13 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Saskatchewan`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Saskatchewan` 13 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 9(4), the region of Northern Saskatchewan
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 12 0 `er6 no Census Metropolitan Area` `er6 North Battleford CA` FALSE) EQUALS JUST `er6 the region of Northern Saskatchewan`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Saskatchewan` 12 0 `er6 no Census Metropolitan Area` `er6 North Battleford CA` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 14 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Saskatchewan`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Saskatchewan` 14 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 18 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Saskatchewan`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Saskatchewan` 18 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 10(1), the region of Calgary
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 0 0 `er6 Calgary CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Calgary`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Alberta` 0 0 `er6 Calgary CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 10(2), the region of Edmonton
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 0 0 `er6 Edmonton CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Edmonton`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Alberta` 0 0 `er6 Edmonton CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 10(3), the region of Southern Alberta
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 6 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Alberta`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Alberta` 6 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 10(3) the place is in the region of Southern Alberta` (`er6 test place` `er6 Alberta` 6 0 `er6 Calgary CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 10 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Alberta`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Alberta` 10 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 11 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Alberta`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Alberta` 11 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 10(3) the place is in the region of Southern Alberta` (`er6 test place` `er6 Alberta` 10 0 `er6 Edmonton CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Alberta`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Alberta` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 19 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Alberta`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Alberta` 19 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 10(4), the region of Northern Alberta
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Alberta`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Alberta` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 17 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Northern Alberta`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Alberta` 17 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 11(1), the region of St. John’s
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Newfoundland` 0 0 `er6 St. John’s CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of St. John’s`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Newfoundland` 0 0 `er6 St. John’s CMA` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 11(1) the place is in the region of St. John’s` (`er6 test place` `er6 Newfoundland` 1 1557 `er6 St. John’s CMA` `er6 no Census Agglomeration` FALSE))
+-- s 11(2), the region of Newfoundland/Labrador
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Newfoundland` 1 1557 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Newfoundland/Labrador`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Newfoundland` 1 1557 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Newfoundland` 1 1559 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Newfoundland/Labrador`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Newfoundland` 1 1559 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Newfoundland` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Newfoundland/Labrador`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Newfoundland` 1 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 11(2) the place is in the region of Newfoundland/Labrador` (`er6 test place` `er6 Newfoundland` 1 0 `er6 St. John’s CMA` `er6 no Census Agglomeration` FALSE))
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Newfoundland` 2 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Newfoundland/Labrador`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Newfoundland` 2 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Newfoundland` 10 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Newfoundland/Labrador`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Newfoundland` 10 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 12(1), the region of Whitehorse
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Yukon` 0 0 `er6 no Census Metropolitan Area` `er6 Whitehorse CA` FALSE) EQUALS JUST `er6 the region of Whitehorse`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Yukon` 0 0 `er6 no Census Metropolitan Area` `er6 Whitehorse CA` FALSE) EQUALS 1
+-- s 12(2), the region of Yukon
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Yukon` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Yukon`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Yukon` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 12(2) the place is in the region of Yukon` (`er6 test place` `er6 Yukon` 0 0 `er6 no Census Metropolitan Area` `er6 Whitehorse CA` FALSE))
+-- s 13(1), the region of Yellowknife
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Northwest Territories` 0 0 `er6 no Census Metropolitan Area` `er6 Yellowknife CA` FALSE) EQUALS JUST `er6 the region of Yellowknife`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Northwest Territories` 0 0 `er6 no Census Metropolitan Area` `er6 Yellowknife CA` FALSE) EQUALS 1
+-- s 13(2), the region of the Northwest Territories
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Northwest Territories` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of the Northwest Territories`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Northwest Territories` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 13(2) the place is in the region of the Northwest Territories` (`er6 test place` `er6 Northwest Territories` 0 0 `er6 no Census Metropolitan Area` `er6 Yellowknife CA` FALSE))
+-- s 14(1), the region of Iqaluit
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Nunavut` 0 6204003 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Iqaluit`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Nunavut` 0 6204003 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+-- s 14(2), the region of Nunavut
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Nunavut` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Nunavut`
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Nunavut` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 1
+#ASSERT NOT (`Regs Sch I s 14(2) the place is in the region of Nunavut` (`er6 test place` `er6 Nunavut` 0 6204003 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE))
+
+§ `written by hand from the sentences of Schedule I`
+
+-- s 1: which edition of Statistics Canada's classification defines each term for a section.
+-- "Census Agglomeration for the purposes of sections 2, 5, 7 and 9 ... SGC 1996 and for the purposes of sections 8, 12 and 13 ... SGC 2011"
+#ASSERT `Regs Sch I s 1 the edition that defines Census Agglomeration in section` 2 EQUALS JUST `er6 SGC 1996`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Agglomeration in section` 5 EQUALS JUST `er6 SGC 1996`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Agglomeration in section` 7 EQUALS JUST `er6 SGC 1996`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Agglomeration in section` 9 EQUALS JUST `er6 SGC 1996`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Agglomeration in section` 8 EQUALS JUST `er6 SGC 2011`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Agglomeration in section` 12 EQUALS JUST `er6 SGC 2011`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Agglomeration in section` 13 EQUALS JUST `er6 SGC 2011`
+-- s 3 mentions no agglomeration, so the definition says nothing for it: the text does not answer.
+#ASSERT `Regs Sch I s 1 the edition that defines Census Agglomeration in section` 3 EQUALS NOTHING
+#ASSERT `Regs Sch I s 1 the edition that defines Census Agglomeration in section` 14 EQUALS NOTHING
+-- "Census Subdivision for the purposes of sections 5 and 11 ... 1996 and for the purposes of sections 8 and 12 to 14 ... 2011"
+#ASSERT `Regs Sch I s 1 the edition that defines Census Subdivision in section` 5 EQUALS JUST `er6 SGC 1996`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Subdivision in section` 11 EQUALS JUST `er6 SGC 1996`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Subdivision in section` 8 EQUALS JUST `er6 SGC 2011`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Subdivision in section` 12 EQUALS JUST `er6 SGC 2011`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Subdivision in section` 13 EQUALS JUST `er6 SGC 2011`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Subdivision in section` 14 EQUALS JUST `er6 SGC 2011`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Subdivision in section` 2 EQUALS NOTHING
+#ASSERT `Regs Sch I s 1 the edition that defines Census Subdivision in section` 10 EQUALS NOTHING
+-- "Census Division ... SGC 1996" and "Census Metropolitan Area ... SGC 1996" for the whole Schedule
+#ASSERT `Regs Sch I s 1 the edition that defines Census Division` EQUALS `er6 SGC 1996`
+#ASSERT `Regs Sch I s 1 the edition that defines Census Metropolitan Area` EQUALS `er6 SGC 1996`
+
+-- The helper behind "Census Division Nos. 12 to 16": the whole numbers from 12 to 16, both ends included.
+#ASSERT `Regs Sch I whole numbers from` 12 `to` 16 EQUALS LIST 12, 13, 14, 15, 16
+#ASSERT `Regs Sch I whole numbers from` 14 `to` 18 EQUALS LIST 14, 15, 16, 17, 18
+#ASSERT `Regs Sch I whole numbers from` 5 `to` 5 EQUALS LIST 5
+#ASSERT `Regs Sch I whole numbers from` 6 `to` 5 EQUALS EMPTY
+
+-- Ottawa and Hull are the two sides of one metropolitan area: s 2(1) takes the part in Ontario, s 3(10) the part in Quebec.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 Ottawa — Hull CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Ottawa`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 0 0 `er6 Ottawa — Hull CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Hull`
+-- s 3(3)(e): Census Division No. 82 of Quebec outside the metropolitan area is Central Quebec; inside it, Hull.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 82 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Quebec`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Quebec` 82 0 `er6 Ottawa — Hull CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Hull`
+
+-- Census division numbers repeat from province to province: Census Division No. 11 is in Central Ontario only in Ontario
+-- (s 2(1.2)(a)); in Alberta it is part of Southern Alberta (s 10(3)(b)).
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 11 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Ontario`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 11 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Alberta`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Alberta` 11 0 `er6 Edmonton CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Edmonton`
+-- Census Division No. 11 in Ontario inside the Kingston agglomeration is Kingston (s 2(1.1)), not Central Ontario.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 11 0 `er6 no Census Metropolitan Area` `er6 Kingston CA` FALSE) EQUALS JUST `er6 the region of Kingston`
+
+-- s 2(1.2)(b) and (9)(a): a division that contains a metropolitan area is that region where the place is in the area and the
+-- rest of the division belongs to another.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 18 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Central Ontario`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 18 0 `er6 Oshawa CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Oshawa`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 18 0 `er6 Toronto CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Toronto`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 26 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Niagara`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 26 0 `er6 Hamilton CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Hamilton`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 26 0 `er6 St. Catharines — Niagara CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of St. Catharines`
+
+-- s 2(9)(b) and (12)(a): Census Division No. 34 outside London is Niagara where it "lies east of" London, Huron where it does not.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 34 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` TRUE) EQUALS JUST `er6 the region of Niagara`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 34 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Huron`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 34 0 `er6 London CMA` `er6 no Census Agglomeration` TRUE) EQUALS JUST `er6 the region of London`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 34 0 `er6 London CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of London`
+
+-- New Brunswick, s 5: Census Division No. 2 is split by the Saint John metropolitan area, No. 6 by the Moncton agglomeration.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 2 0 `er6 Saint John CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 2 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Madawaska — Charlotte`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 6 0 `er6 no Census Metropolitan Area` `er6 Moncton CA` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 6 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+-- New Brunswick census subdivisions: 1303001 (s 5(1)(c)), 1303014 (s 5(3)(b)), 1310004 (s 5(2)(c)) and 1310036 (s 5(3)(f)).
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 3 1303001 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Fredericton — Moncton — Saint John`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 3 1303014 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 10 1310004 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Madawaska — Charlotte`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 New Brunswick` 10 1310036 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Restigouche — Albert`
+
+-- Newfoundland, s 11: two census subdivisions of Census Division No. 1 lie in the St. John's metropolitan area but belong to Newfoundland/Labrador.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Newfoundland` 1 1500 `er6 St. John’s CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of St. John’s`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Newfoundland` 1 1557 `er6 St. John’s CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Newfoundland/Labrador`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Newfoundland` 1 1559 `er6 St. John’s CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Newfoundland/Labrador`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Newfoundland` 1 1200 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Newfoundland/Labrador`
+
+-- Saskatchewan, s 9: Census Division No. 12 is split three ways.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 12 0 `er6 Saskatoon CMA` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Saskatoon`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 12 0 `er6 no Census Metropolitan Area` `er6 North Battleford CA` FALSE) EQUALS JUST `er6 the region of Northern Saskatchewan`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Saskatchewan` 12 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Saskatchewan`
+
+-- British Columbia s 7(4)(b) and (4.1): Census Division No. 9 outside the Abbotsford agglomeration is Southern Coastal.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 9 0 `er6 no Census Metropolitan Area` `er6 Abbotsford CA` FALSE) EQUALS JUST `er6 the region of Abbotsford`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 British Columbia` 9 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Southern Coastal British Columbia`
+
+-- The rest of a province or territory outside one agglomeration: ss 8(2), 12(2), 13(2), 14(2).
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Prince Edward Island` 0 0 `er6 no Census Metropolitan Area` `er6 Charlottetown CA` FALSE) EQUALS JUST `er6 the region of Charlottetown`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Prince Edward Island` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Prince Edward Island`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Yukon` 0 0 `er6 no Census Metropolitan Area` `er6 Whitehorse CA` FALSE) EQUALS JUST `er6 the region of Whitehorse`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Yukon` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Yukon`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Northwest Territories` 0 0 `er6 no Census Metropolitan Area` `er6 Yellowknife CA` FALSE) EQUALS JUST `er6 the region of Yellowknife`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Northwest Territories` 0 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of the Northwest Territories`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Nunavut` 6204 6204003 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Iqaluit`
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Nunavut` 6204 6204004 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS JUST `er6 the region of Nunavut`
+-- The territory test matters: the same agglomeration facts in the wrong province give no region of that name.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 0 0 `er6 no Census Metropolitan Area` `er6 Whitehorse CA` FALSE) EQUALS NOTHING
+
+-- The text does not answer for a place no region consists of (a census division the Schedule does not list): NOTHING, asserted.
+#ASSERT `Regs Sch I the region that the place is in` (`er6 test place` `er6 Ontario` 99 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS NOTHING
+#ASSERT `er6 test number of Schedule I regions the place is in` (`er6 test place` `er6 Ontario` 99 0 `er6 no Census Metropolitan Area` `er6 no Census Agglomeration` FALSE) EQUALS 0
+

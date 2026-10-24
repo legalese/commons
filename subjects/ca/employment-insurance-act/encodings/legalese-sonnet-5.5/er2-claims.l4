@@ -1,0 +1,369 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `er2-common`
+
+-- Employment Insurance Regulations (SOR/96-332), regulations 25 to 28: the week of benefits, the election between Part I and Part VII.1,
+-- the claim for benefits and when it is made, claims made for an incapacitated or a deceased person, and payments in advance.
+-- Piece er2 (Sonnet 5.5), LAYER 1: the law, objectively.
+-- Every src:N is a line of SOR-96-332.txt, an unofficial plain-text rendering; nothing here is verified against the official text.
+--
+-- Time limits (keel fork F4): "within three weeks after the week" ends on the Saturday that ends that week plus 21 days, that day counting.
+-- The weeks are Sunday to Saturday (s 2(1) "week"), so a week is named by any day in it and the core finds its Saturday.
+
+§ `Regulation 25 - Week of benefits`
+
+DECLARE `er2 Week of benefits paid` HAS
+    `the amount of the benefits paid to the claimant for the week` IS A NUMBER
+    `the rate of weekly benefits applicable to the week` IS A NUMBER
+
+-- src:407 | (2) For the purpose of subsection (1), the percentage of benefits paid for a week shall be obtained by dividing the amount of the benefits paid to the claimant for that week by the rate of weekly benefits applicable to that week.
+@ref Employment Insurance Regulations reg 25(2) (src:407)
+GIVEN w IS AN `er2 Week of benefits paid`
+GIVETH A MAYBE NUMBER
+-- out of range: the rate of weekly benefits is section 14 of the Act (piece ei1); NOTHING when that rate is not above zero.
+-- The quotient is a fraction of a week; "equals 100" in (1) reads it as a percentage, so it is multiplied by 100.
+DECIDE `reg 25(2) the percentage of benefits paid for a week` IS
+    IF   w's `the rate of weekly benefits applicable to the week` GREATER THAN 0
+    THEN JUST ((w's `the amount of the benefits paid to the claimant for the week` DIVIDED BY w's `the rate of weekly benefits applicable to the week`) TIMES 100)
+    ELSE NOTHING
+
+-- src:406 | 25 (1) For the purpose of section 145 of the Act, a claimant is considered to have been paid a week of benefits when the total of the percentages of benefits paid for one or more weeks of unemployment equals 100.
+@ref Employment Insurance Regulations reg 25(1) (src:406)
+GIVEN weeks IS A LIST OF `er2 Week of benefits paid`
+GIVETH A MAYBE NUMBER
+-- A claimant is considered to have been paid a week of benefits each time the total of the percentages reaches 100 (fork F6 in NOTES.md:
+-- 150 is one week and a half, so one week). NOTHING if any week has a rate that is not above zero.
+-- out of range: section 145 of the Act (piece ei4) uses the number of weeks of benefits paid.
+DECIDE `reg 25(1) the number of weeks of benefits that the claimant is considered to have been paid` IS
+    IF   all (GIVEN w YIELD w's `the rate of weekly benefits applicable to the week` GREATER THAN 0) weeks
+    THEN JUST (FLOOR ((sum (map `the percentage of one week` weeks)) DIVIDED BY 100))
+    ELSE NOTHING
+    WHERE
+        `the percentage of one week` w MEANS
+            (w's `the amount of the benefits paid to the claimant for the week` DIVIDED BY w's `the rate of weekly benefits applicable to the week`) TIMES 100
+
+§ `Regulation 25.1 - Election to receive benefits payable under Part I or VII.1 of the Act`
+
+-- src:410 | 25.1 The election referred to in subsection 152.09(1) of the Act shall be made to the Commission in writing.
+@ref Employment Insurance Regulations reg 25.1 (src:410)
+GIVEN `the election is made to the Commission` IS A BOOLEAN
+      `the election is made in writing` IS A BOOLEAN
+GIVETH A BOOLEAN
+-- out of range: subsection 152.09(1) of the Act (piece ei5) gives the election. "In writing" is not "on paper": s 2(3) of the Act lets a
+-- document or communication under the Regulations be in electronic form.
+DECIDE `reg 25.1 the election referred to in subsection 152.09(1) of the Act is made as required` IF
+        `the election is made to the Commission`
+    AND `the election is made in writing`
+
+§ `Regulation 26 - Claim for benefits`
+
+-- src:413 | 26 (1) Subject to subsection (2), a claim for benefits for a week of unemployment in a benefit period shall be made by a claimant within three weeks after the week for which benefits are claimed.
+-- src:414 | (2) Where a claimant has not made a claim for benefits for four or more consecutive weeks, the first claim for benefits after that period for a week of unemployment shall be made within one week after the week for which benefits are claimed.
+@ref Employment Insurance Regulations reg 26(1), (2) (src:413-414)
+GIVEN `a day in the week for which benefits are claimed` IS A DATE
+      `the number of consecutive weeks immediately before for which the claimant did not make a claim for benefits` IS A NUMBER
+GIVETH A DATE
+-- (2) applies to "the first claim for benefits after" a stretch of four or more consecutive weeks without a claim; (1) to every other claim.
+DECIDE `reg 26 the last day for making the claim for a week of unemployment` IS
+    `the last day of` (IF `the number of consecutive weeks immediately before for which the claimant did not make a claim for benefits` AT LEAST 4 THEN `weeks as days` 1 ELSE `weeks as days` 3) `days after` (`s 2(1) the Saturday that ends the week containing` `a day in the week for which benefits are claimed`)
+
+@ref Employment Insurance Regulations reg 26(1), (2) (src:413-414)
+GIVEN `a day in the week for which benefits are claimed` IS A DATE
+      `the number of consecutive weeks immediately before for which the claimant did not make a claim for benefits` IS A NUMBER
+      `the day on which the claim is made` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `reg 26 the claim for a week of unemployment is made in time` IF
+    `the day on which the claim is made` AT MOST (`reg 26 the last day for making the claim for a week of unemployment` `a day in the week for which benefits are claimed` `the number of consecutive weeks immediately before for which the claimant did not make a claim for benefits`)
+
+§ `Regulation 26.1 - Claimants who need not make periodic claims`
+
+§§ `Regulation 26.1(1) - definitions`
+
+-- src:415 | 26.1 (1) The definitions in this subsection apply in this section.
+-- src:416 | condition of entitlement to benefits means any requirement, circumstance or condition referred to in subsection 49(1) of the Act. (condition d'admissibilité au bénéfice des prestations)
+@ref Employment Insurance Regulations reg 26.1(1) "condition of entitlement to benefits" (src:415-416)
+GIVEN `the requirement, circumstance or condition is one referred to in subsection 49(1) of the Act` IS A BOOLEAN
+GIVETH A BOOLEAN
+-- out of range: subsection 49(1) of the Act (piece ei2)
+DECIDE `reg 26.1(1) condition of entitlement to benefits` IF
+    `the requirement, circumstance or condition is one referred to in subsection 49(1) of the Act`
+
+-- (a) benefits for a reason in 12(3)(a), (b), (d), (e) or (f) of the Act: the five periods of ss 22(2), 23(2), 23.1(4), 23.2(3), 23.3(3) (one
+-- per reason: pregnancy, a new-born or adopted child, a family member, a critically ill child, a critically ill adult), "to which is added
+-- the waiting period referred to in section 13 of the Act if that period has not already been served". (b) apprenticeship, s 25(1)(a):
+-- the period of attendance. (c) work-sharing, s 24: the period of work-sharing employment. NOTHING for any other benefits (regular or
+-- sickness): the definition says nothing about them. Fork F7 in NOTES.md: the waiting period is added at the end of the period.
+-- src:417 | period of eligibility means
+-- src:418 | (a) in respect of the benefits referred to in subparagraph (2)(c)(i), one of the following periods, to which is added the waiting period referred to in section 13 of the Act if that period has not already been served:
+-- src:419 | (i) the period referred to in subsection 22(2) of the Act and any extension of that period,
+-- src:420 | (ii) the period referred to in subsection 23(2) of the Act,
+-- src:421 | (iii) the period referred to in subsection 23.1(4) of the Act,
+-- src:422 | (iv) the period referred to in subsection 23.2(3) of the Act,
+-- src:423 | (v) the period referred to in subsection 23.3(3) of the Act;
+-- src:424 | (b) in respect of the benefits referred to in subparagraph (2)(c)(ii), the period during which the claimant attends a course or program, referred to in paragraph 25(1)(a) of the Act, that is an apprenticeship course or an apprenticeship program; and
+-- src:425 | (c) in respect of the benefits referred to in subparagraph (2)(c)(iii), the period during which the claimant is employed in work-sharing employment referred to in section 24 of the Act. (période d’admissibilité)
+@ref Employment Insurance Regulations reg 26.1(1) "period of eligibility" (src:417-425)
+GIVEN reason IS A `Reason for benefits`
+      `the claim is made under section 25 of the Act to attend an apprenticeship course or program` IS A BOOLEAN
+      `the claim is made under section 24 of the Act to receive work-sharing benefits` IS A BOOLEAN
+      `the period fixed for the benefits by the section of the Act that applies` IS A `Period of days`
+      `the number of days of the waiting period that have not already been served` IS A NUMBER
+GIVETH A MAYBE (`Period of days`)
+-- out of range: subsections 22(2), 23(2), 23.1(4), 23.2(3) and 23.3(3) of the Act (piece ei1), sections 24 and 25 (piece ei2), section 13 (piece ei1)
+DECIDE `reg 26.1(1) the period of eligibility` IS
+    BRANCH IF `reg 26.1(2)(c)(i) the benefits are for a reason set out in paragraph 12(3)(a), (b), (d), (e) or (f) of the Act` reason
+           THEN JUST (`Period of days` OF (`the period fixed for the benefits by the section of the Act that applies`'s `first day of the period`), (`the last day of` `the number of days of the waiting period that have not already been served` `days after` (`the period fixed for the benefits by the section of the Act that applies`'s `last day of the period`)))
+           IF `the claim is made under section 25 of the Act to attend an apprenticeship course or program`
+           THEN JUST `the period fixed for the benefits by the section of the Act that applies`
+           IF `the claim is made under section 24 of the Act to receive work-sharing benefits`
+           THEN JUST `the period fixed for the benefits by the section of the Act that applies`
+           OTHERWISE NOTHING
+
+§§ `Regulation 26.1(2) - the conditions`
+
+-- src:426 | (2) Notwithstanding section 26, a claimant is not required to make periodic claims for benefits in accordance with that section where
+-- src:427 | (a) the claimant makes an initial claim for benefits or a claim in respect of which subsection 26(2) applies;
+@ref Employment Insurance Regulations reg 26.1(2)(a) (src:427)
+GIVEN `the claimant makes an initial claim for benefits` IS A BOOLEAN
+      `the claimant makes a claim in respect of which subsection 26(2) applies` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 26.1(2)(a) the claim is an initial claim or one to which subsection 26(2) applies` IF
+        `the claimant makes an initial claim for benefits`
+    OR  `the claimant makes a claim in respect of which subsection 26(2) applies`
+
+-- src:428 | (b) the claimant's period of eligibility ends after June 26, 1999;
+@ref Employment Insurance Regulations reg 26.1(2)(b) (src:428)
+GIVETH A DATE
+`reg 26.1(2)(b) the day after which the period of eligibility must end` MEANS YMD 1999 6 26
+
+@ref Employment Insurance Regulations reg 26.1(2)(b) (src:428)
+GIVEN `the last day of the claimant's period of eligibility` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `reg 26.1(2)(b) the claimant's period of eligibility ends after June 26, 1999` IF
+    `the last day of the claimant's period of eligibility` GREATER THAN `reg 26.1(2)(b) the day after which the period of eligibility must end`
+
+-- src:429 | (c) the claimant makes a claim for benefits in respect of every week of unemployment in the claimant's period of eligibility
+-- src:430 | (i) for a reason set out in paragraph 12(3)(a), (b), (d), (e) or (f) of the Act,
+-- src:431 | (ii) under section 25 of the Act, to attend an apprenticeship course or an apprenticeship program, or
+-- src:432 | (iii) under section 24 of the Act, to receive work-sharing benefits, and
+@ref Employment Insurance Regulations reg 26.1(2)(c)(i) (src:430)
+GIVEN reason IS A `Reason for benefits`
+GIVETH A BOOLEAN
+-- Paragraphs 12(3)(a), (b), (d), (e), (f): pregnancy, a new-born or adopted child, a family member, a critically ill child and a critically ill
+-- adult. Paragraph (c), a prescribed illness, injury or quarantine, is NOT in the list, and neither is a reason other than those in 12(3).
+DECIDE `reg 26.1(2)(c)(i) the benefits are for a reason set out in paragraph 12(3)(a), (b), (d), (e) or (f) of the Act` IF
+    CONSIDER reason
+    WHEN `pregnancy` THEN TRUE
+    WHEN `caring for a new-born or adopted child` THEN TRUE
+    WHEN `care or support of a family member` THEN TRUE
+    WHEN `care or support of a critically ill child` THEN TRUE
+    WHEN `care or support of a critically ill adult` THEN TRUE
+    OTHERWISE FALSE
+
+@ref Employment Insurance Regulations reg 26.1(2)(c) (src:429-432)
+GIVEN reason IS A `Reason for benefits`
+      `the claim is made under section 25 of the Act to attend an apprenticeship course or program` IS A BOOLEAN
+      `the claim is made under section 24 of the Act to receive work-sharing benefits` IS A BOOLEAN
+      `the claimant makes a claim for benefits in respect of every week of unemployment in the claimant's period of eligibility` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 26.1(2)(c) the claimant makes a claim for every week of unemployment in the period of eligibility, for a reason in (i), under section 25 or under section 24` IF
+        `the claimant makes a claim for benefits in respect of every week of unemployment in the claimant's period of eligibility`
+    AND (   `reg 26.1(2)(c)(i) the benefits are for a reason set out in paragraph 12(3)(a), (b), (d), (e) or (f) of the Act` reason
+         OR `the claim is made under section 25 of the Act to attend an apprenticeship course or program`
+         OR `the claim is made under section 24 of the Act to receive work-sharing benefits`)
+
+-- src:433 | (d) the claimant completes a form, provided by the Commission, stating that
+-- src:434 | (i) to the best of the claimant’s knowledge at the time of completing the form, there are no conditions of entitlement to benefits that will not be met for each week in the period of eligibility, except in respect of earnings that may be deducted under section 19, 22, 23, 23.1, 23.2 or 23.3 of the Act during that period,
+-- src:435 | (ii) the claimant will notify the Commission as soon as possible if the claimant ceases to meet a condition of entitlement to benefits at any time during the period of eligibility and failure to meet that condition has the effect of reducing or eliminating any benefits for any week in the period of eligibility, or if the claimant has earnings referred to in subparagraph (i) in respect of that period, and
+-- src:436 | (iii) the claimant will notify the Commission at the end of the period of eligibility whether or not they have met the conditions of entitlement to benefits for each week in the period of eligibility and whether or not they have declared all earnings that could be deducted under section 19, 22, 23, 23.1, 23.2 or 23.3 of the Act during that period.
+@ref Employment Insurance Regulations reg 26.1(2)(d) (src:433-436)
+GIVEN `the claimant completes a form provided by the Commission` IS A BOOLEAN
+      `the form states (i): to the best of the claimant's knowledge at the time of completing it, no conditions of entitlement to benefits will fail to be met for any week in the period of eligibility, except for earnings deducted under section 19, 22, 23, 23.1, 23.2 or 23.3 of the Act` IS A BOOLEAN
+      `the form states (ii): the claimant will notify the Commission as soon as possible of a failure to meet a condition that reduces or eliminates benefits, or of earnings that may be deducted` IS A BOOLEAN
+      `the form states (iii): the claimant will notify the Commission at the end of the period of eligibility whether the conditions were met and all deductible earnings declared` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 26.1(2)(d) the claimant completes the Commission's form stating (i), (ii) and (iii)` IF
+        `the claimant completes a form provided by the Commission`
+    AND `the form states (i): to the best of the claimant's knowledge at the time of completing it, no conditions of entitlement to benefits will fail to be met for any week in the period of eligibility, except for earnings deducted under section 19, 22, 23, 23.1, 23.2 or 23.3 of the Act`
+    AND `the form states (ii): the claimant will notify the Commission as soon as possible of a failure to meet a condition that reduces or eliminates benefits, or of earnings that may be deducted`
+    AND `the form states (iii): the claimant will notify the Commission at the end of the period of eligibility whether the conditions were met and all deductible earnings declared`
+
+-- (ii): what the claimant undertakes to notify as soon as possible, and (iii): when the last notification is due.
+@ref Employment Insurance Regulations reg 26.1(2)(d)(ii) (src:435)
+GIVEN `the claimant ceases to meet a condition of entitlement to benefits at some time during the period of eligibility` IS A BOOLEAN
+      `failure to meet that condition has the effect of reducing or eliminating benefits for some week in the period of eligibility` IS A BOOLEAN
+      `the claimant has earnings that may be deducted under section 19, 22, 23, 23.1, 23.2 or 23.3 of the Act in respect of that period` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 26.1(2)(d)(ii) the claimant must notify the Commission as soon as possible` IF
+        (   `the claimant ceases to meet a condition of entitlement to benefits at some time during the period of eligibility`
+         AND `failure to meet that condition has the effect of reducing or eliminating benefits for some week in the period of eligibility`)
+    OR  `the claimant has earnings that may be deducted under section 19, 22, 23, 23.1, 23.2 or 23.3 of the Act in respect of that period`
+
+@ref Employment Insurance Regulations reg 26.1(2)(d)(iii) (src:436)
+GIVEN `the claimant's period of eligibility` IS A `Period of days`
+GIVETH A DATE
+-- "at the end of the period of eligibility": the last day of the period.
+DECIDE `reg 26.1(2)(d)(iii) the day at the end of the period of eligibility on which the claimant must notify the Commission` IS
+    `the claimant's period of eligibility`'s `last day of the period`
+
+§§ `Regulation 26.1(3) - when the Commission learns the claimant fails a condition`
+
+-- src:437 | (3) If the Commission becomes aware that the claimant does not meet a condition of entitlement to benefits during the claimant's period of eligibility, this section shall cease to apply in respect of the claimant's claim for benefits as of the date on which the Commission becomes aware of the claimant's failure to meet the condition.
+@ref Employment Insurance Regulations reg 26.1(3) (src:437)
+GIVEN `the day on which the Commission becomes aware that the claimant does not meet a condition of entitlement to benefits, if it does` IS A MAYBE DATE
+      `the day in question` IS A DATE
+GIVETH A BOOLEAN
+-- "this section shall cease to apply ... as of the date on which the Commission becomes aware": it applies on every day before that date (fork F8).
+DECIDE `reg 26.1(3) section 26.1 still applies to the claim on the day` IF
+    CONSIDER `the day on which the Commission becomes aware that the claimant does not meet a condition of entitlement to benefits, if it does`
+    WHEN NOTHING THEN TRUE
+    WHEN JUST aware THEN `the day in question` LESS THAN aware
+
+§§ `Regulation 26.1(2), (3) - the exemption from periodic claims as a whole`
+
+@ref Employment Insurance Regulations reg 26.1(2), (3) (src:426-437)
+GIVEN `the claimant makes an initial claim for benefits` IS A BOOLEAN
+      `the claimant makes a claim in respect of which subsection 26(2) applies` IS A BOOLEAN
+      `the last day of the claimant's period of eligibility` IS A DATE
+      reason IS A `Reason for benefits`
+      `the claim is made under section 25 of the Act to attend an apprenticeship course or program` IS A BOOLEAN
+      `the claim is made under section 24 of the Act to receive work-sharing benefits` IS A BOOLEAN
+      `the claimant makes a claim for benefits in respect of every week of unemployment in the claimant's period of eligibility` IS A BOOLEAN
+      `the claimant completes a form provided by the Commission` IS A BOOLEAN
+      `the form states (i)` IS A BOOLEAN
+      `the form states (ii)` IS A BOOLEAN
+      `the form states (iii)` IS A BOOLEAN
+      `the day on which the Commission becomes aware that the claimant does not meet a condition of entitlement to benefits, if it does` IS A MAYBE DATE
+      `the day in question` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `reg 26.1 the claimant is not required to make periodic claims on the day` IF
+        `reg 26.1(2)(a) the claim is an initial claim or one to which subsection 26(2) applies` `the claimant makes an initial claim for benefits` `the claimant makes a claim in respect of which subsection 26(2) applies`
+    AND `reg 26.1(2)(b) the claimant's period of eligibility ends after June 26, 1999` `the last day of the claimant's period of eligibility`
+    AND `reg 26.1(2)(c) the claimant makes a claim for every week of unemployment in the period of eligibility, for a reason in (i), under section 25 or under section 24` reason `the claim is made under section 25 of the Act to attend an apprenticeship course or program` `the claim is made under section 24 of the Act to receive work-sharing benefits` `the claimant makes a claim for benefits in respect of every week of unemployment in the claimant's period of eligibility`
+    AND `reg 26.1(2)(d) the claimant completes the Commission's form stating (i), (ii) and (iii)` `the claimant completes a form provided by the Commission` `the form states (i)` `the form states (ii)` `the form states (iii)`
+    AND `reg 26.1(3) section 26.1 still applies to the claim on the day` `the day on which the Commission becomes aware that the claimant does not meet a condition of entitlement to benefits, if it does` `the day in question`
+
+§ `Regulation 27 - Persons with mental disabilities, incapacitated persons and deceased persons`
+
+-- src:440 | 27 (1) If an initial claim for benefits or a claim for benefits for a week of unemployment is made to the Commission on behalf of a person with mental disabilities or an incapacitated person, the Commission shall authorize payment of the benefits to any person acting on behalf of the person if the person on whose behalf the claim is made meets the requirements of Part I, VII.1 or VIII of the Act.
+@ref Employment Insurance Regulations reg 27(1) (src:440)
+GIVEN `the claim is made to the Commission on behalf of a person with mental disabilities or an incapacitated person` IS A BOOLEAN
+      `the person on whose behalf the claim is made meets the requirements of Part I, VII.1 or VIII of the Act` IS A BOOLEAN
+GIVETH A BOOLEAN
+-- out of range: Parts I, VII.1 and VIII of the Act (pieces ei1, ei2, ei5, ei4): the second fact is their outcome.
+DECIDE `reg 27(1) payment of the benefits must be authorized to the person acting on behalf of the claimant` IF
+        `the claim is made to the Commission on behalf of a person with mental disabilities or an incapacitated person`
+    AND `the person on whose behalf the claim is made meets the requirements of Part I, VII.1 or VIII of the Act`
+
+-- src:441 | (2) If an initial claim for benefits or a claim for benefits for a week of unemployment is made to the Commission by the legal representative of a deceased person, the Commission shall authorize payment of the benefits to the legal representative if the deceased person, at the time of death, met the requirements of Part I, VII.1 or VIII of the Act.
+@ref Employment Insurance Regulations reg 27(2) (src:441)
+GIVEN `the claim is made by the legal representative of a deceased person` IS A BOOLEAN
+      `the deceased person, at the time of death, met the requirements of Part I, VII.1 or VIII of the Act` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 27(2) payment of the benefits must be authorized to the legal representative of the deceased person` IF
+        `the claim is made by the legal representative of a deceased person`
+    AND `the deceased person, at the time of death, met the requirements of Part I, VII.1 or VIII of the Act`
+
+-- src:442 | (3) For the purposes of subsection (2), "legal representative" means the executor or administrator of the estate of the deceased person.
+@ref Employment Insurance Regulations reg 27(3) (src:442)
+GIVEN `the person is the executor of the estate of the deceased person` IS A BOOLEAN
+      `the person is the administrator of the estate of the deceased person` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 27(3) legal representative` IF
+        `the person is the executor of the estate of the deceased person`
+    OR  `the person is the administrator of the estate of the deceased person`
+
+-- src:443 | (4) Notwithstanding subsection (2), any person entitled to succeed to the property of a deceased person may make a claim for benefits, in accordance with subsections (5) and (6), which benefits are payable to the person where the total value of the estate of the deceased person is not sufficient to warrant obtaining
+-- src:444 | (a) in the case of an intestate succession, letters of administration; or
+-- src:445 | (b) in the case of a testate succession, probate of the will of the deceased person.
+@ref Employment Insurance Regulations reg 27(4) (src:443-445)
+GIVEN `the succession is intestate` IS A BOOLEAN
+      `the total value of the estate is not sufficient to warrant obtaining letters of administration` IS A BOOLEAN
+      `the total value of the estate is not sufficient to warrant obtaining probate of the will` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 27(4) the total value of the estate of the deceased person is not sufficient to warrant obtaining a grant` IS
+    IF `the succession is intestate`
+    THEN `the total value of the estate is not sufficient to warrant obtaining letters of administration`
+    ELSE `the total value of the estate is not sufficient to warrant obtaining probate of the will`
+
+-- src:446 | (5) The claim for benefits referred to in subsection (4) shall be made on a form supplied by the Commission and shall include
+-- src:447 | (a) a statutory declaration, signed by the applicant, stating that the applicant is a person entitled to succeed to the property of the deceased person; and
+-- src:448 | (b) an undertaking signed by the applicant to repay to the Receiver General any moneys paid in error to the applicant.
+@ref Employment Insurance Regulations reg 27(5) (src:446-448)
+GIVEN `the claim is made on a form supplied by the Commission` IS A BOOLEAN
+      `the claim includes a statutory declaration, signed by the applicant, stating that the applicant is a person entitled to succeed to the property of the deceased person` IS A BOOLEAN
+      `the claim includes an undertaking, signed by the applicant, to repay to the Receiver General any moneys paid in error to the applicant` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 27(5) the claim for benefits is made on the form and includes the declaration and the undertaking` IF
+        `the claim is made on a form supplied by the Commission`
+    AND `the claim includes a statutory declaration, signed by the applicant, stating that the applicant is a person entitled to succeed to the property of the deceased person`
+    AND `the claim includes an undertaking, signed by the applicant, to repay to the Receiver General any moneys paid in error to the applicant`
+
+-- src:449 | (6) When making a claim for benefits referred to in subsection (4), the applicant shall also submit
+-- src:450 | (a) a copy of the will of the deceased person, if one exists; and
+-- src:451 | (b) a release of all claims in respect of the amount payable, signed by all persons other than the applicant, if any, who are entitled to succeed to the property of the deceased person.
+@ref Employment Insurance Regulations reg 27(6) (src:449-451)
+GIVEN `a will of the deceased person exists` IS A BOOLEAN
+      `the applicant submits a copy of the will` IS A BOOLEAN
+      `there are other persons entitled to succeed to the property of the deceased person` IS A BOOLEAN
+      `the applicant submits a release of all claims in respect of the amount payable, signed by all of those other persons` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 27(6) the applicant submits the copy of the will, if one exists, and the release signed by all other persons entitled to succeed` IF
+        ((NOT (`a will of the deceased person exists`)) OR `the applicant submits a copy of the will`)
+    AND ((NOT (`there are other persons entitled to succeed to the property of the deceased person`)) OR `the applicant submits a release of all claims in respect of the amount payable, signed by all of those other persons`)
+
+-- (4): "any person entitled to succeed to the property of a deceased person may make a claim for benefits, in accordance with subsections
+-- (5) and (6), which benefits are payable to the person where the total value of the estate ... is not sufficient to warrant obtaining ...".
+-- Fork F9 in NOTES.md: the "where" clause is read as a condition of the benefits being PAYABLE to that person, not of making the claim.
+@ref Employment Insurance Regulations reg 27(4) (src:443-445)
+GIVEN `the person is entitled to succeed to the property of the deceased person` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 27(4) the person may make a claim for benefits notwithstanding subsection (2)` IF
+    `the person is entitled to succeed to the property of the deceased person`
+
+@ref Employment Insurance Regulations reg 27(4) (src:443-445)
+GIVEN `the person is entitled to succeed to the property of the deceased person` IS A BOOLEAN
+      `the total value of the estate is not sufficient to warrant obtaining the grant that applies` IS A BOOLEAN
+      `the claim is made in accordance with subsection (5)` IS A BOOLEAN
+      `the claim is made in accordance with subsection (6)` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 27(4) the benefits are payable to the person entitled to succeed to the property of the deceased person` IF
+        `reg 27(4) the person may make a claim for benefits notwithstanding subsection (2)` `the person is entitled to succeed to the property of the deceased person`
+    AND `the total value of the estate is not sufficient to warrant obtaining the grant that applies`
+    AND `the claim is made in accordance with subsection (5)`
+    AND `the claim is made in accordance with subsection (6)`
+
+§ `Regulation 28 - Payments in advance`
+
+-- (b)(i): "the week in which Christmas Day falls or the week that precedes the week in which Christmas Day falls". A week is Sunday to
+-- Saturday; Christmas Day is 25 December of the year in which the week's Sunday falls.
+-- src:457 | (i) the week in which Christmas Day falls or the week that precedes the week in which Christmas Day falls, or
+@ref Employment Insurance Regulations reg 28(b)(i) (src:457)
+GIVEN `a day in the week of unemployment` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `reg 28(b)(i) the week is the week in which Christmas Day falls or the week that precedes it` IF
+        `the Sunday of the week` EQUALS `the Sunday of the week in which Christmas Day falls`
+    OR  (`the Sunday of the week` PLUS 7) EQUALS `the Sunday of the week in which Christmas Day falls`
+    WHERE
+        `the Sunday of the week` MEANS `s 2(1) the Sunday that begins the week containing` `a day in the week of unemployment`
+        `the Sunday of the week in which Christmas Day falls` MEANS `s 2(1) the Sunday that begins the week containing` (YMD (`s 2(1) the year containing` `the Sunday of the week`) 12 25)
+
+-- src:454 | 28 The Commission may pay benefits for a week of unemployment to a claimant in advance of the customary time for paying benefits where
+-- src:455 | (a) that unemployment arises from the occurrence of a fire, flood, hurricane, epidemic or other natural disaster or act of God at the factory, workshop or other premises or in the area where the claimant is employed;
+-- src:456 | (b) that week of unemployment is
+-- src:457 | (i) the week in which Christmas Day falls or the week that precedes the week in which Christmas Day falls, or
+-- src:458 | (ii) a week during which the claimant is attending a course or program, referred to in paragraph 25(1)(a) of the Act, that is an apprenticeship course or apprenticeship program; or
+-- src:459 | (c) there is, or is anticipated to be, a disruption of electrical service, electronic processes or telecommunications that will prevent the processing of claims for benefits in the normal manner and in a timely fashion.
+@ref Employment Insurance Regulations reg 28 (src:454-459)
+GIVEN `the unemployment arises from the occurrence of a fire, flood, hurricane, epidemic or other natural disaster or act of God at the factory, workshop or other premises or in the area where the claimant is employed` IS A BOOLEAN
+      `a day in the week of unemployment` IS A DATE
+      `the claimant is attending a course or program, referred to in paragraph 25(1)(a) of the Act, that is an apprenticeship course or apprenticeship program` IS A BOOLEAN
+      `there is, or is anticipated to be, a disruption of electrical service, electronic processes or telecommunications that will prevent the processing of claims for benefits in the normal manner and in a timely fashion` IS A BOOLEAN
+GIVETH A BOOLEAN
+-- The Commission "may" pay in advance: this is the list of cases in which it has that power, not a decision that it will use it.
+DECIDE `reg 28 the Commission may pay benefits for the week of unemployment in advance of the customary time` IF
+        `the unemployment arises from the occurrence of a fire, flood, hurricane, epidemic or other natural disaster or act of God at the factory, workshop or other premises or in the area where the claimant is employed`
+    OR  `reg 28(b)(i) the week is the week in which Christmas Day falls or the week that precedes it` `a day in the week of unemployment`
+    OR  `the claimant is attending a course or program, referred to in paragraph 25(1)(a) of the Act, that is an apprenticeship course or apprenticeship program`
+    OR  `there is, or is anticipated to be, a disruption of electrical service, electronic processes or telecommunications that will prevent the processing of claims for benefits in the normal manner and in a timely fashion`

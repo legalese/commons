@@ -1,0 +1,166 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `er1-hours-of-insurable-employment`
+
+-- Tests of er1-hours-of-insurable-employment (Employment Insurance Regulations, regs 9.1 to 11). Piece er1.
+-- Every expected value is written by hand from the text of the Regulations (../../registers/source-bundle/SOR-96-332.txt), beside the assertion,
+-- before the rule was run. The argument order is the order of the rule's GIVEN lines. A rule answers JUST hours when its
+-- regulation fixes the hours and NOTHING when it does not.
+-- Calendar used below: Sunday 18 October 2026, so Saturday 24 October 2026 ends that week (the core's week is Sunday to Saturday).
+
+§ `Regulation 10.2 - an hour is an hour; a fraction counts as a whole hour (src:188-190)`
+
+-- 10.2(a) arguments: hours at the ordinary rate; hours at an overtime rate
+#ASSERT `reg 10.2(a) the number of hours of insurable employment` 10 4 EQUALS 14      -- four overtime hours are four hours, not six
+#ASSERT `reg 10.2(a) the number of hours of insurable employment` 7.5 2 EQUALS 9.5
+#ASSERT `reg 10.2(a) the number of hours of insurable employment` 0 0 EQUALS 0
+-- 10.2(b)
+#ASSERT `reg 10.2(b) hours with a fraction of an hour counted as a whole hour` 7 EQUALS 7
+#ASSERT `reg 10.2(b) hours with a fraction of an hour counted as a whole hour` 7.01 EQUALS 8
+#ASSERT `reg 10.2(b) hours with a fraction of an hour counted as a whole hour` 7.5 EQUALS 8
+#ASSERT `reg 10.2(b) hours with a fraction of an hour counted as a whole hour` 0.2 EQUALS 1
+#ASSERT `reg 10.2(b) hours with a fraction of an hour counted as a whole hour` 0 EQUALS 0
+
+§ `Regulations 9.1 and 9.2 - hours actually worked (src:169-170)`
+
+-- 9.1 arguments: earnings are paid on an hourly basis; hours actually worked and remunerated
+#ASSERT `reg 9.1 the hours considered to have been worked by a person paid on an hourly basis` TRUE 40 EQUALS JUST 40
+#ASSERT `reg 9.1 the hours considered to have been worked by a person paid on an hourly basis` TRUE 37.5 EQUALS JUST 38    -- reg 10.2(b)
+#ASSERT `reg 9.1 the hours considered to have been worked by a person paid on an hourly basis` FALSE 40 EQUALS NOTHING     -- not paid by the hour: reg 9.1 says nothing
+-- 9.2 arguments: earnings unpaid for the reasons in subsection 2(2) of the IECP Regulations; section 10 fixes the hours; hours actually worked in the period
+#ASSERT `reg 9.2 the hours deemed to have been worked where earnings remain unpaid` TRUE FALSE 120 EQUALS JUST 120
+#ASSERT `reg 9.2 the hours deemed to have been worked where earnings remain unpaid` TRUE FALSE 120.2 EQUALS JUST 121
+#ASSERT `reg 9.2 the hours deemed to have been worked where earnings remain unpaid` TRUE TRUE 120 EQUALS NOTHING          -- "Subject to section 10"
+#ASSERT `reg 9.2 the hours deemed to have been worked where earnings remain unpaid` FALSE FALSE 120 EQUALS NOTHING
+
+§ `Regulation 10(1) - the employer provides evidence (src:171)`
+
+-- arguments: earnings not paid on an hourly basis; the employer provides evidence of the hours actually worked and remunerated; that number
+#ASSERT `reg 10(1) the hours deemed to have been worked where the employer provides evidence` TRUE TRUE 80 EQUALS JUST 80
+#ASSERT `reg 10(1) the hours deemed to have been worked where the employer provides evidence` TRUE TRUE 79.1 EQUALS JUST 80
+#ASSERT `reg 10(1) the hours deemed to have been worked where the employer provides evidence` FALSE TRUE 80 EQUALS NOTHING    -- paid by the hour: reg 9.1, not reg 10(1)
+#ASSERT `reg 10(1) the hours deemed to have been worked where the employer provides evidence` TRUE FALSE 80 EQUALS NOTHING   -- no evidence
+
+§ `Regulation 10(2) and (3) - agreement, and the Minister's figure (src:172-173)`
+
+-- the situation: arguments: subsection (1) applies; section 9.1 applies; the employer cannot establish with certainty the hours
+#ASSERT `reg 10(2) the employer cannot establish the hours and neither subsection (1) nor section 9.1 applies` FALSE FALSE TRUE
+#ASSERT NOT (`reg 10(2) the employer cannot establish the hours and neither subsection (1) nor section 9.1 applies` TRUE FALSE TRUE)   -- "Except where subsection (1) ... apply"
+#ASSERT NOT (`reg 10(2) the employer cannot establish the hours and neither subsection (1) nor section 9.1 applies` FALSE TRUE TRUE)   -- "... and section 9.1 apply"
+#ASSERT NOT (`reg 10(2) the employer cannot establish the hours and neither subsection (1) nor section 9.1 applies` FALSE FALSE FALSE)  -- the employer can establish the hours
+-- (2) arguments: the situation arises; the parties agree; the agreed number is reasonable; the agreed number
+#ASSERT `reg 10(2) the hours deemed to have been worked where the parties agree` TRUE TRUE TRUE 100 EQUALS JUST 100
+#ASSERT `reg 10(2) the hours deemed to have been worked where the parties agree` TRUE TRUE FALSE 100 EQUALS NOTHING     -- an unreasonable agreement goes to subsection (3)
+#ASSERT `reg 10(2) the hours deemed to have been worked where the parties agree` TRUE FALSE FALSE 0 EQUALS NOTHING      -- no agreement
+#ASSERT `reg 10(2) the hours deemed to have been worked where the parties agree` FALSE TRUE TRUE 100 EQUALS NOTHING     -- the situation of subsection (2) does not arise
+-- (3) arguments: the situation arises; the parties agree; the agreed number is reasonable; no agreement can be reached; the Minister's figure
+#ASSERT `reg 10(3) the hours deemed to have been worked as established by the Minister of National Revenue` TRUE TRUE FALSE FALSE 90 EQUALS JUST 90    -- the agreed number is not reasonable
+#ASSERT `reg 10(3) the hours deemed to have been worked as established by the Minister of National Revenue` TRUE FALSE FALSE TRUE 90 EQUALS JUST 90    -- no agreement can be reached
+#ASSERT `reg 10(3) the hours deemed to have been worked as established by the Minister of National Revenue` TRUE TRUE TRUE FALSE 90 EQUALS NOTHING     -- a reasonable agreement stands
+#ASSERT `reg 10(3) the hours deemed to have been worked as established by the Minister of National Revenue` TRUE FALSE FALSE FALSE 90 EQUALS NOTHING    -- not (yet) a case of no agreement
+#ASSERT `reg 10(3) the hours deemed to have been worked as established by the Minister of National Revenue` FALSE FALSE FALSE TRUE 90 EQUALS NOTHING    -- the situation of subsection (2) does not arise
+
+§ `Regulation 10(5) - the maximum under subsection (4) (src:175)`
+
+-- arguments: first day of the period of employment; last day of the period of employment
+#ASSERT `reg 10(5) the maximum number of hours of insurable employment deemed under subsection (4)` (YMD 2026 10 18) (YMD 2026 10 24) EQUALS 35   -- a whole week: seven days of seven hours is 49, but 35 is "an overall maximum ... per week"
+#ASSERT `reg 10(5) the maximum number of hours of insurable employment deemed under subsection (4)` (YMD 2026 10 19) (YMD 2026 10 23) EQUALS 35   -- five days at seven hours is exactly 35
+#ASSERT `reg 10(5) the maximum number of hours of insurable employment deemed under subsection (4)` (YMD 2026 10 19) (YMD 2026 10 21) EQUALS 21   -- three days at seven hours
+#ASSERT `reg 10(5) the maximum number of hours of insurable employment deemed under subsection (4)` (YMD 2026 10 21) (YMD 2026 10 21) EQUALS 7    -- one day
+#ASSERT `reg 10(5) the maximum number of hours of insurable employment deemed under subsection (4)` (YMD 2026 10 22) (YMD 2026 10 28) EQUALS 49   -- three days in one week (21) and four in the next (28)
+#ASSERT `reg 10(5) the maximum number of hours of insurable employment deemed under subsection (4)` (YMD 2026 10 18) (YMD 2026 10 31) EQUALS 70   -- two whole weeks
+#ASSERT `reg 10(5) the maximum number of hours of insurable employment deemed under subsection (4)` (YMD 2026 10 20) (YMD 2026 10 29) EQUALS 70   -- five days (35) in each of two weeks
+-- the weekly helper itself: arguments: Sunday of the first week; first day; last day
+#ASSERT `reg 10(5) the maximum number of hours for the weeks of the period from the week beginning` (YMD 2026 11 1) (YMD 2026 10 20) (YMD 2026 10 29) EQUALS 0   -- the week begins after the last day
+
+§ `Regulation 10(4) - earnings divided by the minimum wage (src:174-175)`
+
+-- arguments: subsection (1) applies; section 9.1 applies; the hours are not known or ascertainable by the employer; total earnings; minimum wage on January 1; evidence of overtime or excess hours; first day; last day
+#ASSERT `reg 10(4) the hours deemed to have been worked where the actual hours are not known` FALSE FALSE TRUE 420 14 FALSE (YMD 2026 10 19) (YMD 2026 10 23) EQUALS JUST 30    -- 420 / 14 = 30, under the 35 hours of the week
+#ASSERT `reg 10(4) the hours deemed to have been worked where the actual hours are not known` FALSE FALSE TRUE 490 14 FALSE (YMD 2026 10 19) (YMD 2026 10 23) EQUALS JUST 35    -- 490 / 14 = 35, exactly the maximum
+#ASSERT `reg 10(4) the hours deemed to have been worked where the actual hours are not known` FALSE FALSE TRUE 700 14 FALSE (YMD 2026 10 19) (YMD 2026 10 23) EQUALS JUST 35    -- 700 / 14 = 50, held to 35 for the week
+#ASSERT `reg 10(4) the hours deemed to have been worked where the actual hours are not known` FALSE FALSE TRUE 700 14 TRUE (YMD 2026 10 19) (YMD 2026 10 23) EQUALS JUST 50     -- evidence of overtime: no maximum
+#ASSERT `reg 10(4) the hours deemed to have been worked where the actual hours are not known` FALSE FALSE TRUE 100 15 FALSE (YMD 2026 10 19) (YMD 2026 10 23) EQUALS JUST 7     -- 100 / 15 = 6.67 counts as 7 whole hours
+#ASSERT `reg 10(4) the hours deemed to have been worked where the actual hours are not known` FALSE FALSE TRUE 200 15 FALSE (YMD 2026 10 21) (YMD 2026 10 21) EQUALS JUST 7     -- 200 / 15 = 13.33, held to seven hours for the one day
+#ASSERT `reg 10(4) the hours deemed to have been worked where the actual hours are not known` TRUE FALSE TRUE 420 14 FALSE (YMD 2026 10 19) (YMD 2026 10 23) EQUALS NOTHING     -- "Except where subsection (1) ... apply"
+#ASSERT `reg 10(4) the hours deemed to have been worked where the actual hours are not known` FALSE TRUE TRUE 420 14 FALSE (YMD 2026 10 19) (YMD 2026 10 23) EQUALS NOTHING     -- "... and section 9.1 apply"
+#ASSERT `reg 10(4) the hours deemed to have been worked where the actual hours are not known` FALSE FALSE FALSE 420 14 FALSE (YMD 2026 10 19) (YMD 2026 10 23) EQUALS NOTHING   -- the hours are known or ascertainable
+#ASSERT `reg 10(4) the hours deemed to have been worked where the actual hours are not known` FALSE FALSE TRUE 420 0 FALSE (YMD 2026 10 19) (YMD 2026 10 23) EQUALS NOTHING     -- no minimum wage figure to divide by
+
+§ `Regulation 10(6) - the order in which the methods are applied (src:176)`
+
+-- arguments: section 10.1 fixes the hours; the answers under reg 9.1, reg 10(1), reg 10(4), reg 10(2), reg 10(3)
+#ASSERT `reg 9.1 and reg 10(1) to (6) the hours fixed by the first method that applies` FALSE (JUST 40) (JUST 41) (JUST 42) (JUST 43) (JUST 44) EQUALS JUST 40
+#ASSERT `reg 9.1 and reg 10(1) to (6) the hours fixed by the first method that applies` FALSE NOTHING (JUST 41) (JUST 42) (JUST 43) (JUST 44) EQUALS JUST 41
+#ASSERT `reg 9.1 and reg 10(1) to (6) the hours fixed by the first method that applies` FALSE NOTHING NOTHING (JUST 42) (JUST 43) (JUST 44) EQUALS JUST 42   -- (4) before (2) (fork F8)
+#ASSERT `reg 9.1 and reg 10(1) to (6) the hours fixed by the first method that applies` FALSE NOTHING NOTHING NOTHING (JUST 43) (JUST 44) EQUALS JUST 43
+#ASSERT `reg 9.1 and reg 10(1) to (6) the hours fixed by the first method that applies` FALSE NOTHING NOTHING NOTHING NOTHING (JUST 44) EQUALS JUST 44
+#ASSERT `reg 9.1 and reg 10(1) to (6) the hours fixed by the first method that applies` FALSE NOTHING NOTHING NOTHING NOTHING NOTHING EQUALS NOTHING
+#ASSERT `reg 9.1 and reg 10(1) to (6) the hours fixed by the first method that applies` TRUE (JUST 40) (JUST 41) (JUST 42) (JUST 43) (JUST 44) EQUALS NOTHING    -- "subject to section 10.1"
+#ASSERT `reg 10(7) repealed in this text` EQUALS "reg 10(7): [Repealed, SOR/97-31, s. 4]"
+
+§ `Regulation 10.01 - hours of availability (src:178-179)`
+
+-- (1) arguments: required to be available awaiting a request to work; the rate the person is paid for those hours; the rate that would be paid if the person had worked; hours in the period
+#ASSERT `reg 10.01(1) the hours of availability deemed to be hours of insurable employment` TRUE 20 20 12 EQUALS JUST 12       -- "equivalent": equal rates
+#ASSERT `reg 10.01(1) the hours of availability deemed to be hours of insurable employment` TRUE 25 20 12 EQUALS JUST 12       -- "or superior"
+#ASSERT `reg 10.01(1) the hours of availability deemed to be hours of insurable employment` TRUE 19.99 20 12 EQUALS NOTHING   -- a lower rate
+#ASSERT `reg 10.01(1) the hours of availability deemed to be hours of insurable employment` FALSE 25 20 12 EQUALS NOTHING     -- not required to be available
+-- (2) arguments: required to be present at the employer's premises; paid for those hours; hours in the period
+#ASSERT `reg 10.01(2) the hours of presence at the premises deemed to be hours of insurable employment` TRUE TRUE 8 EQUALS JUST 8
+#ASSERT `reg 10.01(2) the hours of presence at the premises deemed to be hours of insurable employment` TRUE FALSE 8 EQUALS NOTHING   -- not paid for those hours
+#ASSERT `reg 10.01(2) the hours of presence at the premises deemed to be hours of insurable employment` FALSE TRUE 8 EQUALS NOTHING
+-- both: arguments: the answer under (2); the answer under (1)
+#ASSERT `reg 10.01 the hours deemed to be hours of insurable employment` (JUST 8) (JUST 12) EQUALS JUST 8     -- "Despite subsection (1)"
+#ASSERT `reg 10.01 the hours deemed to be hours of insurable employment` NOTHING (JUST 12) EQUALS JUST 12
+#ASSERT `reg 10.01 the hours deemed to be hours of insurable employment` NOTHING NOTHING EQUALS NOTHING
+
+§ `Regulation 10.1 and 10.11 - paid leave and paid non-working days (src:180-187)`
+
+-- 10.1(1) arguments: remunerated for a period of paid leave; hours normally worked and remunerated in that period
+#ASSERT `reg 10.1(1) the hours deemed to have been worked during a period of paid leave` TRUE 75 EQUALS JUST 75
+#ASSERT `reg 10.1(1) the hours deemed to have been worked during a period of paid leave` TRUE 37.5 EQUALS JUST 38
+#ASSERT `reg 10.1(1) the hours deemed to have been worked during a period of paid leave` FALSE 75 EQUALS NOTHING
+-- 10.11 arguments: the lump sum amount; the amounts excluded by subsection 2(3) of the IECP Regulations
+#ASSERT `reg 10.11 the amount to be taken into account in determining the hours` 1000 100 EQUALS 900
+-- 10.1(2) arguments: remunerated by a lump sum for leave; hours normally worked and remunerated in the period; the lump sum; excluded amounts; normal hourly rate
+#ASSERT `reg 10.1(2) the hours deemed to have been worked during a period of leave paid as a lump sum` TRUE 80 1000 0 20 EQUALS JUST 50     -- (b) 1000 / 20 = 50 is the lesser of 80 and 50
+#ASSERT `reg 10.1(2) the hours deemed to have been worked during a period of leave paid as a lump sum` TRUE 80 2000 0 20 EQUALS JUST 80     -- (a) 80 is the lesser of 80 and 100
+#ASSERT `reg 10.1(2) the hours deemed to have been worked during a period of leave paid as a lump sum` TRUE 80 1000 200 20 EQUALS JUST 40   -- reg 10.11: (1000 - 200) / 20 = 40
+#ASSERT `reg 10.1(2) the hours deemed to have been worked during a period of leave paid as a lump sum` TRUE 80 1010 0 20 EQUALS JUST 51     -- 50.5 counts as 51
+#ASSERT `reg 10.1(2) the hours deemed to have been worked during a period of leave paid as a lump sum` TRUE 50 1000 0 20 EQUALS JUST 50     -- equal: either
+#ASSERT `reg 10.1(2) the hours deemed to have been worked during a period of leave paid as a lump sum` TRUE 80 1000 0 0 EQUALS NOTHING     -- no hourly rate to divide by
+#ASSERT `reg 10.1(2) the hours deemed to have been worked during a period of leave paid as a lump sum` FALSE 80 1000 0 20 EQUALS NOTHING   -- not a lump sum for leave
+-- 10.1(3) arguments: remunerated for a non-working day; works on that day; hours actually worked that day; hours normally worked that day
+#ASSERT `reg 10.1(3) the hours deemed to have been worked on a non-working day` TRUE TRUE 8 7.5 EQUALS JUST 8     -- (a) the greater of 8 and 7.5
+#ASSERT `reg 10.1(3) the hours deemed to have been worked on a non-working day` TRUE TRUE 6 7 EQUALS JUST 7       -- (a) the greater of 6 and 7
+#ASSERT `reg 10.1(3) the hours deemed to have been worked on a non-working day` TRUE TRUE 6 7.5 EQUALS JUST 8     -- (a) the greater of 6 and 7.5 is 7.5, counted as 8
+#ASSERT `reg 10.1(3) the hours deemed to have been worked on a non-working day` TRUE FALSE 0 7 EQUALS JUST 7      -- (b) did not work: the hours normally worked that day
+#ASSERT `reg 10.1(3) the hours deemed to have been worked on a non-working day` FALSE TRUE 8 7 EQUALS NOTHING     -- not remunerated for the non-working day
+
+§ `Regulation 11 - deemed hours (src:191-197)`
+
+-- 11(1) arguments: employed full-time; hours per week remunerated; full-time hours are limited by statute; that maximum per week
+#ASSERT `reg 11(1) the hours per week deemed to be worked in an occupation with limited full-time hours` TRUE 30 TRUE 32 EQUALS JUST 35
+#ASSERT `reg 11(1) the hours per week deemed to be worked in an occupation with limited full-time hours` TRUE 34 TRUE 34 EQUALS JUST 35
+#ASSERT `reg 11(1) the hours per week deemed to be worked in an occupation with limited full-time hours` TRUE 35 TRUE 32 EQUALS NOTHING     -- "remunerated for less than 35 hours": 35 is not less
+#ASSERT `reg 11(1) the hours per week deemed to be worked in an occupation with limited full-time hours` TRUE 30 TRUE 35 EQUALS NOTHING     -- the statutory maximum must be "less than 35 hours"
+#ASSERT `reg 11(1) the hours per week deemed to be worked in an occupation with limited full-time hours` FALSE 30 TRUE 32 EQUALS NOTHING    -- not on a full-time basis
+#ASSERT `reg 11(1) the hours per week deemed to be worked in an occupation with limited full-time hours` TRUE 30 FALSE 32 EQUALS NOTHING    -- no statutory limit
+-- 11(2)(a) arguments: section 10 fixes the hours; Canadian Forces on full-time service; police force; required to be on standby
+#ASSERT `reg 11(2)(a) the hours per week deemed to be worked by a member of the Canadian Forces or of a police force on standby` FALSE TRUE FALSE TRUE EQUALS JUST 35
+#ASSERT `reg 11(2)(a) the hours per week deemed to be worked by a member of the Canadian Forces or of a police force on standby` FALSE FALSE TRUE TRUE EQUALS JUST 35
+#ASSERT `reg 11(2)(a) the hours per week deemed to be worked by a member of the Canadian Forces or of a police force on standby` FALSE TRUE FALSE FALSE EQUALS NOTHING    -- not on standby
+#ASSERT `reg 11(2)(a) the hours per week deemed to be worked by a member of the Canadian Forces or of a police force on standby` TRUE TRUE FALSE TRUE EQUALS NOTHING     -- "Subject to section 10"
+#ASSERT `reg 11(2)(a) the hours per week deemed to be worked by a member of the Canadian Forces or of a police force on standby` FALSE FALSE FALSE TRUE EQUALS NOTHING   -- neither a member of the Forces nor of a police force
+-- 11(2)(b) arguments: section 10 fixes the hours; member of the reserve force; paid the rate of pay for each period; periods under 6 hours; periods of 6 to 24 hours; periods over 24 hours
+#ASSERT `reg 11(2)(b) the hours per week deemed to be worked by a member of the reserve force` FALSE TRUE TRUE 3 2 0 EQUALS JUST 24.5     -- 3 x 3.5 + 2 x 7
+#ASSERT `reg 11(2)(b) the hours per week deemed to be worked by a member of the reserve force` FALSE TRUE TRUE 10 0 0 EQUALS JUST 35      -- 10 x 3.5 = 35, exactly the maximum
+#ASSERT `reg 11(2)(b) the hours per week deemed to be worked by a member of the reserve force` FALSE TRUE TRUE 11 0 0 EQUALS JUST 35      -- 38.5 held to the 35 hour maximum
+#ASSERT `reg 11(2)(b) the hours per week deemed to be worked by a member of the reserve force` FALSE TRUE TRUE 0 6 0 EQUALS JUST 35       -- 6 x 7 = 42 held to 35
+#ASSERT `reg 11(2)(b) the hours per week deemed to be worked by a member of the reserve force` FALSE TRUE TRUE 0 0 0 EQUALS JUST 0
+#ASSERT `reg 11(2)(b) the hours per week deemed to be worked by a member of the reserve force` FALSE TRUE TRUE 1 1 1 EQUALS NOTHING      -- a period over 24 hours is not provided for
+#ASSERT `reg 11(2)(b) the hours per week deemed to be worked by a member of the reserve force` TRUE TRUE TRUE 3 2 0 EQUALS NOTHING       -- "Subject to section 10"
+#ASSERT `reg 11(2)(b) the hours per week deemed to be worked by a member of the reserve force` FALSE FALSE TRUE 3 2 0 EQUALS NOTHING     -- not a member of the reserve force
+#ASSERT `reg 11(2)(b) the hours per week deemed to be worked by a member of the reserve force` FALSE TRUE FALSE 3 2 0 EQUALS NOTHING     -- not paid the rate of pay for each period

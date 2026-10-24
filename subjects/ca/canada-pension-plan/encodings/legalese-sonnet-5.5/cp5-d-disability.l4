@@ -1,0 +1,227 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cpp-core-age`
+IMPORT `cp5-months`
+
+-- Canada Pension Plan Act, Part II, Division D (Payment of Benefits: Special Rules Applicable)
+-- DISABILITY PENSION AND POST-RETIREMENT DISABILITY BENEFIT: sections 69, 70, 70.01 and 70.02.
+-- Layer 1: the law, objectively.
+--
+-- A month is the DATE of its first day. The month in which the applicant "became disabled" is the month of the
+-- time determined in the prescribed manner under paragraph 42(2)(b) (piece cp3), taken here as a plain input.
+-- Ages: subsection 70(1)(c) and subsection 70(2) are the two places in this range where section 2(2) does NOT
+-- apply ("section 70" is among the ten references it excepts), so the actual birthday governs there; section
+-- 70.02(b) is not excepted, so the month a person reaches 65 for a post-retirement disability benefit is the month
+-- after the birthday's month (NOTES.md, fork F5).
+
+-- out of range: paragraph 42(2)(b) (piece cp3): the month in which the applicant became disabled, as determined in the prescribed manner, and the "fifteen months" that sections 69(b) and 70.01(b) re-read as twelve (returned as a number for cp3 to take as an input)
+-- out of range: section 66.1 (piece cp4): the beneficiary's right to cancel a benefit, a plain fact in s 70(3)
+-- out of range: section 60 (piece cp4): the Minister's approval of payment, a plain fact in ss 69 and 70.01
+
+§ `Part II, Division D -- Disability pension and post-retirement disability benefit (sections 69 to 70.02)`
+
+§§ `Section 69 -- when a disability pension begins to be payable`
+
+-- src:2296 | Commencement of pension
+-- src:2297 | 69 Subject to section 62, where payment of a disability pension is approved, the pension is payable for each month commencing with the fourth month following the month in which the applicant became disabled, except that where the applicant was, at any time during the five year period next before the month in which the applicant became disabled as a result of which the payment is approved, in receipt of a disability pension payable under this Act or under a provincial pension plan,
+-- src:2298 | (a) the pension is payable for each month commencing with the month next following the month in which the applicant became disabled as a result of which the payment is approved; and
+-- src:2299 | (b) the reference to “fifteen months” in paragraph 42(2)(b) shall be read as a reference to “twelve months”.
+@ref Act s 69 (src:2297-2299)
+GIVEN `a day in the month the applicant became disabled` IS A DATE
+GIVETH A DATE
+`s 69 — the first month of the five-year period next before the month the applicant became disabled` `a day in the month the applicant became disabled` MEANS
+    `cp5 helper -- the month a number of months from the month of a date` `a day in the month the applicant became disabled` (0 MINUS 60)
+
+-- The period ends with the month before the month the applicant became disabled.
+@ref Act s 69 (src:2297)
+GIVEN month IS A DATE
+      `a day in the month the applicant became disabled` IS A DATE
+GIVETH A BOOLEAN
+`s 69 — a month falls within the five-year period next before the month the applicant became disabled` month `a day in the month the applicant became disabled` MEANS
+        `the month of a date` month AT LEAST `s 69 — the first month of the five-year period next before the month the applicant became disabled` `a day in the month the applicant became disabled`
+    AND `the month of a date` month BELOW `the month of a date` `a day in the month the applicant became disabled`
+
+@ref Act s 69 (src:2297-2299)
+GIVEN `payment of the disability pension is approved` IS A BOOLEAN
+      `a day in the month the applicant became disabled` IS A DATE
+      `the applicant was in receipt of a disability pension in the five-year period` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`s 69 — the month a disability pension is first payable` `payment of the disability pension is approved` `a day in the month the applicant became disabled` `the applicant was in receipt of a disability pension in the five-year period` MEANS
+    IF NOT `payment of the disability pension is approved`
+    THEN NOTHING
+    ELSE IF `the applicant was in receipt of a disability pension in the five-year period`
+         -- (a) the month next following the month in which the applicant became disabled
+         THEN JUST (`the month following the month of a date` `a day in the month the applicant became disabled`)
+         -- the fourth month following the month in which the applicant became disabled
+         ELSE JUST (`cp5 helper -- the month a number of months from the month of a date` `a day in the month the applicant became disabled` 4)
+
+-- (b) "the reference to 'fifteen months' in paragraph 42(2)(b) shall be read as a reference to 'twelve months'".
+-- JUST 12 where that applies; NOTHING where paragraph 42(2)(b) keeps its own figure (piece cp3).
+@ref Act s 69(b) (src:2299)
+GIVEN `the applicant was in receipt of a disability pension in the five-year period` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`s 69(b) — the number of months to read in place of fifteen months in paragraph 42(2)(b)` `the applicant was in receipt of a disability pension in the five-year period` MEANS
+    IF `the applicant was in receipt of a disability pension in the five-year period` THEN JUST 12 ELSE NOTHING
+
+§§ `Section 70 -- when a disability pension ceases to be payable`
+
+-- src:2300 | When pension ceases to be payable
+-- src:2301 | 70 (1) A disability pension ceases to be payable with the payment
+-- src:2302 | (a) for the month in which the beneficiary ceases to be disabled;
+-- src:2303 | (b) for the month immediately preceding the month in which the beneficiary commences to receive a retirement pension under this Act or under a provincial pension plan;
+-- src:2304 | (c) for the month in which the beneficiary reaches sixty-five years of age; or
+-- src:2305 | (d) for the month in which the beneficiary dies.
+@ref Act s 70(1) (src:2301-2305)
+GIVEN `a day in the month the beneficiary ceased to be disabled` IS A MAYBE DATE
+      `first month for which a retirement pension is payable under this Act or a provincial pension plan` IS A MAYBE DATE
+      `date of birth` IS A DATE
+      `day the beneficiary died` IS A MAYBE DATE
+GIVETH A DATE
+`s 70(1) — the last month for which a disability pension is payable` `a day in the month the beneficiary ceased to be disabled` `first month for which a retirement pension is payable under this Act or a provincial pension plan` `date of birth` `day the beneficiary died` MEANS
+    CONSIDER others
+    WHEN NOTHING THEN monthAt65
+    WHEN JUST m THEN IF m AT MOST monthAt65 THEN m ELSE monthAt65
+    WHERE
+        -- (c) the month the beneficiary reaches 65: the actual birthday, because section 70 is excepted from section 2(2)
+        monthAt65 MEANS `the month of a date` (`s 2(2) — the date a person is treated as reaching a specified age for a provision` `section 70` `date of birth` 65)
+        -- the earliest of (a) the month the beneficiary ceases to be disabled; (b) the month immediately preceding the month
+        -- the beneficiary commences to receive a retirement pension; (d) the month the beneficiary dies
+        others MEANS `cp5 helper -- the earliest of the months that apply` (LIST
+            `cp5 helper -- the month of a date that may be absent` `a day in the month the beneficiary ceased to be disabled`,
+            beforeRetirement,
+            `cp5 helper -- the month of a date that may be absent` `day the beneficiary died`)
+        beforeRetirement MEANS CONSIDER `first month for which a retirement pension is payable under this Act or a provincial pension plan`
+                               WHEN NOTHING THEN NOTHING
+                               WHEN JUST r THEN JUST (`cp5 helper -- the month a number of months from the month of a date` r (0 MINUS 1))
+
+-- A disability pension is paid for a month from its first month up to and including the last month of subsection (1).
+@ref Act s 70(1) (src:2301-2305)
+GIVEN month IS A DATE
+      `first month for which the pension is payable` IS A DATE
+      `a day in the month the beneficiary ceased to be disabled` IS A MAYBE DATE
+      `first month for which a retirement pension is payable under this Act or a provincial pension plan` IS A MAYBE DATE
+      `date of birth` IS A DATE
+      `day the beneficiary died` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`s 70(1) — a disability pension is payable for a month` month `first month for which the pension is payable` `a day in the month the beneficiary ceased to be disabled` `first month for which a retirement pension is payable under this Act or a provincial pension plan` `date of birth` `day the beneficiary died` MEANS
+        `the month of a date` month AT LEAST `first month for which the pension is payable`
+    AND `the month of a date` month AT MOST `s 70(1) — the last month for which a disability pension is payable` `a day in the month the beneficiary ceased to be disabled` `first month for which a retirement pension is payable under this Act or a provincial pension plan` `date of birth` `day the beneficiary died`
+
+§§ `Subsection 70(2) -- an application for a retirement pension deemed made at 65`
+
+-- src:2306 | Application for retirement pension deemed to have been made
+-- src:2307 | (2) Where a disability pension ceases to be payable to a person by reason of his having reached sixty-five years of age, an application under section 60 shall be deemed to have been made by and received from that person, in the month in which he reached that age, for a retirement pension to commence with the month following that month.
+-- "by reason of his having reached sixty-five": the last month of subsection (1) is the month of the 65th birthday (NOTES.md, fork F22)
+@ref Act s 70(2) (src:2307)
+GIVEN `a day in the month the beneficiary ceased to be disabled` IS A MAYBE DATE
+      `first month for which a retirement pension is payable under this Act or a provincial pension plan` IS A MAYBE DATE
+      `date of birth` IS A DATE
+      `day the beneficiary died` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`s 70(2) — the disability pension ceases to be payable by reason of the beneficiary having reached 65` `a day in the month the beneficiary ceased to be disabled` `first month for which a retirement pension is payable under this Act or a provincial pension plan` `date of birth` `day the beneficiary died` MEANS
+    `s 70(1) — the last month for which a disability pension is payable` `a day in the month the beneficiary ceased to be disabled` `first month for which a retirement pension is payable under this Act or a provincial pension plan` `date of birth` `day the beneficiary died`
+        EQUALS `the month of a date` (`s 2(2) — the date a person is treated as reaching a specified age for a provision` `section 70` `date of birth` 65)
+
+-- The month the person reached 65 is the month of the actual birthday (section 70 is excepted from section 2(2)).
+@ref Act s 70(2) (src:2307)
+GIVEN `the disability pension ceases to be payable by reason of the beneficiary having reached 65` IS A BOOLEAN
+      `date of birth` IS A DATE
+GIVETH A MAYBE DATE
+`s 70(2) — the month in which an application for a retirement pension is deemed made by and received from the person` `the disability pension ceases to be payable by reason of the beneficiary having reached 65` `date of birth` MEANS
+    IF `the disability pension ceases to be payable by reason of the beneficiary having reached 65`
+    THEN JUST (`the month of a date` (`s 2(2) — the date a person is treated as reaching a specified age for a provision` `section 70` `date of birth` 65))
+    ELSE NOTHING
+
+@ref Act s 70(2) (src:2307)
+GIVEN `the disability pension ceases to be payable by reason of the beneficiary having reached 65` IS A BOOLEAN
+      `date of birth` IS A DATE
+GIVETH A MAYBE DATE
+`s 70(2) — the month with which the retirement pension applied for is to commence` `the disability pension ceases to be payable by reason of the beneficiary having reached 65` `date of birth` MEANS
+    CONSIDER `s 70(2) — the month in which an application for a retirement pension is deemed made by and received from the person` `the disability pension ceases to be payable by reason of the beneficiary having reached 65` `date of birth`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST m THEN JUST (`the month following the month of a date` m)
+
+§§ `Subsection 70(3) -- after a retirement pension has begun`
+
+-- src:2308 | Effect of receiving a retirement pension
+-- src:2309 | (3) A person who commences to receive a retirement pension under this Act or under a provincial pension plan is thereafter ineligible to apply or re-apply, at any time, for a disability pension under this Act, except as provided in section 66.1 or in a substantially similar provision of a provincial pension plan, as the case may be.
+@ref Act s 70(3) (src:2309)
+-- out of range: section 66.1 (piece cp4), the beneficiary's right to cancel a retirement pension, or a substantially
+-- similar provision of a provincial pension plan; taken as a plain fact
+GIVEN `the person commenced to receive a retirement pension under this Act or a provincial pension plan` IS A BOOLEAN
+      `section 66.1 or a substantially similar provision of a provincial pension plan provides otherwise` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 70(3) — the person is ineligible to apply or re-apply for a disability pension` `the person commenced to receive a retirement pension under this Act or a provincial pension plan` `section 66.1 or a substantially similar provision of a provincial pension plan provides otherwise` MEANS
+        `the person commenced to receive a retirement pension under this Act or a provincial pension plan`
+    AND (NOT `section 66.1 or a substantially similar provision of a provincial pension plan provides otherwise`)
+
+§§ `Section 70.01 -- when a post-retirement disability benefit begins to be payable`
+
+-- The five-year period next before the month the applicant became disabled is the one section 69 describes.
+-- src:2310 | Commencement of benefit
+-- src:2311 | 70.01 Subject to section 62, if payment of a post-retirement disability benefit is approved, the benefit is payable for each month commencing with the fourth month following the month after December 2018 in which the applicant became disabled, except that if the applicant was, at any time during the five-year period next before the month in which the applicant became disabled as a result of which the payment is approved, in receipt of a disability pension payable under this Act or under a provincial pension plan or a post-retirement disability benefit,
+-- src:2312 | (a) the benefit is payable for each month commencing with the month next following the month after December 2018 in which the applicant became disabled as a result of which the payment is approved; and
+-- src:2313 | (b) the reference to “fifteen months” in paragraph 42(2)(b) shall be read as a reference to “twelve months”.
+@ref Act s 70.01 "the month after December 2018" (src:2311)
+`s 70.01 — the first month in which a disability can begin for a post-retirement disability benefit` MEANS YMD 2019 1 1
+
+@ref Act s 70.01 (src:2311-2313)
+GIVEN `payment of the post-retirement disability benefit is approved` IS A BOOLEAN
+      `a day in the month the applicant became disabled` IS A DATE
+      `the applicant was in receipt of a disability pension or a post-retirement disability benefit in the five-year period` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`s 70.01 — the month a post-retirement disability benefit is first payable` `payment of the post-retirement disability benefit is approved` `a day in the month the applicant became disabled` `the applicant was in receipt of a disability pension or a post-retirement disability benefit in the five-year period` MEANS
+    -- a disability that began in or before December 2018 is outside the section (NOTES.md, fork F21)
+    IF      (NOT `payment of the post-retirement disability benefit is approved`)
+         OR `the month of a date` `a day in the month the applicant became disabled` BELOW `s 70.01 — the first month in which a disability can begin for a post-retirement disability benefit`
+    THEN NOTHING
+    ELSE IF `the applicant was in receipt of a disability pension or a post-retirement disability benefit in the five-year period`
+         -- (a) the month next following the month after December 2018 in which the applicant became disabled
+         THEN JUST (`the month following the month of a date` `a day in the month the applicant became disabled`)
+         -- the fourth month following that month
+         ELSE JUST (`cp5 helper -- the month a number of months from the month of a date` `a day in the month the applicant became disabled` 4)
+
+-- (b) "the reference to 'fifteen months' in paragraph 42(2)(b) shall be read as a reference to 'twelve months'".
+@ref Act s 70.01(b) (src:2313)
+GIVEN `the applicant was in receipt of a disability pension or a post-retirement disability benefit in the five-year period` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`s 70.01(b) — the number of months to read in place of fifteen months in paragraph 42(2)(b)` `the applicant was in receipt of a disability pension or a post-retirement disability benefit in the five-year period` MEANS
+    IF `the applicant was in receipt of a disability pension or a post-retirement disability benefit in the five-year period` THEN JUST 12 ELSE NOTHING
+
+§§ `Section 70.02 -- when a post-retirement disability benefit ceases to be payable`
+
+-- src:2314 | When benefit ceases to be payable
+-- src:2315 | 70.02 A post-retirement disability benefit ceases to be payable with the payment
+-- src:2316 | (a) for the month in which the beneficiary ceases to be disabled;
+-- src:2317 | (b) for the month in which the beneficiary reaches 65 years of age; or
+-- src:2318 | (c) for the month in which the beneficiary dies.
+@ref Act s 70.02 (src:2315-2318)
+GIVEN `a day in the month the beneficiary ceased to be disabled` IS A MAYBE DATE
+      `date of birth` IS A DATE
+      `day the beneficiary died` IS A MAYBE DATE
+GIVETH A DATE
+`s 70.02 — the last month for which a post-retirement disability benefit is payable` `a day in the month the beneficiary ceased to be disabled` `date of birth` `day the beneficiary died` MEANS
+    CONSIDER others
+    WHEN NOTHING THEN monthAt65
+    WHEN JUST m THEN IF m AT MOST monthAt65 THEN m ELSE monthAt65
+    WHERE
+        -- (b) the month in which the beneficiary reaches 65 years of age: section 70.02 is not one of the ten references
+        --     excepted from section 2(2), so this is the month after the month of the birthday
+        monthAt65 MEANS `cp5 helper -- the month in which the person reaches an age under section 2(2)` `date of birth` 65
+        -- the earlier of (a) the month the beneficiary ceases to be disabled and (c) the month the beneficiary dies
+        others MEANS `cp5 helper -- the earliest of the months that apply` (LIST
+            `cp5 helper -- the month of a date that may be absent` `a day in the month the beneficiary ceased to be disabled`,
+            `cp5 helper -- the month of a date that may be absent` `day the beneficiary died`)
+
+@ref Act s 70.02 (src:2315-2318)
+GIVEN month IS A DATE
+      `first month for which the benefit is payable` IS A DATE
+      `a day in the month the beneficiary ceased to be disabled` IS A MAYBE DATE
+      `date of birth` IS A DATE
+      `day the beneficiary died` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`s 70.02 — a post-retirement disability benefit is payable for a month` month `first month for which the benefit is payable` `a day in the month the beneficiary ceased to be disabled` `date of birth` `day the beneficiary died` MEANS
+        `the month of a date` month AT LEAST `first month for which the benefit is payable`
+    AND `the month of a date` month AT MOST `s 70.02 — the last month for which a post-retirement disability benefit is payable` `a day in the month the beneficiary ceased to be disabled` `date of birth` `day the beneficiary died`
