@@ -2,7 +2,7 @@
 
 North Dakota (US state) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the North Dakota Legislative Branch - North Dakota Century Code (North Dakota Legislative Council); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text had been deposited when they were laid out; see the 2026-10-20 sample below. Nothing is encoded yet.
+The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the North Dakota Legislative Branch - North Dakota Century Code (North Dakota Legislative Council); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text had been deposited when they were laid out; see the 2026-10-20 sample below. Two baselines were encoded on 2026-10-24 (see the last section).
 
 **Licence category: unclear.** **Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
 
@@ -60,3 +60,18 @@ Statute text was deposited for five chapters of the North Dakota Century Code, s
 - The AABD rules (state supplement and basic care, under ch. 50-24.5) are not sourced.
 - The UI weekly benefit maximum, computed each year by Job Service North Dakota under ch. 52-06, has no notice sourced.
 - Sections 75-02-01.2-56 and -57 (payment computation) were repealed effective April 1, 2026. How the payment is now computed beyond the net income test (section 48) is not stated in the deposited sections.
+
+## Encodings of 2026-10-24: income tax and TANF
+
+Two baselines were encoded from the texts deposited on 2026-10-20. No new text was fetched.
+
+| Encoding | Seat | What it answers | Checks |
+|---|---|---|---|
+| `north-dakota-century-code-chapter-57-38-income-tax/encodings/baseline-2026-10/` | the individual taxpayer | Residence (s 57-38-01(11)); who must file, by 15 April, paying with the return (ss 57-38-31, -34, -35); reporting a federal change within 90 days (s 57-38-34.4); North Dakota taxable income from federal taxable income (s 57-38-30.3(2)); the tax on the printed schedules and on the commissioner's indexed schedules ((1)(g)); the marriage penalty credit (s 57-38-01.28) | 8 questions, 2 regulative rules, 31 assertions |
+| `north-dakota-century-code-chapter-50-09-aid-to-dependent-children/encodings/baseline-2026-10/` (with N.D.A.C. ch. 75-02-01.2) | the TANF applicant | The 60-month limit and hardship exemption (s 50-09-29(1)); absent children; assignment of support rights; the asset limit with one vehicle excluded; the employment expense allowance and the time-limited earned income incentive; the net income test; the grant in whole dollars and the $10 minimum; the fair hearing on appeal | 8 questions, 2 regulative rules, 37 assertions |
+
+**Main findings.**
+- The income tax rate schedules printed in s 57-38-30.3(1) are replaced each year by the commissioner's indexed schedules ((1)(g)). Those are not deposited, so the thresholds are an input.
+- Chapter 57-38 has no earned income or child credit.
+- Chapter 50-09 sets no TANF amounts at all. The rules give the asset limits and the disregards. The standard of need, which decides the grant, is in neither text and is an input.
+- Section 50-09-06.1(5) refers to a "benefit cap imposed under section 50-09-29" that the deposited s 50-09-29 does not contain.

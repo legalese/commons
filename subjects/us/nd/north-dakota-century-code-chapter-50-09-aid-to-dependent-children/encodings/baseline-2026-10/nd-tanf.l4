@@ -1,0 +1,217 @@
+IMPORT prelude
+IMPORT daydate
+
+-- North Dakota Century Code chapter 50-09 (temporary assistance for needy families), with the rules that set its numbers,
+-- N.D. Admin. Code chapter 75-02-01.2 -- what a household applying for TANF meets: who is provided assistance and the
+-- 60-month limit (N.D.C.C. s 50-09-29(1)); the asset limit, with one motor vehicle excluded (s 50-09-29(1)(f), (g);
+-- N.D.A.C. 75-02-01.2-22); a child absent from the household (s 50-09-29(1)(s)); the assignment of support rights
+-- (s 50-09-06.1); the employment expense allowance and the time-limited earned income incentive (s 50-09-29(1)(v);
+-- N.D.A.C. 75-02-01.2-50(6), (7), -51); the budgeting and net income tests (-47, -48); the grant in whole dollars and the
+-- $10 minimum (-42, -43); and appeal to a fair hearing (s 50-09-14(1)).
+--
+-- SEAT: the applicant -- a parent or caretaker relative, or a pregnant woman -- applying for TANF for the household. "Can we
+-- get TANF? Are our savings too high? How much of my pay counts? How much will we get a month? Is there a time limit?"
+-- Provisions addressed to the state agency or the human service zone are encoded as what they mean for that person.
+--
+-- Edition: N.D.C.C. ch. 50-09, Legislative Council 07/01/25 update, deposited at ../../registers/source-bundle/ndcc-t50c09.txt;
+-- N.D.A.C. ch. 75-02-01.2 (sections -01, -22, -42, -43, -47, -48, -50, -51; amended as late as 1 April 2026), deposited in
+-- the sibling subject ../../../north-dakota-administrative-code-chapter-75-02-01-2-tanf-income-and-standards/
+-- registers/source-bundle/nd-admin-code-75-02-01-2-tanf-income-and-standards.txt.
+--
+-- The standard of need by household size, the income incentive limit, the personal needs allowance and special items of
+-- need are set by the department and are not in either deposited text: they are inputs.
+--
+-- NOT ENCODED: work requirements and sanctions (s 50-09-29(1)(h), (q), (t)); noncitizen rules ((1)(e), (j)); child support
+-- enforcement (most of chapter 50-09); self-employment income (75-02-01.2-50(3)); stepparent and minor parent budgeting
+-- (-51(4)); the department's choice to disregard more than the minimum percentages (-51(2)(c)).
+--
+-- BASELINE ENCODING. Written from the applicant's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `North Dakota TANF -- N.D.C.C. ch. 50-09 and N.D.A.C. ch. 75-02-01.2`
+
+GIVEN x IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` x y MEANS IF x AT MOST y THEN x ELSE y
+
+GIVEN x IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the greater of` x y MEANS IF x AT LEAST y THEN x ELSE y
+
+§§ `N.D.C.C. s 50-09-29(1) -- time limit, pregnant women, absent children`
+
+-- s 50-09-29(1): the state agency "shall: a. Provide assistance to otherwise eligible pregnant women; b. Except as provided in
+-- subdivision c, afford eligible households benefits for no more than sixty months; c. Exempt eligible households from the
+-- requirements of subdivision b due to mental or physical disability of a parent or child, mental or physical incapacity of
+-- a parent, or other hardship including a parent subject to domestic violence". Whether a hardship exists is the agency's
+-- determination (s 50-09-31(1)(d) for domestic violence), asked as a fact.
+GIVEN `months of TANF benefits the household has had` IS A NUMBER
+      `a parent or child has a mental or physical disability, a parent is incapacitated, or another hardship applies` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the sixty-month limit bars benefits` IF
+        `months of TANF benefits the household has had` AT LEAST 60
+    AND (NOT `a parent or child has a mental or physical disability, a parent is incapacitated, or another hardship applies`)
+
+-- (1)(s): "Deny assistance with respect to a minor child absent from the household for more than one calendar month,
+-- except as specifically provided by the state agency for absences" (the exception is an input).
+GIVEN `the child has been absent for more than one calendar month` IS A BOOLEAN
+      `the state agency's absence exception applies` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `assistance for an absent child is denied` IF
+        `the child has been absent for more than one calendar month`
+    AND (NOT `the state agency's absence exception applies`)
+
+§§ `N.D.A.C. 75-02-01.2-22, N.D.C.C. s 50-09-29(1)(g) -- assets`
+
+-- 75-02-01.2-22: "A member of a household may not be found eligible for benefits unless the value of the household's
+-- assets, not specifically excluded under this chapter, does not exceed nine thousand dollars for a household consisting of
+-- one individual, fifteen thousand dollars for households consisting of two individuals, and an additional five hundred
+-- dollars for each additional individual." Property is valued at "current market value", less "Any reasonable costs
+-- associated with liquidation of excess assets". s 50-09-29(1)(g): "Exclude one motor vehicle of any value"; (m): exempt
+-- individual development account savings and matching funds.
+GIVEN `household size` IS A NUMBER
+GIVETH A NUMBER
+`the asset limit` `household size` MEANS
+    IF `household size` AT MOST 1
+    THEN 9000
+    ELSE 15000 PLUS (500 TIMES (`household size` MINUS 2))
+
+GIVEN `household size` IS A NUMBER
+      `market value of assets not excluded, other than one motor vehicle` IS A NUMBER
+      `reasonable costs of liquidating them` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the household's assets are within the limit` IF
+    (`market value of assets not excluded, other than one motor vehicle` MINUS `reasonable costs of liquidating them`) AT MOST (`the asset limit` `household size`)
+
+§§ `N.D.A.C. 75-02-01.2-50, -51 -- earned income`
+
+-- -50(7): "The standard employment expense allowance is the greater of one hundred eighty dollars or twenty-seven percent of
+-- gross earned income per month." -51(2)(a): it is disregarded from "the household's monthly gross earned income, except
+-- earnings of any child who is a full-time elementary or high school student" (left out of the earnings asked). "The
+-- amount remaining is net earned income."
+GIVEN `monthly gross earned income` IS A NUMBER
+GIVETH A NUMBER
+`net earned income` `monthly gross earned income` MEANS
+    IF `monthly gross earned income` LESS THAN 0
+    THEN 0
+    ELSE `the greater of` 0 (`monthly gross earned income` MINUS (`the greater of` 180 (27% TIMES `monthly gross earned income`)))
+
+-- -51(2)(b): "Any net earned income that exceeds the income incentive limit is treated as countable earned income."
+-- (c): of the part at or below the limit, "(1) ... at least fifty percent ... may be disregarded for six months beginning the
+-- month in which the earned income is first budgeted. (2) ... at least thirty-five percent ... for months seven through nine
+-- ... (3) ... at least twenty-five percent ... for months ten through twelve ... (4) ... no net earned income may be
+-- disregarded under this subdivision after the twelfth month". s 50-09-29(1)(v): "no more than twelve months". The
+-- encoding applies the minimum percentages (NOTES.md finding 4). The income incentive limit is the department's (input).
+GIVEN `month of the incentive cycle` IS A NUMBER
+GIVETH A NUMBER
+`the minimum incentive percentage` `month of the incentive cycle` MEANS
+    BRANCH
+        IF `month of the incentive cycle` LESS THAN 1  THEN 0
+        IF `month of the incentive cycle` AT MOST 6    THEN 50%
+        IF `month of the incentive cycle` AT MOST 9    THEN 35%
+        IF `month of the incentive cycle` AT MOST 12   THEN 25%
+        OTHERWISE 0
+
+GIVEN `net earned` IS A NUMBER
+      `the income incentive limit` IS A NUMBER
+      `month of the incentive cycle` IS A NUMBER
+      `the incentive is available` IS A BOOLEAN
+GIVETH A NUMBER
+`countable earned income` `net earned` `the income incentive limit` `month of the incentive cycle` `the incentive is available` MEANS
+    LET `within the limit` MEANS `the lesser of` `net earned` `the income incentive limit`
+        `above the limit`  MEANS `net earned` MINUS `within the limit`
+        `percentage`       MEANS IF `the incentive is available` THEN `the minimum incentive percentage` `month of the incentive cycle` ELSE 0
+    IN `above the limit` PLUS (`within the limit` TIMES (1 MINUS `percentage`))
+
+-- -51(3): the disregard is available "if the eligible employed individual previously received assistance, has not received
+-- temporary assistance for needy families at least twelve months or has not completed the twelve month earned income
+-- employment incentive disregard cycle"; -51(2)(c)(5): those who have had the full twelve months "are not eligible for this
+-- incentive again unless the individual has been off assistance for twelve or more months."
+GIVEN `has had the full twelve months of the incentive` IS A BOOLEAN
+      `has been off assistance for twelve or more months since` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the earned income incentive is available` IF
+        (NOT `has had the full twelve months of the incentive`)
+    OR  `has been off assistance for twelve or more months since`
+
+§§ `N.D.A.C. 75-02-01.2-47, -48, -42, -43 -- the tests and the grant`
+
+-- -51(2)(g), (h): "If any nondisregarded income remains, a health insurance premium, or paid child or spousal support, if
+-- applicable, may be disregarded", then "child and dependent care costs that are employment-related". Adjusted net income is
+-- the countable earned income plus unearned income less those disregards, not below zero.
+GIVEN `countable earned` IS A NUMBER
+      `unearned income` IS A NUMBER
+      `health insurance premium and child or spousal support paid` IS A NUMBER
+      `employment-related child and dependent care costs` IS A NUMBER
+GIVETH A NUMBER
+`adjusted net income` `countable earned` `unearned income` `health insurance premium and child or spousal support paid` `employment-related child and dependent care costs` MEANS
+    `the greater of` 0 ((`countable earned` PLUS `unearned income`) MINUS (`health insurance premium and child or spousal support paid` PLUS `employment-related child and dependent care costs`))
+
+-- -47(2): "If nonexcluded income equals or exceeds the standard of need, the household is not needy, and the household is
+-- ineligible for assistance." -48: "If the adjusted net income is less than the standard of need, personal needs allowance,
+-- and special items of need, the household passes the net income test and the cash grant amount is calculated."
+GIVEN `adjusted net` IS A NUMBER
+      `standard of need` IS A NUMBER
+      `personal needs allowance and special items of need` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the household passes the net income test` IF
+    `adjusted net` LESS THAN (`standard of need` PLUS `personal needs allowance and special items of need`)
+
+-- The grant is the need not met by income (-47(1): "income is matched against the standard of need"). -42: "Benefits are
+-- granted in whole dollar amounts ... rounded down to the nearest whole dollar." -43: "A benefit payment may not be issued if
+-- the calculated benefit is less than ten dollars, but the household must be treated for all other purposes of this chapter
+-- as a household to which the department makes a benefit payment."
+GIVEN `adjusted net` IS A NUMBER
+      `standard of need` IS A NUMBER
+      `personal needs allowance and special items of need` IS A NUMBER
+GIVETH A NUMBER
+`the cash grant` `adjusted net` `standard of need` `personal needs allowance and special items of need` MEANS
+    IF `the household passes the net income test` `adjusted net` `standard of need` `personal needs allowance and special items of need`
+    THEN LET `calculated` MEANS FLOOR ((`standard of need` PLUS `personal needs allowance and special items of need`) MINUS `adjusted net`)
+         IN  IF `calculated` LESS THAN 10 THEN 0 ELSE `calculated`
+    ELSE 0
+
+§§ `N.D.C.C. ss 50-09-06.1, 50-09-14 -- support rights and appeals`
+
+DECLARE `Party` IS ONE OF
+    `the applicant`
+    `the state agency`
+
+DECLARE `Act` IS ONE OF
+    `afford reasonable notice and an opportunity for a fair hearing`
+    `issue a benefit payment for the month`
+
+-- s 50-09-06.1: "An application under this chapter is deemed to create and effect an assignment of all rights to support,
+-- which a family member ... may have or come to have, to the state agency", "limited to the total cost of benefits provided
+-- to the family" and terminating "when eligibility ceases, except with respect to any support obligation unpaid at that
+-- time". (5): "Is not effective as to any child subject to a benefit cap imposed under section 50-09-29" (NOTES.md finding 7).
+GIVEN `applied for TANF` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the household's support rights are assigned to the state agency` IF `applied for TANF`
+
+-- s 50-09-14(1): "An applicant for or recipient of temporary assistance for needy families ..., aggrieved because of a human
+-- service zone's or state agency's decision or delay in making a decision, may appeal to the state agency ... and must be
+-- afforded a reasonable notice and opportunity for a fair hearing by the state agency." No time is set in the chapter.
+GIVEN `appealed` IS A BOOLEAN
+GIVETH A DEONTIC `Party` `Act`
+`my fair hearing on appeal` `appealed` MEANS
+    IF `appealed`
+    THEN PARTY `the state agency`
+         MUST  `afford reasonable notice and an opportunity for a fair hearing`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- -43 and s 50-09-29(1)(b): for a benefit month in which the calculated benefit is under ten dollars, or the household is
+-- past its sixty months without an exemption, the state agency must not issue a payment. Time is counted in benefit months
+-- (WITHIN 1: the month concerned).
+GIVEN `calculated benefit` IS A NUMBER
+      `the sixty-month limit applies` IS A BOOLEAN
+GIVETH A DEONTIC `Party` `Act`
+`no payment for the month` `calculated benefit` `the sixty-month limit applies` MEANS
+    IF `calculated benefit` LESS THAN 10 OR `the sixty-month limit applies`
+    THEN PARTY `the state agency`
+         SHANT `issue a benefit payment for the month`
+         WITHIN 1
+         HENCE FULFILLED
+         LEST  BREACH BY `the state agency` BECAUSE "payment issued under ten dollars (N.D.A.C. 75-02-01.2-43) or beyond sixty months (N.D.C.C. s 50-09-29(1)(b))"
+    ELSE FULFILLED
