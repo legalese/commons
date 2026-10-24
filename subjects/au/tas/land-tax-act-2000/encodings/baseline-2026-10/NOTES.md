@@ -4,21 +4,21 @@
 
 **Baseline.** Written straight from the deposited texts with the `writing-l4-rules` skill, from the seat of the individual the law is applied to. It follows the design defaults ruled on 2026-10-18 and the brief for the tax-and-benefits encodings of 24 October 2026. It uses no REFUSE. It was checked with the stable `l4` from VS Code extension 1.6.98, with `JL4_LIBRARY_PATH` unset.
 
-There was no pipeline, no coverage table, no independent test pass and no human gate. Not for public use as advice.
+There was no pipeline, no coverage table and no human gate. An independent verifier reviewed the encoding on 2026-10-24 and raised five issues; all five were checked against the deposited texts, found real and fixed the same day (findings 1 and 23-26). Not for public use as advice.
 
 **The Remissions Act and its Regulations are encoded here.** The Local Government (Rates and Charges Remissions) Act 1991 and the Local Government (Rates and Charges Remissions) Regulations 2024 have no encoding folder of their own: their rules are in `rcr-core.l4` in this folder. The reason is the jurisdiction README's own pairing. These are the two yearly charges on a home that a resident owns, and both are relieved by a Commonwealth card. Both fix eligibility on 1 July. Both relieve a card-holding pensioner on their principal residence. The rates remission is enforced by the Commissioner of State Revenue (ss 4B-4F), as land tax is. Cross-folder IMPORT does not work, so one folder lets one seat layer ask both sets of questions. The Land Tax Rating Act 2000 and the Land Tax Regulations 2021 are brought in the same way, because they hold the numbers.
 
 The encoding has two layers:
 
-- **A seat-neutral core** in the instruments' own actors and terms: the owner (s 3A), the related person, the taxpayer, the Commissioner of State Revenue, the eligible pensioner who applies, the municipality, the person given a remission, the surviving spouse and the objector. Where the text says "must" or sets a deadline, the rule is regulative (`DEONTIC`, `PARTY ... MUST/DO/SHANT ... WITHIN ... HENCE ... LEST`). There are 10 such rules. Computations (the land tax, the s 7 rounding, the maximum remission and the amount remitted) are functions.
+- **A seat-neutral core** in the instruments' own actors and terms: the owner (s 3A), the related person, the taxpayer, the Commissioner of State Revenue, the eligible pensioner who applies, the municipality, the person given a remission, the surviving spouse and the objector. Where the text says "must" or sets a deadline, the rule is regulative (`DEONTIC`, `PARTY ... MUST/DO/SHANT ... WITHIN ... HENCE ... LEST`). There are 11 such rules. Computations (the land tax, the s 7 rounding, the maximum remission and the amount remitted) are functions.
 - **A seat layer** (`lta-seat.l4`) that asks the owner's questions with plain inputs. It builds the core's records and restates no rule.
 
 | File | What it holds |
 |---|---|
 | `lt-common.l4` | Arithmetic and date helpers, the financial year, the "not covered" answers, and the parties and steps of every regulative rule |
-| `lta-core.l4` | Core: Land Tax Act ss 3A, 3B, 6, 7, 8, 10, 11(3), 11A, 13, 14, 16, 19(a)-(b), 20, 23, 24, 26, 27, 37, 37A, 37B; Land Tax Rating Act ss 4-7 and Schedule 1; Land Tax Regulations reg 5. Five regulative rules (ss 10(2), 13, 16, 37, 37A) |
+| `lta-core.l4` | Core: Land Tax Act ss 3A, 3B, 6, 7, 8, 10, 11(3), 11(5)-(6), 11A, 13, 14, 16, 19(a)-(b), 20, 23, 24, 26, 27, 37, 37A, 37B; Land Tax Rating Act ss 4-7 and Schedule 1; Land Tax Regulations reg 5; the edge of the encoded amount (Div 1A and the other exemptions, answered `not covered`). Six regulative rules (ss 10(2), 11(5)-(6), 13, 16, 37, 37A) |
 | `rcr-core.l4` | Core: Remissions Act ss 3, 4(1)-(9), 4A, 4B, 4C, 4E, 4F; Regulations 2024 regs 4, 5, 6. Five regulative rules (s 4(1)-(1A), s 4(9), s 4A, s 4B, ss 4C-4F) |
-| `lta-seat.l4` | Seat layer: 32 exported questions, `@desc` on every input, under `§§` headings in the order of the instruments |
+| `lta-seat.l4` | Seat layer: 33 exported questions, `@desc` on every input, under `§§` headings in the order of the instruments |
 | `lta-cases-core.l4`, `rcr-cases-core.l4` | Cases for the two core modules, with `#TRACE`s for the regulative rules |
 | `lta-cases-seat.l4` | Cases for the seat layer, asked with plain answers. Several use the same facts as the core cases and must agree with them |
 
@@ -51,16 +51,16 @@ All five texts are the consolidations that the Tasmanian Legislation website ser
 
 ## Checks
 
-`l4 run` on every `.l4` in the folder gives **0 errors and 0 warnings**, with **335 assertions written and 335 satisfied** (2026-10-24).
+`l4 run` on every `.l4` in the folder gives **0 errors and 0 warnings**, with **373 assertions written and 373 satisfied** (2026-10-24, after the fixes; 335 of 335 before them).
 
 | File | Assertions | `#TRACE`s (each with an `-- expect:` line, read and as expected) |
 |---|---|---|
 | `lt-common.l4`, `lta-core.l4`, `rcr-core.l4`, `lta-seat.l4` | (modules) | each runs clean on its own |
-| `lta-cases-core.l4` | 134 | 6: four breaches by the owner (late payment, the s 13 instalment path twice, late s 16 notice) and two pending obligations of the Commissioner to grant a rebate (s 37, s 37A) |
-| `rcr-cases-core.l4` | 97 | 5: the municipality's obligation to remit, pending after an application on 30 March; a breach of s 4(9) (notice on 1 July); a breach of s 4A; the s 4B obligation to repay, pending (no period is set); the Commissioner's obligation to determine an objection, pending |
-| `lta-cases-seat.l4` | 104 | none |
+| `lta-cases-core.l4` | 153 | 7: five breaches by the owner (late payment, a late s 11(6) statement, the s 13 instalment path twice, late s 16 notice) and two pending obligations of the Commissioner to grant a rebate (s 37, s 37A) |
+| `rcr-cases-core.l4` | 104 | 5: the municipality's obligation to remit, pending after an application on 30 March; a breach of s 4(9) (notice on 1 July); a breach of s 4A; the s 4B obligation to repay, pending (no period is set); the Commissioner's obligation to determine an objection, pending |
+| `lta-cases-seat.l4` | 116 | none |
 
-**Control.** A copy of `lta-cases-core.l4` with one expected value altered ($1,017.50 to $1,017.60) was run. The runner reported that assertion as failed, and the copy was then deleted.
+**Control.** A copy of `lta-cases-core.l4` with one expected value altered ($1,017.50 to $1,017.60) was run. The runner reported that assertion as failed, and the copy was then deleted. After the fixes, a copy of `lta-cases-seat.l4` with two new expected values altered (the foreign owner's nil home to $1, and the 2024-25 maximum with no CPI figures to $379.42) reported exactly those two assertions as failed, and was deleted.
 
 **Expected values.** Each was worked by hand from the deposited texts. The arithmetic of Schedule 1, Rating Act s 7 and reg 5 was checked in an independent calculator, `au-tas-4/hand.py` in the session scratchpad, written from the statutory words with exact fractions. No value was copied from the encoding's output.
 
@@ -74,7 +74,7 @@ All five texts are the consolidations that the Tasmanian Legislation website ser
 - "Is my land exempt because I hold a pensioner card?"
 - "Can I get a rebate for building, or for moving between two homes, and by when must I apply?"
 - "What remission do I get on my council rates and charges this year, and by when must I apply?"
-- "What must I tell the council, and when?", and also "What must I tell the Commissioner?"
+- "What must I tell the council, and when?", and also "What must I tell the Commissioner?", including the statement of interest the Commissioner may ask a new owner for (s 11(5)-(6)).
 
 **No other seat.** The Commissioner of State Revenue and the municipality are parties to rules, never seats. Their duties (to grant a rebate, to remit 30%, to determine an objection) appear as regulative rules, for what they mean to the owner. The text puts real duties on no other private party within this scope.
 
@@ -99,6 +99,8 @@ How each default was applied:
 **Departures and simplifications in the seat layer:**
 
 - The amount question takes the home, the shacks together and the rentals together as three parcels, because s 24 aggregates them anyway. It does not ask about a s 37B extension for other land (taken as no). The principal residence question asks it.
+- The amount question also asks two facts that mark the edge of the encoding: whether an owner is a foreign person within s 16C(1)(b), and whether any of the land is exempt on a ground other than s 19(a)-(b). Either can make it answer `not covered` (finding 24).
+- The pensioner exemption question asks the share facts plainly (the share held, the number of joint tenants, any Help to Buy share) and has the core's 50% test count them (finding 26).
 - The rates application question asks the card facts once, for 1 July, and takes them to hold on the day of applying too. Its single "in a facility" answer stands for any of the three reg 6 institutions, which s 4(3) treats alike.
 - The remission and repayment questions take "eligible and living there on 1 July" as one answer for each year, worked out by the eligibility and application questions.
 
@@ -113,6 +115,7 @@ How each default was applied:
 - ss 7, 8: primary production land and general land;
 - s 10(1)-(2), with s 39(10) for the "relevant day": who is liable, and when the tax is due;
 - s 11(3): ownership changes on completion;
+- s 11(5)-(6): a person served with the Commissioner's notice must state their interest in the land by statutory declaration lodged within 14 days, as a regulative rule (finding 25);
 - s 13: instalments, with s 13(2) as a regulative rule;
 - s 14(1)-(2): joint owners;
 - s 16: notice of a change within 30 days, as a regulative rule;
@@ -129,10 +132,11 @@ How each default was applied:
 
 **Out.**
 
-- Foreign investor land tax (Div 1A; Rating Act s 6A).
+- Foreign investor land tax (Div 1A; Rating Act s 6A), including the s 16J notice. Where an owner is a foreign person within s 16C(1)(b) and the land includes general land, the amount answers `not covered` (finding 24).
 - Trusts, companies and home-unit companies: s 6(3)-(5), s 24(2)-(4), ss 28, 31-35, Div 5, and s 37(1)(b)(ii).
 - Cooperative housing societies (s 30).
-- Crown, trust, retirement village and other exempt land: ss 17, 18, 19(ba)-(e), 19A-19EA, 29, 30A.
+- Crown, trust, retirement village and other exempt land: ss 17, 18, 19(ba)-(e), 19A-19EA, 29, 30A. Where any of them reaches the land, the amount answers `not covered` (finding 24).
+- s 11(1) and (4): the Commissioner's list of owners and the Valuer-General's details of valuations (machinery).
 - Subdivisions: ss 23(2), 25.
 - The special rate (s 38) and recovery (ss 39-40), apart from the s 39(10) "relevant day" that s 10(2) borrows.
 - Assessment and reassessment (s 12).
@@ -173,8 +177,13 @@ Cross-folder IMPORT does not work. These are links in the notes only.
    - Example: a $400,000 home with a shop on 70 of its 700 m² of land area (s 26(2A)), plus a $300,000 rental. That is $1,017.50 without the card and $837.50 with it, $180 less. A $500,000 home with 30% used otherwise pays $162.50 without the card and nil with it.
    - The contrary reading confines the exemption to the principal residence part. On that reading s 19 is redundant for the amount payable. One constant switches between the readings (`READING: s 19 exempts the whole parcel ...`).
    - On either reading s 19 is not idle: it makes the land "exempt land", so losing the card is a change the owner must notify within 30 days under s 16(a) (finding 21).
+   - **The case for each reading** (weighed after the independent verification of 2026-10-24, which pointed out that the first version gave only one side):
+     - *For the whole parcel (the default):* s 26(1) starts from land that is principal residence land and "is used for other purposes", and apportions its value, not the land; s 19 says land tax "is not payable in respect of" that land, and s 10(1) charges only land "that is not exempt land"; where the Act means an exemption to reach only part of a parcel it says so, apportioning "between exempt land and general land" (ss 19A(2), 19B(2), 19C(2), 29, 30A), and s 19(a)-(b) has no such words; and s 16A(2)(a) has to provide that, for Division 1A, "a reference to general land includes a reference to" a part apportioned as general land, which suggests that elsewhere the part is not general land in its own right.
+     - *For the principal residence part only:* s 26(1) apportions the value "between principal residence land and general land", so the Act itself names the apportioned part general land; Rating Act s 6(2) provides that the land tax "in respect of the apportioned assessed land value in respect of any general land is to be calculated in accordance with Schedule 1", in mandatory terms and with no exception for exempt land; and s 16A(2)(a) treats that part as general land, if only for Division 1A. The redundancy this reading gives s 19 is answered by s 19's other work (exempt land status, s 16).
+     - Neither side is conclusive on the deposited text, so the default is kept, flagged and listed for settling below.
+   - On the contrary reading the examples become $1,017.50 with the card as without it, and $162.50 for the $500,000 home. The core works the parcel's general land value out on either reading (`the value of the parcel that is general land, on the reading`), and the cases assert both.
 
-   Asserted.
+   Asserted both ways.
 2. **Different cards open the two concessions.**
    - Land tax (s 19, reg 5) needs one of: a Pensioner Concession Card; the DVA gold card with a war widow(er) endorsement; or the VEA special rate pension together with total and permanent incapacity.
    - The rates remission (reg 4) needs one of: a Pensioner Concession Card (even while inoperative abroad); a Health Care Card; total and permanent incapacity under VEA s 24 or MRCA s 199; a VEA s 30(1) war widow(er)'s pension; or MRCA s 12 dependency.
@@ -251,14 +260,43 @@ Cross-folder IMPORT does not work. These are links in the notes only.
 
     Asserted.
 
+Findings 23 to 26 are corrections made after the independent verification of 2026-10-24. Finding 1 was also revised then.
+
+23. **The 2024-25 maximum remission needs no CPI figure.** Regulation 5(4) sets it directly ($379.41 for a water and sewerage customer, $558.50 otherwise). Regulation 5(2) first indexes it for 2025-26, with C the March 2025 figure and D the March 2024 figure.
+    - The first version required one figure for 2024-25. Given none, it answered `not covered` because "a Hobart CPI figure that the year's maximum remission needs was not given", which is false for that year. The seat's `@desc` asked for "one figure for 2024-25" too.
+    - Corrected: the core now works out how many figures a year needs (`the number of Hobart CPI figures reg 5 needs for`): none for 2024-25, and n + 1 for the year n years later. The `@desc` now says none is needed for 2024-25.
+    - No asserted value was wrong; the only 2024-25 assertion had passed a one-item list.
+
+    Asserted: with no figures, 2024-25 gives $379.41 and $558.50, and a 2024-25 remission of 30% of $1,500 is capped at $379.41; 2025-26 with March 2024 alone, and 2027-28 with three figures, are `not covered`.
+24. **The amount question now finds the cases it does not cover.** Two parts of the Act can change an individual owner's land tax and are not encoded. The first version answered both with the plain Schedule 1 figure.
+    - *Foreign investor land tax.* Under s 16C(1) an owner is liable if, at the start of the year, (a) the land is general land capable of residential use, and (b) an owner is a foreign person who acquired an interest by a dutiable transaction or by survivorship on or after 1 July 2022 (or became a foreign person, other than a foreign natural person, on or after that day). Rating Act s 6A charges 2% of the assessed land value, "in addition to" the Schedule 1 amount. A foreign natural person is an individual owner and inside the seat, so the first version understated their tax without warning. Example: a $300,000 rental, on which Schedule 1 charges $837.50 and s 6A may add $6,000.
+    - *The other exemptions.* Land under a conservation covenant (s 19A), approved new rentals and former short-stay properties (ss 19D, 19E), retirement village land (s 19(ba)-(bb)) and the other Division 2 exemptions take land, or part of it, out of the tax. The first version taxed such land in full.
+    - Corrected: the amount question asks both facts, and the core's `the land tax payable, within the encoded scope, for the financial year on` answers `not covered` with the reason. The foreign-person screen applies only where the owner has some general land, counting a part apportioned as general land (s 16A(2)(a)). With none, s 16C(1)(a) cannot be met and the Schedule 1 amount (nil) stands. Paragraph (a)'s residential test and the s 16D carve-outs are not worked out, so the screen leans to `not covered`.
+    - The plain Schedule 1 question now says that it leaves out foreign investor land tax.
+
+    Asserted: a foreign owner's rental, and a foreign owner's home with a shop ($40,000 apportioned as general land), are `not covered`; a foreign owner with only a home, or only a home and a farm, pays nil; a conservation covenant is `not covered`; a year before 2026-27 gives the year's own reason first.
+25. **Section 11(5)-(6) puts a 14-day duty on a new owner.** If it appears to the Commissioner that a person has become an owner and no details have been received, the Commissioner may serve a notice requiring the person "to state any interest in the land". The statement "is to be" by statutory declaration, "lodged with the Commissioner within 14 days after service of the notice".
+    - The first version encoded s 11(3) only, and listed s 11(5)-(6) as neither in nor out.
+    - Corrected: s 11(5)-(6) is now a regulative rule on the owner, clocked from service, and the seat asks what the person must do once served.
+    - Section 11 sets no penalty. Whether the Taxation Administration Act 1997 adds one is not answered, because that Act is not deposited.
+    - Section 11(1) and (4) (the Commissioner's list and the Valuer-General's details) are machinery and stay out.
+
+    Asserted, with a trace: lodged on day 14, in time; on day 15, a breach by the owner.
+26. **The pensioner exemption question restated the 50% test.** It took "my share for land tax" and tested it `AT LEAST 50` in the seat layer, repeating ss 6(1) and 19 instead of using the core's `is an owner of at least a 50% interest`. It also asked for a derived figure (the share after s 3B and s 11A) instead of plain facts.
+    - Corrected: the question asks the share held, the number of joint tenants and any Help to Buy share, as the share question does, and passes them to the core.
+    - The answers are unchanged where the old input was the counted share.
+
+    Asserted: two joint tenants of the whole are exempt and three are not; a couple holding 70% with Housing Australia holding 30% are exempt (35 of 70 is 50%, finding 4); 35% with no Help to Buy share is not; a 60% tenant in common is.
+
 ## What would need doing before this is worth relying on
 
-- Deposit the Taxation Administration Act 1997 (Tas), which governs land tax objections, interest and penalty tax, and the Penalty Units and Other Penalties Act 1987 (Tas).
+- Deposit the Taxation Administration Act 1997 (Tas), which governs land tax objections, interest and penalty tax (and may penalise a late s 11(6) statement), and the Penalty Units and Other Penalties Act 1987 (Tas).
 - Deposit the Hobart CPI March-quarter figures (ABS) for reg 5, and the regulations in force before 2024-25 if earlier years are to be answered.
 - Deposit the wording of ss 13 and 37 before 1 July 2026 if 2024-25 or 2025-26 land tax is to be answered.
 - Check the reg 5(2) formula against the source image.
 - Settle the readings in findings 1, 4, 6, 7, 10, 12, 15, 16 and 17 with the State Revenue Office's practice or the owner.
 - Resolve reg 6(a) after the repeal of the Aged Care Act 1997 (finding 18).
 - Deposit the Water and Sewerage Industry Act 2008 text for "customer".
-- Encode the out-of-scope parts as needed: trusts and companies, foreign investor land tax, the other exemptions.
+- Encode the out-of-scope parts as needed: trusts and companies, foreign investor land tax (Div 1A with Rating Act s 6A, so that a foreign owner gets an amount instead of `not covered`), the other exemptions.
+- The amount question screens out foreign investor land tax and the other exemptions (finding 24), but not land the owner holds as a trustee (s 6(3)-(5), s 24(4)) or land being subdivided (s 25). The seat is taken to be an individual owning in their own right, with no subdivision; a screen for both would be the next step.
 - Check against State Revenue Office calculators and rulings. None were consulted.
