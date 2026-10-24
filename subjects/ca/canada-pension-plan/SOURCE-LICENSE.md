@@ -20,6 +20,10 @@ The Justice Laws Important Note adds: "The Department of Justice Canada assumes 
 
 The Reproduction Order covers reproduction and does not expressly grant a right to adapt. The XML repository's Open Government Licence does grant adaptation, which is why the text was taken from the repository. Whether an L4 encoding that quotes this text may rely on the Open Government Licence is a human decision to record here before an encoding quotes it.
 
+## Ruling recorded 2026-10-24
+
+The question left open above ("Whether an L4 encoding that quotes this text may rely on the Open Government Licence is a human decision") is settled. The tax-and-benefits brief of 24 October 2026 records that federal texts taken from github.com/justicecanada/laws-lois-xml under the Open Government Licence - Canada 2.0, which permits adaptation, may be encoded, and Michael's ruling of 24 October 2026 allows Canadian texts whose terms permit reproduction to be quoted in L4 encodings in Commons. An encoding here may quote this text, keeping the notice that it is not an official version and the attribution "Contains information licensed under the Open Government Licence - Canada."
+
 ## Language
 
 English is not the only authoritative language. Federal Acts are enacted in both English and French, and the two versions have equal authority (Constitution Act, 1982, s. 18; Official Languages Act, s. 13). Only the English version is deposited; Justice Laws publishes both, at /eng/ and /fra/.

@@ -1,0 +1,514 @@
+IMPORT prelude
+
+-- Canada Pension Plan (R.S.C., 1985, c. C-8), with the Canada Pension Plan Regulations (C.R.C., c. 385).
+-- SEAT-NEUTRAL CORE. Written in the Act's own actors and terms: "the employee", "the contributor", "the survivor",
+-- "the estate", "the Minister". The individual's questions are in cpp-seat.l4, which IMPORTs this module and restates
+-- no rule.
+--
+-- PROVISIONS COVERED. Part I: ss 8(1)-(1.2) and 10(1)-(1.2) (base, first and second additional contributions of an
+-- employee and of a self-employed person), ss 11.1(2) and 11.2 with Schedules 1 and 2 (rates), ss 12(1)(d), 16, 17,
+-- 17.1, 18.1, 19(a), 20 (maximum, additional maximum and basic exemption), s 30(1) (return of self-employed earnings).
+-- Part II: s 42(1) "survivor", s 42(2)(a) (disabled, as a determination), s 44(1)(a)-(d), (2)(a), (3), ss 44.1, 44.2
+-- (who is paid), s 46(1), (3.1) with Regulations ss 78.3-78.4 (retirement pension and its adjustment factor), s 48(4)
+-- (the months dropped), s 56(1), (3)-(4) (disability pension), s 57(1)(b), (1.2) (death benefit), s 58(1)(a.1), (b)
+-- (survivor's pension without a retirement pension of the survivor's own), s 67(3.1) (when a retirement pension
+-- starts), s 69 (when a disability pension starts). Duties: s 30(1), s 66(1), s 81(1)-(2); Regulations ss 46.2, 70.1,
+-- 71(2), as regulative rules.
+--
+-- FIGURES. The Year's Maximum Pensionable Earnings is set each year by the wage index (s 18) and is an INPUT; the
+-- Year's Additional Maximum Pensionable Earnings is computed from it (s 18.1); the Year's Basic Exemption is $3,500
+-- (s 20(2)); the rates are the Schedules' (written in). The flat rate benefits of ss 56(2) and 58(1.1) are indexed to the
+-- Pension Index and are inputs, as are the contributor's average monthly pensionable earnings (ss 48-53), which depend
+-- on a lifetime record of earnings that the Minister keeps (the Record of Earnings, s 95).
+--
+-- Edition: Justice Laws consolidation current to 2026-09-30 (Act last amended 2024-12-17; Regulations last amended
+-- 2026-01-01), deposited at ../../registers/source-bundle/R.S.C.-1985-c.-C-8.txt and C.R.C.-c.-385.txt. Unofficial
+-- reproduction; not an official version. Contains information licensed under the Open Government Licence - Canada.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Canada Pension Plan -- seat-neutral core`
+
+§§ `Arithmetic`
+
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`not below zero` `x` MEANS IF `x` LESS THAN 0 THEN 0 ELSE `x`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` `a` `b` MEANS IF `a` LESS THAN `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the greater of` `a` `b` MEANS IF `a` GREATER THAN `b` THEN `a` ELSE `b`
+
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`to the cent` `x` MEANS (FLOOR ((`x` TIMES 100) PLUS 0.5)) DIVIDED BY 100
+
+§§ `Part I -- rates, maximums and the basic exemption`
+
+-- Schedule 1: "2003 and each subsequent year | 4.95 | 4.95 | 9.9". Schedule 2, first additional: 2019 0.15/0.3, 2020
+-- 0.3/0.6, 2021 0.5/1.0, 2022 0.75/1.5, 2023 and "2024 and each subsequent year" 1.0/2.0; second additional: "2024 and
+-- each subsequent year | 4.0 | 4.0 | 8.0". The encoding covers 2019 onward; an earlier year answers `not covered`.
+DECLARE `CPP rates` HAS
+    `base rate for employees`                      IS A NUMBER
+    `base rate for self-employed persons`          IS A NUMBER
+    `first additional rate for employees`          IS A NUMBER
+    `first additional rate for self-employed persons` IS A NUMBER
+    `second additional rate for employees`         IS A NUMBER
+    `second additional rate for self-employed persons` IS A NUMBER
+
+GIVEN `year` IS A NUMBER
+GIVETH A MAYBE `CPP rates`
+`the rates for the year` `year` MEANS
+    IF `year` LESS THAN 2019
+    THEN NOTHING
+    ELSE JUST (`CPP rates` WITH
+                  `base rate for employees`                          IS 4.95%
+                  `base rate for self-employed persons`              IS 9.9%
+                  `first additional rate for employees`              IS `the first additional employee rate for` `year`
+                  `first additional rate for self-employed persons`  IS 2 TIMES (`the first additional employee rate for` `year`)
+                  `second additional rate for employees`             IS (IF `year` AT LEAST 2024 THEN 4% ELSE 0)
+                  `second additional rate for self-employed persons` IS (IF `year` AT LEAST 2024 THEN 8% ELSE 0))
+
+GIVEN `year` IS A NUMBER
+GIVETH A NUMBER
+`the first additional employee rate for` `year` MEANS
+    IF `year` EQUALS 2019 THEN 0.15%
+    ELSE IF `year` EQUALS 2020 THEN 0.3%
+         ELSE IF `year` EQUALS 2021 THEN 0.5%
+              ELSE IF `year` EQUALS 2022 THEN 0.75%
+                   ELSE 1%
+
+-- s 18.1: the Year's Additional Maximum Pensionable Earnings is "(a) for 2024, 1.07 multiplied by" the YMPE, "(b) for
+-- 2025 and each subsequent year, 1.14", rounded to "the next multiple of $100 below". Before 2024 there is none (the
+-- encoding gives the YMPE, so the second additional band is nil).
+GIVEN `year` IS A NUMBER, `YMPE` IS A NUMBER
+GIVETH A NUMBER
+`the Year's Additional Maximum Pensionable Earnings` `year` `YMPE` MEANS
+    IF `year` LESS THAN 2024
+    THEN `YMPE`
+    ELSE LET `factor` MEANS IF `year` EQUALS 2024 THEN 1.07 ELSE 1.14
+         IN (FLOOR ((`factor` TIMES `YMPE`) DIVIDED BY 100)) TIMES 100
+
+-- s 20(2): "For each year after 1997 the amount of a Year's Basic Exemption is $3,500."
+`the Year's Basic Exemption` MEANS 3500
+
+-- ss 17(a), 17.1(a), 19(a): for a year in which the person reaches 18 or 70 or dies, or the contributory period ends
+-- or begins by reason of disability, each amount is "that proportion ... that the number of months in the year" after
+-- 18 (or before 70, or up to death) "is of 12". The number of months is a fact (12 in an ordinary year). The other
+-- prorations (elections under s 12(1)(c)(ii), s 19(d) for the year a retirement pension starts) are not encoded.
+DECLARE `Contribution year` HAS
+    `year`                                       IS A NUMBER
+    `Year's Maximum Pensionable Earnings`        IS A NUMBER
+    `months of the year that count`              IS A NUMBER
+    `contributory salary and wages`              IS A NUMBER  -- s 12, income from pensionable employment
+    `contributory self-employed earnings`        IS A NUMBER  -- s 13
+    `resident in Canada for the Income Tax Act`  IS A BOOLEAN -- s 10(1)
+
+GIVEN `y` IS A `Contribution year`
+GIVETH A NUMBER
+`the maximum pensionable earnings` `y` MEANS
+    (`y`'s `Year's Maximum Pensionable Earnings`) TIMES (`y`'s `months of the year that count`) DIVIDED BY 12
+
+GIVEN `y` IS A `Contribution year`
+GIVETH A NUMBER
+`the additional maximum pensionable earnings` `y` MEANS
+    (`the Year's Additional Maximum Pensionable Earnings` (`y`'s `year`) (`y`'s `Year's Maximum Pensionable Earnings`)) TIMES (`y`'s `months of the year that count`) DIVIDED BY 12
+
+GIVEN `y` IS A `Contribution year`
+GIVETH A NUMBER
+`the basic exemption` `y` MEANS
+    `the Year's Basic Exemption` TIMES (`y`'s `months of the year that count`) DIVIDED BY 12
+
+-- s 16: maximum contributory earnings = maximum pensionable earnings minus the basic exemption.
+GIVEN `y` IS A `Contribution year`
+GIVETH A NUMBER
+`the maximum contributory earnings` `y` MEANS
+    (`the maximum pensionable earnings` `y`) MINUS (`the basic exemption` `y`)
+
+§§ `Part I -- contributions of the employee and the self-employed person (ss 8, 10)`
+
+-- s 8(1), (1.1): the base and first additional contributions are the rate times "the lesser of (a) the employee's
+-- contributory salary and wages for the year ... minus ... the basic exemption ... and (b) the employee's maximum
+-- contributory earnings". s 8(1.2): the second additional contribution is the rate times the amount by which
+-- contributory salary and wages "not exceeding the employee's additional maximum pensionable earnings ... exceeds the
+-- employee's maximum pensionable earnings". One employer for the year and no provincial plan; s 15 then makes "the
+-- salary and wages on which a base contribution has been made" the amount in the lesser-of.
+GIVEN `y` IS A `Contribution year`
+GIVETH A NUMBER
+`the employee's contributory band` `y` MEANS
+    `the lesser of` (`not below zero` ((`y`'s `contributory salary and wages`) MINUS (`the basic exemption` `y`))) (`the maximum contributory earnings` `y`)
+
+GIVEN `y` IS A `Contribution year`
+GIVETH A NUMBER
+`the employee's second additional band` `y` MEANS
+    `not below zero` ((`the lesser of` (`y`'s `contributory salary and wages`) (`the additional maximum pensionable earnings` `y`)) MINUS (`the maximum pensionable earnings` `y`))
+
+-- s 10(1), (1.1): the self-employed base and first additional contributions are the rate times the lesser of (a)
+-- contributory self-employed earnings "minus the amount by which the individual's basic exemption ... exceeds" the
+-- exemption already deducted by employers, and (b) maximum contributory earnings "minus the individual's salary and
+-- wages ... on which a base contribution has been made". READING: the exemption deducted by the one employer is the
+-- lesser of the basic exemption and the salary and wages.
+GIVEN `y` IS A `Contribution year`
+GIVETH A NUMBER
+`the self-employed contributory band` `y` MEANS
+    LET `exemption left` MEANS `not below zero` ((`the basic exemption` `y`) MINUS (`the lesser of` (`the basic exemption` `y`) (`y`'s `contributory salary and wages`)))
+    IN `not below zero`
+           (`the lesser of`
+               ((`y`'s `contributory self-employed earnings`) MINUS `exemption left`)
+               ((`the maximum contributory earnings` `y`) MINUS (`the employee's contributory band` `y`)))
+
+-- s 10(1.2): the second additional self-employed contribution is the rate times "(a) the amount by which the
+-- individual's contributory self-employed earnings for the year -- not exceeding the individual's additional maximum
+-- pensionable earnings -- exceeds the individual's maximum pensionable earnings, minus (b) the individual's salary and
+-- wages ... on which a second additional contribution has been made". Encoded as written (finding 3): the
+-- self-employed earnings alone are compared with the maximum pensionable earnings.
+GIVEN `y` IS A `Contribution year`
+GIVETH A NUMBER
+`the self-employed second additional band` `y` MEANS
+    `not below zero`
+        ((`not below zero` ((`the lesser of` (`y`'s `contributory self-employed earnings`) (`the additional maximum pensionable earnings` `y`)) MINUS (`the maximum pensionable earnings` `y`)))
+         MINUS (`the employee's second additional band` `y`))
+
+DECLARE `Contributions` HAS
+    `employee's base contribution`                   IS A NUMBER
+    `employee's first additional contribution`       IS A NUMBER
+    `employee's second additional contribution`      IS A NUMBER
+    `self-employed base contribution`                IS A NUMBER
+    `self-employed first additional contribution`    IS A NUMBER
+    `self-employed second additional contribution`   IS A NUMBER
+
+GIVEN `y` IS A `Contribution year`
+GIVETH A MAYBE `Contributions`
+`the contributions for the year` `y` MEANS
+    CONSIDER `the rates for the year` (`y`'s `year`)
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST `r` THEN
+        LET `self-employed applies` MEANS `y`'s `resident in Canada for the Income Tax Act`
+        IN JUST (`Contributions` WITH
+                    `employee's base contribution`                IS `to the cent` ((`r`'s `base rate for employees`) TIMES (`the employee's contributory band` `y`))
+                    `employee's first additional contribution`    IS `to the cent` ((`r`'s `first additional rate for employees`) TIMES (`the employee's contributory band` `y`))
+                    `employee's second additional contribution`   IS `to the cent` ((`r`'s `second additional rate for employees`) TIMES (`the employee's second additional band` `y`))
+                    `self-employed base contribution`             IS (IF `self-employed applies` THEN `to the cent` ((`r`'s `base rate for self-employed persons`) TIMES (`the self-employed contributory band` `y`)) ELSE 0)
+                    `self-employed first additional contribution` IS (IF `self-employed applies` THEN `to the cent` ((`r`'s `first additional rate for self-employed persons`) TIMES (`the self-employed contributory band` `y`)) ELSE 0)
+                    `self-employed second additional contribution` IS (IF `self-employed applies` THEN `to the cent` ((`r`'s `second additional rate for self-employed persons`) TIMES (`the self-employed second additional band` `y`)) ELSE 0))
+
+GIVEN `c` IS A `Contributions`
+GIVETH A NUMBER
+`the total contributions` `c` MEANS
+    `c`'s `employee's base contribution` PLUS `c`'s `employee's first additional contribution` PLUS `c`'s `employee's second additional contribution`
+    PLUS `c`'s `self-employed base contribution` PLUS `c`'s `self-employed first additional contribution` PLUS `c`'s `self-employed second additional contribution`
+
+§§ `Part II -- the retirement pension (ss 44(1)(a), 46, 48, 67)`
+
+-- s 44(1)(a): "a retirement pension shall be paid to a contributor who has reached sixty years of age"; s 2
+-- "contributor": "a person who has made an employee's contribution or a contribution in respect of the person's
+-- self-employed earnings" (or has had earnings attributed to them on a division); s 60(1): only on application.
+DECLARE `Retirement eligibility` IS ONE OF
+    `a retirement pension is payable on application (s 44(1)(a))`
+    `no retirement pension: under 60 (s 44(1)(a))`
+    `no retirement pension: not a contributor (s 2)`
+
+GIVEN `age` IS A NUMBER, `has made a contribution` IS A BOOLEAN
+GIVETH A `Retirement eligibility`
+`the retirement pension eligibility` `age` `has made a contribution` MEANS
+    IF NOT (`has made a contribution`)
+    THEN `no retirement pension: not a contributor (s 2)`
+    ELSE IF `age` LESS THAN 60
+         THEN `no retirement pension: under 60 (s 44(1)(a))`
+         ELSE `a retirement pension is payable on application (s 44(1)(a))`
+
+-- s 46(1): "a basic monthly amount equal to the aggregate of (a) 25% of their average monthly pensionable earnings,
+-- (b) 8.33% of their first additional monthly pensionable earnings, and (c) 33.33% of their second additional monthly
+-- pensionable earnings". The three earnings figures come from the Record of Earnings (ss 48-53): inputs.
+DECLARE `Pensionable earnings record` HAS
+    `average monthly pensionable earnings`               IS A NUMBER
+    `first additional monthly pensionable earnings`      IS A NUMBER
+    `second additional monthly pensionable earnings`     IS A NUMBER
+
+GIVEN `e` IS A `Pensionable earnings record`
+GIVETH A NUMBER
+`the s 46(1) basic monthly amount` `e` MEANS
+    (25% TIMES `e`'s `average monthly pensionable earnings`)
+    PLUS (8.33% TIMES `e`'s `first additional monthly pensionable earnings`)
+    PLUS (33.33% TIMES `e`'s `second additional monthly pensionable earnings`)
+
+-- Ages in months: the month in which a person reaches an age counts as that age in whole years and 0 months, so
+-- "the month in which the contributor reaches 65" is month 780.
+`the month of turning 60` MEANS 720
+`the month of turning 65` MEANS 780
+`the month of turning 70` MEANS 840
+
+-- s 46(3.1) with Regulations s 78.3: before 65, "1 - (A x B)", A the months "beginning with the month in which the
+-- retirement pension becomes payable and ending with the month before the month in which the contributor reaches 65
+-- years of age, or 60 months, whichever is less", B 0.0060 after 2015. s 78.4: after 65, "1 + (A x B)", A the months
+-- "beginning with the month after the contributor reaches 65 years of age and ending with the month in which the
+-- retirement pension becomes payable, or 60 months", B 0.0070 after 2012. READING: a pension starting in or after 2016.
+GIVEN `age in months when the pension starts` IS A NUMBER
+GIVETH A NUMBER
+`the adjustment factor` `age in months when the pension starts` MEANS
+    IF `age in months when the pension starts` LESS THAN `the month of turning 65`
+    THEN 1 MINUS ((`the lesser of` (`the month of turning 65` MINUS `age in months when the pension starts`) 60) TIMES 0.006)
+    ELSE 1 PLUS ((`the lesser of` (`age in months when the pension starts` MINUS `the month of turning 65`) 60) TIMES 0.007)
+
+GIVEN `e` IS A `Pensionable earnings record`, `age in months when the pension starts` IS A NUMBER
+GIVETH A NUMBER
+`the monthly retirement pension` `e` `age in months when the pension starts` MEANS
+    `to the cent` ((`the s 46(1) basic monthly amount` `e`) TIMES (`the adjustment factor` `age in months when the pension starts`))
+
+-- s 67(3.1): a retirement pension starting after 2011 "is payable for each month commencing with the latest of (a) the
+-- month in which the applicant reached sixty years of age, (b) the month following the month in which the application
+-- was received if they were under sixty-five years of age when they applied, (c) the eleventh month preceding the month
+-- in which the application was received if they have reached sixty-five years of age when they applied, but in no case
+-- earlier than the month in which they reached sixty-five years of age, and (d) the month chosen by the applicant".
+-- Months as ages in months; a chosen month of 0 means none chosen.
+GIVEN `age in months when applying` IS A NUMBER, `age in months chosen for the start` IS A NUMBER
+GIVETH A NUMBER
+`the first month of the retirement pension` `age in months when applying` `age in months chosen for the start` MEANS
+    LET `b or c` MEANS IF `age in months when applying` LESS THAN `the month of turning 65`
+                       THEN `age in months when applying` PLUS 1
+                       ELSE `the greater of` (`age in months when applying` MINUS 11) `the month of turning 65`
+    IN `the greater of` `the month of turning 60` (`the greater of` `b or c` `age in months chosen for the start`)
+
+-- s 48(4): where more than 120 months remain in the contributory period, there is deducted "the lesser of" 17 per cent
+-- of the number remaining (for a pension starting after 2013), a fraction "taken to be a complete month", "and (ii) the
+-- number of months by which the number remaining exceeds one hundred and twenty". The months with the lowest earnings
+-- are the ones dropped; the earnings are the Record's.
+GIVEN `months remaining` IS A NUMBER
+GIVETH A NUMBER
+`the months dropped under s 48(4)` `months remaining` MEANS
+    IF `months remaining` AT MOST 120
+    THEN 0
+    ELSE `the lesser of` (CEILING (17% TIMES `months remaining`)) (`months remaining` MINUS 120)
+
+§§ `Part II -- minimum qualifying periods (s 44(2), (3))`
+
+-- s 44(2)(a): for a disability pension, base contributions "on earnings that are not less than the contributor's basic
+-- exemption, calculated without regard to subsection 20(2)" (that is, 10% of the YMPE, s 20(1)) "(i) for at least four
+-- of the last six calendar years included ... in the contributor's contributory period or, where there are fewer than
+-- six calendar years ..., for at least four years, (i.1) for at least 25 calendar years ..., of which at least three are
+-- in the last six", or "(ii) for each year after the month of cessation of the contributor's previous disability
+-- benefit". The counts of qualifying years are facts from the Record.
+DECLARE `Disability contribution record` HAS
+    `qualifying years among the last six`             IS A NUMBER
+    `qualifying years in all`                         IS A NUMBER
+    `contributed every year since a previous disability benefit ceased` IS A BOOLEAN
+
+GIVEN `r` IS A `Disability contribution record`
+GIVETH A BOOLEAN
+DECIDE `meets the disability minimum qualifying period` `r` IF
+        `r`'s `qualifying years among the last six` AT LEAST 4
+    OR  (`r`'s `qualifying years in all` AT LEAST 25 AND `r`'s `qualifying years among the last six` AT LEAST 3)
+    OR  `r`'s `contributed every year since a previous disability benefit ceased`
+
+-- s 44(3): for the death benefit, survivor's and orphan's benefits, base contributions "(a) for at least one third of
+-- the total number of years included ... within their contributory period ..., but in no case for less than three
+-- years; or (b) for at least ten years".
+GIVEN `years with base contributions` IS A NUMBER, `years in the contributory period` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `meets the s 44(3) minimum qualifying period` `years with base contributions` `years in the contributory period` IF
+        (    `years with base contributions` TIMES 3 AT LEAST `years in the contributory period`
+         AND `years with base contributions` AT LEAST 3)
+    OR  `years with base contributions` AT LEAST 10
+
+§§ `Part II -- the disability pension (ss 42(2), 44(1)(b), 56, 69)`
+
+-- s 42(2)(a): "disabled only if he is determined in prescribed manner to have a severe and prolonged mental or
+-- physical disability": severe "only if ... incapable regularly of pursuing any substantially gainful occupation";
+-- prolonged "only if ... likely to be long continued and of indefinite duration or is likely to result in death". A
+-- determination by the Minister: answered conditionally, as two facts.
+DECLARE `Disability eligibility` IS ONE OF
+    `a disability pension is payable on application (s 44(1)(b))`
+    `no disability pension: 65 or over, or a retirement pension is payable (s 44(1)(b))`
+    `no disability pension: not determined to have a severe and prolonged disability (s 42(2)(a))`
+    `no disability pension: the minimum qualifying period is not met (s 44(2))`
+
+GIVEN `age` IS A NUMBER, `a retirement pension is payable` IS A BOOLEAN, `determined severe` IS A BOOLEAN, `determined prolonged` IS A BOOLEAN, `r` IS A `Disability contribution record`
+GIVETH A `Disability eligibility`
+`the disability pension eligibility` `age` `a retirement pension is payable` `determined severe` `determined prolonged` `r` MEANS
+    IF `age` AT LEAST 65 OR `a retirement pension is payable`
+    THEN `no disability pension: 65 or over, or a retirement pension is payable (s 44(1)(b))`
+    ELSE IF NOT (`determined severe` AND `determined prolonged`)
+         THEN `no disability pension: not determined to have a severe and prolonged disability (s 42(2)(a))`
+         ELSE IF `meets the disability minimum qualifying period` `r`
+              THEN `a disability pension is payable on application (s 44(1)(b))`
+              ELSE `no disability pension: the minimum qualifying period is not met (s 44(2))`
+
+-- s 56(1): "(a) a flat rate benefit ... and (b) 75% of the amount of the contributor's retirement pension", that
+-- amount being 25% of average monthly pensionable earnings (s 56(3), computed by s 56(4) over the contributory period
+-- ending with the month of disability, "or 48, whichever is greater"), 8.33% of first additional and 33.33% of second
+-- additional monthly pensionable earnings (s 56(3.1), (3.2), each over 480 months). No adjustment factor applies.
+GIVEN `flat rate benefit` IS A NUMBER, `e` IS A `Pensionable earnings record`
+GIVETH A NUMBER
+`the monthly disability pension` `flat rate benefit` `e` MEANS
+    `to the cent` (`flat rate benefit` PLUS (75% TIMES (`the s 46(1) basic monthly amount` `e`)))
+
+-- s 56(4): average monthly pensionable earnings for the disability pension: total pensionable earnings "by the total
+-- number of months in the contributor's contributory period or 48, whichever is greater" (subject to s 48(2), (4)).
+GIVEN `total pensionable earnings` IS A NUMBER, `months in the contributory period` IS A NUMBER
+GIVETH A NUMBER
+`the s 56(4) average monthly pensionable earnings` `total pensionable earnings` `months in the contributory period` MEANS
+    `total pensionable earnings` DIVIDED BY (`the greater of` `months in the contributory period` 48)
+
+-- s 69: payable "commencing with the fourth month following the month in which the applicant became disabled", or the
+-- month following it if a disability pension was received in the previous five years; s 42(2)(b): never "deemed to have
+-- become disabled earlier than fifteen months before the time of the making of any application" (twelve with s 69(b)).
+-- Months counted back from the month of application (0); the answer is the number of months before the application
+-- month in which payment can begin (negative: after it).
+GIVEN `months between becoming disabled and applying` IS A NUMBER, `received a disability pension in the previous five years` IS A BOOLEAN
+GIVETH A NUMBER
+`months before the application that the disability pension can start` `months between becoming disabled and applying` `received a disability pension in the previous five years` MEANS
+    LET `deemed` MEANS IF `received a disability pension in the previous five years`
+                       THEN `the lesser of` `months between becoming disabled and applying` 12
+                       ELSE `the lesser of` `months between becoming disabled and applying` 15
+        `waiting`  MEANS IF `received a disability pension in the previous five years` THEN 1 ELSE 4
+    IN `deemed` MINUS `waiting`
+
+§§ `Part II -- the death benefit and the survivor's pension (ss 42(1), 44(1)(c)-(d), 44.1, 44.2, 57, 58)`
+
+-- s 42(1) "survivor": "(a) if there is no person described in paragraph (b), a person who was married to the
+-- contributor at the time of the contributor's death, or (b) a person who was the common-law partner of the
+-- contributor at the time of the contributor's death". A common-law partner displaces a married spouse.
+DECLARE `Relationship at death` IS ONE OF
+    `the common-law partner at death`
+    `married at death, and there was no common-law partner`
+    `married at death, but the contributor had a common-law partner`
+    `neither`
+
+DECLARE `Survivor eligibility` IS ONE OF
+    `a survivor's pension is payable on application (s 44(1)(d)(ii))`
+    `no survivor's pension: not the survivor (s 42(1))`
+    `no survivor's pension: the contributor did not meet the minimum qualifying period (s 44(3))`
+    `no survivor's pension: convicted of the contributor's murder or manslaughter (s 44.1(1)(a))`
+    `no survivor's pension: a division of pensionable earnings after 2024 and no new cohabitation of a year (s 44.2)`
+
+GIVEN `relationship` IS A `Relationship at death`, `the contributor met s 44(3)` IS A BOOLEAN, `convicted` IS A BOOLEAN, `divided after 2024 without a new year of cohabitation` IS A BOOLEAN
+GIVETH A `Survivor eligibility`
+`the survivor's pension eligibility` `relationship` `the contributor met s 44(3)` `convicted` `divided after 2024 without a new year of cohabitation` MEANS
+    CONSIDER `relationship`
+    WHEN `married at death, but the contributor had a common-law partner` THEN `no survivor's pension: not the survivor (s 42(1))`
+    WHEN `neither` THEN `no survivor's pension: not the survivor (s 42(1))`
+    OTHERWISE
+        IF NOT (`the contributor met s 44(3)`)
+        THEN `no survivor's pension: the contributor did not meet the minimum qualifying period (s 44(3))`
+        ELSE IF `convicted`
+             THEN `no survivor's pension: convicted of the contributor's murder or manslaughter (s 44.1(1)(a))`
+             ELSE IF `divided after 2024 without a new year of cohabitation`
+                  THEN `no survivor's pension: a division of pensionable earnings after 2024 and no new cohabitation of a year (s 44.2)`
+                  ELSE `a survivor's pension is payable on application (s 44(1)(d)(ii))`
+
+-- s 58(1)(a.1): under 65 and no retirement pension of one's own, after 2018: "(i) a flat rate benefit ... and (ii)
+-- 37.5% of the amount of the contributor's retirement pension" (the three portions, ss 58(3), (3.1), (3.4), each
+-- indexed from the contributor's death). (b): 65 or over and no retirement pension: "60% of the amount of the
+-- contributor's retirement pension". With a retirement pension of one's own, s 58(2) applies: not encoded (NOTHING).
+GIVEN `survivor's age` IS A NUMBER, `the survivor has a retirement pension of their own` IS A BOOLEAN, `flat rate benefit` IS A NUMBER, `the contributor's retirement pension for s 58` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the monthly survivor's pension` `survivor's age` `the survivor has a retirement pension of their own` `flat rate benefit` `the contributor's retirement pension for s 58` MEANS
+    IF `the survivor has a retirement pension of their own`
+    THEN NOTHING
+    ELSE IF `survivor's age` LESS THAN 65
+         THEN JUST (`to the cent` (`flat rate benefit` PLUS (37.5% TIMES `the contributor's retirement pension for s 58`)))
+         ELSE JUST (`to the cent` (60% TIMES `the contributor's retirement pension for s 58`))
+
+-- s 57(1)(b): a death after 2018: "$2,500". (1.2): "$5,000 if (a) the contributor's death occurs after December 31,
+-- 2024; (b) a death benefit is payable ...; (c) the contributor has not received a retirement pension or a disability
+-- pension under this Act or under a provincial pension plan; and (d) no survivor's pension is payable". s 44(1)(c):
+-- only if the contributor met the s 44(3) period; s 44.1(1)(b): not to a person convicted of the murder.
+GIVEN `year of death` IS A NUMBER, `the contributor met s 44(3)` IS A BOOLEAN, `the contributor received a retirement or disability pension` IS A BOOLEAN, `a survivor's pension is payable` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`the death benefit` `year of death` `the contributor met s 44(3)` `the contributor received a retirement or disability pension` `a survivor's pension is payable` MEANS
+    IF NOT (`the contributor met s 44(3)`)
+    THEN JUST 0
+    ELSE IF `year of death` LESS THAN 2019
+         THEN NOTHING
+         ELSE IF     `year of death` AT LEAST 2025
+                 AND NOT (`the contributor received a retirement or disability pension`)
+                 AND NOT (`a survivor's pension is payable`)
+              THEN JUST 5000
+              ELSE JUST 2500
+
+§§ `Regulative rules -- the contributor's and beneficiary's duties, and what the Minister owes`
+
+DECLARE `CPP party` IS ONE OF `the contributor or beneficiary`, `the Minister`
+
+DECLARE `CPP act` IS ONE OF
+    `file a return of self-employed earnings`
+    `return the overpayment`
+    `request a reconsideration`
+    `reconsider and notify the decision with reasons`
+    `inform the Minister of a return to work`
+    `request cancellation of the benefit`
+    `repay the benefit`
+    `request reinstatement of the disability pension`
+
+-- s 30(1): a person "required to make a contribution for a year in respect of self-employed earnings" must file "a
+-- return of the person's self-employed earnings ... without notice or demand ... on or before the day on or before
+-- which the person's return of income under Part I of the Income Tax Act ... is required to be filed". Clock: days from
+-- the end of the year to that due date (an input; the Income Tax Act sets it). s 35: a penalty for failing to file.
+GIVEN `required to contribute on self-employed earnings` IS A BOOLEAN, `days to the income tax return due date` IS A NUMBER
+GIVETH A DEONTIC `CPP party` `CPP act`
+DECIDE `s 30(1) -- a self-employed contributor must file a return of self-employed earnings by the income tax due date` IS
+    IF `required to contribute on self-employed earnings`
+    THEN PARTY `the contributor or beneficiary`
+         MUST  `file a return of self-employed earnings`
+         WITHIN `days to the income tax return due date`
+         LEST  BREACH BY `the contributor or beneficiary` BECAUSE "s 30(1): a return of self-employed earnings must be filed by the day the income tax return is due (s 35: penalty)"
+    ELSE FULFILLED
+
+-- s 66(1): a person or estate that received a benefit payment "to which the person or estate is not entitled, or ...
+-- in excess" "shall forthwith return the cheque or the amount". No period ("forthwith").
+GIVETH A DEONTIC `CPP party` `CPP act`
+DECIDE `s 66(1) -- a person overpaid must return the overpayment forthwith` IS
+    PARTY `the contributor or beneficiary`
+    MUST  `return the overpayment`
+
+-- s 81(1): a dissatisfied applicant or beneficiary "may, within ninety days after the day on which the dissatisfied
+-- party was notified ... make a request to the Minister ... for a reconsideration" (or within a longer period the
+-- Minister allows). (2): "The Minister shall reconsider without delay ... and shall notify in writing ... of the
+-- Minister's decision and of the reasons for it." Clock: days from the notice.
+GIVETH A DEONTIC `CPP party` `CPP act`
+DECIDE `s 81 -- I may ask for a reconsideration within 90 days, and the Minister must then reconsider and give reasons in writing` IS
+    PARTY `the contributor or beneficiary`
+    MAY   `request a reconsideration`
+    WITHIN 90
+    HENCE PARTY `the Minister`
+          MUST  `reconsider and notify the decision with reasons`
+
+-- Regulations s 70.1: "If a person who has been determined to be disabled within the meaning of the Act returns to
+-- work, the person shall so inform the Minister without delay." No period.
+GIVEN `has returned to work` IS A BOOLEAN
+GIVETH A DEONTIC `CPP party` `CPP act`
+DECIDE `Regulations s 70.1 -- a disability beneficiary who returns to work must tell the Minister without delay` IS
+    IF `has returned to work`
+    THEN PARTY `the contributor or beneficiary`
+         MUST  `inform the Minister of a return to work`
+    ELSE FULFILLED
+
+-- Regulations s 46.2(1): "A beneficiary may submit to the Minister, within the interval between the date of
+-- commencement of payment of the benefit and the expiration of 12 months after that date, a request in writing that
+-- the benefit be cancelled." (3): the Minister "shall grant" it. (4): the amount "shall be repayable within the time
+-- beginning on the granting of the request and ending on the expiration of 12 months following the month in which the
+-- request is granted". Clock: days; 12 months taken as 365 days, and the repayment period counted from the grant as
+-- 365 days (READING; the text runs to the end of the twelfth month after the month of the grant).
+GIVETH A DEONTIC `CPP party` `CPP act`
+DECIDE `Regulations s 46.2 -- I may cancel my benefit within 12 months of its start, then must repay within 12 months` IS
+    PARTY `the contributor or beneficiary`
+    MAY   `request cancellation of the benefit`
+    WITHIN 365
+    HENCE PARTY `the contributor or beneficiary`
+          MUST  `repay the benefit`
+          WITHIN 365
+          LEST  BREACH BY `the contributor or beneficiary` BECAUSE "Regulations s 46.2(4) and Act s 66.1: the benefit paid must be repaid within 12 months after the month the cancellation is granted"
+
+-- Act s 70.1 and Regulations s 71(2): a person whose disability pension stopped on a return to work may request
+-- reinstatement; "The request shall be made within 12 months after the month in which the person became incapable
+-- again of working." Clock: days from that month's end; 365 days (READING). A choice: no breach for not asking.
+GIVETH A DEONTIC `CPP party` `CPP act`
+DECIDE `Regulations s 71(2) -- I may ask for my disability pension back within 12 months of becoming unable to work again` IS
+    PARTY `the contributor or beneficiary`
+    MAY   `request reinstatement of the disability pension`
+    WITHIN 365
