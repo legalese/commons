@@ -1,0 +1,1560 @@
+IMPORT prelude
+
+-- Workers' Compensation and Rehabilitation Act 2003 (Qld) -- SEAT-NEUTRAL CORE.
+-- The rules are written in the Act's own actors and terms: "the worker", "the claimant", "the employer", "the insurer"
+-- (WorkCover Queensland or a self-insurer), "a dependant". The injured worker's questions are in wcra-seat.l4 and the
+-- insurer's in wcra-seat-insurer.l4; both IMPORT this module and restate no rule.
+--
+-- PROVISIONS COVERED. s 10A with the QOTE Notice 2026 (QOTE); s 11 and schedule 2 (worker); s 30 and schedule 3
+-- (employer); s 109 (who pays); ss 32, 34-36 (injury; in the course of employment; journeys), s 113(1) as a fact;
+-- s 106 with Regulation ss 105-109 (NWE); ss 108, 119 (entitlement; it ends on damages); ss 131, 132 with Regulation
+-- s 110, 132AA, 133, 134, 136, 141 (claim, time limits, decision); s 140 (maximum); s 144 (day of injury); s 144A
+-- (when weekly payments stop); s 146B with Regulation s 15 (basic weekly payment; excess period); ss 147, 148, 150-155
+-- (total incapacity); s 163 (partial incapacity: only the cap and its terms, the formula did not survive conversion);
+-- ss 169, 170 (review under 18, overpayments); ss 171-174, 176 (redemption); ss 178-181, 185-190 with Regulation
+-- s 117 (DPI lump sum, notice, disagreement, offer, decision); s 192 with Regulation s 118 and schedule 3, s 193 with
+-- Regulation s 121 and schedule 4 (additional lump sums); ss 194, 195, 199-201A (death); s 205 (automatic variation);
+-- ss 224, 225 with Regulation s 147 and schedule 8 (caring allowance); s 220(3)-(4) (referral to rehabilitation);
+-- ss 231, 232 (mitigation and rehabilitation); s 232B (dismissal within 12 months); ss 237(3), 239 (the election).
+--
+-- FIGURES. QOTE for 2026-27 is $1,994.50 (QOTE Notice 2026, s 3(1)), 2.1% up on 2025-26 (s 3(2)). QOTE for an
+-- earlier financial year is not deposited: it is an input. No QOTE after 30 June 2027 is deposited: such a day answers
+-- `not covered`. The single pension rate (maximum single disability support pension) and the carer pension rate
+-- (maximum carer payment) are Commonwealth figures: inputs.
+--
+-- EDITION. The Act: act-2003-027, the current in-force version on 22 September 2026, as deposited at
+-- ../../registers/source-bundle/act-2003-027.txt. The Regulation: sl-2025-0116, in force from 1 September 2025,
+-- deposited 20 October 2026 at ../../../workers-compensation-and-rehabilitation-regulation-2025/registers/source-bundle/.
+-- The QOTE Notice 2026: sl-2026-0044, in force from 1 July 2026, deposited 20 October 2026 at
+-- ../../../workers-compensation-and-rehabilitation-qote-notice-2026/registers/source-bundle/.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Workers' Compensation and Rehabilitation Act 2003 (Qld) -- seat-neutral core`
+
+§§ `Small helpers`
+
+GIVEN `a` IS A NUMBER
+      `b` IS A NUMBER
+GIVETH A NUMBER
+`the greater of` `a` `and` `b` MEANS
+    IF `a` AT LEAST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER
+      `b` IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` `a` `and` `b` MEANS
+    IF `a` AT MOST `b` THEN `a` ELSE `b`
+
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`nil if negative` `x` MEANS
+    IF `x` LESS THAN 0 THEN 0 ELSE `x`
+
+-- The n-th entry of a table column (1-based); 0 past the end (callers check the range first).
+GIVEN `n`          IS A NUMBER
+      `the column` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`entry` `n` `of` `the column` MEANS
+    CONSIDER `the column`
+    WHEN EMPTY THEN 0
+    WHEN x FOLLOWED BY xs THEN
+        IF `n` AT MOST 1
+        THEN x
+        ELSE `entry` (`n` MINUS 1) `of` xs
+
+§§ `Days, months and business days`
+
+-- DATE_SERIAL counts days from 1 January of year 1 (a Monday, serial 1), so DATE_SERIAL MODULO 7 is 0 on a Sunday,
+-- 1 on a Monday ... 6 on a Saturday. Check: 1 July 2026 is a Wednesday and its serial, 740162, is 3 modulo 7.
+GIVEN `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is a Monday to Friday` `the day` IF
+        (DATE_SERIAL `the day` MODULO 7) AT LEAST 1
+    AND (DATE_SERIAL `the day` MODULO 7) AT MOST 5
+
+GIVEN `n`         IS A NUMBER
+      `the start` IS A DATE
+GIVETH A DATE
+`the calendar day` `n` `days after` `the start` MEANS
+    DATE_FROM_SERIAL (DATE_SERIAL `the start` PLUS `n`)
+
+-- "Business day" is not defined in the Act; the Acts Interpretation Act 1954 (not deposited) excludes Saturdays,
+-- Sundays and public holidays. READING: the count skips Saturdays and Sundays, and `extra` adds one business day for
+-- each Queensland public holiday that falls on a Monday to Friday in the period, which the caller states.
+GIVEN `n`         IS A NUMBER
+      `the start` IS A DATE
+GIVETH A DATE
+`the date` `n` `Monday-to-Friday days after` `the start` MEANS
+    IF `n` AT MOST 0
+    THEN `the start`
+    ELSE IF `is a Monday to Friday` (`the calendar day` 1 `days after` `the start`)
+         THEN `the date` (`n` MINUS 1) `Monday-to-Friday days after` (`the calendar day` 1 `days after` `the start`)
+         ELSE `the date` `n` `Monday-to-Friday days after` (`the calendar day` 1 `days after` `the start`)
+
+GIVEN `n`         IS A NUMBER
+      `the start` IS A DATE
+GIVETH A DATE
+`the earlier date` `n` `Monday-to-Friday days before` `the start` MEANS
+    IF `n` AT MOST 0
+    THEN `the start`
+    ELSE IF `is a Monday to Friday` (`the calendar day` (0 MINUS 1) `days after` `the start`)
+         THEN `the earlier date` (`n` MINUS 1) `Monday-to-Friday days before` (`the calendar day` (0 MINUS 1) `days after` `the start`)
+         ELSE `the earlier date` `n` `Monday-to-Friday days before` (`the calendar day` (0 MINUS 1) `days after` `the start`)
+
+GIVEN `n`              IS A NUMBER
+      `the start`      IS A DATE
+      `public holidays` IS A NUMBER
+GIVETH A DATE
+`the deadline day` `n` `business days after` `the start` `with` `public holidays` `public holidays in between` MEANS
+    `the date` (`n` PLUS `public holidays`) `Monday-to-Friday days after` `the start`
+
+-- Monday-to-Friday days after the first day, up to and including the last (0 if the last is not after the first).
+GIVEN `the first day` IS A DATE
+      `the last day`  IS A DATE
+GIVETH A NUMBER
+`the Monday-to-Friday days after` `the first day` `up to` `the last day` MEANS
+    IF DATE_SERIAL `the last day` AT MOST DATE_SERIAL `the first day`
+    THEN 0
+    ELSE IF `is a Monday to Friday` `the last day`
+         THEN 1 PLUS `the Monday-to-Friday days after` `the first day` `up to` (`the calendar day` (0 MINUS 1) `days after` `the last day`)
+         ELSE `the Monday-to-Friday days after` `the first day` `up to` (`the calendar day` (0 MINUS 1) `days after` `the last day`)
+
+GIVEN `y` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a leap year` `y` IF
+        ((`y` MODULO 4) EQUALS 0 AND (NOT ((`y` MODULO 100) EQUALS 0)))
+    OR  (`y` MODULO 400) EQUALS 0
+
+GIVEN `m` IS A NUMBER
+      `y` IS A NUMBER
+GIVETH A NUMBER
+`the number of days in month` `m` `of` `y` MEANS
+    IF `m` EQUALS 2
+    THEN IF `is a leap year` `y` THEN 29 ELSE 28
+    ELSE IF `m` EQUALS 4 OR `m` EQUALS 6 OR `m` EQUALS 9 OR `m` EQUALS 11
+         THEN 30
+         ELSE 31
+
+-- READING: "within 6 months after" a day ends on the same day of the month 6 months on, or that month's last day
+-- where it is shorter (31 August to 28 February). The Act does not say; the Acts Interpretation Act is not deposited.
+GIVEN `k`       IS A NUMBER
+      `the day` IS A DATE
+GIVETH A DATE
+`the same day` `k` `months after` `the day` MEANS
+    DATE_FROM_DMY (`the lesser of` (DATE_DAY `the day`) `and` (`the number of days in month` `the month` `of` `the year`)) `the month` `the year`
+    WHERE
+        `months from year 0` MEANS (DATE_YEAR `the day` TIMES 12) PLUS (DATE_MONTH `the day` MINUS 1) PLUS `k`
+        `the year`  MEANS FLOOR (`months from year 0` DIVIDED BY 12)
+        `the month` MEANS (`months from year 0` MODULO 12) PLUS 1
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A NUMBER
+`the days from` `a` `to` `b` MEANS
+    DATE_SERIAL `b` MINUS DATE_SERIAL `a`
+
+§§ `s 10A and the QOTE Notice 2026 -- QOTE`
+
+-- s 10A(1): "QOTE, for a financial year, is-- (a) the amount of Queensland full-time adult persons ordinary time
+-- earnings declared by the Australian Statistician ... most recently published before the start of the financial year;
+-- or (b) if the amount mentioned in paragraph (a) is less than QOTE for the previous financial year--the amount that
+-- is QOTE for the previous financial year." So QOTE never falls.
+GIVEN `the Statistician's amount`       IS A NUMBER
+      `QOTE for the previous financial year` IS A NUMBER
+GIVETH A NUMBER
+`QOTE under s 10A(1)` `the Statistician's amount` `QOTE for the previous financial year` MEANS
+    `the greater of` `the Statistician's amount` `and` `QOTE for the previous financial year`
+
+-- QOTE Notice 2026, s 3(1): "For section 10A(2)(a) of the Act, QOTE for the 2026-2027 financial year is $1,994.50."
+-- s 3(2): "the percentage difference in QOTE for the 2026-2027 financial year compared to QOTE for the 2025-2026
+-- financial year is 2.1%." The Notice commenced (s 4) on 1 July 2026.
+`QOTE for 2026-27`                      MEANS 1994.50
+`the 2026-27 percentage difference`     MEANS 2.1%
+`the first day of 2026-27`              MEANS DATE_FROM_DMY 1 7 2026
+`the last day of 2026-27`               MEANS DATE_FROM_DMY 30 6 2027
+
+-- QOTE for the financial year containing a day: the Notice for 2026-27; for an earlier year, the caller's figure if
+-- one is given (more than 0); otherwise, and for any day after 30 June 2027, NOTHING (not covered).
+GIVEN `the day`                     IS A DATE
+      `QOTE for an earlier year`    IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the QOTE for the financial year containing` `the day` `given` `QOTE for an earlier year` MEANS
+    IF      DATE_SERIAL `the day` AT LEAST DATE_SERIAL `the first day of 2026-27`
+        AND DATE_SERIAL `the day` AT MOST  DATE_SERIAL `the last day of 2026-27`
+    THEN JUST `QOTE for 2026-27`
+    ELSE IF     DATE_SERIAL `the day` LESS THAN DATE_SERIAL `the first day of 2026-27`
+            AND `QOTE for an earlier year` GREATER THAN 0
+         THEN JUST `QOTE for an earlier year`
+         ELSE NOTHING
+
+§§ `s 205 -- automatic variation`
+
+-- s 205(1): "If QOTE varies, each payment or amount under part 3, division 4 or 5 or part 6, 10 or 11 that is not
+-- expressed as a percentage of QOTE must be varied proportionately." (2): "An amount varied under subsection (1) is to
+-- be rounded up to the nearest $5."
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`rounded up to the nearest $5` `x` MEANS
+    CEILING (`x` DIVIDED BY 5) TIMES 5
+
+GIVEN `the amount`   IS A NUMBER
+      `the old QOTE` IS A NUMBER
+      `the new QOTE` IS A NUMBER
+GIVETH A NUMBER
+`the amount varied under s 205` `the amount` `from` `the old QOTE` `to` `the new QOTE` MEANS
+    `rounded up to the nearest $5` (`the amount` TIMES (`the new QOTE` DIVIDED BY `the old QOTE`))
+
+-- READING (finding 4): an amount stated as a multiple of QOTE ("216.15 times QOTE") is "not expressed as a percentage
+-- of QOTE", so it is varied with QOTE and rounded up to the nearest $5 under s 205(2). Regulation s 117's example
+-- ("The maximum statutory compensation is $422,295") is a rounded figure of this kind. Amounts stated as a percentage
+-- of QOTE (70% of QOTE, 10% of QOTE) are not rounded.
+GIVEN `the multiple` IS A NUMBER
+      `QOTE`         IS A NUMBER
+GIVETH A NUMBER
+`the multiple` `times QOTE, at` `QOTE` MEANS
+    `rounded up to the nearest $5` (`the multiple` TIMES `QOTE`)
+
+§§ `s 140 -- maximum statutory compensation`
+
+-- s 140(1): the maximum for 1 injury or multiple injuries in 1 event is "(a) for compensation payable as weekly
+-- payments under part 9--216.15 times QOTE; and (b) for the total of all lump sum compensation payable under part 3,
+-- division 5 and section 180--216.15 times QOTE." Schedule 6: "maximum statutory compensation, means an amount equal
+-- to the amount of compensation payable under chapter 3, part 6."
+`the s 140 multiple` MEANS 216.15
+
+GIVEN `QOTE` IS A NUMBER
+GIVETH A NUMBER
+`the maximum statutory compensation at` `QOTE` MEANS
+    `the s 140 multiple` `times QOTE, at` `QOTE`
+
+§§ `s 11 and schedule 2 -- who is a worker`
+
+-- The kinds of arrangement schedule 2, part 1 and schedule 3 single out. One case is one engagement.
+DECLARE `Work arrangement` IS ONE OF
+    `an ordinary engagement`
+    `sharefarming`
+    `work paid entirely or partly by commission`
+    `work as a contractor`
+    `services lent or let on hire by the person the worker has a contract of service with`
+    `work arranged by a labour hire agency or group training organisation`
+    `services let on hire by a holding company`
+    `unpaid work for experience or a qualification`
+
+DECLARE `Engagement` HAS
+    `is an individual`                                                       IS A BOOLEAN
+    `works under a contract`                                                 IS A BOOLEAN
+    `is an employee for PAYG withholding under TAA 1953 schedule 1, chapter 2, part 2-5` IS A BOOLEAN
+    `is a regulated worker covered under chapter 3A of the Fair Work Act 2009` IS A BOOLEAN
+    `arrangement`                                                            IS A `Work arrangement`
+    `the sharefarmer provides and uses powered farm machinery`               IS A BOOLEAN
+    `the sharefarmer's share of the proceeds`                                IS A NUMBER
+    `the work is incident to the person's own regular trade or business`     IS A BOOLEAN
+    `the contractor sublets the contract`                                    IS A BOOLEAN
+    `the contractor employs a worker`                                        IS A BOOLEAN
+    `the contractor performs part of the work personally`                    IS A BOOLEAN
+    `supplies and uses a motor vehicle for driving tuition under a contract other than a contract of service` IS A BOOLEAN
+    `would be a worker if the work were paid`                                IS A BOOLEAN
+    `is covered as a volunteer, community service worker, student or eligible person under chapter 1, part 4, division 3` IS A BOOLEAN
+    `works under a contract of service with own corporation, trust or partnership, or the Commonwealth` IS A BOOLEAN
+    `is a professional sportsperson competing, training, promoting or travelling for it` IS A BOOLEAN
+    `is fishing crew paid wholly or mainly by a share of the ship's earnings or profits` IS A BOOLEAN
+    `is in an approved program or work for an unemployment payment under the Social Security Act 1991, s 601 or 606` IS A BOOLEAN
+    `has a personal services business determination in effect` IS A BOOLEAN
+
+-- s 11(1)(b)(ii): a regulated worker is a worker only if "the person is prescribed by regulation to be a worker". The
+-- deposited Regulation prescribes no one (finding 3).
+`a regulated worker is prescribed by the Regulation` MEANS FALSE
+
+DECLARE `Worker status` IS ONE OF
+    `a worker under s 11(1)(a): works under a contract and is an employee for PAYG withholding`
+    `a worker under s 11(1)(b): a prescribed regulated worker`
+    `a worker under schedule 2, part 1` HAS `item` IS A NUMBER
+    `not a worker under schedule 2, part 2` HAS `item` IS A NUMBER
+    `not a worker: s 11(4), only an individual can be a worker`
+    `not a worker: neither s 11(1) nor schedule 2, part 1 applies`
+
+-- Schedule 2, part 1. Item 1: a sharefarmer who "does not provide and use ... farm machinery driven or drawn by
+-- mechanical power" and is entitled to "not more than 1/3 of the proceeds". Item 2: a salesperson paid by commission
+-- "not received for or in connection with work incident to a trade or business regularly carried on by the
+-- salesperson". Item 3: a contractor (other than one in part 2, s 4) whose work is "not incident to a trade or business
+-- regularly carried on by the contractor" and who "(i) does not sublet the contract; or (ii) does not employ a worker;
+-- or (iii) if the contractor employs a worker, performs part of the work personally" (finding 2: any one suffices).
+-- Items 4-6: a person under a contract of service whose services are lent or let on hire, placed by a labour hire
+-- agency or group training organisation, or let on hire by a holding company. Item 7: an intern, "other than a person
+-- mentioned in chapter 1, part 4, division 3, subdivision 1, 2, 3 or 4", working unpaid for experience or a
+-- qualification, who "would be a worker if the work performed by the person were for the payment of wages".
+GIVEN `e` IS AN `Engagement`
+GIVETH A NUMBER
+`the schedule 2, part 1 item for` `e` MEANS
+    CONSIDER `e`'s `arrangement`
+    WHEN `sharefarming` THEN
+        IF      (NOT `e`'s `the sharefarmer provides and uses powered farm machinery`)
+            AND `e`'s `the sharefarmer's share of the proceeds` AT MOST (1 DIVIDED BY 3)
+        THEN 1 ELSE 0
+    WHEN `work paid entirely or partly by commission` THEN
+        IF (NOT `e`'s `the work is incident to the person's own regular trade or business`) THEN 2 ELSE 0
+    WHEN `work as a contractor` THEN
+        IF      (NOT `e`'s `supplies and uses a motor vehicle for driving tuition under a contract other than a contract of service`)
+            AND (NOT `e`'s `the work is incident to the person's own regular trade or business`)
+            AND (    (NOT `e`'s `the contractor sublets the contract`)
+                  OR (NOT `e`'s `the contractor employs a worker`)
+                  OR (`e`'s `the contractor employs a worker` AND `e`'s `the contractor performs part of the work personally`))
+        THEN 3 ELSE 0
+    WHEN `services lent or let on hire by the person the worker has a contract of service with` THEN 4
+    WHEN `work arranged by a labour hire agency or group training organisation` THEN 5
+    WHEN `services let on hire by a holding company` THEN 6
+    WHEN `unpaid work for experience or a qualification` THEN
+        IF      `e`'s `would be a worker if the work were paid`
+            AND (NOT `e`'s `is covered as a volunteer, community service worker, student or eligible person under chapter 1, part 4, division 3`)
+        THEN 7 ELSE 0
+    OTHERWISE 0
+
+-- Schedule 2, part 2 (who is not a worker): item 1, a contract of service with a corporation the person directs, a
+-- trust the person is trustee of, a partnership the person is a member of, or the Commonwealth; item 2, a professional
+-- sportsperson while competing, training, promoting or travelling for it; item 3, fishing crew paid contingently and
+-- wholly or mainly by a share; item 4, a driving instructor supplying the vehicle under a contract that is not a
+-- contract of service; item 5, an approved program or work for unemployment payment (SSA 1991, s 601 or 606); item 6,
+-- a personal services business determination (ITAA 1997, s 87-60) in effect.
+GIVEN `e` IS AN `Engagement`
+GIVETH A NUMBER
+`the schedule 2, part 2 item for` `e` MEANS
+    BRANCH
+        IF `e`'s `works under a contract of service with own corporation, trust or partnership, or the Commonwealth` THEN 1
+        IF `e`'s `is a professional sportsperson competing, training, promoting or travelling for it` THEN 2
+        IF `e`'s `is fishing crew paid wholly or mainly by a share of the ship's earnings or profits` THEN 3
+        IF `e`'s `supplies and uses a motor vehicle for driving tuition under a contract other than a contract of service` THEN 4
+        IF `e`'s `is in an approved program or work for an unemployment payment under the Social Security Act 1991, s 601 or 606` THEN 5
+        IF `e`'s `has a personal services business determination in effect` THEN 6
+        OTHERWISE 0
+
+-- s 11(1): "A worker is-- (a) a person who-- (i) works under a contract; and (ii) in relation to the work, is an
+-- employee for the purpose of assessment of PAYG withholding ...; or (b) a person who is a regulated worker under the
+-- Fair Work Act 2009 (Cwlth) if (i) a minimum standards order, minimum standards guideline or collective agreement
+-- applies to, or covers, the person under chapter 3A ...; and (ii) the person is prescribed by regulation to be a
+-- worker." (2) "Also, schedule 2, part 1 sets out who is a worker in particular circumstances." (3) "However,
+-- schedule 2, part 2 sets out who is not a worker in particular circumstances." (4) "Only an individual can be a
+-- worker for this Act."
+GIVEN `e` IS AN `Engagement`
+GIVETH A `Worker status`
+`the s 11 status of` `e` MEANS
+    IF (NOT `e`'s `is an individual`)
+    THEN `not a worker: s 11(4), only an individual can be a worker`
+    ELSE IF `the schedule 2, part 2 item for` `e` GREATER THAN 0
+         THEN `not a worker under schedule 2, part 2` (`the schedule 2, part 2 item for` `e`)
+         ELSE IF `e`'s `works under a contract` AND `e`'s `is an employee for PAYG withholding under TAA 1953 schedule 1, chapter 2, part 2-5`
+              THEN `a worker under s 11(1)(a): works under a contract and is an employee for PAYG withholding`
+              ELSE IF `e`'s `is a regulated worker covered under chapter 3A of the Fair Work Act 2009` AND `a regulated worker is prescribed by the Regulation`
+                   THEN `a worker under s 11(1)(b): a prescribed regulated worker`
+                   ELSE IF `the schedule 2, part 1 item for` `e` GREATER THAN 0
+                        THEN `a worker under schedule 2, part 1` (`the schedule 2, part 1 item for` `e`)
+                        ELSE `not a worker: neither s 11(1) nor schedule 2, part 1 applies`
+
+GIVEN `e` IS AN `Engagement`
+GIVETH A BOOLEAN
+DECIDE `is a worker` `e` IF
+    CONSIDER `the s 11 status of` `e`
+    WHEN `a worker under s 11(1)(a): works under a contract and is an employee for PAYG withholding` THEN TRUE
+    WHEN `a worker under s 11(1)(b): a prescribed regulated worker` THEN TRUE
+    WHEN `a worker under schedule 2, part 1` n THEN TRUE
+    OTHERWISE FALSE
+
+§§ `s 30 and schedule 3 -- who is the employer; s 109 -- who pays`
+
+DECLARE `Employer answer` IS ONE OF
+    `the person who engages the worker to perform work (s 30(1))`
+    `the person who lends or lets the worker's services on hire, not the hirer (schedule 3, item 1)`
+    `the labour hire agency or group training organisation, not the host (schedule 3, item 2)`
+    `the holding company, not the hirer (schedule 3, item 3)`
+    `the owner of the farm (schedule 3, item 4)`
+    `the person by whom the commission is payable (schedule 3, item 5)`
+    `the person who made the contract with the contractor (schedule 3, item 6)`
+    `the person conducting the business or undertaking the intern works for (schedule 3, item 8)`
+    `no employer: the person is not a worker`
+
+-- s 30(1): "An employer is a person who engages a worker to perform work." (2): schedule 3 "sets out who is an employer
+-- in particular circumstances". Schedule 3 items 1-6 and 8 match schedule 2, part 1 items 4, 5, 6, 1, 2, 3 and 7; item 1
+-- also covers a worker under s 11(1)(a) whose services are lent or let on hire. Items 7 (administration) and 9
+-- (prescribed regulated business) change nothing here.
+GIVEN `e` IS AN `Engagement`
+GIVETH AN `Employer answer`
+`the s 30 employer of` `e` MEANS
+    IF (NOT `is a worker` `e`)
+    THEN `no employer: the person is not a worker`
+    ELSE CONSIDER `e`'s `arrangement`
+         WHEN `services lent or let on hire by the person the worker has a contract of service with` THEN `the person who lends or lets the worker's services on hire, not the hirer (schedule 3, item 1)`
+         WHEN `work arranged by a labour hire agency or group training organisation` THEN `the labour hire agency or group training organisation, not the host (schedule 3, item 2)`
+         WHEN `services let on hire by a holding company` THEN `the holding company, not the hirer (schedule 3, item 3)`
+         WHEN `sharefarming` THEN IF `the schedule 2, part 1 item for` `e` EQUALS 1 THEN `the owner of the farm (schedule 3, item 4)` ELSE `the person who engages the worker to perform work (s 30(1))`
+         WHEN `work paid entirely or partly by commission` THEN IF `the schedule 2, part 1 item for` `e` EQUALS 2 THEN `the person by whom the commission is payable (schedule 3, item 5)` ELSE `the person who engages the worker to perform work (s 30(1))`
+         WHEN `work as a contractor` THEN IF `the schedule 2, part 1 item for` `e` EQUALS 3 THEN `the person who made the contract with the contractor (schedule 3, item 6)` ELSE `the person who engages the worker to perform work (s 30(1))`
+         WHEN `unpaid work for experience or a qualification` THEN `the person conducting the business or undertaking the intern works for (schedule 3, item 8)`
+         OTHERWISE `the person who engages the worker to perform work (s 30(1))`
+
+DECLARE `Payer` IS ONE OF
+    `the employer, as a self-insurer (s 109(1))`
+    `WorkCover Queensland (s 109(2))`
+
+-- s 109(1): "If an employer is a self-insurer, the employer must pay the compensation." (2) "Otherwise, WorkCover must
+-- pay the compensation." Schedule 6, insurer: WorkCover or the self-insurer.
+GIVEN `the employer is a self-insurer` IS A BOOLEAN
+GIVETH A `Payer`
+`who must pay compensation under s 109` `the employer is a self-insurer` MEANS
+    IF `the employer is a self-insurer`
+    THEN `the employer, as a self-insurer (s 109(1))`
+    ELSE `WorkCover Queensland (s 109(2))`
+
+§§ `ss 32-36 -- injury, and when it arises out of or in the course of employment`
+
+DECLARE `Event setting` IS ONE OF
+    `at the place of employment, engaged in an activity for the employer's trade or business`
+    `away from the place of employment in the course of employment`
+    `temporarily absent from the place of employment during an ordinary recess`
+    `on a journey listed in s 35(1)`
+    `in other circumstances`
+
+DECLARE `Injury facts` HAS
+    `setting`                                                                    IS AN `Event setting`
+    `the worker attended the place of employment that day as required`          IS A BOOLEAN
+    `the worker voluntarily subjected themself to an abnormal risk during the recess` IS A BOOLEAN
+    `in control of a vehicle, a contravention of TORUM s 79 or Criminal Code s 328A was the major significant factor` IS A BOOLEAN
+    `the event happened during or after a substantial delay, interruption or deviation` IS A BOOLEAN
+    `the delay, interruption or deviation was connected with the employment or beyond the worker's control` IS A BOOLEAN
+    `the injury otherwise arose out of, or in the course of, the employment`    IS A BOOLEAN
+    `the employment is a significant contributing factor to the injury`         IS A BOOLEAN
+    `is a psychiatric or psychological disorder`                                IS A BOOLEAN
+    `the disorder arose out of reasonable management action, the expectation of it, or the Regulator's or insurer's action on the claim` IS A BOOLEAN
+    `the employment is connected with Queensland (s 113)`                       IS A BOOLEAN
+
+-- s 34(1): an injury is "taken to arise out of, or in the course of, the worker's employment if the event happens on a
+-- day on which the worker has attended at the place of employment as required ... (a) while the worker is at the place
+-- of employment and is engaged in an activity for, or in connection with, the employer's trade or business; or (b)
+-- while the worker is away from the place of employment in the course of the worker's employment; or (c) while the
+-- worker is temporarily absent ... during an ordinary recess if the event is not due to the worker voluntarily
+-- subjecting themself to an abnormal risk of injury during the recess."
+GIVEN `f` IS AN `Injury facts`
+GIVETH A BOOLEAN
+DECIDE `s 34(1) applies to` `f` IF
+    CONSIDER `f`'s `setting`
+    WHEN `at the place of employment, engaged in an activity for the employer's trade or business` THEN `f`'s `the worker attended the place of employment that day as required`
+    WHEN `away from the place of employment in the course of employment` THEN `f`'s `the worker attended the place of employment that day as required`
+    WHEN `temporarily absent from the place of employment during an ordinary recess` THEN
+            `f`'s `the worker attended the place of employment that day as required`
+        AND (NOT `f`'s `the worker voluntarily subjected themself to an abnormal risk during the recess`)
+    OTHERWISE FALSE
+
+-- s 36(2): a s 35 journey injury "is not taken to arise out of, or in the course of, the worker's employment if the
+-- event happens (a) while the worker is in control of a vehicle and contravenes" TORUM s 79 or Criminal Code s 328A
+-- "if the contravention is the major significant factor causing the event; or (b) during or after (i) a substantial
+-- delay before the worker starts the journey; or (ii) a substantial interruption of, or deviation from, the journey."
+-- (3): "(2)(b) does not apply if (a) the reason ... is connected with the workers' employment; or (b) the delay,
+-- interruption or deviation arises because of circumstances beyond the worker's control." Whether a delay is
+-- "substantial" is the insurer's judgment, asked as a fact.
+GIVEN `f` IS AN `Injury facts`
+GIVETH A BOOLEAN
+DECIDE `s 36(2) excludes the journey injury in` `f` IF
+        `f`'s `in control of a vehicle, a contravention of TORUM s 79 or Criminal Code s 328A was the major significant factor`
+    OR  (    `f`'s `the event happened during or after a substantial delay, interruption or deviation`
+         AND (NOT `f`'s `the delay, interruption or deviation was connected with the employment or beyond the worker's control`))
+
+-- s 35(1): an injury is "also taken to arise out of, or in the course of, the worker's employment if the event happens
+-- while the worker" is on a listed journey (home and work; to a required or expected training school; for an existing
+-- compensable injury, to treatment, rehabilitation, an examination or payment; between two employers) or attending
+-- the school or place. Subject to s 36.
+GIVEN `f` IS AN `Injury facts`
+GIVETH A BOOLEAN
+DECIDE `s 35(1) applies to` `f` IF
+    CONSIDER `f`'s `setting`
+    WHEN `on a journey listed in s 35(1)` THEN NOT (`s 36(2) excludes the journey injury in` `f`)
+    OTHERWISE FALSE
+
+-- s 33: subdivision 3 "does not limit the circumstances in which an injury to a worker arises out of, or in the course
+-- of, the worker's employment". s 36(2) displaces that for an excluded journey.
+GIVEN `f` IS AN `Injury facts`
+GIVETH A BOOLEAN
+DECIDE `the injury arises out of, or in the course of, employment in` `f` IF
+        `s 34(1) applies to` `f`
+    OR  `s 35(1) applies to` `f`
+    OR  (    `f`'s `the injury otherwise arose out of, or in the course of, the employment`
+         AND (NOT (`f`'s `setting` EQUALS `on a journey listed in s 35(1)` AND `s 36(2) excludes the journey injury in` `f`)))
+
+-- s 32(2): "employment need not be a contributing factor to the injury if section 34(2) or 35(2) applies". s 34(2)
+-- is for the recess case, s 34(1)(c); s 35(2) for every s 35(1) journey.
+GIVEN `f` IS AN `Injury facts`
+GIVETH A BOOLEAN
+DECIDE `employment need not be a contributing factor in` `f` IF
+        `s 35(1) applies to` `f`
+    OR  (`f`'s `setting` EQUALS `temporarily absent from the place of employment during an ordinary recess` AND `s 34(1) applies to` `f`)
+
+DECLARE `Injury answer` IS ONE OF
+    `an injury (s 32(1)): it arose out of, or in the course of, employment, and employment is a significant contributing factor`
+    `an injury (s 32(2)): a recess or journey injury, for which employment need not be a contributing factor`
+    `not an injury (s 32(5)): a psychiatric or psychological disorder from reasonable management action or the claim`
+    `not an injury (s 36(2)): the journey injury is excluded`
+    `not an injury: it did not arise out of, or in the course of, employment`
+    `not an injury (s 32(1)): employment is not a significant contributing factor`
+    `not compensable here (s 113): the employment is not connected with Queensland`
+
+-- s 32(1): "An injury is personal injury arising out of, or in the course of, employment if the employment is a
+-- significant contributing factor to the injury." (3) includes disease, aggravation (to the extent of its effects,
+-- (4)), industrial deafness and death on the same test. (5): "Despite subsections (1) and (3), injury does not include
+-- a psychiatric or psychological disorder arising out of, or in the course of" reasonable management action taken in
+-- a reasonable way, the worker's expectation or perception of it, or "action by the Regulator or an insurer in
+-- connection with the worker's application for compensation". s 113(1): compensation "is only payable in relation to
+-- employment that is connected with this State" (asked as a fact; s 113(3)-(7) not encoded).
+GIVEN `f` IS AN `Injury facts`
+GIVETH AN `Injury answer`
+`the s 32 answer for` `f` MEANS
+    IF (NOT `f`'s `the employment is connected with Queensland (s 113)`)
+    THEN `not compensable here (s 113): the employment is not connected with Queensland`
+    ELSE IF `f`'s `is a psychiatric or psychological disorder` AND `f`'s `the disorder arose out of reasonable management action, the expectation of it, or the Regulator's or insurer's action on the claim`
+         THEN `not an injury (s 32(5)): a psychiatric or psychological disorder from reasonable management action or the claim`
+         ELSE IF `f`'s `setting` EQUALS `on a journey listed in s 35(1)` AND `s 36(2) excludes the journey injury in` `f`
+              THEN `not an injury (s 36(2)): the journey injury is excluded`
+              ELSE IF (NOT `the injury arises out of, or in the course of, employment in` `f`)
+                   THEN `not an injury: it did not arise out of, or in the course of, employment`
+                   ELSE IF `employment need not be a contributing factor in` `f`
+                        THEN `an injury (s 32(2)): a recess or journey injury, for which employment need not be a contributing factor`
+                        ELSE IF `f`'s `the employment is a significant contributing factor to the injury`
+                             THEN `an injury (s 32(1)): it arose out of, or in the course of, employment, and employment is a significant contributing factor`
+                             ELSE `not an injury (s 32(1)): employment is not a significant contributing factor`
+
+GIVEN `f` IS AN `Injury facts`
+GIVETH A BOOLEAN
+DECIDE `is a compensable injury` `f` IF
+    CONSIDER `the s 32 answer for` `f`
+    WHEN `an injury (s 32(1)): it arose out of, or in the course of, employment, and employment is a significant contributing factor` THEN TRUE
+    WHEN `an injury (s 32(2)): a recess or journey injury, for which employment need not be a contributing factor` THEN TRUE
+    OTHERWISE FALSE
+
+§§ `s 106 and Regulation ss 105-109 -- normal weekly earnings (NWE)`
+
+DECLARE `Earnings facts` HAS
+    `weeks of employment in the 12 months before the injury`                    IS A NUMBER
+    `earnings in that period, leaving out the amounts the Act excludes`         IS A NUMBER
+    `overtime, higher duties, penalties and allowances in that period`          IS A NUMBER
+    `those amounts are regular and would have continued but for the injury`     IS A BOOLEAN
+    `earnings in that period from other employers under concurrent contracts of service` IS A NUMBER
+    `it is impracticable to calculate because of the period or terms of employment` IS A BOOLEAN
+    `the NWE of a comparable worker`                                            IS A NUMBER
+    `the insurer considers the calculation unfair and has made a fair one`      IS A BOOLEAN
+    `the insurer's fair calculation`                                            IS A NUMBER
+
+-- s 106(1): NWE "are the normal weekly earnings of a worker from employment (continuous or intermittent) had by the
+-- worker in the 12 months immediately before the day the worker sustained an injury"; (2) for less than 12 months,
+-- "in the period in which the worker has had the employment"; (3) "calculated as prescribed under a regulation".
+-- Regulation s 106(1): overtime, higher duties, penalties and allowances "may be taken into account but only if the
+-- amounts (a) are of a regular nature; and (b) would have continued if not for the worker's injury"; (2): the
+-- schedule 6 "wages" exclusions (travelling and similar allowances, superannuation, termination lump sums, s 66
+-- amounts) "must not be taken into account". s 107: if impracticable, "regard must be had to" a comparable worker's
+-- NWE. s 108: concurrent contracts of service, "as if earnings under all the contracts were earnings in the employment
+-- of the employer for whom the worker was working". s 109: if the insurer "considers that the calculation ... would be
+-- unfair", its fair calculation "is taken to be the worker's NWE". READING: "normal weekly earnings" are the period's
+-- counted earnings divided by its weeks (finding 6).
+GIVEN `e` IS AN `Earnings facts`
+GIVETH A NUMBER
+`the NWE from` `e` MEANS
+    IF `e`'s `the insurer considers the calculation unfair and has made a fair one`
+    THEN `e`'s `the insurer's fair calculation`
+    ELSE IF `e`'s `it is impracticable to calculate because of the period or terms of employment`
+         THEN `e`'s `the NWE of a comparable worker`
+         ELSE IF `e`'s `weeks of employment in the 12 months before the injury` AT MOST 0
+              THEN 0
+              ELSE `the counted earnings` DIVIDED BY (`the lesser of` (`e`'s `weeks of employment in the 12 months before the injury`) `and` 52)
+    WHERE
+        `the counted extras` MEANS
+            IF `e`'s `those amounts are regular and would have continued but for the injury`
+            THEN `e`'s `overtime, higher duties, penalties and allowances in that period`
+            ELSE 0
+        `the counted earnings` MEANS
+            `e`'s `earnings in that period, leaving out the amounts the Act excludes` PLUS `the counted extras` PLUS `e`'s `earnings in that period from other employers under concurrent contracts of service`
+
+§§ `ss 108, 119, 131, 132, 141 -- entitlement, applying, and the time limits`
+
+-- s 141(1): "The entitlement to compensation for an injury arises on the day the worker's injury is assessed by (a) a
+-- doctor; or (b) if the injury is a minor injury--a nurse practitioner ...; or (c) if the injury is an oral injury and
+-- the worker attends a dentist--the dentist." The caller gives that day.
+-- s 131(1): an application "is valid and enforceable only if the application is lodged by the claimant within 6 months
+-- after the entitlement to compensation for the injury arises."
+`the s 131(1) months` MEANS 6
+
+GIVEN `the day the entitlement arises` IS A DATE
+GIVETH A DATE
+`the last day to lodge under s 131(1)` `the day the entitlement arises` MEANS
+    `the same day` `the s 131(1) months` `months after` `the day the entitlement arises`
+
+GIVEN `the day the entitlement arises` IS A DATE
+      `the day of lodgement`           IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is lodged within 6 months` IF
+    DATE_SERIAL `the day of lodgement` AT MOST DATE_SERIAL (`the last day to lodge under s 131(1)` `the day the entitlement arises`)
+
+DECLARE `Time limit answer` IS ONE OF
+    `in time: lodged within 6 months (s 131(1))`
+    `late, but the insurer must waive the limit (s 131(4))`
+    `late, but the insurer may waive the limit (s 131(5))`
+    `late, but the insurer may waive the limit (s 131(6))`
+    `late: the application is not valid and enforceable (s 131(1))`
+
+-- s 131(4): "An insurer must waive subsection (1) for a particular application if it is satisfied that special
+-- circumstances of a medical nature, decided by a medical assessment tribunal, exist." (5): "an insurer may waive
+-- subsection (1) ... if (a) it is satisfied that a doctor, nurse practitioner or dentist has assessed the injury as
+-- resulting in total or partial incapacity for work; and (b) the claimant lodged the application within 20 business
+-- days after the first assessment". (6): "may waive subsection (1) or (2) ... if the insurer is satisfied that a
+-- claimant's failure to lodge the application was due to (a) mistake; or (b) the claimant's absence from the State; or
+-- (c) a reasonable cause."
+`the s 131 business days` MEANS 20
+
+GIVEN `the day the entitlement arises`                                 IS A DATE
+      `the day of lodgement`                                           IS A DATE
+      `a medical assessment tribunal decided special medical circumstances exist` IS A BOOLEAN
+      `lodged within 20 business days after incapacity was first assessed` IS A BOOLEAN
+      `the late lodgement was due to mistake, absence from the State or a reasonable cause` IS A BOOLEAN
+GIVETH A `Time limit answer`
+`the s 131 time limit answer` `the day the entitlement arises` `the day of lodgement` `a medical assessment tribunal decided special medical circumstances exist` `lodged within 20 business days after incapacity was first assessed` `the late lodgement was due to mistake, absence from the State or a reasonable cause` MEANS
+    IF `is lodged within 6 months` `the day the entitlement arises` `the day of lodgement`
+    THEN `in time: lodged within 6 months (s 131(1))`
+    ELSE IF `a medical assessment tribunal decided special medical circumstances exist`
+         THEN `late, but the insurer must waive the limit (s 131(4))`
+         ELSE IF `lodged within 20 business days after incapacity was first assessed`
+              THEN `late, but the insurer may waive the limit (s 131(5))`
+              ELSE IF `the late lodgement was due to mistake, absence from the State or a reasonable cause`
+                   THEN `late, but the insurer may waive the limit (s 131(6))`
+                   ELSE `late: the application is not valid and enforceable (s 131(1))`
+
+-- s 141(2): weekly compensation starts "(a) if a doctor, nurse practitioner or dentist assesses the injury as
+-- resulting in total or partial incapacity for work on the day the worker stops work because of the injury--the day
+-- after the worker stops work ...; or (b) if [the incapacity is assessed] on a day later than the day the worker stops
+-- work--the day the doctor, nurse practitioner or dentist assesses the injury." (5): "Subsection (2) is subject to
+-- section 131(2)."
+GIVEN `the day the worker stopped work`        IS A DATE
+      `the day incapacity was first assessed` IS A DATE
+GIVETH A DATE
+`the s 141(2) first day of weekly compensation` `the day the worker stopped work` `the day incapacity was first assessed` MEANS
+    IF DATE_SERIAL `the day incapacity was first assessed` AT MOST DATE_SERIAL `the day the worker stopped work`
+    THEN `the calendar day` 1 `days after` `the day the worker stopped work`
+    ELSE `the day incapacity was first assessed`
+
+-- s 131(2): "If an application is lodged more than 20 business days after the entitlement to compensation arises, the
+-- extent of the insurer's liability to pay compensation is limited to a period starting no earlier than 20 business
+-- days before the day on which the valid application is lodged." (3): not if "death is, or results from, the injury".
+-- (6): the insurer may waive (2) on the same grounds as (1).
+GIVEN `the day the entitlement arises`        IS A DATE
+      `the day of lodgement`                  IS A DATE
+      `public holidays`                       IS A NUMBER
+      `the injury resulted in death`          IS A BOOLEAN
+      `the insurer has waived s 131(2) under s 131(6)` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 131(2) limits the back-payment` IF
+        `the Monday-to-Friday days after` `the day the entitlement arises` `up to` `the day of lodgement` GREATER THAN (`the s 131 business days` PLUS `public holidays`)
+    AND (NOT `the injury resulted in death`)
+    AND (NOT `the insurer has waived s 131(2) under s 131(6)`)
+
+GIVEN `the day the entitlement arises`        IS A DATE
+      `the day of lodgement`                  IS A DATE
+      `the day the worker stopped work`       IS A DATE
+      `the day incapacity was first assessed` IS A DATE
+      `public holidays`                       IS A NUMBER
+      `the injury resulted in death`          IS A BOOLEAN
+      `the insurer has waived s 131(2) under s 131(6)` IS A BOOLEAN
+GIVETH A DATE
+`the first day the insurer is liable for weekly compensation` `the day the entitlement arises` `the day of lodgement` `the day the worker stopped work` `the day incapacity was first assessed` `public holidays` `the injury resulted in death` `the insurer has waived s 131(2) under s 131(6)` MEANS
+    IF      `s 131(2) limits the back-payment` `the day the entitlement arises` `the day of lodgement` `public holidays` `the injury resulted in death` `the insurer has waived s 131(2) under s 131(6)`
+        AND DATE_SERIAL `the s 141 day` LESS THAN DATE_SERIAL `the s 131(2) day`
+    THEN `the s 131(2) day`
+    ELSE `the s 141 day`
+    WHERE
+        `the s 141 day`    MEANS `the s 141(2) first day of weekly compensation` `the day the worker stopped work` `the day incapacity was first assessed`
+        `the s 131(2) day` MEANS `the earlier date` (`the s 131 business days` PLUS `public holidays`) `Monday-to-Friday days before` `the day of lodgement`
+
+-- s 132(1)-(3) with Regulation s 110: the application "must be made in the approved form", "lodged with the insurer",
+-- and "accompanied by (a) a certificate in the approved form given by (i) a doctor who attended the claimant; or (ii) if
+-- the application relates to a minor injury--a nurse practitioner ..." (a dentist for an oral injury, (4)), and the
+-- evidence and particulars of "(a) the injury and its cause; and (b) the nature, extent and duration of incapacity";
+-- for a death, also "(i) the identity of the worker; and (ii) the worker's death; and (iii) the relationship to the
+-- worker, and dependency, of persons claiming to be the worker's dependants". (6): "valid and enforceable if it
+-- complies with this section".
+GIVEN `in the approved form and lodged with the insurer`              IS A BOOLEAN
+      `with a certificate from a doctor, or a nurse practitioner for a minor injury, or a dentist for an oral injury` IS A BOOLEAN
+      `with evidence of the injury and its cause`                      IS A BOOLEAN
+      `with evidence of the nature, extent and duration of incapacity` IS A BOOLEAN
+      `for a death: with evidence of identity, death, and relationship and dependency` IS A BOOLEAN
+      `the application is for a death`                                 IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the application complies with s 132` IF
+        `in the approved form and lodged with the insurer`
+    AND `with a certificate from a doctor, or a nurse practitioner for a minor injury, or a dentist for an oral injury`
+    AND `with evidence of the injury and its cause`
+    AND `with evidence of the nature, extent and duration of incapacity`
+    AND ((NOT `the application is for a death`) OR `for a death: with evidence of identity, death, and relationship and dependency`)
+
+-- s 134(2): "The insurer must make a decision on the application within 20 business days after the application is
+-- made." (6): if it does not, "the insurer must, within 5 business days after the end of the time stated in subsection
+-- (2), notify the claimant of its reasons for not making the decision and that the claimant may have the claimant's
+-- application reviewed under chapter 13." s 136(1): a worker receiving compensation "must give notice within 10 business
+-- days of the worker's (a) return to work; or (b) engagement in a calling." s 133(3): the employer offends if the report
+-- is not given "within 8 business days after the first of" the s 133(2) events.
+`the s 134(2) business days` MEANS 20
+`the s 134(6) business days` MEANS 5
+`the s 136 business days`    MEANS 10
+`the s 133(3) business days` MEANS 8
+
+-- s 119(2): "An entitlement to compensation ends when settlement for damages is agreed or judgment for damages is
+-- given" (chapter 4A aside).
+GIVEN `damages have been settled or judgment given for the injury` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the entitlement has ended under s 119` IF `damages have been settled or judgment given for the injury`
+
+§§ `ss 146B, 65 -- the basic weekly payment and the excess period`
+
+-- s 146B(4): "If the worker is engaged in full-time work, the basic weekly payment of compensation must be (a) an
+-- amount equal to 55% of QOTE; or (b) if a different amount is prescribed by regulation--that amount." No amount is
+-- prescribed in the deposited Regulation. (5): otherwise "not greater than the amount ... for a worker engaged in
+-- full-time work" and, no method being prescribed, "on a pro rata basis having regard to the hours usually worked by
+-- the worker in the preceding 4 weeks". READING: pro rata to the full-time hours for the position.
+GIVEN `QOTE`                                     IS A NUMBER
+      `engaged in full-time work`                IS A BOOLEAN
+      `hours usually worked a week in the preceding 4 weeks` IS A NUMBER
+      `full-time hours a week`                   IS A NUMBER
+GIVETH A NUMBER
+`the s 146B basic weekly payment at` `QOTE` `full time` `engaged in full-time work` `hours` `hours usually worked a week in the preceding 4 weeks` `of` `full-time hours a week` MEANS
+    IF `engaged in full-time work` OR `full-time hours a week` AT MOST 0
+    THEN `the full-time amount`
+    ELSE `the lesser of` (`the full-time amount` TIMES (`hours usually worked a week in the preceding 4 weeks` DIVIDED BY `full-time hours a week`)) `and` `the full-time amount`
+    WHERE
+        `the full-time amount` MEANS 55% TIMES `QOTE`
+
+-- s 146B(3): the insurer "must commence making a basic weekly payment ... on the later of (a) the expiry of 5 business
+-- days after the day the decision to allow the worker's application for compensation is made; (b) the expiry of the
+-- excess period". s 65(2) with Regulation s 15: the excess period ends when the weekly compensation paid exceeds "the
+-- lesser of (a) QOTE; (b) the amount of the weekly payment of compensation payable" (s 66: the employer pays it).
+`the s 146B business days` MEANS 5
+
+GIVEN `QOTE`                   IS A NUMBER
+      `the weekly payment`     IS A NUMBER
+GIVETH A NUMBER
+`the excess period amount under Regulation s 15` `QOTE` `the weekly payment` MEANS
+    `the lesser of` `QOTE` `and` `the weekly payment`
+
+§§ `ss 147, 148, 150-155 -- weekly compensation for total incapacity`
+
+DECLARE `Employment basis` IS ONE OF
+    `employment governed by an industrial instrument (s 150)`
+    `employment not governed by an industrial instrument (s 151)`
+    `a contract worker under s 152 (public service, government entity, university, electricity industry salaried, health service)`
+
+DECLARE `Weekly facts` HAS
+    `basis`                                                                      IS AN `Employment basis`
+    `NWE`                                                                        IS A NUMBER
+    `the amount payable under the industrial instrument or contract of service` IS A NUMBER
+    `engaged in casual or part-time employment`                                 IS A BOOLEAN
+    `was receiving an age, disability support or class B widow pension when injured` IS A BOOLEAN
+    `the amount the worker was earning at the time of the injury`               IS A NUMBER
+    `the amount the worker may earn before the maximum pension is reduced`      IS A NUMBER
+    `the worker has demonstrated to the insurer that the injury could result in a DPI of more than 15%` IS A BOOLEAN
+    `the single pension rate`                                                   IS A NUMBER
+    `the week of the incapacity`                                                IS A NUMBER
+    `what the worker would have received from employment that week if not injured` IS A NUMBER
+    `the weekly amount of other payments the insurer has decided to deduct under s 148` IS A NUMBER
+
+-- "the first 26 weeks", "the first 2 years", "the first 5 years" of the incapacity. READING (finding 7): counted in
+-- weeks of the incapacity, with a year of 52 weeks: weeks 1-26, 27-104 and 105-260.
+`the end of the first 26 weeks` MEANS 26
+`the end of the first 2 years`  MEANS 104
+`the end of the first 5 years`  MEANS 260
+
+-- s 150(1)(a), 151(1)(a), 152(1)(a): for the first 26 weeks, "the greater of (i) 85% of the worker's NWE; (ii) the
+-- amount payable under the worker's industrial instrument" (s 150), "80% of QOTE" (s 151), "the amount payable under
+-- the worker's contract of service" (s 152).
+GIVEN `w` IS A `Weekly facts`
+      `QOTE` IS A NUMBER
+GIVETH A NUMBER
+`the first-period amount for` `w` `at` `QOTE` MEANS
+    CONSIDER `w`'s `basis`
+    WHEN `employment not governed by an industrial instrument (s 151)` THEN `the greater of` (85% TIMES `w`'s `NWE`) `and` (80% TIMES `QOTE`)
+    OTHERWISE `the greater of` (85% TIMES `w`'s `NWE`) `and` (`w`'s `the amount payable under the industrial instrument or contract of service`)
+
+-- (1)(b): from 26 weeks to 2 years, "the greater of (i) 75% of the worker's NWE; (ii) 70% of QOTE".
+GIVEN `w` IS A `Weekly facts`
+      `QOTE` IS A NUMBER
+GIVETH A NUMBER
+`the second-period amount for` `w` `at` `QOTE` MEANS
+    `the greater of` (75% TIMES `w`'s `NWE`) `and` (70% TIMES `QOTE`)
+
+-- (1)(c): from 2 to 5 years, "(i) if a worker demonstrates to the insurer that the injury could result in a DPI of
+-- more than 15%--the greater of (A) 75% of the worker's NWE; (B) 70% of QOTE; or (ii) otherwise--an amount equal to the
+-- single pension rate." Schedule 6: "single pension rate ... means the amount of the maximum single disability support
+-- pension payable from time to time under a Commonwealth law" (an input).
+GIVEN `w` IS A `Weekly facts`
+      `QOTE` IS A NUMBER
+GIVETH A NUMBER
+`the third-period amount for` `w` `at` `QOTE` MEANS
+    IF `w`'s `the worker has demonstrated to the insurer that the injury could result in a DPI of more than 15%`
+    THEN `the second-period amount for` `w` `at` `QOTE`
+    ELSE `w`'s `the single pension rate`
+
+-- ss 150-152 with their caps: s 150(2), 152(2): "the amount paid under subsection (1)(b) or (c) must not be more than
+-- the amount to which the worker would be entitled under subsection (1)(a)"; s 151(2): "the amount must not be more
+-- than the worker's NWE". Beyond 5 years: NOTHING.
+GIVEN `w` IS A `Weekly facts`
+      `QOTE` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the ss 150-152 amount for` `w` `at` `QOTE` MEANS
+    IF `w`'s `the week of the incapacity` GREATER THAN `the end of the first 5 years`
+    THEN NOTHING
+    ELSE CONSIDER `w`'s `basis`
+         WHEN `employment not governed by an industrial instrument (s 151)` THEN JUST (`the lesser of` `the period amount` `and` (`w`'s `NWE`))
+         OTHERWISE JUST (IF `w`'s `the week of the incapacity` AT MOST `the end of the first 26 weeks`
+                         THEN `the period amount`
+                         ELSE `the lesser of` `the period amount` `and` (`the first-period amount for` `w` `at` `QOTE`))
+    WHERE
+        `the period amount` MEANS
+            IF `w`'s `the week of the incapacity` AT MOST `the end of the first 26 weeks`
+            THEN `the first-period amount for` `w` `at` `QOTE`
+            ELSE IF `w`'s `the week of the incapacity` AT MOST `the end of the first 2 years`
+                 THEN `the second-period amount for` `w` `at` `QOTE`
+                 ELSE `the third-period amount for` `w` `at` `QOTE`
+
+-- s 153: a casual or part-time worker gets "a payment under section 150, 151 or 152", which "must not be more than
+-- the worker's NWE". s 154: a worker who was receiving an age, disability support or class B widow pension when
+-- injured gets "the lesser of (a) the amount the worker was earning at the time of the injury; (b) the amount the
+-- worker is entitled to earn before the maximum pension payable to the worker is reduced" (a Commonwealth figure, an
+-- input). s 155 (more than 1 employer, one not casual): the insurer "may decide" which instrument; the caller gives
+-- that instrument's amount. s 147: the worker "must not receive an amount under this part that is more than the worker
+-- would have received from the worker's employment if the worker were at work and the injury had not been sustained".
+-- This amount is MC for s 163 (before any s 148 deduction).
+GIVEN `w` IS A `Weekly facts`
+      `QOTE` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the total incapacity amount before s 148 for` `w` `at` `QOTE` MEANS
+    CONSIDER `the ss 150-152 amount for` `w` `at` `QOTE`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST `the amount` THEN
+        JUST (`the lesser of` (`the s 153-154 amount` `the amount`) `and` (`w`'s `what the worker would have received from employment that week if not injured`))
+    WHERE
+        GIVEN `a` IS A NUMBER
+        GIVETH A NUMBER
+        `the s 153-154 amount` `a` MEANS
+            IF `w`'s `was receiving an age, disability support or class B widow pension when injured`
+            THEN `the lesser of` (`w`'s `the amount the worker was earning at the time of the injury`) `and` (`w`'s `the amount the worker may earn before the maximum pension is reduced`)
+            ELSE IF `w`'s `engaged in casual or part-time employment`
+                 THEN `the lesser of` `a` `and` (`w`'s `NWE`)
+                 ELSE `a`
+
+-- s 148: the insurer "may reduce the weekly payment of compensation by the equivalent weekly amount of the payment or
+-- other benefit" the worker has independently of the Act. A discretion: the caller gives the amount it decided on.
+GIVEN `w` IS A `Weekly facts`
+      `QOTE` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the weekly compensation for total incapacity for` `w` `at` `QOTE` MEANS
+    CONSIDER `the total incapacity amount before s 148 for` `w` `at` `QOTE`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST `the amount` THEN JUST (`nil if negative` (`the amount` MINUS `w`'s `the weekly amount of other payments the insurer has decided to deduct under s 148`))
+
+§§ `s 163 -- partial incapacity`
+
+-- s 162: "LE means the worker's ... loss of earnings, expressed as a weekly rate, because of the injury"; "loss of
+-- earnings means the difference between (a) the amount of the worker's ... normal weekly earnings at the time of
+-- injury; and (b) the amount (i) of the worker's ... weekly earnings from employment during the period of partial
+-- incapacity; or (ii) if the worker ... is not in employment ...--that could be reasonably expected to be derived";
+-- "MC means the maximum compensation expressed as a weekly rate, that would have been payable under this part had total
+-- incapacity of the worker or person resulted from the injury". s 163(2): "The weekly payment is an amount calculated
+-- under the following formula--" and the deposited text has no formula (finding 1). (3): "However, the amount must not
+-- be more than MC."
+GIVEN `NWE`                             IS A NUMBER
+      `weekly earnings while partially incapacitated, or what could reasonably be expected` IS A NUMBER
+GIVETH A NUMBER
+`LE under s 162 for` `NWE` `and` `weekly earnings while partially incapacitated, or what could reasonably be expected` MEANS
+    `nil if negative` (`NWE` MINUS `weekly earnings while partially incapacitated, or what could reasonably be expected`)
+
+GIVEN `w` IS A `Weekly facts`
+      `QOTE` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`MC under s 162 for` `w` `at` `QOTE` MEANS
+    `the total incapacity amount before s 148 for` `w` `at` `QOTE`
+
+§§ `ss 144A, 190, 119, 173, 176 -- when weekly payments stop`
+
+DECLARE `Stop answer` IS ONE OF
+    `weekly payments continue`
+    `weekly payments have stopped: the incapacity has stopped (s 144A(1)(a))`
+    `weekly payments and all further compensation have stopped: 5 years of weekly payments (s 144A(1)(b), (2))`
+    `weekly payments and all further compensation have stopped: the maximum has been paid (s 144A(1)(c), (2), s 140)`
+    `compensation other than lump sums has stopped: the decision on the lump sum offer was given, or 20 business days passed (s 190)`
+    `compensation has ended: damages were settled or judgment given (s 119)`
+    `compensation has ended: a redemption payment was agreed (s 176)`
+    `compensation has ended: the worker stopped ordinarily residing in Australia (s 173(2))`
+    `not covered: no deposited QOTE for that financial year`
+
+DECLARE `Stop facts` HAS
+    `the incapacity because of the injury has stopped`                           IS A BOOLEAN
+    `weeks of weekly payments received for the incapacity`                       IS A NUMBER
+    `total weekly payments received for the injury`                              IS A NUMBER
+    `a notice of assessment has been given and the decision was notified or 20 business days have passed since the offer` IS A BOOLEAN
+    `damages have been settled or judgment given`                                IS A BOOLEAN
+    `a redemption payment has been agreed`                                       IS A BOOLEAN
+    `the worker has stopped ordinarily residing in Australia`                    IS A BOOLEAN
+
+-- s 144A(1): weekly payments stop "when the first of the following happens (a) the incapacity because of the work
+-- related injury stops; (b) the worker has received weekly payments for the incapacity for 5 years; (c) compensation
+-- under this part reaches the maximum amount under part 6." (2): "If subsection (1)(b) or (c) applies, the worker's
+-- entitlement to further compensation for the injury stops." s 190(2): after a notice of assessment the worker "is not
+-- entitled to further compensation for the injury after the first of (a) the worker notifies the insurer of the
+-- worker's decision about the offer within the decision period; (b) 20 business days have passed since the worker
+-- received the offer" (lump sums and chapter 4A aside, (3)). s 119(2), s 176(1), s 173(2) end compensation too.
+GIVEN `s`    IS A `Stop facts`
+      `QOTE` IS A NUMBER
+GIVETH A `Stop answer`
+`the weekly payment stop answer for` `s` `at` `QOTE` MEANS
+    BRANCH
+        IF `s`'s `damages have been settled or judgment given` THEN `compensation has ended: damages were settled or judgment given (s 119)`
+        IF `s`'s `a redemption payment has been agreed` THEN `compensation has ended: a redemption payment was agreed (s 176)`
+        IF `s`'s `the worker has stopped ordinarily residing in Australia` THEN `compensation has ended: the worker stopped ordinarily residing in Australia (s 173(2))`
+        IF `s`'s `a notice of assessment has been given and the decision was notified or 20 business days have passed since the offer` THEN `compensation other than lump sums has stopped: the decision on the lump sum offer was given, or 20 business days passed (s 190)`
+        IF `s`'s `the incapacity because of the injury has stopped` THEN `weekly payments have stopped: the incapacity has stopped (s 144A(1)(a))`
+        IF `s`'s `weeks of weekly payments received for the incapacity` AT LEAST `the end of the first 5 years` THEN `weekly payments and all further compensation have stopped: 5 years of weekly payments (s 144A(1)(b), (2))`
+        IF `s`'s `total weekly payments received for the injury` AT LEAST `the maximum statutory compensation at` `QOTE` THEN `weekly payments and all further compensation have stopped: the maximum has been paid (s 144A(1)(c), (2), s 140)`
+        OTHERWISE `weekly payments continue`
+
+§§ `ss 169, 170 -- review under 18; overpayments`
+
+-- s 169(1): applies if a worker receiving weekly payments "(a) was under 18 years when the injury was sustained; and
+-- (b) a review takes place more than 12 months after the injury was sustained." (2): the entitlement "may be increased
+-- from the date of the review"; (3) recalculated under the industrial instrument "as if the worker were at work".
+GIVEN `under 18 when injured`                         IS A BOOLEAN
+      `months from the injury to the review`          IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `s 169 applies` IF
+        `under 18 when injured`
+    AND `months from the injury to the review` GREATER THAN 12
+
+-- s 170(2): "The insurer may (a) recover from the worker or person the difference between the payment and the
+-- entitlement; or (b) from time to time deduct [it] from weekly payments".
+GIVEN `paid`     IS A NUMBER
+      `entitled` IS A NUMBER
+GIVETH A NUMBER
+`the overpayment recoverable under s 170` `paid` `entitled` MEANS
+    `nil if negative` (`paid` MINUS `entitled`)
+
+§§ `ss 171-174, 176 -- redemption of weekly payments`
+
+DECLARE `Redemption answer` IS ONE OF
+    `the insurer and the worker may agree a redemption payment (s 171)`
+    `the insurer and the worker may agree a redemption payment (s 172)`
+    `the worker is entitled to a redemption payment in an agreed amount (s 173(3))`
+    `the worker stops being entitled to compensation, with no redemption (s 173(2))`
+    `no redemption is available`
+
+-- s 171: "(a) a worker has been receiving weekly payments ... for at least 2 years; and (b) the insurer receives a
+-- report from a doctor that the worker's injury is not stable and stationary". s 172: the worker "moves interstate
+-- permanently" and the same report. s 173: a worker who "stops ordinarily residing in Australia" stops being entitled,
+-- but "if the worker satisfies the insurer that the worker's incapacity ... is permanent, the worker is entitled to a
+-- redemption payment in an amount agreed".
+GIVEN `receiving weekly payments`                             IS A BOOLEAN
+      `weeks of weekly payments received`                     IS A NUMBER
+      `a doctor reports the injury is not stable and stationary` IS A BOOLEAN
+      `moved interstate permanently`                          IS A BOOLEAN
+      `stopped ordinarily residing in Australia`              IS A BOOLEAN
+      `the insurer is satisfied the incapacity is permanent`  IS A BOOLEAN
+GIVETH A `Redemption answer`
+`the redemption answer` `receiving weekly payments` `weeks of weekly payments received` `a doctor reports the injury is not stable and stationary` `moved interstate permanently` `stopped ordinarily residing in Australia` `the insurer is satisfied the incapacity is permanent` MEANS
+    IF (NOT `receiving weekly payments`)
+    THEN `no redemption is available`
+    ELSE IF `stopped ordinarily residing in Australia`
+         THEN IF `the insurer is satisfied the incapacity is permanent`
+              THEN `the worker is entitled to a redemption payment in an agreed amount (s 173(3))`
+              ELSE `the worker stops being entitled to compensation, with no redemption (s 173(2))`
+         ELSE IF `a doctor reports the injury is not stable and stationary` AND `weeks of weekly payments received` AT LEAST `the end of the first 2 years`
+              THEN `the insurer and the worker may agree a redemption payment (s 171)`
+              ELSE IF `a doctor reports the injury is not stable and stationary` AND `moved interstate permanently`
+                   THEN `the insurer and the worker may agree a redemption payment (s 172)`
+                   ELSE `no redemption is available`
+
+-- s 174(1): a redemption payment "is an amount that is not more than ... (156 x Q) - TWP", "Q is 70% of QOTE",
+-- "TWP means the total weekly payments already paid to the worker". (Part 9, division 7 is not in s 205's list.)
+GIVEN `QOTE`                          IS A NUMBER
+      `total weekly payments already paid` IS A NUMBER
+GIVETH A NUMBER
+`the s 174 redemption cap at` `QOTE` `less` `total weekly payments already paid` MEANS
+    `nil if negative` ((156 TIMES (70% TIMES `QOTE`)) MINUS `total weekly payments already paid`)
+
+§§ `ss 178-181, Regulation s 117 -- lump sum compensation for permanent impairment`
+
+-- s 179(3): "the DPI must be expressed as a percentage." Here a DPI is a number of percent (10 is 10%).
+-- Regulation s 117: "the lump sum compensation for a worker's DPI is calculated by multiplying the maximum statutory
+-- compensation by the worker's DPI." s 180(2): it "must not include an amount for a degree of impairment attributable
+-- to (a) a condition existing before the injury; or (b) a condition for which the worker is not entitled to
+-- compensation." (3): "calculated as at the day the insurer makes an offer". s 181: for a further injury to the same
+-- part of the body, it "must be reduced by the worker's previous entitlement" (industrial deafness aside).
+GIVEN `QOTE`                                       IS A NUMBER
+      `the DPI`                                    IS A NUMBER
+      `the DPI attributable to a prior or non-compensable condition` IS A NUMBER
+      `the previous entitlement for the same part of the body` IS A NUMBER
+GIVETH A NUMBER
+`the s 180 lump sum at` `QOTE` `for a DPI of` `the DPI` `less` `the DPI attributable to a prior or non-compensable condition` `and` `the previous entitlement for the same part of the body` MEANS
+    `nil if negative` (`the counted share` MINUS `the previous entitlement for the same part of the body`)
+    WHERE
+        `the counted share` MEANS
+            `the maximum statutory compensation at` `QOTE` TIMES (`nil if negative` (`the DPI` MINUS `the DPI attributable to a prior or non-compensable condition`) DIVIDED BY 100)
+
+-- Regulation s 117, example: "A worker's DPI is assessed as 10%. The maximum statutory compensation is $422,295. The
+-- lump sum compensation is $42,229.50." The same multiplication, on a given maximum.
+GIVEN `the maximum statutory compensation` IS A NUMBER
+      `the DPI`                            IS A NUMBER
+GIVETH A NUMBER
+`the Regulation s 117 product of` `the maximum statutory compensation` `and a DPI of` `the DPI` MEANS
+    `the maximum statutory compensation` TIMES (`the DPI` DIVIDED BY 100)
+
+§§ `s 192, Regulation s 118 and schedule 3 -- additional lump sum for a DPI of 30% or more`
+
+-- Schedule 3: "30 | 8.15 times QOTE" ... "74 | 211.53 times QOTE", "75-100 | 216.15 times QOTE". The multiples for DPI
+-- 30 to 74, in order.
+`the schedule 3 multiples for DPI 30 to 74` MEANS
+    LIST 8.15, 12.77, 17.39, 22.01, 26.63, 31.26, 35.88, 40.50, 45.12, 49.75,
+         54.37, 58.99, 63.61, 68.23, 72.86, 77.48, 82.10, 86.73, 91.35, 95.97,
+         100.59, 105.21, 109.83, 114.46, 119.08, 123.70, 128.32, 132.95, 137.57, 142.19,
+         146.82, 151.44, 156.06, 160.68, 165.31, 169.93, 174.55, 179.17, 183.80, 188.42,
+         193.04, 197.66, 202.28, 206.91, 211.53
+`the schedule 3 multiple for DPI 75 to 100` MEANS 216.15
+
+-- s 192(1)-(2): a worker with a DPI of 30% or more "is entitled to additional lump sum compensation of no more than
+-- 216.15 times QOTE for the injury, payable according to a graduated scale prescribed under a regulation." (3): not
+-- "if the DPI arises from (a) a psychiatric or psychological injury; or (b) combining a psychiatric or psychological
+-- injury and another injury." READING: a DPI between table rows takes the row of its whole number.
+GIVEN `QOTE`    IS A NUMBER
+      `the DPI` IS A NUMBER
+      `the DPI arises from or combines a psychiatric or psychological injury` IS A BOOLEAN
+GIVETH A NUMBER
+`the s 192 additional lump sum at` `QOTE` `for a DPI of` `the DPI` `psychiatric` `the DPI arises from or combines a psychiatric or psychological injury` MEANS
+    IF `the DPI` LESS THAN 30 OR `the DPI arises from or combines a psychiatric or psychological injury`
+    THEN 0
+    ELSE IF FLOOR `the DPI` AT LEAST 75
+         THEN `the schedule 3 multiple for DPI 75 to 100` `times QOTE, at` `QOTE`
+         ELSE (`entry` (FLOOR `the DPI` MINUS 29) `of` `the schedule 3 multiples for DPI 30 to 74`) `times QOTE, at` `QOTE`
+
+§§ `s 193, Regulation ss 119, 121 and schedule 4 -- additional lump sum for gratuitous care`
+
+-- Schedule 4, s 2(3): in column 2 "(a) moderate is a modified barthel index total score of 50-74; and (b) severe is
+-- ... 25-49; and (c) total is ... 0-24." Schedule 8, s 2(2) adds "minimal ... 91-99" and "mild ... 75-90".
+DECLARE `Dependency level` IS ONE OF `no dependency`, `minimal`, `mild`, `moderate`, `severe`, `total`
+
+GIVEN `the modified barthel index total score` IS A NUMBER
+GIVETH A `Dependency level`
+`the dependency level for a modified barthel index score of` `the modified barthel index total score` MEANS
+    BRANCH
+        IF `the modified barthel index total score` AT MOST 24 THEN `total`
+        IF `the modified barthel index total score` AT MOST 49 THEN `severe`
+        IF `the modified barthel index total score` AT MOST 74 THEN `moderate`
+        IF `the modified barthel index total score` AT MOST 90 THEN `mild`
+        IF `the modified barthel index total score` AT MOST 99 THEN `minimal`
+        OTHERWISE `no dependency`
+
+-- Schedule 4 graduated scale: rows of DPI bands, each with the moderate, severe and total multiples of QOTE.
+-- "15-39 | 1.99 3.97 5.94", "40-49 | 3.70 7.52 11.21", "50-59 | 16.35 32.68 49.00", "60-69 | 40.84 73.49 97.97",
+-- "70-79 | 57.16 106.14 146.93", "80-89 | 65.32 132.00 195.89", "90-94 | 73.49 146.93 228.53",
+-- "95-100 | 81.63 163.28 244.86".
+GIVEN `the DPI` IS A NUMBER
+GIVETH A LIST OF NUMBER
+`the schedule 4 row for a DPI of` `the DPI` MEANS
+    BRANCH
+        IF `the DPI` LESS THAN 40 THEN LIST 1.99, 3.97, 5.94
+        IF `the DPI` LESS THAN 50 THEN LIST 3.70, 7.52, 11.21
+        IF `the DPI` LESS THAN 60 THEN LIST 16.35, 32.68, 49.00
+        IF `the DPI` LESS THAN 70 THEN LIST 40.84, 73.49, 97.97
+        IF `the DPI` LESS THAN 80 THEN LIST 57.16, 106.14, 146.93
+        IF `the DPI` LESS THAN 90 THEN LIST 65.32, 132.00, 195.89
+        IF `the DPI` LESS THAN 95 THEN LIST 73.49, 146.93, 228.53
+        OTHERWISE LIST 81.63, 163.28, 244.86
+
+DECLARE `Gratuitous care facts` HAS
+    `the DPI`                                                                    IS A NUMBER
+    `the modified barthel index total score`                                     IS A NUMBER
+    `care is to be provided at the worker's home on a voluntary basis by another person` IS A BOOLEAN
+    `the worker resides at home on a permanent basis`                            IS A BOOLEAN
+    `the level of care was not provided before the impairment`                   IS A BOOLEAN
+    `the worker physically demonstrates the level of dependency`                 IS A BOOLEAN
+    `the DPI arises from or combines a psychiatric or psychological injury`     IS A BOOLEAN
+
+-- s 193(1): "a DPI of 15% or more; and (b) a moderate to total level of dependency on day to day care for the
+-- fundamental activities of daily living." (2): "entitled ... only if (a) day to day care ... is to be provided at the
+-- worker's home on a voluntary basis by another person; and (b) the worker resides at home on a permanent basis; and
+-- (c) the level of care required was not provided to the worker before the worker sustained the impairment; and (d)
+-- the worker physically demonstrates the level of dependency". (3): not for a psychiatric or psychological DPI. (6):
+-- the insurer decides the amount, "no more than 244.86 times QOTE, payable according to a graduated scale".
+GIVEN `g` IS A `Gratuitous care facts`
+GIVETH A BOOLEAN
+DECIDE `s 193 applies to` `g` IF
+        `g`'s `the DPI` AT LEAST 15
+    AND `g`'s `the modified barthel index total score` AT MOST 74
+    AND `g`'s `care is to be provided at the worker's home on a voluntary basis by another person`
+    AND `g`'s `the worker resides at home on a permanent basis`
+    AND `g`'s `the level of care was not provided before the impairment`
+    AND `g`'s `the worker physically demonstrates the level of dependency`
+    AND (NOT `g`'s `the DPI arises from or combines a psychiatric or psychological injury`)
+
+GIVEN `g`    IS A `Gratuitous care facts`
+      `QOTE` IS A NUMBER
+GIVETH A NUMBER
+`the s 193 additional lump sum for` `g` `at` `QOTE` MEANS
+    IF (NOT `s 193 applies to` `g`)
+    THEN 0
+    ELSE (`entry` `the column` `of` (`the schedule 4 row for a DPI of` (`g`'s `the DPI`))) `times QOTE, at` `QOTE`
+    WHERE
+        `the column` MEANS
+            CONSIDER `the dependency level for a modified barthel index score of` (`g`'s `the modified barthel index total score`)
+            WHEN `moderate` THEN 1
+            WHEN `severe`   THEN 2
+            OTHERWISE 3
+
+§§ `ss 185-190, 237(3), 239 -- the notice of assessment, disagreeing, and deciding about the offer`
+
+-- s 185(1): "The insurer must, within 10 business days after receiving the assessment of the worker's permanent
+-- impairment, give the worker a notice of assessment in the approved form." s 187: if there is a lump sum
+-- entitlement, "the insurer must include, in the notice of assessment, an offer". s 186(2): a worker who disagrees
+-- "must advise the insurer within 20 business days after the original notice is given (the decision period)"; (3): on a
+-- request to be assessed again, "the insurer must decide, within 10 business days after receiving the request".
+-- ss 188(2), 189(3): the worker gives written notice "within the decision period". s 190(2)(b): "20 business days have
+-- passed since the worker received the offer".
+`the s 185 business days`      MEANS 10
+`the decision period`          MEANS 20
+`the s 186(3) business days`   MEANS 10
+`the DPI threshold for the election` MEANS 20
+
+DECLARE `Offer consequence` IS ONE OF
+    `DPI 20% or more: accepting or deferring keeps the right to seek damages; other compensation ends at the decision or after 20 business days (ss 188, 190)`
+    `DPI under 20%: accepting is an irrevocable election not to seek damages; other compensation ends at the decision or after 20 business days (ss 189, 190, 237(3), 239)`
+    `no DPI: no lump sum is offered; the worker must still elect whether to seek damages (s 189(1)(b), (2))`
+
+-- s 188 (DPI 20% or more): the worker "may accept or defer a decision about the offer"; silence is a deferral (3).
+-- s 189 (DPI less than 20%, or no DPI): the insurer must advise "that the worker must make an irrevocable election as
+-- to whether the worker (i) accepts the offer of payment of lump sum compensation; or (ii) seeks damages for the
+-- injury"; s 237(3): a worker required under s 239 to elect who "has accepted an offer of payment of lump sum
+-- compensation ... is not entitled to seek damages" (s 266 aside, (4)); s 239(2): "not entitled to both".
+GIVEN `the DPI` IS A NUMBER
+GIVETH AN `Offer consequence`
+`what accepting the offer means for a DPI of` `the DPI` MEANS
+    IF `the DPI` AT LEAST `the DPI threshold for the election`
+    THEN `DPI 20% or more: accepting or deferring keeps the right to seek damages; other compensation ends at the decision or after 20 business days (ss 188, 190)`
+    ELSE IF `the DPI` GREATER THAN 0
+         THEN `DPI under 20%: accepting is an irrevocable election not to seek damages; other compensation ends at the decision or after 20 business days (ss 189, 190, 237(3), 239)`
+         ELSE `no DPI: no lump sum is offered; the worker must still elect whether to seek damages (s 189(1)(b), (2))`
+
+§§ `ss 194-201A -- compensation on the worker's death`
+
+DECLARE `Death facts` HAS
+    `at least 1 dependant was totally dependent on the worker's earnings`        IS A BOOLEAN
+    `the worker left dependent members of the family`                            IS A BOOLEAN
+    `the worker left a totally dependent spouse`                                 IS A BOOLEAN
+    `dependent members of the family under 6`                                    IS A NUMBER
+    `dependent members, other than the spouse, under 16 or students`             IS A NUMBER
+    `the amount the insurer considers reasonable for partial dependants`         IS A NUMBER
+    `the worker left a spouse, issue or next of kin`                             IS A BOOLEAN
+    `the death is from a terminal latent onset injury already compensated by a lump sum or damages` IS A BOOLEAN
+
+-- s 194(2): part 11 "does not apply if (a) a worker dies because of a latent onset injury that is a terminal
+-- condition; and (b) the worker had received a payment of lump sum compensation or damages for" it. s 195: "student
+-- means a person who is under 21 years and receiving full-time education". s 197: compensation "may be apportioned
+-- between the total dependants and the partial dependants".
+--
+-- s 200(2), at least 1 dependant totally dependent: "(a) if the worker has left dependent members of the worker's
+-- family, for the members--404.87 times QOTE; and (aa) if the worker has left a totally dependent spouse, for the
+-- spouse--10.83 times QOTE; and (ab) if the worker has left a totally dependent spouse and dependent members of the
+-- worker's family who are under 6, for the spouse--a weekly amount equal to 8% of QOTE while a dependent member is
+-- under 6; and (b) if the worker has left a totally dependent spouse and dependent members ... who are under 16 or are
+-- students, for each member other than the spouse--21.64 times QOTE; and (c) if the worker has left dependent members
+-- of the worker's family or a child of the worker's spouse who was totally dependent on the worker's earnings and who
+-- are under 16 or students, for each member or child--a weekly amount equal to 10% of QOTE".
+`the s 200(2)(a) multiple`  MEANS 404.87
+`the s 200(2)(aa) multiple` MEANS 10.83
+`the s 200(2)(b) multiple`  MEANS 21.64
+
+GIVEN `QOTE` IS A NUMBER
+GIVETH A NUMBER
+`the s 200(2)(a) amount at` `QOTE` MEANS
+    `the s 200(2)(a) multiple` `times QOTE, at` `QOTE`
+
+-- s 201 (all dependants partially dependent): "(a) ... an amount the insurer considers is reasonable and
+-- proportionate to the monetary value of the loss of dependence" which (3) "(a) must not be less than 15% of the amount
+-- payable under section 200(2)(a); and (b) must not be more than the amount payable under section 200(2)(a)"; and
+-- "(b) ... for each member or child [under 16 or students]--a weekly amount equal to 7% of QOTE". s 201A: no
+-- dependants, but a spouse, issue or next of kin: "The amount of compensation payable to the worker's estate is 10% of
+-- the amount payable under section 200(2)(a)."
+GIVEN `d`    IS A `Death facts`
+      `QOTE` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the lump sum on death for` `d` `at` `QOTE` MEANS
+    IF `d`'s `the death is from a terminal latent onset injury already compensated by a lump sum or damages`
+    THEN NOTHING
+    ELSE IF `d`'s `at least 1 dependant was totally dependent on the worker's earnings`
+         THEN JUST (`the (a) amount` PLUS `the (aa) amount` PLUS `the (b) amount`)
+         ELSE IF `d`'s `the worker left dependent members of the family`
+              THEN JUST (`the lesser of` (`the greater of` (`d`'s `the amount the insurer considers reasonable for partial dependants`) `and` (15% TIMES `the s 200(2)(a) amount at` `QOTE`)) `and` (`the s 200(2)(a) amount at` `QOTE`))
+              ELSE IF `d`'s `the worker left a spouse, issue or next of kin`
+                   THEN JUST (10% TIMES `the s 200(2)(a) amount at` `QOTE`)
+                   ELSE JUST 0
+    WHERE
+        `the (a) amount` MEANS
+            IF `d`'s `the worker left dependent members of the family` THEN `the s 200(2)(a) amount at` `QOTE` ELSE 0
+        `the (aa) amount` MEANS
+            IF `d`'s `the worker left a totally dependent spouse` THEN `the s 200(2)(aa) multiple` `times QOTE, at` `QOTE` ELSE 0
+        `the (b) amount` MEANS
+            IF `d`'s `the worker left a totally dependent spouse`
+            THEN (`d`'s `dependent members, other than the spouse, under 16 or students`) TIMES (`the s 200(2)(b) multiple` `times QOTE, at` `QOTE`)
+            ELSE 0
+
+GIVEN `d`    IS A `Death facts`
+      `QOTE` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the weekly amount on death for` `d` `at` `QOTE` MEANS
+    IF `d`'s `the death is from a terminal latent onset injury already compensated by a lump sum or damages`
+    THEN NOTHING
+    ELSE IF `d`'s `at least 1 dependant was totally dependent on the worker's earnings`
+         THEN JUST (`the (ab) amount` PLUS ((`d`'s `dependent members, other than the spouse, under 16 or students`) TIMES (10% TIMES `QOTE`)))
+         ELSE IF `d`'s `the worker left dependent members of the family`
+              THEN JUST ((`d`'s `dependent members, other than the spouse, under 16 or students`) TIMES (7% TIMES `QOTE`))
+              ELSE JUST 0
+    WHERE
+        `the (ab) amount` MEANS
+            IF `d`'s `the worker left a totally dependent spouse` AND `d`'s `dependent members of the family under 6` GREATER THAN 0
+            THEN 8% TIMES `QOTE`
+            ELSE 0
+
+§§ `ss 224, 225, Regulation s 147 and schedule 8 -- caring allowance`
+
+-- s 224(1)-(2): for a worker "receiving weekly payments", a caring allowance "may be paid if the insurer is satisfied
+-- that (a) the worker depends on day to day care for the fundamental activities of daily living; and (b) the care is
+-- to be provided to the worker at the worker's home on a voluntary basis by another person in relation to whom
+-- compensation is not payable." Regulation s 147(1): the insurer decides the hours "having regard to the occupational
+-- therapist's assessment report ... and the graduated scale stated in schedule 8" and pays "at an hourly rate equal to
+-- the carer pension rate divided by 35"; (2) "carer pension rate means the weekly amount of the maximum carer payment"
+-- (a Commonwealth figure, an input). Schedule 8: "Maximum hours of care required in a week": minimal 10, mild 13.0,
+-- moderate 20.0, severe 23.5, total 27.0.
+`the carer pension rate divisor` MEANS 35
+
+GIVEN `the level` IS A `Dependency level`
+GIVETH A NUMBER
+`the schedule 8 maximum hours a week for` `the level` MEANS
+    CONSIDER `the level`
+    WHEN `minimal`  THEN 10
+    WHEN `mild`     THEN 13.0
+    WHEN `moderate` THEN 20.0
+    WHEN `severe`   THEN 23.5
+    WHEN `total`    THEN 27.0
+    OTHERWISE 0
+
+GIVEN `receiving weekly payments`                                   IS A BOOLEAN
+      `the modified barthel index total score`                      IS A NUMBER
+      `care is to be provided at home on a voluntary basis by another person not compensated` IS A BOOLEAN
+      `the carer pension rate`                                      IS A NUMBER
+GIVETH A NUMBER
+`the most caring allowance a week` `receiving weekly payments` `the modified barthel index total score` `care is to be provided at home on a voluntary basis by another person not compensated` `the carer pension rate` MEANS
+    IF `receiving weekly payments` AND `care is to be provided at home on a voluntary basis by another person not compensated`
+    THEN (`the schedule 8 maximum hours a week for` (`the dependency level for a modified barthel index score of` `the modified barthel index total score`)) TIMES (`the carer pension rate` DIVIDED BY `the carer pension rate divisor`)
+    ELSE 0
+
+§§ `ss 220, 231, 232 -- rehabilitation`
+
+-- s 220(3): the insurer "(b) must refer a worker who is receiving compensation for an injury, and has asked the
+-- insurer to be referred ..., to an accredited rehabilitation and return to work program of the insurer; and (c) must
+-- refer a worker who has stopped receiving compensation for an injury under section 144A, 168 or 190(2), and has not
+-- returned to work because of the injury". (4): "(a) subsection (3)(b) and (c) does not apply if the insurer is
+-- satisfied the program is not able to further assist the worker ...; and (b) subsection (3)(c) does not apply if the
+-- worker is already participating".
+GIVEN `receiving compensation and has asked to be referred`                         IS A BOOLEAN
+      `stopped receiving compensation under s 144A, 168 or 190(2) and has not returned to work` IS A BOOLEAN
+      `already participating in an accredited program`                            IS A BOOLEAN
+      `the insurer is satisfied the program cannot further assist`                 IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 220(3) requires a referral` IF
+        (NOT `the insurer is satisfied the program cannot further assist`)
+    AND (    `receiving compensation and has asked to be referred`
+         OR  (`stopped receiving compensation under s 144A, 168 or 190(2) and has not returned to work` AND (NOT `already participating in an accredited program`)))
+
+-- s 232(1): "The worker must satisfactorily participate in rehabilitation (a) as soon as practicable after the injury
+-- is sustained; and (b) for the period for which the worker is entitled to compensation." (2): "If the worker fails or
+-- refuses to participate in rehabilitation without reasonable excuse, the insurer may, by written notice given to the
+-- worker, suspend the worker's entitlement to compensation until the worker satisfactorily participates". s 231: the
+-- common law duty to mitigate applies, "may be discharged by participating in rehabilitation", and the worker "must
+-- satisfactorily participate in any return to work program or suitable duties arranged by the insurer".
+GIVEN `the worker failed or refused to participate in rehabilitation` IS A BOOLEAN
+      `the worker had a reasonable excuse`                            IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the insurer may suspend compensation under s 232(2)` IF
+        `the worker failed or refused to participate in rehabilitation`
+    AND (NOT `the worker had a reasonable excuse`)
+
+§§ `s 232B -- no dismissal for the injury within 12 months`
+
+-- s 232B(1): "Within 12 months after a worker sustains an injury, the employer must not dismiss the worker solely or
+-- mainly because the worker is not fit for employment in a position because of the injury. Maximum penalty--500
+-- penalty units." s 232A: "injury means an injury for which compensation is payable"; "dismiss" includes an
+-- unreasonable employment condition designed to make the worker leave, and the worker leaving. READING: the 12 months
+-- run to the same day of the month a year on.
+`the s 232B months` MEANS 12
+
+GIVEN `the day of the injury` IS A DATE
+GIVETH A DATE
+`the last day of s 232B protection` `the day of the injury` MEANS
+    `the same day` `the s 232B months` `months after` `the day of the injury`
+
+GIVEN `the day of the injury`                                  IS A DATE
+      `the day of dismissal`                                   IS A DATE
+      `the dismissal is solely or mainly because the worker is not fit because of the injury` IS A BOOLEAN
+      `compensation is payable for the injury`                 IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the dismissal contravenes s 232B` IF
+        `compensation is payable for the injury`
+    AND `the dismissal is solely or mainly because the worker is not fit because of the injury`
+    AND DATE_SERIAL `the day of dismissal` AT MOST DATE_SERIAL (`the last day of s 232B protection` `the day of the injury`)
+
+§§ `Regulative rules -- the claimant, the worker, the employer and the insurer`
+
+-- Each rule's clock is stated above it: business days for the business-day deadlines, calendar days otherwise. Day 0
+-- is the day the rule starts. The seats work out the dates.
+DECLARE `WCRA party` IS ONE OF `the claimant`, `the worker`, `the employer`, `the insurer`
+
+DECLARE `Application decision` IS ONE OF `allowed`, `rejected`
+DECLARE `Disagreement request` IS ONE OF `assess the injury again by a different entity`, `refer the DPI to a medical assessment tribunal`
+DECLARE `Offer choice` IS ONE OF `accept the offer`, `defer the decision`, `reject the offer`
+
+DECLARE `WCRA act` IS ONE OF
+    `lodge the application for compensation`
+    `waive the s 131(1) time limit`
+    `give the worker the information statement`
+    `give the employer the information statement`
+    `give the insurer the injury report`
+    `decide the application` HAS `the decision` IS AN `Application decision`
+    `notify the claimant of the decision`
+    `notify the claimant of the rejection with written reasons and the prescribed information`
+    `notify the claimant of its reasons for not deciding and of the right to a review`
+    `start the basic weekly payment`
+    `notify the insurer of the return to work or engagement in a calling`
+    `pay the worker for the day of injury` HAS `the amount` IS A NUMBER
+    `give the worker the notice of assessment, with any offer`
+    `give the worker copies of ss 10, 237(3), 239, 240 and 316 and advise of the irrevocable election`
+    `advise the insurer of disagreement with the DPI` HAS `the request` IS A `Disagreement request`
+    `decide whether to have the injury assessed again` HAS `assess again` IS A BOOLEAN
+    `refer the DPI to a medical assessment tribunal`
+    `give the insurer written notice about the offer` HAS `the choice` IS AN `Offer choice`
+    `pay the lump sum` HAS `the amount` IS A NUMBER
+    `refer the worker to an accredited rehabilitation and return to work program`
+    `fail or refuse to participate in rehabilitation without reasonable excuse`
+    `suspend the worker's compensation by written notice`
+    `dismiss the worker solely or mainly because the worker is unfit because of the injury`
+
+-- s 131(1), (4)-(6). Clock: calendar days from the day the entitlement arises; `days to lodge` is the days to the last
+-- day of the 6 months (the seat works it out). Lodging late is not an offence: the BREACH records that the application
+-- is not valid and enforceable. After a late lodgement the insurer must waive on s 131(4) grounds and may waive on
+-- s 131(5) or (6) grounds; s 131 sets no time for the waiver.
+GIVEN `days to lodge`                                                IS A NUMBER
+      `a medical assessment tribunal decided special medical circumstances exist` IS A BOOLEAN
+      `there is a s 131(5) or (6) ground`                            IS A BOOLEAN
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 131 -- the claimant must lodge the application within 6 months after the entitlement arises` IS
+    PARTY  `the claimant`
+    MUST   `lodge the application for compensation`
+    WITHIN `days to lodge`
+    HENCE  FULFILLED
+    LEST
+        (IF `a medical assessment tribunal decided special medical circumstances exist`
+         THEN PARTY `the insurer`
+              MUST  `waive the s 131(1) time limit`
+         ELSE IF `there is a s 131(5) or (6) ground`
+              THEN PARTY `the insurer`
+                   MAY   `waive the s 131(1) time limit`
+              ELSE BREACH BY `the claimant` BECAUSE "s 131(1): an application lodged more than 6 months after the entitlement arises is not valid and enforceable")
+
+-- s 132AA(1): "The insurer must, as soon as practicable after an application for compensation ... is lodged (a) give
+-- the worker a statement providing information about the workers' compensation scheme relevant to workers; and (b)
+-- give the worker's employer a statement ... relevant to employers. Maximum penalty--50 penalty units." Regulation
+-- s 209 sets the content. "As soon as practicable" is no fixed period, so there is no WITHIN (finding 9).
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 132AA -- the insurer must give the worker and the employer an information statement` IS
+        (PARTY `the insurer`
+         MUST  `give the worker the information statement`)
+    RAND
+        (PARTY `the insurer`
+         MUST  `give the employer the information statement`)
+
+-- s 133(1)-(3): the employer "must complete a report in the approved form and give the report to the insurer
+-- immediately after the first of" knowing of the injury, the worker reporting it, or the insurer's written request;
+-- "If an employer fails to comply with subsection (1) within 8 business days after the first of the circumstances ...,
+-- the employer commits an offence, unless the employer has a reasonable excuse. Maximum penalty--50 penalty units."
+-- Clock: business days from the first of those events. With a reasonable excuse the report is still owed.
+GIVEN `the employer has a reasonable excuse` IS A BOOLEAN
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 133 -- the employer must report the injury to the insurer` IS
+    PARTY  `the employer`
+    MUST   `give the insurer the injury report`
+    WITHIN `the s 133(3) business days`
+    HENCE  FULFILLED
+    LEST
+        (IF `the employer has a reasonable excuse`
+         THEN PARTY `the employer`
+              MUST  `give the insurer the injury report`
+         ELSE BREACH BY `the employer` BECAUSE "s 133(3): the employer did not report the injury within 8 business days and has no reasonable excuse (maximum penalty 50 penalty units)")
+
+-- s 134(1)-(6). Clock: business days from the day the application is made. On a decision in time, the claimant must
+-- be notified (no time is stated, (3)), with written reasons and the prescribed information on a rejection (4). Without
+-- a decision in time, the insurer must, within 5 more business days, give its reasons and say that the claimant may
+-- have the application reviewed under chapter 13 (6). A late decision followed by a timely s 134(6) notice ends the
+-- trace FULFILLED: the s 134(2) failure is the LEST path taken (finding 8).
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 134 -- the insurer must decide the application within 20 business days` IS
+    PARTY  `the insurer`
+    MUST   `decide the application` `the outcome`
+    WITHIN `the s 134(2) business days`
+    HENCE
+        (IF `the outcome` EQUALS `rejected`
+         THEN PARTY `the insurer`
+              MUST  `notify the claimant of the rejection with written reasons and the prescribed information`
+         ELSE PARTY `the insurer`
+              MUST  `notify the claimant of the decision`)
+    LEST
+        PARTY  `the insurer`
+        MUST   `notify the claimant of its reasons for not deciding and of the right to a review`
+        WITHIN `the s 134(6) business days`
+        LEST   BREACH BY `the insurer` BECAUSE "s 134(2), (6): no decision within 20 business days, and no notice of the reasons and of the right to a review within 5 business days after that"
+
+-- s 136(1): "A worker receiving compensation for an injury must give notice within 10 business days of the worker's
+-- (a) return to work; or (b) engagement in a calling. Maximum penalty--50 penalty units." (2): to the insurer. Clock:
+-- business days from the return to work.
+GIVEN `the worker is receiving compensation` IS A BOOLEAN
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 136 -- the worker must notify the insurer of a return to work within 10 business days` IS
+    IF `the worker is receiving compensation`
+    THEN PARTY  `the worker`
+         MUST   `notify the insurer of the return to work or engagement in a calling`
+         WITHIN `the s 136 business days`
+         LEST   BREACH BY `the worker` BECAUSE "s 136(1): a worker receiving compensation must notify the insurer within 10 business days of returning to work or engaging in a calling (maximum penalty 50 penalty units)"
+    ELSE FULFILLED
+
+-- s 144(1)-(2): "For the day the worker stops work because of the injury, the worker is entitled to compensation under
+-- this part" and "Despite section 109, the employer must pay the compensation"; s 143: "an amount equal to the amount
+-- the worker would have received from the worker's employment for the day ... if the worker were at work". s 142:
+-- part 8 applies only if the instrument or contract does not pay the whole day, or pays less. No time is stated.
+GIVEN `part 8 applies`                                 IS A BOOLEAN
+      `what the worker would have received for the day` IS A NUMBER
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 144 -- the employer must pay the worker for the day of injury` IS
+    IF `part 8 applies`
+    THEN PARTY `the employer`
+         MUST  `pay the worker for the day of injury` (EXACTLY `what the worker would have received for the day`)
+    ELSE FULFILLED
+
+-- s 146B(1)-(3): if the insurer allows the application but "does not have the information necessary to calculate the
+-- weekly payment", it "must commence making a basic weekly payment ... on the later of (a) the expiry of 5 business
+-- days after the day the decision to allow the worker's application ... is made; (b) the expiry of the excess period
+-- ... Maximum penalty--300 penalty units." Clock: business days from the decision; the seat gives the business days to
+-- the end of the excess period. With the information in hand, s 146C applies instead ("as soon as practicable").
+GIVEN `the insurer has the information to calculate the weekly payment` IS A BOOLEAN
+      `business days from the decision to the end of the excess period` IS A NUMBER
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 146B -- the insurer must start the basic weekly payment while it waits for information` IS
+    IF `the insurer has the information to calculate the weekly payment`
+    THEN FULFILLED
+    ELSE PARTY  `the insurer`
+         MUST   `start the basic weekly payment`
+         WITHIN (`the greater of` `the s 146B business days` `and` `business days from the decision to the end of the excess period`)
+         LEST   BREACH BY `the insurer` BECAUSE "s 146B(3): the basic weekly payment must start by the later of 5 business days after the decision to allow the application and the end of the excess period (maximum penalty 300 penalty units)"
+
+-- s 185(1), s 187, s 189(2)(a)-(b). Clock: business days from the insurer's receipt of the assessment. For a DPI
+-- under 20% (or none), "when giving the notice of assessment" the insurer must also give copies of ss 10, 237(3),
+-- 239, 240 and 316 and advise of the irrevocable election.
+GIVEN `the DPI is under 20% or there is no DPI` IS A BOOLEAN
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 185 -- the insurer must give the notice of assessment within 10 business days` IS
+    IF `the DPI is under 20% or there is no DPI`
+    THEN    (PARTY  `the insurer`
+             MUST   `give the worker the notice of assessment, with any offer`
+             WITHIN `the s 185 business days`
+             LEST   BREACH BY `the insurer` BECAUSE "s 185(1), 187: the notice of assessment, with any offer, must be given within 10 business days after the insurer receives the assessment")
+        RAND
+            (PARTY  `the insurer`
+             MUST   `give the worker copies of ss 10, 237(3), 239, 240 and 316 and advise of the irrevocable election`
+             WITHIN `the s 185 business days`
+             LEST   BREACH BY `the insurer` BECAUSE "s 189(2): with a notice of assessment for a DPI under 20%, the insurer must give the listed sections and advise of the irrevocable election")
+    ELSE PARTY  `the insurer`
+         MUST   `give the worker the notice of assessment, with any offer`
+         WITHIN `the s 185 business days`
+         LEST   BREACH BY `the insurer` BECAUSE "s 185(1), 187: the notice of assessment, with any offer, must be given within 10 business days after the insurer receives the assessment"
+
+-- s 186(1)-(7). Clock: business days from the day the notice of assessment is given. Disagreeing is the worker's
+-- choice (DO ... LEST FULFILLED: silence leaves the notice standing). On a request to be assessed again, the insurer
+-- must decide within 10 business days; if it decides not to, or the worker asked for a tribunal, it must refer the DPI
+-- to a medical assessment tribunal (no time is stated). Not available if a tribunal already assessed the DPI.
+GIVEN `a medical assessment tribunal assessed the DPI` IS A BOOLEAN
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 186 -- disagreeing with the DPI in the notice of assessment` IS
+    IF `a medical assessment tribunal assessed the DPI`
+    THEN FULFILLED
+    ELSE PARTY  `the worker`
+         DO     `advise the insurer of disagreement with the DPI` `the request`
+         WITHIN `the decision period`
+         HENCE
+             (IF `the request` EQUALS `assess the injury again by a different entity`
+              THEN PARTY  `the insurer`
+                   MUST   `decide whether to have the injury assessed again` `the answer`
+                   WITHIN `the s 186(3) business days`
+                   HENCE
+                       (IF `the answer`
+                        THEN FULFILLED
+                        ELSE PARTY `the insurer`
+                             MUST  `refer the DPI to a medical assessment tribunal`)
+                   LEST   BREACH BY `the insurer` BECAUSE "s 186(3): the insurer must decide within 10 business days whether to have the injury assessed again"
+              ELSE PARTY `the insurer`
+                   MUST  `refer the DPI to a medical assessment tribunal`)
+         LEST   FULFILLED
+
+-- ss 188, 189: the worker may accept or defer (DPI 20% or more), or accept, reject or defer (DPI under 20%), "by giving
+-- the insurer written notice within the decision period"; silence is a deferral (ss 188(3), 189(4)). "If the worker
+-- accepts the offer, the insurer must pay the worker the amount of lump sum compensation" (ss 188(4), 189(5)); no time
+-- is stated. Clock: business days from the day the notice of assessment is given. A rejection does not count for a
+-- DPI of 20% or more, which has no rejection.
+GIVEN `the lump sum offered`     IS A NUMBER
+      `the DPI is 20% or more`   IS A BOOLEAN
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `ss 188, 189 -- deciding about the lump sum offer within the decision period` IS
+    PARTY    `the worker`
+    DO       `give the insurer written notice about the offer` `the choice`
+             PROVIDED (NOT (`the DPI is 20% or more` AND `the choice` EQUALS `reject the offer`))
+    WITHIN   `the decision period`
+    HENCE
+        (IF `the choice` EQUALS `accept the offer`
+         THEN PARTY `the insurer`
+              MUST  `pay the lump sum` (EXACTLY `the lump sum offered`)
+         ELSE FULFILLED)
+    LEST     FULFILLED
+
+-- s 220(3)-(4): the duty to refer (above). No time is stated. Max penalty for s 220(1): 1,000 penalty units.
+GIVEN `a referral is required` IS A BOOLEAN
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 220(3) -- the insurer must refer the worker to an accredited rehabilitation and return to work program` IS
+    IF `a referral is required`
+    THEN PARTY `the insurer`
+         MUST  `refer the worker to an accredited rehabilitation and return to work program`
+    ELSE FULFILLED
+
+-- s 232(1)-(2). Clock: calendar days of the entitlement to compensation (`days entitled`). Failing or refusing without
+-- reasonable excuse lets the insurer suspend, by written notice, until the worker participates; it is not an offence.
+GIVEN `days entitled` IS A NUMBER
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 232 -- the worker must participate in rehabilitation` IS
+    PARTY  `the worker`
+    SHANT  `fail or refuse to participate in rehabilitation without reasonable excuse`
+    WITHIN `days entitled`
+    HENCE  FULFILLED
+    LEST
+        PARTY `the insurer`
+        MAY   `suspend the worker's compensation by written notice`
+
+-- s 232B(1). Clock: calendar days from the injury; `days protected` runs to the last day of the 12 months.
+GIVEN `days protected` IS A NUMBER
+GIVETH A DEONTIC `WCRA party` `WCRA act`
+DECIDE `s 232B -- the employer must not dismiss the worker for unfitness because of the injury within 12 months` IS
+    PARTY  `the employer`
+    SHANT  `dismiss the worker solely or mainly because the worker is unfit because of the injury`
+    WITHIN `days protected`
+    HENCE  FULFILLED
+    LEST   BREACH BY `the employer` BECAUSE "s 232B(1): within 12 months after the injury the employer must not dismiss the worker solely or mainly because the worker is not fit for employment because of the injury (maximum penalty 500 penalty units)"

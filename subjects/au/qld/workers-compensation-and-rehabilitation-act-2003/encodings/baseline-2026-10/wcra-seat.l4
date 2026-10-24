@@ -1,0 +1,587 @@
+IMPORT prelude
+IMPORT `wcra-core`
+
+-- Workers' Compensation and Rehabilitation Act 2003 (Qld) -- from the seat of the INJURED WORKER (the claimant).
+--
+-- "Am I covered? By when must I claim, and how far back will I be paid? By when must the insurer decide? How much will
+-- I get each week, and when does it stop? What does my DPI give me, and what do I give up by accepting it? What do my
+-- dependants get if I die? Can I be dismissed?" Every question is phrased as the worker would ask it, on facts the
+-- worker could state. The rules are in wcra-core.l4; this module builds the core's records from plain answers and
+-- restates no rule. Its names are its own: the insurer's seat (wcra-seat-insurer.l4) defines none of them.
+--
+-- FIGURES: QOTE for 2026-27 ($1,994.50) is built in. For a day before 1 July 2026, the worker gives that year's QOTE;
+-- otherwise, and for any day after 30 June 2027, the answer is `not covered`.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Workers' Compensation and Rehabilitation Act 2003 (Qld) -- the injured worker's questions`
+
+-- Answers that carry an amount, or say why there is none.
+DECLARE `Worker amount answer` IS ONE OF
+    `the amount, in dollars, is` HAS `dollars` IS A NUMBER
+    `at most this amount a week, in dollars (s 163(3)); the s 163(2) formula is missing from the deposited text` HAS `dollars` IS A NUMBER
+    `none: past the first 5 years of the incapacity (ss 150-152, 144A)`
+    `none: part 11 does not apply to a terminal latent onset injury already compensated (s 194(2))`
+    `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+
+GIVEN `the day` IS A DATE
+      `QOTE for an earlier year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`my QOTE for` `the day` `given` `QOTE for an earlier year` MEANS
+    `the QOTE for the financial year containing` `the day` `given` `QOTE for an earlier year`
+
+§§ `Am I covered?`
+
+-- The seat is an individual, so s 11(4) is met by construction (`is an individual` is fixed TRUE).
+GIVEN `I work under a contract`                                IS A BOOLEAN
+      `I am an employee for PAYG withholding`                  IS A BOOLEAN
+      `I am a regulated worker under chapter 3A of the Fair Work Act` IS A BOOLEAN
+      `how my work is arranged`                                IS A `Work arrangement`
+      `as a sharefarmer I provide and use powered farm machinery` IS A BOOLEAN
+      `my share of the sharefarming proceeds`                  IS A NUMBER
+      `the work is part of my own regular trade or business`   IS A BOOLEAN
+      `I sublet the contract`                                  IS A BOOLEAN
+      `I employ a worker`                                      IS A BOOLEAN
+      `I do part of the work myself`                           IS A BOOLEAN
+      `I supply and use a motor vehicle for driving tuition under a contract that is not a contract of service` IS A BOOLEAN
+      `I would be a worker if I were paid for this work`       IS A BOOLEAN
+      `I am covered as a volunteer, community service worker, student or eligible person` IS A BOOLEAN
+      `I work under a contract of service with my own corporation, trust or partnership, or with the Commonwealth` IS A BOOLEAN
+      `I was competing, training, promoting or travelling as a professional sportsperson` IS A BOOLEAN
+      `I am fishing crew paid wholly or mainly by a share of the ship's earnings` IS A BOOLEAN
+      `I am in an approved program or work for an unemployment payment` IS A BOOLEAN
+      `a personal services business determination is in effect for me` IS A BOOLEAN
+GIVETH AN `Engagement`
+`my engagement from my answers` `I work under a contract` `I am an employee for PAYG withholding` `I am a regulated worker under chapter 3A of the Fair Work Act` `how my work is arranged` `as a sharefarmer I provide and use powered farm machinery` `my share of the sharefarming proceeds` `the work is part of my own regular trade or business` `I sublet the contract` `I employ a worker` `I do part of the work myself` `I supply and use a motor vehicle for driving tuition under a contract that is not a contract of service` `I would be a worker if I were paid for this work` `I am covered as a volunteer, community service worker, student or eligible person` `I work under a contract of service with my own corporation, trust or partnership, or with the Commonwealth` `I was competing, training, promoting or travelling as a professional sportsperson` `I am fishing crew paid wholly or mainly by a share of the ship's earnings` `I am in an approved program or work for an unemployment payment` `a personal services business determination is in effect for me` MEANS
+    `Engagement` WITH
+        `is an individual`                                                       IS TRUE
+        `works under a contract`                                                 IS `I work under a contract`
+        `is an employee for PAYG withholding under TAA 1953 schedule 1, chapter 2, part 2-5` IS `I am an employee for PAYG withholding`
+        `is a regulated worker covered under chapter 3A of the Fair Work Act 2009` IS `I am a regulated worker under chapter 3A of the Fair Work Act`
+        `arrangement`                                                            IS `how my work is arranged`
+        `the sharefarmer provides and uses powered farm machinery`               IS `as a sharefarmer I provide and use powered farm machinery`
+        `the sharefarmer's share of the proceeds`                                IS `my share of the sharefarming proceeds`
+        `the work is incident to the person's own regular trade or business`     IS `the work is part of my own regular trade or business`
+        `the contractor sublets the contract`                                    IS `I sublet the contract`
+        `the contractor employs a worker`                                        IS `I employ a worker`
+        `the contractor performs part of the work personally`                    IS `I do part of the work myself`
+        `supplies and uses a motor vehicle for driving tuition under a contract other than a contract of service` IS `I supply and use a motor vehicle for driving tuition under a contract that is not a contract of service`
+        `would be a worker if the work were paid`                                IS `I would be a worker if I were paid for this work`
+        `is covered as a volunteer, community service worker, student or eligible person under chapter 1, part 4, division 3` IS `I am covered as a volunteer, community service worker, student or eligible person`
+        `works under a contract of service with own corporation, trust or partnership, or the Commonwealth` IS `I work under a contract of service with my own corporation, trust or partnership, or with the Commonwealth`
+        `is a professional sportsperson competing, training, promoting or travelling for it` IS `I was competing, training, promoting or travelling as a professional sportsperson`
+        `is fishing crew paid wholly or mainly by a share of the ship's earnings or profits` IS `I am fishing crew paid wholly or mainly by a share of the ship's earnings`
+        `is in an approved program or work for an unemployment payment under the Social Security Act 1991, s 601 or 606` IS `I am in an approved program or work for an unemployment payment`
+        `has a personal services business determination in effect`               IS `a personal services business determination is in effect for me`
+
+@export Am I a "worker" under the Queensland Workers' Compensation and Rehabilitation Act 2003 (s 11 and schedule 2)?
+GIVEN `I work under a contract` IS A BOOLEAN @desc Whether you do the work under a contract (written or not), for example a contract of employment or a contract for services
+      `I am an employee for PAYG withholding` IS A BOOLEAN @desc Whether, for this work, you are an employee for PAYG withholding under the Taxation Administration Act 1953 (Cth), schedule 1, part 2-5 (usually: tax is withheld from your pay as an employee)
+      `I am a regulated worker under chapter 3A of the Fair Work Act` IS A BOOLEAN @desc Whether you are a regulated worker (for example a gig or road transport worker) covered by a minimum standards order, minimum standards guideline or collective agreement under chapter 3A of the Fair Work Act 2009 (Cth)
+      `how my work is arranged` IS A `Work arrangement` @desc How the work is arranged. One of: an ordinary engagement; sharefarming; work paid entirely or partly by commission; work as a contractor; services lent or let on hire by the person the worker has a contract of service with; work arranged by a labour hire agency or group training organisation; services let on hire by a holding company; unpaid work for experience or a qualification
+      `as a sharefarmer I provide and use powered farm machinery` IS A BOOLEAN @desc If you sharefarm: whether you provide and use, in the sharefarming, farm machinery driven or drawn by mechanical power (answer no if you do not sharefarm)
+      `my share of the sharefarming proceeds` IS A NUMBER @desc If you sharefarm: your share of the proceeds under the sharefarming agreement, as a fraction (one third is 0.3333); 0 if you do not sharefarm
+      `the work is part of my own regular trade or business` IS A BOOLEAN @desc If you are paid by commission or work as a contractor: whether the work is incident to a trade or business you regularly carry on, alone or in partnership
+      `I sublet the contract` IS A BOOLEAN @desc If you work as a contractor: whether you sublet the contract to someone else
+      `I employ a worker` IS A BOOLEAN @desc If you work as a contractor: whether you employ a worker
+      `I do part of the work myself` IS A BOOLEAN @desc If you work as a contractor and employ a worker: whether you do part of the work under the contract personally
+      `I supply and use a motor vehicle for driving tuition under a contract that is not a contract of service` IS A BOOLEAN @desc Whether you are a driving instructor who supplies and uses your own motor vehicle for driving tuition under a contract that is not a contract of employment
+      `I would be a worker if I were paid for this work` IS A BOOLEAN @desc If you work unpaid for experience or a qualification: whether you would be a worker if you were paid wages for the same work
+      `I am covered as a volunteer, community service worker, student or eligible person` IS A BOOLEAN @desc Whether you are covered under a WorkCover contract of insurance as a volunteer, a person doing community service, a work experience or vocational placement student, or an eligible person (chapter 1, part 4, division 3)
+      `I work under a contract of service with my own corporation, trust or partnership, or with the Commonwealth` IS A BOOLEAN @desc Whether you work under a contract of employment with a company you are a director of, a trust you are a trustee of, a partnership you are a member of, or the Commonwealth or a Commonwealth authority
+      `I was competing, training, promoting or travelling as a professional sportsperson` IS A BOOLEAN @desc Whether you are a professional sportsperson and, at the time, were competing, training or preparing to compete, doing promotional work because of your sporting standing, or travelling for any of these
+      `I am fishing crew paid wholly or mainly by a share of the ship's earnings` IS A BOOLEAN @desc Whether you are crew on a fishing ship whose pay depends on the ship's earnings or profits and is wholly or mainly a share of them
+      `I am in an approved program or work for an unemployment payment` IS A BOOLEAN @desc Whether the work is an approved program or work for your unemployment payment under the Social Security Act 1991 (Cth), section 601 or 606
+      `a personal services business determination is in effect for me` IS A BOOLEAN @desc Whether the Commissioner of Taxation has made a personal services business determination for you that is in effect (Income Tax Assessment Act 1997, section 87-60)
+GIVETH A `Worker status`
+DECIDE `Am I a worker under the Workers' Compensation and Rehabilitation Act` IS
+    `the s 11 status of` (`my engagement from my answers` `I work under a contract` `I am an employee for PAYG withholding` `I am a regulated worker under chapter 3A of the Fair Work Act` `how my work is arranged` `as a sharefarmer I provide and use powered farm machinery` `my share of the sharefarming proceeds` `the work is part of my own regular trade or business` `I sublet the contract` `I employ a worker` `I do part of the work myself` `I supply and use a motor vehicle for driving tuition under a contract that is not a contract of service` `I would be a worker if I were paid for this work` `I am covered as a volunteer, community service worker, student or eligible person` `I work under a contract of service with my own corporation, trust or partnership, or with the Commonwealth` `I was competing, training, promoting or travelling as a professional sportsperson` `I am fishing crew paid wholly or mainly by a share of the ship's earnings` `I am in an approved program or work for an unemployment payment` `a personal services business determination is in effect for me`)
+
+@export Who is my employer for Queensland workers' compensation: the person I work for, or a labour hire agency, lender, farm owner or principal (s 30 and schedule 3)?
+GIVEN `I work under a contract` IS A BOOLEAN @desc Whether you do the work under a contract (written or not), for example a contract of employment or a contract for services
+      `I am an employee for PAYG withholding` IS A BOOLEAN @desc Whether, for this work, you are an employee for PAYG withholding under the Taxation Administration Act 1953 (Cth), schedule 1, part 2-5 (usually: tax is withheld from your pay as an employee)
+      `I am a regulated worker under chapter 3A of the Fair Work Act` IS A BOOLEAN @desc Whether you are a regulated worker (for example a gig or road transport worker) covered by a minimum standards order, minimum standards guideline or collective agreement under chapter 3A of the Fair Work Act 2009 (Cth)
+      `how my work is arranged` IS A `Work arrangement` @desc How the work is arranged. One of: an ordinary engagement; sharefarming; work paid entirely or partly by commission; work as a contractor; services lent or let on hire by the person the worker has a contract of service with; work arranged by a labour hire agency or group training organisation; services let on hire by a holding company; unpaid work for experience or a qualification
+      `as a sharefarmer I provide and use powered farm machinery` IS A BOOLEAN @desc If you sharefarm: whether you provide and use, in the sharefarming, farm machinery driven or drawn by mechanical power (answer no if you do not sharefarm)
+      `my share of the sharefarming proceeds` IS A NUMBER @desc If you sharefarm: your share of the proceeds under the sharefarming agreement, as a fraction (one third is 0.3333); 0 if you do not sharefarm
+      `the work is part of my own regular trade or business` IS A BOOLEAN @desc If you are paid by commission or work as a contractor: whether the work is incident to a trade or business you regularly carry on, alone or in partnership
+      `I sublet the contract` IS A BOOLEAN @desc If you work as a contractor: whether you sublet the contract to someone else
+      `I employ a worker` IS A BOOLEAN @desc If you work as a contractor: whether you employ a worker
+      `I do part of the work myself` IS A BOOLEAN @desc If you work as a contractor and employ a worker: whether you do part of the work under the contract personally
+      `I supply and use a motor vehicle for driving tuition under a contract that is not a contract of service` IS A BOOLEAN @desc Whether you are a driving instructor who supplies and uses your own motor vehicle for driving tuition under a contract that is not a contract of employment
+      `I would be a worker if I were paid for this work` IS A BOOLEAN @desc If you work unpaid for experience or a qualification: whether you would be a worker if you were paid wages for the same work
+      `I am covered as a volunteer, community service worker, student or eligible person` IS A BOOLEAN @desc Whether you are covered under a WorkCover contract of insurance as a volunteer, a person doing community service, a work experience or vocational placement student, or an eligible person (chapter 1, part 4, division 3)
+      `I work under a contract of service with my own corporation, trust or partnership, or with the Commonwealth` IS A BOOLEAN @desc Whether you work under a contract of employment with a company you are a director of, a trust you are a trustee of, a partnership you are a member of, or the Commonwealth or a Commonwealth authority
+      `I was competing, training, promoting or travelling as a professional sportsperson` IS A BOOLEAN @desc Whether you are a professional sportsperson and, at the time, were competing, training or preparing to compete, doing promotional work because of your sporting standing, or travelling for any of these
+      `I am fishing crew paid wholly or mainly by a share of the ship's earnings` IS A BOOLEAN @desc Whether you are crew on a fishing ship whose pay depends on the ship's earnings or profits and is wholly or mainly a share of them
+      `I am in an approved program or work for an unemployment payment` IS A BOOLEAN @desc Whether the work is an approved program or work for your unemployment payment under the Social Security Act 1991 (Cth), section 601 or 606
+      `a personal services business determination is in effect for me` IS A BOOLEAN @desc Whether the Commissioner of Taxation has made a personal services business determination for you that is in effect (Income Tax Assessment Act 1997, section 87-60)
+GIVETH AN `Employer answer`
+DECIDE `Who is my employer for workers' compensation` IS
+    `the s 30 employer of` (`my engagement from my answers` `I work under a contract` `I am an employee for PAYG withholding` `I am a regulated worker under chapter 3A of the Fair Work Act` `how my work is arranged` `as a sharefarmer I provide and use powered farm machinery` `my share of the sharefarming proceeds` `the work is part of my own regular trade or business` `I sublet the contract` `I employ a worker` `I do part of the work myself` `I supply and use a motor vehicle for driving tuition under a contract that is not a contract of service` `I would be a worker if I were paid for this work` `I am covered as a volunteer, community service worker, student or eligible person` `I work under a contract of service with my own corporation, trust or partnership, or with the Commonwealth` `I was competing, training, promoting or travelling as a professional sportsperson` `I am fishing crew paid wholly or mainly by a share of the ship's earnings` `I am in an approved program or work for an unemployment payment` `a personal services business determination is in effect for me`)
+
+@export Who must pay my workers' compensation: my employer as a self-insurer, or WorkCover Queensland (s 109)?
+GIVEN `my employer is a self-insurer` IS A BOOLEAN @desc Whether your employer is licensed as a self-insurer under chapter 2, part 4 of the Act (most employers insure with WorkCover Queensland)
+GIVETH A `Payer`
+DECIDE `Who must pay my compensation` IS
+    `who must pay compensation under s 109` `my employer is a self-insurer`
+
+@export Is my injury one the Queensland workers' compensation scheme covers: did it arise out of, or in the course of, my employment, with employment a significant contributing factor, or on a covered journey (ss 32-36, 113)?
+GIVEN `where I was when it happened` IS AN `Event setting` @desc Where the event that injured you happened. One of: at the place of employment, engaged in an activity for the employer's trade or business; away from the place of employment in the course of employment; temporarily absent from the place of employment during an ordinary recess; on a journey listed in s 35(1) (between home and work, to required training, to treatment or rehabilitation for an existing compensable injury, between two employers); in other circumstances
+      `I had attended my place of employment that day as required` IS A BOOLEAN @desc Whether, on the day of the event, you had attended your place of employment as your terms of employment required
+      `during the recess I voluntarily took an abnormal risk of injury` IS A BOOLEAN @desc If you were hurt during a recess away from work: whether the event was due to you voluntarily taking an abnormal risk of injury
+      `I was driving and a drink-driving or dangerous-driving offence was the major significant factor` IS A BOOLEAN @desc If you were hurt on a journey while in control of a vehicle: whether you contravened the drink or drug driving law (TORUM s 79) or dangerous driving law (Criminal Code s 328A), or another State's equivalent, and that was the major significant factor causing the event
+      `it happened during or after a substantial delay, interruption or deviation` IS A BOOLEAN @desc If you were hurt on a journey: whether it happened during or after a substantial delay before starting, or a substantial interruption of or deviation from the journey
+      `the delay, interruption or deviation was for work or beyond my control` IS A BOOLEAN @desc If there was such a delay, interruption or deviation: whether its reason was connected with your employment, or it arose from circumstances beyond your control
+      `it otherwise arose out of, or in the course of, my employment` IS A BOOLEAN @desc If none of the listed situations fits: whether the injury otherwise arose out of, or in the course of, your employment
+      `my employment is a significant contributing factor to the injury` IS A BOOLEAN @desc Whether your employment is a significant contributing factor to the injury (or disease, or aggravation), as the insurer decides it
+      `it is a psychiatric or psychological disorder` IS A BOOLEAN @desc Whether the injury is a psychiatric or psychological disorder
+      `it arose out of reasonable management action, my expectation of it, or the handling of my claim` IS A BOOLEAN @desc If it is a psychiatric or psychological disorder: whether it arose out of reasonable management action taken in a reasonable way (for example transfer, discipline or dismissal), your expectation or perception of such action, or the Regulator's or insurer's action on your application
+      `my employment is connected with Queensland` IS A BOOLEAN @desc Whether your employment is connected with Queensland under s 113 (usually: you usually work in Queensland, or are based here)
+GIVETH AN `Injury answer`
+DECIDE `Is my injury one the Act compensates` IS
+    `the s 32 answer for` (`Injury facts` WITH
+        `setting`                                                                    IS `where I was when it happened`
+        `the worker attended the place of employment that day as required`          IS `I had attended my place of employment that day as required`
+        `the worker voluntarily subjected themself to an abnormal risk during the recess` IS `during the recess I voluntarily took an abnormal risk of injury`
+        `in control of a vehicle, a contravention of TORUM s 79 or Criminal Code s 328A was the major significant factor` IS `I was driving and a drink-driving or dangerous-driving offence was the major significant factor`
+        `the event happened during or after a substantial delay, interruption or deviation` IS `it happened during or after a substantial delay, interruption or deviation`
+        `the delay, interruption or deviation was connected with the employment or beyond the worker's control` IS `the delay, interruption or deviation was for work or beyond my control`
+        `the injury otherwise arose out of, or in the course of, the employment`    IS `it otherwise arose out of, or in the course of, my employment`
+        `the employment is a significant contributing factor to the injury`         IS `my employment is a significant contributing factor to the injury`
+        `is a psychiatric or psychological disorder`                                IS `it is a psychiatric or psychological disorder`
+        `the disorder arose out of reasonable management action, the expectation of it, or the Regulator's or insurer's action on the claim` IS `it arose out of reasonable management action, my expectation of it, or the handling of my claim`
+        `the employment is connected with Queensland (s 113)`                       IS `my employment is connected with Queensland`)
+
+§§ `Claiming compensation`
+
+@export By when must I lodge my application for workers' compensation (s 131(1): within 6 months after the entitlement arises)?
+GIVEN `the day my injury was first assessed by a doctor` IS A DATE @desc The day a doctor (or a nurse practitioner for a minor injury, or a dentist for an oral injury) first assessed your injury: your entitlement arises that day (s 141(1))
+GIVETH A DATE
+DECIDE `By when must I lodge my application` IS
+    `the last day to lodge under s 131(1)` `the day my injury was first assessed by a doctor`
+
+@export Is my application for workers' compensation in time, and if not, must or may the insurer waive the 6-month limit (s 131)?
+GIVEN `the day my injury was first assessed by a doctor` IS A DATE @desc The day a doctor (or a nurse practitioner for a minor injury, or a dentist for an oral injury) first assessed your injury: your entitlement arises that day (s 141(1))
+      `the day I lodged my application` IS A DATE @desc The day you lodged (or will lodge) your application with the insurer
+      `a medical assessment tribunal decided there are special medical circumstances` IS A BOOLEAN @desc Whether a medical assessment tribunal has decided that special circumstances of a medical nature exist for your late application
+      `I lodged within 20 business days after a doctor first assessed me as unable to work` IS A BOOLEAN @desc Whether a doctor, nurse practitioner or dentist assessed the injury as making you totally or partly unable to work, and you lodged within 20 business days after that first assessment
+      `I was late because of a mistake, my absence from Queensland or a reasonable cause` IS A BOOLEAN @desc Whether your failure to lodge in time was due to a mistake, your absence from Queensland, or another reasonable cause (the insurer must be satisfied of it)
+GIVETH A `Time limit answer`
+DECIDE `Is my application in time` IS
+    `the s 131 time limit answer` `the day my injury was first assessed by a doctor` `the day I lodged my application` `a medical assessment tribunal decided there are special medical circumstances` `I lodged within 20 business days after a doctor first assessed me as unable to work` `I was late because of a mistake, my absence from Queensland or a reasonable cause`
+
+-- The worker's own claim: the injury has not resulted in death (fixed FALSE).
+@export If my application is allowed, from what day will weekly compensation be paid, given how long I took to lodge (ss 141(2), 131(2))?
+GIVEN `the day my injury was first assessed by a doctor` IS A DATE @desc The day a doctor (or a nurse practitioner for a minor injury, or a dentist for an oral injury) first assessed your injury: your entitlement arises that day (s 141(1))
+      `the day I lodged my application` IS A DATE @desc The day you lodged (or will lodge) your application with the insurer
+      `the day I stopped work because of the injury` IS A DATE @desc The day you stopped work because of the injury
+      `the day a doctor first assessed me as unable to work` IS A DATE @desc The day a doctor, nurse practitioner or dentist first assessed the injury as making you totally or partly unable to work
+      `Queensland public holidays on weekdays in the 20 business days before I lodged` IS A NUMBER @desc How many Queensland public holidays fall on a Monday to Friday in the four weeks or so before the day you lodged (0 if none)
+      `the insurer waived the back-payment limit for mistake, absence or reasonable cause` IS A BOOLEAN @desc Whether the insurer has waived the s 131(2) limit on back-payment because your delay was due to a mistake, your absence from Queensland or a reasonable cause
+GIVETH A DATE
+DECIDE `From what day will I be paid weekly compensation` IS
+    `the first day the insurer is liable for weekly compensation` `the day my injury was first assessed by a doctor` `the day I lodged my application` `the day I stopped work because of the injury` `the day a doctor first assessed me as unable to work` `Queensland public holidays on weekdays in the 20 business days before I lodged` FALSE `the insurer waived the back-payment limit for mistake, absence or reasonable cause`
+
+@export By when must the insurer decide my application for workers' compensation (s 134(2): within 20 business days after it is made)?
+GIVEN `the day I made my application` IS A DATE @desc The day your application was made (lodged with the insurer)
+      `Queensland public holidays on weekdays in the next six weeks` IS A NUMBER @desc How many Queensland public holidays fall on a Monday to Friday in the business days counted from your application (0 if none)
+GIVETH A DATE
+DECIDE `By when must the insurer decide my application` IS
+    `the deadline day` `the s 134(2) business days` `business days after` `the day I made my application` `with` `Queensland public holidays on weekdays in the next six weeks` `public holidays in between`
+
+@export If the insurer has not decided my application in time, by when must it tell me why, and that I can seek a review (s 134(6): 5 business days after the 20)?
+GIVEN `the day I made my application` IS A DATE @desc The day your application was made (lodged with the insurer)
+      `Queensland public holidays on weekdays in the next six weeks` IS A NUMBER @desc How many Queensland public holidays fall on a Monday to Friday in the business days counted from your application (0 if none)
+GIVETH A DATE
+DECIDE `By when must the insurer tell me why it has not decided` IS
+    `the deadline day` (`the s 134(2) business days` PLUS `the s 134(6) business days`) `business days after` `the day I made my application` `with` `Queensland public holidays on weekdays in the next six weeks` `public holidays in between`
+
+-- The worker's own claim: not an application for a death (fixed FALSE).
+@export Does my application for workers' compensation have what s 132 and the Regulation require it to have?
+GIVEN `it is in the approved form and lodged with the insurer` IS A BOOLEAN @desc Whether the application is in the approved form and lodged with the insurer
+      `it has a certificate from my doctor` IS A BOOLEAN @desc Whether it comes with a certificate in the approved form from a doctor who attended you (or a nurse practitioner for a minor injury, or a dentist for an oral injury)
+      `it has evidence of the injury and its cause` IS A BOOLEAN @desc Whether it comes with evidence and particulars of the injury and its cause
+      `it has evidence of how far and how long I cannot work` IS A BOOLEAN @desc Whether it comes with evidence and particulars of the nature, extent and duration of your incapacity
+GIVETH A BOOLEAN
+DECIDE `Is my application complete` IS
+    `the application complies with s 132` `it is in the approved form and lodged with the insurer` `it has a certificate from my doctor` `it has evidence of the injury and its cause` `it has evidence of how far and how long I cannot work` FALSE FALSE
+
+-- Situation: the worker has gone back to work, or taken up a calling, while receiving compensation.
+@export I am getting workers' compensation and have gone back to work: by when must I tell the insurer (s 136: within 10 business days)?
+GIVEN `the day I returned to work or took up a calling` IS A DATE @desc The day you returned to work, or began any activity that ordinarily earns money, including self-employment
+      `Queensland public holidays on weekdays in the next two weeks` IS A NUMBER @desc How many Queensland public holidays fall on a Monday to Friday in the two weeks after that day (0 if none)
+GIVETH A DATE
+DECIDE `By when must I tell the insurer I have gone back to work` IS
+    `the deadline day` `the s 136 business days` `business days after` `the day I returned to work or took up a calling` `with` `Queensland public holidays on weekdays in the next two weeks` `public holidays in between`
+
+§§ `My weekly payments`
+
+@export What are my normal weekly earnings (NWE), on which my weekly compensation is based (s 106 and Regulation ss 105-109)?
+GIVEN `weeks I worked in the 12 months before the injury` IS A NUMBER @desc How many weeks you had employment in the 12 months before the day of the injury (52 if all year)
+      `my earnings in that time, without excluded amounts` IS A NUMBER @desc Your earnings from the employment in that time, in dollars, leaving out travel, car, meal, clothing, tools and similar allowances, superannuation contributions, and lump sums paid on leaving a job
+      `my overtime, higher duties, penalties and allowances in that time` IS A NUMBER @desc What you were paid in that time for overtime, higher duties, penalty rates and work allowances, in dollars
+      `those amounts were regular and would have continued` IS A BOOLEAN @desc Whether those overtime, higher duties, penalty and allowance amounts were regular and would have continued but for the injury
+      `my earnings in that time from my other employers` IS A NUMBER @desc If you worked for two or more employers at the same time under contracts of employment: your earnings from the others in that time, in dollars (0 if none)
+      `it is impracticable to work out my earnings` IS A BOOLEAN @desc Whether it is impracticable to work out your earnings because of how long you had been employed or your terms of employment
+      `the NWE of a comparable worker` IS A NUMBER @desc If so: the normal weekly earnings of a comparable worker doing comparable work on comparable terms, in dollars a week (0 otherwise)
+      `the insurer has found the calculation unfair and worked out a fair one` IS A BOOLEAN @desc Whether the insurer considers the usual calculation unfair and has worked out your NWE in a way it considers fair
+      `the insurer's fair figure` IS A NUMBER @desc If so: the insurer's figure, in dollars a week (0 otherwise)
+GIVETH A NUMBER
+DECIDE `What are my normal weekly earnings` IS
+    `the NWE from` (`Earnings facts` WITH
+        `weeks of employment in the 12 months before the injury`                    IS `weeks I worked in the 12 months before the injury`
+        `earnings in that period, leaving out the amounts the Act excludes`         IS `my earnings in that time, without excluded amounts`
+        `overtime, higher duties, penalties and allowances in that period`          IS `my overtime, higher duties, penalties and allowances in that time`
+        `those amounts are regular and would have continued but for the injury`     IS `those amounts were regular and would have continued`
+        `earnings in that period from other employers under concurrent contracts of service` IS `my earnings in that time from my other employers`
+        `it is impracticable to calculate because of the period or terms of employment` IS `it is impracticable to work out my earnings`
+        `the NWE of a comparable worker`                                            IS `the NWE of a comparable worker`
+        `the insurer considers the calculation unfair and has made a fair one`      IS `the insurer has found the calculation unfair and worked out a fair one`
+        `the insurer's fair calculation`                                            IS `the insurer's fair figure`)
+
+GIVEN `how my employment is governed` IS AN `Employment basis`
+      `my NWE` IS A NUMBER
+      `the weekly amount under my industrial instrument or contract of service` IS A NUMBER
+      `I am casual or part-time` IS A BOOLEAN
+      `I was getting an age, disability support or class B widow pension when injured` IS A BOOLEAN
+      `what I was earning when injured` IS A NUMBER
+      `what I may earn before my pension is reduced` IS A NUMBER
+      `I have shown the insurer my injury could result in a DPI over 15%` IS A BOOLEAN
+      `the single pension rate` IS A NUMBER
+      `the week of my incapacity` IS A NUMBER
+      `what I would have earned that week if not injured` IS A NUMBER
+      `the weekly amount the insurer deducts for my other payments` IS A NUMBER
+GIVETH A `Weekly facts`
+`my weekly facts from my answers` `how my employment is governed` `my NWE` `the weekly amount under my industrial instrument or contract of service` `I am casual or part-time` `I was getting an age, disability support or class B widow pension when injured` `what I was earning when injured` `what I may earn before my pension is reduced` `I have shown the insurer my injury could result in a DPI over 15%` `the single pension rate` `the week of my incapacity` `what I would have earned that week if not injured` `the weekly amount the insurer deducts for my other payments` MEANS
+    `Weekly facts` WITH
+        `basis`                                                                      IS `how my employment is governed`
+        `NWE`                                                                        IS `my NWE`
+        `the amount payable under the industrial instrument or contract of service` IS `the weekly amount under my industrial instrument or contract of service`
+        `engaged in casual or part-time employment`                                 IS `I am casual or part-time`
+        `was receiving an age, disability support or class B widow pension when injured` IS `I was getting an age, disability support or class B widow pension when injured`
+        `the amount the worker was earning at the time of the injury`               IS `what I was earning when injured`
+        `the amount the worker may earn before the maximum pension is reduced`      IS `what I may earn before my pension is reduced`
+        `the worker has demonstrated to the insurer that the injury could result in a DPI of more than 15%` IS `I have shown the insurer my injury could result in a DPI over 15%`
+        `the single pension rate`                                                   IS `the single pension rate`
+        `the week of the incapacity`                                                IS `the week of my incapacity`
+        `what the worker would have received from employment that week if not injured` IS `what I would have earned that week if not injured`
+        `the weekly amount of other payments the insurer has decided to deduct under s 148` IS `the weekly amount the insurer deducts for my other payments`
+
+@export How much workers' compensation will I get for a week in which I cannot work at all, in the first 26 weeks, up to 2 years, and up to 5 years (ss 147, 148, 150-155)?
+GIVEN `the week I am asking about` IS A DATE @desc Any day in the week the payment is for (it fixes the financial year's QOTE: 2026-27 is built in)
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+      `how my employment is governed` IS AN `Employment basis` @desc One of: employment governed by an industrial instrument (s 150); employment not governed by an industrial instrument (s 151); a contract worker under s 152 (public service, government entity, university, electricity industry salaried, health service)
+      `my NWE` IS A NUMBER @desc Your normal weekly earnings, in dollars (see the NWE question)
+      `the weekly amount under my industrial instrument or contract of service` IS A NUMBER @desc The weekly rate of wages your award, agreement or contract of service entitled you to in your usual position just before the incapacity (or an amount the Regulator approved), in dollars; 0 if not under an instrument
+      `I am casual or part-time` IS A BOOLEAN @desc Whether you were engaged in casual or part-time employment
+      `I was getting an age, disability support or class B widow pension when injured` IS A BOOLEAN @desc Whether you were receiving the Commonwealth age pension, disability support pension or class B widow pension when you were injured
+      `what I was earning when injured` IS A NUMBER @desc If you were on such a pension: what you were earning a week when injured, in dollars (0 otherwise)
+      `what I may earn before my pension is reduced` IS A NUMBER @desc If you were on such a pension: how much a week you may earn before your maximum pension is reduced under the Social Security Act 1991, in dollars (0 otherwise)
+      `I have shown the insurer my injury could result in a DPI over 15%` IS A BOOLEAN @desc Whether you have shown the insurer that your injury could result in a degree of permanent impairment of more than 15% (matters only after the first 2 years)
+      `the single pension rate` IS A NUMBER @desc The maximum single rate of the Commonwealth disability support pension, as a weekly amount in dollars, without allowances (matters only after the first 2 years)
+      `the week of my incapacity` IS A NUMBER @desc Which week of your incapacity the payment is for (1 for the first week; weeks 1-26 are the first 26 weeks, 27-104 to 2 years, 105-260 to 5 years)
+      `what I would have earned that week if not injured` IS A NUMBER @desc What you would have received from your employment that week if you were at work and had not been injured, in dollars
+      `the weekly amount the insurer deducts for my other payments` IS A NUMBER @desc The weekly amount, in dollars, the insurer has decided to deduct for payments or benefits you get for the injury outside the Act (s 148); 0 if none
+GIVETH A `Worker amount answer`
+DECIDE `How much will I get for a week I cannot work at all` IS
+    CONSIDER `my QOTE for` `the week I am asking about` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+    WHEN JUST `QOTE` THEN
+        CONSIDER `the weekly compensation for total incapacity for` (`my weekly facts from my answers` `how my employment is governed` `my NWE` `the weekly amount under my industrial instrument or contract of service` `I am casual or part-time` `I was getting an age, disability support or class B widow pension when injured` `what I was earning when injured` `what I may earn before my pension is reduced` `I have shown the insurer my injury could result in a DPI over 15%` `the single pension rate` `the week of my incapacity` `what I would have earned that week if not injured` `the weekly amount the insurer deducts for my other payments`) `at` `QOTE`
+        WHEN NOTHING THEN `none: past the first 5 years of the incapacity (ss 150-152, 144A)`
+        WHEN JUST `the amount` THEN `the amount, in dollars, is` `the amount`
+
+-- MC: the amount for total incapacity before any s 148 deduction (that input is fixed at 0 here).
+@export How much workers' compensation will I get for a week in which I can partly work (s 163)?
+GIVEN `the week I am asking about` IS A DATE @desc Any day in the week the payment is for (it fixes the financial year's QOTE: 2026-27 is built in)
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+      `how my employment is governed` IS AN `Employment basis` @desc One of: employment governed by an industrial instrument (s 150); employment not governed by an industrial instrument (s 151); a contract worker under s 152 (public service, government entity, university, electricity industry salaried, health service)
+      `my NWE` IS A NUMBER @desc Your normal weekly earnings, in dollars (see the NWE question)
+      `the weekly amount under my industrial instrument or contract of service` IS A NUMBER @desc The weekly rate of wages your award, agreement or contract of service entitled you to in your usual position just before the incapacity (or an amount the Regulator approved), in dollars; 0 if not under an instrument
+      `I am casual or part-time` IS A BOOLEAN @desc Whether you were engaged in casual or part-time employment
+      `I was getting an age, disability support or class B widow pension when injured` IS A BOOLEAN @desc Whether you were receiving the Commonwealth age pension, disability support pension or class B widow pension when you were injured
+      `what I was earning when injured` IS A NUMBER @desc If you were on such a pension: what you were earning a week when injured, in dollars (0 otherwise)
+      `what I may earn before my pension is reduced` IS A NUMBER @desc If you were on such a pension: how much a week you may earn before your maximum pension is reduced under the Social Security Act 1991, in dollars (0 otherwise)
+      `I have shown the insurer my injury could result in a DPI over 15%` IS A BOOLEAN @desc Whether you have shown the insurer that your injury could result in a degree of permanent impairment of more than 15% (matters only after the first 2 years)
+      `the single pension rate` IS A NUMBER @desc The maximum single rate of the Commonwealth disability support pension, as a weekly amount in dollars, without allowances (matters only after the first 2 years)
+      `the week of my incapacity` IS A NUMBER @desc Which week of your incapacity the payment is for (1 for the first week; weeks 1-26 are the first 26 weeks, 27-104 to 2 years, 105-260 to 5 years)
+      `what I would have earned that week if not injured` IS A NUMBER @desc What you would have received from your employment that week if you were at work and had not been injured, in dollars
+GIVETH A `Worker amount answer`
+DECIDE `How much will I get for a week I can partly work` IS
+    CONSIDER `my QOTE for` `the week I am asking about` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+    WHEN JUST `QOTE` THEN
+        CONSIDER `MC under s 162 for` (`my weekly facts from my answers` `how my employment is governed` `my NWE` `the weekly amount under my industrial instrument or contract of service` `I am casual or part-time` `I was getting an age, disability support or class B widow pension when injured` `what I was earning when injured` `what I may earn before my pension is reduced` `I have shown the insurer my injury could result in a DPI over 15%` `the single pension rate` `the week of my incapacity` `what I would have earned that week if not injured` 0) `at` `QOTE`
+        WHEN NOTHING THEN `none: past the first 5 years of the incapacity (ss 150-152, 144A)`
+        WHEN JUST `MC` THEN `at most this amount a week, in dollars (s 163(3)); the s 163(2) formula is missing from the deposited text` `MC`
+
+@export What is my loss of earnings (LE) for a week in which I can partly work (s 162)?
+GIVEN `my NWE` IS A NUMBER @desc Your normal weekly earnings at the time of the injury, in dollars (see the NWE question)
+      `what I earn a week now, or could reasonably be expected to` IS A NUMBER @desc What you earn a week from employment while partly unable to work, in dollars; if you are not working, what you could reasonably be expected to earn given your incapacity and the work available
+GIVETH A NUMBER
+DECIDE `What is my loss of earnings while I can partly work` IS
+    `LE under s 162 for` `my NWE` `and` `what I earn a week now, or could reasonably be expected to`
+
+@export While the insurer waits for the information it needs to work out my weekly compensation, what basic weekly payment must it pay me (s 146B(4)-(5))?
+GIVEN `the week I am asking about` IS A DATE @desc Any day in the week the payment is for (it fixes the financial year's QOTE: 2026-27 is built in)
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+      `I work full time` IS A BOOLEAN @desc Whether you were engaged in full-time work
+      `the hours I usually worked a week in the 4 weeks before` IS A NUMBER @desc If not full time: the hours you usually worked a week in the 4 weeks before the injury (or a reasonable estimate)
+      `full-time hours a week in my job` IS A NUMBER @desc If not full time: the full-time hours a week for your position (for example 38)
+GIVETH A `Worker amount answer`
+DECIDE `What basic weekly payment will I get while the insurer waits for information` IS
+    CONSIDER `my QOTE for` `the week I am asking about` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+    WHEN JUST `QOTE` THEN `the amount, in dollars, is` (`the s 146B basic weekly payment at` `QOTE` `full time` `I work full time` `hours` `the hours I usually worked a week in the 4 weeks before` `of` `full-time hours a week in my job`)
+
+@export When do my weekly workers' compensation payments stop (ss 144A, 190, 119, 173, 176)?
+GIVEN `the day I am asking about` IS A DATE @desc The day you are asking about (it fixes the financial year's QOTE for the maximum: 2026-27 is built in)
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+      `I am no longer incapacitated because of the injury` IS A BOOLEAN @desc Whether your incapacity for work because of the injury has stopped
+      `weeks of weekly payments I have received` IS A NUMBER @desc How many weeks of weekly payments you have received for the incapacity (5 years is 260 weeks)
+      `the total of the weekly payments I have received` IS A NUMBER @desc The total, in dollars, of the weekly payments you have received for the injury
+      `I have a notice of assessment and have decided on the offer or 20 business days have passed` IS A BOOLEAN @desc Whether the insurer has given you a notice of assessment of permanent impairment and you have told it your decision on the offer within the decision period, or 20 business days have passed since you received the offer
+      `my damages claim has been settled or decided` IS A BOOLEAN @desc Whether a settlement of damages has been agreed, or judgment for damages given, for the injury
+      `a redemption payment has been agreed` IS A BOOLEAN @desc Whether you and the insurer have agreed a redemption payment of your weekly payments
+      `I no longer ordinarily live in Australia` IS A BOOLEAN @desc Whether you have stopped ordinarily residing in Australia
+GIVETH A `Stop answer`
+DECIDE `When do my weekly payments stop` IS
+    CONSIDER `my QOTE for` `the day I am asking about` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year`
+    WHEN JUST `QOTE` THEN
+        `the weekly payment stop answer for` (`Stop facts` WITH
+            `the incapacity because of the injury has stopped`                           IS `I am no longer incapacitated because of the injury`
+            `weeks of weekly payments received for the incapacity`                       IS `weeks of weekly payments I have received`
+            `total weekly payments received for the injury`                              IS `the total of the weekly payments I have received`
+            `a notice of assessment has been given and the decision was notified or 20 business days have passed since the offer` IS `I have a notice of assessment and have decided on the offer or 20 business days have passed`
+            `damages have been settled or judgment given`                                IS `my damages claim has been settled or decided`
+            `a redemption payment has been agreed`                                       IS `a redemption payment has been agreed`
+            `the worker has stopped ordinarily residing in Australia`                    IS `I no longer ordinarily live in Australia`) `at` `QOTE`
+
+@export What is the most I can receive in total for one injury, as weekly payments and, separately, as lump sums for permanent impairment (s 140: 216.15 times QOTE each)?
+GIVEN `the day I am asking about` IS A DATE @desc The day you are asking about (it fixes the financial year's QOTE: 2026-27 is built in)
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+GIVETH A `Worker amount answer`
+DECIDE `What is the most I can receive for one injury` IS
+    CONSIDER `my QOTE for` `the day I am asking about` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+    WHEN JUST `QOTE` THEN `the amount, in dollars, is` (`the maximum statutory compensation at` `QOTE`)
+
+@export Can my weekly workers' compensation payments be redeemed (paid out) by agreement with the insurer (ss 171-173)?
+GIVEN `I am receiving weekly payments` IS A BOOLEAN @desc Whether you are receiving weekly payments of compensation
+      `weeks of weekly payments I have received` IS A NUMBER @desc How many weeks of weekly payments you have received for the incapacity (5 years is 260 weeks)
+      `a doctor has reported my injury is not stable and stationary` IS A BOOLEAN @desc Whether the insurer has a doctor's report that your injury is not stable and stationary for assessing permanent impairment
+      `I have moved interstate permanently` IS A BOOLEAN @desc Whether you have moved to another State or Territory permanently
+      `I no longer ordinarily live in Australia` IS A BOOLEAN @desc Whether you have stopped ordinarily residing in Australia
+      `I have satisfied the insurer my incapacity is permanent` IS A BOOLEAN @desc If you have left Australia: whether you have satisfied the insurer that your incapacity from the injury is permanent
+GIVETH A `Redemption answer`
+DECIDE `Can my weekly payments be redeemed` IS
+    `the redemption answer` `I am receiving weekly payments` `weeks of weekly payments I have received` `a doctor has reported my injury is not stable and stationary` `I have moved interstate permanently` `I no longer ordinarily live in Australia` `I have satisfied the insurer my incapacity is permanent`
+
+@export What is the most a redemption payment of my weekly payments can be (s 174: 156 times 70% of QOTE, less what I have been paid)?
+GIVEN `the day I am asking about` IS A DATE @desc The day you are asking about (it fixes the financial year's QOTE: 2026-27 is built in)
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+      `the total of the weekly payments I have received` IS A NUMBER @desc The total, in dollars, of the weekly payments you have received for the injury
+GIVETH A `Worker amount answer`
+DECIDE `What is the most my redemption payment can be` IS
+    CONSIDER `my QOTE for` `the day I am asking about` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+    WHEN JUST `QOTE` THEN `the amount, in dollars, is` (`the s 174 redemption cap at` `QOTE` `less` `the total of the weekly payments I have received`)
+
+@export I was under 18 when injured: can a review increase my weekly payments to what my industrial instrument would now pay (s 169)?
+GIVEN `I was under 18 when injured` IS A BOOLEAN @desc Whether you were under 18 years old when you were injured
+      `months from my injury to the review` IS A NUMBER @desc How many months after your injury the review takes place
+GIVETH A BOOLEAN
+DECIDE `Can a review increase my payments because I was injured under 18` IS
+    `s 169 applies` `I was under 18 when injured` `months from my injury to the review`
+
+@export The insurer says it overpaid me: how much can it recover from me or deduct from my weekly payments (s 170)?
+GIVEN `what I was paid` IS A NUMBER @desc The amount you were paid for the application, in dollars
+      `what I was entitled to` IS A NUMBER @desc The amount you were entitled to, in dollars
+GIVETH A NUMBER
+DECIDE `How much of an overpayment can the insurer recover from me` IS
+    `the overpayment recoverable under s 170` `what I was paid` `what I was entitled to`
+
+-- Situation: the worker's injury has been assessed for permanent impairment (a degree of permanent impairment, DPI).
+§§ `Permanent impairment and lump sums`
+
+@export The insurer has received my permanent impairment assessment: by when must it give me my notice of assessment (s 185: within 10 business days)?
+GIVEN `the day the insurer received my assessment` IS A DATE @desc The day the insurer received the report of the assessment of your permanent impairment
+      `Queensland public holidays on weekdays in the next two weeks` IS A NUMBER @desc How many Queensland public holidays fall on a Monday to Friday in the two weeks after that day (0 if none)
+GIVETH A DATE
+DECIDE `By when must the insurer give me my notice of assessment` IS
+    `the deadline day` `the s 185 business days` `business days after` `the day the insurer received my assessment` `with` `Queensland public holidays on weekdays in the next two weeks` `public holidays in between`
+
+@export What lump sum does my degree of permanent impairment (DPI) give me (s 180 and Regulation s 117)?
+GIVEN `the day of the insurer's offer` IS A DATE @desc The day the insurer makes (or made) its offer of lump sum compensation: the lump sum is worked out as at that day
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+      `my DPI` IS A NUMBER @desc Your degree of permanent impairment, in percent, as in your notice of assessment (for example 10 for 10%)
+      `the part of my DPI from earlier or non-compensable conditions` IS A NUMBER @desc The part of that DPI, in percent, that is attributable to a condition you had before the injury, or one you are not entitled to compensation for (0 if none)
+      `my earlier lump sum entitlement for the same part of my body` IS A NUMBER @desc If you had an earlier entitlement to lump sum compensation for an injury to the same part of your body (not industrial deafness), that entitlement in dollars; 0 if none
+GIVETH A `Worker amount answer`
+DECIDE `What lump sum does my DPI give me` IS
+    CONSIDER `my QOTE for` `the day of the insurer's offer` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+    WHEN JUST `QOTE` THEN `the amount, in dollars, is` (`the s 180 lump sum at` `QOTE` `for a DPI of` `my DPI` `less` `the part of my DPI from earlier or non-compensable conditions` `and` `my earlier lump sum entitlement for the same part of my body`)
+
+@export What additional lump sum do I get because my DPI is 30% or more (s 192, Regulation schedule 3)?
+GIVEN `the day I am asking about` IS A DATE @desc The day you are asking about (it fixes the financial year's QOTE: 2026-27 is built in)
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+      `my DPI` IS A NUMBER @desc Your degree of permanent impairment, in percent, as in your notice of assessment (for example 10 for 10%)
+      `my DPI is from, or combines, a psychiatric or psychological injury` IS A BOOLEAN @desc Whether your DPI arises from a psychiatric or psychological injury, or from combining one with another injury
+GIVETH A `Worker amount answer`
+DECIDE `What additional lump sum do I get for a DPI of 30% or more` IS
+    CONSIDER `my QOTE for` `the day I am asking about` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+    WHEN JUST `QOTE` THEN `the amount, in dollars, is` (`the s 192 additional lump sum at` `QOTE` `for a DPI of` `my DPI` `psychiatric` `my DPI is from, or combines, a psychiatric or psychological injury`)
+
+@export What additional lump sum do I get for the unpaid care someone gives me at home (s 193, Regulation schedule 4)?
+GIVEN `the day I am asking about` IS A DATE @desc The day you are asking about (it fixes the financial year's QOTE: 2026-27 is built in)
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+      `my DPI` IS A NUMBER @desc Your degree of permanent impairment, in percent, as in your notice of assessment (for example 10 for 10%)
+      `my modified barthel index score` IS A NUMBER @desc Your total score on the modified Barthel index, from the occupational therapist's assessment (0 to 100; 74 or less is a moderate to total dependency)
+      `someone will care for me at home without pay` IS A BOOLEAN @desc Whether day to day care for the fundamental activities of daily living is to be provided at your home on a voluntary basis by another person
+      `I live at home permanently` IS A BOOLEAN @desc Whether you reside at home on a permanent basis
+      `I did not need that care before` IS A BOOLEAN @desc Whether that level of care was not provided to you before the impairment
+      `I physically demonstrate that dependency` IS A BOOLEAN @desc Whether you physically demonstrate that level of dependency
+      `my DPI is from, or combines, a psychiatric or psychological injury` IS A BOOLEAN @desc Whether your DPI arises from a psychiatric or psychological injury, or from combining one with another injury
+GIVETH A `Worker amount answer`
+DECIDE `What additional lump sum do I get for gratuitous care` IS
+    CONSIDER `my QOTE for` `the day I am asking about` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+    WHEN JUST `QOTE` THEN `the amount, in dollars, is` (`the s 193 additional lump sum for` (`Gratuitous care facts` WITH
+        `the DPI`                                                                    IS `my DPI`
+        `the modified barthel index total score`                                     IS `my modified barthel index score`
+        `care is to be provided at the worker's home on a voluntary basis by another person` IS `someone will care for me at home without pay`
+        `the worker resides at home on a permanent basis`                            IS `I live at home permanently`
+        `the level of care was not provided before the impairment`                   IS `I did not need that care before`
+        `the worker physically demonstrates the level of dependency`                 IS `I physically demonstrate that dependency`
+        `the DPI arises from or combines a psychiatric or psychological injury`     IS `my DPI is from, or combines, a psychiatric or psychological injury`) `at` `QOTE`)
+
+@export I do not agree with the DPI in my notice of assessment: by when must I tell the insurer (s 186(2): within 20 business days)?
+GIVEN `the day my notice of assessment was given` IS A DATE @desc The day the insurer gave you the notice of assessment
+      `Queensland public holidays on weekdays in the next five weeks` IS A NUMBER @desc How many Queensland public holidays fall on a Monday to Friday in the 20 business days after that day (0 if none)
+GIVETH A DATE
+DECIDE `By when must I tell the insurer I disagree with my DPI` IS
+    `the deadline day` `the decision period` `business days after` `the day my notice of assessment was given` `with` `Queensland public holidays on weekdays in the next five weeks` `public holidays in between`
+
+@export By when must I tell the insurer my decision on its lump sum offer, before I am taken to have deferred it and further compensation ends (ss 188-190)?
+GIVEN `the day I received the offer` IS A DATE @desc The day you received the notice of assessment with the insurer's offer of lump sum compensation
+      `Queensland public holidays on weekdays in the next five weeks` IS A NUMBER @desc How many Queensland public holidays fall on a Monday to Friday in the 20 business days after that day (0 if none)
+GIVETH A DATE
+DECIDE `By when must I decide about the lump sum offer` IS
+    `the deadline day` `the decision period` `business days after` `the day I received the offer` `with` `Queensland public holidays on weekdays in the next five weeks` `public holidays in between`
+
+@export What do I give up if I accept the insurer's lump sum offer: my right to sue for damages, and further compensation (ss 188-190, 237(3), 239)?
+GIVEN `my DPI` IS A NUMBER @desc Your degree of permanent impairment, in percent, as in your notice of assessment (for example 10 for 10%; 0 if none)
+GIVETH AN `Offer consequence`
+DECIDE `What do I give up by accepting the lump sum offer` IS
+    `what accepting the offer means for a DPI of` `my DPI`
+
+-- Situation: what the worker's family would receive if the worker died because of the injury. The worker states the
+-- family as it is now.
+§§ `If I die from the injury`
+
+GIVEN `someone was totally dependent on my earnings` IS A BOOLEAN
+      `I leave members of my family dependent on my earnings` IS A BOOLEAN
+      `my spouse is totally dependent on my earnings` IS A BOOLEAN
+      `dependent family members under 6` IS A NUMBER
+      `dependent children under 16 or students under 21` IS A NUMBER
+      `the amount the insurer considers reasonable for partial dependants` IS A NUMBER
+      `I leave a spouse, children or other next of kin` IS A BOOLEAN
+      `my death would be from a terminal latent onset injury already compensated` IS A BOOLEAN
+GIVETH A `Death facts`
+`my death facts from my answers` `someone was totally dependent on my earnings` `I leave members of my family dependent on my earnings` `my spouse is totally dependent on my earnings` `dependent family members under 6` `dependent children under 16 or students under 21` `the amount the insurer considers reasonable for partial dependants` `I leave a spouse, children or other next of kin` `my death would be from a terminal latent onset injury already compensated` MEANS
+    `Death facts` WITH
+        `at least 1 dependant was totally dependent on the worker's earnings`        IS `someone was totally dependent on my earnings`
+        `the worker left dependent members of the family`                            IS `I leave members of my family dependent on my earnings`
+        `the worker left a totally dependent spouse`                                 IS `my spouse is totally dependent on my earnings`
+        `dependent members of the family under 6`                                    IS `dependent family members under 6`
+        `dependent members, other than the spouse, under 16 or students`             IS `dependent children under 16 or students under 21`
+        `the amount the insurer considers reasonable for partial dependants`         IS `the amount the insurer considers reasonable for partial dependants`
+        `the worker left a spouse, issue or next of kin`                             IS `I leave a spouse, children or other next of kin`
+        `the death is from a terminal latent onset injury already compensated by a lump sum or damages` IS `my death would be from a terminal latent onset injury already compensated`
+
+@export If I die because of my work injury, what lump sum compensation is payable for my dependants, or my estate (ss 200, 201, 201A)?
+GIVEN `the day I am asking about` IS A DATE @desc The day you are asking about (it fixes the financial year's QOTE: 2026-27 is built in)
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+      `someone was totally dependent on my earnings` IS A BOOLEAN @desc Whether at least one member of your family is totally dependent on your earnings
+      `I leave members of my family dependent on my earnings` IS A BOOLEAN @desc Whether any member of your family (spouse, parent, grandparent, step-parent, child, grandchild, stepchild, brother or sister, or someone you stand in the place of a parent to) is wholly or partly dependent on your earnings
+      `my spouse is totally dependent on my earnings` IS A BOOLEAN @desc Whether your spouse (including a de facto partner of at least 2 years, or with a child of the relationship) is totally dependent on your earnings
+      `dependent family members under 6` IS A NUMBER @desc How many dependent members of your family are under 6
+      `dependent children under 16 or students under 21` IS A NUMBER @desc How many dependent members of your family other than your spouse (or totally dependent children of your spouse) are under 16, or under 21 and in full-time education
+      `the amount the insurer considers reasonable for partial dependants` IS A NUMBER @desc If all your dependants are only partly dependent: the amount, in dollars, the insurer considers reasonable and proportionate to their loss of dependence (0 if not known: the minimum applies)
+      `I leave a spouse, children or other next of kin` IS A BOOLEAN @desc Whether, if you have no dependants, you would leave a spouse, issue (children, grandchildren) or other next of kin
+      `my death would be from a terminal latent onset injury already compensated` IS A BOOLEAN @desc Whether the death would be from a latent onset disease that is a terminal condition, for which you have already received lump sum compensation or damages
+GIVETH A `Worker amount answer`
+DECIDE `What lump sum would be paid for my death` IS
+    CONSIDER `my QOTE for` `the day I am asking about` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+    WHEN JUST `QOTE` THEN
+        CONSIDER `the lump sum on death for` (`my death facts from my answers` `someone was totally dependent on my earnings` `I leave members of my family dependent on my earnings` `my spouse is totally dependent on my earnings` `dependent family members under 6` `dependent children under 16 or students under 21` `the amount the insurer considers reasonable for partial dependants` `I leave a spouse, children or other next of kin` `my death would be from a terminal latent onset injury already compensated`) `at` `QOTE`
+        WHEN NOTHING THEN `none: part 11 does not apply to a terminal latent onset injury already compensated (s 194(2))`
+        WHEN JUST `the amount` THEN `the amount, in dollars, is` `the amount`
+
+@export If I die because of my work injury, what weekly amounts are payable for my spouse and dependent children (s 200(2)(ab), (c), s 201(2)(b))?
+GIVEN `the day I am asking about` IS A DATE @desc The day you are asking about (it fixes the financial year's QOTE: 2026-27 is built in)
+      `the QOTE for that financial year, if before July 2026` IS A NUMBER @desc If the day is before 1 July 2026: QOTE for that financial year in dollars, as notified by the Workers' Compensation Regulator; otherwise 0
+      `someone was totally dependent on my earnings` IS A BOOLEAN @desc Whether at least one member of your family is totally dependent on your earnings
+      `I leave members of my family dependent on my earnings` IS A BOOLEAN @desc Whether any member of your family (spouse, parent, grandparent, step-parent, child, grandchild, stepchild, brother or sister, or someone you stand in the place of a parent to) is wholly or partly dependent on your earnings
+      `my spouse is totally dependent on my earnings` IS A BOOLEAN @desc Whether your spouse (including a de facto partner of at least 2 years, or with a child of the relationship) is totally dependent on your earnings
+      `dependent family members under 6` IS A NUMBER @desc How many dependent members of your family are under 6
+      `dependent children under 16 or students under 21` IS A NUMBER @desc How many dependent members of your family other than your spouse (or totally dependent children of your spouse) are under 16, or under 21 and in full-time education
+      `my death would be from a terminal latent onset injury already compensated` IS A BOOLEAN @desc Whether the death would be from a latent onset disease that is a terminal condition, for which you have already received lump sum compensation or damages
+GIVETH A `Worker amount answer`
+DECIDE `What weekly amounts would be paid for my death` IS
+    CONSIDER `my QOTE for` `the day I am asking about` `given` `the QOTE for that financial year, if before July 2026`
+    WHEN NOTHING THEN `not covered: no deposited QOTE for that financial year (only 2026-27 is deposited)`
+    WHEN JUST `QOTE` THEN
+        CONSIDER `the weekly amount on death for` (`my death facts from my answers` `someone was totally dependent on my earnings` `I leave members of my family dependent on my earnings` `my spouse is totally dependent on my earnings` `dependent family members under 6` `dependent children under 16 or students under 21` 0 FALSE `my death would be from a terminal latent onset injury already compensated`) `at` `QOTE`
+        WHEN NOTHING THEN `none: part 11 does not apply to a terminal latent onset injury already compensated (s 194(2))`
+        WHEN JUST `the amount` THEN `the amount, in dollars, is` `the amount`
+
+§§ `Care and rehabilitation`
+
+@export What is the most caring allowance that can be paid each week for the unpaid care someone gives me at home (ss 224-225, Regulation s 147 and schedule 8)?
+GIVEN `I am receiving weekly payments` IS A BOOLEAN @desc Whether you are receiving weekly payments of compensation
+      `my modified barthel index score` IS A NUMBER @desc Your total score on the modified Barthel index, from the occupational therapist's assessment (0 to 100; 74 or less is a moderate to total dependency)
+      `someone not compensated cares for me at home without pay` IS A BOOLEAN @desc Whether day to day care for the fundamental activities of daily living is to be provided at your home, on a voluntary basis, by another person who is not themselves receiving compensation for it
+      `the carer pension rate` IS A NUMBER @desc The weekly amount of the maximum Commonwealth carer payment, in dollars, without allowances
+GIVETH A NUMBER
+DECIDE `What is the most caring allowance that can be paid each week` IS
+    `the most caring allowance a week` `I am receiving weekly payments` `my modified barthel index score` `someone not compensated cares for me at home without pay` `the carer pension rate`
+
+@export Must the insurer refer me to an accredited rehabilitation and return to work program (s 220(3)-(4))?
+GIVEN `I am receiving compensation and have asked to be referred` IS A BOOLEAN @desc Whether you are receiving compensation for the injury and have asked the insurer to refer you to a rehabilitation and return to work program
+      `my compensation stopped under s 144A, 168 or 190(2) and I have not returned to work` IS A BOOLEAN @desc Whether your compensation stopped (at the 5-year or maximum limit, on a review, or after a notice of assessment) and you have not returned to work because of the injury
+      `I am already in an accredited program` IS A BOOLEAN @desc Whether you are already participating in the insurer's accredited rehabilitation and return to work program
+      `the insurer is satisfied a program cannot help me further` IS A BOOLEAN @desc Whether the insurer is satisfied that the program is not able to further assist you with rehabilitation for the injury
+GIVETH A BOOLEAN
+DECIDE `Must the insurer refer me to a rehabilitation program` IS
+    `s 220(3) requires a referral` `I am receiving compensation and have asked to be referred` `my compensation stopped under s 144A, 168 or 190(2) and I have not returned to work` `I am already in an accredited program` `the insurer is satisfied a program cannot help me further`
+
+@export Can the insurer suspend my workers' compensation because I have not taken part in rehabilitation (ss 231, 232)?
+GIVEN `I have failed or refused to take part in rehabilitation` IS A BOOLEAN @desc Whether you have failed or refused to satisfactorily participate in rehabilitation, including a return to work program or suitable duties the insurer arranged
+      `I had a reasonable excuse` IS A BOOLEAN @desc Whether you had a reasonable excuse for not participating
+GIVETH A BOOLEAN
+DECIDE `Can the insurer suspend my compensation for not taking part in rehabilitation` IS
+    `the insurer may suspend compensation under s 232(2)` `I have failed or refused to take part in rehabilitation` `I had a reasonable excuse`
+
+-- Situation: the worker's employer is dismissing, or has dismissed, the worker.
+§§ `If my employer dismisses me`
+
+@export Until what day does s 232B stop my employer dismissing me because I am not fit for work because of my injury?
+GIVEN `the day I was injured` IS A DATE @desc The day you sustained the injury
+GIVETH A DATE
+DECIDE `Until when am I protected from dismissal because of my injury` IS
+    `the last day of s 232B protection` `the day I was injured`
+
+@export Would my employer break s 232B by dismissing me on this day?
+GIVEN `the day I was injured` IS A DATE @desc The day you sustained the injury
+      `the day of the dismissal` IS A DATE @desc The day you are (or were) dismissed, or left because of an unreasonable condition imposed to make you leave
+      `I am dismissed solely or mainly because I am not fit for work because of the injury` IS A BOOLEAN @desc Whether the dismissal is solely or mainly because you are not fit for employment in a position because of the injury
+      `compensation is payable for my injury` IS A BOOLEAN @desc Whether your injury is one for which compensation is payable under the Act
+GIVETH A BOOLEAN
+DECIDE `Would dismissing me break s 232B` IS
+    `the dismissal contravenes s 232B` `the day I was injured` `the day of the dismissal` `I am dismissed solely or mainly because I am not fit for work because of the injury` `compensation is payable for my injury`
