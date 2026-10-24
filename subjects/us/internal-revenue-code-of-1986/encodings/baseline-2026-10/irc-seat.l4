@@ -1,0 +1,373 @@
+IMPORT prelude
+IMPORT `irc-dates`
+IMPORT `irc-individual`
+
+-- Internal Revenue Code of 1986 -- the individual taxpayer's questions about 2026. Seat layer over irc-individual.l4.
+--
+-- Seat: the individual taxpayer (a US citizen or resident filing for the calendar year 2026, alone or with a spouse).
+-- Each question takes plain answers the person can give, builds the core's records from them, and asks the core. No rule
+-- of the Code is restated here. Where a record field the core reads is not asked, it gets a fixed value, with a comment.
+--
+-- Not for public use as advice.
+
+§ `The individual taxpayer's questions about federal income tax for 2026`
+
+§§ `How the answers are put together`
+
+-- The person's marriage at the end of 2026, as they would describe it.
+DECLARE `My marital situation` IS ONE OF
+    `not married`
+    `married`
+    `legally separated or divorced under a court decree`
+    `my spouse died during the year`
+    `my spouse died in one of the two years before, and I have not remarried`
+
+GIVEN situation IS A `My marital situation`, joint IS A BOOLEAN, `spouse lived with me in the last 6 months` IS A BOOLEAN, `lived apart all year` IS A BOOLEAN, `spouse age` IS A NUMBER, `spouse blind` IS A BOOLEAN, `spouse has an SSN` IS A BOOLEAN, `spouse nonresident alien` IS A BOOLEAN, `spouse has gross income` IS A BOOLEAN, `spouse can be claimed` IS A BOOLEAN, `spouse itemizes` IS A BOOLEAN
+GIVETH A `Marriage`
+`the marriage described by` situation joint `spouse lived with me in the last 6 months` `lived apart all year` `spouse age` `spouse blind` `spouse has an SSN` `spouse nonresident alien` `spouse has gross income` `spouse can be claimed` `spouse itemizes` MEANS `Marriage` WITH
+    `married at the close of the year or at the spouse's death` IS `married or widowed this year` OR situation EQUALS `legally separated or divorced under a court decree`
+    `the spouse died during the year`                         IS situation EQUALS `my spouse died during the year`
+    `legally separated under a decree of divorce or of separate maintenance` IS situation EQUALS `legally separated or divorced under a court decree`
+    `the spouse was a nonresident alien at some time in the year` IS `spouse nonresident alien`
+    `the spouse was a member of the household in the last 6 months of the year` IS `spouse lived with me in the last 6 months`
+    `the spouses lived apart at all times during the year`   IS `lived apart all year`
+    -- not asked: taken as the same home at the end of the year when the spouse lived there in the last 6 months
+    `the spouses had the same household as their home at the close of the year` IS `spouse lived with me in the last 6 months`
+    `the spouses make a joint return`                         IS joint AND `married or widowed this year`
+    -- not asked: a married person not filing jointly is taken to have a spouse who makes a separate return
+    `the spouse makes a separate return`                      IS `married or widowed this year` AND (NOT joint)
+    `the spouse itemizes deductions on a separate return`     IS `spouse itemizes`
+    `the spouse's age at the close of the year`               IS `spouse age`
+    `the spouse is blind`                                     IS `spouse blind`
+    `the spouse has gross income`                             IS `spouse has gross income`
+    `the spouse is the dependent of another taxpayer`         IS `spouse can be claimed`
+    `the spouse has a social security number valid for employment` IS `spouse has an SSN`
+    `a spouse died in either of the two preceding years`      IS situation EQUALS `my spouse died in one of the two years before, and I have not remarried`
+    -- the situation says "I have not remarried"
+    `the taxpayer remarried before the close of the year`     IS FALSE
+    -- not asked: taken as TRUE (a joint return could have been made for the year the spouse died; s 2(a)(2)(B))
+    `a joint return could have been made for the year of that death` IS TRUE
+    WHERE
+        `married or widowed this year` MEANS situation EQUALS `married` OR situation EQUALS `my spouse died during the year`
+
+-- One member of the household, built from the counts the person gives. Fixed values: a son or daughter (or a parent, or
+-- another relative), a US citizen and resident, not self-supporting, unmarried, no joint return, not claimed by anyone with
+-- a better claim, supported by the person, no gross income.
+GIVEN rel IS A `Relationship to the taxpayer`, age IS A NUMBER, months IS A NUMBER, ssn IS A BOOLEAN
+GIVETH A `Person`
+`a household member` rel `aged` age `for months` months `with an SSN` ssn MEANS `Person` WITH
+    `relationship`                                            IS rel
+    `age at the close of the year`                            IS age
+    `a student`                                               IS FALSE
+    `permanently and totally disabled`                        IS FALSE
+    `months sharing the taxpayer's home`                      IS months
+    `the shared home was in the United States`                IS TRUE
+    `provided over half of their own support`                 IS FALSE
+    `made a joint return with a spouse`                       IS FALSE
+    `that joint return was only a claim of refund`            IS FALSE
+    `married at the close of the year`                        IS FALSE
+    `a citizen or national of the United States`              IS TRUE
+    `a resident of the United States`                         IS TRUE
+    `a resident of Canada or Mexico`                          IS FALSE
+    `gross income for the calendar year`                      IS 0
+    `the taxpayer provided over half of their support`        IS TRUE
+    `treated as another taxpayer's qualifying child under s 152(c)(4)` IS FALSE
+    `a qualifying child of another taxpayer`                  IS FALSE
+    `has a social security number valid for employment`       IS ssn
+
+-- The people in the household. A child under 17 is placed at age 10 and an older child at 18 (both qualifying ages); a
+-- parent lives elsewhere; another relative lives with the person all year.
+GIVEN `children under 17` IS A NUMBER, `of them with an SSN` IS A NUMBER, `older children` IS A NUMBER, `all year` IS A BOOLEAN, parents IS A NUMBER, `other relatives` IS A NUMBER
+GIVETH A LIST OF `Person`
+`the household described by` `children under 17` `of them with an SSN` `older children` `all year` parents `other relatives` MEANS
+    append `young children with an SSN` (append `young children without one` (append `the older children` (append `the parents` `the other relatives`)))
+    WHERE
+        -- "more than half the year" is placed at 7 months; "all year" at 12
+        `months` MEANS IF `all year` THEN 12 ELSE 7
+        `young children with an SSN` MEANS
+            replicate (min `children under 17` `of them with an SSN`) (`a household member` `a son, daughter, stepson or stepdaughter` `aged` 10 `for months` `months` `with an SSN` TRUE)
+        `young children without one` MEANS
+            replicate (`the positive part of` (`children under 17` MINUS `of them with an SSN`)) (`a household member` `a son, daughter, stepson or stepdaughter` `aged` 10 `for months` `months` `with an SSN` FALSE)
+        `the older children` MEANS
+            replicate `older children` (`a household member` `a son, daughter, stepson or stepdaughter` `aged` 18 `for months` `months` `with an SSN` TRUE)
+        `the parents` MEANS
+            replicate parents (`a household member` `the father or mother` `aged` 70 `for months` 0 `with an SSN` TRUE)
+        `the other relatives` MEANS
+            replicate `other relatives` (`a household member` `a grandparent or other ancestor` `aged` 75 `for months` 12 `with an SSN` TRUE)
+
+GIVEN wT IS A NUMBER, wS IS A NUMBER, int IS A NUMBER, exempt IS A NUMBER, div IS A NUMBER, qdcg IS A NUMBER, pen IS A NUMBER, uc IS A NUMBER, ss IS A NUMBER, other IS A NUMBER, bgT IS A NUMBER, bdT IS A NUMBER, bgS IS A NUMBER, bdS IS A NUMBER, adj IS A NUMBER, ded IS A NUMBER, itemize IS A BOOLEAN, itemized IS A NUMBER, fica IS A NUMBER, withheld IS A NUMBER
+GIVETH AN `Income`
+`the income described by` wT wS int exempt div qdcg pen uc ss other bgT bdT bgS bdS adj ded itemize itemized fica withheld MEANS `Income` WITH
+    `wages of the taxpayer`                                   IS wT
+    `wages of the spouse`                                     IS wS
+    `taxable interest`                                        IS int
+    `tax-exempt interest`                                     IS exempt
+    `ordinary dividends`                                      IS div
+    `qualified dividends and net capital gain`                IS qdcg
+    `taxable pensions and annuities`                          IS pen
+    `unemployment compensation`                               IS uc
+    `social security benefits`                                IS ss
+    `other gross income`                                      IS other
+    `business gross income of the taxpayer`                   IS bgT
+    `business deductions of the taxpayer`                     IS bdT
+    `business gross income of the spouse`                     IS bgS
+    `business deductions of the spouse`                       IS bdS
+    `other deductions in arriving at adjusted gross income`   IS adj
+    `other deductions allowed to a non-itemizer`              IS ded
+    `the taxpayer elects to itemize`                          IS itemize
+    `itemized deductions`                                     IS itemized
+    `social security taxes withheld from wages`               IS fica
+    `income tax withheld`                                     IS withheld
+
+-- Fixed values: the person is not someone else's qualifying child unless someone else can claim them (the two are asked
+-- as one question).
+GIVEN yr IS A NUMBER, age IS A NUMBER, blind IS A BOOLEAN, claimed IS A BOOLEAN, ssn IS A BOOLEAN, `in the US` IS A BOOLEAN, `pays for the home` IS A BOOLEAN, nra IS A BOOLEAN, m IS A `Marriage`, inc IS AN `Income`
+      ppl IS A LIST OF `Person`
+GIVETH A `Taxable year`
+`the year described by` yr age blind claimed ssn `in the US` `pays for the home` nra m inc ppl MEANS `Taxable year` WITH
+    `the calendar year`                                       IS yr
+    `the taxpayer's age at the close of the year`             IS age
+    `the taxpayer is blind`                                   IS blind
+    `the taxpayer was a nonresident alien at some time in the year` IS nra
+    `the taxpayer is a dependent of another taxpayer`         IS claimed
+    `the taxpayer is a qualifying child of another taxpayer`  IS claimed
+    `the taxpayer has a social security number valid for employment` IS ssn
+    `the taxpayer's principal place of abode was in the United States for more than half the year` IS `in the US`
+    `the taxpayer furnished over half the cost of maintaining the household` IS `pays for the home`
+    `marriage`                                                IS m
+    `people`                                                  IS ppl
+    `income`                                                  IS inc
+
+-- What the seat's questions answer when the core says `not covered`.
+DECLARE `My filing answer` IS ONE OF
+    `the answer is`                                     HAS `answer` IS A `Whether a return is required`
+    `this encoding does not cover my case`              HAS `reason` IS A `Why not covered`
+
+DECLARE `My return answer` IS ONE OF
+    `my return comes to`                                HAS `figures` IS A `Return figures`
+    `this encoding does not cover my return`            HAS `reason` IS A `Why not covered`
+
+-- What one person counts as for the taxpayer.
+DECLARE `What this person counts as` HAS
+    `my dependent`                                            IS A BOOLEAN
+    `a qualifying child for the $2,200 child tax credit`      IS A BOOLEAN
+    `a dependent for the $500 credit for other dependents`    IS A BOOLEAN
+    `a qualifying child for the earned income credit`         IS A BOOLEAN
+    `a qualifying person for head of household`               IS A BOOLEAN
+
+§§ `Filing status (ss 1, 2, 6013, 7703)`
+
+@export What is my federal income tax filing status for the year (joint return, surviving spouse, head of household, unmarried individual, or married filing separately)?
+GIVEN `my marital situation`                     IS A `My marital situation` @desc At the end of the year: "not married", "married", "legally separated or divorced under a court decree", "my spouse died during the year", or "my spouse died in one of the two years before, and I have not remarried"
+      `we will file jointly`                     IS A BOOLEAN @desc If you are married (or your spouse died this year): will you and your spouse make one joint return?
+      `my spouse lived with me in the last 6 months` IS A BOOLEAN @desc Did your spouse live in your home at any time in the last 6 months of the year?
+      `my spouse was a nonresident alien`        IS A BOOLEAN @desc Was your spouse a nonresident alien (not a US citizen or resident) at any time in the year?
+      `I was a nonresident alien`                IS A BOOLEAN @desc Were you a nonresident alien (not a US citizen or resident) at any time in the year?
+      `I pay over half the cost of my home`      IS A BOOLEAN @desc Did you pay more than half the cost of keeping up your home this year?
+      `children under 17 living with me`         IS A NUMBER @desc How many of your children (sons, daughters, stepchildren, adopted children) under 17 at the end of the year lived with you for more than half the year?
+      `older children living with me`            IS A NUMBER @desc How many of your other children lived with you for more than half the year and were under 19 at the end of the year (or under 24 and full-time students)?
+      `they lived with me all year`              IS A BOOLEAN @desc Did those children live with you for the whole year?
+      `parents I support`                        IS A NUMBER @desc How many of your parents did you pay more than half the support of, where the parent's gross income was under $5,300?
+      `other relatives I support at home`        IS A NUMBER @desc How many other relatives (grandparents, aunts, uncles, in-laws) lived with you all year, with more than half their support from you and gross income under $5,300?
+      `someone can claim me`                     IS A BOOLEAN @desc Can someone else (for example your parents) claim you as a dependent this year?
+GIVETH A `Filing status`
+`What is my filing status` `my marital situation` `we will file jointly` `my spouse lived with me in the last 6 months` `my spouse was a nonresident alien` `I was a nonresident alien` `I pay over half the cost of my home` `children under 17 living with me` `older children living with me` `they lived with me all year` `parents I support` `other relatives I support at home` `someone can claim me` MEANS
+    -- Fixed values in this question: ages 30 (yours and your spouse's) and income nil; neither affects the filing status.
+    `the filing status` `the year`
+    WHERE
+        `the year` MEANS `the year described by` 2026 30 FALSE `someone can claim me` TRUE TRUE `I pay over half the cost of my home` `I was a nonresident alien` `the marriage` `the income` `the household`
+        `the marriage` MEANS `the marriage described by` `my marital situation` `we will file jointly` `my spouse lived with me in the last 6 months` (NOT `my spouse lived with me in the last 6 months`) 30 FALSE TRUE `my spouse was a nonresident alien` TRUE FALSE FALSE
+        `the income` MEANS `the income described by` 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 FALSE 0 0 0
+        `the household` MEANS `the household described by` `children under 17 living with me` `children under 17 living with me` `older children living with me` `they lived with me all year` `parents I support` `other relatives I support at home`
+
+§§ `Who must file (s 6012)`
+
+@export Must I file a federal income tax return for the year under 26 U.S.C. 6012? (The answer says when it turns on how "exemption amount" is read, or when s 6017 on self-employment income, not encoded, may require one.)
+GIVEN `tax year`                                 IS A NUMBER @desc The calendar year of the return; only 2026 is covered
+      `my age`                                   IS A NUMBER @desc Your age at the end of the year
+      `my marital situation`                     IS A `My marital situation` @desc At the end of the year: "not married", "married", "legally separated or divorced under a court decree", "my spouse died during the year", or "my spouse died in one of the two years before, and I have not remarried"
+      `we will file jointly`                     IS A BOOLEAN @desc If you are married: will you and your spouse make one joint return?
+      `my spouse lived with me in the last 6 months` IS A BOOLEAN @desc Did your spouse live in your home at any time in the last 6 months of the year (and at the end of it)?
+      `my spouse's age`                          IS A NUMBER @desc Your spouse's age at the end of the year (0 if not married)
+      `my spouse was a nonresident alien`        IS A BOOLEAN @desc Was your spouse a nonresident alien at any time in the year?
+      `someone can claim my spouse`              IS A BOOLEAN @desc Can someone else claim your spouse as a dependent?
+      `I was a nonresident alien`                IS A BOOLEAN @desc Were you a nonresident alien at any time in the year?
+      `someone can claim me`                     IS A BOOLEAN @desc Can someone else (for example your parents) claim you as a dependent this year?
+      `I pay over half the cost of my home`      IS A BOOLEAN @desc Did you pay more than half the cost of keeping up your home this year?
+      `children living with me`                  IS A NUMBER @desc How many of your children lived with you for more than half the year and were under 19 at the end of it (or under 24 and full-time students)?
+      `my wages`                                 IS A NUMBER @desc Your wages, salary and tips for the year, in US dollars
+      `my spouse's wages`                        IS A NUMBER @desc Your spouse's wages, salary and tips (counted only on a joint return)
+      `taxable interest and dividends`           IS A NUMBER @desc Taxable interest and ordinary (not qualified) dividends, in US dollars
+      `pensions and other income`                IS A NUMBER @desc The taxable part of pensions and annuities, unemployment compensation and any other gross income, in US dollars
+      `social security benefits`                 IS A NUMBER @desc Social Security (and tier 1 railroad retirement) benefits received in the year, less any repaid
+      `my business income`                       IS A NUMBER @desc Gross income of a business you run yourself (receipts less cost of goods sold), in US dollars
+      `my business expenses`                     IS A NUMBER @desc The deductible expenses of that business, in US dollars
+GIVETH A `My filing answer`
+`Must I file a return` `tax year` `my age` `my marital situation` `we will file jointly` `my spouse lived with me in the last 6 months` `my spouse's age` `my spouse was a nonresident alien` `someone can claim my spouse` `I was a nonresident alien` `someone can claim me` `I pay over half the cost of my home` `children living with me` `my wages` `my spouse's wages` `taxable interest and dividends` `pensions and other income` `social security benefits` `my business income` `my business expenses` MEANS
+    -- Fixed values: blindness is not asked (s 6012(a)(1)(B) counts age only); children are placed as living with you all
+    -- year; your spouse is taken to have gross income; interest and dividends are placed as taxable interest.
+    CONSIDER `whether s 6012 requires a return` `the year`
+    WHEN `answered` a THEN `the answer is` a
+    WHEN `not covered` r THEN `this encoding does not cover my case` r
+    WHERE
+        `the year` MEANS `the year described by` `tax year` `my age` FALSE `someone can claim me` TRUE TRUE `I pay over half the cost of my home` `I was a nonresident alien` `the marriage` `the income` `the household`
+        `the marriage` MEANS `the marriage described by` `my marital situation` `we will file jointly` `my spouse lived with me in the last 6 months` (NOT `my spouse lived with me in the last 6 months`) `my spouse's age` FALSE TRUE `my spouse was a nonresident alien` TRUE `someone can claim my spouse` FALSE
+        `the income` MEANS `the income described by` `my wages` `my spouse's wages` `taxable interest and dividends` 0 0 0 `pensions and other income` 0 `social security benefits` 0 `my business income` `my business expenses` 0 0 0 0 FALSE 0 0 0
+        `the household` MEANS `the household described by` 0 0 `children living with me` TRUE 0 0
+
+@export The duty to file: on what day does the three-year period end within which my spouse and I, having filed separately, may still make a joint return (26 U.S.C. 6013(b)(2)(A))?
+GIVEN `the due date of the return` IS A DATE @desc The last day set by law for filing the return, without extensions (for 2026 returns, 15 April 2027 under s 6072, which this encoding does not include), e.g. 2027-04-15
+GIVETH A DATE
+`When does my chance to switch to a joint return end` `the due date of the return` MEANS
+    `the end of the s 6013(b)(2)(A) period from` `the due date of the return`
+
+§§ `Dependents (s 152), for the child tax credit (s 24) and the earned income credit (s 32)`
+
+@export Does this person count as my dependent, and do they count for the $2,200 child tax credit, the $500 credit for other dependents, the earned income credit and head of household?
+GIVEN `my age`                                   IS A NUMBER @desc Your age at the end of the year
+      `someone can claim me`                     IS A BOOLEAN @desc Can someone else claim you as a dependent this year?
+      `I have an SSN`                            IS A BOOLEAN @desc Do you have a social security number valid for employment?
+      `their relationship to me`                 IS A `Relationship to the taxpayer` @desc One of: "a son, daughter, stepson or stepdaughter", "an eligible foster child", "a grandchild or other descendant of a child", "a brother, sister, stepbrother or stepsister", "a descendant of a brother, sister, stepbrother or stepsister", "the father or mother", "a grandparent or other ancestor", "a stepfather or stepmother", "a brother or sister of the father or mother", "a son-in-law, daughter-in-law, father-in-law, mother-in-law, brother-in-law or sister-in-law", "an unrelated member of the household for the whole year", "none of these"
+      `their age`                                IS A NUMBER @desc Their age at the end of the year
+      `a full-time student`                      IS A BOOLEAN @desc Were they a full-time student during some part of 5 months of the year?
+      `permanently and totally disabled`         IS A BOOLEAN @desc Were they permanently and totally disabled at any time in the year?
+      `months living with me`                    IS A NUMBER @desc For how many months of the year did they live in your home (temporary absences count as living with you)?
+      `the home was in the US`                   IS A BOOLEAN @desc Was that home in the United States?
+      `they paid over half their own support`    IS A BOOLEAN @desc Did they pay more than half of their own support for the year?
+      `I paid over half their support`           IS A BOOLEAN @desc Did you pay more than half of their support for the year?
+      `they are married`                         IS A BOOLEAN @desc Were they married at the end of the year?
+      `they filed a joint return`                IS A BOOLEAN @desc Did they make a joint return with a spouse for the year, other than only to claim a refund?
+      `a US citizen or resident`                 IS A BOOLEAN @desc Are they a US citizen, US national or US resident?
+      `a resident of Canada or Mexico`           IS A BOOLEAN @desc If not, are they a resident of Canada or Mexico?
+      `their gross income`                       IS A NUMBER @desc Their gross income for the year, in US dollars
+      `someone else has the better claim`        IS A BOOLEAN @desc Is someone else (for example the other parent) entitled to treat them as a qualifying child ahead of you, under the tie-breaker rules?
+      `they have an SSN`                         IS A BOOLEAN @desc Do they have a social security number valid for employment, issued by the return's due date?
+GIVETH A `What this person counts as`
+`What does this person count as for me` `my age` `someone can claim me` `I have an SSN` `their relationship to me` `their age` `a full-time student` `permanently and totally disabled` `months living with me` `the home was in the US` `they paid over half their own support` `I paid over half their support` `they are married` `they filed a joint return` `a US citizen or resident` `a resident of Canada or Mexico` `their gross income` `someone else has the better claim` `they have an SSN` MEANS
+    `What this person counts as` WITH
+        `my dependent`                                         IS `a dependent of the taxpayer` `the year` `the person`
+        `a qualifying child for the $2,200 child tax credit`   IS `a qualifying child for whom the s 24 credit is allowed` `the year` `the person`
+        `a dependent for the $500 credit for other dependents` IS `a dependent for the s 24(h)(4) partial credit` `the year` `the person`
+        `a qualifying child for the earned income credit`      IS `a qualifying child under s 32(c)(3)` `the year` `the person` AND `they have an SSN`
+        `a qualifying person for head of household`            IS     `a qualifying person for head of household under s 2(b)(1)(A)` `the year` `the person`
+                                                                   OR `a parent who qualifies the taxpayer as head of household under s 2(b)(1)(B)` `the year` `the person`
+    WHERE
+        `the person` MEANS `Person` WITH
+            `relationship`                                    IS `their relationship to me`
+            `age at the close of the year`                    IS `their age`
+            `a student`                                       IS `a full-time student`
+            `permanently and totally disabled`                IS `permanently and totally disabled`
+            `months sharing the taxpayer's home`              IS `months living with me`
+            `the shared home was in the United States`        IS `the home was in the US`
+            `provided over half of their own support`         IS `they paid over half their own support`
+            `made a joint return with a spouse`               IS `they filed a joint return`
+            -- the question asks only about a joint return that was not just a refund claim
+            `that joint return was only a claim of refund`    IS FALSE
+            `married at the close of the year`                IS `they are married`
+            `a citizen or national of the United States`      IS `a US citizen or resident`
+            `a resident of the United States`                 IS `a US citizen or resident`
+            `a resident of Canada or Mexico`                  IS `a resident of Canada or Mexico`
+            `gross income for the calendar year`              IS `their gross income`
+            `the taxpayer provided over half of their support` IS `I paid over half their support`
+            `treated as another taxpayer's qualifying child under s 152(c)(4)` IS `someone else has the better claim`
+            -- the tie-breaker question stands for both
+            `a qualifying child of another taxpayer`          IS `someone else has the better claim`
+            `has a social security number valid for employment` IS `they have an SSN`
+        -- Fixed values: 2026, unmarried, nil income; none of them is read by the dependent tests.
+        `the year` MEANS `the year described by` 2026 `my age` FALSE `someone can claim me` `I have an SSN` TRUE TRUE FALSE `no marriage` (`the income described by` 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 FALSE 0 0 0) (LIST `the person`)
+
+§§ `Social Security benefits (s 86) and self-employment tax (ss 1401, 1402)`
+
+@export How much of my Social Security benefits is taxable income for the year under 26 U.S.C. 86?
+GIVEN `my marital situation`                     IS A `My marital situation` @desc At the end of the year: "not married", "married", "legally separated or divorced under a court decree", "my spouse died during the year", or "my spouse died in one of the two years before, and I have not remarried"
+      `we will file jointly`                     IS A BOOLEAN @desc If you are married: will you and your spouse make one joint return?
+      `we lived apart all year`                  IS A BOOLEAN @desc If you are married and filing separately: did you and your spouse live apart at all times during the year?
+      `social security benefits`                 IS A NUMBER @desc Social Security (and tier 1 railroad retirement) benefits received in the year, less any repaid (both spouses' on a joint return)
+      `wages`                                    IS A NUMBER @desc Wages, salary and tips on the return, in US dollars
+      `taxable interest and dividends`           IS A NUMBER @desc Taxable interest and ordinary dividends, in US dollars
+      `tax-exempt interest`                      IS A NUMBER @desc Tax-exempt interest received in the year, in US dollars
+      `pensions and other income`                IS A NUMBER @desc The taxable part of pensions and annuities and any other gross income, in US dollars
+      `adjustments to income`                    IS A NUMBER @desc Deductions taken in arriving at adjusted gross income (other than for student loan interest), in US dollars
+GIVETH A NUMBER
+`How much of my Social Security is taxable` `my marital situation` `we will file jointly` `we lived apart all year` `social security benefits` `wages` `taxable interest and dividends` `tax-exempt interest` `pensions and other income` `adjustments to income` MEANS
+    -- Fixed values: the s 86 amounts are statutory, so the year and ages do not change the answer; there is no business.
+    `the taxable social security benefits` `the year`
+    WHERE
+        `the year` MEANS `the year described by` 2026 66 FALSE FALSE TRUE TRUE TRUE FALSE `the marriage` `the income` `the household`
+        `the marriage` MEANS `the marriage described by` `my marital situation` `we will file jointly` (NOT `we lived apart all year`) `we lived apart all year` 66 FALSE TRUE FALSE TRUE FALSE FALSE
+        `the income` MEANS `the income described by` `wages` 0 `taxable interest and dividends` `tax-exempt interest` 0 0 `pensions and other income` 0 `social security benefits` 0 0 0 0 0 `adjustments to income` 0 FALSE 0 0 0
+        `the household` MEANS EMPTY
+
+@export How much self-employment tax (26 U.S.C. 1401) do I owe for 2026 on the profit of a business I run, and what is the s 164(f) deduction for half of it?
+GIVEN `my marital situation`                     IS A `My marital situation` @desc At the end of the year: "not married", "married", "legally separated or divorced under a court decree", "my spouse died during the year", or "my spouse died in one of the two years before, and I have not remarried"
+      `we will file jointly`                     IS A BOOLEAN @desc If you are married: will you and your spouse make one joint return?
+      `my business income`                       IS A NUMBER @desc Gross income of the business (receipts less cost of goods sold), in US dollars
+      `my business expenses`                     IS A NUMBER @desc The deductible expenses of the business, in US dollars
+      `my wages`                                 IS A NUMBER @desc Your wages from employment in the year (they use up the Social Security wage base first), in US dollars
+      `my spouse's business income`              IS A NUMBER @desc On a joint return: your spouse's business gross income (0 otherwise)
+      `my spouse's business expenses`            IS A NUMBER @desc On a joint return: your spouse's business expenses (0 otherwise)
+      `my spouse's wages`                        IS A NUMBER @desc On a joint return: your spouse's wages (0 otherwise)
+GIVETH A NUMBER
+`How much self-employment tax do I owe` `my marital situation` `we will file jointly` `my business income` `my business expenses` `my wages` `my spouse's business income` `my spouse's business expenses` `my spouse's wages` MEANS
+    `the tax on self-employment income for the year` `the year`
+    WHERE
+        `the year` MEANS `the year described by` 2026 40 FALSE FALSE TRUE TRUE TRUE FALSE (`the marriage described by` `my marital situation` `we will file jointly` TRUE FALSE 40 FALSE TRUE FALSE TRUE FALSE FALSE) (`the income described by` `my wages` `my spouse's wages` 0 0 0 0 0 0 0 0 `my business income` `my business expenses` `my spouse's business income` `my spouse's business expenses` 0 0 FALSE 0 0 0) EMPTY
+
+§§ `The return: tax, credits and refund for 2026`
+
+@export Work out my 2026 federal income tax return: filing status, adjusted gross income, taxable income, the tax, self-employment tax, the child tax credit, the earned income credit, and the balance due (negative means a refund).
+GIVEN `tax year`                                 IS A NUMBER @desc The calendar year of the return; only 2026 is covered
+      `my age`                                   IS A NUMBER @desc Your age at the end of the year
+      `I am blind`                               IS A BOOLEAN @desc Are you blind (as defined in 26 U.S.C. 63(f)(4)) at the end of the year?
+      `I have an SSN`                            IS A BOOLEAN @desc Do you have a social security number valid for employment?
+      `I was a nonresident alien`                IS A BOOLEAN @desc Were you a nonresident alien at any time in the year?
+      `I lived in the US over half the year`     IS A BOOLEAN @desc Was your main home in the United States for more than half the year?
+      `someone can claim me`                     IS A BOOLEAN @desc Can someone else (for example your parents) claim you as a dependent this year?
+      `I pay over half the cost of my home`      IS A BOOLEAN @desc Did you pay more than half the cost of keeping up your home this year?
+      `my marital situation`                     IS A `My marital situation` @desc At the end of the year: "not married", "married", "legally separated or divorced under a court decree", "my spouse died during the year", or "my spouse died in one of the two years before, and I have not remarried"
+      `we will file jointly`                     IS A BOOLEAN @desc If you are married: will you and your spouse make one joint return?
+      `my spouse lived with me in the last 6 months` IS A BOOLEAN @desc Did your spouse live in your home at any time in the last 6 months of the year?
+      `we lived apart all year`                  IS A BOOLEAN @desc If married: did you and your spouse live apart at all times during the year?
+      `my spouse's age`                          IS A NUMBER @desc Your spouse's age at the end of the year (0 if not married)
+      `my spouse is blind`                       IS A BOOLEAN @desc Is your spouse blind?
+      `my spouse has an SSN`                     IS A BOOLEAN @desc Does your spouse have a social security number valid for employment?
+      `my spouse was a nonresident alien`        IS A BOOLEAN @desc Was your spouse a nonresident alien at any time in the year?
+      `my spouse has gross income`               IS A BOOLEAN @desc Did your spouse have any gross income in the year?
+      `someone can claim my spouse`              IS A BOOLEAN @desc Can someone else claim your spouse as a dependent?
+      `my spouse itemizes separately`            IS A BOOLEAN @desc If filing separately: does your spouse itemize deductions on their own return?
+      `children under 17 living with me`         IS A NUMBER @desc How many of your children under 17 at the end of the year lived with you for more than half the year?
+      `of them, with an SSN`                     IS A NUMBER @desc How many of those children have a social security number valid for employment, issued by the return's due date?
+      `older children living with me`            IS A NUMBER @desc How many of your other children lived with you for more than half the year and were under 19 (or under 24 and full-time students), with a social security number?
+      `they lived with me all year`              IS A BOOLEAN @desc Did those children live with you for the whole year?
+      `parents I support`                        IS A NUMBER @desc How many of your parents did you pay more than half the support of, where the parent's gross income was under $5,300?
+      `other relatives I support at home`        IS A NUMBER @desc How many other relatives lived with you all year, with more than half their support from you and gross income under $5,300?
+      `my wages`                                 IS A NUMBER @desc Your wages, salary and tips, in US dollars
+      `my spouse's wages`                        IS A NUMBER @desc Your spouse's wages, salary and tips (counted only on a joint return)
+      `taxable interest`                         IS A NUMBER @desc Taxable interest, in US dollars
+      `tax-exempt interest`                      IS A NUMBER @desc Tax-exempt interest, in US dollars
+      `ordinary dividends`                       IS A NUMBER @desc Dividends other than qualified dividends, in US dollars
+      `qualified dividends and capital gains`    IS A NUMBER @desc Qualified dividends and net capital gain (any amount other than 0 is not covered by this encoding)
+      `pensions and annuities`                   IS A NUMBER @desc The taxable part of pensions and annuities, in US dollars
+      `unemployment compensation`                IS A NUMBER @desc Unemployment compensation received, in US dollars
+      `social security benefits`                 IS A NUMBER @desc Social Security (and tier 1 railroad retirement) benefits received, less any repaid
+      `other income`                             IS A NUMBER @desc Any other gross income, in US dollars
+      `my business income`                       IS A NUMBER @desc Gross income of a business you run (receipts less cost of goods sold)
+      `my business expenses`                     IS A NUMBER @desc The deductible expenses of that business
+      `my spouse's business income`              IS A NUMBER @desc On a joint return: your spouse's business gross income
+      `my spouse's business expenses`            IS A NUMBER @desc On a joint return: your spouse's business expenses
+      `adjustments to income`                    IS A NUMBER @desc Other deductions taken in arriving at adjusted gross income (IRA, HSA, educator expenses, student loan interest...)
+      `other deductions`                         IS A NUMBER @desc Deductions taken from adjusted gross income besides the standard or itemized deduction (qualified tips, overtime, s 199A...)
+      `I itemize`                                IS A BOOLEAN @desc Do you elect to itemize deductions instead of taking the standard deduction?
+      `itemized deductions`                      IS A NUMBER @desc If you itemize: the total of your itemized deductions
+      `social security and Medicare tax withheld` IS A NUMBER @desc Social Security and Medicare tax withheld from wages (W-2 boxes 4 and 6), in US dollars
+      `income tax withheld`                      IS A NUMBER @desc Federal income tax withheld in the year, in US dollars
+GIVETH A `My return answer`
+`What does my 2026 return come to` `tax year` `my age` `I am blind` `I have an SSN` `I was a nonresident alien` `I lived in the US over half the year` `someone can claim me` `I pay over half the cost of my home` `my marital situation` `we will file jointly` `my spouse lived with me in the last 6 months` `we lived apart all year` `my spouse's age` `my spouse is blind` `my spouse has an SSN` `my spouse was a nonresident alien` `my spouse has gross income` `someone can claim my spouse` `my spouse itemizes separately` `children under 17 living with me` `of them, with an SSN` `older children living with me` `they lived with me all year` `parents I support` `other relatives I support at home` `my wages` `my spouse's wages` `taxable interest` `tax-exempt interest` `ordinary dividends` `qualified dividends and capital gains` `pensions and annuities` `unemployment compensation` `social security benefits` `other income` `my business income` `my business expenses` `my spouse's business income` `my spouse's business expenses` `adjustments to income` `other deductions` `I itemize` `itemized deductions` `social security and Medicare tax withheld` `income tax withheld` MEANS
+    CONSIDER `the return for the year` `the year`
+    WHEN `answered` f THEN `my return comes to` f
+    WHEN `not covered` r THEN `this encoding does not cover my return` r
+    WHERE
+        `the year` MEANS `the year described by` `tax year` `my age` `I am blind` `someone can claim me` `I have an SSN` `I lived in the US over half the year` `I pay over half the cost of my home` `I was a nonresident alien` `the marriage` `the income` `the household`
+        `the marriage` MEANS `the marriage described by` `my marital situation` `we will file jointly` `my spouse lived with me in the last 6 months` `we lived apart all year` `my spouse's age` `my spouse is blind` `my spouse has an SSN` `my spouse was a nonresident alien` `my spouse has gross income` `someone can claim my spouse` `my spouse itemizes separately`
+        `the income` MEANS `the income described by` `my wages` `my spouse's wages` `taxable interest` `tax-exempt interest` `ordinary dividends` `qualified dividends and capital gains` `pensions and annuities` `unemployment compensation` `social security benefits` `other income` `my business income` `my business expenses` `my spouse's business income` `my spouse's business expenses` `adjustments to income` `other deductions` `I itemize` `itemized deductions` `social security and Medicare tax withheld` `income tax withheld`
+        `the household` MEANS `the household described by` `children under 17 living with me` `of them, with an SSN` `older children living with me` `they lived with me all year` `parents I support` `other relatives I support at home`

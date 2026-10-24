@@ -1,0 +1,511 @@
+IMPORT prelude
+IMPORT `irc-individual`
+IMPORT `irc-dates`
+
+-- Internal Revenue Code of 1986 -- worked cases on the seat-neutral core (irc-individual.l4), taxable year 2026.
+--
+-- Every assertion is a claim about the ENCODING on stated facts, not about the law. Nothing here has been checked against
+-- IRS forms, tables, publications or any ruling. Expected values were worked by hand from the deposited text and Rev. Proc.
+-- 2025-32; the arithmetic is shown in the comment above each case. Amounts are not rounded to whole dollars: the Code
+-- computes in dollars and cents, and the s 3 tax tables and s 32(f) credit tables that would round are not deposited.
+--
+-- The four cases the brief asks for: a single wage earner (Alex), a married couple with two children claiming the Child
+-- Tax Credit and the EITC (Maria and Jose), a retiree with Social Security benefits under s 86 (Ruth), a self-employed
+-- person (Sam). The others test one rule each.
+
+§ `Fixtures`
+
+GIVEN wT IS A NUMBER, wS IS A NUMBER, int IS A NUMBER, pen IS A NUMBER, ss IS A NUMBER, bg IS A NUMBER, bd IS A NUMBER, fica IS A NUMBER, wh IS A NUMBER
+GIVETH AN `Income`
+`income of wages` wT `and` wS `interest` int `pensions` pen `social security` ss `business` bg `less` bd `FICA` fica `withheld` wh MEANS `Income` WITH
+    `wages of the taxpayer`                                   IS wT
+    `wages of the spouse`                                     IS wS
+    `taxable interest`                                        IS int
+    `tax-exempt interest`                                     IS 0
+    `ordinary dividends`                                      IS 0
+    `qualified dividends and net capital gain`                IS 0
+    `taxable pensions and annuities`                          IS pen
+    `unemployment compensation`                               IS 0
+    `social security benefits`                                IS ss
+    `other gross income`                                      IS 0
+    `business gross income of the taxpayer`                   IS bg
+    `business deductions of the taxpayer`                     IS bd
+    `business gross income of the spouse`                     IS 0
+    `business deductions of the spouse`                       IS 0
+    `other deductions in arriving at adjusted gross income`   IS 0
+    `other deductions allowed to a non-itemizer`              IS 0
+    `the taxpayer elects to itemize`                          IS FALSE
+    `itemized deductions`                                     IS 0
+    `social security taxes withheld from wages`               IS fica
+    `income tax withheld`                                     IS wh
+
+-- A son or daughter who lived at home, in the United States, all year: a citizen with a social security number.
+GIVEN age IS A NUMBER
+GIVETH A `Person`
+`a child at home aged` age MEANS `Person` WITH
+    `relationship`                                            IS `a son, daughter, stepson or stepdaughter`
+    `age at the close of the year`                            IS age
+    `a student`                                               IS FALSE
+    `permanently and totally disabled`                        IS FALSE
+    `months sharing the taxpayer's home`                      IS 12
+    `the shared home was in the United States`                IS TRUE
+    `provided over half of their own support`                 IS FALSE
+    `made a joint return with a spouse`                       IS FALSE
+    `that joint return was only a claim of refund`            IS FALSE
+    `married at the close of the year`                        IS FALSE
+    `a citizen or national of the United States`              IS TRUE
+    `a resident of the United States`                         IS TRUE
+    `a resident of Canada or Mexico`                          IS FALSE
+    `gross income for the calendar year`                      IS 0
+    `the taxpayer provided over half of their support`        IS TRUE
+    `treated as another taxpayer's qualifying child under s 152(c)(4)` IS FALSE
+    `a qualifying child of another taxpayer`                  IS FALSE
+    `has a social security number valid for employment`       IS TRUE
+
+-- A mother who lives elsewhere, whom the taxpayer supports, with the given gross income.
+GIVEN gi IS A NUMBER
+GIVETH A `Person`
+`a supported mother with gross income` gi MEANS `Person` WITH
+    `relationship`                                            IS `the father or mother`
+    `age at the close of the year`                            IS 70
+    `a student`                                               IS FALSE
+    `permanently and totally disabled`                        IS FALSE
+    `months sharing the taxpayer's home`                      IS 0
+    `the shared home was in the United States`                IS FALSE
+    `provided over half of their own support`                 IS FALSE
+    `made a joint return with a spouse`                       IS FALSE
+    `that joint return was only a claim of refund`            IS FALSE
+    `married at the close of the year`                        IS FALSE
+    `a citizen or national of the United States`              IS TRUE
+    `a resident of the United States`                         IS TRUE
+    `a resident of Canada or Mexico`                          IS FALSE
+    `gross income for the calendar year`                      IS gi
+    `the taxpayer provided over half of their support`        IS TRUE
+    `treated as another taxpayer's qualifying child under s 152(c)(4)` IS FALSE
+    `a qualifying child of another taxpayer`                  IS FALSE
+    `has a social security number valid for employment`       IS TRUE
+
+-- A married couple sharing a home all year, both with social security numbers and both with gross income.
+GIVEN `spouse age` IS A NUMBER, joint IS A BOOLEAN
+GIVETH A `Marriage`
+`married to a spouse aged` `spouse age` `making a joint return` joint MEANS `Marriage` WITH
+    `married at the close of the year or at the spouse's death` IS TRUE
+    `the spouse died during the year`                         IS FALSE
+    `legally separated under a decree of divorce or of separate maintenance` IS FALSE
+    `the spouse was a nonresident alien at some time in the year` IS FALSE
+    `the spouse was a member of the household in the last 6 months of the year` IS TRUE
+    `the spouses lived apart at all times during the year`   IS FALSE
+    `the spouses had the same household as their home at the close of the year` IS TRUE
+    `the spouses make a joint return`                         IS joint
+    `the spouse makes a separate return`                      IS (NOT joint)
+    `the spouse itemizes deductions on a separate return`     IS FALSE
+    `the spouse's age at the close of the year`               IS `spouse age`
+    `the spouse is blind`                                     IS FALSE
+    `the spouse has gross income`                             IS TRUE
+    `the spouse is the dependent of another taxpayer`         IS FALSE
+    `the spouse has a social security number valid for employment` IS TRUE
+    `a spouse died in either of the two preceding years`      IS FALSE
+    `the taxpayer remarried before the close of the year`     IS FALSE
+    `a joint return could have been made for the year of that death` IS FALSE
+
+-- A taxable year in 2026 of a US citizen with a social security number, living in the United States, who keeps up the home.
+GIVEN age IS A NUMBER, m IS A `Marriage`, inc IS AN `Income`
+      ppl IS A LIST OF `Person`
+GIVETH A `Taxable year`
+`2026 for a taxpayer aged` age `with marriage` m `income` inc `people` ppl MEANS `Taxable year` WITH
+    `the calendar year`                                       IS 2026
+    `the taxpayer's age at the close of the year`             IS age
+    `the taxpayer is blind`                                   IS FALSE
+    `the taxpayer was a nonresident alien at some time in the year` IS FALSE
+    `the taxpayer is a dependent of another taxpayer`         IS FALSE
+    `the taxpayer is a qualifying child of another taxpayer`  IS FALSE
+    `the taxpayer has a social security number valid for employment` IS TRUE
+    `the taxpayer's principal place of abode was in the United States for more than half the year` IS TRUE
+    `the taxpayer furnished over half the cost of maintaining the household` IS TRUE
+    `marriage`                                                IS m
+    `people`                                                  IS ppl
+    `income`                                                  IS inc
+
+GIVETH A LIST OF `Person`
+`nobody` MEANS EMPTY
+
+§ `Case 1 -- Alex, a single wage earner`
+
+-- Alex, 30, unmarried, no dependents: wages $60,000, taxable interest $200, $6,000 income tax withheld.
+-- Gross income 60,200 = AGI. Standard deduction (s 63(c)(2)(C), Rev. Proc. s 4.14(1)) 16,100. Taxable income 44,100.
+-- Table 3: 1,240 + 12% x (44,100 - 12,400) = 1,240 + 3,804 = 5,044.
+-- EITC, no qualifying child: 7.65% x 8,680 = 664.02 less 7.65% x (60,200 - 10,860) = 3,774.51: nothing.
+-- Balance: 5,044 - 6,000 = -956 (an overpayment of $956).
+`Alex` MEANS `2026 for a taxpayer aged` 30 `with marriage` `no marriage` `income` (`income of wages` 60000 `and` 0 `interest` 200 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 4590 `withheld` 6000) `people` `nobody`
+
+#ASSERT `the filing status` `Alex` EQUALS `unmarried individual`
+#ASSERT `gross income` `Alex` EQUALS 60200
+#ASSERT `adjusted gross income` `Alex` EQUALS 60200
+#ASSERT `the standard deduction` `Alex` EQUALS 16100
+#ASSERT `taxable income` `Alex` EQUALS 44100
+#ASSERT `the regular tax` `Alex` EQUALS 5044
+#ASSERT `the s 32 credit` `Alex` EQUALS 0
+#ASSERT `the s 24 credit before the tax limitation` `Alex` EQUALS 0
+#ASSERT `the alternative minimum tax is screened out` `Alex`
+#ASSERT `the return for the year` `Alex` EQUALS `answered` (`the figures of the return` `Alex`)
+#ASSERT (`the figures of the return` `Alex`)'s `balance due` EQUALS -956
+-- s 6012: 60,200 is at least 0 + 16,100 (and at least 5,300 + 16,100).
+#ASSERT `whether s 6012 requires a return` `Alex` EQUALS `answered` `a return is required`
+
+-- The s 6012 duty, with the due date taken as 105 days after the close of the year (15 April 2027; s 6072 is not deposited).
+#ASSERT EVALTRACE (`the duty to make a return` TRUE `living and able to make a return` 105) 0 (LIST EVENT `the individual` (`make the return of income` TRUE) 90) EQUALS FULFILLED
+-- A return that leaves out the tax-exempt interest (s 6012(d)) does not count, and none follows by day 105.
+-- expect: BREACH by the individual, "no return of income, showing tax-exempt interest, was made by the day s 6072 sets"
+#TRACE `the duty to make a return` TRUE `living and able to make a return` 105 AT 0 WITH
+    PARTY `the individual` DOES `make the return of income` FALSE AT 90
+    (WAITUNTIL 106)
+-- No return required: nothing is owed.
+#ASSERT EVALTRACE (`the duty to make a return` FALSE `living and able to make a return` 105) 0 (LIST (WAITUNTIL 200)) EQUALS FULFILLED
+-- s 6012(b)(1): for a deceased individual the executor makes the return.
+#ASSERT `who makes the return` `deceased` EQUALS `the executor, administrator or other person charged with the decedent's property`
+#ASSERT EVALTRACE (`the duty to make a return` TRUE `deceased` 105) 0 (LIST EVENT `the executor, administrator or other person charged with the decedent's property` (`make the return of income` TRUE) 100) EQUALS FULFILLED
+
+§ `Case 2 -- Maria and Jose, married, two children, the Child Tax Credit and the EITC`
+
+-- Maria (35) and Jose (35) make a joint return. Sofia (6) and Mateo (9) live with them all year; all four are citizens with
+-- social security numbers. Wages $30,000 (Maria) and $10,000 (Jose); $3,060 FICA and $1,000 income tax withheld.
+-- Gross income 40,000 = AGI. Standard deduction 32,200 (200% of 16,100). Taxable income 7,800. Table 1: 10% = 780.
+-- s 24: 2 x 2,200 = 4,400; AGI below 400,000, no reduction. s 26(a) limit: 780 allowed against the tax; 3,620 unused.
+-- s 24(d): (A) min(4,400, 2 x 1,700) = 3,400; (B) min(3,620, 15% x (40,000 - 2,500) = 5,625) = 3,620; refundable 3,400.
+-- s 32, 2 children: 40% x 18,290 = 7,316; phaseout 21.06% x (40,000 - 31,160) = 21.06% x 8,840 = 1,861.704;
+-- credit 7,316 - 1,861.704 = 5,454.296.
+-- Total tax 780 - 780 = 0. Balance 0 - 3,400 - 5,454.296 - 1,000 = -9,854.296.
+`the Garcia family` MEANS `2026 for a taxpayer aged` 35 `with marriage` (`married to a spouse aged` 35 `making a joint return` TRUE) `income` (`income of wages` 30000 `and` 10000 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 3060 `withheld` 1000) `people` (LIST (`a child at home aged` 6), (`a child at home aged` 9))
+
+#ASSERT `the filing status` `the Garcia family` EQUALS `joint return`
+#ASSERT `gross income` `the Garcia family` EQUALS 40000
+#ASSERT `the standard deduction` `the Garcia family` EQUALS 32200
+#ASSERT `taxable income` `the Garcia family` EQUALS 7800
+#ASSERT `the regular tax` `the Garcia family` EQUALS 780
+#ASSERT `the number of qualifying children for the s 24 credit` `the Garcia family` EQUALS 2
+#ASSERT `the number of other dependents for the s 24 credit` `the Garcia family` EQUALS 0
+#ASSERT `the s 24 credit before the tax limitation` `the Garcia family` EQUALS 4400
+#ASSERT `the s 24 credit allowed against the tax` `the Garcia family` EQUALS 780
+#ASSERT `the refundable portion of the s 24 credit under s 24(d)` `the Garcia family` EQUALS 3400
+#ASSERT `the number of qualifying children under s 32(b)` `the Garcia family` EQUALS 2
+#ASSERT `earned income` `the Garcia family` EQUALS 40000
+#ASSERT `the s 32 credit` `the Garcia family` EQUALS 5454.296
+#ASSERT (`the figures of the return` `the Garcia family`)'s `total tax` EQUALS 0
+#ASSERT (`the figures of the return` `the Garcia family`)'s `balance due` EQUALS -9854.296
+-- s 6012(a)(1)(A)(iv): combined gross income 40,000 against 2 x 0 + 32,200 (zero reading: a return is required) or
+-- 2 x 5,300 + 32,200 = 42,800 (indexed reading: none is required). NOTES.md finding 1.
+#ASSERT `a return is required by s 6012(a)(1) on the reading` `zero, as s 151(d)(5)(A) states` `the Garcia family`
+#ASSERT (NOT `a return is required by s 6012(a)(1) on the reading` `the indexed amount of $5,300 used for s 152(d)(1)(B)` `the Garcia family`)
+#ASSERT `whether s 6012 requires a return` `the Garcia family` EQUALS `answered` `a return is required if the exemption amount in s 6012 is zero, but not if it is $5,300`
+-- s 6013(a): they may make a joint return; the permission is not used up by a separate return.
+#ASSERT EVALTRACE (`the permission to make a joint return` `the Garcia family` 105) 0 (LIST EVENT `the husband and wife` `make a single return jointly` 60) EQUALS FULFILLED
+#ASSERT EVALTRACE (`the permission to make a joint return` `the Garcia family` 105) 0 (LIST (WAITUNTIL 200)) EQUALS FULFILLED
+
+-- The same couple filing separately (Maria's return; Jose files his own): married filing separately, no s 32 credit
+-- (s 32(d): Jose shared the home all year), and the separate standard deduction 16,100.
+`Maria filing separately` MEANS `2026 for a taxpayer aged` 35 `with marriage` (`married to a spouse aged` 35 `making a joint return` FALSE) `income` (`income of wages` 30000 `and` 10000 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 2295 `withheld` 700) `people` (LIST (`a child at home aged` 6), (`a child at home aged` 9))
+
+#ASSERT `the filing status` `Maria filing separately` EQUALS `married filing separately`
+#ASSERT `gross income` `Maria filing separately` EQUALS 30000
+#ASSERT `the standard deduction` `Maria filing separately` EQUALS 16100
+#ASSERT `the s 32 credit` `Maria filing separately` EQUALS 0
+-- s 6012(a)(1)(A): Jose makes a separate return, so clause (iv) cannot apply; 30,000 is at least the exemption amount.
+#ASSERT `whether s 6012 requires a return` `Maria filing separately` EQUALS `answered` `a return is required`
+
+§ `Case 3 -- Ruth, a retiree with Social Security benefits`
+
+-- Ruth, 67, unmarried: Social Security benefits $24,000, taxable pension $20,000, taxable interest $1,000.
+-- s 86(b)(2): modified AGI 21,000; plus half the benefits 12,000 = 33,000, above the base amount 25,000 but not the
+-- adjusted base amount 34,000, so (a)(1): lesser of 12,000 or half of 8,000 = 4,000.
+-- Gross income 25,000 = AGI. Standard deduction 16,100 + 2,050 (s 63(f)(1)(A), (3)) = 18,150.
+-- s 151(d)(5)(C): 6,000 (AGI below 75,000). Taxable income 25,000 - 18,150 - 6,000 = 850. Tax 10% = 85.
+-- s 32: aged 67, no qualifying child: not an eligible individual. Balance 85.
+`Ruth` MEANS `2026 for a taxpayer aged` 67 `with marriage` `no marriage` `income` (`income of wages` 0 `and` 0 `interest` 1000 `pensions` 20000 `social security` 24000 `business` 0 `less` 0 `FICA` 0 `withheld` 0) `people` `nobody`
+
+#ASSERT `modified adjusted gross income for s 86` `Ruth` EQUALS 21000
+#ASSERT `the taxable social security benefits` `Ruth` EQUALS 4000
+#ASSERT `gross income` `Ruth` EQUALS 25000
+#ASSERT `the standard deduction` `Ruth` EQUALS 18150
+#ASSERT `the deduction for seniors under s 151(d)(5)(C)` `Ruth` EQUALS 6000
+#ASSERT `taxable income` `Ruth` EQUALS 850
+#ASSERT `the regular tax` `Ruth` EQUALS 85
+#ASSERT (NOT `an eligible individual under s 32(c)(1)` `Ruth`)
+#ASSERT (`the figures of the return` `Ruth`)'s `balance due` EQUALS 85
+-- s 6012(a)(1)(A)(i), (B): 25,000 against 0 + 16,100 + 2,050 = 18,150 (indexed reading: 23,450). Required either way.
+#ASSERT `whether s 6012 requires a return` `Ruth` EQUALS `answered` `a return is required`
+
+-- s 86 alone. Benefits 30,000, modified AGI 32,000, unmarried: 32,000 + 15,000 = 47,000, above 34,000, so (a)(2):
+-- 85% x 13,000 = 11,050, plus the lesser of the (a)(1) amount (min(15,000, half of 22,000) = 11,000) and half of
+-- (34,000 - 25,000) = 4,500: 15,550; less than 85% x 30,000 = 25,500.
+#ASSERT `the social security benefits included in gross income under s 86 on` 30000 `with modified AGI` 32000 `base amount` 25000 `adjusted base amount` 34000 EQUALS 15550
+-- Benefits 20,000, modified AGI 10,000: 10,000 + 10,000 = 20,000, not above 25,000: nothing.
+#ASSERT `the social security benefits included in gross income under s 86 on` 20000 `with modified AGI` 10000 `base amount` 25000 `adjusted base amount` 34000 EQUALS 0
+-- Benefits 40,000, modified AGI 100,000: (a)(2)(B) caps at 85% x 40,000 = 34,000.
+#ASSERT `the social security benefits included in gross income under s 86 on` 40000 `with modified AGI` 100000 `base amount` 25000 `adjusted base amount` 34000 EQUALS 34000
+
+-- s 86(c)(1)(C): a married individual filing separately who lived with the spouse has a base amount of zero. Ruth's figures,
+-- married to Harold (70) and filing separately: 21,000 + 12,000 = 33,000, all above the zero base, so (a)(2): 85% x 33,000 =
+-- 28,050, plus the lesser of the (a)(1) amount (12,000) and half of (0 - 0) = 0: 28,050; against 85% x 24,000 = 20,400: 20,400.
+`Ruth filing separately` MEANS `2026 for a taxpayer aged` 67 `with marriage` (`married to a spouse aged` 70 `making a joint return` FALSE) `income` (`income of wages` 0 `and` 0 `interest` 1000 `pensions` 20000 `social security` 24000 `business` 0 `less` 0 `FICA` 0 `withheld` 0) `people` `nobody`
+
+#ASSERT `the s 86 base amount` `Ruth filing separately` EQUALS 0
+#ASSERT `the taxable social security benefits` `Ruth filing separately` EQUALS 20400
+-- s 151(d)(5)(C)(v): a married individual gets the deduction for seniors only on a joint return.
+#ASSERT `the deduction for seniors under s 151(d)(5)(C)` `Ruth filing separately` EQUALS 0
+
+§ `Case 4 -- Sam, a self-employed person`
+
+-- Sam, 40, unmarried, a sole proprietor: business gross income $70,000, business deductions $20,000; no wages.
+-- s 1402(a)(12): 50,000 - 50,000 x 7.65% (half of 12.4% + 2.9%) = 46,175 net earnings from self-employment.
+-- s 1401(a): 12.4% x 46,175 = 5,725.70 (below the 184,500 base); (b)(1): 2.9% x 46,175 = 1,339.075; (b)(2): nothing.
+-- Tax on self-employment income 7,064.775. s 164(f): half, 3,532.3875.
+-- Gross income 70,000. AGI 70,000 - 20,000 - 3,532.3875 = 46,467.6125. Taxable income 46,467.6125 - 16,100 = 30,367.6125.
+-- Table 3: 1,240 + 12% x 17,967.6125 = 1,240 + 2,156.1135 = 3,396.1135.
+-- s 32: earned income 50,000 - 3,532.3875 = 46,467.6125, no child: phased out. Total tax 3,396.1135 + 7,064.775 = 10,460.8885.
+`Sam` MEANS `2026 for a taxpayer aged` 40 `with marriage` `no marriage` `income` (`income of wages` 0 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 70000 `less` 20000 `FICA` 0 `withheld` 0) `people` `nobody`
+
+#ASSERT `the taxpayer's net earnings from self-employment` `Sam` EQUALS 46175
+#ASSERT `the tax on self-employment income for the year` `Sam` EQUALS 7064.775
+#ASSERT `the s 164(f) deduction` `Sam` EQUALS 3532.3875
+#ASSERT `gross income` `Sam` EQUALS 70000
+#ASSERT `adjusted gross income` `Sam` EQUALS 46467.6125
+#ASSERT `taxable income` `Sam` EQUALS 30367.6125
+#ASSERT `the regular tax` `Sam` EQUALS 3396.1135
+#ASSERT `earned income` `Sam` EQUALS 46467.6125
+#ASSERT `the s 32 credit` `Sam` EQUALS 0
+#ASSERT (`the figures of the return` `Sam`)'s `total tax` EQUALS 10460.8885
+#ASSERT (`the figures of the return` `Sam`)'s `balance due` EQUALS 10460.8885
+#ASSERT `whether s 6012 requires a return` `Sam` EQUALS `answered` `a return is required`
+
+-- ss 1401, 1402 alone. Net earnings under $400: no self-employment income (s 1402(b)(2)).
+#ASSERT `the s 1401(a) and (b)(1) taxes on` 300 `with wages of` 0 EQUALS 0
+-- Wages of 180,000 leave 4,500 of the 184,500 base: 12.4% x 4,500 = 558, plus 2.9% x 46,175 = 1,339.075: 1,897.075.
+#ASSERT `the s 1401(a) and (b)(1) taxes on` 46175 `with wages of` 180000 EQUALS 1897.075
+-- s 1401(b)(2): the 200,000 threshold less 180,000 wages is 20,000; 0.9% x (46,175 - 20,000) = 235.575.
+#ASSERT `the s 1401(b)(2) additional tax for` `unmarried individual` `on` 46175 `with wages of` 180000 EQUALS 235.575
+
+-- Sam's earnings of $500 gross and $200 deductions: 300 - 22.95 = 277.05 of net earnings, no self-employment tax, gross
+-- income 500 below 16,100: s 6012 requires nothing, and the s 6017 duty is not reached (net earnings under $400).
+`Sam in a slow year` MEANS `2026 for a taxpayer aged` 40 `with marriage` `no marriage` `income` (`income of wages` 0 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 500 `less` 200 `FICA` 0 `withheld` 0) `people` `nobody`
+#ASSERT `whether s 6012 requires a return` `Sam in a slow year` EQUALS `answered` `no return is required`
+-- Net profit $5,000: 4,617.50 of net earnings, gross income 5,000 below the threshold: s 6017 may require a return.
+`Sam with a small business` MEANS `2026 for a taxpayer aged` 40 `with marriage` `no marriage` `income` (`income of wages` 0 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 5000 `less` 0 `FICA` 0 `withheld` 0) `people` `nobody`
+#ASSERT `whether s 6012 requires a return` `Sam with a small business` EQUALS `answered` `not required by s 6012, but s 6017 (self-employment income), which is not deposited, may require one`
+
+§ `Head of household, surviving spouse, s 7703(b)`
+
+-- Dana, 30, unmarried, keeps up a home for her son (4) all year; wages $25,000.
+-- Head of household (s 2(b)(1)(A)(i)). Standard deduction 24,150; taxable income 850; Table 2: 85.
+-- s 24: 2,200; 85 allowed; (A) min(2,200, 1,700) = 1,700; (B) min(2,115, 15% x 22,500 = 3,375) = 2,115; refundable 1,700.
+-- s 32, one child: 34% x 13,020 = 4,426.80; phaseout 15.98% x (25,000 - 23,890) = 177.378; credit 4,249.422.
+-- Balance (85 - 85) - 1,700 - 4,249.422 = -5,949.422.
+`Dana` MEANS `2026 for a taxpayer aged` 30 `with marriage` `no marriage` `income` (`income of wages` 25000 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 1912.5 `withheld` 0) `people` (LIST (`a child at home aged` 4))
+
+#ASSERT `the filing status` `Dana` EQUALS `head of household`
+#ASSERT `the standard deduction` `Dana` EQUALS 24150
+#ASSERT `the regular tax` `Dana` EQUALS 85
+#ASSERT `the refundable portion of the s 24 credit under s 24(d)` `Dana` EQUALS 1700
+#ASSERT `the s 32 credit` `Dana` EQUALS 4249.422
+#ASSERT (`the figures of the return` `Dana`)'s `balance due` EQUALS -5949.422
+-- s 6012(a)(1)(A)(ii): 25,000 against 0 + 24,150 (required) or 5,300 + 24,150 = 29,450 (not).
+#ASSERT `whether s 6012 requires a return` `Dana` EQUALS `answered` `a return is required if the exemption amount in s 6012 is zero, but not if it is $5,300`
+
+-- If Dana did not pay over half the cost of the home, she is not a head of household.
+`Dana without the household cost` MEANS `Taxable year` WITH
+    `the calendar year`                                       IS 2026
+    `the taxpayer's age at the close of the year`             IS 30
+    `the taxpayer is blind`                                   IS FALSE
+    `the taxpayer was a nonresident alien at some time in the year` IS FALSE
+    `the taxpayer is a dependent of another taxpayer`         IS FALSE
+    `the taxpayer is a qualifying child of another taxpayer`  IS FALSE
+    `the taxpayer has a social security number valid for employment` IS TRUE
+    `the taxpayer's principal place of abode was in the United States for more than half the year` IS TRUE
+    `the taxpayer furnished over half the cost of maintaining the household` IS FALSE
+    `marriage`                                                IS `no marriage`
+    `people`                                                  IS LIST (`a child at home aged` 4)
+    `income`                                                  IS (`income of wages` 25000 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 1912.5 `withheld` 0)
+#ASSERT `the filing status` `Dana without the household cost` EQUALS `unmarried individual`
+
+-- Elena, 45, whose husband died in 2025; her daughter (12) lives with her all year; she has not remarried, and a joint return
+-- could have been made for 2025. A surviving spouse under s 2(a).
+`widowed in 2025` MEANS `Marriage` WITH
+    `married at the close of the year or at the spouse's death` IS FALSE
+    `the spouse died during the year`                         IS FALSE
+    `legally separated under a decree of divorce or of separate maintenance` IS FALSE
+    `the spouse was a nonresident alien at some time in the year` IS FALSE
+    `the spouse was a member of the household in the last 6 months of the year` IS FALSE
+    `the spouses lived apart at all times during the year`   IS FALSE
+    `the spouses had the same household as their home at the close of the year` IS FALSE
+    `the spouses make a joint return`                         IS FALSE
+    `the spouse makes a separate return`                      IS FALSE
+    `the spouse itemizes deductions on a separate return`     IS FALSE
+    `the spouse's age at the close of the year`               IS 0
+    `the spouse is blind`                                     IS FALSE
+    `the spouse has gross income`                             IS FALSE
+    `the spouse is the dependent of another taxpayer`         IS FALSE
+    `the spouse has a social security number valid for employment` IS FALSE
+    `a spouse died in either of the two preceding years`      IS TRUE
+    `the taxpayer remarried before the close of the year`     IS FALSE
+    `a joint return could have been made for the year of that death` IS TRUE
+
+`Elena` MEANS `2026 for a taxpayer aged` 45 `with marriage` `widowed in 2025` `income` (`income of wages` 50000 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 3825 `withheld` 2000) `people` (LIST (`a child at home aged` 12))
+#ASSERT `the filing status` `Elena` EQUALS `surviving spouse`
+-- Taxable income 50,000 - 32,200 = 17,800; Table 1: 1,780.
+#ASSERT `the regular tax` `Elena` EQUALS 1780
+
+-- Lena, 38, still married but living apart: she files separately, her son (8) lives with her all year, she pays over half
+-- the cost of the home, and her husband has not lived there in the last 6 months. s 7703(b): not married; head of household.
+`married but living apart` MEANS `Marriage` WITH
+    `married at the close of the year or at the spouse's death` IS TRUE
+    `the spouse died during the year`                         IS FALSE
+    `legally separated under a decree of divorce or of separate maintenance` IS FALSE
+    `the spouse was a nonresident alien at some time in the year` IS FALSE
+    `the spouse was a member of the household in the last 6 months of the year` IS FALSE
+    `the spouses lived apart at all times during the year`   IS FALSE
+    `the spouses had the same household as their home at the close of the year` IS FALSE
+    `the spouses make a joint return`                         IS FALSE
+    `the spouse makes a separate return`                      IS TRUE
+    `the spouse itemizes deductions on a separate return`     IS FALSE
+    `the spouse's age at the close of the year`               IS 40
+    `the spouse is blind`                                     IS FALSE
+    `the spouse has gross income`                             IS TRUE
+    `the spouse is the dependent of another taxpayer`         IS FALSE
+    `the spouse has a social security number valid for employment` IS TRUE
+    `a spouse died in either of the two preceding years`      IS FALSE
+    `the taxpayer remarried before the close of the year`     IS FALSE
+    `a joint return could have been made for the year of that death` IS FALSE
+
+`Lena` MEANS `2026 for a taxpayer aged` 38 `with marriage` `married but living apart` `income` (`income of wages` 28000 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 2142 `withheld` 500) `people` (LIST (`a child at home aged` 8))
+#ASSERT `treated as not married under s 7703(b)` `Lena`
+#ASSERT `the filing status` `Lena` EQUALS `head of household`
+-- s 32(d)(2)(B): married (s 7703(a)) and not filing jointly, but living with her son and not with her husband in the last 6
+-- months: the credit is not barred. One child: 4,426.80 less 15.98% x (28,000 - 23,890) = 656.778: 3,770.022.
+#ASSERT `the s 32(d) joint return condition is met` `Lena`
+#ASSERT `the s 32 credit` `Lena` EQUALS 3770.022
+
+§ `Dependents`
+
+-- A 17-year-old is a qualifying child (s 152(c)) and counts for the EITC, but not for the s 24 child credit (s 24(c)(1)):
+-- $500 under s 24(h)(4) instead.
+`Hana, with a son of 17` MEANS `2026 for a taxpayer aged` 42 `with marriage` `no marriage` `income` (`income of wages` 45000 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 3442.5 `withheld` 2500) `people` (LIST (`a child at home aged` 17))
+#ASSERT `the number of qualifying children for the s 24 credit` `Hana, with a son of 17` EQUALS 0
+#ASSERT `the number of other dependents for the s 24 credit` `Hana, with a son of 17` EQUALS 1
+#ASSERT `the s 24 credit before the tax limitation` `Hana, with a son of 17` EQUALS 500
+#ASSERT `the number of qualifying children under s 32(b)` `Hana, with a son of 17` EQUALS 1
+#ASSERT `the refundable portion of the s 24 credit under s 24(d)` `Hana, with a son of 17` EQUALS 0
+
+-- A mother the taxpayer supports, with gross income $4,000 (below the $5,300 of s 152(d)(1)(B)), is a qualifying relative;
+-- with $6,000 she is not.
+#ASSERT `a dependent of the taxpayer` `Alex` (`a supported mother with gross income` 4000)
+#ASSERT (NOT `a dependent of the taxpayer` `Alex` (`a supported mother with gross income` 6000))
+-- She qualifies Alex as head of household under s 2(b)(1)(B) though she lives elsewhere.
+#ASSERT `a parent who qualifies the taxpayer as head of household under s 2(b)(1)(B)` `Alex` (`a supported mother with gross income` 4000)
+
+-- s 24(b): modified AGI of 410,500 on a joint return is 10,500 above 400,000: 11 x $50 = $550.
+`a high-earning couple` MEANS `2026 for a taxpayer aged` 50 `with marriage` (`married to a spouse aged` 50 `making a joint return` TRUE) `income` (`income of wages` 300000 `and` 110500 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 0 `withheld` 0) `people` (LIST (`a child at home aged` 10))
+#ASSERT `the s 24(b) reduction` `a high-earning couple` EQUALS 550
+#ASSERT `the s 24 credit before the tax limitation` `a high-earning couple` EQUALS 1650
+
+§ `A dependent's own return`
+
+-- Mia, 20, a student whom her parents claim: wages $5,000. s 63(c)(5): basic standard deduction min(16,100, 450 + 5,000) =
+-- 5,450. s 6012(a)(1)(C): unearned income 0, gross income 5,000 not above 5,450; exception (i): 5,000 < 0 + 5,450. None.
+`a dependent student` MEANS `Taxable year` WITH
+    `the calendar year`                                       IS 2026
+    `the taxpayer's age at the close of the year`             IS 20
+    `the taxpayer is blind`                                   IS FALSE
+    `the taxpayer was a nonresident alien at some time in the year` IS FALSE
+    `the taxpayer is a dependent of another taxpayer`         IS TRUE
+    `the taxpayer is a qualifying child of another taxpayer`  IS TRUE
+    `the taxpayer has a social security number valid for employment` IS TRUE
+    `the taxpayer's principal place of abode was in the United States for more than half the year` IS TRUE
+    `the taxpayer furnished over half the cost of maintaining the household` IS FALSE
+    `marriage`                                                IS `no marriage`
+    `people`                                                  IS `nobody`
+    `income`                                                  IS (`income of wages` 5000 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 382.5 `withheld` 200)
+#ASSERT `the standard deduction` `a dependent student` EQUALS 5450
+#ASSERT `whether s 6012 requires a return` `a dependent student` EQUALS `answered` `no return is required`
+#ASSERT `the s 32 credit` `a dependent student` EQUALS 0
+
+-- The same student with $1,500 of interest and no wages: unearned income 1,500 exceeds 1,350, so s 6012(a)(1)(C)(i)(I) shuts
+-- off the exceptions and a return is required on any gross income at or above the zero exemption amount ((D)(ii)).
+`a dependent student with interest` MEANS `Taxable year` WITH
+    `the calendar year`                                       IS 2026
+    `the taxpayer's age at the close of the year`             IS 20
+    `the taxpayer is blind`                                   IS FALSE
+    `the taxpayer was a nonresident alien at some time in the year` IS FALSE
+    `the taxpayer is a dependent of another taxpayer`         IS TRUE
+    `the taxpayer is a qualifying child of another taxpayer`  IS TRUE
+    `the taxpayer has a social security number valid for employment` IS TRUE
+    `the taxpayer's principal place of abode was in the United States for more than half the year` IS TRUE
+    `the taxpayer furnished over half the cost of maintaining the household` IS FALSE
+    `marriage`                                                IS `no marriage`
+    `people`                                                  IS `nobody`
+    `income`                                                  IS (`income of wages` 0 `and` 0 `interest` 1500 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 0 `withheld` 0)
+#ASSERT `the exceptions are shut off by s 6012(a)(1)(C)` `a dependent student with interest`
+#ASSERT `whether s 6012 requires a return` `a dependent student with interest` EQUALS `answered` `a return is required`
+-- 1,500 of unearned income is under the 2,700 s 1(g) screen: covered. Standard deduction 1,350; taxable income 150; tax 15.
+#ASSERT `the regular tax` `a dependent student with interest` EQUALS 15
+
+§ `Not covered`
+
+`Alex in 2025` MEANS `Taxable year` WITH
+    `the calendar year`                                       IS 2025
+    `the taxpayer's age at the close of the year`             IS 29
+    `the taxpayer is blind`                                   IS FALSE
+    `the taxpayer was a nonresident alien at some time in the year` IS FALSE
+    `the taxpayer is a dependent of another taxpayer`         IS FALSE
+    `the taxpayer is a qualifying child of another taxpayer`  IS FALSE
+    `the taxpayer has a social security number valid for employment` IS TRUE
+    `the taxpayer's principal place of abode was in the United States for more than half the year` IS TRUE
+    `the taxpayer furnished over half the cost of maintaining the household` IS TRUE
+    `marriage`                                                IS `no marriage`
+    `people`                                                  IS `nobody`
+    `income`                                                  IS (`income of wages` 58000 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 0 `withheld` 0)
+#ASSERT `the return for the year` `Alex in 2025` EQUALS `not covered` `the figures of a taxable year other than 2026 are not deposited`
+#ASSERT `whether s 6012 requires a return` `Alex in 2025` EQUALS `not covered` `the figures of a taxable year other than 2026 are not deposited`
+
+-- A single earner with $1.2 million of wages: the tentative minimum tax on the bound is below the regular tax, so covered;
+-- the s 55 screen does not fire on wages alone.
+`a high earner` MEANS `2026 for a taxpayer aged` 50 `with marriage` `no marriage` `income` (`income of wages` 1200000 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 0 `withheld` 0) `people` `nobody`
+#ASSERT `the alternative minimum tax is screened out` `a high earner`
+-- Taxable income 1,183,900; Table 3: 192,979.25 + 37% x (1,183,900 - 640,600) = 192,979.25 + 201,021 = 394,000.25.
+#ASSERT `the regular tax` `a high earner` EQUALS 394000.25
+
+§ `s 6013 -- joint returns`
+
+-- s 6013(a)(1): if the spouse was a nonresident alien at any time in the year, no joint return may be made, and the couple
+-- files separately.
+`married to a nonresident alien` MEANS `Marriage` WITH
+    `married at the close of the year or at the spouse's death` IS TRUE
+    `the spouse died during the year`                         IS FALSE
+    `legally separated under a decree of divorce or of separate maintenance` IS FALSE
+    `the spouse was a nonresident alien at some time in the year` IS TRUE
+    `the spouse was a member of the household in the last 6 months of the year` IS TRUE
+    `the spouses lived apart at all times during the year`   IS FALSE
+    `the spouses had the same household as their home at the close of the year` IS TRUE
+    `the spouses make a joint return`                         IS TRUE
+    `the spouse makes a separate return`                      IS FALSE
+    `the spouse itemizes deductions on a separate return`     IS FALSE
+    `the spouse's age at the close of the year`               IS 33
+    `the spouse is blind`                                     IS FALSE
+    `the spouse has gross income`                             IS FALSE
+    `the spouse is the dependent of another taxpayer`         IS FALSE
+    `the spouse has a social security number valid for employment` IS FALSE
+    `a spouse died in either of the two preceding years`      IS FALSE
+    `the taxpayer remarried before the close of the year`     IS FALSE
+    `a joint return could have been made for the year of that death` IS FALSE
+
+`Omar` MEANS `2026 for a taxpayer aged` 34 `with marriage` `married to a nonresident alien` `income` (`income of wages` 52000 `and` 0 `interest` 0 `pensions` 0 `social security` 0 `business` 0 `less` 0 `FICA` 0 `withheld` 0) `people` `nobody`
+#ASSERT (NOT `a joint return may be made under s 6013(a)` `Omar`)
+-- s 2(b)(2)(B) makes him "not married" for head of household, but he has no qualifying person: married filing separately.
+#ASSERT `the filing status` `Omar` EQUALS `married filing separately`
+#ASSERT EVALTRACE (`the permission to make a joint return` `Omar` 105) 0 (LIST (WAITUNTIL 200)) EQUALS FULFILLED
+-- expect: BREACH by the husband and wife, "a joint return was made although a spouse was a nonresident alien during the year"
+#TRACE `the permission to make a joint return` `Omar` 105 AT 0 WITH
+    PARTY `the husband and wife` DOES `make a single return jointly` AT 60
+
+-- s 6013(b)(2)(A): from a due date of 15 April 2027, three years run to 15 April 2030, which is 1,096 days (2028 is a leap
+-- year). A switch on day 1,000 is within the permission.
+#ASSERT `days from the due date to the end of the s 6013(b)(2)(A) period` (`the calendar date` 15 4 2027) EQUALS 1096
+#ASSERT EVALTRACE (`the permission to switch to a joint return` `the Garcia family` FALSE (`days from the due date to the end of the s 6013(b)(2)(A) period` (`the calendar date` 15 4 2027))) 0 (LIST EVENT `the husband and wife` `make a joint return after filing a separate return` 1000) EQUALS FULFILLED
