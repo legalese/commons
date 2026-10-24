@@ -1,0 +1,363 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Rules of the Georgia Department of Labor, Subject 300-2-4 (Unemployment Insurance Benefit Payments): what a person claiming
+-- unemployment insurance must do to be paid, and what happens to an overpayment.
+--
+-- SEAT: the claimant, an individual who has filed a total or part-total claim for regular unemployment insurance benefits.
+-- "Must I register for work? By when must I ask to be paid for a week? I missed a report: does my reason count? I have been
+-- told I was overpaid: must I pay it back, can I ask for a waiver, and by when?" Provisions addressed to the Department or
+-- the Commissioner are encoded as what they mean for the claimant: the Commissioner must tell me in writing; collection
+-- stops while my waiver application is pending.
+--
+-- Edition: Rules 300-2-4-.01 to -.13 as published on the Rules and Regulations of the State of Georgia site of the Secretary
+-- of State (https://rules.sos.ga.gov/gac/300-2-4), retrieved 24 October 2026, as deposited at
+-- ../../registers/source-bundle/gac-300-2-4.txt. Rules .02 (registration), .03 (reporting) and .08 (overpayments) are
+-- encoded; .01 only as context.
+--
+-- The amount of a weekly benefit, the qualifying wages and the disqualifications are set by the Employment Security Law,
+-- O.C.G.A. Title 34, Chapter 8 (for example 34-8-193 to 34-8-195), which the rules cite and which is not deposited (the
+-- O.C.G.A. public access site puts each section behind a CAPTCHA). Those are out of scope; NOTES.md says so.
+--
+-- NOT ENCODED: Rule .01 beyond its cross-references; .04, .05 (supplemental unemployment benefit plans), .06, .09
+-- (employer-filed partial claims), .10, .11, .12, .13; Rule .08(3)(b)2 (the Covid-19 special rule) beyond saying it exists
+-- (`not covered`); the appeal time limits of Chapter 300-2-5 that Rule .03(4) points to.
+--
+-- BASELINE ENCODING. Written from the claimant's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Georgia unemployment insurance -- what a claimant must do (Rules 300-2-4-.02, .03, .08)`
+
+DECLARE `UI party` IS ONE OF
+    `the claimant`
+    `the Department`
+    `the Commissioner`
+
+DECLARE `UI act` IS ONE OF
+    `register for work with WorkSource Georgia`
+    `request payment for the benefit week`
+    `file an application for waiver of the overpayment`
+    `notify me in writing whether the waiver is approved or denied`
+    `appeal the waiver decision`
+    `repay the overpayment`
+
+§§ `Rule 300-2-4-.02 -- registering for work`
+
+-- (2): "Except as provided in paragraph (4), a claimant must register for work with TCSG through WorkSource Georgia ... in
+-- the manner and within the timeframe directed by the Department. A claimant who fails to complete registration as directed
+-- is ineligible for unemployment insurance benefits for any week in which the registration requirement remains unmet."
+-- (4): "A claimant is not required to register for work under paragraph (2) if the claimant is: (a) On a short-term layoff
+-- with a definite recall date within six (6) weeks of the last day worked; (b) A partial unemployment claimant ...; (c)
+-- Attending training approved by the Commissioner; (d) A member of a union in good standing who customarily obtains work
+-- through a hiring hall ... and who provides evidence of current union membership and current registration with the union
+-- for job referrals; or (e) Unemployed because of a strike or similar labor dispute, except that a claimant who has been
+-- locked out must register if directed by the Department."
+DECLARE `Registration facts` HAS
+    `weeks from my last day worked to a definite recall date` IS A NUMBER
+    `I have a definite recall date` IS A BOOLEAN
+    `I am a partial unemployment claimant` IS A BOOLEAN
+    `I am attending training approved by the Commissioner` IS A BOOLEAN
+    `I am a union member who gets work through a hiring hall and can show current membership and registration with the union` IS A BOOLEAN
+    `I am unemployed because of a strike or similar labor dispute` IS A BOOLEAN
+    `I have been locked out and the Department has directed me to register` IS A BOOLEAN
+
+GIVEN f IS A `Registration facts`
+GIVETH A BOOLEAN
+DECIDE `an exception in Rule .02(4) applies` IF
+        (    f's `I have a definite recall date`
+         AND f's `weeks from my last day worked to a definite recall date` AT MOST 6)
+    OR  f's `I am a partial unemployment claimant`
+    OR  f's `I am attending training approved by the Commissioner`
+    OR  f's `I am a union member who gets work through a hiring hall and can show current membership and registration with the union`
+    OR  (    f's `I am unemployed because of a strike or similar labor dispute`
+         AND (NOT f's `I have been locked out and the Department has directed me to register`))
+
+GIVEN f IS A `Registration facts`
+GIVETH A BOOLEAN
+DECIDE `I must register for work` IF NOT (`an exception in Rule .02(4) applies` f)
+
+-- The duty itself, with "the timeframe directed by the Department" as an input in days.
+GIVEN `days the Department gives me to register` IS A NUMBER
+GIVETH A DEONTIC `UI party` `UI act`
+`Rule 300-2-4-.02(2) -- I must register for work within the time the Department directs` MEANS
+    PARTY `the claimant`
+    MUST  `register for work with WorkSource Georgia`
+    WITHIN `days the Department gives me to register`
+    HENCE FULFILLED
+    LEST  BREACH BY `the claimant` BECAUSE "Rule 300-2-4-.02(2): a claimant who fails to complete registration as directed is ineligible for benefits for any week in which the requirement remains unmet"
+
+§§ `Rule 300-2-4-.03(1)(a) -- asking to be paid for a week`
+
+-- 2.(i): "An individual must wait until a benefit week has ended to request a benefit payment for such week."
+-- (ii): "An individual may request a week of benefit payments no later than two weeks after the end of such benefit week,
+-- provided, however, that an individual may not request payment for any claim week ending before the date the initial
+-- benefit claim was filed." (iii): "Failure to request a week of benefit payment on time will result in an individual being
+-- considered ineligible for benefits for that week."
+-- "Two weeks after the end" is read as 14 days after the last day of the benefit week (NOTES.md finding 3).
+DECLARE `Can I request payment for this week` IS ONE OF
+    `not yet: the benefit week has not ended (Rule .03(1)(a)2.(i))`
+    `yes: the week has ended and it is no later than two weeks after its end (Rule .03(1)(a)2.(ii))`
+    `no: it is more than two weeks after the end of the week, so I am considered ineligible for that week (Rule .03(1)(a)2.(iii))`
+    `no: the week ended before the date I filed my initial claim (Rule .03(1)(a)2.(ii))`
+
+GIVEN `last day of the benefit week` IS A DATE
+      `day I filed my initial claim` IS A DATE
+      `today` IS A DATE
+GIVETH A `Can I request payment for this week`
+DECIDE `the request for a week` IS
+    IF `last day of the benefit week` LESS THAN `day I filed my initial claim`
+    THEN `no: the week ended before the date I filed my initial claim (Rule .03(1)(a)2.(ii))`
+    ELSE IF `today` AT MOST `last day of the benefit week`
+         THEN `not yet: the benefit week has not ended (Rule .03(1)(a)2.(i))`
+         ELSE IF `today` AT MOST (`last day of the benefit week` PLUS 14)
+              THEN `yes: the week has ended and it is no later than two weeks after its end (Rule .03(1)(a)2.(ii))`
+              ELSE `no: it is more than two weeks after the end of the week, so I am considered ineligible for that week (Rule .03(1)(a)2.(iii))`
+
+-- The same as a duty, counted in days from the end of the benefit week.
+GIVETH A DEONTIC `UI party` `UI act`
+`Rule 300-2-4-.03(1)(a) -- I must request payment for a week within two weeks after it ends` MEANS
+    PARTY `the claimant`
+    MUST  `request payment for the benefit week`
+    WITHIN 14
+    HENCE FULFILLED
+    LEST  BREACH BY `the claimant` BECAUSE "Rule 300-2-4-.03(1)(a)2.(iii): failure to request a week of benefit payment on time results in being considered ineligible for benefits for that week"
+
+-- 2.(iv): "Failure to request three or more consecutive weeks of benefit payments may result in an individual being
+-- required to reopen their claim by filing a new application for benefits." "May": the Department's choice.
+GIVEN `consecutive weeks I did not request` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `I may be required to reopen my claim` IF `consecutive weeks I did not request` AT LEAST 3
+
+§§ `Rule 300-2-4-.03(1)(b), (c), (3) -- reporting, and a late report with good cause`
+
+-- (1)(b): "An individual is required to conduct an active work search during each week that benefits are claimed and report
+-- on such work search activities as directed by the department. Unemployment benefits shall cease to be payable for failure
+-- to conduct an active work search or timely report on work search activities". (1)(c): the same for "any other matter
+-- which, in the discretion of the department, may affect eligibility".
+GIVEN `I conducted an active work search this week` IS A BOOLEAN
+      `I reported my work search on time as directed` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `benefits stay payable on work search` IF
+        `I conducted an active work search this week`
+    AND `I reported my work search on time as directed`
+
+-- (3): "For reasons found to constitute good cause, a claimant unable to report to the department as directed may be
+-- permitted to report within the two (2) day period following the date the claimant was directed to report. Good cause is
+-- defined as circumstances beyond the claimant's control, such as: (a) An 'act of God' or similar event ...; (b) Death of an
+-- individual's immediate family member. (i) The reporting requirements shall be waived for the day of the death and for four
+-- (4) consecutive calendar days thereafter. (ii) ... 'immediate family member', means a spouse, child, stepchild, adopted
+-- child, grandchild, parent, grandparent, brother or sister of the individual or his or her spouse and the spouse of any of
+-- the foregoing; or (c) Personal illness or disability of a temporary nature of claimant or a dependent family member which
+-- occurred in such a way to prevent the claimant from timely reporting, and the claimant made diligent efforts to give notice
+-- to the department prior to the time for the scheduled reporting date."
+-- Whether a reason is good cause is "found" by the Department; the listed reasons are given as facts and "may be permitted"
+-- is answered conditionally (NOTES.md finding 4).
+DECLARE `Why I could not report on time` IS ONE OF
+    `no reason beyond my control`
+    `an act of God or similar event prevented me`
+    `a member of my immediate family died`
+    `a temporary illness or disability of mine or a dependent family member prevented me, and I tried diligently to tell the department before the reporting date`
+    `another circumstance beyond my control`
+
+DECLARE `Is my late report accepted` IS ONE OF
+    `the reporting requirement is waived: the reporting date fell on the day of the death or the four calendar days after it (Rule .03(3)(b)(i))`
+    `the department may permit it: a listed good cause and I reported within the two days after the date I was directed to report (Rule .03(3))`
+    `the department may permit it if it finds the circumstance beyond my control is good cause, since I reported within the two days after the date I was directed to report (Rule .03(3))`
+    `no: I reported more than two days after the date I was directed to report`
+    `no: no circumstance beyond my control prevented me from reporting`
+
+GIVEN `the date I was directed to report` IS A DATE
+      `the date I reported` IS A DATE
+      `why` IS A `Why I could not report on time`
+      `the date of the death` IS A DATE
+GIVETH A `Is my late report accepted`
+DECIDE `the late report` IS
+    IF     `why` EQUALS `a member of my immediate family died`
+       AND `the date I was directed to report` AT LEAST `the date of the death`
+       AND `the date I was directed to report` AT MOST (`the date of the death` PLUS 4)
+    THEN `the reporting requirement is waived: the reporting date fell on the day of the death or the four calendar days after it (Rule .03(3)(b)(i))`
+    ELSE IF `why` EQUALS `no reason beyond my control`
+         THEN `no: no circumstance beyond my control prevented me from reporting`
+         ELSE IF `the date I reported` GREATER THAN (`the date I was directed to report` PLUS 2)
+              THEN `no: I reported more than two days after the date I was directed to report`
+              ELSE IF `why` EQUALS `another circumstance beyond my control`
+                   THEN `the department may permit it if it finds the circumstance beyond my control is good cause, since I reported within the two days after the date I was directed to report (Rule .03(3))`
+                   ELSE `the department may permit it: a listed good cause and I reported within the two days after the date I was directed to report (Rule .03(3))`
+
+§§ `Rule 300-2-4-.08 -- an overpayment (only if the department has sent you a Notice of Overpayment)`
+
+-- (1): "An individual shall be required to repay an overpayment of unemployment compensation unless a written application for
+-- waiver is filed with the department and approved by the Commissioner or the Commissioner's designee."
+-- (3)(a)1: no waiver application "shall ... be accepted for any overpayment the department determined was the result of fraud
+-- attributable to the individual"; 2: none approved "when waiver would be prohibited by federal law".
+-- (3)(b)1: none approved "if it is filed later than fifteen (15) calendar days following the release date of the Notice of
+-- Overpayment, provided, however, that the time limitation may be extended upon a showing of extenuating circumstances which
+-- prevented the filing of a timely application ... and such circumstances were beyond the individual's control."
+-- (3)(b)2: the Covid-19 special rule for claim weeks ending 8 February 2020 to 26 June 2021: `not covered` here.
+DECLARE `Can I apply for a waiver` IS ONE OF
+    `yes: I am within the fifteen calendar days after the Notice of Overpayment was released (Rule .08(3)(b)1)`
+    `only if the department accepts that extenuating circumstances beyond my control prevented a timely application (Rule .08(3)(b)1)`
+    `no: the department determined the overpayment was the result of fraud attributable to me (Rule .08(3)(a)1)`
+    `not covered: the overpayment is for claim weeks ending 8 February 2020 to 26 June 2021, where the Covid-19 special rule of Rule .08(3)(b)2 applies`
+
+GIVEN `the release date of the Notice of Overpayment` IS A DATE
+      `the date I file the application` IS A DATE
+      `the department determined fraud attributable to me` IS A BOOLEAN
+      `the overpayment is for weeks ending 8 February 2020 to 26 June 2021` IS A BOOLEAN
+GIVETH A `Can I apply for a waiver`
+DECIDE `the waiver application` IS
+    IF `the department determined fraud attributable to me`
+    THEN `no: the department determined the overpayment was the result of fraud attributable to me (Rule .08(3)(a)1)`
+    ELSE IF `the overpayment is for weeks ending 8 February 2020 to 26 June 2021`
+         THEN `not covered: the overpayment is for claim weeks ending 8 February 2020 to 26 June 2021, where the Covid-19 special rule of Rule .08(3)(b)2 applies`
+         ELSE IF `the date I file the application` AT MOST (`the release date of the Notice of Overpayment` PLUS 15)
+              THEN `yes: I am within the fifteen calendar days after the Notice of Overpayment was released (Rule .08(3)(b)1)`
+              ELSE `only if the department accepts that extenuating circumstances beyond my control prevented a timely application (Rule .08(3)(b)1)`
+
+-- (3)(d)1: a waiver "shall be approved only if: (i) The individual is determined to be without fault in the cause of the
+-- overpayment; and (ii) Repayment of the overpayment is determined to be contrary to equity and good conscience."
+-- 2: "at fault ... if the individual brought about such overpayment by the presentation of false or misleading statements or
+-- representations, whether or not such action has been determined fraudulent, when such individual could have or should have
+-- known the presentation of such information was false or misleading."
+-- 3: "contrary to equity and good conscience if: (i) ... repayment would genuinely work a financial hardship ... loss of or
+-- inability to obtain the minimal necessities of food, medicine, and shelter for a substantial period of time and such
+-- circumstances may be expected to endure for the foreseeable future; and (ii) ... no reasonable prospect of future
+-- employment or ability to repay the overpayment in the future, due to age, disability, or other good cause."
+-- (e): the burden of proof is on the individual. Satisfactory evidence is the Department's judgment: asked as facts.
+DECLARE `Waiver facts` HAS
+    `I brought about the overpayment by statements I could have or should have known were false or misleading` IS A BOOLEAN
+    `repayment would cost me the minimal necessities of food, medicine and shelter for a substantial and continuing time` IS A BOOLEAN
+    `I have no reasonable prospect of future employment or of repaying, because of age, disability or other good cause` IS A BOOLEAN
+    `federal law prohibits a waiver of this overpayment` IS A BOOLEAN
+
+GIVEN w IS A `Waiver facts`
+GIVETH A BOOLEAN
+DECIDE `I am without fault` IF NOT w's `I brought about the overpayment by statements I could have or should have known were false or misleading`
+
+GIVEN w IS A `Waiver facts`
+GIVETH A BOOLEAN
+DECIDE `repayment is contrary to equity and good conscience` IF
+        w's `repayment would cost me the minimal necessities of food, medicine and shelter for a substantial and continuing time`
+    AND w's `I have no reasonable prospect of future employment or of repaying, because of age, disability or other good cause`
+
+GIVEN w IS A `Waiver facts`
+GIVETH A BOOLEAN
+DECIDE `the waiver may be approved` IF
+        `I am without fault` w
+    AND `repayment is contrary to equity and good conscience` w
+    AND (NOT w's `federal law prohibits a waiver of this overpayment`)
+
+-- The sequence for the claimant: apply for a waiver within the 15 days, or repay. (3)(c): "Collection of an overpayment will
+-- be suspended upon the filing of an application for waiver and while the application for waiver is pending." (3)(g): "The
+-- Commissioner or the Commissioner's designee shall notify each individual in writing whether the application for waiver of
+-- overpayment has been approved or denied. The decision ... shall become final unless the individual appeals the decision
+-- within 15 days after the notice was mailed or otherwise delivered". No time is set for the Commissioner's notice.
+-- Whether the waiver is approved is the Commissioner's decision, an input. Applying, and appealing, are the claimant's
+-- choice: not doing either is no breach, it only leaves the repayment owed ((1)). The repayment has no deadline in Rule .08.
+GIVEN `the waiver will be approved` IS A BOOLEAN
+GIVETH A DEONTIC `UI party` `UI act`
+`Rule 300-2-4-.08(1), (3)(b), (g) -- apply for a waiver within 15 days or repay; if refused, appeal within 15 days or repay` MEANS
+    PARTY `the claimant`
+    DO    `file an application for waiver of the overpayment`
+    WITHIN 15
+    HENCE (
+        PARTY `the Commissioner`
+        MUST  `notify me in writing whether the waiver is approved or denied`
+        HENCE (
+            IF `the waiver will be approved`
+            THEN FULFILLED
+            ELSE PARTY `the claimant`
+                 DO    `appeal the waiver decision`
+                 WITHIN 15
+                 HENCE FULFILLED
+                 LEST  (PARTY `the claimant` MUST `repay the overpayment`)))
+    LEST  (PARTY `the claimant` MUST `repay the overpayment`)
+
+§ `Questions for the claimant`
+
+§§ `Registering for work`
+
+@export Do I have to register for work with WorkSource Georgia to keep my Georgia unemployment benefits (Rule 300-2-4-.02)?
+GIVEN `definite recall date` IS A BOOLEAN @desc Whether your employer has given you a definite date to return to work
+      `weeks to recall` IS A NUMBER @desc How many weeks after your last day worked the recall date is (0 if none)
+      `partial claimant` IS A BOOLEAN @desc Whether you are a partial unemployment claimant (your employer filed the claim for you)
+      `approved training` IS A BOOLEAN @desc Whether you are attending training approved by the Commissioner of Labor
+      `union hiring hall` IS A BOOLEAN @desc Whether you are a union member in good standing who usually gets work through a hiring hall and can show current membership and registration with the union for job referrals
+      `labor dispute` IS A BOOLEAN @desc Whether you are unemployed because of a strike or similar labor dispute
+      `locked out and directed` IS A BOOLEAN @desc Whether you were locked out and the Department has directed you to register
+GIVETH A BOOLEAN
+DECIDE `Must I register for work` IF
+    `I must register for work` (`Registration facts` WITH
+        `weeks from my last day worked to a definite recall date` IS `weeks to recall`
+        `I have a definite recall date` IS `definite recall date`
+        `I am a partial unemployment claimant` IS `partial claimant`
+        `I am attending training approved by the Commissioner` IS `approved training`
+        `I am a union member who gets work through a hiring hall and can show current membership and registration with the union` IS `union hiring hall`
+        `I am unemployed because of a strike or similar labor dispute` IS `labor dispute`
+        `I have been locked out and the Department has directed me to register` IS `locked out and directed`)
+
+§§ `Asking to be paid each week`
+
+@export Can I still request payment of Georgia unemployment benefits for this week (Rule 300-2-4-.03(1)(a))?
+GIVEN `week end` IS A DATE @desc The last day of the benefit week you want to be paid for
+      `claim date` IS A DATE @desc The date you filed your initial claim for benefits
+      `request date` IS A DATE @desc The date on which you would make the request
+GIVETH A `Can I request payment for this week`
+DECIDE `Can I still request payment for this week` IS
+    `the request for a week` `week end` `claim date` `request date`
+
+@export May I have to reopen my claim because I have not requested payment for several weeks (Rule 300-2-4-.03(1)(a)2.(iv))?
+GIVEN `weeks missed` IS A NUMBER @desc How many consecutive weeks you have not requested payment for
+GIVETH A BOOLEAN
+DECIDE `May I have to reopen my claim` IF `I may be required to reopen my claim` `weeks missed`
+
+@export Do my Georgia unemployment benefits stay payable on my work search this week (Rule 300-2-4-.03(1)(b))?
+GIVEN `searched` IS A BOOLEAN @desc Whether you conducted an active work search during the week you are claiming
+      `reported` IS A BOOLEAN @desc Whether you reported your work search activities on time as the department directed
+GIVETH A BOOLEAN
+DECIDE `Do my benefits stay payable on my work search` IF `benefits stay payable on work search` `searched` `reported`
+
+§§ `Reporting late (only if you missed a date the department set for you to report)`
+
+@export I could not report to the department on the date I was directed: will my late report be accepted (Rule 300-2-4-.03(3))?
+GIVEN `directed date` IS A DATE @desc The date the department directed you to report
+      `reported date` IS A DATE @desc The date you reported, or will report
+      `reason` IS A `Why I could not report on time` @desc Why you could not report on time: none beyond your control, an act of God or similar event, the death of an immediate family member (spouse, child, stepchild, adopted child, grandchild, parent, grandparent, brother or sister of you or your spouse, or the spouse of any of them), your or a dependent's temporary illness or disability after you tried to tell the department in advance, or another circumstance beyond your control
+      `death date` IS A DATE @desc If an immediate family member died, the date of the death (otherwise any date)
+GIVETH A `Is my late report accepted`
+DECIDE `Will my late report be accepted` IS
+    `the late report` `directed date` `reported date` `reason` `death date`
+
+§§ `An overpayment (only if the department has sent you a Notice of Overpayment)`
+
+@export Can I apply for a waiver of my Georgia unemployment overpayment (Rule 300-2-4-.08(3)(a), (b))?
+GIVEN `notice released` IS A DATE @desc The release date shown on the Notice of Overpayment
+      `filing date` IS A DATE @desc The date you file, or will file, the written application for waiver
+      `fraud` IS A BOOLEAN @desc Whether the department determined the overpayment was the result of fraud attributable to you
+      `covid weeks` IS A BOOLEAN @desc Whether the overpayment is for claim weeks ending 8 February 2020 to 26 June 2021
+GIVETH A `Can I apply for a waiver`
+DECIDE `Can I apply for a waiver of my overpayment` IS
+    `the waiver application` `notice released` `filing date` `fraud` `covid weeks`
+
+@export Can my Georgia unemployment overpayment be waived, so that I do not have to repay it (Rule 300-2-4-.08(1), (3)(d))?
+GIVEN `false statements` IS A BOOLEAN @desc Whether you brought about the overpayment by statements or representations you could have or should have known were false or misleading
+      `hardship` IS A BOOLEAN @desc Whether you can show that repaying would cost you the minimal necessities of food, medicine and shelter for a substantial time, and that this will continue for the foreseeable future
+      `no prospect` IS A BOOLEAN @desc Whether you can show you have no reasonable prospect of future employment or of repaying, because of age, disability or other good cause
+      `federal bar` IS A BOOLEAN @desc Whether federal law or regulation prohibits waiving this overpayment
+GIVETH A BOOLEAN
+DECIDE `Can my overpayment be waived` IF
+    `the waiver may be approved` (`Waiver facts` WITH
+        `I brought about the overpayment by statements I could have or should have known were false or misleading` IS `false statements`
+        `repayment would cost me the minimal necessities of food, medicine and shelter for a substantial and continuing time` IS `hardship`
+        `I have no reasonable prospect of future employment or of repaying, because of age, disability or other good cause` IS `no prospect`
+        `federal law prohibits a waiver of this overpayment` IS `federal bar`)
+
+@export Will the department keep collecting my overpayment while I apply for a waiver (Rule 300-2-4-.08(3)(c))?
+GIVEN `application filed and pending` IS A BOOLEAN @desc Whether you have filed an application for waiver that has not yet been decided
+GIVETH A BOOLEAN
+DECIDE `Is collection of my overpayment suspended` IF `application filed and pending`
+
+@export By what date must I appeal the decision refusing my overpayment waiver (Rule 300-2-4-.08(3)(g))?
+GIVEN `notice delivered` IS A DATE @desc The date the written decision on your waiver was mailed or otherwise delivered to you
+GIVETH A DATE
+DECIDE `By when must I appeal the waiver decision` IS `notice delivered` PLUS 15
