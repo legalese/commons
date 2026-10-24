@@ -2,7 +2,7 @@
 
 Minnesota (US state) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the Minnesota Office of the Revisor of Statutes - Minnesota Statutes (official publisher); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text has been deposited and nothing is encoded yet.
+The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the Minnesota Office of the Revisor of Statutes - Minnesota Statutes (official publisher); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. Statute text was deposited later and two baseline encodings were added on 2026-10-24 (see the last section).
 
 **Licence category: unclear.** **Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
 
@@ -67,3 +67,18 @@ Two new subjects bring in the texts that set amounts the statutes leave to the a
 - Minnesota Supplemental Aid: the standards are in statute (256D.44), but the current-year figures DHS publishes are not sourced.
 - The General Assistance standard after CPI adjustment (October 2025, October 2026) is not sourced. Nothing was found in State Register vol. 51, issues 12-16.
 - The 2026 session laws are still not applied. The MFIP notice cites 142G.17, subd. 5c, which the 2025 edition does not contain.
+
+## Tax and benefits encodings (2026-10-24)
+
+Two baseline encodings, written from the deposited text with the stable l4 (1.6.98); each has a `NOTES.md` with its findings and what to do before relying on it.
+
+| Encoding | Seat | What it answers |
+|---|---|---|
+| [`minnesota-statutes-chapter-290-income-and-franchise-taxes/encodings/baseline-2026-10`](minnesota-statutes-chapter-290-income-and-franchise-taxes/encodings/baseline-2026-10) | the full-year resident taxpayer | residence; net income with the Social Security subtraction, standard deduction and dependent exemption; the rate schedules; the child tax credit and working family credit with their joint phaseout (refundable; the refund duty as a regulative rule). 6 questions, 32 assertions. |
+| [`minnesota-statutes-chapter-142g-minnesota-family-investment-program/encodings/baseline-2026-10`](minnesota-statutes-chapter-142g-minnesota-family-investment-program/encodings/baseline-2026-10) | the caregiver applying for, or receiving, MFIP | eligibility (unit, property limit, 60 months, initial income test) and the monthly assistance payment from 1 October 2026 with the earned income disregard, the HUD subsidy rule and the housing grant; the duty to report a change by the tenth of the next month (regulative). 4 questions, 22 assertions. |
+
+**Deposited 2026-10-24:** [`minnesota-statutes-chapter-256p-economic-assistance-program-eligibility-and-verification`](minnesota-statutes-chapter-256p-economic-assistance-program-eligibility-and-verification) (new subject): Minn. Stat. ch. 256P, whole chapter, 2025 edition, from the Revisor (robots.txt read again; clean terms). It fills the gap named above: MFIP's earned income disregard (256P.03), property limit (256P.02) and reporting duties (256P.07) are there.
+
+**Inputs, not deposited:** the commissioner's inflation adjustments under 270C.22 (one factor per statutory year: 2019, 2023, 2025), the adjusted MFIP housing assistance grant, and the federal figures (link: `subjects/us/internal-revenue-code-of-1986/`).
+
+**Main findings:** the deposited 2025 edition lacks the 2026 session's amendments, including to the rate schedules (290.06, subd. 2c) and the MFIP 60-month limit (142G.40, subd. 1); 290.0132, subd. 26(h) points to a threshold "specified in paragraph (d)" that (d) does not specify; 142G.16, subd. 2(a) literally subtracts the disregard, not the earnings, from the family wage level; dependent care is deducted in the MFIP initial income test but not in the payment.
