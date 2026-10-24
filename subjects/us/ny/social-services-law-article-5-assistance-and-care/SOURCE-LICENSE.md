@@ -21,3 +21,15 @@ English is the only language of enactment and the only authoritative text for Ne
 ## Status of this deposit
 
 No statute text has been deposited yet.
+
+## Deposit of 2026-10-24
+
+- **Terms read again**: 2026-10-24, https://www.nysenate.gov/policies-and-waivers. Text on Senate websites is "licensed under a Creative Commons Attribution-Noncommercial-No Derivative Works 3.0 United States License", with a CC+ waiver: "The CC+ waives attribution requirements and allows for the creation of derivative works and commercial usage provided that such derivative works and commercial usage do not relate to political fundraising." An L4 encoding in Commons is a derivative work that does not relate to political fundraising, so it is within the waiver; the statute text itself is in any case a government edict (*Georgia v. Public.Resource.Org*, 590 U.S. 255 (2020)).
+- **Robots**: https://www.nysenate.gov/robots.txt read 2026-10-24: Drupal defaults for `User-agent: *` (Disallow /core/, /profiles/, /admin/, /search/, /user/...); `/legislation/laws/` is allowed; no Crawl-delay. Requests spaced 3.5 s apart, with the User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`.
+- **Access note**: the section pages answered `curl` with HTTP 200. A Python `urllib` client sending the same User-Agent was refused with HTTP 403 by the site's Cloudflare front end (a client-fingerprint refusal, not a challenge page); no request was retried with any other User-Agent, and the Open Legislation API host (legislation.nysenate.gov) timed out and was not used.
+- **What is deposited**: the statutory text of selected sections, one Senate section page each, as listed in the `.meta.json` (URL, the Senate's "most recent revision" date, retrieval time, sha256 of each page and of the text). No annotations; the Senate's own "* NB" effective-date notes are kept because they are part of its rendering of the section.
+- **Verdict**: open (CC+ waiver; government edicts).
+
+## Status of this deposit
+
+Text deposited on 2026-10-24; see `registers/source-bundle/*-selected.txt` and its `.meta.json`. The earlier "No statute text has been deposited yet" is superseded.
