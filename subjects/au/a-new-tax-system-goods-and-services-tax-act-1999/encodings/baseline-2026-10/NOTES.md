@@ -36,7 +36,8 @@ specify". It is an input, and the cases use $50.
 
 - `gst-cases-registration.l4`: 68 assertions written, 68 satisfied, 0 errors, 0 warnings.
 - `gst-registration.l4`: checks with no errors or warnings.
-- Both were run with the stable `l4` from VS Code extension 1.6.98.
+- `gst-cases-formulas.l4` (24 October 2026): 19 assertions written, 19 satisfied, 0 errors, 0 warnings; `gst-formulas.l4` checks with no errors or warnings. 87 assertions in all.
+- All were run with the stable `l4` from VS Code extension 1.6.98.
 
 ## Seat
 
@@ -197,6 +198,16 @@ was put down to chained MINUS being read right to left. A later check on the sta
 `l4` (1.6.98) found chained MINUS left-associative (`10 MINUS 3 MINUS 1` is 6, also
 across lines, with function calls and with record fields), so the cause lay elsewhere.
 All arithmetic in the module is fully parenthesised for readability.
+
+## The formulas module (24 October 2026)
+
+Every other formula image of the compilation is now transcribed in `../../registers/source-bundle/C2004A00446.formulas.md` ("Further entries, recovered 2026-10-24"). The registration module takes nothing as an input that those formulas give: its partly GST-free supply is asked by the dollar amount of the GST-free part, and that gives the same GST as s 9-80. `gst-formulas.l4`, beside `gst-registration.l4`, adds the individual's questions the formulas now answer. It calls `What is the value of a taxable supply` (s 9-75) and changes nothing.
+
+- **s 9-80(2).** The value of a partly taxable supply from its price and taxable proportion: (price × 10) / (10 + taxable proportion). Checked against the existing case: a $1,100 sale with $440 GST-free has a taxable proportion of 600/1,040, a value of $1,040 and GST of $60, the same as `How much GST must I pay on my supply`. The two routes agree.
+- **Division 129.** The number of adjustment periods (s 129-20(2), (3)) and the increasing or decreasing adjustment when a thing is used more or less for the enterprise than claimed (s 129-40, with the s 129-70 and s 129-75 formulas: full input tax credit × the difference in application).
+- **s 138-5.** The increasing adjustment on cancelling registration: (1/11) × actual application × applicable value. The applicable value is the GST-inclusive market value, or the consideration if less.
+
+Still left for later (in the sidecar): the importation, gambling, going concern, deceased estate and cash-basis adjustments (ss 15-25, 126-5, 126-10, 135-5, 139-5, 159-5, 159-10), the Division 70, 72, 78, 79, 80, 84, 131, 132 and 136 credit and adjustment formulas, and the Division 162 instalment shortfalls (ss 162-175, 162-180, 162-195).
 
 ## What would need doing before this is worth anything
 
