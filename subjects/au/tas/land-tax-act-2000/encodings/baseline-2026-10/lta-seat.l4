@@ -1,0 +1,576 @@
+IMPORT prelude
+IMPORT `lt-common`
+IMPORT `lta-core`
+IMPORT `rcr-core`
+
+-- Owning a home in Tasmania: the yearly State land tax (Land Tax Act 2000, Land Tax Rating Act 2000, Land Tax
+-- Regulations 2021) and the pensioner remission of council rates and charges (Local Government (Rates and Charges
+-- Remissions) Act 1991 and Regulations 2024) -- the owner's questions.
+--
+-- SEAT: the individual who owns land in Tasmania and pays council rates on it -- a home owner, a joint owner, the owner
+-- of a shack or of investment land, and a pensioner or a pensioner's surviving spouse. "Do I pay land tax this year,
+-- and how much? Is my land exempt because I hold a pensioner card? Can I get a rebate? What remission do I get on my
+-- rates, and by when must I apply? What must I tell the council or the Commissioner, and when?" Every question is
+-- phrased as that person would ask it, on facts that person could state. The rules are in lta-core.l4 and rcr-core.l4;
+-- this module builds their records from plain answers and restates no rule. The Commissioner of State Revenue and the
+-- council are parties to the rules, never seats.
+--
+-- Inputs that the person cannot state from their own knowledge: the land value (from the Valuer-General's valuation or
+-- the land tax notice) and the Hobart CPI figures (published by the Australian Statistician), which the deposit does
+-- not contain.
+--
+-- Copyright State of Tasmania, CC BY 4.0. Based on material from the Tasmanian Legislation website at 20 October 2026.
+-- For the latest information on Tasmanian Government legislation please go to www.legislation.tas.gov.au.
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Land tax and the pensioner rates remission -- the owner's questions`
+
+-- Answers that only the seat needs.
+DECLARE `Rebate answer` IS ONE OF
+    `yes: a rebate, in dollars, of` HAS `dollars` IS A NUMBER
+    `no rebate under this section`
+    `not covered here` HAS `because` IS A `Why not covered`
+
+DECLARE `Time limit answer` IS ONE OF
+    `the Land Tax Act sets no time limit for applying`
+
+DECLARE `Notice answer` IS ONE OF
+    `yes: notify the Commissioner in writing within this many days, or face a fine of up to this many penalty units` HAS `days` IS A NUMBER, `penalty units` IS A NUMBER
+    `no notice is required of me`
+
+DECLARE `Extension answer` IS ONE OF
+    `yes: for up to this many years, if the Commissioner is satisfied of these facts; meanwhile no other land of yours can be principal residence land` HAS `years` IS A NUMBER
+    `no extension under s 37B`
+
+DECLARE `Remission answer` IS ONE OF
+    `the remission, in dollars, is` HAS `dollars` IS A NUMBER
+    `no remission for this year`
+    `not covered by the deposited law` HAS `because` IS A `Why not covered`
+
+DECLARE `Surviving spouse answer` IS ONE OF
+    `yes: you may apply, and the remission can cover only the year you apply in and, if your late spouse was eligible and living there on its 1 July, the year before`
+    `no: the conditions of s 4(4) are not met`
+
+DECLARE `Review periods` HAS
+    `days after the repayment notice to lodge a written objection` IS A NUMBER
+    `days after the decision on the objection to apply to the Magistrates Court` IS A NUMBER
+
+§§ `Land tax -- who pays, and when`
+
+@export Am I the owner who is liable for any Tasmanian land tax on this land for this financial year (Land Tax Act 2000 ss 3A, 10(1), 11(3))?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it begins on 1 July (2026 for 1 July 2026 to 30 June 2027)
+      `I am registered as an owner of the land` IS A BOOLEAN @desc Whether the title (the folio of the Register) shows you as an owner of the land, alone or with others
+      `another person holds a life estate in the land` IS A BOOLEAN @desc Whether someone else is registered as entitled to the land for their lifetime, so that your ownership takes effect only after them
+      `I hold a life estate in the land` IS A BOOLEAN @desc Whether you are registered as entitled to the land for your lifetime
+      `the day my purchase was completed` IS A DATE @desc The day the contract for your purchase of the land was completed (settled), ISO 8601, e.g. 2026-06-30
+      `I have sold the land` IS A BOOLEAN @desc Whether you have sold the land and the sale has been completed (settled)
+      `the day my sale was completed` IS A DATE @desc The day your sale of the land was completed (settled), ISO 8601; give any date if you have not sold
+GIVETH A BOOLEAN
+DECIDE `Am I the owner liable for land tax on this land this year` IF
+    `was the owner at the commencement of the financial year` `my ownership` `the financial year`
+    WHERE
+        `my title` MEANS
+            IF `I hold a life estate in the land`
+            THEN `registered as entitled to a life estate`
+            ELSE IF `I am registered as an owner of the land` AND `another person holds a life estate in the land`
+                 THEN `owner of the fee simple in remainder after another person's life estate`
+                 ELSE IF `I am registered as an owner of the land`
+                      THEN `registered owner of the fee simple, with no life estate in another person`
+                      ELSE `no estate in the land`
+        `my ownership` MEANS `Ownership` WITH
+            `the title`                       IS `my title`
+            `the day the purchase was completed` IS `the day my purchase was completed`
+            `the land has been sold`          IS `I have sold the land`
+            `the day the sale was completed`  IS `the day my sale was completed`
+
+@export Can I be made to pay all of the land tax on land I own with other people, whatever my share (s 14(2)(b))?
+GIVEN `I own the land with other people` IS A BOOLEAN @desc Whether you own the land together with one or more other people (as joint tenants or tenants in common)
+GIVETH A BOOLEAN
+DECIDE `Can I be made to pay all the land tax on land I own with others` IF
+    `each joint owner is liable for the full tax under s 14(2)(b)` `I own the land with other people`
+
+@export Is land I own with other people assessed for land tax apart from land I own alone (s 14(2)(a): joint owners are a single taxpayer)?
+GIVETH A BOOLEAN
+DECIDE `Is my jointly owned land assessed apart from my own land` IF
+    `READING: land owned jointly is assessed apart from land a joint owner owns alone`
+
+@export On what day is my land tax due (s 10(2): the date the Commissioner sets, or the day a sale is completed if earlier)?
+GIVEN `the due date in my assessment notice` IS A DATE @desc The due date the Commissioner of State Revenue set in your land tax assessment notice, ISO 8601
+      `I am selling the land during the year` IS A BOOLEAN @desc Whether you are selling or transferring the land during the financial year
+      `the day the sale will be completed` IS A DATE @desc The day the sale or transfer is (or will be) completed (settled), ISO 8601; give any date if you are not selling
+GIVETH A DATE
+DECIDE `On what day is my land tax due` IS
+    `the day land tax is due under s 10(2)` `the due date in my assessment notice` `I am selling the land during the year` `the day the sale will be completed`
+
+@export Can I pay my land tax for the year in instalments (s 13(1): if it is more than $500, the Commissioner may accept instalments)?
+GIVEN `my land tax for the year` IS A NUMBER @desc The land tax assessed for the financial year, in Australian dollars
+GIVETH A BOOLEAN
+DECIDE `Can I pay my land tax in instalments` IF
+    `the Commissioner may accept instalments under s 13(1)` `my land tax for the year`
+
+§§ `Land tax -- is my land principal residence land or primary production land?`
+
+@export What share of the land do I own, as land tax counts it (s 3B: joint tenants own equal shares; s 11A: a Help to Buy share is left out)?
+GIVEN `the share of the land I hold, in percent` IS A NUMBER @desc The share of the land you hold, alone or jointly with others, in percent (100 if you, with any joint tenants, hold all of it)
+      `how many joint tenants hold that share, counting me` IS A NUMBER @desc 1 if you hold your share alone or as a tenant in common; 2 for a couple who are joint tenants; and so on
+      `the Help to Buy share, in percent` IS A NUMBER @desc The share held by the Commonwealth or Housing Australia under the Commonwealth Help to Buy scheme, in percent; 0 if none
+GIVETH A NUMBER
+DECIDE `What share of the land do I own for land tax` IS
+    `the interest in percent counted for land tax` (`Holding` WITH
+        `share of the land held, in percent`                                    IS `the share of the land I hold, in percent`
+        `number of joint tenants of that share`                                 IS `how many joint tenants hold that share, counting me`
+        `Help to Buy share of the Commonwealth or Housing Australia, in percent` IS `the Help to Buy share, in percent`)
+
+@export Do I own at least half of the land, as land tax counts it (the 50% test in ss 6(1), 19 and 37)?
+GIVEN `the share of the land I hold, in percent` IS A NUMBER @desc The share of the land you hold, alone or jointly with others, in percent (100 if you, with any joint tenants, hold all of it)
+      `how many joint tenants hold that share, counting me` IS A NUMBER @desc 1 if you hold your share alone or as a tenant in common; 2 for a couple who are joint tenants; and so on
+      `the Help to Buy share, in percent` IS A NUMBER @desc The share held by the Commonwealth or Housing Australia under the Commonwealth Help to Buy scheme, in percent; 0 if none
+GIVETH A BOOLEAN
+DECIDE `Do I own at least half of the land for land tax` IF
+    `is an owner of at least a 50% interest` (`Holding` WITH
+        `share of the land held, in percent`                                    IS `the share of the land I hold, in percent`
+        `number of joint tenants of that share`                                 IS `how many joint tenants hold that share, counting me`
+        `Help to Buy share of the Commonwealth or Housing Australia, in percent` IS `the Help to Buy share, in percent`)
+
+@export Is my home principal residence land for this financial year, so that it is taxed at nil (s 6(1), (8); s 37B(2))?
+GIVEN `an owner of at least half of the land lives in it as their main residence on 1 July` IS A BOOLEAN @desc Whether, on 1 July, a home on the land is the main place of residence of someone who owns at least half of the land (joint tenants count as equal shares; leave out any Help to Buy share)
+      `that owner lives in a retirement village instead` IS A BOOLEAN @desc Whether that owner occupies premises in a retirement village as their main place of residence (then this land is not that owner's principal residence)
+      `a related person of such an owner lives in it as their main residence on 1 July` IS A BOOLEAN @desc Whether, on 1 July, a home on the land is the main residence of the spouse or former spouse of an owner of at least half, a beneficiary of a deceased owner's estate, a beneficiary of a court-appointed trust, or a person in a registered caring relationship with the owner
+      `a disaster extension is in force for another home of mine` IS A BOOLEAN @desc Whether the Commissioner has extended, under s 37B, the principal residence classification of another of your homes after a flood, fire or similar disaster
+GIVETH A BOOLEAN
+DECIDE `Is my home principal residence land this year` IF
+    `is principal residence land under s 6(1)` (`Residence at 1 July` WITH
+        `the principal residence of an owner of at least a 50% interest is on the land`               IS `an owner of at least half of the land lives in it as their main residence on 1 July`
+        `that owner occupies premises in a retirement village as their principal place of residence` IS `that owner lives in a retirement village instead`
+        `the principal residence of a related person of such an owner is on the land`               IS `a related person of such an owner lives in it as their main residence on 1 July`
+        `a s 37B extension is in force for other land of the owner`                                 IS `a disaster extension is in force for another home of mine`)
+
+@export Is the block next to my home also principal residence land, taxed at nil (s 6(2): yes, if the Commissioner is satisfied of these facts)?
+GIVEN `the block adjoins my home's land` IS A BOOLEAN @desc Whether the block adjoins the land your home is on
+      `the block is on a separate title that I hold` IS A BOOLEAN @desc Whether the block is on its own title, held by the owner of the home's land
+      `no one lives in a dwelling on the block` IS A BOOLEAN @desc Whether there is no dwelling on the block used as a place of residence
+      `I use the block only together with my home` IS A BOOLEAN @desc Whether the block is used by you solely in conjunction with your home (a garden, a yard, a garage)
+      `I get no income from the block` IS A BOOLEAN @desc Whether you receive no income (rent, agistment, parking fees) from the use of the block
+      `the owner of at least half of my home's land owns at least half of the block` IS A BOOLEAN @desc Whether the person who owns at least half of the home's land also owns at least half of the block
+GIVETH A BOOLEAN
+DECIDE `Is the block next to my home principal residence land` IF
+    `is principal residence land under s 6(2)` (`Adjoining land` WITH
+        `adjoins the principal residence land`                                                   IS `the block adjoins my home's land`
+        `is on a separate title held by the owner of the principal residence land`                IS `the block is on a separate title that I hold`
+        `has no dwelling used as a place of residence`                                           IS `no one lives in a dwelling on the block`
+        `is used by that owner solely in conjunction with the principal residence land`            IS `I use the block only together with my home`
+        `the owner receives no income from its use`                                              IS `I get no income from the block`
+        `the owner of at least 50% of the principal residence land owns at least 50% of this land` IS `the owner of at least half of my home's land owns at least half of the block`)
+
+-- Situation: the sole owner of a home has died (asked by the personal representative or a beneficiary).
+@export The sole owner of a home has died: is it still principal residence land this financial year, taxed at nil and not apportioned (s 6(9)-(11))?
+GIVEN `it was the owner's principal residence land on the previous 1 July` IS A BOOLEAN @desc Whether, on 1 July of the previous financial year, the land was principal residence land because it was the main residence of its owner
+      `the owner was the sole owner and died after that 1 July and before this one` IS A BOOLEAN @desc Whether the person who was the sole owner on that 1 July died on or after it and before 1 July of this financial year
+      `the home on the land was the owner's main residence on the previous 1 July` IS A BOOLEAN @desc Whether the deceased owner's main residence was on the land on that previous 1 July
+      `the land has not been sold or passed on, except to the executor or administrator` IS A BOOLEAN @desc Whether the land has not, since that 1 July, been sold or transferred (in whole or part) to anyone other than the personal representative of the deceased
+GIVETH A BOOLEAN
+DECIDE `Is the late owner's home still principal residence land this year` IF
+    `continues as principal residence land under s 6(10)-(11)` (`After a sole owner's death` WITH
+        `the land was principal residence land under s 6(1) on the previous 1 July`                 IS `it was the owner's principal residence land on the previous 1 July`
+        `the sole owner on that day died on or after it and before this 1 July`                    IS `the owner was the sole owner and died after that 1 July and before this one`
+        `that owner's principal residence was on the land on the previous 1 July`                  IS `the home on the land was the owner's main residence on the previous 1 July`
+        `the land has not since been sold or transferred, other than to the personal representative` IS `the land has not been sold or passed on, except to the executor or administrator`)
+
+-- Situation: a flood, fire or similar disaster.
+@export After a flood, fire or similar disaster made my home or farm unfit for that use, can its land tax classification be kept, and for how many years at most (s 37B)?
+GIVEN `my land is classified as principal residence land or primary production land` IS A BOOLEAN @desc Whether the land was classified as principal residence land (your home) or primary production land (your farm)
+      `the disaster made it unsuitable to live on or to farm` IS A BOOLEAN @desc Whether a flood, fire or other similar disaster made the land unsuitable to be occupied as your home, or to be used for primary production
+      `the disaster was outside my control` IS A BOOLEAN @desc Whether the flood, fire or other disaster was outside your control
+GIVETH AN `Extension answer`
+DECIDE `Can my land's classification be kept after a disaster` IS
+    IF `the classification may be extended under s 37B` (`Disaster` WITH
+           `the land is classified as principal residence land or primary production land` IS `my land is classified as principal residence land or primary production land`
+           `a flood, fire or other similar disaster made it unsuitable for that use`        IS `the disaster made it unsuitable to live on or to farm`
+           `the disaster was outside the owner's control`                                  IS `the disaster was outside my control`)
+    THEN `yes: for up to this many years, if the Commissioner is satisfied of these facts; meanwhile no other land of yours can be principal residence land` `the longest s 37B extension, in years`
+    ELSE `no extension under s 37B`
+
+@export Is my land primary production land, so that it is taxed at nil (s 7)?
+GIVEN `I farm, keep bees, fish or grow plants for sale on the land` IS A BOOLEAN @desc Whether the land is used for cultivating land to sell the produce, keeping animals or poultry for sale or for their produce, keeping bees to sell honey, commercial fishing or aquaculture, or growing plants, seedlings, mushrooms or orchids for sale
+      `I do it in a business-like way, expecting a profit` IS A BOOLEAN @desc Whether that activity is carried on in a business-like manner with a reasonable expectation of profit
+      `the land is used substantially for it` IS A BOOLEAN @desc Whether the land is used substantially for that business
+      `the land is a timber reserve or under a forest practices plan` IS A BOOLEAN @desc Whether the land is a declared private timber reserve, permanent timber production zone land, or land with a certified forest practices plan in effect
+GIVETH A BOOLEAN
+DECIDE `Is my land primary production land` IF
+    `is primary production land under s 7` (`Primary production` WITH
+        `an activity listed in s 7(2) is carried on on the land`                                         IS `I farm, keep bees, fish or grow plants for sale on the land`
+        `it is carried on in a business-like manner with a reasonable expectation of profit`               IS `I do it in a business-like way, expecting a profit`
+        `the land is used substantially for it`                                                          IS `the land is used substantially for it`
+        `the land is a private timber reserve, permanent timber production zone land or under a certified forest practices plan` IS `the land is a timber reserve or under a forest practices plan`)
+
+@export Is the business I run from home a qualifying home business, so that my home is not split into principal residence land and taxable general land (ss 3, 26(1))?
+GIVEN `my home is a permanent dwelling on the land` IS A BOOLEAN @desc Whether the land has a permanent building of predominantly residential character affixed to it (not under a council closure order)
+      `the business runs from the house, or a building usual on residential land` IS A BOOLEAN @desc Whether the business is run from the house, or from a building ordinarily found on residential land that is not solely commercial (a shed, a garage, a studio)
+      `I, or my spouse, sibling, child or parent, run it` IS A BOOLEAN @desc Whether the business is run by an owner of the land, or the owner's spouse, sibling, child or parent
+      `the land is the only permanent business premises of whoever runs it` IS A BOOLEAN @desc Whether the land is the sole permanent business premises of the person who runs it
+      `the percentage of the house's floor area ordinarily used for the business` IS A NUMBER @desc How much of the floor area of the house is ordinarily used for the business, in percent
+GIVETH A BOOLEAN
+DECIDE `Is my business at home a qualifying home business` IF
+    `is a qualifying home business` (`Home business` WITH
+        `is operated from land on which a prescribed dwelling is located`                                              IS `my home is a permanent dwelling on the land`
+        `is operated from that dwelling or a building ordinarily found on residential land that is not solely commercial` IS `the business runs from the house, or a building usual on residential land`
+        `is operated by the owner, or the owner's spouse, sibling, child or parent`                                    IS `I, or my spouse, sibling, child or parent, run it`
+        `the land is that person's sole permanent business premises`                                                   IS `the land is the only permanent business premises of whoever runs it`
+        `percentage of the dwelling's floor area ordinarily used for it`                                               IS `the percentage of the house's floor area ordinarily used for the business`)
+
+§§ `Land tax -- is my land exempt because I hold a pensioner card?`
+
+-- s 19(a)-(b) reach principal residence land and primary production land alike; the one answer stands for either
+-- (the class built here is principal residence land when the answer is yes, general land when no).
+@export Is my land exempt from land tax because I hold a Pensioner Concession Card, a DVA gold card as a war widow or widower, or the special rate (TPI) pension (s 19(a)-(b), Land Tax Regulations 2021 reg 5)?
+GIVEN `the land is my home or my farm for land tax` IS A BOOLEAN @desc Whether the land is principal residence land (see the principal residence question) or primary production land (see the primary production question)
+      `my share of the land for land tax, in percent` IS A NUMBER @desc Your share of the land as land tax counts it (see the share question): joint tenants own equal shares, and any Help to Buy share is left out
+      `I hold a current Pensioner Concession Card` IS A BOOLEAN @desc Whether, on 1 July, you hold a current Pensioner Concession Card issued under Commonwealth law (Services Australia or the Department of Veterans' Affairs)
+      `I hold a DVA gold card with a war widow or widower endorsement` IS A BOOLEAN @desc Whether, on 1 July, you hold a Repatriation Health Card - For All Conditions (the DVA gold card) with a war widow or war widower endorsement
+      `I receive the special rate pension` IS A BOOLEAN @desc Whether, on 1 July, you receive a special rate pension under the Veterans' Entitlements Act 1986 (the TPI pension)
+      `I am totally and permanently incapacitated` IS A BOOLEAN @desc Whether you are totally and permanently incapacitated
+GIVETH A BOOLEAN
+DECIDE `Is my land exempt because I hold a pensioner card` IF
+    `is exempt land under s 19(a) or (b)` `the class asked about` (`Pensioner owner` WITH
+        `owns 50% or more of the land`                                                         IS `my share of the land for land tax, in percent` AT LEAST 50
+        `holds a current Pensioner Concession Card`                                            IS `I hold a current Pensioner Concession Card`
+        `holds a Repatriation Health Card -- For All Conditions with a war widow or war widower endorsement` IS `I hold a DVA gold card with a war widow or widower endorsement`
+        `receives a special rate pension under the Veterans' Entitlements Act 1986`             IS `I receive the special rate pension`
+        `is totally and permanently incapacitated`                                             IS `I am totally and permanently incapacitated`)
+    WHERE
+        `the class asked about` MEANS `the class of land that is` `the land is my home or my farm for land tax` FALSE
+
+§§ `Land tax -- how much do I pay?`
+
+-- One holding: the land one taxpayer owns (land owned with others is a separate holding, s 14(2)(a)). The home is one
+-- parcel; the shacks and the rentals are general land and are aggregated with any general part of the home (s 24).
+-- A s 37B extension for other land is not asked here (taken as FALSE); see the principal residence question.
+@export How much Tasmanian land tax do I pay for this financial year on my home, my shack or holiday home, and my rental or other land (Land Tax Act ss 6, 19, 24, 26; Land Tax Rating Act Schedule 1 and s 7)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it begins on 1 July (2026 for 1 July 2026 to 30 June 2027)
+      `my home's land value` IS A NUMBER @desc The assessed land value of the land your home is on, in Australian dollars, from the Valuer-General's valuation (as shown on your land tax notice); 0 if you have no home in this holding
+      `an owner of at least half lives in the home as their main residence on 1 July` IS A BOOLEAN @desc Whether, on 1 July, the home is the main residence of someone who owns at least half of it (joint tenants count as equal shares; leave out any Help to Buy share)
+      `that owner lives in a retirement village instead` IS A BOOLEAN @desc Whether that owner occupies premises in a retirement village as their main place of residence
+      `a related person of such an owner lives in the home as their main residence on 1 July` IS A BOOLEAN @desc Whether, on 1 July, the home is the main residence of the spouse or former spouse of an owner of at least half, a beneficiary of a deceased owner's estate, or a person in a registered caring relationship with the owner
+      `the area of my home's land` IS A NUMBER @desc The area of the land your home is on, in square metres
+      `the floor area of upper and lower floors, not the ground floor` IS A NUMBER @desc The total area, in square metres, of every floor above or below ground level of all buildings on that land, not counting the ground floor
+      `the area used for something other than my home` IS A NUMBER @desc How much of that total area (land plus the extra floors) is used for something other than your home, such as a shop, an office let to others or a separately let flat, in square metres; 0 if none
+      `that other use is a qualifying home business` IS A BOOLEAN @desc Whether that other use is a qualifying home business (see the home business question); if so, the home is not split
+      `an owner of at least half holds a current Pensioner Concession Card` IS A BOOLEAN @desc Whether, on 1 July, a person who owns at least half of the home holds a current Pensioner Concession Card
+      `an owner of at least half holds a DVA gold card as a war widow or widower` IS A BOOLEAN @desc Whether, on 1 July, a person who owns at least half of the home holds a Repatriation Health Card - For All Conditions with a war widow or war widower endorsement
+      `an owner of at least half receives the special rate pension` IS A BOOLEAN @desc Whether, on 1 July, a person who owns at least half of the home receives a special rate pension under the Veterans' Entitlements Act 1986
+      `that pensioner is totally and permanently incapacitated` IS A BOOLEAN @desc Whether that special rate pensioner is totally and permanently incapacitated
+      `my shacks' and holiday homes' land value` IS A NUMBER @desc The total assessed land value of your shacks, holiday homes and other homes that are not your main residence, in Australian dollars; 0 if none
+      `my rentals' and other land's land value` IS A NUMBER @desc The total assessed land value of your rental properties, vacant blocks and other land that is neither your home nor primary production land, in Australian dollars; 0 if none
+GIVETH AN `Amount answer`
+DECIDE `How much land tax do I pay this year` IS
+    `the land tax payable for the financial year on` `the financial year` (LIST `the home parcel`, `the shacks parcel`, `the rentals parcel`)
+    WHERE
+        `the home is principal residence land` MEANS
+            `is principal residence land under s 6(1)` (`Residence at 1 July` WITH
+                `the principal residence of an owner of at least a 50% interest is on the land`               IS `an owner of at least half lives in the home as their main residence on 1 July`
+                `that owner occupies premises in a retirement village as their principal place of residence` IS `that owner lives in a retirement village instead`
+                `the principal residence of a related person of such an owner is on the land`               IS `a related person of such an owner lives in the home as their main residence on 1 July`
+                `a s 37B extension is in force for other land of the owner`                                 IS FALSE)
+        `the home's class` MEANS `the class of land that is` `the home is principal residence land` FALSE
+        `the home's areas` MEANS `Land area` WITH
+            `area of the land`                                                                         IS `the area of my home's land`
+            `area of all additional floors above or below ground level, not the ground floor, of all structures` IS `the floor area of upper and lower floors, not the ground floor`
+            `part of that land area used for purposes other than the principal residence`               IS `the area used for something other than my home`
+        `the pensioner` MEANS `Pensioner owner` WITH
+            `owns 50% or more of the land`                                                         IS TRUE
+            `holds a current Pensioner Concession Card`                                            IS `an owner of at least half holds a current Pensioner Concession Card`
+            `holds a Repatriation Health Card -- For All Conditions with a war widow or war widower endorsement` IS `an owner of at least half holds a DVA gold card as a war widow or widower`
+            `receives a special rate pension under the Veterans' Entitlements Act 1986`             IS `an owner of at least half receives the special rate pension`
+            `is totally and permanently incapacitated`                                             IS `that pensioner is totally and permanently incapacitated`
+        `the home parcel` MEANS `Parcel` WITH
+            `assessed land value`                              IS `my home's land value`
+            `class`                                            IS `the home's class`
+            `proportion of the value apportioned to its class` IS `the principal residence proportion under s 26` `the home's areas` `that other use is a qualifying home business` FALSE
+            `is exempt land`                                   IS `is exempt land under s 19(a) or (b)` `the home's class` `the pensioner`
+        `the shacks parcel` MEANS `Parcel` WITH
+            `assessed land value`                              IS `my shacks' and holiday homes' land value`
+            `class`                                            IS `general land`
+            `proportion of the value apportioned to its class` IS 1
+            `is exempt land`                                   IS FALSE
+        `the rentals parcel` MEANS `Parcel` WITH
+            `assessed land value`                              IS `my rentals' and other land's land value`
+            `class`                                            IS `general land`
+            `proportion of the value apportioned to its class` IS 1
+            `is exempt land`                                   IS FALSE
+
+@export How much land tax is charged on this total value of general land for the year (Land Tax Rating Act Schedule 1, rounded under s 7)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it begins on 1 July (2026 for 1 July 2026 to 30 June 2027)
+      `the total land value of my general land` IS A NUMBER @desc The total assessed land value of all your land that is neither your home nor primary production land (shacks, rentals, vacant land, and any part of your home apportioned to other uses), in Australian dollars
+GIVETH AN `Amount answer`
+DECIDE `How much land tax is charged on this value of general land` IS
+    `the land tax payable for the financial year on` `the financial year` (LIST (`Parcel` WITH
+        `assessed land value`                              IS `the total land value of my general land`
+        `class`                                            IS `general land`
+        `proportion of the value apportioned to its class` IS 1
+        `is exempt land`                                   IS FALSE))
+
+§§ `Land tax -- rebates for building or for moving between homes (situation: you built a home, or moved, this year)`
+
+@export A home was built on my land and moved into during the year: can I get a land tax rebate, and how much (s 37)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it begins on 1 July (2026 for 1 July 2026 to 30 June 2027)
+      `I owned the land on 1 July` IS A BOOLEAN @desc Whether you were an owner of the land at the start of the financial year
+      `a home was built and moved into during the year` IS A BOOLEAN @desc Whether, during the year, a home was built on the land and occupied as the main residence of an owner of at least half of the land, or of their spouse or other related person
+      `the person who moved in owned another home during the year` IS A BOOLEAN @desc Whether the person who moved in owned, at any time during the year, other principal residence land in Tasmania, or land treated as their principal residence under a similar law of another State or Territory
+      `the land tax for the year on this land` IS A NUMBER @desc The land tax assessed (paid or not) for the year on this land, in Australian dollars
+GIVETH A `Rebate answer`
+DECIDE `Can I get a land tax rebate for building a home` IS
+    IF NOT (`the deposited land tax provisions apply to` `the financial year`)
+    THEN `not covered here` `the financial year begins before 1 July 2026: sections 13 and 37 of the Land Tax Act were amended from that day (No. 19 of 2026) and the earlier wording is not in the deposited consolidation`
+    ELSE IF `may apply for a rebate under s 37` (`Building a home` WITH
+                `the owner was an owner at the start of the financial year`                                                                   IS `I owned the land on 1 July`
+                `during the year a dwelling was built on the land and occupied as principal residence by an owner of at least 50% or a related person` IS `a home was built and moved into during the year`
+                `during the year the occupier owned other principal residence land in Tasmania, or a principal residence elsewhere in Australia` IS `the person who moved in owned another home during the year`)
+         THEN `yes: a rebate, in dollars, of` `the land tax for the year on this land`
+         ELSE `no rebate under this section`
+
+@export By when must I apply for the land tax rebate for building a home (s 37)?
+GIVETH A `Time limit answer`
+DECIDE `By when must I apply for the building rebate` IS `the Land Tax Act sets no time limit for applying`
+
+@export I moved between two homes around 1 July: can I get a land tax rebate on the other home, and how much (s 37A)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it begins on 1 July (2026 for 1 July 2026 to 30 June 2027)
+      `on 1 July I owned at least half of both homes` IS A BOOLEAN @desc Whether, on 1 July, you owned 50% or more of the home that was then your principal residence land and 50% or more of the other home
+      `I bought the other home to live in, or it was my home in the 3 months before 1 July` IS A BOOLEAN @desc Whether the other home was bought with the intention that it become your principal residence, or was your principal residence in the 3 months before 1 July
+      `the day I became owner of the home that was my principal residence on 1 July` IS A DATE @desc The day you became owner of the home that was your principal residence land on 1 July, ISO 8601
+      `the day I became owner of the other home` IS A DATE @desc The day you became owner of the other home, ISO 8601
+      `my principal residence on 1 July was my home in the 3 months before` IS A BOOLEAN @desc Whether the home that was your principal residence land on 1 July was also your principal residence in the 3 months before 1 July
+      `the other home became my home during the year` IS A BOOLEAN @desc Whether the other home became your principal residence during the financial year
+      `the day I signed the contract to sell one of them` IS A DATE @desc The day you entered into the contract to sell (or otherwise disposed of) one of the two homes, ISO 8601
+      `the buyer took possession during the year` IS A BOOLEAN @desc Whether the new owner took possession of the home you sold during the financial year
+      `I got rent or other income from either while I owned both` IS A BOOLEAN @desc Whether any rent or other income came from either home while you owned both
+      `I recovered part of the land tax from the buyer` IS A BOOLEAN @desc Whether you recovered a proportion of the land tax from the buyer (for example as an adjustment at settlement under s 40(1))
+      `the land tax paid on the other home` IS A NUMBER @desc The land tax paid for the year on the home that was not your principal residence land on 1 July, in Australian dollars
+GIVETH A `Rebate answer`
+DECIDE `Can I get a land tax rebate for moving between two homes` IS
+    IF NOT (`the deposited land tax provisions apply to` `the financial year`)
+    THEN `not covered here` `the financial year begins before 1 July 2026: sections 13 and 37 of the Land Tax Act were amended from that day (No. 19 of 2026) and the earlier wording is not in the deposited consolidation`
+    ELSE IF `the conditions of s 37A(1) and (3)(a)-(e) are met` `my move`
+         THEN `yes: a rebate, in dollars, of` `the land tax paid on the other home`
+         ELSE `no rebate under this section`
+    WHERE
+        `my move` MEANS `Moving between two homes` WITH
+            `the financial year`                                                                          IS `the financial year`
+            `at 1 July the owner owned 50% or more of principal residence land and 50% or more of other land` IS `on 1 July I owned at least half of both homes`
+            `the other land was bought to become the owner's principal residence land, or was it in the 3 months before 1 July` IS `I bought the other home to live in, or it was my home in the 3 months before 1 July`
+            `the day the owner became owner of the principal residence land`                              IS `the day I became owner of the home that was my principal residence on 1 July`
+            `the day the owner became owner of the other land`                                            IS `the day I became owner of the other home`
+            `the principal residence land was the owner's principal residence land in the 3 months before 1 July` IS `my principal residence on 1 July was my home in the 3 months before`
+            `the other land became the owner's principal residence land during the financial year`         IS `the other home became my home during the year`
+            `the day the owner contracted to sell or otherwise disposed of one of the two`                 IS `the day I signed the contract to sell one of them`
+            `the new owner took possession during the financial year`                                     IS `the buyer took possession during the year`
+            `rent or other income was derived from either while the owner owned both`                      IS `I got rent or other income from either while I owned both`
+            `the owner recovered a proportion of the land tax from the buyer under s 40(1)`               IS `I recovered part of the land tax from the buyer`
+
+@export By what day must I apply for the land tax rebate for moving between two homes (s 37A(3)(f): after the buyer takes possession, and within 3 months after the year ends)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year of the move, named by the year in which it begins on 1 July (2026 for 1 July 2026 to 30 June 2027)
+GIVETH A DATE
+DECIDE `By what day must I apply for the moving rebate` IS
+    `the last day to apply for a s 37A rebate` `the financial year`
+
+§§ `Land tax -- what I must tell the Commissioner (situation: something about your land changed)`
+
+@export Must I tell the Commissioner of State Revenue about a change in my land, and within how many days (s 16)?
+GIVEN `my land stopped being my home, my farm or exempt` IS A BOOLEAN @desc Whether the land has ceased to be principal residence land, primary production land or exempt land (for example you moved out and let it, stopped farming, or no longer hold the pensioner card that made it exempt)
+      `something affecting how much of it is my home, farm or exempt land changed` IS A BOOLEAN @desc Whether a fact relevant to whether, or how far, the land or part of it is principal residence, primary production or exempt land has changed (for example part of the home is now used as a shop)
+      `it started or stopped being land apportioned for a conservation covenant, park or flood structure` IS A BOOLEAN @desc Whether all or part of the land has become, or ceased to be, land the Commissioner must apportion under s 19A, 19B, 19C or 30A
+GIVETH A `Notice answer`
+DECIDE `Must I tell the Commissioner about a change in my land` IS
+    IF `the owner must notify under s 16` (`Change in use` WITH
+           `the land ceased to be principal residence land, primary production land or exempt land`                       IS `my land stopped being my home, my farm or exempt`
+           `a factor relevant to whether, or how far, it is principal residence, primary production or exempt land altered` IS `something affecting how much of it is my home, farm or exempt land changed`
+           `the land ceased to be, or became, land to be apportioned under s 19A, 19B, 19C or 30A`                        IS `it started or stopped being land apportioned for a conservation covenant, park or flood structure`)
+    THEN `yes: notify the Commissioner in writing within this many days, or face a fine of up to this many penalty units` `the days to notify under s 16` `the most penalty units for an offence against s 16`
+    ELSE `no notice is required of me`
+
+§§ `Council rates -- am I an eligible pensioner?`
+
+@export Am I an eligible pensioner for the 30% remission of council rates and charges (Local Government (Rates and Charges Remissions) Regulations 2024 reg 4)?
+GIVEN `I hold a current Pensioner Concession Card` IS A BOOLEAN @desc Whether you hold a current Pensioner Concession Card in operation, issued by Services Australia under the Social Security Act 1991 or by the Department of Veterans' Affairs
+      `my Pensioner Concession Card is suspended only because I am overseas for a while` IS A BOOLEAN @desc Whether you hold a current Pensioner Concession Card that is inoperative only because you are temporarily out of Australia
+      `I hold a current Health Care Card` IS A BOOLEAN @desc Whether you hold a current Health Care Card issued under the Social Security Act 1991
+      `I am a totally and permanently incapacitated veteran` IS A BOOLEAN @desc Whether section 24 of the Veterans' Entitlements Act 1986 (the special rate, TPI) or section 199 of the Military Rehabilitation and Compensation Act 2004 applies to you
+      `I receive a war widow's or widower's pension` IS A BOOLEAN @desc Whether you receive a war widow's or war widower's pension under Part II or IV of the Veterans' Entitlements Act 1986 at the section 30(1) rate
+      `I was wholly dependent on a member who died, under the MRCA` IS A BOOLEAN @desc Whether you were the wholly dependent partner of a deceased member to whom section 12 of the Military Rehabilitation and Compensation Act 2004 applies
+GIVETH A BOOLEAN
+DECIDE `Am I an eligible pensioner for the rates remission` IF
+    `is an eligible pensioner under reg 4` (`Cards and pensions` WITH
+        `holds a current pensioner concession card in operation`                                       IS `I hold a current Pensioner Concession Card`
+        `holds a current pensioner concession card inoperative only because temporarily out of Australia` IS `my Pensioner Concession Card is suspended only because I am overseas for a while`
+        `holds a current health care card`                                                             IS `I hold a current Health Care Card`
+        `is a person to whom VEA s 24 or MRCA s 199 applies`                                           IS `I am a totally and permanently incapacitated veteran`
+        `receives a war widow's or widower's pension under VEA Part II or IV at the s 30(1) rate`        IS `I receive a war widow's or widower's pension`
+        `was the wholly dependent partner of a deceased member to whom MRCA s 12 applies`               IS `I was wholly dependent on a member who died, under the MRCA`)
+
+§§ `Council rates -- applying for the remission`
+
+@export By what day must I apply to my council for the pensioner remission of rates and charges for this financial year (s 4(1): before 31 March)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it begins on 1 July (2026 for 1 July 2026 to 30 June 2027)
+GIVETH A DATE
+DECIDE `By what day must I apply for the rates remission` IS
+    `the last day to apply in the financial year` `the financial year`
+
+-- The card facts are asked once, for 1 July of the year of the application, and taken to hold on the day of applying
+-- too. The three reg 6 institutions are treated alike by s 4(3), so any one of them is entered as the first.
+@export Must my council grant my application for the 30% pensioner remission of my rates and charges (s 4(1), (1A), (3)-(3C); regs 4, 6)?
+GIVEN `the day I apply` IS A DATE @desc The day you lodge your application with the council, ISO 8601
+      `I hold a current Pensioner Concession Card` IS A BOOLEAN @desc Whether, on 1 July of the financial year in which you apply (and still when you apply), you hold a current Pensioner Concession Card in operation
+      `my Pensioner Concession Card is suspended only because I am overseas for a while` IS A BOOLEAN @desc Whether, then, your current Pensioner Concession Card is inoperative only because you are temporarily out of Australia
+      `I hold a current Health Care Card` IS A BOOLEAN @desc Whether, then, you hold a current Health Care Card issued under the Social Security Act 1991
+      `I am a totally and permanently incapacitated veteran` IS A BOOLEAN @desc Whether, then, section 24 of the Veterans' Entitlements Act 1986 or section 199 of the Military Rehabilitation and Compensation Act 2004 applies to you
+      `I receive a war widow's or widower's pension` IS A BOOLEAN @desc Whether, then, you receive a war widow's or widower's pension under Part II or IV of the Veterans' Entitlements Act 1986 at the section 30(1) rate
+      `I was wholly dependent on a member who died, under the MRCA` IS A BOOLEAN @desc Whether you were the wholly dependent partner of a deceased member to whom section 12 of the Military Rehabilitation and Compensation Act 2004 applies
+      `I must pay rates or charges to the council for the property` IS A BOOLEAN @desc Whether you are liable to pay council rates or charges on the property (an owner usually is)
+      `on 1 July I lived in the property as my main home` IS A BOOLEAN @desc Whether, on 1 July of the financial year in which you apply, the property was your principal dwelling
+      `on 1 July I lived in residential aged care, a nursing-home type hospital bed or a residential psychiatric facility` IS A BOOLEAN @desc Whether, on 1 July, you were living in a residential aged care facility, a hospital as a nursing-home type patient, or a facility providing residential psychiatric or psychological care
+      `I am married or in a significant relationship` IS A BOOLEAN @desc Whether you are married or in a significant relationship (Relationships Act 2003)
+      `on 1 July my spouse lived in the property as their main home` IS A BOOLEAN @desc Whether, on 1 July, your spouse or partner lived in the property as their main home
+      `on 1 July my spouse was also in such a facility` IS A BOOLEAN @desc Whether, on 1 July, your spouse or partner was also living in one of those facilities
+      `I or my spouse got rent from the property` IS A BOOLEAN @desc Whether you, or your spouse, received any rental income from the property
+      `I have given the council a statutory declaration about the facility and rent` IS A BOOLEAN @desc Whether you have provided a statutory declaration that you (and your spouse) were in such a facility and received no rental income from the property
+      `how many years in a row just before this one I had the remission while in a facility` IS A NUMBER @desc How many financial years in a row, just before this one, you had the remission while in a facility (with no spouse at home); 0 if none
+GIVETH A BOOLEAN
+DECIDE `Must my council grant my rates remission application` IF
+    `the municipality is to grant the application under s 4(1A)` `my application` `I am an eligible pensioner` (`is occupying the property as a principal dwelling under s 4` `my occupation`)
+    WHERE
+        `I am an eligible pensioner` MEANS
+            `is an eligible pensioner under reg 4` (`Cards and pensions` WITH
+                `holds a current pensioner concession card in operation`                                       IS `I hold a current Pensioner Concession Card`
+                `holds a current pensioner concession card inoperative only because temporarily out of Australia` IS `my Pensioner Concession Card is suspended only because I am overseas for a while`
+                `holds a current health care card`                                                             IS `I hold a current Health Care Card`
+                `is a person to whom VEA s 24 or MRCA s 199 applies`                                           IS `I am a totally and permanently incapacitated veteran`
+                `receives a war widow's or widower's pension under VEA Part II or IV at the s 30(1) rate`        IS `I receive a war widow's or widower's pension`
+                `was the wholly dependent partner of a deceased member to whom MRCA s 12 applies`               IS `I was wholly dependent on a member who died, under the MRCA`)
+        `my application` MEANS `Application` WITH
+            `the day of application`                                   IS `the day I apply`
+            `the applicant is an eligible pensioner when applying`     IS `I am an eligible pensioner`
+            `the applicant is liable to pay rates or charges to the municipality` IS `I must pay rates or charges to the council for the property`
+        `where I lived` MEANS
+            IF `on 1 July I lived in the property as my main home`
+            THEN `in the property, as their principal dwelling`
+            ELSE IF `on 1 July I lived in residential aged care, a nursing-home type hospital bed or a residential psychiatric facility`
+                 THEN `in a residential care facility under the Aged Care Act 1997 s 41-3`
+                 ELSE `somewhere else`
+        `where my spouse lived` MEANS
+            IF `on 1 July my spouse lived in the property as their main home`
+            THEN `in the property, as their principal dwelling`
+            ELSE IF `on 1 July my spouse was also in such a facility`
+                 THEN `in a residential care facility under the Aged Care Act 1997 s 41-3`
+                 ELSE `somewhere else`
+        `my occupation` MEANS `Occupation on 1 July` WITH
+            `where the person lives`                                       IS `where I lived`
+            `is married or in a significant relationship`                  IS `I am married or in a significant relationship`
+            `where the spouse lives`                                       IS `where my spouse lived`
+            `the person or the spouse received rental income from the property` IS `I or my spouse got rent from the property`
+            `a statutory declaration under s 4(3A) or (3B) has been provided` IS `I have given the council a statutory declaration about the facility and rent`
+            `consecutive financial years just before this one remitted while in an institution under s 4(3)(a) or (b)(i)` IS `how many years in a row just before this one I had the remission while in a facility`
+
+§§ `Council rates -- how much is remitted?`
+
+@export What is the most my council can remit on my rates and charges for this financial year (Remissions Regulations 2024 reg 5, indexed by the Hobart CPI)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it begins on 1 July (2026 for 1 July 2026 to 30 June 2027); 2024 or later
+      `the owner or occupier is a water and sewerage customer` IS A BOOLEAN @desc Whether the owner or occupier of the land is a customer of the regulated water and sewerage entity under the Water and Sewerage Industry Act 2008 (that is, is billed for water or sewerage services separately from the council)
+      `the Hobart CPI figures` IS A LIST OF NUMBER @desc The ABS Consumer Price Index (All Groups) for Hobart for each March quarter, in order, starting with March 2024: one figure for 2024-25, two for 2025-26 (March 2024 and March 2025), and so on
+GIVETH AN `Amount answer`
+DECIDE `What is the most my council can remit this year` IS
+    `the prescribed maximum remission for` `the financial year` `the owner or occupier is a water and sewerage customer` `the Hobart CPI figures`
+
+@export How much is remitted on my council rates and charges for this financial year under the pensioner remission (s 4(1B)-(1D), (2); reg 5)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year you are asking about, named by the year in which it begins on 1 July (2026 for 1 July 2026 to 30 June 2027)
+      `the day I applied` IS A DATE @desc The day you applied to the council for the remission, ISO 8601
+      `when I applied I was an eligible pensioner liable for the rates` IS A BOOLEAN @desc Whether, on the day you applied, you were an eligible pensioner (see the eligible pensioner question) and liable to pay the council's rates or charges on the property
+      `on 1 July of the year I applied I was eligible and living there` IS A BOOLEAN @desc Whether, on 1 July of the financial year in which you applied, you were an eligible pensioner and the property was your principal dwelling (or you were taken to be living there while in care, see the application question)
+      `on 1 July of the year before I applied I was eligible and living there` IS A BOOLEAN @desc Whether, on 1 July of the financial year before the one in which you applied, you were an eligible pensioner and the property was your principal dwelling
+      `on every 1 July since then I was eligible and living there` IS A BOOLEAN @desc Whether, on every 1 July after the financial year in which you applied, up to and including the year you are asking about, you were still an eligible pensioner and the property was still your principal dwelling (answer yes if you are asking about the year you applied in)
+      `the rates and charges for the year` IS A NUMBER @desc The council rates and charges on the property for the financial year you are asking about, in Australian dollars (the amount actually paid if a discount was given; leave out penalties and interest)
+      `the owner or occupier is a water and sewerage customer` IS A BOOLEAN @desc Whether the owner or occupier of the land is a customer of the regulated water and sewerage entity under the Water and Sewerage Industry Act 2008
+      `the Hobart CPI figures` IS A LIST OF NUMBER @desc The ABS Consumer Price Index (All Groups) for Hobart for each March quarter, in order, starting with March 2024 (needed for 2025-26 and later)
+GIVETH A `Remission answer`
+DECIDE `How much is remitted on my rates this year` IS
+    IF `the financial year is remitted under s 4(1B)-(1D)` `my history` `the financial year`
+    THEN CONSIDER `the prescribed maximum remission for` `the financial year` `the owner or occupier is a water and sewerage customer` `the Hobart CPI figures`
+         WHEN `the amount, in dollars, is` `the maximum` THEN `the remission, in dollars, is` (`the amount remitted under s 4(1B) and (2)` `the rates and charges for the year` `the maximum`)
+         WHEN `not covered` `the reason` THEN `not covered by the deposited law` `the reason`
+    ELSE `no remission for this year`
+    WHERE
+        `my application` MEANS `Application` WITH
+            `the day of application`                                   IS `the day I applied`
+            `the applicant is an eligible pensioner when applying`     IS `when I applied I was an eligible pensioner liable for the rates`
+            `the applicant is liable to pay rates or charges to the municipality` IS `when I applied I was an eligible pensioner liable for the rates`
+        `my history` MEANS `Remission history` WITH
+            `the application`                                                                          IS `my application`
+            `the application was granted under s 4(1A)`                                                IS `the municipality is to grant the application under s 4(1A)` `my application` `on 1 July of the year I applied I was eligible and living there` `on 1 July of the year I applied I was eligible and living there`
+            `eligible pensioner and occupying on 1 July of the year before the application`             IS `on 1 July of the year before I applied I was eligible and living there`
+            `eligible pensioner and occupying on every 1 July after the year of the application, up to the year asked about` IS `on every 1 July since then I was eligible and living there`
+
+§§ `Council rates -- when an eligible pensioner dies (situation: your spouse, an eligible pensioner, has died)`
+
+@export My spouse was an eligible pensioner and died without applying for the rates remission: can I apply instead, and for which years (s 4(4)-(6))?
+GIVEN `my late spouse could have applied this year` IS A BOOLEAN @desc Whether your late spouse or partner would have been entitled to apply this financial year: an eligible pensioner, liable for the rates, and living in the property as their main home on 1 July
+      `my spouse died without applying` IS A BOOLEAN @desc Whether your spouse or partner died without having made the application
+      `I was living in the property on 1 July this year` IS A BOOLEAN @desc Whether you were occupying the property on 1 July of the financial year in which the application could have been made
+GIVETH A `Surviving spouse answer`
+DECIDE `Can I apply for the rates remission as the surviving spouse` IS
+    IF `the surviving spouse may apply under s 4(4)` `my late spouse could have applied this year` `my spouse died without applying` `I was living in the property on 1 July this year`
+    THEN `yes: you may apply, and the remission can cover only the year you apply in and, if your late spouse was eligible and living there on its 1 July, the year before`
+    ELSE `no: the conditions of s 4(4) are not met`
+
+@export My spouse had the rates remission and has died: is the unpaid remission for this year given to me (s 4(7)-(8))?
+GIVEN `the financial year I am asking about` IS A NUMBER @desc The financial year you are asking about, named by the year in which it begins on 1 July
+      `the financial year my spouse applied in` IS A NUMBER @desc The financial year in which your spouse or partner applied for the remission
+      `the financial year my spouse died in` IS A NUMBER @desc The financial year in which your spouse or partner died
+      `my spouse would have had the remission for that year` IS A BOOLEAN @desc Whether, had they not died, your spouse would have been entitled to the remission for the year you are asking about
+      `I was living in the property on 1 July of the year my spouse died` IS A BOOLEAN @desc Whether you were occupying the property on 1 July of the financial year in which your spouse died
+GIVETH A BOOLEAN
+DECIDE `Is my late spouse's unpaid remission given to me` IF
+    `the surviving spouse is to be given the unpaid remission under s 4(7)-(8)` `the financial year my spouse applied in` `the financial year my spouse died in` `the financial year I am asking about` `my spouse would have had the remission for that year` `I was living in the property on 1 July of the year my spouse died`
+
+§§ `Council rates -- what I must tell the council (situation: you stop being an eligible pensioner, or move out)`
+
+@export I have the rates remission this year and have stopped being an eligible pensioner or moved out: by what day must I tell my council in writing (s 4(9))?
+GIVEN `the day I stopped being eligible or moved out` IS A DATE @desc The day you ceased to be an eligible pensioner, or ceased to live in the property as your principal dwelling, ISO 8601
+GIVETH A DATE
+DECIDE `By what day must I tell my council` IS
+    `the last day to notify the municipality under s 4(9)` (`the financial year of` `the day I stopped being eligible or moved out`)
+
+@export What is the most I can be fined, in penalty units, for not telling my council that I am no longer eligible, or for a false or misleading statement in my application (ss 4(9), 4A)?
+GIVETH A NUMBER
+DECIDE `What is the most I can be fined over my rates remission` IS
+    `the greater of` `the most penalty units for an offence against s 4(9)` `the most penalty units for an offence against s 4A`
+
+§§ `Council rates -- if the Commissioner wants the remission back (situation: you received a repayment notice under s 4B)`
+
+-- s 4B: the Commissioner may require repayment "if the Commissioner is satisfied that the person was not entitled to
+-- that remission". Entitlement is worked out by the core's s 4(1B)-(1D) rule from the same facts as the remission
+-- question; TRUE means the Commissioner may require repayment, if so satisfied, by written notice.
+@export I was given a rates remission for this year: can the Commissioner of State Revenue make me repay it because I was not entitled to it (s 4B)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year for which you were given the remission, named by the year in which it begins on 1 July
+      `the day I applied` IS A DATE @desc The day you applied to the council for the remission, ISO 8601
+      `when I applied I was an eligible pensioner liable for the rates` IS A BOOLEAN @desc Whether, on the day you applied, you were an eligible pensioner and liable to pay the council's rates or charges on the property
+      `on 1 July of the year I applied I was eligible and living there` IS A BOOLEAN @desc Whether, on 1 July of the financial year in which you applied, you were an eligible pensioner and the property was your principal dwelling
+      `on 1 July of the year before I applied I was eligible and living there` IS A BOOLEAN @desc Whether, on 1 July of the financial year before the one in which you applied, you were an eligible pensioner and the property was your principal dwelling
+      `on every 1 July since then I was eligible and living there` IS A BOOLEAN @desc Whether, on every 1 July after the financial year in which you applied, up to and including this one, you were still an eligible pensioner and the property was still your principal dwelling
+GIVETH A BOOLEAN
+DECIDE `Can the Commissioner make me repay my rates remission` IF
+    NOT (`the financial year is remitted under s 4(1B)-(1D)` `the history` `the financial year`)
+    WHERE
+        `the application made` MEANS `Application` WITH
+            `the day of application`                                   IS `the day I applied`
+            `the applicant is an eligible pensioner when applying`     IS `when I applied I was an eligible pensioner liable for the rates`
+            `the applicant is liable to pay rates or charges to the municipality` IS `when I applied I was an eligible pensioner liable for the rates`
+        `the history` MEANS `Remission history` WITH
+            `the application`                                                                          IS `the application made`
+            `the application was granted under s 4(1A)`                                                IS `the municipality is to grant the application under s 4(1A)` `the application made` `on 1 July of the year I applied I was eligible and living there` `on 1 July of the year I applied I was eligible and living there`
+            `eligible pensioner and occupying on 1 July of the year before the application`             IS `on 1 July of the year before I applied I was eligible and living there`
+            `eligible pensioner and occupying on every 1 July after the year of the application, up to the year asked about` IS `on every 1 July since then I was eligible and living there`
+
+@export If the Commissioner requires me to repay my rates remission, within how many days can I object, and then apply to the Magistrates Court (ss 4C, 4F)?
+GIVETH A `Review periods`
+DECIDE `How long do I have to object and then apply for review` IS
+    `Review periods` WITH
+        `days after the repayment notice to lodge a written objection`              IS `the days to object under s 4C`
+        `days after the decision on the objection to apply to the Magistrates Court` IS `the days to apply for review under s 4F`
