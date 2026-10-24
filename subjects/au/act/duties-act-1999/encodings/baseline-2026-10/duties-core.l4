@@ -1,0 +1,1155 @@
+IMPORT prelude
+
+-- Duties Act 1999 (ACT), with the three 2026 duty determinations and the Taxation Administration Act 1999 (ACT):
+-- transfer duty on buying a home or vacant land, for a transaction dated on or after 1 July 2026.
+--
+-- SEAT-NEUTRAL CORE. The rules are written in the texts' own actors and terms: "the transferee", "an eligible home
+-- buyer", "the commissioner", "the taxpayer". The transferee's questions are in duties-seat.l4, which IMPORTs this
+-- module and restates no rule.
+--
+-- PROVISIONS COVERED.
+--   Duties Act 1999: s 7 and s 10 (dutiable transaction and property, as a choice of kind); s 11 (the transaction date);
+--   s 12 (the transferee pays); s 13 (joint tenants hold in equal shares); s 15(1)-(2) (lodging within 90 days, a
+--   regulative rule); s 16 and table 16 items 1, 3 and 5 (payable on registration, no tax default if paid within 14
+--   days, a regulative rule); s 18, s 20(1), s 21(1)-(2), s 22(1) (dutiable value); s 31 (the determined rate);
+--   s 232D(1)(a), ss 232E-232I (deceased estates and relationship breakdown).
+--   Taxation Administration (Amounts Payable--Duty) Determination 2026 (DI2026-155): pt 2, ss 4-5, Tables 1 and 2;
+--   pt 3, Table 3 (computed, but the transferee's questions answer `not covered` for it); Schedule 1 ss 1-3 and 5.
+--   Taxation Administration (Amounts Payable--Home Buyer Concession Scheme) Determination 2026 (DI2026-157): ss 4-8,
+--   Schedules 1 and 2.
+--   Taxation Administration (Amounts Payable--Pensioner Duty Concession Scheme) Determination 2026 (DI2026-159):
+--   ss 3-9.
+--   Taxation Administration Act 1999 (incorporated by Duties Act s 3): ss 25-27 (interest), ss 30-35 and table 34
+--   (penalty tax), s 36, s 67 (failure to lodge or notify), ss 100-104 (objection), as the HENCE and LEST branches of
+--   the payment and notice duties.
+--
+-- FIGURES. Every rate and threshold is read from the three determinations, not from the Act (s 31 charges "duty at
+-- the determined rate"). They commence on 1 July 2026; the 2025 determinations they revoke are not deposited, so a
+-- transaction dated before 1 July 2026 is `not covered`. Determinations under TAA s 139 are made each 1 July, so a
+-- transaction dated after 30 June 2027 is also `not covered`. The interest rate's market rate component (TAA s 26(2))
+-- is not deposited: an input.
+--
+-- Edition: Duties Act 1999 A1999-7 R79 (effective 16 December 2025), ../../registers/source-bundle/A1999-7.txt;
+-- DI2026-155, DI2026-157 and DI2026-159 as notified 30 June 2026 (commencing 1 July 2026); Taxation Administration
+-- Act 1999 A1999-4 R52 (effective 26 November 2025). The last four are in their own subject folders under
+-- subjects/au/act/.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Duties Act 1999 and the 2026 duty determinations -- seat-neutral core`
+
+§§ `Dates`
+
+-- Every period here is counted the way the texts say it: "within 90 days after the day", "within 14 days after",
+-- "not later than 18 months after", "within 12 months of", "not later than 60 days after". The last day of such a
+-- period is the day that number of days (or months) after the starting day.
+GIVEN `n` IS A NUMBER, `the start` IS A DATE
+GIVETH A DATE
+`the day that is` `n` `days after` `the start` MEANS
+    DATE_FROM_SERIAL (DATE_SERIAL `the start` PLUS `n`)
+
+GIVEN `a` IS A DATE, `b` IS A DATE
+GIVETH A NUMBER
+`the number of days from` `a` `to` `b` MEANS
+    DATE_SERIAL `b` MINUS DATE_SERIAL `a`
+
+GIVEN `a` IS A DATE, `b` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `a` `is on or before` `b` IF
+    DATE_SERIAL `a` AT MOST DATE_SERIAL `b`
+
+GIVEN `m` IS A NUMBER, `y` IS A NUMBER
+GIVETH A NUMBER
+`the number of days in month` `m` `of` `y` MEANS
+    IF `m` EQUALS 12
+    THEN 31
+    ELSE DATE_SERIAL (DATE_FROM_DMY 1 (`m` PLUS 1) `y`) MINUS DATE_SERIAL (DATE_FROM_DMY 1 `m` `y`)
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the smaller of` `a` `and` `b` MEANS IF `a` AT MOST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the greater of` `a` `and` `b` MEANS IF `a` AT LEAST `b` THEN `a` ELSE `b`
+
+-- "n months after" a day: the same day of the month n months on; where that month is shorter, its last day (READING:
+-- the texts do not say; 31 August plus 18 months is read as 28 or 29 February). n may be negative ("1 year before").
+GIVEN `n` IS A NUMBER, `the day` IS A DATE
+GIVETH A DATE
+`the date` `n` `months after` `the day` MEANS
+    DATE_FROM_DMY (`the smaller of` (DATE_DAY `the day`) `and` (`the number of days in month` `target month` `of` `target year`)) `target month` `target year`
+    WHERE
+        `month count` MEANS (DATE_YEAR `the day` TIMES 12) PLUS (DATE_MONTH `the day` MINUS 1) PLUS `n`
+        `target year` MEANS FLOOR (`month count` DIVIDED BY 12)
+        `target month` MEANS (`month count` MINUS (`target year` TIMES 12)) PLUS 1
+
+GIVEN `n` IS A NUMBER, `the day` IS A DATE
+GIVETH A DATE
+`the date` `n` `months before` `the day` MEANS
+    `the date` (0 MINUS `n`) `months after` `the day`
+
+`1 July 2026` MEANS DATE_FROM_DMY 1 7 2026
+`30 June 2027` MEANS DATE_FROM_DMY 30 6 2027
+
+§§ `What is covered, and what is not`
+
+-- The not-covered answers. Each names the gap.
+DECLARE `Why not covered` IS ONE OF
+    `motor vehicle duty (ch 9): its 2026 determined rates are not deposited`
+    `landholder duty and the other chapter 3 transactions are not encoded`
+    `declarations of trust and transfers to or from trustees are not encoded`
+    `commercial leases with premium are not encoded`
+    `duty on partnership interests and business assets (s 33) is not encoded`
+    `the transaction date is before 1 July 2026: the 2025 determinations are not deposited`
+    `the transaction date is after 30 June 2027: a later determination under TAA s 139 may apply`
+    `the property is used, or will be used, partly or wholly for a commercial purpose (DI2026-155 pt 3, Table 3)`
+    `a transfer only partly in conformity with the will or intestacy (s 232D(2)-(3)) is not encoded`
+    `deferral of duty under pt 2.6A is not encoded (moot where the home buyer concession makes the duty nil)`
+    `the Disability Duty Concession Scheme determination is not deposited`
+    `the Pensioner Duty Deferral Scheme determination is not deposited`
+    `the s 109 disability exemption (land use entitlements, pt 3.4) is not encoded`
+    `foreign-purchaser matters are not encoded: the deposited Duties Act charges no separate duty on a foreign purchaser`
+
+§§ `ss 7, 10 and 11 -- the dutiable transaction, the dutiable property and the transaction date`
+
+-- s 7(1): duty is charged on "(a) a transfer of dutiable property; and (b) ... (i) an agreement for the sale or transfer
+-- of dutiable property; (ii) a declaration of trust over dutiable property; (iii) a grant of a Crown lease; ... (v) a
+-- grant of a commercial lease with premium." s 10(1): dutiable property includes "(a) land in the ACT; (b) a Crown
+-- lease". Ch 3 charges landholder and other transactions treated as transfers; ch 9 charges duty on registering a
+-- motor vehicle. Only the first kind below is encoded.
+DECLARE `Kind of transaction` IS ONE OF
+    `a transfer of land or a Crown lease in the ACT, an agreement for one, or the grant of a Crown lease`
+    `the registration of a motor vehicle (ch 9)`
+    `an acquisition of an interest in a landholder, or another chapter 3 transaction`
+    `a declaration of trust, or a transfer to or from a trustee`
+    `the grant of a commercial lease with premium`
+    `a transfer of a partnership interest or other business assets (s 33)`
+
+GIVEN `the kind` IS A `Kind of transaction`
+GIVETH A MAYBE `Why not covered`
+`the gap for` `the kind` MEANS
+    CONSIDER `the kind`
+    WHEN `a transfer of land or a Crown lease in the ACT, an agreement for one, or the grant of a Crown lease` THEN NOTHING
+    WHEN `the registration of a motor vehicle (ch 9)` THEN JUST `motor vehicle duty (ch 9): its 2026 determined rates are not deposited`
+    WHEN `an acquisition of an interest in a landholder, or another chapter 3 transaction` THEN JUST `landholder duty and the other chapter 3 transactions are not encoded`
+    WHEN `a declaration of trust, or a transfer to or from a trustee` THEN JUST `declarations of trust and transfers to or from trustees are not encoded`
+    WHEN `the grant of a commercial lease with premium` THEN JUST `commercial leases with premium are not encoded`
+    WHEN `a transfer of a partnership interest or other business assets (s 33)` THEN JUST `duty on partnership interests and business assets (s 33) is not encoded`
+
+-- DI2026-155 Sch 1 s 2, DI2026-157 s 4, DI2026-159 s 3: "eligible property means -- (a) a home; or (b) vacant land."
+-- "home means a building (affixed to land in the ACT) or unit in a units plan that -- (a) may lawfully be used as a
+-- place of residence; and (b) is, in the Commissioner's opinion, a suitable building for use as a place of residence."
+-- "vacant land means land in the ACT, which has a Crown lease or a declared land sublease that does not have a home
+-- built, in full or in part, on it." Which of these the property is, is a FACT (the Commissioner's opinion included).
+DECLARE `Kind of property` IS ONE OF
+    `a home`
+    `vacant land`
+    `other land or a Crown lease`
+
+-- How the transferee comes to the property (for the exemptions in ch 11).
+DECLARE `How the property is acquired` IS ONE OF
+    `by purchase, or another transfer for value`
+    `from the legal personal representative of a deceased person, for no consideration, under and in conformity with the will or the intestacy`
+    `from the legal personal representative of a deceased person, for no consideration, as property under a trust for sale in the will`
+    `from the legal personal representative of a deceased person, only partly in conformity with the will or the intestacy`
+    `under an order of a court under the Family Law Act 1975 or the Married Persons Property Act 1986`
+    `under another court order distributing property at the end of a relationship between partners`
+    `under a binding financial agreement under the Family Law Act 1975, s 90B, s 90C or s 90D`
+    `under a binding part 8AB financial agreement under the Family Law Act 1975, s 90UB, s 90UC or s 90UD`
+    `under a domestic relationship agreement or termination agreement under the Domestic Relationships Act 1994`
+
+-- The facts ss 232G-232I ask of a transaction on separation.
+DECLARE `Separation facts` HAS
+    `the property is matrimonial property or relationship property` IS A BOOLEAN
+    `the transfer is to a party, to a child of either party, or to a trustee for the child` IS A BOOLEAN
+    `the agreement is in writing, signed by each party, with the certificates of independent legal advice for each party` IS A BOOLEAN
+
+-- One case is one dutiable transaction. s 11(1): liability arises "(a) when a transfer of dutiable property occurs;
+-- or (b) if a transfer of dutiable property is effected by an instrument -- when the instrument is first executed";
+-- for an agreement, when it is entered into (s 8(2), table 8 item 1). The determinations call that day the
+-- "transaction date" (DI2026-155 Sch 1 s 6; DI2026-157 dictionary; DI2026-159 s 3). It is a FACT here.
+DECLARE `Transaction` HAS
+    `kind`                                                             IS A `Kind of transaction`
+    `transaction date`                                                 IS A DATE
+    `property`                                                         IS A `Kind of property`
+    `the property is used, or will be used, partly or wholly for a commercial purpose` IS A BOOLEAN
+    `consideration`                                                    IS A NUMBER
+    `encumbrances the property is transferred subject to`              IS A NUMBER
+    `unencumbered value`                                               IS A NUMBER
+    `acquired`                                                         IS A `How the property is acquired`
+    `separation`                                                       IS A `Separation facts`
+
+-- DI2026-155 s 4: pt 2 "applies to a dutiable transaction of dutiable property used, or that will be used, wholly for
+-- purposes other than a commercial purpose"; s 6: pt 3 applies where it is used "partly or wholly for a commercial
+-- purpose".
+GIVEN `the transaction` IS A `Transaction`
+GIVETH A BOOLEAN
+DECIDE `part 2 of the duty determination applies to` `the transaction` IF
+    NOT (`the transaction`'s `the property is used, or will be used, partly or wholly for a commercial purpose`)
+
+-- The determinations commence on 1 July 2026 (DI2026-155 s 2; DI2026-157 s 2; DI2026-159 s 2).
+GIVEN `the day` IS A DATE
+GIVETH A MAYBE `Why not covered`
+`the date gap for` `the day` MEANS
+    BRANCH
+        IF NOT (`1 July 2026` `is on or before` `the day`)
+        THEN JUST `the transaction date is before 1 July 2026: the 2025 determinations are not deposited`
+        IF NOT (`the day` `is on or before` `30 June 2027`)
+        THEN JUST `the transaction date is after 30 June 2027: a later determination under TAA s 139 may apply`
+        OTHERWISE NOTHING
+
+§§ `ss 12 and 13 -- who pays, and joint tenants`
+
+-- s 12: "Duty payable under this chapter is payable by the transferee, unless this chapter requires another person to
+-- pay the duty." TAA s 50(1): where 2 or more people are "jointly or severally liable", the commissioner "may recover
+-- the whole of the amount from them, or any of them". (INFERENCE: two transferees are each liable for the whole.)
+DECLARE `Duty party` IS ONE OF
+    `the transferee`
+    `the commissioner`
+    `an approved person`
+
+`the person liable to pay transfer duty` MEANS `the transferee`
+
+-- s 13: "joint tenants of dutiable property are taken to hold the dutiable property as tenants in common in equal
+-- shares."
+GIVEN `the number of joint tenants` IS A NUMBER
+GIVETH A NUMBER
+`the share each joint tenant is taken to hold` `the number of joint tenants` MEANS
+    IF `the number of joint tenants` AT MOST 0 THEN 0 ELSE 1 DIVIDED BY `the number of joint tenants`
+
+§§ `ss 18, 20, 21 and 22 -- the dutiable value`
+
+-- s 21(1): "The consideration for the transfer of dutiable property is taken to include the amount or value of all
+-- encumbrances, whether certain or contingent, subject to which the dutiable property is transferred."
+GIVEN `the transaction` IS A `Transaction`
+GIVETH A NUMBER
+`the consideration under s 21 for` `the transaction` MEANS
+    `the transaction`'s `consideration` PLUS `the transaction`'s `encumbrances the property is transferred subject to`
+
+-- s 20(1): "The dutiable value of dutiable property that is subject to a dutiable transaction is the greater of -- (a)
+-- the consideration (if any) for the dutiable transaction ...; and (b) ... (ii) for any other dutiable property -- the
+-- unencumbered value of the dutiable property." s 22(1): "the value of the property determined without regard to any
+-- encumbrance" (and (2): improvements the transferee made before the transfer are left out; the input is that value).
+-- The land rent lease case in s 20(1)(b)(i) is not encoded.
+GIVEN `the transaction` IS A `Transaction`
+GIVETH A NUMBER
+`the dutiable value of` `the transaction` MEANS
+    `the greater of` (`the consideration under s 21 for` `the transaction`) `and` (`the transaction`'s `unencumbered value`)
+
+§§ `DI2026-155 pts 2 and 3 -- the rates of duty, as tables`
+
+-- "for every $100, or part of $100": a part of $100 counts as a whole $100, so the amount is rounded up to the next
+-- $100.
+GIVEN `amount` IS A NUMBER
+GIVETH A NUMBER
+`the number of 100-dollar parts in` `amount` MEANS
+    IF `amount` AT MOST 0 THEN 0 ELSE CEILING (`amount` DIVIDED BY 100)
+
+-- A band of a table: on a dutiable amount "more than" `above`, the duty is `base` plus `per 100` for every $100, or
+-- part of $100, of the dutiable amount that is more than `above`.
+DECLARE `Rate band` HAS
+    `above`   IS A NUMBER
+    `base`    IS A NUMBER
+    `per 100` IS A NUMBER
+
+-- A table: its bands, highest first, and above `flat from` "a flat rate of `flat per 100` per $100 applied to the total
+-- dutiable amount". READING: "per $100" in the flat rate, unlike the bands, does not say "or part of $100", so the flat
+-- rate is applied to the exact dutiable amount, unrounded.
+DECLARE `Rate table` HAS
+    `bands`        IS A LIST OF `Rate band`
+    `flat from`    IS A NUMBER
+    `flat per 100` IS A NUMBER
+
+-- Table 1, eligible owner occupier transaction:
+--   <= $260 000                    $0.28 for every $100, or part of $100, of the dutiable amount
+--   > $260 000, <= $300 000        $728 plus $2.20 for every $100, or part of $100, ... more than $260 000
+--   > $300 000, <= $500 000        $1,608 plus $3.40 ... more than $300 000
+--   > $500 000, <= $750 000        $8,408 plus $4.32 ... more than $500 000
+--   > $750 000, <= $1 000 000      $19,208 plus $5.90 ... more than $750 000
+--   > $1 000 000, <= $1 455 000    $33,958 plus $6.40 ... more than $1 000 000
+--   > $1 455 000                   a flat rate of $4.54 per $100 applied to the total dutiable amount
+`Table 1` MEANS
+    `Rate table` WITH
+        `bands`        IS LIST `Rate band` OF 1000000, 33958, 6.40
+                               `Rate band` OF 750000,  19208, 5.90
+                               `Rate band` OF 500000,  8408,  4.32
+                               `Rate band` OF 300000,  1608,  3.40
+                               `Rate band` OF 260000,  728,   2.20
+                               `Rate band` OF 0,       0,     0.28
+        `flat from`    IS 1455000
+        `flat per 100` IS 4.54
+
+-- Table 2, transaction that is not an eligible owner occupier transaction:
+--   <= $200 000                    $1.20 for every $100, or part of $100, of the dutiable amount
+--   > $200 000, <= $300 000        $2,400 plus $2.20 ... more than $200 000
+--   > $300 000, <= $500 000        $4,600 plus $3.40 ... more than $300 000
+--   > $500 000, <= $750 000        $11,400 plus $4.32 ... more than $500 000
+--   > $750 000, <= $1 000 000      $22,200 plus $5.90 ... more than $750 000
+--   > $1 000 000, <= $1 455 000    $36,950 plus $6.40 ... more than $1 000 000
+--   > $1 455 000                   a flat rate of $4.54 per $100 applied to the total dutiable amount
+`Table 2` MEANS
+    `Rate table` WITH
+        `bands`        IS LIST `Rate band` OF 1000000, 36950, 6.40
+                               `Rate band` OF 750000,  22200, 5.90
+                               `Rate band` OF 500000,  11400, 4.32
+                               `Rate band` OF 300000,  4600,  3.40
+                               `Rate band` OF 200000,  2400,  2.20
+                               `Rate band` OF 0,       0,     1.20
+        `flat from`    IS 1455000
+        `flat per 100` IS 4.54
+
+-- Table 3, commercial transfer rate (pt 3): "less than or equal to $2 100 000 | nil"; "more than $2 100 000 | a flat
+-- rate of $5.00 per $100 applied to the total dutiable amount". Computed here; the transferee's questions answer
+-- `not covered` for commercial use, which is outside this encoding's seat.
+`Table 3` MEANS
+    `Rate table` WITH
+        `bands`        IS LIST `Rate band` OF 0, 0, 0
+        `flat from`    IS 2100000
+        `flat per 100` IS 5.00
+
+GIVEN `bands`  IS A LIST OF `Rate band`
+      `amount` IS A NUMBER
+GIVETH A NUMBER
+`the duty on the bands` `bands` `for` `amount` MEANS
+    CONSIDER `bands`
+    WHEN EMPTY THEN 0
+    WHEN `band` FOLLOWED BY `rest` THEN
+        IF `amount` GREATER THAN `band`'s `above`
+        THEN `band`'s `base` PLUS (`band`'s `per 100` TIMES (`the number of 100-dollar parts in` (`amount` MINUS `band`'s `above`)))
+        ELSE `the duty on the bands` `rest` `for` `amount`
+
+GIVEN `table` IS A `Rate table`, `amount` IS A NUMBER
+GIVETH A NUMBER
+`the duty under` `table` `on` `amount` MEANS
+    IF `amount` GREATER THAN `table`'s `flat from`
+    THEN (`amount` TIMES `table`'s `flat per 100`) DIVIDED BY 100
+    ELSE `the duty on the bands` (`table`'s `bands`) `for` `amount`
+
+§§ `DI2026-155 Schedule 1, DI2026-157 Schedule 2, DI2026-159 s 6 -- the residence requirement`
+
+-- All three determinations use the same words. DI2026-155 Sch 1 s 1(1)(b) [the second (b)]: "at least 1 transferee will
+-- own and occupy the eligible property, as the transferee's principal place of residence, within 1 year after the
+-- residence start date for the duration of the residence period." Sch 1 s 3(1): "residence period means a continuous
+-- period of at least 1 year. residence start date means -- (a) for a home -- the date of completion of the eligible
+-- transaction; or (b) for vacant land -- the date that a certificate of occupancy has been issued under the Building Act
+-- 2004 for a home on the land". s 3(2): the Commissioner may determine "a shorter residence period (including no
+-- period)"; s 3(3): "a later residence start date". DI2026-157 Sch 2 s 1 and DI2026-159 ss 5(1)(e) and 6 say the same.
+-- "occupy" excludes occupation "of a transient, temporary, unlawful or passing nature" (a FACT: the input is lawful,
+-- settled occupation as a principal place of residence). The residence start date is the one that applies, a later
+-- date the Commissioner has determined included.
+DECLARE `Occupation` HAS
+    `the residence start date`                                                  IS A DATE
+    `a transferee occupies the property as their principal place of residence`  IS A BOOLEAN
+    `the day occupation began`                                                  IS A DATE
+    `the occupation has ended`                                                  IS A BOOLEAN
+    `the day occupation ended`                                                  IS A DATE
+    `the Commissioner has determined a shorter residence period`                IS A BOOLEAN
+    `the shorter residence period, in days`                                     IS A NUMBER
+
+-- An occupation as intended at the time of the transaction: from the residence start date, and continuing. This is how
+-- "will own and occupy" is read when the transferee asks what duty is payable (DI2026-157 s 6(3) example: "A person
+-- claims the concession and intends to live in the property").
+GIVEN `the residence start date` IS A DATE, `a transferee will occupy` IS A BOOLEAN
+GIVETH AN `Occupation`
+`the intended occupation from` `the residence start date` `if` `a transferee will occupy` MEANS
+    `Occupation` WITH
+        `the residence start date`                                                  IS `the residence start date`
+        `a transferee occupies the property as their principal place of residence`  IS `a transferee will occupy`
+        `the day occupation began`                                                  IS `the residence start date`
+        `the occupation has ended`                                                  IS FALSE
+        `the day occupation ended`                                                  IS `the residence start date`
+        `the Commissioner has determined a shorter residence period`                IS FALSE
+        `the shorter residence period, in days`                                     IS 0
+
+-- "within 1 year after the residence start date": occupation begins no later than the first anniversary.
+GIVEN `the occupation` IS AN `Occupation`
+GIVETH A BOOLEAN
+DECIDE `occupation begins within 1 year after the residence start date` `the occupation` IF
+        `the occupation`'s `a transferee occupies the property as their principal place of residence`
+    AND ((`the occupation`'s `the day occupation began`) `is on or before` (`the date` 12 `months after` (`the occupation`'s `the residence start date`)))
+
+-- "for the duration of the residence period": continuous from the day it began, for a year (READING: leaving on or
+-- after the first anniversary of moving in completes the year) or for the shorter period the Commissioner determined.
+GIVEN `the occupation` IS AN `Occupation`
+GIVETH A BOOLEAN
+DECIDE `occupation lasts for the residence period` `the occupation` IF
+        NOT (`the occupation`'s `the occupation has ended`)
+    OR  ((`the date` 12 `months after` (`the occupation`'s `the day occupation began`)) `is on or before` (`the occupation`'s `the day occupation ended`))
+    OR  (    `the occupation`'s `the Commissioner has determined a shorter residence period`
+         AND `the number of days from` (`the occupation`'s `the day occupation began`) `to` (`the occupation`'s `the day occupation ended`) AT LEAST `the occupation`'s `the shorter residence period, in days`)
+
+GIVEN `the occupation` IS AN `Occupation`
+GIVETH A BOOLEAN
+DECIDE `the residence requirement is met by` `the occupation` IF
+        `occupation begins within 1 year after the residence start date` `the occupation`
+    AND `occupation lasts for the residence period` `the occupation`
+
+-- The notice duty runs from "the first of the following events: (a) the end of any period allowed for compliance with a
+-- requirement of the transaction; or (b) the date that the transferee first becomes aware that the transaction is not
+-- an [eligible] transaction" (DI2026-155 Sch 1 s 1(2); DI2026-157 s 6(2); DI2026-159 s 5(2)). READING: for the residence
+-- requirement, the period allowed ends on the first anniversary of the residence start date where occupation did not
+-- begin in time, and otherwise at the end of the residence period counted from the day occupation began.
+GIVEN `the occupation` IS AN `Occupation`
+GIVETH A DATE
+`the end of the period allowed for the residence requirement` `the occupation` MEANS
+    BRANCH
+        IF NOT (`occupation begins within 1 year after the residence start date` `the occupation`)
+        THEN `the date` 12 `months after` (`the occupation`'s `the residence start date`)
+        IF `the occupation`'s `the Commissioner has determined a shorter residence period`
+        THEN `the day that is` (`the occupation`'s `the shorter residence period, in days`) `days after` (`the occupation`'s `the day occupation began`)
+        OTHERWISE `the date` 12 `months after` (`the occupation`'s `the day occupation began`)
+
+GIVEN `the occupation` IS AN `Occupation`, `the day the transferee became aware` IS A DATE
+GIVETH A DATE
+`the first of the events for notice` `the occupation` `aware on` `the day the transferee became aware` MEANS
+    IF `the day the transferee became aware` `is on or before` (`the end of the period allowed for the residence requirement` `the occupation`)
+    THEN `the day the transferee became aware`
+    ELSE `the end of the period allowed for the residence requirement` `the occupation`
+
+GIVEN `the occupation` IS AN `Occupation`, `the day the transferee became aware` IS A DATE
+GIVETH A DATE
+`the last day to give notice for` `the occupation` `aware on` `the day the transferee became aware` MEANS
+    `the day that is` `the days to give notice` `days after` (`the first of the events for notice` `the occupation` `aware on` `the day the transferee became aware`)
+
+§§ `The transferees`
+
+-- The facts each definition asks of the transferees together. "A transferee if more than one -- means transferees"
+-- (DI2026-155 Sch 1 s 6; DI2026-157 dictionary; DI2026-159 s 3).
+DECLARE `Transferees` HAS
+    `every transferee is an individual`                                                         IS A BOOLEAN
+    `every transferee acquires in their personal capacity, not as a trustee, partner in a partnership or agent` IS A BOOLEAN
+    `every transferee acquires both a legal and an equitable interest on completion`            IS A BOOLEAN
+    `the youngest transferee's age on the transaction date`                                     IS A NUMBER
+    `the Commissioner has determined a younger required age that every transferee meets`        IS A BOOLEAN
+
+-- DI2026-157 and DI2026-159: "required age means -- (a) 18 years of age; or (b) a younger age determined by the
+-- Commissioner". READING: "18 years of age" is 18 or older.
+GIVEN `the transferees` IS A `Transferees`
+GIVETH A BOOLEAN
+DECIDE `every transferee is the required age` `the transferees` IF
+        `the transferees`'s `the youngest transferee's age on the transaction date` AT LEAST 18
+    OR  `the transferees`'s `the Commissioner has determined a younger required age that every transferee meets`
+
+-- Every condition any of the three definitions can fail on, in the texts' order.
+DECLARE `Failed condition` IS ONE OF
+    `the transaction date is before 1 July 2026`
+    `the property is not a home or vacant land`
+    `a transferee is not an individual`
+    `a transferee acquires other than in their personal capacity (as a trustee, a partner in a partnership or an agent)`
+    `a transferee is under the required age`
+    `not every transferee acquires both a legal and an equitable interest`
+    `a buyer or a domestic partner held an interest in land in the previous 5 years that is not an allowed interest`
+    `no buyer receives a qualifying pension or holds a Gold Card on the transaction date`
+    `a buyer or a domestic partner holds an interest in land on the transaction date other than the former home and the excepted interests`
+    `there is no former home`
+    `the former home is not sold within 1 year before or after the registration date`
+    `the property is not bought in the same name or names as the former home`
+    `a buyer has already had duty determined under an Over 60s Home Bonus Scheme or a Pensioner Duty Concession Scheme`
+    `no transferee occupies the property as their principal place of residence within 1 year after the residence start date`
+    `the occupation does not last for the residence period`
+    `the occupier is not the pensioner or the pensioner's domestic partner`
+    `the domestic partner named in the family violence order or injunction lives in the property in the residence period`
+
+DECLARE `Eligibility answer` IS ONE OF
+    `eligible`
+    `not eligible` HAS `because` IS A `Failed condition`
+
+GIVEN `the answer` IS AN `Eligibility answer`
+GIVETH A BOOLEAN
+DECIDE `is eligible` `the answer` IF
+    CONSIDER `the answer`
+    WHEN `eligible` THEN TRUE
+    OTHERWISE FALSE
+
+-- The residence failures, in the order the words come.
+GIVEN `the occupation` IS AN `Occupation`
+GIVETH AN `Eligibility answer`
+`the residence answer for` `the occupation` MEANS
+    BRANCH
+        IF NOT (`occupation begins within 1 year after the residence start date` `the occupation`)
+        THEN `not eligible` `no transferee occupies the property as their principal place of residence within 1 year after the residence start date`
+        IF NOT (`occupation lasts for the residence period` `the occupation`)
+        THEN `not eligible` `the occupation does not last for the residence period`
+        OTHERWISE `eligible`
+
+GIVEN `the transaction` IS A `Transaction`
+GIVETH A BOOLEAN
+DECIDE `the property is eligible property` `the transaction` IF
+    CONSIDER `the transaction`'s `property`
+    WHEN `a home` THEN TRUE
+    WHEN `vacant land` THEN TRUE
+    OTHERWISE FALSE
+
+§§ `DI2026-155 Schedule 1 -- the eligible owner occupier transaction`
+
+-- Sch 1 s 1(1): "eligible owner occupier transaction means a transfer with a transaction date on or after 1 July 2026
+-- that meets the following requirements: (a) all transferees acquire both a legal and an equitable interest in
+-- eligible property on completion of the transaction; and (b) all transferees are an individual; (i) a transferee is
+-- not an individual if the individual acquires the eligible property other than in the individual's personal capacity;
+-- and (b) at least 1 transferee will own and occupy the eligible property, as the transferee's principal place of
+-- residence, within 1 year after the residence start date for the duration of the residence period." (Two paragraphs
+-- are lettered (b): NOTES finding 2.) There is no age, prior-ownership or value condition.
+GIVEN `the transaction`  IS A `Transaction`
+      `the transferees`  IS A `Transferees`
+      `the occupation`   IS AN `Occupation`
+GIVETH AN `Eligibility answer`
+`the Schedule 1 answer for` `the transaction` `the transferees` `the occupation` MEANS
+    BRANCH
+        IF NOT (`1 July 2026` `is on or before` (`the transaction`'s `transaction date`))
+        THEN `not eligible` `the transaction date is before 1 July 2026`
+        IF NOT (`the property is eligible property` `the transaction`)
+        THEN `not eligible` `the property is not a home or vacant land`
+        IF NOT (`the transferees`'s `every transferee acquires both a legal and an equitable interest on completion`)
+        THEN `not eligible` `not every transferee acquires both a legal and an equitable interest`
+        IF NOT (`the transferees`'s `every transferee is an individual`)
+        THEN `not eligible` `a transferee is not an individual`
+        IF NOT (`the transferees`'s `every transferee acquires in their personal capacity, not as a trustee, partner in a partnership or agent`)
+        THEN `not eligible` `a transferee acquires other than in their personal capacity (as a trustee, a partner in a partnership or an agent)`
+        OTHERWISE `the residence answer for` `the occupation`
+
+§§ `DI2026-157 -- the Home Buyer Concession Scheme`
+
+-- s 6(1)(b): "on the transaction date, all eligible home buyers and their domestic partners (if any) have not held a
+-- legal or equitable interest in land within the previous 5 years, other than an allowed interest".
+-- Schedule 1(1): "allowed interest means any legal or equitable interest interest -- (a) in the eligible property; or
+-- (b) in land that a person was required to relinquish prior to the transaction date under -- (i) a sealed order of a
+-- court; or (ii) a financial agreement made under section 90B, section 90C, or section 90D of the Family Law Act 1975
+-- (Cwlth) ...; or (iii) a part VIIIAB financial agreement ...; or (iv) a domestic relationship agreement or termination
+-- agreement under the Domestic Relationships Act 1994 ...; or (c) in land held by an eligible home buyer's domestic
+-- partner, who is a spouse, if the Commissioner is satisfied -- (i) there has been a dissolution, annulment or
+-- irretrievable breakdown of the relationship; and (ii) the eligible home buyer is not cohabitating with the spouse and
+-- there is no likelihood of cohabitation being resumed; or (d) in land held by the eligible home buyer, where the
+-- eligible home buyer or their dependent child has experienced family violence within the previous 5 years as evidenced
+-- by -- (i) a family violence order ...; or (ii) an injunction made under the Family Law Act 1975 (Cwlth), section 68B
+-- or section 114 ...; or (iii) a competent person declaration ...; or (e) that a person acquires -- (i) as an executor
+-- or trustee (but not a beneficiary) under a will; or (ii) under an agreement for the sale or transfer of the interest
+-- within the 5-year period that was subsequently cancelled and, sections 50 or 50A of the Act ... were applied so as to
+-- result in no duty payable."
+-- Paragraphs (a), (b) and (e) are kinds of interest anyone can recognise; the facts below leave them out. Paragraph (c)
+-- turns on the Commissioner's satisfaction and (d) on the evidence: both are FACTS. READING: (d) reaches every interest
+-- "held by the eligible home buyer" once the family violence is evidenced, and nothing held by a domestic partner;
+-- (c) reaches a domestic partner's land only where the partner is a spouse. "domestic partner" is not defined in the
+-- determination (the Legislation Act 2001 defines it): a FACT.
+DECLARE `Land held in the previous 5 years` HAS
+    `a buyer held an interest in land other than one in Schedule 1 paragraph (a), (b) or (e)`                 IS A BOOLEAN
+    `a buyer or their dependent child experienced family violence in the 5 years, evidenced as Schedule 1 paragraph (d) requires` IS A BOOLEAN
+    `a buyer's domestic partner held an interest in land other than one in Schedule 1 paragraph (a), (b) or (e)` IS A BOOLEAN
+    `that domestic partner is a spouse, and the Commissioner is satisfied the relationship has broken down with no likelihood of cohabitation` IS A BOOLEAN
+    `the domestic partner named in the family violence order or injunction occupies or resides in the property in the residence period` IS A BOOLEAN
+
+GIVEN `the land` IS A `Land held in the previous 5 years`
+GIVETH A BOOLEAN
+DECIDE `every interest held in the previous 5 years is an allowed interest` `the land` IF
+        (    NOT (`the land`'s `a buyer held an interest in land other than one in Schedule 1 paragraph (a), (b) or (e)`)
+         OR  `the land`'s `a buyer or their dependent child experienced family violence in the 5 years, evidenced as Schedule 1 paragraph (d) requires`)
+    AND (    NOT (`the land`'s `a buyer's domestic partner held an interest in land other than one in Schedule 1 paragraph (a), (b) or (e)`)
+         OR  `the land`'s `that domestic partner is a spouse, and the Commissioner is satisfied the relationship has broken down with no likelihood of cohabitation`)
+
+-- Sch 2 s 1(1)(b): "where the eligible home buyer, (or their dependent child) has experienced family violence and the
+-- transaction is an eligible transaction under the operation of Schedule 1, section 1 (d) of this instrument -- the
+-- domestic partner referenced in the family violence order or the injunction must not occupy or reside in the eligible
+-- property for the duration of the residence period." It operates only where paragraph (d) is what makes a buyer's own
+-- land an allowed interest.
+GIVEN `the land` IS A `Land held in the previous 5 years`
+GIVETH A BOOLEAN
+DECIDE `the transaction relies on Schedule 1 paragraph (d)` `the land` IF
+        `the land`'s `a buyer held an interest in land other than one in Schedule 1 paragraph (a), (b) or (e)`
+    AND `the land`'s `a buyer or their dependent child experienced family violence in the 5 years, evidenced as Schedule 1 paragraph (d) requires`
+
+-- s 5: "(1) eligible home buyer ... means an individual who is a transferee of the eligible property. (2) If there is
+-- more than one transferee, each transferee must be an individual. (3) A transferee is not an eligible home buyer if the
+-- transferee is: (a) a corporation; or (b) a trustee of a trust; or (c) a partner in a partnership; or (d) an agent ...
+-- (4) An individual is not an eligible home buyer if the individual acquires the eligible property other than in the
+-- individual's personal capacity. (5) An eligible home buyer must be the required age on the transaction date."
+-- s 6(1): "eligible transaction means a transfer to an eligible home buyer with a transaction date on or after 1 July
+-- 2026 that meets the following requirements: (a) all eligible home buyers acquire both a legal and an equitable
+-- interest in eligible property on completion of the transaction; and (b) [above]; and (c) at least 1 eligible home
+-- buyer will own and occupy the eligible property to meet the residence requirement." No value or income cap appears
+-- (NOTES finding 3).
+GIVEN `the transaction`  IS A `Transaction`
+      `the transferees`  IS A `Transferees`
+      `the land`         IS A `Land held in the previous 5 years`
+      `the occupation`   IS AN `Occupation`
+GIVETH AN `Eligibility answer`
+`the home buyer concession answer for` `the transaction` `the transferees` `the land` `the occupation` MEANS
+    BRANCH
+        IF NOT (`1 July 2026` `is on or before` (`the transaction`'s `transaction date`))
+        THEN `not eligible` `the transaction date is before 1 July 2026`
+        IF NOT (`the property is eligible property` `the transaction`)
+        THEN `not eligible` `the property is not a home or vacant land`
+        IF NOT (`the transferees`'s `every transferee is an individual`)
+        THEN `not eligible` `a transferee is not an individual`
+        IF NOT (`the transferees`'s `every transferee acquires in their personal capacity, not as a trustee, partner in a partnership or agent`)
+        THEN `not eligible` `a transferee acquires other than in their personal capacity (as a trustee, a partner in a partnership or an agent)`
+        IF NOT (`every transferee is the required age` `the transferees`)
+        THEN `not eligible` `a transferee is under the required age`
+        IF NOT (`the transferees`'s `every transferee acquires both a legal and an equitable interest on completion`)
+        THEN `not eligible` `not every transferee acquires both a legal and an equitable interest`
+        IF NOT (`every interest held in the previous 5 years is an allowed interest` `the land`)
+        THEN `not eligible` `a buyer or a domestic partner held an interest in land in the previous 5 years that is not an allowed interest`
+        IF NOT (`is eligible` (`the residence answer for` `the occupation`))
+        THEN `the residence answer for` `the occupation`
+        IF `the transaction relies on Schedule 1 paragraph (d)` `the land` AND `the land`'s `the domestic partner named in the family violence order or injunction occupies or resides in the property in the residence period`
+        THEN `not eligible` `the domestic partner named in the family violence order or injunction lives in the property in the residence period`
+        OTHERWISE `eligible`
+
+§§ `DI2026-159 -- the Pensioner Duty Concession Scheme`
+
+-- s 5(1)(a): "on the transaction date, at least 1 eligible home buyer -- (i) received a Services Australia age pension
+-- or Department of Veterans' Affairs age pension equivalent; or (ii) received a Services Australia disability support
+-- pension and was 50 years of age or older; or (iii) held a Department of Veterans' Affairs Gold Card; or (iv) received
+-- a service pension". s 3: "service pension means: (a) an age service pension; or (b) an invalidity service pension; or
+-- (c) a partner service pension; under the Veterans' Entitlements Act 1986 (Cwlth)." Which payment a buyer receives is
+-- a FACT (Commonwealth law decides it).
+DECLARE `Pension` IS ONE OF
+    `none of these`
+    `a Services Australia age pension, or the Department of Veterans' Affairs equivalent`
+    `a Services Australia disability support pension`
+    `a Department of Veterans' Affairs Gold Card`
+    `a service pension under the Veterans' Entitlements Act 1986 (age, invalidity or partner service pension)`
+
+-- s 5(4): "former property, of a person, means land in Australia that the person occupied as the person's principal
+-- place of residence -- (a) immediately before the transaction date; or (b) immediately before the land was sold within
+-- a 1-year period ending on the transaction date."
+DECLARE `Former home` IS ONE OF
+    `no former home`
+    `a home in Australia a buyer occupies as their principal place of residence immediately before the transaction date`
+    `a home in Australia a buyer occupied as their principal place of residence until it was sold`
+
+DECLARE `Pensioner facts` HAS
+    `the pension a buyer receives or card a buyer holds on the transaction date`                 IS A `Pension`
+    `that buyer's age on the transaction date`                                                    IS A NUMBER
+    `on the transaction date a buyer holds an interest in land other than the former home or one in s 5(1)(b)(ii) or (iii)` IS A BOOLEAN
+    `on the transaction date a buyer's domestic partner holds an interest in land other than the former home or one in s 5(1)(b)(ii) or (iii)` IS A BOOLEAN
+    `that domestic partner is a spouse, and the Commissioner is satisfied the relationship has broken down with no likelihood of cohabitation` IS A BOOLEAN
+    `the former home`                                                                             IS A `Former home`
+    `the day the former home was or will be sold`                                                 IS A DATE
+    `the registration date`                                                                       IS A DATE
+    `the Commissioner is satisfied an unforeseen circumstance prevents the sale in time`          IS A BOOLEAN
+    `the property is bought in the same name or names as the former home`                         IS A BOOLEAN
+    `a buyer was required to give up an interest in the former home under a sealed court order or a binding family law or domestic relationship agreement` IS A BOOLEAN
+    `the Commissioner has exempted the buyer from the same-names requirement`                     IS A BOOLEAN
+    `the occupier is the pensioner or the pensioner's domestic partner`                           IS A BOOLEAN
+    `a buyer has had duty determined under an Over 60s Home Bonus Scheme or a Pensioner Duty Concession Scheme` IS A BOOLEAN
+
+GIVEN `the facts` IS A `Pensioner facts`
+GIVETH A BOOLEAN
+DECIDE `a buyer is a pensioner` `the facts` IF
+    CONSIDER `the facts`'s `the pension a buyer receives or card a buyer holds on the transaction date`
+    WHEN `none of these` THEN FALSE
+    WHEN `a Services Australia disability support pension` THEN `the facts`'s `that buyer's age on the transaction date` AT LEAST 50
+    OTHERWISE TRUE
+
+-- s 5(1)(b): on the transaction date no buyer or domestic partner holds an interest in land "other than an interest --
+-- (i) in the former property; or (ii) in land that a person was required to and did relinquish prior to the transaction
+-- date under -- (A) an order of a court; or (B)-(D) [the family law and domestic relationship agreements]; or (iii) that
+-- a person acquires as an executor or trustee (but not a beneficiary) under a will; or (iv) any legal or equitable
+-- interest in land held by an eligible home buyer's domestic partner, who is a spouse, if the Commissioner is satisfied
+-- -- (A) there has been a dissolution, annulment or irretrievable breakdown of the relationship; and (B) the eligible home
+-- buyer is not cohabitating with the spouse and there is no likelihood of cohabitating being resumed". Unlike DI2026-157,
+-- there is no 5-year look-back.
+GIVEN `the facts` IS A `Pensioner facts`
+GIVETH A BOOLEAN
+DECIDE `no other interest in land is held on the transaction date` `the facts` IF
+        NOT (`the facts`'s `on the transaction date a buyer holds an interest in land other than the former home or one in s 5(1)(b)(ii) or (iii)`)
+    AND (    NOT (`the facts`'s `on the transaction date a buyer's domestic partner holds an interest in land other than the former home or one in s 5(1)(b)(ii) or (iii)`)
+         OR  `the facts`'s `that domestic partner is a spouse, and the Commissioner is satisfied the relationship has broken down with no likelihood of cohabitation`)
+
+-- s 5(4): a home a buyer left when it was sold is a "former property" only if it was sold "within a 1-year period ending
+-- on the transaction date".
+GIVEN `the facts` IS A `Pensioner facts`, `the transaction date` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `there is a former property` `the facts` `the transaction date` IF
+    CONSIDER `the facts`'s `the former home`
+    WHEN `no former home` THEN FALSE
+    WHEN `a home in Australia a buyer occupies as their principal place of residence immediately before the transaction date` THEN TRUE
+    WHEN `a home in Australia a buyer occupied as their principal place of residence until it was sold` THEN
+            ((`the date` 12 `months before` `the transaction date`) `is on or before` (`the facts`'s `the day the former home was or will be sold`))
+        AND ((`the facts`'s `the day the former home was or will be sold`) `is on or before` `the transaction date`)
+
+-- s 5(1)(c): "the former property is sold within 1 year before or after the registration date, except if the
+-- Commissioner is satisfied that the eligible home buyer is unable to sell the former property in this time because of
+-- an unforeseen circumstance". "registration date means the date that the eligible transaction is registered on the
+-- land titles register." (The two 1-year tests run from different days: NOTES finding 7.)
+GIVEN `the facts` IS A `Pensioner facts`
+GIVETH A BOOLEAN
+DECIDE `the former property is sold within 1 year of the registration date` `the facts` IF
+        (    ((`the date` 12 `months before` (`the facts`'s `the registration date`)) `is on or before` (`the facts`'s `the day the former home was or will be sold`))
+         AND ((`the facts`'s `the day the former home was or will be sold`) `is on or before` (`the date` 12 `months after` (`the facts`'s `the registration date`))))
+    OR  `the facts`'s `the Commissioner is satisfied an unforeseen circumstance prevents the sale in time`
+
+-- s 5(1)(d): "the ownership of the eligible property is in the same name or names as the former property, except if --
+-- (i) a person was required to relinquish an interest in the former property prior to the transaction date under -- (A)
+-- a sealed order of a court; or (B)-(D) [the agreements]; or (ii) an exemption is requested ..., and the Commissioner is
+-- satisfied that it is fair and reasonable to exempt the eligible home buyer".
+GIVEN `the facts` IS A `Pensioner facts`
+GIVETH A BOOLEAN
+DECIDE `the same-names requirement is met` `the facts` IF
+        `the facts`'s `the property is bought in the same name or names as the former home`
+    OR  `the facts`'s `a buyer was required to give up an interest in the former home under a sealed court order or a binding family law or domestic relationship agreement`
+    OR  `the facts`'s `the Commissioner has exempted the buyer from the same-names requirement`
+
+-- s 4 (eligible home buyer: as DI2026-157 s 5) and s 5(1)(a)-(g), in that order. No value or income cap appears (NOTES
+-- finding 3).
+GIVEN `the transaction`  IS A `Transaction`
+      `the transferees`  IS A `Transferees`
+      `the facts`        IS A `Pensioner facts`
+      `the occupation`   IS AN `Occupation`
+GIVETH AN `Eligibility answer`
+`the pensioner concession answer for` `the transaction` `the transferees` `the facts` `the occupation` MEANS
+    BRANCH
+        IF NOT (`1 July 2026` `is on or before` (`the transaction`'s `transaction date`))
+        THEN `not eligible` `the transaction date is before 1 July 2026`
+        IF NOT (`the property is eligible property` `the transaction`)
+        THEN `not eligible` `the property is not a home or vacant land`
+        IF NOT (`the transferees`'s `every transferee is an individual`)
+        THEN `not eligible` `a transferee is not an individual`
+        IF NOT (`the transferees`'s `every transferee acquires in their personal capacity, not as a trustee, partner in a partnership or agent`)
+        THEN `not eligible` `a transferee acquires other than in their personal capacity (as a trustee, a partner in a partnership or an agent)`
+        IF NOT (`every transferee is the required age` `the transferees`)
+        THEN `not eligible` `a transferee is under the required age`
+        IF NOT (`a buyer is a pensioner` `the facts`)
+        THEN `not eligible` `no buyer receives a qualifying pension or holds a Gold Card on the transaction date`
+        IF NOT (`no other interest in land is held on the transaction date` `the facts`)
+        THEN `not eligible` `a buyer or a domestic partner holds an interest in land on the transaction date other than the former home and the excepted interests`
+        IF NOT (`there is a former property` `the facts` (`the transaction`'s `transaction date`))
+        THEN `not eligible` `there is no former home`
+        IF NOT (`the former property is sold within 1 year of the registration date` `the facts`)
+        THEN `not eligible` `the former home is not sold within 1 year before or after the registration date`
+        IF NOT (`the same-names requirement is met` `the facts`)
+        THEN `not eligible` `the property is not bought in the same name or names as the former home`
+        IF NOT (`is eligible` (`the residence answer for` `the occupation`))
+        THEN `the residence answer for` `the occupation`
+        IF NOT (`the facts`'s `the occupier is the pensioner or the pensioner's domestic partner`)
+        THEN `not eligible` `the occupier is not the pensioner or the pensioner's domestic partner`
+        IF NOT (`the transferees`'s `every transferee acquires both a legal and an equitable interest on completion`)
+        THEN `not eligible` `not every transferee acquires both a legal and an equitable interest`
+        IF `the facts`'s `a buyer has had duty determined under an Over 60s Home Bonus Scheme or a Pensioner Duty Concession Scheme`
+        THEN `not eligible` `a buyer has already had duty determined under an Over 60s Home Bonus Scheme or a Pensioner Duty Concession Scheme`
+        OTHERWISE `eligible`
+
+§§ `Chapter 11 -- deceased estates and the end of a relationship`
+
+DECLARE `Exemption answer` IS ONE OF
+    `not exempt: the transaction is a transfer for value`
+    `exempt under s 232D(1)(a)(i), if the commissioner is satisfied the transfer is under and in conformity with the will or the intestacy`
+    `exempt under s 232D(1)(a)(ii), if the commissioner is satisfied the property is the subject of a trust for sale in the will`
+    `not covered: a transfer only partly in conformity with the will or the intestacy has the reduced dutiable value of s 232D(3), not encoded`
+    `exempt under s 232F(a): a transaction under an order of a court under the Family Law Act 1975 or the Married Persons Property Act 1986`
+    `exempt under s 232F(b): a transaction under a court order distributing property at the end of the relationship between partners`
+    `exempt under s 232G, if the commissioner is satisfied the transaction is consequent on the dissolution, annulment or irretrievable breakdown of the marriage`
+    `exempt under s 232H, if the commissioner is satisfied the transaction is consequent on the end of the de facto relationship`
+    `exempt under s 232I, if the commissioner is satisfied the transaction is consequent on the end of the domestic relationship`
+    `not exempt: the property is not matrimonial property or relationship property`
+    `not exempt: the transfer is not to a party, to a child of either party, or to a trustee for the child`
+    `not exempt: the agreement is not in writing signed by each party with the certificates for each party`
+
+-- s 232D(1): "Duty under this Act is not payable in relation to the following: (a) a transfer of dutiable property not
+-- made for valuable consideration by the legal personal representative of a deceased person to a beneficiary if the
+-- commissioner is satisfied that the transfer is -- (i) a transfer made under and in conformity with the trusts contained
+-- in the will of the deceased person or arising on an intestacy; or (ii) a transfer of property the subject of a trust
+-- for sale contained in the will". (2)-(3): a transfer "only partly in conformity" has dutiable value X - Y (not encoded).
+-- s 232F: "Duty under this Act is not payable in relation to a transaction made under -- (a) an order of a court under
+-- the Family Law Act 1975 (Cwlth) or the Married Persons Property Act 1986; or (b) any other order of a court for the
+-- distribution of property consequent on the end of the relationship between partners."
+-- s 232G(1): a transaction under a binding s 90B, 90C or 90D financial agreement, "if -- (a) the commissioner is satisfied
+-- that the transaction is consequent on the dissolution, annulment or irretrievable breakdown of a marriage; and (b) the
+-- property that is the subject of the transaction is matrimonial property; and (c) for a transfer of dutiable property
+-- ..., the transfer is -- (i) to the parties to the marriage, or to either of them; or (ii) to a child or children of
+-- either of them, or to a trustee for the child or children". s 232H(1): the same for a binding pt 8AB agreement, "(a)
+-- ... consequent on the end of the de facto relationship ...; (b) ... relationship property; (c) [the same]". s 232I(1):
+-- a domestic relationship or termination agreement, "if -- (a) the agreement is in writing and signed by each party; and
+-- (b) the agreement is endorsed with, or accompanied by, the certificates mentioned in that Act, section 33 (1) (d) for
+-- each party; and (c) the commissioner is satisfied that the transaction is consequent on the end of the domestic
+-- relationship ...; and (d) ... relationship property; and (e) [the same]". The commissioner's satisfaction is left to
+-- the commissioner: the answers say "if the commissioner is satisfied".
+GIVEN `the transaction` IS A `Transaction`
+GIVETH AN `Exemption answer`
+`the chapter 11 answer for` `the transaction` MEANS
+    CONSIDER `the transaction`'s `acquired`
+    WHEN `by purchase, or another transfer for value` THEN `not exempt: the transaction is a transfer for value`
+    WHEN `from the legal personal representative of a deceased person, for no consideration, under and in conformity with the will or the intestacy` THEN `exempt under s 232D(1)(a)(i), if the commissioner is satisfied the transfer is under and in conformity with the will or the intestacy`
+    WHEN `from the legal personal representative of a deceased person, for no consideration, as property under a trust for sale in the will` THEN `exempt under s 232D(1)(a)(ii), if the commissioner is satisfied the property is the subject of a trust for sale in the will`
+    WHEN `from the legal personal representative of a deceased person, only partly in conformity with the will or the intestacy` THEN `not covered: a transfer only partly in conformity with the will or the intestacy has the reduced dutiable value of s 232D(3), not encoded`
+    WHEN `under an order of a court under the Family Law Act 1975 or the Married Persons Property Act 1986` THEN `exempt under s 232F(a): a transaction under an order of a court under the Family Law Act 1975 or the Married Persons Property Act 1986`
+    WHEN `under another court order distributing property at the end of a relationship between partners` THEN `exempt under s 232F(b): a transaction under a court order distributing property at the end of the relationship between partners`
+    WHEN `under a binding financial agreement under the Family Law Act 1975, s 90B, s 90C or s 90D` THEN
+        `the agreement answer` `exempt under s 232G, if the commissioner is satisfied the transaction is consequent on the dissolution, annulment or irretrievable breakdown of the marriage` TRUE
+    WHEN `under a binding part 8AB financial agreement under the Family Law Act 1975, s 90UB, s 90UC or s 90UD` THEN
+        `the agreement answer` `exempt under s 232H, if the commissioner is satisfied the transaction is consequent on the end of the de facto relationship` TRUE
+    WHEN `under a domestic relationship agreement or termination agreement under the Domestic Relationships Act 1994` THEN
+        `the agreement answer` `exempt under s 232I, if the commissioner is satisfied the transaction is consequent on the end of the domestic relationship` (`the separation`'s `the agreement is in writing, signed by each party, with the certificates of independent legal advice for each party`)
+    WHERE
+        `the separation` MEANS `the transaction`'s `separation`
+        GIVEN `the exemption` IS AN `Exemption answer`, `the form is right` IS A BOOLEAN
+        GIVETH AN `Exemption answer`
+        `the agreement answer` `the exemption` `the form is right` MEANS
+            BRANCH
+                IF NOT (`the form is right`)
+                THEN `not exempt: the agreement is not in writing signed by each party with the certificates for each party`
+                IF NOT (`the separation`'s `the property is matrimonial property or relationship property`)
+                THEN `not exempt: the property is not matrimonial property or relationship property`
+                IF NOT (`the separation`'s `the transfer is to a party, to a child of either party, or to a trustee for the child`)
+                THEN `not exempt: the transfer is not to a party, to a child of either party, or to a trustee for the child`
+                OTHERWISE `the exemption`
+
+GIVEN `the answer` IS AN `Exemption answer`
+GIVETH A BOOLEAN
+DECIDE `is an exemption` `the answer` IF
+    CONSIDER `the answer`
+    WHEN `exempt under s 232D(1)(a)(i), if the commissioner is satisfied the transfer is under and in conformity with the will or the intestacy` THEN TRUE
+    WHEN `exempt under s 232D(1)(a)(ii), if the commissioner is satisfied the property is the subject of a trust for sale in the will` THEN TRUE
+    WHEN `exempt under s 232F(a): a transaction under an order of a court under the Family Law Act 1975 or the Married Persons Property Act 1986` THEN TRUE
+    WHEN `exempt under s 232F(b): a transaction under a court order distributing property at the end of the relationship between partners` THEN TRUE
+    WHEN `exempt under s 232G, if the commissioner is satisfied the transaction is consequent on the dissolution, annulment or irretrievable breakdown of the marriage` THEN TRUE
+    WHEN `exempt under s 232H, if the commissioner is satisfied the transaction is consequent on the end of the de facto relationship` THEN TRUE
+    WHEN `exempt under s 232I, if the commissioner is satisfied the transaction is consequent on the end of the domestic relationship` THEN TRUE
+    OTHERWISE FALSE
+
+§§ `s 31 -- the duty payable, and under which rate`
+
+DECLARE `Duty answer` IS ONE OF
+    `no duty: the transaction is exempt` HAS `exemption` IS AN `Exemption answer`
+    `nil duty under the Home Buyer Concession Scheme (DI2026-157 s 7)`
+    `nil duty under the Pensioner Duty Concession Scheme (DI2026-159 s 9)`
+    `duty at the eligible owner occupier rate (DI2026-155 s 5(1)(a), Table 1)` HAS `dollars` IS A NUMBER
+    `duty at the rate for other transactions (DI2026-155 s 5(1)(b), Table 2)` HAS `dollars` IS A NUMBER
+    `not covered` HAS `because` IS A `Why not covered`
+
+-- Every fact the duty turns on, for one transaction.
+DECLARE `Duty case` HAS
+    `the transaction`  IS A `Transaction`
+    `the transferees`  IS A `Transferees`
+    `the occupation`   IS AN `Occupation`
+    `the land history` IS A `Land held in the previous 5 years`
+    `the pensioner facts` IS A `Pensioner facts`
+
+-- s 31: "duty at the determined rate is payable on a dutiable transaction." DI2026-155 s 5(1): "(a) for an eligible owner
+-- occupier transaction -- ... Table 1 ...; or (b) for a transaction that is not an eligible owner occupier transaction
+-- -- ... Table 2". DI2026-157 s 7: "the amount of duty payable on an eligible transaction under this instrument is nil
+-- rate of duty." DI2026-159 s 9: "the amount of duty payable on an eligible transaction under this instrument is nil."
+-- INFERENCE: the two scheme determinations, each made for s 31 for its own eligible transactions, displace the general
+-- Tables for those transactions; the answer assumes the concession is applied for (DI2026-157 s 8, DI2026-159 s 8).
+-- The order of the checks: the kinds of transaction not encoded; the exemptions (the Act's, so not tied to the dates
+-- of the determinations); the determinations' dates; commercial use (pt 3); then the schemes and the two Tables.
+GIVEN `the case` IS A `Duty case`
+GIVETH A `Duty answer`
+`the duty answer for` `the case` MEANS
+    CONSIDER `the gap for` (`the transaction`'s `kind`)
+    WHEN JUST `the gap` THEN `not covered` `the gap`
+    WHEN NOTHING THEN `the answer for a transaction of the encoded kind`
+    WHERE
+        `the transaction` MEANS `the case`'s `the transaction`
+        `the exemption` MEANS `the chapter 11 answer for` `the transaction`
+        `the answer for a transaction of the encoded kind` MEANS
+            BRANCH
+                IF `is an exemption` `the exemption`
+                THEN `no duty: the transaction is exempt` `the exemption`
+                IF `the exemption` EQUALS `not covered: a transfer only partly in conformity with the will or the intestacy has the reduced dutiable value of s 232D(3), not encoded`
+                THEN `not covered` `a transfer only partly in conformity with the will or intestacy (s 232D(2)-(3)) is not encoded`
+                OTHERWISE `the answer within the dates`
+        `the answer within the dates` MEANS
+            CONSIDER `the date gap for` (`the transaction`'s `transaction date`)
+            WHEN JUST `the gap` THEN `not covered` `the gap`
+            WHEN NOTHING THEN
+                BRANCH
+                    IF NOT (`part 2 of the duty determination applies to` `the transaction`)
+                    THEN `not covered` `the property is used, or will be used, partly or wholly for a commercial purpose (DI2026-155 pt 3, Table 3)`
+                    IF `is eligible` (`the home buyer concession answer for` `the transaction` (`the case`'s `the transferees`) (`the case`'s `the land history`) (`the case`'s `the occupation`))
+                    THEN `nil duty under the Home Buyer Concession Scheme (DI2026-157 s 7)`
+                    IF `is eligible` (`the pensioner concession answer for` `the transaction` (`the case`'s `the transferees`) (`the case`'s `the pensioner facts`) (`the case`'s `the occupation`))
+                    THEN `nil duty under the Pensioner Duty Concession Scheme (DI2026-159 s 9)`
+                    IF `is eligible` (`the Schedule 1 answer for` `the transaction` (`the case`'s `the transferees`) (`the case`'s `the occupation`))
+                    THEN `duty at the eligible owner occupier rate (DI2026-155 s 5(1)(a), Table 1)` (`the duty under` `Table 1` `on` (`the dutiable value of` `the transaction`))
+                    OTHERWISE `duty at the rate for other transactions (DI2026-155 s 5(1)(b), Table 2)` (`the duty under` `Table 2` `on` (`the dutiable value of` `the transaction`))
+
+-- The dollars of an answer: nil and exempt are 0; not covered has no amount.
+GIVEN `the answer` IS A `Duty answer`
+GIVETH A MAYBE NUMBER
+`the dollars of` `the answer` MEANS
+    CONSIDER `the answer`
+    WHEN `no duty: the transaction is exempt` `e` THEN JUST 0
+    WHEN `nil duty under the Home Buyer Concession Scheme (DI2026-157 s 7)` THEN JUST 0
+    WHEN `nil duty under the Pensioner Duty Concession Scheme (DI2026-159 s 9)` THEN JUST 0
+    WHEN `duty at the eligible owner occupier rate (DI2026-155 s 5(1)(a), Table 1)` `d` THEN JUST `d`
+    WHEN `duty at the rate for other transactions (DI2026-155 s 5(1)(b), Table 2)` `d` THEN JUST `d`
+    WHEN `not covered` `g` THEN NOTHING
+
+§§ `When the concession falls away -- DI2026-155 Sch 1 s 1(3), DI2026-157 s 6(3), DI2026-159 s 5(3)`
+
+DECLARE `Concession` IS ONE OF
+    `the eligible owner occupier rate (DI2026-155 Schedule 1)`
+    `the Home Buyer Concession Scheme (DI2026-157)`
+    `the Pensioner Duty Concession Scheme (DI2026-159)`
+
+-- DI2026-155 Sch 1 s 1(3): "If a person claims the duty concession but the transaction is not an eligible owner occupier
+-- transaction (including where the residence requirement is not complied with) then duty is calculated with reference
+-- to section 5 (1) (b)." DI2026-157 s 6(3) and DI2026-159 s 5(3): "... then the person was never eligible for the
+-- concession." Either way the duty is what the facts as they turned out give: the same rules, run on the occupation that
+-- happened. The shortfall is that duty less the duty paid on the facts as claimed.
+GIVEN `the case as claimed` IS A `Duty case`, `the case as it turned out` IS A `Duty case`
+GIVETH A MAYBE NUMBER
+`the shortfall between` `the case as claimed` `and` `the case as it turned out` MEANS
+    CONSIDER `the dollars of` (`the duty answer for` `the case as claimed`)
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST `paid` THEN
+        CONSIDER `the dollars of` (`the duty answer for` `the case as it turned out`)
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST `owed` THEN JUST (`the greater of` 0 `and` (`owed` MINUS `paid`))
+
+§§ `Taxation Administration Act 1999 pt 5 -- interest and penalty tax`
+
+-- TAA dictionary: "tax default means a failure by a taxpayer to pay, in accordance with a tax law, the whole or part of
+-- tax that the taxpayer is liable to pay." Duties Act s 16(2): "A tax default does not happen for the Taxation
+-- Administration Act if duty ... is paid within the period mentioned in column 4 [14 days for items 1, 3 and 5] ..., or
+-- any longer time determined by the commissioner, after the duty becomes payable." DI2026-157 s 6(3) example: "The person
+-- was never eligible for the concession and was liable to pay duty within 14 days of the transfer being registered ...
+-- A tax default will have occurred if duty was unpaid 15 days after the transfer was registered".
+-- TAA s 25(1): interest "on the amount of tax unpaid calculated on a daily basis from the end of the last day for
+-- payment until the day it is paid". s 26: "(1) The interest rate is the sum of -- (a) the market rate component; and
+-- (b) the premium component. ... (3) The premium component is 8% per annum." The market rate component (a determined
+-- rate, or the RBA 90-day bank bill rate under table 26) is not deposited: an input, in percent per annum.
+-- READING: "daily basis" is the annual rate divided by 365. s 27(1): "No interest is payable under a tax law if the
+-- amount that would otherwise be payable is less than $20." Remission (s 29) is the commissioner's: not encoded.
+`the premium component, percent per annum` MEANS 8
+
+GIVEN `the tax unpaid` IS A NUMBER
+      `the market rate component, percent per annum` IS A NUMBER
+      `days unpaid after the last day for payment` IS A NUMBER
+GIVETH A NUMBER
+`the interest under TAA ss 25 to 27 on` `the tax unpaid` `at` `the market rate component, percent per annum` `for` `days unpaid after the last day for payment` MEANS
+    IF `the amount` LESS THAN 20 THEN 0 ELSE `the amount`
+    WHERE
+        `the amount` MEANS
+            IF `days unpaid after the last day for payment` AT MOST 0
+            THEN 0
+            ELSE ((`the tax unpaid` TIMES (`the market rate component, percent per annum` PLUS `the premium component, percent per annum`)) DIVIDED BY 100)
+                 TIMES (`days unpaid after the last day for payment` DIVIDED BY 365)
+
+-- TAA s 31: "(1) ... penalty tax ... is 25% of the amount of tax unpaid, subject to this division. (2) The commissioner
+-- may increase the amount ... to 50% ... if the commissioner is satisfied that the tax default -- (a) was caused wholly
+-- or partly by the taxpayer ... (i) delaying the payment of tax; or (ii) delaying the provision of information required
+-- for the assessment of tax; or (iii) providing information ... that is incorrect, incomplete or misleading; or (b) is
+-- the taxpayer's second or subsequent tax default ... (4) ... to 75% ... if ... caused wholly or partly by the
+-- intentional disregard by the taxpayer ... of a tax law. (5) No penalty tax is payable ... if the commissioner is
+-- satisfied that -- (a) the taxpayer ... took reasonable care to comply with the tax law; or (b) the tax default happened
+-- solely because of circumstances beyond the taxpayer's control ... but not amounting to financial incapacity." s 34:
+-- "The amount of penalty tax ... is 90% of the amount of tax unpaid if the commissioner is satisfied that, after the
+-- commissioner has informed the taxpayer that an investigation is to be carried out and before the investigation is
+-- completed, the taxpayer" destroys records, fails to comply with a requirement, obstructs, or "otherwise shows
+-- intentional disregard for a tax law". What the commissioner is satisfied of is a FACT.
+DECLARE `What the commissioner is satisfied of` IS ONE OF
+    `the taxpayer took reasonable care, or the default happened solely because of circumstances beyond the taxpayer's control (s 31(5))`
+    `nothing more than the tax default (s 31(1))`
+    `delay in paying or in giving information, incorrect, incomplete or misleading information, or a second or later default (s 31(2))`
+    `intentional disregard of a tax law (s 31(4))`
+    `concealment or obstruction after being told of an investigation (s 34)`
+
+-- s 32: "The amount of penalty tax determined under section 31 is reduced by 80% if, before the commissioner informs
+-- the taxpayer that an investigation relating to the taxpayer is to be carried out, the taxpayer discloses to the
+-- commissioner, in writing, sufficient information to enable the nature and extent of the tax default to be
+-- determined." s 33: "... reduced by 20% if, after the commissioner informs the taxpayer that an investigation ... is to
+-- be carried out and before it is begun, the taxpayer discloses ...". The reductions apply to the s 31 amount, not the
+-- s 34 amount (table 34, item 6: 90% in every column).
+DECLARE `Disclosure` IS ONE OF
+    `no disclosure`
+    `disclosure in writing before the commissioner said an investigation would be carried out (s 32)`
+    `disclosure in writing after the commissioner said an investigation would be carried out, before it began (s 33)`
+
+GIVEN `the finding` IS A `What the commissioner is satisfied of`
+GIVETH A NUMBER
+`the basic penalty tax rate for` `the finding` MEANS
+    CONSIDER `the finding`
+    WHEN `the taxpayer took reasonable care, or the default happened solely because of circumstances beyond the taxpayer's control (s 31(5))` THEN 0
+    WHEN `nothing more than the tax default (s 31(1))` THEN 25
+    WHEN `delay in paying or in giving information, incorrect, incomplete or misleading information, or a second or later default (s 31(2))` THEN 50
+    WHEN `intentional disregard of a tax law (s 31(4))` THEN 75
+    WHEN `concealment or obstruction after being told of an investigation (s 34)` THEN 90
+
+-- Table 34, as percent of the tax unpaid: basic 0/25/50/75/90; voluntary disclosure 0/5/10/15/90; disclosure before
+-- investigation 0/20/40/60/90.
+GIVEN `the finding` IS A `What the commissioner is satisfied of`, `the disclosure` IS A `Disclosure`
+GIVETH A NUMBER
+`the penalty tax rate under table 34 for` `the finding` `with` `the disclosure` MEANS
+    IF `the finding` EQUALS `concealment or obstruction after being told of an investigation (s 34)`
+    THEN 90
+    ELSE CONSIDER `the disclosure`
+         WHEN `no disclosure` THEN `the basic penalty tax rate for` `the finding`
+         WHEN `disclosure in writing before the commissioner said an investigation would be carried out (s 32)` THEN
+             `the basic penalty tax rate for` `the finding` TIMES (100 MINUS 80) DIVIDED BY 100
+         WHEN `disclosure in writing after the commissioner said an investigation would be carried out, before it began (s 33)` THEN
+             `the basic penalty tax rate for` `the finding` TIMES (100 MINUS 20) DIVIDED BY 100
+
+-- s 35: "No penalty tax is payable if the amount that would otherwise be payable is less than $20." Remission (s 37)
+-- is the commissioner's: not encoded.
+GIVEN `the tax unpaid` IS A NUMBER, `the finding` IS A `What the commissioner is satisfied of`, `the disclosure` IS A `Disclosure`
+GIVETH A NUMBER
+`the penalty tax under TAA ss 30 to 35 on` `the tax unpaid` `for` `the finding` `with` `the disclosure` MEANS
+    IF `the amount` LESS THAN 20 THEN 0 ELSE `the amount`
+    WHERE
+        `the amount` MEANS (`the tax unpaid` TIMES `the penalty tax rate under table 34 for` `the finding` `with` `the disclosure`) DIVIDED BY 100
+
+-- Duties Act s 16(1), table 16 items 1, 3 and 5: duty "becomes payable" "when the transfer [or the lease] is registered
+-- with the registrar-general", and (2) no tax default happens if it is paid within "14 days" or a longer time the
+-- commissioner determines.
+`the days to pay after registration under table 16` MEANS 14
+
+§§ `Regulative rules -- the transferee, the commissioner and an approved person`
+
+-- Clock: days, counted from the day each rule starts (named in the comment above it).
+DECLARE `Duty act` IS ONE OF
+    `lodge the instrument or the written statement with the commissioner`
+    `lodge an electronic application for assessment of duty`
+    `pay the duty`
+    `pay the duty with interest and penalty tax`
+    `give the commissioner written notice that the transaction is not eligible`
+    `pay the reassessed duty with interest and penalty tax`
+    `ask in writing for a shorter residence period or a later residence start date`
+    `determine a shorter residence period or a later residence start date`
+    `apply for the duty concession` HAS `how` IS A `Way of applying`
+    `lodge a written objection`
+    `allow or disallow the objection`
+
+DECLARE `Way of applying` IS ONE OF
+    `on lodgement of the transfer with the registrar-general`
+    `later, with a written application to extend the time`
+
+-- s 15(1): "A transferee who is liable to pay duty in relation to a dutiable transaction must, within 90 days after the
+-- day the liability arises lodge with the commissioner -- (a) the instrument that effects the dutiable transaction ...;
+-- or (b) the written statement made in accordance with section 14." (2): "Subsection (1) does not apply ... if -- (a) the
+-- registrar-general must tell the commissioner about the transaction under the Land Titles Act 1925, section 178B ...;
+-- or (b) an electronic application for assessment of duty ... is lodged with the commissioner by a person approved under
+-- section 239 ... within the 90-day period." s 15 states no penalty; TAA s 67(1) does: "A person must not fail to
+-- lodge a document, instrument, statement or return that is required to be lodged by a tax law. Maximum penalty: 50
+-- penalty units." (TAA s 4(c): the Duties Act is a tax law.) Clock starts on the transaction date (s 11).
+`the days to lodge under s 15` MEANS 90
+
+-- TAA s 67(1) and (2): "Maximum penalty: 50 penalty units." The value of a penalty unit is set by the Legislation Act
+-- 2001, s 133 (not deposited); the TAA republication note gives "$160 for an individual" at 26 November 2025. An input.
+`the maximum penalty under TAA s 67, in penalty units` MEANS 50
+
+GIVEN `the registrar-general must tell the commissioner` IS A BOOLEAN
+GIVETH A DEONTIC `Duty party` `Duty act`
+DECIDE `s 15 -- the transferee must lodge the instrument or statement within 90 days` IS
+    IF `the registrar-general must tell the commissioner`
+    THEN FULFILLED
+    ELSE    (PARTY `the transferee`
+             MUST  `lodge the instrument or the written statement with the commissioner`
+             WITHIN `the days to lodge under s 15`
+             LEST  BREACH BY `the transferee` BECAUSE "Duties Act s 15(1): the instrument or written statement was not lodged with the commissioner within 90 days after the liability arose; TAA s 67(1): maximum penalty 50 penalty units")
+        ROR
+            (PARTY `an approved person`
+             DO    `lodge an electronic application for assessment of duty`
+             WITHIN `the days to lodge under s 15`
+             LEST  BREACH BY `the transferee` BECAUSE "Duties Act s 15(1) and (2)(b): no electronic application was lodged within the 90-day period, so the transferee had to lodge; TAA s 67(1): maximum penalty 50 penalty units")
+
+-- s 16 and table 16 (items 1, 3, 5), with TAA ss 25, 30 and 36. Clock starts on the day the transfer is registered.
+-- Paid within 14 days (or the longer time the commissioner determined): FULFILLED, no tax default. Otherwise a tax
+-- default happens: interest runs daily from the end of the last day for payment (s 25), penalty tax is added (s 30),
+-- and "Penalty tax must be paid ... within the period stated in a notice of assessment" (s 36), which is an input.
+GIVEN `days allowed to pay`                       IS A NUMBER
+      `days allowed by the notice of assessment`  IS A NUMBER
+GIVETH A DEONTIC `Duty party` `Duty act`
+DECIDE `s 16 -- the transferee must pay the duty within 14 days of registration, lest interest and penalty tax` IS
+    PARTY `the transferee`
+    MUST  `pay the duty`
+    WITHIN `days allowed to pay`
+    HENCE FULFILLED
+    LEST
+        PARTY `the transferee`
+        MUST  `pay the duty with interest and penalty tax`
+        WITHIN `days allowed by the notice of assessment`
+        LEST  BREACH BY `the transferee` BECAUSE "Duties Act s 16(2) and TAA ss 25, 30 and 36: a tax default happened and the duty, interest and penalty tax were not paid within the period in the notice of assessment"
+
+GIVEN `the concession` IS A `Concession`
+GIVETH A STRING
+`the notice provision for` `the concession` MEANS
+    CONSIDER `the concession`
+    WHEN `the eligible owner occupier rate (DI2026-155 Schedule 1)` THEN "DI2026-155 Sch 1 s 1(2): written notice that the transaction is not an eligible owner occupier transaction was not given within 14 days; TAA s 67(2): maximum penalty 50 penalty units; TAA s 32 then does not reduce the penalty tax"
+    WHEN `the Home Buyer Concession Scheme (DI2026-157)` THEN "DI2026-157 s 6(2): written notice that the transaction is not an eligible transaction was not given within 14 days; TAA s 67(2): maximum penalty 50 penalty units; TAA s 32 then does not reduce the penalty tax"
+    WHEN `the Pensioner Duty Concession Scheme (DI2026-159)` THEN "DI2026-159 s 5(2): written notice that the transaction is not an eligible transaction was not given within 14 days; TAA s 67(2): maximum penalty 50 penalty units; TAA s 32 then does not reduce the penalty tax"
+
+-- DI2026-155 Sch 1 s 1(2), DI2026-157 s 6(2), DI2026-159 s 5(2), in the same words: "If it becomes apparent that a
+-- transaction is not an [eligible] transaction, a transferee must give the Commissioner written notice of that fact
+-- within 14 days after the first of the following events: (a) the end of any period allowed for compliance with a
+-- requirement of the transaction; or (b) the date that the transferee first becomes aware that the transaction is not
+-- an [eligible] transaction." Clock starts on the first of those events. HENCE: the reassessed duty, with interest and
+-- penalty tax, within the period in the notice of assessment (TAA ss 25, 30, 36); INFERENCE: the notice is a written
+-- disclosure before any investigation, so TAA s 32 reduces the penalty tax by 80%. LEST: a breach, and no s 32
+-- reduction. TAA s 67(2): "A person must not fail to notify the commissioner ... of any matter or thing of which notice
+-- is required to be lodged by a tax law. Maximum penalty: 50 penalty units." INFERENCE: a determination under TAA s 139
+-- is an instrument under a tax law, so s 67(2) reaches these notices (Legislation Act s 104, not deposited).
+`the days to give notice` MEANS 14
+
+GIVEN `the concession`                            IS A `Concession`
+      `days allowed by the notice of assessment`  IS A NUMBER
+GIVETH A DEONTIC `Duty party` `Duty act`
+DECIDE `notice -- the transferee must tell the commissioner within 14 days that the transaction is not eligible` IS
+    PARTY `the transferee`
+    MUST  `give the commissioner written notice that the transaction is not eligible`
+    WITHIN `the days to give notice`
+    HENCE
+        (PARTY `the transferee`
+         MUST  `pay the reassessed duty with interest and penalty tax`
+         WITHIN `days allowed by the notice of assessment`
+         LEST  BREACH BY `the transferee` BECAUSE "TAA ss 25, 30 and 36: the reassessed duty, interest and penalty tax were not paid within the period in the notice of assessment")
+    LEST  BREACH BY `the transferee` BECAUSE (`the notice provision for` `the concession`)
+
+-- DI2026-155 Sch 1 s 3(2)-(3), DI2026-157 Sch 2 s 1(3)-(4), DI2026-159 s 6(2)-(3): "The Commissioner may determine a
+-- shorter residence period (including no period), if -- (a) the shorter period is requested, in writing, for a
+-- transferee not later than 18 months after the residence start date; and (b) the Commissioner is satisfied that the
+-- transferee is unable to occupy the eligible property for a continuous period of 1 year because of an unforeseen
+-- circumstance." (3): the same for "a later residence start date". Asking is a choice (DO ... LEST FULFILLED). Clock
+-- starts on the residence start date; the seat works out the days to 18 months after it.
+`the months to ask for a shorter period or a later start` MEANS 18
+
+GIVEN `days from the residence start date to 18 months after it` IS A NUMBER
+GIVETH A DEONTIC `Duty party` `Duty act`
+DECIDE `residence -- the transferee may ask in writing within 18 months for a shorter period or a later start` IS
+    PARTY `the transferee`
+    DO    `ask in writing for a shorter residence period or a later residence start date`
+    WITHIN `days from the residence start date to 18 months after it`
+    HENCE
+        (PARTY `the commissioner`
+         MAY   `determine a shorter residence period or a later residence start date`
+         WITHIN 0)
+    LEST  FULFILLED
+
+-- DI2026-155 Sch 1 s 5, DI2026-157 s 8, DI2026-159 s 8: "(1) A transferee may apply to the Commissioner for duty
+-- concession ... on the lodgement of the transfer ... with the registrar-general. (2) If an application is not made at
+-- the time specified in subsection (1), a transferee may apply to the Commissioner to extend the time ... (3) An
+-- application to extend the time ... must -- (a) be in writing ...; (b) specify -- (i) the name and address of the
+-- applicant; and (ii) the grounds ...; and (c) be made within 12 months of the date of lodgement of the transfer ...
+-- (4) The Commissioner may extend the time". Clock starts on the day of lodgement with the registrar-general. Not
+-- applying is no breach; the concession is simply not had.
+`the months to apply to extend the time` MEANS 12
+
+GIVEN `days from lodgement to 12 months after it` IS A NUMBER
+GIVETH A DEONTIC `Duty party` `Duty act`
+DECIDE `application -- the transferee may apply for the concession on lodgement, or ask within 12 months to extend the time` IS
+    PARTY `the transferee`
+    DO    `apply for the duty concession` `the way`
+    WITHIN `days from lodgement to 12 months after it`
+    HENCE FULFILLED
+    LEST  FULFILLED
+
+-- TAA s 100(1): "A taxpayer may lodge a written objection with the commissioner if the taxpayer is dissatisfied with --
+-- (a) an assessment ... shown in a notice of assessment". s 102: "An objection must be lodged ... not later than 60 days
+-- after the date that the notice of the assessment ... is given to the taxpayer, except as provided by section 103."
+-- s 103(1): "The commissioner may permit a person to lodge an objection after the 60 day period." s 104(1): "The
+-- commissioner must consider an objection and either allow the objection in whole or in part or disallow the
+-- objection" (no period is stated). s 105: tax may be recovered while an objection is pending. Clock starts on the day
+-- the notice of assessment is given.
+`the days to object` MEANS 60
+
+GIVETH A DEONTIC `Duty party` `Duty act`
+DECIDE `TAA ss 100 to 104 -- the taxpayer may object within 60 days, and the commissioner must then decide` IS
+    PARTY `the transferee`
+    DO    `lodge a written objection`
+    WITHIN `the days to object`
+    HENCE
+        (PARTY `the commissioner`
+         MUST  `allow or disallow the objection`)
+    LEST  FULFILLED
