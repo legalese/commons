@@ -1,0 +1,93 @@
+IMPORT prelude
+IMPORT `wca-core`
+
+-- Workers Compensation Act 1951 (ACT) -- from the seat of the employer.
+--
+-- SEAT: the employer of an injured worker (a private-sector employer, insured with a licensed insurer or itself a
+-- licensed self-insurer). The Act puts real duties on the employer with hard deadlines: begin weekly payments when the
+-- worker gives notice (s 38(1), an offence if not), give the insurer an injury notice within 48 hours (s 93(2)), confirm
+-- an oral notice within 3 days (s 94(3)), forward a claim within 7 days (s 126(1), an offence if not), and pay weekly
+-- compensation itself, without indemnity, after a late injury notice (s 95). "Must I start paying? By when must I tell
+-- my insurer? What does a late notice cost me? When may I stop paying if no claim comes?" The rules are in
+-- wca-core.l4; this module restates none, and keeps its own names (none shared with wca-seat.l4 or
+-- wca-seat-insurer.l4).
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Workers Compensation Act 1951 (ACT) -- the employer's questions`
+
+§§ `When my worker is injured (s 38, s 93, s 94, s 95)`
+
+DECLARE `Employer payment answer` IS ONE OF
+    `yes: weekly payments must begin on the day the worker gave notice of the injury` HAS `the day` IS A DATE
+    `not yet: the duty begins when the worker gives notice of the injury (s 38(1)(a))`
+    `no: the worker is not, and may not be, entitled to compensation for the injury`
+
+@export Must I begin paying my injured worker weekly compensation, and from when (s 38(1), (4))?
+GIVEN `my worker is or may be entitled to compensation for the injury` IS A BOOLEAN @desc Whether your worker is or may be entitled to compensation: a work-related injury (s 31) that may be compensable
+      `my worker has given me notice of the injury` IS A BOOLEAN @desc Whether your worker has told you (or a person you designated, or their supervisor) about the injury
+      `the day my worker gave me notice` IS A DATE @desc The day your worker gave notice of the injury (otherwise any date)
+GIVETH AN `Employer payment answer`
+DECIDE `Must I begin paying my worker weekly compensation` IS
+    IF (NOT `my worker is or may be entitled to compensation for the injury`)
+    THEN `no: the worker is not, and may not be, entitled to compensation for the injury`
+    ELSE IF `my worker has given me notice of the injury`
+         THEN `yes: weekly payments must begin on the day the worker gave notice of the injury` (`days after` `the same day` `the day my worker gave me notice`)
+         ELSE `not yet: the duty begins when the worker gives notice of the injury (s 38(1)(a))`
+
+DECLARE `Employer injury notice answer` IS ONE OF
+    `give the insurer an injury notice within 48 hours of becoming aware of the injury; if given orally, give it again in writing or electronically within 3 days` HAS `hours` IS A NUMBER, `days to confirm an oral notice` IS A NUMBER
+    `no injury notice to an insurer: I am a licensed self-insurer (s 93(3))`
+
+@export By when must I give my insurer notice of my worker's injury (s 93(2)-(3), s 94)?
+GIVEN `I am a licensed self-insurer` IS A BOOLEAN @desc Whether you hold a self-insurer licence under the Act (then you are your own insurer)
+GIVETH AN `Employer injury notice answer`
+DECIDE `By when must I give my insurer the injury notice` IS
+    IF `I am a licensed self-insurer`
+    THEN `no injury notice to an insurer: I am a licensed self-insurer (s 93(3))`
+    ELSE `give the insurer an injury notice within 48 hours of becoming aware of the injury; if given orally, give it again in writing or electronically within 3 days` `the hours to give the insurer an injury notice` (`the hours to confirm an oral injury notice` DIVIDED BY 24)
+
+-- Situation: the employer gave the injury notice more than 48 hours after becoming aware of the injury.
+@export I gave my insurer the injury notice late: what weekly compensation must I pay myself (s 95, s 134(3))?
+GIVEN `I am a licensed self-insurer` IS A BOOLEAN @desc Whether you hold a self-insurer licence under the Act
+      `the hours between my learning of the injury and my notice to the insurer` IS A NUMBER @desc How many hours passed between your becoming aware of the workplace injury and your giving the insurer the injury notice
+      `the day my worker was injured` IS A DATE @desc The date of the injury (ISO date)
+      `the day I gave the insurer the injury notice` IS A DATE @desc The day you gave the insurer the injury notice
+GIVETH A `Late notice answer`
+DECIDE `What does my late injury notice cost me` IS
+    `what a late injury notice costs the employer` `I am a licensed self-insurer` `the hours between my learning of the injury and my notice to the insurer` `the day my worker was injured` `the day I gave the insurer the injury notice`
+
+§§ `When my worker claims (s 38(2)-(3), s 126)`
+
+DECLARE `Employer weekly payments answer` IS ONE OF
+    `weekly payments continue: the worker claimed in time, or no day is lost (s 38(2), (3))`
+    `weekly payments end unless the worker claims by the last day; a later claim leaves no weekly compensation owed from the first day below to the day before the claim` HAS `the last day to claim` IS A DATE, `the first day not owed` IS A DATE
+    `weekly payments have ended: no weekly compensation is owed from the first day below to the day before the claim` HAS `the first day not owed` IS A DATE, `the day of the claim` IS A DATE
+
+-- Situation: weekly payments have begun, and the employer asks whether they may stop because no claim has come.
+@export My worker has not claimed: when may I stop weekly payments (s 38(2), (3))?
+GIVEN `the day my worker was injured` IS A DATE @desc The date of the injury (ISO date)
+      `my worker has made a claim` IS A BOOLEAN @desc Whether your worker has made a claim for compensation (given to you or to the insurer)
+      `the day my worker made the claim` IS A DATE @desc The day the claim was made (otherwise any date)
+      `the injury stopped my worker claiming within 7 days` IS A BOOLEAN @desc Whether the injury itself made your worker unable to claim within 7 days after it
+      `the day my worker was first able to claim` IS A DATE @desc If so, the first day your worker was able to claim (otherwise any date)
+GIVETH AN `Employer weekly payments answer`
+DECIDE `When may I stop weekly payments because my worker has not claimed` IS
+    IF `my worker has made a claim`
+    THEN CONSIDER `the days lost for a late claim` `the day my worker was injured` `the day my worker made the claim` `the injury stopped my worker claiming within 7 days` `the day my worker was first able to claim`
+         WHEN `no weekly compensation is lost under s 38(2)` THEN `weekly payments continue: the worker claimed in time, or no day is lost (s 38(2), (3))`
+         WHEN `no weekly compensation for the days` `from` `to` THEN `weekly payments have ended: no weekly compensation is owed from the first day below to the day before the claim` `from` `the day my worker made the claim`
+    ELSE `weekly payments end unless the worker claims by the last day; a later claim leaves no weekly compensation owed from the first day below to the day before the claim` (`the last day to claim and keep weekly payments going` `the day my worker was injured` `the injury stopped my worker claiming within 7 days` `the day my worker was first able to claim`) (`days after` 8 `the day my worker was injured`)
+
+DECLARE `Employer forwarding answer` IS ONE OF
+    `forward the claim to the insurer no later than` HAS `the day` IS A DATE
+    `no forwarding: I am a licensed self-insurer (s 126(4))`
+
+@export By what day must I forward my worker's claim to my insurer (s 126(1), (4))?
+GIVEN `I am a licensed self-insurer` IS A BOOLEAN @desc Whether you hold a self-insurer licence under the Act
+      `the day I received the claim` IS A DATE @desc The day you received the claim, or another document about it (ISO date)
+GIVETH AN `Employer forwarding answer`
+DECIDE `By what day must I forward the claim to my insurer` IS
+    IF `I am a licensed self-insurer`
+    THEN `no forwarding: I am a licensed self-insurer (s 126(4))`
+    ELSE `forward the claim to the insurer no later than` (`days after` `the days to forward a claim to the insurer` `the day I received the claim`)

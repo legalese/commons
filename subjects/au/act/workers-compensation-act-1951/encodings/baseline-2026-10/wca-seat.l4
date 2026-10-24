@@ -1,0 +1,309 @@
+IMPORT prelude
+IMPORT `wca-core`
+
+-- Workers Compensation Act 1951 (ACT) -- from the seat of the injured worker.
+--
+-- SEAT: the injured private-sector worker in the ACT, and, on the worker's death, the dependants or the personal
+-- representative (the questions under "If the worker dies" are theirs). "How much weekly compensation am I paid? When
+-- does it stop? What lump sum do I get, and when can I claim it? What do my dependants get if I die? What must I do,
+-- and by when? When is my claim taken to be accepted, and how soon after a rejection can my payments stop?" Every
+-- question is phrased as that person would ask it, on facts that person could state. The rules are in wca-core.l4;
+-- this module builds the core's records from plain answers and restates no rule.
+--
+-- FIGURES: the indexed amounts (single loss amount, maximum loss amount, death benefits), AWE and the statutory floor
+-- are inputs, because no regulation or indexation notice is deposited. Hand-worked cases use the Act's base figures.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Workers Compensation Act 1951 (ACT) -- the injured worker's questions`
+
+§§ `Weekly compensation (pt 4.3)`
+
+-- Situation: the worker is, or has been, incapacitated for work by a work injury.
+-- `the worker is dead` is fixed at FALSE: the worker is the one asking (s 37 is asserted on the core).
+@export How much weekly compensation am I paid for this week under the Workers Compensation Act 1951 (ACT) (ss 37-45, s 83)?
+GIVEN `the day I am asking about` IS A DATE @desc A day in the week you are asking about (ISO date, e.g. 2026-10-05)
+      `the day I was first incapacitated for work by the injury` IS A DATE @desc The day you first became unable to do all or some of your work because of the injury (the initial incapacity date, s 36G)
+      `the day I reach pension age` IS A DATE @desc The day you reach age pension age under the Social Security Act 1991 (Cwlth) s 23 (67 for anyone born on or after 1 January 1957)
+      `how the injury affects my work` IS AN `Incapacity` @desc Totally incapacitated (no suitable paid work you can do is reasonably available), partially incapacitated (you can do some but not all of your old work), or not incapacitated
+      `my average weekly earnings before the injury` IS A NUMBER @desc Your average weekly earnings from all employment in the year before the injury, in dollars (ss 21-22; regular overtime counts, s 25)
+      `my average weekly hours before the injury` IS A NUMBER @desc Your average weekly hours of work from all employment in the year before the injury (ss 23-24)
+      `what I am paid a week for working, or could earn in suitable work available to me` IS A NUMBER @desc What you are now paid a week for working, or could earn in suitable employment reasonably available to you (count suitable work you unreasonably refused or gave up), in dollars; 0 if none
+      `the hours a week I am working now` IS A NUMBER @desc The hours a week you are working now; 0 if you are not working
+      `the weeks of weekly compensation I have already had for the first 26 weeks` IS A NUMBER @desc How many weeks of weekly compensation you have already received for this injury, in total (count weeks stopped because you were in prison or did not comply with your injury plan, s 43B)
+      `the statutory floor now` IS A NUMBER @desc The national minimum wage a week now, as set by the Fair Work Commission, in dollars
+      `the statutory floor just before I was first incapacitated` IS A NUMBER @desc The national minimum wage a week that applied immediately before you were first incapacitated, in dollars
+      `ACT average weekly earnings now` IS A NUMBER @desc ABS average weekly earnings for the ACT (all males total earnings, seasonally adjusted), latest figure, in dollars
+      `I have stopped living in Australia` IS A BOOLEAN @desc Whether you have stopped living in Australia
+      `my incapacity is likely to be permanent` IS A BOOLEAN @desc Whether the incapacity from the injury is likely to be permanent (only matters if you live outside Australia)
+      `living outside Australia is likely to help me recover` IS A BOOLEAN @desc Whether your absence from Australia is likely to help you recuperate (only matters if you live outside Australia)
+      `I have proved my identity and that I am still incapacitated` IS A BOOLEAN @desc Whether you have proved your identity and that you are still incapacitated (only matters if you live outside Australia)
+      `I am in prison after being convicted of an offence` IS A BOOLEAN @desc Whether you are imprisoned because you were convicted of an offence (in any Australian jurisdiction)
+GIVETH A `Weekly compensation`
+DECIDE `How much weekly compensation am I paid this week` IS
+    `the weekly compensation for`
+        (`Weekly facts` WITH
+            `the day asked about`                                         IS `the day I am asking about`
+            `the initial incapacity date`                                 IS `the day I was first incapacitated for work by the injury`
+            `the day the worker reaches pension age`                      IS `the day I reach pension age`
+            `the worker is`                                               IS `how the injury affects my work`
+            `average pre-incapacity weekly earnings`                      IS `my average weekly earnings before the injury`
+            `average pre-incapacity weekly hours`                         IS `my average weekly hours before the injury`
+            `the weekly amount the worker is paid for working or could earn in reasonably available suitable employment` IS `what I am paid a week for working, or could earn in suitable work available to me`
+            `the hours a week the worker is working`                      IS `the hours a week I am working now`
+            `weeks of weekly compensation already counted under s 39`     IS `the weeks of weekly compensation I have already had for the first 26 weeks`
+            `the statutory floor at the time of payment`                  IS `the statutory floor now`
+            `the pre-incapacity floor`                                    IS `the statutory floor just before I was first incapacitated`
+            `AWE at the time of payment`                                  IS `ACT average weekly earnings now`
+            `the worker is dead`                                          IS FALSE
+            `the worker has stopped living in Australia`                  IS `I have stopped living in Australia`
+            `the incapacity is likely to be permanent`                    IS `my incapacity is likely to be permanent`
+            `the absence from Australia is likely to help the worker recuperate` IS `living outside Australia is likely to help me recover`
+            `the worker proves identity and continuing incapacity`        IS `I have proved my identity and that I am still incapacitated`
+            `the worker is imprisoned after a conviction`                 IS `I am in prison after being convicted of an offence`)
+
+@export When does my weekly compensation stop because of my age (s 39(3), s 40(4))?
+GIVEN `the day I was first incapacitated for work by the injury` IS A DATE @desc The day you first became unable to do all or some of your work because of the injury (the initial incapacity date, s 36G)
+      `the day I reach pension age` IS A DATE @desc The day you reach age pension age under the Social Security Act 1991 (Cwlth) s 23 (67 for anyone born on or after 1 January 1957)
+GIVETH AN `Age limit`
+DECIDE `When does my weekly compensation stop because of my age` IS
+    `the age limit for` `the day I was first incapacitated for work by the injury` `the day I reach pension age`
+
+-- Situation: the worker has been partially incapacitated for more than 26 weeks.
+@export After 26 weeks of partial incapacity, what is my relevant percentage of my earnings before the injury (s 42(2))?
+GIVEN `the hours a week I am working now` IS A NUMBER @desc The hours a week you are working now; 0 if you are not working
+      `my average weekly hours before the injury` IS A NUMBER @desc Your average weekly hours of work from all employment in the year before the injury (ss 23-24)
+GIVETH A NUMBER
+DECIDE `What is my relevant percentage after 26 weeks` IS
+    `the relevant percentage` `the hours a week I am working now` `my average weekly hours before the injury`
+
+§§ `Lump sums for permanent injuries (pt 4.4, schedule 1)`
+
+-- Situation: the injury has left a permanent loss listed in schedule 1.
+DECLARE `My lump sum answer` IS ONE OF
+    `my loss is worth this percentage of the single loss amount` HAS `percent` IS A NUMBER
+    `my lump sum, in dollars, is` HAS `dollars` IS A NUMBER
+    `my lump sum is not covered` HAS `because` IS A `Why not covered`
+
+GIVEN `item` IS A NUMBER, `percentage lost` IS A NUMBER, `deductible` IS A NUMBER, `deductible is hard to work out` IS A BOOLEAN, `only limb` IS A BOOLEAN
+GIVETH A `Permanent loss`
+`my permanent loss` `item` `percentage lost` `deductible` `deductible is hard to work out` `only limb` MEANS
+    `Permanent loss` WITH
+        `the Schedule 1 item`                                          IS `item`
+        `the percentage of the thing lost`                             IS `percentage lost`
+        `the deductible proportion, as a percentage of the loss`       IS `deductible`
+        `the deductible proportion is difficult or costly to work out` IS `deductible is hard to work out`
+        `it is the worker's only arm, leg, hand or foot`               IS `only limb`
+
+GIVEN `penis` IS A BOOLEAN, `testicles` IS A NUMBER
+GIVETH A `Sexual organ losses`
+`my sexual organ losses` `penis` `testicles` MEANS
+    `Sexual organ losses` WITH
+        `the penis is lost`                                            IS `penis`
+        `the number of testicles lost, an only testicle counting as 2` IS `testicles`
+
+@export What percentage of the single loss amount is my permanent loss worth (s 51, ss 54-59, s 61, schedule 1)?
+GIVEN `the schedule 1 item for my loss` IS A NUMBER @desc The item number (1 to 54) in schedule 1 of the Act that describes your loss, e.g. 12 for loss of the right arm at or above the elbow, 46 for permanent impairment of the back
+      `how much of it I have lost, in per cent` IS A NUMBER @desc How much of the thing you have lost, as assessed: 100 for a total loss, or the percentage for a partial loss of use (s 59)
+      `the part of my loss due to an earlier injury or condition, in per cent` IS A NUMBER @desc The percentage of the loss caused by a previous injury or a pre-existing condition or abnormality (s 61); 0 if none
+      `that part is difficult or costly to work out` IS A BOOLEAN @desc Whether part of the loss is due to an earlier injury or condition but it would be difficult or costly to work out how much (then 10% is assumed, s 61(3))
+      `it was my only arm, leg, hand or foot` IS A BOOLEAN @desc Whether the arm, leg, hand or foot you lost was your only one (s 56)
+      `my left arm or hand is my dominant one` IS A BOOLEAN @desc Whether you are left-handed, that is your left arm or hand is your dominant limb (s 54)
+      `I lost my penis` IS A BOOLEAN @desc For item 41 only: whether you lost your penis (s 57)
+      `the testicles I lost` IS A NUMBER @desc For item 41 only: how many testicles you lost (0, 1 or 2; an only testicle counts as 2) (s 57)
+GIVETH A `My lump sum answer`
+DECIDE `What percentage of the single loss amount is my loss worth` IS
+    CONSIDER `the percentage of the single loss amount for` (`my permanent loss` `the schedule 1 item for my loss` `how much of it I have lost, in per cent` `the part of my loss due to an earlier injury or condition, in per cent` `that part is difficult or costly to work out` `it was my only arm, leg, hand or foot`) `my left arm or hand is my dominant one` (`my sexual organ losses` `I lost my penis` `the testicles I lost`)
+    WHEN JUST `p` THEN `my loss is worth this percentage of the single loss amount` `p`
+    WHEN NOTHING THEN `my lump sum is not covered` `the item is not one of the 54 items of Schedule 1`
+
+@export How much is my lump sum for a permanent loss (s 49, s 51, s 53, ss 54-59, s 61, schedule 1)?
+GIVEN `the schedule 1 item for my loss` IS A NUMBER @desc The item number (1 to 54) in schedule 1 of the Act that describes your loss, e.g. 12 for loss of the right arm at or above the elbow, 46 for permanent impairment of the back
+      `how much of it I have lost, in per cent` IS A NUMBER @desc How much of the thing you have lost, as assessed: 100 for a total loss, or the percentage for a partial loss of use (s 59)
+      `the part of my loss due to an earlier injury or condition, in per cent` IS A NUMBER @desc The percentage of the loss caused by a previous injury or a pre-existing condition or abnormality (s 61); 0 if none
+      `that part is difficult or costly to work out` IS A BOOLEAN @desc Whether part of the loss is due to an earlier injury or condition but it would be difficult or costly to work out how much (then 10% is assumed, s 61(3))
+      `it was my only arm, leg, hand or foot` IS A BOOLEAN @desc Whether the arm, leg, hand or foot you lost was your only one (s 56)
+      `my left arm or hand is my dominant one` IS A BOOLEAN @desc Whether you are left-handed, that is your left arm or hand is your dominant limb (s 54)
+      `I lost my penis` IS A BOOLEAN @desc For item 41 only: whether you lost your penis (s 57)
+      `the testicles I lost` IS A NUMBER @desc For item 41 only: how many testicles you lost (0, 1 or 2; an only testicle counts as 2) (s 57)
+      `the single loss amount now` IS A NUMBER @desc The single loss amount as cpi indexed today ($100 000 in the Act, s 49), in dollars
+      `the maximum loss amount now` IS A NUMBER @desc The maximum loss amount as cpi indexed today ($150 000 in the Act, s 50), in dollars
+GIVETH A `My lump sum answer`
+DECIDE `How much is my lump sum for a permanent loss` IS
+    CONSIDER `the lump sum for` (LIST (`my permanent loss` `the schedule 1 item for my loss` `how much of it I have lost, in per cent` `the part of my loss due to an earlier injury or condition, in per cent` `that part is difficult or costly to work out` `it was my only arm, leg, hand or foot`)) `my left arm or hand is my dominant one` (`my sexual organ losses` `I lost my penis` `the testicles I lost`) `the single loss amount now` `the maximum loss amount now`
+    WHEN JUST `d` THEN `my lump sum, in dollars, is` `d`
+    WHEN NOTHING THEN `my lump sum is not covered` `the item is not one of the 54 items of Schedule 1`
+
+@export How much is my lump sum for two permanent losses from the same injury (s 53: at most the maximum loss amount)?
+GIVEN `the schedule 1 item for my first loss` IS A NUMBER @desc The schedule 1 item number (1 to 54) for your first loss
+      `how much of the first I have lost, in per cent` IS A NUMBER @desc 100 for a total loss, or the percentage for a partial loss of use (s 59)
+      `the part of the first loss due to an earlier injury or condition, in per cent` IS A NUMBER @desc The percentage of the first loss caused by a previous injury or a pre-existing condition (s 61); 0 if none
+      `that part of the first loss is difficult or costly to work out` IS A BOOLEAN @desc Whether that part would be difficult or costly to work out (then 10% is assumed, s 61(3))
+      `the first loss was of my only arm, leg, hand or foot` IS A BOOLEAN @desc Whether the first loss was of your only arm, leg, hand or foot (s 56)
+      `the schedule 1 item for my second loss` IS A NUMBER @desc The schedule 1 item number (1 to 54) for your second loss
+      `how much of the second I have lost, in per cent` IS A NUMBER @desc 100 for a total loss, or the percentage for a partial loss of use (s 59)
+      `the part of the second loss due to an earlier injury or condition, in per cent` IS A NUMBER @desc The percentage of the second loss caused by a previous injury or a pre-existing condition (s 61); 0 if none
+      `that part of the second loss is difficult or costly to work out` IS A BOOLEAN @desc Whether that part would be difficult or costly to work out (then 10% is assumed, s 61(3))
+      `the second loss was of my only arm, leg, hand or foot` IS A BOOLEAN @desc Whether the second loss was of your only arm, leg, hand or foot (s 56)
+      `my left arm or hand is my dominant one` IS A BOOLEAN @desc Whether you are left-handed, that is your left arm or hand is your dominant limb (s 54)
+      `I lost my penis` IS A BOOLEAN @desc For item 41 only: whether you lost your penis (s 57)
+      `the testicles I lost` IS A NUMBER @desc For item 41 only: how many testicles you lost (0, 1 or 2; an only testicle counts as 2) (s 57)
+      `the single loss amount now` IS A NUMBER @desc The single loss amount as cpi indexed today ($100 000 in the Act, s 49), in dollars
+      `the maximum loss amount now` IS A NUMBER @desc The maximum loss amount as cpi indexed today ($150 000 in the Act, s 50), in dollars
+GIVETH A `My lump sum answer`
+DECIDE `How much is my lump sum for two permanent losses` IS
+    CONSIDER `the lump sum for` (LIST (`my permanent loss` `the schedule 1 item for my first loss` `how much of the first I have lost, in per cent` `the part of the first loss due to an earlier injury or condition, in per cent` `that part of the first loss is difficult or costly to work out` `the first loss was of my only arm, leg, hand or foot`), (`my permanent loss` `the schedule 1 item for my second loss` `how much of the second I have lost, in per cent` `the part of the second loss due to an earlier injury or condition, in per cent` `that part of the second loss is difficult or costly to work out` `the second loss was of my only arm, leg, hand or foot`)) `my left arm or hand is my dominant one` (`my sexual organ losses` `I lost my penis` `the testicles I lost`) `the single loss amount now` `the maximum loss amount now`
+    WHEN JUST `d` THEN `my lump sum, in dollars, is` `d`
+    WHEN NOTHING THEN `my lump sum is not covered` `the item is not one of the 54 items of Schedule 1`
+
+@export When can I claim my lump sum for a permanent injury (s 121)?
+GIVEN `the day I was injured` IS A DATE @desc The date of the injury (ISO date)
+      `I am back at work for my pre-injury weekly hours or more` IS A BOOLEAN @desc Whether you have returned to work for at least your average weekly hours before the injury
+      `I have worked those hours for at least 3 months` IS A BOOLEAN @desc Whether you have been working at least those hours for at least 3 months
+      `my injury has otherwise stabilised` IS A BOOLEAN @desc Whether your injury has stabilised although you have not gone back to those hours (s 121(5); in a dispute, decided by the court)
+      `the Magistrates Court has allowed an earlier claim` IS A BOOLEAN @desc Whether the Magistrates Court has allowed you to claim early because of the severity of the injury or the prospect of your imminent death
+GIVETH A `Lump sum claim timing`
+DECIDE `When can I claim my lump sum` IS
+    `when a lump sum claim may be made` `the day I was injured` (`the injury has stabilised under s 121` `I am back at work for my pre-injury weekly hours or more` `I have worked those hours for at least 3 months` `my injury has otherwise stabilised`) `the Magistrates Court has allowed an earlier claim`
+
+@export What is an indexed amount in the Act worth now (s 20, s 77(7))?
+GIVEN `the amount I am asking about` IS AN `Indexed figure` @desc Which amount: the single loss amount (s 49), the maximum loss amount (s 50), the funeral expenses maximum, the death lump sum or the weekly payment for a dependent child (s 77)
+      `the index number when the provision commenced` IS A NUMBER @desc The index number at the provision's commencement: CPI (Canberra) for ss 49, 50 and the funeral maximum (from 1 July 2002 for ss 49-50); WPI for the death lump sum and child payment (from 13 December 2017)
+      `the index number to apply` IS A NUMBER @desc For a cpi indexed amount, the highest CPI (Canberra) published since commencement; for a wpi indexed amount, the latest WPI published
+GIVETH A NUMBER
+DECIDE `What is this indexed amount worth now` IS
+    CONSIDER `the index for` `the amount I am asking about`
+    WHEN `the CPI (Canberra)` THEN `the cpi indexed amount` (`the figure in the Act for` `the amount I am asking about`) `the index number when the provision commenced` `the index number to apply`
+    WHEN `the WPI` THEN `the wpi indexed amount` (`the figure in the Act for` `the amount I am asking about`) `the index number when the provision commenced` `the index number to apply`
+
+§§ `If the worker dies (pt 4.6)`
+
+-- Situation: the worker has died of the injury. Asked by a person who may be a dependant, or by the worker's
+-- personal representative.
+@export Am I a dependant of the worker who died (dictionary, s 77(3))?
+GIVEN `I depended wholly or partly on the worker's earnings, leaving out family tax benefit` IS A BOOLEAN @desc Whether, on the day the worker died, you depended totally or partly on the worker's earnings (leave family tax benefit out of account, s 77(3))
+      `I would have depended on them but for the worker's incapacity from the injury` IS A BOOLEAN @desc Whether you would have depended on the worker's earnings if the injury had not stopped the worker earning
+      `I am a member of the worker's family` IS A BOOLEAN @desc Whether you were the worker's domestic partner, child, stepchild, adopted child, grandchild, parent, step-parent, parent-in-law, grandparent, brother, sister, half-brother or half-sister
+      `the worker acted as my parent, or I as the worker's` IS A BOOLEAN @desc Whether the worker acted in place of a parent for you, or you for the worker
+GIVETH A BOOLEAN
+DECIDE `Am I a dependant of the worker who died` IF
+    `is a dependant of the dead worker` `I depended wholly or partly on the worker's earnings, leaving out family tax benefit` `I would have depended on them but for the worker's incapacity from the injury` `I am a member of the worker's family` `the worker acted as my parent, or I as the worker's`
+
+@export Is this dependant paid weekly compensation as the dead worker's child (s 77(2)(b), (5); dictionary)?
+GIVEN `the dependant is the worker's child` IS A BOOLEAN @desc Whether the dependant is a child of the worker who died (including an adopted child or stepchild)
+      `the dependant is in a domestic partnership` IS A BOOLEAN @desc Whether the dependant is in a domestic partnership
+      `the dependant's age` IS A NUMBER @desc The dependant's age in years
+      `the dependant is in full-time secondary or tertiary education` IS A BOOLEAN @desc Whether the dependant is receiving full-time education at a secondary or tertiary educational institution
+GIVETH A BOOLEAN
+DECIDE `Is this dependant paid weekly compensation as the worker's child` IF
+    `is a child of the worker for the Act` `the dependant is the worker's child` `the dependant is in a domestic partnership` `the dependant's age` `the dependant is in full-time secondary or tertiary education`
+
+@export What do the dependants (or the personal representative) get when the worker dies of the injury (s 77, s 78)?
+GIVEN `compensation is payable under the Act for the death` IS A BOOLEAN @desc Whether the death is one for which compensation is payable (a work injury or disease, s 31; not intentionally self-inflicted, s 82)
+      `how many dependants the worker left` IS A NUMBER @desc How many dependants the worker left (people who depended on the worker's earnings and were family, or in a parent relationship)
+      `how many of them are the worker's children` IS A NUMBER @desc How many of the dependants are the worker's children under 16, or full-time students under 25, not in a domestic partnership
+      `the funeral expenses` IS A NUMBER @desc The worker's funeral expenses, in dollars
+      `the death lump sum now` IS A NUMBER @desc The lump sum as wpi indexed today ($539 002.37 in the Act, s 77(2)(a)), in dollars
+      `the weekly payment for each child now` IS A NUMBER @desc The weekly payment for each dependent child as wpi indexed today ($148.23 in the Act, s 77(2)(b)), in dollars
+      `the funeral expenses maximum now` IS A NUMBER @desc The funeral expenses maximum as cpi indexed today ($11 828.87 in the Act, s 77(2)(c)), in dollars
+GIVETH A `Death benefits`
+DECIDE `What do the dependants get when the worker dies` IS
+    `the death benefits` `compensation is payable under the Act for the death` `how many dependants the worker left` `how many of them are the worker's children` `the funeral expenses` `the death lump sum now` `the weekly payment for each child now` `the funeral expenses maximum now`
+
+§§ `Telling my employer and claiming (s 38, s 93, ch 6)`
+
+-- s 93(1): the worker must tell the employer of the injury as soon as possible; s 38(1): the employer must then begin
+-- weekly payments. Both are regulative rules in wca-core.l4 and are traced in the case file. The questions below give
+-- the worker's own dates.
+@export By what day must I claim compensation to keep my weekly payments going (s 38(2), (3))?
+GIVEN `the day I was injured` IS A DATE @desc The date of the injury (ISO date)
+      `my injury stopped me claiming within 7 days` IS A BOOLEAN @desc Whether the injury itself made you unable to make a claim within 7 days after it
+      `the day I was first able to claim` IS A DATE @desc If the injury stopped you claiming, the first day you were able to make a claim (otherwise any date)
+GIVETH A DATE
+DECIDE `By what day must I claim to keep my weekly payments going` IS
+    `the last day to claim and keep weekly payments going` `the day I was injured` `my injury stopped me claiming within 7 days` `the day I was first able to claim`
+
+@export Do I lose weekly compensation because I claimed late, and for which days (s 38(2), (3))?
+GIVEN `the day I was injured` IS A DATE @desc The date of the injury (ISO date)
+      `the day I made my claim` IS A DATE @desc The day your claim was made: the day you gave it to your employer or the insurer, whichever was first (s 122)
+      `my injury stopped me claiming within 7 days` IS A BOOLEAN @desc Whether the injury itself made you unable to make a claim within 7 days after it
+      `the day I was first able to claim` IS A DATE @desc If the injury stopped you claiming, the first day you were able to make a claim (otherwise any date)
+GIVETH A `Late claim`
+DECIDE `Do I lose weekly compensation because I claimed late` IS
+    `the days lost for a late claim` `the day I was injured` `the day I made my claim` `my injury stopped me claiming within 7 days` `the day I was first able to claim`
+
+@export On what day is my claim made (s 116(2), s 118(2), s 119, s 122)?
+GIVEN `the day I first gave my claim to my employer or the insurer` IS A DATE @desc The day you gave the claim to your employer or the insurer, whichever was first
+      `my claim is for weekly compensation` IS A BOOLEAN @desc Whether the claim is for weekly compensation (which needs a medical certificate)
+      `my medical certificate met the requirements` IS A BOOLEAN @desc Whether your doctor's certificate met the prescribed requirements and said whether your condition is consistent with work being a substantial contributing factor (s 118(2))
+      `the insurer told me in writing within 72 hours what was missing` IS A BOOLEAN @desc Whether the insurer told you in writing, within 72 hours of receiving the claim, what the certificate lacked
+      `the insurer waived the requirement` IS A BOOLEAN @desc Whether the insurer waived the certificate requirement
+      `the day I gave a certificate that met the requirements` IS A DATE @desc If the insurer told you what was missing, the day you gave a certificate that met the requirements (otherwise any date)
+GIVETH A DATE
+DECIDE `On what day is my claim made` IS
+    `the day the claim is made under s 119 and s 122` `the day I first gave my claim to my employer or the insurer` (`the medical certificate position` `my claim is for weekly compensation` `my medical certificate met the requirements` `the insurer told me in writing within 72 hours what was missing` `the insurer waived the requirement`) `the day I gave a certificate that met the requirements`
+
+GIVEN `injury day` IS A DATE, `aware at the time` IS A BOOLEAN, `awareness day` IS A DATE, `about a death` IS A BOOLEAN, `death awareness day` IS A DATE
+GIVETH A DATE
+`the day my 3 years run from` `injury day` `aware at the time` `awareness day` `about a death` `death awareness day` MEANS
+    IF `about a death` THEN `death awareness day`
+    ELSE IF `aware at the time`
+         THEN `injury day`
+         ELSE `awareness day`
+
+@export By what day must my claim for compensation be made (s 120(1)(b))?
+GIVEN `the day the injury happened` IS A DATE @desc The date of the injury (ISO date)
+      `I knew of the injury when it happened` IS A BOOLEAN @desc Whether you were aware of the injury when it happened (a disease may only become known later)
+      `the day I became aware of the injury` IS A DATE @desc If you were not aware of it when it happened, the day you became aware of it (otherwise any date)
+      `the claim is for the worker's death` IS A BOOLEAN @desc Whether you are claiming because the worker has died
+      `the day I became aware of the death` IS A DATE @desc If the claim is for the worker's death, the day you (the claimant) became aware of it (otherwise any date)
+GIVETH A DATE
+DECIDE `By what day must my claim be made` IS
+    `the last day to claim under s 120` (`the day my 3 years run from` `the day the injury happened` `I knew of the injury when it happened` `the day I became aware of the injury` `the claim is for the worker's death` `the day I became aware of the death`)
+
+@export May my proceeding for compensation continue, given when I gave notice and claimed (s 120)?
+GIVEN `I gave notice of the injury as soon as practicable, before leaving that job of my own accord` IS A BOOLEAN @desc Whether notice of the injury was given as soon as practicable after it happened, and before you voluntarily left the job in which you were injured
+      `the day I made my claim` IS A DATE @desc The day your claim was made (s 122)
+      `the day the injury happened` IS A DATE @desc The date of the injury (ISO date)
+      `I knew of the injury when it happened` IS A BOOLEAN @desc Whether you were aware of the injury when it happened
+      `the day I became aware of the injury` IS A DATE @desc If you were not aware of it when it happened, the day you became aware of it (otherwise any date)
+      `the claim is for the worker's death` IS A BOOLEAN @desc Whether you are claiming because the worker has died
+      `the day I became aware of the death` IS A DATE @desc If the claim is for the worker's death, the day you became aware of it (otherwise any date)
+GIVETH A `Proceeding answer`
+DECIDE `May my proceeding for compensation continue` IS
+    `whether a proceeding may continue` `I gave notice of the injury as soon as practicable, before leaving that job of my own accord` `the day I made my claim` (`the day my 3 years run from` `the day the injury happened` `I knew of the injury when it happened` `the day I became aware of the injury` `the claim is for the worker's death` `the day I became aware of the death`)
+
+§§ `When the insurer accepts or rejects my claim (pt 6.2)`
+
+-- Situation: the worker has made a claim and is waiting for the insurer's decision, or has had a rejection notice.
+@export Is my claim taken to be accepted because the insurer did not reject it within 28 days (s 128)?
+GIVEN `my claim is for an imminently fatal asbestos-related disease` IS A BOOLEAN @desc Whether the claim is for an imminently fatal asbestos-related disease (handled differently, not covered here)
+      `the day the insurer received my claim` IS A DATE @desc The day the insurer received your claim (ISO date)
+      `the insurer decided to reject my claim` IS A BOOLEAN @desc Whether the insurer has decided to reject your claim
+      `the day the insurer decided to reject it` IS A DATE @desc If it did, the day it decided (otherwise any date)
+GIVETH AN `Acceptance answer`
+DECIDE `Is my claim taken to be accepted` IS
+    `whether the claim is taken to be accepted` `my claim is for an imminently fatal asbestos-related disease` `the day the insurer received my claim` `the insurer decided to reject my claim` `the day the insurer decided to reject it`
+
+-- Situation: the insurer has sent a notice rejecting the claim.
+@export My claim was rejected: from what day may my weekly compensation stop (ss 129-132, s 134)?
+GIVEN `the day my claim was given to the insurer` IS A DATE @desc The day the insurer was given your claim, or notice of it by you or your employer (s 127(2))
+      `the day the rejection notice reached me and my employer` IS A DATE @desc The day the written rejection notice was received by you and your employer, whichever was later (only you, if your employer is a self-insurer) (s 129(2)-(3))
+      `the notice gives the reason, and if late explains why` IS A BOOLEAN @desc Whether the notice gives the reason for rejecting the claim (not just "medical reasons"), and, if it came 28 days or more after the claim, a statement explaining why (s 129(4)-(6))
+      `the only reason given is that the insurer had no time to assess my claim` IS A BOOLEAN @desc Whether the only ground is that the insurer has not had time to assess the claim properly (s 130(2))
+      `the Magistrates Court gave the insurer leave to reject` IS A BOOLEAN @desc Whether the Magistrates Court gave the insurer leave to reject the claim (needed from 1 year after the claim, s 132)
+      `the court's order states a day for payments to stop` IS A BOOLEAN @desc Whether the court's order giving leave states a day on which payments may stop
+      `the day stated in the court's order` IS A DATE @desc That day, if stated (otherwise any date)
+      `the day I got notice of the rejection` IS A DATE @desc The day you got notice of a rejection the court allowed: the day of the court's leave if you or your lawyer were there, otherwise the day you received the notice (otherwise any date)
+GIVETH A `Stop answer`
+DECIDE `From what day may my weekly compensation stop after a rejection` IS
+    `when weekly compensation may stop after a rejection`
+        (`Rejection facts` WITH
+            `the day the claim was given to the insurer`                               IS `the day my claim was given to the insurer`
+            `the day the claim is taken to be rejected`                                IS `the day the rejection notice reached me and my employer`
+            `the notice gives the reason, and from 28 days a statement explaining why` IS `the notice gives the reason, and if late explains why`
+            `the only ground is that the insurer has not had time to assess the claim` IS `the only reason given is that the insurer had no time to assess my claim`
+            `the Magistrates Court gave leave to reject`                               IS `the Magistrates Court gave the insurer leave to reject`
+            `the court's order states a day to stop`                                   IS `the court's order states a day for payments to stop`
+            `the day stated in the order`                                              IS `the day stated in the court's order`
+            `the day the worker got notice of the rejection`                           IS `the day I got notice of the rejection`)
