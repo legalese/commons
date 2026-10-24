@@ -1,0 +1,886 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `euca-nouns`
+IMPORT `euca-shared`
+IMPORT `euca-s202-work-test`
+IMPORT `euca-s202-conditions`
+IMPORT `euca-s203-period`
+IMPORT `euca-s203-indicators`
+IMPORT `euca-s202-account`
+IMPORT `euca-s202-payable`
+IMPORT `euca-s205-definitions`
+IMPORT `euca-s207-dates`
+IMPORT `euca-s208-sea`
+
+-- Federal-State Extended Unemployment Compensation Act of 1970 (Pub. L. 91-373, title II), as the
+-- OLRC sets it out in the note under 26 U.S.C. 3304 -- THE SEAT LAYER.
+--
+-- SEAT: the individual to whom the Act is applied: an unemployed worker in the United States who
+-- has used up regular unemployment compensation in a period of high unemployment and asks whether
+-- extended compensation is payable, for how many weeks, and what must be done (look for work,
+-- accept suitable work) to keep getting it.
+--
+-- This layer phrases the rules in the euca- modules imported above as the questions that person
+-- asks. Nothing here is new law, and no rule is restated: each question builds the records the
+-- module rules expect, in its WHERE, from the plain facts the person is asked, and calls the same
+-- module rule.
+--
+-- PLAIN INPUTS. Every input is a yes/no, a number, a date or a choice from a list, one for each fact
+-- the person can state, with an @desc worded as the person is asked. A record field that the rule
+-- called never reads is given a fixed placeholder, with a comment saying so.
+--
+-- SECTIONS 204 AND 206 AND THE POWERS OF OFFICIALS. The Act's rules on the Federal share of the cost
+-- (section 204) and the officials who determine and publish things (section 203(b)(2), (e)(2),
+-- (f)(3)) pass no right, duty or liability to the individual, so there are no questions on them
+-- beyond the one on notice. They are encoded in layer 1 (see NOTES.md, coverage table).
+--
+-- JUDGMENTS HANDED TO OTHERS are taken as plain facts the person can state or have been told:
+-- whether the State agency is satisfied that prospects are good, whether the State law treats work
+-- as suitable or would deny compensation for a refusal, whether a State rule is inconsistent with
+-- the Act. NOTES.md, fork register, records each.
+--
+-- THE FIGURES OF OTHER INSTRUMENTS are inputs too: the federal minimum wage, the State's rates of
+-- unemployment, the State law's choices of method and option.
+
+§ `Extended compensation under the Federal-State Extended Unemployment Compensation Act of 1970 -- the individual's questions`
+
+-- No rule reads a field that carries this date. It is only here so that a record can be built.
+GIVETH A DATE
+`a date that no rule reads` MEANS Date 1 1 1900
+
+§§ `Section 202(a)(1) and (2): who extended compensation is payable to`
+
+-- s 202(a)(1). "Exhausted all rights to regular compensation" has two forms: all the regular
+-- compensation available has been received, or the benefit year has expired.
+@export Have I used up my regular unemployment compensation (s 202(a)(1))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `I have received all the regular compensation available to me` IS A BOOLEAN @desc Have you received all the regular compensation available to you based on your employment or wages in your base period?
+      `my benefit year ends on` IS A DATE @desc What is the last day of your benefit year?
+GIVETH A BOOLEAN
+DECIDE `Have I used up my regular unemployment compensation` IF
+    `the individual has exhausted all rights to regular compensation` `the week I am claiming for begins on` `my benefit year` `my position`
+    WHERE
+        `my benefit year` MEANS `Benefit year` WITH
+            -- Placeholder: the exhaustion rule does not read the first day.
+            `first day of the benefit year` IS `a date that no rule reads`
+            `last day of the benefit year` IS `my benefit year ends on`
+        `my position` MEANS `Regular compensation position` WITH
+            `received all the regular compensation available on the base period employment or wages` IS `I have received all the regular compensation available to me`
+            -- Placeholders: the exhaustion rule does not read these four fields.
+            `rights to regular compensation for the week under the State law` IS FALSE
+            `rights to regular compensation for the week under another State's unemployment compensation law` IS FALSE
+            `compensation for the week under another Federal law` IS FALSE
+            `receiving compensation for the week under the unemployment compensation law of Canada` IS FALSE
+
+-- s 202(a)(1). The individual must have no right to regular compensation for the week under the
+-- State law or any other State's law, no compensation under any other Federal law, and not be
+-- receiving compensation under the unemployment compensation law of Canada.
+@export Am I free of any other right to compensation for this week (s 202(a)(1))?
+GIVEN `I have a right to regular compensation for this week under my State's law` IS A BOOLEAN @desc Do you have a right to regular compensation for this week under your State's unemployment compensation law?
+      `I have a right to regular compensation for this week under another State's law` IS A BOOLEAN @desc Do you have a right to regular compensation for this week under another State's unemployment compensation law?
+      `I have compensation for this week under another Federal law` IS A BOOLEAN @desc Are you entitled to compensation for this week under any other Federal law?
+      `I am receiving compensation for this week under the law of Canada` IS A BOOLEAN @desc Are you receiving compensation for this week under the unemployment compensation law of Canada?
+GIVETH A BOOLEAN
+DECIDE `Am I free of any other right to compensation for this week` IF
+    `the individual has no other rights to compensation for the week` `my position`
+    WHERE
+        `my position` MEANS `Regular compensation position` WITH
+            -- Placeholder: the "no other rights" rule does not read this field.
+            `received all the regular compensation available on the base period employment or wages` IS FALSE
+            `rights to regular compensation for the week under the State law` IS `I have a right to regular compensation for this week under my State's law`
+            `rights to regular compensation for the week under another State's unemployment compensation law` IS `I have a right to regular compensation for this week under another State's law`
+            `compensation for the week under another Federal law` IS `I have compensation for this week under another Federal law`
+            `receiving compensation for the week under the unemployment compensation law of Canada` IS `I am receiving compensation for this week under the law of Canada`
+
+-- s 202(a)(2). The terms of the State law for regular claims apply to extended claims, except where
+-- inconsistent with the Act. Whether a State rule is inconsistent is a judgment handed to the State
+-- agency and the courts; the question takes it as a fact the person has been told.
+@export Does my State's rule for regular claims also apply to my extended claim (s 202(a)(2))?
+GIVEN `that State rule is inconsistent with the provisions of the Act` IS A BOOLEAN @desc Has that State rule been found inconsistent with the extended compensation provisions of the Act? (Answer no if you have not been told so.)
+GIVETH A BOOLEAN
+DECIDE `Does my State's rule for regular claims also apply to my extended claim` IF
+    `a State rule for regular compensation claims applies to extended compensation claims` `that State rule is inconsistent with the provisions of the Act`
+
+§§ `Section 202(a)(3): the work test`
+
+-- s 202(a)(3)(A)(i), (C), (D). Asked as a hypothetical: if the person turns the job down or does not
+-- apply for it, is extended compensation denied for that week? "Referred" work is applied for;
+-- offered work is accepted. Suitable work is any work within the person's capabilities, unless the
+-- person has shown the State agency that prospects in the customary occupation are good, in which
+-- case the State law decides. Subparagraph D lists four jobs that may be turned down without a denial.
+@export Will I be denied extended compensation if I turn down this job (s 202(a)(3)(A)(i), (C), (D))?
+GIVEN `the State agency referred me to this job` IS A BOOLEAN @desc Did the State agency refer you to this job (rather than the employer offering it to you)?
+      `this job is within my capabilities` IS A BOOLEAN @desc Is this job within your capabilities?
+      `I have shown the State agency that my prospects of work in my customary occupation are good` IS A BOOLEAN @desc Have you given the State agency satisfactory evidence that your prospects of getting work in your customary occupation within a reasonably short period are good?
+      `my State law treats this job as suitable` IS A BOOLEAN @desc Does your State's law treat this job as suitable work for you?
+      `the job's gross average weekly pay` IS A NUMBER @desc What is the gross average weekly pay for the job, in dollars?
+      `my weekly benefit amount for my benefit year` IS A NUMBER @desc What is your average weekly benefit amount for your benefit year, in dollars?
+      `my supplemental unemployment compensation benefits for the week` IS A NUMBER @desc How much supplemental unemployment compensation benefit (under section 501(c)(17)(D) of the Internal Revenue Code) is payable to you for the week, in dollars? (0 if none)
+      `the job was offered to me in writing` IS A BOOLEAN @desc Was the job offered to you in writing?
+      `the job was listed with the State employment service` IS A BOOLEAN @desc Was the job listed with the State employment service?
+      `my State law would deny me regular compensation for turning it down` IS A BOOLEAN @desc Would your State's law deny you compensation for turning this job down?
+      `the job pays this much per hour` IS A NUMBER @desc How much does the job pay per hour, in dollars?
+      `the federal minimum wage per hour` IS A NUMBER @desc What is the federal minimum wage per hour under section 6(a)(1) of the Fair Labor Standards Act, without regard to any exemption, in dollars?
+      `the highest State or local minimum wage per hour` IS A NUMBER @desc What is the highest State or local minimum wage per hour that applies to the job, in dollars? (0 if none)
+GIVETH A BOOLEAN
+DECIDE `Will I be denied extended compensation if I turn down this job` IF
+    `extended compensation is denied under clause (i) for the offer or referral` `this job if I turn it down`
+    WHERE
+        `this job if I turn it down` MEANS `Offer of work or referral` WITH
+            `how the work reached the individual` IS
+                IF `the State agency referred me to this job`
+                THEN `referred to the individual by the State agency`
+                ELSE `offered to the individual`
+            -- The question supposes a refusal: the person neither accepts the offer nor applies for the referral.
+            `the individual accepted the offer` IS FALSE
+            `the individual applied for the work to which the State agency referred them` IS FALSE
+            `the work is within the individual's capabilities` IS `this job is within my capabilities`
+            `the individual furnished evidence satisfactory to the State agency that prospects of work in the customary occupation are good` IS `I have shown the State agency that my prospects of work in my customary occupation are good`
+            `the applicable State law treats the work as suitable` IS `my State law treats this job as suitable`
+            `gross average weekly remuneration payable for the position` IS `the job's gross average weekly pay`
+            `average weekly benefit amount for the individual's benefit year` IS `my weekly benefit amount for my benefit year`
+            `supplemental unemployment compensation benefits payable to the individual for the week` IS `my supplemental unemployment compensation benefits for the week`
+            `the position was offered to the individual in writing` IS `the job was offered to me in writing`
+            `the position was listed with the State employment service` IS `the job was listed with the State employment service`
+            `State law, so far as consistent with C and E, would deny compensation for the failure` IS `my State law would deny me regular compensation for turning it down`
+            `wages the position pays per hour` IS `the job pays this much per hour`
+            `Fair Labor Standards Act section 6(a)(1) minimum wage per hour, without regard to any exemption` IS `the federal minimum wage per hour`
+            `highest applicable State or local minimum wage per hour, or 0 if there is none` IS `the highest State or local minimum wage per hour`
+
+-- s 202(a)(3)(C). "Suitable work".
+@export Is this job suitable work for me (s 202(a)(3)(C))?
+GIVEN `this job is within my capabilities` IS A BOOLEAN @desc Is this job within your capabilities?
+      `I have shown the State agency that my prospects of work in my customary occupation are good` IS A BOOLEAN @desc Have you given the State agency satisfactory evidence that your prospects of getting work in your customary occupation within a reasonably short period are good?
+      `my State law treats this job as suitable` IS A BOOLEAN @desc Does your State's law treat this job as suitable work for you?
+GIVETH A BOOLEAN
+DECIDE `Is this job suitable work for me` IF
+    `the work is suitable work` `this job`
+    WHERE
+        `this job` MEANS `Offer of work or referral` WITH
+            `the work is within the individual's capabilities` IS `this job is within my capabilities`
+            `the individual furnished evidence satisfactory to the State agency that prospects of work in the customary occupation are good` IS `I have shown the State agency that my prospects of work in my customary occupation are good`
+            `the applicable State law treats the work as suitable` IS `my State law treats this job as suitable`
+            -- Placeholders: the suitable work rule does not read the remaining fields.
+            `how the work reached the individual` IS `offered to the individual`
+            `the individual accepted the offer` IS FALSE
+            `the individual applied for the work to which the State agency referred them` IS FALSE
+            `gross average weekly remuneration payable for the position` IS 0
+            `average weekly benefit amount for the individual's benefit year` IS 0
+            `supplemental unemployment compensation benefits payable to the individual for the week` IS 0
+            `the position was offered to the individual in writing` IS FALSE
+            `the position was listed with the State employment service` IS FALSE
+            `State law, so far as consistent with C and E, would deny compensation for the failure` IS FALSE
+            `wages the position pays per hour` IS 0
+            `Fair Labor Standards Act section 6(a)(1) minimum wage per hour, without regard to any exemption` IS 0
+            `highest applicable State or local minimum wage per hour, or 0 if there is none` IS 0
+
+-- s 202(a)(3)(E). "Actively engaged in seeking work" needs both a systematic and sustained effort in
+-- the week and tangible evidence of it given to the State agency.
+@export Am I treated as actively seeking work this week (s 202(a)(3)(E))?
+GIVEN `I made a systematic and sustained effort to get work this week` IS A BOOLEAN @desc Did you make a systematic and sustained effort to obtain work this week?
+      `I gave the State agency tangible evidence of that effort` IS A BOOLEAN @desc Did you give the State agency tangible evidence of that effort?
+GIVETH A BOOLEAN
+DECIDE `Am I treated as actively seeking work this week` IF
+    `the individual is treated as actively engaged in seeking work` `my search`
+    WHERE
+        `my search` MEANS `Search for work` WITH
+            `engaged in a systematic and sustained effort to obtain work during the week` IS `I made a systematic and sustained effort to get work this week`
+            `provided tangible evidence to the State agency of that effort` IS `I gave the State agency tangible evidence of that effort`
+            -- Placeholders: the "actively engaged" rule does not read the exemption fields.
+            `before a court of the United States or of a State pursuant to a lawfully issued summons to appear for jury duty` IS FALSE
+            `hospitalized for treatment of an emergency or a life-threatening condition` IS FALSE
+            `the jury duty exemption applies to recipients of regular benefits` IS FALSE
+            `the State chooses to apply the jury duty exemption to recipients of extended benefits` IS FALSE
+            `the hospitalization exemption applies to recipients of regular benefits` IS FALSE
+            `the State chooses to apply the hospitalization exemption to recipients of extended benefits` IS FALSE
+
+-- s 202(a)(3)(A)(ii). Not seeking work costs the week unless the person is excused: on jury duty
+-- under a summons, or hospitalised for an emergency or life-threatening condition, where the
+-- exemption applies to regular benefits and the State has chosen to apply it to extended benefits.
+@export Will I be denied extended compensation this week for not seeking work (s 202(a)(3)(A)(ii))?
+GIVEN `I made a systematic and sustained effort to get work this week` IS A BOOLEAN @desc Did you make a systematic and sustained effort to obtain work this week?
+      `I gave the State agency tangible evidence of that effort` IS A BOOLEAN @desc Did you give the State agency tangible evidence of that effort?
+      `I was before a court on a jury summons` IS A BOOLEAN @desc Were you before a court of the United States or of a State under a lawfully issued summons to appear for jury duty?
+      `my State excuses jury duty for regular benefits` IS A BOOLEAN @desc Does your State's law excuse a person on jury duty from seeking work when they receive regular benefits?
+      `my State has chosen to excuse jury duty for extended benefits` IS A BOOLEAN @desc Has your State chosen to apply that jury duty excuse to people receiving extended benefits?
+      `I was hospitalized for an emergency or a life-threatening condition` IS A BOOLEAN @desc Were you hospitalized for treatment of an emergency or a life-threatening condition?
+      `my State excuses hospitalization for regular benefits` IS A BOOLEAN @desc Does your State's law excuse a person who is hospitalized in that way from seeking work when they receive regular benefits?
+      `my State has chosen to excuse hospitalization for extended benefits` IS A BOOLEAN @desc Has your State chosen to apply that hospitalization excuse to people receiving extended benefits?
+GIVETH A BOOLEAN
+DECIDE `Will I be denied extended compensation this week for not seeking work` IF
+    `extended compensation is denied under clause (ii) for failing to seek work` `my search`
+    WHERE
+        `my search` MEANS `Search for work` WITH
+            `engaged in a systematic and sustained effort to obtain work during the week` IS `I made a systematic and sustained effort to get work this week`
+            `provided tangible evidence to the State agency of that effort` IS `I gave the State agency tangible evidence of that effort`
+            `before a court of the United States or of a State pursuant to a lawfully issued summons to appear for jury duty` IS `I was before a court on a jury summons`
+            `hospitalized for treatment of an emergency or a life-threatening condition` IS `I was hospitalized for an emergency or a life-threatening condition`
+            `the jury duty exemption applies to recipients of regular benefits` IS `my State excuses jury duty for regular benefits`
+            `the State chooses to apply the jury duty exemption to recipients of extended benefits` IS `my State has chosen to excuse jury duty for extended benefits`
+            `the hospitalization exemption applies to recipients of regular benefits` IS `my State excuses hospitalization for regular benefits`
+            `the State chooses to apply the hospitalization exemption to recipients of extended benefits` IS `my State has chosen to excuse hospitalization for extended benefits`
+
+-- s 202(a)(3)(B). After a failure to accept suitable work or to seek work, the person is ineligible
+-- for each week beginning from the week after the failure until they have worked at least 4 weeks
+-- that began after the failure and earned at least 4 times their average weekly benefit amount.
+-- If there was no such failure the question is answered "no".
+@export Am I still ineligible this week because of an earlier failure to accept work or to seek work (s 202(a)(3)(B))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `I failed to accept suitable work or to seek work earlier` IS A BOOLEAN @desc Did you earlier fail to accept an offer of suitable work, to apply for suitable work you were referred to, or to actively seek work?
+      `the week of that failure began on` IS A DATE @desc On what date did the week in which you failed begin? (Any date if you did not fail.)
+      `weeks I have worked since that failure` IS A NUMBER @desc In how many weeks that began after the failure and before this week have you been employed?
+      `pay I have earned since that failure` IS A NUMBER @desc How much have you earned, in dollars, from being employed in those weeks?
+      `my weekly benefit amount for my benefit year` IS A NUMBER @desc What is your average weekly benefit amount for your benefit year, in dollars?
+GIVETH A BOOLEAN
+DECIDE `Am I still ineligible this week because of an earlier failure` IF
+    `the week begins during the period of ineligibility after an earlier failure` `the week I am claiming for begins on` `my earlier failure`
+    WHERE
+        `my earlier failure` MEANS `Earlier failure` WITH
+            `week in which the failure occurred, if there was one` IS
+                IF `I failed to accept suitable work or to seek work earlier`
+                THEN JUST `the week of that failure began on`
+                ELSE NOTHING
+            `weeks of employment that began after the failure and before the week claimed` IS `weeks I have worked since that failure`
+            `remuneration earned for being so employed` IS `pay I have earned since that failure`
+            `average weekly benefit amount for the individual's benefit year` IS `my weekly benefit amount for my benefit year`
+
+-- s 202(a)(3)(B)(ii). What is left to do before the ineligibility ends: weeks of work.
+@export How many more weeks of work do I need to end my ineligibility (s 202(a)(3)(B)(ii))?
+GIVEN `weeks I have worked since that failure` IS A NUMBER @desc In how many weeks that began after the failure and before this week have you been employed?
+GIVETH A NUMBER
+DECIDE `How many more weeks of work do I need to end my ineligibility` IS
+    `weeks of employment still needed to end the period of ineligibility` `my earlier failure`
+    WHERE
+        `my earlier failure` MEANS `Earlier failure` WITH
+            `weeks of employment that began after the failure and before the week claimed` IS `weeks I have worked since that failure`
+            -- Placeholders: the "weeks still needed" rule reads only the weeks worked.
+            `week in which the failure occurred, if there was one` IS NOTHING
+            `remuneration earned for being so employed` IS 0
+            `average weekly benefit amount for the individual's benefit year` IS 0
+
+-- s 202(a)(3)(B)(ii). What is left to do before the ineligibility ends: pay earned.
+@export How much more must I earn to end my ineligibility, in dollars (s 202(a)(3)(B)(ii))?
+GIVEN `pay I have earned since that failure` IS A NUMBER @desc How much have you earned, in dollars, from being employed in the weeks that began after the failure?
+      `my weekly benefit amount for my benefit year` IS A NUMBER @desc What is your average weekly benefit amount for your benefit year, in dollars?
+GIVETH A NUMBER
+DECIDE `How much more must I earn to end my ineligibility` IS
+    `remuneration still needed to end the period of ineligibility` `my earlier failure`
+    WHERE
+        `my earlier failure` MEANS `Earlier failure` WITH
+            `remuneration earned for being so employed` IS `pay I have earned since that failure`
+            `average weekly benefit amount for the individual's benefit year` IS `my weekly benefit amount for my benefit year`
+            -- Placeholders: the "remuneration still needed" rule does not read these two fields.
+            `week in which the failure occurred, if there was one` IS NOTHING
+            `weeks of employment that began after the failure and before the week claimed` IS 0
+
+§§ `Section 202(a)(4), (5), (7): disqualifications, the employment needed, and when the work test is suspended`
+
+-- s 202(a)(4). A State law's end to a disqualification (for leaving a job voluntarily, being
+-- discharged for misconduct, or refusing suitable work) counts only if it rests on employment after
+-- the disqualification. Paragraphs (3) and (4) do not apply to weeks beginning after 6 March 1993
+-- and before 1 January 1995 (section 202(a)(7)).
+@export Does an earlier disqualification still bar my extended compensation this week (s 202(a)(4), (7))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `the reason I was disqualified` IS A `Kind of disqualification` @desc Why were you disqualified (leaving your job voluntarily, being discharged for misconduct, or refusing suitable employment)?
+      `my State law has ended that disqualification` IS A BOOLEAN @desc Has your State's law ended that disqualification?
+      `it was ended because of work I did after the disqualification` IS A BOOLEAN @desc Was it ended because of employment you had after the date of the disqualification?
+GIVETH A BOOLEAN
+DECIDE `Does an earlier disqualification still bar my extended compensation this week` IF
+    `a disqualification bars extended compensation for the week unless section 202(a)(7) suspends it` `the week I am claiming for begins on` (LIST `my disqualification`)
+    WHERE
+        `my disqualification` MEANS Disqualification WITH
+            `kind of disqualification` IS `the reason I was disqualified`
+            `the State law has terminated the disqualification` IS `my State law has ended that disqualification`
+            `the termination is based upon employment subsequent to the date of the disqualification` IS `it was ended because of work I did after the disqualification`
+
+-- s 202(a)(5). Twenty weeks of full-time insured employment, or the equivalent in insured wages
+-- (earnings over 40 times the most recent weekly benefit amount, or over 1.5 times the wages in
+-- the highest quarter), whichever method or methods the State law has chosen. The answer is one of
+-- three: has it, lacks it, or the State law has chosen no method (which the Act requires it to do).
+@export Do I have enough employment in my base period to get extended compensation (s 202(a)(5))?
+GIVEN `weeks of full-time insured employment I had in my base period` IS A NUMBER @desc How many weeks of full-time insured employment did you have in your base period?
+      `my earnings covered by the State law in my base period` IS A NUMBER @desc How much did you earn in your base period in employment covered by the State law, in dollars?
+      `my most recent weekly benefit amount` IS A NUMBER @desc What is your most recent weekly benefit amount, in dollars?
+      `my insured wages in my best quarter` IS A NUMBER @desc What were your insured wages, in dollars, in the calendar quarter of your base period in which they were highest?
+      `my State uses the 20 weeks method` IS A BOOLEAN @desc Does your State's law measure employment by 20 weeks of full-time insured employment?
+      `my State uses the 40 times method` IS A BOOLEAN @desc Does your State's law measure it by earnings above 40 times your most recent weekly benefit amount?
+      `my State uses the one and a half times method` IS A BOOLEAN @desc Does your State's law measure it by earnings above one and a half times your insured wages in your highest quarter?
+GIVETH A `Result of the employment requirement`
+DECIDE `Do I have enough employment in my base period to get extended compensation` IS
+    `the result of the employment requirement` `my employment`
+    WHERE
+        `my employment` MEANS `Employment in the base period` WITH
+            `weeks of full-time insured employment in the base period` IS `weeks of full-time insured employment I had in my base period`
+            `earnings covered by the State law in the base period` IS `my earnings covered by the State law in my base period`
+            `most recent weekly benefit amount` IS `my most recent weekly benefit amount`
+            `insured wages in the calendar quarter of the base period in which they were highest` IS `my insured wages in my best quarter`
+            `the State law uses the 20 weeks of full-time insured employment method` IS `my State uses the 20 weeks method`
+            `the State law uses the earnings above 40 times the weekly benefit amount method` IS `my State uses the 40 times method`
+            `the State law uses the earnings above one and a half times the highest quarter method` IS `my State uses the one and a half times method`
+
+-- s 202(a)(7).
+@export Is the work test in force for this week (s 202(a)(7))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+GIVETH A BOOLEAN
+DECIDE `Is the work test in force for this week` IF
+    `paragraphs (3) and (4) of section 202(a) apply to the week` `the week I am claiming for begins on`
+
+§§ `Section 202(b): the extended compensation account`
+
+-- s 202(b)(1), (3)(A). The account holds at least the least of three amounts: 50 per cent of the
+-- regular compensation payable in the benefit year, 13 times the weekly benefit amount, and 39 times
+-- the weekly benefit amount less regular compensation paid; in a high unemployment period 80 per
+-- cent, 20 times and 46 times. A State law may give more, and may reduce the account by additional
+-- compensation paid earlier. The answer is the amount the Act requires, in dollars.
+@export How much extended compensation must my account hold, in dollars (s 202(b))?
+GIVEN `all the regular compensation payable to me in my benefit year` IS A NUMBER @desc How much regular compensation, including dependents' allowances, was payable to you during your benefit year, in dollars?
+      `my weekly benefit amount for my benefit year` IS A NUMBER @desc What is your average weekly benefit amount for your benefit year, in dollars?
+      `the regular compensation I was paid in my benefit year` IS A NUMBER @desc How much regular compensation were you paid, or deemed paid, during your benefit year, in dollars?
+      `my State reduces the account by additional compensation` IS A BOOLEAN @desc Does your State's law reduce the account by additional compensation paid to you earlier?
+      `the additional compensation I was paid earlier` IS A NUMBER @desc How much additional compensation were you paid for earlier weeks in your benefit year that did not begin in an extended benefit period, in dollars? (0 if none)
+      `my week is in a high unemployment period` IS A BOOLEAN @desc Is the week you are claiming for in a high unemployment period?
+GIVETH A NUMBER
+DECIDE `How much extended compensation must my account hold` IS
+    `the amount the extended compensation account must hold` `my account`
+    WHERE
+        `my account` MEANS `Account facts` WITH
+            `total regular compensation payable during the benefit year, including dependents' allowances` IS `all the regular compensation payable to me in my benefit year`
+            `average weekly benefit amount` IS `my weekly benefit amount for my benefit year`
+            `regular compensation paid or deemed paid during the benefit year` IS `the regular compensation I was paid in my benefit year`
+            `the State law reduces the account by additional compensation paid` IS `my State reduces the account by additional compensation`
+            `additional compensation paid or deemed paid for prior weeks in the benefit year that did not begin in an extended benefit period` IS `the additional compensation I was paid earlier`
+            `the week begins in a high unemployment period` IS `my week is in a high unemployment period`
+
+-- s 202(b)(1), (2). Dividing the account by the weekly amount of extended compensation.
+-- NOTHING if the weekly amount is not above 0.
+@export For how many whole weeks will my extended compensation account pay (s 202(b))?
+GIVEN `all the regular compensation payable to me in my benefit year` IS A NUMBER @desc How much regular compensation, including dependents' allowances, was payable to you during your benefit year, in dollars?
+      `my weekly benefit amount for my benefit year` IS A NUMBER @desc What is your average weekly benefit amount for your benefit year, in dollars?
+      `the regular compensation I was paid in my benefit year` IS A NUMBER @desc How much regular compensation were you paid, or deemed paid, during your benefit year, in dollars?
+      `my State reduces the account by additional compensation` IS A BOOLEAN @desc Does your State's law reduce the account by additional compensation paid to you earlier?
+      `the additional compensation I was paid earlier` IS A NUMBER @desc How much additional compensation were you paid for earlier weeks in your benefit year that did not begin in an extended benefit period, in dollars? (0 if none)
+      `my week is in a high unemployment period` IS A BOOLEAN @desc Is the week you are claiming for in a high unemployment period?
+      `the weekly amount of extended compensation I am paid` IS A NUMBER @desc How much extended compensation are you paid for each week, in dollars?
+GIVETH A MAYBE NUMBER
+DECIDE `For how many whole weeks will my extended compensation account pay` IS
+    `the number of whole weeks the extended compensation account covers` `my account` `the weekly amount of extended compensation I am paid`
+    WHERE
+        `my account` MEANS `Account facts` WITH
+            `total regular compensation payable during the benefit year, including dependents' allowances` IS `all the regular compensation payable to me in my benefit year`
+            `average weekly benefit amount` IS `my weekly benefit amount for my benefit year`
+            `regular compensation paid or deemed paid during the benefit year` IS `the regular compensation I was paid in my benefit year`
+            `the State law reduces the account by additional compensation paid` IS `my State reduces the account by additional compensation`
+            `additional compensation paid or deemed paid for prior weeks in the benefit year that did not begin in an extended benefit period` IS `the additional compensation I was paid earlier`
+            `the week begins in a high unemployment period` IS `my week is in a high unemployment period`
+
+-- s 202(b)(3)(B). A high unemployment period is a period in which an extended benefit period would
+-- be in effect if the alternative trigger of section 203(f)(1)(A)(i) were applied at 8 per cent in
+-- place of 6.5 per cent, whether or not the State law has adopted that trigger. The question takes
+-- the first week in which that 8 per cent test was met, and (if it has stopped being met) the first
+-- week in which it was not.
+@export Is the week I am claiming for in a high unemployment period (s 202(b)(3))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `the 8 per cent test was met` IS A BOOLEAN @desc Has your State's seasonally adjusted rate of total unemployment met the 8 percent test of section 202(b)(3)(B) (and been at least 110 percent of the rate for either of the same 3 months in the 2 preceding years) in some week?
+      `the first week the 8 per cent test was met began on` IS A DATE @desc On what date did the first week in which that test was met begin? (Any date if it never was.)
+      `an earlier extended benefit period closed` IS A BOOLEAN @desc Did an earlier extended benefit period in your State close?
+      `the week it closed began on` IS A DATE @desc On what date did the last week of that earlier period begin? (Any date if there was none.)
+      `the 8 per cent test has stopped being met` IS A BOOLEAN @desc Has the 8 percent test since stopped being met?
+      `the first week it stopped being met began on` IS A DATE @desc On what date did the first week in which it was not met begin? (Any date if it has not stopped.)
+GIVETH A BOOLEAN
+DECIDE `Is the week I am claiming for in a high unemployment period` IF
+    `the week begins in a high unemployment period` `the week I am claiming for begins on` `the hypothetical period`
+    WHERE
+        `the prior close` MEANS
+            IF `an earlier extended benefit period closed`
+            THEN JUST `the week it closed began on`
+            ELSE NOTHING
+        `the hypothetical period` MEANS
+            IF `the 8 per cent test was met`
+            THEN JUST (`Extended benefit period` WITH
+                          `first week of the extended benefit period` IS `the week with which an extended benefit period begins` `the first week the 8 per cent test was met began on` `the prior close`
+                          `last week of the extended benefit period` IS
+                              IF `the 8 per cent test has stopped being met`
+                              THEN JUST (`the week with which an extended benefit period ends` (`the week with which an extended benefit period begins` `the first week the 8 per cent test was met began on` `the prior close`) `the first week it stopped being met began on`)
+                              ELSE NOTHING)
+            ELSE NOTHING
+
+§§ `Section 202(c): interstate claims`
+
+-- Asked only if the person is claiming from a State other than the one where they worked, under
+-- the interstate benefit payment plan; the first 2 weeks payable on the claim are exempt.
+@export Is extended compensation on my interstate claim cut off for this week (s 202(c))?
+GIVEN `the claim would otherwise be payable for this week` IS A BOOLEAN @desc Would extended compensation be payable to you for this week on your interstate claim, apart from section 202(c)?
+      `an extended benefit period is in effect in the State where I filed` IS A BOOLEAN @desc Is an extended benefit period in effect for this week in the State where you filed the interstate claim?
+      `weeks already payable on this interstate claim` IS A NUMBER @desc For how many earlier weeks was extended compensation payable to you on this interstate claim from this account?
+GIVETH A BOOLEAN
+DECIDE `Is extended compensation on my interstate claim cut off for this week` IF
+    `payment of extended compensation is not made for the week under section 202(c)(1)` `my interstate claim`
+    WHERE
+        `my interstate claim` MEANS `Interstate claim` WITH
+            `extended compensation would but for the cessation rule have been payable for the week pursuant to an interstate claim under the interstate benefit payment plan` IS `the claim would otherwise be payable for this week`
+            `an extended benefit period is in effect for the week in the State where the claim was filed` IS `an extended benefit period is in effect in the State where I filed`
+            `earlier weeks for which extended compensation was payable pursuant to the interstate claim from the account` IS `weeks already payable on this interstate claim`
+
+§§ `Section 202(a), (b) and (c) together: is extended compensation payable for this week`
+
+-- The whole of section 202 for one week. "Payable" means what the Act requires a State law to
+-- provide (a State may give more). One offer or referral and one disqualification may be described;
+-- the person answers "no" to the first question of each if they have none.
+@export Is extended compensation payable to me for this week (s 202(a), (b), (c))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `my benefit year began on` IS A DATE @desc What is the first day of your benefit year?
+      `my benefit year ends on` IS A DATE @desc What is the last day of your benefit year?
+      `my State's extended benefit period began with the week of` IS A DATE @desc On what date did the first week of your State's extended benefit period begin?
+      `my State's extended benefit period has ended` IS A BOOLEAN @desc Has your State's extended benefit period ended?
+      `my State's extended benefit period ended with the week of` IS A DATE @desc On what date did the last week of your State's extended benefit period begin? (Any date if it has not ended.)
+      `I have received all the regular compensation available to me` IS A BOOLEAN @desc Have you received all the regular compensation available to you based on your employment or wages in your base period?
+      `I have a right to regular compensation for this week under my State's law` IS A BOOLEAN @desc Do you have a right to regular compensation for this week under your State's unemployment compensation law?
+      `I have a right to regular compensation for this week under another State's law` IS A BOOLEAN @desc Do you have a right to regular compensation for this week under another State's unemployment compensation law?
+      `I have compensation for this week under another Federal law` IS A BOOLEAN @desc Are you entitled to compensation for this week under any other Federal law?
+      `I am receiving compensation for this week under the law of Canada` IS A BOOLEAN @desc Are you receiving compensation for this week under the unemployment compensation law of Canada?
+      `I was offered or referred to a job this week` IS A BOOLEAN @desc Were you offered a job, or referred to one by the State agency, in this week? (Answer the next questions about it; if no, they are not used.)
+      `the State agency referred me to this job` IS A BOOLEAN @desc Did the State agency refer you to this job (rather than the employer offering it to you)?
+      `I accepted the job` IS A BOOLEAN @desc Did you accept the job offered to you?
+      `I applied for the job I was referred to` IS A BOOLEAN @desc Did you apply for the job you were referred to?
+      `this job is within my capabilities` IS A BOOLEAN @desc Is the job within your capabilities?
+      `I have shown the State agency that my prospects of work in my customary occupation are good` IS A BOOLEAN @desc Have you given the State agency satisfactory evidence that your prospects of getting work in your customary occupation within a reasonably short period are good?
+      `my State law treats this job as suitable` IS A BOOLEAN @desc Does your State's law treat the job as suitable work for you?
+      `the job's gross average weekly pay` IS A NUMBER @desc What is the gross average weekly pay for the job, in dollars?
+      `my supplemental unemployment compensation benefits for the week` IS A NUMBER @desc How much supplemental unemployment compensation benefit is payable to you for the week, in dollars? (0 if none)
+      `the job was offered to me in writing` IS A BOOLEAN @desc Was the job offered to you in writing?
+      `the job was listed with the State employment service` IS A BOOLEAN @desc Was the job listed with the State employment service?
+      `my State law would deny me regular compensation for turning it down` IS A BOOLEAN @desc Would your State's law deny you compensation for turning this job down?
+      `the job pays this much per hour` IS A NUMBER @desc How much does the job pay per hour, in dollars?
+      `the federal minimum wage per hour` IS A NUMBER @desc What is the federal minimum wage per hour under section 6(a)(1) of the Fair Labor Standards Act, without regard to any exemption, in dollars?
+      `the highest State or local minimum wage per hour` IS A NUMBER @desc What is the highest State or local minimum wage per hour that applies to the job, in dollars? (0 if none)
+      `I made a systematic and sustained effort to get work this week` IS A BOOLEAN @desc Did you make a systematic and sustained effort to obtain work this week?
+      `I gave the State agency tangible evidence of that effort` IS A BOOLEAN @desc Did you give the State agency tangible evidence of that effort?
+      `I was before a court on a jury summons` IS A BOOLEAN @desc Were you before a court of the United States or of a State under a lawfully issued summons to appear for jury duty?
+      `my State excuses jury duty for regular benefits` IS A BOOLEAN @desc Does your State's law excuse a person on jury duty from seeking work when they receive regular benefits?
+      `my State has chosen to excuse jury duty for extended benefits` IS A BOOLEAN @desc Has your State chosen to apply that jury duty excuse to people receiving extended benefits?
+      `I was hospitalized for an emergency or a life-threatening condition` IS A BOOLEAN @desc Were you hospitalized for treatment of an emergency or a life-threatening condition?
+      `my State excuses hospitalization for regular benefits` IS A BOOLEAN @desc Does your State's law excuse a person who is hospitalized in that way from seeking work when they receive regular benefits?
+      `my State has chosen to excuse hospitalization for extended benefits` IS A BOOLEAN @desc Has your State chosen to apply that hospitalization excuse to people receiving extended benefits?
+      `I failed to accept suitable work or to seek work earlier` IS A BOOLEAN @desc Did you earlier fail to accept an offer of suitable work, to apply for suitable work you were referred to, or to actively seek work?
+      `the week of that failure began on` IS A DATE @desc On what date did the week in which you failed begin? (Any date if you did not fail.)
+      `weeks I have worked since that failure` IS A NUMBER @desc In how many weeks that began after the failure and before this week have you been employed?
+      `pay I have earned since that failure` IS A NUMBER @desc How much have you earned, in dollars, from being employed in those weeks?
+      `I have an earlier disqualification` IS A BOOLEAN @desc Do you have an earlier disqualification for leaving a job voluntarily, being discharged for misconduct, or refusing suitable employment?
+      `my State law has ended that disqualification` IS A BOOLEAN @desc Has your State's law ended that disqualification?
+      `it was ended because of work I did after the disqualification` IS A BOOLEAN @desc Was it ended because of employment you had after the date of the disqualification?
+      `weeks of full-time insured employment I had in my base period` IS A NUMBER @desc How many weeks of full-time insured employment did you have in your base period?
+      `my earnings covered by the State law in my base period` IS A NUMBER @desc How much did you earn in your base period in employment covered by the State law, in dollars?
+      `my most recent weekly benefit amount` IS A NUMBER @desc What is your most recent weekly benefit amount, in dollars?
+      `my insured wages in my best quarter` IS A NUMBER @desc What were your insured wages, in dollars, in the calendar quarter of your base period in which they were highest?
+      `my State uses the 20 weeks method` IS A BOOLEAN @desc Does your State's law measure employment by 20 weeks of full-time insured employment?
+      `my State uses the 40 times method` IS A BOOLEAN @desc Does your State's law measure it by earnings above 40 times your most recent weekly benefit amount?
+      `my State uses the one and a half times method` IS A BOOLEAN @desc Does your State's law measure it by earnings above one and a half times your insured wages in your highest quarter?
+      `the claim would otherwise be payable for this week` IS A BOOLEAN @desc If you are claiming from another State under the interstate benefit payment plan, would extended compensation be payable to you for this week apart from section 202(c)? (No if you are not.)
+      `an extended benefit period is in effect in the State where I filed` IS A BOOLEAN @desc Is an extended benefit period in effect for this week in the State where you filed the interstate claim?
+      `weeks already payable on this interstate claim` IS A NUMBER @desc For how many earlier weeks was extended compensation payable to you on this interstate claim from this account?
+      `all the regular compensation payable to me in my benefit year` IS A NUMBER @desc How much regular compensation, including dependents' allowances, was payable to you during your benefit year, in dollars?
+      `my weekly benefit amount for my benefit year` IS A NUMBER @desc What is your average weekly benefit amount for your benefit year, in dollars?
+      `the regular compensation I was paid in my benefit year` IS A NUMBER @desc How much regular compensation were you paid, or deemed paid, during your benefit year, in dollars?
+      `my State reduces the account by additional compensation` IS A BOOLEAN @desc Does your State's law reduce the account by additional compensation paid to you earlier?
+      `the additional compensation I was paid earlier` IS A NUMBER @desc How much additional compensation were you paid for earlier weeks in your benefit year that did not begin in an extended benefit period, in dollars? (0 if none)
+      `my week is in a high unemployment period` IS A BOOLEAN @desc Is the week you are claiming for in a high unemployment period?
+      `the extended compensation I have already been paid in my benefit year` IS A NUMBER @desc How much extended compensation have you already been paid in this benefit year, in dollars?
+GIVETH A BOOLEAN
+DECIDE `Is extended compensation payable to me for this week` IF
+    `extended compensation is payable for the week`
+        `the week I am claiming for begins on`
+        `my benefit year`
+        `my State's extended benefit period`
+        `my position`
+        `my offers`
+        `my search`
+        `my earlier failure`
+        `my disqualifications`
+        `my employment`
+        `my interstate claim`
+        `my account`
+        `the extended compensation I have already been paid in my benefit year`
+    WHERE
+        `my benefit year` MEANS `Benefit year` WITH
+            `first day of the benefit year` IS `my benefit year began on`
+            `last day of the benefit year` IS `my benefit year ends on`
+        `my State's extended benefit period` MEANS `Extended benefit period` WITH
+            `first week of the extended benefit period` IS `my State's extended benefit period began with the week of`
+            `last week of the extended benefit period` IS
+                IF `my State's extended benefit period has ended`
+                THEN JUST `my State's extended benefit period ended with the week of`
+                ELSE NOTHING
+        `my position` MEANS `Regular compensation position` WITH
+            `received all the regular compensation available on the base period employment or wages` IS `I have received all the regular compensation available to me`
+            `rights to regular compensation for the week under the State law` IS `I have a right to regular compensation for this week under my State's law`
+            `rights to regular compensation for the week under another State's unemployment compensation law` IS `I have a right to regular compensation for this week under another State's law`
+            `compensation for the week under another Federal law` IS `I have compensation for this week under another Federal law`
+            `receiving compensation for the week under the unemployment compensation law of Canada` IS `I am receiving compensation for this week under the law of Canada`
+        `my offers` MEANS
+            IF `I was offered or referred to a job this week`
+            THEN LIST `my job`
+            ELSE EMPTY
+        `my job` MEANS `Offer of work or referral` WITH
+            `how the work reached the individual` IS
+                IF `the State agency referred me to this job`
+                THEN `referred to the individual by the State agency`
+                ELSE `offered to the individual`
+            `the individual accepted the offer` IS `I accepted the job`
+            `the individual applied for the work to which the State agency referred them` IS `I applied for the job I was referred to`
+            `the work is within the individual's capabilities` IS `this job is within my capabilities`
+            `the individual furnished evidence satisfactory to the State agency that prospects of work in the customary occupation are good` IS `I have shown the State agency that my prospects of work in my customary occupation are good`
+            `the applicable State law treats the work as suitable` IS `my State law treats this job as suitable`
+            `gross average weekly remuneration payable for the position` IS `the job's gross average weekly pay`
+            `average weekly benefit amount for the individual's benefit year` IS `my weekly benefit amount for my benefit year`
+            `supplemental unemployment compensation benefits payable to the individual for the week` IS `my supplemental unemployment compensation benefits for the week`
+            `the position was offered to the individual in writing` IS `the job was offered to me in writing`
+            `the position was listed with the State employment service` IS `the job was listed with the State employment service`
+            `State law, so far as consistent with C and E, would deny compensation for the failure` IS `my State law would deny me regular compensation for turning it down`
+            `wages the position pays per hour` IS `the job pays this much per hour`
+            `Fair Labor Standards Act section 6(a)(1) minimum wage per hour, without regard to any exemption` IS `the federal minimum wage per hour`
+            `highest applicable State or local minimum wage per hour, or 0 if there is none` IS `the highest State or local minimum wage per hour`
+        `my search` MEANS `Search for work` WITH
+            `engaged in a systematic and sustained effort to obtain work during the week` IS `I made a systematic and sustained effort to get work this week`
+            `provided tangible evidence to the State agency of that effort` IS `I gave the State agency tangible evidence of that effort`
+            `before a court of the United States or of a State pursuant to a lawfully issued summons to appear for jury duty` IS `I was before a court on a jury summons`
+            `hospitalized for treatment of an emergency or a life-threatening condition` IS `I was hospitalized for an emergency or a life-threatening condition`
+            `the jury duty exemption applies to recipients of regular benefits` IS `my State excuses jury duty for regular benefits`
+            `the State chooses to apply the jury duty exemption to recipients of extended benefits` IS `my State has chosen to excuse jury duty for extended benefits`
+            `the hospitalization exemption applies to recipients of regular benefits` IS `my State excuses hospitalization for regular benefits`
+            `the State chooses to apply the hospitalization exemption to recipients of extended benefits` IS `my State has chosen to excuse hospitalization for extended benefits`
+        `my earlier failure` MEANS `Earlier failure` WITH
+            `week in which the failure occurred, if there was one` IS
+                IF `I failed to accept suitable work or to seek work earlier`
+                THEN JUST `the week of that failure began on`
+                ELSE NOTHING
+            `weeks of employment that began after the failure and before the week claimed` IS `weeks I have worked since that failure`
+            `remuneration earned for being so employed` IS `pay I have earned since that failure`
+            `average weekly benefit amount for the individual's benefit year` IS `my weekly benefit amount for my benefit year`
+        `my disqualifications` MEANS
+            IF `I have an earlier disqualification`
+            THEN LIST `my disqualification`
+            ELSE EMPTY
+        `my disqualification` MEANS Disqualification WITH
+            -- Placeholder: the rules about whether a disqualification still bars do not read the kind.
+            `kind of disqualification` IS `voluntarily leaving employment`
+            `the State law has terminated the disqualification` IS `my State law has ended that disqualification`
+            `the termination is based upon employment subsequent to the date of the disqualification` IS `it was ended because of work I did after the disqualification`
+        `my employment` MEANS `Employment in the base period` WITH
+            `weeks of full-time insured employment in the base period` IS `weeks of full-time insured employment I had in my base period`
+            `earnings covered by the State law in the base period` IS `my earnings covered by the State law in my base period`
+            `most recent weekly benefit amount` IS `my most recent weekly benefit amount`
+            `insured wages in the calendar quarter of the base period in which they were highest` IS `my insured wages in my best quarter`
+            `the State law uses the 20 weeks of full-time insured employment method` IS `my State uses the 20 weeks method`
+            `the State law uses the earnings above 40 times the weekly benefit amount method` IS `my State uses the 40 times method`
+            `the State law uses the earnings above one and a half times the highest quarter method` IS `my State uses the one and a half times method`
+        `my interstate claim` MEANS `Interstate claim` WITH
+            `extended compensation would but for the cessation rule have been payable for the week pursuant to an interstate claim under the interstate benefit payment plan` IS `the claim would otherwise be payable for this week`
+            `an extended benefit period is in effect for the week in the State where the claim was filed` IS `an extended benefit period is in effect in the State where I filed`
+            `earlier weeks for which extended compensation was payable pursuant to the interstate claim from the account` IS `weeks already payable on this interstate claim`
+        `my account` MEANS `Account facts` WITH
+            `total regular compensation payable during the benefit year, including dependents' allowances` IS `all the regular compensation payable to me in my benefit year`
+            `average weekly benefit amount` IS `my weekly benefit amount for my benefit year`
+            `regular compensation paid or deemed paid during the benefit year` IS `the regular compensation I was paid in my benefit year`
+            `the State law reduces the account by additional compensation paid` IS `my State reduces the account by additional compensation`
+            `additional compensation paid or deemed paid for prior weeks in the benefit year that did not begin in an extended benefit period` IS `the additional compensation I was paid earlier`
+            `the week begins in a high unemployment period` IS `my week is in a high unemployment period`
+
+§§ `Section 203: the extended benefit period in my State`
+
+-- s 203(a)(1), (b)(1)(B). The period begins with the third week after the first "on" week, but not
+-- before the fourteenth week after the close of an earlier period.
+@export In which week does my State's extended benefit period begin (s 203(a)(1), (b)(1)(B))?
+GIVEN `the first week my State was on began on` IS A DATE @desc On what date did the first week in which your State had an "on" indicator begin?
+      `an earlier extended benefit period closed` IS A BOOLEAN @desc Did an earlier extended benefit period in your State close?
+      `the week it closed began on` IS A DATE @desc On what date did the last week of that earlier period begin? (Any date if there was none.)
+GIVETH A DATE
+DECIDE `In which week does my State's extended benefit period begin` IS
+    `the week with which an extended benefit period begins` `the first week my State was on began on` `the prior close`
+    WHERE
+        `the prior close` MEANS
+            IF `an earlier extended benefit period closed`
+            THEN JUST `the week it closed began on`
+            ELSE NOTHING
+
+-- s 203(a)(2), (b)(1)(A). The period ends with the third week after the first "off" week, but not
+-- so that it lasts less than 13 consecutive weeks. "Begins with" and "ends with" a week include it.
+@export In which week does my State's extended benefit period end (s 203(a)(2), (b)(1)(A))?
+GIVEN `my State's extended benefit period began with the week of` IS A DATE @desc On what date did the first week of your State's extended benefit period begin?
+      `the first week my State was off began on` IS A DATE @desc On what date did the first week in which your State had an "off" indicator begin?
+GIVETH A DATE
+DECIDE `In which week does my State's extended benefit period end` IS
+    `the week with which an extended benefit period ends` `my State's extended benefit period began with the week of` `the first week my State was off began on`
+
+-- s 203(c). The eligibility period is the weeks of the benefit year that begin in the extended
+-- benefit period and, if the benefit year ends within it, the weeks after that which begin in it.
+@export Is this week in my eligibility period (s 203(c))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `my benefit year began on` IS A DATE @desc What is the first day of your benefit year?
+      `my benefit year ends on` IS A DATE @desc What is the last day of your benefit year?
+      `my State's extended benefit period began with the week of` IS A DATE @desc On what date did the first week of your State's extended benefit period begin?
+      `my State's extended benefit period has ended` IS A BOOLEAN @desc Has your State's extended benefit period ended?
+      `my State's extended benefit period ended with the week of` IS A DATE @desc On what date did the last week of your State's extended benefit period begin? (Any date if it has not ended.)
+GIVETH A BOOLEAN
+DECIDE `Is this week in my eligibility period` IF
+    `the week is in the individual's eligibility period` `the week I am claiming for begins on` `my benefit year` `my State's extended benefit period`
+    WHERE
+        `my benefit year` MEANS `Benefit year` WITH
+            `first day of the benefit year` IS `my benefit year began on`
+            `last day of the benefit year` IS `my benefit year ends on`
+        `my State's extended benefit period` MEANS `Extended benefit period` WITH
+            `first week of the extended benefit period` IS `my State's extended benefit period began with the week of`
+            `last week of the extended benefit period` IS
+                IF `my State's extended benefit period has ended`
+                THEN JUST `my State's extended benefit period ended with the week of`
+                ELSE NOTHING
+
+-- s 203(b)(2). When a determination has been made that a period is beginning or ending, the
+-- Secretary of Labor must have notice published in the Federal Register.
+@export Must the Secretary of Labor publish notice when my State's extended benefit period begins or ends (s 203(b)(2))?
+GIVEN `a determination has been made that my State's extended benefit period is beginning or ending` IS A BOOLEAN @desc Has a determination been made that an extended benefit period is beginning or ending in your State?
+GIVETH A BOOLEAN
+DECIDE `Must the Secretary of Labor publish notice when my State's extended benefit period begins or ends` IF
+    `the Secretary must cause notice to be published in the Federal Register` `a determination has been made that my State's extended benefit period is beginning or ending`
+
+-- s 203(e)(1). Percentage of covered employment claiming regular compensation. NOTHING if there is no
+-- covered employment to divide by.
+@export What is my State's rate of insured unemployment, in per cent (s 203(e))?
+GIVEN `the average weekly number of people claiming regular compensation in my State` IS A NUMBER @desc What is the average weekly number of individuals filing claims for regular compensation in your State over the period?
+      `my State's average monthly covered employment` IS A NUMBER @desc What is the average monthly covered employment in your State for the same period?
+GIVETH A MAYBE NUMBER
+DECIDE `What is my State's rate of insured unemployment` IS
+    `the rate of insured unemployment` `the average weekly number of people claiming regular compensation in my State` `my State's average monthly covered employment`
+
+-- s 203(d), last sentence. The average of the first four of the six most recent calendar quarters.
+@export What average monthly covered employment must my State use for a thirteen-week period (s 203(d))?
+GIVEN `covered employment in the earliest of the six most recent quarters` IS A NUMBER @desc What was the average monthly covered employment in your State in the earliest of the 6 most recent calendar quarters ending before the close of the thirteen-week period?
+      `covered employment in the second of the six quarters` IS A NUMBER @desc And in the second of those 6 quarters?
+      `covered employment in the third of the six quarters` IS A NUMBER @desc And in the third?
+      `covered employment in the fourth of the six quarters` IS A NUMBER @desc And in the fourth?
+      `covered employment in the fifth of the six quarters` IS A NUMBER @desc And in the fifth?
+      `covered employment in the latest of the six quarters` IS A NUMBER @desc And in the latest of the 6?
+GIVETH A MAYBE NUMBER
+DECIDE `What average monthly covered employment must my State use for a thirteen-week period` IS
+    `the average monthly covered employment for a thirteen-week period` `the six quarters`
+    WHERE
+        `the six quarters` MEANS
+            LIST `covered employment in the earliest of the six most recent quarters`,
+                 `covered employment in the second of the six quarters`,
+                 `covered employment in the third of the six quarters`,
+                 `covered employment in the fourth of the six quarters`,
+                 `covered employment in the fifth of the six quarters`,
+                 `covered employment in the latest of the six quarters`
+
+-- s 203(d). The insured unemployment test: the rate for the week and the 12 weeks before it equals
+-- or exceeds 120 per cent of the average of the rates for the same 13 weeks in the 2 preceding years
+-- (3 under the 2010 option), and is at least 5 per cent (6 per cent under the option from 30 March
+-- 1977, which does without the 120 per cent test).
+@export Is my State on for this week by the insured unemployment test (s 203(d))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `my State's rate of insured unemployment for this week and the 12 weeks before` IS A NUMBER @desc What is your State's rate of insured unemployment, in per cent, for this week and the 12 weeks before it?
+      `its rate for the same 13 weeks one year earlier` IS A NUMBER @desc What was that rate, in per cent, for the corresponding 13 weeks ending in the first preceding calendar year?
+      `its rate for the same 13 weeks two years earlier` IS A NUMBER @desc And for the corresponding 13 weeks ending in the second preceding calendar year?
+      `its rate for the same 13 weeks three years earlier` IS A NUMBER @desc And for the third preceding calendar year? (0 if your State does not use the three-year option.)
+      `my State law adopts the 6 per cent option` IS A BOOLEAN @desc Has your State's law adopted the option under which the rate need only be 6 per cent?
+      `the 6 per cent option applies from` IS A DATE @desc From what date does your State's law adopt that option? (Any date if it has not.)
+      `my State law adopts the three-year option` IS A BOOLEAN @desc Has your State's law adopted the option of comparing with the 3 preceding years instead of 2?
+      `the three-year option applies from` IS A DATE @desc From what date does your State's law adopt that option? (Any date if it has not.)
+GIVETH A BOOLEAN
+DECIDE `Is my State on for this week by the insured unemployment test` IF
+    `there is a State on indicator under section 203(d)` `the week I am claiming for begins on` `my State's readings`
+    WHERE
+        `my State's readings` MEANS `Insured unemployment reading` WITH
+            `rate of insured unemployment for the week and the preceding twelve weeks` IS `my State's rate of insured unemployment for this week and the 12 weeks before`
+            `rate for the corresponding thirteen-week period ending in the first preceding calendar year` IS `its rate for the same 13 weeks one year earlier`
+            `rate for the corresponding thirteen-week period ending in the second preceding calendar year` IS `its rate for the same 13 weeks two years earlier`
+            `rate for the corresponding thirteen-week period ending in the third preceding calendar year` IS `its rate for the same 13 weeks three years earlier`
+            `date from which the State law adopts the 6 per cent option` IS
+                IF `my State law adopts the 6 per cent option` THEN JUST `the 6 per cent option applies from` ELSE NOTHING
+            `date from which the State law adopts the three-year comparison option` IS
+                IF `my State law adopts the three-year option` THEN JUST `the three-year option applies from` ELSE NOTHING
+
+-- s 203(f). The alternative trigger, if the State law adopts it for weeks after 6 March 1993: the
+-- seasonally adjusted rate of total unemployment for the latest 3 months equals or exceeds 6.5 per
+-- cent and 110 per cent of the same figure for either of the 2 preceding years (any of 3 under the
+-- 2010 option).
+@export Is my State on for this week by the total unemployment trigger (s 203(f))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `my State's average rate of total unemployment for the latest 3 months` IS A NUMBER @desc What is your State's seasonally adjusted average rate of total unemployment, in per cent, for the most recent 3 months for which data for all States are published before the close of this week?
+      `its rate for the same 3 months one year earlier` IS A NUMBER @desc What was that rate, in per cent, for the corresponding 3 months ending in the first preceding calendar year?
+      `its rate for the same 3 months two years earlier` IS A NUMBER @desc And for the second preceding calendar year?
+      `its rate for the same 3 months three years earlier` IS A NUMBER @desc And for the third preceding calendar year? (0 if your State does not use the three-year option.)
+      `my State law adopts the alternative trigger` IS A BOOLEAN @desc Has your State's law adopted the alternative trigger on total unemployment?
+      `my State law adopts the three-year option for the trigger` IS A BOOLEAN @desc Has your State's law adopted the option of comparing with the 3 preceding years instead of 2?
+      `the three-year option for the trigger applies from` IS A DATE @desc From what date does your State's law adopt that option? (Any date if it has not.)
+GIVETH A BOOLEAN
+DECIDE `Is my State on for this week by the total unemployment trigger` IF
+    `there is a State on indicator under section 203(f)` `the week I am claiming for begins on` `my State's total unemployment readings`
+    WHERE
+        `my State's total unemployment readings` MEANS `Total unemployment reading` WITH
+            `average rate of total unemployment (seasonally adjusted) for the most recent 3 months for which data for all States are published` IS `my State's average rate of total unemployment for the latest 3 months`
+            `average rate for the corresponding 3-month period ending in the first preceding calendar year` IS `its rate for the same 3 months one year earlier`
+            `average rate for the corresponding 3-month period ending in the second preceding calendar year` IS `its rate for the same 3 months two years earlier`
+            `average rate for the corresponding 3-month period ending in the third preceding calendar year` IS `its rate for the same 3 months three years earlier`
+            `the State law adopts the alternative trigger` IS `my State law adopts the alternative trigger`
+            `date from which the State law adopts the three-year comparison option` IS
+                IF `my State law adopts the three-year option for the trigger` THEN JUST `the three-year option for the trigger applies from` ELSE NOTHING
+
+-- s 203(f)(1), last sentence. A week that is "on" under subsection (d) stays "on" whatever the
+-- State law says about the alternative trigger.
+@export Is my State on for this week by either test (s 203(d), (f))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `my State's rate of insured unemployment for this week and the 12 weeks before` IS A NUMBER @desc What is your State's rate of insured unemployment, in per cent, for this week and the 12 weeks before it?
+      `its rate for the same 13 weeks one year earlier` IS A NUMBER @desc What was that rate, in per cent, for the corresponding 13 weeks ending in the first preceding calendar year?
+      `its rate for the same 13 weeks two years earlier` IS A NUMBER @desc And for the corresponding 13 weeks ending in the second preceding calendar year?
+      `its rate for the same 13 weeks three years earlier` IS A NUMBER @desc And for the third preceding calendar year? (0 if your State does not use the three-year option.)
+      `my State law adopts the 6 per cent option` IS A BOOLEAN @desc Has your State's law adopted the option under which the rate need only be 6 per cent?
+      `the 6 per cent option applies from` IS A DATE @desc From what date does your State's law adopt that option? (Any date if it has not.)
+      `my State law adopts the three-year option` IS A BOOLEAN @desc Has your State's law adopted the option of comparing with the 3 preceding years instead of 2 for the insured unemployment test?
+      `the three-year option applies from` IS A DATE @desc From what date does your State's law adopt that option? (Any date if it has not.)
+      `my State's average rate of total unemployment for the latest 3 months` IS A NUMBER @desc What is your State's seasonally adjusted average rate of total unemployment, in per cent, for the most recent 3 months for which data for all States are published before the close of this week?
+      `its rate for the same 3 months one year earlier` IS A NUMBER @desc What was that rate, in per cent, for the corresponding 3 months ending in the first preceding calendar year?
+      `its rate for the same 3 months two years earlier` IS A NUMBER @desc And for the second preceding calendar year?
+      `its rate for the same 3 months three years earlier` IS A NUMBER @desc And for the third preceding calendar year? (0 if your State does not use the three-year option.)
+      `my State law adopts the alternative trigger` IS A BOOLEAN @desc Has your State's law adopted the alternative trigger on total unemployment?
+      `my State law adopts the three-year option for the trigger` IS A BOOLEAN @desc Has your State's law adopted the option of comparing with the 3 preceding years instead of 2 for the trigger?
+      `the three-year option for the trigger applies from` IS A DATE @desc From what date does your State's law adopt that option? (Any date if it has not.)
+GIVETH A BOOLEAN
+DECIDE `Is my State on for this week by either test` IF
+    `there is a State on indicator for the week` `the week I am claiming for begins on` `my State's readings` `my State's total unemployment readings`
+    WHERE
+        `my State's readings` MEANS `Insured unemployment reading` WITH
+            `rate of insured unemployment for the week and the preceding twelve weeks` IS `my State's rate of insured unemployment for this week and the 12 weeks before`
+            `rate for the corresponding thirteen-week period ending in the first preceding calendar year` IS `its rate for the same 13 weeks one year earlier`
+            `rate for the corresponding thirteen-week period ending in the second preceding calendar year` IS `its rate for the same 13 weeks two years earlier`
+            `rate for the corresponding thirteen-week period ending in the third preceding calendar year` IS `its rate for the same 13 weeks three years earlier`
+            `date from which the State law adopts the 6 per cent option` IS
+                IF `my State law adopts the 6 per cent option` THEN JUST `the 6 per cent option applies from` ELSE NOTHING
+            `date from which the State law adopts the three-year comparison option` IS
+                IF `my State law adopts the three-year option` THEN JUST `the three-year option applies from` ELSE NOTHING
+        `my State's total unemployment readings` MEANS `Total unemployment reading` WITH
+            `average rate of total unemployment (seasonally adjusted) for the most recent 3 months for which data for all States are published` IS `my State's average rate of total unemployment for the latest 3 months`
+            `average rate for the corresponding 3-month period ending in the first preceding calendar year` IS `its rate for the same 3 months one year earlier`
+            `average rate for the corresponding 3-month period ending in the second preceding calendar year` IS `its rate for the same 3 months two years earlier`
+            `average rate for the corresponding 3-month period ending in the third preceding calendar year` IS `its rate for the same 3 months three years earlier`
+            `the State law adopts the alternative trigger` IS `my State law adopts the alternative trigger`
+            `date from which the State law adopts the three-year comparison option` IS
+                IF `my State law adopts the three-year option for the trigger` THEN JUST `the three-year option for the trigger applies from` ELSE NOTHING
+
+§§ `Section 205: definitions`
+
+-- s 205(3). Extended compensation: compensation payable under a State law (or 5 U.S.C. chapter 85)
+-- for weeks beginning in an extended benefit period, under provisions that satisfy the Act, and
+-- including additional compensation.
+@export Is the payment I receive extended compensation (s 205(3))?
+GIVEN `it is a cash benefit` IS A BOOLEAN @desc Is the payment a cash benefit?
+      `it is payable with respect to my unemployment` IS A BOOLEAN @desc Is it payable with respect to your unemployment?
+      `it is payable under a State unemployment compensation law` IS A BOOLEAN @desc Is it payable under a State's unemployment compensation law?
+      `it is payable under 5 U.S.C. chapter 85` IS A BOOLEAN @desc Is it payable under chapter 85 of title 5, United States Code (unemployment compensation for Federal employees)?
+      `it is payable to me as an exhaustee because of high unemployment or other special factors` IS A BOOLEAN @desc Is it paid to you, as someone who has used up regular compensation, because of conditions of high unemployment or other special factors?
+      `it is for a week beginning in an extended benefit period` IS A BOOLEAN @desc Is it for a week of unemployment that began in an extended benefit period?
+      `it is paid under State provisions that satisfy the title` IS A BOOLEAN @desc Is it paid under provisions of your State's law that satisfy the requirements of this title about extended compensation?
+GIVETH A BOOLEAN
+DECIDE `Is the payment I receive extended compensation` IF
+    `the payment is extended compensation` `my payment`
+    WHERE
+        `my payment` MEANS `Payment to an individual` WITH
+            `cash benefits` IS `it is a cash benefit`
+            `payable with respect to the individual's unemployment` IS `it is payable with respect to my unemployment`
+            `payable under a State unemployment compensation law` IS `it is payable under a State unemployment compensation law`
+            `payable pursuant to 5 U.S.C. chapter 85` IS `it is payable under 5 U.S.C. chapter 85`
+            `payable to exhaustees by reason of conditions of high unemployment or by reason of other special factors` IS `it is payable to me as an exhaustee because of high unemployment or other special factors`
+            `for a week of unemployment beginning in an extended benefit period` IS `it is for a week beginning in an extended benefit period`
+            `under provisions of the State law which satisfy the requirements of this title with respect to the payment of extended compensation` IS `it is paid under State provisions that satisfy the title`
+
+-- s 205(8). "State" includes the District of Columbia, the Commonwealth of Puerto Rico and the Virgin
+-- Islands. A place the definition does not name is neither included nor excluded by it.
+@export Does the place where I live count as a State for this Act (s 205(8))?
+GIVEN `the place where I live` IS A Place @desc Where do you live (a State of the United States, the District of Columbia, the Commonwealth of Puerto Rico, the Virgin Islands, or another place)?
+GIVETH A `Status of a place under the definition of State`
+DECIDE `Does the place where I live count as a State for this Act` IS
+    `the status of the place under the definition of State` `the place where I live`
+
+§§ `Section 207: dates`
+
+-- s 207(a)(1), (b)(1). An extended benefit period may not begin with a week beginning before 1
+-- January 1972, unless a State law approved under section 3304(a)(11) of the Internal Revenue Code
+-- provides that one may, for a week not earlier than 60 days after 10 August 1970.
+@export Can an extended benefit period begin with the week I am claiming for (s 207(a)(1), (b)(1))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `my State's approved law lets a period begin earlier than 1 January 1972` IS A BOOLEAN @desc Does a State law approved under section 3304(a)(11) of the Internal Revenue Code provide that an extended benefit period may begin with a week that begins before 1 January 1972?
+GIVETH A BOOLEAN
+DECIDE `Can an extended benefit period begin with the week I am claiming for` IF
+    `an extended benefit period may begin with the week` `the week I am claiming for begins on` `my State's approved law lets a period begin earlier than 1 January 1972`
+
+-- s 207(c). Section 3304(a)(11) of the Internal Revenue Code (the requirement that a State law pay
+-- extended compensation) binds a State law only from 1 January 1972, or from 1 July 1972 if the
+-- State's legislature held no regular session closing in 1971.
+@export Is a State law required to provide extended compensation for the week I am claiming for (s 207(c))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `my State's legislature held no regular session closing in 1971` IS A BOOLEAN @desc Did your State's legislature fail to meet in a regular session that closed during the calendar year 1971?
+GIVETH A BOOLEAN
+DECIDE `Is a State law required to provide extended compensation for the week I am claiming for` IF
+    `section 3304(a)(11) of the Internal Revenue Code is a requirement for the State law for the week` `the week I am claiming for begins on` `my State's legislature held no regular session closing in 1971`
+
+§§ `Section 208: self-employment assistance (only if my State has a program)`
+
+-- s 208(a)(1). At the State's option, for weeks beginning after 22 February 2012.
+@export May I be paid self-employment assistance instead of extended compensation for this week (s 208(a)(1))?
+GIVEN `the week I am claiming for begins on` IS A DATE @desc On what date does the week you are claiming for begin?
+      `my State has a self-employment assistance program under section 208` IS A BOOLEAN @desc Has your State established a self-employment assistance program under section 208 of this Act?
+      `I would otherwise satisfy the eligibility criteria for extended compensation` IS A BOOLEAN @desc Would you otherwise satisfy the eligibility criteria for extended compensation under this title?
+GIVETH A BOOLEAN
+DECIDE `May I be paid self-employment assistance instead of extended compensation for this week` IF
+    `extended compensation may be paid as a self-employment assistance allowance for the week` `the week I am claiming for begins on` `my State has a self-employment assistance program under section 208` `I would otherwise satisfy the eligibility criteria for extended compensation`
+
+-- s 208(a)(2). The allowance comes out of the extended compensation account.
+@export How much will my extended compensation account hold after a self-employment assistance allowance, in dollars (s 208(a)(2))?
+GIVEN `the amount in my extended compensation account` IS A NUMBER @desc How much is in your extended compensation account, in dollars?
+      `the self-employment assistance allowance paid to me` IS A NUMBER @desc How much self-employment assistance allowance is paid to you, in dollars?
+GIVETH A NUMBER
+DECIDE `How much will my extended compensation account hold after a self-employment assistance allowance` IS
+    `the amount in the extended compensation account after the allowance is paid` `the amount in my extended compensation account` `the self-employment assistance allowance paid to me`
+
+-- s 208(a)(3)(A). 26 weeks together under this section and section 4001(j) of the Supplemental
+-- Appropriations Act, 2008.
+@export How many more weeks of self-employment assistance can I get (s 208(a)(3)(A))?
+GIVEN `weeks of allowances I have already received under this section and section 4001(j) of the 2008 Act` IS A NUMBER @desc How many weeks of self-employment assistance allowances have you already received under section 208 of this Act and under section 4001(j) of the Supplemental Appropriations Act, 2008?
+GIVETH A NUMBER
+DECIDE `How many more weeks of self-employment assistance can I get` IS
+    `weeks of allowances still available under the combined eligibility limit` `weeks of allowances I have already received under this section and section 4001(j) of the 2008 Act`
+
+-- s 208(a)(3)(B). After extended compensation runs out, the 2008 Act's program carries on up to the
+-- combined limit.
+@export Can I carry on with self-employment assistance under the 2008 Act when my extended compensation runs out (s 208(a)(3)(B))?
+GIVEN `I am taking part in a self-employment assistance program under section 208` IS A BOOLEAN @desc Are you taking part in a self-employment assistance program established under section 208 of this Act?
+      `weeks of allowances I had received when my extended compensation ran out` IS A NUMBER @desc How many weeks of self-employment assistance allowances had you received on the day you used up all your extended compensation?
+      `I otherwise satisfy the eligibility criteria of title IV of the 2008 Act` IS A BOOLEAN @desc Do you otherwise satisfy the eligibility criteria in title IV of the Supplemental Appropriations Act, 2008?
+GIVETH A BOOLEAN
+DECIDE `Can I carry on with self-employment assistance under the 2008 Act when my extended compensation runs out` IF
+    `the individual is eligible for allowances under section 4001(j) of the Supplemental Appropriations Act, 2008 until the combined eligibility limit is reached` `I am taking part in a self-employment assistance program under section 208` `weeks of allowances I had received when my extended compensation ran out` `I otherwise satisfy the eligibility criteria of title IV of the 2008 Act`
+
+-- s 208(c). The State agency must reasonably expect the person to be entitled to at least 13 times
+-- the weekly benefit amount in extended compensation and emergency unemployment compensation.
+@export Does the State expect me to be entitled to enough to be paid self-employment assistance (s 208(c))?
+GIVEN `the amount the State agency reasonably expects I will be entitled to` IS A NUMBER @desc What total of extended compensation and emergency unemployment compensation does the State agency reasonably expect you will be entitled to, in dollars?
+      `my weekly benefit amount for my benefit year` IS A NUMBER @desc What is your average weekly benefit amount for your benefit year, in dollars?
+GIVETH A BOOLEAN
+DECIDE `Does the State expect me to be entitled to enough to be paid self-employment assistance` IF
+    `the individual may receive self-employment assistance allowances under section 208(c)` `the amount the State agency reasonably expects I will be entitled to` `my weekly benefit amount for my benefit year`
+
+-- s 208(d)(1). An individual may elect to discontinue at any time.
+@export May I stop taking part in self-employment assistance whenever I want (s 208(d)(1))?
+GIVEN `I am taking part in a self-employment assistance program under section 208` IS A BOOLEAN @desc Are you taking part in a self-employment assistance program established under section 208 of this Act?
+GIVETH A BOOLEAN
+DECIDE `May I stop taking part in self-employment assistance whenever I want` IF
+    `the individual may elect to discontinue participation at any time` `I am taking part in a self-employment assistance program under section 208`
+
+-- s 208(d)(2). If participation has ended and the person still satisfies the title, extended
+-- compensation resumes, to the extent that amounts remain in the account.
+@export How much more extended compensation can I be paid after I stop self-employment assistance, in dollars (s 208(d)(2))?
+GIVEN `my participation ended because of the combined limit or I stopped it myself` IS A BOOLEAN @desc Did your participation end because the combined eligibility limit was reached, or did you stop it yourself?
+      `I still satisfy the eligibility requirements for extended compensation` IS A BOOLEAN @desc Do you still satisfy the eligibility requirements for extended compensation under this title?
+      `the amount still in my extended compensation account` IS A NUMBER @desc How much is still in your extended compensation account, in dollars?
+GIVETH A NUMBER
+DECIDE `How much more extended compensation can I be paid after I stop self-employment assistance` IS
+    `the most extended compensation that may be paid for subsequent weeks` `my participation ended because of the combined limit or I stopped it myself` `I still satisfy the eligibility requirements for extended compensation` `the amount still in my extended compensation account`
