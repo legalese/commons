@@ -1,0 +1,306 @@
+IMPORT prelude
+
+-- Newfoundland and Labrador Income and Employment Support Act (SNL2002 cI-0.1) and Income and Employment Support
+-- Regulations (NLR 144/04), Part I -- income support for a household in the province: who can get it (Act ss 13, 15,
+-- regs ss 4, 9), the liquid-asset limits (reg s 26), the income that counts and its exemptions (regs ss 8, 11, 12), the
+-- monthly amounts (regs ss 13, 16, 18, 19(1)), and what the person must report (Act s 17(5), reg s 7(1)). The time
+-- limits (reg s 5(2), Act ss 41(3), 43(2)) are in nl-ies-deadlines.l4.
+--
+-- SEAT: the applicant or recipient of income support. "Can I get income support? How much a month at most? What must
+-- I report, and by when must I answer, ask for a review or appeal?" Officers, the minister and the appeal board appear
+-- only as what they may do to the person or must give them.
+--
+-- Edition: the House of Assembly consolidations retrieved 2026-10-24: the Act as amended to 2019 cS-29.02 s27 (sections
+-- 2, 13 to 17, 41 and 43 deposited at ../../registers/source-bundle/SNL2002-cI-0.1-selected.txt) and the Regulations as
+-- amended to 106/25 (Part I and s 45 at ../../registers/source-bundle/NLR-144-04-part-i.txt).
+--
+-- The amounts in regs ss 13, 16 and 19 are "up to" amounts: an officer grants income support "according to the Act,
+-- these regulations, and any policies, procedures and service standards established by the minister" (reg s 6(3)(a)).
+-- The encoding computes the most the regulations allow; what is granted may be less.
+--
+-- NOT ENCODED: employment support (Part II of the Regulations); special needs (regs ss 21 to 24), the start-up
+-- allowance (s 17), funeral costs (s 27), emergencies (s 28), hospital and shelter amounts (s 19(2) to (4)), the
+-- other s 19(1) and (5) amounts that are set by an officer or the minister; overpayments and recovery (Act Part III);
+-- the lump-sum rules (reg s 10); the under-21 rules (reg s 18(2) to (4)); emergency eligibility (Act s 16).
+--
+-- BASELINE ENCODING. Written from the applicant's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Income and Employment Support -- income support for a household`
+
+§§ `Small arithmetic`
+
+GIVEN x IS A NUMBER
+GIVETH A NUMBER
+`zero or more` x MEANS IF x GREATER THAN 0 THEN x ELSE 0
+
+GIVEN x IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` x y MEANS IF x AT MOST y THEN x ELSE y
+
+§§ `Act s 15 and reg s 4 -- living in the province`
+
+-- Act s 15(1): "An applicant and a recipient shall live in the province to be eligible"; (2): "live in the province"
+-- means physically present, but a person may be temporarily absent for a prescribed purpose. Reg s 4(2): a recipient
+-- may be absent "(a) for a period of up to 60 days for a purpose approved by an officer; or (b) for a period of more
+-- than 60 days if the absence is due to medical reasons and is approved by an officer". The approval is the officer's;
+-- it is asked as a fact ("if an officer has approved ...").
+GIVEN `physically present in the province` IS A BOOLEAN
+      `days absent` IS A NUMBER
+      `an officer approved the purpose of the absence` IS A BOOLEAN
+      `the absence is for medical reasons` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `lives in the province` IF
+        `physically present in the province`
+    OR  (    `an officer approved the purpose of the absence`
+         AND (   `days absent` AT MOST 60
+              OR `the absence is for medical reasons`))
+
+§§ `Act s 13 and reg s 9 -- the conditions of eligibility`
+
+-- Act s 13(1): "as a condition of eligibility for income support, a person shall pursue all other financial resources
+-- available to him or her or his or her spouse or cohabiting partner" (not including support under s 38 of the Family
+-- Law Act, s 13(2)). Reg s 9(5): "where an applicant is applying for income support due to job action at the
+-- workplace, the applicant shall not be eligible".
+GIVEN `lives in the province` IS A BOOLEAN
+      `has pursued all other financial resources` IS A BOOLEAN
+      `applying because of job action at the workplace` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `meets the conditions of eligibility` IF
+        `lives in the province`
+    AND `has pursued all other financial resources`
+    AND (NOT `applying because of job action at the workplace`)
+
+§§ `Reg s 26 -- liquid assets`
+
+-- Reg s 26(1): income support may be granted where liquid assets "do not exceed ... (a) for one person, $6,000; and
+-- (b) for 2 or more people, combined liquid assets of $11,000". The "people" are read as the persons the application is
+-- for: the applicant, a spouse or cohabiting partner (Act s 2(d)) and dependants (NOTES.md finding 3).
+-- s 26(3), (4): RRSPs "with a cumulative value of $20,000 or less are exempt"; above that, "the value ... in excess of
+-- $20,000 shall, where the Registered Retirement Savings Plans may be liquefied, be considered a liquid asset".
+-- s 8(b): liquid assets are cash and readily marketable securities, not counting RESPs, a support trust, prepaid
+-- funeral funds, exempt income and a severance package during its covering period; those are left out of the input.
+GIVEN `people in the application` IS A NUMBER
+GIVETH A NUMBER
+`the liquid asset limit` MEANS IF `people in the application` AT MOST 1 THEN 6000 ELSE 11000
+
+GIVEN `liquid assets other than RRSPs` IS A NUMBER
+      `value of RRSPs` IS A NUMBER
+      `the RRSPs can be cashed` IS A BOOLEAN
+GIVETH A NUMBER
+`the liquid assets counted` MEANS
+    `liquid assets other than RRSPs`
+    PLUS (IF `the RRSPs can be cashed` THEN `zero or more` (`value of RRSPs` MINUS 20000) ELSE 0)
+
+GIVEN `people in the application` IS A NUMBER
+      `liquid assets counted` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `liquid assets are within the limit` IF
+    `liquid assets counted` AT MOST (`the liquid asset limit` `people in the application`)
+
+§§ `Regs ss 8, 11, 12 -- the income that counts`
+
+-- s 12(a): exemptions from earnings (salary, wages, self-employment) and winnings, "in the month it is received":
+-- (i) single adult: 100% up to $75 plus 20% above; (ii) 2 or more persons: $150; (iii) a person requiring supportive
+-- services: $150; (iv) 2 or more persons where at least one requires supportive services: $250.
+DECLARE `Exemption class` IS ONE OF
+    `a single adult`
+    `two or more persons`
+    `a person requiring supportive services`
+    `two or more persons, one requiring supportive services`
+
+GIVEN `people in the application` IS A NUMBER
+      `someone requires supportive services` IS A BOOLEAN
+GIVETH AN `Exemption class`
+`the exemption class` MEANS
+    IF `people in the application` AT MOST 1
+    THEN IF `someone requires supportive services` THEN `a person requiring supportive services` ELSE `a single adult`
+    ELSE IF `someone requires supportive services` THEN `two or more persons, one requiring supportive services` ELSE `two or more persons`
+
+GIVEN `class` IS AN `Exemption class`
+GIVETH A NUMBER
+`the fully exempt part` `class` MEANS
+    CONSIDER `class`
+    WHEN `a single adult` THEN 75
+    WHEN `two or more persons` THEN 150
+    WHEN `a person requiring supportive services` THEN 150
+    WHEN `two or more persons, one requiring supportive services` THEN 250
+
+GIVEN `class` IS AN `Exemption class`, `earnings in the month` IS A NUMBER
+GIVETH A NUMBER
+`the s 12(a) exemption` MEANS
+    LET base MEANS `the fully exempt part` `class`
+    IN  (`the lesser of` `earnings in the month` base) PLUS (20% TIMES (`zero or more` (`earnings in the month` MINUS base)))
+
+-- s 18(1): the officer "shall deduct from the total income support to which the applicant or recipient is entitled
+-- under section 13 and section 16 ... (a) all non-exempt income; and (b) all partially exempt income minus (i) the
+-- deduction described in section 11, and (ii) the exemptions described in section 12". The s 11 deduction (expenses of
+-- earning the income) is one an officer "may authorize"; it is asked as the amount authorized.
+GIVEN `class` IS AN `Exemption class`
+      `earnings in the month` IS A NUMBER
+      `authorized expenses of earning` IS A NUMBER
+      `non-exempt income in the month` IS A NUMBER
+GIVETH A NUMBER
+`the income deducted` MEANS
+        `non-exempt income in the month`
+    PLUS `zero or more` ((`earnings in the month` MINUS `authorized expenses of earning`) MINUS (`the s 12(a) exemption` `class` `earnings in the month`))
+
+§§ `Regs ss 13 and 16 -- the monthly amounts for living costs and shelter`
+
+-- s 13(1): "The monthly amount of income support for each adult who is boarding, renting or owns a residence is an
+-- amount up to $561." s 13(2): reduced where heat or electricity is included: in an apartment or house by $76 (both),
+-- $49 (heat only) or $27 (electricity only); in a bed sitting room by $61, $49 or $12.
+DECLARE `Dwelling` IS ONE OF
+    `an apartment or a house`
+    `a bed sitting room`
+
+DECLARE `Utilities included` IS ONE OF
+    `heat and electricity`
+    `heat only`
+    `electricity only`
+    `neither`
+
+GIVEN `dwelling` IS A `Dwelling`, `included` IS A `Utilities included`
+GIVETH A NUMBER
+`the s 13(2) reduction` MEANS
+    CONSIDER `included`
+    WHEN `heat and electricity` THEN IF `in a bed sitting room` THEN 61 ELSE 76
+    WHEN `heat only` THEN 49
+    WHEN `electricity only` THEN IF `in a bed sitting room` THEN 12 ELSE 27
+    WHEN `neither` THEN 0
+    WHERE
+        `in a bed sitting room` MEANS `dwelling` EQUALS `a bed sitting room`
+
+GIVEN `adults` IS A NUMBER, `dwelling` IS A `Dwelling`, `included` IS A `Utilities included`
+GIVETH A NUMBER
+`the s 13 amount` MEANS `zero or more` ((561 TIMES `adults`) MINUS (`the s 13(2) reduction` `dwelling` `included`))
+
+-- s 16(1): the maximum for rent, or for principal and interest on a mortgage on the principal residence, is "(i) for an
+-- adult living alone or with a dependent ... up to $522, or (ii) for 2 or more adults ... up to $299 for each adult".
+-- s 16(2): where s 13(2) reduced the support, these maximums "are increased by the amount of the deductions ... but in
+-- no case shall the total amount exceed the actual amount required by the applicant or recipient for shelter".
+DECLARE `Shelter` IS ONE OF
+    `renting`
+    `paying a mortgage`
+    `boarding`
+    `no shelter cost`
+
+GIVEN `adults` IS A NUMBER
+GIVETH A NUMBER
+`the s 16(1) maximum` `adults` MEANS IF `adults` AT MOST 1 THEN 522 ELSE 299 TIMES `adults`
+
+GIVEN `shelter` IS A `Shelter`
+      `adults` IS A NUMBER
+      `monthly rent or mortgage payment` IS A NUMBER
+      `dwelling` IS A `Dwelling`
+      `included` IS A `Utilities included`
+GIVETH A NUMBER
+`the s 16 amount` MEANS
+    CONSIDER `shelter`
+    WHEN `renting` THEN `capped`
+    WHEN `paying a mortgage` THEN `capped`
+    OTHERWISE 0
+    WHERE
+        `capped` MEANS `the lesser of` (`zero or more` `monthly rent or mortgage payment`) ((`the s 16(1) maximum` `adults`) PLUS (`the s 13(2) reduction` `dwelling` `included`))
+
+§§ `Reg s 19(1) -- other monthly amounts`
+
+-- s 19(1) "Other monthly income support for which an applicant or recipient may be eligible is": (a) a fuel supplement
+-- "up to a maximum of $132" in Labrador, (b) "up to a maximum of $71" on the island, "where the cost of heat is not
+-- included in the amount of rent"; (f) "$105 for each applicant or recipient who is 65 years of age or older" (unless
+-- they will stop being eligible within 2 months); (h) "for a recipient maintaining a residence in a coastal Labrador
+-- community, an amount of $150"; (i) "$89 for each recipient or dependent ... who is legally blind"; (j) "$60 for each
+-- recipient or dependent with diabetes" (each certified); (p) "for an applicant or recipient who has a dependent but
+-- does not have a spouse or cohabiting partner, an amount of $168". Only these fixed amounts are encoded; (c) to (e),
+-- (g), (k), (l), (n), (o) depend on an officer's or the minister's determination or a one-off event.
+DECLARE `Region` IS ONE OF
+    `the island portion of the province`
+    `Labrador, outside the coastal communities`
+    `a coastal Labrador community`
+
+GIVEN `region` IS A `Region`
+      `maintains a residence where heat is not included in the rent` IS A BOOLEAN
+      `adults 65 or older who will stay eligible` IS A NUMBER
+      `persons certified legally blind` IS A NUMBER
+      `persons certified with diabetes` IS A NUMBER
+      `has a dependent and no spouse or cohabiting partner` IS A BOOLEAN
+GIVETH A NUMBER
+`the s 19(1) amounts` MEANS
+        `fuel`
+    PLUS (105 TIMES `adults 65 or older who will stay eligible`)
+    PLUS `coastal`
+    PLUS (89 TIMES `persons certified legally blind`)
+    PLUS (60 TIMES `persons certified with diabetes`)
+    PLUS (IF `has a dependent and no spouse or cohabiting partner` THEN 168 ELSE 0)
+    WHERE
+        `fuel` MEANS
+            IF `maintains a residence where heat is not included in the rent`
+            THEN IF `region` EQUALS `the island portion of the province` THEN 71 ELSE 132
+            ELSE 0
+        `coastal` MEANS
+            IF `region` EQUALS `a coastal Labrador community` THEN 150 ELSE 0
+
+§§ `Reg s 18(1) -- the monthly income support`
+
+-- The most a month: the ss 13 and 16 amounts less the income deducted under s 18(1), never below nil, plus the
+-- s 19(1) amounts. Section 18(1) deducts income only from the "income support to which the applicant or recipient is
+-- entitled under section 13 and section 16"; it does not reach s 19 (NOTES.md finding 6).
+GIVEN `s 13 and s 16 amounts` IS A NUMBER, `income deducted` IS A NUMBER, `s 19(1) amounts` IS A NUMBER
+GIVETH A NUMBER
+`the most monthly income support` MEANS
+    (`zero or more` (`s 13 and s 16 amounts` MINUS `income deducted`)) PLUS `s 19(1) amounts`
+
+§§ `Reg s 9(3) -- the applicant's income test`
+
+-- s 9(3): eligibility is determined "by evaluating the applicant's financial situation for the 30 days preceding the
+-- date of application according to the following formula: BR + (.40 x BR) + CBA is >= I - D", where BR is the s 13(1)
+-- amount plus the s 16(1)(a) or (b) amount if applicable, CBA the child benefit adjustment (an amount the minister
+-- approves: s 19(1)(g)), I "the applicant's total net income calculated according to paragraphs 8(c) and 8(d) minus the
+-- deduction for expenses incurred in earning that income referred to in section 11" and D "the deduction referred to in
+-- section 11". Read as written, the s 11 deduction is subtracted twice (NOTES.md finding 5).
+GIVEN `BR` IS A NUMBER, `CBA` IS A NUMBER, `net income in the 30 days` IS A NUMBER, `s 11 deduction` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `passes the s 9(3) income test` IF
+    (`BR` PLUS (40% TIMES `BR`) PLUS `CBA`) AT LEAST ((`net income in the 30 days` MINUS `s 11 deduction`) MINUS `s 11 deduction`)
+
+GIVEN `adults` IS A NUMBER
+      `shelter` IS A `Shelter`
+      `monthly rent or mortgage payment` IS A NUMBER
+GIVETH A NUMBER
+`BR for the s 9(3) test` MEANS
+        (561 TIMES `adults`)
+    PLUS `the shelter part`
+    WHERE
+        `the shelter part` MEANS
+            IF `shelter` EQUALS `renting` OR `shelter` EQUALS `paying a mortgage`
+            THEN `the lesser of` (`zero or more` `monthly rent or mortgage payment`) (`the s 16(1) maximum` `adults`)
+            ELSE 0
+
+§§ `Act s 17(5) and reg s 7(1) -- what must be reported`
+
+-- Act s 17(5): "A recipient shall notify the officer immediately of any changes that may affect that recipient's
+-- eligibility". Reg s 7(1) lists them: (a) address; (b) living arrangements; (c) marital or cohabitation status; (d)
+-- the circumstances of any dependents; (e) income, liquid assets, real property or assets; (f) absence from the
+-- province; (g) the reason for the application; (h) receipt of a liquid asset; (i) sale or transfer of assets; (j)
+-- expenses of earning income; (k) any other circumstance the minister determines. Under reg s 7(2) an officer "may
+-- deny, vary, suspend or cancel income support where a circumstance ... has been confirmed".
+DECLARE `Change` IS ONE OF
+    `my address`
+    `my living arrangements`
+    `my marital or cohabitation status`
+    `the circumstances of a dependent`
+    `my income, liquid assets, real property or assets`
+    `an absence from the province`
+    `the reason I applied`
+    `I received a liquid asset`
+    `I sold or transferred an asset or real property`
+    `my expenses of earning income`
+    `something the minister has said must be reported`
+    `none of these`
+
+GIVEN `change` IS A `Change`
+GIVETH A BOOLEAN
+DECIDE `the change must be reported immediately` IF
+    CONSIDER `change`
+    WHEN `none of these` THEN FALSE
+    OTHERWISE TRUE
