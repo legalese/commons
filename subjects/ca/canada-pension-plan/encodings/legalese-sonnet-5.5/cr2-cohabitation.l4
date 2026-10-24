@@ -1,0 +1,209 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cr2-nouns`
+
+-- Canada Pension Plan Regulations (C.R.C., c. 385), Part V -- COHABITATION (regulations 78, 78.1 and 78.2).
+-- Layer 1: the law, objectively. Source: the Regulations text file, lines 781 to 799.
+--
+-- Three regulations say which months count as months of cohabitation: for the division on divorce under section 55 of
+-- the Act (78); for the division of unadjusted pensionable earnings under sections 55.1 and 55.2 (78.1); for the assignment of
+-- a retirement pension under section 65.1 (78.2).
+-- They are encoded at the grain the text states: one rule for whether a separation interrupts the cohabitation (78(2)); one
+-- for the day the cohabitation is deemed to have ceased (78(3)); one for whether a given month counts (78(1), 78.1(1), 78.2).
+-- No timeline engine is built: the caller supplies the facts of each month and each separation.
+-- A month is the DATE of any day in it; the rules take the first day with `the month of a date`.
+-- Forks F-78a and F-78b in NOTES.md record the readings.
+
+§ `Part V -- Cohabitation (regulations 78, 78.1 and 78.2)`
+
+§§ `Regulation 78(2) and (3) -- interruption of the cohabitation`
+
+-- src:785 | (2) For the purpose of paragraph (1)(a),
+-- src:786 | (a) where the former spouses did not have the intention to live separate and apart but were separated by reason of the occupation, employment or illness of either spouse, the separation does not constitute interruption of cohabitation; and
+-- src:787 | (b) where, after having completed the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act, the former spouses were separated for any reason for a period of more than 90 days and subsequently resumed cohabitation for a period of more than 90 days, the cohabitation of the former spouses shall be deemed not to have been interrupted.
+-- src:788 | (3) For the purposes of section 55 of the Act, where the cohabitation of the spouses is interrupted for more than 90 days as referred to in paragraph (1)(a), the cohabitation shall be deemed to have ceased immediately before the year in which the interruption commenced.
+@ref Reg 78(2) (src:785-787)
+GIVEN `the number of days the former spouses were separated` IS A NUMBER
+      `the former spouses did not have the intention to live separate and apart but were separated by reason of the occupation, employment or illness of either spouse` IS A BOOLEAN
+      `the former spouses had completed the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act before the separation` IS A BOOLEAN   -- out of range: section 55(2)(a) (piece cp3)
+      `the former spouses subsequently resumed cohabitation for a period of more than 90 days` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 78(2) — a separation interrupts the cohabitation of the former spouses`
+    `the number of days the former spouses were separated`
+    `the former spouses did not have the intention to live separate and apart but were separated by reason of the occupation, employment or illness of either spouse`
+    `the former spouses had completed the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act before the separation`
+    `the former spouses subsequently resumed cohabitation for a period of more than 90 days` MEANS
+    (`the number of days the former spouses were separated` GREATER THAN 90)
+        AND (NOT `the former spouses did not have the intention to live separate and apart but were separated by reason of the occupation, employment or illness of either spouse`)
+        AND (NOT (    `the former spouses had completed the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act before the separation`
+                  AND `the former spouses subsequently resumed cohabitation for a period of more than 90 days`))
+
+-- src:788 | (3) For the purposes of section 55 of the Act, where the cohabitation of the spouses is interrupted for more than 90 days as referred to in paragraph (1)(a), the cohabitation shall be deemed to have ceased immediately before the year in which the interruption commenced.
+@ref Reg 78(3) (src:788)
+GIVEN `the year in which the interruption commenced` IS A NUMBER
+GIVETH A DATE
+`reg 78(3) — the first day of the year before which the cohabitation is deemed to have ceased`
+    `the year in which the interruption commenced` MEANS
+    YMD `the year in which the interruption commenced` 1 1
+
+§§ `Regulation 78(1) -- the months during which the former spouses have cohabited`
+
+-- src:782 | 78 (1) For the purposes of section 55 of the Act, months during which the former spouses have cohabited include
+-- src:783 | (a) all consecutive months during the marriage in which the former spouses have lived together as husband and wife without interruption for more than 90 days; and
+-- src:784 | (b) any period of the marriage preceding the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act.
+@ref Reg 78(1)(a) (src:783)
+GIVEN `a day in the month` IS A DATE
+      `the former spouses lived together as husband and wife in the month` IS A BOOLEAN
+      `the month is during the marriage` IS A BOOLEAN
+      `the year in which an interruption of more than 90 days of their cohabitation commenced` IS A MAYBE NUMBER
+GIVETH A BOOLEAN
+`reg 78(1)(a) — the month is a month of cohabitation without interruption for more than 90 days`
+    `a day in the month`
+    `the former spouses lived together as husband and wife in the month`
+    `the month is during the marriage`
+    `the year in which an interruption of more than 90 days of their cohabitation commenced` MEANS
+    `the former spouses lived together as husband and wife in the month`
+        AND `the month is during the marriage`
+        AND (CONSIDER `the year in which an interruption of more than 90 days of their cohabitation commenced`
+             WHEN NOTHING THEN TRUE
+             WHEN JUST interruptionYear THEN
+                 `the month of a date` `a day in the month`
+                     LESS THAN (`reg 78(3) — the first day of the year before which the cohabitation is deemed to have ceased` interruptionYear))
+
+@ref Reg 78(1)(b) (src:784)
+GIVEN `the month is during the marriage` IS A BOOLEAN
+      `the month precedes the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act` IS A BOOLEAN   -- out of range: section 55(2)(a) (piece cp3)
+GIVETH A BOOLEAN
+`reg 78(1)(b) — the month is in a period of the marriage preceding the minimum period of 36 consecutive months of cohabitation`
+    `the month is during the marriage`
+    `the month precedes the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act` MEANS
+    `the month is during the marriage`
+        AND `the month precedes the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act`
+
+@ref Reg 78(1) (src:782-784)
+GIVEN `a day in the month` IS A DATE
+      `the former spouses lived together as husband and wife in the month` IS A BOOLEAN
+      `the month is during the marriage` IS A BOOLEAN
+      `the year in which an interruption of more than 90 days of their cohabitation commenced` IS A MAYBE NUMBER
+      `the month precedes the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 78(1) — the month is a month during which the former spouses have cohabited`
+    `a day in the month`
+    `the former spouses lived together as husband and wife in the month`
+    `the month is during the marriage`
+    `the year in which an interruption of more than 90 days of their cohabitation commenced`
+    `the month precedes the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act` MEANS
+    `reg 78(1)(a) — the month is a month of cohabitation without interruption for more than 90 days`
+        `a day in the month` `the former spouses lived together as husband and wife in the month` `the month is during the marriage`
+        `the year in which an interruption of more than 90 days of their cohabitation commenced`
+        OR `reg 78(1)(b) — the month is in a period of the marriage preceding the minimum period of 36 consecutive months of cohabitation`
+              `the month is during the marriage`
+              `the month precedes the minimum period of 36 consecutive months of cohabitation required by paragraph 55(2)(a) of the Act`
+
+§§ `Regulation 78.1 -- cohabitation for the division of unadjusted pensionable earnings`
+
+-- src:791 | 78.1 (1) In determining, for the purposes of subsections 55.1(4) and 55.2(7) of the Act, the months during which the spouses, former spouses or former common-law partners cohabited,
+-- src:792 | (a) those months shall, subject to paragraphs (b) and (c), be reckoned as beginning with the first month of the year in which the marriage of the persons subject to the division was solemnized or in which they commenced to cohabit in a conjugal relationship, whichever is applicable;
+@ref Reg 78.1(1)(a) (src:792)
+GIVEN `the date the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship, whichever is applicable` IS A DATE
+GIVETH A DATE
+`reg 78.1(1)(a) — the first month of cohabitation`
+    `the date the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship, whichever is applicable` MEANS
+    YMD (DATE_YEAR `the date the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship, whichever is applicable`) 1 1
+
+-- src:793 | (b) the persons subject to the division shall be considered not to have cohabited at any time during the year in which they were divorced or their marriage annulled or in which they commenced to live separate and apart; and
+@ref Reg 78.1(1)(b) (src:793)
+GIVEN `a day in the month` IS A DATE
+      `the dates on which they were divorced, their marriage was annulled or they commenced to live separate and apart` IS A LIST OF DATE
+GIVETH A BOOLEAN
+`reg 78.1(1)(b) — the persons are considered not to have cohabited at any time during the month`
+    `a day in the month`
+    `the dates on which they were divorced, their marriage was annulled or they commenced to live separate and apart` MEANS
+    any (GIVEN eventDate YIELD DATE_YEAR eventDate EQUALS DATE_YEAR `a day in the month`)
+        `the dates on which they were divorced, their marriage was annulled or they commenced to live separate and apart`
+
+-- src:794 | (c) where, after having lived separate and apart for one year or more, the persons subject to the division resumed cohabitation for at least one year, the period of that separation shall be considered to have begun with the first month of the year in which they commenced to live separate and apart and to have ended with the last month of the year immediately preceding the year in which they resumed cohabitation.
+@ref Reg 78.1(1)(c) (src:794)
+GIVEN `a day in the month` IS A DATE
+      separation IS A `cr2 Separation followed by resumed cohabitation`
+GIVETH A BOOLEAN
+`reg 78.1(1)(c) — the month falls within the period of the separation`
+    `a day in the month` separation MEANS
+    separation's `they lived separate and apart for one year or more`
+        AND separation's `they resumed cohabitation for at least one year`
+        AND `the month of a date` `a day in the month` AT LEAST (YMD (DATE_YEAR (separation's `the date they commenced to live separate and apart`)) 1 1)
+        AND `the month of a date` `a day in the month` AT MOST (YMD ((DATE_YEAR (separation's `the date they resumed cohabitation`)) MINUS 1) 12 1)
+
+@ref Reg 78.1(1) (src:791-794)
+GIVEN `a day in the month` IS A DATE
+      `the persons lived together in a conjugal relationship in the month` IS A BOOLEAN
+      `the date the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship, whichever is applicable` IS A DATE
+      `the dates on which they were divorced, their marriage was annulled or they commenced to live separate and apart` IS A LIST OF DATE
+      `the separations of one year or more followed by a resumption of cohabitation for at least one year` IS A LIST OF `cr2 Separation followed by resumed cohabitation`
+GIVETH A BOOLEAN
+`reg 78.1(1) — the month is a month during which the persons cohabited`
+    `a day in the month`
+    `the persons lived together in a conjugal relationship in the month`
+    `the date the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship, whichever is applicable`
+    `the dates on which they were divorced, their marriage was annulled or they commenced to live separate and apart`
+    `the separations of one year or more followed by a resumption of cohabitation for at least one year` MEANS
+    `the persons lived together in a conjugal relationship in the month`
+        AND `the month of a date` `a day in the month` AT LEAST
+            (`reg 78.1(1)(a) — the first month of cohabitation` `the date the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship, whichever is applicable`)
+        AND (NOT (`reg 78.1(1)(b) — the persons are considered not to have cohabited at any time during the month`
+                    `a day in the month` `the dates on which they were divorced, their marriage was annulled or they commenced to live separate and apart`))
+        AND (NOT (any (GIVEN separation YIELD `reg 78.1(1)(c) — the month falls within the period of the separation` `a day in the month` separation)
+                      `the separations of one year or more followed by a resumption of cohabitation for at least one year`))
+
+-- src:795 | (2) In determining a continuous period of at least one year for the purposes of subsection 55.1(3) of the Act, such a period shall be considered to be constituted by any period of cohabitation by the persons subject to the division for twelve or more consecutive months, reckoned as beginning with the month in which the marriage was solemnized or in which they commenced to cohabit in a conjugal relationship and ending with the month immediately preceding the month in which they commenced to live separate and apart.
+@ref Reg 78.1(2) (src:795)
+GIVEN `a day in the month in which the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship` IS A DATE
+      `a day in the month in which they commenced to live separate and apart` IS A DATE
+GIVETH A NUMBER
+`reg 78.1(2) — the number of consecutive months from the month of the marriage or of commencing to cohabit to the month before they commenced to live separate and apart`
+    `a day in the month in which the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship`
+    `a day in the month in which they commenced to live separate and apart` MEANS
+    `the number of months from the month of one date to the month of another`
+        `a day in the month in which the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship`
+        `a day in the month in which they commenced to live separate and apart`
+
+@ref Reg 78.1(2) (src:795)
+GIVEN `a day in the month in which the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship` IS A DATE
+      `a day in the month in which they commenced to live separate and apart` IS A DATE
+GIVETH A BOOLEAN
+`reg 78.1(2) — the period of cohabitation is a continuous period of at least one year`
+    `a day in the month in which the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship`
+    `a day in the month in which they commenced to live separate and apart` MEANS
+    `reg 78.1(2) — the number of consecutive months from the month of the marriage or of commencing to cohabit to the month before they commenced to live separate and apart`
+        `a day in the month in which the marriage was solemnized or the persons commenced to cohabit in a conjugal relationship`
+        `a day in the month in which they commenced to live separate and apart`
+        AT LEAST 12
+
+-- src:796 | (3) For the purposes of this section, where the persons subject to the division did not have the intention to live separate and apart but were separated by reason of the occupation, employment or illness of either person, the separation does not constitute interruption of cohabitation.
+@ref Reg 78.1(3) (src:796)
+GIVEN `the persons did not have the intention to live separate and apart` IS A BOOLEAN
+      `they were separated by reason of the occupation, employment or illness of either person` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 78.1(3) — the separation does not constitute interruption of cohabitation`
+    `the persons did not have the intention to live separate and apart`
+    `they were separated by reason of the occupation, employment or illness of either person` MEANS
+    `the persons did not have the intention to live separate and apart`
+        AND `they were separated by reason of the occupation, employment or illness of either person`
+
+§§ `Regulation 78.2 -- cohabitation for an assignment of a retirement pension`
+
+-- src:799 | 78.2 For the purposes of subsection 65.1(8) of the Act, period of cohabitation means the period comprising all months during which the contributor and spouse or common-law partner referred to in subsection 65.1(9) of the Act cohabited, and includes the month in which their marriage was solemnized or in which they commenced to cohabit in a conjugal relationship, whichever is applicable, but does not include any months that are not within their joint contributory period as defined in subsection 65.1(8) of the Act.
+@ref Reg 78.2 (src:799)
+GIVEN `the contributor and the spouse or common-law partner cohabited in the month` IS A BOOLEAN
+      `the month is the month in which their marriage was solemnized or they commenced to cohabit in a conjugal relationship` IS A BOOLEAN
+      `the month is within their joint contributory period as defined in subsection 65.1(8) of the Act` IS A BOOLEAN   -- out of range: section 65.1(8) (piece cp4)
+GIVETH A BOOLEAN
+`reg 78.2 — the month is in the period of cohabitation`
+    `the contributor and the spouse or common-law partner cohabited in the month`
+    `the month is the month in which their marriage was solemnized or they commenced to cohabit in a conjugal relationship`
+    `the month is within their joint contributory period as defined in subsection 65.1(8) of the Act` MEANS
+    (    `the contributor and the spouse or common-law partner cohabited in the month`
+      OR `the month is the month in which their marriage was solemnized or they commenced to cohabit in a conjugal relationship`)
+        AND `the month is within their joint contributory period as defined in subsection 65.1(8) of the Act`

@@ -1,0 +1,364 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `er2-common`
+
+-- Employment Insurance Regulations (SOR/96-332), regulations 22 to 24.3: how the hours and insurable earnings on a record of employment
+-- are allocated to the qualifying period, to pay periods and to weeks; the lay-off and separation earnings that count; the earnings a
+-- self-employed person leaves out. Piece er2 (Sonnet 5.5), LAYER 1: the law, objectively.
+-- Every src:N is a line of SOR-96-332.txt, an unofficial plain-text rendering; nothing here is verified against the official text.
+--
+-- A period is the core's Period of days (both ends included). "Proportionately" is exact arithmetic (L4 numbers are rationals), so no
+-- rounding happens except where the text says so (reg 22(2)). Where the text says "unless the claimant or employer provides evidence",
+-- the evidence is a MAYBE NUMBER: when it is present it governs and nothing is allocated (phrasebook 7.3).
+
+§ `Regulation 22 - Allocation of hours of insurable employment to the qualifying period`
+
+-- src:372 | 22 (1) Where a period of employment falls partially within a claimant's qualifying period, the Commission shall, unless the claimant or employer provides evidence of the number of hours actually worked within the qualifying period
+-- src:373 | (a) first allocate the total number of hours worked by the claimant proportionately over the whole period of employment if that period is 52 weeks or less, or over the period of employment covered by the record of employment if that period is more than 52 weeks, on the basis that the claimant worked the same number of hours on each of the seven days of each week; and
+-- src:374 | (b) then allocate the hours, that have been allocated under paragraph (a) to the portion of the period of employment that falls within the qualifying period, proportionately over the corresponding portion of the qualifying period.
+@ref Employment Insurance Regulations reg 22(1)(a) (src:372-373)
+GIVEN `the period of employment` IS A `Period of days`
+      `the period of employment covered by the record of employment` IS A `Period of days`
+GIVETH A `Period of days`
+DECIDE `reg 22(1)(a) the period over which the total number of hours worked is allocated` IS
+    IF   `the number of days in` `the period of employment` AT MOST (`weeks as days` 52)
+    THEN `the period of employment`
+    ELSE `the period of employment covered by the record of employment`
+
+-- "Where a period of employment falls partially within a claimant's qualifying period": part of it is inside and part outside.
+@ref Employment Insurance Regulations reg 22(1) (src:372)
+GIVEN `the period of employment` IS A `Period of days`
+      `the claimant's qualifying period` IS A `Period of days`
+GIVETH A BOOLEAN
+DECIDE `reg 22(1) a period of employment falls partially within the claimant's qualifying period` IF
+        `er2 the number of days two periods have in common` `the period of employment` `the claimant's qualifying period` GREATER THAN 0
+    AND NOT (`er2 a period lies wholly within another` `the period of employment` `the claimant's qualifying period`)
+
+-- (a) the same number of hours on each day of the allocation period, then (b) the hours that fall on the days shared with the qualifying
+-- period, spread over those same days: the hours counted in the qualifying period are the hours per day times the days shared.
+-- NOTHING: reg 22(1) does not decide (the period of employment is not partially within the qualifying period, or the period is empty).
+@ref Employment Insurance Regulations reg 22(1)(a), (b) (src:373-374)
+GIVEN `the period of employment` IS A `Period of days`
+      `the period of employment covered by the record of employment` IS A `Period of days`
+      `the claimant's qualifying period` IS A `Period of days`
+      `the total number of hours worked` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 22(1)(a), (b) the hours allocated to the qualifying period, before any fraction of an hour is counted` IS
+    IF   (NOT (`reg 22(1) a period of employment falls partially within the claimant's qualifying period` `the period of employment` `the claimant's qualifying period`))
+         OR (`the number of days in` `the allocation period` LESS THAN 1)
+    THEN NOTHING
+    ELSE JUST ((`the total number of hours worked` TIMES `er2 the number of days two periods have in common` `the allocation period` `the claimant's qualifying period`) DIVIDED BY `the number of days in` `the allocation period`)
+    WHERE
+        `the allocation period` MEANS `reg 22(1)(a) the period over which the total number of hours worked is allocated` `the period of employment` `the period of employment covered by the record of employment`
+
+-- src:375 | (2) Where the allocation referred to in subsection (1) results in a number of hours that contains a fraction of an hour, the fraction shall be counted as a whole hour.
+@ref Employment Insurance Regulations reg 22(2) (src:375)
+GIVEN `the number of hours that the allocation results in` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 22(2) a fraction of an hour counted as a whole hour` IS
+    CEILING `the number of hours that the allocation results in`
+
+-- The hours counted within the qualifying period: the evidence of the hours actually worked within it, when the claimant or the employer
+-- provides it, otherwise the allocation of reg 22(1) with any fraction of an hour counted as a whole hour (reg 22(2)).
+-- Fork F3 in NOTES.md: reg 22(2) is applied to the allocation only, not to hours given by evidence.
+@ref Employment Insurance Regulations reg 22(1), (2) (src:372-375)
+GIVEN `the period of employment` IS A `Period of days`
+      `the period of employment covered by the record of employment` IS A `Period of days`
+      `the claimant's qualifying period` IS A `Period of days`
+      `the total number of hours worked` IS A NUMBER
+      `the number of hours actually worked within the qualifying period, if the claimant or the employer provides evidence of it` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 22 the hours of insurable employment counted within the claimant's qualifying period` IS
+    IF   NOT (`reg 22(1) a period of employment falls partially within the claimant's qualifying period` `the period of employment` `the claimant's qualifying period`)
+    THEN NOTHING
+    ELSE CONSIDER `the number of hours actually worked within the qualifying period, if the claimant or the employer provides evidence of it`
+         WHEN JUST evidence THEN JUST evidence
+         WHEN NOTHING THEN `the allocation with fractions counted`
+    WHERE
+        `the allocation with fractions counted` MEANS
+            CONSIDER `reg 22(1)(a), (b) the hours allocated to the qualifying period, before any fraction of an hour is counted` `the period of employment` `the period of employment covered by the record of employment` `the claimant's qualifying period` `the total number of hours worked`
+            WHEN JUST allocated THEN JUST (`reg 22(2) a fraction of an hour counted as a whole hour` allocated)
+            WHEN NOTHING THEN NOTHING
+
+§ `Regulation 23 - Allocation of insurable earnings`
+
+-- Nouns. The kind of payment and the basis on which it is paid are two separate facts: an item of paragraph (b) such as vacation pay can
+-- be paid in respect of a pay period or not, and that decides which paragraph governs it (fork F4 in NOTES.md).
+DECLARE `er2 Item of remuneration` IS ONE OF
+    `er2 overtime pay`                                          -- (b)
+    `er2 shift premiums`                                        -- (b)
+    `er2 pay adjustments`                                       -- (b)
+    `er2 retroactive pay increases`                             -- (b)
+    `er2 bonuses`                                               -- (b)
+    `er2 gratuities`                                            -- (b)
+    `er2 accumulated sick leave credits`                        -- (b)
+    `er2 incentive payments`                                    -- (b)
+    `er2 cost of living allowances`                             -- (b)
+    `er2 separation payments`                                   -- (b)
+    `er2 wages in lieu of notice`                               -- (b), only when not paid in respect of a pay period (fork F4)
+    `er2 vacation pay`                                          -- (b), only when not paid in respect of a pay period (fork F4)
+    `er2 remuneration not listed in paragraph 23(1)(b)`
+
+DECLARE `er2 Basis on which remuneration is paid` IS ONE OF
+    `er2 not paid in respect of a pay period`
+    `er2 paid in respect of a pay period for work performed during the pay period`                                   -- (a)(i)
+    `er2 paid in respect of a pay period for a period of leave`                                                      -- (a)(ii)
+    `er2 paid in respect of a pay period for a period of leave as a lump sum calculated on a basis other than the length of the leave`  -- (a)(iii)
+    `er2 paid in respect of a pay period but neither for work performed during it nor for a period of leave`        -- none of (a)(i) to (iii)
+
+DECLARE `er2 Method of allocating insurable earnings` IS ONE OF
+    `er2 to the pay period in proportion to the hours worked during each day of the period`                                 -- 23(1)(a)(i)
+    `er2 to the period of leave at the rate at which the period was compensated`                                             -- 23(1)(a)(ii)
+    `er2 proportionately over the whole period of leave`                                                                     -- 23(1)(a)(iii)
+    `er2 proportionately over the pay period in which it is paid`                                                            -- 23(1)(b), (c)
+    `er2 proportionately over the last pay period for which regular salary, wages or commissions are paid`                   -- 23(1.1)
+    `er2 proportionately over the term of the contract`                                                                      -- 23(2)
+    `er2 proportionately over the shorter of the period of employment and the last 52 weeks, excluding weeks of unpaid leave for a reason in subsection 12(3) of the Act`  -- 23(3)
+    `er2 proportionately over the shorter of the period of employment and the last 52 weeks`                                 -- 23(4)
+
+-- src:378 | 23 (1) For the purposes of section 14 of the Act, insurable earnings shall be allocated in the following manner:
+-- src:379 | (a) remuneration, including statutory holiday pay, other than the remuneration referred to in paragraph (b), paid in respect of a pay period shall be allocated in the following manner:
+-- src:380 | (i) if the remuneration is paid in respect of work performed during the pay period, it shall be allocated to that pay period in proportion to the hours worked during each day of the period,
+-- src:381 | (ii) if the remuneration is paid in respect of a period of leave, it shall be allocated to that period at the rate at which the period was compensated,
+-- src:382 | (iii) if the remuneration is paid in respect of a period of leave in the form of a lump-sum payment calculated on a basis other than the length of the period of leave, it shall be allocated proportionately over the whole period;
+-- src:383 | (b) overtime pay, shift premiums, pay adjustments, retroactive pay increases, bonuses, gratuities, accumulated sick leave credits, incentive payments, cost of living allowances, separation payments, and wages in lieu of notice and vacation pay not paid in respect of a pay period shall be allocated proportionately over the pay period in which they are paid;
+-- src:384 | (c) any other remuneration not paid in respect of a pay period and not covered by paragraphs (a) and (b) shall be allocated proportionally over the pay period in which it is paid; and
+-- src:385 | (d) remuneration that remains unpaid for reasons described in subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations shall be allocated under paragraphs (a) to (c) in the same manner as if it had actually been paid in the normal course of business.
+@ref Employment Insurance Regulations reg 23(1)(b) (src:383)
+GIVEN item IS AN `er2 Item of remuneration`
+      basis IS A `er2 Basis on which remuneration is paid`
+GIVETH A BOOLEAN
+DECIDE `reg 23(1)(b) the remuneration is one of the items listed in paragraph (b)` IF
+    CONSIDER item
+    WHEN `er2 wages in lieu of notice` THEN basis EQUALS `er2 not paid in respect of a pay period`
+    WHEN `er2 vacation pay`            THEN basis EQUALS `er2 not paid in respect of a pay period`
+    WHEN `er2 remuneration not listed in paragraph 23(1)(b)` THEN FALSE
+    OTHERWISE TRUE
+
+-- (1): (b) first, because (a) is "other than the remuneration referred to in paragraph (b)"; then (a)(i) to (iii) for pay in respect of a
+-- pay period; then (c) for any other remuneration "not paid in respect of a pay period and not covered by (a) and (b)". NOTHING: none of
+-- (a) to (c) applies (pay in respect of a pay period that is neither work nor leave), so subsection (4) is the residual.
+@ref Employment Insurance Regulations reg 23(1) (src:378-384)
+GIVEN item IS AN `er2 Item of remuneration`
+      basis IS A `er2 Basis on which remuneration is paid`
+GIVETH A MAYBE `er2 Method of allocating insurable earnings`
+DECIDE `reg 23(1) the method of allocating a payment under paragraphs (a) to (c)` IS
+    BRANCH IF `reg 23(1)(b) the remuneration is one of the items listed in paragraph (b)` item basis
+           THEN JUST `er2 proportionately over the pay period in which it is paid`
+           IF basis EQUALS `er2 paid in respect of a pay period for work performed during the pay period`
+           THEN JUST `er2 to the pay period in proportion to the hours worked during each day of the period`
+           IF basis EQUALS `er2 paid in respect of a pay period for a period of leave as a lump sum calculated on a basis other than the length of the leave`
+           THEN JUST `er2 proportionately over the whole period of leave`
+           IF basis EQUALS `er2 paid in respect of a pay period for a period of leave`
+           THEN JUST `er2 to the period of leave at the rate at which the period was compensated`
+           IF basis EQUALS `er2 not paid in respect of a pay period`
+           THEN JUST `er2 proportionately over the pay period in which it is paid`
+           OTHERWISE NOTHING
+
+-- (d): the unpaid remuneration is allocated "in the same manner as if it had actually been paid": it changes no method, it says the
+-- remuneration is treated as paid. The fact is decided by section 2(2) of the Insurable Earnings and Collection of Premiums Regulations.
+@ref Employment Insurance Regulations reg 23(1)(d) (src:385)
+GIVEN `the remuneration remains unpaid for reasons described in subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations` IS A BOOLEAN
+GIVETH A BOOLEAN
+-- out of range: subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations (not deposited)
+DECIDE `reg 23(1)(d) the unpaid remuneration is allocated as if it had actually been paid in the normal course of business` IF
+    `the remuneration remains unpaid for reasons described in subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations`
+
+-- src:386 | (1.1) Where an insured person is on unpaid leave or has quit their employment or been terminated or laid off, the remuneration referred to in paragraph (1)(b) shall be allocated proportionately over the last pay period for which regular salary, wages or commissions are paid.
+@ref Employment Insurance Regulations reg 23(1.1) (src:386)
+GIVEN `the insured person is on unpaid leave or has quit their employment or been terminated or laid off` IS A BOOLEAN
+      item IS AN `er2 Item of remuneration`
+      basis IS A `er2 Basis on which remuneration is paid`
+GIVETH A BOOLEAN
+DECIDE `reg 23(1.1) the remuneration referred to in paragraph (1)(b) is allocated over the last pay period for which regular pay is paid` IF
+        `the insured person is on unpaid leave or has quit their employment or been terminated or laid off`
+    AND `reg 23(1)(b) the remuneration is one of the items listed in paragraph (b)` item basis
+
+-- src:387 | (2) Where an insured person is employed in insurable employment on the basis of a contract for a fixed term and their insurable earnings under the contract are not paid on a regular basis, the insurable earnings shall, regardless of the basis on which they are paid, be allocated proportionately over the term of the contract.
+@ref Employment Insurance Regulations reg 23(2) (src:387)
+GIVEN `the insured person is employed in insurable employment on the basis of a contract for a fixed term` IS A BOOLEAN
+      `their insurable earnings under the contract are not paid on a regular basis` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 23(2) the insurable earnings are allocated over the term of the contract` IF
+        `the insured person is employed in insurable employment on the basis of a contract for a fixed term`
+    AND `their insurable earnings under the contract are not paid on a regular basis`
+
+-- src:388 | (3) Where the remuneration of an insured person consists solely of commissions or of salary and irregularly paid commissions, the person's insurable earnings paid in the period of employment or in the last 52 weeks, whichever is shorter, shall be allocated proportionately over the shorter of the period of employment and the last 52 weeks, as applicable, excluding weeks for which the insured person is on unpaid leave of absence from employment for one of the reasons referred to in subsection 12(3) of the Act.
+@ref Employment Insurance Regulations reg 23(3) (src:388)
+GIVEN `the remuneration consists solely of commissions` IS A BOOLEAN
+      `the remuneration consists of salary and irregularly paid commissions` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 23(3) the insurable earnings are allocated over the shorter of the period of employment and the last 52 weeks` IF
+        `the remuneration consists solely of commissions`
+    OR  `the remuneration consists of salary and irregularly paid commissions`
+
+-- The number of days over which (3) allocates: the shorter of the period of employment and the last 52 weeks, without the weeks of unpaid
+-- leave of absence for a reason referred to in subsection 12(3) of the Act. NOTHING when nothing is left to allocate over.
+@ref Employment Insurance Regulations reg 23(3) (src:388)
+GIVEN `the number of days in the period of employment` IS A NUMBER
+      `the number of weeks of unpaid leave of absence from employment for a reason referred to in subsection 12(3) of the Act` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 23(3) the number of days over which the insurable earnings are allocated` IS
+    IF   `the days that remain` GREATER THAN 0
+    THEN JUST `the days that remain`
+    ELSE NOTHING
+    WHERE
+        `the days that remain` MEANS
+            (min `the number of days in the period of employment` (`weeks as days` 52)) MINUS (`weeks as days` `the number of weeks of unpaid leave of absence from employment for a reason referred to in subsection 12(3) of the Act`)
+
+-- src:389 | (4) Where an insured person has insurable earnings to which none of subsections (1) to (3) apply, the insurable earnings paid in the period of employment or in the last 52 weeks, whichever is shorter, shall be allocated proportionately over the shorter of the period of employment and the last 52 weeks, as applicable.
+@ref Employment Insurance Regulations reg 23(4) (src:389)
+GIVEN item IS AN `er2 Item of remuneration`
+      basis IS A `er2 Basis on which remuneration is paid`
+      `the insured person is employed in insurable employment on the basis of a contract for a fixed term` IS A BOOLEAN
+      `their insurable earnings under the contract are not paid on a regular basis` IS A BOOLEAN
+      `the remuneration consists solely of commissions` IS A BOOLEAN
+      `the remuneration consists of salary and irregularly paid commissions` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 23(4) none of subsections (1) to (3) applies to the insurable earnings` IF
+        (NOT (`reg 23(2) the insurable earnings are allocated over the term of the contract` `the insured person is employed in insurable employment on the basis of a contract for a fixed term` `their insurable earnings under the contract are not paid on a regular basis`))
+    AND (NOT (`reg 23(3) the insurable earnings are allocated over the shorter of the period of employment and the last 52 weeks` `the remuneration consists solely of commissions` `the remuneration consists of salary and irregularly paid commissions`))
+    AND (`reg 23(1) the method of allocating a payment under paragraphs (a) to (c)` item basis EQUALS NOTHING)
+
+@ref Employment Insurance Regulations reg 23(4) (src:389)
+GIVEN `the number of days in the period of employment` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 23(4) the number of days over which the insurable earnings are allocated` IS
+    min `the number of days in the period of employment` (`weeks as days` 52)
+
+-- src:390 | (5) Where the insurable earnings of an insured person for a pay period that is running at the time the insured person is laid off or separated from employment cannot be ascertained with accuracy, the employer may estimate the person's insurable earnings for that period.
+@ref Employment Insurance Regulations reg 23(5) (src:390)
+GIVEN `the pay period is running at the time the insured person is laid off or separated from employment` IS A BOOLEAN
+      `the insurable earnings for that pay period cannot be ascertained with accuracy` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 23(5) the employer may estimate the insurable earnings for the pay period` IF
+        `the pay period is running at the time the insured person is laid off or separated from employment`
+    AND `the insurable earnings for that pay period cannot be ascertained with accuracy`
+
+-- WHICH METHOD GOVERNS. The text does not rank (1) against (2) and (3); this order is the encoding's (fork F5 in NOTES.md): (2) first, since
+-- it applies "regardless of the basis on which they are paid"; then (3), the more specific rule for commission earners; then (1.1), which
+-- moves a paragraph (b) payment; then (1); and (4) when none applies.
+@ref Employment Insurance Regulations reg 23(1), (1.1), (2), (3), (4) (src:378) (src:386) (src:387) (src:388) (src:389)
+GIVEN item IS AN `er2 Item of remuneration`
+      basis IS A `er2 Basis on which remuneration is paid`
+      `the insured person is on unpaid leave or has quit their employment or been terminated or laid off` IS A BOOLEAN
+      `the insured person is employed in insurable employment on the basis of a contract for a fixed term` IS A BOOLEAN
+      `their insurable earnings under the contract are not paid on a regular basis` IS A BOOLEAN
+      `the remuneration consists solely of commissions` IS A BOOLEAN
+      `the remuneration consists of salary and irregularly paid commissions` IS A BOOLEAN
+GIVETH A `er2 Method of allocating insurable earnings`
+DECIDE `reg 23 the method of allocating insurable earnings` IS
+    BRANCH IF `reg 23(2) the insurable earnings are allocated over the term of the contract` `the insured person is employed in insurable employment on the basis of a contract for a fixed term` `their insurable earnings under the contract are not paid on a regular basis`
+           THEN `er2 proportionately over the term of the contract`
+           IF `reg 23(3) the insurable earnings are allocated over the shorter of the period of employment and the last 52 weeks` `the remuneration consists solely of commissions` `the remuneration consists of salary and irregularly paid commissions`
+           THEN `er2 proportionately over the shorter of the period of employment and the last 52 weeks, excluding weeks of unpaid leave for a reason in subsection 12(3) of the Act`
+           IF `reg 23(1.1) the remuneration referred to in paragraph (1)(b) is allocated over the last pay period for which regular pay is paid` `the insured person is on unpaid leave or has quit their employment or been terminated or laid off` item basis
+           THEN `er2 proportionately over the last pay period for which regular salary, wages or commissions are paid`
+           OTHERWISE fromMaybe `er2 proportionately over the shorter of the period of employment and the last 52 weeks` (`reg 23(1) the method of allocating a payment under paragraphs (a) to (c)` item basis)
+
+-- THE ARITHMETIC of the methods. "Proportionately over a period" (23(1)(a)(iii), (b), (c), (1.1), (2), (3), (4)): the part of the amount that
+-- falls on a stretch of days is the amount times the days of the stretch over the days of the whole period. NOTHING if the period is empty.
+@ref Employment Insurance Regulations reg 23(1)(a)(iii), (b), (c), (1.1), (2), (3), (4) (src:382) (src:383) (src:384) (src:386) (src:387) (src:388) (src:389)
+GIVEN amount IS A NUMBER
+      `the number of days of the stretch` IS A NUMBER
+      `the number of days of the whole period over which the amount is allocated` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 23 the part of an amount allocated proportionately to a stretch of days` IS
+    IF   `the number of days of the whole period over which the amount is allocated` GREATER THAN 0
+    THEN JUST ((amount TIMES `the number of days of the stretch`) DIVIDED BY `the number of days of the whole period over which the amount is allocated`)
+    ELSE NOTHING
+
+-- (a)(i): "in proportion to the hours worked during each day of the period". NOTHING if no hours were worked in the pay period.
+@ref Employment Insurance Regulations reg 23(1)(a)(i) (src:380)
+GIVEN `the remuneration` IS A NUMBER
+      `the hours worked on the day` IS A NUMBER
+      `the hours worked in the whole pay period` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 23(1)(a)(i) the part of the remuneration allocated to a day in proportion to the hours worked` IS
+    IF   `the hours worked in the whole pay period` GREATER THAN 0
+    THEN JUST ((`the remuneration` TIMES `the hours worked on the day`) DIVIDED BY `the hours worked in the whole pay period`)
+    ELSE NOTHING
+
+-- (a)(ii): "allocated to that period at the rate at which the period was compensated": the daily rate of compensation times the days of leave.
+@ref Employment Insurance Regulations reg 23(1)(a)(ii) (src:381)
+GIVEN `the daily rate at which the period of leave was compensated` IS A NUMBER
+      `the number of days in the period of leave` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 23(1)(a)(ii) the part of the remuneration allocated to a period of leave at the rate at which it was compensated` IS
+    `the daily rate at which the period of leave was compensated` TIMES `the number of days in the period of leave`
+
+§ `Regulation 24 - Allocation of insurable earnings to a week`
+
+-- A period of employment "falls partially within a week that is included in the claimant's qualifying period": part of it is inside the
+-- week and part outside. Unless there is evidence of the earnings actually earned in the week, the earnings on the record of employment,
+-- not including those paid or payable by reason of lay-off or separation, are spread evenly over the days of the period of employment.
+-- NOTHING: reg 24 does not decide (the week is not in the qualifying period, or the period is not partially within the week).
+-- src:391 | 24 If a period of employment for which insurable earnings have been reported on the record of employment falls partially within a week that is included in the claimant’s qualifying period, the Commission shall, unless presented by the claimant or the employer with evidence of the amount of insurable earnings actually earned in the week, allocate the amount of insurable earnings, not including any insurable earnings paid or payable by reason of lay-off or separation from employment, proportionately over that period of employment, on the basis that the claimant earned the same amount of insurable earnings for each of the seven days of each week.
+@ref Employment Insurance Regulations reg 24 (src:391)
+GIVEN `the period of employment for which insurable earnings have been reported on the record of employment` IS A `Period of days`
+      `the week` IS A `Period of days`
+      `the claimant's qualifying period` IS A `Period of days`
+      `the insurable earnings reported on the record of employment for that period of employment` IS A NUMBER
+      `the insurable earnings paid or payable by reason of lay-off or separation from employment` IS A NUMBER
+      `the amount of insurable earnings actually earned in the week, if the claimant or the employer presents evidence of it` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 24 the insurable earnings allocated to the week` IS
+    IF   (NOT (`er2 a period lies wholly within another` `the week` `the claimant's qualifying period`))
+         OR (`er2 the number of days two periods have in common` `the period of employment for which insurable earnings have been reported on the record of employment` `the week` LESS THAN 1)
+         OR (`er2 a period lies wholly within another` `the period of employment for which insurable earnings have been reported on the record of employment` `the week`)
+         OR (`the number of days in` `the period of employment for which insurable earnings have been reported on the record of employment` LESS THAN 1)
+    THEN NOTHING
+    ELSE CONSIDER `the amount of insurable earnings actually earned in the week, if the claimant or the employer presents evidence of it`
+         WHEN JUST evidence THEN JUST evidence
+         WHEN NOTHING THEN JUST (((`the insurable earnings reported on the record of employment for that period of employment` MINUS `the insurable earnings paid or payable by reason of lay-off or separation from employment`) TIMES `er2 the number of days two periods have in common` `the period of employment for which insurable earnings have been reported on the record of employment` `the week`) DIVIDED BY `the number of days in` `the period of employment for which insurable earnings have been reported on the record of employment`)
+
+§ `Regulation 24.1 - Lay-off and separation earnings`
+
+-- src:392 | 24.1 For the purposes of paragraph 14(3)(b) of the Act, the insurable earnings paid or payable to the claimant, during the qualifying period, by reason of lay-off or separation from employment is the lesser of
+-- src:393 | (a) the actual amount of those earnings, and
+-- src:394 | (b) the amount calculated in accordance with the following formula:
+-- src:395 | A x 0.18
+-- src:396 | where
+-- src:397 | A is the claimant’s insurable earnings during the calculation period — not including those referred to in paragraph (a) — paid or payable for the employment that gave rise to the earnings referred to in that paragraph.
+@ref Employment Insurance Regulations reg 24.1 (src:392-397)
+GIVEN `the actual amount of the insurable earnings paid or payable to the claimant, during the qualifying period, by reason of lay-off or separation from employment` IS A NUMBER
+      `the claimant's insurable earnings during the calculation period, not including the earnings paid or payable by reason of lay-off or separation, paid or payable for the employment that gave rise to those earnings` IS A NUMBER
+GIVETH A NUMBER
+-- out of range: paragraph 14(3)(b) and the calculation period of section 14 of the Act (piece ei1)
+DECIDE `reg 24.1 the insurable earnings paid or payable by reason of lay-off or separation that are counted` IS
+    min `the actual amount of the insurable earnings paid or payable to the claimant, during the qualifying period, by reason of lay-off or separation from employment` (`the claimant's insurable earnings during the calculation period, not including the earnings paid or payable by reason of lay-off or separation, paid or payable for the employment that gave rise to those earnings` TIMES 0.18)
+
+§ `Regulation 24.2 - Repealed`
+
+-- src:398 | 24.2 [Repealed, SOR/2013-45, s. 3]
+-- Regulation 24.2 is "[Repealed, SOR/2013-45, s. 3]": nothing to encode (phrasebook 9.1).
+@ref Employment Insurance Regulations reg 24.2 (src:398)
+`regulation 24.2 - repealed, and therefore not encoded` MEANS "24.2 [Repealed, SOR/2013-45, s. 3]"
+
+§ `Regulation 24.3 - Insurable earnings a self-employed person leaves out of the rate of weekly benefits`
+
+-- src:401 | 24.3 For the purposes of paragraph 152.16(1)(b) of the Act, the following insurable earnings are not taken into account in the calculation of the rate of weekly benefits of a self-employed person:
+-- src:402 | (a) insurable earnings from any employment that they lost because of their misconduct or that they voluntarily left without just cause within the meaning of paragraphs 29(b.1) and (c) of the Act; and
+-- src:403 | (b) insurable earnings in the qualifying period earned before the beginning of a prior benefit period established under Part I of the Act or regulations made under Part VIII of the Act for the self-employed person as an insured person.
+@ref Employment Insurance Regulations reg 24.3 (src:401-403)
+GIVEN `the earnings are insurable earnings from an employment that the person lost because of their misconduct` IS A BOOLEAN
+      `the earnings are insurable earnings from an employment that the person voluntarily left without just cause` IS A BOOLEAN
+      `the day on which the insurable earnings were earned` IS A DATE
+      `the qualifying period` IS A `Period of days`
+      `the first day of a prior benefit period established for the self-employed person as an insured person` IS A MAYBE DATE
+GIVETH A BOOLEAN
+-- out of range: paragraphs 29(b.1) and (c) of the Act (piece ei2): the two BOOLEANs are those paragraphs' outcomes
+-- out of range: paragraph 152.16(1)(b) of the Act (piece ei5)
+-- A prior benefit period is one "established under Part I of the Act or regulations made under Part VIII of the Act"; (b) asks that the
+-- earnings be in the qualifying period and earned before it began. NOTHING for the prior period means there is none, so (b) does not apply.
+DECIDE `reg 24.3 the insurable earnings are not taken into account in the rate of weekly benefits of a self-employed person` IF
+        `the earnings are insurable earnings from an employment that the person lost because of their misconduct`
+    OR  `the earnings are insurable earnings from an employment that the person voluntarily left without just cause`
+    OR  (    `the day` `the day on which the insurable earnings were earned` `falls within` `the qualifying period`
+         AND `earned before the beginning of a prior benefit period`)
+    WHERE
+        `earned before the beginning of a prior benefit period` MEANS
+            CONSIDER `the first day of a prior benefit period established for the self-employed person as an insured person`
+            WHEN NOTHING THEN FALSE
+            WHEN JUST firstday THEN `the day on which the insurable earnings were earned` LESS THAN firstday

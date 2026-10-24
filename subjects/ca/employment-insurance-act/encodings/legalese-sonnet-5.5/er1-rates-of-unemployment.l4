@@ -1,0 +1,714 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+
+-- Employment Insurance Regulations (SOR/96-332), regulations 17 to 18: Rates of Unemployment, and Regions. Piece er1, layer 1.
+-- Text: the unofficial plain-text rendering of the Justice Laws consolidation current to 2026-09-30
+-- (../../registers/source-bundle/SOR-96-332.txt). Nothing here is verified against the official text. `src:N` is a line of that file.
+-- Instrument: the Regulations. The regional rate of unemployment is the number the Act's ss 7, 7.1, 12 and 14 and Part VIII read in
+-- bands (the core: `Rate band`, `the band of the regional rate of unemployment`); these regulations say which rate applies to a claimant.
+-- The regions themselves are Schedule I of the Regulations (piece er6): which section of Schedule I describes a region is an input,
+-- and so is Statistics Canada's published monthly rate. A rate is a fraction (6.5% is 0.065), as in the core.
+--
+-- Dates. Reg 17.1 gives rates "in respect of the period" from one date to another. The text says which periods but not what is tested
+-- against them; the rules test the Sunday of "the week referred to in subsection 10(1) of the Act" (the week the benefit period
+-- begins, piece ei1), because that is the week reg 17(1) itself uses to fix the three- and 12-month periods (fork F13 in NOTES.md).
+-- The dates are data inside the rules; none of them is a commencement date.
+
+§ `The provisions and regions the rates are needed for`
+
+-- src:248 | (a) for the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, the rate produced for the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident; and
+-- src:249 | (b) for the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, if the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident outside Canada, the rate produced for the region in which the claimant was last employed in insurable employment in Canada.
+@ref Employment Insurance Regulations reg 17(1.1) (src:248-249)
+-- The provisions of the Act that reg 17(1.1) and reg 17.1 name. A rate needed for any other provision is not decided by them.
+DECLARE `er1 Provision for which the regional rate of unemployment is needed` IS ONE OF
+    `er1 section 7 of the Act`
+    `er1 section 7.1 of the Act`
+    `er1 section 12 of the Act`
+    `er1 section 14 of the Act`
+    `er1 Part VIII of the Act`
+    `er1 another provision of the Act`
+
+-- src:253 | 17.1 (1) The definitions in this subsection apply in this section.
+-- src:254 | Gaspésie — Îles-de-la-Madeleine means the region described in subsection 3(1) of Schedule I. (région de Gaspésie — Îles-de-la-Madeleine)
+-- src:255 | Lower St. Lawrence and North Shore means the region described in subsection 3(11) of Schedule I. (région du Bas Saint-Laurent — Côte Nord)
+-- src:256 | Madawaska — Charlotte means the region described in subsection 5(2) of Schedule I. (région de Madawaska — Charlotte)
+-- src:257 | Restigouche — Albert means the region described in subsection 5(3) of Schedule I. (région de Restigouche — Albert)
+@ref Employment Insurance Regulations reg 17.1(1) (src:253-257)
+-- The four regions that reg 17.1(1) names by pointing at Schedule I (piece er6). Any other region is the last constructor.
+DECLARE `er1 Region named in regulation 17.1` IS ONE OF
+    `er1 Gaspesie - Iles-de-la-Madeleine`
+    `er1 Lower St. Lawrence and North Shore`
+    `er1 Madawaska - Charlotte`
+    `er1 Restigouche - Albert`
+    `er1 a region not named in regulation 17.1`
+
+-- src:253 | 17.1 (1) The definitions in this subsection apply in this section.
+-- src:254 | Gaspésie — Îles-de-la-Madeleine means the region described in subsection 3(1) of Schedule I. (région de Gaspésie — Îles-de-la-Madeleine)
+-- src:255 | Lower St. Lawrence and North Shore means the region described in subsection 3(11) of Schedule I. (région du Bas Saint-Laurent — Côte Nord)
+-- src:256 | Madawaska — Charlotte means the region described in subsection 5(2) of Schedule I. (région de Madawaska — Charlotte)
+-- src:257 | Restigouche — Albert means the region described in subsection 5(3) of Schedule I. (région de Restigouche — Albert)
+@ref Employment Insurance Regulations reg 17.1(1) (src:254) (src:255) (src:256) (src:257)
+-- Plain gloss: each name means the region that a subsection of Schedule I (piece er6) describes: Gaspesie - Iles-de-la-Madeleine is subsection
+-- 3(1), Lower St. Lawrence and North Shore is subsection 3(11), Madawaska - Charlotte is subsection 5(2), Restigouche - Albert is subsection 5(3).
+GIVEN region IS A `er1 Region named in regulation 17.1`
+GIVETH A MAYBE STRING
+DECIDE `reg 17.1(1) the subsection of Schedule I that describes the region` IS
+    CONSIDER region
+    WHEN `er1 Gaspesie - Iles-de-la-Madeleine` THEN JUST "3(1)"
+    WHEN `er1 Lower St. Lawrence and North Shore` THEN JUST "3(11)"
+    WHEN `er1 Madawaska - Charlotte` THEN JUST "5(2)"
+    WHEN `er1 Restigouche - Albert` THEN JUST "5(3)"
+    OTHERWISE NOTHING
+
+§ `Regulation 17(1) and (4) - the regional rate of unemployment that applies to a claimant`
+
+-- src:252 | (4) The seasonally adjusted monthly rate of unemployment referred to in subsection (1) shall be obtained by using the regional rates of unemployment produced by Statistics Canada that incorporate an estimate of the rates of unemployment for status Indians living on Indian reserves.
+@ref Employment Insurance Regulations reg 17(4) (src:252)
+-- Plain gloss: the monthly rates used must be the Statistics Canada regional rates that include an estimate for status Indians living on
+-- Indian reserves. This is a condition on the data; the averaging rule below answers NOTHING when it is not met.
+GIVEN `the monthly rates used are the regional rates of unemployment produced by Statistics Canada that incorporate an estimate of the rates of unemployment for status Indians living on Indian reserves` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 17(4) the seasonally adjusted monthly rates are those that incorporate the estimate for status Indians living on Indian reserves` IF
+    `the monthly rates used are the regional rates of unemployment produced by Statistics Canada that incorporate an estimate of the rates of unemployment for status Indians living on Indian reserves`
+
+-- src:243 | (a) in the case of regions described in sections 2 to 11 of Schedule I, the average of the seasonally adjusted monthly rates of unemployment for the last three-month period for which statistics were produced by Statistics Canada that precedes the week referred to in subsection 10(1) of the Act or, if Statistics Canada does not publish the relevant rate for a region for reasons of confidentiality, the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate; and
+-- src:245 | (i) the average of the seasonally adjusted monthly rates of unemployment for the last three-month period for which statistics were produced by Statistics Canada that precedes the week referred to in subsection 10(1) of the Act or, if Statistics Canada does not publish the relevant rate for a region for reasons of confidentiality, the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate, and
+-- src:246 | (ii) the average of the seasonally adjusted monthly rates of unemployment for the last 12-month period for which statistics were produced by Statistics Canada that precedes the week referred to in subsection 10(1) of the Act or, if Statistics Canada does not publish the relevant rate for a region for reasons of confidentiality, the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate.
+@ref Employment Insurance Regulations reg 17(1) (src:243) (src:245) (src:246)
+-- Plain gloss: the rate used from a period is the average of the monthly rates Statistics Canada produced for it; if Statistics Canada
+-- does not publish the region's rate for reasons of confidentiality, it is the average that Statistics Canada has determined from the
+-- minimum number of unemployed persons that lets it publish. This rule takes the average once worked out; reg 17(4) is a condition on
+-- the monthly rates it comes from, so it applies to a published average and not to the one Statistics Canada determined.
+GIVEN `the monthly rates are those that incorporate the estimate for status Indians living on Indian reserves` IS A BOOLEAN
+      `Statistics Canada publishes the relevant rate for the region` IS A BOOLEAN
+      `the average of the seasonally adjusted monthly rates of unemployment for the period` IS A NUMBER
+      `the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17(1) the average of the monthly rates for the period, once worked out` IS
+    IF NOT (`Statistics Canada publishes the relevant rate for the region`)
+    THEN `the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate`
+    ELSE IF `reg 17(4) the seasonally adjusted monthly rates are those that incorporate the estimate for status Indians living on Indian reserves` `the monthly rates are those that incorporate the estimate for status Indians living on Indian reserves`
+         THEN JUST `the average of the seasonally adjusted monthly rates of unemployment for the period`
+         ELSE NOTHING
+
+-- src:243 | (a) in the case of regions described in sections 2 to 11 of Schedule I, the average of the seasonally adjusted monthly rates of unemployment for the last three-month period for which statistics were produced by Statistics Canada that precedes the week referred to in subsection 10(1) of the Act or, if Statistics Canada does not publish the relevant rate for a region for reasons of confidentiality, the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate; and
+-- src:245 | (i) the average of the seasonally adjusted monthly rates of unemployment for the last three-month period for which statistics were produced by Statistics Canada that precedes the week referred to in subsection 10(1) of the Act or, if Statistics Canada does not publish the relevant rate for a region for reasons of confidentiality, the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate, and
+-- src:246 | (ii) the average of the seasonally adjusted monthly rates of unemployment for the last 12-month period for which statistics were produced by Statistics Canada that precedes the week referred to in subsection 10(1) of the Act or, if Statistics Canada does not publish the relevant rate for a region for reasons of confidentiality, the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate.
+@ref Employment Insurance Regulations reg 17(1) (src:243) (src:245) (src:246)
+-- Plain gloss: the same, working the average out from the months' rates. The caller gives the length of the period (3 or 12) and the
+-- months' rates; fewer or more rates than months is not a case the text contemplates (NOTHING).
+GIVEN `the number of months in the period` IS A NUMBER
+      `the monthly rates are those that incorporate the estimate for status Indians living on Indian reserves` IS A BOOLEAN
+      `Statistics Canada publishes the relevant rate for the region` IS A BOOLEAN
+      `the seasonally adjusted monthly rates of unemployment for the months of the period` IS A LIST OF NUMBER
+      `the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17(1) the average of the seasonally adjusted monthly rates of unemployment for the period` IS
+    IF     `Statistics Canada publishes the relevant rate for the region`
+       AND NOT (    `the number of months in the period` GREATER THAN 0
+                AND count `the seasonally adjusted monthly rates of unemployment for the months of the period` EQUALS `the number of months in the period`)
+    THEN NOTHING
+    ELSE `reg 17(1) the average of the monthly rates for the period, once worked out`
+            `the monthly rates are those that incorporate the estimate for status Indians living on Indian reserves`
+            `Statistics Canada publishes the relevant rate for the region`
+            ((sum `the seasonally adjusted monthly rates of unemployment for the months of the period`) DIVIDED BY (max 1 `the number of months in the period`))
+            `the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate`
+
+-- src:242 | 17 (1) The regional rate of unemployment that applies to a claimant is
+-- src:243 | (a) in the case of regions described in sections 2 to 11 of Schedule I, the average of the seasonally adjusted monthly rates of unemployment for the last three-month period for which statistics were produced by Statistics Canada that precedes the week referred to in subsection 10(1) of the Act or, if Statistics Canada does not publish the relevant rate for a region for reasons of confidentiality, the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate; and
+-- src:244 | (b) in the case of regions described in sections 12 to 14 of Schedule I, the greater of the average that would arise under subparagraph (i) and the average that would arise under subparagraph (ii):
+-- src:245 | (i) the average of the seasonally adjusted monthly rates of unemployment for the last three-month period for which statistics were produced by Statistics Canada that precedes the week referred to in subsection 10(1) of the Act or, if Statistics Canada does not publish the relevant rate for a region for reasons of confidentiality, the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate, and
+-- src:246 | (ii) the average of the seasonally adjusted monthly rates of unemployment for the last 12-month period for which statistics were produced by Statistics Canada that precedes the week referred to in subsection 10(1) of the Act or, if Statistics Canada does not publish the relevant rate for a region for reasons of confidentiality, the average that Statistics Canada has determined based on the minimum number of unemployed persons required to allow it to publish the rate.
+@ref Employment Insurance Regulations reg 17(1) (src:242) (src:243) (src:244) (src:245) (src:246)
+-- Plain gloss: for the regions described in sections 2 to 11 of Schedule I the rate is the three-month average; for the regions described
+-- in sections 12 to 14 it is the greater of the three-month average and the 12-month average. A region described in no section from 2 to
+-- 14 is not decided by this regulation (NOTHING), and so is a rate whose average is not available.
+GIVEN `the number of the section of Schedule I that describes the region` IS A NUMBER
+      `the average for the last three-month period` IS A MAYBE NUMBER
+      `the average for the last 12-month period` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17(1) the regional rate of unemployment that applies to a claimant, for a region` IS
+    BRANCH
+        IF `the number of the section of Schedule I that describes the region` AT LEAST 2 AND `the number of the section of Schedule I that describes the region` AT MOST 11
+            THEN `the average for the last three-month period`
+        IF `the number of the section of Schedule I that describes the region` AT LEAST 12 AND `the number of the section of Schedule I that describes the region` AT MOST 14
+            THEN (CONSIDER `the average for the last three-month period`
+                  WHEN NOTHING THEN NOTHING
+                  WHEN JUST three THEN
+                      CONSIDER `the average for the last 12-month period`
+                      WHEN NOTHING THEN NOTHING
+                      WHEN JUST twelve THEN JUST (max three twelve))
+        OTHERWISE NOTHING
+
+§ `Regulation 17(1.1) to (3) - which region's rate`
+
+-- src:250 | (2) If a claimant referred to in paragraph (1.1)(a) ordinarily resides so near to the boundaries of more than one region that it cannot be determined with certainty in which region the claimant resides, the regional rate of unemployment that applies to that claimant is the highest of the regional rates that apply in respect of each of those regions.
+-- src:251 | (3) If a claimant referred to in paragraph (1.1)(b) was last employed in insurable employment in Canada so near to the boundaries of more than one region that it cannot be determined with certainty in which region the claimant was employed, the regional rate of unemployment that applies to that claimant is the highest of the regional rates that apply in respect of each of those regions.
+@ref Employment Insurance Regulations reg 17(2) and (3) (src:250) (src:251)
+-- Plain gloss: when a claimant lives (or, for a claimant living outside Canada, was last employed) so near the boundaries of more than one
+-- region that the region cannot be determined with certainty, the rate is the highest of the rates of those regions. Subsections (2) and (3)
+-- say the same of the two cases. NOTHING when no rate is given.
+GIVEN `the regional rates of unemployment that apply in respect of each of those regions` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17(2) and (3) the highest of the regional rates that apply in respect of each of those regions` IS
+    IF null `the regional rates of unemployment that apply in respect of each of those regions`
+    THEN NOTHING
+    ELSE JUST (maximum `the regional rates of unemployment that apply in respect of each of those regions`)
+
+-- src:247 | (1.1) The regional rate of unemployment referred to in subsection (1) is
+-- src:248 | (a) for the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, the rate produced for the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident; and
+-- src:249 | (b) for the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, if the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident outside Canada, the rate produced for the region in which the claimant was last employed in insurable employment in Canada.
+-- src:250 | (2) If a claimant referred to in paragraph (1.1)(a) ordinarily resides so near to the boundaries of more than one region that it cannot be determined with certainty in which region the claimant resides, the regional rate of unemployment that applies to that claimant is the highest of the regional rates that apply in respect of each of those regions.
+-- src:251 | (3) If a claimant referred to in paragraph (1.1)(b) was last employed in insurable employment in Canada so near to the boundaries of more than one region that it cannot be determined with certainty in which region the claimant was employed, the regional rate of unemployment that applies to that claimant is the highest of the regional rates that apply in respect of each of those regions.
+@ref Employment Insurance Regulations reg 17(1.1) (src:247-249) (src:250) (src:251)
+-- Plain gloss: for ss 7, 7.1, 12 and 14 and Part VIII the claimant's rate is the one produced for the region they were ordinarily resident
+-- in during the week of subsection 10(1); for ss 7, 7.1 and 14 and Part VIII, a claimant ordinarily resident outside Canada that week
+-- takes the rate of the region they were last employed in, in insurable employment in Canada (not for section 12). If the region cannot
+-- be determined with certainty the highest rate counts (reg 17(2), (3)). A rate for any other provision is not decided here (NOTHING).
+-- The rates given are the subsection 17(1) rates of the region or regions concerned; one rate where the region is certain.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident outside Canada` IS A BOOLEAN
+      `it cannot be determined with certainty in which region the claimant resides or, for a claimant outside Canada, was last employed in insurable employment in Canada` IS A BOOLEAN
+      `the regional rates of unemployment, as determined under subsection (1), of the region or regions concerned` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17(1.1) the regional rate of unemployment that applies to a claimant` IS
+    IF NOT (IF `the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident outside Canada`
+            THEN `reg 17.1 the purpose is section 7, 7.1 or 14 or Part VIII` purpose
+            ELSE `reg 17.1 the purpose is section 7, 7.1, 12 or 14 or Part VIII` purpose)
+    THEN NOTHING
+    ELSE IF `it cannot be determined with certainty in which region the claimant resides or, for a claimant outside Canada, was last employed in insurable employment in Canada`
+         THEN `reg 17(2) and (3) the highest of the regional rates that apply in respect of each of those regions` `the regional rates of unemployment, as determined under subsection (1), of the region or regions concerned`
+         ELSE IF count `the regional rates of unemployment, as determined under subsection (1), of the region or regions concerned` EQUALS 1
+              THEN JUST (at `the regional rates of unemployment, as determined under subsection (1), of the region or regions concerned` 0)
+              ELSE NOTHING
+
+§ `Regulation 17.1 - the periods, formulas and purposes shared by subsections (2) to (13)`
+
+-- The twelve subsections apply to two pairs of regions and use the same five formulas, so each formula and period is written once here and
+-- each subsection below calls them. Of a pair, the first is the claimant's region ("own") and the second its neighbour: Madawaska - Charlotte
+-- with Restigouche - Albert, Lower St. Lawrence and North Shore with Gaspesie - Iles-de-la-Madeleine.
+
+-- src:258 | (2) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in respect of the period beginning on September 17, 2000 and ending on October 6, 2001, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+@ref Employment Insurance Regulations reg 17.1(2) (src:258)
+`reg 17.1(2) the period from September 17, 2000 to October 6, 2001` MEANS `Period of days` OF (YMD 2000 9 17), (YMD 2001 10 6)
+
+-- src:268 | (4) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in respect of the period beginning on October 7, 2001 and ending on October 12, 2002, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+@ref Employment Insurance Regulations reg 17.1(4) (src:268)
+`reg 17.1(4) the period from October 7, 2001 to October 12, 2002` MEANS `Period of days` OF (YMD 2001 10 7), (YMD 2002 10 12)
+
+-- src:275 | (a) in respect of the period beginning on October 13, 2002 and ending on August 6, 2011, the greater of
+@ref Employment Insurance Regulations reg 17.1(6)(a) (src:275)
+`reg 17.1(6)(a) the period from October 13, 2002 to August 6, 2011` MEANS `Period of days` OF (YMD 2002 10 13), (YMD 2011 8 6)
+
+-- src:278 | (b) in respect of the period beginning on August 7, 2011 and ending on February 11, 2012, the greater of
+@ref Employment Insurance Regulations reg 17.1(6)(b) (src:278)
+`reg 17.1(6)(b) the period from August 7, 2011 to February 11, 2012` MEANS `Period of days` OF (YMD 2011 8 7), (YMD 2012 2 11)
+
+-- src:281 | (c) in respect of the period beginning on February 12, 2012 and ending on April 7, 2012, the greater of
+@ref Employment Insurance Regulations reg 17.1(6)(c) (src:281)
+`reg 17.1(6)(c) the period from February 12, 2012 to April 7, 2012` MEANS `Period of days` OF (YMD 2012 2 12), (YMD 2012 4 7)
+
+-- src:259 | (a) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:260 | (b) the average of
+-- src:261 | (i) the regional rate of unemployment for Restigouche — Albert, as determined in accordance with subsection 17(1), and
+-- src:262 | (ii) the average of the regional rates of unemployment for Restigouche — Albert and Madawaska — Charlotte, as determined in accordance with subsection 17(1).
+@ref Employment Insurance Regulations reg 17.1(2) (src:259-262)
+-- Plain gloss: the greater of the claimant's own rate and the average of (i) the neighbouring rate and (ii) the average of the neighbouring
+-- and the own rate. (2)(b) averages the neighbour with the average of both; it does not average the neighbour's rate with itself.
+GIVEN own IS A NUMBER
+      neighbour IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 17.1(2) the greater of the regional rate and the average of the neighbouring rate and the average of both rates` IS
+    max own ((neighbour PLUS ((neighbour PLUS own) DIVIDED BY 2)) DIVIDED BY 2)
+
+-- src:269 | (a) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:270 | (b) the average of the regional rates of unemployment for Madawaska — Charlotte and Restigouche-Albert, as determined in accordance with subsection 17(1).
+@ref Employment Insurance Regulations reg 17.1(4) (src:269-270)
+-- Plain gloss: the greater of the claimant's own rate and the average of the own and the neighbouring rate. The average in (4)(b) is the
+-- average that reg 17.1(6)(a)(ii) and (12)(a)(ii) call "the average rate determined in accordance with paragraph (4)(b)" or "(10)(b)".
+GIVEN own IS A NUMBER
+      neighbour IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 17.1(4) the greater of the regional rate and the average of both rates` IS
+    max own ((own PLUS neighbour) DIVIDED BY 2)
+
+-- src:276 | (i) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:277 | (ii) the average of the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and the average rate determined in accordance with paragraph (4)(b);
+@ref Employment Insurance Regulations reg 17.1(6)(a) (src:276-277)
+-- Plain gloss: the greater of the own rate and the average of the own rate and the average rate determined under (4)(b) (that is, the
+-- average of the own and neighbouring rates).
+GIVEN own IS A NUMBER
+      neighbour IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 17.1(6)(a) the greater of the regional rate and the average of it and the average of both rates` IS
+    max own ((own PLUS ((own PLUS neighbour) DIVIDED BY 2)) DIVIDED BY 2)
+
+-- src:279 | (i) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:280 | (ii) the sum of the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), multiplied by 0.85, and the regional rate of unemployment for Restigouche — Albert, as determined in accordance with that subsection, multiplied by 0.15; and
+@ref Employment Insurance Regulations reg 17.1(6)(b) (src:279-280)
+-- Plain gloss: the greater of the own rate and the sum of 0.85 times the own rate and 0.15 times the neighbouring rate.
+GIVEN own IS A NUMBER
+      neighbour IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 17.1(6)(b) the greater of the regional rate and the sum of 85% of it and 15% of the neighbouring rate` IS
+    max own ((own TIMES 0.85) PLUS (neighbour TIMES 0.15))
+
+-- src:282 | (i) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:283 | (ii) the sum of the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), multiplied by 0.95, and the regional rate of unemployment for Restigouche — Albert, as determined in accordance with that subsection, multiplied by 0.05.
+@ref Employment Insurance Regulations reg 17.1(6)(c) (src:282-283)
+-- Plain gloss: the greater of the own rate and the sum of 0.95 times the own rate and 0.05 times the neighbouring rate.
+GIVEN own IS A NUMBER
+      neighbour IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 17.1(6)(c) the greater of the regional rate and the sum of 95% of it and 5% of the neighbouring rate` IS
+    max own ((own TIMES 0.95) PLUS (neighbour TIMES 0.05))
+
+-- src:258 | (2) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in respect of the period beginning on September 17, 2000 and ending on October 6, 2001, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+-- src:268 | (4) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in respect of the period beginning on October 7, 2001 and ending on October 12, 2002, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+-- src:274 | (6) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Madawaska — Charlotte, the applicable regional rate of unemployment is
+@ref Employment Insurance Regulations reg 17.1(2) (src:258) (src:268) (src:274)
+-- Plain gloss: subsections (2), (4), (6), (8), (10) and (12) are for sections 7, 7.1, 12 and 14 and Part VIII.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+GIVETH A BOOLEAN
+DECIDE `reg 17.1 the purpose is section 7, 7.1, 12 or 14 or Part VIII` IS
+    CONSIDER purpose
+    WHEN `er1 another provision of the Act` THEN FALSE
+    OTHERWISE TRUE
+
+-- src:263 | (3) For the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, in respect of the period beginning on September 17, 2000 and ending on October 6, 2001, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident outside Canada and who was last employed in insurable employment in Canada in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+-- src:271 | (5) For the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, in respect of the period beginning on October 7, 2001 and ending on October 12, 2002, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident outside Canada and who was last employed in insurable employment in Canada in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+-- src:284 | (7) For the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident outside Canada and who was last employed in insurable employment in Canada in Madawaska — Charlotte, the applicable regional rate of unemployment is
+@ref Employment Insurance Regulations reg 17.1(3) (src:263) (src:271) (src:284)
+-- Plain gloss: subsections (3), (5), (7), (9), (11) and (13) are for sections 7, 7.1 and 14 and Part VIII, not section 12.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+GIVETH A BOOLEAN
+DECIDE `reg 17.1 the purpose is section 7, 7.1 or 14 or Part VIII` IS
+    CONSIDER purpose
+    WHEN `er1 section 12 of the Act` THEN FALSE
+    WHEN `er1 another provision of the Act` THEN FALSE
+    OTHERWISE TRUE
+
+-- src:332 | (16) If, on any day after March 12, 2011, the required number of hours of insurable employment in a claimant’s qualifying period and the number of weeks for which benefits are payable, determined in respect of Madawaska — Charlotte using the regional rate of unemployment as determined in accordance with subsection (6), are exactly the same as if they were determined in respect of the same region using the regional rate of unemployment as determined in accordance with subsection 17(1), subsections (6) and (7) cease to have effect on the Sunday after that day.
+-- src:333 | (17) If, on any day after March 12, 2011, the required number of hours of insurable employment in a claimant’s qualifying period and the number of weeks for which benefits are payable, determined in respect of Lower St. Lawrence and North Shore using the regional rate of unemployment as determined in accordance with subsection (12), are exactly the same as if they were determined in respect of the same region using the regional rate of unemployment as determined in accordance with subsection 17(1), subsections (12) and (13) cease to have effect on the Sunday after that day.
+@ref Employment Insurance Regulations reg 17.1(16) and (17) (src:332) (src:333)
+-- Plain gloss: subsections (6) and (7) (for Madawaska - Charlotte), and (12) and (13) (for Lower St. Lawrence and North Shore), stop having
+-- effect on the Sunday after the first day after March 12, 2011 on which the hours of insurable employment required, and the weeks of
+-- benefits payable, worked out with the special rate are exactly the same as with the subsection 17(1) rate. Whether that has happened
+-- depends on the Act's tables (ss 7, 12 and Schedule I, pieces ei1 and ei6) and is the caller's input: NOTHING means it has not happened.
+-- A day on or before March 12, 2011 is not "after March 12, 2011": NOTHING.
+GIVEN `the first day after March 12, 2011 on which the required number of hours of insurable employment in a claimant's qualifying period and the number of weeks for which benefits are payable are exactly the same` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+DECIDE `reg 17.1(16) and (17) the Sunday after the day on which the hours and weeks are exactly the same` IS
+    CONSIDER `the first day after March 12, 2011 on which the required number of hours of insurable employment in a claimant's qualifying period and the number of weeks for which benefits are payable are exactly the same`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST day THEN
+        IF day GREATER THAN (YMD 2011 3 12)
+        THEN JUST (`s 2(1) the Sunday that begins the week containing` day PLUS 7)
+        ELSE NOTHING
+
+-- src:332 | (16) If, on any day after March 12, 2011, the required number of hours of insurable employment in a claimant’s qualifying period and the number of weeks for which benefits are payable, determined in respect of Madawaska — Charlotte using the regional rate of unemployment as determined in accordance with subsection (6), are exactly the same as if they were determined in respect of the same region using the regional rate of unemployment as determined in accordance with subsection 17(1), subsections (6) and (7) cease to have effect on the Sunday after that day.
+-- src:333 | (17) If, on any day after March 12, 2011, the required number of hours of insurable employment in a claimant’s qualifying period and the number of weeks for which benefits are payable, determined in respect of Lower St. Lawrence and North Shore using the regional rate of unemployment as determined in accordance with subsection (12), are exactly the same as if they were determined in respect of the same region using the regional rate of unemployment as determined in accordance with subsection 17(1), subsections (12) and (13) cease to have effect on the Sunday after that day.
+@ref Employment Insurance Regulations reg 17.1(16) and (17) (src:332) (src:333)
+-- Plain gloss: the special rate has effect on a day until the Sunday on which it ceases; with no such Sunday it has effect throughout.
+GIVEN day IS A DATE
+      `the Sunday on which the subsections cease to have effect, if they have ceased` IS A MAYBE DATE
+GIVETH A BOOLEAN
+DECIDE `reg 17.1(16) and (17) the subsection has effect on the day` IS
+    CONSIDER `the Sunday on which the subsections cease to have effect, if they have ceased`
+    WHEN NOTHING THEN TRUE
+    WHEN JUST sunday THEN day LESS THAN sunday
+
+§ `Regulation 17.1(2) to (13) - the special rates`
+
+-- BEGIN GENERATED 17.1 WRAPPERS (mk17.py in the author's work directory; the text below is in the deposit as written)
+-- src:258 | (2) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in respect of the period beginning on September 17, 2000 and ending on October 6, 2001, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+-- src:259 | (a) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:260 | (b) the average of
+-- src:261 | (i) the regional rate of unemployment for Restigouche — Albert, as determined in accordance with subsection 17(1), and
+-- src:262 | (ii) the average of the regional rates of unemployment for Restigouche — Albert and Madawaska — Charlotte, as determined in accordance with subsection 17(1).
+@ref Employment Insurance Regulations reg 17.1(2) (src:258-262)
+-- Plain gloss: a claimant ordinarily resident in Madawaska - Charlotte in the week of section 10(1), for a claim whose week falls from September 17, 2000 to October 6, 2001, gets the greater of the Madawaska - Charlotte rate and the average of the Restigouche - Albert rate and the average of the Restigouche - Albert and Madawaska - Charlotte rates.
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(2) the applicable regional rate for a claimant resident in Madawaska - Charlotte from September 17, 2000 to October 6, 2001` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1, 12 or 14 or Part VIII` purpose
+       AND `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` EQUALS `er1 Madawaska - Charlotte`
+       AND `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(2) the period from September 17, 2000 to October 6, 2001`
+    THEN JUST (`reg 17.1(2) the greater of the regional rate and the average of the neighbouring rate and the average of both rates` `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)`)
+    ELSE NOTHING
+
+-- src:263 | (3) For the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, in respect of the period beginning on September 17, 2000 and ending on October 6, 2001, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident outside Canada and who was last employed in insurable employment in Canada in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+-- src:264 | (a) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:265 | (b) the average of
+-- src:266 | (i) the regional rate of unemployment for Restigouche — Albert, as determined in accordance with subsection 17(1), and
+-- src:267 | (ii) the average of the regional rates of unemployment for Restigouche — Albert and Madawaska — Charlotte, as determined in accordance with subsection 17(1).
+@ref Employment Insurance Regulations reg 17.1(3) (src:263-267)
+-- Plain gloss: the same for a claimant ordinarily resident outside Canada in that week who was last employed in insurable employment in Canada in Madawaska - Charlotte (not for section 12).
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(3) the applicable regional rate for a claimant outside Canada last employed in Madawaska - Charlotte from September 17, 2000 to October 6, 2001` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1 or 14 or Part VIII` purpose
+       AND `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` EQUALS `er1 Madawaska - Charlotte`
+       AND `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(2) the period from September 17, 2000 to October 6, 2001`
+    THEN JUST (`reg 17.1(2) the greater of the regional rate and the average of the neighbouring rate and the average of both rates` `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)`)
+    ELSE NOTHING
+
+-- src:268 | (4) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in respect of the period beginning on October 7, 2001 and ending on October 12, 2002, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+-- src:269 | (a) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:270 | (b) the average of the regional rates of unemployment for Madawaska — Charlotte and Restigouche-Albert, as determined in accordance with subsection 17(1).
+@ref Employment Insurance Regulations reg 17.1(4) (src:268-270)
+-- Plain gloss: for a claim whose week falls from October 7, 2001 to October 12, 2002, a claimant ordinarily resident in Madawaska - Charlotte gets the greater of the Madawaska - Charlotte rate and the average of the Madawaska - Charlotte and Restigouche - Albert rates.
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(4) the applicable regional rate for a claimant resident in Madawaska - Charlotte from October 7, 2001 to October 12, 2002` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1, 12 or 14 or Part VIII` purpose
+       AND `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` EQUALS `er1 Madawaska - Charlotte`
+       AND `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(4) the period from October 7, 2001 to October 12, 2002`
+    THEN JUST (`reg 17.1(4) the greater of the regional rate and the average of both rates` `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)`)
+    ELSE NOTHING
+
+-- src:271 | (5) For the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, in respect of the period beginning on October 7, 2001 and ending on October 12, 2002, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident outside Canada and who was last employed in insurable employment in Canada in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+-- src:272 | (a) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:273 | (b) the average of the regional rates of unemployment for Madawaska — Charlotte and Restigouche-Albert, as determined in accordance with subsection 17(1).
+@ref Employment Insurance Regulations reg 17.1(5) (src:271-273)
+-- Plain gloss: the same for a claimant ordinarily resident outside Canada in that week who was last employed in insurable employment in Canada in Madawaska - Charlotte (not for section 12).
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(5) the applicable regional rate for a claimant outside Canada last employed in Madawaska - Charlotte from October 7, 2001 to October 12, 2002` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1 or 14 or Part VIII` purpose
+       AND `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` EQUALS `er1 Madawaska - Charlotte`
+       AND `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(4) the period from October 7, 2001 to October 12, 2002`
+    THEN JUST (`reg 17.1(4) the greater of the regional rate and the average of both rates` `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)`)
+    ELSE NOTHING
+
+-- src:274 | (6) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Madawaska — Charlotte, the applicable regional rate of unemployment is
+-- src:275 | (a) in respect of the period beginning on October 13, 2002 and ending on August 6, 2011, the greater of
+-- src:276 | (i) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:277 | (ii) the average of the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and the average rate determined in accordance with paragraph (4)(b);
+-- src:278 | (b) in respect of the period beginning on August 7, 2011 and ending on February 11, 2012, the greater of
+-- src:279 | (i) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:280 | (ii) the sum of the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), multiplied by 0.85, and the regional rate of unemployment for Restigouche — Albert, as determined in accordance with that subsection, multiplied by 0.15; and
+-- src:281 | (c) in respect of the period beginning on February 12, 2012 and ending on April 7, 2012, the greater of
+-- src:282 | (i) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:283 | (ii) the sum of the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), multiplied by 0.95, and the regional rate of unemployment for Restigouche — Albert, as determined in accordance with that subsection, multiplied by 0.05.
+@ref Employment Insurance Regulations reg 17.1(6) (src:274-283)
+-- Plain gloss: a claimant ordinarily resident in Madawaska - Charlotte: from October 13, 2002 to August 6, 2011 the greater of the Madawaska - Charlotte rate and the average of it and the (4)(b) average; from August 7, 2011 to February 11, 2012 the greater of it and 0.85 times it plus 0.15 times the Restigouche - Albert rate; from February 12, 2012 to April 7, 2012 the same with 0.95 and 0.05. It stops having effect on the Sunday after the day reg 17.1(16) describes.
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the Sunday on which subsections (6) and (7) cease to have effect, if they have ceased` IS A MAYBE DATE
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(6) the applicable regional rate for a claimant resident in Madawaska - Charlotte from October 13, 2002 to April 7, 2012` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1, 12 or 14 or Part VIII` purpose
+       AND `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` EQUALS `er1 Madawaska - Charlotte`
+       AND `reg 17.1(16) and (17) the subsection has effect on the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `the Sunday on which subsections (6) and (7) cease to have effect, if they have ceased`
+    THEN
+        BRANCH
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(a) the period from October 13, 2002 to August 6, 2011` THEN JUST (`reg 17.1(6)(a) the greater of the regional rate and the average of it and the average of both rates` `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)`)
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(b) the period from August 7, 2011 to February 11, 2012` THEN JUST (`reg 17.1(6)(b) the greater of the regional rate and the sum of 85% of it and 15% of the neighbouring rate` `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)`)
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(c) the period from February 12, 2012 to April 7, 2012` THEN JUST (`reg 17.1(6)(c) the greater of the regional rate and the sum of 95% of it and 5% of the neighbouring rate` `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)`)
+            OTHERWISE NOTHING
+    ELSE NOTHING
+
+-- src:284 | (7) For the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident outside Canada and who was last employed in insurable employment in Canada in Madawaska — Charlotte, the applicable regional rate of unemployment is
+-- src:285 | (a) in respect of the period beginning on October 13, 2002 and ending on August 6, 2011, the greater of
+-- src:286 | (i) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:287 | (ii) the average of the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and the average rate determined in accordance with paragraph (5)(b);
+-- src:288 | (b) in respect of the period beginning on August 7, 2011 and ending on February 11, 2012, the greater of
+-- src:289 | (i) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:290 | (ii) the sum of the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), multiplied by 0.85, and the regional rate of unemployment for Restigouche — Albert, as determined in accordance with that subsection, multiplied by 0.15; and
+-- src:291 | (c) in respect of the period beginning on February 12, 2012 and ending on April 7, 2012, the greater of
+-- src:292 | (i) the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), and
+-- src:293 | (ii) the sum of the regional rate of unemployment for Madawaska — Charlotte, as determined in accordance with subsection 17(1), multiplied by 0.95, and the regional rate of unemployment for Restigouche — Albert, as determined in accordance with that subsection, multiplied by 0.05.
+@ref Employment Insurance Regulations reg 17.1(7) (src:284-293)
+-- Plain gloss: the same for a claimant ordinarily resident outside Canada in that week who was last employed in insurable employment in Canada in Madawaska - Charlotte (not for section 12). It stops having effect on the Sunday after the day reg 17.1(16) describes.
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the Sunday on which subsections (6) and (7) cease to have effect, if they have ceased` IS A MAYBE DATE
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(7) the applicable regional rate for a claimant outside Canada last employed in Madawaska - Charlotte from October 13, 2002 to April 7, 2012` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1 or 14 or Part VIII` purpose
+       AND `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` EQUALS `er1 Madawaska - Charlotte`
+       AND `reg 17.1(16) and (17) the subsection has effect on the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `the Sunday on which subsections (6) and (7) cease to have effect, if they have ceased`
+    THEN
+        BRANCH
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(a) the period from October 13, 2002 to August 6, 2011` THEN JUST (`reg 17.1(6)(a) the greater of the regional rate and the average of it and the average of both rates` `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)`)
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(b) the period from August 7, 2011 to February 11, 2012` THEN JUST (`reg 17.1(6)(b) the greater of the regional rate and the sum of 85% of it and 15% of the neighbouring rate` `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)`)
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(c) the period from February 12, 2012 to April 7, 2012` THEN JUST (`reg 17.1(6)(c) the greater of the regional rate and the sum of 95% of it and 5% of the neighbouring rate` `the regional rate of unemployment for Madawaska - Charlotte, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Restigouche - Albert, as determined in accordance with subsection 17(1)`)
+            OTHERWISE NOTHING
+    ELSE NOTHING
+
+-- src:294 | (8) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in respect of the period beginning on September 17, 2000 and ending on October 6, 2001, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Lower St. Lawrence and North Shore, the applicable regional rate of unemployment is the greater of
+-- src:295 | (a) the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and
+-- src:296 | (b) the average of
+-- src:297 | (i) the regional rate of unemployment for Gaspésie — Îles-de-la-Madeleine, as determined in accordance with subsection 17(1), and
+-- src:298 | (ii) the average of the regional rates of unemployment for Lower St. Lawrence and North Shore and Gaspésie — Îles-de-la-Madeleine, as determined in accordance with subsection 17(1).
+@ref Employment Insurance Regulations reg 17.1(8) (src:294-298)
+-- Plain gloss: a claimant ordinarily resident in Lower St. Lawrence and North Shore, for a claim whose week falls from September 17, 2000 to October 6, 2001, gets the greater of the Lower St. Lawrence and North Shore rate and the average of the Gaspesie - Iles-de-la-Madeleine rate and the average of the Gaspesie - Iles-de-la-Madeleine and Lower St. Lawrence and North Shore rates.
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(8) the applicable regional rate for a claimant resident in Lower St. Lawrence and North Shore from September 17, 2000 to October 6, 2001` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1, 12 or 14 or Part VIII` purpose
+       AND `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` EQUALS `er1 Lower St. Lawrence and North Shore`
+       AND `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(2) the period from September 17, 2000 to October 6, 2001`
+    THEN JUST (`reg 17.1(2) the greater of the regional rate and the average of the neighbouring rate and the average of both rates` `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)`)
+    ELSE NOTHING
+
+-- src:299 | (9) For the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, in respect of the period beginning on September 17, 2000 and ending on October 6, 2001, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident outside Canada and who was last employed in insurable employment in Canada in Lower St. Lawrence and North Shore, the applicable regional rate of unemployment is the greater of
+-- src:300 | (a) the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and
+-- src:301 | (b) the average of
+-- src:302 | (i) the regional rate of unemployment for Gaspésie — Îles-de-la-Madeleine, as determined in accordance with subsection 17(1), and
+-- src:303 | (ii) the average of the regional rates of unemployment for Lower St. Lawrence and North Shore and Gaspésie — Îles-de-la-Madeleine, as determined in accordance with subsection 17(1).
+@ref Employment Insurance Regulations reg 17.1(9) (src:299-303)
+-- Plain gloss: the same for a claimant ordinarily resident outside Canada in that week who was last employed in insurable employment in Canada in Lower St. Lawrence and North Shore (not for section 12).
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(9) the applicable regional rate for a claimant outside Canada last employed in Lower St. Lawrence and North Shore from September 17, 2000 to October 6, 2001` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1 or 14 or Part VIII` purpose
+       AND `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` EQUALS `er1 Lower St. Lawrence and North Shore`
+       AND `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(2) the period from September 17, 2000 to October 6, 2001`
+    THEN JUST (`reg 17.1(2) the greater of the regional rate and the average of the neighbouring rate and the average of both rates` `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)`)
+    ELSE NOTHING
+
+-- src:304 | (10) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in respect of the period beginning on October 7, 2001 and ending on October 12, 2002, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Lower St. Lawrence and North Shore, the applicable regional rate of unemployment is the greater of
+-- src:305 | (a) the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and
+-- src:306 | (b) the average of the regional rates of unemployment for Lower St. Lawrence and North Shore and Gaspésie — Îles-de-la-Madeleine, as determined in accordance with subsection 17(1).
+@ref Employment Insurance Regulations reg 17.1(10) (src:304-306)
+-- Plain gloss: for a claim whose week falls from October 7, 2001 to October 12, 2002, a claimant ordinarily resident in Lower St. Lawrence and North Shore gets the greater of its rate and the average of its rate and the Gaspesie - Iles-de-la-Madeleine rate.
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(10) the applicable regional rate for a claimant resident in Lower St. Lawrence and North Shore from October 7, 2001 to October 12, 2002` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1, 12 or 14 or Part VIII` purpose
+       AND `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` EQUALS `er1 Lower St. Lawrence and North Shore`
+       AND `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(4) the period from October 7, 2001 to October 12, 2002`
+    THEN JUST (`reg 17.1(4) the greater of the regional rate and the average of both rates` `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)`)
+    ELSE NOTHING
+
+-- src:307 | (11) For the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, in respect of the period beginning on October 7, 2001 and ending on October 12, 2002, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident outside Canada and who was last employed in insurable employment in Canada in Lower St. Lawrence and North Shore, the applicable regional rate of unemployment is the greater of
+-- src:308 | (a) the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and
+-- src:309 | (b) the average of the regional rates of unemployment for Lower St. Lawrence and North Shore and Gaspésie — Îles-de-la-Madeleine, as determined in accordance with subsection 17(1).
+@ref Employment Insurance Regulations reg 17.1(11) (src:307-309)
+-- Plain gloss: the same for a claimant ordinarily resident outside Canada in that week who was last employed in insurable employment in Canada in Lower St. Lawrence and North Shore (not for section 12).
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(11) the applicable regional rate for a claimant outside Canada last employed in Lower St. Lawrence and North Shore from October 7, 2001 to October 12, 2002` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1 or 14 or Part VIII` purpose
+       AND `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` EQUALS `er1 Lower St. Lawrence and North Shore`
+       AND `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(4) the period from October 7, 2001 to October 12, 2002`
+    THEN JUST (`reg 17.1(4) the greater of the regional rate and the average of both rates` `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)`)
+    ELSE NOTHING
+
+-- src:310 | (12) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Lower St. Lawrence and North Shore, the applicable regional rate of unemployment is
+-- src:311 | (a) in respect of the period beginning on October 13, 2002 and ending on August 6, 2011, the greater of
+-- src:312 | (i) the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and
+-- src:313 | (ii) the average of the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and the average rate determined in accordance with paragraph (10)(b);
+-- src:314 | (b) in respect of the period beginning on August 7, 2011 and ending on February 11, 2012, the greater of
+-- src:315 | (i) the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and
+-- src:316 | (ii) the sum of the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), multiplied by 0.85, and the regional rate of unemployment for Gaspésie — Îles-de-la-Madeleine, as determined in accordance with that subsection, multiplied by 0.15; and
+-- src:317 | (c) in respect of the period beginning on February 12, 2012 and ending on April 7, 2012, the greater of
+-- src:318 | (i) the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and
+-- src:319 | (ii) the sum of the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), multiplied by 0.95, and the regional rate of unemployment for Gaspésie — Îles-de-la-Madeleine, as determined in accordance with that subsection, multiplied by 0.05.
+@ref Employment Insurance Regulations reg 17.1(12) (src:310-319)
+-- Plain gloss: a claimant ordinarily resident in Lower St. Lawrence and North Shore: the same three formulas as reg 17.1(6) with the Gaspesie - Iles-de-la-Madeleine rate as the neighbouring rate. It stops having effect on the Sunday after the day reg 17.1(17) describes.
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the Sunday on which subsections (12) and (13) cease to have effect, if they have ceased` IS A MAYBE DATE
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(12) the applicable regional rate for a claimant resident in Lower St. Lawrence and North Shore from October 13, 2002 to April 7, 2012` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1, 12 or 14 or Part VIII` purpose
+       AND `the region in which the claimant was, during the week referred to in subsection 10(1) of the Act, ordinarily resident` EQUALS `er1 Lower St. Lawrence and North Shore`
+       AND `reg 17.1(16) and (17) the subsection has effect on the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `the Sunday on which subsections (12) and (13) cease to have effect, if they have ceased`
+    THEN
+        BRANCH
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(a) the period from October 13, 2002 to August 6, 2011` THEN JUST (`reg 17.1(6)(a) the greater of the regional rate and the average of it and the average of both rates` `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)`)
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(b) the period from August 7, 2011 to February 11, 2012` THEN JUST (`reg 17.1(6)(b) the greater of the regional rate and the sum of 85% of it and 15% of the neighbouring rate` `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)`)
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(c) the period from February 12, 2012 to April 7, 2012` THEN JUST (`reg 17.1(6)(c) the greater of the regional rate and the sum of 95% of it and 5% of the neighbouring rate` `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)`)
+            OTHERWISE NOTHING
+    ELSE NOTHING
+
+-- src:320 | (13) For the purposes of sections 7, 7.1 and 14 and Part VIII of the Act, in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident outside Canada and who was last employed in insurable employment in Canada in Lower St. Lawrence and North Shore, the applicable regional rate of unemployment is
+-- src:321 | (a) in respect of the period beginning on October 13, 2002 and ending on August 6, 2011, the greater of
+-- src:322 | (i) the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and
+-- src:323 | (ii) the average of the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and the average rate determined in accordance with paragraph (11)(b);
+-- src:324 | (b) in respect of the period beginning on August 7, 2011 and ending on February 11, 2012, the greater of
+-- src:325 | (i) the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and
+-- src:326 | (ii) the sum of the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), multiplied by 0.85, and the regional rate of unemployment for Gaspésie — Îles-de-la-Madeleine, as determined in accordance with that subsection, multiplied by 0.15; and
+-- src:327 | (c) in respect of the period beginning on February 12, 2012 and ending on April 7, 2012, the greater of
+-- src:328 | (i) the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), and
+-- src:329 | (ii) the sum of the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1), multiplied by 0.95, and the regional rate of unemployment for Gaspésie — Îles-de-la-Madeleine, as determined in accordance with that subsection, multiplied by 0.05.
+@ref Employment Insurance Regulations reg 17.1(13) (src:320-329)
+-- Plain gloss: the same for a claimant ordinarily resident outside Canada in that week who was last employed in insurable employment in Canada in Lower St. Lawrence and North Shore (not for section 12). It stops having effect on the Sunday after the day reg 17.1(17) describes.
+-- The week tested is the week referred to in subsection 10(1) of the Act (the Sunday that begins it): the text says the rate is "in respect of the
+-- period" but not which day of the claim is tested against it (fork F13 in NOTES.md). The two rates are the subsection 17(1) rates of the regions concerned.
+GIVEN purpose IS A `er1 Provision for which the regional rate of unemployment is needed`
+      `the Sunday of the week referred to in subsection 10(1) of the Act` IS A DATE
+      `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` IS A `er1 Region named in regulation 17.1`
+      `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)` IS A NUMBER
+      `the Sunday on which subsections (12) and (13) cease to have effect, if they have ceased` IS A MAYBE DATE
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(13) the applicable regional rate for a claimant outside Canada last employed in Lower St. Lawrence and North Shore from October 13, 2002 to April 7, 2012` IS
+    IF     `reg 17.1 the purpose is section 7, 7.1 or 14 or Part VIII` purpose
+       AND `the region in which the claimant, ordinarily resident outside Canada, was last employed in insurable employment in Canada` EQUALS `er1 Lower St. Lawrence and North Shore`
+       AND `reg 17.1(16) and (17) the subsection has effect on the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `the Sunday on which subsections (12) and (13) cease to have effect, if they have ceased`
+    THEN
+        BRANCH
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(a) the period from October 13, 2002 to August 6, 2011` THEN JUST (`reg 17.1(6)(a) the greater of the regional rate and the average of it and the average of both rates` `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)`)
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(b) the period from August 7, 2011 to February 11, 2012` THEN JUST (`reg 17.1(6)(b) the greater of the regional rate and the sum of 85% of it and 15% of the neighbouring rate` `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)`)
+            IF `the day` `the Sunday of the week referred to in subsection 10(1) of the Act` `falls within` `reg 17.1(6)(c) the period from February 12, 2012 to April 7, 2012` THEN JUST (`reg 17.1(6)(c) the greater of the regional rate and the sum of 95% of it and 5% of the neighbouring rate` `the regional rate of unemployment for Lower St. Lawrence and North Shore, as determined in accordance with subsection 17(1)` `the regional rate of unemployment for Gaspesie - Iles-de-la-Madeleine, as determined in accordance with subsection 17(1)`)
+            OTHERWISE NOTHING
+    ELSE NOTHING
+
+-- END GENERATED 17.1 WRAPPERS
+
+§ `Regulation 17.1(14) to (18) - boundaries, ending and notice`
+
+-- src:330 | (14) Where a claimant referred to in subsection (2),(4),(6), (8), (10) or (12) ordinarily resides so near to the boundaries of more than one region that it cannot be determined with certainty in which region the claimant resides, the regional rate of unemployment that applies to that claimant is the highest of the regional rates that apply in respect of each of those regions.
+@ref Employment Insurance Regulations reg 17.1(14) (src:330)
+-- Plain gloss: a claimant under (2), (4), (6), (8), (10) or (12) who lives so near the boundaries of more than one region that the region
+-- cannot be determined with certainty takes the highest of the rates that apply for each of those regions. The rates given are those
+-- that apply in respect of each region under this regulation or under reg 17(1.1).
+GIVEN `the regional rates of unemployment that apply in respect of each of those regions` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(14) the highest of the regional rates for a claimant who resides near the boundaries of more than one region` IS
+    `reg 17(2) and (3) the highest of the regional rates that apply in respect of each of those regions` `the regional rates of unemployment that apply in respect of each of those regions`
+
+-- src:331 | (15) Where a claimant referred to in subsection (3),(5),(7), (9), (11) or (13) was last employed in insurable employment in Canada so near to the boundaries of more than one region that it cannot be determined with certainty in which region the claimant was employed, the regional rate of unemployment that applies to that claimant is the highest of the regional rates that apply in respect of each of those regions.
+@ref Employment Insurance Regulations reg 17.1(15) (src:331)
+-- Plain gloss: the same for a claimant under (3), (5), (7), (9), (11) or (13) who was last employed in insurable employment in Canada so
+-- near the boundaries of more than one region that the region cannot be determined with certainty.
+GIVEN `the regional rates of unemployment that apply in respect of each of those regions` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1(15) the highest of the regional rates for a claimant last employed near the boundaries of more than one region` IS
+    `reg 17(2) and (3) the highest of the regional rates that apply in respect of each of those regions` `the regional rates of unemployment that apply in respect of each of those regions`
+
+-- src:334 | (18) As soon as possible after the condition referred to in subsection (16) or (17) is satisfied, the Commission must publish a notice in the Canada Gazette that specifies the provisions that cease to have effect. The Commission must also publish the notice on its website.
+@ref Employment Insurance Regulations reg 17.1(18) (src:334)
+-- Plain gloss: when the condition of (16) or (17) is satisfied, the Commission must as soon as possible publish in the Canada Gazette a
+-- notice naming the provisions that cease to have effect, and publish it on its website too. This is the Commission's duty; the answer is
+-- whether it has been met, and it is met where the duty has not arisen. Whether the notice was published "as soon as possible" is a
+-- judgment the caller states. The cessation of (6), (7), (12) and (13) does not wait for the notice (reg 17.1(16), (17)).
+GIVEN `the condition referred to in subsection (16) or (17) is satisfied` IS A BOOLEAN
+      `the Commission has published a notice in the Canada Gazette that specifies the provisions that cease to have effect` IS A BOOLEAN
+      `the Commission has also published the notice on its website` IS A BOOLEAN
+      `the notice was published as soon as possible after the condition was satisfied` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 17.1(18) the Commission has published the notice as required` IF
+        NOT (`the condition referred to in subsection (16) or (17) is satisfied`)
+    OR  (   `the Commission has published a notice in the Canada Gazette that specifies the provisions that cease to have effect`
+        AND `the Commission has also published the notice on its website`
+        AND `the notice was published as soon as possible after the condition was satisfied`)
+
+§ `Regulation 17 and 17.1 - the rate that applies, taking the special rates into account`
+
+-- src:242 | 17 (1) The regional rate of unemployment that applies to a claimant is
+-- src:258 | (2) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in respect of the period beginning on September 17, 2000 and ending on October 6, 2001, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+@ref Employment Insurance Regulations reg 17 and reg 17.1 (src:242) (src:258)
+-- Plain gloss: at most one of reg 17.1(2) to (13) applies to a claimant (one region, resident in Canada or not, one period). The first
+-- answer in the list is the one that applies; with none, the claimant's rate is the one reg 17(1.1) to (3) gives.
+GIVEN `the answers under reg 17.1(2) to (13) that could apply to the claimant` IS A LIST OF MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17.1 the first answer that applies` IS
+    CONSIDER `the answers under reg 17.1(2) to (13) that could apply to the claimant`
+    WHEN EMPTY THEN NOTHING
+    WHEN first FOLLOWED BY rest THEN
+        CONSIDER first
+        WHEN JUST rate THEN JUST rate
+        WHEN NOTHING THEN `reg 17.1 the first answer that applies` rest
+
+-- src:242 | 17 (1) The regional rate of unemployment that applies to a claimant is
+-- src:258 | (2) For the purposes of sections 7, 7.1, 12 and 14 and Part VIII of the Act, in respect of the period beginning on September 17, 2000 and ending on October 6, 2001, and in the case of a claimant who, during the week referred to in subsection 10(1) of the Act, was ordinarily resident in Madawaska — Charlotte, the applicable regional rate of unemployment is the greater of
+@ref Employment Insurance Regulations reg 17 and reg 17.1 (src:242) (src:258)
+-- Plain gloss: where reg 17.1 gives "the applicable regional rate of unemployment", that rate is the claimant's; otherwise the rate of reg 17(1.1) to (3).
+GIVEN `the answer under reg 17.1` IS A MAYBE NUMBER
+      `the answer under reg 17(1.1) to (3)` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 17 and reg 17.1 the regional rate of unemployment that applies to the claimant` IS
+    CONSIDER `the answer under reg 17.1`
+    WHEN JUST rate THEN JUST rate
+    WHEN NOTHING THEN `the answer under reg 17(1.1) to (3)`
+
+§ `Regulation 18 - regions`
+
+-- src:337 | 18 (1) The regions described in Schedule I are hereby established for the purposes of Parts I and VIII of the Act.
+@ref Employment Insurance Regulations reg 18(1) (src:337)
+-- Plain gloss: the regions Schedule I (piece er6) describes are the regions for Parts I and VIII of the Act.
+GIVEN `the region is described in Schedule I` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 18(1) the region is established for the purposes of Parts I and VIII of the Act` IF
+    `the region is described in Schedule I`
+
+-- src:338 | (2) The Commission shall, at least once every five years after the coming into force of subsection (1), review the boundaries of the regions established by that subsection for the purpose of determining if it is appropriate to make changes to those boundaries.
+@ref Employment Insurance Regulations reg 18(2) (src:338)
+-- Plain gloss: the Commission must review the regions' boundaries at least every five years after subsection (1) came into force. The
+-- answer is whether, on the day in question, a review is not yet overdue: the day must be no later than five years after the last review (or
+-- after the day subsection (1) came into force, which is in Part VII of the Regulations, piece er6, if there has been none). The review is
+-- the Commission's duty; the text states no consequence for the person.
+GIVEN `the day of the most recent review of the boundaries, or the day subsection (1) came into force if there has been none` IS A DATE
+      `the day in question` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `reg 18(2) the Commission's review of the boundaries is not overdue` IF
+    `the day in question` AT MOST `add years` `the day of the most recent review of the boundaries, or the day subsection (1) came into force if there has been none` 5

@@ -1,0 +1,297 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cpp-core-age`
+IMPORT `cpp-core-definitions`
+IMPORT `cp5-months`
+
+-- Canada Pension Plan Act, Part II, Division D (Payment of Benefits: Special Rules Applicable)
+-- DEATH BENEFIT AND SURVIVOR'S PENSION: sections 71 (to whom the death benefit is paid), 72 (when the survivor's
+-- pension begins) and 73 (when it ends).
+-- Layer 1: the law, objectively.
+--
+-- Regulation 64 (the Regulations, piece cr2) fixes what section 71(2) leaves to the regulations: the time interval
+-- (60 days), the prescribed amount ($2,387; before 1998 a fraction of the Year's Maximum Pensionable Earnings) and
+-- the persons to whom a direction may be given. It is read here so that the question "who is paid?" has an answer;
+-- piece cr2 encodes the regulation itself.
+-- A month is the DATE of its first day. Ages go through section 2(2); the one place in this range that section 2(2)
+-- excepts is subparagraph 72(a)(iii), the survivor's 65th birthday (the actual birthday governs).
+
+-- out of range: section 46 (piece cp3): the amount of the death benefit, a plain input `the amount of the death benefit`
+-- out of range: section 18 (piece cp1): the Year's Maximum Pensionable Earnings, a plain input used only for a death before 1998
+-- out of range: regulation 64 (piece cr2): read in s 71(2)
+-- out of range: subparagraphs 44(1)(d)(i) and (ii) and section 42(1) "survivor with dependent children" (piece cp3): plain facts in s 72
+-- out of range: paragraph 55.1(1)(b) (piece cp3): the approval of a division of unadjusted pensionable earnings, a plain input in s 73(3)
+-- out of range: section 60 (piece cp4): the Minister's approval of payment and the application, plain facts in ss 71 and 72
+
+§ `Part II, Division D -- Death benefit and survivor's pension (sections 71 to 73)`
+
+§§ `Section 71 -- to whom the death benefit is paid`
+
+-- src:2344 | Payable to estate
+-- src:2345 | 71 (1) Where payment of a death benefit is approved, the Minister shall, except as provided in subsections (2) and (3), pay the death benefit to the estate of the contributor.
+@ref Act s 71(1) (src:2345)
+DECLARE `cp5 Payee of a death benefit` IS ONE OF
+    `the death benefit is paid to the estate of the contributor`
+    `the death benefit is paid to a prescribed person or body as the Minister directs`
+
+-- Subsection 71(2): the Minister may direct payment to a prescribed person or body where (a) there is no estate,
+-- (b) the estate has not applied within the prescribed time interval, or (c) for a death before 2019 the amount
+-- is less than the prescribed amount. Regulation 64(1) prescribes: 60 days; for a death before 1998, two thirds
+-- of 10% of the Year's Maximum Pensionable Earnings for the year of death; for a death after 1997 and before 2019, $2,387.
+-- src:2346 | Exceptions
+-- src:2347 | (2) The Minister may direct payment of a death benefit in whole or in part to such person or body as is prescribed where
+-- src:2348 | (a) he is satisfied, after making reasonable inquiries, that there is no estate;
+-- src:2349 | (b) the estate has not applied for the death benefit within the prescribed time interval following the contributor’s death; or
+-- src:2350 | (c) if the contributor’s death occurs before January 1, 2019, the amount of the death benefit is less than the prescribed amount.
+@ref Act s 71(2)(b) (src:2349)
+-- src:C.R.C.-c.-385:638 | 64 (1) If paragraph 71(2)(a) of the Act applies or the estate of a deceased contributor has not applied for the death benefit within 60 days after the contributor’s death, or if the amount of the death benefit is less than two thirds of 10% of the Year’s Maximum Pensionable Earnings for the year in which the contributor died, in the case of a death that occurred before January 1, 1998, or less than $2,387, in the case of a death that occurred after December 31, 1997 and before January 1, 2019, a direction under subsection 71(2) of the Act may, subject to subsections (2) and (3), be given for payment of the death benefit
+@ref Reg 64(1) (src:C.R.C.-c.-385:638)
+GIVEN `day the contributor died` IS A DATE
+GIVETH A DATE
+`s 71(2)(b) — the last day of the prescribed time interval following the contributor's death` `day the contributor died` MEANS
+    `the date a time limit ends` `day the contributor died` (`a number of days` WITH `number of days` IS 60)
+
+@ref Act s 71(2)(b) (src:2349)
+GIVEN `day the contributor died` IS A DATE
+      `day the estate applied for the death benefit` IS A MAYBE DATE
+      `day on which the Minister considers a direction` IS A DATE
+GIVETH A BOOLEAN
+`s 71(2)(b) — the estate has not applied for the death benefit within the prescribed time interval following the contributor's death` `day the contributor died` `day the estate applied for the death benefit` `day on which the Minister considers a direction` MEANS
+        -- the interval must have run out when the Minister considers the direction (NOTES.md, fork F23)
+        `day on which the Minister considers a direction` ABOVE `s 71(2)(b) — the last day of the prescribed time interval following the contributor's death` `day the contributor died`
+    AND (CONSIDER `day the estate applied for the death benefit`
+         WHEN NOTHING THEN TRUE
+         WHEN JUST applied THEN applied ABOVE `s 71(2)(b) — the last day of the prescribed time interval following the contributor's death` `day the contributor died`)
+
+@ref Act s 71(2)(c) (src:2350)
+@ref Reg 64(1) (src:C.R.C.-c.-385:638)
+GIVEN `day the contributor died` IS A DATE
+      `the Year's Maximum Pensionable Earnings for the year in which the contributor died` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 71(2)(c) — the prescribed amount for the death benefit of a contributor who died before 2019` `day the contributor died` `the Year's Maximum Pensionable Earnings for the year in which the contributor died` MEANS
+    BRANCH
+        IF `day the contributor died` BELOW (YMD 1998 1 1) THEN JUST ((2 DIVIDED BY 3) TIMES (10% TIMES `the Year's Maximum Pensionable Earnings for the year in which the contributor died`))
+        IF `day the contributor died` BELOW (YMD 2019 1 1) THEN JUST 2387
+        OTHERWISE NOTHING
+
+@ref Act s 71(2) (src:2347-2350)
+GIVEN `the Minister is satisfied, after making reasonable inquiries, that there is no estate` IS A BOOLEAN
+      `day the contributor died` IS A DATE
+      `day the estate applied for the death benefit` IS A MAYBE DATE
+      `day on which the Minister considers a direction` IS A DATE
+      `the amount of the death benefit` IS A NUMBER
+      `the Year's Maximum Pensionable Earnings for the year in which the contributor died` IS A NUMBER
+GIVETH A BOOLEAN
+`s 71(2) — the Minister may direct payment of the death benefit in whole or in part to a prescribed person or body` `the Minister is satisfied, after making reasonable inquiries, that there is no estate` `day the contributor died` `day the estate applied for the death benefit` `day on which the Minister considers a direction` `the amount of the death benefit` `the Year's Maximum Pensionable Earnings for the year in which the contributor died` MEANS
+        `the Minister is satisfied, after making reasonable inquiries, that there is no estate`
+     OR `s 71(2)(b) — the estate has not applied for the death benefit within the prescribed time interval following the contributor's death` `day the contributor died` `day the estate applied for the death benefit` `day on which the Minister considers a direction`
+     OR (CONSIDER `s 71(2)(c) — the prescribed amount for the death benefit of a contributor who died before 2019` `day the contributor died` `the Year's Maximum Pensionable Earnings for the year in which the contributor died`
+         WHEN NOTHING THEN FALSE
+         WHEN JUST prescribed THEN `the amount of the death benefit` BELOW prescribed)
+
+-- Subsection 71(1): the estate, except as (2) and (3) provide. Nothing if payment is not approved.
+@ref Act s 71(1) (src:2345)
+GIVEN `payment of the death benefit is approved` IS A BOOLEAN
+      `the Minister directs payment to a prescribed person or body` IS A BOOLEAN
+      `subsection (2) allows the Minister to direct payment` IS A BOOLEAN
+GIVETH A MAYBE `cp5 Payee of a death benefit`
+`s 71 — to whom the death benefit is paid` `payment of the death benefit is approved` `the Minister directs payment to a prescribed person or body` `subsection (2) allows the Minister to direct payment` MEANS
+    IF NOT `payment of the death benefit is approved`
+    THEN NOTHING
+    ELSE IF `the Minister directs payment to a prescribed person or body` AND `subsection (2) allows the Minister to direct payment`
+         THEN JUST `the death benefit is paid to a prescribed person or body as the Minister directs`
+         ELSE JUST `the death benefit is paid to the estate of the contributor`
+
+-- Regulation 64(1)(a) to (c), (2) and (3): the persons to whom a direction under subsection 71(2) may be given.
+-- src:C.R.C.-c.-385:639 | (a) to the individual or institution who has paid or is responsible for the payment of the deceased contributor’s funeral expenses;
+-- src:C.R.C.-c.-385:640 | (b) in the absence of an individual or institution described in paragraph (a), to the survivor of the deceased contributor; or
+-- src:C.R.C.-c.-385:641 | (c) in the absence of an individual or institution referred to in paragraph (a) and a survivor referred to in paragraph (b), to the next of kin of the deceased contributor.
+-- src:C.R.C.-c.-385:642 | (2) No amount in excess of the actual funeral expenses shall be paid pursuant to paragraph (1)(a).
+-- src:C.R.C.-c.-385:643 | (3) Where, by virtue of subsection (2), an amount paid pursuant to paragraph (1)(a) is less than the amount of the death benefit, a direction pursuant to subsection (1), in so far as it relates to the remainder of the death benefit, may be given as if in the absence of an individual or institution described in that paragraph.
+@ref Reg 64 (src:C.R.C.-c.-385:639-643)
+DECLARE `cp5 Person or body to whom a death benefit may be directed` IS ONE OF
+    `payment is directed to the individual or institution who has paid or is responsible for the funeral expenses`
+    `payment is directed to the survivor of the deceased contributor`
+    `payment is directed to the next of kin of the deceased contributor`
+    `payment cannot be directed to anyone whom regulation 64(1) describes`
+
+@ref Act s 71(2); Reg 64(1) (src:C.R.C.-c.-385:639-641)
+GIVEN `there is an individual or institution who has paid or is responsible for the funeral expenses` IS A BOOLEAN
+      `there is a survivor of the deceased contributor` IS A BOOLEAN
+      `there is next of kin of the deceased contributor` IS A BOOLEAN
+GIVETH A `cp5 Person or body to whom a death benefit may be directed`
+`s 71(2) — the person or body to whom payment may be directed under regulation 64(1)` `there is an individual or institution who has paid or is responsible for the funeral expenses` `there is a survivor of the deceased contributor` `there is next of kin of the deceased contributor` MEANS
+    BRANCH
+        IF `there is an individual or institution who has paid or is responsible for the funeral expenses` THEN `payment is directed to the individual or institution who has paid or is responsible for the funeral expenses`
+        IF `there is a survivor of the deceased contributor` THEN `payment is directed to the survivor of the deceased contributor`
+        IF `there is next of kin of the deceased contributor` THEN `payment is directed to the next of kin of the deceased contributor`
+        OTHERWISE `payment cannot be directed to anyone whom regulation 64(1) describes`
+
+-- Regulation 64(2) and (3): no more than the actual funeral expenses to the person who paid them; the rest as if that person were absent.
+@ref Act s 71(2); Reg 64(2) (src:C.R.C.-c.-385:639-642)
+GIVEN `the amount of the death benefit` IS A NUMBER
+      `the actual funeral expenses` IS A NUMBER
+GIVETH A NUMBER
+`s 71(2) — the most that may be paid to the individual or institution who paid the funeral expenses under regulation 64(2)` `the amount of the death benefit` `the actual funeral expenses` MEANS
+    IF `the actual funeral expenses` BELOW `the amount of the death benefit` THEN `the actual funeral expenses` ELSE `the amount of the death benefit`
+
+@ref Act s 71(2); Reg 64(3) (src:C.R.C.-c.-385:643)
+GIVEN `the amount of the death benefit` IS A NUMBER
+      `the actual funeral expenses` IS A NUMBER
+GIVETH A NUMBER
+`s 71(2) — the remainder of the death benefit that may be directed as if the individual or institution who paid the funeral expenses were absent under regulation 64(3)` `the amount of the death benefit` `the actual funeral expenses` MEANS
+    `the amount of the death benefit` MINUS (`s 71(2) — the most that may be paid to the individual or institution who paid the funeral expenses under regulation 64(2)` `the amount of the death benefit` `the actual funeral expenses`)
+
+-- src:2351 | No double payment
+-- src:2352 | (3) Where a payment has been made pursuant to subsection (2), the Minister is not liable to make that payment to any subsequent applicant.
+@ref Act s 71(3) (src:2352)
+GIVEN `a payment has been made under subsection (2)` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 71(3) — the Minister is not liable to make that payment to any subsequent applicant` `a payment has been made under subsection (2)` MEANS
+    `a payment has been made under subsection (2)`
+
+§§ `Section 72 -- when a survivor's pension begins to be payable`
+
+-- src:2355 | Commencement of pension
+-- src:2356 | 72 Subject to section 62, if payment of a survivor’s pension is approved, the pension is payable for each month commencing with,
+-- src:2357 | (a) if subparagraph 44(1)(d)(i) applies, the month following the month in which
+-- src:2358 | (i) the contributor died, in the case of a survivor who at the time of the death of the contributor had reached 35 years of age or was a survivor with dependent children,
+-- src:2359 | (ii) the survivor became a survivor who, not having reached 65 years of age, is disabled, in the case of a survivor other than a survivor described in subparagraph (i), or
+-- src:2360 | (iii) the survivor reached 65 years of age, in the case of a survivor other than a survivor described in subparagraph (i) or (ii); or
+-- src:2361 | (b) if subparagraph 44(1)(d)(ii) applies, the month following the month in which the contributor died.
+-- src:2362 | However, in no case is the pension payable earlier than for the twelfth-month preceding the month following the month in which the application was received.
+@ref Act s 72 (src:2356-2362)
+GIVEN `a day in the month the application was received` IS A DATE
+GIVETH A DATE
+`s 72 — the earliest month for which a survivor's pension is payable, by reason of the application` `a day in the month the application was received` MEANS
+    -- "the twelfth-month preceding the month following the month in which the application was received"
+    `cp5 helper -- the month a number of months from the month of a date` `a day in the month the application was received` (0 MINUS 11)
+
+-- out of range: subparagraph 44(1)(d)(i) and (ii) (piece cp3) say which survivors are entitled, before 2019 and after
+-- 2018; section 42(1) (piece cp3) defines "survivor with dependent children". They are plain facts here.
+@ref Act s 72(a) (src:2357-2360)
+GIVEN `date of birth of the survivor` IS A DATE
+      `day the contributor died` IS A DATE
+      `the survivor was a survivor with dependent children at the time of the death` IS A BOOLEAN
+      `day the survivor became disabled` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 72(a) — the first month for which a survivor's pension under subparagraph 44(1)(d)(i) is payable` `date of birth of the survivor` `day the contributor died` `the survivor was a survivor with dependent children at the time of the death` `day the survivor became disabled` MEANS
+    IF `cp5 helper -- the person has reached an age on a day under section 2(2)` `date of birth of the survivor` 35 `day the contributor died` OR `the survivor was a survivor with dependent children at the time of the death`
+    -- (i) the contributor died, in the case of a survivor who at the time of the death had reached 35 years of age or was a survivor with dependent children
+    THEN JUST (`the month following the month of a date` `day the contributor died`)
+    ELSE CONSIDER `day the survivor became disabled`
+         WHEN JUST disabled THEN
+             IF NOT (`cp5 helper -- the person has reached an age on a day under section 2(2)` `date of birth of the survivor` 65 (`cp5 helper -- the later of two days` `day the contributor died` disabled))
+             -- (ii) the survivor became a survivor who, not having reached 65 years of age, is disabled: the later of the death and the
+             --      disability (NOTES.md, fork F20)
+             THEN JUST (`the month following the month of a date` (`cp5 helper -- the later of two days` `day the contributor died` disabled))
+             -- (iii) the survivor reached 65 years of age
+             ELSE JUST (`the month following the month of a date` (`s 2(2) — the date a person is treated as reaching a specified age for a provision` `subparagraph 72(a)(iii)` `date of birth of the survivor` 65))
+         WHEN NOTHING THEN
+             -- (iii) the survivor reached 65 years of age (the actual birthday: subparagraph 72(a)(iii) is excepted from section 2(2))
+             JUST (`the month following the month of a date` (`s 2(2) — the date a person is treated as reaching a specified age for a provision` `subparagraph 72(a)(iii)` `date of birth of the survivor` 65))
+
+@ref Act s 72(b) (src:2361)
+GIVEN `day the contributor died` IS A DATE
+GIVETH A DATE
+`s 72(b) — the month following the month in which the contributor died` `day the contributor died` MEANS
+    `the month following the month of a date` `day the contributor died`
+
+-- The month from which the pension is payable: the earlier of (a) and (b) for the subparagraphs that apply (NOTES.md, fork F19),
+-- but in no case earlier than the twelfth month preceding the month following the month of the application.
+@ref Act s 72 (src:2356-2362)
+GIVEN `payment of the survivor's pension is approved` IS A BOOLEAN
+      `subparagraph 44(1)(d)(i) applies` IS A BOOLEAN
+      `subparagraph 44(1)(d)(ii) applies` IS A BOOLEAN
+      `date of birth of the survivor` IS A DATE
+      `day the contributor died` IS A DATE
+      `the survivor was a survivor with dependent children at the time of the death` IS A BOOLEAN
+      `day the survivor became disabled` IS A MAYBE DATE
+      `a day in the month the application was received` IS A DATE
+GIVETH A MAYBE DATE
+`s 72 — the first month for which a survivor's pension is payable` `payment of the survivor's pension is approved` `subparagraph 44(1)(d)(i) applies` `subparagraph 44(1)(d)(ii) applies` `date of birth of the survivor` `day the contributor died` `the survivor was a survivor with dependent children at the time of the death` `day the survivor became disabled` `a day in the month the application was received` MEANS
+    IF NOT `payment of the survivor's pension is approved`
+    THEN NOTHING
+    ELSE CONSIDER `cp5 helper -- the earliest of the months that apply` (LIST underI, underII)
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST m THEN
+             IF m AT LEAST `s 72 — the earliest month for which a survivor's pension is payable, by reason of the application` `a day in the month the application was received`
+             THEN JUST m
+             ELSE JUST (`s 72 — the earliest month for which a survivor's pension is payable, by reason of the application` `a day in the month the application was received`)
+    WHERE
+        underI MEANS IF `subparagraph 44(1)(d)(i) applies`
+                     THEN `s 72(a) — the first month for which a survivor's pension under subparagraph 44(1)(d)(i) is payable` `date of birth of the survivor` `day the contributor died` `the survivor was a survivor with dependent children at the time of the death` `day the survivor became disabled`
+                     ELSE NOTHING
+        underII MEANS IF `subparagraph 44(1)(d)(ii) applies`
+                      THEN JUST (`s 72(b) — the month following the month in which the contributor died` `day the contributor died`)
+                      ELSE NOTHING
+
+§§ `Section 73 -- how long a survivor's pension is paid`
+
+-- src:2363 | Duration of payment
+-- src:2364 | 73 (1) Subject to this Act, a survivor’s pension shall continue to be paid during the lifetime of the beneficiary, and shall cease with the payment for the month in which the beneficiary dies.
+@ref Act s 73(1) (src:2364)
+GIVEN `day the beneficiary died` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 73(1) — the last month for which a survivor's pension is paid on account of the beneficiary's death` `day the beneficiary died` MEANS
+    `cp5 helper -- the month of a date that may be absent` `day the beneficiary died`
+
+-- Subsection 73(2): the date of its coming into force is not in the text; taken as a stated input.
+-- src:2365 | Special case
+-- src:2366 | (2) If
+-- src:2367 | (a) a contributor died on or after January 1, 1998 but before the coming into force of this subsection, and
+-- src:2368 | (b) a survivor’s pension was, immediately before that coming into force, payable to a survivor who had been married to the contributor at the time of the contributor’s death,
+-- src:2369 | the approval of payment of a survivor’s pension, in respect of that contributor’s death, to a survivor who was the contributor’s common-law partner at the time of the contributor’s death and was not a person described in subparagraph (a)(ii) of the definition spouse in subsection 2(1) as that definition read at that time, does not affect the right of the survivor referred to in paragraph (b) to continue to receive the survivor’s pension in accordance with subsection (1).
+@ref Act s 73(2) (src:2366-2369)
+GIVEN `day the contributor died` IS A DATE
+      `day subsection 73(2) came into force` IS A DATE
+      `a survivor's pension was payable immediately before that coming into force to a survivor who had been married to the contributor at the time of the death` IS A BOOLEAN
+      `the survivor to whom approval is given was the contributor's common-law partner at the time of the death and was not a person described in paragraph (a)(ii) of the definition spouse in subsection 2(1) as it read at that time` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 73(2) — the approval of a survivor's pension to the common-law partner does not affect the right of the survivor who had been married to the contributor to continue to receive the survivor's pension` `day the contributor died` `day subsection 73(2) came into force` `a survivor's pension was payable immediately before that coming into force to a survivor who had been married to the contributor at the time of the death` `the survivor to whom approval is given was the contributor's common-law partner at the time of the death and was not a person described in paragraph (a)(ii) of the definition spouse in subsection 2(1) as it read at that time` MEANS
+    IF     (`day the contributor died` AT LEAST (YMD 1998 1 1))
+       AND (`day the contributor died` BELOW `day subsection 73(2) came into force`)
+       AND `a survivor's pension was payable immediately before that coming into force to a survivor who had been married to the contributor at the time of the death`
+       AND `the survivor to whom approval is given was the contributor's common-law partner at the time of the death and was not a person described in paragraph (a)(ii) of the definition spouse in subsection 2(1) as it read at that time`
+    THEN JUST TRUE
+    ELSE NOTHING
+
+-- src:2370 | Cessation of payment
+-- src:2371 | (3) Despite subsection (1), a survivor’s pension shall cease with the payment for the month of the effective date of the approval of a division of unadjusted pensionable earnings between the survivor and the contributor under paragraph 55.1(1)(b) unless, at the time of the contributor’s death, the survivor had been cohabiting with the contributor in a new conjugal relationship for a continuous period of at least one year.
+@ref Act s 73(3) (src:2371)
+-- out of range: paragraph 55.1(1)(b) (piece cp3): the approval of a division of unadjusted pensionable earnings
+-- between the survivor and the contributor. The new conjugal relationship is the cohabitation of section 2(1)
+-- "common-law partner"; its one-year test is the core's.
+GIVEN `a day in the month of the effective date of the approval of a division under paragraph 55.1(1)(b)` IS A MAYBE DATE
+      `the survivor had been cohabiting with the contributor in a new conjugal relationship at the time of the contributor's death` IS A BOOLEAN
+      `day the continuous cohabitation in the new conjugal relationship began` IS A DATE
+      `day the contributor died` IS A DATE
+GIVETH A MAYBE DATE
+`s 73(3) — the last month for which a survivor's pension is paid because of a division of unadjusted pensionable earnings` `a day in the month of the effective date of the approval of a division under paragraph 55.1(1)(b)` `the survivor had been cohabiting with the contributor in a new conjugal relationship at the time of the contributor's death` `day the continuous cohabitation in the new conjugal relationship began` `day the contributor died` MEANS
+    CONSIDER `a day in the month of the effective date of the approval of a division under paragraph 55.1(1)(b)`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST effective THEN
+        IF `s 2(1) — a common-law partner of a contributor at the contributor's death` `the survivor had been cohabiting with the contributor in a new conjugal relationship at the time of the contributor's death` `day the continuous cohabitation in the new conjugal relationship began` `day the contributor died`
+        THEN NOTHING
+        ELSE JUST (`the month of a date` effective)
+
+-- The survivor's pension is paid through the earlier of the two last months.
+@ref Act s 73 (src:2364-2371)
+GIVEN month IS A DATE
+      `first month for which the pension is payable` IS A DATE
+      `day the beneficiary died` IS A MAYBE DATE
+      `a day in the month of the effective date of the approval of a division under paragraph 55.1(1)(b)` IS A MAYBE DATE
+      `the survivor had been cohabiting with the contributor in a new conjugal relationship at the time of the contributor's death` IS A BOOLEAN
+      `day the continuous cohabitation in the new conjugal relationship began` IS A DATE
+      `day the contributor died` IS A DATE
+GIVETH A BOOLEAN
+`s 73 — a survivor's pension is paid for a month` month `first month for which the pension is payable` `day the beneficiary died` `a day in the month of the effective date of the approval of a division under paragraph 55.1(1)(b)` `the survivor had been cohabiting with the contributor in a new conjugal relationship at the time of the contributor's death` `day the continuous cohabitation in the new conjugal relationship began` `day the contributor died` MEANS
+        `the month of a date` month AT LEAST `first month for which the pension is payable`
+    AND (CONSIDER `cp5 helper -- the earliest of the months that apply` (LIST lastByDeath, lastByDivision)
+         WHEN NOTHING THEN TRUE
+         WHEN JUST last THEN `the month of a date` month AT MOST last)
+    WHERE
+        lastByDeath MEANS `s 73(1) — the last month for which a survivor's pension is paid on account of the beneficiary's death` `day the beneficiary died`
+        lastByDivision MEANS `s 73(3) — the last month for which a survivor's pension is paid because of a division of unadjusted pensionable earnings` `a day in the month of the effective date of the approval of a division under paragraph 55.1(1)(b)` `the survivor had been cohabiting with the contributor in a new conjugal relationship at the time of the contributor's death` `day the continuous cohabitation in the new conjugal relationship began` `day the contributor died`

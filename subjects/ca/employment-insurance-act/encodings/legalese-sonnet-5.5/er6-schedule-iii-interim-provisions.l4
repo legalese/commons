@@ -1,0 +1,543 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `eia-core-interpretation`
+IMPORT `er6-part-vii-transitional`
+
+-- Employment Insurance Regulations (SOR/96-332), SCHEDULE III, "Interim Provisions (Section 95)": provisions that applied only from
+-- the coming into force of the Regulations (30 June 1996) until the provisions they stood in place of came into force (1 January and 5 January 1997).
+-- Text: the plain-text rendering of the Justice Laws consolidation current to 2026-09-30 (SOR-96-332.txt, lines 2244-2369);
+-- an unofficial conversion, not verified against the official text.
+--
+-- WHAT THEY ARE. Part I adds a section 6.1 (a very low-earning week is not insurable); Part I.1 replaces section 12 (prescribed weeks);
+-- Part II replaces sections 19 to 21 (the record of employment), 22 to 24 (earnings and weeks counted), 34 (dependants), the Table to
+-- subsection 55(7) and paragraph 93(1)(c). Reg 95(4), (4.1) and (5) say when each applies (er6-part-vii-transitional).
+--
+-- HOW THEY ARE GATED. Every rule here takes a DAY and answers only when the matching period of reg 95 contains it; outside the period
+-- the provision does not operate, which is the law's own answer: FALSE for a yes/no rule, NOTHING for a number or a date (the
+-- ordinary provision, in another piece, governs then). The text does not say which day is tested ("applies ... during the period");
+-- these rules test the day of the fact in question, the week worked or the day the duty arises (fork F-SCHED3-DAY in NOTES.md).
+--
+-- WHAT IS TAKEN AS AN INPUT. The maximum weekly insurable earnings (out of range: the Act's Schedule II item 1, the interim section 4(2),
+-- piece ei6, which gives $750 and names no year); the Income Tax Act's meanings (related persons, spouse; no piece: not among the
+-- inputs); the Act's sections that are named (7(4)(c), 14, 19, 59, 63, 87(3), Parts III and IV) and regs 35 and 36 (pieces ei1, ei2, ei3, er3).
+--
+-- Not a section of the text, but a finding: item 2 "applies in place of sections 19 to 21" and item 3 "in place of sections 22 to 24" set out
+-- only sections 19 and 20, and 22 and 23; there is no interim section 21 or 24. Item 6 replaces "paragraph 93(1)(c)" and sets out a paragraph
+-- (c); the reg 93(1) in the text has only paragraphs (a) and (b) (the hours of paragraph (b) now stand where the interim weeks of (c) stood).
+
+§ `Schedule III -- the nouns of the interim provisions`
+
+-- The pay periods that 6.1(2) and item 3 (s 23) tell apart.
+-- src:2249 | (2) Where the cash earnings of a person for a pay period described in any of the following paragraphs are paid or payable to the person otherwise than in respect of weeks, subsection (1) does not apply to the employment of that person during any such pay period:
+-- src:2250 | (a) a pay period that is a multiple of a week where
+-- src:2251 | (i) the person has cash earnings for each week in the pay period, and the cash earnings for the pay period are equal to or exceed an amount that is a like multiple of the amount of cash earnings referred to in subsection (1), or
+-- src:2252 | (ii) the person is employed in each week in the pay period and the total number of hours of employment in the pay period is equal to or exceeds a number of hours that is a like multiple of 15;
+-- src:2253 | (b) a pay period that is a semi-monthly pay period where
+-- src:2254 | (i) the person has cash earnings for each week or part of a week that falls in the pay period, and the cash earnings for the pay period are equal to or exceed an amount that is 2 1/6 times the amount of cash earnings referred to in subsection (1), or
+-- src:2255 | (ii) the person is employed in each week or part of a week that falls in the pay period, and the total number of hours of employment in the pay period is 33 hours or more;
+-- src:2256 | (c) a pay period that is a monthly pay period where
+-- src:2257 | (i) the person has cash earnings for each week or part of a week that falls in the pay period, and the cash earnings for the pay period are equal to or exceed an amount that is 4 1/3 times the amount of cash earnings referred to in subsection (1), or
+-- src:2258 | (ii) the person is employed in each week or part of a week that falls in the pay period, and the total number of hours of employment in the pay period is 65 hours or more;
+-- src:2259 | (d) a pay period of seven consecutive days that begins on a day other than Sunday, where
+-- src:2260 | (i) the person has cash earnings for the pay period and the cash earnings for the pay period are equal to or exceed 20 per cent of the maximum weekly insurable earnings, or
+-- src:2261 | (ii) the person is employed in the pay period for a total number of hours that is equal to or exceeds 15 hours; or
+-- src:2262 | (e) a pay period that consists of more than one period of seven consecutive days and that begins on a day other than Sunday, where
+-- src:2263 | (i) the person has cash earnings for each period of seven consecutive days in the pay period, and the cash earnings for the pay period are equal to or exceed the product obtained by multiplying the amount of cash earnings referred to in subsection (1) by the number of periods of seven consecutive days in the pay period, or
+-- src:2264 | (ii) the person is employed in each period of seven consecutive days in the pay period and the total number of hours of employment in the pay period is equal to or exceeds the product obtained by multiplying 15 by the number of periods of seven consecutive days in the pay period.
+@ref Employment Insurance Regulations Schedule III Part I s 6.1(2) (src:2249-2264)
+DECLARE `er6 Pay period` IS ONE OF
+    `er6 a multiple of a week` HAS `number of weeks in the pay period` IS A NUMBER
+    `er6 a semi-monthly pay period`
+    `er6 a monthly pay period`
+    `er6 seven consecutive days beginning on a day other than Sunday`
+    `er6 more than one period of seven consecutive days beginning on a day other than Sunday` HAS `number of periods of seven consecutive days in the pay period` IS A NUMBER
+
+-- What the person states about the earnings and hours of one pay period.
+DECLARE `er6 Earnings and hours in a pay period` HAS
+    `cash earnings for the pay period`                                                       IS A NUMBER
+    `total number of hours of employment in the pay period`                                  IS A NUMBER
+    `cash earnings for each week, part of a week or period of seven days in the pay period`  IS A BOOLEAN
+    `employment in each week, part of a week or period of seven days in the pay period`      IS A BOOLEAN
+
+-- Part I.1, s 12(1): the ten ways a week can be a prescribed week.
+-- src:2270 | 12 (1) For the purposes of paragraph 7(4)(c) of the Act, a prescribed week is:
+-- src:2271 | (a) a week in respect of which a claimant has received or will receive
+-- src:2272 | (i) workers’ compensation payments, other than a lump sum or pension paid in full and final settlement of a claim made for workers’ compensation payments,
+-- src:2273 | (ii) under a wage-loss indemnity plan, any earnings by reason of illness, injury, quarantine, pregnancy or care of a child or children referred to in subsection 23(1) of the Act,
+-- src:2274 | (iii) indemnity payments referred to in paragraph 35(2)(f), or
+-- src:2275 | (iv) earnings because of which, pursuant to section 19 of the Act, no benefits are payable to the claimant;
+-- src:2276 | (b) a week in which the claimant was
+-- src:2277 | (i) attending a course or program of instruction or training to which the claimant was referred by the Commission or by an authority designated by the Commission,
+-- src:2278 | (ii) employed under the Self-employment employment benefit or the Job Creation Partnerships employment benefit established by the Commission under section 59 of the Act or under a similar benefit that is provided by a provincial government or other organization and is the subject of an agreement under section 63 of the Act,
+-- src:2279 | (iii) prevented from establishing an interruption of earnings by virtue of the allocation of earnings pursuant to section 36,
+-- src:2280 | (iv) serving a week of the waiting period, or
+-- src:2281 | (v) disqualified; or
+-- src:2282 | (c) a week of unemployment due to a stoppage of work attributable to a labour dispute at the factory, workshop or other premises at which the claimant was employed.
+@ref Employment Insurance Regulations Schedule III Part I.1 s 12(1) (src:2270-2282)
+DECLARE `er6 Facts about a week` HAS
+    `workers’ compensation payments received or to be received, other than a lump sum or pension paid in full and final settlement of a claim`        IS A BOOLEAN   -- (a)(i)
+    `earnings under a wage-loss indemnity plan by reason of illness, injury, quarantine, pregnancy or care of a child received or to be received`        IS A BOOLEAN   -- (a)(ii)
+    `indemnity payments referred to in paragraph 35(2)(f) received or to be received`                                                                   IS A BOOLEAN   -- (a)(iii); out of range: reg 35(2)(f) (piece er3)
+    `earnings because of which, under section 19 of the Act, no benefits are payable received or to be received`                                       IS A BOOLEAN   -- (a)(iv); out of range: s 19 of the Act (piece ei1)
+    `attending a course or program of instruction or training to which the claimant was referred by the Commission or a designated authority`           IS A BOOLEAN   -- (b)(i)
+    `employed under the Self-employment or Job Creation Partnerships employment benefit or a similar benefit under an agreement under section 63`      IS A BOOLEAN   -- (b)(ii); out of range: ss 59 and 63 of the Act (piece ei2)
+    `prevented from establishing an interruption of earnings by the allocation of earnings under section 36`                                            IS A BOOLEAN   -- (b)(iii); out of range: reg 36 (piece er3)
+    `serving a week of the waiting period`                                                                                                              IS A BOOLEAN   -- (b)(iv); out of range: s 13 of the Act, the waiting period (piece ei1)
+    `disqualified`                                                                                                                                      IS A BOOLEAN   -- (b)(v); out of range: ss 6(1) and 30 of the Act, disqualification (pieces ei1, ei2)
+    `a week of unemployment due to a stoppage of work attributable to a labour dispute at the premises at which the claimant was employed`              IS A BOOLEAN   -- (c)
+
+§ `Part I -- section 6.1: a week of very low earnings (applies 30 June to 31 December 1996)`
+
+-- "20 per cent of the maximum weekly insurable earnings": the amount of cash earnings referred to in subsection (1).
+-- src:2248 | 6.1 (1) Subject to subsection (2), the employment with an employer in any week of a person whose cash earnings are less than 20 per cent of the maximum weekly insurable earnings and who is employed for less than 15 hours is excluded from insurable employment.
+@ref Employment Insurance Regulations Schedule III Part I s 6.1(1) (src:2248)
+GIVEN `the maximum weekly insurable earnings` IS A NUMBER   -- out of range: Act Schedule II item 1, interim s 4(2) (piece ei6): $750, no year named
+GIVETH A NUMBER
+`Regs Sch III Part I s 6.1(1) the amount of cash earnings` MEANS (20%) TIMES `the maximum weekly insurable earnings`
+
+-- (2): where the earnings for a pay period "are paid or payable ... otherwise than in respect of weeks", subsection (1) does not apply
+-- to the employment in that pay period if the pay period is one of the five kinds and earns or works enough for it.
+-- src:2249 | (2) Where the cash earnings of a person for a pay period described in any of the following paragraphs are paid or payable to the person otherwise than in respect of weeks, subsection (1) does not apply to the employment of that person during any such pay period:
+-- src:2250 | (a) a pay period that is a multiple of a week where
+-- src:2251 | (i) the person has cash earnings for each week in the pay period, and the cash earnings for the pay period are equal to or exceed an amount that is a like multiple of the amount of cash earnings referred to in subsection (1), or
+-- src:2252 | (ii) the person is employed in each week in the pay period and the total number of hours of employment in the pay period is equal to or exceeds a number of hours that is a like multiple of 15;
+-- src:2253 | (b) a pay period that is a semi-monthly pay period where
+-- src:2254 | (i) the person has cash earnings for each week or part of a week that falls in the pay period, and the cash earnings for the pay period are equal to or exceed an amount that is 2 1/6 times the amount of cash earnings referred to in subsection (1), or
+-- src:2255 | (ii) the person is employed in each week or part of a week that falls in the pay period, and the total number of hours of employment in the pay period is 33 hours or more;
+-- src:2256 | (c) a pay period that is a monthly pay period where
+-- src:2257 | (i) the person has cash earnings for each week or part of a week that falls in the pay period, and the cash earnings for the pay period are equal to or exceed an amount that is 4 1/3 times the amount of cash earnings referred to in subsection (1), or
+-- src:2258 | (ii) the person is employed in each week or part of a week that falls in the pay period, and the total number of hours of employment in the pay period is 65 hours or more;
+-- src:2259 | (d) a pay period of seven consecutive days that begins on a day other than Sunday, where
+-- src:2260 | (i) the person has cash earnings for the pay period and the cash earnings for the pay period are equal to or exceed 20 per cent of the maximum weekly insurable earnings, or
+-- src:2261 | (ii) the person is employed in the pay period for a total number of hours that is equal to or exceeds 15 hours; or
+-- src:2262 | (e) a pay period that consists of more than one period of seven consecutive days and that begins on a day other than Sunday, where
+-- src:2263 | (i) the person has cash earnings for each period of seven consecutive days in the pay period, and the cash earnings for the pay period are equal to or exceed the product obtained by multiplying the amount of cash earnings referred to in subsection (1) by the number of periods of seven consecutive days in the pay period, or
+-- src:2264 | (ii) the person is employed in each period of seven consecutive days in the pay period and the total number of hours of employment in the pay period is equal to or exceeds the product obtained by multiplying 15 by the number of periods of seven consecutive days in the pay period.
+@ref Employment Insurance Regulations Schedule III Part I s 6.1(2) (src:2249-2264)
+GIVEN period IS AN `er6 Pay period`
+      facts IS AN `er6 Earnings and hours in a pay period`
+      `the maximum weekly insurable earnings` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part I s 6.1(2) the cash earnings or the hours reach what is required for the pay period` IF
+    CONSIDER period
+    WHEN `er6 a multiple of a week` n THEN
+            (    facts's `cash earnings for each week, part of a week or period of seven days in the pay period`
+             AND facts's `cash earnings for the pay period` AT LEAST n TIMES `Regs Sch III Part I s 6.1(1) the amount of cash earnings` `the maximum weekly insurable earnings`)   -- (a)(i): a like multiple of the amount
+         OR (    facts's `employment in each week, part of a week or period of seven days in the pay period`
+             AND facts's `total number of hours of employment in the pay period` AT LEAST n TIMES 15)   -- (a)(ii): a like multiple of 15
+    WHEN `er6 a semi-monthly pay period` THEN
+            (    facts's `cash earnings for each week, part of a week or period of seven days in the pay period`
+             AND facts's `cash earnings for the pay period` AT LEAST (2 PLUS (1 DIVIDED BY 6)) TIMES `Regs Sch III Part I s 6.1(1) the amount of cash earnings` `the maximum weekly insurable earnings`)   -- (b)(i): 2 1/6 times
+         OR (    facts's `employment in each week, part of a week or period of seven days in the pay period`
+             AND facts's `total number of hours of employment in the pay period` AT LEAST 33)   -- (b)(ii)
+    WHEN `er6 a monthly pay period` THEN
+            (    facts's `cash earnings for each week, part of a week or period of seven days in the pay period`
+             AND facts's `cash earnings for the pay period` AT LEAST (4 PLUS (1 DIVIDED BY 3)) TIMES `Regs Sch III Part I s 6.1(1) the amount of cash earnings` `the maximum weekly insurable earnings`)   -- (c)(i): 4 1/3 times
+         OR (    facts's `employment in each week, part of a week or period of seven days in the pay period`
+             AND facts's `total number of hours of employment in the pay period` AT LEAST 65)   -- (c)(ii)
+    WHEN `er6 seven consecutive days beginning on a day other than Sunday` THEN
+            facts's `cash earnings for the pay period` AT LEAST `Regs Sch III Part I s 6.1(1) the amount of cash earnings` `the maximum weekly insurable earnings`   -- (d)(i): 20 per cent of the maximum weekly insurable earnings
+         OR facts's `total number of hours of employment in the pay period` AT LEAST 15   -- (d)(ii)
+    WHEN `er6 more than one period of seven consecutive days beginning on a day other than Sunday` n THEN
+            (    facts's `cash earnings for each week, part of a week or period of seven days in the pay period`
+             AND facts's `cash earnings for the pay period` AT LEAST `Regs Sch III Part I s 6.1(1) the amount of cash earnings` `the maximum weekly insurable earnings` TIMES n)   -- (e)(i): the amount times the number of periods
+         OR (    facts's `employment in each week, part of a week or period of seven days in the pay period`
+             AND facts's `total number of hours of employment in the pay period` AT LEAST 15 TIMES n)   -- (e)(ii)
+
+-- src:2248 | 6.1 (1) Subject to subsection (2), the employment with an employer in any week of a person whose cash earnings are less than 20 per cent of the maximum weekly insurable earnings and who is employed for less than 15 hours is excluded from insurable employment.
+@ref Employment Insurance Regulations Schedule III Part I s 6.1(1) (src:2248)
+GIVEN day IS A DATE   -- a day in the week
+      `the person’s cash earnings in the week` IS A NUMBER
+      `the number of hours the person is employed in the week` IS A NUMBER
+      `the maximum weekly insurable earnings` IS A NUMBER
+      `subsection (2) says that subsection (1) does not apply to the pay period` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part I s 6.1(1) the employment in the week is excluded from insurable employment` IF
+        `reg 95(4) the provision set out in Part I of Schedule III applies on the day` day
+    AND `the person’s cash earnings in the week` LESS THAN `Regs Sch III Part I s 6.1(1) the amount of cash earnings` `the maximum weekly insurable earnings`
+    AND `the number of hours the person is employed in the week` LESS THAN 15
+    AND NOT (`subsection (2) says that subsection (1) does not apply to the pay period`)
+
+§ `Part I.1 -- section 12: prescribed weeks (applies 12 September to 31 December 1996)`
+
+-- src:2270 | 12 (1) For the purposes of paragraph 7(4)(c) of the Act, a prescribed week is:
+-- src:2271 | (a) a week in respect of which a claimant has received or will receive
+-- src:2272 | (i) workers’ compensation payments, other than a lump sum or pension paid in full and final settlement of a claim made for workers’ compensation payments,
+-- src:2273 | (ii) under a wage-loss indemnity plan, any earnings by reason of illness, injury, quarantine, pregnancy or care of a child or children referred to in subsection 23(1) of the Act,
+-- src:2274 | (iii) indemnity payments referred to in paragraph 35(2)(f), or
+-- src:2275 | (iv) earnings because of which, pursuant to section 19 of the Act, no benefits are payable to the claimant;
+-- src:2276 | (b) a week in which the claimant was
+-- src:2277 | (i) attending a course or program of instruction or training to which the claimant was referred by the Commission or by an authority designated by the Commission,
+-- src:2278 | (ii) employed under the Self-employment employment benefit or the Job Creation Partnerships employment benefit established by the Commission under section 59 of the Act or under a similar benefit that is provided by a provincial government or other organization and is the subject of an agreement under section 63 of the Act,
+-- src:2279 | (iii) prevented from establishing an interruption of earnings by virtue of the allocation of earnings pursuant to section 36,
+-- src:2280 | (iv) serving a week of the waiting period, or
+-- src:2281 | (v) disqualified; or
+-- src:2282 | (c) a week of unemployment due to a stoppage of work attributable to a labour dispute at the factory, workshop or other premises at which the claimant was employed.
+@ref Employment Insurance Regulations Schedule III Part I.1 s 12(1) (src:2270-2282)
+GIVEN day IS A DATE   -- a day in the week
+      facts IS AN `er6 Facts about a week`
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part I.1 s 12(1) the week is a prescribed week for the purposes of paragraph 7(4)(c) of the Act` IF
+        `reg 95(4.1) the provision set out in Part I.1 of Schedule III applies in place of section 12 on the day` day
+    AND (   facts's `workers’ compensation payments received or to be received, other than a lump sum or pension paid in full and final settlement of a claim`   -- (a)(i)
+         OR facts's `earnings under a wage-loss indemnity plan by reason of illness, injury, quarantine, pregnancy or care of a child received or to be received`   -- (a)(ii)
+         OR facts's `indemnity payments referred to in paragraph 35(2)(f) received or to be received`   -- (a)(iii)
+         OR facts's `earnings because of which, under section 19 of the Act, no benefits are payable received or to be received`   -- (a)(iv)
+         OR facts's `attending a course or program of instruction or training to which the claimant was referred by the Commission or a designated authority`   -- (b)(i)
+         OR facts's `employed under the Self-employment or Job Creation Partnerships employment benefit or a similar benefit under an agreement under section 63`   -- (b)(ii)
+         OR facts's `prevented from establishing an interruption of earnings by the allocation of earnings under section 36`   -- (b)(iii)
+         OR facts's `serving a week of the waiting period`   -- (b)(iv)
+         OR facts's `disqualified`   -- (b)(v)
+         OR facts's `a week of unemployment due to a stoppage of work attributable to a labour dispute at the premises at which the claimant was employed`)   -- (c)
+
+-- (2): "where a week is taken into account under any paragraph or subparagraph of that subsection, that week may not be taken into account under any other":
+-- the weeks are counted, not the paragraphs, so a week that meets two of them counts once.
+-- src:2283 | (2) For the purposes of subsection (1), where a week is taken into account under any paragraph or subparagraph of that subsection, that week may not be taken into account under any other paragraph or subparagraph of that subsection.
+@ref Employment Insurance Regulations Schedule III Part I.1 s 12(2) (src:2283)
+GIVEN day IS A DATE
+      weeks IS A LIST OF `er6 Facts about a week`
+GIVETH A NUMBER
+DECIDE `Regs Sch III Part I.1 s 12(2) the number of prescribed weeks, each week taken into account once` IS
+    count (filter (GIVEN w YIELD `Regs Sch III Part I.1 s 12(1) the week is a prescribed week for the purposes of paragraph 7(4)(c) of the Act` day w) weeks)
+
+§ `Part II item 2 -- sections 19 and 20: the record of employment (applies 30 June to 31 December 1996)`
+
+-- 19(1): "Every employer who employs a person in insurable employment shall, if that person has an interruption of earnings, complete a
+-- record of employment in quadruplicate ... on a form supplied by the Commission." The duty is the employer's; the right to the record is the insured person's.
+-- src:2289 | 19 (1) Every employer who employs a person in insurable employment shall, if that person has an interruption of earnings, complete a record of employment in quadruplicate with respect to that person on a form supplied by the Commission.
+@ref Employment Insurance Regulations Schedule III Part II s 19(1) (src:2289)
+GIVEN day IS A DATE   -- the first day of the interruption of earnings
+      `the employer employs the person in insurable employment` IS A BOOLEAN   -- the core's s 5 (keel)
+      `the person has an interruption of earnings` IS A BOOLEAN   -- out of range: reg 14 (piece er1)
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II s 19(1) the employer must complete a record of employment` IF
+        `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 19 to 21 on the day` day
+    AND `the employer employs the person in insurable employment`
+    AND `the person has an interruption of earnings`
+
+@ref Employment Insurance Regulations Schedule III Part II s 19(1) (src:2289)
+`Regs Sch III Part II s 19(1) the number of copies of the record of employment` MEANS 4   -- "in quadruplicate"
+
+-- 19(2)(a) and (b): the employee's copies are delivered or mailed to the insured person, and the Commission's copy is mailed, "not later than five days
+-- after the later of (i) the first day of the interruption of earnings, and (ii) the day on which the employer becomes aware of the interruption of earnings".
+-- src:2290 | (2) Subject to subsection (3), copies of the record of employment completed pursuant to subsection (1) shall be distributed in the following manner:
+-- src:2291 | (a) the copies marked “Employee’s copy: Part 1” and “Employee’s copy: Part 2” shall be delivered or mailed to the insured person not later than five days after the later of
+-- src:2292 | (i) the first day of the interruption of earnings, and
+-- src:2293 | (ii) the day on which the employer becomes aware of the interruption of earnings;
+-- src:2294 | (b) the copy marked “Commission’s copy” shall be mailed to the Commission within the time limit set out in paragraph (a); and
+@ref Employment Insurance Regulations Schedule III Part II s 19(2)(a) and (b) (src:2290-2294)
+GIVEN `the first day of the interruption of earnings` IS A DATE
+      `the day on which the employer becomes aware of the interruption of earnings` IS A DATE
+GIVETH A MAYBE DATE
+DECIDE `Regs Sch III Part II s 19(2) the last day for delivering or mailing the copies of the record of employment` IS
+    IF `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 19 to 21 on the day` `the first day of the interruption of earnings`
+    THEN JUST (`the last day of` 5 `days after`
+                (IF `the first day of the interruption of earnings` AT LEAST `the day on which the employer becomes aware of the interruption of earnings`
+                 THEN `the first day of the interruption of earnings`
+                 ELSE `the day on which the employer becomes aware of the interruption of earnings`))
+    ELSE NOTHING
+
+-- 19(2)(c): the employer's copy "shall be kept and retained as a part of the employer's records and books of account in accordance with subsection 87(3) of the Act"
+-- (out of range: s 87(3) of the Act, piece ei3, says how long; the duty here carries no date of its own).
+-- src:2295 | (c) the copy marked “Employer’s copy” shall be kept and retained as a part of the employer’s records and books of account in accordance with subsection 87(3) of the Act.
+@ref Employment Insurance Regulations Schedule III Part II s 19(2)(c) (src:2295)
+GIVEN day IS A DATE
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II s 19(2)(c) the employer must keep the employer’s copy with its records and books of account` IF
+    `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 19 to 21 on the day` day
+
+-- 19(3): "If, for reasons beyond the employer's control, the employer is unable to deliver or mail the [employee's] copies ... within the time limit
+-- set out in paragraph (2)(a), the employer shall retain them until (a) such time as they are requested by the Commission or insured person, or
+-- (b) 52 weeks after the time limit set out in paragraph (2)(a), whichever is earlier."
+-- src:2296 | (3) If, for reasons beyond the employer’s control, the employer is unable to deliver or mail the copies marked “Employee’s copy: Part 1” and “Employee’s copy: Part 2” of the completed record of employment to the insured person within the time limit set out in paragraph (2)(a), the employer shall retain them until
+-- src:2297 | (a) such time as they are requested by the Commission or insured person, or
+-- src:2298 | (b) 52 weeks after the time limit set out in paragraph (2)(a),
+-- src:2299 | whichever is earlier.
+@ref Employment Insurance Regulations Schedule III Part II s 19(3) (src:2296-2299)
+GIVEN `the last day of the time limit set out in paragraph (2)(a)` IS A DATE
+      `the day on which the Commission or the insured person requests the copies` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+DECIDE `Regs Sch III Part II s 19(3) the day until which the employer retains the employee’s copies` IS
+    IF NOT (`reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 19 to 21 on the day` `the last day of the time limit set out in paragraph (2)(a)`)
+    THEN NOTHING
+    ELSE JUST (CONSIDER `the day on which the Commission or the insured person requests the copies`
+               WHEN NOTHING THEN `the end of the 52 weeks`
+               WHEN JUST requested THEN
+                   IF requested AT MOST `the end of the 52 weeks` THEN requested ELSE `the end of the 52 weeks`)
+    WHERE
+        `the end of the 52 weeks` MEANS `the last day of the time limit set out in paragraph (2)(a)` PLUS (`weeks as days` 52)
+
+-- 19(4): the weeks and earnings reported are those "as determined and allocated pursuant to Parts III and IV of the Act and any regulations made under those Parts,
+-- but sections 35 and 36 of these Regulations shall not apply in respect of any such determination".
+-- src:2300 | (4) The number of weeks of insurable employment and insurable earnings reported in a record of employment with respect to an insured person shall be as determined and allocated pursuant to Parts III and IV of the Act and any regulations made under those Parts, but sections 35 and 36 of these Regulations shall not apply in respect of any such determination.
+@ref Employment Insurance Regulations Schedule III Part II s 19(4) (src:2300)
+GIVEN day IS A DATE
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II s 19(4) sections 35 and 36 of these Regulations do not apply to the determination of the weeks and earnings reported in a record of employment` IF
+    `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 19 to 21 on the day` day
+
+-- 19(5): "Where the earnings of a claimant for a pay period that is current when the claimant has a lay-off or separation from employment cannot be ascertained
+-- with accuracy, the employer may estimate the earnings for that period."
+-- src:2301 | (5) Where the earnings of a claimant for a pay period that is current when the claimant has a lay-off or separation from employment cannot be ascertained with accuracy, the employer may estimate the earnings for that period.
+@ref Employment Insurance Regulations Schedule III Part II s 19(5) (src:2301)
+GIVEN day IS A DATE
+      `the pay period is current when the claimant has a lay-off or separation from employment` IS A BOOLEAN
+      `the earnings for that pay period cannot be ascertained with accuracy` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II s 19(5) the employer may estimate the earnings for the pay period` IF
+        `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 19 to 21 on the day` day
+    AND `the pay period is current when the claimant has a lay-off or separation from employment`
+    AND `the earnings for that pay period cannot be ascertained with accuracy`
+
+-- 20(1): the claimant's power to give a statement in place of the record.
+-- src:2302 | 20 (1) Where an employer has failed to deliver a record of employment to an insured person or the Commission pursuant to section 19 or the employer is not available or is unable to provide information respecting the employment history and insurable earnings of a claimant because the employer’s records are destroyed or lost, a claimant may provide a statement containing evidence of their employment history and insurable earnings.
+@ref Employment Insurance Regulations Schedule III Part II s 20(1) (src:2302)
+GIVEN day IS A DATE
+      `the employer has failed to deliver a record of employment to the insured person or the Commission under section 19` IS A BOOLEAN
+      `the employer is not available or is unable to provide the information because its records are destroyed or lost` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II s 20(1) the claimant may provide a statement containing evidence of their employment history and insurable earnings` IF
+        `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 19 to 21 on the day` day
+    AND (   `the employer has failed to deliver a record of employment to the insured person or the Commission under section 19`
+         OR `the employer is not available or is unable to provide the information because its records are destroyed or lost`)
+
+-- 20(2): "All the weeks of insurable employment reported in a record of employment shall be determined to have occurred consecutively and to be weeks that
+-- immediately preceded and included the week in which the lay-off or separation occurred." So n weeks end with the week of the lay-off: the first of them begins 7 (n - 1) days before it.
+-- src:2303 | (2) All the weeks of insurable employment reported in a record of employment shall be determined to have occurred consecutively and to be weeks that immediately preceded and included the week in which the lay-off or separation occurred.
+@ref Employment Insurance Regulations Schedule III Part II s 20(2) (src:2303)
+GIVEN day IS A DATE
+      `the Sunday that begins the week in which the lay-off or separation occurred` IS A DATE
+      `the number of weeks of insurable employment reported` IS A NUMBER
+GIVETH A MAYBE DATE
+DECIDE `Regs Sch III Part II s 20(2) the Sunday that begins the first of the weeks of insurable employment` IS
+    IF `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 19 to 21 on the day` day
+    THEN JUST (`the Sunday that begins the week in which the lay-off or separation occurred` MINUS (`weeks as days` (`the number of weeks of insurable employment reported` MINUS 1)))
+    ELSE NOTHING
+
+-- 20(3): "Notwithstanding subsection 19(4) and section 23, for the purposes of Part I of the Act, the number of weeks of insurable employment in any one employment
+-- period of a claimant shall not be greater than the number of weeks or part weeks that falls within that employment period."
+-- src:2304 | (3) Notwithstanding subsection 19(4) and section 23, for the purposes of Part I of the Act, the number of weeks of insurable employment in any one employment period of a claimant shall not be greater than the number of weeks or part weeks that falls within that employment period.
+@ref Employment Insurance Regulations Schedule III Part II s 20(3) (src:2304)
+GIVEN day IS A DATE
+      `the number of weeks of insurable employment reported in the employment period` IS A NUMBER
+      `the number of weeks or part weeks that fall within the employment period` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `Regs Sch III Part II s 20(3) the number of weeks of insurable employment in the employment period` IS
+    IF `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 19 to 21 on the day` day
+    THEN JUST (IF `the number of weeks of insurable employment reported in the employment period` AT MOST `the number of weeks or part weeks that fall within the employment period`
+               THEN `the number of weeks of insurable employment reported in the employment period`
+               ELSE `the number of weeks or part weeks that fall within the employment period`)
+    ELSE NOTHING
+
+-- 20(4): "Where a bankrupt employer or the trustee of the bankrupt employer has not provided the Commission with a record of employment for an insured person, the
+-- Commission may, in respect of that person, determine the number of insurable weeks and the amount of insurable earnings for benefit purposes on the basis of the payroll and
+-- personnel records of the bankrupt employer provided to the Commission by the trustee." What this means for the person: the Commission may rely on the trustee's records.
+-- src:2305 | (4) Where a bankrupt employer or the trustee of the bankrupt employer has not provided the Commission with a record of employment for an insured person, the Commission may, in respect of that person, determine the number of insurable weeks and the amount of insurable earnings for benefit purposes on the basis of the payroll and personnel records of the bankrupt employer provided to the Commission by the trustee.
+@ref Employment Insurance Regulations Schedule III Part II s 20(4) (src:2305)
+GIVEN day IS A DATE
+      `the employer is bankrupt` IS A BOOLEAN
+      `neither the employer nor its trustee has provided the Commission with a record of employment for the insured person` IS A BOOLEAN
+      `the trustee has provided the Commission with the payroll and personnel records of the bankrupt employer` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II s 20(4) the Commission may determine the insurable weeks and insurable earnings from the trustee’s payroll and personnel records` IF
+        `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 19 to 21 on the day` day
+    AND `the employer is bankrupt`
+    AND `neither the employer nor its trustee has provided the Commission with a record of employment for the insured person`
+    AND `the trustee has provided the Commission with the payroll and personnel records of the bankrupt employer`
+
+§ `Part II item 3 -- sections 22 and 23: earnings and weeks counted (applies 30 June 1996 to 4 January 1997)`
+
+-- src:2307 | 22 The earnings to be taken into account for the purpose of determining the average weekly insurable earnings for the purposes of section 14 of the Act as set out in section 6 of Schedule II to the Act are those earnings for which a premium was payable.
+@ref Employment Insurance Regulations Schedule III Part II s 22 (src:2307)
+GIVEN day IS A DATE
+      `a premium was payable on the earnings` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II s 22 the earnings are taken into account in determining the average weekly insurable earnings` IF
+        `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 22 to 24 and 34, the Table to subsection 55(7) and paragraph 93(1)(c) on the day` day
+    AND `a premium was payable on the earnings`
+
+-- s 23: where the earnings were paid or payable in the qualifying period "for a period otherwise than in respect of weeks (hereinafter called the 'pay period')",
+-- the weeks taken as weeks of insurable employment in an employment period equal (a) the number of pay periods, for a pay period of seven consecutive days beginning on a day other than
+-- Sunday that earns 20 per cent of the maximum weekly insurable earnings or has 15 hours, and (b) the number of periods of seven days, for a longer such pay period that earns that amount, or has that many hours, for each.
+-- src:2308 | 23 For the purposes of Part I of the Act, where a claimant’s earnings were paid or payable in the qualifying period for a period otherwise than in respect of weeks (hereinafter called the “pay period”), the number of weeks that are to be taken as weeks of insurable employment in any one employment period shall
+-- src:2309 | (a) where the pay period consists of seven consecutive days and begins on a day other than Sunday and
+-- src:2310 | (i) the claimant has cash earnings for each pay period and the cash earnings for the pay period are equal to or exceed 20 per cent of the maximum weekly insurable earnings, or
+-- src:2311 | (ii) the claimant is employed in each pay period for a total number of hours that is equal to or exceeds 15 hours,
+-- src:2312 | be equal to the number of pay periods; and
+-- src:2313 | (b) where the pay period consists of more than one period of seven consecutive days and begins on a day other than Sunday and
+-- src:2314 | (i) the claimant has cash earnings for each period of seven consecutive days in the pay period, and the cash earnings for the pay period are equal to or exceed the product obtained by multiplying the amount of cash earnings referred to in paragraph (a) by the number of periods of seven consecutive days in the pay period, or
+-- src:2315 | (ii) the claimant is employed in each period of seven consecutive days in the pay period, and the total number of hours of employment in the pay period is equal to or exceeds the product obtained by multiplying 15 by the number of periods of seven consecutive days in the pay period,
+-- src:2316 | be equal to the number of periods of seven consecutive days in the pay period.
+@ref Employment Insurance Regulations Schedule III Part II s 23 (src:2308-2316)
+GIVEN day IS A DATE
+      period IS AN `er6 Pay period`
+      facts IS AN `er6 Earnings and hours in a pay period`
+      `the number of pay periods` IS A NUMBER
+      `the maximum weekly insurable earnings` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `Regs Sch III Part II s 23 the number of weeks that are to be taken as weeks of insurable employment` IS
+    IF NOT (`reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 22 to 24 and 34, the Table to subsection 55(7) and paragraph 93(1)(c) on the day` day)
+    THEN NOTHING
+    ELSE CONSIDER period
+         WHEN `er6 seven consecutive days beginning on a day other than Sunday` THEN
+             IF    (    facts's `cash earnings for each week, part of a week or period of seven days in the pay period`
+                    AND facts's `cash earnings for the pay period` AT LEAST `Regs Sch III Part I s 6.1(1) the amount of cash earnings` `the maximum weekly insurable earnings`)   -- (a)(i)
+                OR (    facts's `employment in each week, part of a week or period of seven days in the pay period`
+                    AND facts's `total number of hours of employment in the pay period` AT LEAST 15)   -- (a)(ii)
+             THEN JUST `the number of pay periods`
+             ELSE NOTHING
+         WHEN `er6 more than one period of seven consecutive days beginning on a day other than Sunday` n THEN
+             IF    (    facts's `cash earnings for each week, part of a week or period of seven days in the pay period`
+                    AND facts's `cash earnings for the pay period` AT LEAST `Regs Sch III Part I s 6.1(1) the amount of cash earnings` `the maximum weekly insurable earnings` TIMES n)   -- (b)(i)
+                OR (    facts's `employment in each week, part of a week or period of seven days in the pay period`
+                    AND facts's `total number of hours of employment in the pay period` AT LEAST 15 TIMES n)   -- (b)(ii)
+             THEN JUST n
+             ELSE NOTHING
+         OTHERWISE NOTHING
+
+§ `Part II item 4 -- section 34: dependants (applies 30 June 1996 to 4 January 1997)`
+
+-- src:2318 | 34 (1) A dependant of a claimant or of the spouse of a claimant is a person who is related to the claimant or the spouse in the manner described in subsection 251(6) of the Income Tax Act.
+@ref Employment Insurance Regulations Schedule III Part II s 34(1) (src:2318)
+GIVEN day IS A DATE
+      `is related to the claimant or the spouse in the manner described in subsection 251(6) of the Income Tax Act` IS A BOOLEAN   -- out of range: the Income Tax Act (no piece: not among the inputs)
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II s 34(1) the person is a dependant of the claimant or of the spouse of the claimant` IF
+        `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 22 to 24 and 34, the Table to subsection 55(7) and paragraph 93(1)(c) on the day` day
+    AND `is related to the claimant or the spouse in the manner described in subsection 251(6) of the Income Tax Act`
+
+-- src:2319 | (2) The spouse of a claimant is the person who is married to the claimant, and includes a person described in subsection 252(4) of the Income Tax Act.
+@ref Employment Insurance Regulations Schedule III Part II s 34(2) (src:2319)
+GIVEN day IS A DATE
+      `is married to the claimant` IS A BOOLEAN
+      `is a person described in subsection 252(4) of the Income Tax Act` IS A BOOLEAN   -- out of range: the Income Tax Act (no piece: not among the inputs)
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II s 34(2) the person is the spouse of the claimant` IF
+        `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 22 to 24 and 34, the Table to subsection 55(7) and paragraph 93(1)(c) on the day` day
+    AND (`is married to the claimant` OR `is a person described in subsection 252(4) of the Income Tax Act`)
+
+-- src:2320 | (3) For the purposes of paragraph 14(1)(b) of the Act as set out in section 6 of Schedule II to the Act, the following circumstances are prescribed as circumstances which must exist in relation to one or more dependants of a claimant or of the spouse of the claimant:
+-- src:2321 | (a) a child tax benefit as provided for in section 122.61 of the Income Tax Act is payable to either the claimant or the spouse during the month in which the claimant makes a claim for the benefit rate prescribed by paragraph 14(1)(b) of the Act as set out in section 6 of Schedule II to the Act; or
+-- src:2322 | (b) the claimant or the spouse provides support to a dependant of the claimant or of the spouse of the claimant.
+@ref Employment Insurance Regulations Schedule III Part II s 34(3) (src:2320-2322)
+GIVEN day IS A DATE
+      `a child tax benefit under section 122.61 of the Income Tax Act is payable to the claimant or the spouse during the month in which the claimant makes a claim for the benefit rate` IS A BOOLEAN
+      `the claimant or the spouse provides support to a dependant of the claimant or of the spouse` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II s 34(3) the circumstances prescribed for paragraph 14(1)(b) of the Act exist` IF
+        `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 22 to 24 and 34, the Table to subsection 55(7) and paragraph 93(1)(c) on the day` day
+    AND (   `a child tax benefit under section 122.61 of the Income Tax Act is payable to the claimant or the spouse during the month in which the claimant makes a claim for the benefit rate`   -- (a)
+         OR `the claimant or the spouse provides support to a dependant of the claimant or of the spouse`)   -- (b)
+
+§ `Part II item 5 -- the Table to subsection 55(7) (applies 30 June 1996 to 4 January 1997)`
+
+-- Column I, the number of weeks of insurable employment (whole weeks, 12 to 52), against Column II, the number of weeks of benefits.
+-- A number of weeks below 12 or above 52, or with a fraction, is not in the Table: NOTHING.
+-- src:2323 | 5 The following applies in place of the table to subsection 55(7):
+-- src:2324 | TABLE
+-- src:2325 | Column I | Column II
+-- src:2326 | Number of Weeks of Insurable Employment | Number of Weeks of Benefits
+-- src:2327 | 12 | 10
+-- src:2328 | 13 | 10
+-- src:2329 | 14 | 11
+-- src:2330 | 15 | 11
+-- src:2331 | 16 | 12
+-- src:2332 | 17 | 12
+-- src:2333 | 18 | 13
+-- src:2334 | 19 | 13
+-- src:2335 | 20 | 14
+-- src:2336 | 21 | 14
+-- src:2337 | 22 | 15
+-- src:2338 | 23 | 15
+-- src:2339 | 24 | 16
+-- src:2340 | 25 | 16
+-- src:2341 | 26 | 17
+-- src:2342 | 27 | 17
+-- src:2343 | 28 | 18
+-- src:2344 | 29 | 18
+-- src:2345 | 30 | 19
+-- src:2346 | 31 | 19
+-- src:2347 | 32 | 20
+-- src:2348 | 33 | 20
+-- src:2349 | 34 | 21
+-- src:2350 | 35 | 21
+-- src:2351 | 36 | 22
+-- src:2352 | 37 | 22
+-- src:2353 | 38 | 23
+-- src:2354 | 39 | 23
+-- src:2355 | 40 | 24
+-- src:2356 | 41 | 25
+-- src:2357 | 42 | 26
+-- src:2358 | 43 | 27
+-- src:2359 | 44 | 28
+-- src:2360 | 45 | 29
+-- src:2361 | 46 | 30
+-- src:2362 | 47 | 31
+-- src:2363 | 48 | 32
+-- src:2364 | 49 | 33
+-- src:2365 | 50 | 34
+-- src:2366 | 51 | 35
+-- src:2367 | 52 | 36
+@ref Employment Insurance Regulations Schedule III Part II item 5, Table to subsection 55(7) (src:2323-2367)
+GIVEN day IS A DATE
+      weeks IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `Regs Sch III Part II item 5 the number of weeks of benefits for the number of weeks of insurable employment` IS
+    IF NOT (`reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 22 to 24 and 34, the Table to subsection 55(7) and paragraph 93(1)(c) on the day` day)
+    THEN NOTHING
+    ELSE CONSIDER weeks
+         WHEN 12 THEN JUST 10   -- line 2327
+         WHEN 13 THEN JUST 10   -- line 2328
+         WHEN 14 THEN JUST 11   -- line 2329
+         WHEN 15 THEN JUST 11   -- line 2330
+         WHEN 16 THEN JUST 12   -- line 2331
+         WHEN 17 THEN JUST 12   -- line 2332
+         WHEN 18 THEN JUST 13   -- line 2333
+         WHEN 19 THEN JUST 13   -- line 2334
+         WHEN 20 THEN JUST 14   -- line 2335
+         WHEN 21 THEN JUST 14   -- line 2336
+         WHEN 22 THEN JUST 15   -- line 2337
+         WHEN 23 THEN JUST 15   -- line 2338
+         WHEN 24 THEN JUST 16   -- line 2339
+         WHEN 25 THEN JUST 16   -- line 2340
+         WHEN 26 THEN JUST 17   -- line 2341
+         WHEN 27 THEN JUST 17   -- line 2342
+         WHEN 28 THEN JUST 18   -- line 2343
+         WHEN 29 THEN JUST 18   -- line 2344
+         WHEN 30 THEN JUST 19   -- line 2345
+         WHEN 31 THEN JUST 19   -- line 2346
+         WHEN 32 THEN JUST 20   -- line 2347
+         WHEN 33 THEN JUST 20   -- line 2348
+         WHEN 34 THEN JUST 21   -- line 2349
+         WHEN 35 THEN JUST 21   -- line 2350
+         WHEN 36 THEN JUST 22   -- line 2351
+         WHEN 37 THEN JUST 22   -- line 2352
+         WHEN 38 THEN JUST 23   -- line 2353
+         WHEN 39 THEN JUST 23   -- line 2354
+         WHEN 40 THEN JUST 24   -- line 2355
+         WHEN 41 THEN JUST 25   -- line 2356
+         WHEN 42 THEN JUST 26   -- line 2357
+         WHEN 43 THEN JUST 27   -- line 2358
+         WHEN 44 THEN JUST 28   -- line 2359
+         WHEN 45 THEN JUST 29   -- line 2360
+         WHEN 46 THEN JUST 30   -- line 2361
+         WHEN 47 THEN JUST 31   -- line 2362
+         WHEN 48 THEN JUST 32   -- line 2363
+         WHEN 49 THEN JUST 33   -- line 2364
+         WHEN 50 THEN JUST 34   -- line 2365
+         WHEN 51 THEN JUST 35   -- line 2366
+         WHEN 52 THEN JUST 36   -- line 2367
+         OTHERWISE NOTHING
+
+§ `Part II item 6 -- paragraph 93(1)(c): weeks instead of hours (applies 30 June 1996 to 4 January 1997)`
+
+-- src:2368 | 6 The following applies in place of paragraph 93(1)(c):
+-- src:2369 | (c) has had 20 or more weeks of insurable employment in their qualifying period.
+@ref Employment Insurance Regulations Schedule III Part II item 6, paragraph 93(1)(c) (src:2368-2369)
+GIVEN day IS A DATE
+      `weeks of insurable employment in the qualifying period` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `Regs Sch III Part II item 6 paragraph 93(1)(c) the insured person has had 20 or more weeks of insurable employment in the qualifying period` IF
+        `reg 95(5) the provisions set out in Part II of Schedule III apply in place of sections 22 to 24 and 34, the Table to subsection 55(7) and paragraph 93(1)(c) on the day` day
+    AND `weeks of insurable employment in the qualifying period` AT LEAST 20

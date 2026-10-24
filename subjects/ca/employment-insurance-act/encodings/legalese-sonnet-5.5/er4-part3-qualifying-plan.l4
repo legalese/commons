@@ -1,0 +1,163 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `er4-nouns`
+
+-- Employment Insurance Regulations (SOR/96-332), PART III, "Standards", reg 67: the formal written commitment, the
+-- qualifying plan, the day a plan is considered to become or cease to be one, and the months of the year to which a
+-- reduction applies. Layer 1 (the law, objectively), piece er4. Unofficial plain-text rendering; nothing here is
+-- "verified against the official text". No section GIVEN: every rule has its own GIVEN.
+--
+-- Whether a plan MEETS the requirements of reg 63, 64, 65 or 66 is decided by the modules for those regs; here it is
+-- a BOOLEAN input per plan, so that this module does not depend on which of the four regs the plan falls under.
+-- The effective date of a reduction (reg 71, module er4-part3-application) is a DATE input of reg 67(2).
+
+§ `Regulation 67(1) -- the formal written commitment`
+
+-- "including one or a combination of any of the following": the list is open (fork F11), so a form not on it that is
+-- still a formal written commitment counts; a board of directors' resolution counts only when it "has been implemented".
+-- src:1109 | 67 (1) A plan that meets the requirements of section 63, 64, 65 or 66 shall be evidenced by a formal written commitment, including one or a combination of any of the following:
+-- src:1110 | (a) a union or association agreement;
+-- src:1111 | (b) an industry-wide plan;
+-- src:1112 | (c) a private carrier insurance policy;
+-- src:1113 | (d) an undertaking contained in an employees' handbook;
+-- src:1114 | (e) a board of directors' resolution that has been implemented;
+-- src:1115 | (f) an undertaking contained in a personnel policy bulletin; or
+-- src:1116 | (g) a memorandum or other document addressed to employees by their employer.
+@ref Employment Insurance Regulations reg 67(1) (src:1109-1116)
+DECLARE `er4 Form of formal written commitment` IS ONE OF
+    `er4 a union or association agreement`
+    `er4 an industry-wide plan`
+    `er4 a private carrier insurance policy`
+    `er4 an undertaking contained in an employees' handbook`
+    `er4 a board of directors' resolution`
+        HAS `er4 the resolution has been implemented` IS A BOOLEAN
+    `er4 an undertaking contained in a personnel policy bulletin`
+    `er4 a memorandum or other document addressed to employees by their employer`
+    `er4 another formal written commitment`
+
+@ref Employment Insurance Regulations reg 67(1) (src:1109-1116)
+GIVEN form IS A `er4 Form of formal written commitment`
+GIVETH A BOOLEAN
+DECIDE `reg 67(1) the form is a formal written commitment` form IF
+    CONSIDER form
+    WHEN `er4 a board of directors' resolution` implemented THEN implemented
+    OTHERWISE TRUE
+
+@ref Employment Insurance Regulations reg 67(1) (src:1109-1116)
+GIVEN forms IS A LIST OF `er4 Form of formal written commitment`
+GIVETH A BOOLEAN
+DECIDE `reg 67(1) the plan is evidenced by a formal written commitment` forms IF
+    any `reg 67(1) the form is a formal written commitment` forms
+
+§ `Regulation 67(4) -- when a plan is considered to become or cease to be a qualifying plan`
+
+-- (declared before (2), (3) and (5), which use it)
+-- src:1119 | (4) For the purpose of determining when a plan becomes or ceases to be a qualifying plan under this Part, where the plan becomes or ceases to be a qualifying plan
+-- src:1120 | (a) on or before the 15th day of a month, it shall be considered to have done so on the first day of that month; and
+-- src:1121 | (b) after the 15th day of a month, it shall be considered to have done so on the first day of the following month.
+@ref Employment Insurance Regulations reg 67(4) (src:1119-1121)
+GIVEN d IS A DATE
+GIVETH A DATE
+`reg 67(4) the day on which a plan is considered to become or cease to be a qualifying plan` MEANS
+    BRANCH IF DATE_DAY d AT MOST 15 THEN YMD (DATE_YEAR d) (DATE_MONTH d) 1
+           OTHERWISE `add months` (YMD (DATE_YEAR d) (DATE_MONTH d) 1) 1
+
+§ `Regulation 67(5) -- plans of section 65 or 66 credited with days of paid sick leave`
+
+-- src:1122 | (5) A plan referred to in section 65 or 66 is considered to be a qualifying plan as of the date an application is made for a reduction of the employer's premium or the date it becomes a qualifying plan under subsection (4), whichever is later, if, on that date, each insured person covered by the plan is credited
+-- src:1123 | (a) in the case of a plan referred to in section 65, with a number of days of paid sick leave equal to 72 minus the maximum number of days that could have been accumulated by the insured person since its commencement or during the six years preceding that date, whichever is the shorter period; and
+-- src:1124 | (b) in the case of a plan referred to in section 66, with a number of days of paid sick leave equal to 120 minus the maximum number of days that could have been accumulated by the insured person since its commencement or during the six years preceding that date, whichever is the shorter period.
+@ref Employment Insurance Regulations reg 67(5) (src:1122-1124)
+DECLARE `er4 Credit of an insured person covered by a plan` HAS
+    `er4 days of paid sick leave the insured person is credited with`                      IS A NUMBER
+    `er4 maximum days the insured person could have accumulated since the plan's commencement or during the six years preceding, whichever period is shorter`   IS A NUMBER
+
+@ref Employment Insurance Regulations reg 67(5)(a) (src:1123)
+GIVEN maximum IS A NUMBER
+GIVETH A NUMBER
+`reg 67(5)(a) the days of paid sick leave a person must be credited with under a plan of section 65` MEANS
+    72 MINUS maximum
+
+@ref Employment Insurance Regulations reg 67(5)(b) (src:1124)
+GIVEN maximum IS A NUMBER
+GIVETH A NUMBER
+`reg 67(5)(b) the days of paid sick leave a person must be credited with under a plan of section 66` MEANS
+    120 MINUS maximum
+
+-- The paragraph says "a number of days ... equal to", so the credit must equal the figure, not merely reach it
+-- (fork F12). It applies only to a plan "referred to in section 65 or 66": for any other kind, NOTHING.
+@ref Employment Insurance Regulations reg 67(5) (src:1122-1124)
+GIVEN kind IS A `er4 Kind of wage-loss plan`
+      persons IS A LIST OF `er4 Credit of an insured person covered by a plan`
+GIVETH A MAYBE BOOLEAN
+`reg 67(5) each insured person covered by the plan is credited with the days the subsection requires` MEANS
+    CONSIDER kind
+    WHEN `er4 a Cumulative Paid Sick Leave Plan` THEN
+        JUST (all (GIVEN c YIELD c's `er4 days of paid sick leave the insured person is credited with`
+                       EQUALS `reg 67(5)(a) the days of paid sick leave a person must be credited with under a plan of section 65` (c's `er4 maximum days the insured person could have accumulated since the plan's commencement or during the six years preceding, whichever period is shorter`)) persons)
+    WHEN `er4 an Enhanced Cumulative Paid Sick Leave Plan` THEN
+        JUST (all (GIVEN c YIELD c's `er4 days of paid sick leave the insured person is credited with`
+                       EQUALS `reg 67(5)(b) the days of paid sick leave a person must be credited with under a plan of section 66` (c's `er4 maximum days the insured person could have accumulated since the plan's commencement or during the six years preceding, whichever period is shorter`)) persons)
+    OTHERWISE NOTHING
+
+-- The later of the day the application is made and the day the plan becomes a qualifying plan under (4), if on that
+-- day each insured person covered is so credited; otherwise there is no such day (NOTHING).
+@ref Employment Insurance Regulations reg 67(5) (src:1122-1124)
+GIVEN `the day the application for a reduction of the employer's premium is made` IS A DATE
+      `the day the plan becomes a qualifying plan under subsection (4)` IS A DATE
+      `each insured person covered is credited as paragraph (a) or (b) requires` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`reg 67(5) the day as of which the plan is considered to be a qualifying plan` MEANS
+    IF `each insured person covered is credited as paragraph (a) or (b) requires`
+    THEN JUST (IF `the day the application for a reduction of the employer's premium is made` AT LEAST `the day the plan becomes a qualifying plan under subsection (4)`
+               THEN `the day the application for a reduction of the employer's premium is made`
+               ELSE `the day the plan becomes a qualifying plan under subsection (4)`)
+    ELSE NOTHING
+
+§ `Regulation 67(3) -- the qualifying plan`
+
+-- A plan of section 63 or 64 qualifies when it meets that section and is evidenced as (1) requires. A plan of section
+-- 65 or 66 does so "subject to subsection (5)": it must also be credited as (5) says. A plan of none of the four kinds
+-- cannot meet "section 63, 64, 65 or 66", so it is not a qualifying plan.
+-- src:1118 | (3) A plan is a qualifying plan when it satisfies all the requirements of subsection (1) and section 63 or 64 or, subject to subsection (5), section 65 or 66.
+@ref Employment Insurance Regulations reg 67(3) (src:1118)
+GIVEN kind IS A `er4 Kind of wage-loss plan`
+      `the plan is evidenced by a formal written commitment` IS A BOOLEAN
+      `the plan meets the requirements of the section for its kind` IS A BOOLEAN
+      `each insured person covered is credited as subsection (5) requires` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 67(3) the plan is a qualifying plan` IF
+        `the plan is evidenced by a formal written commitment`
+    AND `the plan meets the requirements of the section for its kind`
+    AND (CONSIDER kind
+         WHEN `er4 a Weekly Indemnity Plan` THEN TRUE
+         WHEN `er4 a Special Weekly Indemnity Plan` THEN TRUE
+         WHEN `er4 a Cumulative Paid Sick Leave Plan` THEN `each insured person covered is credited as subsection (5) requires`
+         WHEN `er4 an Enhanced Cumulative Paid Sick Leave Plan` THEN `each insured person covered is credited as subsection (5) requires`
+         OTHERWISE FALSE)
+
+§ `Regulation 67(2) -- the months of the year to which the reduction applies`
+
+-- The reduction applies to the months of the year in which the plan is a qualifying plan. A month counts when its
+-- first day falls on or after the later of the day the plan is considered to have become a qualifying plan and the
+-- effective date of the reduction under reg 71 ("subject to section 71", fork F13), and before the day the plan is
+-- considered to have ceased to be one, if it has. Both considered days are first days of a month by (4).
+-- src:1117 | (2) Subject to section 71, if a plan referred to in section 63, 64, 65 or 66 becomes a qualifying plan or ceases to be a qualifying plan under subsection (4) at any time during the year for which a reduction of the employer’s premium rate is made under subsection 62(1), the reduction shall apply to the number of months in the year during which the plan is a qualifying plan.
+@ref Employment Insurance Regulations reg 67(2) (src:1117)
+GIVEN year IS A NUMBER
+      `the day the plan is considered to have become a qualifying plan` IS A DATE
+      `the day the plan is considered to have ceased to be a qualifying plan, if it has` IS A MAYBE DATE
+      `the effective date of the reduction under section 71` IS A DATE
+GIVETH A NUMBER
+`reg 67(2) the number of months in the year to which the reduction applies` MEANS
+    count (filter `a month of the year in which the plan is a qualifying plan` (LIST 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))
+    WHERE
+        GIVEN month IS A NUMBER
+        GIVETH A BOOLEAN
+        `a month of the year in which the plan is a qualifying plan` month MEANS
+                YMD year month 1 AT LEAST `the day the plan is considered to have become a qualifying plan`
+            AND YMD year month 1 AT LEAST `the effective date of the reduction under section 71`
+            AND (CONSIDER `the day the plan is considered to have ceased to be a qualifying plan, if it has`
+                 WHEN NOTHING THEN TRUE
+                 WHEN JUST ceased THEN YMD year month 1 LESS THAN ceased)

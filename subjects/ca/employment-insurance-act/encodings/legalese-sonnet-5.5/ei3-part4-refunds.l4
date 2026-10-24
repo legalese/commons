@@ -1,0 +1,662 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+
+-- Employment Insurance Act (S.C. 1996, c. 23), Part IV, "Overpayments and Refunds": sections 95 and 96.
+-- What counts as an overpayment of employee's premiums, and every refund the Minister shall (or may) make: of overpayments,
+-- after an appeal, of premiums on earnings of $2,000 or less, of the shortfall below $2,000, and the employer refunds the
+-- section also carries (1997 to 2000, 2011 to 2016); who applies, by when; recovery of an excessive refund; set-off; interest.
+-- Written by piece ei3 (Sonnet 5.5). LAYER 1: the law, objectively. Unofficial plain-text source; nothing verified
+-- against the official text.
+--
+-- RESULTS. A refund rule returns `ei3 Refund`: `ei3 no refund is payable under the provision` (the text's own answer when its
+-- conditions or its "more than $1 / $2" gate fail) or `ei3 a refund is payable` with the amount. That is not the encoding's
+-- "not covered" value; a case the text does not decide at all is a NOTHING in the rules that use MAYBE.
+-- "Shall refund" is a duty (ss 96(1), (2), (4), (5), (5.1), (6), (7), (8.2), (8.3), (8.7), (8.91), (8.94), (8.97), (8.98));
+-- "may refund" is a power (ss 96(3), (3.1)) and its rule is a BOOLEAN, with the Minister's satisfaction as an input.
+-- A prescribed figure (interest rate, allocation among associated employers) is a plain input.
+-- Spent provisions: ss 96(6) to (8.98) concern the years 1996 to 2016. They are in-force text, so they are encoded with the
+-- year as a literal condition; s 96(10) (three years) makes them practically dead (NOTES.md, "What the text turns out to say").
+--
+-- OUT OF RANGE, taken as inputs: the maximum yearly insurable earnings (keel s 4); the "self-employed person to whom Part VII.1
+-- applies" and the Part VII.1 premium under s 152.21 (piece ei5); appeals under ss 91, 92 and 103 (this piece).
+
+DECLARE `ei3 Refund` IS ONE OF
+    `ei3 no refund is payable under the provision`
+    `ei3 a refund is payable` HAS `ei3 amount of the refund` IS A NUMBER
+
+GIVEN refund IS A `ei3 Refund`
+GIVETH A BOOLEAN
+DECIDE `s 96 a refund is payable` IS
+    CONSIDER refund
+    WHEN `ei3 no refund is payable under the provision` THEN FALSE
+    WHEN `ei3 a refund is payable` amount THEN TRUE
+
+-- Helper used by the refunds with a floor ("if that amount is more than $1 / $2"): the refund, only if the amount exceeds the floor.
+GIVEN amount IS A NUMBER
+      floor IS A NUMBER
+GIVETH A `ei3 Refund`
+`ei3 the refund of` amount `if it is more than` floor MEANS
+    IF amount GREATER THAN floor
+    THEN `ei3 a refund is payable` amount
+    ELSE `ei3 no refund is payable under the provision`
+
+-- Helpers for the refunds with a maximum ("shall not exceed"): the refund, cut down to the cap. `capped at` takes a cap that is
+-- always there; `capped at the maximum, if there is one,` takes the cap of s 96(8), which has none for a 1996 premium of $60,000
+-- or more (and then (6) and (7) give nothing anyway).
+GIVEN refund IS A `ei3 Refund`
+      cap IS A NUMBER
+GIVETH A `ei3 Refund`
+`ei3 the refund` refund `capped at` cap MEANS
+    CONSIDER refund
+    WHEN `ei3 no refund is payable under the provision` THEN `ei3 no refund is payable under the provision`
+    WHEN `ei3 a refund is payable` amount THEN `ei3 a refund is payable` (IF amount LESS THAN cap THEN amount ELSE cap)
+
+GIVEN refund IS A `ei3 Refund`
+      cap IS A MAYBE NUMBER
+GIVETH A `ei3 Refund`
+`ei3 the refund` refund `capped at the maximum, if there is one,` cap MEANS
+    CONSIDER cap
+    WHEN NOTHING THEN `ei3 no refund is payable under the provision`
+    WHEN JUST limit THEN `ei3 the refund` refund `capped at` limit
+
+§ `Section 95 - the employee's overpayment`
+
+-- As the text has it: the total of the employee's premiums deducted during the year from the insurable earnings of a person in
+-- excess of the maximum yearly insurable earnings is an overpayment made by the person.
+-- src:1493 | 95 The total amount of any employee’s premiums deducted during a year from the insurable earnings of a person in excess of the maximum yearly insurable earnings is an overpayment made by the person.
+@ref Employment Insurance Act s 95 (src:1493)
+GIVEN `the total amount of the employee's premiums deducted during the year from the part of the person's insurable earnings in excess of the maximum yearly insurable earnings` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `s 95 the overpayment made by the person` IS
+    `the total amount of the employee's premiums deducted during the year from the part of the person's insurable earnings in excess of the maximum yearly insurable earnings`
+
+-- The same, worked out from the facts a person can state. The text does not say how to find "the premiums deducted ... from the
+-- earnings in excess of the maximum", so this is a reading (fork F-ei3-20): the premiums actually deducted, minus the premium
+-- the person owes on the earnings up to the maximum (the premium rate times the smaller of total insurable earnings and the
+-- maximum); never below zero, and never more than what was deducted (s 96(1) refunds money actually deducted).
+-- src:1493 | 95 The total amount of any employee’s premiums deducted during a year from the insurable earnings of a person in excess of the maximum yearly insurable earnings is an overpayment made by the person.
+@ref Employment Insurance Act s 95 (src:1493)
+GIVEN `the total of all the employee's premiums deducted in the year, by all employers` IS A NUMBER
+      `the person's total insurable earnings for the year, from all employers` IS A NUMBER
+      `the maximum yearly insurable earnings for the year` IS A NUMBER
+      `the premium rate for the year` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `s 95 the premiums deducted in excess of what the maximum allows` IS
+    IF `the total of all the employee's premiums deducted in the year, by all employers`
+           GREATER THAN (`the premium rate for the year` TIMES
+                         (IF `the person's total insurable earnings for the year, from all employers` LESS THAN `the maximum yearly insurable earnings for the year`
+                          THEN `the person's total insurable earnings for the year, from all employers`
+                          ELSE `the maximum yearly insurable earnings for the year`))
+    THEN `the total of all the employee's premiums deducted in the year, by all employers`
+             MINUS (`the premium rate for the year` TIMES
+                    (IF `the person's total insurable earnings for the year, from all employers` LESS THAN `the maximum yearly insurable earnings for the year`
+                     THEN `the person's total insurable earnings for the year, from all employers`
+                     ELSE `the maximum yearly insurable earnings for the year`))
+    ELSE 0
+
+§ `Section 96(10) and (4.1) - application and the self-employed bar`
+
+-- Subsection (10): "payable only if an application is made in writing to the Minister within three years after the end of the
+-- year for which the premiums were deducted or required to be paid". Three years after the end of year Y is the end of 31 December
+-- Y+3, and an application made on that day is in time (keel fork F4; F-ei3-14).
+-- src:1603 | (10) A refund under this section is payable only if an application is made in writing to the Minister within three years after the end of the year for which the premiums were deducted or required to be paid.
+@ref Employment Insurance Act s 96(10) (src:1603)
+GIVEN `the application is made in writing to the Minister` IS A BOOLEAN
+      `the year for which the premiums were deducted or required to be paid` IS A NUMBER
+      `the day on which the application is made` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `s 96(10) the application for the refund is made in time` IF
+        `the application is made in writing to the Minister`
+    AND `the day on which the application is made` AT MOST (`add years` (YMD `the year for which the premiums were deducted or required to be paid` 12 31) 3)
+
+-- Subsection (4.1): no refund under (4) to a person who is also a self-employed person to whom Part VII.1 applies and whose
+-- total earnings (insurable and self-employed, calculated under Part VII.1) are more than $2,000 in the year.
+-- src:1505 | (4.1) No refund shall be made to a person under subsection (4) if the person is also a self-employed person to whom Part VII.1 applies and the person’s total earnings from insurable employment and from self-employment calculated in accordance with that Part are more than $2,000 in a year.
+@ref Employment Insurance Act s 96(4.1) (src:1505)
+GIVEN `the person is also a self-employed person to whom Part VII.1 applies` IS A BOOLEAN
+      `the person's total earnings from insurable employment and from self-employment calculated in accordance with Part VII.1` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `s 96(4.1) no refund shall be made under subsection (4)` IF
+        `the person is also a self-employed person to whom Part VII.1 applies`
+    AND `the person's total earnings from insurable employment and from self-employment calculated in accordance with Part VII.1` GREATER THAN 2_000
+
+§ `Section 96(1) to (3.1) - refunds on application`
+
+-- Subsection (1): the Minister shall refund the overpayment, or a payment of employee's premiums made in a year when the person
+-- was not employed in insurable employment, if the person applies in writing within three years after the end of that year.
+-- src:1495 | 96 (1) If a person has made an overpayment on account of their employee’s premiums, or has made a payment of employee’s premiums during a year when the person was not employed in insurable employment, the Minister shall refund to the person the amount of the overpayment or payment if the person applies in writing to the Minister within three years after the end of that year.
+@ref Employment Insurance Act s 96(1) (src:1495)
+GIVEN `the person has made an overpayment on account of their employee's premiums` IS A BOOLEAN
+      `the person has made a payment of employee's premiums during a year when they were not employed in insurable employment` IS A BOOLEAN
+      `the amount of the overpayment or of the payment` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the year` IS A NUMBER
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(1) the refund of the overpayment or of the payment` IS
+    IF     (`the person has made an overpayment on account of their employee's premiums` OR `the person has made a payment of employee's premiums during a year when they were not employed in insurable employment`)
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` `the year` `the day on which the application is made`
+    THEN `ei3 a refund is payable` `the amount of the overpayment or of the payment`
+    ELSE `ei3 no refund is payable under the provision`
+
+-- Subsection (2): after a decision on an appeal under s 91, 92 or 103 that the amount deducted or paid exceeds what was required,
+-- or should not have been deducted or paid, the Minister shall refund the excess if the person or employer applies in writing
+-- within 30 days after the decision is communicated. Read as having its own window; (10) is not applied to it (fork F-ei3-21).
+-- src:1497 | (2) If an amount on account of a premium has been deducted from the remuneration of a person during a year, or has been paid by an employer with respect to a person employed by the employer during a year, and by a decision on an appeal under section 91, 92 or 103 it is decided that the amount so deducted or paid exceeds the amount required to be deducted or paid, or should not have been deducted or paid, the Minister shall refund the excess amount or the amount that should not have been deducted or paid if the person or the employer applies in writing to the Minister within 30 days after the decision is communicated to the person or employer, as the case may be.
+@ref Employment Insurance Act s 96(2) (src:1497)
+GIVEN `an amount on account of a premium was deducted from the remuneration of the person during a year, or paid by an employer with respect to a person employed by the employer during a year` IS A BOOLEAN
+      `a decision on an appeal under section 91, 92 or 103 decided that the amount exceeds the amount required to be deducted or paid, or should not have been deducted or paid` IS A BOOLEAN
+      `the excess amount or the amount that should not have been deducted or paid` IS A NUMBER
+      `the person or employer applies in writing to the Minister` IS A BOOLEAN
+      `the day on which the decision is communicated to the person or employer` IS A DATE
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(2) the refund after a decision on an appeal` IS
+    IF     `an amount on account of a premium was deducted from the remuneration of the person during a year, or paid by an employer with respect to a person employed by the employer during a year`
+       AND `a decision on an appeal under section 91, 92 or 103 decided that the amount exceeds the amount required to be deducted or paid, or should not have been deducted or paid`
+       AND `the person or employer applies in writing to the Minister`
+       AND `the day on which the application is made` AT MOST (`the last day of` 30 `days after` `the day on which the decision is communicated to the person or employer`)
+    THEN `ei3 a refund is payable` `the excess amount or the amount that should not have been deducted or paid`
+    ELSE `ei3 no refund is payable under the provision`
+
+-- Subsection (3): "Notwithstanding anything in this Part", where a person or employer applies to and satisfies the Minister that
+-- for any year the amount deducted or paid is in excess of the amount required, or should not have been, the Minister MAY refund
+-- it, if the application is made within three years after the end of that year. The Minister's satisfaction is an input.
+-- src:1499 | (3) Notwithstanding anything in this Part, if a person or employer applies to and satisfies the Minister that, for any year, the amount deducted from the remuneration of the person, or paid by the employer with respect to a person, as the case may be, is in excess of the amount required to be deducted or paid for the year, or should not have been deducted or paid, the Minister may refund the excess amount or the amount that should not have been deducted or paid if the application is made within three years after the end of that year.
+@ref Employment Insurance Act s 96(3) (src:1499)
+GIVEN `the person or employer applies to the Minister` IS A BOOLEAN
+      `the applicant satisfies the Minister that the amount deducted or paid for the year is in excess of the amount required to be deducted or paid, or should not have been deducted or paid` IS A BOOLEAN
+      `the year` IS A NUMBER
+      `the day on which the application is made` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `s 96(3) the Minister may refund the excess amount or the amount that should not have been deducted or paid` IF
+        `the person or employer applies to the Minister`
+    AND `the applicant satisfies the Minister that the amount deducted or paid for the year is in excess of the amount required to be deducted or paid, or should not have been deducted or paid`
+    AND `the day on which the application is made` AT MOST (`add years` (YMD `the year` 12 31) 3)
+
+-- src:1501 | (3.1) If an amount remitted by an employer is deemed under section 82.01 not to have been deducted, the Minister may refund that amount to the employer if the employer applies to the Minister for the refund within three years after the end of the year for which the amount was remitted.
+@ref Employment Insurance Act s 96(3.1) (src:1501)
+GIVEN `an amount remitted by an employer is deemed under section 82.01 not to have been deducted` IS A BOOLEAN
+      `the year for which the amount was remitted` IS A NUMBER
+      `the day on which the employer applies to the Minister for the refund` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `s 96(3.1) the Minister may refund the amount to the employer` IF
+        `an amount remitted by an employer is deemed under section 82.01 not to have been deducted`
+    AND `the day on which the employer applies to the Minister for the refund` AT MOST (`add years` (YMD `the year for which the amount was remitted` 12 31) 3)
+
+§ `Section 96(4) to (5.1) - the $2,000 rules`
+
+-- Subsection (4): earnings of not more than $2,000 in the year: the Minister shall refund the aggregate of all amounts
+-- deducted as required on account of the person's employee's premiums for the year, whether by one or more employers.
+-- Subject to (4.1), and to (10) (an application in writing within three years).
+-- src:1503 | (4) If a person has insurable earnings of not more than $2,000 in a year, the Minister shall refund to the person the aggregate of all amounts deducted as required from the insurable earnings, whether by one or more employers, on account of the person’s employee’s premiums for that year.
+@ref Employment Insurance Act s 96(4) (src:1503)
+GIVEN `the person's insurable earnings in the year` IS A NUMBER
+      `the aggregate of all amounts deducted as required on account of the person's employee's premiums for the year, by one or more employers` IS A NUMBER
+      `the person is also a self-employed person to whom Part VII.1 applies` IS A BOOLEAN
+      `the person's total earnings from insurable employment and from self-employment calculated in accordance with Part VII.1` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the year` IS A NUMBER
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(4) the refund of premiums on insurable earnings of not more than $2,000` IS
+    IF     `the person's insurable earnings in the year` AT MOST 2_000
+       AND (NOT `s 96(4.1) no refund shall be made under subsection (4)` `the person is also a self-employed person to whom Part VII.1 applies` `the person's total earnings from insurable employment and from self-employment calculated in accordance with Part VII.1`)
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` `the year` `the day on which the application is made`
+    THEN `ei3 a refund is payable` `the aggregate of all amounts deducted as required on account of the person's employee's premiums for the year, by one or more employers`
+    ELSE `ei3 no refund is payable under the provision`
+
+-- Subsection (5): a person who is NOT a self-employed person to whom Part VII.1 applies, with insurable earnings IE above $2,000,
+-- where IE minus P (the aggregate of the amounts deducted, as in (4)) is less than $2,000: the refund is $2,000 - (IE - P),
+-- "if that amount is more than $1". Subject to (10).
+-- src:1507 | (5) If a person who is not a self-employed person to whom Part VII.1 applies has insurable earnings of more than $2,000 in a year, but the insurable earnings minus the aggregate of all deducted amounts mentioned in subsection (4) are less than $2,000, the Minister shall refund to the person an amount calculated in accordance with the following formula if that amount is more than $1:
+-- src:1508 | $2,000 – (IE – P)
+-- src:1509 | where
+-- src:1510 | IE is the person’s insurable earnings in the year; and
+-- src:1511 | P is the aggregate of all deducted amounts mentioned in subsection (4).
+@ref Employment Insurance Act s 96(5) (src:1507-1511)
+GIVEN `the person is a self-employed person to whom Part VII.1 applies` IS A BOOLEAN
+      `IE, the person's insurable earnings in the year` IS A NUMBER
+      `P, the aggregate of all the amounts deducted on account of the person's employee's premiums for the year` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the year` IS A NUMBER
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(5) the refund of the shortfall below $2,000` IS
+    IF     (NOT `the person is a self-employed person to whom Part VII.1 applies`)
+       AND `IE, the person's insurable earnings in the year` GREATER THAN 2_000
+       AND (`IE, the person's insurable earnings in the year` MINUS `P, the aggregate of all the amounts deducted on account of the person's employee's premiums for the year`) LESS THAN 2_000
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` `the year` `the day on which the application is made`
+    THEN `ei3 the refund of` (2_000 MINUS (`IE, the person's insurable earnings in the year` MINUS `P, the aggregate of all the amounts deducted on account of the person's employee's premiums for the year`)) `if it is more than` 1
+    ELSE `ei3 no refund is payable under the provision`
+
+-- Subsection (5.1): a person with insurable earnings who is also a self-employed person to whom Part VII.1 applies, whose total
+-- earnings TE are above $2,000 but TE minus TP (the deducted amounts in (4) plus the premiums payable under s 152.21) is below
+-- $2,000: the lesser of (a) the aggregate deducted and (b) $2,000 - (TE - TP), if more than $1. Subject to (10).
+-- src:1513 | (5.1) If a person has insurable earnings and is also a self-employed person to whom Part VII.1 applies and the person’s total earnings from insurable employment and from self-employment calculated under that Part are more than $2,000 in a year, but the total earnings minus the aggregate of all deducted amounts mentioned in subsection (4) and the premiums payable under section 152.21 are less than $2,000, the Minister shall refund to the person the lesser of the following amounts if that amount is more than $1:
+-- src:1514 | (a) the aggregate of all deducted amounts mentioned in subsection (4), and
+-- src:1515 | (b) the amount calculated in accordance with the following formula
+-- src:1516 | $2,000 – (TE –TP)
+-- src:1517 | where
+-- src:1518 | TE is the person’s total earnings from insurable employment and from self-employment calculated under Part VII.1; and
+-- src:1519 | TP is the aggregate of all deducted amounts mentioned in subsection (4) and the premiums payable under section 152.21.
+@ref Employment Insurance Act s 96(5.1) (src:1513-1519)
+GIVEN `the person has insurable earnings` IS A BOOLEAN
+      `the person is also a self-employed person to whom Part VII.1 applies` IS A BOOLEAN
+      `TE, the person's total earnings from insurable employment and from self-employment calculated under Part VII.1` IS A NUMBER
+      `the aggregate of all deducted amounts mentioned in subsection (4)` IS A NUMBER
+      `the premiums payable under section 152.21` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the year` IS A NUMBER
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(5.1) the refund of the shortfall below $2,000 for a person who is also self-employed` IS
+    IF     `the person has insurable earnings`
+       AND `the person is also a self-employed person to whom Part VII.1 applies`
+       AND `TE, the person's total earnings from insurable employment and from self-employment calculated under Part VII.1` GREATER THAN 2_000
+       AND `TE minus TP` LESS THAN 2_000
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` `the year` `the day on which the application is made`
+    THEN `ei3 the refund of` `the lesser of paragraphs (a) and (b)` `if it is more than` 1
+    ELSE `ei3 no refund is payable under the provision`
+    WHERE
+        `TP, the aggregate of all deducted amounts mentioned in subsection (4) and the premiums payable under section 152.21` MEANS
+            `the aggregate of all deducted amounts mentioned in subsection (4)` PLUS `the premiums payable under section 152.21`
+        `TE minus TP` MEANS
+            `TE, the person's total earnings from insurable employment and from self-employment calculated under Part VII.1` MINUS `TP, the aggregate of all deducted amounts mentioned in subsection (4) and the premiums payable under section 152.21`
+        `the amount under paragraph (b)` MEANS 2_000 MINUS `TE minus TP`
+        `the lesser of paragraphs (a) and (b)` MEANS
+            IF `the aggregate of all deducted amounts mentioned in subsection (4)` LESS THAN `the amount under paragraph (b)`
+            THEN `the aggregate of all deducted amounts mentioned in subsection (4)`
+            ELSE `the amount under paragraph (b)`
+
+§ `Section 96(6) to (9) - the 1997 and 1998 refunds of employer's premium, and associated employers`
+
+-- Subsection (8.1): a reference to an employer's premium in 1996 includes the premium required to be paid that year under the
+-- Unemployment Insurance Act. Subsection (7.1): P1 is zero where a person was not required to pay an employer's premium in 1996.
+-- src:1539 | (8.1) For the purposes of subsections (6) to (8), a reference to an employer’s premium in 1996 includes the employer’s premium required to be paid that year under the Unemployment Insurance Act.
+@ref Employment Insurance Act s 96(8.1) (src:1539)
+GIVEN `the employer's premium required to be paid in 1996 under this Act` IS A NUMBER
+      `the employer's premium required to be paid in 1996 under the Unemployment Insurance Act` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `s 96(8.1) the employer's premium in 1996` IS
+    `the employer's premium required to be paid in 1996 under this Act` PLUS `the employer's premium required to be paid in 1996 under the Unemployment Insurance Act`
+
+-- src:1533 | (7.1) For the purposes of subsections (6) and (7), P1 is equal to zero where a person was not required to pay an employer’s premium in 1996.
+@ref Employment Insurance Act s 96(7.1) (src:1533)
+GIVEN `the employer's premium in 1996` IS A NUMBER
+      `the person was required to pay an employer's premium in 1996` IS A BOOLEAN
+GIVETH A NUMBER
+DECIDE `s 96(7.1) P1 for subsections (6) and (7)` IS
+    IF `the person was required to pay an employer's premium in 1996`
+    THEN `the employer's premium in 1996`
+    ELSE 0
+
+-- Subsection (8): the refund under (6) or (7) shall not exceed $10,000 if the 1996 premium is under $50,000, or $60,000 minus the
+-- 1996 premium if it is $50,000 or more but under $60,000. For a 1996 premium of $60,000 or more (6) and (7) give no refund at
+-- all, and (8) says nothing: NOTHING.
+-- src:1535 | (8) A refund under subsection (6) or (7) shall not exceed
+-- src:1536 | (a) $10,000, if the amount of the employer’s premium in 1996 is less than $50,000; and
+-- src:1537 | (b) $60,000 minus the amount of the employer’s premium in 1996, if that amount is $50,000 or more, but less than $60,000.
+@ref Employment Insurance Act s 96(8) (src:1535-1537)
+GIVEN `the amount of the employer's premium in 1996` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `s 96(8) the maximum refund under subsection (6) or (7)` IS
+    BRANCH IF `the amount of the employer's premium in 1996` LESS THAN 50_000 THEN JUST 10_000
+           IF `the amount of the employer's premium in 1996` LESS THAN 60_000 THEN JUST (60_000 MINUS `the amount of the employer's premium in 1996`)
+           OTHERWISE NOTHING
+
+-- src:1521 | (6) If an employer’s premium is less than $60,000 during 1996, the Minister shall refund to the employer a portion of the premium for 1997 determined by the following formula if that amount is more than $1:
+-- src:1522 | P2 - (P1 + $250)
+-- src:1523 | where
+-- src:1524 | P1 is the amount of the employer’s premium in 1996; and
+-- src:1525 | P2 is the amount of the employer’s premium in 1997.
+@ref Employment Insurance Act s 96(6) (src:1521-1525)
+GIVEN `P1, the amount of the employer's premium in 1996 (with the Unemployment Insurance Act premium, if any)` IS A NUMBER
+      `the person was required to pay an employer's premium in 1996` IS A BOOLEAN
+      `P2, the amount of the employer's premium in 1997` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(6) the refund of part of the employer's premium for 1997` IS
+    IF     `P1 as subsection (7.1) sets it` LESS THAN 60_000
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` 1997 `the day on which the application is made`
+    THEN `ei3 the refund` (`ei3 the refund of` (`P2, the amount of the employer's premium in 1997` MINUS (`P1 as subsection (7.1) sets it` PLUS 250)) `if it is more than` 1)
+             `capped at the maximum, if there is one,` (`s 96(8) the maximum refund under subsection (6) or (7)` `P1 as subsection (7.1) sets it`)
+    ELSE `ei3 no refund is payable under the provision`
+    WHERE
+        `P1 as subsection (7.1) sets it` MEANS `s 96(7.1) P1 for subsections (6) and (7)` `P1, the amount of the employer's premium in 1996 (with the Unemployment Insurance Act premium, if any)` `the person was required to pay an employer's premium in 1996`
+
+-- src:1527 | (7) If an employer’s premium is less than $60,000 during 1996, the Minister shall refund to the employer a portion of the premium for 1998 determined by the following formula if that amount is more than $1:
+-- src:1528 | [P2 - (P1 + $250)]/4
+-- src:1529 | where
+-- src:1530 | P1 is the amount of the employer’s premium in 1996; and
+-- src:1531 | P2 is the amount of the employer’s premium in 1998.
+@ref Employment Insurance Act s 96(7) (src:1527-1531)
+GIVEN `P1, the amount of the employer's premium in 1996 (with the Unemployment Insurance Act premium, if any)` IS A NUMBER
+      `the person was required to pay an employer's premium in 1996` IS A BOOLEAN
+      `P2, the amount of the employer's premium in 1998` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(7) the refund of part of the employer's premium for 1998` IS
+    IF     `P1 as subsection (7.1) sets it` LESS THAN 60_000
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` 1998 `the day on which the application is made`
+    THEN `ei3 the refund` (`ei3 the refund of` ((`P2, the amount of the employer's premium in 1998` MINUS (`P1 as subsection (7.1) sets it` PLUS 250)) DIVIDED BY 4) `if it is more than` 1)
+             `capped at the maximum, if there is one,` (`s 96(8) the maximum refund under subsection (6) or (7)` `P1 as subsection (7.1) sets it`)
+    ELSE `ei3 no refund is payable under the provision`
+    WHERE
+        `P1 as subsection (7.1) sets it` MEANS `s 96(7.1) P1 for subsections (6) and (7)` `P1, the amount of the employer's premium in 1996 (with the Unemployment Insurance Act premium, if any)` `the person was required to pay an employer's premium in 1996`
+
+-- Subsection (9): two or more employers associated at any time in the year for which a refund is sought "shall be considered a
+-- single employer for the purposes of subsections (6) to (8.4)", and the refund is allocated among them in the prescribed manner.
+-- src:1601 | (9) If at any time during a year for which a refund is sought two or more employers are associated, as defined by the regulations, they shall be considered a single employer for the purposes of subsections (6) to (8.4) and any refund shall be allocated to them in the prescribed manner.
+@ref Employment Insurance Act s 96(9) (src:1601)
+GIVEN `two or more employers are associated, as defined by the regulations, at any time during the year for which a refund is sought` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 96(9) the associated employers are considered a single employer for subsections (6) to (8.4)` IF
+    `two or more employers are associated, as defined by the regulations, at any time during the year for which a refund is sought`
+
+§ `Section 96(8.2) to (8.6) - the 1999 and 2000 refunds of employer's premium`
+
+-- Subsection (8.2): (E2 - E1) x P1999, where E1 is the total of insurable earnings paid in 1998, for which premiums were
+-- deductible, in respect of employees 18 or older but younger than 25 at any time during 1998; E2 the same for 1999; and
+-- P1999 is 1.4 times the premium rate for 1999; if more than $1. Subject to (10).
+-- src:1541 | (8.2) With respect to 1999, the Minister shall refund to the employer the amount determined by the following formula if that amount is more than $1:
+-- src:1542 | (E2 – E1) × P1999
+-- src:1543 | where
+-- src:1544 | E1 is the total of all insurable earnings paid in 1998 by the employer, for which premiums were deductible, in respect of employees who were 18 years of age or older but younger than 25 at any time during 1998;
+-- src:1545 | E2 is the total of all insurable earnings paid in 1999 by the employer, for which premiums were deductible, in respect of employees who were 18 years of age or older but younger than 25 at any time during 1999; and
+-- src:1546 | P1999 is 1.4 times the premium rate for 1999.
+@ref Employment Insurance Act s 96(8.2) (src:1541-1546)
+GIVEN `E1, the insurable earnings paid in 1998 in respect of employees aged 18 to under 25` IS A NUMBER
+      `E2, the insurable earnings paid in 1999 in respect of employees aged 18 to under 25` IS A NUMBER
+      `the premium rate for 1999` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(8.2) the refund of the employer's premium for 1999` IS
+    IF `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` 1999 `the day on which the application is made`
+    THEN `ei3 the refund of` ((`E2, the insurable earnings paid in 1999 in respect of employees aged 18 to under 25` MINUS `E1, the insurable earnings paid in 1998 in respect of employees aged 18 to under 25`) TIMES (1.4 TIMES `the premium rate for 1999`)) `if it is more than` 1
+    ELSE `ei3 no refund is payable under the provision`
+
+-- Subsection (8.3): the same for 2000, E1 still being the 1998 earnings, and P2000 being 1.4 times the premium rate for 2000.
+-- src:1548 | (8.3) With respect to 2000, the Minister shall refund to the employer the amount determined by the following formula if that amount is more than $1:
+-- src:1549 | (E2 – E1) × P2000
+-- src:1550 | where
+-- src:1551 | E1 is the total of all insurable earnings paid in 1998 by the employer, for which premiums were deductible, in respect of employees who were 18 years of age or older but younger than 25 at any time during 1998;
+-- src:1552 | E2 is the total of all insurable earnings paid in 2000 by the employer, for which premiums were deductible, in respect of employees who were 18 years of age or older but younger than 25 at any time during 2000; and
+-- src:1553 | P2000 is 1.4 times the premium rate for 2000.
+@ref Employment Insurance Act s 96(8.3) (src:1548-1553)
+GIVEN `E1, the insurable earnings paid in 1998 in respect of employees aged 18 to under 25` IS A NUMBER
+      `E2, the insurable earnings paid in 2000 in respect of employees aged 18 to under 25` IS A NUMBER
+      `the premium rate for 2000` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(8.3) the refund of the employer's premium for 2000` IS
+    IF `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` 2000 `the day on which the application is made`
+    THEN `ei3 the refund of` ((`E2, the insurable earnings paid in 2000 in respect of employees aged 18 to under 25` MINUS `E1, the insurable earnings paid in 1998 in respect of employees aged 18 to under 25`) TIMES (1.4 TIMES `the premium rate for 2000`)) `if it is more than` 1
+    ELSE `ei3 no refund is payable under the provision`
+
+-- Subsection (8.4): where it is determined that an employer who applied for or received a refund under (8.2) or (8.3) unduly
+-- terminated an employee's employment or changed its conditions in order to obtain or increase the refund, the Minister shall
+-- eliminate the refund or reduce it by the sum the Minister considers appropriate. (8.6): the employer is so determined if an
+-- order, decision or ruling of any competent body has so established.
+-- src:1559 | (8.6) For the purpose of subsection (8.4), an employer shall be determined to have unduly terminated the employment of an employee or changed the conditions of employment of an employee in order to obtain or to increase the refund that would otherwise be payable to the employer if an order, decision or ruling of any competent body has so established.
+@ref Employment Insurance Act s 96(8.6) (src:1559)
+GIVEN `an order, decision or ruling of any competent body has established that the employer unduly terminated the employment of an employee or changed the conditions of employment of an employee in order to obtain or to increase the refund` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 96(8.6) the employer is determined to have unduly terminated or changed the employment` IF
+    `an order, decision or ruling of any competent body has established that the employer unduly terminated the employment of an employee or changed the conditions of employment of an employee in order to obtain or to increase the refund`
+
+-- src:1555 | (8.4) Where it is determined that an employer who has applied for or received a refund under subsection (8.2) or (8.3) has unduly terminated the employment of an employee or changed the conditions of employment of an employee in order to obtain or to increase the refund that would otherwise be payable to the employer, the Minister shall eliminate the refund, or reduce it by the sum the Minister considers appropriate in the circumstances.
+@ref Employment Insurance Act s 96(8.4) (src:1555)
+GIVEN `the refund the employer applied for or received under subsection (8.2) or (8.3)` IS A `ei3 Refund`
+      `it is determined that the employer unduly terminated or changed the employment in order to obtain or increase the refund` IS A BOOLEAN
+      `the sum by which the Minister reduces the refund, if the Minister reduces it instead of eliminating it` IS A MAYBE NUMBER
+GIVETH A `ei3 Refund`
+DECIDE `s 96(8.4) the refund after elimination or reduction` IS
+    IF NOT `it is determined that the employer unduly terminated or changed the employment in order to obtain or increase the refund`
+    THEN `the refund the employer applied for or received under subsection (8.2) or (8.3)`
+    ELSE CONSIDER `the refund the employer applied for or received under subsection (8.2) or (8.3)`
+         WHEN `ei3 no refund is payable under the provision` THEN `ei3 no refund is payable under the provision`
+         WHEN `ei3 a refund is payable` amount THEN
+             CONSIDER `the sum by which the Minister reduces the refund, if the Minister reduces it instead of eliminating it`
+             WHEN NOTHING THEN `ei3 no refund is payable under the provision`
+             WHEN JUST sum THEN `ei3 the refund of` (amount MINUS sum) `if it is more than` 0
+
+-- src:1557 | (8.5) If the Minister eliminates or reduces a refund under subsection (8.4), the Minister shall notify the employer, as if the Minister were issuing a notice of assessment, that the employer is not entitled to the refund or that the refund has been reduced by the sum specified in the notice.
+@ref Employment Insurance Act s 96(8.5) (src:1557)
+GIVEN `the Minister eliminates or reduces a refund under subsection (8.4)` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 96(8.5) the Minister shall notify the employer as if issuing a notice of assessment` IF
+    `the Minister eliminates or reduces a refund under subsection (8.4)`
+
+§ `Section 96(8.7) to (8.98) - the small business refunds, 2011 to 2016`
+
+-- Subsection (8.7): an employer's premium of $10,000 or less for 2010: refund of P2 - P1 (P1 the 2010 premium, zero if none was
+-- required, subsection (8.8); P2 the 2011 premium) if more than $2; at most $1,000 (subsection (8.9)). Subject to (10).
+-- Subsection (8.7): an employer's premium of $10,000 or less for 2010: refund of P2 - P1 (P1 the 2010 premium, zero if none was
+-- required, subsection (8.8); P2 the 2011 premium) if more than $2; at most $1,000 (subsection (8.9)). Subject to (10).
+-- src:1567 | (8.8) For the purposes of subsection (8.7), P1 is equal to zero if a person was not required to pay an employer’s premium in 2010.
+@ref Employment Insurance Act s 96(8.8) (src:1567)
+GIVEN `the amount of the employer's premium in 2010` IS A NUMBER
+      `the person was required to pay an employer's premium in 2010` IS A BOOLEAN
+GIVETH A NUMBER
+DECIDE `s 96(8.8) P1 for subsection (8.7)` IS
+    IF `the person was required to pay an employer's premium in 2010`
+    THEN `the amount of the employer's premium in 2010`
+    ELSE 0
+
+-- src:1561 | (8.7) If an employer’s premium is $10,000 or less for 2010, the Minister shall refund to the employer a portion of the premium for 2011 determined by the following formula if that amount is more than $2:
+-- src:1562 | P2 – P1
+-- src:1563 | where
+-- src:1564 | P1 is the amount of the employer’s premium in 2010; and
+-- src:1565 | P2 is the amount of the employer’s premium in 2011.
+-- src:1569 | (8.9) A refund under subsection (8.7) shall not exceed $1,000.
+@ref Employment Insurance Act s 96(8.7), s 96(8.9) (src:1561-1565) (src:1569)
+GIVEN `P1, the amount of the employer's premium in 2010` IS A NUMBER
+      `the person was required to pay an employer's premium in 2010` IS A BOOLEAN
+      `P2, the amount of the employer's premium in 2011` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(8.7) the refund of part of the employer's premium for 2011` IS
+    IF     `P1 as subsection (8.8) sets it` AT MOST 10_000
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` 2011 `the day on which the application is made`
+    THEN `ei3 the refund` (`ei3 the refund of` (`P2, the amount of the employer's premium in 2011` MINUS `P1 as subsection (8.8) sets it`) `if it is more than` 2)
+             `capped at` 1_000
+    ELSE `ei3 no refund is payable under the provision`
+    WHERE
+        `P1 as subsection (8.8) sets it` MEANS `s 96(8.8) P1 for subsection (8.7)` `P1, the amount of the employer's premium in 2010` `the person was required to pay an employer's premium in 2010`
+
+-- Subsections (8.91) to (8.93) are the same for 2012 (P1 the 2011 premium, zero if none was required, (8.92); at most $1,000, (8.93)).
+-- src:1577 | (8.92) For the purposes of subsection (8.91), P1 is equal to zero if a person was not required to pay an employer’s premium in 2011.
+@ref Employment Insurance Act s 96(8.92) (src:1577)
+GIVEN `the amount of the employer's premium in 2011` IS A NUMBER
+      `the person was required to pay an employer's premium in 2011` IS A BOOLEAN
+GIVETH A NUMBER
+DECIDE `s 96(8.92) P1 for subsection (8.91)` IS
+    IF `the person was required to pay an employer's premium in 2011`
+    THEN `the amount of the employer's premium in 2011`
+    ELSE 0
+
+-- src:1571 | (8.91) If an employer’s premium is $10,000 or less for 2011, the Minister shall refund to the employer a portion of the premium for 2012 determined by the following formula if that amount is more than $2:
+-- src:1572 | P2 – P1
+-- src:1573 | where
+-- src:1574 | P1 is the amount of the employer’s premium in 2011; and
+-- src:1575 | P2 is the amount of the employer’s premium in 2012.
+-- src:1579 | (8.93) A refund under subsection (8.91) shall not exceed $1,000.
+@ref Employment Insurance Act s 96(8.91), s 96(8.93) (src:1571-1575) (src:1579)
+GIVEN `P1, the amount of the employer's premium in 2011` IS A NUMBER
+      `the person was required to pay an employer's premium in 2011` IS A BOOLEAN
+      `P2, the amount of the employer's premium in 2012` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(8.91) the refund of part of the employer's premium for 2012` IS
+    IF     `P1 as subsection (8.92) sets it` AT MOST 10_000
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` 2012 `the day on which the application is made`
+    THEN `ei3 the refund` (`ei3 the refund of` (`P2, the amount of the employer's premium in 2012` MINUS `P1 as subsection (8.92) sets it`) `if it is more than` 2)
+             `capped at` 1_000
+    ELSE `ei3 no refund is payable under the provision`
+    WHERE
+        `P1 as subsection (8.92) sets it` MEANS `s 96(8.92) P1 for subsection (8.91)` `P1, the amount of the employer's premium in 2011` `the person was required to pay an employer's premium in 2011`
+
+-- Subsections (8.94) to (8.96): an employer's premium of $15,000 or less for 2012; the refund for 2013; P1 zero if none was required
+-- for 2012, (8.95); at most $1,000, (8.96).
+-- src:1587 | (8.95) For the purposes of subsection (8.94), P1 is equal to zero if a person was not required to pay an employer’s premium in 2012.
+@ref Employment Insurance Act s 96(8.95) (src:1587)
+GIVEN `the amount of the employer's premium in 2012` IS A NUMBER
+      `the person was required to pay an employer's premium in 2012` IS A BOOLEAN
+GIVETH A NUMBER
+DECIDE `s 96(8.95) P1 for subsection (8.94)` IS
+    IF `the person was required to pay an employer's premium in 2012`
+    THEN `the amount of the employer's premium in 2012`
+    ELSE 0
+
+-- src:1581 | (8.94) If an employer’s premium is $15,000 or less for 2012, the Minister shall refund to the employer a portion of the premium for 2013 determined by the following formula if that amount is more than $2:
+-- src:1582 | P2 – P1
+-- src:1583 | where
+-- src:1584 | P1 is the amount of the employer’s premium in 2012; and
+-- src:1585 | P2 is the amount of the employer’s premium in 2013.
+-- src:1589 | (8.96) A refund under subsection (8.94) shall not exceed $1,000.
+@ref Employment Insurance Act s 96(8.94), s 96(8.96) (src:1581-1585) (src:1589)
+GIVEN `P1, the amount of the employer's premium in 2012` IS A NUMBER
+      `the person was required to pay an employer's premium in 2012` IS A BOOLEAN
+      `P2, the amount of the employer's premium in 2013` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(8.94) the refund of part of the employer's premium for 2013` IS
+    IF     `P1 as subsection (8.95) sets it` AT MOST 15_000
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` 2013 `the day on which the application is made`
+    THEN `ei3 the refund` (`ei3 the refund of` (`P2, the amount of the employer's premium in 2013` MINUS `P1 as subsection (8.95) sets it`) `if it is more than` 2)
+             `capped at` 1_000
+    ELSE `ei3 no refund is payable under the provision`
+    WHERE
+        `P1 as subsection (8.95) sets it` MEANS `s 96(8.95) P1 for subsection (8.94)` `P1, the amount of the employer's premium in 2012` `the person was required to pay an employer's premium in 2012`
+
+-- Subsections (8.97) and (8.98): an employer's premium of $15,000 or less for 2015 (2016): a refund of E x 0.28% x 1.4, E being
+-- the total insurable earnings paid in that year by the employer for which premiums were deductible, if more than $2.
+-- No maximum is stated for these two.
+-- src:1591 | (8.97) If an employer’s premium is $15,000 or less for 2015, the Minister shall refund to the employer a portion of the premium for 2015 determined by the following formula if that amount is more than $2:
+-- src:1592 | E × 0.28% × 1.4
+-- src:1593 | where
+-- src:1594 | E is the total of all insurable earnings paid in 2015 by the employer for which premiums were deductible.
+@ref Employment Insurance Act s 96(8.97) (src:1591-1594)
+GIVEN `the amount of the employer's premium for 2015` IS A NUMBER
+      `E, the total of all insurable earnings paid in 2015 by the employer for which premiums were deductible` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(8.97) the refund of part of the employer's premium for 2015` IS
+    IF     `the amount of the employer's premium for 2015` AT MOST 15_000
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` 2015 `the day on which the application is made`
+    THEN `ei3 the refund of` (`E, the total of all insurable earnings paid in 2015 by the employer for which premiums were deductible` TIMES (0.28%) TIMES 1.4) `if it is more than` 2
+    ELSE `ei3 no refund is payable under the provision`
+
+-- src:1596 | (8.98) If an employer’s premium is $15,000 or less for 2016, the Minister shall refund to the employer a portion of the premium for 2016 determined by the following formula if that amount is more than $2:
+-- src:1597 | E × 0.28% × 1.4
+-- src:1598 | where
+-- src:1599 | E is the total of all insurable earnings paid in 2016 by the employer for which premiums were deductible.
+@ref Employment Insurance Act s 96(8.98) (src:1596-1599)
+GIVEN `the amount of the employer's premium for 2016` IS A NUMBER
+      `E, the total of all insurable earnings paid in 2016 by the employer for which premiums were deductible` IS A NUMBER
+      `the application is made in writing to the Minister` IS A BOOLEAN
+      `the day on which the application is made` IS A DATE
+GIVETH A `ei3 Refund`
+DECIDE `s 96(8.98) the refund of part of the employer's premium for 2016` IS
+    IF     `the amount of the employer's premium for 2016` AT MOST 15_000
+       AND `s 96(10) the application for the refund is made in time` `the application is made in writing to the Minister` 2016 `the day on which the application is made`
+    THEN `ei3 the refund of` (`E, the total of all insurable earnings paid in 2016 by the employer for which premiums were deductible` TIMES (0.28%) TIMES 1.4) `if it is more than` 2
+    ELSE `ei3 no refund is payable under the provision`
+
+§ `Section 96(11) to (13.1) - recovery, set-off, interest`
+
+-- Subsection (11): if the Minister refunded, or applied to a liability to Her Majesty, more than should have been, "whether on
+-- the basis of incorrect or incomplete information contained in the application or otherwise", the excess may be recovered at
+-- any time from the person as a debt due to Her Majesty.
+-- src:1605 | (11) If a person applies under this section for a refund and, whether on the basis of incorrect or incomplete information contained in the application or otherwise, the Minister has
+-- src:1606 | (a) refunded an amount to the person, or
+-- src:1607 | (b) applied an amount to a liability of the person to Her Majesty in right of Canada,
+-- src:1608 | in excess of the amount that should have been refunded or applied, the excess amount may be recovered at any time from the person as a debt due to Her Majesty.
+@ref Employment Insurance Act s 96(11) (src:1605-1608)
+GIVEN `the person applied under this section for a refund` IS A BOOLEAN
+      `the amount the Minister refunded to the person or applied to a liability of the person to Her Majesty` IS A NUMBER
+      `the amount that should have been refunded or applied` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `s 96(11) the excess may be recovered at any time from the person as a debt due to Her Majesty` IF
+        `the person applied under this section for a refund`
+    AND `the amount the Minister refunded to the person or applied to a liability of the person to Her Majesty` GREATER THAN `the amount that should have been refunded or applied`
+
+-- src:1605 | (11) If a person applies under this section for a refund and, whether on the basis of incorrect or incomplete information contained in the application or otherwise, the Minister has
+-- src:1606 | (a) refunded an amount to the person, or
+-- src:1607 | (b) applied an amount to a liability of the person to Her Majesty in right of Canada,
+-- src:1608 | in excess of the amount that should have been refunded or applied, the excess amount may be recovered at any time from the person as a debt due to Her Majesty.
+@ref Employment Insurance Act s 96(11) (src:1605-1608)
+GIVEN `the amount the Minister refunded to the person or applied to a liability of the person to Her Majesty` IS A NUMBER
+      `the amount that should have been refunded or applied` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `s 96(11) the excess amount` IS
+    IF `the amount the Minister refunded to the person or applied to a liability of the person to Her Majesty` GREATER THAN `the amount that should have been refunded or applied`
+    THEN `the amount the Minister refunded to the person or applied to a liability of the person to Her Majesty` MINUS `the amount that should have been refunded or applied`
+    ELSE 0
+
+-- src:1610 | (12) If a person is liable or about to become liable to make a payment to Her Majesty in right of Canada and a refund under this section is otherwise payable to the person, the Minister may apply the amount of the refund to that liability and notify the person of that action instead of making the refund.
+@ref Employment Insurance Act s 96(12) (src:1610)
+GIVEN `the person is liable or about to become liable to make a payment to Her Majesty in right of Canada` IS A BOOLEAN
+      `a refund under this section is otherwise payable to the person` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 96(12) the Minister may apply the refund to that liability and notify the person instead of making the refund` IF
+        `the person is liable or about to become liable to make a payment to Her Majesty in right of Canada`
+    AND `a refund under this section is otherwise payable to the person`
+
+-- Subsection (13.1): no interest on a refund payable under (3.1), (8.7), (8.91), (8.94), (8.97) or (8.98), nor on the amount of
+-- such a refund applied to another liability.
+DECLARE `ei3 Provision under which a refund is payable` IS ONE OF
+    `ei3 subsection 96(1)`
+    `ei3 subsection 96(2)`
+    `ei3 subsection 96(3)`
+    `ei3 subsection 96(3.1)`
+    `ei3 subsection 96(4)`
+    `ei3 subsection 96(5)`
+    `ei3 subsection 96(5.1)`
+    `ei3 subsection 96(6)`
+    `ei3 subsection 96(7)`
+    `ei3 subsection 96(8.2)`
+    `ei3 subsection 96(8.3)`
+    `ei3 subsection 96(8.7)`
+    `ei3 subsection 96(8.91)`
+    `ei3 subsection 96(8.94)`
+    `ei3 subsection 96(8.97)`
+    `ei3 subsection 96(8.98)`
+
+-- src:1614 | (13.1) Despite subsection (13), no interest shall be paid on a refund payable under subsection (3.1), (8.7), (8.91), (8.94), (8.97) or (8.98) or on the amount of a refund payable under any of those subsections that is applied under this Act to any other liability.
+@ref Employment Insurance Act s 96(13.1) (src:1614)
+GIVEN provision IS A `ei3 Provision under which a refund is payable`
+GIVETH A BOOLEAN
+DECIDE `s 96(13.1) no interest shall be paid on the refund` IS
+    CONSIDER provision
+    WHEN `ei3 subsection 96(3.1)` THEN TRUE
+    WHEN `ei3 subsection 96(8.7)` THEN TRUE
+    WHEN `ei3 subsection 96(8.91)` THEN TRUE
+    WHEN `ei3 subsection 96(8.94)` THEN TRUE
+    WHEN `ei3 subsection 96(8.97)` THEN TRUE
+    WHEN `ei3 subsection 96(8.98)` THEN TRUE
+    OTHERWISE FALSE
+
+-- Subsection (13): interest on an overpayment refunded, or applied to another liability, "at a prescribed annual rate ... for the
+-- period or periods determined as prescribed", but none if the interest is less than $1. The rate and periods are prescribed
+-- (Regulations not deposited), so the amount of interest is an input; the rule says whether it is paid.
+-- src:1612 | (13) If an amount for an overpayment is refunded or applied under this Act to any other liability, interest shall be paid or applied on the amount at a prescribed annual rate under the circumstances and for the period or periods determined as prescribed, except that no interest shall be paid or applied if the amount of the interest is less than $1.
+@ref Employment Insurance Act s 96(13) (src:1612)
+GIVEN provision IS A `ei3 Provision under which a refund is payable`
+      `an amount for an overpayment is refunded or applied under this Act to any other liability` IS A BOOLEAN
+      `the amount of the interest at the prescribed annual rate for the prescribed period` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `s 96(13) interest shall be paid or applied on the amount` IF
+        `an amount for an overpayment is refunded or applied under this Act to any other liability`
+    AND (NOT `s 96(13.1) no interest shall be paid on the refund` provision)
+    AND `the amount of the interest at the prescribed annual rate for the prescribed period` AT LEAST 1

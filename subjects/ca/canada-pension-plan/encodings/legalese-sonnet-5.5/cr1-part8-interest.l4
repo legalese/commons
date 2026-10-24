@@ -1,0 +1,226 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cr1-helpers`
+
+-- Canada Pension Plan Regulations (C.R.C., c. 385), PART VIII, regulation 87 -- INTEREST ON AMOUNTS OWING TO HER
+-- MAJESTY: debts under subsection 66(2) or (2.02) of the Act (piece cp4/cp5), penalties imposed under section 90.1
+-- of the Act, demands for payment, the due date, the rate, when interest does not accrue, when it stops, and when
+-- the Minister may remit it. Piece cr1. LAYER 1.
+--
+-- A rate is a fraction (0.05 is 5 per cent). The Bank of Canada's weekly bank rate is an external series (not
+-- deposited): it arrives as a number. The text says that the rate "is calculated daily and compounded monthly" but
+-- not on what basis the days are counted (a 365-day year? the actual year?) nor on what date the interest is
+-- added to the debt. The module gives the rate, the day interest starts and stops, the days it does not run and
+-- the remission test, which the text states; for the amount, it takes the number of days in the year as an input
+-- and compounds at the end of each month (fork F19).
+-- "This section comes into force" (subsection (2)) has no date in the text: whether a debt is "recoverable on or
+-- after" it is a plain input.
+
+§ `Regulations, Part VIII -- regulation 87: interest on amounts owing to Her Majesty`
+
+§§ `Regulation 87(1): the definitions`
+
+-- bank rate means the rate of interest established weekly by the Bank of Canada as the minimum rate at which the
+-- Bank of Canada makes short-term advances to members of the Canadian Payments Association: an external series, so
+-- each weekly rate is a plain input of the list below (the weekly rates are fractions).
+-- average bank rate means the simple arithmetic mean of the bank rates that are established during the month before
+-- the month in respect of which interest is being calculated. NOTHING when none is established.
+-- src:860 | average bank rate means the simple arithmetic mean of the bank rates that are established during the month before the month in respect of which interest is being calculated. (taux d’escompte moyen)
+-- src:861 | bank rate means the rate of interest established weekly by the Bank of Canada as the minimum rate at which the Bank of Canada makes short-term advances to members of the Canadian Payments Association. (taux d’escompte)
+@ref Reg 87(1) "average bank rate", "bank rate" (src:860-861)
+GIVEN `the bank rates established during the month before the month in respect of which interest is being calculated` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+`reg 87(1) — the average bank rate` `the bank rates established during the month before the month in respect of which interest is being calculated` MEANS
+    IF count `the bank rates established during the month before the month in respect of which interest is being calculated` EQUALS 0
+    THEN NOTHING
+    ELSE JUST ((sum `the bank rates established during the month before the month in respect of which interest is being calculated`) DIVIDED BY (count `the bank rates established during the month before the month in respect of which interest is being calculated`))
+
+-- debt means (a) a debt due under subsection 66(2) of the Act in respect of which a penalty has been imposed under
+-- section 90.1 of the Act; or (b) a debt due under subsection 66(2.02) of the Act.
+-- src:862 | debt means
+-- src:863 | (a) a debt due under subsection 66(2) of the Act in respect of which a penalty has been imposed under section 90.1 of the Act; or
+-- src:864 | (b) a debt due under subsection 66(2.02) of the Act. (créance)
+@ref Reg 87(1) "debt" (src:862-864)
+DECLARE `cr1 Kind of amount owing for the definition of a debt` IS ONE OF
+    `a debt due under subsection 66(2) of the Act in respect of which a penalty has been imposed under section 90.1 of the Act`
+    `a debt due under subsection 66(2.02) of the Act`
+    `any other amount owing`
+
+@ref Reg 87(1) "debt" (src:862-864)
+GIVEN kind IS A `cr1 Kind of amount owing for the definition of a debt`
+GIVETH A BOOLEAN
+`reg 87(1) — an amount owing is a debt` kind MEANS
+    CONSIDER kind
+    WHEN `any other amount owing` THEN FALSE
+    OTHERWISE TRUE
+
+-- demand for payment means a demand for payment in writing and includes a notification of a decision to impose a
+-- penalty under section 90.1 of the Act or of the amount of a penalty imposed under that section.
+-- src:865 | demand for payment means a demand for payment in writing and includes a notification of a decision to impose a penalty under section 90.1 of the Act or of the amount of a penalty imposed under that section. (demande de paiement)
+@ref Reg 87(1) "demand for payment" (src:865)
+GIVEN `a demand for payment in writing` IS A BOOLEAN
+      `a notification of a decision to impose a penalty under section 90.1 of the Act, or of the amount of a penalty imposed under that section` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 87(1) — a communication is a demand for payment` `a demand for payment in writing` `a notification of a decision to impose a penalty under section 90.1 of the Act, or of the amount of a penalty imposed under that section` MEANS
+    `a demand for payment in writing` OR `a notification of a decision to impose a penalty under section 90.1 of the Act, or of the amount of a penalty imposed under that section`
+
+-- due date means, in respect of a debt, (a) where a payment schedule has been established, any day on which a
+-- scheduled payment is to be made; or (b) where no payment schedule has been established, the day that is 120 days
+-- after the day on which a demand for payment was issued.
+-- src:866 | due date means, in respect of a debt,
+-- src:867 | (a) where a payment schedule has been established, any day on which a scheduled payment is to be made; or
+-- src:868 | (b) where no payment schedule has been established, the day that is 120 days after the day on which a demand for payment was issued. (date d’exigibilité)
+@ref Reg 87(1) "due date" (src:866-868)
+GIVEN day IS A DATE
+      `a payment schedule has been established` IS A BOOLEAN
+      `the days on which scheduled payments are to be made` IS A LIST OF DATE
+      `the day on which a demand for payment was issued` IS A DATE
+GIVETH A BOOLEAN
+`reg 87(1) — a day is a due date of the debt` day `a payment schedule has been established` `the days on which scheduled payments are to be made` `the day on which a demand for payment was issued` MEANS
+    IF `a payment schedule has been established`
+    THEN elem day `the days on which scheduled payments are to be made`
+    ELSE day EQUALS (`the date a time limit ends` `the day on which a demand for payment was issued` (`a number of days` WITH `number of days` IS 120))
+
+§§ `Regulation 87(2) to (4): when interest is payable and at what rate`
+
+-- 87 (2) Interest is payable on all debts that are recoverable on or after the day on which this section comes
+-- into force. (3) The accrual of interest on a debt, at the rate set out in subsection (4), begins on the due date.
+-- src:869 | (2) Interest is payable on all debts that are recoverable on or after the day on which this section comes into force.
+-- src:870 | (3) The accrual of interest on a debt, at the rate set out in subsection (4), begins on the due date.
+@ref Reg 87(2), 87(3) (src:869-870)
+GIVEN `the debt is recoverable on or after the day on which this section comes into force` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 87(2) — interest is payable on the debt` `the debt is recoverable on or after the day on which this section comes into force` MEANS
+    `the debt is recoverable on or after the day on which this section comes into force`
+
+@ref Reg 87(3) (src:870)
+GIVEN `the due date` IS A DATE
+GIVETH A DATE
+`reg 87(3) — the day the accrual of interest on the debt begins` `the due date` MEANS
+    `the due date`
+
+-- 87 (4) Interest accrues on a debt at a rate that is calculated daily and compounded monthly at the average bank
+-- rate plus three per cent.
+-- src:871 | (4) Interest accrues on a debt at a rate that is calculated daily and compounded monthly at the average bank rate plus three per cent.
+@ref Reg 87(4) (src:871)
+GIVEN `the average bank rate` IS A NUMBER
+GIVETH A NUMBER
+`reg 87(4) — the rate at which interest accrues on the debt` `the average bank rate` MEANS
+    `the average bank rate` PLUS 3%
+
+@ref Reg 87(4) (src:871)
+GIVEN balance IS A NUMBER
+      rate IS A NUMBER
+      `the number of days in the month on which interest accrues` IS A NUMBER
+      `the number of days in the year on which the daily rate is based` IS A NUMBER
+GIVETH A NUMBER
+`reg 87(4) — the interest that accrues on a balance in one month` balance rate `the number of days in the month on which interest accrues` `the number of days in the year on which the daily rate is based` MEANS
+    (balance TIMES rate TIMES `the number of days in the month on which interest accrues`) DIVIDED BY `the number of days in the year on which the daily rate is based`
+
+@ref Reg 87(4) (src:871)
+GIVEN balance IS A NUMBER
+      rate IS A NUMBER
+      `the number of days in the month on which interest accrues` IS A NUMBER
+      `the number of days in the year on which the daily rate is based` IS A NUMBER
+GIVETH A NUMBER
+`reg 87(4) — the balance after the month's interest is compounded` balance rate `the number of days in the month on which interest accrues` `the number of days in the year on which the daily rate is based` MEANS
+    balance PLUS (`reg 87(4) — the interest that accrues on a balance in one month` balance rate `the number of days in the month on which interest accrues` `the number of days in the year on which the daily rate is based`)
+
+§§ `Regulation 87(5) and (6): interest that does not accrue, and when accrual stops`
+
+-- 87 (5) Interest does not accrue on a debt during the period in which a reconsideration under subsection 81(2) of
+-- the Act, an appeal under section 82 of the Act or section 55 of the Department of Employment and Social
+-- Development Act, or a judicial review under the Federal Courts Act is pending in respect of that debt.
+-- src:872 | (5) Interest does not accrue on a debt during the period in which a reconsideration under subsection 81(2) of the Act, an appeal under section 82 of the Act or section 55 of the Department of Employment and Social Development Act, or a judicial review under the Federal Courts Act is pending in respect of that debt.
+@ref Reg 87(5) (src:872)
+GIVEN `a reconsideration under subsection 81(2) of the Act is pending in respect of the debt` IS A BOOLEAN
+      `an appeal under section 82 of the Act or section 55 of the Department of Employment and Social Development Act is pending in respect of the debt` IS A BOOLEAN
+      `a judicial review under the Federal Courts Act is pending in respect of the debt` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 87(5) — interest accrues on the debt on the day` `a reconsideration under subsection 81(2) of the Act is pending in respect of the debt` `an appeal under section 82 of the Act or section 55 of the Department of Employment and Social Development Act is pending in respect of the debt` `a judicial review under the Federal Courts Act is pending in respect of the debt` MEANS
+    NOT (    `a reconsideration under subsection 81(2) of the Act is pending in respect of the debt`
+         OR  `an appeal under section 82 of the Act or section 55 of the Department of Employment and Social Development Act is pending in respect of the debt`
+         OR  `a judicial review under the Federal Courts Act is pending in respect of the debt`)
+
+-- 87 (6)(c)(ii) the latest of the following decisions in respect of a decision or determination of the Minister under
+-- section 90.1 of the Act: (A) a decision of the Minister under subsection 81(2) of the Act, and (B) a decision on an
+-- appeal under section 82 of the Act or section 55 of the Department of Employment and Social Development Act or a
+-- judicial review under the Federal Courts Act.
+-- src:878 | (ii) the latest of the following decisions in respect of a decision or determination of the Minister under section 90.1 of the Act:
+-- src:879 | (A) a decision of the Minister under subsection 81(2) of the Act, and
+-- src:880 | (B) a decision on an appeal under section 82 of the Act or section 55 of the Department of Employment and Social Development Act or a judicial review under the Federal Courts Act;
+@ref Reg 87(6)(c)(ii) (src:878-880)
+GIVEN `the day of the decision of the Minister under subsection 81(2) of the Act` IS A MAYBE DATE
+      `the day of the decision on an appeal or a judicial review` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`reg 87(6)(c)(ii) — the day of the latest of the decisions` `the day of the decision of the Minister under subsection 81(2) of the Act` `the day of the decision on an appeal or a judicial review` MEANS
+    `cr1 helper: the later of two optional dates` `the day of the decision of the Minister under subsection 81(2) of the Act` `the day of the decision on an appeal or a judicial review`
+
+-- 87 (6) The accrual of interest on a debt or on a portion of the debt, as applicable, ceases on (a) the day before
+-- the day on which a scheduled payment in respect of the debt or a payment of the debt in full is received by Her
+-- Majesty; (b) the day on which the debt or the portion of the debt is remitted under subsection 66(3) of the Act;
+-- (c) the day on which the penalty that constitutes the debt is reduced or the decision imposing that penalty is
+-- rescinded under (i) subsection 90.1(4) of the Act, or (ii) the latest of the decisions of (c)(ii); (d) the day
+-- on which the accrued interest is remitted under subsection (7); or (e) the day on which the debtor dies. The
+-- answer is the earliest of the days that have come; NOTHING if none has.
+-- src:873 | (6) The accrual of interest on a debt or on a portion of the debt, as applicable, ceases on
+-- src:874 | (a) the day before the day on which a scheduled payment in respect of the debt or a payment of the debt in full is received by Her Majesty;
+-- src:875 | (b) the day on which the debt or the portion of the debt is remitted under subsection 66(3) of the Act;
+-- src:876 | (c) the day on which the penalty that constitutes the debt is reduced or the decision imposing that penalty is rescinded under
+-- src:877 | (i) subsection 90.1(4) of the Act, or
+-- src:878 | (ii) the latest of the following decisions in respect of a decision or determination of the Minister under section 90.1 of the Act:
+-- src:879 | (A) a decision of the Minister under subsection 81(2) of the Act, and
+-- src:880 | (B) a decision on an appeal under section 82 of the Act or section 55 of the Department of Employment and Social Development Act or a judicial review under the Federal Courts Act;
+-- src:881 | (d) the day on which the accrued interest is remitted under subsection (7); or
+-- src:882 | (e) the day on which the debtor dies.
+@ref Reg 87(6) (src:873-882)
+GIVEN `the day a scheduled payment, or a payment of the debt in full, is received by Her Majesty` IS A MAYBE DATE
+      `the day the debt or the portion of the debt is remitted under subsection 66(3) of the Act` IS A MAYBE DATE
+      `the day the penalty is reduced or the decision imposing it is rescinded under subsection 90.1(4) of the Act` IS A MAYBE DATE
+      `the day of the latest of the decisions` IS A MAYBE DATE
+      `the day the accrued interest is remitted under subsection (7)` IS A MAYBE DATE
+      `the day the debtor dies` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`reg 87(6) — the day the accrual of interest on the debt ceases` `the day a scheduled payment, or a payment of the debt in full, is received by Her Majesty` `the day the debt or the portion of the debt is remitted under subsection 66(3) of the Act` `the day the penalty is reduced or the decision imposing it is rescinded under subsection 90.1(4) of the Act` `the day of the latest of the decisions` `the day the accrued interest is remitted under subsection (7)` `the day the debtor dies` MEANS
+    `cr1 helper: the earlier of two optional dates`
+        (`cr1 helper: the earlier of two optional dates`
+            (`cr1 helper: the earlier of two optional dates`
+                (`the day before the day a payment is received`)
+                `the day the debt or the portion of the debt is remitted under subsection 66(3) of the Act`)
+            (`cr1 helper: the earlier of two optional dates`
+                `the day the penalty is reduced or the decision imposing it is rescinded under subsection 90.1(4) of the Act`
+                `the day of the latest of the decisions`))
+        (`cr1 helper: the earlier of two optional dates`
+            `the day the accrued interest is remitted under subsection (7)`
+            `the day the debtor dies`)
+    WHERE
+        `the day before the day a payment is received` MEANS
+            CONSIDER `the day a scheduled payment, or a payment of the debt in full, is received by Her Majesty`
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST received THEN JUST (received PLUS (0 MINUS 1))
+
+§§ `Regulation 87(7): remission of the interest`
+
+-- 87 (7) The conditions under which the Minister may remit in whole or in part the interest payable under this
+-- section are that (a) the interest has ceased to accrue in accordance with paragraph (6)(c); (b) the interest
+-- cannot be collected within the reasonably foreseeable future; (c) the administrative costs of collecting the
+-- interest would exceed the amount of that interest; and (d) the payment of the interest would result in undue
+-- hardship to the debtor. All four hold ("; and").
+-- src:883 | (7) The conditions under which the Minister may remit in whole or in part the interest payable under this section are that
+-- src:884 | (a) the interest has ceased to accrue in accordance with paragraph (6)(c);
+-- src:885 | (b) the interest cannot be collected within the reasonably foreseeable future;
+-- src:886 | (c) the administrative costs of collecting the interest would exceed the amount of that interest; and
+-- src:887 | (d) the payment of the interest would result in undue hardship to the debtor.
+@ref Reg 87(7) (src:883-887)
+GIVEN `the interest has ceased to accrue in accordance with paragraph (6)(c)` IS A BOOLEAN
+      `the interest cannot be collected within the reasonably foreseeable future` IS A BOOLEAN
+      `the administrative costs of collecting the interest would exceed the amount of that interest` IS A BOOLEAN
+      `the payment of the interest would result in undue hardship to the debtor` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 87(7) — the Minister may remit the interest in whole or in part` `the interest has ceased to accrue in accordance with paragraph (6)(c)` `the interest cannot be collected within the reasonably foreseeable future` `the administrative costs of collecting the interest would exceed the amount of that interest` `the payment of the interest would result in undue hardship to the debtor` MEANS
+        `the interest has ceased to accrue in accordance with paragraph (6)(c)`
+    AND `the interest cannot be collected within the reasonably foreseeable future`
+    AND `the administrative costs of collecting the interest would exceed the amount of that interest`
+    AND `the payment of the interest would result in undue hardship to the debtor`

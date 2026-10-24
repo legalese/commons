@@ -1,0 +1,221 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cpp-core-age`
+IMPORT `cp1-nouns`
+
+-- Canada Pension Plan Act, Part I, Division B -- MONTH HELPERS shared by sections 12, 13, 17, 17.1 and 19.
+--
+-- No provision licenses these rules. Sections 12, 13, 17, 17.1 and 19 count months ("the number of months in the
+-- year after they reach eighteen years of age", "any month that is excluded from the person's contributory period").
+-- A month is the DATE of its first day (the keel's convention). Ages go through the keel's section 2(2) rules in the
+-- modules that need them, never here.
+
+§ `Month helpers (no provision)`
+
+-- The twelve months of a year, each as the date of its first day.
+GIVEN year IS A NUMBER
+GIVETH A LIST OF DATE
+`the twelve months of a year` year MEANS
+    LIST YMD year 1 1, YMD year 2 1, YMD year 3 1, YMD year 4 1, YMD year 5 1, YMD year 6 1,
+         YMD year 7 1, YMD year 8 1, YMD year 9 1, YMD year 10 1, YMD year 11 1, YMD year 12 1
+
+-- Whether a month (any date in it) lies in a run of months, both ends included. A run with no end has not ended.
+GIVEN month IS A DATE
+      period IS A `cp1 Month period`
+GIVETH A BOOLEAN
+`a month falls in a month period` month period MEANS
+        `the month of a date` month AT LEAST `the month of a date` (period's `first month of the month period`)
+    AND (CONSIDER period's `last month of the month period`
+         WHEN NOTHING THEN TRUE
+         WHEN JUST last THEN `the month of a date` month AT MOST `the month of a date` last)
+
+-- Whether a month lies in any of several runs of months.
+GIVEN month IS A DATE
+      periods IS A LIST OF `cp1 Month period`
+GIVETH A BOOLEAN
+`a month falls in one of the month periods` month periods MEANS
+    any (GIVEN period YIELD `a month falls in a month period` month period) periods
+
+-- Whether a month is at or after the first day of a month that may be missing (NOTHING: it never happens).
+GIVEN month IS A DATE
+      from IS A MAYBE DATE
+GIVETH A BOOLEAN
+`a month is at or after the month of an optional date` month from MEANS
+    CONSIDER from
+    WHEN NOTHING THEN FALSE
+    WHEN JUST d THEN `the month of a date` month AT LEAST `the month of a date` d
+
+-- Whether a date that may be missing falls in a year.
+GIVEN d IS A MAYBE DATE
+      year IS A NUMBER
+GIVETH A BOOLEAN
+`an optional date falls in a year` d year MEANS
+    CONSIDER d
+    WHEN NOTHING THEN FALSE
+    WHEN JUST x THEN DATE_YEAR x EQUALS year
+
+-- How many of the twelve months of a year lie between two month numbers (the keel's `the month number of a date`),
+-- both ends included. Not below zero.
+GIVEN year IS A NUMBER
+      `first month number` IS A NUMBER
+      `last month number` IS A NUMBER
+GIVETH A NUMBER
+`the number of months of a year from one month number to another` year `first month number` `last month number` MEANS
+    max 0 ((min `last month number` (year TIMES 12 PLUS 12)) MINUS (max `first month number` (year TIMES 12 PLUS 1)) PLUS 1)
+
+§§ `Counting the months of a year for sections 13, 17, 17.1 and 19`
+
+-- Sections 13(1), 17, 17.1 and 19 all prorate an amount by "that proportion ... that the number of months in the
+-- year ... is of 12", where the months are those after one event and before another. These helpers count the months
+-- once; each section calls them with the provision it is (the keel's `Provision about reaching an age` says whether the
+-- actual birthday or the deemed date governs there) and says whether the person's death counts.
+
+-- How many of the twelve months of a year come before a first day (a month that begins on an earlier date).
+GIVEN year IS A NUMBER
+      day IS A DATE
+GIVETH A NUMBER
+`the number of months of a year before a first day` year day MEANS
+    count (filter (GIVEN month YIELD month LESS THAN day) (`the twelve months of a year` year))
+
+-- How many of the twelve months of a year begin on or after a first day.
+GIVEN year IS A NUMBER
+      day IS A DATE
+GIVETH A NUMBER
+`the number of months of a year from a first day` year day MEANS
+    count (filter (GIVEN month YIELD month AT LEAST day) (`the twelve months of a year` year))
+
+-- How many months of the year are excluded from the person's contributory period by reason of disability.
+GIVEN facts IS A `cp1 Facts about a person for a year`
+GIVETH A NUMBER
+`the number of months of the year excluded from the contributory period by reason of disability` facts MEANS
+    count (filter (GIVEN month YIELD `a month falls in one of the month periods` month (facts's `months excluded from the contributory period of the person by reason of disability`))
+                  (`the twelve months of a year` (facts's `the year at hand`)))
+
+-- How many months of the year begin after the person reaches seventy years of age or, when death counts, dies,
+-- whichever is earlier. The provision says whether the actual birthday governs (it does in the places section 2(2) lists).
+GIVEN facts IS A `cp1 Facts about a person for a year`
+      provision IS A `Provision about reaching an age`
+      `death counts` IS A BOOLEAN
+GIVETH A NUMBER
+`the number of months of the year after the person reaches seventy years of age or dies, whichever is earlier` facts provision `death counts` MEANS
+    count (filter (GIVEN month YIELD month GREATER THAN limit) (`the twelve months of a year` (facts's `the year at hand`)))
+    WHERE
+        seventy MEANS `s 2(2) — the date a person is treated as reaching a specified age for a provision` provision (facts's `date of birth of the person`) 70
+        limit MEANS
+            IF `death counts`
+            THEN (CONSIDER facts's `date of death of the person`
+                  WHEN NOTHING THEN seventy
+                  WHEN JUST died THEN (IF seventy AT MOST died THEN seventy ELSE died))
+            ELSE seventy
+
+-- Whether a retirement pension is payable to the person for at least one month of the year.
+GIVEN facts IS A `cp1 Facts about a person for a year`
+GIVETH A BOOLEAN
+`a retirement pension is payable to the person in the year` facts MEANS
+    any (GIVEN month YIELD `a month is at or after the month of an optional date` month (facts's `month from which a retirement pension is payable to the person`))
+        (`the twelve months of a year` (facts's `the year at hand`))
+
+-- The number of months of the year for which a retirement pension is payable.
+GIVEN facts IS A `cp1 Facts about a person for a year`
+GIVETH A NUMBER
+`the number of months of the year for which a retirement pension is payable` facts MEANS
+    count (filter (GIVEN month YIELD `a month is at or after the month of an optional date` month (facts's `month from which a retirement pension is payable to the person`))
+                  (`the twelve months of a year` (facts's `the year at hand`)))
+
+-- Month-granular tests of whether an event that may be missing falls in the year, and of the first day after it.
+GIVEN d IS A MAYBE DATE
+      year IS A NUMBER
+      month IS A DATE
+GIVETH A BOOLEAN
+`a month is not after the month of an event in the year` d year month MEANS
+    IF `an optional date falls in a year` d year
+    THEN (CONSIDER d
+          WHEN NOTHING THEN TRUE
+          WHEN JUST x THEN `the month of a date` month AT MOST `the month of a date` x)
+    ELSE TRUE
+
+GIVEN d IS A MAYBE DATE
+      year IS A NUMBER
+      month IS A DATE
+GIVETH A BOOLEAN
+`a month is after the month of an event in the year` d year month MEANS
+    IF `an optional date falls in a year` d year
+    THEN (CONSIDER d
+          WHEN NOTHING THEN TRUE
+          WHEN JUST x THEN `the month of a date` month AT LEAST `the month following the month of a date` x)
+    ELSE TRUE
+
+§§ `The election event of a year`
+
+-- Not a provision. The elections of subparagraph 12(1)(c)(ii) and paragraphs 13(1)(b) and (c) are dated in the
+-- facts; the year at hand has an election event when one of the four dates falls in it. The month an election under
+-- paragraph 13(1)(b) refers to is the first day of that month (13(1.1)(e)), so the year of that month is the year.
+GIVEN facts IS A `cp1 Facts about a person for a year`
+GIVETH A `cp1 Election event in a year`
+`the election event in the year` facts MEANS
+    BRANCH
+        IF `number of election events` GREATER THAN 1 THEN `more than one election event in the year`
+        IF made12 THEN `an election under subparagraph 12(1)(c)(ii) is made in the year`
+        IF revoked12 THEN `an election under subparagraph 12(1)(c)(ii) is revoked in the year`
+        IF made13 THEN `an election under paragraph 13(1)(b) is deemed made in the year`
+        IF revoked13 THEN `an election under paragraph 13(1)(c) is deemed revoked in the year`
+        OTHERWISE `no election event in the year`
+    WHERE
+        year MEANS facts's `the year at hand`
+        made12 MEANS `an optional date falls in a year` (facts's `date the person makes an election under subparagraph 12(1)(c)(ii)`) year
+        revoked12 MEANS `an optional date falls in a year` (facts's `date the person revokes the election under subparagraph 12(1)(c)(ii)`) year
+        made13 MEANS `an optional date falls in a year` (facts's `month referred to in the election of the person under paragraph 13(1)(b)`) year
+        revoked13 MEANS `an optional date falls in a year` (facts's `month referred to in the revocation by the person under paragraph 13(1)(c)`) year
+        `number of election events` MEANS
+            count (filter (GIVEN happened YIELD happened) (LIST made12, revoked12, made13, revoked13))
+
+§§ `Paragraph (a) of sections 13(1), 17, 17.1 and 19`
+
+-- The four paragraphs (a) share one text, apart from death (sections 17, 17.1 and 19 count it, section 13 does not):
+-- "for a year in which the person reaches eighteen or seventy years of age or dies, in which their contributory period
+-- ends ... by reason of disability or in which a disability pension ceases to be payable to them", the amount is that
+-- proportion that "the number of months in the year (i) after (A) they reach eighteen years of age, or (B) the
+-- disability pension ceases to be payable, or (ii) before (A) they reach seventy years of age, (B) they die, or (C) the
+-- month following the month in which their contributory period ends ... by reason of disability, including, if they die,
+-- the month in which they die, is of 12".
+--
+-- Reading taken (NOTES.md, fork register): each event is one of the year's, so a month counts when it satisfies every
+-- event that happens in the year. Reaching eighteen or seventy is tested through section 2(2) with `any other
+-- provision`: paragraphs (a) are not among the ten places where the actual birthday governs.
+GIVEN facts IS A `cp1 Facts about a person for a year`
+      `death counts` IS A BOOLEAN
+GIVETH A BOOLEAN
+`a paragraph (a) event occurs in the year` facts `death counts` MEANS
+        DATE_YEAR (`s 2(2) — the date a person is treated as reaching a specified age for a provision` `any other provision` (facts's `date of birth of the person`) 18) EQUALS facts's `the year at hand`
+    OR  DATE_YEAR (`s 2(2) — the date a person is treated as reaching a specified age for a provision` `any other provision` (facts's `date of birth of the person`) 70) EQUALS facts's `the year at hand`
+    OR  (`death counts` AND `an optional date falls in a year` (facts's `date of death of the person`) (facts's `the year at hand`))
+    OR  `an optional date falls in a year` (facts's `date the contributory period of the person ends by reason of disability`) (facts's `the year at hand`)
+    OR  `an optional date falls in a year` (facts's `date the disability pension ceases to be payable to the person`) (facts's `the year at hand`)
+
+GIVEN facts IS A `cp1 Facts about a person for a year`
+      `death counts` IS A BOOLEAN
+GIVETH A NUMBER
+`the number of months counted under paragraph (a)` facts `death counts` MEANS
+    count (filter (GIVEN month YIELD `a month is counted under paragraph (a)` facts `death counts` month) (`the twelve months of a year` (facts's `the year at hand`)))
+
+GIVEN facts IS A `cp1 Facts about a person for a year`
+      `death counts` IS A BOOLEAN
+      month IS A DATE
+GIVETH A BOOLEAN
+`a month is counted under paragraph (a)` facts `death counts` month MEANS
+    -- (i)(A) after they reach eighteen years of age, in the year they reach it
+        (IF DATE_YEAR (`s 2(2) — the date a person is treated as reaching a specified age for a provision` `any other provision` (facts's `date of birth of the person`) 18) EQUALS facts's `the year at hand`
+         THEN `s 2(2)(b) — a month is counted in a period of months commencing with a specified age` month (facts's `date of birth of the person`) 18
+         ELSE TRUE)
+    -- (i)(B) after the disability pension ceases to be payable, in the year it ceases
+    AND `a month is after the month of an event in the year` (facts's `date the disability pension ceases to be payable to the person`) (facts's `the year at hand`) month
+    -- (ii)(A) before they reach seventy years of age, in the year they reach it
+    AND (IF DATE_YEAR (`s 2(2) — the date a person is treated as reaching a specified age for a provision` `any other provision` (facts's `date of birth of the person`) 70) EQUALS facts's `the year at hand`
+         THEN `s 2(2)(a) — a month is counted in a period of months ending with a specified age` month (facts's `date of birth of the person`) 70
+         ELSE TRUE)
+    -- (ii)(B) before they die, including the month in which they die, in the year they die
+    AND (IF `death counts` THEN `a month is not after the month of an event in the year` (facts's `date of death of the person`) (facts's `the year at hand`) month ELSE TRUE)
+    -- (ii)(C) before the month following the month in which their contributory period ends by reason of disability, in the year it ends
+    AND `a month is not after the month of an event in the year` (facts's `date the contributory period of the person ends by reason of disability`) (facts's `the year at hand`) month

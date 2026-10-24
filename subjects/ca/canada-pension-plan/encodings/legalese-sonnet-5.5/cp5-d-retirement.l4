@@ -1,0 +1,337 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cpp-core-age`
+IMPORT `cp5-months`
+
+-- Canada Pension Plan Act, Part II, Division D (Payment of Benefits: Special Rules Applicable)
+-- RETIREMENT PENSION: sections 67 (when the pension is first payable) and 68 (how long it is paid).
+-- Layer 1: the law, objectively. Nobody's point of view; the seat layer is cp5-seat.l4.
+--
+-- A month is the DATE of its first day (cpp-core-calendar.l4). "NOTHING" means the text does not decide:
+-- payment is not approved, or the subsection does not apply to this pension (NOTES.md, fork register).
+-- The text speaks of the month "in which the applicant reached" an age; section 2(2) makes that the month
+-- after the month of the birthday, and no provision of this range is one of the ten that section 2(2) excepts
+-- here, so every age below goes through `any other provision` (NOTES.md, fork F5).
+-- "Subject to section 62" in subsections 67(1), (2) and (3.1) is not modelled: section 62 (piece cp4)
+-- says when payment is made for the months that precede approval, not which month is the first payable (NOTES.md, fork F9).
+
+-- out of range: section 60 (piece cp4): the Minister's approval of payment and the waiver under subsection 60(1.2), carried as `day payment of the pension was approved` and the day the requirement to apply was waived
+-- out of range: section 55 (piece cp3): the last month for which unadjusted pensionable earnings were attributed, `a day in the last month for which unadjusted pensionable earnings were attributed under section 55`
+-- out of range: subsection 42(1) "wholly or substantially" (piece cp3; the meaning is prescribed, piece cr2): `day the applicant wholly or substantially ceased paid employment and self-employment`
+-- out of range: sections 5 to 20 (pieces cp1 and cp2) and provincial plans: `a day in the month the contributor last worked and for which a contribution was made`
+-- out of range: subsection 42(2) and section 44 (piece cp3): whether a disability pension is no longer payable because the decision that the person was disabled was reversed or they ceased to be disabled, the first input of s 67(4)
+
+§ `Part II, Division D -- Retirement pension (sections 67 and 68)`
+
+§§ `The application, as the section 67 rules read it`
+
+-- The facts about an application for a retirement pension that the commencement rules of section 67 read.
+-- Approval is the Minister's judgment (section 60); it is carried as the day payment was approved, NOTHING
+-- when it has not been, and every rule below then answers NOTHING.
+-- "applied" (subsection (2)) and "the application was received" (subsections (1), (3), (3.1)) are taken as the
+-- one day the application was received (NOTES.md, fork F6).
+-- src:2256 | 67 (1) For a retirement pension that commences to be payable before January 1, 1987, subject to section 62, where an applicant, other than an estate, has reached sixty-five years of age and payment of the retirement pension is approved, the pension is payable for each month commencing with
+@ref Act s 67 (src:2256)
+DECLARE `cp5 Application for a retirement pension` HAS
+    `the applicant is an estate` IS A BOOLEAN
+    `date of birth of the applicant` IS A DATE
+    `day the application was received` IS A DATE
+    `day payment of the pension was approved` IS A MAYBE DATE
+    `a day in the month the contributor last worked and for which a contribution was made` IS A MAYBE DATE
+    `a day in the last month for which unadjusted pensionable earnings were attributed under section 55` IS A MAYBE DATE
+    `a day in the month the applicant chose for the pension to commence` IS A MAYBE DATE
+    `day the applicant wholly or substantially ceased paid employment and self-employment` IS A MAYBE DATE
+
+§§ `Subsection 67(1) -- a pension that commences before 1 January 1987`
+
+-- src:2256 | 67 (1) For a retirement pension that commences to be payable before January 1, 1987, subject to section 62, where an applicant, other than an estate, has reached sixty-five years of age and payment of the retirement pension is approved, the pension is payable for each month commencing with
+-- src:2257 | (a) the month in which the applicant reached sixty-five years of age,
+-- src:2258 | (b) the latest of the eleventh month preceding the month in which the application was received, the month following the month in which the contributor last worked and for which a contribution was made under this Act or a provincial pension plan and the month following the last month for which unadjusted pensionable earnings have been attributed under section 55, or
+-- src:2259 | (c) the month for which the applicant applied for the pension to commence,
+-- src:2260 | whichever is the latest.
+@ref Act s 67(1) "before January 1, 1987" (src:2256)
+`s 67(1) — the day before which a pension must commence for subsection (1) to apply` MEANS YMD 1987 1 1
+
+@ref Act s 67(1) (src:2256-2260)
+GIVEN application IS A `cp5 Application for a retirement pension`
+GIVETH A MAYBE DATE
+`s 67(1) — the month a retirement pension that commences before 1987 is first payable` application MEANS
+    CONSIDER application's `day payment of the pension was approved`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST approved THEN
+        IF      application's `the applicant is an estate`
+             OR (NOT (`cp5 helper -- the person has reached an age on a day under section 2(2)` (application's `date of birth of the applicant`) 65 approved))
+        THEN NOTHING
+        -- "has reached sixty-five years of age and payment ... is approved": the age is tested on the day payment was approved (NOTES.md, fork F8)
+        ELSE `cp5 helper -- the month if it falls before a day` latest `s 67(1) — the day before which a pension must commence for subsection (1) to apply`
+    WHERE
+        -- (a) the month in which the applicant reached 65
+        -- (b) the latest of: the eleventh month preceding the month the application was received; the month
+        --     following the month the contributor last worked and for which a contribution was made; the month
+        --     following the last month for which earnings were attributed under section 55
+        -- (c) the month for which the applicant applied for the pension to commence
+        -- whichever is the latest
+        latest MEANS `cp5 helper -- the latest of the months that apply` (LIST
+            JUST (`cp5 helper -- the month in which the person reaches an age under section 2(2)` (application's `date of birth of the applicant`) 65),
+            JUST (`cp5 helper -- the month a number of months from the month of a date` (application's `day the application was received`) (0 MINUS 11)),
+            `cp5 helper -- the month following the month of a date that may be absent` (application's `a day in the month the contributor last worked and for which a contribution was made`),
+            `cp5 helper -- the month following the month of a date that may be absent` (application's `a day in the last month for which unadjusted pensionable earnings were attributed under section 55`),
+            `cp5 helper -- the month of a date that may be absent` (application's `a day in the month the applicant chose for the pension to commence`))
+
+§§ `Subsection 67(2) -- a pension that commences on or after 1 January 1987`
+
+-- src:2262 | (2) For a retirement pension that commences to be payable on or after January 1, 1987 and where the applicant is not an estate, subject to section 62, where payment of the retirement pension is approved, the pension is payable for each month commencing with the latest of
+-- src:2263 | (a) the month in which the applicant reached sixty years of age,
+-- src:2264 | (b) the month following the month in which the applicant applied, if he was under seventy years of age when he applied,
+-- src:2265 | (c) the month following the month in which the applicant wholly or substantially ceased to be engaged in paid employment or self-employment, if he is then under sixty-five years of age,
+-- src:2266 | (d) the month in which the applicant reached sixty-five years of age, if he has not wholly or substantially ceased to be engaged in paid employment or self-employment,
+-- src:2267 | (e) the twelfth month preceding the month following the month in which the applicant applied, if he was over seventy years of age when he applied,
+-- src:2268 | (f) the month in which the applicant reached seventy years of age, if he applied after reaching that age,
+-- src:2269 | (g) the month of January 1987, if the applicant has reached sixty years of age but not sixty-five years of age before that month, and
+-- src:2270 | (h) the month chosen by the applicant in his application.
+@ref Act s 67(2) "on or after January 1, 1987" (src:2262)
+`s 67(2)(g) — the month of January 1987` MEANS YMD 1987 1 1
+
+@ref Act s 67(2) (src:2262-2270)
+GIVEN application IS A `cp5 Application for a retirement pension`
+GIVETH A MAYBE DATE
+`s 67(2) — the month a retirement pension that commences on or after 1987 is first payable` application MEANS
+    CONSIDER application's `day payment of the pension was approved`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST approved THEN
+        IF application's `the applicant is an estate`
+        THEN NOTHING
+        ELSE `cp5 helper -- the month if it falls on or after a day` latest `s 67(1) — the day before which a pension must commence for subsection (1) to apply`
+    WHERE
+        dob MEANS application's `date of birth of the applicant`
+        applied MEANS application's `day the application was received`
+        ceased MEANS application's `day the applicant wholly or substantially ceased paid employment and self-employment`
+        -- (b) the month following the month the applicant applied, if under seventy when applying
+        paraB MEANS IF NOT (`cp5 helper -- the person has reached an age on a day under section 2(2)` dob 70 applied)
+                    THEN JUST (`the month following the month of a date` applied)
+                    ELSE NOTHING
+        -- (c) the month following the month the applicant wholly or substantially ceased to be engaged in paid
+        --     employment or self-employment, if then under sixty-five
+        paraC MEANS CONSIDER ceased
+                    WHEN NOTHING THEN NOTHING
+                    WHEN JUST c THEN IF NOT (`cp5 helper -- the person has reached an age on a day under section 2(2)` dob 65 c)
+                                     THEN JUST (`the month following the month of a date` c)
+                                     ELSE NOTHING
+        -- (d) the month in which the applicant reached sixty-five, if he has not wholly or substantially ceased
+        --     (tested when he reached 65: NOTES.md, fork F7)
+        paraD MEANS CONSIDER ceased
+                    WHEN NOTHING THEN JUST (`cp5 helper -- the month in which the person reaches an age under section 2(2)` dob 65)
+                    WHEN JUST c THEN IF `cp5 helper -- the person has reached an age on a day under section 2(2)` dob 65 c
+                                     THEN JUST (`cp5 helper -- the month in which the person reaches an age under section 2(2)` dob 65)
+                                     ELSE NOTHING
+        -- (e) the twelfth month preceding the month following the month the applicant applied, if over seventy
+        paraE MEANS IF `cp5 helper -- the person has reached an age on a day under section 2(2)` dob 70 applied
+                    THEN JUST (`cp5 helper -- the month a number of months from the month of a date` applied (0 MINUS 11))
+                    ELSE NOTHING
+        -- (f) the month in which the applicant reached seventy, if he applied after reaching that age
+        paraF MEANS IF `cp5 helper -- the person has reached an age on a day under section 2(2)` dob 70 applied
+                    THEN JUST (`cp5 helper -- the month in which the person reaches an age under section 2(2)` dob 70)
+                    ELSE NOTHING
+        -- (g) the month of January 1987, if the applicant has reached sixty but not sixty-five before that month
+        paraG MEANS IF     `cp5 helper -- the person has reached an age on a day under section 2(2)` dob 60 (`s 67(2)(g) — the month of January 1987` MINUS 1)
+                       AND (NOT (`cp5 helper -- the person has reached an age on a day under section 2(2)` dob 65 (`s 67(2)(g) — the month of January 1987` MINUS 1)))
+                    THEN JUST `s 67(2)(g) — the month of January 1987`
+                    ELSE NOTHING
+        latest MEANS `cp5 helper -- the latest of the months that apply` (LIST
+            JUST (`cp5 helper -- the month in which the person reaches an age under section 2(2)` dob 60),
+            paraB,
+            paraC,
+            paraD,
+            paraE,
+            paraF,
+            paraG,
+            `cp5 helper -- the month of a date that may be absent` (application's `a day in the month the applicant chose for the pension to commence`))
+
+§§ `Subsection 67(3) -- an applicant who attained 65 before the application was received`
+
+-- src:2272 | (3) Where a person who has applied to receive a retirement pension attains the age of sixty-five years before the day on which the application is received, the pension is payable commencing with the latest of
+-- src:2273 | (a) the twelfth month before the month after the month in which the applicant applied or the month of January 1995, whichever is later,
+-- src:2274 | (b) the month in which the applicant reaches the age of sixty-five years, or
+-- src:2275 | (c) the month chosen by the applicant in the application.
+@ref Act s 67(3) "January 1995" (src:2273)
+`s 67(3)(a) — the month of January 1995` MEANS YMD 1995 1 1
+
+@ref Act s 67(3) (src:2272-2275)
+GIVEN application IS A `cp5 Application for a retirement pension`
+GIVETH A MAYBE DATE
+`s 67(3) — the month a retirement pension is first payable to an applicant who attained 65 before the day the application was received` application MEANS
+    CONSIDER application's `day payment of the pension was approved`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST approved THEN
+        IF      application's `the applicant is an estate`
+             OR (NOT (`cp5 helper -- the day the person is treated as reaching an age under section 2(2)` dob 65 BELOW application's `day the application was received`))
+        THEN NOTHING
+        ELSE `cp5 helper -- the latest of the months that apply` (LIST
+            -- (a) the twelfth month before the month after the month in which the applicant applied, or the month
+            --     of January 1995, whichever is later
+            `cp5 helper -- the later of two months that may not apply`
+                (JUST (`cp5 helper -- the month a number of months from the month of a date` (application's `day the application was received`) (0 MINUS 11)))
+                (JUST `s 67(3)(a) — the month of January 1995`),
+            -- (b) the month in which the applicant reaches 65
+            JUST (`cp5 helper -- the month in which the person reaches an age under section 2(2)` dob 65),
+            -- (c) the month chosen by the applicant in the application
+            `cp5 helper -- the month of a date that may be absent` (application's `a day in the month the applicant chose for the pension to commence`))
+    WHERE
+        dob MEANS application's `date of birth of the applicant`
+
+§§ `Subsection 67(3.1) -- a pension that commences on or after 1 January 2012`
+
+-- src:2277 | (3.1) For a retirement pension that commences to be payable on or after January 1, 2012 and if the applicant is not an estate, subject to section 62, if payment of the retirement pension is approved, the pension is payable for each month commencing with the latest of
+-- src:2278 | (a) the month in which the applicant reached sixty years of age,
+-- src:2279 | (b) the month following the month in which the application was received if they were under sixty-five years of age when they applied,
+-- src:2280 | (c) the eleventh month preceding the month in which the application was received if they have reached sixty-five years of age when they applied, but in no case earlier than the month in which they reached sixty-five years of age, and
+-- src:2281 | (d) the month chosen by the applicant in their application.
+@ref Act s 67(3.1) "on or after January 1, 2012" (src:2277)
+`s 67(3.1) — the day on or after which a pension must commence for subsection (3.1) to apply` MEANS YMD 2012 1 1
+
+@ref Act s 67(3.1) (src:2277-2281)
+GIVEN application IS A `cp5 Application for a retirement pension`
+GIVETH A MAYBE DATE
+`s 67(3.1) — the month a retirement pension that commences on or after 2012 is first payable` application MEANS
+    CONSIDER application's `day payment of the pension was approved`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST approved THEN
+        IF application's `the applicant is an estate`
+        THEN NOTHING
+        ELSE `cp5 helper -- the month if it falls on or after a day` latest `s 67(3.1) — the day on or after which a pension must commence for subsection (3.1) to apply`
+    WHERE
+        dob MEANS application's `date of birth of the applicant`
+        applied MEANS application's `day the application was received`
+        over65 MEANS `cp5 helper -- the person has reached an age on a day under section 2(2)` dob 65 applied
+        latest MEANS `cp5 helper -- the latest of the months that apply` (LIST
+            -- (a) the month in which the applicant reached sixty
+            JUST (`cp5 helper -- the month in which the person reaches an age under section 2(2)` dob 60),
+            -- (b) the month following the month the application was received, if under sixty-five when they applied
+            IF over65 THEN NOTHING ELSE JUST (`the month following the month of a date` applied),
+            -- (c) the eleventh month preceding the month the application was received, if they had reached
+            --     sixty-five when they applied, but in no case earlier than the month they reached sixty-five
+            IF over65
+            THEN `cp5 helper -- the later of two months that may not apply`
+                    (JUST (`cp5 helper -- the month a number of months from the month of a date` applied (0 MINUS 11)))
+                    (JUST (`cp5 helper -- the month in which the person reaches an age under section 2(2)` dob 65))
+            ELSE NOTHING,
+            -- (d) the month chosen by the applicant in their application
+            `cp5 helper -- the month of a date that may be absent` (application's `a day in the month the applicant chose for the pension to commence`))
+
+§§ `Subsection 67(3.2) -- the requirement to make the application was waived`
+
+-- src:2283 | (3.2) For a retirement pension in respect of which the requirement to make the application was waived under subsection 60(1.2), if payment of the retirement pension is approved, the pension is payable for each of the following months:
+-- src:2284 | (a) each month after the month in which the requirement was waived; and
+-- src:2285 | (b) each of the 12 months in which the beneficiary had reached the age of 70 — including the month in which they reached that age — before the first month referred to in paragraph (a).
+@ref Act s 67(3.2) (src:2283-2285)
+GIVEN `payment is approved` IS A BOOLEAN
+      `date of birth` IS A DATE
+      `day the requirement was waived` IS A DATE
+GIVETH A MAYBE DATE
+`s 67(3.2) — the first month for which a retirement pension is payable where the requirement to apply was waived` `payment is approved` `date of birth` `day the requirement was waived` MEANS
+    IF `payment is approved`
+    THEN `cp5 helper -- the later of two months that may not apply`
+            -- (b) the twelve months in which the beneficiary had reached 70, counting the month they reached it,
+            --     that precede the first month in (a)
+            (JUST (`cp5 helper -- the month in which the person reaches an age under section 2(2)` `date of birth` 70))
+            -- (a) each month after the month in which the requirement was waived, and the twelve before the first of them
+            (JUST (`cp5 helper -- the month a number of months from the month of a date` (`the month following the month of a date` `day the requirement was waived`) (0 MINUS 12)))
+    ELSE NOTHING
+
+§§ `Subsection 67(4) -- a disability pension has ceased and the person applies for a retirement pension`
+
+-- src:2287 | (4) Where a disability pension is no longer payable because a decision that the person was disabled has been reversed or because the person has ceased to be disabled, and on or before the day that is 90 days after the day on which the person is notified that the disability pension has ceased, or within any longer period that the Minister may either before or after the expiration of those 90 days allow, the person applies for a retirement pension, that application is deemed to have been received in the latest of
+-- src:2288 | (a) the month in which the disability pension application was made,
+-- src:2289 | (b) the last month for which the disability pension was payable, and
+-- src:2290 | (c) the month before the month in which the contributor reached the age of 60 years.
+@ref Act s 67(4) (src:2287)
+GIVEN `the disability pension has ceased` IS A BOOLEAN
+      `day notified that it has ceased` IS A DATE
+      `day applied for a retirement pension` IS A DATE
+      `last day of any longer period the Minister allowed` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`s 67(4) — the application for a retirement pension is deemed to have been received in an earlier month` `the disability pension has ceased` `day notified that it has ceased` `day applied for a retirement pension` `last day of any longer period the Minister allowed` MEANS
+        `the disability pension has ceased`
+    AND (   `day applied for a retirement pension` AT MOST (`the date a time limit ends` `day notified that it has ceased` (`a number of days` WITH `number of days` IS 90))
+         OR (CONSIDER `last day of any longer period the Minister allowed`
+             WHEN NOTHING THEN FALSE
+             WHEN JUST last THEN `day applied for a retirement pension` AT MOST last))
+
+@ref Act s 67(4) (src:2287-2290)
+GIVEN `the disability pension has ceased` IS A BOOLEAN
+      `day notified that it has ceased` IS A DATE
+      `day applied for a retirement pension` IS A DATE
+      `last day of any longer period the Minister allowed` IS A MAYBE DATE
+      `a day in the month the disability pension application was made` IS A DATE
+      `a day in the last month the disability pension was payable` IS A DATE
+      `date of birth` IS A DATE
+GIVETH A MAYBE DATE
+`s 67(4) — the month in which the application for a retirement pension is deemed to have been received` `the disability pension has ceased` `day notified that it has ceased` `day applied for a retirement pension` `last day of any longer period the Minister allowed` `a day in the month the disability pension application was made` `a day in the last month the disability pension was payable` `date of birth` MEANS
+    IF `s 67(4) — the application for a retirement pension is deemed to have been received in an earlier month` `the disability pension has ceased` `day notified that it has ceased` `day applied for a retirement pension` `last day of any longer period the Minister allowed`
+    THEN `cp5 helper -- the latest of the months that apply` (LIST
+            -- (a) the month in which the disability pension application was made
+            JUST (`the month of a date` `a day in the month the disability pension application was made`),
+            -- (b) the last month for which the disability pension was payable
+            JUST (`the month of a date` `a day in the last month the disability pension was payable`),
+            -- (c) the month before the month in which the contributor reached sixty
+            JUST (`cp5 helper -- the month a number of months from the month of a date` (`cp5 helper -- the day the person is treated as reaching an age under section 2(2)` `date of birth` 60) (0 MINUS 1)))
+    ELSE NOTHING
+
+§§ `Section 67 as a whole -- which subsection governs`
+
+-- Subsections (1), (2), (3) and (3.1) each begin "for a retirement pension that commences to be payable ..." or
+-- "where a person ... attains the age of sixty-five", and the month they compute is the month the pension commences,
+-- so the vintage gate cannot be tested before the month is known. This rule computes each subsection's month and
+-- takes the first that applies, in the order (3.1), (3), (1), (2) (NOTES.md, fork F1 to F4):
+--   * (3.1) is the later and more specific rule for a pension commencing on or after 2012, and displaces (2);
+--   * (3) is the exception for an applicant who attained 65 before the application was received; it is read as
+--     applying to an application received on or after 1 January 1995, the month its paragraph (a) names as a floor;
+--   * (1) governs a pension whose month falls before 1987, and (2) one whose month falls on or after 1987.
+-- NOTHING: payment is not approved, the applicant is an estate, or no subsection's gate is met.
+-- When the requirement to apply was waived under subsection 60(1.2), subsection (3.2) governs.
+-- src:2282 | Retirement pension — application waived
+@ref Act s 67 (src:2256-2290)
+GIVEN application IS A `cp5 Application for a retirement pension`
+      waived IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 67 — the month a retirement pension is first payable` application waived MEANS
+    CONSIDER waived
+    WHEN JUST w THEN
+        `s 67(3.2) — the first month for which a retirement pension is payable where the requirement to apply was waived` approved dob w
+    WHEN NOTHING THEN
+        `cp5 helper -- the first reading that gives a month` (LIST
+            `s 67(3.1) — the month a retirement pension that commences on or after 2012 is first payable` application,
+            IF application's `day the application was received` AT LEAST (YMD 1995 1 1)
+            THEN `s 67(3) — the month a retirement pension is first payable to an applicant who attained 65 before the day the application was received` application
+            ELSE NOTHING,
+            `s 67(1) — the month a retirement pension that commences before 1987 is first payable` application,
+            `s 67(2) — the month a retirement pension that commences on or after 1987 is first payable` application)
+    WHERE
+        dob MEANS application's `date of birth of the applicant`
+        approved MEANS CONSIDER application's `day payment of the pension was approved`
+                       WHEN NOTHING THEN FALSE
+                       WHEN JUST a THEN TRUE
+
+§§ `Section 68 -- how long a retirement pension is paid`
+
+-- src:2291 | Duration of payment
+-- src:2292 | 68 Subject to this Act, a retirement pension shall continue to be paid during the lifetime of the beneficiary, and shall cease with the payment for the month in which the beneficiary dies.
+-- src:2293 | 68.1 [Repealed, 2009, c. 31, s. 39]
+@ref Act s 68 (src:2292)
+GIVEN `day the beneficiary died` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`s 68 — the last month for which a retirement pension is paid` `day the beneficiary died` MEANS
+    `cp5 helper -- the month of a date that may be absent` `day the beneficiary died`
+
+@ref Act s 68 (src:2292)
+GIVEN month IS A DATE
+      `first month for which the pension is payable` IS A DATE
+      `day the beneficiary died` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`s 68 — a retirement pension is paid for a month` month `first month for which the pension is payable` `day the beneficiary died` MEANS
+        `the month of a date` month AT LEAST `first month for which the pension is payable`
+    AND (CONSIDER `s 68 — the last month for which a retirement pension is paid` `day the beneficiary died`
+         WHEN NOTHING THEN TRUE
+         WHEN JUST last THEN `the month of a date` month AT MOST last)
