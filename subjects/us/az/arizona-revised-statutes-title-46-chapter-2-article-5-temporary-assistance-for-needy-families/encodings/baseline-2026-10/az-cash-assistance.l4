@@ -1,0 +1,330 @@
+IMPORT prelude
+
+-- Arizona Revised Statutes, Title 46, Chapter 2, Article 5 -- cash assistance (TANF) for a needy family.
+--
+-- Edition: the Legislature's online A.R.S. (unofficial; "updated to include the revised sections from the 57th
+-- Legislature, 2nd Regular Session"), sections fetched 2026-10-19, deposited at
+--   ../../registers/source-bundle/az-ars-46-ch2-art5-tanf-sel-2026.txt
+-- (ss 46-101, 46-207, 46-207.01, 46-292, 46-294, 46-296, 46-298, 46-300 only).
+--
+-- In: s 46-292(A), (B)(1)-(3), (C), (D), (G), (O), (P)(1)-(2), (S), (T) (who can get cash assistance; citizenship and
+-- qualified aliens; cooperation with child support; earned income and dependent care disregards; the 130% test for a
+-- nonparent relative's child-only request; school and immunization); s 46-294(A), (C), (E), (G) (the 12-month and 60-month
+-- limits and the 12-month extension); s 46-296 (unwed minor parents); s 46-298(C), (D) (diversion: three months' cash,
+-- within three working days); s 46-300(D) (graduated sanctions); s 46-207.01 with s 46-207(D) (the floor on cash plus
+-- income).
+--
+-- Not in the deposited text, so INPUTS: the department's monthly cash assistance amount for the family (set by DES rule,
+-- not deposited: ADMIN-POLICY); the federal poverty guidelines (HHS, s 46-101(12)) and the 1992 federal poverty level for
+-- the family's size; the department's "hardship" finding.
+--
+-- Out: s 46-292(H)-(L) (no increase for a child born while on assistance, and its exceptions); s 46-299 (work activities:
+-- not deposited); DES rules on the assistance unit and resources; Arizona's other programmes.
+--
+-- BASELINE ENCODING, from the seat of the applicant (the parent or nonparent relative applying for a dependent child).
+-- Expected values in the case file are hand-written. No pipeline, no independent test pass, no human gate. NOT ADVICE.
+
+§ `A.R.S. Title 46, Article 5 -- cash assistance for needy families`
+
+§§ `s 46-292(B)(1), (C) -- citizenship and qualified aliens`
+
+-- s 46-292(B)(1)(a)-(d) and (C), in the categories the text uses. "Qualified alien" is the PRWORA s 431 term; whether a
+-- person falls in a PRWORA s 412 exception group, or is a qualified alien by the Attorney General's definition under
+-- Public Law 104-208 s 501, is asked as a fact.
+DECLARE `Status` IS ONE OF
+    `a citizen by birth or naturalization`
+    `a qualified alien who entered the United States on or before 21 August 1996`
+    `a qualified alien in a PRWORA section 412 exception group`
+    `a qualified alien defined by the Attorney General under Public Law 104-208 section 501`
+    `a qualified alien who entered after 21 August 1996, in no exception group`
+    `not a citizen or qualified alien`
+
+GIVEN `status` IS A `Status`
+GIVETH A BOOLEAN
+DECIDE `meets the citizenship or alien requirement` IF
+    CONSIDER `status`
+    WHEN `a citizen by birth or naturalization` THEN TRUE
+    WHEN `a qualified alien who entered the United States on or before 21 August 1996` THEN TRUE
+    WHEN `a qualified alien in a PRWORA section 412 exception group` THEN TRUE
+    WHEN `a qualified alien defined by the Attorney General under Public Law 104-208 section 501` THEN TRUE
+    WHEN `a qualified alien who entered after 21 August 1996, in no exception group` THEN FALSE
+    WHEN `not a citizen or qualified alien` THEN FALSE
+
+§§ `s 46-292, s 46-296 -- who can get cash assistance`
+
+DECLARE `Family` HAS
+    `a dependent child in the household`                     IS A BOOLEAN
+    `residence established in Arizona at application`        IS A BOOLEAN
+    `status`                                                 IS A `Status`
+    -- (B)(2): the employable parent or nonparent relative head of household "does not refuse to accept available
+    -- employment"; employability is the department's determination
+    `an employable adult refused available employment`       IS A BOOLEAN
+    -- (B)(3): property transferred within one year before application, or while a recipient, "with the intent to evade"
+    `property transferred to evade eligibility rules`         IS A BOOLEAN
+    -- (S): an initial applicant "is ineligible for benefits until the applicant's dependent children are verified to be
+    -- enrolled in and attending an educational program" (children 6 to 16)
+    `school enrollment of children 6 to 16 verified`          IS A BOOLEAN
+    -- s 46-296(A), (B)
+    `headed by an unmarried person under 18`                  IS A BOOLEAN
+    `an unwed minor parent exception applies`                 IS A BOOLEAN
+
+GIVEN f IS A `Family`
+GIVETH A BOOLEAN
+DECIDE `meets the conditions of s 46-292 and s 46-296` IF
+        f's `a dependent child in the household`
+    AND f's `residence established in Arizona at application`
+    AND `meets the citizenship or alien requirement` (f's `status`)
+    AND (NOT (f's `an employable adult refused available employment`))
+    AND (NOT (f's `property transferred to evade eligibility rules`))
+    AND f's `school enrollment of children 6 to 16 verified`
+    AND (    NOT (f's `headed by an unmarried person under 18`)
+         OR  f's `an unwed minor parent exception applies`)
+
+§§ `s 46-294 -- how long`
+
+DECLARE `History` HAS
+    `months of cash assistance counted`                      IS A NUMBER
+    `a child only case`                                      IS A BOOLEAN
+    `hardship found by the department`                       IS A BOOLEAN
+    -- (G)(1), (2)
+    `the work-program adult is in full compliance`           IS A BOOLEAN
+    `every school-age child has at least 90 percent attendance` IS A BOOLEAN
+    -- (E): months of TANF-funded assistance as a head of household, in any state or tribal programme
+    `months of TANF-funded assistance anywhere as head of household` IS A NUMBER
+
+-- (A): ineligible once the head of household (or the other adults listed) "has received cash assistance ... for a total of
+-- twelve months", "except in case of hardship or as provided in subsection G". (C): not for child only cases. (G): "an
+-- additional twelve months" if the work-program adult is in full compliance and every school-age child has 90 percent
+-- attendance. (E): never more than sixty months of TANF-funded assistance, except in case of hardship or under G.
+GIVEN h IS A `History`
+GIVETH A BOOLEAN
+DECIDE `within the time limits` IF
+        (    h's `a child only case`
+         OR  h's `hardship found by the department`
+         OR  h's `months of cash assistance counted` LESS THAN 12
+         OR  (    h's `the work-program adult is in full compliance`
+              AND h's `every school-age child has at least 90 percent attendance`
+              AND h's `months of cash assistance counted` LESS THAN 24))
+    AND (    h's `months of TANF-funded assistance anywhere as head of household` LESS THAN 60
+         OR  h's `hardship found by the department`)
+
+§§ `s 46-292(P), (Q) -- counting income`
+
+-- (P)(1): "each month every employed person is entitled to receive an earned income disregard of ninety dollars plus an
+-- additional thirty percent of the remaining earned income".
+GIVEN `monthly earnings` IS A NUMBER
+GIVETH A NUMBER
+`the countable earnings of one employed person` MEANS
+    max 0 ((`monthly earnings` MINUS 90) TIMES 70%)
+
+-- (P)(1): a dependent care disregard of the actual amount billed, "up to two hundred dollars a month for a child under two
+-- years of age and up to one hundred seventy-five dollars a month for each other dependent", only where the care is
+-- necessary for work or for training preparatory to employment.
+GIVEN `billed for a child under two` IS A NUMBER, `billed for each other dependent` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the dependent care disregard` MEANS
+    min 200 `billed for a child under two` PLUS sum (map (GIVEN b YIELD min 175 b) `billed for each other dependent`)
+
+-- (P)(2): where a nonparent relative head of household not applying for himself or herself asks for cash assistance only
+-- for a dependent child, the family's "total gross countable income ... shall not exceed one hundred thirty percent of the
+-- federal poverty guidelines". The guidelines are an input.
+GIVEN `the family's gross countable income` IS A NUMBER, `the monthly federal poverty guideline for the family size` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `within 130 percent of the poverty guidelines` IF
+    `the family's gross countable income` AT MOST (130% TIMES `the monthly federal poverty guideline for the family size`)
+
+§§ `s 46-207.01, s 46-207(D) -- the floor on cash assistance`
+
+-- s 46-207.01: cash assistance, "when added to nonexempt income from all other sources, shall not be less than thirty-six
+-- per cent of the 1992 federal poverty level adjusted for family size" and for s 46-207(B) and (D). (D): the poverty level
+-- used "shall" be reduced "by thirty-seven per cent if the person is not paying, or is not obligated to pay, shelter costs".
+-- The (B) adjustment (a shortfall of monies, as the Joint Legislative Budget Committee decides) is not modelled.
+GIVEN `the 1992 monthly federal poverty level for the family size` IS A NUMBER, `paying or obliged to pay shelter costs` IS A BOOLEAN
+GIVETH A NUMBER
+`the floor on cash plus income` MEANS
+    IF `paying or obliged to pay shelter costs`
+    THEN 36% TIMES `the 1992 monthly federal poverty level for the family size`
+    ELSE 36% TIMES (`the 1992 monthly federal poverty level for the family size` TIMES 63%)
+
+GIVEN `the 1992 monthly federal poverty level for the family size` IS A NUMBER, `paying or obliged to pay shelter costs` IS A BOOLEAN, `nonexempt income` IS A NUMBER
+GIVETH A NUMBER
+`the least cash assistance` MEANS
+    max 0 (`the floor on cash plus income` `the 1992 monthly federal poverty level for the family size` `paying or obliged to pay shelter costs` MINUS `nonexempt income`)
+
+§§ `s 46-300(D) -- sanctions`
+
+-- (D)(1): for the first instance of noncompliance, the grant is reduced "by fifty percent for one month"; (2): for a second
+-- instance (in another month) and after, the grant is terminated "for at least one month or until the household complies".
+GIVEN `monthly grant` IS A NUMBER, `instance of noncompliance` IS A NUMBER
+GIVETH A NUMBER
+`the grant for a month of noncompliance` MEANS
+    IF `instance of noncompliance` AT MOST 0
+    THEN `monthly grant`
+    ELSE IF `instance of noncompliance` EQUALS 1
+         THEN `monthly grant` TIMES 50%
+         ELSE 0
+
+§§ `s 46-298 -- the diversion option`
+
+-- (D): "a dollar amount equal to three times the monthly amount of cash assistance for which the applicant qualifies".
+-- (H): if the applicant reapplies within three months, the payment is prorated over three months from the application and
+-- subtracted from the cash assistance.
+GIVEN `monthly amount` IS A NUMBER
+GIVETH A NUMBER
+`the diversion payment` MEANS 3 TIMES `monthly amount`
+
+§§ `Duties with deadlines`
+
+DECLARE `Party` IS ONE OF
+    `the applicant or recipient`
+    `the department`
+
+DECLARE `Act` IS ONE OF
+    `cooperate with child support enforcement`
+    `supply evidence supporting the good cause claim`
+    `ensure the child is enrolled in and attending school`
+    `ensure the child is immunized`
+    `issue the diversion benefits`
+    `reduce the grant by half for one month`
+
+-- s 46-292(D): a parent or relative who applies for or receives cash assistance for a child "shall cooperate with the
+-- department" (information on the parents, interviews, genetic testing, releases, a sworn paternity statement). (E): a
+-- recipient who fails without good cause is sanctioned under s 46-300 (first: half the grant for one month).
+GIVEN `who` IS A `Party`, `department` IS A `Party`, `days allowed` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`the duty to cooperate on child support` `who` `department` `days allowed` MEANS
+    PARTY `who`
+    MUST  `cooperate with child support enforcement`
+    WITHIN `days allowed`
+    HENCE FULFILLED
+    LEST
+        PARTY `department`
+        MUST  `reduce the grant by half for one month`
+
+-- s 46-292(G): "A person claiming good cause has twenty days from the date the good cause claim is provided to the agency
+-- to supply evidence supporting the claim."
+GIVEN `who` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the time to support a good cause claim` `who` MEANS
+    PARTY `who`
+    MUST  `supply evidence supporting the good cause claim`
+    WITHIN 20
+    HENCE FULFILLED
+    LEST  BREACH BY `who` BECAUSE "s 46-292(G): no evidence for the good cause claim within 20 days"
+
+-- s 46-292(S): the parent or relative "shall ensure that the child is enrolled in and attending school" (ages 6 to 16);
+-- failure without good cause is sanctioned under s 46-300. No time is stated.
+GIVEN `who` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the duty on school attendance` `who` MEANS
+    PARTY `who`
+    MUST  `ensure the child is enrolled in and attending school`
+
+-- s 46-292(T): the parent or relative "shall ensure that the child is immunized in accordance with the schedule"; failure
+-- without good cause is sanctioned under s 46-300. The schedule (s 36-672) is not deposited.
+GIVEN `who` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the duty on immunization` `who` MEANS
+    PARTY `who`
+    MUST  `ensure the child is immunized`
+
+-- s 46-298(C): if the department and the applicant agree on the diversion option, "the department shall issue benefits,
+-- if the applicant is eligible, within three working days after the applicant submits a completed application". Days
+-- here are working days.
+GIVEN `department` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the duty to issue diversion benefits` `department` MEANS
+    PARTY `department`
+    MUST  `issue the diversion benefits`
+    WITHIN 3
+    HENCE FULFILLED
+    LEST  BREACH BY `department` BECAUSE "s 46-298(C): diversion benefits not issued within three working days"
+
+-- =====================================================================================================================
+§ `Questions for the applicant`
+-- The seat: the parent or nonparent relative applying for cash assistance for a dependent child (later the recipient).
+
+§§ `Can we get cash assistance?`
+
+@export Does my family meet Arizona's conditions for TANF cash assistance, apart from the income test (A.R.S. ss 46-292, 46-294, 46-296)?
+GIVEN `a dependent child lives with us` IS A BOOLEAN @desc Is there a dependent child (a needy child deprived of a parent's support or care, living with a parent or listed relative) in your household?
+      `we live in Arizona` IS A BOOLEAN @desc Had you established residence in Arizona when you applied?
+      `my status` IS A `Status` @desc Your citizenship or immigration status: a citizen by birth or naturalization; a qualified alien who entered the United States on or before 21 August 1996; a qualified alien in a PRWORA section 412 exception group; a qualified alien defined by the Attorney General under Public Law 104-208 section 501; a qualified alien who entered after 21 August 1996, in no exception group; not a citizen or qualified alien
+      `I refused available work` IS A BOOLEAN @desc If DES found you employable, did you refuse to accept available employment?
+      `I transferred property to qualify` IS A BOOLEAN @desc In the year before applying (or while receiving), did you transfer property to get around the eligibility rules?
+      `school enrollment is verified` IS A BOOLEAN @desc Has your children's (ages 6 to 16) school enrollment and attendance been verified (answer yes if you have no such children)?
+      `I am an unmarried parent under 18` IS A BOOLEAN @desc Are you an unmarried parent under 18 heading the household?
+      `a minor parent exception applies` IS A BOOLEAN @desc If so: do you have no locatable parent or guardian, are you emancipated, would living with them endanger you or your child, or do you live with a parent or guardian who has eligible children or is needy?
+      `months we have had cash assistance` IS A NUMBER @desc Months of Arizona cash assistance counted against you since October 2002 (not necessarily in a row)
+      `this is a child only case` IS A BOOLEAN @desc Is this a child only case (the child is in DCS or tribal custody and placed with a relative or unrelated adult not receiving cash assistance)?
+      `DES found hardship` IS A BOOLEAN @desc Has DES found that a hardship applies to your family?
+      `I am in full compliance with work activities` IS A BOOLEAN @desc Are you (or the adult required to take part) in full compliance with the work program?
+      `my children attend school 90 percent` IS A BOOLEAN @desc Does every school-age child have a school attendance record of at least 90 percent?
+      `months of TANF anywhere` IS A NUMBER @desc Total months of TANF-funded assistance you have had as head of household in any state or tribal program
+GIVETH A BOOLEAN
+`Does my family meet the conditions for cash assistance` MEANS
+        `meets the conditions of s 46-292 and s 46-296` (`Family` WITH
+            `a dependent child in the household`              IS `a dependent child lives with us`
+            `residence established in Arizona at application` IS `we live in Arizona`
+            `status`                                          IS `my status`
+            `an employable adult refused available employment` IS `I refused available work`
+            `property transferred to evade eligibility rules`  IS `I transferred property to qualify`
+            `school enrollment of children 6 to 16 verified`   IS `school enrollment is verified`
+            `headed by an unmarried person under 18`           IS `I am an unmarried parent under 18`
+            `an unwed minor parent exception applies`          IS `a minor parent exception applies`)
+    AND `within the time limits` (`History` WITH
+            `months of cash assistance counted`                 IS `months we have had cash assistance`
+            `a child only case`                                 IS `this is a child only case`
+            `hardship found by the department`                  IS `DES found hardship`
+            `the work-program adult is in full compliance`      IS `I am in full compliance with work activities`
+            `every school-age child has at least 90 percent attendance` IS `my children attend school 90 percent`
+            `months of TANF-funded assistance anywhere as head of household` IS `months of TANF anywhere`)
+
+§§ `How is my income counted?`
+
+@export How much of my monthly earnings does Arizona count for cash assistance, after the $90 and 30 percent disregard (A.R.S. s 46-292(P)(1))?
+GIVEN `my monthly earnings` IS A NUMBER @desc Your gross earnings from employment for the month, in US dollars
+GIVETH A NUMBER
+`How much of my earnings is counted` MEANS
+    `the countable earnings of one employed person` `my monthly earnings`
+
+@export How much of my dependent care costs does Arizona disregard for cash assistance (A.R.S. s 46-292(P)(1))?
+GIVEN `care billed for a child under two` IS A NUMBER @desc The monthly amount billed for care of a child under two (0 if none), in US dollars
+      `care billed for each other dependent` IS A LIST OF NUMBER @desc The monthly amount billed for care of each other child or adult dependent, one number per dependent, in US dollars
+GIVETH A NUMBER
+`How much of my dependent care is disregarded` MEANS
+    `the dependent care disregard` `care billed for a child under two` `care billed for each other dependent`
+
+@export As a relative caring for a child, asking for cash assistance only for the child, is our family's income low enough (A.R.S. s 46-292(P)(2))?
+GIVEN `our gross countable monthly income` IS A NUMBER @desc The whole family's gross countable income for the month, in US dollars
+      `the monthly poverty guideline for our family size` IS A NUMBER @desc The HHS federal poverty guideline for your family size, per month, in US dollars
+GIVETH A BOOLEAN
+`Is our income low enough for a child only request` MEANS
+    `within 130 percent of the poverty guidelines` `our gross countable monthly income` `the monthly poverty guideline for our family size`
+
+§§ `How much would we get?`
+
+@export What is the least Arizona cash assistance my family must get each month under the statutory floor (A.R.S. ss 46-207.01, 46-207(D))?
+GIVEN `the 1992 monthly poverty level for our family size` IS A NUMBER @desc The 1992 federal poverty level for your family size, per month, in US dollars
+      `we pay shelter costs` IS A BOOLEAN @desc Do you pay, or are you obliged to pay, rent or other shelter costs for your home?
+      `our nonexempt income` IS A NUMBER @desc Your family's nonexempt monthly income from all other sources, in US dollars
+GIVETH A NUMBER
+`What is the least cash assistance we must get` MEANS
+    `the least cash assistance` `the 1992 monthly poverty level for our family size` `we pay shelter costs` `our nonexempt income`
+
+@export How much would a diversion payment be instead of monthly cash assistance (A.R.S. s 46-298(D))?
+GIVEN `our monthly cash assistance amount` IS A NUMBER @desc The monthly amount of cash assistance DES says you qualify for, in US dollars
+GIVETH A NUMBER
+`How much would a diversion payment be` MEANS
+    `the diversion payment` `our monthly cash assistance amount`
+
+§§ `If I am sanctioned`
+-- Arises only where the department finds noncompliance (child support, work activities, school, immunization, quitting a job,
+-- drugs).
+
+@export How much cash assistance do we get in a month of noncompliance (A.R.S. s 46-300(D))?
+GIVEN `our monthly grant` IS A NUMBER @desc Your usual monthly cash assistance grant, in US dollars
+      `which instance` IS A NUMBER @desc Which instance of noncompliance this is: 1 for the first, 2 for the second, and so on (0 if none)
+GIVETH A NUMBER
+`How much do we get in a month of noncompliance` MEANS
+    `the grant for a month of noncompliance` `our monthly grant` `which instance`
