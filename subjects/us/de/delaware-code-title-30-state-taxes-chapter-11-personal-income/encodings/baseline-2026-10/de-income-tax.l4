@@ -1,0 +1,539 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Delaware Code, Title 30, Chapter 11 (Personal Income Tax) -- the tax of a RESIDENT individual (or resident spouses on a
+-- joint return) for a taxable year that is a calendar year from 2022: resident individual (s 1103); who must file (s 1161);
+-- joint or separate returns (s 1162(a)); taxable income (s 1105); the subtractions for the elderly or disabled on low income,
+-- for pensions and eligible retirement income, and for Social Security (s 1106(b)(2) to (4)); the standard deduction
+-- (ss 1107, 1108); the rates (s 1102(a)(14)); the personal credits (s 1110(b), (c)); the earned income tax credit and its
+-- two options (s 1117(a)(2), (b)); and the date to file and pay (s 1168).
+--
+-- SEAT: the individual taxpayer resident in Delaware. "Must I file? Am I a resident? How much of my pension and Social
+-- Security is taken out? What is my standard deduction? How much tax do I owe after my personal credits and the earned income
+-- credit, and which EITC option should I take? By when must I file and pay?"
+-- The Division of Revenue (Department of Finance) appears only as the body the return is filed with and paid to.
+--
+-- Edition: The Delaware Code Online, Title 30, chapter 11, "includes all acts enacted as of September 10, 2026, up to and
+-- including 85 Del. Laws, c. 518", as deposited at ../../registers/source-bundle/de-code-t30-ch11-2026-09-10.txt (retrieved
+-- 2026-10-19).
+--
+-- Read with the Internal Revenue Code baseline (../../../../internal-revenue-code-of-1986/encodings/baseline-2026-10/): federal
+-- adjusted gross income (IRC s 62), the number of personal exemptions "for federal income tax purposes" (IRC s 151), whether
+-- a federal return is required (IRC s 6012), the federal earned income credit (IRC s 32), and the Social Security benefits
+-- included in federal AGI (IRC s 86) are INPUTS here. s 1101 reads every term with its federal meaning, on rolling conformity.
+--
+-- NOT ENCODED: nonresidents and part-year residents (subchapter III, ss 1165, 1167); estates and trusts; taxable years before
+-- 2022 and fiscal years; the s 1106(a) additions and the other s 1106(b) subtractions (asked as two totals); itemized
+-- deductions (s 1109: the amount is asked as an input, and the encoding takes it only where elected); the lump-sum tax
+-- (s 1102(b)); the Director's tax tables (s 1102(d), not deposited: the tax is worked from the rates); the credits other than
+-- ss 1110 and 1117; withholding and estimated tax; penalties and interest (in 30 Del. C. ch. 5, not deposited).
+--
+-- BASELINE ENCODING. Written from the taxpayer's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Delaware personal income tax -- a resident`
+
+§§ `Questions this encoding does not cover`
+
+DECLARE `Why not covered` IS ONE OF
+    `the tax on a nonresident or part-year resident (subchapter III, s 1165) is not encoded`
+    `only taxable years beginning on or after January 1, 2022 are encoded`
+
+GIVEN a IS A TYPE
+GIVETH A TYPE
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+§§ `s 1103 -- resident individual`
+
+-- s 1103: "A resident individual of this State means an individual: (1) Who is domiciled in this State to the extent of the
+-- period of such domicile; provided, however, an individual who is present in a foreign country or countries for at least 495
+-- full days in any consecutive 18-month period, and during such period of 18 consecutive months is not present in this State
+-- for more than 45 days, and does not maintain a permanent place of abode in this State at which the individual's spouse,
+-- children or parents are present for more than 45 days, and is not an employee of the United States ... shall not be
+-- considered a resident of this State during such period; or (2) Who maintains a place of abode in this State and spends in
+-- the aggregate more than 183 days of the taxable year in this State." The 18-month foreign-presence proviso is asked as one
+-- fact.
+GIVEN `domiciled in this State` IS A BOOLEAN
+      `meets every condition of the 18-month foreign presence proviso` IS A BOOLEAN
+      `maintains a place of abode in this State` IS A BOOLEAN
+      `days in this State in the taxable year` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `a resident individual of this State` IF
+        "(1)" ... (`domiciled in this State` AND (NOT `meets every condition of the 18-month foreign presence proviso`))
+    OR  "(2)" ... (`maintains a place of abode in this State` AND `days in this State in the taxable year` GREATER THAN 183)
+
+§§ `The return and the people on it`
+
+DECLARE `Delaware return type` IS ONE OF
+    `a single person's return`
+    `a joint return of resident spouses`
+    `a separate return of a married resident`
+
+-- One person on the return. Ages are at the close of the taxable year (NOTES.md finding 6).
+DECLARE `Delaware person` HAS
+    `age`                                              IS A NUMBER
+    `blind at the close of the taxable year`           IS A BOOLEAN
+    `has a total and permanent disability`             IS A BOOLEAN
+    `earned income`                                    IS A NUMBER
+    `pensions from employers, the United States, this State or a subdivision` IS A NUMBER
+    `United States military pension`                   IS A NUMBER
+    `eligible retirement income`                       IS A NUMBER
+    `legally domiciled in this State before January 1, 2027` IS A BOOLEAN
+    `years legally domiciled in this State`            IS A NUMBER
+
+DECLARE `Delaware return` HAS
+    `taxable year`                                     IS A NUMBER
+    `resident for the whole taxable year`              IS A BOOLEAN
+    `return type`                                      IS A `Delaware return type`
+    `the taxpayer`                                     IS A `Delaware person`
+    `the spouse`                                       IS A `Delaware person`   -- read only on a joint return, and for s 1108(b)(2), (4)
+    `spouse has no gross income and is not another taxpayer's dependent` IS A BOOLEAN
+    `federal adjusted gross income`                    IS A NUMBER
+    `Social Security and Railroad Retirement benefits included in federal AGI` IS A NUMBER
+    `other s 1106 additions`                           IS A NUMBER
+    `other s 1106 subtractions`                        IS A NUMBER
+    `elects to itemize, with this total of itemized deductions under s 1109` IS A MAYBE NUMBER
+    `personal exemptions for federal income tax purposes` IS A NUMBER
+    `federal earned income credit allowed`             IS A NUMBER
+
+§§ `s 1106(b)(2) -- the $2,000 subtraction for the elderly or disabled on low income`
+
+-- s 1106(b)(2): "The amount of $2,000 by any person who has a total and permanent disability or by a person who is over 60
+-- years of age, and (i) whose earned income in the taxable year is less than $2,500 and (ii) whose adjusted gross income
+-- (without reduction by this exclusion) does not exceed $10,000. For purposes of this paragraph (2), in the case of spouses
+-- filing a joint return, the amount of the exclusion shall be $4,000 if (i) both are either over 60 years of age or have
+-- total and permanent disabilities or 1 is over 60 years of age and the other has a total and permanent disability and (ii)
+-- their total earned income in the taxable year is less than $5,000 and their adjusted gross income does not exceed
+-- $20,000". "over 60 years of age" is read as 60 or more in whole years (NOTES.md finding 4). The joint case where only one
+-- spouse qualifies is read as the single-person rule applied to that spouse and the joint AGI (finding 4).
+GIVEN `p` IS A `Delaware person`
+GIVETH A BOOLEAN
+DECIDE `over 60 or totally and permanently disabled` IF
+    `p`'s `age` AT LEAST 60 OR `p`'s `has a total and permanent disability`
+
+GIVEN `r` IS A `Delaware return`
+      `the adjusted gross income before this exclusion` IS A NUMBER
+GIVETH A NUMBER
+`the s 1106(b)(2) subtraction for` `r` `on` `the adjusted gross income before this exclusion` MEANS
+    IF   `r`'s `return type` EQUALS `a joint return of resident spouses`
+         AND `over 60 or totally and permanently disabled` (`r`'s `the taxpayer`)
+         AND `over 60 or totally and permanently disabled` (`r`'s `the spouse`)
+    THEN IF   (`r`'s `the taxpayer`'s `earned income` PLUS `r`'s `the spouse`'s `earned income`) LESS THAN 5000
+              AND `the adjusted gross income before this exclusion` AT MOST 20000
+         THEN 4000
+         ELSE 0
+    ELSE IF   `one qualifying person on the return`
+         THEN 2000
+         ELSE 0
+    WHERE
+        `qualifies alone` `p` MEANS
+                `over 60 or totally and permanently disabled` `p`
+            AND `p`'s `earned income` LESS THAN 2500
+            AND `the adjusted gross income before this exclusion` AT MOST 10000
+        `one qualifying person on the return` MEANS
+                `qualifies alone` (`r`'s `the taxpayer`)
+            OR  (`r`'s `return type` EQUALS `a joint return of resident spouses` AND `qualifies alone` (`r`'s `the spouse`))
+
+§§ `s 1106(b)(3) -- pensions, military pensions and eligible retirement income`
+
+-- s 1106(b)(3)b. "For taxable years beginning on January 1, 2022, and ending before January 1, 2027: 1. For persons under age
+-- 60, the greater of: A. Amounts received, not to exceed $2,000, as pensions from employers, the United States, this State,
+-- or any subdivision of this State; or B. Amounts received, not to exceed $12,500, as a United States military pension.
+-- 2. For persons age 60 or older, amounts received, not to exceed $12,500, as pensions ... or as eligible retirement income."
+-- c. (2027): under 60, the greater of $2,000 pensions or $15,000 military; 60 or older, the greater of $12,500 pensions or
+-- eligible retirement income, or $15,000 military. d. (2028): the military figure is $20,000. e. (2029 on): $25,000.
+-- f.4.: a person 60 or older qualifies "only if": domiciled here before 1 January 2027 and "legally domiciled in this State for
+-- at least 3 years", or domiciled here on or after that day and domiciled "for at least 5 years". f.3.: the limits apply to
+-- each spouse on a joint return.
+GIVEN `the taxable year` IS A NUMBER
+GIVETH A NUMBER
+`the military pension limit for` `the taxable year` MEANS
+    BRANCH
+        IF `the taxable year` AT MOST 2026 THEN 12500   -- b.
+        IF `the taxable year` EQUALS 2027  THEN 15000   -- c.
+        IF `the taxable year` EQUALS 2028  THEN 20000   -- d.
+        OTHERWISE                               25000   -- e.
+
+GIVEN `p` IS A `Delaware person`
+GIVETH A BOOLEAN
+DECIDE `meets the f.4 domicile condition` IF
+    IF   `p`'s `legally domiciled in this State before January 1, 2027`
+    THEN `p`'s `years legally domiciled in this State` AT LEAST 3
+    ELSE `p`'s `years legally domiciled in this State` AT LEAST 5
+
+GIVEN `p` IS A `Delaware person`
+      `the taxable year` IS A NUMBER
+GIVETH A NUMBER
+`the s 1106(b)(3) subtraction for` `p` `in` `the taxable year` MEANS
+    IF   `p`'s `age` LESS THAN 60
+    THEN max (min 2000 `all pensions`)
+             (min `the military limit` (`p`'s `United States military pension`))
+    ELSE IF   `meets the f.4 domicile condition` `p`
+         THEN IF   `the taxable year` AT MOST 2026
+              THEN `the pension or retirement part`        -- b.2.: no separate military limb for those 60 or older
+              ELSE max `the pension or retirement part` (min `the military limit` (`p`'s `United States military pension`))
+         ELSE 0
+    WHERE
+        `the military limit` MEANS `the military pension limit for` `the taxable year`
+        -- A United States military pension is also a pension "from ... the United States" (NOTES.md finding 3).
+        `all pensions` MEANS
+            `p`'s `pensions from employers, the United States, this State or a subdivision` PLUS `p`'s `United States military pension`
+        `the pension or retirement part` MEANS
+            min 12500 (`all pensions` PLUS `p`'s `eligible retirement income`)
+
+§§ `s 1105 and s 1106 -- Delaware adjusted gross income and taxable income`
+
+-- s 1106(b)(4): "Social Security benefits paid by the United States and all payments received under the Railroad Retirement
+-- Act of 1974 ... to the extent included in federal adjusted gross income" are subtracted.
+GIVEN `r` IS A `Delaware return`
+GIVETH A NUMBER
+`the s 1106(b)(3) subtractions on` `r` MEANS
+    IF   `r`'s `return type` EQUALS `a joint return of resident spouses`
+    THEN     `the s 1106(b)(3) subtraction for` (`r`'s `the taxpayer`) `in` (`r`'s `taxable year`)
+        PLUS `the s 1106(b)(3) subtraction for` (`r`'s `the spouse`) `in` (`r`'s `taxable year`)
+    ELSE `the s 1106(b)(3) subtraction for` (`r`'s `the taxpayer`) `in` (`r`'s `taxable year`)
+
+-- s 1105: "The entire taxable income of a resident of this State shall be the federal adjusted gross income ... with the
+-- modifications and less the deductions and personal exemptions provided in this subchapter." (Personal exemptions are now
+-- credits, s 1110(b).) The (b)(2) test uses "adjusted gross income (without reduction by this exclusion)", read as federal
+-- AGI with the other modifications (NOTES.md finding 4).
+GIVEN `r` IS A `Delaware return`
+GIVETH A NUMBER
+`the Delaware adjusted gross income of` `r` MEANS
+    `before (b)(2)` MINUS `the s 1106(b)(2) subtraction for` `r` `on` `before (b)(2)`
+    WHERE
+        `before (b)(2)` MEANS
+            max 0 (    `r`'s `federal adjusted gross income`
+                  PLUS  `r`'s `other s 1106 additions`
+                  MINUS `r`'s `Social Security and Railroad Retirement benefits included in federal AGI`
+                  MINUS `the s 1106(b)(3) subtractions on` `r`
+                  MINUS `r`'s `other s 1106 subtractions`)
+
+§§ `ss 1107, 1108 -- the standard deduction`
+
+-- s 1108(a)(3): "the standard deduction of a resident individual shall be $3,250, and the standard deduction of resident
+-- spouses shall be $6,500 if they file a joint return and $3,250 each if they file separate returns". (b): "$2,500 shall be
+-- added ... (1) For the taxpayer who has attained the age of 65 before the close of the taxable year; (2) For the spouse of
+-- the taxpayer if a joint return is not made ..., if the spouse has attained the age of 65 ... and ... has no gross income
+-- and is not the dependent of another taxpayer; (3) For the taxpayer who is blind at the close of the taxable year; and (4)
+-- For the spouse of the taxpayer if a separate return is made ..., and if the spouse is blind and ... has no gross income and
+-- is not the dependent of another taxpayer." On a joint return each spouse is read as "the taxpayer" for (1) and (3)
+-- (NOTES.md finding 5). "attained the age of 65 before the close" is read as 65 or more at the close.
+GIVEN `p` IS A `Delaware person`
+GIVETH A NUMBER
+`the s 1108(b)(1) and (3) additions for` `p` MEANS
+        (IF `p`'s `age` AT LEAST 65 THEN 2500 ELSE 0)
+    PLUS (IF `p`'s `blind at the close of the taxable year` THEN 2500 ELSE 0)
+
+GIVEN `r` IS A `Delaware return`
+GIVETH A NUMBER
+`the standard deduction on` `r` MEANS
+    CONSIDER `r`'s `return type`
+    WHEN `a joint return of resident spouses` THEN
+        6500 PLUS `the s 1108(b)(1) and (3) additions for` (`r`'s `the taxpayer`)
+             PLUS `the s 1108(b)(1) and (3) additions for` (`r`'s `the spouse`)
+    OTHERWISE
+        3250 PLUS `the s 1108(b)(1) and (3) additions for` (`r`'s `the taxpayer`) PLUS `the (2) and (4) additions`
+    WHERE
+        `the (2) and (4) additions` MEANS
+            IF   `r`'s `return type` EQUALS `a separate return of a married resident`
+                 AND `r`'s `spouse has no gross income and is not another taxpayer's dependent`
+            THEN     (IF `r`'s `the spouse`'s `age` AT LEAST 65 THEN 2500 ELSE 0)
+                PLUS (IF `r`'s `the spouse`'s `blind at the close of the taxable year` THEN 2500 ELSE 0)
+            ELSE 0
+
+-- s 1107: "The deduction of a resident individual shall be the standard deduction, unless the individual elects to itemize
+-- deductions as provided in § 1109".
+GIVEN `r` IS A `Delaware return`
+GIVETH A NUMBER
+`the s 1107 deduction on` `r` MEANS
+    CONSIDER `r`'s `elects to itemize, with this total of itemized deductions under s 1109`
+    WHEN JUST `itemized` THEN `itemized`
+    WHEN NOTHING         THEN `the standard deduction on` `r`
+
+GIVEN `r` IS A `Delaware return`
+GIVETH A NUMBER
+`the Delaware taxable income of` `r` MEANS
+    max 0 (`the Delaware adjusted gross income of` `r` MINUS `the s 1107 deduction on` `r`)
+
+§§ `s 1102(a)(14) -- the rates`
+
+-- s 1102(a)(14): "For taxable years beginning after December 31, 2013, the amount of tax shall be determined as follows: 2.2% of
+-- taxable income in excess of $2,000 but not in excess of $5,000; 3.9% ... in excess of $5,000 but not in excess of $10,000;
+-- 4.8% ... $10,000 ... $20,000; 5.2% ... $20,000 ... $25,000; 5.55% ... $25,000 ... $60,000; and 6.6% of taxable income in
+-- excess of $60,000." No rate is set on the first $2,000 (NOTES.md finding 2).
+DECLARE `Rate band` HAS
+    `in excess of`        IS A NUMBER
+    `not in excess of`    IS A MAYBE NUMBER
+    `rate`                IS A NUMBER
+
+GIVETH A LIST OF `Rate band`
+`the s 1102(a)(14) bands` MEANS
+    LIST (`Rate band` OF 2000,  JUST 5000,  2.2%)
+       , (`Rate band` OF 5000,  JUST 10000, 3.9%)
+       , (`Rate band` OF 10000, JUST 20000, 4.8%)
+       , (`Rate band` OF 20000, JUST 25000, 5.2%)
+       , (`Rate band` OF 25000, JUST 60000, 5.55%)
+       , (`Rate band` OF 60000, NOTHING,    6.6%)
+
+GIVEN `the taxable income` IS A NUMBER
+GIVETH A NUMBER
+`the s 1102(a)(14) tax on` `the taxable income` MEANS
+    sum (map `the tax in the band` `the s 1102(a)(14) bands`)
+    WHERE
+        `the tax in the band` `b` MEANS
+            `b`'s `rate` TIMES max 0 (`the top` `b` MINUS `b`'s `in excess of`)
+        `the top` `b` MEANS
+            CONSIDER `b`'s `not in excess of`
+            WHEN JUST `t` THEN min `the taxable income` `t`
+            WHEN NOTHING  THEN `the taxable income`
+
+§§ `s 1110 -- personal credits`
+
+-- s 1110(b): "resident individuals shall be allowed a personal credit against the individual's tax otherwise due under this
+-- chapter in the amount of: (1) $110 for each personal exemption to which such individual is entitled for the taxable year for
+-- federal income tax purposes; plus (2) An additional $110 in the case of each resident person age 60 or over." (c): "In no
+-- event shall the credit allowed under subsection (b) ... exceed the tax otherwise due under this chapter."
+GIVEN `r` IS A `Delaware return`
+GIVETH A NUMBER
+`the s 1110(b) personal credit before the cap on` `r` MEANS
+        (110 TIMES `r`'s `personal exemptions for federal income tax purposes`)
+    PLUS (110 TIMES `the people on the return aged 60 or over`)
+    WHERE
+        `aged 60 or over` `p` MEANS IF `p`'s `age` AT LEAST 60 THEN 1 ELSE 0
+        `the people on the return aged 60 or over` MEANS
+            IF   `r`'s `return type` EQUALS `a joint return of resident spouses`
+            THEN `aged 60 or over` (`r`'s `the taxpayer`) PLUS `aged 60 or over` (`r`'s `the spouse`)
+            ELSE `aged 60 or over` (`r`'s `the taxpayer`)
+
+GIVEN `r` IS A `Delaware return`
+GIVETH A NUMBER
+`the tax after personal credits on` `r` MEANS
+    `the tax` MINUS min `the tax` (`the s 1110(b) personal credit before the cap on` `r`)
+    WHERE
+        `the tax` MEANS `the s 1102(a)(14) tax on` (`the Delaware taxable income of` `r`)
+
+§§ `s 1117 -- the earned income tax credit`
+
+-- s 1117(a)(2): "For any tax year beginning on or after January 1, 2022, an individual who is a resident of this State may
+-- receive a credit ... based on a percentage of the corresponding federal earned income credit allowed under § 32 ... The
+-- individual may claim either of the following amounts: a. 20% of the corresponding federal earned income tax credit, not to
+-- exceed the tax otherwise due under this chapter. b. 4.5% of the corresponding federal earned income tax credit, of which the
+-- amount that exceeds the tax otherwise due under this chapter is refundable." "The tax otherwise due" is read as the tax after
+-- the s 1110 personal credits (NOTES.md finding 7).
+DECLARE `EITC option` IS ONE OF
+    `option a: 20%, not refundable`
+    `option b: 4.5%, refundable`
+
+GIVEN `the tax otherwise due` IS A NUMBER
+      `the federal credit` IS A NUMBER
+      `the option` IS AN `EITC option`
+GIVETH A NUMBER
+`the balance on tax otherwise due` `the tax otherwise due` `and federal credit` `the federal credit` `with EITC` `the option` MEANS
+    CONSIDER `the option`
+    WHEN `option a: 20%, not refundable` THEN `the tax otherwise due` MINUS min `the tax otherwise due` (20% TIMES `the federal credit`)
+    WHEN `option b: 4.5%, refundable`    THEN `the tax otherwise due` MINUS (4.5% TIMES `the federal credit`)
+
+-- The option that leaves the lower balance (option a where they are equal).
+GIVEN `the tax otherwise due` IS A NUMBER
+      `the federal credit` IS A NUMBER
+GIVETH AN `EITC option`
+`the better EITC option on tax otherwise due` `the tax otherwise due` `and federal credit` `the federal credit` MEANS
+    IF       `the balance on tax otherwise due` `the tax otherwise due` `and federal credit` `the federal credit` `with EITC` `option b: 4.5%, refundable`
+        LESS THAN `the balance on tax otherwise due` `the tax otherwise due` `and federal credit` `the federal credit` `with EITC` `option a: 20%, not refundable`
+    THEN `option b: 4.5%, refundable`
+    ELSE `option a: 20%, not refundable`
+
+GIVEN `r` IS A `Delaware return`
+GIVETH A NUMBER
+`the balance after the better EITC option on` `r` MEANS
+    `the balance on tax otherwise due` `the tax otherwise due` `and federal credit` `the federal credit`
+        `with EITC` (`the better EITC option on tax otherwise due` `the tax otherwise due` `and federal credit` `the federal credit`)
+    WHERE
+        `the tax otherwise due` MEANS `the tax after personal credits on` `r`
+        `the federal credit` MEANS `r`'s `federal earned income credit allowed`
+
+GIVEN `r` IS A `Delaware return`
+GIVETH AN `Answer` NUMBER
+`the Delaware tax balance on` `r` MEANS
+    IF   NOT (`r`'s `resident for the whole taxable year`)
+    THEN `not covered` `the tax on a nonresident or part-year resident (subchapter III, s 1165) is not encoded`
+    ELSE IF   `r`'s `taxable year` LESS THAN 2022
+         THEN `not covered` `only taxable years beginning on or after January 1, 2022 are encoded`
+         ELSE `answered` (`the balance after the better EITC option on` `r`)
+
+§§ `s 1161 -- who must file`
+
+-- s 1161: "An income tax return ... shall be made by the following: (1) Every resident individual who a. Is required to file a
+-- federal income tax return for the taxable year, or b. Is a single person and has for the taxable year adjusted gross income
+-- as modified by § 1106 of this title of more than $9,378, or c. Is a married individual who is entitled to file a joint
+-- federal income tax return for the taxable year, and whose adjusted gross income for the taxable year as modified by § 1106
+-- ..., when combined with the adjusted gross income of the individual's spouse, is more than $15,449."
+GIVEN `a resident individual` IS A BOOLEAN
+      `required to file a federal income tax return` IS A BOOLEAN
+      `married and entitled to file a joint federal return` IS A BOOLEAN
+      `adjusted gross income as modified by s 1106, combined with the spouse's if married` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `a resident who must make a return` IF
+        `a resident individual`
+    AND (    "a." ... `required to file a federal income tax return`
+         OR  "b." ... (    (NOT `married and entitled to file a joint federal return`)
+                       AND `adjusted gross income as modified by s 1106, combined with the spouse's if married` GREATER THAN 9378)
+         OR  "c." ... (    `married and entitled to file a joint federal return`
+                       AND `adjusted gross income as modified by s 1106, combined with the spouse's if married` GREATER THAN 15449))
+
+§§ `s 1162(a) -- joint or separate`
+
+DECLARE `Federal return of the spouses` IS ONE OF
+    `separate federal returns`
+    `a joint federal return`
+    `neither spouse must file a federal return`
+
+DECLARE `What Delaware return the spouses file` IS ONE OF
+    `they must file separate Delaware returns (s 1162(a)(1))`
+    `they may file either a joint or separate Delaware returns, as they elect (s 1162(a)(2), (3))`
+
+-- s 1162(a): "(1) [federal liability] determined on separate federal income tax returns, then ... they shall file separate
+-- returns; (2) ... determined on a joint federal income tax return, then they may file either a joint return or separate
+-- returns ..., whichever they elect; (3) Neither spouse is required to file a federal income tax return and either or both are
+-- required to file a return under this chapter, then they may elect to file separate or joint returns". (Both resident.)
+GIVEN `the federal return` IS A `Federal return of the spouses`
+GIVETH A `What Delaware return the spouses file`
+`the s 1162(a) answer for resident spouses with` `the federal return` MEANS
+    CONSIDER `the federal return`
+    WHEN `separate federal returns` THEN `they must file separate Delaware returns (s 1162(a)(1))`
+    OTHERWISE `they may file either a joint or separate Delaware returns, as they elect (s 1162(a)(2), (3))`
+
+§§ `s 1168 -- filing and paying`
+
+DECLARE `Delaware tax party` IS ONE OF `the resident taxpayer`
+DECLARE `Delaware tax action` IS ONE OF `file the return and pay the tax due on it`
+
+-- s 1168: "The income tax returns required by this chapter shall be filed on or before the thirtieth day of the fourth month
+-- following the close of the taxpayer's taxable year. A person required to make and file a return ... shall, without
+-- assessment, notice or demand, pay any tax due thereon to the Department of Finance on or before the date fixed for filing".
+-- For a calendar year: 30 April of the next year. Days are counted from 1 January of that next year.
+GIVEN `the taxable year` IS A NUMBER
+GIVETH A DATE
+`the s 1168 due date for the calendar taxable year` `the taxable year` MEANS Date 30 4 (`the taxable year` PLUS 1)
+
+GIVEN `the taxable year` IS A NUMBER
+GIVETH A DEONTIC `Delaware tax party` `Delaware tax action`
+`the s 1168 duty to file and pay` `the taxable year` MEANS
+    PARTY  `the resident taxpayer`
+    MUST   `file the return and pay the tax due on it`
+    WITHIN (Day (`the s 1168 due date for the calendar taxable year` `the taxable year`) MINUS Day (Date 1 1 (`the taxable year` PLUS 1)))
+    HENCE  FULFILLED
+    LEST   BREACH BY `the resident taxpayer` BECAUSE "return not filed or tax not paid by the thirtieth day of the fourth month (s 1168); the penalties and interest are in 30 Del. C. ch. 5, not deposited"
+
+§ `Questions for the taxpayer`
+
+§§ `Must I file? Am I a resident?`
+
+@export Am I a "resident individual" of Delaware for income tax (s 1103)?
+GIVEN `I am domiciled in Delaware` IS A BOOLEAN @desc Whether Delaware is your domicile (your permanent legal home)
+      `I meet the 18-month foreign presence exception` IS A BOOLEAN @desc Whether, in some 18 consecutive months, you were abroad at least 495 full days, in Delaware no more than 45 days, no family of yours stayed over 45 days at a Delaware home of yours, and you were not a US government employee
+      `I keep a place of abode in Delaware` IS A BOOLEAN @desc Whether you maintain a place to live in Delaware
+      `days I spent in Delaware this year` IS A NUMBER @desc How many days of the taxable year you spent in Delaware
+GIVETH A BOOLEAN
+DECIDE `Am I a resident of Delaware for income tax` IF
+    `a resident individual of this State` `I am domiciled in Delaware` `I meet the 18-month foreign presence exception`
+        `I keep a place of abode in Delaware` `days I spent in Delaware this year`
+
+@export Must I file a Delaware income tax return as a resident (s 1161)?
+GIVEN `I am a Delaware resident` IS A BOOLEAN @desc Whether you are a resident individual of Delaware for the year
+      `I must file a federal return` IS A BOOLEAN @desc Whether you are required to file a federal income tax return for the year
+      `I am married and can file a joint federal return` IS A BOOLEAN @desc Whether you are married and entitled to file a joint federal income tax return for the year
+      `my Delaware AGI, combined with my spouse's if married` IS A NUMBER @desc Your adjusted gross income as modified by s 1106 (Delaware adjusted gross income), added to your spouse's if you are married, in US dollars
+GIVETH A BOOLEAN
+DECIDE `Must I file a Delaware return` IF
+    `a resident who must make a return` `I am a Delaware resident` `I must file a federal return`
+        `I am married and can file a joint federal return` `my Delaware AGI, combined with my spouse's if married`
+
+@export We are a married couple, both Delaware residents: must we file separately, or may we file jointly (s 1162(a))?
+GIVEN `our federal returns` IS A `Federal return of the spouses` @desc How your federal income tax is determined: separate federal returns, a joint federal return, or neither of you must file a federal return
+GIVETH A `What Delaware return the spouses file`
+`Must we file separately in Delaware` MEANS `the s 1162(a) answer for resident spouses with` `our federal returns`
+
+§§ `How much is taken out of my income?`
+
+@export How much of my pension, military pension or retirement income is subtracted from my Delaware income (s 1106(b)(3))?
+GIVEN `the taxable year` IS A NUMBER @desc The calendar year of the return, for example 2025
+      `my age` IS A NUMBER @desc Your age at the close of the taxable year
+      `my pensions` IS A NUMBER @desc Pensions you received from employers, the United States, Delaware or a Delaware subdivision, other than a US military pension, in US dollars
+      `my US military pension` IS A NUMBER @desc A United States military pension you received, in US dollars
+      `my eligible retirement income` IS A NUMBER @desc Eligible retirement income: distributions from qualified plans, 401(k) and 457 plans, dividends, capital gains, interest and net rental income, in US dollars
+      `I was domiciled in Delaware before 2027` IS A BOOLEAN @desc Whether you became legally domiciled in Delaware before 1 January 2027
+      `years I have been domiciled in Delaware` IS A NUMBER @desc How many years you have been legally domiciled in Delaware
+GIVETH A NUMBER
+`How much of my pension is subtracted` MEANS
+    `the s 1106(b)(3) subtraction for`
+        (`Delaware person` OF `my age`, FALSE, FALSE, 0, `my pensions`, `my US military pension`, `my eligible retirement income`,
+                             `I was domiciled in Delaware before 2027`, `years I have been domiciled in Delaware`)
+        `in` `the taxable year`
+    -- blindness, disability and earned income are not read by s 1106(b)(3): fixed placeholders
+
+@export What is my Delaware standard deduction (s 1108)?
+GIVEN `my return` IS A `Delaware return type` @desc The return: a single person's return, a joint return of resident spouses, or a separate return of a married resident
+      `my age` IS A NUMBER @desc Your age at the close of the taxable year
+      `I am blind` IS A BOOLEAN @desc Whether you are blind at the close of the taxable year (central visual acuity 20/200 or less in the better eye with correction, or a field of vision of 20 degrees or less)
+      `my spouse's age` IS A NUMBER @desc Your spouse's age at the close of the taxable year (0 if you have no spouse)
+      `my spouse is blind` IS A BOOLEAN @desc Whether your spouse is blind at the close of the taxable year
+      `my spouse has no gross income and is no one's dependent` IS A BOOLEAN @desc On a separate return: whether your spouse has no gross income for the year and is not the dependent of another taxpayer
+GIVETH A NUMBER
+`What is my Delaware standard deduction` MEANS
+    `the standard deduction on`
+        (`Delaware return` OF 2025, TRUE, `my return`,
+                             (`Delaware person` OF `my age`, `I am blind`, FALSE, 0, 0, 0, 0, TRUE, 0),
+                             (`Delaware person` OF `my spouse's age`, `my spouse is blind`, FALSE, 0, 0, 0, 0, TRUE, 0),
+                             `my spouse has no gross income and is no one's dependent`, 0, 0, 0, 0, NOTHING, 0, 0)
+    -- only the return type, the ages, blindness and the spouse's income are read by s 1108: the rest are fixed placeholders
+
+§§ `How much tax?`
+
+@export What is the Delaware tax on a given Delaware taxable income, before credits (s 1102(a)(14))?
+GIVEN `my Delaware taxable income` IS A NUMBER @desc Your Delaware taxable income in US dollars (Delaware adjusted gross income less the standard or itemized deduction)
+GIVETH A NUMBER
+`What is the Delaware tax before credits` MEANS `the s 1102(a)(14) tax on` `my Delaware taxable income`
+
+@export How much Delaware income tax do I owe after personal credits and the better EITC option (negative means a refund), as a single person?
+GIVEN `the taxable year` IS A NUMBER @desc The calendar year of the return, 2022 or later
+      `I was a Delaware resident all year` IS A BOOLEAN @desc Whether you were a resident individual of Delaware for the whole taxable year
+      `my age` IS A NUMBER @desc Your age at the close of the taxable year
+      `I am blind` IS A BOOLEAN @desc Whether you are blind at the close of the taxable year
+      `my earned income` IS A NUMBER @desc Your earned income (wages and self-employment) for the year, in US dollars
+      `my federal AGI` IS A NUMBER @desc Your federal adjusted gross income, in US dollars
+      `Social Security in my federal AGI` IS A NUMBER @desc The Social Security and Railroad Retirement benefits included in your federal AGI, in US dollars
+      `my pensions` IS A NUMBER @desc Pensions from employers, the United States, Delaware or a subdivision, other than a US military pension, in US dollars
+      `my US military pension` IS A NUMBER @desc A United States military pension, in US dollars
+      `my eligible retirement income` IS A NUMBER @desc Eligible retirement income (qualified-plan distributions, dividends, capital gains, interest, net rents), in US dollars
+      `years I have been domiciled in Delaware` IS A NUMBER @desc How many years you have been legally domiciled in Delaware (you are taken to have been domiciled here before 2027)
+      `my federal personal exemptions` IS A NUMBER @desc The number of personal exemptions you are entitled to for federal income tax purposes (yourself and any dependents)
+      `my federal earned income credit` IS A NUMBER @desc Your federal earned income credit allowed under IRC s 32, in US dollars (0 if none)
+GIVETH AN `Answer` NUMBER
+`How much Delaware income tax do I owe` MEANS
+    `the Delaware tax balance on`
+        (`Delaware return` OF `the taxable year`, `I was a Delaware resident all year`, `a single person's return`,
+                             (`Delaware person` OF `my age`, `I am blind`, FALSE, `my earned income`, `my pensions`, `my US military pension`,
+                                                  `my eligible retirement income`, TRUE, `years I have been domiciled in Delaware`),
+                             (`Delaware person` OF 0, FALSE, FALSE, 0, 0, 0, 0, TRUE, 0),
+                             FALSE, `my federal AGI`, `Social Security in my federal AGI`, 0, 0, NOTHING,
+                             `my federal personal exemptions`, `my federal earned income credit`)
+    -- the spouse is not read on a single person's return; the s 1106(b)(2) disability limb, other modifications and itemizing
+    -- are not asked here: fixed placeholders
+
+@export Which Delaware EITC option gives me more, the 20% non-refundable credit or the 4.5% refundable one (s 1117(a)(2))?
+GIVEN `my Delaware tax after personal credits` IS A NUMBER @desc Your Delaware tax after the s 1110 personal credits, in US dollars
+      `my federal earned income credit` IS A NUMBER @desc Your federal earned income credit allowed under IRC s 32, in US dollars
+GIVETH AN `EITC option`
+`Which EITC option is better` MEANS
+    `the better EITC option on tax otherwise due` `my Delaware tax after personal credits` `and federal credit` `my federal earned income credit`
+
+§§ `When must I file and pay?`
+
+@export By what date must I file my Delaware return and pay the tax, for a calendar taxable year (s 1168)?
+GIVEN `the taxable year` IS A NUMBER @desc The calendar year of the return, for example 2025
+GIVETH A DATE
+`By when must I file and pay in Delaware` MEANS `the s 1168 due date for the calendar taxable year` `the taxable year`
