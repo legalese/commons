@@ -29,3 +29,5 @@ Formulas the text deposit lost in s 960-275 (Subdivision 960-M) are transcribed 
 Register and under the same licence (CC BY 4.0, as above):
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A05138',asat=2026-09-22T00:00:00Z,type='Primary',format='Word',uniquetypenumber=0,volumenumber=10,rectificationspecification='Latest')
 (`C2026C00400VOL10.docx`), sha256 of the download: `6923971ee7f90eef24e23ae7509d87af38074fb04c7b0063b8bab6cd78bf8f28`.
+
+Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 in `registers/source-bundle/C2004A05138.formulas.md`, from the Word rendering of the same compilation (C2026C00400) on the same Register and under the same licence (CC BY 4.0, as above): https://api.prod.legislation.gov.au/v1/Documents/Find(registerid='C2026C00400',type='Primary',format='Word',uniquetypenumber=0,volumenumber=1,rectificationspecification='Latest') (volumes 1 to 12).
