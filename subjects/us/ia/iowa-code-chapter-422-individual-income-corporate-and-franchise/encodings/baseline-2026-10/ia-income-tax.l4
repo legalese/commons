@@ -1,0 +1,363 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Iowa Code chapter 422, subchapter II (personal net income tax) -- the seat-neutral core.
+--
+-- Written in the chapter's own actors and terms: "resident" and "nonresident" (422.4(9), (14)), "net income" (422.7),
+-- "taxable income" (422.4(15)), the tax "imposed upon every resident and nonresident" at 3.8% (422.5(1)(a)), the
+-- low-income and age-65 limits (422.5(2), (3)), the credits deducted from the computed tax (422.12, 422.12B, 422.12C), the
+-- return (422.13) and its due date (422.21(1)), and payment with the return (422.24(1)).
+--
+-- Edition: Iowa Code 2026 (Legislative Services Agency; laws through the 2025 regular session), chapter 422 as deposited at
+-- ../../registers/source-bundle/ia-code-ch-422-2026.txt (retrieved 2026-10-19). Acts of the 2026 session are not applied.
+--
+-- Federal figures (federal taxable income under IRC s63, the taxable Social Security benefits under IRC s86, the federal
+-- earned income credit under IRC s32, the federal child and dependent care credit under IRC s21, "dependent", "head of
+-- household", the federal filing status) are borrowed terms and enter as inputs. They are answered by the Internal
+-- Revenue Code encoding in subjects/us/internal-revenue-code-of-1986/ (cross-folder IMPORT is not possible in the stable
+-- l4; NOTES.md names the link).
+--
+-- The taxpayer's seat questions are in ia-income-tax-seat.l4, built only from the rules here.
+--
+-- BASELINE ENCODING. No pipeline, no coverage table, no independent test pass, no human gate. Not advice. See NOTES.md.
+
+§ `Iowa Code chapter 422, subchapter II -- personal net income tax`
+
+§§ `Answers this encoding does not give`
+
+DECLARE `Why not covered` IS ONE OF
+    `a married person filing a separate return is not encoded: 422.5(2), (3) and 422.13(2) turn on the combined net income of both spouses and the alternate tax for separate filers is not worked out here`
+    `the tax of a nonresident or part-year resident is not encoded: it is prorated by net income allocated to Iowa under 422.8, subsection 2, under rules prescribed by the director (422.5(1)(b))`
+    `the credit for income tax paid to another state or foreign country (422.8(1)) is not encoded`
+    `the extra time for a person in a combat zone, a qualified hazardous duty area or a contingency operation follows section 7508(a) of the Internal Revenue Code (422.21(2)), which is not encoded here`
+
+GIVEN a IS A TYPE
+GIVETH A TYPE
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+§§ `422.4, 422.5(11) -- terms`
+
+-- 422.5(11): "a taxpayer shall use the same filing status for Iowa income tax purposes as the taxpayer used for federal
+-- income tax purposes." So the status is the federal one, a borrowed term.
+DECLARE `Filing status` IS ONE OF
+    `single`
+    `married filing jointly`
+    `married filing separately`
+    `head of household`
+    `surviving spouse`
+
+-- 422.4(14): "'resident' ... includes ... any individual domiciled in the state, and any other individual who maintains a
+-- permanent place of abode within the state." 422.4(9): a "nonresident" is any individual who is not a resident.
+GIVEN `domiciled in Iowa` IS A BOOLEAN
+      `maintains a permanent place of abode within Iowa` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a resident` IF
+        `domiciled in Iowa`
+    OR  `maintains a permanent place of abode within Iowa`
+
+-- 422.5(2)(a), (b), (3)(a), (b): "married persons filing jointly, heads of household, and surviving spouses" get the higher
+-- amounts; "all other persons" the lower.
+GIVEN status IS A `Filing status`
+GIVETH A BOOLEAN
+DECIDE `is in the joint, head of household or surviving spouse group` IF
+    CONSIDER status
+    WHEN `married filing jointly` THEN TRUE
+    WHEN `head of household`      THEN TRUE
+    WHEN `surviving spouse`       THEN TRUE
+    OTHERWISE FALSE
+
+§§ `422.7 -- net income`
+
+-- 422.7: "'net income' means the taxable income as properly computed for federal income tax purposes under section 63 of
+-- the Internal Revenue Code, with the following adjustments". Only the adjustments a member of the public most often meets
+-- are worked out; every other 422.7 adjustment is one input each way.
+DECLARE `Net income facts` HAS
+    `federal taxable income`                               IS A NUMBER  -- IRC s63, a borrowed term
+    `interest and dividends from federal securities`       IS A NUMBER  -- 422.7(1), subtracted
+    `federally exempt interest from other states' securities` IS A NUMBER -- 422.7(2), added
+    `taxable social security benefits`                     IS A NUMBER  -- 422.7(8): taxable under IRC s86, subtracted
+    `retirement pay of a qualifying person`                IS A NUMBER  -- 422.7(19): pension or retirement plan amounts received by a person who is disabled, 55 or older, or a qualifying survivor
+    `military retirement pay`                              IS A NUMBER  -- 422.7(20)
+    `active duty military pay`                             IS A NUMBER  -- 422.7(29)
+    `other additions under 422.7`                          IS A NUMBER  -- not worked out
+    `other subtractions under 422.7`                       IS A NUMBER  -- not worked out
+
+GIVEN f IS A `Net income facts`
+GIVETH A NUMBER
+`net income` f MEANS
+    (f's `federal taxable income`
+        PLUS f's `federally exempt interest from other states' securities`
+        PLUS f's `other additions under 422.7`)
+    MINUS (f's `interest and dividends from federal securities`
+        PLUS f's `taxable social security benefits`
+        PLUS f's `retirement pay of a qualifying person`
+        PLUS f's `military retirement pay`
+        PLUS f's `active duty military pay`
+        PLUS f's `other subtractions under 422.7`)
+
+-- 422.7(19)(a): the pension subtraction is for amounts "received by a person who is any of the following: (1) Disabled.
+-- (2) Fifty-five years of age or older. (3) The surviving spouse of an individual or a survivor having an insurable
+-- interest in an individual who would have qualified". Age is taken in the tax year (a borrowed reading; NOTES.md).
+GIVEN `disabled` IS A BOOLEAN
+      `age` IS A NUMBER
+      `qualifying survivor` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `may subtract retirement pay under 422.7(19)` IF
+        `disabled`
+    OR  `age` AT LEAST 55
+    OR  `qualifying survivor`
+
+-- 422.4(15): "'Taxable income' means, in the case of individuals, the net income as defined in section 422.7 minus the
+-- deduction allowed by section 422.9, if available" (the Iowa net operating loss carryover, an input).
+GIVEN `the net income` IS A NUMBER
+      `the 422.9 deduction` IS A NUMBER
+GIVETH A NUMBER
+`taxable income` MEANS `the net income` MINUS `the 422.9 deduction`
+
+§§ `422.5(1)(a) -- the tax`
+
+-- "a rate of three and eight-tenths percent" of "the entire taxable income".
+`the rate` MEANS 0.038
+
+GIVEN `the taxable income` IS A NUMBER
+GIVETH A NUMBER
+`tax at the 422.5(1)(a) rate` MEANS max 0 (`the taxable income` TIMES `the rate`)
+
+§§ `422.5(2), (3) -- the low-income and age-65 limits`
+
+-- 422.5(2)(a), (3)(a): "In calculating net income for purposes of this subsection, any amount of itemized or standard
+-- deduction, personal exemption deduction, or qualified business income deduction that was allowed as a deduction in
+-- computing federal taxable income under the Internal Revenue Code shall be added back", and "the entire net income,
+-- including any part of the net income not allocated to Iowa, shall be taken into account".
+GIVEN `the net income` IS A NUMBER
+      `federal deductions added back` IS A NUMBER
+GIVETH A NUMBER
+`net income for the 422.5(2) and (3) limits` MEANS `the net income` PLUS `federal deductions added back`
+
+-- The amounts "upon which tax is not imposed".
+GIVEN status IS A `Filing status`
+GIVETH A NUMBER
+`the 422.5(2) amount` status MEANS
+    IF `is in the joint, head of household or surviving spouse group` status THEN 13500 ELSE 9000
+
+GIVEN status IS A `Filing status`
+GIVETH A NUMBER
+`the 422.5(3) amount` status MEANS
+    IF `is in the joint, head of household or surviving spouse group` status THEN 32000 ELSE 24000
+
+-- 422.5(3)(a), (c): "at least sixty-five years old on December 31 of the tax year"; it "applies even though one spouse has
+-- not attained the age of sixty-five, if the other spouse is at least sixty-five at the end of the tax year".
+GIVEN `age on December 31` IS A NUMBER
+      `spouse's age on December 31` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `subsection 3 applies by age` IF
+        `age on December 31` AT LEAST 65
+    OR  `spouse's age on December 31` AT LEAST 65
+
+-- The tax under one subsection: none at or below the amount; above it, reduced so that the taxpayer keeps the amount
+-- ("the tax shall be reduced to that amount which would result in allowing the taxpayer to retain a net income of" it);
+-- and for the joint, head of household and surviving spouse group, "the lesser of the alternate state individual income
+-- tax rate of four and three-tenths percent times the portion of the net income in excess of" the amount "or the regular
+-- tax liability computed without regard to this sentence" (422.5(2)(b), (3)(b)).
+-- 422.5(2)(a), (3)(a): "A person who is claimed as a dependent by another person ... shall not receive the benefit of this
+-- subsection if the person claiming the dependent has net income exceeding" the amount (an input).
+`the alternate rate` MEANS 0.043
+
+GIVEN `the regular tax` IS A NUMBER
+      `the limit net income` IS A NUMBER
+      `the amount` IS A NUMBER
+      `the joint group` IS A BOOLEAN
+      `denied as a dependent` IS A BOOLEAN
+GIVETH A NUMBER
+`tax limited by one subsection` MEANS
+    IF `denied as a dependent`
+    THEN `the regular tax`
+    ELSE IF `the limit net income` AT MOST `the amount`
+         THEN 0
+         ELSE IF `the joint group`
+              THEN min (min `the regular tax` (`the limit net income` MINUS `the amount`))
+                       (`the alternate rate` TIMES (`the limit net income` MINUS `the amount`))
+              ELSE min `the regular tax` (`the limit net income` MINUS `the amount`)
+
+-- The tax of a resident after 422.5(2) and, where it applies, 422.5(3) ("In lieu of the computation in subsection 1 or 2").
+GIVEN `the regular tax` IS A NUMBER
+      `the limit net income` IS A NUMBER
+      status IS A `Filing status`
+      `65 or older, or spouse is` IS A BOOLEAN
+      `denied as a dependent` IS A BOOLEAN
+GIVETH A NUMBER
+`tax after the 422.5(2) and (3) limits` MEANS
+    IF `65 or older, or spouse is`
+    THEN min under2 under3
+    ELSE under2
+    WHERE
+        joint MEANS `is in the joint, head of household or surviving spouse group` status
+        under2 MEANS `tax limited by one subsection` `the regular tax` `the limit net income` (`the 422.5(2) amount` status) joint `denied as a dependent`
+        under3 MEANS `tax limited by one subsection` `the regular tax` `the limit net income` (`the 422.5(3) amount` status) joint `denied as a dependent`
+
+§§ `422.12 -- deductions from computed tax`
+
+-- 422.12(2)(a) personal exemption credit: "(1) For ... a single individual, or a married person filing a separate return,
+-- forty dollars. (2) For a head of household, or a husband and wife filing a joint return, eighty dollars. (3) For each
+-- dependent, an additional forty dollars. (4) ... an additional exemption of twenty dollars for each of said individuals
+-- who has attained the age of sixty-five years ... (5) ... twenty dollars for each of said individuals who is blind".
+-- A surviving spouse is not named in (1) or (2); NOTES.md finding 3. It is given the single amount here.
+GIVEN status IS A `Filing status`
+      `number of dependents` IS A NUMBER
+      `number aged 65 or older` IS A NUMBER
+      `number blind` IS A NUMBER
+GIVETH A NUMBER
+`personal exemption credit` MEANS
+    base PLUS (40 TIMES `number of dependents`) PLUS (20 TIMES `number aged 65 or older`) PLUS (20 TIMES `number blind`)
+    WHERE
+        base MEANS
+            CONSIDER status
+            WHEN `married filing jointly` THEN 80
+            WHEN `head of household`      THEN 80
+            OTHERWISE 40
+
+-- 422.12(2)(b): "A tuition credit equal to twenty-five percent of the first two thousand dollars which the taxpayer has
+-- paid to others for each dependent in grades kindergarten through twelve" at a qualifying Iowa school or in private
+-- instruction. One number per dependent.
+GIVEN `tuition and textbooks paid for each dependent` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`tuition credit` MEANS
+    sum (map (GIVEN paid YIELD 0.25 TIMES (min 2000 (max 0 paid))) `tuition and textbooks paid for each dependent`)
+
+-- "There shall be deducted from but not to exceed the tax": the 422.12 credits are not refundable.
+GIVEN `the tax` IS A NUMBER
+      `the 422.12 credits` IS A NUMBER
+GIVETH A NUMBER
+`tax less the 422.12 credits` MEANS max 0 (`the tax` MINUS `the 422.12 credits`)
+
+§§ `422.12B -- earned income tax credit`
+
+-- 1.a.(2): "For tax years beginning on or after January 1, 2014, fifteen percent" of "the federal earned income credit
+-- provided in section 32 of the Internal Revenue Code". b: "Any credit in excess of the tax liability is refundable."
+GIVEN `the federal earned income credit` IS A NUMBER
+GIVETH A NUMBER
+`Iowa earned income credit` MEANS 0.15 TIMES (max 0 `the federal earned income credit`)
+
+§§ `422.12C -- child and dependent care, or early childhood development`
+
+-- 422.12C(1): a percentage of "the federal child and dependent care credit provided in section 21 of the Internal Revenue
+-- Code, without regard to whether or not the federal credit was limited by the taxpayer's federal tax liability", by net
+-- income bands a to g.
+GIVEN `the net income` IS A NUMBER
+GIVETH A NUMBER
+`the 422.12C(1) percentage` MEANS
+    BRANCH
+        IF `the net income` LESS THAN 10000 THEN 0.75
+        IF `the net income` LESS THAN 20000 THEN 0.65
+        IF `the net income` LESS THAN 25000 THEN 0.55
+        IF `the net income` LESS THAN 35000 THEN 0.50
+        IF `the net income` LESS THAN 40000 THEN 0.40
+        IF `the net income` LESS THAN 90000 THEN 0.30
+        OTHERWISE 0
+
+GIVEN `the net income` IS A NUMBER
+      `the federal child and dependent care credit before the tax liability limit` IS A NUMBER
+GIVETH A NUMBER
+`child and dependent care credit` MEANS
+    `the 422.12C(1) percentage` `the net income` TIMES (max 0 `the federal child and dependent care credit before the tax liability limit`)
+
+-- 422.12C(2)(a): "twenty-five percent of the first one thousand dollars which the taxpayer has paid to others for each
+-- dependent ... ages three through five for early childhood development expenses. ... This credit is available to a
+-- taxpayer whose net income is less than ninety thousand dollars." One number per such dependent.
+GIVEN `the net income` IS A NUMBER
+      `early childhood development expenses paid for each dependent aged 3 to 5` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`early childhood development credit` MEANS
+    IF `the net income` LESS THAN 90000
+    THEN sum (map (GIVEN paid YIELD 0.25 TIMES (min 1000 (max 0 paid))) `early childhood development expenses paid for each dependent aged 3 to 5`)
+    ELSE 0
+
+-- 422.12C(3): "Any credit in excess of the tax liability shall be refunded."
+
+§§ `422.13 -- who must make a return`
+
+-- 422.13(1): "A resident or nonresident of this state shall make a return ... if any of the following are applicable:
+-- a. The individual is claimed as a dependent on another person's return and has net income of five thousand dollars or
+-- more ... b. The net income of a nonresident which is allocated to Iowa ... is one thousand dollars or more ..., unless the
+-- nonresident's total net income, as determined under section 422.5, subsection 2 or 3, does not exceed the appropriate
+-- dollar amount ... c. The total net income, as determined under section 422.5, subsection 2 or 3, of a resident of this
+-- state is more than the appropriate dollar amount". (2): "the combined net income of a husband and wife ... shall be
+-- considered". The "appropriate dollar amount" is read as the 422.5(3) amount where subsection 3 applies by age, otherwise
+-- the 422.5(2) amount (NOTES.md finding 4).
+GIVEN status IS A `Filing status`
+      `65 or older, or spouse is` IS A BOOLEAN
+GIVETH A NUMBER
+`the appropriate dollar amount` MEANS
+    IF `65 or older, or spouse is` THEN `the 422.5(3) amount` status ELSE `the 422.5(2) amount` status
+
+GIVEN `resident` IS A BOOLEAN
+      status IS A `Filing status`
+      `65 or older, or spouse is` IS A BOOLEAN
+      `claimed as a dependent on another person's return` IS A BOOLEAN
+      `the net income` IS A NUMBER
+      `the limit net income` IS A NUMBER
+      `net income allocated to Iowa` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `shall make a return` IF
+        (`claimed as a dependent on another person's return` AND `the net income` AT LEAST 5000)
+    OR  ((NOT `resident`)
+         AND `net income allocated to Iowa` AT LEAST 1000
+         AND `the limit net income` GREATER THAN (`the appropriate dollar amount` status `65 or older, or spouse is`))
+    OR  (`resident`
+         AND `the limit net income` GREATER THAN (`the appropriate dollar amount` status `65 or older, or spouse is`))
+
+§§ `422.21(1), 422.24(1) -- when the return is due, and paying with it`
+
+-- 422.21(1): returns "shall be filed with the department on or before the last day of the fourth month after the
+-- expiration of the tax year". The tax year ends on the last day of a month (422.4(4), (16)); 52-53 week years
+-- (422.4(16)(a)) are not encoded.
+GIVEN m IS A NUMBER, y IS A NUMBER
+GIVETH A DATE
+`first day of the month after` m y MEANS
+    IF m AT LEAST 12 THEN DATE_FROM_DMY 1 1 (y PLUS 1) ELSE DATE_FROM_DMY 1 (m PLUS 1) y
+
+GIVEN `month the tax year ends` IS A NUMBER
+      `year the tax year ends` IS A NUMBER
+GIVETH A DATE
+`the return due date` MEANS
+    (`first day of the month after` m4 y4) MINUS 1
+    WHERE
+        m4 MEANS IF (`month the tax year ends` PLUS 4) GREATER THAN 12 THEN `month the tax year ends` PLUS 4 MINUS 12 ELSE `month the tax year ends` PLUS 4
+        y4 MEANS IF (`month the tax year ends` PLUS 4) GREATER THAN 12 THEN `year the tax year ends` PLUS 1 ELSE `year the tax year ends`
+
+-- The duties. 422.13(1) "shall make a return"; 422.21(1) "on or before" the due date; 422.24(1): "the total tax due shall
+-- be paid in full at the time of filing the return". The deadline is counted in days from the day after the tax year ends.
+-- 422.21(1) "In case of sickness, absence, or other disability, or if good cause exists, the director may allow further
+-- time": an extension is the director's judgment and enters as extra days. 422.24(2): interest runs on an extension.
+DECLARE `Party` IS ONE OF
+    `the individual`   -- the resident or nonresident who must make a return
+    `the department`   -- the department of revenue (422.3(3))
+
+DECLARE `Act` IS ONE OF
+    `make the return and pay the total tax due in full`  -- 422.24(1): payment is "at the time of filing the return"
+    `claim the child and dependent care credit`
+
+GIVEN `days from the end of the tax year to the due date` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the 422.13 and 422.21 duty to make a return and pay` IS
+    PARTY  `the individual`
+    MUST   `make the return and pay the total tax due in full`
+    WITHIN `days from the end of the tax year to the due date`
+    HENCE  FULFILLED
+    LEST   BREACH BY `the individual` BECAUSE "the return was not filed, with the total tax due paid in full, on or before the last day of the fourth month after the tax year (422.21(1), 422.24(1))"
+
+-- 422.12C(2)(a): "If the early childhood development tax credit is claimed for a tax year, the taxpayer and the
+-- taxpayer's spouse shall not claim the child and dependent care credit under subsection 1."
+GIVEN `the early childhood development credit is claimed for the tax year` IS A BOOLEAN
+GIVETH A DEONTIC `Party` `Act`
+DECIDE `the 422.12C(2) bar on claiming both credits` IS
+    IF `the early childhood development credit is claimed for the tax year`
+    THEN `the bar`
+    ELSE FULFILLED
+    WHERE
+      `the bar` MEANS
+        PARTY  `the individual`
+        SHANT  `claim the child and dependent care credit`
+        LEST   BREACH BY `the individual` BECAUSE "the early childhood development credit was claimed, so the child and dependent care credit may not also be claimed (422.12C(2)(a))"

@@ -71,3 +71,11 @@ Two new subjects from the Iowa Administrative Code (IAC), taken from the publica
 - The state supplementary assistance standards the department publishes on its website (dependent relative, residential care per diem, family-life home and personal allowances) are not sourced. They are not rule text.
 - The unemployment insurance maximum weekly benefit for the current benefit year is computed by Iowa Workforce Development from the statewide average weekly wage (96.3). No official notice was located. The host workforce.iowa.gov allows crawling, but no page was guessed at.
 - IAC 871 (Workforce Development) UI rules and the Department of Revenue's inflation factors are not sourced.
+
+## Encodings, 24 October 2026: tax and benefits
+
+| Encoding | Seat | What it answers | Assertions |
+| --- | --- | --- | --- |
+| [`iowa-code-chapter-422-individual-income-corporate-and-franchise/encodings/baseline-2026-10/`](iowa-code-chapter-422-individual-income-corporate-and-franchise/encodings/baseline-2026-10/) | the individual taxpayer | residence (422.4(14)); net income from federal taxable income with the main 422.7 adjustments (Social Security, pensions at 55, military pay); the 3.8% flat tax and the $9,000 / $13,500 and age-65 $24,000 / $32,000 limits with the 4.3% alternate (422.5); the personal exemption and tuition credits (422.12); the 15% refundable EITC (422.12B); the child care and early childhood credits (422.12C); who must file (422.13) and by when, with payment (422.21(1), 422.24(1)) | 46 / 46 |
+
+Both are baselines: a seat-neutral core in the Code's own terms with regulative rules for the duties, and a seat layer with `@export` questions. Federal figures (federal taxable income, IRC s86, s32, s21) are inputs, answered by `subjects/us/internal-revenue-code-of-1986/`. Each encoding's NOTES.md lists its findings and what is `not covered`.

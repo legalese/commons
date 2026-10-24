@@ -1,0 +1,163 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ia-income-tax`
+
+-- Iowa Code chapter 422, subchapter II -- the seat of the individual taxpayer.
+--
+-- SEAT: the individual who earns income and asks about Iowa income tax: "Am I a resident? Must I file? By when? What is my
+-- net income? How much do I owe, or get back? What are my earned income and child care credits?" Every answer is built
+-- from the rules in ia-income-tax.l4; nothing is restated here. Inputs are facts the person can state, or figures from
+-- their federal return (borrowed terms, answered by the IRC encoding in subjects/us/internal-revenue-code-of-1986/).
+--
+-- BASELINE ENCODING. Not advice. See NOTES.md.
+
+§ `Iowa income tax -- my questions`
+
+§§ `Am I a resident`
+
+@export Am I a resident of Iowa for Iowa income tax (Iowa Code 422.4(14))?
+GIVEN `I am domiciled in Iowa` IS A BOOLEAN @desc Whether Iowa is your domicile: your true, fixed home, to which you intend to return when away
+      `I keep a permanent home in Iowa` IS A BOOLEAN @desc Whether you maintain a permanent place of abode in Iowa during the tax year, even if your domicile is elsewhere
+GIVETH A BOOLEAN
+DECIDE `Am I an Iowa resident` IF `is a resident` `I am domiciled in Iowa` `I keep a permanent home in Iowa`
+
+§§ `My net income`
+
+@export What is my Iowa net income for the year (Iowa Code 422.7), starting from my federal taxable income?
+GIVEN `my federal taxable income` IS A NUMBER @desc Your taxable income on your federal return (IRC s63), in dollars; on a joint return, the joint figure
+      `my interest from US government securities` IS A NUMBER @desc Interest and dividends from federal securities included in your federal taxable income
+      `my federally exempt interest from other states' bonds` IS A NUMBER @desc Interest and dividends from securities of other states and their political subdivisions that are exempt from federal tax
+      `my taxable social security benefits` IS A NUMBER @desc The social security benefits included in your federal income as taxable under IRC s86
+      `my retirement pay` IS A NUMBER @desc Pension, annuity, IRA, 401(k) or other retirement plan amounts you received and included in federal income (not military retirement pay)
+      `I was disabled` IS A BOOLEAN @desc Whether you are disabled
+      `my age` IS A NUMBER @desc Your age in the tax year
+      `I am a qualifying survivor` IS A BOOLEAN @desc Whether you receive the retirement pay as the surviving spouse, or a survivor with an insurable interest, of a person who would have qualified for the exclusion
+      `my spouse's retirement pay on our joint return` IS A NUMBER @desc On a joint return, the pension or retirement plan amounts your spouse received and included in federal income; otherwise 0
+      `my spouse was disabled` IS A BOOLEAN @desc Whether your spouse is disabled
+      `my spouse's age` IS A NUMBER @desc Your spouse's age in the tax year (0 if you have no spouse on the return)
+      `my military retirement pay` IS A NUMBER @desc Retirement pay from the federal government for service in the armed forces, reserve or national guard, included in federal income
+      `my active duty military pay` IS A NUMBER @desc Pay from the federal government for military service on active duty, included in federal income
+      `my other Iowa additions` IS A NUMBER @desc Any other additions required by Iowa Code 422.7 (not worked out here); usually 0
+      `my other Iowa subtractions` IS A NUMBER @desc Any other subtractions allowed by Iowa Code 422.7 (not worked out here); usually 0
+GIVETH A NUMBER
+`What is my Iowa net income` MEANS
+    `net income` (`Net income facts` WITH
+        `federal taxable income` IS `my federal taxable income`
+        `interest and dividends from federal securities` IS `my interest from US government securities`
+        `federally exempt interest from other states' securities` IS `my federally exempt interest from other states' bonds`
+        `taxable social security benefits` IS `my taxable social security benefits`
+        `retirement pay of a qualifying person` IS mine PLUS spouses
+        `military retirement pay` IS `my military retirement pay`
+        `active duty military pay` IS `my active duty military pay`
+        `other additions under 422.7` IS `my other Iowa additions`
+        `other subtractions under 422.7` IS `my other Iowa subtractions`)
+    WHERE
+        mine MEANS IF `may subtract retirement pay under 422.7(19)` `I was disabled` `my age` `I am a qualifying survivor` THEN `my retirement pay` ELSE 0
+        spouses MEANS IF `may subtract retirement pay under 422.7(19)` `my spouse was disabled` `my spouse's age` FALSE THEN `my spouse's retirement pay on our joint return` ELSE 0
+
+§§ `Must I file, and by when`
+
+@export Must I make an Iowa income tax return for the year (Iowa Code 422.13)?
+GIVEN `I am an Iowa resident` IS A BOOLEAN @desc Whether you are an Iowa resident for the whole tax year (domiciled in Iowa, or keeping a permanent home there)
+      `my filing status` IS A `Filing status` @desc Your filing status on your federal return; Iowa uses the same (422.5(11))
+      `my age on December 31` IS A NUMBER @desc Your age on December 31 of the tax year
+      `my spouse's age on December 31` IS A NUMBER @desc Your spouse's age on December 31 of the tax year (0 if you are not married)
+      `someone claims me as a dependent` IS A BOOLEAN @desc Whether another person claims you as a dependent on their return
+      `my Iowa net income` IS A NUMBER @desc Your Iowa net income (Iowa Code 422.7); on a joint return, both spouses' combined
+      `my federal deductions` IS A NUMBER @desc The standard or itemized deduction, personal exemption deduction and qualified business income deduction taken on your federal return; these are added back for the filing test
+      `my net income allocated to Iowa` IS A NUMBER @desc If you are a nonresident: your net income from Iowa sources (allocated to Iowa under 422.8); if a resident, enter the same as your Iowa net income
+GIVETH AN `Answer` BOOLEAN
+`Must I make an Iowa return` MEANS
+    CONSIDER `my filing status`
+    WHEN `married filing separately` THEN `not covered` `a married person filing a separate return is not encoded: 422.5(2), (3) and 422.13(2) turn on the combined net income of both spouses and the alternate tax for separate filers is not worked out here`
+    OTHERWISE `answered` must
+    WHERE
+        aged MEANS `subsection 3 applies by age` `my age on December 31` `my spouse's age on December 31`
+        limitIncome MEANS `net income for the 422.5(2) and (3) limits` `my Iowa net income` `my federal deductions`
+        must MEANS `shall make a return` `I am an Iowa resident` `my filing status` aged `someone claims me as a dependent` `my Iowa net income` limitIncome `my net income allocated to Iowa`
+
+@export By what date must I file my Iowa income tax return and pay the tax due (Iowa Code 422.21(1), 422.24(1))?
+GIVEN `the month my tax year ends` IS A NUMBER @desc The month in which your tax year ends, 1 to 12 (12 for a calendar year)
+      `the year my tax year ends` IS A NUMBER @desc The year in which your tax year ends
+      `I serve in a combat zone or contingency operation` IS A BOOLEAN @desc Whether you are in the US armed forces (or serving in support of them) in a combat zone, qualified hazardous duty area or contingency operation, or deployed outside the US on active duty
+GIVETH AN `Answer` DATE
+`When is my Iowa return due` MEANS
+    IF `I serve in a combat zone or contingency operation`
+    THEN `not covered` `the extra time for a person in a combat zone, a qualified hazardous duty area or a contingency operation follows section 7508(a) of the Internal Revenue Code (422.21(2)), which is not encoded here`
+    ELSE `answered` (`the return due date` `the month my tax year ends` `the year my tax year ends`)
+
+@export If I file my Iowa return and pay on a given day, am I in time (Iowa Code 422.21(1), 422.24(1))?
+GIVEN `the month my tax year ends` IS A NUMBER @desc The month in which your tax year ends, 1 to 12 (12 for a calendar year)
+      `the year my tax year ends` IS A NUMBER @desc The year in which your tax year ends
+      `the day I file and pay` IS A DATE @desc The day on which you file the return and pay the tax due
+      `extra days the director allowed` IS A NUMBER @desc Extra days the director of revenue allowed you to file, for sickness, absence, other disability or good cause (0 if none)
+GIVETH A BOOLEAN
+DECIDE `Am I in time to file and pay` IF
+    `the day I file and pay` AT MOST ((`the return due date` `the month my tax year ends` `the year my tax year ends`) PLUS `extra days the director allowed`)
+
+§§ `How much do I owe, or get back`
+
+-- Only for a full-year resident who does not file separately from a spouse and paid no tax to another state.
+@export How much Iowa income tax do I owe for the year, or how much is refunded to me, after credits and the tax already withheld (Iowa Code 422.5, 422.12, 422.12B, 422.12C)?
+GIVEN `I am an Iowa resident for the whole year` IS A BOOLEAN @desc Whether you were an Iowa resident for the entire tax year
+      `my filing status` IS A `Filing status` @desc Your filing status on your federal return; Iowa uses the same (422.5(11))
+      `my Iowa net income` IS A NUMBER @desc Your Iowa net income (Iowa Code 422.7); on a joint return, both spouses' combined
+      `my Iowa net operating loss carryover` IS A NUMBER @desc The Iowa net operating loss deduction available to you under 422.9 (usually 0)
+      `my federal deductions` IS A NUMBER @desc The standard or itemized deduction, personal exemption deduction and qualified business income deduction taken on your federal return
+      `my age on December 31` IS A NUMBER @desc Your age on December 31 of the tax year
+      `my spouse's age on December 31` IS A NUMBER @desc Your spouse's age on December 31 of the tax year (0 if not married)
+      `someone with too much income claims me as a dependent` IS A BOOLEAN @desc Whether you are claimed as a dependent by a person whose net income (with their spouse's) exceeds $13,500, or $9,000 for a single filer ($32,000 or $24,000 where they or their spouse are 65 or older)
+      `my number of dependents` IS A NUMBER @desc How many dependents you claim
+      `I am blind` IS A BOOLEAN @desc Whether you are blind at the end of the tax year (visual acuity of 20/200 or less in the better eye with glasses, or a visual field of 20 degrees or less)
+      `my spouse is blind` IS A BOOLEAN @desc On a joint return, whether your spouse is blind at the end of the tax year
+      `tuition and textbooks I paid for each child in K-12` IS A LIST OF NUMBER @desc For each dependent in kindergarten to grade 12 at an accredited nonprofit Iowa school or in private instruction, the tuition and textbooks you paid
+      `my federal earned income credit` IS A NUMBER @desc Your federal earned income credit (IRC s32)
+      `my federal child and dependent care credit` IS A NUMBER @desc Your federal child and dependent care credit (IRC s21), before it is limited by your federal tax
+      `I claim the early childhood development credit instead` IS A BOOLEAN @desc Whether you choose the early childhood development credit instead of the child and dependent care credit (you cannot have both)
+      `early childhood expenses I paid for each child aged 3 to 5` IS A LIST OF NUMBER @desc For each dependent aged 3 to 5, the preschool, books, materials and activities you paid for
+      `I paid income tax to another state on some of this income` IS A BOOLEAN @desc Whether you paid income tax to another state or a foreign country on income from outside Iowa
+      `Iowa tax withheld and estimated tax I paid` IS A NUMBER @desc Iowa income tax withheld from your pay or pensions, plus any Iowa estimated tax you paid for the year
+GIVETH AN `Answer` NUMBER
+`What do I owe or get back` MEANS
+    IF (NOT `I am an Iowa resident for the whole year`)
+    THEN `not covered` `the tax of a nonresident or part-year resident is not encoded: it is prorated by net income allocated to Iowa under 422.8, subsection 2, under rules prescribed by the director (422.5(1)(b))`
+    ELSE IF `I paid income tax to another state on some of this income`
+         THEN `not covered` `the credit for income tax paid to another state or foreign country (422.8(1)) is not encoded`
+         ELSE CONSIDER `my filing status`
+              WHEN `married filing separately` THEN `not covered` `a married person filing a separate return is not encoded: 422.5(2), (3) and 422.13(2) turn on the combined net income of both spouses and the alternate tax for separate filers is not worked out here`
+              OTHERWISE `answered` ((afterNonrefundable MINUS eitc MINUS careCredit) MINUS `Iowa tax withheld and estimated tax I paid`)
+    WHERE
+        regular MEANS `tax at the 422.5(1)(a) rate` (`taxable income` `my Iowa net income` `my Iowa net operating loss carryover`)
+        limited MEANS `tax after the 422.5(2) and (3) limits` regular
+                          (`net income for the 422.5(2) and (3) limits` `my Iowa net income` `my federal deductions`)
+                          `my filing status`
+                          (`subsection 3 applies by age` `my age on December 31` `my spouse's age on December 31`)
+                          `someone with too much income claims me as a dependent`
+        aged MEANS (IF `my age on December 31` AT LEAST 65 THEN 1 ELSE 0) PLUS (IF `my spouse's age on December 31` AT LEAST 65 THEN 1 ELSE 0)
+        blind MEANS (IF `I am blind` THEN 1 ELSE 0) PLUS (IF `my spouse is blind` THEN 1 ELSE 0)
+        credits422 MEANS (`personal exemption credit` `my filing status` `my number of dependents` aged blind)
+                         PLUS (`tuition credit` `tuition and textbooks I paid for each child in K-12`)
+        afterNonrefundable MEANS `tax less the 422.12 credits` limited credits422
+        eitc MEANS `Iowa earned income credit` `my federal earned income credit`
+        careCredit MEANS IF `I claim the early childhood development credit instead`
+                         THEN `early childhood development credit` `my Iowa net income` `early childhood expenses I paid for each child aged 3 to 5`
+                         ELSE `child and dependent care credit` `my Iowa net income` `my federal child and dependent care credit`
+
+§§ `My credits`
+
+@export How much is my Iowa earned income credit, which is refundable (Iowa Code 422.12B)?
+GIVEN `my federal earned income credit` IS A NUMBER @desc Your federal earned income credit (IRC s32), in dollars
+GIVETH A NUMBER
+`What is my Iowa earned income credit` MEANS `Iowa earned income credit` `my federal earned income credit`
+
+@export How much is my Iowa child and dependent care credit, which is refundable (Iowa Code 422.12C(1))?
+GIVEN `my Iowa net income` IS A NUMBER @desc Your Iowa net income (Iowa Code 422.7)
+      `my federal child and dependent care credit` IS A NUMBER @desc Your federal child and dependent care credit (IRC s21), before it is limited by your federal tax
+GIVETH A NUMBER
+`What is my Iowa child and dependent care credit` MEANS `child and dependent care credit` `my Iowa net income` `my federal child and dependent care credit`
+
+@export How much is my Iowa early childhood development credit, which is refundable, if I claim it instead of the child and dependent care credit (Iowa Code 422.12C(2))?
+GIVEN `my Iowa net income` IS A NUMBER @desc Your Iowa net income (Iowa Code 422.7)
+      `early childhood expenses I paid for each child aged 3 to 5` IS A LIST OF NUMBER @desc For each dependent aged 3 to 5, the preschool, books, materials and activities you paid for
+GIVETH A NUMBER
+`What is my Iowa early childhood development credit` MEANS `early childhood development credit` `my Iowa net income` `early childhood expenses I paid for each child aged 3 to 5`
