@@ -1,0 +1,371 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Montana Code Annotated 2025, Title 15, chapter 30 (individual income tax), parts 21 and 23 -- the seat-neutral core:
+-- who is a resident (15-30-2101(31)), Montana taxable income from federal taxable income (15-30-2101(22), 15-30-2120),
+-- the rates for tax year 2026 (15-30-2103, temporary version) and from 2027 (15-30-2103, version effective 1 January
+-- 2027), the nonresident ratio (15-30-2104(1)), the duty to file on a change of residence (15-30-2112), the earned
+-- income tax credit (15-30-2318) and the residential property tax credit for the elderly (15-30-2337 to 15-30-2341).
+--
+-- Edition: Montana Code Annotated 2025 (laws through the 2025 session), site marked "Updated August 2026", as deposited
+-- at ../../registers/source-bundle/mca-15-30-part-21.txt and mca-15-30-part-23.txt (retrieved 2026-10-19 UTC).
+--
+-- Federal taxable income (IRC s 63), federal adjusted gross income (IRC s 62), filing status (IRC ss 2, 7703) and the
+-- federal earned income credit (IRC s 32) are borrowed terms, taken as inputs. They are encoded federally in
+-- subjects/us/internal-revenue-code-of-1986/ (cross-folder IMPORT is not possible in the stable l4; NOTES.md names the
+-- link).
+--
+-- The seat questions are in mt-iit-seat.l4. BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Montana individual income tax -- core`
+
+§§ `Questions this encoding does not cover`
+
+DECLARE `Why not covered` IS ONE OF
+    `tax years before 2026: only the 2026 (temporary) and 2027 versions of 15-30-2103 are deposited`
+    `tax years after 2027: the brackets are the department's inflation-adjusted brackets under 15-30-2103(3), and none was given`
+
+GIVEN a IS A TYPE
+GIVETH A TYPE
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+§§ `15-30-2101(31) -- resident`
+
+-- "Resident" applies only to natural persons and includes "any person domiciled in the state of Montana and any other
+-- person who maintains a permanent place of abode within the state even though temporarily absent from the state and
+-- who has not established a residence elsewhere".
+GIVEN `domiciled in Montana` IS A BOOLEAN
+      `maintains a permanent place of abode in Montana` IS A BOOLEAN
+      `has established a residence elsewhere` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a Montana resident` IF
+        `domiciled in Montana`
+    OR  (    `maintains a permanent place of abode in Montana`
+         AND (NOT `has established a residence elsewhere`))
+
+§§ `15-30-2120 -- Montana taxable income`
+
+-- 15-30-2101(22): "Montana taxable income" means federal taxable income as determined for federal income tax purposes
+-- and adjusted as provided in 15-30-2120. 15-30-2120(1): the items in (2) are added and the items in (3) are subtracted.
+-- 15-30-2113: filing status, dependent status and every other status is the one claimed on the federal return.
+DECLARE `Filing status` IS ONE OF
+    `married filing jointly or surviving spouse`
+    `head of household`
+    `single`
+    `married filing separately`
+
+DECLARE `Federal return figures` HAS
+    `federal taxable income`                         IS A NUMBER
+    `state income taxes deducted as an itemized deduction` IS A NUMBER
+    `federal itemized deductions in total`           IS A NUMBER
+    `federal standard deduction allowable`           IS A NUMBER
+    `qualified business income deduction claimed`    IS A NUMBER
+
+DECLARE `Montana adjustments` HAS
+    -- 15-30-2120(2)(a)
+    `interest on other states' and territories' obligations not exempt under federal law` IS A NUMBER
+    -- 15-30-2120(2)(b) to (h) and (k), as one figure
+    `other additions under 15-30-2120(2)`            IS A NUMBER
+    -- 15-30-2120(3)(b)
+    `US obligation interest and railroad retirement benefits exempt under federal law` IS A NUMBER
+    -- 15-30-2120(3)(c)
+    `armed forces and national guard active-duty salary subtraction` IS A NUMBER
+    -- 15-30-2120(3)(g), (7)
+    `number of taxpayers on the return aged 65 or over` IS A NUMBER
+    `the age 65 subtraction for the year as indexed by the department` IS A NUMBER
+    -- 15-30-2120(6)
+    `ABLE account contributions`                     IS A NUMBER
+    -- 15-30-2120(3)(a), (d)-(f), (h)-(q), (4), (5), (8)-(11), as one figure
+    `other subtractions under 15-30-2120(3) to (5)`  IS A NUMBER
+
+-- 15-30-2120(2)(j): for an individual who deducts state income taxes under IRC s 164(a)(3), "an additional amount equal
+-- to the state income tax deduction claimed, not to exceed the amount required to reduce the federal itemized amount
+-- ... to the amount of the federal standard deduction allowable under section 63(c)". Read as: the lesser of the state
+-- income tax deducted and the excess of the itemized total over the standard deduction (never below zero).
+GIVEN f IS A `Federal return figures`
+GIVETH A NUMBER
+`the state income tax add-back` f MEANS
+    min (f's `state income taxes deducted as an itemized deduction`)
+        (max 0 (f's `federal itemized deductions in total` MINUS f's `federal standard deduction allowable`))
+
+-- 15-30-2120(6)(a): "may reduce taxable income by the lesser of $3,000 or the amount of the contribution"; joint
+-- filers "not in excess of $6,000". Not indexed.
+GIVEN status IS A `Filing status`, contributions IS A NUMBER
+GIVETH A NUMBER
+`the ABLE subtraction` status contributions MEANS
+    IF status EQUALS `married filing jointly or surviving spouse`
+    THEN min contributions 6000
+    ELSE min contributions 3000
+
+GIVEN status IS A `Filing status`, f IS A `Federal return figures`, adj IS A `Montana adjustments`
+GIVETH A NUMBER
+`Montana taxable income` status f adj MEANS
+    (f's `federal taxable income` PLUS additions) MINUS subtractions
+    WHERE
+        additions MEANS
+                adj's `interest on other states' and territories' obligations not exempt under federal law`
+            PLUS adj's `other additions under 15-30-2120(2)`
+            PLUS f's `qualified business income deduction claimed`
+            PLUS `the state income tax add-back` f
+        subtractions MEANS
+                adj's `US obligation interest and railroad retirement benefits exempt under federal law`
+            PLUS adj's `armed forces and national guard active-duty salary subtraction`
+            PLUS (adj's `number of taxpayers on the return aged 65 or over` TIMES adj's `the age 65 subtraction for the year as indexed by the department`)
+            PLUS `the ABLE subtraction` status (adj's `ABLE account contributions`)
+            PLUS adj's `other subtractions under 15-30-2120(3) to (5)`
+
+§§ `15-30-2103 -- rate of tax`
+
+-- The ceiling of the 4.7% bracket, and the top rate.
+-- Tax year 2026, 15-30-2103 (Temporary), terminating 31 December 2026: joint and surviving spouse $95,000; head of
+-- household $71,250; single and married filing separately $47,500; top rate 5.65%. No indexing in this version.
+-- From 1 January 2027: $130,000; $97,500; $65,000; $65,000; top rate 5.4%; (3) the department multiplies the brackets
+-- by the "modified inflation factor" (CPI-U for June of the previous tax year divided by CPI-U for June 2026, (4)(a)
+-- with 15-30-2101(12)) and rounds to the nearest $100. For tax year 2027 the factor is CPI June 2026 / CPI June 2026 = 1,
+-- so the statutory figures apply unchanged (NOTES.md finding 2). From 2028 the published bracket is an input.
+DECLARE `Rate schedule` HAS
+    `the 4.7% bracket ceiling` IS A NUMBER
+    `the top rate`             IS A NUMBER
+
+GIVEN status IS A `Filing status`
+GIVETH A NUMBER
+`the 2026 bracket ceiling` status MEANS
+    CONSIDER status
+    WHEN `married filing jointly or surviving spouse` THEN 95000
+    WHEN `head of household`                          THEN 71250
+    WHEN `single`                                     THEN 47500
+    WHEN `married filing separately`                  THEN 47500
+
+GIVEN status IS A `Filing status`
+GIVETH A NUMBER
+`the 2027 statutory bracket ceiling` status MEANS
+    CONSIDER status
+    WHEN `married filing jointly or surviving spouse` THEN 130000
+    WHEN `head of household`                          THEN 97500
+    WHEN `single`                                     THEN 65000
+    WHEN `married filing separately`                  THEN 65000
+
+-- `the department's published bracket ceiling` is used only for tax years after 2027; 0 means not given.
+GIVEN `tax year` IS A NUMBER
+      status IS A `Filing status`
+      `the department's published bracket ceiling` IS A NUMBER
+GIVETH AN `Answer` `Rate schedule`
+`the rate schedule for` `tax year` status `the department's published bracket ceiling` MEANS
+    IF `tax year` LESS THAN 2026
+    THEN `not covered` `tax years before 2026: only the 2026 (temporary) and 2027 versions of 15-30-2103 are deposited`
+    ELSE IF `tax year` EQUALS 2026
+         THEN `answered` (`Rate schedule` WITH `the 4.7% bracket ceiling` IS `the 2026 bracket ceiling` status, `the top rate` IS 0.0565)
+         ELSE IF `tax year` EQUALS 2027
+              THEN `answered` (`Rate schedule` WITH `the 4.7% bracket ceiling` IS `the 2027 statutory bracket ceiling` status, `the top rate` IS 0.054)
+              ELSE IF `the department's published bracket ceiling` GREATER THAN 0
+                   THEN `answered` (`Rate schedule` WITH `the 4.7% bracket ceiling` IS `the department's published bracket ceiling`, `the top rate` IS 0.054)
+                   ELSE `not covered` `tax years after 2027: the brackets are the department's inflation-adjusted brackets under 15-30-2103(3), and none was given`
+
+-- 15-30-2103(1): 4.7% "on the first [ceiling] of Montana taxable income or any part of that income", the top rate "on
+-- any Montana taxable income in excess of [ceiling]".
+GIVEN income IS A NUMBER, schedule IS A `Rate schedule`
+GIVETH A NUMBER
+`the ordinary tax on` income schedule MEANS
+        (0.047 TIMES (min (max 0 income) (schedule's `the 4.7% bracket ceiling`)))
+    PLUS (schedule's `the top rate` TIMES (max 0 (income MINUS schedule's `the 4.7% bracket ceiling`)))
+
+-- 15-30-2103(2): the portion of Montana taxable income that consists of net long-term capital gains (IRC s 1222) is
+-- taxed at 3.0% "on the first [ceiling] less nonqualified taxable income" and 4.1% above; "if the total nonqualified
+-- taxable income is [ceiling] or greater, all of the net long-term capital gains are taxed at 4.1%". (3)(b)/(4)(c):
+-- nonqualified taxable income is Montana taxable income that is not net long-term capital gains. The capital gains
+-- portion is read as never more than Montana taxable income itself. 15-30-3704 (an exception) is not deposited.
+GIVEN mti IS A NUMBER, ltcg IS A NUMBER, schedule IS A `Rate schedule`
+GIVETH A NUMBER
+`the resident tax on` mti ltcg schedule MEANS
+    `the ordinary tax on` nonqualified schedule
+        PLUS (0.03 TIMES at3)
+        PLUS (0.041 TIMES (gains MINUS at3))
+    WHERE
+        gains MEANS max 0 (min ltcg mti)
+        nonqualified MEANS max 0 (mti MINUS gains)
+        at3 MEANS min gains (max 0 (schedule's `the 4.7% bracket ceiling` MINUS nonqualified))
+
+-- 15-30-2104(1)(a): a nonresident's tax is the tax computed under 15-30-2103 "as if the nonresident ... were a resident
+-- during the entire tax year, multiplied by the ratio of Montana source income to total income from all sources".
+-- (Montana source income, 15-30-2101(21), includes everything received while a resident, so the same ratio is used for
+-- a part-year resident; NOTES.md finding 4.) 15-30-2106 (the nonresident compensation exclusion) is an input: leave
+-- the excluded compensation out of Montana source income.
+GIVEN `full-year tax` IS A NUMBER, `Montana source income` IS A NUMBER, `total income` IS A NUMBER
+GIVETH A NUMBER
+`the nonresident tax` `full-year tax` `Montana source income` `total income` MEANS
+    IF `total income` AT MOST 0
+    THEN 0
+    ELSE `full-year tax` TIMES (`Montana source income` DIVIDED BY `total income`)
+
+§§ `15-30-2318 -- earned income tax credit`
+
+-- (1), (2): a resident taxpayer is allowed a credit of 20% of the federal earned income credit under IRC s 32.
+-- (3), (5)(b): reduced by the "reduction percentage", the earned income treated as a dividend from a s 501(d)
+-- agricultural organization divided by total earned income. (4): refundable.
+GIVEN resident IS A BOOLEAN
+      `federal earned income credit` IS A NUMBER
+      `earned income` IS A NUMBER
+      `earned income treated as a 501(d) dividend` IS A NUMBER
+GIVETH A NUMBER
+`the Montana earned income tax credit` resident `federal earned income credit` `earned income` `earned income treated as a 501(d) dividend` MEANS
+    IF (NOT resident)
+    THEN 0
+    ELSE (0.2 TIMES `federal earned income credit`) TIMES (1 MINUS reduction)
+    WHERE
+        reduction MEANS
+            IF `earned income` GREATER THAN 0
+            THEN min 1 (`earned income treated as a 501(d) dividend` DIVIDED BY `earned income`)
+            ELSE 0
+
+§§ `15-30-2337 to 15-30-2341 -- residential property tax credit for the elderly`
+
+DECLARE `Elderly claim` HAS
+    `reached 62 or older during the claim period`      IS A BOOLEAN
+    `months resided in Montana in the period`          IS A NUMBER
+    `months occupied a Montana dwelling as owner, renter or lessee` IS A NUMBER
+    `gross household income`                           IS A NUMBER
+    -- 15-30-2337(10), less any portion derived from a public rent or tax subsidy program (15-30-2341(2))
+    `property tax billed on the owned homestead`       IS A NUMBER
+    -- 15-30-2337(5), likewise
+    `gross rent paid for the rented homestead`         IS A NUMBER
+    -- 15-30-2341(3)
+    `the rented dwelling is subject to Montana property tax or rented from a housing authority` IS A BOOLEAN
+    -- 15-30-2341(1)
+    `another member of the household claims for the period` IS A BOOLEAN
+    -- 15-30-2338(3), the department's finding
+    `the department finds title was received primarily to get the credit` IS A BOOLEAN
+
+-- 15-30-2338(1): age 62 or older during the claim period; resided in Montana at least 9 months of it; occupied one or
+-- more Montana dwellings as owner, renter or lessee at least 6 months; "less than $45,000 of gross household income".
+-- 15-30-2341(1): one claimant per household; 15-30-2338(3): disallowed if title was taken primarily for the credit.
+GIVEN c IS AN `Elderly claim`
+GIVETH A BOOLEAN
+DECIDE `is eligible for the elderly credit` c IF
+        c's `reached 62 or older during the claim period`
+    AND c's `months resided in Montana in the period` AT LEAST 9
+    AND c's `months occupied a Montana dwelling as owner, renter or lessee` AT LEAST 6
+    AND c's `gross household income` LESS THAN 45000
+    AND (NOT c's `another member of the household claims for the period`)
+    AND (NOT c's `the department finds title was received primarily to get the credit`)
+
+-- 15-30-2337(8): "household income" is gross household income less $12,600.
+GIVEN `gross household income` IS A NUMBER
+GIVETH A NUMBER
+`household income` `gross household income` MEANS `gross household income` MINUS 12600
+
+-- 15-30-2340(4): the reduction, "the product of [rate] times the household income", by $1,000 band.
+GIVEN hi IS A NUMBER
+GIVETH A NUMBER
+`the reduction rate` hi MEANS
+    BRANCH
+        IF hi LESS THAN 2000 THEN 0
+        IF hi LESS THAN 3000 THEN 0.006
+        IF hi LESS THAN 4000 THEN 0.016
+        IF hi LESS THAN 5000 THEN 0.024
+        IF hi LESS THAN 6000 THEN 0.028
+        IF hi LESS THAN 7000 THEN 0.032
+        IF hi LESS THAN 8000 THEN 0.035
+        IF hi LESS THAN 9000 THEN 0.039
+        IF hi LESS THAN 10000 THEN 0.042
+        IF hi LESS THAN 11000 THEN 0.045
+        IF hi LESS THAN 12000 THEN 0.048
+        OTHERWISE 0.05
+
+GIVEN hi IS A NUMBER
+GIVETH A NUMBER
+`the reduction` hi MEANS `the reduction rate` hi TIMES (max 0 hi)
+
+-- 15-30-2340(5): for gross household income from $35,000 to under $45,000, only a percentage of the credit. The
+-- subsection's opening words say "household income", the table's column says "gross household income"; this encoding
+-- follows the table (NOTES.md finding 5).
+GIVEN ghi IS A NUMBER
+GIVETH A NUMBER
+`the percentage of credit allowed` ghi MEANS
+    BRANCH
+        IF ghi LESS THAN 35000 THEN 1
+        IF ghi AT MOST 37500 THEN 0.4
+        IF ghi AT MOST 40000 THEN 0.3
+        IF ghi AT MOST 42500 THEN 0.2
+        IF ghi LESS THAN 45000 THEN 0.1
+        OTHERWISE 0
+
+-- 15-30-2340(1)-(3): owner: property tax billed less the reduction; renter: rent-equivalent tax paid (15% of gross rent,
+-- 15-30-2337(11)) less the reduction; both: each portion less the reduction (the text takes the reduction from each
+-- portion; NOTES.md finding 6). A portion never goes below zero. (6): at most $1,150.
+GIVEN c IS AN `Elderly claim`
+GIVETH A NUMBER
+`the elderly credit` c MEANS
+    IF `is eligible for the elderly credit` c
+    THEN min 1150 ((owned PLUS rented) TIMES (`the percentage of credit allowed` (c's `gross household income`)))
+    ELSE 0
+    WHERE
+        r MEANS `the reduction` (`household income` (c's `gross household income`))
+        owned MEANS
+            IF c's `property tax billed on the owned homestead` GREATER THAN 0
+            THEN max 0 (c's `property tax billed on the owned homestead` MINUS r)
+            ELSE 0
+        rented MEANS
+            IF     c's `gross rent paid for the rented homestead` GREATER THAN 0
+               AND c's `the rented dwelling is subject to Montana property tax or rented from a housing authority`
+            THEN max 0 ((0.15 TIMES c's `gross rent paid for the rented homestead`) MINUS r)
+            ELSE 0
+
+§§ `Duties and deadlines`
+
+DECLARE `Party` IS ONE OF
+    `the taxpayer`
+    `the claimant`
+    `the department of revenue`
+
+DECLARE `Act` IS ONE OF
+    `file a Montana income tax return`
+    `submit the elderly credit claim with the property tax or rent receipt`
+    `revise the return and make the elderly credit claim`
+    
+-- 15-30-2112: "If a taxpayer changes status from that of resident to that of nonresident or from that of nonresident to
+-- that of resident during the tax year, the taxpayer shall file a return." The due date is in part 26 (not deposited),
+-- so the days from the end of the tax year to it are an input.
+GIVEN `days to the return due date` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`the duty to file on a change of residence` `days to the return due date` MEANS
+    PARTY `the taxpayer`
+    MUST  `file a Montana income tax return`
+    WITHIN `days to the return due date`
+    HENCE FULFILLED
+    LEST  BREACH BY `the taxpayer` BECAUSE "a taxpayer who changed residence status during the year did not file the return 15-30-2112 requires"
+
+-- 15-30-2339(1): the claim "must be submitted at the same time the claimant's individual income tax return is due";
+-- for an individual not required to file, "on or before April 15 of the year following"; (2) with the receipt.
+-- (3): "The department may grant a reasonable extension for filing a claim whenever, in its judgment, good cause exists."
+-- (5): the individual "may revise a return and make a claim ... within 3 years from the last day prescribed".
+GIVEN `days to the last day for the claim` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`the elderly credit claim deadline` `days to the last day for the claim` MEANS
+    PARTY `the claimant`
+    MUST  `submit the elderly credit claim with the property tax or rent receipt`
+    WITHIN `days to the last day for the claim`
+    HENCE FULFILLED
+    LEST  BREACH BY `the claimant` BECAUSE "the elderly credit claim was not submitted by the last day; only a department extension for good cause (15-30-2339(3)) or a revision within 3 years (15-30-2339(5)) remains"
+
+-- The last day for the claim (15-30-2339(1)): the return due date if the claimant must file, otherwise April 15 of the
+-- following year, moved to the first business day after it where April 15 is an IRS-recognised holiday not observed in
+-- Montana (an input, given as that business day).
+GIVEN `required to file a Montana return` IS A BOOLEAN
+      `the return due date` IS A DATE
+      `claim period year` IS A NUMBER
+      `the first business day after a deferring holiday on April 15, if any` IS A MAYBE DATE
+GIVETH A DATE
+`the last day for the elderly credit claim` `required to file a Montana return` `the return due date` `claim period year` `the first business day after a deferring holiday on April 15, if any` MEANS
+    IF `required to file a Montana return`
+    THEN `the return due date`
+    ELSE CONSIDER `the first business day after a deferring holiday on April 15, if any`
+         WHEN JUST d THEN d
+         WHEN NOTHING THEN Date 15 4 (`claim period year` PLUS 1)
+
+-- 15-30-2339(5): a revision and claim "within 3 years from the last day prescribed for filing a claim for relief".
+GIVEN `the last day for the claim` IS A DATE
+GIVETH A DATE
+`the last day to revise and claim` `the last day for the claim` MEANS
+    Date (DATE_DAY `the last day for the claim`) (DATE_MONTH `the last day for the claim`) (DATE_YEAR `the last day for the claim` PLUS 3)

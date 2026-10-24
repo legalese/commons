@@ -2,7 +2,7 @@
 
 Montana (US state) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the Montana Code Annotated, published by the Legislative Services Division of the Montana Legislature; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text had been deposited when they were laid out; see the 2026-10-20 sample below. Nothing is encoded yet.
+The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the Montana Code Annotated, published by the Legislative Services Division of the Montana Legislature; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text had been deposited when they were laid out; see the 2026-10-20 sample below. Encodings were added on 2026-10-24; see the last section.
 
 **Licence category: unclear.** **Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
 
@@ -54,3 +54,11 @@ Montana's TANF benefit standards and other assistance amounts are set by the Dep
 
 **Remaining gaps.**
 - TANF benefit standards (ARM 37.78), the state SSI supplement, if any, and the UI weekly maximum (set each year by the Department of Labor and Industry under Title 39 ch. 51) are all not sourced.
+
+## Encodings (2026-10-24)
+
+Tax and benefits baselines, each written from the individual's seat with a seat-neutral core, checked with the stable `l4` 1.6.98:
+
+| Encoding | Seat | What it answers |
+|---|---|---|
+| [`montana-code-annotated-title-15-taxation-chapter-30-individual/encodings/baseline-2026-10`](montana-code-annotated-title-15-taxation-chapter-30-individual/encodings/baseline-2026-10) | the individual taxpayer; the elderly credit claimant | residence, Montana taxable income from federal taxable income, the 2026 and 2027 rates (with capital gains rates and the nonresident ratio), the earned income tax credit, the elderly homeowner/renter credit and its claim deadline |
