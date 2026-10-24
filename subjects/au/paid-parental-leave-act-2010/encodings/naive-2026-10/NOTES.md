@@ -10,6 +10,7 @@ amendments up to Act No. 57, 2025), register id C2026C00294, deposited at
 
 **Checks:** one module (`ppl-leave.l4`) and one case file (`ppl-cases-leave.l4`):
 55 assertions satisfied, 0 errors, 0 warnings.
+Added 2026-10-24: `ppl-leave-formulas.l4` and `ppl-cases-leave-formulas.l4` (16 assertions): 71 satisfied in all, 0 errors, 0 warnings in every file.
 
 ## Why this Act, and why scoped
 
@@ -157,6 +158,16 @@ The text also requires a record of payment by the end of the next working day (s
 records kept for 7 years (s 81), notice of listed events (s 82) and a response to the
 determination within 14 days (s 103). Those were read but not encoded. Section 99 says a
 period of unpaid leave does not become paid leave because PPL is received. Not asserted.
+
+### 11. The indexed limits, computed from the recovered formula (2026-10-24)
+
+`ppl-leave-formulas.l4` IMPORTs `ppl-leave.l4`, leaves it unchanged, and works out the limits finding 7 takes as inputs. It uses the same arithmetic as the baseline's `ppl-formulas.l4`, and its case file has the same cases:
+
+- **The s 43 indexation factor**, from the formula: the reference December quarter's CPI over the base December quarter's, to 3 places, raised by 0.001 when the fourth place is more than 4, and never below 1.
+- **The income limits in force on a day** (ss 41-44): $150,000 (individual) or $350,000 (family) indexed every 1 July from 1 July 2021 or 1 July 2024. The input is a list of December-quarter CPI numbers from December 2007. Each indexation's base quarter is the highest earlier December quarter (s 43(1)). A day after the last CPI number supplied answers `NOTHING`. So does a day before the limit starts.
+- **The present value of an unpaid debt** (s 198(6)), for a part-payment agreement under s 198(4)-(5).
+
+The CPI numbers in the cases are illustrative, not the published series, and the settlement interest rate is the Minister's (both inputs). s 44 does not say which way an amount ending in exactly 50 cents goes; it is rounded up (an inference). No computed value disagrees with an existing assertion; the existing questions that take "the indexed amount in force" are unchanged.
 
 ## What would need doing before this is worth anything
 

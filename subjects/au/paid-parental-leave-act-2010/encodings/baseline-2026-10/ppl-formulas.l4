@@ -1,0 +1,131 @@
+IMPORT prelude
+IMPORT `ppl-parent`
+
+-- Paid Parental Leave Act 2010 (Cth) -- the indexed income limits and the present value of a debt, computed from the formulas
+-- recovered on 2026-10-24, beside ppl-parent.l4 (unchanged, where the indexed limits are inputs).
+--
+-- The sidecar ../../registers/source-bundle/C2010A00104.formulas.md gives the two formulas the text deposit lost:
+--   * s 43(1): indexation factor = Index number for the reference December quarter / Index number for the base December quarter;
+--   * s 198(6): present value = (Annual repayment / Settlement interest) x [1 - (1 / (1 + Settlement interest)^rp)].
+-- From the text: s 41 (the $150,000 individual limit from 1 October 2010 to 30 June 2021, the $350,000 family limit from 1 July
+-- 2023 to 30 June 2024, then the indexed amount); s 42 (indexed on 1 July each year, from 1 July 2021 and 1 July 2024; previous
+-- amount x factor, rounded); s 43(1) "where" (the reference December quarter is "the last December quarter before the indexation
+-- day"; the base December quarter is the December quarter "that has the highest index number of the December quarters before the
+-- reference December quarter (but not earlier than the December quarter 2007)"), (2) "to 3 decimal places, but increased by 0.001
+-- if the fourth decimal place is more than 4", (3) never below 1; s 44 (rounded to the nearest $1); s 198(5)(b).
+--
+-- INPUTS: the CPI index numbers (All Groups, weighted average of the 8 capital cities, published by the Australian Statistician;
+-- not deposited), as a list of December-quarter numbers starting with the December quarter 2007, one a year in order; and the
+-- settlement interest rate (the Minister's notice). s 44 does not say how to round a provisional amount that ends in exactly 50
+-- cents; it is rounded up here (an INFERENCE).
+--
+-- SEAT: the parent, as in ppl-parent.l4. Edition: as ppl-parent.l4. BASELINE. See NOTES.md.
+
+§ `Paid Parental Leave Act -- the indexed income limits and the present value of a debt`
+
+§§ `ss 42-44 -- one indexation`
+
+@export What is the indexation factor for the PPL income limits on an indexation day (s 43)?
+GIVEN `index number for the reference December quarter` IS A NUMBER @desc The CPI index number for the last December quarter before the indexation day
+      `index number for the base December quarter` IS A NUMBER @desc The highest CPI index number of the December quarters before that one (from December 2007)
+GIVETH A NUMBER
+`What is the PPL indexation factor` MEANS
+    IF `raised` LESS THAN 1 THEN 1 ELSE `raised`
+    WHERE
+        `ratio` MEANS `index number for the reference December quarter` DIVIDED BY `index number for the base December quarter`
+        `to 3 places` MEANS FLOOR (`ratio` TIMES 1000) DIVIDED BY 1000
+        `fourth place` MEANS FLOOR (`ratio` TIMES 10000) MINUS (FLOOR (`ratio` TIMES 1000) TIMES 10)
+        `raised` MEANS IF `fourth place` GREATER THAN 4 THEN `to 3 places` PLUS 0.001 ELSE `to 3 places`
+
+@export What is a PPL income limit after one indexation day (ss 42(3), 43, 44)?
+GIVEN `the previous amount` IS A NUMBER @desc The limit that applied on the day before the indexation day
+      `index number for the reference December quarter` IS A NUMBER @desc The CPI index number for the last December quarter before the indexation day
+      `index number for the base December quarter` IS A NUMBER @desc The highest CPI index number of the December quarters before that one (from December 2007)
+GIVETH A NUMBER
+`What is the PPL limit after one indexation` MEANS
+    FLOOR ((`the previous amount` TIMES `What is the PPL indexation factor` `index number for the reference December quarter` `index number for the base December quarter`)
+           PLUS 0.5)
+
+§§ `ss 41-44 -- the limit in force on a day, from the December CPI numbers`
+
+@desc The item at a position in a list of numbers (0 for the first), or NOTHING if the list is too short
+GIVEN `xs` IS A LIST OF NUMBER @desc The list
+      `n` IS A NUMBER @desc The position, 0 for the first
+GIVETH A MAYBE NUMBER
+`the item at` MEANS
+    CONSIDER `xs`
+    WHEN EMPTY THEN NOTHING
+    WHEN `x` FOLLOWED BY `rest` THEN IF `n` AT MOST 0 THEN JUST `x` ELSE `the item at` `rest` (`n` MINUS 1)
+
+@desc The highest of the first n items of a list of numbers (0 if n is 0)
+GIVEN `xs` IS A LIST OF NUMBER @desc The list
+      `n` IS A NUMBER @desc How many items from the start
+GIVETH A NUMBER
+`the highest of the first` MEANS
+    CONSIDER `xs`
+    WHEN EMPTY THEN 0
+    WHEN `x` FOLLOWED BY `rest` THEN
+        IF `n` AT MOST 0 THEN 0 ELSE max `x` (`the highest of the first` `rest` (`n` MINUS 1))
+
+-- The indexation on 1 July of year k: the reference quarter is December (k - 1), item (k - 1 - 2007) of the list counting from 0;
+-- the base quarter is the highest of the December quarters 2007 to (k - 2), which are the first (k - 1 - 2007) items. NOTHING if
+-- the list does not reach December (k - 1).
+@desc The limit after the indexation days from 1 July of one year to 1 July of another, both included, or NOTHING if a CPI number is missing
+GIVEN `amount` IS A NUMBER @desc The limit before the first of those indexation days
+      `from year` IS A NUMBER @desc The year of the first indexation day
+      `to year` IS A NUMBER @desc The year of the last indexation day
+      `december index numbers` IS A LIST OF NUMBER @desc December-quarter CPI index numbers, December 2007 first, one a year
+GIVETH A MAYBE NUMBER
+`the limit indexed through` MEANS
+    IF `from year` GREATER THAN `to year`
+    THEN JUST `amount`
+    ELSE CONSIDER `the item at` `december index numbers` (`from year` MINUS 1 MINUS 2007)
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST `reference` THEN
+             `the limit indexed through`
+                 (`What is the PPL limit after one indexation` `amount` `reference`
+                     (`the highest of the first` `december index numbers` (`from year` MINUS 1 MINUS 2007)))
+                 (`from year` PLUS 1) `to year` `december index numbers`
+
+@desc The year of the last 1 July on or before a day written YYYYMMDD
+GIVEN `the day` IS A NUMBER @desc A day, YYYYMMDD
+GIVETH A NUMBER
+`the year of the last 1 July on or before` MEANS
+    IF `the day` MINUS (FLOOR (`the day` DIVIDED BY 10000) TIMES 10000) AT LEAST 701
+    THEN FLOOR (`the day` DIVIDED BY 10000)
+    ELSE FLOOR (`the day` DIVIDED BY 10000) MINUS 1
+
+-- s 41(1): $150,000 from 1 October 2010 to 30 June 2021; from 1 July 2021, the indexed amount (first indexation day 1 July 2021).
+-- Before 1 October 2010 the Act sets no limit: NOTHING.
+@export What is the individual PPL income limit on a day, worked out from the CPI (ss 41(1), 42-44)?
+GIVEN `the day` IS A NUMBER @desc The earlier of your claim day and your child's birth, as YYYYMMDD
+      `december index numbers` IS A LIST OF NUMBER @desc December-quarter CPI index numbers, December 2007 first, one a year in order
+GIVETH A MAYBE NUMBER
+`What is the individual PPL income limit from the CPI` MEANS
+    BRANCH IF `the day` LESS THAN 20101001 THEN NOTHING
+           IF `the day` LESS THAN 20210701 THEN JUST (`What is the individual PPL income limit` `the day` 0)
+           OTHERWISE `the limit indexed through` 150000 2021 (`the year of the last 1 July on or before` `the day`) `december index numbers`
+
+-- s 41(2): $350,000 from 1 July 2023 to 30 June 2024; from 1 July 2024, the indexed amount. Before 1 July 2023 this subsection
+-- sets no family limit: NOTHING.
+@export What is the family PPL income limit on a day, worked out from the CPI (ss 41(2), 42-44)?
+GIVEN `the day` IS A NUMBER @desc The earlier of your claim day and your child's birth, as YYYYMMDD
+      `december index numbers` IS A LIST OF NUMBER @desc December-quarter CPI index numbers, December 2007 first, one a year in order
+GIVETH A MAYBE NUMBER
+`What is the family PPL income limit from the CPI` MEANS
+    BRANCH IF `the day` LESS THAN 20230701 THEN NOTHING
+           IF `the day` LESS THAN 20240701 THEN JUST (`What is the family PPL income limit` `the day` 0)
+           OTHERWISE `the limit indexed through` 350000 2024 (`the year of the last 1 July on or before` `the day`) `december index numbers`
+
+§§ `s 198(5), (6) -- the present value of an unpaid debt`
+
+-- s 198(6), formula (sidecar): (Annual repayment / Settlement interest) x [1 - (1 / (1 + Settlement interest)^rp)], with rp the
+-- repayment period in years and the settlement interest the Minister's rate. (5)(b): a part-payment agreement needs the agreed
+-- amount to be at least that present value.
+@export What is the present value of my unpaid parental leave pay debt for a part-payment agreement (s 198(6))?
+GIVEN `annual repayment` IS A NUMBER @desc What would be recovered from you in a year, in dollars
+      `settlement interest` IS A NUMBER @desc The annual rate the Minister has specified, as a fraction (for example 0.1)
+      `repayment period` IS A NUMBER @desc The number of years needed to repay the unpaid amount at that annual repayment
+GIVETH A NUMBER
+`What is the present value of my unpaid PPL debt` MEANS
+    (`annual repayment` DIVIDED BY `settlement interest`) TIMES (1 MINUS (1 DIVIDED BY (EXPONENT (1 PLUS `settlement interest`) `repayment period`)))
