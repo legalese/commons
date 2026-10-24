@@ -80,3 +80,15 @@ The 2026-10-18 defaults:
 - **Case law.** No case was read; "reasonable" time (s 23C(4)), "exceptional circumstances" (s 17B), the s 19B opinion and "special circumstances" (s 23V(5)) are the courts'. Each is asked as a finding.
 - **The Evidence Act 1995 baseline** (`../../../evidence-act-1995/encodings/baseline-2026-10/`) answers what happens to evidence obtained without a caution (s 139) or improperly (s 138); not restated here.
 - An independent test pass and a human review.
+
+## The Crimes Regulations brought in (added 2026-10-24, REQ-0097)
+
+**Module:** `ca14-regulations.l4`, beside `ca14-accused.l4`, which it imports; cases in `ca14-cases-regulations.l4` (15 written, 15 satisfied; `l4 run` 0 errors, 0 warnings; `ca14-cases-accused.l4` still 90 of 90). Seat: the person with a conviction.
+
+**Instrument:** the Crimes Regulations 2019, Compilation No. 5 (F2025C01226, compilation date 13 December 2025), deposited at `subjects/au/crimes-regulations-2019/` with `parent_act` this Act.
+
+**What the module computes:** whether a named State or Territory screening body is prescribed for work with children (reg 20) or with people with disability (reg 20A), and from that the answer to `Must I disclose this conviction` with the body treated as a Division 6 screening body only when it is prescribed. Finding 15's input is no longer needed for screening bodies.
+
+16. **Every State's and Territory's working with children and NDIS screening body is prescribed, and some are prescribed twice.** Reg 20 lists ten bodies for children (two in Queensland, two in the ACT); reg 20A lists eight for disability. The Victorian Secretary, the South Australian central assessment unit (under a different Act for each), the Tasmanian Registrar and the ACT Commissioner appear in both. A WA applicant meets the CEO under the Working with Children (Criminal Record Checking) Act 2004 for children and the CEO under the NDIS (Worker Screening) Act 2020 for disability. Asserted.
+17. **No one is prescribed for funded aged care.** Sections 85ZZGP–85ZZGR let a prescribed body for aged care worker screening be told of spent convictions, but the Regulations prescribe none, so on the deposited law a spent Commonwealth conviction stays protected from aged care screening. Asserted. (A later amendment could change this; the Register's compilation is dated 13 December 2025.)
+18. **A body prescribed for one kind of work is not thereby prescribed for another.** The prescription is "to the extent that those laws relate to persons working, or seeking to work, with children" (reg 20), or are NDIS worker screening laws (reg 20A): the WA working with children CEO is not a prescribed body for NDIS screening. Asserted.
