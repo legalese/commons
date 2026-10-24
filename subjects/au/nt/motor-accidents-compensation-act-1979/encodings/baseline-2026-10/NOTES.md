@@ -10,13 +10,25 @@ No pipeline, no coverage table, no independent test pass, no human gate.
 
 It is written in three layers:
 
-- **`maca-core.l4`**, the seat-neutral core. It uses the Act's own actors and terms: the injured person, the eligible person, the qualifying person, the claimant, the Commission, the designated person. Computations (the s 7 entitlement, the Part 3 exclusions, the weekly amount, the lump sums, the dates) are functions. Where the text says "must" or sets a deadline there is a regulative rule (`DEONTIC`): four in all (ss 7(3), 31, 31A, and the review chain of ss 28A, 28B and 28E).
-- **`maca-seat.l4`**, the seat of the person injured. 23 questions, each with `@export` and a `@desc` on every input, under `§§` headings.
+- **`maca-core.l4`**, the seat-neutral core. It uses the Act's own actors and terms: the injured person, the eligible person, the qualifying person, the claimant, the Commission, the designated person. Computations (the s 7 entitlement, the Part 3 exclusions, the weekly amount, the lump sums, the dates) are functions. Where the text says "must" or sets a deadline there is a regulative rule (`DEONTIC`): five in all (ss 7(3), 18BD(4), 31, 31A, and the review chain of ss 28A, 28B and 28E). The s 31 rule also has a form built from the dates, with `the days from`.
+- **`maca-seat.l4`**, the seat of the person injured. 24 questions, each with `@export` and a `@desc` on every input, under `§§` headings.
 - **`maca-seat-survivors.l4`**, the seat of those left after a death. 13 questions.
 
-Neither seat restates a rule; both build the core's records from plain answers. Their names differ, so a case file imports both for the mirror cases.
+Neither seat restates a rule; both build the core's records from plain answers and call the core. Their names differ, so a case file imports both for the mirror cases.
 
 No earlier encoding of this Act existed to keep. No requirement ledger covers the Northern Territory, so no ledger line is closed.
+
+**Fix pass, 24 October 2026.** An independent verifier raised seven issues. Each was checked against the deposited text; all seven were real and are fixed:
+
+1. For an accident before 1 July 2014, the s 11 and s 11A reductions were applied as amended in 2014, though s 46 keeps the earlier Part 3 for those accidents. Those answers are now `outside this encoding` (finding 24).
+2. Four pieces of rule logic sat in the seat layers. They are now core functions that the seats call: whether death benefits apply (ss 7, 20), whether Part 3 excludes them, the s 28A(2) last day for a review, and the s 28E(3)(a)/(b) last day for the Tribunal. The core's unused `excludes death benefits` was folded into the new death exclusion function.
+3. The s 18BD(4) duty on the Commission was not encoded. It is now a regulative rule, with a seat question giving the last day (finding 26).
+4. Finding 22 gave the wrong payment dates. It is corrected, and the 70% week is asserted.
+5. The scope lists contradicted each other on Part 8 and left out ss 18BF, 28C and 33. Section 33 is now encoded as an input (finding 25), and finding 21 is corrected.
+6. The date helpers disagreed about a 29 February birthday. A week could pay $0 as a result (finding 27).
+7. The reg 4M(5) and (6) fields were fixed to false after a death. They are now asked (finding 28). The s 31 comment promised a seat computation that did not exist; the rule now has a form built from the dates.
+
+The questions whose inputs changed are `Are my benefits reduced for no seatbelt or helmet` and `Are death benefits reduced for no seatbelt or helmet` (they now answer a choice, not yes or no), `When does my weekly compensation stop`, `How much weekly compensation do I get this week`, `Which attendant care benefits can I get` (each gains the s 33 inputs), `May death benefits be reduced under s 20A` (gains the reg 4M(5), (6) inputs), `How much does each dependent parent get` (gains the day of the accident), and the funeral, children's weekly and parents' amounts, which now answer a `Death benefit amount`. Any deployment of these seats must be updated under the same name.
 
 ## Edition
 
@@ -31,7 +43,8 @@ The two texts are seven years apart. The Regulations are read against the Act as
 - the maximum weekly amount MA under s 13(2)(a), which the Commission determines each half-year;
 - the CPI figures for the reg 3 "(indexed)" caps;
 - the day a person reaches pension age (Social Security Act 1991 (Cth) s 23);
-- what reg 19(2) of the Traffic Regulations 1999 requires of a driver.
+- what reg 19(2) of the Traffic Regulations 1999 requires of a driver;
+- whether the Commission has extended a time limit on payment for special hardship under s 33, and to what day (finding 25).
 
 The case files use round illustrative figures for these: average weekly earnings of $2,000, MA of $1,500, CPI of 100 and 150. They are not the published figures.
 
@@ -49,12 +62,12 @@ Figures fixed by the Act or the Regulations are constants:
 
 | Module | Case file | Assertions |
 |---|---|---|
-| `maca-core.l4`, `maca-seat.l4` | `maca-cases-injured.l4` | 162 written, 162 satisfied |
-| `maca-core.l4`, `maca-seat-survivors.l4`, `maca-seat.l4` | `maca-cases-survivors.l4` | 72 written, 72 satisfied (including 5 mirror cases) |
+| `maca-core.l4`, `maca-seat.l4` | `maca-cases-injured.l4` | 193 written, 193 satisfied |
+| `maca-core.l4`, `maca-seat-survivors.l4`, `maca-seat.l4` | `maca-cases-survivors.l4` | 85 written, 85 satisfied (including 5 mirror cases) |
 
-The injured person's case file also has 7 `#TRACE`s, each with an `-- expect:` line: three breaches by the claimant, three obligations still pending, and one late request that leaves nothing owed. Each was read and matches its expectation.
+The injured person's case file also has 9 `#TRACE`s, each with an `-- expect:` line: four breaches by the claimant, one breach by the Commission (s 18BD(4)), three obligations still pending, and one late request that leaves nothing owed. Each was read and matches its expectation.
 
-`l4 run` on all five files: 0 errors, 0 warnings (2026-10-24). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. A throwaway file of three deliberately wrong assertions was run to confirm that failures are reported; it was deleted.
+`l4 run` on all five files: 0 errors, 0 warnings (2026-10-24, after the fix pass). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. A throwaway file of three deliberately wrong assertions was run to confirm that failures are reported, first at the encoding and again in the fix pass (against the new answer types); it was deleted each time. In the fix pass, the pre-fix modules were also run on the verifier's examples. They gave $0 for the week from 28 February 2027 (born 29 February 2012), $93,600 for an impairment lump sum after an accident on 1 May 2013, and "reduced" under s 11 for that accident. That confirmed issues 1 and 6 before they were fixed.
 
 Every expected value was written by hand from the text, with the arithmetic in the comment above the assertion.
 
@@ -69,6 +82,7 @@ Every expected value was written by hand from the text, with the arithmetic in t
 - Is this treatment covered? Which attendant care can I get?
 - Can I take a lump sum instead?
 - When must I claim, and when must I ask for a review?
+- While I have interim attendant care, by when must the Commission decide on long-term care?
 
 **2. On a death, those Part 5 pays** (`maca-seat-survivors.l4`): the spouse, a dependent child (or whoever asks for the child), a dependent parent, and the person liable to meet the expense of the funeral. They ask:
 
@@ -79,7 +93,7 @@ Every expected value was written by hand from the text, with the arithmetic in t
 - Can my spouse, permanently in hospital, be treated as having died?
 - By when must I claim?
 
-**The Motor Accidents (Compensation) Commission and the designated person get no seat.** They are the scheme's statutory decision makers. Their duties appear only as what the claimant is owed and by when: the s 28B review decision within 30 business days, and the claimant's right to go to the Tribunal if it is late. Their judgments are inputs, answered conditionally: that earning capacity is reduced, the impairment percentage, an emergency, a reasonable excuse, dependency, and the s 20A proportion.
+**The Motor Accidents (Compensation) Commission and the designated person get no seat.** They are the scheme's statutory decision makers. Their duties appear only as what the claimant is owed and by when: the s 28B review decision within 30 business days, the claimant's right to go to the Tribunal if it is late, and the s 18BD(4) decision on long-term attendant care before interim care ceases. Their judgments are inputs, answered conditionally: that earning capacity is reduced, the impairment percentage, an emergency, a reasonable excuse, dependency, the s 20A proportion, and an s 33 extension for special hardship.
 
 The 2026-10-18 defaults:
 
@@ -90,7 +104,8 @@ The 2026-10-18 defaults:
 - **Borrowed terms are asked as facts.** Registration under the Motor Vehicles Act 1949, a traffic offence, a licence, a terrorist act, workers compensation legislation and pension age are asked. One departure: the age of majority is fixed at 18 (finding 18).
 - **One case is one accident**, and for the weekly amount one week.
 - **The Act's own terms**, quoted in the comment above each rule, with a plain gloss in each `@desc`.
-- **Machinery out:** Part 2 (indemnity), s 38 (indemnity of the Commission), s 40 (conduct of proceedings), the Tribunal's procedure (ss 29-30B), the regulation-making power, and the transitional Parts. Their dates are kept only as the limits of the encoding (ss 46, 47, 49).
+- **Machinery out:** Part 2 (indemnity), s 38 (indemnity of the Commission), s 40 (conduct of proceedings), the Tribunal's procedure (ss 29-30B), the regulation-making power, and Part 8 Divisions 1 and 2 (ss 43, 44). Part 8 Divisions 3 and 4 (ss 45-49) are in, but only as the dates that limit the encoding.
+- **"Must" makes a regulative rule.** Followed, with one departure. Section 28C(2) says the designated person "must give the claimant written notice of the review decision as soon as practicable after making it". That duty has no fixed period, and s 28C(4) says a breach of it does not affect the decision, so it is not a rule of its own. The day the claimant receives the notice is a fact the claimant states, and the s 28E(3)(a) period counts from it.
 
 ## Scope
 
@@ -102,11 +117,12 @@ The 2026-10-18 defaults:
 - **Weekly compensation:** s 13(1), (2), (2A), (3) (the amount as an input; see finding 1), (5), (5A); s 14.
 - **Impairment lump sum:** s 17.
 - **Medical and rehabilitation:** s 18 with reg 4D, at the level of "is it covered".
-- **Attendant care, injuries on or after 1 July 2014:** ss 18BA-18BE with regs 4E and 4F, as eligibility tests only. Schedule 1 is assessed by the specialist's certificate, an input.
+- **Attendant care, injuries on or after 1 July 2014:** ss 18BA-18BE with regs 4E and 4F, as eligibility tests. The s 18BD(4) duty on the Commission is a regulative rule (finding 26). Schedule 1 is assessed by the specialist's certificate, an input.
 - **Death:** ss 20, 20A with reg 4M, ss 21, 22, 23, 24, 37.
 - **Commutation:** s 25 with regs 5 and 6.
-- **Claims and review:** ss 31, 31A, 28A, 28B, 28E.
-- **Amendment dates that limit the encoding:** ss 46, 47, 49.
+- **Claims and review:** ss 31, 31A, 28A, 28B, 28C (only the notice from which s 28E(3)(a) counts, as a fact), 28E.
+- **Extension for special hardship:** s 33, as the Commission's determination, an input. It reaches the s 13(5)(a) and s 18BD(3) limits (finding 25).
+- **Amendment dates that limit the encoding:** Part 8 Divisions 3 and 4, ss 45-49.
 
 **Out:**
 
@@ -114,9 +130,10 @@ The 2026-10-18 defaults:
 - s 12 (the Commission's powers, treatment plans and suspension under s 12(7)).
 - s 13(4) (suspension for a long hospital stay) and s 13(6) (instalments).
 - Attendant care for injuries before 1 July 2014 (ss 18A, 18B, returned as `outside this encoding`).
-- The attendant care amounts (reg 4G, Schedule 2) and approved providers (reg 4J).
+- s 18BF (attendant care benefits are determined under the regulations and paid to the provider, or to the injured person if the Commission considers it appropriate), with the amounts (reg 4G, Schedule 2) and approved providers (reg 4J).
 - s 18C (emergency travel); s 19 with regs 4K, 4L (appliances and building alterations).
-- s 28D, the Tribunal's procedure (ss 29-30B), s 30C, ss 32-35 (other than as noted), s 38, s 40, Part 8.
+- s 28C(1), (3), (5) (the content and effect of the review decision); s 28D; the Tribunal's procedure (ss 29-30B); s 30C; ss 32, 34, 35; s 38; s 40.
+- Part 8 Divisions 1 and 2 (ss 43, 44: the 2007 transitional rule and the 2010 transfer to the Board). Every accident s 43 reaches is before 1 July 2014, so it is already outside this encoding.
 - The commuted amount itself (finding 17).
 
 The NT levies no land tax and no personal income tax; neither touches this Act.
@@ -142,7 +159,7 @@ The stable `l4` cannot IMPORT across encoding folders, so these links are record
    - s 49 keeps the earlier s 13 for accidents before 31 May 2019;
    - ss 46 and 47 keep the earlier Part 3 and ss 18 and 19 for accidents before 1 July 2014.
 
-   Neither earlier text is deposited, so those accidents answer `outside this encoding`. READING: an accident on 31 May 2019 itself "happens after the commencement". Asserted at both boundaries.
+   Neither earlier text is deposited, so those accidents answer `outside this encoding`. That includes the reductions in ss 11 and 11A, which are part of Part 3 (finding 24). READING: an accident on 31 May 2019 itself "happens after the commencement". Asserted at both boundaries.
 3. **There are three different "average earnings".**
    - The lump sums and death benefits use s 4's *average weekly earnings*: the ABS full-time adult ordinary time earnings for the Territory, fixed for each calendar year.
    - The weekly maximum MA is 85% of "the average weekly earnings for all employees' total employment earnings in the Territory", less notional income tax, set by the Commission each half-year. Section 13(2A) disapplies the s 4 definition here.
@@ -187,9 +204,36 @@ The stable `l4` cannot IMPORT across encoding folders, so these links are record
 18. **"The age of majority" is not defined in the Act.** Section 31(3)(d) gives a claimant under age at the accident until "3 years after the date the claimant attained the age of majority". That is 18 under the Age of Majority Act 1974 (NT), which is not deposited. The encoding fixes it at 18. Asserted (a 14-year-old hurt in 2025 has until 20 August 2031).
 19. **"Business day" is not defined in the Act.** The Interpretation Act 1978 (NT) is not deposited. For the s 28B review, a business day is taken as a weekday that is not a Territory public holiday, and the claimant counts the holidays. The s 28B(3) extension is added in calendar days after the 30th business day. Asserted (a request on Monday 1 September 2025 is due by 13 October 2025).
 20. **A dispute about which Act applies runs the other way in the Return to Work Act.** Section 10A here gives nothing for an injury "compensable under workers compensation legislation". The Return to Work Act's s 61(2) says that while it is disputed whether compensation is payable under that Act or this one, "compensation is payable under the MAC Act until it is determined" otherwise. Its s 61(3) then lets the Commission recover from the employer. This encoding takes s 10A's input as decided; the interim payment belongs to the Return to Work encoding. Not asserted here.
-21. **Weekly compensation can run for decades.** Section 13(5)(a) stops it at pension age if the accident was more than 2 years before pension age, and otherwise 104 weeks after the accident. There is no step-down and no other cap. The two limbs nearly meet: with pension age exactly 2 years after the accident it stops after 104 weeks, 2 days before pension age; with one day more it stops at pension age. Asserted.
-22. **A deferred young person is deemed to have lost earning capacity.** Under s 14(1), a child under 15, or a qualifying student, waits until the later of turning 15 and leaving full-time study (or sooner marrying). They are then "deemed to have suffered a reduction in earning capacity", so the Commission's s 13(1) opinion is not needed. Asserted (a 12-year-old hurt in 2025, leaving school in December 2030, is paid 60% from January 2031).
+21. **Weekly compensation can run for decades.** Section 13(5)(a) stops it at pension age if the accident was more than 2 years before pension age, and otherwise 104 weeks after the accident. There is no step-down. The two limbs nearly meet: with pension age exactly 2 years after the accident it stops after 104 weeks, 2 days before pension age; with one day more it stops at pension age. Asserted. *Corrected 24 October 2026:* this finding said there was "no other cap". That was incomplete. Section 33 lets the Commission extend the limit for special hardship (finding 25), so the stop day is the s 13(5)(a) day unless the Commission extends it.
+22. **A deferred young person is deemed to have lost earning capacity.** Under s 14(1), a child under 15, or a qualifying student, waits until the later of turning 15 and leaving full-time study (or sooner marrying). They are then "deemed to have suffered a reduction in earning capacity", so the Commission's s 13(1) opinion is not needed. Asserted: a 12-year-old (born 15 January 2013) is hurt in 2025 and leaves school on 1 December 2030. The s 14(1) start is 1 December 2030, the later of that day and her 15th birthday. She is 17 from then until she turns 18 on 15 January 2031, so she is paid 60% from 1 December 2030 (the week from 1 December and the week from 6 January 2031, $720 each on a $1,200 figure) and 70% from 15 January 2031 ($840). *Corrected 24 October 2026:* this finding first said she "is paid 60% from January 2031". That was wrong on both counts: payment starts on 1 December 2030, and from 15 January 2031 the rate is 70%. The assertions were right; the week from 1 December 2030 and the 70% week are now asserted as well. READING: the age on the first day of a week governs that week, so a week in which a birthday falls is paid at the earlier age.
 23. **Interim attendant care is once only, and closes off short-term care.** Section 18BD(5) allows interim benefits only once for the same impairment. Section 18BB(1)(c) allows short-term benefits only to a person "not ... assessed as eligible for interim or long-term" care. READING: a person who has had interim care for an impairment gets neither again. Asserted.
+
+Findings 24 to 28 come from the fix pass of 24 October 2026. Each corrects the encoding as first committed.
+
+24. **Section 46 reaches the seatbelt and other-insurance reductions.** Section 46(2) keeps "Part 3, as in force before commencement" for an accident before 1 July 2014. The endnotes show s 11 "sub No. 20, 2014, s 8" and ss 11A-11B "ins No. 20, 2014, s 8": both are the 2014 Part 3. The encoding first checked the date only for the Part 3 exclusions, and applied the 2014 s 11 and s 11A to an earlier accident. It now answers `outside this encoding` for an accident before 1 July 2014 in each of these questions:
+    - the s 11 question, from both seats;
+    - the impairment lump sum;
+    - the funeral benefit;
+    - the death lump sum;
+    - the children's weekly benefit;
+    - the parents' benefit. Section 11A reaches "any statutory benefits", so it is caught too, although the verifier did not list it.
+
+    Sections 17, 22, 23 and 24 themselves were not changed in 2014, so an answer that pays nothing still stands for any accident: an assessment under 5%, no spouse or child, or a surviving spouse for s 24. The weekly benefit was never affected, because s 49 already puts accidents before 31 May 2019 outside the encoding. Section 20A is in Part 5, which s 46 does not reach. Asserted at 1 May 2013, 30 June 2014 and 1 July 2014.
+25. **Section 33 lets the Commission extend time limits on payment.** It may, "because of special hardship", determine that "the time limits imposed by this Act on the payment of benefits under Part 3, 4 (other than section 18A or 18BB) or 5 may be extended". That reaches the s 13(5)(a) day weekly compensation stops and the s 18BD(3) day interim attendant care ceases. It does not reach the s 18BB year, which it names as an exception. READING: the s 31 limits are on claims, not on payment, so they are not reached. Whether to extend, and to what day, is the Commission's judgment, so both are inputs. An "extension" to an earlier day leaves the limit as it is. Asserted:
+    - the 104-week stop day of 8 March 2027, extended to 30 June 2027;
+    - the week from 15 March 2027 paid, the week from 28 June 2027 a part week, and the week from 5 July 2027 after the stop;
+    - interim care to 1 October 2028;
+    - the short-term year unchanged.
+26. **Section 18BD(4) puts a deadline on the Commission.** "The Commission must determine whether an injured person in receipt of benefits under this section is eligible for benefits under section 18BC prior to the expiry of the period in subsection (3)." It is now the fifth regulative rule, with `the Commission` as the party, so the duty appears as what the person receiving interim care is owed. A seat question gives the last day. READING: interim benefits "cease to be payable" on the s 18BD(3) day, so the period expires as that day begins, and the last day for the determination is the day before. A s 33 extension of payment does not move the period in subsection (3). Asserted:
+    - an adult claiming on 1 April 2025 must have the determination by 31 March 2028 (day 1,095 from the claim; day 1,096 is a breach, traced);
+    - for a child born 1 June 2023, by 31 May 2029;
+    - for a child born 29 February 2024, by 28 February 2030;
+    - nothing is owed for an injury before 1 July 2014.
+27. **A 29 February birthday is now the same day in every rule.** `the age of a person born` puts the birthday on 1 March in a common year. The s 14(1) 15th birthday, the s 18BD(3)(a) 6th birthday and the s 31(3)(d) age of majority were worked out instead by adding months, which gives 28 February. So a child born 29 February 2012 had an s 14(1) start of 28 February 2027 while still 14, and the week from that day paid $0 (s 14(2) has no row for 14). The encoding now has one helper for the day a person attains an age, and it agrees with the age function: 1 March in a common year (READING; neither the Act nor the deposited texts say). Periods of months counted from a day still end on the last day of a shorter month. Asserted:
+    - the start of 1 March 2027, the week from 28 February 2027 deferred, and the week from 1 March 2027 paid at 40% ($480);
+    - interim care to 1 March 2030 for a child born 29 February 2024;
+    - a claim limit of 1 March 2029 for a claimant born 29 February 2008, from both seats.
+28. **The reg 4M(5) presumption can arise after a death.** Regulation 4M(5) takes the concentration to exceed 0.08 if "the person is required under the Traffic Act 1987 to submit to a breath analysis or provide a sample of blood and fails to do so". Regulation 4M(6) lifts that if the Commission accepts a reasonable excuse. A qualifying person can be required to give a sample, and fail to, before dying. The s 20A question first fixed both facts to "no", with the comment "not asked after a death", and NOTES did not record that departure. It now asks both. Asserted: a driver over the limit who failed to give a blood sample, with no excuse, may have death benefits reduced; with an excuse accepted, and no opinion of the Commission that the alcohol contributed, may not. In the same pass, the core's s 31 comment ("the seat works out the days to the limit") was corrected. No seat question did that, and the case hand-wrote 1,096 days. The rule now also has a form built from the dates with `the days from` (previously unused). The cases assert it at day 1,096 and, for the claimant born 29 February 2008, at day 1,452, with the breach at day 1,097 traced.
 
 ## Before relying on it
 
@@ -198,7 +242,8 @@ The stable `l4` cannot IMPORT across encoding folders, so these links are record
 - Deposit the earlier s 13 (before 31 May 2019) and the earlier Part 3 and ss 18 and 19 (before 1 July 2014), for older claims still running.
 - Deposit the published figures as dated tables: average weekly earnings for each calendar year, the Commission's MA for each half-year, and the CPI figures for the reg 3 indexation.
 - Deposit the Traffic Regulations 1999 reg 19(2) (s 31A), the Interpretation Act 1978 (business days) and the Age of Majority Act 1974 (findings 18, 19).
-- An independent test pass, and a human gate on the readings in findings 6, 7, 9, 12, 14, 15, 18, 19 and 23.
+- An independent test pass (one verifier pass was made on 24 October 2026; its seven issues are fixed, see Method), and a human gate on the readings in findings 6, 7, 9, 12, 14, 15, 18, 19, 22, 23, 25, 26 and 27.
+- Deposit the Interpretation Act 1978 (NT), to settle when a person born on 29 February attains an age and when a period "after" a day expires (findings 26, 27).
 - **Further work:**
   - attendant care amounts (Schedule 2), and attendant care for injuries before 1 July 2014;
   - s 18C (emergency travel) and s 19 (appliances and building alterations, regs 4K, 4L);
