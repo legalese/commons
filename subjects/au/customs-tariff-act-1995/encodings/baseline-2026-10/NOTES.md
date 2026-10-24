@@ -10,19 +10,24 @@ No pipeline, no coverage table, no independent test pass, no human gate.
 
 It satisfies `REQ-0078` in `subjects/au/requirements.jsonl`. There was no earlier encoding of this Act to keep. No scenario raised it; every case is hypothetical.
 
+**Added 24 October 2026 (REQ-0112):** `cta-by-laws.l4`, a module beside `cta-importer.l4` that IMPORTs it, reads the deposited Customs By-Laws 2023 for Schedule 4 items 17, 25, 26, 28 and 37: whether the goods are prescribed (five questions) and, for items 26 and 37, whether the concession then applies (two questions, through `Does a concession apply to my goods`). Nothing in `cta-importer.l4` was changed.
+
 ## Edition
 
 **Compilation No. 100**, compilation date 4 July 2026, includes amendments up to Act No. 67, 2026 (register id C2026C00399, seven volumes), as deposited at `../../registers/source-bundle/C2004A04997.txt` (76,562 lines; Schedule 3 at lines 1134–30111, Schedule 4 at 30112–30499).
 
-No instrument is brought in. The Customs By-laws that "prescribe" goods for most Schedule 4 items, the Customs Tariff Regulations that list the Forum Island, Developing and Least Developed Countries (s 12), and the Customs Act's rules of origin and valuation are not deposited here; each is asked as a fact.
+`cta-by-laws.l4` reads the **Customs By-Laws 2023** (F2023L00366, made under s 271 of the Customs Act 1901), Compilation No. 6 (F2026C00194, compilation date 17 February 2026, includes amendments up to F2026L00107; retrieved 23 October 2026), deposited at `../../../customs-by-laws-2023/registers/source-bundle/F2023L00366.txt`.
+
+In `cta-importer.l4`, no instrument is brought in. The Customs By-laws that "prescribe" goods for most Schedule 4 items, the Customs Tariff Regulations that list the Forum Island, Developing and Least Developed Countries (s 12), and the Customs Act's rules of origin and valuation are not deposited here; each is asked as a fact.
 
 ## Checks
 
 | Module | Case file | Assertions |
 |---|---|---|
 | `cta-importer.l4` | `cta-cases-importer.l4` | 34 written, 34 satisfied |
+| `cta-by-laws.l4` | `cta-cases-by-laws.l4` | 33 written, 33 satisfied |
 
-`l4 run` on both files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text: the rate in the third column of each Schedule 3 line and Schedule 4 item.
+`l4 run` on all four files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text: the rate in the third column of each Schedule 3 line and Schedule 4 item.
 
 ## Seat
 
@@ -74,9 +79,16 @@ The 2026-10-18 defaults:
 6. **Electric passenger cars below the fuel-efficient car limit are Free.** Subheading 8703.80.12 covers new ("NSA") electric passenger cars "with a value less than the fuel-efficient car limit" (Additional Note 6 to Chapter 87), at Free; others are 5%. The limit is an Additional Note figure not encoded here; which subheading applies is the classification input. Asserted.
 7. **The Act sets customs duty only.** GST, luxury car tax and the excise-equivalent duties on alcohol, tobacco and fuel (the s 19 family) are other rates or other Acts. Not asserted.
 
+8. **Goods of low value means $1,000 or less, but not for passengers, alcohol, tobacco or bulk orders.** By-Laws s 36(2) prescribes goods "the value of which is less than $1000.01"; (3) excludes tobacco, tobacco products and alcoholic beverages, goods a passenger or crew member brings in, and goods forming part of a bulk order. The compilation prints two paragraphs "(a)"; both are read. Asserted.
+9. **A used car needs a written import approval.** By-Laws s 59 prescribes for item 37 only used or second-hand passenger motor vehicles under heading 8703 (not ambulances, hearses, police vans, amphibious or off-road vehicles), on condition of a written import approval under the Road Vehicle Standards Rules 2019. Asserted.
+10. **Item 28 is narrow.** By-Laws s 38 prescribes four kinds of aid only: braille tiles and road rivets designed for the blind; reading machines turning print into tactile images or speech; reading systems that enlarge print on a screen; and sound reproducers and recorders meeting seven conditions (under 2.5 W, magnetic tape, monophonic, DC or AC/DC, hand-carried, colour-coded raised keys, dual speeds). A wheelchair or hearing aid is not prescribed by it. Asserted.
+11. **Item 25's by-law for trophies won overseas lists two conditions joined by "and".** Section 35(2) says "each of the following are goods to which that paragraph of the item applies: (a) the goods are trophies won outside of Australia in competition; and (b) the trophies are appliances or articles of a kind used in an office or the household". Read as written, a trophy qualifies only if it is also an office or household article; a reading that treats (a) and (b) as two classes would admit any trophy won overseas. The encoding takes the conjunctive reading. Asserted.
+12. **The general passenger concession (item 15) is not in the By-Laws 2023.** They prescribe for item 15 only motor vehicles of Canadian and United Kingdom forces (s 25, item 15(d)). The by-law that sets the duty-free amounts for travellers was not found among the in-force instruments searched (titles containing "Customs By-law", "Customs (International Obligations) By-Laws 2023", and "Passenger"); the Customs Act 1901 baseline still asks its figures as inputs. A new ledger entry, REQ-0114, asks for it. Not asserted (a finding about the sources).
+13. **Item 17 is prescribed only for the Antarctic.** The By-Laws 2023 prescribe for item 17 only goods temporarily exported to the Australian Antarctic Territory or Heard Island and McDonald Islands and returned unaltered (s 28). Goods taken anywhere else and brought back are not prescribed by them; item 18 (warranty repair or replacement) and the general rules may still help. Asserted.
+
 ## What would need doing before this is worth relying on
 
-- **The Customs By-laws** for Schedule 4 (REQ-0112), and the low-value amount for item 26.
+- **The Customs By-laws** for Schedule 4: the By-Laws 2023 are deposited and used for items 17, 25, 26, 28 and 37 (REQ-0112, `cta-by-laws.l4`); the by-law setting the item 15 passenger concession is still to be found and deposited (finding 12), as are any by-laws for items 17 and 28 outside the 2023 consolidation.
 - **The rest of Schedule 3**, ideally as data rather than code, with the phasing dates of s 11.
 - **The free trade schedules** (Schedules 4A–16) as data, and the rules of origin in the Customs Act.
 - **The Customs Tariff Regulations** listing the preference countries (s 12).
