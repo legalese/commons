@@ -1,0 +1,217 @@
+IMPORT prelude
+IMPORT `fa-families`
+
+-- A New Tax System (Family Assistance) Act 1999 (Cth) -- FTB Part A with rent assistance and the maintenance income test, and the
+-- Schedule 4 indexation of the rates, computed from the formulas recovered on 2026-10-24, beside fa-families.l4 (unchanged).
+--
+-- fa-families.l4 leaves out rent assistance (Sch 1 cl 3 step 1(d)) and takes maintenance income as nil (cl 3 step 3), because the
+-- formulas of Sch 1 cll 20A, 38D and 38E were lost from the text deposit. The sidecar
+-- ../../registers/source-bundle/C2004A00490.formulas.md ("Further entries, recovered 2026-10-24") now gives them:
+--   * cl 38D (Method 1, at least one FTB child, not a relevant shared carer): Rate A = ((Annual rent - threshold) / 4) x 3, the
+--     threshold $5,000.50 (not a member of a couple, and the gaol, illness, respite and temporarily separated couples) or
+--     $7,391.25 (other members of a couple), "but only up to" Rate B ($6,343.70 for 1 or 2 rent assistance children, $7,168.60 for
+--     3 or more);
+--   * cl 20A(2): annualised maintenance = maintenance received in the relevant period x (days in the income year / days in the
+--     relevant period);
+--   * Sch 4 cl 5(1): indexation factor = index number for most recent reference quarter / index number for base quarter.
+-- The rest is text: cl 38C (eligibility), cl 20 (the reduction is half the excess over the maintenance income free area), cl 21
+-- (a couple's annualised amounts added), cl 22 (the free area), cl 19B (blind pensioners), Sch 4 cll 4, 5(2), (3), 6.
+--
+-- SCOPE of the maintenance income test: maintenance from ONE payer for ALL the FTB children, with no regular care child who is a
+-- rent assistance child. Then cll 24F and 24M say Subdivisions C and D (the maintenance income ceilings, cll 24G-24S, whose
+-- formulas are also in the sidecar) do not apply, so no ceiling is needed. Any other arrangement answers `not covered`.
+-- Rent assistance is the cl 38D table only (no relevant shared carer, no regular care child: cl 38E is not encoded).
+-- The dollar figures are indexed (Sch 4 cl 2 items 4, 4A, 12, 15, 16): they are inputs, in `Rent and maintenance figures`, with
+-- the printed set as a labelled example. The CPI index numbers are inputs.
+--
+-- SEAT: the parent, as in fa-families.l4. Edition: Compilation No. 124 (C2026C00331). BASELINE. See NOTES.md.
+
+§ `Family Assistance Act -- amounts computed from the recovered formulas`
+
+§§ `Sch 1 cll 38B-38F -- rent assistance (Method 1)`
+
+DECLARE `Rent and maintenance figures` HAS
+    `rent threshold, single or separated couple`        IS A NUMBER  -- cl 38C(1)(f)(i), (iii), (iv); cl 38D items 1, 3, 4
+    `rent threshold, member of a couple`                IS A NUMBER  -- cl 38C(1)(f)(ii); cl 38D item 2
+    `maximum rent assistance, 1 or 2 children`          IS A NUMBER  -- cl 38D column 3A (Rate B)
+    `maximum rent assistance, 3 or more children`       IS A NUMBER  -- cl 38D column 3B (Rate B)
+    `maintenance income free area, basic amount`        IS A NUMBER  -- cl 22 items 1 and 3, column 2
+    `maintenance income free area, basic amount, both partners receive maintenance` IS A NUMBER  -- cl 22 item 2, column 2
+    `maintenance income free area, additional amount`   IS A NUMBER  -- cl 22 column 3
+
+-- The figures as printed in Compilation No. 124. Indexed (Sch 4 cl 2): not the figures paid in any given year.
+`the rent and maintenance figures as printed in Compilation No. 124` MEANS `Rent and maintenance figures` WITH
+    `rent threshold, single or separated couple`        IS 5000.50
+    `rent threshold, member of a couple`                IS 7391.25
+    `maximum rent assistance, 1 or 2 children`          IS 6343.70
+    `maximum rent assistance, 3 or more children`       IS 7168.60
+    `maintenance income free area, basic amount`        IS 952.65
+    `maintenance income free area, basic amount, both partners receive maintenance` IS 1905.30
+    `maintenance income free area, additional amount`   IS 317.55
+
+DECLARE `My rent and maintenance` HAS
+    `my couple is separated by gaol, illness or respite care, or temporarily` IS A BOOLEAN  -- cl 38D items 3, 4
+    `my rent assistance children`                       IS A NUMBER   -- cl 38B(2): FTB children whose child rate exceeds the base rate
+    `I pay rent other than Government rent`             IS A BOOLEAN  -- cl 38C(1)(e)
+    `my annual rent`                                    IS A NUMBER   -- cl 38F, with my partner's (cll 38G, 38H)
+    `I am an ineligible homeowner or an aged care resident` IS A BOOLEAN  -- cl 38C(1)(c), (d)
+    `my claim is for a past period without an instalment claim, or I or my partner get incentive allowance` IS A BOOLEAN  -- cl 38C(1)(b), (ba), (2)
+    `I am a relevant shared carer`                      IS A BOOLEAN  -- cl 38E (not encoded)
+    `maintenance received in the relevant period`       IS A NUMBER   -- cl 20A(2), with my partner's (cl 21); 0 if none
+    `days in the income year`                           IS A NUMBER   -- cl 20A(2)
+    `days in the relevant period`                       IS A NUMBER   -- cl 20A(3)-(9)
+    `my partner and I both receive maintenance`         IS A BOOLEAN  -- cl 22 item 2
+    `the maintenance is from one payer for all my FTB children` IS A BOOLEAN  -- cll 24F, 24M
+    `I or my partner am permanently blind and receive an age or disability support pension or the like` IS A BOOLEAN  -- cl 19B
+
+DECLARE `Amount or not covered` IS ONE OF
+    `an amount` HAS `dollars` IS A NUMBER
+    `not covered`
+
+-- cl 38C(1): rent assistance is added if "(a) the individual has at least one rent assistance child", the claim is not a (2) claim,
+-- no incentive allowance, "(c) the individual is not an ineligible homeowner; and (d) ... not an aged care resident; and (e) the
+-- individual pays, or is liable to pay, rent (other than Government rent); and (f) if the individual has at least one FTB child
+-- and is not a relevant shared carer -- the rent is payable at a rate of more than" the threshold for the family situation.
+-- cl 38D: Rate A by the formula, "but only up to the individual's maximum rent assistance rate", Rate B.
+@export How much rent assistance is added to my maximum rate of FTB Part A a year (Sch 1 cll 38B-38F)?
+GIVEN `figures` IS A `Rent and maintenance figures` @desc The rent thresholds and maximum rent assistance rates in force
+      `f` IS A `My family` @desc Your family
+      `r` IS A `My rent and maintenance` @desc Your rent, and the rent assistance facts
+GIVETH AN `Amount or not covered`
+`How much rent assistance do I get a year` MEANS
+    IF `r`'s `I am a relevant shared carer`
+    THEN `not covered`
+    ELSE IF     `the number of FTB children` `f` AT LEAST 1
+            AND `r`'s `my rent assistance children` AT LEAST 1
+            AND `r`'s `I pay rent other than Government rent`
+            AND NOT `r`'s `I am an ineligible homeowner or an aged care resident`
+            AND NOT `r`'s `my claim is for a past period without an instalment claim, or I or my partner get incentive allowance`
+            AND `r`'s `my annual rent` GREATER THAN `threshold`
+         THEN `an amount` (min `Rate B` (((`r`'s `my annual rent` MINUS `threshold`) DIVIDED BY 4) TIMES 3))
+         ELSE `an amount` 0
+    WHERE
+        `threshold` MEANS
+            IF `f`'s `I am a member of a couple` AND NOT `r`'s `my couple is separated by gaol, illness or respite care, or temporarily`
+            THEN `figures`'s `rent threshold, member of a couple`
+            ELSE `figures`'s `rent threshold, single or separated couple`
+        `Rate B` MEANS
+            IF `r`'s `my rent assistance children` AT LEAST 3
+            THEN `figures`'s `maximum rent assistance, 3 or more children`
+            ELSE `figures`'s `maximum rent assistance, 1 or 2 children`
+
+§§ `Sch 1 cll 19B-23 -- the maintenance income test (one payer for all the children)`
+
+-- cl 20A(2), formula (sidecar): The amount of maintenance income (other than CMI) received by the individual during the relevant
+-- period or periods x (Number of days in the income year / Number of days in the relevant period or periods). cl 21: a couple's
+-- annualised amounts are added (the input is the couple's total).
+@export What is the annualised amount of my maintenance income (Sch 1 cll 20A(2), 21)?
+GIVEN `r` IS A `My rent and maintenance` @desc The maintenance you (and your partner) received, and over how many days
+GIVETH A NUMBER
+`What is my annualised maintenance income` MEANS
+    IF `r`'s `days in the relevant period` AT MOST 0 THEN 0
+    ELSE `r`'s `maintenance received in the relevant period` TIMES (`r`'s `days in the income year` DIVIDED BY `r`'s `days in the relevant period`)
+
+-- cl 22: "the corresponding amount in column 2 plus an additional corresponding amount in column 3 for each FTB child after the
+-- first": item 1 not a member of a couple, item 2 partnered with both receiving maintenance, item 3 partnered with one.
+@export What is my maintenance income free area (Sch 1 cl 22)?
+GIVEN `figures` IS A `Rent and maintenance figures` @desc The free area amounts in force
+      `f` IS A `My family` @desc Your family
+      `r` IS A `My rent and maintenance` @desc Whether you and your partner both receive maintenance
+GIVETH A NUMBER
+`What is my maintenance income free area` MEANS
+    `basic` PLUS (`figures`'s `maintenance income free area, additional amount` TIMES `the positive part of` (`the number of FTB children` `f` MINUS 1))
+    WHERE
+        `basic` MEANS
+            IF `f`'s `I am a member of a couple` AND `r`'s `my partner and I both receive maintenance`
+            THEN `figures`'s `maintenance income free area, basic amount, both partners receive maintenance`
+            ELSE `figures`'s `maintenance income free area, basic amount`
+
+-- cl 20(1) Steps 3-6: "The individual's reduction for maintenance income is half the maintenance income excess" over the free
+-- area. cl 19B: nil for a blind age or disability support pensioner couple. Outside one payer for all the children, the
+-- ceilings of Subdivisions C and D apply: not covered.
+@export What is my reduction for maintenance income a year (Sch 1 cll 19B, 20)?
+GIVEN `figures` IS A `Rent and maintenance figures` @desc The free area amounts in force
+      `f` IS A `My family` @desc Your family
+      `r` IS A `My rent and maintenance` @desc Your maintenance
+GIVETH AN `Amount or not covered`
+`What is my reduction for maintenance income` MEANS
+    BRANCH IF `r`'s `maintenance received in the relevant period` AT MOST 0 THEN `an amount` 0
+           IF `r`'s `I or my partner am permanently blind and receive an age or disability support pension or the like` THEN `an amount` 0
+           IF NOT `r`'s `the maintenance is from one payer for all my FTB children` THEN `not covered`
+           OTHERWISE `an amount` (`the positive part of` (`What is my annualised maintenance income` `r` MINUS `What is my maintenance income free area` `figures` `f` `r`) DIVIDED BY 2)
+
+§§ `Sch 1 cll 3, 25, 25D -- FTB Part A with rent assistance and maintenance`
+
+-- cl 3 Step 1(d) adds rent assistance to the maximum rate; Step 3 takes the maintenance reduction from the income tested rate;
+-- Step 4: the base rate if higher. cl 25 Step 3 with cl 25D: the Method 2 income and maintenance tested rate is the Method 1
+-- maximum rate (so with rent assistance) less 20% of (HIFA - IFA), 30% of (income - HIFA) and the maintenance reduction; Step 4:
+-- the greater of that and the provisional Part A rate. The same arithmetic as fa-families.l4's `How much FTB Part A do I get a
+-- year`, with the two additions; with no rent and no maintenance it gives the same answer.
+@desc FTB Part A a year with a given rent assistance amount and maintenance reduction added to the Method 1 and Method 2 arithmetic
+GIVEN `the rates` IS A Rates @desc The indexed rates in force
+      `f` IS A `My family` @desc Your family
+      `ra` IS A NUMBER @desc Rent assistance a year
+      `mit` IS A NUMBER @desc Reduction for maintenance income a year
+GIVETH A NUMBER
+`FTB Part A with rent assistance and a maintenance reduction` MEANS
+    BRANCH IF `the number of FTB children` `f` EQUALS 0 THEN 0
+           IF `Is my FTB Part A worked out by Method 1` `the rates` `f`
+           THEN max (`income tested rate before rent assistance` PLUS `ra` MINUS `mit`) `base rate`
+           OTHERWISE `the positive part of` (max `provisional Part A rate` `Method 2 income and maintenance tested rate`)
+    WHERE
+        `income`       MEANS `What income is my FTB Part A tested on` `f`
+        `maximum rate` MEANS `What is my maximum rate of FTB Part A` `the rates` `f`
+        `base rate`    MEANS `What is my base rate of FTB Part A` `the rates` `f`
+        `HIFA`         MEANS `the rates`'s `higher income free area`
+        `IFA`          MEANS `the rates`'s `income free area (A)`
+        `income tested rate before rent assistance` MEANS
+            IF `f`'s `I or my partner get a pension or benefit`
+            THEN `maximum rate`
+            ELSE `maximum rate` MINUS `percent of` 20 (`the positive part of` (`income` MINUS `IFA`))
+        `provisional Part A rate` MEANS `base rate` MINUS `percent of` 30 (`income` MINUS `HIFA`)
+        `Method 2 income and maintenance tested rate` MEANS
+            ((`maximum rate` PLUS `ra`) MINUS `percent of` 20 (`HIFA` MINUS `IFA`)) MINUS (`percent of` 30 (`income` MINUS `HIFA`) PLUS `mit`)
+
+@export How much FTB Part A do I get a year, with rent assistance and the maintenance income test (Sch 1 cll 3, 20, 25, 38D)?
+GIVEN `the rates` IS A Rates @desc The indexed rates in force
+      `figures` IS A `Rent and maintenance figures` @desc The rent assistance and maintenance figures in force
+      `f` IS A `My family` @desc Your family
+      `r` IS A `My rent and maintenance` @desc Your rent and maintenance
+GIVETH AN `Amount or not covered`
+`How much FTB Part A do I get a year with rent and maintenance` MEANS
+    CONSIDER `How much rent assistance do I get a year` `figures` `f` `r`
+    WHEN `not covered` THEN `not covered`
+    WHEN `an amount` `ra` THEN
+        CONSIDER `What is my reduction for maintenance income` `figures` `f` `r`
+        WHEN `not covered` THEN `not covered`
+        WHEN `an amount` `mit` THEN `an amount` (`FTB Part A with rent assistance and a maintenance reduction` `the rates` `f` `ra` `mit`)
+
+§§ `Sch 4 cll 4-6 -- indexation of the rates`
+
+-- Sch 4 cl 5(1), formula (sidecar): Index number for most recent reference quarter / Index number for base quarter, "worked out to
+-- 3 decimal places"; (2) raised by 0.001 if the 4th decimal place "is greater than 4"; (3) never below 1. cl 4(2): the current
+-- figure times the factor, rounded under cl 6 to the nearest multiple of the rounding base, a half rounded up. The rounding base is
+-- column 5 of the cl 3 CPI Indexation Table for the amount. The CPI index numbers are INPUTS. Clauses 10 and 11 (pauses) are not
+-- modelled.
+@export What is the Schedule 4 indexation factor (Sch 4 cl 5)?
+GIVEN `index number for most recent reference quarter` IS A NUMBER @desc The CPI index number for the reference quarter
+      `index number for base quarter` IS A NUMBER @desc The CPI index number for the base quarter
+GIVETH A NUMBER
+`What is the FTB indexation factor` MEANS
+    IF `raised` LESS THAN 1 THEN 1 ELSE `raised`
+    WHERE
+        `ratio` MEANS `index number for most recent reference quarter` DIVIDED BY `index number for base quarter`
+        `to 3 places` MEANS FLOOR (`ratio` TIMES 1000) DIVIDED BY 1000
+        `fourth place` MEANS FLOOR (`ratio` TIMES 10000) MINUS (FLOOR (`ratio` TIMES 1000) TIMES 10)
+        `raised` MEANS IF `fourth place` GREATER THAN 4 THEN `to 3 places` PLUS 0.001 ELSE `to 3 places`
+
+@export What is an amount after a Schedule 4 indexation (Sch 4 cll 4, 6)?
+GIVEN `current figure` IS A NUMBER @desc The current figure for the amount immediately before the indexation day
+      `index number for most recent reference quarter` IS A NUMBER @desc The CPI index number for the reference quarter
+      `index number for base quarter` IS A NUMBER @desc The CPI index number for the base quarter
+      `rounding base` IS A NUMBER @desc Column 5 of the Sch 4 cl 3 table for the amount
+GIVETH A NUMBER
+`What is the FTB indexed amount` MEANS
+    FLOOR ((`current figure` TIMES `What is the FTB indexation factor` `index number for most recent reference quarter` `index number for base quarter`
+            DIVIDED BY `rounding base`) PLUS 0.5)
+    TIMES `rounding base`

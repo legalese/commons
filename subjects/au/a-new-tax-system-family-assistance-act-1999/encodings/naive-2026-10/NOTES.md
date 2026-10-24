@@ -8,8 +8,7 @@ pass, no human gate. Not for public use.
 Act No. 73, 2025 (register id C2026C00331). It is deposited at
 `../../registers/source-bundle/C2004A00490.txt`.
 
-**Checks:** one module (`fa-families.l4`) and one case file (`fa-cases-families.l4`). 50 assertions
-satisfied, 0 errors, 0 warnings.
+**Checks:** two modules (`fa-families.l4`, and `fa-families-formulas.l4` added 2026-10-24) and two case files (`fa-cases-families.l4`, 50 assertions; `fa-cases-families-formulas.l4`, 8 assertions). 58 assertions satisfied, 0 errors, 0 warnings in every file, with the stable `l4` of VS Code extension 1.6.98 (2026-10-24).
 
 ## Why this Act, and why scoped
 
@@ -126,6 +125,15 @@ Two formulas are missing from the deposit: the CCS taper between the thresholds 
 - **daniel d002 (1996).** It predates the Act, which is No. 80 of 1999. Under s 2 the Act commences on the last of five GST Act commencements, and those dates are not in the deposit.
 
 Replaying either event under the current law, as the scenario notes propose, gives today's answer, not the answer of the day. Not asserted.
+
+### 9. The two lost formulas, recovered: the CCS taper and the newborn supplement are now computed (2026-10-24)
+
+The sidecar `../../registers/source-bundle/C2004A00490.formulas.md` transcribes both formulas finding 7 says were lost. `fa-families-formulas.l4` IMPORTs `fa-families.l4`, leaves it unchanged, and computes them:
+
+- **Sch 2 cl 3(2):** 90 − (adjusted taxable income − lower income (base rate) threshold) / 5,000, to 2 decimal places. It fills the `taper result` slot of `the applicable percentage`. $82,345 gives 89.53; $300,000 gives 46.
+- **Sch 1 cl 35B:** $1,501.50 × 365 / 91 a year for the first child (and each child of a multiple birth), $500.50 × 365 / 91 otherwise: $6,022.50 and $2,007.50 at the printed figures.
+
+The old case file's one supplied taper result (86 at $100,000) agrees with the formula. No disagreement. The FTB maximum rate is still an input in this encoding; the baseline computes it, and now adds rent assistance and the maintenance income test (`../baseline-2026-10/fa-formulas.l4`).
 
 ## What would need doing before this is worth anything
 
