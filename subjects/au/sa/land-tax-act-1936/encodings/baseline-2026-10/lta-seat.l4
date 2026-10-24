@@ -1,0 +1,582 @@
+IMPORT prelude
+IMPORT `lta-common`
+IMPORT `taa-procedure`
+IMPORT `lta-core`
+
+-- Land Tax Act 1936 (SA), with the Taxation Administration Act 1996 (SA) -- the owner of land.
+--
+-- SEAT: the individual owner of land in South Australia -- the home owner, and the individual who owns other land.
+-- "Is my home exempt? What about a home being built or renovated, or partly used for business? How much land tax do I pay
+-- on my other land this year? When must I pay? How do I object?" Every question is phrased as that owner would ask it,
+-- on facts the owner could state. The rules are in lta-core.l4 and taa-procedure.l4; this module builds their records
+-- from plain answers and restates no rule. The owner is an individual, so "a natural person" (s 5(10)) is always TRUE
+-- here.
+--
+-- SOURCE. Based on content from the South Australian Legislation website, through the Open Australian Legal Corpus
+-- (CC BY 4.0). The Land Tax Act text is the corpus text as at 2023-07-01 and the Taxation Administration Act text as at
+-- 2019-10-03; neither is the official text, and both are out of date (the Current Titles list of 22 September 2026 lists
+-- both at 4.12.2025). Every year's thresholds, and any change to the rates after 1 July 2023, are INPUTS. See NOTES.md.
+--
+-- Conventions. A financial year is named by the calendar year in which it ENDS: 2025/2026 is 2026. Money is in dollars.
+-- Percentages are numbers out of 100. Dates are ISO 8601.
+--
+-- BASELINE. Not for public use as advice.
+
+§ `Land Tax Act 1936 (SA) -- the owner of land`
+
+-- The thresholds and rates as the owner supplies them.
+GIVEN `I have the thresholds` IS A BOOLEAN
+      `A` IS A NUMBER, `B` IS A NUMBER, `C` IS A NUMBER, `D` IS A NUMBER
+GIVETH A MAYBE `Thresholds`
+`the thresholds from my answers` MEANS
+    IF `I have the thresholds` THEN JUST (`Thresholds` OF `A`, `B`, `C`, `D`) ELSE NOTHING
+
+GIVEN `the rates changed` IS A BOOLEAN
+      `r1` IS A NUMBER, `r2` IS A NUMBER, `r3` IS A NUMBER, `r4` IS A NUMBER
+GIVETH A MAYBE `Scale rates`
+`the rates from my answers` MEANS
+    IF `the rates changed` THEN JUST (`Scale rates` OF `r1`, `r2`, `r3`, `r4`) ELSE NOTHING
+
+-- The home, as the owner describes it. The owner is a natural person.
+GIVEN `it is my principal place of residence` IS A BOOLEAN
+      `predominantly residential` IS A BOOLEAN
+      `hotel` IS A BOOLEAN
+      `business` IS A NUMBER
+      `residence` IS A NUMBER
+GIVETH A `Home at midnight on 30 June`
+`my home from my answers` MEANS
+    `Home at midnight on 30 June` WITH
+        `it is the principal place of residence of a natural person who owns it`                      IS `it is my principal place of residence`
+        `the buildings have a predominantly residential character`                                     IS `predominantly residential`
+        `the buildings are used for a hotel, motel, serviced holiday apartments or similar accommodation` IS `hotel`
+        `percentage of the total floor area used for a business or commercial purpose`                 IS `business`
+        `percentage of the total floor area used as the principal place of residence`                  IS `residence`
+
+DECLARE `Thresholds answer` IS ONE OF
+    `the thresholds for the year are` HAS `thresholds` IS A `Thresholds`
+    `the thresholds are not covered` HAS `because` IS A `Why not covered`
+
+DECLARE `Notice deadline` IS ONE OF
+    `notify the Commissioner in writing by` HAS `the day` IS A DATE
+    `no duty to notify arises`
+
+§§ `When the land tax is worked out, and who pays (ss 2, 4, 9, 14-17)`
+
+@export At midnight on which day are the facts fixed for my land tax for a financial year (s 4(3), s 7(2))?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it ends (2025/2026 is 2026)
+GIVETH A DATE
+DECIDE `At midnight on which day are the facts fixed for my land tax` IS
+    `the day at whose midnight the land tax is calculated` `the financial year`
+
+@export Am I liable for the land tax on this land for the year (ss 2, 9(2), 14)?
+GIVEN `how I held the land at midnight on 30 June before the year` IS A `Capacity` @desc One of: legal owner; equitable owner; prospective owner, under a contract to purchase or acquire the land; lessee under a perpetual lease or a shack site lease; occupier of land in a defined shack-site area; mortgagee only; tenant under an ordinary lease only; no estate or interest in the land
+      `someone else owned the land in a different capacity at that time` IS A BOOLEAN @desc Whether another person was also an owner then in a different capacity, for example the seller still on the title while you had a contract to buy
+GIVETH A `Liability answer`
+DECIDE `Am I liable for the land tax on this land` IS
+    `the person's liability for the land tax on the land` `how I held the land at midnight on 30 June before the year` `someone else owned the land in a different capacity at that time`
+
+@export If I sell my land during the financial year, am I still liable for that year's land tax (s 15(1))?
+GIVEN `I was liable for the year as owner at midnight on 30 June before it` IS A BOOLEAN @desc Whether you were liable for the year's land tax on the land as its owner at midnight on 30 June before the year began
+GIVETH A BOOLEAN
+DECIDE `Am I still liable after selling during the year` IF
+        `I was liable for the year as owner at midnight on 30 June before it`
+    AND (NOT `a change of ownership during the year relieves the liability for that year`)
+
+@export I own the land with others: can I be made to pay all of the land tax on it (s 16)?
+GIVEN `how many taxpayers there are for the land` IS A NUMBER @desc How many people (you included) are liable for the land tax on this land
+GIVETH A BOOLEAN
+DECIDE `Can I be made to pay all the land tax on land I own with others` IF
+    `each taxpayer can be made to pay all the tax on the land` `how many taxpayers there are for the land`
+
+@export I paid all the land tax on land I own with others: how much can I recover from them (s 17)?
+GIVEN `the land tax I paid` IS A NUMBER @desc The land tax you paid on the land, in dollars
+      `my share of the value of the interests in the land, percent` IS A NUMBER @desc The value of your interest as a percentage of the value of all the owners' interests (for example 50 for an equal half)
+GIVETH A NUMBER
+DECIDE `How much can I recover from my co-owners` IS
+    `the amount recoverable from the other taxpayers` `the land tax I paid` `my share of the value of the interests in the land, percent`
+
+§§ `Is my home exempt? (s 5(10)(a), (b), (ba), (bb), (12), s 5AA)`
+
+@export Are there proper grounds to exempt my home from land tax, wholly or partly (s 5(10)(a), (b), (ba), (bb), with s 5AA)?
+GIVEN `my home is my principal place of residence` IS A BOOLEAN @desc Whether, at midnight on 30 June before the year, the land was your principal place of residence
+      `the buildings are predominantly residential` IS A BOOLEAN @desc Whether the buildings on the land have a predominantly residential character
+      `the buildings are a hotel, motel or serviced holiday apartments` IS A BOOLEAN @desc Whether the buildings are used for a hotel, motel, set of serviced holiday apartments or similar accommodation
+      `percentage of floor area used for business` IS A NUMBER @desc The part of the total floor area of all buildings on the land used for a business or commercial purpose, as a percentage (leave out primary production; for a hotel, motel or serviced apartments, the area used for that accommodation)
+      `percentage of floor area that is my home` IS A NUMBER @desc For a hotel, motel or serviced apartments: the part of the total floor area used as your principal place of residence, as a percentage
+      `I own the land with someone else` IS A BOOLEAN @desc Whether one or more other people also own the land
+      `my interest in the land, percent` IS A NUMBER @desc Your interest in the land as a percentage (100 if you are the sole owner)
+      `the Commissioner is satisfied my small interest was not created to reduce land tax` IS A BOOLEAN @desc For an interest of 5% or less: whether the Commissioner, on a co-owner's application, is satisfied there is no doubt your interest was created solely for purposes unrelated to reducing land tax
+      `the Commissioner thinks my interest was created to reduce land tax` IS A BOOLEAN @desc For an interest over 5% but under 50%: whether the Commissioner has formed the opinion that a purpose of creating your interest was to reduce land tax
+GIVETH AN `Exemption`
+DECIDE `Are there proper grounds to exempt my home` IS
+    `the residential land exemption after s 5AA`
+        (`my home from my answers` `my home is my principal place of residence` `the buildings are predominantly residential` `the buildings are a hotel, motel or serviced holiday apartments` `percentage of floor area used for business` `percentage of floor area that is my home`)
+        (`the resident's interest is disregarded under s 5AA` `my interest in the land, percent` `I own the land with someone else` `the Commissioner is satisfied my small interest was not created to reduce land tax` `the Commissioner thinks my interest was created to reduce land tax`)
+
+@export By what percentage is my home's taxable value reduced when part of it is used for business (s 5(12))?
+GIVEN `percentage of floor area used for business` IS A NUMBER @desc The part of the total floor area of all buildings on the land used for a business or commercial purpose, as a percentage (for a hotel, motel or serviced apartments, the area used for that accommodation)
+GIVETH A NUMBER
+DECIDE `By what percentage is my home's taxable value reduced for business use` IS
+    `the s 5(12) percentage reduction in taxable value for` `percentage of floor area used for business`
+
+@export What is the taxable value of my home for land tax, after any residential land exemption (ss 5, 7)?
+GIVEN `the site value of my home` IS A NUMBER @desc The Valuer-General's site value of the land at midnight on 30 June before the year (as corrected, if it was), in dollars
+      `my home is my principal place of residence` IS A BOOLEAN @desc Whether, at midnight on 30 June before the year, the land was your principal place of residence
+      `the buildings are predominantly residential` IS A BOOLEAN @desc Whether the buildings on the land have a predominantly residential character
+      `the buildings are a hotel, motel or serviced holiday apartments` IS A BOOLEAN @desc Whether the buildings are used for a hotel, motel, set of serviced holiday apartments or similar accommodation
+      `percentage of floor area used for business` IS A NUMBER @desc The part of the total floor area used for a business or commercial purpose, as a percentage (leave out primary production; for a hotel, motel or serviced apartments, the area used for that accommodation)
+      `percentage of floor area that is my home` IS A NUMBER @desc For a hotel, motel or serviced apartments: the part of the total floor area used as your principal place of residence, as a percentage
+      `the Commissioner has granted the exemption and it is in force` IS A BOOLEAN @desc Whether the Commissioner has granted the exemption (on your application or otherwise) and it remains in force
+GIVETH A NUMBER
+DECIDE `What is the taxable value of my home after its exemption` IS
+    `the taxable value of the land` `the site value of my home`
+        (IF `the Commissioner has granted the exemption and it is in force`
+         THEN `the residential land exemption for the home` (`my home from my answers` `my home is my principal place of residence` `the buildings are predominantly residential` `the buildings are a hotel, motel or serviced holiday apartments` `percentage of floor area used for business` `percentage of floor area that is my home`)
+         ELSE `no exemption on these grounds`)
+
+§§ `Building, rebuilding or renovating my home (s 5(10)(ab), (ac), (ad), (10a)-(11a))`
+
+-- Arises only if your home was destroyed or made uninhabitable, or you are building, rebuilding or renovating it.
+
+@export Is my land exempt while my home is destroyed, rebuilt, renovated or being built (s 5(10)(ab), (ac), (ad), (10a), (10b), (11a))?
+GIVEN `what is happening to my home` IS A `Kind of building work` @desc One of: the home was destroyed or made uninhabitable by an occurrence the owner was not responsible for, or by an accident; the owner moved out because a building on the land is being renovated or rebuilt; the owner is, or will be, renovating or constructing a building on the land
+      `it was my principal place of residence just before` IS A BOOLEAN @desc Whether the home was your principal place of residence immediately before it was destroyed or you moved out
+      `the buildings were predominantly residential before` IS A BOOLEAN @desc Whether the buildings had a predominantly residential character immediately before you moved out
+      `the buildings will be predominantly residential after the work` IS A BOOLEAN @desc Whether the buildings will have a predominantly residential character when the work is finished
+      `I intend to live there as my principal place of residence after the work` IS A BOOLEAN @desc Whether you intend to occupy the land as your principal place of residence when the work is complete (or complete to a suitable stage)
+      `I intend to repair or rebuild within 3 years` IS A BOOLEAN @desc For a destroyed or uninhabitable home: whether you intend to repair or rebuild it within 3 years of the date it was destroyed or made uninhabitable
+      `percentage of floor area used for business` IS A NUMBER @desc The part of the total floor area of all buildings on the land used for a business or commercial purpose, as a percentage (leave out primary production)
+      `I have a residential exemption for another home I live in` IS A BOOLEAN @desc Whether you are receiving a residential land exemption on other land that is your principal place of residence
+      `years already exempted on these grounds` IS A NUMBER @desc How many financial years this land has already been exempted on the same ground before this one
+      `the Commissioner sees good reasons for a longer exemption` IS A BOOLEAN @desc For building or renovating: whether the Commissioner considers there are good reasons to exempt for longer than 2 years
+      `months I live there after the work is finished` IS A NUMBER @desc For building or renovating: for how many months you live (or will live) there as your principal place of residence after the work is completed
+      `there were good reasons I could not live there for 12 months` IS A BOOLEAN @desc For building or renovating: whether you intended to live there but there were good reasons you could not
+      `someone else pays rent to live there` IS A BOOLEAN @desc Whether rent or other consideration is paid or payable for someone else to occupy the land during the year (or during the 12 months after completion)
+GIVETH AN `Exemption`
+DECIDE `Is my land exempt while my home is destroyed, rebuilt, renovated or built` IS
+    `the exemption while the home is destroyed, rebuilt, renovated or built`
+        (`Building work facts` WITH
+            `owned by a natural person`                                                          IS TRUE
+            `the work`                                                                           IS `what is happening to my home`
+            `it was the owner's principal place of residence immediately before`                IS `it was my principal place of residence just before`
+            `the buildings were predominantly residential before`                                IS `the buildings were predominantly residential before`
+            `the buildings will be predominantly residential after the work`                     IS `the buildings will be predominantly residential after the work`
+            `the owner intends to live there as principal place of residence after the work`     IS `I intend to live there as my principal place of residence after the work`
+            `the owner intends to repair or rebuild within 3 years of the destruction`           IS `I intend to repair or rebuild within 3 years`
+            `percentage of the total floor area used for a business or commercial purpose`       IS `percentage of floor area used for business`
+            `the owner has a residential exemption for other land that is the owner's principal place of residence` IS `I have a residential exemption for another home I live in`
+            `years the land has already been exempted under this paragraph`                      IS `years already exempted on these grounds`
+            `the Commissioner sees good reasons to exempt for longer than 2 years`               IS `the Commissioner sees good reasons for a longer exemption`
+            `months the owner lives there as principal place of residence after completion`      IS `months I live there after the work is finished`
+            `there were good reasons the owner could not live there for 12 months`               IS `there were good reasons I could not live there for 12 months`
+            `rent or other consideration is paid for someone else's occupation`                  IS `someone else pays rent to live there`)
+
+@export For how many months must I live in my home after the building or renovation work is finished, to keep the exemption (s 5(10a))?
+GIVETH A NUMBER
+DECIDE `For how many months must I live there after the work is finished` IS
+    `the months the owner must live there after completion`
+
+@export Can I still apply for a waiver or refund of land tax for a past year in which my home was being built or renovated (s 5(10c))?
+GIVEN `there were grounds for the building or renovation exemption that year` IS A BOOLEAN @desc Whether proper grounds for the exemption while building, rebuilding or renovating existed for that financial year
+      `the date of the assessment for that year` IS A DATE @desc The date of the assessment of the land tax for that year (ISO 8601)
+      `the date I apply` IS A DATE @desc The date you make (or will make) the application (ISO 8601)
+GIVETH A BOOLEAN
+DECIDE `Can I still apply for a waiver or refund for a building year` IF
+        `there were grounds for the building or renovation exemption that year`
+    AND `the application is made not more than 5 years after the assessment` `the date of the assessment for that year` `the date I apply`
+
+§§ `Moving home during the year (s 5A)`
+
+-- Arises only if your home changed during the financial year.
+
+@export I moved into my new home during the financial year: can the land tax on it for that year be waived or refunded, including what I paid the seller (s 5A(1)(a), (b), (c), (6a))?
+GIVEN `it became my principal place of residence during the year` IS A BOOLEAN @desc Whether the land became your principal place of residence during the financial year
+      `it qualified for a residential exemption once I moved in` IS A BOOLEAN @desc Whether proper grounds for a s 5 exemption came into existence when it became your principal place of residence
+      `I sold my old home before 30 June` IS A BOOLEAN @desc Whether, before the end of the financial year, you divested yourself of any other land on which you had an exemption, waiver or refund as your home for the year
+      `rent was paid on either home while I owned both` IS A BOOLEAN @desc Whether rent or other consideration was paid or payable for occupation of either property during the year while you owned both
+      `the Commissioner allows it despite the rent` IS A BOOLEAN @desc Whether the Commissioner allows otherwise in your case despite the rent
+      `I meet any criteria set by regulation` IS A BOOLEAN @desc Whether you meet any further criteria in the Land Tax Regulations (not deposited here; answer yes if none apply)
+      `I had the destroyed-home exemption on this land for the 3 years just before` IS A BOOLEAN @desc Whether you had the exemption for a destroyed or uninhabitable home on this land for the 3 financial years immediately before
+GIVETH A BOOLEAN
+DECIDE `Can the land tax on my new home be waived or refunded` IF
+    `the s 5A(1)(c) criteria for a new home are met` `it became my principal place of residence during the year` `it qualified for a residential exemption once I moved in` `I sold my old home before 30 June` `rent was paid on either home while I owned both` `the Commissioner allows it despite the rent` `I meet any criteria set by regulation` `I had the destroyed-home exemption on this land for the 3 years just before`
+
+@export I moved out of my old home last financial year and sold it this year: can this year's land tax on it be waived or refunded (s 5A(1)(a), (d))?
+GIVEN `it stopped being my principal place of residence last year` IS A BOOLEAN @desc Whether the land ceased to be your principal place of residence during the previous financial year
+      `it was exempt as my home just before I moved out` IS A BOOLEAN @desc Whether proper grounds for a s 5 exemption existed immediately before it ceased to be your principal place of residence
+      `I sold it before 30 June this year` IS A BOOLEAN @desc Whether you divested yourself of the land before the end of this financial year
+      `rent was paid on either home while I owned both` IS A BOOLEAN @desc Whether rent or other consideration was paid or payable for occupation of either property, this year or last, while you owned both
+      `the Commissioner allows it despite the rent` IS A BOOLEAN @desc Whether the Commissioner allows otherwise in your case despite the rent
+      `I meet any criteria set by regulation` IS A BOOLEAN @desc Whether you meet any further criteria in the Land Tax Regulations (not deposited here; answer yes if none apply)
+GIVETH A BOOLEAN
+DECIDE `Can the land tax on my former home be waived or refunded` IF
+    `the s 5A(1)(d) criteria for a former home are met` `it stopped being my principal place of residence last year` `it was exempt as my home just before I moved out` `I sold it before 30 June this year` `rent was paid on either home while I owned both` `the Commissioner allows it despite the rent` `I meet any criteria set by regulation`
+
+@export How much land tax can be waived or refunded on my new or former home: the amount by which my assessment would have been reduced had it been exempt (s 5A(3)(a))?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it ends (2025/2026 is 2026)
+      `I have the gazetted thresholds for the year` IS A BOOLEAN @desc Whether you have the land tax thresholds the Commissioner published in the Gazette for the year (s 8A(7))
+      `threshold A` IS A NUMBER @desc Threshold A for the year from the Gazette notice, in dollars
+      `threshold B` IS A NUMBER @desc Threshold B for the year from the Gazette notice, in dollars
+      `threshold C` IS A NUMBER @desc Threshold C for the year from the Gazette notice, in dollars
+      `threshold D` IS A NUMBER @desc Threshold D for the year from the Gazette notice, in dollars
+      `the rates were changed after 1 July 2023` IS A BOOLEAN @desc Whether the Act's Schedule 1 rates ($0.50, $1.00, $2.00, $2.40 per $100) were changed for the year by an amendment after 1 July 2023 (check legislation.sa.gov.au; applies from 2024/2025)
+      `rate over A` IS A NUMBER @desc If changed: dollars per $100 over Threshold A
+      `rate over B` IS A NUMBER @desc If changed: dollars per $100 over Threshold B
+      `rate over C` IS A NUMBER @desc If changed: dollars per $100 over Threshold C
+      `rate over D` IS A NUMBER @desc If changed: dollars per $100 over Threshold D
+      `the total taxable value of my land with this home counted` IS A NUMBER @desc The aggregate taxable value of all the land on your assessment, counting this home as if it were not exempt, in dollars
+      `the taxable value of this home` IS A NUMBER @desc The taxable value (site value) of the home the waiver or refund is for, in dollars
+GIVETH A `Land tax answer`
+DECIDE `How much land tax can be waived or refunded on my home` IS
+    `the s 5A(3)(a) waiver or refund` `the financial year`
+        (`the thresholds from my answers` `I have the gazetted thresholds for the year` `threshold A` `threshold B` `threshold C` `threshold D`)
+        (`the rates from my answers` `the rates were changed after 1 July 2023` `rate over A` `rate over B` `rate over C` `rate over D`)
+        `the total taxable value of my land with this home counted` `the taxable value of this home`
+
+@export How much of the land tax adjustment I paid the seller at settlement can be refunded (s 5A(3)(b))?
+GIVEN `the financial year` IS A NUMBER @desc The financial year of the settlement, named by the year in which it ends (2025/2026 is 2026)
+      `I have the gazetted thresholds for the year` IS A BOOLEAN @desc Whether you have the land tax thresholds the Commissioner published in the Gazette for the year (s 8A(7))
+      `threshold A` IS A NUMBER @desc Threshold A for the year from the Gazette notice, in dollars
+      `threshold B` IS A NUMBER @desc Threshold B for the year from the Gazette notice, in dollars
+      `threshold C` IS A NUMBER @desc Threshold C for the year from the Gazette notice, in dollars
+      `threshold D` IS A NUMBER @desc Threshold D for the year from the Gazette notice, in dollars
+      `the rates were changed after 1 July 2023` IS A BOOLEAN @desc Whether the Act's Schedule 1 rates ($0.50, $1.00, $2.00, $2.40 per $100) were changed for the year by an amendment after 1 July 2023 (check legislation.sa.gov.au; applies from 2024/2025)
+      `rate over A` IS A NUMBER @desc If changed: dollars per $100 over Threshold A
+      `rate over B` IS A NUMBER @desc If changed: dollars per $100 over Threshold B
+      `rate over C` IS A NUMBER @desc If changed: dollars per $100 over Threshold C
+      `rate over D` IS A NUMBER @desc If changed: dollars per $100 over Threshold D
+      `the taxable value of my new home` IS A NUMBER @desc The taxable value (site value) of the home you bought, in dollars
+      `the land tax adjustment I paid the seller` IS A NUMBER @desc The amount you paid the seller at settlement as an adjustment of land tax, in dollars
+      `the date of settlement` IS A DATE @desc The date of settlement (ISO 8601)
+GIVETH A `Land tax answer`
+DECIDE `How much of the land tax adjustment I paid can be refunded` IS
+    `the s 5A(3)(b) refund of an amount representing land tax` `the financial year`
+        (`the thresholds from my answers` `I have the gazetted thresholds for the year` `threshold A` `threshold B` `threshold C` `threshold D`)
+        (`the rates from my answers` `the rates were changed after 1 July 2023` `rate over A` `rate over B` `rate over C` `rate over D`)
+        `the taxable value of my new home` `the land tax adjustment I paid the seller` `the date of settlement`
+
+@export By what date must I apply for a refund under s 5A, at the latest (s 5A(4)(c))?
+GIVEN `the date of the assessment` IS A DATE @desc The date of the assessment of the land tax you want refunded (ISO 8601)
+GIVETH A DATE
+DECIDE `By what date must I apply for a s 5A refund` IS
+    `years after` `the years after the assessment within which an application may be made` `the date of the assessment`
+
+§§ `Retirement villages, relocatable home parks and special disability trusts (s 5(10)(e), (f), (h), (12a))`
+
+-- Arises only if you own land in a retirement village or a relocatable home park, or hold land as trustee of a special
+-- disability trust.
+
+@export Is my land in a retirement village exempt from land tax (s 5(10)(e))?
+GIVEN `what the land is` IS A `Retirement village land` @desc One of: a residential unit occupied under a residence contract by a natural person as principal place of residence; a residential unit available under a residence contract and likely to be so occupied within the next 12 months; land appurtenant to such a residential unit; a facility under the retirement village scheme for the exclusive use of residents and their guests; other land in the village
+GIVETH AN `Exemption`
+DECIDE `Is my retirement village land exempt` IS
+    `the retirement village exemption for` `what the land is`
+
+@export Is my land in a relocatable home park for retired people exempt from land tax (s 5(10)(f))?
+GIVEN `the park has 2 or more sites for relocatable homes` IS A BOOLEAN @desc Whether the land comprises home sites used, or to be used, for 2 or more relocatable homes (not caravans or motor homes that can be registered)
+      `the sites are let mainly to retired people over 55` IS A BOOLEAN @desc Whether rights to occupy the sites are granted, by lease or licence, predominantly to people over 55 who have retired from full-time employment
+      `what the land is` IS A `Relocatable home park land` @desc One of: a site with a relocatable home owned and occupied by a natural person as principal place of residence; a site likely to have such a home within the next 12 months; land appurtenant to such a site; a facility provided by the owner for the exclusive use of residents and their guests; other land in the park
+GIVETH AN `Exemption`
+DECIDE `Is my relocatable home park land exempt` IS
+    `the relocatable home park exemption for`
+        (`it is a retired persons' relocatable home park` `the park has 2 or more sites for relocatable homes` `the sites are let mainly to retired people over 55`)
+        `what the land is`
+
+@export I hold land as trustee of a special disability trust: is it exempt from land tax (s 5(10)(h))?
+GIVEN `I own the land as trustee of a special disability trust` IS A BOOLEAN @desc Whether you own the land as trustee of a special disability trust under the Social Security Act 1991 or the Veterans' Entitlements Act 1986 (Cth)
+      `the Commissioner is satisfied it is the home of the trust's principal beneficiary` IS A BOOLEAN @desc Whether the Commissioner is satisfied the land is the principal place of residence of the trust's principal beneficiary
+GIVETH AN `Exemption`
+DECIDE `Is my special disability trust land exempt` IS
+    `the special disability trust exemption` `I own the land as trustee of a special disability trust` `the Commissioner is satisfied it is the home of the trust's principal beneficiary`
+
+@export As trustee of a special disability trust that bought the land this year, can the year's land tax be waived or refunded (s 5(12a))?
+GIVEN `I acquired the land as trustee during the year` IS A BOOLEAN @desc Whether you acquired the land as trustee of the special disability trust during the financial year
+      `the Commissioner is satisfied it is or will be the beneficiary's home this year` IS A BOOLEAN @desc Whether the Commissioner is satisfied the land is or will be the principal place of residence of the principal beneficiary during the year
+      `the date of the assessment` IS A DATE @desc The date of the assessment of the land tax (ISO 8601)
+      `the date I apply` IS A DATE @desc The date you make (or will make) the application (ISO 8601)
+GIVETH A BOOLEAN
+DECIDE `Can the land tax on my special disability trust land be waived or refunded` IF
+    `a s 5(12a) waiver or refund is open to the trustee` `I acquired the land as trustee during the year` `the Commissioner is satisfied it is or will be the beneficiary's home this year` `the date of the assessment` `the date I apply`
+
+§§ `How much land tax? (ss 6, 7, 8A, 8B, Schedule 1)`
+
+@export What are the land tax thresholds for the financial year (s 8A; the amounts the Act states, otherwise the Gazette notice)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it ends (2025/2026 is 2026)
+      `I have the gazetted thresholds for the year` IS A BOOLEAN @desc Whether you have the land tax thresholds the Commissioner published in the Gazette for the year (s 8A(7))
+      `threshold A` IS A NUMBER @desc Threshold A for the year from the Gazette notice, in dollars
+      `threshold B` IS A NUMBER @desc Threshold B for the year from the Gazette notice, in dollars
+      `threshold C` IS A NUMBER @desc Threshold C for the year from the Gazette notice, in dollars
+      `threshold D` IS A NUMBER @desc Threshold D for the year from the Gazette notice, in dollars
+GIVETH A `Thresholds answer`
+DECIDE `What are the land tax thresholds for the year` IS
+    IF `the financial year` LESS THAN `the first year with a Schedule 1 scale`
+    THEN `the thresholds are not covered` `the assessment year is before 2020/2021: Schedule 1 (inserted from 1 July 2020) has no scale for it, and the earlier scales are not in the deposited text`
+    ELSE CONSIDER `the thresholds for` `the financial year` (`the thresholds from my answers` `I have the gazetted thresholds for the year` `threshold A` `threshold B` `threshold C` `threshold D`)
+         WHEN JUST `t` THEN `the thresholds for the year are` `t`
+         WHEN NOTHING THEN `the thresholds are not covered` `the thresholds for the assessment year were not supplied: the Commissioner publishes them by Gazette notice (s 8A(7)), and the s 8A(2a), (3) and (3b) formulas are missing from the deposited text`
+
+@export How much land tax is charged on this taxable value for the financial year (s 8A, Schedule 1 Part 2, s 6)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it ends (2025/2026 is 2026)
+      `I have the gazetted thresholds for the year` IS A BOOLEAN @desc Whether you have the land tax thresholds the Commissioner published in the Gazette for the year (s 8A(7))
+      `threshold A` IS A NUMBER @desc Threshold A for the year from the Gazette notice, in dollars
+      `threshold B` IS A NUMBER @desc Threshold B for the year from the Gazette notice, in dollars
+      `threshold C` IS A NUMBER @desc Threshold C for the year from the Gazette notice, in dollars
+      `threshold D` IS A NUMBER @desc Threshold D for the year from the Gazette notice, in dollars
+      `the rates were changed after 1 July 2023` IS A BOOLEAN @desc Whether the Act's Schedule 1 rates ($0.50, $1.00, $2.00, $2.40 per $100) were changed for the year by an amendment after 1 July 2023 (check legislation.sa.gov.au; applies from 2024/2025)
+      `rate over A` IS A NUMBER @desc If changed: dollars per $100 over Threshold A
+      `rate over B` IS A NUMBER @desc If changed: dollars per $100 over Threshold B
+      `rate over C` IS A NUMBER @desc If changed: dollars per $100 over Threshold C
+      `rate over D` IS A NUMBER @desc If changed: dollars per $100 over Threshold D
+      `the taxable value` IS A NUMBER @desc The taxable value (or aggregate taxable value) of the land, in dollars
+GIVETH A `Land tax answer`
+DECIDE `How much land tax is charged on this taxable value` IS
+    `the land tax payable for the year` `the financial year`
+        (`the thresholds from my answers` `I have the gazetted thresholds for the year` `threshold A` `threshold B` `threshold C` `threshold D`)
+        (`the rates from my answers` `the rates were changed after 1 July 2023` `rate over A` `rate over B` `rate over C` `rate over D`)
+        `the taxable value`
+
+@export How much land tax must I pay this year on the land I own alone, my home included (ss 5, 6, 7, 8B, Schedule 1)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it ends (2025/2026 is 2026)
+      `I have the gazetted thresholds for the year` IS A BOOLEAN @desc Whether you have the land tax thresholds the Commissioner published in the Gazette for the year (s 8A(7))
+      `threshold A` IS A NUMBER @desc Threshold A for the year from the Gazette notice, in dollars
+      `threshold B` IS A NUMBER @desc Threshold B for the year from the Gazette notice, in dollars
+      `threshold C` IS A NUMBER @desc Threshold C for the year from the Gazette notice, in dollars
+      `threshold D` IS A NUMBER @desc Threshold D for the year from the Gazette notice, in dollars
+      `the rates were changed after 1 July 2023` IS A BOOLEAN @desc Whether the Act's Schedule 1 rates ($0.50, $1.00, $2.00, $2.40 per $100) were changed for the year by an amendment after 1 July 2023 (check legislation.sa.gov.au; applies from 2024/2025)
+      `rate over A` IS A NUMBER @desc If changed: dollars per $100 over Threshold A
+      `rate over B` IS A NUMBER @desc If changed: dollars per $100 over Threshold B
+      `rate over C` IS A NUMBER @desc If changed: dollars per $100 over Threshold C
+      `rate over D` IS A NUMBER @desc If changed: dollars per $100 over Threshold D
+      `the site value of my home` IS A NUMBER @desc The site value of the home you own alone at midnight on 30 June before the year, in dollars (0 if you own no home alone)
+      `my home is my principal place of residence` IS A BOOLEAN @desc Whether, at midnight on 30 June before the year, it was your principal place of residence
+      `the buildings are predominantly residential` IS A BOOLEAN @desc Whether the buildings on the home's land have a predominantly residential character
+      `the buildings are a hotel, motel or serviced holiday apartments` IS A BOOLEAN @desc Whether the buildings are used for a hotel, motel, set of serviced holiday apartments or similar accommodation
+      `percentage of floor area used for business` IS A NUMBER @desc The part of the home's total floor area used for a business or commercial purpose, as a percentage (leave out primary production; for a hotel, motel or serviced apartments, the area used for that accommodation)
+      `percentage of floor area that is my home` IS A NUMBER @desc For a hotel, motel or serviced apartments: the part of the total floor area used as your principal place of residence, as a percentage
+      `the Commissioner has granted the exemption and it is in force` IS A BOOLEAN @desc Whether the Commissioner has granted the home's exemption (on your application or otherwise) and it remains in force
+      `the total site value of my other land` IS A NUMBER @desc The total site value of all the other land you own alone and that is not exempt (rentals, holiday homes, vacant blocks), in dollars
+GIVETH A `Land tax answer`
+DECIDE `How much land tax must I pay on the land I own alone` IS
+    `the land tax payable for the year` `the financial year`
+        (`the thresholds from my answers` `I have the gazetted thresholds for the year` `threshold A` `threshold B` `threshold C` `threshold D`)
+        (`the rates from my answers` `the rates were changed after 1 July 2023` `rate over A` `rate over B` `rate over C` `rate over D`)
+        (`the aggregate taxable value of`
+            (LIST `Parcel` OF `the site value of my home`, `the home's exemption`
+                  `Parcel` OF `the total site value of my other land`, `no exemption on these grounds`))
+    WHERE
+        `the home's exemption` MEANS
+            IF `the Commissioner has granted the exemption and it is in force`
+            THEN `the residential land exemption for the home` (`my home from my answers` `my home is my principal place of residence` `the buildings are predominantly residential` `the buildings are a hotel, motel or serviced holiday apartments` `percentage of floor area used for business` `percentage of floor area that is my home`)
+            ELSE `no exemption on these grounds`
+
+§§ `Land I own with others (s 9)`
+
+-- Arises only if you own land together with someone else.
+
+@export How much land tax is on the joint assessment of the land I own with others (s 9(4))?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it ends (2025/2026 is 2026)
+      `I have the gazetted thresholds for the year` IS A BOOLEAN @desc Whether you have the land tax thresholds the Commissioner published in the Gazette for the year (s 8A(7))
+      `threshold A` IS A NUMBER @desc Threshold A for the year from the Gazette notice, in dollars
+      `threshold B` IS A NUMBER @desc Threshold B for the year from the Gazette notice, in dollars
+      `threshold C` IS A NUMBER @desc Threshold C for the year from the Gazette notice, in dollars
+      `threshold D` IS A NUMBER @desc Threshold D for the year from the Gazette notice, in dollars
+      `the rates were changed after 1 July 2023` IS A BOOLEAN @desc Whether the Act's Schedule 1 rates ($0.50, $1.00, $2.00, $2.40 per $100) were changed for the year by an amendment after 1 July 2023 (check legislation.sa.gov.au; applies from 2024/2025)
+      `rate over A` IS A NUMBER @desc If changed: dollars per $100 over Threshold A
+      `rate over B` IS A NUMBER @desc If changed: dollars per $100 over Threshold B
+      `rate over C` IS A NUMBER @desc If changed: dollars per $100 over Threshold C
+      `rate over D` IS A NUMBER @desc If changed: dollars per $100 over Threshold D
+      `the taxable value of the land we own together` IS A NUMBER @desc The taxable value of the land owned jointly or in common, after any exemption, in dollars (0 if a co-owner's residential exemption covers it all)
+GIVETH A `Land tax answer`
+DECIDE `How much land tax is on our joint assessment` IS
+    `the land tax on the joint assessment` `the financial year`
+        (`the thresholds from my answers` `I have the gazetted thresholds for the year` `threshold A` `threshold B` `threshold C` `threshold D`)
+        (`the rates from my answers` `the rates were changed after 1 July 2023` `rate over A` `rate over B` `rate over C` `rate over D`)
+        `the taxable value of the land we own together`
+
+@export How much land tax is on my own separate assessment as a co-owner, after the double-taxation deduction (s 9(6), (8), (9))?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it ends (2025/2026 is 2026)
+      `I have the gazetted thresholds for the year` IS A BOOLEAN @desc Whether you have the land tax thresholds the Commissioner published in the Gazette for the year (s 8A(7))
+      `threshold A` IS A NUMBER @desc Threshold A for the year from the Gazette notice, in dollars
+      `threshold B` IS A NUMBER @desc Threshold B for the year from the Gazette notice, in dollars
+      `threshold C` IS A NUMBER @desc Threshold C for the year from the Gazette notice, in dollars
+      `threshold D` IS A NUMBER @desc Threshold D for the year from the Gazette notice, in dollars
+      `the rates were changed after 1 July 2023` IS A BOOLEAN @desc Whether the Act's Schedule 1 rates ($0.50, $1.00, $2.00, $2.40 per $100) were changed for the year by an amendment after 1 July 2023 (check legislation.sa.gov.au; applies from 2024/2025)
+      `rate over A` IS A NUMBER @desc If changed: dollars per $100 over Threshold A
+      `rate over B` IS A NUMBER @desc If changed: dollars per $100 over Threshold B
+      `rate over C` IS A NUMBER @desc If changed: dollars per $100 over Threshold C
+      `rate over D` IS A NUMBER @desc If changed: dollars per $100 over Threshold D
+      `my share of the land we own together, percent` IS A NUMBER @desc Your individual interest in the jointly owned land, as a percentage
+      `the taxable value of the land we own together` IS A NUMBER @desc The taxable value of the jointly owned land, after any exemption, in dollars
+      `the taxable value of the land I own alone` IS A NUMBER @desc The total taxable value of the land you own alone, after any exemption, in dollars
+      `the taxable value of my shares of other land I own with others` IS A NUMBER @desc The total of your shares of the taxable value of any other land you own with others, in dollars
+      `I know the double-taxation deduction on my assessment` IS A BOOLEAN @desc Whether you know the s 9(8) deduction shown on your separate assessment (its formula is missing from the deposited text)
+      `the double-taxation deduction` IS A NUMBER @desc If known: the s 9(8) deduction on your separate assessment, in dollars
+GIVETH A `Land tax answer`
+DECIDE `How much land tax is on my separate assessment as a co-owner` IS
+    `the land tax on the separate assessment` `the financial year`
+        (`the thresholds from my answers` `I have the gazetted thresholds for the year` `threshold A` `threshold B` `threshold C` `threshold D`)
+        (`the rates from my answers` `the rates were changed after 1 July 2023` `rate over A` `rate over B` `rate over C` `rate over D`)
+        (`the taxable value on the separate assessment` `my share of the land we own together, percent` `the taxable value of the land we own together` `the taxable value of the land I own alone` `the taxable value of my shares of other land I own with others`)
+        (IF `I know the double-taxation deduction on my assessment` THEN JUST `the double-taxation deduction` ELSE NOTHING)
+
+@export What is the most my separate assessment as a co-owner can be, before the double-taxation deduction (s 9(6), s 6)?
+GIVEN `the financial year` IS A NUMBER @desc The financial year, named by the year in which it ends (2025/2026 is 2026)
+      `I have the gazetted thresholds for the year` IS A BOOLEAN @desc Whether you have the land tax thresholds the Commissioner published in the Gazette for the year (s 8A(7))
+      `threshold A` IS A NUMBER @desc Threshold A for the year from the Gazette notice, in dollars
+      `threshold B` IS A NUMBER @desc Threshold B for the year from the Gazette notice, in dollars
+      `threshold C` IS A NUMBER @desc Threshold C for the year from the Gazette notice, in dollars
+      `threshold D` IS A NUMBER @desc Threshold D for the year from the Gazette notice, in dollars
+      `the rates were changed after 1 July 2023` IS A BOOLEAN @desc Whether the Act's Schedule 1 rates ($0.50, $1.00, $2.00, $2.40 per $100) were changed for the year by an amendment after 1 July 2023 (check legislation.sa.gov.au; applies from 2024/2025)
+      `rate over A` IS A NUMBER @desc If changed: dollars per $100 over Threshold A
+      `rate over B` IS A NUMBER @desc If changed: dollars per $100 over Threshold B
+      `rate over C` IS A NUMBER @desc If changed: dollars per $100 over Threshold C
+      `rate over D` IS A NUMBER @desc If changed: dollars per $100 over Threshold D
+      `my share of the land we own together, percent` IS A NUMBER @desc Your individual interest in the jointly owned land, as a percentage
+      `the taxable value of the land we own together` IS A NUMBER @desc The taxable value of the jointly owned land, after any exemption, in dollars
+      `the taxable value of the land I own alone` IS A NUMBER @desc The total taxable value of the land you own alone, after any exemption, in dollars
+      `the taxable value of my shares of other land I own with others` IS A NUMBER @desc The total of your shares of the taxable value of any other land you own with others, in dollars
+GIVETH A `Land tax answer`
+DECIDE `What is the most my separate assessment can be` IS
+    `the land tax payable for the year` `the financial year`
+        (`the thresholds from my answers` `I have the gazetted thresholds for the year` `threshold A` `threshold B` `threshold C` `threshold D`)
+        (`the rates from my answers` `the rates were changed after 1 July 2023` `rate over A` `rate over B` `rate over C` `rate over D`)
+        (`the taxable value on the separate assessment` `my share of the land we own together, percent` `the taxable value of the land we own together` `the taxable value of the land I own alone` `the taxable value of my shares of other land I own with others`)
+
+§§ `Paying, and telling the Commissioner (ss 5(7), 5(8), 5(9), 19)`
+
+@export By what date must I pay the land tax in my assessment (s 19(1))?
+GIVEN `the date the assessment was served` IS A DATE @desc The date the assessment was served on you (or, for jointly owned land, on any one of the owners), ISO 8601
+GIVETH A DATE
+DECIDE `By what date must I pay my land tax` IS
+    `days after` `the days to pay land tax after service of the assessment` `the date the assessment was served`
+
+@export The exemption notice I received states wrong facts: by what date must I tell the Commissioner (s 5(7))?
+GIVEN `the facts stated in the notice are wrong or inaccurate` IS A BOOLEAN @desc Whether the factual basis of the exemption, as the Commissioner's notice states it, is wrong or inaccurate
+      `the date I received the notice` IS A DATE @desc The date you received the exemption notice (ISO 8601)
+GIVETH A `Notice deadline`
+DECIDE `By what date must I tell the Commissioner my exemption notice is wrong` IS
+    IF `the facts stated in the notice are wrong or inaccurate`
+    THEN `notify the Commissioner in writing by` (`days after` `the days to notify an error in the exemption notice` `the date I received the notice`)
+    ELSE `no duty to notify arises`
+
+@export My home's exemption should end or be reduced: must I tell the Commissioner straight away (s 5(8))?
+GIVEN `my land is exempt wholly or partly` IS A BOOLEAN @desc Whether your land has been granted a whole or partial exemption
+      `the grounds for the exemption no longer exist` IS A BOOLEAN @desc Whether circumstances have changed so that proper grounds for the exemption no longer exist (for example, you moved out or let the home)
+      `the grounds now support only a smaller exemption` IS A BOOLEAN @desc Whether circumstances have changed so that only a lesser exemption is justified (for example, more of the floor area is now used for business)
+GIVETH A BOOLEAN
+DECIDE `Must I tell the Commissioner my exemption should end or be reduced` IF
+    `the owner must forthwith inform the Commissioner in writing under s 5(8)` `my land is exempt wholly or partly` `the grounds for the exemption no longer exist` `the grounds now support only a smaller exemption`
+
+@export What is the most I can be fined for not telling the Commissioner about a wrong exemption notice or a change in my circumstances (ss 5(7), 5(9))?
+GIVETH A NUMBER
+DECIDE `What is the most I can be fined for not telling the Commissioner` IS
+    `the maximum penalty under s 5(7) or s 5(9)`
+
+@export What expiation fee can I be offered for not telling the Commissioner about a wrong exemption notice or a change (ss 5(7), 5(9))?
+GIVETH A NUMBER
+DECIDE `What expiation fee applies for not telling the Commissioner` IS
+    `the expiation fee under s 5(7) or s 5(9)`
+
+@export Is my failure to give the Commissioner correct information about my exemption a tax default, carrying interest and penalty tax (s 19(2))?
+GIVEN `I was assessed too little because of an exemption, waiver or refund that should not have applied` IS A BOOLEAN @desc Whether you were not assessed, or assessed for too little, because an exemption applied (or went on) that should not have, or a waiver or refund was given that should not have been
+      `that was because of wrong or missing information from me` IS A BOOLEAN @desc Whether that was due, wholly or partly, to false, misleading or incomplete information given to the Commissioner, or information or a notification you should have given and did not
+GIVETH A BOOLEAN
+DECIDE `Is my failure to inform the Commissioner a tax default` IF
+    `there is a tax default under s 19(2)` `I was assessed too little because of an exemption, waiver or refund that should not have applied` `that was because of wrong or missing information from me`
+
+§§ `Objecting and appealing (Taxation Administration Act 1996, ss 84-95)`
+
+-- Arises only if you disagree with an assessment of land tax or another decision of the Commissioner.
+
+@export By what date must I lodge my objection to a land tax assessment with the Minister (TAA s 86)?
+GIVEN `the date the assessment was served` IS A DATE @desc The date the assessment was served on you (or, for another decision, the date you were notified of it), ISO 8601
+GIVETH A DATE
+DECIDE `By what date must I lodge my objection` IS
+    `days after` `the days to object` `the date the assessment was served`
+
+@export My objection is late: until what date can the Minister still let me lodge it (TAA s 87)?
+GIVEN `the date the assessment was served` IS A DATE @desc The date the assessment was served on you (or, for another decision, the date you were notified of it), ISO 8601
+GIVETH A DATE
+DECIDE `Until what date can the Minister allow my late objection` IS
+    `years after` (`the months within which the Minister may allow a late objection` DIVIDED BY 12) `the date the assessment was served`
+
+@export How much of a reassessment can I object to (TAA s 84)?
+GIVEN `it is a reassessment` IS A BOOLEAN @desc Whether the decision you object to is a reassessment of an earlier assessment
+      `the amount assessed before` IS A NUMBER @desc The land tax in the earlier assessment, in dollars (0 if none)
+      `the amount assessed now` IS A NUMBER @desc The land tax in the assessment you object to, in dollars
+GIVETH A NUMBER
+DECIDE `How much of the assessment can I object to` IS
+    `the amount open to objection` `it is a reassessment` `the amount assessed before` `the amount assessed now`
+
+@export Does my objection stop the land tax being collected in the meantime (TAA s 91)?
+GIVETH A BOOLEAN
+DECIDE `Does my objection stop the land tax being collected` IF
+    `an objection suspends recovery of the tax`
+
+@export Can I appeal to the Supreme Court now (TAA ss 92, 93)?
+GIVEN `the Minister has decided my objection and served notice` IS A BOOLEAN @desc Whether the Minister has determined your objection and served notice of the determination on you
+      `the Minister's decision` IS AN `Objection outcome` @desc If decided, one of: the objection is allowed in full; the objection is allowed in part only; the objection is disallowed
+      `days since I lodged the objection, not counting suspensions` IS A NUMBER @desc How many days have passed since you lodged the objection, leaving out any period the Minister suspended it while waiting for information you were asked for
+      `the land tax assessed` IS A NUMBER @desc The tax the appeal is about, as assessed, without interest or penalty tax, in dollars
+      `the amount of it I have paid` IS A NUMBER @desc How much of that tax you have paid, in dollars
+      `the Minister lets me appeal without paying half` IS A BOOLEAN @desc Whether the Minister has permitted you to appeal without first paying half the tax
+GIVETH A BOOLEAN
+DECIDE `Can I appeal to the Supreme Court now` IF
+        `the objector has a right of appeal under s 92` `the Minister has decided my objection and served notice` `the Minister's decision` `days since I lodged the objection, not counting suspensions`
+    AND `s 93 does not bar the appeal` `the land tax assessed` `the amount of it I have paid` `the Minister lets me appeal without paying half`
+
+@export By what date must I appeal to the Supreme Court after the Minister decides my objection (TAA s 94(1))?
+GIVEN `the date the Minister's decision was served on me` IS A DATE @desc The date notice of the Minister's determination of your objection was served on you (ISO 8601)
+GIVETH A DATE
+DECIDE `By what date must I appeal` IS
+    `days after` `the days to appeal` `the date the Minister's decision was served on me`
+
+@export The Minister has not decided my objection within 90 days: on what date at the earliest may I appeal after giving the Commissioner written notice (TAA s 94(2))?
+GIVEN `the date I give the Commissioner written notice of my appeal` IS A DATE @desc The date you give the Commissioner written notice of your intention to appeal (ISO 8601)
+GIVETH A DATE
+DECIDE `On what date at the earliest may I appeal an undecided objection` IS
+    `days after` `the days of notice to the Commissioner before an appeal on an undetermined objection` `the date I give the Commissioner written notice of my appeal`
+
+@export My appeal is late: until what date can the Supreme Court still allow it (TAA s 95)?
+GIVEN `the date the Minister's decision was served on me` IS A DATE @desc The date notice of the Minister's determination of your objection was served on you (ISO 8601)
+GIVETH A DATE
+DECIDE `Until what date can the Supreme Court allow my late appeal` IS
+    `years after` (`the months within which the Supreme Court may allow a late appeal` DIVIDED BY 12) `the date the Minister's decision was served on me`
+
+§§ `Interest and penalty tax (Taxation Administration Act 1996, Part 5)`
+
+-- Arises only if land tax was not paid in full by the due date.
+
+@export How much interest is charged on my unpaid land tax (TAA ss 25-27: the market rate plus 8% a year, daily, nil under $20)?
+GIVEN `the land tax unpaid` IS A NUMBER @desc The amount of land tax (and any penalty tax) unpaid after the due date, in dollars
+      `the market rate, percent a year` IS A NUMBER @desc The market rate for the financial year: the May average of the daily 90-day Bank Accepted Bill Rate, rounded to 2 decimal places, or the rate the Minister gazetted
+      `the last day for payment` IS A DATE @desc The last day for paying the tax (ISO 8601)
+      `the day I paid` IS A DATE @desc The day you paid it, or will pay it (ISO 8601)
+GIVETH A NUMBER
+DECIDE `How much interest is charged on my unpaid land tax` IS
+    `the interest on the tax default` `the land tax unpaid` `the market rate, percent a year` `the last day for payment` `the day I paid`
+
+@export How much penalty tax can I be charged on land tax I did not pay (TAA ss 30-32)?
+GIVEN `the land tax unpaid` IS A NUMBER @desc The amount of land tax unpaid by the due date, in dollars
+      `my default was deliberate` IS A BOOLEAN @desc Whether the failure to pay was deliberate, or you deliberately failed to inform or misled the Commissioner about the tax
+      `the Commissioner is satisfied I took reasonable care` IS A BOOLEAN @desc Whether the Commissioner is satisfied the default was not deliberate and did not come from any failure to take reasonable care
+      `I disclosed it in writing before any tax audit` IS A BOOLEAN @desc Whether you made a sufficient written disclosure of the default while not subject to a tax audit
+      `I disclosed it in writing during a tax audit` IS A BOOLEAN @desc Whether you made a sufficient written disclosure of the default while subject to a tax audit
+      `the Commissioner increased it for obstruction` IS A BOOLEAN @desc Whether the Commissioner has increased the penalty tax by 20% for obstructive conduct during a tax audit
+GIVETH A NUMBER
+DECIDE `How much penalty tax can I be charged` IS
+    `the penalty tax`
+        (`Penalty tax facts` WITH
+            `the amount of tax unpaid`                                                                   IS `the land tax unpaid`
+            `the tax default was deliberate`                                                             IS `my default was deliberate`
+            `the Commissioner is satisfied the default was not deliberate and not from a lack of reasonable care` IS `the Commissioner is satisfied I took reasonable care`
+            `a sufficient disclosure was made while not subject to a tax audit`                          IS `I disclosed it in writing before any tax audit`
+            `a sufficient disclosure was made while subject to a tax audit`                              IS `I disclosed it in writing during a tax audit`
+            `the Commissioner increases it for obstructive conduct during a tax audit`                   IS `the Commissioner increased it for obstruction`)
+
+@export By what date must I pay penalty tax (TAA s 33: within the period the assessment specifies)?
+GIVEN `the date the assessment was served` IS A DATE @desc The date the assessment imposing the penalty tax was served on you (ISO 8601)
+      `the days the assessment allows` IS A NUMBER @desc The number of days the assessment specifies for paying the penalty tax
+GIVETH A DATE
+DECIDE `By what date must I pay penalty tax` IS
+    `days after` `the days the assessment allows` `the date the assessment was served`
