@@ -16,10 +16,41 @@ by the Office of the Chief Parliamentary Counsel (OCPC).
 - **Source**: https://www.legislation.vic.gov.au/in-force/statutory-rules/land-tax-regulations-2025
 - **Current version at indexing**: version 001, effective 16 Dec 2025 (Statutory Rule No. 149/2025).
 
-## Consequence for this subject
+## Owner's ruling, 24 October 2026
 
-**No text is deposited here.** Do not deposit Victorian statute text, and do not quote it in an
-encoding, without written permission from the Office of the Chief Parliamentary Counsel
-(ocpc@ocpc.vic.gov.au). Canon's inert style quotes the statute inline, which is reproduction.
-This directory holds metadata only until permission is obtained, and the permission, when granted,
-belongs in this file.
+The Victorian terms were put to Michael (the owner of Legalese Commons), with the warning that nothing could be
+deposited without permission. The terms were the Government Printer's notice at https://www.legislation.vic.gov.au/copyright
+(no reproduction except in accordance with the Copyright Act 1968; authorised electronic versions published "for personal
+use only"). On 24 October 2026 he answered, in chat:
+
+> "On NT, Vic and SA, yes please go ahead."
+
+The ruling: Legalese Commons may deposit Victorian legislation and quote it in L4 encodings, keeping the copyright
+notice, the Government Printer's attribution and a notice that the version is unofficial. The ruling is about the
+licence only. It does not lift robots.txt: nothing is fetched from a path that robots.txt disallows.
+
+## Consequence for this subject (from 24 October 2026)
+
+The licence question is settled by the ruling above: the text may be deposited and quoted in L4 encodings, keeping
+the copyright notice, the Government Printer's attribution and an unofficial-version notice. Until 24 October 2026
+this file said the text could not be deposited or quoted without the written permission of the Office of the Chief
+Parliamentary Counsel; the ruling replaces that.
+
+**No text is deposited yet, because of robots.txt.** The site shows no text of the instrument on its landing or
+version pages: the text is only in the authorised PDF and the Word file under `/sites/default/files/`, which are
+served from content.legislation.vic.gov.au. robots.txt on www.legislation.vic.gov.au disallows
+`/sites/default/files/*.pdf` and `*.doc` (read 2026-10-24T04:20:18Z), and robots.txt on content.legislation.vic.gov.au
+disallows everything (`User-agent: *`, `Disallow: /`, read 2026-10-24T04:29:38Z). Neither file was fetched.
+
+**Current version on 2026-10-24**: version 001, effective 16 Dec 2025 (In force), read from
+https://www.legislation.vic.gov.au/in-force/statutory-rules/land-tax-regulations-2025/001 at 2026-10-24T04:27:38Z.
+
+Files to save by hand into `C:\Users\micha\Downloads\vic-legislation`:
+
+- Word: https://content.legislation.vic.gov.au/sites/default/files/2025-12/25-149sr001.docx
+- Authorised PDF: https://content.legislation.vic.gov.au/sites/default/files/2025-12/25-149sra001-authorised.pdf
+
+Once they are saved, convert the Word file to plain text (checking it against the authorised PDF), put the
+copyright notice, the Government Printer's attribution and an unofficial-version notice at its head, deposit it in
+`registers/source-bundle/` with its `.meta.json`, and record the deposit here. Any formula or table lost in
+conversion goes in a `<source-id>.formulas.md` sidecar.
