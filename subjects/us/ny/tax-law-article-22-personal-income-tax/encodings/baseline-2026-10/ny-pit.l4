@@ -1,0 +1,500 @@
+IMPORT prelude
+IMPORT daydate
+
+-- New York Tax Law, Article 22 (personal income tax) -- what a resident individual meets for tax years 2026 and 2027:
+-- who is a resident (s 605(b)(1)); who must file and by when, and paying the tax (ss 651(a)(1), 652(a), (b)); New York
+-- adjusted gross income from federal AGI (s 612(a), and the subtractions in s 612(c)(3), (3-a), (3-c)); New York taxable
+-- income (s 611(a)); the deduction (s 613), the standard deduction (s 614) and exemptions (s 616); the tax (s 601(a), (b),
+-- (c), paragraph (1)(B)(vii) and (viii)); the household credit (s 606(b)), the Empire State child credit for 2026 and 2027
+-- (s 606(c-1)(1-a)(B), (C), (D), (2)) and the earned income credit (s 606(d)(1), (2)).
+--
+-- SEAT: the resident individual taxpayer. "Am I a New York resident? Must I file? By when? How much tax do I pay, and what
+-- credits do I get back?" Provisions addressed to the commissioner, the department or the comptroller are encoded as what
+-- they mean for that person: the department recomputes on the standard deduction if it is larger (s 613), refundable
+-- credits are paid out as an overpayment (s 606(c-1)(2), (d)(2)).
+--
+-- Edition: NYSenate.gov Open Legislation, each section's most recent revision as at 24 October 2026 (s 601: 2025-07-11;
+-- s 606: 2026-10-23; s 612: 2026-09-04; the others as listed in the .meta.json), deposited at
+-- ../../registers/source-bundle/ny-tax-law-art22-selected.txt.
+--
+-- Federal figures are inputs: federal adjusted gross income, the federal earned income credit (IRC s 32), whether a
+-- federal return is required, and the number of dependants (IRC s 151(c)). Read with the federal Internal Revenue Code
+-- encoding, subjects/us/internal-revenue-code-of-1986/ (cross-folder IMPORT is not possible in the stable l4).
+--
+-- NOT ENCODED (answers `not covered` where a question can reach it): nonresidents and part-year residents (s 601(e),
+-- Part III); the tax table benefit recapture (s 601(d), (d-1)), so a New York AGI over $100,000 is not covered; the
+-- separate tax on lump sum distributions (s 603); tax years other than 2026 and 2027; the Empire State child credit under
+-- s 606(c-1)(1) (tax years 2028 on); the itemized deduction (s 615) is an input; the s 612(b) additions and other s 612(c)
+-- subtractions are inputs; every other credit in s 606; the New York City and Yonkers taxes.
+--
+-- BASELINE ENCODING. Written from the individual's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `New York Tax Law Article 22 -- personal income tax of a resident individual`
+
+§§ `Questions this encoding does not cover`
+
+DECLARE `Why not covered` IS ONE OF
+    `only resident individuals are encoded; nonresident and part-year resident tax (s 601(e), Part III) is not`
+    `only tax years 2026 and 2027 are encoded (s 601(a)(1)(B)(vii), (viii))`
+    `New York adjusted gross income over $100,000 brings in the tax table benefit recapture (s 601(d-1)), which is not encoded`
+    `a lump sum distribution taxed under s 603 is not encoded`
+
+GIVEN a IS A TYPE
+GIVETH A TYPE
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+§§ `Filing status`
+
+-- The tables of s 601 are kept by status: (a) "resident married individuals filing joint returns and resident surviving
+-- spouses"; (b) "resident heads of households"; (c) "resident unmarried individuals, resident married individuals filing
+-- separate returns". Section 651(b) ties a married couple's New York status to their federal return. Status is a borrowed
+-- (federal) term, asked as a fact.
+DECLARE `Filing status` IS ONE OF
+    `single`
+    `married filing jointly`
+    `married filing separately`
+    `head of household`
+    `surviving spouse`
+
+§§ `s 605(b)(1) -- am I a resident`
+
+-- s 605(b)(1): "A resident individual means an individual: (A) who is domiciled in this state, unless (i) the taxpayer
+-- maintains no permanent place of abode in this state, maintains a permanent place of abode elsewhere, and spends in the
+-- aggregate not more than thirty days of the taxable year in this state, or (ii)" the 548-day foreign-presence test; "or (B)
+-- who maintains a permanent place of abode in this state and spends in the aggregate more than one hundred eighty-three days
+-- of the taxable year in this state, whether or not domiciled in this state ..., unless such individual is in active
+-- service in the armed forces of the United States." The 548-day test has three limbs counted over days abroad and days in
+-- the state; it is asked as one fact.
+GIVEN `domiciled in New York` IS A BOOLEAN
+      `keeps a permanent place of abode in New York` IS A BOOLEAN
+      `keeps a permanent place of abode elsewhere` IS A BOOLEAN
+      `days in New York in the year` IS A NUMBER
+      `meets the 548-day foreign presence test of s 605(b)(1)(A)(ii)` IS A BOOLEAN
+      `in active service in the US armed forces` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a resident individual` IF
+        (    `domiciled in New York`
+         AND (NOT (     (NOT `keeps a permanent place of abode in New York`)
+                    AND `keeps a permanent place of abode elsewhere`
+                    AND `days in New York in the year` AT MOST 30))
+         AND (NOT `meets the 548-day foreign presence test of s 605(b)(1)(A)(ii)`))
+    OR  (    `keeps a permanent place of abode in New York`
+         AND `days in New York in the year` GREATER THAN 183
+         AND (NOT `in active service in the US armed forces`))
+
+§§ `s 614 -- the New York standard deduction`
+
+-- s 614: (a) unmarried, not head of household or surviving spouse, and not "claimed as a dependent by another New York
+-- state taxpayer": $7,500; (b) "husband and wife whose New York taxable income is determined jointly or a surviving spouse":
+-- $15,000; (c) head of household: $10,500; (d) married filing separately: $7,500; (e) "a resident individual whose federal
+-- exemption amount is zero": $3,000 (read here as the individual who is another's dependant: NOTES.md finding 3). (f): "For
+-- taxable years beginning after two thousand seventeen, the standard deductions set forth in this section shall be the
+-- amounts set forth in this section adjusted by the cost of living adjustment prescribed in section six hundred one-a ...
+-- for tax years two thousand thirteen through two thousand seventeen." The adjustment was the commissioner's to compute
+-- (s 601-a(a)) and is not in the deposited text, so it is an input (NOTES.md finding 2).
+GIVEN `status` IS A `Filing status`
+      `can be claimed as a dependant by another taxpayer` IS A BOOLEAN
+GIVETH A NUMBER
+`the s 614 amount before the s 614(f) adjustment` MEANS
+    IF `can be claimed as a dependant by another taxpayer`
+    THEN 3000
+    ELSE CONSIDER `status`
+         WHEN `single`                    THEN 7500
+         WHEN `married filing jointly`    THEN 15000
+         WHEN `surviving spouse`          THEN 15000
+         WHEN `head of household`         THEN 10500
+         WHEN `married filing separately` THEN 7500
+
+GIVEN `status` IS A `Filing status`
+      `can be claimed as a dependant by another taxpayer` IS A BOOLEAN
+      `the s 614(f) cost-of-living increase` IS A NUMBER
+GIVETH A NUMBER
+`the New York standard deduction` MEANS
+    `the s 614 amount before the s 614(f) adjustment` `status` `can be claimed as a dependant by another taxpayer`
+    PLUS `the s 614(f) cost-of-living increase`
+
+§§ `s 651(a)(1), s 652 -- must I file, and by when`
+
+-- s 651(a): "On or before the fifteenth day of the fourth month following the close of the taxable year, an income tax
+-- return under this article shall be made and filed by or for: (1) every resident individual (A) required to file a federal
+-- income tax return for the taxable year, or (B) having federal adjusted gross income for the taxable year, increased by the
+-- modifications under subsection (b) of section six hundred twelve, in excess of four thousand dollars, or in excess of his
+-- New York standard deduction, if lower, or (C) having received during the taxable year a lump sum distribution any portion
+-- of which is subject to tax under section six hundred three".
+GIVEN `resident` IS A BOOLEAN
+      `required to file a federal return` IS A BOOLEAN
+      `federal adjusted gross income` IS A NUMBER
+      `s 612(b) additions` IS A NUMBER
+      `standard deduction` IS A NUMBER
+      `received a lump sum distribution taxed under s 603` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a resident must file a return under s 651(a)(1)` IF
+        `resident`
+    AND (    `required to file a federal return`
+         OR  (`federal adjusted gross income` PLUS `s 612(b) additions`) GREATER THAN (`the lesser of` 4000 `standard deduction`)
+         OR  `received a lump sum distribution taxed under s 603`)
+
+GIVEN x IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` x y MEANS IF x AT MOST y THEN x ELSE y
+
+GIVEN x IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the greater of` x y MEANS IF x AT LEAST y THEN x ELSE y
+
+-- s 651(a) and s 652(a): the return is due, and the tax must be paid "without assessment, notice or demand", "on or before
+-- the fifteenth day of the fourth month following the close of the taxable year" -- for a calendar year, 15 April of the next
+-- year (s 605(a)(1): the taxable year is the federal one). "(determined without regard to any extension of time for filing
+-- the return)": an extension of time to file does not extend the time to pay.
+GIVEN `tax year` IS A NUMBER
+GIVETH A DATE
+`the due date for the return and the tax` MEANS Date 15 4 (`tax year` PLUS 1)
+
+-- The parties named in Article 22 that the rules below need. The commissioner and the comptroller appear only as what they
+-- must do for the taxpayer.
+DECLARE `Party` IS ONE OF
+    `the taxpayer`
+    `the department`
+    `the comptroller`
+
+DECLARE `Act` IS ONE OF
+    `make and file the return`
+    `pay the tax due`
+    `recompute the tax on the standard deduction and notify the taxpayer`
+    `pay the excess credit as an overpayment`
+
+-- s 651(a), s 652(a): "an income tax return ... shall be made and filed"; "a person required to make and file a return ...
+-- shall, without assessment, notice or demand, pay any tax due thereon ... on or before the date fixed for filing". Time is
+-- counted in days from the close of the taxable year (31 December). Both duties run together (RAND).
+GIVEN `tax year` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`my duty to file and pay` `tax year` MEANS
+        (PARTY `the taxpayer`
+         MUST  `make and file the return`
+         WITHIN (`the due date for the return and the tax` `tax year`) MINUS (Date 31 12 `tax year`)
+         HENCE FULFILLED
+         LEST  BREACH BY `the taxpayer` BECAUSE "no return filed by the fifteenth day of the fourth month after the taxable year (s 651(a))")
+    RAND
+        (PARTY `the taxpayer`
+         MUST  `pay the tax due`
+         WITHIN (`the due date for the return and the tax` `tax year`) MINUS (Date 31 12 `tax year`)
+         HENCE FULFILLED
+         LEST  BREACH BY `the taxpayer` BECAUSE "tax not paid by the date fixed for filing, without regard to any extension (s 652(a))")
+
+-- s 652(b): where a qualified taxpayer "elects to have the commissioner compute the tax, the amount determined by the
+-- commissioner shall be paid (i) within ten days from the date of the issuance of a notice and demand therefor or (ii) on
+-- the date fixed for filing such return (determined without regard to any extension of time for filing), whichever is later."
+GIVEN `tax year` IS A NUMBER
+      `the day the notice and demand was issued` IS A DATE
+GIVETH A DATE
+`the last day to pay a tax the commissioner computed` MEANS
+    LET `ten days after the notice` MEANS `the day the notice and demand was issued` PLUS 10
+    IN  IF `ten days after the notice` AT LEAST (`the due date for the return and the tax` `tax year`)
+        THEN `ten days after the notice`
+        ELSE `the due date for the return and the tax` `tax year`
+
+§§ `s 612 -- New York adjusted gross income`
+
+-- s 612(a): "The New York adjusted gross income of a resident individual means his federal adjusted gross income ... with
+-- the modifications specified in this section." (b) additions and most of (c) are inputs. Encoded subtractions:
+-- (c)(3) "(i) Pensions to officers and employees of this state, its subdivisions and agencies" and "(ii)" of the United
+-- States, "to the extent includible in gross income for federal income tax purposes";
+-- (c)(3-a) private pensions and annuities (and IRA and Keogh distributions) "received by an individual who has attained the
+-- age of fifty-nine and one-half ... but not in excess of twenty thousand dollars"; on a joint return "computed as if they
+-- were filing separate" returns, so each spouse has their own $20,000;
+-- (c)(3-c) "Social security benefits to the extent includible in gross income for federal income tax purposes pursuant to
+-- section eighty-six of the internal revenue code."
+-- (The $20,000 cap of (3-a) is shared with the (3-b) disability exclusion, which is not encoded.)
+GIVEN `age is at least 59 and a half` IS A BOOLEAN
+      `pensions and annuities in federal AGI` IS A NUMBER
+GIVETH A NUMBER
+`the s 612(c)(3-a) subtraction for one person` MEANS
+    IF `age is at least 59 and a half`
+    THEN `the lesser of` 20000 `pensions and annuities in federal AGI`
+    ELSE 0
+
+GIVEN `federal adjusted gross income` IS A NUMBER
+      `s 612(b) additions` IS A NUMBER
+      `New York and federal government pensions in federal AGI` IS A NUMBER
+      `my private pension subtraction` IS A NUMBER
+      `my spouse's private pension subtraction` IS A NUMBER
+      `social security benefits in federal AGI` IS A NUMBER
+      `other s 612(c) subtractions` IS A NUMBER
+GIVETH A NUMBER
+`New York adjusted gross income` MEANS
+      `federal adjusted gross income`
+    PLUS `s 612(b) additions`
+    MINUS (    `New York and federal government pensions in federal AGI`
+          PLUS `my private pension subtraction`
+          PLUS `my spouse's private pension subtraction`
+          PLUS `social security benefits in federal AGI`
+          PLUS `other s 612(c) subtractions`)
+
+§§ `ss 611, 613, 616 -- New York taxable income`
+
+-- s 613: "The New York deduction of a resident individual shall be his New York standard deduction unless he elects to
+-- deduct his New York itemized deduction ... If an individual taxpayer has elected to deduct his New York itemized
+-- deduction ..., but the department determines that the New York standard deduction ... is greater, the department shall
+-- recompute the taxpayer's tax liability ... using the New York standard deduction". So the deduction is the standard one,
+-- or, if itemized is elected, the greater of the two.
+GIVEN `standard deduction` IS A NUMBER
+      `elects the itemized deduction` IS A BOOLEAN
+      `New York itemized deduction` IS A NUMBER
+GIVETH A NUMBER
+`the New York deduction` MEANS
+    IF `elects the itemized deduction`
+    THEN `the greater of` `standard deduction` `New York itemized deduction`
+    ELSE `standard deduction`
+
+-- s 613: the department's duty where the elected itemized deduction is smaller. No time is set.
+GIVEN `standard deduction` IS A NUMBER
+      `New York itemized deduction` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`the department's duty to recompute on the standard deduction` `standard deduction` `New York itemized deduction` MEANS
+    IF `standard deduction` GREATER THAN `New York itemized deduction`
+    THEN PARTY `the department`
+         MUST  `recompute the tax on the standard deduction and notify the taxpayer`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- s 616(a): "a resident individual shall be allowed a New York exemption of one thousand dollars for each exemption for
+-- which he is entitled to a deduction for the taxable year under section one hundred fifty-one(c) of the Internal Revenue
+-- Code" -- s 151(c) is the dependants' exemption, so the taxpayer and spouse get none here (NOTES.md finding 4).
+GIVEN `number of dependants under IRC s 151(c)` IS A NUMBER
+GIVETH A NUMBER
+`the New York exemptions` MEANS 1000 TIMES `number of dependants under IRC s 151(c)`
+
+-- s 611(a): "The New York taxable income of a resident individual shall be his New York adjusted gross income less his New
+-- York deduction and New York exemptions". Not below zero.
+GIVEN `New York AGI` IS A NUMBER, `deduction` IS A NUMBER, `exemptions` IS A NUMBER
+GIVETH A NUMBER
+`New York taxable income` MEANS `the greater of` 0 (`New York AGI` MINUS `deduction` MINUS `exemptions`)
+
+§§ `s 601(a), (b), (c) -- the tax`
+
+-- Each table row: "Over $X ... $B plus R% of excess over $X". Rows are listed from the top down; the first row whose "over"
+-- figure the income exceeds gives the tax. The bottom row is "Not over ...: R% of the New York taxable income" (over 0).
+DECLARE `Table row` HAS
+    `over` IS A NUMBER
+    `base` IS A NUMBER
+    `rate` IS A NUMBER
+
+GIVEN `income` IS A NUMBER, `rows` IS A LIST OF `Table row`
+GIVETH A NUMBER
+`tax from a table` `income` `rows` MEANS
+    CONSIDER `rows`
+    WHEN EMPTY THEN 0
+    WHEN r FOLLOWED BY rest THEN
+        IF `income` GREATER THAN r's `over` OR rest EQUALS EMPTY
+        THEN r's `base` PLUS (r's `rate` TIMES (`income` MINUS r's `over`))
+        ELSE `tax from a table` `income` rest
+
+GIVEN o IS A NUMBER, b IS A NUMBER, p IS A NUMBER
+GIVETH A `Table row`
+`row` o b p MEANS `Table row` WITH `over` IS o, `base` IS b, `rate` IS p
+
+-- s 601(a)(1)(B)(vii), "For taxable years beginning after two thousand twenty-five and before two thousand twenty-seven":
+-- married filing jointly and surviving spouses.
+`table (a) 2026` MEANS LIST
+    `row` 25000000 2477939 (10.90%), `row` 5000000 417939 (10.30%), `row` 2155350 143430 (9.65%), `row` 323200 17928 (6.85%),
+    `row` 161550 8391 (5.90%), `row` 27900 1174 (5.40%), `row` 23600 953 (5.15%), `row` 17150 669 (4.40%), `row` 0 0 (3.90%)
+
+-- s 601(a)(1)(B)(viii), "after two thousand twenty-six and before two thousand thirty-three".
+`table (a) 2027` MEANS LIST
+    `row` 25000000 2477616 (10.90%), `row` 5000000 417616 (10.30%), `row` 2155350 143107 (9.65%), `row` 323200 17605 (6.85%),
+    `row` 161550 8229 (5.80%), `row` 27900 1146 (5.30%), `row` 23600 929 (5.05%), `row` 17150 652 (4.30%), `row` 0 0 (3.80%)
+
+-- s 601(b)(1)(B)(vii): heads of households.
+`table (b) 2026` MEANS LIST
+    `row` 25000000 2493894 (10.90%), `row` 5000000 433894 (10.30%), `row` 1616450 107381 (9.65%), `row` 269300 15101 (6.85%),
+    `row` 107650 5564 (5.90%), `row` 20900 879 (5.40%), `row` 17650 712 (5.15%), `row` 12800 499 (4.40%), `row` 0 0 (3.90%)
+
+-- s 601(b)(1)(B)(viii).
+`table (b) 2027` MEANS LIST
+    `row` 25000000 2493626 (10.90%), `row` 5000000 433626 (10.30%), `row` 1616450 107113 (9.65%), `row` 269300 14833 (6.85%),
+    `row` 107650 5457 (5.80%), `row` 20900 859 (5.30%), `row` 17650 695 (5.05%), `row` 12800 486 (4.30%), `row` 0 0 (3.80%)
+
+-- s 601(c)(1)(B)(vii): unmarried individuals and married individuals filing separately.
+`table (c) 2026` MEANS LIST
+    `row` 25000000 2509714 (10.90%), `row` 5000000 449714 (10.30%), `row` 1077550 71198 (9.65%), `row` 215400 12141 (6.85%),
+    `row` 80650 4191 (5.90%), `row` 13900 586 (5.40%), `row` 11700 473 (5.15%), `row` 8500 332 (4.40%), `row` 0 0 (3.90%)
+
+-- s 601(c)(1)(B)(viii).
+`table (c) 2027` MEANS LIST
+    `row` 25000000 2509499 (10.90%), `row` 5000000 449499 (10.30%), `row` 1077550 70983 (9.65%), `row` 215400 11926 (6.85%),
+    `row` 80650 4110 (5.80%), `row` 13900 572 (5.30%), `row` 11700 461 (5.05%), `row` 8500 323 (4.30%), `row` 0 0 (3.80%)
+
+GIVEN `status` IS A `Filing status`, `tax year` IS A NUMBER
+GIVETH A LIST OF `Table row`
+`the s 601 table` `status` `tax year` MEANS
+    CONSIDER `status`
+    WHEN `married filing jointly` THEN IF `tax year` EQUALS 2026 THEN `table (a) 2026` ELSE `table (a) 2027`
+    WHEN `surviving spouse`       THEN IF `tax year` EQUALS 2026 THEN `table (a) 2026` ELSE `table (a) 2027`
+    WHEN `head of household`      THEN IF `tax year` EQUALS 2026 THEN `table (b) 2026` ELSE `table (b) 2027`
+    OTHERWISE                          IF `tax year` EQUALS 2026 THEN `table (c) 2026` ELSE `table (c) 2027`
+
+GIVEN `tax year` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the tax year is encoded` IF `tax year` EQUALS 2026 OR `tax year` EQUALS 2027
+
+-- s 601(d-1): the supplemental "tax table benefit recapture" tax, every fraction of which has a numerator of "the excess of
+-- New York adjusted gross income for the taxable year over" an amount of at least one hundred thousand dollars. At or below
+-- $100,000 of New York AGI it is nil; above, it is not encoded.
+GIVEN `status` IS A `Filing status`, `tax year` IS A NUMBER, `New York AGI` IS A NUMBER, `taxable income` IS A NUMBER
+GIVETH AN `Answer` NUMBER
+`the s 601 tax` `status` `tax year` `New York AGI` `taxable income` MEANS
+    IF NOT (`the tax year is encoded` `tax year`)
+    THEN `not covered` `only tax years 2026 and 2027 are encoded (s 601(a)(1)(B)(vii), (viii))`
+    ELSE IF `New York AGI` GREATER THAN 100000
+         THEN `not covered` `New York adjusted gross income over $100,000 brings in the tax table benefit recapture (s 601(d-1)), which is not encoded`
+         ELSE `answered` (`tax from a table` `taxable income` (`the s 601 table` `status` `tax year`))
+
+§§ `s 606(b) -- the household credit`
+
+-- s 606(b)(3)(B): "Household" excludes "a taxpayer with respect to whom a deduction under subsection (c) of section one
+-- hundred fifty-one ... is allowable to another taxpayer": a dependant gets no household credit.
+-- (2)(A), for an individual "not married nor the head of a household nor a surviving spouse": by household gross income,
+-- not over $5,000: $75; to $6,000: $60; to $7,000: $50; to $20,000: $45; to $25,000: $40; to $28,000: $20; above: none.
+GIVEN `household gross income` IS A NUMBER
+GIVETH A NUMBER
+`the s 606(b)(2)(A) amount` `household gross income` MEANS
+    BRANCH
+        IF `household gross income` AT MOST 5000  THEN 75
+        IF `household gross income` AT MOST 6000  THEN 60
+        IF `household gross income` AT MOST 7000  THEN 50
+        IF `household gross income` AT MOST 20000 THEN 45
+        IF `household gross income` AT MOST 25000 THEN 40
+        IF `household gross income` AT MOST 28000 THEN 20
+        OTHERWISE 0
+
+-- (2)(B), for "any husband and wife, head of a household, or surviving spouse": a base amount "plus an amount equal to"
+-- $15 (to $20,000), $10 (over $20,000 to $25,000) or $5 (over $25,000 to $32,000) "multiplied by a number which is one less
+-- than the number of exemptions for which the taxpayer (or in the case of a husband and wife, taxpayers) is entitled to a
+-- deduction ... under subsections (b) and (c) of section one hundred fifty-one" (the taxpayer, the spouse, the dependants).
+GIVEN `household gross income` IS A NUMBER, `federal exemptions under IRC s 151(b) and (c)` IS A NUMBER
+GIVETH A NUMBER
+`the s 606(b)(2)(B) amount` `household gross income` `federal exemptions under IRC s 151(b) and (c)` MEANS
+    LET n MEANS `the greater of` 0 (`federal exemptions under IRC s 151(b) and (c)` MINUS 1)
+    IN BRANCH
+        IF `household gross income` AT MOST 5000  THEN 90 PLUS (15 TIMES n)
+        IF `household gross income` AT MOST 6000  THEN 75 PLUS (15 TIMES n)
+        IF `household gross income` AT MOST 7000  THEN 65 PLUS (15 TIMES n)
+        IF `household gross income` AT MOST 20000 THEN 60 PLUS (15 TIMES n)
+        IF `household gross income` AT MOST 22000 THEN 60 PLUS (10 TIMES n)
+        IF `household gross income` AT MOST 25000 THEN 50 PLUS (10 TIMES n)
+        IF `household gross income` AT MOST 28000 THEN 40 PLUS (5 TIMES n)
+        IF `household gross income` AT MOST 32000 THEN 20 PLUS (5 TIMES n)
+        OTHERWISE 0
+
+-- (1): the credit "shall not exceed the tax determined under subsections (a) through (d) of section six hundred one".
+-- (3)(A), (C): household gross income is the household's aggregate federal AGI, and for a husband and wife "the aggregate of
+-- their federal adjusted gross incomes ... irrespective of whether joint or separate New York income tax returns are filed.
+-- Provided, however, that a husband or wife who is required to file a separate New York income tax return shall be
+-- permitted one-half the credit otherwise allowed his or her household".
+GIVEN `status` IS A `Filing status`
+      `can be claimed as a dependant by another taxpayer` IS A BOOLEAN
+      `household gross income` IS A NUMBER
+      `federal exemptions under IRC s 151(b) and (c)` IS A NUMBER
+      `s 601 tax` IS A NUMBER
+GIVETH A NUMBER
+`the household credit` `status` `can be claimed as a dependant by another taxpayer` `household gross income` `federal exemptions under IRC s 151(b) and (c)` `s 601 tax` MEANS
+    IF `can be claimed as a dependant by another taxpayer`
+    THEN 0
+    ELSE `the lesser of` `s 601 tax`
+           (CONSIDER `status`
+            WHEN `single`                    THEN `the s 606(b)(2)(A) amount` `household gross income`
+            WHEN `married filing separately` THEN (`the s 606(b)(2)(B) amount` `household gross income` `federal exemptions under IRC s 151(b) and (c)`) DIVIDED BY 2
+            OTHERWISE                             `the s 606(b)(2)(B) amount` `household gross income` `federal exemptions under IRC s 151(b) and (c)`)
+
+§§ `s 606(c-1) -- the Empire State child credit, 2026 and 2027`
+
+-- (1-a)(D): "a qualifying child shall be an individual who: (i) is a child, sibling, or stepsibling of the taxpayer, or a
+-- descendent of any such relative; (ii) has the same principal place of abode as the taxpayer for more than one-half of the
+-- taxable year; (iii) has not attained age seventeen; (iv) has not provided over one-half of such individual's own support
+-- ...; (v) has not filed a joint return (other than only for a claim of refund) ...; and (vi) is a citizen or national of the
+-- United States, or an individual with an individual taxpayer identification number". (E) defines "child" (offspring,
+-- stepchild, eligible foster child, adopted or placed for adoption). The tie-breakers of (F) are not encoded.
+GIVEN `is my child, sibling or stepsibling, or a descendant of one` IS A BOOLEAN
+      `lived with me for more than half the year` IS A BOOLEAN
+      `age at the end of the year` IS A NUMBER
+      `provided over half of their own support` IS A BOOLEAN
+      `filed a joint return other than only to claim a refund` IS A BOOLEAN
+      `is a US citizen or national or has an ITIN` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a qualifying child under s 606(c-1)(1-a)(D)` IF
+        `is my child, sibling or stepsibling, or a descendant of one`
+    AND `lived with me for more than half the year`
+    AND `age at the end of the year` LESS THAN 17
+    AND (NOT `provided over half of their own support`)
+    AND (NOT `filed a joint return other than only to claim a refund`)
+    AND `is a US citizen or national or has an ITIN`
+
+-- (1-a)(B): "For taxable years beginning on and after January first, two thousand twenty-six, and before January first, two
+-- thousand twenty-eight, a resident taxpayer shall be allowed a credit ... equal to the sum of: (i) one thousand dollars
+-- times the number of qualifying children of the taxpayer aged three or younger, and (ii) five hundred dollars times the
+-- number of qualifying children of the taxpayer who have attained age four and not yet attained age seventeen."
+-- (C): "reduced (but not below zero) by sixteen dollars and fifty cents for each one thousand dollars by which the
+-- taxpayer's federal adjusted gross income exceeds the threshold amount": $110,000 married filing jointly; $75,000 single,
+-- head of household or surviving spouse; $55,000 married filing separately. "Each one thousand dollars" is read as each
+-- whole $1,000 of the excess (NOTES.md finding 6).
+GIVEN `status` IS A `Filing status`
+GIVETH A NUMBER
+`the s 606(c-1)(1-a)(C) threshold amount` `status` MEANS
+    CONSIDER `status`
+    WHEN `married filing jointly`    THEN 110000
+    WHEN `married filing separately` THEN 55000
+    OTHERWISE                             75000
+
+GIVEN `status` IS A `Filing status`
+      `federal adjusted gross income` IS A NUMBER
+      `qualifying children aged three or younger` IS A NUMBER
+      `qualifying children aged four to sixteen` IS A NUMBER
+GIVETH A NUMBER
+`the Empire State child credit for 2026 or 2027` `status` `federal adjusted gross income` `qualifying children aged three or younger` `qualifying children aged four to sixteen` MEANS
+    LET `full credit` MEANS (1000 TIMES `qualifying children aged three or younger`) PLUS (500 TIMES `qualifying children aged four to sixteen`)
+        `excess` MEANS `the greater of` 0 (`federal adjusted gross income` MINUS `the s 606(c-1)(1-a)(C) threshold amount` `status`)
+        `reduction` MEANS 16.50 TIMES (FLOOR (`excess` DIVIDED BY 1000))
+    IN `the greater of` 0 (`full credit` MINUS `reduction`)
+
+§§ `s 606(d) -- the New York earned income credit`
+
+-- (d)(1): "a credit ... equal to (i) the applicable percentage of the earned income credit allowed under section thirty-two
+-- of the internal revenue code for the same taxable year, (ii) reduced by the credit permitted under subsection (b) of this
+-- section." "The applicable percentage shall be ... (vii) thirty percent for taxable years beginning in two thousand three
+-- and thereafter. Provided, however, that if the reversion event ... occurs, the applicable percentage shall be twenty
+-- percent" (the reversion event is a certification by the commissioner of OTDA after federal TANF changes; an input).
+GIVEN `federal earned income credit` IS A NUMBER
+      `household credit` IS A NUMBER
+      `the s 606(d)(1) reversion event has occurred` IS A BOOLEAN
+GIVETH A NUMBER
+`the New York earned income credit` `federal earned income credit` `household credit` `the s 606(d)(1) reversion event has occurred` MEANS
+    LET `applicable percentage` MEANS IF `the s 606(d)(1) reversion event has occurred` THEN 20% ELSE 30%
+    IN `the greater of` 0 ((`applicable percentage` TIMES `federal earned income credit`) MINUS `household credit`)
+
+-- (c-1)(2) and (d)(2): if the credit exceeds the tax, "the excess shall be treated as an overpayment of tax to be credited
+-- or refunded ..., provided, however, that no interest shall be paid thereon"; "the taxpayer may receive, and the
+-- comptroller, subject to a certificate of the commissioner, shall pay as an overpayment, without interest, the amount of
+-- such excess". No time is set.
+GIVEN `excess refundable credit` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`the comptroller's duty to pay my excess credit` `excess refundable credit` MEANS
+    IF `excess refundable credit` GREATER THAN 0
+    THEN PARTY `the comptroller`
+         MUST  `pay the excess credit as an overpayment`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+§§ `The bottom line`
+
+-- Tax after the household credit, then the two refundable credits. A positive result is tax still to pay; a negative one is
+-- the overpayment to be refunded (before any tax withheld or paid, which is not asked).
+GIVEN `s 601 tax` IS A NUMBER
+      `household credit` IS A NUMBER
+      `Empire State child credit` IS A NUMBER
+      `New York earned income credit` IS A NUMBER
+GIVETH A NUMBER
+`tax less credits` `s 601 tax` `household credit` `Empire State child credit` `New York earned income credit` MEANS
+    (`s 601 tax` MINUS `household credit`) MINUS (`Empire State child credit` PLUS `New York earned income credit`)
