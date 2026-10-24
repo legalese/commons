@@ -122,3 +122,23 @@ The 2026-10-18 defaults:
 - **Schedule 2 clause 4A** (start day for claimants required to attend an interview), and the declared program participant regime (Division 3A), if a life needs them.
 - **The payment-specific date-of-effect rules** (ss 109A, 110–116, 118(2A)–(5B), 120).
 - **Wider sources.** No Social Security Guide, ruling or case was read. Finding 7 is a reading of the text alone.
+
+## The Minister's and Secretary's instruments brought in (added 2026-10-24, REQ-0106)
+
+**Module:** `ssaa-instruments.l4`, beside `ssaa-claimant.l4`, which it imports; cases in `ssaa-cases-instruments.l4` (25 written, 25 satisfied; `l4 run` 0 errors, 0 warnings; `ssaa-cases-claimant.l4` still 79 of 79). Seat: the claimant and jobseeker.
+
+**Instruments**, each deposited 2026-10-23 as its own subject with `parent_act` this Act:
+- Social Security (Administration) (Class of Persons – Intent to Claim) Determination 2018, as made (F2018L00971), s 14A;
+- Social Security (Administration) (Job Search Efforts) Determination 2026, as made (F2026L01408, made 21 October 2026, in force from the day after registration), s 42AC(3); it repealed the 2018 determination;
+- Social Security (Administration) (Reasonable Excuse – Participation Payments) Determination 2018, as made (F2018L00779), s 42AI;
+- Social Security (Administration) (Non-Compliance) Determination 2018 (No. 1), Compilation No. 1 (F2022C00591), s 42AR(1).
+
+**What the module computes:** whether the claimant is in the s 14A class, feeding the baseline's `On what day is my claim taken to be made`; whether job searches were adequate on the number required, and whether a shortfall is a mutual obligation failure through the baseline's s 42AC question; whether a reason is a matter the Secretary must, or must not, take into account for a reasonable excuse; whether failures must be treated as persistent; and whether a persistent-failure reduction is a half or a whole instalment.
+
+11. **The s 14A class is wide but needs a cause.** Eleven circumstances at any time in the 8 weeks ending on the day of contact (family violence, homelessness, hospital or temporary incapacity, release from prison or psychiatric confinement, separation stress, a birth, a death in the family, arrival as a humanitarian entrant, living in a remote area, a home lost to an extreme event, other special circumstances beyond one's control) put the person in the class only if the circumstance is why the claim could not be lodged on the contact day. Asserted.
+12. **Adequate job search is first a count.** The Secretary must check whether the required number of job searches was made; only if it was may the Secretary look at quality (good faith, variety of seniority, pay, fields and methods) or other matters. The module answers the count and leaves quality to the Secretary. Asserted.
+13. **Ten matters must be taken into account for a reasonable excuse, but only if they directly prevented compliance.** Housing, literacy, illness or disability, cognitive or mental impairment, drug or alcohol dependency, unforeseen caring duties, criminal violence, a death in the family, being at paid work, being at a job interview. A drug or alcohol dependency is shut out after an earlier excused failure and a refused referral to treatment, unless one of four exceptions applies. Asserted.
+14. **"Persistent" is a demerit count followed by an assessment.** Five demerits in 6 active months, or 2 to 4 with one for a job interview, a job opportunity or job-offer sabotage, then a completed Services Australia assessment; a failure within the next 3 active months is persistent. It is never persistent without a demerit (or unexcused) failure in the previous 3 active months. Active months are the instrument's own measure (91 or 182 days, extended for exemptions and penalties, at most 12 months) and are asked as facts. Asserted.
+15. **The reduction escalates from half to whole and resets after cancellation.** Half an instalment for the first persistent-failure reduction; the whole instalment if the last one in the previous 3 active months was a half; half again for the first failure after a cancellation. Asserted.
+16. **No relocation assistance instrument is in force (s 42AO(3)).** The Relocation Assistance Specification 2014 (F2014L00900) and its 2010 and 2013 predecessors are marked not in force on the Register (title search 23 October 2026). The baseline's `I was paid relocation assistance for that job` input is kept.
+17. **The instruments put no duty on the jobseeker**; they direct the Secretary. So no regulative rule is written for them; the jobseeker's own duties are the Act's.
