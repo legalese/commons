@@ -1,0 +1,669 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ssa-common`
+IMPORT `ssa-figures`
+
+-- Social Security Act, Title II (42 U.S.C. 401-434): Federal Old-Age, Survivors, and Disability Insurance -- the core rules a
+-- worker, a retiree, a survivor and a disabled person meet: quarters of coverage (s 413), fully, currently and disability
+-- insured status (s 414, s 423(c)(1)), retirement age (s 416(l)), the PIA (s 415(a)(1)) and the family maximum (s 403(a)(1)),
+-- old-age benefits (s 402(a)) with the early-retirement reduction (s 402(q)) and the delayed-retirement increase (s 402(w)),
+-- the application rules (s 402(j)), widow's and widower's benefits (s 402(e), (f)), child's benefits (s 402(d)), the lump-sum
+-- death payment (s 402(i)), disability benefits (s 423(a)-(c)), the retirement earnings test (s 403(b), (f)) and the report
+-- of earnings (s 403(h)), and the hearing and court review (s 405(b), (g)).
+--
+-- Written in the Act's own actors and terms; the questions for the person are in ssa-seat.l4, which calls these rules.
+-- Edition: 42 U.S.C. chapter 7 subchapter II as deposited at ../../registers/source-bundle/usc42-ch7-schII.txt (OLRC USLM,
+-- release point Public Law 119-121, current through 9 October 2026). Figures: ssa-figures.l4 (2026 only).
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Title II -- Old-Age, Survivors, and Disability Insurance`
+
+§§ `s 413 -- quarters of coverage`
+
+-- s 413(a)(2)(A)(ii): for a year after 1977, a quarter of coverage for "each portion of the total of the wages paid and the
+-- self-employment income credited ... which equals the amount required for a quarter of coverage in that calendar year";
+-- (B)(vii): "no more than four quarters of coverage may be credited to any calendar year after 1977".
+GIVEN `calendar year` IS A NUMBER
+      `wages paid and self-employment income credited in the year` IS A NUMBER
+GIVETH AN `Answer` NUMBER
+`the quarters of coverage credited for the year` `calendar year` `wages paid and self-employment income credited in the year` MEANS
+    CONSIDER `the figures for` `calendar year`
+    WHEN JUST f THEN `answered` (min 4 (FLOOR (`wages paid and self-employment income credited in the year` DIVIDED BY f's `amount for a quarter of coverage`)))
+    WHEN NOTHING THEN `not covered` `the figures the Act needs for that year are not deposited: only the 2026 Federal Register notices are`
+
+§§ `s 414 -- fully and currently insured`
+
+-- s 414(a)(1): "one quarter of coverage ... for each calendar year elapsing after 1950 (or, if later, the year in which he
+-- attained age 21) and before the year in which he died or (if earlier) the year in which he attained age 62", "not counting
+-- as an elapsed year ... any year any part of which was included in a period of disability".
+GIVEN `birth date` IS A DATE
+      `the year of death, or of the event that fixes the test` IS A NUMBER
+      `elapsed years that were partly in a period of disability` IS A NUMBER
+GIVETH A NUMBER
+`the elapsed years for fully insured status` `birth date` `the year of death, or of the event that fixes the test` `elapsed years that were partly in a period of disability` MEANS
+    max 0 ((min `the year of death, or of the event that fixes the test` (`the year in which age is attained` `birth date` 62))
+            MINUS (max 1950 (`the year in which age is attained` `birth date` 21))
+            MINUS 1
+            MINUS `elapsed years that were partly in a period of disability`)
+
+-- s 414(a): fully insured with (1) a quarter for each elapsed year, never fewer than 6, or (2) 40 quarters; and, if not a
+-- citizen or national, the s 414(c) criterion (a work-authorised SSN, or a B or D visa for the work done).
+GIVEN `quarters of coverage` IS A NUMBER
+      `elapsed years` IS A NUMBER
+      `meets the s 414(c) criterion or is a citizen or national` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a fully insured individual` IF
+        (    `quarters of coverage` AT LEAST (max 6 `elapsed years`)
+          OR `quarters of coverage` AT LEAST 40)
+    AND `meets the s 414(c) criterion or is a citizen or national`
+
+-- s 414(b): "not less than six quarters of coverage during the thirteen-quarter period ending with" the quarter of death (or
+-- of entitlement to old-age or disability benefits), plus the s 414(c) criterion.
+GIVEN `quarters of coverage in the 13-quarter period` IS A NUMBER
+      `meets the s 414(c) criterion or is a citizen or national` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a currently insured individual` IF
+        `quarters of coverage in the 13-quarter period` AT LEAST 6
+    AND `meets the s 414(c) criterion or is a citizen or national`
+
+§§ `s 423(c)(1), s 416(i)(3) -- insured for disability insurance benefits`
+
+-- s 423(c)(1)(B)(ii): the young-worker rule applies "if such month ends before the quarter in which he attains ... age 31".
+GIVEN `birth date` IS A DATE, `month number` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the month ends before the quarter in which age 31 is attained` IF
+    `the quarter number of month` `month number` LESS THAN `the quarter number of month` (`the month in which age is attained` `birth date` 31)
+
+-- The quarters "during the period ending with the quarter in which such month occurred and beginning after he attained the age
+-- of 21"; "when the number of quarters in any period is an odd number, such number shall be reduced by one".
+GIVEN `birth date` IS A DATE, `month number` IS A NUMBER
+GIVETH A NUMBER
+`the quarters after age 21, made even` `birth date` `month number` MEANS
+    LET q MEANS `the quarter number of month` `month number` MINUS `the quarter number of month` (`the month in which age is attained` `birth date` 21)
+    IN  2 TIMES FLOOR (q DIVIDED BY 2)
+
+-- s 423(c)(1): insured in a month if (A) fully insured as if 62 on the first day of the month, and (B)(i) 20 of the 40
+-- quarters ending with that quarter, or (ii) before the quarter of age 31, half the quarters after 21 (at least 6), or 6 of
+-- the last 12 if fewer than 12 quarters have passed. (B) does not apply to a blind individual.
+GIVEN `birth date` IS A DATE
+      `month number` IS A NUMBER
+      `is fully insured as if 62 on the first day of the month` IS A BOOLEAN
+      `quarters of coverage in the 40-quarter period ending with the quarter` IS A NUMBER
+      `quarters of coverage after age 21 up to and including the quarter` IS A NUMBER
+      `quarters of coverage in the 12-quarter period ending with the quarter` IS A NUMBER
+      `is blind` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is insured for disability insurance benefits in the month` IF
+        `is fully insured as if 62 on the first day of the month`
+    AND (    `is blind`
+          OR `quarters of coverage in the 40-quarter period ending with the quarter` AT LEAST 20
+          OR (    `the month ends before the quarter in which age 31 is attained` `birth date` `month number`
+              AND `meets the young-worker test` ))
+    WHERE
+        `quarters to count` MEANS `the quarters after age 21, made even` `birth date` `month number`
+        `meets the young-worker test` MEANS
+            IF `quarters to count` LESS THAN 12
+                THEN `quarters of coverage in the 12-quarter period ending with the quarter` AT LEAST 6
+                ELSE `quarters of coverage after age 21 up to and including the quarter` AT LEAST (max 6 (`quarters to count` DIVIDED BY 2))
+
+§§ `s 416(l) -- retirement age`
+
+-- s 416(l)(1): retirement age by the year early retirement age is attained; (3): the age increase factor, two-twelfths of the
+-- months from January 2000 (or 2017) to December of that year, which is two months for each year. In months of age.
+GIVEN `the year early retirement age is attained` IS A NUMBER
+GIVETH A NUMBER
+`retirement age in months for` `the year early retirement age is attained` MEANS
+    BRANCH
+        IF `the year early retirement age is attained` LESS THAN 2000 THEN 65 TIMES 12
+        IF `the year early retirement age is attained` AT MOST 2004 THEN 65 TIMES 12 PLUS 2 TIMES (`the year early retirement age is attained` MINUS 1999)
+        IF `the year early retirement age is attained` AT MOST 2016 THEN 66 TIMES 12
+        IF `the year early retirement age is attained` AT MOST 2021 THEN 66 TIMES 12 PLUS 2 TIMES (`the year early retirement age is attained` MINUS 2016)
+        OTHERWISE 67 TIMES 12
+
+-- s 416(l)(2): "early retirement age" is 62 for an old-age, wife's or husband's benefit; 60 for a widow's or widower's.
+-- s 403(j): retirement age is attained "during the entire month in which he attains such age".
+GIVEN `birth date` IS A DATE, `early retirement age` IS A NUMBER
+GIVETH A NUMBER
+`the month retirement age is attained` `birth date` `early retirement age` MEANS
+    `the month in which the age in months is attained` `birth date` `retirement age in months`
+    WHERE `retirement age in months` MEANS `retirement age in months for` (`the year in which age is attained` `birth date` `early retirement age`)
+
+GIVEN `birth date` IS A DATE
+GIVETH A NUMBER
+`the month retirement age is attained for an old-age benefit` `birth date` MEANS
+    `the month retirement age is attained` `birth date` 62
+
+GIVEN `birth date` IS A DATE
+GIVETH A NUMBER
+`the month retirement age is attained for a widow's or widower's benefit` `birth date` MEANS
+    `the month retirement age is attained` `birth date` 60
+
+§§ `s 415(a)(1) -- the primary insurance amount`
+
+-- s 415(a)(1)(A): 90 percent of AIME up to the first bend point, 32 percent up to the second, 15 percent above, "rounded, if
+-- not a multiple of $0.10, to the next lower multiple of $0.10, and thereafter increased as provided in subsection (i)".
+-- (B): the bend points are those for the year the individual "initially become[s] eligible for old-age or disability
+-- insurance benefits, or ... die[s] (before becoming eligible)". s 415(a)(3)(B): eligible for old-age benefits from the month
+-- age 62 is attained.
+GIVEN `average indexed monthly earnings` IS A NUMBER
+      `first bend point` IS A NUMBER
+      `second bend point` IS A NUMBER
+GIVETH A NUMBER
+`the PIA formula` `average indexed monthly earnings` `first bend point` `second bend point` MEANS
+    `rounded down to a multiple of 10 cents`
+        (    0.90 TIMES (min `average indexed monthly earnings` `first bend point`)
+        PLUS 0.32 TIMES (max 0 ((min `average indexed monthly earnings` `second bend point`) MINUS `first bend point`))
+        PLUS 0.15 TIMES (max 0 (`average indexed monthly earnings` MINUS `second bend point`)))
+
+-- The PIA for the months of the year of first eligibility. A year without deposited bend points is not covered; so is a year
+-- before 1979 (s 415(a)(3)(A)). For the year 2026, no s 415(i) increase has yet been applied: the December 2026 increase is
+-- set by the 2027 notice, which is not deposited.
+GIVEN `year of first eligibility or death` IS A NUMBER
+      `average indexed monthly earnings` IS A NUMBER
+GIVETH AN `Answer` NUMBER
+`the primary insurance amount for the year of eligibility` `year of first eligibility or death` `average indexed monthly earnings` MEANS
+    IF `year of first eligibility or death` LESS THAN 1979
+        THEN `not covered` `the person was first eligible, or died, before 1979, so the old PIA rules in s 415(a)(4), (5) and (d) apply, which are not encoded`
+        ELSE IF `year of first eligibility or death` LESS THAN 2026
+            THEN `not covered` `the PIA of a person first eligible before 2026 has been raised by cost-of-living increases that are not deposited`
+            ELSE CONSIDER `the figures for` `year of first eligibility or death`
+                 WHEN JUST f THEN `answered` (`the PIA formula` `average indexed monthly earnings` (f's `first PIA bend point`) (f's `second PIA bend point`))
+                 WHEN NOTHING THEN `not covered` `the figures the Act needs for that year are not deposited: only the 2026 Federal Register notices are`
+
+-- s 415(b)(2)(A): the benefit computation years are the elapsed years less 5 (old-age or death), "in no case ... less than 2".
+GIVEN `elapsed years` IS A NUMBER
+GIVETH A NUMBER
+`the number of benefit computation years for old-age or death` `elapsed years` MEANS max 2 (`elapsed years` MINUS 5)
+
+-- s 415(b)(2)(A)(ii): for disability, the elapsed years less one-fifth of them (fraction disregarded), at most 5, at least 2
+-- (the child-care drop-out years in the second sentence are not encoded).
+GIVEN `elapsed years` IS A NUMBER
+GIVETH A NUMBER
+`the number of benefit computation years for disability` `elapsed years` MEANS
+    max 2 (`elapsed years` MINUS (min 5 (FLOOR (`elapsed years` DIVIDED BY 5))))
+
+-- s 415(b)(1): AIME is the indexed earnings of the benefit computation years, divided by the months in those years. The
+-- indexing and the choice of the highest years (s 415(b)(2)(B)(i), (b)(3)) need the national average wage index series, which
+-- is not deposited; the total of the chosen years' indexed earnings is taken as a fact.
+GIVEN `total indexed earnings of the benefit computation years` IS A NUMBER
+      `number of benefit computation years` IS A NUMBER
+GIVETH A NUMBER
+`the average indexed monthly earnings` `total indexed earnings of the benefit computation years` `number of benefit computation years` MEANS
+    `total indexed earnings of the benefit computation years` DIVIDED BY (`number of benefit computation years` TIMES 12)
+
+§§ `s 403(a)(1) -- the family maximum`
+
+-- s 403(a)(1): 150, 272, 134 and 175 percent of the PIA across the bend points for the year of eligibility or death, then
+-- "decreased to the next lower multiple of $0.10". (The disability family maximum in s 403(a)(6) is not encoded.)
+GIVEN `year of first eligibility or death` IS A NUMBER
+      `primary insurance amount` IS A NUMBER
+GIVETH AN `Answer` NUMBER
+`the family maximum for the year of eligibility` `year of first eligibility or death` `primary insurance amount` MEANS
+    CONSIDER `the figures for` `year of first eligibility or death`
+    WHEN JUST f THEN `answered` (`rounded down to a multiple of 10 cents` (`the family maximum formula` f))
+    WHEN NOTHING THEN `not covered` `the figures the Act needs for that year are not deposited: only the 2026 Federal Register notices are`
+    WHERE
+        p MEANS `primary insurance amount`
+        GIVEN f IS AN `Annual figures`
+        `the family maximum formula` f MEANS
+                 1.50 TIMES (min p (f's `first family maximum bend point`))
+            PLUS 2.72 TIMES (max 0 ((min p (f's `second family maximum bend point`)) MINUS f's `first family maximum bend point`))
+            PLUS 1.34 TIMES (max 0 ((min p (f's `third family maximum bend point`)) MINUS f's `second family maximum bend point`))
+            PLUS 1.75 TIMES (max 0 (p MINUS f's `third family maximum bend point`))
+
+§§ `s 402(a), s 402(j) -- old-age insurance benefits and when they can begin`
+
+-- s 402(a): "(1) is a fully insured individual ..., (2) has attained age 62, and (3) has filed application"; entitled from
+-- (B), below retirement age, "the first month throughout which" (1) and (2) are met (if (3) is met in that month), or (A), at
+-- or after retirement age, the first month the three criteria are met.
+-- s 402(j)(1)(B): a benefit for a month before the application month is paid if the application is filed before the end of
+-- the sixth month after it. s 402(j)(4)(A): but never for a month before the application month if the benefit for it "would
+-- be subject to reduction pursuant to subsection (q)", that is a month before retirement age.
+GIVEN `birth date` IS A DATE
+      `month number of the application` IS A NUMBER
+GIVETH A NUMBER
+`the first month of old-age benefits on an application` `birth date` `month number of the application` MEANS
+    IF `month number of the application` LESS THAN ra
+        THEN max `month number of the application` (`the first month throughout which the age is attained` `birth date` 62)
+        ELSE max (`month number of the application` MINUS 6) ra
+    WHERE ra MEANS `the month retirement age is attained for an old-age benefit` `birth date`
+
+§§ `s 402(q) -- reduction for entitlement before retirement age`
+
+-- s 402(q)(1)(A), (9)(A): an old-age benefit is reduced by 5/9 of 1 percent for each of the first 36 months of the reduction
+-- period and 5/12 of 1 percent for each further month. (6)(A)(i), (B): the reduction period runs from the first month of
+-- entitlement to the month before the month retirement age is attained. (7): at retirement age, months in which the benefit
+-- was withheld under s 403(b) are left out (the adjusted reduction period). (8): the reduction is rounded up to $0.10.
+GIVEN `months in the reduction period` IS A NUMBER
+GIVETH A NUMBER
+`the old-age reduction fraction` `months in the reduction period` MEANS
+        (5 DIVIDED BY 900) TIMES (min 36 `months in the reduction period`)
+    PLUS (5 DIVIDED BY 1200) TIMES (max 0 (`months in the reduction period` MINUS 36))
+
+-- s 402(q)(9)(B): for a widow's or widower's benefit, 28.5 percent at early retirement age (60), falling "by linear
+-- interpolation" to 0 at retirement age. NOTES.md finding 6: the Act tells the Commissioner to revise the monthly figure
+-- "periodically" to keep to this line; the line itself is encoded.
+GIVEN `months in the reduction period` IS A NUMBER
+      `months from age 60 to retirement age` IS A NUMBER
+GIVETH A NUMBER
+`the widow's or widower's reduction fraction` `months in the reduction period` `months from age 60 to retirement age` MEANS
+    0.285 TIMES `months in the reduction period` DIVIDED BY `months from age 60 to retirement age`
+
+§§ `s 402(w) -- increase for delayed retirement`
+
+-- s 402(w)(6): the applicable percentage for each increment month, by the year first eligible for an old-age benefit (the
+-- year age 62 is attained): 1/12 of 1 percent before 1979; 1/4 of 1 percent 1979-1986; from 1987 to 2004 the previous year's
+-- plus 1/24 of 1 percent in each odd year; 2/3 of 1 percent after 2004.
+GIVEN `year first eligible` IS A NUMBER
+GIVETH A NUMBER
+`the delayed retirement percentage per month` `year first eligible` MEANS
+    BRANCH
+        IF `year first eligible` LESS THAN 1979 THEN 0.01 DIVIDED BY 12
+        IF `year first eligible` LESS THAN 1987 THEN 0.01 DIVIDED BY 4
+        IF `year first eligible` LESS THAN 2005 THEN 0.01 TIMES (6 PLUS FLOOR ((`year first eligible` MINUS 1987) DIVIDED BY 2) PLUS 1) DIVIDED BY 24
+        OTHERWISE 0.01 TIMES 2 DIVIDED BY 3
+
+-- s 402(w)(2): increment months are the months from the month retirement age is attained to the month before age 70 in which
+-- the individual was fully insured and not entitled (or had suspended benefits under (z)).
+GIVEN `birth date` IS A DATE, `first month of entitlement` IS A NUMBER
+GIVETH A NUMBER
+`the increment months` `birth date` `first month of entitlement` MEANS
+    max 0 ((min `first month of entitlement` (`the month in which age is attained` `birth date` 70))
+           MINUS `the month retirement age is attained for an old-age benefit` `birth date`)
+
+-- The old-age benefit for a month: s 402(a), equal to the PIA "except as provided in subsection (q) and subsection (w)", then
+-- s 415(g), rounded down to $1. The PIA is the one for the month (after any s 415(i) increases). NOTES.md finding 4: under
+-- s 402(w)(3) the increments are credited from January of the following year (or at age 70); the amount here is the amount
+-- once all the increment months are credited. The s 1395s deduction of the Part B premium is not made here.
+GIVEN `birth date` IS A DATE
+      `primary insurance amount` IS A NUMBER
+      `first month of entitlement` IS A NUMBER
+      `months before retirement age in which benefits were withheld under s 403(b)` IS A NUMBER
+GIVETH A NUMBER
+`the old-age insurance benefit` `birth date` `primary insurance amount` `first month of entitlement` `months before retirement age in which benefits were withheld under s 403(b)` MEANS
+    IF `first month of entitlement` LESS THAN ra
+        THEN `rounded down to a whole dollar` (pia MINUS reduction)
+        ELSE `rounded down to a whole dollar` (pia PLUS increase)
+    WHERE
+        pia MEANS `primary insurance amount`
+        ra MEANS `the month retirement age is attained for an old-age benefit` `birth date`
+        months MEANS max 0 (ra MINUS `first month of entitlement` MINUS `months before retirement age in which benefits were withheld under s 403(b)`)
+        reduction MEANS `rounded up to a multiple of 10 cents` (pia TIMES `the old-age reduction fraction` months)
+        rate MEANS `the delayed retirement percentage per month` (`the year in which age is attained` `birth date` 62)
+        increase MEANS pia TIMES rate TIMES (`the increment months` `birth date` `first month of entitlement`)
+
+§§ `s 402(e), (f), s 416(c), (d), (g) -- widow's and widower's insurance benefits`
+
+-- s 416(c)(1), (g)(1): a "widow" ("widower") is the surviving spouse, but only if (A) the parent of the deceased's son or
+-- daughter, (B)-(D) an adoption while married, (E) "married to him for a period of not less than nine months immediately
+-- prior to the day on which he died", or (F) entitled to certain benefits in the month before the marriage. s 416(k): the nine
+-- months are waived where the death was accidental or in line of duty, or on remarriage to the same person.
+-- s 416(d)(2): a "surviving divorced wife" (husband) had been married to the deceased "for a period of 10 years immediately
+-- before the date the divorce became effective".
+DECLARE `Survivor relationship` IS ONE OF
+    `married to the deceased at the death`
+    `divorced from the deceased`
+    `neither`
+
+GIVEN `relationship` IS A `Survivor relationship`
+      `months married immediately before the death` IS A NUMBER
+      `is the parent of the deceased's child, or another s 416(c)(1)(B)-(D) or (F) ground applies` IS A BOOLEAN
+      `the s 416(k) waiver applies (accidental death, death in line of duty, or remarriage to the same person)` IS A BOOLEAN
+      `years married before the divorce became effective` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is the widow or widower, or surviving divorced spouse` IF
+    CONSIDER `relationship`
+    WHEN `married to the deceased at the death` THEN
+            `months married immediately before the death` AT LEAST 9
+         OR `is the parent of the deceased's child, or another s 416(c)(1)(B)-(D) or (F) ground applies`
+         OR `the s 416(k) waiver applies (accidental death, death in line of duty, or remarriage to the same person)`
+    WHEN `divorced from the deceased` THEN `years married before the divorce became effective` AT LEAST 10
+    OTHERWISE FALSE
+
+-- s 402(e)(1)(A) "is not married"; (e)(3): a marriage after attaining 60 (or after 50 if then entitled on disability, or a
+-- disabled widow marrying after 50) "shall be deemed not to have occurred".
+GIVEN `is now married` IS A BOOLEAN
+      `the present marriage took place after age 60, or after age 50 while disabled` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `counts as not married for a widow's or widower's benefit` IF
+        NOT `is now married`
+    OR  `the present marriage took place after age 60, or after age 50 while disabled`
+
+-- s 402(e)(4): the period in which a disabled widow's disability must begin runs from the month of the death (the later
+-- starts in (B), (C), after mother's benefits or an earlier disabled widow's benefit, are not encoded) to the month before age
+-- 60, or, if earlier, "the close of the eighty-fourth month following the month with which such period began".
+GIVEN `birth date` IS A DATE
+      `month number of the death` IS A NUMBER
+      `month number the disability began` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the disability began within the s 402(e)(4) period` IF
+        `month number the disability began` AT LEAST `month number of the death`
+    AND `month number the disability began` AT MOST (min ((`the month in which age is attained` `birth date` 60) MINUS 1) (`month number of the death` PLUS 84))
+
+-- s 402(e)(1), (f)(1): entitled for a month if the deceased "died a fully insured individual", the survivor is the widow(er) or
+-- surviving divorced spouse, (A) is not married, (B) (i) has attained 60, or (ii) has attained 50 and is under a disability
+-- that began in the (e)(4) period, (C)(i) has filed application, and (D) is not entitled to an old-age benefit at least
+-- equal to the deceased's PIA. (C)(ii)-(iii) (conversion from wife's or mother's benefits) are not encoded. The disability is
+-- the Commissioner's finding, asked as a fact; s 402(e)(8): eligibility for SSI counts as being under a disability. The
+-- waiting period in (e)(5) is not applied here (see NOTES.md).
+GIVEN `birth date` IS A DATE
+      `month number asked about` IS A NUMBER
+      `the deceased died fully insured` IS A BOOLEAN
+      `is the widow or widower, or surviving divorced spouse` IS A BOOLEAN
+      `counts as not married` IS A BOOLEAN
+      `is under a disability that began within the s 402(e)(4) period` IS A BOOLEAN
+      `has filed application for the benefit` IS A BOOLEAN
+      `own old-age benefit` IS A NUMBER
+      `the deceased's primary insurance amount` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is entitled to a widow's or widower's insurance benefit for the month` IF
+        `the deceased died fully insured`
+    AND `is the widow or widower, or surviving divorced spouse`
+    AND `counts as not married`
+    AND (    `month number asked about` AT LEAST `the month in which age is attained` `birth date` 60
+         OR (    `month number asked about` AT LEAST `the month in which age is attained` `birth date` 50
+             AND `is under a disability that began within the s 402(e)(4) period`))
+    AND `has filed application for the benefit`
+    AND `own old-age benefit` LESS THAN `the deceased's primary insurance amount`
+
+-- s 402(e)(2)(A): the benefit is the deceased's PIA; (2)(C): if the deceased had a benefit increased under (w), that larger
+-- benefit stands in for the PIA; s 402(q)(1), (6)(A)(iii), (9)(B): reduced for each month before retirement age, counting from
+-- the later of the first month of entitlement and the month age 60 is attained; (2)(D): if the deceased had an old-age
+-- benefit reduced under (q), the widow's benefit is cut to the larger of what the deceased would now get and 82.5 percent of
+-- the PIA, where it is above both; s 415(g): rounded down to $1. Not encoded: (2)(B) (re-indexing where the deceased died
+-- before 62), the s 402(q)(3) combined reduction for a survivor also on early old-age or disability benefits, (q)(5)(D).
+GIVEN `birth date` IS A DATE
+      `first month of entitlement` IS A NUMBER
+      `the deceased's primary insurance amount` IS A NUMBER
+      `the deceased's old-age benefit increased for delayed retirement, or 0` IS A NUMBER
+      `the deceased received an old-age benefit reduced for early retirement` IS A BOOLEAN
+      `the deceased's reduced old-age benefit as if still living` IS A NUMBER
+GIVETH A NUMBER
+`the widow's or widower's insurance benefit` `birth date` `first month of entitlement` `the deceased's primary insurance amount` `the deceased's old-age benefit increased for delayed retirement, or 0` `the deceased received an old-age benefit reduced for early retirement` `the deceased's reduced old-age benefit as if still living` MEANS
+    `rounded down to a whole dollar` limited
+    WHERE
+        floor MEANS max (`the deceased's reduced old-age benefit as if still living`) (0.825 TIMES pia)
+        limited MEANS IF `the deceased received an old-age benefit reduced for early retirement` AND after GREATER THAN floor
+                          THEN floor
+                          ELSE after
+        pia MEANS `the deceased's primary insurance amount`
+        base MEANS max pia (`the deceased's old-age benefit increased for delayed retirement, or 0`)
+        m60 MEANS `the month in which age is attained` `birth date` 60
+        ra MEANS `the month retirement age is attained for a widow's or widower's benefit` `birth date`
+        months MEANS max 0 (ra MINUS (max `first month of entitlement` m60))
+        after MEANS base MINUS `rounded up to a multiple of 10 cents` (base TIMES `the widow's or widower's reduction fraction` months (ra MINUS m60))
+
+§§ `s 402(d) -- child's insurance benefits`
+
+-- s 402(d)(1): a child (s 416(e)) of an individual entitled to old-age or disability benefits, or who died fully or currently
+-- insured, who (A) has filed application, (B) when it was filed was unmarried and (i) under 18, or a full-time elementary or
+-- secondary school student under 19, or (ii) under a disability that began before 22, and (C) was dependent on that individual
+-- (s 402(d)(3)-(4), a fact).
+GIVEN `the parent is entitled to old-age or disability benefits, or died fully or currently insured` IS A BOOLEAN
+      `is the parent's child within s 416(e)` IS A BOOLEAN
+      `has filed application` IS A BOOLEAN
+      `was unmarried when the application was filed` IS A BOOLEAN
+      `age when the application was filed` IS A NUMBER
+      `was a full-time elementary or secondary school student` IS A BOOLEAN
+      `is under a disability that began before age 22` IS A BOOLEAN
+      `was dependent on the parent within s 402(d)(3)-(4)` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is entitled to a child's insurance benefit` IF
+        `the parent is entitled to old-age or disability benefits, or died fully or currently insured`
+    AND `is the parent's child within s 416(e)`
+    AND `has filed application`
+    AND `was unmarried when the application was filed`
+    AND (    `age when the application was filed` LESS THAN 18
+         OR (`was a full-time elementary or secondary school student` AND `age when the application was filed` LESS THAN 19)
+         OR `is under a disability that began before age 22`)
+    AND `was dependent on the parent within s 402(d)(3)-(4)`
+
+-- s 402(d)(2): one-half of the parent's PIA while the parent lives; three-fourths if the parent has died. Before the family
+-- maximum of s 403(a), which is not distributed here. s 415(g): rounded down to $1.
+GIVEN `the parent has died` IS A BOOLEAN
+      `the parent's primary insurance amount` IS A NUMBER
+GIVETH A NUMBER
+`the child's insurance benefit before the family maximum` `the parent has died` `the parent's primary insurance amount` MEANS
+    IF `the parent has died`
+        THEN `rounded down to a whole dollar` (0.75 TIMES `the parent's primary insurance amount`)
+        ELSE `rounded down to a whole dollar` (0.5 TIMES `the parent's primary insurance amount`)
+
+§§ `s 402(i) -- the lump-sum death payment`
+
+-- s 402(i): on the death of a fully or currently insured individual, "three times such individual's primary insurance amount
+-- ... or an amount equal to $255, whichever is the smaller", paid first to the widow(er) living in the same household; if none,
+-- (1) to a widow(er) entitled (or who would be on a timely application) to benefits under (e), (f) or (g) for the month of
+-- death; if none, (2) in equal shares to the children entitled under (d) for that month.
+DECLARE `Lump-sum position` IS ONE OF
+    `the widow or widower living in the same household`
+    `a widow or widower entitled to a widow's, widower's, mother's or father's benefit for the month of death`
+    `one of the children entitled to child's benefits for the month of death`
+    `none of these`
+
+GIVEN `the deceased died fully or currently insured` IS A BOOLEAN
+      `the deceased's primary insurance amount` IS A NUMBER
+      `position` IS A `Lump-sum position`
+      `there is a widow or widower living in the same household` IS A BOOLEAN
+      `there is a widow or widower entitled for the month of death` IS A BOOLEAN
+      `number of children entitled for the month of death` IS A NUMBER
+GIVETH A NUMBER
+`the share of the lump-sum death payment` `the deceased died fully or currently insured` `the deceased's primary insurance amount` `position` `there is a widow or widower living in the same household` `there is a widow or widower entitled for the month of death` `number of children entitled for the month of death` MEANS
+    IF NOT `the deceased died fully or currently insured`
+        THEN 0
+        ELSE CONSIDER `position`
+             WHEN `the widow or widower living in the same household` THEN amount
+             WHEN `a widow or widower entitled to a widow's, widower's, mother's or father's benefit for the month of death` THEN
+                IF `there is a widow or widower living in the same household` THEN 0 ELSE amount
+             WHEN `one of the children entitled to child's benefits for the month of death` THEN
+                IF `there is a widow or widower living in the same household` OR `there is a widow or widower entitled for the month of death`
+                    THEN 0
+                    ELSE amount DIVIDED BY (max 1 `number of children entitled for the month of death`)
+             OTHERWISE 0
+    WHERE amount MEANS min (3 TIMES `the deceased's primary insurance amount`) `lump-sum death payment cap`
+
+-- s 402(i): "No payment shall be made ... unless application therefor shall have been filed ... prior to the expiration of
+-- two years after the date of death", unless the person was entitled to wife's or husband's benefits for the month before
+-- the death. A permission with a deadline, counted in days from the death to the second anniversary (an application on the
+-- anniversary is taken as filed in time; s 416(j) moves a deadline on a weekend or holiday to the next workday, not encoded).
+GIVEN `date of death` IS A DATE
+GIVETH A NUMBER
+`the days to apply for the lump-sum death payment` `date of death` MEANS
+    (Date (DATE_DAY `date of death`) (DATE_MONTH `date of death`) (DATE_YEAR `date of death` PLUS 2)) MINUS `date of death`
+
+GIVEN `date of death` IS A DATE
+GIVETH A DEONTIC `SSA party` `SSA act`
+`s 402(i) -- the survivor may apply for the lump-sum death payment within two years of the death` `date of death` MEANS
+    PARTY `the individual`
+    MAY   `file an application for the lump-sum death payment`
+    WITHIN `the days to apply for the lump-sum death payment` `date of death`
+
+§§ `s 423 -- disability insurance benefits`
+
+-- s 423(c)(2): the waiting period is "the earliest period of five consecutive calendar months ... throughout which the
+-- individual ... has been under a disability", beginning no earlier than the first day of the seventeenth month before the
+-- month of application (if insured then; otherwise the first later month in which insured -- not encoded: insured status
+-- is assumed throughout). The first full month of disability is the month it began if it began on the 1st, else the next.
+GIVEN `date the disability began` IS A DATE
+GIVETH A NUMBER
+`the first full month of disability` `date the disability began` MEANS
+    IF DATE_DAY `date the disability began` EQUALS 1
+        THEN `the month number of the date` `date the disability began`
+        ELSE `the month number of the date` `date the disability began` PLUS 1
+
+GIVEN `date the disability began` IS A DATE
+      `month number of the application` IS A NUMBER
+GIVETH A NUMBER
+`the first month of the waiting period` `date the disability began` `month number of the application` MEANS
+    max (`the first full month of disability` `date the disability began`) (`month number of the application` MINUS 17)
+
+-- s 423(a)(1): entitled "(i) for each month beginning with the first month after his waiting period", or (ii) with ALS, "the
+-- first month during all of which the individual is under a disability"; s 423(b): a month is paid only if the application
+-- is filed before the end of the 12th month after it. (iii), re-entitlement within 60 months, is not encoded.
+GIVEN `date the disability began` IS A DATE
+      `month number of the application` IS A NUMBER
+      `has been medically determined to have ALS` IS A BOOLEAN
+GIVETH A NUMBER
+`the first month of disability insurance benefits` `date the disability began` `month number of the application` `has been medically determined to have ALS` MEANS
+    IF `has been medically determined to have ALS`
+        THEN max (`the first full month of disability` `date the disability began`) (`month number of the application` MINUS 12)
+        ELSE `the first month of the waiting period` `date the disability began` `month number of the application` PLUS 5
+
+-- s 423(a)(1): every individual who (A) is insured for disability benefits, (B) has not attained retirement age, (C) if not a
+-- citizen or national, meets the SSN or visa criterion, (D) has filed application, and (E) is under a disability (s 423(d):
+-- a judgment for the Commissioner, asked as a fact) is entitled. s 423(a)(2): the benefit equals the PIA, computed as though
+-- age 62 were attained in the first month of the waiting period.
+GIVEN `is insured for disability insurance benefits` IS A BOOLEAN
+      `has attained retirement age` IS A BOOLEAN
+      `is a citizen or national, or meets s 423(a)(1)(C)` IS A BOOLEAN
+      `has filed application` IS A BOOLEAN
+      `is under a disability as defined in s 423(d)` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is entitled to disability insurance benefits` IF
+        `is insured for disability insurance benefits`
+    AND NOT `has attained retirement age`
+    AND `is a citizen or national, or meets s 423(a)(1)(C)`
+    AND `has filed application`
+    AND `is under a disability as defined in s 423(d)`
+
+-- s 423(d)(4)(A): a blind individual "shall [not] be regarded as having demonstrated an ability to engage in substantial
+-- gainful activity on the basis of earnings that do not exceed" the blind amount (2026: $2,830). For others the criteria are
+-- the Commissioner's regulations (20 CFR 404.1574); the published 2026 figure of $1,690 is used, marked ADMIN-POLICY.
+GIVEN `calendar year` IS A NUMBER
+      `is blind` IS A BOOLEAN
+      `monthly earnings from work` IS A NUMBER
+GIVETH AN `Answer` BOOLEAN
+`earnings are above the substantial gainful activity amount` `calendar year` `is blind` `monthly earnings from work` MEANS
+    CONSIDER `the figures for` `calendar year`
+    WHEN JUST f THEN
+        IF `is blind`
+            THEN `answered` (`monthly earnings from work` GREATER THAN f's `substantial gainful activity amount, blind`)
+            ELSE `answered` (`monthly earnings from work` GREATER THAN f's `substantial gainful activity amount, non-blind (regulation)`)
+    WHEN NOTHING THEN `not covered` `the figures the Act needs for that year are not deposited: only the 2026 Federal Register notices are`
+
+§§ `s 403(b), (f) -- deductions on account of work (the retirement earnings test)`
+
+-- s 403(f)(3): excess earnings are "33 1/3 percent of his earnings for such year in excess of the product of the applicable
+-- exempt amount ... in the case of an individual who has attained ... retirement age ... before the close of such taxable
+-- year, or 50 percent ... in the case of any other individual, multiplied by the number of months in such year"; in the year
+-- retirement age is attained, the earnings for that month and later are excluded; "if not a multiple of $1, shall be
+-- reduced to the next lower multiple of $1". s 403(f)(8)(D): the higher exempt amount is for the year retirement age is
+-- attained. A whole calendar taxable year of 12 months is assumed.
+DECLARE `Earnings test year` IS ONE OF
+    `under retirement age for the whole year`
+    `the year retirement age is attained`
+    `retirement age attained before the year began`
+
+GIVEN `calendar year` IS A NUMBER
+      `which year this is` IS A `Earnings test year`
+      `earnings counted for the year` IS A NUMBER
+GIVETH AN `Answer` NUMBER
+`the excess earnings for the year` `calendar year` `which year this is` `earnings counted for the year` MEANS
+    CONSIDER `the figures for` `calendar year`
+    WHEN JUST f THEN
+        CONSIDER `which year this is`
+        WHEN `under retirement age for the whole year` THEN
+            `answered` (FLOOR (0.5 TIMES (max 0 (`earnings counted for the year` MINUS 12 TIMES f's `lower monthly exempt amount`))))
+        WHEN `the year retirement age is attained` THEN
+            `answered` (FLOOR ((1 DIVIDED BY 3) TIMES (max 0 (`earnings counted for the year` MINUS 12 TIMES f's `higher monthly exempt amount`))))
+        WHEN `retirement age attained before the year began` THEN `answered` 0
+    WHEN NOTHING THEN `not covered` `the figures the Act needs for that year are not deposited: only the 2026 Federal Register notices are`
+
+-- s 403(b)(1), (f)(1): deductions equal to the excess earnings, charged to the months of the year in order, each month up to
+-- the benefits payable for it to the individual and those entitled on his record; no charge to a month in which the
+-- individual is at or above retirement age, was not entitled, or (grace year, (f)(1)(E)) did no substantial work. The
+-- total deducted is therefore the excess earnings, but no more than the benefits for the months that can be charged.
+GIVEN `excess earnings` IS A NUMBER
+      `monthly benefits payable on the individual's record, including family members` IS A NUMBER
+      `months of the year that can be charged` IS A NUMBER
+GIVETH A NUMBER
+`the deductions on account of work` `excess earnings` `monthly benefits payable on the individual's record, including family members` `months of the year that can be charged` MEANS
+    min `excess earnings` (`monthly benefits payable on the individual's record, including family members` TIMES `months of the year that can be charged`)
+
+§§ `s 403(h) -- the report of earnings`
+
+-- s 403(h)(1)(A): an individual entitled to a monthly benefit during a taxable year whose earnings exceed the applicable
+-- exempt amount times the months in the year "shall make a report to the Commissioner of Social Security of his earnings";
+-- not needed for a year "beginning with or after the month in which such individual attained retirement age", nor (ii) where
+-- all the year's benefits were suspended under (h)(3) (unless a family member in another household is affected -- the
+-- exception's exception is asked as one fact).
+GIVEN `calendar year` IS A NUMBER
+      `was entitled to a monthly benefit during the year` IS A BOOLEAN
+      `which year this is` IS A `Earnings test year`
+      `earnings for the year` IS A NUMBER
+      `all benefits for the months under retirement age were suspended under s 403(h)(3) and no exception applies` IS A BOOLEAN
+GIVETH AN `Answer` BOOLEAN
+`a report of earnings is required` `calendar year` `was entitled to a monthly benefit during the year` `which year this is` `earnings for the year` `all benefits for the months under retirement age were suspended under s 403(h)(3) and no exception applies` MEANS
+    CONSIDER `the figures for` `calendar year`
+    WHEN JUST f THEN
+        CONSIDER `which year this is`
+        WHEN `retirement age attained before the year began` THEN `answered` FALSE
+        WHEN `the year retirement age is attained` THEN
+            `answered` (    `was entitled to a monthly benefit during the year`
+                        AND `earnings for the year` GREATER THAN 12 TIMES f's `higher monthly exempt amount`
+                        AND NOT `all benefits for the months under retirement age were suspended under s 403(h)(3) and no exception applies`)
+        WHEN `under retirement age for the whole year` THEN
+            `answered` (    `was entitled to a monthly benefit during the year`
+                        AND `earnings for the year` GREATER THAN 12 TIMES f's `lower monthly exempt amount`
+                        AND NOT `all benefits for the months under retirement age were suspended under s 403(h)(3) and no exception applies`)
+    WHEN NOTHING THEN `not covered` `the figures the Act needs for that year are not deposited: only the 2026 Federal Register notices are`
+
+-- "Such report shall be made on or before the fifteenth day of the fourth month following the close of such year"; the
+-- Commissioner may extend it, "but in no case may the period be extended more than four months". Counted in days from the
+-- close of the year (31 December).
+GIVEN `calendar year` IS A NUMBER
+      `months of extension granted by the Commissioner` IS A NUMBER
+GIVETH A DATE
+`the last day for the report of earnings` `calendar year` `months of extension granted by the Commissioner` MEANS
+    Date 15 (4 PLUS (min 4 (max 0 `months of extension granted by the Commissioner`))) (`calendar year` PLUS 1)
+
+-- s 403(h)(2): a failure to report, where a deduction is imposed for the year, brings additional deductions: the benefit for
+-- the last month of the year (or the deduction, if smaller, but not less than $10) for the first failure, twice it for the
+-- second, three times for the third and later. s 403(l): not a failure if the Commissioner is satisfied there was good cause.
+GIVEN `calendar year` IS A NUMBER
+      `months of extension granted by the Commissioner` IS A NUMBER
+GIVETH A DEONTIC `SSA party` `SSA act`
+`s 403(h)(1)(A) -- a working beneficiary must report the year's earnings to the Commissioner` `calendar year` `months of extension granted by the Commissioner` MEANS
+    PARTY `the individual`
+    MUST  `report earnings for the taxable year to the Commissioner`
+    WITHIN (`the last day for the report of earnings` `calendar year` `months of extension granted by the Commissioner`) MINUS (Date 31 12 `calendar year`)
+    HENCE FULFILLED
+    LEST  BREACH BY `the individual` BECAUSE "s 403(h)(2): no report of earnings by the 15th day of the fourth month after the year (or the extended day): additional deductions follow if a deduction is imposed for the year, unless there was good cause (s 403(l))"
+
+GIVEN `which failure this is` IS A NUMBER
+      `benefit for the last month of the year in which entitled` IS A NUMBER
+      `deduction imposed under s 403(b) for the year` IS A NUMBER
+      `had good cause for the failure` IS A BOOLEAN
+GIVETH A NUMBER
+`the additional deduction for a failure to report earnings` `which failure this is` `benefit for the last month of the year in which entitled` `deduction imposed under s 403(b) for the year` `had good cause for the failure` MEANS
+    IF `had good cause for the failure` OR `deduction imposed under s 403(b) for the year` AT MOST 0
+        THEN 0
+        ELSE `the multiple-based deduction`
+    WHERE
+        last MEANS `benefit for the last month of the year in which entitled`
+        ded MEANS `deduction imposed under s 403(b) for the year`
+        `the first-failure deduction` MEANS IF ded LESS THAN last THEN max 10 ded ELSE last
+        `the multiple-based deduction` MEANS
+            BRANCH
+                IF `which failure this is` AT MOST 1 THEN `the first-failure deduction`
+                IF `which failure this is` EQUALS 2 THEN 2 TIMES last
+                OTHERWISE 3 TIMES last
+
+§§ `s 405(b), (g) -- hearing and court review`
+
+-- s 405(b)(1): the Commissioner "shall give ... reasonable notice and opportunity for a hearing"; "Any such request ... must
+-- be filed within sixty days after notice of such decision is received". A permission with a deadline, in days.
+GIVETH A DEONTIC `SSA party` `SSA act`
+`s 405(b)(1) -- the individual may request a hearing within 60 days after notice of the decision is received` MEANS
+    PARTY `the individual`
+    MAY   `request a hearing on the determination`
+    WITHIN 60
+
+-- s 405(g): "Any individual, after any final decision of the Commissioner ... made after a hearing to which he was a party
+-- ... may obtain a review of such decision by a civil action commenced within sixty days after the mailing to him of notice
+-- of such decision or within such further time as the Commissioner ... may allow".
+GIVEN `further days allowed by the Commissioner` IS A NUMBER
+GIVETH A DEONTIC `SSA party` `SSA act`
+`s 405(g) -- the individual may commence a civil action within 60 days after notice of the final decision is mailed` `further days allowed by the Commissioner` MEANS
+    PARTY `the individual`
+    MAY   `commence a civil action to review the final decision`
+    WITHIN 60 PLUS `further days allowed by the Commissioner`

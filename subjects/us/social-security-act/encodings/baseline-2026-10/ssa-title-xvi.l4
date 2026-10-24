@@ -1,0 +1,260 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ssa-common`
+IMPORT `ssa-figures`
+
+-- Social Security Act, Title XVI (42 U.S.C. 1381-1383f): Supplemental Security Income for the Aged, Blind, and Disabled --
+-- the core rules the SSI applicant meets: who is an aged, blind, or disabled individual (s 1382c(a)), the income and
+-- resource tests (s 1382(a)), countable income and its exclusions (s 1382a), resources and their exclusions (s 1382b), the
+-- benefit at the federal benefit rate less countable income (s 1382(b), s 1382f), the one-third reduction for in-kind support
+-- in another's household (s 1382a(a)(2)(A)(i)), public institutions (s 1382(e)(1)), when an application takes effect
+-- (s 1382(c)(7)), the duty to apply for other benefits (s 1382(e)(2)), the duty to report changes and its penalties
+-- (s 1383(e)), and the hearing (s 1383(c)).
+--
+-- Written in the Act's own actors and terms; the questions for the applicant are in ssa-seat.l4.
+-- Edition: 42 U.S.C. chapter 7 subchapter XVI as deposited at ../../registers/source-bundle/usc42-ch7-schXVI.txt (OLRC USLM,
+-- release point Public Law 119-121). Figures: ssa-figures.l4 (2026 only). All amounts are monthly.
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Title XVI -- Supplemental Security Income`
+
+§§ `s 1382c(a)(1) -- aged, blind, or disabled individual`
+
+-- s 1382c(a)(1): "(A) is 65 years of age or older, is blind (as determined under paragraph (2)), or is disabled (as determined
+-- under paragraph (3)), and (B)(i) is a resident of the United States, and is either (I) a citizen or (II) an alien lawfully
+-- admitted for permanent residence or otherwise permanently residing in the United States under color of law", or (ii) a
+-- citizen child living abroad with a parent in the Armed Forces. Blindness (central visual acuity of 20/200 or less) and
+-- disability (s 1382c(a)(3)) are the Commissioner's determinations, asked as facts. NOTES.md finding 9: 8 U.S.C. 1612 (not
+-- deposited) further limits SSI for many aliens; this rule says only what Title XVI says.
+GIVEN `age` IS A NUMBER
+      `is blind within s 1382c(a)(2)` IS A BOOLEAN
+      `is disabled within s 1382c(a)(3)` IS A BOOLEAN
+      `is a resident and a citizen, a permanent resident, or permanently residing under color of law, or s 1382c(a)(1)(B)(ii) applies` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is an aged, blind, or disabled individual` IF
+        (    `age` AT LEAST 65
+          OR `is blind within s 1382c(a)(2)`
+          OR `is disabled within s 1382c(a)(3)`)
+    AND `is a resident and a citizen, a permanent resident, or permanently residing under color of law, or s 1382c(a)(1)(B)(ii) applies`
+
+§§ `s 1382a -- countable income`
+
+-- s 1382a(a)(1): earned income is wages, net earnings from self-employment, sheltered workshop pay, royalties and honoraria;
+-- (a)(2): unearned income is "all other income", including (B) "old-age, survivors, and disability insurance benefits" and
+-- (A) support and maintenance in cash or kind. Income in a month: one month's earned and unearned income, asked as facts.
+DECLARE `Monthly income` HAS
+    `earned income`                                                     IS A NUMBER
+    `unearned income, including Social Security benefits`               IS A NUMBER
+    `part of the unearned income paid on the basis of need, other than State or local assistance` IS A NUMBER
+    -- s 1382a(b)(6): "assistance ... based on need and furnished by any State or political subdivision" is excluded.
+    `need-based assistance from a State or local government`            IS A NUMBER
+    -- s 1382a(b)(1): the earned income of a student under 22 is excluded "subject to limitations ... prescribed by the
+    -- Commissioner" (2026: $2,410 a month, $9,730 a year).
+    `is a student under 22 regularly attending school`                  IS A BOOLEAN
+    `student earned income already excluded earlier this year`          IS A NUMBER
+    -- s 1382a(b)(4)(A)(ii) (blind: "expenses reasonably attributable to the earning of any income") and (B)(ii) (disabled:
+    -- impairment-related work expenses, within the Commissioner's limits).
+    `impairment-related or blind work expenses`                         IS A NUMBER
+    `is blind`                                                          IS A BOOLEAN
+
+-- s 1382a(b)(1): the student exclusion, within the monthly and yearly limits.
+GIVEN `income` IS A `Monthly income`, f IS AN `Annual figures`
+GIVETH A NUMBER
+`the student earned income exclusion` `income` f MEANS
+    IF `income`'s `is a student under 22 regularly attending school`
+        THEN min (`income`'s `earned income`)
+                 (min (f's `SSI student earned income exclusion monthly`)
+                      (max 0 (f's `SSI student earned income exclusion yearly` MINUS `income`'s `student earned income already excluded earlier this year`)))
+        ELSE 0
+
+-- s 1382a(b)(2)(A): "the first $240 per year (or proportionately smaller amounts for shorter periods) of income (whether earned
+-- or unearned) other than income which is paid on the basis of need" -- $20 a month. NOTES.md finding 10: the Act does not say
+-- which income it comes off first; it is taken off unearned income first, the order that gives the applicant more (earned
+-- income is later halved), and what is left of it comes off earned income before the $65 ("not excluded by the preceding
+-- paragraphs", (b)(4)).
+`the general income exclusion per month` MEANS 240 DIVIDED BY 12
+
+-- s 1382a(b)(4)(A)(i), (B)(i), (C): "the first $780 per year ... of earned income not excluded by the preceding paragraphs ...,
+-- plus one-half of the remainder" -- $65 a month and one-half. The same for the blind, the disabled under 65 and those 65 or
+-- over. (B)(ii)-(iii): for the disabled, impairment-related work expenses come off before the half; (A)(ii): for the blind,
+-- work expenses come off after it.
+`the earned income exclusion per month` MEANS 780 DIVIDED BY 12
+
+GIVEN `income` IS A `Monthly income`, f IS AN `Annual figures`
+GIVETH A NUMBER
+`the countable unearned income` `income` f MEANS
+    max 0 (unearned MINUS (min `the general income exclusion per month` (max 0 (unearned MINUS `income`'s `part of the unearned income paid on the basis of need, other than State or local assistance`))))
+    WHERE unearned MEANS `income`'s `unearned income, including Social Security benefits`
+
+GIVEN `income` IS A `Monthly income`, f IS AN `Annual figures`
+GIVETH A NUMBER
+`the countable earned income` `income` f MEANS
+    IF `income`'s `is blind`
+        THEN max 0 (halved MINUS work)
+        ELSE (max 0 (afterSixtyFive MINUS work)) DIVIDED BY 2
+    WHERE
+        unearned MEANS `income`'s `unearned income, including Social Security benefits`
+        `general exclusion used on unearned` MEANS min `the general income exclusion per month` (max 0 (unearned MINUS `income`'s `part of the unearned income paid on the basis of need, other than State or local assistance`))
+        `general exclusion left` MEANS `the general income exclusion per month` MINUS `general exclusion used on unearned`
+        afterStudent MEANS max 0 (`income`'s `earned income` MINUS `the student earned income exclusion` `income` f)
+        afterGeneral MEANS max 0 (afterStudent MINUS `general exclusion left`)
+        afterSixtyFive MEANS max 0 (afterGeneral MINUS `the earned income exclusion per month`)
+        work MEANS `income`'s `impairment-related or blind work expenses`
+        halved MEANS afterSixtyFive DIVIDED BY 2
+
+-- Income "other than income excluded pursuant to section 1382a(b)". State need-based assistance is excluded whole ((b)(6)).
+-- Not encoded: (b)(3) infrequent or irregular income, (b)(5), (b)(7)-(b)(25) and the plan-for-achieving-self-support amounts.
+GIVEN `income` IS A `Monthly income`, f IS AN `Annual figures`
+GIVETH A NUMBER
+`the countable income` `income` f MEANS
+    `the countable unearned income` `income` f PLUS `the countable earned income` `income` f
+
+§§ `s 1382(a), (b), s 1382a(a)(2)(A)(i), s 1382(e)(1) -- the rate, eligibility, and the benefit`
+
+DECLARE `Living arrangement` IS ONE OF
+    `in my own household`
+    -- s 1382a(a)(2)(A)(i)
+    `in another person's household, receiving support and maintenance in kind from that person`
+    -- s 1382(e)(1)(B)
+    `throughout the month in a medical treatment facility, with Medicaid paying for my care`
+    -- s 1382(e)(1)(A)
+    `throughout the month an inmate of a public institution`
+
+-- s 1382(b)(1)-(2): the rate is $1,752 a year for an individual and $2,628 for a couple, "or, if greater, the amount determined
+-- under section 1382f" (2026: $994 and $1,491 a month). s 1382a(a)(2)(A)(i): living in another person's household and
+-- receiving support and maintenance in kind from that person, "the dollar amounts ... specified in subsections (a) and (b) of
+-- section 1382 ... shall be reduced by 33 1/3 percent". s 1382(e)(1)(B): in a medical treatment facility with Medicaid paying,
+-- "not in excess of $360 per year" for an individual without an eligible spouse.
+GIVEN f IS AN `Annual figures`
+      `has an eligible spouse` IS A BOOLEAN
+      `living arrangement` IS A `Living arrangement`
+GIVETH A NUMBER
+`the applicable SSI rate` f `has an eligible spouse` `living arrangement` MEANS
+    CONSIDER `living arrangement`
+    WHEN `in another person's household, receiving support and maintenance in kind from that person` THEN full TIMES 2 DIVIDED BY 3
+    WHEN `throughout the month in a medical treatment facility, with Medicaid paying for my care` THEN 360 DIVIDED BY 12
+    WHEN `throughout the month an inmate of a public institution` THEN 0
+    OTHERWISE full
+    WHERE
+        full MEANS IF `has an eligible spouse`
+                       THEN f's `SSI monthly rate for an individual and eligible spouse`
+                       ELSE f's `SSI monthly rate for an individual`
+
+-- s 1382(a)(1)(B), (2)(B), (a)(3): resources "other than resources excluded pursuant to section 1382b(a)" not more than $2,000
+-- (individual with no spouse with whom living) or $3,000 (with an eligible spouse, or living with a spouse).
+GIVEN `has an eligible spouse or lives with a spouse` IS A BOOLEAN
+      `countable resources` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the resources are within the limit` IF
+    IF `has an eligible spouse or lives with a spouse`
+        THEN `countable resources` AT MOST `SSI resource limit for a couple`
+        ELSE `countable resources` AT MOST `SSI resource limit for an individual`
+
+-- s 1382b(a): excluded are (1) the home, (2)(A) household goods, personal effects and an automobile within the Commissioner's
+-- limits, (2)(B) burial spaces, (3) property essential to self-support, (4) a plan for achieving self-support, (11) EITC and
+-- child tax credit refunds for 9 months, and others. The exclusions that depend on the Commissioner's limits are asked as one
+-- figure.
+GIVEN `value of resources other than the home` IS A NUMBER
+      `value of those that s 1382b(a)(2)-(25) excludes` IS A NUMBER
+GIVETH A NUMBER
+`the countable resources` `value of resources other than the home` `value of those that s 1382b(a)(2)-(25) excludes` MEANS
+    max 0 (`value of resources other than the home` MINUS `value of those that s 1382b(a)(2)-(25) excludes`)
+
+-- s 1382(a)(1)-(2): an eligible individual has income, other than excluded income, "at a rate of not more than" the rate, and
+-- resources within the limit; s 1382(e)(1)(A): "no person shall be an eligible individual ... with respect to any month if
+-- throughout such month he is an inmate of a public institution" (except the medical treatment facility case in (B)).
+-- s 1382(b): the benefit is the rate "reduced by the amount of income, not excluded". The month's benefit is worked out from
+-- the income of that month (s 1382(c)(1) uses the first or second month before -- the income given is the month that counts).
+GIVEN `calendar year` IS A NUMBER
+      `is an aged, blind, or disabled individual` IS A BOOLEAN
+      `has an eligible spouse` IS A BOOLEAN
+      `lives with an ineligible spouse, or is a child living with a parent` IS A BOOLEAN
+      `living arrangement` IS A `Living arrangement`
+      `income` IS A `Monthly income`
+      `countable resources` IS A NUMBER
+GIVETH A `Benefit answer`
+`the SSI benefit for the month` `calendar year` `is an aged, blind, or disabled individual` `has an eligible spouse` `lives with an ineligible spouse, or is a child living with a parent` `living arrangement` `income` `countable resources` MEANS
+    CONSIDER `the figures for` `calendar year`
+    WHEN NOTHING THEN `benefit not covered` `the figures the Act needs for that year are not deposited: only the 2026 Federal Register notices are`
+    WHEN JUST f THEN
+        BRANCH
+            IF `lives with an ineligible spouse, or is a child living with a parent` THEN `benefit not covered` `deeming of an ineligible spouse's or parent's income and resources (s 1382c(f)) is not encoded`
+            IF `has an eligible spouse` AND (`living arrangement` EQUALS `throughout the month in a medical treatment facility, with Medicaid paying for my care`) THEN `benefit not covered` `the reduced rate in a medical treatment facility is encoded only for an individual without an eligible spouse`
+            IF NOT `is an aged, blind, or disabled individual` THEN `no benefit` "not an aged, blind, or disabled individual (s 1382c(a)(1))"
+            IF `living arrangement` EQUALS `throughout the month an inmate of a public institution` THEN `no benefit` "an inmate of a public institution throughout the month is not an eligible individual (s 1382(e)(1)(A))"
+            IF NOT (`the resources are within the limit` `has an eligible spouse` `countable resources`) THEN `no benefit` "resources over the limit (s 1382(a)(1)(B), (a)(3))"
+            IF `the countable income` `income` f GREATER THAN rate THEN `no benefit` "countable income above the benefit rate (s 1382(a)(1)(A))"
+            OTHERWISE `a monthly benefit of` (rate MINUS `the countable income` `income` f)
+        WHERE rate MEANS `the applicable SSI rate` f `has an eligible spouse` `living arrangement`
+
+§§ `s 1382(c)(7) -- when an application takes effect`
+
+-- s 1382(c)(7): "an application ... shall be effective on the later of (A) the first day of the month following the date such
+-- application is filed, or (B) the first day of the month following the date such individual becomes eligible".
+GIVEN `date the application is filed` IS A DATE
+      `date the individual becomes eligible` IS A DATE
+GIVETH A NUMBER
+`the first month of SSI on an application` `date the application is filed` `date the individual becomes eligible` MEANS
+    max (`the month number of the date` `date the application is filed`) (`the month number of the date` `date the individual becomes eligible`) PLUS 1
+
+§§ `s 1382(e)(2) -- applying for other benefits`
+
+-- s 1382(e)(2): "No person shall be an eligible individual ... if, after notice to such person by the Commissioner ... that it
+-- is likely that such person is eligible for any payments of the type enumerated in section 1382a(a)(2)(B) [annuities,
+-- pensions, Social Security, unemployment insurance], such person fails within 30 days to take all appropriate steps to apply
+-- for and (if eligible) obtain any such payments." In days from the notice.
+GIVETH A DEONTIC `SSA party` `SSA act`
+`s 1382(e)(2) -- after notice, the applicant must take all appropriate steps to apply for other payments within 30 days` MEANS
+    PARTY `the individual`
+    MUST  `take all appropriate steps to apply for and obtain the other payments`
+    WITHIN 30
+    HENCE FULFILLED
+    LEST  BREACH BY `the individual` BECAUSE "s 1382(e)(2): no steps within 30 days after notice to apply for the payments the Commissioner named: not an eligible individual"
+
+§§ `s 1383(e) -- reporting events and changes`
+
+-- s 1383(e)(1)(A): the Commissioner "shall ... prescribe such requirements with respect to ... the reporting of events and
+-- changes in circumstances, as may be necessary". The time for a report is set by regulation (not deposited), so it is an
+-- input, in days from the event. s 1383(e)(2)(A): on a failure or delay, the Commissioner "shall reduce any benefits which may
+-- subsequently become payable" by $25, $50, then $100, "except where the individual was without fault or good cause for such
+-- failure or delay existed".
+GIVEN `days the Commissioner's requirements allow for the report` IS A NUMBER
+GIVETH A DEONTIC `SSA party` `SSA act`
+`s 1383(e) -- the SSI recipient must report events and changes in circumstances as the Commissioner requires` `days the Commissioner's requirements allow for the report` MEANS
+    PARTY `the individual`
+    MUST  `report the event or change in circumstances`
+    WITHIN `days the Commissioner's requirements allow for the report`
+    HENCE FULFILLED
+    LEST  BREACH BY `the individual` BECAUSE "s 1383(e)(2)(A): report not made, or late: later benefits reduced by $25, $50 or $100, unless without fault or for good cause"
+
+GIVEN `which failure or delay this is` IS A NUMBER
+      `was without fault or had good cause` IS A BOOLEAN
+GIVETH A NUMBER
+`the reduction for a failure or delay in reporting` `which failure or delay this is` `was without fault or had good cause` MEANS
+    IF `was without fault or had good cause`
+        THEN 0
+        ELSE BRANCH
+                IF `which failure or delay this is` AT MOST 1 THEN 25
+                IF `which failure or delay this is` EQUALS 2 THEN 50
+                OTHERWISE 100
+
+§§ `s 1383(c) -- hearing`
+
+-- s 1383(c)(1)(A): the Commissioner "shall provide reasonable notice and opportunity for a hearing to any individual who is or
+-- claims to be an eligible individual ... if such individual requests a hearing on the matter in disagreement within sixty
+-- days after notice of such determination is received".
+GIVETH A DEONTIC `SSA party` `SSA act`
+`s 1383(c)(1) -- the applicant may request a hearing within 60 days after notice of the determination is received` MEANS
+    PARTY `the individual`
+    MAY   `request a hearing on the determination`
+    WITHIN 60
+
+-- s 1383(c)(2): "Determination on the basis of such hearing, except to the extent that the matter in disagreement involves a
+-- disability ..., shall be made within ninety days after the individual requests the hearing". What the applicant is owed.
+GIVETH A DEONTIC `SSA party` `SSA act`
+`s 1383(c)(2) -- the Commissioner must decide within 90 days of a hearing request that does not involve disability` MEANS
+    PARTY `the Commissioner of Social Security`
+    MUST  `make the determination on the basis of the hearing`
+    WITHIN 90
+    HENCE FULFILLED
+    LEST  BREACH BY `the Commissioner of Social Security` BECAUSE "s 1383(c)(2): no determination within 90 days after the hearing request"
