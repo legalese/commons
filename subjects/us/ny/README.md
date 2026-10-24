@@ -2,7 +2,7 @@
 
 New York (US state) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-22 for the legislation governing twelve everyday topics. Each was checked against the New York State Senate - Open Legislation / Consolidated Laws of New York; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. Statute text was deposited and two baselines encoded on 2026-10-24; see the section below.
+The subjects here were laid out on 2026-09-22 for the legislation governing twelve everyday topics. Each was checked against the New York State Senate - Open Legislation / Consolidated Laws of New York; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. Statute text was deposited and two baselines encoded on 2026-10-24; see the section below. One further subject, the RAISE Act on frontier AI incident reporting, was deposited and encoded the same day (second section below).
 
 **Licence category: open.** Statute text may be deposited and quoted in an encoding, subject to the attribution above.
 
@@ -24,3 +24,15 @@ Text was deposited from NYSenate.gov Open Legislation (CC BY-NC-ND 3.0 US with t
 **How they connect.** The tax starts from federal AGI and borrows the federal EIC (Tax Law ss 612(a), 606(d)). Both are inputs that the federal IRC encoding could supply. The New York EIC refund is disregarded for family assistance (Social Services Law s 131-a(8)(a)(viii), s 131-n(1)). Federally taxable social security is subtracted in full (s 612(c)(3-c)).
 
 **Gaps.** The amounts set by regulation or by the Tax Department are not in the deposited text and are inputs: the s 614(f) adjusted standard deductions, the 18 NYCRR shelter and fuel allowances, and the June-adjusted earned income disregard percentage. Not covered: nonresidents, the recapture tax above $100,000 of New York AGI, and safety net assistance. The resource exemptions of s 131-n(1) are marked to expire on 22 August 2027.
+
+## Frontier AI incident reporting (deposited 2026-10-24)
+
+General Business Law Article 44-B, the Responsible AI Safety and Education (RAISE) Act, was deposited on 2026-10-24 as `general-business-law-article-44-b-responsible-ai-safety-and-education`.
+Its source is not the Senate's Open Legislation site, which answered HTTP 403 (a Cloudflare challenge) that day, but the bill prints on the New York State Assembly's bill-search pages; that site's terms could not be found, so the subject's licence status is UNDETERMINED (see its `SOURCE-LICENSE.md`).
+
+| Subject | File | What | Characters |
+| --- | --- | --- | --- |
+| `general-business-law-article-44-b-responsible-ai-safety-and-education` (new) | `ny-s8828-2026-ch-96` | S.8828, Laws of 2026 ch. 96: Article 44-B (§§ 1420-1429) as repealed and re-added, effective 2027-01-01 | 34,665 |
+| same | `ny-s6953b-2025-ch-699` | S.6953-B, Laws of 2025 ch. 699: Article 44-B (§§ 1420-1425) as first enacted | 17,663 |
+
+Encoded as row `solo-2026-10` (critical safety incident reporting, frontier developer's seat; draft).
