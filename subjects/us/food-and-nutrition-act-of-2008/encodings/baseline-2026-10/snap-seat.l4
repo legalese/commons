@@ -1,0 +1,393 @@
+IMPORT prelude
+IMPORT `snap-core`
+
+-- Food and Nutrition Act of 2008 (7 U.S.C. ch. 51) -- SNAP from the seat of the household applying.
+--
+-- SEAT: the individual applying for SNAP for their household (the applicant, speaking for the household). "Who is in
+-- my household? Do we qualify? How much will we get? Must I work? How fast must the State act?" Every question is
+-- phrased as that person would ask it, on facts that person could state. The rules are in snap-core.l4; this module
+-- builds the core's records from plain answers and restates no rule. The sixteen household questions are the same in
+-- every s 2014 and s 2017 question, in the same order, so the form can ask them once.
+--
+-- FIGURES: FY 2027 (1 October 2026 to 30 September 2027), the 48 contiguous States and DC, from the deposited USDA COLA
+-- page. Another day, or another area, answers `not covered`.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `SNAP -- the applicant's questions`
+
+-- Answers that carry an amount, or say why there is none.
+DECLARE `SNAP amount answer` IS ONE OF
+    `the amount, in US dollars a month, is` HAS `dollars` IS A NUMBER
+    `my household is not eligible` HAS `because` IS AN `Eligibility answer`
+    `not covered: no deposited SNAP figures for that day, or my household is outside the 48 States and DC`
+
+GIVEN `the day` IS A DATE
+      `in the 48 States or DC` IS A BOOLEAN
+GIVETH A MAYBE `SNAP annual figures`
+`the figures for my answers` `the day` `in the 48 States or DC` MEANS
+    IF `in the 48 States or DC`
+    THEN `the SNAP figures in force on` `the day`
+    ELSE NOTHING
+
+GIVEN `the month I am asking about` IS A DATE @desc Any day in the month for which SNAP is being worked out (FY 2027 runs from 2026-10-01 to 2027-09-30)
+      `my household lives in the 48 contiguous States or DC` IS A BOOLEAN @desc Whether your household lives in one of the 48 contiguous States or the District of Columbia (Alaska, Hawaii, Guam and the Virgin Islands have other figures, not covered here)
+      `how many people are in my household` IS A NUMBER @desc How many people are in your SNAP household (see the household question; count only members who are themselves eligible, such as citizens or eligible immigrants)
+      `someone in my household is elderly or disabled` IS A BOOLEAN @desc Whether any member is 60 or older, or receives SSI or Social Security disability or blindness payments, or is otherwise an elderly or disabled member (s 2012(j))
+      `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` IS A BOOLEAN @desc Whether every member of your household receives TANF cash assistance, Supplemental Security Income, or aid to the aged, blind or disabled under the Social Security Act
+      `our monthly earnings` IS A NUMBER @desc The household's monthly earnings from work, in US dollars, before tax (leave out a school child's earnings if the child is 17 or younger)
+      `our other monthly income` IS A NUMBER @desc The household's other monthly income in US dollars, such as Social Security, SSI, unemployment or child support received (leave out income the Act excludes, such as student grants for tuition, loans, and energy assistance)
+      `the child support we pay each month` IS A NUMBER @desc Legally obligated child support a household member pays each month to someone outside the household, in US dollars
+      `my State deducts child support instead of excluding it` IS A BOOLEAN @desc Whether your State agency has chosen to give a deduction for child support paid rather than leaving it out of income (if unsure, answer no)
+      `what we pay each month for dependent care` IS A NUMBER @desc What the household pays each month for the care of a child or other dependent so that a member can work, look for work, or train or study for work, in US dollars
+      `the monthly medical costs of our elderly or disabled members` IS A NUMBER @desc What the household's elderly or disabled members pay each month for medical costs (doctors, prescriptions, Medicare premiums, insurance, dental, glasses, medical transport), not paid by anyone else, in US dollars
+      `our monthly shelter costs` IS A NUMBER @desc What the household pays each month for rent or mortgage, property tax, home insurance and utilities (or the State's standard utility allowance), in US dollars; leave out internet
+      `everyone in my household is homeless` IS A BOOLEAN @desc Whether every member of the household is homeless (no fixed, regular night-time residence, or staying in a shelter or temporarily with others)
+      `we get free shelter all month` IS A BOOLEAN @desc Whether the household receives free shelter throughout the month
+      `we choose the homeless shelter deduction` IS A BOOLEAN @desc Whether a homeless household chooses the flat homeless shelter deduction instead of claiming its actual shelter costs
+      `our countable resources` IS A NUMBER @desc The value of the household's countable resources in US dollars: cash, bank and savings accounts, and similar (leave out the home, retirement accounts, 529 and Coverdell accounts, and vehicles the Act excludes)
+GIVETH A `Household month`
+`my household's month from my answers` `the month I am asking about` `my household lives in the 48 contiguous States or DC` `how many people are in my household` `someone in my household is elderly or disabled` `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` `our monthly earnings` `our other monthly income` `the child support we pay each month` `my State deducts child support instead of excluding it` `what we pay each month for dependent care` `the monthly medical costs of our elderly or disabled members` `our monthly shelter costs` `everyone in my household is homeless` `we get free shelter all month` `we choose the homeless shelter deduction` `our countable resources` MEANS
+    `Household month` WITH
+        `household size`                                                       IS `how many people are in my household`
+        `has an elderly or disabled member`                                    IS `someone in my household is elderly or disabled`
+        `every member receives TANF, SSI or aid to the aged, blind or disabled` IS `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled`
+        `monthly earned income`                                                IS `our monthly earnings`
+        `monthly unearned income`                                              IS `our other monthly income`
+        `monthly legally obligated child support paid to non-members`          IS `the child support we pay each month`
+        `the State agency deducts child support instead of excluding it`       IS `my State deducts child support instead of excluding it`
+        `monthly dependent care costs for work, training or education`         IS `what we pay each month for dependent care`
+        `monthly medical costs of the elderly or disabled members`             IS `the monthly medical costs of our elderly or disabled members`
+        `monthly shelter costs`                                                IS `our monthly shelter costs`
+        `all members are homeless individuals`                                 IS `everyone in my household is homeless`
+        `receives free shelter throughout the month`                           IS `we get free shelter all month`
+        `opts for the homeless shelter deduction`                              IS `we choose the homeless shelter deduction`
+        `countable resources`                                                  IS `our countable resources`
+
+§§ `s 2012 -- who is in my household`
+
+@export Under SNAP, who counts as my household (s 2012(m))?
+GIVEN `the month I am asking about` IS A DATE @desc Any day in the month for which SNAP is being worked out (FY 2027 runs from 2026-10-01 to 2027-09-30)
+      `I live alone` IS A BOOLEAN @desc Whether you live alone
+      `I buy food and cook separately from the people I live with` IS A BOOLEAN @desc Whether you usually buy food and prepare meals separately from the people you live with
+      `I live with my spouse` IS A BOOLEAN @desc Whether you live with your husband or wife
+      `I live with my parent or my child, and the child is 21 or younger` IS A BOOLEAN @desc Whether you live with your parent or your child, where the child (you, or your child) is 21 or younger
+      `I am under 18 and under the parental control of an adult who is not my parent` IS A BOOLEAN @desc Whether you are a child under 18 (not a foster child) living under the parental control of an adult who is not your parent
+      `I live in a listed facility` IS A BOOLEAN @desc Whether you live in federally subsidised housing for the elderly, a small certified group home for disabled people, a shelter for battered women and children, a homeless shelter, or a drug or alcohol treatment centre
+      `I live in an institution or boarding house` IS A BOOLEAN @desc Whether you live in an institution or a boarding house (other than a listed facility)
+      `I pay the people I live with for my meals` IS A BOOLEAN @desc Whether you pay the people you live with for your meals
+      `I am 60 or older` IS A BOOLEAN @desc Whether you are 60 or older
+      `a doctor certifies I cannot buy food and cook because of a permanent disability` IS A BOOLEAN @desc Whether a licensed physician certifies that you cannot buy food and prepare meals because of a permanent disability or a severe, permanent and disabling infirmity
+      `the monthly income of the others I live with, not counting my spouse` IS A NUMBER @desc The total monthly income, in US dollars, of the people you live with other than your spouse
+      `how many others I live with, not counting my spouse` IS A NUMBER @desc How many people you live with, other than your spouse
+GIVETH A `Household answer`
+DECIDE `Who is my SNAP household` IS
+    IF      `I am 60 or older`
+        AND `a doctor certifies I cannot buy food and cook because of a permanent disability`
+        AND (NOT `I live alone`)
+    THEN CONSIDER `the SNAP figures in force on` `the month I am asking about`
+         WHEN NOTHING THEN `not covered: the (m)(3) poverty line is not in a deposited publication for that day`
+         WHEN JUST `the figures` THEN `the s 2012(m) household of` (`the arrangement` (`the others' income is within 165 percent` `the figures` `the monthly income of the others I live with, not counting my spouse` `how many others I live with, not counting my spouse`))
+    ELSE `the s 2012(m) household of` (`the arrangement` FALSE)
+    WHERE
+        GIVEN `within` IS A BOOLEAN
+        GIVETH A `Living arrangement`
+        `the arrangement` `within` MEANS
+            `Living arrangement` WITH
+                `lives alone`                                                          IS `I live alone`
+                `buys food and prepares meals separately from the others`             IS `I buy food and cook separately from the people I live with`
+                `lives with a spouse`                                                  IS `I live with my spouse`
+                `lives with a parent or a child, the child being 21 or younger`        IS `I live with my parent or my child, and the child is 21 or younger`
+                `is a child under 18 under the parental control of an adult who is not a parent` IS `I am under 18 and under the parental control of an adult who is not my parent`
+                `lives in a facility listed in s 2012(m)(5)`                           IS `I live in a listed facility`
+                `lives in an institution or boarding house`                            IS `I live in an institution or boarding house`
+                `pays the people lived with for meals`                                 IS `I pay the people I live with for my meals`
+                `is 60 or older`                                                       IS `I am 60 or older`
+                `cannot buy food and prepare meals because of a certified permanent disability or infirmity` IS `a doctor certifies I cannot buy food and cook because of a permanent disability`
+                `the others' income (excluding a spouse) is within 165 percent of the poverty line` IS `within`
+
+-- s 2012(j): "Elderly or disabled member" means a member who (1) "is sixty years of age or older"; (2) receives SSI or
+-- the listed supplementary, interim or disability-based assistance; (3) "receives disability or blindness payments
+-- under title I, II, X, XIV, or XVI of the Social Security Act" or a government disability retirement for a permanent
+-- disability; (4)-(6) the listed veterans, surviving spouses and children of veterans; (7) the listed railroad
+-- retirement annuitants. Paragraphs (2)(B) and (4)-(7) are asked as one fact.
+@export Is this member of my household an "elderly or disabled member" for SNAP (s 2012(j))?
+GIVEN `their age` IS A NUMBER @desc The member's age in years
+      `they receive SSI` IS A BOOLEAN @desc Whether the member receives Supplemental Security Income (or federally or State administered supplementary payments of that type)
+      `they receive Social Security disability or blindness payments` IS A BOOLEAN @desc Whether the member receives disability or blindness payments under title I, II, X, XIV or XVI of the Social Security Act, or a government disability retirement for a permanent disability
+      `they fall in another listed group` IS A BOOLEAN @desc Whether the member is one of the other listed groups: disability-based State assistance or Medicaid at least as strict as SSI, a totally disabled or housebound veteran, a listed surviving spouse or child of a veteran, or a listed railroad retirement disability annuitant
+GIVETH A BOOLEAN
+DECIDE `Is this member elderly or disabled` IF
+        `their age` AT LEAST 60
+    OR  `they receive SSI`
+    OR  `they receive Social Security disability or blindness payments`
+    OR  `they fall in another listed group`
+
+§§ `s 2014 -- income, deductions and whether we qualify`
+
+@export What is my household's gross monthly income for SNAP, after the exclusions and before the deductions (s 2014(c)(2), (d))?
+GIVEN `the month I am asking about` IS A DATE @desc Any day in the month for which SNAP is being worked out (FY 2027 runs from 2026-10-01 to 2027-09-30)
+      `my household lives in the 48 contiguous States or DC` IS A BOOLEAN @desc Whether your household lives in one of the 48 contiguous States or the District of Columbia (Alaska, Hawaii, Guam and the Virgin Islands have other figures, not covered here)
+      `how many people are in my household` IS A NUMBER @desc How many people are in your SNAP household (see the household question; count only members who are themselves eligible, such as citizens or eligible immigrants)
+      `someone in my household is elderly or disabled` IS A BOOLEAN @desc Whether any member is 60 or older, or receives SSI or Social Security disability or blindness payments, or is otherwise an elderly or disabled member (s 2012(j))
+      `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` IS A BOOLEAN @desc Whether every member of your household receives TANF cash assistance, Supplemental Security Income, or aid to the aged, blind or disabled under the Social Security Act
+      `our monthly earnings` IS A NUMBER @desc The household's monthly earnings from work, in US dollars, before tax (leave out a school child's earnings if the child is 17 or younger)
+      `our other monthly income` IS A NUMBER @desc The household's other monthly income in US dollars, such as Social Security, SSI, unemployment or child support received (leave out income the Act excludes, such as student grants for tuition, loans, and energy assistance)
+      `the child support we pay each month` IS A NUMBER @desc Legally obligated child support a household member pays each month to someone outside the household, in US dollars
+      `my State deducts child support instead of excluding it` IS A BOOLEAN @desc Whether your State agency has chosen to give a deduction for child support paid rather than leaving it out of income (if unsure, answer no)
+      `what we pay each month for dependent care` IS A NUMBER @desc What the household pays each month for the care of a child or other dependent so that a member can work, look for work, or train or study for work, in US dollars
+      `the monthly medical costs of our elderly or disabled members` IS A NUMBER @desc What the household's elderly or disabled members pay each month for medical costs (doctors, prescriptions, Medicare premiums, insurance, dental, glasses, medical transport), not paid by anyone else, in US dollars
+      `our monthly shelter costs` IS A NUMBER @desc What the household pays each month for rent or mortgage, property tax, home insurance and utilities (or the State's standard utility allowance), in US dollars; leave out internet
+      `everyone in my household is homeless` IS A BOOLEAN @desc Whether every member of the household is homeless (no fixed, regular night-time residence, or staying in a shelter or temporarily with others)
+      `we get free shelter all month` IS A BOOLEAN @desc Whether the household receives free shelter throughout the month
+      `we choose the homeless shelter deduction` IS A BOOLEAN @desc Whether a homeless household chooses the flat homeless shelter deduction instead of claiming its actual shelter costs
+      `our countable resources` IS A NUMBER @desc The value of the household's countable resources in US dollars: cash, bank and savings accounts, and similar (leave out the home, retirement accounts, 529 and Coverdell accounts, and vehicles the Act excludes)
+GIVETH A NUMBER
+DECIDE `What is our gross income for SNAP` IS
+    `the gross income of` (`my household's month from my answers` `the month I am asking about` `my household lives in the 48 contiguous States or DC` `how many people are in my household` `someone in my household is elderly or disabled` `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` `our monthly earnings` `our other monthly income` `the child support we pay each month` `my State deducts child support instead of excluding it` `what we pay each month for dependent care` `the monthly medical costs of our elderly or disabled members` `our monthly shelter costs` `everyone in my household is homeless` `we get free shelter all month` `we choose the homeless shelter deduction` `our countable resources`)
+
+@export What is my household's monthly shelter deduction for SNAP (s 2014(e)(6)), capped unless a member is elderly or disabled?
+GIVEN `the month I am asking about` IS A DATE @desc Any day in the month for which SNAP is being worked out (FY 2027 runs from 2026-10-01 to 2027-09-30)
+      `my household lives in the 48 contiguous States or DC` IS A BOOLEAN @desc Whether your household lives in one of the 48 contiguous States or the District of Columbia (Alaska, Hawaii, Guam and the Virgin Islands have other figures, not covered here)
+      `how many people are in my household` IS A NUMBER @desc How many people are in your SNAP household (see the household question; count only members who are themselves eligible, such as citizens or eligible immigrants)
+      `someone in my household is elderly or disabled` IS A BOOLEAN @desc Whether any member is 60 or older, or receives SSI or Social Security disability or blindness payments, or is otherwise an elderly or disabled member (s 2012(j))
+      `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` IS A BOOLEAN @desc Whether every member of your household receives TANF cash assistance, Supplemental Security Income, or aid to the aged, blind or disabled under the Social Security Act
+      `our monthly earnings` IS A NUMBER @desc The household's monthly earnings from work, in US dollars, before tax (leave out a school child's earnings if the child is 17 or younger)
+      `our other monthly income` IS A NUMBER @desc The household's other monthly income in US dollars, such as Social Security, SSI, unemployment or child support received (leave out income the Act excludes, such as student grants for tuition, loans, and energy assistance)
+      `the child support we pay each month` IS A NUMBER @desc Legally obligated child support a household member pays each month to someone outside the household, in US dollars
+      `my State deducts child support instead of excluding it` IS A BOOLEAN @desc Whether your State agency has chosen to give a deduction for child support paid rather than leaving it out of income (if unsure, answer no)
+      `what we pay each month for dependent care` IS A NUMBER @desc What the household pays each month for the care of a child or other dependent so that a member can work, look for work, or train or study for work, in US dollars
+      `the monthly medical costs of our elderly or disabled members` IS A NUMBER @desc What the household's elderly or disabled members pay each month for medical costs (doctors, prescriptions, Medicare premiums, insurance, dental, glasses, medical transport), not paid by anyone else, in US dollars
+      `our monthly shelter costs` IS A NUMBER @desc What the household pays each month for rent or mortgage, property tax, home insurance and utilities (or the State's standard utility allowance), in US dollars; leave out internet
+      `everyone in my household is homeless` IS A BOOLEAN @desc Whether every member of the household is homeless (no fixed, regular night-time residence, or staying in a shelter or temporarily with others)
+      `we get free shelter all month` IS A BOOLEAN @desc Whether the household receives free shelter throughout the month
+      `we choose the homeless shelter deduction` IS A BOOLEAN @desc Whether a homeless household chooses the flat homeless shelter deduction instead of claiming its actual shelter costs
+      `our countable resources` IS A NUMBER @desc The value of the household's countable resources in US dollars: cash, bank and savings accounts, and similar (leave out the home, retirement accounts, 529 and Coverdell accounts, and vehicles the Act excludes)
+GIVETH A `SNAP amount answer`
+DECIDE `What is our shelter deduction` IS
+    CONSIDER `the figures for my answers` `the month I am asking about` `my household lives in the 48 contiguous States or DC`
+    WHEN NOTHING THEN `not covered: no deposited SNAP figures for that day, or my household is outside the 48 States and DC`
+    WHEN JUST `the figures` THEN `the amount, in US dollars a month, is` (`the shelter deduction` (`my household's month from my answers` `the month I am asking about` `my household lives in the 48 contiguous States or DC` `how many people are in my household` `someone in my household is elderly or disabled` `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` `our monthly earnings` `our other monthly income` `the child support we pay each month` `my State deducts child support instead of excluding it` `what we pay each month for dependent care` `the monthly medical costs of our elderly or disabled members` `our monthly shelter costs` `everyone in my household is homeless` `we get free shelter all month` `we choose the homeless shelter deduction` `our countable resources`) `under` `the figures`)
+
+@export What is my household's net monthly income for SNAP, after all the deductions (s 2014(c)(1), (e))?
+GIVEN `the month I am asking about` IS A DATE @desc Any day in the month for which SNAP is being worked out (FY 2027 runs from 2026-10-01 to 2027-09-30)
+      `my household lives in the 48 contiguous States or DC` IS A BOOLEAN @desc Whether your household lives in one of the 48 contiguous States or the District of Columbia (Alaska, Hawaii, Guam and the Virgin Islands have other figures, not covered here)
+      `how many people are in my household` IS A NUMBER @desc How many people are in your SNAP household (see the household question; count only members who are themselves eligible, such as citizens or eligible immigrants)
+      `someone in my household is elderly or disabled` IS A BOOLEAN @desc Whether any member is 60 or older, or receives SSI or Social Security disability or blindness payments, or is otherwise an elderly or disabled member (s 2012(j))
+      `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` IS A BOOLEAN @desc Whether every member of your household receives TANF cash assistance, Supplemental Security Income, or aid to the aged, blind or disabled under the Social Security Act
+      `our monthly earnings` IS A NUMBER @desc The household's monthly earnings from work, in US dollars, before tax (leave out a school child's earnings if the child is 17 or younger)
+      `our other monthly income` IS A NUMBER @desc The household's other monthly income in US dollars, such as Social Security, SSI, unemployment or child support received (leave out income the Act excludes, such as student grants for tuition, loans, and energy assistance)
+      `the child support we pay each month` IS A NUMBER @desc Legally obligated child support a household member pays each month to someone outside the household, in US dollars
+      `my State deducts child support instead of excluding it` IS A BOOLEAN @desc Whether your State agency has chosen to give a deduction for child support paid rather than leaving it out of income (if unsure, answer no)
+      `what we pay each month for dependent care` IS A NUMBER @desc What the household pays each month for the care of a child or other dependent so that a member can work, look for work, or train or study for work, in US dollars
+      `the monthly medical costs of our elderly or disabled members` IS A NUMBER @desc What the household's elderly or disabled members pay each month for medical costs (doctors, prescriptions, Medicare premiums, insurance, dental, glasses, medical transport), not paid by anyone else, in US dollars
+      `our monthly shelter costs` IS A NUMBER @desc What the household pays each month for rent or mortgage, property tax, home insurance and utilities (or the State's standard utility allowance), in US dollars; leave out internet
+      `everyone in my household is homeless` IS A BOOLEAN @desc Whether every member of the household is homeless (no fixed, regular night-time residence, or staying in a shelter or temporarily with others)
+      `we get free shelter all month` IS A BOOLEAN @desc Whether the household receives free shelter throughout the month
+      `we choose the homeless shelter deduction` IS A BOOLEAN @desc Whether a homeless household chooses the flat homeless shelter deduction instead of claiming its actual shelter costs
+      `our countable resources` IS A NUMBER @desc The value of the household's countable resources in US dollars: cash, bank and savings accounts, and similar (leave out the home, retirement accounts, 529 and Coverdell accounts, and vehicles the Act excludes)
+GIVETH A `SNAP amount answer`
+DECIDE `What is our net income for SNAP` IS
+    CONSIDER `the figures for my answers` `the month I am asking about` `my household lives in the 48 contiguous States or DC`
+    WHEN NOTHING THEN `not covered: no deposited SNAP figures for that day, or my household is outside the 48 States and DC`
+    WHEN JUST `the figures` THEN `the amount, in US dollars a month, is` (`the net income of` (`my household's month from my answers` `the month I am asking about` `my household lives in the 48 contiguous States or DC` `how many people are in my household` `someone in my household is elderly or disabled` `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` `our monthly earnings` `our other monthly income` `the child support we pay each month` `my State deducts child support instead of excluding it` `what we pay each month for dependent care` `the monthly medical costs of our elderly or disabled members` `our monthly shelter costs` `everyone in my household is homeless` `we get free shelter all month` `we choose the homeless shelter deduction` `our countable resources`) `under` `the figures`)
+
+@export Does my household pass the SNAP income and resource tests (s 2014(a), (c), (g))?
+GIVEN `the month I am asking about` IS A DATE @desc Any day in the month for which SNAP is being worked out (FY 2027 runs from 2026-10-01 to 2027-09-30)
+      `my household lives in the 48 contiguous States or DC` IS A BOOLEAN @desc Whether your household lives in one of the 48 contiguous States or the District of Columbia (Alaska, Hawaii, Guam and the Virgin Islands have other figures, not covered here)
+      `how many people are in my household` IS A NUMBER @desc How many people are in your SNAP household (see the household question; count only members who are themselves eligible, such as citizens or eligible immigrants)
+      `someone in my household is elderly or disabled` IS A BOOLEAN @desc Whether any member is 60 or older, or receives SSI or Social Security disability or blindness payments, or is otherwise an elderly or disabled member (s 2012(j))
+      `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` IS A BOOLEAN @desc Whether every member of your household receives TANF cash assistance, Supplemental Security Income, or aid to the aged, blind or disabled under the Social Security Act
+      `our monthly earnings` IS A NUMBER @desc The household's monthly earnings from work, in US dollars, before tax (leave out a school child's earnings if the child is 17 or younger)
+      `our other monthly income` IS A NUMBER @desc The household's other monthly income in US dollars, such as Social Security, SSI, unemployment or child support received (leave out income the Act excludes, such as student grants for tuition, loans, and energy assistance)
+      `the child support we pay each month` IS A NUMBER @desc Legally obligated child support a household member pays each month to someone outside the household, in US dollars
+      `my State deducts child support instead of excluding it` IS A BOOLEAN @desc Whether your State agency has chosen to give a deduction for child support paid rather than leaving it out of income (if unsure, answer no)
+      `what we pay each month for dependent care` IS A NUMBER @desc What the household pays each month for the care of a child or other dependent so that a member can work, look for work, or train or study for work, in US dollars
+      `the monthly medical costs of our elderly or disabled members` IS A NUMBER @desc What the household's elderly or disabled members pay each month for medical costs (doctors, prescriptions, Medicare premiums, insurance, dental, glasses, medical transport), not paid by anyone else, in US dollars
+      `our monthly shelter costs` IS A NUMBER @desc What the household pays each month for rent or mortgage, property tax, home insurance and utilities (or the State's standard utility allowance), in US dollars; leave out internet
+      `everyone in my household is homeless` IS A BOOLEAN @desc Whether every member of the household is homeless (no fixed, regular night-time residence, or staying in a shelter or temporarily with others)
+      `we get free shelter all month` IS A BOOLEAN @desc Whether the household receives free shelter throughout the month
+      `we choose the homeless shelter deduction` IS A BOOLEAN @desc Whether a homeless household chooses the flat homeless shelter deduction instead of claiming its actual shelter costs
+      `our countable resources` IS A NUMBER @desc The value of the household's countable resources in US dollars: cash, bank and savings accounts, and similar (leave out the home, retirement accounts, 529 and Coverdell accounts, and vehicles the Act excludes)
+GIVETH AN `Eligibility answer`
+DECIDE `Does my household qualify for SNAP` IS
+    CONSIDER `the figures for my answers` `the month I am asking about` `my household lives in the 48 contiguous States or DC`
+    WHEN NOTHING THEN `not covered: no deposited figures for that day, or the household is outside the 48 States and DC`
+    WHEN JUST `the figures` THEN `the s 2014 eligibility of` (`my household's month from my answers` `the month I am asking about` `my household lives in the 48 contiguous States or DC` `how many people are in my household` `someone in my household is elderly or disabled` `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` `our monthly earnings` `our other monthly income` `the child support we pay each month` `my State deducts child support instead of excluding it` `what we pay each month for dependent care` `the monthly medical costs of our elderly or disabled members` `our monthly shelter costs` `everyone in my household is homeless` `we get free shelter all month` `we choose the homeless shelter deduction` `our countable resources`) `under` `the figures`
+
+§§ `s 2017 -- how much we get`
+
+@export How much SNAP will my household get for a full month (s 2017(a))?
+GIVEN `the month I am asking about` IS A DATE @desc Any day in the month for which SNAP is being worked out (FY 2027 runs from 2026-10-01 to 2027-09-30)
+      `my household lives in the 48 contiguous States or DC` IS A BOOLEAN @desc Whether your household lives in one of the 48 contiguous States or the District of Columbia (Alaska, Hawaii, Guam and the Virgin Islands have other figures, not covered here)
+      `how many people are in my household` IS A NUMBER @desc How many people are in your SNAP household (see the household question; count only members who are themselves eligible, such as citizens or eligible immigrants)
+      `someone in my household is elderly or disabled` IS A BOOLEAN @desc Whether any member is 60 or older, or receives SSI or Social Security disability or blindness payments, or is otherwise an elderly or disabled member (s 2012(j))
+      `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` IS A BOOLEAN @desc Whether every member of your household receives TANF cash assistance, Supplemental Security Income, or aid to the aged, blind or disabled under the Social Security Act
+      `our monthly earnings` IS A NUMBER @desc The household's monthly earnings from work, in US dollars, before tax (leave out a school child's earnings if the child is 17 or younger)
+      `our other monthly income` IS A NUMBER @desc The household's other monthly income in US dollars, such as Social Security, SSI, unemployment or child support received (leave out income the Act excludes, such as student grants for tuition, loans, and energy assistance)
+      `the child support we pay each month` IS A NUMBER @desc Legally obligated child support a household member pays each month to someone outside the household, in US dollars
+      `my State deducts child support instead of excluding it` IS A BOOLEAN @desc Whether your State agency has chosen to give a deduction for child support paid rather than leaving it out of income (if unsure, answer no)
+      `what we pay each month for dependent care` IS A NUMBER @desc What the household pays each month for the care of a child or other dependent so that a member can work, look for work, or train or study for work, in US dollars
+      `the monthly medical costs of our elderly or disabled members` IS A NUMBER @desc What the household's elderly or disabled members pay each month for medical costs (doctors, prescriptions, Medicare premiums, insurance, dental, glasses, medical transport), not paid by anyone else, in US dollars
+      `our monthly shelter costs` IS A NUMBER @desc What the household pays each month for rent or mortgage, property tax, home insurance and utilities (or the State's standard utility allowance), in US dollars; leave out internet
+      `everyone in my household is homeless` IS A BOOLEAN @desc Whether every member of the household is homeless (no fixed, regular night-time residence, or staying in a shelter or temporarily with others)
+      `we get free shelter all month` IS A BOOLEAN @desc Whether the household receives free shelter throughout the month
+      `we choose the homeless shelter deduction` IS A BOOLEAN @desc Whether a homeless household chooses the flat homeless shelter deduction instead of claiming its actual shelter costs
+      `our countable resources` IS A NUMBER @desc The value of the household's countable resources in US dollars: cash, bank and savings accounts, and similar (leave out the home, retirement accounts, 529 and Coverdell accounts, and vehicles the Act excludes)
+GIVETH A `SNAP amount answer`
+DECIDE `How much SNAP will we get each month` IS
+    CONSIDER `the figures for my answers` `the month I am asking about` `my household lives in the 48 contiguous States or DC`
+    WHEN NOTHING THEN `not covered: no deposited SNAP figures for that day, or my household is outside the 48 States and DC`
+    WHEN JUST `the figures` THEN
+        IF `is an eligible answer` (`the s 2014 eligibility of` `the month` `under` `the figures`)
+        THEN `the amount, in US dollars a month, is` (`the s 2017(a) allotment for` `the month` `under` `the figures`)
+        ELSE `my household is not eligible` (`the s 2014 eligibility of` `the month` `under` `the figures`)
+    WHERE
+        `the month` MEANS `my household's month from my answers` `the month I am asking about` `my household lives in the 48 contiguous States or DC` `how many people are in my household` `someone in my household is elderly or disabled` `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` `our monthly earnings` `our other monthly income` `the child support we pay each month` `my State deducts child support instead of excluding it` `what we pay each month for dependent care` `the monthly medical costs of our elderly or disabled members` `our monthly shelter costs` `everyone in my household is homeless` `we get free shelter all month` `we choose the homeless shelter deduction` `our countable resources`
+
+-- The first month: "the month I am asking about" is the day of application.
+@export How much SNAP will my household get for the month we apply in, counting from the day of application (s 2017(c))?
+GIVEN `the month I am asking about` IS A DATE @desc Any day in the month for which SNAP is being worked out (FY 2027 runs from 2026-10-01 to 2027-09-30)
+      `my household lives in the 48 contiguous States or DC` IS A BOOLEAN @desc Whether your household lives in one of the 48 contiguous States or the District of Columbia (Alaska, Hawaii, Guam and the Virgin Islands have other figures, not covered here)
+      `how many people are in my household` IS A NUMBER @desc How many people are in your SNAP household (see the household question; count only members who are themselves eligible, such as citizens or eligible immigrants)
+      `someone in my household is elderly or disabled` IS A BOOLEAN @desc Whether any member is 60 or older, or receives SSI or Social Security disability or blindness payments, or is otherwise an elderly or disabled member (s 2012(j))
+      `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` IS A BOOLEAN @desc Whether every member of your household receives TANF cash assistance, Supplemental Security Income, or aid to the aged, blind or disabled under the Social Security Act
+      `our monthly earnings` IS A NUMBER @desc The household's monthly earnings from work, in US dollars, before tax (leave out a school child's earnings if the child is 17 or younger)
+      `our other monthly income` IS A NUMBER @desc The household's other monthly income in US dollars, such as Social Security, SSI, unemployment or child support received (leave out income the Act excludes, such as student grants for tuition, loans, and energy assistance)
+      `the child support we pay each month` IS A NUMBER @desc Legally obligated child support a household member pays each month to someone outside the household, in US dollars
+      `my State deducts child support instead of excluding it` IS A BOOLEAN @desc Whether your State agency has chosen to give a deduction for child support paid rather than leaving it out of income (if unsure, answer no)
+      `what we pay each month for dependent care` IS A NUMBER @desc What the household pays each month for the care of a child or other dependent so that a member can work, look for work, or train or study for work, in US dollars
+      `the monthly medical costs of our elderly or disabled members` IS A NUMBER @desc What the household's elderly or disabled members pay each month for medical costs (doctors, prescriptions, Medicare premiums, insurance, dental, glasses, medical transport), not paid by anyone else, in US dollars
+      `our monthly shelter costs` IS A NUMBER @desc What the household pays each month for rent or mortgage, property tax, home insurance and utilities (or the State's standard utility allowance), in US dollars; leave out internet
+      `everyone in my household is homeless` IS A BOOLEAN @desc Whether every member of the household is homeless (no fixed, regular night-time residence, or staying in a shelter or temporarily with others)
+      `we get free shelter all month` IS A BOOLEAN @desc Whether the household receives free shelter throughout the month
+      `we choose the homeless shelter deduction` IS A BOOLEAN @desc Whether a homeless household chooses the flat homeless shelter deduction instead of claiming its actual shelter costs
+      `our countable resources` IS A NUMBER @desc The value of the household's countable resources in US dollars: cash, bank and savings accounts, and similar (leave out the home, retirement accounts, 529 and Coverdell accounts, and vehicles the Act excludes)
+GIVETH A `SNAP amount answer`
+DECIDE `How much SNAP will we get for the first month` IS
+    CONSIDER `How much SNAP will we get each month` `the month I am asking about` `my household lives in the 48 contiguous States or DC` `how many people are in my household` `someone in my household is elderly or disabled` `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` `our monthly earnings` `our other monthly income` `the child support we pay each month` `my State deducts child support instead of excluding it` `what we pay each month for dependent care` `the monthly medical costs of our elderly or disabled members` `our monthly shelter costs` `everyone in my household is homeless` `we get free shelter all month` `we choose the homeless shelter deduction` `our countable resources`
+    WHEN `the amount, in US dollars a month, is` `full` THEN `the amount, in US dollars a month, is` (`the s 2017(c) initial allotment of` `full` `applying on` `the month I am asking about`)
+    OTHERWISE `How much SNAP will we get each month` `the month I am asking about` `my household lives in the 48 contiguous States or DC` `how many people are in my household` `someone in my household is elderly or disabled` `everyone in my household gets TANF, SSI or aid to the aged, blind or disabled` `our monthly earnings` `our other monthly income` `the child support we pay each month` `my State deducts child support instead of excluding it` `what we pay each month for dependent care` `the monthly medical costs of our elderly or disabled members` `our monthly shelter costs` `everyone in my household is homeless` `we get free shelter all month` `we choose the homeless shelter deduction` `our countable resources`
+
+§§ `s 2015(d) -- must I work (for household members aged 16 to 59)`
+
+@export Must I meet the SNAP work requirements -- register for work, take a suitable job, not quit without good cause (s 2015(d)(1), (2))?
+GIVEN `my age` IS A NUMBER @desc Your age in years
+      `I am physically and mentally fit to work` IS A BOOLEAN @desc Whether you are physically and mentally fit for work
+      `I comply with a TANF or unemployment work registration requirement` IS A BOOLEAN @desc Whether you are subject to and complying with a work registration requirement under TANF or unemployment compensation
+      `I care for a child under 6 or an incapacitated person` IS A BOOLEAN @desc Whether you are responsible for the care of a dependent child under 6 or of an incapacitated person
+      `I am a student at least half time` IS A BOOLEAN @desc Whether you are enrolled at least half time in a recognised school, training program or college
+      `I am in a drug or alcohol treatment program` IS A BOOLEAN @desc Whether you regularly take part in a drug addiction or alcoholic treatment and rehabilitation program
+      `the hours I work each week` IS A NUMBER @desc How many hours you work each week
+      `what I earn each week` IS A NUMBER @desc Your weekly earnings in US dollars
+      `the federal minimum wage per hour` IS A NUMBER @desc The federal minimum hourly wage under the Fair Labor Standards Act, in US dollars (not deposited here; for example 7.25)
+      `I am the head of my household` IS A BOOLEAN @desc Whether you are the head of your household
+GIVETH A BOOLEAN
+DECIDE `Must I meet the SNAP work requirements` IF
+    `is subject to the s 2015(d)(1) work requirements` (`my work facts` `my age` `I am physically and mentally fit to work` `I comply with a TANF or unemployment work registration requirement` `I care for a child under 6 or an incapacitated person` FALSE `I am a student at least half time` `I am in a drug or alcohol treatment program` `the hours I work each week` `what I earn each week` `the federal minimum wage per hour` `I am the head of my household` FALSE FALSE)
+
+-- Builds the core's work facts. The two time-limit-only facts (child under 14, pregnancy, Indian status) are placeholders
+-- (FALSE) where the general work-requirement question does not read them.
+GIVEN `a1` IS A NUMBER, `a2` IS A BOOLEAN, `a3` IS A BOOLEAN, `a4` IS A BOOLEAN, `a5` IS A BOOLEAN, `a6` IS A BOOLEAN, `a7` IS A BOOLEAN, `a8` IS A NUMBER, `a9` IS A NUMBER, `a10` IS A NUMBER, `a11` IS A BOOLEAN, `a12` IS A BOOLEAN, `a13` IS A BOOLEAN
+GIVETH A `Work facts`
+`my work facts` `a1` `a2` `a3` `a4` `a5` `a6` `a7` `a8` `a9` `a10` `a11` `a12` `a13` MEANS
+    `Work facts` WITH
+        `age`                                                                    IS `a1`
+        `is physically and mentally fit`                                         IS `a2`
+        `complies with a TANF or unemployment compensation work registration requirement` IS `a3`
+        `cares for a dependent child under 6 or an incapacitated person`         IS `a4`
+        `cares for a dependent child under 14 as a parent or household member`   IS `a5`
+        `is a student enrolled at least half time`                               IS `a6`
+        `regularly takes part in a drug or alcohol treatment program`            IS `a7`
+        `hours worked per week`                                                  IS `a8`
+        `weekly earnings`                                                        IS `a9`
+        `the federal minimum hourly wage`                                        IS `a10`
+        `is the head of the household`                                           IS `a11`
+        `is pregnant`                                                            IS `a12`
+        `is an Indian, Urban Indian or California Indian`                        IS `a13`
+
+-- Situation: the person has been found to have refused to register, refused a job or E&T without good cause, or quit.
+@export If I am found to have refused work or quit without good cause, for how long am I barred from SNAP (s 2015(d)(1)(C))?
+GIVEN `which time this is` IS A NUMBER @desc Whether this is your first (1), second (2), or third or later (3) such finding
+GIVETH AN `Ineligibility period`
+DECIDE `How long am I barred for a work requirement violation` IS
+    `the s 2015(d)(1)(C) period for violation number` `which time this is`
+
+§§ `s 2015(o) -- the 3-month time limit (for adults aged 18 to 65)`
+
+@export Does the SNAP time limit (3 months in 36 without working 20 hours a week) stop me getting SNAP this month (s 2015(o))?
+GIVEN `my age` IS A NUMBER @desc Your age in years
+      `a doctor certifies I am unfit for work` IS A BOOLEAN @desc Whether you are medically certified as physically or mentally unfit for employment
+      `I care for a child under 14 in my household` IS A BOOLEAN @desc Whether you are a parent or other member of a household with responsibility for a dependent child under 14
+      `I comply with a TANF or unemployment work registration requirement` IS A BOOLEAN @desc Whether you are subject to and complying with a work registration requirement under TANF or unemployment compensation
+      `I care for a child under 6 or an incapacitated person` IS A BOOLEAN @desc Whether you are responsible for the care of a dependent child under 6 or of an incapacitated person
+      `I am a student at least half time` IS A BOOLEAN @desc Whether you are enrolled at least half time in a recognised school, training program or college
+      `I am in a drug or alcohol treatment program` IS A BOOLEAN @desc Whether you regularly take part in a drug addiction or alcoholic treatment and rehabilitation program
+      `the hours I work each week` IS A NUMBER @desc How many hours you work each week, averaged over the month
+      `what I earn each week` IS A NUMBER @desc Your weekly earnings in US dollars
+      `the federal minimum wage per hour` IS A NUMBER @desc The federal minimum hourly wage under the Fair Labor Standards Act, in US dollars (not deposited here; for example 7.25)
+      `I am pregnant` IS A BOOLEAN @desc Whether you are pregnant
+      `I am an Indian, Urban Indian or California Indian` IS A BOOLEAN @desc Whether you are an Indian or Urban Indian (25 U.S.C. 1603) or a California Indian (25 U.S.C. 1679(a))
+      `my area has a waiver` IS A BOOLEAN @desc Whether the area you live in is covered by a waiver of the time limit granted by USDA (s 2015(o)(4))
+      `the State has exempted me` IS A BOOLEAN @desc Whether your State agency has given you one of its discretionary exemptions (s 2015(o)(6))
+      `I work or do a work program 20 hours a week, or do workfare` IS A BOOLEAN @desc Whether this month you work 20 or more hours a week (averaged monthly), or take part 20 or more hours a week in a work program, or take part in workfare
+      `months already counted in the last 36` IS A NUMBER @desc How many months in the last 36 you received SNAP without meeting the work requirement and without an exception, waiver or exemption
+GIVETH A `Time limit answer`
+DECIDE `Does the time limit stop me getting SNAP` IS
+    `the s 2015(o) answer for`
+        (`Time limit facts` WITH
+            `the person` IS `my work facts` `my age` TRUE `I comply with a TANF or unemployment work registration requirement` `I care for a child under 6 or an incapacitated person` `I care for a child under 14 in my household` `I am a student at least half time` `I am in a drug or alcohol treatment program` `the hours I work each week` `what I earn each week` `the federal minimum wage per hour` TRUE `I am pregnant` `I am an Indian, Urban Indian or California Indian`
+            `is medically certified as unfit for employment`            IS `a doctor certifies I am unfit for work`
+            `lives in an area covered by a waiver under s 2015(o)(4)`   IS `my area has a waiver`
+            `has an exemption from the State agency under s 2015(o)(6)` IS `the State has exempted me`
+            `works or takes part in a work program 20 hours a week, or does workfare` IS `I work or do a work program 20 hours a week, or do workfare`
+            `countable months already received in the 36-month period`  IS `months already counted in the last 36`)
+
+-- Situation: the person has been cut off by the time limit.
+@export I was cut off by the SNAP time limit: have I regained eligibility (s 2015(o)(5)(A))?
+GIVEN `hours I worked or spent in a work program in a 30-day period` IS A NUMBER @desc Hours you worked, or took part in a work program, in a single 30-day period
+      `I did workfare in that period` IS A BOOLEAN @desc Whether you took part in and complied with workfare (s 2029) or a comparable State program in that period
+GIVETH A BOOLEAN
+DECIDE `Have I regained SNAP eligibility after the time limit` IF
+    `regains eligibility under s 2015(o)(5)` `hours I worked or spent in a work program in a 30-day period` `I did workfare in that period`
+
+§§ `s 2020 -- applying and keeping benefits`
+
+@export Is my household entitled to expedited SNAP service, with benefits within 7 days (s 2020(e)(9))?
+GIVEN `our gross monthly income` IS A NUMBER @desc The household's gross monthly income in US dollars
+      `our cash and bank balances` IS A NUMBER @desc The household's liquid resources (cash, bank balances) in US dollars
+      `our monthly rent or mortgage and utilities` IS A NUMBER @desc What the household pays each month for rent or mortgage and utilities, in US dollars
+      `we are a destitute migrant or seasonal farmworker household` IS A BOOLEAN @desc Whether the household is a destitute migrant or seasonal farmworker household
+GIVETH A BOOLEAN
+DECIDE `Are we entitled to expedited service` IF
+    `is entitled to expedited service` `our gross monthly income` `our cash and bank balances` `our monthly rent or mortgage and utilities` `we are a destitute migrant or seasonal farmworker household`
+
+@export If my household is eligible, within how many days of filing our application must the State agency give us benefits (s 2020(e)(3), (9))?
+GIVEN `our gross monthly income` IS A NUMBER @desc The household's gross monthly income in US dollars
+      `our cash and bank balances` IS A NUMBER @desc The household's liquid resources (cash, bank balances) in US dollars
+      `our monthly rent or mortgage and utilities` IS A NUMBER @desc What the household pays each month for rent or mortgage and utilities, in US dollars
+      `we are a destitute migrant or seasonal farmworker household` IS A BOOLEAN @desc Whether the household is a destitute migrant or seasonal farmworker household
+GIVETH A NUMBER
+DECIDE `Within how many days must the State give us benefits` IS
+    `the days to provide benefits` (`is entitled to expedited service` `our gross monthly income` `our cash and bank balances` `our monthly rent or mortgage and utilities` `we are a destitute migrant or seasonal farmworker household`)
+
+DECLARE `Recertification answer` IS ONE OF
+    `if we are still eligible, our next allotment must arrive no later than` HAS `the date` IS A DATE
+    `s 2020(e)(4) sets no date: we applied later than 15 days before our certification period ends`
+
+-- Situation: the household's certification period is ending.
+@export If we apply to renew SNAP, by what date must our next allotment arrive (s 2020(e)(4))?
+GIVEN `the day we file for recertification` IS A DATE @desc The day you filed your application for recertification
+      `the last day of our certification period` IS A DATE @desc The last day of your current certification period
+      `the day we received our last allotment` IS A DATE @desc The day you received the last allotment of your current certification period
+GIVETH A `Recertification answer`
+DECIDE `By when must our renewed SNAP arrive` IS
+    IF DATE_SERIAL `the day we file for recertification` AT MOST (DATE_SERIAL `the last day of our certification period` MINUS `the days before expiry to recertify`)
+    THEN `if we are still eligible, our next allotment must arrive no later than` (`one month after` `the day we received our last allotment`)
+    ELSE `s 2020(e)(4) sets no date: we applied later than 15 days before our certification period ends`
+
+@export By what date must the State agency have sent us the notice that our SNAP certification is expiring (s 2020(e)(4))?
+GIVEN `the last day of our certification period` IS A DATE @desc The last day of your current certification period
+GIVETH A DATE
+DECIDE `By when must we get our expiry notice` IS
+    DATE_FROM_SERIAL (DATE_SERIAL (DATE_FROM_DMY 1 (DATE_MONTH `the last day of our certification period`) (DATE_YEAR `the last day of our certification period`)) MINUS 1)

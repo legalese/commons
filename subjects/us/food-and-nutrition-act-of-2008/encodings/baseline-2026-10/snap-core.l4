@@ -1,0 +1,764 @@
+IMPORT prelude
+
+-- Food and Nutrition Act of 2008 (7 U.S.C. ch. 51) -- the Supplemental Nutrition Assistance Program (SNAP).
+-- SEAT-NEUTRAL CORE. The rules are written in the Act's own actors and terms: "the household", "the State agency",
+-- "an individual". The applicant's questions are in snap-seat.l4, which IMPORTs this module and restates no rule.
+--
+-- PROVISIONS COVERED. s 2012(j) (elderly or disabled member, as facts), s 2012(m) (household), s 2012(u)(2)
+-- (household-size ratios, read against the published table), s 2014(a) (categorical eligibility), s 2014(c) (gross and
+-- net income standards), s 2014(d) (income after exclusions, as an input, with the (d)(6) child support exclusion),
+-- s 2014(e)(1)-(6) (standard, earned income, dependent care, child support, excess medical and excess shelter
+-- deductions, the shelter cap and the homeless shelter deduction), s 2014(g)(1) (resource limits), s 2014a (report of
+-- leaving the State), s 2015(d)(1)-(2) (work requirements, exemptions, periods of ineligibility), s 2015(o) (the
+-- 3-months-in-36 time limit), s 2017(a) (allotment), s 2017(c) (first-month proration), s 2020(e)(2)(B)(iii), (e)(3),
+-- (e)(4), (e)(9), (e)(10) (the State agency's duties when a household applies, recertifies or asks for a hearing).
+--
+-- FIGURES. The FY 2027 figures (1 October 2026 to 30 September 2027, the 48 contiguous States and DC) are taken from
+-- the deposited USDA COLA page, ../../registers/source-bundle/fna-snap-cola-fy2027.txt, as one dated table. A date
+-- outside FY 2027 has no figures here, and the questions answer `not covered`.
+--
+-- Edition: 7 U.S.C. ch. 51, OLRC USLM XML release point Public Law 119-121 (current through 9 October 2026), as
+-- deposited at ../../registers/source-bundle/usc07-ch51.txt. The text includes the amendments of Pub. L. 119-21
+-- (4 July 2025).
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Food and Nutrition Act of 2008 -- seat-neutral core`
+
+§§ `FY 2027 figures (USDA SNAP COLA page, 48 States and DC)`
+
+-- The COLA page's tables, one field per table. Household sizes 1 to 8 are a list; the page gives the amount for each
+-- additional member. Where the page gives "18+" for the maximum allotment, that is the s 2012(u)(2)(I) cap ("shall not
+-- total more than 200 percent").
+DECLARE `SNAP annual figures` HAS
+    `fiscal year`                                              IS A STRING
+    `first day serial`                                         IS A NUMBER
+    `last day serial`                                          IS A NUMBER
+    `net income limits for 1 to 8 members`                     IS A LIST OF NUMBER
+    `net income limit for each additional member`              IS A NUMBER
+    `gross income limits for 1 to 8 members`                   IS A LIST OF NUMBER
+    `gross income limit for each additional member`            IS A NUMBER
+    `165 percent limits for 1 to 8 members`                    IS A LIST OF NUMBER
+    `165 percent limit for each additional member`             IS A NUMBER
+    `maximum allotments for 1 to 8 members`                    IS A LIST OF NUMBER
+    `maximum allotment for each additional member, 9 to 17`    IS A NUMBER
+    `maximum allotment for 18 or more members`                 IS A NUMBER
+    `minimum allotment for 1 or 2 members`                     IS A NUMBER
+    `standard deduction for 1 to 3 members`                    IS A NUMBER
+    `standard deduction for 4 members`                         IS A NUMBER
+    `standard deduction for 5 members`                         IS A NUMBER
+    `standard deduction for 6 or more members`                 IS A NUMBER
+    `maximum excess shelter deduction`                         IS A NUMBER
+    `homeless shelter deduction`                               IS A NUMBER
+    `resource limit with an elderly or disabled member`        IS A NUMBER
+    `resource limit for other households`                      IS A NUMBER
+
+-- fna-snap-cola-fy2027.txt: "effective Oct. 1, 2026, through Sept. 30, 2027". Serials are DATE_SERIAL of those days.
+`FY 2027 figures` MEANS
+    `SNAP annual figures` WITH
+        `fiscal year`                                           IS "FY 2027"
+        `first day serial`                                      IS DATE_SERIAL (DATE_FROM_DMY 1 10 2026)
+        `last day serial`                                       IS DATE_SERIAL (DATE_FROM_DMY 30 9 2027)
+        `net income limits for 1 to 8 members`                  IS LIST 1330, 1804, 2277, 2750, 3224, 3697, 4170, 4644
+        `net income limit for each additional member`           IS 474
+        `gross income limits for 1 to 8 members`                IS LIST 1729, 2345, 2960, 3575, 4191, 4806, 5421, 6037
+        `gross income limit for each additional member`         IS 616
+        `165 percent limits for 1 to 8 members`                 IS LIST 2195, 2976, 3757, 4538, 5319, 6100, 6881, 7662
+        `165 percent limit for each additional member`          IS 781
+        `maximum allotments for 1 to 8 members`                 IS LIST 306, 562, 808, 1023, 1217, 1463, 1616, 1841
+        `maximum allotment for each additional member, 9 to 17` IS 225
+        `maximum allotment for 18 or more members`              IS 3887
+        `minimum allotment for 1 or 2 members`                  IS 25
+        `standard deduction for 1 to 3 members`                 IS 217
+        `standard deduction for 4 members`                      IS 229
+        `standard deduction for 5 members`                      IS 268
+        `standard deduction for 6 or more members`              IS 308
+        `maximum excess shelter deduction`                      IS 769
+        `homeless shelter deduction`                            IS 205.66
+        `resource limit with an elderly or disabled member`     IS 4750
+        `resource limit for other households`                   IS 3000
+
+-- The dated table: the figures in force on a day, or NOTHING if no deposited publication covers it.
+GIVEN `the day` IS A DATE
+GIVETH A MAYBE `SNAP annual figures`
+`the SNAP figures in force on` `the day` MEANS
+    IF      DATE_SERIAL `the day` AT LEAST `FY 2027 figures`'s `first day serial`
+        AND DATE_SERIAL `the day` AT MOST  `FY 2027 figures`'s `last day serial`
+    THEN JUST `FY 2027 figures`
+    ELSE NOTHING
+
+-- The n-th entry of a table row (1-based); 0 past the end (never reached: callers check the size).
+GIVEN `n`       IS A NUMBER
+      `the row` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`entry` `n` `of` `the row` MEANS
+    CONSIDER `the row`
+    WHEN EMPTY THEN 0
+    WHEN x FOLLOWED BY xs THEN
+        IF `n` AT MOST 1
+        THEN x
+        ELSE `entry` (`n` MINUS 1) `of` xs
+
+-- A row for sizes 1 to 8 plus a fixed amount for each member over 8.
+GIVEN `size`             IS A NUMBER
+      `the row`          IS A LIST OF NUMBER
+      `each additional`  IS A NUMBER
+GIVETH A NUMBER
+`the limit for size` `size` `from` `the row` `and` `each additional` MEANS
+    IF `size` AT MOST 8
+    THEN `entry` `size` `of` `the row`
+    ELSE (`entry` 8 `of` `the row`) PLUS (`each additional` TIMES (`size` MINUS 8))
+
+§§ `s 2012(m) -- who is a household`
+
+-- s 2012(m)(1): "Household" means (A) "an individual who lives alone or who, while living with others, customarily
+-- purchases food and prepares meals for home consumption separate and apart from the others; or (B) a group of
+-- individuals who live together and customarily purchase food and prepare meals together for home consumption."
+-- (m)(2): "Spouses who live together, parents and their children 21 years of age or younger who live together, and
+-- children (excluding foster children) under 18 years of age who live with and are under the parental control of a
+-- person other than their parent together with the person exercising parental control shall be treated as a group of
+-- individuals who customarily purchase and prepare meals together ... even if they do not do so."
+-- (m)(3): an individual 60 or older, living with others, "unable to purchase food and prepare meals" because of a
+-- physician-certified permanent disability (s 221(i) SSA) or "severe, permanent, and disabling physical or mental
+-- infirmity", is with any spouse "an individual household" if the others' income (excluding the spouse) "does not
+-- exceed the poverty line ... by more than 65 per centum".
+-- (m)(4): "In no event shall any individual or group of individuals constitute a household if they reside in an
+-- institution or boarding house, or else live with others and pay compensation to the others for meals."
+-- (m)(5): residents of the listed facilities (subsidised elderly housing, small certified group homes, battered
+-- women's shelters, homeless shelters, drug or alcohol treatment centres) "shall not be considered to be residents of
+-- institutions and shall be considered to be individual households".
+DECLARE `Living arrangement` HAS
+    `lives alone`                                                          IS A BOOLEAN
+    `buys food and prepares meals separately from the others`             IS A BOOLEAN
+    `lives with a spouse`                                                  IS A BOOLEAN
+    `lives with a parent or a child, the child being 21 or younger`        IS A BOOLEAN
+    `is a child under 18 under the parental control of an adult who is not a parent` IS A BOOLEAN
+    `lives in a facility listed in s 2012(m)(5)`                           IS A BOOLEAN
+    `lives in an institution or boarding house`                            IS A BOOLEAN
+    `pays the people lived with for meals`                                 IS A BOOLEAN
+    `is 60 or older`                                                       IS A BOOLEAN
+    `cannot buy food and prepare meals because of a certified permanent disability or infirmity` IS A BOOLEAN
+    `the others' income (excluding a spouse) is within 165 percent of the poverty line` IS A BOOLEAN
+
+DECLARE `Household answer` IS ONE OF
+    `a household of my own (s 2012(m)(1)(A))`
+    `one household with the people I buy food and prepare meals with (s 2012(m)(1)(B))`
+    `one household with my spouse, parent or child, or the adult whose parental control I am under, even if we buy and cook separately (s 2012(m)(2))`
+    `a separate household of my own, together with my spouse if any (s 2012(m)(3))`
+    `a household of my own: the facility I live in is not an institution for SNAP (s 2012(m)(5))`
+    `not a household: I live in an institution or boarding house, or pay the people I live with for meals (s 2012(m)(4))`
+    `not covered: the (m)(3) poverty line is not in a deposited publication for that day`
+
+GIVEN `the arrangement` IS A `Living arrangement`
+GIVETH A `Household answer`
+`the s 2012(m) household of` `the arrangement` MEANS
+    IF `the arrangement`'s `lives in a facility listed in s 2012(m)(5)`
+    THEN `a household of my own: the facility I live in is not an institution for SNAP (s 2012(m)(5))`
+    ELSE IF     `the arrangement`'s `lives in an institution or boarding house`
+             OR `the arrangement`'s `pays the people lived with for meals`
+         THEN `not a household: I live in an institution or boarding house, or pay the people I live with for meals (s 2012(m)(4))`
+         ELSE IF `the arrangement`'s `lives alone`
+              THEN `a household of my own (s 2012(m)(1)(A))`
+              ELSE IF     `the arrangement`'s `is 60 or older`
+                      AND `the arrangement`'s `cannot buy food and prepare meals because of a certified permanent disability or infirmity`
+                      AND `the arrangement`'s `the others' income (excluding a spouse) is within 165 percent of the poverty line`
+                   THEN `a separate household of my own, together with my spouse if any (s 2012(m)(3))`
+                   ELSE IF     `the arrangement`'s `lives with a spouse`
+                            OR `the arrangement`'s `lives with a parent or a child, the child being 21 or younger`
+                            OR `the arrangement`'s `is a child under 18 under the parental control of an adult who is not a parent`
+                        THEN `one household with my spouse, parent or child, or the adult whose parental control I am under, even if we buy and cook separately (s 2012(m)(2))`
+                        ELSE IF `the arrangement`'s `buys food and prepares meals separately from the others`
+                             THEN `a household of my own (s 2012(m)(1)(A))`
+                             ELSE `one household with the people I buy food and prepare meals with (s 2012(m)(1)(B))`
+
+-- (m)(3): the others' income against 165% of the poverty line for the others' number. READING: the poverty line is
+-- taken for a household the size of "the others, excluding the spouse"; the Act does not say which size.
+GIVEN `the figures`             IS A `SNAP annual figures`
+      `the others' income`      IS A NUMBER
+      `how many others`         IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the others' income is within 165 percent` IF
+    `the others' income` AT MOST
+        `the limit for size` `how many others` `from` (`the figures`'s `165 percent limits for 1 to 8 members`) `and` (`the figures`'s `165 percent limit for each additional member`)
+
+§§ `s 2014 -- income, deductions and the eligibility tests`
+
+-- One household's month. Income figures are after the s 2014(d) exclusions (asked as facts), except the (d)(6) child
+-- support exclusion, which is computed.
+DECLARE `Household month` HAS
+    `household size`                                                       IS A NUMBER
+    `has an elderly or disabled member`                                    IS A BOOLEAN
+    `every member receives TANF, SSI or aid to the aged, blind or disabled` IS A BOOLEAN
+    `monthly earned income`                                                IS A NUMBER
+    `monthly unearned income`                                              IS A NUMBER
+    `monthly legally obligated child support paid to non-members`          IS A NUMBER
+    `the State agency deducts child support instead of excluding it`       IS A BOOLEAN
+    `monthly dependent care costs for work, training or education`         IS A NUMBER
+    `monthly medical costs of the elderly or disabled members`             IS A NUMBER
+    `monthly shelter costs`                                                IS A NUMBER
+    `all members are homeless individuals`                                 IS A BOOLEAN
+    `receives free shelter throughout the month`                           IS A BOOLEAN
+    `opts for the homeless shelter deduction`                              IS A BOOLEAN
+    `countable resources`                                                  IS A NUMBER
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the larger of` `a` `and` `b` MEANS IF `a` AT LEAST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the smaller of` `a` `and` `b` MEANS IF `a` AT MOST `b` THEN `a` ELSE `b`
+
+-- s 2014(d)(6): income excludes "child support payments made by a household member to or for an individual who is not a
+-- member of the household if the household member is legally obligated to make the payments"; (e)(4)(A) lets the State
+-- agency give a deduction "in lieu of" the exclusion.
+GIVEN `the month` IS A `Household month`
+GIVETH A NUMBER
+`the child support exclusion` `the month` MEANS
+    IF `the month`'s `the State agency deducts child support instead of excluding it`
+    THEN 0
+    ELSE `the month`'s `monthly legally obligated child support paid to non-members`
+
+-- s 2014(c)(2): income "after the exclusions provided for in subsection (d) but before the deductions".
+GIVEN `the month` IS A `Household month`
+GIVETH A NUMBER
+`the gross income of` `the month` MEANS
+    `the larger of` 0 `and`
+        ((`the month`'s `monthly earned income` PLUS `the month`'s `monthly unearned income`)
+            MINUS `the child support exclusion` `the month`)
+
+-- s 2014(e)(1): the standard deduction; the amounts are the FY figures (8.31 percent of the (c)(1) standard, capped at
+-- 6 members, with the CPI floor of (e)(1)(A)(ii)).
+GIVEN `size`        IS A NUMBER
+      `the figures` IS A `SNAP annual figures`
+GIVETH A NUMBER
+`the standard deduction for` `size` `under` `the figures` MEANS
+    IF `size` AT MOST 3 THEN `the figures`'s `standard deduction for 1 to 3 members`
+    ELSE IF `size` EQUALS 4 THEN `the figures`'s `standard deduction for 4 members`
+         ELSE IF `size` EQUALS 5 THEN `the figures`'s `standard deduction for 5 members`
+              ELSE `the figures`'s `standard deduction for 6 or more members`
+
+-- s 2014(e)(2)(B): "a deduction of 20 percent of all earned income".
+GIVEN `the month` IS A `Household month`
+GIVETH A NUMBER
+`the earned income deduction` `the month` MEANS
+    `the month`'s `monthly earned income` TIMES 20%
+
+-- s 2014(e)(3)(A): "the actual cost of payments necessary for the care of a dependent if the care enables a household
+-- member to accept or continue employment, or training or education that is preparatory for employment" (third-party
+-- payments excluded: the input is what the household itself pays).
+GIVEN `the month` IS A `Household month`
+GIVETH A NUMBER
+`the dependent care deduction` `the month` MEANS
+    `the month`'s `monthly dependent care costs for work, training or education`
+
+-- s 2014(e)(4): the child support deduction, where the State agency elects it.
+GIVEN `the month` IS A `Household month`
+GIVETH A NUMBER
+`the child support deduction` `the month` MEANS
+    IF `the month`'s `the State agency deducts child support instead of excluding it`
+    THEN `the month`'s `monthly legally obligated child support paid to non-members`
+    ELSE 0
+
+-- s 2014(e)(5)(A): "A household containing an elderly or disabled member shall be entitled ... to an excess medical
+-- expense deduction for the portion of the actual costs of allowable medical expenses, incurred by the elderly or
+-- disabled member, exclusive of special diets, that exceeds $35 per month." ($35 is statutory, not indexed.)
+`the medical expense threshold` MEANS 35
+
+GIVEN `the month` IS A `Household month`
+GIVETH A NUMBER
+`the excess medical deduction` `the month` MEANS
+    IF `the month`'s `has an elderly or disabled member`
+    THEN `the larger of` 0 `and` (`the month`'s `monthly medical costs of the elderly or disabled members` MINUS `the medical expense threshold`)
+    ELSE 0
+
+-- s 2014(e)(6)(A): the shelter deduction is the excess over "50 percent of monthly household income after all other
+-- applicable deductions have been allowed".
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A NUMBER
+`the income after all other deductions` `the month` `under` `the figures` MEANS
+    `the larger of` 0 `and`
+        (`the gross income of` `the month`
+            MINUS `the standard deduction for` (`the month`'s `household size`) `under` `the figures`
+            MINUS `the earned income deduction` `the month`
+            MINUS `the dependent care deduction` `the month`
+            MINUS `the child support deduction` `the month`
+            MINUS `the excess medical deduction` `the month`)
+
+-- s 2014(e)(6)(A)-(B): the excess shelter expense deduction; capped only "In the case of a household that does not
+-- contain an elderly or disabled individual". Internet fees are not shelter costs ((e)(6)(E)): the input excludes them.
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A NUMBER
+`the uncapped excess shelter amount` `the month` `under` `the figures` MEANS
+    `the larger of` 0 `and`
+        (`the month`'s `monthly shelter costs`
+            MINUS (`the income after all other deductions` `the month` `under` `the figures` TIMES 50%))
+
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A NUMBER
+`the excess shelter deduction` `the month` `under` `the figures` MEANS
+    IF `the month`'s `has an elderly or disabled member`
+    THEN `the uncapped excess shelter amount` `the month` `under` `the figures`
+    ELSE `the smaller of` (`the uncapped excess shelter amount` `the month` `under` `the figures`) `and` (`the figures`'s `maximum excess shelter deduction`)
+
+-- s 2014(e)(6)(D)(i): the homeless shelter deduction for households "(I) in which all members are homeless individuals;
+-- (II) that are not receiving free shelter throughout the month; and (III) that do not opt to claim an excess shelter
+-- expense deduction". The amount is the FY figure ($143 indexed under (D)(ii)). (D)(iii) lets the State agency exclude
+-- households with "extremely low shelter costs": not encoded (a State choice).
+GIVEN `the month` IS A `Household month`
+GIVETH A BOOLEAN
+DECIDE `the homeless shelter deduction applies to` `the month` IF
+        `the month`'s `all members are homeless individuals`
+    AND (NOT `the month`'s `receives free shelter throughout the month`)
+    AND `the month`'s `opts for the homeless shelter deduction`
+
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A NUMBER
+`the shelter deduction` `the month` `under` `the figures` MEANS
+    IF `the homeless shelter deduction applies to` `the month`
+    THEN `the figures`'s `homeless shelter deduction`
+    ELSE `the excess shelter deduction` `the month` `under` `the figures`
+
+-- s 2014(c)(1): income "after the exclusions and deductions provided for in subsections (d) and (e)".
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A NUMBER
+`the net income of` `the month` `under` `the figures` MEANS
+    `the larger of` 0 `and`
+        (`the income after all other deductions` `the month` `under` `the figures`
+            MINUS `the shelter deduction` `the month` `under` `the figures`)
+
+-- s 2014(c)(2): the gross income test, only "in the case of a household that does not include an elderly or disabled
+-- member": ineligible if gross income "exceeds such poverty line by more than 30 per centum".
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A BOOLEAN
+DECIDE `the household fails the gross income test` `the month` `under` `the figures` IF
+        (NOT `the month`'s `has an elderly or disabled member`)
+    AND `the gross income of` `the month` GREATER THAN
+            `the limit for size` (`the month`'s `household size`) `from` (`the figures`'s `gross income limits for 1 to 8 members`) `and` (`the figures`'s `gross income limit for each additional member`)
+
+-- s 2014(c)(1): ineligible if net income "exceeds the poverty line".
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A BOOLEAN
+DECIDE `the household fails the net income test` `the month` `under` `the figures` IF
+    `the net income of` `the month` `under` `the figures` GREATER THAN
+        `the limit for size` (`the month`'s `household size`) `from` (`the figures`'s `net income limits for 1 to 8 members`) `and` (`the figures`'s `net income limit for each additional member`)
+
+-- s 2014(g)(1)(A): "will not be eligible ... if its resources exceed $2,000 ... or, in the case of a household which
+-- consists of or includes an elderly or disabled member, if its resources exceed $3,000" (both indexed: the FY figures).
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A NUMBER
+`the resource limit for` `the month` `under` `the figures` MEANS
+    IF `the month`'s `has an elderly or disabled member`
+    THEN `the figures`'s `resource limit with an elderly or disabled member`
+    ELSE `the figures`'s `resource limit for other households`
+
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A BOOLEAN
+DECIDE `the household fails the resource test` `the month` `under` `the figures` IF
+    `the month`'s `countable resources` GREATER THAN `the resource limit for` `the month` `under` `the figures`
+
+DECLARE `Eligibility answer` IS ONE OF
+    `eligible: every member receives TANF, SSI or aid to the aged, blind or disabled (s 2014(a))`
+    `eligible: the household meets the income and resource tests (s 2014(c), (g))`
+    `not eligible: gross income is over 130 percent of the poverty line (s 2014(c)(2))`
+    `not eligible: net income is over the poverty line (s 2014(c)(1))`
+    `not eligible: resources are over the limit (s 2014(g))`
+    `not covered: no deposited figures for that day, or the household is outside the 48 States and DC`
+
+-- s 2014(a): "Notwithstanding any other provisions of this chapter except subsections (b), (d)(2), (g), and (r) of
+-- section 2015 ... and section 2012(m)(4) ..., households in which each member receives benefits under a State program
+-- funded under part A of title IV [TANF], supplemental security income benefits under title XVI, or aid to the aged,
+-- blind, or disabled ... shall be eligible to participate". The excepted provisions (fraud, work exemptions, State
+-- supplementary payments, felons, institutions) are not part of this test; they are asked elsewhere or out of scope.
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A `Eligibility answer`
+`the s 2014 eligibility of` `the month` `under` `the figures` MEANS
+    IF `the month`'s `every member receives TANF, SSI or aid to the aged, blind or disabled`
+    THEN `eligible: every member receives TANF, SSI or aid to the aged, blind or disabled (s 2014(a))`
+    ELSE IF `the household fails the gross income test` `the month` `under` `the figures`
+         THEN `not eligible: gross income is over 130 percent of the poverty line (s 2014(c)(2))`
+         ELSE IF `the household fails the net income test` `the month` `under` `the figures`
+              THEN `not eligible: net income is over the poverty line (s 2014(c)(1))`
+              ELSE IF `the household fails the resource test` `the month` `under` `the figures`
+                   THEN `not eligible: resources are over the limit (s 2014(g))`
+                   ELSE `eligible: the household meets the income and resource tests (s 2014(c), (g))`
+
+GIVEN `the answer` IS AN `Eligibility answer`
+GIVETH A BOOLEAN
+DECIDE `is an eligible answer` `the answer` IF
+        `the answer` EQUALS `eligible: every member receives TANF, SSI or aid to the aged, blind or disabled (s 2014(a))`
+    OR  `the answer` EQUALS `eligible: the household meets the income and resource tests (s 2014(c), (g))`
+
+§§ `s 2017 -- the allotment`
+
+-- The cost of the thrifty food plan for the household's size (s 2012(u)), as the FY figures' maximum allotment.
+GIVEN `size`        IS A NUMBER
+      `the figures` IS A `SNAP annual figures`
+GIVETH A NUMBER
+`the maximum allotment for` `size` `under` `the figures` MEANS
+    IF `size` AT LEAST 18
+    THEN `the figures`'s `maximum allotment for 18 or more members`
+    ELSE `the limit for size` `size` `from` (`the figures`'s `maximum allotments for 1 to 8 members`) `and` (`the figures`'s `maximum allotment for each additional member, 9 to 17`)
+
+-- s 2017(a): "equal to the cost to such households of the thrifty food plan reduced by an amount equal to 30 per centum
+-- of the household's income, as determined in accordance with section 2014(d) and (e) ..., rounded to the nearest lower
+-- whole dollar: Provided, That for households of one and two persons the minimum allotment shall be 8 percent of the
+-- cost of the thrifty food plan for a household containing 1 member". The minimum is the FY figure (see NOTES finding 4).
+GIVEN `the month`   IS A `Household month`
+      `the figures` IS A `SNAP annual figures`
+GIVETH A NUMBER
+`the s 2017(a) allotment for` `the month` `under` `the figures` MEANS
+    IF `the month`'s `household size` AT MOST 2
+    THEN `the larger of` (`the figures`'s `minimum allotment for 1 or 2 members`) `and` `the formula`
+    ELSE `the larger of` 0 `and` `the formula`
+    WHERE
+        `the formula` MEANS
+            FLOOR (`the maximum allotment for` (`the month`'s `household size`) `under` `the figures`
+                       MINUS (`the net income of` `the month` `under` `the figures` TIMES 30%))
+
+-- s 2017(c)(1): the initial month's allotment "bears the same ratio to the value of the allotment for a full month ...
+-- as the number of days (from the date of application) remaining in the month ... bears to the total number of days in
+-- the month", and "no allotment may be issued ... if the value ... is less than $10". READING: the day of application
+-- counts as a remaining day. The Act states no rounding of the prorated amount; none is applied.
+`the smallest initial allotment issued` MEANS 10
+
+GIVEN `the day` IS A DATE
+GIVETH A NUMBER
+`the number of days in the month of` `the day` MEANS
+    DATE_SERIAL `the first of next month` MINUS DATE_SERIAL (DATE_FROM_DMY 1 (DATE_MONTH `the day`) (DATE_YEAR `the day`))
+    WHERE
+        `the first of next month` MEANS
+            IF DATE_MONTH `the day` EQUALS 12
+            THEN DATE_FROM_DMY 1 1 (DATE_YEAR `the day` PLUS 1)
+            ELSE DATE_FROM_DMY 1 (DATE_MONTH `the day` PLUS 1) (DATE_YEAR `the day`)
+
+GIVEN `the day` IS A DATE
+GIVETH A NUMBER
+`the days remaining in the month from` `the day` MEANS
+    (`the number of days in the month of` `the day` MINUS DATE_DAY `the day`) PLUS 1
+
+GIVEN `the full allotment`      IS A NUMBER
+      `the date of application` IS A DATE
+GIVETH A NUMBER
+`the s 2017(c) initial allotment of` `the full allotment` `applying on` `the date of application` MEANS
+    IF `the prorated value` LESS THAN `the smallest initial allotment issued`
+    THEN 0
+    ELSE `the prorated value`
+    WHERE
+        `the prorated value` MEANS
+            (`the full allotment` TIMES `the days remaining in the month from` `the date of application`)
+                DIVIDED BY `the number of days in the month of` `the date of application`
+
+§§ `s 2015(d) -- work requirements`
+
+-- s 2015(d)(1)(A): "No physically and mentally fit individual over the age of 15 and under the age of 60 shall be
+-- eligible ... if the individual" refuses to register for employment, refuses an E&T program or a suitable job offer,
+-- refuses information, voluntarily quits or cuts below 30 hours, or fails to comply with workfare (s 2029).
+-- s 2015(d)(2): exempt if (A) subject to and complying with a TANF or unemployment compensation work registration
+-- requirement; (B) "a parent or other member of a household with responsibility for the care of a dependent child under
+-- age six or of an incapacitated person"; (C) "a bona fide student enrolled at least half time"; (D) "a regular
+-- participant in a drug addiction or alcoholic treatment and rehabilitation program"; (E) "employed a minimum of thirty
+-- hours per week or receiving weekly earnings which equal the minimum hourly rate under the Fair Labor Standards Act
+-- ... multiplied by thirty hours"; (F) "a person between the ages of sixteen and eighteen who is not a head of a
+-- household or who is attending school, or enrolled in an employment training program, on at least a half-time basis".
+DECLARE `Work facts` HAS
+    `age`                                                                    IS A NUMBER
+    `is physically and mentally fit`                                         IS A BOOLEAN
+    `complies with a TANF or unemployment compensation work registration requirement` IS A BOOLEAN
+    `cares for a dependent child under 6 or an incapacitated person`         IS A BOOLEAN
+    `cares for a dependent child under 14 as a parent or household member`   IS A BOOLEAN
+    `is a student enrolled at least half time`                               IS A BOOLEAN
+    `regularly takes part in a drug or alcohol treatment program`            IS A BOOLEAN
+    `hours worked per week`                                                  IS A NUMBER
+    `weekly earnings`                                                        IS A NUMBER
+    `the federal minimum hourly wage`                                        IS A NUMBER
+    `is the head of the household`                                           IS A BOOLEAN
+    `is pregnant`                                                            IS A BOOLEAN
+    `is an Indian, Urban Indian or California Indian`                        IS A BOOLEAN
+
+`the hours that exempt a worker` MEANS 30
+
+GIVEN `the person` IS A `Work facts`
+GIVETH A BOOLEAN
+DECIDE `is exempt under s 2015(d)(2)` `the person` IF
+        `the person`'s `complies with a TANF or unemployment compensation work registration requirement`
+    OR  `the person`'s `cares for a dependent child under 6 or an incapacitated person`
+    OR  `the person`'s `is a student enrolled at least half time`
+    OR  `the person`'s `regularly takes part in a drug or alcohol treatment program`
+    OR  `the person`'s `hours worked per week` AT LEAST `the hours that exempt a worker`
+    OR  `the person`'s `weekly earnings` AT LEAST (`the person`'s `the federal minimum hourly wage` TIMES `the hours that exempt a worker`)
+    OR  (    `the person`'s `age` AT LEAST 16
+         AND `the person`'s `age` LESS THAN 18
+         AND (    (NOT `the person`'s `is the head of the household`)
+              OR  `the person`'s `is a student enrolled at least half time`))
+
+GIVEN `the person` IS A `Work facts`
+GIVETH A BOOLEAN
+DECIDE `is subject to the s 2015(d)(1) work requirements` `the person` IF
+        `the person`'s `age` GREATER THAN 15
+    AND `the person`'s `age` LESS THAN 60
+    AND `the person`'s `is physically and mentally fit`
+    AND (NOT `is exempt under s 2015(d)(2)` `the person`)
+
+-- s 2015(d)(1)(C): the individual stays ineligible "until the later of" (I) becoming eligible again (complying), (II)
+-- 1, 3 or 6 months after becoming ineligible, or (III) a date the State agency sets, at most 3 months (first time) or
+-- 6 months (second time); the third time the State date has no cap and "(IV) at the option of the State agency,
+-- permanently". NOTHING for the longest period means the Act sets no upper limit.
+DECLARE `Ineligibility period` HAS
+    `at least months`                          IS A NUMBER
+    `the State agency may set up to months`    IS A MAYBE NUMBER
+    `the State agency may make it permanent`   IS A BOOLEAN
+
+GIVEN `which time` IS A NUMBER
+GIVETH AN `Ineligibility period`
+`the s 2015(d)(1)(C) period for violation number` `which time` MEANS
+    IF `which time` AT MOST 1
+    THEN `Ineligibility period` WITH
+             `at least months`                        IS 1
+             `the State agency may set up to months`  IS JUST 3
+             `the State agency may make it permanent` IS FALSE
+    ELSE IF `which time` EQUALS 2
+         THEN `Ineligibility period` WITH
+                  `at least months`                        IS 3
+                  `the State agency may set up to months`  IS JUST 6
+                  `the State agency may make it permanent` IS FALSE
+         ELSE `Ineligibility period` WITH
+                  `at least months`                        IS 6
+                  `the State agency may set up to months`  IS NOTHING
+                  `the State agency may make it permanent` IS TRUE
+
+-- s 2015(d)(1)(B): if the head of the household becomes ineligible, the household may, "at the option of the State
+-- agency", be ineligible for "the lesser of (i) the duration of the ineligibility of the individual ... or (ii) 180 days".
+`the longest household ineligibility in days` MEANS 180
+
+§§ `s 2015(o) -- the time limit (3 months in 36)`
+
+-- s 2015(o)(2): "no individual shall be eligible ... if, during the preceding 36-month period, the individual received
+-- supplemental nutrition assistance program benefits for not less than 3 months (consecutive or otherwise) during which
+-- the individual did not -- (A) work 20 hours or more per week, averaged monthly; (B) participate in and comply with
+-- ... a work program for 20 hours or more per week ...; (C) participate in and comply with ... a program under section
+-- 2029 [workfare] ...; or (D) receive benefits pursuant to paragraph (3), (4), (5), or (6)."
+-- (o)(3): not applicable to an individual "(A) under 18, or over 65, years of age; (B) medically certified as
+-- physically or mentally unfit for employment; (C) a parent or other member of a household with responsibility for a
+-- dependent child under 14 years of age; (D) otherwise exempt under subsection (d)(2); (E) a pregnant woman; (F) an
+-- Indian or an Urban Indian ...; or (G) a California Indian".
+DECLARE `Time limit facts` HAS
+    `the person`                                                    IS A `Work facts`
+    `is medically certified as unfit for employment`                IS A BOOLEAN
+    `lives in an area covered by a waiver under s 2015(o)(4)`       IS A BOOLEAN
+    `has an exemption from the State agency under s 2015(o)(6)`     IS A BOOLEAN
+    `works or takes part in a work program 20 hours a week, or does workfare` IS A BOOLEAN
+    `countable months already received in the 36-month period`      IS A NUMBER
+
+`the months allowed without meeting the work requirement` MEANS 3
+
+-- READING: (o)(3)(D) "otherwise exempt under subsection (d)(2)" is read as the (d)(2) categories, whatever the person's
+-- age, although (d)(2) speaks of a person "who otherwise would be required to comply with ... paragraph (1)" (16 to 59).
+GIVEN `the facts` IS A `Time limit facts`
+GIVETH A BOOLEAN
+DECIDE `an s 2015(o)(3) exception applies to` `the facts` IF
+        `the facts`'s `the person`'s `age` LESS THAN 18
+    OR  `the facts`'s `the person`'s `age` GREATER THAN 65
+    OR  `the facts`'s `is medically certified as unfit for employment`
+    OR  `the facts`'s `the person`'s `cares for a dependent child under 14 as a parent or household member`
+    OR  `is exempt under s 2015(d)(2)` (`the facts`'s `the person`)
+    OR  `the facts`'s `the person`'s `is pregnant`
+    OR  `the facts`'s `the person`'s `is an Indian, Urban Indian or California Indian`
+
+DECLARE `Time limit answer` IS ONE OF
+    `the time limit does not apply to me: an exception in s 2015(o)(3) applies`
+    `the time limit does not apply to me: my area is covered by a waiver (s 2015(o)(4))`
+    `the time limit does not apply to me: the State agency has exempted me (s 2015(o)(6))`
+    `I meet the work requirement this month, so the month does not count (s 2015(o)(2)(A)-(C))`
+    `I can still get SNAP without meeting the work requirement` HAS `months left in the 36-month period` IS A NUMBER
+    `I am not eligible: I have had 3 months in the 36-month period without meeting the work requirement (s 2015(o)(2))`
+
+GIVEN `the facts` IS A `Time limit facts`
+GIVETH A `Time limit answer`
+`the s 2015(o) answer for` `the facts` MEANS
+    IF `an s 2015(o)(3) exception applies to` `the facts`
+    THEN `the time limit does not apply to me: an exception in s 2015(o)(3) applies`
+    ELSE IF `the facts`'s `lives in an area covered by a waiver under s 2015(o)(4)`
+         THEN `the time limit does not apply to me: my area is covered by a waiver (s 2015(o)(4))`
+         ELSE IF `the facts`'s `has an exemption from the State agency under s 2015(o)(6)`
+              THEN `the time limit does not apply to me: the State agency has exempted me (s 2015(o)(6))`
+              ELSE IF `the facts`'s `works or takes part in a work program 20 hours a week, or does workfare`
+                   THEN `I meet the work requirement this month, so the month does not count (s 2015(o)(2)(A)-(C))`
+                   ELSE IF `the facts`'s `countable months already received in the 36-month period` LESS THAN `the months allowed without meeting the work requirement`
+                        THEN `I can still get SNAP without meeting the work requirement` (`the months allowed without meeting the work requirement` MINUS `the facts`'s `countable months already received in the 36-month period`)
+                        ELSE `I am not eligible: I have had 3 months in the 36-month period without meeting the work requirement (s 2015(o)(2))`
+
+-- s 2015(o)(5)(A): "An individual denied eligibility under paragraph (2) shall regain eligibility ... if, during a
+-- 30-day period, the individual -- (i) works 80 or more hours; (ii) participates in and complies with ... a work program
+-- for 80 or more hours ...; or (iii) participates in and complies with ... a program under section 2029".
+`the hours that regain eligibility` MEANS 80
+
+GIVEN `hours worked or in a work program in a 30-day period` IS A NUMBER
+      `did workfare in that period`                           IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `regains eligibility under s 2015(o)(5)` `hours worked or in a work program in a 30-day period` `did workfare in that period` IF
+        `hours worked or in a work program in a 30-day period` AT LEAST `the hours that regain eligibility`
+    OR  `did workfare in that period`
+
+§§ `s 2020(e)(9) -- expedited service`
+
+-- s 2020(e)(9): benefits "no later than 7 days after the date of application" to a household that (A) has gross income
+-- "less than $150 per month" (or is a destitute migrant or seasonal farmworker household) and liquid resources that "do
+-- not exceed $100"; or (B) "has a combined gross income and liquid resources that is less than the monthly rent, or
+-- mortgage, and utilities of the household".
+`the expedited gross income ceiling` MEANS 150
+`the expedited liquid resource ceiling` MEANS 100
+
+GIVEN `gross monthly income`                       IS A NUMBER
+      `liquid resources`                           IS A NUMBER
+      `monthly rent or mortgage and utilities`     IS A NUMBER
+      `is a destitute migrant or seasonal farmworker household` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is entitled to expedited service` `gross monthly income` `liquid resources` `monthly rent or mortgage and utilities` `is a destitute migrant or seasonal farmworker household` IF
+        (    (    `gross monthly income` LESS THAN `the expedited gross income ceiling`
+              OR  `is a destitute migrant or seasonal farmworker household`)
+         AND `liquid resources` AT MOST `the expedited liquid resource ceiling`)
+    OR  (`gross monthly income` PLUS `liquid resources`) LESS THAN `monthly rent or mortgage and utilities`
+
+`the expedited days` MEANS 7
+`the normal processing days` MEANS 30
+
+GIVEN `expedited` IS A BOOLEAN
+GIVETH A NUMBER
+`the days to provide benefits` `expedited` MEANS
+    IF `expedited` THEN `the expedited days` ELSE `the normal processing days`
+
+§§ `Regulative rules -- the State agency and the household`
+
+-- Clock: days, counted from the day the rule starts (the day of application, unless a rule says otherwise).
+DECLARE `SNAP party` IS ONE OF `the State agency`, `the household`
+
+DECLARE `SNAP act` IS ONE OF
+    `let the household apply that day`
+    `give the household a written statement of what it must do to complete the application`
+    `certify the household and provide its allotment`
+    `send the household a notice of expiration of its certification`
+    `provide the first allotment of the new certification period`
+    `report that it no longer lives in the State`
+    `request a fair hearing`
+    `reduce or terminate the household's benefits before the hearing decision`
+
+-- s 2020(e)(2)(B)(iii): the State agency "shall permit an applicant household to apply to participate in the program
+-- on the same day that the household first contacts a supplemental nutrition assistance program office in person
+-- during office hours". (iv): an application with "the name, address, and signature of the applicant" is filed "on the
+-- date the applicant submits" it. Clock starts at the in-person contact.
+`the same day` MEANS 0
+
+GIVETH A DEONTIC `SNAP party` `SNAP act`
+DECIDE `s 2020(e)(2)(B)(iii) -- the State agency must let the household apply on the day it first comes in` IS
+    PARTY `the State agency`
+    MUST  `let the household apply that day`
+    WITHIN `the same day`
+    LEST  BREACH BY `the State agency` BECAUSE "s 2020(e)(2)(B)(iii): the State agency must permit the household to apply on the same day it first contacts an office in person during office hours"
+
+-- s 2020(e)(3): the State agency must "provide each applicant household, at the time of application, a clear written
+-- statement explaining what acts the household must perform"; and must "complete certification of and provide an
+-- allotment retroactive to the period of application to any eligible household not later than thirty days following
+-- its filing of an application"; (e)(9): no later than 7 days for a household entitled to expedited service. For a
+-- household not eligible, (e)(3) sets no day (the determination must be "prompt"); only the written statement is owed.
+GIVEN `the household is eligible` IS A BOOLEAN
+      `expedited`                 IS A BOOLEAN
+GIVETH A DEONTIC `SNAP party` `SNAP act`
+DECIDE `s 2020(e)(3), (9) -- the State agency must explain the application and, if the household is eligible, provide benefits within 30 days, or 7 if expedited` IS
+    IF `the household is eligible`
+    THEN    (PARTY `the State agency`
+             MUST  `give the household a written statement of what it must do to complete the application`
+             WITHIN `the same day`
+             LEST  BREACH BY `the State agency` BECAUSE "s 2020(e)(3): the State agency must give the household, at the time of application, a clear written statement of what it must do")
+        RAND
+            (PARTY `the State agency`
+             MUST  `certify the household and provide its allotment`
+             WITHIN `the days to provide benefits` `expedited`
+             LEST  BREACH BY `the State agency` BECAUSE "s 2020(e)(3), (9): the State agency must certify an eligible household and provide its allotment within 30 days of application, or 7 days if it is entitled to expedited service")
+    ELSE PARTY `the State agency`
+         MUST  `give the household a written statement of what it must do to complete the application`
+         WITHIN `the same day`
+         LEST  BREACH BY `the State agency` BECAUSE "s 2020(e)(3): the State agency must give the household, at the time of application, a clear written statement of what it must do"
+
+-- s 2020(e)(4): "each participating household receive a notice of expiration of its certification prior to the start
+-- of the last month of its certification period". Clock starts on the day given; the deadline is the day before the
+-- last month starts.
+GIVEN `days from now to the start of the last month` IS A NUMBER
+GIVETH A DEONTIC `SNAP party` `SNAP act`
+DECIDE `s 2020(e)(4) -- the State agency must send a notice of expiration before the last month of certification` IS
+    PARTY `the State agency`
+    MUST  `send the household a notice of expiration of its certification`
+    WITHIN (`days from now to the start of the last month` MINUS 1)
+    LEST  BREACH BY `the State agency` BECAUSE "s 2020(e)(4): the household must receive a notice of expiration before the start of the last month of its certification period"
+
+-- s 2020(e)(4): a household "filing an application for recertification no later than fifteen days prior to the day upon
+-- which its existing certification period expires shall, if found to be still eligible, receive its allotment no later
+-- than one month after the receipt of the last allotment issued to it pursuant to its prior certification". Clock starts
+-- on the day the recertification application is filed; the seat works out the days.
+`the days before expiry to recertify` MEANS 15
+
+-- "one month after" a day: the same day of the next month. READING: where the next month is shorter (31 January), its
+-- last day (28 or 29 February). The Act does not say.
+GIVEN `the day` IS A DATE
+GIVETH A DATE
+`one month after` `the day` MEANS
+    DATE_FROM_DMY (`the smaller of` (DATE_DAY `the day`) `and` (`the number of days in the month of` `the first of next month`)) (DATE_MONTH `the first of next month`) (DATE_YEAR `the first of next month`)
+    WHERE
+        `the first of next month` MEANS
+            IF DATE_MONTH `the day` EQUALS 12
+            THEN DATE_FROM_DMY 1 1 (DATE_YEAR `the day` PLUS 1)
+            ELSE DATE_FROM_DMY 1 (DATE_MONTH `the day` PLUS 1) (DATE_YEAR `the day`)
+
+GIVEN `days from filing to one month after the last allotment` IS A NUMBER
+GIVETH A DEONTIC `SNAP party` `SNAP act`
+DECIDE `s 2020(e)(4) -- after a timely recertification, the next allotment must come within one month of the last` IS
+    PARTY `the State agency`
+    MUST  `provide the first allotment of the new certification period`
+    WITHIN `days from filing to one month after the last allotment`
+    LEST  BREACH BY `the State agency` BECAUSE "s 2020(e)(4): a household that applied for recertification at least 15 days before expiry and is still eligible must receive its allotment no later than one month after its last allotment"
+
+-- s 2014a: "a household certified to participate ... is required to report in a manner prescribed by the Secretary if
+-- the household no longer resides in the State in which it is certified." No period is stated.
+GIVEN `the household has left the State` IS A BOOLEAN
+GIVETH A DEONTIC `SNAP party` `SNAP act`
+DECIDE `s 2014a -- the household must report that it no longer lives in the State` IS
+    IF `the household has left the State`
+    THEN PARTY `the household`
+         MUST  `report that it no longer lives in the State`
+    ELSE FULFILLED
+
+-- s 2020(e)(10): "any household which timely requests such a fair hearing after receiving individual notice of agency
+-- action reducing or terminating its benefits within the household's certification period shall continue to
+-- participate and receive benefits on the basis authorized immediately prior to the notice ... until such time as the
+-- fair hearing is completed and an adverse decision rendered or until such time as the household's certification
+-- period terminates, whichever occurs earlier", except where the household's own written statement "clearly requires a
+-- reduction or termination". What is "timely" is set by regulation (not deposited): an input. Asking is a choice, so
+-- not asking is no breach (DO ... LEST FULFILLED). The prohibition runs to the end of the certification period; a cut
+-- after an adverse hearing decision is a different act and does not breach it.
+GIVEN `days allowed for a timely request`               IS A NUMBER
+      `days left in the certification period`          IS A NUMBER
+      `the household's own written statement requires the cut` IS A BOOLEAN
+GIVETH A DEONTIC `SNAP party` `SNAP act`
+DECIDE `s 2020(e)(10) -- a timely hearing request keeps benefits going until the decision or the end of certification` IS
+    IF `the household's own written statement requires the cut`
+    THEN FULFILLED
+    ELSE PARTY `the household`
+         DO    `request a fair hearing`
+         WITHIN `days allowed for a timely request`
+         HENCE
+             PARTY `the State agency`
+             SHANT `reduce or terminate the household's benefits before the hearing decision`
+             WITHIN `days left in the certification period`
+             LEST  BREACH BY `the State agency` BECAUSE "s 2020(e)(10): after a timely request for a fair hearing, benefits continue until an adverse decision or the end of the certification period"
+         LEST  FULFILLED
