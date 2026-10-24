@@ -26,8 +26,9 @@ It satisfies `REQ-0075` in `subjects/au/requirements.jsonl`. There was no earlie
 |---|---|---|
 | `fbtaa-employee.l4` (employee, 9 questions) | `fbtaa-cases-employee.l4` | 42 written, 42 satisfied |
 | `fbtaa-seat-employer.l4` (employer, 7 questions) | `fbtaa-cases-employer.l4` | 20 written, 20 satisfied (13 in the mirror section, 10 of them five pairs asked from both seats) |
+| `fbtaa-formulas.l4` (24 October 2026: s 135Q, the s 10 cost basis; 6 employee and 2 employer questions) | `fbtaa-cases-formulas.l4` | 22 written, 22 satisfied |
 
-`l4 run` on all four files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text and the sidecar.
+`l4 run` on all six files: 0 errors, 0 warnings (2026-10-23; 2026-10-24 with `fbtaa-formulas.l4`, 84 assertions in all). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text and the sidecar.
 
 ## Seats
 
@@ -49,6 +50,19 @@ The 2026-10-18 defaults:
 
 **In:** s 5B(1A)–(1C), (3) (employer); s 5C(3)–(4) only as the employer's two totals; s 5E(2)–(3) (as the employee's input); ss 8A, 9(1)–(2), 16 (as the benefit), 17(1), (3), 18(1), 58P(1), 58X, 66(1), 68, 90, 135N, 135P, 136(1) (fringe benefit, benchmark and statutory interest rate, notional amount of interest, year of tax); Fringe Benefits Tax Act 1986 ss 6, 6A.
 
+**Added 24 October 2026** (`fbtaa-formulas.l4`, from the formulas recovered into the sidecar that day):
+
+- **s 135Q.** `My reportable fringe benefits amount` answers `not covered` for an employee of a s 57A or s 58 employer, and still does. The new `My reportable fringe benefits amount from a s 57A or s 58 employer` computes it under s 135Q(2) to (4): (individual fringe benefits amount + individual quasi-fringe benefits amount) × 1 / (1 − rate of tax), if the sum is more than $2,000. `My reportable fringe benefits amount, any employer` routes between ss 135P and 135Q.
+- **The cost basis for cars.** This is s 10(2) and (3)(a), with the deemed depreciation and interest of an owned car (s 11(1A), (1), (1AA), (1B), (2)), the depreciated value (s 12(1)) and the business use percentage (s 136(1)). Section 10(5) is encoded too: a cost basis value above the s 9 value gives way to the s 9 value, which comes from `The taxable value of my car`.
+
+**Inputs these formulas still need:**
+
+- the statutory interest rate (REQ-0110);
+- the Income Tax Assessment Act 1997 diminishing value percentage (200%, its s 40-72) and the Commissioner's effective life;
+- the car expenses and lease charges.
+
+The seat question takes the holding period to be all the days the car was owned in the year.
+
 **Out:** the other kinds of benefit and their valuation (debt waiver, expense payment, housing, living-away-from-home, board, meal entertainment, tax-exempt body entertainment, car parking, property, residual); s 8 and s 10 (other exempt cars; the cost basis); ss 11–13; s 17(2), (4); the otherwise deductible rules (ss 19, 24, 37, 44, 52); exemptions other than ss 8A, 17(1), (3), 58P and 58X; reductions (ss 59–65CC); s 65J rebate; s 5B(1D)–(1M) (s 57A employers); s 135G; s 135Q (`not covered`); years of tax before 1 April 2015 (`not covered`: the rates Act compilation deposited does not give earlier rates); Parts IV onwards except ss 66, 68, 90.
 
 ## What the Act turns out to say
@@ -64,10 +78,12 @@ The 2026-10-18 defaults:
 9. **The return and the tax are due on the same day.** 21 May after the FBT year ends (ss 68, 90), unless the Commissioner allows a later date for the return. Asserted.
 10. **The 2018 rates Act still gives 47%.** Fringe Benefits Tax Act 1986 s 6 at Compilation No. 9 (19 June 2018); whether a later amendment changed the rate is not known from the deposit, whose compilation is older than the Assessment Act's. Not asserted.
 
+11. **Under the cost basis, the employee's payment can only lower the value to nil.** Section 10(2) is (C × (100% − BP)) − R, again with no floor. This encoding reads it as it reads s 9 (finding 4): nil, not below. Section 10(5) then caps the cost basis at the s 9 value. On the cases' car ($40,000, a $16,500 operating cost, 30% business use, $1,000 paid), the cost basis gives $10,550 and the statutory formula $7,000, so $7,000 applies. At 80% business use the cost basis gives $2,300, which applies. Asserted.
+
 ## What would need doing before this is worth relying on
 
 - **The benchmark interest rate** for each FBT year (REQ-0110).
 - **A current compilation of the Fringe Benefits Tax Act 1986**, to confirm the 47% rate (finding 10), and earlier rates for years before 2015.
-- **The other benefit types**, the cost basis for cars, and the otherwise deductible rules — the bulk of the Act, left out by design.
+- **The other benefit types** and the otherwise deductible rules (the cost basis for cars was added on 24 October 2026; the housing (s 26), car parking (ss 39DA to 39GB), otherwise deductible (ss 19, 24, 37, 44, 52), long service award (s 58Q), rebate (s 65J) and instalment (ss 111, 112B) formulas are in the sidecar, not yet encoded) — the bulk of the Act, left out by design.
 - **s 135Q and s 57A** for employees of charities, hospitals and ambulance services.
 - **ATO rulings and case law** were not read; findings 4 and 5 are interpretive.
