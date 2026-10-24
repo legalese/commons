@@ -1,0 +1,1519 @@
+IMPORT prelude
+
+-- Motor Accident Injuries Act 2019 (ACT) -- the defined benefits of the ACT's compulsory third-party (CTP) scheme.
+-- SEAT-NEUTRAL CORE. The rules are written in the Act's own actors and terms: "the person injured in a motor accident",
+-- "the dependant", "the person who has paid, or is liable to pay, the funeral expenses", "the applicant", "the relevant
+-- insurer". The individual's questions are in mai-seat.l4 and the relevant insurer's in mai-seat-insurer.l4; both
+-- IMPORT this module and restate no rule.
+--
+-- PROVISIONS COVERED. ss 18-19 (AWE indexed amounts, read from NI2026-402); s 36 (person who died as a result of a
+-- motor accident); ss 43-50 (limitations, as facts); s 55 (who may apply); ss 58-60, 65, 66 (applying, the receipt
+-- notice, the liability decision, deemed acceptance, payment: regulative rules); ss 78-79, 89-92 (income replacement
+-- entitlement); ss 93, 96-98 (the amount); s 101 (period payable); s 102 (fortnightly payment: regulative); s 103
+-- (interim weekly payments); ss 112, 118, 128 (treatment and care: eligibility and period only); ss 132-136 (quality
+-- of life entitlement); s 137 (2) (when to apply for quality of life benefits); ss 154-157 (the WPI notice and offer: regulative); s 167 and table 167 (quality of life
+-- amount); s 239 (the WPI threshold for damages: "can I sue?" only); ss 168-177 (death benefits, the ACAT
+-- application: regulative); ss 178-181 (funeral benefits).
+--
+-- FIGURES. The AWE indexed amounts are those of the Motor Accident Injuries (Indexation of Benefits) Declaration 2026
+-- (No 2), NI2026-402, as deposited at
+-- ../../../motor-accident-injuries-indexation-of-benefits-declaration-2026-no-2/registers/source-bundle/NI2026-402.txt.
+-- Its "1 October 2026" column applies from 1 October 2026; its comparison column ("1 April 2026" for ss 96, 97 and
+-- 103, "1 October 2025" for ss 167, 174 and 181) is used for 1 April to 30 September 2026. A day before 1 April 2026,
+-- after 31 March 2027 (ss 96, 97, 103: the next biannual indexation day) or after 30 September 2027 (ss 167, 174,
+-- 181: the next annual one) has no deposited figure, and the answer is `not covered`.
+--
+-- Edition: Motor Accident Injuries Act 2019 (A2019-12), Republication No 8, effective 26 December 2025, as deposited
+-- at ../../registers/source-bundle/A2019-12.txt.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Motor Accident Injuries Act 2019 (ACT) -- seat-neutral core`
+
+§§ `Dates`
+
+-- Dates are compared through DATE_SERIAL (day numbers). daydate is not imported: the prelude's DATE_FROM_DMY,
+-- DATE_SERIAL and DATE_FROM_SERIAL are enough, and keep type-checking fast.
+
+GIVEN `n`       IS A NUMBER
+      `the day` IS A DATE
+GIVETH A DATE
+`n` `days after` `the day` MEANS DATE_FROM_SERIAL (DATE_SERIAL `the day` PLUS `n`)
+
+GIVEN `first` IS A DATE
+      `second` IS A DATE
+GIVETH A NUMBER
+`the days from` `first` `to` `second` MEANS DATE_SERIAL `second` MINUS DATE_SERIAL `first`
+
+GIVEN `first`  IS A DATE
+      `second` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `first` `is on or before` `second` IF DATE_SERIAL `first` AT MOST DATE_SERIAL `second`
+
+GIVEN `first`  IS A DATE
+      `second` IS A DATE
+GIVETH A DATE
+`the later of` `first` `and` `second` MEANS
+    IF `first` `is on or before` `second`
+    THEN `second`
+    ELSE `first`
+
+GIVEN `first`  IS A DATE
+      `second` IS A DATE
+GIVETH A DATE
+`the earlier of` `first` `and` `second` MEANS
+    IF `first` `is on or before` `second`
+    THEN `first`
+    ELSE `second`
+
+GIVEN `the year` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a leap year` `the year` IF
+        (`the year` MODULO 4) EQUALS 0
+    AND (    (NOT ((`the year` MODULO 100) EQUALS 0))
+          OR (`the year` MODULO 400) EQUALS 0)
+
+-- "n years after" a day: the same day and month n years on. READING: 29 February goes to 28 February in a year that is
+-- not a leap year. The Act does not say.
+GIVEN `n`       IS A NUMBER
+      `the day` IS A DATE
+GIVETH A DATE
+`n` `years after` `the day` MEANS
+    IF      DATE_DAY `the day` EQUALS 29
+        AND DATE_MONTH `the day` EQUALS 2
+        AND (NOT (`is a leap year` (DATE_YEAR `the day` PLUS `n`)))
+    THEN DATE_FROM_DMY 28 2 (DATE_YEAR `the day` PLUS `n`)
+    ELSE DATE_FROM_DMY (DATE_DAY `the day`) (DATE_MONTH `the day`) (DATE_YEAR `the day` PLUS `n`)
+
+-- "4 years and 6 months after": the same day 54 months on (28 February where that month is shorter; a reading).
+GIVEN `the day` IS A DATE
+GIVETH A DATE
+`4 years and 6 months after` `the day` MEANS
+    IF DATE_MONTH `the day` AT MOST 6
+    THEN `the same day, or the month's last day, in` (DATE_MONTH `the day` PLUS 6) (DATE_YEAR `the day` PLUS 4)
+    ELSE `the same day, or the month's last day, in` (DATE_MONTH `the day` MINUS 6) (DATE_YEAR `the day` PLUS 5)
+    WHERE
+        GIVEN `m` IS A NUMBER
+              `y` IS A NUMBER
+        GIVETH A DATE
+        `the same day, or the month's last day, in` `m` `y` MEANS
+            IF DATE_DAY `the day` AT MOST `the last day of month` `m` `y`
+            THEN DATE_FROM_DMY (DATE_DAY `the day`) `m` `y`
+            ELSE DATE_FROM_DMY (`the last day of month` `m` `y`) `m` `y`
+
+GIVEN `m` IS A NUMBER
+      `y` IS A NUMBER
+GIVETH A NUMBER
+`the last day of month` `m` `y` MEANS
+    IF `m` EQUALS 2
+    THEN IF `is a leap year` `y` THEN 29 ELSE 28
+    ELSE IF `m` EQUALS 4 OR `m` EQUALS 6 OR `m` EQUALS 9 OR `m` EQUALS 11
+         THEN 30
+         ELSE 31
+
+-- DATE_SERIAL counts 1 January 2024 (a Monday) as 1 modulo 7, so 0 is a Sunday and 6 a Saturday.
+GIVEN `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `falls on a weekend` `the day` IF
+        (DATE_SERIAL `the day` MODULO 7) EQUALS 0
+    OR  (DATE_SERIAL `the day` MODULO 7) EQUALS 6
+
+-- The n-th weekday after a day. Legislation Act 2001 dictionary: a business day is a day that is not a Saturday,
+-- Sunday or public holiday in the ACT. Public holidays (Holidays Act 1958, not deposited) are not known here; a caller
+-- adds the number of weekday public holidays in the period to n.
+GIVEN `n`       IS A NUMBER
+      `the day` IS A DATE
+GIVETH A DATE
+`n` `weekdays after` `the day` MEANS
+    IF `n` AT MOST 0
+    THEN `the day`
+    ELSE IF `falls on a weekend` `the next day`
+         THEN `n` `weekdays after` `the next day`
+         ELSE (`n` MINUS 1) `weekdays after` `the next day`
+    WHERE
+        `the next day` MEANS 1 `days after` `the day`
+
+§§ `ss 18-19 -- AWE indexed amounts (NI2026-402)`
+
+-- s 18 (1): "AWE indexed, for an amount, means the amount as adjusted in line with any adjustment in the AWE ... on a
+-- day (an indexation day) prescribed by regulation for the amount; and rounded up to the nearest-- (i) for an amount
+-- referred to in section 96, section 97 or section 103--dollar; or (ii) in any other case--whole $10."
+-- s 19 (1): the MAI commission must declare "the amount as indexed" and "that the amount as indexed applies on the
+-- indexation day". NI2026-402 items 1-2: amounts in ss 96, 97 and 103 are indexed "biannually on 1 April and
+-- 1 October"; the others "annually on 1 October".
+
+-- NI2026-402 items 3 and 4 (ss 96, 97, 103).
+DECLARE `Biannual AWE indexed amounts` HAS
+    `as indexed on`                                   IS A STRING
+    `first day`                                       IS A DATE
+    `last day`                                        IS A DATE
+    `$100 AWE indexed`                                IS A NUMBER
+    `$800 AWE indexed`                                IS A NUMBER
+    `$1 000 AWE indexed`                              IS A NUMBER
+    `$2 250 AWE indexed`                              IS A NUMBER
+    `$2 250 AWE indexed for interim weekly payments`  IS A NUMBER
+
+-- NI2026-402 items 6, 7 and 8 (ss 167, 174, 181).
+DECLARE `Annual AWE indexed amounts` HAS
+    `as indexed on`             IS A STRING
+    `first day`                 IS A DATE
+    `last day`                  IS A DATE
+    `$7 000 AWE indexed`        IS A NUMBER
+    `$2 100 AWE indexed`        IS A NUMBER
+    `$17 500 AWE indexed`       IS A NUMBER
+    `$2 450 AWE indexed`        IS A NUMBER
+    `$42 000 AWE indexed`       IS A NUMBER
+    `$2 800 AWE indexed`        IS A NUMBER
+    `$126 000 AWE indexed`      IS A NUMBER
+    `$4 480 AWE indexed`        IS A NUMBER
+    `$350 000 AWE indexed`      IS A NUMBER
+    `$190 000 AWE indexed`      IS A NUMBER
+    `$40 000 AWE indexed`       IS A NUMBER
+    `$80 000 AWE indexed`       IS A NUMBER
+    `$120 000 AWE indexed`      IS A NUMBER
+    `$160 000 AWE indexed`      IS A NUMBER
+    `$15 000 AWE indexed`       IS A NUMBER
+
+-- NI2026-402, "Amount as indexed on 1 April 2026*" column ("* For information/comparison"), used for 1 April to
+-- 30 September 2026.
+`the biannual amounts as indexed on 1 April 2026` MEANS
+    `Biannual AWE indexed amounts` WITH
+        `as indexed on`                                  IS "1 April 2026"
+        `first day`                                      IS DATE_FROM_DMY 1 4 2026
+        `last day`                                       IS DATE_FROM_DMY 30 9 2026
+        `$100 AWE indexed`                               IS 170
+        `$800 AWE indexed`                               IS 1026
+        `$1 000 AWE indexed`                             IS 1247
+        `$2 250 AWE indexed`                             IS 2794
+        `$2 250 AWE indexed for interim weekly payments` IS 2794
+
+-- NI2026-402, "Amount as indexed on 1 October 2026" column, until the next biannual indexation day (1 April 2027).
+`the biannual amounts as indexed on 1 October 2026` MEANS
+    `Biannual AWE indexed amounts` WITH
+        `as indexed on`                                  IS "1 October 2026"
+        `first day`                                      IS DATE_FROM_DMY 1 10 2026
+        `last day`                                       IS DATE_FROM_DMY 31 3 2027
+        `$100 AWE indexed`                               IS 175
+        `$800 AWE indexed`                               IS 1052
+        `$1 000 AWE indexed`                             IS 1279
+        `$2 250 AWE indexed`                             IS 2864
+        `$2 250 AWE indexed for interim weekly payments` IS 2864
+
+-- NI2026-402, "Amount as indexed on 1 October 2025*" column, used (from 1 April 2026, as for the biannual amounts) to
+-- 30 September 2026.
+`the annual amounts as indexed on 1 October 2025` MEANS
+    `Annual AWE indexed amounts` WITH
+        `as indexed on`         IS "1 October 2025"
+        `first day`             IS DATE_FROM_DMY 1 4 2026
+        `last day`              IS DATE_FROM_DMY 30 9 2026
+        `$7 000 AWE indexed`    IS 8690
+        `$2 100 AWE indexed`    IS 2630
+        `$17 500 AWE indexed`   IS 21680
+        `$2 450 AWE indexed`    IS 3060
+        `$42 000 AWE indexed`   IS 52000
+        `$2 800 AWE indexed`    IS 3490
+        `$126 000 AWE indexed`  IS 155930
+        `$4 480 AWE indexed`    IS 5570
+        `$350 000 AWE indexed`  IS 433070
+        `$190 000 AWE indexed`  IS 235110
+        `$40 000 AWE indexed`   IS 49530
+        `$80 000 AWE indexed`   IS 99020
+        `$120 000 AWE indexed`  IS 148520
+        `$160 000 AWE indexed`  IS 198000
+        `$15 000 AWE indexed`   IS 18580
+
+-- NI2026-402, "Amount as indexed on 1 October 2026" column, until the next annual indexation day (1 October 2027).
+`the annual amounts as indexed on 1 October 2026` MEANS
+    `Annual AWE indexed amounts` WITH
+        `as indexed on`         IS "1 October 2026"
+        `first day`             IS DATE_FROM_DMY 1 10 2026
+        `last day`              IS DATE_FROM_DMY 30 9 2027
+        `$7 000 AWE indexed`    IS 8960
+        `$2 100 AWE indexed`    IS 2720
+        `$17 500 AWE indexed`   IS 22360
+        `$2 450 AWE indexed`    IS 3160
+        `$42 000 AWE indexed`   IS 53620
+        `$2 800 AWE indexed`    IS 3600
+        `$126 000 AWE indexed`  IS 160770
+        `$4 480 AWE indexed`    IS 5750
+        `$350 000 AWE indexed`  IS 446500
+        `$190 000 AWE indexed`  IS 242400
+        `$40 000 AWE indexed`   IS 51070
+        `$80 000 AWE indexed`   IS 102090
+        `$120 000 AWE indexed`  IS 153130
+        `$160 000 AWE indexed`  IS 204140
+        `$15 000 AWE indexed`   IS 19160
+
+-- The dated tables: the amounts as indexed that apply on a day, or NOTHING where nothing deposited covers it.
+GIVEN `the day` IS A DATE
+GIVETH A MAYBE `Biannual AWE indexed amounts`
+`the biannual AWE indexed amounts applying on` `the day` MEANS
+    IF      (`the biannual amounts as indexed on 1 October 2026`'s `first day`) `is on or before` `the day`
+        AND `the day` `is on or before` (`the biannual amounts as indexed on 1 October 2026`'s `last day`)
+    THEN JUST `the biannual amounts as indexed on 1 October 2026`
+    ELSE IF     (`the biannual amounts as indexed on 1 April 2026`'s `first day`) `is on or before` `the day`
+            AND `the day` `is on or before` (`the biannual amounts as indexed on 1 April 2026`'s `last day`)
+         THEN JUST `the biannual amounts as indexed on 1 April 2026`
+         ELSE NOTHING
+
+GIVEN `the day` IS A DATE
+GIVETH A MAYBE `Annual AWE indexed amounts`
+`the annual AWE indexed amounts applying on` `the day` MEANS
+    IF      (`the annual amounts as indexed on 1 October 2026`'s `first day`) `is on or before` `the day`
+        AND `the day` `is on or before` (`the annual amounts as indexed on 1 October 2026`'s `last day`)
+    THEN JUST `the annual amounts as indexed on 1 October 2026`
+    ELSE IF     (`the annual amounts as indexed on 1 October 2025`'s `first day`) `is on or before` `the day`
+            AND `the day` `is on or before` (`the annual amounts as indexed on 1 October 2025`'s `last day`)
+         THEN JUST `the annual amounts as indexed on 1 October 2025`
+         ELSE NOTHING
+
+§§ `Answers`
+
+-- Why nothing is payable, or why there is no entitlement.
+DECLARE `MAI reason` IS ONE OF
+    `under 15 on the date of the motor accident (s 89 (1) (a))`
+    `neither in paid work nor capable of being in paid work on the date of the motor accident (ss 78, 79, 89 (1) (b))`
+    `pension age reached and not in paid work on the date of the motor accident (s 90)`
+    `the injured person has died (s 91)`
+    `an insurer has already paid damages for loss of income (s 92)`
+    `a limitation in division 2.2.2 ends or excludes these benefits (ss 43 to 50)`
+    `the day is outside the first and second payment periods (s 93)`
+    `the day is outside the period for which income replacement benefits are payable (s 101)`
+    `a participant in the LTCS scheme (s 118)`
+    `WPI less than 5% (s 132 (1); table 167, item 1)`
+    `a foreign national living permanently outside Australia (s 134)`
+    `quality of life benefits already received (s 135)`
+    `quality of life damages already awarded (s 136)`
+    `not a person who died as a result of a motor accident: the death was more than 2 years after it (s 36)`
+    `no domestic partner, dependent former domestic partner or dependent child on the date of the motor accident (s 174)`
+    `an exclusion in section 46, 49 or 170 to 173 applies (s 169 (2))`
+    `not the person who has paid, or is liable to pay, the funeral expenses (s 178 (1))`
+    `an exclusion in section 49, 179 or 180 applies (s 178 (2))`
+    `the interim weekly payment period has ended (s 103 (2))`
+
+-- Why the encoding gives no answer.
+DECLARE `Not covered reason` IS ONE OF
+    `no deposited AWE indexed amounts for ss 96, 97 and 103 on that day (NI2026-402 covers 1 April 2026 to 31 March 2027)`
+    `no deposited AWE indexed amounts for ss 167, 174 and 181 on that day (NI2026-402 covers 1 April 2026 to 30 September 2027)`
+    `a WPI that is not a whole number from 0 to 100 (s 13)`
+    `no start date in s 101 (3) to (5) for this work situation`
+
+-- An amount in dollars, or nil and why, or not covered and why.
+DECLARE `MAI amount answer` IS ONE OF
+    `dollars` HAS `amount` IS A NUMBER
+    `nothing payable` HAS `because` IS A `MAI reason`
+    `amount not covered` HAS `because not covered` IS A `Not covered reason`
+
+DECLARE `Entitlement answer` IS ONE OF
+    `entitled`
+    `not entitled` HAS `why not entitled` IS A `MAI reason`
+
+DECLARE `Period answer` IS ONE OF
+    `payable from and to` HAS `from` IS A DATE
+                              `to`   IS A DATE
+    `no period` HAS `why no period` IS A `MAI reason`
+    `period not covered` HAS `why period not covered` IS A `Not covered reason`
+
+§§ `Parties and acts (for the regulative rules)`
+
+DECLARE `MAI party` IS ONE OF
+    `the applicant`
+    `the injured person`
+    `the relevant insurer`
+
+DECLARE `MAI act` IS ONE OF
+    `apply for defined benefits`
+    `make a late application with an explanation for the delay`
+    `respond to the explanation for the late application` HAS `accepts the late application` IS A BOOLEAN
+    `give the receipt notice`
+    `give the late receipt notice`
+    `decide liability and give notice of the decision` HAS `accepts liability` IS A BOOLEAN
+    `give a defined benefits notice`
+    `pay the defined benefits`
+    `pay the income replacement benefits for the fortnight` HAS `the fortnight's amount` IS A NUMBER
+    `apply to the ACAT for an order for payment of the death benefits`
+    `give the WPI notice`
+    `notify the insurer whether accepting or disagreeing with each WPI report` HAS `accepts each report` IS A BOOLEAN
+    `pay the quality of life benefits` HAS `the quality of life amount` IS A NUMBER
+
+-- s 33 kinds of defined benefits, grouped as s 59 (2) (a) groups them for the late application limit.
+DECLARE `Benefits applied for` IS ONE OF
+    `income replacement benefits or treatment and care benefits`
+    `death benefits`
+    `funeral benefits`
+
+§§ `s 36 -- person who died as a result of a motor accident`
+
+-- s 36: "an individual who dies-- (a) as a result of a personal injury the person sustained as a result of a motor
+-- accident; and (b) within 2 years after the date of the motor accident." Paragraph (a) is a fact.
+GIVEN `the accident date` IS A DATE
+      `the death date`    IS A DATE
+GIVETH A BOOLEAN
+DECIDE `died within 2 years after the date of the motor accident` `the accident date` `the death date` IF
+        `the accident date` `is on or before` `the death date`
+    AND `the death date` `is on or before` (2 `years after` `the accident date`)
+
+§§ `ss 43-50 -- limitations and exceptions to entitlement (as facts)`
+
+-- Each limitation is a fact: a conviction, a finding of guilt, an MAI commission declaration or notice, or an accepted
+-- workers compensation claim. The facts are of the kind the person can state. Which benefits each one ends follows the
+-- "subject to" lists: s 89 (3) (a) (all of division 2.2.2), s 112 (2) and s 132 (2).
+DECLARE `Division 2.2.2 facts` HAS
+    -- s 43 (2): the driver or responsible person of an uninsured vehicle gets income replacement benefits only in the
+    -- three listed cases (another insured vehicle whose insurer is the relevant insurer; a single-vehicle no-fault
+    -- accident; a driver who reasonably believed the vehicle was insured and the responsible person consented).
+    `s 43 (2): driver or responsible person of an uninsured vehicle, with no s 43 (2) exception` IS A BOOLEAN
+    -- s 43 (3): quality of life benefits only if another vehicle was insured and its insurer is the relevant insurer.
+    `s 43 (3): driver or responsible person of an uninsured vehicle, with no other insured vehicle whose insurer is the relevant insurer` IS A BOOLEAN
+    -- s 44 (3), s 45 (5): convicted or found guilty of a driving offence (or the s 44 (4) declaration), the appeal
+    -- period over or the appeal finalised. Ends income replacement and quality of life benefits.
+    `s 44: convicted or found guilty of a driving offence in relation to the accident` IS A BOOLEAN
+    -- s 45 (3): 2 or more driving offences. Ends treatment and care benefits as well.
+    `s 45: convicted or found guilty of 2 or more driving offences in relation to the accident` IS A BOOLEAN
+    -- s 46 (1): "not entitled to income replacement benefits or quality of life benefits if the injury is an
+    -- intentionally self-inflicted injury".
+    `s 46: the injury is intentionally self-inflicted` IS A BOOLEAN
+    -- s 47 (1): no income replacement or treatment and care benefits "during any period when the person is a detainee
+    -- or a young detainee".
+    `s 47: a detainee or young detainee for the period` IS A BOOLEAN
+    -- s 48 (3): convicted or found guilty of a serious offence (s 48 (6)). Ends income replacement, treatment and care
+    -- and quality of life benefits.
+    `s 48: convicted or found guilty of a serious offence in relation to the accident` IS A BOOLEAN
+    -- s 49 (1): the MAI commission notifies the insurer that the accident was caused by an act of terrorism.
+    `s 49: the MAI commission has notified that the accident was caused by an act of terrorism` IS A BOOLEAN
+    -- s 50 (2)-(3): a workers compensation claim for the injury accepted or settled (and not withdrawn within 13 weeks
+    -- after the accident, nor rejected). Ends income replacement, treatment and care and quality of life benefits.
+    `s 50: a workers compensation claim for the injury has been accepted or settled` IS A BOOLEAN
+
+-- s 89 (3) (a): income replacement benefits are subject to all of division 2.2.2; the sections that name them are
+-- ss 43 (2), 44, 45, 46, 47, 48, 49 and 50.
+GIVEN `the facts` IS A `Division 2.2.2 facts`
+GIVETH A BOOLEAN
+DECIDE `division 2.2.2 ends or excludes income replacement benefits` `the facts` IF
+        `the facts`'s `s 43 (2): driver or responsible person of an uninsured vehicle, with no s 43 (2) exception`
+    OR  `the facts`'s `s 44: convicted or found guilty of a driving offence in relation to the accident`
+    OR  `the facts`'s `s 45: convicted or found guilty of 2 or more driving offences in relation to the accident`
+    OR  `the facts`'s `s 46: the injury is intentionally self-inflicted`
+    OR  `the facts`'s `s 47: a detainee or young detainee for the period`
+    OR  `the facts`'s `s 48: convicted or found guilty of a serious offence in relation to the accident`
+    OR  `the facts`'s `s 49: the MAI commission has notified that the accident was caused by an act of terrorism`
+    OR  `the facts`'s `s 50: a workers compensation claim for the injury has been accepted or settled`
+
+-- s 112 (2) (a)-(e): treatment and care benefits are subject to ss 45, 47, 48, 49 and 50.
+GIVEN `the facts` IS A `Division 2.2.2 facts`
+GIVETH A BOOLEAN
+DECIDE `division 2.2.2 ends or excludes treatment and care benefits` `the facts` IF
+        `the facts`'s `s 45: convicted or found guilty of 2 or more driving offences in relation to the accident`
+    OR  `the facts`'s `s 47: a detainee or young detainee for the period`
+    OR  `the facts`'s `s 48: convicted or found guilty of a serious offence in relation to the accident`
+    OR  `the facts`'s `s 49: the MAI commission has notified that the accident was caused by an act of terrorism`
+    OR  `the facts`'s `s 50: a workers compensation claim for the injury has been accepted or settled`
+
+-- s 132 (2) (a)-(g): quality of life benefits are subject to ss 43, 44, 45, 46, 48, 49 and 50.
+GIVEN `the facts` IS A `Division 2.2.2 facts`
+GIVETH A BOOLEAN
+DECIDE `division 2.2.2 ends or excludes quality of life benefits` `the facts` IF
+        `the facts`'s `s 43 (3): driver or responsible person of an uninsured vehicle, with no other insured vehicle whose insurer is the relevant insurer`
+    OR  `the facts`'s `s 44: convicted or found guilty of a driving offence in relation to the accident`
+    OR  `the facts`'s `s 45: convicted or found guilty of 2 or more driving offences in relation to the accident`
+    OR  `the facts`'s `s 46: the injury is intentionally self-inflicted`
+    OR  `the facts`'s `s 48: convicted or found guilty of a serious offence in relation to the accident`
+    OR  `the facts`'s `s 49: the MAI commission has notified that the accident was caused by an act of terrorism`
+    OR  `the facts`'s `s 50: a workers compensation claim for the injury has been accepted or settled`
+
+§§ `s 55 -- who may apply for defined benefits`
+
+-- s 55 (1): "(a) a person injured in the motor accident; (b) the dependant of a person who died as a result of the
+-- motor accident; (c) the person who has paid, or is liable to pay, the funeral expenses of a person who died as a
+-- result of the motor accident." (2): on behalf of an applicant, "(a) for an applicant ... who is a person with a
+-- legal disability--the applicant's guardian; (b) for an applicant ... mentioned in subsection (1) (b)--the personal
+-- representative of the person who died".
+GIVEN `injured in the motor accident`                                    IS A BOOLEAN
+      `a dependant of a person who died as a result of the motor accident` IS A BOOLEAN
+      `paid or liable to pay the funeral expenses`                       IS A BOOLEAN
+      `the guardian of such a person with a legal disability`             IS A BOOLEAN
+      `the personal representative of the person who died`                IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `may make an application for defined benefits under s 55` IF
+        `injured in the motor accident`
+    OR  `a dependant of a person who died as a result of the motor accident`
+    OR  `paid or liable to pay the funeral expenses`
+    OR  `the guardian of such a person with a legal disability`
+    OR  `the personal representative of the person who died`
+
+§§ `ss 58-59 -- the application period and late applications`
+
+-- s 58: the application period is "the period of 13 weeks beginning on the date of the motor accident" for the
+-- injured person, and "the period of 13 weeks beginning on the date of the injured person's death" for the funeral
+-- payer and for the dependant or personal representative. 13 weeks beginning on a day: that day and the 90 after it.
+`the days in the application period after its first day` MEANS (13 TIMES 7) MINUS 1
+
+GIVEN `the first day of the application period` IS A DATE
+GIVETH A DATE
+`the last day of the application period beginning on` `the first day of the application period` MEANS
+    `the days in the application period after its first day` `days after` `the first day of the application period`
+
+-- s 59 (2) (a): a late application may be accepted if made "(i) for income replacement benefits or treatment and care
+-- benefits, or both--within 2 years after the date of the motor accident; or (ii) for death benefits and funeral
+-- benefits--within 1 year after the date of the injured person's death".
+GIVEN `the benefits`      IS A `Benefits applied for`
+      `the accident date` IS A DATE
+      `the death date`    IS A DATE
+GIVETH A DATE
+`the last day for a late application for` `the benefits` `after an accident on` `the accident date` `and a death on` `the death date` MEANS
+    CONSIDER `the benefits`
+    WHEN `income replacement benefits or treatment and care benefits` THEN 2 `years after` `the accident date`
+    OTHERWISE 1 `years after` `the death date`
+
+-- s 58: the first day of the application period.
+GIVEN `the benefits`      IS A `Benefits applied for`
+      `the accident date` IS A DATE
+      `the death date`    IS A DATE
+GIVETH A DATE
+`the first day of the application period for` `the benefits` `after an accident on` `the accident date` `and a death on` `the death date` MEANS
+    CONSIDER `the benefits`
+    WHEN `income replacement benefits or treatment and care benefits` THEN `the accident date`
+    OTHERWISE `the death date`
+
+DECLARE `Application timing` IS ONE OF
+    `made within the application period (s 59 (1))`
+    `a late application the insurer may accept, if satisfied the applicant has a full and satisfactory explanation (s 59 (2))`
+    `a late application the insurer has accepted (s 59 (2))`
+    `a late application the insurer has refused (s 59 (2))`
+    `a late application the insurer is taken to have accepted: no response to the explanation within 28 days (s 59 (4))`
+    `made after the late application limit: the insurer need not accept it (s 59 (5))`
+
+DECLARE `Response to a late application` IS ONE OF
+    `no response yet`
+    `accepted the late application`
+    `refused the late application`
+
+-- s 59 (4): "if the relevant insurer does not respond to the applicant about the applicant's explanation for the late
+-- application within 28 days after receiving it, the relevant insurer is taken to have accepted the application."
+-- READING: s 59 (5) ("need not accept an application if made after the time stated in subsection (2) (a)") is read as
+-- prevailing over s 59 (4), so silence does not accept an application made after the limit (see NOTES.md, finding 6).
+GIVEN `the benefits`                                 IS A `Benefits applied for`
+      `the accident date`                            IS A DATE
+      `the death date`                               IS A DATE
+      `the application date`                         IS A DATE
+      `date the insurer received the explanation`    IS A DATE
+      `the insurer's response`                       IS A `Response to a late application`
+      `date of the insurer's response`               IS A DATE
+      `the day asked about`                          IS A DATE
+GIVETH AN `Application timing`
+`the s 59 timing of the application` `the benefits` `the accident date` `the death date` `the application date` `date the insurer received the explanation` `the insurer's response` `date of the insurer's response` `the day asked about` MEANS
+    IF `the application date` `is on or before` (`the last day of the application period beginning on` (`the first day of the application period for` `the benefits` `after an accident on` `the accident date` `and a death on` `the death date`))
+    THEN `made within the application period (s 59 (1))`
+    ELSE IF NOT (`the application date` `is on or before` (`the last day for a late application for` `the benefits` `after an accident on` `the accident date` `and a death on` `the death date`))
+         THEN `made after the late application limit: the insurer need not accept it (s 59 (5))`
+         ELSE CONSIDER `the insurer's response`
+              WHEN `accepted the late application` THEN
+                  IF `responded in time`
+                  THEN `a late application the insurer has accepted (s 59 (2))`
+                  ELSE `a late application the insurer is taken to have accepted: no response to the explanation within 28 days (s 59 (4))`
+              WHEN `refused the late application` THEN
+                  IF `responded in time`
+                  THEN `a late application the insurer has refused (s 59 (2))`
+                  ELSE `a late application the insurer is taken to have accepted: no response to the explanation within 28 days (s 59 (4))`
+              OTHERWISE
+                  IF `the day asked about` `is on or before` `the last day to respond`
+                  THEN `a late application the insurer may accept, if satisfied the applicant has a full and satisfactory explanation (s 59 (2))`
+                  ELSE `a late application the insurer is taken to have accepted: no response to the explanation within 28 days (s 59 (4))`
+    WHERE
+        `the last day to respond` MEANS 28 `days after` `date the insurer received the explanation`
+        `responded in time` MEANS `date of the insurer's response` `is on or before` `the last day to respond`
+
+§§ `ss 60, 65 -- the receipt notice and the decision on liability`
+
+-- s 60 (1): the relevant insurer "must, within the period stated in the MAI guidelines" give a receipt notice (or a
+-- late receipt notice, or return an incomplete application). The MAI guidelines are not deposited: the period is an
+-- input, in days after the insurer receives the application.
+GIVEN `date the insurer received the application`        IS A DATE
+      `days the MAI guidelines allow for a receipt notice` IS A NUMBER
+GIVETH A DATE
+`the last day for the receipt notice` `date the insurer received the application` `days the MAI guidelines allow for a receipt notice` MEANS
+    `days the MAI guidelines allow for a receipt notice` `days after` `date the insurer received the application`
+
+-- s 65 (1): "within 28 days after the date of the receipt notice given to the applicant". READING: for a late
+-- application, the late receipt notice (s 60 (1) (b)); s 65 says only "receipt notice" (NOTES.md, finding 7).
+`the days to decide liability` MEANS 28
+
+GIVEN `date of the receipt notice` IS A DATE
+GIVETH A DATE
+`the last day to decide liability after a receipt notice on` `date of the receipt notice` MEANS
+    `the days to decide liability` `days after` `date of the receipt notice`
+
+DECLARE `Decision on liability so far` IS ONE OF
+    `no notice given yet`
+    `a defined benefits notice: liability accepted`
+    `a transfer notice: another insurer is liable`
+    `a rejection notice: liability not accepted`
+
+DECLARE `Liability position` IS ONE OF
+    `liability accepted (s 65 (2))`
+    `taken to have accepted liability: no transfer or rejection notice within 28 days after the receipt notice (s 65 (4))`
+    `liability transferred to another insurer (s 65 (3) (a))`
+    `liability rejected (s 65 (3) (b))`
+    `not yet decided: the 28 days after the receipt notice have not ended (s 65 (1))`
+
+-- s 65 (4): "If the relevant insurer fails to give the applicant a transfer notice or rejection notice within the
+-- 28 days, the relevant insurer-- (a) is taken to have accepted liability for the defined benefits; and (b) is liable
+-- for the defined benefits; and (c) must give the applicant a defined benefits notice." A transfer or rejection notice
+-- after the 28 days does not undo that; a later change of decision is s 68 (not encoded).
+GIVEN `date of the receipt notice`    IS A DATE
+      `the decision so far`           IS A `Decision on liability so far`
+      `date of the decision notice`   IS A DATE
+      `the day asked about`           IS A DATE
+GIVETH A `Liability position`
+`the s 65 liability position` `date of the receipt notice` `the decision so far` `date of the decision notice` `the day asked about` MEANS
+    CONSIDER `the decision so far`
+    WHEN `a defined benefits notice: liability accepted` THEN `liability accepted (s 65 (2))`
+    WHEN `a transfer notice: another insurer is liable` THEN
+        IF `in time` THEN `liability transferred to another insurer (s 65 (3) (a))` ELSE `deemed`
+    WHEN `a rejection notice: liability not accepted` THEN
+        IF `in time` THEN `liability rejected (s 65 (3) (b))` ELSE `deemed`
+    OTHERWISE
+        IF `the day asked about` `is on or before` `the last day`
+        THEN `not yet decided: the 28 days after the receipt notice have not ended (s 65 (1))`
+        ELSE `deemed`
+    WHERE
+        `the last day` MEANS `the last day to decide liability after a receipt notice on` `date of the receipt notice`
+        `in time`      MEANS `date of the decision notice` `is on or before` `the last day`
+        `deemed`       MEANS `taken to have accepted liability: no transfer or rejection notice within 28 days after the receipt notice (s 65 (4))`
+
+GIVEN `the position` IS A `Liability position`
+GIVETH A BOOLEAN
+DECIDE `the relevant insurer has accepted, or is taken to have accepted, liability` `the position` IF
+    CONSIDER `the position`
+    WHEN `liability accepted (s 65 (2))` THEN TRUE
+    WHEN `taken to have accepted liability: no transfer or rejection notice within 28 days after the receipt notice (s 65 (4))` THEN TRUE
+    OTHERWISE FALSE
+
+§§ `ss 59, 60, 65, 66, 176 -- the application and the insurer's duties (regulative rules)`
+
+-- The clock is in days. For the applicant's rule, day 0 is the first day of the application period (the date of the
+-- accident, or of the death). For the insurer's rules, a rule's clock starts at the event that led to it.
+-- TRACE NOTE: a LEST rule starts at the event that shows the earlier deadline has passed, and that event is not
+-- matched against it. So a trace of a late application first waits until the day after the application period
+-- (WAITUNTIL 91), and the late application's window is the limit less 91 days.
+
+-- s 66 (1): "If a relevant insurer accepts liability for defined benefits, the insurer must pay the applicant the
+-- defined benefits to which the applicant is entitled." No period is stated (the MAI guidelines may make provision,
+-- s 66 (2)), so the obligation has no WITHIN.
+GIVETH A DEONTIC `MAI party` `MAI act`
+DECIDE `s 66 -- the insurer must pay the defined benefits` IS
+    PARTY `the relevant insurer`
+    MUST  `pay the defined benefits`
+
+-- s 176 (2)-(3): "The relevant insurer must apply to the ACAT for an order for the payment of the death benefits to
+-- the dependants. The application must be made after the later of the following: (a) 5 business days after the day
+-- the relevant insurer accepts liability ...; (b) 28 days after the day the relevant insurer gives notice to a
+-- dependant for additional information". The text sets the earliest day and no latest one: a prohibition until the
+-- earliest day, then an obligation with no WITHIN. The clock starts on the day liability is accepted (day 0), and
+-- `the first day it may apply` is the earliest day counted from it.
+GIVEN `the first day it may apply` IS A NUMBER
+GIVETH A DEONTIC `MAI party` `MAI act`
+DECIDE `s 176 -- the insurer must apply to the ACAT for the death benefits order, and not before the later of 5 business days and 28 days` `the first day it may apply` IS
+    PARTY `the relevant insurer`
+    SHANT `apply to the ACAT for an order for payment of the death benefits`
+    WITHIN (`the first day it may apply` MINUS 1)
+    HENCE
+        PARTY `the relevant insurer`
+        MUST  `apply to the ACAT for an order for payment of the death benefits`
+    LEST  BREACH BY `the relevant insurer` BECAUSE "s 176 (3): the application to the ACAT must be made after the later of 5 business days after the insurer accepts liability and 28 days after it asks a dependant for additional information"
+
+-- What follows acceptance: s 66 payment, or, for death benefits, the s 176 application to the ACAT (s 66 note).
+GIVEN `the benefits`               IS A `Benefits applied for`
+      `the first day it may apply` IS A NUMBER
+GIVETH A DEONTIC `MAI party` `MAI act`
+`after liability is accepted for` `the benefits` `the first day it may apply` MEANS
+    CONSIDER `the benefits`
+    WHEN `death benefits` THEN `s 176 -- the insurer must apply to the ACAT for the death benefits order, and not before the later of 5 business days and 28 days` `the first day it may apply`
+    OTHERWISE `s 66 -- the insurer must pay the defined benefits`
+
+-- s 65 (1), (4): decide liability within 28 days after the receipt notice; if no transfer or rejection notice comes in
+-- the 28 days, the insurer is taken to have accepted liability and "must give the applicant a defined benefits notice".
+-- Missing the 28 days is not a breach: the Act's consequence is deemed acceptance.
+GIVEN `the benefits`               IS A `Benefits applied for`
+      `the first day it may apply` IS A NUMBER
+GIVETH A DEONTIC `MAI party` `MAI act`
+DECIDE `s 65 -- the insurer must decide liability within 28 days after the receipt notice, or is taken to accept it` `the benefits` `the first day it may apply` IS
+    PARTY `the relevant insurer`
+    MUST  `decide liability and give notice of the decision` `accepts`
+    WITHIN `the days to decide liability`
+    HENCE (IF `accepts` THEN `after liability is accepted for` `the benefits` `the first day it may apply` ELSE FULFILLED)
+    LEST
+        PARTY `the relevant insurer`
+        MUST  `give a defined benefits notice`
+        HENCE `after liability is accepted for` `the benefits` `the first day it may apply`
+
+-- s 60 (1) (a), (b): the receipt notice (or, for a late application, the late receipt notice), within the period in
+-- the MAI guidelines; then s 65. A receipt notice not given in that period is a breach.
+GIVEN `late`                                             IS A BOOLEAN
+      `the benefits`                                     IS A `Benefits applied for`
+      `days the MAI guidelines allow for a receipt notice` IS A NUMBER
+      `the first day it may apply`                       IS A NUMBER
+GIVETH A DEONTIC `MAI party` `MAI act`
+DECIDE `s 60 -- the insurer must give a receipt notice within the period in the MAI guidelines` `late` `the benefits` `days the MAI guidelines allow for a receipt notice` `the first day it may apply` IS
+    PARTY `the relevant insurer`
+    MUST  EXACTLY (`the receipt notice to give` `late`)
+    WITHIN `days the MAI guidelines allow for a receipt notice`
+    HENCE `s 65 -- the insurer must decide liability within 28 days after the receipt notice, or is taken to accept it` `the benefits` `the first day it may apply`
+    LEST  BREACH BY `the relevant insurer` BECAUSE "s 60 (1): the relevant insurer must give the applicant a receipt notice (or late receipt notice) within the period stated in the MAI guidelines"
+    WHERE
+        GIVEN `is late` IS A BOOLEAN
+        GIVETH AN `MAI act`
+        `the receipt notice to give` `is late` MEANS
+            IF `is late` THEN `give the late receipt notice` ELSE `give the receipt notice`
+
+-- s 59 (1): "An application for defined benefits ... must be made within the application period." (2): the insurer
+-- "may accept" a late application made within the limit; (4): silence on the explanation for 28 days is acceptance;
+-- (5): after the limit the insurer "need not accept". Applying late is not a breach; the LEST path is the late
+-- application, and an application after the limit leaves nothing owed.
+GIVEN `the benefits`                                       IS A `Benefits applied for`
+      `days from the first day of the application period to the late application limit` IS A NUMBER
+      `days the MAI guidelines allow for a receipt notice`  IS A NUMBER
+      `the first day it may apply`                         IS A NUMBER
+GIVETH A DEONTIC `MAI party` `MAI act`
+DECIDE `s 59 -- the application must be made within the application period, or late with an explanation` `the benefits` `days from the first day of the application period to the late application limit` `days the MAI guidelines allow for a receipt notice` `the first day it may apply` IS
+    PARTY `the applicant`
+    MUST  `apply for defined benefits`
+    WITHIN `the days in the application period after its first day`
+    HENCE `s 60 -- the insurer must give a receipt notice within the period in the MAI guidelines` FALSE `the benefits` `days the MAI guidelines allow for a receipt notice` `the first day it may apply`
+    LEST
+        PARTY `the applicant`
+        DO    `make a late application with an explanation for the delay`
+        WITHIN (`days from the first day of the application period to the late application limit` MINUS (`the days in the application period after its first day` PLUS 1))
+        HENCE
+            PARTY `the relevant insurer`
+            DO    `respond to the explanation for the late application` `accepts it`
+            WITHIN 28
+            HENCE (IF `accepts it` THEN `s 60 -- the insurer must give a receipt notice within the period in the MAI guidelines` TRUE `the benefits` `days the MAI guidelines allow for a receipt notice` `the first day it may apply` ELSE FULFILLED)
+            LEST  `s 60 -- the insurer must give a receipt notice within the period in the MAI guidelines` TRUE `the benefits` `days the MAI guidelines allow for a receipt notice` `the first day it may apply`
+        LEST  FULFILLED
+
+§§ `s 176 -- the earliest day for the ACAT application`
+
+-- s 176 (3) (a): "5 business days after the day the relevant insurer accepts liability"; (b) "28 days after the day the
+-- relevant insurer gives notice to a dependant for additional information". The application "must be made after the
+-- later of" them. READING: "after" a day is from the next day; paragraph (b) counts only where such a notice was given.
+-- Weekday public holidays in the five business days are an input (Holidays Act 1958 not deposited).
+GIVEN `date the insurer accepted liability`                    IS A DATE
+      `weekday public holidays in the 5 business days`         IS A NUMBER
+      `the insurer gave a dependant notice for additional information` IS A BOOLEAN
+      `date of that notice`                                    IS A DATE
+GIVETH A DATE
+`the first day the insurer may apply to the ACAT` `date the insurer accepted liability` `weekday public holidays in the 5 business days` `the insurer gave a dependant notice for additional information` `date of that notice` MEANS
+    1 `days after` `the later day`
+    WHERE
+        `5 business days after acceptance` MEANS (5 PLUS `weekday public holidays in the 5 business days`) `weekdays after` `date the insurer accepted liability`
+        `the later day` MEANS
+            IF `the insurer gave a dependant notice for additional information`
+            THEN `the later of` `5 business days after acceptance` `and` (28 `days after` `date of that notice`)
+            ELSE `5 business days after acceptance`
+
+§§ `Part 2.4 -- income replacement benefits: entitlement (ss 78, 79, 89-92)`
+
+-- The injured person's situation on the date of the motor accident, in the categories of ss 78-87.
+-- s 78 (1): "in paid work if the person is engaged in any work for remuneration or other financial benefit ...
+-- whether or not the person was on paid leave".
+-- s 79 (1): capable of being in paid work if (a) not in paid work but "in paid work for at least 260 hours in the
+-- 52 weeks immediately before"; (b) "receiving a weekly payment or other payment in relation to loss of income under
+-- this Act or the Workers Compensation Act 1951 (or a corresponding law ...)"; (c) on unpaid leave and anticipating a
+-- return; (d) an arrangement to start employment or a business; (e) at least 15, a full-time student, expecting paid
+-- work after the course or the final year of secondary school.
+DECLARE `Work situation` IS ONE OF
+    `in paid work as an ongoing employee or fixed term contractor (s 81)`
+    `in paid work as a self-employed person (s 82)`
+    `in paid work as a casual worker, with at least 260 hours in the 52 weeks before (s 83)`
+    `in paid work, casually, with fewer than 260 hours in the 52 weeks before`
+    `not in paid work, but in paid work for at least 260 hours in the 52 weeks before (ss 79 (1) (a), 83)`
+    `receiving weekly payments for loss of income under a workers compensation scheme (ss 79 (1) (b), 84)`
+    `receiving income replacement benefits under this Act for an earlier accident (s 79 (1) (b))`
+    `on unpaid leave from paid work, expecting to return (ss 79 (1) (c), 85)`
+    `with an arrangement to start work or a business (ss 79 (1) (d), 86)`
+    `a full-time student expecting paid work after the course or the final year of school (ss 79 (1) (e), 87)`
+    `none of these`
+
+GIVEN `the situation` IS A `Work situation`
+GIVETH A BOOLEAN
+DECIDE `is in paid work` `the situation` IF
+    CONSIDER `the situation`
+    WHEN `in paid work as an ongoing employee or fixed term contractor (s 81)` THEN TRUE
+    WHEN `in paid work as a self-employed person (s 82)` THEN TRUE
+    WHEN `in paid work as a casual worker, with at least 260 hours in the 52 weeks before (s 83)` THEN TRUE
+    WHEN `in paid work, casually, with fewer than 260 hours in the 52 weeks before` THEN TRUE
+    OTHERWISE FALSE
+
+GIVEN `the situation` IS A `Work situation`
+GIVETH A BOOLEAN
+DECIDE `is capable of being in paid work` `the situation` IF
+    CONSIDER `the situation`
+    WHEN `not in paid work, but in paid work for at least 260 hours in the 52 weeks before (ss 79 (1) (a), 83)` THEN TRUE
+    WHEN `receiving weekly payments for loss of income under a workers compensation scheme (ss 79 (1) (b), 84)` THEN TRUE
+    WHEN `receiving income replacement benefits under this Act for an earlier accident (s 79 (1) (b))` THEN TRUE
+    WHEN `on unpaid leave from paid work, expecting to return (ss 79 (1) (c), 85)` THEN TRUE
+    WHEN `with an arrangement to start work or a business (ss 79 (1) (d), 86)` THEN TRUE
+    WHEN `a full-time student expecting paid work after the course or the final year of school (ss 79 (1) (e), 87)` THEN TRUE
+    OTHERWISE FALSE
+
+-- One person injured in one motor accident.
+DECLARE `Injured person's facts` HAS
+    `date of the motor accident`                                   IS A DATE
+    `age on the date of the motor accident`                        IS A NUMBER
+    `work situation on the date of the motor accident`             IS A `Work situation`
+    -- "pension age--see the Social Security Act 1991 (Cwlth), section 23" (dictionary): a borrowed term, asked as the
+    -- date the person reaches it.
+    `date the injured person reaches pension age`                  IS A DATE
+    `the injured person has died`                                  IS A BOOLEAN
+    `an insurer has paid damages for loss of income under a motor accident claim` IS A BOOLEAN
+    `limitations`                                                  IS A `Division 2.2.2 facts`
+
+-- s 90 (1): "on the date of the accident, the person was the pension age, or older".
+GIVEN `the facts` IS AN `Injured person's facts`
+GIVETH A BOOLEAN
+DECIDE `had reached pension age on the date of the motor accident` `the facts` IF
+    (`the facts`'s `date the injured person reaches pension age`) `is on or before` (`the facts`'s `date of the motor accident`)
+
+-- s 89 (1): entitled if, on the date of the motor accident, "(a) the person was at least 15 years old; and (b) the
+-- person was-- (i) in paid work; or (ii) capable of being in paid work." Subject to (3): division 2.2.2, s 90 (pension
+-- age: "only if ... in paid work"), s 91 (death; accrued entitlements survive), s 92 (damages for loss of income
+-- already paid).
+GIVEN `the facts` IS AN `Injured person's facts`
+GIVETH AN `Entitlement answer`
+`the entitlement to income replacement benefits of` `the facts` MEANS
+    IF `the facts`'s `age on the date of the motor accident` LESS THAN 15
+    THEN `not entitled` `under 15 on the date of the motor accident (s 89 (1) (a))`
+    ELSE IF NOT (    `is in paid work` (`the facts`'s `work situation on the date of the motor accident`)
+                  OR `is capable of being in paid work` (`the facts`'s `work situation on the date of the motor accident`))
+         THEN `not entitled` `neither in paid work nor capable of being in paid work on the date of the motor accident (ss 78, 79, 89 (1) (b))`
+         ELSE IF     `had reached pension age on the date of the motor accident` `the facts`
+                 AND (NOT (`is in paid work` (`the facts`'s `work situation on the date of the motor accident`)))
+              THEN `not entitled` `pension age reached and not in paid work on the date of the motor accident (s 90)`
+              ELSE IF `the facts`'s `the injured person has died`
+                   THEN `not entitled` `the injured person has died (s 91)`
+                   ELSE IF `the facts`'s `an insurer has paid damages for loss of income under a motor accident claim`
+                        THEN `not entitled` `an insurer has already paid damages for loss of income (s 92)`
+                        ELSE IF `division 2.2.2 ends or excludes income replacement benefits` (`the facts`'s `limitations`)
+                             THEN `not entitled` `a limitation in division 2.2.2 ends or excludes these benefits (ss 43 to 50)`
+                             ELSE `entitled`
+
+§§ `s 93 -- the payment periods`
+
+DECLARE `Payment period` IS ONE OF
+    `the first payment period (s 93)`
+    `the second payment period (s 93)`
+    `outside the payment periods (s 93)`
+
+-- s 93: "first payment period means the period of 13 weeks beginning on the date of the motor accident"; "second
+-- payment period means the period-- (a) beginning on the day after the end of the first payment period; and (b) ending
+-- 5 years after the date of the motor accident".
+GIVEN `the day`           IS A DATE
+      `the accident date` IS A DATE
+GIVETH A `Payment period`
+`the payment period of` `the day` `after an accident on` `the accident date` MEANS
+    IF NOT (`the accident date` `is on or before` `the day`)
+    THEN `outside the payment periods (s 93)`
+    ELSE IF `the day` `is on or before` (((13 TIMES 7) MINUS 1) `days after` `the accident date`)
+         THEN `the first payment period (s 93)`
+         ELSE IF `the day` `is on or before` (5 `years after` `the accident date`)
+              THEN `the second payment period (s 93)`
+              ELSE `outside the payment periods (s 93)`
+
+§§ `ss 94, 96-98 -- the amount of income replacement benefits`
+
+-- The figures one week's amount is worked out from. Pre-injury income (s 80; ss 81-87) and its AWE adjustment (s 94;
+-- the s 95 declarations are not deposited) are an input, as is post-injury earning capacity (s 100: the insurer's
+-- decision). The superannuation guarantee charge percentage is set by the Superannuation Guarantee (Administration)
+-- Act 1992 (Cwlth), s 19 (2): an input.
+DECLARE `Income replacement figures` HAS
+    `pre-injury income AWE adjusted`                                        IS A NUMBER
+    `post-injury earning capacity`                                          IS A NUMBER
+    `employer superannuation contributions paid or payable in the 52 weeks before the accident` IS A BOOLEAN
+    `superannuation guarantee charge percentage for the year of the contributions` IS A NUMBER
+    `workers compensation payment for the week`                             IS A NUMBER
+
+-- s 96 (1), s 97 (1): "P means-- (a) if the injured person's pre-injury income AWE adjusted is $2 250 AWE indexed or
+-- less--the amount of the injured person's pre-injury income AWE adjusted; or (b) if ... more than $2 250 AWE
+-- indexed--$2 250 AWE indexed."
+GIVEN `the amounts` IS A `Biannual AWE indexed amounts`
+      `the figures` IS AN `Income replacement figures`
+GIVETH A NUMBER
+`P under ss 96 and 97` `the amounts` `the figures` MEANS
+    IF `the figures`'s `pre-injury income AWE adjusted` AT MOST `the amounts`'s `$2 250 AWE indexed`
+    THEN `the figures`'s `pre-injury income AWE adjusted`
+    ELSE `the amounts`'s `$2 250 AWE indexed`
+
+-- s 96 (2): "SG ... means-- (a) if superannuation contributions were paid or payable ... during the 52 weeks before the
+-- motor accident--the superannuation guarantee charge number set out in the Superannuation Guarantee (Administration)
+-- Act 1992 (Cwlth), section 19 (2) for the year in which the contributions were paid or payable; or (b) if no
+-- superannuation contributions were paid or payable ...--0." The deposited Superannuation Guarantee (Administration)
+-- Act 1992 compilation (No 78, 1 July 2026) has no s 19 (2); its charge percentage is now in s 17A (2) (NOTES.md,
+-- finding 20). The percentage is an input.
+GIVEN `the figures` IS AN `Income replacement figures`
+GIVETH A NUMBER
+`SG under s 96 (2)` `the figures` MEANS
+    IF `the figures`'s `employer superannuation contributions paid or payable in the 52 weeks before the accident`
+    THEN `the figures`'s `superannuation guarantee charge percentage for the year of the contributions`
+    ELSE 0
+
+-- s 96 (1): "N means-- (a) if P is $100 AWE indexed or less--1.0; or (b) if P is more than $100 AWE indexed but less
+-- than $800 AWE indexed--1.0 + SG/100; or (c) if P is $800 AWE indexed or more--0.95."
+GIVEN `the amounts` IS A `Biannual AWE indexed amounts`
+      `the figures` IS AN `Income replacement figures`
+GIVETH A NUMBER
+`N for the first payment period (s 96)` `the amounts` `the figures` MEANS
+    IF `P` AT MOST `the amounts`'s `$100 AWE indexed`
+    THEN 1
+    ELSE IF `P` LESS THAN `the amounts`'s `$800 AWE indexed`
+         THEN 1 PLUS (`SG under s 96 (2)` `the figures` DIVIDED BY 100)
+         ELSE 0.95
+    WHERE
+        `P` MEANS `P under ss 96 and 97` `the amounts` `the figures`
+
+-- s 97 (1): "N means-- (a) if P is $100 AWE indexed or less--1.0; or (b) if P is more than $100 AWE indexed but less
+-- than $800 AWE indexed--1.0 + SG/100; or (c) if P is at least $800 AWE indexed and not more than $1 000 AWE
+-- indexed--0.95; or (d) if P is more than $1 000 AWE indexed--0.8."
+GIVEN `the amounts` IS A `Biannual AWE indexed amounts`
+      `the figures` IS AN `Income replacement figures`
+GIVETH A NUMBER
+`N for the second payment period (s 97)` `the amounts` `the figures` MEANS
+    IF `P` AT MOST `the amounts`'s `$100 AWE indexed`
+    THEN 1
+    ELSE IF `P` LESS THAN `the amounts`'s `$800 AWE indexed`
+         THEN 1 PLUS (`SG under s 96 (2)` `the figures` DIVIDED BY 100)
+         ELSE IF `P` AT MOST `the amounts`'s `$1 000 AWE indexed`
+              THEN 0.95
+              ELSE 0.8
+    WHERE
+        `P` MEANS `P under ss 96 and 97` `the amounts` `the figures`
+
+-- s 96 (1), s 97 (1): "the amount each week worked out as follows ... (P - A) x N", A being post-injury earning
+-- capacity. READING: where A is at least P the amount is nil; the Act does not say (NOTES.md, finding 5).
+-- s 98 (2): "For each week that the injured person receives the workers compensation payment, the amount of the income
+-- replacement benefit payment ... for that week is reduced by the amount of the workers compensation payment."
+GIVEN `the amounts` IS A `Biannual AWE indexed amounts`
+      `the figures` IS AN `Income replacement figures`
+      `the period`  IS A `Payment period`
+GIVETH A NUMBER
+`the weekly income replacement benefit (ss 96-98)` `the amounts` `the figures` `the period` MEANS
+    max 0 ((max 0 ((`P under ss 96 and 97` `the amounts` `the figures` MINUS `the figures`'s `post-injury earning capacity`) TIMES `N`)) MINUS `the figures`'s `workers compensation payment for the week`)
+    WHERE
+        `N` MEANS
+            CONSIDER `the period`
+            WHEN `the second payment period (s 93)` THEN `N for the second payment period (s 97)` `the amounts` `the figures`
+            OTHERWISE `N for the first payment period (s 96)` `the amounts` `the figures`
+
+§§ `s 101 -- the period for which income replacement benefits are payable`
+
+-- The application, as s 101 (3)-(5) need it. s 101 (1): the section applies if the insurer accepts liability; the
+-- questions assume it has.
+DECLARE `Application facts` HAS
+    `date of the application`                                                    IS A DATE
+    `the insurer is satisfied on reasonable grounds that exceptional circumstances justify earlier payment` IS A BOOLEAN
+    `date the person anticipated returning to paid work, or starting work or a business` IS A DATE
+
+-- s 101 (3): "The start date for an ongoing employee or fixed term contractor, self-employed person, casual worker or
+-- person receiving workers compensation is-- (a) for an application made during the application period--the date of
+-- the motor accident; or (b) for a late application-- (i) 28 days before the date of the late application; or (ii) if
+-- the insurer is satisfied on reasonable grounds that there are exceptional circumstances justifying earlier
+-- payment--the date of the motor accident."
+-- s 101 (4) (person on unpaid leave) and (5) (person with a new work arrangement, full-time student): the anticipated
+-- date; for a late application, the later of it and 28 days before the application, unless exceptional circumstances.
+-- A person in casual paid work with fewer than 260 hours, and a person receiving income replacement benefits for an
+-- earlier accident, are in none of the s 101 (3)-(5) categories: not covered (NOTES.md, findings 3 and 4).
+GIVEN `the facts`       IS AN `Injured person's facts`
+      `the application` IS AN `Application facts`
+GIVETH A MAYBE DATE
+`the s 101 start date` `the facts` `the application` MEANS
+    CONSIDER `the facts`'s `work situation on the date of the motor accident`
+    WHEN `in paid work as an ongoing employee or fixed term contractor (s 81)` THEN JUST `start under s 101 (3)`
+    WHEN `in paid work as a self-employed person (s 82)` THEN JUST `start under s 101 (3)`
+    WHEN `in paid work as a casual worker, with at least 260 hours in the 52 weeks before (s 83)` THEN JUST `start under s 101 (3)`
+    WHEN `not in paid work, but in paid work for at least 260 hours in the 52 weeks before (ss 79 (1) (a), 83)` THEN JUST `start under s 101 (3)`
+    WHEN `receiving weekly payments for loss of income under a workers compensation scheme (ss 79 (1) (b), 84)` THEN JUST `start under s 101 (3)`
+    WHEN `on unpaid leave from paid work, expecting to return (ss 79 (1) (c), 85)` THEN JUST `start under s 101 (4) or (5)`
+    WHEN `with an arrangement to start work or a business (ss 79 (1) (d), 86)` THEN JUST `start under s 101 (4) or (5)`
+    WHEN `a full-time student expecting paid work after the course or the final year of school (ss 79 (1) (e), 87)` THEN JUST `start under s 101 (4) or (5)`
+    OTHERWISE NOTHING
+    WHERE
+        `the accident` MEANS `the facts`'s `date of the motor accident`
+        `in the application period` MEANS
+            (`the application`'s `date of the application`) `is on or before` (`the last day of the application period beginning on` `the accident`)
+        `exceptional` MEANS `the application`'s `the insurer is satisfied on reasonable grounds that exceptional circumstances justify earlier payment`
+        `28 days before the application` MEANS (0 MINUS 28) `days after` (`the application`'s `date of the application`)
+        `anticipated` MEANS `the application`'s `date the person anticipated returning to paid work, or starting work or a business`
+        `start under s 101 (3)` MEANS
+            IF `in the application period` OR `exceptional`
+            THEN `the accident`
+            ELSE `28 days before the application`
+        `start under s 101 (4) or (5)` MEANS
+            IF `in the application period` OR `exceptional`
+            THEN `anticipated`
+            ELSE `the later of` `anticipated` `and` `28 days before the application`
+
+-- s 101 (2) (b): the period ends "(i) if a person to whom section 90 ... applies is in paid work on the date of the
+-- motor accident--2 years after the date of the motor accident; or (ii) in any other case-- (A) 2 years after the
+-- person reaches the pension age; or (B) 5 years after the date of the motor accident." Which of (A) and (B) is not
+-- said; s 51 (2) ends the entitlement "on the first occurring", so the earlier.
+GIVEN `the facts` IS AN `Injured person's facts`
+GIVETH A DATE
+`the s 101 end date` `the facts` MEANS
+    IF     `had reached pension age on the date of the motor accident` `the facts`
+       AND `is in paid work` (`the facts`'s `work situation on the date of the motor accident`)
+    THEN 2 `years after` (`the facts`'s `date of the motor accident`)
+    ELSE `the earlier of` (2 `years after` (`the facts`'s `date the injured person reaches pension age`)) `and` (5 `years after` (`the facts`'s `date of the motor accident`))
+
+GIVEN `the facts`       IS AN `Injured person's facts`
+      `the application` IS AN `Application facts`
+GIVETH A `Period answer`
+`the period for which income replacement benefits are payable` `the facts` `the application` MEANS
+    CONSIDER `the entitlement to income replacement benefits of` `the facts`
+    WHEN `not entitled` `why` THEN `no period` `why`
+    OTHERWISE
+        CONSIDER `the s 101 start date` `the facts` `the application`
+        WHEN NOTHING THEN `period not covered` `no start date in s 101 (3) to (5) for this work situation`
+        WHEN JUST `start` THEN `payable from and to` `start` (`the s 101 end date` `the facts`)
+
+§§ `ss 96-102 -- one week's income replacement benefit, and the fortnight's payment`
+
+DECLARE `Income replacement answer` IS ONE OF
+    `income replacement benefits` HAS `in the payment period` IS A `Payment period`
+                                      `a week`                IS A NUMBER
+                                      `a fortnight`           IS A NUMBER
+    `no income replacement benefits` HAS `why none` IS A `MAI reason`
+    `income replacement benefits not covered` HAS `why not covered here` IS A `Not covered reason`
+
+-- The amount for the week that includes `the day`, with the AWE indexed amounts that apply on that day, and the
+-- fortnight's payment (s 102 (1): "payable to an injured person every 14 days after the start date") as two such
+-- weeks. READING: a fortnight that straddles an indexation day or the end of the first payment period is not split.
+GIVEN `the day`         IS A DATE
+      `the facts`       IS AN `Injured person's facts`
+      `the application` IS AN `Application facts`
+      `the figures`     IS AN `Income replacement figures`
+GIVETH AN `Income replacement answer`
+`the income replacement benefit for the week of` `the day` `for` `the facts` `the application` `the figures` MEANS
+    CONSIDER `the period for which income replacement benefits are payable` `the facts` `the application`
+    WHEN `no period` `why` THEN `no income replacement benefits` `why`
+    WHEN `period not covered` `why` THEN `income replacement benefits not covered` `why`
+    WHEN `payable from and to` `first payable day` `last payable day` THEN
+        IF NOT (`first payable day` `is on or before` `the day` AND `the day` `is on or before` `last payable day`)
+        THEN `no income replacement benefits` `the day is outside the period for which income replacement benefits are payable (s 101)`
+        ELSE CONSIDER `the payment period of` `the day` `after an accident on` (`the facts`'s `date of the motor accident`)
+             WHEN `outside the payment periods (s 93)` THEN `no income replacement benefits` `the day is outside the first and second payment periods (s 93)`
+             OTHERWISE
+                 CONSIDER `the biannual AWE indexed amounts applying on` `the day`
+                 WHEN NOTHING THEN `income replacement benefits not covered` `no deposited AWE indexed amounts for ss 96, 97 and 103 on that day (NI2026-402 covers 1 April 2026 to 31 March 2027)`
+                 WHEN JUST `the amounts` THEN
+                     `income replacement benefits` `the period` `the weekly amount` (2 TIMES `the weekly amount`)
+                     WHERE
+                         `the period` MEANS `the payment period of` `the day` `after an accident on` (`the facts`'s `date of the motor accident`)
+                         `the weekly amount` MEANS `the weekly income replacement benefit (ss 96-98)` `the amounts` `the figures` `the period`
+
+-- s 102 (1) with s 66 (1): the insurer must pay the fortnight's income replacement benefits every 14 days after the
+-- start date. Day 0 is the start date. READING: each fortnight's clock starts at the previous payment, so a payment
+-- made early brings the next one forward, which the Act does not do; traces pay on the fourteenth day.
+GIVEN `fortnights still to pay` IS A NUMBER
+      `the fortnightly amount`  IS A NUMBER
+GIVETH A DEONTIC `MAI party` `MAI act`
+`s 102 -- the insurer must pay income replacement benefits every 14 days after the start date` `fortnights still to pay` `the fortnightly amount` MEANS
+    IF `fortnights still to pay` GREATER THAN 0
+    THEN PARTY `the relevant insurer`
+         MUST  `pay the income replacement benefits for the fortnight` (EXACTLY `the fortnightly amount`)
+         WITHIN 14
+         HENCE `s 102 -- the insurer must pay income replacement benefits every 14 days after the start date` (`fortnights still to pay` MINUS 1) `the fortnightly amount`
+         LEST  BREACH BY `the relevant insurer` BECAUSE "s 102 (1), s 66 (1): income replacement benefit payments are payable every 14 days after the start date"
+    ELSE FULFILLED
+
+§§ `s 103 -- interim weekly payments`
+
+-- s 103 (2): the insurer "may pay the injured person an amount (an interim weekly payment) until whichever of the
+-- following happens first: (a) the person gives the insurer the additional information; (b) 28 days after the day the
+-- insurer asks for the additional information; (c) 13 weeks after the date of the motor accident." (3): "The amount
+-- of the interim weekly payment is the percentage of $2 250 AWE indexed prescribed by regulation." The regulation is
+-- not deposited: the percentage is an input.
+GIVEN `the accident date`                         IS A DATE
+      `date the insurer asked for additional information` IS A DATE
+      `the person has given the additional information` IS A BOOLEAN
+      `date the person gave it`                   IS A DATE
+GIVETH A DATE
+`the last day for interim weekly payments` `the accident date` `date the insurer asked for additional information` `the person has given the additional information` `date the person gave it` MEANS
+    IF `the person has given the additional information`
+    THEN `the earlier of` `date the person gave it` `and` `the earlier of (b) and (c)`
+    ELSE `the earlier of (b) and (c)`
+    WHERE
+        `the earlier of (b) and (c)` MEANS `the earlier of` (28 `days after` `date the insurer asked for additional information`) `and` ((13 TIMES 7) `days after` `the accident date`)
+
+GIVEN `the prescribed percentage` IS A NUMBER
+      `the day`                   IS A DATE
+      `the last day`              IS A DATE
+GIVETH A `MAI amount answer`
+`the interim weekly payment` `the prescribed percentage` `on` `the day` `ending` `the last day` MEANS
+    IF NOT (`the day` `is on or before` `the last day`)
+    THEN `nothing payable` `the interim weekly payment period has ended (s 103 (2))`
+    ELSE CONSIDER `the biannual AWE indexed amounts applying on` `the day`
+         WHEN NOTHING THEN `amount not covered` `no deposited AWE indexed amounts for ss 96, 97 and 103 on that day (NI2026-402 covers 1 April 2026 to 31 March 2027)`
+         WHEN JUST `the amounts` THEN `dollars` ((`the prescribed percentage` DIVIDED BY 100) TIMES (`the amounts`'s `$2 250 AWE indexed for interim weekly payments`))
+
+§§ `Part 2.5 -- treatment and care benefits: entitlement and period only (ss 112, 118, 128)`
+
+-- s 112 (1): "A person injured in a motor accident is entitled to treatment and care benefits for ... treatment and
+-- care expenses; ... domestic services expenses; ... travel expenses." (2): subject to ss 45, 47, 48, 49, 50, 116-119.
+-- Sections 116, 117 and 119 exclude particular expenses (already paid, paid under a claim, paid directly, free
+-- ambulance), not the entitlement, and are not encoded. s 118: "not entitled ... if the person is a participant in the
+-- LTCS scheme in relation to the injury".
+GIVEN `the limitations`                          IS A `Division 2.2.2 facts`
+      `a participant in the LTCS scheme for the injury` IS A BOOLEAN
+GIVETH AN `Entitlement answer`
+`the entitlement to treatment and care benefits` `the limitations` `a participant in the LTCS scheme for the injury` MEANS
+    IF `division 2.2.2 ends or excludes treatment and care benefits` `the limitations`
+    THEN `not entitled` `a limitation in division 2.2.2 ends or excludes these benefits (ss 43 to 50)`
+    ELSE IF `a participant in the LTCS scheme for the injury`
+         THEN `not entitled` `a participant in the LTCS scheme (s 118)`
+         ELSE `entitled`
+
+-- s 128 (2): starts "(i) the date of the motor accident, if-- (A) the insurer accepts liability for an application made
+-- during the application period; or (B) ... a late application and is satisfied on reasonable grounds that there are
+-- exceptional circumstances ...; or (ii) ... the date that is 13 weeks before the date of the application"; "(b) ends
+-- 5 years after the date of the motor accident".
+GIVEN `the accident date` IS A DATE
+      `the application`   IS AN `Application facts`
+GIVETH A `Period answer`
+`the period for which treatment and care benefits are payable` `the accident date` `the application` MEANS
+    `payable from and to` `the start` (5 `years after` `the accident date`)
+    WHERE
+        `the start` MEANS
+            IF    (`the application`'s `date of the application`) `is on or before` (`the last day of the application period beginning on` `the accident date`)
+               OR `the application`'s `the insurer is satisfied on reasonable grounds that exceptional circumstances justify earlier payment`
+            THEN `the accident date`
+            ELSE (0 MINUS (13 TIMES 7)) `days after` (`the application`'s `date of the application`)
+
+§§ `Part 2.6 -- quality of life benefits: entitlement (ss 132-136)`
+
+-- s 13: WPI is "expressed as a whole number percentage".
+GIVEN `the WPI` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a whole number percentage` `the WPI` IF
+        `the WPI` AT LEAST 0
+    AND `the WPI` AT MOST 100
+    AND FLOOR `the WPI` EQUALS `the WPI`
+
+-- s 133 (1): "taken to have a WPI of 10% ... if the person-- (a) was a child on the date of the motor accident; and
+-- (b) 4 years and 6 months after the date of the motor accident-- (i) is receiving treatment and care benefits ... and
+-- meets the requirements prescribed by regulation; or (ii) is a participant in the LTCS scheme". (3): an assessment
+-- "may increase, but not reduce, the injured person's assessed WPI". "Child" is not defined in the Act: a fact.
+DECLARE `Quality of life facts` HAS
+    `WPI assessed`                                                     IS A NUMBER
+    `a child on the date of the motor accident`                        IS A BOOLEAN
+    `4 years 6 months after the accident, receiving treatment and care benefits and meeting the prescribed requirements, or an LTCS scheme participant` IS A BOOLEAN
+    `a foreign national living permanently outside Australia`          IS A BOOLEAN
+    `has already received quality of life benefits for the accident`   IS A BOOLEAN
+    `has been awarded quality of life damages for the accident`        IS A BOOLEAN
+    `limitations`                                                      IS A `Division 2.2.2 facts`
+
+GIVEN `the facts` IS A `Quality of life facts`
+GIVETH A BOOLEAN
+DECIDE `is taken to have a WPI of 10% under s 133` `the facts` IF
+        `the facts`'s `a child on the date of the motor accident`
+    AND `the facts`'s `4 years 6 months after the accident, receiving treatment and care benefits and meeting the prescribed requirements, or an LTCS scheme participant`
+
+GIVEN `the facts` IS A `Quality of life facts`
+GIVETH A NUMBER
+`the WPI for the Act` `the facts` MEANS
+    IF `is taken to have a WPI of 10% under s 133` `the facts`
+    THEN max 10 (`the facts`'s `WPI assessed`)
+    ELSE `the facts`'s `WPI assessed`
+
+-- s 132 (1): "entitled to quality of life benefits if the personal injury ... results in at least 5% WPI"; (2): subject
+-- to ss 43-46, 48-50, 134-136.
+GIVEN `the facts` IS A `Quality of life facts`
+GIVETH AN `Entitlement answer`
+`the entitlement to quality of life benefits of` `the facts` MEANS
+    IF `the WPI for the Act` `the facts` LESS THAN 5
+    THEN `not entitled` `WPI less than 5% (s 132 (1); table 167, item 1)`
+    ELSE IF `division 2.2.2 ends or excludes quality of life benefits` (`the facts`'s `limitations`)
+         THEN `not entitled` `a limitation in division 2.2.2 ends or excludes these benefits (ss 43 to 50)`
+         ELSE IF `the facts`'s `a foreign national living permanently outside Australia`
+              THEN `not entitled` `a foreign national living permanently outside Australia (s 134)`
+              ELSE IF `the facts`'s `has already received quality of life benefits for the accident`
+                   THEN `not entitled` `quality of life benefits already received (s 135)`
+                   ELSE IF `the facts`'s `has been awarded quality of life damages for the accident`
+                        THEN `not entitled` `quality of life damages already awarded (s 136)`
+                        ELSE `entitled`
+
+§§ `s 137 -- when a quality of life benefits application may be made`
+
+DECLARE `Application window` HAS
+    `not earlier than` IS A DATE
+    `not later than`   IS A DATE
+
+-- s 137 (1): a person may apply for quality of life benefits "if the insurer accepts, or is taken to have accepted,
+-- liability for defined benefits under section 65"; (2): "(a) not earlier than 26 weeks after the date of the motor
+-- accident; and (b) not later than 4 years and 6 months after the date of the motor accident."
+GIVEN `the accident date` IS A DATE
+GIVETH AN `Application window`
+`the quality of life application window after an accident on` `the accident date` MEANS
+    `Application window` WITH
+        `not earlier than` IS (26 TIMES 7) `days after` `the accident date`
+        `not later than`   IS `4 years and 6 months after` `the accident date`
+
+§§ `s 167 and table 167 -- the amount of quality of life benefits`
+
+-- Table 167: "1 | less than 5% | nil; 2 | 5% | $7 000 AWE indexed; 3 | 6% to 10% | $7 000 AWE indexed + [(W-5) x
+-- $2 100 AWE indexed]; 4 | 11% to 20% | $17 500 AWE indexed + [(W-10) x $2 450 AWE indexed]; 5 | 21% to 50% | $42 000
+-- AWE indexed + [(W-20) x $2 800 AWE indexed]; 6 | 51% to 99% | $126 000 AWE indexed + [(W-50) x $4 480 AWE indexed];
+-- 7 | 100% | $350 000 AWE indexed". s 167 (2): "W means WPI/100% x 100".
+GIVEN `the amounts` IS AN `Annual AWE indexed amounts`
+      `W`           IS A NUMBER
+GIVETH A NUMBER
+`the table 167 amount` `the amounts` `W` MEANS
+    IF `W` LESS THAN 5
+    THEN 0
+    ELSE IF `W` EQUALS 5
+         THEN `the amounts`'s `$7 000 AWE indexed`
+         ELSE IF `W` AT MOST 10
+              THEN `the amounts`'s `$7 000 AWE indexed` PLUS ((`W` MINUS 5) TIMES `the amounts`'s `$2 100 AWE indexed`)
+              ELSE IF `W` AT MOST 20
+                   THEN `the amounts`'s `$17 500 AWE indexed` PLUS ((`W` MINUS 10) TIMES `the amounts`'s `$2 450 AWE indexed`)
+                   ELSE IF `W` AT MOST 50
+                        THEN `the amounts`'s `$42 000 AWE indexed` PLUS ((`W` MINUS 20) TIMES `the amounts`'s `$2 800 AWE indexed`)
+                        ELSE IF `W` AT MOST 99
+                             THEN `the amounts`'s `$126 000 AWE indexed` PLUS ((`W` MINUS 50) TIMES `the amounts`'s `$4 480 AWE indexed`)
+                             ELSE `the amounts`'s `$350 000 AWE indexed`
+
+-- s 167 (1): the amount "as at the date of the later WPI report" (separate physical and psychological reports) or "as
+-- at the date of the WPI report" (one). READING: with separate reports the higher WPI is used, as ss 154-157 and
+-- s 239 (3) use it; s 167 does not say, and s 153 (2) lets the insurer "take into account" both (NOTES.md, finding 9).
+GIVEN `the facts`             IS A `Quality of life facts`
+      `date of the WPI report` IS A DATE
+GIVETH A `MAI amount answer`
+`the quality of life benefits payable` `the facts` `date of the WPI report` MEANS
+    IF NOT (`is a whole number percentage` (`the facts`'s `WPI assessed`))
+    THEN `amount not covered` `a WPI that is not a whole number from 0 to 100 (s 13)`
+    ELSE CONSIDER `the entitlement to quality of life benefits of` `the facts`
+         WHEN `not entitled` `why` THEN `nothing payable` `why`
+         OTHERWISE
+             CONSIDER `the annual AWE indexed amounts applying on` `date of the WPI report`
+             WHEN NOTHING THEN `amount not covered` `no deposited AWE indexed amounts for ss 167, 174 and 181 on that day (NI2026-402 covers 1 April 2026 to 30 September 2027)`
+             WHEN JUST `the amounts` THEN `dollars` (`the table 167 amount` `the amounts` (`the WPI for the Act` `the facts`))
+
+§§ `ss 154-157 -- the WPI notice and the offer`
+
+DECLARE `WPI notice section` IS ONE OF
+    `s 154: WPI less than 5%, the insurer may make an offer`
+    `s 155: WPI 5% to 9%, the insurer must make an offer`
+    `s 156: WPI 10% or more, no motor accident claim, the insurer must make an offer`
+    `s 157: WPI 10% or more, with a motor accident claim, the insurer must make an offer`
+
+-- ss 154 (1), 155 (1)-(2), 156 (1)-(2), 157 (1)-(2): which section applies, on the higher WPI where physical and
+-- psychological injuries were assessed separately, and on whether "the injured person is entitled to make a motor
+-- accident claim" (a fact: a claim for damages against someone at fault, s 228).
+GIVEN `the WPI`                                       IS A NUMBER
+      `entitled to make a motor accident claim`       IS A BOOLEAN
+GIVETH A `WPI notice section`
+`the WPI notice section for` `the WPI` `entitled to make a motor accident claim` MEANS
+    IF `the WPI` LESS THAN 5
+    THEN `s 154: WPI less than 5%, the insurer may make an offer`
+    ELSE IF `the WPI` AT MOST 9
+         THEN `s 155: WPI 5% to 9%, the insurer must make an offer`
+         ELSE IF `entitled to make a motor accident claim`
+              THEN `s 157: WPI 10% or more, with a motor accident claim, the insurer must make an offer`
+              ELSE `s 156: WPI 10% or more, no motor accident claim, the insurer must make an offer`
+
+-- ss 154 (3), 155 (4), 156 (4), 157 (4): the notice "within 14 days after receiving the later report" (separate
+-- reports) or "within 14 days after receiving the report".
+GIVEN `date the insurer received the (later) WPI report` IS A DATE
+GIVETH A DATE
+`the last day for the WPI notice` `date the insurer received the (later) WPI report` MEANS
+    14 `days after` `date the insurer received the (later) WPI report`
+
+-- ss 154 (2) (c), 155 (3) (c), 156 (3) (c): reply "within 26 weeks after receiving the notice". s 157 (3) (d), (8):
+-- by the due date, "the later of-- (a) 5 years after the date of the motor accident; and (b) 26 weeks after the person
+-- receives the notice; and (c) if the injured person gives a complying notice of claim--6 weeks after the date the
+-- claim is finally decided."
+GIVEN `the section`                              IS A `WPI notice section`
+      `the accident date`                        IS A DATE
+      `date the person received the notice`      IS A DATE
+      `the person gave a complying notice of claim` IS A BOOLEAN
+      `date the claim was finally decided`       IS A DATE
+GIVETH A DATE
+`the last day to reply to the WPI notice` `the section` `the accident date` `date the person received the notice` `the person gave a complying notice of claim` `date the claim was finally decided` MEANS
+    CONSIDER `the section`
+    WHEN `s 157: WPI 10% or more, with a motor accident claim, the insurer must make an offer` THEN
+        IF `the person gave a complying notice of claim`
+        THEN `the later of` `the later of (a) and (b)` `and` (42 `days after` `date the claim was finally decided`)
+        ELSE `the later of (a) and (b)`
+    OTHERWISE `26 weeks after the notice`
+    WHERE
+        `26 weeks after the notice` MEANS (26 TIMES 7) `days after` `date the person received the notice`
+        `the later of (a) and (b)` MEANS `the later of` (5 `years after` `the accident date`) `and` `26 weeks after the notice`
+
+DECLARE `Silence on the WPI notice` IS ONE OF
+    `taken to have accepted the offer (ss 154 (4) (a), 155 (5), 156 (5))`
+    `taken to have accepted each report (s 154 (4) (b))`
+    `the quality of life application is finally dealt with and the entitlement ends (s 157 (6))`
+
+-- What silence until the last day means: s 154 (4): "taken to have accepted-- (a) if the relevant insurer has made an
+-- offer--the offer; and (b) if the relevant insurer has not made an offer--each report"; ss 155 (5), 156 (5): "taken
+-- to have accepted the offer"; s 157 (6): the application "is taken to have been finally dealt with" and the
+-- "entitlement to quality of life benefits ... ends".
+GIVEN `the section`       IS A `WPI notice section`
+      `an offer was made` IS A BOOLEAN
+GIVETH A `Silence on the WPI notice`
+`what silence on the WPI notice means` `the section` `an offer was made` MEANS
+    CONSIDER `the section`
+    WHEN `s 154: WPI less than 5%, the insurer may make an offer` THEN
+        IF `an offer was made`
+        THEN `taken to have accepted the offer (ss 154 (4) (a), 155 (5), 156 (5))`
+        ELSE `taken to have accepted each report (s 154 (4) (b))`
+    WHEN `s 157: WPI 10% or more, with a motor accident claim, the insurer must make an offer` THEN `the quality of life application is finally dealt with and the entitlement ends (s 157 (6))`
+    OTHERWISE `taken to have accepted the offer (ss 154 (4) (a), 155 (5), 156 (5))`
+
+-- The regulative rule. Day 0 is the day the insurer receives the (later) WPI report. The insurer must give the notice
+-- within 14 days (a breach otherwise). Then the injured person may reply within the days allowed; accepting, or
+-- silence where silence is acceptance of an offer, leads to the duty to pay the table 167 amount (ss 155 (7) (b),
+-- 156 (7) (b), 157 (5) (b)). Disagreeing leads to a second WPI assessment (s 158, not encoded). READING: s 154 has no
+-- duty to pay an accepted offer (NOTES.md, finding 10), so the s 154 path ends FULFILLED.
+GIVEN `the section`                 IS A `WPI notice section`
+      `days the person has to reply` IS A NUMBER
+      `the quality of life amount`   IS A NUMBER
+GIVETH A DEONTIC `MAI party` `MAI act`
+DECIDE `ss 154 to 157 -- the insurer must give the WPI notice within 14 days, and the injured person's reply` `the section` `days the person has to reply` `the quality of life amount` IS
+    PARTY `the relevant insurer`
+    MUST  `give the WPI notice`
+    WITHIN 14
+    HENCE
+        PARTY `the injured person`
+        DO    `notify the insurer whether accepting or disagreeing with each WPI report` `accepts`
+        WITHIN `days the person has to reply`
+        HENCE (IF `accepts` THEN `payment` ELSE FULFILLED)
+        LEST  `on silence`
+    LEST  BREACH BY `the relevant insurer` BECAUSE "ss 154 (3), 155 (4), 156 (4), 157 (4): the relevant insurer must give the WPI notice within 14 days after receiving the (later) WPI report"
+    WHERE
+        `payment` MEANS
+            CONSIDER `the section`
+            WHEN `s 154: WPI less than 5%, the insurer may make an offer` THEN FULFILLED
+            OTHERWISE
+                PARTY `the relevant insurer`
+                MUST  `pay the quality of life benefits` (EXACTLY `the quality of life amount`)
+        `on silence` MEANS
+            CONSIDER `the section`
+            WHEN `s 155: WPI 5% to 9%, the insurer must make an offer` THEN `payment`
+            WHEN `s 156: WPI 10% or more, no motor accident claim, the insurer must make an offer` THEN `payment`
+            OTHERWISE FULFILLED
+
+§§ `s 239 -- the WPI threshold for damages in a motor accident claim ("can I sue?")`
+
+-- s 239 (1): "An award of damages in a motor accident claim may be made only if the injured person ... (a) has made a
+-- quality of life benefits application ... and ... has been assessed as having a WPI of at least 10% ... or the insurer
+-- has decided the person has a WPI of at least 10% and has made a final offer WPI; or (b) is a foreign national who
+-- has received a lump sum payment under section 184 (6) and been assessed [by a private medical examiner] as having a
+-- WPI of at least 10%; or (c) is taken, under section 133 ... or section 213 (2) (a) ..., to have a WPI of 10%; or
+-- (d) has made a successful claim for workers compensation benefits ... and ... been assessed as having a WPI of at
+-- least 10% ... or is taken under section 213 (2) (a) ...; or (e) has died as a result of the accident."
+-- Whether there is anyone to sue (a claim for damages against a person at fault, s 228) is a fact. Damages are not
+-- encoded.
+DECLARE `Motor accident claim facts` HAS
+    `someone other than the injured person is liable in damages for the injury` IS A BOOLEAN
+    `has made a quality of life benefits application`                            IS A BOOLEAN
+    `WPI assessed, or the insurer's final offer WPI`                             IS A NUMBER
+    `a foreign national paid a s 184 (6) lump sum and assessed by a private medical examiner` IS A BOOLEAN
+    `taken to have a WPI of 10% under s 133`                                      IS A BOOLEAN
+    `taken to have a WPI of 10% because of a significant occupational impact (s 213 (2) (a))` IS A BOOLEAN
+    `has made a successful claim for workers compensation benefits for the injury` IS A BOOLEAN
+    `has died as a result of the accident`                                        IS A BOOLEAN
+
+DECLARE `Motor accident claim answer` IS ONE OF
+    `damages may be awarded in a motor accident claim: the s 239 (1) threshold is met`
+    `no award of damages: the s 239 (1) threshold is not met`
+    `no motor accident claim: no one else is liable in damages`
+
+GIVEN `the facts` IS A `Motor accident claim facts`
+GIVETH A BOOLEAN
+DECIDE `the s 239 (1) threshold is met` `the facts` IF
+        (`the facts`'s `has made a quality of life benefits application` AND `at least 10%`)
+    OR  (`the facts`'s `a foreign national paid a s 184 (6) lump sum and assessed by a private medical examiner` AND `at least 10%`)
+    OR  `the facts`'s `taken to have a WPI of 10% under s 133`
+    OR  `the facts`'s `taken to have a WPI of 10% because of a significant occupational impact (s 213 (2) (a))`
+    OR  (`the facts`'s `has made a successful claim for workers compensation benefits for the injury` AND `at least 10%`)
+    OR  `the facts`'s `has died as a result of the accident`
+    WHERE
+        `at least 10%` MEANS `the facts`'s `WPI assessed, or the insurer's final offer WPI` AT LEAST 10
+
+GIVEN `the facts` IS A `Motor accident claim facts`
+GIVETH A `Motor accident claim answer`
+`the s 239 answer` `the facts` MEANS
+    IF NOT (`the facts`'s `someone other than the injured person is liable in damages for the injury`)
+    THEN `no motor accident claim: no one else is liable in damages`
+    ELSE IF `the s 239 (1) threshold is met` `the facts`
+         THEN `damages may be awarded in a motor accident claim: the s 239 (1) threshold is met`
+         ELSE `no award of damages: the s 239 (1) threshold is not met`
+
+§§ `Part 2.7 -- death benefits (ss 168-177)`
+
+DECLARE `Relationship to the person who died` IS ONE OF
+    `a child of the person (including one born after the death)`
+    `a grandchild or step child of the person`
+    `the domestic partner of the person`
+    `a former domestic partner of the person`
+    `none of these`
+
+-- s 168 (1): "dependant ... means someone who was, when the person died-- (a) a dependent child of the person; or (b) a
+-- domestic partner of the person; or (c) a dependent former domestic partner of the person." (2): a dependent child is
+-- "(a) ... (i) a child of the person (including a child born after the person's death), whether or not living with the
+-- person ...; or (ii) a grandchild or step child of the person, living with the person as a member of the person's
+-- family; and (b) 1 or more of the following: (i) under 18 years old; (ii) a full-time student and under 25 years old;
+-- (iii) a person with a disability and wholly or partly financially dependent on the person." A dependent former
+-- domestic partner is "wholly or partly financially dependent on the person". "Domestic partner" is the Legislation
+-- Act's: a fact.
+DECLARE `Dependant facts` HAS
+    `relationship`                                                     IS A `Relationship to the person who died`
+    `living with the person as a member of the person's family`        IS A BOOLEAN
+    `age when the person died`                                         IS A NUMBER
+    `a full-time student when the person died`                         IS A BOOLEAN
+    `a person with a disability`                                       IS A BOOLEAN
+    `wholly or partly financially dependent on the person`             IS A BOOLEAN
+
+GIVEN `the facts` IS A `Dependant facts`
+GIVETH A BOOLEAN
+DECIDE `is a dependant under s 168` `the facts` IF
+    CONSIDER `the facts`'s `relationship`
+    WHEN `a child of the person (including one born after the death)` THEN `a dependent child by age, study or disability`
+    WHEN `a grandchild or step child of the person` THEN
+        `the facts`'s `living with the person as a member of the person's family` AND `a dependent child by age, study or disability`
+    WHEN `the domestic partner of the person` THEN TRUE
+    WHEN `a former domestic partner of the person` THEN `the facts`'s `wholly or partly financially dependent on the person`
+    OTHERWISE FALSE
+    WHERE
+        `a dependent child by age, study or disability` MEANS
+                `the facts`'s `age when the person died` LESS THAN 18
+            OR  (`the facts`'s `a full-time student when the person died` AND `the facts`'s `age when the person died` LESS THAN 25)
+            OR  (`the facts`'s `a person with a disability` AND `the facts`'s `wholly or partly financially dependent on the person`)
+
+-- One death. The s 169 (2) exclusions are facts.
+DECLARE `Death facts` HAS
+    `date of the motor accident`                                         IS A DATE
+    `date of death`                                                      IS A DATE
+    `had a domestic partner or dependent former domestic partner on the date of the motor accident` IS A BOOLEAN
+    `number of dependent children on the date of the motor accident`     IS A NUMBER
+    -- s 46 (2) (b): death "caused by an intentionally self-inflicted injury".
+    `the death was caused by an intentionally self-inflicted injury`     IS A BOOLEAN
+    -- s 49 (1) (c).
+    `the MAI commission has notified that the accident was caused by an act of terrorism` IS A BOOLEAN
+    -- s 170: a foreign national whose death happens outside Australia.
+    `a foreign national whose death happened outside Australia`          IS A BOOLEAN
+    -- s 171: a coroner establishes conduct making up the physical elements of 2 or more driving offences or a serious
+    -- offence.
+    `a coroner established conduct making up 2 or more driving offences or a serious offence` IS A BOOLEAN
+    -- s 172: the person received quality of life benefits or quality of life damages.
+    `the person who died received quality of life benefits or damages`   IS A BOOLEAN
+    -- s 173: death benefits (other than funeral expenses) paid under a workers compensation scheme.
+    `death benefits were paid under a workers compensation scheme`       IS A BOOLEAN
+
+GIVEN `the facts` IS A `Death facts`
+GIVETH A BOOLEAN
+DECIDE `an exclusion from death benefits applies` `the facts` IF
+        `the facts`'s `the death was caused by an intentionally self-inflicted injury`
+    OR  `the facts`'s `the MAI commission has notified that the accident was caused by an act of terrorism`
+    OR  `the facts`'s `a foreign national whose death happened outside Australia`
+    OR  `the facts`'s `a coroner established conduct making up 2 or more driving offences or a serious offence`
+    OR  `the facts`'s `the person who died received quality of life benefits or damages`
+    OR  `the facts`'s `death benefits were paid under a workers compensation scheme`
+
+-- s 174: "(a) if, at the date of the motor accident, the dead person had a domestic partner or dependent former
+-- domestic partner--$190 000 AWE indexed; (b) if, at the date of the motor accident, the dead person had-- (i) only 1
+-- dependent child--$40 000 AWE indexed; or (ii) only 2 ...--$80 000 ...; or (iii) only 3 ...--$120 000 ...; or (iv) 4
+-- or more dependent children--$160 000 AWE indexed." Paragraphs (a) and (b) add up: both are "payable to the
+-- dependants".
+GIVEN `the amounts` IS AN `Annual AWE indexed amounts`
+      `the facts`   IS A `Death facts`
+GIVETH A NUMBER
+`the s 174 amount` `the amounts` `the facts` MEANS
+    `for the partner` PLUS `for the children`
+    WHERE
+        `for the partner` MEANS
+            IF `the facts`'s `had a domestic partner or dependent former domestic partner on the date of the motor accident`
+            THEN `the amounts`'s `$190 000 AWE indexed`
+            ELSE 0
+        `children` MEANS `the facts`'s `number of dependent children on the date of the motor accident`
+        `for the children` MEANS
+            IF `children` AT LEAST 4 THEN `the amounts`'s `$160 000 AWE indexed`
+            ELSE IF `children` EQUALS 3 THEN `the amounts`'s `$120 000 AWE indexed`
+                 ELSE IF `children` EQUALS 2 THEN `the amounts`'s `$80 000 AWE indexed`
+                      ELSE IF `children` EQUALS 1 THEN `the amounts`'s `$40 000 AWE indexed`
+                           ELSE 0
+
+-- The death benefits payable to the dependants, as a whole, with the amounts that apply on the day they are worked
+-- out. READING: s 174 does not say on which day the AWE indexed amount is taken; it is an input (NOTES.md, finding 11).
+GIVEN `the facts`         IS A `Death facts`
+      `the day worked out` IS A DATE
+GIVETH A `MAI amount answer`
+`the death benefits payable to the dependants` `the facts` `the day worked out` MEANS
+    IF NOT (`died within 2 years after the date of the motor accident` (`the facts`'s `date of the motor accident`) (`the facts`'s `date of death`))
+    THEN `nothing payable` `not a person who died as a result of a motor accident: the death was more than 2 years after it (s 36)`
+    ELSE IF `an exclusion from death benefits applies` `the facts`
+         THEN `nothing payable` `an exclusion in section 46, 49 or 170 to 173 applies (s 169 (2))`
+         ELSE IF     (NOT (`the facts`'s `had a domestic partner or dependent former domestic partner on the date of the motor accident`))
+                 AND `the facts`'s `number of dependent children on the date of the motor accident` AT MOST 0
+              THEN `nothing payable` `no domestic partner, dependent former domestic partner or dependent child on the date of the motor accident (s 174)`
+              ELSE CONSIDER `the annual AWE indexed amounts applying on` `the day worked out`
+                   WHEN NOTHING THEN `amount not covered` `no deposited AWE indexed amounts for ss 167, 174 and 181 on that day (NI2026-402 covers 1 April 2026 to 30 September 2027)`
+                   WHEN JUST `the amounts` THEN `dollars` (`the s 174 amount` `the amounts` `the facts`)
+
+-- s 177 (2): the ACAT's order "must not be for more than an amount stated in section 174". READING: the cap is on the
+-- order as a whole, the s 174 amounts added (NOTES.md, finding 12).
+GIVEN `the facts`           IS A `Death facts`
+      `the day worked out`  IS A DATE
+      `the amount ordered`  IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the ACAT order is within the s 177 (2) cap` `the facts` `the day worked out` `the amount ordered` IF
+    CONSIDER `the death benefits payable to the dependants` `the facts` `the day worked out`
+    WHEN `dollars` `the cap` THEN `the amount ordered` AT MOST `the cap`
+    OTHERWISE `the amount ordered` AT MOST 0
+
+-- s 175 (2): "The relevant insurer-- (a) is not entitled to recover any amount of income replacement benefits or
+-- treatment and care benefits already paid to the person; and (b) must pay to the person's estate any amount of income
+-- replacement benefits or treatment and care benefits to which the person was entitled and had not received when the
+-- person died." It applies if the insurer accepts liability for an application for death benefits and the person was
+-- entitled to either before dying.
+GIVEN `the insurer has accepted liability for an application for death benefits` IS A BOOLEAN
+      `before dying, the person was entitled to income replacement or treatment and care benefits` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the estate must be paid the benefits owed and not received, and nothing paid is recovered (s 175)` `the insurer has accepted liability for an application for death benefits` `before dying, the person was entitled to income replacement or treatment and care benefits` IF
+        `the insurer has accepted liability for an application for death benefits`
+    AND `before dying, the person was entitled to income replacement or treatment and care benefits`
+
+§§ `Part 2.8 -- funeral benefits (ss 178-181)`
+
+-- s 178 (1): "The person who has paid, or is liable to pay, the funeral expenses of a person who died as a result of a
+-- motor accident is entitled to funeral benefits"; (3): funeral expenses include transporting the body elsewhere in
+-- Australia or overseas; (2): subject to s 49, s 179 (foreign national dying outside Australia), s 180 (funeral
+-- expenses paid under a workers compensation scheme). s 181: "The maximum amount of funeral benefits payable is
+-- $15 000 AWE indexed." What counts as funeral expenses is for the MAI guidelines (s 182, not deposited): the
+-- expenses are an input.
+DECLARE `Funeral facts` HAS
+    `date of the motor accident`                                         IS A DATE
+    `date of death`                                                      IS A DATE
+    `has paid, or is liable to pay, the funeral expenses`                IS A BOOLEAN
+    `the funeral expenses`                                               IS A NUMBER
+    `the MAI commission has notified that the accident was caused by an act of terrorism` IS A BOOLEAN
+    `a foreign national whose death happened outside Australia`          IS A BOOLEAN
+    `funeral expenses were paid under a workers compensation scheme`     IS A BOOLEAN
+
+-- READING: s 181 does not say on which day the AWE indexed maximum is taken; it is an input (NOTES.md, finding 11).
+GIVEN `the facts`          IS A `Funeral facts`
+      `the day worked out` IS A DATE
+GIVETH A `MAI amount answer`
+`the funeral benefits payable` `the facts` `the day worked out` MEANS
+    IF NOT (`died within 2 years after the date of the motor accident` (`the facts`'s `date of the motor accident`) (`the facts`'s `date of death`))
+    THEN `nothing payable` `not a person who died as a result of a motor accident: the death was more than 2 years after it (s 36)`
+    ELSE IF NOT (`the facts`'s `has paid, or is liable to pay, the funeral expenses`)
+         THEN `nothing payable` `not the person who has paid, or is liable to pay, the funeral expenses (s 178 (1))`
+         ELSE IF    `the facts`'s `the MAI commission has notified that the accident was caused by an act of terrorism`
+                 OR `the facts`'s `a foreign national whose death happened outside Australia`
+                 OR `the facts`'s `funeral expenses were paid under a workers compensation scheme`
+              THEN `nothing payable` `an exclusion in section 49, 179 or 180 applies (s 178 (2))`
+              ELSE CONSIDER `the annual AWE indexed amounts applying on` `the day worked out`
+                   WHEN NOTHING THEN `amount not covered` `no deposited AWE indexed amounts for ss 167, 174 and 181 on that day (NI2026-402 covers 1 April 2026 to 30 September 2027)`
+                   WHEN JUST `the amounts` THEN `dollars` (min (`the facts`'s `the funeral expenses`) (`the amounts`'s `$15 000 AWE indexed`))
