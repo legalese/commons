@@ -1,0 +1,511 @@
+IMPORT prelude
+IMPORT `rates-shared`
+IMPORT `rates-core`
+IMPORT `landtax-core`
+
+-- Rates Act 2004 and Land Tax Act 2004 (ACT), with the 2026 determinations -- the yearly and quarterly charges on a
+-- residential property, from the seat of its owner.
+--
+-- SEAT: the owner of a residential parcel or unit in the ACT: an owner-occupier (including a pensioner and an owner
+-- aged 65 or over) and an owner who rents a home out or moves out of it. "What are my rates and levies this year? Am I
+-- eligible for the pensioner rebate, how much is it, and what must I report and by when? Can I defer my rates, what
+-- interest runs, and when is the debt due? If I rent my home out or move out, do I pay land tax, from which quarter,
+-- and how much? What must I tell the Commissioner, by when, and what follows if I do not?" Every question is phrased as
+-- that person would ask it, on facts that person could state. The rules are in rates-core.l4, landtax-core.l4 and
+-- rates-shared.l4; this module builds their records from plain answers and restates no rule. Inputs with the same name
+-- mean the same fact in every question, so the form can ask them once.
+--
+-- FIGURES: the 2026 determinations, for the year 1 July 2026 to 30 June 2027 (and its four quarters).
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `Rates, the pensioner rebate, deferral and land tax -- the owner's questions`
+
+§§ `Building the core's records from the owner's answers`
+
+GIVEN `what my property is`                                                IS A `Kind of land`
+      `the unimproved values of my parcel as at 1 January, most recent first` IS A LIST OF NUMBER
+      `my unit entitlement`                                                IS A NUMBER
+      `the total unit entitlement of the residential units`                IS A NUMBER
+      `the total unit entitlement of all the units`                        IS A NUMBER
+      `the days in 2026-27 my parcel is rateable`                          IS A NUMBER
+      `an owner is a corporation or a trustee`                             IS A BOOLEAN
+GIVETH A `Rateable parcel`
+`my parcel from my answers` `what my property is` `the unimproved values of my parcel as at 1 January, most recent first` `my unit entitlement` `the total unit entitlement of the residential units` `the total unit entitlement of all the units` `the days in 2026-27 my parcel is rateable` `an owner is a corporation or a trustee` MEANS
+    `Rateable parcel` WITH
+        `kind`                                                     IS `what my property is`
+        `the unimproved values as at 1 January, most recent first` IS `the unimproved values of my parcel as at 1 January, most recent first`
+        `the unit entitlements`                                    IS `Unit entitlements` WITH
+            `UE`   IS `my unit entitlement`
+            `TUER` IS `the total unit entitlement of the residential units`
+            `TUE`  IS `the total unit entitlement of all the units`
+        `rateable days in the year`                                IS `the days in 2026-27 my parcel is rateable`
+        `an owner is a corporation or a trustee`                   IS `an owner is a corporation or a trustee`
+
+GIVEN `I am paid a pension, allowance or benefit under the Social Security Act 1991 and hold a pensioner concession card` IS A BOOLEAN
+      `I am a service pensioner under the Veterans' Entitlements Act 1986`                                                    IS A BOOLEAN
+      `I hold a DVA card for treatment of all injuries and diseases (a Gold Card)`                                             IS A BOOLEAN
+      `I am a pensioner because of my partner or my late partner (s 45 pensioner pars (d) to (g))`                            IS A BOOLEAN
+      `I am the partner or surviving partner of a special rate pensioner (s 45 eligible person pars (b) and (c))`             IS A BOOLEAN
+GIVETH A `Pension facts`
+`my pension facts from my answers` `I am paid a pension, allowance or benefit under the Social Security Act 1991 and hold a pensioner concession card` `I am a service pensioner under the Veterans' Entitlements Act 1986` `I hold a DVA card for treatment of all injuries and diseases (a Gold Card)` `I am a pensioner because of my partner or my late partner (s 45 pensioner pars (d) to (g))` `I am the partner or surviving partner of a special rate pensioner (s 45 eligible person pars (b) and (c))` MEANS
+    `Pension facts` WITH
+        `paid a pension, allowance or benefit under the Social Security Act 1991 and given a pensioner concession card` IS `I am paid a pension, allowance or benefit under the Social Security Act 1991 and hold a pensioner concession card`
+        `a service pensioner under the Veterans' Entitlements Act 1986` IS `I am a service pensioner under the Veterans' Entitlements Act 1986`
+        `given a card for treatment of all injuries and diseases under the Veterans' Entitlements Act 1986 or the Military Rehabilitation and Compensation Act 2004` IS `I hold a DVA card for treatment of all injuries and diseases (a Gold Card)`
+        `a pensioner because of a partnership or a partner's death, under s 45 pensioner pars (d) to (g)` IS `I am a pensioner because of my partner or my late partner (s 45 pensioner pars (d) to (g))`
+        `the partner, or surviving partner not since repartnered, of a special rate pensioner, under s 45 eligible person pars (b) and (c)` IS `I am the partner or surviving partner of a special rate pensioner (s 45 eligible person pars (b) and (c))`
+
+GIVEN `how the parcel is held`                                      IS A `How the parcel is held`
+      `the number of owners`                                        IS A NUMBER
+      `my interest as a tenant in common, as a fraction`            IS A NUMBER
+      `the number of other owners who can reasonably contribute to the rates` IS A NUMBER
+GIVETH AN `Ownership`
+`my ownership from my answers` `how the parcel is held` `the number of owners` `my interest as a tenant in common, as a fraction` `the number of other owners who can reasonably contribute to the rates` MEANS
+    `Ownership` WITH
+        `held`                                                       IS `how the parcel is held`
+        `the number of owners`                                       IS `the number of owners`
+        `the person's interest as a tenant in common, as a fraction` IS `my interest as a tenant in common, as a fraction`
+        `the number of other owners who can reasonably contribute`   IS `the number of other owners who can reasonably contribute to the rates`
+
+§§ `Rates and levies for 2026-27`
+
+@export What are my 2026-27 general rates, police, fire and emergency services levy and safer families levy on my house or unit in the ACT, and their total (Rates Act ss 13A, 14, 15, 29, sch 1; DI2026-150)?
+GIVEN `what my property is`                                                IS A `Kind of land` @desc What the property is: residential land that is not a unit (a house or townhouse on its own block), a residential unit in a units plan, or commercial land, rural land, airport land or a proposed unit subdivision (those four are not covered)
+      `the unimproved values of my parcel as at 1 January, most recent first` IS A LIST OF NUMBER @desc The unimproved values of the parcel in dollars (for a unit, of the whole units-plan parcel), as at 1 January of each year it has been rateable, the most recent (1 January 2026) first, as shown on your rates notices; only the latest five are used
+      `my unit entitlement`                                                IS A NUMBER @desc For a unit, the unit entitlement of your unit under the units plan (any number for a house)
+      `the total unit entitlement of the residential units`                IS A NUMBER @desc For a unit, the total unit entitlement of all the residential units in the units plan (any number above 0 for a house)
+      `the total unit entitlement of all the units`                        IS A NUMBER @desc For a unit, the total unit entitlement of all the units in the units plan, residential and other (any number above 0 for a house)
+      `the days in 2026-27 my parcel is rateable`                          IS A NUMBER @desc The number of days from 1 July 2026 to 30 June 2027 the parcel is rateable: 365, unless it became or stopped being rateable during the year
+      `an owner is a corporation or a trustee`                             IS A BOOLEAN @desc Whether any owner of the parcel or unit is a company or holds it as trustee (not covered)
+GIVETH AN `Answer` `Rates assessment`
+`What are my rates and levies for 2026-27` `what my property is` `the unimproved values of my parcel as at 1 January, most recent first` `my unit entitlement` `the total unit entitlement of the residential units` `the total unit entitlement of all the units` `the days in 2026-27 my parcel is rateable` `an owner is a corporation or a trustee` MEANS
+    `the rates assessment for 2026-27 on` (`my parcel from my answers` `what my property is` `the unimproved values of my parcel as at 1 January, most recent first` `my unit entitlement` `the total unit entitlement of the residential units` `the total unit entitlement of all the units` `the days in 2026-27 my parcel is rateable` `an owner is a corporation or a trustee`)
+
+@export What is the average unimproved value of my parcel for 2026-27, on which my rates and any land tax are worked out (Rates Act s 13A)?
+GIVEN `the unimproved values of my parcel as at 1 January, most recent first` IS A LIST OF NUMBER @desc The unimproved values of the parcel in dollars (for a unit, of the whole units-plan parcel), as at 1 January of each year it has been rateable, the most recent (1 January 2026) first, as shown on your rates notices; only the latest five are used
+GIVETH AN `Answer` NUMBER
+`What is my average unimproved value` `the unimproved values of my parcel as at 1 January, most recent first` MEANS
+    CONSIDER `the average unimproved value under s 13A of` `the unimproved values of my parcel as at 1 January, most recent first`
+    WHEN JUST `auv` THEN `answered` `auv`
+    WHEN NOTHING THEN `not covered` `no unimproved value of the parcel was given (the valuation, Rates Act pt 2, is out of scope)`
+
+§§ `Paying the rates (s 17 to s 21)`
+
+@export If I pay my rates and levies by quarterly instalments, how much is each instalment (Rates Act s 19(1)(a))?
+GIVEN `the total on my rates notice` IS A NUMBER @desc The total rates and levies payable for the year on the notice of assessment, in dollars and cents
+GIVETH AN `Instalments`
+`How much is each instalment` `the total on my rates notice` MEANS
+    `the instalments under s 19(1)(a) of` `the total on my rates notice`
+
+@export Is the payment date on my rates notice at least 4 weeks after the date of the notice, as the law requires (Rates Act s 17(2))?
+GIVEN `the date of my notice of assessment` IS A DATE @desc The date of the notice of assessment
+      `the payment date on my notice`       IS A DATE @desc The payment date the notice states
+GIVETH A BOOLEAN
+`Is the payment date on my rates notice lawful` `the date of my notice of assessment` `the payment date on my notice` MEANS
+    `the payment date on my notice` `is lawful for a notice dated` `the date of my notice of assessment`
+
+@export Are the due dates of my four rates instalments each at least 3 months after the one before (Rates Act s 19(1)(b))?
+GIVEN `the 1st instalment due date` IS A DATE @desc The due date of the 1st instalment
+      `the 2nd instalment due date` IS A DATE @desc The due date of the 2nd instalment
+      `the 3rd instalment due date` IS A DATE @desc The due date of the 3rd instalment
+      `the 4th instalment due date` IS A DATE @desc The due date of the 4th instalment
+GIVETH A BOOLEAN
+`Are my instalment dates at least 3 months apart` `the 1st instalment due date` `the 2nd instalment due date` `the 3rd instalment due date` `the 4th instalment due date` MEANS
+        `the 2nd instalment due date` `is at least 3 months after` `the 1st instalment due date`
+    AND `the 3rd instalment due date` `is at least 3 months after` `the 2nd instalment due date`
+    AND `the 4th instalment due date` `is at least 3 months after` `the 3rd instalment due date`
+
+@export If I pay my rates, or my land tax, after the due date, how much interest do I owe (Rates Act s 21; Land Tax Act s 19)? There is no penalty tax on an individual's overdue rates, and no $20 minimum.
+GIVEN `the amount overdue`                 IS A NUMBER @desc The amount of rates or land tax not paid by its due date, in dollars
+      `the due date`                       IS A DATE   @desc The payment date (or instalment due date) of that amount
+      `the day I pay`                      IS A DATE   @desc The day the amount is paid
+      `the yearly interest rate`           IS A NUMBER @desc The interest rate the Minister determined for overdue rates or land tax under the Taxation Administration Act s 139, as a yearly fraction (0.096 for 9.6%); it is not in the deposited texts
+GIVETH A NUMBER
+`How much interest do I owe on an overdue amount` `the amount overdue` `the due date` `the day I pay` `the yearly interest rate` MEANS
+    `the monthly interest on` `the amount overdue` `at` `the yearly interest rate` `due on` `the due date` `paid on` `the day I pay`
+
+§§ `The pensioner rebate (pt 7, div 7.3)`
+
+@export Am I a pensioner, or an eligible person, for the ACT pensioner rates rebate and deferral (Rates Act s 45)?
+GIVEN `I am paid a pension, allowance or benefit under the Social Security Act 1991 and hold a pensioner concession card` IS A BOOLEAN @desc Whether you are paid a Centrelink (Services Australia) pension, allowance or benefit and have been given a pensioner concession card
+      `I am a service pensioner under the Veterans' Entitlements Act 1986`                                                    IS A BOOLEAN @desc Whether you are paid a DVA service pension (age, invalidity or partner service pension)
+      `I hold a DVA card for treatment of all injuries and diseases (a Gold Card)`                                             IS A BOOLEAN @desc Whether DVA has given you a card for treatment of all injuries and all diseases, under the Veterans' Entitlements Act or the Military Rehabilitation and Compensation Act
+      `I am a pensioner because of my partner or my late partner (s 45 pensioner pars (d) to (g))`                            IS A BOOLEAN @desc Whether you would be one of those pensioners because of your partnership or your late partner (the cases in s 45, definition of pensioner, pars (d) to (g))
+      `I am the partner or surviving partner of a special rate pensioner (s 45 eligible person pars (b) and (c))`             IS A BOOLEAN @desc Whether you are the partner (not separated) of a DVA or MRCA special rate pensioner, or were their partner until their death and have not repartnered
+GIVETH A BOOLEAN
+`Am I an eligible person for the rebate` `I am paid a pension, allowance or benefit under the Social Security Act 1991 and hold a pensioner concession card` `I am a service pensioner under the Veterans' Entitlements Act 1986` `I hold a DVA card for treatment of all injuries and diseases (a Gold Card)` `I am a pensioner because of my partner or my late partner (s 45 pensioner pars (d) to (g))` `I am the partner or surviving partner of a special rate pensioner (s 45 eligible person pars (b) and (c))` MEANS
+    `is an eligible person under s 45` (`my pension facts from my answers` `I am paid a pension, allowance or benefit under the Social Security Act 1991 and hold a pensioner concession card` `I am a service pensioner under the Veterans' Entitlements Act 1986` `I hold a DVA card for treatment of all injuries and diseases (a Gold Card)` `I am a pensioner because of my partner or my late partner (s 45 pensioner pars (d) to (g))` `I am the partner or surviving partner of a special rate pensioner (s 45 eligible person pars (b) and (c))`)
+
+@export How much pensioner rebate do I get on my 2026-27 rates, and on the emergency services levy, and if none, why not (Rates Act ss 60-64, 69; sch 1 s 3.2; DI2026-150 ss 6, 10)?
+GIVEN `what my property is`                                                IS A `Kind of land` @desc What the property is: residential land that is not a unit, a residential unit in a units plan, or commercial, rural or airport land or a proposed unit subdivision (not covered)
+      `the unimproved values of my parcel as at 1 January, most recent first` IS A LIST OF NUMBER @desc The unimproved values of the parcel in dollars (for a unit, of the whole units-plan parcel), as at 1 January of each year it has been rateable, the most recent (1 January 2026) first
+      `my unit entitlement`                                                IS A NUMBER @desc For a unit, the unit entitlement of your unit (any number for a house)
+      `the total unit entitlement of the residential units`                IS A NUMBER @desc For a unit, the total unit entitlement of the residential units (any number above 0 for a house)
+      `the total unit entitlement of all the units`                        IS A NUMBER @desc For a unit, the total unit entitlement of all the units (any number above 0 for a house)
+      `the days in 2026-27 my parcel is rateable`                          IS A NUMBER @desc The number of days from 1 July 2026 to 30 June 2027 the parcel is rateable: usually 365
+      `an owner is a corporation or a trustee`                             IS A BOOLEAN @desc Whether any owner is a company or a trustee (not covered)
+      `I am paid a pension, allowance or benefit under the Social Security Act 1991 and hold a pensioner concession card` IS A BOOLEAN @desc Whether you are paid a Centrelink pension, allowance or benefit and have been given a pensioner concession card
+      `I am a service pensioner under the Veterans' Entitlements Act 1986`                                                    IS A BOOLEAN @desc Whether you are paid a DVA service pension
+      `I hold a DVA card for treatment of all injuries and diseases (a Gold Card)`                                             IS A BOOLEAN @desc Whether DVA has given you a card for treatment of all injuries and all diseases
+      `I am a pensioner because of my partner or my late partner (s 45 pensioner pars (d) to (g))`                            IS A BOOLEAN @desc Whether you are a pensioner because of your partnership or late partner (s 45 pars (d) to (g))
+      `I am the partner or surviving partner of a special rate pensioner (s 45 eligible person pars (b) and (c))`             IS A BOOLEAN @desc Whether you are the partner, or surviving partner not since repartnered, of a special rate pensioner
+      `I own the parcel, or have a life or term interest in it under a will or court order and must pay its rates` IS A BOOLEAN @desc Whether you are an owner (lessee) of the parcel or unit, or hold it for life or a term under a will or court order that makes you liable for its rates
+      `how the parcel is held`                                             IS A `How the parcel is held` @desc Whether you own it alone, as a joint tenant with others, or as a tenant in common with others
+      `the number of owners`                                               IS A NUMBER @desc How many owners the parcel has, you included (1 if you own it alone)
+      `my interest as a tenant in common, as a fraction`                   IS A NUMBER @desc If you are a tenant in common, your share of the land as a fraction (0.5 for a half share); otherwise any number
+      `the number of other owners who can reasonably contribute to the rates` IS A NUMBER @desc How many of the other owners can reasonably contribute to paying the rates (0 if none, or if you own it alone)
+      `the days in 2026-27 the parcel is my principal place of residence`  IS A NUMBER @desc The number of days from 1 July 2026 to 30 June 2027 the parcel is your principal place of residence
+      `the day I applied for the rebate`                                   IS A DATE @desc The day you applied in writing to the Commissioner for the rebate (or will apply); there is no rebate for a year before the year you apply
+      `I have been an eligible person and owned my home continuously since 30 June 1997` IS A BOOLEAN @desc Whether you have been a pensioner (or eligible person) continuously since 30 June 1997 and owned the same home, or successive homes with no gap of more than 6 months, since then (s 63)
+      `the rebate I received under s 63 for 2025-26`                       IS A NUMBER @desc If so, the rebate you received under that grandfathered rule for 2025-26, in dollars (0 otherwise)
+      `after a break of more than 14 days I have not applied again`        IS A BOOLEAN @desc Whether, since your last application, you stopped being eligible or stopped owning your home for more than 14 days and have not applied again since (s 69)
+GIVETH AN `Answer` `Rebate answer`
+`How much pensioner rebate do I get for 2026-27` `what my property is` `the unimproved values of my parcel as at 1 January, most recent first` `my unit entitlement` `the total unit entitlement of the residential units` `the total unit entitlement of all the units` `the days in 2026-27 my parcel is rateable` `an owner is a corporation or a trustee` `I am paid a pension, allowance or benefit under the Social Security Act 1991 and hold a pensioner concession card` `I am a service pensioner under the Veterans' Entitlements Act 1986` `I hold a DVA card for treatment of all injuries and diseases (a Gold Card)` `I am a pensioner because of my partner or my late partner (s 45 pensioner pars (d) to (g))` `I am the partner or surviving partner of a special rate pensioner (s 45 eligible person pars (b) and (c))` `I own the parcel, or have a life or term interest in it under a will or court order and must pay its rates` `how the parcel is held` `the number of owners` `my interest as a tenant in common, as a fraction` `the number of other owners who can reasonably contribute to the rates` `the days in 2026-27 the parcel is my principal place of residence` `the day I applied for the rebate` `I have been an eligible person and owned my home continuously since 30 June 1997` `the rebate I received under s 63 for 2025-26` `after a break of more than 14 days I have not applied again` MEANS
+    CONSIDER `the rates assessment for 2026-27 on` `my parcel`
+    WHEN `not covered` `gap` THEN `not covered` `gap`
+    WHEN `answered` `the assessment` THEN
+        `answered` (`the rebate for 2026-27 of` (`the assessment`'s `general rates`) `and a levy of` (`the assessment`'s `police, fire and emergency services levy`) `for` `my rebate facts`)
+    WHERE
+        `my parcel` MEANS `my parcel from my answers` `what my property is` `the unimproved values of my parcel as at 1 January, most recent first` `my unit entitlement` `the total unit entitlement of the residential units` `the total unit entitlement of all the units` `the days in 2026-27 my parcel is rateable` `an owner is a corporation or a trustee`
+        `my rebate facts` MEANS
+            `Rebate facts` WITH
+                `the pension facts` IS `my pension facts from my answers` `I am paid a pension, allowance or benefit under the Social Security Act 1991 and hold a pensioner concession card` `I am a service pensioner under the Veterans' Entitlements Act 1986` `I hold a DVA card for treatment of all injuries and diseases (a Gold Card)` `I am a pensioner because of my partner or my late partner (s 45 pensioner pars (d) to (g))` `I am the partner or surviving partner of a special rate pensioner (s 45 eligible person pars (b) and (c))`
+                `the person is an owner, or has a life or term interest under a will or court order and is liable for the rates` IS `I own the parcel, or have a life or term interest in it under a will or court order and must pay its rates`
+                `the ownership` IS `my ownership from my answers` `how the parcel is held` `the number of owners` `my interest as a tenant in common, as a fraction` `the number of other owners who can reasonably contribute to the rates`
+                `days in the year the parcel is the person's principal place of residence` IS `the days in 2026-27 the parcel is my principal place of residence`
+                `the day the person applied for the rebate` IS `the day I applied for the rebate`
+                `the person has been an eligible person and an owner of their home continuously since 30 June 1997, under s 63(1) or (2)` IS `I have been an eligible person and owned my home continuously since 30 June 1997`
+                `the rebate the person received under s 63 for the year before` IS `the rebate I received under s 63 for 2025-26`
+                `after a break of more than 14 days in eligibility or in owning the home, the person has not applied again (s 69)` IS `after a break of more than 14 days I have not applied again`
+
+@export If part of my rates is deferred, how does my rebate reduce what I pay now and what stays deferred (Rates Act s 65)?
+GIVEN `my liability for rates for the year`   IS A NUMBER @desc Your liability for the year's rates, deferred part included, in dollars
+      `the part of it that is deferred`       IS A NUMBER @desc The part of that liability deferred under a deferral determination, in dollars
+      `my rebate`                             IS A NUMBER @desc The rebate you are entitled to, in dollars
+GIVETH A `Rebate applied`
+`How does my rebate apply to deferred rates` `my liability for rates for the year` `the part of it that is deferred` `my rebate` MEANS
+    `the rebate applied under s 65 to a liability of` `my liability for rates for the year` `with` `the part of it that is deferred` `deferred, for a rebate of` `my rebate`
+
+DECLARE `Notice I must give` HAS
+    `the last day to give it`    IS A DATE
+    `the most I can be fined`    IS A NUMBER
+
+@export Once I have applied for the rebate, if I stop being eligible, stop owning my home, change my share as a tenant in common, or move, by what date must I tell the Commissioner in writing, and what is the most I can be fined if I do not (Rates Act s 67)?
+GIVEN `the change`                IS A `Change in circumstances` @desc What happened: you stopped being an eligible person, stopped owning your principal place of residence, your share as a tenant in common changed, or you changed your principal place of residence
+      `the day it happened`       IS A DATE   @desc The day the change happened
+      `the value of a penalty unit` IS A NUMBER @desc The value of a penalty unit for an individual in dollars (Legislation Act 2001 s 133; $160 at the republication date, 26 December 2025)
+GIVETH A `Notice I must give`
+`By when must I tell the Commissioner of a change after applying for the rebate` `the change` `the day it happened` `the value of a penalty unit` MEANS
+    `Notice I must give` WITH
+        `the last day to give it` IS `the day that is` `the days to give notice of a change (s 67(3))` `days after` `the day it happened`
+        `the most I can be fined` IS `the maximum penalty under s 67(4), in penalty units` TIMES `the value of a penalty unit`
+
+§§ `Deferring the rates (pt 7, div 7.2)`
+
+@export Can I have my rates deferred, as a pensioner, for hardship, or as an owner aged 65 or over with at least 75% equity, and on which grounds (Rates Act s 46; DI2026-144)?
+GIVEN `the lease permits the parcel to be used only for residential purposes` IS A BOOLEAN @desc Whether the Crown lease of the parcel permits residential use only
+      `each of us applying ordinarily lives on the parcel`                     IS A BOOLEAN @desc Whether you, and each other owner applying with you, ordinarily live on the parcel
+      `the number of owners`                                                   IS A NUMBER  @desc How many owners the parcel has, you included
+      `the number of owners who are pensioners`                                IS A NUMBER  @desc How many of the owners are pensioners (a pensioner concession card holder paid under the Social Security Act, a DVA service pensioner, or a Gold Card holder)
+      `the owners are a pensioner and their partner who is not a pensioner`    IS A BOOLEAN @desc Whether the owners are a pensioner and their partner, who is not a pensioner
+      `I am a pensioner joint owner and no other owner can reasonably contribute` IS A BOOLEAN @desc Whether you are a pensioner who owns the parcel jointly and no other owner can reasonably contribute to the rates
+      `the Commissioner is satisfied paying would cause each owner substantial hardship` IS A BOOLEAN @desc Whether the Commissioner is satisfied that paying the rates is likely to cause substantial hardship to each owner (only counts where no owner is a pensioner)
+      `at least 1 owner is 65 or older`                                        IS A BOOLEAN @desc Whether at least one owner is 65 years old or older
+      `our equity in the parcel, as a percentage of its value`                 IS A NUMBER  @desc The owners' equity in the parcel (its value less what is owed against it) as a percentage of its value, for example 80
+GIVETH A `Deferral answer`
+`Can I defer my rates` `the lease permits the parcel to be used only for residential purposes` `each of us applying ordinarily lives on the parcel` `the number of owners` `the number of owners who are pensioners` `the owners are a pensioner and their partner who is not a pensioner` `I am a pensioner joint owner and no other owner can reasonably contribute` `the Commissioner is satisfied paying would cause each owner substantial hardship` `at least 1 owner is 65 or older` `our equity in the parcel, as a percentage of its value` MEANS
+    `the deferral answer under s 46 for` (`Deferral facts` WITH
+        `the lease permits the parcel to be used only for residential purposes` IS `the lease permits the parcel to be used only for residential purposes`
+        `each applicant ordinarily lives on the parcel`                         IS `each of us applying ordinarily lives on the parcel`
+        `the number of owners`                                                  IS `the number of owners`
+        `the number of owners who are pensioners`                               IS `the number of owners who are pensioners`
+        `the owners are a pensioner and their partner who is not a pensioner`   IS `the owners are a pensioner and their partner who is not a pensioner`
+        `the applicant is a pensioner joint owner and no other owner can reasonably contribute` IS `I am a pensioner joint owner and no other owner can reasonably contribute`
+        `the commissioner is satisfied payment is likely to cause substantial hardship to each owner` IS `the Commissioner is satisfied paying would cause each owner substantial hardship`
+        `at least 1 owner is 65 years old or older`                             IS `at least 1 owner is 65 or older`
+        `the owners' equity in the parcel, as a percentage of its value`        IS `our equity in the parcel, as a percentage of its value`)
+
+@export How much interest runs on my deferred rates, which is a debt to the Territory, from the date of deferral until I pay or the deferral is revoked (Rates Act s 48)?
+GIVEN `the amount deferred`              IS A NUMBER @desc The amount of rates deferred, in dollars
+      `the market rate component`        IS A NUMBER @desc The market rate component under the Taxation Administration Act s 26 (a determined rate, or the Reserve Bank 90-day bank bill rate), as a yearly fraction (0.036 for 3.6%); it is not in the deposited texts
+      `the date of deferral`             IS A DATE   @desc The date the amount was deferred (for rates payable when the determination was made, the date of the determination; for later rates, the date interest would otherwise have begun under s 21)
+      `the day I pay or it is revoked`   IS A DATE   @desc The day the amount is paid, or the day the deferral determination is revoked, whichever is earlier
+GIVETH A NUMBER
+`How much interest runs on my deferred rates` `the amount deferred` `the market rate component` `the date of deferral` `the day I pay or it is revoked` MEANS
+    `the interest under s 48 on` `the amount deferred` `at` `the market rate component` `from` `the date of deferral` `to` `the day I pay or it is revoked`
+
+@export While my deferral determination is in force, can the Territory recover the deferred rates from me (Rates Act s 49)?
+GIVEN `my deferral determination is in force` IS A BOOLEAN @desc Whether the deferral determination is still in force (not revoked)
+GIVETH A BOOLEAN
+`Can the deferred rates be recovered now` `my deferral determination is in force` MEANS
+    `the deferred amount can be recovered under s 49 while` `my deferral determination is in force`
+
+@export If my rates deferral is revoked, on what day is the whole deferred debt payable (Rates Act s 55(2))?
+GIVEN `the day the deferral was revoked` IS A DATE @desc The day the Commissioner revoked the deferral determination
+GIVETH A DATE
+`When is my deferred debt payable` `the day the deferral was revoked` MEANS
+    `the day the deferred amount is payable under s 55(2), after revocation on` `the day the deferral was revoked`
+
+@export What could bring my rates deferral to an end: what makes the Commissioner revoke it, and what gives the Commissioner a ground to revoke it (Rates Act ss 51-52)?
+GIVEN `the deferred amount has been paid`                                  IS A BOOLEAN @desc Whether the whole deferred amount has been paid to discharge the debt
+      `I have asked in writing for the deferral to be revoked`             IS A BOOLEAN @desc Whether you asked the Commissioner in writing to revoke the deferral
+      `it was made because each of us was a pensioner, and each has stopped being one` IS A BOOLEAN @desc Whether the deferral was made because each person was a pensioner, and each has stopped being a pensioner
+      `some but not all of us have stopped being pensioners, and revoking would not cause substantial hardship` IS A BOOLEAN @desc Whether some (not all) of the pensioners have stopped being pensioners, and the Commissioner considers revoking would not cause substantial hardship
+      `none of us was a pensioner, and revoking would not cause substantial hardship` IS A BOOLEAN @desc Whether no one was a pensioner when the deferral was made, and the Commissioner considers revoking would not cause substantial hardship
+      `I have not given information the Commissioner asked for`            IS A BOOLEAN @desc Whether you have not given information about the parcel or your means and income that the Commissioner asked for (s 58)
+      `each of us who lived there has stopped ordinarily living there`     IS A BOOLEAN @desc Whether each person who lived on the parcel when applying has stopped ordinarily living there
+      `each of us has stopped being an owner`                              IS A BOOLEAN @desc Whether each person the deferral relates to has stopped owning the parcel
+      `it was made because an owner is 65 or older with enough equity`     IS A BOOLEAN @desc Whether the deferral was made on the 65-or-over equity ground (s 46(2)(f))
+      `our equity in the parcel now, as a percentage of its value`         IS A NUMBER  @desc The owners' equity in the parcel now, as a percentage of its value
+GIVETH A LIST OF `Revocation ground`
+`What could end my rates deferral` `the deferred amount has been paid` `I have asked in writing for the deferral to be revoked` `it was made because each of us was a pensioner, and each has stopped being one` `some but not all of us have stopped being pensioners, and revoking would not cause substantial hardship` `none of us was a pensioner, and revoking would not cause substantial hardship` `I have not given information the Commissioner asked for` `each of us who lived there has stopped ordinarily living there` `each of us has stopped being an owner` `it was made because an owner is 65 or older with enough equity` `our equity in the parcel now, as a percentage of its value` MEANS
+    `the grounds to end the deferral under ss 51 and 52(1) for` (`Deferral now` WITH
+        `the deferred amount has been paid to discharge the debt` IS `the deferred amount has been paid`
+        `the person has asked in writing for the determination to be revoked` IS `I have asked in writing for the deferral to be revoked`
+        `it was made because each person was a pensioner, and each has stopped being one` IS `it was made because each of us was a pensioner, and each has stopped being one`
+        `some but not all of the pensioners it relates to have stopped being pensioners, and revocation is not likely to cause substantial hardship` IS `some but not all of us have stopped being pensioners, and revoking would not cause substantial hardship`
+        `no one was a pensioner when it was made, and revocation is not likely to cause substantial hardship` IS `none of us was a pensioner, and revoking would not cause substantial hardship`
+        `the person has not given information the commissioner asked for under s 58` IS `I have not given information the Commissioner asked for`
+        `each person who lived on the parcel when applying has stopped ordinarily living there` IS `each of us who lived there has stopped ordinarily living there`
+        `each person it relates to has stopped being an owner of the parcel` IS `each of us has stopped being an owner`
+        `it was made under s 46(2)(f)` IS `it was made because an owner is 65 or older with enough equity`
+        `the owners' equity in the parcel now, as a percentage of its value` IS `our equity in the parcel now, as a percentage of its value`)
+
+§§ `Land tax, quarter by quarter (Land Tax Act pt 2) -- if the home is rented out, left empty or moved out of`
+
+-- This group arises only where the home is not, or stops being, the owner's principal place of residence.
+
+GIVEN `the quarter starting`                                               IS A DATE
+      `what my property is`                                                IS A `Kind of land`
+      `an owner is a corporation or a trustee`                             IS A BOOLEAN
+      `who occupies it on the 1st day of the quarter`                      IS AN `Occupancy on the 1st day of the quarter`
+      `what happened before the quarter`                                   IS AN `Earlier event`
+      `the day it happened`                                                IS A DATE
+      `within 3 months after, the owner moved in as their principal place of residence` IS A BOOLEAN
+      `within 3 months after, it was rented to a tenant (other than the seller for up to 3 months)` IS A BOOLEAN
+      `since the owner's death it has been registered only in the name of the deceased owner or the personal representative` IS A BOOLEAN
+      `the Commissioner has extended the 2-year period after the death to cover the quarter` IS A BOOLEAN
+      `my partner and I own more than 1 parcel and the home exemption is taken for another` IS A BOOLEAN
+      `the Commissioner is satisfied my partner and I have separated for good`  IS A BOOLEAN
+      `the Commissioner is satisfied the home became unfit to live in`     IS A BOOLEAN
+      `a certificate of occupancy has been issued`                         IS A BOOLEAN
+      `the day the certificate of occupancy was issued`                    IS A DATE
+      `the Commissioner is satisfied it is fit to live in again`           IS A BOOLEAN
+      `the Commissioner has given a compassionate exemption covering the quarter` IS A BOOLEAN
+      `it has more than 1 dwelling, one lived in by an owner (or rent-free) and another rented` IS A BOOLEAN
+GIVETH A `Land tax quarter`
+`my quarter from my answers` `the quarter starting` `what my property is` `an owner is a corporation or a trustee` `who occupies it on the 1st day of the quarter` `what happened before the quarter` `the day it happened` `within 3 months after, the owner moved in as their principal place of residence` `within 3 months after, it was rented to a tenant (other than the seller for up to 3 months)` `since the owner's death it has been registered only in the name of the deceased owner or the personal representative` `the Commissioner has extended the 2-year period after the death to cover the quarter` `my partner and I own more than 1 parcel and the home exemption is taken for another` `the Commissioner is satisfied my partner and I have separated for good` `the Commissioner is satisfied the home became unfit to live in` `a certificate of occupancy has been issued` `the day the certificate of occupancy was issued` `the Commissioner is satisfied it is fit to live in again` `the Commissioner has given a compassionate exemption covering the quarter` `it has more than 1 dwelling, one lived in by an owner (or rent-free) and another rented` MEANS
+    `Land tax quarter` WITH
+        `the first day of the quarter` IS `the quarter starting`
+        `kind` IS `what my property is`
+        `an owner is a corporation or a trustee` IS `an owner is a corporation or a trustee`
+        `occupancy` IS `who occupies it on the 1st day of the quarter`
+        `the event` IS `what happened before the quarter`
+        `the date of the event` IS `the day it happened`
+        `within 3 months after the event the owner occupied it as their principal place of residence` IS `within 3 months after, the owner moved in as their principal place of residence`
+        `within 3 months after the event it was rented to a tenant, other than the seller for up to 3 months` IS `within 3 months after, it was rented to a tenant (other than the seller for up to 3 months)`
+        `since the death it has been registered only in the name of the deceased owner or the personal representative` IS `since the owner's death it has been registered only in the name of the deceased owner or the personal representative`
+        `the commissioner has extended the 2-year period after the death to cover the quarter (s 11E)` IS `the Commissioner has extended the 2-year period after the death to cover the quarter`
+        `the owner and their domestic partner own more than 1 parcel and the s 11A exemption is taken for another` IS `my partner and I own more than 1 parcel and the home exemption is taken for another`
+        `the commissioner is satisfied the owner and their partner have separated, with no reasonable likelihood of resuming cohabitation` IS `the Commissioner is satisfied my partner and I have separated for good`
+        `the commissioner is satisfied the parcel became unfit for occupation as a place of residence (s 11I)` IS `the Commissioner is satisfied the home became unfit to live in`
+        `a certificate of occupancy was issued for it, on` IS (IF `a certificate of occupancy has been issued` THEN JUST `the day the certificate of occupancy was issued` ELSE NOTHING)
+        `the commissioner is satisfied it is fit for occupation again` IS `the Commissioner is satisfied it is fit to live in again`
+        `the commissioner has exempted it on compassionate grounds for a period including the quarter (s 13)` IS `the Commissioner has given a compassionate exemption covering the quarter`
+        `it has more than 1 dwelling, one occupied as in s 15(1)(b) and another rented to a tenant` IS `it has more than 1 dwelling, one lived in by an owner (or rent-free) and another rented`
+
+@export Do I pay ACT land tax on my residential property for the quarter starting on a given day, and if not, which exemption applies (Land Tax Act ss 8-15)?
+GIVEN `the quarter starting`                                               IS A DATE @desc The first day of the quarter: 1 July 2026, 1 October 2026, 1 January 2027 or 1 April 2027
+      `what my property is`                                                IS A `Kind of land` @desc What the property is: residential land that is not a unit, a residential unit in a units plan, or commercial, rural or airport land or a proposed unit subdivision (not covered)
+      `an owner is a corporation or a trustee`                             IS A BOOLEAN @desc Whether any owner is a company or holds it as trustee (not covered)
+      `who occupies it on the 1st day of the quarter`                      IS AN `Occupancy on the 1st day of the quarter` @desc Who lives there on the first day of the quarter: an owner as their main home, a life tenant under a will, someone paying no rent or only the outgoings, a tenant (not a boarder or lodger), or no one
+      `what happened before the quarter`                                   IS AN `Earlier event` @desc Whether, before the quarter, an owner moved out of it as their home, you became the owner intending to move in, a rental ended so the owner could move in, or the owner who lived there died; or none of these
+      `the day it happened`                                                IS A DATE @desc The day that happened (any date if none)
+      `within 3 months after, the owner moved in as their principal place of residence` IS A BOOLEAN @desc For a purchase or the end of a rental: whether the owner moved in as their main home within 3 months after it
+      `within 3 months after, it was rented to a tenant (other than the seller for up to 3 months)` IS A BOOLEAN @desc For a purchase or the end of a rental: whether it was rented within 3 months after it (a lease back to the seller for up to 3 months does not count after a purchase)
+      `since the owner's death it has been registered only in the name of the deceased owner or the personal representative` IS A BOOLEAN @desc After an owner's death: whether the title has stayed in the deceased owner's name or the executor's or administrator's name
+      `the Commissioner has extended the 2-year period after the death to cover the quarter` IS A BOOLEAN @desc After an owner's death: whether the Commissioner extended the 2-year exemption to cover this quarter
+      `my partner and I own more than 1 parcel and the home exemption is taken for another` IS A BOOLEAN @desc Whether you and your domestic partner own more than one parcel and the principal place of residence exemption is claimed for another of them
+      `the Commissioner is satisfied my partner and I have separated for good`  IS A BOOLEAN @desc Whether the Commissioner is satisfied you and your partner have separated with no reasonable likelihood of living together again
+      `the Commissioner is satisfied the home became unfit to live in`     IS A BOOLEAN @desc Whether the Commissioner is satisfied the home is or became unfit to live in (for example under construction, substantially renovated, or damaged)
+      `a certificate of occupancy has been issued`                         IS A BOOLEAN @desc If so, whether a certificate of occupancy has since been issued for it
+      `the day the certificate of occupancy was issued`                    IS A DATE @desc The day the certificate of occupancy was issued (any date if none)
+      `the Commissioner is satisfied it is fit to live in again`           IS A BOOLEAN @desc Whether the Commissioner is satisfied it is fit to live in again
+      `the Commissioner has given a compassionate exemption covering the quarter` IS A BOOLEAN @desc Whether the Commissioner has exempted the property on compassionate grounds for a period that includes this quarter
+      `it has more than 1 dwelling, one lived in by an owner (or rent-free) and another rented` IS A BOOLEAN @desc Whether the property has more than one dwelling (such as a house and a granny flat), one lived in by an owner as their home (or by a life tenant, or rent-free) and another rented to a tenant
+GIVETH AN `Answer` `Land tax position`
+`Do I pay land tax for the quarter` `the quarter starting` `what my property is` `an owner is a corporation or a trustee` `who occupies it on the 1st day of the quarter` `what happened before the quarter` `the day it happened` `within 3 months after, the owner moved in as their principal place of residence` `within 3 months after, it was rented to a tenant (other than the seller for up to 3 months)` `since the owner's death it has been registered only in the name of the deceased owner or the personal representative` `the Commissioner has extended the 2-year period after the death to cover the quarter` `my partner and I own more than 1 parcel and the home exemption is taken for another` `the Commissioner is satisfied my partner and I have separated for good` `the Commissioner is satisfied the home became unfit to live in` `a certificate of occupancy has been issued` `the day the certificate of occupancy was issued` `the Commissioner is satisfied it is fit to live in again` `the Commissioner has given a compassionate exemption covering the quarter` `it has more than 1 dwelling, one lived in by an owner (or rent-free) and another rented` MEANS
+    `the land tax position for` (`my quarter from my answers` `the quarter starting` `what my property is` `an owner is a corporation or a trustee` `who occupies it on the 1st day of the quarter` `what happened before the quarter` `the day it happened` `within 3 months after, the owner moved in as their principal place of residence` `within 3 months after, it was rented to a tenant (other than the seller for up to 3 months)` `since the owner's death it has been registered only in the name of the deceased owner or the personal representative` `the Commissioner has extended the 2-year period after the death to cover the quarter` `my partner and I own more than 1 parcel and the home exemption is taken for another` `the Commissioner is satisfied my partner and I have separated for good` `the Commissioner is satisfied the home became unfit to live in` `a certificate of occupancy has been issued` `the day the certificate of occupancy was issued` `the Commissioner is satisfied it is fit to live in again` `the Commissioner has given a compassionate exemption covering the quarter` `it has more than 1 dwelling, one lived in by an owner (or rent-free) and another rented`)
+
+@export How much ACT land tax do I pay for the quarter starting on a given day on my house, unit or rented dwelling, or nothing if it is exempt (Land Tax Act ss 9, 15, 27; DI2026-152 ss 4-6)?
+GIVEN `the quarter starting`                                               IS A DATE @desc The first day of the quarter: 1 July 2026, 1 October 2026, 1 January 2027 or 1 April 2027
+      `what my property is`                                                IS A `Kind of land` @desc What the property is: residential land that is not a unit, a residential unit in a units plan, or commercial, rural or airport land or a proposed unit subdivision (not covered)
+      `an owner is a corporation or a trustee`                             IS A BOOLEAN @desc Whether any owner is a company or holds it as trustee (not covered)
+      `who occupies it on the 1st day of the quarter`                      IS AN `Occupancy on the 1st day of the quarter` @desc Who lives there on the first day of the quarter: an owner as their main home, a life tenant under a will, someone paying no rent or only the outgoings, a tenant, or no one
+      `what happened before the quarter`                                   IS AN `Earlier event` @desc Whether, before the quarter, an owner moved out, you bought it to move in, a rental ended so the owner could move in, or the owner who lived there died; or none of these
+      `the day it happened`                                                IS A DATE @desc The day that happened (any date if none)
+      `within 3 months after, the owner moved in as their principal place of residence` IS A BOOLEAN @desc For a purchase or the end of a rental: whether the owner moved in within 3 months after it
+      `within 3 months after, it was rented to a tenant (other than the seller for up to 3 months)` IS A BOOLEAN @desc For a purchase or the end of a rental: whether it was rented within 3 months after it
+      `since the owner's death it has been registered only in the name of the deceased owner or the personal representative` IS A BOOLEAN @desc After an owner's death: whether the title has stayed in the deceased owner's or the personal representative's name
+      `the Commissioner has extended the 2-year period after the death to cover the quarter` IS A BOOLEAN @desc After an owner's death: whether the Commissioner extended the 2-year exemption to cover this quarter
+      `my partner and I own more than 1 parcel and the home exemption is taken for another` IS A BOOLEAN @desc Whether you and your domestic partner own more than one parcel and the home exemption is claimed for another
+      `the Commissioner is satisfied my partner and I have separated for good`  IS A BOOLEAN @desc Whether the Commissioner is satisfied you and your partner have separated for good
+      `the Commissioner is satisfied the home became unfit to live in`     IS A BOOLEAN @desc Whether the Commissioner is satisfied the home is or became unfit to live in
+      `a certificate of occupancy has been issued`                         IS A BOOLEAN @desc If so, whether a certificate of occupancy has since been issued
+      `the day the certificate of occupancy was issued`                    IS A DATE @desc The day the certificate of occupancy was issued (any date if none)
+      `the Commissioner is satisfied it is fit to live in again`           IS A BOOLEAN @desc Whether the Commissioner is satisfied it is fit to live in again
+      `the Commissioner has given a compassionate exemption covering the quarter` IS A BOOLEAN @desc Whether a compassionate exemption covers this quarter
+      `it has more than 1 dwelling, one lived in by an owner (or rent-free) and another rented` IS A BOOLEAN @desc Whether the property has more than one dwelling, one lived in by an owner (or a life tenant, or rent-free) and another rented
+      `the unimproved values of my parcel as at 1 January, most recent first` IS A LIST OF NUMBER @desc The unimproved values of the parcel in dollars (for a unit, of the whole units-plan parcel), as at 1 January of each year it has been rateable, the most recent (1 January 2026) first
+      `my unit entitlement`                                                IS A NUMBER @desc For a unit, the unit entitlement of your unit (any number for a house)
+      `the total unit entitlement of the residential units`                IS A NUMBER @desc For a unit, the total unit entitlement of the residential units (any number above 0 for a house)
+      `the total unit entitlement of all the units`                        IS A NUMBER @desc For a unit, the total unit entitlement of all the units (any number above 0 for a house)
+      `the floor area of the rented dwelling`                              IS A NUMBER @desc Where one dwelling is lived in and another rented: the floor area of the rented dwelling, in square metres (any number otherwise)
+      `the total floor area of all the dwellings`                          IS A NUMBER @desc Where one dwelling is lived in and another rented: the total floor area of all the dwellings (for a unit, of the unit), in square metres (any number above 0 otherwise)
+GIVETH AN `Answer` NUMBER
+`How much land tax do I pay for the quarter` `the quarter starting` `what my property is` `an owner is a corporation or a trustee` `who occupies it on the 1st day of the quarter` `what happened before the quarter` `the day it happened` `within 3 months after, the owner moved in as their principal place of residence` `within 3 months after, it was rented to a tenant (other than the seller for up to 3 months)` `since the owner's death it has been registered only in the name of the deceased owner or the personal representative` `the Commissioner has extended the 2-year period after the death to cover the quarter` `my partner and I own more than 1 parcel and the home exemption is taken for another` `the Commissioner is satisfied my partner and I have separated for good` `the Commissioner is satisfied the home became unfit to live in` `a certificate of occupancy has been issued` `the day the certificate of occupancy was issued` `the Commissioner is satisfied it is fit to live in again` `the Commissioner has given a compassionate exemption covering the quarter` `it has more than 1 dwelling, one lived in by an owner (or rent-free) and another rented` `the unimproved values of my parcel as at 1 January, most recent first` `my unit entitlement` `the total unit entitlement of the residential units` `the total unit entitlement of all the units` `the floor area of the rented dwelling` `the total floor area of all the dwellings` MEANS
+    IF `the average unimproved value under s 13A of` `the unimproved values of my parcel as at 1 January, most recent first` EQUALS NOTHING
+    THEN `not covered` `no unimproved value of the parcel was given (the valuation, Rates Act pt 2, is out of scope)`
+    ELSE `the land tax for the quarter of` `my quarter` `on` `my land tax parcel`
+    WHERE
+        `my quarter` MEANS `my quarter from my answers` `the quarter starting` `what my property is` `an owner is a corporation or a trustee` `who occupies it on the 1st day of the quarter` `what happened before the quarter` `the day it happened` `within 3 months after, the owner moved in as their principal place of residence` `within 3 months after, it was rented to a tenant (other than the seller for up to 3 months)` `since the owner's death it has been registered only in the name of the deceased owner or the personal representative` `the Commissioner has extended the 2-year period after the death to cover the quarter` `my partner and I own more than 1 parcel and the home exemption is taken for another` `the Commissioner is satisfied my partner and I have separated for good` `the Commissioner is satisfied the home became unfit to live in` `a certificate of occupancy has been issued` `the day the certificate of occupancy was issued` `the Commissioner is satisfied it is fit to live in again` `the Commissioner has given a compassionate exemption covering the quarter` `it has more than 1 dwelling, one lived in by an owner (or rent-free) and another rented`
+        `my land tax parcel` MEANS
+            `Land tax parcel` WITH
+                `the unimproved values as at 1 January, most recent first` IS `the unimproved values of my parcel as at 1 January, most recent first`
+                `the unit entitlements` IS `Unit entitlements` WITH
+                    `UE`   IS `my unit entitlement`
+                    `TUER` IS `the total unit entitlement of the residential units`
+                    `TUE`  IS `the total unit entitlement of all the units`
+                `FA`  IS `the floor area of the rented dwelling`
+                `TFA` IS `the total floor area of all the dwellings`
+
+@export If I move out of my home and rent it out or leave it empty, from which quarter do I start paying land tax (Land Tax Act ss 8A(3), 9, 11B)?
+GIVEN `the day I moved out`                         IS A DATE    @desc The day you stopped living in the home as your principal place of residence
+      `it is rented to a tenant on the 1st day of the next quarter` IS A BOOLEAN @desc Whether a tenant has the home on the first day of the quarter after you moved out (1 January, 1 April, 1 July or 1 October)
+GIVETH A DATE
+`From which quarter do I pay land tax after moving out` `the day I moved out` `it is rented to a tenant on the 1st day of the next quarter` MEANS
+    `the first quarter of land tax after moving out on` `the day I moved out` `when rented at the next quarter` `it is rented to a tenant on the 1st day of the next quarter`
+
+@export Am I a foreign individual for the ACT foreign ownership surcharge on residential land (Land Tax Act s 17A)?
+GIVEN `I am an Australian citizen`                         IS A BOOLEAN @desc Whether you are an Australian citizen on the first day of the quarter
+      `I hold a permanent visa, or am a New Zealand citizen with a special category visa` IS A BOOLEAN @desc Whether you hold a permanent visa, or are a New Zealand citizen holding a special category visa, on the first day of the quarter
+      `I am ordinarily resident in Australia`              IS A BOOLEAN @desc Whether you ordinarily live in Australia (or an external territory) on the first day of the quarter
+GIVETH A BOOLEAN
+`Am I a foreign individual` `I am an Australian citizen` `I hold a permanent visa, or am a New Zealand citizen with a special category visa` `I am ordinarily resident in Australia` MEANS
+    `is a foreign individual under s 17A` (`Residence facts` WITH
+        `an Australian citizen` IS `I am an Australian citizen`
+        `a permanent resident (a permanent visa, or a New Zealand citizen with a special category visa)` IS `I hold a permanent visa, or am a New Zealand citizen with a special category visa`
+        `ordinarily resident in Australia or an external territory` IS `I am ordinarily resident in Australia`)
+
+@export As a foreign individual, how much foreign ownership surcharge do I pay on my residential property for the quarter starting on a given day, on top of any land tax (Land Tax Act ss 17A-17F; DI2026-152 ss 4, 7)?
+GIVEN `the quarter starting`                                               IS A DATE @desc The first day of the quarter: 1 July 2026, 1 October 2026, 1 January 2027 or 1 April 2027
+      `what my property is`                                                IS A `Kind of land` @desc What the property is: residential land that is not a unit, or a residential unit in a units plan (others not covered)
+      `who occupies it on the 1st day of the quarter`                      IS AN `Occupancy on the 1st day of the quarter` @desc Who lives there on the first day of the quarter
+      `I am an Australian citizen`                                         IS A BOOLEAN @desc Whether you are an Australian citizen on the first day of the quarter
+      `I hold a permanent visa, or am a New Zealand citizen with a special category visa` IS A BOOLEAN @desc Whether you hold a permanent visa, or are a New Zealand citizen with a special category visa
+      `I am ordinarily resident in Australia`                              IS A BOOLEAN @desc Whether you ordinarily live in Australia
+      `the share of the value of all interests held by foreign people`     IS A NUMBER @desc The value of all interests in the parcel or unit held by foreign people, as a fraction of the value of all interests (1 if you own it alone)
+      `the unimproved values of my parcel as at 1 January, most recent first` IS A LIST OF NUMBER @desc The unimproved values of the parcel in dollars (for a unit, of the whole units-plan parcel), as at 1 January of each year, most recent first
+      `my unit entitlement`                                                IS A NUMBER @desc For a unit, the unit entitlement of your unit (any number for a house)
+      `the total unit entitlement of the residential units`                IS A NUMBER @desc For a unit, the total unit entitlement of the residential units (any number above 0 for a house)
+      `the total unit entitlement of all the units`                        IS A NUMBER @desc For a unit, the total unit entitlement of all the units (any number above 0 for a house)
+GIVETH AN `Answer` NUMBER
+`How much foreign ownership surcharge do I pay for the quarter` `the quarter starting` `what my property is` `who occupies it on the 1st day of the quarter` `I am an Australian citizen` `I hold a permanent visa, or am a New Zealand citizen with a special category visa` `I am ordinarily resident in Australia` `the share of the value of all interests held by foreign people` `the unimproved values of my parcel as at 1 January, most recent first` `my unit entitlement` `the total unit entitlement of the residential units` `the total unit entitlement of all the units` MEANS
+    IF NOT (`Am I a foreign individual` `I am an Australian citizen` `I hold a permanent visa, or am a New Zealand citizen with a special category visa` `I am ordinarily resident in Australia`)
+    THEN `answered` 0
+    ELSE `the foreign ownership surcharge for the quarter of` `the quarter` `on` `the parcel` `with a foreign share of` `the share of the value of all interests held by foreign people`
+    WHERE
+        -- The surcharge question asks only who occupies the parcel; the other exemption facts are held at "none".
+        `the quarter` MEANS `my quarter from my answers` `the quarter starting` `what my property is` FALSE `who occupies it on the 1st day of the quarter` `none of these` `the quarter starting` FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE `the quarter starting` FALSE FALSE FALSE
+        `the parcel` MEANS
+            `Land tax parcel` WITH
+                `the unimproved values as at 1 January, most recent first` IS `the unimproved values of my parcel as at 1 January, most recent first`
+                `the unit entitlements` IS `Unit entitlements` WITH
+                    `UE`   IS `my unit entitlement`
+                    `TUER` IS `the total unit entitlement of the residential units`
+                    `TUE`  IS `the total unit entitlement of all the units`
+                `FA`  IS 1
+                `TFA` IS 1
+
+§§ `Telling the Commissioner, and what follows if I do not (Land Tax Act ss 14, 19A; TAA s 67(2), div 5.2)`
+
+-- This group arises only where something changes that makes land tax or the surcharge payable: the home is rented,
+-- stops being the principal place of residence, changes hands, or an exemption otherwise ends.
+
+@export If something changes that makes land tax payable on my home (I rent it out, move out, or an exemption ends), by what date must I, my agent or the personal representative tell the Commissioner, and what is the most the fine can be (Land Tax Act s 14; TAA s 67(2))?
+GIVEN `the day the circumstances changed` IS A DATE   @desc The day of the change that makes land tax or the foreign ownership surcharge payable (for example the day the home was first rented)
+      `the value of a penalty unit`       IS A NUMBER @desc The value of a penalty unit for an individual in dollars (Legislation Act 2001 s 133; $160 at the republication date, 26 December 2025)
+GIVETH A `Notice I must give`
+`By when must I tell the Commissioner that land tax has become payable` `the day the circumstances changed` `the value of a penalty unit` MEANS
+    `Notice I must give` WITH
+        `the last day to give it` IS `the day that is` `the days to tell the commissioner (s 14(3))` `days after` `the day the circumstances changed`
+        `the most I can be fined` IS `the maximum penalty under TAA s 67(2), in penalty units` TIMES `the value of a penalty unit`
+
+DECLARE `If I did not tell the Commissioner` HAS
+    `interest runs after`         IS A DATE
+    `the penalty tax`             IS A NUMBER
+
+@export If I did not tell the Commissioner of a change that made land tax payable, from when does interest run, and how much penalty tax can I be charged (Land Tax Act s 19A; TAA ss 30-35, table 34)?
+GIVEN `the 1st day of the 1st quarter the tax is imposed for` IS A DATE @desc The first day of the first quarter for which land tax was imposed after the change
+      `the land tax payable`                                  IS A NUMBER @desc The land tax payable that was not disclosed, in dollars
+      `what the Commissioner is satisfied of`                 IS A `What the commissioner is satisfied of` @desc What the Commissioner is satisfied of: reasonable care or circumstances beyond your control; nothing more than the default; delay, incorrect information or a second default; intentional disregard; or concealment during an investigation
+      `whether and when I disclosed it`                       IS A `Disclosure` @desc Whether you told the Commissioner in writing before being told of an investigation, after being told but before it began, or not at all
+GIVETH AN `If I did not tell the Commissioner`
+`What follows if I did not tell the Commissioner` `the 1st day of the 1st quarter the tax is imposed for` `the land tax payable` `what the Commissioner is satisfied of` `whether and when I disclosed it` MEANS
+    `If I did not tell the Commissioner` WITH
+        `interest runs after` IS `the day s 19A interest runs to the end of, for a quarter starting` `the 1st day of the 1st quarter the tax is imposed for`
+        `the penalty tax`     IS `the penalty tax under s 19A(4) on` `the land tax payable` `for` `what the Commissioner is satisfied of` `with` `whether and when I disclosed it`
+
+@export Is the payment date on my land tax notice at least 4 weeks after the date of the notice, as the law requires (Land Tax Act s 17(5))?
+GIVEN `the date of my notice of assessment` IS A DATE @desc The date of the land tax notice of assessment
+      `the payment date on my notice`       IS A DATE @desc The payment date the notice states
+GIVETH A BOOLEAN
+`Is the payment date on my land tax notice lawful` `the date of my notice of assessment` `the payment date on my notice` MEANS
+    `the payment date on my notice` `is a lawful land tax payment date for a notice dated` `the date of my notice of assessment`
+
+@export As the personal representative of an owner who lived in the home and died, before what date must I apply in writing to extend the 2-year land tax exemption (Land Tax Act ss 11D(3), 11F)?
+GIVEN `the day the owner died` IS A DATE @desc The day the owner who lived in the home died
+GIVETH A DATE
+`Before what date must I apply to extend the exemption after the death` `the day the owner died` MEANS
+    `the date` 24 `months after` `the day the owner died`
+
+§§ `Objecting (Taxation Administration Act ss 100-103; Rates Act ss 70-72; Land Tax Act s 38)`
+
+-- This group arises only where the owner disagrees with a notice of assessment, a valuation or a decision.
+
+@export If I disagree with my rates or land tax assessment, the unimproved value it is based on, or a decision such as a refusal to defer, by what date must I lodge a written objection (TAA ss 100-103; Rates Act ss 70-72)?
+GIVEN `what I object to`         IS A `What is objected to` @desc What you object to: the assessment in a notice of assessment, the valuation the rates assessment is based on, or a decision listed in Rates Act s 70 or Land Tax Act s 38 (such as a refusal to defer rates or to extend an exemption)
+      `the day the notice was given` IS A DATE @desc The day you were given the notice of assessment or decision (for a valuation, the notice of the unimproved value under Rates Act s 12(2))
+      `I own a unit`               IS A BOOLEAN @desc Whether the property is a unit in a units plan
+GIVETH AN `Objection answer`
+`By when must I object` `what I object to` `the day the notice was given` `I own a unit` MEANS
+    `the objection deadline for` `what I object to` `after a notice given on` `the day the notice was given` `for a unit` `I own a unit`
+
+§§ `Outside this encoding`
+
+DECLARE `Other matter` IS ONE OF
+    `rates or levies on commercial land, including the city centre levy`
+    `rates on rural land`
+    `rates on airport land`
+    `a proposed unit subdivision under div 5.2`
+    `land owned by a company or a trust`
+    `whether the Commissioner will grant a compassionate land tax exemption`
+    `the land tax exemption for affordable community housing`
+    `how my unimproved value was determined`
+    `a year other than 2026-27`
+
+@export Can this encoding answer my question about commercial, rural or airport land, a proposed unit subdivision, land owned by a company or trust, a compassionate exemption decision, the affordable community housing exemption, how my land was valued, or another year?
+GIVEN `the matter` IS AN `Other matter` @desc The matter you are asking about
+GIVETH A `Why not covered`
+`Is my other question covered` `the matter` MEANS
+    CONSIDER `the matter`
+    WHEN `rates or levies on commercial land, including the city centre levy` THEN `commercial land (DI2026-150 Table 3, the city centre levy, the commercial emergency services levy in Table 4) is not encoded`
+    WHEN `rates on rural land` THEN `rural land (DI2026-150 s 5(1)(a)(iv) and (b)(iv)) is not encoded; Land Tax Act s 10(1)(d) exempts it from land tax`
+    WHEN `rates on airport land` THEN `airport land (Rates Act pt 5A) is not encoded`
+    WHEN `a proposed unit subdivision under div 5.2` THEN `a proposed unit subdivision under Rates Act div 5.2 is not encoded`
+    WHEN `land owned by a company or a trust` THEN `land owned, wholly or partly, by a corporation or a trustee (Rates Act s 20A(2), Land Tax Act ss 16 and 27(5)) is not encoded`
+    WHEN `whether the Commissioner will grant a compassionate land tax exemption` THEN `whether the commissioner will grant a compassionate exemption (Land Tax Act ss 12-13) is the commissioner's decision; it is taken as a fact`
+    WHEN `the land tax exemption for affordable community housing` THEN `the affordable community housing exemption (Land Tax Act s 13A) is not encoded`
+    WHEN `how my unimproved value was determined` THEN `how the unimproved value is determined (Rates Act pt 2) is not encoded; the values are taken as facts`
+    WHEN `a year other than 2026-27` THEN `the day is outside the year 1 July 2026 to 30 June 2027: only the 2026 determinations are deposited`

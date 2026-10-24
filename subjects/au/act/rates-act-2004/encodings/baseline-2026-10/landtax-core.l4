@@ -1,0 +1,554 @@
+IMPORT prelude
+IMPORT `rates-shared`
+
+-- Land Tax Act 2004 (ACT), with the Taxation Administration (Amounts Payable--Land Tax) Determination 2026
+-- (DI2026-152) and the Taxation Administration Act 1999 (ACT): land tax, quarter by quarter, on a residential parcel or
+-- unit an individual owns, and the foreign ownership surcharge, for 2026-27.
+--
+-- Land tax is encoded here, in the Rates Act 2004's encoding folder, because its measure is the Rates Act s 13A average
+-- unimproved value (Land Tax Act s 9(4): "AUV means the average unimproved value of the parcel of land under the Rates
+-- Act 2004"), and the stable l4 cannot IMPORT across encoding folders. The Land Tax Act 2004 has no encoding folder of
+-- its own (see NOTES.md).
+--
+-- SEAT-NEUTRAL CORE. The rules are written in the Act's own actors and terms: "the owner", "a relevant person", "the
+-- personal representative", "the commissioner". The owner's questions are in rates-seat.l4, which IMPORTs this module
+-- and restates no rule.
+--
+-- PROVISIONS COVERED.
+--   Land Tax Act 2004: s 7 (rent, tenancy agreement, tenant), s 8, s 8A, s 9, s 10(1)(a)-(b), (d), s 11A, s 11B,
+--   s 11C, s 11CA, s 11D (and (3), a regulative rule), s 11G, s 11H, s 11I, s 13 (its decision as a fact), s 14 (a
+--   regulative rule), s 15, s 17 (a regulative rule), s 17A (foreign individual), s 17D, s 17E, s 17F, s 19 (in
+--   rates-shared.l4), s 19A, s 27(3), (4), (6), s 40.
+--   DI2026-152: s 4, s 5, s 6 and Table 1, s 7.
+--   Taxation Administration Act 1999: div 5.2 (ss 30-35 and table 34, as applied by Land Tax Act s 19A(4)), s 67(2).
+--
+-- FIGURES. Every amount is read from DI2026-152, which commences on 1 July 2026: the quarters beginning 1 July 2026,
+-- 1 October 2026, 1 January 2027 and 1 April 2027. Another quarter is `not covered`. The s 19 and s 19A interest rate
+-- (TAA s 139) is not deposited: an input. The value of a penalty unit (Legislation Act 2001 s 133) is an input.
+--
+-- Edition: Land Tax Act 2004 A2004-4 R34 (effective 26 December 2025), and DI2026-152 as notified 30 June 2026, in
+-- their own subject folders under subjects/au/act/; Taxation Administration Act 1999 A1999-4 R52 (effective 26 November
+-- 2025).
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Land Tax Act 2004 and the 2026 land tax determination -- seat-neutral core`
+
+§§ `s 9 and DI2026-152 s 6 -- the yearly figures`
+
+-- s 9(1): "Land tax at the appropriate rate is imposed for a quarter on each parcel of rateable land that is residential
+-- land." (3)(b): "FC+(AUV×P)". (4): "AUV means the average unimproved value of the parcel of land under the Rates Act
+-- 2004. FC means the fixed charge determined under the Taxation Administration Act, section 139 for the parcel of land.
+-- P means the percentage rate determined under the Taxation Administration Act, section 139 for the parcel of land."
+-- DI2026-152 s 6: "(a) FC (or fixed charge) is $1,778; and (b) P (or percentage rate) is the amount listed in column 2
+-- of Table 1 opposite the base value listed in column 1." s 3: "base value, of a parcel of land, means -- (a) the AUV of
+-- the parcel; or (b) for a unit -- the AUVRU worked out for the unit."
+`the land tax fixed charge (DI2026-152 s 6(a))` MEANS 1778
+
+-- DI2026-152 Table 1 Percentage rates--land tax:
+--   <= $150 000                     0.54% of the base value
+--   > $150 000, <= $275 000         $810 plus 0.64% of the part of the base value that is more than $150 000
+--   > $275 000, <= $1 000 000       $1,610 plus 1.24% ... more than $275 000
+--   > $1 000 000, <= $2 000 000     $10,600 plus 1.25% ... more than $1 000 000
+--   > $2 000 000                    $23,100 plus 1.26% ... more than $2 000 000
+`DI2026-152 Table 1` MEANS
+    LIST `Table row` WITH `above` IS 2000000, `base` IS 23100, `rate` IS 1.26%
+         `Table row` WITH `above` IS 1000000, `base` IS 10600, `rate` IS 1.25%
+         `Table row` WITH `above` IS 275000,  `base` IS 1610,  `rate` IS 1.24%
+         `Table row` WITH `above` IS 150000,  `base` IS 810,   `rate` IS 0.64%
+         `Table row` WITH `above` IS 0,       `base` IS 0,     `rate` IS 0.54%
+
+-- DI2026-152 s 7: "For the purposes of section 17E (4) of the Act, I determine that P (or percentage rate) is 0.75% of
+-- the base value."
+`the foreign ownership surcharge rate (DI2026-152 s 7)` MEANS 0.75%
+
+§§ `DI2026-152 s 4 -- the amount for a quarter`
+
+-- s 4(1): "a determined amount payable for a quarter is worked out as follows: determined amount × (days in
+-- quarter)/(days in year)". The example: "FC of $1 778 ... The quarter beginning 1 October 2026 has 92 days. The
+-- relevant financial year has 365 days. The determined FC for the quarter is $1 778 × (92)/(365) = $448.15." (2):
+-- "determined amount includes -- (a) FC (or fixed charge) and P (or percentage rate) determined under section 6 ... and
+-- (b) P (or percentage rate) determined under section 7". READING: each determined amount is scaled to the quarter and
+-- rounded to the cent (Land Tax Act s 40(1)) before they are added, as the example rounds the FC (NOTES.md finding 16).
+GIVEN `the yearly amount` IS A NUMBER, `the quarter start` IS A DATE
+GIVETH A NUMBER
+`the amount for the quarter under DI2026-152 s 4 of` `the yearly amount` `starting` `the quarter start` MEANS
+    `to the nearest cent` ((`the yearly amount` TIMES (`the days in the quarter starting` `the quarter start`)) DIVIDED BY `the days in the year 2026-27`)
+
+§§ `ss 7, 8 and 8A -- rented, and payable on the 1st day of a quarter`
+
+-- s 7: "tenancy agreement -- (a) means an agreement under which a person gives someone else, for value, a right of
+-- occupation of a parcel of land for use as a residence ... but (b) does not include an agreement giving a right of
+-- occupation only as a boarder or lodger." s 8(1): "a parcel of land or dwelling is not taken to be rented only because a
+-- tenant is liable to pay for rates, repairs, maintenance or insurance". (2): "a parcel of land or dwelling is taken to
+-- be rented if it is rented on the 1st day of a quarter." s 8A(1): "land tax is payable on a parcel of land for a
+-- quarter if it is payable on the 1st day of the quarter." (2): "... if it is not exempt under this part from land tax
+-- on that day." (3): "If an exemption under this part stops applying to a parcel of land, land tax is payable on the 1st
+-- day of the quarter after the date the exemption stops applying."
+-- Who occupies the parcel on the 1st day of the quarter, and on what terms. A boarder or lodger is not a tenant (s 7);
+-- an occupant who pays only the rates, repairs, maintenance and insurance is not a tenant either (s 8(1)), and is the
+-- s 11H occupant.
+DECLARE `Occupancy on the 1st day of the quarter` IS ONE OF
+    `an owner occupies it as their principal place of residence`
+    `a person with a life or term interest in it under a will occupies it as their principal place of residence`
+    `a person occupies it who pays no rent, or no more than the rates, repairs, maintenance and insurance`
+    `it is rented to a tenant`
+    `no one occupies it`
+
+-- The earlier events from which an exemption runs on into a later quarter (ss 11B, 11C, 11CA, 11D).
+DECLARE `Earlier event` IS ONE OF
+    `none of these`
+    `an owner stopped occupying it as their principal place of residence (s 11B)`
+    `the owner became the owner, to occupy it as their principal place of residence (s 11C)`
+    `it stopped being rented so the owner could occupy it as their principal place of residence (s 11CA)`
+    `the owner who occupied it as their principal place of residence died (s 11D)`
+
+-- Every fact the position for one quarter turns on, for one parcel or unit.
+DECLARE `Land tax quarter` HAS
+    `the first day of the quarter`                                           IS A DATE
+    `kind`                                                                   IS A `Kind of land`
+    `an owner is a corporation or a trustee`                                 IS A BOOLEAN
+    `occupancy`                                                              IS AN `Occupancy on the 1st day of the quarter`
+    `the event`                                                              IS AN `Earlier event`
+    `the date of the event`                                                  IS A DATE
+    `within 3 months after the event the owner occupied it as their principal place of residence` IS A BOOLEAN
+    `within 3 months after the event it was rented to a tenant, other than the seller for up to 3 months` IS A BOOLEAN
+    `since the death it has been registered only in the name of the deceased owner or the personal representative` IS A BOOLEAN
+    `the commissioner has extended the 2-year period after the death to cover the quarter (s 11E)` IS A BOOLEAN
+    `the owner and their domestic partner own more than 1 parcel and the s 11A exemption is taken for another` IS A BOOLEAN
+    `the commissioner is satisfied the owner and their partner have separated, with no reasonable likelihood of resuming cohabitation` IS A BOOLEAN
+    `the commissioner is satisfied the parcel became unfit for occupation as a place of residence (s 11I)` IS A BOOLEAN
+    `a certificate of occupancy was issued for it, on`                       IS A MAYBE DATE
+    `the commissioner is satisfied it is fit for occupation again`           IS A BOOLEAN
+    `the commissioner has exempted it on compassionate grounds for a period including the quarter (s 13)` IS A BOOLEAN
+    `it has more than 1 dwelling, one occupied as in s 15(1)(b) and another rented to a tenant` IS A BOOLEAN
+
+DECLARE `Land tax exemption` IS ONE OF
+    `s 11A: an owner's principal place of residence`
+    `s 11B: the 1st quarter after an owner moved out (and it is not rented)`
+    `s 11C: the 1st quarter after becoming the owner, to move in`
+    `s 11CA: the 1st quarter after a rental ended, to move in`
+    `s 11D: 2 years after the death of the owner who lived there (or as extended)`
+    `s 11G: a life tenant's principal place of residence`
+    `s 11H: occupied rent-free, or for no more than the outgoings`
+    `s 11I: unfit for occupation as a place of residence`
+    `s 13: a compassionate exemption`
+
+DECLARE `Land tax position` IS ONE OF
+    `land tax is payable for the quarter (s 9)`
+    `land tax is payable on the rented dwelling's share (s 15)`
+    `exempt` HAS `under` IS A `Land tax exemption`
+
+GIVEN `q` IS A `Land tax quarter`
+GIVETH A MAYBE `Why not covered`
+`the gap for the quarter` `q` MEANS
+    BRANCH
+        IF NOT (`q`'s `the first day of the quarter` `is the first day of a quarter of 2026-27`)
+        THEN JUST `the day is outside the year 1 July 2026 to 30 June 2027: only the 2026 determinations are deposited`
+        IF `q`'s `an owner is a corporation or a trustee`
+        THEN JUST `land owned, wholly or partly, by a corporation or a trustee (Rates Act s 20A(2), Land Tax Act ss 16 and 27(5)) is not encoded`
+        OTHERWISE `the gap for the kind of land` (`q`'s `kind`)
+
+GIVEN `q` IS A `Land tax quarter`
+GIVETH A BOOLEAN
+DECIDE `it is rented on the 1st day of` `q` IF
+    `q`'s `occupancy` EQUALS `it is rented to a tenant`
+
+GIVEN `q` IS A `Land tax quarter`
+GIVETH A BOOLEAN
+DECIDE `the quarter is the 1st quarter after the event in` `q` IF
+    (`q`'s `the first day of the quarter`) `is the same day as` (`the first day of the quarter after` (`q`'s `the date of the event`))
+
+-- s 11A(1): "This section applies if a parcel of land is, on the 1st day of a quarter -- (a) owned by someone other than
+-- a corporation or trustee; and (b) occupied as the principal place of residence of 1 or more owners of the parcel of
+-- land. (2) The parcel of land is exempt from land tax. (3) However, for 2 people in a domestic partnership with more
+-- than 1 parcel of land, only 1 parcel may be eligible for an exemption under this section unless the commissioner is
+-- satisfied the people have separated and there is no reasonable likelihood of cohabitation being resumed."
+GIVEN `q` IS A `Land tax quarter`
+GIVETH A BOOLEAN
+DECIDE `s 11A exempts` `q` IF
+        `q`'s `occupancy` EQUALS `an owner occupies it as their principal place of residence`
+    AND (    NOT (`q`'s `the owner and their domestic partner own more than 1 parcel and the s 11A exemption is taken for another`)
+         OR  `q`'s `the commissioner is satisfied the owner and their partner have separated, with no reasonable likelihood of resuming cohabitation`)
+
+-- s 11B(1): "This section applies if an owner of a parcel of land ... (a) occupies the parcel as the principal place of
+-- residence; and (b) stops occupying the parcel as the principal place of residence. (2) The parcel of land is exempt
+-- from land tax for the 1st quarter after the date the owner stops occupying the parcel as the principal place of
+-- residence. ... (3) Subsection (2) does not apply if the parcel of land is rented by a tenant." READING: "rented" as on
+-- the 1st day of that quarter (s 8(2)).
+GIVEN `q` IS A `Land tax quarter`
+GIVETH A BOOLEAN
+DECIDE `s 11B exempts` `q` IF
+        `q`'s `the event` EQUALS `an owner stopped occupying it as their principal place of residence (s 11B)`
+    AND `the quarter is the 1st quarter after the event in` `q`
+    AND NOT (`it is rented on the 1st day of` `q`)
+
+-- s 11C(1): "This section applies if a person, other than a corporation or trustee, becomes the owner (the new owner) of
+-- a parcel of land, to be occupied by the new owner as their principal place of residence. (2) The parcel of land is
+-- exempt from land tax for the 1st quarter after the date the new owner becomes the owner of the parcel. ... (3)
+-- Subsection (2) does not apply if, within 3 months after the date the new owner becomes the owner of the parcel -- (a)
+-- the new owner does not occupy the parcel as their principal place of residence; or (b) the parcel is rented by a
+-- tenant, other than the seller of the parcel under an agreement with the new owner for a period of not longer than 3
+-- months."
+GIVEN `q` IS A `Land tax quarter`
+GIVETH A BOOLEAN
+DECIDE `s 11C exempts` `q` IF
+        `q`'s `the event` EQUALS `the owner became the owner, to occupy it as their principal place of residence (s 11C)`
+    AND `the quarter is the 1st quarter after the event in` `q`
+    AND `q`'s `within 3 months after the event the owner occupied it as their principal place of residence`
+    AND NOT (`q`'s `within 3 months after the event it was rented to a tenant, other than the seller for up to 3 months`)
+
+-- s 11CA(1): "This section applies if a parcel of land ... stops being rented so it can be occupied by the owner of the
+-- parcel as their principal place of residence. (2) The parcel of land is exempt from land tax for the 1st quarter after
+-- the date the parcel stopped being rented. ... (3) Subsection (2) does not apply if, within 3 months after the date the
+-- parcel stopped being rented -- (a) the owner does not occupy the parcel as their principal place of residence; or (b)
+-- the parcel is rented by a tenant."
+GIVEN `q` IS A `Land tax quarter`
+GIVETH A BOOLEAN
+DECIDE `s 11CA exempts` `q` IF
+        `q`'s `the event` EQUALS `it stopped being rented so the owner could occupy it as their principal place of residence (s 11CA)`
+    AND `the quarter is the 1st quarter after the event in` `q`
+    AND `q`'s `within 3 months after the event the owner occupied it as their principal place of residence`
+    AND NOT (`q`'s `within 3 months after the event it was rented to a tenant, other than the seller for up to 3 months`)
+
+-- s 11D(1): "This section applies if -- (a) a parcel of land, other than a parcel of land owned by a corporation or
+-- trustee, is occupied as the principal place of residence by the owner of the parcel; and (b) the owner dies. (2) The
+-- parcel of land is exempt from land tax for 2 years after the date of the owner's death if, during the 2-year period,
+-- the parcel is registered in the name of -- (a) the deceased owner; or (b) the personal representative." s 11E(1): the
+-- commissioner "may extend the period" (a FACT). READING: a quarter is within the 2 years if its 1st day is before the
+-- second anniversary of the death.
+GIVEN `q` IS A `Land tax quarter`
+GIVETH A BOOLEAN
+DECIDE `s 11D exempts` `q` IF
+        `q`'s `the event` EQUALS `the owner who occupied it as their principal place of residence died (s 11D)`
+    AND `q`'s `since the death it has been registered only in the name of the deceased owner or the personal representative`
+    AND (    DATE_SERIAL (`q`'s `the first day of the quarter`) LESS THAN DATE_SERIAL (`the date` 24 `months after` (`q`'s `the date of the event`))
+         OR  `q`'s `the commissioner has extended the 2-year period after the death to cover the quarter (s 11E)`)
+
+-- s 11G(1): "This section applies if a parcel of land is, on the 1st day of a quarter -- (a) owned by someone other than
+-- a corporation or trustee; and (b) occupied as the principal place of residence of a person having a life or term
+-- interest in the parcel of land under a will. (2) The parcel of land is exempt from land tax. (3) Subsection (2) does
+-- not apply if the parcel of land is rented to the person or another person."
+-- s 11H(1): "This section applies if a parcel of land is, on the 1st day of a quarter -- (a) owned by someone other than
+-- a corporation or trustee; and (b) occupied by a person who -- (i) is liable only to pay an amount that is not more
+-- than the total amount required for rates, repairs, maintenance and insurance in relation to the parcel; or (ii) pays
+-- no rent for the parcel. (2) The parcel of land is exempt from land tax."
+-- s 11I(1): "This section applies if the commissioner is satisfied that a parcel of land is, or has become, unfit for
+-- occupation as a place of residence." (2): "exempt from land tax after the date the parcel became unfit ..., until --
+-- (a) the end of the quarter following the quarter in which a certificate of occupancy is issued for the parcel; or (b)
+-- the commissioner is satisfied that the parcel is fit for occupation as a place of residence. (3) Subsection (2) does
+-- not apply if the parcel of land is rented by a tenant."
+GIVEN `q` IS A `Land tax quarter`
+GIVETH A BOOLEAN
+DECIDE `s 11I exempts` `q` IF
+        `q`'s `the commissioner is satisfied the parcel became unfit for occupation as a place of residence (s 11I)`
+    AND NOT (`q`'s `the commissioner is satisfied it is fit for occupation again`)
+    AND NOT (`it is rented on the 1st day of` `q`)
+    AND `the certificate period has not ended`
+    WHERE
+        `the certificate period has not ended` MEANS
+            CONSIDER `q`'s `a certificate of occupancy was issued for it, on`
+            WHEN NOTHING THEN TRUE
+            WHEN JUST `the day issued` THEN
+                (`q`'s `the first day of the quarter`) `is on or before` (`the first day of the quarter after` `the day issued`)
+
+-- s 15(1): "This section applies if -- (a) a parcel of residential land owned by someone other than a corporation or
+-- trustee contains multiple dwellings; and (b) at least 1 of the dwellings is occupied -- (i) as the principal place of
+-- residence of 1 or more owners ...; or (ii) as the principal place of residence of a person having a life or term
+-- interest in the parcel of land under a will; or (iii) by a person who pays no rent ...; and (c) at least 1 of the
+-- dwellings is rented by a tenant. (2) Section 10 ... and section 11 ... do not apply to the parcel of land."
+GIVEN `q` IS A `Land tax quarter`
+GIVETH A BOOLEAN
+DECIDE `s 15 applies to` `q` IF
+    `q`'s `it has more than 1 dwelling, one occupied as in s 15(1)(b) and another rented to a tenant`
+
+-- s 9(2): "land tax is not imposed on a parcel of land that is exempt under section 10 or section 11." s 10(1)(a) lists
+-- the exemptions of ss 11A-11I; (b) "a parcel of residential land owned by an individual if the parcel is exempted under
+-- section 13 (Decision on compassionate application)" (the decision is a FACT).
+GIVEN `q` IS A `Land tax quarter`
+GIVETH AN `Answer` `Land tax position`
+`the land tax position for` `q` MEANS
+    CONSIDER `the gap for the quarter` `q`
+    WHEN JUST `gap` THEN `not covered` `gap`
+    WHEN NOTHING THEN `answered` `the position`
+    WHERE
+        `the position` MEANS
+            BRANCH
+                IF `s 15 applies to` `q` THEN `land tax is payable on the rented dwelling's share (s 15)`
+                IF `s 11A exempts` `q` THEN `exempt` `s 11A: an owner's principal place of residence`
+                IF `q`'s `occupancy` EQUALS `a person with a life or term interest in it under a will occupies it as their principal place of residence`
+                THEN `exempt` `s 11G: a life tenant's principal place of residence`
+                IF `q`'s `occupancy` EQUALS `a person occupies it who pays no rent, or no more than the rates, repairs, maintenance and insurance`
+                THEN `exempt` `s 11H: occupied rent-free, or for no more than the outgoings`
+                IF `s 11B exempts` `q` THEN `exempt` `s 11B: the 1st quarter after an owner moved out (and it is not rented)`
+                IF `s 11C exempts` `q` THEN `exempt` `s 11C: the 1st quarter after becoming the owner, to move in`
+                IF `s 11CA exempts` `q` THEN `exempt` `s 11CA: the 1st quarter after a rental ended, to move in`
+                IF `s 11D exempts` `q` THEN `exempt` `s 11D: 2 years after the death of the owner who lived there (or as extended)`
+                IF `s 11I exempts` `q` THEN `exempt` `s 11I: unfit for occupation as a place of residence`
+                IF `q`'s `the commissioner has exempted it on compassionate grounds for a period including the quarter (s 13)`
+                THEN `exempt` `s 13: a compassionate exemption`
+                OTHERWISE `land tax is payable for the quarter (s 9)`
+
+GIVEN `the position` IS A `Land tax position`
+GIVETH A BOOLEAN
+DECIDE `land tax is payable in` `the position` IF
+    CONSIDER `the position`
+    WHEN `exempt` `e` THEN FALSE
+    OTHERWISE TRUE
+
+§§ `ss 9, 15 and 27 -- the land tax for a quarter`
+
+-- What the amount turns on. The floor areas are read only under s 15 or s 27(4); the unit entitlements only for a unit.
+-- s 15(5): "FA means the floor area of the rented dwelling. ... TFA means the total floor area of all dwellings on the
+-- parcel of land." s 27(7): "FA means the floor area of the dwelling that is rented. ... TFA means the total floor area
+-- of the unit."
+DECLARE `Land tax parcel` HAS
+    `the unimproved values as at 1 January, most recent first` IS A LIST OF NUMBER
+    `the unit entitlements`                                    IS A `Unit entitlements`
+    `FA`                                                       IS A NUMBER
+    `TFA`                                                      IS A NUMBER
+
+GIVEN `p` IS A `Land tax parcel`
+GIVETH A NUMBER
+`the parcel AUV of` `p` MEANS
+    CONSIDER `the average unimproved value under s 13A of` (`p`'s `the unimproved values as at 1 January, most recent first`)
+    WHEN JUST `auv` THEN `auv`
+    WHEN NOTHING THEN 0
+
+-- The yearly fixed part and variable part, before DI2026-152 s 4 scales them to the quarter.
+-- s 9(3)(b): FC + (AUV × P), P the Table 1 amount on the AUV.
+-- s 15(3): "the AUV of the parcel of land is the amount worked out as follows: AUV × (FA)/(TFA)"; (4): "the FC for the
+-- parcel of land is ... FC × (FA)/(TFA)". Land Tax Act s 40(2): "in working out the average unimproved value under
+-- section 15 (3) ... or section 27 (4), (5) or (6) ..., any fraction of a dollar in the amount worked out must be
+-- disregarded."
+-- s 27(6): "FC + (AUVRUP × (UE)/(TUER))", AUVRUP = AUVRU × P, P the Table 1 amount on the base value AUVRU.
+-- s 27(4): "(FC × (FA)/(TFA)) + (AUVRUP × (UE)/(TUER) × (FA)/(TFA))" for a unit with multiple dwellings, one occupied
+-- as in s 27(4)(c) and one rented.
+DECLARE `Yearly land tax parts` HAS
+    `fixed part`    IS A NUMBER
+    `variable part` IS A NUMBER
+
+GIVEN `is a unit` IS A BOOLEAN, `under s 15` IS A BOOLEAN, `p` IS A `Land tax parcel`
+GIVETH A `Yearly land tax parts`
+`the yearly land tax parts for` `is a unit` `with s 15` `under s 15` `on` `p` MEANS
+    IF `is a unit`
+    THEN `Yearly land tax parts` WITH
+             `fixed part`    IS `the land tax fixed charge (DI2026-152 s 6(a))` TIMES `the floor share`
+             `variable part` IS ((`the column 2 amount in` `DI2026-152 Table 1` `for` (`AUVRU for` `AUV` `and` (`p`'s `the unit entitlements`))) TIMES ((`p`'s `the unit entitlements`'s `UE`) DIVIDED BY (`p`'s `the unit entitlements`'s `TUER`))) TIMES `the floor share`
+    ELSE `Yearly land tax parts` WITH
+             `fixed part`    IS `the land tax fixed charge (DI2026-152 s 6(a))` TIMES `the floor share`
+             `variable part` IS `the column 2 amount in` `DI2026-152 Table 1` `for` (IF `under s 15` THEN `with any fraction of a dollar disregarded` (`AUV` TIMES `the floor share`) ELSE `AUV`)
+    WHERE
+        `AUV` MEANS `the parcel AUV of` `p`
+        `the floor share` MEANS
+            IF `under s 15` AND `p`'s `TFA` GREATER THAN 0
+            THEN (`p`'s `FA`) DIVIDED BY (`p`'s `TFA`)
+            ELSE 1
+
+-- The land tax for the quarter: nil if exempt; otherwise each part scaled by DI2026-152 s 4 and added.
+GIVEN `q` IS A `Land tax quarter`, `p` IS A `Land tax parcel`
+GIVETH AN `Answer` NUMBER
+`the land tax for the quarter of` `q` `on` `p` MEANS
+    CONSIDER `the land tax position for` `q`
+    WHEN `not covered` `gap` THEN `not covered` `gap`
+    WHEN `answered` `the position` THEN
+        IF NOT (`land tax is payable in` `the position`)
+        THEN `answered` 0
+        ELSE `answered` ((`the amount for the quarter under DI2026-152 s 4 of` (`the parts`'s `fixed part`) `starting` (`q`'s `the first day of the quarter`))
+                        PLUS (`the amount for the quarter under DI2026-152 s 4 of` (`the parts`'s `variable part`) `starting` (`q`'s `the first day of the quarter`)))
+            WHERE
+                `the parts` MEANS `the yearly land tax parts for` (`q`'s `kind` EQUALS `a residential unit in a units plan`) `with s 15` (`the position` EQUALS `land tax is payable on the rented dwelling's share (s 15)`) `on` `p`
+
+-- The first quarter for which land tax is payable after an owner moves out of their home and leaves it rented or empty
+-- (ss 8A(3), 11B). The 1st quarter after the date is exempt under s 11B unless it is rented on its 1st day; the next is
+-- not exempt (an empty home is not exempt either: s 9(1) imposes land tax on each parcel of residential land, and none
+-- of ss 10-11I exempts one that no one occupies).
+GIVEN `the day the owner moved out` IS A DATE, `rented on the 1st day of the next quarter` IS A BOOLEAN
+GIVETH A DATE
+`the first quarter of land tax after moving out on` `the day the owner moved out` `when rented at the next quarter` `rented on the 1st day of the next quarter` MEANS
+    IF `rented on the 1st day of the next quarter`
+    THEN `the next quarter`
+    ELSE `the date` 3 `months after` `the next quarter`
+    WHERE
+        `the next quarter` MEANS `the first day of the quarter after` `the day the owner moved out`
+
+§§ `Part 2A -- the foreign ownership surcharge`
+
+-- s 17A: "foreign individual means an individual who, on the 1st day of a quarter, is not -- (a) an Australian citizen;
+-- or (b) a permanent resident; or (c) ordinarily resident in Australia or an external territory." "foreign person -- (a)
+-- means -- (i) a foreign individual; ... but (b) does not include a personal representative of a deceased person."
+-- "permanent resident means -- (a) a person who holds a permanent visa under the Migration Act 1958 (Cwlth), section 30
+-- (1); or (b) a New Zealand citizen who holds a special category visa under the Migration Act 1958 (Cwlth), section 32."
+-- The three statuses are FACTS (borrowed terms). READING: "is not (a) ...; or (b) ...; or (c) ..." means none of them,
+-- so a person ordinarily resident in Australia is not a foreign individual whatever their visa (NOTES.md finding 19).
+-- Foreign corporations and trusts (ss 17B, 17C) are outside the seat.
+DECLARE `Residence facts` HAS
+    `an Australian citizen`                                                        IS A BOOLEAN
+    `a permanent resident (a permanent visa, or a New Zealand citizen with a special category visa)` IS A BOOLEAN
+    `ordinarily resident in Australia or an external territory`                    IS A BOOLEAN
+
+GIVEN `r` IS A `Residence facts`
+GIVETH A BOOLEAN
+DECIDE `is a foreign individual under s 17A` `r` IF
+        NOT (`r`'s `an Australian citizen`)
+    AND NOT (`r`'s `a permanent resident (a permanent visa, or a New Zealand citizen with a special category visa)`)
+    AND NOT (`r`'s `ordinarily resident in Australia or an external territory`)
+
+-- s 17E(1): the surcharge "is imposed for a quarter on each parcel of rateable land that is -- (a) residential land;
+-- and (b) on the 1st day of the quarter, owned by a foreign person." (2): "However, a foreign ownership surcharge is not
+-- imposed on a parcel of land that is exempt under -- (a) section 10 ..., other than section 10 (1) (a) (vii); or (b)
+-- section 11". s 10(1)(a)(vii) is s 11H (nil or nominal rent). (3): "(a) for a unit that is part of a unit subdivision
+-- -- ... AUVRUP× (UE)/(TUER); or (b) in any other case -- ... AUV×P". s 17F(2): where the parcel is owned by foreign and
+-- other people, the amount is multiplied by "(FI)/(AI)", "FI means the value of all interests in the parcel or unit held
+-- by foreign people", "AI means the value of all interests in the parcel of land."
+-- INFERENCE: where s 15 applies, s 15(2) disapplies ss 10 and 11 to the parcel, so the surcharge falls on the whole AUV
+-- (s 15 changes only the land tax AUV and FC).
+GIVEN `the position` IS A `Land tax position`
+GIVETH A BOOLEAN
+DECIDE `the surcharge is imposed in` `the position` IF
+    CONSIDER `the position`
+    WHEN `exempt` `e` THEN `e` EQUALS `s 11H: occupied rent-free, or for no more than the outgoings`
+    OTHERWISE TRUE
+
+GIVEN `q` IS A `Land tax quarter`, `p` IS A `Land tax parcel`, `the foreign share` IS A NUMBER
+GIVETH AN `Answer` NUMBER
+`the foreign ownership surcharge for the quarter of` `q` `on` `p` `with a foreign share of` `the foreign share` MEANS
+    CONSIDER `the land tax position for` `q`
+    WHEN `not covered` `gap` THEN `not covered` `gap`
+    WHEN `answered` `the position` THEN
+        IF NOT (`the surcharge is imposed in` `the position`) OR `the foreign share` AT MOST 0
+        THEN `answered` 0
+        ELSE `answered` (`the amount for the quarter under DI2026-152 s 4 of` (`the yearly surcharge` TIMES `the foreign share`) `starting` (`q`'s `the first day of the quarter`))
+    WHERE
+        `AUV` MEANS `the parcel AUV of` `p`
+        `the yearly surcharge` MEANS
+            IF `q`'s `kind` EQUALS `a residential unit in a units plan`
+            THEN ((`AUVRU for` `AUV` `and` (`p`'s `the unit entitlements`)) TIMES `the foreign ownership surcharge rate (DI2026-152 s 7)`) TIMES ((`p`'s `the unit entitlements`'s `UE`) DIVIDED BY (`p`'s `the unit entitlements`'s `TUER`))
+            ELSE `AUV` TIMES `the foreign ownership surcharge rate (DI2026-152 s 7)`
+
+§§ `s 14 -- the commissioner must be told of a change`
+
+-- s 14(1): "This section applies in relation to a parcel of land that is leased for residential purposes if -- (a) land
+-- tax or a foreign ownership surcharge is not imposed on the parcel; or (b) the parcel is exempt from land tax or a
+-- foreign ownership surcharge. (2) A relevant person for the parcel of land must tell the commissioner -- (a) of any
+-- change in circumstances in relation to the parcel that would cause land tax or a foreign ownership surcharge to
+-- become payable for the parcel; and (b) the date of the change in circumstances." (3): "... not later than 30 days
+-- after the date the circumstances change." (4): "relevant person ... means -- (a) the owner of the parcel of land; or
+-- (b) if the owner has authorised an agent to act on the owner's behalf in relation to the parcel -- the agent; or (c)
+-- if the owner has died -- the personal representative." s 14 states no penalty. Note 1: "It is an offence to fail to
+-- notify the commissioner under this section (see Taxation Administration Act, s 67 (2))" -- TAA s 67(2): "Maximum
+-- penalty: 50 penalty units." s 19A: if "the owner of the parcel of land fails to comply with section 14", interest runs
+-- "from the end of 30 days after the 1st day of the 1st quarter for which the tax is imposed" and TAA div 5.2 (penalty
+-- tax) applies "as if -- (a) the owner's failure to comply with section 14 were a tax default". Clock: days from the date
+-- of the change.
+`the days to tell the commissioner (s 14(3))` MEANS 30
+`the maximum penalty under TAA s 67(2), in penalty units` MEANS 50
+
+GIVEN `the relevant person` IS A `Party`
+GIVETH A DEONTIC `Party` `Act done`
+DECIDE `s 14 -- a relevant person must tell the commissioner within 30 days of a change that makes land tax payable` IS
+    PARTY `the relevant person`
+    MUST  `tell the commissioner of the change in circumstances and its date`
+    WITHIN `the days to tell the commissioner (s 14(3))`
+    LEST  BREACH BY `the relevant person` BECAUSE "Land Tax Act s 14(2)-(3): the commissioner was not told of the change within 30 days; TAA s 67(2): maximum penalty 50 penalty units; s 19A: the owner pays interest from 30 days after the 1st day of the 1st quarter of the tax, and penalty tax under TAA div 5.2"
+
+-- s 19A(2): "The owner is liable to pay interest on the amount of land tax from the end of 30 days after the 1st day of
+-- the 1st quarter for which the tax is imposed." (3): interest "for each month that the amount is payable; and (b) on
+-- the 1st day of that month; and (c) at the interest rate applying to that day; and (d) on the total amount of land tax
+-- that is payable". FINDING: s 19A has no counterpart of s 19(2) (a part of a month counts as a whole month). READING:
+-- the months are counted as under s 19 (NOTES.md finding 21).
+GIVEN `the 1st day of the 1st quarter of the tax` IS A DATE
+GIVETH A DATE
+`the day s 19A interest runs to the end of, for a quarter starting` `the 1st day of the 1st quarter of the tax` MEANS
+    `the day that is` 30 `days after` `the 1st day of the 1st quarter of the tax`
+
+-- TAA div 5.2 as s 19A(4) applies it: "a reference to the amount of tax unpaid were a reference to the amount of land
+-- tax payable". s 31(1): "25% of the amount of tax unpaid"; (2) up to 50% (delay, incorrect information, a second
+-- default); (4) up to 75% (intentional disregard); (5) none if the commissioner is satisfied of reasonable care or
+-- circumstances beyond the taxpayer's control. s 32: "reduced by 80% if, before the commissioner informs the taxpayer
+-- that an investigation ... is to be carried out, the taxpayer discloses"; s 33: "reduced by 20%" if disclosed after
+-- being told and before it is begun; s 34: 90% for concealment; s 35: "No penalty tax is payable if the amount that
+-- would otherwise be payable is less than $20." What the commissioner is satisfied of is a FACT.
+DECLARE `What the commissioner is satisfied of` IS ONE OF
+    `reasonable care, or circumstances beyond the owner's control (TAA s 31(5))`
+    `nothing more than the default (TAA s 31(1))`
+    `delay, incorrect or incomplete information, or a second default (TAA s 31(2))`
+    `intentional disregard of a tax law (TAA s 31(4))`
+    `concealment after being told of an investigation (TAA s 34)`
+
+DECLARE `Disclosure` IS ONE OF
+    `no disclosure`
+    `disclosure in writing before being told of an investigation (TAA s 32)`
+    `disclosure in writing after being told of an investigation, before it began (TAA s 33)`
+
+GIVEN `the finding` IS A `What the commissioner is satisfied of`
+GIVETH A NUMBER
+`the basic penalty tax percentage for` `the finding` MEANS
+    CONSIDER `the finding`
+    WHEN `reasonable care, or circumstances beyond the owner's control (TAA s 31(5))` THEN 0
+    WHEN `nothing more than the default (TAA s 31(1))` THEN 25
+    WHEN `delay, incorrect or incomplete information, or a second default (TAA s 31(2))` THEN 50
+    WHEN `intentional disregard of a tax law (TAA s 31(4))` THEN 75
+    WHEN `concealment after being told of an investigation (TAA s 34)` THEN 90
+
+-- Table 34: basic 0/25/50/75/90; voluntary disclosure 0/5/10/15/90; disclosure before investigation 0/20/40/60/90.
+GIVEN `the finding` IS A `What the commissioner is satisfied of`, `the disclosure` IS A `Disclosure`
+GIVETH A NUMBER
+`the penalty tax percentage under table 34 for` `the finding` `with` `the disclosure` MEANS
+    IF `the finding` EQUALS `concealment after being told of an investigation (TAA s 34)`
+    THEN 90
+    ELSE CONSIDER `the disclosure`
+         WHEN `no disclosure` THEN `the basic penalty tax percentage for` `the finding`
+         WHEN `disclosure in writing before being told of an investigation (TAA s 32)` THEN
+             (`the basic penalty tax percentage for` `the finding` TIMES 20) DIVIDED BY 100
+         WHEN `disclosure in writing after being told of an investigation, before it began (TAA s 33)` THEN
+             (`the basic penalty tax percentage for` `the finding` TIMES 80) DIVIDED BY 100
+
+GIVEN `the land tax payable` IS A NUMBER, `the finding` IS A `What the commissioner is satisfied of`, `the disclosure` IS A `Disclosure`
+GIVETH A NUMBER
+`the penalty tax under s 19A(4) on` `the land tax payable` `for` `the finding` `with` `the disclosure` MEANS
+    IF `the amount` LESS THAN 20 THEN 0 ELSE `to the nearest cent` `the amount`
+    WHERE
+        `the amount` MEANS (`the land tax payable` TIMES `the penalty tax percentage under table 34 for` `the finding` `with` `the disclosure`) DIVIDED BY 100
+
+§§ `s 17 -- payment`
+
+-- s 17(1): "Land tax in relation to a parcel of land is payable to the commissioner by the owner of the parcel." (2): the
+-- owner is liable for unpaid land tax "whether the amount became payable before or after the person became the owner".
+-- (4): "The assessment notice for the land tax payable for a quarter ... must state a date for payment of the land tax
+-- (the payment date). (5) The payment date must not be earlier than 4 weeks after the date of the notice." (6): the
+-- owner may pay "(a) ... on or before the date for the payment ..., the amount of the land tax; or (b) by paying the
+-- amounts on the days that the person wishes, but so that the amount owing on the date for payment is paid no later
+-- than the date for payment." Clock: days from the date of the notice. LEST: s 19 interest for each month or part of a
+-- month (TAA s 25 does not apply, s 19(3)).
+GIVEN `the payment date` IS A DATE, `the notice date` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the payment date` `is a lawful land tax payment date for a notice dated` `the notice date` IF
+    (`the day that is` 28 `days after` `the notice date`) `is on or before` `the payment date`
+
+GIVEN `days to the payment date` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act done`
+DECIDE `s 17 -- the owner must pay the land tax by the payment date` IS
+    PARTY `the owner`
+    MUST  `pay the land tax`
+    WITHIN `days to the payment date`
+    LEST  BREACH BY `the owner` BECAUSE "Land Tax Act s 17: the land tax was not paid by the payment date; s 19: interest for each month or part of a month it remains unpaid (TAA s 25 does not apply, s 19(3))"
+
+§§ `s 11D(3) -- extending the exemption after a death`
+
+-- s 11D(3): "Before the 2-year period ends, the personal representative may apply, in writing, to the commissioner to
+-- extend the period. (4) The application must set out the grounds on which it is made." s 11E(1): "On receiving an
+-- application under section 11D, the commissioner may extend the period". s 11E(3): the commissioner "must tell the
+-- personal representative, in writing, of the decision". s 11F: the commissioner may allow a later application. Clock:
+-- days from the owner's death; the seat works out the days to the second anniversary.
+GIVEN `days to the end of the 2-year period` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act done`
+DECIDE `s 11D(3) -- the personal representative may apply before the 2 years end to extend the exemption` IS
+    PARTY `the personal representative`
+    DO    `apply in writing to extend the 2-year period`
+    WITHIN `days to the end of the 2-year period`
+    HENCE
+        (PARTY `the commissioner`
+         MUST  `decide whether to extend the period`)
+    LEST  FULFILLED

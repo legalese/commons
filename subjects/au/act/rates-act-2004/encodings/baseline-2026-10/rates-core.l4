@@ -1,0 +1,684 @@
+IMPORT prelude
+IMPORT `rates-shared`
+
+-- Rates Act 2004 (ACT), with the Taxation Administration (Amounts Payable--Rates) Determination 2026 (DI2026-150) and
+-- the Rates (Age 65 or Over--Rates Deferral) Determination 2026 (DI2026-144): general rates and levies on a residential
+-- parcel or unit for 2026-27, the pensioner rebate and the deferral of rates.
+--
+-- SEAT-NEUTRAL CORE. The rules are written in the Act's own actors and terms: "the owner", "an eligible person", "a
+-- pensioner", "the commissioner". The owner's questions are in rates-seat.l4, which IMPORTs this module and restates no
+-- rule.
+--
+-- PROVISIONS COVERED.
+--   Rates Act 2004: s 13A (in rates-shared.l4); s 14(1)-(3); s 15(1)-(2); s 16; s 17 and s 19 (a regulative rule);
+--   s 18(1); s 20, s 20A(1); s 21 (in rates-shared.l4); s 29(3)-(5) (a residential unit); s 45 (eligible person,
+--   pensioner, owner); div 7.2: s 46(1)-(2), (5), s 48, s 49, s 51, s 52(1), s 55(2), (4); div 7.3: s 60, s 61, s 62,
+--   s 63, s 64, s 65, s 67 (a regulative rule), s 69; s 74 (in rates-shared.l4); sch 1 ss 1.1(1), 1.3, 2.1, 2.1A,
+--   2.1B, 3.2.
+--   DI2026-150: s 4, s 5(1)(a)(i)-(ii), (b)(i)-(ii), Tables 1 and 2, s 6, s 7(1)(a), s 9, s 10.
+--   DI2026-144: s 4 (the determined percentage, 75%).
+--   Taxation Administration Act 1999: s 26 (the market rate component, an input), s 27(2)(c).
+--
+-- FIGURES. Every amount is read from DI2026-150 and DI2026-144, which commence on 1 July 2026, for the year 1 July 2026
+-- to 30 June 2027. Two figures the Act needs are not in them and not deposited: the s 18(3) discount rate (none is
+-- determined in DI2026-150, so none is applied) and the s 21 interest rate (an input). The TAA s 26 market rate
+-- component (for deferred rates, s 48(3)) is an input.
+--
+-- Edition: Rates Act 2004 A2004-3 R45 (effective 26 December 2025), ../../registers/source-bundle/A2004-3.txt;
+-- DI2026-150 as notified 30 June 2026 and DI2026-144 as notified 29 June 2026, both commencing 1 July 2026, in their own
+-- subject folders under subjects/au/act/.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Rates Act 2004 and the 2026 rates determinations -- seat-neutral core`
+
+§§ `The parcel`
+
+-- One case is one parcel of rateable land (or, for a unit subdivision, one unit: s 28(2)(a)) for one year.
+-- The unimproved values are facts (pt 2 is out of scope); the unit entitlements are read only for a unit.
+-- s 15(4): "rateable days means the number of days in the year that the parcel of land was a rateable parcel."
+DECLARE `Rateable parcel` HAS
+    `kind`                                                     IS A `Kind of land`
+    `the unimproved values as at 1 January, most recent first` IS A LIST OF NUMBER
+    `the unit entitlements`                                    IS A `Unit entitlements`
+    `rateable days in the year`                                IS A NUMBER
+    `an owner is a corporation or a trustee`                   IS A BOOLEAN
+
+GIVEN `the parcel` IS A `Rateable parcel`
+GIVETH A MAYBE `Why not covered`
+`the gap for the parcel` `the parcel` MEANS
+    IF `the parcel`'s `an owner is a corporation or a trustee`
+    THEN JUST `land owned, wholly or partly, by a corporation or a trustee (Rates Act s 20A(2), Land Tax Act ss 16 and 27(5)) is not encoded`
+    ELSE CONSIDER `the gap for the kind of land` (`the parcel`'s `kind`)
+         WHEN JUST `gap` THEN JUST `gap`
+         WHEN NOTHING THEN
+             CONSIDER `the average unimproved value under s 13A of` (`the parcel`'s `the unimproved values as at 1 January, most recent first`)
+             WHEN NOTHING THEN JUST `no unimproved value of the parcel was given (the valuation, Rates Act pt 2, is out of scope)`
+             WHEN JUST `auv` THEN NOTHING
+
+GIVEN `the parcel` IS A `Rateable parcel`
+GIVETH A NUMBER
+`the AUV of` `the parcel` MEANS
+    CONSIDER `the average unimproved value under s 13A of` (`the parcel`'s `the unimproved values as at 1 January, most recent first`)
+    WHEN JUST `auv` THEN `auv`
+    WHEN NOTHING THEN 0
+
+§§ `s 14 and DI2026-150 s 5 -- the rates on residential land`
+
+-- s 14(1): "Rates of the fixed charge are imposed for a parcel of rateable land." (2): "Rates are imposed for a parcel
+-- of rateable land in accordance with -- (a) if section 29 (3) applies -- the formula that applies under section 29 (4);
+-- or (b) in any other case -- the following formula: FC+(AUV×P)". (3): "FC (or fixed charge) means the fixed charge
+-- determined under the Taxation Administration Act, section 139 for the parcel. P means the percentage rate determined
+-- under the Taxation Administration Act, section 139 for the parcel."
+-- DI2026-150 s 5(1)(a): "FC (or fixed charge) is -- (i) for residential land $884 per year; and (ii) for residential
+-- units $943 per year".
+`the fixed charge for residential land (DI2026-150 s 5(1)(a)(i))` MEANS 884
+`the fixed charge for residential units (DI2026-150 s 5(1)(a)(ii))` MEANS 943
+
+-- DI2026-150 s 5(1)(b)(i), Table 1 Percentage rates--residential land:
+--   <= $150 000                     0.2842% of the base value
+--   > $150 000, <= $300 000         $426.30 plus 0.3676% of the part of the base value that is more than $150 000
+--   > $300 000, <= $450 000         $977.70 plus 0.4545% ... more than $300 000
+--   > $450 000, <= $600 000         $1,659.45 plus 0.4947% ... more than $450 000
+--   > $600 000, <= $750 000         $2,401.50 plus 0.5029% ... more than $600 000
+--   > $750 000, <= $1 000 000       $3,155.85 plus 0.5071% ... more than $750 000
+--   > $1 000 000                    $4,423.60 plus 0.6018% ... more than $1 000 000
+-- s 5(3): "base value, of a parcel of land, means -- (a) the AUV of the parcel; or (b) for a residential unit -- the
+-- AUVRU worked out for the unit".
+`DI2026-150 Table 1` MEANS
+    LIST `Table row` WITH `above` IS 1000000, `base` IS 4423.60, `rate` IS 0.6018%
+         `Table row` WITH `above` IS 750000,  `base` IS 3155.85, `rate` IS 0.5071%
+         `Table row` WITH `above` IS 600000,  `base` IS 2401.50, `rate` IS 0.5029%
+         `Table row` WITH `above` IS 450000,  `base` IS 1659.45, `rate` IS 0.4947%
+         `Table row` WITH `above` IS 300000,  `base` IS 977.70,  `rate` IS 0.4545%
+         `Table row` WITH `above` IS 150000,  `base` IS 426.30,  `rate` IS 0.3676%
+         `Table row` WITH `above` IS 0,       `base` IS 0,       `rate` IS 0.2842%
+
+-- DI2026-150 s 5(1)(b)(ii), Table 2 Percentage rates--residential units:
+--   <= $600 000                     0.6400% of the base value
+--   > $600 000, <= $2 000 000       $3,840.00 plus 0.7787% of the part of the base value that is more than $600 000
+--   > $2 000 000, <= $3 650 000     $14,741.80 plus 0.9070% ... more than $2 000 000
+--   > $3 650 000, <= $4 850 000     $29,707.30 plus 0.9651% ... more than $3 650 000
+--   > $4 850 000                    $41,288.50 plus 1.0156% ... more than $4 850 000
+`DI2026-150 Table 2` MEANS
+    LIST `Table row` WITH `above` IS 4850000, `base` IS 41288.50, `rate` IS 1.0156%
+         `Table row` WITH `above` IS 3650000, `base` IS 29707.30, `rate` IS 0.9651%
+         `Table row` WITH `above` IS 2000000, `base` IS 14741.80, `rate` IS 0.9070%
+         `Table row` WITH `above` IS 600000,  `base` IS 3840.00,  `rate` IS 0.7787%
+         `Table row` WITH `above` IS 0,       `base` IS 0,        `rate` IS 0.6400%
+
+-- s 14(2)(b) on residential land that is not a unit: FC + (AUV × P), P read as the Table 1 amount for the AUV.
+GIVEN `AUV` IS A NUMBER
+GIVETH A NUMBER
+`the rates on residential land with an AUV of` `AUV` MEANS
+    `the fixed charge for residential land (DI2026-150 s 5(1)(a)(i))` PLUS (`the column 2 amount in` `DI2026-150 Table 1` `for` `AUV`)
+
+§§ `s 29 -- the rates on a residential unit`
+
+-- s 29(3): on and after the 1 July after the units plan is registered "(a) the rates imposed for the parcel are payable
+-- by the unit owners; and (b) the amount payable by each unit owner is the amount worked out under subsection (4)".
+-- s 29(4)(b): "for a residential unit -- the following formula: FC + (AUVRUP × (UE)/(TUER))". (5): "AUVRU means the AUV
+-- of the parcel proportionate to the number of residential units in the parcel, worked out as follows: AUV ×(TUER)/(TUE).
+-- AUVRUP means the AUVRU adjusted by the applicable percentage rate, worked out as follows: AUVRU × P". P for
+-- residential units is the Table 2 amount for the base value, which for a residential unit is the AUVRU (DI2026-150
+-- s 5(3)). The AUV here is the AUV of the whole parcel (s 28(1): the unit subdivision "is taken to continue to be a
+-- single parcel of land"). A unit plan registered in 2026-27 itself (s 29(2)) is not distinguished: the unit owner is
+-- taken to pay under s 29(4) for the whole year.
+GIVEN `AUV` IS A NUMBER, `the entitlements` IS A `Unit entitlements`
+GIVETH A NUMBER
+`the rates on a residential unit with a parcel AUV of` `AUV` `and` `the entitlements` MEANS
+    `the fixed charge for residential units (DI2026-150 s 5(1)(a)(ii))` PLUS ((`AUVRUP` TIMES `the entitlements`'s `UE`) DIVIDED BY `the entitlements`'s `TUER`)
+    WHERE
+        `AUVRUP` MEANS `the column 2 amount in` `DI2026-150 Table 2` `for` (`AUVRU for` `AUV` `and` `the entitlements`)
+
+§§ `s 15 -- rates for part of a year`
+
+-- s 15(1): "This section applies to a parcel of land if the parcel starts or stops being rateable in a year." (2): "the
+-- amount of rates payable is ... rates otherwise payable for year × (rateable days ÷ days in year)" (the formula is
+-- transcribed from the authorised PDF; see the deposited text). Sch 1 s 2.1(1)(a) applies s 15 to the levies.
+GIVEN `the amount for the year` IS A NUMBER, `rateable days` IS A NUMBER
+GIVETH A NUMBER
+`the part-year amount under s 15(2) of` `the amount for the year` `for` `rateable days` MEANS
+    IF `rateable days` AT LEAST `the days in the year 2026-27`
+    THEN `the amount for the year`
+    ELSE (`the amount for the year` TIMES `rateable days`) DIVIDED BY `the days in the year 2026-27`
+
+-- The general rates for the year on one parcel or unit, rounded to the cent (s 74(1)).
+GIVEN `the parcel` IS A `Rateable parcel`
+GIVETH A NUMBER
+`the general rates for 2026-27 on` `the parcel` MEANS
+    `to the nearest cent` (`the part-year amount under s 15(2) of` `the rates for the whole year` `for` (`the parcel`'s `rateable days in the year`))
+    WHERE
+        `the rates for the whole year` MEANS
+            IF `the parcel`'s `kind` EQUALS `a residential unit in a units plan`
+            THEN `the rates on a residential unit with a parcel AUV of` (`the AUV of` `the parcel`) `and` (`the parcel`'s `the unit entitlements`)
+            ELSE `the rates on residential land with an AUV of` (`the AUV of` `the parcel`)
+
+§§ `Schedule 1 -- the levies`
+
+-- Sch 1 s 1.1(1): "Police, fire and emergency services levy of the fixed charge is imposed for a parcel of rateable land
+-- that is residential or rural land." DI2026-150 s 7(1)(a): "FC (or fixed charge) is $458". Sch 1 s 1.3(1): "Safer
+-- families levy is imposed for a parcel of rateable land that is residential or rural land." DI2026-150 s 9: "the safer
+-- families levy is $70". Sch 1 s 2.1 applies ss 15, 16, 17, pt 4 and ss 28-29 to the levies "as if a reference to rates
+-- included a reference to a levy". READING: by s 28(2)(a) as so applied, each residential unit is "a parcel" for the
+-- levies and bears each fixed charge (NOTES.md finding 4).
+`the emergency services levy fixed charge (DI2026-150 s 7(1)(a))` MEANS 458
+`the safer families levy (DI2026-150 s 9)` MEANS 70
+
+GIVEN `the parcel` IS A `Rateable parcel`
+GIVETH A NUMBER
+`the police, fire and emergency services levy for 2026-27 on` `the parcel` MEANS
+    `to the nearest cent` (`the part-year amount under s 15(2) of` `the emergency services levy fixed charge (DI2026-150 s 7(1)(a))` `for` (`the parcel`'s `rateable days in the year`))
+
+GIVEN `the parcel` IS A `Rateable parcel`
+GIVETH A NUMBER
+`the safer families levy for 2026-27 on` `the parcel` MEANS
+    `to the nearest cent` (`the part-year amount under s 15(2) of` `the safer families levy (DI2026-150 s 9)` `for` (`the parcel`'s `rateable days in the year`))
+
+-- What the owner is assessed for the year: rates and the two levies. s 16(1): "Rates imposed for a parcel of land are
+-- payable to the commissioner by the owner of the parcel"; (2): the owner is liable for unpaid rates "whether the amount
+-- became payable before or after the person became the owner".
+DECLARE `Rates assessment` HAS
+    `general rates`                            IS A NUMBER
+    `police, fire and emergency services levy` IS A NUMBER
+    `safer families levy`                      IS A NUMBER
+    `total`                                    IS A NUMBER
+
+GIVEN `the parcel` IS A `Rateable parcel`
+GIVETH AN `Answer` `Rates assessment`
+`the rates assessment for 2026-27 on` `the parcel` MEANS
+    CONSIDER `the gap for the parcel` `the parcel`
+    WHEN JUST `gap` THEN `not covered` `gap`
+    WHEN NOTHING THEN
+        `answered` (`Rates assessment` WITH
+            `general rates`                            IS `the rates`
+            `police, fire and emergency services levy` IS `the levy`
+            `safer families levy`                      IS `the safer families levy`
+            `total`                                    IS `the rates` PLUS `the levy` PLUS `the safer families levy`)
+    WHERE
+        `the rates` MEANS `the general rates for 2026-27 on` `the parcel`
+        `the levy` MEANS `the police, fire and emergency services levy for 2026-27 on` `the parcel`
+        `the safer families levy` MEANS `the safer families levy for 2026-27 on` `the parcel`
+
+§§ `ss 17 to 19 -- when and how the rates are paid`
+
+-- s 17(1): "The assessment notice ... must state a date for payment of the rates (the payment date)." (2): "The payment
+-- date must not be a date earlier than 4 weeks after the date of the notice." (3): "The rates are payable on the payment
+-- date." Sch 1 s 2.1(1)(c) applies s 17 to the levies.
+`the weeks between the notice and the payment date (s 17(2))` MEANS 4
+
+GIVEN `the payment date` IS A DATE, `the notice date` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the payment date` `is lawful for a notice dated` `the notice date` IF
+    (`the day that is` (`the weeks between the notice and the payment date (s 17(2))` TIMES 7) `days after` `the notice date`) `is on or before` `the payment date`
+
+-- s 19(1): "(a) the amount of each instalment must be a whole dollar amount worked out by dividing the total amount of
+-- the rates payable by 4 and adding the amount of any remainder to the amount worked out for the 1st instalment; and
+-- (b) the date when an instalment is due for payment is not less than 3 months after the date when any previous
+-- instalment is due for payment." Sch 1 ss 2.1A and 2.1B apply ss 18 and 19 to the two levies, so the total is the
+-- total of the notice.
+DECLARE `Instalments` HAS
+    `the 1st instalment`       IS A NUMBER
+    `each later instalment`    IS A NUMBER
+
+GIVEN `the total` IS A NUMBER
+GIVETH AN `Instalments`
+`the instalments under s 19(1)(a) of` `the total` MEANS
+    `Instalments` WITH
+        `the 1st instalment`    IS `the total` MINUS (3 TIMES `each`)
+        `each later instalment` IS `each`
+    WHERE
+        `each` MEANS `the whole dollars in` (`the total` DIVIDED BY 4)
+
+GIVEN `the later due date` IS A DATE, `the earlier due date` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the later due date` `is at least 3 months after` `the earlier due date` IF
+    (`the date` 3 `months after` `the earlier due date`) `is on or before` `the later due date`
+
+-- s 18(1): the rates "must be paid by the owner -- (a) if the amount payable is for a year and any arrears of rates in
+-- relation to previous years have been paid in full -- by paying, on or before the payment date, the amount of the rates
+-- less the discount rate; or (b) if the amount payable is for part of a year -- by paying the amount of the rates on or
+-- before the payment date; or (c) by paying the rates in instalments in accordance with section 19; or (d) by paying
+-- amounts so that the total amount paid ... on or before a date in the year is not less than the total amount that the
+-- person would have paid on that date if the person were paying the rates in instalments". (3): "discount rate means the
+-- discount rate determined under the Taxation Administration Act, section 139." FINDING: DI2026-150 determines no
+-- discount rate, so none is applied (NOTES.md finding 5). Paying by (d) is the instalment branch with earlier payments.
+--
+-- Rule, clock from the date of the notice: either the rates in full by the payment date, or 4 instalments at the dates
+-- in the notice (each at least 3 months after the one before, s 19(1)(b)). LEST: the amount is overdue and s 21
+-- interest runs for each month or part of a month. s 20: TAA s 25 does not apply; s 20A(1): TAA div 5.2 (penalty tax)
+-- does not apply, save for a corporation or trust. s 19(2): TAA s 52(4) does not apply to a missed instalment.
+GIVEN `days to the payment date`             IS A NUMBER
+      `days from the 1st to the 2nd instalment` IS A NUMBER
+      `days from the 2nd to the 3rd instalment` IS A NUMBER
+      `days from the 3rd to the 4th instalment` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act done`
+DECIDE `ss 17 to 19 -- the owner must pay the rates by the payment date, or by 4 instalments` IS
+        (PARTY `the owner`
+         MUST  `pay the rates in full`
+         WITHIN `days to the payment date`
+         LEST  BREACH BY `the owner` BECAUSE "Rates Act s 17(3): the rates were not paid on the payment date; s 21: interest is payable for each month or part of a month they remain unpaid (TAA s 25 does not apply, s 20; no penalty tax for an individual, s 20A(1))")
+    ROR
+        (PARTY `the owner`
+         MUST  `pay instalment` 1
+         WITHIN `days to the payment date`
+         HENCE
+             (PARTY `the owner`
+              MUST  `pay instalment` 2
+              WITHIN `days from the 1st to the 2nd instalment`
+              HENCE
+                  (PARTY `the owner`
+                   MUST  `pay instalment` 3
+                   WITHIN `days from the 2nd to the 3rd instalment`
+                   HENCE
+                       (PARTY `the owner`
+                        MUST  `pay instalment` 4
+                        WITHIN `days from the 3rd to the 4th instalment`
+                        LEST  BREACH BY `the owner` BECAUSE "Rates Act s 19: the 4th instalment was not paid when due; s 21: interest on it for each month or part of a month (TAA s 52(4) does not apply, s 19(2))")
+                   LEST  BREACH BY `the owner` BECAUSE "Rates Act s 19: the 3rd instalment was not paid when due; s 21: interest on it for each month or part of a month (TAA s 52(4) does not apply, s 19(2))")
+              LEST  BREACH BY `the owner` BECAUSE "Rates Act s 19: the 2nd instalment was not paid when due; s 21: interest on it for each month or part of a month (TAA s 52(4) does not apply, s 19(2))")
+         LEST  BREACH BY `the owner` BECAUSE "Rates Act s 19: the 1st instalment was not paid when due; s 21: interest on it for each month or part of a month (TAA s 52(4) does not apply, s 19(2))")
+
+§§ `s 45 -- eligible person and pensioner`
+
+-- s 45: "pensioner means -- (a) a person to, or for whom, a pension, allowance or benefit is being paid under the
+-- Social Security Act 1991 (Cwlth) and who has been given a pensioner concession card under that Act; or (b) a service
+-- pensioner within the meaning of the Veterans' Entitlements Act 1986 (Cwlth); or (c) a person who has been given a card
+-- or other written authority by the Commonwealth that evidences the person's eligibility under the Veterans'
+-- Entitlements Act 1986 (Cwlth) or the Military Rehabilitation and Compensation Act 2004 (Cwlth) to be given treatment
+-- for all injuries suffered, and all diseases contracted, by the person; or (d)-(g)" a person eligible because of a
+-- partnership, or after a partner's death. "eligible person means -- (a) a pensioner; or (b) a non-pensioner who is the
+-- partner of a special rate pensioner and is not separated from the pensioner; or (c) a non-pensioner who -- (i) was the
+-- partner of a special rate pensioner until the pensioner's death; and (ii) was not separated ...; and (iii) has not
+-- subsequently formed a partnership with someone else; or (d) a special disability trust."
+-- The Commonwealth statuses are FACTS (borrowed terms). Paragraphs (d)-(g) of "pensioner", and (b)-(c) of "eligible
+-- person", are each asked as one fact (the brief's simplification). (d) of "eligible person" (a special disability
+-- trust, Social Security Act 1991 s 1209L) is not encoded: the seat is an individual.
+DECLARE `Pension facts` HAS
+    `paid a pension, allowance or benefit under the Social Security Act 1991 and given a pensioner concession card` IS A BOOLEAN
+    `a service pensioner under the Veterans' Entitlements Act 1986`                                                 IS A BOOLEAN
+    `given a card for treatment of all injuries and diseases under the Veterans' Entitlements Act 1986 or the Military Rehabilitation and Compensation Act 2004` IS A BOOLEAN
+    `a pensioner because of a partnership or a partner's death, under s 45 pensioner pars (d) to (g)`              IS A BOOLEAN
+    `the partner, or surviving partner not since repartnered, of a special rate pensioner, under s 45 eligible person pars (b) and (c)` IS A BOOLEAN
+
+GIVEN `the facts` IS A `Pension facts`
+GIVETH A BOOLEAN
+DECIDE `is a pensioner under s 45` `the facts` IF
+        `the facts`'s `paid a pension, allowance or benefit under the Social Security Act 1991 and given a pensioner concession card`
+    OR  `the facts`'s `a service pensioner under the Veterans' Entitlements Act 1986`
+    OR  `the facts`'s `given a card for treatment of all injuries and diseases under the Veterans' Entitlements Act 1986 or the Military Rehabilitation and Compensation Act 2004`
+    OR  `the facts`'s `a pensioner because of a partnership or a partner's death, under s 45 pensioner pars (d) to (g)`
+
+GIVEN `the facts` IS A `Pension facts`
+GIVETH A BOOLEAN
+DECIDE `is an eligible person under s 45` `the facts` IF
+        `is a pensioner under s 45` `the facts`
+    OR  `the facts`'s `the partner, or surviving partner not since repartnered, of a special rate pensioner, under s 45 eligible person pars (b) and (c)`
+
+§§ `s 60 -- the person's liability for rates, and s 64(4) -- the person's part of the rebate cap`
+
+-- s 60(1): "(a) for a person who is the sole owner of the parcel -- ... the amount of rates payable by the person for the
+-- parcel for the year; and (b) for a person who is a joint owner ... the part of the rates payable by the owners ... --
+-- (i) if the parcel is held by the owners as tenants in common -- that is proportional to the person's interest in the
+-- land; and (ii) if the parcel is held by the owners as joint tenants -- that would be proportional to the person's
+-- interest in the land if the joint tenants were tenants in common in equal shares." (2): if "1 or more of the other
+-- joint owners cannot reasonably contribute", the liability is "(a) if no other joint owner can reasonably contribute
+-- ... the rates payable for the land; or (b) if the rates are to be paid by 2 or more of the joint owners -- ... so much
+-- of the rates ... as would be payable if the joint owners paying the rates -- (i) were the sole owners of the land as
+-- tenants in common in equal shares; and (ii) the value of their interests in the land were increased proportionately."
+-- READING of (2)(b): the owners who pay share the rates equally (NOTES.md finding 7).
+DECLARE `How the parcel is held` IS ONE OF
+    `by the person alone`
+    `by the person and others as joint tenants`
+    `by the person and others as tenants in common`
+
+DECLARE `Ownership` HAS
+    `held`                                                   IS A `How the parcel is held`
+    `the number of owners`                                   IS A NUMBER
+    `the person's interest as a tenant in common, as a fraction` IS A NUMBER
+    `the number of other owners who can reasonably contribute` IS A NUMBER
+
+GIVEN `the ownership` IS AN `Ownership`
+GIVETH A NUMBER
+`the person's ordinary share under s 60(1) for` `the ownership` MEANS
+    CONSIDER `the ownership`'s `held`
+    WHEN `by the person alone` THEN 1
+    WHEN `by the person and others as joint tenants` THEN 1 DIVIDED BY (`the greater of` 1 `and` (`the ownership`'s `the number of owners`))
+    WHEN `by the person and others as tenants in common` THEN `the ownership`'s `the person's interest as a tenant in common, as a fraction`
+
+GIVEN `the ownership` IS AN `Ownership`
+GIVETH A NUMBER
+`the person's share of the rates under s 60 for` `the ownership` MEANS
+    IF      `the ownership`'s `held` EQUALS `by the person alone`
+         OR `the ownership`'s `the number of other owners who can reasonably contribute` AT LEAST ((`the ownership`'s `the number of owners`) MINUS 1)
+    THEN `the person's ordinary share under s 60(1) for` `the ownership`
+    ELSE 1 DIVIDED BY (1 PLUS (`the greater of` 0 `and` (`the ownership`'s `the number of other owners who can reasonably contribute`)))
+
+-- s 64(4): "If the person is a joint owner of the parcel, the reference to the rebate cap in subsection (3) (a) is a
+-- reference to the part of the rebate cap -- (a) if the parcel is held by the owners as tenants in common -- that is
+-- proportional to the person's interest in the land; and (b) if the parcel is held by the owners as joint tenants --
+-- that would be proportional to the person's interest in the land if the joint tenants were tenants in common in equal
+-- shares." FINDING: s 64(4) has no counterpart to s 60(2), so where the other owners cannot contribute the person's
+-- liability grows but their part of the cap does not (NOTES.md finding 8).
+GIVEN `the ownership` IS AN `Ownership`
+GIVETH A NUMBER
+`the person's share of the rebate cap under s 64(4) for` `the ownership` MEANS
+    `the person's ordinary share under s 60(1) for` `the ownership`
+
+§§ `Division 7.3 -- the rebate of rates`
+
+-- s 64(6): "rebate cap means the rebate cap determined under the Taxation Administration Act, section 139."
+-- DI2026-150 s 6: "the rebate cap is $750". Sch 1 s 3.2(5): "PFES rebate means the police, fire and emergency services
+-- rebate determined under the Taxation Administration Act, section 139." DI2026-150 s 10: "the police, fire and
+-- emergency services rebate is $133".
+`the rebate cap (DI2026-150 s 6)` MEANS 750
+`the PFES rebate (DI2026-150 s 10)` MEANS 133
+
+DECLARE `Rebate facts` HAS
+    `the pension facts`                                                      IS A `Pension facts`
+    `the person is an owner, or has a life or term interest under a will or court order and is liable for the rates` IS A BOOLEAN
+    `the ownership`                                                          IS AN `Ownership`
+    `days in the year the parcel is the person's principal place of residence` IS A NUMBER
+    `the day the person applied for the rebate`                              IS A DATE
+    `the person has been an eligible person and an owner of their home continuously since 30 June 1997, under s 63(1) or (2)` IS A BOOLEAN
+    `the rebate the person received under s 63 for the year before`         IS A NUMBER
+    `after a break of more than 14 days in eligibility or in owning the home, the person has not applied again (s 69)` IS A BOOLEAN
+
+DECLARE `No rebate because` IS ONE OF
+    `the person is not an eligible person (s 45)`
+    `the person is not an owner of the parcel for div 7.3 (s 45, owner)`
+    `the parcel is not the person's principal place of residence for any part of the year (s 63(3)(b), s 64(2)(b))`
+    `the person applied after the year: there is no rebate for a year before the year of the application (s 62)`
+    `after a break in entitlement of more than 14 days the person must apply again (s 69)`
+
+DECLARE `Rebate section` IS ONE OF
+    `s 64 (capped)`
+    `s 63 (an eligible person since 30 June 1997)`
+
+DECLARE `Rebate answer` IS ONE OF
+    `a rebate` HAS `of rates`                                     IS A NUMBER
+                   `of the police, fire and emergency services levy` IS A NUMBER
+                   `under`                                        IS A `Rebate section`
+    `no rebate` HAS `because` IS A `No rebate because`
+
+-- s 63(5)(b) and s 64(3)(b), the same formula: (RL ÷ 2) × (D ÷ days in year), "RL means the amount of the person's
+-- liability for rates for the parcel for the year", "D means the number of days in the year when the parcel is the
+-- person's principal place of residence"; "rates, for the year, includes any rates deferred under a deferral
+-- determination" (s 63(6), s 64(6)).
+GIVEN `RL` IS A NUMBER, `D` IS A NUMBER
+GIVETH A NUMBER
+`the rebate formula for` `RL` `and` `D` MEANS
+    ((`RL` DIVIDED BY 2) TIMES `D`) DIVIDED BY `the days in the year 2026-27`
+
+-- s 63(5): "The amount of the rebate for a year is the lesser of -- (a) the amount that the person received as a rebate
+-- under this section in the year before the rebate is claimed; and (b)" the formula.
+-- s 64(1): "This section applies to an eligible person if -- (a) section 63 does not apply to the person; or (b) section
+-- 63 applies to the person but the amount of the rebate to which the person is entitled under section 63 is less than
+-- or equal to the amount of the rebate cap under this section." (3): "The amount of rebate is the lesser of -- (a) the
+-- rebate cap; and (b)" the formula. READING: "the amount of the rebate cap under this section" in (1)(b) is the full
+-- cap; and where both sections apply the person has the greater of the two (NOTES.md finding 6).
+GIVEN `the rates on the parcel` IS A NUMBER, `the levy on the parcel` IS A NUMBER, `the facts` IS A `Rebate facts`
+GIVETH A `Rebate answer`
+`the rebate for 2026-27 of` `the rates on the parcel` `and a levy of` `the levy on the parcel` `for` `the facts` MEANS
+    BRANCH
+        IF NOT (`is an eligible person under s 45` (`the facts`'s `the pension facts`))
+        THEN `no rebate` `the person is not an eligible person (s 45)`
+        IF NOT (`the facts`'s `the person is an owner, or has a life or term interest under a will or court order and is liable for the rates`)
+        THEN `no rebate` `the person is not an owner of the parcel for div 7.3 (s 45, owner)`
+        IF `D` AT MOST 0
+        THEN `no rebate` `the parcel is not the person's principal place of residence for any part of the year (s 63(3)(b), s 64(2)(b))`
+        IF NOT (`the facts`'s `the day the person applied for the rebate` `is on or before` (DATE_FROM_DMY 30 6 2027))
+        THEN `no rebate` `the person applied after the year: there is no rebate for a year before the year of the application (s 62)`
+        IF `the facts`'s `after a break of more than 14 days in eligibility or in owning the home, the person has not applied again (s 69)`
+        THEN `no rebate` `after a break in entitlement of more than 14 days the person must apply again (s 69)`
+        IF `s 63 applies` AND (NOT `s 64 applies`)
+        THEN `a rebate` `the s 63 amount` `the levy rebate` `s 63 (an eligible person since 30 June 1997)`
+        IF `s 63 applies` AND `the s 63 amount` GREATER THAN `the s 64 amount`
+        THEN `a rebate` `the s 63 amount` `the levy rebate` `s 63 (an eligible person since 30 June 1997)`
+        OTHERWISE `a rebate` `the s 64 amount` `the levy rebate` `s 64 (capped)`
+    WHERE
+        `D` MEANS `the facts`'s `days in the year the parcel is the person's principal place of residence`
+        `RL` MEANS `the rates on the parcel` TIMES (`the person's share of the rates under s 60 for` (`the facts`'s `the ownership`))
+        `the formula` MEANS `the rebate formula for` `RL` `and` `D`
+        `s 63 applies` MEANS `the facts`'s `the person has been an eligible person and an owner of their home continuously since 30 June 1997, under s 63(1) or (2)`
+        `the s 63 amount` MEANS `to the nearest cent` (`the smaller of` (`the facts`'s `the rebate the person received under s 63 for the year before`) `and` `the formula`)
+        `s 64 applies` MEANS (NOT `s 63 applies`) OR (`the s 63 amount` AT MOST `the rebate cap (DI2026-150 s 6)`)
+        `the s 64 amount` MEANS `to the nearest cent` (`the smaller of` (`the rebate cap (DI2026-150 s 6)` TIMES (`the person's share of the rebate cap under s 64(4) for` (`the facts`'s `the ownership`))) `and` `the formula`)
+        -- Sch 1 s 3.2(3): "PFES rebate × (LL)/(levy) × (D)/(days in year)", "LL means the amount of the person's
+        -- liability for levy for the parcel for the year"; s 3.2(4): div 7.3 "has effect as if it included this
+        -- section", so s 60 gives the person's liability for the levy, and ss 62 and 69 apply to it.
+        `LL over levy` MEANS `the person's share of the rates under s 60 for` (`the facts`'s `the ownership`)
+        `the levy rebate` MEANS
+            IF `the levy on the parcel` AT MOST 0
+            THEN 0
+            ELSE `to the nearest cent` (((`the PFES rebate (DI2026-150 s 10)` TIMES `LL over levy`) TIMES `D`) DIVIDED BY `the days in the year 2026-27`)
+
+-- s 65: "(2) The rebate applies to reduce the amount of the person's liability for rates for the year, other than the
+-- person's deferred liability. (3) Any remaining rebate applies to reduce the person's deferred liability."
+DECLARE `Rebate applied` HAS
+    `the liability left to pay`  IS A NUMBER
+    `the deferred liability left` IS A NUMBER
+
+GIVEN `the liability` IS A NUMBER, `the deferred part` IS A NUMBER, `the rebate` IS A NUMBER
+GIVETH A `Rebate applied`
+`the rebate applied under s 65 to a liability of` `the liability` `with` `the deferred part` `deferred, for a rebate of` `the rebate` MEANS
+    `Rebate applied` WITH
+        `the liability left to pay`   IS `the greater of` 0 `and` (`the payable part` MINUS `the rebate`)
+        `the deferred liability left` IS `the greater of` 0 `and` (`the deferred part` MINUS (`the greater of` 0 `and` (`the rebate` MINUS `the payable part`)))
+    WHERE
+        `the payable part` MEANS `the liability` MINUS `the deferred part`
+
+-- s 61(1): "A person may apply to the commissioner for a rebate under this division." (2): "The application must -- (a)
+-- be in writing signed by the applicant; and (b) include a statement of particulars in support; and (c) include a
+-- statement signed by the applicant authorising any entity chosen by the commissioner to disclose relevant information
+-- about the applicant". s 62: "A person is not entitled to a rebate under this division for rates for any year before
+-- the year when the person applies for the rebate." Not applying is no breach; the rebate is simply not had.
+-- Clock: days from the start of the year; the year has 365 days.
+GIVETH A DEONTIC `Party` `Act done`
+DECIDE `s 61 -- the owner may apply in writing for a rebate, in the year or earlier` IS
+    PARTY `the owner`
+    MAY   `apply in writing for a rebate`
+    WITHIN `the days in the year 2026-27`
+    HENCE FULFILLED
+
+-- s 67(1): "This section applies to a person who has applied for a rebate if any of the following circumstances happens:
+-- (a) the person stops being an eligible person; (b) the person stops being the owner or a joint owner of the person's
+-- principal place of residence; (c) for a tenant in common -- there is a change in the extent of the person's interest
+-- in the person's principal place of residence; (d) the person changes his or her principal place of residence."
+-- (3): "Within 30 days after the day the circumstance happens, the person must give written notice of it to the
+-- commissioner." (4): "The person commits an offence if the person contravenes subsection (3). Maximum penalty: 5
+-- penalty units." (5): "An offence against this section is a strict liability offence." Clock: days from the day the
+-- circumstance happens.
+DECLARE `Change in circumstances` IS ONE OF
+    `the person stops being an eligible person (s 67(1)(a))`
+    `the person stops being the owner or a joint owner of their principal place of residence (s 67(1)(b))`
+    `the extent of a tenant in common's interest in their principal place of residence changes (s 67(1)(c))`
+    `the person changes their principal place of residence (s 67(1)(d))`
+
+`the days to give notice of a change (s 67(3))` MEANS 30
+`the maximum penalty under s 67(4), in penalty units` MEANS 5
+
+GIVETH A DEONTIC `Party` `Act done`
+DECIDE `s 67 -- a rebate applicant must give written notice of a change within 30 days` IS
+    PARTY `the owner`
+    MUST  `give the commissioner written notice of the change in circumstances`
+    WITHIN `the days to give notice of a change (s 67(3))`
+    LEST  BREACH BY `the owner` BECAUSE "Rates Act s 67(3)-(5): written notice of the change was not given to the commissioner within 30 days; a strict liability offence, maximum penalty 5 penalty units; the commissioner may then adjust the liability for rates (s 68)"
+
+§§ `Division 7.2 -- deferral of rates`
+
+-- s 46(1): "The owner of a parcel of land may apply to the commissioner for a determination deferring payment of rates
+-- payable for the parcel." (2): "The commissioner must make the determination if satisfied -- (a) that the owner is a
+-- pensioner or, if there are 2 or more owners, each owner is a pensioner; or (b) that the owner is a special disability
+-- trust; or (c) if the owner, or each owner, is not a pensioner -- that payment of the total amount of rates payable or
+-- to become payable is likely to cause substantial hardship to the owner or each owner; or (d) that the owners are a
+-- pensioner and his or her partner who is not a pensioner; or (e) for an application made by a pensioner who is a joint
+-- owner -- that no other owner of the parcel can reasonably contribute to the payment of rates for the parcel; or (f)
+-- if the owner, or each owner, is not a pensioner -- that -- (i) at least 1 owner is 65 years old or older; and (ii) the
+-- owner's or owners' equity in the parcel is not less than a percentage determined by the Minister (the determined
+-- percentage)." (5): "However, the commissioner may make a determination only if -- (a) the lease under which the
+-- parcel is held permits the parcel to be used only for residential purposes; and (b) each applicant ordinarily lives
+-- on the parcel." DI2026-144 s 4: "the determined percentage is 75%".
+-- The commissioner's satisfaction of hardship is a FACT. "Equity" is not defined in the Act or DI2026-144: a FACT,
+-- given as a percentage of the parcel's value (NOTES.md finding 10). (b), a special disability trust, is not encoded.
+`the determined percentage (DI2026-144 s 4)` MEANS 75
+
+DECLARE `Deferral facts` HAS
+    `the lease permits the parcel to be used only for residential purposes` IS A BOOLEAN
+    `each applicant ordinarily lives on the parcel`                         IS A BOOLEAN
+    `the number of owners`                                                  IS A NUMBER
+    `the number of owners who are pensioners`                               IS A NUMBER
+    `the owners are a pensioner and their partner who is not a pensioner`   IS A BOOLEAN
+    `the applicant is a pensioner joint owner and no other owner can reasonably contribute` IS A BOOLEAN
+    `the commissioner is satisfied payment is likely to cause substantial hardship to each owner` IS A BOOLEAN
+    `at least 1 owner is 65 years old or older`                             IS A BOOLEAN
+    `the owners' equity in the parcel, as a percentage of its value`        IS A NUMBER
+
+DECLARE `Deferral ground` IS ONE OF
+    `s 46(2)(a): the owner, or each owner, is a pensioner`
+    `s 46(2)(c): no owner is a pensioner, and payment is likely to cause substantial hardship to each owner`
+    `s 46(2)(d): the owners are a pensioner and their partner who is not a pensioner`
+    `s 46(2)(e): a pensioner joint owner applies, and no other owner can reasonably contribute`
+    `s 46(2)(f): no owner is a pensioner, at least 1 owner is 65 or older, and the owners' equity is at least the determined percentage of 75%`
+
+DECLARE `Deferral answer` IS ONE OF
+    `the commissioner must make a deferral determination, on the grounds` HAS `grounds` IS A LIST OF `Deferral ground`
+    `no deferral on application: the lease does not permit residential use only (s 46(5)(a))`
+    `no deferral on application: an applicant does not ordinarily live on the parcel (s 46(5)(b))`
+    `no deferral on application: no ground in s 46(2) is made out`
+
+GIVEN `g` IS A `Deferral ground`, `ok` IS A BOOLEAN, `rest` IS A LIST OF `Deferral ground`
+GIVETH A LIST OF `Deferral ground`
+`adding` `g` `if` `ok` `to` `rest` MEANS IF `ok` THEN `g` FOLLOWED BY `rest` ELSE `rest`
+
+GIVEN `the facts` IS A `Deferral facts`
+GIVETH A LIST OF `Deferral ground`
+`the grounds under s 46(2) for` `the facts` MEANS
+    `adding` `s 46(2)(a): the owner, or each owner, is a pensioner` `if` `each owner is a pensioner` `to` `the grounds after (a)`
+    WHERE
+        `no owner is a pensioner` MEANS `the facts`'s `the number of owners who are pensioners` EQUALS 0
+        `each owner is a pensioner` MEANS
+                `the facts`'s `the number of owners` AT LEAST 1
+            AND `the facts`'s `the number of owners who are pensioners` AT LEAST (`the facts`'s `the number of owners`)
+        `the grounds after (a)` MEANS
+            `adding` `s 46(2)(c): no owner is a pensioner, and payment is likely to cause substantial hardship to each owner` `if` (`no owner is a pensioner` AND `the facts`'s `the commissioner is satisfied payment is likely to cause substantial hardship to each owner`) `to` `the grounds after (c)`
+        `the grounds after (c)` MEANS
+            `adding` `s 46(2)(d): the owners are a pensioner and their partner who is not a pensioner` `if` (`the facts`'s `the owners are a pensioner and their partner who is not a pensioner`) `to` `the grounds after (d)`
+        `the grounds after (d)` MEANS
+            `adding` `s 46(2)(e): a pensioner joint owner applies, and no other owner can reasonably contribute` `if` (`the facts`'s `the applicant is a pensioner joint owner and no other owner can reasonably contribute`) `to` `the grounds after (e)`
+        `the grounds after (e)` MEANS
+            `adding` `s 46(2)(f): no owner is a pensioner, at least 1 owner is 65 or older, and the owners' equity is at least the determined percentage of 75%` `if` (`no owner is a pensioner` AND `the facts`'s `at least 1 owner is 65 years old or older` AND `the facts`'s `the owners' equity in the parcel, as a percentage of its value` AT LEAST `the determined percentage (DI2026-144 s 4)`) `to` EMPTY
+
+GIVEN `the facts` IS A `Deferral facts`
+GIVETH A `Deferral answer`
+`the deferral answer under s 46 for` `the facts` MEANS
+    BRANCH
+        IF NOT (`the facts`'s `the lease permits the parcel to be used only for residential purposes`)
+        THEN `no deferral on application: the lease does not permit residential use only (s 46(5)(a))`
+        IF NOT (`the facts`'s `each applicant ordinarily lives on the parcel`)
+        THEN `no deferral on application: an applicant does not ordinarily live on the parcel (s 46(5)(b))`
+        OTHERWISE
+            CONSIDER `the grounds under s 46(2) for` `the facts`
+            WHEN EMPTY THEN `no deferral on application: no ground in s 46(2) is made out`
+            WHEN `g` FOLLOWED BY `rest` THEN `the commissioner must make a deferral determination, on the grounds` (`g` FOLLOWED BY `rest`)
+
+-- s 46(1) and (2), as a rule. Clock: days from the day the owner may first apply. The owner may apply; if a ground in
+-- s 46(2) is made out (and s 46(5) is met) the commissioner must then make the determination (no period is stated).
+-- s 70(d): a refusal is a decision the owner may object to.
+GIVEN `a ground is made out` IS A BOOLEAN
+GIVETH A DEONTIC `Party` `Act done`
+DECIDE `s 46 -- the owner may apply for deferral, and on a ground the commissioner must defer` IS
+    PARTY `the owner`
+    MAY   `apply for a deferral determination`
+    HENCE
+        (IF `a ground is made out`
+         THEN PARTY `the commissioner`
+              MUST  `make the deferral determination`
+         ELSE FULFILLED)
+
+-- s 48(1)-(2): the person's "obligation to pay the rates is reduced in accordance with the determination; and ... the
+-- person becomes indebted to the Territory for the amount by which the obligation is reduced." (3): "A person who
+-- becomes indebted to the Territory for an amount under this section must pay interest on the amount at the market rate
+-- component determined under the Taxation Administration Act, section 26." (4): "Interest is payable on the amount from
+-- the date of deferral of the obligation to pay the amount until the earlier of -- (a) the day the amount is paid; and
+-- (b) the day the deferral determination is revoked." TAA s 26(2): the market rate component is a determined rate, or
+-- the RBA monthly 90-day bank bill rate under table 26 (an INPUT, a yearly rate; the 8% premium component of s 26(3)
+-- is not added). READING: simple interest, counted by the day at one 365th of the yearly rate (NOTES.md finding 12).
+GIVEN `the amount deferred` IS A NUMBER, `the market rate component` IS A NUMBER, `the date of deferral` IS A DATE, `the end` IS A DATE
+GIVETH A NUMBER
+`the interest under s 48 on` `the amount deferred` `at` `the market rate component` `from` `the date of deferral` `to` `the end` MEANS
+    `to the nearest cent` ((((`the amount deferred` TIMES `the market rate component`) TIMES (`the greater of` 0 `and` (`the number of days from` `the date of deferral` `to` `the end`)))) DIVIDED BY 365)
+
+-- s 49: "If a person is indebted to the Territory for an amount because of a deferral determination, the amount is not
+-- recoverable by the Territory while the determination is in force."
+GIVEN `the determination is in force` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the deferred amount can be recovered under s 49 while` `the determination is in force` IF
+    NOT `the determination is in force`
+
+-- ss 51 and 52(1): when the deferral ends. s 51: "The commissioner must revoke a deferral determination in relation to a
+-- person if -- (a) the amount for which the person is indebted ... is paid ... to discharge the debt; or (b) ... the
+-- person asks the commissioner in writing to revoke the determination." s 52(1): grounds on which the commissioner may
+-- revoke a s 46 determination, after notice (s 53) and, if the person objects, after the objection and any review
+-- (s 54(2)). (c) and (b)(ii) turn on the commissioner's view of hardship: FACTS.
+DECLARE `Deferral now` HAS
+    `the deferred amount has been paid to discharge the debt`                         IS A BOOLEAN
+    `the person has asked in writing for the determination to be revoked`             IS A BOOLEAN
+    `it was made because each person was a pensioner, and each has stopped being one` IS A BOOLEAN
+    `some but not all of the pensioners it relates to have stopped being pensioners, and revocation is not likely to cause substantial hardship` IS A BOOLEAN
+    `no one was a pensioner when it was made, and revocation is not likely to cause substantial hardship` IS A BOOLEAN
+    `the person has not given information the commissioner asked for under s 58`      IS A BOOLEAN
+    `each person who lived on the parcel when applying has stopped ordinarily living there` IS A BOOLEAN
+    `each person it relates to has stopped being an owner of the parcel`              IS A BOOLEAN
+    `it was made under s 46(2)(f)`                                                    IS A BOOLEAN
+    `the owners' equity in the parcel now, as a percentage of its value`              IS A NUMBER
+
+DECLARE `Revocation ground` IS ONE OF
+    `the commissioner must revoke: the deferred amount was paid (s 51(a))`
+    `the commissioner must revoke: the person asked in writing (s 51(b))`
+    `a ground for revocation: each person stopped being a pensioner (s 52(1)(a))`
+    `a ground for revocation: some pensioners stopped being pensioners, without substantial hardship (s 52(1)(b))`
+    `a ground for revocation: no substantial hardship to a non-pensioner (s 52(1)(c))`
+    `a ground for revocation: information asked for under s 58 was not given (s 52(1)(d))`
+    `a ground for revocation: the people who lived there stopped ordinarily living there (s 52(1)(e))`
+    `a ground for revocation: each person stopped being an owner (s 52(1)(f))`
+    `a ground for revocation: the equity fell below the determined percentage (s 52(1)(g))`
+
+GIVEN `g` IS A `Revocation ground`, `ok` IS A BOOLEAN, `rest` IS A LIST OF `Revocation ground`
+GIVETH A LIST OF `Revocation ground`
+`with` `g` `if` `ok` `before` `rest` MEANS IF `ok` THEN `g` FOLLOWED BY `rest` ELSE `rest`
+
+GIVEN `now` IS A `Deferral now`
+GIVETH A LIST OF `Revocation ground`
+`the grounds to end the deferral under ss 51 and 52(1) for` `now` MEANS
+    `with` `the commissioner must revoke: the deferred amount was paid (s 51(a))` `if` (`now`'s `the deferred amount has been paid to discharge the debt`) `before` `g1`
+    WHERE
+        `g1` MEANS `with` `the commissioner must revoke: the person asked in writing (s 51(b))` `if` (`now`'s `the person has asked in writing for the determination to be revoked`) `before` `g2`
+        `g2` MEANS `with` `a ground for revocation: each person stopped being a pensioner (s 52(1)(a))` `if` (`now`'s `it was made because each person was a pensioner, and each has stopped being one`) `before` `g3`
+        `g3` MEANS `with` `a ground for revocation: some pensioners stopped being pensioners, without substantial hardship (s 52(1)(b))` `if` (`now`'s `some but not all of the pensioners it relates to have stopped being pensioners, and revocation is not likely to cause substantial hardship`) `before` `g4`
+        `g4` MEANS `with` `a ground for revocation: no substantial hardship to a non-pensioner (s 52(1)(c))` `if` (`now`'s `no one was a pensioner when it was made, and revocation is not likely to cause substantial hardship`) `before` `g5`
+        `g5` MEANS `with` `a ground for revocation: information asked for under s 58 was not given (s 52(1)(d))` `if` (`now`'s `the person has not given information the commissioner asked for under s 58`) `before` `g6`
+        `g6` MEANS `with` `a ground for revocation: the people who lived there stopped ordinarily living there (s 52(1)(e))` `if` (`now`'s `each person who lived on the parcel when applying has stopped ordinarily living there`) `before` `g7`
+        `g7` MEANS `with` `a ground for revocation: each person stopped being an owner (s 52(1)(f))` `if` (`now`'s `each person it relates to has stopped being an owner of the parcel`) `before` `g8`
+        `g8` MEANS `with` `a ground for revocation: the equity fell below the determined percentage (s 52(1)(g))` `if` (`now`'s `it was made under s 46(2)(f)` AND `now`'s `the owners' equity in the parcel now, as a percentage of its value` LESS THAN `the determined percentage (DI2026-144 s 4)`) `before` EMPTY
+
+-- s 55(2): "The amount to which a person is indebted to the Territory because of the determination is payable by the
+-- person to the Territory on the day immediately after the day the determination is revoked." (3): instalments the
+-- commissioner declares are payable on the days stated. (4): "if the person ... stops being an owner of the parcel of
+-- land ... (other than because of the person's death) any balance of an amount to be paid in instalments is payable on
+-- the day immediately after the day the person stops being an owner."
+GIVEN `the day revoked` IS A DATE
+GIVETH A DATE
+`the day the deferred amount is payable under s 55(2), after revocation on` `the day revoked` MEANS
+    `the day that is` 1 `days after` `the day revoked`
+
+-- s 55(2) as a rule. Clock: days from the day the determination is revoked. LEST: s 56(1)-(2), interest on the unpaid
+-- amount "is worked out in the same way as interest on overdue rates is worked out under section 21"; (3) TAA s 25
+-- does not apply; and the amount may be recovered as a debt (Legislation Act s 177, the note to s 55(2)).
+GIVETH A DEONTIC `Party` `Act done`
+DECIDE `s 55 -- after revocation the deferred amount is payable on the next day` IS
+    PARTY `the owner`
+    MUST  `pay the deferred amount`
+    WITHIN 1
+    LEST  BREACH BY `the owner` BECAUSE "Rates Act s 55(2): the deferred amount was not paid on the day after the determination was revoked; s 56: interest on it is worked out as under s 21, and it may be recovered as a debt"

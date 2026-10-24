@@ -1,0 +1,380 @@
+IMPORT prelude
+
+-- Rates Act 2004 (ACT) and Land Tax Act 2004 (ACT), with the 2026 determinations and the Taxation Administration Act
+-- 1999 (ACT): what both cores share.
+--
+-- This module holds what rates-core.l4 and landtax-core.l4 both use, so that neither defines a name the other also
+-- defines (a name defined in two imported modules cannot be used): the financial year 2026-27 and its quarters,
+-- counting days and months, the rounding rules of Rates Act s 74 and Land Tax Act s 40, the marginal tables of the
+-- determinations, the Rates Act s 13A average unimproved value (which the Land Tax Act s 9(4) borrows), the monthly
+-- interest of Rates Act s 21 and Land Tax Act s 19 (worded alike), the parties and acts of the regulative rules, the
+-- not-covered answers, and the Taxation Administration Act objection (ss 100-102), which serves both taxes.
+--
+-- Edition: Rates Act 2004 A2004-3 R45 (effective 26 December 2025); Land Tax Act 2004 A2004-4 R34 (effective 26
+-- December 2025); Taxation Administration Act 1999 A1999-4 R52 (effective 26 November 2025); DI2026-150, DI2026-152
+-- (notified 30 June 2026) and DI2026-144 (notified 29 June 2026), all commencing 1 July 2026.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Rates and land tax -- what both cores share`
+
+§§ `Numbers and dates`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the smaller of` `a` `and` `b` MEANS IF `a` AT MOST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the greater of` `a` `and` `b` MEANS IF `a` AT LEAST `b` THEN `a` ELSE `b`
+
+GIVEN `n` IS A NUMBER, `the start` IS A DATE
+GIVETH A DATE
+`the day that is` `n` `days after` `the start` MEANS
+    DATE_FROM_SERIAL (DATE_SERIAL `the start` PLUS `n`)
+
+GIVEN `a` IS A DATE, `b` IS A DATE
+GIVETH A NUMBER
+`the number of days from` `a` `to` `b` MEANS
+    DATE_SERIAL `b` MINUS DATE_SERIAL `a`
+
+GIVEN `a` IS A DATE, `b` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `a` `is on or before` `b` IF
+    DATE_SERIAL `a` AT MOST DATE_SERIAL `b`
+
+GIVEN `a` IS A DATE, `b` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `a` `is the same day as` `b` IF
+    DATE_SERIAL `a` EQUALS DATE_SERIAL `b`
+
+GIVEN `m` IS A NUMBER, `y` IS A NUMBER
+GIVETH A NUMBER
+`the number of days in month` `m` `of` `y` MEANS
+    IF `m` EQUALS 12
+    THEN 31
+    ELSE DATE_SERIAL (DATE_FROM_DMY 1 (`m` PLUS 1) `y`) MINUS DATE_SERIAL (DATE_FROM_DMY 1 `m` `y`)
+
+-- "n months after" a day: the same day of the month n months on; where that month is shorter, its last day. READING:
+-- the texts do not say; 31 August plus 6 months is read as 28 February.
+GIVEN `n` IS A NUMBER, `the day` IS A DATE
+GIVETH A DATE
+`the date` `n` `months after` `the day` MEANS
+    DATE_FROM_DMY (`the smaller of` (DATE_DAY `the day`) `and` (`the number of days in month` `target month` `of` `target year`)) `target month` `target year`
+    WHERE
+        `month count` MEANS (DATE_YEAR `the day` TIMES 12) PLUS (DATE_MONTH `the day` MINUS 1) PLUS `n`
+        `target year` MEANS FLOOR (`month count` DIVIDED BY 12)
+        `target month` MEANS (`month count` MINUS (`target year` TIMES 12)) PLUS 1
+
+-- "year means a financial year" (Rates Act dictionary; DI2026-152 s 3). Every figure here is from the 2026
+-- determinations, which commence on 1 July 2026 and are remade each 1 July under TAA s 139, so the encoding answers for
+-- the year 1 July 2026 to 30 June 2027 only.
+`1 July 2026` MEANS DATE_FROM_DMY 1 7 2026
+`1 July 2027` MEANS DATE_FROM_DMY 1 7 2027
+
+-- "days in year": 365 for 2026-27 (February 2027 has 28 days).
+`the days in the year 2026-27` MEANS `the number of days from` `1 July 2026` `to` `1 July 2027`
+
+GIVEN `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` `is in the year 2026-27` IF
+        `1 July 2026` `is on or before` `the day`
+    AND DATE_SERIAL `the day` LESS THAN DATE_SERIAL `1 July 2027`
+
+-- "quarter" (Legislation Act 2001, dict pt 1, not deposited): a period of 3 months beginning on 1 January, 1 April,
+-- 1 July or 1 October. The first day of the quarter that contains a day:
+GIVEN `the day` IS A DATE
+GIVETH A DATE
+`the first day of the quarter containing` `the day` MEANS
+    DATE_FROM_DMY 1 ((FLOOR ((DATE_MONTH `the day` MINUS 1) DIVIDED BY 3) TIMES 3) PLUS 1) (DATE_YEAR `the day`)
+
+-- The first day of the first quarter that begins after a day ("the 1st quarter after the date", Land Tax Act ss 11B,
+-- 11C, 11CA; "the 1st day of the quarter after the date", s 8A(3)). READING: a quarter beginning on the day itself is
+-- not "after" it.
+GIVEN `the day` IS A DATE
+GIVETH A DATE
+`the first day of the quarter after` `the day` MEANS
+    `the date` 3 `months after` (`the first day of the quarter containing` `the day`)
+
+GIVEN `the quarter start` IS A DATE
+GIVETH A NUMBER
+`the days in the quarter starting` `the quarter start` MEANS
+    `the number of days from` `the quarter start` `to` (`the date` 3 `months after` `the quarter start`)
+
+GIVEN `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` `is the first day of a quarter of 2026-27` IF
+        `the day` `is in the year 2026-27`
+    AND `the day` `is the same day as` (`the first day of the quarter containing` `the day`)
+
+§§ `Rates Act s 74, Land Tax Act s 40, DI2026-150 s 4, DI2026-152 s 5 -- fractions`
+
+-- Rates Act s 74(1) and Land Tax Act s 40(1), in the same words: "If an amount worked out under this Act contains a
+-- fraction of a cent, the amount must be rounded to the nearest cent, with ½ a cent being disregarded." READING:
+-- "disregarded" drops an exact half cent, so 0.5 of a cent rounds down and anything above it rounds up.
+GIVEN `amount` IS A NUMBER
+GIVETH A NUMBER
+`to the nearest cent` `amount` MEANS
+    IF (`cents` MINUS `whole cents`) GREATER THAN (1 DIVIDED BY 2)
+    THEN (`whole cents` PLUS 1) DIVIDED BY 100
+    ELSE `whole cents` DIVIDED BY 100
+    WHERE
+        `cents` MEANS `amount` TIMES 100
+        `whole cents` MEANS FLOOR `cents`
+
+-- Rates Act s 74(2): "if the amount is a part of the average unimproved value of a parcel of land, any fraction of a
+-- dollar in the amount worked out must be disregarded." Land Tax Act s 40(2), DI2026-150 s 4 and DI2026-152 s 5 say the
+-- same of the AUV and the "base value" (AUVRU, AUVU).
+GIVEN `amount` IS A NUMBER
+GIVETH A NUMBER
+`with any fraction of a dollar disregarded` `amount` MEANS FLOOR `amount`
+
+-- Rates Act s 19(1)(a): an instalment "must be a whole dollar amount".
+GIVEN `amount` IS A NUMBER
+GIVETH A NUMBER
+`the whole dollars in` `amount` MEANS FLOOR `amount`
+
+§§ `The determinations' marginal tables`
+
+-- Each table in DI2026-150 (Tables 1 and 2) and DI2026-152 (Table 1) has rows "more than `above` but not more than ...
+-- | `base` plus `rate` of the part of the base value that is more than `above`", and a first row "less than or equal to
+-- ... | `rate` of the base value" (`above` 0, `base` 0). The rows are listed highest first.
+DECLARE `Table row` HAS
+    `above` IS A NUMBER
+    `base`  IS A NUMBER
+    `rate`  IS A NUMBER
+
+-- The amount in column 2 opposite a base value. FINDING: the determinations call this amount "P (or percentage rate)",
+-- while the Acts' formulas multiply "AUV × P"; P is read as the column 2 amount for the base value, which already
+-- includes the base value (NOTES.md finding 2).
+GIVEN `rows`       IS A LIST OF `Table row`
+      `base value` IS A NUMBER
+GIVETH A NUMBER
+`the column 2 amount in` `rows` `for` `base value` MEANS
+    CONSIDER `rows`
+    WHEN EMPTY THEN 0
+    WHEN `row` FOLLOWED BY `rest` THEN
+        IF `base value` GREATER THAN `row`'s `above`
+        THEN `row`'s `base` PLUS (`row`'s `rate` TIMES (`base value` MINUS `row`'s `above`))
+        ELSE `the column 2 amount in` `rest` `for` `base value`
+
+§§ `Rates Act s 13A -- the average unimproved value (also Land Tax Act s 9(4))`
+
+-- s 13A(1): "average unimproved value, of a parcel of land for a particular year, means ... (a) if the parcel has not
+-- been rateable previously -- the unimproved value of the parcel; ... (f) if the particular year is 1 July 2021 to 30
+-- June 2022, or a later year, and the parcel has been rateable for less than 5 years -- the average unimproved value of
+-- the parcel over those years; (g) if the particular year is 1 July 2021 to 30 June 2022, or a later year, and the
+-- parcel has been rateable for 5 years or more -- the average unimproved value of the parcel over the 5 years
+-- immediately before the particular year."
+--
+-- The unimproved values are FACTS (pt 2, the valuation, is out of scope). They are given as the values determined as
+-- at 1 January for each year the parcel has been rateable, the most recent first (for 2026-27, the value as at
+-- 1 January 2026 first). FINDING: the s 11(3) example averages, for the year beginning 1 July 2025, the values as at
+-- 1 January 2021 to 1 January 2025, so "the 5 years immediately before the particular year" includes the value as at
+-- 1 January of the particular year's own calendar year (which s 10(2) makes the value "for the financial year
+-- immediately following that date"). The encoding follows the example (NOTES.md finding 1).
+-- s 74(2): any fraction of a dollar in the AUV is disregarded. A parcel with no value given has no AUV (NOTHING).
+GIVEN `n`  IS A NUMBER
+      `xs` IS A LIST OF NUMBER
+GIVETH A LIST OF NUMBER
+`the first` `n` `of` `xs` MEANS
+    IF `n` AT MOST 0
+    THEN EMPTY
+    ELSE CONSIDER `xs`
+         WHEN EMPTY THEN EMPTY
+         WHEN `x` FOLLOWED BY `rest` THEN `x` FOLLOWED BY (`the first` (`n` MINUS 1) `of` `rest`)
+
+GIVEN `xs` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the total of` `xs` MEANS
+    CONSIDER `xs`
+    WHEN EMPTY THEN 0
+    WHEN `x` FOLLOWED BY `rest` THEN `x` PLUS (`the total of` `rest`)
+
+GIVEN `xs` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the count of` `xs` MEANS
+    CONSIDER `xs`
+    WHEN EMPTY THEN 0
+    WHEN `x` FOLLOWED BY `rest` THEN 1 PLUS (`the count of` `rest`)
+
+GIVEN `the unimproved values as at 1 January, most recent first` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+`the average unimproved value under s 13A of` `the unimproved values as at 1 January, most recent first` MEANS
+    IF `the count of` `the values averaged` EQUALS 0
+    THEN NOTHING
+    ELSE JUST (`with any fraction of a dollar disregarded` ((`the total of` `the values averaged`) DIVIDED BY (`the count of` `the values averaged`)))
+    WHERE
+        `the values averaged` MEANS `the first` 5 `of` `the unimproved values as at 1 January, most recent first`
+
+§§ `Rates Act s 21 and Land Tax Act s 19 -- interest on an overdue amount, month by month`
+
+-- Rates Act s 21(1), and Land Tax Act s 19(1) in the same words: "Interest on an amount of unpaid overdue rates [land
+-- tax] is worked out -- (a) for each month when the amount remains unpaid; and (b) on the 1st day of that month; and (c)
+-- at the interest rate applying to that day; and (d) on the total amount of overdue rates [land tax] that are unpaid on
+-- a day when the interest is worked out." (2): "if an amount remains unpaid for part of a month, interest is payable for
+-- the whole month." The example: due 15 August, paid 5 October, interest for 16 August to 15 October, 2 months.
+--
+-- The months are counted from the day after the due date: the number of whole or part months until the day paid.
+GIVEN `m` IS A NUMBER, `the due date` IS A DATE, `the day paid` IS A DATE
+GIVETH A NUMBER
+`the months counted from` `m` `for` `the due date` `paid on` `the day paid` MEANS
+    IF `the day paid` `is on or before` (`the date` `m` `months after` `the due date`)
+    THEN `m`
+    ELSE IF `m` AT LEAST 1200
+         THEN `m`
+         ELSE `the months counted from` (`m` PLUS 1) `for` `the due date` `paid on` `the day paid`
+
+GIVEN `the due date` IS A DATE, `the day paid` IS A DATE
+GIVETH A NUMBER
+`the months of interest for an amount due on` `the due date` `and paid on` `the day paid` MEANS
+    `the months counted from` 0 `for` `the due date` `paid on` `the day paid`
+
+-- The interest rate for s 21 and s 19 is one "the Minister may determine ... under the Taxation Administration Act,
+-- s 139" (the notes to s 21(1) and s 19(1)); no such determination is deposited, so the rate is an INPUT, given as a
+-- yearly percentage. READING: a month's interest is one twelfth of the yearly rate. READING: interest compounds month
+-- by month, because (d) charges it on "the total amount of overdue rates [land tax] that are unpaid", and "rates"
+-- (Rates Act dictionary) and "land tax" (Land Tax Act dictionary) include "interest payable in relation to" them
+-- (NOTES.md finding 13). The rate is taken as the same in every month. TAA s 27 (no interest under $20) does not apply:
+-- s 27(2)(b)-(c) exclude the Land Tax Act and the Rates Act.
+GIVEN `the amount unpaid` IS A NUMBER, `yearly rate` IS A NUMBER, `months` IS A NUMBER
+GIVETH A NUMBER
+`the amount with monthly interest on` `the amount unpaid` `at` `yearly rate` `for` `months` MEANS
+    IF `months` AT MOST 0
+    THEN `the amount unpaid`
+    ELSE `the amount with monthly interest on` (`the amount unpaid` TIMES (1 PLUS (`yearly rate` DIVIDED BY 12))) `at` `yearly rate` `for` (`months` MINUS 1)
+
+GIVEN `the amount unpaid` IS A NUMBER, `yearly rate` IS A NUMBER, `the due date` IS A DATE, `the day paid` IS A DATE
+GIVETH A NUMBER
+`the monthly interest on` `the amount unpaid` `at` `yearly rate` `due on` `the due date` `paid on` `the day paid` MEANS
+    `to the nearest cent` ((`the amount with monthly interest on` `the amount unpaid` `at` `yearly rate` `for` (`the months of interest for an amount due on` `the due date` `and paid on` `the day paid`)) MINUS `the amount unpaid`)
+
+§§ `What is covered, and what is not`
+
+-- The stable l4 has no REFUSE. A question that can reach a gap answers `not covered`, naming the gap.
+DECLARE `Why not covered` IS ONE OF
+    `the day is outside the year 1 July 2026 to 30 June 2027: only the 2026 determinations are deposited`
+    `commercial land (DI2026-150 Table 3, the city centre levy, the commercial emergency services levy in Table 4) is not encoded`
+    `rural land (DI2026-150 s 5(1)(a)(iv) and (b)(iv)) is not encoded; Land Tax Act s 10(1)(d) exempts it from land tax`
+    `airport land (Rates Act pt 5A) is not encoded`
+    `a proposed unit subdivision under Rates Act div 5.2 is not encoded`
+    `land owned, wholly or partly, by a corporation or a trustee (Rates Act s 20A(2), Land Tax Act ss 16 and 27(5)) is not encoded`
+    `a special disability trust as owner is not encoded`
+    `no unimproved value of the parcel was given (the valuation, Rates Act pt 2, is out of scope)`
+    `the affordable community housing exemption (Land Tax Act s 13A) is not encoded`
+    `whether the commissioner will grant a compassionate exemption (Land Tax Act ss 12-13) is the commissioner's decision; it is taken as a fact`
+    `how the unimproved value is determined (Rates Act pt 2) is not encoded; the values are taken as facts`
+    `rates for a parcel held under a Commonwealth lease for only part of the year (Rates Act s 15(3)) are not encoded`
+
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+-- The kind of land, as the Rates Act dictionary defines it ("residential land", "commercial land", "rural land"), with
+-- a residential unit (Rates Act s 29(5), "a unit that is residential land") and airport land (s 40B) apart.
+DECLARE `Kind of land` IS ONE OF
+    `residential land that is not a unit`
+    `a residential unit in a units plan`
+    `commercial land`
+    `rural land`
+    `airport land`
+    `a parcel under Rates Act div 5.2 (proposed unit subdivision)`
+
+GIVEN `the kind` IS A `Kind of land`
+GIVETH A MAYBE `Why not covered`
+`the gap for the kind of land` `the kind` MEANS
+    CONSIDER `the kind`
+    WHEN `residential land that is not a unit` THEN NOTHING
+    WHEN `a residential unit in a units plan` THEN NOTHING
+    WHEN `commercial land` THEN JUST `commercial land (DI2026-150 Table 3, the city centre levy, the commercial emergency services levy in Table 4) is not encoded`
+    WHEN `rural land` THEN JUST `rural land (DI2026-150 s 5(1)(a)(iv) and (b)(iv)) is not encoded; Land Tax Act s 10(1)(d) exempts it from land tax`
+    WHEN `airport land` THEN JUST `airport land (Rates Act pt 5A) is not encoded`
+    WHEN `a parcel under Rates Act div 5.2 (proposed unit subdivision)` THEN JUST `a proposed unit subdivision under Rates Act div 5.2 is not encoded`
+
+-- A unit's share of the parcel (Rates Act s 29(5); Land Tax Act ss 17E(4), 27(7)): "TUE means the total unit
+-- entitlement of all the units in the units plan. TUER means the total unit entitlement of all the residential units in
+-- the units plan. UE means the unit entitlement of the unit." The entitlements are FACTS (Unit Titles Act 2001, s 8).
+DECLARE `Unit entitlements` HAS
+    `UE`   IS A NUMBER
+    `TUER` IS A NUMBER
+    `TUE`  IS A NUMBER
+
+-- "AUVRU means the AUV of the parcel proportionate to the number of residential units in the parcel, worked out as
+-- follows: AUV × TUER/TUE" (Rates Act s 29(5); Land Tax Act ss 17E(4), 27(7)); with any fraction of a dollar
+-- disregarded (DI2026-150 s 4; DI2026-152 s 5).
+GIVEN `AUV` IS A NUMBER, `the entitlements` IS A `Unit entitlements`
+GIVETH A NUMBER
+`AUVRU for` `AUV` `and` `the entitlements` MEANS
+    `with any fraction of a dollar disregarded` ((`AUV` TIMES `the entitlements`'s `TUER`) DIVIDED BY `the entitlements`'s `TUE`)
+
+§§ `Regulative rules -- the parties and what they do`
+
+-- The rules in rates-core.l4 and landtax-core.l4 share these parties and acts. The owner is "the owner" of the
+-- Rates Act dictionary and pt 7 (s 45), or of the Land Tax Act dictionary; a relevant person under Land Tax Act s 14(4)
+-- may be the owner, their agent or, after the owner's death, the personal representative. Clock: days, counted from the
+-- day each rule starts (named in the comment above it).
+DECLARE `Party` IS ONE OF
+    `the owner`
+    `the owner's agent`
+    `the personal representative`
+    `the commissioner`
+
+DECLARE `Act done` IS ONE OF
+    `pay the rates in full`
+    `pay instalment` HAS `number` IS A NUMBER
+    `apply in writing for a rebate`
+    `give the commissioner written notice of the change in circumstances`
+    `apply for a deferral determination`
+    `make the deferral determination`
+    `pay the deferred amount`
+    `tell the commissioner of the change in circumstances and its date`
+    `pay the land tax`
+    `apply in writing to extend the 2-year period`
+    `decide whether to extend the period`
+    `lodge a written objection`
+    `allow or disallow the objection`
+
+§§ `Taxation Administration Act ss 100-102 -- objection`
+
+-- TAA s 100(1): "A taxpayer may lodge a written objection with the commissioner if the taxpayer is dissatisfied with --
+-- (a) an assessment, other than a compromise assessment, that is shown in a notice of assessment given to the taxpayer;
+-- or (b) a decision mentioned in schedule 1 or schedule 2; or (c) a decision under a tax law that is prescribed under
+-- the law for this section" (Rates Act s 70, Land Tax Act s 38). s 101(1): the grounds "must be stated fully and in
+-- detail, and must be in writing". s 102: "An objection must be lodged with the commissioner not later than 60 days
+-- after the date that the notice of the assessment, or of the decision objected to, is given to the taxpayer, except as
+-- provided by section 103." s 103(1): "The commissioner may permit a person to lodge an objection after the 60 day
+-- period." s 104(1): "The commissioner must consider an objection and either allow the objection in whole or in part
+-- or disallow the objection" (no period is stated). s 105: tax may be recovered while it is pending.
+-- Rates Act s 71: an objection that "relates to the valuation on which the assessment is based" must be made within
+-- "60 days after the day the commissioner gives notice under section 12 (2) of the amount determined as the unimproved
+-- value", and (4) TAA s 103 does not apply to it. s 72: for a unit subdivision, only the owners corporation may object
+-- to the valuation.
+`the days to object` MEANS 60
+
+GIVETH A DEONTIC `Party` `Act done`
+DECIDE `TAA ss 100 to 104 -- the owner may object within 60 days, and the commissioner must then decide` IS
+    PARTY `the owner`
+    DO    `lodge a written objection`
+    WITHIN `the days to object`
+    HENCE
+        (PARTY `the commissioner`
+         MUST  `allow or disallow the objection`)
+    LEST  FULFILLED
+
+-- What the owner may object to, and from which notice the 60 days run.
+DECLARE `What is objected to` IS ONE OF
+    `the assessment shown in a notice of assessment (TAA s 100(1)(a))`
+    `the valuation on which the rates assessment is based (Rates Act s 71)`
+    `a decision prescribed by Rates Act s 70 or Land Tax Act s 38`
+
+DECLARE `Objection answer` IS ONE OF
+    `object in writing by` HAS `the last day` IS A DATE, `late objection possible` IS A BOOLEAN
+    `a unit owner cannot object to the valuation; the owners corporation may (Rates Act s 72)`
+
+GIVEN `what` IS A `What is objected to`, `the notice was given on` IS A DATE, `I own a unit` IS A BOOLEAN
+GIVETH AN `Objection answer`
+`the objection deadline for` `what` `after a notice given on` `the notice was given on` `for a unit` `I own a unit` MEANS
+    IF `what` EQUALS `the valuation on which the rates assessment is based (Rates Act s 71)` AND `I own a unit`
+    THEN `a unit owner cannot object to the valuation; the owners corporation may (Rates Act s 72)`
+    ELSE `object in writing by` (`the day that is` `the days to object` `days after` `the notice was given on`) (NOT (`what` EQUALS `the valuation on which the rates assessment is based (Rates Act s 71)`))
