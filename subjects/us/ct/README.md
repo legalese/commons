@@ -67,3 +67,12 @@ The plan named "17b-600 ff." for the state supplement; the register shows the st
 **Remaining gaps.**
 - The current SAGA payment standard after CPI adjustment, the TFA payment standard table, and the AABD (state supplement) standards (CGS 17b-600 ff., UPM 4520) are not sourced.
 - The UI maximum weekly benefit is set each year by the Labor Commissioner (CGS 31-231a). No notice was sourced.
+
+## Tax and benefits encodings (2026-10-24)
+
+| Encoding | Seat | What it answers | Assertions |
+|---|---|---|---|
+| `general-statutes-of-connecticut-title-12-taxation-chapter-229/encodings/baseline-2026-10/` | the resident individual taxpayer | residency (12-701(a)(1)); exemption (12-702); tax for years from 2024 with the 2% phase-out and recaptures (12-700(a)(10)); the s 12-703 credit; the EITC and its $250 (12-704e); due date, late-payment and no-return additions, refund claims (12-719(a), 12-735, 12-732) | 52 / 52 |
+| `general-statutes-of-connecticut-title-17b-social-services/encodings/baseline-2026-10/` | the applicant for temporary family assistance | dependent child (17b-75); earnings, assets, time-limit and child-support tests, extensions (17b-112); standard of need and payment standard (17b-104); the Department's 45/60 days and the 10-day reporting duty (17b-80, 17b-85) | 47 / 47 |
+
+Connecticut adjusted gross income, the federal filing status, the federal EIC and the federal poverty level are inputs. Chapter 229 does not say who must file (s 12-740(c) leaves it to the Commissioner): that question answers `not covered`. SAGA (Regulations 17b-198) is deposited but not yet encoded.
