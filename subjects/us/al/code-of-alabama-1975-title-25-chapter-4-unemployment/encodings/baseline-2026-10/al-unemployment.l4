@@ -1,0 +1,403 @@
+IMPORT prelude
+
+-- Code of Alabama 1975, Title 25, Chapter 4 (Unemployment Compensation) -- what an unemployed worker can get.
+--
+-- Edition: the text ALISON served on 2026-10-20, as deposited at
+--   ../../registers/source-bundle/ala-code-25-4-art4.txt (Article 4, Benefits, ss 25-4-70 to 25-4-78)
+--   ../../registers/source-bundle/ala-code-25-4-art5.txt (Article 5, Claims procedure, ss 25-4-90 to 25-4-97)
+-- ALISON publishes no 'current through' date.
+--
+-- In: s 25-4-72(b), (b)(1), (2), (5) (the weekly benefit amount, for benefit years beginning on or after 1 January 2020);
+-- s 25-4-73(a), (c) (the weekly payment; partial earnings; the waiting week); s 25-4-74(a) (the maximum total in a benefit
+-- year); s 25-4-77(a)(1)-(6) (weekly eligibility, the work search, the base-period wage test and requalification);
+-- s 25-4-78(2) (voluntary quit), (3) (discharge for misconduct), (5) (refusing suitable work), (8) (employer pensions);
+-- s 25-4-91(d)(1) (the time to appeal; repaying disputed benefits).
+--
+-- Out: benefit years beginning before 1 January 2020 (`not covered`); maritime workers (s 25-4-76); extended benefits
+-- (s 25-4-75; federal frame in subjects/us/federal-state-extended-unemployment-compensation-act-of-1970); the training
+-- extension of s 25-4-74(f); s 25-4-78(1), (4), (6), (7), (9)-(13) and the rest of s 25-4-78; employer charging (s 25-4-54);
+-- who is an employer and what is insured work (Article 1): the worker states wages for insured work.
+--
+-- Federal frame (not imported): FUTA 26 U.S.C. 3304 and SSA Title III, deposited in subjects/us/internal-revenue-code-of-1986
+-- and subjects/us/social-security-act. Unemployment compensation is federal gross income (26 U.S.C. 85); Alabama exempts
+-- some after a downsizing (s 40-18-19.1, encoded in ../../../code-of-alabama-1975-title-40-chapter-18-income-taxes/).
+--
+-- BASELINE ENCODING, from the seat of the unemployed worker (the claimant). Expected values in the case file are
+-- hand-written. No pipeline, no independent test pass, no human gate. NOT ADVICE.
+
+§ `Code of Alabama 1975, Title 25, Chapter 4 -- unemployment compensation benefits`
+
+§§ `What this encoding does not cover`
+
+DECLARE `Why not covered` IS ONE OF
+    -- s 25-4-72(a), (b)(3), (4): benefit years before 2020 had other maximums (and before 2006 another formula)
+    `this encoding computes benefits for benefit years beginning on or after 1 January 2020 only`
+
+DECLARE `Answer` IS ONE OF
+    `answered`    HAS `amount`  IS A NUMBER
+    `not covered` HAS `because` IS A `Why not covered`
+
+-- s 25-4-72(1), s 25-4-73(a), s 25-4-74(a): "fractional parts of one dollar ($1) in excess of fifty cents ($.50) shall be
+-- rounded to the next higher multiple ... fractional parts ... which are fifty cents ($.50) or less shall be dropped". The
+-- same rule is used for "computed to the nearest multiple of one dollar" in ss 25-4-73 and 25-4-74 (NOTES.md finding 3).
+GIVEN `amount` IS A NUMBER
+GIVETH A NUMBER
+`to the dollar` MEANS
+    IF (`amount` MINUS FLOOR `amount`) GREATER THAN 0.5
+    THEN FLOOR `amount` PLUS 1
+    ELSE FLOOR `amount`
+
+§§ `s 25-4-72 -- the weekly benefit amount`
+
+-- (b): "one twenty-sixth of the average of the wages for insured work paid to the individual during the two quarters of
+-- his or her base period in which the total wages were the highest"; (2): if that is not more than $44.50 "there shall be
+-- no weekly benefit amount"; (5): from benefit years beginning on or after 1 January 2020, above $274.50 the maximum is
+-- $275. Wages in the two highest quarters are stated by the worker.
+GIVEN `wages in the highest quarter` IS A NUMBER, `wages in the second-highest quarter` IS A NUMBER
+GIVETH A NUMBER
+`the amount derived` MEANS
+    ((`wages in the highest quarter` PLUS `wages in the second-highest quarter`) DIVIDED BY 2) DIVIDED BY 26
+
+GIVEN `wages in the highest quarter` IS A NUMBER, `wages in the second-highest quarter` IS A NUMBER
+GIVETH A NUMBER
+`the weekly benefit amount` MEANS
+    IF `the amount derived` `wages in the highest quarter` `wages in the second-highest quarter` AT MOST 44.5
+    THEN 0
+    ELSE IF `the amount derived` `wages in the highest quarter` `wages in the second-highest quarter` GREATER THAN 274.5
+         THEN 275
+         ELSE `to the dollar` (`the amount derived` `wages in the highest quarter` `wages in the second-highest quarter`)
+
+§§ `s 25-4-77(a)(6) -- the base-period wage test`
+
+-- Base-period wages "equal to or exceeding one and one-half times" the highest quarter, "and in addition, qualifies for
+-- benefits under the provisions of Section 25-4-72" (a weekly benefit amount exists). Proviso: a person who received
+-- benefits in the preceding benefit year must since have earned in insured work "at least eight times the weekly benefit
+-- amount established for the individual in the preceding benefit year".
+DECLARE `Base period` HAS
+    `wages in the highest quarter`                       IS A NUMBER
+    `wages in the second-highest quarter`                IS A NUMBER
+    `total base-period wages`                            IS A NUMBER
+    `received benefits in the preceding benefit year`    IS A BOOLEAN
+    `weekly benefit amount in the preceding benefit year` IS A NUMBER
+    `insured wages earned since that benefit year began` IS A NUMBER
+
+GIVEN b IS A `Base period`
+GIVETH A BOOLEAN
+DECIDE `meets the base-period wage test` IF
+        b's `total base-period wages` AT LEAST (1.5 TIMES b's `wages in the highest quarter`)
+    AND `the weekly benefit amount` (b's `wages in the highest quarter`) (b's `wages in the second-highest quarter`) GREATER THAN 0
+    AND (    NOT (b's `received benefits in the preceding benefit year`)
+         OR  b's `insured wages earned since that benefit year began` AT LEAST (8 TIMES b's `weekly benefit amount in the preceding benefit year`))
+
+§§ `s 25-4-74(a) -- the maximum total in a benefit year`
+
+-- "the lesser of 14 times his or her weekly benefit amount, if the state's average unemployment rate is at or below 6.5
+-- percent, with an additional weekly benefit amount added for each 0.5 percent increase ... above 6.5 percent up to a
+-- maximum of 20 times ... if the state's average unemployment rate equals or exceeds 9.5 percent, and one fourth of the
+-- wages paid ... during his or her base period". The rate is the one the Department of Workforce publishes ((d)): an input.
+GIVEN `the state's average unemployment rate` IS A NUMBER
+GIVETH A NUMBER
+`the number of weekly amounts` MEANS
+    IF `the state's average unemployment rate` AT MOST 6.5
+    THEN 14
+    ELSE min 20 (14 PLUS FLOOR ((`the state's average unemployment rate` MINUS 6.5) DIVIDED BY 0.5))
+
+GIVEN `weekly benefit amount` IS A NUMBER, `total base-period wages` IS A NUMBER, `the state's average unemployment rate` IS A NUMBER
+GIVETH A NUMBER
+`the maximum total benefits` MEANS
+    `to the dollar` (min (`the number of weekly amounts` `the state's average unemployment rate` TIMES `weekly benefit amount`)
+                         (`total base-period wages` DIVIDED BY 4))
+
+§§ `s 25-4-73 -- the payment for a week`
+
+-- (a): "his or her weekly benefit amount, less that part of the wages, if any, payable to him or her with respect to such
+-- week which is in excess of one third of the weekly benefit amount", to the nearest dollar. Never below nil.
+GIVEN `weekly benefit amount` IS A NUMBER, `wages for the week` IS A NUMBER
+GIVETH A NUMBER
+`the payment for the week` MEANS
+    max 0 (`to the dollar` (`weekly benefit amount` MINUS max 0 (`wages for the week` MINUS (`weekly benefit amount` DIVIDED BY 3))))
+
+-- (c): "a one-week waiting period with no benefits payable during the first compensable week within a benefit year".
+GIVEN `the first compensable week of the benefit year` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a waiting week` IF `the first compensable week of the benefit year`
+
+§§ `s 25-4-77(a)(1)-(5) -- eligibility for a week`
+
+DECLARE `Week claimed` HAS
+    `claim made for the week`                         IS A BOOLEAN
+    `registered and reporting at the employment office` IS A BOOLEAN
+    `able to work and available for work`             IS A BOOLEAN
+    `in approved training`                            IS A BOOLEAN
+    `totally or partially unemployed in the week`     IS A BOOLEAN
+    `prospective employers contacted in the week`     IS A NUMBER
+    `summoned for jury duty`                          IS A BOOLEAN
+
+-- (a)(5): "contacting at least three prospective employers for each week of unemployment claimed", unless the failure is
+-- because of a jury summons. (b)(1)-(2): approved training is no ground for denial under (a)(3).
+GIVEN w IS A `Week claimed`
+GIVETH A BOOLEAN
+DECIDE `made a reasonable and active effort to secure work` IF
+        w's `prospective employers contacted in the week` AT LEAST 3
+    OR  w's `summoned for jury duty`
+
+GIVEN w IS A `Week claimed`
+GIVETH A BOOLEAN
+DECIDE `eligible for the week` IF
+        w's `claim made for the week`
+    AND w's `registered and reporting at the employment office`
+    AND (w's `able to work and available for work` OR w's `in approved training`)
+    AND w's `totally or partially unemployed in the week`
+    AND `made a reasonable and active effort to secure work` w
+
+§§ `s 25-4-78 -- disqualifications for how the job ended`
+
+-- How the worker's most recent bona fide work ended, in the categories s 25-4-78(2) and (3) use. Whether a quit had
+-- "good cause connected with such work", and which kind of misconduct it was, are for the secretary; asked as facts.
+DECLARE `How the job ended` IS ONE OF
+    `laid off or let go for no fault of mine`
+    `quit with good cause connected with the work`
+    `quit without good cause connected with the work`
+    -- (3)a: "a dishonest or criminal act committed in connection with his or her work or for sabotage or an act
+    -- endangering the safety of others or for the use of illegal drugs after previous warning or for the refusal to
+    -- submit to or cooperate with a blood or urine test after previous warning"
+    `discharged for a dishonest or criminal act, sabotage, endangering others, or drugs after warning`
+    -- (3)b: "actual or threatened misconduct ... repeated after previous warning"
+    `discharged for misconduct repeated after warning`
+    -- (3)c: "misconduct connected with his or her work" of any other kind
+    `discharged for other misconduct connected with the work`
+
+-- (2)a.1, c, d: a quit is not disqualifying where the worker was forced to leave by sickness or disability and met the
+-- notice and return conditions, immediately returned to the regular employer or to recall rights, or relocated with an
+-- active-duty military spouse. Asked as one fact.
+DECLARE `Effect of the separation` IS ONE OF
+    `no disqualification`
+    -- (2)b, (3)b: no benefits "until" re-employment with wages of at least 10 times the weekly benefit amount and a
+    -- nondisqualifying separation; the total reduced by 3 to 9 times the weekly benefit amount, as the secretary decides
+    `no benefits until requalified, and the total reduced by 3 to 9 weekly amounts`
+    -- (3)a: the same requalification, and never any benefits on the wages from that employer
+    `no benefits until requalified, and none ever on that employer's wages`
+    -- (3)c: the week of discharge and 1 to 4 following weeks, as the secretary decides; the total reduced by those weeks
+    `no benefits for the week of discharge and 1 to 4 more weeks, and the total reduced by those weeks`
+
+GIVEN `how` IS A `How the job ended`, `a quit exception applies` IS A BOOLEAN
+GIVETH AN `Effect of the separation`
+`the effect of the separation` MEANS
+    CONSIDER `how`
+    WHEN `laid off or let go for no fault of mine`         THEN `no disqualification`
+    WHEN `quit with good cause connected with the work`    THEN `no disqualification`
+    WHEN `quit without good cause connected with the work` THEN
+        IF `a quit exception applies`
+        THEN `no disqualification`
+        ELSE `no benefits until requalified, and the total reduced by 3 to 9 weekly amounts`
+    WHEN `discharged for a dishonest or criminal act, sabotage, endangering others, or drugs after warning` THEN `no benefits until requalified, and none ever on that employer's wages`
+    WHEN `discharged for misconduct repeated after warning` THEN `no benefits until requalified, and the total reduced by 3 to 9 weekly amounts`
+    WHEN `discharged for other misconduct connected with the work` THEN `no benefits for the week of discharge and 1 to 4 more weeks, and the total reduced by those weeks`
+
+-- (2)b.1(ii), (3)a.1: requalifying needs insured wages "equal to at least 10 times his or her weekly benefit amount".
+GIVEN `weekly benefit amount` IS A NUMBER
+GIVETH A NUMBER
+`the wages needed to requalify` MEANS 10 TIMES `weekly benefit amount`
+
+-- (2)b.2, (3)c.2: the total of s 25-4-74 reduced by the number of weekly amounts the secretary sets.
+GIVEN `maximum total` IS A NUMBER, `weekly benefit amount` IS A NUMBER, `weekly amounts deducted` IS A NUMBER
+GIVETH A NUMBER
+`the reduced maximum total` MEANS
+    max 0 (`maximum total` MINUS (`weekly amounts deducted` TIMES `weekly benefit amount`))
+
+-- (5): failing without good cause to apply for or accept available suitable work: "not less than one nor more than five
+-- weeks from the date of failure". (5)b: work is never suitable if the post is vacant because of a labour dispute, if its
+-- wages, hours or conditions are substantially less favourable than prevailing locally, or if it requires joining a
+-- company union or leaving a bona fide union.
+GIVEN `vacant because of a strike, lockout or labor dispute` IS A BOOLEAN
+      `substantially less favorable than prevailing local conditions` IS A BOOLEAN
+      `requires joining a company union or leaving a union` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the work can never be suitable` IF
+        `vacant because of a strike, lockout or labor dispute`
+    OR  `substantially less favorable than prevailing local conditions`
+    OR  `requires joining a company union or leaving a union`
+
+-- (8)b, c: the weekly benefit is reduced, not below nil, by a pension "reasonably attributable to the week" only if it is
+-- paid under a plan maintained or contributed to by a base-period employer, 100 percent employer-financed; Social Security
+-- and Railroad Retirement payments never reduce it. (8)b.2 (base-period work affecting the pension) is folded into the
+-- first fact.
+GIVEN `weekly payment` IS A NUMBER, `pension for the week` IS A NUMBER
+      `paid under a base-period employer's plan, wholly employer-financed` IS A BOOLEAN
+      `a Social Security or Railroad Retirement payment` IS A BOOLEAN
+GIVETH A NUMBER
+`the payment after a pension` MEANS
+    IF `paid under a base-period employer's plan, wholly employer-financed` AND (NOT `a Social Security or Railroad Retirement payment`)
+    THEN max 0 (`weekly payment` MINUS `pension for the week`)
+    ELSE `weekly payment`
+
+§§ `Duties with deadlines`
+
+DECLARE `Party` IS ONE OF
+    `the claimant`
+    `the claimant's last employing unit`
+
+DECLARE `Act` IS ONE OF
+    `certify the week's work search` HAS `employers contacted` IS A NUMBER
+    `file an appeal from the determination`
+    `repay the disputed benefits to the fund`
+
+-- s 25-4-77(a)(5): the claimant must contact "at least three prospective employers for each week of unemployment
+-- claimed", and "The department shall require the claimant to provide proof of work search efforts when filing his or her
+-- weekly certification". Modelled as the weekly certification, which counts only if it shows three or more employers
+-- contacted. Days count from the start of the week claimed; the certification is taken to fall within the week (the
+-- deadline for filing it is set by the secretary's rules, s 25-4-90, not deposited).
+GIVEN `who` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the weekly work search` `who` MEANS
+    PARTY `who`
+    MUST  `certify the week's work search` `employers contacted` PROVIDED `employers contacted` AT LEAST 3
+    WITHIN 7
+    HENCE FULFILLED
+    LEST  BREACH BY `who` BECAUSE "s 25-4-77(a)(5): fewer than three prospective employers contacted; not eligible for the week"
+
+-- s 25-4-91(d)(1): a party to whom notice of determination is given may appeal "within seven calendar days after delivery
+-- of such notice or within 15 calendar days after such notice was mailed"; otherwise "such decision shall be deemed final".
+GIVEN `who` IS A `Party`, `days allowed` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`the right to appeal` `who` `days allowed` MEANS
+    PARTY `who`
+    MAY   `file an appeal from the determination`
+    WITHIN `days allowed`
+    HENCE FULFILLED
+
+GIVEN `the notice was mailed` IS A BOOLEAN
+GIVETH A NUMBER
+`the days to appeal` MEANS
+    IF `the notice was mailed`
+    THEN 15
+    ELSE 7
+
+-- s 25-4-91(d)(1)a: if an appeal is filed, benefits paid before the final decision that "would not have been payable under
+-- the terms of the final decision" are an overpayment, and "the claimant shall be required to repay". No time is stated.
+GIVEN `who` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the duty to repay disputed benefits` `who` MEANS
+    PARTY `who`
+    MUST  `repay the disputed benefits to the fund`
+
+-- =====================================================================================================================
+§ `Questions for the unemployed worker`
+-- The seat: the individual who has lost work and claims benefits (the claimant). Each question is derived from the rules
+-- above.
+
+§§ `How much would I get?`
+
+@export What is my Alabama weekly unemployment benefit amount (Ala. Code s 25-4-72)? 0 means no weekly benefit amount.
+GIVEN `benefit year starts in` IS A NUMBER @desc The calendar year your benefit year begins (the year you first claim)
+      `my highest quarter wages` IS A NUMBER @desc Wages for insured work in the calendar quarter of your base period with the most wages, in US dollars
+      `my second-highest quarter wages` IS A NUMBER @desc Wages for insured work in the quarter of your base period with the next most wages, in US dollars
+GIVETH AN `Answer`
+`What is my weekly benefit amount` MEANS
+    IF `benefit year starts in` LESS THAN 2020
+    THEN `not covered` `this encoding computes benefits for benefit years beginning on or after 1 January 2020 only`
+    ELSE `answered` (`the weekly benefit amount` `my highest quarter wages` `my second-highest quarter wages`)
+
+@export Have I earned enough in my base period to get Alabama unemployment benefits (Ala. Code s 25-4-77(a)(6))?
+GIVEN `my highest quarter wages` IS A NUMBER @desc Wages for insured work in the calendar quarter of your base period with the most wages, in US dollars
+      `my second-highest quarter wages` IS A NUMBER @desc Wages for insured work in the quarter of your base period with the next most wages, in US dollars
+      `my total base-period wages` IS A NUMBER @desc All your wages for insured work in the four quarters of your base period, in US dollars
+      `I got benefits last benefit year` IS A BOOLEAN @desc Did you receive unemployment benefits in your preceding benefit year?
+      `my last weekly benefit amount` IS A NUMBER @desc Your weekly benefit amount in that preceding benefit year (0 if none)
+      `my insured wages since then` IS A NUMBER @desc Wages you have earned in insured work since that preceding benefit year began, in US dollars
+GIVETH A BOOLEAN
+`Have I earned enough to qualify` MEANS
+    `meets the base-period wage test` (`Base period` WITH
+        `wages in the highest quarter`                        IS `my highest quarter wages`
+        `wages in the second-highest quarter`                 IS `my second-highest quarter wages`
+        `total base-period wages`                             IS `my total base-period wages`
+        `received benefits in the preceding benefit year`     IS `I got benefits last benefit year`
+        `weekly benefit amount in the preceding benefit year` IS `my last weekly benefit amount`
+        `insured wages earned since that benefit year began`  IS `my insured wages since then`)
+
+@export What is the most Alabama unemployment benefit I can get in my benefit year (Ala. Code s 25-4-74(a))?
+GIVEN `my weekly benefit amount` IS A NUMBER @desc Your weekly benefit amount, in US dollars
+      `my total base-period wages` IS A NUMBER @desc All your wages for insured work in your base period, in US dollars
+      `the state's unemployment rate` IS A NUMBER @desc The state's average unemployment rate published by the Alabama Department of Workforce for the most recent third calendar quarter, in percent (e.g. 3.1)
+GIVETH A NUMBER
+`What is the most I can get in my benefit year` MEANS
+    `the maximum total benefits` `my weekly benefit amount` `my total base-period wages` `the state's unemployment rate`
+
+@export How much Alabama unemployment benefit will I be paid for a week in which I earned some wages (Ala. Code s 25-4-73(a))?
+GIVEN `my weekly benefit amount` IS A NUMBER @desc Your weekly benefit amount, in US dollars
+      `my wages this week` IS A NUMBER @desc Wages payable to you for the week, in US dollars (0 if none)
+      `this is my first compensable week` IS A BOOLEAN @desc Is this the first week of your benefit year for which you would otherwise be paid (the waiting week)?
+GIVETH A NUMBER
+`How much will I be paid for this week` MEANS
+    IF `a waiting week` `this is my first compensable week`
+    THEN 0
+    ELSE `the payment for the week` `my weekly benefit amount` `my wages this week`
+
+§§ `Am I eligible this week?`
+
+@export Am I eligible for Alabama unemployment benefits for this week (Ala. Code s 25-4-77(a)(1)-(5))?
+GIVEN `I filed my claim for the week` IS A BOOLEAN @desc Did you file your weekly claim (certification) for the week?
+      `I am registered and reporting` IS A BOOLEAN @desc Are you registered for work and reporting at a state employment office as required?
+      `I am able and available` IS A BOOLEAN @desc Are you physically and mentally able to work, and available for work?
+      `I am in approved training` IS A BOOLEAN @desc Are you in a training course approved by the secretary, or Trade Act training?
+      `I was unemployed this week` IS A BOOLEAN @desc Were you totally or partially unemployed this week?
+      `employers I contacted this week` IS A NUMBER @desc How many different prospective employers did you contact this week?
+      `I was summoned for jury duty` IS A BOOLEAN @desc Did a jury summons keep you from looking for work this week?
+GIVETH A BOOLEAN
+`Am I eligible this week` MEANS
+    `eligible for the week` (`Week claimed` WITH
+        `claim made for the week`                           IS `I filed my claim for the week`
+        `registered and reporting at the employment office` IS `I am registered and reporting`
+        `able to work and available for work`               IS `I am able and available`
+        `in approved training`                              IS `I am in approved training`
+        `totally or partially unemployed in the week`       IS `I was unemployed this week`
+        `prospective employers contacted in the week`       IS `employers I contacted this week`
+        `summoned for jury duty`                            IS `I was summoned for jury duty`)
+
+§§ `How my job ended`
+
+@export Does the way my last job ended disqualify me from Alabama unemployment benefits, and how (Ala. Code s 25-4-78(2), (3))?
+GIVEN `how my job ended` IS A `How the job ended` @desc How your most recent job ended: laid off or let go for no fault of mine; quit with good cause connected with the work; quit without good cause connected with the work; discharged for a dishonest or criminal act, sabotage, endangering others, or drugs after warning; discharged for misconduct repeated after warning; discharged for other misconduct connected with the work
+      `a quit exception applies` IS A BOOLEAN @desc If you quit: were you forced out by sickness or disability (having told the employer and offered to return), did you go straight back to your regular employer or a job with recall rights, or did you move with an active-duty military spouse under orders?
+GIVETH AN `Effect of the separation`
+`Does how my job ended disqualify me` MEANS
+    `the effect of the separation` `how my job ended` `a quit exception applies`
+
+@export How much must I earn in a new insured job to requalify after a disqualification (Ala. Code s 25-4-78(2)b, (3)a)?
+GIVEN `my weekly benefit amount` IS A NUMBER @desc Your weekly benefit amount for the benefit year of the disqualification, in US dollars
+GIVETH A NUMBER
+`How much must I earn to requalify` MEANS
+    `the wages needed to requalify` `my weekly benefit amount`
+
+@export What is the most I can get in my benefit year after the secretary deducts weekly amounts for a disqualification (Ala. Code s 25-4-78(2)b.2, (3)c.2)?
+GIVEN `my maximum total` IS A NUMBER @desc Your maximum total benefits for the benefit year before the reduction, in US dollars
+      `my weekly benefit amount` IS A NUMBER @desc Your weekly benefit amount, in US dollars
+      `weekly amounts deducted` IS A NUMBER @desc The number of weekly amounts the secretary deducted (3 to 9 for a quit or repeated misconduct; the weeks of disqualification for other misconduct)
+GIVETH A NUMBER
+`What is my reduced maximum` MEANS
+    `the reduced maximum total` `my maximum total` `my weekly benefit amount` `weekly amounts deducted`
+
+@export Can I refuse an offer of work without being disqualified because the work can never count as suitable (Ala. Code s 25-4-78(5)b)?
+GIVEN `the job is vacant because of a strike` IS A BOOLEAN @desc Is the position vacant directly because of a strike, lockout or other labor dispute?
+      `the job is worse than local conditions` IS A BOOLEAN @desc Are its wages, hours or other conditions substantially less favorable than those prevailing for similar work locally?
+      `the job requires a company union` IS A BOOLEAN @desc Would you have to join a company union, or resign from or not join a bona fide labor union?
+GIVETH A BOOLEAN
+`Can I refuse this work` MEANS
+    `the work can never be suitable` `the job is vacant because of a strike` `the job is worse than local conditions` `the job requires a company union`
+
+@export How much is my weekly Alabama unemployment payment after a pension is taken off (Ala. Code s 25-4-78(8))?
+GIVEN `my weekly payment` IS A NUMBER @desc Your weekly benefit payment before the pension, in US dollars
+      `my pension for the week` IS A NUMBER @desc The part of your pension, retirement pay or annuity reasonably attributable to the week, in US dollars
+      `the pension is from a base-period employer's plan it alone paid for` IS A BOOLEAN @desc Is it paid under a plan of an employer you worked for in your base period, wholly financed by that employer?
+      `the pension is Social Security or Railroad Retirement` IS A BOOLEAN @desc Is it a Social Security or Railroad Retirement payment?
+GIVETH A NUMBER
+`What is my payment after my pension` MEANS
+    `the payment after a pension` `my weekly payment` `my pension for the week` `the pension is from a base-period employer's plan it alone paid for` `the pension is Social Security or Railroad Retirement`
+
+§§ `If I disagree with a decision`
+
+@export How many days do I have to appeal an Alabama unemployment determination (Ala. Code s 25-4-91(d)(1))?
+GIVEN `the notice was mailed to me` IS A BOOLEAN @desc Was the notice of determination mailed to you (rather than delivered to you)?
+GIVETH A NUMBER
+`How many days do I have to appeal` MEANS
+    `the days to appeal` `the notice was mailed to me`
