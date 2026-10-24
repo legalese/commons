@@ -14,6 +14,8 @@ It satisfies `REQ-0068` in `subjects/au/requirements.jsonl` (priority 2, the 20 
 
 Compilation No. 82, compilation date 1 July 2026, includes amendments up to Act No. 17, 2025 (register id **C2026C00285**, Federal Register of Legislation, retrieved 22 September 2026), as deposited at `../../registers/source-bundle/C2004A03668.txt`.
 
+The formulas the deposit lost are taken from the sidecar `../../registers/source-bundle/C2004A03668.formulas.md` (transcribed 2026-10-24 from the authorised Word rendering of the same compilation, each checked against its equation image), used by `src-formulas.l4` (added 2026-10-24).
+
 Nothing else is brought in. The approved Guide to the Assessment of the Degree of Permanent Impairment (s 28), the Minister's travel rate (s 16(6)) and the Regulations are not deposited. The CPI- and WPI-indexed amounts (ss 13, 13AA) are inputs.
 
 ## Checks
@@ -21,8 +23,9 @@ Nothing else is brought in. The approved Guide to the Assessment of the Degree o
 | Module | Case file | Assertions |
 |---|---|---|
 | `src-employee.l4` (11 questions) | `src-cases-employee.l4` | 60 written, 60 satisfied |
+| `src-formulas.l4` (5 questions, imports `src-employee`) | `src-cases-formulas.l4` | 38 written, 38 satisfied |
 
-`l4 run` on both files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
+`l4 run` on all four files: 0 errors, 0 warnings (2026-10-23; again 2026-10-24 with the formulas module, the 60 earlier assertions unchanged and still satisfied). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
 
 ## Seat
 
@@ -44,7 +47,9 @@ The 2026-10-18 defaults:
 
 ## Scope
 
-**In:** ss 5(1) (employee), 5A, 5B, 6(1)(a)–(d), (1C), (3) and 6(1)(e)–(g) as one case, 14, 16(1), (2), (6) (eligibility only), (7), 17(2)–(4), 19(2), (2A), (3) (which rate, and the adjustment percentage), 23(1), (1A), (2), 24(1)–(9), 25(4), (5), 26(1), (2), 53(1), (3), 54(1)–(3), (5), 60(1), 62(3), 64(1).
+**Added 2026-10-24 (`src-formulas.l4`):** s 8(1), (2) (normal weekly earnings), s 16(6)(c) (the travel amount), s 19(2), (2B)–(2D), (3), (5)–(11) (the weekly amount, the split week, the 150% AWOTE cap, minimum earnings with the dependant additions), s 27 (non-economic loss), ss 13(4)–(6), 13AA(2)–(4) (one year's indexation of an amount). Still out: s 8(3)–(10), s 19(3A), (4) as a computation (what the employee is able to earn is Comcare's determination, an input), ss 20–22.
+
+**In (2026-10-23):** ss 5(1) (employee), 5A, 5B, 6(1)(a)–(d), (1C), (3) and 6(1)(e)–(g) as one case, 14, 16(1), (2), (6) (eligibility only), (7), 17(2)–(4), 19(2), (2A), (3) (which rate, and the adjustment percentage), 23(1), (1A), (2), 24(1)–(9), 25(4), (5), 26(1), (2), 53(1), (3), 54(1)–(3), (5), 60(1), 62(3), 64(1).
 
 **Out:** s 7 (diseases listed by the Minister); s 8 (normal weekly earnings: its formulas are lost, see finding 1); s 15; s 16 amounts; s 17(5) and s 18 amounts; s 19(2B)–(2D) (a week split at the 45-week mark), (3A)–(14) (superannuation, the 150% cap and minimum earnings, which act on the lost formula's result); ss 20 to 22, 23A, 25(1)–(3), 27 (non-economic loss: formula lost), 29, 29A, 30, 31; Part III (rehabilitation); Part IV (common law and third parties); ss 55 to 59; Part VI beyond ss 60, 62(3) and 64(1); Parts VII onwards; Defence service (s 4AA; the Military Rehabilitation and Compensation Act 2004 and the DRCA).
 
@@ -62,9 +67,16 @@ The 2026-10-18 defaults:
 10. **The death lump sum is all or a determined share.** Where any dependant was wholly dependent, the full s 17(3) amount ($400,000 printed, indexed by the Wage Price Index under s 13AA) is payable for all dependants; where only partly dependent dependants are left, Comcare determines an amount up to it; where there are none, only medical and funeral costs. Asserted.
 11. **The Tribunal reviews only a reconsidered decision.** A reviewable decision is one made under s 62 (or s 38(4)) (s 60(1)), and s 64(3) excludes any other application; reconsideration must be asked within 30 days after the determination first came to the person's notice (s 62(3)). Asserted.
 
+12. **The formulas are now in, from the sidecar (2026-10-24).** Finding 1 is answered for ss 8(1), (2), 16(6)(c), 19(2), (2C), (2D), (3), 27(2) and 13AA(3): `src-formulas.l4` computes normal weekly earnings ((NH × RP) + A, plus NH × OR for regular overtime), the travel amount, the weekly amount and non-economic loss in dollars. No earlier case supplied a dollar amount that a formula now produces (the earlier cases asserted the rate and the adjustment percentage, which the new module reuses), so there is nothing to compare. Asserted.
+13. **The 150% AWOTE cap and the minimum earnings act only on the s 19(3) amount, and the minimum only in a week the employee is not employed.** Section 19(5) caps "an amount of compensation calculated under subsection (3)"; (6) raises only "an amount ... calculated under paragraph (3)(a)". A maximum rate week is uncapped, and a reduced rate week with any employment is not raised to the minimum however low it is. Asserted.
+14. **The dependant additions have a quirk at (10) and (11).** A dependent child of 16 or more is a prescribed person as well as a prescribed child. If it is the only prescribed person, (10) removes its $25 and the $50 is added for it; if two or more such children depend on the employee, (11) puts one of them under (8) whether or not a spouse is also dependent, so that child earns no $25. With a spouse and a single child of 16 or more, neither applies and both $50 and $25 are added. Encoded literally. Asserted.
+15. **A negative result is read as nil.** Where AE exceeds NWE (or the percentage of it), each formula goes below zero; the Act says nothing of a negative amount, and the encoding returns 0 (an INFERENCE). Asserted.
+16. **X in the split week is an inference where the incapacity is partial.** Section 19(2C) defines X by the normal hours of the week that "elapse before" the 45-week total is passed. With the employee's inputs (hours prevented before and during the week) the encoding takes the week's prevented hours as spread evenly across its normal hours, so X = NWH × (hours left ÷ hours prevented this week); in a week of total incapacity this is exactly the hours left. The "reduced rate compensation entitlement" of s 19(2D) is read as the s 19(3) amount after the (5) cap and (6) minimum. Both INFERENCES. Asserted.
+17. **"Calculated to 3 decimal places" is read as truncation**, so that the s 13(6) and s 13AA(4) increase of 0.001 when the fourth place is over 4 completes a round-half-up. Indexation substitutes an amount only when the factor is greater than one, and applies it to the last substituted amount; no rounding of the dollar amount is prescribed. Asserted. The amounts in force cannot yet be computed without inputs: no CPI or WPI index numbers are deposited, and amending Acts reset several bases (REQ-0101, left open).
+
 ## What would need doing before this is worth relying on
 
-- **The lost formulas** (ss 8, 16(6), 19, 27, 13AA), transcribed from the authorised rendering, so normal weekly earnings and the weekly amount can be computed, with the s 19(5) cap and the s 19(6)–(9) minimum earnings.
-- **The indexed amounts** in force each year (s 24(9), s 17, s 18), and the approved Guide's percentages for a real assessment.
+- **The indexed amounts** in force each year (s 24(9), s 17, s 18, s 19(7)–(9), s 27(2)): deposit the ABS December-quarter CPI and WPI index numbers and the amending Acts' application provisions that reset the bases (REQ-0101); `src-formulas.l4` then computes each year's amount. The approved Guide's percentages for a real assessment.
+- **The Minister's rate per kilometre** (s 16(6)) and the published AWOTE (s 19(5)), now inputs.
 - **Part III (rehabilitation)**, which carries the employer's duties and the suspension of compensation for refusing a program.
 - **Wider sources.** No Comcare guidance, AAT or ART decision or case law was read; finding 4 is an interpretive choice.

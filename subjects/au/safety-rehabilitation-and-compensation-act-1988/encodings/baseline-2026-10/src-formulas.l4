@@ -1,0 +1,257 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `src-employee`
+
+-- Safety, Rehabilitation and Compensation Act 1988 (Commonwealth of Australia) -- the dollar amounts, from the formulas
+-- the text deposit lost. Beside src-employee.l4, which answers which weekly rate applies; this module turns that into
+-- dollars, and adds normal weekly earnings (s 8), travel to treatment (s 16(6)(c)), non-economic loss (s 27) and the
+-- indexation factors (ss 13, 13AA).
+--
+-- SEAT: the injured employee, as in src-employee.l4.
+--
+-- FORMULAS. Taken from ../../registers/source-bundle/C2004A03668.formulas.md (transcribed 2026-10-24 from the authorised
+-- Word rendering of compilation C2026C00285, each checked against the equation image). Each rule quotes its formula in
+-- that file's linear notation.
+--
+-- FIGURES THAT ARE INPUTS. Nothing indexed is deposited: the CPI and WPI index numbers (ss 13, 13AA), the amounts in force
+-- after indexation ($202, $50, $25 in s 19(7)-(9), $15,000 in s 27(2)), the Average Weekly Ordinary Time Earnings of
+-- Full-time Adults (s 19(5)) and the Minister's rate per kilometre (s 16(6)) are asked for. The indexation rules below
+-- turn a printed or last substituted amount into the next one, given the two index numbers.
+--
+-- BASELINE ENCODING. No pipeline, no coverage table, no independent test pass, no human gate. Not for public use as
+-- advice. See NOTES.md (findings 12 to 17).
+
+§ `Safety, Rehabilitation and Compensation Act 1988 -- the amounts, from the formulas`
+
+§§ `s 8 -- normal weekly earnings`
+
+-- s 8(1): normal weekly earnings "shall be calculated in relation to the relevant period under the formula:
+--     (NH × RP) + A
+-- where: NH is the average number of hours worked in each week by the employee in his or her employment during the
+-- relevant period; RP is the employee's average hourly ordinary time rate of pay during that period; and A is the average
+-- amount of any allowance payable to the employee in each week ... other than an allowance payable in respect of special
+-- expenses". (2): where the employee "is required to work overtime on a regular basis", plus "NH × OR" with NH the average
+-- weekly hours of overtime and OR "the employee's average hourly overtime rate of pay during that period". s 9(1): the
+-- relevant period is "the latest period of 2 weeks before the date of the injury during which the employee was
+-- continuously employed" (the averages are asked over it). Out: s 8(3)-(10) (other employment, a short period, later
+-- increases and indexation, the cap) -- each adjusts the figure computed here.
+@export What were my normal weekly earnings before the injury (s 8(1), (2))?
+GIVEN `my average weekly hours in the relevant period` IS A NUMBER @desc The average number of hours you worked each week in the latest 2 weeks before the injury during which you were continuously employed (s 9), not counting overtime
+      `my average hourly ordinary time rate of pay` IS A NUMBER @desc Your average hourly ordinary time rate of pay over those 2 weeks, in dollars
+      `my average weekly allowances` IS A NUMBER @desc The average amount of allowances paid to you each week over those 2 weeks, in dollars, leaving out allowances for special expenses (0 if none)
+      `I am required to work overtime on a regular basis` IS A BOOLEAN @desc Whether your employment required you to work overtime on a regular basis
+      `my average weekly hours of overtime` IS A NUMBER @desc If so: the average number of hours of overtime you worked each week over those 2 weeks (ignored otherwise)
+      `my average hourly overtime rate of pay` IS A NUMBER @desc If so: your average hourly overtime rate of pay over those 2 weeks, in dollars (ignored otherwise)
+GIVETH A NUMBER
+`my normal weekly earnings under s 8` MEANS
+    (`my average weekly hours in the relevant period` TIMES `my average hourly ordinary time rate of pay`)
+    PLUS `my average weekly allowances`
+    PLUS `the s 8(2) overtime amount`
+    WHERE
+        `the s 8(2) overtime amount` MEANS
+            IF `I am required to work overtime on a regular basis`
+            THEN `my average weekly hours of overtime` TIMES `my average hourly overtime rate of pay`
+            ELSE 0
+
+§§ `s 16(6)(c) -- travel to treatment`
+
+-- s 16(6)(c): "in respect of the journey--of an amount worked out using the formula:
+--     Specified rate per kilometre × Number of kilometres travelled
+-- where: specified rate per kilometre means such rate per kilometre as the Minister specifies, by legislative instrument
+-- ...; numbers of kilometres travelled means the number of whole kilometres Comcare determines to have been the reasonable
+-- length of such a journey ... (including the return part of the journey)". Payable only where src-employee.l4's
+-- `Can I claim travel to treatment` is met (s 16(7)). The Minister's rate is not deposited: an input.
+@export How much can I claim for the journey to medical treatment (s 16(6)(c), (7))?
+GIVEN `the travel treatment is compensable` IS A BOOLEAN @desc Whether Comcare is paying (or must pay) for the medical treatment you travelled to
+      `the reasonable return distance` IS A NUMBER @desc The reasonable length of the necessary journey, there and back, in kilometres
+      `I used public transport or an ambulance to get there` IS A BOOLEAN @desc Whether the journey used public transport or an ambulance
+      `my injury reasonably required that transport` IS A BOOLEAN @desc Whether your injury reasonably required public transport or an ambulance (ignored if you used neither)
+      `the specified rate per kilometre` IS A NUMBER @desc The rate per kilometre the Minister has specified for these journeys, in dollars
+GIVETH A NUMBER
+`How much for the journey to treatment` MEANS
+    IF `Can I claim travel to treatment` `the travel treatment is compensable` `the reasonable return distance` `I used public transport or an ambulance to get there` `my injury reasonably required that transport`
+    THEN `the specified rate per kilometre` TIMES FLOOR `the reasonable return distance`
+    ELSE 0
+
+§§ `s 19 -- the weekly amount of incapacity compensation` -- arises only if the person cannot work, or work as before
+
+-- s 19(2): for a maximum rate compensation week, "NWE − AE", where "AE is the greater of the following amounts: (a) the
+-- amount per week (if any) that the employee is able to earn in suitable employment; (b) the amount per week (if any) that
+-- the employee earns from any employment (including self-employment) that is undertaken by the employee during that
+-- week" and "NWE is the amount of the employee's normal weekly earnings".
+GIVEN `what I am able to earn in suitable employment` IS A NUMBER
+      `what I earn this week` IS A NUMBER
+GIVETH A NUMBER
+`AE` MEANS max `what I am able to earn in suitable employment` `what I earn this week`
+
+-- s 19(3): for any other week, "(Adjustment percentage × NWE) − AE". (5): where that "exceeds 150% of the amount called the
+-- Average Weekly Ordinary Time Earnings of Full-time Adults, as published from time to time by the Australian
+-- Statistician, the amount so calculated shall be reduced by an amount equal to the excess". (6): where "an amount of
+-- compensation calculated under paragraph (3)(a)" (the 75% of a week in which the employee is not employed) "is less than
+-- the minimum earnings, the amount ... shall be increased" to them. (7): the minimum earnings are "$202, or, if subsection
+-- (8) or (9) applies ..., the sum of $202 and the amount or amounts required to be added ...; or ... 90% of the employee's
+-- normal weekly earnings; whichever is less". (8): "$50" if prescribed persons are wholly or mainly dependent on the
+-- employee; (9): "$25 for each" prescribed child wholly or mainly dependent. (10): a prescribed child who is a prescribed
+-- person (16 or more) and the only prescribed person dependent gets no $25 (the $50 is added for them instead); (11): of
+-- 2 or more such children, one counts under (8) and the rest under (9). $202, $50 and $25 are indexed under s 13: the
+-- amounts in force are inputs.
+-- A negative result (AE above the percentage of NWE) is read as nil: the Act makes Comcare liable for "an amount", and
+-- no provision makes the employee pay the difference (an INFERENCE).
+GIVEN `the dependant additions` IS A NUMBER
+      `the $202 amount in force` IS A NUMBER
+      `NWE` IS A NUMBER
+GIVETH A NUMBER
+`the minimum earnings` MEANS min (`the $202 amount in force` PLUS `the dependant additions`) (0.9 TIMES `NWE`)
+
+GIVEN `a prescribed person other than a child is wholly or mainly dependent on me` IS A BOOLEAN
+      `the prescribed children wholly or mainly dependent on me` IS A NUMBER
+      `of those children, the number aged 16 or more` IS A NUMBER
+      `the $50 amount in force` IS A NUMBER
+      `the $25 amount in force` IS A NUMBER
+GIVETH A NUMBER
+`the s 19(8), (9) additions` MEANS
+    (IF `the $50 is added` THEN `the $50 amount in force` ELSE 0)
+    PLUS (`the $25 amount in force` TIMES max 0 (`the prescribed children wholly or mainly dependent on me` MINUS `children counted under (8) instead`))
+    WHERE
+        `the $50 is added` MEANS
+                `a prescribed person other than a child is wholly or mainly dependent on me`
+            OR  `of those children, the number aged 16 or more` AT LEAST 1
+        `children counted under (8) instead` MEANS
+            IF `of those children, the number aged 16 or more` AT LEAST 2
+            THEN 1
+            ELSE IF `of those children, the number aged 16 or more` EQUALS 1 AND (NOT `a prescribed person other than a child is wholly or mainly dependent on me`)
+                 THEN 1
+                 ELSE 0
+
+GIVEN `adjustment` IS A NUMBER
+      `NWE` IS A NUMBER
+      `the AE` IS A NUMBER
+      `AWOTE` IS A NUMBER
+      `the minimum earnings figure` IS A NUMBER
+GIVETH A NUMBER
+`the s 19(3) amount` MEANS
+    IF `adjustment` EQUALS 75
+    THEN max `capped` `the minimum earnings figure`
+    ELSE `capped`
+    WHERE
+        `raw`    MEANS max 0 ((`adjustment` DIVIDED BY 100 TIMES `NWE`) MINUS `the AE`)
+        `capped` MEANS min `raw` (1.5 TIMES `AWOTE`)
+
+-- s 19(2B)-(2D): a week in which the 45-week total "will exceed" the hours of s 19(2A)(b) is split. (2C): the part before
+-- is paid at "(X / NWH) × [NWE − AE]"; (2D): the remainder at "((NWH − X) / NWH) × Reduced rate compensation entitlement",
+-- the reduced rate compensation entitlement being "the rate of compensation that would have been applicable for the whole
+-- week had subsection (3) applied throughout the whole week" (read as including the s 19(5) cap and (6) minimum, which
+-- act on the s 19(3) amount). X is "the total of the hours in that particular week ... that would have counted towards
+-- the employee's normal weekly hours ... and ... that elapse before the total number of hours ... exceeds 45 times the
+-- employee's normal weekly hours". The encoding takes the hours this week's incapacity prevents as spread evenly over the
+-- week's normal hours, so X = NWH × (the hours left to the 45-week total ÷ the hours prevented this week); for a week of
+-- total incapacity that is simply the hours left (an INFERENCE where the incapacity is partial).
+@export How much weekly compensation for incapacity do I get this week, in dollars (s 19(2) to (9), s 23)?
+GIVEN `I cannot work as before this week` IS A BOOLEAN @desc Whether, because of the injury, you cannot work your normal weekly hours this week, or cannot work at your level before the injury
+      `my normal weekly hours before the injury` IS A NUMBER @desc The hours you normally worked each week before the injury
+      `the hours I was prevented from working before this week` IS A NUMBER @desc The total hours of your normal weekly hours that the incapacity prevented you from working (or working at your old level) in all earlier weeks of this incapacity
+      `the hours I am prevented from working this week` IS A NUMBER @desc The hours of your normal weekly hours that the incapacity prevents you from working (or working at your old level) this week
+      `the hours I am employed this week` IS A NUMBER @desc The hours you are employed this week, in any job (0 if none)
+      `I have reached my pension age` IS A BOOLEAN @desc Whether you have reached pension age under the Social Security Act 1991 (67 for most people)
+      `I was injured in the 2 years before pension age` IS A BOOLEAN @desc Whether you were injured at or after the age 2 years before your pension age
+      `the weeks of incapacity compensated so far` IS A NUMBER @desc How many weeks of incapacity have already been compensated for this injury (counted only for an injury within 2 years before pension age)
+      `I am in prison for an offence` IS A BOOLEAN @desc Whether you are in prison this week in connection with your conviction of an offence
+      `my normal weekly earnings` IS A NUMBER @desc Your normal weekly earnings before the injury, in dollars (s 8; the question above works them out)
+      `the amount I am able to earn in suitable employment` IS A NUMBER @desc The amount per week you are able to earn in suitable employment, as Comcare determines it under s 19(4), in dollars (0 if none)
+      `the amount I earn this week` IS A NUMBER @desc The amount you earn this week from any employment, including self-employment, in dollars (0 if none)
+      `the Average Weekly Ordinary Time Earnings of Full-time Adults` IS A NUMBER @desc The Australian Statistician's latest published Average Weekly Ordinary Time Earnings of Full-time Adults, in dollars (the s 19(5) cap is 150% of it)
+      `a prescribed person other than a child depends on me` IS A BOOLEAN @desc Whether your spouse, or another prescribed person who is not a dependent child (a parent, sibling and so on aged 16 or more), is wholly or mainly dependent on you
+      `the number of prescribed children dependent on me` IS A NUMBER @desc How many prescribed children are wholly or mainly dependent on you
+      `the number of those children aged 16 or more` IS A NUMBER @desc How many of those children are 16 or more
+      `the s 19(7) $202 in force` IS A NUMBER @desc The s 19(7) minimum earnings amount in force, in dollars ($202 in the Act, indexed by CPI under s 13)
+      `the s 19(8) $50 in force` IS A NUMBER @desc The s 19(8) addition for a dependent prescribed person in force, in dollars ($50 in the Act, indexed under s 13)
+      `the s 19(9) $25 in force` IS A NUMBER @desc The s 19(9) addition for each dependent prescribed child in force, in dollars ($25 in the Act, indexed under s 13)
+GIVETH A NUMBER
+`How much weekly compensation this week` MEANS
+    CONSIDER `Which weekly rate applies` `I cannot work as before this week` `my normal weekly hours before the injury` `the hours prevented to the end of this week` `the hours I am employed this week` `I have reached my pension age` `I was injured in the 2 years before pension age` `the weeks of incapacity compensated so far` `I am in prison for an offence`
+    WHEN `a maximum rate compensation week: compensation is worked out on all of my normal weekly earnings less what I earn or could earn (s 19(2))` THEN `the maximum rate`
+    WHEN `a reduced rate week: compensation is worked out on this percentage of my normal weekly earnings less what I earn or could earn (s 19(3))` `adj` THEN
+        IF `the hours I was prevented from working before this week` LESS THAN `the 45-week total`
+        THEN ((`X` DIVIDED BY `my normal weekly hours before the injury`) TIMES `the maximum rate`)
+             PLUS (((`my normal weekly hours before the injury` MINUS `X`) DIVIDED BY `my normal weekly hours before the injury`) TIMES (`the reduced rate` `adj`))
+        ELSE `the reduced rate` `adj`
+    OTHERWISE 0
+    WHERE
+        `the hours prevented to the end of this week` MEANS `the hours I was prevented from working before this week` PLUS `the hours I am prevented from working this week`
+        `the 45-week total` MEANS 45 TIMES `my normal weekly hours before the injury`
+        `the AE this week` MEANS `AE` `the amount I am able to earn in suitable employment` `the amount I earn this week`
+        `the maximum rate` MEANS max 0 (`my normal weekly earnings` MINUS `the AE this week`)
+        `X` MEANS
+            `my normal weekly hours before the injury`
+            TIMES ((`the 45-week total` MINUS `the hours I was prevented from working before this week`) DIVIDED BY `the hours I am prevented from working this week`)
+        `the additions` MEANS `the s 19(8), (9) additions` `a prescribed person other than a child depends on me` `the number of prescribed children dependent on me` `the number of those children aged 16 or more` `the s 19(8) $50 in force` `the s 19(9) $25 in force`
+        `the reduced rate` MEANS
+            GIVEN `a` IS A NUMBER
+            YIELD `the s 19(3) amount` `a` `my normal weekly earnings` `the AE this week` `the Average Weekly Ordinary Time Earnings of Full-time Adults` (`the minimum earnings` `the additions` `the s 19(7) $202 in force` `my normal weekly earnings`)
+
+§§ `s 27 -- non-economic loss` -- arises only if the injury has left a permanent impairment
+
+-- s 27(1): where "compensation is payable in respect of the injury under section 24", additional compensation for
+-- non-economic loss. (2): "an amount assessed by Comcare under the formula:
+--     ($15,000 × A) + ($15,000 × B)
+-- where: A is the percentage finally determined by Comcare under section 24 to be the degree of permanent impairment of
+-- the employee; and B is the percentage determined by Comcare under the approved Guide to be the degree of non-economic
+-- loss". The $15,000 is a s 13 relevant amount, indexed: the figure in force is an input, used for both terms. Whether s
+-- 24 compensation is payable is worked out with src-employee.l4's thresholds (a maximum amount of 1 is passed there: only
+-- whether the result is above nil is read).
+@export How much compensation for non-economic loss do I get (s 27)?
+GIVEN `my kind of impairment` IS A `Kind of impairment` @desc What kind of permanent impairment it is
+      `my degree of permanent impairment` IS A NUMBER @desc The degree of permanent impairment Comcare finally determined under s 24, as a percentage (for example 20 for 20%)
+      `my binaural hearing loss` IS A NUMBER @desc For a hearing loss: your binaural hearing loss as Comcare determines it, as a percentage (ignored otherwise)
+      `my degree of non-economic loss` IS A NUMBER @desc The degree of non-economic loss Comcare determined under the approved Guide, as a percentage
+      `the s 27 $15,000 in force` IS A NUMBER @desc The s 27(2) amount in force, in dollars ($15,000 in the Act, indexed each 1 July by the CPI under s 13)
+GIVETH A NUMBER
+`How much for non-economic loss` MEANS
+    IF `How much permanent impairment compensation` `my kind of impairment` `my degree of permanent impairment` `my binaural hearing loss` 1 GREATER THAN 0
+    THEN (`the s 27 $15,000 in force` TIMES `my degree of permanent impairment` DIVIDED BY 100)
+         PLUS (`the s 27 $15,000 in force` TIMES `my degree of non-economic loss` DIVIDED BY 100)
+    ELSE 0
+
+§§ `ss 13, 13AA -- indexation of the amounts`
+
+-- s 13(5): the CPI factor is "the number (calculated to 3 decimal places) ascertained by dividing the index number of the
+-- December quarter immediately before the relevant year by the index number for the December quarter immediately before
+-- that first-mentioned December quarter"; (6): if it "would, if it were calculated to 4 decimal places, end with a number
+-- greater than 4", it is increased by 0.001.
+-- s 13AA(3): the WPI factor is "the number calculated, to 3 decimal places, using the formula:
+--     Index number for the reference December quarter / Index number for the base December quarter"
+-- the reference December quarter being "the last December quarter before the relevant year" and the base "the last
+-- December quarter before the reference December quarter"; (4): the same 0.001 rule.
+-- "Calculated to 3 decimal places" is read as cutting off after the third place, so that the 0.001 increase completes a
+-- round-half-up (an INFERENCE, as in the Family Assistance Administration Act baseline).
+GIVEN `the later index number` IS A NUMBER
+      `the earlier index number` IS A NUMBER
+GIVETH A NUMBER
+`the indexation factor to 3 places` MEANS
+    IF `fourth place` GREATER THAN 4 THEN `three places` PLUS 0.001 ELSE `three places`
+    WHERE
+        `ratio`        MEANS `the later index number` DIVIDED BY `the earlier index number`
+        `three places` MEANS FLOOR (`ratio` TIMES 1000) DIVIDED BY 1000
+        `fourth place` MEANS FLOOR (`ratio` TIMES 10000) MINUS (FLOOR (`ratio` TIMES 1000) TIMES 10)
+
+-- s 13(4), s 13AA(2): "If the indexation factor for a relevant year is greater than one, this Act has effect as if for
+-- each relevant amount there were substituted, on the first day of that relevant year, an amount calculated by
+-- multiplying by that factor: (a) ... the substituted amount or the last substituted amount; or (b) in any other case--the
+-- relevant amount." No rounding of the amount is prescribed. s 13's relevant amounts: ss 18(4)(a), 19(7), (8), (9), 24(9),
+-- 27(2), 29(1), (3), 30(1), 137(1); s 13AA's: s 17(3), (4), (5).
+DECLARE `Which index` IS ONE OF
+    `the Consumer Price Index (s 13: the amounts in ss 18(4)(a), 19(7) to (9), 24(9), 27(2), 29, 30(1), 137(1))`
+    `the Wage Price Index (s 13AA: the amounts in s 17(3) to (5))`
+
+@export What does an amount become on 1 July after a year's indexation (ss 13, 13AA)?
+GIVEN `the index` IS A `Which index` @desc Which index the amount moves with
+      `the amount before indexation` IS A NUMBER @desc The amount in the Act, or the amount last substituted for it by indexation, in dollars
+      `the index number for the last December quarter before the year` IS A NUMBER @desc The index number (All Groups CPI, weighted average of the 8 capital cities; or the Wage Price Index, total hourly rates of pay excluding bonuses, all sectors, all Australia, original) for the December quarter just before the 1 July
+      `the index number for the December quarter a year earlier` IS A NUMBER @desc The same index number for the December quarter a year before that
+GIVETH A NUMBER
+`the amount after a year's indexation` MEANS
+    IF `the factor` GREATER THAN 1
+    THEN `the amount before indexation` TIMES `the factor`
+    ELSE `the amount before indexation`
+    WHERE
+        `the factor` MEANS `the indexation factor to 3 places` `the index number for the last December quarter before the year` `the index number for the December quarter a year earlier`
