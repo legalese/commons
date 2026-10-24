@@ -37,3 +37,14 @@ The "Metadata only until resolved" consequence and the "No statute text has been
 Text deposited 2026-10-20 (English version only; the French version is equally authoritative):
 
 - `registers/source-bundle/income-tax.a.2023-11-23.txt` (with `income-tax.a.2023-11-23.meta.json`)
+
+## Encoding the text (ruling of 2026-10-24)
+
+The terms permit non-commercial reproduction and are silent on adaptation. **Owner's ruling, 2026-10-24 (Michael):** Canadian texts whose terms permit reproduction but are silent on adaptation may be quoted in L4 encodings in Commons, keeping the attribution the publisher requires and an "unofficial version" notice. The encoding at `encodings/baseline-2026-10/` relies on it; its copy of this file carries the attribution.
+
+## Canada Revenue Agency publication (deposited 2026-10-24)
+
+- `registers/source-bundle/cra-tax-rates-brackets-2026.txt` (with `.meta.json`): the Canada Revenue Agency page "Current year tax rates and income brackets (2026)", https://www.canada.ca/en/revenue-agency/services/tax/individuals/tax-rates-brackets/current-year.html (page details 2026-06-25, retrieved 2026-10-24). Deposited because it states the 2026 tier thresholds that s 2.11(6) of the Act produces by indexation and the Act does not print.
+- **Terms**: Government of Canada terms and conditions, https://www.canada.ca/en/transparency/terms.html, read 2026-10-24: "Unless otherwise specified you may reproduce the materials in whole or in part for non-commercial purposes, and in any format, without charge or further permission", provided the reproducer exercises due diligence over accuracy, indicates the complete title and the author, and indicates that the reproduction is a copy of the version at the URL. Commercial reproduction needs written permission. Commons counts as non-commercial (ruling of 2026-10-20).
+- **Attribution used** (at the top of the text): the title, "Author: Canada Revenue Agency", the statement that it is a copy of the version at the URL, and "NOT AN OFFICIAL VERSION".
+- **robots.txt** (https://www.canada.ca/robots.txt, read 2026-10-24) disallows `/content/dam/cra-arc/formspubs/`, where the TD1NT form and the T4127 payroll tables (which carry the indexed credit amounts) are kept; they were not fetched.

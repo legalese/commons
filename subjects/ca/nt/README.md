@@ -74,3 +74,9 @@ What follows was read in the deposited texts unless it is marked otherwise.
 - Not sourced: the Social Assistance Appeals Regulations, the Social Assistance Appeal Committees Order, the Welfare Services Regulations, the Income Tax Act's Isolated Posts remission regulations, the Senior Citizens and Disabled Persons Property Tax Relief Act, the Payroll Tax Act, and the administrative "direction of the Director" that many Income Assistance amounts depend on.
 - Not checked: whether the federal provisions the NWT texts cite still say what the NWT texts assume. For example, the federal Table 410 that payroll withholding refers to may no longer exist in that form.
 - Nothing is encoded yet.
+
+## Update 2026-10-24: encodings, and the CRA thresholds
+
+**Ruling of 2026-10-24 (Michael):** Canadian texts whose terms permit reproduction but are silent on adaptation may be quoted in L4 encodings in Commons, with the attribution the publisher requires and an "unofficial version" notice. The GNWT terms are of that kind (they permit non-commercial reproduction and say nothing of adaptation), so the deposited texts above may be encoded.
+
+- **`income-tax-act/encodings/baseline-2026-10/`**: the resident individual's territorial tax (s 2.11 rates and thresholds, the main non-refundable credits, the dividend deduction), filing and payment duties, the NWT Child Benefit (ss 3.1 to 3.3 with Regulations s 1.1) and the Cost of Living Offset (s 3.5 with Regulations s 1.2, currently $0). The 2026 tier thresholds are taken from the Canada Revenue Agency page "Current year tax rates and income brackets (2026)", deposited 2026-10-24 as `income-tax-act/registers/source-bundle/cra-tax-rates-brackets-2026.txt` under the Government of Canada's non-commercial reproduction terms. The indexed credit amounts are inputs: the CRA's TD1NT form and T4127 tables are in a folder that canada.ca's robots.txt disallows.
