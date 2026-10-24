@@ -13,13 +13,17 @@ It satisfies `REQ-0070` in `subjects/au/requirements.jsonl` (a scheduled priorit
 - Anne, his wife;
 - Kerry, an allied veteran.
 
-Thirteen questions are exported, each with `@export` and a `@desc` on every input, grouped under `§§` headings in the Act's order.
+**Added 24 October 2026 (REQ-0111, in part):** `vea-guide.l4`, a module beside `vea-veteran.l4` that IMPORTs it, brings in the Approved Guide's Table 23.1 (degree of incapacity from the impairment and lifestyle ratings, with the rounding to five points) and the Repatriation Commission's s 37AA determination (permanent incapacity for work), and asks the disability pension rate and invalidity service pension questions again from them: five more exported questions. The pension rates in force after indexation are still inputs (finding 13). Nothing in `vea-veteran.l4` was changed.
+
+Thirteen questions are exported from `vea-veteran.l4`, each with `@export` and a `@desc` on every input, grouped under `§§` headings in the Act's order.
 
 ## Edition
 
 Compilation No. 199, compilation date 1 July 2026, includes amendments up to Act No. 17, 2025 and Act No. 31, 2026 (register id **C2026C00275**, in 4 volumes), as deposited at `../../registers/source-bundle/C2004A03268.txt` (about 2 MB; this baseline reads Parts I, II, III and IX of it).
 
-No instrument is deposited. Here is what that leaves open:
+`vea-guide.l4` reads the **Guide to the Assessment of Rates of Veterans' Pensions (No. 2) 2016** (F2016L01332, the Approved Guide under s 29, as made; the Register's EPUB rendering, retrieved 23 October 2026), deposited at `../../../guide-to-the-assessment-of-rates-of-veterans-pensions-no-2-2016/registers/source-bundle/F2016L01332.txt` with Table 23.1 transcribed in `F2016L01332.tables.md` (the conversion drops table cells), and the **Veterans' Entitlements (Invalidity Service Pension – Permanent Incapacity for Work) Determination 2023** (F2023L01239, as made), deposited at `../../../veterans-entitlements-invalidity-service-pension-permanent-incapacity-for-work-determination-2023/registers/source-bundle/F2023L01239.txt`.
+
+In `vea-veteran.l4` no instrument is brought in. Here is what that leaves open:
 
 - **The pension rates.** The rates in ss 22(3), 22(4), 23(4), 24(4) and 30(1) are indexed twice a year (s 198, s 59LA and Part IIIB Division 18). The figures the compilation prints are therefore not necessarily those in force: $338.94, $510.40, $619.80, $1,595.66, and the $35 and $25.60 of s 30(1). The rates in force are inputs. The cases use the printed figures as stand-ins.
 - **Asked as facts:**
@@ -33,8 +37,9 @@ No instrument is deposited. Here is what that leaves open:
 | Module | Case file | Assertions |
 |---|---|---|
 | `vea-veteran.l4` | `vea-cases-veteran.l4` | 65 written, 65 satisfied |
+| `vea-guide.l4` | `vea-cases-guide.l4` | 25 written, 25 satisfied |
 
-`l4 run` on both files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
+`l4 run` on all four files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
 
 ## Seat
 
@@ -110,9 +115,14 @@ The 2026-10-18 defaults:
    Asserted.
 9. **A notice to report a change can give 14 days, or up to 28.** A notice under s 54 must give no more than 14 days from the change. In special circumstances the Secretary may direct 15 to 28 days. Failing to comply is a strict liability offence (6 months' imprisonment or 10 penalty units, or both). Asserted (the days).
 
+10. **The degree of incapacity is a table lookup on two ratings.** The Guide rounds the combined impairment rating to the nearest five points and reads Table 23.1 at that row and the lifestyle rating's column (0 to 7). Rows 65 to 90 give 100% at every lifestyle rating; some low-impairment, high-lifestyle cells and the lifestyle-0 cells from 35 up are "N/A", which `vea-guide.l4` answers as no degree. The table has no row above 90: a rounded rating of 95 or 100 answers `not covered` rather than assume 100. The rounded rating is also the one the Guide uses for the extreme disablement adjustment's 70 points. Asserted.
+11. **Permanent incapacity for work for the invalidity service pension is mostly automatic.** The 2023 Determination s 7 makes a veteran permanently incapacitated if blind in both eyes, on the special rate, on (or barred only by MRCA ss 204, 415 from) an MRCA Special Rate Disability Pension, or found by the MRCC to meet MRCA s 199(1); otherwise only if an impairment would rate 40 or more under Table 18.1, permanently prevents work over 8 hours a week, and the Commission is satisfied it is permanent. Section 6 carries over those incapacitated under the 2013 Determination. The deposit has lost the label "(a)" of the first limb; the text is otherwise whole. Asserted.
+12. **Table 24.1's minimum degrees are not encoded.** For listed disabilities (loss of limbs or eyes, total deafness and others) Chapter 24 sets a minimum degree that overrides a lower Table 23.1 result. `vea-guide.l4` does not apply it; for a veteran with such a disability, the Commission's degree is the input to `vea-veteran.l4`'s question. Not asserted.
+13. **The rates in force are still inputs.** The disability pension and war widow's pension rates are substituted on each 20 March and 20 September (s 198(5DA), (5E), (8A), by formulas built on the pension MBR factor of s 59LA and the CPI), but those formulas are lost from the deposited text, and DVA's published rate tables could not be fetched (www.dva.gov.au did not answer the fetcher; treated as a refusal). So no rate in force is computed, and a new ledger entry asks for them. Not asserted (a finding about the sources).
+
 ## What would need doing before this is worth relying on
 
-- **The rates in force** (the s 198 and Part IIIB indexation results), the **Approved Guide** (s 29) and the Commission's **s 37AA determination**, deposited, so that the rate and invalidity questions take fewer inputs. Raised as `REQ-0111`.
+- **The rates in force** (the s 198 and Part IIIB indexation results), so that the rate questions take no rate inputs: a formulas sidecar for s 198(5DA), (5E), (8A) and s 59LA, and the ABS index numbers, or DVA's published rates. The **Approved Guide** (Table 23.1) and the **s 37AA determination** are deposited and used since 24 October 2026 (`REQ-0111`); the rest of the Guide (the impairment tables, Table 18.1, Table 24.1) is not encoded.
 - **The Schedule 6 Rate Calculator** for the service pension's rate, in the manner of the Social Security Act 1991 baseline's Pension Rate Calculator A, which it closely parallels. Not raised: it is in this Act and needs only a larger encoding of it.
 - **The MRCA** (`REQ-0071`), which now takes every new claim for a disability or war widow's pension.
 - **Pending claims at 1 July 2026** are now answered by the Consequential and Transitional Provisions Act baseline (`subjects/au/military-rehabilitation-and-compensation-consequential-and-transitional-provisions-act-2004/encodings/baseline-2026-10/`, `REQ-0109`): a VEA claim made before 1 July 2026 of a kind s 12AA closes, and not finally determined by then, continues under this Act, including review (that Act's s 89); a pending prisoner of war claim or Part VII application becomes an MRCA claim (its ss 110, 112). This baseline has no `not covered` answer for pre-2004 conditions, so nothing in its code changes.
