@@ -12,7 +12,7 @@ It is written in three layers:
 
 - **`wcra-core.l4`**, the seat-neutral core. It uses the Act's own actors and terms: "the worker", "the claimant", "the employer", "the insurer" (WorkCover Queensland or a self-insurer), "a dependant". Computations (QOTE, NWE, the weekly amounts, the lump sums, the death benefits, the caring allowance) are functions. Where the text says "must", "may", "must not" or sets a deadline, there is a regulative rule (`DEONTIC`): 13 in all (ss 131, 132AA, 133, 134, 136, 144, 146B, 185 with 189(2), 186, 188-189, 220(3), 232, 232B).
 - **`wcra-seat.l4`**, the injured worker's seat. It asks 36 questions, each with `@export` and a `@desc` on every input, grouped under `§§` headings in the Act's order. It builds the core's records from plain answers and restates no rule.
-- **`wcra-seat-insurer.l4`**, the insurer's seat. It asks 16 questions on the insurer's deadline and payment duties. It defines no name the worker's seat defines.
+- **`wcra-seat-insurer.l4`**, the insurer's seat. It asks 16 questions on the insurer's deadline and payment duties. It restates no rule (since finding 19, the s 146B(3) start day and the s 189(1) test are core functions) and defines no name the worker's seat defines.
 
 No earlier encoding of this Act existed to keep. Queensland keeps no requirement ledger and no scenario life raises this Act, so no ledger line is closed and no life event is cited.
 
@@ -20,7 +20,7 @@ No earlier encoding of this Act existed to keep. Queensland keeps no requirement
 
 - **The Act:** Workers' Compensation and Rehabilitation Act 2003 (act-2003-027), the current in-force version on 22 September 2026, as deposited at `../../registers/source-bundle/act-2003-027.txt`. The jurisdiction README records it as in force from 1 January 2025 and still current on 20 October 2026. It is an older deposit, converted by an earlier tool, with no notice at its top.
 - **The Regulation:** Workers' Compensation and Rehabilitation Regulation 2025 (sl-2025-0116), in force from 1 September 2025, retrieved 20 October 2026, deposited at `../../../workers-compensation-and-rehabilitation-regulation-2025/registers/source-bundle/sl-2025-0116.txt`. Used: ss 15, 105-110, 117-121, 147, 209 and schedules 3, 4 and 8.
-- **The QOTE Notice:** Workers' Compensation and Rehabilitation (QOTE) Notice 2026 (sl-2026-0044), in force from 1 July 2026, retrieved 20 October 2026, deposited at `../../../workers-compensation-and-rehabilitation-qote-notice-2026/registers/source-bundle/sl-2026-0044.txt`. QOTE for 2026-27 is **$1,994.50** (s 3(1)), **2.1%** up on 2025-26 (s 3(2)).
+- **The QOTE Notice:** Workers' Compensation and Rehabilitation (QOTE) Notice 2026 (sl-2026-0044), in force from 1 July 2026, retrieved 20 October 2026, deposited at `../../../workers-compensation-and-rehabilitation-qote-notice-2026/registers/source-bundle/sl-2026-0044.txt`. QOTE for 2026-27 is **$1,994.50** (s 3(1)), **2.1%** up on 2025-26 (s 3(2)). Its s 2 commences only s 4, the repeal of the QOTE Notice 2025, on 1 July 2026 (finding 17).
 
 QOTE for an earlier financial year is not deposited: the questions take it as an input, and without it they answer `not covered`. QOTE for 2027-28 does not exist yet. Three Commonwealth figures are inputs: the single pension rate (the maximum single disability support pension), the carer pension rate (the weekly maximum carer payment, Regulation s 147(2)), and, for s 154, what a pensioner may earn before the pension is reduced.
 
@@ -30,14 +30,14 @@ All three texts are CC BY 4.0, State of Queensland. The Act's attribution is in 
 
 | Module | Case file | Assertions |
 |---|---|---|
-| `wcra-core.l4`, `wcra-seat.l4` | `wcra-cases-worker.l4` | 208 written, 208 satisfied |
-| `wcra-core.l4`, `wcra-seat-insurer.l4`, `wcra-seat.l4` | `wcra-cases-insurer.l4` | 53 written, 53 satisfied |
+| `wcra-core.l4`, `wcra-seat.l4` | `wcra-cases-worker.l4` | 210 written, 210 satisfied |
+| `wcra-core.l4`, `wcra-seat-insurer.l4`, `wcra-seat.l4` | `wcra-cases-insurer.l4` | 54 written, 54 satisfied |
 
-The 261 assertions include the core's own checks (QOTE, s 205, the date helpers, the Regulation s 117 example), every regulative rule on a trace that ends `FULFILLED`, and 15 mirror cases: the same facts asked from both seats, with answers that agree.
+The 264 assertions include the core's own checks (QOTE, s 205, the date helpers, the Regulation s 117 example), every regulative rule on a trace that ends `FULFILLED`, and 16 mirror cases: the same facts asked from both seats, with answers that agree.
 
 In addition, 14 `#TRACE`s in the worker case file carry an `-- expect:` line: 8 breaches (by the claimant, the employer, the worker and the insurer) and 6 obligations or permissions still pending. Each was read and matches its expectation.
 
-`l4 run` on all five files: 0 errors, 0 warnings (2026-10-24). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was worked by hand from the texts, with the arithmetic in the comment above the assertion, and cross-checked in exact fractions before the run.
+`l4 run` on all five files: 0 errors, 0 warnings (2026-10-24, and again after the fixes of findings 17-20). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was worked by hand from the texts, with the arithmetic in the comment above the assertion, and cross-checked in exact fractions before the run.
 
 ## Seats
 
@@ -131,6 +131,19 @@ The stable `l4` cannot IMPORT across encoding folders, so the links are recorded
 14. **An injury at work still needs employment as a significant contributing factor.** Section 34(1)(a) and (b) deem an injury at or away from the workplace to arise in the course of employment. But s 32(2) waives the significant-contributing-factor test only where "section 34(2) or 35(2) applies", that is, for a recess (s 34(1)(c)) or a journey (s 35). An injury lifting stock at work is not compensable if employment is not a significant contributing factor, while a lunch-break or journey injury is. Asserted.
 15. **Schedule 2, part 2 overrides PAYG.** A director employed by their own company under a contract of service and paid through PAYG meets s 11(1)(a). But schedule 2, part 2, item 1 says such a person "is not a worker", and s 11(3) says "However". Asserted.
 16. **The Act rarely says which year's QOTE applies.** Section 180(3) fixes the lump sum "as at the day the insurer makes an offer". For the weekly rates and the death benefits the Act says only "QOTE". READING: the QOTE of the financial year containing the week of payment, the day of the offer, or the day of death. Section 206 suggests amounts follow later variations, which this encoding does not model.
+
+### Corrections after the independent check (24 October 2026)
+
+An independent verifier raised four minor issues. Each was checked against the deposited texts and each was real. No expected value changed.
+
+17. **The QOTE Notice's commencement was misquoted.** The core said "The Notice commenced (s 4) on 1 July 2026". The deposited Notice says in s 2 "Section 4 commences on 1 July 2026", and s 4 is the repeal of the QOTE Notice 2025 (SL No. 52), not a commencement provision. The deposit does not say when ss 1-3 commence. The 2026-27 window the code uses, 1 July 2026 to 30 June 2027, is the financial year s 3(1) names, so the code is unaffected. The comment now quotes s 2 and s 4.
+18. **Case facts did not match finding 16's reading.** Tom (case 2) has been totally incapacitated since September 2024, but his weeks 10 and 60 (November 2024 and October 2025) were asked with 1 October 2026, so they took the 2026-27 QOTE. Under finding 16 they take the QOTE for 2024-25 and 2025-26, neither deposited. The facts are now exact (incapacitated from Monday 2 September 2024), and each week is asked with a day in it:
+    - Week 10 (from 4 November 2024) and week 60 (from 20 October 2025) answer `not covered` without an earlier year's QOTE. With a HYPOTHETICAL QOTE ($1,900 for 2024-25, and $1,953.70 for 2025-26 from finding 4) they answer $2,040 and $1,800 as before. Under s 10A(1)(b) QOTE never falls, so any earlier year's QOTE is at most $1,994.50. Its 80% (at most $1,595.60) and 70% (at most $1,396.15) stay below 85% and 75% of NWE $2,400, so the answers hold for any figure.
+    - Week 110 is asked with Monday 5 October 2026, the day it begins (1 October 2026 fell in week 109).
+    - Tom's week 261 begins on 27 August 2029, with no deposited QOTE. So the "past 5 years" case is now Lee, on the same terms, incapacitated from Monday 4 October 2021, whose week 261 (28 September to 4 October 2026) contains 1 October 2026.
+    - The same check found three more: Mia's week 120 had been asked with 1 July 2027 and is now asked with 14 December 2028 (still `not covered`); the insurer cases' mirror of Mia's week 1 now uses 3 September 2026; and the s 144A questions asked on 1 October 2026 are labelled as hypothetical histories, not Mia's.
+19. **The insurer's seat restated two rules.** Its s 146B(3) question wrote the "later of" test itself, and its s 189(2) question wrote the s 189(1) test (`the worker's DPI LESS THAN the DPI threshold for the election`). Both now call new core functions, `the s 146B(3) start day` and `s 189 applies to a DPI of`. The answers and the assertions are unchanged.
+20. **A wrong cross-reference.** A case 1 comment in `wcra-cases-worker.l4` cited finding 5 for the point that s 34(1)(a) still needs employment as a significant contributing factor. That point is finding 14, and the comment now says so.
 
 ## Before relying on it
 
