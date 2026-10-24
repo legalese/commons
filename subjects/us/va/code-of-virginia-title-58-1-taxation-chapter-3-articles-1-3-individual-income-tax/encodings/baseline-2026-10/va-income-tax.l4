@@ -1,0 +1,442 @@
+IMPORT prelude
+
+-- Virginia individual income tax, Code of Virginia Title 58.1, chapter 3, articles 1-3 -- what an individual meets: who is a
+-- resident (s 58.1-302), who owes no tax and need file no return (s 58.1-321 A), Virginia adjusted gross income (s 58.1-321,
+-- with the additions and subtractions of ss 58.1-322.01, 58.1-322.02 and the Social Security subtraction, s 58.1-322.02(3)),
+-- the deductions (s 58.1-322.03: the itemised or standard deduction by taxable year, personal exemptions, the age and blind
+-- exemption, the dependent care deduction, the age deduction), the rates (s 58.1-320), the nonresident proportion
+-- (s 58.1-325), the credit for low-income taxpayers and the earned income credit (s 58.1-339.8), and two duties with deadlines:
+-- paying an assessed deficiency within 30 days (s 58.1-308) and reporting a federal change within one year (s 58.1-311).
+--
+-- SEAT: the individual taxpayer (a Virginia resident, or a nonresident with Virginia-source income). "Do I owe Virginia tax and
+-- must I file? What is my Virginia taxable income? How much tax? Do I get the low-income or earned income credit? I got a bill /
+-- the IRS changed my return: by when must I act?"
+--
+-- Edition: the Code of Virginia as online after the 2026 Session (Virginia Law Portal, 'Read all' pages), retrieved
+-- 2026-10-19 (UTC), as deposited at ../../registers/source-bundle/title-58-1-chapter-3-article-{1,2,3}-*.txt. The Internal
+-- Revenue Code is adopted as it existed on December 31, 2025 (s 58.1-301).
+--
+-- FIGURES. Every amount used is fixed in the statute (no annual indexation), except the federal poverty guideline in
+-- s 58.1-339.8, which HHS publishes each year (an INPUT). Federal adjusted gross income, the federal earned income credit, the
+-- federal personal exemptions allowable, s 63(f) status and the s 21 employment-related expenses are federal facts (INPUTS);
+-- the federal text is at subjects/us/internal-revenue-code-of-1986/ (cross-folder IMPORT is not possible; NOTES.md).
+--
+-- NOT ENCODED. Part-year residents (s 58.1-303: answers `not covered`); estates and trusts; the itemised additions and
+-- subtractions other than Social Security (asked as totals); s 58.1-322.03 subdivisions 4 and 6-19 (asked as one total of
+-- other deductions); s 58.1-324 C-D (allocation between spouses filing separately); s 58.1-326; credits in article 3 other
+-- than s 58.1-339.8 (s 58.1-332 credit for taxes paid to other states and the rest); estimated tax (s 58.1-317); returns and
+-- due dates in article 4 (not deposited).
+--
+-- BASELINE ENCODING. Written from the individual's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Virginia individual income tax -- Code of Virginia ss 58.1-300 to 58.1-339.14`
+
+§§ `Questions this encoding does not cover`
+
+DECLARE `Why not covered` IS ONE OF
+    -- s 58.1-303
+    `a part-year resident is taxed as a resident only for the part of the year of residence, with prorated exemptions (s 58.1-303), which this encoding does not compute`
+
+GIVEN a IS A TYPE
+GIVETH A TYPE
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+§§ `The people and the actions`
+
+DECLARE `Filing status` IS ONE OF
+    `single`
+    `married filing jointly`
+    `married filing separately`
+
+DECLARE `Residence` IS ONE OF
+    `a resident all year`
+    `a part-year resident`
+    `a nonresident all year`
+
+DECLARE `Party` IS ONE OF
+    `the taxpayer`
+    `the Department of Taxation`
+
+DECLARE `Action` IS ONE OF
+    `pay the additional tax assessed`
+    `file an amended return reporting the federal change`
+
+§§ `s 58.1-302 -- resident`
+
+-- s 58.1-302: "'Resident' applies only to natural persons and includes ... every person domiciled in Virginia at any time during
+-- the taxable year and every other person who, for an aggregate of more than 183 days of the taxable year, maintained his place
+-- of abode within Virginia ... The word 'resident' shall not include any member of the United States Congress who is domiciled
+-- in another state."
+GIVEN `domiciled in Virginia at any time in the year` IS A BOOLEAN
+      `days of abode in Virginia` IS A NUMBER
+      `a member of Congress domiciled in another state` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a Virginia resident` IF
+        (`domiciled in Virginia at any time in the year` OR `days of abode in Virginia` GREATER THAN 183)
+    AND NOT (`a member of Congress domiciled in another state`)
+
+§§ `s 58.1-322.03(5) -- the age deduction`
+
+-- s 58.1-322.03(5): "a. A deduction in the amount of $ 12,000 for individuals born on or before January 1, 1939. b. A deduction
+-- in the amount of $ 12,000 for individuals born after January 1, 1939, who have attained the age of 65. This deduction shall be
+-- reduced by $ 1 for every $ 1 that the taxpayer's adjusted federal adjusted gross income exceeds $ 50,000 for single taxpayers
+-- or $ 75,000 for married taxpayers. For married taxpayers filing separately, the deduction shall be reduced by $ 1 for every
+-- $ 1 that the total combined adjusted federal adjusted gross income of both spouses exceeds $ 75,000." "Adjusted federal
+-- adjusted gross income" is federal AGI "minus any benefits received under Title II of the Social Security Act and other
+-- benefits subject to federal income taxation solely pursuant to s 86".
+-- On a joint return with two qualifying spouses, the reduction is applied once to the combined deduction (NOTES.md finding 3).
+GIVEN `filing status` IS A `Filing status`
+      `individuals born on or before January 1, 1939` IS A NUMBER
+      `other individuals aged 65 or over` IS A NUMBER
+      `adjusted federal adjusted gross income` IS A NUMBER   -- combined for both spouses where they are married
+GIVETH A NUMBER
+`the age deduction` `filing status` `individuals born on or before January 1, 1939` `other individuals aged 65 or over` `adjusted federal adjusted gross income` MEANS
+    (`individuals born on or before January 1, 1939` TIMES 12000)
+        PLUS max 0 ((`other individuals aged 65 or over` TIMES 12000) MINUS `excess`)
+    WHERE
+        `threshold` MEANS IF `filing status` EQUALS `single` THEN 50000 ELSE 75000
+        `excess`    MEANS max 0 (`adjusted federal adjusted gross income` MINUS `threshold`)
+
+§§ `s 58.1-321 -- Virginia adjusted gross income, and who owes nothing`
+
+DECLARE `Taxpayer` HAS
+    `filing status`                                IS A `Filing status`
+    `residence`                                    IS A `Residence`
+    `taxable year`                                 IS A NUMBER
+    `federal adjusted gross income`                IS A NUMBER  -- joint where married filing jointly
+    `s 58.1-322.01 additions`                      IS A NUMBER
+    `Social Security benefits in federal AGI`      IS A NUMBER  -- Title II and s 86 benefits included in federal AGI
+    `other s 58.1-322.02 subtractions`             IS A NUMBER
+    `itemises on the federal return`               IS A BOOLEAN
+    `federal itemised deductions less income taxes` IS A NUMBER -- s 58.1-322.03(1)(a), after the reduction for income taxes
+    `can be claimed as a dependent`                IS A BOOLEAN
+    `earned income`                                IS A NUMBER  -- used only where the person can be claimed as a dependent
+    `federal personal exemptions allowable`        IS A NUMBER
+    `aged or blind under s 63(f)`                  IS A NUMBER  -- the number of s 63(f) additional amounts
+    `s 21 employment-related expenses`             IS A NUMBER
+    `born on or before January 1, 1939`            IS A NUMBER  -- individuals on the return
+    `other individuals aged 65 or over`            IS A NUMBER
+    `other deductions`                             IS A NUMBER  -- s 58.1-322.03(4), (6)-(19), as a total
+    `share of income from Virginia sources`        IS A NUMBER  -- s 58.1-325 for a nonresident (a fraction); ignored otherwise
+
+-- s 58.1-321: "'Virginia adjusted gross income' means federal adjusted gross income for the taxable years with the
+-- modifications specified in ss 58.1-322.01 and 58.1-322.02."
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`the Virginia adjusted gross income of` t MEANS
+    ((t's `federal adjusted gross income` PLUS t's `s 58.1-322.01 additions`)
+        MINUS t's `Social Security benefits in federal AGI`) MINUS t's `other s 58.1-322.02 subtractions`
+
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`the age deduction of` t MEANS
+    `the age deduction` (t's `filing status`) (t's `born on or before January 1, 1939`) (t's `other individuals aged 65 or over`)
+        (t's `federal adjusted gross income` MINUS t's `Social Security benefits in federal AGI`)
+
+-- s 58.1-321 A: "No tax levied pursuant to s 58.1-320 is imposed, nor any return required to be filed, by: 1. A single individual
+-- where the Virginia adjusted gross income plus the modification specified in subdivision 5 of s 58.1-322.03 for such taxable
+-- year is less than ... $11,950 for taxable years beginning on and after January 1, 2012. 2. An individual and spouse if their
+-- combined Virginia adjusted gross income plus the modification specified in subdivision 5 ... is less than ... $23,900 ... (or
+-- one-half of such amount in the case of a married individual filing a separate return)". The threshold adds the age deduction
+-- back (NOTES.md finding 2).
+GIVEN `filing status` IS A `Filing status`
+GIVETH A NUMBER
+`the s 58.1-321 A threshold` `filing status` MEANS
+    CONSIDER `filing status`
+    WHEN `single`                 THEN 11950
+    WHEN `married filing jointly` THEN 23900
+    OTHERWISE 11950
+
+GIVEN t IS A `Taxpayer`
+GIVETH A BOOLEAN
+DECIDE `owes no tax and need file no return under s 58.1-321 A` t IF
+    (`the Virginia adjusted gross income of` t PLUS `the age deduction of` t) LESS THAN `the s 58.1-321 A threshold` (t's `filing status`)
+
+§§ `s 58.1-322.03 -- the deductions`
+
+-- s 58.1-322.03(1)(b): the standard deduction where the taxpayer does not itemise federally, by taxable year: (ii) 2019-2021
+-- $4,500 / $9,000; (iii) 2022-2023 $8,000 / $16,000; (iv) 2024 $8,500 / $17,000; (v) 2025-2026 $8,750 / $17,500; (vi) 2027
+-- $9,200 / $18,400; (vii) 2028-2029 $9,300 / $18,600; (i) before 2019 and from 2030 $3,000 / $6,000; "one-half of such amounts
+-- in the case of a married individual filing a separate return". "Any person who may be claimed as a dependent on another
+-- taxpayer's return ... may compute the deduction only with respect to earned income."
+GIVEN `taxable year` IS A NUMBER
+GIVETH A NUMBER
+`the standard deduction for a single individual in` `taxable year` MEANS
+    BRANCH
+        IF `taxable year` LESS THAN 2019 THEN 3000
+        IF `taxable year` LESS THAN 2022 THEN 4500
+        IF `taxable year` LESS THAN 2024 THEN 8000
+        IF `taxable year` LESS THAN 2025 THEN 8500
+        IF `taxable year` LESS THAN 2027 THEN 8750
+        IF `taxable year` LESS THAN 2028 THEN 9200
+        IF `taxable year` LESS THAN 2030 THEN 9300
+        OTHERWISE 3000
+
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`the standard deduction of` t MEANS
+    IF t's `can be claimed as a dependent`
+    THEN min `amount` (t's `earned income`)
+    ELSE `amount`
+    WHERE
+        `single amount` MEANS `the standard deduction for a single individual in` (t's `taxable year`)
+        `amount`        MEANS CONSIDER t's `filing status`
+                              WHEN `married filing jointly` THEN `single amount` TIMES 2
+                              OTHERWISE `single amount`
+
+-- s 58.1-322.03(1)(a) or (b); (2)(a) "$ 930 for each personal exemption allowable ... for federal income tax purposes";
+-- (2)(b) "an additional personal exemption in the amount of $ 800" for each blind or aged taxpayer under s 63(f), whether or
+-- not the taxpayer itemises; (3) the s 21 employment-related expenses; (5) the age deduction; and the others as a total.
+GIVEN t IS A `Taxpayer`
+GIVETH A NUMBER
+`the deductions of` t MEANS
+    sum (LIST `first`,
+              t's `federal personal exemptions allowable` TIMES 930,
+              t's `aged or blind under s 63(f)` TIMES 800,
+              t's `s 21 employment-related expenses`,
+              `the age deduction of` t,
+              t's `other deductions`)
+    WHERE
+        `first` MEANS IF t's `itemises on the federal return`
+                      THEN t's `federal itemised deductions less income taxes`
+                      ELSE `the standard deduction of` t
+
+-- s 58.1-322: Virginia taxable income of a resident; s 58.1-325 A: of a nonresident, "an amount bearing the same proportion to
+-- his Virginia taxable income, computed as though he were a resident, as the net amount of his income ... from Virginia sources
+-- bears to the net amount of his income ... from all sources".
+GIVEN t IS A `Taxpayer`
+GIVETH AN `Answer` NUMBER
+`the Virginia taxable income of` t MEANS
+    CONSIDER t's `residence`
+    WHEN `a part-year resident` THEN `not covered` `a part-year resident is taxed as a resident only for the part of the year of residence, with prorated exemptions (s 58.1-303), which this encoding does not compute`
+    WHEN `a nonresident all year` THEN `answered` (`as a resident` TIMES t's `share of income from Virginia sources`)
+    OTHERWISE `answered` `as a resident`
+    WHERE
+        `as a resident` MEANS max 0 (`the Virginia adjusted gross income of` t MINUS `the deductions of` t)
+
+§§ `s 58.1-320 -- the tax`
+
+-- s 58.1-320, for taxable years from 1990: "Two percent on income not exceeding $3,000; Three percent on income in excess of
+-- $3,000, but not in excess of $5,000; Five percent on income in excess of $5,000 but not in excess of $17,000 ...; Five and
+-- three-quarters percent on income in excess of $17,000".
+GIVEN `taxable income` IS A NUMBER
+GIVETH A NUMBER
+`the s 58.1-320 tax on` `taxable income` MEANS
+    BRANCH
+        IF `taxable income` AT MOST 3000  THEN `taxable income` TIMES 2%
+        IF `taxable income` AT MOST 5000  THEN 60 PLUS ((`taxable income` MINUS 3000) TIMES 3%)
+        IF `taxable income` AT MOST 17000 THEN 120 PLUS ((`taxable income` MINUS 5000) TIMES 5%)
+        OTHERWISE 720 PLUS ((`taxable income` MINUS 17000) TIMES 5.75%)
+
+GIVEN t IS A `Taxpayer`
+GIVETH AN `Answer` NUMBER
+`the Virginia income tax of` t MEANS
+    IF `owes no tax and need file no return under s 58.1-321 A` t
+    THEN `answered` 0
+    ELSE CONSIDER `the Virginia taxable income of` t
+         WHEN `answered` x THEN `answered` (`the s 58.1-320 tax on` x)
+         WHEN `not covered` r THEN `not covered` r
+
+§§ `s 58.1-339.8 -- the credit for low-income taxpayers and the earned income credit`
+
+DECLARE `Credit claimed` IS ONE OF
+    `none: barred by s 58.1-339.8 D`
+    `the $300 per person low-income credit, nonrefundable (B 1)`
+    `20 percent of the federal earned income credit, nonrefundable (B 2)`
+    `15 percent (2022-2024) or 20 percent (2025-2026) of the federal earned income credit, refundable (B 3)`
+    `no credit: neither the poverty test nor a federal earned income credit`
+
+DECLARE `Credit` HAS
+    `which`  IS A `Credit claimed`
+    `amount` IS A NUMBER
+
+-- B 1: family Virginia AGI "does not exceed 100 percent of the poverty guideline amount corresponding to a household of an equal
+-- number of persons": "$ 300 each for the individual, the individual's spouse, and any person claimed as a dependent",
+-- nonrefundable. B 2: "20 percent of the credit claimed ... pursuant to s 32", nonrefundable. B 3 a, taxable years 2022 to
+-- 2024: a refundable credit of 15 percent; B 3 b, taxable years 2025 and 2026: "in lieu of the credit authorized under
+-- subdivision 1 or 2", "a refundable credit ... equal to 20 percent of the credit claimed ... pursuant to s 32". C: B 1 and B 2, "or in the case of a nonresident or a person to which s 58.1-303
+-- applies, subdivision B 3", may not exceed the Virginia tax. D: no credit if the household claims the National Guard,
+-- s 58.1-322.02(15) or (16) subtractions, the s 63(f) additional exemption, or the age deduction.
+-- The credit chosen is the largest (each is "in lieu of" the others). The B 1 "household" is read as the persons for whom $300
+-- is given (NOTES.md finding 5).
+GIVEN `taxable year` IS A NUMBER
+      `residence` IS A `Residence`
+      `persons on the return` IS A NUMBER
+      `family Virginia adjusted gross income` IS A NUMBER
+      `poverty guideline for a household of that size` IS A NUMBER
+      `federal earned income credit claimed` IS A NUMBER
+      `a s 58.1-339.8 D item is claimed` IS A BOOLEAN
+      `Virginia tax` IS A NUMBER
+GIVETH A `Credit`
+`the s 58.1-339.8 credit` `taxable year` `residence` `persons on the return` `family Virginia adjusted gross income` `poverty guideline for a household of that size` `federal earned income credit claimed` `a s 58.1-339.8 D item is claimed` `Virginia tax` MEANS
+    BRANCH
+        IF `a s 58.1-339.8 D item is claimed`
+        THEN `Credit` WITH `which` IS `none: barred by s 58.1-339.8 D`, `amount` IS 0
+        IF `b3` AT LEAST `b1` AND `b3` AT LEAST `b2` AND `b3` GREATER THAN 0
+        THEN `Credit` WITH `which` IS `15 percent (2022-2024) or 20 percent (2025-2026) of the federal earned income credit, refundable (B 3)`, `amount` IS `b3`
+        IF `b2` GREATER THAN `b1` AND `b2` GREATER THAN 0
+        THEN `Credit` WITH `which` IS `20 percent of the federal earned income credit, nonrefundable (B 2)`, `amount` IS `b2`
+        IF `b1` GREATER THAN 0
+        THEN `Credit` WITH `which` IS `the $300 per person low-income credit, nonrefundable (B 1)`, `amount` IS `b1`
+        OTHERWISE `Credit` WITH `which` IS `no credit: neither the poverty test nor a federal earned income credit`, `amount` IS 0
+    WHERE
+        `b1` MEANS IF `family Virginia adjusted gross income` AT MOST `poverty guideline for a household of that size`
+                   THEN min (`persons on the return` TIMES 300) `Virginia tax`
+                   ELSE 0
+        `b2` MEANS min (`federal earned income credit claimed` TIMES 20%) `Virginia tax`
+        `b3 rate` MEANS BRANCH
+                            IF `taxable year` AT LEAST 2022 AND `taxable year` LESS THAN 2025 THEN 15%
+                            IF `taxable year` AT LEAST 2025 AND `taxable year` LESS THAN 2027 THEN 20%
+                            OTHERWISE 0
+        `b3` MEANS IF `residence` EQUALS `a resident all year`
+                   THEN `federal earned income credit claimed` TIMES `b3 rate`
+                   ELSE min (`federal earned income credit claimed` TIMES `b3 rate`) `Virginia tax`
+
+§§ `ss 58.1-308, 58.1-311 -- duties with deadlines`
+
+-- s 58.1-308: "The taxpayer shall pay such additional tax to the Department within thirty days after the amount of the tax as
+-- computed is mailed by the Department." Counted in days from the mailing.
+GIVETH A DEONTIC `Party` `Action`
+`my duty to pay an assessed deficiency` MEANS
+    PARTY  `the taxpayer`
+    MUST   `pay the additional tax assessed`
+    WITHIN 30
+    HENCE  FULFILLED
+    LEST   BREACH BY `the taxpayer` BECAUSE "additional tax not paid within 30 days after the bill was mailed (Va. Code s 58.1-308)"
+
+-- s 58.1-311: where federal taxable income "is changed or corrected by the United States Internal Revenue Service ... the
+-- taxpayer shall file an amended return ... within one year after the final determination date ... However, if the Department
+-- has sufficient information from which to compute the proper additional tax and the taxpayer has paid such tax, then the
+-- taxpayer is not required to file". One year is counted as 365 days from the final determination date (NOTES.md finding 6).
+GIVEN `the Department has the information and I have paid the tax` IS A BOOLEAN
+GIVETH A DEONTIC `Party` `Action`
+`my duty to report a federal change` `the Department has the information and I have paid the tax` MEANS
+    IF `the Department has the information and I have paid the tax`
+    THEN FULFILLED
+    ELSE PARTY  `the taxpayer`
+         MUST   `file an amended return reporting the federal change`
+         WITHIN 365
+         HENCE  FULFILLED
+         LEST   BREACH BY `the taxpayer` BECAUSE "no amended Virginia return within one year after the final determination date of the federal change (Va. Code s 58.1-311)"
+
+§ `Questions for the taxpayer`
+
+GIVEN `status` IS A `Filing status`, `residence` IS A `Residence`, `year` IS A NUMBER, `agi` IS A NUMBER, `additions` IS A NUMBER, `ss` IS A NUMBER, `subtractions` IS A NUMBER, `itemises` IS A BOOLEAN, `itemised` IS A NUMBER, `dependent` IS A BOOLEAN, `earned` IS A NUMBER, `exemptions` IS A NUMBER, `aged or blind` IS A NUMBER, `care` IS A NUMBER, `pre-1939` IS A NUMBER, `over 65` IS A NUMBER, `others` IS A NUMBER, `share` IS A NUMBER
+GIVETH A `Taxpayer`
+`the Virginia taxpayer with` `status` `residence` `year` `agi` `additions` `ss` `subtractions` `itemises` `itemised` `dependent` `earned` `exemptions` `aged or blind` `care` `pre-1939` `over 65` `others` `share` MEANS
+    `Taxpayer` WITH
+        `filing status`                                 IS `status`
+        `residence`                                     IS `residence`
+        `taxable year`                                  IS `year`
+        `federal adjusted gross income`                 IS `agi`
+        `s 58.1-322.01 additions`                       IS `additions`
+        `Social Security benefits in federal AGI`       IS `ss`
+        `other s 58.1-322.02 subtractions`              IS `subtractions`
+        `itemises on the federal return`                IS `itemises`
+        `federal itemised deductions less income taxes` IS `itemised`
+        `can be claimed as a dependent`                 IS `dependent`
+        `earned income`                                 IS `earned`
+        `federal personal exemptions allowable`         IS `exemptions`
+        `aged or blind under s 63(f)`                   IS `aged or blind`
+        `s 21 employment-related expenses`              IS `care`
+        `born on or before January 1, 1939`             IS `pre-1939`
+        `other individuals aged 65 or over`             IS `over 65`
+        `other deductions`                              IS `others`
+        `share of income from Virginia sources`         IS `share`
+
+§§ `Am I a resident, and must I file?`
+
+@export Am I a Virginia resident for income tax (Va. Code s 58.1-302)?
+GIVEN `I was domiciled in Virginia at some time in the year` IS A BOOLEAN @desc Whether Virginia was your domicile (permanent home) at any time during the taxable year
+      `days I kept my place of abode in Virginia` IS A NUMBER @desc For how many days in total during the year you maintained your place of abode in Virginia
+      `I am a member of Congress domiciled in another state` IS A BOOLEAN @desc Whether you are a member of the US Congress whose domicile is another state
+GIVETH A BOOLEAN
+DECIDE `Am I a Virginia resident` IF
+    `is a Virginia resident` `I was domiciled in Virginia at some time in the year` `days I kept my place of abode in Virginia` `I am a member of Congress domiciled in another state`
+
+@export Am I free of Virginia income tax and of filing a return because my income is below the threshold (Va. Code s 58.1-321 A)?
+GIVEN `my filing status` IS A `Filing status` @desc single, married filing jointly, or married filing separately
+      `my federal adjusted gross income` IS A NUMBER @desc Your federal adjusted gross income in US dollars (joint, if married filing jointly)
+      `my Virginia additions` IS A NUMBER @desc The total, in US dollars, of income Virginia adds back under s 58.1-322.01 (for example interest on other states' bonds); 0 if none
+      `my Social Security benefits in federal AGI` IS A NUMBER @desc The Social Security (Title II) benefits included in your federal adjusted gross income, in US dollars; 0 if none
+      `my other Virginia subtractions` IS A NUMBER @desc Other income Virginia subtracts under s 58.1-322.02 (for example US bond interest, up to $20,000 of disability income), in US dollars; 0 if none
+      `people on the return born on or before 1 January 1939` IS A NUMBER @desc How many people on the return (you, and your spouse if married) were born on or before 1 January 1939
+      `other people on the return aged 65 or over` IS A NUMBER @desc How many others on the return (you, and your spouse if married) were born after 1 January 1939 and are 65 or older
+GIVETH A BOOLEAN
+DECIDE `Am I below the Virginia filing threshold` IF
+    `owes no tax and need file no return under s 58.1-321 A` (`the Virginia taxpayer with` `my filing status` `a resident all year` 2026 `my federal adjusted gross income` `my Virginia additions` `my Social Security benefits in federal AGI` `my other Virginia subtractions` FALSE 0 FALSE 0 0 0 0 `people on the return born on or before 1 January 1939` `other people on the return aged 65 or over` 0 1)
+
+§§ `How much Virginia tax do I owe?`
+
+@export How much is my Virginia age deduction (Va. Code s 58.1-322.03(5))?
+GIVEN `my filing status` IS A `Filing status` @desc single, married filing jointly, or married filing separately
+      `people on the return born on or before 1 January 1939` IS A NUMBER @desc How many people on the return (you, and your spouse if married) were born on or before 1 January 1939
+      `other people on the return aged 65 or over` IS A NUMBER @desc How many others on the return were born after 1 January 1939 and are 65 or older
+      `federal adjusted gross income less Social Security` IS A NUMBER @desc Your federal adjusted gross income minus the Social Security benefits in it, in US dollars; if married, the combined figure for both spouses (also when filing separately)
+GIVETH A NUMBER
+`How much is my Virginia age deduction` `my filing status` `people on the return born on or before 1 January 1939` `other people on the return aged 65 or over` `federal adjusted gross income less Social Security` MEANS
+    `the age deduction` `my filing status` `people on the return born on or before 1 January 1939` `other people on the return aged 65 or over` `federal adjusted gross income less Social Security`
+
+@export What is my Virginia taxable income, and how much Virginia income tax do I owe before credits (Va. Code ss 58.1-320 to 58.1-325)?
+GIVEN `my filing status` IS A `Filing status` @desc single, married filing jointly, or married filing separately
+      `my residence` IS A `Residence` @desc Whether you were a Virginia resident all year, a part-year resident, or a nonresident all year
+      `the taxable year` IS A NUMBER @desc The calendar year the taxable year begins in, for example 2026
+      `my federal adjusted gross income` IS A NUMBER @desc Your federal adjusted gross income in US dollars (joint, if married filing jointly)
+      `my Virginia additions` IS A NUMBER @desc The total, in US dollars, of income Virginia adds back under s 58.1-322.01; 0 if none
+      `my Social Security benefits in federal AGI` IS A NUMBER @desc The Social Security (Title II) benefits included in your federal adjusted gross income, in US dollars; 0 if none
+      `my other Virginia subtractions` IS A NUMBER @desc Other income Virginia subtracts under s 58.1-322.02, in US dollars; 0 if none
+      `I itemise on my federal return` IS A BOOLEAN @desc Whether you itemise deductions on your federal return
+      `my federal itemised deductions less income taxes` IS A NUMBER @desc If you itemise: your federal itemised deductions minus state and local income taxes deducted, plus any extra mileage allowed by s 58.1-322.03(1)(a), in US dollars
+      `someone can claim me as a dependent` IS A BOOLEAN @desc Whether another taxpayer may claim you as a dependent
+      `my earned income` IS A NUMBER @desc Your earned income in US dollars (used only if someone can claim you as a dependent)
+      `my federal personal exemptions` IS A NUMBER @desc The number of personal exemptions allowable to you for federal purposes (you, your spouse if joint, your dependents)
+      `my aged or blind additional amounts` IS A NUMBER @desc How many s 63(f) aged-or-blind additional amounts you (and your spouse) have
+      `my child and dependent care expenses` IS A NUMBER @desc The employment-related expenses your federal child and dependent care credit is based on (s 21), in US dollars; 0 if none
+      `people on the return born on or before 1 January 1939` IS A NUMBER @desc How many people on the return were born on or before 1 January 1939
+      `other people on the return aged 65 or over` IS A NUMBER @desc How many others on the return were born after 1 January 1939 and are 65 or older
+      `my other Virginia deductions` IS A NUMBER @desc The total, in US dollars, of other deductions you take under s 58.1-322.03 (foster care, Commonwealth Savers Plan contributions, long-term care premiums and the others); 0 if none
+      `my share of income from Virginia sources` IS A NUMBER @desc For a nonresident: your net income from Virginia sources divided by your net income from all sources (a fraction from 0 to 1); enter 1 otherwise
+GIVETH AN `Answer` NUMBER
+`How much Virginia income tax do I owe` `my filing status` `my residence` `the taxable year` `my federal adjusted gross income` `my Virginia additions` `my Social Security benefits in federal AGI` `my other Virginia subtractions` `I itemise on my federal return` `my federal itemised deductions less income taxes` `someone can claim me as a dependent` `my earned income` `my federal personal exemptions` `my aged or blind additional amounts` `my child and dependent care expenses` `people on the return born on or before 1 January 1939` `other people on the return aged 65 or over` `my other Virginia deductions` `my share of income from Virginia sources` MEANS
+    `the Virginia income tax of` (`the Virginia taxpayer with` `my filing status` `my residence` `the taxable year` `my federal adjusted gross income` `my Virginia additions` `my Social Security benefits in federal AGI` `my other Virginia subtractions` `I itemise on my federal return` `my federal itemised deductions less income taxes` `someone can claim me as a dependent` `my earned income` `my federal personal exemptions` `my aged or blind additional amounts` `my child and dependent care expenses` `people on the return born on or before 1 January 1939` `other people on the return aged 65 or over` `my other Virginia deductions` `my share of income from Virginia sources`)
+
+@export What is my Virginia taxable income (Va. Code ss 58.1-322, 58.1-325)?
+GIVEN `my filing status` IS A `Filing status` @desc single, married filing jointly, or married filing separately
+      `my residence` IS A `Residence` @desc Whether you were a Virginia resident all year, a part-year resident, or a nonresident all year
+      `the taxable year` IS A NUMBER @desc The calendar year the taxable year begins in, for example 2026
+      `my federal adjusted gross income` IS A NUMBER @desc Your federal adjusted gross income in US dollars (joint, if married filing jointly)
+      `my Virginia additions` IS A NUMBER @desc The total, in US dollars, of income Virginia adds back under s 58.1-322.01; 0 if none
+      `my Social Security benefits in federal AGI` IS A NUMBER @desc The Social Security (Title II) benefits included in your federal adjusted gross income, in US dollars; 0 if none
+      `my other Virginia subtractions` IS A NUMBER @desc Other income Virginia subtracts under s 58.1-322.02, in US dollars; 0 if none
+      `I itemise on my federal return` IS A BOOLEAN @desc Whether you itemise deductions on your federal return
+      `my federal itemised deductions less income taxes` IS A NUMBER @desc If you itemise: your federal itemised deductions minus income taxes deducted, in US dollars
+      `someone can claim me as a dependent` IS A BOOLEAN @desc Whether another taxpayer may claim you as a dependent
+      `my earned income` IS A NUMBER @desc Your earned income in US dollars (used only if someone can claim you as a dependent)
+      `my federal personal exemptions` IS A NUMBER @desc The number of personal exemptions allowable to you for federal purposes
+      `my aged or blind additional amounts` IS A NUMBER @desc How many s 63(f) aged-or-blind additional amounts you (and your spouse) have
+      `my child and dependent care expenses` IS A NUMBER @desc The employment-related expenses your federal child and dependent care credit is based on, in US dollars
+      `people on the return born on or before 1 January 1939` IS A NUMBER @desc How many people on the return were born on or before 1 January 1939
+      `other people on the return aged 65 or over` IS A NUMBER @desc How many others on the return were born after 1 January 1939 and are 65 or older
+      `my other Virginia deductions` IS A NUMBER @desc The total of other deductions you take under s 58.1-322.03, in US dollars
+      `my share of income from Virginia sources` IS A NUMBER @desc For a nonresident: Virginia-source net income over all net income (0 to 1); enter 1 otherwise
+GIVETH AN `Answer` NUMBER
+`What is my Virginia taxable income` `my filing status` `my residence` `the taxable year` `my federal adjusted gross income` `my Virginia additions` `my Social Security benefits in federal AGI` `my other Virginia subtractions` `I itemise on my federal return` `my federal itemised deductions less income taxes` `someone can claim me as a dependent` `my earned income` `my federal personal exemptions` `my aged or blind additional amounts` `my child and dependent care expenses` `people on the return born on or before 1 January 1939` `other people on the return aged 65 or over` `my other Virginia deductions` `my share of income from Virginia sources` MEANS
+    `the Virginia taxable income of` (`the Virginia taxpayer with` `my filing status` `my residence` `the taxable year` `my federal adjusted gross income` `my Virginia additions` `my Social Security benefits in federal AGI` `my other Virginia subtractions` `I itemise on my federal return` `my federal itemised deductions less income taxes` `someone can claim me as a dependent` `my earned income` `my federal personal exemptions` `my aged or blind additional amounts` `my child and dependent care expenses` `people on the return born on or before 1 January 1939` `other people on the return aged 65 or over` `my other Virginia deductions` `my share of income from Virginia sources`)
+
+§§ `What credit do I get?`
+
+@export Which credit for low-income taxpayers or earned income credit do I get, and how much (Va. Code s 58.1-339.8)?
+GIVEN `the taxable year` IS A NUMBER @desc The calendar year the taxable year begins in, for example 2026
+      `my residence` IS A `Residence` @desc Whether you were a Virginia resident all year, a part-year resident, or a nonresident all year
+      `people on my return` IS A NUMBER @desc How many people the return covers: you, your spouse if married, and each dependent you claim
+      `our family Virginia adjusted gross income` IS A NUMBER @desc The combined Virginia adjusted gross income of you, your spouse and your dependents, in US dollars
+      `the poverty guideline for a household our size` IS A NUMBER @desc The HHS poverty guideline published in the taxable year for a household of that many people (48 contiguous states and DC), in US dollars
+      `my federal earned income credit` IS A NUMBER @desc The federal earned income credit (s 32) you claim for the year, in US dollars; 0 if none
+      `we claim an item that bars the credit` IS A BOOLEAN @desc Whether you, your spouse or a dependent claims the age deduction, the extra $800 aged-or-blind exemption, the National Guard subtraction, or the s 58.1-322.02(15) or (16) subtraction
+      `my Virginia income tax` IS A NUMBER @desc Your Virginia income tax for the year before this credit, in US dollars
+GIVETH A `Credit`
+`Which Virginia low-income or earned income credit do I get` `the taxable year` `my residence` `people on my return` `our family Virginia adjusted gross income` `the poverty guideline for a household our size` `my federal earned income credit` `we claim an item that bars the credit` `my Virginia income tax` MEANS
+    `the s 58.1-339.8 credit` `the taxable year` `my residence` `people on my return` `our family Virginia adjusted gross income` `the poverty guideline for a household our size` `my federal earned income credit` `we claim an item that bars the credit` `my Virginia income tax`

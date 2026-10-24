@@ -60,3 +60,14 @@ Statute text was deposited on 2026-10-20 for a Priority 3 sample: personal incom
 - The Auxiliary Grant rate and personal needs allowance: in the Appropriation Act (budget.lis.virginia.gov), not sourced.
 - The UI weekly benefit table in s 60.2-602: still missing ("SEE PRINTED BILL FOR TABLES"). No Virginia Employment Commission notice was sourced.
 - Code of Virginia Title 51.5 (the AG enabling statute) is not in commons.
+
+## Encodings added 2026-10-24: tax and benefits baselines
+
+Two baseline encodings, written from the individual's seat with the 2026-10-18 defaults and checked with the stable `l4` (1.6.98). Each folder's `NOTES.md` has the method, scope and findings.
+
+| Encoding | Seat | Questions | Regulative rules | Assertions |
+| --- | --- | --- | --- | --- |
+| [`code-of-virginia-title-58-1-taxation-chapter-3-articles-1-3-individual-income-tax/encodings/baseline-2026-10`](code-of-virginia-title-58-1-taxation-chapter-3-articles-1-3-individual-income-tax/encodings/baseline-2026-10) | the individual taxpayer | am I a resident (s 58.1-302); am I below the filing threshold (s 58.1-321 A); the age deduction (s 58.1-322.03(5)); Virginia taxable income and tax (ss 58.1-320 to 58.1-325, with the Social Security subtraction); the low-income or earned income credit (s 58.1-339.8) | 2 (pay a deficiency within 30 days, s 58.1-308; amend within a year of a federal change, s 58.1-311) | 40 / 40 |
+| [`code-of-virginia-title-63-2-welfare-social-services-chapter-6/encodings/baseline-2026-10`](code-of-virginia-title-63-2-welfare-social-services-chapter-6/encodings/baseline-2026-10) | the caretaker applying for TANF | the eligible child and the applicant's duties (s 63.2-602); income eligibility and the payment (22VAC40-295-50, brought in, with the immunization reduction of s 63.2-603); diversionary assistance (s 63.2-617 A); VIEW exemptions (s 63.2-609); the 24-month limit (s 63.2-612); continued payment on appeal (s 63.2-618) | 3 (the 60-day notice before termination, s 63.2-612; the hearing request and continued payment, s 63.2-618) | 36 / 36 |
+
+Inputs, not deposited: the HHS poverty guideline, the TANF standard of assistance (State Board) and the SNAP standard deduction. Federal AGI and the federal EIC are inputs linked to `subjects/us/internal-revenue-code-of-1986/`.

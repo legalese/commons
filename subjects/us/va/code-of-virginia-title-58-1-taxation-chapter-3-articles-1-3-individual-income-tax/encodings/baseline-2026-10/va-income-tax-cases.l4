@@ -1,0 +1,115 @@
+IMPORT prelude
+IMPORT `va-income-tax`
+
+-- Virginia individual income tax -- worked cases from the taxpayer's seat. Expected values were worked by hand from the
+-- deposited text (Code of Virginia after the 2026 Session), never copied from the encoding's output. Poverty guideline
+-- figures are HYPOTHETICAL (HHS publishes them; not deposited).
+--
+-- Argument order of the two tax questions: status, residence, year, federal AGI, additions, Social Security in AGI, other
+-- subtractions, itemises?, itemised amount, dependent?, earned income, federal exemptions, aged/blind count, s 21 expenses,
+-- born on or before 1 Jan 1939, others 65+, other deductions, Virginia-source share.
+
+-- s 58.1-302: resident.
+#ASSERT `Am I a Virginia resident` TRUE 0 FALSE
+#ASSERT `Am I a Virginia resident` FALSE 184 FALSE
+#ASSERT NOT (`Am I a Virginia resident` FALSE 183 FALSE)
+#ASSERT NOT (`Am I a Virginia resident` TRUE 365 TRUE)
+
+-- s 58.1-321 A: below the threshold, no tax and no return.
+-- Single, AGI $11,000: below $11,950.
+#ASSERT `Am I below the Virginia filing threshold` `single` 11000 0 0 0 0 0
+-- Single, AGI $12,000: not below.
+#ASSERT NOT (`Am I below the Virginia filing threshold` `single` 12000 0 0 0 0 0)
+-- Single, AGI $20,000 of which $9,000 is Social Security: Virginia AGI $11,000: below.
+#ASSERT `Am I below the Virginia filing threshold` `single` 20000 0 9000 0 0 0
+-- Single aged 70 (born after 1939), AGI $11,000, no Social Security: $11,000 + the $12,000 age deduction = $23,000: not below.
+#ASSERT NOT (`Am I below the Virginia filing threshold` `single` 11000 0 0 0 0 1)
+-- Married filing jointly, combined $23,000: below $23,900. Married filing separately $11,000: below half, $11,950.
+#ASSERT `Am I below the Virginia filing threshold` `married filing jointly` 23000 0 0 0 0 0
+#ASSERT `Am I below the Virginia filing threshold` `married filing separately` 11000 0 0 0 0 0
+#ASSERT NOT (`Am I below the Virginia filing threshold` `married filing separately` 12000 0 0 0 0 0)
+
+-- s 58.1-322.03(5): the age deduction.
+-- Single, 65, adjusted federal AGI $55,000: 12,000 - 5,000 = 7,000.
+#ASSERT `How much is my Virginia age deduction` `single` 0 1 55000 EQUALS 7000
+-- Single, 65, $62,000: nil.
+#ASSERT `How much is my Virginia age deduction` `single` 0 1 62000 EQUALS 0
+-- Born in 1938: $12,000 whatever the income.
+#ASSERT `How much is my Virginia age deduction` `single` 1 0 200000 EQUALS 12000
+-- Joint, both 65+, combined $85,000: 24,000 - 10,000 = 14,000.
+#ASSERT `How much is my Virginia age deduction` `married filing jointly` 0 2 85000 EQUALS 14000
+-- Married filing separately, one 65+, combined of both spouses $80,000: 12,000 - 5,000 = 7,000.
+#ASSERT `How much is my Virginia age deduction` `married filing separately` 0 1 80000 EQUALS 7000
+
+-- s 58.1-320, s 58.1-322.03: taxable income and tax.
+-- A: single resident 2026, AGI $60,000: 60,000 - 8,750 - 930 = 50,320; tax 720 + 5.75% x 33,320 = 720 + 1,915.90 = 2,635.90.
+#ASSERT `What is my Virginia taxable income` `single` `a resident all year` 2026 60000 0 0 0 FALSE 0 FALSE 0 1 0 0 0 0 0 1 EQUALS `answered` 50320
+#ASSERT `How much Virginia income tax do I owe` `single` `a resident all year` 2026 60000 0 0 0 FALSE 0 FALSE 0 1 0 0 0 0 0 1 EQUALS `answered` 2635.9
+-- The same in 2027 ($9,200): 49,870. In 2030 the deduction falls back to $3,000: 56,070.
+#ASSERT `What is my Virginia taxable income` `single` `a resident all year` 2027 60000 0 0 0 FALSE 0 FALSE 0 1 0 0 0 0 0 1 EQUALS `answered` 49870
+#ASSERT `What is my Virginia taxable income` `single` `a resident all year` 2030 60000 0 0 0 FALSE 0 FALSE 0 1 0 0 0 0 0 1 EQUALS `answered` 56070
+-- Itemising $20,000 instead: 60,000 - 20,930 = 39,070.
+#ASSERT `What is my Virginia taxable income` `single` `a resident all year` 2026 60000 0 0 0 TRUE 20000 FALSE 0 1 0 0 0 0 0 1 EQUALS `answered` 39070
+
+-- B: joint 2026, AGI $100,000, four exemptions, $6,000 child care expenses: 100,000 - 17,500 - 3,720 - 6,000 = 72,780;
+-- tax 720 + 5.75% x 55,780 = 720 + 3,207.35 = 3,927.35.
+#ASSERT `How much Virginia income tax do I owe` `married filing jointly` `a resident all year` 2026 100000 0 0 0 FALSE 0 FALSE 0 4 0 6000 0 0 0 1 EQUALS `answered` 3927.35
+
+-- C: retired couple 2026, both 66, AGI $70,000 including $30,000 Social Security: Virginia AGI 40,000; deductions
+-- 17,500 + 1,860 + 1,600 + 24,000 (age, adjusted federal AGI 40,000 under 75,000) = 44,960; taxable income nil; tax nil.
+#ASSERT `What is my Virginia taxable income` `married filing jointly` `a resident all year` 2026 70000 0 30000 0 FALSE 0 FALSE 0 2 2 0 0 2 0 1 EQUALS `answered` 0
+#ASSERT `How much Virginia income tax do I owe` `married filing jointly` `a resident all year` 2026 70000 0 30000 0 FALSE 0 FALSE 0 2 2 0 0 2 0 1 EQUALS `answered` 0
+
+-- D: a dependent student 2026, AGI $15,000 of which $4,000 earned, no federal exemption: standard deduction limited to earned
+-- income, 4,000; taxable 11,000; tax 120 + 5% x 6,000 = 420.
+#ASSERT `How much Virginia income tax do I owe` `single` `a resident all year` 2026 15000 0 0 0 FALSE 0 TRUE 4000 0 0 0 0 0 0 1 EQUALS `answered` 420
+-- Below the threshold the tax is nil although taxable income is not: AGI $11,000 single gives taxable income 1,320
+-- (2% would be 26.40), but s 58.1-321 A imposes no tax.
+#ASSERT `What is my Virginia taxable income` `single` `a resident all year` 2026 11000 0 0 0 FALSE 0 FALSE 0 1 0 0 0 0 0 1 EQUALS `answered` 1320
+#ASSERT `How much Virginia income tax do I owe` `single` `a resident all year` 2026 11000 0 0 0 FALSE 0 FALSE 0 1 0 0 0 0 0 1 EQUALS `answered` 0
+-- The bands: $3,000 -> 60; $5,000 -> 120; $17,000 -> 720.
+#ASSERT `the s 58.1-320 tax on` 3000 EQUALS 60
+#ASSERT `the s 58.1-320 tax on` 5000 EQUALS 120
+#ASSERT `the s 58.1-320 tax on` 17000 EQUALS 720
+
+-- E: a nonresident (s 58.1-325), facts of A, a quarter of income from Virginia: 50,320 x 0.25 = 12,580; tax 120 + 5% x 7,580 = 499.
+#ASSERT `How much Virginia income tax do I owe` `single` `a nonresident all year` 2026 60000 0 0 0 FALSE 0 FALSE 0 1 0 0 0 0 0 0.25 EQUALS `answered` 499
+-- A part-year resident: not covered.
+#ASSERT `How much Virginia income tax do I owe` `single` `a part-year resident` 2026 60000 0 0 0 FALSE 0 FALSE 0 1 0 0 0 0 0 1 EQUALS `not covered` `a part-year resident is taxed as a resident only for the part of the year of residence, with prorated exemptions (s 58.1-303), which this encoding does not compute`
+
+-- s 58.1-339.8: the credit. Arguments: year, residence, persons, family VAGI, poverty guideline, federal EIC, barred?, tax.
+-- 2026 resident, 3 persons, family VAGI $20,000 under a HYPOTHETICAL guideline of $27,000, federal EIC $3,000, tax $300:
+-- B 1 = min(900, 300) = 300; B 2 = min(600, 300) = 300; B 3 = 600 refundable: B 3, $600.
+#ASSERT `Which Virginia low-income or earned income credit do I get` 2026 `a resident all year` 3 20000 27000 3000 FALSE 300 EQUALS `Credit` WITH `which` IS `15 percent (2022-2024) or 20 percent (2025-2026) of the federal earned income credit, refundable (B 3)`, `amount` IS 600
+-- The same in 2024: 15 percent, $450.
+#ASSERT `Which Virginia low-income or earned income credit do I get` 2024 `a resident all year` 3 20000 27000 3000 FALSE 300 EQUALS `Credit` WITH `which` IS `15 percent (2022-2024) or 20 percent (2025-2026) of the federal earned income credit, refundable (B 3)`, `amount` IS 450
+-- The same in 2027, when B 3 has lapsed: B 1 and B 2 both 300; B 1 is taken.
+#ASSERT `Which Virginia low-income or earned income credit do I get` 2027 `a resident all year` 3 20000 27000 3000 FALSE 300 EQUALS `Credit` WITH `which` IS `the $300 per person low-income credit, nonrefundable (B 1)`, `amount` IS 300
+-- 2027, tax $2,000, federal EIC $6,000, family VAGI above the guideline: B 2, $1,200.
+#ASSERT `Which Virginia low-income or earned income credit do I get` 2027 `a resident all year` 3 30000 27000 6000 FALSE 2000 EQUALS `Credit` WITH `which` IS `20 percent of the federal earned income credit, nonrefundable (B 2)`, `amount` IS 1200
+-- 2026 nonresident: B 3 cannot exceed the tax (s 58.1-339.8 C): $300.
+#ASSERT `Which Virginia low-income or earned income credit do I get` 2026 `a nonresident all year` 3 20000 27000 3000 FALSE 300 EQUALS `Credit` WITH `which` IS `15 percent (2022-2024) or 20 percent (2025-2026) of the federal earned income credit, refundable (B 3)`, `amount` IS 300
+-- Claiming the age deduction bars the credit (s 58.1-339.8 D 5).
+#ASSERT `Which Virginia low-income or earned income credit do I get` 2026 `a resident all year` 2 15000 27000 1000 TRUE 100 EQUALS `Credit` WITH `which` IS `none: barred by s 58.1-339.8 D`, `amount` IS 0
+-- No federal EIC and above the guideline: none.
+#ASSERT `Which Virginia low-income or earned income credit do I get` 2026 `a resident all year` 2 30000 27000 0 FALSE 500 EQUALS `Credit` WITH `which` IS `no credit: neither the poverty test nor a federal earned income credit`, `amount` IS 0
+-- No federal EIC, family VAGI at the guideline ("does not exceed"), 2 persons, tax $800: B 1, $600.
+#ASSERT `Which Virginia low-income or earned income credit do I get` 2026 `a resident all year` 2 27000 27000 0 FALSE 800 EQUALS `Credit` WITH `which` IS `the $300 per person low-income credit, nonrefundable (B 1)`, `amount` IS 600
+
+-- s 58.1-308: pay an assessed deficiency within 30 days of the bill being mailed.
+-- expect: FULFILLED
+#TRACE `my duty to pay an assessed deficiency` AT 0 WITH
+    PARTY `the taxpayer` DOES `pay the additional tax assessed` AT 25
+-- expect: BREACH by the taxpayer (not paid within 30 days)
+#TRACE `my duty to pay an assessed deficiency` AT 0 WITH
+    (WAITUNTIL 31)
+-- s 58.1-311: amend within one year of the final determination date of a federal change.
+-- expect: FULFILLED
+#TRACE `my duty to report a federal change` FALSE AT 0 WITH
+    PARTY `the taxpayer` DOES `file an amended return reporting the federal change` AT 300
+-- expect: BREACH by the taxpayer (no amended return within the year)
+#TRACE `my duty to report a federal change` FALSE AT 0 WITH
+    (WAITUNTIL 366)
+-- The Department has the information and the tax is paid: no duty. expect: FULFILLED
+#TRACE `my duty to report a federal change` TRUE AT 0 WITH
+    (WAITUNTIL 400)
