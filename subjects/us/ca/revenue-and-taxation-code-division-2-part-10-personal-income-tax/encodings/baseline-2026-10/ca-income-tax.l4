@@ -1,0 +1,360 @@
+IMPORT prelude
+
+-- California Revenue and Taxation Code, Division 2, Part 10 (Personal Income Tax) -- the 2025 tax of a full-year resident.
+--
+-- Edition: the Legislative Counsel's official bulk export (code tables updated 2026-10-03), deposited at
+--   ../../registers/source-bundle/ca-rtc-div2-part10-ch1-general-provisions-definitions-2026-10.txt (ss 17014, 17016)
+--   ../../registers/source-bundle/ca-rtc-div2-part10-ch2-imposition-of-tax-rates-credits-2026-10.txt (ss 17041-17054.1, 17053.5)
+--   ../../registers/source-bundle/ca-rtc-div2-part10-ch3-arts1-3-gross-income-inclusions-exclusions-2026-10.txt (s 17073.5)
+-- and, for the figures the Franchise Tax Board recomputes each year (ss 17041(h), 17054(i), 17054.1(f), 17073.5(d)), the
+-- FTB's 2025 publications deposited on 2026-10-24:
+--   ../../registers/source-bundle/ftb-2025-540-tax-rate-schedules.txt (transcribed in its .formulas.md)
+--   ../../registers/source-bundle/ftb-2025-540-booklet.txt
+-- and recorded in ../../registers/annual-figures.json.
+--
+-- In: s 17014(a), (c), (d) and s 17016 (resident); s 17041(a), (b) with (h) and s 17045 (the 2025 rate schedules X, Y,
+-- Z); s 17043 (1% on taxable income over $1,000,000); s 17054(a)-(f) with (i) (exemption credits: personal, senior,
+-- blind, dependents, at the 2025 amounts); s 17054.1 (their phase-out); s 17053.5(a), (c) (renter's credit, 2025);
+-- s 17073.5 (standard deduction, 2025 amounts).
+--
+-- Out: taxable years other than 2025 (`not covered`: the FTB figures for 2026 are not deposited); part-year residents and
+-- nonresidents (`not covered`); California AGI itself (IRC s 62 via s 17072, with the Part 10 modifications: an input);
+-- itemized deductions item by item (one total); the CalEITC (s 17052) and Young Child Tax Credit (s 17052.1), whose
+-- amounts turn on an adjustment factor in the annual Budget Act and on form FTB 3514, not deposited; every other credit;
+-- the alternative minimum tax; the FTB Tax Table for taxable income of $100,000 or less (the schedules are used instead:
+-- NOTES.md finding 2); the standard deduction of a person who can be claimed as a dependent (IRC s 63(c)(5)).
+--
+-- Federal links (not imported): federal AGI and "dependent" (s 17056, IRC s 152) come from
+-- subjects/us/internal-revenue-code-of-1986, as conformed by s 17024.5.
+--
+-- BASELINE ENCODING, from the seat of the individual taxpayer. Expected values in the case file are hand-written. No
+-- pipeline, no independent test pass, no human gate. NOT TAX ADVICE.
+
+§ `Rev. & Tax. Code Part 10 -- the personal income tax of a California resident, 2025`
+
+§§ `What this encoding does not cover`
+
+DECLARE `Why not covered` IS ONE OF
+    `this encoding has the Franchise Tax Board's figures for the 2025 taxable year only`
+    `the tax of a part-year resident or nonresident is not encoded`
+
+DECLARE `Answer` IS ONE OF
+    `answered`    HAS `amount`  IS A NUMBER
+    `not covered` HAS `because` IS A `Why not covered`
+
+§§ `Filing status`
+
+-- s 17042 (head of household), s 17045 (joint returns), s 17046 (surviving spouse); registered domestic partners are
+-- treated as spouses (Family Code 297.5; the FTB forms say "Married/RDP"). Asked as a fact.
+DECLARE `Filing status` IS ONE OF
+    `single`
+    `married or RDP filing jointly`
+    `married or RDP filing separately`
+    `head of household`
+    `qualifying surviving spouse or RDP`
+
+GIVEN `status` IS A `Filing status`
+GIVETH A BOOLEAN
+DECIDE `a joint-type status` IF
+        `status` EQUALS `married or RDP filing jointly`
+    OR  `status` EQUALS `qualifying surviving spouse or RDP`
+
+§§ `s 17014, s 17016 -- resident`
+
+-- s 17014(a): "(1) Every individual who is in this state for other than a temporary or transitory purpose. (2) Every
+-- individual domiciled in this state who is outside the state for a temporary or transitory purpose." (d): a domiciliary
+-- absent for at least 546 consecutive days under an employment-related contract (returns of up to 45 days a year
+-- disregarded) is outside the state for other than a temporary purpose -- unless intangible income exceeds $200,000 in a
+-- year the contract is in effect. s 17016: more than nine months in the state raises a presumption of residence, which
+-- "may be overcome by satisfactory evidence" of a temporary or transitory purpose.
+GIVEN `in California for other than a temporary or transitory purpose` IS A BOOLEAN
+      `domiciled in California and away only temporarily`          IS A BOOLEAN
+      `away 546 days or more under an employment contract`         IS A BOOLEAN
+      `intangible income over 200000`                              IS A BOOLEAN
+      `months in California in the year`                           IS A NUMBER
+      `the presumption is overcome`                                IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a resident` IF
+        `in California for other than a temporary or transitory purpose`
+    OR  (    `domiciled in California and away only temporarily`
+         AND (    NOT (`away 546 days or more under an employment contract`)
+              OR  `intangible income over 200000`))
+    OR  (`months in California in the year` GREATER THAN 9 AND (NOT (`the presumption is overcome`)))
+
+§§ `s 17073.5 -- the standard deduction (2025 figures)`
+
+-- (a): $1,880 (single or separate) and $3,760 (head of household, surviving spouse, joint), recomputed each year by the FTB
+-- under (d). For 2025 the FTB booklet gives $5,706 and $11,412 (annual-figures.json).
+GIVEN `status` IS A `Filing status`
+GIVETH A NUMBER
+`the 2025 standard deduction` MEANS
+    IF `status` EQUALS `single` OR `status` EQUALS `married or RDP filing separately`
+    THEN 5706
+    ELSE 11412
+
+§§ `s 17041 -- the tax (2025 rate schedules)`
+
+-- One row of a schedule: over `from`, the tax is `base` plus `rate` of the excess.
+GIVEN `taxable income` IS A NUMBER, `from` IS A NUMBER, `base` IS A NUMBER, `rate` IS A NUMBER
+GIVETH A NUMBER
+`the row` MEANS `base` PLUS (`rate` TIMES (`taxable income` MINUS `from`))
+
+-- Schedule X: s 17041(a)(1), single and married filing separately.
+GIVEN `ti` IS A NUMBER
+GIVETH A NUMBER
+`schedule X` MEANS
+    BRANCH IF `ti` AT MOST 11079  THEN `the row` `ti` 0 0 (1%)
+           IF `ti` AT MOST 26264  THEN `the row` `ti` 11079 110.79 (2%)
+           IF `ti` AT MOST 41452  THEN `the row` `ti` 26264 414.49 (4%)
+           IF `ti` AT MOST 57542  THEN `the row` `ti` 41452 1022.01 (6%)
+           IF `ti` AT MOST 72724  THEN `the row` `ti` 57542 1987.41 (8%)
+           IF `ti` AT MOST 371479 THEN `the row` `ti` 72724 3201.97 (9.3%)
+           IF `ti` AT MOST 445771 THEN `the row` `ti` 371479 30986.19 (10.3%)
+           IF `ti` AT MOST 742953 THEN `the row` `ti` 445771 38638.27 (11.3%)
+           OTHERWISE `the row` `ti` 742953 72219.84 (12.3%)
+
+-- Schedule Y: s 17041(a)(2) and s 17045, joint returns and surviving spouses.
+GIVEN `ti` IS A NUMBER
+GIVETH A NUMBER
+`schedule Y` MEANS
+    BRANCH IF `ti` AT MOST 22158   THEN `the row` `ti` 0 0 (1%)
+           IF `ti` AT MOST 52528   THEN `the row` `ti` 22158 221.58 (2%)
+           IF `ti` AT MOST 82904   THEN `the row` `ti` 52528 828.98 (4%)
+           IF `ti` AT MOST 115084  THEN `the row` `ti` 82904 2044.02 (6%)
+           IF `ti` AT MOST 145448  THEN `the row` `ti` 115084 3974.82 (8%)
+           IF `ti` AT MOST 742958  THEN `the row` `ti` 145448 6403.94 (9.3%)
+           IF `ti` AT MOST 891542  THEN `the row` `ti` 742958 61972.37 (10.3%)
+           IF `ti` AT MOST 1485906 THEN `the row` `ti` 891542 77276.52 (11.3%)
+           OTHERWISE `the row` `ti` 1485906 144439.65 (12.3%)
+
+-- Schedule Z: s 17041(b), head of household.
+GIVEN `ti` IS A NUMBER
+GIVETH A NUMBER
+`schedule Z` MEANS
+    BRANCH IF `ti` AT MOST 22173   THEN `the row` `ti` 0 0 (1%)
+           IF `ti` AT MOST 52530   THEN `the row` `ti` 22173 221.73 (2%)
+           IF `ti` AT MOST 67716   THEN `the row` `ti` 52530 828.87 (4%)
+           IF `ti` AT MOST 83805   THEN `the row` `ti` 67716 1436.31 (6%)
+           IF `ti` AT MOST 98990   THEN `the row` `ti` 83805 2401.65 (8%)
+           IF `ti` AT MOST 505208  THEN `the row` `ti` 98990 3616.45 (9.3%)
+           IF `ti` AT MOST 606251  THEN `the row` `ti` 505208 41394.72 (10.3%)
+           IF `ti` AT MOST 1010417 THEN `the row` `ti` 606251 51802.15 (11.3%)
+           OTHERWISE `the row` `ti` 1010417 97472.91 (12.3%)
+
+GIVEN `status` IS A `Filing status`, `taxable income` IS A NUMBER
+GIVETH A NUMBER
+`the s 17041 tax` MEANS
+    IF `a joint-type status` `status`
+    THEN `schedule Y` `taxable income`
+    ELSE IF `status` EQUALS `head of household`
+         THEN `schedule Z` `taxable income`
+         ELSE `schedule X` `taxable income`
+
+-- s 17043(a): "an additional tax ... at the rate of 1 percent on that portion of a taxpayer's taxable income in excess of
+-- one million dollars ($1,000,000)". (c): no credits against it, no filing-status doubling.
+GIVEN `taxable income` IS A NUMBER
+GIVETH A NUMBER
+`the s 17043 additional tax` MEANS 1% TIMES max 0 (`taxable income` MINUS 1000000)
+
+§§ `s 17054, s 17054.1 -- exemption credits (2025 figures)`
+
+-- s 17054(a)-(d), recomputed by the FTB (2025: $153 personal, blind and senior; $475 each dependent). The personal credit
+-- counts 1 (single, separate, head of household) or 2 (joint, surviving spouse); none for a person someone else can claim
+-- as a dependent (the FTB form, line 6). Blind and senior credits count each spouse who qualifies.
+DECLARE `Exemption facts` HAS
+    `can be claimed as a dependent by someone else` IS A BOOLEAN
+    `blind persons`                                 IS A NUMBER
+    `persons 65 or older`                           IS A NUMBER
+    `dependents`                                    IS A NUMBER
+
+GIVEN `status` IS A `Filing status`, `e` IS AN `Exemption facts`
+GIVETH A NUMBER
+`the personal, blind and senior credit count` MEANS
+    (IF e's `can be claimed as a dependent by someone else`
+     THEN 0
+     ELSE IF `a joint-type status` `status` THEN 2 ELSE 1)
+    PLUS e's `blind persons` PLUS e's `persons 65 or older`
+
+-- s 17054.1: each credit "reduced by six dollars ($6) for each two thousand five hundred dollars ($2,500), or fraction
+-- thereof, by which the taxpayer's federal adjusted gross income exceeds the threshold amount" ($1,250 for married filing
+-- separately; $12 for the joint personal credit, which the count of 2 gives); thresholds recomputed annually (2025:
+-- $252,203 single or separate; $504,411 joint or surviving spouse; $378,310 head of household). Never below zero.
+GIVEN `status` IS A `Filing status`
+GIVETH A NUMBER
+`the 2025 phase-out threshold` MEANS
+    IF `a joint-type status` `status`
+    THEN 504411
+    ELSE IF `status` EQUALS `head of household`
+         THEN 378310
+         ELSE 252203
+
+GIVEN `status` IS A `Filing status`, `federal AGI` IS A NUMBER
+GIVETH A NUMBER
+`the reduction per credit` MEANS
+    IF `federal AGI` AT MOST `the 2025 phase-out threshold` `status`
+    THEN 0
+    ELSE 6 TIMES `steps or fraction` (`federal AGI` MINUS `the 2025 phase-out threshold` `status`) (`the phase-out step` `status`)
+
+GIVEN `status` IS A `Filing status`
+GIVETH A NUMBER
+`the phase-out step` MEANS
+    IF `status` EQUALS `married or RDP filing separately`
+    THEN 1250
+    ELSE 2500
+
+GIVEN `excess` IS A NUMBER, `step` IS A NUMBER
+GIVETH A NUMBER
+`steps or fraction` MEANS
+    IF FLOOR (`excess` DIVIDED BY `step`) EQUALS (`excess` DIVIDED BY `step`)
+    THEN `excess` DIVIDED BY `step`
+    ELSE FLOOR (`excess` DIVIDED BY `step`) PLUS 1
+
+GIVEN `status` IS A `Filing status`, `federal AGI` IS A NUMBER, `e` IS AN `Exemption facts`
+GIVETH A NUMBER
+`the exemption credits` MEANS
+    (max 0 ((153 MINUS `the reduction per credit` `status` `federal AGI`) TIMES `the personal, blind and senior credit count` `status` `e`))
+    PLUS (max 0 ((475 MINUS `the reduction per credit` `status` `federal AGI`) TIMES e's `dependents`))
+
+§§ `s 17053.5 -- renter's credit (2025)`
+
+-- (a)(1): for joint filers, heads of household and surviving spouses with AGI at or under the limit, $120 (taxable years
+-- before 2026); for other individuals, $60. The AGI limits are recomputed annually (2025: $107,988 and $53,994). (a)(2): a
+-- married couple filing separately share one credit; the equal division, $60 each, is used (finding 5). (c): a "qualified
+-- renter" was a resident and rented and occupied a California principal residence for at least half the year; the (d)
+-- exclusions are folded into that fact. Nonrefundable: a credit against "net tax".
+GIVEN `status` IS A `Filing status`, `California AGI` IS A NUMBER, `qualified renter` IS A BOOLEAN
+GIVETH A NUMBER
+`the 2025 renter's credit` MEANS
+    IF NOT `qualified renter`
+    THEN 0
+    ELSE IF `status` EQUALS `single` OR `status` EQUALS `married or RDP filing separately`
+         THEN IF `California AGI` AT MOST 53994 THEN 60 ELSE 0
+         ELSE IF `California AGI` AT MOST 107988 THEN 120 ELSE 0
+
+§§ `The tax for 2025`
+
+DECLARE `Return` HAS
+    `taxable year`                 IS A NUMBER
+    `full-year resident`           IS A BOOLEAN
+    `status`                       IS A `Filing status`
+    `federal AGI`                  IS A NUMBER
+    `California AGI`               IS A NUMBER
+    `elects the standard deduction` IS A BOOLEAN
+    `itemized deductions`          IS A NUMBER
+    `exemption facts`              IS AN `Exemption facts`
+    `qualified renter`             IS A BOOLEAN
+
+-- Taxable income: California AGI less the standard deduction (or itemized deductions), never below nil. "Net tax"
+-- (s 17039): the s 17041 tax less the exemption credits and the renter's credit, never below nil; then the s 17043 tax,
+-- against which no credit is allowed.
+GIVEN r IS A `Return`
+GIVETH AN `Answer`
+`the 2025 tax` MEANS
+    IF NOT (r's `taxable year` EQUALS 2025)
+    THEN `not covered` `this encoding has the Franchise Tax Board's figures for the 2025 taxable year only`
+    ELSE IF NOT (r's `full-year resident`)
+         THEN `not covered` `the tax of a part-year resident or nonresident is not encoded`
+         ELSE `answered` ((max 0 (`regular tax` MINUS `credits`)) PLUS `the s 17043 additional tax` `taxable income`)
+    WHERE
+        `deduction` MEANS
+            IF r's `elects the standard deduction`
+            THEN `the 2025 standard deduction` (r's `status`)
+            ELSE r's `itemized deductions`
+        `taxable income` MEANS max 0 (r's `California AGI` MINUS `deduction`)
+        `regular tax` MEANS `the s 17041 tax` (r's `status`) `taxable income`
+        `credits` MEANS (`the exemption credits` (r's `status`) (r's `federal AGI`) (r's `exemption facts`)) PLUS (`the 2025 renter's credit` (r's `status`) (r's `California AGI`) (r's `qualified renter`))
+
+§§ `Duties and elections`
+
+DECLARE `Party` IS ONE OF `the taxpayer`
+
+DECLARE `Act` IS ONE OF
+    `elect the standard deduction`
+    `include each dependent's identifying number or the information the Board prescribes`
+
+-- s 17073.5(a): "A taxpayer may elect to take a standard deduction".
+GIVEN `who` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the standard deduction election` `who` MEANS
+    PARTY `who`
+    MAY   `elect the standard deduction`
+
+-- s 17054(d)(2)(A)(ii): no dependent credit "unless" the dependent's identifying number is on the return, or, for a
+-- dependent ineligible for one, "the taxpayer shall provide information to identify the individual in the form and the
+-- manner as prescribed by the Franchise Tax Board". (B): a disallowance may be assessed like a math error. No time.
+GIVEN `who` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the duty to identify dependents` `who` MEANS
+    PARTY `who`
+    MUST  `include each dependent's identifying number or the information the Board prescribes`
+
+-- =====================================================================================================================
+§ `Questions for the taxpayer`
+
+§§ `Am I a California resident?`
+
+@export Am I a California resident for personal income tax (Rev. & Tax. Code ss 17014, 17016)?
+GIVEN `I am in California for more than a temporary purpose` IS A BOOLEAN @desc Are you in California for other than a temporary or transitory purpose?
+      `California is my domicile and I am away temporarily` IS A BOOLEAN @desc Is California your domicile, and are you outside the state only for a temporary or transitory purpose?
+      `I am away 546 days on a work contract` IS A BOOLEAN @desc Are you away for at least 546 consecutive days under an employment-related contract (ignoring up to 45 days of visits a year)?
+      `my intangible income is over 200000` IS A BOOLEAN @desc In a year the contract is in effect, is your income from stocks, bonds and other intangibles over $200,000?
+      `months I spent in California` IS A NUMBER @desc In total, how many months of the year did you spend in California?
+      `I can show my stay was temporary` IS A BOOLEAN @desc If over nine months: can you show by satisfactory evidence that you were in California only for a temporary or transitory purpose?
+GIVETH A BOOLEAN
+`Am I a California resident` MEANS
+    `a resident` `I am in California for more than a temporary purpose` `California is my domicile and I am away temporarily` `I am away 546 days on a work contract` `my intangible income is over 200000` `months I spent in California` `I can show my stay was temporary`
+
+§§ `How much is my 2025 tax?`
+
+@export What are my 2025 California exemption credits after the high-income phase-out (Rev. & Tax. Code ss 17054, 17054.1)?
+GIVEN `my filing status` IS A `Filing status` @desc Your filing status: single, married or RDP filing jointly, married or RDP filing separately, head of household, or qualifying surviving spouse or RDP
+      `my federal AGI` IS A NUMBER @desc Your federal adjusted gross income, in US dollars
+      `someone can claim me as a dependent` IS A BOOLEAN @desc Can someone else claim you (or your spouse) as a dependent?
+      `blind people` IS A NUMBER @desc How many of you and your spouse/RDP are visually impaired?
+      `people 65 or older` IS A NUMBER @desc How many of you and your spouse/RDP were 65 or older by the end of 2025?
+      `my dependents` IS A NUMBER @desc How many dependents (not yourself or your spouse/RDP) do you claim?
+GIVETH A NUMBER
+`What are my 2025 exemption credits` MEANS
+    `the exemption credits` `my filing status` `my federal AGI` (`Exemption facts` WITH
+        `can be claimed as a dependent by someone else` IS `someone can claim me as a dependent`
+        `blind persons`                                 IS `blind people`
+        `persons 65 or older`                           IS `people 65 or older`
+        `dependents`                                    IS `my dependents`)
+
+@export What is my 2025 California renter's credit (Rev. & Tax. Code s 17053.5)?
+GIVEN `my filing status` IS A `Filing status` @desc Your filing status: single, married or RDP filing jointly, married or RDP filing separately, head of household, or qualifying surviving spouse or RDP
+      `my California AGI` IS A NUMBER @desc Your California adjusted gross income, in US dollars
+      `I am a qualified renter` IS A BOOLEAN @desc Were you a California resident who rented and lived in a California home (not property-tax exempt, and not living with someone who claims you as a dependent) as your main home for at least half of 2025?
+GIVETH A NUMBER
+`What is my 2025 renter's credit` MEANS
+    `the 2025 renter's credit` `my filing status` `my California AGI` `I am a qualified renter`
+
+@export How much California personal income tax do I owe for 2025 as a full-year resident, before the CalEITC, Young Child Tax Credit and other credits (Rev. & Tax. Code ss 17041, 17043, 17053.5, 17054, 17073.5)?
+GIVEN `taxable year` IS A NUMBER @desc The taxable year (only 2025 is covered)
+      `I was a resident all year` IS A BOOLEAN @desc Were you a California resident for the whole year?
+      `my filing status` IS A `Filing status` @desc Your filing status: single, married or RDP filing jointly, married or RDP filing separately, head of household, or qualifying surviving spouse or RDP
+      `my federal AGI` IS A NUMBER @desc Your federal adjusted gross income, in US dollars
+      `my California AGI` IS A NUMBER @desc Your California adjusted gross income (federal AGI with the California adjustments), in US dollars
+      `I take the standard deduction` IS A BOOLEAN @desc Will you take the California standard deduction rather than itemise?
+      `my itemized deductions` IS A NUMBER @desc Your California itemized deductions, if you itemise, in US dollars
+      `someone can claim me as a dependent` IS A BOOLEAN @desc Can someone else claim you (or your spouse) as a dependent?
+      `blind people` IS A NUMBER @desc How many of you and your spouse/RDP are visually impaired?
+      `people 65 or older` IS A NUMBER @desc How many of you and your spouse/RDP were 65 or older by the end of 2025?
+      `my dependents` IS A NUMBER @desc How many dependents do you claim?
+      `I am a qualified renter` IS A BOOLEAN @desc Did you rent and live in a California home as your main home for at least half of 2025 (see the renter's credit question)?
+GIVETH AN `Answer`
+`How much California income tax do I owe for 2025` MEANS
+    `the 2025 tax` (`Return` WITH
+        `taxable year`                  IS `taxable year`
+        `full-year resident`            IS `I was a resident all year`
+        `status`                        IS `my filing status`
+        `federal AGI`                   IS `my federal AGI`
+        `California AGI`                IS `my California AGI`
+        `elects the standard deduction` IS `I take the standard deduction`
+        `itemized deductions`           IS `my itemized deductions`
+        `exemption facts`               IS (`Exemption facts` WITH
+            `can be claimed as a dependent by someone else` IS `someone can claim me as a dependent`
+            `blind persons`                                 IS `blind people`
+            `persons 65 or older`                           IS `people 65 or older`
+            `dependents`                                    IS `my dependents`)
+        `qualified renter`              IS `I am a qualified renter`)
