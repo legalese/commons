@@ -1,0 +1,448 @@
+IMPORT prelude
+IMPORT daydate
+
+-- The Saskatchewan Assistance Act, R.S.S. 1978, c. S-8, and The Saskatchewan Income Support Regulations (SIS),
+-- R.R.S. c. S-8 Reg 13 -- what a household applying for Saskatchewan Income Support meets: who may apply (Reg s 2-1(3));
+-- the eligibility criteria (s 2-4) and the household members for whom nothing is paid (s 2-5); the monthly income test
+-- with its exemptions (s 2-7) and the liquid and excess asset tests (ss 1-2, 2-6(4), (5)); the budget deficit (s 2-6(3));
+-- the amount paid (s 3-1); the months of self-support after a lump sum (s 3-3(1)); the applicant's and client's duties
+-- (ss 2-2(5), (6), 3-8, 3-11(2)) and the appeal deadlines (ss 3-12, 3-14); the Act's protection of payments (s 29.7), its
+-- overpayment certificate review (ss 29.5, 29.6) and its offences (ss 27, 28).
+--
+-- SEAT: the individual applying for, or receiving, SIS for their household (the "applicant", then the "client").
+-- "Can I apply? Is my household eligible? How much of our income counts? How much will we get? What must I do, and by
+-- when? How do I appeal? What can I be fined?" Provisions addressed to the minister are encoded as what they mean for that
+-- person: the minister must reconsider an appeal within 7 days, the household gets nothing during a self-support period.
+--
+-- UNOFFICIAL VERSION. The statutory text quoted in the comments is reproduced, for non-commercial use, from the
+-- consolidations of the Office of the King's Printer for Saskatchewan (Publications Centre): the Act, last update posted
+-- 22 Aug 2024; the SIS Regulations, last update posted 9 Sep 2026. It is not an official version.
+-- (c) 2026, Government of Saskatchewan.
+--
+-- AMOUNTS: the regulations leave the amount of nearly every benefit to "the schedule of rates established by the minister"
+-- (s 3-1(3)), which is not law and not deposited. The total of benefits the household would get is therefore an input.
+-- The income exemptions, the asset limits and the lump-sum formula are stated in the regulations and are encoded.
+--
+-- NOT ENCODED: the individual benefits of Part 4 (their amounts are the minister's), Part 4.1 (education and training
+-- incentive), emergency assistance and funerals (ss 4-12, 4-15), supplementary health benefits (s 4-17), the minister's
+-- discretions of s 2-10 (asked as facts where they matter), SAID (R.R.S. c. S-8 Reg 11, deposited beside these, not
+-- encoded), reassessment timing (s 3-9).
+--
+-- BASELINE ENCODING. Written from the applicant's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Saskatchewan Income Support -- the household's eligibility and benefit`
+
+GIVEN x IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` x y MEANS IF x AT MOST y THEN x ELSE y
+
+GIVEN x IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the greater of` x y MEANS IF x AT LEAST y THEN x ELSE y
+
+§§ `s 2-1(3), s 1-2 -- who may apply`
+
+-- s 1-2: "'residency requirement' means, with respect to an applicant or primary household member, that the applicant or
+-- primary household member: (a) is a Canadian citizen; (b) is authorized to take up permanent residence in Canada; (c) is
+-- determined ... to be a Convention refugee; (d) is in Canada under a temporary resident permit issued pursuant to section 24
+-- of the Immigration and Refugee Protection Act (Canada); (e) is in the process of having a claim for refugee protection, or
+-- application for protection, determined or decided ...; or (f) is subject to a removal order ... that cannot be executed".
+DECLARE `Status in Canada` IS ONE OF
+    `Canadian citizen`
+    `permanent resident`
+    `Convention refugee`
+    `holder of a temporary resident permit under IRPA s 24`
+    `refugee claimant or protection applicant awaiting a decision`
+    `subject to a removal order that cannot be executed`
+    `another status, such as a visitor, student or worker`
+
+GIVEN `status` IS A `Status in Canada`
+GIVETH A BOOLEAN
+DECIDE `meets the residency requirement` IF
+    NOT (`status` EQUALS `another status, such as a visitor, student or worker`)
+
+-- s 2-1(3): "An applicant must: (a) be ordinarily present in Saskatchewan; (b) be 18 years of age or older; and (c) meet the
+-- residency requirement." s 2-10(1)(d): the minister may "waive the residency requirement or the requirement to be
+-- ordinarily present in Saskatchewan ... if there are compassionate, compelling or medical reasons" -- a judgment of the
+-- minister's, asked conditionally.
+GIVEN `ordinarily present in Saskatchewan` IS A BOOLEAN
+      `age` IS A NUMBER
+      `status` IS A `Status in Canada`
+      `the minister waives presence or residency for compassionate, compelling or medical reasons` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `may apply under s 2-1(3)` IF
+        `age` AT LEAST 18
+    AND (    (`ordinarily present in Saskatchewan` AND `meets the residency requirement` `status`)
+         OR  `the minister waives presence or residency for compassionate, compelling or medical reasons`)
+
+§§ `s 2-5 -- household members for whom nothing is paid`
+
+-- s 2-5: "no benefit is to be paid to or on behalf of a household member who: (a) is detained for more than 30 days in" a
+-- provincial correctional or youth custody facility; "(b) is an inmate [federal] or a prisoner [provincial]"; "(c) is
+-- ordinarily resident on a reserve as defined in the Indian Act (Canada); (d) has been absent from Saskatchewan for more than
+-- 30 continuous days, unless the minister is satisfied that the absence is for compassionate, compelling or medical
+-- reasons; (e) is an adult student who is enrolled in a post-secondary program other than an approved program described in
+-- section 4.1-3; or (f)" is within a period of ineligibility under the Saskatchewan Assistance Regulations, 2014 s 18 or the
+-- SAID Regulations s 20.
+DECLARE `Household member's circumstances` HAS
+    `days detained in a provincial correctional or youth custody facility`  IS A NUMBER
+    `is a federal inmate or a prisoner`                                     IS A BOOLEAN
+    `ordinarily resident on a reserve`                                      IS A BOOLEAN
+    `continuous days absent from Saskatchewan`                              IS A NUMBER
+    `the minister accepts the absence as compassionate, compelling or medical` IS A BOOLEAN
+    `adult student in a post-secondary program that is not an approved program` IS A BOOLEAN
+    `in a period of ineligibility under SAR 2014 s 18 or SAID s 20`         IS A BOOLEAN
+
+GIVEN m IS A `Household member's circumstances`
+GIVETH A BOOLEAN
+DECIDE `no benefit is paid for the member under s 2-5` IF
+        m's `days detained in a provincial correctional or youth custody facility` GREATER THAN 30
+    OR  m's `is a federal inmate or a prisoner`
+    OR  m's `ordinarily resident on a reserve`
+    OR  (    m's `continuous days absent from Saskatchewan` GREATER THAN 30
+         AND (NOT m's `the minister accepts the absence as compassionate, compelling or medical`))
+    OR  m's `adult student in a post-secondary program that is not an approved program`
+    OR  m's `in a period of ineligibility under SAR 2014 s 18 or SAID s 20`
+
+§§ `s 2-7 -- the monthly income that counts`
+
+-- s 2-7(2)(a): earned income is exempt up to "(i) a maximum of $375 per month for a household that is a single individual;
+-- (ii) a maximum of $475 per month for a household that is an individual and the individual's spouse; (iii) a maximum of
+-- $500 per month for a household that comprises: (A) either of the households mentioned in subclause (i) or (ii); and (B) a
+-- dependent child of an individual mentioned in subclause (i) or (ii)".
+GIVEN `has a spouse in the household` IS A BOOLEAN
+      `has a dependent child in the household` IS A BOOLEAN
+GIVETH A NUMBER
+`the s 2-7(2)(a) earned income exemption` `has a spouse in the household` `has a dependent child in the household` MEANS
+    IF `has a dependent child in the household`
+    THEN 500
+    ELSE IF `has a spouse in the household`
+         THEN 475
+         ELSE 375
+
+-- s 2-7(3): "In determining earned income from employment ..., the following deductions are allowed: (a) income tax;
+-- (b) Canada Pension Plan premiums; (c) Employment Insurance premiums; (d) deductions required by an employer as a condition
+-- of employment." (s 2-7(1), (1.1), (4): self-employment income is net of reasonable expenses the minister determines,
+-- never below nil -- asked as the net figure.) s 2-7(2)(i): "any employment income of a dependent child" is exempt
+-- (it is left out of the input).
+GIVEN `gross earnings from employment` IS A NUMBER
+      `income tax, CPP and EI deducted` IS A NUMBER
+      `deductions the employer requires` IS A NUMBER
+      `net self-employment income` IS A NUMBER
+GIVETH A NUMBER
+`the household's earned income` `gross earnings from employment` `income tax, CPP and EI deducted` `deductions the employer requires` `net self-employment income` MEANS
+    `the greater of` 0 (`gross earnings from employment` MINUS `income tax, CPP and EI deducted` MINUS `deductions the employer requires`)
+    PLUS `the greater of` 0 `net self-employment income`
+
+-- s 2-7(2)(d.1): exempt are "the portion of payments received as maintenance payments for child support up to $600 per month
+-- per household and the portion of maintenance payments to the individual that: (i) is specified in an order or agreement for
+-- special or extraordinary expenses ... and (ii) is not related to or is over and above the amount set out in the Tables to
+-- the Federal Child Support Guidelines".
+GIVEN `child support received` IS A NUMBER
+      `of it, for special or extraordinary expenses over the Guidelines table amount` IS A NUMBER
+GIVETH A NUMBER
+`the s 2-7(2)(d.1) child support exemption` `child support received` `of it, for special or extraordinary expenses over the Guidelines table amount` MEANS
+    LET `special` MEANS `the lesser of` `child support received` (`the greater of` 0 `of it, for special or extraordinary expenses over the Guidelines table amount`)
+    IN  `special` PLUS (`the lesser of` 600 (`child support received` MINUS `special`))
+
+-- s 2-7(2)(w.3): exempt is "the combined amount of gifts, prizes, winnings and incidental moneys received up to $200 per month
+-- per household".
+GIVEN `gifts, prizes, winnings and incidental moneys` IS A NUMBER
+GIVETH A NUMBER
+`the s 2-7(2)(w.3) exemption` `gifts, prizes, winnings and incidental moneys` MEANS
+    `the lesser of` 200 (`the greater of` 0 `gifts, prizes, winnings and incidental moneys`)
+
+-- s 2-7(2): "the income of a primary household member and primary household member's spouse, if any, is the amount of moneys
+-- that [they] received or were eligible to receive, from all sources other than the following: ..." The fully exempt sources
+-- -- (b) to (d), (e) to (h) (among them the Canada Child Benefit, the Canada Child Disability Benefit, the GST/HST credit,
+-- income tax refunds and the Canada Workers Benefit), (j) to (w.2) (among them RDSP money and the Canada Disability Benefit),
+-- and (x) -- come in as one total. Capped exemptions are worked out above. s 2-7(7): "The amount of any overpayment recovered
+-- from an applicant or client by set-off or any other means is to be included when determining monthly income."
+-- The CPP, EI and OAS benefits are not in the list, so they count in full (NOTES.md finding 3).
+DECLARE `Monthly moneys` HAS
+    `gross earnings from employment`                         IS A NUMBER
+    `income tax, CPP and EI deducted`                        IS A NUMBER
+    `deductions the employer requires`                       IS A NUMBER
+    `net self-employment income`                             IS A NUMBER
+    `child support received`                                 IS A NUMBER
+    `special or extraordinary expenses portion of child support` IS A NUMBER
+    `gifts, prizes, winnings and incidental moneys`          IS A NUMBER
+    `moneys from fully exempt sources`                       IS A NUMBER
+    `all other moneys`                                       IS A NUMBER
+    `overpayments recovered by set-off`                      IS A NUMBER
+
+GIVEN `money` IS A `Monthly moneys`
+      `has a spouse in the household` IS A BOOLEAN
+      `has a dependent child in the household` IS A BOOLEAN
+GIVETH A NUMBER
+`the household's income under s 2-7` `money` `has a spouse in the household` `has a dependent child in the household` MEANS
+    LET `earned` MEANS `the household's earned income` (money's `gross earnings from employment`) (money's `income tax, CPP and EI deducted`) (money's `deductions the employer requires`) (money's `net self-employment income`)
+        `earned that counts` MEANS `the greater of` 0 (`earned` MINUS (`the s 2-7(2)(a) earned income exemption` `has a spouse in the household` `has a dependent child in the household`))
+        `support that counts` MEANS (money's `child support received`) MINUS (`the s 2-7(2)(d.1) child support exemption` (money's `child support received`) (money's `special or extraordinary expenses portion of child support`))
+        `gifts that count` MEANS (`the greater of` 0 (money's `gifts, prizes, winnings and incidental moneys`)) MINUS (`the s 2-7(2)(w.3) exemption` (money's `gifts, prizes, winnings and incidental moneys`))
+    IN  `earned that counts` PLUS `support that counts` PLUS `gifts that count` PLUS (money's `all other moneys`) PLUS (money's `overpayments recovered by set-off`)
+
+§§ `ss 1-2, 2-6(4), (5) -- the asset tests`
+
+-- s 2-6(4): "A household does not have a budget deficit if, subject to sections 2-8 and 2-9, the total value of the liquid
+-- assets at the time of application is greater than $2,000 per household member." Liquid assets (s 1-2) are cash, deposits,
+-- debts payable on demand, the realizable value of securities, mortgages, bequests, damages, settlements, unlocked pensions,
+-- RRSPs, RRIFs and trust interests, and "(e) the cash surrender value of a life insurance policy in excess of $1,500";
+-- s 2-8(3): exempt assets are not counted. The life insurance cash surrender value is asked separately.
+GIVEN `liquid assets other than life insurance` IS A NUMBER
+      `cash surrender value of life insurance` IS A NUMBER
+GIVETH A NUMBER
+`the household's liquid assets` `liquid assets other than life insurance` `cash surrender value of life insurance` MEANS
+    `liquid assets other than life insurance` PLUS (`the greater of` 0 (`cash surrender value of life insurance` MINUS 1500))
+
+GIVEN `liquid assets` IS A NUMBER
+      `household members` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `the liquid assets exceed the s 2-6(4) limit` IF
+    `liquid assets` GREATER THAN (2000 TIMES `household members`)
+
+-- s 1-2: "'excess asset' means: (a) any real property of an applicant or client other than the principal residence of an
+-- applicant or client; (b) secondary or recreational vehicles with a total equity value exceeding $5,000". s 2-6(5)(a): no
+-- budget deficit "if the minister is satisfied that ... the household owns excess assets", subject to s 2-10, under which the
+-- minister may decide not to count an asset, for example where there are "genuine social or economic reasons" for not
+-- converting it (s 2-10(1)(a)(iii), (c)) -- asked as a fact. ss 2-9(2), (3): the minister may allow 180 days (24 months for
+-- farm land) to convert an excess asset into cash.
+GIVEN `owns real property other than the principal residence` IS A BOOLEAN
+      `equity in secondary or recreational vehicles` IS A NUMBER
+      `the minister decides not to count the asset under s 2-10` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `owns excess assets` IF
+        (    `owns real property other than the principal residence`
+         OR  `equity in secondary or recreational vehicles` GREATER THAN 5000)
+    AND (NOT `the minister decides not to count the asset under s 2-10`)
+
+§§ `s 2-6(3), (5)(b) -- the budget deficit`
+
+-- s 2-6(3): "a household has a budget deficit if the combined income determined pursuant to clause (1)(a) is less than the
+-- total of benefits determined pursuant to clause (1)(d)" -- the benefits the household "would be entitled [to] pursuant to
+-- these regulations if the applicant were entitled to benefits" (from the minister's schedule of rates: an input).
+-- (4), (5): no budget deficit with liquid assets over the limit, excess assets, or "a disposal of assets or an unusual
+-- expenditure that was carried out for the purpose of causing the household to have a budget deficit within the 6 calendar
+-- months ... preceding the calendar month in which the applicant's application ... was made" (if the minister is satisfied).
+GIVEN `monthly income under s 2-7` IS A NUMBER
+      `total monthly benefits under the minister's schedule` IS A NUMBER
+      `liquid assets exceed the limit` IS A BOOLEAN
+      `owns excess assets` IS A BOOLEAN
+      `the minister is satisfied assets were disposed of to cause a deficit` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `has a budget deficit under s 2-6` IF
+        `monthly income under s 2-7` LESS THAN `total monthly benefits under the minister's schedule`
+    AND (NOT `liquid assets exceed the limit`)
+    AND (NOT `owns excess assets`)
+    AND (NOT `the minister is satisfied assets were disposed of to cause a deficit`)
+
+§§ `s 2-4 -- the eligibility criteria`
+
+-- s 2-4(1): "(a) the applicant must: (i) submit an application; (ii) satisfy the minister that the household has a budget
+-- deficit ...; and (iii) satisfy the minister that the financial resources of the household ... are not adequate to provide
+-- for one or more of the needs described in ... Parts 4 and 4.1; (b) the applicant and the applicant's spouse, if any, must:
+-- (i) on request, provide any consent necessary ...; (ii) satisfy the minister that [they] have explored every possibility of
+-- providing for the needs of the household, including applying for any benefits ... to which [they] may be eligible, even if
+-- being granted early access to those benefits has the effect of reducing the amount of benefits; (iii) not be receiving:
+-- (A) a benefit pursuant to The Saskatchewan Assistance Regulations, 2014; (C) subject to subsection (2), a benefit pursuant
+-- to The Saskatchewan Assured Income for Disability Regulations, 2012; (D) [federal resettlement assistance]; or (E) other
+-- similar benefits; and (iv) participate in case planning." (2): (C) does not apply to a SAID applicant receiving temporary
+-- benefits under SAID s 17.
+DECLARE `Other assistance received` IS ONE OF
+    `none`
+    `Saskatchewan Assistance Regulations, 2014 benefits`
+    `SAID benefits`
+    `SAID temporary benefits under SAID s 17`
+    `federal resettlement assistance`
+    `other similar benefits`
+
+GIVEN `submitted an application` IS A BOOLEAN
+      `has a budget deficit` IS A BOOLEAN
+      `resources are not adequate for a need in Part 4` IS A BOOLEAN
+      `gave the consents requested` IS A BOOLEAN
+      `explored every possibility, including applying for other benefits` IS A BOOLEAN
+      `other assistance received` IS AN `Other assistance received`
+      `participates in case planning` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the household is eligible under s 2-4` IF
+        `submitted an application`
+    AND `has a budget deficit`
+    AND `resources are not adequate for a need in Part 4`
+    AND `gave the consents requested`
+    AND `explored every possibility, including applying for other benefits`
+    AND (    `other assistance received` EQUALS `none`
+         OR  `other assistance received` EQUALS `SAID temporary benefits under SAID s 17`)
+    AND `participates in case planning`
+
+§§ `s 3-1 -- how much is paid`
+
+-- s 3-1(1): "the amount of a benefit that may be paid to a client is the total of all benefits for which the household is
+-- determined to be eligible in accordance with all or any of Parts 4 and 4.1 minus the amount of income determined in
+-- accordance with sections 2-6 and 2-7." (2): the benefit for a month "is to be reduced by the amount of any income that is
+-- received by the client in the previous month" -- the income input is the previous month's. Never below nil.
+GIVEN `total monthly benefits under the minister's schedule` IS A NUMBER
+      `monthly income under s 2-7` IS A NUMBER
+GIVETH A NUMBER
+`the monthly benefit under s 3-1` `total monthly benefits under the minister's schedule` `monthly income under s 2-7` MEANS
+    `the greater of` 0 (`total monthly benefits under the minister's schedule` MINUS `monthly income under s 2-7`)
+
+§§ `s 3-3 -- the period of self-support after a lump sum`
+
+-- s 3-3(1): "If a primary household member or the primary household member's spouse, if any, receives income in the form of
+-- a lump sum payment, the household is not eligible to receive a benefit for the period T, expressed in months, determined in
+-- accordance with the following formula: T = L / ((115% x N) - I) where: L is the amount of the lump sum payment; N is the
+-- total of the benefits that the household would otherwise receive for a month; and I is the household's monthly income
+-- determined pursuant to section 2-7, but without taking into account the lump sum payment." The text does not say how a
+-- fraction of a month is treated; the encoding gives T unrounded (NOTES.md finding 5). Where 115% x N does not exceed I the
+-- formula has no meaning; then the household would not have a budget deficit anyway, and the answer is `NOTHING`.
+GIVEN `lump sum` IS A NUMBER
+      `total monthly benefits under the minister's schedule` IS A NUMBER
+      `monthly income without the lump sum` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`the s 3-3(1) months of self-support` `lump sum` `total monthly benefits under the minister's schedule` `monthly income without the lump sum` MEANS
+    LET `divisor` MEANS (115% TIMES `total monthly benefits under the minister's schedule`) MINUS `monthly income without the lump sum`
+    IN  IF `divisor` GREATER THAN 0
+        THEN JUST (`lump sum` DIVIDED BY `divisor`)
+        ELSE NOTHING
+
+§§ `Duties and deadlines`
+
+DECLARE `Party` IS ONE OF
+    `the applicant`
+    `the client`
+    `the minister`
+
+DECLARE `Act` IS ONE OF
+    `confirm the application in person`
+    `report the change to the minister`
+    `respond to the minister's request`
+    `appeal the decision in writing to the minister`
+    `reconsider the decision and give a written decision`
+    `give notice of appeal to the appeal board`
+
+-- s 2-2(5), (6): "If an application is made, the applicant and the applicant's spouse, if any, shall, on the request of the
+-- ministry, confirm the application in person ... If an application is not confirmed pursuant to subsection (5) within 15
+-- days after the request by the ministry to confirm the application, the application is discontinued and will not be
+-- processed unless, in the opinion of the minister, exceptional circumstances exist." Days count from the request.
+GIVETH A DEONTIC `Party` `Act`
+`my duty to confirm my application` MEANS
+    PARTY `the applicant`
+    MUST  `confirm the application in person`
+    WITHIN 15
+    HENCE FULFILLED
+    LEST  BREACH BY `the applicant` BECAUSE "application not confirmed within 15 days of the request: discontinued and not processed, unless the minister finds exceptional circumstances (s 2-2(6))"
+
+-- s 3-8: "A client shall report immediately to the minister all or any of the following: (a) any changes in the composition of
+-- the client's household; (b) any changes in: (i) the financial resources of [the primary household member or spouse]; (ii)
+-- the place of residence or the mailing address of the client; or (iii) the type of the client's accommodation". Act s 29.2
+-- puts the same duty in the Act, and s 29.3 makes excess benefits received after a failure an overpayment. "Immediately" is
+-- encoded as within one day of the change (NOTES.md finding 6).
+GIVETH A DEONTIC `Party` `Act`
+`my duty to report a change` MEANS
+    PARTY `the client`
+    MUST  `report the change to the minister`
+    WITHIN 1
+    HENCE FULFILLED
+    LEST  BREACH BY `the client` BECAUSE "change not reported immediately (Reg s 3-8, Act s 29.2): excess benefits are an overpayment (Act s 29.3)"
+
+-- s 3-11(2)(a): before varying, suspending, cancelling or reinstating a benefit, "the client shall respond to a request made
+-- by the minister for the purposes of clause (1)(a) within 30 days after that request is sent"; (b): if not, the minister may
+-- make inquiries and obtain information; (4): the minister may extend the period for extenuating circumstances.
+GIVEN `days the minister has extended the period` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`my duty to respond to a review request` `days the minister has extended the period` MEANS
+    PARTY `the client`
+    MUST  `respond to the minister's request`
+    WITHIN 30 PLUS `days the minister has extended the period`
+    HENCE FULFILLED
+    LEST  BREACH BY `the client` BECAUSE "no response within 30 days of the request: the minister may make inquiries and obtain information (s 3-11(2)(b))"
+
+-- s 3-12(1): "Within 15 days after the date of a decision with respect to any of the following matters, an applicant or
+-- client may appeal, in writing, the decision to the minister" (refusal, delay, eligibility, variation, suspension or
+-- cancellation, an overpayment, the amount). (2): "the minister shall reconsider the decision ... within 7 days after
+-- receiving the request and provide the applicant or client with a written decision as soon as is reasonably possible."
+-- Days count from the decision; the minister's 7 days run from the appeal. The appeal is a right, not a duty: it is
+-- written with DO and LEST FULFILLED, because with MAY the HENCE branch (the minister's duty) would also follow when the
+-- 15 days pass without an appeal.
+GIVETH A DEONTIC `Party` `Act`
+`my right to appeal to the minister` MEANS
+    PARTY `the applicant`
+    DO    `appeal the decision in writing to the minister`
+    WITHIN 15
+    HENCE
+        PARTY `the minister`
+        MUST  `reconsider the decision and give a written decision`
+        WITHIN 7
+        HENCE FULFILLED
+        LEST  BREACH BY `the minister` BECAUSE "appeal not reconsidered within 7 days of receiving it (s 3-12(2))"
+    LEST  FULFILLED
+
+-- s 3-14(1), (2): "An applicant or client who is dissatisfied with the decision of an appeal committee ... may notify the
+-- minister in writing" of an intention to appeal to the appeal board and the grounds, "within 15 days after the appeal
+-- committee's decision is given in writing". (4.1): the notice stays the committee's decision pending the appeal; (21): the
+-- appeal board's decision is final.
+GIVETH A DEONTIC `Party` `Act`
+`my right to appeal to the appeal board` MEANS
+    PARTY `the applicant`
+    MAY   `give notice of appeal to the appeal board`
+    WITHIN 15
+    HENCE FULFILLED
+
+GIVEN `the date of the decision` IS A DATE
+GIVETH A DATE
+`the last day to appeal under s 3-12(1)` `the date of the decision` MEANS `the date of the decision` PLUS 15
+
+GIVEN `the date the appeal committee's decision was given in writing` IS A DATE
+GIVETH A DATE
+`the last day to appeal to the appeal board under s 3-14(2)` `the date the appeal committee's decision was given in writing` MEANS
+    `the date the appeal committee's decision was given in writing` PLUS 15
+
+§§ `The Act -- overpayment certificates, protection of payments, offences`
+
+-- Act s 29.5(5): a notice of a filed overpayment certificate "must be served personally or by registered mail and, when sent
+-- by registered mail, is deemed to have been served on the person to whom it was mailed on the seventh day after the notice
+-- was mailed." s 29.6(1): the person "may, within 30 days after being served with the notice ..., apply by notice of motion
+-- to a judge of the Court of King's Bench ... for a review, on a question of law or jurisdiction".
+GIVEN `the date the notice was mailed or served` IS A DATE
+      `served by registered mail` IS A BOOLEAN
+GIVETH A DATE
+`the last day to apply for review of an overpayment certificate` `the date the notice was mailed or served` `served by registered mail` MEANS
+    LET `served on` MEANS IF `served by registered mail` THEN `the date the notice was mailed or served` PLUS 7 ELSE `the date the notice was mailed or served`
+    IN  `served on` PLUS 30
+
+-- Act s 29.5(2): a certificate may be filed only once "(a) 30 days have elapsed after the person ... has been given written
+-- notice of his or her right to appeal a determination respecting the existence or amount of an overpayment and no appeal has
+-- been commenced; or (b) 30 days have elapsed after the determination of an appeal".
+GIVEN `the date of the notice of the right to appeal, or of the appeal decision` IS A DATE
+GIVETH A DATE
+`the earliest day a certificate may be filed` `the date of the notice of the right to appeal, or of the appeal decision` MEANS
+    `the date of the notice of the right to appeal, or of the appeal decision` PLUS 30
+
+-- Act s 29.7(1): "any payments to be made pursuant to this Act are not subject to attachment, garnishment, seizure or legal
+-- process and are not assignable." (2): this does not prevent recovery of an overpayment from future payments.
+GIVEN `the taking is the recovery of an overpayment from future payments` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a payment may be taken from me` IF `the taking is the recovery of an overpayment from future payments`
+
+-- Act s 27: a person who contravenes the Act, a regulation or an order "is guilty of an offence and liable on summary
+-- conviction, if an individual, to a fine not exceeding $100 and in default of payment to imprisonment for a term not
+-- exceeding three months". s 28(1): knowingly giving false information, or concealing information, to obtain assistance,
+-- and (3): receiving assets while on assistance and continuing to receive it "when the person ought reasonably to know that
+-- the person is no longer eligible": "a fine not exceeding $200 and in default of payment to imprisonment for a term not
+-- exceeding six months".
+DECLARE `Offence` IS ONE OF
+    `contravening the Act, a regulation or an order (s 27)`
+    `knowingly giving false information or concealing information to obtain assistance (s 28(1))`
+    `continuing to receive assistance after receiving assets, knowing I am no longer eligible (s 28(3))`
+
+DECLARE `Penalty` HAS
+    `maximum fine`                              IS A NUMBER
+    `maximum months of imprisonment in default` IS A NUMBER
+
+GIVEN `offence` IS AN `Offence`
+GIVETH A `Penalty`
+`the maximum penalty for an individual` `offence` MEANS
+    CONSIDER `offence`
+    WHEN `contravening the Act, a regulation or an order (s 27)` THEN `Penalty` WITH `maximum fine` IS 100, `maximum months of imprisonment in default` IS 3
+    OTHERWISE `Penalty` WITH `maximum fine` IS 200, `maximum months of imprisonment in default` IS 6
