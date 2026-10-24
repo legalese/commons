@@ -1,0 +1,349 @@
+IMPORT prelude
+
+-- Montana Code Annotated 2025, Title 39, chapter 51 (unemployment insurance), parts 2, 21, 22 and 23 -- the
+-- seat-neutral core: the base period (39-51-201(2)), qualifying wages (39-51-2105), the weekly benefit amount and its
+-- minimum and maximum (39-51-2201), the maximum benefit amount (39-51-2204), total unemployment and the week's payment
+-- (39-51-2101, 39-51-2104(2), 39-51-2202, 39-51-2203), the weekly eligibility conditions (39-51-2104(1)), the
+-- disqualifications for leaving work, discharge and refusing suitable work (39-51-2302 to 39-51-2304), suitable work
+-- (39-51-2304(2)-(4)), and the duties at a new claim and on double payment (39-51-2207, 39-51-2208(2), 39-51-2306(2)).
+--
+-- Edition: Montana Code Annotated 2025 (laws through the 2025 session), site marked "Updated August 2026", as deposited
+-- at ../../registers/source-bundle/mca-39-51-part-2.txt, -part-21.txt, -part-22.txt, -part-23.txt (retrieved 2026-10-19
+-- UTC). The average annual wage (39-51-2201(2)) and the contribution schedule in force (39-51-1218, not deposited) are
+-- set each year and are inputs.
+--
+-- The federal frame (FUTA s 3304, SSA Title III, EUCA 1970) is in subjects/us/internal-revenue-code-of-1986/ and
+-- subjects/us/social-security-act/ (cross-folder IMPORT is not possible; NOTES.md names the link).
+--
+-- The seat questions are in mt-ui-seat.l4. BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Montana unemployment insurance -- core`
+
+§§ `Arithmetic`
+
+GIVEN x IS A NUMBER
+GIVETH A NUMBER
+`rounded to the nearest cent` x MEANS (FLOOR ((x TIMES 100) PLUS 0.5)) DIVIDED BY 100
+
+-- The sum of the two largest of four quarters.
+GIVEN a IS A NUMBER, b IS A NUMBER, c IS A NUMBER, d IS A NUMBER
+GIVETH A NUMBER
+`the two highest of` a b c d MEANS
+    maximum (LIST (a PLUS b), (a PLUS c), (a PLUS d), (b PLUS c), (b PLUS d), (c PLUS d))
+
+§§ `39-51-201(2) -- the base period, and 39-51-2105 -- qualifying wages`
+
+-- Wages paid in each of the last 5 completed calendar quarters before the benefit year, oldest first.
+DECLARE `Quarterly wages` HAS
+    `quarter 1 (oldest)` IS A NUMBER
+    `quarter 2`          IS A NUMBER
+    `quarter 3`          IS A NUMBER
+    `quarter 4`          IS A NUMBER
+    `quarter 5 (most recent)` IS A NUMBER
+
+DECLARE `Base period wages` HAS
+    `total base period wages`        IS A NUMBER
+    `high quarter wages`             IS A NUMBER
+    `two highest quarters wages`     IS A NUMBER
+
+-- 39-51-201(2)(a): "the first 4 of the last 5 completed calendar quarters".
+GIVEN w IS A `Quarterly wages`
+GIVETH A `Base period wages`
+`the regular base period` w MEANS
+    `Base period wages` WITH
+        `total base period wages`    IS ((w's `quarter 1 (oldest)` PLUS w's `quarter 2`) PLUS w's `quarter 3`) PLUS w's `quarter 4`
+        `high quarter wages`         IS maximum (LIST w's `quarter 1 (oldest)`, w's `quarter 2`, w's `quarter 3`, w's `quarter 4`)
+        `two highest quarters wages` IS `the two highest of` (w's `quarter 1 (oldest)`) (w's `quarter 2`) (w's `quarter 3`) (w's `quarter 4`)
+
+-- 39-51-201(2)(b): if not enough to qualify under (a), "the 4 most recently completed calendar quarters".
+GIVEN w IS A `Quarterly wages`
+GIVETH A `Base period wages`
+`the alternative base period` w MEANS
+    `Base period wages` WITH
+        `total base period wages`    IS ((w's `quarter 2` PLUS w's `quarter 3`) PLUS w's `quarter 4`) PLUS w's `quarter 5 (most recent)`
+        `high quarter wages`         IS maximum (LIST w's `quarter 2`, w's `quarter 3`, w's `quarter 4`, w's `quarter 5 (most recent)`)
+        `two highest quarters wages` IS `the two highest of` (w's `quarter 2`) (w's `quarter 3`) (w's `quarter 4`) (w's `quarter 5 (most recent)`)
+
+-- 39-51-2105: total base period wages "(1) not less than 1 1/2 times the wages earned in the calendar quarter in which
+-- wages were the highest during the base period; however, the total wages in the base period must be equal to or
+-- greater than 7% of the average annual wage described in 39-51-2201; or (2) equal to or greater than 50% of the
+-- average annual wage".
+GIVEN bp IS A `Base period wages`, `average annual wage` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `has qualifying wages` bp `average annual wage` IF
+        (    bp's `total base period wages` AT LEAST (1.5 TIMES bp's `high quarter wages`)
+         AND bp's `total base period wages` AT LEAST (0.07 TIMES `average annual wage`))
+    OR  bp's `total base period wages` AT LEAST (0.5 TIMES `average annual wage`)
+
+DECLARE `Which base period` IS ONE OF
+    `the regular base period (the first 4 of the last 5 completed quarters)`
+    `the alternative base period (the 4 most recently completed quarters)`
+    `neither: the wages do not qualify`
+
+GIVEN w IS A `Quarterly wages`, `average annual wage` IS A NUMBER
+GIVETH A `Which base period`
+`the base period that qualifies` w `average annual wage` MEANS
+    IF `has qualifying wages` (`the regular base period` w) `average annual wage`
+    THEN `the regular base period (the first 4 of the last 5 completed quarters)`
+    ELSE IF `has qualifying wages` (`the alternative base period` w) `average annual wage`
+         THEN `the alternative base period (the 4 most recently completed quarters)`
+         ELSE `neither: the wages do not qualify`
+
+GIVEN w IS A `Quarterly wages`, `average annual wage` IS A NUMBER
+GIVETH A MAYBE `Base period wages`
+`the qualifying base period wages` w `average annual wage` MEANS
+    CONSIDER `the base period that qualifies` w `average annual wage`
+    WHEN `the regular base period (the first 4 of the last 5 completed quarters)` THEN JUST (`the regular base period` w)
+    WHEN `the alternative base period (the 4 most recently completed quarters)` THEN JUST (`the alternative base period` w)
+    WHEN `neither: the wages do not qualify` THEN NOTHING
+
+§§ `39-51-2201 -- the weekly benefit amount`
+
+-- (2): the average weekly wage is the average annual wage "divided by 52, rounded to the nearest cent".
+-- (3)(a): if the contribution schedule under 39-51-1218 is Schedule II or higher, the maximum is 66.5% and the minimum
+-- 19% of the average weekly wage; (3)(b): under Schedule I, 67.5% and 20%. The text does not round them (NOTES.md
+-- finding 3).
+GIVEN `average annual wage` IS A NUMBER
+GIVETH A NUMBER
+`the average weekly wage` `average annual wage` MEANS `rounded to the nearest cent` (`average annual wage` DIVIDED BY 52)
+
+GIVEN `average annual wage` IS A NUMBER, `schedule I is in force` IS A BOOLEAN
+GIVETH A NUMBER
+`the maximum weekly benefit amount` `average annual wage` `schedule I is in force` MEANS
+    IF `schedule I is in force`
+    THEN 0.675 TIMES `the average weekly wage` `average annual wage`
+    ELSE 0.665 TIMES `the average weekly wage` `average annual wage`
+
+GIVEN `average annual wage` IS A NUMBER, `schedule I is in force` IS A BOOLEAN
+GIVETH A NUMBER
+`the minimum weekly benefit amount` `average annual wage` `schedule I is in force` MEANS
+    IF `schedule I is in force`
+    THEN 0.2 TIMES `the average weekly wage` `average annual wage`
+    ELSE 0.19 TIMES `the average weekly wage` `average annual wage`
+
+-- (1): "an amount equal to 1% of the total base period wages or equal to 1.9% of the total wages paid in the 2
+-- calendar quarters in which wages were the highest during the base period", rounded down to the dollar, and not less
+-- than the minimum or more than the maximum. The text does not say which of the two; this encoding takes the greater
+-- (NOTES.md finding 2).
+GIVEN bp IS A `Base period wages`, `average annual wage` IS A NUMBER, `schedule I is in force` IS A BOOLEAN
+GIVETH A NUMBER
+`the weekly benefit amount` bp `average annual wage` `schedule I is in force` MEANS
+    min (`the maximum weekly benefit amount` `average annual wage` `schedule I is in force`)
+        (max (`the minimum weekly benefit amount` `average annual wage` `schedule I is in force`) rounded)
+    WHERE
+        rounded MEANS FLOOR (max (0.01 TIMES bp's `total base period wages`) (0.019 TIMES bp's `two highest quarters wages`))
+
+§§ `39-51-2204 -- the maximum benefit amount`
+
+-- Full weeks of benefits by the ratio of total base period earnings to the high quarter.
+GIVEN ratio IS A NUMBER
+GIVETH A NUMBER
+`the full weeks of benefits for the ratio` ratio MEANS
+    BRANCH
+        IF ratio LESS THAN 1.25 THEN 8
+        IF ratio LESS THAN 1.5 THEN 10
+        IF ratio LESS THAN 1.75 THEN 12
+        IF ratio LESS THAN 2 THEN 14
+        IF ratio LESS THAN 2.25 THEN 16
+        IF ratio LESS THAN 2.5 THEN 18
+        IF ratio LESS THAN 2.75 THEN 20
+        IF ratio LESS THAN 3 THEN 22
+        OTHERWISE 24
+
+GIVEN bp IS A `Base period wages`
+GIVETH A NUMBER
+`the full weeks of benefits` bp MEANS
+    IF bp's `high quarter wages` GREATER THAN 0
+    THEN `the full weeks of benefits for the ratio` (bp's `total base period wages` DIVIDED BY bp's `high quarter wages`)
+    ELSE 0
+
+§§ `39-51-2101, 39-51-2104, 39-51-2202, 39-51-2203 -- one week`
+
+DECLARE `The week` HAS
+    `hours worked in the week`                               IS A NUMBER
+    `wages earned in the week`                               IS A NUMBER
+    `worked fewer hours than usual because of a lack of work` IS A BOOLEAN
+    `days or part-days unavailable for work in the week`     IS A NUMBER
+    -- 39-51-2203(1), only where (a), (b) apply and (2) does not
+    `pension reasonably attributable to the week that must be deducted` IS A NUMBER
+    -- 39-51-2104(1)
+    `filed the claim and continued claims as the rules require`    IS A BOOLEAN
+    `able to work, available for work and seeking work`            IS A BOOLEAN
+    `has served the 1-week waiting period`                         IS A BOOLEAN
+    `registered for work with the local job service, or excused`  IS A BOOLEAN
+
+-- 39-51-2101: totally unemployed in a week in which the individual "(a) did not perform any work in employment and did
+-- not earn any wages", or "(b) (i) due to a lack of work, worked fewer than the hours that are typically worked ... and
+-- (ii) earned wages ... less than two times the individual's weekly benefit amount"; (2) never in a week of 40 hours.
+GIVEN wk IS A `The week`, wba IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is totally unemployed in the week` wk wba IF
+        wk's `hours worked in the week` LESS THAN 40
+    AND (    (    wk's `hours worked in the week` EQUALS 0
+              AND wk's `wages earned in the week` EQUALS 0)
+         OR  (    wk's `worked fewer hours than usual because of a lack of work`
+              AND wk's `wages earned in the week` LESS THAN (2 TIMES wba)))
+
+-- 39-51-2104(1)(a)-(d), as found by the department; (2)(b): unavailable 3 days or more, no benefits for the week.
+GIVEN wk IS A `The week`, wba IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is eligible for the week` wk wba IF
+        `is totally unemployed in the week` wk wba
+    AND wk's `filed the claim and continued claims as the rules require`
+    AND wk's `able to work, available for work and seeking work`
+    AND wk's `has served the 1-week waiting period`
+    AND wk's `registered for work with the local job service, or excused`
+    AND wk's `days or part-days unavailable for work in the week` LESS THAN 3
+
+-- 39-51-2104(2)(a): unavailable fewer than 3 days, "reduced by one-fifth of that amount for each day or part of a day".
+-- 39-51-2202: partial payment is "the claimant's weekly benefit amount less 50% of wages for employment earned in excess
+-- of one-fourth of the claimant's weekly benefit amount", each rounded down to the dollar.
+-- 39-51-2203: reduced "(but not below zero)" by a pension attributable to the week.
+-- The text does not order the three reductions; this encoding applies the availability fifths and the earnings to the
+-- weekly benefit amount and then the pension (NOTES.md finding 5).
+GIVEN wk IS A `The week`, wba IS A NUMBER
+GIVETH A NUMBER
+`the payment for the week` wk wba MEANS
+    IF `is eligible for the week` wk wba
+    THEN max 0 ((afterAvailability MINUS earningsDeduction) MINUS wk's `pension reasonably attributable to the week that must be deducted`)
+    ELSE 0
+    WHERE
+        afterAvailability MEANS wba MINUS ((wba DIVIDED BY 5) TIMES (CEILING (wk's `days or part-days unavailable for work in the week`)))
+        earningsDeduction MEANS 0.5 TIMES (max 0 ((FLOOR (wk's `wages earned in the week`)) MINUS (FLOOR (wba DIVIDED BY 4))))
+
+§§ `39-51-2302 to 39-51-2304 -- disqualifications`
+
+-- How the claimant's last job ended, as the department determines it. "Misconduct" and "gross misconduct" are defined in
+-- 39-51-201(19) and (13); the finding is the department's, so it is an input.
+DECLARE `How the job ended` IS ONE OF
+    `laid off for lack of work`
+    `I quit with good cause attributable to my employment`
+    `I quit without good cause attributable to my employment`
+    `discharged, but not for misconduct`
+    `discharged for misconduct`
+    `discharged for gross misconduct, as the department determines`
+    `discharged for failing or refusing an employer drug test under a written policy`
+
+DECLARE `Disqualification` IS ONE OF
+    `not disqualified`
+    `disqualified until I earn, after the week of the act, wages of at least` HAS `the amount` IS A NUMBER
+    `disqualified for 52 weeks`
+    `disqualified, with no end stated in the text`
+
+-- 39-51-2302(2): a quit is not disqualifying for (a) illness or injury on medical advice with an offer to return on
+-- recovery, (b) leaving temporary work to return to the regular employer, (c) a military order of under 180 days
+-- after which the job had ended, (d) a spouse's mandatory military transfer. (3): to requalify, services paid at least
+-- six times the weekly benefit amount, unless in regular attendance at an accredited Montana educational institution for
+-- at least 3 consecutive months from the act.
+-- 39-51-2303(1): misconduct, until services paid at least eight times the weekly benefit amount; (2) gross misconduct,
+-- 52 weeks; (3) a failed or refused drug test (not a marijuana test of a registered cardholder): no period is stated.
+GIVEN `how the job ended` IS A `How the job ended`
+      `a 39-51-2302(2) exception applies to my quit` IS A BOOLEAN
+      `I attended an accredited Montana school for 3 consecutive months since the act` IS A BOOLEAN
+      `the drug test was for marijuana and I am a registered cardholder` IS A BOOLEAN
+      wba IS A NUMBER
+GIVETH A `Disqualification`
+`the disqualification for the separation` `how the job ended` `a 39-51-2302(2) exception applies to my quit` `I attended an accredited Montana school for 3 consecutive months since the act` `the drug test was for marijuana and I am a registered cardholder` wba MEANS
+    CONSIDER `how the job ended`
+    WHEN `I quit without good cause attributable to my employment` THEN
+        IF     `a 39-51-2302(2) exception applies to my quit`
+            OR `I attended an accredited Montana school for 3 consecutive months since the act`
+        THEN `not disqualified`
+        ELSE `disqualified until I earn, after the week of the act, wages of at least` (6 TIMES wba)
+    WHEN `discharged for misconduct` THEN `disqualified until I earn, after the week of the act, wages of at least` (8 TIMES wba)
+    WHEN `discharged for gross misconduct, as the department determines` THEN `disqualified for 52 weeks`
+    WHEN `discharged for failing or refusing an employer drug test under a written policy` THEN
+        IF `the drug test was for marijuana and I am a registered cardholder`
+        THEN `not disqualified`
+        ELSE `disqualified, with no end stated in the text`
+    OTHERWISE `not disqualified`
+
+-- 39-51-2304(3): work is never suitable, and benefits may not be denied for refusing it, if (a) the vacancy is due
+-- directly to a strike, lockout or other labor dispute, (b) wages, hours or conditions are substantially less favorable
+-- than those prevailing for similar work locally, or (c) the job requires joining a company union or not joining a bona
+-- fide labor organization. (4): after 13 weeks of unemployment, suitable work is work meeting the criteria that offers
+-- 75% of earnings in previous insured work in the customary occupation, but never below the federal minimum wage.
+-- (2): otherwise the department weighs risk, fitness, experience, length of unemployment and distance (an input).
+DECLARE `Job offer` HAS
+    `the vacancy is due directly to a strike, lockout or other labor dispute`          IS A BOOLEAN
+    `pay, hours or conditions are substantially less favorable than prevailing locally` IS A BOOLEAN
+    `the job requires joining a company union or not joining a bona fide union`         IS A BOOLEAN
+    `the department finds it suitable on the 39-51-2304(2) factors`                     IS A BOOLEAN
+    `weeks of unemployment so far`                                                       IS A NUMBER
+    `offered pay as a fraction of my previous insured earnings in my customary occupation` IS A NUMBER
+    `the offered pay is below the federal minimum wage`                                  IS A BOOLEAN
+
+GIVEN o IS A `Job offer`
+GIVETH A BOOLEAN
+DECIDE `is suitable work` o IF
+        (NOT o's `the vacancy is due directly to a strike, lockout or other labor dispute`)
+    AND (NOT o's `pay, hours or conditions are substantially less favorable than prevailing locally`)
+    AND (NOT o's `the job requires joining a company union or not joining a bona fide union`)
+    AND (NOT o's `the offered pay is below the federal minimum wage`)
+    AND (    o's `the department finds it suitable on the 39-51-2304(2) factors`
+         OR  (    o's `weeks of unemployment so far` GREATER THAN 13
+              AND o's `offered pay as a fraction of my previous insured earnings in my customary occupation` AT LEAST 0.75))
+
+-- 39-51-2304(1)(b): refusing suitable work without good cause disqualifies "for the week in which the failure occurs
+-- and until" services paid at least six times the weekly benefit amount, "with a reduction in the individual's maximum
+-- benefit amount equal to six times the weekly benefit amount". The department's "as determined" reading of the
+-- 13-week clause is not second-guessed: the department finding is one input.
+
+DECLARE `Refusal outcome` IS ONE OF
+    `not disqualified: the work offered is not suitable work`
+    `not disqualified: I had good cause`
+    `disqualified for the week and until I earn wages of at least this, and my maximum benefit amount is cut by the same` HAS `six times my weekly benefit amount` IS A NUMBER
+
+GIVEN o IS A `Job offer`, `I had good cause` IS A BOOLEAN, wba IS A NUMBER
+GIVETH A `Refusal outcome`
+`the outcome of refusing the offer` o `I had good cause` wba MEANS
+    IF (NOT (`is suitable work` o))
+    THEN `not disqualified: the work offered is not suitable work`
+    ELSE IF `I had good cause`
+         THEN `not disqualified: I had good cause`
+         ELSE `disqualified for the week and until I earn wages of at least this, and my maximum benefit amount is cut by the same` (6 TIMES wba)
+
+§§ `Duties at a new claim, and on double payment`
+
+DECLARE `Party` IS ONE OF
+    `the claimant`
+    `the department of labor and industry`
+
+DECLARE `Act` IS ONE OF
+    `disclose whether I owe an uncollected food stamp overissuance`
+    `advise that benefits are federally taxable, that estimated tax rules exist, and that federal withholding may be elected or changed`
+    `elect federal income tax withholding from benefits`
+    `repay the unemployment benefits for the week`
+
+-- 39-51-2208(2): "An individual filing a new claim for unemployment benefits shall disclose at the time of filing the
+-- claim whether or not the individual owes for an uncollected overissuance of food stamp benefits".
+-- 39-51-2207(1): "The department shall advise an individual at the time the individual files a new claim" that
+-- benefits are subject to federal income tax, of the estimated tax requirements, and that the individual "may elect"
+-- withholding and change it. "At the time" of filing is day 0 of the claim.
+GIVETH A DEONTIC `Party` `Act`
+`the duties when I file a new claim` MEANS
+        (PARTY `the claimant`
+         MUST  `disclose whether I owe an uncollected food stamp overissuance`
+         WITHIN 0
+         HENCE FULFILLED
+         LEST  BREACH BY `the claimant` BECAUSE "the claimant did not disclose at the time of the new claim whether a food stamp overissuance is owed (39-51-2208(2))")
+    RAND
+        (PARTY `the department of labor and industry`
+         MUST  `advise that benefits are federally taxable, that estimated tax rules exist, and that federal withholding may be elected or changed`
+         WITHIN 0
+         HENCE (PARTY `the claimant` MAY `elect federal income tax withholding from benefits`)
+         LEST  BREACH BY `the department of labor and industry` BECAUSE "the department did not advise the claimant of the tax status of benefits and the withholding election when the new claim was filed (39-51-2207(1))")
+
+-- 39-51-2306(2): if the individual later receives workers' compensation, or other unemployment benefits, for a week
+-- already paid, "the individual shall repay the unemployment benefits, and the department may collect" them under
+-- 39-51-3206 (not deposited). No time for repayment is stated, so the rule has no WITHIN.
+GIVETH A DEONTIC `Party` `Act`
+`the duty to repay a doubly paid week` MEANS
+    PARTY `the claimant`
+    MUST  `repay the unemployment benefits for the week`
+    HENCE FULFILLED
+
+GIVEN `received workers' compensation or other unemployment benefits for an already paid week` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `must repay the week` `received workers' compensation or other unemployment benefits for an already paid week` IF
+    `received workers' compensation or other unemployment benefits for an already paid week`
