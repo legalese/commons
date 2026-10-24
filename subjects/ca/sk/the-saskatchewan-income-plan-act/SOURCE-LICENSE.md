@@ -19,7 +19,9 @@ Not an official version. Each deposited text opens with a notice that it is an u
 
 ## Consequence for this subject
 
-The terms grant reproduction; they are silent on adaptation. Whether an L4 encoding that quotes this text is covered by the non-commercial reproduction grant is a human decision to record here before an encoding quotes it.
+The terms grant reproduction; they are silent on adaptation. Whether an L4 encoding that quotes this text is covered by the non-commercial reproduction grant was left as a human decision to record here before an encoding quotes it.
+
+**Owner's ruling, 24 Oct 2026 (Michael): Canadian texts whose terms permit reproduction but are silent on adaptation, Saskatchewan's among them, MAY be quoted in L4 encodings in Legalese Commons.** Each encoding that quotes this text keeps the attribution the terms require ("© 2026, Government of Saskatchewan.") and an "unofficial version / not an official version" notice in its module headers and in its copy of this file. The 20 Oct 2026 ruling (Commons is non-commercial use) still applies; commercial use remains outside the terms.
 
 ## Language
 
