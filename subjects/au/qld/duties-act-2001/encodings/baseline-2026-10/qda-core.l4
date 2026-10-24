@@ -1,0 +1,787 @@
+IMPORT prelude
+IMPORT `qda-dates`
+
+-- Duties Act 2001 (Queensland) -- seat-neutral core for transfer duty on buying a home or a block of land: the
+-- dutiable value, the general rate, the Chapter 2 Part 9 home concessions, the s 93 mixed claim for two buyers, the
+-- Part 14 Division 1 clawback and its notice, additional foreign acquirer duty, and the duty to lodge. Written in the
+-- Act's own actors and terms (the transferee, the parties to the transaction, the commissioner). The buyer's questions
+-- are in qda-seat.l4, which IMPORTs this module and restates no rule. Vehicle registration duty is in qda-vehicles.l4;
+-- payment, interest, penalty tax, objections and appeals (Taxation Administration Act 2001) are in qda-admin.l4.
+--
+-- PROVISIONS: ss 9(1)(a)-(b), 10(1)(a), 11(7), 12(1), 14(1), 16 and Schedule 2, 17, 19(3), 20, 24(2) and Schedule 3;
+-- ss 85, 86, 86A-86D, 87-89, 90, 90A, 91, 92 and Schedule 4A, 92A, 92B, 93 (the s 93(1)(c)(ii) case with two buyers
+-- only), 95; ss 153, 154, 155; Chapter 4 ss 231, 232 (as a fact), 233(1)(a), 234, 235, 240(1), 243, 244(2)(a); Duties
+-- Regulation 2023 s 5(1) and Schedule 2 Part 1.
+--
+-- Edition: the Duties Act 2001 (act-2001-071) as deposited at ../../registers/source-bundle/act-2001-071.txt (current
+-- in-force version on 2026-09-22, in force from 2026-08-01); the Duties Regulation 2023 (sl-2023-0104), version in force
+-- from 2025-05-01, as deposited at ../../../duties-regulation-2023/registers/source-bundle/sl-2023-0104.txt.
+--
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Duties Act 2001 (Qld) -- seat-neutral core for transfer duty on land`
+
+§§ `Arithmetic used by the rates`
+
+-- Schedule 3 and s 91(3)(a) charge "for each $100, or part of $100": a part of $100 counts as a whole $100.
+GIVEN `amount` IS A NUMBER
+GIVETH A NUMBER
+`the number of 100-dollar parts in` `amount` MEANS
+    IF `amount` AT MOST 0 THEN 0 ELSE CEILING (`amount` DIVIDED BY 100)
+
+GIVEN `a` IS A NUMBER
+      `b` IS A NUMBER
+GIVETH A NUMBER
+`the larger of` `a` `and` `b` MEANS
+    IF `a` AT LEAST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER
+      `b` IS A NUMBER
+GIVETH A NUMBER
+`the smaller of` `a` `and` `b` MEANS
+    IF `a` AT MOST `b` THEN `a` ELSE `b`
+
+§§ `s 24(2) and Schedule 3 -- the general rate of transfer duty, as a table`
+
+-- s 24(2): "The rate of transfer duty imposed on another dutiable transaction is stated in schedule 3, column 2, opposite
+-- the dutiable value of the transaction in schedule 3, column 1." Schedule 3:
+--   Not more than $5,000                          Nil
+--   More than $5,000 but not more than $75,000    $1.50 for each $100, or part of $100, by which the value is more than $5,000
+--   More than $75,000 but not more than $540,000  $1,050 plus $3.50 for each $100, or part of $100, more than $75,000
+--   More than $540,000 but not more than $1m      $17,325 plus $4.50 for each $100, or part of $100, more than $540,000
+--   More than $1m                                 $38,025 plus $5.75 for each $100, or part of $100, more than $1m
+-- A band: on a value more than `above`, the duty is `base amount` plus `per 100` for each $100 or part above it.
+DECLARE `Rate band` HAS
+    `above`       IS A NUMBER
+    `base amount` IS A NUMBER
+    `per 100`     IS A NUMBER
+
+-- Highest band first: the first band whose floor the value is more than is the one that applies; below $5,000, nil.
+`Schedule 3` MEANS
+    LIST `Rate band` OF 1000000, 38025, 5.75
+         `Rate band` OF 540000, 17325, 4.50
+         `Rate band` OF 75000, 1050, 3.50
+         `Rate band` OF 5000, 0, 1.50
+
+GIVEN `scale` IS A LIST OF `Rate band`
+      `value` IS A NUMBER
+GIVETH A NUMBER
+`the duty on the scale` `scale` `value` MEANS
+    CONSIDER `scale`
+    WHEN EMPTY THEN 0
+    WHEN `band` FOLLOWED BY `rest` THEN
+        IF `value` GREATER THAN `band`'s `above`
+        THEN `band`'s `base amount` PLUS (`band`'s `per 100` TIMES `the number of 100-dollar parts in` (`value` MINUS `band`'s `above`))
+        ELSE `the duty on the scale` `rest` `value`
+
+-- "The rate ... opposite" a value, applied to that value. Sections 91(3)(b), 91(5)(b), 92A(3), 92B(3) and 93(7)(b) all
+-- apply "the relevant rate" (the Schedule 3 row for an amount) to that amount, which is this function of the amount.
+GIVEN `value` IS A NUMBER
+GIVETH A NUMBER
+`the general rate applied to` `value` MEANS
+    `the duty on the scale` `Schedule 3` `value`
+
+§§ `The purchase`
+
+-- s 9(1)(a)-(b): a transfer, or an agreement for the transfer, of dutiable property is a dutiable transaction; s 10(1)(a):
+-- land in Queensland is dutiable property. One case is one dutiable transaction.
+-- s 86A: "Residential land is land, or the part of land, on which a residence is constructed, and includes the curtilage
+-- attributable to the residence if the curtilage is used for residential purposes." s 87: a residence is a building, or
+-- part of one, "fixed to land", "designed, or approved by a local government, for human habitation by a single family
+-- unit" and "used for residential purposes" (a FACT). s 86C(1): land is vacant land if "(a) a residence is to be
+-- constructed on the land; and (b) when the person acquired the land, there was no building or part of a building on
+-- the land".
+DECLARE `What is bought` IS ONE OF
+    `residential land`
+    `vacant land`
+    `other dutiable property`
+
+-- s 90A: "A specified resident is an individual who is-- (a) an Australian citizen; or (b) a permanent resident; or (c) a
+-- specified foreign retiree under section 246(2)." Schedule 6: "permanent resident means-- (a) the holder of a permanent
+-- visa as defined by the Migration Act 1958 (Cwlth), section 30(1); or (b) a New Zealand citizen who is the holder of a
+-- special category visa". s 246(2): a "specified foreign retiree" is "(a) a foreign individual who holds ... a Subclass
+-- 405 (Investor Retirement) visa or Subclass 410 (Retirement) visa; or (b) a foreign individual (i) who applied on or after
+-- 8 May 2018 for ... a Subclass 103 (Parent) visa or Subclass 143 (Contributory Parent) visa; and (ii) whose last
+-- substantive visa ... was the class of visa mentioned in paragraph (a); and (iii) whose application has not been
+-- decided". Citizenship and the visas are Commonwealth terms, asked as FACTS.
+DECLARE `Residency` IS ONE OF
+    `an Australian citizen`
+    `the holder of a permanent visa`
+    `a New Zealand citizen holding a special category visa`
+    `the holder of a Subclass 405 or 410 retirement visa`
+    `an undecided Subclass 103 or 143 parent visa applicant whose last substantive visa was a Subclass 405 or 410 visa`
+    `none of these`
+
+GIVEN `r` IS A `Residency`
+GIVETH A BOOLEAN
+DECIDE `is a permanent resident` `r` IF
+    CONSIDER `r`
+    WHEN `the holder of a permanent visa` THEN TRUE
+    WHEN `a New Zealand citizen holding a special category visa` THEN TRUE
+    OTHERWISE FALSE
+
+GIVEN `r` IS A `Residency`
+GIVETH A BOOLEAN
+DECIDE `is a specified foreign retiree` `r` IF
+    CONSIDER `r`
+    WHEN `the holder of a Subclass 405 or 410 retirement visa` THEN TRUE
+    WHEN `an undecided Subclass 103 or 143 parent visa applicant whose last substantive visa was a Subclass 405 or 410 visa` THEN TRUE
+    OTHERWISE FALSE
+
+GIVEN `r` IS A `Residency`
+GIVETH A BOOLEAN
+DECIDE `is a specified resident` `r` IF
+        `r` EQUALS `an Australian citizen`
+    OR  `is a permanent resident` `r`
+    OR  `is a specified foreign retiree` `r`
+
+-- s 235: "A foreign individual is an individual other than an Australian citizen or permanent resident." A specified
+-- foreign retiree is therefore a foreign individual for AFAD, although a specified resident for Part 9.
+GIVEN `r` IS A `Residency`
+GIVETH A BOOLEAN
+DECIDE `is a foreign individual` `r` IF
+    NOT (    `r` EQUALS `an Australian citizen`
+          OR `is a permanent resident` `r`)
+
+-- The facts of one purchase. Where there is more than one transferee, every person fact is a fact about each of them:
+-- Part 9 asks that "the transferees ... are all individuals", that the residence be "their home" or "the first home of
+-- all of the transferees", and that "each transferee ... is a specified resident". The two-buyer case where only one
+-- qualifies is s 93, below.
+DECLARE `Home purchase` HAS
+    `what is bought`                                    IS A `What is bought`
+    -- s 11(7)(a), 12(1): the consideration, including liabilities assumed and debts released.
+    `consideration`                                     IS A NUMBER
+    -- s 14(1): the value "determined without regard to ... any encumbrance".
+    `unencumbered value`                                IS A NUMBER
+    -- s 90(2)(a): only "the part of the dutiable value of the transaction that is attributable to the land" counts as
+    -- the dutiable value of the residential or vacant land; this is the value of everything else in the transaction.
+    `value of the other dutiable property`              IS A NUMBER
+    `the transferees are individuals and not trustees`  IS A BOOLEAN
+    -- s 89: the transfer date is "the date the person is entitled to possession of the land".
+    `transfer date`                                     IS A DATE
+    -- s 88: the occupation date is "the date the person, as owner of the residence, starts occupying it as the
+    -- person's principal place of residence".
+    `the transferees will occupy it as their principal place of residence` IS A BOOLEAN
+    `occupation date`                                   IS A DATE
+    `residency of the transferees`                      IS A `Residency`
+    `the transferees are at least 18 on the day liability arises` IS A BOOLEAN
+    -- s 86(2)(a), 86B(1)(b)(i): never held an interest in (other) residential land, in Queensland or elsewhere, other
+    -- than as trustee, as lessee (other than under a premium lease of a home) or as holder of a security interest.
+    `the transferees never held an interest in other residential land` IS A BOOLEAN
+    -- s 86(2)(b), 86B(1)(b)(ii), 86D: never a "vacant land concession beneficiary" in relation to other land.
+    `the transferees were never vacant land concession beneficiaries for other land` IS A BOOLEAN
+    -- s 86(4): "has not been previously occupied or sold as a place of residence; or (b) is a substantially renovated
+    -- home" (s 86(5), which turns on the GST Act 1999 (Cwlth) s 40-75(1)(b): a FACT).
+    `the residence is a new home`                       IS A BOOLEAN
+
+§§ `ss 11(7) and 90 -- dutiable value`
+
+-- s 11(7): "the dutiable value of another dutiable transaction is-- (a) the consideration for the dutiable transaction; or
+-- (b) the unencumbered value of the dutiable property ... if-- (i) there is no consideration ...; or (ii) the consideration
+-- can not be ascertained ...; or (iii) the unencumbered value is greater than the consideration". With no consideration
+-- entered as 0, that is the greater of the two.
+GIVEN `the consideration` IS A NUMBER
+      `the unencumbered value` IS A NUMBER
+GIVETH A NUMBER
+`the dutiable value given` `the consideration` `and` `the unencumbered value` MEANS
+    `the larger of` `the consideration` `and` `the unencumbered value`
+
+GIVEN `p` IS A `Home purchase`
+GIVETH A NUMBER
+`the dutiable value of` `p` MEANS
+    `the dutiable value given` (`p`'s `consideration`) `and` (`p`'s `unencumbered value`)
+
+-- s 90(2)(a): the dutiable value of the residential land (or vacant land) is "the part of the dutiable value of the
+-- transaction that is attributable to the land".
+GIVEN `p` IS A `Home purchase`
+GIVETH A NUMBER
+`the dutiable value of the land in` `p` MEANS
+    `the dutiable value of` `p` MINUS `p`'s `value of the other dutiable property`
+
+GIVEN `p` IS A `Home purchase`
+GIVETH A NUMBER
+`the unencumbered value of the land in` `p` MEANS
+    `p`'s `unencumbered value` MINUS `p`'s `value of the other dutiable property`
+
+GIVEN `p` IS A `Home purchase`
+GIVETH A NUMBER
+`the transfer duty at the general rate on` `p` MEANS
+    `the general rate applied to` (`the dutiable value of` `p`)
+
+§§ `ss 86, 86B -- home and first home`
+
+-- s 86(1): "A residence is a person's home if the person's occupation date for the residence is within 1 year after the
+-- person's transfer date for the residential land." s 86B(1)(a): for a residence to be built on vacant land, within 2
+-- years. The same windows are the "occupancy requirement" (Schedule 6).
+GIVEN `p` IS A `Home purchase`
+GIVETH A NUMBER
+`the years allowed to occupy` `p` MEANS
+    IF `p`'s `what is bought` EQUALS `vacant land` THEN 2 ELSE 1
+
+GIVEN `p` IS A `Home purchase`
+GIVETH A DATE
+`the last day to occupy` `p` MEANS
+    `the day that is` (`the years allowed to occupy` `p`) `years after` (`p`'s `transfer date`)
+
+GIVEN `p` IS A `Home purchase`
+GIVETH A BOOLEAN
+DECIDE `the occupation date is within the occupancy requirement for` `p` IF
+        `p`'s `the transferees will occupy it as their principal place of residence`
+    AND `is on or before` (`p`'s `occupation date`) (`the last day to occupy` `p`)
+
+-- s 86(1).
+GIVEN `p` IS A `Home purchase`
+GIVETH A BOOLEAN
+DECIDE `the residence will be the home of the transferees in` `p` IF
+        `p`'s `what is bought` EQUALS `residential land`
+    AND `the occupation date is within the occupancy requirement for` `p`
+
+-- s 86(2): "A person's home is the person's first home if, before acquiring the home-- (a) the person did not hold, and
+-- never before held, an interest in other residential land ...; and (b) the person was not, and had never been, a vacant
+-- land concession beneficiary in relation to land other than the residential land on which the home is constructed."
+GIVEN `p` IS A `Home purchase`
+GIVETH A BOOLEAN
+DECIDE `the residence will be the first home of the transferees in` `p` IF
+        `the residence will be the home of the transferees in` `p`
+    AND `p`'s `the transferees never held an interest in other residential land`
+    AND `p`'s `the transferees were never vacant land concession beneficiaries for other land`
+
+-- s 86B(1): a residence to be constructed on vacant land is a person's first home if the occupation date is within 2
+-- years after the transfer date and the person never held an interest in residential land and was never a vacant land
+-- concession beneficiary for other land.
+GIVEN `p` IS A `Home purchase`
+GIVETH A BOOLEAN
+DECIDE `the residence to be built will be the first home of the transferees in` `p` IF
+        `p`'s `what is bought` EQUALS `vacant land`
+    AND `the occupation date is within the occupancy requirement for` `p`
+    AND `p`'s `the transferees never held an interest in other residential land`
+    AND `p`'s `the transferees were never vacant land concession beneficiaries for other land`
+
+§§ `ss 91-92B -- which home concession applies`
+
+-- The concessions of Division 3, and s 93 for the two-buyer case. The transfer duty is assessed on the basis of one.
+DECLARE `Home concession` IS ONE OF
+    `no home concession`
+    `the home concession (s 91)`
+    `the first home concession (s 92)`
+    `the first home and new home concession (s 92A)`
+    `the first home vacant land concession (s 92B)`
+    `the concession for one of two buyers (s 93)`
+
+-- s 91(1): residential land; "(b)(i) the transferees ... are individuals and are not trustees and the residence will be
+-- their home"; "(c) each transferee ... is a specified resident on the day the liability for transfer duty arises".
+GIVEN `p` IS A `Home purchase`
+GIVETH A BOOLEAN
+DECIDE `s 91 applies to` `p` IF
+        `p`'s `the transferees are individuals and not trustees`
+    AND `the residence will be the home of the transferees in` `p`
+    AND `is a specified resident` (`p`'s `residency of the transferees`)
+
+-- s 92(1): residential land; "(aa) the residence is not a new home"; "(b)(i) the transferees ... are all individuals of at
+-- least 18 years of age ..., the residence will be the first home of all of the transferees ... and none ... are
+-- trustees"; "(ba)" each is a specified resident; "(c) either-- (i) the unencumbered value of the residential land is not
+-- more than $700,000; or (ii) if [it] is more than [that], the consideration for the dutiable transaction is at least the
+-- unencumbered value of the land". The commissioner's power to waive the age (s 92(3)) is not encoded.
+`the s 92 unencumbered value limit` MEANS 700000
+
+GIVEN `p` IS A `Home purchase`
+GIVETH A BOOLEAN
+DECIDE `s 92 applies to` `p` IF
+        (NOT (`p`'s `the residence is a new home`))
+    AND `p`'s `the transferees are individuals and not trustees`
+    AND `p`'s `the transferees are at least 18 on the day liability arises`
+    AND `the residence will be the first home of the transferees in` `p`
+    AND `is a specified resident` (`p`'s `residency of the transferees`)
+    AND (    `the unencumbered value of the land in` `p` AT MOST `the s 92 unencumbered value limit`
+         OR  `p`'s `consideration` AT LEAST `the unencumbered value of the land in` `p`)
+
+-- s 92A(1): residential land; "(b) the residence is a new home"; (c)(i) individuals of at least 18, first home of all,
+-- not trustees; (ca) specified residents; "(d) the consideration for the dutiable transaction is at least the
+-- unencumbered value of the residential land". There is no value limit.
+GIVEN `p` IS A `Home purchase`
+GIVETH A BOOLEAN
+DECIDE `s 92A applies to` `p` IF
+        `p`'s `the residence is a new home`
+    AND `p`'s `the transferees are individuals and not trustees`
+    AND `p`'s `the transferees are at least 18 on the day liability arises`
+    AND `the residence will be the first home of the transferees in` `p`
+    AND `is a specified resident` (`p`'s `residency of the transferees`)
+    AND `p`'s `consideration` AT LEAST `the unencumbered value of the land in` `p`
+
+-- s 92B(1): vacant land; (b)(i) individuals of at least 18, the residence will be the first home of all, not trustees;
+-- (ba) specified residents; "(c) the consideration for the dutiable transaction is at least the unencumbered value of
+-- the vacant land". No value limit.
+GIVEN `p` IS A `Home purchase`
+GIVETH A BOOLEAN
+DECIDE `s 92B applies to` `p` IF
+        `p`'s `the transferees are individuals and not trustees`
+    AND `p`'s `the transferees are at least 18 on the day liability arises`
+    AND `the residence to be built will be the first home of the transferees in` `p`
+    AND `is a specified resident` (`p`'s `residency of the transferees`)
+    AND `p`'s `consideration` AT LEAST `the unencumbered value of the land in` `p`
+
+-- More than one section can apply (s 91 to every home that s 92 or s 92A also covers). The Act leaves the choice to the
+-- application (s 95); this takes the concession with the least duty, which is this order.
+GIVEN `p` IS A `Home purchase`
+GIVETH A `Home concession`
+`the home concession for` `p` MEANS
+    IF `s 92A applies to` `p`
+    THEN `the first home and new home concession (s 92A)`
+    ELSE IF `s 92 applies to` `p`
+         THEN `the first home concession (s 92)`
+         ELSE IF `s 92B applies to` `p`
+              THEN `the first home vacant land concession (s 92B)`
+              ELSE IF `s 91 applies to` `p`
+                   THEN `the home concession (s 91)`
+                   ELSE `no home concession`
+
+§§ `s 91 -- the home concession`
+
+-- s 91(3): "If the dutiable value of the residential land is not more than $350,000, the transfer duty is the total of--
+-- (a) $1 for each $100, or part of $100, of the dutiable value of the land; and (b) the amount worked out by deducting,
+-- from transfer duty on the dutiable value of the dutiable transaction, the amount worked out by applying the relevant
+-- rate to the dutiable value of the residential land." (5): "If [it] is more than $350,000, the transfer duty is the total
+-- of-- (a) $3,500; and (b) the amount worked out by deducting, from transfer duty on the dutiable value of the dutiable
+-- transaction, the amount worked out by applying the relevant rate to $350,000."
+`the s 91 threshold` MEANS 350000
+`the s 91(5)(a) amount` MEANS 3500
+
+GIVEN `the dutiable value of the residential land` IS A NUMBER
+GIVETH A NUMBER
+`the s 91(3)(a) amount for` `the dutiable value of the residential land` MEANS
+    1 TIMES `the number of 100-dollar parts in` `the dutiable value of the residential land`
+
+GIVEN `the dutiable value of the transaction` IS A NUMBER
+      `the dutiable value of the residential land` IS A NUMBER
+GIVETH A NUMBER
+`the s 91 duty on` `the dutiable value of the transaction` `with residential land of` `the dutiable value of the residential land` MEANS
+    IF `the dutiable value of the residential land` AT MOST `the s 91 threshold`
+    THEN `the s 91(3)(a) amount for` `the dutiable value of the residential land` PLUS (`the general rate applied to` `the dutiable value of the transaction` MINUS `the general rate applied to` `the dutiable value of the residential land`)
+    ELSE `the s 91(5)(a) amount` PLUS (`the general rate applied to` `the dutiable value of the transaction` MINUS `the general rate applied to` `the s 91 threshold`)
+
+§§ `s 92(2) and Schedule 4A -- the first home concession amount, as a table`
+
+-- Schedule 4A, by the dutiable value of the residential land:
+--   Not more than $709,999.99   $17,350 or, if the transfer duty otherwise payable under section 91 is less than
+--                               $17,350, the amount of duty otherwise payable under that section
+--   $710,000--$719,999.99 $15,615; $720,000-- $13,880; $730,000-- $12,145; $740,000-- $10,410; $750,000-- $8,675;
+--   $760,000-- $6,940; $770,000-- $5,205; $780,000-- $3,470; $790,000--$799,999.99 $1,735; $800,000 or more nil.
+DECLARE `Schedule 4A row` HAS
+    `from`              IS A NUMBER
+    `concession amount` IS A NUMBER
+
+`Schedule 4A` MEANS
+    LIST `Schedule 4A row` OF 800000, 0
+         `Schedule 4A row` OF 790000, 1735
+         `Schedule 4A row` OF 780000, 3470
+         `Schedule 4A row` OF 770000, 5205
+         `Schedule 4A row` OF 760000, 6940
+         `Schedule 4A row` OF 750000, 8675
+         `Schedule 4A row` OF 740000, 10410
+         `Schedule 4A row` OF 730000, 12145
+         `Schedule 4A row` OF 720000, 13880
+         `Schedule 4A row` OF 710000, 15615
+
+`the full Schedule 4A concession` MEANS 17350
+
+GIVEN `rows` IS A LIST OF `Schedule 4A row`
+      `the dutiable value of the residential land` IS A NUMBER
+      `the s 91 duty` IS A NUMBER
+GIVETH A NUMBER
+`the Schedule 4A amount from` `rows` `for` `the dutiable value of the residential land` `where the s 91 duty is` `the s 91 duty` MEANS
+    CONSIDER `rows`
+    WHEN EMPTY THEN `the smaller of` `the full Schedule 4A concession` `and` `the s 91 duty`
+    WHEN `row` FOLLOWED BY `rest` THEN
+        IF `the dutiable value of the residential land` AT LEAST `row`'s `from`
+        THEN `row`'s `concession amount`
+        ELSE `the Schedule 4A amount from` `rest` `for` `the dutiable value of the residential land` `where the s 91 duty is` `the s 91 duty`
+
+GIVEN `the dutiable value of the residential land` IS A NUMBER
+      `the s 91 duty` IS A NUMBER
+GIVETH A NUMBER
+`the Schedule 4A concession amount for` `the dutiable value of the residential land` `where the s 91 duty is` `the s 91 duty` MEANS
+    `the Schedule 4A amount from` `Schedule 4A` `for` `the dutiable value of the residential land` `where the s 91 duty is` `the s 91 duty`
+
+§§ `The transfer duty on the purchase`
+
+DECLARE `Why not covered` IS ONE OF
+    `a buyer is a trustee or not an individual: the trust concessions and trust rules are not encoded`
+    `both buyers qualify: ask the question for all the buyers, or, for a home buyer with a first home buyer, s 93(6), which is not encoded`
+    `the home is the first home and new home of the buyer who qualifies: s 93A is not encoded`
+    `vacant land with two buyers of whom only one qualifies: s 93B is not encoded`
+    `a specified foreign retiree: the s 246 exemption from AFAD is not encoded`
+
+DECLARE `Duty answer` IS ONE OF
+    `the duty, in dollars, is` HAS `dollars` IS A NUMBER
+    `not covered` HAS `because` IS A `Why not covered`
+
+-- s 24(2) and Schedule 3 at the general rate; s 91(2); s 92(2): "the amount of transfer duty worked out under section 91
+-- less the concession amount stated in schedule 4A"; s 92A(3) and s 92B(3): transfer duty on the dutiable value of the
+-- transaction less "the amount worked out by applying the relevant rate to the dutiable value of the residential land"
+-- (or residential vacant land).
+GIVEN `p` IS A `Home purchase`
+GIVETH A NUMBER
+`the transfer duty on` `p` MEANS
+    CONSIDER `the home concession for` `p`
+    WHEN `the home concession (s 91)` THEN `the s 91 duty`
+    WHEN `the first home concession (s 92)` THEN `the s 91 duty` MINUS `the Schedule 4A concession amount for` `L` `where the s 91 duty is` `the s 91 duty`
+    WHEN `the first home and new home concession (s 92A)` THEN `the general rate applied to` `T` MINUS `the general rate applied to` `L`
+    WHEN `the first home vacant land concession (s 92B)` THEN `the general rate applied to` `T` MINUS `the general rate applied to` `L`
+    OTHERWISE `the general rate applied to` `T`
+    WHERE
+        `T` MEANS `the dutiable value of` `p`
+        `L` MEANS `the dutiable value of the land in` `p`
+        `the s 91 duty` MEANS `the s 91 duty on` `T` `with residential land of` `L`
+
+GIVEN `p` IS A `Home purchase`
+GIVETH A `Duty answer`
+`the transfer duty answer for` `p` MEANS
+    IF `p`'s `the transferees are individuals and not trustees`
+    THEN `the duty, in dollars, is` (`the transfer duty on` `p`)
+    ELSE `not covered` `a buyer is a trustee or not an individual: the trust concessions and trust rules are not encoded`
+
+-- What the concession saves: the duty at the general rate less the duty assessed with it.
+GIVEN `p` IS A `Home purchase`
+GIVETH A NUMBER
+`the saving from the home concession for` `p` MEANS
+    `the transfer duty at the general rate on` `p` MINUS `the transfer duty on` `p`
+
+DECLARE `Saving answer` IS ONE OF
+    `the saving, in dollars, is` HAS `dollars` IS A NUMBER
+    `no saving is worked out` HAS `because` IS A `Why not covered`
+
+GIVEN `p` IS A `Home purchase`
+GIVETH A `Saving answer`
+`the saving answer for` `p` MEANS
+    IF `p`'s `the transferees are individuals and not trustees`
+    THEN `the saving, in dollars, is` (`the saving from the home concession for` `p`)
+    ELSE `no saving is worked out` `a buyer is a trustee or not an individual: the trust concessions and trust rules are not encoded`
+
+§§ `s 93 -- two buyers, of whom only one has it as a home or first home (s 93(1)(c)(ii) and (7))`
+
+-- s 93(1): residential land; "(b) there is more than 1 transferee"; "(c) the residence is-- ... (ii) the home, or the first
+-- home but not a new home, of 1 or more of the transferees ... (each also relevant persons) but not all the transferees";
+-- "(d) the relevant persons are individuals". s 93(3A): s 93 does not apply if the residence is "the first home and new
+-- home of 1 or more of the transferees" (that is s 93A). s 93(4): the residence may be treated as a relevant person's home
+-- only if the person is a specified resident, and as their first home only if they are also at least 18.
+-- ONE CASE here is two transferees, one of whom is the relevant person; the `Home purchase` carries the relevant
+-- person's facts. Every other s 93 case (both relevant, more than one residence, a part interest) is not encoded.
+DECLARE `Two-buyer purchase` HAS
+    `the purchase, with the facts of the buyer who will live there` IS A `Home purchase`
+    `that buyer's interest`                                          IS A NUMBER
+    `the other buyer will also have it as a home and is a specified resident` IS A BOOLEAN
+
+-- s 93(8)(a): "the concessional duty is the transfer duty that-- (i) if section 91 were to apply to the dutiable
+-- transaction--would be equal to the amount worked out under section 91(3)(a) or the amount stated in section 91(5)(a);
+-- or (ii) if section 92 were to apply ...--would be equal to [that amount] less the amount of the deduction under section
+-- 92(2)". For a first home the result is negative whenever the Schedule 4A amount is more than $3,500; it is not floored
+-- at nil (see NOTES.md).
+GIVEN `p` IS A `Home purchase`
+GIVETH A NUMBER
+`the s 93 concessional duty for` `p` MEANS
+    IF `s 92 applies to` `p`
+    THEN `the base amount` MINUS `the Schedule 4A concession amount for` `L` `where the s 91 duty is` (`the s 91 duty on` `T` `with residential land of` `L`)
+    ELSE `the base amount`
+    WHERE
+        `T` MEANS `the dutiable value of` `p`
+        `L` MEANS `the dutiable value of the land in` `p`
+        `the base amount` MEANS
+            IF `L` AT MOST `the s 91 threshold`
+            THEN `the s 91(3)(a) amount for` `L`
+            ELSE `the s 91(5)(a) amount`
+
+-- s 93(7): "the total of-- (a) for each relevant person, the amount worked out by applying the person's interest to the
+-- concessional duty; and (b) the amount worked out by deducting, from transfer duty on the dutiable value of the
+-- transaction, the amount (also the deduction amount) worked out by applying the relevant rate to the lesser of the
+-- following-- (i) the total of the value of each relevant person's interest; (ii) the total of the relevant persons'
+-- interests multiplied by $350,000." (8)(b): the interest is the person's share over all the transferees' shares;
+-- (8)(c): the value of the interest is the interest applied to the dutiable value of the residential land.
+GIVEN `p` IS A `Home purchase`
+      `i` IS A NUMBER
+GIVETH A NUMBER
+`the s 93(7) duty on` `p` `for an interest of` `i` MEANS
+    (`i` TIMES `the s 93 concessional duty for` `p`) PLUS (`the general rate applied to` `T` MINUS `the general rate applied to` `the deduction base`)
+    WHERE
+        `T` MEANS `the dutiable value of` `p`
+        `the deduction base` MEANS `the smaller of` (`i` TIMES `the dutiable value of the land in` `p`) `and` (`i` TIMES `the s 91 threshold`)
+
+GIVEN `t` IS A `Two-buyer purchase`
+GIVETH A `Duty answer`
+`the s 93 answer for` `t` MEANS
+    IF NOT (`p`'s `the transferees are individuals and not trustees`)
+    THEN `not covered` `a buyer is a trustee or not an individual: the trust concessions and trust rules are not encoded`
+    ELSE IF `p`'s `what is bought` EQUALS `vacant land`
+         THEN IF     `the residence to be built will be the first home of the transferees in` `p`
+                 AND `p`'s `the transferees are at least 18 on the day liability arises`
+                 AND `is a specified resident` (`p`'s `residency of the transferees`)
+              THEN `not covered` `vacant land with two buyers of whom only one qualifies: s 93B is not encoded`
+              ELSE `the duty, in dollars, is` (`the transfer duty at the general rate on` `p`)
+         ELSE IF `t`'s `the other buyer will also have it as a home and is a specified resident`
+              THEN `not covered` `both buyers qualify: ask the question for all the buyers, or, for a home buyer with a first home buyer, s 93(6), which is not encoded`
+              ELSE IF NOT (`s 91 applies to` `p`)
+                   THEN `the duty, in dollars, is` (`the transfer duty at the general rate on` `p`)
+                   ELSE IF     `p`'s `the residence is a new home`
+                           AND `the residence will be the first home of the transferees in` `p`
+                           AND `p`'s `the transferees are at least 18 on the day liability arises`
+                        THEN `not covered` `the home is the first home and new home of the buyer who qualifies: s 93A is not encoded`
+                        ELSE `the duty, in dollars, is` (`the s 93(7) duty on` `p` `for an interest of` (`t`'s `that buyer's interest`))
+    WHERE
+        `p` MEANS `t`'s `the purchase, with the facts of the buyer who will live there`
+
+§§ `Duties Regulation 2023 s 5(1) and Schedule 2 Part 1 -- concessions for ELN transfers`
+
+-- Regulation s 5(1): "Each of the concessions for transfer duty mentioned in a provision of the Act stated in schedule 2,
+-- part 1 is a concession for transfer duty for an ELN transfer or ELN lodgement." Schedule 2 Part 1 lists ss 91, 92,
+-- 92A, 92B, 105 and 105A. Act s 156D: a relevant transfer agreement, an ELN transfer and an ELN lodgement must not be
+-- "eligible for a concession ... other than a concession ... prescribed by regulation".
+GIVEN `the concession` IS A `Home concession`
+GIVETH A BOOLEAN
+DECIDE `the concession is prescribed for ELN transfers and ELN lodgements` `the concession` IF
+    CONSIDER `the concession`
+    WHEN `the home concession (s 91)` THEN TRUE
+    WHEN `the first home concession (s 92)` THEN TRUE
+    WHEN `the first home and new home concession (s 92A)` THEN TRUE
+    WHEN `the first home vacant land concession (s 92B)` THEN TRUE
+    OTHERWISE FALSE
+
+§§ `ss 16, 17, 19(3), 20 and Schedule 2 -- liability and lodging`
+
+-- s 16 and Schedule 2: liability for an "Agreement for transfer of dutiable property" arises "When the agreement is
+-- made"; for a "Transfer of dutiable property", at the earlier of the transfer, the locking of an ELN workspace holding a
+-- signed ELN transaction document, or the signing of an instrument that effects the transfer.
+-- s 17(2): transfer duty on a dutiable transaction other than a statutory one "must be paid by the parties to the
+-- transaction". s 19(3): "The parties liable to pay transfer duty ... must, within 30 days after the liability arises,
+-- lodge-- (a) the instrument or ELN transaction document that effects or evidences the transaction or transfer duty
+-- statement for the transaction; and (b) an approved form for the transaction." s 20: lodging "by 1 of the parties to the
+-- dutiable transaction relieves the other parties".
+-- Clock: days from the day the liability arises.
+DECLARE `Duty party` IS ONE OF
+    `the transferee`
+    `another party to the transaction`
+
+DECLARE `Duty act` IS ONE OF
+    `lodge the instrument and an approved form for the transaction`
+    `give the commissioner notice in the approved form and have the instruments lodged for a reassessment`
+
+`the days to lodge` MEANS 30
+
+GIVETH A DEONTIC `Duty party` `Duty act`
+DECIDE `ss 19(3), 20 -- the parties must lodge within 30 days after liability arises, and one party's lodging relieves the others` IS
+        (PARTY  `the transferee`
+         MUST   `lodge the instrument and an approved form for the transaction`
+         WITHIN `the days to lodge`
+         LEST   BREACH BY `the transferee` BECAUSE "s 19(3): the parties liable to pay transfer duty must lodge the instrument and an approved form within 30 days after the liability arises (failure is an offence under the Administration Act s 121, up to 100 penalty units, and lets the commissioner make a default assessment, s 13(1)(a)(ii), with penalty tax under s 58)")
+    ROR
+        (PARTY  `another party to the transaction`
+         MUST   `lodge the instrument and an approved form for the transaction`
+         WITHIN `the days to lodge`
+         LEST   BREACH BY `another party to the transaction` BECAUSE "s 19(3): the parties liable to pay transfer duty must lodge the instrument and an approved form within 30 days after the liability arises")
+
+GIVEN `the day liability arises` IS A DATE
+GIVETH A DATE
+`the last day to lodge, for a liability arising on` `the day liability arises` MEANS
+    `the day that is` `the days to lodge` `days after` `the day liability arises`
+
+§§ `ss 153, 154 -- reassessment if the home is disposed of, or not occupied in time`
+
+-- s 153(1): duty assessed on the basis of a concession under s 91, 92, 92A, 92B, 93, 93A or 93B; "(b) a transferee ...,
+-- within the year after the transferee's ... occupation date for the residence, disposes of the land, other than because
+-- of an intervening event, by-- (i) transferring part or all of it; or (ii) leasing or otherwise granting exclusive
+-- possession of part or all of it to another person". Not a disposal: (1A) a transfer of part to the transferee's spouse
+-- exempt under s 151; (1C) "entering into a residential lease of part, but not all, of the land". (2): "The commissioner
+-- must make a reassessment to impose further transfer duty ... worked out using the following formula-- [THE FORMULA IS
+-- NOT IN THE DEPOSITED TEXT] where-- C means the difference between the transfer duty that would have been imposed on
+-- the dutiable transaction if the concession had not applied to the transferee ... and transfer duty assessed on the
+-- dutiable transaction. OD means the number of days between the transferee's ... occupation date for the residence and
+-- the date of disposal of the land, both days inclusive. TD means the further transfer duty payable on the reassessment."
+-- s 154(1)(b): "(i) a transferee ... disposes of the land before the occupation date; (ii) a transferee's ... occupation
+-- date ... is not within-- (A) if the dutiable transaction related to residential land--1 year after the transfer date
+-- for the land; or (B) if ... vacant land--2 years after", other than because of an intervening event. (2): disposing
+-- includes transferring, leasing or granting exclusive possession of part or all; (2A): not a transfer of part to a
+-- spouse exempt under s 151. (3): "The commissioner must make a reassessment to impose transfer duty on the dutiable
+-- transaction as if the concession had never applied to the transferee". Schedule 6: "intervening event means-- (a) a
+-- natural disaster, including, for example, fire and flood; or (b) the death or incapacity of a person to whom section
+-- 153, 154 ... applies; or (c) another event prescribed under a regulation" (none is prescribed in the deposited Duties
+-- Regulation 2023). NOT ENCODED: s 154(2)(c) and (2AA) (land bought subject to an existing lease or with the seller still
+-- in possession), retirement villages (ss 153(1B), 154(2B)), s 154A, and the C for a s 93 case with more than one
+-- relevant person.
+DECLARE `Dealing` IS ONE OF
+    `no dealing with the land`
+    `a transfer of part or all of the land`
+    `a lease or other grant of exclusive possession of all of the land, or of part of it other than for residential purposes`
+    `a residential lease of part, but not all, of the land`
+    `a transfer of part of the land to the transferee's spouse that is exempt under s 151`
+
+DECLARE `Concession follow-up` HAS
+    `the concession assessed`                  IS A `Home concession`
+    `the dutiable value of the transaction`    IS A NUMBER
+    `the transfer duty assessed`               IS A NUMBER
+    `the land is vacant land`                  IS A BOOLEAN
+    `the transferee's transfer date`           IS A DATE
+    `the transferee has occupied the residence` IS A BOOLEAN
+    `the transferee's occupation date`         IS A DATE
+    `the dealing`                              IS A `Dealing`
+    `the date of the dealing`                  IS A DATE
+    `it was because of an intervening event`   IS A BOOLEAN
+    `the day asked about`                      IS A DATE
+
+DECLARE `Clawback answer` IS ONE OF
+    `nothing happens: the duty was not assessed with a home concession`
+    `nothing happens: the dealing and the occupation meet ss 153 and 154`
+    `nothing happens: what happened was because of an intervening event`
+    `nothing happens yet: the residence may still be occupied up to and including` HAS `the last day to occupy` IS A DATE
+    `the commissioner must reassess as if the concession had never applied (s 154): further duty, in dollars` HAS `further duty` IS A NUMBER
+    `the commissioner must reassess for further duty TD by the s 153(2) formula from C and OD, which is not in the deposited text` HAS `C` IS A NUMBER
+                                                                                                                                       `OD` IS A NUMBER
+
+GIVEN `f` IS A `Concession follow-up`
+GIVETH A DATE
+`the last day of the occupancy requirement for` `f` MEANS
+    `the day that is` (IF `f`'s `the land is vacant land` THEN 2 ELSE 1) `years after` (`f`'s `the transferee's transfer date`)
+
+-- s 153(2), C: the transfer duty "if the concession had not applied" (the general rate, for the cases encoded) less the
+-- duty assessed.
+GIVEN `f` IS A `Concession follow-up`
+GIVETH A NUMBER
+`C for` `f` MEANS
+    `the general rate applied to` (`f`'s `the dutiable value of the transaction`) MINUS `f`'s `the transfer duty assessed`
+
+GIVEN `f` IS A `Concession follow-up`
+GIVETH A BOOLEAN
+DECIDE `there is a dealing in` `f` IF
+    NOT (`f`'s `the dealing` EQUALS `no dealing with the land`)
+
+-- s 154(1)(b)(i): a disposal before the occupation date (never occupied counts as before it).
+GIVEN `f` IS A `Concession follow-up`
+GIVETH A BOOLEAN
+DECIDE `the dealing is before the occupation date in` `f` IF
+        `there is a dealing in` `f`
+    AND (    (NOT (`f`'s `the transferee has occupied the residence`))
+         OR  `is before` (`f`'s `the date of the dealing`) (`f`'s `the transferee's occupation date`))
+
+-- s 154(1)(b)(ii) and the occupancy requirement: occupied late, or not occupied and the last day has passed.
+GIVEN `f` IS A `Concession follow-up`
+GIVETH A BOOLEAN
+DECIDE `the occupancy requirement has failed in` `f` IF
+    IF `f`'s `the transferee has occupied the residence`
+    THEN `is before` (`the last day of the occupancy requirement for` `f`) (`f`'s `the transferee's occupation date`)
+    ELSE `is before` (`the last day of the occupancy requirement for` `f`) (`f`'s `the day asked about`)
+
+-- s 153(1)(b): within the year after the occupation date.
+GIVEN `f` IS A `Concession follow-up`
+GIVETH A BOOLEAN
+DECIDE `the dealing is within the year after the occupation date in` `f` IF
+        `there is a dealing in` `f`
+    AND `f`'s `the transferee has occupied the residence`
+    AND (NOT (`is before` (`f`'s `the date of the dealing`) (`f`'s `the transferee's occupation date`)))
+    AND `is on or before` (`f`'s `the date of the dealing`) (`the day that is` 1 `years after` (`f`'s `the transferee's occupation date`))
+
+GIVEN `f` IS A `Concession follow-up`
+GIVETH A `Clawback answer`
+`the reassessment for` `f` MEANS
+    IF `f`'s `the concession assessed` EQUALS `no home concession`
+    THEN `nothing happens: the duty was not assessed with a home concession`
+    ELSE IF `the dealing is before the occupation date in` `f`
+         THEN IF `f`'s `it was because of an intervening event`
+              THEN `nothing happens: what happened was because of an intervening event`
+              ELSE IF `f`'s `the dealing` EQUALS `a transfer of part of the land to the transferee's spouse that is exempt under s 151`
+                   THEN `nothing happens: the dealing and the occupation meet ss 153 and 154`
+                   ELSE `the commissioner must reassess as if the concession had never applied (s 154): further duty, in dollars` (`C for` `f`)
+         ELSE IF `the occupancy requirement has failed in` `f`
+              THEN IF `f`'s `it was because of an intervening event`
+                   THEN `nothing happens: what happened was because of an intervening event`
+                   ELSE `the commissioner must reassess as if the concession had never applied (s 154): further duty, in dollars` (`C for` `f`)
+              ELSE IF NOT (`f`'s `the transferee has occupied the residence`)
+                   THEN `nothing happens yet: the residence may still be occupied up to and including` (`the last day of the occupancy requirement for` `f`)
+                   ELSE IF `the dealing is within the year after the occupation date in` `f`
+                        THEN IF `f`'s `it was because of an intervening event`
+                             THEN `nothing happens: what happened was because of an intervening event`
+                             ELSE IF     `f`'s `the dealing` EQUALS `a transfer of part of the land to the transferee's spouse that is exempt under s 151`
+                                     OR  `f`'s `the dealing` EQUALS `a residential lease of part, but not all, of the land`
+                                  THEN `nothing happens: the dealing and the occupation meet ss 153 and 154`
+                                  ELSE `the commissioner must reassess for further duty TD by the s 153(2) formula from C and OD, which is not in the deposited text` (`C for` `f`) (`the number of days from` (`f`'s `the transferee's occupation date`) `to` (`f`'s `the date of the dealing`) `both inclusive`)
+                        ELSE `nothing happens: the dealing and the occupation meet ss 153 and 154`
+
+§§ `s 155 -- the notice the transferee must give`
+
+-- s 155(2): "Within 28 days after the notifiable event happens, the notifier ... must-- (a) give notice in the approved
+-- form to the commissioner; and (b) ensure the instruments required for the assessment of duty for the transaction are
+-- lodged for a reassessment". (3): "notifiable event ... means-- (a) the transfer, lease or otherwise granting of
+-- exclusive possession of all or part of the land before, or within 1 year after, the transferee's ... occupation date
+-- ...; ... (c) failure to comply with the occupancy requirement"; "notifier ... means ... each transferee". The note:
+-- "Failure to give the notice is an offence under the Administration Act, section 120" (up to 100 penalty units). The
+-- notice has no exception for an intervening event, a transfer to a spouse or a residential lease of part.
+-- READING: a failure to meet the occupancy requirement happens on the day after its last day.
+-- Clock: days from the notifiable event.
+`the days to notify` MEANS 28
+
+GIVETH A DEONTIC `Duty party` `Duty act`
+DECIDE `s 155(2) -- within 28 days after a notifiable event, the transferee must notify the commissioner and have the instruments lodged` IS
+    PARTY  `the transferee`
+    MUST   `give the commissioner notice in the approved form and have the instruments lodged for a reassessment`
+    WITHIN `the days to notify`
+    LEST   BREACH BY `the transferee` BECAUSE "s 155(2): within 28 days after a notifiable event the transferee must notify the commissioner in the approved form and ensure the instruments are lodged for reassessment (failure is an offence under the Administration Act s 120, up to 100 penalty units)"
+
+DECLARE `Notice answer` IS ONE OF
+    `no notice is required: the duty was not assessed with a home concession`
+    `no notice is required: no notifiable event has happened`
+    `no notice is required yet: if the residence is not occupied by this day, notice is due 28 days after the next day` HAS `the last day to occupy` IS A DATE
+    `notice must be given to the commissioner, and the instruments lodged, by` HAS `the last day to notify` IS A DATE
+
+GIVEN `f` IS A `Concession follow-up`
+GIVETH A BOOLEAN
+DECIDE `the dealing is a notifiable event in` `f` IF
+        `there is a dealing in` `f`
+    AND (    `the dealing is before the occupation date in` `f`
+         OR  `is on or before` (`f`'s `the date of the dealing`) (`the day that is` 1 `years after` (`f`'s `the transferee's occupation date`)))
+
+GIVEN `f` IS A `Concession follow-up`
+GIVETH A `Notice answer`
+`the notice due for` `f` MEANS
+    IF `f`'s `the concession assessed` EQUALS `no home concession`
+    THEN `no notice is required: the duty was not assessed with a home concession`
+    ELSE IF `the dealing is a notifiable event in` `f`
+         THEN IF `the occupancy requirement has failed in` `f`
+              THEN `notice must be given to the commissioner, and the instruments lodged, by` (`the earlier date of` `the deadline for the dealing` `and` `the deadline for the failure`)
+              ELSE `notice must be given to the commissioner, and the instruments lodged, by` `the deadline for the dealing`
+         ELSE IF `the occupancy requirement has failed in` `f`
+              THEN `notice must be given to the commissioner, and the instruments lodged, by` `the deadline for the failure`
+              ELSE IF NOT (`f`'s `the transferee has occupied the residence`)
+                   THEN `no notice is required yet: if the residence is not occupied by this day, notice is due 28 days after the next day` (`the last day of the occupancy requirement for` `f`)
+                   ELSE `no notice is required: no notifiable event has happened`
+    WHERE
+        `the deadline for the dealing` MEANS `the day that is` `the days to notify` `days after` (`f`'s `the date of the dealing`)
+        `the deadline for the failure` MEANS `the day that is` `the days to notify` `days after` (`the day that is` 1 `days after` (`the last day of the occupancy requirement for` `f`))
+
+§§ `Chapter 4 -- additional foreign acquirer duty (AFAD)`
+
+-- s 231: Chapter 4 "imposes an additional amount of transfer duty"; (5) it "is added to the duty imposed on the
+-- transaction under chapter 2". s 240(1): AFAD is imposed if, when liability arises, "(a) the property condition under
+-- section 241 applies [for a transfer of land: "the dutiable property is AFAD residential land"]; and (b) an acquirer
+-- under the transaction is a foreign person". s 233(1)(a): for a transfer or agreement for transfer, an acquirer is "a
+-- transferee". s 234: a foreign individual is a foreign person. s 232: AFAD residential land is land in Queensland
+-- solely or primarily used, or to be used, for residential purposes with a single-family dwelling on it or to be built
+-- (a FACT). s 243: "chapter 2, part 9 ... [does] not apply to the calculation or payment of AFAD". s 244(2)(a): "AFAD is
+-- imposed at the rate of 8% on ... the dutiable value of the transaction to the extent of the foreign acquirer's
+-- interest in the AFAD residential land". s 242: the foreign acquirer's interest is their share over all the
+-- acquirers' shares. NOT ENCODED: foreign corporations and trusts (ss 236, 237), agents (s 240(2)), the s 246
+-- exemption for specified foreign retirees (answered `not covered`), and the Chapter 4 Part 5 reassessments.
+`the AFAD rate` MEANS 8%
+
+GIVEN `the dutiable value of the transaction` IS A NUMBER
+      `the foreign acquirer's interest`        IS A NUMBER
+GIVETH A NUMBER
+`the AFAD at 8% on` `the dutiable value of the transaction` `to the extent of` `the foreign acquirer's interest` MEANS
+    `the AFAD rate` TIMES `the dutiable value of the transaction` TIMES `the foreign acquirer's interest`
+
+GIVEN `the dutiable value of the transaction`  IS A NUMBER
+      `the acquirer's interest`                IS A NUMBER
+      `the acquirer's residency`               IS A `Residency`
+      `the land is AFAD residential land`      IS A BOOLEAN
+GIVETH A `Duty answer`
+`the AFAD answer for` `the dutiable value of the transaction` `the acquirer's interest` `the acquirer's residency` `the land is AFAD residential land` MEANS
+    IF NOT (`the land is AFAD residential land` AND `is a foreign individual` `the acquirer's residency`)
+    THEN `the duty, in dollars, is` 0
+    ELSE IF `is a specified foreign retiree` `the acquirer's residency`
+         THEN `not covered` `a specified foreign retiree: the s 246 exemption from AFAD is not encoded`
+         ELSE `the duty, in dollars, is` (`the AFAD at 8% on` `the dutiable value of the transaction` `to the extent of` `the acquirer's interest`)
