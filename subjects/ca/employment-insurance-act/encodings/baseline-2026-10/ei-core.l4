@@ -1,0 +1,373 @@
+IMPORT prelude
+
+-- Employment Insurance Act (S.C. 1996, c. 23), with the Employment Insurance Regulations (SOR/96-332).
+-- SEAT-NEUTRAL CORE. Written in the Act's own actors and terms: "the insured person", "the claimant", "the employer",
+-- "the Commission". The claimant's questions are in ei-seat.l4, which IMPORTs this module and restates no rule.
+--
+-- PROVISIONS COVERED. s 6(1) (major attachment), s 6(2) (rounding), s 7(2) and 7.1(1) (qualifying hours by regional
+-- rate, increased for violations), s 12(2) and Schedule I (weeks of regular benefits), s 13 (the waiting period),
+-- s 14(1)-(2), (4) and s 17 (rate of weekly benefits: 55% of weekly insurable earnings, the best-weeks divisor, the
+-- maximum), s 29(c) and s 30(1)-(2), (5)-(6) (disqualification for misconduct or leaving without just cause), s 67 with
+-- s 82(2) (the employee's premium), Part VII ss 144-145 (benefit repayment). Duties: s 50(4) with Regulations s 26
+-- (claiming each week), s 145(4) with s 146 (repayment and its return), s 44 (returning an overpayment), s 112
+-- (reconsideration), as regulative rules.
+--
+-- FIGURES. The maximum yearly insurable earnings (s 4, indexed to Average Weekly Earnings), the premium rate (s 66, set
+-- each year by the Commission) and the regional rate of unemployment (Regulations s 17, from Statistics Canada) are
+-- INPUTS; no publication of them is deposited. Schedule I and the tables in ss 7, 7.1 and 14 are written in.
+--
+-- Edition: Justice Laws consolidation current to 2026-09-30 (Act last amended 2026-06-18; Regulations last amended
+-- 2026-04-01), deposited at ../../registers/source-bundle/S.C.-1996-c.-23.txt and SOR-96-332.txt. Unofficial
+-- reproduction; not an official version. Contains information licensed under the Open Government Licence - Canada.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Employment Insurance Act -- seat-neutral core`
+
+§§ `Arithmetic`
+
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`not below zero` `x` MEANS IF `x` LESS THAN 0 THEN 0 ELSE `x`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` `a` `b` MEANS IF `a` LESS THAN `b` THEN `a` ELSE `b`
+
+-- s 6(2): "A reference in this Part to an amount equal to a percentage or fraction of earnings or benefits in a period
+-- shall be rounded to the nearest multiple of one dollar or, if the amount is equidistant from two multiples of one
+-- dollar, to the higher multiple."
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`rounded under s 6(2)` `x` MEANS FLOOR (`x` PLUS 0.5)
+
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`to the cent` `x` MEANS (FLOOR ((`x` TIMES 100) PLUS 0.5)) DIVIDED BY 100
+
+-- The n-th entry of a list (1-based); 0 past the end.
+GIVEN `n` IS A NUMBER, `xs` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`entry` `n` `of` `xs` MEANS
+    CONSIDER `xs`
+    WHEN EMPTY THEN 0
+    WHEN `x` FOLLOWED BY `rest` THEN
+        IF `n` AT MOST 1 THEN `x` ELSE `entry` (`n` MINUS 1) `of` `rest`
+
+§§ `The regional rate of unemployment`
+
+-- The tables in ss 7(2), 7.1(1), 14(2) and Schedule I are in bands of the regional rate of unemployment: "6% and
+-- under", "more than 6% but not more than 7%", ... The band number here is 0 for 6% and under, 1 for more than 6% but
+-- not more than 7%, and so on; Schedule I goes to 11 ("More than 16%"), the other tables stop at 8 ("more than 13%").
+-- The rate is a fact (Regulations s 17: the three-month average Statistics Canada produces for the claimant's region).
+GIVEN `regional rate in percent` IS A NUMBER
+GIVETH A NUMBER
+`the Schedule I band` `regional rate in percent` MEANS
+    IF `regional rate in percent` AT MOST 6
+    THEN 0
+    ELSE `the lesser of` 11 (CEILING (`regional rate in percent` MINUS 6))
+
+GIVEN `regional rate in percent` IS A NUMBER
+GIVETH A NUMBER
+`the s 7 band` `regional rate in percent` MEANS
+    `the lesser of` 8 (`the Schedule I band` `regional rate in percent`)
+
+§§ `ss 6, 7, 7.1 -- qualifying for benefits`
+
+-- s 7(2) TABLE: 6% and under 700; ... more than 13% 420 (35 hours a band).
+`the s 7(2) hours` MEANS LIST 700, 665, 630, 595, 560, 525, 490, 455, 420
+
+-- s 7.1(1) TABLE, with a violation in the 260 weeks before the initial claim: columns minor, serious, very serious,
+-- subsequent.
+`the s 7.1 hours for a minor violation`        MEANS LIST 875, 831, 788, 744, 700, 656, 613, 569, 525
+`the s 7.1 hours for a serious violation`      MEANS LIST 1050, 998, 945, 893, 840, 788, 735, 683, 630
+`the s 7.1 hours for a very serious violation` MEANS LIST 1225, 1164, 1103, 1041, 980, 919, 858, 796, 735
+`the s 7.1 hours for a subsequent violation`   MEANS LIST 1400, 1330, 1260, 1190, 1120, 1050, 980, 910, 840
+
+-- s 7.1(4)-(5): the kind of violation the person has accumulated (the Commission's notice of violation says which).
+DECLARE `Violation` IS ONE OF
+    `no violation in the 260 weeks before the claim`
+    `a minor violation`
+    `a serious violation`
+    `a very serious violation`
+    `a subsequent violation`
+
+GIVEN `regional rate in percent` IS A NUMBER, `violation` IS A `Violation`
+GIVETH A NUMBER
+`the hours required to qualify` `regional rate in percent` `violation` MEANS
+    LET `n` MEANS (`the s 7 band` `regional rate in percent`) PLUS 1
+    IN CONSIDER `violation`
+       WHEN `no violation in the 260 weeks before the claim` THEN `entry` `n` `of` `the s 7(2) hours`
+       WHEN `a minor violation` THEN `entry` `n` `of` `the s 7.1 hours for a minor violation`
+       WHEN `a serious violation` THEN `entry` `n` `of` `the s 7.1 hours for a serious violation`
+       WHEN `a very serious violation` THEN `entry` `n` `of` `the s 7.1 hours for a very serious violation`
+       WHEN `a subsequent violation` THEN `entry` `n` `of` `the s 7.1 hours for a subsequent violation`
+
+-- s 7(2): "An insured person qualifies if the person (a) has had an interruption of earnings from employment; and (b)
+-- has had during their qualifying period at least the number of hours of insurable employment set out in the following
+-- table". s 8(1): the qualifying period is the 52 weeks before the benefit period (or since the last benefit period
+-- began, if shorter), extended to at most 104 weeks for the s 8(2) reasons: the hours in it are a fact.
+DECLARE `Qualification` IS ONE OF
+    `qualifies (s 7(2))`
+    `does not qualify: no interruption of earnings (s 7(2)(a))`
+    `does not qualify: too few hours of insurable employment` HAS `hours required` IS A NUMBER
+
+GIVEN `had an interruption of earnings` IS A BOOLEAN, `hours in the qualifying period` IS A NUMBER, `regional rate in percent` IS A NUMBER, `violation` IS A `Violation`
+GIVETH A `Qualification`
+`the qualification` `had an interruption of earnings` `hours in the qualifying period` `regional rate in percent` `violation` MEANS
+    LET `required` MEANS `the hours required to qualify` `regional rate in percent` `violation`
+    IN IF NOT (`had an interruption of earnings`)
+       THEN `does not qualify: no interruption of earnings (s 7(2)(a))`
+       ELSE IF `hours in the qualifying period` AT LEAST `required`
+            THEN `qualifies (s 7(2))`
+            ELSE `does not qualify: too few hours of insurable employment` `required`
+
+-- s 6(1): a "major attachment claimant" has 600 or more hours in the qualifying period (relevant to special benefits).
+GIVEN `hours in the qualifying period` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a major attachment claimant` `hours in the qualifying period` IF
+    `hours in the qualifying period` AT LEAST 600
+
+§§ `s 12(2) and Schedule I -- weeks of regular benefits`
+
+-- Schedule I, "Table of Weeks of Benefits", transcribed from the deposited text row by row: the lower bound of the hours
+-- band ("420-454", ..., "1820-") and the twelve entries for the regional rate bands. A blank entry is 0 (those hours do
+-- not qualify at that rate).
+DECLARE `Schedule I row` HAS
+    `from hours`    IS A NUMBER
+    `weeks by band` IS A LIST OF NUMBER
+
+`Schedule I` MEANS
+    LIST
+        (`Schedule I row` 420 (LIST 0, 0, 0, 0, 0, 0, 0, 0, 26, 28, 30, 32)),
+        (`Schedule I row` 455 (LIST 0, 0, 0, 0, 0, 0, 0, 24, 26, 28, 30, 32)),
+        (`Schedule I row` 490 (LIST 0, 0, 0, 0, 0, 0, 23, 25, 27, 29, 31, 33)),
+        (`Schedule I row` 525 (LIST 0, 0, 0, 0, 0, 21, 23, 25, 27, 29, 31, 33)),
+        (`Schedule I row` 560 (LIST 0, 0, 0, 0, 20, 22, 24, 26, 28, 30, 32, 34)),
+        (`Schedule I row` 595 (LIST 0, 0, 0, 18, 20, 22, 24, 26, 28, 30, 32, 34)),
+        (`Schedule I row` 630 (LIST 0, 0, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35)),
+        (`Schedule I row` 665 (LIST 0, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35)),
+        (`Schedule I row` 700 (LIST 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36)),
+        (`Schedule I row` 735 (LIST 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36)),
+        (`Schedule I row` 770 (LIST 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37)),
+        (`Schedule I row` 805 (LIST 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37)),
+        (`Schedule I row` 840 (LIST 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38)),
+        (`Schedule I row` 875 (LIST 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38)),
+        (`Schedule I row` 910 (LIST 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39)),
+        (`Schedule I row` 945 (LIST 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39)),
+        (`Schedule I row` 980 (LIST 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40)),
+        (`Schedule I row` 1015 (LIST 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40)),
+        (`Schedule I row` 1050 (LIST 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41)),
+        (`Schedule I row` 1085 (LIST 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41)),
+        (`Schedule I row` 1120 (LIST 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42)),
+        (`Schedule I row` 1155 (LIST 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42)),
+        (`Schedule I row` 1190 (LIST 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43)),
+        (`Schedule I row` 1225 (LIST 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43)),
+        (`Schedule I row` 1260 (LIST 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44)),
+        (`Schedule I row` 1295 (LIST 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44)),
+        (`Schedule I row` 1330 (LIST 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45)),
+        (`Schedule I row` 1365 (LIST 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45)),
+        (`Schedule I row` 1400 (LIST 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 45)),
+        (`Schedule I row` 1435 (LIST 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 45)),
+        (`Schedule I row` 1470 (LIST 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 45, 45)),
+        (`Schedule I row` 1505 (LIST 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 45, 45)),
+        (`Schedule I row` 1540 (LIST 28, 30, 32, 34, 36, 38, 40, 42, 44, 45, 45, 45)),
+        (`Schedule I row` 1575 (LIST 29, 31, 33, 35, 37, 39, 41, 43, 45, 45, 45, 45)),
+        (`Schedule I row` 1610 (LIST 30, 32, 34, 36, 38, 40, 42, 44, 45, 45, 45, 45)),
+        (`Schedule I row` 1645 (LIST 31, 33, 35, 37, 39, 41, 43, 45, 45, 45, 45, 45)),
+        (`Schedule I row` 1680 (LIST 32, 34, 36, 38, 40, 42, 44, 45, 45, 45, 45, 45)),
+        (`Schedule I row` 1715 (LIST 33, 35, 37, 39, 41, 43, 45, 45, 45, 45, 45, 45)),
+        (`Schedule I row` 1750 (LIST 34, 36, 38, 40, 42, 44, 45, 45, 45, 45, 45, 45)),
+        (`Schedule I row` 1785 (LIST 35, 37, 39, 41, 43, 45, 45, 45, 45, 45, 45, 45)),
+        (`Schedule I row` 1820 (LIST 36, 38, 40, 42, 44, 45, 45, 45, 45, 45, 45, 45))
+
+-- The row for a number of hours: the last row whose lower bound is at most the hours.
+GIVEN `hours` IS A NUMBER
+      `rows`  IS A LIST OF `Schedule I row`
+      `found` IS A LIST OF NUMBER
+GIVETH A LIST OF NUMBER
+`the row for` `hours` `in` `rows` `so far` `found` MEANS
+    CONSIDER `rows`
+    WHEN EMPTY THEN `found`
+    WHEN `r` FOLLOWED BY `rest` THEN
+        IF `r`'s `from hours` AT MOST `hours`
+        THEN `the row for` `hours` `in` `rest` `so far` (`r`'s `weeks by band`)
+        ELSE `found`
+
+-- s 12(2): "The maximum number of weeks for which benefits may be paid in a benefit period because of a reason other
+-- than those mentioned in subsection (3) shall be determined in accordance with the table in Schedule I by reference to
+-- the regional rate of unemployment that applies to the claimant and the number of hours of insurable employment of the
+-- claimant in their qualifying period." The s 12(2.3) seasonal-worker table (Schedule V) is not encoded.
+GIVEN `hours in the qualifying period` IS A NUMBER, `regional rate in percent` IS A NUMBER
+GIVETH A NUMBER
+`the weeks of regular benefits` `hours in the qualifying period` `regional rate in percent` MEANS
+    `entry` ((`the Schedule I band` `regional rate in percent`) PLUS 1) `of` (`the row for` `hours in the qualifying period` `in` `Schedule I` `so far` EMPTY)
+
+-- s 13: "A claimant is not entitled to be paid benefits in a benefit period until, after the beginning of the benefit
+-- period, the claimant has served a waiting period of one week of unemployment for which benefits would otherwise be
+-- payable." The waiting week is not one of the Schedule I weeks.
+`the waiting period in weeks` MEANS 1
+
+§§ `s 14 and s 17 -- the rate of weekly benefits`
+
+-- s 14(2) TABLE: the number of weeks (the "best weeks") by regional rate: not more than 6% 22, ..., more than 13% 14.
+`the s 14(2) weeks` MEANS LIST 22, 21, 20, 19, 18, 17, 16, 15, 14
+
+GIVEN `regional rate in percent` IS A NUMBER
+GIVETH A NUMBER
+`the number of best weeks` `regional rate in percent` MEANS
+    `entry` ((`the s 7 band` `regional rate in percent`) PLUS 1) `of` `the s 14(2) weeks`
+
+-- s 14(2): weekly insurable earnings are "their insurable earnings in the calculation period divided by the number of
+-- weeks determined in accordance with the following table"; s 14(4): the calculation period is that number of weeks
+-- "in the claimant's qualifying period for which he or she received the highest insurable earnings". The total of those
+-- weeks' earnings is a fact (the Record of Employment). Rounded under s 6(2) (READING: a "fraction of earnings").
+GIVEN `insurable earnings in the best weeks` IS A NUMBER, `regional rate in percent` IS A NUMBER
+GIVETH A NUMBER
+`the weekly insurable earnings` `insurable earnings in the best weeks` `regional rate in percent` MEANS
+    `rounded under s 6(2)` (`insurable earnings in the best weeks` DIVIDED BY (`the number of best weeks` `regional rate in percent`))
+
+-- s 17: "The maximum rate of weekly benefits is 55 % of the maximum yearly insurable earnings divided by 52."
+GIVEN `maximum yearly insurable earnings` IS A NUMBER
+GIVETH A NUMBER
+`the maximum rate of weekly benefits` `maximum yearly insurable earnings` MEANS
+    `rounded under s 6(2)` (55% TIMES `maximum yearly insurable earnings` DIVIDED BY 52)
+
+-- s 14(1): "The rate of weekly benefits payable to a claimant is 55% of their weekly insurable earnings", not more than
+-- the s 17 maximum; rounded under s 6(2).
+GIVEN `insurable earnings in the best weeks` IS A NUMBER, `regional rate in percent` IS A NUMBER, `maximum yearly insurable earnings` IS A NUMBER
+GIVETH A NUMBER
+`the rate of weekly benefits` `insurable earnings in the best weeks` `regional rate in percent` `maximum yearly insurable earnings` MEANS
+    `the lesser of`
+        (`rounded under s 6(2)` (55% TIMES (`the weekly insurable earnings` `insurable earnings in the best weeks` `regional rate in percent`)))
+        (`the maximum rate of weekly benefits` `maximum yearly insurable earnings`)
+
+§§ `ss 29-30 -- disqualification for misconduct or leaving without just cause`
+
+-- s 30(1): "A claimant is disqualified from receiving any benefits if the claimant lost any employment because of their
+-- misconduct or voluntarily left any employment without just cause, unless (a) the claimant has, since losing or
+-- leaving the employment, been employed in insurable employment for the number of hours required by section 7 or 7.1".
+-- s 29(c): "just cause ... exists if the claimant had no reasonable alternative to leaving ..., having regard to all the
+-- circumstances, including" harassment, accompanying a spouse or child, discrimination, danger, caring for a child or
+-- family member, assurance of another job, significant changes in wages or duties, excessive overtime, antagonism with
+-- a supervisor, unlawful practices, union discrimination, undue pressure to leave. Misconduct and "no reasonable
+-- alternative" are the Commission's findings (with the benefit of the doubt to the claimant, s 49(2)): asked as facts.
+-- s 29(b): loss of employment for union membership or lawful union activity is not a loss of employment.
+DECLARE `How the job ended` IS ONE OF
+    `laid off, or the job ended through no act of mine`
+    `dismissed or suspended for misconduct`
+    `left voluntarily, with no reasonable alternative to leaving`
+    `left voluntarily, with a reasonable alternative`
+
+DECLARE `Disqualification answer` IS ONE OF
+    `not disqualified`
+    `disqualified for every week of the benefit period after the waiting period (s 30(1)-(2))`
+    `not disqualified: enough insurable hours since then (s 30(1)(a))`
+
+GIVEN `how` IS A `How the job ended`, `insurable hours since then` IS A NUMBER, `hours required to qualify` IS A NUMBER
+GIVETH A `Disqualification answer`
+`the s 30 disqualification` `how` `insurable hours since then` `hours required to qualify` MEANS
+    CONSIDER `how`
+    WHEN `dismissed or suspended for misconduct` THEN
+         IF `insurable hours since then` AT LEAST `hours required to qualify`
+         THEN `not disqualified: enough insurable hours since then (s 30(1)(a))`
+         ELSE `disqualified for every week of the benefit period after the waiting period (s 30(1)-(2))`
+    WHEN `left voluntarily, with a reasonable alternative` THEN
+         IF `insurable hours since then` AT LEAST `hours required to qualify`
+         THEN `not disqualified: enough insurable hours since then (s 30(1)(a))`
+         ELSE `disqualified for every week of the benefit period after the waiting period (s 30(1)-(2))`
+    OTHERWISE `not disqualified`
+
+-- s 30(5)-(6): after such a loss or leaving, hours "from that or any other employment before the employment was lost or
+-- left" may not be used to qualify, and hours in that employment may not be used for the weeks (s 12(2)) or the rate
+-- (s 14). So only the hours and earnings after it count.
+GIVEN `how` IS A `How the job ended`, `hours in the qualifying period` IS A NUMBER, `insurable hours since then` IS A NUMBER
+GIVETH A NUMBER
+`the hours that count after s 30(5)` `how` `hours in the qualifying period` `insurable hours since then` MEANS
+    CONSIDER `how`
+    WHEN `dismissed or suspended for misconduct` THEN `insurable hours since then`
+    WHEN `left voluntarily, with a reasonable alternative` THEN `insurable hours since then`
+    OTHERWISE `hours in the qualifying period`
+
+§§ `Part III -- the employee's premium (s 67)`
+
+-- s 67: the insured person pays "a premium equal to their insurable earnings multiplied by the premium rate set under
+-- section 66". s 82(2): no deduction "if in that year the insurable earnings paid by the employer to the person have
+-- reached the maximum yearly insurable earnings". One employer: earnings counted to the maximum. The rate is an input
+-- (a percentage, set and published each year, s 66.5).
+GIVEN `insurable earnings for the year` IS A NUMBER, `maximum yearly insurable earnings` IS A NUMBER, `premium rate` IS A NUMBER
+GIVETH A NUMBER
+`the employee's premium` `insurable earnings for the year` `maximum yearly insurable earnings` `premium rate` MEANS
+    `to the cent` (`premium rate` TIMES (`the lesser of` `insurable earnings for the year` `maximum yearly insurable earnings`))
+
+§§ `Part VII -- benefit repayment (ss 144, 145)`
+
+-- s 145(1): "If a claimant's income for a taxation year exceeds 1.25 times the maximum yearly insurable earnings, the
+-- claimant shall repay ... 30% of the lesser of (a) the total benefits, other than special benefits and benefits under
+-- Part VII.1, paid to the claimant in the taxation year, and (b) the amount by which the claimant's income ... exceeds
+-- 1.25 times the maximum yearly insurable earnings." (2): not for a claimant "paid regular benefits for less than one
+-- week in the ten years before the taxation year". s 144 "income": income under the Income Tax Act without the
+-- deductions under ITA 60(v.1), (w), (y), (z), the s 79 gain and 56(1)(q.1)/56(6) amounts: a fact from that Act.
+GIVEN `income for the year under s 144` IS A NUMBER, `regular benefits paid in the year` IS A NUMBER, `maximum yearly insurable earnings` IS A NUMBER, `paid regular benefits for a week or more in the previous ten years` IS A BOOLEAN
+GIVETH A NUMBER
+`the benefit repayment` `income for the year under s 144` `regular benefits paid in the year` `maximum yearly insurable earnings` `paid regular benefits for a week or more in the previous ten years` MEANS
+    LET `threshold` MEANS 1.25 TIMES `maximum yearly insurable earnings`
+    IN IF (NOT (`paid regular benefits for a week or more in the previous ten years`)) OR `income for the year under s 144` AT MOST `threshold`
+       THEN 0
+       ELSE `to the cent` (30% TIMES (`the lesser of` `regular benefits paid in the year` (`income for the year under s 144` MINUS `threshold`)))
+
+§§ `Regulative rules -- the claimant's duties, and what the Commission owes`
+
+DECLARE `EI party` IS ONE OF `the claimant`, `the Commission`
+
+DECLARE `EI act` IS ONE OF
+    `claim benefits for the week`
+    `file the benefit repayment return and repay`
+    `return the overpayment`
+    `request a reconsideration`
+    `reconsider the decision`
+
+-- s 50(4): "A claim for benefits for a week of unemployment in a benefit period shall be made within the prescribed
+-- time"; Regulations s 26(1): "within three weeks after the week for which benefits are claimed"; (2): "within one week"
+-- if no claim was made for four or more consecutive weeks. s 50(1): a claimant who does not is "not entitled to
+-- receive benefits for as long as the condition ... is not fulfilled". s 10(5): a late claim may be antedated for good
+-- cause. Clock: days from the end of the week claimed for.
+GIVEN `no claim made for four or more consecutive weeks` IS A BOOLEAN
+GIVETH A DEONTIC `EI party` `EI act`
+DECIDE `s 50(4) and Regulations s 26 -- claim each week within three weeks, or one week after a gap of four` IS
+    PARTY `the claimant`
+    MUST  `claim benefits for the week`
+    WITHIN (IF `no claim made for four or more consecutive weeks` THEN 7 ELSE 21)
+    LEST  BREACH BY `the claimant` BECAUSE "s 50(1), (4) and Regulations s 26: a claim made out of time is not paid unless antedated for good cause under s 10(5)"
+
+-- s 145(4): the repayment must be made "(b) ... on or before April 30 in the next year" (or within six months of death
+-- in the cases in (a)); s 146: the return is filed with the income tax return "without notice or demand". Clock: days
+-- from the end of the taxation year; 30 April is day 120 (READING: in a year that is not a leap year).
+GIVEN `a repayment is owed` IS A BOOLEAN
+GIVETH A DEONTIC `EI party` `EI act`
+DECIDE `ss 145(4), 146 -- a claimant who owes a benefit repayment must file and repay by 30 April` IS
+    IF `a repayment is owed`
+    THEN PARTY `the claimant`
+         MUST  `file the benefit repayment return and repay`
+         WITHIN 120
+         LEST  BREACH BY `the claimant` BECAUSE "ss 145(4)(b) and 146: the benefit repayment is due on or before April 30 of the next year, with the return of income"
+    ELSE FULFILLED
+
+-- s 44: "A person who has received or obtained a benefit payment to which the person is disentitled, or a benefit
+-- payment in excess of the amount ... shall without delay return the amount". No period.
+GIVETH A DEONTIC `EI party` `EI act`
+DECIDE `s 44 -- a person overpaid must return the overpayment without delay` IS
+    PARTY `the claimant`
+    MUST  `return the overpayment`
+
+-- s 112(1): a claimant "may make a request to the Commission ... for a reconsideration of that decision at any time
+-- within (a) 30 days after the day on which a decision is communicated to them; or (b) any further time that the
+-- Commission may allow". (2): "The Commission must reconsider its decision if a request is made". No period for it.
+GIVETH A DEONTIC `EI party` `EI act`
+DECIDE `s 112 -- I may ask for a reconsideration within 30 days, and the Commission must then reconsider` IS
+    PARTY `the claimant`
+    MAY   `request a reconsideration`
+    WITHIN 30
+    HENCE PARTY `the Commission`
+          MUST  `reconsider the decision`
