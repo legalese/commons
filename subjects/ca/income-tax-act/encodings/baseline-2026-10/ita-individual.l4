@@ -1,0 +1,987 @@
+IMPORT prelude
+IMPORT `ita-amounts`
+
+-- Income Tax Act (R.S.C., 1985, c. 1 (5th Supp.)) -- the individual's federal income tax for the 2026 taxation year, and
+-- the benefits the Act pays through the tax system. Seat-neutral core.
+--
+-- Encoded from the Justice Laws consolidation current to 2026-09-30 (last amended 2026-06-18), as deposited at
+-- ../../registers/source-bundle/R.S.C.-1985-c.-1-5th-Supp..txt, converted from justicecanada/laws-lois-xml (Open
+-- Government Licence - Canada 2.0). Unofficial version: see SOURCE-LICENSE.md. The indexed 2026 amounts come from the
+-- CRA table deposited beside it, through ita-amounts.l4.
+--
+-- In scope: residence (s 2(1), s 250(1), (3)); income from the main heads (s 3, s 5, s 56(1)(a), (u)) less the
+-- deductions in s 60(e.1), (i) with s 146(5), and (w); taxable income (s 2(2), s 110(1)(f)); the rates (s 117(2)); the
+-- credits of s 118(1)(a) to (c), (1.1), (2), (3), (10), (11), s 118.3(1) and s 118.7; the Canada workers benefit
+-- (s 122.7(1) to (3), (5)); the Canada child benefit (ss 122.6, 122.61(1), 122.62(1)); the GST/HST credit for the
+-- months of s 122.5(3.005); the OAS recovery tax (Part I.2, s 180.2(1), (2), (5)); the duties to file (s 150(1)(d),
+-- (1.1)(b)), to pay instalments (s 156(1), s 156.1(1), (2)), to pay the balance (s 156.1(4)) and to notify the
+-- Minister (s 122.62(5) to (7)).
+--
+-- The rules use the Act's own actors and terms: "the individual", "the cohabiting spouse or common-law partner", "the
+-- qualified dependant", "the Minister". The questions an individual asks are in ita-seat.l4, which IMPORTs this module.
+--
+-- Read with the Old Age Security Act, Canada Pension Plan and Employment Insurance Act encodings (another agent; see
+-- NOTES.md): they give the OAS pension and supplement, the CPP benefits and contributions, and the EI benefits and
+-- premiums that this module takes as amounts. The stable l4 cannot IMPORT across encoding folders.
+--
+-- Not for public use as advice.
+
+§ `Income Tax Act -- the individual's federal income tax and benefits, 2026`
+
+§§ `Questions this encoding does not cover`
+
+-- The stable l4 has no REFUSE. A rule that can reach a gap answers `not covered` with one of these reasons.
+DECLARE `Why not covered` IS ONE OF
+    -- ita-amounts.l4 holds only the CRA's 2026 column
+    `the indexed amounts of a taxation year other than 2026 are not deposited`
+    `the CCB amounts for a month outside July 2026 to June 2027 are not deposited`
+    `the GST/HST credit is encoded only for the months July 2026 to April 2028 under s 122.5(3.005)`
+    -- s 2(3), Division D (s 115): taxable income earned in Canada
+    `a person not resident in Canada is taxed under Division D, which is not encoded`
+    -- s 114, s 118.91
+    `a part-year resident is taxed under s 114 and s 118.91, which are not encoded`
+    -- s 120(2): the abatement for an individual resident in Quebec, and s 156.1(1)(a)
+    `an individual resident in Quebec at the end of the year has the s 120(2) abatement, which is not encoded`
+    -- s 3(b), subdivision c
+    `taxable capital gains under subdivision c are not encoded`
+    -- s 150(1)(b), s 70: the return of a deceased individual
+    `the return of an individual who died in the year is not encoded`
+    -- s 122.61(1.1), s 122.5(3.06): half of each of two computations
+    `a shared-custody parent's amount under s 122.61(1.1) or s 122.5(3.06) is not encoded`
+    -- s 122.71: CRA footnote 8 names reconfiguration agreements with Alberta, Quebec and Nunavut
+    `the CWB of a resident of Alberta, Quebec or Nunavut is replaced under a s 122.71 agreement, which is not deposited`
+    -- s 122.7(3), D(b) and D(c): both read on the same facts (NOTES.md finding 4)
+    `s 122.7(3) D(b) and D(c) both apply when the spouse may deduct a disability amount and there is an eligible dependant`
+
+GIVEN a IS A TYPE
+GIVETH A TYPE
+DECLARE `Answer` a IS ONE OF
+    `answered`    HAS `the answer` IS AN a
+    `not covered` HAS `because`    IS A `Why not covered`
+
+§§ `Arithmetic`
+
+-- s 257: "if the amount or number when so determined or calculated would ... be a negative amount or number, it shall be
+-- deemed to be nil". Every formula below goes through this.
+GIVEN x IS A NUMBER
+GIVETH A NUMBER
+`nil if negative` x MEANS max 0 x
+
+GIVEN x IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the excess of` x `over` y MEANS `nil if negative` (x MINUS y)
+
+GIVEN b IS A BOOLEAN
+GIVETH A NUMBER
+`one if` b MEANS IF b THEN 1 ELSE 0
+
+§§ `Residence (s 2(1), s 250)`
+
+-- One case is one individual's taxation year, the calendar year (s 249(1)).
+DECLARE `Residence facts` HAS
+    -- s 250(3) "ordinarily resident"; residence itself is not defined by the Act and is asked as a fact
+    `resident in Canada throughout the year`          IS A BOOLEAN
+    `resident in Canada for part of the year only`    IS A BOOLEAN
+    -- s 250(1)(a): sojourned in Canada for a period, or periods totalling, 183 days or more
+    `days sojourned in Canada in the year`            IS A NUMBER
+    -- s 250(1)(b), (c), (d), (d.1), (f), (g), asked as one fact
+    `deemed resident under s 250(1)(b) to (g)`        IS A BOOLEAN
+
+DECLARE `Residence status` IS ONE OF
+    `resident throughout the year`
+    `resident for part of the year`
+    `not resident at any time in the year`
+
+-- s 2(1), s 250(1): a person who sojourned 183 days or more, or is described in (b) to (g), "shall ... be deemed to have
+-- been resident in Canada throughout a taxation year".
+GIVEN r IS A `Residence facts`
+GIVETH A `Residence status`
+`the residence status` r MEANS
+    IF     r's `resident in Canada throughout the year`
+        OR r's `days sojourned in Canada in the year` AT LEAST 183
+        OR r's `deemed resident under s 250(1)(b) to (g)`
+    THEN `resident throughout the year`
+    ELSE IF r's `resident in Canada for part of the year only`
+         THEN `resident for part of the year`
+         ELSE `not resident at any time in the year`
+
+-- Where the individual lives at the end of the year, for s 120(2) and s 122.71.
+DECLARE `Province at the end of the year` IS ONE OF
+    `Quebec`
+    `Alberta`
+    `Nunavut`
+    `another province or territory`
+
+§§ `Income (s 3), by source`
+
+-- The amounts the individual received or paid in the year. Each is a whole-year total in dollars.
+DECLARE `Income amounts` HAS
+    -- s 5(1), s 6: salary, wages and other remuneration, including gratuities and taxable benefits
+    `employment income`                               IS A NUMBER
+    -- s 8: deductions from employment income (union dues, employment expenses)
+    `deductions under s 8`                            IS A NUMBER
+    -- s 56(1)(a)(i)(A): the OAS pension, and the supplement and allowances, under the Old Age Security Act
+    `OAS pension`                                     IS A NUMBER
+    `OAS supplement or allowance`                     IS A NUMBER
+    -- s 56(1)(a)(i)(B): benefits under the Canada Pension Plan or a provincial pension plan
+    `CPP or QPP benefits`                             IS A NUMBER
+    -- s 56(1)(a)(i); s 118(7) "pension income" (a)(i): payments of a life annuity out of a pension plan
+    `life annuity payments from a pension plan`       IS A NUMBER
+    -- s 118(7) "pension income" (a)(ii) to (vi), (b): RRSP annuity, RRIF payments and the others listed
+    `other pension income listed in s 118(7)`         IS A NUMBER
+    -- s 118(7) "qualified pension income" (b): the part of those other amounts received because a spouse died
+    `of which received because of a spouse's death`   IS A NUMBER
+    -- s 56(1)(a)(iv): benefits under Part I, VII.1, VIII or VIII.1 of the Employment Insurance Act
+    `EI benefits`                                     IS A NUMBER
+    -- s 56(1)(u): social assistance payments made on the basis of a means, needs or income test
+    `social assistance`                               IS A NUMBER
+    -- s 12 and the other property heads: interest, dividends as included, rents
+    `property income`                                 IS A NUMBER
+    -- s 9: profit from a business; a negative figure is a loss (s 3(d))
+    `business income or loss`                         IS A NUMBER
+    -- any other amount included under subdivision d
+    `other income`                                    IS A NUMBER
+    -- s 3(b): taxable capital gains (not encoded; any amount above nil is not covered)
+    `taxable capital gains`                           IS A NUMBER
+    -- s 146(5): premiums paid for the year, and the RRSP deduction limit (s 146(1)) as the person's notice states it
+    `RRSP premiums paid for the year`                 IS A NUMBER
+    `RRSP deduction limit`                            IS A NUMBER
+    -- s 60(e.1): the enhanced employee's contribution under s 8(1.1) or (1.2) of the Canada Pension Plan
+    `enhanced CPP contributions`                      IS A NUMBER
+    -- s 118.7(b): the employee's contribution under s 8(1) of the Canada Pension Plan (the base contribution)
+    `base CPP contributions`                          IS A NUMBER
+    -- s 118.7(a): the employee's premium under the Employment Insurance Act
+    `EI premiums`                                     IS A NUMBER
+
+-- s 146(5): "such amount as the taxpayer claims not exceeding the lesser of" the premiums and the RRSP deduction limit.
+-- The individual is taken to claim the most allowed.
+GIVEN inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the s 146(5) RRSP deduction` inc MEANS
+    min (inc's `RRSP premiums paid for the year`) (`nil if negative` (inc's `RRSP deduction limit`))
+
+-- s 3(a): income from each source other than a loss. Employment income is after s 8 (s 8(1): "in computing a
+-- taxpayer's income for a taxation year from an office or employment").
+GIVEN inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the net employment income` inc MEANS inc's `employment income` MINUS inc's `deductions under s 8`
+
+GIVEN inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the s 3(a) total` inc MEANS
+         `nil if negative` (`the net employment income` inc)
+    PLUS inc's `OAS pension`
+    PLUS inc's `OAS supplement or allowance`
+    PLUS inc's `CPP or QPP benefits`
+    PLUS inc's `life annuity payments from a pension plan`
+    PLUS inc's `other pension income listed in s 118(7)`
+    PLUS inc's `EI benefits`
+    PLUS inc's `social assistance`
+    PLUS inc's `property income`
+    PLUS `nil if negative` (inc's `business income or loss`)
+    PLUS inc's `other income`
+
+-- s 3(d): losses from an office, employment or business.
+GIVEN inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the s 3(d) losses` inc MEANS
+         `nil if negative` (0 MINUS `the net employment income` inc)
+    PLUS `nil if negative` (0 MINUS inc's `business income or loss`)
+
+-- Subdivision e deductions other than s 60(w): s 60(e.1) and s 60(i) with s 146(5).
+GIVEN inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the subdivision e deductions other than s 60(w)` inc MEANS
+    `the s 146(5) RRSP deduction` inc PLUS inc's `enhanced CPP contributions`
+
+-- s 3(c) to (f), with a given s 60(w) deduction (the Part I.2 tax).
+GIVEN inc IS AN `Income amounts`, `the s 60(w) deduction` IS A NUMBER
+GIVETH A NUMBER
+`the s 3 income with` inc `and a s 60(w) deduction of` `the s 60(w) deduction` MEANS
+    `the excess of` (`the excess of` (`the s 3(a) total` inc) `over` (`the subdivision e deductions other than s 60(w)` inc PLUS `the s 60(w) deduction`)) `over` (`the s 3(d) losses` inc)
+
+§§ `Part I.2 -- the tax on Old Age Security benefits (s 180.2)`
+
+-- s 180.2(1) "adjusted income": the income under Part I "if in computing that income no amount were ... deductible under
+-- paragraph 20(1)(ww) or 60(w), (y) or (z)". The other exclusions (s 56(1)(q.1), (6), s 79 gains, s 40(3.21)) are not
+-- among the income heads taken.
+GIVEN inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the Part I.2 adjusted income` inc MEANS `the s 3 income with` inc `and a s 60(w) deduction of` 0
+
+-- s 180.2(2): A(1 - B). A is the lesser of the OAS amounts included in income (less the s 60(n)(i) repayment, taken as
+-- nil) and 15% of the adjusted income over $50,000 as adjusted. B is the Part XIII rate, nil for a resident.
+GIVEN ia IS AN `Indexed amounts for a taxation year`, inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the Part I.2 tax` ia inc MEANS
+    min (inc's `OAS pension` PLUS inc's `OAS supplement or allowance`)
+        ((15%) TIMES (`the excess of` (`the Part I.2 adjusted income` inc) `over` (ia's `the OAS recovery threshold`)))
+
+-- s 60(w): the Part I.2 tax is deducted in computing income under Part I.
+GIVEN ia IS AN `Indexed amounts for a taxation year`, inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the income for the year` ia inc MEANS
+    `the s 3 income with` inc `and a s 60(w) deduction of` (`the Part I.2 tax` ia inc)
+
+§§ `Taxable income (s 2(2), Division C)`
+
+-- s 110(1)(f): "any social assistance payment made on the basis of a means, needs or income test and included because of
+-- clause 56(1)(a)(i)(A) or paragraph 56(1)(u)". The supplement and the allowances under the Old Age Security Act are paid
+-- on an income test; the OAS pension is not (NOTES.md finding 6).
+GIVEN inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the s 110(1)(f) deduction` inc MEANS inc's `OAS supplement or allowance` PLUS inc's `social assistance`
+
+GIVEN ia IS AN `Indexed amounts for a taxation year`, inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the taxable income` ia inc MEANS
+    `the excess of` (`the income for the year` ia inc) `over` (`the s 110(1)(f) deduction` inc)
+
+§§ `The rates (s 117(2))`
+
+-- s 117(2)(a) to (e): 14%, 20.5%, 26%, 29% and 33% above the four thresholds as adjusted.
+GIVEN t IS A NUMBER, ia IS AN `Indexed amounts for a taxation year`
+GIVETH A NUMBER
+`the s 117(2) tax on` t `with` ia MEANS
+         (14% TIMES min t t1)
+    PLUS (20.5% TIMES `the excess of` (min t t2) `over` t1)
+    PLUS (26% TIMES `the excess of` (min t t3) `over` t2)
+    PLUS (29% TIMES `the excess of` (min t t4) `over` t3)
+    PLUS (33% TIMES `the excess of` t `over` t4)
+    WHERE
+        t1 MEANS ia's `the first bracket threshold`
+        t2 MEANS ia's `the second bracket threshold`
+        t3 MEANS ia's `the third bracket threshold`
+        t4 MEANS ia's `the fourth bracket threshold`
+
+-- s 248(1) "appropriate percentage, for a taxation year, means the lowest percentage referred to in subsection 117(2)".
+`the appropriate percentage` MEANS 14%
+
+§§ `The family (s 118(1), s 122.6, s 122.7)`
+
+DECLARE `Spouse facts` HAS
+    -- s 118(1)(a): "a married person or a person who is in a common-law partnership" at any time in the year
+    `married or in a common-law partnership in the year` IS A BOOLEAN
+    -- s 118(1)(a): who supports the spouse and is not living separate and apart because of a breakdown
+    `supports the spouse`                             IS A BOOLEAN
+    `living separate and apart because of a breakdown` IS A BOOLEAN
+    -- s 122.6 "cohabiting spouse or common-law partner", at the end of the year (not apart for 90 days or more
+    -- because of a breakdown)
+    `a cohabiting spouse at the end of the year`      IS A BOOLEAN
+    -- s 118(1)(a), C.1
+    `the spouse's income`                             IS A NUMBER
+    -- s 118(1)(a), C(A)
+    `the spouse is dependent on the individual by reason of infirmity` IS A BOOLEAN
+    -- s 122.7(1) "eligible spouse", "working income"
+    `the spouse was resident in Canada throughout the year` IS A BOOLEAN
+    `the spouse is an ineligible individual under s 122.7(1)` IS A BOOLEAN
+    `the spouse's working income`                     IS A NUMBER
+    `the spouse may deduct a disability amount under s 118.3(1)` IS A BOOLEAN
+
+-- The person for whom the s 118(1)(b) "wholly dependent person" amount is claimed, if any.
+DECLARE `Eligible dependant facts` HAS
+    `claimed`                                         IS A BOOLEAN
+    -- s 118(1)(b)(ii): maintains a self-contained domestic establishment, in which the individual lives, and supports
+    -- the person in it
+    `maintains a self-contained domestic establishment and supports the person in it` IS A BOOLEAN
+    -- (ii)(B), (C)
+    `wholly dependent for support on the individual`  IS A BOOLEAN
+    `related to the individual`                       IS A BOOLEAN
+    -- (ii)(A): "except in the case of a child of the individual, resident in Canada"
+    `a child of the individual`                       IS A BOOLEAN
+    `resident in Canada`                              IS A BOOLEAN
+    -- (ii)(D)
+    `a parent or grandparent of the individual`       IS A BOOLEAN
+    `age at the end of the year`                      IS A NUMBER
+    `dependent by reason of mental or physical infirmity` IS A BOOLEAN
+    -- D.1
+    `income for the year`                             IS A NUMBER
+    -- s 118(5): the individual must pay a support amount to a spouse or former spouse for the person, and lives apart
+    -- from them all year or deducts the support
+    `s 118(5) excludes the claim`                     IS A BOOLEAN
+
+§§ `The non-refundable credits (s 118, s 118.3, s 118.7)`
+
+-- s 118(1.1): A + B, B = C - D x E, C = F - G, G = A, D = C; E is nil up to the first dollar amount in s 117(2)(d)
+-- (the third threshold), and otherwise the lesser of 1 and (H - I)/J, J = the first dollar amount in s 117(2)(e) less I.
+GIVEN income IS A NUMBER, ia IS AN `Indexed amounts for a taxation year`
+GIVETH A NUMBER
+`the basic personal amount for` income `with` ia MEANS
+    a PLUS `nil if negative` (c MINUS (c TIMES e))
+    WHERE
+        a MEANS ia's `the basic personal amount's A`
+        c MEANS ia's `the basic personal amount's F` MINUS a
+        i MEANS ia's `the third bracket threshold`
+        j MEANS ia's `the fourth bracket threshold` MINUS i
+        e MEANS IF income AT MOST i THEN 0 ELSE min 1 ((income MINUS i) DIVIDED BY j)
+
+DECLARE `Status under s 118(1)` IS ONE OF
+    `paragraph (a), married or common-law partnership status`
+    `paragraph (b), wholly dependent person`
+    `paragraph (c), single status`
+
+-- s 118(1)(b)(i), (ii) and s 118(5): the conditions for the wholly dependent person amount.
+GIVEN sp IS A `Spouse facts`, ed IS AN `Eligible dependant facts`
+GIVETH A BOOLEAN
+DECIDE `the s 118(1)(b) conditions are met` sp ed IF
+        ed's `claimed`
+    AND ((NOT sp's `married or in a common-law partnership in the year`) OR sp's `living separate and apart because of a breakdown`)
+    AND ed's `maintains a self-contained domestic establishment and supports the person in it`
+    AND (ed's `a child of the individual` OR ed's `resident in Canada`)
+    AND ed's `wholly dependent for support on the individual`
+    AND ed's `related to the individual`
+    AND (ed's `a parent or grandparent of the individual` OR ed's `age at the end of the year` LESS THAN 18 OR ed's `dependent by reason of mental or physical infirmity`)
+    AND (NOT ed's `s 118(5) excludes the claim`)
+
+-- s 118(1)(a), (b), (c): which paragraph gives the individual's amount. (a) comes first; (b) only for "an individual who
+-- does not claim a deduction for the year because of paragraph 118(1)(a)"; (c) "except in the case of an individual
+-- entitled to a deduction because of paragraph (a) or (b)".
+GIVEN sp IS A `Spouse facts`, ed IS AN `Eligible dependant facts`
+GIVETH A `Status under s 118(1)`
+`the status under s 118(1)` sp ed MEANS
+    IF     sp's `married or in a common-law partnership in the year`
+       AND sp's `supports the spouse`
+       AND (NOT sp's `living separate and apart because of a breakdown`)
+    THEN `paragraph (a), married or common-law partnership status`
+    ELSE IF `the s 118(1)(b) conditions are met` sp ed
+         THEN `paragraph (b), wholly dependent person`
+         ELSE `paragraph (c), single status`
+
+-- The amount in B of s 118(1) under (a), (b) or (c). (a)(ii): C + C.01 - C.1; (b)(iv): D + D.01 - D.1, D being the
+-- infirmity addition for a dependant 18 or older dependent by reason of infirmity (D(A)(II), for an infirm child under
+-- 18, is not encoded and taken as nil).
+GIVEN ia IS AN `Indexed amounts for a taxation year`, income IS A NUMBER, sp IS A `Spouse facts`, ed IS AN `Eligible dependant facts`
+GIVETH A NUMBER
+`the s 118(1) status amount` ia income sp ed MEANS
+    CONSIDER `the status under s 118(1)` sp ed
+    WHEN `paragraph (a), married or common-law partnership status` THEN
+        bpa PLUS `nil if negative` ((IF sp's `the spouse is dependent on the individual by reason of infirmity` THEN ia's `the infirmity addition` ELSE 0) PLUS bpa MINUS sp's `the spouse's income`)
+    WHEN `paragraph (b), wholly dependent person` THEN
+        bpa PLUS `nil if negative` ((IF ed's `age at the end of the year` AT LEAST 18 AND ed's `dependent by reason of mental or physical infirmity` THEN ia's `the infirmity addition` ELSE 0) PLUS bpa MINUS ed's `income for the year`)
+    WHEN `paragraph (c), single status` THEN bpa
+    WHERE
+        bpa MEANS `the basic personal amount for` income `with` ia
+
+-- s 118(2): A x (the age amount - B), B = 15% of income over the threshold, for an individual 65 or older before the end
+-- of the year.
+GIVEN ia IS AN `Indexed amounts for a taxation year`, age IS A NUMBER, income IS A NUMBER
+GIVETH A NUMBER
+`the s 118(2) age amount` ia age income MEANS
+    IF age AT LEAST 65
+    THEN `nil if negative` (ia's `the age amount` MINUS ((15%) TIMES `the excess of` income `over` (ia's `the age amount's income threshold`)))
+    ELSE 0
+
+-- s 118(7) "eligible pension income": 65 or older, the pension income; under 65, the qualified pension income (the life
+-- annuity from a pension plan, and the other amounts only if received because of a spouse's death). s 118(8): OAS and
+-- CPP amounts are not pension income, and they are not among these fields.
+GIVEN age IS A NUMBER, inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the eligible pension income` age inc MEANS
+    IF age AT LEAST 65
+    THEN inc's `life annuity payments from a pension plan` PLUS inc's `other pension income listed in s 118(7)`
+    ELSE inc's `life annuity payments from a pension plan` PLUS min (inc's `of which received because of a spouse's death`) (inc's `other pension income listed in s 118(7)`)
+
+-- s 118(3): B is the lesser of $2,000 (not indexed: s 117.1(2) does not list it) and the eligible pension income.
+GIVEN age IS A NUMBER, inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the s 118(3) pension amount` age inc MEANS min 2000 (`the eligible pension income` age inc)
+
+-- s 118(10): the lesser of $1,000 as adjusted and the amounts included in income from an office or employment.
+GIVEN ia IS AN `Indexed amounts for a taxation year`, inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the s 118(10) Canada employment amount` ia inc MEANS min (ia's `the Canada employment amount`) (`nil if negative` (inc's `employment income`))
+
+-- s 118.7(a), (b): EI premiums and the base CPP contribution, each "not exceeding the maximum ... payable" (the amounts
+-- are taken as already within the maxima, as the EI and CPP encodings compute them).
+GIVEN inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the s 118.7 amount` inc MEANS inc's `EI premiums` PLUS inc's `base CPP contributions`
+
+DECLARE `Disability facts` HAS
+    -- s 118.3(1)(a) to (b): the impairment, certified in prescribed form by a medical practitioner, and the certificate
+    -- filed with the Minister. Whether the impairment meets (a) to (a.3) is the practitioner's certification, asked as
+    -- one fact.
+    `a certified disability tax credit certificate is filed for the year` IS A BOOLEAN
+    -- s 118.3(1)(c): no attendant or nursing home remuneration for the individual included in a s 118.2 claim
+    `attendant care or nursing home costs are claimed under s 118.2` IS A BOOLEAN
+    -- s 118.3(1), C(a)(ii)(A): care or supervision amounts included in a deduction under s 63, 64 or 118.2
+    `care and supervision amounts claimed under ss 63, 64 and 118.2` IS A NUMBER
+
+GIVEN d IS A `Disability facts`
+GIVETH A BOOLEAN
+DECIDE `may deduct the disability amount` d IF
+    d's `a certified disability tax credit certificate is filed for the year` AND (NOT d's `attendant care or nursing home costs are claimed under s 118.2`)
+
+-- s 118.3(1): A x (B + C); C, for an individual under 18 at the end of the year, is $3,500 less the care amounts over
+-- $2,050 (each as adjusted).
+GIVEN ia IS AN `Indexed amounts for a taxation year`, age IS A NUMBER, d IS A `Disability facts`
+GIVETH A NUMBER
+`the s 118.3(1) disability amount` ia age d MEANS
+    IF `may deduct the disability amount` d
+    THEN ia's `the disability amount` PLUS (IF age LESS THAN 18 THEN `the excess of` (ia's `the child disability supplement`) `over` (`the excess of` (d's `care and supervision amounts claimed under ss 63, 64 and 118.2`) `over` (ia's `the child care expenses threshold`)) ELSE 0)
+    ELSE 0
+
+-- s 118(11): the top-up tax credit for 2025 to 2030, (A - B x C) x D: A = E + F, E the credits deducted under the
+-- provisions listed (those in scope here), F nil (s 118.1 gifts are not encoded); B the appropriate percentage; C the
+-- first dollar amount in s 117(2)(b) (the first threshold); D 7.14% for a year other than 2025.
+GIVEN ia IS AN `Indexed amounts for a taxation year`, credits IS A NUMBER
+GIVETH A NUMBER
+`the s 118(11) top-up credit` ia credits MEANS
+    (7.14%) TIMES `the excess of` credits `over` (`the appropriate percentage` TIMES ia's `the first bracket threshold`)
+
+§§ `The facts of one taxation year`
+
+DECLARE `Taxation year` HAS
+    `year`                                            IS A NUMBER
+    `residence`                                       IS A `Residence facts`
+    `province at the end of the year`                 IS A `Province at the end of the year`
+    `died in the year`                                IS A BOOLEAN
+    -- s 118(2), s 118(7): age reached before the end of the year
+    `age at the end of the year`                      IS A NUMBER
+    `income`                                          IS AN `Income amounts`
+    `spouse`                                          IS A `Spouse facts`
+    `eligible dependant`                              IS AN `Eligible dependant facts`
+    `disability`                                      IS A `Disability facts`
+    -- s 153: income tax deducted at source; s 180.2(3): Part I.2 tax withheld from OAS
+    `income tax withheld at source`                   IS A NUMBER
+    `Part I.2 tax withheld from OAS payments`         IS A NUMBER
+    -- s 156.1(4)(b): instalments and other amounts paid on account of the year's tax
+    `instalments paid for the year`                   IS A NUMBER
+
+GIVEN ty IS A `Taxation year`
+GIVETH A MAYBE `Why not covered`
+`the gap in` ty MEANS
+    CONSIDER `the residence status` (ty's `residence`)
+    WHEN `not resident at any time in the year` THEN JUST `a person not resident in Canada is taxed under Division D, which is not encoded`
+    WHEN `resident for part of the year` THEN JUST `a part-year resident is taxed under s 114 and s 118.91, which are not encoded`
+    WHEN `resident throughout the year` THEN
+        IF NOT (ty's `year` EQUALS 2026)
+        THEN JUST `the indexed amounts of a taxation year other than 2026 are not deposited`
+        ELSE IF ty's `died in the year`
+             THEN JUST `the return of an individual who died in the year is not encoded`
+             ELSE IF ty's `province at the end of the year` EQUALS `Quebec`
+                  THEN JUST `an individual resident in Quebec at the end of the year has the s 120(2) abatement, which is not encoded`
+                  ELSE IF ty's `income`'s `taxable capital gains` GREATER THAN 0
+                       THEN JUST `taxable capital gains under subdivision c are not encoded`
+                       ELSE NOTHING
+
+-- The non-refundable credits in scope, each as A x B with A the appropriate percentage, plus the s 118(11) top-up.
+GIVEN ia IS AN `Indexed amounts for a taxation year`, ty IS A `Taxation year`
+GIVETH A NUMBER
+`the credit base` ia ty MEANS
+         `the s 118(1) status amount` ia income (ty's `spouse`) (ty's `eligible dependant`)
+    PLUS `the s 118(2) age amount` ia (ty's `age at the end of the year`) income
+    PLUS `the s 118(3) pension amount` (ty's `age at the end of the year`) (ty's `income`)
+    PLUS `the s 118(10) Canada employment amount` ia (ty's `income`)
+    PLUS `the s 118.3(1) disability amount` ia (ty's `age at the end of the year`) (ty's `disability`)
+    PLUS `the s 118.7 amount` (ty's `income`)
+    WHERE
+        income MEANS `the income for the year` ia (ty's `income`)
+
+GIVEN ia IS AN `Indexed amounts for a taxation year`, ty IS A `Taxation year`
+GIVETH A NUMBER
+`the non-refundable credits` ia ty MEANS
+    base PLUS `the s 118(11) top-up credit` ia base
+    WHERE
+        base MEANS `the appropriate percentage` TIMES `the credit base` ia ty
+
+-- Tax payable under Part I: the s 117(2) tax less the Division E credits, never below nil (the credits are amounts that
+-- "may be deducted" in computing the tax).
+GIVEN ia IS AN `Indexed amounts for a taxation year`, ty IS A `Taxation year`
+GIVETH A NUMBER
+`the Part I tax payable` ia ty MEANS
+    `the excess of` (`the s 117(2) tax on` (`the taxable income` ia (ty's `income`)) `with` ia) `over` (`the non-refundable credits` ia ty)
+
+§§ `The Canada workers benefit (s 122.7)`
+
+DECLARE `CWB facts` HAS
+    -- s 122.7(1) "eligible individual": at the end of the year 19 or older, a cohabiting spouse, or the parent of a
+    -- child with whom the individual resides
+    `the parent of a child with whom the individual resides` IS A BOOLEAN
+    -- "eligible dependant": a child who at the end of the year resided with the individual, was under 19 and was not an
+    -- eligible individual
+    `has an eligible dependant`                       IS A BOOLEAN
+    -- "ineligible individual": (a) s 149(1)(a) or (b); (b) a full-time student for more than 13 weeks (unless with an
+    -- eligible dependant); (c) confined to a prison for 90 days or more
+    `described in s 149(1)(a) or (b)`                 IS A BOOLEAN
+    `a full-time student for more than 13 weeks`      IS A BOOLEAN
+    `confined to a prison for 90 days or more`        IS A BOOLEAN
+    -- s 122.7(5): where both spouses would be eligible, only the one they agree on (or the Minister designates)
+    `the individual is the one of the couple who claims` IS A BOOLEAN
+    -- s 122.7(2): "who files a return of income for the taxation year"
+    `files a return of income for the year`           IS A BOOLEAN
+
+GIVEN ty IS A `Taxation year`, c IS A `CWB facts`
+GIVETH A BOOLEAN
+DECIDE `an ineligible individual under s 122.7(1)` ty c IF
+       c's `described in s 149(1)(a) or (b)`
+    OR (c's `a full-time student for more than 13 weeks` AND (NOT c's `has an eligible dependant`))
+    OR c's `confined to a prison for 90 days or more`
+
+GIVEN ty IS A `Taxation year`, c IS A `CWB facts`
+GIVETH A BOOLEAN
+DECIDE `an eligible individual under s 122.7(1)` ty c IF
+        `the residence status` (ty's `residence`) EQUALS `resident throughout the year`
+    AND (NOT `an ineligible individual under s 122.7(1)` ty c)
+    AND (ty's `age at the end of the year` AT LEAST 19 OR ty's `spouse`'s `a cohabiting spouse at the end of the year` OR c's `the parent of a child with whom the individual resides`)
+
+GIVEN ty IS A `Taxation year`
+GIVETH A BOOLEAN
+DECIDE `has an eligible spouse` ty IF
+        ty's `spouse`'s `a cohabiting spouse at the end of the year`
+    AND ty's `spouse`'s `the spouse was resident in Canada throughout the year`
+    AND (NOT ty's `spouse`'s `the spouse is an ineligible individual under s 122.7(1)`)
+
+-- "working income": (a) employment income read without s 8; (b) amounts under s 56(1)(n), (o), (r)(v) (taken as nil);
+-- (c) business income (otherwise than as a specified member of a partnership).
+GIVEN inc IS AN `Income amounts`
+GIVETH A NUMBER
+`the working income` inc MEANS
+    `nil if negative` (inc's `employment income`) PLUS `nil if negative` (inc's `business income or loss`)
+
+-- s 122.7(1.3): the secondary earner exemption. The adjusted net income of whichever of the couple has the lower working
+-- income (the individual if strictly lower, otherwise the spouse) is reduced by the lesser of that working income and
+-- $14,000 as adjusted.
+GIVEN ia IS AN `Indexed amounts for a taxation year`, ty IS A `Taxation year`
+GIVETH A NUMBER
+`the family adjusted net income` ia ty MEANS
+    IF `has an eligible spouse` ty
+    THEN IF wi LESS THAN swi
+         THEN `the excess of` ani `over` (min wi ex) PLUS sani
+         ELSE ani PLUS `the excess of` sani `over` (min swi ex)
+    ELSE ani
+    WHERE
+        wi   MEANS `the working income` (ty's `income`)
+        swi  MEANS ty's `spouse`'s `the spouse's working income`
+        -- s 122.7(1) "adjusted net income": the income for the year, with exclusions not among the heads taken
+        ani  MEANS `the income for the year` ia (ty's `income`)
+        sani MEANS ty's `spouse`'s `the spouse's income`
+        ex   MEANS ia's `the CWB secondary earner exemption`
+
+-- s 122.7(2): A - B.
+GIVEN ia IS AN `Indexed amounts for a taxation year`, ty IS A `Taxation year`, c IS A `CWB facts`
+GIVETH A NUMBER
+`the s 122.7(2) basic amount` ia ty c MEANS
+    IF `an eligible individual under s 122.7(1)` ty c AND c's `files a return of income for the year` AND ((NOT `has an eligible spouse` ty) OR c's `the individual is the one of the couple who claims`)
+    THEN IF family
+         THEN `nil if negative` (min (ia's `the CWB maximum for a family`) ((27%) TIMES `the excess of` (wi PLUS swi) `over` 3000) MINUS ((15%) TIMES `the excess of` (`the family adjusted net income` ia ty) `over` (ia's `the CWB threshold for a family`)))
+         ELSE `nil if negative` (min (ia's `the CWB maximum for a single individual`) ((27%) TIMES `the excess of` wi `over` 3000) MINUS ((15%) TIMES `the excess of` (`the income for the year` ia (ty's `income`)) `over` (ia's `the CWB threshold for a single individual`)))
+    ELSE 0
+    WHERE
+        family MEANS `has an eligible spouse` ty OR c's `has an eligible dependant`
+        wi     MEANS `the working income` (ty's `income`)
+        swi    MEANS IF `has an eligible spouse` ty THEN ty's `spouse`'s `the spouse's working income` ELSE 0
+
+-- s 122.7(3): C - D, for an eligible individual who may deduct an amount under s 118.3(1). s 122.7(5) restricts only
+-- subsection (2), so each spouse may receive a supplement.
+GIVEN ia IS AN `Indexed amounts for a taxation year`, ty IS A `Taxation year`, c IS A `CWB facts`
+GIVETH AN `Answer` NUMBER
+`the s 122.7(3) disability supplement` ia ty c MEANS
+    IF `an eligible individual under s 122.7(1)` ty c AND c's `files a return of income for the year` AND `may deduct the disability amount` (ty's `disability`)
+    THEN IF spouseDTC AND c's `has an eligible dependant`
+         THEN `not covered` `s 122.7(3) D(b) and D(c) both apply when the spouse may deduct a disability amount and there is an eligible dependant`
+         ELSE `answered` (`nil if negative` (cc MINUS d))
+    ELSE `answered` 0
+    WHERE
+        spouse   MEANS `has an eligible spouse` ty
+        spouseDTC MEANS spouse AND ty's `spouse`'s `the spouse may deduct a disability amount under s 118.3(1)`
+        cc MEANS min (ia's `the CWB disability supplement maximum`) ((27%) TIMES `the excess of` (`the working income` (ty's `income`)) `over` 1150)
+        d  MEANS IF (NOT spouse) AND (NOT c's `has an eligible dependant`)
+                 THEN (15%) TIMES `the excess of` (`the income for the year` ia (ty's `income`)) `over` (ia's `the CWB disability supplement threshold for a single individual`)
+                 ELSE IF spouseDTC
+                      THEN (7.5%) TIMES `the excess of` (`the family adjusted net income` ia ty) `over` (ia's `the CWB disability supplement threshold for a family`)
+                      ELSE (15%) TIMES `the excess of` (`the family adjusted net income` ia ty) `over` (ia's `the CWB disability supplement threshold for a family`)
+
+DECLARE `CWB figures` HAS
+    `basic amount`                                    IS A NUMBER
+    `disability supplement`                           IS A NUMBER
+    `total`                                           IS A NUMBER
+
+GIVEN ty IS A `Taxation year`, c IS A `CWB facts`
+GIVETH AN `Answer` `CWB figures`
+`the Canada workers benefit for the year` ty c MEANS
+    CONSIDER `the gap in` ty
+    WHEN JUST reason THEN `not covered` reason
+    WHEN NOTHING THEN
+        IF ty's `province at the end of the year` EQUALS `Alberta` OR ty's `province at the end of the year` EQUALS `Nunavut`
+        THEN `not covered` `the CWB of a resident of Alberta, Quebec or Nunavut is replaced under a s 122.71 agreement, which is not deposited`
+        ELSE CONSIDER `the indexed amounts for the taxation year` (ty's `year`)
+             WHEN NOTHING THEN `not covered` `the indexed amounts of a taxation year other than 2026 are not deposited`
+             WHEN JUST ia THEN
+                 CONSIDER `the s 122.7(3) disability supplement` ia ty c
+                 WHEN `not covered` r THEN `not covered` r
+                 WHEN `answered` ds THEN `answered` (`CWB figures` WITH
+                     `basic amount`          IS `the s 122.7(2) basic amount` ia ty c
+                     `disability supplement` IS ds
+                     `total`                 IS `the s 122.7(2) basic amount` ia ty c PLUS ds)
+
+§§ `The return: tax, Part I.2 tax and the balance (s 117, s 180.2, s 156.1(4))`
+
+DECLARE `Return figures` HAS
+    `income`                                          IS A NUMBER
+    `taxable income`                                  IS A NUMBER
+    `tax at the s 117(2) rates`                       IS A NUMBER
+    `non-refundable credits`                          IS A NUMBER
+    `Part I tax payable`                              IS A NUMBER
+    `Part I.2 OAS recovery tax`                       IS A NUMBER
+    `Canada workers benefit`                          IS A NUMBER
+    -- s 156.1(4) and s 180.2(5)(b): what is left to pay by the balance-due day; a negative figure is an overpayment
+    -- (refund under s 164, not encoded)
+    `balance owing`                                   IS A NUMBER
+
+GIVEN ty IS A `Taxation year`, c IS A `CWB facts`
+GIVETH AN `Answer` `Return figures`
+`the return for the year` ty c MEANS
+    CONSIDER `the gap in` ty
+    WHEN JUST reason THEN `not covered` reason
+    WHEN NOTHING THEN
+        CONSIDER `the indexed amounts for the taxation year` (ty's `year`)
+        WHEN NOTHING THEN `not covered` `the indexed amounts of a taxation year other than 2026 are not deposited`
+        WHEN JUST ia THEN
+            CONSIDER `the Canada workers benefit for the year` ty c
+            WHEN `not covered` r THEN `not covered` r
+            WHEN `answered` cwb THEN `answered` (`Return figures` WITH
+                `income`                    IS `the income for the year` ia (ty's `income`)
+                `taxable income`            IS `the taxable income` ia (ty's `income`)
+                `tax at the s 117(2) rates` IS `the s 117(2) tax on` (`the taxable income` ia (ty's `income`)) `with` ia
+                `non-refundable credits`    IS `the non-refundable credits` ia ty
+                `Part I tax payable`        IS `the Part I tax payable` ia ty
+                `Part I.2 OAS recovery tax` IS `the Part I.2 tax` ia (ty's `income`)
+                `Canada workers benefit`    IS cwb's `total`
+                `balance owing`             IS (`the Part I tax payable` ia ty PLUS `the Part I.2 tax` ia (ty's `income`)) MINUS (ty's `income tax withheld at source` PLUS ty's `Part I.2 tax withheld from OAS payments` PLUS ty's `instalments paid for the year` PLUS cwb's `total`))
+
+§§ `The Canada child benefit (ss 122.6 to 122.62)`
+
+-- One child, at the beginning of the month.
+DECLARE `CCB child` HAS
+    -- s 122.6 "qualified dependant" (a): has not attained the age of 18
+    `age at the beginning of the month`               IS A NUMBER
+    -- "eligible individual" (a)
+    `resides with the individual`                     IS A BOOLEAN
+    -- (b)(i): the parent who primarily fulfils the responsibility for the care and upbringing (presumed to be the
+    -- female parent with whom the child resides, (f)); asked as a fact
+    `the individual primarily fulfils the responsibility for care and upbringing` IS A BOOLEAN
+    -- (b)(ii), "shared-custody parent"
+    `the individual is a shared-custody parent`       IS A BOOLEAN
+    -- "qualified dependant" (b): claimed as a spouse under s 118(1)(a) by the child's spouse; (c): a special allowance
+    -- under the Children's Special Allowances Act
+    `claimed as a spouse or under a special allowance` IS A BOOLEAN
+    -- s 122.61(1), N(a): an amount may be deducted under s 118.3 for the child for the year that includes the month
+    `the disability amount may be deducted for the child` IS A BOOLEAN
+    -- s 122.62(1): a notice in prescribed form filed no later than 11 months after the end of the month
+    `a notice has been filed for the child`           IS A BOOLEAN
+
+DECLARE `CCB facts` HAS
+    `year of the month`                               IS A NUMBER
+    `month`                                           IS A NUMBER
+    `children`                                        IS A LIST OF `CCB child`
+    -- "eligible individual" (c): resident in Canada (or the cohabiting spouse of a deemed resident who was resident in
+    -- an earlier year), asked as one fact
+    `resident in Canada`                              IS A BOOLEAN
+    -- (d): s 149(1)(a) or (b)
+    `described in s 149(1)(a) or (b)`                 IS A BOOLEAN
+    -- (e): the individual or the cohabiting spouse is a citizen, permanent resident, protected person, temporary
+    -- resident here 18 months, member of a humanitarian class, or an Indian within the Indian Act
+    `the individual or the spouse has a status in s 122.6 (e)` IS A BOOLEAN
+    -- s 122.61(1): the person (and, if the Minister demands, the cohabiting spouse) has filed a return for the base
+    -- taxation year
+    `returns filed for the base taxation year`        IS A BOOLEAN
+    -- "adjusted income": the income of the individual and of the cohabiting spouse at the end of the base year
+    `adjusted income for the base taxation year`      IS A NUMBER
+
+-- s 122.6 "base taxation year": the first 6 months of a calendar year take the year ended 31 December of the second
+-- preceding calendar year; the last 6 months, the preceding calendar year.
+GIVEN year IS A NUMBER, month IS A NUMBER
+GIVETH A NUMBER
+`the base taxation year for` year month MEANS
+    IF month AT MOST 6 THEN year MINUS 2 ELSE year MINUS 1
+
+GIVEN f IS A `CCB facts`, ch IS A `CCB child`
+GIVETH A BOOLEAN
+DECIDE `an eligible individual for the child` f ch IF
+        ch's `age at the beginning of the month` LESS THAN 18
+    AND (NOT ch's `claimed as a spouse or under a special allowance`)
+    AND ch's `resides with the individual`
+    AND (ch's `the individual primarily fulfils the responsibility for care and upbringing` OR ch's `the individual is a shared-custody parent`)
+    AND f's `resident in Canada`
+    AND (NOT f's `described in s 149(1)(a) or (b)`)
+    AND f's `the individual or the spouse has a status in s 122.6 (e)`
+    -- s 122.62(1)
+    AND ch's `a notice has been filed for the child`
+
+GIVEN f IS A `CCB facts`
+GIVETH A LIST OF `CCB child`
+`the qualified dependants for whom the person is an eligible individual` f MEANS
+    filter (GIVEN ch YIELD `an eligible individual for the child` f ch) (f's `children`)
+
+-- s 122.61(1): (A + M)/12, A = E - Q, M = N - O.
+GIVEN ca IS AN `Indexed CCB amounts`, f IS A `CCB facts`
+GIVETH A NUMBER
+`the s 122.61(1) monthly amount` ca f MEANS
+    (`nil if negative` (e MINUS q) PLUS `nil if negative` (n MINUS o)) DIVIDED BY 12
+    WHERE
+        kids    MEANS `the qualified dependants for whom the person is an eligible individual` f
+        nkids   MEANS count kids
+        under6  MEANS count (filter (GIVEN ch YIELD ch's `age at the beginning of the month` LESS THAN 6) kids)
+        dtc     MEANS count (filter (GIVEN ch YIELD ch's `the disability amount may be deducted for the child`) kids)
+        ai      MEANS f's `adjusted income for the base taxation year`
+        t1      MEANS ca's `the first income threshold`
+        t2      MEANS ca's `the second income threshold`
+        e       MEANS (ca's `the amount for a child under six` TIMES under6) PLUS (ca's `the amount for a child aged six to seventeen` TIMES (nkids MINUS under6))
+        r1      MEANS IF nkids EQUALS 1 THEN 7% ELSE IF nkids EQUALS 2 THEN 13.5% ELSE IF nkids EQUALS 3 THEN 19% ELSE 23%
+        base    MEANS IF nkids EQUALS 1 THEN ca's `the base phase-out for one child` ELSE IF nkids EQUALS 2 THEN ca's `the base phase-out for two children` ELSE IF nkids EQUALS 3 THEN ca's `the base phase-out for three children` ELSE ca's `the base phase-out for four or more children`
+        r2      MEANS IF nkids EQUALS 1 THEN 3.2% ELSE IF nkids EQUALS 2 THEN 5.7% ELSE IF nkids EQUALS 3 THEN 8% ELSE 9.5%
+        q       MEANS IF nkids EQUALS 0 OR ai AT MOST t1
+                      THEN 0
+                      ELSE IF ai AT MOST t2
+                           THEN r1 TIMES (ai MINUS t1)
+                           ELSE base PLUS (r2 TIMES (ai MINUS t2))
+        n       MEANS ca's `the child disability benefit amount` TIMES dtc
+        o       MEANS IF ai AT MOST t2 OR dtc EQUALS 0
+                      THEN 0
+                      ELSE IF dtc EQUALS 1
+                           THEN 3.2% TIMES (ai MINUS t2)
+                           ELSE 5.7% TIMES (ai MINUS t2)
+
+GIVEN f IS A `CCB facts`
+GIVETH AN `Answer` NUMBER
+`the Canada child benefit for the month` f MEANS
+    IF any (GIVEN ch YIELD `an eligible individual for the child` f ch AND ch's `the individual is a shared-custody parent`) (f's `children`)
+    THEN `not covered` `a shared-custody parent's amount under s 122.61(1.1) or s 122.5(3.06) is not encoded`
+    ELSE CONSIDER `the indexed CCB amounts for the month` (f's `year of the month`) (f's `month`)
+         WHEN NOTHING THEN `not covered` `the CCB amounts for a month outside July 2026 to June 2027 are not deposited`
+         WHEN JUST ca THEN
+             IF f's `returns filed for the base taxation year`
+             THEN `answered` (`the s 122.61(1) monthly amount` ca f)
+             ELSE `answered` 0
+
+§§ `The GST/HST credit (s 122.5), for the months of s 122.5(3.005)`
+
+DECLARE `GST credit facts` HAS
+    `year of the month`                               IS A NUMBER
+    `month`                                           IS A NUMBER
+    -- s 122.5(1) "eligible individual": before the month, 19 or older, or a parent who resided with their child, or
+    -- married or in a common-law partnership
+    `age before the month`                            IS A NUMBER
+    `before the month, a parent who resided with their child` IS A BOOLEAN
+    `before the month, married or in a common-law partnership` IS A BOOLEAN
+    -- s 122.5(2): died before the month, in prison for 90 days including the first day, non-resident at the beginning
+    -- of the month, s 149(1)(a) or (b), or a special allowance payable
+    `excluded by s 122.5(2)`                          IS A BOOLEAN
+    -- "qualified relation": the cohabiting spouse at the beginning of the month
+    `has a qualified relation`                        IS A BOOLEAN
+    -- s 122.5(5): of two spouses, only the one the Minister designates
+    `the individual is the one designated for the couple` IS A BOOLEAN
+    -- "qualified dependant": the individual's child or a person dependent for support, who resides with the
+    -- individual, is under 19, is not an eligible individual and is not a qualified relation
+    `number of qualified dependants`                  IS A NUMBER
+    `a shared-custody parent of a qualified dependant` IS A BOOLEAN
+    -- A(c): entitled to deduct for the taxation year under s 118(1)(b) for a qualified dependant
+    `claims the s 118(1)(b) amount for a qualified dependant` IS A BOOLEAN
+    -- "who files a return of income for the taxation year"
+    `files a return of income for the taxation year`  IS A BOOLEAN
+    -- A(f): the individual's income for the taxation year; B: adjusted income (with the qualified relation's)
+    `income for the taxation year`                    IS A NUMBER
+    `adjusted income for the taxation year`           IS A NUMBER
+
+-- s 122.5(4.5): July 2026 to April 2031; for July or October the taxation year is the preceding one, for January or
+-- April the second preceding one. The amounts are not indexed for a taxation year before 2027 (s 117.1(2)(m.1)), so the
+-- months from July 2026 to April 2028 (taxation years 2025 and 2026) are covered.
+GIVEN year IS A NUMBER, month IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `a month specified in s 122.5(4.5) and covered` year month IF
+        (month EQUALS 1 OR month EQUALS 4 OR month EQUALS 7 OR month EQUALS 10)
+    AND ((year EQUALS 2026 AND month AT LEAST 7) OR year EQUALS 2027 OR (year EQUALS 2028 AND month AT MOST 4))
+
+GIVEN year IS A NUMBER, month IS A NUMBER
+GIVETH A NUMBER
+`the taxation year for the specified month` year month MEANS
+    IF month EQUALS 7 OR month EQUALS 10 THEN year MINUS 1 ELSE year MINUS 2
+
+GIVEN g IS A `GST credit facts`
+GIVETH A BOOLEAN
+DECIDE `an eligible individual under s 122.5(1)` g IF
+        (g's `age before the month` AT LEAST 19 OR g's `before the month, a parent who resided with their child` OR g's `before the month, married or in a common-law partnership`)
+    AND (NOT g's `excluded by s 122.5(2)`)
+    AND ((NOT g's `has a qualified relation`) OR g's `the individual is the one designated for the couple`)
+
+-- s 122.5(3.005): 1/4 of A - B.
+GIVEN g IS A `GST credit facts`
+GIVETH A NUMBER
+`the s 122.5(3.005) amount` g MEANS
+    (1 DIVIDED BY 4) TIMES `nil if negative` (a MINUS b)
+    WHERE
+        qr   MEANS g's `has a qualified relation`
+        qd   MEANS g's `number of qualified dependants`
+        -- (c): no qualified relation, and the s 118(1)(b) amount claimed for a qualified dependant
+        c    MEANS (NOT qr) AND g's `claims the s 118(1)(b) amount for a qualified dependant` AND qd AT LEAST 1
+        a    MEANS 445
+              PLUS (IF qr THEN 445 ELSE 0)
+              PLUS (IF c THEN 445 ELSE 0)
+              PLUS (234 TIMES (qd MINUS `one if` c))
+              PLUS (IF (NOT qr) AND qd AT LEAST 1 THEN 234 ELSE 0)
+              PLUS (IF (NOT qr) AND qd EQUALS 0 THEN min 234 ((2%) TIMES `the excess of` (g's `income for the taxation year`) `over` 11564) ELSE 0)
+        b    MEANS (5%) TIMES `the excess of` (g's `adjusted income for the taxation year`) `over` 46432
+
+GIVEN g IS A `GST credit facts`
+GIVETH AN `Answer` NUMBER
+`the GST/HST credit for the specified month` g MEANS
+    IF NOT `a month specified in s 122.5(4.5) and covered` (g's `year of the month`) (g's `month`)
+    THEN `not covered` `the GST/HST credit is encoded only for the months July 2026 to April 2028 under s 122.5(3.005)`
+    ELSE IF g's `a shared-custody parent of a qualified dependant`
+         THEN `not covered` `a shared-custody parent's amount under s 122.61(1.1) or s 122.5(3.06) is not encoded`
+         ELSE IF `an eligible individual under s 122.5(1)` g AND g's `files a return of income for the taxation year`
+              THEN `answered` (`the s 122.5(3.005) amount` g)
+              ELSE `answered` 0
+
+§§ `Duties: filing, paying and notifying (s 150, s 156, s 156.1, s 180.2(5), s 122.62)`
+
+-- The actors the text names. s 150(1)(d)(i): the return is filed "by that person or, if the person is unable for any
+-- reason to file the return, by the person's guardian, committee or other legal representative".
+DECLARE `Person who acts` IS ONE OF
+    `the individual`
+    `the individual's guardian, committee or other legal representative`
+
+DECLARE `Act of the individual` IS ONE OF
+    -- s 150(1), s 180.2(5)(a): a return of income in prescribed form
+    `file a return of income for the year`
+    -- s 156.1(4), s 180.2(5)(b): pay to the Receiver General
+    `pay the balance` HAS `amount` IS A NUMBER
+    -- s 156(1)(a), (b)
+    `pay an instalment` HAS `amount` IS A NUMBER
+    -- s 122.62(5)(a), (6)(a), (7)(a): notify the Minister in prescribed form
+    `notify the Minister of the change`
+
+GIVEN able IS A BOOLEAN
+GIVETH A `Person who acts`
+`who files the return` able MEANS
+    IF able THEN `the individual` ELSE `the individual's guardian, committee or other legal representative`
+
+DECLARE `Filing facts` HAS
+    -- s 150(1.1)(b)(ii): a taxable capital gain, or a disposition of capital property, in the year
+    `had a taxable capital gain or disposed of capital property` IS A BOOLEAN
+    -- (iv): an HBP or LLP balance at the end of the year
+    `has a positive HBP or LLP balance at the end of the year` IS A BOOLEAN
+    -- s 150(2): a demand from the Minister (the return is then due as the demand says; asked only as a fact)
+    `the Minister has demanded a return`               IS A BOOLEAN
+    -- s 150(1)(d)(ii): carried on a business in the year (not primarily tax shelter investments), or was the
+    -- cohabiting spouse of such an individual
+    `the individual or the cohabiting spouse carried on a business` IS A BOOLEAN
+    `able to file`                                     IS A BOOLEAN
+
+-- s 150(1.1)(b): s 150(1) does not apply to an individual unless (i) tax is payable under Part I, (ii) a capital gain or
+-- disposition, (iv) an HBP or LLP balance. s 180.2(5)(a): an individual liable to Part I.2 tax must file. s 150(2): a
+-- demand.
+GIVEN `Part I tax` IS A NUMBER, `Part I.2 tax` IS A NUMBER, ff IS A `Filing facts`
+GIVETH A BOOLEAN
+DECIDE `a return is required` `Part I tax` `Part I.2 tax` ff IF
+       `Part I tax` GREATER THAN 0
+    OR `Part I.2 tax` GREATER THAN 0
+    OR ff's `had a taxable capital gain or disposed of capital property`
+    OR ff's `has a positive HBP or LLP balance at the end of the year`
+    OR ff's `the Minister has demanded a return`
+
+-- s 150(1)(d)(i), (ii): on or before the following April 30, or June 15 for a business. Counted in days from
+-- 31 December of the taxation year: 30 April 2027 is day 120, 15 June 2027 day 166.
+GIVEN ff IS A `Filing facts`
+GIVETH A NUMBER
+`days to the filing-due date` ff MEANS
+    IF ff's `the individual or the cohabiting spouse carried on a business` THEN 166 ELSE 120
+
+-- s 248(1) "balance-due day" (c): April 30 in the following year, for a living individual. Day 120.
+`days to the balance-due day` MEANS 120
+
+GIVEN required IS A BOOLEAN, ff IS A `Filing facts`
+GIVETH A DEONTIC `Person who acts` `Act of the individual`
+`the duty to file a return` required ff MEANS
+    IF required
+    THEN PARTY `who files the return` (ff's `able to file`)
+         MUST  `file a return of income for the year`
+         WITHIN `days to the filing-due date` ff
+         HENCE FULFILLED
+         LEST  BREACH BY (`who files the return` (ff's `able to file`)) BECAUSE "no return of income was filed by the filing-due date (s 150(1)(d))"
+    ELSE FULFILLED
+
+-- s 156.1(4), s 180.2(5)(b): on or before the balance-due day, pay the tax payable less the amounts withheld and paid.
+GIVEN balance IS A NUMBER
+GIVETH A DEONTIC `Person who acts` `Act of the individual`
+`the duty to pay the balance` balance MEANS
+    IF balance GREATER THAN 0
+    THEN PARTY `the individual`
+         MUST  `pay the balance` paid PROVIDED paid AT LEAST balance
+         WITHIN `days to the balance-due day`
+         HENCE FULFILLED
+         LEST  BREACH BY `the individual` BECAUSE "the balance of tax was not paid by the balance-due day (s 156.1(4))"
+    ELSE FULFILLED
+
+-- s 156.1(1): "net tax owing" (b), outside Quebec: A + B - C - E - F, with A the Part I and Part I.2 taxes, B the provincial
+-- income tax collected under an agreement, C the tax withheld under s 153 and Part I.2, E the provincial tax withheld,
+-- F nil (s 120(2.2) not encoded). "instalment threshold" (b): $3,000.
+GIVEN `federal taxes` IS A NUMBER, `provincial tax` IS A NUMBER, `federal withheld` IS A NUMBER, `provincial withheld` IS A NUMBER
+GIVETH A NUMBER
+`the net tax owing` `federal taxes` `provincial tax` `federal withheld` `provincial withheld` MEANS
+    (`federal taxes` PLUS `provincial tax`) MINUS (`federal withheld` PLUS `provincial withheld`)
+
+`the instalment threshold` MEANS 3000
+
+-- s 156.1(2)(b): ss 155 and 156 do not apply where the net tax owing for the year, or for each of the 2 preceding years,
+-- does not exceed the instalment threshold. (a), farming or fishing, and (c), a graduated rate estate, are not encoded.
+GIVEN `this year` IS A NUMBER, `last year` IS A NUMBER, `the year before` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `instalments are required` `this year` `last year` `the year before` IF
+        `this year` GREATER THAN `the instalment threshold`
+    AND (`last year` GREATER THAN `the instalment threshold` OR `the year before` GREATER THAN `the instalment threshold`)
+
+-- s 156(1): on or before March 15, June 15, September 15 and December 15 in the year. Counted in days from 31 December
+-- of the preceding year (2026 is not a leap year): day 74, 166, 258 and 349.
+GIVEN n IS A NUMBER
+GIVETH A NUMBER
+`days to instalment` n MEANS
+    IF n EQUALS 1 THEN 74 ELSE IF n EQUALS 2 THEN 166 ELSE IF n EQUALS 3 THEN 258 ELSE 349
+
+-- One instalment, of the amount the method chosen under s 156(1)(a) or (b) gives.
+GIVEN n IS A NUMBER, required IS A BOOLEAN, `the instalment` IS A NUMBER
+GIVETH A DEONTIC `Person who acts` `Act of the individual`
+`the duty to pay instalment` n required `the instalment` MEANS
+    IF required AND `the instalment` GREATER THAN 0
+    THEN PARTY `the individual`
+         MUST  `pay an instalment` paid PROVIDED paid AT LEAST `the instalment`
+         WITHIN `days to instalment` n
+         HENCE FULFILLED
+         LEST  BREACH BY `the individual` BECAUSE "an instalment was not paid by its day under s 156(1)"
+    ELSE FULFILLED
+
+-- s 156(1)(a)(ii): 1/4 of the instalment base for the preceding year; (a)(i) 1/4 of the estimated tax; (b) the second
+-- preceding year's base for March and June. Whichever the individual chooses gives the amount.
+GIVEN base IS A NUMBER
+GIVETH A NUMBER
+`a quarter of` base MEANS base DIVIDED BY 4
+
+-- s 122.62(5)(a), (6)(a), (7)(a): an eligible individual whose cohabiting spouse dies, who separates, or who gains a
+-- cohabiting spouse "shall notify the Minister in prescribed form of that event before the end of the first calendar
+-- month that begins after that event". Counted in days from the event.
+GIVEN `days to the end of the next calendar month` IS A NUMBER
+GIVETH A DEONTIC `Person who acts` `Act of the individual`
+`the duty to notify a change of cohabiting spouse` `days to the end of the next calendar month` MEANS
+    PARTY `the individual`
+    MUST  `notify the Minister of the change`
+    WITHIN `days to the end of the next calendar month`
+    HENCE FULFILLED
+    LEST  BREACH BY `the individual` BECAUSE "the change of cohabiting spouse or common-law partner was not notified in time (s 122.62)"
+
+-- The day count for that deadline, without a calendar library: the days left in the month of the event plus the whole
+-- of the next month. An event on the first of a month is after that month began, so the next month is still "the first
+-- calendar month that begins after".
+GIVEN month IS A NUMBER, year IS A NUMBER
+GIVETH A NUMBER
+`days in month` month year MEANS
+    IF month EQUALS 2
+    THEN IF (year MODULO 4 EQUALS 0 AND (NOT (year MODULO 100 EQUALS 0))) OR year MODULO 400 EQUALS 0 THEN 29 ELSE 28
+    ELSE IF month EQUALS 4 OR month EQUALS 6 OR month EQUALS 9 OR month EQUALS 11
+         THEN 30
+         ELSE 31
+
+GIVEN day IS A NUMBER, month IS A NUMBER, year IS A NUMBER
+GIVETH A NUMBER
+`days from the event to the end of the next calendar month` day month year MEANS
+    (`days in month` month year MINUS day) PLUS (IF month EQUALS 12 THEN `days in month` 1 (year PLUS 1) ELSE `days in month` (month PLUS 1) year)

@@ -1,0 +1,353 @@
+IMPORT prelude
+IMPORT `ita-amounts`
+IMPORT `ita-individual`
+
+-- Income Tax Act -- the individual's questions about federal income tax for 2026 and the benefits paid through it. Seat
+-- layer over ita-individual.l4.
+--
+-- Seat: the individual (a person resident in Canada for 2026, alone or with a spouse or common-law partner, with or
+-- without children). Each question takes plain answers the person can give, builds the core's records from them, and asks
+-- the core. No rule of the Act is restated here. Where a record field the core reads is not asked, it gets a fixed value,
+-- with a comment.
+--
+-- Not for public use as advice.
+
+§ `The individual's questions about federal income tax and benefits, 2026`
+
+§§ `How the answers are put together`
+
+-- The person's situation at the end of the year, as they would describe it.
+DECLARE `My family situation` IS ONE OF
+    `single, divorced or widowed`
+    `married or common-law, and living together`
+    `married or common-law, but living apart because the relationship broke down`
+
+GIVEN situation IS A `My family situation`, `I support my spouse` IS A BOOLEAN, `spouse's income` IS A NUMBER, `spouse's working income` IS A NUMBER, `spouse infirm` IS A BOOLEAN, `spouse has a disability certificate` IS A BOOLEAN
+GIVETH A `Spouse facts`
+`the spouse described by` situation `I support my spouse` `spouse's income` `spouse's working income` `spouse infirm` `spouse has a disability certificate` MEANS `Spouse facts` WITH
+    `married or in a common-law partnership in the year` IS NOT (situation EQUALS `single, divorced or widowed`)
+    `supports the spouse`                             IS together AND `I support my spouse`
+    `living separate and apart because of a breakdown` IS situation EQUALS `married or common-law, but living apart because the relationship broke down`
+    `a cohabiting spouse at the end of the year`      IS together
+    `the spouse's income`                             IS IF together THEN `spouse's income` ELSE 0
+    `the spouse is dependent on the individual by reason of infirmity` IS together AND `spouse infirm`
+    -- not asked: a spouse living with the person is taken as resident in Canada all year and not ineligible for the CWB
+    `the spouse was resident in Canada throughout the year` IS together
+    `the spouse is an ineligible individual under s 122.7(1)` IS FALSE
+    `the spouse's working income`                     IS IF together THEN `spouse's working income` ELSE 0
+    `the spouse may deduct a disability amount under s 118.3(1)` IS together AND `spouse has a disability certificate`
+    WHERE
+        together MEANS situation EQUALS `married or common-law, and living together`
+
+-- The eligible dependant: one of the person's own children, living in the person's home and wholly supported there, with
+-- no income. Fixed values: a child of the person (so related, and residence not needed), not infirm, no support order.
+GIVEN claimed IS A BOOLEAN, age IS A NUMBER
+GIVETH AN `Eligible dependant facts`
+`the eligible dependant described by` claimed age MEANS `Eligible dependant facts` WITH
+    `claimed`                                         IS claimed
+    `maintains a self-contained domestic establishment and supports the person in it` IS claimed
+    `wholly dependent for support on the individual`  IS claimed
+    `related to the individual`                       IS claimed
+    `a child of the individual`                       IS claimed
+    `resident in Canada`                              IS claimed
+    `a parent or grandparent of the individual`       IS FALSE
+    `age at the end of the year`                      IS age
+    `dependent by reason of mental or physical infirmity` IS FALSE
+    `income for the year`                             IS 0
+    `s 118(5) excludes the claim`                     IS FALSE
+
+GIVEN `resident all year` IS A BOOLEAN, `resident part of the year` IS A BOOLEAN, `days in Canada` IS A NUMBER, `deemed resident` IS A BOOLEAN
+GIVETH A `Residence facts`
+`the residence described by` `resident all year` `resident part of the year` `days in Canada` `deemed resident` MEANS `Residence facts` WITH
+    `resident in Canada throughout the year`          IS `resident all year`
+    `resident in Canada for part of the year only`    IS `resident part of the year`
+    `days sojourned in Canada in the year`            IS `days in Canada`
+    `deemed resident under s 250(1)(b) to (g)`        IS `deemed resident`
+
+-- The amounts received and paid, as on the person's slips.
+GIVEN emp IS A NUMBER, dues IS A NUMBER, oas IS A NUMBER, gis IS A NUMBER, cpp IS A NUMBER, ann IS A NUMBER, rrif IS A NUMBER, ei IS A NUMBER, sa IS A NUMBER, interest IS A NUMBER, business IS A NUMBER, rrsp IS A NUMBER, `rrsp limit` IS A NUMBER, enh IS A NUMBER, base IS A NUMBER, eip IS A NUMBER
+GIVETH AN `Income amounts`
+`the income described by` emp dues oas gis cpp ann rrif ei sa interest business rrsp `rrsp limit` enh base eip MEANS `Income amounts` WITH
+    `employment income`                               IS emp
+    `deductions under s 8`                            IS dues
+    `OAS pension`                                     IS oas
+    `OAS supplement or allowance`                     IS gis
+    `CPP or QPP benefits`                             IS cpp
+    `life annuity payments from a pension plan`       IS ann
+    `other pension income listed in s 118(7)`         IS rrif
+    -- not asked: RRIF and annuity payments received because a spouse died (they count under 65 only)
+    `of which received because of a spouse's death`   IS 0
+    `EI benefits`                                     IS ei
+    `social assistance`                               IS sa
+    `property income`                                 IS interest
+    `business income or loss`                         IS business
+    -- not asked: other income heads; taxable capital gains are a separate question (not covered)
+    `other income`                                    IS 0
+    `taxable capital gains`                           IS 0
+    `RRSP premiums paid for the year`                 IS rrsp
+    `RRSP deduction limit`                            IS `rrsp limit`
+    `enhanced CPP contributions`                      IS enh
+    `base CPP contributions`                          IS base
+    `EI premiums`                                     IS eip
+
+-- CWB facts. Fixed values: not a diplomat's family (s 149(1)(a), (b)), not in prison for 90 days, and the one of a couple
+-- who claims the basic amount (s 122.7(5)).
+GIVEN `children under 19 living with me` IS A NUMBER, `full-time student over 13 weeks` IS A BOOLEAN, `I file a return` IS A BOOLEAN
+GIVETH A `CWB facts`
+`the CWB facts described by` `children under 19 living with me` `full-time student over 13 weeks` `I file a return` MEANS `CWB facts` WITH
+    `the parent of a child with whom the individual resides` IS `children under 19 living with me` GREATER THAN 0
+    `has an eligible dependant`                       IS `children under 19 living with me` GREATER THAN 0
+    `described in s 149(1)(a) or (b)`                 IS FALSE
+    `a full-time student for more than 13 weeks`      IS `full-time student over 13 weeks`
+    `confined to a prison for 90 days or more`        IS FALSE
+    `the individual is the one of the couple who claims` IS TRUE
+    `files a return of income for the year`           IS `I file a return`
+
+GIVEN `tax year` IS A NUMBER, province IS A `Province at the end of the year`, age IS A NUMBER, res IS A `Residence facts`, inc IS AN `Income amounts`, sp IS A `Spouse facts`, ed IS AN `Eligible dependant facts`, `disability certificate` IS A BOOLEAN, withheld IS A NUMBER, `OAS withheld` IS A NUMBER, instalments IS A NUMBER
+GIVETH A `Taxation year`
+`the year described by` `tax year` province age res inc sp ed `disability certificate` withheld `OAS withheld` instalments MEANS `Taxation year` WITH
+    `year`                                            IS `tax year`
+    `residence`                                       IS res
+    `province at the end of the year`                 IS province
+    -- the person asking is alive
+    `died in the year`                                IS FALSE
+    `age at the end of the year`                      IS age
+    `income`                                          IS inc
+    `spouse`                                          IS sp
+    `eligible dependant`                              IS ed
+    -- not asked: attendant care claimed under s 118.2, and care costs (they matter only for a child's own return)
+    `disability`                                      IS `Disability facts` WITH
+        `a certified disability tax credit certificate is filed for the year` IS `disability certificate`
+        `attendant care or nursing home costs are claimed under s 118.2` IS FALSE
+        `care and supervision amounts claimed under ss 63, 64 and 118.2` IS 0
+    `income tax withheld at source`                   IS withheld
+    `Part I.2 tax withheld from OAS payments`         IS `OAS withheld`
+    `instalments paid for the year`                   IS instalments
+
+-- n children of the given age who live with the person; the first d of them have a disability certificate. The person is
+-- the main caregiver unless custody is shared.
+GIVEN age IS A NUMBER, n IS A NUMBER, d IS A NUMBER, sh IS A BOOLEAN, ap IS A BOOLEAN
+GIVETH A LIST OF `CCB child`
+`CCB children aged` age `how many` n `with a certificate` d `shared` sh `applied` ap MEANS
+    IF n LESS THAN 1
+    THEN LIST
+    ELSE (`CCB child` WITH
+            `age at the beginning of the month`               IS age
+            `resides with the individual`                     IS TRUE
+            `the individual primarily fulfils the responsibility for care and upbringing` IS NOT sh
+            `the individual is a shared-custody parent`       IS sh
+            `claimed as a spouse or under a special allowance` IS FALSE
+            `the disability amount may be deducted for the child` IS d GREATER THAN 0
+            `a notice has been filed for the child`           IS ap)
+         FOLLOWED BY `CCB children aged` age `how many` (n MINUS 1) `with a certificate` (d MINUS 1) `shared` sh `applied` ap
+
+§§ `Residence (s 2(1), s 250)`
+
+@export Am I resident in Canada for income tax purposes for the whole year, for part of it, or not at all (Income Tax Act s 2(1), s 250)?
+GIVEN `I lived in Canada all year`               IS A BOOLEAN @desc Were you resident in Canada (your home and ordinary life here) throughout the year?
+      `I lived in Canada for part of the year`   IS A BOOLEAN @desc If not, did you live in Canada for part of the year (you moved here or left)?
+      `days I spent in Canada`                   IS A NUMBER @desc How many days in total did you spend in Canada during the year?
+      `I am deemed resident`                     IS A BOOLEAN @desc Were you, at any time in the year, a member of the Canadian Forces, a Canadian or provincial official abroad, on a Canadian aid program abroad, or the dependent child of one of these?
+GIVETH A `Residence status`
+`Am I resident in Canada` `I lived in Canada all year` `I lived in Canada for part of the year` `days I spent in Canada` `I am deemed resident` MEANS
+    `the residence status` (`the residence described by` `I lived in Canada all year` `I lived in Canada for part of the year` `days I spent in Canada` `I am deemed resident`)
+
+§§ `Your 2026 return (ss 3, 117, 118, 118.3, 118.7, 122.7, 180.2, 156.1)`
+
+@export What does my 2026 federal income tax return come to: income, taxable income, tax, credits, the OAS recovery tax, the Canada workers benefit, and the balance owing or refund?
+GIVEN `tax year`                                 IS A NUMBER @desc The taxation year; only 2026 is covered
+      `my province or territory`                 IS A `Province at the end of the year` @desc Where you lived on 31 December: "Quebec", "Alberta", "Nunavut" or "another province or territory"
+      `I lived in Canada all year`               IS A BOOLEAN @desc Were you resident in Canada throughout the year?
+      `my age`                                   IS A NUMBER @desc Your age on 31 December
+      `my family situation`                      IS A `My family situation` @desc On 31 December: "single, divorced or widowed", "married or common-law, and living together", or "married or common-law, but living apart because the relationship broke down"
+      `I support my spouse`                      IS A BOOLEAN @desc If you live with a spouse or common-law partner: do you support them?
+      `my spouse's net income`                   IS A NUMBER @desc Your spouse's or common-law partner's net income for the year (0 if none)
+      `my spouse's working income`               IS A NUMBER @desc Your spouse's or partner's earnings from employment and business for the year
+      `my spouse is infirm and depends on me`    IS A BOOLEAN @desc Does your spouse or partner depend on you because of a mental or physical infirmity?
+      `my spouse has a disability certificate`   IS A BOOLEAN @desc Has a disability tax credit certificate been approved for your spouse or partner for the year?
+      `children under 19 living with me`         IS A NUMBER @desc How many of your children under 19 lived with you on 31 December?
+      `I claim the eligible dependant amount`    IS A BOOLEAN @desc If you are not living with a spouse or partner: do you claim the amount for an eligible dependant for one of your children who lives with you and whom you support?
+      `that child's age`                         IS A NUMBER @desc The age on 31 December of the child you claim for (0 if none)
+      `I have a disability certificate`          IS A BOOLEAN @desc Has a disability tax credit certificate (Form T2201) been approved for you for the year?
+      `I was a full-time student over 13 weeks`  IS A BOOLEAN @desc Were you enrolled full-time at a college or university for more than 13 weeks of the year?
+      `employment income`                        IS A NUMBER @desc Salary, wages, tips and taxable benefits from your T4 slips
+      `union dues and employment expenses`       IS A NUMBER @desc Union or professional dues and other employment expenses you can deduct
+      `OAS pension`                              IS A NUMBER @desc Old Age Security pension received (T4A(OAS))
+      `Guaranteed Income Supplement or allowance` IS A NUMBER @desc Guaranteed Income Supplement or Allowance received
+      `CPP or QPP benefits`                      IS A NUMBER @desc Canada or Quebec Pension Plan benefits received (T4A(P))
+      `pension from a pension plan`              IS A NUMBER @desc Pension (a life annuity) from an employer or other registered pension plan
+      `RRIF and RRSP annuity payments`           IS A NUMBER @desc RRIF payments, RRSP annuity payments and other pension income of that kind
+      `EI benefits`                              IS A NUMBER @desc Employment Insurance benefits received (T4E)
+      `social assistance`                        IS A NUMBER @desc Social assistance (welfare) payments received
+      `interest and investment income`           IS A NUMBER @desc Interest, rental and other investment income
+      `business income`                          IS A NUMBER @desc Net income from a business you run (negative for a loss)
+      `RRSP contributions`                       IS A NUMBER @desc RRSP contributions for the year (including the first 60 days of the next year)
+      `my RRSP deduction limit`                  IS A NUMBER @desc Your RRSP deduction limit, from your last notice of assessment
+      `enhanced CPP contributions`               IS A NUMBER @desc Enhanced (first and second additional) CPP contributions deducted from your pay
+      `base CPP contributions`                   IS A NUMBER @desc Base CPP contributions deducted from your pay
+      `EI premiums`                              IS A NUMBER @desc EI premiums deducted from your pay
+      `income tax deducted`                      IS A NUMBER @desc Federal income tax deducted at source on your slips
+      `OAS recovery tax deducted`                IS A NUMBER @desc Recovery tax deducted from your OAS payments
+      `instalments paid`                         IS A NUMBER @desc Instalments you paid for the year
+GIVETH AN `Answer` `Return figures`
+`What does my return come to` `tax year` `my province or territory` `I lived in Canada all year` `my age` `my family situation` `I support my spouse` `my spouse's net income` `my spouse's working income` `my spouse is infirm and depends on me` `my spouse has a disability certificate` `children under 19 living with me` `I claim the eligible dependant amount` `that child's age` `I have a disability certificate` `I was a full-time student over 13 weeks` `employment income` `union dues and employment expenses` `OAS pension` `Guaranteed Income Supplement or allowance` `CPP or QPP benefits` `pension from a pension plan` `RRIF and RRSP annuity payments` `EI benefits` `social assistance` `interest and investment income` `business income` `RRSP contributions` `my RRSP deduction limit` `enhanced CPP contributions` `base CPP contributions` `EI premiums` `income tax deducted` `OAS recovery tax deducted` `instalments paid` MEANS
+    -- Fixed values: residence is "all year" or "not at all" (part-year residence is asked in the residence question); a
+    -- return is filed (this question computes it).
+    `the return for the year` `the year` (`the CWB facts described by` `children under 19 living with me` `I was a full-time student over 13 weeks` TRUE)
+    WHERE
+        `the year` MEANS `the year described by` `tax year` `my province or territory` `my age` (`the residence described by` `I lived in Canada all year` FALSE 0 FALSE) (`the income described by` `employment income` `union dues and employment expenses` `OAS pension` `Guaranteed Income Supplement or allowance` `CPP or QPP benefits` `pension from a pension plan` `RRIF and RRSP annuity payments` `EI benefits` `social assistance` `interest and investment income` `business income` `RRSP contributions` `my RRSP deduction limit` `enhanced CPP contributions` `base CPP contributions` `EI premiums`) (`the spouse described by` `my family situation` `I support my spouse` `my spouse's net income` `my spouse's working income` `my spouse is infirm and depends on me` `my spouse has a disability certificate`) (`the eligible dependant described by` `I claim the eligible dependant amount` `that child's age`) `I have a disability certificate` `income tax deducted` `OAS recovery tax deducted` `instalments paid`
+
+§§ `The OAS recovery tax (Part I.2, s 180.2) -- if you receive Old Age Security`
+
+@export How much of my Old Age Security must I repay as the OAS recovery tax for 2026 (Income Tax Act s 180.2)?
+GIVEN `tax year`                                 IS A NUMBER @desc The taxation year; only 2026 is covered
+      `OAS pension`                              IS A NUMBER @desc Old Age Security pension received in the year
+      `Guaranteed Income Supplement or allowance` IS A NUMBER @desc Guaranteed Income Supplement or Allowance received
+      `my other income`                          IS A NUMBER @desc All your other net income for the year (pensions, CPP, employment, interest), after deductions such as RRSP contributions
+GIVETH AN `Answer` NUMBER
+`How much OAS recovery tax do I pay` `tax year` `OAS pension` `Guaranteed Income Supplement or allowance` `my other income` MEANS
+    -- The other income is placed as property income; its source does not change Part I.2.
+    CONSIDER `the indexed amounts for the taxation year` `tax year`
+    WHEN NOTHING THEN `not covered` `the indexed amounts of a taxation year other than 2026 are not deposited`
+    WHEN JUST ia THEN `answered` (`the Part I.2 tax` ia (`the income described by` 0 0 `OAS pension` `Guaranteed Income Supplement or allowance` 0 0 0 0 0 `my other income` 0 0 0 0 0 0))
+
+§§ `Must you file, and when (s 150)`
+
+DECLARE `My filing answer` HAS
+    `I must file a return`                            IS A BOOLEAN
+    -- counted from 31 December of the taxation year: 120 is 30 April, 166 is 15 June
+    `days after the end of the year the return is due` IS A NUMBER
+
+@export Must I file a federal income tax return for the year, and how many days after 31 December is it due (Income Tax Act s 150)? (If you want the Canada child benefit, the GST/HST credit or the Canada workers benefit you need to file even when you are not required to.)
+GIVEN `my federal tax payable`                   IS A NUMBER @desc Your federal tax for the year after non-refundable credits (from the return question), 0 if none
+      `my OAS recovery tax`                      IS A NUMBER @desc Your OAS recovery tax for the year, 0 if none
+      `I sold capital property`                  IS A BOOLEAN @desc Did you sell or dispose of capital property (shares, a cottage, land), or have a taxable capital gain, in the year?
+      `I owe on a Home Buyers' or Lifelong Learning Plan` IS A BOOLEAN @desc Do you have an amount still to repay under the Home Buyers' Plan or the Lifelong Learning Plan at the end of the year?
+      `the CRA asked me to file`                 IS A BOOLEAN @desc Has the CRA sent you a demand to file a return?
+      `I or my spouse ran a business`            IS A BOOLEAN @desc Did you, or the spouse or partner you live with, carry on a business in the year?
+GIVETH A `My filing answer`
+`Must I file a return` `my federal tax payable` `my OAS recovery tax` `I sold capital property` `I owe on a Home Buyers' or Lifelong Learning Plan` `the CRA asked me to file` `I or my spouse ran a business` MEANS
+    `My filing answer` WITH
+        `I must file a return`                            IS `a return is required` `my federal tax payable` `my OAS recovery tax` ff
+        `days after the end of the year the return is due` IS `days to the filing-due date` ff
+    WHERE
+        -- fixed: the person asking is able to file
+        ff MEANS `Filing facts` WITH
+            `had a taxable capital gain or disposed of capital property` IS `I sold capital property`
+            `has a positive HBP or LLP balance at the end of the year` IS `I owe on a Home Buyers' or Lifelong Learning Plan`
+            `the Minister has demanded a return`               IS `the CRA asked me to file`
+            `the individual or the cohabiting spouse carried on a business` IS `I or my spouse ran a business`
+            `able to file`                                     IS TRUE
+
+§§ `Instalments (s 156, s 156.1) -- if you owe more than $3,000 at filing time`
+
+DECLARE `My instalment answer` HAS
+    `I must pay instalments`                          IS A BOOLEAN
+    -- s 156(1)(a)(ii): a quarter of last year's instalment base, due 15 March, 15 June, 15 September and 15 December
+    `each quarterly instalment`                       IS A NUMBER
+
+@export Must I pay my 2026 income tax by instalments, and how much each quarter on last year's figures (Income Tax Act s 156, s 156.1)?
+GIVEN `tax this year`                            IS A NUMBER @desc Your expected federal and provincial income tax for this year, after credits
+      `tax deducted this year`                   IS A NUMBER @desc Federal and provincial income tax you expect to have deducted at source this year
+      `net tax owing last year`                  IS A NUMBER @desc Last year's tax less the tax deducted at source (the balance you owed when you filed, before instalments)
+      `net tax owing the year before`            IS A NUMBER @desc The same figure for the year before last
+      `last year's tax`                          IS A NUMBER @desc Last year's federal tax payable (the instalment base for a quarterly figure)
+GIVETH A `My instalment answer`
+`Must I pay instalments` `tax this year` `tax deducted this year` `net tax owing last year` `net tax owing the year before` `last year's tax` MEANS
+    `My instalment answer` WITH
+        `I must pay instalments`    IS required
+        `each quarterly instalment` IS IF required THEN `a quarter of` `last year's tax` ELSE 0
+    WHERE
+        -- the federal and provincial figures are given together, which is how s 156.1(1) adds them (A + B - C - E)
+        required MEANS `instalments are required` (`the net tax owing` `tax this year` 0 `tax deducted this year` 0) `net tax owing last year` `net tax owing the year before`
+
+§§ `Benefits paid through the tax system`
+
+@export How much Canada child benefit do I get for a month (Income Tax Act s 122.61)? Counts only children under 18 who live with you and for whom you are the main caregiver.
+GIVEN `year of the month`                        IS A NUMBER @desc The year of the payment month (July 2026 to June 2027 are covered)
+      `month`                                    IS A NUMBER @desc The payment month, 1 to 12
+      `children under 6`                         IS A NUMBER @desc How many children under 6 at the start of the month live with you and are mainly in your care?
+      `children aged 6 to 17`                    IS A NUMBER @desc How many children aged 6 to 17 at the start of the month live with you and are mainly in your care?
+      `of them, children with a disability certificate` IS A NUMBER @desc How many of those children have an approved disability tax credit certificate?
+      `I share custody`                          IS A BOOLEAN @desc Do you share custody of any of them, with each parent having the child at least 40% of the time?
+      `I applied for the benefit`                IS A BOOLEAN @desc Have you applied for the Canada child benefit for these children?
+      `I am resident in Canada`                  IS A BOOLEAN @desc Do you live in Canada?
+      `I or my spouse has status`                IS A BOOLEAN @desc Are you or your spouse or partner a Canadian citizen, permanent resident, protected person, an Indian under the Indian Act, or a temporary resident here for the last 18 months?
+      `we filed returns`                         IS A BOOLEAN @desc Did you (and your spouse or partner) file income tax returns for the base year (2025 for these months)?
+      `family net income in the base year`       IS A NUMBER @desc Your net income plus your spouse's or partner's, for the base year (2025 for July 2026 to June 2027)
+GIVETH AN `Answer` NUMBER
+`How much Canada child benefit do I get` `year of the month` `month` `children under 6` `children aged 6 to 17` `of them, children with a disability certificate` `I share custody` `I applied for the benefit` `I am resident in Canada` `I or my spouse has status` `we filed returns` `family net income in the base year` MEANS
+    -- The children are built from the counts: those under 6 at age 3, the others at age 10; the first ones counted are
+    -- those with a disability certificate. Each lives with the person, who is the main caregiver.
+    `the Canada child benefit for the month` (`CCB facts` WITH
+        `year of the month`                               IS `year of the month`
+        `month`                                           IS `month`
+        `children`                                        IS append (`CCB children aged` 3 `how many` `children under 6` `with a certificate` `of them, children with a disability certificate` `shared` `I share custody` `applied` `I applied for the benefit`) (`CCB children aged` 10 `how many` `children aged 6 to 17` `with a certificate` (`nil if negative` (`of them, children with a disability certificate` MINUS `children under 6`)) `shared` `I share custody` `applied` `I applied for the benefit`)
+        `resident in Canada`                              IS `I am resident in Canada`
+        -- not asked: s 149(1)(a), (b) (a foreign diplomat's household)
+        `described in s 149(1)(a) or (b)`                 IS FALSE
+        `the individual or the spouse has a status in s 122.6 (e)` IS `I or my spouse has status`
+        `returns filed for the base taxation year`        IS `we filed returns`
+        `adjusted income for the base taxation year`      IS `family net income in the base year`)
+
+@export How much Canada workers benefit do I get for 2026 (Income Tax Act s 122.7)?
+GIVEN `tax year`                                 IS A NUMBER @desc The taxation year; only 2026 is covered
+      `my province or territory`                 IS A `Province at the end of the year` @desc Where you lived on 31 December: "Quebec", "Alberta", "Nunavut" or "another province or territory"
+      `my age`                                   IS A NUMBER @desc Your age on 31 December
+      `my family situation`                      IS A `My family situation` @desc On 31 December: "single, divorced or widowed", "married or common-law, and living together", or "married or common-law, but living apart because the relationship broke down"
+      `children under 19 living with me`         IS A NUMBER @desc How many of your children under 19 lived with you on 31 December?
+      `my working income`                        IS A NUMBER @desc Your earnings from employment (before deductions) and from a business
+      `my net income`                            IS A NUMBER @desc Your net income for the year
+      `my spouse's working income`               IS A NUMBER @desc Your spouse's or partner's earnings from employment and business (0 if none)
+      `my spouse's net income`                   IS A NUMBER @desc Your spouse's or partner's net income (0 if none)
+      `I have a disability certificate`          IS A BOOLEAN @desc Has a disability tax credit certificate been approved for you for the year?
+      `my spouse has a disability certificate`   IS A BOOLEAN @desc Has one been approved for your spouse or partner?
+      `I was a full-time student over 13 weeks`  IS A BOOLEAN @desc Were you enrolled full-time at a college or university for more than 13 weeks of the year?
+      `I file a return`                          IS A BOOLEAN @desc Will you file your income tax return for the year?
+GIVETH AN `Answer` `CWB figures`
+`How much Canada workers benefit do I get` `tax year` `my province or territory` `my age` `my family situation` `children under 19 living with me` `my working income` `my net income` `my spouse's working income` `my spouse's net income` `I have a disability certificate` `my spouse has a disability certificate` `I was a full-time student over 13 weeks` `I file a return` MEANS
+    -- The working income is placed as employment income and the rest of the net income as interest; resident all year.
+    `the Canada workers benefit for the year` `the year` (`the CWB facts described by` `children under 19 living with me` `I was a full-time student over 13 weeks` `I file a return`)
+    WHERE
+        `the year` MEANS `the year described by` `tax year` `my province or territory` `my age` (`the residence described by` TRUE FALSE 365 FALSE) (`the income described by` `my working income` 0 0 0 0 0 0 0 0 (`my net income` MINUS `my working income`) 0 0 0 0 0 0) (`the spouse described by` `my family situation` TRUE `my spouse's net income` `my spouse's working income` FALSE `my spouse has a disability certificate`) (`the eligible dependant described by` FALSE 0) `I have a disability certificate` 0 0 0
+
+@export How much GST/HST credit (Canada Groceries and Essentials Benefit) do I get for a quarter (Income Tax Act s 122.5(3.005))?
+GIVEN `year of the month`                        IS A NUMBER @desc The year of the payment month (July 2026 to April 2028 are covered)
+      `month`                                    IS A NUMBER @desc The payment month: 1 (January), 4 (April), 7 (July) or 10 (October)
+      `my age`                                   IS A NUMBER @desc Your age before that month
+      `I live with a spouse or partner`          IS A BOOLEAN @desc At the start of that month, do you live with a spouse or common-law partner?
+      `I am the one of us who receives it`       IS A BOOLEAN @desc If so, are you the one of you who receives the credit?
+      `children under 19 living with me`         IS A NUMBER @desc How many of your children (or other dependants) under 19 live with you at the start of the month?
+      `I share custody`                          IS A BOOLEAN @desc Do you share custody of any of them?
+      `I claim the eligible dependant amount`    IS A BOOLEAN @desc If you do not live with a spouse or partner: do you claim the eligible dependant amount for one of them on your return?
+      `I filed my return`                        IS A BOOLEAN @desc Did you file your return for the year the payment is based on (2025 for July 2026 to April 2027, 2026 for July 2027 to April 2028)?
+      `my net income`                            IS A NUMBER @desc Your net income for that year
+      `family net income`                        IS A NUMBER @desc Your net income plus your spouse's or partner's for that year
+GIVETH AN `Answer` NUMBER
+`How much GST credit do I get` `year of the month` `month` `my age` `I live with a spouse or partner` `I am the one of us who receives it` `children under 19 living with me` `I share custody` `I claim the eligible dependant amount` `I filed my return` `my net income` `family net income` MEANS
+    `the GST/HST credit for the specified month` (`GST credit facts` WITH
+        `year of the month`                               IS `year of the month`
+        `month`                                           IS `month`
+        `age before the month`                            IS `my age`
+        `before the month, a parent who resided with their child` IS `children under 19 living with me` GREATER THAN 0
+        `before the month, married or in a common-law partnership` IS `I live with a spouse or partner`
+        -- not asked: s 122.5(2) (in prison, non-resident, a diplomat's household, a special allowance)
+        `excluded by s 122.5(2)`                          IS FALSE
+        `has a qualified relation`                        IS `I live with a spouse or partner`
+        `the individual is the one designated for the couple` IS `I am the one of us who receives it`
+        `number of qualified dependants`                  IS `children under 19 living with me`
+        `a shared-custody parent of a qualified dependant` IS `I share custody`
+        `claims the s 118(1)(b) amount for a qualified dependant` IS `I claim the eligible dependant amount`
+        `files a return of income for the taxation year`  IS `I filed my return`
+        `income for the taxation year`                    IS `my net income`
+        `adjusted income for the taxation year`           IS `family net income`)
+
+§§ `Telling the CRA about a change (s 122.62) -- if your spouse or partner moves in, moves out or dies while you get the CCB`
+
+@export If I get the Canada child benefit and my spouse or partner moves in, we separate, or my spouse dies, how many days do I have to tell the CRA (Income Tax Act s 122.62(5) to (7))?
+GIVEN `day of the change`                        IS A NUMBER @desc The day of the month the change happened
+      `month of the change`                      IS A NUMBER @desc The month of the change, 1 to 12
+      `year of the change`                       IS A NUMBER @desc The year of the change
+GIVETH A NUMBER
+`How many days do I have to tell the CRA` `day of the change` `month of the change` `year of the change` MEANS
+    `days from the event to the end of the next calendar month` `day of the change` `month of the change` `year of the change`

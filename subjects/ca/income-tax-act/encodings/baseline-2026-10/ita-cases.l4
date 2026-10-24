@@ -1,0 +1,485 @@
+IMPORT prelude
+IMPORT `ita-amounts`
+IMPORT `ita-individual`
+
+-- Income Tax Act -- worked cases on the seat-neutral core (ita-individual.l4), the 2026 taxation year and the benefit
+-- months that follow it.
+--
+-- Every assertion is a claim about the ENCODING on stated facts, not about the law. Nothing here has been checked against
+-- CRA forms, the T1 return, the CRA's calculators or any ruling. Expected values were worked by hand from the deposited
+-- text and the CRA's 2026 indexation table; the arithmetic is shown in the comment above each case. Amounts are not
+-- rounded to cents: the Act computes in dollars, and the forms' rounding is not deposited.
+--
+-- The CPP contributions, EI premiums and OAS pension amounts in these cases are inputs chosen for the case. They are not
+-- worked out from the Canada Pension Plan, Employment Insurance Act or Old Age Security Act, whose encodings (another
+-- agent) compute them.
+--
+-- The three cases the brief asks for: an employee (Priya), a single parent of two on the CCB and the CWB (Jordan), and a
+-- pensioner with OAS who pays the recovery tax (Margaret). The others test one rule each.
+
+§ `Fixtures`
+
+GIVEN emp IS A NUMBER, s8 IS A NUMBER, oas IS A NUMBER, gis IS A NUMBER, cpp IS A NUMBER, ann IS A NUMBER, oth IS A NUMBER, ei IS A NUMBER, sa IS A NUMBER, prop IS A NUMBER, bus IS A NUMBER, rrsp IS A NUMBER, lim IS A NUMBER, enh IS A NUMBER, base IS A NUMBER, eip IS A NUMBER
+GIVETH AN `Income amounts`
+`income of employment` emp `less s 8` s8 `OAS` oas `GIS` gis `CPP` cpp `annuity` ann `other pension` oth `EI` ei `social assistance` sa `property` prop `business` bus `RRSP` rrsp `limit` lim `enhanced CPP` enh `base CPP` base `EI premiums` eip MEANS `Income amounts` WITH
+    `employment income`                               IS emp
+    `deductions under s 8`                            IS s8
+    `OAS pension`                                     IS oas
+    `OAS supplement or allowance`                     IS gis
+    `CPP or QPP benefits`                             IS cpp
+    `life annuity payments from a pension plan`       IS ann
+    `other pension income listed in s 118(7)`         IS oth
+    `of which received because of a spouse's death`   IS 0
+    `EI benefits`                                     IS ei
+    `social assistance`                               IS sa
+    `property income`                                 IS prop
+    `business income or loss`                         IS bus
+    `other income`                                    IS 0
+    `taxable capital gains`                           IS 0
+    `RRSP premiums paid for the year`                 IS rrsp
+    `RRSP deduction limit`                            IS lim
+    `enhanced CPP contributions`                      IS enh
+    `base CPP contributions`                          IS base
+    `EI premiums`                                     IS eip
+
+`resident all year` MEANS `Residence facts` WITH
+    `resident in Canada throughout the year`          IS TRUE
+    `resident in Canada for part of the year only`    IS FALSE
+    `days sojourned in Canada in the year`            IS 365
+    `deemed resident under s 250(1)(b) to (g)`        IS FALSE
+
+`no spouse` MEANS `Spouse facts` WITH
+    `married or in a common-law partnership in the year` IS FALSE
+    `supports the spouse`                             IS FALSE
+    `living separate and apart because of a breakdown` IS FALSE
+    `a cohabiting spouse at the end of the year`      IS FALSE
+    `the spouse's income`                             IS 0
+    `the spouse is dependent on the individual by reason of infirmity` IS FALSE
+    `the spouse was resident in Canada throughout the year` IS FALSE
+    `the spouse is an ineligible individual under s 122.7(1)` IS FALSE
+    `the spouse's working income`                     IS 0
+    `the spouse may deduct a disability amount under s 118.3(1)` IS FALSE
+
+-- A cohabiting spouse, supported, resident all year, with the given income (all of it working income) and DTC status.
+GIVEN inc IS A NUMBER, dtc IS A BOOLEAN
+GIVETH A `Spouse facts`
+`a spouse with income` inc `DTC` dtc MEANS `Spouse facts` WITH
+    `married or in a common-law partnership in the year` IS TRUE
+    `supports the spouse`                             IS TRUE
+    `living separate and apart because of a breakdown` IS FALSE
+    `a cohabiting spouse at the end of the year`      IS TRUE
+    `the spouse's income`                             IS inc
+    `the spouse is dependent on the individual by reason of infirmity` IS FALSE
+    `the spouse was resident in Canada throughout the year` IS TRUE
+    `the spouse is an ineligible individual under s 122.7(1)` IS FALSE
+    `the spouse's working income`                     IS inc
+    `the spouse may deduct a disability amount under s 118.3(1)` IS dtc
+
+`no eligible dependant` MEANS `Eligible dependant facts` WITH
+    `claimed`                                         IS FALSE
+    `maintains a self-contained domestic establishment and supports the person in it` IS FALSE
+    `wholly dependent for support on the individual`  IS FALSE
+    `related to the individual`                       IS FALSE
+    `a child of the individual`                       IS FALSE
+    `resident in Canada`                              IS FALSE
+    `a parent or grandparent of the individual`       IS FALSE
+    `age at the end of the year`                      IS 0
+    `dependent by reason of mental or physical infirmity` IS FALSE
+    `income for the year`                             IS 0
+    `s 118(5) excludes the claim`                     IS FALSE
+
+-- A child of the individual, living in the individual's home, wholly dependent, with no income.
+GIVEN age IS A NUMBER
+GIVETH AN `Eligible dependant facts`
+`my child aged` age MEANS `Eligible dependant facts` WITH
+    `claimed`                                         IS TRUE
+    `maintains a self-contained domestic establishment and supports the person in it` IS TRUE
+    `wholly dependent for support on the individual`  IS TRUE
+    `related to the individual`                       IS TRUE
+    `a child of the individual`                       IS TRUE
+    `resident in Canada`                              IS TRUE
+    `a parent or grandparent of the individual`       IS FALSE
+    `age at the end of the year`                      IS age
+    `dependent by reason of mental or physical infirmity` IS FALSE
+    `income for the year`                             IS 0
+    `s 118(5) excludes the claim`                     IS FALSE
+
+`no disability` MEANS `Disability facts` WITH
+    `a certified disability tax credit certificate is filed for the year` IS FALSE
+    `attendant care or nursing home costs are claimed under s 118.2` IS FALSE
+    `care and supervision amounts claimed under ss 63, 64 and 118.2` IS 0
+
+GIVEN care IS A NUMBER
+GIVETH A `Disability facts`
+`a disability certificate with care costs` care MEANS `Disability facts` WITH
+    `a certified disability tax credit certificate is filed for the year` IS TRUE
+    `attendant care or nursing home costs are claimed under s 118.2` IS FALSE
+    `care and supervision amounts claimed under ss 63, 64 and 118.2` IS care
+
+GIVEN y IS A NUMBER, prov IS A `Province at the end of the year`, age IS A NUMBER, inc IS AN `Income amounts`, sp IS A `Spouse facts`, ed IS AN `Eligible dependant facts`, d IS A `Disability facts`, wh IS A NUMBER, oaswh IS A NUMBER, inst IS A NUMBER
+GIVETH A `Taxation year`
+`the year` y `in` prov `aged` age `with` inc `spouse` sp `dependant` ed `disability` d `withheld` wh `OAS withheld` oaswh `instalments` inst MEANS `Taxation year` WITH
+    `year`                                            IS y
+    `residence`                                       IS `resident all year`
+    `province at the end of the year`                 IS prov
+    `died in the year`                                IS FALSE
+    `age at the end of the year`                      IS age
+    `income`                                          IS inc
+    `spouse`                                          IS sp
+    `eligible dependant`                              IS ed
+    `disability`                                      IS d
+    `income tax withheld at source`                   IS wh
+    `Part I.2 tax withheld from OAS payments`         IS oaswh
+    `instalments paid for the year`                   IS inst
+
+-- CWB facts: files a return, not ineligible, the one who claims.
+GIVEN parent IS A BOOLEAN, dep IS A BOOLEAN
+GIVETH A `CWB facts`
+`CWB facts with a child at home` parent `and an eligible dependant` dep MEANS `CWB facts` WITH
+    `the parent of a child with whom the individual resides` IS parent
+    `has an eligible dependant`                       IS dep
+    `described in s 149(1)(a) or (b)`                 IS FALSE
+    `a full-time student for more than 13 weeks`      IS FALSE
+    `confined to a prison for 90 days or more`        IS FALSE
+    `the individual is the one of the couple who claims` IS TRUE
+    `files a return of income for the year`           IS TRUE
+
+`plain CWB facts` MEANS `CWB facts with a child at home` FALSE `and an eligible dependant` FALSE
+
+-- The return's figures, or zeros where not covered (so a case can compare one figure).
+GIVEN a IS AN `Answer` `Return figures`
+GIVETH A `Return figures`
+`figures of` a MEANS
+    CONSIDER a
+    WHEN `answered` f THEN f
+    WHEN `not covered` r THEN `Return figures` WITH
+        `income` IS 0
+        `taxable income` IS 0
+        `tax at the s 117(2) rates` IS 0
+        `non-refundable credits` IS 0
+        `Part I tax payable` IS 0
+        `Part I.2 OAS recovery tax` IS 0
+        `Canada workers benefit` IS 0
+        `balance owing` IS 0
+
+`the 2026 amounts` MEANS
+    CONSIDER `the indexed amounts for the taxation year` 2026
+    WHEN JUST ia THEN ia
+    WHEN NOTHING THEN `the 2026 amounts`
+
+§ `Case 1: Priya, an employee in Ontario`
+
+-- Priya, 34, single, no children, resident in Ontario all of 2026. Salary $72,000; union dues $600 (s 8(1)(i)); RRSP
+-- premiums $5,000 with a deduction limit of $12,000; base CPP contributions $3,500, enhanced CPP contributions $800, EI
+-- premiums $1,100 (inputs); $9,000 withheld.
+--   s 3: 72,000 - 600 = 71,400; subdivision e: RRSP 5,000 (s 146(5), lesser of 5,000 and 12,000) + s 60(e.1) 800 = 5,800;
+--   income 65,600. No OAS, so no Part I.2 tax. Taxable income 65,600.
+--   s 117(2): 14% x 58,523 = 8,193.22; 20.5% x (65,600 - 58,523 = 7,077) = 1,450.785; total 9,644.005.
+--   Credits: basic personal amount 16,452 (income under 181,440, E nil) under s 118(1)(c); Canada employment amount 1,501;
+--   s 118.7: 1,100 + 3,500 = 4,600. Total 22,553 x 14% = 3,157.42. Top-up: 3,157.42 is under 14% x 58,523, so nil.
+--   Part I tax 9,644.005 - 3,157.42 = 6,486.585. CWB: B = 15% x (65,600 - 27,392) exceeds A, nil.
+--   Balance 6,486.585 - 9,000 = -2,513.415 (an overpayment).
+`Priya's income` MEANS `income of employment` 72000 `less s 8` 600 `OAS` 0 `GIS` 0 `CPP` 0 `annuity` 0 `other pension` 0 `EI` 0 `social assistance` 0 `property` 0 `business` 0 `RRSP` 5000 `limit` 12000 `enhanced CPP` 800 `base CPP` 3500 `EI premiums` 1100
+`Priya` MEANS `the year` 2026 `in` `another province or territory` `aged` 34 `with` `Priya's income` `spouse` `no spouse` `dependant` `no eligible dependant` `disability` `no disability` `withheld` 9000 `OAS withheld` 0 `instalments` 0
+`Priya's return` MEANS `figures of` (`the return for the year` `Priya` `plain CWB facts`)
+
+#ASSERT `the gap in` `Priya` EQUALS NOTHING
+#ASSERT `Priya's return`'s `income` EQUALS 65600
+#ASSERT `Priya's return`'s `taxable income` EQUALS 65600
+#ASSERT `Priya's return`'s `tax at the s 117(2) rates` EQUALS 9644.005
+#ASSERT `Priya's return`'s `non-refundable credits` EQUALS 3157.42
+#ASSERT `Priya's return`'s `Part I tax payable` EQUALS 6486.585
+#ASSERT `Priya's return`'s `Part I.2 OAS recovery tax` EQUALS 0
+#ASSERT `Priya's return`'s `Canada workers benefit` EQUALS 0
+#ASSERT `Priya's return`'s `balance owing` EQUALS -2513.415
+#ASSERT `the status under s 118(1)` `no spouse` `no eligible dependant` EQUALS `paragraph (c), single status`
+-- She must file (Part I tax payable), by 30 April 2027, day 120.
+#ASSERT `a return is required` 6486.585 0 (`Filing facts` WITH `had a taxable capital gain or disposed of capital property` IS FALSE, `has a positive HBP or LLP balance at the end of the year` IS FALSE, `the Minister has demanded a return` IS FALSE, `the individual or the cohabiting spouse carried on a business` IS FALSE, `able to file` IS TRUE)
+
+§ `Case 2: Jordan, a single parent of two in British Columbia, on the CCB and the CWB`
+
+-- Jordan, 31, not married, lives in British Columbia with two children: Sam, 4, and Alex, 8 at the end of 2026 (3 and 7
+-- at the beginning of July 2026... taken here as 4 and 7). Wages $28,000; base CPP $1,300, enhanced CPP $250, EI premiums
+-- $460 (inputs); $1,200 withheld. Jordan claims the s 118(1)(b) amount for Alex.
+--   Income 28,000 - 250 = 27,750; taxable income 27,750; s 117(2) tax 14% x 27,750 = 3,885.
+--   Credits: s 118(1)(b): 16,452 + (0 + 16,452 - 0) = 32,904; Canada employment 1,501; s 118.7 460 + 1,300 = 1,760. Total
+--   36,165 x 14% = 5,063.10. Part I tax: nil (the credits exceed the tax).
+--   CWB (s 122.7(2)), with an eligible dependant: A = lesser of 2,869 and 27% x (28,000 - 3,000) = 6,750, so 2,869;
+--   B = 15% x (27,750 - 31,251), nil. CWB 2,869. Balance: 0 - (1,200 + 2,869) = -4,069.
+`Jordan's income` MEANS `income of employment` 28000 `less s 8` 0 `OAS` 0 `GIS` 0 `CPP` 0 `annuity` 0 `other pension` 0 `EI` 0 `social assistance` 0 `property` 0 `business` 0 `RRSP` 0 `limit` 0 `enhanced CPP` 250 `base CPP` 1300 `EI premiums` 460
+`Jordan` MEANS `the year` 2026 `in` `another province or territory` `aged` 31 `with` `Jordan's income` `spouse` `no spouse` `dependant` (`my child aged` 8) `disability` `no disability` `withheld` 1200 `OAS withheld` 0 `instalments` 0
+`Jordan's CWB facts` MEANS `CWB facts with a child at home` TRUE `and an eligible dependant` TRUE
+`Jordan's return` MEANS `figures of` (`the return for the year` `Jordan` `Jordan's CWB facts`)
+
+#ASSERT `Jordan's return`'s `income` EQUALS 27750
+#ASSERT `Jordan's return`'s `tax at the s 117(2) rates` EQUALS 3885
+#ASSERT `the status under s 118(1)` `no spouse` (`my child aged` 8) EQUALS `paragraph (b), wholly dependent person`
+#ASSERT `Jordan's return`'s `non-refundable credits` EQUALS 5063.10
+#ASSERT `Jordan's return`'s `Part I tax payable` EQUALS 0
+#ASSERT `Jordan's return`'s `Canada workers benefit` EQUALS 2869
+#ASSERT `Jordan's return`'s `balance owing` EQUALS -4069
+-- No Part I tax, no gain, no demand: s 150(1.1)(b) means Jordan is not required to file. The CWB, CCB and GST/HST credit
+-- all need a return (NOTES.md finding 2).
+#ASSERT NOT (`a return is required` 0 0 (`Filing facts` WITH `had a taxable capital gain or disposed of capital property` IS FALSE, `has a positive HBP or LLP balance at the end of the year` IS FALSE, `the Minister has demanded a return` IS FALSE, `the individual or the cohabiting spouse carried on a business` IS FALSE, `able to file` IS TRUE))
+
+-- The CCB for July 2026 (base taxation year 2025). Jordan's 2025 adjusted income: $26,500, under the first threshold
+-- of 38,237, so Q is nil. E = 8,157 (Sam, under six) + 6,883 (Alex) = 15,040. Monthly: 15,040 / 12.
+GIVEN age IS A NUMBER
+GIVETH A `CCB child`
+`a child living with me aged` age MEANS `CCB child` WITH
+    `age at the beginning of the month`               IS age
+    `resides with the individual`                     IS TRUE
+    `the individual primarily fulfils the responsibility for care and upbringing` IS TRUE
+    `the individual is a shared-custody parent`       IS FALSE
+    `claimed as a spouse or under a special allowance` IS FALSE
+    `the disability amount may be deducted for the child` IS FALSE
+    `a notice has been filed for the child`           IS TRUE
+
+GIVEN y IS A NUMBER, m IS A NUMBER, ai IS A NUMBER, kids IS A LIST OF `CCB child`
+GIVETH A `CCB facts`
+`CCB for` y m `adjusted income` ai `children` kids MEANS `CCB facts` WITH
+    `year of the month`                               IS y
+    `month`                                           IS m
+    `children`                                        IS kids
+    `resident in Canada`                              IS TRUE
+    `described in s 149(1)(a) or (b)`                 IS FALSE
+    `the individual or the spouse has a status in s 122.6 (e)` IS TRUE
+    `returns filed for the base taxation year`        IS TRUE
+    `adjusted income for the base taxation year`      IS ai
+
+`Jordan's children` MEANS LIST (`a child living with me aged` 4), (`a child living with me aged` 7)
+
+#ASSERT `the base taxation year for` 2026 7 EQUALS 2025
+#ASSERT `the base taxation year for` 2027 3 EQUALS 2025
+#ASSERT `the Canada child benefit for the month` (`CCB for` 2026 7 `adjusted income` 26500 `children` `Jordan's children`) EQUALS `answered` (15040 DIVIDED BY 12)
+-- At $50,000 of adjusted income: Q = 13.5% x (50,000 - 38,237 = 11,763) = 1,588.005; A = 15,040 - 1,588.005 = 13,451.995.
+#ASSERT `the Canada child benefit for the month` (`CCB for` 2026 7 `adjusted income` 50000 `children` `Jordan's children`) EQUALS `answered` (13451.995 DIVIDED BY 12)
+
+-- The GST/HST credit for July 2026 (taxation year 2025, s 122.5(4.5)). No qualified relation; two qualified dependants;
+-- the s 118(1)(b) amount claimed for one. A = 445 + 445 (c) + 234 x 1 (d) + 234 (e) = 1,358; B nil (26,500 is under
+-- 46,432). A quarter: 339.50.
+GIVEN y IS A NUMBER, m IS A NUMBER, age IS A NUMBER, qr IS A BOOLEAN, qd IS A NUMBER, claims IS A BOOLEAN, inc IS A NUMBER, ai IS A NUMBER
+GIVETH A `GST credit facts`
+`GST credit for` y m `aged` age `qualified relation` qr `dependants` qd `claims s 118(1)(b)` claims `income` inc `adjusted income` ai MEANS `GST credit facts` WITH
+    `year of the month`                               IS y
+    `month`                                           IS m
+    `age before the month`                            IS age
+    `before the month, a parent who resided with their child` IS qd GREATER THAN 0
+    `before the month, married or in a common-law partnership` IS qr
+    `excluded by s 122.5(2)`                          IS FALSE
+    `has a qualified relation`                        IS qr
+    `the individual is the one designated for the couple` IS TRUE
+    `number of qualified dependants`                  IS qd
+    `a shared-custody parent of a qualified dependant` IS FALSE
+    `claims the s 118(1)(b) amount for a qualified dependant` IS claims
+    `files a return of income for the taxation year`  IS TRUE
+    `income for the taxation year`                    IS inc
+    `adjusted income for the taxation year`           IS ai
+
+#ASSERT `the GST/HST credit for the specified month` (`GST credit for` 2026 7 `aged` 31 `qualified relation` FALSE `dependants` 2 `claims s 118(1)(b)` TRUE `income` 26500 `adjusted income` 26500) EQUALS `answered` 339.5
+#ASSERT `the taxation year for the specified month` 2027 1 EQUALS 2025
+#ASSERT `the taxation year for the specified month` 2027 10 EQUALS 2026
+
+§ `Case 3: Margaret, a pensioner with OAS who pays the recovery tax`
+
+-- Margaret, 72, widowed, lives in Nova Scotia. 2026: OAS pension $8,900 (input), CPP $13,000, a life annuity from her
+-- registered pension plan $68,000, RRIF payments $15,000, interest $4,000. $17,000 withheld under s 153 and $1,200 of
+-- Part I.2 tax withheld from her OAS.
+--   s 3(a) total 108,900. Part I.2 adjusted income 108,900 (no s 60(w) deduction).
+--   s 180.2(2): 15% x (108,900 - 95,323 = 13,577) = 2,036.55, under the OAS of 8,900; Part I.2 tax 2,036.55.
+--   Income (after s 60(w)) 108,900 - 2,036.55 = 106,863.45 = taxable income.
+--   s 117(2): 8,193.22 + 20.5% x (106,863.45 - 58,523 = 48,340.45) = 8,193.22 + 9,909.79225 = 18,103.01225.
+--   Credits: basic personal amount 16,452; age amount 9,208 - 15% x (106,863.45 - 46,432 = 60,431.45) = 9,208 - 9,064.7175
+--   = 143.2825; pension amount: lesser of 2,000 and 83,000 = 2,000. Total 18,595.2825 x 14% = 2,603.33955. Top-up nil.
+--   Part I tax 18,103.01225 - 2,603.33955 = 15,499.6727.
+--   Balance (15,499.6727 + 2,036.55) - (17,000 + 1,200) = -663.7773.
+`Margaret's income` MEANS `income of employment` 0 `less s 8` 0 `OAS` 8900 `GIS` 0 `CPP` 13000 `annuity` 68000 `other pension` 15000 `EI` 0 `social assistance` 0 `property` 4000 `business` 0 `RRSP` 0 `limit` 0 `enhanced CPP` 0 `base CPP` 0 `EI premiums` 0
+`Margaret` MEANS `the year` 2026 `in` `another province or territory` `aged` 72 `with` `Margaret's income` `spouse` `no spouse` `dependant` `no eligible dependant` `disability` `no disability` `withheld` 17000 `OAS withheld` 1200 `instalments` 0
+`Margaret's return` MEANS `figures of` (`the return for the year` `Margaret` `plain CWB facts`)
+
+#ASSERT `the Part I.2 adjusted income` `Margaret's income` EQUALS 108900
+#ASSERT `Margaret's return`'s `Part I.2 OAS recovery tax` EQUALS 2036.55
+#ASSERT `Margaret's return`'s `income` EQUALS 106863.45
+#ASSERT `Margaret's return`'s `taxable income` EQUALS 106863.45
+#ASSERT `Margaret's return`'s `tax at the s 117(2) rates` EQUALS 18103.01225
+#ASSERT `the s 118(2) age amount` `the 2026 amounts` 72 106863.45 EQUALS 143.2825
+#ASSERT `the s 118(3) pension amount` 72 `Margaret's income` EQUALS 2000
+#ASSERT `Margaret's return`'s `non-refundable credits` EQUALS 2603.33955
+#ASSERT `Margaret's return`'s `Part I tax payable` EQUALS 15499.6727
+#ASSERT `Margaret's return`'s `balance owing` EQUALS -663.7773
+#ASSERT `a return is required` 15499.6727 2036.55 (`Filing facts` WITH `had a taxable capital gain or disposed of capital property` IS FALSE, `has a positive HBP or LLP balance at the end of the year` IS FALSE, `the Minister has demanded a return` IS FALSE, `the individual or the cohabiting spouse carried on a business` IS FALSE, `able to file` IS TRUE)
+-- With $200,000 of other income the recovery tax is the whole OAS: 15% x (208,900 - 95,323) = 17,036.55, capped at 8,900.
+#ASSERT `the Part I.2 tax` `the 2026 amounts` (`income of employment` 0 `less s 8` 0 `OAS` 8900 `GIS` 0 `CPP` 0 `annuity` 200000 `other pension` 0 `EI` 0 `social assistance` 0 `property` 0 `business` 0 `RRSP` 0 `limit` 0 `enhanced CPP` 0 `base CPP` 0 `EI premiums` 0) EQUALS 8900
+
+§ `One rule at a time`
+
+-- Residence (s 250(1)(a)): 200 days' sojourn deems residence throughout the year; part-year residence is not covered.
+#ASSERT `the residence status` (`Residence facts` WITH `resident in Canada throughout the year` IS FALSE, `resident in Canada for part of the year only` IS FALSE, `days sojourned in Canada in the year` IS 200, `deemed resident under s 250(1)(b) to (g)` IS FALSE) EQUALS `resident throughout the year`
+#ASSERT `the residence status` (`Residence facts` WITH `resident in Canada throughout the year` IS FALSE, `resident in Canada for part of the year only` IS TRUE, `days sojourned in Canada in the year` IS 120, `deemed resident under s 250(1)(b) to (g)` IS FALSE) EQUALS `resident for part of the year`
+#ASSERT `the gap in` (`the year` 2026 `in` `Quebec` `aged` 34 `with` `Priya's income` `spouse` `no spouse` `dependant` `no eligible dependant` `disability` `no disability` `withheld` 0 `OAS withheld` 0 `instalments` 0) EQUALS JUST `an individual resident in Quebec at the end of the year has the s 120(2) abatement, which is not encoded`
+#ASSERT `the return for the year` (`the year` 2025 `in` `another province or territory` `aged` 34 `with` `Priya's income` `spouse` `no spouse` `dependant` `no eligible dependant` `disability` `no disability` `withheld` 0 `OAS withheld` 0 `instalments` 0) `plain CWB facts` EQUALS `not covered` `the indexed amounts of a taxation year other than 2026 are not deposited`
+
+-- s 118(1.1): E is nil up to 181,440; at 219,961 it is (219,961 - 181,440) / (258,482 - 181,440) = 38,521 / 77,042 = 1/2,
+-- so 14,829 + 1,623 x 1/2 = 15,640.50; at 258,482 or more, 14,829.
+#ASSERT `the basic personal amount for` 100000 `with` `the 2026 amounts` EQUALS 16452
+#ASSERT `the basic personal amount for` 219961 `with` `the 2026 amounts` EQUALS 15640.5
+#ASSERT `the basic personal amount for` 300000 `with` `the 2026 amounts` EQUALS 14829
+
+-- s 118(1)(a): a supported spouse with $5,000 of income: 16,452 + (0 + 16,452 - 5,000) = 27,904; with $20,000, the
+-- second part is nil (s 257) and the amount is 16,452.
+#ASSERT `the s 118(1) status amount` `the 2026 amounts` 50000 (`a spouse with income` 5000 `DTC` FALSE) `no eligible dependant` EQUALS 27904
+#ASSERT `the s 118(1) status amount` `the 2026 amounts` 50000 (`a spouse with income` 20000 `DTC` FALSE) `no eligible dependant` EQUALS 16452
+
+-- s 118(2): the age amount is nil above 46,432 + 9,208 / 15% = 107,818.67; nil under 65.
+#ASSERT `the s 118(2) age amount` `the 2026 amounts` 70 120000 EQUALS 0
+#ASSERT `the s 118(2) age amount` `the 2026 amounts` 64 20000 EQUALS 0
+#ASSERT `the s 118(2) age amount` `the 2026 amounts` 65 40000 EQUALS 9208
+
+-- s 118(7): under 65, RRIF payments are not qualified pension income unless received because of a spouse's death.
+#ASSERT `the eligible pension income` 60 (`income of employment` 0 `less s 8` 0 `OAS` 0 `GIS` 0 `CPP` 0 `annuity` 10000 `other pension` 5000 `EI` 0 `social assistance` 0 `property` 0 `business` 0 `RRSP` 0 `limit` 0 `enhanced CPP` 0 `base CPP` 0 `EI premiums` 0) EQUALS 10000
+
+-- s 118.3(1): an adult, 10,341; a child of 10 with $4,000 of care costs: 10,341 + (6,032 - (4,000 - 3,533 = 467)) = 15,906.
+#ASSERT `the s 118.3(1) disability amount` `the 2026 amounts` 40 (`a disability certificate with care costs` 0) EQUALS 10341
+#ASSERT `the s 118.3(1) disability amount` `the 2026 amounts` 10 (`a disability certificate with care costs` 4000) EQUALS 15906
+#ASSERT `the s 118.3(1) disability amount` `the 2026 amounts` 40 `no disability` EQUALS 0
+
+-- s 118(11): credits of 9,800 (a base of 70,000 at 14%): 7.14% x (9,800 - 8,193.22 = 1,606.78) = 114.724092.
+#ASSERT `the s 118(11) top-up credit` `the 2026 amounts` 9800 EQUALS 114.724092
+#ASSERT `the s 118(11) top-up credit` `the 2026 amounts` 5000 EQUALS 0
+
+-- s 110(1)(f): the supplement is deducted in computing taxable income. OAS 8,900 + GIS 6,000 + CPP 4,000: income 18,900,
+-- taxable income 12,900.
+#ASSERT `the taxable income` `the 2026 amounts` (`income of employment` 0 `less s 8` 0 `OAS` 8900 `GIS` 6000 `CPP` 4000 `annuity` 0 `other pension` 0 `EI` 0 `social assistance` 0 `property` 0 `business` 0 `RRSP` 0 `limit` 0 `enhanced CPP` 0 `base CPP` 0 `EI premiums` 0) EQUALS 12900
+
+-- s 3(d): a business loss of 10,000 against 25,000 of EI benefits: income 15,000.
+#ASSERT `the income for the year` `the 2026 amounts` (`income of employment` 0 `less s 8` 0 `OAS` 0 `GIS` 0 `CPP` 0 `annuity` 0 `other pension` 0 `EI` 25000 `social assistance` 0 `property` 0 `business` -10000 `RRSP` 0 `limit` 0 `enhanced CPP` 0 `base CPP` 0 `EI premiums` 0) EQUALS 15000
+
+-- s 117(2) at the top: 300,000: 8,193.22 + 20.5% x 58,522 + 26% x 64,395 + 29% x 77,042 + 33% x 41,518
+-- = 8,193.22 + 11,997.01 + 16,742.70 + 22,342.18 + 13,700.94 = 72,976.05.
+#ASSERT `the s 117(2) tax on` 300000 `with` `the 2026 amounts` EQUALS 72976.05
+
+§ `The Canada workers benefit, one rule at a time`
+
+-- Single, working income 20,000, income 30,000 (10,000 of interest): A = lesser of 1,665 and 27% x 17,000 = 4,590, so
+-- 1,665; B = 15% x (30,000 - 27,392) = 391.20; CWB 1,273.80.
+`a single worker` MEANS `the year` 2026 `in` `another province or territory` `aged` 40 `with` (`income of employment` 20000 `less s 8` 0 `OAS` 0 `GIS` 0 `CPP` 0 `annuity` 0 `other pension` 0 `EI` 0 `social assistance` 0 `property` 10000 `business` 0 `RRSP` 0 `limit` 0 `enhanced CPP` 0 `base CPP` 0 `EI premiums` 0) `spouse` `no spouse` `dependant` `no eligible dependant` `disability` (`a disability certificate with care costs` 0) `withheld` 0 `OAS withheld` 0 `instalments` 0
+#ASSERT `the s 122.7(2) basic amount` `the 2026 amounts` `a single worker` `plain CWB facts` EQUALS 1273.8
+-- The disability supplement: C = lesser of 860 and 27% x (20,000 - 1,150); D = 15% x (30,000 - 38,495), nil; 860.
+#ASSERT `the Canada workers benefit for the year` `a single worker` `plain CWB facts` EQUALS `answered` (`CWB figures` WITH `basic amount` IS 1273.8, `disability supplement` IS 860, `total` IS 2133.8)
+-- 18 at the end of the year, no spouse, no child: not an eligible individual.
+#ASSERT NOT (`an eligible individual under s 122.7(1)` (`the year` 2026 `in` `another province or territory` `aged` 18 `with` `Priya's income` `spouse` `no spouse` `dependant` `no eligible dependant` `disability` `no disability` `withheld` 0 `OAS withheld` 0 `instalments` 0) `plain CWB facts`)
+-- A full-time student for more than 13 weeks without an eligible dependant is ineligible.
+#ASSERT `an ineligible individual under s 122.7(1)` `a single worker` (`CWB facts` WITH `the parent of a child with whom the individual resides` IS FALSE, `has an eligible dependant` IS FALSE, `described in s 149(1)(a) or (b)` IS FALSE, `a full-time student for more than 13 weeks` IS TRUE, `confined to a prison for 90 days or more` IS FALSE, `the individual is the one of the couple who claims` IS TRUE, `files a return of income for the year` IS TRUE)
+
+-- s 122.7(1.3): a couple, the individual working 30,000 and the spouse 10,000 (each with that income). The individual's
+-- working income is not less, so the spouse's adjusted net income is reduced by the lesser of 10,000 and 16,714, to nil.
+-- Family adjusted net income 30,000. A = lesser of 2,869 and 27% x 37,000; B = 15% x (30,000 - 31,251), nil. CWB 2,869.
+`a working couple` MEANS `the year` 2026 `in` `another province or territory` `aged` 40 `with` (`income of employment` 30000 `less s 8` 0 `OAS` 0 `GIS` 0 `CPP` 0 `annuity` 0 `other pension` 0 `EI` 0 `social assistance` 0 `property` 0 `business` 0 `RRSP` 0 `limit` 0 `enhanced CPP` 0 `base CPP` 0 `EI premiums` 0) `spouse` (`a spouse with income` 10000 `DTC` FALSE) `dependant` `no eligible dependant` `disability` `no disability` `withheld` 0 `OAS withheld` 0 `instalments` 0
+#ASSERT `the family adjusted net income` `the 2026 amounts` `a working couple` EQUALS 30000
+#ASSERT `the s 122.7(2) basic amount` `the 2026 amounts` `a working couple` `plain CWB facts` EQUALS 2869
+-- If the spouse claims for the couple (s 122.7(5)), the individual gets no basic amount.
+#ASSERT `the s 122.7(2) basic amount` `the 2026 amounts` `a working couple` (`CWB facts` WITH `the parent of a child with whom the individual resides` IS FALSE, `has an eligible dependant` IS FALSE, `described in s 149(1)(a) or (b)` IS FALSE, `a full-time student for more than 13 weeks` IS FALSE, `confined to a prison for 90 days or more` IS FALSE, `the individual is the one of the couple who claims` IS FALSE, `files a return of income for the year` IS TRUE) EQUALS 0
+
+-- Alberta: a s 122.71 agreement replaces the amounts; not covered.
+#ASSERT `the Canada workers benefit for the year` (`the year` 2026 `in` `Alberta` `aged` 31 `with` `Jordan's income` `spouse` `no spouse` `dependant` (`my child aged` 8) `disability` `no disability` `withheld` 0 `OAS withheld` 0 `instalments` 0) `Jordan's CWB facts` EQUALS `not covered` `the CWB of a resident of Alberta, Quebec or Nunavut is replaced under a s 122.71 agreement, which is not deposited`
+-- Both spouses may deduct a disability amount and there is an eligible dependant: D(b) and D(c) both read (finding 4).
+#ASSERT `the Canada workers benefit for the year` (`the year` 2026 `in` `another province or territory` `aged` 40 `with` `Jordan's income` `spouse` (`a spouse with income` 5000 `DTC` TRUE) `dependant` `no eligible dependant` `disability` (`a disability certificate with care costs` 0) `withheld` 0 `OAS withheld` 0 `instalments` 0) `Jordan's CWB facts` EQUALS `not covered` `s 122.7(3) D(b) and D(c) both apply when the spouse may deduct a disability amount and there is an eligible dependant`
+
+§ `The Canada child benefit, one rule at a time`
+
+-- Three children (2, 5 and 9), adjusted income 100,000: E = 8,157 x 2 + 6,883 = 23,197; Q = 8,476 + 8% x (100,000 -
+-- 82,847 = 17,153) = 8,476 + 1,372.24 = 9,848.24; A = 13,348.76 a year.
+#ASSERT `the Canada child benefit for the month` (`CCB for` 2027 2 `adjusted income` 100000 `children` (LIST (`a child living with me aged` 2), (`a child living with me aged` 5), (`a child living with me aged` 9))) EQUALS `answered` (13348.76 DIVIDED BY 12)
+-- One child of 10 for whom the disability amount may be deducted, adjusted income 90,000: E = 6,883; Q = 3,123 + 3.2% x
+-- 7,153 = 3,351.896; A = 3,531.104; N = 3,480; O = 3.2% x 7,153 = 228.896; M = 3,251.104. A + M = 6,782.208 a year.
+`a child with a disability aged ten` MEANS `CCB child` WITH
+    `age at the beginning of the month`               IS 10
+    `resides with the individual`                     IS TRUE
+    `the individual primarily fulfils the responsibility for care and upbringing` IS TRUE
+    `the individual is a shared-custody parent`       IS FALSE
+    `claimed as a spouse or under a special allowance` IS FALSE
+    `the disability amount may be deducted for the child` IS TRUE
+    `a notice has been filed for the child`           IS TRUE
+#ASSERT `the Canada child benefit for the month` (`CCB for` 2026 9 `adjusted income` 90000 `children` (LIST `a child with a disability aged ten`)) EQUALS `answered` (6782.208 DIVIDED BY 12)
+-- A child of 18 is not a qualified dependant: nothing.
+#ASSERT `the Canada child benefit for the month` (`CCB for` 2026 9 `adjusted income` 20000 `children` (LIST (`a child living with me aged` 18))) EQUALS `answered` 0
+-- A month before July 2026: not covered.
+#ASSERT `the Canada child benefit for the month` (`CCB for` 2026 3 `adjusted income` 26500 `children` `Jordan's children`) EQUALS `not covered` `the CCB amounts for a month outside July 2026 to June 2027 are not deposited`
+-- A shared-custody parent: not covered.
+#ASSERT `the Canada child benefit for the month` (`CCB for` 2026 9 `adjusted income` 30000 `children` (LIST (`CCB child` WITH `age at the beginning of the month` IS 5, `resides with the individual` IS TRUE, `the individual primarily fulfils the responsibility for care and upbringing` IS FALSE, `the individual is a shared-custody parent` IS TRUE, `claimed as a spouse or under a special allowance` IS FALSE, `the disability amount may be deducted for the child` IS FALSE, `a notice has been filed for the child` IS TRUE))) EQUALS `not covered` `a shared-custody parent's amount under s 122.61(1.1) or s 122.5(3.06) is not encoded`
+
+§ `The GST/HST credit, one rule at a time`
+
+-- Single, no dependants, income 15,000: A = 445 + lesser of 234 and 2% x (15,000 - 11,564 = 3,436) = 68.72; 513.72;
+-- B nil. A quarter: 128.43.
+#ASSERT `the GST/HST credit for the specified month` (`GST credit for` 2026 10 `aged` 25 `qualified relation` FALSE `dependants` 0 `claims s 118(1)(b)` FALSE `income` 15000 `adjusted income` 15000) EQUALS `answered` 128.43
+-- A couple, no children, adjusted income 50,000: A = 890; B = 5% x 3,568 = 178.40; a quarter of 711.60 = 177.90.
+#ASSERT `the GST/HST credit for the specified month` (`GST credit for` 2027 4 `aged` 45 `qualified relation` TRUE `dependants` 0 `claims s 118(1)(b)` FALSE `income` 30000 `adjusted income` 50000) EQUALS `answered` 177.9
+-- 18 and never married or a parent: not an eligible individual.
+#ASSERT `the GST/HST credit for the specified month` (`GST credit for` 2026 7 `aged` 18 `qualified relation` FALSE `dependants` 0 `claims s 118(1)(b)` FALSE `income` 9000 `adjusted income` 9000) EQUALS `answered` 0
+-- January 2026 falls under s 122.5(3.004), not encoded; July 2028 is indexed (s 117.1(2)(m.1)) and not covered.
+#ASSERT `the GST/HST credit for the specified month` (`GST credit for` 2026 1 `aged` 40 `qualified relation` FALSE `dependants` 0 `claims s 118(1)(b)` FALSE `income` 15000 `adjusted income` 15000) EQUALS `not covered` `the GST/HST credit is encoded only for the months July 2026 to April 2028 under s 122.5(3.005)`
+#ASSERT `the GST/HST credit for the specified month` (`GST credit for` 2028 7 `aged` 40 `qualified relation` FALSE `dependants` 0 `claims s 118(1)(b)` FALSE `income` 15000 `adjusted income` 15000) EQUALS `not covered` `the GST/HST credit is encoded only for the months July 2026 to April 2028 under s 122.5(3.005)`
+
+§ `Duties`
+
+`ordinary filing facts` MEANS `Filing facts` WITH
+    `had a taxable capital gain or disposed of capital property` IS FALSE
+    `has a positive HBP or LLP balance at the end of the year` IS FALSE
+    `the Minister has demanded a return`               IS FALSE
+    `the individual or the cohabiting spouse carried on a business` IS FALSE
+    `able to file`                                     IS TRUE
+
+`a business owner's filing facts` MEANS `Filing facts` WITH
+    `had a taxable capital gain or disposed of capital property` IS FALSE
+    `has a positive HBP or LLP balance at the end of the year` IS FALSE
+    `the Minister has demanded a return`               IS FALSE
+    `the individual or the cohabiting spouse carried on a business` IS TRUE
+    `able to file`                                     IS TRUE
+
+#ASSERT `days to the filing-due date` `ordinary filing facts` EQUALS 120
+#ASSERT `days to the filing-due date` `a business owner's filing facts` EQUALS 166
+#ASSERT `who files the return` FALSE EQUALS `the individual's guardian, committee or other legal representative`
+
+-- s 150(1)(d): Priya files on day 100 (10 April 2027): fulfilled.
+#ASSERT EVALTRACE (`the duty to file a return` TRUE `ordinary filing facts`) 0 (LIST EVENT `the individual` `file a return of income for the year` 100) EQUALS FULFILLED
+-- Not required: nothing is owed even if no return is filed.
+#ASSERT EVALTRACE (`the duty to file a return` FALSE `ordinary filing facts`) 0 (LIST (WAITUNTIL 200)) EQUALS FULFILLED
+-- A business owner files on day 150 (30 May 2027): in time.
+#ASSERT EVALTRACE (`the duty to file a return` TRUE `a business owner's filing facts`) 0 (LIST EVENT `the individual` `file a return of income for the year` 150) EQUALS FULFILLED
+-- An employee files on day 150: late.
+-- expect: BREACH by the individual, "no return of income was filed by the filing-due date (s 150(1)(d))"
+#TRACE `the duty to file a return` TRUE `ordinary filing facts` AT 0 WITH
+    PARTY `the individual` DOES `file a return of income for the year` AT 150
+
+-- s 156.1(4): a balance of 400 paid with 500 on day 110: fulfilled. No balance: fulfilled.
+#ASSERT EVALTRACE (`the duty to pay the balance` 400) 0 (LIST EVENT `the individual` (`pay the balance` 500) 110) EQUALS FULFILLED
+#ASSERT EVALTRACE (`the duty to pay the balance` -663.7773) 0 (LIST (WAITUNTIL 200)) EQUALS FULFILLED
+-- expect: BREACH by the individual, "the balance of tax was not paid by the balance-due day (s 156.1(4))"
+#TRACE `the duty to pay the balance` 400 AT 0 WITH
+    PARTY `the individual` DOES `pay the balance` 300 AT 100
+    (WAITUNTIL 130)
+
+-- s 156.1(2)(b): net tax owing 4,200 this year, 3,500 last year, 2,800 the year before: instalments are required. With
+-- 2,900 this year, they are not; with 4,200 this year but 2,500 and 2,800 before, they are not.
+#ASSERT `the net tax owing` 9000 4000 7800 1000 EQUALS 4200
+#ASSERT `instalments are required` 4200 3500 2800
+#ASSERT NOT (`instalments are required` 2900 3500 2800)
+#ASSERT NOT (`instalments are required` 4200 2500 2800)
+-- s 156(1)(a)(ii): an instalment base of 4,200 for last year: 1,050 a quarter. The first is due on 15 March, day 74.
+#ASSERT `a quarter of` 4200 EQUALS 1050
+#ASSERT EVALTRACE (`the duty to pay instalment` 1 TRUE 1050) 0 (LIST EVENT `the individual` (`pay an instalment` 1050) 70) EQUALS FULFILLED
+#ASSERT EVALTRACE (`the duty to pay instalment` 4 TRUE 1050) 0 (LIST EVENT `the individual` (`pay an instalment` 1050) 340) EQUALS FULFILLED
+#ASSERT EVALTRACE (`the duty to pay instalment` 2 FALSE 1050) 0 (LIST (WAITUNTIL 400)) EQUALS FULFILLED
+-- expect: BREACH by the individual, "an instalment was not paid by its day under s 156(1)"
+#TRACE `the duty to pay instalment` 1 TRUE 1050 AT 0 WITH
+    PARTY `the individual` DOES `pay an instalment` 1050 AT 80
+
+-- s 122.62(6): Jordan separates on 15 August 2026: notice is due by 30 September, 16 + 30 = 46 days later.
+#ASSERT `days from the event to the end of the next calendar month` 15 8 2026 EQUALS 46
+#ASSERT `days from the event to the end of the next calendar month` 20 12 2026 EQUALS 42
+#ASSERT `days from the event to the end of the next calendar month` 10 1 2028 EQUALS 50
+#ASSERT EVALTRACE (`the duty to notify a change of cohabiting spouse` 46) 0 (LIST EVENT `the individual` `notify the Minister of the change` 20) EQUALS FULFILLED
+-- expect: BREACH by the individual, "the change of cohabiting spouse or common-law partner was not notified in time (s 122.62)"
+#TRACE `the duty to notify a change of cohabiting spouse` 46 AT 0 WITH
+    (WAITUNTIL 60)
