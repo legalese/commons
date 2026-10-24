@@ -55,3 +55,11 @@ The planned instruments are indexed, so a later fetch knows its targets:
 - the access check is re-run from a US egress.
 
 Each new subject's `SOURCE-LICENSE.md` records the access check in full.
+
+## Tax and benefits pass (2026-10-24): still blocked
+
+The plain-client route was checked again on 2026-10-24 with the User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`. Two requests were made: robots.txt, and `https://iga.in.gov/ic/2026/Title_6.html`. Both got the same 691-byte application shell, served as CloudFront's error document (`X-Cache: Error from cloudfront`, `Server: AmazonS3`).
+
+The Code text itself was not read, but a browser that renders the site was used to see how it is published. The application loads each title's full text as a single same-origin static file, for example `https://iga.in.gov/ic/2026/Title_6.html` for Title 6 (Taxation, including IC 6-3 Adjusted Gross Income Tax), next to the `Title_<n>.json` index files described above. So the whole of IC 6-3, IC 12-14 and IC 22-4 is one static file per title. The obstacle is only the delivery layer: the files are served to a rendering browser but not to an honest scripted client.
+
+Reading those files in a rendering browser and depositing them is the route that the 2026-10-20 note already leaves to the owner. Without that approval it was not taken, and nothing was deposited or encoded. The other two unblock routes in that note still apply: an API key, or a check from another network.
