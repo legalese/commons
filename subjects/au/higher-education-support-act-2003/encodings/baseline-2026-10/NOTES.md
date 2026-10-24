@@ -29,7 +29,8 @@ from the Word rendering of the same compilation (fetched 2026-10-21) in
 
 **Checks:** one module (`hesa-help.l4`) and one case file (`hesa-cases-help.l4`). 70
 assertions satisfied, 0 errors, 0 warnings (re-run 2026-10-21 after the formulas were encoded). A deliberately wrong expected value ($676 for
-$675) was run as a check, and it failed as it should.
+$675) was run as a check, and it failed as it should. Added 2026-10-24: `hesa-formulas.l4` with `hesa-cases-formulas.l4`
+(21 assertions, written by hand): 91 satisfied in all, 0 errors, 0 warnings in every file.
 
 ## Seat
 
@@ -106,6 +107,16 @@ Left out, because no event asks it and it is machinery or another loan scheme:
 13. **The four lost formulas say what the first pass inferred, and a little more.** From the sidecar: a unit's student contribution amount is the amount for a place times the unit's EFTSL value, rounded down (s 93-5(1), (4)); the accumulated HELP debt is former debt + debts incurred − repayments − the location-preferred reduction (s 140-25(1), the first pass's inference, now confirmed); for 2024-25 only the net new debt is cut to 80% (s 140-26(2)); and each repayment threshold after 2025-26 is the 2025-26 amount times AWE for the year over AWE for 2025-26, rounded down (s 154-25(2), (3)). $16,992 × 0.0833 gives $1,415; Lorraine's cut debt with $3,000 incurred and $500 repaid gives $12,691 on 1 June 2025; $67,000 at AWE 2,000/1,900 gives $70,526 (hypothetical AWE). Asserted.
 
 14. **The text is the 2026 text.** Daniel's 2014 and 2017 answers apply today's text to past facts, including the Student Learning Entitlement and student identifier conditions added later (endnotes record amendments to ss 36-5 and 36-10 in 2020, 2022 and 2024). That is the right shape, but it is not the law as it stood. Not asserted as history.
+
+15. **Indexed figures are now computed from the recovered formulas (2026-10-24).** `hesa-formulas.l4` IMPORTs `hesa-help.l4`, leaves it unchanged, and works out from `../../registers/source-bundle/C2004A01234.formulas.md`:
+    - the reduced HELP debt indexation factor for a person whose indexation the Secretary has reduced (s 140-10(1A)): 1 + ((A − 1) / 365) × (365 − B);
+    - the Part 5-6 indexation factor and indexed amounts (ss 198-10, 198-15). The CPI ratio is rounded to 3 places, the 4th rounded up from 5. Nothing changes when the factor is 1 or less, and the result is rounded down to the dollar. These give the HELP loan limit in force from a known figure, year by year, and with it the HELP balance;
+    - the repayment thresholds after 2025-26 from AWE (s 154-25(2), rounded down), and the compulsory repayment on them (ss 154-1, 154-20);
+    - the most a provider may charge for a unit (s 36-45) and for a short accelerator program course (s 128C-10(1)(b), rounded down under (2)).
+
+    The CPI and AWE figures are inputs. Whether the $106,319 that s 128-20 states was in force from 1 January of a given year is the caller's statement, because the compilation does not date it. Asserted, on illustrative figures.
+
+No computed value disagrees with an existing assertion. **Left for later** (formulas in the sidecar, not encoded): the provider-grant adjustment (s 33-37(2)); and the VET FEE-HELP formulas of Schedule 1A cll 45D(3) and 46B(4).
 
 ## What would need doing before this is worth anything
 

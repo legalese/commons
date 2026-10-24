@@ -12,7 +12,9 @@ formulas that the Register prints as images. The formulas in ss 93-5(1),
 
 **Checks:** one module (`hesa-help.l4`) and one case file (`hesa-cases-help.l4`),
 57 assertions satisfied, 0 errors, 0 warnings. One deliberately wrong expected value
-was run as a check, and it failed as it should.
+was run as a check, and it failed as it should. Added 2026-10-24: `hesa-help-formulas.l4`
+with `hesa-cases-help-formulas.l4` (11 assertions): 68 satisfied in all, 0 errors, 0 warnings
+in every file.
 
 ## Why this Act, and why scoped
 
@@ -176,6 +178,17 @@ Act's Paula example ($20,000 + $1,500 = $21,500).
 
 The s 93-5(1) formula for the student contribution amount is also absent. That
 amount is taken as an input.
+
+### 9. The missing formulas, recovered (2026-10-24)
+
+The sidecar `../../registers/source-bundle/C2004A01234.formulas.md` now gives the formulas this encoding could not find. `hesa-help-formulas.l4` IMPORTs `hesa-help.l4`, leaves it unchanged, and adds:
+
+- **s 140-25(1).** The formula is former accumulated debt + debts incurred − repayments − the location-preferred reduction. That is finding 8's inference exactly, so the Paula case stands.
+- **s 140-26(2).** For 2024-25 the formula is former debt + (debts incurred − repayments) × 0.8 − the reduction, with s 140-30's rounding. It is now computed; it was not encoded before.
+- **s 154-25(2).** The thresholds after 2025-26 are the 2025-26 figure × (AWE for the year / AWE for 2025-26), rounded down. The compulsory repayment for a year is computed on them.
+- **s 140-10(1A).** The reduced indexation factor.
+
+The s 93-5(1) student contribution amount is still an input here; the baseline computes it. No disagreement with an earlier supplied value. Asserted.
 
 ## What would need doing before this is worth anything
 
