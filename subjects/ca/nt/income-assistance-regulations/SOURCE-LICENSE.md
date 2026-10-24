@@ -18,3 +18,7 @@ The text of **Income Assistance Regulations** (R-038-2024 (as amended)) is publi
 Text deposited 2026-10-20 (English version only; the French version is equally authoritative):
 
 - `registers/source-bundle/social-assistance.r1.2026-07-06.txt` (with `social-assistance.r1.2026-07-06.meta.json`)
+
+## Encoding the text (ruling of 2026-10-24)
+
+**Owner's ruling, 2026-10-24 (Michael):** Canadian texts whose terms permit reproduction but are silent on adaptation (as the GNWT terms are) may be quoted in L4 encodings in Commons, keeping the attribution the publisher requires and an "unofficial version" notice. This regulation is encoded, with the Social Assistance Act it is made under, at `../social-assistance-act/encodings/baseline-2026-10/`.

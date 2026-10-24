@@ -37,3 +37,7 @@ The "Metadata only until resolved" consequence and the "No statute text has been
 Text deposited 2026-10-20 (English version only; the French version is equally authoritative):
 
 - `registers/source-bundle/social-assistance.a.2018-11-21.txt` (with `social-assistance.a.2018-11-21.meta.json`)
+
+## Encoding the text (ruling of 2026-10-24)
+
+The terms permit non-commercial reproduction and are silent on adaptation. **Owner's ruling, 2026-10-24 (Michael):** Canadian texts whose terms permit reproduction but are silent on adaptation may be quoted in L4 encodings in Commons, keeping the attribution the publisher requires and an "unofficial version" notice. The encoding at `encodings/baseline-2026-10/` relies on it. It also quotes the Income Assistance Regulations (R-038-2024) and the Income Assistance for Seniors and Persons with Disabilities Regulations (R-037-2024), deposited in the sibling subjects `../income-assistance-regulations/` and `../income-assistance-for-seniors-and-persons-with-disabilities-regulations/` under the same GNWT terms.
