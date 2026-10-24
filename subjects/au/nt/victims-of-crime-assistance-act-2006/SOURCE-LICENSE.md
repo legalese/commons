@@ -11,7 +11,7 @@ The text of **Victims of Crime Assistance Act 2006** is published on the [Northe
 
 ## Consequence for this subject
 
-Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Confirm before quoting it in an encoding** -- a human decision recorded here.
+Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Licence ruling, Michael, 24 October 2026:** the NT terms permit reproduction but are silent on adaptation; as for Canada, the texts may be quoted in L4 encodings in Commons, keeping the NT attribution ("Copyright in Northern Territory legislation is owned by the Northern Territory") and the unofficial-copy notice.
 
 ## Language
 
@@ -21,4 +21,4 @@ English is the only language of NT legislation; there are no other official or a
 
 Text deposited 2026-10-19T17:06:01Z (UTC): reprint **REPV014**, as in force at 1 July 2025, converted from the register's Word reprint, at `registers/source-bundle/Victims-of-Crime-Assistance-Act-2006-NT-current-reprint-REPV014.txt`. The text opens with an unofficial-copy notice as the policy's first condition requires; the sidecar `.meta.json` records the download and text sha256, character count and converter.
 
-Verbatim reproduction is within the policy ("publish or deal with"). Whether an L4 encoding that paraphrases or restructures the text is also within it (the policy does not expressly mention adaptation) remains the open question above; record the human decision here before an encoding quotes the text.
+Verbatim reproduction is within the policy ("publish or deal with"). Whether an L4 encoding that paraphrases or restructures the text is also within it (the policy does not expressly mention adaptation) was the open question above. The licence ruling of 24 October 2026, recorded above, settles it: an L4 encoding in Commons may quote the text, keeping the NT attribution and the unofficial-copy notice.

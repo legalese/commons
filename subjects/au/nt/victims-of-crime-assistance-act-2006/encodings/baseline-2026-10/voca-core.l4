@@ -1,0 +1,1140 @@
+IMPORT prelude
+IMPORT `voca-schedules`
+
+-- Victims of Crime Assistance Act 2006 (NT), with the Victims of Crime Assistance Regulations 2007 (NT).
+-- SEAT-NEUTRAL CORE. The rules use the Act's own actors and terms: "a person", "the primary victim", "an eligible
+-- victim", "the applicant", "an individual who has incurred the costs of a funeral", "the Territory", "the Director",
+-- "the assessor". The Director and the assessor are officials: what they must not do, or must reduce, is written as the
+-- outcome of their function for the person applying, never as a seat. Where the text sets a duty with a period (the
+-- Territory pays within 28 days; a refund within the time in a notice; contact details within 30 days; a request to
+-- reopen within 6 months), it is a regulative rule. The questions are in voca-seat.l4 (the victim) and
+-- voca-seat-funeral.l4 (the person who paid for a victim's funeral), which IMPORT this module and restate no rule.
+--
+-- PROVISIONS COVERED. Act: ss 4, 5, 6, 7 (definitions); ss 9-16 (the four categories and what each may apply for);
+-- ss 17-18 (motor accident and work injury exclusions), with reg 13; s 19 (death); s 22 (counselling); ss 25, 25B,
+-- 26, 27(5), 28 and 29 (interim payments); ss 29A, 31, 37-43 (awards); ss 45-47 (payment, increase, refund); ss
+-- 47A-47G (funeral expense assistance); ss 47H-47K (closure); s 48 and Schedule 1 (NTCAT review); s 54 (legal costs).
+-- Regulations: regs 3-7 (sexual offences, domestic violence injuries, pattern of abuse, factor of aggravation), 14-16
+-- and Schedules 1-3 (in voca-schedules.l4), 18-23 (multiple injuries, existing condition, aids and single body parts,
+-- burns and scarring, domestic violence injuries, loss of earnings).
+-- OUT: Part 5 (recovery from offenders); s 61 and reg 26 (the levy, which falls on offenders and is set in revenue
+-- units whose value is not deposited); Part 3 machinery (s 21); ss 24, 33-36 (assessors and procedure), 44, 62-70;
+-- regs 8-12 (application contents), 24-25 (review costs), 27-31.
+--
+-- Edition: Act reprint REPV014, as in force at 1 July 2025; Regulations reprint REPV014R1, as in force at 25 March
+-- 2024; both deposited from legislation.nt.gov.au (unofficial copies). Quoted under the NT licence ruling of 24
+-- October 2026 (SOURCE-LICENSE.md).
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Victims of Crime Assistance Act 2006 -- seat-neutral core`
+
+§§ `Small helpers`
+
+GIVEN `a` IS A NUMBER
+      `b` IS A NUMBER
+GIVETH A NUMBER
+`the larger of` `a` `and` `b` MEANS IF `a` AT LEAST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER
+      `b` IS A NUMBER
+GIVETH A NUMBER
+`the smaller of` `a` `and` `b` MEANS IF `a` AT MOST `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER
+GIVETH A NUMBER
+`not below zero` `a` MEANS `the larger of` 0 `and` `a`
+
+-- The days in month `m` of year `y`.
+GIVEN `m` IS A NUMBER
+      `y` IS A NUMBER
+GIVETH A NUMBER
+`the days in month` `m` `of` `y` MEANS
+    DATE_SERIAL `the first of the next month` MINUS DATE_SERIAL (DATE_FROM_DMY 1 `m` `y`)
+    WHERE
+        `the first of the next month` MEANS
+            IF `m` EQUALS 12
+            THEN DATE_FROM_DMY 1 1 (`y` PLUS 1)
+            ELSE DATE_FROM_DMY 1 (`m` PLUS 1) `y`
+
+-- The same day `n` months later. READING: where that month is shorter (a 31 August closure, a 29 February death), its
+-- last day. The Act does not say; the Interpretation Act 1978, which may, is not deposited.
+GIVEN `n`       IS A NUMBER
+      `the day` IS A DATE
+GIVETH A DATE
+`the date` `n` `months after` `the day` MEANS
+    DATE_FROM_DMY (`the smaller of` (DATE_DAY `the day`) `and` (`the days in month` `the month` `of` `the year`)) `the month` `the year`
+    WHERE
+        `the months from year zero` MEANS ((DATE_YEAR `the day`) TIMES 12) PLUS (DATE_MONTH `the day` MINUS 1) PLUS `n`
+        `the year`  MEANS FLOOR (`the months from year zero` DIVIDED BY 12)
+        `the month` MEANS (`the months from year zero` MODULO 12) PLUS 1
+
+GIVEN `a` IS A DATE
+      `b` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `is on or before` `a` `b` IF DATE_SERIAL `a` AT MOST DATE_SERIAL `b`
+
+§§ `s 5 -- violent act`
+
+-- s 5(1): "A violent act is: (a) a criminal act prescribed by regulation, or a series of such related criminal acts,
+-- whether committed by one or more persons, that occurs in the Territory; or (b) a criminal act, or a series of related
+-- criminal acts ... that: (i) occurs in the Territory; and (ii) directly results in the injury or death of one or more
+-- persons regardless of where the injury or death occurs." (2): a criminal act is one "(a) that constitutes a criminal
+-- offence; or (b) if the person is excused from criminal responsibility due to age, mental impairment or other legal
+-- incapacity or by some other lawful defence -- that would otherwise constitute a criminal offence". (7): "a person who
+-- attempts to commit a criminal act is taken to have committed the criminal act". reg 4(1): the prescribed criminal
+-- acts are the offences in Schedule 1, Parts 1-4, with their qualifications.
+-- (3)-(6) (series of related acts; s 5(6) on acts after an award notice) are facts in the offence record.
+DECLARE `Criminal act` HAS
+    `occurred in the Territory`                                        IS A BOOLEAN
+    `constitutes a criminal offence, or would but for an excuse in s 5(2)(b)` IS A BOOLEAN
+    `directly resulted in the injury or death of one or more persons`  IS A BOOLEAN
+    `the offence`                                                      IS AN `Offence`
+
+GIVEN `the act` IS A `Criminal act`
+GIVETH A BOOLEAN
+DECIDE `is prescribed by regulation` `the act` IF
+    `the Schedule 1 category of` (`the act`'s `the offence`) AT LEAST 1
+
+GIVEN `the act` IS A `Criminal act`
+GIVETH A BOOLEAN
+DECIDE `is a violent act` `the act` IF
+        `the act`'s `occurred in the Territory`
+    AND `the act`'s `constitutes a criminal offence, or would but for an excuse in s 5(2)(b)`
+    AND (    `is prescribed by regulation` `the act`
+          OR `the act`'s `directly resulted in the injury or death of one or more persons`)
+
+-- s 7(1): "A compensable violent act is a violent act under section 5(1)(a)."
+GIVEN `the act` IS A `Criminal act`
+GIVETH A BOOLEAN
+DECIDE `is a compensable violent act` `the act` IF
+        `the act`'s `occurred in the Territory`
+    AND `the act`'s `constitutes a criminal offence, or would but for an excuse in s 5(2)(b)`
+    AND `is prescribed by regulation` `the act`
+
+-- regs 14, Schedule 1 Part 5: the category and standard amount of a compensable violent act.
+DECLARE `Compensable violent act answer` IS ONE OF
+    `a compensable violent act` HAS `category` IS A NUMBER
+                                    `standard amount` IS A NUMBER
+    `not a compensable violent act: the offence is not in Schedule 1 (s 7(1), reg 4)`
+    `not a violent act (s 5)`
+
+GIVEN `the act` IS A `Criminal act`
+GIVETH A `Compensable violent act answer`
+`the s 7(1) answer for` `the act` MEANS
+    IF `is compensable` `the act`
+    THEN `a compensable violent act` `the category` (`the Schedule 1 standard amount for category` `the category`)
+    ELSE IF `is a violent act` `the act`
+         THEN `not a compensable violent act: the offence is not in Schedule 1 (s 7(1), reg 4)`
+         ELSE `not a violent act (s 5)`
+    WHERE
+        `the category` MEANS `the Schedule 1 category of` (`the act`'s `the offence`)
+        GIVEN `a` IS A `Criminal act`
+        GIVETH A BOOLEAN
+        DECIDE `is compensable` `a` IF `is a compensable violent act` `a`
+
+§§ `s 6 -- injury`
+
+-- s 6(1): "An injury is any of the following: (a) a physical illness or injury; (b) a recognisable psychological or
+-- psychiatric disorder; (c) pregnancy; (d) a combination of any injuries mentioned in paragraphs (a) to (c)." (2): "does
+-- not include an injury resulting from the loss of or damage to property".
+GIVEN `a physical illness or injury`                          IS A BOOLEAN
+      `a recognisable psychological or psychiatric disorder`  IS A BOOLEAN
+      `pregnancy`                                             IS A BOOLEAN
+      `it results from the loss of or damage to property`     IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is an injury` `a physical illness or injury` `a recognisable psychological or psychiatric disorder` `pregnancy` `it results from the loss of or damage to property` IF
+        (    `a physical illness or injury`
+          OR `a recognisable psychological or psychiatric disorder`
+          OR `pregnancy`)
+    AND (NOT `it results from the loss of or damage to property`)
+
+§§ `regs 5 and 15 -- domestic violence injuries; categories of psychological or psychiatric disorder`
+
+-- reg 5(1): "A victim suffers domestic violence injuries if: (a) the victim suffers 1 or more injuries as a direct
+-- result of: (i) a violent act involving a pattern of abuse, committed by an offender with whom the victim is in a
+-- domestic relationship; or (ii) a violent act of unlawful stalking under section 189 of the Criminal Code in
+-- contravention, or apparent contravention, of a domestic violence order; or (iii) a combination of violent acts
+-- mentioned in subparagraphs (i) and (ii) if committed by the same offender; and (b) the injuries are more than
+-- transient or trifling, though they need not be serious." "Domestic relationship" and "domestic violence order" are
+-- borrowed from the Domestic and Family Violence Act 2007: facts.
+GIVEN `suffered an injury as a direct result`                                   IS A BOOLEAN
+      `the act involved a pattern of abuse by an offender in a domestic relationship with the victim` IS A BOOLEAN
+      `the act was unlawful stalking under s 189 in contravention of a domestic violence order` IS A BOOLEAN
+      `a combination of those acts by the same offender`                        IS A BOOLEAN
+      `the injuries are more than transient or trifling`                        IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `suffers domestic violence injuries` `suffered an injury as a direct result` `the act involved a pattern of abuse by an offender in a domestic relationship with the victim` `the act was unlawful stalking under s 189 in contravention of a domestic violence order` `a combination of those acts by the same offender` `the injuries are more than transient or trifling` IF
+        `suffered an injury as a direct result`
+    AND (    `the act involved a pattern of abuse by an offender in a domestic relationship with the victim`
+          OR `the act was unlawful stalking under s 189 in contravention of a domestic violence order`
+          OR `a combination of those acts by the same offender`)
+    AND `the injuries are more than transient or trifling`
+
+-- reg 15(1): "A category 1 psychological or psychiatric disorder is a recognisable psychological or psychiatric
+-- disorder that: (a) is moderately disabling and chronic; and (b) is suffered as a direct result of an offence against
+-- the Criminal Code specified in Schedule 1 or 2 to which the qualification specified opposite applies." (2): category 2
+-- is "severely disabling and chronic" and suffered as a direct result of "(i) an offence ... specified in Schedule 1 or
+-- 2 ...; or (ii) a violent act causing domestic violence injuries". "Moderately" and "severely" disabling and
+-- "chronic" are clinical judgments: facts.
+DECLARE `How disabling` IS ONE OF
+    `mildly or not disabling`
+    `moderately disabling`
+    `severely disabling`
+
+DECLARE `Disorder category` IS ONE OF
+    `a category 1 psychological or psychiatric disorder (reg 15(1))`
+    `a category 2 psychological or psychiatric disorder (reg 15(2))`
+    `neither category: no Schedule 3 item 12 amount`
+
+GIVEN `how disabling`                                IS A `How disabling`
+      `it is chronic`                                IS A BOOLEAN
+      `it results from an offence in Schedule 1 or 2` IS A BOOLEAN
+      `it results from a violent act causing domestic violence injuries` IS A BOOLEAN
+GIVETH A `Disorder category`
+`the reg 15 category of the disorder` `how disabling` `it is chronic` `it results from an offence in Schedule 1 or 2` `it results from a violent act causing domestic violence injuries` MEANS
+    IF      `how disabling` EQUALS `severely disabling`
+        AND `it is chronic`
+        AND (`it results from an offence in Schedule 1 or 2` OR `it results from a violent act causing domestic violence injuries`)
+    THEN `a category 2 psychological or psychiatric disorder (reg 15(2))`
+    ELSE IF     `how disabling` EQUALS `moderately disabling`
+            AND `it is chronic`
+            AND `it results from an offence in Schedule 1 or 2`
+         THEN `a category 1 psychological or psychiatric disorder (reg 15(1))`
+         ELSE `neither category: no Schedule 3 item 12 amount`
+
+-- Schedule 3, item 12: category 1 lasting "(i) more than 13 weeks but not more than 52 weeks / (ii) more than 52 weeks
+-- or permanently" ($10 000 / $20 000); category 2 the same periods ($30 000 / $40 000). 13 weeks or less: no item.
+GIVEN `the category`     IS A `Disorder category`
+      `weeks it has lasted or will last` IS A NUMBER
+      `it is permanent` IS A BOOLEAN
+GIVETH A MAYBE STRING
+`the item 12 leaf for` `the category` `weeks it has lasted or will last` `it is permanent` MEANS
+    IF `the category` EQUALS `neither category: no Schedule 3 item 12 amount`
+    THEN NOTHING
+    ELSE IF `it is permanent` OR `weeks it has lasted or will last` GREATER THAN 52
+         THEN JUST (IF `the category` EQUALS `a category 1 psychological or psychiatric disorder (reg 15(1))` THEN "12(a)(ii)" ELSE "12(b)(ii)")
+         ELSE IF `weeks it has lasted or will last` GREATER THAN 13
+              THEN JUST (IF `the category` EQUALS `a category 1 psychological or psychiatric disorder (reg 15(1))` THEN "12(a)(i)" ELSE "12(b)(i)")
+              ELSE NOTHING
+
+§§ `ss 9, 11, 13, 15 -- the four categories of victim`
+
+-- One person, and what they were to the violent act and to the primary victim.
+DECLARE `Person and the violent act` HAS
+    `the act is a violent act`                                                   IS A BOOLEAN
+    `the act is a compensable violent act`                                       IS A BOOLEAN
+    `the act was committed against the person`                                   IS A BOOLEAN
+    `the person suffered an injury as a direct result`                           IS A BOOLEAN
+    `the person died as a direct result`                                         IS A BOOLEAN
+    `the person was injured or died trying to prevent the act, help or rescue a victim, or arrest the offender` IS A BOOLEAN
+    `the person was present at the scene and was injured as a direct result of witnessing the act` IS A BOOLEAN
+    `the person was injured as a direct result of later becoming aware of the act` IS A BOOLEAN
+    `the person is a child or stepchild of the primary victim, or a child under their guardianship` IS A BOOLEAN
+    `the person is a parent, step-parent or guardian of the primary victim`      IS A BOOLEAN
+    `the primary victim was a child when the act occurred`                       IS A BOOLEAN
+    `the person is the spouse or de facto partner of the primary victim`         IS A BOOLEAN
+    `the person was entirely or substantially dependent on the primary victim for financial support` IS A BOOLEAN
+    `the person is a relative of the primary victim, or in an intimate personal relationship with them` IS A BOOLEAN
+    `the person committed the violent act`                                       IS A BOOLEAN
+
+DECLARE `Category of victim` IS ONE OF
+    `primary victim`
+    `secondary victim`
+    `family victim`
+    `related victim`
+
+-- s 9(1): "(a) if the violent act is a compensable violent act -- a person against whom the violent act has been
+-- committed regardless of whether the person suffers an injury or dies ...; or (b) otherwise -- a person against whom
+-- the violent act has been committed and who suffers an injury or dies as a direct result". (2): a person who "suffers an
+-- injury or dies as a direct result of" trying to prevent it, help or rescue, or arrest.
+GIVEN `p` IS A `Person and the violent act`
+GIVETH A BOOLEAN
+DECIDE `is a primary victim` `p` IF
+        `p`'s `the act is a violent act`
+    AND (    (    `p`'s `the act was committed against the person`
+              AND (    `p`'s `the act is a compensable violent act`
+                    OR `p`'s `the person suffered an injury as a direct result`
+                    OR `p`'s `the person died as a direct result`))
+          OR `p`'s `the person was injured or died trying to prevent the act, help or rescue a victim, or arrest the offender`)
+
+-- s 11(1): "present at the scene of the violent act and suffers an injury as a direct result of witnessing the violent
+-- act". (2): injured "as a direct result of subsequently becoming aware of the violent act": "(a) a child or stepchild of
+-- the primary victim, or a child under the guardianship of the primary victim ...; (b) if the primary victim is a child
+-- -- a parent, step-parent or guardian of the primary victim". (3): not the person who committed it.
+GIVEN `p` IS A `Person and the violent act`
+GIVETH A BOOLEAN
+DECIDE `is a secondary victim` `p` IF
+        `p`'s `the act is a violent act`
+    AND (NOT `p`'s `the person committed the violent act`)
+    AND (    `p`'s `the person was present at the scene and was injured as a direct result of witnessing the act`
+          OR (    `p`'s `the person was injured as a direct result of later becoming aware of the act`
+              AND (    `p`'s `the person is a child or stepchild of the primary victim, or a child under their guardianship`
+                    OR (    `p`'s `the primary victim was a child when the act occurred`
+                        AND `p`'s `the person is a parent, step-parent or guardian of the primary victim`))))
+
+-- s 13(1): spouse or de facto partner; parent, step-parent or guardian; child, stepchild or child under guardianship
+-- (including one "born after the violent act occurs", (2)); "a person entirely or substantially dependent for financial
+-- support on the primary victim". (3): injury immaterial. (4): not the person who committed it.
+GIVEN `p` IS A `Person and the violent act`
+GIVETH A BOOLEAN
+DECIDE `is a family victim` `p` IF
+        `p`'s `the act is a violent act`
+    AND (NOT `p`'s `the person committed the violent act`)
+    AND (    `p`'s `the person is the spouse or de facto partner of the primary victim`
+          OR `p`'s `the person is a parent, step-parent or guardian of the primary victim`
+          OR `p`'s `the person is a child or stepchild of the primary victim, or a child under their guardianship`
+          OR `p`'s `the person was entirely or substantially dependent on the primary victim for financial support`)
+
+-- s 15(1): "(a) a relative of the primary victim ...; (b) a person in an intimate personal relationship with the primary
+-- victim". (2): not a family victim, not the person who committed it. (3): the Regulations may exclude others; the
+-- deposited Regulations exclude no one.
+GIVEN `p` IS A `Person and the violent act`
+GIVETH A BOOLEAN
+DECIDE `is a related victim` `p` IF
+        `p`'s `the act is a violent act`
+    AND (NOT `p`'s `the person committed the violent act`)
+    AND (NOT `is a family victim` `p`)
+    AND `p`'s `the person is a relative of the primary victim, or in an intimate personal relationship with them`
+
+GIVEN `p` IS A `Person and the violent act`
+GIVETH A LIST OF `Category of victim`
+`the categories of` `p` MEANS
+    filter (GIVEN `c` YIELD `is in` `c`) (LIST `primary victim`, `secondary victim`, `family victim`, `related victim`)
+    WHERE
+        GIVEN `c` IS A `Category of victim`
+        GIVETH A BOOLEAN
+        DECIDE `is in` `c` IF
+            CONSIDER `c`
+            WHEN `primary victim`   THEN `is a primary victim` `p`
+            WHEN `secondary victim` THEN `is a secondary victim` `p`
+            WHEN `family victim`    THEN `is a family victim` `p`
+            WHEN `related victim`   THEN `is a related victim` `p`
+
+§§ `ss 17, 18 and reg 13 -- injuries a motor accident or return to work scheme covers`
+
+-- s 17(1): the injured person "is not eligible to apply as a primary victim for an interim payment or award for the
+-- same (or substantially the same) injury if the person: (a) is being paid, or has been paid, a benefit under the Motor
+-- Accidents (Compensation) Act 1979 for the injury; or (b) is entitled to a benefit under [that Act] for the injury,
+-- regardless of whether the injured person has made a claim". (2): "even if the nature of the damage or loss ... is
+-- different". (3): "A person who would, apart from subsection (1), be a secondary victim or family victim of the violent
+-- act against the injured person is not eligible for an interim payment or award in connection with the violent act."
+-- (4): counselling stays open. s 18 is the same for "a worker" (Return to Work Act 1986 definition) and compensation
+-- under that Act. reg 13: where the worker claimed, the employer disputed liability, the worker referred the dispute to
+-- mediation or started a proceeding, and entitlement is undetermined, the Director or assessor "must presume the injured
+-- person is not entitled to compensation" (13(2)); the assessor may defer in exceptional circumstances (13(3)).
+-- The other scheme's entitlement is a fact here: see the RTW and MAC encodings named in NOTES.md.
+DECLARE `Other scheme facts` HAS
+    `the injured person is being paid, or has been paid, a Motor Accidents (Compensation) benefit for the injury` IS A BOOLEAN
+    `the injured person is entitled to a Motor Accidents (Compensation) benefit for the injury, claimed or not` IS A BOOLEAN
+    `the injured person is a worker under the Return to Work Act 1986`        IS A BOOLEAN
+    `the worker is being paid, or has been paid, Return to Work compensation for the injury` IS A BOOLEAN
+    `the worker is entitled to Return to Work compensation for the injury, claimed or not` IS A BOOLEAN
+    `the worker's claim is disputed, referred to mediation or a proceeding, and undetermined` IS A BOOLEAN
+
+DECLARE `Other scheme answer` IS ONE OF
+    `not excluded by s 17 or s 18`
+    `not excluded for now: a disputed Return to Work claim is presumed not to be an entitlement (reg 13(2)); the assessor may defer in exceptional circumstances (reg 13(3))`
+    `excluded as the injured person, for that injury: a Motor Accidents (Compensation) benefit is paid or payable (s 17(1)); counselling stays open`
+    `excluded as the injured person, for that injury: Return to Work compensation is paid or payable (s 18(1)); counselling stays open`
+    `excluded as a secondary or family victim: the injured person is covered by the Motor Accidents (Compensation) Act (s 17(3)); counselling stays open`
+    `excluded as a secondary or family victim: the injured worker is covered by the Return to Work Act (s 18(3)); counselling stays open`
+
+GIVEN `f` IS AN `Other scheme facts`
+GIVETH A BOOLEAN
+DECIDE `s 17(1) applies to the injured person` `f` IF
+        `f`'s `the injured person is being paid, or has been paid, a Motor Accidents (Compensation) benefit for the injury`
+    OR  `f`'s `the injured person is entitled to a Motor Accidents (Compensation) benefit for the injury, claimed or not`
+
+GIVEN `f` IS AN `Other scheme facts`
+GIVETH A BOOLEAN
+DECIDE `reg 13 presumes no Return to Work entitlement` `f` IF
+    `f`'s `the worker's claim is disputed, referred to mediation or a proceeding, and undetermined`
+
+GIVEN `f` IS AN `Other scheme facts`
+GIVETH A BOOLEAN
+DECIDE `s 18(1) applies to the injured person` `f` IF
+        `f`'s `the injured person is a worker under the Return to Work Act 1986`
+    AND (    `f`'s `the worker is being paid, or has been paid, Return to Work compensation for the injury`
+          OR (    `f`'s `the worker is entitled to Return to Work compensation for the injury, claimed or not`
+              AND (NOT `reg 13 presumes no Return to Work entitlement` `f`)))
+
+-- `as the injured person`: TRUE for the injured person's own claim (as a primary victim, for the same or substantially
+-- the same injury); FALSE for a secondary or family victim of the act against the injured person.
+GIVEN `f`                       IS AN `Other scheme facts`
+      `as the injured person`   IS A BOOLEAN
+GIVETH AN `Other scheme answer`
+`the s 17 and 18 answer for` `f` `as the injured person` MEANS
+    IF `s 17(1) applies to the injured person` `f`
+    THEN IF `as the injured person`
+         THEN `excluded as the injured person, for that injury: a Motor Accidents (Compensation) benefit is paid or payable (s 17(1)); counselling stays open`
+         ELSE `excluded as a secondary or family victim: the injured person is covered by the Motor Accidents (Compensation) Act (s 17(3)); counselling stays open`
+    ELSE IF `s 18(1) applies to the injured person` `f`
+         THEN IF `as the injured person`
+              THEN `excluded as the injured person, for that injury: Return to Work compensation is paid or payable (s 18(1)); counselling stays open`
+              ELSE `excluded as a secondary or family victim: the injured worker is covered by the Return to Work Act (s 18(3)); counselling stays open`
+         ELSE IF     `f`'s `the injured person is a worker under the Return to Work Act 1986`
+                 AND `f`'s `the worker is entitled to Return to Work compensation for the injury, claimed or not`
+                 AND `reg 13 presumes no Return to Work entitlement` `f`
+              THEN `not excluded for now: a disputed Return to Work claim is presumed not to be an entitlement (reg 13(2)); the assessor may defer in exceptional circumstances (reg 13(3))`
+              ELSE `not excluded by s 17 or s 18`
+
+GIVEN `the answer` IS AN `Other scheme answer`
+GIVETH A BOOLEAN
+DECIDE `excludes an interim payment or award` `the answer` IF
+        (NOT (`the answer` EQUALS `not excluded by s 17 or s 18`))
+    AND (NOT (`the answer` EQUALS `not excluded for now: a disputed Return to Work claim is presumed not to be an entitlement (reg 13(2)); the assessor may defer in exceptional circumstances (reg 13(3))`))
+
+§§ `ss 10, 12, 14, 16, 22, 25 and 26 -- what each category may apply for`
+
+DECLARE `Application position` HAS
+    `the category applied in`                                  IS A `Category of victim`
+    `the act is a compensable violent act`                     IS A BOOLEAN
+    `has one or more compensable injuries from the act`        IS A BOOLEAN
+    `is in circumstances of financial hardship`                IS A BOOLEAN
+    `the act directly resulted in the death of the primary victim` IS A BOOLEAN
+    `excluded by s 17 or s 18`                                 IS A BOOLEAN
+    `has already applied for an award for the same violent act` IS A BOOLEAN
+    `the assessor has decided the application for an award`   IS A BOOLEAN
+    `interim payments already paid for the act`                IS A NUMBER
+
+DECLARE `What may be applied for` HAS
+    `counselling`                                              IS A BOOLEAN
+    `an interim payment for financial loss`                    IS A BOOLEAN
+    `an award for financial loss`                              IS A BOOLEAN
+    `an award for the mere commission of a compensable violent act` IS A BOOLEAN
+    `an award for compensable injuries`                        IS A BOOLEAN
+
+-- s 27(5): "The maximum amount of the payment is $5 000." s 25(3): more than one interim payment "if the total of the
+-- interim payments does not exceed the maximum amount mentioned in section 27(5)".
+`the maximum interim payment` MEANS 5000
+
+GIVEN `already paid` IS A NUMBER
+GIVETH A NUMBER
+`the most a further interim payment can be` `already paid` MEANS
+    `not below zero` (`the maximum interim payment` MINUS `already paid`)
+
+-- s 10 (primary): counselling (1); an interim payment "in circumstances of financial hardship" (2); an award for
+-- financial loss (3); an award for "(a) if the violent act is a compensable violent act: (i) the mere commission of the
+-- violent act; or (ii) one or more compensable injuries ...; or (b) otherwise -- one or more compensable injuries" (4).
+-- s 12 (secondary): counselling; interim if in financial hardship; award for financial loss; award for compensable
+-- injuries. s 14 (family): counselling; where the act "directly result[ed] in the death of the primary victim", an interim
+-- payment "if the family victim is in circumstances of hardship" and an award for financial loss. s 16 (related):
+-- counselling only. s 22: counselling is applied for to an approved counsellor or organisation.
+-- ss 17(4), 18(4): counselling stays open whatever the exclusion. s 25(2): "must not apply for more than one award for
+-- the same violent act". s 26(2A): no interim application "after the assessor decides the application for an award".
+-- s 25(3): interim payments in total at most $5 000.
+GIVEN `a` IS AN `Application position`
+GIVETH A `What may be applied for`
+`what may be applied for in` `a` MEANS
+    `What may be applied for` WITH
+        `counselling`                                              IS TRUE
+        `an interim payment for financial loss`                    IS `interim`
+        `an award for financial loss`                              IS `award for loss`
+        `an award for the mere commission of a compensable violent act` IS
+                (`a`'s `the category applied in` EQUALS `primary victim`)
+            AND `a`'s `the act is a compensable violent act`
+            AND `an award is open`
+        `an award for compensable injuries`                        IS
+                (    `a`'s `the category applied in` EQUALS `primary victim`
+                  OR `a`'s `the category applied in` EQUALS `secondary victim`)
+            AND `a`'s `has one or more compensable injuries from the act`
+            AND `an award is open`
+    WHERE
+        `an award is open` MEANS
+                (NOT `a`'s `excluded by s 17 or s 18`)
+            AND (NOT `a`'s `has already applied for an award for the same violent act`)
+        `interim` MEANS
+                (NOT `a`'s `excluded by s 17 or s 18`)
+            AND (NOT `a`'s `the assessor has decided the application for an award`)
+            AND `the most a further interim payment can be` (`a`'s `interim payments already paid for the act`) GREATER THAN 0
+            AND `a`'s `is in circumstances of financial hardship`
+            AND (    `a`'s `the category applied in` EQUALS `primary victim`
+                  OR `a`'s `the category applied in` EQUALS `secondary victim`
+                  OR (    `a`'s `the category applied in` EQUALS `family victim`
+                      AND `a`'s `the act directly resulted in the death of the primary victim`))
+        `award for loss` MEANS
+                `an award is open`
+            AND (    `a`'s `the category applied in` EQUALS `primary victim`
+                  OR `a`'s `the category applied in` EQUALS `secondary victim`
+                  OR (    `a`'s `the category applied in` EQUALS `family victim`
+                      AND `a`'s `the act directly resulted in the death of the primary victim`))
+
+§§ `reg 23 -- loss of earnings`
+
+-- reg 23(2): for each week of the relevant period, "the lesser of: (a) 75% of the difference between average weekly
+-- earnings at the date of the violent act and the applicant's net weekly earnings during the relevant period; (b) 75% of
+-- the difference between the applicant's net weekly earnings at the date of the violent act and the applicant's net
+-- weekly earnings during the relevant period". (3): "average weekly earnings means the Average Weekly Earnings for Full
+-- Time Adult Persons, Weekly Ordinary Time Earnings for the Northern Territory last published by the Australian
+-- Statistician before the date on which the applicants weekly actual loss of earnings is calculated, less a notional
+-- deduction for income tax." Neither the ABS figure nor the notional tax is deposited: one INPUT. reg 23(1): primary and
+-- secondary victims only. READING: a negative difference gives nothing for the week (the regulation does not say).
+`the reg 23 rate` MEANS 75%
+
+GIVEN `NT average weekly earnings less notional income tax` IS A NUMBER
+      `net weekly earnings at the date of the act`            IS A NUMBER
+      `net weekly earnings during the period`                 IS A NUMBER
+GIVETH A NUMBER
+`the reg 23 weekly loss of earnings` `NT average weekly earnings less notional income tax` `net weekly earnings at the date of the act` `net weekly earnings during the period` MEANS
+    `not below zero` (`the smaller of` `(a)` `and` `(b)`)
+    WHERE
+        `(a)` MEANS `the reg 23 rate` TIMES (`NT average weekly earnings less notional income tax` MINUS `net weekly earnings during the period`)
+        `(b)` MEANS `the reg 23 rate` TIMES (`net weekly earnings at the date of the act` MINUS `net weekly earnings during the period`)
+
+§§ `regs 16, 18-22 -- the standard amount for compensable injuries`
+
+-- One injury claimed. `on each side of the body` covers reg 16(3)(ab) and reg 20(2) ("If the victim has only 1 leg,
+-- arm, eye or other body part, an injury to the remaining body part is taken to be an injury to both of the body
+-- parts"). `percent attributable to an existing condition` is the assessor's proportion under reg 19 (0 to 100). The two
+-- scarring facts are read only for item 13 (reg 21(2): "must not award financial assistance for scarring unless the
+-- scarring is permanent"; (3): not "for both burns to a part of the body and scarring of that part of the body caused by
+-- burns"). An item not in Schedule 3, Part 2 is a reg 16(1)(b) injury: give the most similar listed item (reg
+-- 10(1)(c)(iii)); whether it is similar, and lasted as long, is for the assessor.
+DECLARE `Injury claimed` HAS
+    `Schedule 3 item`                                     IS A STRING
+    `on each side of the body`                            IS A BOOLEAN
+    `percent attributable to an existing condition`       IS A NUMBER
+    `the scarring is permanent`                           IS A BOOLEAN
+    `the scarring was caused by burns claimed for the same part` IS A BOOLEAN
+
+-- An injury with its row looked up.
+DECLARE `Injury assessed` HAS
+    `prescribed amount`  IS A NUMBER
+    `existing condition` IS A NUMBER
+
+GIVEN `the injury` IS AN `Injury claimed`
+      `the row`    IS A `Schedule 3 row`
+GIVETH A BOOLEAN
+DECIDE `reg 21 bars` `the injury` `the row` IF
+        elem (`the row`'s `item`) `the scarring items`
+    AND (    (NOT `the injury`'s `the scarring is permanent`)
+          OR `the injury`'s `the scarring was caused by burns claimed for the same part`)
+
+-- reg 16(3)(a), (ab): the amount opposite the injury, doubled for a named item "that occurs on each side of the body".
+GIVEN `the injury` IS AN `Injury claimed`
+      `the row`    IS A `Schedule 3 row`
+GIVETH A NUMBER
+`the prescribed standard amount for` `the injury` `the row` MEANS
+    IF `the row`'s `doubles` AND `the injury`'s `on each side of the body`
+    THEN `the row`'s `amount` TIMES 2
+    ELSE `the row`'s `amount`
+
+-- The injuries claimed, assessed: NOTHING if any item is not in the table; injuries reg 21 bars are left out.
+GIVEN `the injuries` IS A LIST OF `Injury claimed`
+GIVETH A MAYBE (LIST OF `Injury assessed`)
+`the injuries assessed` `the injuries` MEANS
+    CONSIDER `the injuries`
+    WHEN EMPTY THEN JUST EMPTY
+    WHEN `i` FOLLOWED BY `rest` THEN
+        CONSIDER `the Schedule 3 row for` (`i`'s `Schedule 3 item`)
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST `r` THEN
+            CONSIDER `the injuries assessed` `rest`
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST `others` THEN
+                IF `reg 21 bars` `i` `r`
+                THEN JUST `others`
+                ELSE JUST (`Injury assessed` WITH
+                               `prescribed amount`  IS `the prescribed standard amount for` `i` `r`
+                               `existing condition` IS `i`'s `percent attributable to an existing condition`
+                           FOLLOWED BY `others`)
+
+-- The first item that is not in the table, if any (for the `not covered` answer).
+GIVEN `the injuries` IS A LIST OF `Injury claimed`
+GIVETH A MAYBE STRING
+`the first item not in Schedule 3` `the injuries` MEANS
+    CONSIDER `the injuries`
+    WHEN EMPTY THEN NOTHING
+    WHEN `i` FOLLOWED BY `rest` THEN
+        CONSIDER `the Schedule 3 row for` (`i`'s `Schedule 3 item`)
+        WHEN NOTHING THEN JUST (`i`'s `Schedule 3 item`)
+        WHEN JUST `r` THEN `the first item not in Schedule 3` `rest`
+
+-- reg 18(2): the most serious injury is the one with the highest prescribed standard amount; the second and third are
+-- the next (a tie with the first amount counts as the second, and so on). So: rank by prescribed amount, highest first.
+GIVEN `the assessed` IS A LIST OF `Injury assessed`
+GIVETH A LIST OF `Injury assessed`
+`ranked by seriousness` `the assessed` MEANS
+    sortBy (GIVEN `x`, `y` YIELD `x`'s `prescribed amount` AT LEAST `y`'s `prescribed amount`) `the assessed`
+
+-- reg 18(1): "the total of: (a) the standard amount for the victim's most serious injury; (b) 30% of the standard amount
+-- for the victim's second most serious injury; (c) if there are more than 2 injuries -- 15% of the standard amount for
+-- the victim's third most serious injury." (3): "No financial assistance may be awarded for another injury". reg 19:
+-- each standard amount "must be reduced by the proportionate amount the assessor considers is attributable to the
+-- existing condition".
+`the reg 18 weights` MEANS LIST 100%, 30%, 15%
+
+GIVEN `the ranked` IS A LIST OF `Injury assessed`
+      `weights`    IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the weighted total of` `the ranked` `with` `weights` MEANS
+    CONSIDER `the ranked`
+    WHEN EMPTY THEN 0
+    WHEN `x` FOLLOWED BY `xs` THEN
+        CONSIDER `weights`
+        WHEN EMPTY THEN 0
+        WHEN `w` FOLLOWED BY `ws` THEN
+            ((`x`'s `prescribed amount` TIMES `w`) TIMES ((100 MINUS `x`'s `existing condition`) DIVIDED BY 100))
+                PLUS `the weighted total of` `xs` `with` `ws`
+
+-- reg 18(4): reg 18 "does not apply in relation to financial assistance awarded for domestic violence injuries"; reg
+-- 22(1): a victim may apply "Instead of applying for an award for domestic violence injuries" for each separate
+-- compensable injury. READING: a claim that includes item 4 is a claim for domestic violence injuries, whose standard
+-- amount ($10 000, Schedule 3 item 4) is the whole standard amount; separate injuries are an alternative claim, not an
+-- addition. reg 19 still applies to it.
+GIVEN `the injuries` IS A LIST OF `Injury claimed`
+GIVETH A BOOLEAN
+DECIDE `claims domestic violence injuries` `the injuries` IF
+    any (GIVEN `i` YIELD `i`'s `Schedule 3 item` EQUALS `the domestic violence injuries item`) `the injuries`
+
+DECLARE `Injury amount answer` IS ONE OF
+    `the standard amount that may be awarded for the injuries, in dollars, is` HAS `dollars` IS A NUMBER
+    `not covered: this item is not a leaf of Schedule 3, Part 2 (give the most similar listed item, reg 16(1)(b))` HAS `the item` IS A STRING
+
+GIVEN `the injuries` IS A LIST OF `Injury claimed`
+GIVETH AN `Injury amount answer`
+`the standard amount for the injuries` `the injuries` MEANS
+    CONSIDER `the first item not in Schedule 3` `the injuries`
+    WHEN JUST `bad` THEN `not covered: this item is not a leaf of Schedule 3, Part 2 (give the most similar listed item, reg 16(1)(b))` `bad`
+    WHEN NOTHING THEN
+        CONSIDER `the injuries assessed` (`the claim`)
+        WHEN NOTHING THEN `the standard amount that may be awarded for the injuries, in dollars, is` 0
+        WHEN JUST `assessed` THEN
+            `the standard amount that may be awarded for the injuries, in dollars, is` (`the weighted total of` (`ranked by seriousness` `assessed`) `with` `the weights`)
+    WHERE
+        `the claim` MEANS
+            IF `claims domestic violence injuries` `the injuries`
+            THEN filter (GIVEN `i` YIELD `i`'s `Schedule 3 item` EQUALS `the domestic violence injuries item`) `the injuries`
+            ELSE `the injuries`
+        `the weights` MEANS
+            IF `claims domestic violence injuries` `the injuries`
+            THEN LIST 100%
+            ELSE `the reg 18 weights`
+
+-- ss 38(3), 39(3): "only if the total of the standard amount for the injury or injuries is at least $7 500".
+-- READING: "standard amount" is defined in s 4 as "the amount prescribed by regulation under section 7(3)", which is the
+-- reg 16(3) amount; so the threshold adds the prescribed amounts of the injuries for which an award may be made (the
+-- three most serious, reg 18(3), less those reg 21 bars), before the reg 18 percentages and the reg 19 reduction. The
+-- other reading (the reg 18 total) gives a different answer: NOTES.md finding 4.
+`the s 38(3) threshold` MEANS 7500
+
+GIVEN `the injuries` IS A LIST OF `Injury claimed`
+GIVETH A NUMBER
+`the total of the standard amounts for the threshold` `the injuries` MEANS
+    CONSIDER `the injuries assessed` (`the claim`)
+    WHEN NOTHING THEN 0
+    WHEN JUST `assessed` THEN sum (map (GIVEN `x` YIELD `x`'s `prescribed amount`) (take `how many count` (`ranked by seriousness` `assessed`)))
+    WHERE
+        `the claim` MEANS
+            IF `claims domestic violence injuries` `the injuries`
+            THEN filter (GIVEN `i` YIELD `i`'s `Schedule 3 item` EQUALS `the domestic violence injuries item`) `the injuries`
+            ELSE `the injuries`
+        `how many count` MEANS IF `claims domestic violence injuries` `the injuries` THEN 1 ELSE 3
+
+GIVEN `the injuries` IS A LIST OF `Injury claimed`
+GIVETH A BOOLEAN
+DECIDE `the injuries reach the s 38(3) threshold` `the injuries` IF
+    `the total of the standard amounts for the threshold` `the injuries` AT LEAST `the s 38(3) threshold`
+
+-- The standard amount the injuries add to an award: the reg 18 total if the threshold is reached, otherwise 0
+-- (financial loss can still be awarded). NOTHING if an item is not in the table.
+GIVEN `the injuries` IS A LIST OF `Injury claimed`
+GIVETH A MAYBE NUMBER
+`the injury part of an award` `the injuries` MEANS
+    CONSIDER `the standard amount for the injuries` `the injuries`
+    WHEN `the standard amount that may be awarded for the injuries, in dollars, is` `d` THEN
+        JUST (IF `the injuries reach the s 38(3) threshold` `the injuries` THEN `d` ELSE 0)
+    WHEN `not covered: this item is not a leaf of Schedule 3, Part 2 (give the most similar listed item, reg 16(1)(b))` `x` THEN NOTHING
+
+§§ `ss 37-43 -- awards`
+
+-- s 43: "The assessor must not award financial assistance to the applicant if any of the following circumstances apply:
+-- (a) the assessor is satisfied the applicant is not entitled to an award; (b) the violent act was not reported to a
+-- police officer within a reasonable time after its occurrence, unless the assessor is satisfied circumstances prevented
+-- the report being made; (c) the violent act was not reported to a police officer before the date the assessor decides
+-- the application, unless [the same]; (d) the applicant failed, without reasonable excuse, to assist police officers in
+-- a material way in the investigation or prosecution of the violent act, including by failing to make a formal
+-- complaint or statement; (e) the assessor is satisfied the applicant made the application in collusion with the
+-- offender; (f) the injury or death occurred during the commission of an indictable offence by the applicant."
+-- The assessor's satisfaction and "reasonable" are judgments: facts, answered conditionally.
+DECLARE `Section 43 facts` HAS
+    `the assessor is satisfied the applicant is not entitled to an award` IS A BOOLEAN
+    `the act was reported to a police officer within a reasonable time`  IS A BOOLEAN
+    `the act was reported to a police officer before the decision`       IS A BOOLEAN
+    `the assessor is satisfied circumstances prevented the report`       IS A BOOLEAN
+    `the applicant failed without reasonable excuse to assist police in a material way` IS A BOOLEAN
+    `the assessor is satisfied the application was made in collusion with the offender` IS A BOOLEAN
+    `the injury or death occurred while the applicant was committing an indictable offence` IS A BOOLEAN
+
+DECLARE `Why no award` IS ONE OF
+    `s 43(a): the assessor is satisfied I am not entitled to an award`
+    `s 43(b): the violent act was not reported to police within a reasonable time`
+    `s 43(c): the violent act was not reported to police before the decision`
+    `s 43(d): I failed, without reasonable excuse, to assist police in a material way`
+    `s 43(e): the application was made in collusion with the offender`
+    `s 43(f): the injury or death occurred while I was committing an indictable offence`
+    `ss 17-18: the injury is covered by the Motor Accidents (Compensation) Act or the Return to Work Act`
+    `s 37(1): I am not an eligible victim of a violent act`
+    `s 40(8): the assessor is not yet satisfied that no other family victim is likely to apply`
+    `s 14(3): a family victim's award needs the violent act to have directly resulted in the primary victim's death`
+
+GIVEN `f` IS A `Section 43 facts`
+GIVETH A MAYBE `Why no award`
+`the s 43 bar for` `f` MEANS
+    IF `f`'s `the assessor is satisfied the applicant is not entitled to an award`
+    THEN JUST `s 43(a): the assessor is satisfied I am not entitled to an award`
+    ELSE IF (NOT `f`'s `the act was reported to a police officer within a reasonable time`) AND (NOT `f`'s `the assessor is satisfied circumstances prevented the report`)
+         THEN JUST `s 43(b): the violent act was not reported to police within a reasonable time`
+         ELSE IF (NOT `f`'s `the act was reported to a police officer before the decision`) AND (NOT `f`'s `the assessor is satisfied circumstances prevented the report`)
+              THEN JUST `s 43(c): the violent act was not reported to police before the decision`
+              ELSE IF `f`'s `the applicant failed without reasonable excuse to assist police in a material way`
+                   THEN JUST `s 43(d): I failed, without reasonable excuse, to assist police in a material way`
+                   ELSE IF `f`'s `the assessor is satisfied the application was made in collusion with the offender`
+                        THEN JUST `s 43(e): the application was made in collusion with the offender`
+                        ELSE IF `f`'s `the injury or death occurred while the applicant was committing an indictable offence`
+                             THEN JUST `s 43(f): the injury or death occurred while I was committing an indictable offence`
+                             ELSE NOTHING
+
+-- s 41(1)-(2): the assessor "may reduce an award" for the listed matters, by "an amount the assessor considers
+-- reasonable": an INPUT (0 if none). s 42(1)-(3): the assessor "must reduce an award if the applicant has received a
+-- payment for the compensable violent act, injury, death or loss described in the application", including "(a) an
+-- interim payment to which the applicant was not entitled; (b) compensation or damages from the offender ...; (c)
+-- private medical insurance benefit; (d) a benefit, compensation, damages or other award under an Act of the Territory,
+-- the Commonwealth, a State or another Territory; (e) payment under an agreement or insurance policy", "by an amount
+-- equal to the payment". READING: the reductions apply to the award as capped (ss 38-40 cap what "may be awarded"; ss
+-- 41-42 reduce "an award"), and never below nil. NOTES.md finding 3.
+GIVEN `the capped award`        IS A NUMBER
+      `the s 41 reduction`      IS A NUMBER
+      `the s 42 payments received` IS A NUMBER
+GIVETH A NUMBER
+`after the s 41 and s 42 reductions` `the capped award` `the s 41 reduction` `the s 42 payments received` MEANS
+    `not below zero` ((`the capped award` MINUS `the s 41 reduction`) MINUS `the s 42 payments received`)
+
+-- s 38(1): "The maximum financial assistance that may be awarded to a primary victim ... is $40 000 less any amount paid
+-- as an interim payment"; (2): for financial loss "$10 000, less any amount paid as an interim payment". s 39 and s 40
+-- use the same figures for all secondary (all family) victims of the act and for each one's financial loss.
+`the s 38 maximum`              MEANS 40000
+`the maximum for financial loss` MEANS 10000
+
+-- s 38: the most that may be awarded to a primary victim, before ss 41-42. `the standard amount part` is the
+-- compensable violent act's standard amount or the injuries' (s 10(4)(a) is a choice: the "mere commission" OR the
+-- injuries). READING: an interim payment lowers the two maximums; it is not itself deducted from the assessed loss
+-- (s 42(2)(a) deducts only an interim payment "to which the applicant was not entitled"). NOTES.md finding 3.
+GIVEN `the standard amount part` IS A NUMBER
+      `the financial loss`       IS A NUMBER
+      `interim paid`             IS A NUMBER
+GIVETH A NUMBER
+`the s 38 capped award` `the standard amount part` `the financial loss` `interim paid` MEANS
+    `the smaller of` (`the standard amount part` PLUS `the loss part`) `and` `the overall maximum`
+    WHERE
+        `the loss part`       MEANS `the smaller of` `the financial loss` `and` (`not below zero` (`the maximum for financial loss` MINUS `interim paid`))
+        `the overall maximum` MEANS `not below zero` (`the s 38 maximum` MINUS `interim paid`)
+
+-- An amount scaled to fit a cap: unchanged if the group's total is within it, otherwise reduced in proportion.
+GIVEN `the amount` IS A NUMBER
+      `the group total` IS A NUMBER
+      `the cap` IS A NUMBER
+GIVETH A NUMBER
+`proportionately reduced` `the amount` `the group total` `the cap` MEANS
+    IF `the group total` AT MOST `the cap`
+    THEN `the amount`
+    ELSE `the amount` TIMES (`the cap` DIVIDED BY `the group total`)
+
+-- ss 39(4)-(7), 40(4)-(7): the share of one victim in a group with a shared maximum and a priority class (s 39(5): the
+-- secondary victims who "witnessed the death of the primary victim at the scene" and were the child primary victim's
+-- parents or guardians, or the primary victim's children or children under guardianship; s 40(5): family victims
+-- "totally or substantially dependent on the primary victim"). (6): each priority victim gets "the financial assistance
+-- as assessed" or, if their total exceeds the maximum, "proportionately reduced"; (7): "If the maximum amount has not
+-- been awarded under subsection (6), the assessor must award any other ... victims the remaining financial assistance
+-- proportionately reduced". Without a priority victim, (4): "proportionately reduce each amount awarded".
+-- READING: (7) is read as a reduction to fit what remains, not as dividing the whole remainder (which could exceed what
+-- was assessed).
+GIVEN `my assessed amount`                         IS A NUMBER
+      `I have priority`                            IS A BOOLEAN
+      `the other priority victims' assessed total` IS A NUMBER
+      `the other victims' assessed total`          IS A NUMBER
+      `the maximum amount`                         IS A NUMBER
+GIVETH A NUMBER
+`my share under the shared maximum` `my assessed amount` `I have priority` `the other priority victims' assessed total` `the other victims' assessed total` `the maximum amount` MEANS
+    IF `I have priority`
+    THEN `proportionately reduced` `my assessed amount` (`my assessed amount` PLUS `the other priority victims' assessed total`) `the maximum amount`
+    ELSE IF `the other priority victims' assessed total` GREATER THAN 0
+         THEN `proportionately reduced` `my assessed amount` (`my assessed amount` PLUS `the other victims' assessed total`) (`not below zero` (`the maximum amount` MINUS `the smaller of` `the other priority victims' assessed total` `and` `the maximum amount`))
+         ELSE `proportionately reduced` `my assessed amount` (`my assessed amount` PLUS `the other victims' assessed total`) `the maximum amount`
+
+-- s 39(1): "$40 000 less any amounts paid as interim payments (the maximum amount)" for all the secondary victims; (2):
+-- each one's financial loss at most "$10 000, less any amount paid as an interim payment"; (3): the $7 500 threshold for
+-- injuries. s 40 is the same for family victims, whose award is for financial loss only (s 14(3)).
+GIVEN `interim payments to all the group` IS A NUMBER
+GIVETH A NUMBER
+`the shared maximum amount` `interim payments to all the group` MEANS
+    `not below zero` (`the s 38 maximum` MINUS `interim payments to all the group`)
+
+GIVEN `the injury part`    IS A NUMBER
+      `the financial loss` IS A NUMBER
+      `my interim paid`    IS A NUMBER
+GIVETH A NUMBER
+`the amount assessed for one victim` `the injury part` `the financial loss` `my interim paid` MEANS
+    `the injury part` PLUS `the smaller of` `the financial loss` `and` (`not below zero` (`the maximum for financial loss` MINUS `my interim paid`))
+
+DECLARE `Award answer` IS ONE OF
+    `the most that can be awarded, in dollars, is` HAS `dollars` IS A NUMBER
+    `no award` HAS `because` IS A `Why no award`
+    `not covered: an injury item is not a leaf of Schedule 3, Part 2` HAS `the item` IS A STRING
+
+-- The final step for every award: a bar, or the reduced amount.
+GIVEN `the bar`        IS A MAYBE `Why no award`
+      `the capped award` IS A NUMBER
+      `the s 41 reduction` IS A NUMBER
+      `the s 42 payments received` IS A NUMBER
+GIVETH AN `Award answer`
+`the award after bars and reductions` `the bar` `the capped award` `the s 41 reduction` `the s 42 payments received` MEANS
+    CONSIDER `the bar`
+    WHEN JUST `why` THEN `no award` `why`
+    WHEN NOTHING THEN `the most that can be awarded, in dollars, is` (`after the s 41 and s 42 reductions` `the capped award` `the s 41 reduction` `the s 42 payments received`)
+
+-- s 40(8): "The assessor may award financial assistance to the family victims of the same violent act only if the
+-- assessor is satisfied no other family victim of the violent act is likely to make an application for an award." (9):
+-- the assessor may be so satisfied if "(a) at least 3 months has elapsed since the latest application was made by a
+-- family victim of the violent act; and (b) no other family victim ... has made an application or notified the assessor
+-- that he or she intends to do so".
+GIVEN `the assessor is satisfied no other family victim is likely to apply` IS A BOOLEAN
+      `months since the latest family victim application`                 IS A NUMBER
+      `another family victim has applied or said they intend to`          IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 40(8) allows an award to the family victims` `the assessor is satisfied no other family victim is likely to apply` `months since the latest family victim application` `another family victim has applied or said they intend to` IF
+        `the assessor is satisfied no other family victim is likely to apply`
+    OR  (    `months since the latest family victim application` AT LEAST 3
+         AND (NOT `another family victim has applied or said they intend to`))
+
+§§ `s 46 -- increase of an award`
+
+-- s 46(1): "(a) if the applicant was an adult at the date of payment -- within 3 years after that date; or (b) if the
+-- applicant was a child at the date of payment -- within 3 years after the person becomes an adult." s 4: "adult means
+-- a person who is 18 or more years of age". READING: "within 3 years after" a day ends on the same day 3 years later.
+GIVEN `the date of payment` IS A DATE
+      `the date of birth`   IS A DATE
+GIVETH A DATE
+`the last day to apply for an increased award` `the date of payment` `the date of birth` MEANS
+    IF `is on or before` `the eighteenth birthday` `the date of payment`
+    THEN `the date` 36 `months after` `the date of payment`
+    ELSE `the date` 36 `months after` `the eighteenth birthday`
+    WHERE
+        `the eighteenth birthday` MEANS `the date` (18 TIMES 12) `months after` `the date of birth`
+
+-- s 46(5): "The assessor may increase the award only if satisfied: (a) the circumstances require it; and (b) the
+-- relevant maximum amount of financial assistance mentioned in section 38, 39 or 40 has not already been awarded."
+GIVEN `in time`                                     IS A BOOLEAN
+      `the assessor is satisfied the circumstances require it` IS A BOOLEAN
+      `the relevant maximum has already been awarded` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the award may be increased` `in time` `the assessor is satisfied the circumstances require it` `the relevant maximum has already been awarded` IF
+        `in time`
+    AND `the assessor is satisfied the circumstances require it`
+    AND (NOT `the relevant maximum has already been awarded`)
+
+§§ `ss 47A-47G -- funeral expense assistance`
+
+-- s 47B(1): "an individual who has incurred or is reasonably likely to incur the costs of a funeral of a primary victim
+-- of a violent act who died as a direct result of the act is eligible to apply"; (2): not "If the individual committed
+-- the violent act". ss 17-18 speak only of interim payments and awards, so they do not reach funeral expense
+-- assistance (NOTES.md finding 11).
+GIVEN `the person who died was a primary victim who died as a direct result of a violent act` IS A BOOLEAN
+      `the individual has incurred or is reasonably likely to incur the funeral costs` IS A BOOLEAN
+      `the individual committed the violent act`                                    IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is eligible to apply for funeral expense assistance` `the person who died was a primary victim who died as a direct result of a violent act` `the individual has incurred or is reasonably likely to incur the funeral costs` `the individual committed the violent act` IF
+        `the person who died was a primary victim who died as a direct result of a violent act`
+    AND `the individual has incurred or is reasonably likely to incur the funeral costs`
+    AND (NOT `the individual committed the violent act`)
+
+-- s 47C(1): "within 2 years after the death of the primary victim"; (2): "The Director may accept an application ...
+-- after the expiry of the period ... if the Director considers the circumstances justify it." s 47E(2)(b): the Director
+-- "must not approve" unless "the application was made within the time allowed under section 47C".
+GIVEN `the date of death` IS A DATE
+GIVETH A DATE
+`the last day to apply for funeral expense assistance` `the date of death` MEANS
+    `the date` 24 `months after` `the date of death`
+
+DECLARE `Funeral time answer` IS ONE OF
+    `in time: within 2 years after the death (s 47C(1))`
+    `late: the Director may accept it only if the Director considers the circumstances justify it (s 47C(2))`
+
+GIVEN `the date of death`       IS A DATE
+      `the date of application` IS A DATE
+GIVETH A `Funeral time answer`
+`the s 47C answer for` `the date of death` `the date of application` MEANS
+    IF `is on or before` `the date of application` (`the last day to apply for funeral expense assistance` `the date of death`)
+    THEN `in time: within 2 years after the death (s 47C(1))`
+    ELSE `late: the Director may accept it only if the Director considers the circumstances justify it (s 47C(2))`
+
+-- s 47D: "The maximum amount of funeral expense assistance payable in relation to a primary victim's funeral is the
+-- lesser of: (a) the amount equal to the costs that the Director considers the applicant reasonably incurred, or will
+-- reasonably incur, for the funeral less any amounts that are paid by an organisation to or for the applicant in
+-- relation to the funeral including a payment made under an insurance policy; (b) $15 000." s 47B(4): more than one
+-- payment "if the total of the payments does not exceed the maximum amount". READING: the $15 000 is "in relation to a
+-- primary victim's funeral", so one cap for the funeral, shared by everyone paid for it (NOTES.md finding 15).
+`the s 47D cap` MEANS 15000
+
+GIVEN `the costs the Director considers reasonable` IS A NUMBER
+      `amounts paid by an organisation for the funeral` IS A NUMBER
+      `funeral expense assistance already paid to the applicant` IS A NUMBER
+      `funeral expense assistance already paid to others for the funeral` IS A NUMBER
+GIVETH A NUMBER
+`the most further funeral expense assistance` `the costs the Director considers reasonable` `amounts paid by an organisation for the funeral` `funeral expense assistance already paid to the applicant` `funeral expense assistance already paid to others for the funeral` MEANS
+    `not below zero` (`the smaller of` `(a) the net reasonable costs` `and` `(b) the cap left`)
+    WHERE
+        `(a) the net reasonable costs` MEANS (`the costs the Director considers reasonable` MINUS `amounts paid by an organisation for the funeral`) MINUS `funeral expense assistance already paid to the applicant`
+        `(b) the cap left`             MEANS (`the s 47D cap` MINUS `funeral expense assistance already paid to the applicant`) MINUS `funeral expense assistance already paid to others for the funeral`
+
+§§ `Regulative rules -- payment, refund, closure and reopening`
+
+-- Clock: days, from the day the rule starts (the day of the approval, notice or decision the section names).
+DECLARE `VOCA party` IS ONE OF
+    `the Territory`
+    `the Director`
+    `the applicant`
+    `the person required to refund`
+
+DECLARE `VOCA act` IS ONE OF
+    `pay the amount specified in the notice` HAS `dollars` IS A NUMBER
+    `refund the amount to the Territory`     HAS `dollars` IS A NUMBER
+    `give updated contact details to a CVSU officer`
+    `ask the Director to reopen the application`
+    `reopen the application`
+
+DECLARE `Payment of financial assistance` IS ONE OF
+    `an interim payment (s 29)`
+    `an award (s 45)`
+    `an increased award (s 46(10))`
+    `funeral expense assistance (s 47F)`
+
+-- s 29: "As soon as practicable (but within 28 days) after the Director approves an interim payment, the Territory must
+-- pay the amount specified in the notice". s 45: "Within 28 days after the Director gives notice under section 44(5) to
+-- an applicant awarded financial assistance, the Territory must pay the amount specified in the notice." s 46(10): the
+-- same for an increased award. s 47F: "As soon as practicable, but no later than 28 days after the Director decides to
+-- pay funeral expense assistance, the Territory must pay the amount specified in the notice".
+GIVEN `the payment` IS A `Payment of financial assistance`
+GIVETH A NUMBER
+`the days the Territory has to pay` `the payment` MEANS 28
+
+GIVEN `the payment` IS A `Payment of financial assistance`
+      `the amount`  IS A NUMBER
+GIVETH A DEONTIC `VOCA party` `VOCA act`
+DECIDE `ss 29, 45, 46(10), 47F -- the Territory must pay within 28 days` `the payment` `the amount` IS
+    CONSIDER `the payment`
+    WHEN `an interim payment (s 29)` THEN
+        PARTY `the Territory`
+        MUST  `pay the amount specified in the notice` (EXACTLY `the amount`)
+        WITHIN `the days the Territory has to pay` `the payment`
+        LEST  BREACH BY `the Territory` BECAUSE "s 29: the Territory must pay an approved interim payment within 28 days after the Director approves it"
+    WHEN `an award (s 45)` THEN
+        PARTY `the Territory`
+        MUST  `pay the amount specified in the notice` (EXACTLY `the amount`)
+        WITHIN `the days the Territory has to pay` `the payment`
+        LEST  BREACH BY `the Territory` BECAUSE "s 45: the Territory must pay an award within 28 days after the Director gives the applicant notice of it"
+    WHEN `an increased award (s 46(10))` THEN
+        PARTY `the Territory`
+        MUST  `pay the amount specified in the notice` (EXACTLY `the amount`)
+        WITHIN `the days the Territory has to pay` `the payment`
+        LEST  BREACH BY `the Territory` BECAUSE "s 46(10): the Territory must pay an increased award within 28 days after the Director gives the applicant notice of it"
+    WHEN `funeral expense assistance (s 47F)` THEN
+        PARTY `the Territory`
+        MUST  `pay the amount specified in the notice` (EXACTLY `the amount`)
+        WITHIN `the days the Territory has to pay` `the payment`
+        LEST  BREACH BY `the Territory` BECAUSE "s 47F: the Territory must pay funeral expense assistance no later than 28 days after the Director decides to pay it"
+
+DECLARE `Refund requirement` IS ONE OF
+    `a refund of an award or interim payment (s 47)`
+    `a refund of funeral expense assistance (s 47G)`
+
+-- s 47(1): the assessor "may require a person to refund an amount to the Territory if satisfied the person has received:
+-- (a) an award or interim payment to which the person was not entitled; or (b) further payments of a type mentioned in
+-- section 42(2)(b) to (e) after being paid financial assistance under section 45 or 46". (2)(c): the notice states "the
+-- time in which the person must refund the amount, which must be at least 28 days after receipt of the notice by the
+-- person"; (4): "The amount to be refunded is a debt owing to the Territory." s 47G: the same for funeral expense
+-- assistance received without entitlement, or after an organisation (an insurer, say) paid for the funeral, (2)(c), (3).
+-- READING: a notice that gives less than 28 days still leaves the person 28 days after receiving it (NOTES.md finding
+-- 14). Clock starts on the day the person receives the notice.
+`the shortest refund period` MEANS 28
+
+GIVEN `days the notice gives` IS A NUMBER
+GIVETH A NUMBER
+`the days to refund` `days the notice gives` MEANS
+    `the larger of` `days the notice gives` `and` `the shortest refund period`
+
+GIVEN `the refund`            IS A `Refund requirement`
+      `the amount`            IS A NUMBER
+      `days the notice gives` IS A NUMBER
+GIVETH A DEONTIC `VOCA party` `VOCA act`
+DECIDE `ss 47, 47G -- a person required to refund must refund within the time in the notice` `the refund` `the amount` `days the notice gives` IS
+    CONSIDER `the refund`
+    WHEN `a refund of an award or interim payment (s 47)` THEN
+        PARTY `the person required to refund`
+        MUST  `refund the amount to the Territory` (EXACTLY `the amount`)
+        WITHIN `the days to refund` `days the notice gives`
+        LEST  BREACH BY `the person required to refund` BECAUSE "s 47(2)(c), (4): the amount was not refunded within the time in the notice (at least 28 days after receipt); it is a debt owing to the Territory"
+    WHEN `a refund of funeral expense assistance (s 47G)` THEN
+        PARTY `the person required to refund`
+        MUST  `refund the amount to the Territory` (EXACTLY `the amount`)
+        WITHIN `the days to refund` `days the notice gives`
+        LEST  BREACH BY `the person required to refund` BECAUSE "s 47G(2)(c), (3): the funeral expense assistance was not refunded within the time in the notice (at least 28 days after receipt); it is a debt owing to the Territory"
+
+-- s 47H(1): where a CVSU officer "is unable to contact an applicant for financial assistance after making reasonable
+-- attempts over a period of at least 3 months", a notice may be sent; (2)(b): "the applicant's application will be
+-- closed, without further notice, unless the applicant provides updated contact details to a CVSU officer within 30 days
+-- after the date of the notice". s 47J(2): on expiry the application "is taken to have closed ... without deciding it".
+-- s 47K: "The Director must reopen an application that has been closed under section 47J if, within 6 months of the date
+-- of the closure, the applicant requests the Director to reopen it." Not responding, and not asking, are no breach: the
+-- consequence is closure. s 47K sets the Director no period. Clock starts on the date of the notice; the request period
+-- runs from when the closure is reached (a trace notices it on the first event after day 30).
+`the days to answer a closure notice` MEANS 30
+
+GIVEN `days in the 6 months after the closure` IS A NUMBER
+GIVETH A DEONTIC `VOCA party` `VOCA act`
+DECIDE `ss 47H-47K -- contact details within 30 days, or closure; a request within 6 months reopens it` `days in the 6 months after the closure` IS
+    PARTY `the applicant`
+    DO    `give updated contact details to a CVSU officer`
+    WITHIN `the days to answer a closure notice`
+    HENCE FULFILLED
+    LEST
+        PARTY `the applicant`
+        DO    `ask the Director to reopen the application`
+        WITHIN `days in the 6 months after the closure`
+        HENCE (PARTY `the Director` MUST `reopen the application`)
+        LEST  FULFILLED
+
+-- The closure position of an application, as the person can state it.
+DECLARE `Closure answer` IS ONE OF
+    `open: no closure notice, or I gave updated contact details within 30 days of it (s 47H(2)(b))`
+    `closed (s 47J): I can ask the Director to reopen it until the last day given` HAS `the last day` IS A DATE
+    `closed, and the Director must reopen it: I asked within 6 months of the closure (s 47K)`
+    `closed, and it cannot be reopened: more than 6 months passed (s 47K); I may be able to make a new application`
+
+GIVEN `the date of the closure` IS A DATE
+GIVETH A DATE
+`the last day to ask for reopening` `the date of the closure` MEANS
+    `the date` 6 `months after` `the date of the closure`
+
+GIVEN `a closure notice was sent`                  IS A BOOLEAN
+      `contact details were given within 30 days`  IS A BOOLEAN
+      `the date of the notice`                     IS A DATE
+      `a request to reopen was made`               IS A BOOLEAN
+      `the date of the request, or today if none`  IS A DATE
+GIVETH A `Closure answer`
+`the ss 47H-47K answer for` `a closure notice was sent` `contact details were given within 30 days` `the date of the notice` `a request to reopen was made` `the date of the request, or today if none` MEANS
+    IF (NOT `a closure notice was sent`) OR `contact details were given within 30 days`
+    THEN `open: no closure notice, or I gave updated contact details within 30 days of it (s 47H(2)(b))`
+    ELSE IF `is on or before` `the date of the request, or today if none` (`the last day to ask for reopening` `the date of the closure`)
+         THEN IF `a request to reopen was made`
+              THEN `closed, and the Director must reopen it: I asked within 6 months of the closure (s 47K)`
+              ELSE `closed (s 47J): I can ask the Director to reopen it until the last day given` (`the last day to ask for reopening` `the date of the closure`)
+         ELSE `closed, and it cannot be reopened: more than 6 months passed (s 47K); I may be able to make a new application`
+    WHERE
+        -- s 47J(2): closed "On the expiry of the period specified in the notice" (30 days after its date).
+        `the date of the closure` MEANS DATE_FROM_SERIAL (DATE_SERIAL `the date of the notice` PLUS `the days to answer a closure notice`)
+
+§§ `s 48 and Schedule 1 -- review by NTCAT`
+
+-- Schedule 1: "1 A decision of an assessor under section 34 on an application for an award -- The applicant / 2 A
+-- decision of an assessor under section 46(4) on an application for an increased award -- The applicant / 3 A decision
+-- of an assessor under section 47(1) to require a person to refund an amount -- The person required to refund the
+-- amount / 4 A decision of the Director under section 47E on an application for funeral expense assistance -- The
+-- applicant / 5 A decision of the Director under section 47G(1) to require an individual to refund an amount of funeral
+-- expense assistance -- The individual". s 28(1): an interim payment decision "is final and is not subject to any review
+-- or appeal". The time to apply is set by the Northern Territory Civil and Administrative Tribunal Act 2014, which is
+-- not deposited: an INPUT.
+DECLARE `Decision` IS ONE OF
+    `an assessor's decision under s 34 on an application for an award`
+    `an assessor's decision under s 46(4) on an application for an increased award`
+    `an assessor's decision under s 47(1) requiring a refund`
+    `the Director's decision under s 47E on an application for funeral expense assistance`
+    `the Director's decision under s 47G(1) requiring a refund of funeral expense assistance`
+    `the Director's decision under s 27 on an application for an interim payment`
+    `the closure of an application under s 47J`
+
+GIVEN `the decision` IS A `Decision`
+GIVETH A NUMBER
+`the Schedule 1 item for` `the decision` MEANS
+    CONSIDER `the decision`
+    WHEN `an assessor's decision under s 34 on an application for an award` THEN 1
+    WHEN `an assessor's decision under s 46(4) on an application for an increased award` THEN 2
+    WHEN `an assessor's decision under s 47(1) requiring a refund` THEN 3
+    WHEN `the Director's decision under s 47E on an application for funeral expense assistance` THEN 4
+    WHEN `the Director's decision under s 47G(1) requiring a refund of funeral expense assistance` THEN 5
+    OTHERWISE 0
+
+DECLARE `Review answer` IS ONE OF
+    `yes: I may apply to NTCAT for review (s 48(3)), within the NTCAT Act time I gave` HAS `Schedule 1 item` IS A NUMBER
+    `I am the affected person (s 48(2)), but the NTCAT Act time I gave has passed` HAS `Schedule 1 item` IS A NUMBER
+    `no: an interim payment decision is final and not subject to any review or appeal (s 28(1)); I can still apply for an award (s 28(2))`
+    `no: a closure is not a reviewable decision (Schedule 1); I can ask the Director to reopen it within 6 months (s 47K) or apply again`
+    `no: only the person named in Schedule 1 for the decision may apply (s 48(2), (3))`
+
+GIVEN `the decision`                              IS A `Decision`
+      `the person is the one Schedule 1 names`    IS A BOOLEAN
+      `days since the person was given the decision` IS A NUMBER
+      `days the NTCAT Act allows`                 IS A NUMBER
+GIVETH A `Review answer`
+`the s 48 answer for` `the decision` `the person is the one Schedule 1 names` `days since the person was given the decision` `days the NTCAT Act allows` MEANS
+    IF `the decision` EQUALS `the Director's decision under s 27 on an application for an interim payment`
+    THEN `no: an interim payment decision is final and not subject to any review or appeal (s 28(1)); I can still apply for an award (s 28(2))`
+    ELSE IF `the decision` EQUALS `the closure of an application under s 47J`
+         THEN `no: a closure is not a reviewable decision (Schedule 1); I can ask the Director to reopen it within 6 months (s 47K) or apply again`
+         ELSE IF (NOT `the person is the one Schedule 1 names`)
+              THEN `no: only the person named in Schedule 1 for the decision may apply (s 48(2), (3))`
+              ELSE IF `days since the person was given the decision` AT MOST `days the NTCAT Act allows`
+                   THEN `yes: I may apply to NTCAT for review (s 48(3)), within the NTCAT Act time I gave` (`the Schedule 1 item for` `the decision`)
+                   ELSE `I am the affected person (s 48(2)), but the NTCAT Act time I gave has passed` (`the Schedule 1 item for` `the decision`)
+
+§§ `s 54 -- legal costs of an application`
+
+-- s 54(1): "A person may be represented by a legal practitioner in making an application under Division 3, 5 or 5A."
+-- (2): "the legal practitioner is not entitled to recover from the person any costs, except the legal practitioner's
+-- reasonable disbursements"; (3): "disbursements do not include counsel's fees"; (4): "The Territory is not liable to pay
+-- any costs". Division 2 (interim payments) is not named (NOTES.md finding 12). Review costs (s 55, regs 24-25) are out.
+DECLARE `Application kind` IS ONE OF
+    `an application for an interim payment (Division 2)`
+    `an application for an award (Division 3)`
+    `an application for an increased award (Division 5)`
+    `an application for funeral expense assistance (Division 5A)`
+
+DECLARE `Costs answer` IS ONE OF
+    `the most the legal practitioner may recover from me, in dollars, is` HAS `dollars` IS A NUMBER
+    `s 54 does not limit the costs of an interim payment application: it covers Divisions 3, 5 and 5A only`
+
+GIVEN `the kind`                         IS AN `Application kind`
+      `reasonable disbursements charged` IS A NUMBER
+      `counsel's fees among them`        IS A NUMBER
+GIVETH A `Costs answer`
+`the s 54 answer for` `the kind` `reasonable disbursements charged` `counsel's fees among them` MEANS
+    IF `the kind` EQUALS `an application for an interim payment (Division 2)`
+    THEN `s 54 does not limit the costs of an interim payment application: it covers Divisions 3, 5 and 5A only`
+    ELSE `the most the legal practitioner may recover from me, in dollars, is` (`not below zero` (`reasonable disbursements charged` MINUS `counsel's fees among them`))
+
+§§ `s 19 -- death of a person eligible or entitled`
+
+-- s 19(1): eligibility or entitlement "does not survive for the benefit of the person's estate"; (2): others may still
+-- apply as secondary, family or related victims; (3): "If an applicant for financial assistance dies before the
+-- application is decided, the application lapses"; (4): "If a person is entitled to receive financial assistance but
+-- dies before the assistance is paid, the assistance is taken to never have been approved or awarded and the person's
+-- application for the assistance lapses."
+DECLARE `Stage at death` IS ONE OF
+    `before applying`
+    `after applying, before the application is decided`
+    `after the assistance is approved or awarded, before it is paid`
+
+DECLARE `Death answer` IS ONE OF
+    `nothing passes to the estate: the eligibility does not survive (s 19(1))`
+    `the application lapses (s 19(3)); nothing passes to the estate (s 19(1))`
+    `the assistance is taken never to have been approved or awarded, and the application lapses (s 19(4))`
+
+GIVEN `the stage` IS A `Stage at death`
+GIVETH A `Death answer`
+`the s 19 answer for` `the stage` MEANS
+    CONSIDER `the stage`
+    WHEN `before applying` THEN `nothing passes to the estate: the eligibility does not survive (s 19(1))`
+    WHEN `after applying, before the application is decided` THEN `the application lapses (s 19(3)); nothing passes to the estate (s 19(1))`
+    WHEN `after the assistance is approved or awarded, before it is paid` THEN `the assistance is taken never to have been approved or awarded, and the application lapses (s 19(4))`
