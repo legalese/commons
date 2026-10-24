@@ -1,0 +1,673 @@
+IMPORT prelude
+
+-- Old Age Security Act (R.S.C., 1985, c. O-9), with the Old Age Security Regulations (C.R.C., c. 1246).
+-- SEAT-NEUTRAL CORE. Written in the Act's own actors and terms: "the applicant", "the pensioner", "the spouse or
+-- common-law partner", "the survivor", "the Minister". The individual's questions are in oas-seat.l4, which IMPORTs
+-- this module and restates no rule.
+--
+-- PROVISIONS COVERED. s 2 ("income", "special qualifying factor", "specially qualified individual", "survivor"),
+-- s 3 (full and partial pension; fortieths), s 4(1) (legal residence), s 7(5) and s 7.1 (the 75-and-over increase and
+-- voluntary deferral), s 9(1)-(4) (suspension outside Canada), s 11(7) (months for which no supplement), s 12(5)-(6)
+-- and s 12.1 (the supplement and its top-up), s 19 and s 21 (the allowances), s 21.1, s 22(1)-(4) and s 22.1 (the
+-- amounts under Part III); Regulations ss 6, 7, 21(1) and 25. Duties: s 14(1), s 15(9), s 27.1(1), s 37(1);
+-- Regulations ss 25(1) and 26.1, as regulative rules.
+--
+-- FIGURES. Every amount in the Act is indexed quarterly to the Consumer Price Index (ss 7(2), 12(2), 12.1(3), 22(4.2),
+-- 22.1(4)). No official table of the indexed amounts is deposited, so the figures for the payment quarter are INPUTS,
+-- one record (`OAS quarter figures`). The statutory constants (fortieths, 0.6%, 10%, $5,000, $2,000, $4,000, the
+-- rounding multiples) are written in.
+--
+-- Edition: Justice Laws consolidation current to 2026-09-30 (Act last amended 2025-10-01; Regulations last amended
+-- 2026-06-12), deposited at ../../registers/source-bundle/R.S.C.-1985-c.-O-9.txt and C.R.C.-c.-1246.txt. Unofficial
+-- reproduction; not an official version. Contains information licensed under the Open Government Licence - Canada.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Old Age Security Act -- seat-neutral core`
+
+§§ `Arithmetic used by the Act`
+
+-- "rounded ... to the next lower multiple of" m dollars; "to the next higher multiple of" m dollars.
+GIVEN `x` IS A NUMBER, `m` IS A NUMBER
+GIVETH A NUMBER
+`rounded down to a multiple of` `x` `m` MEANS (FLOOR (`x` DIVIDED BY `m`)) TIMES `m`
+
+GIVEN `x` IS A NUMBER, `m` IS A NUMBER
+GIVETH A NUMBER
+`rounded up to a multiple of` `x` `m` MEANS (CEILING (`x` DIVIDED BY `m`)) TIMES `m`
+
+-- Regulations ss 7 and 8(2): a fraction of a dollar of three or more digits is rounded at the second digit, a third
+-- digit of 5 or more rounding up: that is, to the nearest cent, half up.
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`to the cent` `x` MEANS (FLOOR ((`x` TIMES 100) PLUS 0.5)) DIVIDED BY 100
+
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`not below zero` `x` MEANS IF `x` LESS THAN 0 THEN 0 ELSE `x`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the lesser of` `a` `b` MEANS IF `a` LESS THAN `b` THEN `a` ELSE `b`
+
+GIVEN `a` IS A NUMBER, `b` IS A NUMBER
+GIVETH A NUMBER
+`the greater of` `a` `b` MEANS IF `a` GREATER THAN `b` THEN `a` ELSE `b`
+
+§§ `The indexed figures for a payment quarter (inputs)`
+
+-- s 2 "payment quarter": three months from 1 April, July, October or January. Each figure is the amount for any month
+-- in that quarter after the CPI adjustment the Act prescribes. None is deposited; the caller supplies them.
+DECLARE `OAS quarter figures` HAS
+    `full monthly pension`                    IS A NUMBER   -- s 7(1)-(4), before the s 7(5) 10% and s 7.1 increases;
+                                                            -- also the s 22(1) "pension equivalent"
+    `maximum supplement, single rate`         IS A NUMBER   -- s 12(1)(a) as indexed by s 12(2)
+    `maximum supplement, pensioner couple rate` IS A NUMBER -- s 12(1)(b)(ii) as indexed; also the s 22(1)
+                                                            -- "supplement equivalent"
+    `supplement equivalent for the survivor`  IS A NUMBER   -- s 22(4.1)-(4.4)
+    `top-up figure A of $50`                  IS A NUMBER   -- s 12.1(1), (2)(a) and s 22.1(3) "A", $50 plus the
+                                                            -- s 12.1(2.1) and s 22.1(3.1) $78.92, as indexed
+    `top-up figure A of $35`                  IS A NUMBER   -- s 12.1(2)(b) and s 22.1(1), (2) "A", as indexed
+
+§§ `s 2 -- income`
+
+-- s 2 "income of a person for a calendar year means the person's income for the year, computed in accordance with the
+-- Income Tax Act, except that" (a) from income from office or employment there is deducted (ii) EI employee's premiums
+-- and (iii) CPP (or provincial plan) employee's contributions; (b) from self-employment earnings, the CPP contributions
+-- and Part VII.1 EI premiums on them; (b.1) "for ... any month after June 2020", from the combined amount (employment
+-- income as reduced, plus self-employment earnings as reduced "if those reduced self-employment earnings are greater
+-- than zero") "(i) the lesser of $5,000 and the combined amount, and (ii) if the combined amount is greater than
+-- $5,000, the lesser of $5,000 and half of the amount by which the combined amount exceeds $5,000"; (c) any benefit
+-- under this Act (and similar provincial payments), any CPP death benefit, means-tested social assistance; (c.1) CERB,
+-- EI Part VIII.4, the Canada Recovery Benefits and Worker Lockdown Benefit; (d) three times the excess of the s 121 ITA
+-- dividend credit over tax otherwise payable; (e) less ITA 56(1)(q.1)/56(6) amounts, plus 60(y)/(z) deductions.
+-- The (a)(i) amounts apply only to months before July 2020: not encoded (the encoding answers for current months).
+-- The ITA figures are borrowed terms, asked as facts (see the Income Tax Act encoding).
+DECLARE `Income facts` HAS
+    `income for the year under the Income Tax Act`                    IS A NUMBER
+    `income from office or employment`                                IS A NUMBER
+    `EI employee's premiums paid`                                     IS A NUMBER
+    `CPP employee's contributions paid`                               IS A NUMBER
+    `self-employment earnings`                                        IS A NUMBER
+    `CPP contributions on self-employment earnings`                   IS A NUMBER
+    `EI Part VII.1 premiums paid`                                     IS A NUMBER
+    `benefits under this Act included in income`                      IS A NUMBER
+    `CPP death benefit included in income`                            IS A NUMBER
+    `means-tested social assistance included in income`               IS A NUMBER
+    `pandemic benefits listed in paragraph (c.1)`                     IS A NUMBER
+    `s 121 dividend credit in excess of tax otherwise payable`        IS A NUMBER
+    `amounts included under ITA 56(1)(q.1) or 56(6)`                  IS A NUMBER
+    `amounts deductible under ITA 60(y) or (z)`                       IS A NUMBER
+
+GIVEN `f` IS AN `Income facts`
+GIVETH A NUMBER
+`the s 2(b.1) combined amount` `f` MEANS
+    LET `employment as reduced` MEANS `f`'s `income from office or employment` MINUS `f`'s `EI employee's premiums paid` MINUS `f`'s `CPP employee's contributions paid`
+        `self-employment as reduced` MEANS `f`'s `self-employment earnings` MINUS `f`'s `CPP contributions on self-employment earnings` MINUS `f`'s `EI Part VII.1 premiums paid`
+    IN  `employment as reduced` PLUS (IF `self-employment as reduced` GREATER THAN 0 THEN `self-employment as reduced` ELSE 0)
+
+GIVEN `combined` IS A NUMBER
+GIVETH A NUMBER
+`the s 2(b.1) earnings exemption` `combined` MEANS
+    IF `combined` AT MOST 0
+    THEN 0
+    ELSE (`the lesser of` 5000 `combined`)
+         PLUS (IF `combined` GREATER THAN 5000
+               THEN `the lesser of` 5000 ((`combined` MINUS 5000) DIVIDED BY 2)
+               ELSE 0)
+
+GIVEN `f` IS AN `Income facts`
+GIVETH A NUMBER
+`income under s 2` `f` MEANS
+    `f`'s `income for the year under the Income Tax Act`
+    MINUS `f`'s `EI employee's premiums paid`
+    MINUS `f`'s `CPP employee's contributions paid`
+    MINUS `f`'s `CPP contributions on self-employment earnings`
+    MINUS `f`'s `EI Part VII.1 premiums paid`
+    MINUS `the s 2(b.1) earnings exemption` (`the s 2(b.1) combined amount` `f`)
+    MINUS `f`'s `benefits under this Act included in income`
+    MINUS `f`'s `CPP death benefit included in income`
+    MINUS `f`'s `means-tested social assistance included in income`
+    MINUS `f`'s `pandemic benefits listed in paragraph (c.1)`
+    MINUS (3 TIMES `f`'s `s 121 dividend credit in excess of tax otherwise payable`)
+    MINUS `f`'s `amounts included under ITA 56(1)(q.1) or 56(6)`
+    PLUS  `f`'s `amounts deductible under ITA 60(y) or (z)`
+
+§§ `s 2 -- special qualifying factor`
+
+-- s 2: a "specially qualified individual" has "not resided in Canada after attaining eighteen years of age for an
+-- aggregate period of ten or more years" (save the pre-1996 and pre-2001 savings, not encoded). The "special
+-- qualifying factor" for a month after March 1996 is one, or for such an individual the number of whole years of
+-- residence after 18 divided by 10. Such a person can be paid only through a social security agreement under s 40.
+GIVEN `years resided in Canada after 18` IS A NUMBER
+GIVETH A NUMBER
+`the special qualifying factor` `years resided in Canada after 18` MEANS
+    IF `years resided in Canada after 18` AT LEAST 10
+    THEN 1
+    ELSE (FLOOR `years resided in Canada after 18`) DIVIDED BY 10
+
+§§ `Part I -- who may be paid a pension (ss 3 and 4)`
+
+-- Regulations s 21(1): "a person resides in Canada if he makes his home and ordinarily lives in any part of Canada";
+-- "is present in Canada when he is physically present". Residence periods are facts the applicant states (Regulations
+-- s 20(1)); temporary absences of up to a year, schooling, and the s 21(5) absences do not interrupt residence
+-- (s 21(4)), and the caller counts them in.
+DECLARE `Pension applicant` HAS
+    `age`                                                                         IS A NUMBER
+    `years resided in Canada after 18 and before approval`                        IS A NUMBER
+    `resided in Canada on the day before approval`                                IS A BOOLEAN
+    `citizen or legally resident on the day before approval, or on the day before ceasing to reside in Canada` IS A BOOLEAN
+    `was 25 or older on 1 July 1977 and resided in Canada then, or had resided after 18, or held an immigration visa` IS A BOOLEAN
+    `resided in Canada for the 10 years immediately before approval`              IS A BOOLEAN
+    `years present in Canada after 18 and before those 10 years`                  IS A NUMBER
+    `years absent from Canada during those 10 years`                              IS A NUMBER
+    `resided in Canada for the year immediately before approval`                  IS A BOOLEAN
+
+DECLARE `Pension eligibility` IS ONE OF
+    `a full pension (s 3(1))`
+    `a partial pension (s 3(2)), in fortieths` HAS `fortieths` IS A NUMBER
+    `no pension: under 65 (s 3)`
+    `no pension: not a citizen or legal resident (s 4(1))`
+    `no pension: under 10 years of residence after 18, unless a social security agreement applies (s 3(2)(b))`
+    `no pension: under 20 years of residence and not resident on the day before approval (s 3(2)(b))`
+
+-- s 3(1)(b)(iii): resided "for the ten years immediately preceding" approval, or "been present in Canada prior to
+-- those ten years for an aggregate period at least equal to three times the aggregate periods of absence from Canada
+-- during those ten years, and has resided in Canada for at least one year immediately preceding" approval.
+GIVEN `p` IS A `Pension applicant`
+GIVETH A BOOLEAN
+DECIDE `meets s 3(1)(b)` `p` IF
+        `p`'s `was 25 or older on 1 July 1977 and resided in Canada then, or had resided after 18, or held an immigration visa`
+    AND `p`'s `age` AT LEAST 65
+    AND (    `p`'s `resided in Canada for the 10 years immediately before approval`
+         OR  (    `p`'s `years present in Canada after 18 and before those 10 years` AT LEAST (3 TIMES `p`'s `years absent from Canada during those 10 years`)
+              AND `p`'s `resided in Canada for the year immediately before approval`))
+
+-- s 3(1)(c): 65, and resided after 18 "for an aggregate period of at least forty years".
+GIVEN `p` IS A `Pension applicant`
+GIVETH A BOOLEAN
+DECIDE `meets s 3(1)(c)` `p` IF
+        `p`'s `age` AT LEAST 65
+    AND `p`'s `years resided in Canada after 18 and before approval` AT LEAST 40
+
+-- s 3(2) partial pension: 65; resided after 18 "for an aggregate period of at least ten years but less than forty
+-- years and, where that aggregate period is less than twenty years, was resident in Canada on the day preceding" approval.
+-- s 3(3)-(4): the amount is the full pension times the whole years over 40 ("rounded to the lower multiple of a year").
+-- s 4(1): legal residence on the day before approval or before ceasing to reside.
+-- s 3(1)(a) (a pensioner on 1 July 1977) is not encoded: such a person would now be over 110.
+GIVEN `p` IS A `Pension applicant`
+GIVETH A `Pension eligibility`
+`the pension the applicant may be paid` `p` MEANS
+    IF `p`'s `age` LESS THAN 65
+    THEN `no pension: under 65 (s 3)`
+    ELSE IF NOT (`p`'s `citizen or legally resident on the day before approval, or on the day before ceasing to reside in Canada`)
+         THEN `no pension: not a citizen or legal resident (s 4(1))`
+         ELSE IF `meets s 3(1)(b)` `p` OR `meets s 3(1)(c)` `p`
+              THEN `a full pension (s 3(1))`
+              ELSE IF `p`'s `years resided in Canada after 18 and before approval` LESS THAN 10
+                   THEN `no pension: under 10 years of residence after 18, unless a social security agreement applies (s 3(2)(b))`
+                   ELSE IF     `p`'s `years resided in Canada after 18 and before approval` LESS THAN 20
+                           AND NOT (`p`'s `resided in Canada on the day before approval`)
+                        THEN `no pension: under 20 years of residence and not resident on the day before approval (s 3(2)(b))`
+                        ELSE `a partial pension (s 3(2)), in fortieths` (FLOOR (`p`'s `years resided in Canada after 18 and before approval`))
+
+§§ `Part I -- the amount of the pension (ss 3(3), 7(5), 7.1)`
+
+-- s 7(5): from the month after the month a person attains 75, the full monthly pension "is increased by 10%".
+-- s 2.1(1): "the amount of a full monthly pension" is as calculated under s 7 (so including s 7(5)), not increased
+-- under s 7.1. READING: a partial pension under s 3(3) bears its fortieths to that amount, so it also carries the 10%.
+GIVEN `figures` IS AN `OAS quarter figures`, `past the month of turning 75` IS A BOOLEAN
+GIVETH A NUMBER
+`the full monthly pension for the person` `figures` `past the month of turning 75` MEANS
+    IF `past the month of turning 75`
+    THEN `to the cent` (`figures`'s `full monthly pension` TIMES 1.1)
+    ELSE `figures`'s `full monthly pension`
+
+-- s 7.1(1), (2): 0.6% "for each month in the period that begins in the month after the month in which the person
+-- becomes qualified ... and that ends in the month in which the person's application is approved". s 7.1(4): no
+-- increase for a month (a) before July 2013, (b) "after the month in which the person attains 70 years of age", or (c)
+-- in which the pension would not be paid (s 5(3)) or would be suspended (s 9(1), (3)).
+DECLARE `Deferral facts` HAS
+    `months from the month after qualifying to the month of approval`  IS A NUMBER
+    `months from the month after qualifying to the month of turning 70` IS A NUMBER
+    `of those months, months the pension would have been suspended or not paid` IS A NUMBER
+
+GIVEN `d` IS A `Deferral facts`
+GIVETH A NUMBER
+`the months that count for deferral` `d` MEANS
+    `not below zero`
+        ((`the lesser of` (`d`'s `months from the month after qualifying to the month of approval`) (`d`'s `months from the month after qualifying to the month of turning 70`))
+         MINUS `d`'s `of those months, months the pension would have been suspended or not paid`)
+
+`the deferral rate per month` MEANS 0.006
+
+GIVEN `amount` IS A NUMBER, `months` IS A NUMBER
+GIVETH A NUMBER
+`increased for deferral` `amount` `months` MEANS
+    `to the cent` (`amount` TIMES (1 PLUS (`the deferral rate per month` TIMES `months`)))
+
+-- s 7.1(3): the pensioner receives "the greatest of" (a) the full pension increased under (1), if qualified for a
+-- full pension; (b) the partial pension increased under (2), computed "at the time that they become qualified" and
+-- "without regard to subsection 7(5)"; (c) the partial pension under s 3(3) at approval. s 7.1(5), (6): the 10%
+-- applies to the amounts increased under (1) and (2). Regulations s 7: a partial pension to the cent.
+DECLARE `Pension amount facts` HAS
+    `eligibility`                                          IS A `Pension eligibility`
+    `whole years of residence after 18 when first qualified` IS A NUMBER
+    `qualified for a full pension when first qualified`    IS A BOOLEAN
+    `deferral`                                             IS A `Deferral facts`
+    `past the month of turning 75`                         IS A BOOLEAN
+
+GIVEN `figures` IS AN `OAS quarter figures`, `a` IS A `Pension amount facts`
+GIVETH A MAYBE NUMBER
+`the monthly pension` `figures` `a` MEANS
+    LET `base`      MEANS `figures`'s `full monthly pension`
+        `months`    MEANS `the months that count for deferral` (`a`'s `deferral`)
+        `ten percent` MEANS IF `a`'s `past the month of turning 75` THEN 1.1 ELSE 1
+        `option a`  MEANS IF `a`'s `qualified for a full pension when first qualified`
+                          THEN `to the cent` ((`increased for deferral` `base` `months`) TIMES `ten percent`)
+                          ELSE 0
+        `option b`  MEANS `to the cent` ((`increased for deferral` (`to the cent` (`base` TIMES (`the lesser of` 40 (`a`'s `whole years of residence after 18 when first qualified`)) DIVIDED BY 40)) `months`) TIMES `ten percent`)
+    IN CONSIDER `a`'s `eligibility`
+       WHEN `a full pension (s 3(1))` THEN
+            JUST (`the greater of` `option a` (`the greater of` `option b` (`the full monthly pension for the person` `figures` (`a`'s `past the month of turning 75`))))
+       WHEN `a partial pension (s 3(2)), in fortieths` `n` THEN
+            JUST (`the greater of` `option a` (`the greater of` `option b` (`to the cent` ((`the full monthly pension for the person` `figures` (`a`'s `past the month of turning 75`)) TIMES `n` DIVIDED BY 40))))
+       OTHERWISE NOTHING
+
+§§ `s 9 -- payment while outside Canada`
+
+-- s 9(1): after "six consecutive months, exclusive of the month in which the pensioner left Canada", payment is
+-- suspended; (2) not if the pensioner "had resided in Canada for at least twenty years after attaining the age of
+-- eighteen years" when leaving. (3)-(4): the same on ceasing to reside in Canada, six months after the end of that month.
+DECLARE `Absence answer` IS ONE OF
+    `the pension continues: 20 or more years of residence after 18 (s 9(2), (4))`
+    `the pension continues: not yet six months outside Canada (s 9(1), (3))`
+    `the pension is suspended until return (s 9(1), (3))`
+
+GIVEN `years resided after 18 when leaving` IS A NUMBER, `full months outside Canada after the month of leaving` IS A NUMBER
+GIVETH AN `Absence answer`
+`the effect of absence from Canada` `years resided after 18 when leaving` `full months outside Canada after the month of leaving` MEANS
+    IF `years resided after 18 when leaving` AT LEAST 20
+    THEN `the pension continues: 20 or more years of residence after 18 (s 9(2), (4))`
+    ELSE IF `full months outside Canada after the month of leaving` AT MOST 6
+         THEN `the pension continues: not yet six months outside Canada (s 9(1), (3))`
+         ELSE `the pension is suspended until return (s 9(1), (3))`
+
+§§ `Part II -- the guaranteed income supplement (ss 11, 12, 12.1)`
+
+-- The marital case for the month, which picks the formula.
+--   s 12(1)(a) with 12(6)(a): no spouse or common-law partner;
+--   s 12(1)(a) with 12(6)(b): a spouse or partner "to whom no pension may be paid";
+--   s 12(1)(b)(ii) with 12(6)(c)(ii): a spouse or partner who is a pensioner;
+--   s 22(2): a spouse or partner for whom an allowance under s 19 is approved (Part III).
+DECLARE `Marital case` IS ONE OF
+    `no spouse or common-law partner`
+    `a spouse or partner who is not a pensioner and gets no allowance`
+    `a spouse or partner who is a pensioner`
+    `a spouse or partner who gets the allowance`
+
+DECLARE `Supplement facts` HAS
+    `marital case`                                         IS A `Marital case`
+    `the pensioner's income for the base calendar year`    IS A NUMBER     -- s 2 income, s 10 base calendar year
+    `the spouse's or partner's income for the base calendar year` IS A NUMBER
+    `the pensioner's monthly pension, without deferral increase` IS A NUMBER -- s 2.1(2)
+    `the pensioner's years of residence after 18`          IS A NUMBER
+    `the spouse's or partner's years of residence after 18` IS A NUMBER
+    `past the month of turning 75`                         IS A BOOLEAN
+    `no pension may be paid for the month`                 IS A BOOLEAN    -- s 11(7)(b)
+    `outside Canada for six consecutive months before this month` IS A BOOLEAN -- s 11(7)(c), (d)
+    `a sponsorship undertaking is in effect`               IS A BOOLEAN    -- s 11(7)(e), 11(8)
+
+-- s 12(6) "monthly base income".
+GIVEN `figures` IS AN `OAS quarter figures`, `s` IS A `Supplement facts`
+GIVETH A NUMBER
+`the monthly base income` `figures` `s` MEANS
+    LET `joint` MEANS `s`'s `the pensioner's income for the base calendar year` PLUS `s`'s `the spouse's or partner's income for the base calendar year`
+    IN CONSIDER `s`'s `marital case`
+       WHEN `no spouse or common-law partner` THEN `s`'s `the pensioner's income for the base calendar year` DIVIDED BY 12
+       -- s 12(6)(b): A/24 - B/2, B the full pension "calculated without regard to subsection 7(5)" times "the
+       -- applicant's special qualifying factor", "rounded ... to the next higher multiple of four dollars".
+       WHEN `a spouse or partner who is not a pensioner and gets no allowance` THEN
+            (`joint` DIVIDED BY 24)
+            MINUS ((`rounded up to a multiple of` ((`figures`'s `full monthly pension`) TIMES (`the special qualifying factor` (`s`'s `the pensioner's years of residence after 18`))) 4) DIVIDED BY 2)
+       OTHERWISE `joint` DIVIDED BY 24
+
+-- The s 12(5) maximum "that, but for this subsection, might have been paid".
+GIVEN `figures` IS AN `OAS quarter figures`, `s` IS A `Supplement facts`
+GIVETH A NUMBER
+`the maximum supplement for the case` `figures` `s` MEANS
+    CONSIDER `s`'s `marital case`
+    WHEN `a spouse or partner who is a pensioner` THEN `figures`'s `maximum supplement, pensioner couple rate`
+    WHEN `a spouse or partner who gets the allowance` THEN `figures`'s `maximum supplement, pensioner couple rate`
+    OTHERWISE `figures`'s `maximum supplement, single rate`
+
+-- s 12(5): "[(A - B) x C] - D/2", A the maximum supplement plus the full monthly pension, B "the pensioner's monthly
+-- pension", C the special qualifying factor, D the monthly base income "rounded ... to the next lower multiple of two
+-- dollars". READING (finding 4): a negative monthly base income is taken as nil; s 12(1) and (2) take "one dollar for
+-- each full two dollars", and a negative income has none.
+GIVEN `figures` IS AN `OAS quarter figures`, `s` IS A `Supplement facts`
+GIVETH A NUMBER
+`the s 12(5) supplement` `figures` `s` MEANS
+    LET `A` MEANS (`the maximum supplement for the case` `figures` `s`) PLUS (`the full monthly pension for the person` `figures` (`s`'s `past the month of turning 75`))
+        `B` MEANS `s`'s `the pensioner's monthly pension, without deferral increase`
+        `C` MEANS `the special qualifying factor` (`s`'s `the pensioner's years of residence after 18`)
+        `D` MEANS `rounded down to a multiple of` (`not below zero` (`the monthly base income` `figures` `s`)) 2
+    IN `not below zero` (((`A` MINUS `B`) TIMES `C`) MINUS (`D` DIVIDED BY 2))
+
+-- s 12.1 top-up, "A x B - C/4":
+--   (1)(a) no spouse: A $50 figure; C = 1/12 of income "in excess of $2,000" rounded down to $4;
+--   (1)(b) spouse "to whom no benefit may be paid": A $50 figure; C = 1/24 of joint income in excess of $4,000;
+--   (2)(b) spouse a pensioner: A $35 figure; C = 1/24 of joint income in excess of $4,000.
+-- READING (finding 5): "1/12 of the pensioner's income ... in excess of $2,000" is 1/12 of (income - $2,000).
+GIVEN `figures` IS AN `OAS quarter figures`, `s` IS A `Supplement facts`
+GIVETH A NUMBER
+`the s 12.1 top-up` `figures` `s` MEANS
+    LET `B`     MEANS `the special qualifying factor` (`s`'s `the pensioner's years of residence after 18`)
+        `own`   MEANS `s`'s `the pensioner's income for the base calendar year`
+        `joint` MEANS `own` PLUS `s`'s `the spouse's or partner's income for the base calendar year`
+        `C single` MEANS `rounded down to a multiple of` ((`not below zero` (`own` MINUS 2000)) DIVIDED BY 12) 4
+        `C couple` MEANS `rounded down to a multiple of` ((`not below zero` (`joint` MINUS 4000)) DIVIDED BY 24) 4
+    IN CONSIDER `s`'s `marital case`
+       WHEN `no spouse or common-law partner` THEN
+            `not below zero` (((`figures`'s `top-up figure A of $50`) TIMES `B`) MINUS (`C single` DIVIDED BY 4))
+       WHEN `a spouse or partner who is not a pensioner and gets no allowance` THEN
+            `not below zero` (((`figures`'s `top-up figure A of $50`) TIMES `B`) MINUS (`C couple` DIVIDED BY 4))
+       OTHERWISE
+            `not below zero` (((`figures`'s `top-up figure A of $35`) TIMES `B`) MINUS (`C couple` DIVIDED BY 4))
+
+-- s 11(7): no supplement for (b) a month for which no pension may be paid, (c)-(d) a month throughout which the
+-- pensioner is absent from, or not resident in, Canada after six months, (e) a month during a sponsorship undertaking.
+-- (a) (more than eleven months before the application) is a matter of dates, not encoded.
+GIVEN `s` IS A `Supplement facts`
+GIVETH A BOOLEAN
+DECIDE `no supplement may be paid under s 11(7)` `s` IF
+        `s`'s `no pension may be paid for the month`
+    OR  `s`'s `outside Canada for six consecutive months before this month`
+    OR  `s`'s `a sponsorship undertaking is in effect`
+
+§§ `Part III -- the allowances (ss 19, 21, 21.1, 22, 22.1)`
+
+-- s 22(1) "rounded pension equivalent": the pension equivalent (the full pension without s 7(5)) "rounded to the next
+-- higher multiple of three dollars". The s 22(3)(b)-(c) threshold: "four-thirds of the rounded pension equivalent"
+-- times the special qualifying factor, "rounded ... to the next higher multiple of four dollars".
+GIVEN `figures` IS AN `OAS quarter figures`, `sqf` IS A NUMBER
+GIVETH A NUMBER
+`the four-thirds threshold` `figures` `sqf` MEANS
+    `rounded up to a multiple of` ((4 DIVIDED BY 3) TIMES (`rounded up to a multiple of` (`figures`'s `full monthly pension`) 3) TIMES `sqf`) 4
+
+-- s 22(3): the allowance to the spouse or partner of a pensioner, by the monthly joint income (1/12 of both incomes):
+--   (a) none: pension equivalent x B + supplement equivalent x B;
+--   (b) at most the threshold: (A x B) + C, C "the greater of zero and" (D x B) - 3/4 E, E the joint monthly income
+--       rounded down to $4;
+--   (c) over it: (A x B) - C/4, C the residual joint income (joint monthly income less the threshold) rounded down to $4.
+-- s 22.1(2): plus A $35 figure x B - C/4, C 1/24 of joint income over $4,000 rounded down to $4.
+GIVEN `figures` IS AN `OAS quarter figures`, `joint income for the year` IS A NUMBER, `years resided after 18` IS A NUMBER
+GIVETH A NUMBER
+`the s 22(3) allowance` `figures` `joint income for the year` `years resided after 18` MEANS
+    LET `B`       MEANS `the special qualifying factor` `years resided after 18`
+        `monthly` MEANS `joint income for the year` DIVIDED BY 12
+        `A`       MEANS `figures`'s `maximum supplement, pensioner couple rate`
+        `D`       MEANS `figures`'s `full monthly pension`
+        `T`       MEANS `the four-thirds threshold` `figures` `B`
+    IN IF `monthly` AT MOST 0 THEN (`D` TIMES `B`) PLUS (`A` TIMES `B`)
+       ELSE IF `monthly` AT MOST `T`
+            THEN (`A` TIMES `B`) PLUS (`not below zero` ((`D` TIMES `B`) MINUS ((3 DIVIDED BY 4) TIMES (`rounded down to a multiple of` `monthly` 4))))
+            ELSE `not below zero` ((`A` TIMES `B`) MINUS ((`rounded down to a multiple of` (`monthly` MINUS `T`) 4) DIVIDED BY 4))
+
+GIVEN `figures` IS AN `OAS quarter figures`, `joint income for the year` IS A NUMBER, `years resided after 18` IS A NUMBER
+GIVETH A NUMBER
+`the s 22.1(1) or (2) top-up` `figures` `joint income for the year` `years resided after 18` MEANS
+    `not below zero`
+        (((`figures`'s `top-up figure A of $35`) TIMES (`the special qualifying factor` `years resided after 18`))
+         MINUS ((`rounded down to a multiple of` ((`not below zero` (`joint income for the year` MINUS 4000)) DIVIDED BY 24) 4) DIVIDED BY 4))
+
+-- s 22(4): the allowance to a survivor, by the survivor's monthly income (1/12 of income):
+--   (a) none: pension equivalent x B + supplement equivalent for the survivor x B;
+--   (b) at most the threshold: (A x B) + C, C the greater of zero and (D x B) - 3/4 E, E rounded down to $4;
+--   (c) over it: (A x B) - C/2, C the residual income rounded down to $2.
+-- s 22.1(3): plus A $50 figure x B - C/4, C 1/12 of income over $2,000 rounded down to $4.
+GIVEN `figures` IS AN `OAS quarter figures`, `income for the year` IS A NUMBER, `years resided after 18` IS A NUMBER
+GIVETH A NUMBER
+`the s 22(4) allowance` `figures` `income for the year` `years resided after 18` MEANS
+    LET `B`       MEANS `the special qualifying factor` `years resided after 18`
+        `monthly` MEANS `income for the year` DIVIDED BY 12
+        `A`       MEANS `figures`'s `supplement equivalent for the survivor`
+        `D`       MEANS `figures`'s `full monthly pension`
+        `T`       MEANS `the four-thirds threshold` `figures` `B`
+    IN IF `monthly` AT MOST 0 THEN (`D` TIMES `B`) PLUS (`A` TIMES `B`)
+       ELSE IF `monthly` AT MOST `T`
+            THEN (`A` TIMES `B`) PLUS (`not below zero` ((`D` TIMES `B`) MINUS ((3 DIVIDED BY 4) TIMES (`rounded down to a multiple of` `monthly` 4))))
+            ELSE `not below zero` ((`A` TIMES `B`) MINUS ((`rounded down to a multiple of` (`monthly` MINUS `T`) 2) DIVIDED BY 2))
+
+GIVEN `figures` IS AN `OAS quarter figures`, `income for the year` IS A NUMBER, `years resided after 18` IS A NUMBER
+GIVETH A NUMBER
+`the s 22.1(3) top-up` `figures` `income for the year` `years resided after 18` MEANS
+    `not below zero`
+        (((`figures`'s `top-up figure A of $50`) TIMES (`the special qualifying factor` `years resided after 18`))
+         MINUS ((`rounded down to a multiple of` ((`not below zero` (`income for the year` MINUS 2000)) DIVIDED BY 12) 4) DIVIDED BY 4))
+
+-- Regulations s 6: "an allowance in an amount that does not exceed $2 monthly" is paid as $2.
+GIVEN `amount` IS A NUMBER
+GIVETH A NUMBER
+`with the $2 minimum` `amount` MEANS
+    IF `amount` GREATER THAN 0 AND `amount` LESS THAN 2 THEN 2 ELSE `to the cent` `amount`
+
+-- s 22(2): the pensioner's supplement when an allowance is approved for the spouse or partner, "[(A - B) x C] - D/4",
+-- A the supplement equivalent plus the full monthly pension, B the pensioner's monthly pension, C the pensioner's
+-- special qualifying factor, D the residual joint income (with the spouse's factor) rounded down to $4.
+-- Plus s 22.1(1): A $35 figure x the pensioner's factor - C/4.
+GIVEN `figures` IS AN `OAS quarter figures`, `s` IS A `Supplement facts`
+GIVETH A NUMBER
+`the s 22(2) supplement` `figures` `s` MEANS
+    LET `joint` MEANS `s`'s `the pensioner's income for the base calendar year` PLUS `s`'s `the spouse's or partner's income for the base calendar year`
+        `A` MEANS (`figures`'s `maximum supplement, pensioner couple rate`) PLUS (`the full monthly pension for the person` `figures` (`s`'s `past the month of turning 75`))
+        `B` MEANS `s`'s `the pensioner's monthly pension, without deferral increase`
+        `C` MEANS `the special qualifying factor` (`s`'s `the pensioner's years of residence after 18`)
+        `T` MEANS `the four-thirds threshold` `figures` (`the special qualifying factor` (`s`'s `the spouse's or partner's years of residence after 18`))
+        `D` MEANS `rounded down to a multiple of` (`not below zero` ((`joint` DIVIDED BY 12) MINUS `T`)) 4
+    IN `not below zero` (((`A` MINUS `B`) TIMES `C`) MINUS (`D` DIVIDED BY 4))
+
+-- The same facts, with the spouse or partner treated as a non-pensioner without an allowance (for s 22(6)).
+GIVEN `s` IS A `Supplement facts`
+GIVETH A `Supplement facts`
+`the same facts as if the spouse got no allowance` `s` MEANS
+    `Supplement facts` WITH
+        `marital case`                                         IS `a spouse or partner who is not a pensioner and gets no allowance`
+        `the pensioner's income for the base calendar year`    IS `s`'s `the pensioner's income for the base calendar year`
+        `the spouse's or partner's income for the base calendar year` IS `s`'s `the spouse's or partner's income for the base calendar year`
+        `the pensioner's monthly pension, without deferral increase` IS `s`'s `the pensioner's monthly pension, without deferral increase`
+        `the pensioner's years of residence after 18`          IS `s`'s `the pensioner's years of residence after 18`
+        `the spouse's or partner's years of residence after 18` IS `s`'s `the spouse's or partner's years of residence after 18`
+        `past the month of turning 75`                         IS `s`'s `past the month of turning 75`
+        `no pension may be paid for the month`                 IS `s`'s `no pension may be paid for the month`
+        `outside Canada for six consecutive months before this month` IS `s`'s `outside Canada for six consecutive months before this month`
+        `a sponsorship undertaking is in effect`               IS `s`'s `a sponsorship undertaking is in effect`
+
+-- The supplement for the month: none under s 11(7); otherwise s 12(5) plus s 12.1, or, with an allowance spouse,
+-- s 22(2) plus s 22.1(1). s 22(6): where the allowance plus the s 22(2) supplement is less than the Part II supplement,
+-- the pensioner "may ... be paid" the Part II supplement less the allowance; the encoding gives that amount where it is
+-- higher, as the most the Act allows.
+GIVEN `figures` IS AN `OAS quarter figures`, `s` IS A `Supplement facts`
+GIVETH A NUMBER
+`the Part II supplement` `figures` `s` MEANS
+    `to the cent` ((`the s 12(5) supplement` `figures` `s`) PLUS (`the s 12.1 top-up` `figures` `s`))
+
+GIVEN `figures` IS AN `OAS quarter figures`, `s` IS A `Supplement facts`
+GIVETH A NUMBER
+`the allowance to the pensioner's spouse` `figures` `s` MEANS
+    `with the $2 minimum`
+        ((`the s 22(3) allowance` `figures` (`s`'s `the pensioner's income for the base calendar year` PLUS `s`'s `the spouse's or partner's income for the base calendar year`) (`s`'s `the spouse's or partner's years of residence after 18`))
+         PLUS (`the s 22.1(1) or (2) top-up` `figures` (`s`'s `the pensioner's income for the base calendar year` PLUS `s`'s `the spouse's or partner's income for the base calendar year`) (`s`'s `the spouse's or partner's years of residence after 18`)))
+
+GIVEN `figures` IS AN `OAS quarter figures`, `s` IS A `Supplement facts`
+GIVETH A NUMBER
+`the monthly supplement` `figures` `s` MEANS
+    IF `no supplement may be paid under s 11(7)` `s`
+    THEN 0
+    ELSE CONSIDER `s`'s `marital case`
+         WHEN `a spouse or partner who gets the allowance` THEN
+              LET `s 22 amount` MEANS `to the cent` ((`the s 22(2) supplement` `figures` `s`) PLUS (`the s 22.1(1) or (2) top-up` `figures` (`s`'s `the pensioner's income for the base calendar year` PLUS `s`'s `the spouse's or partner's income for the base calendar year`) (`s`'s `the pensioner's years of residence after 18`)))
+                  `part II as if no allowance` MEANS `the Part II supplement` `figures` (`the same facts as if the spouse got no allowance` `s`)
+                  `allowance` MEANS `the allowance to the pensioner's spouse` `figures` `s`
+              IN IF (`allowance` PLUS `s 22 amount`) LESS THAN `part II as if no allowance`
+                 THEN `the greater of` `s 22 amount` (`part II as if no allowance` MINUS `allowance`)
+                 ELSE `s 22 amount`
+         OTHERWISE `the Part II supplement` `figures` `s`
+
+-- s 19(1): an allowance may be paid to the spouse, common-law partner or former common-law partner of a pensioner who
+-- (a) is not separated from the pensioner, or separated after June 1999 "not more than three months before the month";
+-- (b) "has attained sixty years of age but has not attained sixty-five"; (c) resided after 18 at least ten years and,
+-- if under twenty, was resident on the day before approval. (2): legal residence. (4): a joint application.
+-- (6)(b): none "for any month for which no supplement may be paid to the pensioner" (unless (6.1)); (6)(c) six months
+-- absent; (6)(d) sponsorship.
+DECLARE `Allowance applicant` HAS
+    `age`                                                       IS A NUMBER
+    `years resided in Canada after 18 and before approval`      IS A NUMBER
+    `resided in Canada on the day before approval`              IS A BOOLEAN
+    `citizen or legally resident`                               IS A BOOLEAN
+    `outside Canada for six consecutive months before this month` IS A BOOLEAN
+    `a sponsorship undertaking is in effect`                    IS A BOOLEAN
+
+DECLARE `Allowance eligibility` IS ONE OF
+    `eligible for the allowance (s 19)`
+    `eligible for the allowance for the survivor (s 21)`
+    `not eligible: under 60 or 65 or over (s 19(1)(b), s 21(1)(a))`
+    `not eligible: not a citizen or legal resident (s 19(2), s 21(2))`
+    `not eligible: under 10 years of residence, or under 20 and not resident the day before approval (s 19(1)(c), s 21(1)(b))`
+    `not eligible: separated more than three months, or the pensioner gets no supplement (s 19(1)(a), (6)(b))`
+    `not eligible: absent six months or sponsored (s 19(6)(c)-(d), s 21(9)(b)-(c))`
+    `not eligible: not a survivor, or convicted of the spouse's murder or manslaughter (s 2, s 21.1)`
+
+GIVEN `a` IS AN `Allowance applicant`
+GIVETH A BOOLEAN
+DECIDE `meets the common allowance conditions` `a` IF
+        `a`'s `age` AT LEAST 60
+    AND `a`'s `age` LESS THAN 65
+    AND `a`'s `citizen or legally resident`
+    AND `a`'s `years resided in Canada after 18 and before approval` AT LEAST 10
+    AND (`a`'s `years resided in Canada after 18 and before approval` AT LEAST 20 OR `a`'s `resided in Canada on the day before approval`)
+    AND NOT (`a`'s `outside Canada for six consecutive months before this month`)
+    AND NOT (`a`'s `a sponsorship undertaking is in effect`)
+
+GIVEN `a` IS AN `Allowance applicant`
+GIVETH AN `Allowance eligibility`
+`the common allowance refusal` `a` MEANS
+    IF `a`'s `age` LESS THAN 60 OR `a`'s `age` AT LEAST 65
+    THEN `not eligible: under 60 or 65 or over (s 19(1)(b), s 21(1)(a))`
+    ELSE IF NOT (`a`'s `citizen or legally resident`)
+         THEN `not eligible: not a citizen or legal resident (s 19(2), s 21(2))`
+         ELSE IF `a`'s `outside Canada for six consecutive months before this month` OR `a`'s `a sponsorship undertaking is in effect`
+              THEN `not eligible: absent six months or sponsored (s 19(6)(c)-(d), s 21(9)(b)-(c))`
+              ELSE `not eligible: under 10 years of residence, or under 20 and not resident the day before approval (s 19(1)(c), s 21(1)(b))`
+
+GIVEN `a` IS AN `Allowance applicant`, `living with the pensioner or separated three months or less` IS A BOOLEAN, `the pensioner may be paid a supplement` IS A BOOLEAN
+GIVETH AN `Allowance eligibility`
+`the s 19 allowance eligibility` `a` `living with the pensioner or separated three months or less` `the pensioner may be paid a supplement` MEANS
+    IF NOT (`meets the common allowance conditions` `a`)
+    THEN `the common allowance refusal` `a`
+    ELSE IF `living with the pensioner or separated three months or less` AND `the pensioner may be paid a supplement`
+         THEN `eligible for the allowance (s 19)`
+         ELSE `not eligible: separated more than three months, or the pensioner gets no supplement (s 19(1)(a), (6)(b))`
+
+-- s 2 "survivor": "a person whose spouse or common-law partner has died and who has not thereafter become the spouse or
+-- common-law partner of another person". s 21.1(1): not payable if "the Minister is informed and satisfied" of a
+-- conviction for first or second degree murder or manslaughter of that spouse (asked as a fact).
+GIVEN `a` IS AN `Allowance applicant`, `spouse or partner has died` IS A BOOLEAN, `has since had a new spouse or partner` IS A BOOLEAN, `convicted of the murder or manslaughter of that spouse` IS A BOOLEAN
+GIVETH AN `Allowance eligibility`
+`the s 21 allowance eligibility` `a` `spouse or partner has died` `has since had a new spouse or partner` `convicted of the murder or manslaughter of that spouse` MEANS
+    IF (NOT (`spouse or partner has died`)) OR `has since had a new spouse or partner` OR `convicted of the murder or manslaughter of that spouse`
+    THEN `not eligible: not a survivor, or convicted of the spouse's murder or manslaughter (s 2, s 21.1)`
+    ELSE IF NOT (`meets the common allowance conditions` `a`)
+         THEN `the common allowance refusal` `a`
+         ELSE `eligible for the allowance for the survivor (s 21)`
+
+GIVEN `figures` IS AN `OAS quarter figures`, `income for the year` IS A NUMBER, `years resided after 18` IS A NUMBER
+GIVETH A NUMBER
+`the allowance for the survivor` `figures` `income for the year` `years resided after 18` MEANS
+    `with the $2 minimum`
+        ((`the s 22(4) allowance` `figures` `income for the year` `years resided after 18`)
+         PLUS (`the s 22.1(3) top-up` `figures` `income for the year` `years resided after 18`))
+
+§§ `Regulative rules -- the applicant's and beneficiary's duties, and what the Minister owes`
+
+DECLARE `OAS party` IS ONE OF `the applicant or beneficiary`, `the Minister`
+
+DECLARE `OAS act` IS ONE OF
+    `state income for the base calendar year in the application`
+    `inform the Minister of a separation or a new spouse or partner`
+    `give notice of an absence from Canada of more than one month`
+    `notify the Minister of the return to Canada`
+    `return the overpayment`
+    `request a reconsideration`
+    `reconsider and notify the decision in writing`
+    `request cancellation of the pension or supplement`
+    `repay the pension and related benefits`
+
+-- s 14(1): "Every person by whom an application for a supplement ... is made shall, in the application, make a
+-- statement of the person's income for the base calendar year." Clock: days from the application; the statement is
+-- part of it (day 0). (1.01): the Minister may waive it where the information is available.
+GIVEN `the Minister has waived the statement` IS A BOOLEAN
+GIVETH A DEONTIC `OAS party` `OAS act`
+DECIDE `s 14(1) -- the applicant must state their income in the application for a supplement` IS
+    IF `the Minister has waived the statement`
+    THEN FULFILLED
+    ELSE PARTY `the applicant or beneficiary`
+         MUST  `state income for the base calendar year in the application`
+         WITHIN 0
+         LEST  BREACH BY `the applicant or beneficiary` BECAUSE "s 14(1): an application for a supplement must state the applicant's income for the base calendar year"
+
+-- s 15(9): "Every applicant shall inform the Minister without delay if they separate from, or cease to have, a spouse
+-- or common-law partner, or if they had a spouse or common-law partner at the beginning of a month, not having had" one
+-- the month before. "Without delay" sets no number of days: no WITHIN (finding 9).
+GIVEN `the marital status has changed` IS A BOOLEAN
+GIVETH A DEONTIC `OAS party` `OAS act`
+DECIDE `s 15(9) -- the applicant must tell the Minister without delay of a separation or a new spouse or partner` IS
+    IF `the marital status has changed`
+    THEN PARTY `the applicant or beneficiary`
+         MUST  `inform the Minister of a separation or a new spouse or partner`
+    ELSE FULFILLED
+
+-- Regulations s 25(1): "Where an applicant or a beneficiary has absented himself from Canada for a period in excess of
+-- one month, he shall forthwith give notice thereof to the Minister and within one month of his return to Canada shall
+-- notify the Minister of his return." Clock: days from the return; one month taken as 30 days (READING). The notice of
+-- absence is "forthwith" (no WITHIN); the notice of return within 30 days.
+GIVETH A DEONTIC `OAS party` `OAS act`
+DECIDE `Regulations s 25(1) -- after returning from more than a month abroad, notify the return within one month` IS
+    PARTY `the applicant or beneficiary`
+    MUST  `notify the Minister of the return to Canada`
+    WITHIN 30
+    LEST  BREACH BY `the applicant or beneficiary` BECAUSE "Regulations s 25(1): an applicant or beneficiary who was absent from Canada for more than one month must notify the Minister of the return within one month of it"
+
+-- s 37(1): a person who received a benefit payment "to which the person is not entitled, or ... in excess" "shall
+-- forthwith return the cheque or the amount". (2): it is a debt due to Her Majesty. No WITHIN ("forthwith").
+GIVETH A DEONTIC `OAS party` `OAS act`
+DECIDE `s 37(1) -- a person overpaid must return the overpayment forthwith` IS
+    PARTY `the applicant or beneficiary`
+    MUST  `return the overpayment`
+
+-- s 27.1(1): a person dissatisfied with a decision "that no benefit may be paid" or about the amount "may, within
+-- ninety days after the day on which the person is notified in writing ... make a request ... for a reconsideration".
+-- (2): the Minister "shall, without delay after receiving a request ... reconsider ... and shall without delay notify,
+-- in writing". Clock: days from the written notice. Not asking is no breach. The Minister's duty has no number of days.
+GIVETH A DEONTIC `OAS party` `OAS act`
+DECIDE `s 27.1 -- I may ask for a reconsideration within 90 days, and the Minister must then reconsider and tell me in writing` IS
+    PARTY `the applicant or beneficiary`
+    MAY   `request a reconsideration`
+    WITHIN 90
+    HENCE PARTY `the Minister`
+          MUST  `reconsider and notify the decision in writing`
+
+-- s 9.3, s 18.2 and Regulations s 26.1: a request to cancel a pension or supplement "shall be made ... no later than
+-- six months after the day on which payment ... begins"; if granted, the amounts "shall be repaid no later than six
+-- months after the day on which the request is granted". Clock: days; six months taken as 182 days (READING). The
+-- request is a choice; the repayment then a duty, the cancellation taking effect only on it (s 9.3(2)).
+GIVETH A DEONTIC `OAS party` `OAS act`
+DECIDE `s 9.3 and Regulations s 26.1 -- I may cancel my pension within six months of its start, then repay within six months` IS
+    PARTY `the applicant or beneficiary`
+    MAY   `request cancellation of the pension or supplement`
+    WITHIN 182
+    HENCE PARTY `the applicant or beneficiary`
+          MUST  `repay the pension and related benefits`
+          WITHIN 182
+          LEST  BREACH BY `the applicant or beneficiary` BECAUSE "s 9.3(2) and Regulations s 26.1(2): the pension and related supplement and allowance must be repaid within six months of the request being granted for the cancellation to take effect"
