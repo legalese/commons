@@ -1,0 +1,1399 @@
+IMPORT prelude
+
+-- Motor Accidents (Liabilities and Compensation) Act 1973 (Tas), Part IV, with the Motor Accidents (Liabilities and
+-- Compensation) Regulations 2020 (Tas), reg 10 and Schedule 1 -- the MAIB no-fault scheduled benefits.
+--
+-- SEAT-NEUTRAL CORE. The rules are written in the texts' own actors and terms: "the Board" (the Motor Accidents
+-- Insurance Board), "a resident of this State", "a person who suffers personal injury resulting directly from a motor
+-- accident", "the dependants", "the personal representative", "a family member", "the Tribunal". The individual's
+-- questions are in maib-seat.l4 and the Board's in maib-seat-board.l4; both IMPORT this module and restate no rule.
+--
+-- PROVISIONS COVERED.
+--   Act: s 2 (1) (interstate motor vehicle, interstate premium, motor accident), s 2 (4) (injury from a motor
+--   accident), s 2 (5) (requires daily care), s 2B (resident), s 23 (1), (1AA), (1A), (2), (2A)-(2C) and (8) (the
+--   duty to pay; family member), s 24 (1), (1A), (2), (3), (3A), (4), (4A) (exclusions; the alcohol table), s 26
+--   (Commonwealth pensions: no regulation made), s 27A (people requiring daily care), s 28 (1)-(2) (the Board
+--   determines; reference to the Tribunal).
+--   Regulations: reg 10 (2)-(4) (notice and claim periods; extension by the Tribunal), reg 11 (2) (prescribed trailers);
+--   Sch 1 Pt 1 (definitions, dependants, dependent child, survivorship, cl 8 cap), Pt 2 (medical benefits), Pt 3
+--   (funeral benefits), Pt 4 (death benefits, accidents from 17 February 2020), Pt 5 (disability allowances), Pt 7
+--   (counselling services benefits). Pt 6 (disability benefits) only through the cl 8 cap.
+--
+-- REGULATIVE RULES (DEONTIC): reg 10 (2) (the claimant: written notice within 1 year of the accident, the claim within
+-- 1 year of the death, loss or care, each as extended by the Tribunal), s 28 (1)-(2) (the Board determines; a person
+-- aggrieved may refer the matter to the Tribunal), and s 23 (1), (1A), (2) (the Board must pay). Clock: days, day 0 is
+-- the date of the motor accident.
+--
+-- Edition: Act No. 71 of 1973, consolidated version published 2026-01-28, as deposited at
+-- ../../registers/source-bundle/act-1973-071.txt; Regulations S.R. 2020, No. 7, consolidated version published
+-- 2021-06-15, as deposited at
+-- ../../../motor-accidents-liabilities-and-compensation-regulations-2020/registers/source-bundle/sr-2020-007.txt.
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Motor Accidents (Liabilities and Compensation) Act 1973 and Regulations 2020 (Tas) -- seat-neutral core`
+
+§§ `Dates`
+
+-- Dates are compared through DATE_SERIAL (day numbers). daydate is not imported: the built-in DATE_FROM_DMY,
+-- DATE_SERIAL and DATE_FROM_SERIAL are enough, and keep type-checking fast.
+
+GIVEN `n`       IS A NUMBER
+      `the day` IS A DATE
+GIVETH A DATE
+`n` `days after` `the day` MEANS DATE_FROM_SERIAL (DATE_SERIAL `the day` PLUS `n`)
+
+GIVEN `first`  IS A DATE
+      `second` IS A DATE
+GIVETH A NUMBER
+`the days from` `first` `to` `second` MEANS DATE_SERIAL `second` MINUS DATE_SERIAL `first`
+
+GIVEN `first`  IS A DATE
+      `second` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `first` `is on or before` `second` IF DATE_SERIAL `first` AT MOST DATE_SERIAL `second`
+
+GIVEN `first`  IS A DATE
+      `second` IS A DATE
+GIVETH A DATE
+`the earlier of` `first` `and` `second` MEANS
+    IF `first` `is on or before` `second`
+    THEN `first`
+    ELSE `second`
+
+GIVEN `first`  IS A DATE
+      `second` IS A DATE
+GIVETH A DATE
+`the later of` `first` `and` `second` MEANS
+    IF `first` `is on or before` `second`
+    THEN `second`
+    ELSE `first`
+
+GIVEN `the year` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `is a leap year` `the year` IF
+        (`the year` MODULO 4) EQUALS 0
+    AND (    (NOT ((`the year` MODULO 100) EQUALS 0))
+          OR (`the year` MODULO 400) EQUALS 0)
+
+-- "n years after" a day: the same day and month n years on (n may be negative). READING: 29 February goes to
+-- 28 February in a year that is not a leap year; neither text says.
+GIVEN `n`       IS A NUMBER
+      `the day` IS A DATE
+GIVETH A DATE
+`n` `years after` `the day` MEANS
+    IF      DATE_DAY `the day` EQUALS 29
+        AND DATE_MONTH `the day` EQUALS 2
+        AND (NOT (`is a leap year` (DATE_YEAR `the day` PLUS `n`)))
+    THEN DATE_FROM_DMY 28 2 (DATE_YEAR `the day` PLUS `n`)
+    ELSE DATE_FROM_DMY (DATE_DAY `the day`) (DATE_MONTH `the day`) (DATE_YEAR `the day` PLUS `n`)
+
+-- Sch 1 Pt 4 cl 1 (2) and Pt 7 cl 1 (2): the Regulations' own figures are for accidents "on or after 17 February 2020"
+-- (reg 2: the day the Regulations took effect). Earlier figures are in the 2010 and 2000 Regulations, not deposited.
+`17 February 2020` MEANS DATE_FROM_DMY 17 2 2020
+
+-- Sch 1 Pt 3 cl 2 (1) and Pt 7 cl 1 (1) (a): "a motor accident that occurs on or after 1 December 2007".
+`1 December 2007` MEANS DATE_FROM_DMY 1 12 2007
+
+GIVEN `the date of the motor accident` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the 2020 figures apply to an accident on` `the date of the motor accident` IF
+    `17 February 2020` `is on or before` `the date of the motor accident`
+
+§§ `Answers`
+
+-- s 24 (1): the paragraph that excludes all scheduled benefits.
+DECLARE `Section 24 (1) paragraph` IS ONE OF
+    `(a) the injury results from the person intentionally causing or attempting to cause personal injury`
+    `(b) workers compensation is payable for the injury`
+    `(ba) compensation is payable for the injury under another Australian motor accidents compensation law`
+    `(bb) an asbestos-related disease compensated under the Asbestos-Related Diseases (Occupational Exposure) Compensation Act 2011`
+    `(c) the injury results from ionizing radiation`
+    `(d) a motor accident in a motor vehicle race in which the person was taking part`
+    `(e) the person owned or drove a trail bike, farm bike or beach buggy with no premium paid`
+    `(ea) an interstate resident owned or drove an interstate trail bike, farm bike or beach buggy with no interstate premium paid`
+    `(f) the vehicle was used for an offence of dishonesty or violence, and the person was a party to that use`
+    `(g) no premium was paid, and the person was the owner, or a driver who knew or ought to have known`
+    `(ga) no interstate premium was paid, and the interstate resident was the owner, or a driver who knew or ought to have known`
+    `(h) a vehicle in the accident was being used for an act of terrorism`
+
+-- Why nothing is payable.
+DECLARE `MAIB reason` IS ONE OF
+    `the personal injury does not result directly from a motor accident (s 2 (4))`
+    `none of s 23 (1), (1A) and (2) applies`
+    `the accident was not reported to a police officer as soon as practicable, and the Board has not excused the failure (s 23 (2A))`
+    `s 23 (2) covers only medical benefits, disability benefits and counselling benefits for family members`
+    `excluded by s 24 (1)` HAS `the paragraph` IS A `Section 24 (1) paragraph`
+    `excluded by s 24 (2) (a): a conviction arising out of the person's driving at the time of the accident`
+    `excluded by s 24 (2) (b): driving without a driver licence of the relevant class, exemption or authority`
+    `nil under the s 24 (4) table`
+    `the death did not result directly from the motor accident`
+    `no dependant survived the person who died (Sch 1 Pt 4 cl 1 (1))`
+    `not treatment required within the Commonwealth (Sch 1 Pt 2 cl 1 (1))`
+    `unnecessarily incurred: the treatment is not warranted, beneficial and curative (Sch 1 Pt 2 cl 1 (4) (b))`
+    `travel that meets neither Sch 1 Pt 2 cl 1 (3) (j) nor (k)`
+    `not entitled to an employed person's allowance (Sch 1 Pt 5 cl 3 (2))`
+    `not entitled to a self-employed person's replacement allowance (Sch 1 Pt 5 cl 4 (2))`
+    `not entitled to a housekeeping allowance (Sch 1 Pt 5 cl 5 (1))`
+    `not wholly disabled within 20 days beginning on the day of the accident (Sch 1 Pt 5 cl 6 (2))`
+    `neither the injured person requires daily care nor has the injured person died (Sch 1 Pt 7 cl 1 (1) (a))`
+    `the accident occurred before 1 December 2007 (Sch 1 Pt 7 cl 1 (1) (a))`
+    `not a family member (s 23 (8))`
+    `the counselling is not provided by, or under the supervision of, a registered psychologist (s 23 (8))`
+    `the family member does not require counselling services because of the injury or death (Sch 1 Pt 7 cl 1 (1) (b))`
+
+-- Why the encoding gives no answer.
+DECLARE `Not covered reason` IS ONE OF
+    `an accident before 17 February 2020: the 2010 or 2000 Regulations apply, which are not deposited`
+    `funeral benefits for an accident before 1 December 2007: the 2000 Regulations apply, which are not deposited`
+    `a conviction under s 6 (1) of the Road Safety (Alcohol and Drugs) Act 1970 below 0.05: the s 24 (4) table has no row for it`
+
+-- An amount in dollars, or nil and why, or not covered and why.
+DECLARE `MAIB amount` IS ONE OF
+    `dollars` HAS `amount` IS A NUMBER
+    `nothing payable` HAS `because` IS A `MAIB reason`
+    `amount not covered` HAS `because not covered` IS A `Not covered reason`
+
+DECLARE `Benefit answer` IS ONE OF
+    `payable`
+    `payable less the benefits payable under the law of the other State or Territory (s 23 (1AA))`
+    `not payable` HAS `why not payable` IS A `MAIB reason`
+
+§§ `s 2B -- resident`
+
+DECLARE `Place` IS ONE OF
+    `in this State`
+    `in another State or a Territory`
+    `outside the Commonwealth`
+
+-- s 2B (1): "A person is a resident of this State only if his or her ordinary place of residence is in this State."
+GIVEN `ordinary place of residence` IS A `Place`
+GIVETH A BOOLEAN
+DECIDE `the person is a resident of this State` `ordinary place of residence` IF
+    `ordinary place of residence` EQUALS `in this State`
+
+-- s 2B (2): "... a resident of another State or a Territory only if his or her ordinary place of residence is in that
+-- other State or that Territory."
+GIVEN `ordinary place of residence` IS A `Place`
+GIVETH A BOOLEAN
+DECIDE `the person is a resident of another State or a Territory` `ordinary place of residence` IF
+    `ordinary place of residence` EQUALS `in another State or a Territory`
+
+§§ `s 2 (1), (4) and s 23 (2B), (2C) -- a motor accident, and the vehicles it involves`
+
+-- s 2 (1): "registered" (Vehicle and Traffic Act 1999), and "interstate motor vehicle": a motor vehicle that is
+-- normally used by a resident of another State or a Territory in that State or Territory, and is required under its
+-- law to be registered. s 23 (2B) (a) and (2C) (a): a suspended registration still counts.
+DECLARE `Kind of registration` IS ONE OF
+    `registered in this State`
+    `an interstate motor vehicle`
+    `neither registered in this State nor an interstate motor vehicle`
+
+-- s 2 (4), s 23 (2B) (b), s 23 (2C) (b): the three ways a personal injury "results directly from" a motor vehicle.
+DECLARE `How the injury resulted from the vehicle` IS ONE OF
+    `a collision, or action taken to avoid a collision, with it`
+    `it moving out of control`
+    `the driving of it`
+    `none of those`
+
+DECLARE `Vehicle involved` HAS
+    `its registration`                IS A `Kind of registration`
+    `how the injury resulted from it` IS A `How the injury resulted from the vehicle`
+
+GIVEN `the vehicle` IS A `Vehicle involved`
+GIVETH A BOOLEAN
+DECIDE `the injury results directly from` `the vehicle` IF
+    NOT (`the vehicle`'s `how the injury resulted from it` EQUALS `none of those`)
+
+-- s 2 (4): a person suffers personal injury from a motor accident if it results directly from (a) a collision, or
+-- action taken to avoid a collision, with a motor vehicle, (b) a motor vehicle moving out of control, or (c) the
+-- driving of a motor vehicle.
+GIVEN `the vehicles` IS A LIST OF `Vehicle involved`
+GIVETH A BOOLEAN
+DECIDE `the personal injury results directly from a motor accident involving` `the vehicles` IF
+    any (GIVEN v YIELD `the injury results directly from` v) `the vehicles`
+
+-- s 23 (2B): "a motor accident involves a motor vehicle registered in this State if (a) the motor vehicle is
+-- registered under the Vehicle and Traffic Act 1999, whether or not that registration has been suspended ...; and
+-- (b) the personal injury results directly from" one of the three.
+GIVEN `the vehicles` IS A LIST OF `Vehicle involved`
+GIVETH A BOOLEAN
+DECIDE `the motor accident involves a motor vehicle registered in this State` `the vehicles` IF
+    any (GIVEN v YIELD v's `its registration` EQUALS `registered in this State` AND `the injury results directly from` v) `the vehicles`
+
+-- s 23 (2C): the same test for an interstate motor vehicle.
+GIVEN `the vehicles` IS A LIST OF `Vehicle involved`
+GIVETH A BOOLEAN
+DECIDE `the motor accident involves an interstate motor vehicle` `the vehicles` IF
+    any (GIVEN v YIELD v's `its registration` EQUALS `an interstate motor vehicle` AND `the injury results directly from` v) `the vehicles`
+
+§§ `s 2 (5) and s 27A -- requires daily care`
+
+DECLARE `Daily care facts` HAS
+    -- s 2 (1): "daily care means treatment, therapy, nursing services, assistance, supervision, services for
+    -- rehabilitation or other care".
+    `hours a day of daily care the person requires or is likely to require` IS A NUMBER
+    `the daily care is required for an indefinite period`                    IS A BOOLEAN
+    `the daily care commences not later than one year after the date of the accident` IS A BOOLEAN
+    -- s 27A (2) (a): the court, giving judgment for damages, certifies that the person requires daily care.
+    `a court has certified that the person requires daily care`              IS A BOOLEAN
+    -- s 27A (3): a payment into court or offer of compromise, made on the basis that the claimant requires daily care,
+    -- is accepted: the claimant "is taken, for the purposes of this Act, to require daily care".
+    `the person accepted a payment into court or offer of compromise made on the basis that the person requires daily care` IS A BOOLEAN
+
+-- s 2 (5): a person requires daily care if, as a result of the injury, the person requires, or is likely to require,
+-- daily care for at least 2 hours a day for an indefinite period, commencing not later than one year after the date of
+-- the accident. READING: a court's certificate under s 27A (2) (a) is taken to settle it as well.
+GIVEN `the facts` IS A `Daily care facts`
+GIVETH A BOOLEAN
+DECIDE `the person requires daily care` `the facts` IF
+        (    `the facts`'s `hours a day of daily care the person requires or is likely to require` AT LEAST 2
+         AND `the facts`'s `the daily care is required for an indefinite period`
+         AND `the facts`'s `the daily care commences not later than one year after the date of the accident`)
+    OR `the facts`'s `a court has certified that the person requires daily care`
+    OR `the facts`'s `the person accepted a payment into court or offer of compromise made on the basis that the person requires daily care`
+
+-- s 27A (4)-(6): after a judgment certifying daily care, or an accepted payment or offer on that basis, the Board is to
+-- pay medical or disability benefits for so long as the person needs them; but not for the cost of an item or service
+-- whose future cost the damages (s 27A (5)) or the accepted payment or offer (s 27A (6)) include an allowance for.
+GIVEN `certified or taken to require daily care` IS A BOOLEAN
+      `the damages or accepted offer include an allowance for the future cost of the item or service` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 27A: the Board pays medical or disability benefits for the item after the damages` `certified or taken to require daily care` `the damages or accepted offer include an allowance for the future cost of the item or service` IF
+        `certified or taken to require daily care`
+    AND (NOT `the damages or accepted offer include an allowance for the future cost of the item or service`)
+
+§§ `s 23 -- liability to pay scheduled benefits`
+
+DECLARE `Accident facts` HAS
+    `date of the motor accident`                 IS A DATE
+    `where the motor accident occurred`          IS A `Place`
+    `the injured person's ordinary place of residence` IS A `Place`
+    `the vehicles involved`                      IS A LIST OF `Vehicle involved`
+    `the daily care facts`                       IS A `Daily care facts`
+    -- s 23 (2A).
+    `the accident was reported to a police officer as soon as practicable` IS A BOOLEAN
+    `the Board has determined that the failure to report should be excused` IS A BOOLEAN
+
+DECLARE `Section 23 ground` IS ONE OF
+    `s 23 (1) (a): a resident of this State injured in a motor accident in this State`
+    `s 23 (1) (b): a resident of this State injured in another State or a Territory, a motor vehicle registered in this State involved`
+    `s 23 (1A): a person who is not a resident of this State injured in this State, a motor vehicle registered in this State involved`
+    `s 23 (2): a resident of another State or a Territory who requires daily care, injured in this State, an interstate motor vehicle involved`
+
+-- s 23 (1): the Board must pay if a resident of this State suffers personal injury resulting directly from a motor
+-- accident and (a) it occurs in this State, or (b) it occurs in another State or a Territory and involves a motor
+-- vehicle registered in this State.
+-- s 23 (1A): ... if a person who is not a resident of this State suffers such an injury and the accident (a) occurs in
+-- this State and (b) involves a motor vehicle registered in this State.
+-- s 23 (2): the medical benefits, disability benefits and counselling benefits for family members, if a resident of
+-- another State or a Territory suffers such an injury, and the accident (a) occurs in this State, (b) involves an
+-- interstate motor vehicle, and (c) the injured person requires daily care.
+-- Where (1A) and (2) both apply, (1A) is the wider and is returned.
+GIVEN `the facts` IS AN `Accident facts`
+GIVETH A MAYBE `Section 23 ground`
+`the s 23 ground` `the facts` MEANS
+    IF NOT (`the personal injury results directly from a motor accident involving` (`the facts`'s `the vehicles involved`))
+    THEN NOTHING
+    ELSE IF `the person is a resident of this State` (`the facts`'s `the injured person's ordinary place of residence`)
+         THEN BRANCH
+                  IF `the facts`'s `where the motor accident occurred` EQUALS `in this State`
+                  THEN JUST `s 23 (1) (a): a resident of this State injured in a motor accident in this State`
+                  IF      `the facts`'s `where the motor accident occurred` EQUALS `in another State or a Territory`
+                      AND `the motor accident involves a motor vehicle registered in this State` (`the facts`'s `the vehicles involved`)
+                  THEN JUST `s 23 (1) (b): a resident of this State injured in another State or a Territory, a motor vehicle registered in this State involved`
+                  OTHERWISE NOTHING
+         ELSE BRANCH
+                  IF      `the facts`'s `where the motor accident occurred` EQUALS `in this State`
+                      AND `the motor accident involves a motor vehicle registered in this State` (`the facts`'s `the vehicles involved`)
+                  THEN JUST `s 23 (1A): a person who is not a resident of this State injured in this State, a motor vehicle registered in this State involved`
+                  IF      `the person is a resident of another State or a Territory` (`the facts`'s `the injured person's ordinary place of residence`)
+                      AND `the facts`'s `where the motor accident occurred` EQUALS `in this State`
+                      AND `the motor accident involves an interstate motor vehicle` (`the facts`'s `the vehicles involved`)
+                      AND `the person requires daily care` (`the facts`'s `the daily care facts`)
+                  THEN JUST `s 23 (2): a resident of another State or a Territory who requires daily care, injured in this State, an interstate motor vehicle involved`
+                  OTHERWISE NOTHING
+
+-- s 23 (2A): subsections (1), (1A) and (2) do not apply where the accident "has not been reported as soon as
+-- practicable to a police officer unless the Board determines that in the circumstances the failure to so report the
+-- motor accident should be excused". "As soon as practicable" and the Board's excuse are judgments, asked as facts.
+GIVEN `the facts` IS AN `Accident facts`
+GIVETH A BOOLEAN
+DECIDE `s 23 (2A) is met for` `the facts` IF
+        `the facts`'s `the accident was reported to a police officer as soon as practicable`
+    OR  `the facts`'s `the Board has determined that the failure to report should be excused`
+
+DECLARE `Scheduled benefit` IS ONE OF
+    `medical benefits`                -- Sch 1 Pt 2
+    `funeral benefits`                -- Sch 1 Pt 3, payable to the personal representative (s 23 (4) (b))
+    `death benefits`                  -- Sch 1 Pt 4, payable to the dependants (s 23 (4) (c))
+    `disability allowances`           -- Sch 1 Pt 5
+    `disability benefits`             -- Sch 1 Pt 6
+    `counselling services benefits`   -- Sch 1 Pt 7, payable to family members (s 23 (4) (f))
+
+-- s 23 (2): which benefits it covers.
+GIVEN `the benefit` IS A `Scheduled benefit`
+GIVETH A BOOLEAN
+DECIDE `s 23 (2) covers` `the benefit` IF
+        `the benefit` EQUALS `medical benefits`
+    OR  `the benefit` EQUALS `disability benefits`
+    OR  `the benefit` EQUALS `counselling services benefits`
+
+§§ `s 24 -- exclusions from scheduled benefits`
+
+-- reg 11 (2): the trailers prescribed for s 29 (1AA) -- (a) a trailer, other than a caravan, of unladen mass not more
+-- than half a tonne; (b) an agricultural implement towed by another motor vehicle; (c) a trailer towed by an
+-- agricultural machine performing agricultural tasks.
+DECLARE `Kind of vehicle` IS ONE OF
+    `a trail bike, farm bike or beach buggy`
+    `a trailer of a kind prescribed by reg 11 (2)`
+    `any other motor vehicle`
+
+-- The motor vehicle whose use resulted in the motor accident, where the injured person was its owner or driver
+-- (s 24 (1) (e), (ea), (g), (ga), (1A)). For a passenger or a pedestrian, owner and driver are both FALSE.
+DECLARE `The person's own vehicle` HAS
+    `the person was its owner`                                   IS A BOOLEAN
+    `the person was its driver`                                  IS A BOOLEAN
+    `the motor accident results from its use`                    IS A BOOLEAN
+    `its kind`                                                   IS A `Kind of vehicle`
+    `it is an interstate motor vehicle`                          IS A BOOLEAN
+    -- s 2 (1): "premium means a premium payable under section 30". (g) (i): "a premium for the use of the motor
+    -- vehicle had not been paid or a premium for the use of that motor vehicle in the circumstances, or under the
+    -- conditions in which the motor vehicle was being used, had not been paid".
+    `a premium for its use in the circumstances had been paid`   IS A BOOLEAN
+    -- s 2 (1): "interstate premium means a premium, levy or other payment that is required to be made under the law
+    -- of another State or a Territory in respect of the use of an interstate motor vehicle ...".
+    `an interstate premium is required for it`                   IS A BOOLEAN
+    `an interstate premium for its use in the circumstances had been paid` IS A BOOLEAN
+    -- (g) (ii) (A), (ga) (ii) (A).
+    `the driver knew or ought to have known that the premium had not been paid` IS A BOOLEAN
+    -- s 24 (1A).
+    `it was a permitted out-of-State vehicle with a third party insurance policy in force` IS A BOOLEAN
+
+DECLARE `Section 24 (1) facts` HAS
+    `the injury results from the person intentionally causing or attempting to cause personal injury to themself or another` IS A BOOLEAN
+    `compensation is payable for the injury under a workers compensation law of this State, the Commonwealth or another State or Territory` IS A BOOLEAN
+    `compensation is payable for the injury under a motor accidents compensation law of the Commonwealth or another State or Territory, or a policy it requires` IS A BOOLEAN
+    `an asbestos-related disease for which the person is entitled to compensation under the Asbestos-Related Diseases (Occupational Exposure) Compensation Act 2011` IS A BOOLEAN
+    `the injury results from the person being subjected to ionizing radiation` IS A BOOLEAN
+    `the accident occurred in a motor vehicle race in which the person was taking part` IS A BOOLEAN
+    `the vehicle was used in or in furtherance of an offence of dishonesty or violence, the person being a party to that use` IS A BOOLEAN
+    `a motor vehicle in the accident was being used for an act of terrorism` IS A BOOLEAN
+    `the person's own vehicle`                                    IS A `The person's own vehicle`
+
+-- READING (NOTES.md, finding 4). Read literally, (e) and (g) speak of the Tasmanian premium (s 2 (1), s 30), which
+-- is never paid for an interstate motor vehicle; they would then exclude every interstate resident who owned or drove
+-- their own interstate vehicle, which is the person (ea), (ga) and s 23 (2) were written for. The encoding applies
+-- (ea) and (ga), not (e) and (g), to an interstate resident's interstate motor vehicle. For a resident of this State,
+-- (g) applies to any vehicle, with the (1A) saving for a permitted out-of-State vehicle that was insured.
+GIVEN `the residence` IS A `Place`
+      `the vehicle`   IS A `The person's own vehicle`
+GIVETH A BOOLEAN
+DECIDE `(ea) and (ga) take the place of (e) and (g) for` `the residence` `the vehicle` IF
+        `the person is a resident of another State or a Territory` `the residence`
+    AND `the vehicle`'s `it is an interstate motor vehicle`
+
+GIVEN `the vehicle` IS A `The person's own vehicle`
+GIVETH A BOOLEAN
+DECIDE `the person was its owner or driver, and the accident results from its use` `the vehicle` IF
+        (`the vehicle`'s `the person was its owner` OR `the vehicle`'s `the person was its driver`)
+    AND `the vehicle`'s `the motor accident results from its use`
+
+-- s 24 (1) (e): the accident results directly from the use of a trail bike, farm bike or beach buggy in respect of
+-- which a premium has not been paid, and the injured person was its owner or driver.
+GIVEN `the residence` IS A `Place`
+      `the vehicle`   IS A `The person's own vehicle`
+GIVETH A BOOLEAN
+DECIDE `s 24 (1) (e) applies to` `the residence` `the vehicle` IF
+        `the person was its owner or driver, and the accident results from its use` `the vehicle`
+    AND `the vehicle`'s `its kind` EQUALS `a trail bike, farm bike or beach buggy`
+    AND (NOT (`the vehicle`'s `a premium for its use in the circumstances had been paid`))
+    AND (NOT (`(ea) and (ga) take the place of (e) and (g) for` `the residence` `the vehicle`))
+
+-- s 24 (1) (ea): the injured person is a resident of another State or a Territory, and the accident results directly
+-- from the use of an interstate trail bike, farm bike or beach buggy for which an interstate premium is required to
+-- be paid but has not been paid, and the injured person was its owner or driver.
+GIVEN `the residence` IS A `Place`
+      `the vehicle`   IS A `The person's own vehicle`
+GIVETH A BOOLEAN
+DECIDE `s 24 (1) (ea) applies to` `the residence` `the vehicle` IF
+        `(ea) and (ga) take the place of (e) and (g) for` `the residence` `the vehicle`
+    AND `the person was its owner or driver, and the accident results from its use` `the vehicle`
+    AND `the vehicle`'s `its kind` EQUALS `a trail bike, farm bike or beach buggy`
+    AND `the vehicle`'s `an interstate premium is required for it`
+    AND (NOT (`the vehicle`'s `an interstate premium for its use in the circumstances had been paid`))
+
+GIVEN `the vehicle` IS A `The person's own vehicle`
+GIVETH A BOOLEAN
+DECIDE `the person was the owner, or a driver who knew or ought to have known` `the vehicle` IF
+        `the vehicle`'s `the person was its owner`
+    OR  (    `the vehicle`'s `the person was its driver`
+         AND `the vehicle`'s `the driver knew or ought to have known that the premium had not been paid`)
+
+-- s 24 (1) (g): the accident results from the use of a motor vehicle (other than a prescribed trailer), the premium
+-- for its use (in the circumstances) had not been paid, and the injured person was (A) its driver and knew or ought to
+-- have known, or (B) its owner. s 24 (1A): (g) does not apply to a resident of this State if the vehicle was a
+-- permitted out-of-State vehicle with a third party insurance policy then in force.
+GIVEN `the residence` IS A `Place`
+      `the vehicle`   IS A `The person's own vehicle`
+GIVETH A BOOLEAN
+DECIDE `s 24 (1) (g) applies to` `the residence` `the vehicle` IF
+        `the vehicle`'s `the motor accident results from its use`
+    AND (NOT (`the vehicle`'s `its kind` EQUALS `a trailer of a kind prescribed by reg 11 (2)`))
+    AND (NOT (`the vehicle`'s `a premium for its use in the circumstances had been paid`))
+    AND `the person was the owner, or a driver who knew or ought to have known` `the vehicle`
+    AND (NOT (`(ea) and (ga) take the place of (e) and (g) for` `the residence` `the vehicle`))
+    AND (NOT (    `the person is a resident of this State` `the residence`
+              AND `the vehicle`'s `it was a permitted out-of-State vehicle with a third party insurance policy in force`))
+
+-- s 24 (1) (ga): the interstate counterpart of (g). READING: "an interstate premium ... had not been paid" is read
+-- with the s 2 (1) definition, which makes an interstate premium one "required to be made" under the other law.
+GIVEN `the residence` IS A `Place`
+      `the vehicle`   IS A `The person's own vehicle`
+GIVETH A BOOLEAN
+DECIDE `s 24 (1) (ga) applies to` `the residence` `the vehicle` IF
+        `(ea) and (ga) take the place of (e) and (g) for` `the residence` `the vehicle`
+    AND `the vehicle`'s `the motor accident results from its use`
+    AND (NOT (`the vehicle`'s `its kind` EQUALS `a trailer of a kind prescribed by reg 11 (2)`))
+    AND `the vehicle`'s `an interstate premium is required for it`
+    AND (NOT (`the vehicle`'s `an interstate premium for its use in the circumstances had been paid`))
+    AND `the person was the owner, or a driver who knew or ought to have known` `the vehicle`
+
+-- s 24 (1): "Notwithstanding section 23, scheduled benefits are not payable in respect of the personal injury to a
+-- person in any of the following cases". The first paragraph that applies, in the order of the text.
+GIVEN `the residence` IS A `Place`
+      `the facts`     IS A `Section 24 (1) facts`
+GIVETH A MAYBE `Section 24 (1) paragraph`
+`the s 24 (1) exclusion for` `the residence` `the facts` MEANS
+    BRANCH
+        IF `the facts`'s `the injury results from the person intentionally causing or attempting to cause personal injury to themself or another`
+        THEN JUST `(a) the injury results from the person intentionally causing or attempting to cause personal injury`
+        IF `the facts`'s `compensation is payable for the injury under a workers compensation law of this State, the Commonwealth or another State or Territory`
+        THEN JUST `(b) workers compensation is payable for the injury`
+        IF `the facts`'s `compensation is payable for the injury under a motor accidents compensation law of the Commonwealth or another State or Territory, or a policy it requires`
+        THEN JUST `(ba) compensation is payable for the injury under another Australian motor accidents compensation law`
+        IF `the facts`'s `an asbestos-related disease for which the person is entitled to compensation under the Asbestos-Related Diseases (Occupational Exposure) Compensation Act 2011`
+        THEN JUST `(bb) an asbestos-related disease compensated under the Asbestos-Related Diseases (Occupational Exposure) Compensation Act 2011`
+        IF `the facts`'s `the injury results from the person being subjected to ionizing radiation`
+        THEN JUST `(c) the injury results from ionizing radiation`
+        IF `the facts`'s `the accident occurred in a motor vehicle race in which the person was taking part`
+        THEN JUST `(d) a motor accident in a motor vehicle race in which the person was taking part`
+        IF `s 24 (1) (e) applies to` `the residence` (`the facts`'s `the person's own vehicle`)
+        THEN JUST `(e) the person owned or drove a trail bike, farm bike or beach buggy with no premium paid`
+        IF `s 24 (1) (ea) applies to` `the residence` (`the facts`'s `the person's own vehicle`)
+        THEN JUST `(ea) an interstate resident owned or drove an interstate trail bike, farm bike or beach buggy with no interstate premium paid`
+        IF `the facts`'s `the vehicle was used in or in furtherance of an offence of dishonesty or violence, the person being a party to that use`
+        THEN JUST `(f) the vehicle was used for an offence of dishonesty or violence, and the person was a party to that use`
+        IF `s 24 (1) (g) applies to` `the residence` (`the facts`'s `the person's own vehicle`)
+        THEN JUST `(g) no premium was paid, and the person was the owner, or a driver who knew or ought to have known`
+        IF `s 24 (1) (ga) applies to` `the residence` (`the facts`'s `the person's own vehicle`)
+        THEN JUST `(ga) no interstate premium was paid, and the interstate resident was the owner, or a driver who knew or ought to have known`
+        IF `the facts`'s `a motor vehicle in the accident was being used for an act of terrorism`
+        THEN JUST `(h) a vehicle in the accident was being used for an act of terrorism`
+        OTHERWISE NOTHING
+
+-- s 24 (2) (a): the convictions that exclude medical benefits, disability benefits and the disability allowance, each
+-- "arising out of his driving of a motor vehicle at the time of the motor accident".
+DECLARE `Section 24 (2) (a) conviction` IS ONE OF
+    `none of the offences in s 24 (2) (a)`
+    `manslaughter`
+    `causing death by dangerous driving`
+    `causing grievous bodily harm by dangerous driving`
+    `dangerous driving`
+    `an offence under s 32 (1) of the Traffic Act 1925`
+    `an offence under s 4 of the Road Safety (Alcohol and Drugs) Act 1970`
+    `a substantially similar offence in another State or a Territory`
+
+DECLARE `Section 24 (2) facts` HAS
+    `conviction arising out of the person's driving at the time of the accident` IS A `Section 24 (2) (a) conviction`
+    `the person was driving a motor vehicle at the time of the accident`       IS A BOOLEAN
+    `the person held a driver licence of the relevant class`                   IS A BOOLEAN
+    `the person was exempted from holding one, or otherwise authorised to drive a vehicle of that class` IS A BOOLEAN
+    -- s 24 (3): a licence or other authority previously held, not renewed through inadvertence, capable of renewal with
+    -- no reason to believe it would not be renewed, and with it renewed the driving would not have been unlawful.
+    `s 24 (3): an earlier licence was not renewed by inadvertence and could be renewed` IS A BOOLEAN
+    -- s 24 (3A): the licence was suspended under s 55 of the Monetary Penalties Enforcement Act 2005 (or a
+    -- corresponding law of another State or a Territory), and but for that suspension the driving was lawful.
+    `s 24 (3A): the licence was suspended only for unpaid monetary penalties` IS A BOOLEAN
+
+-- s 24 (2): "A medical benefit, disability benefit or disability allowance is not payable" in either case.
+GIVEN `the benefit` IS A `Scheduled benefit`
+GIVETH A BOOLEAN
+DECIDE `s 24 (2) reaches` `the benefit` IF
+        `the benefit` EQUALS `medical benefits`
+    OR  `the benefit` EQUALS `disability benefits`
+    OR  `the benefit` EQUALS `disability allowances`
+
+-- s 24 (2) (b), with the savings of s 24 (3) and (3A).
+GIVEN `the facts` IS A `Section 24 (2) facts`
+GIVETH A BOOLEAN
+DECIDE `s 24 (2) (b) applies to` `the facts` IF
+        `the facts`'s `the person was driving a motor vehicle at the time of the accident`
+    AND (NOT (`the facts`'s `the person held a driver licence of the relevant class`))
+    AND (NOT (`the facts`'s `the person was exempted from holding one, or otherwise authorised to drive a vehicle of that class`))
+    AND (NOT (`the facts`'s `s 24 (3): an earlier licence was not renewed by inadvertence and could be renewed`))
+    AND (NOT (`the facts`'s `s 24 (3A): the licence was suspended only for unpaid monetary penalties`))
+
+GIVEN `the facts` IS A `Section 24 (2) facts`
+GIVETH A BOOLEAN
+DECIDE `s 24 (2) (a) applies to` `the facts` IF
+    NOT (`the facts`'s `conviction arising out of the person's driving at the time of the accident` EQUALS `none of the offences in s 24 (2) (a)`)
+
+-- s 24 (4): the conviction "in respect of the driving of a motor vehicle involved in the accident" that cuts the
+-- disability allowance, and the concentration of alcohol (grams per 210 litres of breath or per 100 millilitres of blood).
+DECLARE `Road Safety (Alcohol and Drugs) Act conviction` IS ONE OF
+    `no conviction under s 6 (1), 14 (1A), 14 (2) or 14 (5)`
+    `a conviction under s 6 (1)` HAS `concentration of alcohol` IS A NUMBER
+    `a conviction under s 14 (1A)`
+    `a conviction under s 14 (2)`
+    `a conviction under s 14 (5)`
+
+DECLARE `Section 24 (4) facts` HAS
+    `the conviction`                                                              IS A `Road Safety (Alcohol and Drugs) Act conviction`
+    -- s 24 (4A): only for s 6 (1).
+    `the person has satisfied the Board that the alcohol did not contribute in any way to the accident` IS A BOOLEAN
+
+DECLARE `Proportion answer` IS ONE OF
+    `the proportion` HAS `of the allowance otherwise payable` IS A NUMBER
+    `proportion not covered` HAS `why the proportion is not covered` IS A `Not covered reason`
+
+-- s 24 (4) table: s 6 (1) -- (a) 0.05 or more but less than 0.12: two thirds; (b) 0.12 or more but less than 0.24: one
+-- third; (c) 0.24 or more: nil. s 14 (1A), 14 (2), 14 (5): nil. A s 6 (1) conviction below 0.05 has no row (NOTES.md,
+-- finding 8): not covered. It applies to personal injury other than death, so to a living person's allowance.
+GIVEN `the facts` IS A `Section 24 (4) facts`
+GIVETH A `Proportion answer`
+`the s 24 (4) proportion for` `the facts` MEANS
+    CONSIDER `the facts`'s `the conviction`
+    WHEN `no conviction under s 6 (1), 14 (1A), 14 (2) or 14 (5)` THEN `the proportion` 1
+    WHEN `a conviction under s 6 (1)` `the concentration` THEN
+        BRANCH
+            IF `the facts`'s `the person has satisfied the Board that the alcohol did not contribute in any way to the accident`
+            THEN `the proportion` 1
+            IF `the concentration` AT LEAST 0.24 THEN `the proportion` 0
+            IF `the concentration` AT LEAST 0.12 THEN `the proportion` (1 DIVIDED BY 3)
+            IF `the concentration` AT LEAST 0.05 THEN `the proportion` (2 DIVIDED BY 3)
+            OTHERWISE `proportion not covered` `a conviction under s 6 (1) of the Road Safety (Alcohol and Drugs) Act 1970 below 0.05: the s 24 (4) table has no row for it`
+    WHEN `a conviction under s 14 (1A)` THEN `the proportion` 0
+    WHEN `a conviction under s 14 (2)` THEN `the proportion` 0
+    WHEN `a conviction under s 14 (5)` THEN `the proportion` 0
+
+§§ `ss 23-24 -- the Board's liability for each scheduled benefit`
+
+DECLARE `The Board's liability` HAS
+    `for medical benefits`               IS A `Benefit answer`
+    `for funeral benefits`               IS A `Benefit answer`
+    `for death benefits`                 IS A `Benefit answer`
+    `for disability allowances`          IS A `Benefit answer`
+    `for disability benefits`            IS A `Benefit answer`
+    `for counselling services benefits`  IS A `Benefit answer`
+
+-- s 23 (1), (1A), (2), (2A), (1AA), then s 24 (1), (2). s 24 (4) and the Schedule's own conditions (a death, a
+-- dependant, an employment, the cap) come after, in the Schedule's questions.
+GIVEN `the benefit`   IS A `Scheduled benefit`
+      `the accident`  IS AN `Accident facts`
+      `s 24 (1) facts` IS A `Section 24 (1) facts`
+      `s 24 (2) facts` IS A `Section 24 (2) facts`
+GIVETH A `Benefit answer`
+`the Board's liability for` `the benefit` `the accident` `s 24 (1) facts` `s 24 (2) facts` MEANS
+    CONSIDER `the s 23 ground` `the accident`
+    WHEN NOTHING THEN
+        IF `the personal injury results directly from a motor accident involving` (`the accident`'s `the vehicles involved`)
+        THEN `not payable` `none of s 23 (1), (1A) and (2) applies`
+        ELSE `not payable` `the personal injury does not result directly from a motor accident (s 2 (4))`
+    WHEN JUST `the ground` THEN
+        BRANCH
+            IF NOT (`s 23 (2A) is met for` `the accident`)
+            THEN `not payable` `the accident was not reported to a police officer as soon as practicable, and the Board has not excused the failure (s 23 (2A))`
+            IF      `the ground` EQUALS `s 23 (2): a resident of another State or a Territory who requires daily care, injured in this State, an interstate motor vehicle involved`
+                AND (NOT (`s 23 (2) covers` `the benefit`))
+            THEN `not payable` `s 23 (2) covers only medical benefits, disability benefits and counselling benefits for family members`
+            OTHERWISE
+                CONSIDER `the s 24 (1) exclusion for` (`the accident`'s `the injured person's ordinary place of residence`) `s 24 (1) facts`
+                WHEN JUST `the paragraph` THEN `not payable` (`excluded by s 24 (1)` `the paragraph`)
+                WHEN NOTHING THEN
+                    BRANCH
+                        IF `s 24 (2) reaches` `the benefit` AND `s 24 (2) (a) applies to` `s 24 (2) facts`
+                        THEN `not payable` `excluded by s 24 (2) (a): a conviction arising out of the person's driving at the time of the accident`
+                        IF `s 24 (2) reaches` `the benefit` AND `s 24 (2) (b) applies to` `s 24 (2) facts`
+                        THEN `not payable` `excluded by s 24 (2) (b): driving without a driver licence of the relevant class, exemption or authority`
+                        IF `the ground` EQUALS `s 23 (1) (b): a resident of this State injured in another State or a Territory, a motor vehicle registered in this State involved`
+                        THEN `payable less the benefits payable under the law of the other State or Territory (s 23 (1AA))`
+                        OTHERWISE `payable`
+
+GIVEN `the accident`  IS AN `Accident facts`
+      `s 24 (1) facts` IS A `Section 24 (1) facts`
+      `s 24 (2) facts` IS A `Section 24 (2) facts`
+GIVETH A `The Board's liability`
+`the Board's liability for each scheduled benefit` `the accident` `s 24 (1) facts` `s 24 (2) facts` MEANS
+    `The Board's liability` WITH
+        `for medical benefits`              IS `the Board's liability for` `medical benefits` `the accident` `s 24 (1) facts` `s 24 (2) facts`
+        `for funeral benefits`              IS `the Board's liability for` `funeral benefits` `the accident` `s 24 (1) facts` `s 24 (2) facts`
+        `for death benefits`                IS `the Board's liability for` `death benefits` `the accident` `s 24 (1) facts` `s 24 (2) facts`
+        `for disability allowances`         IS `the Board's liability for` `disability allowances` `the accident` `s 24 (1) facts` `s 24 (2) facts`
+        `for disability benefits`           IS `the Board's liability for` `disability benefits` `the accident` `s 24 (1) facts` `s 24 (2) facts`
+        `for counselling services benefits` IS `the Board's liability for` `counselling services benefits` `the accident` `s 24 (1) facts` `s 24 (2) facts`
+
+GIVEN `the answer` IS A `Benefit answer`
+GIVETH A BOOLEAN
+DECIDE `the benefit is payable on` `the answer` IF
+    NOT (CONSIDER `the answer`
+         WHEN `not payable` `r` THEN TRUE
+         OTHERWISE FALSE)
+
+GIVEN `the liability` IS A `The Board's liability`
+GIVETH A BOOLEAN
+DECIDE `some scheduled benefit is payable under` `the liability` IF
+        `the benefit is payable on` (`the liability`'s `for medical benefits`)
+    OR  `the benefit is payable on` (`the liability`'s `for funeral benefits`)
+    OR  `the benefit is payable on` (`the liability`'s `for death benefits`)
+    OR  `the benefit is payable on` (`the liability`'s `for disability allowances`)
+    OR  `the benefit is payable on` (`the liability`'s `for disability benefits`)
+    OR  `the benefit is payable on` (`the liability`'s `for counselling services benefits`)
+
+-- s 23 (1AA): for an accident in another State or a Territory, "the prescribed benefits less any benefits payable (a)
+-- to the person in respect of that injury; and (b) under the law of that other State or Territory". READING: nil, not
+-- negative, where the other law pays more.
+GIVEN `the prescribed benefit`                    IS A NUMBER
+      `the benefits payable under the other law`  IS A NUMBER
+GIVETH A NUMBER
+`the s 23 (1AA) amount` `the prescribed benefit` `the benefits payable under the other law` MEANS
+    max 0 (`the prescribed benefit` MINUS `the benefits payable under the other law`)
+
+-- s 26: regulations "may" reduce, withhold, postpone or apportion a scheduled benefit payable to a person entitled to,
+-- or receiving, a Commonwealth pension. The 2020 Regulations make no such provision (NOTES.md, finding 12), so a
+-- Commonwealth pension changes nothing here.
+`the 2020 Regulations reduce a scheduled benefit for a Commonwealth pension (s 26)` MEANS FALSE
+
+§§ `Sch 1 Pt 1 cl 8 -- the limit on medical and disability benefits`
+
+DECLARE `Cap answer` IS ONE OF
+    `capped at` HAS `the cap` IS A NUMBER
+    `no cap, because the person requires daily care`
+    `cap not covered` HAS `why the cap is not covered` IS A `Not covered reason`
+
+-- cl 8: "Except in the case of a person requiring daily care, the payment of medical benefits under Part 2 and
+-- disability benefits under Part 6 in respect of a personal injury ... from a single motor accident is not to exceed
+-- (a) if the person has been a continuous hospital in-patient for more than 4 days commencing on the date of the
+-- accident, $500 000 in aggregate; or (b) in any other case, $400 000 in aggregate." Disability allowances (Part 5)
+-- are not counted. The daily care exception is also the Act's (s 23 (4) (a), (e)), so it holds for any accident.
+GIVEN `the date of the motor accident`                                         IS A DATE
+      `requires daily care`                                                    IS A BOOLEAN
+      `days as a continuous hospital in-patient, commencing on the date of the accident` IS A NUMBER
+GIVETH A `Cap answer`
+`the cl 8 limit for` `the date of the motor accident` `requires daily care` `days as a continuous hospital in-patient, commencing on the date of the accident` MEANS
+    BRANCH
+        IF `requires daily care` THEN `no cap, because the person requires daily care`
+        IF NOT (`the 2020 figures apply to an accident on` `the date of the motor accident`)
+        THEN `cap not covered` `an accident before 17 February 2020: the 2010 or 2000 Regulations apply, which are not deposited`
+        IF `days as a continuous hospital in-patient, commencing on the date of the accident` GREATER THAN 4
+        THEN `capped at` 500000
+        OTHERWISE `capped at` 400000
+
+-- What remains under the cap for a further claim, given what has already been paid.
+GIVEN `the cap`               IS A `Cap answer`
+      `already paid`          IS A NUMBER
+      `the further amount`    IS A NUMBER
+GIVETH A `MAIB amount`
+`the part payable under the cap` `the cap` `already paid` `the further amount` MEANS
+    CONSIDER `the cap`
+    WHEN `capped at` `limit` THEN `dollars` (min `the further amount` (max 0 (`limit` MINUS `already paid`)))
+    WHEN `no cap, because the person requires daily care` THEN `dollars` `the further amount`
+    WHEN `cap not covered` `why` THEN `amount not covered` `why`
+
+§§ `Sch 1 Pt 2 -- medical benefits`
+
+DECLARE `Kind of treatment` IS ONE OF
+    `travel by taxi to obtain treatment`               -- cl 1 (3) (j), or (k)
+    `travel by any other means to obtain treatment`    -- cl 1 (3) (k)
+    `other treatment`                                  -- cl 1 (3) (a)-(i): medical, surgical, dental, psychological, hospital, ambulance, nursing, rehabilitation, medicines, apparatus ...
+
+DECLARE `Treatment expense` HAS
+    `kind of treatment`                                              IS A `Kind of treatment`
+    `the expense incurred`                                           IS A NUMBER
+    -- cl 1 (4) (a): unreasonably incurred to the extent it exceeds the expense of the most economical manner practicable.
+    `the expense if provided in the most economical manner practicable` IS A NUMBER
+    -- cl 1 (4) (b): unnecessarily incurred if the treatment is not warranted, beneficial to the person and curative of
+    -- the person's injury. A judgment, asked as a fact.
+    `the treatment is warranted, beneficial and curative`            IS A BOOLEAN
+    `the treatment is required within the Commonwealth`              IS A BOOLEAN
+    -- cl 1 (2): sums paid, or required to be paid, under a law of the Commonwealth (for example Medicare benefits).
+    `sums paid or payable for it under a law of the Commonwealth`    IS A NUMBER
+    -- cl 1 (3) (j), (k): travel to treatment "from a person determined by the Board".
+    `the travel is to treatment from a person determined by the Board` IS A BOOLEAN
+    `the one-way distance travelled in kilometres`                   IS A NUMBER
+    `the date of the travel`                                         IS A DATE
+    `a medical practitioner certifies that the person requires a taxi because of the injury` IS A BOOLEAN
+
+-- cl 1 (3) (j): taxi, if 20 km or less one way, within 39 weeks after the date of the injury, and certified. (k): travel
+-- by any means, if the person requires daily care or the distance is greater than 20 km one way.
+GIVEN `the expense`         IS A `Treatment expense`
+      `the date of injury`  IS A DATE
+      `requires daily care` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the travel meets cl 1 (3) (j) or (k)` `the expense` `the date of injury` `requires daily care` IF
+        `the expense`'s `the travel is to treatment from a person determined by the Board`
+    AND (    (    `the expense`'s `kind of treatment` EQUALS `travel by taxi to obtain treatment`
+              AND `the expense`'s `the one-way distance travelled in kilometres` AT MOST 20
+              AND `the travel date` `is on or before` `the last day of the 39 weeks`
+              AND `the expense`'s `a medical practitioner certifies that the person requires a taxi because of the injury`)
+         OR `requires daily care`
+         OR `the expense`'s `the one-way distance travelled in kilometres` GREATER THAN 20)
+    WHERE
+        `the travel date` MEANS `the expense`'s `the date of the travel`
+        `the last day of the 39 weeks` MEANS (39 TIMES 7) `days after` `the date of injury`
+
+-- cl 1 (1): "all the expenses reasonably and necessarily incurred ... for the provision of treatment required ...
+-- within the Commonwealth as a result of the injury are payable as medical benefits"; cl 1 (2): reduced by the
+-- Commonwealth sums. READING: the reduction comes off the reasonable part, and the result is never below nil.
+-- The cl 8 cap and ss 23-24 are applied separately.
+GIVEN `the expense`         IS A `Treatment expense`
+      `the date of injury`  IS A DATE
+      `requires daily care` IS A BOOLEAN
+GIVETH A `MAIB amount`
+`the medical benefit for` `the expense` `the date of injury` `requires daily care` MEANS
+    BRANCH
+        IF NOT (`the expense`'s `the treatment is required within the Commonwealth`)
+        THEN `nothing payable` `not treatment required within the Commonwealth (Sch 1 Pt 2 cl 1 (1))`
+        IF NOT (`the expense`'s `the treatment is warranted, beneficial and curative`)
+        THEN `nothing payable` `unnecessarily incurred: the treatment is not warranted, beneficial and curative (Sch 1 Pt 2 cl 1 (4) (b))`
+        IF      (NOT (`the expense`'s `kind of treatment` EQUALS `other treatment`))
+            AND (NOT (`the travel meets cl 1 (3) (j) or (k)` `the expense` `the date of injury` `requires daily care`))
+        THEN `nothing payable` `travel that meets neither Sch 1 Pt 2 cl 1 (3) (j) nor (k)`
+        OTHERWISE `dollars` (max 0 ((min (`the expense`'s `the expense incurred`) (`the expense`'s `the expense if provided in the most economical manner practicable`)) MINUS (`the expense`'s `sums paid or payable for it under a law of the Commonwealth`)))
+
+§§ `Sch 1 Pt 3 -- funeral benefits`
+
+-- cl 2 (1): for an accident on or after 1 December 2007, "$7 500, plus an additional amount" A = 7 500 x I%, where I%
+-- is "the total percentage increase in adult average weekly earnings between the adult average weekly earnings released
+-- on the 2007 release day and the most recently released adult average weekly earnings for the period ending in May".
+-- The formula is an image in the source, transcribed in the deposit. The two AWE figures (ABS 6302.0) are inputs.
+-- READING: where AWE has fallen, there is no increase, and the additional amount is nil. No rounding is stated.
+GIVEN `the date of the motor accident`                       IS A DATE
+      `the adult AWE released on the 2007 release day`       IS A NUMBER
+      `the most recently released adult AWE for the period ending in May` IS A NUMBER
+GIVETH A `MAIB amount`
+`the funeral benefit limit for` `the date of the motor accident` `the adult AWE released on the 2007 release day` `the most recently released adult AWE for the period ending in May` MEANS
+    IF NOT (`1 December 2007` `is on or before` `the date of the motor accident`)
+    THEN `amount not covered` `funeral benefits for an accident before 1 December 2007: the 2000 Regulations apply, which are not deposited`
+    ELSE `dollars` (7500 PLUS (7500 TIMES `I%`))
+    WHERE
+        `I%` MEANS max 0 ((`the most recently released adult AWE for the period ending in May` MINUS `the adult AWE released on the 2007 release day`) DIVIDED BY `the adult AWE released on the 2007 release day`)
+
+-- cl 1: "all expenses reasonably incurred in the burial or cremation of the body are payable as funeral benefits, other
+-- than expenses incurred in the provision or erection of a gravestone", up to the cl 2 limit.
+GIVEN `the date of the motor accident`                       IS A DATE
+      `the death results directly from the motor accident`   IS A BOOLEAN
+      `burial or cremation expenses reasonably incurred`     IS A NUMBER
+      `of which for the provision or erection of a gravestone` IS A NUMBER
+      `the adult AWE released on the 2007 release day`       IS A NUMBER
+      `the most recently released adult AWE for the period ending in May` IS A NUMBER
+GIVETH A `MAIB amount`
+`the funeral benefits payable for` `the date of the motor accident` `the death results directly from the motor accident` `burial or cremation expenses reasonably incurred` `of which for the provision or erection of a gravestone` `the adult AWE released on the 2007 release day` `the most recently released adult AWE for the period ending in May` MEANS
+    IF NOT `the death results directly from the motor accident`
+    THEN `nothing payable` `the death did not result directly from the motor accident`
+    ELSE CONSIDER `the funeral benefit limit for` `the date of the motor accident` `the adult AWE released on the 2007 release day` `the most recently released adult AWE for the period ending in May`
+         WHEN `dollars` `limit` THEN `dollars` (min `limit` (max 0 (`burial or cremation expenses reasonably incurred` MINUS `of which for the provision or erection of a gravestone`)))
+         OTHERWISE `the funeral benefit limit for` `the date of the motor accident` `the adult AWE released on the 2007 release day` `the most recently released adult AWE for the period ending in May`
+
+§§ `Sch 1 Pt 1 -- dependants and dependent children`
+
+DECLARE `Relationship to the person who died` IS ONE OF
+    `the spouse, or a person in a significant relationship with them`   -- cl 1, "spouse"; Relationships Act 2003
+    `a child of theirs, or of a marriage or significant relationship they were a party to` -- cl 1 "child", cl 2
+    `a parent`
+    `a person in a caring relationship with them`                       -- Relationships Act 2003
+    `someone else`
+
+DECLARE `Survivor` HAS
+    `relationship to the person who died`                                 IS A `Relationship to the person who died`
+    -- READING: the Schedule does not say on which day an age is taken; the encoding uses the day of the death.
+    `age in years on the day of the death`                                IS A NUMBER
+    `would, but for the death, be wholly or partly dependent on the person for financial support` IS A BOOLEAN
+    `would, but for the death, be wholly or partly dependent on the person for care other than financial support` IS A BOOLEAN
+    `has a spouse`                                                        IS A BOOLEAN
+    `is a full-time student`                                              IS A BOOLEAN
+    `ordinarily resided with the person at the same premises`             IS A BOOLEAN
+    `was principally dependent on the person for financial support`       IS A BOOLEAN
+    `is the parent or step-parent of a dependent child who would, but for the death, be dependent on the person for care` IS A BOOLEAN
+    -- cl 4: a child born from a pregnancy at the time of the accident is treated as born immediately before it, and as
+    -- dependent on both parents (or the parent then living) for financial support.
+    `was born from a pregnancy at the time of the accident`               IS A BOOLEAN
+    -- cl 7: living at the end of 30 days beginning on the day of the death (for a child born after the death, on the
+    -- day of the birth).
+    `survived the person by the cl 7 period of 30 days`                   IS A BOOLEAN
+
+GIVEN `the survivor` IS A `Survivor`
+GIVETH A BOOLEAN
+DECIDE `is financially dependent` `the survivor` IF
+        `the survivor`'s `would, but for the death, be wholly or partly dependent on the person for financial support`
+    OR  `the survivor`'s `was born from a pregnancy at the time of the accident`
+
+-- cl 1, "dependent child": (a) wholly or partly dependent for financial support, a child of the person or of a
+-- marriage or significant relationship to which the person is a party, without a spouse, and under 16, or 16 or more
+-- but under 25 and a full-time student; or (b) wholly or partly dependent for care other than financial support, such
+-- a child, and under 16.
+GIVEN `the survivor` IS A `Survivor`
+GIVETH A BOOLEAN
+DECIDE `is a dependent child` `the survivor` IF
+        `the survivor`'s `relationship to the person who died` EQUALS `a child of theirs, or of a marriage or significant relationship they were a party to`
+    AND (    (    `is financially dependent` `the survivor`
+              AND (NOT (`the survivor`'s `has a spouse`))
+              AND (    `the survivor`'s `age in years on the day of the death` LESS THAN 16
+                   OR  (    `the survivor`'s `age in years on the day of the death` LESS THAN 25
+                        AND `the survivor`'s `is a full-time student`)))
+         OR  (    `the survivor`'s `would, but for the death, be wholly or partly dependent on the person for care other than financial support`
+              AND `the survivor`'s `age in years on the day of the death` LESS THAN 16))
+
+-- cl 1, "dependant", (a) to (e), with cl 5 (dependent parent), cl 6 (dependent carer) and cl 7 (survivorship).
+GIVEN `the survivor` IS A `Survivor`
+GIVETH A BOOLEAN
+DECIDE `is a dependant` `the survivor` IF
+        `the survivor`'s `survived the person by the cl 7 period of 30 days`
+    AND (    (    `the survivor`'s `relationship to the person who died` EQUALS `the spouse, or a person in a significant relationship with them`
+              AND (    `is financially dependent` `the survivor`
+                   OR  `the survivor`'s `is the parent or step-parent of a dependent child who would, but for the death, be dependent on the person for care`))
+         OR  `is a dependent child` `the survivor`
+         OR  (    `the survivor`'s `relationship to the person who died` EQUALS `a parent`
+              AND `the survivor`'s `ordinarily resided with the person at the same premises`
+              AND `the survivor`'s `was principally dependent on the person for financial support`)
+         OR  (    `the survivor`'s `relationship to the person who died` EQUALS `a person in a caring relationship with them`
+              AND `the survivor`'s `ordinarily resided with the person at the same premises`
+              AND `the survivor`'s `was principally dependent on the person for financial support`))
+
+§§ `Sch 1 Pt 4 -- death benefits`
+
+-- cl 1 (1)-(3) and cl 2. (1): a lump sum if the death results directly from the accident and the person is survived by
+-- one or more dependants. (2): $88 000 for an accident on or after 17 February 2020. (3): "If the deceased is survived
+-- by 2 or more dependants, of whom at least one is a dependent child who (a) is less than 9 years of age ... increased
+-- by $26 000 in respect of each such dependent child; or (b) has attained 9 years of age but is less than 18 ...
+-- $13 000 ...; or (c) has attained 18 years of age but is less than 25 ... $5 200 ...". READING: each dependent child
+-- adds the increase for its own age band (NOTES.md, finding 10). cl 2: reduced by the disability allowance paid;
+-- READING: never below nil. cl 1 (4): the Board apportions the lump sum between the dependants (not computed); a share
+-- for a dependent child under 18 is paid to the Public Trustee. cl 1 (5)-(8): earlier accidents use earlier
+-- Regulations, not deposited: not covered.
+GIVEN `the date of the motor accident`                     IS A DATE
+      `the death results directly from the motor accident` IS A BOOLEAN
+      `dependants who are not dependent children`          IS A NUMBER
+      `dependent children under 9`                         IS A NUMBER
+      `dependent children aged 9 to 17`                    IS A NUMBER
+      `dependent children aged 18 to 24`                   IS A NUMBER
+      `disability allowance already paid`                  IS A NUMBER
+GIVETH A `MAIB amount`
+`the death benefit lump sum for` `the date of the motor accident` `the death results directly from the motor accident` `dependants who are not dependent children` `dependent children under 9` `dependent children aged 9 to 17` `dependent children aged 18 to 24` `disability allowance already paid` MEANS
+    BRANCH
+        IF NOT `the death results directly from the motor accident`
+        THEN `nothing payable` `the death did not result directly from the motor accident`
+        IF NOT (`the 2020 figures apply to an accident on` `the date of the motor accident`)
+        THEN `amount not covered` `an accident before 17 February 2020: the 2010 or 2000 Regulations apply, which are not deposited`
+        IF `the number of dependants` EQUALS 0
+        THEN `nothing payable` `no dependant survived the person who died (Sch 1 Pt 4 cl 1 (1))`
+        OTHERWISE `dollars` (max 0 ((88000 PLUS `the cl 1 (3) increase`) MINUS `disability allowance already paid`))
+    WHERE
+        `the number of dependants` MEANS
+            `dependants who are not dependent children` PLUS `dependent children under 9` PLUS `dependent children aged 9 to 17` PLUS `dependent children aged 18 to 24`
+        `the cl 1 (3) increase` MEANS
+            IF `the number of dependants` AT LEAST 2
+            THEN (26000 TIMES `dependent children under 9`) PLUS (13000 TIMES `dependent children aged 9 to 17`) PLUS (5200 TIMES `dependent children aged 18 to 24`)
+            ELSE 0
+
+GIVEN `low`           IS A NUMBER
+      `high`          IS A NUMBER
+      `the survivors` IS A LIST OF `Survivor`
+GIVETH A NUMBER
+`the dependent children aged from` `low` `to under` `high` `among` `the survivors` MEANS
+    count (filter (GIVEN s YIELD `is a dependant` s AND `is a dependent child` s AND s's `age in years on the day of the death` AT LEAST `low` AND s's `age in years on the day of the death` LESS THAN `high`) `the survivors`)
+
+-- The same lump sum, worked out from each survivor's facts.
+GIVEN `the date of the motor accident`                     IS A DATE
+      `the death results directly from the motor accident` IS A BOOLEAN
+      `the survivors`                                      IS A LIST OF `Survivor`
+      `disability allowance already paid`                  IS A NUMBER
+GIVETH A `MAIB amount`
+`the death benefit lump sum for the survivors` `the date of the motor accident` `the death results directly from the motor accident` `the survivors` `disability allowance already paid` MEANS
+    `the death benefit lump sum for` `the date of the motor accident` `the death results directly from the motor accident`
+        (count (filter (GIVEN s YIELD `is a dependant` s AND (NOT (`is a dependent child` s))) `the survivors`))
+        (`the dependent children aged from` 0 `to under` 9 `among` `the survivors`)
+        (`the dependent children aged from` 9 `to under` 18 `among` `the survivors`)
+        (`the dependent children aged from` 18 `to under` 25 `among` `the survivors`)
+        `disability allowance already paid`
+
+§§ `Sch 1 Pt 5 -- disability allowances`
+
+DECLARE `Disability allowance` IS ONE OF
+    `an employed person's allowance`                -- cl 3
+    `a self-employed person's replacement allowance` -- cl 4
+    `a housekeeping allowance`                      -- cl 5
+
+-- The injured person's position at the time of the motor accident.
+DECLARE `Work at the time of the accident` HAS
+    -- cl 3 (2) (a), with cl 3 (3) (temporary absence or standing down) and cl 1 (1) (an office of profit).
+    `engaged in employment or an occupation for remuneration or profit`  IS A BOOLEAN
+    -- cl 3 (2) (b).
+    `travelling directly from home to take up employment or an occupation at the end of the journey` IS A BOOLEAN
+    -- cl 3 (2) (c) (i)-(iii).
+    `at least 15 years old, or exempt from school, on the day of the accident` IS A BOOLEAN
+    `weeks engaged in employment or an occupation in the 12 months before the day of the accident` IS A NUMBER
+    `actively seeking employment through all avenues reasonably available, or certified unfit for work by a medical practitioner` IS A BOOLEAN
+    -- cl 4 (2) (a); "business" (cl 4 (1)) does not include an occupation as an employee.
+    `carrying on a business for profit`                                   IS A BOOLEAN
+    -- cl 5 (1).
+    `normally carried out household duties`                               IS A BOOLEAN
+
+-- cl 3 (2): entitled to an employed person's allowance if, at the time of the accident, (a), (b) or (c).
+GIVEN `the work` IS A `Work at the time of the accident`
+GIVETH A BOOLEAN
+DECIDE `entitled to an employed person's allowance under cl 3 (2)` `the work` IF
+        `the work`'s `engaged in employment or an occupation for remuneration or profit`
+    OR  `the work`'s `travelling directly from home to take up employment or an occupation at the end of the journey`
+    OR  (    `the work`'s `at least 15 years old, or exempt from school, on the day of the accident`
+         AND `the work`'s `weeks engaged in employment or an occupation in the 12 months before the day of the accident` AT LEAST 26
+         AND `the work`'s `actively seeking employment through all avenues reasonably available, or certified unfit for work by a medical practitioner`)
+
+-- cl 3 (2) (c) alone: the job seeker, whose average weekly earnings are worked out under cl 7 (1) (e).
+GIVEN `the work` IS A `Work at the time of the accident`
+GIVETH A BOOLEAN
+DECIDE `entitled only as a job seeker under cl 3 (2) (c)` `the work` IF
+        `entitled to an employed person's allowance under cl 3 (2)` `the work`
+    AND (NOT (`the work`'s `engaged in employment or an occupation for remuneration or profit`))
+    AND (NOT (`the work`'s `travelling directly from home to take up employment or an occupation at the end of the journey`))
+
+-- cl 7 (1): the Board determines average weekly earnings by the method for the person's case. cl 7 (2): earnings are
+-- remuneration and profits; cl 1 (3): not the employer's compulsory superannuation contributions.
+DECLARE `Earnings record` IS ONE OF
+    -- cl 7 (1) (a).
+    `continuously engaged for the entire 12 months before the day of the accident` HAS
+        `earnings in those 12 months` IS A NUMBER
+    -- cl 7 (1) (b).
+    `continuously engaged for one week or more but less than 12 months` HAS
+        `the day the continuous engagement began` IS A DATE
+        `earnings since that day`                 IS A NUMBER
+    -- cl 7 (1) (c).
+    `engaged for less than one week` HAS
+        `the average weekly earnings of a person in the same, or the closest, employment` IS A NUMBER
+    -- cl 7 (1) (d).
+    `travelling to take up employment for the first time` HAS
+        `the average weekly earnings of a person employed in the same, or the closest, employment` IS A NUMBER
+    -- cl 7 (1) (e).
+    `entitled as a job seeker under cl 3 (2) (c)` HAS
+        `earnings in the weeks with earnings in the 12 months before the day of the accident` IS A NUMBER
+        `the number of weeks with earnings`                                                    IS A NUMBER
+
+-- cl 7 (1). (a), (b): the average weekly earnings "over that period", a period immediately preceding the day of the
+-- accident; read as the earnings divided by the days in the period over 7 (the 12 months: from the same day a year
+-- before, up to the day before the accident).
+GIVEN `the date of the motor accident` IS A DATE
+      `the record`                     IS AN `Earnings record`
+GIVETH A NUMBER
+`the average weekly earnings under cl 7` `the date of the motor accident` `the record` MEANS
+    CONSIDER `the record`
+    WHEN `continuously engaged for the entire 12 months before the day of the accident` `earnings` THEN
+        `earnings` DIVIDED BY ((`the days from` ((0 MINUS 1) `years after` `the date of the motor accident`) `to` `the date of the motor accident`) DIVIDED BY 7)
+    WHEN `continuously engaged for one week or more but less than 12 months` `began` `earnings` THEN
+        `earnings` DIVIDED BY ((`the days from` `began` `to` `the date of the motor accident`) DIVIDED BY 7)
+    WHEN `engaged for less than one week` `comparable` THEN `comparable`
+    WHEN `travelling to take up employment for the first time` `comparable` THEN `comparable`
+    WHEN `entitled as a job seeker under cl 3 (2) (c)` `earnings` `weeks` THEN
+        IF `weeks` GREATER THAN 0 THEN `earnings` DIVIDED BY `weeks` ELSE 0
+
+-- cl 3 (5): average weekly earnings over $400 -- the lesser of 80% of them and 3 times the adult average weekly
+-- earnings last published before the accident. cl 3 (6): $400 or less -- the lesser of $320 and the average weekly
+-- earnings. The $400 and $320 are not indexed.
+GIVEN `average weekly earnings`                                  IS A NUMBER
+      `adult average weekly earnings last published before the accident` IS A NUMBER
+GIVETH A NUMBER
+`the employed person's allowance rate for` `average weekly earnings` `adult average weekly earnings last published before the accident` MEANS
+    IF `average weekly earnings` GREATER THAN 400
+    THEN min (`average weekly earnings` TIMES 0.8) (3 TIMES `adult average weekly earnings last published before the accident`)
+    ELSE min 320 `average weekly earnings`
+
+-- cl 4 (4): the lesser of 80% of the remuneration, gratuity or reward paid to the person carrying on the business and 3
+-- times adult AWE; cl 4 (5): reduced by the value of the hours the self-employed person works, as the Board determines.
+-- READING: never below nil.
+GIVEN `weekly remuneration paid to the person carrying on the business` IS A NUMBER
+      `adult average weekly earnings last published before the accident` IS A NUMBER
+      `the value a week of the hours the self-employed person works, as determined by the Board` IS A NUMBER
+GIVETH A NUMBER
+`the self-employed person's replacement allowance rate for` `weekly remuneration paid to the person carrying on the business` `adult average weekly earnings last published before the accident` `the value a week of the hours the self-employed person works, as determined by the Board` MEANS
+    max 0 ((min (`weekly remuneration paid to the person carrying on the business` TIMES 0.8) (3 TIMES `adult average weekly earnings last published before the accident`)) MINUS `the value a week of the hours the self-employed person works, as determined by the Board`)
+
+-- cl 5 (3)-(5): the lesser of the reasonable commercial cost of engaging a person to carry out the household duties the
+-- person normally carried out at least once a week before the accident, and $250 a week; where a housekeeper was
+-- already employed, only the cost of the additional duties.
+GIVEN `the weekly commercial cost of the household duties normally done at least once a week` IS A NUMBER
+      `of which already done by a housekeeper employed before the injury` IS A NUMBER
+GIVETH A NUMBER
+`the housekeeping allowance rate for` `the weekly commercial cost of the household duties normally done at least once a week` `of which already done by a housekeeper employed before the injury` MEANS
+    min 250 (max 0 (`the weekly commercial cost of the household duties normally done at least once a week` MINUS `of which already done by a housekeeper employed before the injury`))
+
+-- cl 3 (7): reduced by remuneration or profit received for the period from any employment or occupation, and not
+-- payable if that exceeds it. Then s 24 (4): the proportion "of disability allowance otherwise payable". READING: the
+-- proportion is applied after the cl 3 (7) reduction.
+GIVEN `the weekly rate`                     IS A NUMBER
+      `remuneration or profit received for the week` IS A NUMBER
+      `the proportion`                      IS A NUMBER
+GIVETH A NUMBER
+`the allowance for a week` `the weekly rate` `remuneration or profit received for the week` `the proportion` MEANS
+    (max 0 (`the weekly rate` MINUS `remuneration or profit received for the week`)) TIMES `the proportion`
+
+DECLARE `Allowance answer` IS ONE OF
+    `weekly allowance` HAS
+        `the allowance`                                   IS A `Disability allowance`
+        `full weekly rate`                                IS A NUMBER
+        `for this week`                                   IS A NUMBER
+        `payable from`                                    IS A DATE
+        -- cl 3 (4) (a), cl 4 (3) (a): the 104 weeks beginning on the day of the accident, while wholly disabled from
+        -- the usual employment or occupation (the business); cl 5 (2): the 26 or 39 weeks, while wholly disabled
+        -- from normal household duties.
+        `first period ends`                               IS A DATE
+        -- cl 3 (4) (b), cl 4 (3) (b): the prescribed period of 156 weeks after it, while wholly disabled from any
+        -- suitable employment or occupation. A housekeeping allowance has no second period: the same date.
+        `prescribed period ends`                          IS A DATE
+    `no allowance` HAS `why no allowance` IS A `MAIB reason`
+    `allowance not covered` HAS `why the allowance is not covered` IS A `Not covered reason`
+
+-- cl 6 (1) (a): not payable for the 7 days beginning on the day of the accident.
+GIVEN `the date of the motor accident` IS A DATE
+GIVETH A DATE
+`the first day a disability allowance can be paid` `the date of the motor accident` MEANS 7 `days after` `the date of the motor accident`
+
+-- "the period of 104 weeks beginning on the day of the motor accident": its last day.
+GIVEN `the date of the motor accident` IS A DATE
+GIVETH A DATE
+`the last day of the 104 weeks` `the date of the motor accident` MEANS ((104 TIMES 7) MINUS 1) `days after` `the date of the motor accident`
+
+-- the prescribed period, "156 weeks beginning at the expiration of" the 104 weeks: its last day.
+GIVEN `the date of the motor accident` IS A DATE
+GIVETH A DATE
+`the last day of the prescribed period` `the date of the motor accident` MEANS ((260 TIMES 7) MINUS 1) `days after` `the date of the motor accident`
+
+-- cl 5 (2): "any period within 39 weeks after the day of the accident" (an in-patient for a continuous period of more
+-- than 4 days commencing on the day of the accident), otherwise "within 26 weeks after the day of the accident".
+GIVEN `the date of the motor accident`                                        IS A DATE
+      `days as a continuous hospital in-patient, commencing on the day of the accident` IS A NUMBER
+GIVETH A DATE
+`the last day of the housekeeping period` `the date of the motor accident` `days as a continuous hospital in-patient, commencing on the day of the accident` MEANS
+    IF `days as a continuous hospital in-patient, commencing on the day of the accident` GREATER THAN 4
+    THEN (39 TIMES 7) `days after` `the date of the motor accident`
+    ELSE (26 TIMES 7) `days after` `the date of the motor accident`
+
+-- The checks every disability allowance shares: the 2020 figures, the s 24 (4) proportion, the cl 6 (2) 20-day rule.
+GIVEN `the date of the motor accident`   IS A DATE
+      `the s 24 (4) facts`               IS A `Section 24 (4) facts`
+      `wholly disabled within 20 days`   IS A BOOLEAN
+      `the allowance`                    IS A `Disability allowance`
+      `the weekly rate`                  IS A NUMBER
+      `remuneration or profit received for the week` IS A NUMBER
+      `first period ends`                IS A DATE
+      `prescribed period ends`           IS A DATE
+GIVETH AN `Allowance answer`
+`the allowance answer for` `the date of the motor accident` `the s 24 (4) facts` `wholly disabled within 20 days` `the allowance` `the weekly rate` `remuneration or profit received for the week` `first period ends` `prescribed period ends` MEANS
+    IF NOT (`the 2020 figures apply to an accident on` `the date of the motor accident`)
+    THEN `allowance not covered` `an accident before 17 February 2020: the 2010 or 2000 Regulations apply, which are not deposited`
+    ELSE IF NOT `wholly disabled within 20 days`
+         THEN `no allowance` `not wholly disabled within 20 days beginning on the day of the accident (Sch 1 Pt 5 cl 6 (2))`
+         ELSE CONSIDER `the s 24 (4) proportion for` `the s 24 (4) facts`
+              WHEN `proportion not covered` `why` THEN `allowance not covered` `why`
+              WHEN `the proportion` `p` THEN
+                  IF `p` EQUALS 0
+                  THEN `no allowance` `nil under the s 24 (4) table`
+                  ELSE `weekly allowance` `the allowance` ((`the weekly rate`) TIMES `p`) (`the allowance for a week` `the weekly rate` `remuneration or profit received for the week` `p`) (`the first day a disability allowance can be paid` `the date of the motor accident`) `first period ends` `prescribed period ends`
+
+-- cl 3: the employed person's allowance, from the average weekly earnings the Board determines under cl 7. cl 6 (2)
+-- (a): wholly disabled from the usual employment or occupation within the 20 days beginning on the day of the accident.
+GIVEN `the date of the motor accident`   IS A DATE
+      `the work`                         IS A `Work at the time of the accident`
+      `average weekly earnings`          IS A NUMBER
+      `adult average weekly earnings last published before the accident` IS A NUMBER
+      `wholly disabled from the usual employment within 20 days` IS A BOOLEAN
+      `remuneration or profit received for the week` IS A NUMBER
+      `the s 24 (4) facts`               IS A `Section 24 (4) facts`
+GIVETH AN `Allowance answer`
+`the employed person's allowance for` `the date of the motor accident` `the work` `average weekly earnings` `adult average weekly earnings last published before the accident` `wholly disabled from the usual employment within 20 days` `remuneration or profit received for the week` `the s 24 (4) facts` MEANS
+    IF NOT (`entitled to an employed person's allowance under cl 3 (2)` `the work`)
+    THEN `no allowance` `not entitled to an employed person's allowance (Sch 1 Pt 5 cl 3 (2))`
+    ELSE `the allowance answer for` `the date of the motor accident` `the s 24 (4) facts` `wholly disabled from the usual employment within 20 days`
+             `an employed person's allowance`
+             (`the employed person's allowance rate for` `average weekly earnings` `adult average weekly earnings last published before the accident`)
+             `remuneration or profit received for the week`
+             (`the last day of the 104 weeks` `the date of the motor accident`)
+             (`the last day of the prescribed period` `the date of the motor accident`)
+
+-- cl 4: the self-employed person's replacement allowance. cl 4 (2): a business carried on for profit at the time of
+-- the accident, the person disabled from conducting it, and arrangements made for another person to be paid to
+-- conduct it. cl 3 (7) does not apply; cl 4 (5) does, in the rate.
+GIVEN `the date of the motor accident`   IS A DATE
+      `the work`                         IS A `Work at the time of the accident`
+      `another person is paid to conduct the business while the person is disabled` IS A BOOLEAN
+      `weekly remuneration paid to the person carrying on the business` IS A NUMBER
+      `adult average weekly earnings last published before the accident` IS A NUMBER
+      `the value a week of the hours the self-employed person works, as determined by the Board` IS A NUMBER
+      `wholly disabled from conducting the business within 20 days` IS A BOOLEAN
+      `the s 24 (4) facts`               IS A `Section 24 (4) facts`
+GIVETH AN `Allowance answer`
+`the self-employed person's replacement allowance for` `the date of the motor accident` `the work` `another person is paid to conduct the business while the person is disabled` `weekly remuneration paid to the person carrying on the business` `adult average weekly earnings last published before the accident` `the value a week of the hours the self-employed person works, as determined by the Board` `wholly disabled from conducting the business within 20 days` `the s 24 (4) facts` MEANS
+    IF NOT (`the work`'s `carrying on a business for profit` AND `another person is paid to conduct the business while the person is disabled`)
+    THEN `no allowance` `not entitled to a self-employed person's replacement allowance (Sch 1 Pt 5 cl 4 (2))`
+    ELSE `the allowance answer for` `the date of the motor accident` `the s 24 (4) facts` `wholly disabled from conducting the business within 20 days`
+             `a self-employed person's replacement allowance`
+             (`the self-employed person's replacement allowance rate for` `weekly remuneration paid to the person carrying on the business` `adult average weekly earnings last published before the accident` `the value a week of the hours the self-employed person works, as determined by the Board`)
+             0
+             (`the last day of the 104 weeks` `the date of the motor accident`)
+             (`the last day of the prescribed period` `the date of the motor accident`)
+
+-- cl 5: the housekeeping allowance. cl 6 (2) (b): wholly disabled from ordinary household duties within the 20 days.
+GIVEN `the date of the motor accident`   IS A DATE
+      `the work`                         IS A `Work at the time of the accident`
+      `the weekly commercial cost of the household duties normally done at least once a week` IS A NUMBER
+      `of which already done by a housekeeper employed before the injury` IS A NUMBER
+      `days as a continuous hospital in-patient, commencing on the day of the accident` IS A NUMBER
+      `wholly disabled from household duties within 20 days` IS A BOOLEAN
+      `the s 24 (4) facts`               IS A `Section 24 (4) facts`
+GIVETH AN `Allowance answer`
+`the housekeeping allowance for` `the date of the motor accident` `the work` `the weekly commercial cost of the household duties normally done at least once a week` `of which already done by a housekeeper employed before the injury` `days as a continuous hospital in-patient, commencing on the day of the accident` `wholly disabled from household duties within 20 days` `the s 24 (4) facts` MEANS
+    IF NOT (`the work`'s `normally carried out household duties`)
+    THEN `no allowance` `not entitled to a housekeeping allowance (Sch 1 Pt 5 cl 5 (1))`
+    ELSE `the allowance answer for` `the date of the motor accident` `the s 24 (4) facts` `wholly disabled from household duties within 20 days`
+             `a housekeeping allowance`
+             (`the housekeeping allowance rate for` `the weekly commercial cost of the household duties normally done at least once a week` `of which already done by a housekeeper employed before the injury`)
+             0
+             (`the last day of the housekeeping period` `the date of the motor accident` `days as a continuous hospital in-patient, commencing on the day of the accident`)
+             (`the last day of the housekeeping period` `the date of the motor accident` `days as a continuous hospital in-patient, commencing on the day of the accident`)
+
+-- Whether an allowance is payable on a given day: within its period, after the first 7 days, while wholly disabled as
+-- that period requires, and not while outside the Commonwealth (cl 6 (1) (b)).
+GIVEN `the answer`                          IS AN `Allowance answer`
+      `the day`                             IS A DATE
+      `wholly disabled from the usual work, the business or household duties on that day` IS A BOOLEAN
+      `wholly disabled from any suitable employment or occupation on that day` IS A BOOLEAN
+      `outside the Commonwealth on that day` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the allowance is payable on` `the answer` `the day` `wholly disabled from the usual work, the business or household duties on that day` `wholly disabled from any suitable employment or occupation on that day` `outside the Commonwealth on that day` IF
+    CONSIDER `the answer`
+    WHEN `weekly allowance` `kind` `rate` `this week` `from` `first ends` `second ends` THEN
+            `from` `is on or before` `the day`
+        AND (NOT `outside the Commonwealth on that day`)
+        AND (    (`the day` `is on or before` `first ends` AND `wholly disabled from the usual work, the business or household duties on that day`)
+             OR  (    (NOT (`the day` `is on or before` `first ends`))
+                  AND `the day` `is on or before` `second ends`
+                  AND `wholly disabled from any suitable employment or occupation on that day`))
+    OTHERWISE FALSE
+
+-- cl 2 (3): "Unless provided to the contrary in this Part, a person is not entitled to both an employed person's
+-- allowance and a self-employed person's replacement allowance." The Part does not say which one a person entitled
+-- to both receives (NOTES.md, finding 11).
+DECLARE `Allowances that may apply` HAS
+    `an employed person's allowance may apply`                 IS A BOOLEAN
+    `a self-employed person's replacement allowance may apply` IS A BOOLEAN
+    `a housekeeping allowance may apply`                       IS A BOOLEAN
+    `cl 2 (3): not both the employed and the self-employed allowance` IS A BOOLEAN
+
+GIVEN `the work` IS A `Work at the time of the accident`
+GIVETH A `Allowances that may apply`
+`the disability allowances that may apply for` `the work` MEANS
+    `Allowances that may apply` WITH
+        `an employed person's allowance may apply`                 IS `entitled to an employed person's allowance under cl 3 (2)` `the work`
+        `a self-employed person's replacement allowance may apply` IS `the work`'s `carrying on a business for profit`
+        `a housekeeping allowance may apply`                       IS `the work`'s `normally carried out household duties`
+        `cl 2 (3): not both the employed and the self-employed allowance` IS
+                `entitled to an employed person's allowance under cl 3 (2)` `the work`
+            AND `the work`'s `carrying on a business for profit`
+
+§§ `Sch 1 Pt 7 -- counselling services benefits`
+
+-- s 23 (8): "family member" (a) a spouse or a person in a significant relationship; (b) a child; (c) a parent; (d) a
+-- sibling; (e) a relative or step-relative who lives with the person; (f) a prescribed person (none is prescribed).
+DECLARE `Family relationship` IS ONE OF
+    `a spouse, or a person in a significant relationship with the injured person`
+    `a child`
+    `a parent`
+    `a sibling`
+    `a relative or step-relative who lives with the injured person`
+    `another person`
+
+-- Pt 7 cl 1 (2): the most payable for each family member.
+GIVEN `the date of the motor accident` IS A DATE
+GIVETH A `MAIB amount`
+`the counselling limit for each family member for` `the date of the motor accident` MEANS
+    BRANCH
+        IF NOT (`1 December 2007` `is on or before` `the date of the motor accident`)
+        THEN `nothing payable` `the accident occurred before 1 December 2007 (Sch 1 Pt 7 cl 1 (1) (a))`
+        IF `the 2020 figures apply to an accident on` `the date of the motor accident`
+        THEN `dollars` 1270
+        OTHERWISE `dollars` 1000
+
+-- Pt 7 cl 1 (1): an accident on or after 1 December 2007; the injured person requires daily care, or has died, as a
+-- result; a family member requires counselling services because of that injury or death: the expenses reasonably
+-- incurred for them, up to the cl 1 (2) limit. s 23 (8): counselling services are counselling by, or under the
+-- supervision of, a registered psychologist (or another prescribed person: none is prescribed).
+GIVEN `the date of the motor accident`                     IS A DATE
+      `the injured person requires daily care`             IS A BOOLEAN
+      `the injured person has died as a result of the injury` IS A BOOLEAN
+      `the relationship`                                   IS A `Family relationship`
+      `the family member requires counselling services because of the injury or death` IS A BOOLEAN
+      `provided by, or under the supervision of, a registered psychologist` IS A BOOLEAN
+      `counselling expenses reasonably incurred`           IS A NUMBER
+GIVETH A `MAIB amount`
+`the counselling services benefit for` `the date of the motor accident` `the injured person requires daily care` `the injured person has died as a result of the injury` `the relationship` `the family member requires counselling services because of the injury or death` `provided by, or under the supervision of, a registered psychologist` `counselling expenses reasonably incurred` MEANS
+    BRANCH
+        IF NOT (`the injured person requires daily care` OR `the injured person has died as a result of the injury`)
+        THEN `nothing payable` `neither the injured person requires daily care nor has the injured person died (Sch 1 Pt 7 cl 1 (1) (a))`
+        IF `the relationship` EQUALS `another person`
+        THEN `nothing payable` `not a family member (s 23 (8))`
+        IF NOT `the family member requires counselling services because of the injury or death`
+        THEN `nothing payable` `the family member does not require counselling services because of the injury or death (Sch 1 Pt 7 cl 1 (1) (b))`
+        IF NOT `provided by, or under the supervision of, a registered psychologist`
+        THEN `nothing payable` `the counselling is not provided by, or under the supervision of, a registered psychologist (s 23 (8))`
+        OTHERWISE
+            CONSIDER `the counselling limit for each family member for` `the date of the motor accident`
+            WHEN `dollars` `limit` THEN `dollars` (min `limit` `counselling expenses reasonably incurred`)
+            OTHERWISE `the counselling limit for each family member for` `the date of the motor accident`
+
+§§ `reg 10 (2)-(4) -- notice and claim`
+
+-- reg 10 (2) (b): the claim "is brought within one year after (i) the date of death resulting directly from the motor
+-- accident; or (ii) the date on which loss or expense resulting directly from the motor accident was incurred; or
+-- (iii) the date on which gratuitous care ... was, or services care ... were, provided".
+DECLARE `What the claim is for` IS ONE OF
+    `a death resulting directly from the motor accident`
+    `loss or expense resulting directly from the motor accident`
+    `gratuitous care, or services care, required as a direct result of the motor accident`
+
+-- reg 10 (2): "within one year after" a date -- the same date a year later is the last day. reg 10 (3): the Tribunal
+-- "may extend a period ... by such period not exceeding 5 years as it thinks fit"; (4) even after it has expired. The
+-- extension is the Tribunal's judgment, asked as a fact: the day to which it extended the period. READING: a longer
+-- extension is cut to 5 years; an "extension" to a day before the last day changes nothing.
+GIVEN `the date the period runs from`               IS A DATE
+      `the Tribunal has extended the period`        IS A BOOLEAN
+      `the day to which the Tribunal extended it`   IS A DATE
+GIVETH A DATE
+`the last day of the one-year period from` `the date the period runs from` `the Tribunal has extended the period` `the day to which the Tribunal extended it` MEANS
+    IF `the Tribunal has extended the period`
+    THEN `the later of` `the one-year day` `and` (`the earlier of` `the day to which the Tribunal extended it` `and` (5 `years after` `the one-year day`))
+    ELSE `the one-year day`
+    WHERE
+        `the one-year day` MEANS 1 `years after` `the date the period runs from`
+
+-- reg 10 (2) (a): "within one year after the date of the motor accident, written notice of the personal injury giving
+-- rise to the claim is given to the Board".
+GIVEN `the date of the motor accident`              IS A DATE
+      `the Tribunal has extended the period`        IS A BOOLEAN
+      `the day to which the Tribunal extended it`   IS A DATE
+GIVETH A DATE
+`the last day for written notice of the injury` `the date of the motor accident` `the Tribunal has extended the period` `the day to which the Tribunal extended it` MEANS
+    `the last day of the one-year period from` `the date of the motor accident` `the Tribunal has extended the period` `the day to which the Tribunal extended it`
+
+-- reg 10 (2) (b).
+GIVEN `the date of the death, loss or care`         IS A DATE
+      `the Tribunal has extended the period`        IS A BOOLEAN
+      `the day to which the Tribunal extended it`   IS A DATE
+GIVETH A DATE
+`the last day to bring the claim` `the date of the death, loss or care` `the Tribunal has extended the period` `the day to which the Tribunal extended it` MEANS
+    `the last day of the one-year period from` `the date of the death, loss or care` `the Tribunal has extended the period` `the day to which the Tribunal extended it`
+
+DECLARE `Claim timing` IS ONE OF
+    `in time`
+    `out of time: written notice of the injury was not given within the period (reg 10 (2) (a))`
+    `out of time: the claim was not brought within the period (reg 10 (2) (b))`
+
+GIVEN `the date written notice was given`  IS A DATE
+      `the last day for written notice`    IS A DATE
+      `the date the claim was brought`     IS A DATE
+      `the last day to bring the claim`    IS A DATE
+GIVETH A `Claim timing`
+`the reg 10 (2) timing of` `the date written notice was given` `the last day for written notice` `the date the claim was brought` `the last day to bring the claim` MEANS
+    BRANCH
+        IF NOT (`the date written notice was given` `is on or before` `the last day for written notice`)
+        THEN `out of time: written notice of the injury was not given within the period (reg 10 (2) (a))`
+        IF NOT (`the date the claim was brought` `is on or before` `the last day to bring the claim`)
+        THEN `out of time: the claim was not brought within the period (reg 10 (2) (b))`
+        OTHERWISE `in time`
+
+-- What a claimant must do, and by when: s 23 (2A) (report to a police officer as soon as practicable; no day is fixed)
+-- and reg 10 (2) (written notice; the claim).
+DECLARE `Police report step` IS ONE OF
+    `reported: nothing more to do`
+    `report the accident to a police officer as soon as practicable, or the Board must excuse the failure (s 23 (2A))`
+
+DECLARE `Steps to claim` HAS
+    `report to a police officer`                      IS A `Police report step`
+    `give the Board written notice of the injury by`  IS A DATE
+    `bring the claim by`                              IS A DATE
+
+GIVEN `reported to a police officer`               IS A BOOLEAN
+      `the last day for written notice`            IS A DATE
+      `the last day to bring the claim`            IS A DATE
+GIVETH A `Steps to claim`
+`the steps to claim` `reported to a police officer` `the last day for written notice` `the last day to bring the claim` MEANS
+    `Steps to claim` WITH
+        `report to a police officer` IS
+            IF `reported to a police officer`
+            THEN `reported: nothing more to do`
+            ELSE `report the accident to a police officer as soon as practicable, or the Board must excuse the failure (s 23 (2A))`
+        `give the Board written notice of the injury by` IS `the last day for written notice`
+        `bring the claim by`                             IS `the last day to bring the claim`
+
+§§ `s 28 (1)-(2) -- determination, and reference to the Tribunal`
+
+-- s 28 (2): "A person aggrieved (a) by a determination under subsection (1); or (b) by a refusal or failure of the
+-- Board to make a payment by way of a scheduled benefit -- may refer the matter to the Tribunal." No time limit is set
+-- in the Act or in the deposited Regulations (s 28 (8) (b) allows one; NOTES.md, finding 13).
+GIVEN `aggrieved by the Board's determination`              IS A BOOLEAN
+      `the Board has refused or failed to pay a scheduled benefit` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the person may refer the matter to the Tribunal under s 28 (2)` `aggrieved by the Board's determination` `the Board has refused or failed to pay a scheduled benefit` IF
+    `aggrieved by the Board's determination` OR `the Board has refused or failed to pay a scheduled benefit`
+
+§§ `Regulative rules`
+
+DECLARE `MAIB party` IS ONE OF
+    `the claimant`   -- the injured person, or the dependant or personal representative claiming after a death
+    `the Board`
+
+DECLARE `MAIB act` IS ONE OF
+    `give the Board written notice of the personal injury`
+    `bring the claim`
+    `determine the claim` HAS `the scheduled benefits are payable` IS A BOOLEAN
+    `pay the scheduled benefits` HAS `the amount paid` IS A NUMBER
+    `refer the matter to the Tribunal`
+
+-- s 23 (1), (1A), (2), (3): "The Board must pay the benefits prescribed by the regulations", in accordance with the
+-- Regulations. Neither text sets a time for payment, so the obligation has no WITHIN: it stays pending until paid.
+GIVEN `the amount` IS A NUMBER
+GIVETH A DEONTIC `MAIB party` `MAIB act`
+`s 23 -- the Board must pay the scheduled benefits` `the amount` MEANS
+    PARTY `the Board`
+    MUST  `pay the scheduled benefits` (EXACTLY `the amount`)
+
+-- s 28 (1): the Board is to determine whether the person is within a class to whom scheduled benefits may be paid,
+-- the right to a benefit, and its amount. No time is set. A determination that the benefits are payable leads to the
+-- s 23 payment; any other leads to the s 28 (2) permission to refer the matter to the Tribunal, with no time limit.
+GIVEN `the amount` IS A NUMBER
+GIVETH A DEONTIC `MAIB party` `MAIB act`
+`s 28 -- the Board determines the claim, and a person aggrieved may refer it to the Tribunal` `the amount` MEANS
+    PARTY `the Board`
+    MUST  `determine the claim` `found payable`
+    HENCE (IF `found payable`
+           THEN `s 23 -- the Board must pay the scheduled benefits` `the amount`
+           ELSE (PARTY `the claimant` MAY `refer the matter to the Tribunal`))
+
+-- reg 10 (2): a person "may make a claim ... if (a) within one year after the date of the motor accident, written
+-- notice of the personal injury ... is given to the Board; and (b) the claim is brought within one year after" the
+-- death, loss or care, each period as the Tribunal extends it. Encoded as two duties of the claimant, in parallel,
+-- from the date of the accident (day 0): missing either is a breach by the claimant (the claim cannot be made). A
+-- claim brought in time leads to the s 28 determination. The day counts come from the seat layer's dates.
+GIVEN `days from the accident to the last day for written notice` IS A NUMBER
+      `days from the accident to the last day to bring the claim` IS A NUMBER
+      `the amount`                                                IS A NUMBER
+GIVETH A DEONTIC `MAIB party` `MAIB act`
+`reg 10 -- the claimant must give written notice and bring the claim in time` `days from the accident to the last day for written notice` `days from the accident to the last day to bring the claim` `the amount` MEANS
+        (PARTY `the claimant`
+         MUST  `give the Board written notice of the personal injury`
+         WITHIN `days from the accident to the last day for written notice`
+         LEST  BREACH BY `the claimant` BECAUSE "reg 10 (2) (a): written notice of the personal injury must be given to the Board within one year after the date of the motor accident (or the period as extended by the Tribunal under reg 10 (3)-(4))")
+    RAND
+        (PARTY `the claimant`
+         MUST  `bring the claim`
+         WITHIN `days from the accident to the last day to bring the claim`
+         HENCE `s 28 -- the Board determines the claim, and a person aggrieved may refer it to the Tribunal` `the amount`
+         LEST  BREACH BY `the claimant` BECAUSE "reg 10 (2) (b): the claim must be brought within one year after the death, the loss or expense, or the care (or the period as extended by the Tribunal under reg 10 (3)-(4))")

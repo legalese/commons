@@ -1,0 +1,234 @@
+IMPORT prelude
+IMPORT `maib-core`
+
+-- Motor Accidents (Liabilities and Compensation) Act 1973 (Tas) and Regulations 2020 -- the MAIB scheduled benefits,
+-- from the seat of the Motor Accidents Insurance Board as insurer.
+--
+-- SEAT: the Board, only for its duty to pay scheduled benefits under s 23 (1), (1A) and (2): "The Board must pay the
+-- benefits prescribed by the regulations if ...". It asks: "Must I pay scheduled benefits for this injury, and which?
+-- What allowance must I pay this week? What is the most I must pay under the cap, as a funeral benefit, as a death
+-- benefit? Was the claim made in time? What part of the allowance must I pay after a drink-driving conviction?" Its
+-- other functions (premiums, Part III indemnity, administration, the Injury Prevention and Management Foundation) are
+-- out of scope. The rules are in maib-core.l4; this module builds the core's records from plain answers and restates
+-- no rule. Its names are its own: none is defined in maib-seat.l4.
+--
+-- BASELINE. Not for public use as advice. See NOTES.md.
+
+§ `MAIB scheduled benefits -- the Board's questions about its duty to pay (s 23 (1), (1A), (2))`
+
+§§ `Building the core's records from the Board's answers`
+
+GIVEN `Tasmanian vehicle` IS A `How the injury resulted from the vehicle`
+      `interstate vehicle` IS A `How the injury resulted from the vehicle`
+      `other vehicle`      IS A `How the injury resulted from the vehicle`
+GIVETH A LIST OF `Vehicle involved`
+`the claimant's vehicles` `Tasmanian vehicle` `interstate vehicle` `other vehicle` MEANS
+    LIST
+        `Vehicle involved` WITH
+            `its registration`                IS `registered in this State`
+            `how the injury resulted from it` IS `Tasmanian vehicle`
+        `Vehicle involved` WITH
+            `its registration`                IS `an interstate motor vehicle`
+            `how the injury resulted from it` IS `interstate vehicle`
+        `Vehicle involved` WITH
+            `its registration`                IS `neither registered in this State nor an interstate motor vehicle`
+            `how the injury resulted from it` IS `other vehicle`
+
+-- The Board states a single fact for daily care: whether it has determined that the person requires daily care
+-- (s 28 (1)). It is carried in the s 27A (2) field, which the rule reads as settling the question; the other fields
+-- are fixed placeholders.
+GIVEN `requires daily care` IS A BOOLEAN
+GIVETH A `Daily care facts`
+`the claimant's daily care` `requires daily care` MEANS
+    `Daily care facts` WITH
+        `hours a day of daily care the person requires or is likely to require` IS 0
+        `the daily care is required for an indefinite period`                    IS FALSE
+        `the daily care commences not later than one year after the date of the accident` IS FALSE
+        `a court has certified that the person requires daily care`              IS `requires daily care`
+        `the person accepted a payment into court or offer of compromise made on the basis that the person requires daily care` IS FALSE
+
+DECLARE `The claimant's alcohol or drug driving conviction` IS ONE OF
+    `no such conviction`
+    `under s 6 (1)`
+    `under s 14 (1A)`
+    `under s 14 (2)`
+    `under s 14 (5)`
+
+GIVEN `the conviction`    IS A `The claimant's alcohol or drug driving conviction`
+      `the concentration` IS A NUMBER
+      `no contribution`   IS A BOOLEAN
+GIVETH A `Section 24 (4) facts`
+`the claimant's s 24 (4) facts` `the conviction` `the concentration` `no contribution` MEANS
+    `Section 24 (4) facts` WITH
+        `the conviction` IS
+            CONSIDER `the conviction`
+            WHEN `no such conviction` THEN `no conviction under s 6 (1), 14 (1A), 14 (2) or 14 (5)`
+            WHEN `under s 6 (1)` THEN `a conviction under s 6 (1)` `the concentration`
+            WHEN `under s 14 (1A)` THEN `a conviction under s 14 (1A)`
+            WHEN `under s 14 (2)` THEN `a conviction under s 14 (2)`
+            WHEN `under s 14 (5)` THEN `a conviction under s 14 (5)`
+        `the person has satisfied the Board that the alcohol did not contribute in any way to the accident` IS `no contribution`
+
+§§ `Must I pay? (ss 23-24)`
+
+@export As MAIB, must I pay scheduled benefits for this person's injury, and which ones (ss 2B, 23, 24)?
+GIVEN `where the accident happened` IS A `Place` @desc Where the motor accident happened: in this State (Tasmania), in another State or a Territory, or outside the Commonwealth
+      `where the injured person ordinarily lives` IS A `Place` @desc The injured person's ordinary place of residence (s 2B)
+      `how a Tasmanian-registered vehicle caused the injury` IS A `How the injury resulted from the vehicle` @desc How a vehicle registered under the Vehicle and Traffic Act 1999 (even if suspended) caused the injury: a collision or avoiding one, out of control, the driving of it, or none of those
+      `how an interstate motor vehicle caused the injury` IS A `How the injury resulted from the vehicle` @desc How an interstate motor vehicle caused the injury: a collision or avoiding one, out of control, the driving of it, or none of those
+      `how any other vehicle caused the injury` IS A `How the injury resulted from the vehicle` @desc How any other motor vehicle caused the injury: a collision or avoiding one, out of control, the driving of it, or none of those
+      `I have determined the person requires daily care` IS A BOOLEAN @desc Whether you have determined (or a court has certified, or the person is taken under s 27A (3)) that the person requires daily care (s 2 (5))
+      `the accident was reported to police as soon as practicable` IS A BOOLEAN @desc Whether the accident was reported to a police officer as soon as practicable
+      `I have excused the failure to report` IS A BOOLEAN @desc If not, whether you have determined that the failure to report should be excused (s 23 (2A))
+      `the person intentionally caused or tried to cause injury` IS A BOOLEAN @desc s 24 (1) (a): the injury results from the person intentionally causing or trying to cause injury to themself or another
+      `workers compensation is payable` IS A BOOLEAN @desc s 24 (1) (b): compensation is payable for the injury under a workers compensation law
+      `another motor accident scheme's compensation is payable` IS A BOOLEAN @desc s 24 (1) (ba): compensation is payable under a motor accidents compensation law of the Commonwealth or another State or Territory, or a policy it requires
+      `a compensated asbestos disease` IS A BOOLEAN @desc s 24 (1) (bb): an asbestos-related disease compensated under the 2011 Act
+      `ionizing radiation` IS A BOOLEAN @desc s 24 (1) (c): the injury results from the person being subjected to ionizing radiation
+      `taking part in a motor vehicle race` IS A BOOLEAN @desc s 24 (1) (d): the accident was in a motor vehicle race in which the person was taking part
+      `a vehicle used for an offence the person was party to` IS A BOOLEAN @desc s 24 (1) (f): the vehicle was used for an offence of dishonesty or violence and the person was party to that use
+      `a vehicle used for terrorism` IS A BOOLEAN @desc s 24 (1) (h): a vehicle in the accident was being used for an act of terrorism
+      `the person owned the vehicle whose use caused the accident` IS A BOOLEAN @desc Whether the injured person was the owner of the vehicle whose use resulted in the accident
+      `the person drove the vehicle whose use caused the accident` IS A BOOLEAN @desc Whether the injured person was its driver
+      `the accident resulted from the use of that vehicle` IS A BOOLEAN @desc Whether the accident resulted from the use of the vehicle the person owned or drove; FALSE for a passenger or pedestrian
+      `the kind of that vehicle` IS A `Kind of vehicle` @desc A trail bike, farm bike or beach buggy; a trailer prescribed by reg 11 (2); or any other motor vehicle
+      `that vehicle is an interstate motor vehicle` IS A BOOLEAN @desc Whether that vehicle is an interstate motor vehicle
+      `the premium for its use had been paid` IS A BOOLEAN @desc Whether the s 30 premium for its use, in the circumstances, had been paid
+      `an interstate premium is required for that vehicle` IS A BOOLEAN @desc Whether an interstate premium is required for it
+      `that interstate premium had been paid` IS A BOOLEAN @desc Whether that interstate premium for its use, in the circumstances, had been paid
+      `the driver knew or ought to have known it was unpaid` IS A BOOLEAN @desc Whether the person, as driver, knew or ought to have known that the premium had not been paid
+      `a permitted out-of-State vehicle with third party insurance` IS A BOOLEAN @desc Whether it was a permitted out-of-State vehicle with a third party insurance policy in force (s 24 (1A))
+      `the person's conviction arising out of their driving` IS A `Section 24 (2) (a) conviction` @desc Any s 24 (2) (a) conviction arising out of the person's driving at the time of the accident, or none
+      `the person was driving` IS A BOOLEAN @desc Whether the person was driving a motor vehicle at the time
+      `the person held a licence of the relevant class` IS A BOOLEAN @desc Whether the person held a driver licence of the relevant class
+      `the person was exempt or authorised` IS A BOOLEAN @desc Whether the person was exempt from holding one, or otherwise authorised
+      `the s 24 (3) inadvertence saving applies` IS A BOOLEAN @desc Whether an earlier licence lapsed only by inadvertence and could be renewed (s 24 (3))
+      `the s 24 (3A) unpaid-fines saving applies` IS A BOOLEAN @desc Whether the licence was suspended only under s 55 of the Monetary Penalties Enforcement Act 2005 or an equivalent (s 24 (3A))
+GIVETH A `The Board's liability`
+DECIDE `Must I pay scheduled benefits for this injury` IS
+    `the Board's liability for each scheduled benefit` `the claimant's accident` `the claimant's s 24 (1) facts` `the claimant's s 24 (2) facts`
+    WHERE
+        `the claimant's accident` MEANS
+            `Accident facts` WITH
+                -- The date is not read by ss 23-24; a fixed placeholder.
+                `date of the motor accident`                       IS DATE_FROM_DMY 1 1 2026
+                `where the motor accident occurred`                IS `where the accident happened`
+                `the injured person's ordinary place of residence` IS `where the injured person ordinarily lives`
+                `the vehicles involved`                            IS `the claimant's vehicles` `how a Tasmanian-registered vehicle caused the injury` `how an interstate motor vehicle caused the injury` `how any other vehicle caused the injury`
+                `the daily care facts`                             IS `the claimant's daily care` `I have determined the person requires daily care`
+                `the accident was reported to a police officer as soon as practicable` IS `the accident was reported to police as soon as practicable`
+                `the Board has determined that the failure to report should be excused` IS `I have excused the failure to report`
+        `the claimant's s 24 (1) facts` MEANS
+            `Section 24 (1) facts` WITH
+                `the injury results from the person intentionally causing or attempting to cause personal injury to themself or another` IS `the person intentionally caused or tried to cause injury`
+                `compensation is payable for the injury under a workers compensation law of this State, the Commonwealth or another State or Territory` IS `workers compensation is payable`
+                `compensation is payable for the injury under a motor accidents compensation law of the Commonwealth or another State or Territory, or a policy it requires` IS `another motor accident scheme's compensation is payable`
+                `an asbestos-related disease for which the person is entitled to compensation under the Asbestos-Related Diseases (Occupational Exposure) Compensation Act 2011` IS `a compensated asbestos disease`
+                `the injury results from the person being subjected to ionizing radiation` IS `ionizing radiation`
+                `the accident occurred in a motor vehicle race in which the person was taking part` IS `taking part in a motor vehicle race`
+                `the vehicle was used in or in furtherance of an offence of dishonesty or violence, the person being a party to that use` IS `a vehicle used for an offence the person was party to`
+                `a motor vehicle in the accident was being used for an act of terrorism` IS `a vehicle used for terrorism`
+                `the person's own vehicle` IS
+                    `The person's own vehicle` WITH
+                        `the person was its owner`                                   IS `the person owned the vehicle whose use caused the accident`
+                        `the person was its driver`                                  IS `the person drove the vehicle whose use caused the accident`
+                        `the motor accident results from its use`                    IS `the accident resulted from the use of that vehicle`
+                        `its kind`                                                   IS `the kind of that vehicle`
+                        `it is an interstate motor vehicle`                          IS `that vehicle is an interstate motor vehicle`
+                        `a premium for its use in the circumstances had been paid`   IS `the premium for its use had been paid`
+                        `an interstate premium is required for it`                   IS `an interstate premium is required for that vehicle`
+                        `an interstate premium for its use in the circumstances had been paid` IS `that interstate premium had been paid`
+                        `the driver knew or ought to have known that the premium had not been paid` IS `the driver knew or ought to have known it was unpaid`
+                        `it was a permitted out-of-State vehicle with a third party insurance policy in force` IS `a permitted out-of-State vehicle with third party insurance`
+        `the claimant's s 24 (2) facts` MEANS
+            `Section 24 (2) facts` WITH
+                `conviction arising out of the person's driving at the time of the accident` IS `the person's conviction arising out of their driving`
+                `the person was driving a motor vehicle at the time of the accident`       IS `the person was driving`
+                `the person held a driver licence of the relevant class`                   IS `the person held a licence of the relevant class`
+                `the person was exempted from holding one, or otherwise authorised to drive a vehicle of that class` IS `the person was exempt or authorised`
+                `s 24 (3): an earlier licence was not renewed by inadvertence and could be renewed` IS `the s 24 (3) inadvertence saving applies`
+                `s 24 (3A): the licence was suspended only for unpaid monetary penalties` IS `the s 24 (3A) unpaid-fines saving applies`
+
+@export As MAIB, must I accept this claim as made in time (reg 10 (2)-(4))?
+GIVEN `the accident date` IS A DATE @desc The date of the motor accident (YYYY-MM-DD)
+      `the date I received written notice of the injury` IS A DATE @desc The date you received written notice of the personal injury (YYYY-MM-DD)
+      `the date of the death, loss or care claimed for` IS A DATE @desc The date of the death, the date the loss or expense was incurred, or the date the gratuitous care was provided (YYYY-MM-DD)
+      `the date the claim was brought` IS A DATE @desc The date the claim was made to you (YYYY-MM-DD)
+      `the Tribunal extended the notice period` IS A BOOLEAN @desc Whether the Tribunal has extended the period for written notice (reg 10 (3)-(4))
+      `the notice period extended to` IS A DATE @desc If so, the date to which it was extended; otherwise any date (YYYY-MM-DD)
+      `the Tribunal extended the claim period` IS A BOOLEAN @desc Whether the Tribunal has extended the period for bringing the claim
+      `the claim period extended to` IS A DATE @desc If so, the date to which it was extended; otherwise any date (YYYY-MM-DD)
+GIVETH A `Claim timing`
+DECIDE `Was the claim made in time` IS
+    `the reg 10 (2) timing of` `the date I received written notice of the injury`
+        (`the last day for written notice of the injury` `the accident date` `the Tribunal extended the notice period` `the notice period extended to`)
+        `the date the claim was brought`
+        (`the last day to bring the claim` `the date of the death, loss or care claimed for` `the Tribunal extended the claim period` `the claim period extended to`)
+
+§§ `How much must I pay? (Sch 1)`
+
+@export As MAIB, what is the most I must pay in medical and disability benefits for this person's injury from this accident (Sch 1 Pt 1 cl 8)?
+GIVEN `the accident date` IS A DATE @desc The date of the motor accident (YYYY-MM-DD)
+      `the person requires daily care` IS A BOOLEAN @desc Whether the person requires daily care (s 2 (5), s 27A); if so there is no cap
+      `continuous in-patient days from the accident` IS A NUMBER @desc How many days the person was a continuous hospital in-patient, starting on the date of the accident
+GIVETH A `Cap answer`
+DECIDE `What is the most I must pay in medical and disability benefits` IS
+    `the cl 8 limit for` `the accident date` `the person requires daily care` `continuous in-patient days from the accident`
+
+@export As MAIB, what employed person's allowance must I pay this person for a week (Sch 1 Pt 5 cl 3, 6; s 24 (4))? Uses average weekly earnings as I have determined them under cl 7.
+GIVEN `the accident date` IS A DATE @desc The date of the motor accident (YYYY-MM-DD)
+      `the person is entitled under cl 3 (2)` IS A BOOLEAN @desc Whether, at the time of the accident, the person was working for pay or profit, travelling directly from home to start work, or a cl 3 (2) (c) job seeker
+      `the average weekly earnings I determined` IS A NUMBER @desc The person's average weekly earnings as you determined them under cl 7, in dollars
+      `adult AWE last published before the accident` IS A NUMBER @desc The ABS adult average weekly earnings last published before the accident, in dollars
+      `wholly disabled from usual work within 20 days` IS A BOOLEAN @desc Whether the person was wholly disabled from their usual employment within 20 days beginning on the day of the accident
+      `the person's earnings from work this week` IS A NUMBER @desc Remuneration or profit the person received from any work for the week; 0 if none
+      `the person's conviction` IS A `The claimant's alcohol or drug driving conviction` @desc Any conviction for the person's driving in the accident under s 6 (1), 14 (1A), 14 (2) or 14 (5) of the Road Safety (Alcohol and Drugs) Act 1970
+      `the alcohol concentration` IS A NUMBER @desc For s 6 (1), the concentration of alcohol; otherwise 0
+      `I am satisfied the alcohol did not contribute` IS A BOOLEAN @desc For s 6 (1), whether the person has satisfied you that the alcohol did not contribute in any way to the accident
+GIVETH AN `Allowance answer`
+DECIDE `What employed person's allowance must I pay` IS
+    `the employed person's allowance for` `the accident date` `the claimant's work`
+        `the average weekly earnings I determined`
+        `adult AWE last published before the accident`
+        `wholly disabled from usual work within 20 days`
+        `the person's earnings from work this week`
+        (`the claimant's s 24 (4) facts` `the person's conviction` `the alcohol concentration` `I am satisfied the alcohol did not contribute`)
+    WHERE
+        -- The Board states cl 3 (2) as one fact, carried in the cl 3 (2) (a) field; the others are placeholders.
+        `the claimant's work` MEANS
+            `Work at the time of the accident` WITH
+                `engaged in employment or an occupation for remuneration or profit`  IS `the person is entitled under cl 3 (2)`
+                `travelling directly from home to take up employment or an occupation at the end of the journey` IS FALSE
+                `at least 15 years old, or exempt from school, on the day of the accident` IS FALSE
+                `weeks engaged in employment or an occupation in the 12 months before the day of the accident` IS 0
+                `actively seeking employment through all avenues reasonably available, or certified unfit for work by a medical practitioner` IS FALSE
+                `carrying on a business for profit`                                   IS FALSE
+                `normally carried out household duties`                               IS FALSE
+
+@export As MAIB, what part of the disability allowance must I still pay after the person's drink or drug driving conviction (s 24 (4), (4A))?
+GIVEN `the person's conviction` IS A `The claimant's alcohol or drug driving conviction` @desc The conviction for the person's driving in the accident under s 6 (1), 14 (1A), 14 (2) or 14 (5) of the Road Safety (Alcohol and Drugs) Act 1970, or none
+      `the alcohol concentration` IS A NUMBER @desc For s 6 (1), the concentration of alcohol (grams per 210 litres of breath or per 100 millilitres of blood); otherwise 0
+      `I am satisfied the alcohol did not contribute` IS A BOOLEAN @desc For s 6 (1), whether the person has satisfied you that the alcohol did not contribute in any way to the accident
+GIVETH A `Proportion answer`
+DECIDE `What part of the disability allowance must I pay` IS
+    `the s 24 (4) proportion for` (`the claimant's s 24 (4) facts` `the person's conviction` `the alcohol concentration` `I am satisfied the alcohol did not contribute`)
+
+@export As MAIB, what death benefit lump sum must I pay the dependants of a person killed in a motor accident (Sch 1 Pt 4)?
+GIVEN `the accident date` IS A DATE @desc The date of the motor accident (YYYY-MM-DD)
+      `the death resulted directly from the accident` IS A BOOLEAN @desc Whether the death resulted directly from the motor accident
+      `surviving dependants other than dependent children` IS A NUMBER @desc How many dependants survived (cl 7) who are not dependent children
+      `surviving dependent children under 9` IS A NUMBER @desc How many dependent children under 9 survived
+      `surviving dependent children aged 9 to 17` IS A NUMBER @desc How many dependent children aged 9 to 17 survived
+      `surviving dependent children aged 18 to 24` IS A NUMBER @desc How many dependent children aged 18 to 24 survived
+      `disability allowance I paid before the death` IS A NUMBER @desc Dollars of disability allowance you paid the person before the death
+GIVETH A `MAIB amount`
+DECIDE `What death benefit must I pay` IS
+    `the death benefit lump sum for` `the accident date` `the death resulted directly from the accident` `surviving dependants other than dependent children` `surviving dependent children under 9` `surviving dependent children aged 9 to 17` `surviving dependent children aged 18 to 24` `disability allowance I paid before the death`
+
+@export As MAIB, what is the most I must pay as funeral benefits for a person killed in this accident (Sch 1 Pt 3 cl 2)?
+GIVEN `the accident date` IS A DATE @desc The date of the motor accident (YYYY-MM-DD)
+      `adult AWE released on the 2007 release day` IS A NUMBER @desc The ABS adult average weekly earnings for the February 2007 quarter, released in May 2007, in dollars
+      `latest adult AWE for a period ending in May` IS A NUMBER @desc The most recently released ABS adult average weekly earnings for a period ending in May, in dollars
+GIVETH A `MAIB amount`
+DECIDE `What is the most I must pay as funeral benefits` IS
+    `the funeral benefit limit for` `the accident date` `adult AWE released on the 2007 release day` `latest adult AWE for a period ending in May`
