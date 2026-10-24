@@ -131,3 +131,15 @@ The 2026-10-18 defaults:
 - **The regulations and the Minister's instruments**: the s 48 prescribed events, and the s 38A(2) and s 41D(2) determinations. Raised as `REQ-0096`.
 - **A formulas sidecar** for ss 9C(1), 9CA(2), 10F(1), 12ZLC(1) and 43E(6) (finding 6), and the Higher Education Support Act s 154-20(2) amount the formulas use.
 - **Wider sources.** No guidance, ruling or case was read. Findings 4 and 9 are readings of the text alone.
+
+## The Student Assistance Regulations brought in (added 2026-10-24, REQ-0096)
+
+**Module:** `saa-regulations.l4`, beside `saa-student.l4`, which it imports; cases in `saa-cases-regulations.l4` (16 assertions written, 16 satisfied; 2 `#TRACE` runs of the s 48 duty, FULFILLED on day 10 and BREACH on day 20; `l4 run` 0 errors, 0 warnings; `saa-cases-student.l4` still 79 of 79). Seat: the ABSTUDY recipient (the student, or the parent who receives it).
+
+**Instrument:** the Student Assistance Regulations 2021, Compilation No. 1 (F2022C00508, compilation date 6 April 2022), deposited at `subjects/au/student-assistance-regulations-2021/` with `parent_act` this Act.
+
+**What the module computes:** whether a change is an event prescribed for ABSTUDY (regs 12–21), by who receives the payment, and from that the baseline's `Must I tell the Department of the event` (s 48), notice being given to Services Australia (reg 29); the s 48 duty as a regulative rule.
+
+13. **What a recipient must report depends on who the recipient is.** Course, residence, benefit, income-for-a-reporting-period and "other" events (regs 13, 16, 17, 18, 21(1)) bind every ABSTUDY payee. A partner, a dependent child leaving or going abroad, and assets over the limit bind only a student with independent status (regs 14(1), 20); a new parent or a parent's income 25% over the estimate bind a dependent student or a parent payee (regs 14(2)–(3), 19); the student's death binds a parent payee (reg 21(2)). Asserted.
+14. **The s 38A(2) and s 41D(2) instruments are not in force.** A title search of the Federal Register on 23 October 2026 found the Student Start-up Loan Debts and ABSTUDY Student Start-up Loan Overpayments Determination 2016 (F2016L00176), marked not in force, and no in-force instrument under ss 38A(2) or 41D(2) among the titles beginning "Student Assistance", "ABSTUDY" or "Student Start-up". On that search, no circumstances are now determined under s 38A(2) (so `I stopped meeting the study condition in a way the Minister's instrument covers` has nothing to be true of) and none under s 41D(2) (so only the payments in s 41D(1)(a)–(e) exempt a debt from interest charge). The baseline's inputs are kept, because a later determination would revive them; the module does not hard-code FALSE. Not asserted.
+15. **The Assistance for Isolated Children Scheme's events (regs 22–28) are not encoded**; an AIC recipient still answers the baseline's s 48 question with the fact.
