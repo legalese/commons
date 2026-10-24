@@ -1,0 +1,594 @@
+IMPORT prelude
+IMPORT `tda-common`
+IMPORT `fhog-terms`
+
+-- Duties Act 2001 (Tas) Chapter 2 -- transfer duty on buying a home, and the first home buyer and pensioner reliefs.
+-- SEAT-NEUTRAL CORE: the rules are written in the Act's own actors and terms ("the transferee", "the Commissioner",
+-- "an eligible first home buyer", "an eligible pensioner"). The buyer's questions are in tda-seat.l4, which IMPORTs
+-- this module and restates no rule.
+--
+-- PROVISIONS COVERED: s 6(1)(a) (duty on a transfer of dutiable property), s 9(1)(a) (land in Tasmania), s 10 (liability
+-- arises when the dutiable transaction occurs), s 11 (the transferee pays), s 12 (joint tenants as tenants in common in
+-- equal shares), ss 13, 14, 15 (written statement, lodging and paying within 3 months; regulative), s 17, ss 18-20
+-- (dutiable value), s 29 (the general rate, as a table), s 32 (Help to Buy), Part 5 Division 2A ss 46A-46F (the first
+-- home buyer duty concession, transfers 7 February 2018 to 30 June 2024: a dated case), Part 5 Division 2B ss 46J-46O
+-- (the pensioner duty concession), Part 6 Division 2 ss 57C-57I (the first home buyer duty exemption, with the
+-- residence requirement as a regulative rule in tda-common.l4). ss 46B, 46K and 57D (extension orders) are not
+-- deposited: the end of each eligible period is a setting that defaults to the text.
+--
+-- NOT ENCODED: Part 3A (additional duty for foreign purchasers) and s 30J; Division 2C (pre-completion concession);
+-- Chapter 3 (landholders); Part 5 Divisions 1 and 2 (trusts, superannuation); the other exemptions in Part 6
+-- Division 1; s 19(2)-(6) (house-and-land improvements); ss 21-28 except as glossed; the Taxation Administration Act
+-- 1997 (interest, penalty tax, objections), which is not deposited. Each of the first three answers `not covered`.
+--
+-- Edition: consolidation published 2026-10-13, current at 2026-10-20, deposited at
+-- ../../registers/source-bundle/act-2001-015.txt. Based on material from the Tasmanian Legislation website at
+-- 20 October 2026 (State of Tasmania, CC BY 4.0).
+--
+-- BASELINE. Written with the writing-l4-rules skill, design defaults of 2026-10-18. No pipeline, no coverage table,
+-- no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Duties Act 2001 Chapter 2 -- transfer duty on a home (seat-neutral core)`
+
+§§ `Settings the text lets a Minister's order or a regulation change`
+
+-- s 57C "eligible period means the period commencing on 18 February 2024 and ending on 30 June 2026"; s 57D lets the
+-- Minister extend it by order. s 46A: "commencing on 7 February 2018 and ending on 30 June 2024" (s 46B). s 46J:
+-- "commencing on 10 February 2018 and ending on 30 June 2025" (s 46K). ss 46D(1)(d), 46M(c): "the prescribed amount or,
+-- if no amount is prescribed, $600 000"; s 57F(1)(d): "... $750 000". No extension order and no Duties Regulations 2021
+-- are deposited, so these are inputs to the core, with the text's figures as the default. The consolidation folds the
+-- earlier extension orders into the text (s 46A's history lists S.R. 2019 Nos 2 and 29, S.R. 2020 No 26 and S.R. 2023
+-- No 24), so the dates below are those in force at 13 October 2026 unless an order was made after that.
+DECLARE `Duty settings` HAS
+    `the last day of the s 57C eligible period`        IS A DATE
+    `the s 57F(1)(d) cap`                               IS A NUMBER
+    `the last day of the s 46A eligible period`        IS A DATE
+    `the s 46D(1)(d) cap`                               IS A NUMBER
+    `the last day of the s 46J eligible period`        IS A DATE
+    `the s 46M(c) cap`                                  IS A NUMBER
+
+`the settings in the deposited text` MEANS
+    `Duty settings` WITH
+        `the last day of the s 57C eligible period`    IS YMD 2026 6 30
+        `the s 57F(1)(d) cap`                           IS 750000
+        `the last day of the s 46A eligible period`    IS YMD 2024 6 30
+        `the s 46D(1)(d) cap`                           IS 600000
+        `the last day of the s 46J eligible period`    IS YMD 2025 6 30
+        `the s 46M(c) cap`                              IS 600000
+
+`the first day of the s 57C eligible period` MEANS YMD 2024 2 18
+`the first day of the s 46A eligible period` MEANS YMD 2018 2 7
+`the first day of the s 46J eligible period` MEANS YMD 2018 2 10
+
+§§ `s 29 -- the general rate, as a table`
+
+-- s 29(1) (substituted 1 October 2012, amended 21 October 2013):
+--   Not more than $3 000                         $50
+--   More than $3 000 but not more than $25 000   $50 plus $1.75 for every $100, or part, by which the dutiable value
+--                                                exceeds $3 000
+--   ... $25 000 to $75 000                       $435 plus $2.25 ... exceeds $25 000
+--   ... $75 000 to $200 000                      $1 560 plus $3.50 ... exceeds $75 000
+--   ... $200 000 to $375 000                     $5 935 plus $4 ... exceeds $200 000
+--   ... $375 000 to $725 000                     $12 935 plus $4.25 ... exceeds $375 000
+--   More than $725 000                           $27 810 plus $4.50 ... exceeds $725 000
+-- (2): "This rate applies unless other provision is made by this Chapter." The Act states no rounding of the value or
+-- of the duty; none is applied.
+DECLARE `Rate band` HAS
+    `above`       IS A NUMBER
+    `base amount` IS A NUMBER
+    `per 100`     IS A NUMBER
+
+-- Highest band first: the first band whose floor the value exceeds is the one that applies.
+`the s 29 scale` MEANS
+    LIST `Rate band` OF 725000, 27810, 4.50
+         `Rate band` OF 375000, 12935, 4.25
+         `Rate band` OF 200000, 5935, 4
+         `Rate band` OF 75000, 1560, 3.50
+         `Rate band` OF 25000, 435, 2.25
+         `Rate band` OF 3000, 50, 1.75
+
+`the s 29 minimum` MEANS 50
+
+GIVEN `scale` IS A LIST OF `Rate band`
+      `value` IS A NUMBER
+GIVETH A NUMBER
+`the duty on the scale` MEANS
+    CONSIDER `scale`
+    WHEN EMPTY THEN `the s 29 minimum`
+    WHEN `band` FOLLOWED BY `rest` THEN
+        IF `value` GREATER THAN `band`'s `above`
+        THEN `band`'s `base amount`
+             PLUS (`band`'s `per 100` TIMES `the number of 100-dollar parts in` (`value` MINUS `band`'s `above`))
+        ELSE `the duty on the scale` `rest` `value`
+
+GIVEN `the dutiable value` IS A NUMBER
+GIVETH A NUMBER
+`the duty at the s 29 general rate on` MEANS
+    `the duty on the scale` `the s 29 scale` `the dutiable value`
+
+§§ `ss 18-20 -- dutiable value`
+
+-- s 18(1): "The dutiable value of dutiable property that is subject to a dutiable transaction is the greater of -- (a)
+-- the consideration (if any) for the dutiable transaction ...; and (b) the unencumbered value of the dutiable property."
+-- s 19(1): the consideration "is taken to include the amount or value of all encumbrances ... subject to which the
+-- dutiable property is transferred". s 20(1): the unencumbered value is "the amount for which the property might
+-- reasonably have been sold in the open market ... (a) in the case of a transfer ... on a sale of the property, at the
+-- time the agreement for sale was entered into ... free from any encumbrance"; (3): improvements the transferee made
+-- before the transfer are left out. Both figures are FACTS the buyer states, already adjusted by ss 19(1) and 20(3).
+GIVEN `the consideration` IS A NUMBER, `the unencumbered value` IS A NUMBER
+GIVETH A NUMBER
+`the dutiable value (s 18(1))` MEANS
+    `the greater of` `the consideration` `the unencumbered value`
+
+§§ `The transfer and the transferees`
+
+-- s 32 (from 5 June 2026): "For the purposes of assessing the duty chargeable under this Chapter, including the
+-- application of any exemptions or concessions, on a transfer of land to a person who purchases the land under a Help to
+-- Buy arrangement, no account is to be taken of any interest the Commonwealth or Housing Australia has in the land."
+-- READING (finding 6): the Commonwealth's or Housing Australia's share is left out of every "each transferee" and "at
+-- least one transferee" test, and the buyer is assessed as if the whole land passed to the buyer, on the whole
+-- dutiable value. The other reading -- duty only on the buyer's share -- is not taken.
+DECLARE `Transferee` HAS
+    `is the Commonwealth or Housing Australia under a Help to Buy arrangement`                          IS A BOOLEAN
+    `is a natural person`                                                                              IS A BOOLEAN
+    `age at the transfer`                                                                              IS A NUMBER
+    `the Commissioner exempts the age requirement (ss 46C(2), 57E(2))`                                 IS A BOOLEAN
+    `is an Australian citizen or a permanent resident`                                                 IS A BOOLEAN
+    `the person or spouse has previously been the owner of a home in Tasmania or any other State or a Territory` IS A BOOLEAN
+    `the person or spouse has previously been paid a first home owner grant under the FHOG Act 2000`   IS A BOOLEAN
+    `a previous transfer to the person or spouse attracted a Division 2A concession`                   IS A BOOLEAN
+    `no duty was charged on a previous transfer to the person or spouse under Part 6 Division 2`       IS A BOOLEAN
+    -- ss 46D(1)(c), 46M(b), 57F(1)(c): the Commissioner is satisfied the person intends to meet the residence requirement
+    -- (to occupy the home as principal place of residence for 6 continuous months starting within 12 months).
+    `intends to meet the residence requirement`                                                        IS A BOOLEAN
+    `holds a Pensioner Concession Card under a relevant Act of the Commonwealth`                       IS A BOOLEAN
+    `holds a Seniors Health Card (Social Security Act 1991)`                                           IS A BOOLEAN
+    `receives a special rate pension (Veterans' Entitlements Act 1986)`                                IS A BOOLEAN
+    `a previous transfer to the person or spouse attracted a Division 2B concession`                   IS A BOOLEAN
+
+-- Facts of the pensioner's former home (s 46J "former property ... means land in Tasmania on which was situated a home
+-- that the person occupied as his or her principal place of residence"), for ss 46N and 46O.
+DECLARE `Former home` HAS
+    `the pensioner has a former home in Tasmania that they lived in as principal place of residence`    IS A BOOLEAN
+    `the day it was or will be transferred`                                                           IS A DATE
+    `its dutiable value when transferred`                                                             IS A NUMBER
+    `it was the principal place of residence for the 6 months before it was transferred (or a lesser period approved)` IS A BOOLEAN
+    `it was the principal place of residence for the 6 months before the new purchase (or a lesser period approved)`  IS A BOOLEAN
+    `the new home is in the same name or names as the former home, or the Commissioner is satisfied of good reasons`  IS A BOOLEAN
+    `the pensioner or spouse owned another home (not the former or new home) at the time of the purchase`             IS A BOOLEAN
+
+DECLARE `Home transfer` HAS
+    -- s 10: "A liability for duty ... arises when a dutiable transaction occurs." The day the land is transferred.
+    `the day of the transfer`                                                                          IS A DATE
+    `the consideration`                                                                                IS A NUMBER
+    `the unencumbered value`                                                                           IS A NUMBER
+    `the land has a building on it`                                                                    IS A BOOLEAN
+    `the building`                                                                                     IS A `Building facts`
+    `the transferees`                                                                                  IS A LIST OF `Transferee`
+    `the former home`                                                                                  IS A `Former home`
+    -- ss 46D(2), 57F(2): the Commissioner "is satisfied that there are good reasons why a transferee is not an eligible
+    -- first home buyer".
+    `the Commissioner is satisfied there are good reasons why a transferee is not an eligible first home buyer` IS A BOOLEAN
+    `is effected by a written instrument`                                                              IS A BOOLEAN
+    `a transferee is a foreign person`                                                                 IS A BOOLEAN
+    `is of a dwelling bought off the plan before its occupancy permit under an agreement signed from 1 July 2024` IS A BOOLEAN
+
+GIVEN `h` IS A `Home transfer`
+GIVETH A NUMBER
+`the dutiable value of` MEANS
+    `the dutiable value (s 18(1))` (`h`'s `the consideration`) (`h`'s `the unencumbered value`)
+
+GIVEN `h` IS A `Home transfer`
+GIVETH A NUMBER
+`the s 29 duty on` MEANS
+    `the duty at the s 29 general rate on` (`the dutiable value of` `h`)
+
+-- s 32: the transferees that count.
+GIVEN `h` IS A `Home transfer`
+GIVETH A LIST OF `Transferee`
+`the transferees counted (s 32)` MEANS
+    filter (GIVEN `t` YIELD (NOT `t`'s `is the Commonwealth or Housing Australia under a Help to Buy arrangement`)) (`h`'s `the transferees`)
+
+GIVEN `h` IS A `Home transfer`
+GIVETH A BOOLEAN
+DECIDE `the land has an established home on it` IF
+        `h`'s `the land has a building on it`
+    AND `is an established home (Duties Act ss 46A, 57C)` (`h`'s `the building`)
+
+GIVEN `h` IS A `Home transfer`
+GIVETH A BOOLEAN
+DECIDE `the land has a home on it` IF
+        `h`'s `the land has a building on it`
+    AND `is a home (FHOG Act s 4)` (`h`'s `the building`)
+
+§§ `ss 11, 12 -- who pays, and joint tenants`
+
+-- s 11: "Duty charged by this Chapter is payable by the transferee, unless this Chapter requires another person to pay
+-- the duty." s 12: "joint tenants of dutiable property are taken to hold the dutiable property as tenants in common in
+-- equal shares." The share of each of n joint tenants, for assessing duty.
+GIVEN `the number of joint tenants` IS A NUMBER
+GIVETH A NUMBER
+`the share of each joint tenant (s 12)` MEANS
+    1 DIVIDED BY `the number of joint tenants`
+
+§§ `Part 6 Division 2 (ss 57C-57G) and Part 5 Division 2A (ss 46A-46E) -- eligible first home buyers`
+
+-- s 57E(1): "a person is an eligible first home buyer if the Commissioner is satisfied that the person -- (a) is a
+-- natural person; and (b) has attained the age of 18 years; and (c) subject to subsection (3), is an Australian citizen
+-- or a permanent resident." (2): the Commissioner may exempt from (1)(b). (3): "If ... there is more than one transferee
+-- and at least one of the transferees is an Australian citizen or a permanent resident, it is not necessary for the
+-- other transferees to be". (4): "A person is not an eligible first home buyer if -- (a) the person or the person's
+-- spouse has previously been the owner of a home in Tasmania or a home in any other State or a Territory; or (b) ...
+-- has previously been paid a first home owner grant under the First Home Owner Grant Act 2000; or (c) a previous
+-- transfer of property to that person or to the person's spouse attracted a duty concession under Division 2A of Part
+-- 5; or (d) no duty was charged on a previous transfer of property to that person or to the person's spouse under this
+-- Division." s 46C says the same for Division 2A, without (d). "owner" and "home" are the FHOG Act's (fhog-terms.l4);
+-- "spouse" is the Duties Act's (s 3).
+DECLARE `First home buyer scheme` IS ONE OF
+    `the first home buyer duty exemption (Part 6 Division 2)`
+    `the first home buyer duty concession (Part 5 Division 2A)`
+
+DECLARE `First home buyer bar` IS ONE OF
+    `a transferee is not a natural person`
+    `a transferee is under 18 and the Commissioner has not exempted them`
+    `no transferee is an Australian citizen or a permanent resident`
+    `a transferee or their spouse has previously been the owner of a home`
+    `a transferee or their spouse has previously been paid a first home owner grant`
+    `a previous transfer to a transferee or their spouse attracted a Division 2A concession`
+    `no duty was charged on a previous transfer to a transferee or their spouse under Part 6 Division 2`
+
+GIVEN `scheme` IS A `First home buyer scheme`
+      `t` IS A `Transferee`
+      `a counted transferee is a citizen or permanent resident` IS A BOOLEAN
+GIVETH A MAYBE `First home buyer bar`
+`the bar on` `scheme` `for` `t` `given` `a counted transferee is a citizen or permanent resident` MEANS
+    IF (NOT `t`'s `is a natural person`)
+    THEN JUST `a transferee is not a natural person`
+    ELSE IF     `t`'s `age at the transfer` LESS THAN 18
+            AND (NOT `t`'s `the Commissioner exempts the age requirement (ss 46C(2), 57E(2))`)
+         THEN JUST `a transferee is under 18 and the Commissioner has not exempted them`
+         ELSE IF     (NOT `t`'s `is an Australian citizen or a permanent resident`)
+                 AND (NOT `a counted transferee is a citizen or permanent resident`)
+              THEN JUST `no transferee is an Australian citizen or a permanent resident`
+              ELSE IF `t`'s `the person or spouse has previously been the owner of a home in Tasmania or any other State or a Territory`
+                   THEN JUST `a transferee or their spouse has previously been the owner of a home`
+                   ELSE IF `t`'s `the person or spouse has previously been paid a first home owner grant under the FHOG Act 2000`
+                        THEN JUST `a transferee or their spouse has previously been paid a first home owner grant`
+                        ELSE IF `t`'s `a previous transfer to the person or spouse attracted a Division 2A concession`
+                             THEN JUST `a previous transfer to a transferee or their spouse attracted a Division 2A concession`
+                             ELSE IF     `t`'s `no duty was charged on a previous transfer to the person or spouse under Part 6 Division 2`
+                                     AND `the scheme counts a previous Part 6 Division 2 exemption` `scheme`
+                                  THEN JUST `no duty was charged on a previous transfer to a transferee or their spouse under Part 6 Division 2`
+                                  ELSE NOTHING
+
+GIVEN `scheme` IS A `First home buyer scheme`
+GIVETH A BOOLEAN
+DECIDE `the scheme counts a previous Part 6 Division 2 exemption` IF
+    CONSIDER `scheme`
+    WHEN `the first home buyer duty exemption (Part 6 Division 2)` THEN TRUE
+    OTHERWISE FALSE
+
+-- The first bar on any counted transferee, in the order of the list.
+GIVEN `scheme` IS A `First home buyer scheme`
+      `ts` IS A LIST OF `Transferee`
+      `a counted transferee is a citizen or permanent resident` IS A BOOLEAN
+GIVETH A MAYBE `First home buyer bar`
+`the first bar among` `scheme` `ts` `a counted transferee is a citizen or permanent resident` MEANS
+    CONSIDER `ts`
+    WHEN EMPTY THEN NOTHING
+    WHEN `t` FOLLOWED BY `rest` THEN
+        CONSIDER `the bar on` `scheme` `for` `t` `given` `a counted transferee is a citizen or permanent resident`
+        WHEN JUST `b` THEN JUST `b`
+        WHEN NOTHING THEN `the first bar among` `scheme` `rest` `a counted transferee is a citizen or permanent resident`
+
+GIVEN `scheme` IS A `First home buyer scheme`
+      `h` IS A `Home transfer`
+GIVETH A MAYBE `First home buyer bar`
+`the bar on the transferees of` `scheme` `h` MEANS
+    `the first bar among` `scheme` (`the transferees counted (s 32)` `h`) (any (GIVEN `t` YIELD `t`'s `is an Australian citizen or a permanent resident`) (`the transferees counted (s 32)` `h`))
+
+-- Whether one person is an eligible first home buyer, alone or with co-transferees who are citizens or residents.
+GIVEN `scheme` IS A `First home buyer scheme`
+      `t` IS A `Transferee`
+      `another transferee is a citizen or permanent resident` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is an eligible first home buyer under` `scheme` `t` `another transferee is a citizen or permanent resident` IF
+    CONSIDER `the bar on` `scheme` `for` `t` `given` (`t`'s `is an Australian citizen or a permanent resident` OR `another transferee is a citizen or permanent resident`)
+    WHEN NOTHING THEN TRUE
+    OTHERWISE FALSE
+
+-- s 57F(1): "an eligible transaction means a transfer of land on which an established home is situated if that
+-- transfer meets the following requirements: (a) the transfer occurs within the eligible period; (b) each of the
+-- transferees is an eligible first home buyer; (c) the Commissioner is satisfied that each of the transferees intends
+-- to meet the residence requirement in relation to the established home; (d) the dutiable value of the dutiable property
+-- does not exceed the prescribed amount or, if no amount is prescribed, $750 000." (2): "(1)(b) does not apply ... if
+-- the Commissioner is satisfied that there are good reasons why a transferee is not an eligible first home buyer."
+-- s 46D says the same for Division 2A, with its own period and a $600 000 cap.
+DECLARE `First home buyer answer` IS ONE OF
+    `yes: the transfer is an eligible transaction`
+    `no: the land has no established home on it`
+    `no: the transfer is outside the eligible period` HAS `which runs from` IS A DATE, `to` IS A DATE
+    `no: a transferee is not an eligible first home buyer` HAS `because` IS A `First home buyer bar`
+    `no: the Commissioner is not satisfied that each transferee intends to meet the residence requirement`
+    `no: the dutiable value is over the cap` HAS `of` IS A NUMBER
+
+GIVEN `scheme` IS A `First home buyer scheme`
+      `settings` IS A `Duty settings`
+GIVETH A DATE
+`the first day of the period of` `scheme` `settings` MEANS
+    CONSIDER `scheme`
+    WHEN `the first home buyer duty exemption (Part 6 Division 2)` THEN `the first day of the s 57C eligible period`
+    WHEN `the first home buyer duty concession (Part 5 Division 2A)` THEN `the first day of the s 46A eligible period`
+
+GIVEN `scheme` IS A `First home buyer scheme`
+      `settings` IS A `Duty settings`
+GIVETH A DATE
+`the last day of the period of` `scheme` `settings` MEANS
+    CONSIDER `scheme`
+    WHEN `the first home buyer duty exemption (Part 6 Division 2)` THEN `settings`'s `the last day of the s 57C eligible period`
+    WHEN `the first home buyer duty concession (Part 5 Division 2A)` THEN `settings`'s `the last day of the s 46A eligible period`
+
+GIVEN `scheme` IS A `First home buyer scheme`
+      `settings` IS A `Duty settings`
+GIVETH A NUMBER
+`the cap of` `scheme` `settings` MEANS
+    CONSIDER `scheme`
+    WHEN `the first home buyer duty exemption (Part 6 Division 2)` THEN `settings`'s `the s 57F(1)(d) cap`
+    WHEN `the first home buyer duty concession (Part 5 Division 2A)` THEN `settings`'s `the s 46D(1)(d) cap`
+
+GIVEN `scheme`   IS A `First home buyer scheme`
+      `settings` IS A `Duty settings`
+      `h`        IS A `Home transfer`
+GIVETH A `First home buyer answer`
+`the first home buyer test under` `scheme` `settings` `h` MEANS
+    IF (NOT `the land has an established home on it` `h`)
+    THEN `no: the land has no established home on it`
+    ELSE IF (NOT `the day falls from` (`h`'s `the day of the transfer`) `to` (`the first day of the period of` `scheme` `settings`) `and` (`the last day of the period of` `scheme` `settings`))
+         THEN `no: the transfer is outside the eligible period` (`the first day of the period of` `scheme` `settings`) (`the last day of the period of` `scheme` `settings`)
+         ELSE CONSIDER `the bar on the transferees of` `scheme` `h`
+              WHEN JUST `b` THEN
+                  IF `h`'s `the Commissioner is satisfied there are good reasons why a transferee is not an eligible first home buyer`
+                  THEN `the rest of the first home buyer test` `scheme` `settings` `h`
+                  ELSE `no: a transferee is not an eligible first home buyer` `b`
+              WHEN NOTHING THEN `the rest of the first home buyer test` `scheme` `settings` `h`
+
+GIVEN `scheme`   IS A `First home buyer scheme`
+      `settings` IS A `Duty settings`
+      `h`        IS A `Home transfer`
+GIVETH A `First home buyer answer`
+`the rest of the first home buyer test` `scheme` `settings` `h` MEANS
+    IF (NOT all (GIVEN `t` YIELD `t`'s `intends to meet the residence requirement`) (`the transferees counted (s 32)` `h`))
+    THEN `no: the Commissioner is not satisfied that each transferee intends to meet the residence requirement`
+    ELSE IF `the dutiable value of` `h` GREATER THAN `the cap of` `scheme` `settings`
+         THEN `no: the dutiable value is over the cap` (`the cap of` `scheme` `settings`)
+         ELSE `yes: the transfer is an eligible transaction`
+
+GIVEN `a` IS A `First home buyer answer`
+GIVETH A BOOLEAN
+DECIDE `the answer is yes` IF
+    CONSIDER `a`
+    WHEN `yes: the transfer is an eligible transaction` THEN TRUE
+    OTHERWISE FALSE
+
+-- s 57G: "Duty is not chargeable under this Chapter on an eligible transaction."
+-- s 46E: "The duty chargeable on an eligible transaction is 50% of the duty that would be chargeable, at the rate
+-- specified in section 29, on a transfer of the dutiable property."
+`the concession fraction (ss 46E, 46N(3), 46O(3))` MEANS 50%
+
+§§ `Part 5 Division 2B (ss 46J-46O) -- the pensioner duty concession`
+
+-- s 46L(1): "a person is an eligible pensioner if the Commissioner is satisfied that -- (a) the person has attained the
+-- age of 60 years; and (b) the person is -- (i) the holder of a Pensioner Concession Card under a relevant Act of the
+-- Commonwealth; or (ii) the holder of a Seniors Health Card within the meaning of the Social Security Act 1991 of the
+-- Commonwealth; or (iii) in receipt of a special rate pension under the Veterans' Entitlements Act 1986 of the
+-- Commonwealth." (2): "A person is not an eligible pensioner if a previous transfer of dutiable property to that
+-- person, or to that person's spouse, attracted a duty concession under this Division." The cards are Commonwealth
+-- FACTS (see NOTES.md for the Social Security Act and Veterans' Entitlements Act encodings).
+GIVEN `t` IS A `Transferee`
+GIVETH A BOOLEAN
+DECIDE `is an eligible pensioner (s 46L)` IF
+        `t`'s `is a natural person`
+    AND `t`'s `age at the transfer` AT LEAST 60
+    AND (    `t`'s `holds a Pensioner Concession Card under a relevant Act of the Commonwealth`
+         OR `t`'s `holds a Seniors Health Card (Social Security Act 1991)`
+         OR `t`'s `receives a special rate pension (Veterans' Entitlements Act 1986)`)
+    AND (NOT `t`'s `a previous transfer to the person or spouse attracted a Division 2B concession`)
+
+DECLARE `Pensioner bar` IS ONE OF
+    `the land has no home on it`
+    `no transferee is an eligible pensioner (aged 60 or over, with a Pensioner Concession Card, Seniors Health Card or special rate pension, and no earlier Division 2B concession)`
+    `the Commissioner is not satisfied the pensioner intends to live in the home for 6 months starting within 12 months`
+    `the dutiable value is over the cap` HAS `of` IS A NUMBER
+    `there is no former home in Tasmania that the pensioner lived in`
+    `the former home was not transferred within the 6 months before or after the purchase`
+    `the former home was not transferred within the eligible period` HAS `which runs from` IS A DATE, `to` IS A DATE
+    `the former home was not the pensioner's principal place of residence for the 6 months required`
+    `the former home's dutiable value is not greater than the new home's`
+    `the new home is not in the same name or names as the former home`
+    `the pensioner or spouse owned another home at the time of the purchase`
+
+DECLARE `Pensioner concession answer` IS ONE OF
+    `yes: the former home was transferred within 6 months before the purchase (s 46N)`
+    `yes: the former home was transferred within 6 months after the purchase (s 46O)`
+    `no` HAS `because` IS A `Pensioner bar`
+
+-- s 46M: "an eligible transaction means a transfer of land on which a home is situated if that transfer meets the
+-- following requirements: (a) a transferee is an eligible pensioner; (b) the Commissioner is satisfied that the eligible
+-- pensioner intends to occupy the home as his or her principal place of residence for a continuous period of at least 6
+-- months commencing within -- (i) the 12-month period immediately after the transfer; or (ii) such longer period as is
+-- approved by the Commissioner; (c) the dutiable value ... does not exceed the prescribed amount or, if no amount is
+-- prescribed, $600 000." NOTE (finding 3): s 46M sets no eligible period for the purchase; the eligible period bites
+-- through ss 46N(1)(a)(ii) and 46O(1)(a)(ii), on the transfer of the former home.
+-- s 46N(1): the concession applies if "(a) a transferee who is an eligible pensioner transferred a former property
+-- within -- (i) the 6-month period immediately before the eligible transaction; and (ii) the eligible period; and (b)
+-- the former property ... was the eligible pensioner's principal place of residence for the 6-month period (or any
+-- lesser period approved by the Commissioner ...) immediately before he or she transferred that former property; and
+-- (c) the dutiable value of the former property ... is greater than the dutiable value of the eligible property ...;
+-- and (d) the ownership of the eligible property is in the same name or names as the ownership of the former property"
+-- ((4): unless the Commissioner is satisfied of good reasons). (5): not if the pensioner or spouse "at the time of the
+-- eligible transaction was the owner of a home in Tasmania or a home in any other State or a Territory (other than the
+-- eligible property)". s 46O: the same with the former property transferred "within the 6-month period immediately
+-- after the eligible transaction", (b) satisfied by the 6 months before either the sale or the purchase, and (5)
+-- excepting the former property too. READING: a sale on the same day as the purchase is "before" (s 46N).
+GIVEN `settings` IS A `Duty settings`
+      `h` IS A `Home transfer`
+GIVETH A `Pensioner concession answer`
+`the pensioner concession test` `settings` `h` MEANS
+    IF (NOT `the land has a home on it` `h`)
+    THEN `no` `the land has no home on it`
+    ELSE IF (NOT any (GIVEN `t` YIELD `is an eligible pensioner (s 46L)` `t`) (`the transferees counted (s 32)` `h`))
+         THEN `no` `no transferee is an eligible pensioner (aged 60 or over, with a Pensioner Concession Card, Seniors Health Card or special rate pension, and no earlier Division 2B concession)`
+         ELSE IF (NOT any (GIVEN `t` YIELD `is an eligible pensioner (s 46L)` `t` AND `t`'s `intends to meet the residence requirement`) (`the transferees counted (s 32)` `h`))
+              THEN `no` `the Commissioner is not satisfied the pensioner intends to live in the home for 6 months starting within 12 months`
+              ELSE IF `the dutiable value of` `h` GREATER THAN `settings`'s `the s 46M(c) cap`
+                   THEN `no` (`the dutiable value is over the cap` (`settings`'s `the s 46M(c) cap`))
+                   ELSE `the s 46N or s 46O test` `settings` `h`
+
+GIVEN `settings` IS A `Duty settings`
+      `h` IS A `Home transfer`
+GIVETH A `Pensioner concession answer`
+`the s 46N or s 46O test` `settings` `h` MEANS
+    IF (NOT `f`'s `the pensioner has a former home in Tasmania that they lived in as principal place of residence`)
+    THEN `no` `there is no former home in Tasmania that the pensioner lived in`
+    ELSE IF `the sale is before`
+         THEN `the downsizing conditions` (`f`'s `it was the principal place of residence for the 6 months before it was transferred (or a lesser period approved)`) `yes: the former home was transferred within 6 months before the purchase (s 46N)`
+         ELSE IF `the sale is after`
+              THEN `the downsizing conditions` (    `f`'s `it was the principal place of residence for the 6 months before it was transferred (or a lesser period approved)`
+                                                OR `f`'s `it was the principal place of residence for the 6 months before the new purchase (or a lesser period approved)`) `yes: the former home was transferred within 6 months after the purchase (s 46O)`
+              ELSE `no` `the former home was not transferred within the 6 months before or after the purchase`
+    WHERE
+        `f`        MEANS `h`'s `the former home`
+        `sold`     MEANS `f`'s `the day it was or will be transferred`
+        `bought`   MEANS `h`'s `the day of the transfer`
+        `the sale is before` MEANS
+                `sold` `is on or before` `bought`
+            AND `sold` `is on or after` (`the day that is` (-6) `months after` `bought`)
+        `the sale is after` MEANS
+                `bought` `is before` `sold`
+            AND `sold` `is on or before` (`the day that is` 6 `months after` `bought`)
+        GIVEN `lived there long enough` IS A BOOLEAN
+              `yes` IS A `Pensioner concession answer`
+        GIVETH A `Pensioner concession answer`
+        `the downsizing conditions` `lived there long enough` `yes` MEANS
+            IF (NOT `the day falls from` `sold` `to` `the first day of the s 46J eligible period` `and` (`settings`'s `the last day of the s 46J eligible period`))
+            THEN `no` (`the former home was not transferred within the eligible period` `the first day of the s 46J eligible period` (`settings`'s `the last day of the s 46J eligible period`))
+            ELSE IF (NOT `lived there long enough`)
+                 THEN `no` `the former home was not the pensioner's principal place of residence for the 6 months required`
+                 ELSE IF `f`'s `its dutiable value when transferred` AT MOST `the dutiable value of` `h`
+                      THEN `no` `the former home's dutiable value is not greater than the new home's`
+                      ELSE IF (NOT `f`'s `the new home is in the same name or names as the former home, or the Commissioner is satisfied of good reasons`)
+                           THEN `no` `the new home is not in the same name or names as the former home`
+                           ELSE IF `f`'s `the pensioner or spouse owned another home (not the former or new home) at the time of the purchase`
+                                THEN `no` `the pensioner or spouse owned another home at the time of the purchase`
+                                ELSE `yes`
+
+GIVEN `a` IS A `Pensioner concession answer`
+GIVETH A BOOLEAN
+DECIDE `the pensioner answer is yes` IF
+    CONSIDER `a`
+    WHEN `no` `b` THEN FALSE
+    OTHERWISE TRUE
+
+§§ `The duty payable on the transfer`
+
+DECLARE `Duty basis` IS ONE OF
+    `nil: the first home buyer duty exemption (s 57G)`
+    `half the s 29 duty: the first home buyer duty concession (s 46E)`
+    `half the s 29 duty: the pensioner duty concession (s 46N(3) or s 46O(3))`
+    `the general rate (s 29)`
+
+DECLARE `Transfer duty answer` IS ONE OF
+    `the duty, in dollars, is` HAS `dollars` IS A NUMBER, `on the basis of` IS A `Duty basis`
+    `not covered` HAS `because` IS A `Why not covered`
+
+-- s 29(2): the general rate "applies unless other provision is made by this Chapter". Where more than one relief could
+-- apply, the one giving the least duty is taken: s 57G (nil) before s 46E and ss 46N-46O (half). READING (finding 4):
+-- in the overlap of the two first home buyer periods (18 February to 30 June 2024) both Division 2A and Part 6
+-- Division 2 can apply; nothing in the text says which, and nil is taken.
+-- FOREIGN BUYERS (finding 8): s 30C(2) charges foreign purchaser duty "In addition to the duty otherwise chargeable";
+-- s 30G(1): "Duty is not chargeable on a dutiable transaction under this Part if the dutiable transaction attracted a
+-- duty concession under Part 5" (Divisions 2A and 2B); and s 57G makes duty "not chargeable under this Chapter", which
+-- contains Part 3A. So where a relief applies the answer stands even with a foreign co-buyer (s 57E(3) lets one join a
+-- citizen); only where none applies does Part 3A, not encoded, leave the answer `not covered`.
+GIVEN `settings` IS A `Duty settings`
+      `h` IS A `Home transfer`
+GIVETH A `Transfer duty answer`
+`the transfer duty on` `settings` `h` MEANS
+    IF `h`'s `the day of the transfer` `is before` (YMD 2013 10 21)
+    THEN `not covered` `the transfer is dated before 21 October 2013, when the s 29 scale was last amended (No. 41 of 2013); the scale in force before then is not in the deposited consolidation`
+    ELSE IF `h`'s `is of a dwelling bought off the plan before its occupancy permit under an agreement signed from 1 July 2024`
+         THEN `not covered` `the home was bought off the plan before its occupancy permit, under an agreement signed from 1 July 2024: the Division 2C pre-completion duty concession is not encoded`
+         ELSE IF `the answer is yes` (`the first home buyer test under` `the first home buyer duty exemption (Part 6 Division 2)` `settings` `h`)
+              THEN `the duty, in dollars, is` 0 `nil: the first home buyer duty exemption (s 57G)`
+              ELSE IF `the answer is yes` (`the first home buyer test under` `the first home buyer duty concession (Part 5 Division 2A)` `settings` `h`)
+                   THEN `the duty, in dollars, is` (`the s 29 duty on` `h` TIMES `the concession fraction (ss 46E, 46N(3), 46O(3))`) `half the s 29 duty: the first home buyer duty concession (s 46E)`
+                   ELSE IF `the pensioner answer is yes` (`the pensioner concession test` `settings` `h`)
+                        THEN `the duty, in dollars, is` (`the s 29 duty on` `h` TIMES `the concession fraction (ss 46E, 46N(3), 46O(3))`) `half the s 29 duty: the pensioner duty concession (s 46N(3) or s 46O(3))`
+                        ELSE IF `h`'s `a transferee is a foreign person`
+                             THEN `not covered` `a transferee is a foreign person: Part 3A additional duty for foreign purchasers (and the s 30J exemption) is not encoded`
+                             ELSE `the duty, in dollars, is` (`the s 29 duty on` `h`) `the general rate (s 29)`
+
+-- ss 46G(2), 57I(2): on a failure of the residence requirement the Commissioner "may reassess the duty that would
+-- otherwise be payable ... as if the transaction was not an eligible transaction". That duty is the s 29 duty (unless,
+-- for a s 57G exemption, a Division 2A concession would apply instead; not taken, as no transaction can now be in both).
+GIVEN `h` IS A `Home transfer`
+GIVETH A NUMBER
+`the duty the Commissioner may reassess on a failure (ss 46G(2), 57I(2))` MEANS
+    `the s 29 duty on` `h`
+
+§§ `ss 13-15 -- lodging and paying within 3 months (regulative)`
+
+-- s 13(1): "If a dutiable transaction that is liable to ad valorem duty under this Chapter is not effected by a written
+-- instrument, the transferee must make a written statement in a form approved by the Commissioner." (2): "within 3
+-- months after the liability arises". s 14: "a transferee who is liable to pay duty in respect of a dutiable transaction
+-- must, within 3 months after the liability arises, lodge with the Commissioner -- (a) the written instrument ...; or (b)
+-- the written statement made in compliance with section 13." s 15: "A tax default does not occur for the purposes of the
+-- Taxation Administration Act 1997 if duty is paid within 3 months after the liability to pay the duty arises." s 10:
+-- the liability arises when the dutiable transaction occurs. Periods of months: s 242 (tda-common.l4).
+-- READING (finding 5): s 14 binds a transferee "who is liable to pay duty", and s 13 a transaction "liable to ad valorem
+-- duty". Where s 57G makes duty "not chargeable", neither binds by its words, so the rule binds nothing. In practice the
+-- exemption is claimed by lodging (the Commissioner must be satisfied, s 57E), and s 243 bars registering an unstamped or
+-- unendorsed instrument; neither is a duty to lodge within 3 months.
+`the months to lodge and pay (ss 13(2), 14, 15)` MEANS 3
+
+GIVEN `the day of the transfer` IS A DATE
+GIVETH A DATE
+`the last day to lodge and pay` MEANS
+    `the day that is` `the months to lodge and pay (ss 13(2), 14, 15)` `months after` `the day of the transfer`
+
+GIVEN `the day of the transfer`                IS A DATE
+      `duty is payable on the transfer`        IS A BOOLEAN
+      `is effected by a written instrument`    IS A BOOLEAN
+GIVETH A DEONTIC `Party` `Duty act`
+`ss 13-15 -- the transferee must lodge and pay within 3 months` `the day of the transfer` `duty is payable on the transfer` `is effected by a written instrument` MEANS
+    IF (NOT `duty is payable on the transfer`)
+    THEN FULFILLED
+    ELSE    (IF `is effected by a written instrument`
+             THEN PARTY `the transferee`
+                  MUST  `lodge the written instrument with the Commissioner`
+                  WITHIN `the days to lodge`
+                  LEST  BREACH BY `the transferee` BECAUSE "s 14(a): the written instrument must be lodged with the Commissioner within 3 months after the liability arises"
+             ELSE PARTY `the transferee`
+                  MUST  `make and lodge a written statement in the approved form`
+                  WITHIN `the days to lodge`
+                  LEST  BREACH BY `the transferee` BECAUSE "ss 13(1)-(2), 14(b): with no written instrument, a written statement in the approved form must be made and lodged within 3 months after the liability arises")
+        RAND
+            (PARTY `the transferee`
+             MUST  `pay the duty`
+             WITHIN `the days to lodge`
+             LEST  BREACH BY `the transferee` BECAUSE "s 15: duty not paid within 3 months after the liability arises is a tax default under the Taxation Administration Act 1997 (interest and penalty tax, not deposited)")
+    WHERE
+        `the days to lodge` MEANS `the days from` `the day of the transfer` `until` (`the last day to lodge and pay` `the day of the transfer`)
+
+§§ `ss 57H, 46F -- the residence requirement after a first home buyer transfer (regulative)`
+
+-- The rule itself is `the residence requirement under` in tda-common.l4, shared with the grant. Here the clock starts on
+-- the day of the transfer: "commencing ... within the 12-month period immediately after the eligible transaction".
+GIVEN `provision`                                      IS A `Residence provision`
+      `the Commissioner exempted this joint transferee` IS A BOOLEAN
+      `the day of the transfer`                        IS A DATE
+      `the months allowed to begin occupying`          IS A NUMBER
+      `the months of occupation required`              IS A NUMBER
+GIVETH A DEONTIC `Party` `Duty act`
+`the transferee's residence requirement` `provision` `the Commissioner exempted this joint transferee` `the day of the transfer` `the months allowed to begin occupying` `the months of occupation required` MEANS
+    `the residence requirement under` `provision` `the Commissioner exempted this joint transferee` (DATE_SERIAL `the day of the transfer`) (DATE_SERIAL (`the day that is` `the months allowed to begin occupying` `months after` `the day of the transfer`)) `the months of occupation required`
