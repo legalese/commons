@@ -122,6 +122,16 @@ rate the Commissioner gave you, or by a rate you choose yourself". This is label
 inference. The instalment rate and notional tax are inputs. Asserted (the inferred
 product).
 
+*Checked 24 October 2026.* The formulas are now transcribed in
+`../../registers/source-bundle/C1953A00001.formulas.md`. Section 45-110(1) reads
+"Applicable instalment rate × Your instalment income for that quarter", so the inferred
+product is the formula, and the asserted 620 on 7,750 at 8% stands. This encoding has no
+function taking an amount that the other recovered formulas give: the GDP-adjusted
+instalment was a comment, not an input. The baseline (`../baseline-2026-10/`,
+`taa-instalments-formulas.l4`) now computes the GDP adjustment, the s 45-400 instalment,
+the s 45-230 charge base and the shortfall interest charge. Nothing here changed; 52 of
+52 assertions are still satisfied.
+
 ### 6. A business paying a sole trader withholds only if no ABN is quoted
 
 Under s 12-190, a payer must withhold from a payment for a supply made in the course of
@@ -149,7 +159,8 @@ her return is assessed (s 18-15). Asserted.
   deposited and encoded (TFN issue, TFN declarations, s 202CB) before c020, k020 and d012
   are fully answered.
 - The formulas in ss 45-110, 45-115 and 45-320 have to be recovered from the authorised
-  compilation. They were lost when the deposit was converted to text.
+  compilation. They were lost when the deposit was converted to text. (Done: see the
+  sidecar, and the baseline that uses it.)
 - The withholding schedules and the Taxation Administration Regulations (the no-TFN rate,
   the no-ABN rate, any higher $50 threshold) were not retrieved.
 - d012 needs the compilation in force in October 2012.

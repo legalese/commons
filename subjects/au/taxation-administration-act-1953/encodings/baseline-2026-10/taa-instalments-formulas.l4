@@ -1,0 +1,173 @@
+IMPORT prelude
+IMPORT `taa-instalments`
+
+-- Taxation Administration Act 1953 (Commonwealth of Australia), Schedule 1 -- PAYG instalment and interest amounts the
+-- baseline left out, now computed from the formulas the Federal Register prints as images: the GDP adjustment and the
+-- GDP-adjusted base year amounts (s 45-405(2), (3), (9), (10)) and the instalment a quarterly payer on GDP-adjusted notional
+-- tax is notified (s 45-400(2)); the benchmark instalment rate (s 45-360(1)) and the general interest charge on a varied rate
+-- that was too low (s 45-230(1), (2)); and the shortfall interest charge on an amended assessment (ss 280-100, 280-105).
+--
+-- A module beside taa-instalments.l4 (24 October 2026). taa-instalments.l4 lists GDP adjustment (Subdivision 45-L), benchmark
+-- tax (Subdivision 45-M) and varying the rate (Subdivision 45-F) as not encoded, and the baseline leaves the shortfall interest
+-- charge out. It stays as it is; this module calls its `the charge accrued` (the daily compounding of s 8AAC(3)) rather than
+-- restating it.
+--
+-- SEAT: the taxpayer -- an individual sole trader paying PAYG instalments (Jake), or anyone whose assessment is amended ("How
+-- much is my instalment?", "Do I owe interest because my varied rate was too low?", "What does the amendment cost me in
+-- interest?").
+--
+-- Edition: Compilation No. 226 (register id C2026C00393), as deposited at ../../registers/source-bundle/C1953A00001.txt. The
+-- formulas are transcribed in ../../registers/source-bundle/C1953A00001.formulas.md (entries Schedule 1 s 45-230(2), (2)(a),
+-- s 45-360(1), s 45-405(2)(b), (3)(b), s 280-105(2); recovered 2026-10-24), and encoded from there.
+--
+-- INPUTS THAT ARE NOT LAW. The GDP amounts (s 45-405(5): "the original gross domestic product at current prices" published by
+-- the Australian Statistician); the base interest rate (s 8AAD(2), the RBA's 90-day bank accepted bill yield); the Commissioner's
+-- figures: your notional tax and GDP-adjusted notional tax (ss 45-325 to 45-340, 45-405(1): worked out from your base assessment,
+-- which this encoding does not hold), your benchmark tax and variation year instalment income (ss 45-365 to 45-375).
+--
+-- NOT ENCODED. Notional tax and benchmark tax themselves; s 45-402 (2 instalments a year) and the regulations under s 45-400(3);
+-- s 45-232 and s 45-233 (GIC on an estimate of benchmark tax) and s 45-235 (annual payers); consolidated groups (s 45-230(2A));
+-- s 280-101 onward (other taxes); remission (s 280-160, the Commissioner's judgment). Income years are named by the calendar year
+-- in which they end, as in taa-instalments.l4 (2029 is the 2028-29 income year).
+--
+-- BASELINE ENCODING. Written with the writing-l4-rules skill from the individual's seat with the 2026-10-18 defaults. No
+-- pipeline, no coverage table, no independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Taxation Administration Act 1953 Schedule 1 -- instalment and interest amounts from the formulas`
+
+§§ `45-405 -- the GDP adjustment`
+
+-- s 45-405(3), from the authorised rendering:
+--     (100 × (Sum of GDP amounts (current year) / Sum of GDP amounts (previous year))) − 100
+-- "GDP adjustment means: (a) the percentage (rounded to the nearest whole number, rounding down a number ending in .5) worked out
+-- using the following formula; or (b) if the percentage worked out using the formula is negative -- 0%". (4): the current-year sum
+-- is of the quarters "in the last calendar year ... ending at least 3 months before the start of the current year", the previous-
+-- year sum of the calendar year before that. (9): "if the current year is the 2022-23 income year ... the GDP adjustment is 2%";
+-- (10): "if the current year is the 2023-24 income year ... 6%".
+@export What is the GDP adjustment for my PAYG instalments this income year, in percent (s 45-405(3), (9), (10))?
+GIVEN `income year ending in` IS A NUMBER @desc The calendar year in which the income year ends (2029 for 2028-29)
+      `sum of GDP amounts for the later calendar year` IS A NUMBER @desc The four quarters' original GDP at current prices for the last calendar year ending at least 3 months before the income year starts, as first published with both years
+      `sum of GDP amounts for the calendar year before` IS A NUMBER @desc The same sum for the calendar year before that one
+GIVETH A NUMBER
+`What is my GDP adjustment` MEANS
+    IF `income year ending in` EQUALS 2023 THEN 2
+    ELSE IF `income year ending in` EQUALS 2024 THEN 6
+         ELSE IF `the percentage` LESS THAN 0 THEN 0
+              ELSE CEILING (`the percentage` MINUS 0.5)
+    WHERE
+        `the percentage` MEANS (100 TIMES (`sum of GDP amounts for the later calendar year` DIVIDED BY `sum of GDP amounts for the calendar year before`)) MINUS 100
+
+-- s 45-405(2), from the authorised rendering:   Original amount × (1 + GDP adjustment)
+-- "original amount means the amount that, apart from subsection (2), would be your *adjusted taxable income for the *base year,
+-- or your *adjusted withholding income for the *base year, as appropriate."
+@export What is my base year adjusted taxable income (or adjusted withholding income) after the GDP uplift (s 45-405(2))?
+GIVEN `original amount` IS A NUMBER @desc Your adjusted taxable income (or adjusted withholding income) for the base year, before the uplift, in dollars
+      `GDP adjustment in percent` IS A NUMBER @desc The GDP adjustment for the income year, in percent
+GIVETH A NUMBER
+`What is my GDP-uplifted base year amount` MEANS
+    `original amount` TIMES (1 PLUS `GDP adjustment in percent` DIVIDED BY 100)
+
+§§ `45-400 -- my quarterly instalment on GDP-adjusted notional tax (4 instalments)`
+
+-- s 45-400(2): the amount the Commissioner must work out and notify is "(a) the amount worked out in accordance with the table if
+-- it is positive; or (b) otherwise -- nil". Table: the first quarter for which you are liable -- "25% of your *GDP-adjusted notional
+-- tax"; the second -- "50% ... reduced by the amount of your instalment for the earlier *instalment quarter"; the third -- 75%, and
+-- the fourth -- 100%, each "reduced by the total of your instalments for earlier *instalment quarters in that income year".
+DECLARE `GDP instalment` IS ONE OF
+    `instalment` HAS `dollars` IS A NUMBER
+    `not covered: there are at most 4 instalment quarters`
+
+@export What instalment must the Commissioner notify me for a quarter, as a payer of 4 instalments on GDP-adjusted notional tax (s 45-400)?
+GIVEN `which liable quarter this is` IS A NUMBER @desc 1 for the first quarter of the income year for which you are liable to pay an instalment, 2 for the second, and so on
+      `GDP-adjusted notional tax` IS A NUMBER @desc Your GDP-adjusted notional tax for the year (s 45-405), as the Commissioner works it out, in dollars
+      `my instalments for earlier quarters this year` IS A NUMBER @desc The total of your instalments for the earlier quarters of the income year, however worked out, in dollars
+GIVETH A `GDP instalment`
+`What GDP-adjusted instalment must I be notified` MEANS
+    IF `which liable quarter this is` LESS THAN 1 OR `which liable quarter this is` GREATER THAN 4
+    THEN `not covered: there are at most 4 instalment quarters`
+    ELSE IF `the table amount` GREATER THAN 0 THEN `instalment` `the table amount` ELSE `instalment` 0
+    WHERE
+        `the table amount` MEANS ((`GDP-adjusted notional tax` TIMES 25 TIMES `which liable quarter this is`) DIVIDED BY 100) MINUS `my instalments for earlier quarters this year`
+
+§§ `45-360, 45-230 -- a varied rate that was too low`
+
+-- s 45-360(1), from the authorised rendering: "Your benchmark instalment rate for the variation year is the percentage worked out
+-- to 2 decimal places (rounding up if the third decimal place is 5 or more) using the formula:
+--     (Your *benchmark tax / Variation year instalment income) × 100
+-- However, your benchmark instalment rate is a nil rate if either component of the formula is nil."
+@export What is my benchmark instalment rate for the year, in percent (s 45-360(1))?
+GIVEN `my benchmark tax` IS A NUMBER @desc Your benchmark tax for the variation year (s 45-365), as the Commissioner works it out, in dollars
+      `variation year instalment income` IS A NUMBER @desc The part of your assessable income for that year the Commissioner determines is instalment income, in dollars
+GIVETH A NUMBER
+`What is my benchmark instalment rate` MEANS
+    IF `my benchmark tax` AT MOST 0 OR `variation year instalment income` AT MOST 0 THEN 0
+    ELSE FLOOR (((`my benchmark tax` DIVIDED BY `variation year instalment income`) TIMES 100) TIMES 100 PLUS 0.5) DIVIDED BY 100
+
+-- s 45-230(1): liable to the general interest charge if you used a varied rate under s 45-205 for a quarter and "(b) the varied
+-- rate is less than 85% of your *benchmark instalment rate for that income year".
+@export Am I liable to the general interest charge because my varied instalment rate was too low (s 45-230(1))?
+GIVEN `I used a varied rate for the quarter` IS A BOOLEAN @desc Whether you chose your own instalment rate under s 45-205 for the quarter
+      `the varied rate` IS A NUMBER @desc The rate you chose, in percent
+      `my benchmark instalment rate` IS A NUMBER @desc Your benchmark instalment rate for the year (s 45-360), in percent
+GIVETH A BOOLEAN
+DECIDE `Am I liable to GIC for a varied rate` IF
+    `I used a varied rate for the quarter` AND `the varied rate` TIMES 100 LESS THAN `my benchmark instalment rate` TIMES 85
+
+-- s 45-230(2), from the authorised rendering:
+--     (Rate discrepancy × Your *instalment income for the variation quarter) + Credit Adjustment
+-- "rate discrepancy means the difference between the varied rate and the lesser of: (a) the most recent instalment rate given to
+-- you by the Commissioner before the end of the variation quarter; and (b) your *benchmark instalment rate for that income year."
+-- "credit adjustment means: (a) if, as a result of using the varied rate for the variation quarter, you claimed a credit under
+-- section 45-215 -- the amount worked out as follows:   Rate discrepancy × Your *instalment income for the earlier instalment
+-- quarters in that income year   or the amount of the credit, whichever is less; and (b) otherwise -- nil."
+-- Rates are percentages, so the products are divided by 100. The charge then runs from the instalment's due day to the day the
+-- assessed tax is due (s 45-230(3)), at the general interest charge rate.
+@export On what amount do I pay the general interest charge for a varied rate that was too low (s 45-230(2))?
+GIVEN `I used a varied rate for the quarter` IS A BOOLEAN @desc Whether you chose your own instalment rate under s 45-205 for the quarter
+      `the varied rate` IS A NUMBER @desc The rate you chose, in percent
+      `the Commissioner's most recent rate` IS A NUMBER @desc The most recent instalment rate the Commissioner gave you before the end of the quarter, in percent
+      `my benchmark instalment rate` IS A NUMBER @desc Your benchmark instalment rate for the year (s 45-360), in percent
+      `my instalment income for the variation quarter` IS A NUMBER @desc Your instalment income for the quarter you used the varied rate, in dollars
+      `I claimed a credit under s 45-215` IS A BOOLEAN @desc Whether, because of the varied rate, you claimed a credit under s 45-215 for earlier quarters' instalments
+      `the credit claimed` IS A NUMBER @desc The amount of that credit, in dollars (0 if none)
+      `my instalment income for the earlier quarters` IS A NUMBER @desc Your instalment income for the earlier instalment quarters of that income year, in dollars
+GIVETH A NUMBER
+`On what amount do I pay GIC for a varied rate` MEANS
+    IF NOT (`Am I liable to GIC for a varied rate` `I used a varied rate for the quarter` `the varied rate` `my benchmark instalment rate`)
+    THEN 0
+    ELSE ((`the rate discrepancy` TIMES `my instalment income for the variation quarter`) DIVIDED BY 100) PLUS `the credit adjustment`
+    WHERE
+        `the lesser rate` MEANS IF `the Commissioner's most recent rate` AT MOST `my benchmark instalment rate` THEN `the Commissioner's most recent rate` ELSE `my benchmark instalment rate`
+        `the rate discrepancy` MEANS IF `the lesser rate` AT LEAST `the varied rate` THEN `the lesser rate` MINUS `the varied rate` ELSE `the varied rate` MINUS `the lesser rate`
+        `the earlier quarters amount` MEANS (`the rate discrepancy` TIMES `my instalment income for the earlier quarters`) DIVIDED BY 100
+        `the credit adjustment` MEANS
+            IF NOT `I claimed a credit under s 45-215` THEN 0
+            ELSE IF `the earlier quarters amount` AT MOST `the credit claimed` THEN `the earlier quarters amount` ELSE `the credit claimed`
+
+§§ `280-100, 280-105 -- the shortfall interest charge on an amended assessment`
+
+-- s 280-100(1): "You are liable to pay *shortfall interest charge on an additional amount of income tax that you are liable to pay
+-- because the Commissioner amends your assessment"; (2) for each day from the day tax under the first assessment was due to the
+-- day before notice of the amended assessment.
+-- s 280-105(2), from the authorised rendering:
+--     (*Base interest rate for the day + 3 percentage points) / Number of days in the calendar year
+-- (1): the charge for a day is that rate times "the sum of ... (a) the additional amount ...; and (b) the shortfall interest charge
+-- on that amount from previous days" -- daily compounding, as for the general interest charge (taa-instalments.l4's `the charge
+-- accrued`). Shown truncated to whole cents, the same display choice as taa-instalments.l4.
+@export What is the shortfall interest charge rate for a day, in percent (s 280-105(2))?
+GIVEN `the base interest rate` IS A NUMBER @desc The base interest rate for the day under s 8AAD(2), in percent
+      `days in the calendar year` IS A NUMBER @desc 365, or 366 in a leap year
+GIVETH A NUMBER
+`What is the daily shortfall interest charge rate` MEANS
+    (`the base interest rate` PLUS 3) DIVIDED BY `days in the calendar year`
+
+@export How much shortfall interest charge do I owe because my assessment was amended (ss 280-100, 280-105)?
+GIVEN `the additional amount of income tax` IS A NUMBER @desc The extra income tax the amended assessment makes you liable to pay, in dollars
+      `the base interest rate` IS A NUMBER @desc The base interest rate under s 8AAD(2) for the period, in percent
+      `days in the calendar year` IS A NUMBER @desc 365, or 366 in a leap year
+      `days in the period` IS A NUMBER @desc The days from the day tax under your first assessment was due to the day before the notice of the amended assessment, counting both
+GIVETH A NUMBER
+`How much shortfall interest charge do I owe` MEANS
+    TRUNC (`the charge accrued` `the additional amount of income tax`
+                                (`What is the daily shortfall interest charge rate` `the base interest rate` `days in the calendar year`)
+                                `days in the period`) 2
