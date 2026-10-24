@@ -71,3 +71,12 @@ The question was where Florida sets the **amounts** a person gets: the TCA grant
 - **Florida Administrative Code** (flrules.org, incl. ch. 65A-1 and 65A-2). Its robots.txt returned HTTP 522 on 2026-10-19, so it was treated as disallowing everything; the same thing happened in the 2026-10-19 statute pass. FloridaCommerce (floridajobs.org) answered HTTP 403 to robots.txt and was not used.
 
 **Remaining gaps:** the rule text of 65A-1 and 65A-2 F.A.C.; any mental-health supplement to the OSS amounts (s 409.212(2) and s 429.075), which A-12 does not show.
+
+## Tax and benefits encodings (2026-10-24)
+
+| Encoding | Seat | What it answers | Assertions |
+|---|---|---|---|
+| `florida-constitution-article-vii-finance-and-taxation/encodings/baseline-2026-10/` (short) | the individual resident or citizen | no personal income tax: art. VII s 5(a) caps any tax on the income of natural persons at the federal or other state allowance, and no deposited statute levies one | 5 / 5 |
+| `the-2026-florida-statutes-title-xxx-chapter-414-family-self/encodings/baseline-2026-10/` | the TCA applicant | the three-tier payment standard; the $200-plus-half and student disregards; 185% FPL gross test; $2,000 resources; the other conditions; the 48-month limit; reporting a child's absence; the 30-day application lapse | 37 / 37 |
+
+185% of FPL is an input (DCF Appendix A-5 prints the April 2026 figures; it is a manual appendix, not a rule). The OSS supplement (s 409.212) and reemployment assistance (ch. 443) are deposited but not encoded.
