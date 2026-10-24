@@ -117,10 +117,25 @@ The general interest charge and the Taxation Administration Act machinery the no
 16. **The unclaimed money days are 30 June and 31 December; the payment is due 31 October or 30 April.** F2009L04037 sets those days, with 31 October for a 30 June day and 30 April (the next year) for a 31 December day. Money that qualifies on a day is reported for the first unclaimed money day on or after it (the statements are "as at the end of the day") and is due at the end of that day's scheduled statement day. The instrument was made in 2009 for s 15A when it spoke of Part 3 alone; s 15A now specifies days "for the purposes of this Part and Parts 3B and 4A", and the instrument is read as supplying them for inactive low-balance and lost member accounts too. Money that qualified before 28 October 2009 answers `not covered`. Asserted.
 17. **For a former temporary resident, the days are each 30 April and 31 October (first 15 June 2009).** F2009L01210 sets them under s 20B. Under s 20F(1) the fund pays by the next of those days after the notice, or the one after it if the notice came less than 28 days before; the 2019 Regulations identify no later day for s 20F(1)(c), so (c) never applies. A notice on 30 April itself is not "before" that day: the next day after it is 31 October. Asserted.
 
+## Amounts computed from the recovered formulas (added 2026-10-24)
+
+**Module:** `sumlma-formulas.l4`, beside `sumlma-member.l4`, which it imports and leaves unchanged; cases in `sumlma-cases-formulas.l4` (10 assertions written, 10 satisfied). In all, 141 assertions satisfied, and every file of the folder shows 0 errors and 0 warnings.
+
+The sidecar `../../registers/source-bundle/C2004A00518.formulas.md` now transcribes the formulas of finding 9. The module computes:
+
+- **What the fund pays** (s 17(1A)): all the unclaimed money at the end of the unclaimed money day, less the former unclaimed money.
+- **A death beneficiary's share** (ss 17(2AA), 20QF(4), 21E(4), 22B(4), 24G(3), one formula for all five Parts): the amount × (the beneficiary's death benefit / the total death benefits). The death benefits are what the Commissioner is satisfied the fund would have paid, so they are inputs.
+- **A former temporary resident's death beneficiaries** (s 20H(3), (4)): each gets the total the funds would have paid them. Where the excess and interest fall short of the sum of those totals, the excess and interest are shared in proportion.
+
+18. **More than one death beneficiary is now answered, on the death benefits.** $12,000 held for a member whose fund would have paid $30,000 to the widow and $15,000 to each of two children gives the widow $6,000 and each child $3,000. The question needs the beneficiary's death benefit and the total. `sumlma-member.l4`'s `How much is my share as a death beneficiary`, which asks only the number of beneficiaries, still answers `not covered` for two or more, and its case stands. Asserted.
+19. **Under s 20H(3)(b), "less than" means a shortfall that exactly meets the totals still pays them in full.** Asserted.
+
+No computed value disagrees with an existing assertion. No formula in the sidecar is left unencoded.
+
 ## What would need doing before this is worth relying on
 
 - **The Superannuation (Unclaimed Money and Lost Members) Regulations** (the 2019 Regulations are now deposited and brought in by `sumlma-regulations.l4`; reg 8, the pre-2013 interest, and Part 7, public sector schemes, are not encoded; the ABS CPI numbers reg 9 uses are inputs). Originally: They hold the eligibility age (if another is prescribed), the interest rates, prescribed visas, the s 24NA(2)(c) period and the s 24NA(3) allocation, and the KiwiSaver matters. Raised as `REQ-0086`.
 - **The Commissioner's s 15A and s 20B instruments** setting the unclaimed money days and scheduled statement days, so that a due day can be computed rather than supplied. Raised as `REQ-0087`; done 23 October 2026 (`sumlma-statement-days.l4`).
-- **A formulas sidecar** for s 17(1A) and the death-beneficiary formulas (finding 9).
+- ~~A formulas sidecar for s 17(1A) and the death-beneficiary formulas (finding 9)~~ done 2026-10-24 (`sumlma-formulas.l4`, findings 18-19).
 - **The SIS and RSA Regulations' definitions of "lost member"** and the conditions of release prescribed for s 20QA, which are asked as facts here.
 - **Wider sources.** No ATO guidance, ruling or case was read. Findings 4 and 5 are readings of the text alone.
