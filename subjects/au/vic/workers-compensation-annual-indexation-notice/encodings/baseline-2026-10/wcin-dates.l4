@@ -1,0 +1,105 @@
+IMPORT prelude
+IMPORT `wcin-common`
+
+-- Victorian workers' compensation indexation notice, Gazette S 363 of 30 June 2026 -- the dates, in one small module.
+--
+-- It uses only the built-in date functions (DATE_FROM_DMY, DATE_SERIAL), not the daydate library, which makes the stable
+-- l4 slow to check the modules that import it.
+--
+-- THE PERIOD RULE. The notice's tables have two columns, "Rate before 1 July 2026" and "Rate from 1 July 2026" (text lines
+-- 28-29, 408-409). The notice says weekly payments "are varied on 1 July each year" (lines 18, 398) and indexes the other
+-- amounts by the year's change in the CPI or AWE (lines 23-27, 403-407). READING: the "before" column holds the figures for
+-- 1 July 2025 to 30 June 2026, and the "from" column the figures for 1 July 2026 to 30 June 2027, when the next notice
+-- takes over. Any other day answers `not covered`. Which day counts for a given amount (the day of injury, of the claim, of
+-- the payment, of the indexation) is set by the Acts, which are not deposited; each question names the day it asks for.
+--
+-- THE CLAIM DATES. The Accident Compensation Act 1985 notice prints different rows for "claims made before 12 November
+-- 1997", "on or after 12 November 1997 and before 5 April 2010" and "on or after 5 April 2010" (lines 175-190), and for
+-- dependants' pensions "before 5 April 2010" and "on or after 5 April 2010" (lines 73-169).
+--
+-- UNOFFICIAL VERSION: quotations from a plain-text conversion by Legalese Commons of the Gazette's PDF, not the published
+-- Gazette. Victoria Government Gazette, published by IVE Group Limited with the authority of the Government Printer for the
+-- State of Victoria. (c) State of Victoria 2026. "This publication is copyright. No part may be reproduced by any process
+-- except in accordance with the provisions of the Copyright Act." Quoted under the owner's ruling of 24 October 2026
+-- (SOURCE-LICENSE.md).
+-- BASELINE ENCODING. Not for public use as advice. See NOTES.md.
+
+§ `Dates for the indexation notice`
+
+-- A date from day, month and year, so that the case files can write dates without the daydate library.
+GIVEN d IS A NUMBER, m IS A NUMBER, y IS A NUMBER
+GIVETH A DATE
+`the calendar date` d m y MEANS DATE_FROM_DMY d m y
+
+GIVEN `the day` IS A DATE, `the first day` IS A DATE, `the last day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` `falls from` `the first day` `to` `the last day` IF
+        DATE_SERIAL `the day` AT LEAST DATE_SERIAL `the first day`
+    AND DATE_SERIAL `the day` AT MOST  DATE_SERIAL `the last day`
+
+GIVEN `the first day` IS A DATE, `the second day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the first day` `is before` `the second day` IF DATE_SERIAL `the first day` LESS THAN DATE_SERIAL `the second day`
+
+§§ `The column in force on a day`
+
+GIVEN `the day` IS A DATE
+GIVETH AN `Answer` `Notice column`
+`the notice column in force on` `the day` MEANS
+    IF `the day` `falls from` (DATE_FROM_DMY 1 7 2025) `to` (DATE_FROM_DMY 30 6 2026)
+    THEN `answered` `the rate before 1 July 2026`
+    ELSE IF `the day` `falls from` (DATE_FROM_DMY 1 7 2026) `to` (DATE_FROM_DMY 30 6 2027)
+         THEN `answered` `the rate from 1 July 2026`
+         ELSE `not covered` `the day is outside 1 July 2025 to 30 June 2027, the two years the notice's columns cover`
+
+§§ `The claim date bands of the Accident Compensation Act 1985 notice`
+
+DECLARE `1985 Act claim band` IS ONE OF
+    `a claim made before 12 November 1997`
+    `a claim made on or after 12 November 1997 and before 5 April 2010`
+    `a claim made on or after 5 April 2010`
+
+GIVEN `the day the claim was made` IS A DATE
+GIVETH A `1985 Act claim band`
+`the 1985 Act claim band for a claim made on` `the day the claim was made` MEANS
+    IF `the day the claim was made` `is before` (DATE_FROM_DMY 12 11 1997)
+    THEN `a claim made before 12 November 1997`
+    ELSE IF `the day the claim was made` `is before` (DATE_FROM_DMY 5 4 2010)
+         THEN `a claim made on or after 12 November 1997 and before 5 April 2010`
+         ELSE `a claim made on or after 5 April 2010`
+
+-- The dependants' pension rows (lines 73-169) have only the 5 April 2010 line. s 92B(3)(b)(iii)'s second row says "for
+-- claims made after 5 April 2010" (line 117), where every other row says "on or after"; both of its rows print the same
+-- figures ($1,470 and $1,500), so a claim made on 5 April 2010 itself gets the same answer either way (NOTES.md finding 7).
+GIVEN `the day the claim was made` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the claim was made before 5 April 2010` `the day the claim was made` IF
+    `the day the claim was made` `is before` (DATE_FROM_DMY 5 4 2010)
+
+§§ `A printed figure on a day`
+
+-- The figure a row prints in the column in force on the day, or the reason there is none.
+GIVEN `the day` IS A DATE, `the pair` IS A `Printed pair`
+GIVETH AN `Answer` NUMBER
+`the printed figure in force on` `the day` `from` `the pair` MEANS
+    `the printed figure for` (`the notice column in force on` `the day`) `from` `the pair`
+
+-- The figure under whichever Act governs, where each notice may or may not print the row (NOTHING where it does not). The
+-- day is checked first.
+GIVEN `the Act` IS A `Governing Act`
+      `the day` IS A DATE
+      `the 2013 Act row` IS A MAYBE `Printed pair`
+      `the 1985 Act row` IS A MAYBE `Printed pair`
+GIVETH AN `Answer` NUMBER
+`the figure under` `the Act` `on` `the day` `from` `the 2013 Act row` `or` `the 1985 Act row` MEANS
+    CONSIDER `the notice column in force on` `the day`
+    WHEN `not covered` `the gap` THEN `not covered` `the gap`
+    WHEN `answered` `the column` THEN
+        CONSIDER `the row for the Act`
+        WHEN JUST `the pair` THEN `answered` (`the amount in` `the column` `of` `the pair`)
+        WHEN NOTHING THEN `not covered` `the notice prints no row for this under the Act named`
+    WHERE
+        `the row for the Act` MEANS
+            CONSIDER `the Act`
+            WHEN `the Workplace Injury Rehabilitation and Compensation Act 2013` THEN `the 2013 Act row`
+            WHEN `the Accident Compensation Act 1985`                            THEN `the 1985 Act row`
