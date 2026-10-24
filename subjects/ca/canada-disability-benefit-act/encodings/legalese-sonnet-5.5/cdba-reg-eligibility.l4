@@ -1,0 +1,291 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cdba-nouns`
+IMPORT `cdba-calendar`
+IMPORT `cdba-reg-definitions`
+
+-- Canada Disability Benefit Regulations (SOR/2025-35), sections 2, 2.1 and 3 -- WHO IS
+-- ELIGIBLE FOR AN ALLOCATION, AND FOR THE SUPPLEMENTAL AMOUNT.
+--
+-- THE MOMENT A CRITERION IS TESTED (fork F1). Section 2(1) makes a person eligible "for
+-- any month ... in which they meet the following criteria". The text does not say
+-- when in the month a criterion is tested. Four readings were looked at: (A) the
+-- criterion holds throughout the month; (B) at some time in the month; (C) on the first
+-- day; (D) on the last day. Only (A) gives every one of the exceptions in ss 2(2) and
+-- 2(3) work to do: under (B) and (C) the exception for the month in which a person
+-- turns 65 is surplusage, and under (C) and (D) one of the two incarceration months is.
+-- This module takes (A) and says so in every rule it governs. Reading "not more than
+-- 65 years of age" as exact elapsed age (not completed years) is part of the same
+-- fork: on completed years a person would still be "65 years of age" until their 66th
+-- birthday and s 2(2) would again have nothing to do.
+--
+-- AGE (fork F2). A person born on 29 February attains each age on 28 February in a year
+-- with no 29 February (`add years` clamps; the text does not say).
+
+§ `Regulations s 2 -- Eligibility criteria for allocation`
+
+-- The day on which a person attains an age: the birthday. Not a provision.
+GIVEN dob IS A DATE
+      years IS A NUMBER
+GIVETH A DATE
+`the day on which a person born on` dob `attains the age of` years MEANS
+    `add years` dob years
+
+-- "2 (1) ... for any month after May 2025": the first day of the month is on or after
+-- 1 June 2025.
+-- src:31 | 2 (1) A person is eligible to receive an allocation for any month after May 2025 in which they meet the following criteria:
+@ref Regulations s 2(1) (src:31)
+GIVEN month IS A DATE
+GIVETH A BOOLEAN
+`the month is after May 2025` month MEANS
+    `the first day of the month of` month AT LEAST YMD 2025 6 1
+
+-- (a) At least 18 throughout the month: the 18th birthday is on or before the first of
+-- the month. Not more than 65 throughout the month: the 65th birthday is on or after
+-- the last day of the month.
+-- src:32 | (a) they are at least 18 years of age but not more than 65 years of age;
+@ref Regulations s 2(1)(a) (src:32)
+GIVEN dob IS A DATE
+      month IS A DATE
+GIVETH A BOOLEAN
+`at least 18 years of age but not more than 65 years of age throughout the month` dob month MEANS
+        `the day on which a person born on` dob `attains the age of` 18 AT MOST `the first day of the month of` month
+    AND `the day on which a person born on` dob `attains the age of` 65 AT LEAST `the last day of the month of` month
+
+-- (b) borrowed term, asked as a fact.
+-- src:33 | (b) they are a DTC-eligible individual;
+@ref Regulations s 2(1)(b) (src:33)
+GIVEN facts IS A `Person facts for a month`
+GIVETH A BOOLEAN
+`a DTC-eligible individual for the month` facts MEANS
+    facts's `a DTC-eligible individual throughout the month`
+
+-- (c) Resident in Canada for the purposes of the Income Tax Act, and one of five.
+-- src:34 | (c) they are resident in Canada for the purposes of the Income Tax Act and are
+-- src:35 | (i) a Canadian citizen,
+-- src:36 | (ii) a permanent resident as defined in subsection 2(1) of the Immigration and Refugee Protection Act,
+-- src:37 | (iii) a temporary resident within the meaning of the Immigration and Refugee Protection Act who was resident in Canada for the 18 months preceding that month,
+-- src:38 | (iv) a protected person within the meaning of the Immigration and Refugee Protection Act, or
+-- src:39 | (v) an Indian as defined in subsection 2(1) of the Indian Act;
+@ref Regulations s 2(1)(c) (src:34-39)
+GIVEN facts IS A `Person facts for a month`
+GIVETH A BOOLEAN
+`resident in Canada and one of the listed kinds of person` facts MEANS
+        facts's `resident in Canada for the purposes of the Income Tax Act throughout the month`
+    AND (   facts's `a Canadian citizen`
+         OR facts's `a permanent resident`
+         OR (    facts's `a temporary resident`
+             AND facts's `months resident in Canada immediately before the month` AT LEAST 18)
+         OR facts's `a protected person`
+         OR facts's `an Indian as defined in subsection 2(1) of the Indian Act`)
+
+-- Custody: some time in the month on or after the first day in custody and before the
+-- release (a parole or statutory release that was terminated or revoked is not a
+-- release, so the custody goes on). Not a provision: the working-out for (d) and (3).
+GIVEN c IS A `Custody under a sentence`
+      month IS A DATE
+GIVETH A BOOLEAN
+`in custody under the sentence at some time in the month` c month MEANS
+        c's `the first day in custody` AT MOST `the last day of the month of` month
+    AND (CONSIDER c's `the release that ended the custody`
+         WHEN NOTHING  THEN TRUE
+         WHEN JUST r   THEN IF `the event is a release` r
+                            THEN r's `the day of the release` AT LEAST `the first day of the month of` month
+                            ELSE TRUE)
+
+-- "a sentence of imprisonment of two years or more that is to be served in a
+-- penitentiary by virtue of any Act of Parliament"
+GIVEN c IS A `Custody under a sentence`
+      month IS A DATE
+GIVETH A BOOLEAN
+`incarcerated under a qualifying sentence at some time in the month` c month MEANS
+        c's `the sentence of imprisonment is of two years or more`
+    AND c's `the sentence is to be served in a penitentiary by virtue of an Act of Parliament`
+    AND `in custody under the sentence at some time in the month` c month
+
+-- (d) Not incarcerated as a result of such a sentence.
+-- src:40 | (d) they are not incarcerated as a result of a sentence of imprisonment of two years or more that is to be served in a penitentiary by virtue of any Act of Parliament; and
+@ref Regulations s 2(1)(d) (src:40)
+GIVEN facts IS A `Person facts for a month`
+GIVETH A BOOLEAN
+`not incarcerated under a qualifying sentence in the month` facts MEANS
+    CONSIDER facts's `the custody under a sentence`
+    WHEN NOTHING THEN TRUE
+    WHEN JUST c  THEN NOT `incarcerated under a qualifying sentence at some time in the month` c (facts's `the month asked about`)
+
+-- (e) A return of income filed for the last taxation year that ended before the
+-- payment period began.
+-- src:41 | (e) they have filed a return of income under the Income Tax Act for the last taxation year that ended before the beginning of the payment period in which that month falls.
+@ref Regulations s 2(1)(e) (src:41)
+GIVEN facts IS A `Person facts for a month`
+GIVETH A BOOLEAN
+`a return of income filed for the last taxation year that ended before the payment period` facts MEANS
+    facts's `a return of income was filed for the last taxation year that ended before the payment period began`
+
+-- (2) The month in which the person turns 65: the 65th birthday falls in the month.
+-- src:42 | Exception — 65 years of age
+-- src:43 | (2) Despite paragraph (1)(a), a person is eligible to receive an allocation for the month in which they turn 65 years of age.
+@ref Regulations s 2(2) (src:42-43)
+GIVEN dob IS A DATE
+      month IS A DATE
+GIVETH A BOOLEAN
+`the person turns 65 years of age in the month` dob month MEANS
+    `the day` (`the day on which a person born on` dob `attains the age of` 65) `falls in the month of` month
+
+-- (3) The first month in which the person is incarcerated, and the month in which they
+-- are released. Taken to apply to the custody (d) is about; a person released on a
+-- release that does not count under s 1 has not been "released".
+-- src:44 | Exception — incarceration
+-- src:45 | (3) Despite paragraph (1)(d), a person is eligible to receive an allocation for the first month in which they are incarcerated and for the month in which they are released.
+@ref Regulations s 2(3) (src:44-45)
+GIVEN facts IS A `Person facts for a month`
+GIVETH A BOOLEAN
+`the month is the first month of the incarceration or the month of the release` facts MEANS
+    CONSIDER facts's `the custody under a sentence`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST c  THEN
+            `incarcerated under a qualifying sentence at some time in the month` c (facts's `the month asked about`)
+        AND (   `the month number of` (c's `the first day in custody`) EQUALS `the month number of` (facts's `the month asked about`)
+             OR (CONSIDER c's `the release that ended the custody`
+                 WHEN NOTHING THEN FALSE
+                 WHEN JUST r  THEN `the event is a release` r
+                                   AND `the day` (r's `the day of the release`) `falls in the month of` (facts's `the month asked about`)))
+
+-- (4) The condition on the cohabiting spouse or common-law partner. A person with no
+-- spouse or partner has no one who could have failed to file (fork F7).
+-- src:46 | Condition — cohabiting spouse or common-law partner
+-- src:47 | (4) Despite subsections (1) to (3), a person is eligible to receive an allocation for any month in a payment period only if their cohabiting spouse or common-law partner has filed a return of income under the Income Tax Act for the last taxation year that ended before the beginning of that payment period.
+@ref Regulations s 2(4) (src:46-47)
+GIVEN facts IS A `Person facts for a month`
+GIVETH A BOOLEAN
+`the cohabiting spouse or common-law partner condition is satisfied` facts MEANS
+        NOT facts's `a cohabiting spouse or common-law partner on the last day of the month before`
+     OR facts's `the cohabiting spouse or common-law partner filed a return of income for that year`
+
+-- (5) The Minister's waiver: a judgment the Regulations hand to the Minister, so it is
+-- a condition on the Minister being satisfied and is never worked out.
+-- src:48 | Waiver
+-- src:49 | (5) The Minister may waive the condition set out in subsection (4) if the Minister is satisfied that the condition is unreasonable or impracticable in the circumstances, including if
+-- src:50 | (a) the cohabiting spouse or common-law partner is not resident in Canada for the purposes of the Income Tax Act;
+-- src:51 | (b) for reasons not attributable to the person or their cohabiting spouse or common-law partner, the person is not living with their cohabiting spouse or common-law partner; or
+-- src:52 | (c) the cohabiting spouse or common-law partner has engaged in family violence as defined in subsection 2(1) of the Divorce Act.
+@ref Regulations s 2(5) (src:48-52)
+GIVEN `the Minister is satisfied that the condition is unreasonable or impracticable in the circumstances` IS A BOOLEAN
+GIVETH A BOOLEAN
+`the Minister may waive the condition in subsection 2(4)` `the Minister is satisfied that the condition is unreasonable or impracticable in the circumstances` MEANS
+    `the Minister is satisfied that the condition is unreasonable or impracticable in the circumstances`
+
+-- The three circumstances the paragraph names as examples ("including if"). They do
+-- not decide the waiver: only the Minister's satisfaction does.
+@ref Regulations s 2(5)(a) to (c) (src:50-52)
+GIVEN `the cohabiting spouse or common-law partner is not resident in Canada for the purposes of the Income Tax Act` IS A BOOLEAN
+      `the person is not living with them for reasons not attributable to the person or to them` IS A BOOLEAN
+      `they have engaged in family violence as defined in subsection 2(1) of the Divorce Act` IS A BOOLEAN
+GIVETH A BOOLEAN
+`a circumstance named in subsection 2(5) is present` `the cohabiting spouse or common-law partner is not resident in Canada for the purposes of the Income Tax Act` `the person is not living with them for reasons not attributable to the person or to them` `they have engaged in family violence as defined in subsection 2(1) of the Divorce Act` MEANS
+        `the cohabiting spouse or common-law partner is not resident in Canada for the purposes of the Income Tax Act`
+     OR `the person is not living with them for reasons not attributable to the person or to them`
+     OR `they have engaged in family violence as defined in subsection 2(1) of the Divorce Act`
+
+-- (6) A month "during which payment of the allocation has been suspended under section
+-- 11". FORK F12. Read here as: the suspension had taken effect by the first day of the
+-- month, so that payment was suspended throughout it. The other reading (any day of the
+-- month is enough) was rejected because it makes s 11(2)(a) pointless: that paragraph
+-- fixes the default day of suspension at the LAST day of the month in which the request
+-- is processed, which only does work if a suspension taking effect on the last day of a
+-- month leaves that month payable. It also matches fork F1, where every other bar and
+-- criterion in s 2 speaks of the whole month. Under the other reading the suspension
+-- test would be "took effect on or before the last day of the month" (one comparison)
+-- and a suspension effective on the 31st would void the month it started in.
+-- src:53 | Exception — suspension of payments
+-- src:54 | (6) Despite subsections (1) to (3), a person is ineligible to receive an allocation for any month during which payment of the allocation has been suspended under section 11.
+@ref Regulations s 2(6) (src:53-54)
+GIVEN facts IS A `Person facts for a month`
+GIVETH A BOOLEAN
+`payment of the allocation is suspended under section 11 throughout the month` facts MEANS
+    CONSIDER facts's `the suspension the beneficiary asked for`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST s  THEN
+            s's `the day the suspension took effect` AT MOST `the first day of the month of` (facts's `the month asked about`)
+        AND (CONSIDER s's `a day in the month payment resumed`
+             WHEN NOTHING   THEN TRUE
+             WHEN JUST back THEN `the month number of` (facts's `the month asked about`) LESS THAN `the month number of` back)
+
+-- The whole of s 2: (1) to (3), then (4) and (6) "despite subsections (1) to (3)".
+-- A person is eligible for a month if (1) is met, with (2) and (3) letting through the
+-- 65th-birthday month and the two incarceration months, and (4) and (6) as well.
+-- It is written in two steps, "everything but (6)" and then (6), because s 4(4) needs
+-- the first alone (fork F11).
+@ref Regulations s 2(1) to (5) (src:31-52)
+GIVEN facts IS A `Person facts for a month`
+GIVETH A BOOLEAN
+`the person meets the criteria of section 2 apart from the bar in subsection 2(6)` facts MEANS
+        `the month is after May 2025` (facts's `the month asked about`)
+    AND (   `at least 18 years of age but not more than 65 years of age throughout the month` (facts's `date of birth`) (facts's `the month asked about`)
+         OR `the person turns 65 years of age in the month` (facts's `date of birth`) (facts's `the month asked about`))
+    AND `a DTC-eligible individual for the month` facts
+    AND `resident in Canada and one of the listed kinds of person` facts
+    AND (   `not incarcerated under a qualifying sentence in the month` facts
+         OR `the month is the first month of the incarceration or the month of the release` facts)
+    AND `a return of income filed for the last taxation year that ended before the payment period` facts
+    AND (   `the cohabiting spouse or common-law partner condition is satisfied` facts
+         OR facts's `the Minister waived the spouse or partner condition`)
+
+@ref Regulations s 2(1) to (6) (src:31-54)
+GIVEN facts IS A `Person facts for a month`
+GIVETH A BOOLEAN
+`the person is eligible to receive an allocation for the month` facts MEANS
+        `the person meets the criteria of section 2 apart from the bar in subsection 2(6)` facts
+    AND NOT `payment of the allocation is suspended under section 11 throughout the month` facts
+
+§ `Regulations s 2(4) and (5) -- where the person stands on the spouse or partner condition`
+
+-- Not in the text as a single rule: the four places a person can stand, so that the
+-- website can tell them which one they are in.
+DECLARE `Position on the spouse or partner condition` IS ONE OF
+    `the condition does not apply: no cohabiting spouse or common-law partner`
+    `the condition is met`
+    `the condition is not met, and the Minister has waived it`
+    `the condition is not met, and the Minister may waive it if satisfied that it is unreasonable or impracticable`
+
+@ref Regulations s 2(4) and (5) (src:46-52)
+GIVEN facts IS A `Person facts for a month`
+GIVETH A `Position on the spouse or partner condition`
+`where the person stands on the cohabiting spouse or common-law partner condition` facts MEANS
+    BRANCH IF NOT facts's `a cohabiting spouse or common-law partner on the last day of the month before`
+                THEN `the condition does not apply: no cohabiting spouse or common-law partner`
+           IF facts's `the cohabiting spouse or common-law partner filed a return of income for that year`
+                THEN `the condition is met`
+           IF facts's `the Minister waived the spouse or partner condition`
+                THEN `the condition is not met, and the Minister has waived it`
+           OTHERWISE `the condition is not met, and the Minister may waive it if satisfied that it is unreasonable or impracticable`
+
+§ `Regulations s 2.1 -- Eligibility criteria for supplemental amount`
+
+-- 2.1(1) and (2), with the related provision SOR/2026-123 s 14: a benefit paid before
+-- that section came into force is deemed to be an allocation. The text does not give the
+-- day it came into force, so whether a payment came before it is a fact asked of the
+-- person. Only payments the person was entitled to are considered ((2)).
+-- src:56 | 2.1 (1) A person is eligible to receive a supplemental amount for a certificate referred to in paragraph 118.3(1)(a.2) or (a.3) of the Income Tax Act that they obtain if an allocation is paid to them after they obtain the certificate and, at the time of the payment, their status as a DTC-eligible individual is based on that certificate.
+-- src:57 | Clarification
+-- src:58 | (2) A payment to which the person is not entitled is not to be considered for the purposes of subsection (1).
+-- src:377 | — SOR/2026-123, s. 14
+-- src:378 | Benefit deemed to be allocation
+-- src:379 | 14 For the purposes of subsection 2.1(1) of the Canada Disability Benefit Regulations, any benefit, as defined in section 1 of those Regulations, that was paid to a person before the day on which this section comes into force is deemed to be an allocation, as defined in that section 1, that was paid to that person.
+@ref Regulations s 2.1 (src:56-58); SOR/2026-123 s 14 (src:377-379)
+GIVEN `obtained a certificate referred to in paragraph 118.3(1)(a.2) or (a.3) of the Income Tax Act` IS A BOOLEAN
+      payments IS A LIST OF `Payment made after a certificate`
+GIVETH A BOOLEAN
+`a supplemental amount is owed for the certificate` `obtained a certificate referred to in paragraph 118.3(1)(a.2) or (a.3) of the Income Tax Act` payments MEANS
+        `obtained a certificate referred to in paragraph 118.3(1)(a.2) or (a.3) of the Income Tax Act`
+    AND any `qualifies` payments
+    WHERE
+        `qualifies` p MEANS
+                (   p's `the payment is an allocation`
+                 OR p's `the payment was made before SOR/2026-123 section 14 came into force`)
+            AND p's `the person was entitled to the payment`
+            AND p's `the status as a DTC-eligible individual at the time of the payment rests on that certificate`
+
+-- Regulations s 3 (the Minister may determine age and identity from information that
+-- the Canada Employment Insurance Commission made available) is NOT encoded: it adds no
+-- condition that decides anything for a person, so it is inert (see NOTES.md, coverage).

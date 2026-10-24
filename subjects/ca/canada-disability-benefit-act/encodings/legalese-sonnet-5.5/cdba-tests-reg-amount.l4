@@ -1,0 +1,194 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cdba-nouns`
+IMPORT `cdba-calendar`
+IMPORT `cdba-reg-definitions`
+IMPORT `cdba-reg-amount`
+
+-- Tests for Regulations ss 6 and 6.1. Every expected value is worked out by hand from
+-- the formulas in the text, and the working is in the comment beside the assertion.
+-- The Consumer Price Index figures below are ILLUSTRATIVE inputs, not published
+-- figures: the encoding contains none.
+
+§ `Regulations s 6 -- tests`
+
+-- Builders: a working income of one number; the household facts for one month.
+GIVEN n IS A NUMBER
+GIVETH A `Working income`
+`a working income of` n MEANS `Working income` WITH
+    `amounts referred to in paragraphs (a) and (b) of the definition working income in subsection 122.7(1) of the Income Tax Act` IS n
+    `net farming income`        IS 0
+    `net fishing income`        IS 0
+    `net professional income`   IS 0
+    `net commission income`     IS 0
+    `other net business income` IS 0
+
+GIVEN spouse   IS A BOOLEAN
+      benef    IS A BOOLEAN
+      waived   IS A BOOLEAN
+      c        IS A NUMBER
+      e        IS A NUMBER
+      own      IS A NUMBER
+      partner  IS A NUMBER
+GIVETH A `Income and household facts`
+`the household facts` spouse benef waived c e own partner MEANS
+    `Income and household facts` WITH
+        `a cohabiting spouse or common-law partner on the last day of the month that precedes the month` IS spouse
+        `the cohabiting spouse or common-law partner is also a beneficiary` IS benef
+        `the Minister waived the condition in subsection 2(4)` IS waived
+        `adjusted income without the income of a person who was the spouse or partner at the end of the year` IS c
+        `adjusted income as if the current spouse or partner had been the spouse or partner at the end of the year` IS e
+        `the beneficiary's own working income` IS `a working income of` own
+        `the working income of the cohabiting spouse or common-law partner` IS `a working income of` partner
+
+GIVEN year IS A NUMBER
+      cpi  IS A NUMBER
+GIVETH A `Consumer Price Index figure`
+`the figure for` year `is` cpi MEANS `Consumer Price Index figure` WITH
+    `the calendar year of the figure` IS year
+    `the annual average all-items Consumer Price Index for Canada, not seasonally adjusted` IS cpi
+
+`the period beginning on 1 July 2024` MEANS `the payment period that includes the day` (YMD 2024 7 1)
+`the period beginning on 1 July 2025` MEANS `the payment period that includes the day` (YMD 2025 7 1)
+`the period beginning on 1 July 2026` MEANS `the payment period that includes the day` (YMD 2026 7 1)
+`the period beginning on 1 July 2027` MEANS `the payment period that includes the day` (YMD 2027 7 1)
+
+§§ `s 6(7) -- working income`
+
+-- Six different powers of ten: the total shows each of the six amounts counted once.
+#ASSERT `the working income` (`Working income` WITH `amounts referred to in paragraphs (a) and (b) of the definition working income in subsection 122.7(1) of the Income Tax Act` IS 1, `net farming income` IS 10, `net fishing income` IS 100, `net professional income` IS 1000, `net commission income` IS 10000, `other net business income` IS 100000) EQUALS 111111
+#ASSERT `the working income` (`a working income of` 0) EQUALS 0
+#ASSERT `the working income` (`a working income of` 5000) EQUALS 5000
+
+§§ `s 6(5) and (6) -- the indexing factor`
+
+-- The payment period that began on 1 July 2024 has no calendar year from 2024 to the
+-- last one that ended before it (that would be 2023), so CPImax has no value.
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2024` (LIST `the figure for` 2024 `is` 100) EQUALS NOTHING
+-- 1 July 2025: the range is 2024 alone, CPImax = CPI2024, factor 100 / 100 = 1.
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2025` (LIST `the figure for` 2024 `is` 100) EQUALS JUST 1
+-- 1 July 2026: the range is 2024 and 2025; the higher is 102; 102 / 100 = 1.02.
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2026` (LIST `the figure for` 2024 `is` 100, `the figure for` 2025 `is` 102) EQUALS JUST 1.02
+-- An index that falls below 2024's leaves the highest at 2024's: factor 1, never below.
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2026` (LIST `the figure for` 2024 `is` 100, `the figure for` 2025 `is` 98) EQUALS JUST 1
+-- 1 July 2027: the range is 2024 to 2026; the highest of 100, 102, 101 is 102.
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2027` (LIST `the figure for` 2024 `is` 100, `the figure for` 2025 `is` 102, `the figure for` 2026 `is` 101) EQUALS JUST 1.02
+-- Order of the figures does not matter.
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2027` (LIST `the figure for` 2026 `is` 102, `the figure for` 2025 `is` 101, `the figure for` 2024 `is` 100) EQUALS JUST 1.02
+-- A fraction: 130 / 125 = 1.04.
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2026` (LIST `the figure for` 2024 `is` 125, `the figure for` 2025 `is` 130) EQUALS JUST 1.04
+-- A calendar year that had not yet ended when the period began is left out: 2026 is
+-- not in the range for 1 July 2026, so 110 is ignored and the factor is 1.02.
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2026` (LIST `the figure for` 2024 `is` 100, `the figure for` 2025 `is` 102, `the figure for` 2026 `is` 110) EQUALS JUST 1.02
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2025` (LIST `the figure for` 2024 `is` 100, `the figure for` 2025 `is` 110) EQUALS JUST 1
+-- "beginning with 2024": a figure for 2023 is left out.
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2025` (LIST `the figure for` 2023 `is` 150, `the figure for` 2024 `is` 100) EQUALS JUST 1
+-- Not covered: no figure for 2024, or a year missing from the range, or no figures.
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2026` (LIST `the figure for` 2025 `is` 102) EQUALS NOTHING
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2027` (LIST `the figure for` 2024 `is` 100, `the figure for` 2026 `is` 101) EQUALS NOTHING
+#ASSERT `the indexing factor for the payment period` `the period beginning on 1 July 2025` EMPTY EQUALS NOTHING
+
+§§ `s 6(2) -- no cohabiting spouse or common-law partner (A = 1)`
+
+-- C 20,000, working income 5,000: D = 5,000; 20,000 - 5,000 - 23,000 = -8,000; B = 0.
+#ASSERT `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` 1 20000 (`a working income of` 5000) EQUALS 0
+#ASSERT `the basic amount worked out by the formula` 1 0 EQUALS 200
+-- C 30,000, working income 5,000: 30,000 - 5,000 - 23,000 = 2,000; B = 400; (2,400 - 400) / 12 = 166.666... = 166.67.
+#ASSERT `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` 1 30000 (`a working income of` 5000) EQUALS 400
+#ASSERT `the basic amount worked out by the formula` 1 400 EQUALS 166.67
+-- Working income above $10,000 counts only up to $10,000: D = 10,000; 30,000 - 10,000 - 23,000 = -3,000; B = 0.
+#ASSERT `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` 1 30000 (`a working income of` 20000) EQUALS 0
+-- On the threshold: 28,000 - 5,000 - 23,000 = 0; one dollar over: B = 0.2 and (2,400 - 0.2) / 12 = 199.98333 = 199.98.
+#ASSERT `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` 1 28000 (`a working income of` 5000) EQUALS 0
+#ASSERT `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` 1 28001 (`a working income of` 5000) EQUALS 0.2
+#ASSERT `the basic amount worked out by the formula` 1 0.2 EQUALS 199.98
+-- A tie: C 25,039.70, no working income: 2,039.70 x 20% = 407.94; (2,400 - 407.94) / 12 = 1,992.06 / 12 = 166.005 exactly, rounded to the higher cent: 166.01.
+#ASSERT `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` 1 25039.7 (`a working income of` 0) EQUALS 407.94
+#ASSERT `the basic amount worked out by the formula` 1 407.94 EQUALS 166.01
+-- The formula value goes below zero (fork F9): C 100,000: 77,000 x 20% = 15,400; (2,400 - 15,400) / 12 = -1,083.33; nothing is payable.
+#ASSERT `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` 1 100000 (`a working income of` 0) EQUALS 15400
+#ASSERT `the basic amount worked out by the formula` 1 15400 EQUALS -1083.33
+#ASSERT `the basic amount payable` 1 15400 EQUALS 0
+-- Exactly zero: C 35,000: 12,000 x 20% = 2,400; (2,400 - 2,400) / 12 = 0.
+#ASSERT `the basic amount worked out by the formula` 1 2400 EQUALS 0
+#ASSERT `the basic amount payable` 1 2400 EQUALS 0
+-- A negative tie rounds to the higher cent: B = 3,400.02 gives -1,000.02 / 12 = -83.335, rounded to -83.33.
+#ASSERT `the basic amount worked out by the formula` 1 3400.02 EQUALS -83.33
+-- Rounding up and down on both sides of a half cent: 83.335 -> 83.34, 83.334 -> 83.33, 83.336 -> 83.34.
+#ASSERT `rounded to the nearest cent, or to the higher of two equidistant cents` 83.335 EQUALS 83.34
+#ASSERT `rounded to the nearest cent, or to the higher of two equidistant cents` 83.334 EQUALS 83.33
+#ASSERT `rounded to the nearest cent, or to the higher of two equidistant cents` 83.336 EQUALS 83.34
+#ASSERT `rounded to the nearest cent, or to the higher of two equidistant cents` (0 MINUS 83.336) EQUALS -83.34
+-- Indexed (A = 1.02): the threshold is 23,000 x 1.02 = 23,460 and the cap is 10,000 x 1.02 = 10,200.
+-- C 30,000, working income 5,000: 30,000 - 5,000 - 23,460 = 1,540; B = 308; (2,448 - 308) / 12 = 178.333 = 178.33.
+#ASSERT `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` 1.02 30000 (`a working income of` 5000) EQUALS 308
+#ASSERT `the basic amount worked out by the formula` 1.02 308 EQUALS 178.33
+-- Working income 20,000 is capped at 10,200: 30,000 - 10,200 - 23,460 = -3,660; B = 0; 2,448 / 12 = 204.
+#ASSERT `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` 1.02 30000 (`a working income of` 20000) EQUALS 0
+#ASSERT `the basic amount worked out by the formula` 1.02 0 EQUALS 204
+
+§§ `s 6(3) -- a cohabiting spouse or common-law partner who is not a beneficiary (A = 1)`
+
+-- E 45,000, working incomes 8,000 and 4,000: F = 12,000; 45,000 - 12,000 - 32,500 = 500; B = 100; 2,300 / 12 = 191.666 = 191.67.
+#ASSERT `the reduction based on income when the cohabiting spouse or common-law partner is not a beneficiary` 1 45000 (`a working income of` 8000) (`a working income of` 4000) EQUALS 100
+#ASSERT `the basic amount worked out by the formula` 1 100 EQUALS 191.67
+-- Working incomes 10,000 + 9,000 = 19,000, capped at 14,000: E 50,000: 50,000 - 14,000 - 32,500 = 3,500; B = 700; 1,700 / 12 = 141.666 = 141.67.
+#ASSERT `the reduction based on income when the cohabiting spouse or common-law partner is not a beneficiary` 1 50000 (`a working income of` 10000) (`a working income of` 9000) EQUALS 700
+#ASSERT `the basic amount worked out by the formula` 1 700 EQUALS 141.67
+-- Working incomes together exactly 14,000: E 46,500: 46,500 - 14,000 - 32,500 = 0; B = 0.
+#ASSERT `the reduction based on income when the cohabiting spouse or common-law partner is not a beneficiary` 1 46500 (`a working income of` 7000) (`a working income of` 7000) EQUALS 0
+-- Below the threshold: E 40,000: 40,000 - 12,000 - 32,500 = -4,500; B = 0.
+#ASSERT `the reduction based on income when the cohabiting spouse or common-law partner is not a beneficiary` 1 40000 (`a working income of` 8000) (`a working income of` 4000) EQUALS 0
+-- Indexed (A = 1.02): threshold 32,500 x 1.02 = 33,150; cap 14,000 x 1.02 = 14,280. E 50,000, working incomes 19,000: 50,000 - 14,280 - 33,150 = 2,570; B = 514.
+#ASSERT `the reduction based on income when the cohabiting spouse or common-law partner is not a beneficiary` 1.02 50000 (`a working income of` 10000) (`a working income of` 9000) EQUALS 514
+
+§§ `s 6(4) -- a cohabiting spouse or common-law partner who is also a beneficiary (A = 1)`
+
+-- 10% instead of 20%: E 50,000, working incomes 19,000 (capped 14,000): 3,500 x 10% = 350; (2,400 - 350) / 12 = 170.833 = 170.83.
+#ASSERT `the reduction based on income when the cohabiting spouse or common-law partner is also a beneficiary` 1 50000 (`a working income of` 10000) (`a working income of` 9000) EQUALS 350
+#ASSERT `the basic amount worked out by the formula` 1 350 EQUALS 170.83
+-- On the threshold: E 44,500, working incomes 12,000: 44,500 - 12,000 - 32,500 = 0; one dollar over: B = 0.1 and (2,400 - 0.1) / 12 = 199.99166 = 199.99.
+#ASSERT `the reduction based on income when the cohabiting spouse or common-law partner is also a beneficiary` 1 44500 (`a working income of` 8000) (`a working income of` 4000) EQUALS 0
+#ASSERT `the reduction based on income when the cohabiting spouse or common-law partner is also a beneficiary` 1 44501 (`a working income of` 8000) (`a working income of` 4000) EQUALS 0.1
+#ASSERT `the basic amount worked out by the formula` 1 0.1 EQUALS 199.99
+
+§§ `s 6(1) and (4.1) -- which subsection applies, and the amount for a month`
+
+#ASSERT `which subsection works out the reduction` (`the household facts` FALSE FALSE FALSE 30000 99999 5000 0) EQUALS `subsection 6(2): no cohabiting spouse or common-law partner`
+#ASSERT `which subsection works out the reduction` (`the household facts` TRUE FALSE FALSE 30000 99999 5000 0) EQUALS `subsection 6(3): a cohabiting spouse or common-law partner who is not a beneficiary`
+#ASSERT `which subsection works out the reduction` (`the household facts` TRUE TRUE FALSE 30000 99999 5000 0) EQUALS `subsection 6(4): a cohabiting spouse or common-law partner who is also a beneficiary`
+#ASSERT `which subsection works out the reduction` (`the household facts` TRUE TRUE TRUE 30000 99999 5000 0) EQUALS `subsection 6(4.1): the Minister waived the condition in subsection 2(4), so subsection 6(2) applies`
+#ASSERT `which subsection works out the reduction` (`the household facts` TRUE FALSE TRUE 30000 99999 5000 0) EQUALS `subsection 6(4.1): the Minister waived the condition in subsection 2(4), so subsection 6(2) applies`
+-- No partner: a flag saying the partner is a beneficiary is not reached.
+#ASSERT `which subsection works out the reduction` (`the household facts` FALSE TRUE FALSE 30000 99999 5000 0) EQUALS `subsection 6(2): no cohabiting spouse or common-law partner`
+
+-- The reduction picks up the right inputs for each subsection (A = 1).
+-- (2): C 30,000, working income 5,000: B = 400. E is not used.
+#ASSERT `the reduction based on income` 1 (`the household facts` FALSE FALSE FALSE 30000 99999 5000 7000) EQUALS 400
+-- (3): E 45,000, 8,000 + 4,000: B = 100. C is not used.
+#ASSERT `the reduction based on income` 1 (`the household facts` TRUE FALSE FALSE 1 45000 8000 4000) EQUALS 100
+-- (4): E 50,000, 10,000 + 9,000: B = 350.
+#ASSERT `the reduction based on income` 1 (`the household facts` TRUE TRUE FALSE 1 50000 10000 9000) EQUALS 350
+-- (4.1): the waiver sends a person with a partner to (2): C 30,000, own 5,000 only (the partner's 7,000 and E are not used): B = 400.
+#ASSERT `the reduction based on income` 1 (`the household facts` TRUE FALSE TRUE 30000 99999 5000 7000) EQUALS 400
+#ASSERT `the reduction based on income` 1 (`the household facts` TRUE TRUE TRUE 30000 99999 5000 7000) EQUALS 400
+
+-- The whole of 6(1) for a month. The payment period beginning 1 July 2024 has no indexing factor.
+#ASSERT `the basic amount worked out by the formula for the month` `the period beginning on 1 July 2024` (LIST `the figure for` 2024 `is` 100) (`the household facts` FALSE FALSE FALSE 30000 0 5000 0) EQUALS NOTHING
+#ASSERT `the basic amount payable for the month` `the period beginning on 1 July 2024` (LIST `the figure for` 2024 `is` 100) (`the household facts` FALSE FALSE FALSE 30000 0 5000 0) EQUALS NOTHING
+-- 1 July 2025 (A = 1): 166.67.
+#ASSERT `the basic amount worked out by the formula for the month` `the period beginning on 1 July 2025` (LIST `the figure for` 2024 `is` 100) (`the household facts` FALSE FALSE FALSE 30000 0 5000 0) EQUALS JUST 166.67
+#ASSERT `the basic amount payable for the month` `the period beginning on 1 July 2025` (LIST `the figure for` 2024 `is` 100) (`the household facts` FALSE FALSE FALSE 30000 0 5000 0) EQUALS JUST 166.67
+-- 1 July 2026 (A = 1.02): 178.33.
+#ASSERT `the basic amount payable for the month` `the period beginning on 1 July 2026` (LIST `the figure for` 2024 `is` 100, `the figure for` 2025 `is` 102) (`the household facts` FALSE FALSE FALSE 30000 0 5000 0) EQUALS JUST 178.33
+-- A couple, partner a beneficiary (A = 1): 170.83.
+#ASSERT `the basic amount payable for the month` `the period beginning on 1 July 2025` (LIST `the figure for` 2024 `is` 100) (`the household facts` TRUE TRUE FALSE 0 50000 10000 9000) EQUALS JUST 170.83
+-- Formula below zero: the formula value is reported, and the amount payable is 0 (fork F9).
+#ASSERT `the basic amount worked out by the formula for the month` `the period beginning on 1 July 2025` (LIST `the figure for` 2024 `is` 100) (`the household facts` FALSE FALSE FALSE 100000 0 0 0) EQUALS JUST -1083.33
+#ASSERT `the basic amount payable for the month` `the period beginning on 1 July 2025` (LIST `the figure for` 2024 `is` 100) (`the household facts` FALSE FALSE FALSE 100000 0 0 0) EQUALS JUST 0
+-- No figures for the range: not covered.
+#ASSERT `the basic amount payable for the month` `the period beginning on 1 July 2026` (LIST `the figure for` 2025 `is` 102) (`the household facts` FALSE FALSE FALSE 30000 0 5000 0) EQUALS NOTHING
+
+§ `Regulations s 6.1 -- tests`
+
+#ASSERT `the supplemental amount` EQUALS 150

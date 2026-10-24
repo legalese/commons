@@ -1,0 +1,138 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cdba-nouns`
+IMPORT `cdba-calendar`
+IMPORT `cdba-reg-definitions`
+IMPORT `cdba-reg-amount`
+
+-- Canada Disability Benefit Regulations (SOR/2025-35), sections 35 and 36 -- ADMINISTRATIVE
+-- MONETARY PENALTIES, AND OFFENCES.
+--
+-- What the text leaves out and these modules do not invent: the Regulations set no fine and
+-- no term of imprisonment for the offences in s 36 (Act s 11(1)(q) lets regulations do that);
+-- the only sums fixed are the penalties in s 35(3). The Minister's opinion (s 35(2)) and
+-- satisfaction (s 35(7)(b)) are plain BOOLEAN inputs.
+--
+-- Time counting (fork F15): "ten years preceding the day" is the ten years ending the day before
+-- it, both ends included; "five years have passed since the day" has passed once the fifth
+-- anniversary of that day is over, so the anniversary itself is still in time (the same
+-- convention as the 24 months in s 11(3)).
+
+§ `Regulations s 35 -- Administrative monetary penalties`
+
+-- 35(1): a violation is knowingly making a false or misleading representation in relation to
+-- an application, or making an application for, and receiving, a benefit knowing one is not
+-- eligible.
+-- src:293 | 35 (1) A person commits a violation if they
+-- src:294 | (a) knowingly make, in relation to an application for a benefit under the Act, a representation that is false or misleading; or
+-- src:295 | (b) make an application for, and receive, a benefit under the Act knowing that they are not eligible to receive it.
+@ref Regulations s 35(1) (src:293-295)
+GIVEN facts IS A `Violation facts`
+GIVETH A BOOLEAN
+`the person commits a violation` facts MEANS
+        facts's `knowingly made a false or misleading representation in relation to an application`
+     OR facts's `made an application for, and received, a benefit knowing they were not eligible to receive it`
+
+-- 35(5): no penalty may be imposed on a person who mistakenly believes a representation is true
+-- or that they (or the person for whom they applied) were eligible.
+-- src:305 | (5) For greater certainty, no penalty may be imposed on a person if they mistakenly believe that a representation is true or that they, or the person on whose behalf they made an application for a benefit, were eligible to receive the benefit, as the case may be.
+@ref Regulations s 35(5) (src:305)
+GIVEN facts IS A `Violation facts`
+GIVETH A BOOLEAN
+`the person is protected from a penalty by a mistaken belief` facts MEANS
+    facts's `the person mistakenly believed the representation true or believed they were eligible`
+
+-- 35(6): no penalty may be imposed if a prosecution for the act has been started, or if five
+-- years have passed since the day the Minister became aware of the act.
+-- src:307 | (6) A penalty must not be imposed on a person in respect of an act referred to in subsection (1) if
+-- src:308 | (a) a prosecution for the act has been initiated against the person; or
+-- src:309 | (b) five years have passed since the day on which the Minister became aware of the act.
+@ref Regulations s 35(6) (src:307-309)
+GIVEN facts IS A `Violation facts`
+      `the day asked about` IS A DATE
+GIVETH A BOOLEAN
+`the time for imposing a penalty has run out` facts `the day asked about` MEANS
+        facts's `a prosecution for the act has been initiated against the person`
+     OR `the day asked about` GREATER THAN `add years` (facts's `the Minister became aware of the act on`) 5
+
+-- 35(2): the Minister may impose a penalty if the Minister is of the opinion, based on
+-- documents or information collected or obtained, that the person has committed a violation;
+-- subject to the mistaken-belief and time-limit rules above.
+-- src:297 | (2) Subject to subsection (7), the Minister may impose a penalty on a person if the Minister is of the opinion, based on documents or information collected or obtained by the Minister, that the person has committed a violation.
+@ref Regulations s 35(2) (src:297)
+GIVEN `the Minister is of the opinion, based on documents or information collected or obtained, that the person has committed a violation` IS A BOOLEAN
+      facts IS A `Violation facts`
+      `the day asked about` IS A DATE
+GIVETH A BOOLEAN
+`the Minister may impose a penalty` `the Minister is of the opinion, based on documents or information collected or obtained, that the person has committed a violation` facts `the day asked about` MEANS
+        `the Minister is of the opinion, based on documents or information collected or obtained, that the person has committed a violation`
+    AND NOT `the person is protected from a penalty by a mistaken belief` facts
+    AND NOT `the time for imposing a penalty has run out` facts `the day asked about`
+
+-- 35(4): the violation is deemed a first violation if no penalty was imposed on the person in
+-- the ten years preceding the day it occurred; otherwise it is a subsequent violation.
+-- src:303 | (4) For the purposes of subsection (3), if no penalty was imposed on a person under this section in the 10 years preceding the day on which a violation occurred, the violation is deemed to be a first violation.
+@ref Regulations s 35(4) (src:303)
+GIVEN `the day the violation occurred` IS A DATE
+      `the days on which penalties were imposed on the person` IS A LIST OF DATE
+GIVETH A BOOLEAN
+`the violation is deemed to be a first violation` `the day the violation occurred` `the days on which penalties were imposed on the person` MEANS
+    NOT any inTheTenYears `the days on which penalties were imposed on the person`
+    WHERE inTheTenYears p MEANS (p AT LEAST `add years` `the day the violation occurred` (0 MINUS 10)) AND (p LESS THAN `the day the violation occurred`)
+
+-- 35(3): 15% for a first violation, 50% for each subsequent one, of twelve times the basic
+-- amount for the payment period in which the violation was committed, worked out under
+-- section 6 without any reduction based on income. NOTHING when section 6 has no indexing
+-- factor for that payment period (the period that began on 1 July 2024).
+-- src:299 | (3) The penalty that the Minister may issue is
+-- src:300 | (a) for a first violation, 15% of the amount calculated by multiplying by 12 the basic amount payable to a beneficiary during the payment period in which the violation was committed, calculated in accordance with section 6 without any reduction based on income; and
+-- src:301 | (b) for each subsequent violation, 50% of the amount calculated by multiplying by 12 the basic amount payable to a beneficiary during the payment period in which the violation was committed, calculated in accordance with section 6 without any reduction based on income.
+@ref Regulations s 35(3) (src:299-301)
+GIVEN `the violation is a first violation` IS A BOOLEAN
+      `the day the violation was committed` IS A DATE
+      figures IS A LIST OF `Consumer Price Index figure`
+GIVETH A MAYBE NUMBER
+`the penalty the Minister may issue` `the violation is a first violation` `the day the violation was committed` figures MEANS
+    CONSIDER `the indexing factor for the payment period` (`the payment period that includes the day` `the day the violation was committed`) figures
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST a  THEN JUST (rate TIMES (12 TIMES `the basic amount worked out by the formula` a 0))
+    WHERE rate MEANS IF `the violation is a first violation` THEN 15% ELSE 50%
+
+-- 35(7): the Minister may rescind a penalty on new facts, or on being satisfied that it was
+-- imposed without knowledge of, or on the basis of a mistake as to, some material fact.
+-- src:311 | (7) The Minister may rescind a penalty imposed under subsection (2)
+-- src:312 | (a) on the presentation of new facts; or
+-- src:313 | (b) on being satisfied that the penalty was imposed without knowledge of, or on the basis of a mistake as to, some material fact.
+@ref Regulations s 35(7) (src:311-313)
+GIVEN `new facts are presented` IS A BOOLEAN
+      `the Minister is satisfied that the penalty was imposed without knowledge of, or on the basis of a mistake as to, some material fact` IS A BOOLEAN
+GIVETH A BOOLEAN
+`the Minister may rescind the penalty` `new facts are presented` `the Minister is satisfied that the penalty was imposed without knowledge of, or on the basis of a mistake as to, some material fact` MEANS
+        `new facts are presented`
+     OR `the Minister is satisfied that the penalty was imposed without knowledge of, or on the basis of a mistake as to, some material fact`
+
+§ `Regulations s 36 -- Offences`
+
+-- 36(1): the three acts that make a person guilty of an offence punishable on summary conviction.
+-- src:317 | 36 (1) A person is guilty of an offence punishable on summary conviction if they
+-- src:318 | (a) knowingly use false identity information or another person’s information for the purpose of obtaining a benefit for themselves;
+-- src:319 | (b) counsel a person to apply for a benefit with the intent to steal all or a substantial part of it; or
+-- src:320 | (c) knowingly make false or misleading representations in relation to an application for a benefit.
+@ref Regulations s 36(1) (src:317-320)
+GIVEN `knowingly used false identity information or another person's information for the purpose of obtaining a benefit for themselves` IS A BOOLEAN
+      `counselled a person to apply for a benefit with the intent to steal all or a substantial part of it` IS A BOOLEAN
+      `knowingly made false or misleading representations in relation to an application for a benefit` IS A BOOLEAN
+GIVETH A BOOLEAN
+`the person is guilty of an offence punishable on summary conviction` `knowingly used false identity information or another person's information for the purpose of obtaining a benefit for themselves` `counselled a person to apply for a benefit with the intent to steal all or a substantial part of it` `knowingly made false or misleading representations in relation to an application for a benefit` MEANS
+        `knowingly used false identity information or another person's information for the purpose of obtaining a benefit for themselves`
+     OR `counselled a person to apply for a benefit with the intent to steal all or a substantial part of it`
+     OR `knowingly made false or misleading representations in relation to an application for a benefit`
+
+-- 36(2): once a penalty has been imposed under s 35 for an act, no proceeding may be started
+-- for it under s 36 or the Criminal Code.
+-- src:322 | (2) No proceeding may be commenced under this section or the Criminal Code for an act if a penalty for that act has been imposed under section 35.
+@ref Regulations s 36(2) (src:322)
+GIVEN `a penalty for the act has been imposed under section 35` IS A BOOLEAN
+GIVETH A BOOLEAN
+`a proceeding may be commenced under section 36 or the Criminal Code for the act` `a penalty for the act has been imposed under section 35` MEANS
+    NOT `a penalty for the act has been imposed under section 35`
