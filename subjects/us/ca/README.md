@@ -63,3 +63,16 @@ These links were not read in deposited text and are unverified (general knowledg
 - Withholding (UIC Division 6) is indexed only.
 - The California Code of Regulations (Westlaw-hosted, HTTP 403) and CDSS/EDD annual figures (CalWORKs MAP levels set by budget acts, SSP payment levels) were not sourced.
 - The CA README line "No statute text has been deposited" above dates from 2026-09-22 and is superseded for these subjects.
+
+## Frontier AI incident reporting (deposited 2026-10-24)
+
+The Transparency in Frontier Artificial Intelligence Act (SB 53, Stats. 2025, ch. 138) was deposited on 2026-10-24 by the same bulk route, reading only the needed members of `pubinfo_2025.zip` (the same export, ETag "4d0220b7-65e29e9d53c80") with HTTP Range requests; leginfo.legislature.ca.gov again answered HTTP 403 (a Cloudflare challenge) and was not used.
+
+| Subject | File | What | Section versions | Characters |
+| --- | --- | --- | --- | --- |
+| `business-and-professions-code-division-8-chapter-25-1-transparency-in-frontier-ai` (new) | `ca-bpc-div8-ch25-1-tfaia-2026-10` | Bus. & Prof. Code Ch. 25.1 whole (22757.10-22757.16): definitions, frontier AI frameworks and transparency reports, critical safety incident reporting, civil penalty | 7 | 21,821 |
+| same | `ca-sb53-stats-2025-ch-138-chaptered` | SB 53 as chaptered, with its uncodified SEC. 1, 5 and 6 | (bill text) | 45,951 |
+| same | `ca-time-computation-2026-10` | Code Civ. Proc. §§ 12, 12a; Civ. Code § 10; Gov. Code § 6800 (computing time) | 4 | 2,985 |
+| same | `ca-time-computation-holidays-2026-10` | Code Civ. Proc. §§ 12b, 135; Gov. Code § 6700 (the holidays § 12a refers to; deposited, not computed) | 3 | 5,063 |
+
+Encoded as row `solo-2026-10` (critical safety incident reporting, frontier developer's seat; draft).
