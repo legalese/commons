@@ -31,3 +31,5 @@ Historical compilation deposited 2026-10-22 beside it, from the same Register an
   https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A00490',asat=2006-08-30T00:00:00Z,type='Primary',format='Epub',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
   sha256 of the download: `db5e3e1eff662db209892bea42546d114b9cbaad34e0a3fd528c879833d74d04`. Three of its formula images are transcribed in
   `registers/source-bundle/C2004A00490.2006-07-01.formulas.md`.
+
+Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 in `registers/source-bundle/C2004A00490.formulas.md`, from the Word rendering of the same compilation (C2026C00331) on the same Register and under the same licence (CC BY 4.0, as above): https://api.prod.legislation.gov.au/v1/Documents/Find(registerid='C2026C00331',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest').
