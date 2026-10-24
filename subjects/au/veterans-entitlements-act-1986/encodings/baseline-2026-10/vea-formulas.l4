@@ -1,0 +1,189 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `vea-veteran`
+
+-- Veterans' Entitlements Act 1986 (Commonwealth of Australia) -- the rates of disability pension and war widow's pension
+-- after indexation, from the formulas the text deposit lost (ss 198(5DA), (5E), (8A) and 59LA(1)) and the words of s
+-- 198(4), (5). Beside vea-veteran.l4, which takes the rates in force as inputs; this module computes them from the rates
+-- on the day before an adjustment day and the indexation inputs, and passes them to that module's questions.
+--
+-- SEAT: the veteran, or the widow or widower, as in vea-veteran.l4.
+--
+-- FORMULAS. Taken from ../../registers/source-bundle/C2004A03268.formulas.md (transcribed 2026-10-24 from the authorised
+-- Word rendering of the same compilation, each checked against the equation image). Each rule quotes its formula in that
+-- file's linear notation.
+--
+-- FIGURES THAT ARE INPUTS. The single pension rate MBR amount on the adjustment day and the day before (s 59A item 1A, as
+-- adjusted under s 59G, which rests on CPI, PBLCI and MTAWE figures not deposited), the CPI index numbers (s 198(5)), the
+-- annual pension MBR of Schedule 6 point SCH6-B1, and the rates on the day before the adjustment day (the compilation's
+-- printed figures stand in for them in the cases). So the rates actually in force are still not derived from deposited
+-- text alone (REQ-0111 stays open).
+--
+-- BASELINE ENCODING. No pipeline, no coverage table, no independent test pass, no human gate. Not for public use as
+-- advice. See NOTES.md (findings 14 to 18).
+
+§ `Veterans' Entitlements Act 1986 -- the rates after indexation`
+
+§§ `s 59LA -- the pension MBR factor`
+
+-- s 59LA(1): "pension MBR factor is:
+--     Current single pension rate MBR amount / Previous single pension rate MBR amount"
+-- (2): "current single pension rate MBR amount means the single pension rate MBR amount (see item 1A of the table in section
+-- 59A) applicable on the adjustment day"; "previous ... applicable on the day before the adjustment day". (2A): "worked out
+-- to 3 decimal places. However: (a) if [it] would, if it were worked out to 4 decimal places, end in a number that is greater
+-- than 4, the pension MBR factor is to be increased by 0.001; and (b) if [it] would be less than 1, the pension MBR factor is
+-- to be increased to 1." "Worked out to 3 decimal places" is read as cutting off after the third place (an INFERENCE).
+-- s 198(1) adopts this factor: "pension MBR factor means the pension MBR factor worked out under section 59LA".
+GIVEN `the later figure` IS A NUMBER
+      `the earlier figure` IS A NUMBER
+GIVETH A NUMBER
+`the factor to 3 places with the 0.001 rule` MEANS
+    IF `fourth place` GREATER THAN 4 THEN `three places` PLUS 0.001 ELSE `three places`
+    WHERE
+        `ratio`        MEANS `the later figure` DIVIDED BY `the earlier figure`
+        `three places` MEANS FLOOR (`ratio` TIMES 1000) DIVIDED BY 1000
+        `fourth place` MEANS FLOOR (`ratio` TIMES 10000) MINUS (FLOOR (`ratio` TIMES 1000) TIMES 10)
+
+GIVEN `the current single pension rate MBR amount` IS A NUMBER
+      `the previous single pension rate MBR amount` IS A NUMBER
+GIVETH A NUMBER
+`the pension MBR factor` MEANS
+    max 1 (`the factor to 3 places with the 0.001 rule` `the current single pension rate MBR amount` `the previous single pension rate MBR amount`)
+
+§§ `s 198(5DA), (5E), (8A) -- the rates on an adjustment day`
+
+-- s 198(5DA): "on each adjustment day, there were substituted, for the general rate, the rate worked out using the following
+-- formula and rounded up to the nearest $0.10:
+--     General rate on the day before the adjustment day × Pension MBR factor for the adjustment day"
+-- (5E): the same for "each above general rate" (s 198(1): the rates under ss 22(4), 23(4) and 24(4) -- the extreme
+-- disablement adjustment, intermediate and special rates): "Above general rate on the day before the adjustment day ×
+-- Pension MBR factor for the adjustment day". (8A): the same for "the rate in paragraph 30(1)(b)": "Rate in paragraph
+-- 30(1)(b) on the day before the adjustment day × Pension MBR factor for the adjustment day". "adjustment day means 20
+-- September or 20 March" (s 198(1)). The substitution is made on every adjustment day, factor 1 included, so a rate that is
+-- not a multiple of $0.10 is rounded up even when the MBR amount has not risen (read literally; NOTES.md finding 16).
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`rounded up to the nearest $0.10` MEANS
+    IF FLOOR (`x` TIMES 10) EQUALS (`x` TIMES 10)
+    THEN `x`
+    ELSE (FLOOR (`x` TIMES 10) PLUS 1) DIVIDED BY 10
+
+GIVEN `the rate on the day before` IS A NUMBER
+      `the current MBR amount` IS A NUMBER
+      `the previous MBR amount` IS A NUMBER
+GIVETH A NUMBER
+`the rate on the adjustment day` MEANS
+    `rounded up to the nearest $0.10` (`the rate on the day before` TIMES `the pension MBR factor` `the current MBR amount` `the previous MBR amount`)
+
+DECLARE `Which s 198 rate` IS ONE OF
+    `the general rate of disability pension (s 22(3), indexed by s 198(5DA))`
+    `the extreme disablement adjustment rate (s 22(4), indexed by s 198(5E))`
+    `the intermediate rate (s 23(4), indexed by s 198(5E))`
+    `the special rate (s 24(4), indexed by s 198(5E))`
+    `the war widow's or widower's amount in s 30(1)(b) (indexed by s 198(8A))`
+
+@export What does a disability pension rate (or the s 30(1)(b) amount) become on an adjustment day, 20 March or 20 September (ss 198(5DA), (5E), (8A), 59LA)?
+GIVEN `the rate` IS A `Which s 198 rate` @desc Which rate it is (each is worked out the same way)
+      `the rate a fortnight on the day before the adjustment day` IS A NUMBER @desc The rate per fortnight on the day before the adjustment day, in dollars (the compilation prints $338.94, $510.40, $619.80, $1,595.66 and $35)
+      `the single pension rate MBR amount on the adjustment day` IS A NUMBER @desc The single pension rate maximum basic rate amount (s 59A item 1A) on the adjustment day, in dollars
+      `the single pension rate MBR amount the day before` IS A NUMBER @desc The same amount on the day before the adjustment day, in dollars
+GIVETH A NUMBER
+`What does the rate become on the adjustment day` MEANS
+    `the rate on the adjustment day` `the rate a fortnight on the day before the adjustment day` `the single pension rate MBR amount on the adjustment day` `the single pension rate MBR amount the day before`
+
+-- Over several adjustment days: the single pension rate MBR amounts in order, the first being the one in force when the
+-- starting rate applied; each later amount is one adjustment day's current amount, and the one before it the previous.
+GIVEN `rate` IS A NUMBER
+      `MBR amounts` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the rate after these adjustment days` MEANS
+    CONSIDER `MBR amounts`
+    WHEN EMPTY THEN `rate`
+    WHEN `previous` FOLLOWED BY `rest` THEN
+        CONSIDER `rest`
+        WHEN EMPTY THEN `rate`
+        WHEN `current` FOLLOWED BY `more` THEN `the rate after these adjustment days` (`the rate on the adjustment day` `rate` `current` `previous`) `rest`
+
+§§ `s 198(4), (5) -- the CPI-indexed relevant rates, including the s 30(1)(c) amount`
+
+-- s 198(4): where the factor for a relevant period "is greater than 1, this Act has effect as if for each relevant rate
+-- there were substituted, on the first day of that period: (a) ... a rate calculated by multiplying by that factor ... the
+-- relevant rate; or ... the last substituted rate; (b) where [the calculated rate] is a rate per fortnight and is not a
+-- multiple of $0.10 per fortnight--a rate equal to: (i) if the calculated rate exceeds the next lower rate that is such a
+-- multiple by $0.05 per fortnight or more--the next higher rate that is such a multiple; or (ii) if ... by less than $0.05
+-- ...--the next lower rate." (5): the factor "(a) is the number, calculated to 3 decimal places, ascertained by dividing: (i)
+-- if the relevant period starts between 1 January and 30 June ...--the index number for the last preceding December
+-- quarter; or (ii) if ... between 1 July and 31 December ...--the index number for the last preceding June quarter; by the
+-- highest index number in respect of a December or June quarter that preceded that quarter, not being a December or June
+-- quarter that occurred before the June quarter in the year 1979; or (b) if [it] would, if it were calculated to 4 decimal
+-- places, end in a number greater than 4--... increased by 0.001; or (c) if the relevant period starts on or after 20 March
+-- 2013 and the brought-forward CPI indexation amount for the period is more than 0--... reduced by that amount, but not
+-- below 1." s 198(1): relevant rates are the s 27(1) table items 1 to 6 (column 2) and "the amount specified in paragraph
+-- 30(1)(c)"; "brought-forward CPI indexation amount ... means 0.007 less any reduction made under paragraph (5)(c) in
+-- relation to an earlier relevant period" (an input).
+GIVEN `x` IS A NUMBER
+GIVETH A NUMBER
+`to the nearest $0.10, 5 cents up` MEANS FLOOR ((`x` TIMES 10) PLUS 0.5) DIVIDED BY 10
+
+@export What does a s 198(4) relevant rate, such as the s 30(1)(c) amount, become at the start of a relevant period (s 198(4), (5))?
+GIVEN `the relevant rate before` IS A NUMBER @desc The relevant rate per fortnight before the period, in dollars (the Act's figure or the last substituted one; s 30(1)(c) prints $25.60)
+      `the CPI for the last preceding December or June quarter` IS A NUMBER @desc The All Groups CPI (8 capital cities) for the last December quarter (a period starting 20 March) or June quarter (a period starting 20 September) before the period
+      `the highest earlier December or June quarter CPI` IS A NUMBER @desc The highest CPI number for any December or June quarter before that one, from the June quarter of 1979
+      `the brought-forward CPI indexation amount left` IS A NUMBER @desc What is left of the 0.007 brought-forward CPI indexation amount after earlier periods' reductions (0 once used up)
+GIVETH A NUMBER
+`the relevant rate for the period` MEANS
+    IF `the factor` GREATER THAN 1
+    THEN `to the nearest $0.10, 5 cents up` (`the relevant rate before` TIMES `the factor`)
+    ELSE `the relevant rate before`
+    WHERE
+        `the raw factor` MEANS `the factor to 3 places with the 0.001 rule` `the CPI for the last preceding December or June quarter` `the highest earlier December or June quarter CPI`
+        `the factor` MEANS
+            IF `the brought-forward CPI indexation amount left` GREATER THAN 0
+            THEN max 1 (`the raw factor` MINUS `the brought-forward CPI indexation amount left`)
+            ELSE `the raw factor`
+
+§§ `ss 22 to 24, 30(1) -- the pensions, on the indexed rates`
+
+-- vea-veteran.l4's `What rate of disability pension am I paid`, with each rate in force worked out under s 198(5DA) or
+-- (5E) from its rate on the day before the last adjustment day.
+@export What rate of disability pension am I paid now, with the rates indexed on the last adjustment day (ss 22 to 24, 198(5DA), (5E))?
+GIVEN `the degree of my incapacity` IS A NUMBER @desc Your degree of incapacity from war-caused injury or disease as a percentage, as the Repatriation Commission has assessed it under the Approved Guide
+      `I am blind in both eyes from it` IS A BOOLEAN @desc Whether you have been blinded in both eyes as a result of war-caused injury or disease
+      `how much work I can do` IS A `How much I can work` @desc How much remunerative work your war-caused incapacity alone leaves you able to do
+      `it ended my work and I lost earnings` IS A BOOLEAN @desc Whether your war-caused incapacity alone stopped you continuing the paid work you were doing, so that you lost earnings
+      `I made the claim before 65` IS A BOOLEAN @desc Whether you made the claim (or application for increase) before you turned 65
+      `my last job came after 65 after 10 years' work begun before 65` IS A BOOLEAN @desc If you claimed at 65 or over: whether your last paid work was after you turned 65, after at least 10 continuous years of work begun before 65
+      `my age now` IS A NUMBER @desc Your age now, in years
+      `my impairment rating` IS A NUMBER @desc Your impairment rating in points under the Approved Guide
+      `my lifestyle rating` IS A NUMBER @desc Your lifestyle rating in points under the Approved Guide
+      `the general rate the day before` IS A NUMBER @desc The general rate per fortnight on the day before the last adjustment day (20 March or 20 September), in dollars (s 22(3) prints $338.94)
+      `the EDA rate the day before` IS A NUMBER @desc The extreme disablement adjustment rate on that day (s 22(4) prints $510.40)
+      `the intermediate rate the day before` IS A NUMBER @desc The intermediate rate on that day (s 23(4) prints $619.80)
+      `the special rate the day before` IS A NUMBER @desc The special (TPI) rate on that day (s 24(4) prints $1,595.66)
+      `the single pension rate MBR amount on the last adjustment day` IS A NUMBER @desc The single pension rate maximum basic rate amount (s 59A item 1A) on the last adjustment day, in dollars
+      `the single pension rate MBR amount the day before it` IS A NUMBER @desc The same amount on the day before, in dollars
+GIVETH A `My rate of disability pension`
+`What rate of disability pension am I paid now` MEANS
+    `What rate of disability pension am I paid` `the degree of my incapacity` `I am blind in both eyes from it` `how much work I can do` `it ended my work and I lost earnings` `I made the claim before 65` `my last job came after 65 after 10 years' work begun before 65` `my age now` `my impairment rating` `my lifestyle rating`
+        (`indexed` `the general rate the day before`) (`indexed` `the EDA rate the day before`) (`indexed` `the intermediate rate the day before`) (`indexed` `the special rate the day before`)
+    WHERE
+        `indexed` MEANS
+            GIVEN `r` IS A NUMBER
+            YIELD `the rate on the adjustment day` `r` `the single pension rate MBR amount on the last adjustment day` `the single pension rate MBR amount the day before it`
+
+-- vea-veteran.l4's `What is my war widow's pension a fortnight`: s 30(1)(a) (1/26 of the annual pension MBR, an input), (b)
+-- indexed by s 198(8A), (c) indexed by s 198(4), (5), both on the same day (20 March and 20 September start both).
+@export What is my war widow's or widower's pension a fortnight now, with the s 30(1)(b) and (c) amounts indexed (ss 30(1), 198(4), (5), (8A))?
+GIVEN `the annual pension MBR now` IS A NUMBER @desc The amount in column 3 of item 1 of the table in point SCH6-B1 of Schedule 6 (the single maximum basic rate a year) as now in force, in dollars
+      `the s 30(1)(b) amount the day before` IS A NUMBER @desc The s 30(1)(b) amount on the day before the last adjustment day (printed as $35)
+      `the MBR amount on the last adjustment day` IS A NUMBER @desc The single pension rate maximum basic rate amount (s 59A item 1A) on the last adjustment day, in dollars
+      `the MBR amount the day before` IS A NUMBER @desc The same amount on the day before, in dollars
+      `the s 30(1)(c) amount before the period` IS A NUMBER @desc The s 30(1)(c) amount before the relevant period that began on that day (printed as $25.60)
+      `the CPI for the last December or June quarter` IS A NUMBER @desc The All Groups CPI for the last December quarter (period from 20 March) or June quarter (period from 20 September) before it
+      `the highest earlier CPI` IS A NUMBER @desc The highest CPI number for an earlier December or June quarter, from June 1979
+      `the brought-forward amount left` IS A NUMBER @desc What is left of the 0.007 brought-forward CPI indexation amount (0 once used up)
+GIVETH A NUMBER
+`What is my war widow's pension a fortnight now` MEANS
+    `What is my war widow's pension a fortnight` `the annual pension MBR now`
+        (`the rate on the adjustment day` `the s 30(1)(b) amount the day before` `the MBR amount on the last adjustment day` `the MBR amount the day before`)
+        (`the relevant rate for the period` `the s 30(1)(c) amount before the period` `the CPI for the last December or June quarter` `the highest earlier CPI` `the brought-forward amount left`)
