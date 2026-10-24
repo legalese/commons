@@ -12,11 +12,11 @@ It is the only Victorian encoding, because the notice is the only Victorian text
 
 It is written in three layers:
 
-- **The seat-neutral core.** `wcin-wirc-2013.l4` holds the Workplace Injury Rehabilitation and Compensation Act 2013 notice; `wcin-aca-1985.l4` holds the Accident Compensation Act 1985 notice. Each row that pays or limits a benefit to an individual is there, in the notice's own words, with both printed figures. So is the arithmetic a row states of itself: a ceiling "less 80% of worker's current weekly earnings", a lump sum "in the following shares ... Balance", a maximum "in equal shares". Two small shared modules carry the types (`wcin-common.l4`) and the dates (`wcin-dates.l4`, built-in date functions only, no daydate).
+- **The seat-neutral core.** `wcin-wirc-2013.l4` holds the Workplace Injury Rehabilitation and Compensation Act 2013 notice; `wcin-aca-1985.l4` holds the Accident Compensation Act 1985 notice. Each row that pays or limits a benefit to an individual is there, in the notice's own words, with both printed figures. So is the arithmetic a row states of itself: a ceiling "less 80% of worker's current weekly earnings", a lump sum "in the following shares ... Balance", a maximum "in equal shares". So is every maximum applied to a total (s 217, s 98C(7) and (8), s 221(4)), every condition a row states (the "more than 100km" of s 224(1)(d), (e) and s 99(1)(d); the severe injury and hospitalisation of s 224(1)(d)), and the reading of a "minimum" earnings figure. Two small shared modules carry the types and the shared arithmetic (`wcin-common.l4`) and the dates (`wcin-dates.l4`, built-in date functions only, no daydate).
 - **`wcin-seat.l4`**, the injured worker's seat: 18 questions, each with `@export` and a `@desc` on every input, under `§§` headings.
 - **`wcin-seat-family.l4`**, the seat of the dependants and close family members of a worker who dies: 14 questions.
 
-Neither seat restates a rule. Their names differ, so one case file imports both for the mirror cases.
+Neither seat restates a rule: each finds the column in force on the day and the Act the claim is under, builds the core's inputs, and calls the core. (Until the fix of 24 October 2026 the seats applied four rules themselves; finding 16.) Their names differ, so one case file imports both for the mirror cases.
 
 **No regulative rules.** The notice states no "must", "may" or deadline. It prints amounts; the duties that use them are in the Acts. So there is no `DEONTIC` here. Even "Contribution to be made by worker towards cost of supported accommodation" (2013 Act s 229(4), 1985 Act s 99(15)) is only a figure: the duty to contribute is the Act's.
 
@@ -60,10 +60,10 @@ The inputs these Acts would answer:
 
 | Modules | Case file | Assertions |
 |---|---|---|
-| `wcin-common.l4`, `wcin-dates.l4`, `wcin-wirc-2013.l4`, `wcin-aca-1985.l4`, `wcin-seat.l4` | `wcin-cases-worker.l4` | 219 written, 219 satisfied |
-| the same, with `wcin-seat-family.l4` | `wcin-cases-family.l4` | 132 written, 132 satisfied (7 of them mirror cases) |
+| `wcin-common.l4`, `wcin-dates.l4`, `wcin-wirc-2013.l4`, `wcin-aca-1985.l4`, `wcin-seat.l4` | `wcin-cases-worker.l4` | 229 written, 229 satisfied |
+| the same, with `wcin-seat-family.l4` | `wcin-cases-family.l4` | 135 written, 135 satisfied (7 of them mirror cases) |
 
-`l4 run` on all eight files: 0 errors, 0 warnings (2026-10-24). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. A probe file with a deliberately wrong assertion was run first, to confirm that failures are reported; it was not kept.
+`l4 run` on all eight files: 0 errors, 0 warnings (2026-10-24, re-run after the fix in finding 16). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. A probe file with a deliberately wrong assertion was run first, to confirm that failures are reported; it was not kept.
 
 Every expected value was written by hand from the printed rows, with the line number and the arithmetic in the comment above the assertion.
 Every encoded row is reached by at least one case, and the worker's case file asserts every Schedule 4 item.
@@ -72,7 +72,7 @@ A script (in the session scratchpad, not kept here) also compared the modules wi
 
 - Every pair of figures the modules print appears on a row of its own notice.
 - Every pair of figures printed on a row of each notice appears in that notice's module, except on the out-of-scope employer, insurer and self-insurer rows. This check is by figures, not by row; the cases check the rows one by one.
-- Every row's "from" figure is its "before" figure indexed by 2.350% or 3.093%, to the nearest $10 (or $1 under $1,000), except the rows in finding 2.
+- Every row's "from" figure is its "before" figure indexed by 2.350% (AWE) or 3.093% (CPI), to the nearest $10 (or $1 under $1,000), except the rows listed in finding 2. That covers all 249 lines of the two notices that print a pair of figures. The first version of these notes said the exceptions were only the unindexed rows of finding 2; they are not. Rows that are $10 off, and one row rounded to $100, are exceptions too. The check was re-run on 2026-10-24 and finding 2 now lists every exception.
 
 ## Seats
 
@@ -157,7 +157,13 @@ The stable `l4` cannot IMPORT across encoding folders, so these links are record
 
    The new figures are half or all of the $3,000 maximum. The old ones were about a third of $2,930 and $2,150. That looks like a change in the Acts or a correction, but the deposit does not say. Encoded as printed and asserted in both columns.
 
-   A smaller rounding point: s 340(a)(ii) and s 134AB(22)(a)(ii) print $1,798,500. That is $1,744,530 x 1.03093 = $1,798,488, rounded to the nearest $100 where other rows round to $10. Encoded as printed.
+   Smaller rounding points, each encoded as printed:
+   - s 340(a)(ii) and s 134AB(22)(a)(ii) print $1,798,500. That is $1,744,530 x 1.03093 = $1,798,488, rounded to the nearest $100 where other rows round to $10.
+   - **$10 above the indexed figure (CPI).** The 2013 Act's Schedule 4 items at $374,230 print $385,810. They are total loss of the sight of both eyes, of an only eye, both hands, both feet, a hand and a foot, quadriplegia, paraplegia and total impairment of the spine (lines 610-614, 670-672). The s 221(4) maximum total prints the same (line 673). $374,230 x 1.03093 = $385,804.93, which is $385,800 to the nearest $10.
+   - **$10 below the indexed figure (AWE).** s 366(2) and s 135C(2), death of a person, print $1,267,530 to $1,297,310 (lines 706, 319). $1,267,530 x 1.0235 = $1,297,316.96, which is $1,297,320 to the nearest $10.
+   - Outside the scope, the employer's s 106(1) and (2) row prints $2,967,330 to $3,059,120 (line 718). x 1.03093 gives $3,059,109.52, so $3,059,110.
+
+   These may come from indexing unrounded amounts, but the deposit does not say. Each is asserted through its printed figure (the cases assert $385,810, $374,230, $1,297,310 and $1,267,530).
 3. **Rows with several amounts carry no labels.** Lines 534-601 print the amounts one under another:
    - two amounts: ss 211(2)(b)-(e)(i), 212(b)-(d)(i), 213(1)(a) and (d), 214A(a) and (d);
    - three amounts: 213(1)(c) and 214A(c);
@@ -173,9 +179,12 @@ The stable `l4` cannot IMPORT across encoding folders, so these links are record
    - above 70% and not above 80%, the formula amount (an input) or the printed maximum, whichever is less.
 
    Every other band answers `not covered`. READING: where a modified or spinal rating also fits a general row, the specific row (b) or (c)(ii) is taken. Asserted.
+
+   READING, added 24 October 2026: a "modified spinal impairment" is "a spinal impairment" in s 211(2)(c)(ii) (lines 542-547), because the notice's words describe a spinal impairment that has been modified. So a modified spinal impairment rated from 11% to less than 30% takes (c)(ii), and one rated exactly 30% takes (c)(i). Below 11% it takes (b)(ii) first, as before. A modified whole person impairment is not spinal and takes (c)(i). The amounts are the same in (c)(i) and (c)(ii) ($26,530 and $3,980), so only the provision returned changes (finding 16). Asserted at 11%, 15% and 30%.
 4. **Weekly payments move on the worker's anniversary, not on 1 July.** The 2013 Act notice says weekly payments "are varied on 1 July each year" and "are indexed on the anniversary of the entitlement to weekly payments" (lines 397-402). The 1985 Act notice adds "or on the deemed anniversary date which for the purposes of this section is 1 July" (lines 21-22). So whether the 1 July 2026 maximum applies to a worker's payment depends on a date the notice does not give.
    - The weekly payment questions ask for **the day the worker's weekly payments were last indexed**, and use the column in force on that day. READING: between anniversaries the payment, and its maximum, stay as they were.
    - A worker last indexed on 1 September 2025 still has the $2,930 maximum in August 2026. Asserted.
+   - **A worker not yet indexed** gives the day the entitlement to weekly payments began. This is a worker whose entitlement began less than a year ago and, under the 1985 Act, before any deemed 1 July anniversary; the 2013 Act notice prints no deemed anniversary. Under the same reading, the payment and its maximum stay as they were when the entitlement began, until the first indexation. Both `@desc`s say so (added 24 October 2026, finding 16). A worker whose entitlement began on 1 March 2026 has the $2,930 maximum in August 2026. Asserted.
    - If the Act applies the new maximum to every payment from 1 July, the input should be the payment day instead, and that worker's answer would be $3,000.
 5. **Misprints.** None changes a figure; not asserted.
    - The 2013 Act notice's heading has "WORKPLACE INJURY REHABILIATION AND COMPENSATION ACT 2013" (line 393).
@@ -222,12 +231,24 @@ The stable `l4` cannot IMPORT across encoding folders, so these links are record
     Asserted.
 14. **The lump sum split names orphans only where there is no partner.** s 236(2) (and s 92A(5)) splits the lump sum equally among "an orphan child or orphan children". s 236(6) (and s 92A(8A)) gives only a "Maximum lump sum for dependent children if no dependent partner". So children with no dependent partner who are not orphans get a maximum and no stated share: `not covered`. Asserted.
 15. **Outside the scope, a stale date.** The Workers Compensation Act 1958 notice says its rates are payable "on and from 1 July 2005" (line 353), in the notice for 1 July 2026. Not encoded.
+16. **Corrections after an independent verification (24 October 2026).** A verifier reported five issues. Each was checked against the deposited text, and all five held. None changed a figure, and every earlier assertion still holds.
+    - **The seats applied rules.** `wcin-seat.l4` applied the s 217 and s 98C(7), (8) maxima and the s 221(4) maximum with its own `min`. The core's s 221(4) function was left unused. The seat also read "minimum" as "at least" itself. `wcin-seat-family.l4` decided the "more than 100km" of s 224(1)(e) and s 99(1)(d) itself. Each is now in the core:
+      - `the 2013 Act total non-economic loss after the s 217 maximum for` and `the 1985 Act total non-economic loss after the s 98C(7) or (8) maximum for`;
+      - the existing `the 2013 Act Schedule 4 total after the s 221(4) maximum of`;
+      - `the 2013 Act s 224(1)(e) maximum for a burial or cremation at` and `the 1985 Act s 99(1)(d) maximum for a burial or cremation at`;
+      - the "minimum" reading, `weekly earnings of … reach the minimum of …`, in `wcin-common.l4`.
+
+      The seats now only choose the column and the Act. New cases assert the day edges of the rewritten questions and 101 km.
+    - **The recorded check result was wrong.** The Checks section said every "from" figure was its "before" figure indexed, except the unindexed rows. The $10 differences on the $374,230 rows and on s 366(2) and s 135C(2) were missed. Finding 2 now lists them.
+    - **`NOT` without brackets.** Three `IF NOT …` (2013 Act s 163(2)(b) and s 224(1)(d) rules, 1985 Act after the second entitlement period) are now `IF (NOT …)`. They parsed correctly before.
+    - **A worker not yet indexed** could not answer the weekly payment questions' day input. Both `@desc`s now say to give the day the entitlement began (finding 4). Asserted.
+    - **A modified spinal impairment from 11% to less than 30%** was sent to s 211(2)(c)(i), because only `a spinal impairment` counted as spinal. It now takes (c)(ii), under the reading in finding 3. The amounts were and are the same. Asserted.
 
 **Readings**, none of them stated by the notice:
 
 - the period rule;
-- the last-indexation day for weekly payments (finding 4);
-- specific impairment rows first (finding 3);
+- the last-indexation day for weekly payments, and the day the entitlement began for a worker not yet indexed (finding 4);
+- specific impairment rows first, and a modified spinal impairment counted as a spinal impairment (finding 3);
 - a "minimum" is reached by earnings of at least the figure;
 - a ceiling that "less" would take below nothing is 0;
 - "more than 100km" is strictly more than 100 km;
