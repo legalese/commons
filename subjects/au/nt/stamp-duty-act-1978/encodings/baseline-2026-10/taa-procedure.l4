@@ -16,9 +16,9 @@ IMPORT `sda-common`
 -- initial assessment, with its four exceptions); ss 107, 109-111 (who may object, to what, in writing within 60 days,
 -- extension for a reasonable excuse); ss 113-117 (decision on the objection, then review by NTCAT or appeal to the
 -- Supreme Court within 60 days; a first home owner grant decision goes to NTCAT only); s 128 (an objection does not
--- suspend recovery); ss 34-36 (interest on a tax default: the market interest rate is an INPUT, the premium is the
--- Act's 8%); ss 39, 41-43 (penalty tax: 25%, 10%, 75% or 95%, nil, the discretionary reductions, nil under $20, at
--- least 14 days to pay).
+-- suspend recovery); ss 34-36 (interest on a tax default, worked one financial year at a time: the market interest
+-- rate for each financial year is an INPUT, the premium is the Act's 7% to 30 June 2008 and 8% after); ss 39, 41-43
+-- (penalty tax: 25%, 10%, 75% or 95%, nil, the discretionary reductions, nil under $20, at least 14 days to pay).
 --
 -- NOT ENCODED: investigations (Part 9), confidentiality (Part 10), returns and special arrangements (Part 6), recovery
 -- (Part 7), refunds (Part 4) except as named, record keeping and offences (Part 8), NTCAT and Supreme Court procedure,
@@ -212,33 +212,73 @@ DECIDE `s 128 -- the duty must still be paid while the objection runs` IS
 §§ `Part 5 Division 1 -- interest on a tax default (ss 34-36)`
 
 -- s 34(1): "If a tax default occurs, the taxpayer is liable to pay interest on the unpaid primary and penalty tax."
--- (2): "at the statutory interest rate as in force from time to time"; (3): "calculated on a daily basis from the date
--- of the tax default to the date of payment". s 35(1): statutory rate = market interest rate + premium interest rate;
--- (2): the market rate is prescribed by regulation or the RBA's average 90-day bank bill yield for May of the preceding
--- financial year -- NOT DEPOSITED, so an INPUT; (3): the premium is "(a) up to (and including) 30 June 2008 -- 7%; and
--- (b) from (and including) 1 July 2008 -- 8%". s 36: "Interest is not to be charged if the amount of the accrued
--- interest is less than $20." READING: "a daily basis" is the annual rate divided by 365 for each day; the Act does not
--- say whether a leap year counts 366.
+-- (2): "Interest accrues at the statutory interest rate as in force from time to time." (3): "Interest is calculated on
+-- a daily basis from the date of the tax default to the date of payment." s 35(1): statutory rate = market interest
+-- rate + premium interest rate; (2): "The market interest rate is (for each financial year): (a) the rate prescribed by
+-- regulation as the market interest rate for the relevant financial year; or (b) if no rate is prescribed ... the
+-- average yield ... on 90-day bank accepted bills published by the Reserve Bank of Australia for the month of May in the
+-- financial year immediately preceding the relevant financial year" -- NOT DEPOSITED, so an INPUT, one rate for each
+-- financial year; (3): the premium is "(a) up to (and including) 30 June 2008 -- 7%; and (b) from (and including)
+-- 1 July 2008 -- 8%". s 36: "Interest is not to be charged if the amount of the accrued interest is less than $20."
+-- So the statutory rate can change on each 1 July (and the premium changed on 1 July 2008, also a 1 July). The period
+-- is therefore split at each 1 July, and each day accrues at the rate for the financial year it falls in (NOTES.md,
+-- finding 22). READING: "a daily basis" is the annual rate divided by 365 for each day; the day of the default counts
+-- and the day of payment does not; the Act does not say whether a leap year counts 366.
 GIVEN `the day` IS A DATE
 GIVETH A NUMBER
 `the premium interest rate on` MEANS
     IF `the day` `is on or before` (YMD 2008 6 30) THEN 7 ELSE 8
 
+-- A financial year runs from 1 July to the next 30 June. The first 1 July after a day begins the next financial year.
+GIVEN `the day` IS A DATE
+GIVETH A DATE
+`the 1 July after` MEANS
+    IF DATE_MONTH `the day` AT MOST 6
+    THEN YMD (DATE_YEAR `the day`) 7 1
+    ELSE YMD (DATE_YEAR `the day` PLUS 1) 7 1
+
+-- The interest accrued on an amount from the first day up to (not including) the day of payment, one financial year at
+-- a time. `the market rates` are the market interest rates, percent a year, for the financial years in order, starting
+-- with the one in which the first day falls. NOTHING if the period runs into a financial year for which no rate is given.
+GIVEN `the amount unpaid` IS A NUMBER
+      `the market rates` IS A LIST OF NUMBER
+      `the first day` IS A DATE
+      `the day of payment` IS A DATE
+GIVETH A MAYBE NUMBER
+`the interest accrued, one financial year at a time` MEANS
+    IF DATE_SERIAL `the day of payment` AT MOST DATE_SERIAL `the first day`
+    THEN JUST 0
+    ELSE CONSIDER `the market rates`
+         WHEN EMPTY THEN NOTHING
+         WHEN `this year's market rate` FOLLOWED BY `the later market rates` THEN
+             CONSIDER `the interest accrued, one financial year at a time` `the amount unpaid` `the later market rates` `the next 1 July` `the day of payment`
+             WHEN NOTHING THEN NOTHING
+             WHEN JUST `the later interest` THEN
+                 JUST (((((`the amount unpaid` TIMES (`this year's market rate` PLUS `the premium interest rate on` `the first day`)) DIVIDED BY 100) TIMES `the days in this financial year`) DIVIDED BY 365) PLUS `the later interest`)
+    WHERE
+        `the next 1 July` MEANS `the 1 July after` `the first day`
+        `the days in this financial year` MEANS
+            (`the lesser of` (DATE_SERIAL `the day of payment`) (DATE_SERIAL `the next 1 July`)) MINUS DATE_SERIAL `the first day`
+
+DECLARE `Interest answer` IS ONE OF
+    `the interest, in dollars, is` HAS `dollars` IS A NUMBER
+    `the interest is not covered` HAS `because` IS A `Why not covered`
+
+-- `the market rates by financial year`: the market interest rate, percent a year, for the financial year in which the
+-- tax default occurred, then for each later financial year in order.
 GIVEN `the unpaid primary tax` IS A NUMBER
       `the unpaid penalty tax` IS A NUMBER
-      `the market interest rate, percent a year` IS A NUMBER
+      `the market rates by financial year` IS A LIST OF NUMBER
       `the date of the tax default` IS A DATE
       `the date of payment` IS A DATE
-GIVETH A NUMBER
+GIVETH A `Interest answer`
 `the interest on the tax default` MEANS
-    IF `accrued` LESS THAN 20
-    THEN 0
-    ELSE `rounded down to a multiple of 5 cents` `accrued`
-    WHERE
-        `days` MEANS DATE_SERIAL `the date of payment` MINUS DATE_SERIAL `the date of the tax default`
-        `rate` MEANS `the market interest rate, percent a year` PLUS `the premium interest rate on` `the date of the tax default`
-        `accrued` MEANS
-            (`the unpaid primary tax` PLUS `the unpaid penalty tax`) TIMES `rate` DIVIDED BY 100 TIMES `days` DIVIDED BY 365
+    CONSIDER `the interest accrued, one financial year at a time` (`the unpaid primary tax` PLUS `the unpaid penalty tax`) `the market rates by financial year` `the date of the tax default` `the date of payment`
+    WHEN NOTHING THEN `the interest is not covered` `the tax default runs into a financial year for which no market interest rate is given; the market interest rate is set for each financial year (TAA s 35(2)) and is not in the deposited texts`
+    WHEN JUST `accrued` THEN
+        IF `accrued` LESS THAN 20
+        THEN `the interest, in dollars, is` 0
+        ELSE `the interest, in dollars, is` (`rounded down to a multiple of 5 cents` `accrued`)
 
 §§ `Part 5 Division 2 -- penalty tax (ss 39-43)`
 
@@ -251,14 +291,25 @@ GIVETH A NUMBER
 -- Commissioner's satisfaction: a FACT, answered conditionally. READING: the Act gives the exceptions no order; (a) is
 -- taken first ("no penalty tax is to be imposed"), then (c), then (b), since a default from intentional disregard
 -- cannot also be one where reasonable care was taken.
+-- Ground (c)(ii) has two limbs: deliberate concealment or suppression of information, and hindering the assessment or
+-- the investigation "in any other way" (s 41(4) says what hindering an investigation includes). They are kept apart
+-- because the s 41(3) bar on a discretionary reduction turns on the first limb only (NOTES.md, finding 23).
 DECLARE `Penalty tax facts` HAS
     `the amount of the tax default`                                                          IS A NUMBER
     `the default arose from circumstances beyond the taxpayer's control and was rectified`  IS A BOOLEAN
     `the taxpayer took reasonable care to comply`                                            IS A BOOLEAN
     `the default arose from intentional disregard of a taxation law`                         IS A BOOLEAN
-    `information was deliberately concealed or the assessment was hindered`                  IS A BOOLEAN
+    `information was deliberately concealed or suppressed from the Commissioner`             IS A BOOLEAN
+    `the assessment or investigation was hindered in any other way`                          IS A BOOLEAN
     `the Commissioner investigated and the taxpayer cooperated fully`                        IS A BOOLEAN
     `before any investigation, full and immediate disclosure avoided the need for one`       IS A BOOLEAN
+
+-- s 41(2)(c)(ii): concealment or suppression of information, or hindering in any other way.
+GIVEN `p` IS A `Penalty tax facts`
+GIVETH A BOOLEAN
+DECIDE `the Commissioner is satisfied of s 41(2)(c)(ii)` IF
+        `p`'s `information was deliberately concealed or suppressed from the Commissioner`
+    OR  `p`'s `the assessment or investigation was hindered in any other way`
 
 GIVEN `p` IS A `Penalty tax facts`
 GIVETH A NUMBER
@@ -266,10 +317,10 @@ GIVETH A NUMBER
     IF `p`'s `the default arose from circumstances beyond the taxpayer's control and was rectified`
     THEN 0
     ELSE IF     `p`'s `the default arose from intentional disregard of a taxation law`
-            AND `p`'s `information was deliberately concealed or the assessment was hindered`
+            AND `the Commissioner is satisfied of s 41(2)(c)(ii)` `p`
          THEN 95
          ELSE IF    `p`'s `the default arose from intentional disregard of a taxation law`
-                 OR `p`'s `information was deliberately concealed or the assessment was hindered`
+                 OR `the Commissioner is satisfied of s 41(2)(c)(ii)` `p`
               THEN 75
               ELSE IF `p`'s `the taxpayer took reasonable care to comply`
                    THEN 10
@@ -291,12 +342,13 @@ GIVETH A NUMBER
 -- investigation is conducted and the taxpayer "cooperates fully"; "by up to 80%" if no investigation has commenced and
 -- "the taxpayer's full and immediate disclosure ... avoids the need for an investigation"; "but if the taxpayer is
 -- liable to penalty tax because of deliberate concealment or suppression of information, there is to be no
--- discretionary reduction". s 44 lets the Commissioner remit penalty tax "in whole or part" besides: that further
--- discretion is not bounded here.
+-- discretionary reduction". The bar names concealment or suppression only: a taxpayer liable at 75% for hindering the
+-- assessment in some other way may still have the reduction. s 44 lets the Commissioner remit penalty tax "in whole or
+-- part" besides: that further discretion is not bounded here.
 GIVEN `p` IS A `Penalty tax facts`
 GIVETH A NUMBER
 `the most the Commissioner may reduce penalty tax by under s 41(3), percent` MEANS
-    IF `p`'s `information was deliberately concealed or the assessment was hindered`
+    IF `p`'s `information was deliberately concealed or suppressed from the Commissioner`
     THEN 0
     ELSE IF `p`'s `before any investigation, full and immediate disclosure avoided the need for one`
          THEN 80

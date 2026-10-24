@@ -25,6 +25,8 @@ The Taxation Administration Act 2007 is brought in as a second module (`taa-proc
 
 The seat layer and its case file were written by two generator scripts, `gen_seat.py` and `gen_seat_cases.py`, in the session scratchpad (`au-nt-1/`). The scripts only spell out the long argument lists. The expected values were typed into them by hand.
 
+On 24 October 2026 an independent verifier reviewed the encoding. Its corrections are findings 21 to 25. They were made by hand in the module and case files, generated ones included, and every expected value they changed or added was worked by hand from the deposited texts.
+
 ## Edition
 
 - **Stamp Duty Act 1978**: reprint **REPS013**, as in force at **1 July 2025**, deposited at `../../registers/source-bundle/Stamp-Duty-Act-1978-NT-current-reprint-REPS013.txt` (retrieved 2026-10-19).
@@ -34,7 +36,7 @@ The seat layer and its case file were written by two generator scripts, `gen_sea
   - the threshold amount uses the Act's own $650,000 (s 88(1));
   - the first home owner discount uses the s 88(1)(b)(ii) fallback, not a prescribed amount;
   - no class is treated as prescribed under Schedule 2 item 23(a)(iii);
-  - the TAA market interest rate (s 35(2)) is an input.
+  - the TAA market interest rate (s 35(2)) is an input, one for each financial year (finding 22).
   
   A prescribed figure would change the answers.
 - **Formula.** The formula in Schedule 1 cl 1(2)(a) lost its superscript in conversion (finding 1). The deposit is not altered.
@@ -43,22 +45,24 @@ The seat layer and its case file were written by two generator scripts, `gen_sea
 
 Owner's ruling, 24 Oct 2026 (Michael): the NT terms permit reproduction but are silent on adaptation. As for Canada, the texts may be quoted in L4 encodings in Legalese Commons, keeping the NT attribution and the unofficial-copy notice.
 
-The ruling is recorded in `SOURCE-LICENSE.md` of both `stamp-duty-act-1978` and `taxation-administration-act-2007`, and this folder holds a copy of the former. Every module header carries the unofficial-copy notice and the Northern Territory's ownership of copyright. No Northern Territory arms are used.
+The ruling is recorded in `SOURCE-LICENSE.md` of both `stamp-duty-act-1978` and `taxation-administration-act-2007`. This folder holds a copy of each: `SOURCE-LICENSE.md` (the Stamp Duty Act) and `SOURCE-LICENSE-taxation-administration-act-2007.md` (the TAA, which the modules also quote). Every module header carries the unofficial-copy notice and the Northern Territory's ownership of copyright. No Northern Territory arms are used.
+
+The ruling was written into the two subject files by the session that made this encoding, in the same commit. The repository holds no other record of it, so it should be confirmed with Michael.
 
 ## Checks
 
-`l4 run` on every `.l4` in the folder: **0 errors, 0 warnings**, and **274 assertions written, 274 satisfied**.
+`l4 run` on every `.l4` in the folder: **0 errors, 0 warnings**, and **299 assertions written, 299 satisfied** (after the corrections of 24 October 2026; 274 before).
 
 | Case file | Assertions | `#TRACE`s (each with an `-- expect:` line, read and as expected) |
 |---|---|---|
-| `sda-cases-home.l4` | 128 | 7: four breaches by the conveyee, three obligations of the Commissioner pending |
+| `sda-cases-home.l4` | 136 | 7: four breaches by the conveyee, three obligations of the Commissioner pending |
 | `sda-cases-vehicles.l4` | 33 | 2: breaches by the applicant (s 57) and by the transferor (s 59(3)) |
-| `taa-cases.l4` | 48 | 4: decision maker's notice pending, NTCAT application still open, breaches by the taxpayer (s 128 and s 43) |
-| `sda-cases-seat.l4` | 65 | none |
+| `taa-cases.l4` | 60 | 4: decision maker's notice pending, NTCAT application still open, breaches by the taxpayer (s 128 and s 43) |
+| `sda-cases-seat.l4` | 70 | none |
 
 The five modules (`sda-common`, `sda-home`, `sda-vehicles`, `taa-procedure`, `sda-seat`) also run clean on their own.
 
-A copy of the seat case file with one expected value altered ($29,700 to $29,705) was run as a control. The runner reported both affected assertions as failed.
+A copy of the seat case file with one expected value altered ($29,700 to $29,705) was run as a control. The runner reported both affected assertions as failed. After the corrections, a copy of `taa-cases.l4` with two expected values put back to the old behaviour (interest across a 30 June at one rate, $203; no reduction for hindering, $7,500) was run as a second control. The runner reported both as failed.
 
 Expected values were worked by hand from the deposited texts. The arithmetic of Schedule 1 cl 1(2), cl 5, s 88(1) and TAA ss 27 and 34 was done in an independent calculator, `au-nt-1/calc/hand.py`, written from the statutory words. No value was copied from the encoding's output.
 
@@ -92,7 +96,7 @@ How each default was applied:
 **Departures:**
 
 - **Group facts.** Where a section counts conveyees ("each of the conveyees", "at least one of the conveyees"), the facts are stated for the group in those terms, rather than as a list of conveyees.
-- **Readings.** The text leaves some points open; the readings taken are recorded under the findings: s 88A (finding 2), the occupancy of several conveyees (findings 13 and 20), the anniversary in s 91 (finding 19), the order of the s 41(2) exceptions and the 14-day minimum (finding 16), the day count for interest (finding 16), and the grant ending the Territory home owner discount (finding 11).
+- **Readings.** The text leaves some points open; the readings taken are recorded under the findings: s 88A (finding 2), the occupancy of several conveyees (findings 13 and 20), the anniversary in s 91 (finding 19), the order of the s 41(2) exceptions and the 14-day minimum (finding 16), the day count for interest (findings 16 and 22), and the grant ending the Territory home owner discount (finding 11).
 
 ## Scope
 
@@ -131,8 +135,8 @@ How each default was applied:
 *Taxation Administration Act:*
 
 - s 21(4): the 5-year limit on reassessment, with the Stamp Duty Act provisions that lift it;
-- s 27: rounding down to 5 cents;
-- ss 34-36: interest, with the market rate an input;
+- s 27: rounding down to 5 cents, of the duty payable on a conveyance (cl 1(2) less any concession, or cl 1(3)), interest and penalty tax;
+- ss 34-36: interest, worked one financial year at a time, with the market rate for each financial year an input. The seat asks two rates, so a default not paid by the end of the next financial year answers `not covered` (finding 22);
 - ss 39, 41-43: penalty tax, with s 43 as a regulative rule;
 - ss 107, 109-111, 113-117: objections, review and appeal, for both duty decisions and first home owner grant decisions, as a regulative rule;
 - s 128: no suspension of recovery, as a regulative rule.
@@ -182,8 +186,8 @@ Cross-folder IMPORT does not work. These are links in the notes only.
    - It fails if the builder bought the land from someone other than the developer, or if the contract replaces one signed before 1 July 2022.
    
    Asserted.
-5. **The rates above $525,000 apply to the whole dutiable value, so the scale has cliffs.** One dollar over $3,000,000 adds $24,000.0495 of duty. One dollar over $5,000,000 adds $10,000.0575. Asserted.
-6. **Duty is rounded down to a multiple of 5 cents (TAA s 27).** $412,345 gives $17,358.4909, which is payable as $17,358.45. Asserted.
+5. **The rates above $525,000 apply to the whole dutiable value, so the scale has cliffs.** Clause 1(2)(c) and (d) apply at "$3 000 000 or more" and "$5 000 000 or more", so the jump comes on reaching each threshold. Going from $2,999,999 to $3,000,000 adds $24,000.0495 of duty, and going from $4,999,999 to $5,000,000 adds $10,000.0575. One dollar over $3,000,000 adds only 5.75 cents. (Corrected 24 October 2026; see finding 25.) Asserted.
+6. **Duty is rounded down to a multiple of 5 cents (TAA s 27).** $412,345 gives $17,358.4909, which is payable as $17,358.45. The joint tenancy duty under cl 1(3) is rounded too (finding 21). Asserted.
 7. **The deposited Schedule 1 is applied only from 1 July 2017.** That is the commencement of No. 13, 2017, s 11, the last amendment the endnotes record. The amount of the first home owner concession, which closed in 2012, can therefore never be computed from this deposit, though its conditions can be tested. Asserted.
 8. **Section 90B in practice.** On 1 March 2019 a first home buyer of an established home at $400,000 met both the first home owner discount and the Territory home owner discount, and each equalled the whole duty of $16,514.3056. The concessions give the same benefit, so the Commissioner determines which (s 90B(3)(b)), and nothing is payable either way. A senior from interstate at $600,000 in 2020 got the Territory home owner discount ($18,601) rather than the senior concession ($10,000), and paid $11,099. Asserted.
 9. **The Territory home owner discount was not limited to first home buyers.** It turned on having had no Territory residential property in the previous 24 months (s 89AAB(2)(d)). Its own definition limits it to a dutiable value not over the $650,000 threshold. At $650,000 the buyer paid $13,574; at $650,001, the full $32,175. Asserted.
@@ -214,10 +218,10 @@ Cross-folder IMPORT does not work. These are links in the notes only.
 16. **Penalty tax and interest (TAA ss 34-36, 41-43):**
     - Penalty tax is 25% of the default. It is 10% where reasonable care was taken; 75% for intentional disregard or concealment, and 95% for both; and nil where the default was beyond the taxpayer's control and was put right.
     - Reading: the s 41(2) exceptions have no stated order. Nil is taken first, then 75% or 95%, then 10%.
-    - The Commissioner may reduce penalty tax by up to 80% for full disclosure before any investigation, or by up to 20% for full cooperation with one. There is no reduction where information was concealed. The Commissioner may also remit penalty tax under s 44, which is not bounded here.
+    - The Commissioner may reduce penalty tax by up to 80% for full disclosure before any investigation, or by up to 20% for full cooperation with one. There is no reduction where the penalty tax is due to deliberate concealment or suppression of information; hindering the assessment in some other way does not bar it (finding 23). The Commissioner may also remit penalty tax under s 44, which is not bounded here.
     - Nothing is imposed under $20 (s 42).
     - There are at least 14 days to pay (s 43). Reading: a notice naming fewer than 14 days still leaves 14.
-    - Interest is the market rate (an input) plus 8%, worked daily. Reading: the annual rate is divided by 365. Nothing is charged under $20 (s 36). $12,500 unpaid for 73 days at 4.35% + 8% is $308.75.
+    - Interest is the market rate for each financial year (an input) plus 8% (7% up to 30 June 2008), worked daily, one financial year at a time (finding 22). Reading: the annual rate is divided by 365. Nothing is charged under $20 (s 36). $12,500 unpaid for 73 days within one financial year at 4.35% + 8% is $308.75.
     
     Asserted.
 17. **The s 92A cap of $1,500 never bites.** The first $50,000 of an electric vehicle's dutiable value is exempt, and at $3 per $100 the duty on $50,000 is exactly $1,500. A $60,000 electric car pays $300; a $40,000 one pays nothing. Asserted.
@@ -231,9 +235,44 @@ Cross-folder IMPORT does not work. These are links in the notes only.
 19. **Section 91 (relationship breakdown).** The order or agreement must be made "within 12 months after the date of the conveyance". Reading: an order made on the anniversary counts. A binding financial agreement counts only for a conveyance made after the irretrievable breakdown. Duty paid before the order must be refunded (s 91(3)). Asserted.
 20. **Section 89(1)(i), "the conveyee or conveyees will occupy", is read as requiring each conveyee to occupy.** Section 90(8A) had to be added to relax the same words in s 90 from 28 April 2015. The senior concession has its own relaxation in s 89A(11AA), and one senior who moves in is enough. Asserted for s 89A.
 
+### Corrections after the independent verification (24 October 2026)
+
+21. **The joint tenancy duty is rounded down to 5 cents too (TAA s 27).** The seat's question on a transfer between joint owners gave the Schedule 1 cl 1(3) figure unrounded. Two joint tenants of an $800,000 home conveying it to one of them were told $16,519.3056: the duty on a half share, $16,514.3056, plus $5.
+    - TAA s 5(3) reads the Stamp Duty Act with the TAA "as a single Act". TAA s 27 rounds a tax liability that is "not ... an exact multiple of 5c" down "to the highest exact multiple of 5c". So the duty payable is **$16,519.30**.
+    - The core now has `the duty payable on a joint tenancy conveyance first executed on`, which rounds. The seat asks it. A half share of $412,345 is payable as $17,363.45.
+    - The question "How much duty is charged on my home before any concession or exemption" still gives the Schedule 1 figure unrounded. That is the figure a concession is subtracted from before s 27 rounds the liability. The question "How much duty must I pay on my home" gives the rounded liability.
+
+    Asserted.
+22. **Interest is worked one financial year at a time.** TAA s 34(2): interest "accrues at the statutory interest rate as in force from time to time". Section 35(2) sets the market interest rate "for each financial year". The premium rate rose from 7% to 8% on 1 July 2008, which is also the start of a financial year.
+    - The encoding had taken one market rate, with the premium on the date of the default, for the whole period. A default that ran across a 30 June was therefore worked at one rate.
+    - The core now takes the market rate for each financial year, starting with the year of the default, and splits the period at each 1 July. A period that runs into a year for which no rate is given answers `not covered`.
+    - The seat asks two rates: one for the year the duty fell due and one for the next. A default not paid by the end of the next financial year therefore answers `not covered`.
+    - $10,000 unpaid from 1 June to 31 July 2026, at made-up market rates of 4.10% and then 4.35%, bears $200.95. One rate of 4.35% would have given $203.00.
+
+    Asserted, with the 2008 premium change and the not-covered cases.
+23. **The s 41(3) bar on a discretionary reduction is narrower than the 75% ground.** Section 41(2)(c)(ii) is made out by deliberate concealment or suppression of information, "or" by hindering the assessment or investigation "in any other way". Section 41(3) bars a reduction only "if the taxpayer is liable to penalty tax because of deliberate concealment or suppression of information".
+    - The encoding had merged the two limbs into one fact and barred the reduction whenever that fact was true.
+    - They are now two facts. Either makes out (c)(ii); only concealment or suppression bars the reduction.
+    - A $10,000 default where the taxpayer hindered the assessment but concealed nothing bears 75%, $7,500. Full disclosure before any investigation may still reduce it by up to 80%, to $1,500.
+    - The seat's two penalty questions now ask the two facts separately.
+
+    Asserted.
+24. **The s 102 gate is now in the core.** Section 102(1)(b): for a conveyance first executed before 4 May 2010 "this Act applies as if the relevant amendments had not been made".
+    - The gate had been applied only in the seat. The core's `the conveyees are entitled to` gave TRUE or FALSE from the amended text for an earlier s 89 or s 90 conveyance.
+    - The core now has `the conveyees' entitlement, apart from s 90B, to`, which answers `not covered here` before 4 May 2010. The `Entitlement answer` type moved from the seat into the core. The seat question calls it and holds no logic of its own.
+    - The boolean remains as the test of the amended conditions. The s 90B path reaches it only for conveyances from 1 July 2017.
+
+    Asserted for 3 and 4 May 2010.
+25. **Smaller corrections.**
+    - Finding 5 said one dollar *over* $3,000,000 or $5,000,000 brings the jump. The jump comes on reaching the threshold; one dollar over $3,000,000 adds 5.75 cents. Asserted.
+    - A case comment cited s 89AAC for a grant on a 1 March 2020 purchase. Section 89AAC(1)(a) reaches only transactions that commenced before 7 May 2019, so the basis there is the s 90AB reading alone (finding 11).
+    - Two `#ASSERT NOT` lines are now parenthesised.
+    - A copy of the TAA's `SOURCE-LICENSE.md` is now in this folder.
+
 ## What would need doing before this is worth relying on
 
-- Deposit the later reprints, if any, of both Acts, and the Stamp Duty and Taxation Administration Regulations: the threshold amount, prescribed discount amounts, the item 23(a)(iii) class and the market interest rate. Then replace the inputs and fixed figures with them.
+- Deposit the later reprints, if any, of both Acts, and the Stamp Duty and Taxation Administration Regulations: the threshold amount, prescribed discount amounts, the item 23(a)(iii) class and the market interest rate for each financial year (or the Reserve Bank yields that s 35(2)(b) falls back on). Then replace the inputs and fixed figures with them.
+- Confirm the licence ruling of 24 October 2026 with Michael (see Licence).
 - Deposit or transcribe the authorised rendering of Schedule 1 cl 1(2)(a) as a formulas sidecar (finding 1).
 - Deposit the Schedule 1 in force before 1 July 2017 if earlier conveyances are to be answered. Deposit the Penalty Units Act to turn penalty units into dollars.
 - Settle the readings in findings 2, 13, 16, 19 and 20 with the owner or Territory Revenue's practice.
