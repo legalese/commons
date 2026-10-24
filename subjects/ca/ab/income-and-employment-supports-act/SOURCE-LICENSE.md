@@ -13,6 +13,8 @@ The text of **Income and Employment Supports Act** is published on the [Alberta 
 
 **Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
 
+**Ruling of 2026-10-24 (Michael):** Canadian texts whose terms permit reproduction but are silent on adaptation may be quoted in L4 encodings in Commons, keeping the publisher's required attribution and an "unofficial version / not an official version" notice in the text header and in this file. These terms are of that kind, so the note above is resolved for quotation: once deposited, the text may be quoted in an encoding with the acknowledgement "(c) Alberta King's Printer, <year of first publication>." and an unofficial-version notice. Deposit is still waiting on access: on 2026-10-24 https://kings-printer.alberta.ca/robots.txt disallowed all user agents (`User-agent: *` / `Disallow: /`), so nothing was fetched (see `subjects/ca/ab/README.md`).
+
 ## Language
 
 English only. Alberta enacts and publishes its statutes in English; the King's Printer catalogue carries no French version of any Act indexed here, and no rule of bilingual equal authority applies.
