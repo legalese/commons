@@ -1,0 +1,237 @@
+IMPORT prelude
+IMPORT daydate
+
+-- The Saskatchewan Income Plan Act, S.S. 1986, c. S-25.1, and The Seniors Income Plan Regulations, R.R.S. c. S-25.1
+-- Reg 3 -- the Seniors Income Plan (SIP), a monthly Saskatchewan top-up for a resident who receives the Old Age Security
+-- pension and the Guaranteed Income Supplement: who is eligible (Act s 4); the maximum benefit (Reg s 4); its reduction as
+-- the GIS falls (Reg s 5); the minimum payment (Reg s 6); when a move into or out of a care facility takes effect (Reg s 7);
+-- arrears after an underpayment (Reg s 9); termination (Act s 7); protection of the benefit (Act s 8) and recovery of an
+-- overpayment (Act s 9).
+--
+-- SEAT: the senior who receives, or asks about, the Seniors Income Plan. "Am I eligible? How much will I get each month?
+-- What happens when I move into a special-care home? If I was underpaid, how far back will I be paid?" Provisions addressed
+-- to the minister are encoded as what they mean for that person.
+--
+-- UNOFFICIAL VERSION. The statutory text quoted in the comments is reproduced, for non-commercial use, from the
+-- consolidations of the Office of the King's Printer for Saskatchewan (Publications Centre): the Act, last update posted
+-- 26 Oct 2018; the Regulations, last update posted 9 June 2023. It is not an official version.
+-- (c) 2026, Government of Saskatchewan.
+--
+-- The federal amounts (the person's maximum and actual GIS, the spouse's allowance) are inputs: they come from the federal
+-- Old Age Security Act and its quarterly Table of Rates, which are read with subjects/ca/old-age-security-act/
+-- (cross-folder IMPORT is not possible in the stable l4).
+--
+-- BASELINE ENCODING. Written from the senior's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `The Seniors Income Plan`
+
+GIVEN x IS A NUMBER, y IS A NUMBER
+GIVETH A NUMBER
+`the greater of` x y MEANS IF x AT LEAST y THEN x ELSE y
+
+§§ `Act s 2, s 4 -- who is eligible`
+
+-- Act s 2(e): "'resident' means a person who makes his home and is ordinarily in Saskatchewan and does not include a tourist,
+-- transient or visitor to Saskatchewan". s 2(d), (f): "pension" and "supplement" are the monthly OAS pension and Guaranteed
+-- Income Supplement. s 4: "Any person who: (a) is a resident of Saskatchewan; (b) is in receipt of a pension and a
+-- supplement; and (c) meets the requirements prescribed in the regulations; is eligible to receive a benefit." The
+-- regulations prescribe no further condition beyond being a "pensioner" (Reg s 2(f): "a person who is in receipt of a
+-- pension and a supplement"), so (c) adds nothing here (NOTES.md finding 2).
+GIVEN `makes their home and is ordinarily in Saskatchewan` IS A BOOLEAN
+      `is a tourist, transient or visitor` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a resident under Act s 2(e)` IF
+        `makes their home and is ordinarily in Saskatchewan`
+    AND (NOT `is a tourist, transient or visitor`)
+
+GIVEN `resident` IS A BOOLEAN
+      `receives the OAS pension` IS A BOOLEAN
+      `receives the Guaranteed Income Supplement` IS A BOOLEAN
+      `the supplement is being paid in another province` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is eligible under Act s 4` IF
+        `resident`
+    AND `receives the OAS pension`
+    AND `receives the Guaranteed Income Supplement`
+    AND (NOT `the supplement is being paid in another province`)
+
+§§ `Reg s 4 -- the maximum benefit`
+
+-- Reg s 4(1): "the maximum benefit payable is: (a) $360 per month to: (i) a single person who is a pensioner; or (ii) a person
+-- who is a pensioner and whose spouse or common-law partner is not a pensioner; (b) $325 per month to a person if both that
+-- person and that person's spouse or common-law partner are pensioners." (2): "the maximum benefit payable is $50 per month
+-- to a person: (a) who is a pensioner; and (b) who is a resident of a facility" -- a special-care home, or a long-term
+-- patient in a hospital or health centre assessed a resident charge (s 2(g)).
+DECLARE `Household` IS ONE OF
+    `single`
+    `spouse or partner is not a pensioner`
+    `spouse or partner is also a pensioner`
+
+GIVEN `household` IS A `Household`
+      `resident of a facility` IS A BOOLEAN
+GIVETH A NUMBER
+`the Reg s 4 maximum` `household` `resident of a facility` MEANS
+    IF `resident of a facility`
+    THEN 50
+    ELSE CONSIDER `household`
+         WHEN `spouse or partner is also a pensioner` THEN 325
+         OTHERWISE 360
+
+§§ `Reg s 5 -- the reduction as the GIS falls`
+
+-- Reg s 5(2): "if a person receives less than the maximum supplement, the minister shall: (a) reduce the maximum benefit
+-- payable pursuant to subsection 4(1) to the person: (i) by $1.90 for every $1 reduction made to the person's supplement in
+-- accordance with Table 1 in the case of a single person; (ii) by $2.10 for every $1 reduction made to the person's
+-- supplement in accordance with Table 2 in the case of a person whose spouse or common-law partner is a pensioner; (iii) by
+-- $6.55 for every $1 reduction made to the person's supplement in accordance with Table 3 in the case of a person whose
+-- spouse or common-law partner is not a pensioner or is not in receipt of an allowance; (iv) in the case of a person whose
+-- spouse or common-law partner is in receipt of an allowance that is less than the maximum allowance: (A) by $1.90 for every
+-- $3 reduction made to the allowance of the spouse or common-law partner in accordance with Table 4; and (B) by $1.90 for
+-- every reduction of less than $3 made to the allowance". The tables are the federal OAS Table of Rates (s 5(1)).
+-- "For every $1" is read proportionally (each dollar and part of a dollar of the GIS reduction); "for every $3 ... and ...
+-- less than $3" counts each started $3 of the allowance reduction (NOTES.md finding 3).
+-- s 5(2)(a) reduces the maximum "pursuant to subsection 4(1)": the $50 facility maximum of s 4(2) is not reduced (finding 4).
+DECLARE `Spouse's OAS position` IS ONE OF
+    `no spouse or partner`
+    `spouse or partner is a pensioner`
+    `spouse or partner is neither a pensioner nor receiving an allowance`
+    `spouse or partner receives an allowance`
+
+GIVEN `allowance reduction` IS A NUMBER
+GIVETH A NUMBER
+`the number of started $3 steps in` `allowance reduction` MEANS
+    LET `whole steps` MEANS TRUNC (`allowance reduction` DIVIDED BY 3) 0
+    IN  IF `allowance reduction` AT MOST 0
+        THEN 0
+        ELSE IF (`whole steps` TIMES 3) EQUALS `allowance reduction`
+             THEN `whole steps`
+             ELSE `whole steps` PLUS 1
+
+GIVEN `spouse` IS A `Spouse's OAS position`
+      `the reduction to my supplement` IS A NUMBER
+      `the reduction to my spouse's allowance` IS A NUMBER
+GIVETH A NUMBER
+`the Reg s 5 reduction` `spouse` `the reduction to my supplement` `the reduction to my spouse's allowance` MEANS
+    LET `gis` MEANS `the greater of` 0 `the reduction to my supplement`
+    IN  CONSIDER `spouse`
+        WHEN `no spouse or partner` THEN 1.90 TIMES `gis`
+        WHEN `spouse or partner is a pensioner` THEN 2.10 TIMES `gis`
+        WHEN `spouse or partner is neither a pensioner nor receiving an allowance` THEN 6.55 TIMES `gis`
+        WHEN `spouse or partner receives an allowance` THEN 1.90 TIMES (`the number of started $3 steps in` `the reduction to my spouse's allowance`)
+
+-- The household of s 4 follows from the spouse's position: a spouse who is not a pensioner (with or without an allowance)
+-- gives the $360 maximum.
+GIVEN `spouse` IS A `Spouse's OAS position`
+GIVETH A `Household`
+`the household for Reg s 4` `spouse` MEANS
+    CONSIDER `spouse`
+    WHEN `no spouse or partner` THEN `single`
+    WHEN `spouse or partner is a pensioner` THEN `spouse or partner is also a pensioner`
+    OTHERWISE `spouse or partner is not a pensioner`
+
+§§ `Reg s 6 -- the minimum payment`
+
+-- Reg s 6: "(1) If a beneficiary is a resident of a facility and the amount of the benefit to which the beneficiary would be
+-- entitled for a month ... is greater than zero but less than $5 per month, the minimum payment ... is $5 per month. (2) If
+-- a beneficiary is not a resident of a facility and the amount ... is greater than zero but less than $15 per month, the
+-- minimum payment ... is $15 per month."
+GIVEN `amount` IS A NUMBER, `resident of a facility` IS A BOOLEAN
+GIVETH A NUMBER
+`after the Reg s 6 minimum` `amount` `resident of a facility` MEANS
+    LET `minimum` MEANS IF `resident of a facility` THEN 5 ELSE 15
+    IN  IF `amount` GREATER THAN 0 AND `amount` LESS THAN `minimum`
+        THEN `minimum`
+        ELSE `amount`
+
+§§ `The monthly benefit`
+
+GIVEN `eligible` IS A BOOLEAN
+      `spouse` IS A `Spouse's OAS position`
+      `resident of a facility` IS A BOOLEAN
+      `the reduction to my supplement` IS A NUMBER
+      `the reduction to my spouse's allowance` IS A NUMBER
+GIVETH A NUMBER
+`the monthly Seniors Income Plan benefit` `eligible` `spouse` `resident of a facility` `the reduction to my supplement` `the reduction to my spouse's allowance` MEANS
+    IF NOT `eligible`
+    THEN 0
+    ELSE IF `resident of a facility`
+         THEN `the Reg s 4 maximum` (`the household for Reg s 4` `spouse`) TRUE
+         ELSE `after the Reg s 6 minimum`
+                (`the greater of` 0 ((`the Reg s 4 maximum` (`the household for Reg s 4` `spouse`) FALSE) MINUS (`the Reg s 5 reduction` `spouse` `the reduction to my supplement` `the reduction to my spouse's allowance`)))
+                FALSE
+
+§§ `Reg s 7, s 9; Act ss 7-9 -- changes, arrears, protection`
+
+-- Reg s 7: "The minister shall adjust a beneficiary's benefit payable as of the second month following the month in which
+-- the change occurred where: (a) the beneficiary: (i) becomes a resident of a facility; or (ii) ceases to be a resident of a
+-- facility; and (b) as a result ... there is a change in the beneficiary's eligibility pursuant to section 4." Months are
+-- numbered 1 to 12; the answer is the month and year from which the new amount is paid.
+DECLARE `Month` HAS
+    `month number` IS A NUMBER
+    `year`         IS A NUMBER
+
+GIVEN `month of the change` IS A NUMBER, `year of the change` IS A NUMBER
+GIVETH A `Month`
+`the Reg s 7 adjustment month` `month of the change` `year of the change` MEANS
+    IF `month of the change` PLUS 2 GREATER THAN 12
+    THEN `Month` WITH `month number` IS `month of the change` PLUS 2 MINUS 12, `year` IS `year of the change` PLUS 1
+    ELSE `Month` WITH `month number` IS `month of the change` PLUS 2, `year` IS `year of the change`
+
+-- Reg s 9: where "a beneficiary was entitled to receive a benefit which was not paid, or that a beneficiary's entitlement to
+-- a supplement was incorrectly assessed, resulting in an underpayment", "the minister shall calculate and pay the amount of
+-- the benefits owing ... from the date that the beneficiary was entitled", but (2) not "from a date earlier than the
+-- beginning of the payment period in which the entitlement or the incorrect assessment was discovered" -- s 2(e): the payment
+-- period runs "on July 1 of one year and ending on June 30 of the next year".
+GIVEN `month discovered` IS A NUMBER, `year discovered` IS A NUMBER
+GIVETH A DATE
+`the start of the payment period` `month discovered` `year discovered` MEANS
+    IF `month discovered` AT LEAST 7
+    THEN Date 1 7 `year discovered`
+    ELSE Date 1 7 (`year discovered` MINUS 1)
+
+GIVEN `the date I became entitled` IS A DATE
+      `month discovered` IS A NUMBER
+      `year discovered` IS A NUMBER
+GIVETH A DATE
+`the earliest date arrears are paid from` `the date I became entitled` `month discovered` `year discovered` MEANS
+    LET `period start` MEANS `the start of the payment period` `month discovered` `year discovered`
+    IN  IF `the date I became entitled` AT LEAST `period start`
+        THEN `the date I became entitled`
+        ELSE `period start`
+
+DECLARE `Party` IS ONE OF
+    `the beneficiary`
+    `the minister`
+
+DECLARE `Act` IS ONE OF
+    `calculate and pay the benefits owing`
+
+-- Reg s 9(1) as a duty of the minister's: "shall calculate and pay". No time is set.
+GIVEN `an underpayment was discovered` IS A BOOLEAN
+GIVETH A DEONTIC `Party` `Act`
+`the minister's duty to pay my arrears` `an underpayment was discovered` MEANS
+    IF `an underpayment was discovered`
+    THEN PARTY `the minister`
+         MUST  `calculate and pay the benefits owing`
+         HENCE FULFILLED
+    ELSE FULFILLED
+
+-- Act s 7: "Payment of a benefit to a person ceases: (a) subject to the regulations, when that person ceases to be eligible to
+-- receive a supplement; (b) on payment to that person of a supplement being effected in another province; or (c) in any case
+-- specified in the regulations." (No case is specified in the deposited regulations beyond s 7's facility adjustments.)
+GIVEN `still eligible for the supplement` IS A BOOLEAN
+      `the supplement is paid in another province` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `payment ceases under Act s 7` IF
+        (NOT `still eligible for the supplement`)
+    OR  `the supplement is paid in another province`
+
+-- Act s 8(1): "No benefit shall be assigned, charged, attached, anticipated or given as security, and any transaction
+-- purporting to assign, charge, attach, anticipate or give as security a benefit is void." s 9: an overpayment "is a debt due
+-- to Her Majesty and, in addition to any other manner in which it may be recovered, may be recovered by deducting the amount
+-- of overpayment from any future payment of a benefit to that person." So the only taking the Act allows from future benefit
+-- payments is the recovery of an overpayment.
+GIVEN `the deduction recovers an overpayment of the benefit` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `a deduction from my benefit is allowed` IF `the deduction recovers an overpayment of the benefit`
