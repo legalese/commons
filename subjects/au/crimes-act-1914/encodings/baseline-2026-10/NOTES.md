@@ -10,21 +10,27 @@ No pipeline, no coverage table, no independent test pass, no human gate.
 
 It satisfies `REQ-0083` in `subjects/au/requirements.jsonl`. There was no earlier encoding of this Act to keep.
 
+**Added 23 October 2026 (REQ-0098):** `ca14-penalty-unit.l4`, a module beside `ca14-accused.l4` that IMPORTs it, gives a penalty unit's dollar value by the day the offence was committed, read from the deposited Crimes (Amount of a Penalty Unit) Instrument 2026, and three exported questions in dollars (one penalty unit; a maximum penalty stated in penalty units; the s 20(5) recognizance penalty). Nothing in `ca14-accused.l4` was changed.
+
 Every question is a function named as the person would ask it, with `@export` and a `@desc` on every input. There are 23 exported questions, grouped under `§§` headings in the order a person meets them — arrest, questioning, detention, sentencing, and afterwards — each heading naming its situation ("if a police officer wants to arrest you", "if you have been arrested", "if you are being sentenced", "if you have a conviction").
 
 ## Edition
 
 The compilation registered as **C2026C00368** (Compilation No. 167, compilation date 27 August 2026, including amendments up to Act No. 66, 2026 and Act No. 70, 2026; three volumes in one file), retrieved from the Federal Register of Legislation on 13 October 2026, as deposited at `../../registers/source-bundle/C1914A00012.txt`. Part IAA Division 4 is at lines 1386–1771, Part IB at 7416–9047, Part IC at 9048–9560, Part VIIC at 11886–12340.
 
-Nothing else is brought in. The Crimes Regulations (which prescribe the Part VIIC screening bodies and offices for s 23L(2)(b)(ii)) and the 2026 penalty-unit notifiable instrument are not deposited.
+`ca14-penalty-unit.l4` also reads the **Crimes (Amount of a Penalty Unit) Instrument 2026**, register id F2026N00424 (a notifiable instrument made by the Attorney-General on 15 June 2026 under s 4AA(1A), commenced 1 July 2026), retrieved 23 October 2026 and deposited at `../../../crimes-amount-of-a-penalty-unit-instrument-2026/registers/source-bundle/F2026N00424.txt`. Its s 5: the amount of a penalty unit is $364, applying to offences committed on or after 1 July 2026.
+
+The Crimes Regulations 2019 are brought in by `ca14-regulations.l4` (see the section on them below).
 
 ## Checks
 
 | Module | Case file | Assertions |
 |---|---|---|
 | `ca14-accused.l4` | `ca14-cases-accused.l4` | 90 written, 90 satisfied |
+| `ca14-regulations.l4` | `ca14-cases-regulations.l4` | 15 written, 15 satisfied |
+| `ca14-penalty-unit.l4` | `ca14-cases-penalty-unit.l4` | 15 written, 15 satisfied |
 
-`l4 run` on both files: 0 errors, 0 warnings (2026-10-23). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
+`l4 run` on all six files: 0 errors, 0 warnings (2026-10-24). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. Every expected value was written by hand from the text.
 
 ## Seat
 
@@ -34,7 +40,7 @@ Part IC is written as obligations on investigating officials, Part IB as directi
 
 The 2026-10-18 defaults:
 
-- **The Act alone.** No instrument is brought in. Where a number comes from outside (a penalty unit's dollar value, a maximum fine), the answer is in the Act's own unit or the number is an input.
+- **The Act, with the instrument that sets its number.** The penalty unit instrument is brought in (`ca14-penalty-unit.l4`). Where a number comes from outside the Act and any deposited instrument (a maximum fine set by the law creating the offence), it is an input.
 - **The actors the text names:** the person, constables and investigating officials, a magistrate and bail authority, the court, an interview friend, an Aboriginal legal assistance organisation, a consular office, Commonwealth and State authorities.
 - **Judgments handed to others are answered conditionally.** Every "believes on reasonable grounds", "is satisfied", "is of the opinion" is an input worded from the person's seat: the constable's beliefs (s 3W), the magistrate's satisfaction (s 23DA), the official's beliefs (ss 23H, 23K, 23L, 23N), the court's opinion and choice (ss 17A, 17B, 19B, 23V(5)). The "reasonable" end of the investigation period is not guessed: the answer is the statutory maximum.
 - **The Act's own definitions are worked out from facts:** "protected suspect" (s 23B(2)), "serious Commonwealth offence" (more than 12 months), "waiting period" and "spent" (ss 85ZL, 85ZM). "Dealt with as a minor", which Part VIIC does not define, is asked as a fact.
@@ -63,17 +69,17 @@ The 2026-10-18 defaults:
 11. **A discharge without conviction still counts as a conviction for Part VIIC** (s 85ZM(1)(b)), so it too becomes spent after the waiting period; Part VIIC does not say it need never be disclosed before then. Not separately asserted (the spent cases cover it); the encoding takes the day of the finding of guilt.
 12. **A conviction is spent 10 years after the day of conviction (5 for a minor) if the sentence was not more than 30 months** (ss 85ZL, 85ZM(2)). The period "beginning on" the day of conviction ends the day before the anniversary, so the conviction is spent from the anniversary (15 March 2016 → 15 March 2026). A sentence of more than 30 months is never spent, short of a pardon. A later offence committed within the waiting period and convicted on indictment, or by a State or foreign court, holds the earlier one unspent until the later waiting period ends (ss 85ZX(2), 85ZY); a summary federal conviction does so only on the court's order (s 85ZX(1)). Asserted.
 13. **Part VIIC protects a State conviction only against Commonwealth authorities and in the Territories** (s 85ZV(2)); otherwise the State's law decides (s 85ZV(3)). For a Western Australian, that is the Spent Convictions Act 1988 (WA), which has its own encoding at `subjects/au/wa/spent-convictions-act-1988/`. This encoding answers `not covered` there. Asserted.
-14. **The deposit has lost four formulas.** Section 4AA(3) and (4) (the 2026 indexation of the penalty unit), s 4AB(1) (dollars to penalty units: the fraction "D 100" survives without its division sign) and s 4B(2) (the fine for an imprisonment-only offence: "the formula:" is followed directly by "where:") are missing from the text conversion. Section 4AA(1) still says $330, but from 1 July 2026 the amount is indexed for offences committed on or after that day (s 4AA(8)), and the Minister publishes it by notifiable instrument (s 4AA(1A)). So no dollar figure is computed: the s 20(5) answer is given in penalty units. A `.formulas.md` sidecar should be transcribed from the authorised rendering. Not asserted (a finding about the deposit).
+14. **The deposit has lost four formulas.** Section 4AA(3) and (4) (the 2026 indexation of the penalty unit), s 4AB(1) (dollars to penalty units: the fraction "D 100" survives without its division sign) and s 4B(2) (the fine for an imprisonment-only offence: "the formula:" is followed directly by "where:") are missing from the text conversion. Section 4AA(1) still says $330, but from 1 July 2026 the amount is indexed for offences committed on or after that day (s 4AA(8)), and the Minister publishes it by notifiable instrument (s 4AA(1A)). So `ca14-accused.l4` computes no dollar figure: the s 20(5) answer is given in penalty units. A `.formulas.md` sidecar should be transcribed from the authorised rendering. Not asserted (a finding about the deposit). **Since 23 October 2026** the dollar value is read from the published instrument instead (finding 19), which does not need the lost formula.
 15. **The exclusions that matter most are prescribed by regulation.** The working-with-children, disability and aged-care screening bodies (ss 85ZZGB–85ZZGD and the matching Subdivisions) and any s 85ZZH(k) exclusion are "prescribed" — the encoding asks who is asking, as a fact, and cannot check that the body is prescribed. Raised in the ledger.
 
 ## Raised in the ledger
 
 - **The Crimes Regulations** prescribing the Part VIIC screening bodies and exclusions (and the offices under s 23L(2)(b)(ii)).
-- **The penalty unit amount from 1 July 2026** (the notifiable instrument under s 4AA(1A)).
+- **The penalty unit amount from 1 July 2026** (the notifiable instrument under s 4AA(1A)): REQ-0098, satisfied 23 October 2026 by the deposit and `ca14-penalty-unit.l4`.
 
 ## What would need doing before this is worth relying on
 
-- **A formulas sidecar** for ss 4AA(3)–(4), 4AB(1) and 4B(2) from the authorised rendering, and the 2026 penalty unit instrument, so maximum fines can be given in dollars.
+- **A formulas sidecar** for ss 4AA(3)–(4), 4AB(1) and 4B(2) from the authorised rendering (the 2026 penalty unit instrument is now deposited and used, so maximum fines are given in dollars), and the instrument for 1 July 2029 when it is made.
 - **The Crimes Regulations**, so the Part VIIC exclusions can be checked rather than asked.
 - **Part IAA searches** (frisk and ordinary searches on arrest, ss 3ZE–3ZH) and **Part ID forensic procedures**, which an arrested person meets.
 - **Part IB non-parole periods and recognizance release orders** (Division 4), and s 16E custody credit, for anyone sentenced to imprisonment.
@@ -92,3 +98,4 @@ The 2026-10-18 defaults:
 16. **Every State's and Territory's working with children and NDIS screening body is prescribed, and some are prescribed twice.** Reg 20 lists ten bodies for children (two in Queensland, two in the ACT); reg 20A lists eight for disability. The Victorian Secretary, the South Australian central assessment unit (under a different Act for each), the Tasmanian Registrar and the ACT Commissioner appear in both. A WA applicant meets the CEO under the Working with Children (Criminal Record Checking) Act 2004 for children and the CEO under the NDIS (Worker Screening) Act 2020 for disability. Asserted.
 17. **No one is prescribed for funded aged care.** Sections 85ZZGP–85ZZGR let a prescribed body for aged care worker screening be told of spent convictions, but the Regulations prescribe none, so on the deposited law a spent Commonwealth conviction stays protected from aged care screening. Asserted. (A later amendment could change this; the Register's compilation is dated 13 December 2025.)
 18. **A body prescribed for one kind of work is not thereby prescribed for another.** The prescription is "to the extent that those laws relate to persons working, or seeking to work, with children" (reg 20), or are NDIS worker screening laws (reg 20A): the WA working with children CEO is not a prescribed body for NDIS screening. Asserted.
+19. **The 2026 penalty unit is $364, by offence date.** The Crimes (Amount of a Penalty Unit) Instrument 2026 s 5 publishes $364 "as the result of indexation under subsection 4AA(3)"; by s 4AA(8) it applies only to offences committed on or after 1 July 2026, so an offence of 30 June 2026 sentenced in 2027 is still at $330. `ca14-penalty-unit.l4` answers $364 from 1 July 2026 to 30 June 2029, $330 from 7 November 2024 (the commencement of the $330, Act No. 93, 2024, Sch 3, per the Act's endnotes) to 30 June 2026, and `not covered` before 7 November 2024 (the earlier amounts, and the 2024 Act's application item, are not in the deposited text) and from 1 July 2029, the next indexation day (s 4AA(3): "each third 1 July"), for which no instrument is deposited. Asserted.
