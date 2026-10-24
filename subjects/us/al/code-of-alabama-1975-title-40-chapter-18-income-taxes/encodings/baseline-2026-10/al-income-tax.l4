@@ -1,0 +1,421 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Code of Alabama 1975, Title 40, Chapter 18 (Income Taxes) -- the individual income tax of a resident of Alabama.
+--
+-- Edition: the text ALISON served on 2026-10-20, as deposited at
+--   ../../registers/source-bundle/ala-code-40-18-art1.txt      (Article 1, ss 40-18-1 to 40-18-62)
+--   ../../registers/source-bundle/ala-code-40-18-art2-div1.txt (Article 2 Division 1, ss 40-18-70 to 40-18-86)
+-- ALISON publishes no 'current through' date. Its own notes say s 40-18-14 was amended by Act 2026-551 (effective
+-- 1 May 2026) and s 40-18-15 by Act 2026-604 (effective 1 October 2026), and that the text shown may not include those
+-- amendments. Neither Act is deposited. See NOTES.md findings 1 and 2.
+--
+-- In: s 40-18-2(a)(1), (b) (who is taxed; the residence presumption), s 40-18-5 (rates), s 40-18-15(b)(4) (the optional
+-- standard deduction for tax years beginning after 31 December 2021), s 40-18-15(c) (the deduction for federal income tax),
+-- s 40-18-15.1 (taxable income), s 40-18-19(a)(8), (9)a, d, e, (13) (personal and dependent exemptions; the $6,000
+-- retirement income exemption at 65), s 40-18-19.1(b), (d) (severance and unemployment compensation after downsizing),
+-- s 40-18-27(a), (c) (who must file; by when), s 40-18-42(a) (when the balance is due), s 40-18-50 (the penalty for not
+-- filing), s 40-18-73(a), (c), (g) (the Form A-4 withholding certificate), s 40-18-75(a) (the wage statement).
+--
+-- Out: gross income and adjusted gross income themselves (ss 40-18-14, 40-18-14.2: Alabama computes its own AGI, item by
+-- item, mostly by reference to the Internal Revenue Code; the person states the figure); the itemised deductions of
+-- s 40-18-15(a) (stated as one total by the person who itemises); nonresidents (s 40-18-19(b) and s 40-18-15(e) prorate:
+-- `not covered`); tax years before 2022 (`not covered`); the other credits and exemptions; estimated tax (s 40-18-80, which
+-- borrows 26 U.S.C. 6654); corporations, estates and trusts.
+--
+-- Federal links (not imported: the stable l4 cannot IMPORT across folders): s 40-18-15(c) federal income tax is the amount
+-- the person paid or accrued (subjects/us/internal-revenue-code-of-1986); "head of family" is "head of household" in
+-- 26 U.S.C. 2(b) (s 40-18-1(15)), asked as a fact.
+--
+-- BASELINE ENCODING, written straight from the deposited text from the seat of the individual taxpayer. Expected values in
+-- the case file are hand-written. No pipeline, no independent test pass, no human gate. NOT FOR USE AS TAX ADVICE.
+
+§ `Code of Alabama 1975, Title 40, Chapter 18 -- the individual income tax`
+
+§§ `What this encoding does not cover`
+
+DECLARE `Why not covered` IS ONE OF
+    -- s 40-18-15(b)(4) and s 40-18-19(a)(9)d, e apply "for tax years beginning after December 31, 2021"; the earlier
+    -- tables are in the text but are not encoded
+    `this encoding computes the tax for tax years from 2022 only`
+    -- s 40-18-2(a)(6), s 40-18-15(e), s 40-18-19(b): nonresidents are taxed on Alabama-source income and their deductions
+    -- and exemptions are prorated by a ratio this encoding does not compute
+    `the tax of a nonresident individual is not encoded`
+
+DECLARE `Answer` IS ONE OF
+    `answered`    HAS `amount`  IS A NUMBER
+    `not covered` HAS `because` IS A `Why not covered`
+
+§§ `Filing status`
+
+-- The categories s 40-18-5 and s 40-18-15(b)(4) use. "Head of family" has the meaning of "head of household" in
+-- 26 U.S.C. 2(b) (s 40-18-1(15)); it is asked as a fact.
+DECLARE `Filing status` IS ONE OF
+    `single`
+    `head of family`
+    `married filing separate return`
+    `married filing joint return`
+
+§§ `s 40-18-2 -- who is taxed; residence`
+
+-- s 40-18-2(b): "Every natural person domiciled in the State of Alabama, and every other natural person who maintains a
+-- permanent place of abode within the state or spends in the aggregate more than seven months of the income year within
+-- the state, shall be presumed to be residing within the state". A presumption (NOTES.md finding 6).
+GIVEN `domiciled in Alabama`                         IS A BOOLEAN
+      `maintains a permanent place of abode in Alabama` IS A BOOLEAN
+      `months spent in Alabama in the income year`   IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `presumed to be residing in Alabama` IF
+        `domiciled in Alabama`
+    OR  `maintains a permanent place of abode in Alabama`
+    OR  `months spent in Alabama in the income year` GREATER THAN 7
+
+§§ `s 40-18-15(b)(4) -- the optional standard deduction (tax years beginning after 31 December 2021)`
+
+-- Each filing status has a full amount below an AGI threshold, a reduction "for each" step of AGI "in excess of" the
+-- threshold, and a floor. "For each $500" is read as each complete $500 (NOTES.md finding 3).
+GIVEN `full amount` IS A NUMBER, `threshold` IS A NUMBER, `reduction` IS A NUMBER, `step` IS A NUMBER, `floor amount` IS A NUMBER, `adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`the phased standard deduction` MEANS
+    IF `adjusted gross income` AT MOST `threshold`
+    THEN `full amount`
+    ELSE max `floor amount` (`full amount` MINUS (`reduction` TIMES (FLOOR ((`adjusted gross income` MINUS `threshold`) DIVIDED BY `step`))))
+
+GIVEN `status` IS A `Filing status`, `adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`the optional standard deduction` MEANS
+    CONSIDER `status`
+    -- (4)a: $8,500 below $25,500; less $175 for each $500 over; not less than $5,000
+    WHEN `married filing joint return`    THEN `the phased standard deduction` 8500 25500 175 500 5000 `adjusted gross income`
+    -- (4)b: $4,250 below $12,750; less $88 for each $250 over; not less than $2,500
+    WHEN `married filing separate return` THEN `the phased standard deduction` 4250 12750 88 250 2500 `adjusted gross income`
+    -- (4)c: $5,200 below $25,500; less $135 for each $500 over; not less than $2,500
+    WHEN `head of family`                 THEN `the phased standard deduction` 5200 25500 135 500 2500 `adjusted gross income`
+    -- (4)d: $3,000 below $25,500; less $25 for each $500 over; not less than $2,500
+    WHEN `single`                         THEN `the phased standard deduction` 3000 25500 25 500 2500 `adjusted gross income`
+
+§§ `s 40-18-19(a)(8) -- the personal exemption`
+
+-- "a single person or a married person not living with a spouse": $1,500; "a head of a family or a married person living
+-- with a spouse": $3,000; spouses living together get one $3,000 against their aggregate income, "and in case they make
+-- separate returns each spouse must claim a personal exemption of one thousand five hundred dollars ($1,500)". Read by
+-- filing status: a joint return gets $3,000 whether or not the spouses live together, since two spouses apart would each
+-- have $1,500 (NOTES.md finding 8).
+GIVEN `status` IS A `Filing status`
+GIVETH A NUMBER
+`the personal exemption` MEANS
+    CONSIDER `status`
+    WHEN `single`                         THEN 1500
+    WHEN `head of family`                 THEN 3000
+    WHEN `married filing joint return`    THEN 3000
+    WHEN `married filing separate return` THEN 1500
+
+§§ `s 40-18-19(a)(9) -- the dependent exemption`
+
+-- For tax years beginning after 31 December 2021: $1,000 a dependent at AGI up to $50,000 (d.), $500 above $50,000 and up
+-- to $100,000 (e.); above $100,000 only the $300 of paragraph a. is left (NOTES.md finding 4). A "dependent" is a relative of
+-- the listed kinds over half of whose support came from the taxpayer; asked as a count.
+GIVEN `adjusted gross income` IS A NUMBER
+GIVETH A NUMBER
+`the exemption for each dependent` MEANS
+    IF `adjusted gross income` AT MOST 50000
+    THEN 1000
+    ELSE IF `adjusted gross income` AT MOST 100000
+         THEN 500
+         ELSE 300
+
+§§ `s 40-18-19(a)(13) -- the retirement income exemption at 65`
+
+-- "Beginning January 1, 2023, the first six thousand dollars ($6,000) of taxable retirement income", claimed only "by
+-- individual taxpayers who are 65 years of age or older". Applied to each spouse on a joint return separately (finding 5).
+GIVEN `tax year` IS A NUMBER, `aged 65 or older` IS A BOOLEAN, `taxable retirement income` IS A NUMBER
+GIVETH A NUMBER
+`the retirement income exemption of one taxpayer` MEANS
+    IF `tax year` AT LEAST 2023 AND `aged 65 or older`
+    THEN min 6000 `taxable retirement income`
+    ELSE 0
+
+§§ `s 40-18-19.1 -- severance and unemployment compensation after administrative downsizing`
+
+-- (b): for tax years beginning after 31 December 2019, up to $50,000 a year "received as severance, unemployment
+-- compensation, or termination pay, or as income from a supplemental income plan" by an employee who "as a result of
+-- administrative downsizing, is terminated, laid-off, fired, or displaced"; limited to the actual payments.
+-- (d): not where the termination "is due to misconduct".
+GIVEN `lost the job as a result of administrative downsizing` IS A BOOLEAN
+      `terminated for misconduct`                            IS A BOOLEAN
+      `severance and unemployment compensation received`      IS A NUMBER
+GIVETH A NUMBER
+`the s 40-18-19.1 exempt amount` MEANS
+    IF `lost the job as a result of administrative downsizing` AND (NOT `terminated for misconduct`)
+    THEN min 50000 `severance and unemployment compensation received`
+    ELSE 0
+
+§§ `s 40-18-15.1 -- taxable income`
+
+-- One resident individual's (or one married couple's joint) return for one tax year. Adjusted gross income is the
+-- Alabama figure under s 40-18-14.2, stated by the taxpayer, with any s 40-18-19.1 amount already left out.
+DECLARE `Return` HAS
+    `tax year`                                   IS A NUMBER
+    `resident`                                   IS A BOOLEAN
+    `status`                                     IS A `Filing status`
+    `adjusted gross income`                      IS A NUMBER
+    `itemises deductions`                        IS A BOOLEAN
+    `itemised deductions`                        IS A NUMBER
+    `federal income tax paid or accrued`         IS A NUMBER
+    `dependents`                                 IS A NUMBER
+    `taxpayer aged 65 or older`                  IS A BOOLEAN
+    `taxpayer's taxable retirement income`       IS A NUMBER
+    `spouse aged 65 or older`                    IS A BOOLEAN
+    `spouse's taxable retirement income`         IS A NUMBER
+
+-- s 40-18-15(b)(1): the optional standard deduction is taken "in lieu of" the itemised deductions; the taxpayer elects.
+GIVEN r IS A `Return`
+GIVETH A NUMBER
+`the deduction in place of itemising, or the itemised total` MEANS
+    IF r's `itemises deductions`
+    THEN r's `itemised deductions`
+    ELSE `the optional standard deduction` (r's `status`) (r's `adjusted gross income`)
+
+GIVEN r IS A `Return`
+GIVETH A NUMBER
+`the exemptions` MEANS
+        `the personal exemption` (r's `status`)
+    PLUS (r's `dependents` TIMES `the exemption for each dependent` (r's `adjusted gross income`))
+    PLUS `the retirement income exemption of one taxpayer` (r's `tax year`) (r's `taxpayer aged 65 or older`) (r's `taxpayer's taxable retirement income`)
+    PLUS `the spouse's retirement income exemption` r
+
+GIVEN r IS A `Return`
+GIVETH A NUMBER
+`the spouse's retirement income exemption` MEANS
+    IF r's `status` EQUALS `married filing joint return`
+    THEN `the retirement income exemption of one taxpayer` (r's `tax year`) (r's `spouse aged 65 or older`) (r's `spouse's taxable retirement income`)
+    ELSE 0
+
+-- "gross income ... less the deductions allowed to individuals by this chapter" (s 40-18-15.1), with the federal income
+-- tax deduction of s 40-18-15(c) and the s 40-18-19 exemptions; never below nil.
+GIVEN r IS A `Return`
+GIVETH A NUMBER
+`the taxable income` MEANS
+    max 0 (r's `adjusted gross income`
+           MINUS `the deduction in place of itemising, or the itemised total` r
+           MINUS r's `federal income tax paid or accrued`
+           MINUS `the exemptions` r)
+
+§§ `s 40-18-5 -- the tax on individuals`
+
+GIVEN `status` IS A `Filing status`, `taxable income` IS A NUMBER
+GIVETH A NUMBER
+`the tax on taxable income` MEANS
+    IF `status` EQUALS `married filing joint return`
+    -- (2): 2% to $1,000; 4% over $1,000 to $6,000; 5% over $6,000
+    THEN `the bracket tax` 1000 6000 `taxable income`
+    -- (1): single, head of family, married filing separately: 2% to $500; 4% over $500 to $3,000; 5% over $3,000
+    ELSE `the bracket tax` 500 3000 `taxable income`
+
+GIVEN `first band top` IS A NUMBER, `second band top` IS A NUMBER, `taxable income` IS A NUMBER
+GIVETH A NUMBER
+`the bracket tax` MEANS
+        (2%  TIMES min `taxable income` `first band top`)
+    PLUS (4% TIMES max 0 (min `taxable income` `second band top` MINUS `first band top`))
+    PLUS (5% TIMES max 0 (`taxable income` MINUS `second band top`))
+
+GIVEN r IS A `Return`
+GIVETH AN `Answer`
+`the income tax` MEANS
+    IF r's `tax year` LESS THAN 2022
+    THEN `not covered` `this encoding computes the tax for tax years from 2022 only`
+    ELSE IF NOT (r's `resident`)
+         THEN `not covered` `the tax of a nonresident individual is not encoded`
+         ELSE `answered` (`the tax on taxable income` (r's `status`) (`the taxable income` r))
+
+§§ `s 40-18-27 -- who must file`
+
+-- (a): every taxpayer "having gross income before the deductions ... exceeding the sum of the allowable standard deduction
+-- as provided in Section 40-18-15 and the personal exemption as provided in Section 40-18-19, as allowed for his or her
+-- respective filing status, shall each year file". The standard deduction is taken at the taxpayer's AGI (finding 7).
+GIVEN `status` IS A `Filing status`, `gross income` IS A NUMBER, `adjusted gross income` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `required to file a return` IF
+    `gross income` GREATER THAN
+        (`the optional standard deduction` `status` `adjusted gross income` PLUS `the personal exemption` `status`)
+
+§§ `Duties with deadlines`
+
+DECLARE `Party` IS ONE OF
+    `the taxpayer`
+    `the employee`
+    `the employer`
+
+DECLARE `Act` IS ONE OF
+    `file the return with the Department of Revenue`
+    `pay the balance of the tax`
+    `furnish a signed Alabama Form A-4`
+    `withhold using no exemptions`
+    `claim more withholding exemptions than the employee is entitled to`
+    `submit a new withholding exemption certificate`
+    `furnish the written wage statement`
+
+-- s 40-18-27(a), (c): the taxpayer required to file "shall each year file", by "the same date as the corresponding federal
+-- income tax returns are required to be filed"; `days to the due date` counts from the end of the tax year, extended by any
+-- extension the department grants (not more than six months, except for taxpayers abroad). s 40-18-50: failing to file in
+-- time is a misdemeanour, fined $10 to $1,000.
+GIVEN `who` IS A `Party`, `days to the due date` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`the duty to file` `who` `days to the due date` MEANS
+    PARTY `who`
+    MUST  `file the return with the Department of Revenue`
+    WITHIN `days to the due date`
+    HENCE FULFILLED
+    LEST  BREACH BY `who` BECAUSE "s 40-18-50: no return within the time allowed; a misdemeanour, fine of $10 to $1,000"
+
+-- s 40-18-42(a): the balance of the tax after withholding and estimated payments "shall be due and payable at the same time
+-- as the due date of an original return".
+GIVEN `who` IS A `Party`, `days to the due date` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`the duty to pay the balance` `who` `days to the due date` MEANS
+    PARTY `who`
+    MUST  `pay the balance of the tax`
+    WITHIN `days to the due date`
+    HENCE FULFILLED
+    LEST  BREACH BY `who` BECAUSE "s 40-18-42(a): balance of tax not paid by the due date of the original return"
+
+-- s 40-18-73(a): every employee, "on or before the date of commencement of employment", shall furnish a signed Alabama
+-- withholding exemption certificate (Form A-4; a federal W-4 will not do, (b)). (c): if not, "the employer must withhold
+-- on such employee's wages using no exemptions". Days count from the start of employment.
+GIVEN `employee` IS A `Party`, `employer` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the duty to furnish a Form A-4` `employee` `employer` MEANS
+    PARTY `employee`
+    MUST  `furnish a signed Alabama Form A-4`
+    WITHIN 0
+    HENCE FULFILLED
+    LEST
+        PARTY `employer`
+        MUST  `withhold using no exemptions`
+
+-- s 40-18-73(a): the number claimed "in no event shall exceed the number to which the employee is entitled"; an employee
+-- who inflates it "shall pay a penalty of five hundred dollars ($500)".
+GIVEN `employee` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the prohibition on inflating exemptions` `employee` MEANS
+    PARTY `employee`
+    SHANT `claim more withholding exemptions than the employee is entitled to`
+    HENCE FULFILLED
+    LEST  BREACH BY `employee` BECAUSE "s 40-18-73(a): exemptions inflated on Form A-4; penalty of $500 under s 40-29-75"
+
+-- s 40-18-73(g): "Whenever the number of exemptions of an employee either increases or decreases, the employee shall submit
+-- to the employer a new exemption certificate". No time is stated, so no WITHIN.
+GIVEN `employee` IS A `Party`
+GIVETH A DEONTIC `Party` `Act`
+`the duty to update the certificate` `employee` MEANS
+    PARTY `employee`
+    MUST  `submit a new withholding exemption certificate`
+
+-- s 40-18-75(a): the employer that withheld shall furnish each employee a written statement of wages and tax withheld "on or
+-- before January 31 of the succeeding year, or, if his employment is terminated before the close of such calendar year,
+-- within 30 days from the day on which the last payment of remuneration is made". (c): the department may extend the time
+-- by not more than 30 days.
+GIVEN `employer` IS A `Party`, `days allowed` IS A NUMBER
+GIVETH A DEONTIC `Party` `Act`
+`the duty to give the wage statement` `employer` `days allowed` MEANS
+    PARTY `employer`
+    MUST  `furnish the written wage statement`
+    WITHIN `days allowed`
+    HENCE FULFILLED
+    LEST  BREACH BY `employer` BECAUSE "s 40-18-75(a): wage statement not furnished in time"
+
+GIVEN `calendar year` IS A NUMBER, `employment terminated before the year ended` IS A BOOLEAN, `day of the last payment of wages` IS A DATE
+GIVETH A DATE
+`the last day for the wage statement` MEANS
+    IF `employment terminated before the year ended`
+    THEN `day of the last payment of wages` PLUS 30
+    ELSE Date 31 1 (`calendar year` PLUS 1)
+
+-- =====================================================================================================================
+§ `Questions for the taxpayer`
+-- The seat: the individual Alabama taxpayer (and, for withholding, the same person as an employee). Each question is
+-- derived from the rules above.
+
+§§ `Am I an Alabama resident?`
+
+@export Am I presumed to be residing in Alabama for Alabama income tax (Ala. Code s 40-18-2(b))?
+GIVEN `I am domiciled in Alabama` IS A BOOLEAN @desc Is Alabama your domicile (your permanent legal home)?
+      `I keep a permanent home in Alabama` IS A BOOLEAN @desc Do you maintain a permanent place of abode in Alabama?
+      `months I spent in Alabama` IS A NUMBER @desc In total, how many months of the tax year did you spend in Alabama?
+GIVETH A BOOLEAN
+`Am I presumed to be an Alabama resident` MEANS
+    `presumed to be residing in Alabama` `I am domiciled in Alabama` `I keep a permanent home in Alabama` `months I spent in Alabama`
+
+§§ `Must I file?`
+
+@export Must I file an Alabama individual income tax return for the year (Ala. Code s 40-18-27(a))?
+GIVEN `my filing status` IS A `Filing status` @desc Your filing status: single, head of family, married filing separate return or married filing joint return
+      `my gross income` IS A NUMBER @desc Your gross income for the year before any deductions, in US dollars
+      `my adjusted gross income` IS A NUMBER @desc Your Alabama adjusted gross income for the year, in US dollars
+GIVETH A BOOLEAN
+`Must I file an Alabama return` MEANS
+    `required to file a return` `my filing status` `my gross income` `my adjusted gross income`
+
+§§ `How much is my tax?`
+
+@export What is my Alabama optional standard deduction for a tax year from 2022 (Ala. Code s 40-18-15(b)(4))?
+GIVEN `my filing status` IS A `Filing status` @desc Your filing status: single, head of family, married filing separate return or married filing joint return
+      `my adjusted gross income` IS A NUMBER @desc Your Alabama adjusted gross income for the year, in US dollars
+GIVETH A NUMBER
+`What is my Alabama standard deduction` MEANS
+    `the optional standard deduction` `my filing status` `my adjusted gross income`
+
+@export What are my Alabama personal and dependent exemptions for a tax year from 2022 (Ala. Code s 40-18-19(a)(8), (9))?
+GIVEN `my filing status` IS A `Filing status` @desc Your filing status: single, head of family, married filing separate return or married filing joint return
+      `my adjusted gross income` IS A NUMBER @desc Your Alabama adjusted gross income for the year, in US dollars
+      `my dependents` IS A NUMBER @desc How many relatives, other than your spouse, received over half of their support from you this year?
+GIVETH A NUMBER
+`What are my Alabama personal and dependent exemptions` MEANS
+    `the personal exemption` `my filing status` PLUS (`my dependents` TIMES `the exemption for each dependent` `my adjusted gross income`)
+
+@export How much of my severance or unemployment pay is exempt from Alabama income tax after a downsizing (Ala. Code s 40-18-19.1)?
+GIVEN `I lost my job in a downsizing` IS A BOOLEAN @desc Were you terminated, laid off, fired or displaced as a result of administrative downsizing?
+      `I was terminated for misconduct` IS A BOOLEAN @desc Was your termination due to misconduct?
+      `my severance and unemployment pay` IS A NUMBER @desc Severance, unemployment compensation, termination pay and supplemental income plan payments you received this year, in US dollars
+GIVETH A NUMBER
+`How much of my severance or unemployment pay is exempt` MEANS
+    `the s 40-18-19.1 exempt amount` `I lost my job in a downsizing` `I was terminated for misconduct` `my severance and unemployment pay`
+
+@export How much Alabama income tax do I owe for the year, as a resident individual (Ala. Code ss 40-18-5, 40-18-15, 40-18-19)?
+GIVEN `tax year` IS A NUMBER @desc The tax year, e.g. 2025
+      `I am an Alabama resident` IS A BOOLEAN @desc Were you an Alabama resident for the whole year?
+      `my filing status` IS A `Filing status` @desc Your filing status: single, head of family, married filing separate return or married filing joint return
+      `my adjusted gross income` IS A NUMBER @desc Your Alabama adjusted gross income for the year (on a joint return, both spouses'), in US dollars
+      `I itemise` IS A BOOLEAN @desc Will you itemise deductions instead of taking the optional standard deduction?
+      `my itemised deductions` IS A NUMBER @desc Your itemised deductions under Ala. Code s 40-18-15(a), in US dollars (0 if you do not itemise)
+      `my federal income tax` IS A NUMBER @desc Federal income tax you paid or accrued in the year, in US dollars
+      `my dependents` IS A NUMBER @desc How many relatives, other than your spouse, received over half of their support from you this year?
+      `I am 65 or older` IS A BOOLEAN @desc Are you 65 or older?
+      `my taxable retirement income` IS A NUMBER @desc Your taxable retirement income for the year, in US dollars
+      `my spouse is 65 or older` IS A BOOLEAN @desc On a joint return: is your spouse 65 or older?
+      `my spouse's taxable retirement income` IS A NUMBER @desc On a joint return: your spouse's taxable retirement income, in US dollars
+GIVETH AN `Answer`
+`How much Alabama income tax do I owe` MEANS
+    `the income tax` (`Return` WITH
+        `tax year`                             IS `tax year`
+        `resident`                             IS `I am an Alabama resident`
+        `status`                               IS `my filing status`
+        `adjusted gross income`                IS `my adjusted gross income`
+        `itemises deductions`                  IS `I itemise`
+        `itemised deductions`                  IS `my itemised deductions`
+        `federal income tax paid or accrued`   IS `my federal income tax`
+        `dependents`                           IS `my dependents`
+        `taxpayer aged 65 or older`            IS `I am 65 or older`
+        `taxpayer's taxable retirement income` IS `my taxable retirement income`
+        `spouse aged 65 or older`              IS `my spouse is 65 or older`
+        `spouse's taxable retirement income`   IS `my spouse's taxable retirement income`)
+
+§§ `When I start a job (withholding)`
+
+@export By what day must my employer give me my Alabama wage statement for a calendar year (Ala. Code s 40-18-75(a))?
+GIVEN `calendar year` IS A NUMBER @desc The calendar year the wages were paid in
+      `my job ended during that year` IS A BOOLEAN @desc Did your employment end before the close of that calendar year?
+      `day of my last pay` IS A DATE @desc The day your last wages were paid (used only if the job ended during the year)
+GIVETH A DATE
+`By when must my employer give me my wage statement` MEANS
+    `the last day for the wage statement` `calendar year` `my job ended during that year` `day of my last pay`
