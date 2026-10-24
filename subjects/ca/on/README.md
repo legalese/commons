@@ -2,7 +2,7 @@
 
 Ontario (Canada) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-22 for the legislation governing twelve everyday topics. Each was checked against the e-Laws (Ontario.ca/laws), King's Printer for Ontario; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. Statute and regulation text has since been deposited for four subjects on social security and benefits and on personal income tax (below); nothing is encoded yet.
+The subjects here were laid out on 2026-09-22 for the legislation governing twelve everyday topics. Each was checked against the e-Laws (Ontario.ca/laws), King's Printer for Ontario; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. Statute and regulation text has since been deposited for four subjects on social security and benefits and on personal income tax (below), and two of them are encoded (2026-10-24, below).
 
 **Licence category: conditional.** The King's Printer permits anyone to reproduce Ontario statutes and regulations free and without permission, commercial use included, on three conditions: accuracy, the acknowledgement "© King's Printer for Ontario, <year>", and a statement that the copy is not an official version. The terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Confirm before quoting the text in an encoding** -- a human decision recorded here.
 
@@ -51,6 +51,17 @@ Claims below cite the deposited text where they were read there; anything not re
   - a CPP or QPP retirement pension available before 65 is not a financial resource the person must pursue -- O. Reg. 134/98 s. 13 (2) (c); O. Reg. 222/98 s. 11 (2) (c);
   - ODSP: persons receiving **CPP disability benefits** are a prescribed class for s. 3 (1) of the ODSP Act -- O. Reg. 222/98 s. 4 (1) para. 6.
 - **GAINS** (Ontario Guaranteed Annual Income Act + regulations) tops up low-income seniors and is built on the federal **Old Age Security Act**: "allowance" is the OAS Part III allowance (Act s. 1 (1)), and "basic monthly income" is computed from the OAS pension and Guaranteed Income Supplement a person receives and from 12 or 24 times the maximum OAS pension and supplement (Act s. 1 (1)). **O. Reg. 357/96** s. 2 sets the guaranteed income limit at $996 plus 12 times the maximum monthly pension plus 12 times the maximum monthly supplement for the quarter, "pension" and "supplement" being the OAS Part I pension and Part II Guaranteed Income Supplement (Act s. 1 (1)). **R.R.O. 1990, Reg. 874** s. 1 (1) counts CPP survivor and disability pensions and unemployment insurance benefits as "private pension income", and excludes OAS benefits. That GAINS is paid automatically to OAS/GIS recipients on CRA income data: *unverified (general knowledge)*.
+
+## Encoded: tax and benefits (2026-10-24)
+
+Two baseline encodings, each a seat-neutral core with a seat layer for the individual, checked with the stable `l4` 1.6.98 (0 errors, 0 warnings):
+
+| Encoding | Seat | Questions | Regulative rules | Assertions |
+|---|---|---|---|---|
+| `taxation-act-2007/encodings/baseline-2026-10/` — 2026 personal income tax (s 6 rates, s 9 credits, s 16 surtax, s 20 tax reduction, s 21.1 LIFT, s 24 Health Premium), s 115 instalments, the Ontario child benefit (s 104) and the Ontario sales tax credit (s 103.8), July 2026 to June 2027 | the individual resident in Ontario | 12 | 2 | 87 / 87 |
+| `ontario-works-act-1997/encodings/baseline-2026-10/` — eligibility, asset limit, budgetary requirements, earnings exemption, amount of assistance, internal review and appeal | the applicant or recipient | 8 | 1 | 52 / 52 |
+
+The Taxation Act's indexed amounts (s 23) are not in the Act; the 2026 and 2026-27 figures come from two Canada Revenue Agency pages deposited beside the Act (`cra-t4127-jan-2026.txt`, `cra-ontario-programs-2026-10.txt`, under the canada.ca non-commercial reproduction terms). The remaining indexed credit amounts (spouse, age, pension, disability) are inputs: the CRA forms that print them are under a robots.txt-disallowed path, and ontario.ca's own pages may be reproduced only "if no changes are made", a no-modification term not used. The ODSP and GAINS subjects are sourced but not yet encoded.
 
 ### Currency
 
