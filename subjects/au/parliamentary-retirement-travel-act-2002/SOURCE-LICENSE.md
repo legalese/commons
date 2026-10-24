@@ -23,3 +23,5 @@ terms.
 Statute text deposited 2026-10-13: `registers/source-bundle/C2004A01047.txt`, converted to plain text from
 https://api.prod.legislation.gov.au/v1/Documents/Find(titleid='C2004A01047',asatspecification='Current',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest')
 (compilation register id: C2018C00008). sha256 of the download: `8aaa0c00b7b5920b7dd972ea6d880a9a6a579f9f04c1e97fcde8435177983b13`.
+
+Formulas, symbols and pictures the text deposit lost are transcribed 2026-10-24 in `registers/source-bundle/C2004A01047.formulas.md`, from the Word rendering of the same compilation (C2018C00008) on the same Register and under the same licence (CC BY 4.0, as above): https://api.prod.legislation.gov.au/v1/Documents/Find(registerid='C2018C00008',type='Primary',format='Word',uniquetypenumber=0,volumenumber=0,rectificationspecification='Latest').
