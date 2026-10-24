@@ -1,0 +1,502 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `oas-core`
+IMPORT `oas-core-measures`
+IMPORT `oas-core-pension`
+IMPORT `oas-core-income`
+IMPORT `oa2-indexation`
+
+-- Old Age Security Act, PART II, sections 12 and 12.1: the amount of the supplement. Piece oa2.
+--
+-- The amounts. The Act states the supplement as a "maximum amount" per payment quarter (a figure fixed for April 1,
+-- 2005, then moved by two fixed increases and by quarterly indexation to the Consumer Price Index) and then reduces it
+-- by the pensioner's income (section 12(5), the formula that replaces the older "$1 for each full $2" of ss 12(1)
+-- and 12(2) for every month after December 1997). Section 12.1 adds a second amount from July 2011.
+--
+-- WHAT IS AN INPUT.  The Consumer Price Index series, the previous quarter's maximum and the income figures are not
+-- in the text. The encoding takes one quarter at a time: the previous quarter's maximum and the two index figures are
+-- inputs, named as the keel's register fixes (KEEL-NOTES, Instructions, item 11). The pension amounts come in under
+-- the keel's three exact names (item 10): the keel's selector rules say which one the Act means.
+-- Incomes are NUMBERS: the value of the keel's `the income of a person for a calendar year` for the base calendar
+-- year (section 2 "income"); the seat has a question that works it out from the tax-return figures.
+-- Rounding of an indexed amount to the cent and of the ratio to three decimals is Regulations s 8 (piece oa3) and is
+-- not applied here.
+
+§ `Amount of Supplement, section 12`
+
+-- The three situations that the first subsection and the additions distinguish: a pensioner who is not one of the
+-- married pensioners of (b); one whose spouse or common-law partner has a pension payable from a later month in the
+-- quarter; and one whose spouse or common-law partner has a pension payable from the first month of the quarter (in
+-- the words of the paragraph: "commencing with the first month for which a pension may be paid to the spouse").
+DECLARE `s 12(1): Situation of the pensioner` IS ONE OF
+    `s 12(1)(a): a person other than a person described in paragraph (b)`
+    `s 12(1)(b)(i): a person whose spouse or common-law partner has no pension payable yet in the quarter`
+    `s 12(1)(b)(ii): a person whose spouse or common-law partner has a pension payable from this month`
+
+-- (b): "in the case of a person who, on the day immediately before that payment quarter, had a spouse or common-law
+-- partner to whom a pension may be paid for any month in that payment quarter", and (i) before / (ii) from the first
+-- month for which a pension may be paid to the spouse or common-law partner.
+-- src:273 | 12 (1) The amount of the supplement that may be paid to a pensioner for any month in the payment quarter commencing on April 1, 2005 is,
+-- src:274 | (a) in the case of a person other than a person described in paragraph (b), five hundred and sixty-two dollars and ninety-three cents, and
+-- src:275 | (b) in the case of a person who, on the day immediately before that payment quarter, had a spouse or common-law partner to whom a pension may be paid for any month in that payment quarter,
+-- src:276 | (i) in respect of any month in that payment quarter before the first month for which a pension may be paid to the spouse or common-law partner, five hundred and sixty-two dollars and ninety-three cents, and
+-- src:277 | (ii) in respect of any month in that payment quarter commencing with the first month for which a pension may be paid to the spouse or common-law partner, three hundred and sixty-six dollars and sixty-seven cents,
+@ref R.S.C., 1985, c. O-9, s 12(1) (src:273-277)
+GIVEN month IS A DATE
+      `on the day immediately before the payment quarter the pensioner had a spouse or common-law partner to whom a pension may be paid for any month in that payment quarter` IS A BOOLEAN
+      `the first month for which a pension may be paid to the spouse or common-law partner (any date if there is no such month)` IS A DATE
+GIVETH A `s 12(1): Situation of the pensioner`
+`s 12(1): the situation of the pensioner for the month` month `on the day immediately before the payment quarter the pensioner had a spouse or common-law partner to whom a pension may be paid for any month in that payment quarter` `the first month for which a pension may be paid to the spouse or common-law partner (any date if there is no such month)` MEANS
+    IF NOT `on the day immediately before the payment quarter the pensioner had a spouse or common-law partner to whom a pension may be paid for any month in that payment quarter`
+    THEN `s 12(1)(a): a person other than a person described in paragraph (b)`
+    ELSE IF `the first day of the month containing` month LESS THAN `the first day of the month containing` `the first month for which a pension may be paid to the spouse or common-law partner (any date if there is no such month)`
+         THEN `s 12(1)(b)(i): a person whose spouse or common-law partner has no pension payable yet in the quarter`
+         ELSE `s 12(1)(b)(ii): a person whose spouse or common-law partner has a pension payable from this month`
+
+-- (1): the maximum for the payment quarter commencing on April 1, 2005: $562.93 for (a) and (b)(i), $366.67 for (b)(ii).
+@ref R.S.C., 1985, c. O-9, s 12(1) (src:273-277)
+GIVEN situation IS A `s 12(1): Situation of the pensioner`
+GIVETH A NUMBER
+`s 12(1): the maximum supplement for the payment quarter commencing on April 1, 2005` situation MEANS
+    CONSIDER situation
+    WHEN `s 12(1)(a): a person other than a person described in paragraph (b)` THEN 562.93
+    WHEN `s 12(1)(b)(i): a person whose spouse or common-law partner has no pension payable yet in the quarter` THEN 562.93
+    WHEN `s 12(1)(b)(ii): a person whose spouse or common-law partner has a pension payable from this month` THEN 366.67
+
+-- (1) ... "minus one dollar for each full two dollars of the pensioner's monthly base income."
+-- Section 12(5) replaces this reduction by its formula for every month after December 1997; the April 1, 2005
+-- quarter is named by (1) and not by (5)'s "Despite subsection (2)", so both are encoded (fork F-12-1).
+-- src:278 | minus one dollar for each full two dollars of the pensioner’s monthly base income.
+@ref R.S.C., 1985, c. O-9, s 12(1) "minus one dollar for each full two dollars" (src:278)
+GIVEN situation IS A `s 12(1): Situation of the pensioner`
+      `the pensioner's monthly base income` IS A NUMBER
+GIVETH A NUMBER
+`s 12(1): the amount of the supplement for a month in the payment quarter commencing on April 1, 2005` situation `the pensioner's monthly base income` MEANS
+    `s 12(1): the maximum supplement for the payment quarter commencing on April 1, 2005` situation MINUS FLOOR (`the pensioner's monthly base income` DIVIDED BY 2)
+
+-- (1.1) and (1.2): the increases for the quarters commencing on January 1, 2006 and January 1, 2007: $18 for a person
+-- described in paragraph (1)(a) or subparagraph (1)(b)(i), $14.50 for a person described in subparagraph (1)(b)(ii).
+-- src:280 | (1.1) The amount of the supplement that may be paid to a pensioner for any month in the payment quarter commencing on January 1, 2006 is the amount of the supplement that would otherwise be payable plus
+-- src:281 | (a) eighteen dollars, in the case of a person described in paragraph (1)(a) or subparagraph (1)(b)(i); and
+-- src:282 | (b) fourteen dollars and fifty cents, in the case of a person described in subparagraph (1)(b)(ii).
+@ref R.S.C., 1985, c. O-9, s 12(1.1) (src:280-282)
+GIVEN situation IS A `s 12(1): Situation of the pensioner`
+GIVETH A NUMBER
+`s 12(1.1): the increase for the payment quarter commencing on January 1, 2006` situation MEANS
+    CONSIDER situation
+    WHEN `s 12(1)(a): a person other than a person described in paragraph (b)` THEN 18
+    WHEN `s 12(1)(b)(i): a person whose spouse or common-law partner has no pension payable yet in the quarter` THEN 18
+    WHEN `s 12(1)(b)(ii): a person whose spouse or common-law partner has a pension payable from this month` THEN 14.50
+
+-- src:284 | (1.2) The amount of the supplement that may be paid to a pensioner for any month in the payment quarter commencing on January 1, 2007 is the amount of the supplement that would otherwise be payable plus
+-- src:285 | (a) eighteen dollars, in the case of a person described in paragraph (1)(a) or subparagraph (1)(b)(i); and
+-- src:286 | (b) fourteen dollars and fifty cents, in the case of a person described subparagraph (1)(b)(ii).
+@ref R.S.C., 1985, c. O-9, s 12(1.2) (src:284-286)
+GIVEN situation IS A `s 12(1): Situation of the pensioner`
+GIVETH A NUMBER
+`s 12(1.2): the increase for the payment quarter commencing on January 1, 2007` situation MEANS
+    CONSIDER situation
+    WHEN `s 12(1)(a): a person other than a person described in paragraph (b)` THEN 18
+    WHEN `s 12(1)(b)(i): a person whose spouse or common-law partner has no pension payable yet in the quarter` THEN 18
+    WHEN `s 12(1)(b)(ii): a person whose spouse or common-law partner has a pension payable from this month` THEN 14.50
+
+-- (2), (3) and (4) together, with the two fixed increases of (1.1) and (1.2).
+-- (2): for a payment quarter commencing after June 30, 2005, the maximum amount is the maximum for the three-month
+--      period immediately before, multiplied by the ratio of the first adjustment quarter's index to the second's.
+-- (3): it is not less than the maximum for the period immediately before.
+-- (4): where the first index is lower than the second there is no adjustment, and none in any later quarter until a
+--      later quarter's first index is higher than that second index, which is then deemed to be the second index of
+--      that later quarter. (The arithmetic is oa2-indexation; the amounts are not rounded: Regulations s 8.)
+-- (1.1), (1.2): for the quarters commencing on January 1, 2006 and 2007 the amount is the one that would otherwise be
+--      payable plus $18 / $14.50.
+-- A quarter that does not commence after June 30, 2005 is not covered by (2): the answer is NOTHING. For the quarter
+-- commencing on April 1, 2005 itself see (1).
+-- src:288 | (2) Subject to subsections (1.1) and (1.2), the amount of the supplement that may be paid to a pensioner for any month in any payment quarter commencing after June 30, 2005 is the amount obtained by multiplying
+-- src:289 | (a) the maximum amount of the supplement that might have been paid to the pensioner for any month in the three-month period immediately before that payment quarter
+-- src:290 | by
+-- src:291 | (b) the ratio that the Consumer Price Index for the first adjustment quarter that relates to that payment quarter bears to the Consumer Price Index for the second adjustment quarter that relates to that payment quarter,
+-- src:292 | minus one dollar for each full two dollars of the pensioner’s monthly base income.
+-- src:293 | No decrease in maximum amount of supplement
+-- src:294 | (3) Notwithstanding subsection (2), the maximum amount of the supplement that may be paid to a pensioner for any month in a payment quarter shall be not less than the maximum amount of the supplement that was or may be paid to a pensioner for any month in the three month period immediately before that payment quarter.
+-- src:295 | Effect of reduction in Consumer Price Index
+-- src:296 | (4) Where, in relation to any payment quarter, the Consumer Price Index for the first adjustment quarter is lower than the Consumer Price Index for the second adjustment quarter,
+-- src:297 | (a) no supplement adjustment shall be made pursuant to subsection (2) in respect of that payment quarter; and
+-- src:298 | (b) no supplement adjustment shall be made pursuant to that subsection in respect of any subsequent payment quarter until, in relation to a subsequent payment quarter, the Consumer Price Index for the first adjustment quarter that relates to that subsequent payment quarter is higher than the Consumer Price Index for the second adjustment quarter that relates to the payment quarter referred to in paragraph (a), in which case the second adjustment quarter that relates to the payment quarter referred to in that paragraph shall be deemed to be the second adjustment quarter that relates to that subsequent payment quarter.
+@ref R.S.C., 1985, c. O-9, s 12(1.1), s 12(1.2), s 12(2), s 12(3), s 12(4) (src:280-298)
+GIVEN `the first day of the payment quarter` IS A DATE
+      situation IS A `s 12(1): Situation of the pensioner`
+      `the maximum amount of the supplement that might have been paid to the pensioner for any month in the three-month period immediately before that payment quarter` IS A NUMBER
+      `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS A MAYBE NUMBER
+GIVETH A MAYBE `oa2 indexation: Outcome of a payment quarter`
+`s 12(2): the maximum supplement for a payment quarter commencing after June 30, 2005` `the first day of the payment quarter` situation `the maximum amount of the supplement that might have been paid to the pensioner for any month in the three-month period immediately before that payment quarter` `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` MEANS
+    IF `the first day of the payment quarter` AT MOST (YMD 2005 6 30)
+    THEN NOTHING
+    ELSE JUST (`oa2 indexation: Outcome of a payment quarter` WITH
+                   `the amount for the payment quarter` IS indexed's `the amount for the payment quarter` PLUS fixedIncrease
+                   `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS indexed's `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`)
+    WHERE
+        indexed MEANS
+            `oa2 indexation: the outcome for a payment quarter`
+                `the maximum amount of the supplement that might have been paid to the pensioner for any month in the three-month period immediately before that payment quarter`
+                `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter`
+                `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter`
+                `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`
+        fixedIncrease MEANS
+            BRANCH
+                IF `the first day of the payment quarter` EQUALS (YMD 2006 1 1) THEN `s 12(1.1): the increase for the payment quarter commencing on January 1, 2006` situation
+                IF `the first day of the payment quarter` EQUALS (YMD 2007 1 1) THEN `s 12(1.2): the increase for the payment quarter commencing on January 1, 2007` situation
+                OTHERWISE 0
+
+-- (5) "Despite subsection (2), the amount of the supplement that may be paid to a pensioner for any month after
+-- December 1997 is the amount determined by the formula [(A - B) x C] - D/2 where A is the aggregate of (a) the
+-- maximum amount of the supplement that, but for this subsection, might have been paid to the pensioner for that
+-- month, and (b) the amount of the full monthly pension; B is the pensioner's monthly pension; C is the pensioner's
+-- special qualifying factor for the month; and D is the pensioner's monthly base income rounded, where it is not a
+-- multiple of two dollars, to the next lower multiple of two dollars."
+-- "the amount of the full monthly pension" is the amount of s 2.1(1) and "the pensioner's monthly pension" the one
+-- of s 2.1(2): neither is the amount increased for a deferred application (7.1). The keel's two selector rules say so.
+-- src:300 | (5) Despite subsection (2), the amount of the supplement that may be paid to a pensioner for any month after December 1997 is the amount determined by the formula
+-- src:301 | [(A - B) × C] - D/2
+-- src:302 | where
+-- src:303 | A is the aggregate of
+-- src:304 | (a) the maximum amount of the supplement that, but for this subsection, might have been paid to the pensioner for that month, and
+-- src:305 | (b) the amount of the full monthly pension;
+-- src:306 | B is the pensioner’s monthly pension;
+-- src:307 | C is the pensioner’s special qualifying factor for the month; and
+-- src:308 | D is the pensioner’s monthly base income rounded, where it is not a multiple of two dollars, to the next lower multiple of two dollars.
+@ref R.S.C., 1985, c. O-9, s 12(5) (src:300-308)
+GIVEN month IS A DATE
+      `the maximum amount of the supplement that, but for this subsection, might have been paid to the pensioner for the month` IS A NUMBER
+      `the amount calculated in accordance with section 7, before any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the amount after any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the pensioner's monthly pension before any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the pensioner's monthly pension after any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the pensioner's special qualification facts` IS A `Special qualification facts`
+      `the pensioner's monthly base income` IS A NUMBER
+GIVETH A NUMBER
+`s 12(5): the amount determined by the formula` month `the maximum amount of the supplement that, but for this subsection, might have been paid to the pensioner for the month` `the amount calculated in accordance with section 7, before any increase under subsection 7.1(1) or (2)` `the amount after any increase under subsection 7.1(1) or (2)` `the pensioner's monthly pension before any increase under subsection 7.1(1) or (2)` `the pensioner's monthly pension after any increase under subsection 7.1(1) or (2)` `the pensioner's special qualification facts` `the pensioner's monthly base income` MEANS
+    ((partA MINUS partB) TIMES partC) MINUS (partD DIVIDED BY 2)
+    WHERE
+        partA MEANS `the maximum amount of the supplement that, but for this subsection, might have been paid to the pensioner for the month`
+                PLUS `the amount of a full monthly pension` `the amount calculated in accordance with section 7, before any increase under subsection 7.1(1) or (2)` `the amount after any increase under subsection 7.1(1) or (2)`
+        partB MEANS `the pensioner's monthly pension in subsections 12(5) and 22(2)` `the pensioner's monthly pension before any increase under subsection 7.1(1) or (2)` `the pensioner's monthly pension after any increase under subsection 7.1(1) or (2)`
+        partC MEANS `the special qualifying factor of a person for the month containing` month `the pensioner's special qualification facts`
+        partD MEANS `the pensioner's monthly base income` `rounded to the next lower multiple of` 2
+
+-- The text does not say what happens when the formula comes out below nothing. A supplement "that may be paid" is not
+-- a negative sum, so the amount that may be paid is the formula's result or nothing, whichever is greater (fork F-12-2).
+@ref R.S.C., 1985, c. O-9, s 12(5) (src:300-308)
+GIVEN month IS A DATE
+      `the maximum amount of the supplement that, but for this subsection, might have been paid to the pensioner for the month` IS A NUMBER
+      `the amount calculated in accordance with section 7, before any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the amount after any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the pensioner's monthly pension before any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the pensioner's monthly pension after any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the pensioner's special qualification facts` IS A `Special qualification facts`
+      `the pensioner's monthly base income` IS A NUMBER
+GIVETH A NUMBER
+`s 12(5): the amount of the supplement that may be paid for the month` month `the maximum amount of the supplement that, but for this subsection, might have been paid to the pensioner for the month` `the amount calculated in accordance with section 7, before any increase under subsection 7.1(1) or (2)` `the amount after any increase under subsection 7.1(1) or (2)` `the pensioner's monthly pension before any increase under subsection 7.1(1) or (2)` `the pensioner's monthly pension after any increase under subsection 7.1(1) or (2)` `the pensioner's special qualification facts` `the pensioner's monthly base income` MEANS
+    max 0 (`s 12(5): the amount determined by the formula` month `the maximum amount of the supplement that, but for this subsection, might have been paid to the pensioner for the month` `the amount calculated in accordance with section 7, before any increase under subsection 7.1(1) or (2)` `the amount after any increase under subsection 7.1(1) or (2)` `the pensioner's monthly pension before any increase under subsection 7.1(1) or (2)` `the pensioner's monthly pension after any increase under subsection 7.1(1) or (2)` `the pensioner's special qualification facts` `the pensioner's monthly base income`)
+
+-- (5.1) "Where the aggregate of the pensions and supplements payable for a month to two pensioners each of whom is the
+-- other's spouse or common-law partner is less than the aggregate of the pension and supplement that would be payable
+-- for that month to one of them if the other were not a pensioner, the Minister may, notwithstanding subsection (2),
+-- pay to one of them for that month (a) the amount of supplement that would be payable for that month to that
+-- pensioner, if the other were not a pensioner, minus (b) the aggregate of the pension and supplement payable for that
+-- month to the other."
+-- "pension" here is the pension of s 2.1(2) (not increased under 7.1(1) or (2)). The two pensioners are called the
+-- pensioner (the one who may be paid the extra) and the other.
+DECLARE `s 12(5.1): Pensions and supplements of two pensioners who are each other's spouse or common-law partner` HAS
+    `the pensioner's pension before any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+    `the pensioner's pension after any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+    `the supplement payable to the pensioner for the month` IS A NUMBER
+    `the supplement that would be payable to the pensioner for the month if the other were not a pensioner` IS A NUMBER
+    `the other's pension before any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+    `the other's pension after any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+    `the supplement payable to the other for the month` IS A NUMBER
+
+-- src:310 | (5.1) Where the aggregate of the pensions and supplements payable for a month to two pensioners each of whom is the other’s spouse or common-law partner is less than the aggregate of the pension and supplement that would be payable for that month to one of them if the other were not a pensioner, the Minister may, notwithstanding subsection (2), pay to one of them for that month
+-- src:311 | (a) the amount of supplement that would be payable for that month to that pensioner, if the other were not a pensioner,
+-- src:312 | minus
+-- src:313 | (b) the aggregate of the pension and supplement payable for that month to the other.
+@ref R.S.C., 1985, c. O-9, s 12(5.1) condition (src:310)
+GIVEN two IS A `s 12(5.1): Pensions and supplements of two pensioners who are each other's spouse or common-law partner`
+GIVETH A BOOLEAN
+`s 12(5.1): the aggregate paid to the two is less than the aggregate that one would be paid if the other were not a pensioner` two MEANS
+    (  `the pension in subsection 12(5.1)` (two's `the pensioner's pension before any increase under subsection 7.1(1) or (2)`) (two's `the pensioner's pension after any increase under subsection 7.1(1) or (2)`)
+     PLUS two's `the supplement payable to the pensioner for the month`
+     PLUS `the pension in subsection 12(5.1)` (two's `the other's pension before any increase under subsection 7.1(1) or (2)`) (two's `the other's pension after any increase under subsection 7.1(1) or (2)`)
+     PLUS two's `the supplement payable to the other for the month`)
+    LESS THAN
+    (  `the pension in subsection 12(5.1)` (two's `the pensioner's pension before any increase under subsection 7.1(1) or (2)`) (two's `the pensioner's pension after any increase under subsection 7.1(1) or (2)`)
+     PLUS two's `the supplement that would be payable to the pensioner for the month if the other were not a pensioner`)
+
+@ref R.S.C., 1985, c. O-9, s 12(5.1) (a) and (b) (src:311-313)
+GIVEN two IS A `s 12(5.1): Pensions and supplements of two pensioners who are each other's spouse or common-law partner`
+GIVETH A NUMBER
+`s 12(5.1): the amount the Minister may pay to the pensioner` two MEANS
+        two's `the supplement that would be payable to the pensioner for the month if the other were not a pensioner`
+    MINUS (  `the pension in subsection 12(5.1)` (two's `the other's pension before any increase under subsection 7.1(1) or (2)`) (two's `the other's pension after any increase under subsection 7.1(1) or (2)`)
+           PLUS two's `the supplement payable to the other for the month`)
+
+-- (6) monthly base income.  "monthly base income means, in relation to the calculation of the supplement for a month
+-- in any given payment quarter,
+-- (a) in the case of a person other than an applicant described in paragraph (b) or (c), one-twelfth of the income of
+--     that person for the base calendar year;
+-- (b) in the case of an applicant who, on the day immediately before the current payment period, was the spouse or
+--     common-law partner of a person to whom no pension may be paid for any month in the current payment period, the
+--     amount determined by the formula A/24 - B/2 ..."
+DECLARE `s 12(6): Situation of the applicant` IS ONE OF
+    `s 12(6)(a): a person other than an applicant described in paragraph (b) or (c)`
+    `s 12(6)(b): an applicant whose spouse or common-law partner has no pension payable in the current payment period`
+    `s 12(6)(c): an applicant whose spouse or common-law partner has a pension payable in the current payment period`
+
+-- src:315 | (6) In this section, monthly base income means, in relation to the calculation of the supplement for a month in any given payment quarter,
+-- src:316 | (a) in the case of a person other than an applicant described in paragraph (b) or (c), one-twelfth of the income of that person for the base calendar year;
+-- src:317 | (b) in the case of an applicant who, on the day immediately before the current payment period, was the spouse or common-law partner of a person to whom no pension may be paid for any month in the current payment period, the amount determined by the formula
+-- src:318 | A/24 - B/2
+-- src:319 | where
+-- src:320 | A is the aggregate of the incomes of the applicant and the spouse or common-law partner for the base calendar year, and
+-- src:321 | B is the product
+-- src:322 | (i) obtained by multiplying the amount of the full monthly pension, calculated without regard to subsection 7(5), that might have been paid to a pensioner for any month by the applicant’s special qualifying factor for the month, and
+-- src:323 | (ii) rounded, if that product is not a multiple of four dollars, to the next higher multiple of four dollars; and
+-- src:324 | (c) in the case of an applicant who, on the day immediately before the current payment period, was the spouse or common-law partner of a person to whom a pension may be paid for any month in the payment period,
+-- src:325 | (i) in respect of any month in the current payment period before the first month for which a pension may be paid to the spouse or common-law partner, the amount determined for the applicant for the month under paragraph (b), and
+-- src:326 | (ii) in respect of any month in that payment period commencing with the first month for which a pension may be paid to the spouse or common-law partner, one twenty-fourth of the aggregate of the incomes of the applicant and the spouse or common-law partner for the base calendar year.
+@ref R.S.C., 1985, c. O-9, s 12(6) lead-in and paragraphs (a) to (c) (src:315-326)
+GIVEN `on the day immediately before the current payment period the applicant was the spouse or common-law partner of a person` IS A BOOLEAN
+      `a pension may be paid to that person for any month in the current payment period` IS A BOOLEAN
+GIVETH A `s 12(6): Situation of the applicant`
+`s 12(6): the situation of the applicant` `on the day immediately before the current payment period the applicant was the spouse or common-law partner of a person` `a pension may be paid to that person for any month in the current payment period` MEANS
+    BRANCH
+        IF NOT `on the day immediately before the current payment period the applicant was the spouse or common-law partner of a person`
+        THEN `s 12(6)(a): a person other than an applicant described in paragraph (b) or (c)`
+        IF `a pension may be paid to that person for any month in the current payment period`
+        THEN `s 12(6)(c): an applicant whose spouse or common-law partner has a pension payable in the current payment period`
+        OTHERWISE `s 12(6)(b): an applicant whose spouse or common-law partner has no pension payable in the current payment period`
+
+-- (a): one-twelfth of the income of that person for the base calendar year.
+@ref R.S.C., 1985, c. O-9, s 12(6)(a) (src:316)
+GIVEN `the income of the person for the base calendar year` IS A NUMBER
+GIVETH A NUMBER
+`s 12(6)(a): the monthly base income` `the income of the person for the base calendar year` MEANS
+    `the income of the person for the base calendar year` DIVIDED BY 12
+
+-- (b): A/24 - B/2, where A is the aggregate of the incomes of the applicant and the spouse or common-law partner for
+-- the base calendar year, and B is the product (i) obtained by multiplying the amount of the full monthly pension,
+-- calculated without regard to subsection 7(5), that might have been paid to a pensioner for any month by the
+-- applicant's special qualifying factor for the month, and (ii) rounded, if that product is not a multiple of four
+-- dollars, to the next higher multiple of four dollars.
+@ref R.S.C., 1985, c. O-9, s 12(6)(b) (src:317-323)
+GIVEN month IS A DATE
+      `the income of the applicant for the base calendar year` IS A NUMBER
+      `the income of the spouse or common-law partner for the base calendar year` IS A NUMBER
+      `the amount of the full monthly pension calculated without regard to subsection 7(5)` IS A NUMBER     -- out of range: section 7 (piece oa1)
+      `the applicant's special qualification facts` IS A `Special qualification facts`
+GIVETH A NUMBER
+`s 12(6)(b): the monthly base income` month `the income of the applicant for the base calendar year` `the income of the spouse or common-law partner for the base calendar year` `the amount of the full monthly pension calculated without regard to subsection 7(5)` `the applicant's special qualification facts` MEANS
+    (partA DIVIDED BY 24) MINUS (partB DIVIDED BY 2)
+    WHERE
+        partA MEANS `the income of the applicant for the base calendar year` PLUS `the income of the spouse or common-law partner for the base calendar year`
+        partB MEANS
+            (`the amount of the full monthly pension calculated without regard to subsection 7(5)`
+             TIMES `the special qualifying factor of a person for the month containing` month `the applicant's special qualification facts`)
+            `rounded to the next higher multiple of` 4
+
+-- (c)(ii): from the first month for which a pension may be paid to the spouse or common-law partner, one
+-- twenty-fourth of the aggregate of the incomes of the applicant and the spouse or common-law partner.
+@ref R.S.C., 1985, c. O-9, s 12(6)(c)(ii) (src:326)
+GIVEN `the income of the applicant for the base calendar year` IS A NUMBER
+      `the income of the spouse or common-law partner for the base calendar year` IS A NUMBER
+GIVETH A NUMBER
+`s 12(6)(c)(ii): the monthly base income from the first month for which a pension may be paid to the spouse or common-law partner` `the income of the applicant for the base calendar year` `the income of the spouse or common-law partner for the base calendar year` MEANS
+    (`the income of the applicant for the base calendar year` PLUS `the income of the spouse or common-law partner for the base calendar year`) DIVIDED BY 24
+
+-- All of (6) for one month: the paragraph that fits the applicant. In (c)(i), a month before the first month for which
+-- a pension may be paid to the spouse or common-law partner takes the amount under (b).
+@ref R.S.C., 1985, c. O-9, s 12(6)(c)(i) (src:325)
+GIVEN situation IS A `s 12(6): Situation of the applicant`
+      month IS A DATE
+      `the first month for which a pension may be paid to the spouse or common-law partner (any date if there is none)` IS A DATE
+      `the income of the applicant for the base calendar year` IS A NUMBER
+      `the income of the spouse or common-law partner for the base calendar year` IS A NUMBER
+      `the amount of the full monthly pension calculated without regard to subsection 7(5)` IS A NUMBER     -- out of range: section 7 (piece oa1)
+      `the applicant's special qualification facts` IS A `Special qualification facts`
+GIVETH A NUMBER
+`s 12(6): the monthly base income for the month` situation month `the first month for which a pension may be paid to the spouse or common-law partner (any date if there is none)` `the income of the applicant for the base calendar year` `the income of the spouse or common-law partner for the base calendar year` `the amount of the full monthly pension calculated without regard to subsection 7(5)` `the applicant's special qualification facts` MEANS
+    CONSIDER situation
+    WHEN `s 12(6)(a): a person other than an applicant described in paragraph (b) or (c)` THEN
+        `s 12(6)(a): the monthly base income` `the income of the applicant for the base calendar year`
+    WHEN `s 12(6)(b): an applicant whose spouse or common-law partner has no pension payable in the current payment period` THEN
+        `s 12(6)(b): the monthly base income` month `the income of the applicant for the base calendar year` `the income of the spouse or common-law partner for the base calendar year` `the amount of the full monthly pension calculated without regard to subsection 7(5)` `the applicant's special qualification facts`
+    WHEN `s 12(6)(c): an applicant whose spouse or common-law partner has a pension payable in the current payment period` THEN
+        IF `the first day of the month containing` month LESS THAN `the first day of the month containing` `the first month for which a pension may be paid to the spouse or common-law partner (any date if there is none)`
+        THEN `s 12(6)(b): the monthly base income` month `the income of the applicant for the base calendar year` `the income of the spouse or common-law partner for the base calendar year` `the amount of the full monthly pension calculated without regard to subsection 7(5)` `the applicant's special qualification facts`
+        ELSE `s 12(6)(c)(ii): the monthly base income from the first month for which a pension may be paid to the spouse or common-law partner` `the income of the applicant for the base calendar year` `the income of the spouse or common-law partner for the base calendar year`
+
+-- "the income of that person for the base calendar year" is the keel's s 2 "income": this rule shows the link by
+-- calling the keel's rule for the base calendar year's income of a person, for the month in question.
+@ref R.S.C., 1985, c. O-9, s 12(6)(a) "the income of that person for the base calendar year" (src:316)
+GIVEN month IS A DATE
+      facts IS A `Income facts`
+GIVETH A NUMBER
+`s 12(6): the income of a person for the base calendar year for the month` month facts MEANS
+    `the income of a person for a calendar year` month facts
+
+§ `Additional amount, section 12.1`
+
+-- 12.1: from the payment quarter beginning on July 1, 2011 an amount "that may be added to the amount of the
+-- supplement that may be paid under section 12" is determined by the formula A x B - C/4, with A a fixed sum that is
+-- indexed from quarter to quarter, B the pensioner's special qualifying factor for the month and C a reduction
+-- worked out from the income for the base calendar year. Subsection (1) is for a pensioner referred to in paragraph
+-- 12(1)(a), subsection (2) for one referred to in paragraph 12(1)(b).
+
+-- A for the payment quarter beginning on July 1, 2011: (1) $50; (2)(a) $50 for a pensioner referred to in
+-- subparagraph 12(1)(b)(i); (2)(b) $35 for one referred to in subparagraph 12(1)(b)(ii).
+-- src:331 | A is $50;
+@ref R.S.C., 1985, c. O-9, s 12.1(1) "A is $50" (src:331)
+-- src:340 | A is
+-- src:341 | (a) in the case of a pensioner referred to in subparagraph 12(1)(b)(i), $50, and
+-- src:342 | (b) in the case of a pensioner referred to in subparagraph 12(1)(b)(ii), $35;
+@ref R.S.C., 1985, c. O-9, s 12.1(2) A (src:340-342)
+GIVEN situation IS A `s 12(1): Situation of the pensioner`
+GIVETH A NUMBER
+`s 12.1: the amount determined for A for the payment quarter beginning on July 1, 2011` situation MEANS
+    CONSIDER situation
+    WHEN `s 12(1)(a): a person other than a person described in paragraph (b)` THEN 50
+    WHEN `s 12(1)(b)(i): a person whose spouse or common-law partner has no pension payable yet in the quarter` THEN 50
+    WHEN `s 12(1)(b)(ii): a person whose spouse or common-law partner has a pension payable from this month` THEN 35
+
+-- (1) C is
+-- (a) in the case of a pensioner who has no spouse or common-law partner, 1/12 of the pensioner's income for the base
+--     calendar year in excess of $2,000 rounded, if it is not a multiple of four dollars, to the next lower multiple of
+--     four dollars, and
+-- (b) in the case of a pensioner who, on the day immediately before the current payment period, had a spouse or
+--     common-law partner to whom no benefit may be paid for any month in the current payment period, 1/24 of the
+--     aggregate of the income of the pensioner and his or her spouse or common-law partner for the base calendar year
+--     in excess of $4,000 rounded, if it is not a multiple of four dollars, to the next lower multiple of four dollars.
+-- The rounding is read as applying to the monthly figure that results (fork F-12.1-1); an income not in excess of the
+-- sum gives nothing. A pensioner with a spouse or common-law partner to whom a benefit (an allowance, for example) may
+-- be paid is in neither (a) nor (b): the Act gives no C, so the answer is NOTHING (fork F-12.1-2).
+-- src:328 | 12.1 (1) The amount that may be added to the amount of the supplement that may be paid under section 12 to a pensioner referred to in paragraph 12(1)(a) for any month in a payment quarter beginning after June 30, 2011 is the amount determined by the formula
+-- src:329 | A × B – C/4
+-- src:330 | where
+-- src:331 | A is $50;
+-- src:332 | B is the pensioner’s special qualifying factor for the month; and
+-- src:333 | C is
+-- src:334 | (a) in the case of a pensioner who has no spouse or common-law partner, 1/12 of the pensioner’s income for the base calendar year in excess of $2,000 rounded, if it is not a multiple of four dollars, to the next lower multiple of four dollars, and
+-- src:335 | (b) in the case of a pensioner who, on the day immediately before the current payment period, had a spouse or common-law partner to whom no benefit may be paid for any month in the current payment period, 1/24 of the aggregate of the income of the pensioner and his or her spouse or common-law partner for the base calendar year in excess of $4,000 rounded, if it is not a multiple of four dollars, to the next lower multiple of four dollars.
+@ref R.S.C., 1985, c. O-9, s 12.1(1) (src:328-335)
+GIVEN month IS A DATE
+      `the amount determined for A` IS A NUMBER
+      `the pensioner's special qualification facts` IS A `Special qualification facts`
+      `the pensioner has no spouse or common-law partner` IS A BOOLEAN
+      `on the day immediately before the current payment period the pensioner had a spouse or common-law partner to whom no benefit may be paid for any month in the current payment period` IS A BOOLEAN
+      `the income of the pensioner for the base calendar year` IS A NUMBER
+      `the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 12.1(1): the amount determined by the formula for a pensioner referred to in paragraph 12(1)(a)` month `the amount determined for A` `the pensioner's special qualification facts` `the pensioner has no spouse or common-law partner` `on the day immediately before the current payment period the pensioner had a spouse or common-law partner to whom no benefit may be paid for any month in the current payment period` `the income of the pensioner for the base calendar year` `the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` MEANS
+    BRANCH
+        IF `the pensioner has no spouse or common-law partner`
+        THEN JUST ((`the amount determined for A` TIMES factorB) MINUS (cNoSpouse DIVIDED BY 4))
+        IF `on the day immediately before the current payment period the pensioner had a spouse or common-law partner to whom no benefit may be paid for any month in the current payment period`
+        THEN JUST ((`the amount determined for A` TIMES factorB) MINUS (cSpouse DIVIDED BY 4))
+        OTHERWISE NOTHING
+    WHERE
+        factorB MEANS `the special qualifying factor of a person for the month containing` month `the pensioner's special qualification facts`
+        cNoSpouse MEANS ((max 0 (`the income of the pensioner for the base calendar year` MINUS 2000)) DIVIDED BY 12) `rounded to the next lower multiple of` 4
+        cSpouse MEANS ((max 0 (`the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` MINUS 4000)) DIVIDED BY 24) `rounded to the next lower multiple of` 4
+
+-- (2) C is 1/24 of the aggregate of the income of the pensioner and his or her spouse or common-law partner for the
+-- base calendar year in excess of $4,000 rounded, if it is not a multiple of four dollars, to the next lower multiple
+-- of four dollars.
+-- src:337 | (2) The amount that may be added to the amount of the supplement that may be paid under section 12 to a pensioner referred to in paragraph 12(1)(b) for any month in a payment quarter beginning after June 30, 2011 is the amount determined by the formula
+-- src:338 | A × B – C/4
+-- src:339 | where
+-- src:340 | A is
+-- src:341 | (a) in the case of a pensioner referred to in subparagraph 12(1)(b)(i), $50, and
+-- src:342 | (b) in the case of a pensioner referred to in subparagraph 12(1)(b)(ii), $35;
+-- src:343 | B is the pensioner’s special qualifying factor for the month; and
+-- src:344 | C is 1/24 of the aggregate of the income of the pensioner and his or her spouse or common-law partner for the base calendar year in excess of $4,000 rounded, if it is not a multiple of four dollars, to the next lower multiple of four dollars.
+@ref R.S.C., 1985, c. O-9, s 12.1(2) (src:337-344)
+GIVEN month IS A DATE
+      `the amount determined for A` IS A NUMBER
+      `the pensioner's special qualification facts` IS A `Special qualification facts`
+      `the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` IS A NUMBER
+GIVETH A NUMBER
+`s 12.1(2): the amount determined by the formula for a pensioner referred to in paragraph 12(1)(b)` month `the amount determined for A` `the pensioner's special qualification facts` `the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` MEANS
+    (`the amount determined for A` TIMES factorB) MINUS (cReduction DIVIDED BY 4)
+    WHERE
+        factorB MEANS `the special qualifying factor of a person for the month containing` month `the pensioner's special qualification facts`
+        cReduction MEANS ((max 0 (`the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` MINUS 4000)) DIVIDED BY 24) `rounded to the next lower multiple of` 4
+
+-- The amount "that may be added" is not a negative sum: where the formula comes out below nothing, nothing is added
+-- (fork F-12-2, as for section 12(5)).
+@ref R.S.C., 1985, c. O-9, s 12.1(1), s 12.1(2) (src:328-344)
+GIVEN formula IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 12.1: the amount that may be added, given the amount determined by the formula` formula MEANS
+    CONSIDER formula
+    WHEN JUST amount THEN JUST (max 0 amount)
+    WHEN NOTHING THEN NOTHING
+
+-- (2.1) For any month in the payment quarter beginning on July 1, 2016, (a) A in subsection (1), and (b) A in
+-- subsection (2) in the case set out in paragraph (a) of A in that subsection, is the amount that would otherwise
+-- have been determined plus $78.92. So the increase is for a pensioner of paragraph 12(1)(a) or of subparagraph
+-- 12(1)(b)(i); not for one of subparagraph 12(1)(b)(ii).
+-- src:346 | (2.1) For any month in the payment quarter beginning on July 1, 2016,
+-- src:347 | (a) the amount determined for A in subsection (1) is the amount that would otherwise have been determined for A in that subsection for any month in that payment quarter plus $78.92; and
+-- src:348 | (b) the amount determined for A in subsection (2) in the case set out in paragraph (a) of A in that subsection is the amount that would otherwise have been determined in that case for A in that subsection for any month in that payment quarter plus $78.92.
+@ref R.S.C., 1985, c. O-9, s 12.1(2.1) (src:346-348)
+GIVEN situation IS A `s 12(1): Situation of the pensioner`
+GIVETH A NUMBER
+`s 12.1(2.1): the increase for the payment quarter beginning on July 1, 2016` situation MEANS
+    CONSIDER situation
+    WHEN `s 12(1)(a): a person other than a person described in paragraph (b)` THEN 78.92
+    WHEN `s 12(1)(b)(i): a person whose spouse or common-law partner has no pension payable yet in the quarter` THEN 78.92
+    WHEN `s 12(1)(b)(ii): a person whose spouse or common-law partner has a pension payable from this month` THEN 0
+
+-- (3), (4), (5) and (2.1) together: for a payment quarter beginning after September 30, 2011 the amount determined
+-- for A is the amount for the three-month period immediately before multiplied by the ratio of the first adjustment
+-- quarter's index to the second's (3); never less than that amount (4); and with no adjustment after a fall in the
+-- index until the index recovers, the earlier second index then being deemed the second index (5). For the quarter
+-- beginning on July 1, 2016 the increase of (2.1) is added. A quarter that does not begin after September 30, 2011
+-- is not covered: NOTHING.
+-- src:349 | Indexation
+-- src:350 | (3) Subject to subsection (2.1), for the purpose of calculating the amount payable under subsection (1) or (2) for any month in a payment quarter beginning after September 30, 2011, the amount to be determined for A in that subsection is the amount obtained by multiplying
+-- src:351 | (a) the amount determined for A for any month in the three-month period immediately before that payment quarter
+-- src:352 | by
+-- src:353 | (b) the ratio that the Consumer Price Index for the first adjustment quarter that relates to that payment quarter bears to the Consumer Price Index for the second adjustment quarter that relates to that payment quarter.
+-- src:354 | No decrease
+-- src:355 | (4) Despite subsection (3), the amount determined for A for any month in a payment quarter shall not be less than the amount determined for A for any month in the three-month period immediately before that payment quarter.
+-- src:356 | Effect of reduction in Consumer Price Index
+-- src:357 | (5) If, in relation to any payment quarter, the Consumer Price Index for the first adjustment quarter is lower than the Consumer Price Index for the second adjustment quarter,
+-- src:358 | (a) no adjustment to the amount determined for A shall be made under subsection (3) in respect of that payment quarter; and
+-- src:359 | (b) no adjustment to the amount determined for A shall be made under subsection (3) in respect of any subsequent payment quarter until, in relation to a subsequent payment quarter, the Consumer Price Index for the first adjustment quarter that relates to that subsequent payment quarter is higher than the Consumer Price Index for the second adjustment quarter that relates to the payment quarter referred to in paragraph (a), in which case the second adjustment quarter that relates to the payment quarter referred to in that paragraph is deemed to be the second adjustment quarter that relates to that subsequent payment quarter.
+@ref R.S.C., 1985, c. O-9, s 12.1(2.1), s 12.1(3), s 12.1(4), s 12.1(5) (src:346-359)
+GIVEN `the first day of the payment quarter` IS A DATE
+      situation IS A `s 12(1): Situation of the pensioner`
+      `the amount determined for A for any month in the three-month period immediately before that payment quarter` IS A NUMBER
+      `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS A MAYBE NUMBER
+GIVETH A MAYBE `oa2 indexation: Outcome of a payment quarter`
+`s 12.1(3): the amount determined for A for a payment quarter beginning after September 30, 2011` `the first day of the payment quarter` situation `the amount determined for A for any month in the three-month period immediately before that payment quarter` `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` MEANS
+    IF `the first day of the payment quarter` AT MOST (YMD 2011 9 30)
+    THEN NOTHING
+    ELSE JUST (`oa2 indexation: Outcome of a payment quarter` WITH
+                   `the amount for the payment quarter` IS indexed's `the amount for the payment quarter` PLUS fixedIncrease
+                   `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS indexed's `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`)
+    WHERE
+        indexed MEANS
+            `oa2 indexation: the outcome for a payment quarter`
+                `the amount determined for A for any month in the three-month period immediately before that payment quarter`
+                `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter`
+                `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter`
+                `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`
+        fixedIncrease MEANS
+            IF `the first day of the payment quarter` EQUALS (YMD 2016 7 1)
+            THEN `s 12.1(2.1): the increase for the payment quarter beginning on July 1, 2016` situation
+            ELSE 0

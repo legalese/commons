@@ -1,0 +1,352 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `oas-core`
+IMPORT `oas-core-measures`
+IMPORT `oas-core-periods`
+IMPORT `oas-core-terms`
+
+-- Old Age Security Act, R.S.C. 1985, c. O-9: PART II, section 10 (the three definitions that Part II and, by
+-- reference, section 22 use) and section 11 (who may be paid the monthly guaranteed income supplement, the
+-- application and its waiver, and the limits on payment). Piece oa2.
+--
+-- Layer 1: the law, objectively. Each rule has the section's own words as its name (labelled with the section) and
+-- is cited with an @ref that a script checks against the text. The seat layer (oa2-seat.l4) asks these rules the
+-- person's questions; nothing here is written from one person's point of view.
+--
+-- A month is the DATE of any day in it (the keel normalises with `the first day of the month containing`).
+-- A judgment the Act leaves to the Minister ("is satisfied", "may waive") is a fact the caller states, named in the
+-- Act's words, and is never guessed.
+
+§ `Part II -- Monthly Guaranteed Income Supplement`
+
+§§ `Interpretation, section 10`
+
+-- "10 The definitions in this section apply in this Part."
+-- The base calendar year is the calendar year that ended last before the payment period began: for a payment period
+-- that begins on July 1 (or April 1) of a year Y, the calendar year Y - 1. The other two definitions are the payment
+-- period of the application and the one before it; the keel supplies the payment period of any month.
+-- src:231 | 10 The definitions in this section apply in this Part.
+-- src:232 | base calendar year means the last calendar year ending before the current payment period. (année de référence)
+@ref R.S.C., 1985, c. O-9, s 10 "base calendar year" (src:231-232)
+GIVEN `the current payment period` IS A `Calendar span`
+GIVETH A `Calendar span`
+`s 10: the base calendar year` `the current payment period` MEANS
+    `Calendar span` WITH
+        `first day` IS Date 1 1 (DATE_YEAR (`the current payment period`'s `first day`) MINUS 1)
+        `last day`  IS Date 31 12 (DATE_YEAR (`the current payment period`'s `first day`) MINUS 1)
+
+-- "current payment period means the payment period in respect of which an application for a supplement is made by
+-- an applicant". The application is made in respect of a payment period; any month in it identifies the period.
+-- src:233 | current payment period means the payment period in respect of which an application for a supplement is made by an applicant. (période de paiement en cours)
+@ref R.S.C., 1985, c. O-9, s 10 "current payment period" (src:233)
+GIVEN `a month in the payment period in respect of which the application for a supplement is made` IS A DATE
+GIVETH A `Calendar span`
+`s 10: the current payment period` `a month in the payment period in respect of which the application for a supplement is made` MEANS
+    `the payment period in relation to the month containing` `a month in the payment period in respect of which the application for a supplement is made`
+
+-- "previous payment period means the payment period immediately before the current payment period": the payment
+-- period that contains the day before the current one begins.
+-- src:234 | previous payment period means the payment period immediately before the current payment period. (période de paiement précédente)
+@ref R.S.C., 1985, c. O-9, s 10 "previous payment period" (src:234)
+GIVEN `the current payment period` IS A `Calendar span`
+GIVETH A `Calendar span`
+`s 10: the previous payment period` `the current payment period` MEANS
+    `the payment period in relation to the month containing` (`the current payment period`'s `first day` MINUS 1)
+
+§§ `Supplement payable, section 11`
+
+-- The facts about one pensioner and one month that section 11 reads. The pensioner is the person who asks; "the
+-- month" is the month for which payment is asked. Judgments left to the Minister are facts (the Minister has
+-- waived, has deemed, is satisfied) and are never worked out here.
+DECLARE `s 11: Facts about a pensioner and a month` HAS
+    `the person's application for a pension has been approved` IS A BOOLEAN     -- out of range: section 5(1) (piece oa1)
+    `an application for payment of a supplement has been made by the pensioner` IS A BOOLEAN
+    `payment of the supplement for months in that year has been approved under this Part` IS A BOOLEAN
+    `the Minister has deemed an application to have been made and approved under subsection 11(3)` IS A BOOLEAN
+    `the Minister has waived the requirement for an application under subsection 11(3.1)` IS A BOOLEAN
+    `the Minister has waived the requirement for an application under subsection 11(4)` IS A BOOLEAN
+    `the month in which the application is received or is deemed to have been made or in which the requirement for an application has been waived` IS A DATE
+    `no pension may be paid to the pensioner for the month` IS A BOOLEAN     -- out of range: sections 5 and 9 (piece oa1)
+    `the pensioner is absent from Canada throughout the month` IS A BOOLEAN
+    `the month in which the pensioner left Canada` IS A MAYBE DATE
+    `the pensioner has remained outside Canada since leaving` IS A BOOLEAN
+    `the pensioner is not resident in Canada throughout the month` IS A BOOLEAN
+    `the day on which the pensioner ceased to reside in Canada` IS A MAYBE DATE
+    `an undertaking by a sponsor is in effect in respect of the pensioner during the month` IS A BOOLEAN     -- out of range: Immigration and Refugee Protection Act (no piece; a plain input)
+    `the pensioner was qualified to receive a pension or an allowance immediately before the day on which paragraph 11(8)(a) comes into force` IS A BOOLEAN
+    `an event as provided by the regulations has occurred` IS A BOOLEAN     -- out of range: Regulations section 22.1 (piece oa3)
+
+-- "(1) Subject to this Part and the regulations, for each month in any payment period, a monthly guaranteed income
+-- supplement may be paid to a pensioner." The general permission: the person must be a pensioner (s 2: a person
+-- whose application for a pension has been approved). The conditions that follow are (2) to (8).
+-- src:238 | 11 (1) Subject to this Part and the regulations, for each month in any payment period, a monthly guaranteed income supplement may be paid to a pensioner.
+@ref R.S.C., 1985, c. O-9, s 11(1) (src:238)
+GIVEN facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A BOOLEAN
+`s 11(1): a supplement may be paid to the person` facts MEANS
+    `the person is a pensioner` (facts's `the person's application for a pension has been approved`)
+
+-- "(2) Subject to subsections (3.1) and (4), no supplement may be paid to a pensioner for a month in any payment
+-- period unless an application for payment of a supplement has been made by the pensioner and payment of the
+-- supplement for months in that year has been approved under this Part."
+-- The requirement is met by an application made and approved, or by the Minister's deemed application under (3), or
+-- by a waiver under (3.1) or (4) (the two exceptions the subsection names; the deemed application of (3) is "an
+-- application under subsection (2)" by its own words).
+-- src:240 | (2) Subject to subsections (3.1) and (4), no supplement may be paid to a pensioner for a month in any payment period unless an application for payment of a supplement has been made by the pensioner and payment of the supplement for months in that year has been approved under this Part.
+@ref R.S.C., 1985, c. O-9, s 11(2) (src:240)
+GIVEN facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A BOOLEAN
+`s 11(2): the requirement for an application is met` facts MEANS
+        (    facts's `an application for payment of a supplement has been made by the pensioner`
+         AND facts's `payment of the supplement for months in that year has been approved under this Part`)
+    OR  facts's `the Minister has deemed an application to have been made and approved under subsection 11(3)`
+    OR  facts's `the Minister has waived the requirement for an application under subsection 11(3.1)`
+    OR  facts's `the Minister has waived the requirement for an application under subsection 11(4)`
+
+-- "(3) Where an allowance ceases to be payable to a person by reason of that person having reached sixty-five years
+-- of age, the Minister may deem an application under subsection (2) to have been made by that person and approved,
+-- on the day on which the person reached that age."
+-- The power exists when an allowance ceased to be payable because the person reached 65; the day of the deemed
+-- application is the day the person reached 65 (the anniversary of the birth, keel fork F5).
+-- src:242 | (3) Where an allowance ceases to be payable to a person by reason of that person having reached sixty-five years of age, the Minister may deem an application under subsection (2) to have been made by that person and approved, on the day on which the person reached that age.
+@ref R.S.C., 1985, c. O-9, s 11(3) (src:242)
+GIVEN `an allowance ceases to be payable to the person by reason of the person having reached sixty-five years of age` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 11(3): the Minister may deem an application to have been made and approved` `an allowance ceases to be payable to the person by reason of the person having reached sixty-five years of age` MEANS
+    `an allowance ceases to be payable to the person by reason of the person having reached sixty-five years of age`
+
+-- src:242 | (3) Where an allowance ceases to be payable to a person by reason of that person having reached sixty-five years of age, the Minister may deem an application under subsection (2) to have been made by that person and approved, on the day on which the person reached that age.
+@ref R.S.C., 1985, c. O-9, s 11(3) the day of the deemed application (src:242)
+GIVEN `the person's date of birth` IS A DATE
+GIVETH A DATE
+`s 11(3): the day on which the application is deemed to have been made and approved` `the person's date of birth` MEANS
+    `the day on which a person born on` `the person's date of birth` `attains the age of` 65
+
+-- "(3.1) The Minister may, in respect of a person, waive the requirement referred to in subsection (2) for an
+-- application for payment of a supplement for any month or months in a payment period if, on the day on which the
+-- person attains 65 years of age, the Minister is satisfied, based on information available to him or her under this
+-- Act, that the person is qualified under this section for the payment of a supplement."
+-- src:244 | (3.1) The Minister may, in respect of a person, waive the requirement referred to in subsection (2) for an application for payment of a supplement for any month or months in a payment period if, on the day on which the person attains 65 years of age, the Minister is satisfied, based on information available to him or her under this Act, that the person is qualified under this section for the payment of a supplement.
+@ref R.S.C., 1985, c. O-9, s 11(3.1) (src:244)
+GIVEN `on the day on which the person attains 65 years of age the Minister is satisfied, based on information available under this Act, that the person is qualified under this section for the payment of a supplement` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 11(3.1): the Minister may waive the requirement for an application` `on the day on which the person attains 65 years of age the Minister is satisfied, based on information available under this Act, that the person is qualified under this section for the payment of a supplement` MEANS
+    `on the day on which the person attains 65 years of age the Minister is satisfied, based on information available under this Act, that the person is qualified under this section for the payment of a supplement`
+
+-- "(3.2) If the Minister intends to waive the requirement for an application in respect of a person under subsection
+-- (3.1), the Minister shall notify the person in writing of that intention and provide them with the information on
+-- which the Minister intends to rely to approve the payment of a supplement."
+-- The person's claim is to be notified in writing and to be given that information; the Minister bears the duty.
+-- src:246 | (3.2) If the Minister intends to waive the requirement for an application in respect of a person under subsection (3.1), the Minister shall notify the person in writing of that intention and provide them with the information on which the Minister intends to rely to approve the payment of a supplement.
+@ref R.S.C., 1985, c. O-9, s 11(3.2) (src:246)
+GIVEN `the Minister intends to waive the requirement for an application in respect of the person under subsection 11(3.1)` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 11(3.2): the Minister must notify the person in writing and provide the information` `the Minister intends to waive the requirement for an application in respect of the person under subsection 11(3.1)` MEANS
+    `the Minister intends to waive the requirement for an application in respect of the person under subsection 11(3.1)`
+
+-- "(3.3) The person shall, before the day on which they attain 65 years of age, file with the Minister a statement in
+-- which the person corrects any inaccuracies in the information provided by the Minister under subsection (3.2)."
+-- The duty is on the person, and arises when there are inaccuracies in what the Minister provided. "Before the day
+-- on which they attain 65" makes the last day for filing the day before the 65th birthday.
+-- src:248 | (3.3) The person shall, before the day on which they attain 65 years of age, file with the Minister a statement in which the person corrects any inaccuracies in the information provided by the Minister under subsection (3.2).
+@ref R.S.C., 1985, c. O-9, s 11(3.3) (src:248)
+GIVEN `the person's date of birth` IS A DATE
+GIVETH A DATE
+`s 11(3.3): the last day on which the person may file the statement correcting inaccuracies` `the person's date of birth` MEANS
+    (`the day on which a person born on` `the person's date of birth` `attains the age of` 65) MINUS 1
+
+@ref R.S.C., 1985, c. O-9, s 11(3.3) (src:248)
+GIVEN `the information provided by the Minister under subsection 11(3.2) contains inaccuracies` IS A BOOLEAN
+      `the day on which the person files the statement` IS A DATE
+      `the person's date of birth` IS A DATE
+GIVETH A BOOLEAN
+`s 11(3.3): the person has complied with the duty to file a statement correcting inaccuracies` `the information provided by the Minister under subsection 11(3.2) contains inaccuracies` `the day on which the person files the statement` `the person's date of birth` MEANS
+    NOT `the information provided by the Minister under subsection 11(3.2) contains inaccuracies`
+    OR `the day on which the person files the statement` AT MOST `s 11(3.3): the last day on which the person may file the statement correcting inaccuracies` `the person's date of birth`
+
+-- "(3.4) The person may, before the day on which they attain 65 years of age, decline a waiver of the requirement for
+-- an application by notifying the Minister in writing of their decision to do so."
+-- src:250 | (3.4) The person may, before the day on which they attain 65 years of age, decline a waiver of the requirement for an application by notifying the Minister in writing of their decision to do so.
+@ref R.S.C., 1985, c. O-9, s 11(3.4) (src:250)
+GIVEN `the person's date of birth` IS A DATE
+      `the day on which the person notifies the Minister in writing of the decision to decline` IS A DATE
+GIVETH A BOOLEAN
+`s 11(3.4): the person has declined the waiver in time` `the person's date of birth` `the day on which the person notifies the Minister in writing of the decision to decline` MEANS
+    `the day on which the person notifies the Minister in writing of the decision to decline` AT MOST `s 11(3.3): the last day on which the person may file the statement correcting inaccuracies` `the person's date of birth`
+
+-- "(3.5) Even if the requirement for an application is intended to be waived in respect of a person under subsection
+-- (3.1), the Minister may, before the day on which the person attains 65 years of age, require that the person make an
+-- application for payment of a supplement and, in that case, the Minister shall notify the person in writing of that
+-- requirement."
+-- The person is liable to be required to apply until the day before their 65th birthday; the Minister's duty is to
+-- notify the person in writing when the Minister does so.
+-- src:252 | (3.5) Even if the requirement for an application is intended to be waived in respect of a person under subsection (3.1), the Minister may, before the day on which the person attains 65 years of age, require that the person make an application for payment of a supplement and, in that case, the Minister shall notify the person in writing of that requirement.
+@ref R.S.C., 1985, c. O-9, s 11(3.5) (src:252)
+GIVEN `the person's date of birth` IS A DATE
+      `the day on which the Minister requires the person to make an application` IS A DATE
+GIVETH A BOOLEAN
+`s 11(3.5): the Minister may still require the person to make an application` `the person's date of birth` `the day on which the Minister requires the person to make an application` MEANS
+    `the day on which the Minister requires the person to make an application` AT MOST `s 11(3.3): the last day on which the person may file the statement correcting inaccuracies` `the person's date of birth`
+
+@ref R.S.C., 1985, c. O-9, s 11(3.5) (src:252)
+GIVEN `the Minister has required the person to make an application under subsection 11(3.5)` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 11(3.5): the Minister must notify the person in writing of the requirement` `the Minister has required the person to make an application under subsection 11(3.5)` MEANS
+    `the Minister has required the person to make an application under subsection 11(3.5)`
+
+-- "(4) The Minister may waive the requirement referred to in subsection (2) for an application for payment of a
+-- supplement for any month or months in a payment period if an application for payment of a supplement has been made
+-- in respect of any payment period before that payment period."
+-- src:254 | (4) The Minister may waive the requirement referred to in subsection (2) for an application for payment of a supplement for any month or months in a payment period if an application for payment of a supplement has been made in respect of any payment period before that payment period.
+@ref R.S.C., 1985, c. O-9, s 11(4) (src:254)
+GIVEN `an application for payment of a supplement has been made in respect of a payment period before that payment period` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 11(4): the Minister may waive the requirement for an application` `an application for payment of a supplement has been made in respect of a payment period before that payment period` MEANS
+    `an application for payment of a supplement has been made in respect of a payment period before that payment period`
+
+-- "(5) Where the requirement ... has been waived under subsection (4) and an application is required for payment of a
+-- supplement for any subsequent month or months in that payment period, the Minister shall, not later than fifteen
+-- days before that subsequent month or the first of those subsequent months, notify the pensioner in writing that an
+-- application is required."
+-- src:256 | (5) Where the requirement for an application for payment of a supplement for any month or months in a payment period has been waived under subsection (4) and an application is required for payment of a supplement for any subsequent month or months in that payment period, the Minister shall, not later than fifteen days before that subsequent month or the first of those subsequent months, notify the pensioner in writing that an application is required.
+@ref R.S.C., 1985, c. O-9, s 11(5) (src:256)
+GIVEN `the requirement for an application has been waived under subsection 11(4) for a month or months in the payment period` IS A BOOLEAN
+      `an application is required for payment of a supplement for a subsequent month or months in that payment period` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 11(5): the Minister must notify the pensioner in writing that an application is required` `the requirement for an application has been waived under subsection 11(4) for a month or months in the payment period` `an application is required for payment of a supplement for a subsequent month or months in that payment period` MEANS
+        `the requirement for an application has been waived under subsection 11(4) for a month or months in the payment period`
+    AND `an application is required for payment of a supplement for a subsequent month or months in that payment period`
+
+@ref R.S.C., 1985, c. O-9, s 11(5) (src:256)
+GIVEN `the first of the subsequent months for which an application is required` IS A DATE
+GIVETH A DATE
+`s 11(5): the last day on which the Minister may give the notice` `the first of the subsequent months for which an application is required` MEANS
+    `the day that is` (`a limit in days` 15) `before` (`the first day of the month containing` `the first of the subsequent months for which an application is required`)
+
+-- "(6) Notwithstanding that the requirement ... has been waived under subsection (4), the Minister may require that
+-- the pensioner make an application for payment of a supplement for that month or for any of those months, and in
+-- such a case, the Minister shall, not later than fifteen days before that month or the first of those months,
+-- notify the pensioner in writing that an application is required."
+-- src:258 | (6) Notwithstanding that the requirement for an application for payment of a supplement for any month or months has been waived under subsection (4), the Minister may require that the pensioner make an application for payment of a supplement for that month or for any of those months, and in such a case, the Minister shall, not later than fifteen days before that month or the first of those months, notify the pensioner in writing that an application is required.
+@ref R.S.C., 1985, c. O-9, s 11(6) (src:258)
+GIVEN `the requirement for an application has been waived under subsection 11(4)` IS A BOOLEAN
+      `the Minister requires the pensioner to make an application for payment of a supplement for the month or months` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 11(6): the Minister must notify the pensioner in writing that an application is required` `the requirement for an application has been waived under subsection 11(4)` `the Minister requires the pensioner to make an application for payment of a supplement for the month or months` MEANS
+        `the requirement for an application has been waived under subsection 11(4)`
+    AND `the Minister requires the pensioner to make an application for payment of a supplement for the month or months`
+
+@ref R.S.C., 1985, c. O-9, s 11(6) (src:258)
+GIVEN `the first of the months for which the Minister requires an application` IS A DATE
+GIVETH A DATE
+`s 11(6): the last day on which the Minister may give the notice` `the first of the months for which the Minister requires an application` MEANS
+    `the day that is` (`a limit in days` 15) `before` (`the first day of the month containing` `the first of the months for which the Minister requires an application`)
+
+-- "(7) No supplement may be paid to a pensioner for
+-- (a) any month that is more than eleven months before the month in which the application is received or is deemed to
+--     have been made or in which the requirement for an application has been waived, as the case may be;
+-- (b) any month for which no pension may be paid to the pensioner;
+-- (c) any month throughout which the pensioner is absent from Canada ... for six consecutive months, exclusive of the
+--     month in which the pensioner left Canada;
+-- (d) any month throughout which the pensioner is not resident in Canada, having ceased to reside in Canada ... six
+--     months before the beginning of that month; or
+-- (e) any month during which the pensioner is a person in respect of whom an undertaking by a sponsor is in effect"
+-- src:260 | (7) No supplement may be paid to a pensioner for
+-- src:261 | (a) any month that is more than eleven months before the month in which the application is received or is deemed to have been made or in which the requirement for an application has been waived, as the case may be;
+-- src:262 | (b) any month for which no pension may be paid to the pensioner;
+-- src:263 | (c) any month throughout which the pensioner is absent from Canada having commenced to be absent from Canada either before or after becoming a pensioner and having remained outside Canada before that month for six consecutive months, exclusive of the month in which the pensioner left Canada;
+-- src:264 | (d) any month throughout which the pensioner is not resident in Canada, having ceased to reside in Canada, either before or after becoming a pensioner, six months before the beginning of that month; or
+-- src:265 | (e) any month during which the pensioner is a person in respect of whom an undertaking by a sponsor is in effect as provided under the Immigration and Refugee Protection Act.
+@ref R.S.C., 1985, c. O-9, s 11(7)(a) (src:261)
+GIVEN month IS A DATE
+      facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A BOOLEAN
+`s 11(7)(a): the month is more than eleven months before the month of the application` month facts MEANS
+    `the number of months from the month containing` month `to the month containing` (facts's `the month in which the application is received or is deemed to have been made or in which the requirement for an application has been waived`) GREATER THAN 11
+
+-- The earliest month for which a supplement may be paid on that application: eleven months before the month of the
+-- application.
+@ref R.S.C., 1985, c. O-9, s 11(7)(a) (src:261)
+GIVEN facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A DATE
+`s 11(7)(a): the earliest month for which a supplement may be paid` facts MEANS
+    `the first day of the month that is` (0 MINUS 11) `months after the month containing` (facts's `the month in which the application is received or is deemed to have been made or in which the requirement for an application has been waived`)
+
+@ref R.S.C., 1985, c. O-9, s 11(7)(b) (src:262)
+GIVEN facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A BOOLEAN
+`s 11(7)(b): no pension may be paid to the pensioner for the month` facts MEANS
+    facts's `no pension may be paid to the pensioner for the month`
+
+-- (c): absent throughout the month, having left Canada (before or after becoming a pensioner) and remained outside
+-- Canada for six consecutive months before the month, not counting the month of leaving: the month of leaving is
+-- followed by six months outside, so the first month barred is the seventh month after the one in which the pensioner
+-- left (fork F-11c).
+@ref R.S.C., 1985, c. O-9, s 11(7)(c) (src:263)
+GIVEN month IS A DATE
+      facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A BOOLEAN
+`s 11(7)(c): the pensioner has been outside Canada for six consecutive months before the month` month facts MEANS
+    facts's `the pensioner is absent from Canada throughout the month`
+    AND facts's `the pensioner has remained outside Canada since leaving`
+    AND CONSIDER facts's `the month in which the pensioner left Canada`
+        WHEN JUST left THEN `the number of months from the month containing` left `to the month containing` month AT LEAST 7
+        WHEN NOTHING THEN FALSE
+
+-- (d): not resident throughout the month, having ceased to reside in Canada six months before the beginning of the
+-- month: the day of ceasing is on or before the day six months before the first day of the month.
+@ref R.S.C., 1985, c. O-9, s 11(7)(d) (src:264)
+GIVEN month IS A DATE
+      facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A BOOLEAN
+`s 11(7)(d): the pensioner ceased to reside in Canada six months before the beginning of the month` month facts MEANS
+    facts's `the pensioner is not resident in Canada throughout the month`
+    AND CONSIDER facts's `the day on which the pensioner ceased to reside in Canada`
+        WHEN JUST ceased THEN ceased AT MOST (`the day that is` (`a limit in months` 6) `before` (`the first day of the month containing` month))
+        WHEN NOTHING THEN FALSE
+
+@ref R.S.C., 1985, c. O-9, s 11(7)(e) (src:265)
+GIVEN facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A BOOLEAN
+`s 11(7)(e): an undertaking by a sponsor is in effect in respect of the pensioner` facts MEANS
+    facts's `an undertaking by a sponsor is in effect in respect of the pensioner during the month`
+
+-- "(8) Paragraph (7)(e) does not apply (a) to a person who was qualified to receive a pension or an allowance
+-- immediately before the day on which this paragraph comes into force, whether or not they had applied for it; or (b)
+-- to a pensioner if an event as provided by the regulations has occurred."
+-- The day on which paragraph (8)(a) comes into force is not in the text; the fact is stated by the person and the
+-- event "as provided by the regulations" (Regulations s 22.1, piece oa3) is a fact too.
+-- src:267 | (8) Paragraph (7)(e) does not apply
+-- src:268 | (a) to a person who was qualified to receive a pension or an allowance immediately before the day on which this paragraph comes into force, whether or not they had applied for it; or
+-- src:269 | (b) to a pensioner if an event as provided by the regulations has occurred.
+@ref R.S.C., 1985, c. O-9, s 11(8) (src:267-269)
+GIVEN facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A BOOLEAN
+`s 11(8): paragraph 11(7)(e) does not apply` facts MEANS
+        facts's `the pensioner was qualified to receive a pension or an allowance immediately before the day on which paragraph 11(8)(a) comes into force`
+    OR  facts's `an event as provided by the regulations has occurred`
+
+-- All of (7): no supplement may be paid for the month if any of (a) to (e) applies, (e) subject to (8).
+@ref R.S.C., 1985, c. O-9, s 11(7), s 11(8) (src:260-269)
+GIVEN month IS A DATE
+      facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A BOOLEAN
+`s 11(7): a limitation bars payment of a supplement for the month` month facts MEANS
+        `s 11(7)(a): the month is more than eleven months before the month of the application` month facts
+    OR  `s 11(7)(b): no pension may be paid to the pensioner for the month` facts
+    OR  `s 11(7)(c): the pensioner has been outside Canada for six consecutive months before the month` month facts
+    OR  `s 11(7)(d): the pensioner ceased to reside in Canada six months before the beginning of the month` month facts
+    OR  (    `s 11(7)(e): an undertaking by a sponsor is in effect in respect of the pensioner` facts
+         AND (NOT `s 11(8): paragraph 11(7)(e) does not apply` facts))
+
+-- Section 11 as a whole: a supplement may be paid to the pensioner for the month if the person is a pensioner (1),
+-- the requirement for an application is met (2) and no limitation of (7) applies. Whether a supplement is in fact
+-- payable also turns on the amount (section 12), which can be nothing.
+@ref R.S.C., 1985, c. O-9, s 11(1), s 11(2), s 11(7) (src:238-265)
+GIVEN month IS A DATE
+      facts IS A `s 11: Facts about a pensioner and a month`
+GIVETH A BOOLEAN
+`s 11: a supplement may be paid to the pensioner for the month` month facts MEANS
+        `s 11(1): a supplement may be paid to the person` facts
+    AND `s 11(2): the requirement for an application is met` facts
+    AND (NOT `s 11(7): a limitation bars payment of a supplement for the month` month facts)

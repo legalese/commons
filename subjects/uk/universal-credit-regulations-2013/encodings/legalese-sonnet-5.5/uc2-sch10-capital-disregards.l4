@@ -1,0 +1,591 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `uc-core`
+IMPORT `uc-core-persons`
+IMPORT `uc-core-bodies`
+IMPORT `uc2-domain`
+IMPORT `uc2-part6-ch3-unearned-income`
+
+-- The Universal Credit Regulations 2013 (S.I. 2013/376), Schedule 10: CAPITAL TO BE DISREGARDED (paragraphs 1 to 24).
+-- Source: ../../registers/source-bundle/uksi-2013-376.txt (lines 2814-2872), a plain-text rendering made by a converter script; it is not the official text.
+-- Target: the stable build 1.6.98. Regulation 48(1) disregards "any capital specified in Schedule 10": each paragraph below
+-- answers whether a sum or asset is within it. Every period "within the past N months" is tested at the date on which the capital
+-- is being calculated (a stated input; fork F-S10-1): the event must not be after that date and that date must not be later than
+-- the event plus the period (the last day counts: fork F-S10-1). Regulation 48(2) lets the Secretary of State extend a period of
+-- 6 months, so each 6-month paragraph takes its period as a `Time limit` (the caller passes `reg 48(2) — the period that
+-- Schedule 10 specifies as 6 months`); the 12-month and 52-week periods cannot be extended.
+
+§ `Schedule 10 -- Capital to be disregarded`
+
+-- src:2814 | SCHEDULE 10 — Capital to be disregarded
+-- src:2815 | Premises
+
+§§ `Helpers shared by the paragraphs`
+
+-- Helper: an event falls within the past period when it is not after the date of calculation and the date of calculation is no
+-- later than the event plus the period.
+GIVEN event IS A DATE
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 helper — an event falls within the past period` event `calculated on` period MEANS
+        (event AT MOST `calculated on`)
+    AND (`calculated on` AT MOST (`core — the date reached by adding a time limit to a date` event period))
+
+GIVEN event IS A MAYBE DATE
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 helper — an event that may not have happened falls within the past period` event `calculated on` period MEANS
+    CONSIDER event
+    WHEN NOTHING THEN FALSE
+    WHEN JUST happened THEN `Sch 10 helper — an event falls within the past period` happened `calculated on` period
+
+`Sch 10 helper — the period of 12 months` MEANS `Time limit` WITH quantity IS 12, unit IS months
+`Sch 10 helper — the period of 52 weeks` MEANS `Time limit` WITH quantity IS 52, unit IS weeks
+
+§§ `Paragraph 1 -- Premises occupied as the person's home`
+
+-- src:2816 | 1 (1) Premises occupied by a person as their home.
+@ref Sch 10 para 1(1) (src:2816)
+GIVEN `premises occupied by the person as their home` IS A BOOLEAN
+      `the premises are the one set treated as the person's home` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 1(1) — premises occupied as the person's home` `premises occupied by the person as their home` `the premises are the one set treated as the person's home` MEANS
+    `premises occupied by the person as their home` AND `the premises are the one set treated as the person's home`
+
+-- Paragraph 1(2) is a limit on how many sets of premises count as a home for paragraphs 1 to 5. Which set is the one is not said
+-- (fork F-S10-2), so the caller says which set it treats as the home, and this rule checks it has named at most one.
+-- src:2817 | (2) For the purposes of this paragraph and paragraphs 2 to 5, only one set of premises may be treated as a person's home.
+@ref Sch 10 para 1(2) (src:2817)
+GIVEN `sets of premises treated as the person's home` IS A LIST OF BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 1(2) — at most one set of premises is treated as the person's home` `sets of premises treated as the person's home` MEANS
+    count (filter (GIVEN treated YIELD treated) `sets of premises treated as the person's home`) AT MOST 1
+
+§§ `Paragraph 2 -- Premises occupied by a close relative`
+
+-- src:2818 | 2 Premises occupied by a close relative of a person as their home where that close relative has limited capability for work or has reached the qualifying age for state pension credit.
+@ref Sch 10 para 2 (src:2818)
+GIVEN `premises occupied by the close relative as their home` IS A BOOLEAN
+      relative IS A `Possible close relative`
+      `the close relative's capability for work` IS A `Capability for work`
+      `the close relative has reached the qualifying age for state pension credit` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 2 — premises occupied by a close relative` `premises occupied by the close relative as their home` relative `the close relative's capability for work` `the close relative has reached the qualifying age for state pension credit` MEANS
+        `premises occupied by the close relative as their home`
+    AND (`reg 2 — close relative` relative)
+    AND (    (`the close relative's capability for work`'s `limited capability for work`)
+          OR `the close relative has reached the qualifying age for state pension credit`)
+
+§§ `Paragraph 3 -- Premises occupied by a former partner`
+
+-- src:2819 | 3 Premises occupied by a person's former partner as their home where the person and their former partner are not estranged, but living apart by force of circumstances, for example where the person is in residential care.
+@ref Sch 10 para 3 (src:2819)
+GIVEN `premises occupied by the person's former partner as their home` IS A BOOLEAN
+      `the person and the former partner are not estranged` IS A BOOLEAN
+      `the person and the former partner are living apart by force of circumstances` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 3 — premises occupied by a former partner` `premises occupied by the person's former partner as their home` `the person and the former partner are not estranged` `the person and the former partner are living apart by force of circumstances` MEANS
+        `premises occupied by the person's former partner as their home`
+    AND `the person and the former partner are not estranged`
+    AND `the person and the former partner are living apart by force of circumstances`
+
+§§ `Paragraph 4 -- Premises the person intends to occupy as their home`
+
+-- src:2820 | 4 (1) Premises that a person intends to occupy as their home where—
+-- src:2821 | (a) the person has acquired the premises within the past 6 months but not yet taken up occupation;
+-- src:2822 | (b) the person is taking steps to obtain possession and has commenced those steps within the past 6 months; or
+-- src:2823 | (c) the person is carrying out essential repairs or alterations required to render the premises fit for occupation and these have been commenced within the past 6 months.
+@ref Sch 10 para 4(1) (src:2820-2823)
+DECLARE `Premises that a person intends to occupy as their home` HAS
+    `the person intends to occupy the premises as their home`                                IS A BOOLEAN
+    `the premises are the one set treated as the person's home`                               IS A BOOLEAN
+    `date on which the person acquired the premises`                                          IS A MAYBE DATE
+    `the person has not yet taken up occupation`                                              IS A BOOLEAN
+    `the person is taking steps to obtain possession`                                         IS A BOOLEAN
+    `date on which legal advice was first sought`                                             IS A MAYBE DATE
+    `date on which proceedings were commenced`                                                IS A MAYBE DATE
+    `the person is carrying out essential repairs or alterations required to render the premises fit for occupation`  IS A BOOLEAN
+    `date on which the repairs or alterations were commenced`                                 IS A MAYBE DATE
+
+-- Paragraph 4(2): steps to obtain possession are taken to be commenced on the date legal advice is first sought or proceedings are
+-- commenced, whichever is earlier. NOTHING if neither has happened.
+-- src:2824 | (2) A person is to be taken to have commenced steps to obtain possession of premises on the date that legal advice is first sought or proceedings are commenced, whichever is earlier.
+@ref Sch 10 para 4(2) (src:2824)
+GIVEN premises IS A `Premises that a person intends to occupy as their home`
+GIVETH A MAYBE DATE
+`Sch 10 para 4(2) — the date steps to obtain possession are taken to have commenced` premises MEANS
+    CONSIDER premises's `date on which legal advice was first sought`
+    WHEN NOTHING THEN premises's `date on which proceedings were commenced`
+    WHEN JUST advice THEN
+        CONSIDER premises's `date on which proceedings were commenced`
+        WHEN NOTHING THEN JUST advice
+        WHEN JUST proceedings THEN JUST (IF advice AT MOST proceedings THEN advice ELSE proceedings)
+
+-- src:2821 | (a) the person has acquired the premises within the past 6 months but not yet taken up occupation;
+@ref Sch 10 para 4(1)(a) (src:2821)
+GIVEN premises IS A `Premises that a person intends to occupy as their home`
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 para 4(1)(a) — acquired within the past period but not yet occupied` premises `calculated on` period MEANS
+        (`Sch 10 helper — an event that may not have happened falls within the past period` (premises's `date on which the person acquired the premises`) `calculated on` period)
+    AND (premises's `the person has not yet taken up occupation`)
+
+-- src:2822 | (b) the person is taking steps to obtain possession and has commenced those steps within the past 6 months; or
+@ref Sch 10 para 4(1)(b) (src:2822)
+GIVEN premises IS A `Premises that a person intends to occupy as their home`
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 para 4(1)(b) — taking steps to obtain possession commenced within the past period` premises `calculated on` period MEANS
+        (premises's `the person is taking steps to obtain possession`)
+    AND (`Sch 10 helper — an event that may not have happened falls within the past period` (`Sch 10 para 4(2) — the date steps to obtain possession are taken to have commenced` premises) `calculated on` period)
+
+-- src:2823 | (c) the person is carrying out essential repairs or alterations required to render the premises fit for occupation and these have been commenced within the past 6 months.
+@ref Sch 10 para 4(1)(c) (src:2823)
+GIVEN premises IS A `Premises that a person intends to occupy as their home`
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 para 4(1)(c) — essential repairs or alterations commenced within the past period` premises `calculated on` period MEANS
+        (premises's `the person is carrying out essential repairs or alterations required to render the premises fit for occupation`)
+    AND (`Sch 10 helper — an event that may not have happened falls within the past period` (premises's `date on which the repairs or alterations were commenced`) `calculated on` period)
+
+-- src:2820 | 4 (1) Premises that a person intends to occupy as their home where—
+-- src:2821 | (a) the person has acquired the premises within the past 6 months but not yet taken up occupation;
+-- src:2822 | (b) the person is taking steps to obtain possession and has commenced those steps within the past 6 months; or
+-- src:2823 | (c) the person is carrying out essential repairs or alterations required to render the premises fit for occupation and these have been commenced within the past 6 months.
+@ref Sch 10 para 4(1) (src:2820-2823)
+GIVEN premises IS A `Premises that a person intends to occupy as their home`
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 para 4(1) — premises the person intends to occupy as their home` premises `calculated on` period MEANS
+        (premises's `the person intends to occupy the premises as their home`)
+    AND (premises's `the premises are the one set treated as the person's home`)
+    AND (    (`Sch 10 para 4(1)(a) — acquired within the past period but not yet occupied` premises `calculated on` period)
+          OR (`Sch 10 para 4(1)(b) — taking steps to obtain possession commenced within the past period` premises `calculated on` period)
+          OR (`Sch 10 para 4(1)(c) — essential repairs or alterations commenced within the past period` premises `calculated on` period))
+
+§§ `Paragraph 5 -- Premises the person has ceased to occupy following an estrangement`
+
+-- src:2825 | 5 Premises that a person has ceased to occupy as their home following an estrangement from their former partner where—
+-- src:2826 | (a) the person has ceased to occupy the premises within the past 6 months; or
+-- src:2827 | (b) the person's former partner is a lone parent and occupies the premises as their home.
+@ref Sch 10 para 5 (src:2825-2827)
+DECLARE `Premises that a person has ceased to occupy after an estrangement` HAS
+    `the person has ceased to occupy the premises as their home following an estrangement from their former partner`  IS A BOOLEAN
+    `the premises are the one set treated as the person's home`   IS A BOOLEAN
+    `date on which the person ceased to occupy the premises`      IS A DATE
+    `the former partner is a lone parent`                          IS A BOOLEAN
+    `the former partner occupies the premises as their home`       IS A BOOLEAN
+
+-- src:2825 | 5 Premises that a person has ceased to occupy as their home following an estrangement from their former partner where—
+-- src:2826 | (a) the person has ceased to occupy the premises within the past 6 months; or
+-- src:2827 | (b) the person's former partner is a lone parent and occupies the premises as their home.
+@ref Sch 10 para 5 (src:2825-2827)
+GIVEN premises IS A `Premises that a person has ceased to occupy after an estrangement`
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 para 5 — premises ceased to be occupied after an estrangement` premises `calculated on` period MEANS
+        (premises's `the person has ceased to occupy the premises as their home following an estrangement from their former partner`)
+    AND (premises's `the premises are the one set treated as the person's home`)
+    AND (    (`Sch 10 helper — an event falls within the past period` (premises's `date on which the person ceased to occupy the premises`) `calculated on` period)
+          OR (    (premises's `the former partner is a lone parent`)
+              AND (premises's `the former partner occupies the premises as their home`)))
+
+§§ `Paragraph 6 -- Premises the person is taking reasonable steps to dispose of`
+
+-- src:2828 | 6 Premises that a person is taking reasonable steps to dispose of where those steps have been commenced within the past 6 months.
+@ref Sch 10 para 6 (src:2828)
+GIVEN `the person is taking reasonable steps to dispose of the premises` IS A BOOLEAN
+      `date on which those steps were commenced` IS A DATE
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 para 6 — premises the person is taking reasonable steps to dispose of` `the person is taking reasonable steps to dispose of the premises` `date on which those steps were commenced` `calculated on` period MEANS
+        `the person is taking reasonable steps to dispose of the premises`
+    AND (`Sch 10 helper — an event falls within the past period` `date on which those steps were commenced` `calculated on` period)
+
+-- src:2829 | Business assets
+
+§§ `Paragraphs 7 and 8 -- Business assets`
+
+-- src:2830 | 7 Assets which are used wholly or mainly for the purposes of a trade, profession or vocation which the person is carrying on.
+@ref Sch 10 para 7 (src:2830)
+GIVEN `assets used wholly or mainly for the purposes of a trade, profession or vocation` IS A BOOLEAN
+      `the person is carrying on that trade, profession or vocation` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 7 — assets used for a trade, profession or vocation the person carries on` `assets used wholly or mainly for the purposes of a trade, profession or vocation` `the person is carrying on that trade, profession or vocation` MEANS
+    `assets used wholly or mainly for the purposes of a trade, profession or vocation` AND `the person is carrying on that trade, profession or vocation`
+
+-- src:2831 | 8 Assets which were used wholly or mainly for a trade, profession or vocation that the person has ceased to carry on within the past 6 months if—
+-- src:2832 | (a) the person is taking reasonable steps to dispose of those assets; or
+-- src:2833 | (b) the person ceased to be engaged in carrying on the trade, profession or vocation because of incapacity and can reasonably expect to be reengaged on recovery.
+@ref Sch 10 para 8 (src:2831-2833)
+DECLARE `Assets of a trade, profession or vocation that has ceased` HAS
+    `assets were used wholly or mainly for a trade, profession or vocation that the person has ceased to carry on`  IS A BOOLEAN
+    `date on which the person ceased to carry it on`                         IS A DATE
+    `the person is taking reasonable steps to dispose of the assets`         IS A BOOLEAN
+    `the person ceased to be engaged in carrying it on because of incapacity`  IS A BOOLEAN
+    `the person can reasonably expect to be reengaged on recovery`           IS A BOOLEAN
+
+-- src:2831 | 8 Assets which were used wholly or mainly for a trade, profession or vocation that the person has ceased to carry on within the past 6 months if—
+-- src:2832 | (a) the person is taking reasonable steps to dispose of those assets; or
+-- src:2833 | (b) the person ceased to be engaged in carrying on the trade, profession or vocation because of incapacity and can reasonably expect to be reengaged on recovery.
+@ref Sch 10 para 8 (src:2831-2833)
+GIVEN assets IS AN `Assets of a trade, profession or vocation that has ceased`
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 para 8 — assets of a trade, profession or vocation ceased within the past period` assets `calculated on` period MEANS
+        (assets's `assets were used wholly or mainly for a trade, profession or vocation that the person has ceased to carry on`)
+    AND (`Sch 10 helper — an event falls within the past period` (assets's `date on which the person ceased to carry it on`) `calculated on` period)
+    AND (    (assets's `the person is taking reasonable steps to dispose of the assets`)
+          OR (    (assets's `the person ceased to be engaged in carrying it on because of incapacity`)
+              AND (assets's `the person can reasonably expect to be reengaged on recovery`)))
+
+-- src:2834 | Rights in pensions schemes etc
+
+§§ `Paragraphs 9 to 11 -- Rights in pensions schemes etc`
+
+-- src:2835 | 9 The value of any policy of life insurance.
+@ref Sch 10 para 9 (src:2835)
+GIVEN `the capital is the value of a policy of life insurance` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 9 — the value of a policy of life insurance` `the capital is the value of a policy of life insurance` MEANS
+    `the capital is the value of a policy of life insurance`
+
+-- src:2836 | 10 (1) The value of any right to receive a pension under an occupational or personal pension scheme or any other pension scheme registered under section 153 of the Finance Act 2004 .
+-- src:2837 | (2) “Occupational pension scheme” and “personal pension scheme” have the meaning in section 1 of the Pension Schemes Act 1993 .
+@ref Sch 10 para 10 (src:2836-2837)
+DECLARE `Right to receive a pension` HAS
+    `the capital is the value of a right to receive a pension`                      IS A BOOLEAN
+    `occupational pension scheme within the meaning of section 1 of the Pension Schemes Act 1993`  IS A BOOLEAN
+    `personal pension scheme within the meaning of section 1 of the Pension Schemes Act 1993`      IS A BOOLEAN
+    `other pension scheme registered under section 153 of the Finance Act 2004`     IS A BOOLEAN
+
+-- src:2836 | 10 (1) The value of any right to receive a pension under an occupational or personal pension scheme or any other pension scheme registered under section 153 of the Finance Act 2004 .
+-- src:2837 | (2) “Occupational pension scheme” and “personal pension scheme” have the meaning in section 1 of the Pension Schemes Act 1993 .
+@ref Sch 10 para 10 (src:2836-2837)
+GIVEN right IS A `Right to receive a pension`
+GIVETH A BOOLEAN
+`Sch 10 para 10 — the value of a right to receive a pension` right MEANS
+        (right's `the capital is the value of a right to receive a pension`)
+    AND (    (right's `occupational pension scheme within the meaning of section 1 of the Pension Schemes Act 1993`)
+          OR (right's `personal pension scheme within the meaning of section 1 of the Pension Schemes Act 1993`)
+          OR (right's `other pension scheme registered under section 153 of the Finance Act 2004`))
+
+-- src:2839 | (2) “Funeral plan contract” means a contract under which the person makes payments to a person to secure the provision of a funeral and where the sole purpose of the plan is the provision of a funeral.
+@ref Sch 10 para 11(2) (src:2839)
+GIVEN `the contract is one under which the person makes payments to a person to secure the provision of a funeral` IS A BOOLEAN
+      `the sole purpose of the plan is the provision of a funeral` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 11(2) — funeral plan contract` `the contract is one under which the person makes payments to a person to secure the provision of a funeral` `the sole purpose of the plan is the provision of a funeral` MEANS
+    `the contract is one under which the person makes payments to a person to secure the provision of a funeral` AND `the sole purpose of the plan is the provision of a funeral`
+
+-- src:2838 | 11 (1) The value of a funeral plan contract.
+@ref Sch 10 para 11(1) (src:2838)
+GIVEN `the capital is the value of a contract` IS A BOOLEAN
+      `the contract is one under which the person makes payments to a person to secure the provision of a funeral` IS A BOOLEAN
+      `the sole purpose of the plan is the provision of a funeral` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 11(1) — the value of a funeral plan contract` `the capital is the value of a contract` `the contract is one under which the person makes payments to a person to secure the provision of a funeral` `the sole purpose of the plan is the provision of a funeral` MEANS
+        `the capital is the value of a contract`
+    AND (`Sch 10 para 11(2) — funeral plan contract` `the contract is one under which the person makes payments to a person to secure the provision of a funeral` `the sole purpose of the plan is the provision of a funeral`)
+
+-- src:2840 | Amounts earmarked for special purposes
+
+§§ `Paragraphs 12 to 15 -- Amounts earmarked for special purposes`
+
+-- src:2841 | 12 An amount deposited with a housing association as a condition of the person occupying premises as their home.
+@ref Sch 10 para 12 (src:2841)
+GIVEN `the amount is deposited with a housing association` IS A BOOLEAN
+      `the deposit is a condition of the person occupying premises as their home` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 12 — an amount deposited with a housing association` `the amount is deposited with a housing association` `the deposit is a condition of the person occupying premises as their home` MEANS
+    `the amount is deposited with a housing association` AND `the deposit is a condition of the person occupying premises as their home`
+
+-- src:2842 | 13 An amount received within the past 6 months which is to be used for the purchase of premises that the person intends to occupy as their home where that amount—
+-- src:2843 | (a) is attributable to the proceeds of the sale of premises formerly occupied by the person as their home;
+-- src:2844 | (b) has been deposited with a housing association as mentioned in paragraph 12; or
+-- src:2845 | (c) is a grant made to the person for the sole purpose of the purchase of a home.
+@ref Sch 10 para 13 (src:2842-2845)
+DECLARE `Amount received for the purchase of a home` HAS
+    `the amount is to be used for the purchase of premises that the person intends to occupy as their home`  IS A BOOLEAN
+    `date on which the amount was received`                                          IS A DATE
+    `the amount is attributable to the proceeds of sale of premises formerly occupied by the person as their home`  IS A BOOLEAN
+    `the amount has been deposited with a housing association as mentioned in paragraph 12`  IS A BOOLEAN
+    `the amount is a grant made to the person for the sole purpose of the purchase of a home`  IS A BOOLEAN
+
+-- src:2842 | 13 An amount received within the past 6 months which is to be used for the purchase of premises that the person intends to occupy as their home where that amount—
+-- src:2843 | (a) is attributable to the proceeds of the sale of premises formerly occupied by the person as their home;
+-- src:2844 | (b) has been deposited with a housing association as mentioned in paragraph 12; or
+-- src:2845 | (c) is a grant made to the person for the sole purpose of the purchase of a home.
+@ref Sch 10 para 13 (src:2842-2845)
+GIVEN amount IS AN `Amount received for the purchase of a home`
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 para 13 — an amount received for the purchase of a home` amount `calculated on` period MEANS
+        (amount's `the amount is to be used for the purchase of premises that the person intends to occupy as their home`)
+    AND (`Sch 10 helper — an event falls within the past period` (amount's `date on which the amount was received`) `calculated on` period)
+    AND (    (amount's `the amount is attributable to the proceeds of sale of premises formerly occupied by the person as their home`)
+          OR (amount's `the amount has been deposited with a housing association as mentioned in paragraph 12`)
+          OR (amount's `the amount is a grant made to the person for the sole purpose of the purchase of a home`))
+
+-- src:2846 | 14 An amount received under an insurance policy within the past 6 months in connection with the loss or damage to the premises occupied by the person as their home or to their personal possessions.
+@ref Sch 10 para 14 (src:2846)
+GIVEN `the amount was received under an insurance policy in connection with the loss of or damage to the premises occupied as the person's home or to their personal possessions` IS A BOOLEAN
+      `date on which the amount was received` IS A DATE
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 para 14 — an amount received under an insurance policy` `the amount was received under an insurance policy in connection with the loss of or damage to the premises occupied as the person's home or to their personal possessions` `date on which the amount was received` `calculated on` period MEANS
+        `the amount was received under an insurance policy in connection with the loss of or damage to the premises occupied as the person's home or to their personal possessions`
+    AND (`Sch 10 helper — an event falls within the past period` `date on which the amount was received` `calculated on` period)
+
+-- src:2847 | 15 An amount received within the past 6 months that is to be used for making essential repairs or alterations to premises occupied or intended to be occupied as the person's home where that amount has been acquired by the person (whether by grant or loan or otherwise) on condition that it is used for that purpose.
+@ref Sch 10 para 15 (src:2847)
+GIVEN `the amount is to be used for making essential repairs or alterations to premises occupied or intended to be occupied as the person's home` IS A BOOLEAN
+      `the person acquired it (whether by grant or loan or otherwise) on condition that it is used for that purpose` IS A BOOLEAN
+      `date on which the amount was received` IS A DATE
+      `calculated on` IS A DATE
+      period IS A `Time limit`
+GIVETH A BOOLEAN
+`Sch 10 para 15 — an amount for essential repairs or alterations` `the amount is to be used for making essential repairs or alterations to premises occupied or intended to be occupied as the person's home` `the person acquired it (whether by grant or loan or otherwise) on condition that it is used for that purpose` `date on which the amount was received` `calculated on` period MEANS
+        `the amount is to be used for making essential repairs or alterations to premises occupied or intended to be occupied as the person's home`
+    AND `the person acquired it (whether by grant or loan or otherwise) on condition that it is used for that purpose`
+    AND (`Sch 10 helper — an event falls within the past period` `date on which the amount was received` `calculated on` period)
+
+-- src:2848 | Other payments
+
+§§ `Paragraphs 16 to 24 -- Other payments`
+
+-- src:2849 | 16 A payment made within the past 12 months under Part 8 of the Contributions and Benefits Act (the social fund).
+@ref Sch 10 para 16 (src:2849)
+GIVEN `the payment was made under Part 8 of the Contributions and Benefits Act (the social fund)` IS A BOOLEAN
+      `date on which the payment was made` IS A DATE
+      `calculated on` IS A DATE
+GIVETH A BOOLEAN
+`Sch 10 para 16 — a social fund payment` `the payment was made under Part 8 of the Contributions and Benefits Act (the social fund)` `date on which the payment was made` `calculated on` MEANS
+        `the payment was made under Part 8 of the Contributions and Benefits Act (the social fund)`
+    AND (`Sch 10 helper — an event falls within the past period` `date on which the payment was made` `calculated on` `Sch 10 helper — the period of 12 months`)
+
+-- Paragraph 17(1): a payment within the past 12 months by or on behalf of a local authority (regulation 2) (a) under one of the
+-- listed sections, or (b) under any other enactment (regulation 2) to meet welfare needs related to old age or disability, other
+-- than living expenses (paragraph 17(2): regulation 66(2)).
+-- src:2850 | 17 (1) A payment made within the past 12 months by or on behalf of a local authority—
+-- src:2851 | (a) under section 17, 23B, 23C or 24A of the Children Act 1989 , section 12 of the Social Work (Scotland) Act 1968 , section 29 or 30 of the Children (Scotland) Act 1995 or section 37, 38, 109, 110, 114 or 115 of the Social Services and Well-being (Wales) Act 2014; or
+-- src:2852 | (b) under any other enactment in order to meet a person's welfare needs related to old age or disability, other than living expenses.
+-- src:2853 | (2) In sub-paragraph (1) “living expenses” has the meaning in regulation 66(2).
+@ref Sch 10 para 17 (src:2850-2853)
+DECLARE `Payment by or on behalf of a local authority` HAS
+    `date on which the payment was made`                                         IS A DATE
+    body                                                                         IS A `Body that may be a local authority`
+    `payment made under section 17, 23B, 23C or 24A of the Children Act 1989, section 12 of the Social Work (Scotland) Act 1968, section 29 or 30 of the Children (Scotland) Act 1995 or section 37, 38, 109, 110, 114 or 115 of the Social Services and Well-being (Wales) Act 2014`  IS A BOOLEAN
+    provision                                                                    IS A `Provision whose standing as an enactment is asked by uc2`
+    `payment made in order to meet a person's welfare needs related to old age or disability`  IS A BOOLEAN
+    cost                                                                         IS A `Cost that may be a living expense`
+
+-- src:2851 | (a) under section 17, 23B, 23C or 24A of the Children Act 1989 , section 12 of the Social Work (Scotland) Act 1968 , section 29 or 30 of the Children (Scotland) Act 1995 or section 37, 38, 109, 110, 114 or 115 of the Social Services and Well-being (Wales) Act 2014; or
+@ref Sch 10 para 17(1)(a) (src:2851)
+GIVEN payment IS A `Payment by or on behalf of a local authority`
+GIVETH A BOOLEAN
+`Sch 10 para 17(1)(a) — a payment under one of the listed sections` payment MEANS
+    payment's `payment made under section 17, 23B, 23C or 24A of the Children Act 1989, section 12 of the Social Work (Scotland) Act 1968, section 29 or 30 of the Children (Scotland) Act 1995 or section 37, 38, 109, 110, 114 or 115 of the Social Services and Well-being (Wales) Act 2014`
+
+-- src:2852 | (b) under any other enactment in order to meet a person's welfare needs related to old age or disability, other than living expenses.
+-- src:2853 | (2) In sub-paragraph (1) “living expenses” has the meaning in regulation 66(2).
+@ref Sch 10 para 17(1)(b) and (2) (src:2852-2853)
+GIVEN payment IS A `Payment by or on behalf of a local authority`
+GIVETH A BOOLEAN
+`Sch 10 para 17(1)(b) — a payment under any other enactment to meet welfare needs related to old age or disability` payment MEANS
+        (`uc2 helper — a provision is an enactment` (payment's provision))
+    AND (payment's `payment made in order to meet a person's welfare needs related to old age or disability`)
+    AND (NOT (`reg 66(2)(b) — living expenses` (payment's cost)))
+
+-- src:2850 | 17 (1) A payment made within the past 12 months by or on behalf of a local authority—
+-- src:2851 | (a) under section 17, 23B, 23C or 24A of the Children Act 1989 , section 12 of the Social Work (Scotland) Act 1968 , section 29 or 30 of the Children (Scotland) Act 1995 or section 37, 38, 109, 110, 114 or 115 of the Social Services and Well-being (Wales) Act 2014; or
+-- src:2852 | (b) under any other enactment in order to meet a person's welfare needs related to old age or disability, other than living expenses.
+-- src:2853 | (2) In sub-paragraph (1) “living expenses” has the meaning in regulation 66(2).
+@ref Sch 10 para 17 (src:2850-2853)
+GIVEN payment IS A `Payment by or on behalf of a local authority`
+      `calculated on` IS A DATE
+GIVETH A BOOLEAN
+`Sch 10 para 17 — a payment by or on behalf of a local authority` payment `calculated on` MEANS
+        (`Sch 10 helper — an event falls within the past period` (payment's `date on which the payment was made`) `calculated on` `Sch 10 helper — the period of 12 months`)
+    AND (`reg 2 — local authority` (payment's body))
+    AND (    (`Sch 10 para 17(1)(a) — a payment under one of the listed sections` payment)
+          OR (`Sch 10 para 17(1)(b) — a payment under any other enactment to meet welfare needs related to old age or disability` payment))
+
+-- Paragraph 18: a payment within the past 12 months by way of arrears of, or compensation for late payment of, universal credit,
+-- a benefit abolished by section 33 of the Act, or a social security benefit that is not unearned income under regulation
+-- 66(1)(a) or (b). Paragraph 18(2): a social security benefit is a benefit under any enactment relating to social security in any
+-- part of the United Kingdom, and includes armed forces independence payment.
+-- src:2858 | (2) “Social security benefit” means a benefit under any enactment relating to social security in any part of the United Kingdom and includes armed forces independence payment under the Armed Forces and Reserve Forces (Compensation Scheme) Order 2011.
+@ref Sch 10 para 18(2) (src:2858)
+DECLARE `Payment that may be a social security benefit` HAS
+    `benefit under an enactment`                                                    IS A BOOLEAN
+    provision                                                                       IS A `Provision whose standing as an enactment is asked by uc2`
+    `enactment relating to social security in any part of the United Kingdom`       IS A BOOLEAN
+    `armed forces independence payment under the Armed Forces and Reserve Forces (Compensation Scheme) Order 2011`  IS A BOOLEAN
+
+-- src:2858 | (2) “Social security benefit” means a benefit under any enactment relating to social security in any part of the United Kingdom and includes armed forces independence payment under the Armed Forces and Reserve Forces (Compensation Scheme) Order 2011.
+@ref Sch 10 para 18(2) (src:2858)
+GIVEN payment IS A `Payment that may be a social security benefit`
+GIVETH A BOOLEAN
+`Sch 10 para 18(2) — social security benefit` payment MEANS
+        (    (payment's `benefit under an enactment`)
+         AND (`uc2 helper — a provision is an enactment` (payment's provision))
+         AND (payment's `enactment relating to social security in any part of the United Kingdom`))
+    OR  (payment's `armed forces independence payment under the Armed Forces and Reserve Forces (Compensation Scheme) Order 2011`)
+
+-- src:2854 | 18 (1) A payment received within the past 12 months by way of arrears of, or compensation for late payment of—
+-- src:2855 | (a) universal credit;
+-- src:2856 | (b) a benefit abolished by section 33 of the Act; or
+-- src:2857 | (c) a social security benefit which is not included as unearned income under regulation 66(1)(a) or (b).
+@ref Sch 10 para 18(1) (src:2854-2857)
+GIVEN `the payment is by way of arrears of, or compensation for late payment of, a benefit` IS A BOOLEAN
+      `the benefit is universal credit` IS A BOOLEAN
+      `the benefit is a benefit abolished by section 33 of the Act` IS A BOOLEAN
+      benefit IS A `Payment that may be a social security benefit`
+      `that social security benefit is included as unearned income under regulation 66(1)(a) or (b)` IS A BOOLEAN
+      `date on which the payment was made` IS A DATE
+      `calculated on` IS A DATE
+GIVETH A BOOLEAN
+`Sch 10 para 18(1) — arrears of, or compensation for late payment of, a benefit` `the payment is by way of arrears of, or compensation for late payment of, a benefit` `the benefit is universal credit` `the benefit is a benefit abolished by section 33 of the Act` benefit `that social security benefit is included as unearned income under regulation 66(1)(a) or (b)` `date on which the payment was made` `calculated on` MEANS
+        `the payment is by way of arrears of, or compensation for late payment of, a benefit`
+    AND (`Sch 10 helper — an event falls within the past period` `date on which the payment was made` `calculated on` `Sch 10 helper — the period of 12 months`)
+    AND (    `the benefit is universal credit`
+          OR `the benefit is a benefit abolished by section 33 of the Act`
+          OR (    (`Sch 10 para 18(2) — social security benefit` benefit)
+              AND (NOT `that social security benefit is included as unearned income under regulation 66(1)(a) or (b)`)))
+
+-- src:2859 | 18ZA A payment made within the past 12 months of widowed parent’s allowance—
+-- src:2860 | (a) to the survivor of a cohabiting partnership (within the meaning in section 39A(7) of the Contributions and Benefits Act) who is entitled to widowed parent’s allowance for a period before the Bereavement Benefits (Remedial) Order 2023 comes into force, and
+-- src:2861 | (b) in respect of any period of time during the period ending with the day before the survivor makes the claim for widowed parent’s allowance.
+@ref Sch 10 para 18ZA (src:2859-2861)
+GIVEN `the payment is a payment of widowed parent's allowance` IS A BOOLEAN
+      `date on which the payment was made` IS A DATE
+      `calculated on` IS A DATE
+      `paid to the survivor of a cohabiting partnership who is entitled to widowed parent's allowance for a period before the Bereavement Benefits (Remedial) Order 2023 comes into force` IS A BOOLEAN
+      `in respect of a period ending with the day before the survivor makes the claim for widowed parent's allowance` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 18ZA — a payment of widowed parent's allowance to the survivor of a cohabiting partnership` `the payment is a payment of widowed parent's allowance` `date on which the payment was made` `calculated on` `paid to the survivor of a cohabiting partnership who is entitled to widowed parent's allowance for a period before the Bereavement Benefits (Remedial) Order 2023 comes into force` `in respect of a period ending with the day before the survivor makes the claim for widowed parent's allowance` MEANS
+        `the payment is a payment of widowed parent's allowance`
+    AND (`Sch 10 helper — an event falls within the past period` `date on which the payment was made` `calculated on` `Sch 10 helper — the period of 12 months`)
+    AND `paid to the survivor of a cohabiting partnership who is entitled to widowed parent's allowance for a period before the Bereavement Benefits (Remedial) Order 2023 comes into force`
+    AND `in respect of a period ending with the day before the survivor makes the claim for widowed parent's allowance`
+
+-- Paragraph 18ZB states no period: a payment by the Secretary of State as a result of the recalculation of carer's allowance
+-- described in the paragraph is disregarded whenever it was made.
+-- src:2862 | 18ZB A payment to the person made by the Secretary of State as a result of a recalculation of carer’s allowance, carried out in consequence of the report of the Independent Review of Carer’s Allowance Overpayments dated 21st July 2025.
+@ref Sch 10 para 18ZB (src:2862)
+GIVEN `the payment was made to the person by the Secretary of State` IS A BOOLEAN
+      `as a result of a recalculation of carer's allowance carried out in consequence of the report of the Independent Review of Carer's Allowance Overpayments dated 21st July 2025` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 18ZB — a payment on the recalculation of carer's allowance` `the payment was made to the person by the Secretary of State` `as a result of a recalculation of carer's allowance carried out in consequence of the report of the Independent Review of Carer's Allowance Overpayments dated 21st July 2025` MEANS
+    `the payment was made to the person by the Secretary of State` AND `as a result of a recalculation of carer's allowance carried out in consequence of the report of the Independent Review of Carer's Allowance Overpayments dated 21st July 2025`
+
+-- src:2863 | 18A A payment received within the past 12 months by way of local welfare provision including arrears and payments in lieu of local welfare provision.
+@ref Sch 10 para 18A (src:2863)
+GIVEN assistance IS AN `Assistance given to individuals`
+      `the payment is arrears of local welfare provision or a payment in lieu of it` IS A BOOLEAN
+      `date on which the payment was received` IS A DATE
+      `calculated on` IS A DATE
+GIVETH A BOOLEAN
+`Sch 10 para 18A — a payment by way of local welfare provision` assistance `the payment is arrears of local welfare provision or a payment in lieu of it` `date on which the payment was received` `calculated on` MEANS
+        (`Sch 10 helper — an event falls within the past period` `date on which the payment was received` `calculated on` `Sch 10 helper — the period of 12 months`)
+    AND (    (`reg 2 — local welfare provision` assistance)
+          OR `the payment is arrears of local welfare provision or a payment in lieu of it`)
+
+-- src:2864 | 19 A payment to a person by virtue of being a holder of the Victoria Cross or George Cross.
+@ref Sch 10 para 19 (src:2864)
+GIVEN `the payment is made to the person by virtue of being a holder of the Victoria Cross or the George Cross` IS A BOOLEAN
+GIVETH A BOOLEAN
+`Sch 10 para 19 — a payment to a holder of the Victoria Cross or the George Cross` `the payment is made to the person by virtue of being a holder of the Victoria Cross or the George Cross` MEANS
+    `the payment is made to the person by virtue of being a holder of the Victoria Cross or the George Cross`
+
+-- Paragraph 20(2) ends, in this text, without saying what happens to the amount it describes ("any amount of that payment which is
+-- (a) ... and (b) ..."). The heading of the Schedule is "Capital to be disregarded", so the amount is read as disregarded
+-- (fork F-S10-3).
+-- src:2865 | 20 (1) A payment made within the past 12 months of bereavement support payment in respect of the rate set out in regulation 3(2) or (5) of the Bereavement Support Payment Regulations 2017 (rate of bereavement support payment).
+-- src:2866 | (2) Where bereavement support payment under section 30 of the Pensions Act 2014 (bereavement support payment) has been paid within the past 12 months to the survivor of a cohabiting partnership (within the meaning in section 30(6B) of the Pensions Act 2014) in respect of a death occurring before the day the Bereavement Benefits (Remedial) Order 2023 comes into force, any amount of that payment which is—
+-- src:2867 | (a) in respect of the rate set out in regulation 3(1) of the Bereavement Support Payment Regulations 2017, and
+-- src:2868 | (b) paid as a lump sum for more than one monthly recurrence of the day of the month on which their cohabiting partner died.
+@ref Sch 10 para 20 (src:2865-2868)
+DECLARE `Bereavement support payment` HAS
+    `date on which the payment was made`                                            IS A DATE
+    `payment in respect of the rate set out in regulation 3(2) or (5) of the Bereavement Support Payment Regulations 2017`  IS A BOOLEAN
+    `paid to the survivor of a cohabiting partnership in respect of a death before the day the Bereavement Benefits (Remedial) Order 2023 comes into force`  IS A BOOLEAN
+    `amount of the payment in respect of the rate set out in regulation 3(1) of the Bereavement Support Payment Regulations 2017`  IS A NUMBER
+    `amount of that payment paid as a lump sum for more than one monthly recurrence of the day of the month on which their cohabiting partner died`  IS A NUMBER
+
+-- src:2865 | 20 (1) A payment made within the past 12 months of bereavement support payment in respect of the rate set out in regulation 3(2) or (5) of the Bereavement Support Payment Regulations 2017 (rate of bereavement support payment).
+@ref Sch 10 para 20(1) (src:2865)
+GIVEN payment IS A `Bereavement support payment`
+      `calculated on` IS A DATE
+GIVETH A BOOLEAN
+`Sch 10 para 20(1) — a payment of bereavement support payment at the rate in regulation 3(2) or (5)` payment `calculated on` MEANS
+        (`Sch 10 helper — an event falls within the past period` (payment's `date on which the payment was made`) `calculated on` `Sch 10 helper — the period of 12 months`)
+    AND (payment's `payment in respect of the rate set out in regulation 3(2) or (5) of the Bereavement Support Payment Regulations 2017`)
+
+-- The amount of a payment within paragraph 20(2) that is disregarded: that part which is both at the regulation 3(1) rate and paid
+-- as a lump sum for more than one monthly recurrence. The text does not say how much of a payment is both; the smaller of the two
+-- amounts is taken as the amount that is (a) and (b) (fork F-S10-3).
+-- src:2866 | (2) Where bereavement support payment under section 30 of the Pensions Act 2014 (bereavement support payment) has been paid within the past 12 months to the survivor of a cohabiting partnership (within the meaning in section 30(6B) of the Pensions Act 2014) in respect of a death occurring before the day the Bereavement Benefits (Remedial) Order 2023 comes into force, any amount of that payment which is—
+-- src:2867 | (a) in respect of the rate set out in regulation 3(1) of the Bereavement Support Payment Regulations 2017, and
+-- src:2868 | (b) paid as a lump sum for more than one monthly recurrence of the day of the month on which their cohabiting partner died.
+@ref Sch 10 para 20(2) (src:2866-2868)
+GIVEN payment IS A `Bereavement support payment`
+      `calculated on` IS A DATE
+GIVETH A NUMBER
+`Sch 10 para 20(2) — the amount of the payment that is disregarded` payment `calculated on` MEANS
+    IF     (`Sch 10 helper — an event falls within the past period` (payment's `date on which the payment was made`) `calculated on` `Sch 10 helper — the period of 12 months`)
+       AND (payment's `paid to the survivor of a cohabiting partnership in respect of a death before the day the Bereavement Benefits (Remedial) Order 2023 comes into force`)
+    THEN min (payment's `amount of the payment in respect of the rate set out in regulation 3(1) of the Bereavement Support Payment Regulations 2017`) (payment's `amount of that payment paid as a lump sum for more than one monthly recurrence of the day of the month on which their cohabiting partner died`)
+    ELSE 0
+
+-- src:2869 | 21 Any early years assistance given within the past 12 months in accordance with section 32 of the Social Security (Scotland) Act 2018.
+@ref Sch 10 para 21 (src:2869)
+GIVEN `the assistance is early years assistance given in accordance with section 32 of the Social Security (Scotland) Act 2018` IS A BOOLEAN
+      `date on which the assistance was given` IS A DATE
+      `calculated on` IS A DATE
+GIVETH A BOOLEAN
+`Sch 10 para 21 — early years assistance` `the assistance is early years assistance given in accordance with section 32 of the Social Security (Scotland) Act 2018` `date on which the assistance was given` `calculated on` MEANS
+        `the assistance is early years assistance given in accordance with section 32 of the Social Security (Scotland) Act 2018`
+    AND (`Sch 10 helper — an event falls within the past period` `date on which the assistance was given` `calculated on` `Sch 10 helper — the period of 12 months`)
+
+-- src:2870 | 22 Any funeral expense assistance given within the past 12 months in accordance with section 34 of the Social Security (Scotland) Act 2018.
+@ref Sch 10 para 22 (src:2870)
+GIVEN `the assistance is funeral expense assistance given in accordance with section 34 of the Social Security (Scotland) Act 2018` IS A BOOLEAN
+      `date on which the assistance was given` IS A DATE
+      `calculated on` IS A DATE
+GIVETH A BOOLEAN
+`Sch 10 para 22 — funeral expense assistance` `the assistance is funeral expense assistance given in accordance with section 34 of the Social Security (Scotland) Act 2018` `date on which the assistance was given` `calculated on` MEANS
+        `the assistance is funeral expense assistance given in accordance with section 34 of the Social Security (Scotland) Act 2018`
+    AND (`Sch 10 helper — an event falls within the past period` `date on which the assistance was given` `calculated on` `Sch 10 helper — the period of 12 months`)
+
+-- src:2871 | 23 Any assistance given within the past 52 weeks in accordance with the Carer’s Assistance (Young Carer Grants) (Scotland) Regulations 2019.
+@ref Sch 10 para 23 (src:2871)
+GIVEN `the assistance is given in accordance with the Carer's Assistance (Young Carer Grants) (Scotland) Regulations 2019` IS A BOOLEAN
+      `date on which the assistance was given` IS A DATE
+      `calculated on` IS A DATE
+GIVETH A BOOLEAN
+`Sch 10 para 23 — young carer grant assistance` `the assistance is given in accordance with the Carer's Assistance (Young Carer Grants) (Scotland) Regulations 2019` `date on which the assistance was given` `calculated on` MEANS
+        `the assistance is given in accordance with the Carer's Assistance (Young Carer Grants) (Scotland) Regulations 2019`
+    AND (`Sch 10 helper — an event falls within the past period` `date on which the assistance was given` `calculated on` `Sch 10 helper — the period of 52 weeks`)
+
+-- src:2872 | 24 Any winter heating assistance given within the past 52 weeks in accordance with regulations under section 30 of the Social Security (Scotland) Act 2018.
+@ref Sch 10 para 24 (src:2872)
+GIVEN `the assistance is winter heating assistance given in accordance with regulations under section 30 of the Social Security (Scotland) Act 2018` IS A BOOLEAN
+      `date on which the assistance was given` IS A DATE
+      `calculated on` IS A DATE
+GIVETH A BOOLEAN
+`Sch 10 para 24 — winter heating assistance` `the assistance is winter heating assistance given in accordance with regulations under section 30 of the Social Security (Scotland) Act 2018` `date on which the assistance was given` `calculated on` MEANS
+        `the assistance is winter heating assistance given in accordance with regulations under section 30 of the Social Security (Scotland) Act 2018`
+    AND (`Sch 10 helper — an event falls within the past period` `date on which the assistance was given` `calculated on` `Sch 10 helper — the period of 52 weeks`)

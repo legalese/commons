@@ -1,0 +1,778 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `oas-core`
+IMPORT `oas-core-measures`
+IMPORT `oas-core-periods`
+IMPORT `oas-core-pension`
+IMPORT `oa2-indexation`
+IMPORT `oa2-part2-eligibility`
+IMPORT `oa2-part2-amount`
+IMPORT `oa2-part2-income`
+
+-- Old Age Security Act, PART III, sections 22 and 22.1: the amount of the allowance, the effect on the pensioner's
+-- supplement, and the additional amounts. Piece oa2.
+--
+-- The amounts are formulas in the Act's own letters (A, B, C, D, E). Incomes are NUMBERS for the base calendar year
+-- (the keel's `the income of a person for a calendar year`, or section 13 for a month before July 1, 1999); the
+-- pension equivalent is an input from section 7 (piece oa1) and the Consumer Price Index figures are inputs, as in
+-- section 12. A formula that comes out below nothing is floored in a wrapper rule, the raw formula being kept
+-- (fork F-12-2); a bracket that the text leaves open at zero is closed at zero and tested (finding in NOTES.md).
+-- Rounding to the cent and of the CPI ratio is Regulations s 8 (piece oa3) and is not applied.
+
+§ `Part III -- Monthly Allowances`
+
+§§ `Definitions, section 22(1)`
+
+-- "base calendar year has the same meaning as in section 10"
+-- src:644 | base calendar year has the same meaning as in section 10; (année de référence)
+@ref R.S.C., 1985, c. O-9, s 22(1) "base calendar year" (src:644)
+GIVEN `the current payment period` IS A `Calendar span`
+GIVETH A `Calendar span`
+`s 22(1): the base calendar year` `the current payment period` MEANS
+    `s 10: the base calendar year` `the current payment period`
+
+-- "current payment period means the payment period in respect of which an application for an allowance is made under
+-- this Part"
+-- src:646 | current payment period means the payment period in respect of which an application for an allowance is made under this Part; (période de paiement en cours)
+@ref R.S.C., 1985, c. O-9, s 22(1) "current payment period" (src:646)
+GIVEN `a month in the payment period in respect of which the application for an allowance is made` IS A DATE
+GIVETH A `Calendar span`
+`s 22(1): the current payment period` `a month in the payment period in respect of which the application for an allowance is made` MEANS
+    `the payment period in relation to the month containing` `a month in the payment period in respect of which the application for an allowance is made`
+
+-- "income, for the purposes of determining the amount of benefits under this Part that may be paid for a month before
+-- July 1, 1999, means the income calculated as prescribed by section 13"
+-- src:647 | income, for the purposes of determining the amount of benefits under this Part that may be paid for a month before July 1, 1999, means the income calculated as prescribed by section 13; (revenu de l’année civile)
+@ref R.S.C., 1985, c. O-9, s 22(1) "income" (src:647)
+GIVEN month IS A DATE
+      facts IS A `s 13: Income facts`
+GIVETH A MAYBE NUMBER
+`s 22(1): the income for a month before July 1, 1999` month facts MEANS
+    `s 13: the income of a person for a calendar year, for a month before July 1, 1999` month facts
+
+-- "monthly income of a survivor in a current payment period is the amount that equals one-twelfth of their income for
+-- the base calendar year"
+-- src:648 | monthly income of a survivor in a current payment period is the amount that equals one-twelfth of their income for the base calendar year; (revenu mensuel du survivant)
+@ref R.S.C., 1985, c. O-9, s 22(1) "monthly income of a survivor" (src:648)
+GIVEN `the survivor's income for the base calendar year` IS A NUMBER
+GIVETH A NUMBER
+`s 22(1): the monthly income of a survivor` `the survivor's income for the base calendar year` MEANS
+    `the survivor's income for the base calendar year` DIVIDED BY 12
+
+-- "monthly joint income of a pensioner and their spouse or common-law partner in a current payment period is the
+-- amount that equals 1/12 of the total of both of their incomes for the base calendar year; however, for the purpose
+-- of calculating the allowance that may be paid to the pensioner's spouse or common-law partner under subsection (3)
+-- for either of the following periods, it is the amount that equals 1/12 of the income of the spouse or common-law
+-- partner for the base calendar year: (a) the months during which the pensioner is an incarcerated person described
+-- in subsection 5(3), exclusive of the first month of incarceration and the month of release; or (b) if a direction
+-- made under subsection 19(8) in respect of the spouse or common-law partner has not been cancelled under subsection
+-- 19(9), the months, exclusive of the first month, during which the spouse or common-law partner is not living with
+-- the pensioner in a dwelling maintained by one or the other of them"
+-- (a): the month is after the first month of incarceration and before the month of release.
+-- src:650 | (a) the months during which the pensioner is an incarcerated person described in subsection 5(3), exclusive of the first month of incarceration and the month of release; or
+@ref R.S.C., 1985, c. O-9, s 22(1) "monthly joint income" (a) (src:650)
+GIVEN month IS A DATE
+      `the pensioner is an incarcerated person described in subsection 5(3)` IS A BOOLEAN     -- out of range: section 5(3) (piece oa1)
+      `the first month of incarceration` IS A DATE
+      `the month of release` IS A MAYBE DATE
+GIVETH A BOOLEAN
+`s 22(1) "monthly joint income" (a): the month is one in which the pensioner is incarcerated, exclusive of the first month and the month of release` month `the pensioner is an incarcerated person described in subsection 5(3)` `the first month of incarceration` `the month of release` MEANS
+        `the pensioner is an incarcerated person described in subsection 5(3)`
+    AND `the first day of the month containing` month GREATER THAN `the first day of the month containing` `the first month of incarceration`
+    AND CONSIDER `the month of release`
+        WHEN JUST released THEN `the first day of the month containing` month LESS THAN `the first day of the month containing` released
+        WHEN NOTHING THEN TRUE
+
+-- (b): the direction under 19(8) has not been cancelled under 19(9); the months after the first month in which the
+-- spouse or common-law partner is not living with the pensioner in a dwelling maintained by one of them.
+-- src:651 | (b) if a direction made under subsection 19(8) in respect of the spouse or common-law partner has not been cancelled under subsection 19(9), the months, exclusive of the first month, during which the spouse or common-law partner is not living with the pensioner in a dwelling maintained by one or the other of them; (revenu conjoint mensuel)
+@ref R.S.C., 1985, c. O-9, s 22(1) "monthly joint income" (b) (src:651)
+GIVEN month IS A DATE
+      `a direction made under subsection 19(8) in respect of the spouse or common-law partner has not been cancelled under subsection 19(9)` IS A BOOLEAN
+      `the spouse or common-law partner is not living with the pensioner in a dwelling maintained by one or the other of them` IS A BOOLEAN
+      `the first month in which the spouse or common-law partner is not living with the pensioner` IS A DATE
+GIVETH A BOOLEAN
+`s 22(1) "monthly joint income" (b): the month is one in which the spouse or common-law partner is not living with the pensioner, exclusive of the first month` month `a direction made under subsection 19(8) in respect of the spouse or common-law partner has not been cancelled under subsection 19(9)` `the spouse or common-law partner is not living with the pensioner in a dwelling maintained by one or the other of them` `the first month in which the spouse or common-law partner is not living with the pensioner` MEANS
+        `a direction made under subsection 19(8) in respect of the spouse or common-law partner has not been cancelled under subsection 19(9)`
+    AND `the spouse or common-law partner is not living with the pensioner in a dwelling maintained by one or the other of them`
+    AND `the first day of the month containing` month GREATER THAN `the first day of the month containing` `the first month in which the spouse or common-law partner is not living with the pensioner`
+
+-- src:649 | monthly joint income of a pensioner and their spouse or common-law partner in a current payment period is the amount that equals 1/12 of the total of both of their incomes for the base calendar year; however, for the purpose of calculating the allowance that may be paid to the pensioner’s spouse or common-law partner under subsection (3) for either of the following periods, it is the amount that equals 1/12 of the income of the spouse or common-law partner for the base calendar year:
+@ref R.S.C., 1985, c. O-9, s 22(1) "monthly joint income" (src:649)
+GIVEN `the pensioner's income for the base calendar year` IS A NUMBER
+      `the spouse's or common-law partner's income for the base calendar year` IS A NUMBER
+      `the month is one of the months in paragraph (a) or (b) of the definition` IS A BOOLEAN
+GIVETH A NUMBER
+`s 22(1): the monthly joint income` `the pensioner's income for the base calendar year` `the spouse's or common-law partner's income for the base calendar year` `the month is one of the months in paragraph (a) or (b) of the definition` MEANS
+    IF `the month is one of the months in paragraph (a) or (b) of the definition`
+    THEN `the spouse's or common-law partner's income for the base calendar year` DIVIDED BY 12
+    ELSE (`the pensioner's income for the base calendar year` PLUS `the spouse's or common-law partner's income for the base calendar year`) DIVIDED BY 12
+
+-- "pension equivalent means, in respect of any month in a payment quarter, the amount of the full monthly pension
+-- payable for that month under section 7 that has not been increased under subsection 7(5)"
+-- src:652 | pension equivalent means, in respect of any month in a payment quarter, the amount of the full monthly pension payable for that month under section 7 that has not been increased under subsection 7(5); (valeur de la pension)
+@ref R.S.C., 1985, c. O-9, s 22(1) "pension equivalent" (src:652)
+GIVEN `the amount of the full monthly pension payable for the month under section 7 that has not been increased under subsection 7(5)` IS A NUMBER     -- out of range: section 7 (piece oa1)
+GIVETH A NUMBER
+`s 22(1): the pension equivalent` `the amount of the full monthly pension payable for the month under section 7 that has not been increased under subsection 7(5)` MEANS
+    `the amount of the full monthly pension payable for the month under section 7 that has not been increased under subsection 7(5)`
+
+-- "rounded pension equivalent means the pension equivalent rounded to the next higher multiple of three dollars when
+-- the pension equivalent is not a multiple of three dollars"
+-- src:667 | rounded pension equivalent means the pension equivalent rounded to the next higher multiple of three dollars when the pension equivalent is not a multiple of three dollars; (valeur arrondie de la pension)
+@ref R.S.C., 1985, c. O-9, s 22(1) "rounded pension equivalent" (src:667)
+GIVEN `the pension equivalent` IS A NUMBER
+GIVETH A NUMBER
+`s 22(1): the rounded pension equivalent` `the pension equivalent` MEANS
+    `the pension equivalent` `rounded to the next higher multiple of` 3
+
+-- "rounded supplement equivalent means the supplement equivalent rounded to the next higher multiple of one dollar
+-- when the supplement equivalent is not a multiple of one dollar"
+-- src:668 | rounded supplement equivalent means the supplement equivalent rounded to the next higher multiple of one dollar when the supplement equivalent is not a multiple of one dollar; (valeur arrondie du supplément)
+@ref R.S.C., 1985, c. O-9, s 22(1) "rounded supplement equivalent" (src:668)
+GIVEN `the supplement equivalent` IS A NUMBER
+GIVETH A NUMBER
+`s 22(1): the rounded supplement equivalent` `the supplement equivalent` MEANS
+    `the supplement equivalent` `rounded to the next higher multiple of` 1
+
+-- "supplement equivalent means, in respect of any month in a payment quarter, the amount of the supplement that would
+-- be payable for that month under subsection 12(1), (1.1), (1.2), (2), (3) or (4), as the case may be, to a
+-- pensioner whose spouse or common-law partner is also a pensioner when both the pensioner and the spouse or
+-- common-law partner have no income in the base calendar year and both are in receipt of a full pension"
+-- That pensioner is in paragraph 12(1)(b)(ii), with no income to reduce the maximum: the supplement equivalent is the
+-- maximum for that paragraph. For the quarter commencing on April 1, 2005 it is 366.67; later quarters are worked out
+-- by the rules of section 12 for the situation of 12(1)(b)(ii).
+-- src:669 | supplement equivalent means, in respect of any month in a payment quarter, the amount of the supplement that would be payable for that month under subsection 12(1), (1.1), (1.2), (2), (3) or (4), as the case may be, to a pensioner whose spouse or common-law partner is also a pensioner when both the pensioner and the spouse or common-law partner have no income in the base calendar year and both are in receipt of a full pension; (valeur du supplément)
+@ref R.S.C., 1985, c. O-9, s 22(1) "supplement equivalent" (April 1, 2005) (src:669)
+GIVETH A NUMBER
+`s 22(1): the supplement equivalent for the payment quarter commencing on April 1, 2005` MEANS
+    `s 12(1): the maximum supplement for the payment quarter commencing on April 1, 2005` `s 12(1)(b)(ii): a person whose spouse or common-law partner has a pension payable from this month`
+
+@ref R.S.C., 1985, c. O-9, s 22(1) "supplement equivalent" (src:669)
+GIVEN `the first day of the payment quarter` IS A DATE
+      `the supplement equivalent for any month in the three-month period immediately before that payment quarter` IS A NUMBER
+      `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS A MAYBE NUMBER
+GIVETH A MAYBE `oa2 indexation: Outcome of a payment quarter`
+`s 22(1): the supplement equivalent for a payment quarter commencing after June 30, 2005` `the first day of the payment quarter` `the supplement equivalent for any month in the three-month period immediately before that payment quarter` `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` MEANS
+    `s 12(2): the maximum supplement for a payment quarter commencing after June 30, 2005`
+        `the first day of the payment quarter`
+        `s 12(1)(b)(ii): a person whose spouse or common-law partner has a pension payable from this month`
+        `the supplement equivalent for any month in the three-month period immediately before that payment quarter`
+        `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter`
+        `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter`
+        `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`
+
+-- "supplement equivalent for the survivor means, in respect of any month in a payment quarter, the amount
+-- determined under subsection (4.1), (4.2), (4.3) or (4.4), as the case may be": see subsections (4.1) to (4.4) below.
+
+-- "residual income of the survivor for a month in a current payment period means the amount determined by the formula
+-- A - B where A is the monthly income of the survivor in the current payment period, and B is the product (a)
+-- obtained by multiplying four-thirds of the rounded pension equivalent by the survivor's special qualifying factor
+-- for the month, and (b) rounded, where that product is not a multiple of four dollars, to the next higher multiple
+-- of four dollars"
+-- src:653 | residual income of the survivor for a month in a current payment period means the amount determined by the formula
+-- src:654 | A - B
+-- src:655 | where
+-- src:656 | A is the monthly income of the survivor in the current payment period, and
+-- src:657 | B is the product
+-- src:658 | (a) obtained by multiplying four-thirds of the rounded pension equivalent by the survivor’s special qualifying factor for the month, and
+-- src:659 | (b) rounded, where that product is not a multiple of four dollars, to the next higher multiple of four dollars; (revenu résiduel du survivant)
+@ref R.S.C., 1985, c. O-9, s 22(1) "residual income of the survivor" (src:653-659)
+GIVEN `the monthly income of the survivor in the current payment period` IS A NUMBER
+      `the rounded pension equivalent` IS A NUMBER
+      `the survivor's special qualifying factor for the month` IS A NUMBER
+GIVETH A NUMBER
+`s 22(1): the residual income of the survivor` `the monthly income of the survivor in the current payment period` `the rounded pension equivalent` `the survivor's special qualifying factor for the month` MEANS
+    `the monthly income of the survivor in the current payment period` MINUS ((((4 DIVIDED BY 3) TIMES `the rounded pension equivalent`) TIMES `the survivor's special qualifying factor for the month`) `rounded to the next higher multiple of` 4)
+
+-- "residual joint income of a pensioner and the pensioner's spouse or common-law partner for a month in a current
+-- payment period means the amount determined by the formula A - B where A is the monthly joint income [...] and B is
+-- the product (a) obtained by multiplying four-thirds of the rounded pension equivalent by the spouse's or
+-- common-law partner's special qualifying factor for the month, and (b) rounded, where that product is not a
+-- multiple of four dollars, to the next higher multiple of four dollars"
+-- src:660 | residual joint income of a pensioner and the pensioner’s spouse or common-law partner for a month in a current payment period means the amount determined by the formula
+-- src:661 | A - B
+-- src:662 | where
+-- src:663 | A is the monthly joint income of the pensioner and the pensioner’s spouse or common-law partner in the current payment period, and
+-- src:664 | B is the product
+-- src:665 | (a) obtained by multiplying four-thirds of the rounded pension equivalent by the spouse’s or common-law partner’s special qualifying factor for the month, and
+-- src:666 | (b) rounded, where that product is not a multiple of four dollars, to the next higher multiple of four dollars; (revenu conjoint résiduel)
+@ref R.S.C., 1985, c. O-9, s 22(1) "residual joint income" (src:660-666)
+GIVEN `the monthly joint income of the pensioner and the pensioner's spouse or common-law partner in the current payment period` IS A NUMBER
+      `the rounded pension equivalent` IS A NUMBER
+      `the spouse's or common-law partner's special qualifying factor for the month` IS A NUMBER
+GIVETH A NUMBER
+`s 22(1): the residual joint income` `the monthly joint income of the pensioner and the pensioner's spouse or common-law partner in the current payment period` `the rounded pension equivalent` `the spouse's or common-law partner's special qualifying factor for the month` MEANS
+    `the monthly joint income of the pensioner and the pensioner's spouse or common-law partner in the current payment period` MINUS ((((4 DIVIDED BY 3) TIMES `the rounded pension equivalent`) TIMES `the spouse's or common-law partner's special qualifying factor for the month`) `rounded to the next higher multiple of` 4)
+
+§§ `Effect on the supplement of the pensioner, subsection 22(2)`
+
+-- (2) "Where, under this Part, an application has been made and approved or the requirement for an application has
+-- been waived in respect of the spouse or common-law partner of a pensioner for any month in a payment quarter, the
+-- amount of the supplement that may be paid for that month to the pensioner, in lieu of the amount of the supplement
+-- provided under Part II for that month, is the amount determined by the formula [(A - B) x C] - D/4 where A is the
+-- total of the supplement equivalent in respect of that month and the amount of the full monthly pension for that
+-- month; B is the pensioner's monthly pension for that month; C is the pensioner's special qualifying factor for that
+-- month; and D is the residual joint income of the pensioner and the spouse or common-law partner for that month
+-- rounded, where that income is not a multiple of four dollars, to the next lower multiple of four dollars."
+-- src:672 | (2) Where, under this Part, an application has been made and approved or the requirement for an application has been waived in respect of the spouse or common-law partner of a pensioner for any month in a payment quarter, the amount of the supplement that may be paid for that month to the pensioner, in lieu of the amount of the supplement provided under Part II for that month, is the amount determined by the formula
+@ref R.S.C., 1985, c. O-9, s 22(2) condition (src:672)
+GIVEN `an application has been made and approved under this Part in respect of the spouse or common-law partner of the pensioner for the month` IS A BOOLEAN
+      `the requirement for an application has been waived under this Part in respect of the spouse or common-law partner of the pensioner for the month` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 22(2): the supplement under this subsection is payable in lieu of the supplement under Part II` `an application has been made and approved under this Part in respect of the spouse or common-law partner of the pensioner for the month` `the requirement for an application has been waived under this Part in respect of the spouse or common-law partner of the pensioner for the month` MEANS
+    `an application has been made and approved under this Part in respect of the spouse or common-law partner of the pensioner for the month` OR `the requirement for an application has been waived under this Part in respect of the spouse or common-law partner of the pensioner for the month`
+
+-- src:672 | (2) Where, under this Part, an application has been made and approved or the requirement for an application has been waived in respect of the spouse or common-law partner of a pensioner for any month in a payment quarter, the amount of the supplement that may be paid for that month to the pensioner, in lieu of the amount of the supplement provided under Part II for that month, is the amount determined by the formula
+-- src:673 | [(A - B) × C] - D/4
+-- src:674 | where
+-- src:675 | A is the total of the supplement equivalent in respect of that month and the amount of the full monthly pension for that month;
+-- src:676 | B is the pensioner’s monthly pension for that month;
+-- src:677 | C is the pensioner’s special qualifying factor for that month; and
+-- src:678 | D is the residual joint income of the pensioner and the spouse or common-law partner for that month rounded, where that income is not a multiple of four dollars, to the next lower multiple of four dollars.
+@ref R.S.C., 1985, c. O-9, s 22(2) formula (src:672-678)
+GIVEN month IS A DATE
+      `the supplement equivalent in respect of the month` IS A NUMBER
+      `the amount calculated in accordance with section 7, before any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the amount after any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the pensioner's monthly pension before any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the pensioner's monthly pension after any increase under subsection 7.1(1) or (2)` IS A NUMBER     -- out of range: sections 7 and 7.1 (piece oa1)
+      `the pensioner's special qualification facts` IS A `Special qualification facts`
+      `the residual joint income of the pensioner and the spouse or common-law partner for the month` IS A NUMBER
+GIVETH A NUMBER
+`s 22(2): the amount determined by the formula` month `the supplement equivalent in respect of the month` `the amount calculated in accordance with section 7, before any increase under subsection 7.1(1) or (2)` `the amount after any increase under subsection 7.1(1) or (2)` `the pensioner's monthly pension before any increase under subsection 7.1(1) or (2)` `the pensioner's monthly pension after any increase under subsection 7.1(1) or (2)` `the pensioner's special qualification facts` `the residual joint income of the pensioner and the spouse or common-law partner for the month` MEANS
+    ((partA MINUS partB) TIMES partC) MINUS (partD DIVIDED BY 4)
+    WHERE
+        partA MEANS `the supplement equivalent in respect of the month` PLUS `the amount of a full monthly pension` `the amount calculated in accordance with section 7, before any increase under subsection 7.1(1) or (2)` `the amount after any increase under subsection 7.1(1) or (2)`
+        partB MEANS `the pensioner's monthly pension in subsections 12(5) and 22(2)` `the pensioner's monthly pension before any increase under subsection 7.1(1) or (2)` `the pensioner's monthly pension after any increase under subsection 7.1(1) or (2)`
+        partC MEANS `the special qualifying factor of a person for the month containing` month `the pensioner's special qualification facts`
+        partD MEANS `the residual joint income of the pensioner and the spouse or common-law partner for the month` `rounded to the next lower multiple of` 4
+
+-- The supplement that "may be paid" is not a negative sum: where the formula comes out below nothing, nothing may be
+-- paid (fork F-12-2, as for section 12(5)).
+@ref R.S.C., 1985, c. O-9, s 22(2) (src:672-678)
+GIVEN formula IS A NUMBER
+GIVETH A NUMBER
+`s 22(2): the amount of the supplement that may be paid, given the formula` formula MEANS
+    max 0 formula
+
+-- (2.1) "No supplement under subsection (2) may be paid to an incarcerated person described in subsection 5(3) for any
+-- month for which no pension may be paid."
+-- src:680 | (2.1) No supplement under subsection (2) may be paid to an incarcerated person described in subsection 5(3) for any month for which no pension may be paid.
+@ref R.S.C., 1985, c. O-9, s 22(2.1) (src:680)
+GIVEN `the pensioner is an incarcerated person described in subsection 5(3)` IS A BOOLEAN     -- out of range: section 5(3) (piece oa1)
+      `no pension may be paid to the pensioner for the month` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 22(2.1): a supplement under subsection 22(2) may not be paid` `the pensioner is an incarcerated person described in subsection 5(3)` `no pension may be paid to the pensioner for the month` MEANS
+    `the pensioner is an incarcerated person described in subsection 5(3)` AND `no pension may be paid to the pensioner for the month`
+
+§§ `Allowance to the spouse or common-law partner of a pensioner, subsection 22(3)`
+
+-- The product used by the branches: "(i) obtained by multiplying four-thirds of the rounded pension equivalent in
+-- respect of the month by the spouse's or common-law partner's special qualifying factor for the month, and (ii)
+-- rounded, where that product is not a multiple of four dollars, to the next higher multiple of four dollars".
+-- src:686 | (b) where the monthly joint income of the pensioner and spouse or common-law partner in the current payment period is equal to or less than the product
+-- src:687 | (i) obtained by multiplying four-thirds of the rounded pension equivalent in respect of the month by the spouse’s or common-law partner’s special qualifying factor for the month, and
+-- src:688 | (ii) rounded, where that product is not a multiple of four dollars, to the next higher multiple of four dollars,
+@ref R.S.C., 1985, c. O-9, s 22(3)(b)(i), (ii) (src:686-688)
+GIVEN `the rounded pension equivalent` IS A NUMBER
+      `the spouse's or common-law partner's special qualifying factor for the month` IS A NUMBER
+GIVETH A NUMBER
+`s 22(3)(b): the product against which the monthly joint income is measured` `the rounded pension equivalent` `the spouse's or common-law partner's special qualifying factor for the month` MEANS
+    (((4 DIVIDED BY 3) TIMES `the rounded pension equivalent`) TIMES `the spouse's or common-law partner's special qualifying factor for the month`) `rounded to the next higher multiple of` 4
+
+-- (a) "where there is no monthly joint income of the pensioner and spouse or common-law partner in the current
+-- payment period, the total of (i) the product obtained by multiplying the pension equivalent in respect of the month
+-- by the spouse's or common-law partner's special qualifying factor for the month, and (ii) the product obtained by
+-- multiplying the supplement equivalent in respect of the month by the spouse's or common-law partner's special
+-- qualifying factor for the month"
+-- src:683 | (a) where there is no monthly joint income of the pensioner and spouse or common-law partner in the current payment period, the total of
+-- src:684 | (i) the product obtained by multiplying the pension equivalent in respect of the month by the spouse’s or common-law partner’s special qualifying factor for the month, and
+-- src:685 | (ii) the product obtained by multiplying the supplement equivalent in respect of the month by the spouse’s or common-law partner’s special qualifying factor for the month;
+@ref R.S.C., 1985, c. O-9, s 22(3)(a) (src:683-685)
+GIVEN `the pension equivalent in respect of the month` IS A NUMBER
+      `the supplement equivalent in respect of the month` IS A NUMBER
+      `the spouse's or common-law partner's special qualifying factor for the month` IS A NUMBER
+GIVETH A NUMBER
+`s 22(3)(a): the amount of the allowance` `the pension equivalent in respect of the month` `the supplement equivalent in respect of the month` `the spouse's or common-law partner's special qualifying factor for the month` MEANS
+        `the pension equivalent in respect of the month` TIMES `the spouse's or common-law partner's special qualifying factor for the month`
+    PLUS `the supplement equivalent in respect of the month` TIMES `the spouse's or common-law partner's special qualifying factor for the month`
+
+-- (b) "where the monthly joint income [...] is equal to or less than the product [...] the amount determined by the
+-- formula (A x B) + C where A is the supplement equivalent in respect of the month, B is the spouse's or common-law
+-- partner's special qualifying factor for the month, and C is the greater of zero and the amount determined by the
+-- formula (D x B) - 3/4 E where B is [the same factor], D is the pension equivalent in respect of the month, and E is
+-- the monthly joint income [...] rounded, where that income is not a multiple of four dollars, to the next lower
+-- multiple of four dollars"
+-- src:689 | the amount determined by the formula
+-- src:690 | (A × B) + C
+-- src:691 | where
+-- src:692 | A is the supplement equivalent in respect of the month,
+-- src:693 | B is the spouse’s or common-law partner’s special qualifying factor for the month, and
+-- src:694 | C is the greater of zero and the amount determined by the formula
+-- src:695 | (D × B) - 3/4 E
+-- src:696 | where
+-- src:697 | B is the spouse’s or common-law partner’s special qualifying factor for the month,
+-- src:698 | D is the pension equivalent in respect of the month, and
+-- src:699 | E is the monthly joint income of the pensioner and the spouse or common-law partner in the current payment period rounded, where that income is not a multiple of four dollars, to the next lower multiple of four dollars; and
+@ref R.S.C., 1985, c. O-9, s 22(3)(b) (src:689-699)
+GIVEN `the pension equivalent in respect of the month` IS A NUMBER
+      `the supplement equivalent in respect of the month` IS A NUMBER
+      `the spouse's or common-law partner's special qualifying factor for the month` IS A NUMBER
+      `the monthly joint income of the pensioner and the spouse or common-law partner in the current payment period` IS A NUMBER
+GIVETH A NUMBER
+`s 22(3)(b): the amount of the allowance` `the pension equivalent in respect of the month` `the supplement equivalent in respect of the month` `the spouse's or common-law partner's special qualifying factor for the month` `the monthly joint income of the pensioner and the spouse or common-law partner in the current payment period` MEANS
+    (partA TIMES partB) PLUS partC
+    WHERE
+        partA MEANS `the supplement equivalent in respect of the month`
+        partB MEANS `the spouse's or common-law partner's special qualifying factor for the month`
+        partC MEANS max 0 ((partD TIMES partB) MINUS ((3 DIVIDED BY 4) TIMES partE))
+        partD MEANS `the pension equivalent in respect of the month`
+        partE MEANS `the monthly joint income of the pensioner and the spouse or common-law partner in the current payment period` `rounded to the next lower multiple of` 4
+
+-- (c) "where the monthly joint income [...] is more than the product [...] the amount determined by the formula
+-- (A x B) - C/4 where A is the supplement equivalent in respect of the month, B is the spouse's or common-law
+-- partner's special qualifying factor for the month, and C is the residual joint income of the pensioner and spouse or
+-- common-law partner for that month rounded, where that income is not a multiple of four dollars, to the next lower
+-- multiple of four dollars"
+-- src:700 | (c) where the monthly joint income of the pensioner and spouse or common-law partner in the current payment period is more than the product
+-- src:701 | (i) obtained by multiplying four-thirds of the rounded pension equivalent in respect of the month by the spouse’s or common-law partner’s special qualifying factor for the month, and
+-- src:702 | (ii) rounded, where that product is not a multiple of four dollars, to the next higher multiple of four dollars,
+-- src:703 | the amount determined by the formula
+-- src:704 | (A × B) - C/4
+-- src:705 | where
+-- src:706 | A is the supplement equivalent in respect of the month,
+-- src:707 | B is the spouse’s or common-law partner’s special qualifying factor for the month, and
+-- src:708 | C is the residual joint income of the pensioner and spouse or common-law partner for that month rounded, where that income is not a multiple of four dollars, to the next lower multiple of four dollars.
+@ref R.S.C., 1985, c. O-9, s 22(3)(c) (src:700-708)
+GIVEN `the supplement equivalent in respect of the month` IS A NUMBER
+      `the spouse's or common-law partner's special qualifying factor for the month` IS A NUMBER
+      `the residual joint income of the pensioner and the spouse or common-law partner for the month` IS A NUMBER
+GIVETH A NUMBER
+`s 22(3)(c): the amount of the allowance` `the supplement equivalent in respect of the month` `the spouse's or common-law partner's special qualifying factor for the month` `the residual joint income of the pensioner and the spouse or common-law partner for the month` MEANS
+    (`the supplement equivalent in respect of the month` TIMES `the spouse's or common-law partner's special qualifying factor for the month`)
+    MINUS ((`the residual joint income of the pensioner and the spouse or common-law partner for the month` `rounded to the next lower multiple of` 4) DIVIDED BY 4)
+
+-- (3) The branch that fits. "where there is no monthly joint income" is read as a joint income of nothing; paragraph
+-- (b) at a joint income of nothing gives the same amount as (a), so nothing turns on it (finding, asserted in the
+-- tests). (b) is "equal to or less than" and (c) "more than" the product: there is no gap.
+-- src:682 | (3) The amount of the allowance that may be paid under section 19 for any month in a payment quarter to the spouse or common-law partner of a pensioner is
+@ref R.S.C., 1985, c. O-9, s 22(3) lead-in (src:682)
+GIVEN `the pension equivalent in respect of the month` IS A NUMBER
+      `the supplement equivalent in respect of the month` IS A NUMBER
+      `the spouse's or common-law partner's special qualifying factor for the month` IS A NUMBER
+      `the monthly joint income of the pensioner and the spouse or common-law partner in the current payment period` IS A NUMBER
+GIVETH A NUMBER
+`s 22(3): the amount of the allowance that may be paid to the spouse or common-law partner of a pensioner` `the pension equivalent in respect of the month` `the supplement equivalent in respect of the month` `the spouse's or common-law partner's special qualifying factor for the month` `the monthly joint income of the pensioner and the spouse or common-law partner in the current payment period` MEANS
+    max 0 chosen
+    WHERE
+        roundedPension MEANS `s 22(1): the rounded pension equivalent` `the pension equivalent in respect of the month`
+        threshold MEANS `s 22(3)(b): the product against which the monthly joint income is measured` roundedPension `the spouse's or common-law partner's special qualifying factor for the month`
+        residual MEANS `s 22(1): the residual joint income` `the monthly joint income of the pensioner and the spouse or common-law partner in the current payment period` roundedPension `the spouse's or common-law partner's special qualifying factor for the month`
+        chosen MEANS
+            BRANCH
+                IF `the monthly joint income of the pensioner and the spouse or common-law partner in the current payment period` EQUALS 0
+                THEN `s 22(3)(a): the amount of the allowance` `the pension equivalent in respect of the month` `the supplement equivalent in respect of the month` `the spouse's or common-law partner's special qualifying factor for the month`
+                IF `the monthly joint income of the pensioner and the spouse or common-law partner in the current payment period` AT MOST threshold
+                THEN `s 22(3)(b): the amount of the allowance` `the pension equivalent in respect of the month` `the supplement equivalent in respect of the month` `the spouse's or common-law partner's special qualifying factor for the month` `the monthly joint income of the pensioner and the spouse or common-law partner in the current payment period`
+                OTHERWISE `s 22(3)(c): the amount of the allowance` `the supplement equivalent in respect of the month` `the spouse's or common-law partner's special qualifying factor for the month` residual
+
+§§ `Allowance to a survivor, subsections 22(4) to 22(4.4)`
+
+-- (4.1) "The amount of the supplement equivalent for the survivor is (a) four hundred and fifty-four dollars and nine
+-- cents, for any month in the payment quarter commencing on April 1, 2005; (b) the amount of the supplement equivalent
+-- for the survivor that would otherwise be payable plus eighteen dollars, for any month in the payment quarter
+-- commencing on January 1, 2006; and (c) [the same] for any month in the payment quarter commencing on January 1, 2007."
+-- src:739 | (a) four hundred and fifty-four dollars and nine cents, for any month in the payment quarter commencing on April 1, 2005;
+@ref R.S.C., 1985, c. O-9, s 22(4.1)(a) (src:739)
+GIVETH A NUMBER
+`s 22(4.1)(a): the supplement equivalent for the survivor for the payment quarter commencing on April 1, 2005` MEANS 454.09
+
+-- src:740 | (b) the amount of the supplement equivalent for the survivor that would otherwise be payable plus eighteen dollars, for any month in the payment quarter commencing on January 1, 2006; and
+-- src:741 | (c) the amount of the supplement equivalent for the survivor that would otherwise be payable plus eighteen dollars, for any month in the payment quarter commencing on January 1, 2007.
+@ref R.S.C., 1985, c. O-9, s 22(4.1)(b), (c) (src:740-741)
+GIVEN `the first day of the payment quarter` IS A DATE
+GIVETH A NUMBER
+`s 22(4.1): the increase for the payment quarters commencing on January 1, 2006 and January 1, 2007` `the first day of the payment quarter` MEANS
+    IF `the first day of the payment quarter` EQUALS (YMD 2006 1 1) OR `the first day of the payment quarter` EQUALS (YMD 2007 1 1)
+    THEN 18
+    ELSE 0
+
+-- (4.2), (4.3), (4.4) "for any month in a payment quarter commencing after June 30, 2005 [...] the amount obtained by
+-- multiplying (a) the amount of the supplement equivalent for the survivor for any month in the three-month period
+-- immediately before that payment quarter by (b) the ratio that the Consumer Price Index for the first adjustment
+-- quarter [...] bears to the Consumer Price Index for the second adjustment quarter"; not less than the amount for the
+-- previous quarter; no adjustment after a fall until the index recovers, the earlier second index then being deemed
+-- the second index. The fixed increases of (4.1)(b) and (c) are added for those two quarters.
+-- src:743 | (4.2) Subject to paragraphs (4.1)(b) and (c), the amount of the supplement equivalent for the survivor for any month in a payment quarter commencing after June 30, 2005 is the amount obtained by multiplying
+-- src:744 | (a) the amount of the supplement equivalent for the survivor for any month in the three-month period immediately before that payment quarter
+-- src:745 | by
+-- src:746 | (b) the ratio that the Consumer Price Index for the first adjustment quarter that relates to that payment quarter bears to the Consumer Price Index for the second adjustment quarter that relates to that payment quarter.
+-- src:747 | No decrease
+-- src:748 | (4.3) Despite subsection (4.2), the amount of the supplement equivalent for the survivor for any month in a payment quarter may not be less than the amount of the supplement equivalent for the survivor for any month in the three-month period immediately before that payment quarter.
+-- src:749 | Reduction in Consumer Price Index
+-- src:750 | (4.4) If, in relation to any payment quarter, the Consumer Price Index for the first adjustment quarter is lower than the Consumer Price Index for the second adjustment quarter,
+-- src:751 | (a) no adjustment of the supplement equivalent for the survivor is to be made under subsection (4.2) in respect of that payment quarter; and
+-- src:752 | (b) no adjustment of the supplement equivalent for the survivor is to be made under that subsection in respect of any subsequent payment quarter until, in relation to a subsequent payment quarter, the Consumer Price Index for the first adjustment quarter that relates to that subsequent payment quarter is higher than the Consumer Price Index for the second adjustment quarter that relates to the payment quarter referred to in paragraph (a), in which case the second adjustment quarter that relates to the payment quarter referred to in that paragraph is deemed to be the second adjustment quarter that relates to that subsequent payment quarter.
+@ref R.S.C., 1985, c. O-9, s 22(4.2), s 22(4.3), s 22(4.4) (src:743-752)
+@ref R.S.C., 1985, c. O-9, s 22(4.1)(b), s 22(4.1)(c) (src:740-741)
+GIVEN `the first day of the payment quarter` IS A DATE
+      `the supplement equivalent for the survivor for any month in the three-month period immediately before that payment quarter` IS A NUMBER
+      `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS A MAYBE NUMBER
+GIVETH A MAYBE `oa2 indexation: Outcome of a payment quarter`
+`s 22(4.2): the supplement equivalent for the survivor for a payment quarter commencing after June 30, 2005` `the first day of the payment quarter` `the supplement equivalent for the survivor for any month in the three-month period immediately before that payment quarter` `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` MEANS
+    IF `the first day of the payment quarter` AT MOST (YMD 2005 6 30)
+    THEN NOTHING
+    ELSE JUST (`oa2 indexation: Outcome of a payment quarter` WITH
+                   `the amount for the payment quarter` IS indexed's `the amount for the payment quarter` PLUS `s 22(4.1): the increase for the payment quarters commencing on January 1, 2006 and January 1, 2007` `the first day of the payment quarter`
+                   `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS indexed's `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`)
+    WHERE
+        indexed MEANS
+            `oa2 indexation: the outcome for a payment quarter`
+                `the supplement equivalent for the survivor for any month in the three-month period immediately before that payment quarter`
+                `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter`
+                `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter`
+                `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`
+
+-- (4)(b) The branches for the survivor: "(b) where the monthly income of the survivor in the current payment period is
+-- equal to or less than the product (i) obtained by multiplying four-thirds of the rounded pension equivalent in
+-- respect of the month by the survivor's special qualifying factor for the month, and (ii) rounded [...] to the next
+-- higher multiple of four dollars".
+-- src:714 | (b) where the monthly income of the survivor in the current payment period is equal to or less than the product
+-- src:715 | (i) obtained by multiplying four-thirds of the rounded pension equivalent in respect of the month by the survivor’s special qualifying factor for the month, and
+-- src:716 | (ii) rounded, where that product is not a multiple of four dollars, to the next higher multiple of four dollars,
+@ref R.S.C., 1985, c. O-9, s 22(4)(b)(i), (ii) (src:714-716)
+GIVEN `the rounded pension equivalent` IS A NUMBER
+      `the survivor's special qualifying factor for the month` IS A NUMBER
+GIVETH A NUMBER
+`s 22(4)(b): the product against which the monthly income of the survivor is measured` `the rounded pension equivalent` `the survivor's special qualifying factor for the month` MEANS
+    (((4 DIVIDED BY 3) TIMES `the rounded pension equivalent`) TIMES `the survivor's special qualifying factor for the month`) `rounded to the next higher multiple of` 4
+
+-- (4)(a) "where there is no monthly income of the survivor in the current payment period, the total of (i) the product
+-- obtained by multiplying the pension equivalent of the survivor in respect of the month by the survivor's special
+-- qualifying factor for the month, and (ii) the product obtained by multiplying the supplement equivalent for the
+-- survivor in respect of the month by the survivor's special qualifying factor for the month"
+-- src:711 | (a) where there is no monthly income of the survivor in the current payment period, the total of
+-- src:712 | (i) the product obtained by multiplying the pension equivalent of the survivor in respect of the month by the survivor’s special qualifying factor for the month, and
+-- src:713 | (ii) the product obtained by multiplying the supplement equivalent for the survivor in respect of the month by the survivor’s special qualifying factor for the month;
+@ref R.S.C., 1985, c. O-9, s 22(4)(a) (src:711-713)
+GIVEN `the pension equivalent in respect of the month` IS A NUMBER
+      `the supplement equivalent for the survivor in respect of the month` IS A NUMBER
+      `the survivor's special qualifying factor for the month` IS A NUMBER
+GIVETH A NUMBER
+`s 22(4)(a): the amount of the allowance` `the pension equivalent in respect of the month` `the supplement equivalent for the survivor in respect of the month` `the survivor's special qualifying factor for the month` MEANS
+        `the pension equivalent in respect of the month` TIMES `the survivor's special qualifying factor for the month`
+    PLUS `the supplement equivalent for the survivor in respect of the month` TIMES `the survivor's special qualifying factor for the month`
+
+-- (4)(b) "the amount determined by the formula (A x B) + C where A is the supplement equivalent for the survivor in
+-- respect of the month, B is the survivor's special qualifying factor for the month, and C is the greater of zero
+-- and the amount determined by the formula (D x B) - 3/4 E where [...] D is the pension equivalent in respect of the
+-- month, and E is the monthly income of the survivor in the current payment period rounded, where that income is not
+-- a multiple of four dollars, to the next lower multiple of four dollars"
+-- src:717 | the amount determined by the formula
+-- src:718 | (A × B) + C
+-- src:719 | where
+-- src:720 | A is the supplement equivalent for the survivor in respect of the month,
+-- src:721 | B is the survivor’s special qualifying factor for the month, and
+-- src:722 | C is the greater of zero and the amount determined by the formula
+-- src:723 | (D × B) - 3/4 E
+-- src:724 | where
+-- src:725 | B is the survivor’s special qualifying factor for the month,
+-- src:726 | D is the pension equivalent in respect of the month, and
+-- src:727 | E is the monthly income of the survivor in the current payment period rounded, where that income is not a multiple of four dollars, to the next lower multiple of four dollars; and
+@ref R.S.C., 1985, c. O-9, s 22(4)(b) (src:717-727)
+GIVEN `the pension equivalent in respect of the month` IS A NUMBER
+      `the supplement equivalent for the survivor in respect of the month` IS A NUMBER
+      `the survivor's special qualifying factor for the month` IS A NUMBER
+      `the monthly income of the survivor in the current payment period` IS A NUMBER
+GIVETH A NUMBER
+`s 22(4)(b): the amount of the allowance` `the pension equivalent in respect of the month` `the supplement equivalent for the survivor in respect of the month` `the survivor's special qualifying factor for the month` `the monthly income of the survivor in the current payment period` MEANS
+    (partA TIMES partB) PLUS partC
+    WHERE
+        partA MEANS `the supplement equivalent for the survivor in respect of the month`
+        partB MEANS `the survivor's special qualifying factor for the month`
+        partC MEANS max 0 ((partD TIMES partB) MINUS ((3 DIVIDED BY 4) TIMES partE))
+        partD MEANS `the pension equivalent in respect of the month`
+        partE MEANS `the monthly income of the survivor in the current payment period` `rounded to the next lower multiple of` 4
+
+-- (4)(c) "the amount determined by the formula (A x B) - C/2 where [...] C is the residual income of the survivor in
+-- respect of the month rounded, where that residual income is not a multiple of two dollars, to the next lower
+-- multiple of two dollars"
+-- src:728 | (c) where the monthly income of the survivor in the current payment period is more than the product
+-- src:729 | (i) obtained by multiplying four-thirds of the rounded pension equivalent in respect of the month by the survivor’s special qualifying factor for the month, and
+-- src:730 | (ii) rounded, where that product is not a multiple of four dollars, to the next higher multiple of four dollars,
+-- src:731 | the amount determined by the formula
+-- src:732 | (A × B) - C/2
+-- src:733 | where
+-- src:734 | A is the supplement equivalent for the survivor in respect of the month,
+-- src:735 | B is the survivor’s special qualifying factor for the month, and
+-- src:736 | C is the residual income of the survivor in respect of the month rounded, where that residual income is not a multiple of two dollars, to the next lower multiple of two dollars.
+@ref R.S.C., 1985, c. O-9, s 22(4)(c) (src:728-736)
+GIVEN `the supplement equivalent for the survivor in respect of the month` IS A NUMBER
+      `the survivor's special qualifying factor for the month` IS A NUMBER
+      `the residual income of the survivor in respect of the month` IS A NUMBER
+GIVETH A NUMBER
+`s 22(4)(c): the amount of the allowance` `the supplement equivalent for the survivor in respect of the month` `the survivor's special qualifying factor for the month` `the residual income of the survivor in respect of the month` MEANS
+    (`the supplement equivalent for the survivor in respect of the month` TIMES `the survivor's special qualifying factor for the month`)
+    MINUS ((`the residual income of the survivor in respect of the month` `rounded to the next lower multiple of` 2) DIVIDED BY 2)
+
+-- (4) The branch that fits (see (3) above).
+-- src:710 | (4) The amount of the allowance that may be paid under section 21 for any month in a payment quarter to a survivor is
+@ref R.S.C., 1985, c. O-9, s 22(4) lead-in (src:710)
+GIVEN `the pension equivalent in respect of the month` IS A NUMBER
+      `the supplement equivalent for the survivor in respect of the month` IS A NUMBER
+      `the survivor's special qualifying factor for the month` IS A NUMBER
+      `the monthly income of the survivor in the current payment period` IS A NUMBER
+GIVETH A NUMBER
+`s 22(4): the amount of the allowance that may be paid to a survivor` `the pension equivalent in respect of the month` `the supplement equivalent for the survivor in respect of the month` `the survivor's special qualifying factor for the month` `the monthly income of the survivor in the current payment period` MEANS
+    max 0 chosen
+    WHERE
+        roundedPension MEANS `s 22(1): the rounded pension equivalent` `the pension equivalent in respect of the month`
+        threshold MEANS `s 22(4)(b): the product against which the monthly income of the survivor is measured` roundedPension `the survivor's special qualifying factor for the month`
+        residual MEANS `s 22(1): the residual income of the survivor` `the monthly income of the survivor in the current payment period` roundedPension `the survivor's special qualifying factor for the month`
+        chosen MEANS
+            BRANCH
+                IF `the monthly income of the survivor in the current payment period` EQUALS 0
+                THEN `s 22(4)(a): the amount of the allowance` `the pension equivalent in respect of the month` `the supplement equivalent for the survivor in respect of the month` `the survivor's special qualifying factor for the month`
+                IF `the monthly income of the survivor in the current payment period` AT MOST threshold
+                THEN `s 22(4)(b): the amount of the allowance` `the pension equivalent in respect of the month` `the supplement equivalent for the survivor in respect of the month` `the survivor's special qualifying factor for the month` `the monthly income of the survivor in the current payment period`
+                OTHERWISE `s 22(4)(c): the amount of the allowance` `the supplement equivalent for the survivor in respect of the month` `the survivor's special qualifying factor for the month` residual
+
+§§ `Reinstatement of the supplement, subsections 22(5) to 22(7)`
+
+-- (5) "Where the allowance payable to the spouse or common-law partner of a pensioner under this Part is suspended or
+-- terminated for any month, the pensioner may, notwithstanding subsection (2), be paid, for that month, the amount of
+-- supplement provided under Part II."
+-- src:754 | (5) Where the allowance payable to the spouse or common-law partner of a pensioner under this Part is suspended or terminated for any month, the pensioner may, notwithstanding subsection (2), be paid, for that month, the amount of supplement provided under Part II.
+@ref R.S.C., 1985, c. O-9, s 22(5) (src:754)
+GIVEN `the allowance payable to the spouse or common-law partner of the pensioner under this Part is suspended for the month` IS A BOOLEAN
+      `the allowance payable to the spouse or common-law partner of the pensioner under this Part is terminated for the month` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 22(5): the pensioner may be paid the amount of supplement provided under Part II for the month` `the allowance payable to the spouse or common-law partner of the pensioner under this Part is suspended for the month` `the allowance payable to the spouse or common-law partner of the pensioner under this Part is terminated for the month` MEANS
+    `the allowance payable to the spouse or common-law partner of the pensioner under this Part is suspended for the month` OR `the allowance payable to the spouse or common-law partner of the pensioner under this Part is terminated for the month`
+
+-- (6) "Where, by reason of the amount of the monthly joint income, the aggregate of the amount of allowance payable to
+-- a pensioner's spouse or common-law partner for a month and the amount of supplement payable to the pensioner for
+-- that month under this Part is less than the amount of supplement that would be payable to the pensioner under Part
+-- II, the pensioner may, notwithstanding subsection (2), be paid, for that month, the amount of supplement provided
+-- under Part II minus the amount, if any, of allowance payable to that pensioner's spouse or common-law partner for
+-- that month."
+-- src:756 | (6) Where, by reason of the amount of the monthly joint income, the aggregate of the amount of allowance payable to a pensioner’s spouse or common-law partner for a month and the amount of supplement payable to the pensioner for that month under this Part is less than the amount of supplement that would be payable to the pensioner under Part II, the pensioner may, notwithstanding subsection (2), be paid, for that month, the amount of supplement provided under Part II minus the amount, if any, of allowance payable to that pensioner’s spouse or common-law partner for that month.
+@ref R.S.C., 1985, c. O-9, s 22(6) (src:756)
+GIVEN `the amount of allowance payable to the pensioner's spouse or common-law partner for the month` IS A NUMBER
+      `the amount of supplement payable to the pensioner for the month under this Part` IS A NUMBER
+      `the amount of supplement that would be payable to the pensioner under Part II for the month` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 22(6): the amount of supplement the pensioner may be paid for the month` `the amount of allowance payable to the pensioner's spouse or common-law partner for the month` `the amount of supplement payable to the pensioner for the month under this Part` `the amount of supplement that would be payable to the pensioner under Part II for the month` MEANS
+    IF `the amount of allowance payable to the pensioner's spouse or common-law partner for the month` PLUS `the amount of supplement payable to the pensioner for the month under this Part` LESS THAN `the amount of supplement that would be payable to the pensioner under Part II for the month`
+    THEN JUST (`the amount of supplement that would be payable to the pensioner under Part II for the month` MINUS `the amount of allowance payable to the pensioner's spouse or common-law partner for the month`)
+    ELSE NOTHING
+
+-- (7) "For the purposes of subsections (5) and (6), an application made and approved under this Part shall be deemed
+-- to have been made and approved under Part II."
+-- src:758 | (7) For the purposes of subsections (5) and (6), an application made and approved under this Part shall be deemed to have been made and approved under Part II.
+@ref R.S.C., 1985, c. O-9, s 22(7) (src:758)
+GIVEN `an application has been made and approved under this Part` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 22(7): the application is deemed to have been made and approved under Part II` `an application has been made and approved under this Part` MEANS
+    `an application has been made and approved under this Part`
+
+§§ `Additional amounts, section 22.1`
+
+-- The quarterly chain of A in subsections 22.1(1) to (3): "A is $35" (subsections (1) and (2)), "A is $50"
+-- (subsection (3)) for a payment quarter beginning after June 30, 2011; then, "for any month in a payment quarter
+-- beginning after September 30, 2011", the amount for the quarter before multiplied by the ratio of the Consumer Price
+-- Index for the first adjustment quarter to that for the second (4), never less than the amount for the quarter
+-- before (5), with no adjustment after a fall in the index until it recovers, the earlier second index then deemed the
+-- second index (6); and for the quarter beginning on July 1, 2016 the amount determined for A in subsection (3) is
+-- that amount plus $78.92 (3.1).
+-- One rule does all three; the three subsections each wrap it with their own amount of A. The quarter beginning on
+-- July 1, 2011 (the first "beginning after June 30, 2011") has the opening amount; a quarter that begins on or before
+-- June 30, 2011 is not covered: NOTHING.
+-- src:783 | (4) Subject to subsection (3.1), for the purpose of calculating the amount payable under any of subsections (1) to (3) for any month in a payment quarter beginning after September 30, 2011, the amount to be determined for A in that subsection is the amount obtained by multiplying
+-- src:784 | (a) the amount determined for A for any month in the three-month period immediately before that payment quarter
+-- src:785 | by
+-- src:786 | (b) the ratio that the Consumer Price Index for the first adjustment quarter that relates to that payment quarter bears to the Consumer Price Index for the second adjustment quarter that relates to that payment quarter.
+-- src:787 | No decrease
+-- src:788 | (5) Despite subsection (4), the amount determined for A for any month in a payment quarter shall not be less than the amount determined for A for any month in the three-month period immediately before that payment quarter.
+-- src:789 | Effect of reduction in Consumer Price Index
+-- src:790 | (6) If, in relation to any payment quarter, the Consumer Price Index for the first adjustment quarter is lower than the Consumer Price Index for the second adjustment quarter,
+-- src:791 | (a) no adjustment to the amount determined for A shall be made under subsection (4) in respect of that payment quarter; and
+-- src:792 | (b) no adjustment to the amount determined for A shall be made under subsection (4) in respect of any subsequent payment quarter until, in relation to a subsequent payment quarter, the Consumer Price Index for the first adjustment quarter that relates to that subsequent payment quarter is higher than the Consumer Price Index for the second adjustment quarter that relates to the payment quarter referred to in paragraph (a), in which case the second adjustment quarter that relates to the payment quarter referred to in that paragraph is deemed to be the second adjustment quarter that relates to that subsequent payment quarter.
+@ref R.S.C., 1985, c. O-9, s 22.1(4), s 22.1(5), s 22.1(6) (src:783-792)
+GIVEN `the first day of the payment quarter` IS A DATE
+      `the opening amount of A` IS A NUMBER
+      `the increase on July 1, 2016` IS A NUMBER
+      `the amount determined for A for any month in the three-month period immediately before that payment quarter` IS A NUMBER
+      `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS A MAYBE NUMBER
+GIVETH A MAYBE `oa2 indexation: Outcome of a payment quarter`
+`s 22.1(4): the amount determined for A for a payment quarter beginning after June 30, 2011` `the first day of the payment quarter` `the opening amount of A` `the increase on July 1, 2016` `the amount determined for A for any month in the three-month period immediately before that payment quarter` `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` MEANS
+    BRANCH
+        IF `the first day of the payment quarter` AT MOST (YMD 2011 6 30)
+        THEN NOTHING
+        IF `the first day of the payment quarter` AT MOST (YMD 2011 9 30)
+        THEN JUST (`oa2 indexation: Outcome of a payment quarter` WITH
+                       `the amount for the payment quarter` IS `the opening amount of A`
+                       `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS NOTHING)
+        OTHERWISE JUST (`oa2 indexation: Outcome of a payment quarter` WITH
+                       `the amount for the payment quarter` IS indexed's `the amount for the payment quarter` PLUS fixedIncrease
+                       `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS indexed's `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`)
+    WHERE
+        indexed MEANS
+            `oa2 indexation: the outcome for a payment quarter`
+                `the amount determined for A for any month in the three-month period immediately before that payment quarter`
+                `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter`
+                `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter`
+                `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`
+        fixedIncrease MEANS
+            IF `the first day of the payment quarter` EQUALS (YMD 2016 7 1)
+            THEN `the increase on July 1, 2016`
+            ELSE 0
+
+-- (3.1) "The amount determined for A in subsection (3) for any month in the payment quarter beginning on July 1, 2016
+-- is the amount that would otherwise have been determined for A in that subsection for any month in that payment
+-- quarter plus $78.92." Only subsection (3)'s A (the survivor's) is increased.
+-- src:781 | (3.1) The amount determined for A in subsection (3) for any month in the payment quarter beginning on July 1, 2016 is the amount that would otherwise have been determined for A in that subsection for any month in that payment quarter plus $78.92.
+@ref R.S.C., 1985, c. O-9, s 22.1(3.1) (src:781)
+GIVETH A NUMBER
+`s 22.1(3.1): the increase on July 1, 2016 for A in subsection 22.1(3)` MEANS 78.92
+
+-- (3) The survivor's A: $50 for the payment quarter beginning on July 1, 2011, then as above with the increase of
+-- (3.1) in the quarter beginning on July 1, 2016.
+-- src:777 | A is $50;
+@ref R.S.C., 1985, c. O-9, s 22.1(3) "A is $50" (src:777)
+GIVEN `the first day of the payment quarter` IS A DATE
+      `the amount determined for A for any month in the three-month period immediately before that payment quarter` IS A NUMBER
+      `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS A MAYBE NUMBER
+GIVETH A MAYBE `oa2 indexation: Outcome of a payment quarter`
+`s 22.1(3): the amount determined for A for the payment quarter` `the first day of the payment quarter` `the amount determined for A for any month in the three-month period immediately before that payment quarter` `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` MEANS
+    `s 22.1(4): the amount determined for A for a payment quarter beginning after June 30, 2011`
+        `the first day of the payment quarter`
+        50
+        (`s 22.1(3.1): the increase on July 1, 2016 for A in subsection 22.1(3)`)
+        `the amount determined for A for any month in the three-month period immediately before that payment quarter`
+        `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter`
+        `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter`
+        `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`
+
+-- (1) and (2): A is $35, with no increase on July 1, 2016.
+-- src:763 | A is $35;
+@ref R.S.C., 1985, c. O-9, s 22.1(1) "A is $35" (src:763)
+GIVEN `the first day of the payment quarter` IS A DATE
+      `the amount determined for A for any month in the three-month period immediately before that payment quarter` IS A NUMBER
+      `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS A MAYBE NUMBER
+GIVETH A MAYBE `oa2 indexation: Outcome of a payment quarter`
+`s 22.1(1): the amount determined for A for the payment quarter` `the first day of the payment quarter` `the amount determined for A for any month in the three-month period immediately before that payment quarter` `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` MEANS
+    `s 22.1(4): the amount determined for A for a payment quarter beginning after June 30, 2011`
+        `the first day of the payment quarter`
+        35
+        0
+        `the amount determined for A for any month in the three-month period immediately before that payment quarter`
+        `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter`
+        `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter`
+        `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`
+
+-- src:770 | A is $35;
+@ref R.S.C., 1985, c. O-9, s 22.1(2) "A is $35" (src:770)
+GIVEN `the first day of the payment quarter` IS A DATE
+      `the amount determined for A for any month in the three-month period immediately before that payment quarter` IS A NUMBER
+      `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` IS A NUMBER
+      `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` IS A MAYBE NUMBER
+GIVETH A MAYBE `oa2 indexation: Outcome of a payment quarter`
+`s 22.1(2): the amount determined for A for the payment quarter` `the first day of the payment quarter` `the amount determined for A for any month in the three-month period immediately before that payment quarter` `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter` `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter` `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply` MEANS
+    `s 22.1(4): the amount determined for A for a payment quarter beginning after June 30, 2011`
+        `the first day of the payment quarter`
+        35
+        0
+        `the amount determined for A for any month in the three-month period immediately before that payment quarter`
+        `the Consumer Price Index for the first adjustment quarter that relates to the payment quarter`
+        `the Consumer Price Index for the second adjustment quarter that relates to the payment quarter`
+        `the Consumer Price Index of the earlier second adjustment quarter still deemed to apply`
+
+-- (1) "The amount that may be added to the amount of the supplement that may be paid to a pensioner referred to in
+-- subsection 22(2) for any month in a payment quarter beginning after June 30, 2011 is the amount determined by the
+-- formula A x B - C/4 where A is $35; B is the pensioner's special qualifying factor for the month; and C is 1/24 of
+-- the aggregate of the income of the pensioner and his or her spouse or common-law partner for the base calendar year
+-- in excess of $4,000 rounded, if it is not a multiple of four dollars, to the next lower multiple of four dollars."
+-- The rounding is read as applying to the monthly figure that results (fork F-12.1-1, as for section 12.1).
+-- src:760 | 22.1 (1) The amount that may be added to the amount of the supplement that may be paid to a pensioner referred to in subsection 22(2) for any month in a payment quarter beginning after June 30, 2011 is the amount determined by the formula
+-- src:761 | A × B – C/4
+-- src:762 | where
+-- src:763 | A is $35;
+-- src:764 | B is the pensioner’s special qualifying factor for the month; and
+-- src:765 | C is 1/24 of the aggregate of the income of the pensioner and his or her spouse or common-law partner for the base calendar year in excess of $4,000 rounded, if it is not a multiple of four dollars, to the next lower multiple of four dollars.
+@ref R.S.C., 1985, c. O-9, s 22.1(1) (src:760-765)
+GIVEN month IS A DATE
+      `the amount determined for A` IS A NUMBER
+      `the pensioner's special qualification facts` IS A `Special qualification facts`
+      `the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` IS A NUMBER
+GIVETH A NUMBER
+`s 22.1(1): the amount determined by the formula for a pensioner referred to in subsection 22(2)` month `the amount determined for A` `the pensioner's special qualification facts` `the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` MEANS
+    (`the amount determined for A` TIMES factorB) MINUS (reductionC DIVIDED BY 4)
+    WHERE
+        factorB MEANS `the special qualifying factor of a person for the month containing` month `the pensioner's special qualification facts`
+        reductionC MEANS ((max 0 (`the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` MINUS 4000)) DIVIDED BY 24) `rounded to the next lower multiple of` 4
+
+-- (2) "The amount that may be added to the amount of the allowance that may be paid to a spouse or common-law partner
+-- referred to in subsection 22(3) [...] A x B - C/4 where A is $35; B is the special qualifying factor for the spouse
+-- or common-law partner for the month; and C is 1/24 of the aggregate of the income of the pensioner and his or her
+-- spouse or common-law partner for the base calendar year in excess of $4,000 rounded [...] to the next lower
+-- multiple of four dollars."
+-- src:767 | (2) The amount that may be added to the amount of the allowance that may be paid to a spouse or common-law partner referred to in subsection 22(3) for any month in a payment quarter beginning after June 30, 2011 is the amount determined by the formula
+-- src:768 | A × B – C/4
+-- src:769 | where
+-- src:770 | A is $35;
+-- src:771 | B is the special qualifying factor for the spouse or common-law partner for the month; and
+-- src:772 | C is 1/24 of the aggregate of the income of the pensioner and his or her spouse or common-law partner for the base calendar year in excess of $4,000 rounded, if it is not a multiple of four dollars, to the next lower multiple of four dollars.
+@ref R.S.C., 1985, c. O-9, s 22.1(2) (src:767-772)
+GIVEN month IS A DATE
+      `the amount determined for A` IS A NUMBER
+      `the spouse's or common-law partner's special qualification facts` IS A `Special qualification facts`
+      `the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` IS A NUMBER
+GIVETH A NUMBER
+`s 22.1(2): the amount determined by the formula for a spouse or common-law partner referred to in subsection 22(3)` month `the amount determined for A` `the spouse's or common-law partner's special qualification facts` `the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` MEANS
+    (`the amount determined for A` TIMES factorB) MINUS (reductionC DIVIDED BY 4)
+    WHERE
+        factorB MEANS `the special qualifying factor of a person for the month containing` month `the spouse's or common-law partner's special qualification facts`
+        reductionC MEANS ((max 0 (`the aggregate of the income of the pensioner and the spouse or common-law partner for the base calendar year` MINUS 4000)) DIVIDED BY 24) `rounded to the next lower multiple of` 4
+
+-- (3) "The amount that may be added to the amount of the allowance that may be paid to a survivor referred to in
+-- subsection 22(4) [...] A x B - C/4 where A is $50; B is the survivor's special qualifying factor for the month; and
+-- C is 1/12 of the survivor's income for the base calendar year in excess of $2,000 rounded [...] to the next lower
+-- multiple of four dollars."
+-- src:774 | (3) The amount that may be added to the amount of the allowance that may be paid to a survivor referred to in subsection 22(4) for any month in a payment quarter beginning after June 30, 2011 is the amount determined by the formula
+-- src:775 | A × B – C/4
+-- src:776 | where
+-- src:777 | A is $50;
+-- src:778 | B is the survivor’s special qualifying factor for the month; and
+-- src:779 | C is 1/12 of the survivor’s income for the base calendar year in excess of $2,000 rounded, if it is not a multiple of four dollars, to the next lower multiple of four dollars.
+@ref R.S.C., 1985, c. O-9, s 22.1(3) (src:774-779)
+GIVEN month IS A DATE
+      `the amount determined for A` IS A NUMBER
+      `the survivor's special qualification facts` IS A `Special qualification facts`
+      `the survivor's income for the base calendar year` IS A NUMBER
+GIVETH A NUMBER
+`s 22.1(3): the amount determined by the formula for a survivor referred to in subsection 22(4)` month `the amount determined for A` `the survivor's special qualification facts` `the survivor's income for the base calendar year` MEANS
+    (`the amount determined for A` TIMES factorB) MINUS (reductionC DIVIDED BY 4)
+    WHERE
+        factorB MEANS `the special qualifying factor of a person for the month containing` month `the survivor's special qualification facts`
+        reductionC MEANS ((max 0 (`the survivor's income for the base calendar year` MINUS 2000)) DIVIDED BY 12) `rounded to the next lower multiple of` 4
+
+-- The amount "that may be added" is not a negative sum: where the formula comes out below nothing, nothing is added
+-- (fork F-12-2, as for sections 12(5) and 12.1).
+@ref R.S.C., 1985, c. O-9, s 22.1(1), s 22.1(2), s 22.1(3) (src:760-779)
+GIVEN formula IS A NUMBER
+GIVETH A NUMBER
+`s 22.1: the amount that may be added, given the amount determined by the formula` formula MEANS
+    max 0 formula

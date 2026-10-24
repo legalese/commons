@@ -1,0 +1,384 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `uc-core`
+IMPORT `uc-core-bodies`
+IMPORT `uc2-domain`
+IMPORT `uc2-part7-benefit-cap`
+
+-- Tests of Part 7, regulations 78 to 83 (the benefit cap). Every expected value is worked out by hand from the text and written
+-- beside the assertion. The hourly rate 12.21 is a stand-in for the rate in regulation 4 of the National Minimum Wage Regulations.
+
+§ `Regulations 78 and 79`
+
+#ASSERT NOT (`reg 78(2) — the claim is by a couple` `a single claimant`)
+#ASSERT `reg 78(2) — the claim is by a couple` `joint claimants`
+#ASSERT `reg 78(2) — the claim is by a couple` `a single claimant who is a member of a couple`
+
+`test a period` MEANS `Assessment period` WITH `first day` IS YMD 2026 7 5, `last day` IS YMD 2026 8 4
+#ASSERT (`reg 79(2) — the reference period` `test a period`)'s `first day` EQUALS YMD 2026 7 5
+
+-- (1): the cap applies where the benefits exceed the relevant amount and neither regulation 82 nor 83 applies.
+#ASSERT `reg 79(1) — the benefit cap applies` 2000 1500 FALSE FALSE
+#ASSERT NOT (`reg 79(1) — the benefit cap applies` 1500 1500 FALSE FALSE)
+#ASSERT `reg 79(1) — the benefit cap applies` 1500.01 1500 FALSE FALSE
+#ASSERT NOT (`reg 79(1) — the benefit cap applies` 2000 1500 TRUE FALSE)
+#ASSERT NOT (`reg 79(1) — the benefit cap applies` 2000 1500 FALSE TRUE)
+#ASSERT NOT (`reg 79(1) — the benefit cap applies` 1000 1500 FALSE FALSE)
+
+§ `Regulation 80 -- total entitlement to welfare benefits`
+
+GIVEN kind IS A `Kind of welfare benefit for regulation 80`
+      award IS A NUMBER
+      interval IS A `Payment interval`
+      universal IS A NUMBER
+      unearned IS A MAYBE NUMBER
+GIVETH A `Welfare benefit to which a person or couple is entitled during the reference period`
+`test welfare benefit` kind award interval universal unearned MEANS
+    `Welfare benefit to which a person or couple is entitled during the reference period` WITH
+        kind IS kind
+        `amount to which the person or couple is entitled for the period for which the benefit is awarded, after any adjustment in accordance with regulations under section 73 of the Social Security Administration Act 1992` IS award
+        `interval of the period for which the benefit is awarded` IS interval
+        `amount of universal credit to which the claimant is entitled before any reduction under regulation 81 or under section 26 or 27 of the Act` IS universal
+        `amount taken into account as unearned income in accordance with regulation 66` IS unearned
+
+-- (2): universal credit: the amount before any reduction (800).
+#ASSERT `reg 80 — the amount of a welfare benefit used` (`test welfare benefit` `universal credit` 0 `monthly payments` 800 NOTHING) EQUALS 800
+-- (2A): housing benefit is nil, whatever the award.
+#ASSERT `reg 80 — the amount of a welfare benefit used` (`test welfare benefit` `housing benefit under section 130 of the Contributions and Benefits Act` 600 `monthly payments` 0 NOTHING) EQUALS 0
+-- (3): an employment and support allowance for which the person is disqualified: disregarded.
+#ASSERT `reg 80 — the amount of a welfare benefit used` (`test welfare benefit` `employment and support allowance for which the person is disqualified by virtue of section 18 of the Welfare Reform Act 2007` 500 `monthly payments` 0 NOTHING) EQUALS 0
+-- (5): a weekly benefit of 100 is 100 x 52 / 12 = 433.33; a two-weekly 200 is 200 x 26 / 12 = 433.33; monthly 300 is 300.
+#ASSERT `reg 80 — the amount of a welfare benefit used` (`test welfare benefit` `another welfare benefit` 100 `weekly payments` 0 NOTHING) EQUALS 433.33
+#ASSERT `reg 80 — the amount of a welfare benefit used` (`test welfare benefit` `another welfare benefit` 200 `two-weekly payments` 0 NOTHING) EQUALS 433.33
+#ASSERT `reg 80 — the amount of a welfare benefit used` (`test welfare benefit` `another welfare benefit` 300 `monthly payments` 0 NOTHING) EQUALS 300
+-- (4): where an amount is taken into account as unearned income, that amount (250) is used instead.
+#ASSERT `reg 80 — the amount of a welfare benefit used` (`test welfare benefit` `another welfare benefit` 300 `monthly payments` 0 (JUST 250)) EQUALS 250
+-- Totals: 800 + 433.33 + 0 = 1,233.33; an empty household has nothing.
+#ASSERT `reg 80 — the total entitlement to welfare benefits` (LIST `test welfare benefit` `universal credit` 0 `monthly payments` 800 NOTHING, `test welfare benefit` `another welfare benefit` 100 `weekly payments` 0 NOTHING, `test welfare benefit` `housing benefit under section 130 of the Contributions and Benefits Act` 600 `monthly payments` 0 NOTHING) EQUALS 1233.33
+#ASSERT `reg 80 — the total entitlement to welfare benefits` EMPTY EQUALS 0
+
+§ `Regulation 80A -- relevant amount`
+
+GIVEN costs IS A BOOLEAN
+      occupation IS A BOOLEAN
+      benefit IS A BOOLEAN
+      exists IS A BOOLEAN
+      home IS A BOOLEAN
+      office IS A BOOLEAN
+GIVETH AN `Accommodation of a claimant for regulation 80A(3)`
+`test accommodation` costs occupation benefit exists home office MEANS
+    `Accommodation of a claimant for regulation 80A(3)` WITH
+        `the housing costs element is included in the claimant's award of universal credit` IS costs
+        `accommodation in respect of which the claimant meets the occupation condition is in Greater London` IS occupation
+        `the claimant is in receipt of housing benefit in respect of a dwelling in Greater London` IS benefit
+        `there is accommodation that the claimant normally occupies as their home` IS exists
+        `accommodation that the claimant normally occupies as their home is in Greater London` IS home
+        `the Jobcentre Plus office to which the Secretary of State has allocated the claim is in Greater London` IS office
+
+-- (3)(a): the housing costs element is included: the accommodation of the occupation condition in Greater London, or housing benefit for a dwelling there.
+#ASSERT `reg 80A(3) — the claimant is resident in Greater London` (`test accommodation` TRUE TRUE FALSE FALSE FALSE FALSE)
+#ASSERT `reg 80A(3) — the claimant is resident in Greater London` (`test accommodation` TRUE FALSE TRUE FALSE FALSE FALSE)
+#ASSERT NOT (`reg 80A(3) — the claimant is resident in Greater London` (`test accommodation` TRUE FALSE FALSE TRUE TRUE TRUE))
+-- (3)(b): the housing costs element is not included: the home in Greater London; with no home, the allocated Jobcentre Plus office.
+#ASSERT `reg 80A(3) — the claimant is resident in Greater London` (`test accommodation` FALSE FALSE FALSE TRUE TRUE FALSE)
+#ASSERT NOT (`reg 80A(3) — the claimant is resident in Greater London` (`test accommodation` FALSE TRUE TRUE TRUE FALSE TRUE))
+#ASSERT `reg 80A(3) — the claimant is resident in Greater London` (`test accommodation` FALSE FALSE FALSE FALSE FALSE TRUE)
+#ASSERT NOT (`reg 80A(3) — the claimant is resident in Greater London` (`test accommodation` FALSE FALSE FALSE FALSE TRUE FALSE))
+
+-- (2): the applicable annual limit by basis, residence and responsibility for a child or qualifying young person.
+#ASSERT `reg 80A(2) — the applicable annual limit` `a single claimant` TRUE FALSE FALSE EQUALS 16967
+#ASSERT `reg 80A(2) — the applicable annual limit` `a single claimant` TRUE FALSE TRUE EQUALS 25323
+#ASSERT `reg 80A(2) — the applicable annual limit` `a single claimant` FALSE FALSE FALSE EQUALS 14753
+#ASSERT `reg 80A(2) — the applicable annual limit` `a single claimant` FALSE FALSE TRUE EQUALS 22020
+#ASSERT `reg 80A(2) — the applicable annual limit` `joint claimants` TRUE FALSE FALSE EQUALS 25323
+#ASSERT `reg 80A(2) — the applicable annual limit` `joint claimants` FALSE TRUE FALSE EQUALS 25323
+#ASSERT `reg 80A(2) — the applicable annual limit` `joint claimants` FALSE FALSE FALSE EQUALS 22020
+#ASSERT `reg 80A(2) — the applicable annual limit` `joint claimants` FALSE FALSE TRUE EQUALS 22020
+-- A single claimant who is a member of a couple is a single claimant here (fork F-C2).
+#ASSERT `reg 80A(2) — the applicable annual limit` `a single claimant who is a member of a couple` TRUE FALSE FALSE EQUALS 16967
+#ASSERT `reg 80A(2) — the applicable annual limit` `a single claimant who is a member of a couple` FALSE FALSE FALSE EQUALS 14753
+-- (1): divided by 12 and rounded to the penny: 16,967 / 12 = 1,413.9166... rounds to 1,413.92; 25,323 / 12 = 2,110.25; 14,753 / 12 = 1,229.4166... rounds to 1,229.42; 22,020 / 12 = 1,835.
+#ASSERT `reg 80A(1) — the relevant amount` 16967 EQUALS 1413.92
+#ASSERT `reg 80A(1) — the relevant amount` 25323 EQUALS 2110.25
+#ASSERT `reg 80A(1) — the relevant amount` 14753 EQUALS 1229.42
+#ASSERT `reg 80A(1) — the relevant amount` 22020 EQUALS 1835
+
+§ `Regulation 81 -- reduction of universal credit`
+
+-- (3): the excess: 2,000 less 1,500 is 500.
+#ASSERT `reg 81(3) — the excess` 2000 1500 EQUALS 500
+-- (1) and (2): the cap applies, excess 500, childcare costs element 200: reduced by 300. Childcare costs 600 are more than the excess: no reduction. Equal: none.
+#ASSERT `reg 81(1) and (2) — the reduction of the award` TRUE 500 200 EQUALS 300
+#ASSERT `reg 81(1) and (2) — the reduction of the award` TRUE 500 600 EQUALS 0
+#ASSERT `reg 81(1) and (2) — the reduction of the award` TRUE 500 500 EQUALS 0
+#ASSERT `reg 81(1) and (2) — the reduction of the award` TRUE 500 0 EQUALS 500
+-- The cap does not apply: nothing.
+#ASSERT `reg 81(1) and (2) — the reduction of the award` FALSE 500 0 EQUALS 0
+-- The award after the reduction: 1,000 less 300 is 700; a reduction equal to the award leaves nothing; more than the award is not covered.
+#ASSERT `reg 81(1) — the amount of the award after the reduction` 1000 300 EQUALS JUST 700
+#ASSERT `reg 81(1) — the amount of the award after the reduction` 1000 1000 EQUALS JUST 0
+#ASSERT `reg 81(1) — the amount of the award after the reduction` 1000 1200 EQUALS NOTHING
+
+§ `Regulation 82 -- exceptions: earnings`
+
+-- (1)(a): 12.21 x 16 = 195.36 a week; x 52 / 12 = 846.56 a month; the fraction of a pound is disregarded: 846. Another rate: 11.44 x 16 x 52 / 12 = 793.17, so 793.
+#ASSERT `reg 82(1)(a) — the earnings threshold` 12.21 EQUALS 846
+#ASSERT `reg 82(1)(a) — the earnings threshold` 11.44 EQUALS 793
+#ASSERT `reg 82(1)(a) — the earned income equals or exceeds the earnings threshold` 846 12.21
+#ASSERT `reg 82(1)(a) — the earned income equals or exceeds the earnings threshold` 900 12.21
+#ASSERT NOT (`reg 82(1)(a) — the earned income equals or exceeds the earnings threshold` 845.99 12.21)
+
+GIVEN income IS A NUMBER
+GIVETH A `Month before a day on which a grace period may begin`
+`test month` income MEANS
+    `Month before a day on which a grace period may begin` WITH
+        `earned income of the claimant, or the couple's combined earned income, in the month, not including income treated as had by virtue of regulation 62` IS income
+        `hourly rate set out in regulation 4 of the National Minimum Wage Regulations as in force at the beginning of the month` IS 12.21
+
+`test twelve good months` MEANS LIST `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 846
+
+-- (3): each of the 12 months at or above the threshold (846 counts); one month under, 11 months, or 13 months fails.
+#ASSERT `reg 82(3) — the condition is met` `test twelve good months`
+#ASSERT NOT (`reg 82(3) — the condition is met` (LIST `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 845))
+#ASSERT NOT (`reg 82(3) — the condition is met` (LIST `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900))
+#ASSERT NOT (`reg 82(3) — the condition is met` (LIST `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900, `test month` 900))
+
+GIVEN day IS A DATE
+      entitlement IS A BOOLEAN
+      first IS A BOOLEAN
+      income IS A NUMBER
+      before IS A BOOLEAN
+      ceased IS A BOOLEAN
+      months IS A LIST OF `Month before a day on which a grace period may begin`
+GIVETH A `Day on which a grace period may begin`
+`test candidate day` day entitlement first income before ceased months MEANS
+    `Day on which a grace period may begin` WITH
+        day IS day
+        `the day falls within the current period of entitlement to universal credit` IS entitlement
+        `the day is the first day of an assessment period` IS first
+        `earned income in that assessment period, not including income treated as had by virtue of regulation 62` IS income
+        `hourly rate set out in regulation 4 of the National Minimum Wage Regulations as in force at the beginning of that assessment period` IS 12.21
+        `the day falls before the current period of entitlement to universal credit` IS before
+        `the claimant ceased paid work on the day before` IS ceased
+        `the 12 months immediately preceding that day` IS months
+
+-- (2)(a): the first day of an assessment period within the current entitlement, with earned income 700 below the threshold 846.
+#ASSERT `reg 82(2) — a grace period may begin on the day` (`test candidate day` (YMD 2026 3 5) TRUE TRUE 700 FALSE FALSE `test twelve good months`)
+-- Earned income 900 is not below: no.
+#ASSERT NOT (`reg 82(2) — a grace period may begin on the day` (`test candidate day` (YMD 2026 3 5) TRUE TRUE 900 FALSE FALSE `test twelve good months`))
+-- Not the first day of an assessment period, or not within the current entitlement: no.
+#ASSERT NOT (`reg 82(2) — a grace period may begin on the day` (`test candidate day` (YMD 2026 3 5) TRUE FALSE 700 FALSE FALSE `test twelve good months`))
+#ASSERT NOT (`reg 82(2) — a grace period may begin on the day` (`test candidate day` (YMD 2026 3 5) FALSE TRUE 700 FALSE FALSE `test twelve good months`))
+-- (2)(b): a day before the current entitlement, the day after the claimant ceased paid work.
+#ASSERT `reg 82(2) — a grace period may begin on the day` (`test candidate day` (YMD 2025 12 1) FALSE FALSE 0 TRUE TRUE `test twelve good months`)
+#ASSERT NOT (`reg 82(2) — a grace period may begin on the day` (`test candidate day` (YMD 2025 12 1) FALSE FALSE 0 TRUE FALSE `test twelve good months`))
+#ASSERT NOT (`reg 82(2) — a grace period may begin on the day` (`test candidate day` (YMD 2025 12 1) FALSE FALSE 0 FALSE TRUE `test twelve good months`))
+-- The (3) condition is needed for either.
+#ASSERT NOT (`reg 82(2) — a grace period may begin on the day` (`test candidate day` (YMD 2026 3 5) TRUE TRUE 700 FALSE FALSE (LIST `test month` 900)))
+
+`test day D1` MEANS `test candidate day` (YMD 2026 3 5) TRUE TRUE 700 FALSE FALSE `test twelve good months`
+`test day D2` MEANS `test candidate day` (YMD 2026 6 5) TRUE TRUE 700 FALSE FALSE `test twelve good months`
+`test day D3` MEANS `test candidate day` (YMD 2026 8 5) TRUE TRUE 700 FALSE FALSE (LIST `test month` 900)
+
+GIVEN first IS A DATE
+      last IS A DATE
+GIVETH AN `Assessment period`
+`test assessment period` first last MEANS `Assessment period` WITH `first day` IS first, `last day` IS last
+
+GIVEN dates IS A MAYBE DATE
+GIVETH A DATE
+`test the date or the dawn of time` dates MEANS
+    CONSIDER dates
+    WHEN JUST d THEN d
+    WHEN NOTHING THEN YMD 1900 1 1
+
+-- The days considered are those not later than the last day of the assessment period: for the period 5 July to 4 August 2026,
+-- D1 (5 March) and D2 (5 June) qualify, D3 (5 August) is after the period and fails the (3) condition anyway: the latest is 5 June.
+#ASSERT `test the date or the dawn of time` (`reg 82(2) — the day on which the grace period begins` (LIST `test day D1`, `test day D2`, `test day D3`) (`test assessment period` (YMD 2026 7 5) (YMD 2026 8 4))) EQUALS YMD 2026 6 5
+-- For the period 5 May to 4 June, D2 (5 June) is after the period: the latest is D1.
+#ASSERT `test the date or the dawn of time` (`reg 82(2) — the day on which the grace period begins` (LIST `test day D1`, `test day D2`, `test day D3`) (`test assessment period` (YMD 2026 5 5) (YMD 2026 6 4))) EQUALS YMD 2026 3 5
+-- Candidates in a different order give the same day.
+#ASSERT `test the date or the dawn of time` (`reg 82(2) — the day on which the grace period begins` (LIST `test day D2`, `test day D1`) (`test assessment period` (YMD 2026 7 5) (YMD 2026 8 4))) EQUALS YMD 2026 6 5
+-- No qualifying day: no grace period.
+#ASSERT `reg 82(2) — the day on which the grace period begins` EMPTY (`test assessment period` (YMD 2026 7 5) (YMD 2026 8 4)) EQUALS NOTHING
+#ASSERT `reg 82(2) — the day on which the grace period begins` (LIST `test day D3`) (`test assessment period` (YMD 2026 7 5) (YMD 2026 8 4)) EQUALS NOTHING
+
+GIVEN grace IS A MAYBE `Grace period`
+GIVETH A DATE
+`test grace period ends` grace MEANS
+    CONSIDER grace
+    WHEN JUST g THEN g's `last day of the grace period`
+    WHEN NOTHING THEN YMD 1900 1 1
+
+-- The grace period beginning 5 June 2026 runs nine months: to 4 March 2027.
+#ASSERT `test grace period ends` (`reg 82(2) — the grace period` (LIST `test day D1`, `test day D2`) (`test assessment period` (YMD 2026 7 5) (YMD 2026 8 4))) EQUALS YMD 2027 3 4
+
+`test the grace period` MEANS `Grace period` WITH `first day of the grace period` IS YMD 2026 6 5, `last day of the grace period` IS YMD 2027 3 4
+
+-- (1)(b): an assessment period within the grace period; one in which it begins; one in which it ends; one before; one after.
+#ASSERT `reg 82(1)(b) — the assessment period is within a grace period or one in which it begins or ends` `test the grace period` (`test assessment period` (YMD 2026 7 5) (YMD 2026 8 4))
+#ASSERT `reg 82(1)(b) — the assessment period is within a grace period or one in which it begins or ends` `test the grace period` (`test assessment period` (YMD 2026 5 20) (YMD 2026 6 19))
+#ASSERT `reg 82(1)(b) — the assessment period is within a grace period or one in which it begins or ends` `test the grace period` (`test assessment period` (YMD 2027 2 20) (YMD 2027 3 19))
+#ASSERT `reg 82(1)(b) — the assessment period is within a grace period or one in which it begins or ends` `test the grace period` (`test assessment period` (YMD 2027 2 5) (YMD 2027 3 4))
+#ASSERT NOT (`reg 82(1)(b) — the assessment period is within a grace period or one in which it begins or ends` `test the grace period` (`test assessment period` (YMD 2026 5 5) (YMD 2026 6 4)))
+#ASSERT NOT (`reg 82(1)(b) — the assessment period is within a grace period or one in which it begins or ends` `test the grace period` (`test assessment period` (YMD 2027 3 5) (YMD 2027 4 4)))
+
+-- (1) together: earned income at the threshold, or a grace period, either suffices; neither does not.
+#ASSERT `reg 82(1) — the benefit cap does not apply by reason of earnings` 900 12.21 EMPTY (`test assessment period` (YMD 2026 7 5) (YMD 2026 8 4))
+#ASSERT `reg 82(1) — the benefit cap does not apply by reason of earnings` 700 12.21 (LIST `test day D1`, `test day D2`) (`test assessment period` (YMD 2026 7 5) (YMD 2026 8 4))
+#ASSERT NOT (`reg 82(1) — the benefit cap does not apply by reason of earnings` 700 12.21 EMPTY (`test assessment period` (YMD 2026 7 5) (YMD 2026 8 4)))
+#ASSERT NOT (`reg 82(1) — the benefit cap does not apply by reason of earnings` 700 12.21 (LIST `test day D1`, `test day D2`) (`test assessment period` (YMD 2027 4 5) (YMD 2027 5 4)))
+
+§ `Regulation 83(2) -- "war pension"`
+
+GIVEN instrument IS A BOOLEAN
+      widow IS A BOOLEAN
+      disablement IS A BOOLEAN
+      crown IS A BOOLEAN
+      provision IS A `Provision whose standing as an enactment is asked by uc2`
+      order IS A BOOLEAN
+      analogous IS A BOOLEAN
+      terminated IS A MAYBE DATE
+      foreign IS A BOOLEAN
+GIVETH A `Pension that may be a war pension`
+`test pension` instrument widow disablement crown provision order analogous terminated foreign MEANS
+    `Pension that may be a war pension` WITH
+        `pension or allowance payable under an instrument listed in section 639(2) of ITEPA` IS instrument
+        `payable to a widow, widower or surviving civil partner` IS widow
+        `payable in respect of disablement` IS disablement
+        `pension payable to a person as a widow, widower or surviving civil partner under a power of the Crown to make provision about pensions for or in respect of persons who have been disabled or have died in consequence of service as members of the armed forces of the Crown` IS crown
+        `provision under which the pension is paid` IS provision
+        `payment made under the Order in Council of 19th December 1881, the Royal Warrant of 27th October 1884 or the Order by His Majesty of 14th January 1922` IS order
+        `payable to a widow, widower or surviving civil partner of a person whose death was attributable to service in a capacity analogous to service as a member of the armed forces of the Crown` IS analogous
+        `date on which that person's service in such a capacity terminated` IS terminated
+        `pension paid by the government of a country outside the United Kingdom which is analogous to a pension, allowance or payment mentioned in paragraphs (a) to (c)` IS foreign
+
+`test not an enactment` MEANS `Provision whose standing as an enactment is asked by uc2` WITH
+    `enactment comprised in an Act of the Scottish Parliament or the National Assembly of Wales` IS FALSE
+    `instrument made under an Act of the Scottish Parliament or the National Assembly of Wales` IS FALSE
+    `an enactment apart from the inclusions in regulation 2` IS FALSE
+`test an enactment` MEANS `Provision whose standing as an enactment is asked by uc2` WITH
+    `enactment comprised in an Act of the Scottish Parliament or the National Assembly of Wales` IS FALSE
+    `instrument made under an Act of the Scottish Parliament or the National Assembly of Wales` IS FALSE
+    `an enactment apart from the inclusions in regulation 2` IS TRUE
+
+`test no pension` MEANS `test pension` FALSE FALSE FALSE FALSE `test not an enactment` FALSE FALSE NOTHING FALSE
+
+-- (a): a pension or allowance under a listed instrument, to a widow, widower or surviving civil partner, or in respect of disablement.
+#ASSERT `reg 83(2) — war pension` (`test pension` TRUE TRUE FALSE FALSE `test not an enactment` FALSE FALSE NOTHING FALSE)
+#ASSERT `reg 83(2) — war pension` (`test pension` TRUE FALSE TRUE FALSE `test not an enactment` FALSE FALSE NOTHING FALSE)
+#ASSERT NOT (`reg 83(2) — war pension` (`test pension` TRUE FALSE FALSE FALSE `test not an enactment` FALSE FALSE NOTHING FALSE))
+#ASSERT NOT (`reg 83(2) — war pension` (`test pension` FALSE TRUE TRUE FALSE `test not an enactment` FALSE FALSE NOTHING FALSE))
+-- (b): a pension under a power of the Crown, otherwise than under an enactment.
+#ASSERT `reg 83(2) — war pension` (`test pension` FALSE FALSE FALSE TRUE `test not an enactment` FALSE FALSE NOTHING FALSE)
+#ASSERT NOT (`reg 83(2) — war pension` (`test pension` FALSE FALSE FALSE TRUE `test an enactment` FALSE FALSE NOTHING FALSE))
+-- (c): a payment under one of the three instruments to a widow, widower or surviving civil partner of a person whose service ended before 31 March 1973.
+#ASSERT `reg 83(2) — war pension` (`test pension` FALSE FALSE FALSE FALSE `test not an enactment` TRUE TRUE (JUST (YMD 1973 3 30)) FALSE)
+#ASSERT NOT (`reg 83(2) — war pension` (`test pension` FALSE FALSE FALSE FALSE `test not an enactment` TRUE TRUE (JUST (YMD 1973 3 31)) FALSE))
+#ASSERT NOT (`reg 83(2) — war pension` (`test pension` FALSE FALSE FALSE FALSE `test not an enactment` TRUE TRUE NOTHING FALSE))
+#ASSERT NOT (`reg 83(2) — war pension` (`test pension` FALSE FALSE FALSE FALSE `test not an enactment` TRUE FALSE (JUST (YMD 1960 1 1)) FALSE))
+#ASSERT NOT (`reg 83(2) — war pension` (`test pension` FALSE FALSE FALSE FALSE `test not an enactment` FALSE TRUE (JUST (YMD 1960 1 1)) FALSE))
+-- (d): a pension paid by a government outside the United Kingdom analogous to (a) to (c).
+#ASSERT `reg 83(2) — war pension` (`test pension` FALSE FALSE FALSE FALSE `test not an enactment` FALSE FALSE NOTHING TRUE)
+#ASSERT NOT (`reg 83(2) — war pension` `test no pension`)
+
+§ `Regulation 83(1) -- exceptions: entitlement or receipt of certain benefits`
+
+GIVEN kind IS A `Payment named in regulation 83`
+      position IS A `Position of a person as to a payment`
+GIVETH A `Payment to a person for regulation 83`
+`test payment` kind position MEANS
+    `Payment to a person for regulation 83` WITH payment IS kind, position IS position, pension IS `test no pension`
+
+GIVEN role IS A `Person in the household`
+      payments IS A LIST OF `Payment to a person for regulation 83`
+GIVETH A `Member of the household for regulation 83`
+`test member` role payments MEANS
+    `Member of the household for regulation 83` WITH role IS role, payments IS payments
+
+GIVEN members IS A LIST OF `Member of the household for regulation 83`
+      lcwra IS A BOOLEAN
+      support IS A BOOLEAN
+      carer IS A BOOLEAN
+GIVETH A `Household for regulation 83`
+`test household` members lcwra support carer MEANS
+    `Household for regulation 83` WITH
+        members IS members
+        `the LCWRA element is included in the award of universal credit` IS lcwra
+        `a claimant is receiving an employment and support allowance that includes the support component` IS support
+        `the carer element is included in the award of universal credit` IS carer
+
+-- A household of one member with one payment.
+GIVEN role IS A `Person in the household`
+      kind IS A `Payment named in regulation 83`
+      position IS A `Position of a person as to a payment`
+GIVETH A `Household for regulation 83`
+`test one payment` role kind position MEANS
+    `test household` (LIST `test member` role (LIST `test payment` kind position)) FALSE FALSE FALSE
+
+`test a child` MEANS `a child for whom a claimant is responsible`
+`test a young person` MEANS `a qualifying young person for whom a claimant is responsible`
+
+-- Nothing at all.
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test household` EMPTY FALSE FALSE FALSE))
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test household` (LIST `test member` `a claimant` EMPTY) FALSE FALSE FALSE))
+-- (a): the LCWRA element, or an employment and support allowance with the support component; (j): the carer element.
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test household` EMPTY TRUE FALSE FALSE)
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test household` EMPTY FALSE TRUE FALSE)
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test household` EMPTY FALSE FALSE TRUE)
+-- (b), (c), (ca), (e): a claimant is receiving; a child is not enough.
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `industrial injuries benefit` `receiving it`)
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a child` `industrial injuries benefit` `receiving it`))
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `attendance allowance` `receiving it`)
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `pension age disability payment` `receiving it`)
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `a payment under article 15(1)(c) or article 29(1)(a) of the Armed Forces and Reserve Forces (Compensation Scheme) Order 2011` `receiving it`)
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a young person` `attendance allowance` `receiving it`))
+-- (d): a war pension, which must be one within paragraph (2).
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test household` (LIST `test member` `a claimant` (LIST `Payment to a person for regulation 83` WITH payment IS `a war pension`, position IS `receiving it`, pension IS `test pension` TRUE TRUE FALSE FALSE `test not an enactment` FALSE FALSE NOTHING FALSE)) FALSE FALSE FALSE)
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `a war pension` `receiving it`))
+-- (f) disability living allowance: a claimant, a child or a qualifying young person.
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `disability living allowance` `receiving it`)
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a child` `disability living allowance` `receiving it`)
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a young person` `disability living allowance` `receiving it`)
+-- (fa) Scottish adult disability living allowance, (g) personal independence payment, (hb) adult disability payment: a claimant or a qualifying young person, not a child.
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a young person` `Scottish adult disability living allowance` `receiving it`)
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a child` `Scottish adult disability living allowance` `receiving it`))
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `personal independence payment` `receiving it`)
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a child` `personal independence payment` `receiving it`))
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a young person` `adult disability payment` `receiving it`)
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a child` `adult disability payment` `receiving it`))
+-- (ha) child disability payment: a claimant, a child or a qualifying young person.
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a child` `child disability payment` `receiving it`)
+-- (i), (ia): entitled to carer's allowance or carer support payment: a claimant or a qualifying young person, receiving or not.
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `carer's allowance` `entitled to it but not receiving it for another reason`)
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a young person` `carer's allowance` `receiving it`)
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a child` `carer's allowance` `receiving it`))
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `carer's allowance` `neither entitled to it nor receiving it`))
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `carer support payment` `entitled to it but not receiving it for another reason`)
+-- (k): guardian's allowance, a claimant entitled.
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `guardian's allowance under section 77 of the Contributions and Benefits Act` `entitled to it but not receiving it for another reason`)
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `test a young person` `guardian's allowance under section 77 of the Contributions and Benefits Act` `receiving it`))
+-- Entitled but not receiving for no listed reason: attendance allowance alone is not enough.
+#ASSERT NOT (`reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test one payment` `a claimant` `attendance allowance` `entitled to it but not receiving it for another reason`))
+
+-- (h): entitled to a payment listed in (b) to (g), (ha) or (hb) but not receiving it for a reason in (i) to (vii).
+#ASSERT `reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `attendance allowance` `entitled to it but not receiving it by virtue of regulation 6 or regulation 7 of the Social Security (Attendance Allowance) Regulations 1991`)
+#ASSERT `reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `test a child` `disability living allowance` `entitled to it but not receiving it by virtue of regulation 8 or regulation 9 of the Social Security (Disability Living Allowance) Regulations 1991`)
+#ASSERT `reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `personal independence payment` `entitled to it but not receiving it by virtue of regulations under section 85 or 86 of the Act`)
+#ASSERT `reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `adult disability payment` `entitled to it but not receiving it by virtue of regulation 27 or 28 of the Disability Assistance for Working Age People (Scotland) Regulations 2022`)
+#ASSERT `reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `pension age disability payment` `entitled to it but not receiving it by virtue of regulation 19 or 20 of the Disability Assistance for Older People (Scotland) Regulations 2024`)
+#ASSERT `reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `Scottish adult disability living allowance` `entitled to it but not receiving it by virtue of regulation 22 or 23 of the Disability Assistance (Scottish Adult Disability Living Allowance) Regulations 2025`)
+#ASSERT `reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `test a child` `child disability payment` `entitled to it but not receiving it by virtue of regulation 17 of the DACYP Regulations`)
+-- Reasons (iv), (iva), (vi), (vii) are tied to their own payment (fork F-C7): a section 85 or 86 reason with attendance allowance, or a 2022 reason with personal independence payment, does not count.
+#ASSERT NOT (`reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `attendance allowance` `entitled to it but not receiving it by virtue of regulations under section 85 or 86 of the Act`))
+#ASSERT NOT (`reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `personal independence payment` `entitled to it but not receiving it by virtue of regulation 27 or 28 of the Disability Assistance for Working Age People (Scotland) Regulations 2022`))
+-- A payment not listed in (b) to (g), (ha) or (hb), even for a listed reason: no.
+#ASSERT NOT (`reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `carer's allowance` `entitled to it but not receiving it by virtue of regulation 6 or regulation 7 of the Social Security (Attendance Allowance) Regulations 1991`))
+-- Another reason, or receiving it: not an (h) case.
+#ASSERT NOT (`reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `attendance allowance` `entitled to it but not receiving it for another reason`))
+#ASSERT NOT (`reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `attendance allowance` `receiving it`))
+-- A war pension withheld under article 53 counts only if it is a war pension within paragraph (2).
+#ASSERT `reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test household` (LIST `test member` `a claimant` (LIST `Payment to a person for regulation 83` WITH payment IS `a war pension`, position IS `entitled to it but withheld by virtue of article 53 of the Naval, Military and Air Forces etc (Disablement and Death) Service Pensions Order 2006`, pension IS `test pension` FALSE FALSE FALSE FALSE `test not an enactment` FALSE FALSE NOTHING TRUE)) FALSE FALSE FALSE)
+#ASSERT NOT (`reg 83(1)(h) — someone is entitled to a listed payment but is not receiving it for one of the reasons` (`test one payment` `a claimant` `a war pension` `entitled to it but withheld by virtue of article 53 of the Naval, Military and Air Forces etc (Disablement and Death) Service Pensions Order 2006`))
+-- A household of two members: the claimant receives nothing, the child receives disability living allowance.
+#ASSERT `reg 83(1) — the benefit cap does not apply by reason of the benefits received` (`test household` (LIST `test member` `a claimant` EMPTY, `test member` `test a child` (LIST `test payment` `disability living allowance` `receiving it`)) FALSE FALSE FALSE)

@@ -1,0 +1,422 @@
+IMPORT prelude
+IMPORT `cbca-core`
+
+-- Canada Business Corporations Act (R.S.C. 1985, c. C-44), section 2(2) to (5) -- CONTROL, SUBSIDIARY,
+-- HOLDING BODY CORPORATE and AFFILIATED BODIES CORPORATE.
+--
+-- UNOFFICIAL. Encoded from a plain-text rendering of the Justice Canada consolidation current to
+-- 2026-09-30, which is not an official version; nothing here is verified against the official text.
+--
+-- THE SHAPE. These four definitions are one structure. Control (s 2(3)) is a fact about votes. A
+-- subsidiary (s 2(5)) is a body corporate that is controlled by another in one of three ways, or that
+-- is a subsidiary of a subsidiary, so it is defined by recursion over who controls whom. The holding
+-- body corporate (s 2(4)) is the inverse. Affiliated (s 2(2)) is built on subsidiary and control, and
+-- (b) closes it up. So the facts are a LIST OF HOLDINGS, one record per body corporate whose votes are
+-- held, and every rule below reads that list.
+--
+-- Each rule has two readings, and both are here: the PAIRWISE form takes the few yes/no facts about
+-- two bodies corporate (for a person who can state them), and the LIST form works the same facts out
+-- from the holdings (for a group structure).
+--
+-- NAMES. Bodies corporate and the persons who hold their votes are named by a STRING; two spellings
+-- are two different names. The only person who is not a body corporate that can appear is one who
+-- holds votes (an individual, say); such a name is never the body corporate of a holding.
+--
+-- TERMINATION. The closure below keeps a list of the bodies already reached and follows only new
+-- ones, and every step reaches at least one name from the finite list of names in the holdings, so a
+-- circular structure (A holds votes in B and B holds votes in A) terminates. (Such a structure should
+-- not occur: s 28 and s 33 are about a body holding shares in itself or in its holding body.)
+
+§ `Section 2(2) to (5) -- control, holding, subsidiary, affiliated`
+
+§§ `The holdings`
+
+-- A holding: in one body corporate, who holds votes to elect its directors, and how many. "By a person
+-- or by two or more bodies corporate" (s 2(3)): the holders are ONE name (a person, of any kind) or
+-- TWO OR MORE names (bodies corporate) who hold together. `the persons holding are bodies corporate`
+-- is FALSE for a single holder who is an individual (or other person who is not a body corporate), TRUE
+-- otherwise: a subsidiary (s 2(5)) is a subsidiary of a BODY CORPORATE only.
+-- src:80 | (3) For the purposes of this Act, a body corporate is controlled by a person or by two or more bodies corporate if
+-- src:81 | (a) securities of the body corporate to which are attached more than fifty per cent of the votes that may be cast to elect directors of the body corporate are held, other than by way of security only, by or for the benefit of that person or by or for the benefit of those bodies corporate; and
+-- src:82 | (b) the votes attached to those securities are sufficient, if exercised, to elect a majority of the directors of the body corporate.
+@ref CBCA s 2(3) control (src:80-82)
+DECLARE `Holding in a body corporate` HAS
+    `the body corporate` IS A STRING
+    `the persons holding` IS A LIST OF STRING
+    `the persons holding are bodies corporate` IS A BOOLEAN
+    `fraction of the votes to elect directors held, other than by way of security only` IS A NUMBER
+    `the votes held are sufficient, if exercised, to elect a majority of the directors` IS A BOOLEAN
+
+§§ `s 2(3) control`
+
+-- (a) more than fifty per cent of the votes that may be cast to elect directors are held, other than by
+-- way of security only, by or for the benefit of the holders; and (b) those votes are sufficient, if
+-- exercised, to elect a majority of the directors. Exactly fifty per cent is not "more than". Whether
+-- the votes are sufficient is a plain input: it depends on the articles (cumulative voting, say).
+-- src:81 | (a) securities of the body corporate to which are attached more than fifty per cent of the votes that may be cast to elect directors of the body corporate are held, other than by way of security only, by or for the benefit of that person or by or for the benefit of those bodies corporate; and
+@ref CBCA s 2(3)(a) control (src:81)
+GIVEN holding IS A `Holding in a body corporate`
+GIVETH A BOOLEAN
+`controlled within s 2(3)(a)` holding MEANS
+    holding's `fraction of the votes to elect directors held, other than by way of security only` GREATER THAN 50%
+
+-- src:82 | (b) the votes attached to those securities are sufficient, if exercised, to elect a majority of the directors of the body corporate.
+@ref CBCA s 2(3)(b) control (src:82)
+GIVEN holding IS A `Holding in a body corporate`
+GIVETH A BOOLEAN
+`controlled within s 2(3)(b)` holding MEANS
+    holding's `the votes held are sufficient, if exercised, to elect a majority of the directors`
+
+-- src:80 | (3) For the purposes of this Act, a body corporate is controlled by a person or by two or more bodies corporate if
+-- src:81 | (a) securities of the body corporate to which are attached more than fifty per cent of the votes that may be cast to elect directors of the body corporate are held, other than by way of security only, by or for the benefit of that person or by or for the benefit of those bodies corporate; and
+-- src:82 | (b) the votes attached to those securities are sufficient, if exercised, to elect a majority of the directors of the body corporate.
+@ref CBCA s 2(3) control (src:80-82)
+GIVEN holding IS A `Holding in a body corporate`
+GIVETH A BOOLEAN
+`controlled within s 2(3)` holding MEANS
+        `controlled within s 2(3)(a)` holding
+    AND `controlled within s 2(3)(b)` holding
+
+§§ `Reading the holdings`
+
+-- The holding gives control of this body corporate.
+@ref CBCA s 2(3) control, helper (src:80-82)
+GIVEN body IS A STRING
+      holding IS A `Holding in a body corporate`
+GIVETH A BOOLEAN
+`the holding gives control of` body holding MEANS
+        holding's `the body corporate` EQUALS body
+    AND `controlled within s 2(3)` holding
+
+-- This body corporate is controlled by this one name alone (a person, or a body corporate), as
+-- "controlled by the same person" in s 2(2)(a) is read; and, when the holder is a body corporate,
+-- as "controlled by that other body corporate" in s 2(5)(a)(ii) and (iii) is read.
+@ref CBCA s 2(3) control, helper (src:80-82)
+GIVEN body IS A STRING
+      controller IS A STRING
+      holding IS A `Holding in a body corporate`
+GIVETH A BOOLEAN
+`the holding gives control of the body to the controller alone` body controller holding MEANS
+        `the holding gives control of` body holding
+    AND (count (holding's `the persons holding`)) EQUALS 1
+    AND elem controller (holding's `the persons holding`)
+
+@ref CBCA s 2(3) control, helper (src:80-82)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      body IS A STRING
+      controller IS A STRING
+GIVETH A BOOLEAN
+`controlled by alone` holdings body controller MEANS
+    any (GIVEN holding YIELD `the holding gives control of the body to the controller alone` body controller holding) holdings
+
+@ref CBCA s 2(3) control, helper (src:80-82)
+GIVEN body IS A STRING
+      controller IS A STRING
+      holding IS A `Holding in a body corporate`
+GIVETH A BOOLEAN
+`the holding gives control of the body to the body corporate alone` body controller holding MEANS
+        `the holding gives control of the body to the controller alone` body controller holding
+    AND holding's `the persons holding are bodies corporate`
+
+@ref CBCA s 2(3) control, helper (src:80-82)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      body IS A STRING
+      controller IS A STRING
+GIVETH A BOOLEAN
+`controlled by a body corporate alone` holdings body controller MEANS
+    any (GIVEN holding YIELD `the holding gives control of the body to the body corporate alone` body controller holding) holdings
+
+@ref CBCA s 2(3) control, helper (src:80-82)
+GIVEN holding IS A `Holding in a body corporate`
+GIVETH A STRING
+`the body corporate of` holding MEANS holding's `the body corporate`
+
+@ref CBCA s 2(3) control, helper (src:80-82)
+GIVEN holding IS A `Holding in a body corporate`
+GIVETH A LIST OF STRING
+`the persons holding in` holding MEANS holding's `the persons holding`
+
+-- Every name that occurs in the holdings, once.
+@ref CBCA s 2(3) control, helper (src:80-82)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+GIVETH A LIST OF STRING
+`all the names in` holdings MEANS
+    nub (append (map `the body corporate of` holdings)
+                (concat (map `the persons holding in` holdings)))
+
+§§ `s 2(5) subsidiary body corporate, s 2(4) holding body corporate`
+
+-- (a)(i) controlled by that other body corporate;
+-- (a)(ii) controlled by that other and one or more bodies corporate each controlled by that other;
+-- (a)(iii) controlled by two or more bodies corporate each controlled by that other.
+-- A holder who is the other body corporate itself, or a body corporate controlled by the other alone,
+-- is one that fits. With one holder, it must be the other (i); with two or more, every holder must fit
+-- (ii and iii). One holder who is controlled by the other, and is not the other, fits none of the three.
+-- src:86 | (5) A body corporate is a subsidiary of another body corporate if
+-- src:87 | (a) it is controlled by
+-- src:88 | (i) that other body corporate,
+-- src:89 | (ii) that other body corporate and one or more bodies corporate each of which is controlled by that other body corporate, or
+-- src:90 | (iii) two or more bodies corporate each of which is controlled by that other body corporate; or
+@ref CBCA s 2(5)(a) subsidiary body corporate (src:86-90)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      other IS A STRING
+      holders IS A LIST OF STRING
+GIVETH A BOOLEAN
+`the holders fit s 2(5)(a)` holdings other holders MEANS
+        (    (count holders) EQUALS 1
+         AND elem other holders)
+    OR  (    (count holders) AT LEAST 2
+         AND all (GIVEN holder YIELD holder EQUALS other OR `controlled by a body corporate alone` holdings holder other) holders)
+
+-- A body corporate is directly a subsidiary of another by s 2(5)(a) if a holding that gives control of it
+-- is held by holders that fit.
+-- src:86 | (5) A body corporate is a subsidiary of another body corporate if
+-- src:87 | (a) it is controlled by
+-- src:88 | (i) that other body corporate,
+-- src:89 | (ii) that other body corporate and one or more bodies corporate each of which is controlled by that other body corporate, or
+-- src:90 | (iii) two or more bodies corporate each of which is controlled by that other body corporate; or
+@ref CBCA s 2(5)(a) subsidiary body corporate (src:86-90)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      subsidiary IS A STRING
+      other IS A STRING
+      holding IS A `Holding in a body corporate`
+GIVETH A BOOLEAN
+`the holding makes it a subsidiary under s 2(5)(a)` holdings subsidiary other holding MEANS
+        `the holding gives control of` subsidiary holding
+    AND holding's `the persons holding are bodies corporate`
+    AND `the holders fit s 2(5)(a)` holdings other (holding's `the persons holding`)
+
+@ref CBCA s 2(5)(a) subsidiary body corporate, helper (src:86-90)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      subsidiary IS A STRING
+      other IS A STRING
+GIVETH A BOOLEAN
+`subsidiary within s 2(5)(a)` holdings subsidiary other MEANS
+    any (GIVEN holding YIELD `the holding makes it a subsidiary under s 2(5)(a)` holdings subsidiary other holding) holdings
+
+-- The bodies corporate that this one is directly a subsidiary of, by s 2(5)(a).
+-- src:91 | (b) it is a subsidiary of a body corporate that is a subsidiary of that other body corporate.
+@ref CBCA s 2(5)(b) subsidiary body corporate, helper (src:91)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      subsidiary IS A STRING
+      other IS A STRING
+GIVETH A BOOLEAN
+`directly above` holdings subsidiary other MEANS
+        (NOT (other EQUALS subsidiary))
+    AND `subsidiary within s 2(5)(a)` holdings subsidiary other
+
+@ref CBCA s 2(5)(b) subsidiary body corporate, helper (src:91)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      subsidiary IS A STRING
+GIVETH A LIST OF STRING
+`the bodies corporate above directly` holdings subsidiary MEANS
+    filter (GIVEN other YIELD `directly above` holdings subsidiary other) (`all the names in` holdings)
+
+-- (b) a subsidiary of a body corporate that is a subsidiary of that other: the closure of (a). The list
+-- `reached` is every body corporate found so far; the step follows the ones found last (`frontier`)
+-- to the ones above them that are not yet in `reached`, and stops when there are none.
+@ref CBCA s 2(5)(b) subsidiary body corporate, helper (src:91)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      frontier IS A LIST OF STRING
+      reached IS A LIST OF STRING
+GIVETH A LIST OF STRING
+`the new bodies corporate above` holdings frontier reached MEANS
+    filter (GIVEN name YIELD (NOT (elem name reached))) (nub (concat (map (GIVEN below YIELD `the bodies corporate above directly` holdings below) frontier)))
+
+@ref CBCA s 2(5)(b) subsidiary body corporate, helper (src:91)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      frontier IS A LIST OF STRING
+      reached IS A LIST OF STRING
+GIVETH A LIST OF STRING
+`the bodies corporate reached above` holdings frontier reached MEANS
+    IF null frontier
+    THEN reached
+    ELSE `the bodies corporate reached above` holdings (`the new bodies corporate above` holdings frontier reached) (append reached (`the new bodies corporate above` holdings frontier reached))
+
+-- Every body corporate that this one is a subsidiary of, by (a) or (b).
+-- src:86 | (5) A body corporate is a subsidiary of another body corporate if
+-- src:87 | (a) it is controlled by
+-- src:88 | (i) that other body corporate,
+-- src:89 | (ii) that other body corporate and one or more bodies corporate each of which is controlled by that other body corporate, or
+-- src:90 | (iii) two or more bodies corporate each of which is controlled by that other body corporate; or
+-- src:91 | (b) it is a subsidiary of a body corporate that is a subsidiary of that other body corporate.
+@ref CBCA s 2(5) subsidiary body corporate (src:86-91)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      subsidiary IS A STRING
+GIVETH A LIST OF STRING
+`the bodies corporate above` holdings subsidiary MEANS
+    `the bodies corporate reached above` holdings (LIST subsidiary) EMPTY
+
+-- src:86 | (5) A body corporate is a subsidiary of another body corporate if
+-- src:87 | (a) it is controlled by
+-- src:88 | (i) that other body corporate,
+-- src:89 | (ii) that other body corporate and one or more bodies corporate each of which is controlled by that other body corporate, or
+-- src:90 | (iii) two or more bodies corporate each of which is controlled by that other body corporate; or
+-- src:91 | (b) it is a subsidiary of a body corporate that is a subsidiary of that other body corporate.
+@ref CBCA s 2(5) subsidiary body corporate (src:86-91)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      subsidiary IS A STRING
+      other IS A STRING
+GIVETH A BOOLEAN
+`subsidiary within s 2(5)` holdings subsidiary other MEANS
+        (NOT (subsidiary EQUALS other))
+    AND elem other (`the bodies corporate above` holdings subsidiary)
+
+-- src:84 | (4) A body corporate is the holding body corporate of another if that other body corporate is its subsidiary.
+@ref CBCA s 2(4) holding body corporate (src:84)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      holder IS A STRING
+      other IS A STRING
+GIVETH A BOOLEAN
+`holding body corporate within s 2(4)` holdings holder other MEANS
+    `subsidiary within s 2(5)` holdings other holder
+
+§§ `s 2(2) affiliated bodies corporate`
+
+-- PAIRWISE. (a): affiliated if one is the subsidiary of the other, or both are subsidiaries of the same
+-- body corporate, or each is controlled by the same person. (b): two bodies corporate affiliated with
+-- the same body corporate at the same time are deemed affiliated with each other.
+-- src:77 | (a) one body corporate is affiliated with another body corporate if one of them is the subsidiary of the other or both are subsidiaries of the same body corporate or each of them is controlled by the same person; and
+@ref CBCA s 2(2)(a) affiliated bodies corporate (src:77)
+GIVEN `one of them is the subsidiary of the other` IS A BOOLEAN
+      `both are subsidiaries of the same body corporate` IS A BOOLEAN
+      `each of them is controlled by the same person` IS A BOOLEAN
+GIVETH A BOOLEAN
+`affiliated within s 2(2)(a)` MEANS
+        `one of them is the subsidiary of the other`
+    OR  `both are subsidiaries of the same body corporate`
+    OR  `each of them is controlled by the same person`
+
+-- src:78 | (b) if two bodies corporate are affiliated with the same body corporate at the same time, they are deemed to be affiliated with each other.
+@ref CBCA s 2(2)(b) affiliated bodies corporate (src:78)
+GIVEN `both are affiliated with the same body corporate at the same time` IS A BOOLEAN
+GIVETH A BOOLEAN
+`affiliated within s 2(2)(b)` MEANS
+    `both are affiliated with the same body corporate at the same time`
+
+-- src:76 | (2) For the purposes of this Act,
+-- src:77 | (a) one body corporate is affiliated with another body corporate if one of them is the subsidiary of the other or both are subsidiaries of the same body corporate or each of them is controlled by the same person; and
+-- src:78 | (b) if two bodies corporate are affiliated with the same body corporate at the same time, they are deemed to be affiliated with each other.
+@ref CBCA s 2(2) affiliated bodies corporate (src:76-78)
+GIVEN `one of them is the subsidiary of the other` IS A BOOLEAN
+      `both are subsidiaries of the same body corporate` IS A BOOLEAN
+      `each of them is controlled by the same person` IS A BOOLEAN
+      `both are affiliated with the same body corporate at the same time` IS A BOOLEAN
+GIVETH A BOOLEAN
+`affiliated within s 2(2)` MEANS
+        `affiliated within s 2(2)(a)` `one of them is the subsidiary of the other` `both are subsidiaries of the same body corporate` `each of them is controlled by the same person`
+    OR  `affiliated within s 2(2)(b)` `both are affiliated with the same body corporate at the same time`
+
+-- FROM THE HOLDINGS. Both are subsidiaries of the same body corporate: some body corporate is above both.
+@ref CBCA s 2(2)(a) affiliated bodies corporate, helper (src:77)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      first IS A STRING
+      second IS A STRING
+GIVETH A BOOLEAN
+`both are subsidiaries of the same body corporate by` holdings first second MEANS
+    any (GIVEN above YIELD elem above (`the bodies corporate above` holdings second))
+        (`the bodies corporate above` holdings first)
+
+-- Each is controlled by the same person: one name controls both alone.
+@ref CBCA s 2(2)(a) affiliated bodies corporate, helper (src:77)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      first IS A STRING
+      second IS A STRING
+      person IS A STRING
+GIVETH A BOOLEAN
+`the person controls both alone` holdings first second person MEANS
+        `controlled by alone` holdings first person
+    AND `controlled by alone` holdings second person
+
+@ref CBCA s 2(2)(a) affiliated bodies corporate, helper (src:77)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      first IS A STRING
+      second IS A STRING
+GIVETH A BOOLEAN
+`each is controlled by the same person by` holdings first second MEANS
+    any (GIVEN person YIELD `the person controls both alone` holdings first second person) (`all the names in` holdings)
+
+-- Affiliated by (a) alone, from the holdings.
+@ref CBCA s 2(2)(a) affiliated bodies corporate, helper (src:77)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      first IS A STRING
+      second IS A STRING
+GIVETH A BOOLEAN
+`affiliated by the holdings within s 2(2)(a)` holdings first second MEANS
+    `affiliated within s 2(2)(a)`
+        (    `subsidiary within s 2(5)` holdings first second
+         OR  `subsidiary within s 2(5)` holdings second first)
+        (`both are subsidiaries of the same body corporate by` holdings first second)
+        (`each is controlled by the same person by` holdings first second)
+
+-- The bodies corporate affiliated by (a) with this one.
+@ref CBCA s 2(2)(b) affiliated bodies corporate, helper (src:78)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      body IS A STRING
+      other IS A STRING
+GIVETH A BOOLEAN
+`directly affiliated` holdings body other MEANS
+        (NOT (other EQUALS body))
+    AND `affiliated by the holdings within s 2(2)(a)` holdings body other
+
+@ref CBCA s 2(2)(b) affiliated bodies corporate, helper (src:78)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      body IS A STRING
+GIVETH A LIST OF STRING
+`the bodies corporate affiliated directly with` holdings body MEANS
+    filter (GIVEN other YIELD `directly affiliated` holdings body other) (`all the names in` holdings)
+
+-- (b) closes affiliation under "affiliated with the same body corporate": the bodies reached by following
+-- (a) from this one, and from each of those, are all affiliated with it. Fork F3 in NOTES.md: this reads
+-- a deemed affiliation as an affiliation, so that it can itself be the "same body corporate".
+@ref CBCA s 2(2)(b) affiliated bodies corporate, helper (src:78)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      frontier IS A LIST OF STRING
+      reached IS A LIST OF STRING
+GIVETH A LIST OF STRING
+`the new bodies corporate reached by affiliation` holdings frontier reached MEANS
+    filter (GIVEN name YIELD (NOT (elem name reached))) (nub (concat (map (GIVEN near YIELD `the bodies corporate affiliated directly with` holdings near) frontier)))
+
+@ref CBCA s 2(2)(b) affiliated bodies corporate, helper (src:78)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      frontier IS A LIST OF STRING
+      reached IS A LIST OF STRING
+GIVETH A LIST OF STRING
+`the bodies corporate reached by affiliation` holdings frontier reached MEANS
+    IF null frontier
+    THEN reached
+    ELSE `the bodies corporate reached by affiliation` holdings (`the new bodies corporate reached by affiliation` holdings frontier reached) (append reached (`the new bodies corporate reached by affiliation` holdings frontier reached))
+
+-- src:76 | (2) For the purposes of this Act,
+-- src:77 | (a) one body corporate is affiliated with another body corporate if one of them is the subsidiary of the other or both are subsidiaries of the same body corporate or each of them is controlled by the same person; and
+-- src:78 | (b) if two bodies corporate are affiliated with the same body corporate at the same time, they are deemed to be affiliated with each other.
+@ref CBCA s 2(2) affiliated bodies corporate (src:76-78)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      first IS A STRING
+      second IS A STRING
+GIVETH A BOOLEAN
+`affiliated by the holdings within s 2(2)` holdings first second MEANS
+        (NOT (first EQUALS second))
+    AND elem second (`the bodies corporate reached by affiliation` holdings (LIST first) (LIST first))
+
+§§ `s 2(1) affiliate`
+
+-- "affiliate means an affiliated body corporate within the meaning of subsection (2)".
+-- src:19 | affiliate means an affiliated body corporate within the meaning of subsection (2); (groupe)
+@ref CBCA s 2(1) affiliate (src:19)
+GIVEN holdings IS A LIST OF `Holding in a body corporate`
+      first IS A STRING
+      second IS A STRING
+GIVETH A BOOLEAN
+`affiliate within s 2(1)` holdings first second MEANS
+    `affiliated by the holdings within s 2(2)` holdings first second
+
+-- src:19 | affiliate means an affiliated body corporate within the meaning of subsection (2); (groupe)
+@ref CBCA s 2(1) affiliate (src:19)
+GIVEN `one of them is the subsidiary of the other` IS A BOOLEAN
+      `both are subsidiaries of the same body corporate` IS A BOOLEAN
+      `each of them is controlled by the same person` IS A BOOLEAN
+      `both are affiliated with the same body corporate at the same time` IS A BOOLEAN
+GIVETH A BOOLEAN
+`affiliate within s 2(1) by the facts` MEANS
+    `affiliated within s 2(2)` `one of them is the subsidiary of the other` `both are subsidiaries of the same body corporate` `each of them is controlled by the same person` `both are affiliated with the same body corporate at the same time`

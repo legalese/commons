@@ -1,0 +1,505 @@
+IMPORT prelude
+IMPORT `uc-core`
+IMPORT `uc1-common`
+
+-- The Universal Credit Regulations 2013 (S.I. 2013/376), Part 3 (awards): regulations 20 to 22A.
+-- Source: ../../registers/source-bundle/uksi-2013-376.txt, a plain-text rendering of the revised text (legislation.gov.uk, version 2026-07-16)
+-- made by a converter script. It is not the official text. Every `-- src:N | ...` line copies line N of that file.
+-- Target: the stable build 1.6.98. Seat: a person who claims or receives Universal Credit, alone or as one of a couple.
+--
+-- WHAT IS HERE: how the one-month assessment periods run (regulations 21 and 21A), what is deducted from the maximum amount
+-- (regulation 22) and the apportionment of a first award after a late reclaim (regulation 22A). Regulations 20 (introduction),
+-- 20A and the repealed paragraphs are in NOTES.md's coverage table and carry no rule.
+-- Money is a NUMBER of pounds; a calculated amount is rounded once, at the end, with the core's rounding rule (regulation 6(1)).
+-- The text of regulations 21A(2)(b) and 22A(2) says "calculated as follows" and "by the following formula" and then shows only
+-- the meaning of the letters: the formulas are not in the deposited text. They are not reconstructed (fork F-FORMULA in NOTES.md):
+-- the amount is NOTHING, and the rule takes the amount A as an input so that a caller shows what the formula would have used.
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 21: assessment periods. The assessment period is the core's record (a first day and a last day, the last
+-- day itself inside the period).
+
+-- The first day of an assessment period, counted in months from the first date of entitlement (0 is the first period).
+-- The month is the same each time; the day is the day of the first date of entitlement, except as paragraph (2) says:
+-- a first date on the 31st gives the last day of each month, and a first date on the 29th or 30th gives the 29th or 30th,
+-- except in February, when the period begins on the 27th or, in a leap year, the 28th.
+-- src:432 | (1) An assessment period is... a period of one month beginning with the first date of entitlement and each subsequent period of one month during which entitlement subsists.
+-- src:434 | (2) Each assessment period begins on the same day of each month except as follows—
+-- src:435 | (a) if the first date of entitlement falls on the 31st day of a month, each assessment period begins on the last day of the month; and
+-- src:436 | (b) if the first date of entitlement falls on the 29th or 30th day of a month, each assessment period begins on the 29th or 30th day of the month (as above) except in February when it begins on the 27th day or, in a leap year, the 28th day.
+@ref reg 21(1) and (2) (src:432-436)
+GIVEN `first date of entitlement` IS A DATE
+      `months after the first date of entitlement` IS A NUMBER
+GIVETH A DATE
+`reg 21(2) — the first day of an assessment period` `first date of entitlement` `months after the first date of entitlement` MEANS
+    Date `the day on which the period begins` `the month in which the period begins` `the year in which the period begins`
+    WHERE
+        `months counted from January of the first year` MEANS
+            ((DATE_MONTH `first date of entitlement`) MINUS 1) PLUS `months after the first date of entitlement`
+        `the month in which the period begins` MEANS (`months counted from January of the first year` MODULO 12) PLUS 1
+        `the year in which the period begins` MEANS
+            (DATE_YEAR `first date of entitlement`) PLUS (FLOOR (`months counted from January of the first year` DIVIDED BY 12))
+        `the day of the first date of entitlement` MEANS DATE_DAY `first date of entitlement`
+        `the day on which the period begins` MEANS
+            BRANCH
+                IF `the day of the first date of entitlement` EQUALS 31
+                THEN `uc1 — the last day of a calendar month` `the month in which the period begins` `the year in which the period begins`
+                IF (`the day of the first date of entitlement` EQUALS 29) OR (`the day of the first date of entitlement` EQUALS 30)
+                THEN (IF `the month in which the period begins` EQUALS 2
+                      THEN (IF `uc1 — a leap year` `the year in which the period begins` THEN 28 ELSE 27)
+                      ELSE `the day of the first date of entitlement`)
+                OTHERWISE `the day of the first date of entitlement`
+
+-- The assessment period that begins a given number of months after the first date of entitlement: it ends on the day
+-- before the next one begins.
+-- src:432 | (1) An assessment period is... a period of one month beginning with the first date of entitlement and each subsequent period of one month during which entitlement subsists.
+-- src:434 | (2) Each assessment period begins on the same day of each month except as follows—
+-- src:435 | (a) if the first date of entitlement falls on the 31st day of a month, each assessment period begins on the last day of the month; and
+-- src:436 | (b) if the first date of entitlement falls on the 29th or 30th day of a month, each assessment period begins on the 29th or 30th day of the month (as above) except in February when it begins on the 27th day or, in a leap year, the 28th day.
+@ref reg 21(1) and (2) (src:432-436)
+GIVEN `first date of entitlement` IS A DATE
+      `months after the first date of entitlement` IS A NUMBER
+GIVETH AN `Assessment period`
+`reg 21(1) — an assessment period` `first date of entitlement` `months after the first date of entitlement` MEANS
+    `Assessment period` WITH
+        `first day` IS `reg 21(2) — the first day of an assessment period` `first date of entitlement` `months after the first date of entitlement`
+        `last day`  IS (`reg 21(2) — the first day of an assessment period` `first date of entitlement` (`months after the first date of entitlement` PLUS 1)) MINUS 1
+
+-- How many months after the first date of entitlement the assessment period containing a day begins; NOTHING for a day
+-- before the first date of entitlement, when no assessment period of the award has begun.
+-- src:432 | (1) An assessment period is... a period of one month beginning with the first date of entitlement and each subsequent period of one month during which entitlement subsists.
+@ref reg 21(1) (src:432)
+GIVEN `first date of entitlement` IS A DATE
+      day IS A DATE
+GIVETH A MAYBE NUMBER
+`reg 21(1) — the position of the assessment period containing a day` `first date of entitlement` day MEANS
+    IF day LESS THAN `first date of entitlement`
+    THEN NOTHING
+    ELSE
+        JUST (IF (`reg 21(2) — the first day of an assessment period` `first date of entitlement` `the months between the two dates`) AT MOST day
+              THEN `the months between the two dates`
+              ELSE `the months between the two dates` MINUS 1)
+    WHERE
+        `the months between the two dates` MEANS
+            (((DATE_YEAR day) MINUS (DATE_YEAR `first date of entitlement`)) TIMES 12)
+            PLUS ((DATE_MONTH day) MINUS (DATE_MONTH `first date of entitlement`))
+
+-- The assessment period containing a day, NOTHING before the first date of entitlement.
+-- src:432 | (1) An assessment period is... a period of one month beginning with the first date of entitlement and each subsequent period of one month during which entitlement subsists.
+@ref reg 21(1) (src:432)
+GIVEN `first date of entitlement` IS A DATE
+      day IS A DATE
+GIVETH A MAYBE `Assessment period`
+`reg 21(1) — the assessment period containing a day` `first date of entitlement` day MEANS
+    CONSIDER `reg 21(1) — the position of the assessment period containing a day` `first date of entitlement` day
+    WHEN JUST position THEN JUST (`reg 21(1) — an assessment period` `first date of entitlement` position)
+    WHEN NOTHING THEN NOTHING
+
+-- One old award, as a new award that follows it sees it: the first date of entitlement that set its assessment periods and
+-- the last day of its last assessment period.
+-- src:438 | (3) Where a new award is made to a single person without a claim by virtue of regulation 9(6)(a) or (10) of the Claims and Payments Regulations (old award has ended when the claimant ceased to be a member of a couple) each assessment period for the new award begins on the same day of each month as the assessment period for the old award.
+-- src:439 | (3A) Where a new award is made to members of a couple jointly without claim by virtue of regulation 9(6)(b) or (7) of the Claims and Payments Regulations (two previous awards have ended when the claimants formed a couple) each assessment period for the new award begins on the same day of each month as the assessment period for whichever of the old awards ended earlier.
+-- src:440 | (3B) Where a claim is treated as made by virtue of regulation 9(8) of the Claims and Payments Regulations (old award ended when a claimant formed a couple with a person not entitled to universal credit), each assessment period in relation to the new award begins on the same day of each month as the assessment period for the old award.
+@ref reg 21(3) to (3B) (src:438-440)
+DECLARE `Old award whose assessment periods a new award follows` HAS
+    `first date of entitlement of the old award`        IS A DATE
+    `last day of the old award's last assessment period`  IS A DATE
+
+-- Of two old awards, the one that ended earlier.
+-- src:439 | (3A) Where a new award is made to members of a couple jointly without claim by virtue of regulation 9(6)(b) or (7) of the Claims and Payments Regulations (two previous awards have ended when the claimants formed a couple) each assessment period for the new award begins on the same day of each month as the assessment period for whichever of the old awards ended earlier.
+@ref reg 21(3A) (src:439)
+GIVEN `first old award` IS AN `Old award whose assessment periods a new award follows`
+      `second old award` IS AN `Old award whose assessment periods a new award follows`
+GIVETH AN `Old award whose assessment periods a new award follows`
+`reg 21(3A) — whichever of the old awards ended earlier` `first old award` `second old award` MEANS
+    IF (`first old award`'s `last day of the old award's last assessment period`) AT MOST (`second old award`'s `last day of the old award's last assessment period`)
+    THEN `first old award`
+    ELSE `second old award`
+
+-- (3) A new award to a single person, made without a claim because the old award ended when the claimant ceased to be a member of
+-- a couple: each assessment period of the new award begins on the same day of each month as the old award's. Whether the new award
+-- is made in that way is regulation 9(6)(a) or (10) of the Claims and Payments Regulations (not among the inputs), a stated input.
+-- The answer is the first date of entitlement whose cycle the new award follows, or NOTHING when the paragraph does not apply.
+-- src:438 | (3) Where a new award is made to a single person without a claim by virtue of regulation 9(6)(a) or (10) of the Claims and Payments Regulations (old award has ended when the claimant ceased to be a member of a couple) each assessment period for the new award begins on the same day of each month as the assessment period for the old award.
+@ref reg 21(3) (src:438)
+GIVEN `the new award is made to a single person without a claim by virtue of regulation 9(6)(a) or (10) of the Claims and Payments Regulations` IS A BOOLEAN  -- out of range: the Claims and Payments Regulations 2013 (not a piece)
+      `old award` IS AN `Old award whose assessment periods a new award follows`
+GIVETH A MAYBE DATE
+`reg 21(3) — the first date of entitlement whose cycle the new award follows` `the new award is made to a single person without a claim by virtue of regulation 9(6)(a) or (10) of the Claims and Payments Regulations` `old award` MEANS
+    IF `the new award is made to a single person without a claim by virtue of regulation 9(6)(a) or (10) of the Claims and Payments Regulations`
+    THEN JUST (`old award`'s `first date of entitlement of the old award`)
+    ELSE NOTHING
+
+-- (3A) A new award to members of a couple jointly, made without a claim because two previous awards ended when they formed a
+-- couple: the cycle of whichever old award ended earlier.
+-- src:439 | (3A) Where a new award is made to members of a couple jointly without claim by virtue of regulation 9(6)(b) or (7) of the Claims and Payments Regulations (two previous awards have ended when the claimants formed a couple) each assessment period for the new award begins on the same day of each month as the assessment period for whichever of the old awards ended earlier.
+@ref reg 21(3A) (src:439)
+GIVEN `the new award is made to members of a couple jointly without a claim by virtue of regulation 9(6)(b) or (7) of the Claims and Payments Regulations` IS A BOOLEAN  -- out of range: the Claims and Payments Regulations 2013 (not a piece)
+      `first old award` IS AN `Old award whose assessment periods a new award follows`
+      `second old award` IS AN `Old award whose assessment periods a new award follows`
+GIVETH A MAYBE DATE
+`reg 21(3A) — the first date of entitlement whose cycle the new award follows` `the new award is made to members of a couple jointly without a claim by virtue of regulation 9(6)(b) or (7) of the Claims and Payments Regulations` `first old award` `second old award` MEANS
+    IF `the new award is made to members of a couple jointly without a claim by virtue of regulation 9(6)(b) or (7) of the Claims and Payments Regulations`
+    THEN JUST ((`reg 21(3A) — whichever of the old awards ended earlier` `first old award` `second old award`)'s `first date of entitlement of the old award`)
+    ELSE NOTHING
+
+-- (3B) A claim treated as made because the old award ended when a claimant formed a couple with a person not entitled to
+-- universal credit: the cycle of the old award.
+-- src:440 | (3B) Where a claim is treated as made by virtue of regulation 9(8) of the Claims and Payments Regulations (old award ended when a claimant formed a couple with a person not entitled to universal credit), each assessment period in relation to the new award begins on the same day of each month as the assessment period for the old award.
+@ref reg 21(3B) (src:440)
+GIVEN `the claim is treated as made by virtue of regulation 9(8) of the Claims and Payments Regulations` IS A BOOLEAN  -- out of range: the Claims and Payments Regulations 2013 (not a piece)
+      `old award` IS AN `Old award whose assessment periods a new award follows`
+GIVETH A MAYBE DATE
+`reg 21(3B) — the first date of entitlement whose cycle the new award follows` `the claim is treated as made by virtue of regulation 9(8) of the Claims and Payments Regulations` `old award` MEANS
+    IF `the claim is treated as made by virtue of regulation 9(8) of the Claims and Payments Regulations`
+    THEN JUST (`old award`'s `first date of entitlement of the old award`)
+    ELSE NOTHING
+
+-- (3C) A claim within 6 months of the end of a previous award: the claimant (or a joint claimant) was previously entitled, the
+-- last day of the award fell within the 6 months before the claim, and throughout that time still met the basic conditions in
+-- section 4 of the Act (disregarding the claimant commitment and a temporary absence that would be disregarded) and was not
+-- excluded by regulation 19.
+-- src:441 | (3C) Where a claim is made by a single person or members of a couple jointly and the claimant (or either joint claimant) meets the following conditions—
+-- src:442 | (a) the claimant was previously entitled to an award of universal credit the last day of which fell within the 6 months preceding the date on which the claim is made; and
+-- src:443 | (b) during that 6 months—
+-- src:444 | (i) the claimant has continued to meet the basic conditions in section 4 of the Act (disregarding the requirement to have accepted a claimant commitment and any temporary period of absence from Great Britain that would be disregarded during a period of entitlement to universal credit); and
+-- src:445 | (ii) the claimant was not excluded from entitlement by regulation 19 (restrictions on entitlement – prisoners etc.),
+-- src:446 | each assessment period for the new award begins on the same day of each month as the assessment period for the old award or, if there was an old award in respect of each joint claimant, the assessment period that ends earlier in relation to the date on which the claim is made.
+@ref reg 21(3C) (src:441-446)
+DECLARE `Claim made within 6 months of the end of a previous award` HAS
+    `date on which the claim is made`                                                                   IS A DATE
+    `last day of the previous award`                                                                    IS A DATE
+    `during those 6 months the claimant continued to meet the basic conditions in section 4 of the Act`  IS A BOOLEAN  -- out of range: the Act, sections 4, 5 or 22 (not a piece)
+    `during those 6 months the claimant was not excluded from entitlement by regulation 19`             IS A BOOLEAN
+
+-- The last day of the previous award fell within the 6 months preceding the claim: it is before the claim, and not more than
+-- 6 months before it (31 August less 6 months is 28 February, by the core's month arithmetic).
+-- src:442 | (a) the claimant was previously entitled to an award of universal credit the last day of which fell within the 6 months preceding the date on which the claim is made; and
+@ref reg 21(3C)(a) (src:442)
+GIVEN claim IS A `Claim made within 6 months of the end of a previous award`
+GIVETH A BOOLEAN
+`reg 21(3C)(a) — the last day of the previous award fell within the 6 months preceding the claim` claim MEANS
+    ((claim's `last day of the previous award`) LESS THAN (claim's `date on which the claim is made`))
+    AND ((`core — the date reached by adding a time limit to a date` (claim's `last day of the previous award`)
+              (`Time limit` WITH quantity IS 6, unit IS months))
+         AT LEAST (claim's `date on which the claim is made`))
+
+-- src:441 | (3C) Where a claim is made by a single person or members of a couple jointly and the claimant (or either joint claimant) meets the following conditions—
+-- src:442 | (a) the claimant was previously entitled to an award of universal credit the last day of which fell within the 6 months preceding the date on which the claim is made; and
+-- src:443 | (b) during that 6 months—
+-- src:444 | (i) the claimant has continued to meet the basic conditions in section 4 of the Act (disregarding the requirement to have accepted a claimant commitment and any temporary period of absence from Great Britain that would be disregarded during a period of entitlement to universal credit); and
+-- src:445 | (ii) the claimant was not excluded from entitlement by regulation 19 (restrictions on entitlement – prisoners etc.),
+-- src:446 | each assessment period for the new award begins on the same day of each month as the assessment period for the old award or, if there was an old award in respect of each joint claimant, the assessment period that ends earlier in relation to the date on which the claim is made.
+@ref reg 21(3C) (src:441-446)
+GIVEN claim IS A `Claim made within 6 months of the end of a previous award`
+GIVETH A BOOLEAN
+`reg 21(3C) — the claim is made within 6 months of the end of a previous award` claim MEANS
+    (`reg 21(3C)(a) — the last day of the previous award fell within the 6 months preceding the claim` claim)
+    AND (claim's `during those 6 months the claimant continued to meet the basic conditions in section 4 of the Act`)
+    AND (claim's `during those 6 months the claimant was not excluded from entitlement by regulation 19`)
+
+-- Where (3C) applies the new award follows the cycle of the old award or, if there was an old award for each joint claimant, of
+-- the old award whose assessment period ends earlier in relation to the date of the claim. "Ends earlier" is read as the earlier last day
+-- of the old award's last assessment period (fork F-21-3C, assumed and not ruled; the text does not say how the 6 months preceding
+-- the claim are counted either, and the first limb counts them with the core's month arithmetic).
+-- src:446 | each assessment period for the new award begins on the same day of each month as the assessment period for the old award or, if there was an old award in respect of each joint claimant, the assessment period that ends earlier in relation to the date on which the claim is made.
+@ref reg 21(3C) (src:446)
+GIVEN claim IS A `Claim made within 6 months of the end of a previous award`
+      `first old award` IS AN `Old award whose assessment periods a new award follows`
+      `second old award, if there was an old award for each joint claimant` IS A MAYBE `Old award whose assessment periods a new award follows`
+GIVETH A MAYBE DATE
+`reg 21(3C) — the first date of entitlement whose cycle the new award follows` claim `first old award` `second old award, if there was an old award for each joint claimant` MEANS
+    IF `reg 21(3C) — the claim is made within 6 months of the end of a previous award` claim
+    THEN
+        CONSIDER `second old award, if there was an old award for each joint claimant`
+        WHEN JUST second THEN JUST ((`reg 21(3A) — whichever of the old awards ended earlier` `first old award` second)'s `first date of entitlement of the old award`)
+        WHEN NOTHING THEN JUST (`first old award`'s `first date of entitlement of the old award`)
+    ELSE NOTHING
+
+-- (3D) A member who, at the beginning of the first assessment period of the new award, fails to meet the age or Great Britain
+-- basic conditions (section 4(1)(a) and (c) of the Act) or is excluded by regulation 19 is not held back by it, provided that
+-- at the end of that period they meet those conditions and are not so excluded. It applies to the member not entitled in a
+-- paragraph (3B) case and to the member who does not meet the conditions in a paragraph (3C) case.
+-- src:447 | (3D) For the purposes of this regulation it does not matter if, at the beginning of the first assessment period of the new award, the following persons do not meet the basic conditions in section 4(1)(a) and (c) of the Act (at least 18 years old and in Great Britain) or if they are excluded from entitlement under regulation 19 (restrictions on entitlement – prisoners etc.) provided they meet those conditions (and are not so excluded) at the end of that assessment period—
+-- src:448 | (a) in a case to which paragraph (3B) applies, the member of the couple who was not entitled to universal credit; or
+-- src:449 | (b) in a case to which paragraph (3C) applies, the member of the couple who does not meet the conditions mentioned in that paragraph.
+@ref reg 21(3D) (src:447-449)
+GIVEN `the case is one to which paragraph (3B) or (3C) applies` IS A BOOLEAN
+      `the member meets the basic conditions in section 4(1)(a) and (c) of the Act and is not excluded by regulation 19 at the end of the first assessment period` IS A BOOLEAN  -- out of range: the Act, sections 4, 5 or 22 (not a piece)
+GIVETH A BOOLEAN
+`reg 21(3D) — the member's position at the beginning of the first assessment period does not matter` `the case is one to which paragraph (3B) or (3C) applies` `the member meets the basic conditions in section 4(1)(a) and (c) of the Act and is not excluded by regulation 19 at the end of the first assessment period` MEANS
+    (`the case is one to which paragraph (3B) or (3C) applies`)
+    AND (`the member meets the basic conditions in section 4(1)(a) and (c) of the Act and is not excluded by regulation 19 at the end of the first assessment period`)
+
+-- The first date of entitlement from which the assessment periods of an award run: the cycle of an old award where one of
+-- paragraphs (3) to (3C) applies (taken in the order of the paragraphs; the text does not say what happens if two apply, fork
+-- F-21-OVERLAP), and otherwise the award's own first date of entitlement, which paragraphs (1) and (2) use.
+-- src:432 | (1) An assessment period is... a period of one month beginning with the first date of entitlement and each subsequent period of one month during which entitlement subsists.
+-- src:434 | (2) Each assessment period begins on the same day of each month except as follows—
+-- src:435 | (a) if the first date of entitlement falls on the 31st day of a month, each assessment period begins on the last day of the month; and
+-- src:436 | (b) if the first date of entitlement falls on the 29th or 30th day of a month, each assessment period begins on the 29th or 30th day of the month (as above) except in February when it begins on the 27th day or, in a leap year, the 28th day.
+-- src:437 | (2A) But paragraphs (1) and (2) are subject to regulation 21A (assessment period cycle to remain the same following change in the first date of entitlement).
+-- src:438 | (3) Where a new award is made to a single person without a claim by virtue of regulation 9(6)(a) or (10) of the Claims and Payments Regulations (old award has ended when the claimant ceased to be a member of a couple) each assessment period for the new award begins on the same day of each month as the assessment period for the old award.
+-- src:439 | (3A) Where a new award is made to members of a couple jointly without claim by virtue of regulation 9(6)(b) or (7) of the Claims and Payments Regulations (two previous awards have ended when the claimants formed a couple) each assessment period for the new award begins on the same day of each month as the assessment period for whichever of the old awards ended earlier.
+-- src:440 | (3B) Where a claim is treated as made by virtue of regulation 9(8) of the Claims and Payments Regulations (old award ended when a claimant formed a couple with a person not entitled to universal credit), each assessment period in relation to the new award begins on the same day of each month as the assessment period for the old award.
+@ref reg 21(1) to (3B) (src:432-440)
+GIVEN `own first date of entitlement` IS A DATE
+      `cycle under paragraph (3)` IS A MAYBE DATE
+      `cycle under paragraph (3A)` IS A MAYBE DATE
+      `cycle under paragraph (3B)` IS A MAYBE DATE
+      `cycle under paragraph (3C)` IS A MAYBE DATE
+GIVETH A DATE
+`reg 21 — the first date of entitlement from which the assessment periods run` `own first date of entitlement` `cycle under paragraph (3)` `cycle under paragraph (3A)` `cycle under paragraph (3B)` `cycle under paragraph (3C)` MEANS
+    CONSIDER `cycle under paragraph (3)`
+    WHEN JUST d THEN d
+    WHEN NOTHING THEN
+        CONSIDER `cycle under paragraph (3A)`
+        WHEN JUST d THEN d
+        WHEN NOTHING THEN
+            CONSIDER `cycle under paragraph (3B)`
+            WHEN JUST d THEN d
+            WHEN NOTHING THEN
+                CONSIDER `cycle under paragraph (3C)`
+                WHEN JUST d THEN d
+                WHEN NOTHING THEN `own first date of entitlement`
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 21A: the cycle stays the same when the first date of entitlement is changed.
+
+-- src:454 | (1) This regulation applies where—
+-- src:455 | (a) the first date of entitlement has been determined;
+-- src:456 | (b) it is subsequently determined that the first date of entitlement falls on a different date (the “start date”); and
+-- src:457 | (c) applying regulation 21(1) and (2) following that subsequent determination (and thereby changing the beginning of each assessment period) would, in the opinion of the Secretary of State, cause unnecessary disruption to the administration of the claim.
+@ref reg 21A(1) (src:454-457)
+DECLARE `Change in the first date of entitlement` HAS
+    `the first date of entitlement has been determined`                                                         IS A BOOLEAN
+    `it is subsequently determined that the first date of entitlement falls on a different date`                IS A BOOLEAN
+    `in the opinion of the Secretary of State applying regulation 21(1) and (2) would cause unnecessary disruption to the administration of the claim`  IS A BOOLEAN
+
+-- src:454 | (1) This regulation applies where—
+-- src:455 | (a) the first date of entitlement has been determined;
+-- src:456 | (b) it is subsequently determined that the first date of entitlement falls on a different date (the “start date”); and
+-- src:457 | (c) applying regulation 21(1) and (2) following that subsequent determination (and thereby changing the beginning of each assessment period) would, in the opinion of the Secretary of State, cause unnecessary disruption to the administration of the claim.
+@ref reg 21A(1) (src:454-457)
+GIVEN change IS A `Change in the first date of entitlement`
+GIVETH A BOOLEAN
+`reg 21A(1) — this regulation applies` change MEANS
+    (change's `the first date of entitlement has been determined`)
+    AND (change's `it is subsequently determined that the first date of entitlement falls on a different date`)
+    AND (change's `in the opinion of the Secretary of State applying regulation 21(1) and (2) would cause unnecessary disruption to the administration of the claim`)
+
+-- (2)(a) The first assessment period is of a length the Secretary of State determines, beginning with the start date (the
+-- different first date of entitlement). The length is the Secretary of State's judgment, so the period is asked for by its last day.
+-- src:459 | (a) the first assessment period is to be a period of a length determined by the Secretary of State beginning with the start date;
+@ref reg 21A(2)(a) (src:459)
+GIVEN `start date` IS A DATE
+      `last day of the first assessment period as the Secretary of State determines` IS A DATE
+GIVETH AN `Assessment period`
+`reg 21A(2)(a) — the first assessment period` `start date` `last day of the first assessment period as the Secretary of State determines` MEANS
+    `Assessment period` WITH
+        `first day` IS `start date`
+        `last day`  IS `last day of the first assessment period as the Secretary of State determines`
+
+-- (2)(b) The amount payable for the first assessment period is worked out by a formula from N (the number of days in the
+-- period) and A (the amount calculated as if it were an assessment period of one month). The formula is not in the deposited
+-- text, so the amount is NOTHING (fork F-FORMULA).
+-- src:460 | (b) the amount payable in respect of that first assessment period is to be calculated as follows—
+-- src:461 | where—
+-- src:462 | N is the number of days in the period; and
+-- src:463 | A is the amount calculated in relation to that period as if it were an assessment period of one month; and
+@ref reg 21A(2)(b) (src:460-463)
+GIVEN period IS AN `Assessment period`
+      `amount calculated as if the period were an assessment period of one month` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`reg 21A(2)(b) — the amount payable for the first assessment period` period `amount calculated as if the period were an assessment period of one month` MEANS
+    NOTHING
+
+-- (2)(c) The second and subsequent assessment periods run as if the day after the end of the first were the first date of entitlement.
+-- src:464 | (c) regulation 21(1) and (2) apply to the second and subsequent assessment periods as if the day after the end of the first assessment period were the first date of entitlement.
+@ref reg 21A(2)(c) (src:464)
+GIVEN `first assessment period` IS AN `Assessment period`
+GIVETH A DATE
+`reg 21A(2)(c) — the first date of entitlement from which the second and later assessment periods run` `first assessment period` MEANS
+    (`first assessment period`'s `last day`) PLUS 1
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 22: deduction of income and work allowance.
+
+-- The table of work allowances: the same figure for a single claimant and for joint claimants who are responsible for a child
+-- or qualifying young person, or one or both of whom has limited capability for work. Where neither is so, the table specifies
+-- none (paragraph (1)(b)(i)), which is NOTHING here. Paragraph (2) chooses between the higher and lower allowance by whether
+-- the award contains an amount for the housing costs element.
+-- src:469 | (i) in a case where no work allowance is specified in the table below (that is where a single claimant does not have, or neither of joint claimants has, responsibility for a child or qualifying young person or limited capability for work), 55% of that earned income; or
+-- src:470 | (ii) in any other case, 55% of the amount by which that earned income exceeds the work allowance specified in the table.
+-- src:472 | (a) if the award contains no amount for the housing costs element, the applicable amount of the higher work allowance specified in the table below; and
+-- src:473 | (b) if the award does contain an amount for the housing costs element, the applicable amount of the lower work allowance specified in that table.
+-- src:475 | | Higher work allowance |
+-- src:476 | | Single claimant— |
+-- src:477 | | responsible for one or more children or qualifying young persons and/or has limited capability for work | £710.00 |
+-- src:478 | | Joint claimants |
+-- src:479 | | responsible for one or more children or qualifying young persons and/or where one or both have limited capability for work | £710.00 |
+-- src:480 | | Lower work allowance |
+-- src:481 | | Single claimant— |
+-- src:482 | | responsible for one or more children or qualifying young persons and/or has limited capability for work | £427.00 |
+-- src:483 | | Joint claimants— |
+-- src:484 | | responsible for one or more children or qualifying young persons and/or where one or both have limited capability for work | £427.00 |
+@ref reg 22(1)(b), (2) and the table (src:469-484)
+GIVEN `the award contains an amount for the housing costs element` IS A BOOLEAN
+      `the claimant, or either joint claimant, is responsible for one or more children or qualifying young persons` IS A BOOLEAN
+      `the claimant, or one or both joint claimants, has limited capability for work` IS A BOOLEAN  -- out of range: Part 5 (piece uc4)
+GIVETH A MAYBE NUMBER
+`reg 22(2) — the work allowance` `the award contains an amount for the housing costs element` `the claimant, or either joint claimant, is responsible for one or more children or qualifying young persons` `the claimant, or one or both joint claimants, has limited capability for work` MEANS
+    IF (`the claimant, or either joint claimant, is responsible for one or more children or qualifying young persons`)
+       OR (`the claimant, or one or both joint claimants, has limited capability for work`)
+    THEN JUST (IF `the award contains an amount for the housing costs element` THEN 427 ELSE 710)
+    ELSE NOTHING
+
+-- Which income is taken into account. A claimant who is a member of a couple but claims as a single person is treated as
+-- if the couple were joint claimants, so the two members' incomes are combined; a single claimant's own income is used.
+-- src:466 | (1) The amounts to be deducted from the maximum amount in accordance with section 8(3) of the Act to determine the amount of an award of universal credit are—
+-- src:467 | (a) all of the claimant's unearned income (or in the case of joint claimants all of their combined unearned income) in respect of the assessment period; and
+-- src:468 | (b) the following amount of the claimant’s earned income (or, in the case of joint claimants, their combined earned income) in respect of the assessment period—
+-- src:474 | (3) In the case of an award where the claimant is a member of a couple, but makes a claim as a single person, the amount to be deducted from the maximum amount in accordance with section 8(3) of the Act is the same as the amount that would be deducted in accordance with paragraph (1) if the couple were joint claimants.
+@ref reg 22(1) and (3) (src:466-474)
+GIVEN `claim basis` IS A `Claim basis`
+      `the claimant's income in respect of the assessment period` IS A NUMBER
+      `the other member of the couple's income in respect of the assessment period` IS A NUMBER
+GIVETH A NUMBER
+`reg 22(3) — the income taken into account` `claim basis` `the claimant's income in respect of the assessment period` `the other member of the couple's income in respect of the assessment period` MEANS
+    CONSIDER `claim basis`
+    WHEN `a single claimant` THEN `the claimant's income in respect of the assessment period`
+    WHEN `joint claimants` THEN (`the claimant's income in respect of the assessment period`) PLUS (`the other member of the couple's income in respect of the assessment period`)
+    WHEN `a single claimant who is a member of a couple` THEN (`the claimant's income in respect of the assessment period`) PLUS (`the other member of the couple's income in respect of the assessment period`)
+
+-- (1)(a) All of the unearned income in respect of the assessment period is deducted.
+-- src:467 | (a) all of the claimant's unearned income (or in the case of joint claimants all of their combined unearned income) in respect of the assessment period; and
+@ref reg 22(1)(a) (src:467)
+GIVEN `unearned income taken into account` IS A NUMBER  -- out of range: Part 6 (piece uc2)
+GIVETH A NUMBER
+`reg 22(1)(a) — the unearned income deducted` `unearned income taken into account` MEANS
+    `unearned income taken into account`
+
+-- (1)(b) 55% of the earned income, or where the table specifies a work allowance, 55% of the amount by which the earned income
+-- exceeds it. If the earned income does not exceed the allowance, nothing is deducted (fork F-22-NOEXCESS). Rounded as regulation 6(1) says.
+-- src:468 | (b) the following amount of the claimant’s earned income (or, in the case of joint claimants, their combined earned income) in respect of the assessment period—
+-- src:469 | (i) in a case where no work allowance is specified in the table below (that is where a single claimant does not have, or neither of joint claimants has, responsibility for a child or qualifying young person or limited capability for work), 55% of that earned income; or
+-- src:470 | (ii) in any other case, 55% of the amount by which that earned income exceeds the work allowance specified in the table.
+@ref reg 22(1)(b) (src:468-470)
+GIVEN `earned income taken into account` IS A NUMBER  -- out of range: Part 6 (piece uc2)
+      `work allowance` IS A MAYBE NUMBER
+GIVETH A NUMBER
+`reg 22(1)(b) — the earned income deducted` `earned income taken into account` `work allowance` MEANS
+    `core — an amount rounded to the nearest penny`
+        (CONSIDER `work allowance`
+         WHEN NOTHING THEN 55% TIMES `earned income taken into account`
+         WHEN JUST allowance THEN
+            IF `earned income taken into account` GREATER THAN allowance
+            THEN 55% TIMES (`earned income taken into account` MINUS allowance)
+            ELSE 0)
+
+-- (1) The amounts deducted from the maximum amount.
+-- src:466 | (1) The amounts to be deducted from the maximum amount in accordance with section 8(3) of the Act to determine the amount of an award of universal credit are—
+-- src:467 | (a) all of the claimant's unearned income (or in the case of joint claimants all of their combined unearned income) in respect of the assessment period; and
+-- src:468 | (b) the following amount of the claimant’s earned income (or, in the case of joint claimants, their combined earned income) in respect of the assessment period—
+-- src:469 | (i) in a case where no work allowance is specified in the table below (that is where a single claimant does not have, or neither of joint claimants has, responsibility for a child or qualifying young person or limited capability for work), 55% of that earned income; or
+-- src:470 | (ii) in any other case, 55% of the amount by which that earned income exceeds the work allowance specified in the table.
+@ref reg 22(1) (src:466-470)
+GIVEN `unearned income taken into account` IS A NUMBER  -- out of range: Part 6 (piece uc2)
+      `earned income taken into account` IS A NUMBER  -- out of range: Part 6 (piece uc2)
+      `work allowance` IS A MAYBE NUMBER
+GIVETH A NUMBER
+`reg 22(1) — the amount deducted from the maximum amount` `unearned income taken into account` `earned income taken into account` `work allowance` MEANS
+    (`reg 22(1)(a) — the unearned income deducted` `unearned income taken into account`)
+    PLUS (`reg 22(1)(b) — the earned income deducted` `earned income taken into account` `work allowance`)
+
+-- The amount of an award for an assessment period: the maximum amount less the amount deducted, as paragraph (1) says
+-- ("deducted from the maximum amount ... to determine the amount of an award"). Section 8(3) of the Act is not among the
+-- inputs. A result below the minimum amount of regulation 17 means the financial condition is not met; it is not floored here.
+-- src:466 | (1) The amounts to be deducted from the maximum amount in accordance with section 8(3) of the Act to determine the amount of an award of universal credit are—
+@ref reg 22(1) (src:466)
+GIVEN `maximum amount` IS A NUMBER
+      `amount deducted from the maximum amount` IS A NUMBER
+GIVETH A NUMBER
+`reg 22(1) — the amount of an award` `maximum amount` `amount deducted from the maximum amount` MEANS
+    `maximum amount` MINUS `amount deducted from the maximum amount`
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 22A: apportionment where a reclaim is delayed after loss of employment.
+
+-- (1) applies where a new award is made in a regulation 21(3C) case, and the claimant (or either joint claimant) is not in paid
+-- work and has ceased paid work since the previous award ended, other than in the 7 days ending with the day of the claim.
+-- The 7 days are counted with the day of the claim as the last of them, and "since the previous award ended" means after its last day
+-- (fork F-22A-DAYS, assumed and not ruled).
+-- (3) The 7 days may be extended if the Secretary of State considers there is good reason for the delay.
+-- src:486 | (1) This regulation applies where—
+-- src:487 | (a) a new award is made in a case to which regulation 21(3C) (new claim within 6 months of a previous award) applies; and
+-- src:488 | (b) the claimant (or either joint claimant) is not in paid work and has ceased being in paid work since the previous award ended, other than in the 7 days ending with the date on which the claim is made.
+-- src:496 | (3) The period of 7 days in paragraph (1)(b) may be extended if the Secretary of State considers there is good reason for the delay in making the claim.
+@ref reg 22A(1) and (3) (src:486-496)
+DECLARE `Reclaim after loss of employment` HAS
+    `the new award is made in a case to which regulation 21(3C) applies`          IS A BOOLEAN
+    `the claimant, or either joint claimant, is not in paid work`                  IS A BOOLEAN
+    `day on which the claimant ceased paid work`                                   IS A DATE
+    `last day of the previous award`                                               IS A DATE
+    `date on which the claim is made`                                              IS A DATE
+    `the Secretary of State considers there is good reason for the delay in making the claim`  IS A BOOLEAN
+    `number of days in the period as the Secretary of State extends it`            IS A NUMBER
+
+-- The 7 days ending with the day of the claim, extended (if the Secretary of State so considers) to the number of days given.
+-- src:488 | (b) the claimant (or either joint claimant) is not in paid work and has ceased being in paid work since the previous award ended, other than in the 7 days ending with the date on which the claim is made.
+-- src:496 | (3) The period of 7 days in paragraph (1)(b) may be extended if the Secretary of State considers there is good reason for the delay in making the claim.
+@ref reg 22A(1)(b) and (3) (src:488-496)
+GIVEN reclaim IS A `Reclaim after loss of employment`
+GIVETH A NUMBER
+`reg 22A(3) — the number of days ending with the day of the claim` reclaim MEANS
+    IF reclaim's `the Secretary of State considers there is good reason for the delay in making the claim`
+    THEN (IF (reclaim's `number of days in the period as the Secretary of State extends it`) AT LEAST 7
+          THEN reclaim's `number of days in the period as the Secretary of State extends it`
+          ELSE 7)
+    ELSE 7
+
+-- src:486 | (1) This regulation applies where—
+-- src:487 | (a) a new award is made in a case to which regulation 21(3C) (new claim within 6 months of a previous award) applies; and
+-- src:488 | (b) the claimant (or either joint claimant) is not in paid work and has ceased being in paid work since the previous award ended, other than in the 7 days ending with the date on which the claim is made.
+-- src:496 | (3) The period of 7 days in paragraph (1)(b) may be extended if the Secretary of State considers there is good reason for the delay in making the claim.
+@ref reg 22A(1) and (3) (src:486-496)
+GIVEN reclaim IS A `Reclaim after loss of employment`
+GIVETH A BOOLEAN
+`reg 22A(1) — this regulation applies` reclaim MEANS
+    (reclaim's `the new award is made in a case to which regulation 21(3C) applies`)
+    AND (reclaim's `the claimant, or either joint claimant, is not in paid work`)
+    AND ((reclaim's `day on which the claimant ceased paid work`) GREATER THAN (reclaim's `last day of the previous award`))
+    AND ((reclaim's `day on which the claimant ceased paid work`)
+         AT MOST ((reclaim's `date on which the claim is made`) MINUS (`reg 22A(3) — the number of days ending with the day of the claim` reclaim)))
+
+-- (2) The amount of each element and of the earned and unearned income for the first assessment period is reduced by a formula
+-- from N (the days from the day of the claim to the last day of the assessment period) and A (the amount otherwise payable or
+-- deducted). The formula is not in the deposited text, so the reduced amount is NOTHING (fork F-FORMULA). N, the days from the
+-- claim to the last day of the assessment period with both days counted, is worked out by the first rule below.
+-- src:489 | (2) In calculating the amount of the award for the first assessment period in accordance with section 8 of the Act—
+-- src:490 | (a) the amount of each element that is to be included in the maximum amount; and
+-- src:491 | (b) the amount of earned and unearned income that is to be deducted from the maximum amount,
+-- src:492 | are each to be reduced to an amount produced by the following formula—
+-- src:493 | Where—
+-- src:494 | N is the number of days in the period beginning with the date on which the claim is made and ending with the last day of the assessment period; and
+-- src:495 | A is the amount of the element that would otherwise be payable for that assessment period or, as the case may be, the amount of earned and unearned income that would otherwise be deducted for that assessment period.
+@ref reg 22A(2) (src:489-495)
+GIVEN `date on which the claim is made` IS A DATE
+      `last day of the assessment period` IS A DATE
+GIVETH A NUMBER
+`reg 22A(2) — the number of days from the claim to the end of the assessment period` `date on which the claim is made` `last day of the assessment period` MEANS
+    ((Day `last day of the assessment period`) MINUS (Day `date on which the claim is made`)) PLUS 1
+
+-- src:489 | (2) In calculating the amount of the award for the first assessment period in accordance with section 8 of the Act—
+-- src:490 | (a) the amount of each element that is to be included in the maximum amount; and
+-- src:491 | (b) the amount of earned and unearned income that is to be deducted from the maximum amount,
+-- src:492 | are each to be reduced to an amount produced by the following formula—
+-- src:493 | Where—
+-- src:494 | N is the number of days in the period beginning with the date on which the claim is made and ending with the last day of the assessment period; and
+-- src:495 | A is the amount of the element that would otherwise be payable for that assessment period or, as the case may be, the amount of earned and unearned income that would otherwise be deducted for that assessment period.
+@ref reg 22A(2) (src:489-495)
+GIVEN `amount that would otherwise be payable or deducted for the assessment period` IS A NUMBER
+      `number of days from the claim to the end of the assessment period` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`reg 22A(2) — the reduced amount` `amount that would otherwise be payable or deducted for the assessment period` `number of days from the claim to the end of the assessment period` MEANS
+    NOTHING

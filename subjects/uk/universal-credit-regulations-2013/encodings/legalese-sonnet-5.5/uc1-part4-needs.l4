@@ -1,0 +1,516 @@
+IMPORT prelude
+IMPORT `uc-core`
+IMPORT `uc-core-persons`
+IMPORT `uc1-part2-finance-and-restrictions`
+IMPORT `uc1-part3-awards`
+IMPORT `uc1-part4-amounts`
+
+-- The Universal Credit Regulations 2013 (S.I. 2013/376), Part 4, particular needs or circumstances: the LCWRA element
+-- (regulations 27 to 28) and the carer element (regulations 29 and 30).
+-- Source: ../../registers/source-bundle/uksi-2013-376.txt, a plain-text rendering of the revised text (legislation.gov.uk, version 2026-07-16)
+-- made by a converter script. It is not the official text. Every `-- src:N | ...` line copies line N of that file.
+-- Target: the stable build 1.6.98. Seat: a person who claims or receives Universal Credit, alone or as one of a couple.
+--
+-- WHAT IS HERE: when an award includes the LCWRA element and how much (regulation 27), who is a "pre-2026 claimant"
+-- (regulation 27A), the three months for which the element is held back (regulation 28), when an award includes the carer element
+-- (regulation 29) and who has "regular and substantial caring responsibilities for a severely disabled person" (regulation 30).
+-- Whether a claimant has limited capability for work and work-related activity, or is a severe conditions criteria claimant,
+-- is Part 5 (uc4): the core's `Capability for work` carries it. Regulation 41(2) is uc4's; the Schedule 5A circumstances
+-- are uc3's; the amounts are regulation 36's (uc1-part4-amounts.l4).
+-- Money is a NUMBER of pounds.
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 27: award to include the LCWRA element.
+
+-- (1) and (2) An award includes the LCWRA element for a claimant with limited capability for work and work-related activity;
+-- its amount is regulation 36's, by whether the claimant is a pre-2026 claimant, a severe conditions criteria claimant, terminally
+-- ill, or any other. A claimant without limited capability for work and work-related activity gets no LCWRA element (NOTHING).
+-- (3) Whether the claimant has it is determined in accordance with Part 5 (the core's record).
+-- src:561 | (1) An award of universal credit is to include an amount in respect of the fact that a claimant has limited capability for work and work-related activity (“the LCWRA element”).
+-- src:562 | (2) The amount of that element is given in the table in regulation 36 by reference to whether the claimant is—
+-- src:563 | (a) a pre-2026 claimant,
+-- src:564 | (b) a severe conditions criteria claimant,
+-- src:565 | (c) terminally ill, or
+-- src:566 | (d) any other claimant.
+-- src:567 | (3) Whether a claimant has limited capability for ... work and work-related activity or is a severe conditions criteria claimant is determined in accordance with Part 5.
+@ref reg 27(1) to (3) (src:561-567)
+GIVEN capability IS A `Capability for work`
+      `the claimant is a pre-2026 claimant` IS A BOOLEAN
+      `the claimant is terminally ill` IS A BOOLEAN  -- keel: regulation 2 defines this; the seat passes in the result of `reg 2 — terminally ill`
+GIVETH A MAYBE NUMBER
+`reg 27(1) and (2) — the amount of the LCWRA element for a claimant` capability `the claimant is a pre-2026 claimant` `the claimant is terminally ill` MEANS
+    IF capability's `limited capability for work and work-related activity`
+    THEN JUST (`reg 36(1) — the amount of the LCWRA element`
+                  `the claimant is a pre-2026 claimant`
+                  (capability's `severe conditions criteria claimant`)
+                  `the claimant is terminally ill`)
+    ELSE NOTHING
+
+-- (4) Joint claimants who each have limited capability for work and work-related activity: only one LCWRA element, the higher
+-- amount if they differ. Where only one has it, that one's element is included.
+-- src:568 | (4) In the case of joint claimants, where each of them has limited capability for work and work-related activity,
+-- src:569 | (a) the award is only to include one LCWRA element , and
+-- src:570 | (b) where the LCWRA element for each of them is a different amount, the LCWRA element to be included is the higher amount.
+@ref reg 27(4) (src:568-570)
+GIVEN `first joint claimant's LCWRA element` IS A MAYBE NUMBER
+      `second joint claimant's LCWRA element` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`reg 27(4) — the LCWRA element of joint claimants` `first joint claimant's LCWRA element` `second joint claimant's LCWRA element` MEANS
+    CONSIDER `first joint claimant's LCWRA element`
+    WHEN NOTHING THEN `second joint claimant's LCWRA element`
+    WHEN JUST first THEN
+        CONSIDER `second joint claimant's LCWRA element`
+        WHEN NOTHING THEN JUST first
+        WHEN JUST second THEN JUST (IF first AT LEAST second THEN first ELSE second)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 27A: pre-2026 claimant.
+
+-- The date before which the entitlement had to begin, which the text names: 6 April 2026.
+-- src:573 | (a) was entitled at any time before 6 April 2026 to an award of universal credit that included the LCWRA element, and
+@ref reg 27A(1)(a) (src:573)
+`reg 27A(1)(a) — the day before which entitlement to an award that included the LCWRA element had to begin` MEANS YMD 2026 4 6
+
+-- (2) A period of non-entitlement is disregarded in deciding whether the claimant has been continuously entitled if it began
+-- because the financial condition in section 5(1)(b) or (2)(b) of the Act ceased to be met and it ends within the period of six
+-- months beginning with the day on which that condition ceased to be met (that period ends the day before the same day six months on) (fork F-6-MONTHS, assumed and not ruled).
+-- src:576 | (2) For the purpose of determining whether the claimant has been continuously entitled to an award of universal credit, no account is to be taken of any period of non-entitlement—
+-- src:577 | (a) that begins because the financial condition in section 5(1)(b) or (2)(b) of the Act ceases to be met, and
+-- src:578 | (b) that ends within the period of six months beginning with the day on which that condition ceased to be met.
+@ref reg 27A(2) (src:576-578)
+DECLARE `Period of non-entitlement to universal credit` HAS
+    `the period began because the financial condition in section 5(1)(b) or (2)(b) of the Act ceased to be met`  IS A BOOLEAN  -- out of range: the Act, sections 4, 5 or 22 (not a piece)
+    `day on which that condition ceased to be met`                                                              IS A DATE
+    `last day of the period of non-entitlement`                                                                  IS A DATE
+
+-- src:576 | (2) For the purpose of determining whether the claimant has been continuously entitled to an award of universal credit, no account is to be taken of any period of non-entitlement—
+-- src:577 | (a) that begins because the financial condition in section 5(1)(b) or (2)(b) of the Act ceases to be met, and
+-- src:578 | (b) that ends within the period of six months beginning with the day on which that condition ceased to be met.
+@ref reg 27A(2) (src:576-578)
+GIVEN period IS A `Period of non-entitlement to universal credit`
+GIVETH A BOOLEAN
+`reg 27A(2) — the period of non-entitlement is not taken into account` period MEANS
+    (period's `the period began because the financial condition in section 5(1)(b) or (2)(b) of the Act ceased to be met`)
+    AND ((period's `last day of the period of non-entitlement`)
+         AT MOST ((`core — the date reached by adding a time limit to a date`
+                      (period's `day on which that condition ceased to be met`)
+                      (`Time limit` WITH quantity IS 6, unit IS months)) MINUS 1))
+
+-- (1) A claimant with limited capability for work and work-related activity is a pre-2026 claimant if they were entitled at any
+-- time before 6 April 2026 to an award that included the LCWRA element, and have been entitled to such an award continuously
+-- from that time (periods of non-entitlement that paragraph (2) disregards do not count against them). (1A) Schedule 5A (uc3)
+-- sets out further circumstances.
+-- src:572 | (1) For the purposes of regulation 27, a claimant with limited capability for work and work-related activity is a “pre-2026 claimant” if the claimant—
+-- src:573 | (a) was entitled at any time before 6 April 2026 to an award of universal credit that included the LCWRA element, and
+-- src:574 | (b) has been entitled to an award of universal credit that included the LCWRA element continuously from that time.
+-- src:575 | (1A) Schedule 5A sets out further circumstances in which a claimant with limited capability for work and work-related activity is a “pre-2026 claimant” for the purposes of regulation 27.
+@ref reg 27A(1) and (1A) (src:572-575)
+DECLARE `Claimant's entitlement to awards that included the LCWRA element` HAS
+    `the claimant has limited capability for work and work-related activity`                                 IS A BOOLEAN  -- out of range: Part 5 (piece uc4)
+    `earliest day on which the claimant was entitled to an award that included the LCWRA element`            IS A MAYBE DATE
+    `periods of non-entitlement since that day`                                                              IS A LIST OF `Period of non-entitlement to universal credit`
+    `the claimant meets a circumstance in Schedule 5A`                                                       IS A BOOLEAN  -- out of range: Schedule 5A (piece uc3)
+
+-- "Continuously from that time": there is a time before 6 April 2026 at which the claimant was entitled and from which they have been
+-- entitled without a break (fork F-27A-CONT). So only the present run of entitlement counts: it starts the day after the last
+-- period of non-entitlement that paragraph (2) does not disregard, or on the earliest day if there is none.
+-- src:573 | (a) was entitled at any time before 6 April 2026 to an award of universal credit that included the LCWRA element, and
+-- src:574 | (b) has been entitled to an award of universal credit that included the LCWRA element continuously from that time.
+@ref reg 27A(1)(a) and (b) (src:573-574)
+GIVEN claimant IS A `Claimant's entitlement to awards that included the LCWRA element`
+GIVETH A MAYBE DATE
+`reg 27A(1) — the first day of the present run of entitlement` claimant MEANS
+    CONSIDER claimant's `earliest day on which the claimant was entitled to an award that included the LCWRA element`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST first THEN
+        JUST (foldr
+                (GIVEN gap, latest YIELD
+                    IF (NOT (`reg 27A(2) — the period of non-entitlement is not taken into account` gap))
+                       AND (((gap's `last day of the period of non-entitlement`) PLUS 1) GREATER THAN latest)
+                    THEN (gap's `last day of the period of non-entitlement`) PLUS 1
+                    ELSE latest)
+                first
+                (claimant's `periods of non-entitlement since that day`))
+
+-- src:573 | (a) was entitled at any time before 6 April 2026 to an award of universal credit that included the LCWRA element, and
+-- src:574 | (b) has been entitled to an award of universal credit that included the LCWRA element continuously from that time.
+@ref reg 27A(1)(a) and (b) (src:573-574)
+GIVEN claimant IS A `Claimant's entitlement to awards that included the LCWRA element`
+GIVETH A BOOLEAN
+`reg 27A(1) — entitled before 6 April 2026 and continuously since` claimant MEANS
+    CONSIDER `reg 27A(1) — the first day of the present run of entitlement` claimant
+    WHEN NOTHING THEN FALSE
+    WHEN JUST start THEN start LESS THAN `reg 27A(1)(a) — the day before which entitlement to an award that included the LCWRA element had to begin`
+
+-- src:572 | (1) For the purposes of regulation 27, a claimant with limited capability for work and work-related activity is a “pre-2026 claimant” if the claimant—
+-- src:573 | (a) was entitled at any time before 6 April 2026 to an award of universal credit that included the LCWRA element, and
+-- src:574 | (b) has been entitled to an award of universal credit that included the LCWRA element continuously from that time.
+-- src:575 | (1A) Schedule 5A sets out further circumstances in which a claimant with limited capability for work and work-related activity is a “pre-2026 claimant” for the purposes of regulation 27.
+@ref reg 27A(1) and (1A) (src:572-575)
+GIVEN claimant IS A `Claimant's entitlement to awards that included the LCWRA element`
+GIVETH A BOOLEAN
+`reg 27A(1) — the claimant is a pre-2026 claimant` claimant MEANS
+    (claimant's `the claimant has limited capability for work and work-related activity`)
+    AND (`reg 27A(1) — entitled before 6 April 2026 and continuously since` claimant
+         OR claimant's `the claimant meets a circumstance in Schedule 5A`)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 28: the period for which the LCWRA element is not included.
+
+-- (2) The relevant period is the three months beginning with the day the award commences or, if later, the day the claimant applies
+-- for the element, where regulation 41(2) applies (a claimant whose monthly earnings equal or exceed the relevant threshold: uc4);
+-- in any other case, with the first day on which the claimant provides evidence of limited capability for work under the Medical
+-- Evidence Regulations.
+-- src:581 | (2) The relevant period is the period of three months beginning with—
+-- src:582 | (a) if regulation 41(2) applies (claimant with monthly earnings equal to or above the relevant threshold) the date on which the award of universal credit commences or, if later, the date on which the claimant applies for the ... LCWRA element to be included in the award; or
+-- src:583 | (b) in any other case, the first day on which the claimant provides evidence of their having limited capability for work in accordance with the Medical Evidence Regulations.
+@ref reg 28(2) (src:581-583)
+DECLARE `Start of the relevant period for the LCWRA element` HAS
+    `regulation 41(2) applies to the claimant`                                                        IS A BOOLEAN  -- out of range: regulation 41(2) (piece uc4)
+    `day on which the award of universal credit commences`                                            IS A DATE
+    `day on which the claimant applies for the LCWRA element to be included in the award`             IS A MAYBE DATE
+    `first day on which the claimant provides evidence of having limited capability for work in accordance with the Medical Evidence Regulations`  IS A DATE  -- out of range: the Medical Evidence Regulations (not a piece)
+
+-- src:581 | (2) The relevant period is the period of three months beginning with—
+-- src:582 | (a) if regulation 41(2) applies (claimant with monthly earnings equal to or above the relevant threshold) the date on which the award of universal credit commences or, if later, the date on which the claimant applies for the ... LCWRA element to be included in the award; or
+-- src:583 | (b) in any other case, the first day on which the claimant provides evidence of their having limited capability for work in accordance with the Medical Evidence Regulations.
+@ref reg 28(2) (src:581-583)
+GIVEN start IS A `Start of the relevant period for the LCWRA element`
+GIVETH A DATE
+`reg 28(2) — the first day of the relevant period` start MEANS
+    IF start's `regulation 41(2) applies to the claimant`
+    THEN (CONSIDER start's `day on which the claimant applies for the LCWRA element to be included in the award`
+          WHEN NOTHING THEN start's `day on which the award of universal credit commences`
+          WHEN JUST applied THEN
+              IF applied GREATER THAN (start's `day on which the award of universal credit commences`)
+              THEN applied
+              ELSE start's `day on which the award of universal credit commences`)
+    ELSE start's `first day on which the claimant provides evidence of having limited capability for work in accordance with the Medical Evidence Regulations`
+
+-- The last day of three months beginning with the first day of the relevant period: the day before the same day three months on
+-- (fork F-6-MONTHS, assumed and not ruled).
+-- src:581 | (2) The relevant period is the period of three months beginning with—
+@ref reg 28(2) (src:581)
+GIVEN start IS A `Start of the relevant period for the LCWRA element`
+GIVETH A DATE
+`reg 28(2) — the last day of the relevant period` start MEANS
+    (`core — the date reached by adding a time limit to a date` (`reg 28(2) — the first day of the relevant period` start)
+        (`Time limit` WITH quantity IS 3, unit IS months)) MINUS 1
+
+-- (4) The circumstances in which there has been a previous award: immediately before the award commences the previous award ceased
+-- because the claimant ceased to be, or became, a member of a couple; or within the six months before it commences the previous
+-- award ceased because the financial condition in section 5(1)(b) (or 5(2)(b)) of the Act was not met.
+-- src:587 | (4) The circumstances are where—
+-- src:588 | (a) immediately before the award commences, the previous award has ceased because the claimant ceased to be a member of a couple or became a member of a couple; or
+-- src:589 | (b) within the six months before the award commences, the previous award has ceased because the financial condition in section 5(1)(b) (or, if it was a joint claim, section 5(2)(b)) of the Act was not met.
+@ref reg 28(4) (src:587-589)
+DECLARE `Previous award of universal credit` HAS
+    `immediately before the award commences the previous award ceased because the claimant ceased to be a member of a couple or became a member of a couple`  IS A BOOLEAN
+    `within the six months before the award commences the previous award ceased because the financial condition in section 5(1)(b) or 5(2)(b) of the Act was not met`  IS A BOOLEAN  -- out of range: the Act, sections 4, 5 or 22 (not a piece)
+    `the previous award included the LCWRA element`                                                                                                        IS A BOOLEAN
+    `the relevant period in relation to the previous award has begun but not ended`                                                                          IS A BOOLEAN
+    `the day on which that relevant period would have ended in relation to the previous award`                                                              IS A DATE
+
+-- src:587 | (4) The circumstances are where—
+-- src:588 | (a) immediately before the award commences, the previous award has ceased because the claimant ceased to be a member of a couple or became a member of a couple; or
+-- src:589 | (b) within the six months before the award commences, the previous award has ceased because the financial condition in section 5(1)(b) (or, if it was a joint claim, section 5(2)(b)) of the Act was not met.
+@ref reg 28(4) (src:587-589)
+GIVEN previous IS A `Previous award of universal credit`
+GIVETH A BOOLEAN
+`reg 28(4) — the circumstances in which there has been a previous award exist` previous MEANS
+    (previous's `immediately before the award commences the previous award ceased because the claimant ceased to be a member of a couple or became a member of a couple`)
+    OR (previous's `within the six months before the award commences the previous award ceased because the financial condition in section 5(1)(b) or 5(2)(b) of the Act was not met`)
+
+-- (5) and (6): paragraph (1) also does not apply if the claimant is terminally ill, or is entitled to an employment and support
+-- allowance that includes the support component, or was so entitled on the day before the award commenced and ceased to be by
+-- virtue of section 1A of the Welfare Reform Act 2007; or if the claimant has limited capability for work and it is subsequently
+-- determined that they have limited capability for work and work-related activity.
+-- src:590 | (5) Paragraph (1) also does not apply if—
+-- src:591 | (a) the claimant is terminally ill; or
+-- src:592 | (b) the claimant—
+-- src:593 | (i) is entitled to an employment and support allowance that includes the support component ..., or
+-- src:594 | (ii) was so entitled on the day before the award of universal credit commenced and has ceased to be so entitled by virtue of section 1A of the Welfare Reform Act 2007 (duration of contributory allowance).
+-- src:595 | (6) Paragraph (1) does not apply where a claimant has limited capability for work and it is subsequently determined that they have limited capability for work and work-related activity.
+@ref reg 28(5) and (6) (src:590-595)
+DECLARE `Claimant who may not be held back from the LCWRA element` HAS
+    `the claimant is terminally ill`                                                                                           IS A BOOLEAN  -- keel: regulation 2 defines this; the seat passes in the result of `reg 2 — terminally ill`
+    `the claimant is entitled to an employment and support allowance that includes the support component`                      IS A BOOLEAN
+    `the claimant was so entitled on the day before the award commenced and ceased to be so entitled by virtue of section 1A of the Welfare Reform Act 2007`  IS A BOOLEAN  -- out of range: the Welfare Reform Act 2007 (not a piece)
+    `the claimant has limited capability for work and it is subsequently determined that they have limited capability for work and work-related activity`  IS A BOOLEAN  -- out of range: Part 5 (piece uc4)
+
+-- src:590 | (5) Paragraph (1) also does not apply if—
+-- src:591 | (a) the claimant is terminally ill; or
+-- src:592 | (b) the claimant—
+-- src:593 | (i) is entitled to an employment and support allowance that includes the support component ..., or
+-- src:594 | (ii) was so entitled on the day before the award of universal credit commenced and has ceased to be so entitled by virtue of section 1A of the Welfare Reform Act 2007 (duration of contributory allowance).
+-- src:595 | (6) Paragraph (1) does not apply where a claimant has limited capability for work and it is subsequently determined that they have limited capability for work and work-related activity.
+@ref reg 28(5) and (6) (src:590-595)
+GIVEN claimant IS A `Claimant who may not be held back from the LCWRA element`
+GIVETH A BOOLEAN
+`reg 28(5) and (6) — paragraph (1) does not apply to the claimant` claimant MEANS
+    (claimant's `the claimant is terminally ill`)
+    OR (claimant's `the claimant is entitled to an employment and support allowance that includes the support component`)
+    OR (claimant's `the claimant was so entitled on the day before the award commenced and ceased to be so entitled by virtue of section 1A of the Welfare Reform Act 2007`)
+    OR (claimant's `the claimant has limited capability for work and it is subsequently determined that they have limited capability for work and work-related activity`)
+
+-- (3) Where there has been a previous award in the paragraph (4) circumstances: if it included the LCWRA element, paragraph (1) does
+-- not apply; if the relevant period in relation to it has begun but not ended, the relevant period ends on the day it would have
+-- ended in relation to the previous award.
+-- src:584 | (3) But where, in the circumstances referred to in paragraph (4), there has been a previous award of universal credit—
+-- src:585 | (a) if the previous award included the ... LCWRA element, paragraph (1) does not apply; and
+-- src:586 | (b) if the relevant period in relation to that award has begun but not ended, the relevant period ends on the date it would have ended in relation to the previous award.
+@ref reg 28(3) (src:584-586)
+GIVEN previous IS A MAYBE `Previous award of universal credit`
+GIVETH A BOOLEAN
+`reg 28(3)(a) — paragraph (1) does not apply because the previous award included the LCWRA element` previous MEANS
+    CONSIDER previous
+    WHEN NOTHING THEN FALSE
+    WHEN JUST award THEN
+        (`reg 28(4) — the circumstances in which there has been a previous award exist` award)
+        AND (award's `the previous award included the LCWRA element`)
+
+-- src:584 | (3) But where, in the circumstances referred to in paragraph (4), there has been a previous award of universal credit—
+-- src:585 | (a) if the previous award included the ... LCWRA element, paragraph (1) does not apply; and
+-- src:586 | (b) if the relevant period in relation to that award has begun but not ended, the relevant period ends on the date it would have ended in relation to the previous award.
+@ref reg 28(3) (src:584-586)
+GIVEN start IS A `Start of the relevant period for the LCWRA element`
+      previous IS A MAYBE `Previous award of universal credit`
+GIVETH A DATE
+`reg 28(3)(b) — the last day of the relevant period, allowing for a previous award` start previous MEANS
+    CONSIDER previous
+    WHEN NOTHING THEN `reg 28(2) — the last day of the relevant period` start
+    WHEN JUST award THEN
+        IF (`reg 28(4) — the circumstances in which there has been a previous award exist` award)
+           AND (award's `the relevant period in relation to the previous award has begun but not ended`)
+        THEN award's `the day on which that relevant period would have ended in relation to the previous award`
+        ELSE `reg 28(2) — the last day of the relevant period` start
+
+-- (1) Whether the award is held back from including the LCWRA element: not when (3)(a), (5) or (6) says paragraph (1) does not apply.
+-- src:580 | (1) An award of universal credit is not to include the ... LCWRA element until the beginning of the assessment period that follows the assessment period in which the relevant period ends.
+-- src:584 | (3) But where, in the circumstances referred to in paragraph (4), there has been a previous award of universal credit—
+-- src:585 | (a) if the previous award included the ... LCWRA element, paragraph (1) does not apply; and
+-- src:590 | (5) Paragraph (1) also does not apply if—
+-- src:591 | (a) the claimant is terminally ill; or
+-- src:592 | (b) the claimant—
+-- src:593 | (i) is entitled to an employment and support allowance that includes the support component ..., or
+-- src:594 | (ii) was so entitled on the day before the award of universal credit commenced and has ceased to be so entitled by virtue of section 1A of the Welfare Reform Act 2007 (duration of contributory allowance).
+-- src:595 | (6) Paragraph (1) does not apply where a claimant has limited capability for work and it is subsequently determined that they have limited capability for work and work-related activity.
+@ref reg 28(1), (3)(a), (5) and (6) (src:580-595)
+GIVEN previous IS A MAYBE `Previous award of universal credit`
+      claimant IS A `Claimant who may not be held back from the LCWRA element`
+GIVETH A BOOLEAN
+`reg 28(1) — paragraph (1) applies` previous claimant MEANS
+    NOT ((`reg 28(3)(a) — paragraph (1) does not apply because the previous award included the LCWRA element` previous)
+         OR (`reg 28(5) and (6) — paragraph (1) does not apply to the claimant` claimant))
+
+-- (1) Where paragraph (1) applies, the award does not include the LCWRA element until the beginning of the assessment period that
+-- follows the assessment period in which the relevant period ends. The assessment periods are regulation 21's, counted from the
+-- first date of entitlement. The answer is the first day from which the element may be included; NOTHING when no assessment period
+-- of the award contains the end of the relevant period.
+-- src:580 | (1) An award of universal credit is not to include the ... LCWRA element until the beginning of the assessment period that follows the assessment period in which the relevant period ends.
+@ref reg 28(1) (src:580)
+GIVEN `first date of entitlement` IS A DATE
+      `last day of the relevant period` IS A DATE
+GIVETH A MAYBE DATE
+`reg 28(1) — the first day from which the award may include the LCWRA element` `first date of entitlement` `last day of the relevant period` MEANS
+    CONSIDER `reg 21(1) — the assessment period containing a day` `first date of entitlement` `last day of the relevant period`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST period THEN JUST ((period's `last day`) PLUS 1)
+
+-- (7) Where, by virtue of this regulation, the condition in section 5(1)(b) or (2)(b) of the Act (the amount payable is not less than
+-- the prescribed minimum) is not met, the claimant's income is treated during the relevant period as such that the amount payable is
+-- the prescribed minimum, which regulation 17 fixes at one penny (uc1-part2-finance-and-restrictions.l4).
+-- src:596 | (7) Where, by virtue of this regulation, the condition in section 5(1)(b) or 5(2)(b) of the Act is not met, the amount of the claimant's income (or, in the case of joint claimants, their combined income) is to be treated during the relevant period as such that the amount payable is the prescribed minimum (see regulation 17).
+@ref reg 28(7) (src:596)
+GIVEN `the condition in section 5(1)(b) or 5(2)(b) of the Act is not met by virtue of this regulation` IS A BOOLEAN  -- out of range: the Act, sections 4, 5 or 22 (not a piece)
+GIVETH A MAYBE NUMBER
+`reg 28(7) — the amount payable during the relevant period` `the condition in section 5(1)(b) or 5(2)(b) of the Act is not met by virtue of this regulation` MEANS
+    IF `the condition in section 5(1)(b) or 5(2)(b) of the Act is not met by virtue of this regulation`
+    THEN JUST `reg 17 — the minimum amount`
+    ELSE NOTHING
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 30: regular and substantial caring responsibilities for a severely disabled person (regulation 29 reads the answer
+-- as one of its facts).
+
+-- (1) The person satisfies the conditions for entitlement to a carer's allowance, or would but for their earnings having exceeded the
+-- limit, or but for being resident (or treated as resident) in Scotland, or resident outside Great Britain with a genuine and sufficient
+-- link to Scotland; or is entitled to carer support payment. (2) Whether or not they have claimed a carer's allowance. (3) But not if
+-- the person derives earned income from those caring responsibilities.
+-- src:616 | (1) For the purposes of Part 1 of the Act and these Regulations, a person has regular and substantial caring responsibilities for a severely disabled person if—
+-- src:617 | (a) they satisfy the conditions for entitlement to a carer’s allowance or would do so but for the fact that—
+-- src:618 | (i) their earnings have exceeded the limit prescribed for the purposes of that allowance; or
+-- src:619 | (ii) they are—
+-- src:620 | (aa) resident, or treated as resident, in Scotland; or
+-- src:621 | (bb) resident outside of Great Britain and have a genuine and sufficient link to Scotland; or
+-- src:622 | (b) they are entitled to carer support payment.
+-- src:623 | (2) Paragraph (1)(a) applies whether or not the person has made a claim for a carer's allowance.
+-- src:624 | (3) But a person does not have regular and substantial caring responsibilities for a severely disabled person if the person derives earned income from those caring responsibilities.
+@ref reg 30(1) to (3) (src:616-624)
+DECLARE `Caring responsibilities for a severely disabled person` HAS
+    `the person satisfies the conditions for entitlement to a carer's allowance`                                                          IS A BOOLEAN
+    `the person would satisfy those conditions but for the fact that their earnings have exceeded the limit prescribed for that allowance`  IS A BOOLEAN
+    `the person would satisfy those conditions but for the fact that they are resident, or treated as resident, in Scotland`               IS A BOOLEAN
+    `the person would satisfy those conditions but for the fact that they are resident outside of Great Britain and have a genuine and sufficient link to Scotland`  IS A BOOLEAN
+    `the person is entitled to carer support payment`                                                                                      IS A BOOLEAN
+    `the person derives earned income from those caring responsibilities`                                                                   IS A BOOLEAN  -- out of range: Part 6 (piece uc2)
+
+-- src:616 | (1) For the purposes of Part 1 of the Act and these Regulations, a person has regular and substantial caring responsibilities for a severely disabled person if—
+-- src:617 | (a) they satisfy the conditions for entitlement to a carer’s allowance or would do so but for the fact that—
+-- src:618 | (i) their earnings have exceeded the limit prescribed for the purposes of that allowance; or
+-- src:619 | (ii) they are—
+-- src:620 | (aa) resident, or treated as resident, in Scotland; or
+-- src:621 | (bb) resident outside of Great Britain and have a genuine and sufficient link to Scotland; or
+-- src:622 | (b) they are entitled to carer support payment.
+-- src:623 | (2) Paragraph (1)(a) applies whether or not the person has made a claim for a carer's allowance.
+-- src:624 | (3) But a person does not have regular and substantial caring responsibilities for a severely disabled person if the person derives earned income from those caring responsibilities.
+@ref reg 30(1) to (3) (src:616-624)
+GIVEN caring IS A `Caring responsibilities for a severely disabled person`
+GIVETH A BOOLEAN
+`reg 30 — regular and substantial caring responsibilities for a severely disabled person` caring MEANS
+    `a carer's allowance condition or carer support payment`
+    AND (NOT (caring's `the person derives earned income from those caring responsibilities`))
+    WHERE
+        `a carer's allowance condition or carer support payment` MEANS
+            (caring's `the person satisfies the conditions for entitlement to a carer's allowance`)
+            OR (caring's `the person would satisfy those conditions but for the fact that their earnings have exceeded the limit prescribed for that allowance`)
+            OR (caring's `the person would satisfy those conditions but for the fact that they are resident, or treated as resident, in Scotland`)
+            OR (caring's `the person would satisfy those conditions but for the fact that they are resident outside of Great Britain and have a genuine and sufficient link to Scotland`)
+            OR (caring's `the person is entitled to carer support payment`)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 29: award to include the carer element.
+
+-- (1) to (3) The award includes the carer element for a claimant who has regular and substantial caring responsibilities for a
+-- severely disabled person, subject to section 70 of the Contributions and Benefits Act (not among the inputs: a stated fact);
+-- in the case of joint claimants for both if both qualify but only if they are not caring for the same person; and where two or more
+-- persons care for the same person, for only one of them, the one they jointly elect or, in default of election, the one the
+-- Secretary of State determines. Paragraph (2)'s "only if they are not caring for the same person" is read as paragraph (3)'s one-of-them
+-- rule applied to everyone, joint claimants included (fork F-29-SAME, assumed and not ruled).
+-- src:599 | (1) An award of universal credit is to include an amount (“the carer element”) specified in the table in regulation 36 where a claimant has regular and substantial caring responsibilities for a severely disabled person, but subject to paragraphs (2) to (6) and section 70 of the Contributions and Benefits Act (entitlement by different persons to the carer element and to carer’s allowance or carer support payment in respect of the same severely disabled person.
+-- src:600 | (2) In the case of joint claimants, an award is to include the carer element for both joint claimants if they both qualify for it, but only if they are not caring for the same severely disabled person.
+-- src:601 | (3) Where two or more persons have regular and substantial caring responsibilities for the same severely disabled person, an award of universal credit may only include the carer element in respect of one them and that is the one they jointly elect or, in default of election, the one the Secretary of State determines.
+@ref reg 29(1) to (3) (src:599-601)
+DECLARE `Claimant who may have the carer element` HAS
+    `the claimant has regular and substantial caring responsibilities for a severely disabled person`               IS A BOOLEAN
+    `section 70 of the Contributions and Benefits Act excludes the claimant from the carer element`                  IS A BOOLEAN  -- by reference: section 70 of the Contributions and Benefits Act (not an input)
+    `two or more persons have regular and substantial caring responsibilities for the same severely disabled person`  IS A BOOLEAN
+    `those persons have jointly elected the claimant`                                                               IS A BOOLEAN
+    `those persons have made no election and the Secretary of State determines the claimant`                         IS A BOOLEAN
+
+-- src:599 | (1) An award of universal credit is to include an amount (“the carer element”) specified in the table in regulation 36 where a claimant has regular and substantial caring responsibilities for a severely disabled person, but subject to paragraphs (2) to (6) and section 70 of the Contributions and Benefits Act (entitlement by different persons to the carer element and to carer’s allowance or carer support payment in respect of the same severely disabled person.
+-- src:600 | (2) In the case of joint claimants, an award is to include the carer element for both joint claimants if they both qualify for it, but only if they are not caring for the same severely disabled person.
+-- src:601 | (3) Where two or more persons have regular and substantial caring responsibilities for the same severely disabled person, an award of universal credit may only include the carer element in respect of one them and that is the one they jointly elect or, in default of election, the one the Secretary of State determines.
+@ref reg 29(1) to (3) (src:599-601)
+GIVEN claimant IS A `Claimant who may have the carer element`
+GIVETH A BOOLEAN
+`reg 29(1) to (3) — the carer element may be included for the claimant` claimant MEANS
+    (claimant's `the claimant has regular and substantial caring responsibilities for a severely disabled person`)
+    AND (NOT (claimant's `section 70 of the Contributions and Benefits Act excludes the claimant from the carer element`))
+    AND `the claimant is the one chosen`
+    WHERE
+        `the claimant is the one chosen` MEANS
+            (NOT (claimant's `two or more persons have regular and substantial caring responsibilities for the same severely disabled person`))
+            OR (claimant's `those persons have jointly elected the claimant`)
+            OR (claimant's `those persons have made no election and the Secretary of State determines the claimant`)
+
+-- (4) Where the carer element would be included by paragraphs (1) to (3) and the claimant has limited capability for work and
+-- work-related activity (and, for joint claimants, the LCWRA element has not been included for the other claimant), only the LCWRA
+-- element may be included for the claimant.
+-- src:602 | (4) Where an amount would, apart from this paragraph, be included in an award in relation to a claimant by virtue of paragraphs (1) to (3), and the claimant has limited capability for work and work-related activity (and, in the case of joint claimants, the LCWRA element has not been included in respect of the other claimant), only the LCWRA element may be included in respect of the claimant.
+@ref reg 29(4) (src:602)
+GIVEN `the carer element would be included by paragraphs (1) to (3)` IS A BOOLEAN
+      `the claimant has limited capability for work and work-related activity` IS A BOOLEAN  -- out of range: Part 5 (piece uc4)
+      `the claimant is one of joint claimants` IS A BOOLEAN
+      `the LCWRA element has been included for the other claimant` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 29(4) — only the LCWRA element may be included` `the carer element would be included by paragraphs (1) to (3)` `the claimant has limited capability for work and work-related activity` `the claimant is one of joint claimants` `the LCWRA element has been included for the other claimant` MEANS
+    (`the carer element would be included by paragraphs (1) to (3)`)
+    AND (`the claimant has limited capability for work and work-related activity`)
+    AND (NOT (`the claimant is one of joint claimants` AND `the LCWRA element has been included for the other claimant`))
+
+-- (5) and (6) Where a person (A) has, or but for the Scottish carer support payment regulations or section 70 would have, an
+-- entitlement to carer support payment or to a carer's allowance that the Scottish Ministers decide, and another person (B) has, or
+-- but for this regulation would have, an entitlement to the carer element for the same day for the same severely disabled person,
+-- and section 70 does not apply to the decision about B: B's award shall not include a carer element unless A and B jointly elect
+-- that B shall have it, or in default of election the Secretary of State, after consulting the Scottish Ministers, is satisfied that
+-- the Scottish Ministers have decided or will decide that A shall not have the entitlement and that B shall have the carer element.
+-- Where paragraph (5) does not apply, paragraph (6) does not restrict B's award (fork F-29-6, assumed and not ruled).
+-- src:603 | (5) Paragraph (6) applies where—
+-- src:604 | (a) a person (A)—
+-- src:605 | (i) has, or would have but for regulation 5(3) of the Carer’s Assistance (Carer Support Payment) (Scotland) Regulations 2023, an entitlement to carer support payment; or
+-- src:606 | (ii) has, or would have but for section 70 of the Contributions and Benefits Act, an entitlement to carer’s allowance in respect of which the Scottish Ministers have the power to make decisions; and
+-- src:607 | (b) another person (B) has, or would have but for this regulation, an entitlement to the carer element of universal credit for the same day in respect of the same severely disabled person; and
+-- src:608 | (c) section 70 of the Contributions and Benefits Act does not apply to the decision in respect of B’s entitlement to universal credit.
+-- src:609 | (6) The universal credit award of B shall not include a carer element unless—
+-- src:610 | (a) A and B jointly elect that B shall have entitlement to the carer element and that A shall not have an entitlement mentioned in paragraph (5)(a) for that day in respect of that severely disabled person; or
+-- src:611 | (b) in default of such an election, the Secretary of State is satisfied, following consultation with the Scottish Ministers, that—
+-- src:612 | (i) Scottish Ministers have decided, or will decide, that A shall not have an entitlement mentioned in paragraph (5)(a); and
+-- src:613 | (ii) B shall have a carer element included in their award of universal credit,
+-- src:614 | for that day in respect of that severely disabled person.
+@ref reg 29(5) and (6) (src:603-614)
+DECLARE `Carer element where a Scottish entitlement is in question` HAS
+    `person A has, or would have but for regulation 5(3) of the Carer's Assistance (Carer Support Payment) (Scotland) Regulations 2023, an entitlement to carer support payment`  IS A BOOLEAN  -- out of range: the Carer's Assistance (Carer Support Payment) (Scotland) Regulations 2023 (not a piece)
+    `person A has, or would have but for section 70 of the Contributions and Benefits Act, an entitlement to carer's allowance in respect of which the Scottish Ministers have the power to make decisions`  IS A BOOLEAN
+    `person B has, or would have but for regulation 29, an entitlement to the carer element for the same day in respect of the same severely disabled person`  IS A BOOLEAN
+    `section 70 of the Contributions and Benefits Act does not apply to the decision in respect of B's entitlement to universal credit`  IS A BOOLEAN
+    `A and B jointly elect that B shall have entitlement to the carer element and that A shall not have an entitlement mentioned in paragraph (5)(a)`  IS A BOOLEAN
+    `in default of election the Secretary of State is satisfied, following consultation with the Scottish Ministers, that the Scottish Ministers have decided or will decide that A shall not have an entitlement and that B shall have a carer element`  IS A BOOLEAN
+
+-- src:603 | (5) Paragraph (6) applies where—
+-- src:604 | (a) a person (A)—
+-- src:605 | (i) has, or would have but for regulation 5(3) of the Carer’s Assistance (Carer Support Payment) (Scotland) Regulations 2023, an entitlement to carer support payment; or
+-- src:606 | (ii) has, or would have but for section 70 of the Contributions and Benefits Act, an entitlement to carer’s allowance in respect of which the Scottish Ministers have the power to make decisions; and
+-- src:607 | (b) another person (B) has, or would have but for this regulation, an entitlement to the carer element of universal credit for the same day in respect of the same severely disabled person; and
+-- src:608 | (c) section 70 of the Contributions and Benefits Act does not apply to the decision in respect of B’s entitlement to universal credit.
+-- src:609 | (6) The universal credit award of B shall not include a carer element unless—
+-- src:610 | (a) A and B jointly elect that B shall have entitlement to the carer element and that A shall not have an entitlement mentioned in paragraph (5)(a) for that day in respect of that severely disabled person; or
+-- src:611 | (b) in default of such an election, the Secretary of State is satisfied, following consultation with the Scottish Ministers, that—
+-- src:612 | (i) Scottish Ministers have decided, or will decide, that A shall not have an entitlement mentioned in paragraph (5)(a); and
+-- src:613 | (ii) B shall have a carer element included in their award of universal credit,
+-- src:614 | for that day in respect of that severely disabled person.
+@ref reg 29(5) and (6) (src:603-614)
+GIVEN scottish IS A `Carer element where a Scottish entitlement is in question`
+GIVETH A BOOLEAN
+`reg 29(6) — B's award may include the carer element` scottish MEANS
+    IF `paragraph (5) applies`
+    THEN (scottish's `A and B jointly elect that B shall have entitlement to the carer element and that A shall not have an entitlement mentioned in paragraph (5)(a)`)
+         OR (scottish's `in default of election the Secretary of State is satisfied, following consultation with the Scottish Ministers, that the Scottish Ministers have decided or will decide that A shall not have an entitlement and that B shall have a carer element`)
+    ELSE TRUE
+    WHERE
+        `paragraph (5) applies` MEANS
+            `person A has an entitlement`
+            AND (scottish's `person B has, or would have but for regulation 29, an entitlement to the carer element for the same day in respect of the same severely disabled person`)
+            AND (scottish's `section 70 of the Contributions and Benefits Act does not apply to the decision in respect of B's entitlement to universal credit`)
+        `person A has an entitlement` MEANS
+            (scottish's `person A has, or would have but for regulation 5(3) of the Carer's Assistance (Carer Support Payment) (Scotland) Regulations 2023, an entitlement to carer support payment`)
+            OR (scottish's `person A has, or would have but for section 70 of the Contributions and Benefits Act, an entitlement to carer's allowance in respect of which the Scottish Ministers have the power to make decisions`)
+
+-- The carer element for a claimant, all of regulation 29 together: the amount is regulation 36's.
+-- src:599 | (1) An award of universal credit is to include an amount (“the carer element”) specified in the table in regulation 36 where a claimant has regular and substantial caring responsibilities for a severely disabled person, but subject to paragraphs (2) to (6) and section 70 of the Contributions and Benefits Act (entitlement by different persons to the carer element and to carer’s allowance or carer support payment in respect of the same severely disabled person.
+-- src:600 | (2) In the case of joint claimants, an award is to include the carer element for both joint claimants if they both qualify for it, but only if they are not caring for the same severely disabled person.
+-- src:601 | (3) Where two or more persons have regular and substantial caring responsibilities for the same severely disabled person, an award of universal credit may only include the carer element in respect of one them and that is the one they jointly elect or, in default of election, the one the Secretary of State determines.
+-- src:602 | (4) Where an amount would, apart from this paragraph, be included in an award in relation to a claimant by virtue of paragraphs (1) to (3), and the claimant has limited capability for work and work-related activity (and, in the case of joint claimants, the LCWRA element has not been included in respect of the other claimant), only the LCWRA element may be included in respect of the claimant.
+-- src:603 | (5) Paragraph (6) applies where—
+-- src:604 | (a) a person (A)—
+-- src:605 | (i) has, or would have but for regulation 5(3) of the Carer’s Assistance (Carer Support Payment) (Scotland) Regulations 2023, an entitlement to carer support payment; or
+-- src:606 | (ii) has, or would have but for section 70 of the Contributions and Benefits Act, an entitlement to carer’s allowance in respect of which the Scottish Ministers have the power to make decisions; and
+-- src:607 | (b) another person (B) has, or would have but for this regulation, an entitlement to the carer element of universal credit for the same day in respect of the same severely disabled person; and
+-- src:608 | (c) section 70 of the Contributions and Benefits Act does not apply to the decision in respect of B’s entitlement to universal credit.
+-- src:609 | (6) The universal credit award of B shall not include a carer element unless—
+-- src:610 | (a) A and B jointly elect that B shall have entitlement to the carer element and that A shall not have an entitlement mentioned in paragraph (5)(a) for that day in respect of that severely disabled person; or
+-- src:611 | (b) in default of such an election, the Secretary of State is satisfied, following consultation with the Scottish Ministers, that—
+-- src:612 | (i) Scottish Ministers have decided, or will decide, that A shall not have an entitlement mentioned in paragraph (5)(a); and
+-- src:613 | (ii) B shall have a carer element included in their award of universal credit,
+-- src:614 | for that day in respect of that severely disabled person.
+@ref reg 29 (src:599-614)
+GIVEN `the carer element may be included for the claimant under paragraphs (1) to (3)` IS A BOOLEAN
+      `only the LCWRA element may be included under paragraph (4)` IS A BOOLEAN
+      `B's award may include the carer element under paragraph (6)` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`reg 29 — the amount of the carer element for a claimant` `the carer element may be included for the claimant under paragraphs (1) to (3)` `only the LCWRA element may be included under paragraph (4)` `B's award may include the carer element under paragraph (6)` MEANS
+    IF (`the carer element may be included for the claimant under paragraphs (1) to (3)`)
+       AND (NOT `only the LCWRA element may be included under paragraph (4)`)
+       AND (`B's award may include the carer element under paragraph (6)`)
+    THEN JUST `reg 36(1) — the amount of the carer element`
+    ELSE NOTHING
