@@ -48,3 +48,14 @@ Five chapters of the Vermont Statutes were deposited as unofficial plain text, f
 - Chapter 154 is printed in two versions (the one in force until a contingency is met, and the one effective July 1, 2029 if it is met), with several subdivisions also split at July 1, 2027. All versions are kept. The site prints 39 of these section versions twice, word for word; each is deposited once.
 - Agency rules (Reach Up and AABD standards and payment levels, Department of Labor UI rules) are not sourced. The official rules are hosted by LexisNexis, whose terms bar automated access.
 - Other Title 33 programmes (Medicaid; General Assistance and emergency assistance) are not deposited; their chapter numbers were not checked.
+
+## Encodings added 2026-10-24: tax and benefits baselines
+
+Two baseline encodings, written from the individual's seat with the 2026-10-18 defaults and checked with the stable `l4` (1.6.98). Each folder's `NOTES.md` has the method, scope and findings.
+
+| Encoding | Seat | Questions | Regulative rules | Assertions |
+| --- | --- | --- | --- | --- |
+| [`vermont-statutes-annotated-title-32-taxation-and-finance/encodings/baseline-2026-10`](vermont-statutes-annotated-title-32-taxation-and-finance/encodings/baseline-2026-10) | the individual taxpayer | must I file (s 5861(a)); must we file jointly (s 5861(c)); the Social Security exclusion (s 5830e(a)); Vermont taxable income (s 5811(21)); tax owed (s 5822, with the 3% minimum and the part-year reduction); the earned income tax credit (s 5828b), child tax credit (s 5830f), child and dependent care credit (s 5828c) | 2 (file by the federal due date, s 5861(b); pay the balance with it, s 5871(3)) | 56 / 56 |
+| [`vermont-statutes-annotated-title-33-human-services-chapter-11/encodings/baseline-2026-10`](vermont-statutes-annotated-title-33-human-services-chapter-11/encodings/baseline-2026-10) | the parent, relative or caretaker applying for Reach Up | dependent child and family (s 1101); asset limit (s 1103(c)(5)); the least grant on the statutory disregards (s 1103(c)(1), (f)); the 60-month limit and hardship exemption (s 1108); deferment (ss 1114, 1115); sanctions and the housing protection (s 1116); continued payment on appeal (s 1132(c)) | 3 (the monthly meeting while sanctioned, s 1116(h); the appeal and the Department's duty to continue payments, s 1132(c)) | 38 / 38 |
+
+The Commissioner of Taxes' inflation-adjusted figures and the Reach Up payment standard and housing allowance are not deposited; they are inputs. Federal AGI and the federal credits are inputs linked to `subjects/us/internal-revenue-code-of-1986/`.

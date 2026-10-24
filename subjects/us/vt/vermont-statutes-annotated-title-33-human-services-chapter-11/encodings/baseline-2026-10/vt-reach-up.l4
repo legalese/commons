@@ -1,0 +1,321 @@
+IMPORT prelude
+
+-- Reach Up, Vermont's TANF cash assistance, 33 V.S.A. chapter 11 -- what a family meets: who is a dependent child and a
+-- family (s 1101(3), (10), (12)), to whom financial assistance is paid (s 1103(a)), the statutory earnings and child support
+-- disregards and the partial grant (s 1103(c)(1), (c)(4), (f)), no asset limit and the vehicle exclusion (s 1103(c)(5), (7)),
+-- two-parent families (s 1103(d)(1)), the 60-month limit, the months that do not count, and the hardship exemption
+-- (s 1108), deferment of the participation requirements (s 1114(1)-(3), s 1115(a)), sanctions and the housing protection
+-- (s 1116(a), (c), (f), (g), (h)), and continued payment pending appeal (s 1132(b), (c)).
+--
+-- SEAT: the parent, relative or caretaker applying for or receiving Reach Up for a family ("Is my family eligible? How much
+-- will we get? Do the 60 months run out? What happens if I am sanctioned? Do payments continue if I appeal?"). Provisions
+-- addressed to the Commissioner or the Department are encoded as what they mean for that person.
+--
+-- Edition: Vermont Statutes Online (unofficial), including the actions of the 2026 session, fetched 2026-10-19 (UTC), as
+-- deposited at ../../registers/source-bundle/vt-33-vsa-ch11-2026.txt.
+--
+-- AMOUNTS SET BY RULE. The Reach Up payment standard, the maximum housing allowance and the financial eligibility test are set
+-- by the Commissioner's rules (s 1103(a), (c); s 1101(11)), which are not deposited (the official rules are hosted by
+-- LexisNexis, whose terms bar automated access). They are INPUTS. The statute fixes only minimum disregards ("not less than"),
+-- so the grant worked out here is the least the statute allows on a given payment standard (NOTES.md finding 1).
+--
+-- NOT ENCODED. Reach First (ch. 10), Reach Ahead (ch. 12), the Postsecondary Education Program (s 1122), Matched Savings
+-- (s 1123), case management and family development plans (ss 1106, 1107, 1112) except as the participation requirement that a
+-- sanction turns on, transitional medical assistance (s 1103(c)(6)), minor parents (s 1103(e)), separate State programs
+-- (s 1121), the incentive payment amounts (s 1103(c)(3)), and s 1114(4) (other deferments by rule, asked as a fact).
+--
+-- BASELINE ENCODING. Written from the individual's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Reach Up -- 33 V.S.A. chapter 11`
+
+§§ `The parties and the actions`
+
+DECLARE `Party` IS ONE OF
+    `the participating adult`
+    `the Department for Children and Families`
+
+DECLARE `Action` IS ONE OF
+    `meet the case manager to report circumstances or take part in assessment`
+    `appeal the sanction to the Human Services Board`
+    `continue financial assistance payments pending the appeal`
+
+§§ `s 1101 -- dependent child, family`
+
+-- s 1101(10): "'Dependent child' means a child who is a resident of this State and: (A) is under 18 years of age; or (B) is 18
+-- years of age or older who is a full-time student in a secondary school, or attending an equivalent level of vocational or
+-- technical training, and is reasonably expected to complete the educational program before reaching 22 years of age or is not
+-- expected to complete ... before reaching 22 ... solely due to a documented disability."
+GIVEN `the child is a Vermont resident` IS A BOOLEAN
+      `age` IS A NUMBER
+      `full-time in secondary school or equivalent vocational or technical training` IS A BOOLEAN
+      `expected to complete before 22, or not solely because of a documented disability` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `is a dependent child` IF
+        `the child is a Vermont resident`
+    AND (    `age` LESS THAN 18
+         OR (    `full-time in secondary school or equivalent vocational or technical training`
+             AND `expected to complete before 22, or not solely because of a documented disability`))
+
+-- s 1101(12): "'Family' means: (A) one or more dependent children living with one or both parents or a relative or caretaker
+-- of such children; or (B) a pregnant individual." s 1101(6): a caretaker is 18 or older, "fulfilling a parental role".
+GIVEN `number of dependent children living with me` IS A NUMBER
+      `I am their parent, a relative or their caretaker` IS A BOOLEAN
+      `I am pregnant` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `we are a family` IF
+        (`number of dependent children living with me` AT LEAST 1 AND `I am their parent, a relative or their caretaker`)
+    OR `I am pregnant`
+
+§§ `s 1103 -- the grant`
+
+-- s 1103(c)(1): "Not less than the first $350.00 per month of earnings from an unsubsidized or subsidized job and 25 percent of
+-- the remaining earnings shall be disregarded". Read: $350, then 25 percent of the earnings above $350.
+GIVEN `monthly earnings from a job` IS A NUMBER
+GIVETH A NUMBER
+`the statutory earned income disregard` `monthly earnings from a job` MEANS
+    IF `monthly earnings from a job` AT MOST 350
+    THEN `monthly earnings from a job`
+    ELSE 350 PLUS ((`monthly earnings from a job` MINUS 350) TIMES 25%)
+
+-- s 1103(f): "The Commissioner shall disregard not less than $100.00 per month of child support payments".
+GIVEN `monthly child support received` IS A NUMBER
+GIVETH A NUMBER
+`the statutory child support disregard` `monthly child support received` MEANS
+    min 100 `monthly child support received`
+
+-- s 1103(c)(4): "Education stipends, employment stipends, job training stipends, and incentive payments ... shall be excluded"
+-- (they are simply not counted: the person leaves them out of other income). Countable income is earnings and child support
+-- less the statutory disregards, plus other income the rules count.
+GIVEN `monthly earnings from a job` IS A NUMBER
+      `monthly child support received` IS A NUMBER
+      `other countable monthly income` IS A NUMBER
+GIVETH A NUMBER
+`countable income at the statutory disregards` `monthly earnings from a job` `monthly child support received` `other countable monthly income` MEANS
+    sum (LIST `monthly earnings from a job` MINUS `the statutory earned income disregard` `monthly earnings from a job`,
+              `monthly child support received` MINUS `the statutory child support disregard` `monthly child support received`,
+              `other countable monthly income`)
+
+-- s 1103(c)(1): "The family shall receive the difference between countable income and the Reach Up payment standard in a
+-- partial financial assistance grant." Nil where countable income reaches the standard.
+GIVEN `payment standard` IS A NUMBER
+      `countable income` IS A NUMBER
+GIVETH A NUMBER
+`the partial grant` `payment standard` `countable income` MEANS
+    max 0 (`payment standard` MINUS `countable income`)
+
+§§ `s 1108 -- the 60 months`
+
+DECLARE `Time limit outcome` IS ONE OF
+    `within the 60 months: eligible as to the time limit (s 1108(a))`
+    `a grant for children in the care of persons other than their parents: the time limit does not apply (s 1108(a))`
+    `past the 60 months: the hardship exemption applies while I am engaged in work activities (s 1108(d))`
+    `past the 60 months: I may continue only if the program director determines, month by month, that I am actively participating (s 1108(e))`
+    `past the 60 months: not eligible`
+
+-- s 1108(a): "only participating families who have received fewer than 60 cumulative months of financial assistance in which
+-- the family was not granted a deferment, including those months in which any type of cash assistance funded by a TANF block
+-- grant was received in other states ... shall be eligible". (b): months in which the participant is not able to work, cares
+-- for a child under one, is affected by domestic violence, or is needed full time at home to care for an ill or disabled
+-- parent, spouse or child do not count. (c): no month counts until the parents reach 18. The person states the months
+-- received and, of those, the months that do not count (overlaps counted once).
+-- (d): a family that "does not meet any of the criteria under subsection (b)" and has exceeded the 60 months "shall qualify
+-- for a hardship exemption ... if the participating adult is engaged in any of the work activities listed in subdivision
+-- 1101(2) ... with the exception of subdivision 1101(2)(L)". The cross-reference is read as s 1101(28) (NOTES.md finding 2).
+-- (e): otherwise the family "may be eligible to continue ... if the program director ... determines, on a monthly basis" (a
+-- judgment of someone else, answered conditionally).
+GIVEN `children in the care of persons other than their parents` IS A BOOLEAN
+      `months of TANF-funded cash assistance received, in any state` IS A NUMBER
+      `of those, months that do not count` IS A NUMBER
+      `a s 1108(b) criterion applies to me now` IS A BOOLEAN
+      `I am engaged in a work activity other than s 1101(28)(L)` IS A BOOLEAN
+      `the program director determines I am actively participating this month` IS A BOOLEAN
+GIVETH A `Time limit outcome`
+`the 60-month limit` `children in the care of persons other than their parents` `months of TANF-funded cash assistance received, in any state` `of those, months that do not count` `a s 1108(b) criterion applies to me now` `I am engaged in a work activity other than s 1101(28)(L)` `the program director determines I am actively participating this month` MEANS
+    BRANCH
+        IF `children in the care of persons other than their parents`
+        THEN `a grant for children in the care of persons other than their parents: the time limit does not apply (s 1108(a))`
+        IF `countable months` LESS THAN 60
+        THEN `within the 60 months: eligible as to the time limit (s 1108(a))`
+        IF (NOT (`a s 1108(b) criterion applies to me now`)) AND `I am engaged in a work activity other than s 1101(28)(L)`
+        THEN `past the 60 months: the hardship exemption applies while I am engaged in work activities (s 1108(d))`
+        IF `the program director determines I am actively participating this month`
+        THEN `past the 60 months: I may continue only if the program director determines, month by month, that I am actively participating (s 1108(e))`
+        OTHERWISE `past the 60 months: not eligible`
+    WHERE
+        `countable months` MEANS max 0 (`months of TANF-funded cash assistance received, in any state` MINUS `of those, months that do not count`)
+
+§§ `ss 1113-1116 -- participation and sanctions`
+
+-- s 1114: the participation requirements "shall be deferred when: (1) a participating adult is 60 years of age or older; (2) ...
+-- caring for a child under six weeks of age; (3) ... due to the effects of domestic violence, engaging in the program
+-- participation requirements can be reasonably anticipated to result in serious physical or emotional harm ...; or (4) any
+-- other participant designated by the Commissioner" by rule (asked as a fact). s 1115(a): also deferred when the services in
+-- the plan "are unavailable for reasons beyond the control of the participant".
+GIVEN `my age` IS A NUMBER
+      `I am caring for a child under six weeks old` IS A BOOLEAN
+      `participating can reasonably be expected to cause serious harm because of domestic violence` IS A BOOLEAN
+      `I am designated for deferment under the Commissioner's rules` IS A BOOLEAN
+      `the services in my plan are unavailable for reasons beyond my control` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `my participation requirements are deferred` IF
+       `my age` AT LEAST 60
+    OR `I am caring for a child under six weeks old`
+    OR `participating can reasonably be expected to cause serious harm because of domestic violence`
+    OR `I am designated for deferment under the Commissioner's rules`
+    OR `the services in my plan are unavailable for reasons beyond my control`
+
+-- s 1116(a): the grant "shall be reduced ... if a participating adult does not engage, without good cause, with the family
+-- development plan or program participation requirements". (c)(1): "For a first, second, and third month ... reduced by the
+-- amount of $75.00." (c)(2): "For the fourth and any subsequent month ... reduced by the amount of $150.00 for each adult
+-- sanctioned." The month of non-engagement is counted from the first (sanctions forgiven under (d) are not counted).
+GIVEN `sanction month number` IS A NUMBER
+      `number of adults sanctioned` IS A NUMBER
+GIVETH A NUMBER
+`the sanction reduction` `sanction month number` `number of adults sanctioned` MEANS
+    BRANCH
+        IF `sanction month number` LESS THAN 1 THEN 0
+        IF `sanction month number` AT MOST 3 THEN 75
+        OTHERWISE 150 TIMES `number of adults sanctioned`
+
+-- s 1116(f)(1): "during the first six months that a family's grant is reduced due to fiscal sanctions ... [the grant shall not]
+-- be reduced to less than an amount that in combination with the family's other countable income is less than the family's
+-- actual incurred housing costs up to the applicable maximum housing allowance." (g): after more than six cumulative months
+-- the full sanction applies "without any consideration of the housing costs protection".
+GIVEN `grant before sanction` IS A NUMBER
+      `sanction month number` IS A NUMBER
+      `number of adults sanctioned` IS A NUMBER
+      `cumulative months sanctioned, including this one` IS A NUMBER
+      `actual housing costs` IS A NUMBER
+      `maximum housing allowance` IS A NUMBER
+      `other countable income` IS A NUMBER
+GIVETH A NUMBER
+`the grant after sanction` `grant before sanction` `sanction month number` `number of adults sanctioned` `cumulative months sanctioned, including this one` `actual housing costs` `maximum housing allowance` `other countable income` MEANS
+    IF `cumulative months sanctioned, including this one` AT MOST 6
+    THEN max `reduced` (min `grant before sanction` `housing floor`)
+    ELSE `reduced`
+    WHERE
+        `reduced`       MEANS max 0 (`grant before sanction` MINUS `the sanction reduction` `sanction month number` `number of adults sanctioned`)
+        `housing floor` MEANS max 0 ((min `actual housing costs` `maximum housing allowance`) MINUS `other countable income`)
+
+-- s 1116(h): "To receive payments during the fiscal sanction period, an adult who is the subject of the sanction shall meet not
+-- less than once each month to report the adult's circumstances to the case manager or to participate in assessments". Counted
+-- in days within a month of 30 days.
+GIVETH A DEONTIC `Party` `Action`
+`my monthly meeting while sanctioned` MEANS
+    PARTY  `the participating adult`
+    MUST   `meet the case manager to report circumstances or take part in assessment`
+    WITHIN 30
+    HENCE  FULFILLED
+    LEST   BREACH BY `the participating adult` BECAUSE "no meeting with the case manager this month: no payment during the sanction period (33 V.S.A. s 1116(h))"
+
+-- s 1132(b): notice and an opportunity for hearing and appeal "before Reach Up sanctions are applied". (c): "A participant
+-- shall continue to receive financial assistance payments pending appeal to the Human Services Board of Reach Up sanctions if
+-- the appeal is received prior to the effective date of the proposed sanctions." The appeal is the participant's choice, written
+-- with DO and LEST FULFILLED (not appealing is no breach; a MAY would fire HENCE also when the time passes unused). The
+-- Department's duty to continue payments follows only from an appeal made in time. Counted in days from the notice.
+GIVEN `days from the notice to the effective date of the sanction` IS A NUMBER
+GIVETH A DEONTIC `Party` `Action`
+`my appeal of a sanction` `days from the notice to the effective date of the sanction` MEANS
+    PARTY  `the participating adult`
+    DO     `appeal the sanction to the Human Services Board`
+    WITHIN `days from the notice to the effective date of the sanction`
+    HENCE  `payments continue pending appeal`
+    LEST   FULFILLED
+
+GIVETH A DEONTIC `Party` `Action`
+`payments continue pending appeal` MEANS
+    PARTY  `the Department for Children and Families`
+    MUST   `continue financial assistance payments pending the appeal`
+    WITHIN 30
+    HENCE  FULFILLED
+    LEST   BREACH BY `the Department for Children and Families` BECAUSE "payments stopped although the appeal was received before the sanction's effective date (33 V.S.A. s 1132(c))"
+
+-- s 1132(c) as a plain question: an appeal received before the effective date keeps the payments going.
+GIVEN `the day the appeal is received` IS A NUMBER
+      `the effective date of the sanction` IS A NUMBER
+GIVETH A BOOLEAN
+DECIDE `payments continue while the appeal is heard` IF
+    `the day the appeal is received` LESS THAN `the effective date of the sanction`
+
+§ `Questions for the applicant`
+
+§§ `Is my family eligible?`
+
+@export Is my child a "dependent child" for Reach Up (33 V.S.A. s 1101(10))?
+GIVEN `my child lives in Vermont` IS A BOOLEAN @desc Whether the child is a resident of Vermont
+      `my child's age` IS A NUMBER @desc The child's age in whole years
+      `my child is a full-time secondary school or equivalent vocational student` IS A BOOLEAN @desc Whether the child (if 18 or older) is a full-time student in secondary school or an equivalent level of vocational or technical training
+      `my child is expected to finish before 22, or would be but for a documented disability` IS A BOOLEAN @desc Whether the child is reasonably expected to complete that programme before age 22, or is not expected to only because of a documented disability
+GIVETH A BOOLEAN
+DECIDE `Is my child a dependent child` IF
+    `is a dependent child` `my child lives in Vermont` `my child's age` `my child is a full-time secondary school or equivalent vocational student` `my child is expected to finish before 22, or would be but for a documented disability`
+
+@export Are we a "family" that Reach Up can help (33 V.S.A. s 1101(12))?
+GIVEN `how many dependent children live with me` IS A NUMBER @desc How many dependent children (under 18, or full-time secondary students up to 22) live with you
+      `I am the children's parent, relative or caretaker` IS A BOOLEAN @desc Whether you are a parent, stepparent, relative, or an adult caretaker fulfilling a parental role for those children
+      `I am pregnant` IS A BOOLEAN @desc Whether you are pregnant
+GIVETH A BOOLEAN
+DECIDE `Are we a family for Reach Up` IF
+    `we are a family` `how many dependent children live with me` `I am the children's parent, relative or caretaker` `I am pregnant`
+
+@export Is there an asset limit for Reach Up (33 V.S.A. s 1103(c)(5))?
+GIVETH A BOOLEAN
+DECIDE `Is there an asset limit for Reach Up` IF FALSE
+
+§§ `How much will we get?`
+
+@export At least how much is our monthly Reach Up grant, on the statute's minimum disregards (33 V.S.A. s 1103(c)(1), (f))?
+GIVEN `the Reach Up payment standard for our family` IS A NUMBER @desc The monthly Reach Up payment standard for your family size and circumstances under the Department's rules, in US dollars (set by rule, not in the statute)
+      `our monthly earnings from jobs` IS A NUMBER @desc The family's total monthly earnings from paid jobs (subsidised or not), before tax, in US dollars
+      `our monthly child support received` IS A NUMBER @desc Child support paid to the family each month, in US dollars
+      `our other countable monthly income` IS A NUMBER @desc Other monthly income the rules count (for example unemployment benefits), in US dollars; leave out education, employment or training stipends and incentive payments, which are excluded
+GIVETH A NUMBER
+`At least how much is our Reach Up grant` `the Reach Up payment standard for our family` `our monthly earnings from jobs` `our monthly child support received` `our other countable monthly income` MEANS
+    `the partial grant` `the Reach Up payment standard for our family` (`countable income at the statutory disregards` `our monthly earnings from jobs` `our monthly child support received` `our other countable monthly income`)
+
+§§ `Do the 60 months run out?`
+
+@export Am I still within, or exempt from, Reach Up's 60-month limit (33 V.S.A. s 1108)?
+GIVEN `the grant is only for children in the care of someone other than their parents` IS A BOOLEAN @desc Whether the assistance is for children cared for by someone who is not their parent (a child-only grant)
+      `months of TANF cash assistance my family has received` IS A NUMBER @desc How many months your family has received Reach Up or other TANF-funded cash assistance in any state
+      `of those, months that do not count` IS A NUMBER @desc How many of those months do not count: months with a deferment, months when you were unable to work, cared for a baby under one, were affected by domestic violence or were needed full time at home to care for an ill or disabled family member, and months before the parents turned 18
+      `one of those exceptions applies to me now` IS A BOOLEAN @desc Whether, now, you are unable to work, caring for a baby under one, affected by domestic violence, or needed full time at home to care for an ill or disabled parent, spouse or child
+      `I am engaged in a work activity` IS A BOOLEAN @desc Whether you are now engaged in a work activity (employment, work experience, training, job search, education for work, community service and the like), other than providing child care to someone in community service
+      `the program director finds me actively participating this month` IS A BOOLEAN @desc Whether the Reach Up program director (or designee) has determined, for this month, that you are actively taking part in goal planning and engagement
+GIVETH A `Time limit outcome`
+`Am I within the 60-month limit` `the grant is only for children in the care of someone other than their parents` `months of TANF cash assistance my family has received` `of those, months that do not count` `one of those exceptions applies to me now` `I am engaged in a work activity` `the program director finds me actively participating this month` MEANS
+    `the 60-month limit` `the grant is only for children in the care of someone other than their parents` `months of TANF cash assistance my family has received` `of those, months that do not count` `one of those exceptions applies to me now` `I am engaged in a work activity` `the program director finds me actively participating this month`
+
+§§ `If I am sanctioned`
+
+-- Situation: only for a participating adult who has not engaged with the plan or the participation requirements.
+
+@export Are my Reach Up participation requirements deferred (33 V.S.A. ss 1114, 1115(a))?
+GIVEN `my age` IS A NUMBER @desc Your age in whole years
+      `I care for a baby under six weeks old` IS A BOOLEAN @desc Whether you are caring for a child under six weeks of age
+      `taking part could cause me or my child serious harm because of domestic violence` IS A BOOLEAN @desc Whether, because of domestic violence, taking part can reasonably be expected to cause serious physical or emotional harm to you or your child
+      `the Commissioner's rules defer me` IS A BOOLEAN @desc Whether you fall within another deferment the Commissioner's rules set
+      `the services in my plan are unavailable for reasons beyond my control` IS A BOOLEAN @desc Whether the case management, training, education or family support services in your family development plan are unavailable for reasons beyond your control, including lack of funds
+GIVETH A BOOLEAN
+DECIDE `Are my participation requirements deferred` IF
+    `my participation requirements are deferred` `my age` `I care for a baby under six weeks old` `taking part could cause me or my child serious harm because of domestic violence` `the Commissioner's rules defer me` `the services in my plan are unavailable for reasons beyond my control`
+
+@export How much is our Reach Up grant cut for a sanction this month (33 V.S.A. s 1116(c), (f), (g))?
+GIVEN `our grant before the sanction` IS A NUMBER @desc Your family's monthly grant before the sanction, in US dollars
+      `which month of non-engagement this is` IS A NUMBER @desc Which month of not engaging without good cause this is (1 for the first), not counting sanctions forgiven after 12 months of compliance
+      `how many adults are sanctioned` IS A NUMBER @desc How many adults in your family are sanctioned this month
+      `months our grant has been cut by sanctions, including this one` IS A NUMBER @desc The cumulative number of months your grant has been reduced by fiscal sanctions, including this month
+      `our actual monthly housing costs` IS A NUMBER @desc What your family actually pays for housing each month, in US dollars
+      `the maximum housing allowance for us` IS A NUMBER @desc The maximum housing allowance that applies to your family under the Department's rules, in US dollars
+      `our other countable monthly income` IS A NUMBER @desc Your family's other countable income for the month, in US dollars
+GIVETH A NUMBER
+`How much is our grant after a sanction` `our grant before the sanction` `which month of non-engagement this is` `how many adults are sanctioned` `months our grant has been cut by sanctions, including this one` `our actual monthly housing costs` `the maximum housing allowance for us` `our other countable monthly income` MEANS
+    `the grant after sanction` `our grant before the sanction` `which month of non-engagement this is` `how many adults are sanctioned` `months our grant has been cut by sanctions, including this one` `our actual monthly housing costs` `the maximum housing allowance for us` `our other countable monthly income`
+
+@export If I appeal a Reach Up sanction, do my payments continue while the appeal is heard (33 V.S.A. s 1132(c))?
+GIVEN `the day the Board receives my appeal` IS A NUMBER @desc The day the Human Services Board receives your appeal, counted in days from the sanction notice
+      `the day the sanction takes effect` IS A NUMBER @desc The day the proposed sanction takes effect, counted in days from the notice
+GIVETH A BOOLEAN
+DECIDE `Do my payments continue during my appeal` IF
+    `payments continue while the appeal is heard` `the day the Board receives my appeal` `the day the sanction takes effect`
