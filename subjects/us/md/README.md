@@ -2,7 +2,7 @@
 
 Maryland (US state) legislation, one subject-id per body of law, following the subject-sidecar shape described in [`subjects/README.md`](../README.md).
 
-The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the Maryland General Assembly - Statute Text (Annotated Code of Maryland), official legislative site; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text has been deposited and nothing is encoded yet.
+The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the Maryland General Assembly - Statute Text (Annotated Code of Maryland), official legislative site; the check is recorded in each subject's `registers/source-bundle/*.meta.json`. Statute text was deposited later (see below); two baseline encodings were added on 2026-10-24.
 
 **Licence category: unclear.** **Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
 
@@ -52,3 +52,18 @@ Maryland sets the Temporary Cash Assistance (TCA) benefit levels, the Temporary 
 - TCA, TDAP and PAA benefit levels (COMAR Title 07) are not in commons.
 - The UI weekly benefit amounts come from the schedule of benefits in Labor and Employment 8-803, which is already deposited as rows, so no rule is needed for them.
 - To unblock COMAR: ask the Division of State Documents for access or written permission for the commons fetcher. Alternatively, accept text from the Maryland Register in print.
+
+## Tax and benefits encodings (2026-10-24)
+
+Two baseline encodings, written from the deposited text with the stable l4 (1.6.98), each with its own `NOTES.md` (findings, scope, what to do before relying on it):
+
+| Encoding | Seat | What it answers |
+|---|---|---|
+| [`annotated-code-of-maryland-tax-general-article-title-10-income/encodings/baseline-2026-10`](annotated-code-of-maryland-tax-general-article-title-10-income/encodings/baseline-2026-10) | the full-year resident taxpayer | residence; Maryland AGI, exemptions, standard or itemized deduction, Maryland taxable income; State tax (with the 2% capital-gain addition) and county tax; the earned income, poverty-level and child tax credits; who must file, joint returns, the due date (also a regulative rule). 9 questions, 60 assertions. |
+| [`annotated-code-of-maryland-human-services-article-title-5/encodings/baseline-2026-10`](annotated-code-of-maryland-human-services-article-title-5/encodings/baseline-2026-10) | the applicant for, or recipient of, temporary cash assistance | eligibility for TCA under the Family Investment Program; work activity exemptions and hours; time limits; sanctions and the 30-day rules (two regulative rules); transitional assistance; SSI excluded. 8 questions, 41 assertions. |
+
+**Deposited for the tax encoding:** Tax-General Title 10, Subtitle 8 (ss 10-804 to 10-823: who must file, joint returns, due dates), fetched 2026-10-24 from mgaleg.maryland.gov under the same clean terms (robots.txt still 404, no terms of use). Recorded in the subject's `SOURCE-LICENSE.md`.
+
+**Inputs, not deposited:** federal AGI and the federal earned income credit (link: `subjects/us/internal-revenue-code-of-1986/`), county income tax rates, the Comptroller's 2026 cost-of-living adjustment to the standard deduction, the HHS poverty guideline, and the TCA grant amounts and income and resource tests (COMAR, still blocked: see above).
+
+**Main findings:** the child tax credit's phase-out (s 10-751(c)) can never operate because (b) admits only incomes below the threshold; the poverty-level credit cites s 10-704(a)(1), a definitions paragraph, for the earned income credit; the FIP 24-month limit (s 5-313(a)(2)) has no exemption for an adult exempt from work activity; the two TCA sanctions are not said to compound.
