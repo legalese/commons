@@ -11,7 +11,7 @@ The text of **First Home Owner Grant Regulations 2000** is published on the [Nor
 
 ## Consequence for this subject
 
-Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Confirm before quoting it in an encoding** -- a human decision recorded here.
+Reproduction is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Owner's ruling, 24 Oct 2026 (Michael):** the NT terms permit reproduction but are silent on adaptation; as for Canada, the texts may be quoted in L4 encodings in Legalese Commons, keeping the NT attribution and the unofficial-copy notice. This replaces the earlier "confirm before quoting" hold.
 
 ## Language
 
@@ -21,4 +21,4 @@ English is the only language of NT legislation; there are no other official or a
 
 Text deposited 2026-10-19T17:06:40Z (UTC): reprint **REPF039R1**, as in force at 1 July 2009, converted from the register's Word reprint, at `registers/source-bundle/First-Home-Owner-Grant-Regulations-2000-NT-current-reprint-REPF039R1.txt`. The text opens with an unofficial-copy notice as the policy's first condition requires; the sidecar `.meta.json` records the download and text sha256, character count and converter.
 
-Verbatim reproduction is within the policy ("publish or deal with"). Whether an L4 encoding that paraphrases or restructures the text is also within it (the policy does not expressly mention adaptation) remains the open question above; record the human decision here before an encoding quotes the text.
+Verbatim reproduction is within the policy ("publish or deal with"). Whether an L4 encoding that paraphrases or restructures the text is also within it (the policy does not expressly mention adaptation) was the open question above; the owner's ruling of 24 Oct 2026 answers it: encodings may quote the text, keeping the NT attribution and the unofficial-copy notice.
