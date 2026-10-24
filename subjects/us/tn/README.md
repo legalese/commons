@@ -16,3 +16,16 @@ PARTIAL - table-of-contents level only, on a commercial platform, because the St
 - **Passenger compensation**: No state statute. Compensation for denied boarding, delay and cancellation is federal: 14 C.F.R. part 250 and 49 U.S.C. ch. 417 for air, 49 U.S.C. for rail. The register's Title 65 table of contents carries carrier chapters (ch. 12 Operation of Railroads, ch. 15 Motor Carriers, ch. 19 Ridesharing, ch. 20 Miscellaneous Provisions Relating to Carriers) that regulate carriers for safety, licensing and rates; none creates a passenger compensation entitlement.
 - **Customs/duties**: Federal matter. Customs duties and tariffs are exclusively federal (Tariff Act of 1930, 19 U.S.C.); U.S. Const. art. I, sec. 10, cl. 2 bars states from laying imposts or duties on imports or exports.
 - **Work permits/immigration**: Federal matter. Immigration status and work authorisation are governed by the Immigration and Nationality Act, 8 U.S.C., and I-9 verification by 8 U.S.C. sec. 1324a. Tennessee's adjacent provisions ride on the federal scheme rather than creating a work-permit regime: Title 50, Chapter 1, Part 7 (Tennessee Lawful Employment Act, the state E-Verify mandate) and Tenn. Code Ann. sec. 4-21-409 (Employee not authorized to work in the United States), both verified present and unmarked in the register's table of contents.
+
+## Tax and benefits pass (2026-10-24): nothing could be sourced
+
+**Personal income tax.** Tennessee levies no tax on wages. The Hall income tax on interest and dividends (Title 67, Chapter 2) ends with s 67-2-124, "Effect of reduction to rate of tax - Annual reduction of tax - Elimination of tax", as recorded above from the table of contents; unverified (general knowledge): the tax was eliminated for tax years beginning on or after 1 January 2021. No text could be deposited to encode this (below).
+
+**Benefits.** The candidate texts are Families First, Tennessee's TANF programme (Title 71, Chapter 3, Part 1; unverified, general knowledge), and the Employment Security Law (Title 50, Chapter 7, already indexed here). Neither could be fetched.
+
+**Access attempts, 2026-10-24** (User-Agent `legalese-commons-source-fetcher/1.0 (+https://github.com/legalese/commons)`, at least 3 s apart):
+- `https://www.capitol.tn.gov/` and `https://wapp.capitol.tn.gov/robots.txt`: no connection ("Failed to connect ... port 443"), as on 2026-09-23.
+- `https://www.tn.gov/robots.txt`: HTTP 403. Treated as a no.
+- `https://www.lexisnexis.com/hottopics/tncode/` (the free public access Code published by LexisNexis for the Tennessee Code Commission): HTTP 301 to `advance.lexis.com/container?...`, which answers with a script-only page that fingerprints the browser (screen size, plugins, user agent) and sets a cookie before redirecting. That is a bot gate, so it was not pursued. The platform's own terms could not be read without passing it; a private contractor's terms for this edition are in any case likely to restrict reuse and would need reading before any deposit.
+
+Nothing was deposited and nothing is encoded. A later pass should retry www.capitol.tn.gov (the General Assembly's own Code links) from another network or day, or Michael may wish to ask the Tennessee Code Commission about reuse of the unannotated text.
