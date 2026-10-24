@@ -61,3 +61,12 @@ The plan's "Rates; EITC" item (30 Del. C. 1102, 1117) is inside chapter 11 and i
 - A Delaware state supplement to SSI, if one exists: not sourced, unverified.
 - The UI weekly maximum in 19 Del. C. 3313 is statutory and already deposited. No rule was needed.
 - Division of Revenue regulations: not sourced.
+
+## Tax and benefits encodings (2026-10-24)
+
+| Encoding | Seat | What it answers | Assertions |
+|---|---|---|---|
+| `delaware-code-title-30-state-taxes-chapter-11-personal-income/encodings/baseline-2026-10/` | the resident taxpayer | residency (1103); who must file (1161, $9,378 / $15,449); joint or separate (1162); pension, military pension and Social Security subtractions (1106(b)(2)-(4)); standard deduction (1108); rates (1102(a)(14)); personal credits (1110); the two EITC options (1117); the 30 April due date (1168) | 48 / 48 |
+| `delaware-code-title-31-welfare-chapter-5-state-public/encodings/baseline-2026-10/` | the TANF applicant or recipient | the s 503 bars; resources; disregards; the gross and net income tests; the Fill the Gap grant (DSSM 4000, brought in as the instrument setting the Act's numbers); reporting (510); the 30-day appeal (520) | 38 / 38 |
+
+The TANF standards printed in DSSM 4007.2 are dated 10/2002-9/2003; a grant question also takes current standards as inputs. Penalties for late filing are in 30 Del. C. ch. 5, not deposited.
