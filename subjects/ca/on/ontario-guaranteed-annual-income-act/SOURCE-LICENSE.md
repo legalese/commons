@@ -21,6 +21,8 @@ The year used is the year the instrument was first published (enacted, or filed 
 
 Reproduction, including commercial reproduction, is permitted on the conditions above, but the terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Confirm before quoting the text in an encoding** -- a human decision recorded here.
 
+**Decided 24 October 2026 (Michael):** Canadian texts whose terms permit reproduction but are silent on adaptation, as the King's Printer for Ontario's terms are, MAY be quoted in L4 encodings in Commons, keeping the attribution the publisher requires ("© King's Printer for Ontario, <year>.") and a not-an-official-version notice in the text header and here.
+
 ## Language
 
 English is not the only authoritative language. Legislation Act, 2006 (S.O. 2006, c. 21, Sched. F), s. 65: 'The English and French versions of Acts and regulations that are enacted or made in both languages are equally authoritative.' The Acts here, and O. Reg. 134/98 and O. Reg. 222/98, are bilingual; O. Reg. 37/09, R.R.O. 1990, Reg. 874 and O. Reg. 357/96 are made in English only. Only the English text is deposited; e-Laws publishes the French at /laws/loi/<id> and /laws/reglement/<id>.

@@ -6,6 +6,8 @@ The subjects here were laid out on 2026-09-22 for the legislation governing twel
 
 **Licence category: conditional.** The King's Printer permits anyone to reproduce Ontario statutes and regulations free and without permission, commercial use included, on three conditions: accuracy, the acknowledgement "© King's Printer for Ontario, <year>", and a statement that the copy is not an official version. The terms do not expressly grant a right to ADAPT. An L4 encoding that quotes the statute is arguably an adaptation. **Confirm before quoting the text in an encoding** -- a human decision recorded here.
 
+**Decided 24 October 2026 (Michael):** Canadian texts whose terms permit reproduction but are silent on adaptation, as the King's Printer for Ontario's are, MAY be quoted in L4 encodings in Commons, keeping the publisher's attribution ("© King's Printer for Ontario, <year>.") and a not-an-official-version notice in each text header and `SOURCE-LICENSE.md`. Recorded in the four sourced subjects' `SOURCE-LICENSE.md`.
+
 ## Topics with no legislation here
 
 - **Passenger compensation**: Air passenger rights (Canada Transportation Act and the Air Passenger Protection Regulations) and interprovincial rail are federal. No Ontario statute governs passenger compensation.
