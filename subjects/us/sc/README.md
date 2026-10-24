@@ -67,3 +67,12 @@ The question was where South Carolina sets the **amounts** a person gets: the Fa
 - The Department of Social Services (dss.sc.gov) timed out on robots.txt, and the Department of Health and Human Services (www.scdhhs.gov, which runs OSS) answered HTTP 403 to robots.txt. Both hosts were dropped.
 
 **Remaining gaps (unchanged):** the Family Independence payment amounts; the OSS amount; the UI weekly maximum. It is unverified (general knowledge) whether Chapter 114 sets Family Independence dollar amounts at all; they may sit in the DSS policy manual instead. A later pass should retry the Chapter 114 PDF on a fresh day.
+
+## Encodings (tax and benefits baseline, 2026-10-24)
+
+| Encoding | Seat | Questions | Regulative rules | Assertions |
+| --- | --- | --- | --- | --- |
+| `south-carolina-code-of-laws-title-12-chapter-6-south-carolina/encodings/baseline-2026-10/` (Income Tax Act, individuals) | the individual taxpayer (full-year resident; joint or single) | 10 | 2 (file by the 15th day of the 4th month or the extended date; pay by the original date) | 47 / 47 |
+| `south-carolina-code-of-laws-title-43-chapter-5-public-aid-assistance-and-relief/encodings/baseline-2026-10/` (Family Independence) | the applicant for or recipient of Family Independence | 12 | 5 (report changes in 10 days; 30-day conciliation; appeal; 60-day review; department acts in 10 days) | 51 / 51 |
+
+Both are baselines from the deposited Code text, checked with the stable `l4` 1.6.98. The income tax encoding starts from federal taxable income (an input; the federal IRC encoding is linked in its NOTES.md) and uses the 2025 Tax Computation Schedule printed in the Editor's Note under s 12-6-510. The Family Independence encoding states the chapter's conditions of eligibility, time limits and duties; the grant amount is not in the chapter and is not encoded.

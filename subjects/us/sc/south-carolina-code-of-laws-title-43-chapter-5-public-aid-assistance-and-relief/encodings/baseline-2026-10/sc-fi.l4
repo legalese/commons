@@ -1,0 +1,400 @@
+IMPORT prelude
+IMPORT daydate
+
+-- South Carolina Code of Laws Title 43, Chapter 5 -- Family Independence (South Carolina's cash assistance for needy
+-- families with children, called "Family Independence" or "Aid to Families with Dependent Children", s 43-5-1110(1)), from
+-- the seat of the applicant or recipient (the parent or caretaker relative who applies for the family).
+--
+-- In scope: the conditions of eligibility the chapter states (ss 43-5-65, 43-5-70, 43-5-95, 43-5-1120(B), 43-5-1190,
+-- 43-5-1200, 43-5-1215, 43-5-1220), income exclusions (ss 43-5-1205, 43-5-1210), the time limits and their exceptions
+-- (s 43-5-1170), the family cap (s 43-5-1175), when benefits begin (s 43-5-148), the work requirement and who is excused
+-- (ss 43-5-1125(B), 43-5-1180), the sanction and conciliation period (s 43-5-1125(A)), the duty to report changes within
+-- ten days (ss 43-5-65(f), 43-5-140(c)), the department's notice and adjustment periods (ss 43-5-45, 43-5-140(d)),
+-- recovery of an overpayment from future aid (s 43-5-30(c)(2)), and the 60-day request for review (s 43-5-150).
+--
+-- NOT ENCODED: the payment standard and the need standard (not in the chapter; set by the department, an input where a
+-- question needs it); the proration formula of s 43-5-148 (its words do not give a formula, NOTES.md finding 4); general
+-- assistance (ss 43-5-310 to 43-5-350) and the older AFDC articles (ss 43-5-400 to 43-5-470); child support enforcement
+-- (ss 43-5-220 to 43-5-245, 43-5-580 to 43-5-630); the SNAP fraud article (ss 43-5-910 to 43-5-970); the department's
+-- programme duties in ss 43-5-1130 to 43-5-1285 except as they reach the applicant.
+--
+-- Edition: S.C. Code of Laws Unannotated, Title 43, Chapter 5, "current through the 2025 Session", as deposited at
+-- ../../registers/source-bundle/sc-code-title-43-chapter-5-public-aid-family-independence-act.txt (retrieved 2026-10-19).
+--
+-- BASELINE ENCODING. Written from the applicant's seat with the 2026-10-18 defaults. No pipeline, no coverage table, no
+-- independent test pass, no human gate. Not for public use as advice. See NOTES.md.
+
+§ `Family Independence -- the applicant's and recipient's questions`
+
+§§ `s 43-5-1200 -- the asset limit`
+
+-- s 43-5-1200: "One licensed vehicle per licensed driver is exempt from the asset limit for Family Independence
+-- participants in work or training. The asset limit for all other assets is two thousand five hundred dollars."
+-- Read: for a family whose members are participants in work or training, up to one licensed vehicle per licensed driver is
+-- left out; every other asset (including any further vehicle, and every vehicle of a family not in work or training)
+-- counts against $2,500. "Asset" is not defined in the chapter: what counts is the department's (NOTES.md finding 5).
+GIVEN `the family is in work or training` IS A BOOLEAN
+      `licensed drivers in the family` IS A NUMBER
+      `licensed vehicles` IS A LIST OF NUMBER
+      `other assets` IS A NUMBER
+GIVETH A NUMBER
+`countable assets` MEANS
+    `other assets` PLUS (sum (drop `vehicles exempt` (reverse (sort `licensed vehicles`))))
+    WHERE
+        -- the most valuable vehicles are the ones left out: sorted largest first, the first ones are dropped
+        `vehicles exempt` MEANS
+            IF `the family is in work or training` THEN `licensed drivers in the family` ELSE 0
+
+@export Are my family's assets within the Family Independence asset limit of $2,500 (S.C. Code s 43-5-1200)?
+GIVEN `we are in work or training` IS A BOOLEAN @desc Whether you (and the other adults on the case) are Family Independence participants in work or training
+      `how many licensed drivers` IS A NUMBER @desc How many licensed drivers there are in the family
+      `my vehicles` IS A LIST OF NUMBER @desc The value in US dollars of each licensed vehicle the family owns, one number per vehicle
+      `my other assets` IS A NUMBER @desc The total value in US dollars of the family's other assets (bank accounts, cash, other property) that the department counts
+GIVETH A BOOLEAN
+DECIDE `Are my assets within the limit` IF
+    `countable assets` `we are in work or training` `how many licensed drivers` `my vehicles` `my other assets` AT MOST 2500
+
+§§ `ss 43-5-1205, 43-5-1210 -- income left out`
+
+-- s 43-5-1205: the department shall apply for a waiver "to exclude interest income and dividends up to four hundred dollars
+-- in determining eligibility and payment amounts". s 43-5-1210: "to exclude income earned by a minor child attending school".
+-- Both are framed as waiver applications (NOTES.md finding 2); encoded as in effect. The period of the $400 (a month, a
+-- year) is not stated; it is applied to whatever period the income is counted for.
+@export How much of my family's income counts for Family Independence once the statutory exclusions are taken out (S.C. Code ss 43-5-1205, 43-5-1210)?
+GIVEN `our earned income from adults` IS A NUMBER @desc Earnings of the adults in the family for the period, in US dollars
+      `earnings of a minor child attending school` IS A NUMBER @desc Earnings of children under 18 in the family who attend school, for the period
+      `our interest and dividends` IS A NUMBER @desc Interest and dividends the family receives for the period
+      `our other income` IS A NUMBER @desc Other income currently available (child support, benefits, gifts and so on) for the period
+GIVETH A NUMBER
+`How much of our income counts` MEANS
+        `our earned income from adults`
+    PLUS (max 0 (`our interest and dividends` MINUS 400))
+    PLUS `our other income`
+
+§§ `s 43-5-1170 -- the time limits`
+
+-- s 43-5-1170: assistance "limited to no more than twenty-four months out of one hundred and twenty months and no more than
+-- sixty months in a lifetime except when" one of eight things is so. (The section directs the department to apply for a
+-- federal waiver; its HISTORY says it takes effect on the waiver or when federal law permits: NOTES.md finding 2.)
+DECLARE `Time limit exception` IS ONE OF
+    `no exception`
+    -- (1)
+    `the head of household is permanently and totally disabled`
+    -- (2)
+    `the head of household provides full-time care for a disabled individual in the home`
+    -- (3) "Assistance must be provided for a period of up to twenty-four months after the minor parent attains the age of
+    -- eighteen or completes high school, whichever occurs first"
+    `the parent is a minor under 18 who has not completed high school`
+    -- (4) "no extension may be granted beyond the thirtieth month except with the express permission of the county director"
+    `I am in an approved training program that will not be completed by the twenty-fourth month`
+    -- (5)
+    `the adult head of household is not the parent and is not included in the assistance check`
+    -- (6)
+    `the adult head of household cares for a child the department has found abandoned, whose alternative is foster care`
+    -- (7)
+    `child care or transportation is not reasonably available`
+    -- (8) full compliance shown "by clear and convincing evidence" and the department satisfied that no employment
+    -- reasonably exists: "may only be extended for up to an additional twelve months", then only with the county director's
+    -- permission and certification
+    `I have fully complied with my agreement and no employment reasonably exists`
+
+DECLARE `Time limit answer` IS ONE OF
+    `within the time limits: fewer than 24 months in the last 120 and fewer than 60 in my lifetime (s 43-5-1170)`
+    `within the time limits because an exception in s 43-5-1170 applies`
+    `beyond the time limits unless the county director expressly permits (s 43-5-1170(4) or (8))`
+    `beyond the time limits of s 43-5-1170`
+
+GIVEN `months received in the last 120 months` IS A NUMBER
+      `months received in my lifetime` IS A NUMBER
+      `exception` IS A `Time limit exception`
+      `months of extension under the exception so far` IS A NUMBER
+      `the county director has given express permission` IS A BOOLEAN
+GIVETH A `Time limit answer`
+`the time limit answer` MEANS
+    IF     `months received in the last 120 months` LESS THAN 24
+       AND `months received in my lifetime` LESS THAN 60
+    THEN `within the time limits: fewer than 24 months in the last 120 and fewer than 60 in my lifetime (s 43-5-1170)`
+    ELSE CONSIDER `exception`
+         WHEN `no exception` THEN `beyond the time limits of s 43-5-1170`
+         WHEN `the parent is a minor under 18 who has not completed high school` THEN
+             -- the extension after 18 or graduation is up to 24 months
+             IF `months of extension under the exception so far` LESS THAN 24
+             THEN `within the time limits because an exception in s 43-5-1170 applies`
+             ELSE `beyond the time limits of s 43-5-1170`
+         WHEN `I am in an approved training program that will not be completed by the twenty-fourth month` THEN
+             IF `months received in the last 120 months` LESS THAN 30
+             THEN `within the time limits because an exception in s 43-5-1170 applies`
+             ELSE IF `the county director has given express permission`
+                  THEN `within the time limits because an exception in s 43-5-1170 applies`
+                  ELSE `beyond the time limits unless the county director expressly permits (s 43-5-1170(4) or (8))`
+         WHEN `I have fully complied with my agreement and no employment reasonably exists` THEN
+             IF `months of extension under the exception so far` LESS THAN 12
+             THEN `within the time limits because an exception in s 43-5-1170 applies`
+             ELSE IF `the county director has given express permission`
+                  THEN `within the time limits because an exception in s 43-5-1170 applies`
+                  ELSE `beyond the time limits unless the county director expressly permits (s 43-5-1170(4) or (8))`
+         OTHERWISE `within the time limits because an exception in s 43-5-1170 applies`
+
+@export Can my family still get Family Independence under the time limits of S.C. Code s 43-5-1170 (24 months in 120, 60 in a lifetime)?
+GIVEN `months in the last 10 years` IS A NUMBER @desc How many months your family received Family Independence (AFDC) in the last 120 months
+      `months ever` IS A NUMBER @desc How many months in total you have received Family Independence (AFDC) in your lifetime
+      `which exception applies` IS A `Time limit exception` @desc Which s 43-5-1170 exception applies to you, if any: "no exception"; the head of household is permanently and totally disabled; provides full-time care for a disabled person at home; the parent is a minor under 18 without a high school diploma; you are in an approved training program that will not finish by the 24th month; the adult head of household is not the parent and is not on the check; caring for an abandoned child who would otherwise go to foster care; child care or transport is not reasonably available; or you have fully complied with your agreement and no job reasonably exists
+      `months already received under the exception` IS A NUMBER @desc For the minor-parent exception, months received since turning 18 or finishing high school; for the full-compliance exception, months of extension already received; otherwise 0
+      `the county director has given permission` IS A BOOLEAN @desc Whether the county director has expressly permitted assistance beyond the 30th month (training) or beyond the 12-month extension (full compliance)
+GIVETH A `Time limit answer`
+`Can we still get Family Independence under the time limits` MEANS
+    `the time limit answer` `months in the last 10 years` `months ever` `which exception applies` `months already received under the exception` `the county director has given permission`
+
+§§ `The conditions of eligibility`
+
+DECLARE `Eligibility answer` IS ONE OF
+    `my family meets the conditions the chapter states; whether we are needy, and the amount, depend on the department's income and payment standards`
+    `the child's aid is paid as protective payments, because I have not assigned support rights or cooperated on paternity and support (s 43-5-65(a)(2))`
+    `not eligible: we are not residents of South Carolina (s 43-5-70)`
+    `not eligible: I am or will be absent from the State for thirty days or longer (s 43-5-70)`
+    `not eligible: the application is incomplete (s 43-5-65(a))`
+    `no assistance yet: a Social Security number, or proof of applying for one, is needed for each person aid is sought for (s 43-5-65(a))`
+    `not approved yet: the personal interview has not been held (s 43-5-65(c))`
+    `not approved yet: the initial job search has not been documented (s 43-5-1120(B))`
+    `not eligible: countable assets are over $2,500 (s 43-5-1200)`
+    `not eligible: a recipient under 18 is not enrolled in school with satisfactory attendance (s 43-5-1215)`
+    `not eligible: a minor mother must live with her parent or guardian unless an exception applies (s 43-5-1220)`
+    `not eligible: random drug tests or an approved treatment program are required (s 43-5-1190)`
+    `not eligible: beyond the time limits (s 43-5-1170)`
+    `no child in the family is an eligible child`
+
+GIVEN `we are residents of South Carolina` IS A BOOLEAN
+      `I am or will be absent from the State for 30 days or longer` IS A BOOLEAN
+      `the application is complete` IS A BOOLEAN
+      `every person aid is sought for has a Social Security number or has applied for one` IS A BOOLEAN
+      `the personal interview has been held` IS A BOOLEAN
+      `I was referred to employment and training and have not documented my initial job search` IS A BOOLEAN
+      `countable assets` IS A NUMBER
+      `every recipient under 18 is enrolled in school with satisfactory attendance` IS A BOOLEAN
+      `I am a minor mother of a child born out of wedlock not living with my parent or guardian` IS A BOOLEAN
+      `a s 43-5-1220(A) exception applies to me` IS A BOOLEAN
+      `s 43-5-1190 applies to me` IS A BOOLEAN
+      `I submit to random drug tests or take part in an approved treatment program` IS A BOOLEAN
+      `time limit` IS A `Time limit answer`
+      `there is an eligible child` IS A BOOLEAN
+      `I have assigned support rights and cooperate on paternity and support, or have good cause` IS A BOOLEAN
+GIVETH AN `Eligibility answer`
+`the eligibility answer` MEANS
+    BRANCH
+        IF (NOT `there is an eligible child`) THEN `no child in the family is an eligible child`
+        IF (NOT `we are residents of South Carolina`) THEN `not eligible: we are not residents of South Carolina (s 43-5-70)`
+        IF `I am or will be absent from the State for 30 days or longer` THEN `not eligible: I am or will be absent from the State for thirty days or longer (s 43-5-70)`
+        IF (NOT `the application is complete`) THEN `not eligible: the application is incomplete (s 43-5-65(a))`
+        IF (NOT `every person aid is sought for has a Social Security number or has applied for one`) THEN `no assistance yet: a Social Security number, or proof of applying for one, is needed for each person aid is sought for (s 43-5-65(a))`
+        IF (NOT `the personal interview has been held`) THEN `not approved yet: the personal interview has not been held (s 43-5-65(c))`
+        IF `I was referred to employment and training and have not documented my initial job search` THEN `not approved yet: the initial job search has not been documented (s 43-5-1120(B))`
+        IF `countable assets` GREATER THAN 2500 THEN `not eligible: countable assets are over $2,500 (s 43-5-1200)`
+        IF (NOT `every recipient under 18 is enrolled in school with satisfactory attendance`) THEN `not eligible: a recipient under 18 is not enrolled in school with satisfactory attendance (s 43-5-1215)`
+        IF `I am a minor mother of a child born out of wedlock not living with my parent or guardian` AND (NOT `a s 43-5-1220(A) exception applies to me`) THEN `not eligible: a minor mother must live with her parent or guardian unless an exception applies (s 43-5-1220)`
+        IF `s 43-5-1190 applies to me` AND (NOT `I submit to random drug tests or take part in an approved treatment program`) THEN `not eligible: random drug tests or an approved treatment program are required (s 43-5-1190)`
+        IF `time limit` EQUALS `beyond the time limits of s 43-5-1170` THEN `not eligible: beyond the time limits (s 43-5-1170)`
+        IF `time limit` EQUALS `beyond the time limits unless the county director expressly permits (s 43-5-1170(4) or (8))` THEN `not eligible: beyond the time limits (s 43-5-1170)`
+        IF (NOT `I have assigned support rights and cooperate on paternity and support, or have good cause`) THEN `the child's aid is paid as protective payments, because I have not assigned support rights or cooperated on paternity and support (s 43-5-65(a)(2))`
+        OTHERWISE `my family meets the conditions the chapter states; whether we are needy, and the amount, depend on the department's income and payment standards`
+
+-- An "eligible child" is not defined in the chapter (a borrowed term from Title IV-A of the Social Security Act); s 43-5-95
+-- adds that aid "may be granted ... to or in behalf of an eligible child over the age of eighteen but not yet nineteen, if he
+-- is a full-time student in a secondary school, or in the equivalent level of vocational or technical training". The
+-- under-18 child living with the caretaker relative (s 43-5-125) is taken here as the core case (NOTES.md finding 6).
+GIVEN `the child's age` IS A NUMBER
+      `the child lives with me` IS A BOOLEAN
+      `the child is a full-time secondary or equivalent vocational student` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `the child can be aided` IF
+        `the child lives with me`
+    AND (    `the child's age` LESS THAN 18
+         OR  (`the child's age` LESS THAN 19 AND `the child is a full-time secondary or equivalent vocational student`))
+
+@export Does my family meet the conditions of eligibility for Family Independence that the South Carolina Code states (S.C. Code ch. 43-5)?
+GIVEN `my youngest child's age` IS A NUMBER @desc The age in years of the youngest child you are applying for (if more than one, answer for the youngest who qualifies)
+      `the child lives with me` IS A BOOLEAN @desc Whether the child lives with you in a common home (temporary absences of up to 30 days do not break this)
+      `the child is a full-time student` IS A BOOLEAN @desc If the child is 18, whether the child is a full-time student in secondary school or the equivalent vocational or technical training
+      `we live in South Carolina` IS A BOOLEAN @desc Whether you and the family are residents of South Carolina (no minimum time is required)
+      `I will be away from South Carolina for 30 days or more` IS A BOOLEAN @desc Whether you are, or will be, absent from the State for 30 days or longer
+      `I have completed the application` IS A BOOLEAN @desc Whether you have given all the information the application asks for (names, birthdates, Social Security numbers, address, all income and property)
+      `everyone has a Social Security number or has applied` IS A BOOLEAN @desc Whether every person you seek aid for has a Social Security number given to the department, or you can show one has been applied for
+      `I have had my interview` IS A BOOLEAN @desc Whether the department has held its personal interview with the adults in the family
+      `I was referred to job search and have not documented it` IS A BOOLEAN @desc Whether you were referred to the employment and training unit and have not yet listed the employers you contacted, the dates and the people you spoke to
+      `we are in work or training` IS A BOOLEAN @desc Whether you are Family Independence participants in work or training (for the vehicle exemption)
+      `how many licensed drivers` IS A NUMBER @desc How many licensed drivers there are in the family
+      `my vehicles` IS A LIST OF NUMBER @desc The value in US dollars of each licensed vehicle the family owns
+      `my other assets` IS A NUMBER @desc The total value of the family's other assets in US dollars
+      `every child under 18 on the case attends school` IS A BOOLEAN @desc Whether every recipient under 18 is enrolled in school with satisfactory attendance
+      `I am a minor mother not living with my parents` IS A BOOLEAN @desc Whether you are under 18, the mother of a child born out of wedlock, and not living in the home of your parent or guardian
+      `a minor mother exception applies` IS A BOOLEAN @desc If so, whether one of the exceptions applies: no parent or guardian whose whereabouts is known; none will let you live with them; you lived apart for at least a year before the birth or application; your or the child's health or safety would be at risk; or other good cause
+      `I have been identified as needing drug or alcohol treatment, convicted of a drug or alcohol offence, or had a drug-exposed baby` IS A BOOLEAN @desc Whether, while receiving Family Independence, you were identified as needing alcohol or drug treatment, were convicted of an alcohol-related or controlled substance offence, or gave birth to a child who tested positive within 24 hours of birth
+      `I submit to testing or treatment` IS A BOOLEAN @desc If so, whether you submit to random drug tests or take part in an approved treatment program
+      `months in the last 10 years` IS A NUMBER @desc How many months your family received Family Independence (AFDC) in the last 120 months
+      `months ever` IS A NUMBER @desc How many months in total you have received it in your lifetime
+      `which exception applies` IS A `Time limit exception` @desc Which s 43-5-1170 time-limit exception applies to you, if any ("no exception" if none)
+      `months already received under the exception` IS A NUMBER @desc For the minor-parent or full-compliance exception, months already received under it; otherwise 0
+      `the county director has given permission` IS A BOOLEAN @desc Whether the county director has expressly permitted assistance beyond the 30th month or the 12-month extension
+      `I cooperate on child support` IS A BOOLEAN @desc Whether you have assigned your rights to child support to the State and cooperate in establishing paternity and getting support, or the department has found good cause not to
+GIVETH AN `Eligibility answer`
+`Does my family meet the Family Independence conditions` MEANS
+    `the eligibility answer`
+        `we live in South Carolina`
+        `I will be away from South Carolina for 30 days or more`
+        `I have completed the application`
+        `everyone has a Social Security number or has applied`
+        `I have had my interview`
+        `I was referred to job search and have not documented it`
+        (`countable assets` `we are in work or training` `how many licensed drivers` `my vehicles` `my other assets`)
+        `every child under 18 on the case attends school`
+        `I am a minor mother not living with my parents`
+        `a minor mother exception applies`
+        `I have been identified as needing drug or alcohol treatment, convicted of a drug or alcohol offence, or had a drug-exposed baby`
+        `I submit to testing or treatment`
+        (`the time limit answer` `months in the last 10 years` `months ever` `which exception applies` `months already received under the exception` `the county director has given permission`)
+        (`the child can be aided` `my youngest child's age` `the child lives with me` `the child is a full-time student`)
+        `I cooperate on child support`
+
+§§ `s 43-5-148 -- when benefits begin`
+
+-- s 43-5-148: "Family Independence benefits shall begin on the date of application if the benefit group met all the
+-- eligibility conditions on that date."
+@export From what date do my Family Independence benefits begin (S.C. Code s 43-5-148)?
+GIVEN `the day I applied` IS A DATE @desc The date of your application
+      `we met all the conditions on that day` IS A BOOLEAN @desc Whether your family met all the eligibility conditions on the day you applied
+GIVETH A MAYBE DATE
+`From when do my benefits begin` MEANS
+    IF `we met all the conditions on that day` THEN JUST `the day I applied` ELSE NOTHING
+
+§§ `s 43-5-1175 -- the family cap`
+
+-- s 43-5-1175: "there must be no incremental increase in AFDC benefits to a family as a result of a child born to that
+-- parent ten or more months after the family begins to receive AFDC. This section does not apply if the department
+-- establishes that the child was conceived as a result of rape or incest." Vouchers may be given instead.
+@export Will my Family Independence grant go up for a new baby (S.C. Code s 43-5-1175)?
+GIVEN `the day we began to receive assistance` IS A DATE @desc The day your family first began to receive Family Independence (AFDC) in this spell of receipt
+      `the baby's birth date` IS A DATE @desc The date the child was (or will be) born
+      `the department found the child was conceived by rape or incest` IS A BOOLEAN @desc Whether the department has established that the child was conceived as a result of rape or incest
+GIVETH A BOOLEAN
+DECIDE `Will my grant go up for the new baby` IF
+        `the department found the child was conceived by rape or incest`
+    OR  `the baby's birth date` LESS THAN (`add months` `the day we began to receive assistance` 10)
+
+§§ `ss 43-5-1125(B), 43-5-1180 -- must I take part in employment and training`
+
+-- s 43-5-1180: "in all cases the recipients must participate in a work program once their youngest child reaches age one."
+-- s 43-5-1125(B): a recipient "is not required to comply with the employment and training provisions of the agreement" if
+-- (1) a parent or caretaker with a child under one (but a custodial parent under 25 without high school must comply
+-- regardless), (2) at least six months pregnant, verified, (3) incapacitated, verified, (4) caring for an incapacitated
+-- person, verified, or (5) child care and reasonable transportation were not provided when needed.
+@export Must I take part in the Family Independence employment and training program (S.C. Code ss 43-5-1125(B), 43-5-1180)?
+GIVEN `my youngest child's age in months` IS A NUMBER @desc The age of your youngest child in complete months
+      `I am a custodial parent under 25 without a high school diploma` IS A BOOLEAN @desc Whether you are a custodial parent under age 25 who has not completed high school (or a GED)
+      `I am at least six months pregnant, verified` IS A BOOLEAN @desc Whether you are at least six months pregnant and a licensed health care provider has verified it
+      `I am incapacitated, verified` IS A BOOLEAN @desc Whether a physician has verified that a physical or mental impairment prevents you from working or taking part in education or training
+      `I care for an incapacitated person, verified` IS A BOOLEAN @desc Whether you care for a person whose incapacity a physician has verified
+      `child care or transport was not provided when needed` IS A BOOLEAN @desc Whether child care and reasonable transportation were not provided when you needed them to take part
+GIVETH A BOOLEAN
+DECIDE `Must I take part in employment and training` IF
+    NOT (    (`my youngest child's age in months` LESS THAN 12 AND (NOT `I am a custodial parent under 25 without a high school diploma`))
+         OR  `I am at least six months pregnant, verified`
+         OR  `I am incapacitated, verified`
+         OR  `I care for an incapacitated person, verified`
+         OR  `child care or transport was not provided when needed`)
+
+§§ `Duties and periods, in days`
+
+DECLARE `Party` IS ONE OF
+    `the recipient`
+    `the department`
+
+DECLARE `Act` IS ONE OF
+    `report the change to the department`
+    `agree to comply and resume the employment and training activities`
+    `appeal the sanction`
+    `request a review of the decision`
+    `adjust the grant or redetermine eligibility`
+
+-- ss 43-5-65(f), 43-5-140(c): failure "to report changes in circumstances that may affect eligibility and grant amount
+-- within ten calendar days of the day on which the change becomes known to the recipient constitutes withholding of
+-- information and permits the department to recover any overpayment". Days count from the day the change becomes known.
+GIVETH A DEONTIC `Party` `Act`
+`my duty to report a change` MEANS
+    PARTY `the recipient`
+    MUST  `report the change to the department`
+    WITHIN 10
+    HENCE FULFILLED
+    LEST  BREACH BY `the recipient` BECAUSE "a change that may affect eligibility or the grant was not reported within ten calendar days; it is wilful withholding and any overpayment it caused may be recovered (ss 43-5-65(f), 43-5-140(c), 43-5-30)"
+
+-- s 43-5-1125(A)(1): on failure without good cause to comply with the agreement's employment and training requirements,
+-- the department "shall ... grant a thirty-day conciliation period for the recipient to reconsider ... During this
+-- thirty-day period, the recipient has the right to appeal ... At the end of this thirty-day period if the
+-- conciliation/fair hearing decision was not in the recipient's favor, all AFDC benefits must be terminated." Days count
+-- from the start of the conciliation period. An appeal is a permission; complying is the way out of termination.
+GIVETH A DEONTIC `Party` `Act`
+`the conciliation period` MEANS
+    PARTY `the recipient`
+    MUST  `agree to comply and resume the employment and training activities`
+    WITHIN 30
+    HENCE FULFILLED
+    LEST  BREACH BY `the recipient` BECAUSE "the thirty-day conciliation period ended without compliance (and without a decision in my favour): all AFDC benefits must be terminated; they may be reinstated after thirty days of participation (s 43-5-1125(A)(1))"
+
+GIVETH A DEONTIC `Party` `Act`
+`my right to appeal a sanction` MEANS
+    PARTY `the recipient`
+    MAY   `appeal the sanction`
+    WITHIN 30
+
+-- s 43-5-150: "the applicant or recipient ... may demand a review of his case before the department by filing his written
+-- request for such review with the county department not more than sixty days after notice of its action shall have been
+-- received." Days count from receipt of the notice.
+GIVETH A DEONTIC `Party` `Act`
+`my right to request a review` MEANS
+    PARTY `the recipient`
+    MAY   `request a review of the decision`
+    WITHIN 60
+
+-- s 43-5-140(d): "When the department receives information that would result in a change in grant amount or eligibility,
+-- the department shall take action to adjust the grant or redetermine eligibility, consistent with notice requirements,
+-- within ten days of receipt of such information." What it means for me: by when my grant should be adjusted.
+GIVETH A DEONTIC `Party` `Act`
+`the department's duty to act on a change` MEANS
+    PARTY `the department`
+    MUST  `adjust the grant or redetermine eligibility`
+    WITHIN 10
+    HENCE FULFILLED
+    LEST  BREACH BY `the department` BECAUSE "the department did not act within ten days of receiving information that changes the grant or eligibility (s 43-5-140(d))"
+
+@export By what date must I report a change in my circumstances to the department (S.C. Code ss 43-5-65(f), 43-5-140(c))?
+GIVEN `the day I learned of the change` IS A DATE @desc The day the change (in address, household, job, income or anything else that may affect eligibility or the grant) became known to you
+GIVETH A DATE
+`By when must I report the change` MEANS `the day I learned of the change` PLUS 10
+
+@export By what date must I ask for a review of a Family Independence decision (S.C. Code s 43-5-150)?
+GIVEN `the day I received the notice` IS A DATE @desc The day you received the notice of the department's action (a denial, or a change to or end of your grant)
+GIVETH A DATE
+`By when must I ask for a review` MEANS `the day I received the notice` PLUS 60
+
+@export By what date does my thirty-day conciliation period end after a sanction for not following my agreement (S.C. Code s 43-5-1125(A)(1))?
+GIVEN `the day the conciliation period began` IS A DATE @desc The day the department's thirty-day conciliation period began
+GIVETH A DATE
+`When does my conciliation period end` MEANS `the day the conciliation period began` PLUS 30
+
+-- s 43-5-45: "'Timely notice' means notice which is mailed at least ten days before the intended change would be effective."
+@export If the department intends to cut or end my grant, what is the earliest date the change can take effect after a timely notice mailed on a given day (S.C. Code s 43-5-45)?
+GIVEN `the day the notice was mailed` IS A DATE @desc The day the department mailed the notice of its intended action
+GIVETH A DATE
+`Earliest date the change can take effect` MEANS `the day the notice was mailed` PLUS 10
+
+§§ `s 43-5-30(c)(2) -- recovering an overpayment from my future aid`
+
+-- s 43-5-30(c)(2): "The adjustment in future aid shall not reduce the family's monthly income to less than ninety percent of
+-- the amount payable to a family of the same composition with no other income." The amount payable to such a family is the
+-- department's payment standard (an input).
+@export If the department recovers an overpayment by reducing my future Family Independence, what is the most it can take in a month (S.C. Code s 43-5-30(c)(2))?
+GIVEN `the grant for a family like mine with no other income` IS A NUMBER @desc The monthly Family Independence amount payable to a family of the same composition as yours with no other income (the department's payment standard), in US dollars
+      `my family's monthly income including the grant` IS A NUMBER @desc Your family's total monthly income including the Family Independence grant, before the recovery, in US dollars
+      `the overpayment still owed` IS A NUMBER @desc How much of the overpayment is still to be recovered, in US dollars
+GIVETH A NUMBER
+`Most that can be recovered this month` MEANS
+    min `the overpayment still owed`
+        (max 0 (`my family's monthly income including the grant` MINUS (90% TIMES `the grant for a family like mine with no other income`)))
