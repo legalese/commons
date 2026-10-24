@@ -5,16 +5,16 @@
 **Baseline.** Written straight from the deposited texts with the `writing-l4-rules` skill, from the seat of the individual to whom the law is applied, with the design defaults ruled on 2026-10-18.
 There is no REFUSE in it. A case outside the encoding answers an explicit `not covered` value, and tests assert it.
 It was checked with the stable `l4` of VS Code extension 1.6.98, with `JL4_LIBRARY_PATH` unset.
-No pipeline, no coverage table, no independent test pass, no human gate.
+No pipeline, no coverage table, no human gate. An independent verification on 2026-10-24 found four minor issues; the corrections are findings 21 to 24.
 **Not for public use as advice.**
 
 It is written as a seat-neutral core and a seat layer:
 
-- **`qda-core.l4`**: transfer duty on land. The dutiable value, the general rate (Schedule 3, as a table), the Chapter 2 Part 9 home concessions (Schedule 4A as a table), the s 93 two-buyer case, the Duties Regulation's ELN list, the Part 14 Division 1 clawback, additional foreign acquirer duty, and two regulative rules: lodging (ss 19(3), 20) and the clawback notice (s 155).
+- **`qda-core.l4`**: transfer duty on land. The dutiable value, the general rate (Schedule 3, as a table), the Chapter 2 Part 9 home concessions (Schedule 4A as a table), the s 93 two-buyer case, the Duties Regulation's ELN list, the Part 14 Division 1 clawback, additional foreign acquirer duty, the transfer duty in all (Chapter 2 duty plus AFAD, s 231(6)(a)), and two regulative rules: lodging (ss 19(3), 20) and the clawback notice (s 155).
 - **`qda-admin.l4`**: the Taxation Administration Act 2001 as it applies to duty. Time for payment, unpaid tax interest, penalty tax, objections and appeals, with two regulative rules: payment (ss 30, 54(1)) and the objection-and-appeal chain (ss 63-69).
 - **`qda-vehicles.l4`**: Chapter 9 vehicle registration duty, with one regulative rule (s 381).
 - **`qda-dates.l4`**: the date arithmetic the three share (prelude DATE builtins only, no daydate import).
-- **`qda-seat.l4`**: the buyer's seat. 20 questions, each with `@export` and a `@desc` on every input, under seven `§§` headings. It builds the cores' records from plain answers and restates no rule.
+- **`qda-seat.l4`**: the buyer's seat. 21 questions, each with `@export` and a `@desc` on every input, under seven `§§` headings. It builds the cores' records from plain answers and restates no rule.
 - **`qda-cases-buyer.l4`**: the cases.
 
 All three cores use the Act's own actors (the transferee, the parties to the transaction, the commissioner, the taxpayer, the applicant, the transferor). Computations are functions; where the text says "must" with a time, there is a `DEONTIC` rule.
@@ -39,14 +39,14 @@ Three things the encoding needs are **not deposited**, and are handled as follow
 
 | Module | Case file | Assertions |
 |---|---|---|
-| `qda-core.l4`, `qda-admin.l4`, `qda-vehicles.l4`, `qda-dates.l4`, `qda-seat.l4` | `qda-cases-buyer.l4` | 148 written, 148 satisfied |
+| `qda-core.l4`, `qda-admin.l4`, `qda-vehicles.l4`, `qda-dates.l4`, `qda-seat.l4` | `qda-cases-buyer.l4` | 164 written, 164 satisfied |
 
 In addition, 6 `#TRACE`s carry an `-- expect:` line, and each was read and matches it:
 
 - 3 breaches: no one lodges by day 30; no s 155 notice by day 28; vehicle duty not paid with the application.
 - 3 obligations still pending: tax unpaid after the due date (now owed with interest); an objection lodged but not yet decided; an appeal attempted before paying, with 40 days left.
 
-`l4 run` on all six files gives 0 errors and 0 warnings (2026-10-24). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. A copy of the case file with one expected value altered (the s 93 figure changed to $10,012.50) was run as a control. The runner reported that assertion failed and 147 satisfied.
+`l4 run` on all six files gives 0 errors and 0 warnings (2026-10-24, again after the corrections). `l4 run` exits 0 even when an assertion fails, so the diagnostics are what was read. A copy of the case file with one expected value altered (the s 93 figure changed to $10,012.50) was run as a control. The runner reported that assertion failed and 147 satisfied. After the corrections, a second control (the foreign buyer's $93,025 changed to $93,000) reported that assertion failed and 163 satisfied.
 
 Every expected value was worked by hand from the deposited texts, with the arithmetic in the comment above the assertion. The Schedule 3 values used are tabulated at the top of the case file. Two figures come from the Act's own worked examples in TAA s 54: the 13 April start date and the $32.87 of interest.
 
@@ -54,7 +54,7 @@ Every expected value was worked by hand from the deposited texts, with the arith
 
 **The buyer.** That is the transferee of a home or of residential vacant land, or the person applying to register a vehicle or to have one transferred into their name. They ask:
 
-- "How much transfer duty must I pay on my home?"
+- "How much transfer duty must I pay on my home?" (in all, with any AFAD, as s 231(6)(a) counts it; and the Chapter 2 duty before AFAD)
 - "Which concession do I get, and what does it save?"
 - "We are two buyers and only one of us will live there: what then?"
 - "By when must I lodge and pay?"
@@ -94,6 +94,7 @@ The 2026-10-18 defaults:
 - **Residence (s 87) and residential land (s 86A)** are asked through the choice "residential land / vacant land / other".
 - **Intervening event (Schedule 6)** is asked as one fact, with its list in the `@desc`.
 - **Readings** (Acts Interpretation Act 1954 s 38, not deposited): "within N days after" a day ends N days later; "within 1 year after" a day ends on its first anniversary; an anniversary of 29 February falls on 28 February. A failure to meet the occupancy requirement "happens" on the day after its last day.
+- **Reading of s 244(2)(a).** AFAD is on "the dutiable value of the transaction to the extent of the foreign acquirer's interest in the AFAD residential land that is the subject of the transaction". The encoding reads this as the part of the dutiable value attributable to the land, leaving out furniture and other goods bought in the same transaction. The AFAD question's `@desc` asks for the land's price and value on that footing, so it agrees with the question on the transfer duty in all.
 - **Where more than one concession applies** (s 91 always does where s 92 or s 92A does), the one with the least duty is taken. The Act leaves the choice to the application (s 95). The answers assume the concession is applied for in the approved form, as s 95 requires.
 
 ## Scope
@@ -101,12 +102,12 @@ The 2026-10-18 defaults:
 **In:**
 
 - ss 9(1)(a)-(b), 10(1)(a), 11(7), 12(1) (as the input's gloss), 14(1), 16 and Schedule 2, 17, 19(3), 20, 24(2) and Schedule 3;
-- ss 85-90A, 91, 92 and Schedule 4A, 92A, 92B; s 93(1)(c)(ii) and (7) for two buyers of whom one qualifies (every other s 93 case is `not covered`); s 95 (as an assumption);
+- ss 85-90A, 91, 92 and Schedule 4A, 92A, 92B; s 93(1)(c)(ii) and (7) for two buyers of whom one qualifies (every other s 93 case is `not covered`); s 93B(1)(c) and (3) only to tell when it does or does not apply to two buyers of vacant land (finding 22); s 95 (as an assumption);
 - ss 153, 154 (C and OD; TD missing, finding 9), 155 (regulative, with its LEST);
-- Chapter 4 ss 231, 232 (as a fact), 233(1)(a), 234, 235, 240(1), 243, 244(2)(a);
+- Chapter 4 ss 231 (with (5) and (6)(a) for the transfer duty in all), 232 (as a fact), 233(1)(a), 234, 235, 240(1), 243, 244(2)(a); s 246(2) (the definition of specified foreign retiree, for s 90A(c));
 - Chapter 9 ss 377, 378, 379A, 379B, 380, 381 (regulative), 382(2), 383 and Schedule 4C, 390(1)(j)-(m) and (2);
 - Duties Regulation 2023 s 5(1) and Schedule 2 Part 1;
-- Taxation Administration Act ss 30(1)(b), (e), (2) (with a regulative rule); 54(1), (2), (5)(aa)(i), (c), (e), (6), (7); 58(1)-(3); 63(1), (2)(a), 64(1), 65(1); 67(1), 68(1), 69(1)-(3) (with a regulative rule).
+- Taxation Administration Act ss 13(1)(a)-(b) (as facts), 14A, 30(1)(b), (e), (2) (with a regulative rule); 54(1), (2), (5)(aa)(i), (c), (e), (6)(b), (7)(a) and the s 54(7) example (s 54(3)(b) noted, not encoded); 58(1)-(3); 60 (noted: amounts are before any remission); 63(1), (2)(a), 64(1), 65(1) (s 65(2) noted, not encoded); 67(1), 68(1), 69(1)-(3) (with a regulative rule). The `qda-admin.l4` header and `encoding.json` give the same list.
 
 **Out:**
 
@@ -168,11 +169,20 @@ Other links in Queensland, from the jurisdiction README:
 13. **The Act's own interest example accrues late payment interest daily, while s 54(3)(b) makes it accrue weekly.** The s 54(7) example's $32.87 is 10,000 × 10% × 12 / 365 = 32.8767, with the part of a cent dropped. For a revenue law other than a royalty law, s 54(3)(b) makes late payment interest accrue on a prescribed weekday and weekly after. The encoding accrues daily and drops part-cents, as the example does. The prescribed rate and weekday are in the undeposited regulation. Asserted.
 14. **Late lodging brings the interest start date forward.** Section 54(5)(c)(ii) moves the start date back by the days of noncompliance with a lodgement requirement, counting the day of compliance (s 54(6)(b)). The Act's example (lodgement due 10 March, made 15 March, duty due 17 April) starts interest on 13 April. Asserted.
 15. **A New Zealand citizen on a special category visa is a permanent resident, and a specified foreign retiree is a foreign individual.** The first gets the home concessions and pays no AFAD. A Subclass 405 or 410 retiree gets the home concessions as a specified resident (s 90A(c)), but is a foreign individual for AFAD (s 235). The s 246 exemption from AFAD is not encoded, so that case answers `not covered`. Asserted.
-16. **AFAD is not reduced by the home concessions (s 243), and a mixed couple pays both.** Take a citizen first home buyer and a foreign spouse owning half each of a $600,000 house. They pay transfer duty of $10,800 under s 93, and AFAD of 8% × $600,000 × 0.5 = $24,000. Asserted.
+16. **AFAD is not reduced by the home concessions (s 243), and a mixed couple pays both.** Take a citizen first home buyer and a foreign spouse owning half each of a $600,000 house. They pay Chapter 2 duty of $10,800 under s 93, and AFAD of 8% × $600,000 × 0.5 = $24,000, which is also transfer duty (s 231(6)(a)): $34,800 in all. The two parts are asserted; the two-buyer question gives the Chapter 2 part only.
 17. **The ELN regulation leaves out s 93.** Duties Regulation 2023 Schedule 2 Part 1 prescribes ss 91, 92, 92A and 92B (and ss 105, 105A) for ELN transfers, but not ss 93, 93A or 93B. Under s 156D, a transaction eligible for any concession that is not prescribed cannot be an ELN transfer or a relevant transfer agreement. A two-buyer mixed claim therefore falls outside the ELN duty provisions. Asserted (the list); the consequence is a reading.
 18. **A new car's dutiable value is its list price plus options, not the price paid.** Under s 378(1), a car listed at $45,000 with $500 of options and sold for $44,000 pays duty on $45,500 ($910). A used car pays on the greater of the price and the market value. A used vehicle modified for a person with a disability pays on its market value less the modifications, and the price is not used at all (s 378(3)(b)). Asserted.
 19. **An appeal or QCAT review needs the duty paid first.** Under TAA s 69(1)(b), the taxpayer must first pay the whole of the tax and late payment interest. The 60 days run from the decision notice regardless, and QCAT may not extend them (s 69(3)). The objection itself must be lodged within 60 days of the assessment notice (s 65(1)(d)). Asserted, and #TRACEd for an appeal attempted before paying.
 20. **An assessment notice must allow at least 30 days.** Under TAA s 30(2), a notice given on 1 September 2026 cannot state a payment date before 1 October 2026. The Act does not say what follows if it does, so the encoding reports the shorter date as non-compliant rather than guess. Asserted.
+
+### Corrections after the independent verification (2026-10-24)
+
+An independent verifier raised four minor issues. Each was checked against the deposited text, found real, and corrected.
+
+21. **The parent visa value left out the 8 May 2018 date.** Section 246(2)(b) makes a foreign individual a specified foreign retiree only if they "(i) ... applied on or after 8 May 2018 for ... a Subclass 103 (Parent) visa or Subclass 143 (Contributory Parent) visa; and (ii) whose last substantive visa ... was" a Subclass 405 or 410 visa; "and (iii) whose application has not been decided". The `Residency` value named (ii) and (iii) but not (i), so an applicant from before that date could pick it and be treated as a specified resident under s 90A(c), with the home concessions. The value is now `an undecided Subclass 103 or 143 parent visa applicant who applied on or after 8 May 2018 and whose last substantive visa was a Subclass 405 or 410 visa`. Every `@desc` that lists it adds that an earlier applicant is "none of these". New cases: that applicant gets s 92 (nil on $600,000), is a foreign individual, and has AFAD `not covered` (s 246); an earlier applicant, as "none of these", gets no concession ($20,025). Asserted.
+22. **The two-buyer question read the kind of land before the other buyer.** On vacant land it answered "s 93B is not encoded" even where both buyers qualify. But s 93B needs the home to be built to be the first home of "1 or more ... but not all the transferees" (s 93B(1)(c)), so where it is the first home of both, s 93B does not apply and s 92B applies to them all. The other buyer's answer is now read first, and on vacant land it gives a new reason: `both buyers of the vacant land will have the home to be built as their first home: s 93B does not apply, so ask the question for all the buyers (s 92B)`. For the same $400,000 block, that question answers nil. The input is renamed `the other buyer qualifies too` (core field of the same name). Its `@desc` now says 1 year for land with a home on it and 2 years for vacant land (s 86B(1)(a)). It also says that on vacant land the other buyer qualifies only if the home will be their first home (s 93B(3)). A vacant land co-buyer who will live there but has owned before does not qualify, so s 93B is still the answer. Asserted.
+23. **"How much transfer duty must I pay" gave the Chapter 2 duty only.** Section 231(6)(a) says that "a reference in this Act to transfer duty is a reference to duty imposed under chapter 2 and AFAD", and s 231(5) adds AFAD "to the duty imposed on the transaction under chapter 2". So a foreign buyer of an $800,000 house owes transfer duty of $29,025 + $64,000 = $93,025, not $29,025. The question of that name now gives the total. It takes a fourteenth answer, whether the land is AFAD residential land, which matters only for a foreign buyer. The Chapter 2 duty alone is the new question `How much transfer duty must I pay before AFAD`, with the old inputs. The two-buyer and AFAD questions' `@export` texts now say which part they give. The AFAD question asks for the land's price and value, without furniture, under the s 244(2)(a) reading in Seat. New cases: $93,025; $29,025 where the land is not AFAD residential land; $56,625 for a $500,000 house with $20,000 of furniture (Chapter 2 duty $16,625 on $520,000, AFAD $40,000 on $500,000); citizen and New Zealand buyers pay no AFAD; a specified foreign retiree's total is `not covered` (s 246); a trustee's is `not covered`. Asserted. Questions exported: 21.
+24. **The three lists of Taxation Administration Act provisions disagreed.** The module header listed s 26(3), which nothing encodes, and gave ss 65(1)-(2) and 69(1)-(2). NOTES.md left out ss 13, 14A and 60. `encoding.json` said "54(1), (2), (5), (6), (7)" and "63-65, 67-69". All three now give the same list: ss 13(1)(a)-(b) (as facts), 14A, 30(1)(b), (e), (2), 54(1), (2), (5)(aa)(i), (c), (e), (6)(b), (7)(a), 58(1)-(3), 60 (noted), 63(1), (2)(a), 64(1), 65(1) (s 65(2) noted, not encoded), 67(1), 68(1) and 69(1)-(3). Section 69(3) is in: QCAT may not extend the 60 days, and the answer allows no extension. The rules did not change.
 
 ## Before relying on it
 
@@ -181,5 +191,6 @@ Other links in Queensland, from the jurisdiction README:
 - Encode s 93(6) (a home buyer with a first home buyer), ss 93A, 93B, the trustee routes and s 94, and the s 246 AFAD exemption.
 - Encode s 154(2)(c) and (2AA): buying with a tenant in place, or with the seller staying on.
 - Encode the Commissioner's age waiver as a conditional input.
-- An independent test pass, and a check against the Queensland Revenue Office's calculators and public rulings, none of which were consulted.
+- A full independent test pass beyond the 2026-10-24 verification, whose four issues are corrected, and a check against the Queensland Revenue Office's calculators and public rulings, none of which were consulted.
+- Encode the two-buyer case where one buyer is foreign, so that its answer includes that buyer's AFAD (finding 16 adds the two parts by hand).
 - Link the home concession answers to an encoding of the FHOG Act and the Land Tax Act home exemption, when they exist.
