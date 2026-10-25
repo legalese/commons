@@ -9,11 +9,14 @@ Lei nº 9.610, de 19 de fevereiro de 1998 (the Copyright Act), art. 8º:
 That was checked on 2026-10-21 against Planalto's own text of Lei nº 9.610 (https://www.planalto.gov.br/ccivil_03/leis/l9610.htm, fetched 2026-10-21, 148,434 bytes), word for word.
 A *lei* is named in art. 8º IV, so the text may be reproduced, including verbatim quotation inside an encoding.
 
-One point is not settled here, and the sibling subject `codigo-penal-1940` states it first.
+One point was open when the text was deposited, and the sibling subject `codigo-penal-1940` states it first.
 Planalto's compilation adds editorial matter to the statute: the "(Redação dada pela Lei …)", "(Incluído pela Lei …)" and "(Vide …)" notes, the strike-through of superseded wording, and the page layout.
 It is published by the Casa Civil da Presidência da República, which makes it arguably one of the *demais atos oficiais* in art. 8º IV.
-No ruling on that point was found, so treat the notes as **probably unprotected, not established**.
-The encodings quote the statute's text, not the notes.
+No ruling on that point was found, and the notes were taken to be "probably unprotected, not established".
+**Ruled 2026-10-25:** Meng ruled to treat the notes as unprotected, in his words "Yes I take your recommendations for Brazil"; the recommendation was to record the notes as treated as unprotected and to correct the sentence that stood here.
+That is a decision to treat them so, not a finding that they are unprotected: no ruling on Planalto's notes was found.
+The sentence "The encodings quote the statute's text, not the notes" was not accurate and is withdrawn.
+The encodings' quoted `-- src:N |` lines are whole lines of the compiled text, so they carry the notes where a line has one: 116 of the 207 quoted lines in this subject's encoding do, and 2 carry a `⟦STRUCK: …⟧` wrapper around superseded wording.
 
 Only the Diário Oficial text is official.
 Each Planalto page says so in its footer ("Este texto não substitui o publicado no DOU …"); the deposited text is a compiled working text.
