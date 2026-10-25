@@ -2,15 +2,19 @@ IMPORT prelude
 
 -- Graffiti Vandalism Act 2016 (WA) -- date helpers for the core and the seat layer.
 --
--- This module states no rule of the Act. It holds the few date helpers the other modules need, built on the
--- built-in DATE functions (DATE_FROM_DMY, DATE_SERIAL, DATE_FROM_SERIAL). It does not IMPORT daydate, so no other
--- module needs daydate either, and daydate's operator overloads on DATE never meet the Act's arithmetic.
+-- This module states no rule of the Graffiti Vandalism Act. It holds the date helpers the other modules need, built
+-- on the built-in DATE functions (DATE_FROM_DMY, DATE_SERIAL, DATE_FROM_SERIAL, DATE_YEAR), and the two counting rules
+-- of the Interpretation Act 1984 (WA) that the Act's periods need: s 61(1)(b) (the first day left out) and s 61(1)(e)
+-- (a last day on an excluded day moves to the next day that is not one), with the excluded days of s 61(2). It does
+-- not IMPORT daydate, so no other module needs daydate either, and daydate's operator overloads on DATE never meet the
+-- Act's arithmetic.
 --
 -- Time on the regulative rules' timeline is counted in whole days, as day numbers (DATE_SERIAL). A rule's trace
 -- starts on the day number of the day its period runs from, and its WITHIN is a number of days. On the stable l4 an
 -- event on the start day plus WITHIN is still within the period, which is how the Interpretation Act 1984 (WA)
 -- s 61(1)(b) counts a period "after" a day: the day itself is left out, and the last day is that day plus the
--- number of days. (The entry rule in ss 27-28 counts in minutes instead; see gva-core.l4.)
+-- number of days. Where s 61(1)(e) moves the last day, the WITHIN is the days from the start to the moved last day.
+-- (The entry rule in ss 27-28 counts in minutes instead; see gva-core.l4.)
 --
 -- BASELINE. See NOTES.md. Not for public use as advice.
 
@@ -43,3 +47,129 @@ GIVEN `the day` IS A DATE, `other` IS A DATE
 GIVETH A BOOLEAN
 DECIDE `the day` `is after` `other` IF
     DATE_SERIAL `the day` GREATER THAN DATE_SERIAL `other`
+
+GIVEN `the day` IS A DATE, `other` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` `is the same day as` `other` IF
+    DATE_SERIAL `the day` EQUALS DATE_SERIAL `other`
+
+§ `Excluded days (Interpretation Act 1984 s 61(1)(e), (2); Public and Bank Holidays Act 1972 s 5, Second Schedule)`
+
+-- Interpretation Act 1984 s 61(1)(e): "where the time limited for the doing of a thing expires or falls upon an
+-- excluded day, the thing may be done on the next day that is not an excluded day". s 61(2): "excluded day means
+-- Saturday, Sunday, public service holiday, and a bank holiday or public holiday throughout the State or in that part of
+-- the State which is relevant to the event, act, thing or proceeding concerned."
+--
+-- The public holidays throughout the State are the days of the Public and Bank Holidays Act 1972 s 5 and Second
+-- Schedule (deposited at subjects/au/wa/public-and-bank-holidays-act-1972/registers/source-bundle/mrdoc_44571.txt).
+-- Counted here: every Saturday and Sunday, and every Schedule day that is fixed or worked out from the calendar.
+-- NOT counted, because nothing deposited fixes them: the Celebration Day for the Birthday of the Reigning Sovereign
+-- (the King's Birthday, "appointed for each year by proclamation"), special or substituted days proclaimed under the
+-- Public and Bank Holidays Act ss 7 and 8, public service holidays, and holidays in only part of the State (NOTES.md
+-- finding 11). The Saturday bank holiday of that Act's s 6 is a Saturday already.
+--
+-- The Schedule's days are worked out as in the baseline encoding of that Act
+-- (subjects/au/wa/public-and-bank-holidays-act-1972/encodings/baseline-2026-10/pbha-holidays.l4), restated here because
+-- an l4 module cannot be imported from another folder. Easter is that encoding's choice too: the Act names Good Friday,
+-- Easter Sunday and Easter Monday without saying how Easter is fixed, and the Gregorian computus gives the Western
+-- churches' Easter.
+
+-- The day of the week: DATE_SERIAL modulo 7 is 0 on a Sunday and 6 on a Saturday (1 January 2027, a Friday, is 5).
+GIVEN `the day` IS A DATE
+GIVETH A NUMBER
+`the weekday of` `the day` MEANS DATE_SERIAL `the day` MODULO 7
+
+GIVEN `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` `is a Saturday or Sunday` IF
+    `the weekday of` `the day` EQUALS 6 OR `the weekday of` `the day` EQUALS 0
+
+-- The Schedule's "Monday on or first Monday following" a day.
+GIVEN `the day` IS A DATE
+GIVETH A DATE
+`the Monday on or first Monday following` `the day` MEANS
+    ((8 MINUS `the weekday of` `the day`) MODULO 7) `days after` `the day`
+
+-- The Schedule's "the next following Tuesday": strictly after the day.
+GIVEN `the day` IS A DATE
+GIVETH A DATE
+`the next following Tuesday after` `the day` MEANS
+    (((8 MINUS `the weekday of` `the day`) MODULO 7) PLUS 1) `days after` `the day`
+
+-- Easter Sunday by the Gregorian computus (the anonymous Gregorian algorithm).
+GIVEN `the year` IS A NUMBER
+GIVETH A DATE
+`Easter Sunday in` `the year` MEANS
+    DATE_FROM_DMY ((r MODULO 31) PLUS 1) (FLOOR (r DIVIDED BY 31)) `the year`
+    WHERE
+        a MEANS `the year` MODULO 19
+        b MEANS FLOOR (`the year` DIVIDED BY 100)
+        c MEANS `the year` MODULO 100
+        d MEANS FLOOR (b DIVIDED BY 4)
+        e MEANS b MODULO 4
+        f MEANS FLOOR ((b PLUS 8) DIVIDED BY 25)
+        g MEANS FLOOR ((b MINUS f PLUS 1) DIVIDED BY 3)
+        h MEANS ((19 TIMES a) PLUS b MINUS d MINUS g PLUS 15) MODULO 30
+        i MEANS FLOOR (c DIVIDED BY 4)
+        k MEANS c MODULO 4
+        l MEANS (32 PLUS (2 TIMES e) PLUS (2 TIMES i) MINUS h MINUS k) MODULO 7
+        m MEANS FLOOR ((a PLUS (11 TIMES h) PLUS (22 TIMES l)) DIVIDED BY 451)
+        r MEANS h PLUS l MINUS (7 TIMES m) PLUS 114
+
+-- Second Schedule: "New Year's Day (1st January). Australia Day (26th January or, when that day falls on a Saturday or
+-- Sunday, the first Monday following the 26th January). Labour Day (Monday on or first Monday following the 1st
+-- March). Good Friday. Easter Sunday. Easter Monday. Anzac Day (25th April). Western Australia Day (Monday on or first
+-- Monday following the 1st June). [The Sovereign's birthday, by proclamation: not counted.] Christmas Day (25th
+-- December). Boxing Day (26th December). When New Year's Day, Anzac Day, or Christmas Day falls on a Saturday or Sunday
+-- the next following Monday is also a public holiday and bank holiday. When Boxing Day falls on a Saturday the next
+-- following Monday is also a public holiday and bank holiday. When Boxing Day falls on a Sunday or Monday the next
+-- following Tuesday is also a public holiday and bank holiday."
+GIVEN `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` `is a public holiday in the Second Schedule, other than one appointed by proclamation` IF
+        `the day` `is the same day as` `New Year's Day`
+    OR (`New Year's Day` `is a Saturday or Sunday` AND `the day` `is the same day as` (`the Monday on or first Monday following` `New Year's Day`))
+    OR `the day` `is the same day as` `Australia Day`
+    OR `the day` `is the same day as` (`the Monday on or first Monday following` (DATE_FROM_DMY 1 3 `the year of the day`))
+    OR `the day` `is the same day as` (2 `days before` `Easter Sunday`)
+    OR `the day` `is the same day as` `Easter Sunday`
+    OR `the day` `is the same day as` (1 `days after` `Easter Sunday`)
+    OR `the day` `is the same day as` `Anzac Day`
+    OR (`Anzac Day` `is a Saturday or Sunday` AND `the day` `is the same day as` (`the Monday on or first Monday following` `Anzac Day`))
+    OR `the day` `is the same day as` (`the Monday on or first Monday following` (DATE_FROM_DMY 1 6 `the year of the day`))
+    OR `the day` `is the same day as` `Christmas Day`
+    OR `the day` `is the same day as` `Boxing Day`
+    OR (`Christmas Day` `is a Saturday or Sunday` AND `the day` `is the same day as` (`the Monday on or first Monday following` `Christmas Day`))
+    OR (`the weekday of` `Boxing Day` EQUALS 6 AND `the day` `is the same day as` (`the Monday on or first Monday following` `Boxing Day`))
+    OR (    (`the weekday of` `Boxing Day` EQUALS 0 OR `the weekday of` `Boxing Day` EQUALS 1)
+        AND `the day` `is the same day as` (`the next following Tuesday after` `Boxing Day`))
+    WHERE
+        `the year of the day` MEANS DATE_YEAR `the day`
+        `New Year's Day` MEANS DATE_FROM_DMY 1 1 `the year of the day`
+        `Australia Day` MEANS
+            IF (DATE_FROM_DMY 26 1 `the year of the day`) `is a Saturday or Sunday`
+            THEN `the Monday on or first Monday following` (DATE_FROM_DMY 26 1 `the year of the day`)
+            ELSE DATE_FROM_DMY 26 1 `the year of the day`
+        `Easter Sunday` MEANS `Easter Sunday in` `the year of the day`
+        `Anzac Day` MEANS DATE_FROM_DMY 25 4 `the year of the day`
+        `Christmas Day` MEANS DATE_FROM_DMY 25 12 `the year of the day`
+        `Boxing Day` MEANS DATE_FROM_DMY 26 12 `the year of the day`
+
+-- The date that is a number of days before another date.
+GIVEN `the days` IS A NUMBER, `the date` IS A DATE
+GIVETH A DATE
+`the days` `days before` `the date` MEANS
+    DATE_FROM_SERIAL (DATE_SERIAL `the date` MINUS `the days`)
+
+GIVEN `the day` IS A DATE
+GIVETH A BOOLEAN
+DECIDE `the day` `is an excluded day` IF
+    `the day` `is a Saturday or Sunday` OR `the day` `is a public holiday in the Second Schedule, other than one appointed by proclamation`
+
+-- s 61(1)(e): the last day of a period, or, if it is an excluded day, the next day that is not one.
+GIVEN `the day` IS A DATE
+GIVETH A DATE
+`Interpretation Act s 61(1)(e) -- the last day, or the next day that is not an excluded day` `the day` MEANS
+    IF `the day` `is an excluded day`
+    THEN `Interpretation Act s 61(1)(e) -- the last day, or the next day that is not an excluded day` (1 `days after` `the day`)
+    ELSE `the day`
