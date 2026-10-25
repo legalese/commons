@@ -9,7 +9,7 @@ Meng's ruling, in his words: "drop the metadata assertions. License in the full 
 So the full text of a Delaware statute may be deposited here, quoted line by line in an encoding, and redistributed with it.
 The Delaware Code Online gives no licence of its own: for the General Corporation Law deposit it was checked on 2026-10-21 and has no terms-of-use, copyright or licence page, and its pages claim no copyright in the statutory text (`delaware-code-title-8-corporations-chapter-1-general-corporation-law/SOURCE-LICENSE.md`).
 The decision therefore rests on the American government-edicts doctrine and not on a licence from the State.
-The authorities, as I read them on 2026-10-25 (Claude, session market-register); no lawyer has reviewed this paragraph:
+The authorities, as I checked them on 2026-10-25 against fetched copies (Cornell LII for *Georgia*, law.resource.org for *Veeck*; the *Veeck* page was read to its first 100,000 of 127,522 characters) (Claude, session market-register); no lawyer has reviewed this paragraph:
 - *Georgia v. Public.Resource.Org, Inc.*, No. 18-1150 (U.S. Apr. 27, 2020), 590 U.S. 255.
   The Court held that the annotations in Georgia's Official Code are not copyrightable, because the doctrine turns on the identity of the author and judges and legislators may not be the authors of works made in their official capacity: "no one can own the law".
   It relied on *Wheaton v. Peters* (1834), *Banks v. Manchester* (1888) and *Callaghan v. Myers* (1888).
