@@ -4,7 +4,7 @@ BASELINE, 25 October 2026. Not for public use as advice.
 
 ## Method
 
-Written straight from the deposited text with the `writing-l4-rules` skill. It follows the design the main session set for Michael (the D1 to D7 decisions below) and the defaults ruled on 2026-10-18.
+Written straight from the deposited text with the `writing-l4-rules` skill. It follows the design the main session set for Michael (the D1 to D8 decisions below) and the defaults ruled on 2026-10-18.
 
 There are three modules:
 
@@ -14,7 +14,9 @@ There are three modules:
 
 There are two case files: `gva-cases-core.l4` and `gva-cases-seat.l4`.
 
-Checked with the stable `l4` of VS Code extension 1.6.98, with `JL4_LIBRARY_PATH` unset. There was no pipeline, no coverage table and no human gate. An independent verification pass (gva-ver, 25 October 2026) found 3 major and 6 minor issues; the fix pass that followed is recorded under "Fixes after the verification" below.
+**What the site's question form needs from a seat layer:** the seat, and each situation a question arises in, as shared inputs, each of which settles a question to `does not arise for you` on its own. The form asks only the inputs that can still change an open question, so a question it should drop must take the fact that drops it, and the questions of one situation must all take the same input (D8).
+
+Checked with the stable `l4` of VS Code extension 1.6.98, with `JL4_LIBRARY_PATH` unset. There was no pipeline, no coverage table and no human gate. An independent verification pass (gva-ver, 25 October 2026) found 3 major and 6 minor issues; the fix pass that followed is recorded under "Fixes after the verification" below. A situations pass (gva-sit, 25 October 2026) then applied D8; it is recorded under D8 and points 25-33.
 
 There was no earlier encoding of this Act, so nothing is replaced.
 
@@ -48,7 +50,7 @@ Each command was `l4 run <file>.l4`, run from this folder with the stable `l4` 1
 | `gva-core.l4` | 0 | 0 | 0 | 0 |
 | `gva-seat.l4` | 0 | 0 | 0 | 0 |
 | `gva-cases-core.l4` | 175 | 175 | 0 | 0 |
-| `gva-cases-seat.l4` | 253 | 253 | 0 | 0 |
+| `gva-cases-seat.l4` | 299 | 299 | 0 | 0 |
 
 - **`gva-cases-core.l4`** has 22 `#TRACE`s, each with an `-- expect:` line, and each was read and came out as expected:
   - 12 breaches: s 5 twice, s 6 once, s 7 twice, s 18 twice, s 24 once and ss 27-28 four times;
@@ -56,11 +58,23 @@ Each command was `l4 run <file>.l4`, run from this folder with the stable `l4` 1
   - 3 permissions lapsed without a breach: s 22 twice (a notice whose 28th day is Easter Monday, and one whose 28th day is a working day) and s 23;
   - 2 fulfilled after the lapse: further time allowed to object, and an extension sought.
 - **`l4 check gva-seat.l4`** reports `Check succeeded`.
-- **A script read every `@export` block in `gva-seat.l4`.** It found 38 exported questions. Each takes `my role` IS A Role as its first input, with `@desc Which of these describes you`. None takes a DEONTIC or EVENT input: their inputs are BOOLEAN, NUMBER, DATE, Role and four plain enumerations.
+- **A script read every `@export` block in `gva-seat.l4`** and listed each question's inputs with their types and `@desc` text (gva-sit). It found 38 exported questions, with the same names and question texts as before D8.
+  - Each takes `my role` IS A Role as its first input, with `@desc Which of these describes you`.
+  - Each of the six situation inputs (D8) has the same name, type and `@desc`, character for character, in every question that takes it. Each comes straight after `my role`, except that the notice comes after consent, and the objection after the notice.
+  - In each question with a situation input, the role's branch reads that input before anything else.
+  - None takes a DEONTIC or EVENT input: their inputs are BOOLEAN, NUMBER, DATE, Role and five plain enumerations.
+- **`gva-cases-seat.l4` has 299 cases:** 7 on the rule-run helper; 76 asking each question for the two roles it is not about; 51 asking each question, for its own role, with each value of its situation input under which the situation does not hold (every later input ASSUMEd); and 165 in the situation that holds.
 - **Negative controls**, each on a scratch copy, each caught:
   - with the s 61(1)(e) move switched off, 17 seat cases and 13 core cases fail;
   - with the written-notice date ignored in the s 23 route, the 2 cases of an application made before a later written notice fail;
   - with the s 12 owner fact ignored, the tenant case fails in the seat cases and 2 core cases fail.
+- **Negative controls for D8** (gva-sit), each on a scratch copy. Each moves a read in front of a situation check:
+  - the notice read before consent: the 18 cases without consent fail;
+  - an entry fact read before the entry situation: its case fails;
+  - the s 5 consent read before the accusation: the s 6 case fails (with 3 cases that ASSUME that consent anyway);
+  - the s 24 decision read before the objection: its case fails;
+  - the s 12 owner fact read before the removal-work situation: its case fails;
+  - the accusation read before the role, in the s 5 fine question: the seller and owner cases fail. With the helper written with OTHERWISE, as before, the same move is not caught (finding 31).
 - **`l4 batch`** was run on two questions as a spot check in the first pass. The entry question returns `no` at 23.99 hours and `yes` at 24. `l4 batch` requires every input in each row, even inputs the function never reads (finding 28). So "never asked" is shown by the ASSUMEd inputs in `gva-cases-seat.l4`, not by batch rows.
 
 ## Seats
@@ -72,6 +86,8 @@ The seat is a parameter. Every exported question takes `my role` first ("Which o
 - `I own or occupy property with graffiti on it`: the owner or occupier on whom Part 3 puts duties and costs, with the rights to object, seek review and refuse entry.
 
 The local government is an actor in the core, with duties and powers. It is never a seat. Nor are the court, the State Administrative Tribunal or the police.
+
+Within a role, the situation is a parameter too (D8, below).
 
 **Questions by role.** These are the exported names, in the layer's order.
 
@@ -100,7 +116,18 @@ The local government is an actor in the core, with duties and powers. It is neve
   - ss 25 and 5: `May the local government remove graffiti put on my property without consent`, `Was it an offence to put this mark on my property`
   - s 12: `Can I be sued if someone is hurt removing graffiti on my property`
 
-**Mirror cases.** The accused's s 5 question and the owner's "was it an offence" question are asked on the same facts in `gva-cases-seat.l4`, and agree. The facts are a fence sprayed without consent, the same with consent, and a sticker.
+**Situation inputs by role** (D8):
+
+- the accused's 9 questions: 8 take `what I am accused of`; forfeiture takes no situation input;
+- the seller's 4: none takes a situation input;
+- the owner's or occupier's 25: each takes one. 21 take consent; 18 of those also take the notice, and 1 of the 18 also the objection. 3 take the entry situation, and 1 the s 12 situation.
+
+Twelve questions settle on the role and their situation inputs alone, with nothing else asked:
+- the s 5 fine, the s 5 prison term, the s 10 hours, the s 8 order and the s 6 fine;
+- the daily fine, the owner told, the written reasons, further time to object and the SAT extension;
+- the hours of notice of entry, and s 30.
+
+**Mirror cases.** The accused's s 5 question and the owner's "was it an offence" question are asked on the same facts in `gva-cases-seat.l4`. A fence sprayed without consent is yes from both seats, and a sticker no from both. For the fence sprayed with the owner's consent, the accused's answer is no, and the owner's question does not arise (D8: consented graffiti is a s 18 matter). The two do not conflict.
 
 ## Design decisions
 
@@ -118,7 +145,7 @@ Michael decided D1 to D7, through the main session. They are followed as set out
 - **D4. Every answer type has an explicit `does not arise for you`.**
   - The types are `Yes or no`, `Amount`, `Years`, `Hours`, `Date answer`, `Done in time or not`, `Least penalty`, `What the local government may do`, `Who may be ordered to pay me back` and `Whether I can be sued`.
   - A question about another role returns `does not arise for you` without reading any other input. `gva-cases-seat.l4` asks all 38 questions for the two roles they are not about, with ASSUMEd inputs that would stop evaluation if read.
-  - Ten questions settle on the role alone, so the form can drop them: fines and prison terms, the least hours, the s 8 order, the daily fine, further time to object, the SAT extension, the hours of notice of entry, and s 30.
+  - Ten questions settle on the role alone, so the form can drop them: fines and prison terms, the least hours, the s 8 order, the daily fine, further time to object, the SAT extension, the hours of notice of entry, and s 30. Under D8 these ten settle on the role and their situation inputs, as do the owner told and the written reasons (see "Questions by role").
 - **D5. Each regulative rule is projected into plain questions.**
   - (a) Does it apply to me?
   - (b) By when? The deadline is computed from the same function the rule's WITHIN uses (`the days the notice allows`; `s 22(2) -- the last day to object`; `s 23(3) -- the last day to apply`, through `s 23(3) -- the days from the day the right arose to the last day to apply`; `s 28(3) -- the hours of notice ...`), never from a restated number.
@@ -132,6 +159,28 @@ Michael decided D1 to D7, through the main session. They are followed as set out
 - **D7. Scope out:** s 2, Part 3 Div 1 delegations (ss 15-17), Part 4, Parts 5-6, s 11 and s 31.
   - s 12 is kept as a one-line owner question, because it is natural there.
   - Judgments are inputs, answered conditionally: unsightly or offensive, a manner acceptable to the local government, reasonable excuse, reasonable suspicion, reasonable grounds, gross negligence, and what is fair and reasonable.
+- **D8. The situation is a parameter, like the seat.** The main session decided this for Michael after a first run of the site's question form.
+  - **Why.** The form asks only the inputs that can still change an open question. It drops a question whose answer is `does not arise for you`, together with every input only that question needs. It cannot drop a question whose function does not take the fact that says the question does not arise. Before D8, an owner or occupier who answered that no notice had been given was still asked for dates. "By what date must the graffiti be obliterated", the objection and review deadlines, entry and the rest stayed open, because those functions did not take that fact.
+  - **The rule.** Within a role, every question that arises only in a situation takes that situation's fact as an input placed straight after `my role`. When the situation does not hold, it returns `does not arise for you` without reading any other input, exactly as D4 does for the role.
+  - **One input per situation.** The questions of one situation share one input: the same name, the same type and the same `@desc`, character for character. So the form asks it once, and one answer removes every question of that situation.
+  - A question that arises in every situation of its role takes no situation input. The seller's four questions arise for every seller, so the seller has none.
+  - Every other answer is as before wherever the situation holds, and the 38 names, the core, the dates module and D1-D7 are unchanged.
+
+  | Situation input | Type | Place | Taken by | Does not arise when |
+  |---|---|---|---|---|
+  | `the graffiti was put there with the consent of the owner or occupier` | BOOLEAN (the existing input) | 2nd | 21 owner questions: every s 18 (all 7), s 19, ss 20-22, s 23 and s 24 question; and s 25 and the owner's s 5 question | FALSE, for the 18 questions of ss 18-24 after the first; TRUE, for s 25 and s 5. The first s 18 question answers no when it is FALSE (point 25) |
+  | `the notice and me` | `The notice and me` (the existing input) | 3rd, after consent | 18 owner questions: every s 18 question but the first, both s 19 questions, the five of ss 20-22, the four of s 23, and s 24 | `no notice has been given to me, or to the owner or occupier of my property` |
+  | `I have objected or applied for a review` | BOOLEAN (the existing input) | 4th, after the notice | s 24 (`Is the notice suspended while my objection or review is decided`). The s 19 question also takes it, as an ordinary input read only once the notice's time has run out | FALSE |
+  | `the local government wants to come on to my land` | BOOLEAN (new) | 2nd | the three of ss 27-30 | FALSE |
+  | `graffiti removal work has been or will be done on my property` | BOOLEAN (new) | 2nd | s 12 | FALSE |
+  | `what I am accused of` | `What I am accused of` (new: `damaging property by graffiti (s 5)`, `having a thing with me to use for graffiti (s 6)`, `both`) | 2nd | 8 accused questions: the s 5 offence, fine, prison, least penalty, s 10 hours and s 8 order; and the s 6 offence and fine | the s 6 value, for the six s 5 questions; the s 5 value, for the two s 6 questions |
+
+  - The new inputs' `@desc` texts:
+    - `the local government wants to come on to my land`: "Whether the local government, or someone it authorised, wants to enter your land under Part 3 (to obliterate graffiti, or to see whether a notice has been complied with)".
+    - `graffiti removal work has been or will be done on my property`: "Whether graffiti removal work is done on your property under the Act, or by someone doing community work under a court order".
+    - `what I am accused of`: "What you did, or are accused of, under the Act".
+  - The `§§§` headings of the owner's questions no longer carry a "(situation: ...)" note, since the inputs now carry the situations. Each names its section group (for example `s 18 -- a notice to remove graffiti`), and the site groups the form by them.
+  - The exact question names for each input are in `encoding.json` (`"situation_parameters"`). The points D8 left open are 25-33 below.
 
 These are the points the design left open, and what was decided:
 
@@ -142,8 +191,8 @@ These are the points the design left open, and what was decided:
 5. **There are ten regulative rules, not eight.** s 19(3) (the council may obliterate, the s 18 rule's LEST after an excuse) and s 25 (the council may obliterate graffiti applied without consent) are rules too. s 19(4), the cost recovery, is a function, as D1 says.
 6. **The rule-run helper (`the outcome of`) is in the seat layer, not the core.** It is projection machinery, not a provision.
 7. **The s 23 route is worked out from facts, not chosen.** The facts are whether an objection was lodged, whether written notice of the decision was given, and the days since lodging, all as at the day judged on: today, or the day of the application if one was made. For an application already made, the written notice counts only if it was given by that day, so the in-time question asks the day it was given. The core gives the first day, the day the right arose and the last day. The seat adds two outcomes the generic answer type needs for s 23(1)(b): `done too early, before the right to do it arose on` and `not open yet: it opens on`.
-8. **`amount 0` is used where the role is right but the facts give no offence.** Examples are a notice given to the occupier rather than me, compliance in time, or a reasonable excuse. `does not arise for you` is kept for the role alone.
-9. **The owner or occupier states one fact about the notice:** who it was given to, and how they stand to the property (`The notice and me`, six values). That one input serves ss 18(3), 18(5), 19, 20, 21, 22 and 23. s 12 asks separately whether the person is an owner of the place, since it is not a notice question.
+8. **`amount 0` is used where the role is right but the facts give no offence.** Examples are a notice given to the occupier rather than me, compliance in time, or a reasonable excuse. `does not arise for you` is kept for the role and, under D8, for a situation that does not hold.
+9. **The owner or occupier states one fact about the notice:** who it was given to, and how they stand to the property (`The notice and me`, six values). That one input serves ss 18(3), 18(5), 19, 20, 21, 22 and 23. Under D8 it is also the notice situation, the third input of the questions of ss 18-24 after the first. s 12 asks separately whether the person is an owner of the place, since it is not a notice question.
 10. **The prohibitions without a deadline (ss 5, 6, 7) have no (b).** Question (c) is the same as "is it an offence", which runs the rule over the act.
 11. **The entry rule counts whole minutes from the notice of entry.** The seat truncates the stated hours to whole minutes, so 23.99 hours is short of 24.
 12. **Questions were added where the text gives the owner something:**
@@ -180,6 +229,21 @@ Each issue was checked against the deposit first. These were decided in the fix 
     - The s 18 compliance, fine and date questions still count on the notice's own dates. How the notice's time runs after a suspension is the Act's silence (finding 4), and without the day of the objection a suspension cannot be placed against the notice's days. Their question texts now say that no allowance is made for a suspension.
 23. **Entry "by when" (verifier m5): no change.** s 28(3) sets the least notice before entry, in hours. A date and time out would need the time the notice was given, and the question is what notice the owner must be given. The verifier rated it acceptable.
 24. **Acts before a rule starts (verifier m6): fixed in the questions.** An objection lodged before the notice is `done too early, before the right to do it arose on` the notice day. An objection not lodged, asked about before the notice, is `not open yet`. An obliteration before the notice is `done in time`: graffiti already gone leaves the notice nothing to require. This last one is a reading. All three are settled from the dates before the rule is run, and asserted.
+
+### Points D8 left open (gva-sit, 25 October 2026)
+
+25. **The first s 18 question answers no without consent, not `does not arise`.** "Can the local government require me to have the graffiti obliterated" already took consent second. D8 asked for FALSE to give `does not arise` unless the text shows the answer no is more useful, and it does. s 18(1)(a) confines the notice to graffiti "applied to property with the consent of the owner or occupier", and s 25 gives the council its own power over the rest. An owner whose wall was tagged wants to know that they cannot be made to remove it, and `no` tells them so. With FALSE nothing else is read, so the form asks nothing more for it. The question keeps its answers.
+26. **The owner's s 5 question no longer asks whether the person the property belongs to consented.** The owner's "Was it an offence to put this mark on my property" now takes consent second and arises only without it. In that situation neither the owner nor the occupier consented, and "my property" belongs to one of them. So the s 5(1) consent of "that other person" is FALSE by the situation's own terms. The old input `the person the property belongs to consented` could then only be answered no, so it was dropped, and FALSE is passed with a comment, as the question already passes TRUE for "the property of another person".
+    - Its one old case with that consent TRUE (expected no) is now the case with consent TRUE, which does not arise.
+    - An edge D8 gives up: a tenant lets someone paint the landlord's wall, and the landlord does not consent. The owner's question then does not arise (one of the owner or occupier consented), though s 5 may make the painting an offence against the landlord. The accused's s 5 question still answers it.
+    - A mark on a thing that belongs to neither the owner nor the occupier is outside this question, which asks about "my property".
+27. **Forfeiture (s 13) takes no accusation input.** D8 says both that every accused question takes `what I am accused of`, and that a question arising in every situation of its role takes no situation input. s 13 follows a conviction for any offence under the Act, so it arises for every value, and the second rule was followed.
+28. **The s 19 answer `nothing under s 19: no notice under s 18 has been given` was removed** from `What the local government may do`. With no notice the question now does not arise, so that answer could no longer be given.
+29. **Answers for the other notice values are kept, as D8 says.** Two kept answers are worth a look: "Can the local government still allow me further time to object" and "Can I ask the Tribunal to extend my time to apply" answer yes for every notice value. That includes an occupier whose landlord was given the notice, who is not an affected person (s 20) and so cannot object or seek review. The questions say "My time ... has run out", which such an occupier never had. Narrowing them is for Michael.
+30. **The situation cases give the earlier situations values under which they hold.** The notice is read only after consent, and the objection only after the notice. So the no-notice cases give consent TRUE, and the no-objection case gives consent TRUE and a notice given to me. Every input after the situation tested is ASSUMEd.
+31. **The seat's helpers over the notice and the accusation list every value, with no OTHERWISE.** This covers `the notice was given to me`, `the s 20 position of`, `the person given the notice is`, `the notice situation does not hold`, and the two accusation helpers. A CONSIDER with OTHERWISE does not fail on an ASSUMEd value (finding 31), so a read of an ASSUMEd notice or accusation would otherwise go unnoticed in the cases. Their answers are unchanged.
+32. **The order of the role and situation checks is also checked by script.** Three core functions read an enumeration through OTHERWISE: `s 3 -- the mark is graffiti` (`How the mark was applied`), `s 4 -- the item is a graffiti implement` (`Kind of item`) and the s 13 forfeiture function (`Thing that may be forfeited`). The core is unchanged, so for those inputs the cases cannot show "not read". The parameter script shows instead that each question starts with the role, and that each role branch reads its situation input first.
+33. **Not changed: two shared non-situation inputs have different `@desc` texts.** `today's date` in the s 18(5) fine question adds "the further fine is counted to this day while the graffiti remains". `how the mark was applied` is worded from each seat ("was, or would be, put" for the accused; "was put" for the owner). Neither is a situation input. If the form merges inputs by name, it will show one of the two texts.
 
 ## Defaults (ruled 2026-10-18)
 
@@ -277,10 +341,18 @@ Departed from:
 28. **`l4 batch` requires every input in each row,** even inputs the function never reads for that role.
 29. **A constructor in a rule's action pattern matches only that constructor.** This is the s 18(2) manner. PROVIDED works too.
 30. **An expression after WITHIN cannot run on to the next line.** Splitting `the days from` *a* `to` *b* across two lines left the function with one argument and `to` undefined. The s 23 WITHIN is therefore a named function, `s 23(3) -- the days from the day the right arose to the last day to apply`. A function may call itself: the s 61(1)(e) move does, one day at a time.
+31. **A CONSIDER with OTHERWISE takes the OTHERWISE branch for an ASSUMEd value; it does not fail** (gva-sit). Probed on 1.6.98:
+    - Reading an ASSUMEd BOOLEAN (in IF, AND or NOT), NUMBER or DATE is an error, so the assertion fails.
+    - A CONSIDER that lists every value and has no OTHERWISE also fails on an ASSUMEd value.
+    - A CONSIDER with OTHERWISE quietly returns its OTHERWISE value: an ASSUMEd `The notice and me` read "not given to me".
+
+    So an ASSUMEd input shows "never read" for BOOLEAN, NUMBER and DATE inputs, and for enumerations read only through exhaustive CONSIDERs, but not for an enumeration read through OTHERWISE. The earlier claim that reading an ASSUMEd term always fails the assertion is narrowed to that. D8 points 31 and 32 above say what was done. Negative control: with the accusation helper written with OTHERWISE, an accusation read before the role is not caught; written without it, it is.
 
 ## Before relying on it
 
-- An independent test pass of the fixes, and the human gates (HG1, HG2).
+- An independent test pass of the fixes and of D8, and the human gates (HG1, HG2).
+- **A run of the site's question form on a deployment of the D8 layer,** to confirm that one answer to each situation input drops its questions. Changing the inputs is a breaking change, so the deployment must be updated under the same name.
+- **The kept answers in point 29** (further time to object and the SAT extension, for an occupier who is not an affected person), and **the s 5 edge in point 26**.
 - **Proclaimed and local holidays** (finding 11): the King's Birthday and other proclaimed days, public service holidays and local holidays are not counted as excluded days. They would need deposited proclamations, or an input.
 - **How the notice's time runs after a s 24 suspension** (finding 4), and how the s 18(5)(b) days are counted (finding 5). Both need case law or departmental guidance.
 - **Whether s 61(1)(e) reaches the time a s 18 notice sets** (fix 16).
