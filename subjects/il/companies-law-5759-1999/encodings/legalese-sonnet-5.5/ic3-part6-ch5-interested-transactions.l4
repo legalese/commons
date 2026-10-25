@@ -1,0 +1,1072 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ic-core`
+IMPORT `ic-core-company-kinds`
+IMPORT `ic-core-people`
+IMPORT `ic-core-meetings`
+IMPORT `ic-core-deals`
+IMPORT `ic-core-securities`
+IMPORT `ic3-part6-ch2-appointment`
+IMPORT `ic3-part6-ch4a-compensation-policy`
+
+-- ic3-part6-ch5-interested-transactions: Part 6 chapter 5 of the Israeli Companies Law, 5759-1999 (חוק החברות, התשנ״ט–1999),
+-- "transactions with interested parties": sections 268 to 284.
+-- Layer 1: the law, objectively. Source: the Hebrew Wikisource raw text (an unofficial consolidation, not the official text);
+-- each `-- src:N |` line copies line N of it, markup included.
+--
+-- HOW THE CHAPTER IS BUILT HERE.
+--   * Section 270 lists the kinds of transaction that need special approval (limbs 1, 2, 3, 4, 4א and 5); each limb is a rule.
+--   * Sections 271 to 275 say which approvals each limb needs; each section is a rule that returns a record of the approvals
+--     (`סעיף 277 - האישורים שעסקה טעונה`: audit committee, compensation committee, board, general meeting, and the two special majorities).
+--     A limb that does not apply returns the record with every field FALSE.
+--   * Section 277 says a transaction that meets more than one limb needs the approvals of each: the records are joined field by field.
+--   * The votes in the general meeting (special majority, section 267א(ב) and section 275(א)(3)) are separate rules over vote counts,
+--     so that "does the transaction need the general meeting" and "did the vote pass" are separate questions.
+--   * Sections 280 to 283 say what follows if the approvals or the disclosure are missing.
+-- Units: a share of voting rights is a fraction of one (25% is 0.25); a number of voting rights is a plain NUMBER of votes.
+-- A fact about the compensation policy (section 267א), the audit committee's composition (section 115) and the Schedules is a plain input.
+
+§ `חוק החברות – חלק 6 פרק 5: עסקאות עם בעלי ענין`
+
+§§ `סעיף 268: הגדרת בעל שליטה`
+
+-- For this chapter, a controlling shareholder is one who has control as the Securities Law means it (the core's field
+-- `שליטה לפי חוק ניירות ערך` of `קשר לחברה`), and also one who holds 25% or more of the voting rights in the general meeting
+-- if no other person holds more than 50% of the voting rights. For the holding, two or more persons who hold voting rights
+-- and each of whom has a personal interest in the approval of the transaction brought for approval count as holding together.
+-- The caller supplies the holdings of the other persons who have such an interest and the largest holding of any other person.
+-- src:1820 | {{ח:סעיף|268|הגדרת בעל שליטה}}
+-- src:1821 | {{ח:ת}} {{ח:פנימי|חלק 6 פרק 5|בפרק זה}}, ”בעל שליטה“ – בעל השליטה כמשמעותה {{ח:פנימי|סעיף 1|בסעיף 1}}, לרבות מי שמחזיק בעשרים וחמישה אחוזים או יותר מזכויות ההצבעה באסיפה הכללית של החברה אם אין אדם אחר המחזיק בלמעלה מחמישים אחוזים מזכויות ההצבעה בחברה; לענין החזקה, יראו שניים או יותר, המחזיקים בזכויות הצבעה בחברה ואשר לכל אחד מהם יש ענין אישי באישור אותה עסקה המובאת לאישור החברה, כמחזיקים יחד.
+@ref סעיף 268 (src:1820-1821)
+GIVEN `הקשר` IS A `קשר לחברה`
+      `לאדם יש עניין אישי באישור העסקה המובאת לאישור החברה` IS A BOOLEAN
+      `החזקות בזכויות ההצבעה של אנשים אחרים שלכל אחד מהם יש עניין אישי באישור אותה עסקה` IS A LIST OF NUMBER
+      `ההחזקה הגדולה ביותר בזכויות ההצבעה של אדם אחר` IS A NUMBER
+GIVETH A BOOLEAN
+`סעיף 268 - בעל שליטה לענין פרק זה` MEANS
+        `הקשר`'s `שליטה לפי חוק ניירות ערך`
+    OR  (    `ההחזקה המצטברת בזכויות ההצבעה` AT LEAST 25%
+         AND `ההחזקה הגדולה ביותר בזכויות ההצבעה של אדם אחר` AT MOST 50%)
+    WHERE
+        -- Persons with an interest in the approval count as holding together; a person with no such interest holds alone.
+        `ההחזקה המצטברת בזכויות ההצבעה` MEANS
+            IF `לאדם יש עניין אישי באישור העסקה המובאת לאישור החברה`
+            THEN `הקשר`'s `החזקה בזכויות ההצבעה` PLUS sum `החזקות בזכויות ההצבעה של אנשים אחרים שלכל אחד מהם יש עניין אישי באישור אותה עסקה`
+            ELSE `הקשר`'s `החזקה בזכויות ההצבעה`
+
+§§ `סעיף 269: חובת גילוי`
+
+-- Section 269(א): an office-holder in a company, or a controlling shareholder in a public company or in a private bond company,
+-- who knows he has a personal interest in an existing or proposed transaction of the company must disclose it to the company.
+-- "In a public company or in a private bond company" is read as qualifying the controlling shareholder only (fork F1 in NOTES.md).
+-- The personal interest is the core's `ענין אישי` (src:238), worked out from the three interests it counts.
+-- src:1824 | {{ח:תת|(א)}} נושא משרה בחברה או בעל שליטה בחברה ציבורית או בחברה פרטית שהיא חברת איגרות חוב היודע שיש לו ענין אישי בעסקה קיימת או מוצעת של החברה, יגלה לחברה, בלא דיחוי, ולא יאוחר מישיבת הדירקטוריון שבה נדונה העסקה לראשונה, את מהות ענינו האישי, לרבות כל עובדה או מסמך מהותיים.
+@ref סעיף 269(א) (src:1824)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `האדם הוא נושא משרה בחברה` IS A BOOLEAN
+      `האדם הוא בעל שליטה בחברה` IS A BOOLEAN
+      `העניין` IS A `עובדות לענין אישי`
+      `האדם יודע שיש לו ענין אישי בעסקה קיימת או מוצעת של החברה` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 269(א) - האדם חייב לגלות לחברה את ענינו האישי` MEANS
+        `האדם יודע שיש לו ענין אישי בעסקה קיימת או מוצעת של החברה`
+    AND `ענין אישי` `העניין`
+    AND (    `האדם הוא נושא משרה בחברה`
+         OR  (    `האדם הוא בעל שליטה בחברה`
+              AND `סעיף 251 - חברה ציבורית או חברה פרטית שהיא חברת איגרות חוב` `העובדות על החברה`))
+
+-- Section 269(א), the time: without delay and no later than the board meeting at which the transaction is first discussed.
+-- "Without delay" is a judgment the text hands to whoever applies it, so it is a plain input; the day-count test is exact:
+-- disclosure on the day of that meeting is still in time ("no later than the meeting").
+-- src:1824 | {{ח:תת|(א)}} נושא משרה בחברה או בעל שליטה בחברה ציבורית או בחברה פרטית שהיא חברת איגרות חוב היודע שיש לו ענין אישי בעסקה קיימת או מוצעת של החברה, יגלה לחברה, בלא דיחוי, ולא יאוחר מישיבת הדירקטוריון שבה נדונה העסקה לראשונה, את מהות ענינו האישי, לרבות כל עובדה או מסמך מהותיים.
+@ref סעיף 269(א) (src:1824)
+GIVEN `הגילוי נעשה בלא דיחוי` IS A BOOLEAN
+      `יום הגילוי` IS A DATE
+      `יום ישיבת הדירקטוריון שבה נדונה העסקה לראשונה` IS A DATE
+GIVETH A BOOLEAN
+`סעיף 269(א) - הגילוי נעשה במועד` MEANS
+        `הגילוי נעשה בלא דיחוי`
+    AND Day `יום הגילוי` AT MOST Day `יום ישיבת הדירקטוריון שבה נדונה העסקה לראשונה`
+
+-- Section 269(ב): the duty in (א) does not apply where the personal interest arises only from a relative's personal interest
+-- in a transaction that is not extraordinary. "Arises only from a relative's interest" is worked out from the core's record:
+-- the relative's interest alone is already a personal interest, and without it neither of the other two interests makes one.
+-- src:1825 | {{ח:תת|(ב)}} הוראת סעיף קטן (א) לא תחול כאשר הענין האישי נובע רק מקיום ענין אישי של קרוב בעסקה שאינה חריגה.
+@ref סעיף 269(ב) (src:1825)
+GIVEN `העניין` IS A `עובדות לענין אישי`
+      `העסקה` IS A `עובדות על עסקה`
+GIVETH A BOOLEAN
+`סעיף 269(ב) - הוראת סעיף קטן (א) אינה חלה` MEANS
+        `ענין אישי` `העניין של קרוב בלבד`
+    AND (NOT (`ענין אישי` `העניין בלי עניינו של קרוב`))
+    AND (NOT (`עסקה חריגה` `העסקה`))
+    WHERE
+        `אין עניין` MEANS `עניין` WITH
+            `עניין בפעולה או בעסקה של החברה` IS FALSE
+            `העניין נובע מעצם החזקת מניות בחברה` IS FALSE
+        `העניין של קרוב בלבד` MEANS `עובדות לענין אישי` WITH
+            `עניינו של האדם` IS `אין עניין`
+            `עניינו של קרובו` IS `העניין`'s `עניינו של קרובו`
+            `עניינו של תאגיד אחר שהאדם או קרובו הם בעלי ענין בו` IS `אין עניין`
+        `העניין בלי עניינו של קרוב` MEANS `עובדות לענין אישי` WITH
+            `עניינו של האדם` IS `העניין`'s `עניינו של האדם`
+            `עניינו של קרובו` IS `אין עניין`
+            `עניינו של תאגיד אחר שהאדם או קרובו הם בעלי ענין בו` IS `העניין`'s `עניינו של תאגיד אחר שהאדם או קרובו הם בעלי ענין בו`
+
+-- Section 269(ג): an "interested party" in the sense of section 270(5) (a party to a material private offer whose holding grows or
+-- who becomes a material shareholder), or one who becomes a controlling shareholder as a result of a private offer, who knows he has a
+-- personal interest in the material private offer, must disclose it to the public company without delay.
+-- src:1826 | {{ח:תת|(ג)}} צד מעונין, כמשמעותו {{ח:פנימי|סעיף 270|בסעיף 270(5)}}, או מי שיהפוך לבעל שליטה כתוצאה מהצעה פרטית, היודע שיש לו ענין אישי בהצעה הפרטית המהותית, יגלה בלא דיחוי לחברה הציבורית את מהות ענינו האישי, לרבות כל עובדה או מסמך מהותיים.
+@ref סעיף 269(ג) (src:1826)
+GIVEN `האדם הוא צד מעוניין כמשמעותו בסעיף 270(5)` IS A BOOLEAN
+      `האדם יהפוך לבעל שליטה כתוצאה מהצעה פרטית` IS A BOOLEAN
+      `העניין` IS A `עובדות לענין אישי`
+      `האדם יודע שיש לו ענין אישי בהצעה הפרטית המהותית` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 269(ג) - צד מעוניין חייב לגלות לחברה הציבורית את ענינו האישי` MEANS
+        (   `האדם הוא צד מעוניין כמשמעותו בסעיף 270(5)`
+         OR `האדם יהפוך לבעל שליטה כתוצאה מהצעה פרטית`)
+    AND `האדם יודע שיש לו ענין אישי בהצעה הפרטית המהותית`
+    AND `ענין אישי` `העניין`
+
+§§ `סעיף 270: עסקאות הטעונות אישורים מיוחדים`
+
+-- The lead-in: the transactions below need the approvals the chapter lays down, provided that the transaction is for the company's benefit.
+-- "Provided that" is read as a limit on what may be approved: a transaction that is not for the company's benefit cannot be approved
+-- (fork F2 in NOTES.md). The judgment whether it is for the company's benefit is a plain input.
+-- src:1829 | {{ח:ת}} עסקאות של חברה המפורטות להלן, טעונות אישורים כקבוע {{ח:פנימי|חלק 6 פרק 5|בפרק זה}}, ובלבד שהעסקה היא לטובת החברה:
+@ref סעיף 270 (src:1829)
+GIVEN `העסקה היא לטובת החברה` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 270 - אפשר לאשר את העסקה` MEANS
+    `העסקה היא לטובת החברה`
+
+-- How the terms of service and employment of an office-holder are recognised: the core's `תנאי כהונה והעסקה` (src:257) worked out
+-- from the office, the item the engagement concerns, and whether it is given by reason of the service or employment.
+-- src:1833 | {{ח:תת|(2)}} התקשרות של חברה עם נושא משרה בה שאינו דירקטור, באשר לתנאי כהונתו והעסקתו;
+@ref סעיף 270(2) (src:1833)
+DECLARE `סעיף 270 - עובדות על התקשרות באשר לתנאי כהונה והעסקה` HAS
+    `משרתו של האדם שההתקשרות עמו`                    IS A `משרה`
+    `הפריט שההתקשרות עוסקת בו`                        IS A `פריט בתנאי כהונה והעסקה`
+    `הפריט ניתן בשל כהונה או העסקה`                    IS A BOOLEAN
+
+-- src:1833 | {{ח:תת|(2)}} התקשרות של חברה עם נושא משרה בה שאינו דירקטור, באשר לתנאי כהונתו והעסקתו;
+@ref סעיף 270(2) (src:1833)
+GIVEN `ההתקשרות` IS A `סעיף 270 - עובדות על התקשרות באשר לתנאי כהונה והעסקה`
+GIVETH A BOOLEAN
+`סעיף 270 - ההתקשרות היא באשר לתנאי כהונה והעסקה` MEANS
+    `תנאי כהונה והעסקה`
+        (`ההתקשרות`'s `משרתו של האדם שההתקשרות עמו`)
+        (`ההתקשרות`'s `הפריט שההתקשרות עוסקת בו`)
+        (`ההתקשרות`'s `הפריט ניתן בשל כהונה או העסקה`)
+
+-- Section 270(1): a transaction of the company with an office-holder in it, and a transaction of the company with another person
+-- in which an office-holder has a personal interest. An office-holder is not treated as having a personal interest, merely because of
+-- being an office-holder in both, or holding shares or exercisable securities in the parent, in a transaction between a parent and its
+-- wholly owned and controlled subsidiary; nor merely because of being an office-holder in several subsidiaries wholly owned and
+-- controlled by the same person, in a transaction between those subsidiaries.
+-- src:1830 | {{ח:תת|(1)}} עסקה של חברה עם נושא משרה בה וכן עסקה של חברה עם אדם אחר שלנושא משרה בחברה יש בה ענין אישי; ואולם, לא יראו
+-- src:1831 | {{ח:תתת|(א)}} נושא משרה בחברה אם וגם בחברה בת הנמצאת בשליטתה ובבעלותה המלאות, כבעל ענין אישי בעסקה בין החברה האם לבין החברה הבת, בשל עצם היותו נושא משרה בשתיהן או בשל היותו בעל מניה או בעל נייר ערך שניתן לממשו במניות בחברה האם;
+-- src:1832 | {{ח:תתת|(ב)}} נושא משרה במספר חברות בנות הנמצאות בשליטה ובבעלות מלאה של אותו אדם, כבעל ענין אישי בעסקה בין חברות בנות כאמור, בשל עצם היותו נושא משרה בחברות המתקשרות;
+@ref סעיף 270(1) (src:1830-1832)
+GIVEN `העסקה היא עסקה של החברה עם נושא משרה בה` IS A BOOLEAN
+      `העסקה היא עסקה של החברה עם אדם אחר` IS A BOOLEAN
+      `העניין של נושא משרה בעסקה` IS A `עובדות לענין אישי`
+      `העסקה היא בין חברה אם לבין חברה בת הנמצאת בשליטתה ובבעלותה המלאות` IS A BOOLEAN
+      `העניין נובע רק מעצם היותו נושא משרה בחברה האם ובחברה הבת או מהיותו בעל מניה או בעל נייר ערך הניתן לממוש במניות בחברה האם` IS A BOOLEAN
+      `העסקה היא בין חברות בנות הנמצאות בשליטה ובבעלות מלאה של אותו אדם` IS A BOOLEAN
+      `העניין נובע רק מעצם היותו נושא משרה בחברות המתקשרות` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 270(1) - מתקיים בעסקה האמור בפסקה` MEANS
+        `העסקה היא עסקה של החברה עם נושא משרה בה`
+    OR  (    `העסקה היא עסקה של החברה עם אדם אחר`
+         AND `ענין אישי` `העניין של נושא משרה בעסקה`
+         AND (NOT (    `העסקה היא בין חברה אם לבין חברה בת הנמצאת בשליטתה ובבעלותה המלאות`
+                   AND `העניין נובע רק מעצם היותו נושא משרה בחברה האם ובחברה הבת או מהיותו בעל מניה או בעל נייר ערך הניתן לממוש במניות בחברה האם`))
+         AND (NOT (    `העסקה היא בין חברות בנות הנמצאות בשליטה ובבעלות מלאה של אותו אדם`
+                   AND `העניין נובע רק מעצם היותו נושא משרה בחברות המתקשרות`)))
+
+-- Section 270(2): an engagement of the company with an office-holder in it who is not a director, about the terms of his service and employment.
+-- src:1833 | {{ח:תת|(2)}} התקשרות של חברה עם נושא משרה בה שאינו דירקטור, באשר לתנאי כהונתו והעסקתו;
+@ref סעיף 270(2) (src:1833)
+GIVEN `ההתקשרות היא התקשרות של החברה עם נושא משרה בה` IS A BOOLEAN
+      `ההתקשרות` IS A `סעיף 270 - עובדות על התקשרות באשר לתנאי כהונה והעסקה`
+GIVETH A BOOLEAN
+`סעיף 270(2) - מתקיים בעסקה האמור בפסקה` MEANS
+        `ההתקשרות היא התקשרות של החברה עם נושא משרה בה`
+    AND `נושא משרה` (`ההתקשרות`'s `משרתו של האדם שההתקשרות עמו`)
+    AND (NOT (`ההתקשרות`'s `משרתו של האדם שההתקשרות עמו` EQUALS `דירקטור`))
+    AND `סעיף 270 - ההתקשרות היא באשר לתנאי כהונה והעסקה` `ההתקשרות`
+
+-- Section 270(3): an engagement of the company with a director in it about the terms of his service and employment, as to his service
+-- as a director, and also as to his employment in other roles if he is so employed.
+-- src:1834 | {{ח:תת|(3)}} התקשרות של חברה עם דירקטור בה באשר לתנאי כהונתו והעסקתו, לעניין כהונתו כדירקטור, וכן לעניין העסקתו בתפקידים אחרים – אם הוא מועסק כאמור;
+@ref סעיף 270(3) (src:1834)
+GIVEN `ההתקשרות היא התקשרות של החברה עם דירקטור בה` IS A BOOLEAN
+      `ההתקשרות` IS A `סעיף 270 - עובדות על התקשרות באשר לתנאי כהונה והעסקה`
+      `התנאים הם לענין כהונתו כדירקטור` IS A BOOLEAN
+      `הדירקטור מועסק בתפקידים אחרים` IS A BOOLEAN
+      `התנאים הם לענין העסקתו בתפקידים אחרים` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 270(3) - מתקיים בעסקה האמור בפסקה` MEANS
+        `ההתקשרות היא התקשרות של החברה עם דירקטור בה`
+    AND `ההתקשרות`'s `משרתו של האדם שההתקשרות עמו` EQUALS `דירקטור`
+    AND `סעיף 270 - ההתקשרות היא באשר לתנאי כהונה והעסקה` `ההתקשרות`
+    AND (    `התנאים הם לענין כהונתו כדירקטור`
+         OR  (    `הדירקטור מועסק בתפקידים אחרים`
+              AND `התנאים הם לענין העסקתו בתפקידים אחרים`))
+
+-- Sections 270(4) and 270(4א) say the same thing of two kinds of company (a public company; a private bond company).
+-- This rule states it once; the two rules after it add the kind of company.
+-- The text is one long sentence: an extraordinary transaction with the controlling shareholder, or with another person in which he has a
+-- personal interest, "including a private offer" in which he has one; and an engagement with him or his relative, directly or indirectly,
+-- for services the company receives; and, if he is also an office-holder, about his terms of service and employment; and, if he is an
+-- employee and not an office-holder, about his employment.
+-- Two readings are taken (forks F3 and F4 in NOTES.md): a private offer in which the controlling shareholder has a personal interest is
+-- covered whether or not it is itself extraordinary; and the terms-of-service and employment limbs speak of the controlling shareholder himself,
+-- not of his relative.
+-- src:1835 | {{ח:תת|(4)}} עסקה חריגה של חברה ציבורית עם בעל השליטה בה או עסקה חריגה של חברה ציבורית עם אדם אחר שלבעל השליטה יש בה ענין אישי, לרבות הצעה פרטית שלבעל השליטה יש בה ענין אישי; וכן התקשרות של חברה ציבורית עם בעל השליטה בה או עם קרובו, במישרין או בעקיפין, לרבות באמצעות חברה שבשליטתו, לעניין קבלת שירותים בידי החברה וכן אם הוא גם נושא משרה בה – באשר לתנאי כהונתו והעסקתו, ואם הוא עובד החברה ואינו נושא משרה בה – באשר להעסקתו בחברה;
+@ref סעיף 270(4) (src:1835)
+GIVEN `העסקה` IS A `עובדות על עסקה`
+      `העסקה היא עם בעל השליטה` IS A BOOLEAN
+      `העסקה היא עם אדם אחר` IS A BOOLEAN
+      `העסקה היא הצעה פרטית` IS A BOOLEAN
+      `העניין של בעל השליטה בעסקה` IS A `עובדות לענין אישי`
+      `ההתקשרות היא עם בעל השליטה או עם קרובו, במישרין או בעקיפין, לרבות באמצעות חברה שבשליטתו, לענין קבלת שירותים בידי החברה` IS A BOOLEAN
+      `בעל השליטה הוא גם נושא משרה בחברה` IS A BOOLEAN
+      `ההתקשרות עם בעל השליטה היא באשר לתנאי כהונתו והעסקתו כנושא משרה` IS A BOOLEAN
+      `בעל השליטה הוא עובד החברה ואינו נושא משרה בה` IS A BOOLEAN
+      `ההתקשרות עם בעל השליטה היא באשר להעסקתו בחברה` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 270(4) - מתקיים בעסקה של בעל שליטה האמור בפסקה, בלי סוג החברה` MEANS
+        (    `עסקה חריגה` `העסקה`
+         AND (    `העסקה היא עם בעל השליטה`
+              OR  (    `העסקה היא עם אדם אחר`
+                   AND `ענין אישי` `העניין של בעל השליטה בעסקה`)))
+    OR  (    `העסקה היא הצעה פרטית`
+         AND `ענין אישי` `העניין של בעל השליטה בעסקה`)
+    OR  `ההתקשרות היא עם בעל השליטה או עם קרובו, במישרין או בעקיפין, לרבות באמצעות חברה שבשליטתו, לענין קבלת שירותים בידי החברה`
+    OR  (    `בעל השליטה הוא גם נושא משרה בחברה`
+         AND `ההתקשרות עם בעל השליטה היא באשר לתנאי כהונתו והעסקתו כנושא משרה`)
+    OR  (    `בעל השליטה הוא עובד החברה ואינו נושא משרה בה`
+         AND `ההתקשרות עם בעל השליטה היא באשר להעסקתו בחברה`)
+
+-- Section 270(4): the limb for a public company.
+-- src:1835 | {{ח:תת|(4)}} עסקה חריגה של חברה ציבורית עם בעל השליטה בה או עסקה חריגה של חברה ציבורית עם אדם אחר שלבעל השליטה יש בה ענין אישי, לרבות הצעה פרטית שלבעל השליטה יש בה ענין אישי; וכן התקשרות של חברה ציבורית עם בעל השליטה בה או עם קרובו, במישרין או בעקיפין, לרבות באמצעות חברה שבשליטתו, לעניין קבלת שירותים בידי החברה וכן אם הוא גם נושא משרה בה – באשר לתנאי כהונתו והעסקתו, ואם הוא עובד החברה ואינו נושא משרה בה – באשר להעסקתו בחברה;
+@ref סעיף 270(4) (src:1835)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `ההתקשרות או העסקה מהסוג שבפסקה, בלי סוג החברה` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 270(4) - מתקיים בעסקה של חברה ציבורית האמור בפסקה` MEANS
+        `חברה ציבורית` `העובדות על החברה`
+    AND `ההתקשרות או העסקה מהסוג שבפסקה, בלי סוג החברה`
+
+-- Section 270(4א): the same limb for a private bond company.
+-- src:1836 | {{ח:תת|(4א)}} עסקה חריגה של חברה פרטית שהיא חברת איגרות חוב, עם בעל השליטה בה, או עסקה חריגה של חברה כאמור עם אדם אחר שלבעל השליטה יש בה עניין אישי, וכן התקשרות של חברה כאמור עם בעל השליטה בה או עם קרובו, במישרין או בעקיפין לרבות באמצעות חברה שבשליטתו, לעניין קבלת שירותים בידי החברה, וכן אם הוא גם נושא משרה בה – באשר לתנאי כהונתו והעסקתו, ואם הוא עובד החברה ואינו נושא משרה בה – באשר להעסקתו בחברה;
+@ref סעיף 270(4א) (src:1836)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `ההתקשרות או העסקה מהסוג שבפסקה, בלי סוג החברה` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 270(4א) - מתקיים בעסקה של חברה פרטית שהיא חברת איגרות חוב האמור בפסקה` MEANS
+        `חברה פרטית` `העובדות על החברה`
+    AND `חברת איגרות חוב` `העובדות על החברה`
+    AND `ההתקשרות או העסקה מהסוג שבפסקה, בלי סוג החברה`
+
+-- Section 270(5)(ג): market terms. An offer counts as on market terms if the board determined, on detailed grounds, that it is,
+-- unless the contrary is proved (pattern 7.2: the rebuttal is its own input); otherwise the fact decides.
+-- src:1844 | {{ח:תתת|(ג)}} לענין תנאי שוק לפי פסקה זו, יראו הצעה כהצעה בתנאי שוק אם הדירקטוריון קבע על יסוד נימוקים מפורטים כי ההצעה היא בתנאי שוק, אלא אם כן הוכח אחרת, ולענין החזקה לפי פסקה זו, יראו ניירות ערך הניתנים להמרה או למימוש למניות, שאותו אדם מחזיק או שיונפקו לו לפי ההצעה הפרטית, כאילו הומרו או מומשו.
+@ref סעיף 270(5)(ג) (src:1844)
+GIVEN `הדירקטוריון קבע על יסוד נימוקים מפורטים שההצעה היא בתנאי שוק` IS A BOOLEAN
+      `הוכח אחרת` IS A BOOLEAN
+      `ההצעה היא בתנאי שוק לפי העובדות` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 270(5)(ג) - ההצעה נחשבת הצעה בתנאי שוק` MEANS
+    IF `הדירקטוריון קבע על יסוד נימוקים מפורטים שההצעה היא בתנאי שוק` AND (NOT `הוכח אחרת`)
+    THEN TRUE
+    ELSE `ההצעה היא בתנאי שוק לפי העובדות`
+
+-- Section 270(5)(ב): private offers that count as one offer. Offers that were made in a period of 12 consecutive months to the same
+-- offeree (or his representative, relative, or a corporation he or his relative controls; and, for a corporate offeree, its controlling
+-- shareholders, their relatives and corporations they control); or in that period and fixing consideration for the same asset
+-- (different securities of one company count as the same asset); or that are part of one transaction or conditional on each other.
+-- The three are alternatives (the text says "one of the following"). The period is a number of months: 12 consecutive months.
+-- src:1840 | {{ח:תתת|(ב)}} לענין פסקה זו יראו את סך כל ההצעות הפרטיות שמתקיים בהן אחד מאלה, כהצעה פרטית אחת:
+-- src:1841 | {{ח:תתתת|(1)}} הן נעשו במהלך תקופה בת 12 חודשים רצופים לאותו ניצע או למי מטעמו, לקרובו, לתאגיד בשליטתו או בשליטת קרובו, וכשהניצע הוא תאגיד – גם לבעלי השליטה בניצע, לקרובו של בעל השליטה ולתאגיד בשליטת בעל השליטה או בשליטת קרובו;
+-- src:1842 | {{ח:תתתת|(2)}} הן נעשו במהלך תקופה בת 12 חודשים רצופים ונקבעה בהם תמורה באותו נכס ויראו ניירות ערך שונים של חברה אחת כאותו נכס;
+-- src:1843 | {{ח:תתתת|(3)}} הן מהוות חלק מעסקה אחת או שהן מותנות זו בזו;
+@ref סעיף 270(5)(ב) (src:1840-1843)
+GIVEN `נעשו במהלך תקופה של חודשים רצופים` IS A NUMBER
+      `ההצעות נעשו לאותו ניצע או למי מטעמו, לקרובו, לתאגיד בשליטתו או בשליטת קרובו, ובניצע תאגיד גם לבעלי השליטה בו, לקרובם ולתאגיד בשליטתם` IS A BOOLEAN
+      `נקבעה בהן תמורה באותו נכס` IS A BOOLEAN
+      `הן מהוות חלק מעסקה אחת או שהן מותנות זו בזו` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 270(5)(ב) - ההצעות נחשבות הצעה פרטית אחת` MEANS
+        (    `נעשו במהלך תקופה של חודשים רצופים` AT MOST 12
+         AND (    `ההצעות נעשו לאותו ניצע או למי מטעמו, לקרובו, לתאגיד בשליטתו או בשליטת קרובו, ובניצע תאגיד גם לבעלי השליטה בו, לקרובם ולתאגיד בשליטתם`
+              OR  `נקבעה בהן תמורה באותו נכס`))
+    OR  `הן מהוות חלק מעסקה אחת או שהן מותנות זו בזו`
+
+-- The total share of the voting rights that the offers counted as one under section 270(5)(ב) give: the offer under review and the
+-- others that count with it (the caller lists only the ones that do).
+-- src:1840 | {{ח:תתת|(ב)}} לענין פסקה זו יראו את סך כל ההצעות הפרטיות שמתקיים בהן אחד מאלה, כהצעה פרטית אחת:
+@ref סעיף 270(5)(ב) (src:1840)
+GIVEN `החלק מזכויות ההצבעה שההצעה הנבחנת מקנה` IS A NUMBER
+      `החלקים מזכויות ההצבעה שמקנות הצעות אחרות הנחשבות עמה הצעה אחת` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`סעיף 270(5)(ב) - סך זכויות ההצבעה שההצעות הנחשבות הצעה אחת מקנות` MEANS
+    `החלק מזכויות ההצבעה שההצעה הנבחנת מקנה` PLUS sum `החלקים מזכויות ההצבעה שמקנות הצעות אחרות הנחשבות עמה הצעה אחת`
+
+-- Section 270(5)(א): a private offer in which one of the following holds. (1): the offer gives 20% or more of the voting rights actually
+-- existing before the issue, its consideration is wholly or partly not cash or securities registered for trading on a bourse, or is not on
+-- market terms, and as a result a material shareholder's holdings grow or a person becomes a material shareholder after the issue
+-- (an "interested party"). (2): as a result a person becomes a controlling shareholder. For the holdings, securities convertible or
+-- exercisable into shares which the person holds or which are to be issued to him count as converted (src:1844): the caller gives the
+-- offeree's tie to the company after the issue on that footing.
+-- src:1837 | {{ח:תת|(5)|(א)}} הצעה פרטית אשר מתקיים בה אחד מאלה:
+-- src:1838 | {{ח:תתתת|(1)}} הצעה המקנה עשרים אחוזים או יותר מסך זכויות ההצבעה בחברה בפועל לפני ההנפקה שהתמורה, כולה או חלקה, אינה במזומן או בניירות ערך הרשומים למסחר בבורסה או שאינה בתנאי שוק, ואשר כתוצאה ממנה יגדלו החזקותיו של בעל מניה מהותי בניירות הערך של החברה, או שכתוצאה ממנה יהפוך אדם לבעל מניה מהותי לאחר ההנפקה (בחוק זה – צד מעוניין);
+-- src:1839 | {{ח:תתתת|(2)}} כתוצאה ממנה יהפוך אדם לבעל שליטה בחברה;
+@ref סעיף 270(5)(א) (src:1837-1839)
+GIVEN `החלק מסך זכויות ההצבעה בחברה בפועל לפני ההנפקה שההצעה מקנה` IS A NUMBER
+      `התמורה כולה במזומן או בניירות ערך הרשומים למסחר בבורסה` IS A BOOLEAN
+      `ההצעה היא בתנאי שוק` IS A BOOLEAN
+      `קשרו של הניצע לחברה לפני ההנפקה` IS A `קשר לחברה`
+      `קשרו של הניצע לחברה לאחר ההנפקה, בהנחה שניירות ערך הניתנים להמרה או למימוש הומרו או מומשו` IS A `קשר לחברה`
+GIVETH A BOOLEAN
+`סעיף 270(5)(א)(1) - מתקיים בהצעה האמור בפסקת משנה, והמקבל הוא צד מעוניין` MEANS
+        `החלק מסך זכויות ההצבעה בחברה בפועל לפני ההנפקה שההצעה מקנה` AT LEAST 20%
+    AND (   (NOT `התמורה כולה במזומן או בניירות ערך הרשומים למסחר בבורסה`)
+         OR (NOT `ההצעה היא בתנאי שוק`))
+    AND (    (    `בעל מניה מהותי` `קשרו של הניצע לחברה לפני ההנפקה`
+              AND (    `קשרו של הניצע לחברה לאחר ההנפקה, בהנחה שניירות ערך הניתנים להמרה או למימוש הומרו או מומשו`'s `החזקה בהון המניות המונפק` GREATER THAN `קשרו של הניצע לחברה לפני ההנפקה`'s `החזקה בהון המניות המונפק`
+                   OR  `קשרו של הניצע לחברה לאחר ההנפקה, בהנחה שניירות ערך הניתנים להמרה או למימוש הומרו או מומשו`'s `החזקה בזכויות ההצבעה` GREATER THAN `קשרו של הניצע לחברה לפני ההנפקה`'s `החזקה בזכויות ההצבעה`))
+         OR  (    (NOT (`בעל מניה מהותי` `קשרו של הניצע לחברה לפני ההנפקה`))
+              AND `בעל מניה מהותי` `קשרו של הניצע לחברה לאחר ההנפקה, בהנחה שניירות ערך הניתנים להמרה או למימוש הומרו או מומשו`))
+
+-- src:1839 | {{ח:תתתת|(2)}} כתוצאה ממנה יהפוך אדם לבעל שליטה בחברה;
+@ref סעיף 270(5)(א)(2) (src:1839)
+GIVEN `האדם הוא בעל שליטה לפני ההצעה` IS A BOOLEAN
+      `האדם לאחר ההצעה בעל שליטה לפי סעיף 268` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 270(5)(א)(2) - מתקיים בהצעה האמור בפסקת משנה, ואדם הופך לבעל שליטה` MEANS
+        `האדם לאחר ההצעה בעל שליטה לפי סעיף 268`
+    AND (NOT `האדם הוא בעל שליטה לפני ההצעה`)
+
+-- Section 270(5): the private offer in which one of the two limbs holds. This is the outcome that the core's `הצעה פרטית מהותית` takes
+-- as its input `מתקיים בה האמור בסעיף 270(5)`.
+-- src:1837 | {{ח:תת|(5)|(א)}} הצעה פרטית אשר מתקיים בה אחד מאלה:
+@ref סעיף 270(5) (src:1837)
+GIVEN `מתקיים בהצעה האמור בפסקת משנה (א)(1)` IS A BOOLEAN
+      `מתקיים בהצעה האמור בפסקת משנה (א)(2)` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 270(5) - מתקיים בהצעה פרטית האמור בפסקה` MEANS
+        `מתקיים בהצעה האמור בפסקת משנה (א)(1)`
+    OR  `מתקיים בהצעה האמור בפסקת משנה (א)(2)`
+
+§§ `סעיפים 271 עד 277: האישורים שעסקה טעונה`
+
+-- The approvals a transaction needs, as a record of what is needed. The order in which the approvals are given is fixed by the text
+-- everywhere (the committee or committees first, then the board, then the general meeting); the record says only what is needed.
+-- `העסקה טעונה אישור בדרך אחרת שנקבעה בתקנון` is the case of section 271 where the articles lay down another way of approval for a
+-- transaction that is not extraordinary.
+-- src:1873 | {{ח:תת|(א)}} עסקה שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(4)}} טעונה אישורם של אלה בסדר הבא:
+-- src:1874 | {{ח:תתת|(1)}} ועדת הביקורת ובעסקה באשר לתנאי כהונה והעסקה – ועדת התגמול;
+-- src:1875 | {{ח:תתת|(2)}} הדירקטוריון;
+-- src:1876 | {{ח:תתת|(3)}} האסיפה הכללית, ובלבד שיתקיים אחד מאלה:
+-- src:1877 | {{ח:תתתת|(א)}} במנין קולות הרוב באסיפה הכללית ייכללו רוב מכלל קולות בעלי המניות שאינם בעלי ענין אישי באישור העסקה, המשתתפים בהצבעה; במנין כלל הקולות של בעלי המניות האמורים לא יובאו בחשבון קולות הנמנעים;
+-- src:1878 | {{ח:תתתת|(ב)}} סך קולות המתנגדים מקרב בעלי המניות האמורים בפסקת משנה (א) לא עלה על שיעור של שני אחוזים מכלל זכויות ההצבעה בחברה.
+@ref סעיף 275(א) (src:1873-1878)
+DECLARE `סעיף 277 - האישורים שעסקה טעונה` HAS
+    `העסקה טעונה אישור ועדת הביקורת`                             IS A BOOLEAN
+    `העסקה טעונה אישור ועדת התגמול`                              IS A BOOLEAN
+    `העסקה טעונה אישור הדירקטוריון`                              IS A BOOLEAN
+    `העסקה טעונה אישור האסיפה הכללית`                            IS A BOOLEAN
+    `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 275(א)(3)`  IS A BOOLEAN
+    `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 267א(ב)`   IS A BOOLEAN
+    `העסקה טעונה אישור בדרך אחרת שנקבעה בתקנון`                 IS A BOOLEAN
+
+-- The six alternatives of section 270 that a transaction may meet (src:1829-1844). Each field is the outcome of the rule of that paragraph.
+-- src:1829 | {{ח:ת}} עסקאות של חברה המפורטות להלן, טעונות אישורים כקבוע {{ח:פנימי|חלק 6 פרק 5|בפרק זה}}, ובלבד שהעסקה היא לטובת החברה:
+@ref סעיף 270 (src:1829)
+DECLARE `סעיף 270 - החלופות שמתקיימות בעסקה` HAS
+    `מתקיים בעסקה האמור בסעיף 270(1)`   IS A BOOLEAN
+    `מתקיים בעסקה האמור בסעיף 270(2)`   IS A BOOLEAN
+    `מתקיים בעסקה האמור בסעיף 270(3)`   IS A BOOLEAN
+    `מתקיים בעסקה האמור בסעיף 270(4)`   IS A BOOLEAN
+    `מתקיים בעסקה האמור בסעיף 270(4א)`  IS A BOOLEAN
+    `מתקיים בעסקה האמור בסעיף 270(5)`   IS A BOOLEAN
+
+-- The facts about the transaction and its approval that sections 271 to 278 read besides the alternatives it meets.
+-- src:1846 | {{ח:סעיף|271|עסקאות שאינן חריגות}}
+-- src:1847 | {{ח:ת}} עסקה שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(1)}}, שאינה עסקה חריגה, טעונה אישור הדירקטוריון, אלא אם כן נקבעה דרך אישור אחרת בתקנון.
+@ref סעיף 271 (src:1846-1847)
+DECLARE `סעיף 271 - עובדות על העסקה לענין האישורים` HAS
+    `העסקה`                                                                     IS A `עובדות על עסקה`
+    `הנושא שהעסקה עמו הוא דירקטור`                                              IS A BOOLEAN
+    `לחברה יש ועדת ביקורת`                                                      IS A BOOLEAN
+    `העסקה היא עם המנהל הכללי של החברה`                                          IS A BOOLEAN
+    `העסקה היא באשר לתנאי כהונה והעסקה`                                         IS A BOOLEAN
+    `העסקה היא שינוי של עסקה קיימת והוועדה אישרה כי השינוי אינו מהותי`           IS A BOOLEAN
+    `האישורים ניתנים שלא בהתאם למדיניות התגמול`                                  IS A BOOLEAN
+    `נקבעה בתקנון דרך אישור אחרת לעסקה שאינה חריגה`                             IS A BOOLEAN
+    `ועדת התגמול החליטה לפטור את העסקה מאישור האסיפה הכללית`                      IS A BOOLEAN
+    `התקיימו התנאים לפטור מאישור האסיפה הכללית לפי סעיף 272(ג1)(3)`              IS A BOOLEAN
+    `לרוב הדירקטורים יש עניין אישי באישור העסקה`                                 IS A BOOLEAN
+    `העסקה היא עסקה כאמור בסעיף 278(א), שאינה עסקה לפי סעיף 271`                  IS A BOOLEAN
+
+-- A transaction that needs no approval under this chapter.
+-- src:1895 | {{ח:סעיף|277|אישורים מצטברים}}
+-- src:1896 | {{ח:ת}} התקיימו בעסקה התנאים הקבועים ביותר מחלופה אחת מהחלופות {{ח:פנימי|סעיף 270|שבסעיף 270}}, טעונה העסקה אישורים בהתאם להוראות החלות על כל אחת מן החלופות.
+@ref סעיף 277 (src:1895-1896)
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 277 - עסקה שאינה טעונה אישורים` MEANS `סעיף 277 - האישורים שעסקה טעונה` WITH
+    `העסקה טעונה אישור ועדת הביקורת` IS FALSE
+    `העסקה טעונה אישור ועדת התגמול` IS FALSE
+    `העסקה טעונה אישור הדירקטוריון` IS FALSE
+    `העסקה טעונה אישור האסיפה הכללית` IS FALSE
+    `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 275(א)(3)` IS FALSE
+    `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 267א(ב)` IS FALSE
+    `העסקה טעונה אישור בדרך אחרת שנקבעה בתקנון` IS FALSE
+
+-- A record from its seven fields, in this order:
+--    audit committee, compensation committee, board, general meeting, majority of 275(א)(3), majority of 267א(ב), other way in the articles.
+-- src:1895 | {{ח:סעיף|277|אישורים מצטברים}}
+-- src:1896 | {{ח:ת}} התקיימו בעסקה התנאים הקבועים ביותר מחלופה אחת מהחלופות {{ח:פנימי|סעיף 270|שבסעיף 270}}, טעונה העסקה אישורים בהתאם להוראות החלות על כל אחת מן החלופות.
+@ref סעיף 277 (src:1895-1896)
+GIVEN `אישור ועדת הביקורת` IS A BOOLEAN
+      `אישור ועדת התגמול` IS A BOOLEAN
+      `אישור הדירקטוריון` IS A BOOLEAN
+      `אישור האסיפה הכללית` IS A BOOLEAN
+      `רוב כאמור בסעיף 275(א)(3)` IS A BOOLEAN
+      `רוב כאמור בסעיף 267א(ב)` IS A BOOLEAN
+      `אישור בדרך אחרת שנקבעה בתקנון` IS A BOOLEAN
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 277 - רשימת אישורים` MEANS `סעיף 277 - האישורים שעסקה טעונה` WITH
+    `העסקה טעונה אישור ועדת הביקורת` IS `אישור ועדת הביקורת`
+    `העסקה טעונה אישור ועדת התגמול` IS `אישור ועדת התגמול`
+    `העסקה טעונה אישור הדירקטוריון` IS `אישור הדירקטוריון`
+    `העסקה טעונה אישור האסיפה הכללית` IS `אישור האסיפה הכללית`
+    `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 275(א)(3)` IS `רוב כאמור בסעיף 275(א)(3)`
+    `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 267א(ב)` IS `רוב כאמור בסעיף 267א(ב)`
+    `העסקה טעונה אישור בדרך אחרת שנקבעה בתקנון` IS `אישור בדרך אחרת שנקבעה בתקנון`
+
+-- Section 277: a transaction in which the conditions of more than one alternative of section 270 are met needs the approvals that apply
+-- to each alternative. Two lists of approvals are joined field by field: an approval needed by either is needed.
+-- src:1896 | {{ח:ת}} התקיימו בעסקה התנאים הקבועים ביותר מחלופה אחת מהחלופות {{ח:פנימי|סעיף 270|שבסעיף 270}}, טעונה העסקה אישורים בהתאם להוראות החלות על כל אחת מן החלופות.
+@ref סעיף 277 (src:1896)
+GIVEN `האישורים האחד` IS A `סעיף 277 - האישורים שעסקה טעונה`
+      `האישורים השני` IS A `סעיף 277 - האישורים שעסקה טעונה`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 277 - צירוף אישורים` MEANS `סעיף 277 - האישורים שעסקה טעונה` WITH
+    `העסקה טעונה אישור ועדת הביקורת` IS `האישורים האחד`'s `העסקה טעונה אישור ועדת הביקורת` OR `האישורים השני`'s `העסקה טעונה אישור ועדת הביקורת`
+    `העסקה טעונה אישור ועדת התגמול` IS `האישורים האחד`'s `העסקה טעונה אישור ועדת התגמול` OR `האישורים השני`'s `העסקה טעונה אישור ועדת התגמול`
+    `העסקה טעונה אישור הדירקטוריון` IS `האישורים האחד`'s `העסקה טעונה אישור הדירקטוריון` OR `האישורים השני`'s `העסקה טעונה אישור הדירקטוריון`
+    `העסקה טעונה אישור האסיפה הכללית` IS `האישורים האחד`'s `העסקה טעונה אישור האסיפה הכללית` OR `האישורים השני`'s `העסקה טעונה אישור האסיפה הכללית`
+    `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 275(א)(3)` IS `האישורים האחד`'s `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 275(א)(3)` OR `האישורים השני`'s `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 275(א)(3)`
+    `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 267א(ב)` IS `האישורים האחד`'s `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 267א(ב)` OR `האישורים השני`'s `העסקה טעונה אישור האסיפה הכללית ברוב כאמור בסעיף 267א(ב)`
+    `העסקה טעונה אישור בדרך אחרת שנקבעה בתקנון` IS `האישורים האחד`'s `העסקה טעונה אישור בדרך אחרת שנקבעה בתקנון` OR `האישורים השני`'s `העסקה טעונה אישור בדרך אחרת שנקבעה בתקנון`
+
+§§ `סעיף 271: עסקאות שאינן חריגות`
+
+-- "A transaction as in section 271": a transaction in which 270(1) holds and which is not extraordinary. Sections 278(א) and 281 speak of it by that phrase.
+-- src:1847 | {{ח:ת}} עסקה שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(1)}}, שאינה עסקה חריגה, טעונה אישור הדירקטוריון, אלא אם כן נקבעה דרך אישור אחרת בתקנון.
+@ref סעיף 271 (src:1847)
+GIVEN `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+      `העסקה` IS A `עובדות על עסקה`
+GIVETH A BOOLEAN
+`סעיף 271 - העסקה היא עסקה כאמור בסעיף 271` MEANS
+        `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(1)`
+    AND (NOT (`עסקה חריגה` `העסקה`))
+
+-- A transaction in which 270(1) holds and which is not extraordinary needs the approval of the board, unless the articles lay down another
+-- way of approval. When they do, the record says so in its last field and the board field is FALSE.
+-- src:1847 | {{ח:ת}} עסקה שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(1)}}, שאינה עסקה חריגה, טעונה אישור הדירקטוריון, אלא אם כן נקבעה דרך אישור אחרת בתקנון.
+@ref סעיף 271 (src:1847)
+GIVEN `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+      `העובדות` IS A `סעיף 271 - עובדות על העסקה לענין האישורים`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 271 - האישורים שעסקה שאינה חריגה טעונה` MEANS
+    IF     `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(1)`
+       AND (NOT (`עסקה חריגה` (`העובדות`'s `העסקה`)))
+    THEN
+        IF `העובדות`'s `נקבעה בתקנון דרך אישור אחרת לעסקה שאינה חריגה`
+        THEN `סעיף 277 - רשימת אישורים` FALSE FALSE FALSE FALSE FALSE FALSE TRUE
+        ELSE `סעיף 277 - רשימת אישורים` FALSE FALSE TRUE FALSE FALSE FALSE FALSE
+    ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+
+§§ `סעיף 272: עסקאות חריגות עם נושא משרה ועסקאות עם נושא משרה שאינו דירקטור באשר לתנאי כהונתו והעסקתו`
+
+-- Section 272(א) and (ב): a transaction in which 270(1) holds and which is extraordinary, or a transaction of a private company that is not
+-- a bond company in which 270(2) holds, needs the audit committee's approval and then the board's. If a private non-bond company had no
+-- audit committee, the board's approval alone is needed if the office-holder is not a director, and if he is a director, the general
+-- meeting's as well. Under 272(ד) a change of an existing 270(2) transaction that the committee found not material is governed by (ד) alone.
+-- Fork F7 in NOTES.md: "(ב)" is read to apply to the transactions of (א) in a private non-bond company without an audit committee.
+-- src:1850 | {{ח:תת|(א)}} עסקה של חברה, שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(1)}} והיא עסקה חריגה, או עסקה של חברה פרטית שאינה חברת איגרות חוב שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(2)}}, טעונה אישור ועדת הביקורת ולאחר מכן אישור הדירקטוריון.
+-- src:1851 | {{ח:תת|(ב)}} לא היתה לחברה פרטית שאינה חברת איגרות חוב ועדת ביקורת, טעונה העסקה אישור הדירקטוריון בלבד אם נושא המשרה אינו דירקטור, ואם נושא המשרה הוא דירקטור גם אישור של האסיפה הכללית.
+@ref סעיף 272(א) (src:1850-1851)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+      `העובדות` IS A `סעיף 271 - עובדות על העסקה לענין האישורים`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 272(א) ו־(ב) - האישורים שעסקה חריגה עם נושא משרה או עסקה בחברה פרטית שאינה חברת איגרות חוב טעונה` MEANS
+    IF `העסקה נכללת בסעיף קטן (א)`
+    THEN
+        IF `סעיף 251 - חברה פרטית שאינה חברת איגרות חוב` `העובדות על החברה` AND (NOT (`העובדות`'s `לחברה יש ועדת ביקורת`))
+        THEN `סעיף 277 - רשימת אישורים` FALSE FALSE TRUE (`העובדות`'s `הנושא שהעסקה עמו הוא דירקטור`) FALSE FALSE FALSE
+        ELSE `סעיף 277 - רשימת אישורים` TRUE FALSE TRUE FALSE FALSE FALSE FALSE
+    ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+    WHERE
+        `העסקה נכללת בסעיף קטן (א)` MEANS
+                (    `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(1)`
+                 AND `עסקה חריגה` (`העובדות`'s `העסקה`))
+            OR  (    `סעיף 251 - חברה פרטית שאינה חברת איגרות חוב` `העובדות על החברה`
+                 AND `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(2)`
+                 AND (NOT (`העובדות`'s `העסקה היא שינוי של עסקה קיימת והוועדה אישרה כי השינוי אינו מהותי`)))
+
+-- Section 272(ג)(1) and (2): a transaction of a public company or a private bond company in which 270(2) holds, other than a transaction
+-- with the general manager, needs the compensation committee's approval and then the board's. The approvals follow the compensation
+-- policy; they may depart from it in special cases if the conditions of (ג)(2)(א) and (ב) are met, the second being the general meeting's
+-- approval, with, in a public company, the majority of section 267א(ב).
+-- src:1852 | {{ח:תת|(ג)|(1)}} עסקה של חברה ציבורית או חברה פרטית שהיא חברת איגרות חוב, שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(2)}}, למעט עסקה עם המנהל הכללי של החברה כאמור בסעיף קטן (ג1), טעונה אישור של ועדת התגמול ולאחר מכן אישור הדירקטוריון.
+-- src:1853 | {{ח:תתת|(2)}} אישור ועדת התגמול והדירקטוריון לפי פסקה (1) יהיה בהתאם למדיניות התגמול, ואולם ועדת התגמול ולאחריה הדירקטוריון רשאים, במקרים מיוחדים, לאשר עסקה כאמור באותה פסקה שלא בהתאם למדיניות התגמול, בהתקיים שניים אלה:
+-- src:1854 | {{ח:תתתת|(א)}} ועדת התגמול ולאחריה הדירקטוריון אישרו את העסקה, בין השאר, לפי השיקולים המנויים {{ח:פנימי|סעיף 267ב|בסעיף 267ב(א)}}, תוך התייחסות לעניינים המפורטים {{ח:פנימי|תוספת 1א חלק א|בחלק א׳ לתוספת ראשונה א׳}} ובתנאי שנקבעו בעסקה, בין השאר, ההוראות כמפורט {{ח:פנימי|תוספת 1א חלק ב|בחלק ב׳ לתוספת האמורה}};
+-- src:1855 | {{ח:תתתת|(ב)}} האסיפה הכללית אישרה את העסקה, ובלבד שבחברה ציבורית מתקיים האמור {{ח:פנימי|סעיף 267א|בסעיף 267א(ב)(1) או (2)}}.
+@ref סעיף 272(ג) (src:1852-1855)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+      `העובדות` IS A `סעיף 271 - עובדות על העסקה לענין האישורים`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 272(ג) - האישורים שעסקה עם נושא משרה בחברה ציבורית או חברת איגרות חוב טעונה` MEANS
+    IF     `סעיף 251 - חברה ציבורית או חברה פרטית שהיא חברת איגרות חוב` `העובדות על החברה`
+       AND `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(2)`
+       AND (NOT (`העובדות`'s `העסקה היא עם המנהל הכללי של החברה`))
+       AND (NOT (`העובדות`'s `העסקה היא שינוי של עסקה קיימת והוועדה אישרה כי השינוי אינו מהותי`))
+    THEN `סעיף 277 - רשימת אישורים` FALSE TRUE TRUE (`העובדות`'s `האישורים ניתנים שלא בהתאם למדיניות התגמול`) FALSE (`העובדות`'s `האישורים ניתנים שלא בהתאם למדיניות התגמול` AND `חברה ציבורית` `העובדות על החברה`) FALSE
+    ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+
+-- Section 272(ג)(2)(א): the first condition for a departure from the compensation policy in a special case: the compensation committee
+-- and then the board approved the transaction, among other things by the considerations of section 267ב(א), referring to the matters in
+-- Part A of Schedule 1A (piece ic6), on condition that the transaction sets, among other things, the provisions in Part B of that Schedule.
+-- out of range: Schedule 1A, Parts A and B (piece ic6): the second and third facts are the inputs.
+-- src:1854 | {{ח:תתתת|(א)}} ועדת התגמול ולאחריה הדירקטוריון אישרו את העסקה, בין השאר, לפי השיקולים המנויים {{ח:פנימי|סעיף 267ב|בסעיף 267ב(א)}}, תוך התייחסות לעניינים המפורטים {{ח:פנימי|תוספת 1א חלק א|בחלק א׳ לתוספת ראשונה א׳}} ובתנאי שנקבעו בעסקה, בין השאר, ההוראות כמפורט {{ח:פנימי|תוספת 1א חלק ב|בחלק ב׳ לתוספת האמורה}};
+@ref סעיף 272(ג)(2)(א) (src:1854)
+GIVEN `ועדת התגמול ולאחריה הדירקטוריון אישרו את העסקה לפי השיקולים המנויים בסעיף 267ב(א)` IS A BOOLEAN
+      `אישרו תוך התייחסות לעניינים המפורטים בחלק א׳ לתוספת ראשונה א׳` IS A BOOLEAN
+      `נקבעו בעסקה, בין השאר, ההוראות כמפורט בחלק ב׳ לתוספת האמורה` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 272(ג)(2)(א) - התקיים תנאי החריגה ממדיניות התגמול בידי הוועדה והדירקטוריון` MEANS
+        `ועדת התגמול ולאחריה הדירקטוריון אישרו את העסקה לפי השיקולים המנויים בסעיף 267ב(א)`
+    AND `אישרו תוך התייחסות לעניינים המפורטים בחלק א׳ לתוספת ראשונה א׳`
+    AND `נקבעו בעסקה, בין השאר, ההוראות כמפורט בחלק ב׳ לתוספת האמורה`
+
+-- Section 272(ג)(3): despite (ג)(2), in a company other than a public grandchild company the compensation committee, and after it the board,
+-- may in special cases approve the transaction even if the general meeting objected, if they decided on detailed grounds, after discussing the
+-- transaction again and examining the general meeting's objection among other things.
+-- src:1856 | {{ח:תתת|(3)}} על אף הוראות פסקה (2), בחברה, למעט חברה נכדה ציבורית כהגדרתה {{ח:פנימי|סעיף 267א|בסעיף 267א(ג)}}, ועדת התגמול ולאחריה הדירקטוריון רשאים, במקרים מיוחדים, לאשר עסקה כאמור באותה פסקה גם אם האסיפה הכללית התנגדה לאישור העסקה, ובלבד שוועדת התגמול ולאחריה הדירקטוריון החליטו על כך, על יסוד נימוקים מפורטים, לאחר שדנו מחדש בעסקה ובחנו בדיון כאמור, בין השאר, את התנגדות האסיפה הכללית.
+@ref סעיף 272(ג)(3) (src:1856)
+GIVEN `החברה היא חברה נכדה ציבורית` IS A BOOLEAN
+      `זהו מקרה מיוחד` IS A BOOLEAN
+      `הוועדה ולאחריה הדירקטוריון החליטו על יסוד נימוקים מפורטים, לאחר שדנו מחדש בעסקה ובחנו, בין השאר, את התנגדות האסיפה הכללית` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 272(ג)(3) - אפשר לאשר את העסקה על אף התנגדות האסיפה הכללית` MEANS
+        (NOT `החברה היא חברה נכדה ציבורית`)
+    AND `זהו מקרה מיוחד`
+    AND `הוועדה ולאחריה הדירקטוריון החליטו על יסוד נימוקים מפורטים, לאחר שדנו מחדש בעסקה ובחנו, בין השאר, את התנגדות האסיפה הכללית`
+
+-- Section 272(ג1)(1) and (2): a transaction of a public company or a private bond company with its general manager in which 270(2) holds
+-- needs the approvals of the compensation committee, the board and the general meeting, in that order, in a public company with the majority
+-- of 267א(ב). The approvals follow the policy; they may depart from it as in (ג)(2)(א) (and that does not derogate from (1)(ג)).
+-- Section 272(ג1)(3): the compensation committee may exempt the transaction from the general meeting's approval; the exemption removes
+-- the general meeting from the record, and with it the majority of 267א(ב).
+-- src:1857 | {{ח:תת|(ג1)|(1)}} עסקה של חברה ציבורית או חברה פרטית שהיא חברת איגרות חוב, עם המנהל הכללי של החברה, שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(2)}}, טעונה אישור של אלה בסדר הזה:
+-- src:1858 | {{ח:תתתת|(א)}} ועדת התגמול;
+-- src:1859 | {{ח:תתתת|(ב)}} הדירקטוריון;
+-- src:1860 | {{ח:תתתת|(ג)}} האסיפה הכללית, ובלבד שבחברה ציבורית מתקיים האמור {{ח:פנימי|סעיף 267א|בסעיף 267א(ב)(1) או (2)}}; לעניין אישור האסיפה הכללית לפי פסקת משנה זו, יחולו הוראות סעיף קטן (ג)(3).
+-- src:1861 | {{ח:תתת|(2)}} אישור ועדת התגמול ואישור הדירקטוריון כאמור בפסקה (1) יהיו בהתאם למדיניות התגמול, ואולם ועדת התגמול ולאחריה הדירקטוריון רשאים, במקרים מיוחדים, לאשר את העסקה שלא בהתאם למדיניות כאמור, ובלבד שמתקיים האמור בסעיף קטן (ג)(2)(א); אין באמור בסעיף קטן זה כדי לגרוע מהוראות פסקה (1)(ג).
+-- src:1862 | {{ח:תתת|(3)}} על אף הוראות פסקה (1)(ג), ועדת התגמול רשאית לפטור מאישור האסיפה הכללית עסקה עם מי שמועמד לכהן כמנהל כללי של החברה שמתקיים לגביו האמור {{ח:פנימי|סעיף 240|בסעיף 240(ב)}}, אם מצאה, על יסוד נימוקים שפירטה, כי הבאת העסקה לאישור האסיפה הכללית תסכל את ההתקשרות, ובלבד שהעסקה תואמת את מדיניות התגמול.
+@ref סעיף 272(ג1) (src:1857-1862)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+      `העובדות` IS A `סעיף 271 - עובדות על העסקה לענין האישורים`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 272(ג1) - האישורים שעסקה עם המנהל הכללי טעונה` MEANS
+    IF     `סעיף 251 - חברה ציבורית או חברה פרטית שהיא חברת איגרות חוב` `העובדות על החברה`
+       AND `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(2)`
+       AND `העובדות`'s `העסקה היא עם המנהל הכללי של החברה`
+       AND (NOT (`העובדות`'s `העסקה היא שינוי של עסקה קיימת והוועדה אישרה כי השינוי אינו מהותי`))
+    THEN `סעיף 277 - רשימת אישורים` FALSE TRUE TRUE (NOT `הפטור ניתן`) FALSE (`חברה ציבורית` `העובדות על החברה` AND (NOT `הפטור ניתן`)) FALSE
+    ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+    WHERE
+        `הפטור ניתן` MEANS
+                `העובדות`'s `ועדת התגמול החליטה לפטור את העסקה מאישור האסיפה הכללית`
+            AND `העובדות`'s `התקיימו התנאים לפטור מאישור האסיפה הכללית לפי סעיף 272(ג1)(3)`
+
+-- Section 272(ג1)(3), the conditions of the exemption: the transaction is with a person who is a candidate to serve as the company's general
+-- manager and as to whom section 240(ב) (piece ic2) holds, the compensation committee found, on grounds it set out, that bringing the
+-- transaction to the general meeting would frustrate the engagement, and the transaction accords with the compensation policy.
+-- out of range: section 240(ב) (piece ic2): that it holds for the counterpart is the first input.
+-- src:1862 | {{ח:תתת|(3)}} על אף הוראות פסקה (1)(ג), ועדת התגמול רשאית לפטור מאישור האסיפה הכללית עסקה עם מי שמועמד לכהן כמנהל כללי של החברה שמתקיים לגביו האמור {{ח:פנימי|סעיף 240|בסעיף 240(ב)}}, אם מצאה, על יסוד נימוקים שפירטה, כי הבאת העסקה לאישור האסיפה הכללית תסכל את ההתקשרות, ובלבד שהעסקה תואמת את מדיניות התגמול.
+@ref סעיף 272(ג1)(3) (src:1862)
+GIVEN `העסקה היא עם מי שמועמד לכהן כמנהל כללי של החברה ושמתקיים לגביו האמור בסעיף 240(ב)` IS A BOOLEAN
+      `הוועדה מצאה על יסוד נימוקים שפירטה שהבאת העסקה לאישור האסיפה הכללית תסכל את ההתקשרות` IS A BOOLEAN
+      `העסקה תואמת את מדיניות התגמול` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 272(ג1)(3) - ועדת התגמול רשאית לפטור מאישור האסיפה הכללית` MEANS
+        `העסקה היא עם מי שמועמד לכהן כמנהל כללי של החברה ושמתקיים לגביו האמור בסעיף 240(ב)`
+    AND `הוועדה מצאה על יסוד נימוקים שפירטה שהבאת העסקה לאישור האסיפה הכללית תסכל את ההתקשרות`
+    AND `העסקה תואמת את מדיניות התגמול`
+
+-- Section 272(ד): despite (א), (ג) and (ג1), a transaction in which 270(2) holds that changes an existing transaction needs only the approval
+-- of the audit committee or the compensation committee, as the case may be (the audit committee in a private non-bond company, the
+-- compensation committee in a public company or private bond company), if that committee approved that the change in the terms of the
+-- transaction is not material in relation to the existing transaction.
+-- src:1863 | {{ח:תת|(ד)}} על אף האמור בסעיפים קטנים (א), (ג) ו־(ג1), עסקה שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(2)}} והיא שינוי של עסקה קיימת, טעונה אישור של ועדת ביקורת או ועדת תגמול, לפי העניין בלבד, אם הוועדה האמורה אישרה כי השינוי בתנאי העסקה אינו מהותי ביחס לעסקה הקיימת.
+@ref סעיף 272(ד) (src:1863)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+      `העובדות` IS A `סעיף 271 - עובדות על העסקה לענין האישורים`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 272(ד) - האישורים שנדרשים לשינוי לא מהותי של עסקה קיימת` MEANS
+    IF     `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(2)`
+       AND `העובדות`'s `העסקה היא שינוי של עסקה קיימת והוועדה אישרה כי השינוי אינו מהותי`
+    THEN
+        IF `סעיף 251 - חברה פרטית שאינה חברת איגרות חוב` `העובדות על החברה`
+        THEN `סעיף 277 - רשימת אישורים` TRUE FALSE FALSE FALSE FALSE FALSE FALSE
+        ELSE
+            IF `סעיף 251 - חברה ציבורית או חברה פרטית שהיא חברת איגרות חוב` `העובדות על החברה`
+            THEN `סעיף 277 - רשימת אישורים` FALSE TRUE FALSE FALSE FALSE FALSE FALSE
+            ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+    ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+
+§§ `סעיף 273: עסקה עם דירקטור באשר לתנאי כהונתו והעסקתו`
+
+-- Section 273(א): a transaction in which 270(3) holds needs the board's approval and then the general meeting's; in a public company and in a
+-- private bond company it needs the compensation committee's approval as well, before the board's.
+-- Section 273(ב): in those two kinds of company the approvals of the committee and the board follow the compensation policy; they may depart
+-- from it in a special case if (ג)(2)(א) of section 272 is met and, in a public company, the general meeting's approval satisfies section
+-- 267א(ב)(1) or (2).
+-- src:1866 | {{ח:תת|(א)}} עסקה של חברה שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(3)}}, טעונה אישורו של הדירקטוריון ולאחריו אישורה של האסיפה הכללית, ובחברה ציבורית וכן בחברה פרטית שהיא חברת איגרות חוב, טעונה העסקה אישור ועדת התגמול, קודם לאישור הדירקטוריון.
+-- src:1867 | {{ח:תת|(ב)}} אישור ועדת התגמול ואישור הדירקטוריון כאמור בסעיף קטן (א), בחברה ציבורית ובחברה פרטית שהיא חברת איגרות חוב, יהיו בהתאם למדיניות התגמול, ואולם ועדת התגמול ולאחריה הדירקטוריון רשאים, במקרים מיוחדים, לאשר את העסקה שלא בהתאם למדיניות כאמור, ובלבד שמתקיים האמור {{ח:פנימי|סעיף 272|בסעיף 272(ג)(2)(א)}} וכן, בחברה ציבורית – מתקיים באישור האסיפה הכללית האמור {{ח:פנימי|סעיף 267א|בסעיף 267א(ב)(1) או (2)}}.
+@ref סעיף 273 (src:1866-1867)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+      `העובדות` IS A `סעיף 271 - עובדות על העסקה לענין האישורים`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 273 - האישורים שעסקה עם דירקטור באשר לתנאי כהונתו והעסקתו טעונה` MEANS
+    IF `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(3)`
+    THEN `סעיף 277 - רשימת אישורים`
+            FALSE
+            (`סעיף 251 - חברה ציבורית או חברה פרטית שהיא חברת איגרות חוב` `העובדות על החברה`)
+            TRUE
+            TRUE
+            FALSE
+            (    `העובדות`'s `האישורים ניתנים שלא בהתאם למדיניות התגמול`
+             AND `חברה ציבורית` `העובדות על החברה`)
+            FALSE
+    ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+
+§§ `סעיף 274: הצעה פרטית`
+
+-- A material private offer needs the board's approval and then the general meeting's.
+-- src:1870 | {{ח:ת}} הצעה פרטית מהותית טעונה אישור הדירקטוריון ולאחריו אישורה של האסיפה הכללית.
+@ref סעיף 274 (src:1870)
+GIVEN `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 274 - האישורים שהצעה פרטית מהותית טעונה` MEANS
+    IF `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(5)`
+    THEN `סעיף 277 - רשימת אישורים` FALSE FALSE TRUE TRUE FALSE FALSE FALSE
+    ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+
+§§ `סעיף 275: עסקה עם בעל שליטה`
+
+-- Section 275(א): a transaction in which 270(4) holds needs these approvals in this order: (1) the audit committee, and in a transaction about
+-- terms of service and employment the compensation committee; (2) the board; (3) the general meeting, provided that one of the two tests
+-- of 275(א)(3) holds. Fork F8 in NOTES.md: the compensation committee is read as taking the audit committee's place in a transaction about
+-- terms of service and employment ("and in a transaction about terms ... the compensation committee" is the same step of the sequence).
+-- src:1873 | {{ח:תת|(א)}} עסקה שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(4)}} טעונה אישורם של אלה בסדר הבא:
+-- src:1874 | {{ח:תתת|(1)}} ועדת הביקורת ובעסקה באשר לתנאי כהונה והעסקה – ועדת התגמול;
+-- src:1875 | {{ח:תתת|(2)}} הדירקטוריון;
+-- src:1876 | {{ח:תתת|(3)}} האסיפה הכללית, ובלבד שיתקיים אחד מאלה:
+@ref סעיף 275(א) (src:1873-1876)
+GIVEN `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+      `העובדות` IS A `סעיף 271 - עובדות על העסקה לענין האישורים`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 275(א) - האישורים שעסקה עם בעל שליטה בחברה ציבורית טעונה` MEANS
+    IF `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(4)`
+    THEN `סעיף 277 - רשימת אישורים`
+            (NOT (`העובדות`'s `העסקה היא באשר לתנאי כהונה והעסקה`))
+            (`העובדות`'s `העסקה היא באשר לתנאי כהונה והעסקה`)
+            TRUE
+            TRUE
+            TRUE
+            FALSE
+            FALSE
+    ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+
+-- Section 275(א)(3)(א): the first test of the general meeting's approval: the majority in the meeting includes a majority of all the votes of
+-- the shareholders who have no personal interest in approving the transaction and take part in the vote, abstentions not counted.
+-- It is the test of section 267א(ב)(1), applied to that group of shareholders.
+-- src:1877 | {{ח:תתתת|(א)}} במנין קולות הרוב באסיפה הכללית ייכללו רוב מכלל קולות בעלי המניות שאינם בעלי ענין אישי באישור העסקה, המשתתפים בהצבעה; במנין כלל הקולות של בעלי המניות האמורים לא יובאו בחשבון קולות הנמנעים;
+@ref סעיף 275(א)(3)(א) (src:1877)
+GIVEN `ההצבעה באסיפה כולה` IS A `הצבעה`
+      `ההצבעה של בעלי המניות שאינם בעלי ענין אישי באישור העסקה` IS A `הצבעה`
+GIVETH A BOOLEAN
+`סעיף 275(א)(3)(א) - מבחן רוב הקולות` MEANS
+    `סעיף 267א(ב)(1) - מבחן רוב הקולות` `ההצבעה באסיפה כולה` `ההצבעה של בעלי המניות שאינם בעלי ענין אישי באישור העסקה`
+
+-- Section 275(א)(3)(ב): the second test: the total votes against among those shareholders do not exceed 2% of all the voting rights in the
+-- company. The Minister may set a different rate (section 275(ב); not exercised in the text).
+-- src:1878 | {{ח:תתתת|(ב)}} סך קולות המתנגדים מקרב בעלי המניות האמורים בפסקת משנה (א) לא עלה על שיעור של שני אחוזים מכלל זכויות ההצבעה בחברה.
+@ref סעיף 275(א)(3)(ב) (src:1878)
+GIVEN `ההצבעה של בעלי המניות שאינם בעלי ענין אישי באישור העסקה` IS A `הצבעה`
+      `כלל זכויות ההצבעה בחברה` IS A NUMBER
+GIVETH A BOOLEAN
+`סעיף 275(א)(3)(ב) - מבחן המתנגדים` MEANS
+    `סעיף 267א(ב)(2) - מבחן המתנגדים` `ההצבעה של בעלי המניות שאינם בעלי ענין אישי באישור העסקה` `כלל זכויות ההצבעה בחברה`
+
+-- src:1876 | {{ח:תתת|(3)}} האסיפה הכללית, ובלבד שיתקיים אחד מאלה:
+@ref סעיף 275(א)(3) (src:1876)
+GIVEN `ההצבעה באסיפה כולה` IS A `הצבעה`
+      `ההצבעה של בעלי המניות שאינם בעלי ענין אישי באישור העסקה` IS A `הצבעה`
+      `כלל זכויות ההצבעה בחברה` IS A NUMBER
+GIVETH A BOOLEAN
+`סעיף 275(א)(3) - אישור האסיפה הכללית ניתן ברוב הנדרש` MEANS
+        `סעיף 275(א)(3)(א) - מבחן רוב הקולות` `ההצבעה באסיפה כולה` `ההצבעה של בעלי המניות שאינם בעלי ענין אישי באישור העסקה`
+    OR  `סעיף 275(א)(3)(ב) - מבחן המתנגדים` `ההצבעה של בעלי המניות שאינם בעלי ענין אישי באישור העסקה` `כלל זכויות ההצבעה בחברה`
+
+-- Section 275(א1): a transaction under (א) for a period exceeding three years needs approval as in (א) once in three years;
+-- (2) but a transaction under the opening limb of 270(4) alone may be approved for longer if the audit committee approved that an engagement
+-- for such a period is reasonable in the circumstances; (3) the rule applies to a company that became public as to the period after it did.
+-- The period is a number of years; "exceeding three" is more than three.
+-- src:1879 | {{ח:תת|(א1)|(1)}} עסקה כאמור בסעיף קטן (א) לתקופה העולה על שלוש שנים, טעונה אישור כאמור באותו סעיף קטן, אחת לשלוש שנים.
+-- src:1880 | {{ח:תתת|(2)}} על אף האמור בפסקה (1), עסקה כאמור {{ח:פנימי|סעיף 270|בסעיף 270(4) רישה}}, בלבד, יכול שתאושר לתקופה העולה על שלוש שנים, ובלבד שוועדת הביקורת אישרה כי התקשרות לתקופה כאמור סבירה בנסיבות העניין.
+-- src:1881 | {{ח:תתת|(3)}} הוראות פסקאות (1) ו־(2) יחולו על עסקה של חברה שהפכה לחברה ציבורית, ביחס לתקופה שלאחר הפיכתה לחברה ציבורית.
+@ref סעיף 275(א1) (src:1879-1881)
+GIVEN `תקופת העסקה בשנים` IS A NUMBER
+      `החברה הפכה לחברה ציבורית` IS A BOOLEAN
+      `התקופה שלאחר הפיכתה לחברה ציבורית בשנים` IS A NUMBER
+      `העסקה היא עסקה מהסוג שברישה של סעיף 270(4) בלבד` IS A BOOLEAN
+      `ועדת הביקורת אישרה כי התקשרות לתקופה כאמור סבירה בנסיבות העניין` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 275(א1) - נדרש אישור חוזר אחת לשלוש שנים` MEANS
+        `התקופה הנספרת בשנים` GREATER THAN 3
+    AND (NOT (    `העסקה היא עסקה מהסוג שברישה של סעיף 270(4) בלבד`
+              AND `ועדת הביקורת אישרה כי התקשרות לתקופה כאמור סבירה בנסיבות העניין`))
+    WHERE
+        `התקופה הנספרת בשנים` MEANS
+            IF `החברה הפכה לחברה ציבורית`
+            THEN `התקופה שלאחר הפיכתה לחברה ציבורית בשנים`
+            ELSE `תקופת העסקה בשנים`
+
+-- Section 275(ג): a transaction in which 270(4א) holds (a private bond company) needs only these approvals, in this order: (1) the audit
+-- committee, and in a transaction about terms of service and employment the compensation committee (read as in (א)); (2) the board;
+-- (3) in a transaction about terms of service and employment, the general meeting. There is no special majority.
+-- src:1883 | {{ח:תת|(ג)}} עסקה שמתקיים בה האמור {{ח:פנימי|סעיף 270|בסעיף 270(4א)}} טעונה אישורם של אלה בלבד בסדר הזה:
+-- src:1884 | {{ח:תתת|(1)}} ועדת הביקורת ובעסקה באשר לתנאי כהונה והעסקה – ועדת התגמול;
+-- src:1885 | {{ח:תתת|(2)}} הדירקטוריון;
+-- src:1886 | {{ח:תתת|(3)}} בעסקה באשר לתנאי כהונה והעסקה – האסיפה הכללית.
+@ref סעיף 275(ג) (src:1883-1886)
+GIVEN `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+      `העובדות` IS A `סעיף 271 - עובדות על העסקה לענין האישורים`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 275(ג) - האישורים שעסקה עם בעל שליטה בחברת איגרות חוב פרטית טעונה` MEANS
+    IF `החלופות`'s `מתקיים בעסקה האמור בסעיף 270(4א)`
+    THEN `סעיף 277 - רשימת אישורים`
+            (NOT (`העובדות`'s `העסקה היא באשר לתנאי כהונה והעסקה`))
+            (`העובדות`'s `העסקה היא באשר לתנאי כהונה והעסקה`)
+            TRUE
+            (`העובדות`'s `העסקה היא באשר לתנאי כהונה והעסקה`)
+            FALSE
+            FALSE
+            FALSE
+    ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+
+-- Section 275(ג1): the approvals of the compensation committee and the board in a transaction about terms of service and employment, under
+-- (א) or (ג), follow the compensation policy; they may depart from it in special cases if section 272(ג)(2)(א) is met; this does not
+-- derogate from (ג)(3), the general meeting's approval. The rule says whether the approvals so given are valid as to the policy.
+-- src:1887 | {{ח:תת|(ג1)}} אישור ועדת התגמול ואישור הדירקטוריון כאמור בסעיפים קטנים (א) ו־(ג), בעסקה שעניינה תנאי כהונה והעסקה, יהיו בהתאם למדיניות התגמול, ואולם ועדת התגמול ולאחריה הדירקטוריון רשאים, במקרים מיוחדים, לאשר את העסקה שלא בהתאם למדיניות כאמור, ובלבד שמתקיים האמור {{ח:פנימי|סעיף 272|בסעיף 272(ג)(2)(א)}}; אין באמור בסעיף קטן זה כדי לגרוע מהוראות סעיף קטן (ג)(3).
+@ref סעיף 275(ג1) (src:1887)
+GIVEN `האישורים ניתנים בהתאם למדיניות התגמול` IS A BOOLEAN
+      `זהו מקרה מיוחד` IS A BOOLEAN
+      `התקיים תנאי החריגה לפי סעיף 272(ג)(2)(א)` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 275(ג1) - האישורים ניתנו כדין לענין מדיניות התגמול` MEANS
+        `האישורים ניתנים בהתאם למדיניות התגמול`
+    OR  (    `זהו מקרה מיוחד`
+         AND `התקיים תנאי החריגה לפי סעיף 272(ג)(2)(א)`)
+
+-- Section 275(ד)(1) and (2): the committee and the board examine, among other things, whether the transaction includes a distribution;
+-- if either found that it does, the transaction is approved only after they confirmed that the provisions of any law on distribution were met.
+-- Section 275(ד)(3), for a bond company: if the committee and the board found that the transaction does not include a distribution, they
+-- examine whether there is a reasonable concern that it would prevent the company from meeting its existing and expected liabilities when due;
+-- if either found such a concern, the transaction is not approved.
+-- src:1888 | {{ח:תת|(ד)|(1)}} אישור ועדת הביקורת או ועדת התגמול, לפי העניין (בסעיף קטן זה – הוועדה) והדירקטוריון לפי הוראות סעיפים קטנים (א) או (ג), יינתן לאחר שהוועדה והדירקטוריון בחנו, בין השאר, אם העסקה כוללת חלוקה.
+-- src:1889 | {{ח:תתת|(2)}} קבעו הוועדה או הדירקטוריון כי העסקה כוללת חלוקה, תאושר העסקה רק לאחר שאישרו כי קוימו, לעניין זה, הוראות כל דין לעניין חלוקה.
+-- src:1890 | {{ח:תתת|(3)}} לעניין חברת איגרות חוב, קבעו הוועדה והדירקטוריון כי עסקה הטעונה אישורם לפי סעיפים קטנים (א) או (ג) אינה כוללת חלוקה, יבחנו אם קיים חשש סביר שהעסקה תמנע מהחברה את היכולת לעמוד בחבויותיה הקיימות והצפויות, בהגיע מועד קיומן; קבעו הוועדה או הדירקטוריון כי קיים חשש כאמור, לא תאושר העסקה.
+@ref סעיף 275(ד) (src:1888-1890)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `הוועדה או הדירקטוריון קבעו כי העסקה כוללת חלוקה` IS A BOOLEAN
+      `הם אישרו כי קוימו הוראות כל דין לענין חלוקה` IS A BOOLEAN
+      `הוועדה והדירקטוריון קבעו כי העסקה אינה כוללת חלוקה` IS A BOOLEAN
+      `הוועדה או הדירקטוריון קבעו כי קיים חשש סביר שהעסקה תמנע מהחברה את היכולת לעמוד בחבויותיה הקיימות והצפויות בהגיע מועד קיומן` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 275(ד) - אפשר לאשר את העסקה` MEANS
+        (   (NOT `הוועדה או הדירקטוריון קבעו כי העסקה כוללת חלוקה`)
+         OR `הם אישרו כי קוימו הוראות כל דין לענין חלוקה`)
+    AND (NOT (    `חברת איגרות חוב` `העובדות על החברה`
+              AND `הוועדה והדירקטוריון קבעו כי העסקה אינה כוללת חלוקה`
+              AND `הוועדה או הדירקטוריון קבעו כי קיים חשש סביר שהעסקה תמנע מהחברה את היכולת לעמוד בחבויותיה הקיימות והצפויות בהגיע מועד קיומן`))
+
+-- Section 275(ב): the Minister may fix a rate different from the 2% of 275(א)(3)(ב). Nothing in the text exercises the power;
+-- the Act's 2% is the constant of `סעיף 267א(ב)(2) - מבחן המתנגדים`, and a regulation that varies it changes that rule's answers.
+
+§§ `סעיף 276: גילוי ענין אישי`
+
+-- A shareholder who takes part in a vote under section 275 must tell the company before the vote in the meeting, or, if the vote is by a
+-- voting deed, on the deed, whether he has a personal interest in approving the transaction or not; if he did not, he does not vote and his
+-- vote is not counted.
+-- src:1893 | {{ח:ת}} בעל מניה המשתתף בהצבעה לפי {{ח:פנימי|סעיף 275|סעיף 275}} יודיע לחברה לפני ההצבעה באסיפה או, אם ההצבעה היא באמצעות כתב הצבעה – על גבי כתב ההצבעה, אם יש לו ענין אישי באישור העסקה אם לאו; לא הודיע בעל מניה כאמור, לא יצביע וקולו לא יימנה.
+@ref סעיף 276 (src:1893)
+GIVEN `בעל המניה משתתף בהצבעה לפי סעיף 275` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 276 - בעל המניה חייב להודיע לחברה אם יש לו עניין אישי` MEANS
+    `בעל המניה משתתף בהצבעה לפי סעיף 275`
+
+-- src:1893 | {{ח:ת}} בעל מניה המשתתף בהצבעה לפי {{ח:פנימי|סעיף 275|סעיף 275}} יודיע לחברה לפני ההצבעה באסיפה או, אם ההצבעה היא באמצעות כתב הצבעה – על גבי כתב ההצבעה, אם יש לו ענין אישי באישור העסקה אם לאו; לא הודיע בעל מניה כאמור, לא יצביע וקולו לא יימנה.
+@ref סעיף 276 (src:1893)
+GIVEN `בעל המניה משתתף בהצבעה לפי סעיף 275` IS A BOOLEAN
+      `הוא הודיע לחברה לפני ההצבעה, או על גבי כתב ההצבעה, אם יש לו עניין אישי באישור העסקה אם לאו` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 276 - בעל המניה רשאי להצביע וקולו יימנה` MEANS
+        (NOT `בעל המניה משתתף בהצבעה לפי סעיף 275`)
+    OR  `הוא הודיע לחברה לפני ההצבעה, או על גבי כתב ההצבעה, אם יש לו עניין אישי באישור העסקה אם לאו`
+
+§§ `סעיף 277: אישורים מצטברים`
+
+-- Section 277: where the conditions of more than one alternative of section 270 are met, the transaction needs the approvals that apply to
+-- each alternative. This rule collects the approvals of sections 271 to 275 and the general meeting's extra approval under 278(ג),
+-- and joins them (`סעיף 277 - צירוף אישורים`).
+-- src:1896 | {{ח:ת}} התקיימו בעסקה התנאים הקבועים ביותר מחלופה אחת מהחלופות {{ח:פנימי|סעיף 270|שבסעיף 270}}, טעונה העסקה אישורים בהתאם להוראות החלות על כל אחת מן החלופות.
+@ref סעיף 277 (src:1896)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `החלופות` IS A `סעיף 270 - החלופות שמתקיימות בעסקה`
+      `העובדות` IS A `סעיף 271 - עובדות על העסקה לענין האישורים`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 277 - האישורים שעסקה טעונה לפי כל החלופות שבסעיף 270` MEANS
+    `סעיף 277 - צירוף אישורים`
+        (`סעיף 277 - צירוף אישורים`
+            (`סעיף 277 - צירוף אישורים`
+                (`סעיף 277 - צירוף אישורים`
+                    (`סעיף 271 - האישורים שעסקה שאינה חריגה טעונה` `החלופות` `העובדות`)
+                    (`סעיף 272(א) ו־(ב) - האישורים שעסקה חריגה עם נושא משרה או עסקה בחברה פרטית שאינה חברת איגרות חוב טעונה` `העובדות על החברה` `החלופות` `העובדות`))
+                (`סעיף 277 - צירוף אישורים`
+                    (`סעיף 272(ג) - האישורים שעסקה עם נושא משרה בחברה ציבורית או חברת איגרות חוב טעונה` `העובדות על החברה` `החלופות` `העובדות`)
+                    (`סעיף 272(ג1) - האישורים שעסקה עם המנהל הכללי טעונה` `העובדות על החברה` `החלופות` `העובדות`)))
+            (`סעיף 277 - צירוף אישורים`
+                (`סעיף 277 - צירוף אישורים`
+                    (`סעיף 272(ד) - האישורים שנדרשים לשינוי לא מהותי של עסקה קיימת` `העובדות על החברה` `החלופות` `העובדות`)
+                    (`סעיף 273 - האישורים שעסקה עם דירקטור באשר לתנאי כהונתו והעסקתו טעונה` `העובדות על החברה` `החלופות` `העובדות`))
+                (`סעיף 277 - צירוף אישורים`
+                    (`סעיף 274 - האישורים שהצעה פרטית מהותית טעונה` `החלופות`)
+                    (`סעיף 275(א) - האישורים שעסקה עם בעל שליטה בחברה ציבורית טעונה` `החלופות` `העובדות`))))
+        (`סעיף 277 - צירוף אישורים`
+            (`סעיף 275(ג) - האישורים שעסקה עם בעל שליטה בחברת איגרות חוב פרטית טעונה` `החלופות` `העובדות`)
+            (`סעיף 278(ג) - האישורים שנוספים כשלרוב הדירקטורים יש עניין אישי` `העובדות`))
+
+§§ `סעיף 278: הימנעות בעלי עניין אישי`
+
+-- Section 278(א): a person with a personal interest in approving a transaction brought for approval to the audit committee or the board,
+-- other than a transaction under section 271, may not be present at the discussion nor take part in the vote in the audit committee and
+-- the board; but an office-holder who has a personal interest may be present to present the transaction if the chairperson of the audit
+-- committee or of the board, as the case may be, determined that he is required to present it.
+-- Section 278(ב): despite (א), a director may be present at the discussion in the audit committee and take part in the vote if most of
+-- the audit committee's members have a personal interest in approving the transaction, and may be present in the board and vote if most of
+-- the directors in the company have one. "In the audit committee ... in the board" is read as the body where the discussion is held.
+-- src:1899 | {{ח:תת|(א)}} מי שיש לו ענין אישי באישור עסקה, למעט עסקה כאמור {{ח:פנימי|סעיף 271|בסעיף 271}}, המובאת לאישור ועדת הביקורת או הדירקטוריון, לא יהיה נוכח בדיון ולא ישתתף בהצבעה בועדת הביקורת ובדירקטוריון ואולם נושא משרה שיש לו עניין אישי, רשאי להיות נוכח לשם הצגת העסקה, אם יושב ראש ועדת הביקורת או יושב ראש הדירקטוריון, לפי העניין, קבע כי הוא נדרש לשם הצגתה.
+-- src:1900 | {{ח:תת|(ב)}} על אף האמור בסעיף קטן (א), רשאי דירקטור להיות נוכח בדיון בועדת ביקורת ולהשתתף בהצבעה, אם לרוב חברי ועדת הביקורת יש ענין אישי באישור העסקה, וכן רשאי דירקטור להיות נוכח בדיון בדירקטוריון ולהשתתף בהצבעה, אם לרוב הדירקטורים בחברה יש ענין אישי באישור העסקה.
+@ref סעיף 278(א) (src:1899-1900)
+GIVEN `לאדם יש ענין אישי באישור העסקה` IS A BOOLEAN
+      `העסקה היא עסקה כאמור בסעיף 271` IS A BOOLEAN
+      `האדם הוא נושא משרה` IS A BOOLEAN
+      `היושב ראש קבע כי הוא נדרש לשם הצגת העסקה` IS A BOOLEAN
+      `האדם הוא דירקטור` IS A BOOLEAN
+      `לרוב חברי הגוף שבו מתקיים הדיון יש ענין אישי באישור העסקה` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 278 - האדם רשאי להיות נוכח בדיון` MEANS
+        (NOT (`לאדם יש ענין אישי באישור העסקה` AND (NOT `העסקה היא עסקה כאמור בסעיף 271`)))
+    OR  (`האדם הוא נושא משרה` AND `היושב ראש קבע כי הוא נדרש לשם הצגת העסקה`)
+    OR  (`האדם הוא דירקטור` AND `לרוב חברי הגוף שבו מתקיים הדיון יש ענין אישי באישור העסקה`)
+
+-- src:1900 | {{ח:תת|(ב)}} על אף האמור בסעיף קטן (א), רשאי דירקטור להיות נוכח בדיון בועדת ביקורת ולהשתתף בהצבעה, אם לרוב חברי ועדת הביקורת יש ענין אישי באישור העסקה, וכן רשאי דירקטור להיות נוכח בדיון בדירקטוריון ולהשתתף בהצבעה, אם לרוב הדירקטורים בחברה יש ענין אישי באישור העסקה.
+@ref סעיף 278(ב) (src:1900)
+GIVEN `לאדם יש ענין אישי באישור העסקה` IS A BOOLEAN
+      `העסקה היא עסקה כאמור בסעיף 271` IS A BOOLEAN
+      `האדם הוא דירקטור` IS A BOOLEAN
+      `לרוב חברי הגוף שבו מתקיים הדיון יש ענין אישי באישור העסקה` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 278 - האדם רשאי להשתתף בהצבעה` MEANS
+        (NOT (`לאדם יש ענין אישי באישור העסקה` AND (NOT `העסקה היא עסקה כאמור בסעיף 271`)))
+    OR  (`האדם הוא דירקטור` AND `לרוב חברי הגוף שבו מתקיים הדיון יש ענין אישי באישור העסקה`)
+
+-- Section 278(ג): if most of the directors on the company's board have a personal interest in approving a transaction as in (א),
+-- the transaction needs the general meeting's approval as well.
+-- src:1901 | {{ח:תת|(ג)}} היה לרוב הדירקטורים בדירקטוריון החברה ענין אישי באישור עסקה כאמור בסעיף קטן (א), טעונה העסקה גם אישור האסיפה הכללית.
+@ref סעיף 278(ג) (src:1901)
+GIVEN `העובדות` IS A `סעיף 271 - עובדות על העסקה לענין האישורים`
+GIVETH A `סעיף 277 - האישורים שעסקה טעונה`
+`סעיף 278(ג) - האישורים שנוספים כשלרוב הדירקטורים יש עניין אישי` MEANS
+    IF `העובדות`'s `לרוב הדירקטורים יש עניין אישי באישור העסקה` AND `העובדות`'s `העסקה היא עסקה כאמור בסעיף 278(א), שאינה עסקה לפי סעיף 271`
+    THEN `סעיף 277 - רשימת אישורים` FALSE FALSE FALSE TRUE FALSE FALSE FALSE
+    ELSE `סעיף 277 - עסקה שאינה טעונה אישורים`
+
+§§ `סעיף 279: ועדת ביקורת בחברה ציבורית ובחברה פרטית שהיא חברת איגרות חוב`
+
+-- The audit committee of a public company or a private bond company may not give an approval this chapter requires unless, when it gives
+-- it, section 115 (piece ic1: the committee's composition) is met in it. The section lays no condition on the audit committee of any other company.
+-- out of range: section 115 (piece ic1): whether the audit committee meets it is the input.
+-- src:1904 | {{ח:ת}} ועדת ביקורת בחברה ציבורית או בחברה פרטית שהיא חברת איגרות חוב לא תהא רשאית לתת אישור הנדרש לפי {{ח:פנימי|חלק 6 פרק 5|פרק זה}}, אלא אם כן מתקיימות בה, בעת מתן האישור, הוראות {{ח:פנימי|סעיף 115|סעיף 115}}.
+@ref סעיף 279 (src:1904)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `בעת מתן האישור מתקיימות בוועדת הביקורת הוראות סעיף 115` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 279 - ועדת הביקורת רשאית לתת אישור הנדרש לפי פרק זה` MEANS
+        (NOT (`סעיף 251 - חברה ציבורית או חברה פרטית שהיא חברת איגרות חוב` `העובדות על החברה`))
+    OR  `בעת מתן האישור מתקיימות בוועדת הביקורת הוראות סעיף 115`
+
+§§ `סעיף 280: עסקה חסרת תוקף`
+
+-- Section 280(א): a transaction of the company with an office-holder in it, or a transaction as in 270(4) and (4א) with a controlling shareholder,
+-- has no effect toward the company and toward the office-holder or controlling shareholder if it was not approved as the chapter provides,
+-- including where a material defect occurred in the approval process, or if the transaction was made in material departure from the approval.
+-- src:1907 | {{ח:תת|(א)}} לעסקה של חברה עם נושא משרה בה או לעסקה כאמור {{ח:פנימי|סעיף 270|בסעיף 270(4) ו־(4א)}} עם בעל שליטה בה לא יהיה תוקף כלפי החברה וכלפי נושא המשרה או בעל השליטה, אם העסקה לא אושרה בהתאם לקבוע {{ח:פנימי|חלק 6 פרק 5|בפרק זה}} לרבות אם נפל בהליך האישור פגם מהותי, או אם העסקה נעשתה בחריגה מהותית מן האישור.
+@ref סעיף 280(א) (src:1907)
+GIVEN `העסקה היא עסקה של החברה עם נושא משרה בה, או עסקה לפי סעיף 270(4) או (4א) עם בעל שליטה בה` IS A BOOLEAN
+      `העסקה לא אושרה בהתאם לקבוע בפרק זה` IS A BOOLEAN
+      `נפל בהליך האישור פגם מהותי` IS A BOOLEAN
+      `העסקה נעשתה בחריגה מהותית מן האישור` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 280(א) - לעסקה אין תוקף כלפי החברה וכלפי נושא המשרה או בעל השליטה` MEANS
+        `העסקה היא עסקה של החברה עם נושא משרה בה, או עסקה לפי סעיף 270(4) או (4א) עם בעל שליטה בה`
+    AND (    `העסקה לא אושרה בהתאם לקבוע בפרק זה`
+         OR  `נפל בהליך האישור פגם מהותי`
+         OR  `העסקה נעשתה בחריגה מהותית מן האישור`)
+
+-- Section 280(ב): the transaction has no effect toward another person either, if that person knew of the personal interest of the
+-- office-holder or the controlling shareholder in approving the transaction, and knew or should have known of the absence of an approval
+-- the chapter requires.
+-- src:1908 | {{ח:תת|(ב)}} לעסקה כאמור בסעיף קטן (א) לא יהיה תוקף גם כלפי אדם אחר אם אותו אדם ידע על ענינו האישי של נושא המשרה או של בעל השליטה באישור העסקה, וידע או היה עליו לדעת על העדר אישור לעסקה כנדרש לפי {{ח:פנימי|חלק 6 פרק 5|פרק זה}}.
+@ref סעיף 280(ב) (src:1908)
+GIVEN `העסקה היא עסקה כאמור בסעיף קטן (א)` IS A BOOLEAN
+      `האדם האחר ידע על ענינו האישי של נושא המשרה או של בעל השליטה באישור העסקה` IS A BOOLEAN
+      `הידיעה` IS A `סעיף 282 - עובדות על ידיעת אדם על העדר אישור`
+GIVETH A BOOLEAN
+`סעיף 280(ב) - לעסקה אין תוקף גם כלפי אדם אחר` MEANS
+        `העסקה היא עסקה כאמור בסעיף קטן (א)`
+    AND `האדם האחר ידע על ענינו האישי של נושא המשרה או של בעל השליטה באישור העסקה`
+    AND `סעיף 282 - האדם ידע או שהיה עליו לדעת על העדר אישור` `הידיעה`
+
+§§ `סעיף 281: ביטול עסקה`
+
+-- Section 281: the company may cancel a transaction with another person that needs approval under the chapter (except one under section 271),
+-- and may claim damages for its loss even without cancelling it, if that person knew of the office-holder's personal interest in approving it,
+-- or of the personal interest of the controlling shareholder in a public company or private bond company, and knew or should have known
+-- of the absence of the approval the chapter requires.
+-- src:1911 | {{ח:ת}} חברה רשאית לבטל עסקה עם אדם אחר, הטעונה אישור כאמור {{ח:פנימי|חלק 6 פרק 5|בפרק זה}}, למעט עסקה כאמור {{ח:פנימי|סעיף 271|בסעיף 271}}, וכן רשאית היא לתבוע ממנו פיצויים בשל הנזק שנגרם לה אף בלא ביטול העסקה, אם אותו אדם ידע על ענינו האישי של נושא המשרה בחברה באישור העסקה או על ענינו האישי של בעל השליטה בחברה הציבורית או בחברה הפרטית שהיא חברת איגרות חוב באישור העסקה, וידע או היה עליו לדעת על העדר אישור לעסקה כנדרש לפי {{ח:פנימי|חלק 6 פרק 5|פרק זה}}.
+@ref סעיף 281 (src:1911)
+GIVEN `העסקה היא עסקה עם אדם אחר, הטעונה אישור כאמור בפרק זה` IS A BOOLEAN
+      `העסקה היא עסקה כאמור בסעיף 271` IS A BOOLEAN
+      `האדם האחר ידע על ענינו האישי של נושא המשרה או של בעל השליטה באישור העסקה` IS A BOOLEAN
+      `הידיעה` IS A `סעיף 282 - עובדות על ידיעת אדם על העדר אישור`
+GIVETH A BOOLEAN
+`סעיף 281 - החברה רשאית לבטל את העסקה או לתבוע פיצויים` MEANS
+        `העסקה היא עסקה עם אדם אחר, הטעונה אישור כאמור בפרק זה`
+    AND (NOT `העסקה היא עסקה כאמור בסעיף 271`)
+    AND `האדם האחר ידע על ענינו האישי של נושא המשרה או של בעל השליטה באישור העסקה`
+    AND `סעיף 282 - האדם ידע או שהיה עליו לדעת על העדר אישור` `הידיעה`
+
+§§ `סעיף 282: אישור דירקטוריון`
+
+-- What a person knew or should have known about the absence of an approval. Sections 280(ב), 281 and 282 read it, and section 256(ד)
+-- (Part 6 chapter 3) is the same presumption for an act.
+-- `קיבל את אישור הדירקטוריון` is the board's confirmation that all the required approvals were obtained; `הוכח שהיה עליו לדעת` is the
+-- rebuttal of the presumption (pattern 7.2: the rebuttal is its own input); `בנסיבות הענין היה עליו לדעת` is the judgment, on the facts, of
+-- whether he should have known.
+-- src:1914 | {{ח:ת}} חזקה על אדם שלא היה עליו לדעת על העדר אישור לעסקה כנדרש לפי {{ח:פנימי|חלק 6 פרק 5|פרק זה}}, אם קיבל את אישור הדירקטוריון לכך שנתקבלו כל האישורים הנדרשים לעסקה.
+@ref סעיף 282 (src:1914)
+DECLARE `סעיף 282 - עובדות על ידיעת אדם על העדר אישור` HAS
+    `האדם ידע על העדר אישור`                                                         IS A BOOLEAN
+    `האדם קיבל את אישור הדירקטוריון לכך שנתקבלו כל האישורים הנדרשים`                    IS A BOOLEAN
+    `הוכח שהיה עליו לדעת על העדר אישור על אף אישור הדירקטוריון`                          IS A BOOLEAN
+    `בנסיבות הענין היה על האדם לדעת על העדר אישור`                                      IS A BOOLEAN
+
+-- Section 282: a person is presumed not to have been required to know of the absence of an approval required by the chapter if he
+-- received the board's approval that all the approvals required for the transaction were obtained.
+-- src:1914 | {{ח:ת}} חזקה על אדם שלא היה עליו לדעת על העדר אישור לעסקה כנדרש לפי {{ח:פנימי|חלק 6 פרק 5|פרק זה}}, אם קיבל את אישור הדירקטוריון לכך שנתקבלו כל האישורים הנדרשים לעסקה.
+@ref סעיף 282 (src:1914)
+GIVEN `הידיעה` IS A `סעיף 282 - עובדות על ידיעת אדם על העדר אישור`
+GIVETH A BOOLEAN
+`סעיף 282 - חזקה שלא היה על האדם לדעת על העדר אישור` MEANS
+        `הידיעה`'s `האדם קיבל את אישור הדירקטוריון לכך שנתקבלו כל האישורים הנדרשים`
+    AND (NOT (`הידיעה`'s `הוכח שהיה עליו לדעת על העדר אישור על אף אישור הדירקטוריון`))
+
+-- He knew or should have known of the absence of approval: he knew, or the circumstances required him to know and the presumption does not
+-- protect him.
+-- src:1914 | {{ח:ת}} חזקה על אדם שלא היה עליו לדעת על העדר אישור לעסקה כנדרש לפי {{ח:פנימי|חלק 6 פרק 5|פרק זה}}, אם קיבל את אישור הדירקטוריון לכך שנתקבלו כל האישורים הנדרשים לעסקה.
+@ref סעיף 282 (src:1914)
+GIVEN `הידיעה` IS A `סעיף 282 - עובדות על ידיעת אדם על העדר אישור`
+GIVETH A BOOLEAN
+`סעיף 282 - האדם ידע או שהיה עליו לדעת על העדר אישור` MEANS
+        `הידיעה`'s `האדם ידע על העדר אישור`
+    OR  (    `הידיעה`'s `בנסיבות הענין היה על האדם לדעת על העדר אישור`
+         AND (NOT (`סעיף 282 - חזקה שלא היה על האדם לדעת על העדר אישור` `הידיעה`)))
+
+§§ `סעיף 283: סעדים`
+
+-- Section 283(א): an office-holder who did not disclose his personal interest as section 269 requires is treated as having breached the
+-- duty of fiduciary loyalty (חובת האמונים).
+-- src:1917 | {{ח:תת|(א)}} נושא משרה שלא גילה את ענינו האישי כאמור {{ח:פנימי|סעיף 269|בסעיף 269}} יראו אותו כמי שהפר את חובת האמונים; בעל שליטה בחברה ציבורית או בחברה פרטית שהיא חברת איגרות חוב שלא גילה את ענינו האישי כאמור {{ח:פנימי|סעיף 269|באותו סעיף}}, יראו אותו כמי שהפר את חובת ההגינות.
+@ref סעיף 283(א) (src:1917)
+GIVEN `האדם הוא נושא משרה` IS A BOOLEAN
+      `האדם לא גילה את ענינו האישי כאמור בסעיף 269` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 283(א) - נושא המשרה נחשב כמי שהפר את חובת האמונים` MEANS
+        `האדם הוא נושא משרה`
+    AND `האדם לא גילה את ענינו האישי כאמור בסעיף 269`
+
+-- Section 283(א), second limb: a controlling shareholder in a public company or a private bond company who did not disclose his
+-- personal interest as that section requires is treated as having breached the duty of fairness (חובת ההגינות).
+-- src:1917 | {{ח:תת|(א)}} נושא משרה שלא גילה את ענינו האישי כאמור {{ח:פנימי|סעיף 269|בסעיף 269}} יראו אותו כמי שהפר את חובת האמונים; בעל שליטה בחברה ציבורית או בחברה פרטית שהיא חברת איגרות חוב שלא גילה את ענינו האישי כאמור {{ח:פנימי|סעיף 269|באותו סעיף}}, יראו אותו כמי שהפר את חובת ההגינות.
+@ref סעיף 283(א) (src:1917)
+GIVEN `העובדות על החברה` IS A `עובדות על חברה`
+      `האדם הוא בעל שליטה בחברה` IS A BOOLEAN
+      `האדם לא גילה את ענינו האישי כאמור בסעיף 269` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 283(א) - בעל השליטה נחשב כמי שהפר את חובת ההגינות` MEANS
+        `האדם הוא בעל שליטה בחברה`
+    AND `סעיף 251 - חברה ציבורית או חברה פרטית שהיא חברת איגרות חוב` `העובדות על החברה`
+    AND `האדם לא גילה את ענינו האישי כאמור בסעיף 269`
+
+-- Section 283(ב): the company may claim damages for the losses it suffered from the lack of disclosure from an interested party who
+-- breached the duty of disclosure in section 269, or from a shareholder who did not disclose his personal interest as section 276 requires.
+-- src:1918 | {{ח:תת|(ב)}} צד מעונין שהפר את חובת הגילוי כאמור {{ח:פנימי|סעיף 269|בסעיף 269}} או בעל מניה שלא גילה את ענינו האישי כאמור {{ח:פנימי|סעיף 276|בסעיף 276}}, רשאית החברה לתבוע ממנו פיצויים על הנזקים שנגרמו לה עקב העדר הגילוי.
+@ref סעיף 283(ב) (src:1918)
+GIVEN `האדם הוא צד מעוניין שהפר את חובת הגילוי כאמור בסעיף 269` IS A BOOLEAN
+      `האדם הוא בעל מניה שלא גילה את ענינו האישי כאמור בסעיף 276` IS A BOOLEAN
+      `נגרמו לחברה נזקים עקב העדר הגילוי` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 283(ב) - החברה רשאית לתבוע פיצויים בשל העדר גילוי` MEANS
+        (   `האדם הוא צד מעוניין שהפר את חובת הגילוי כאמור בסעיף 269`
+         OR `האדם הוא בעל מניה שלא גילה את ענינו האישי כאמור בסעיף 276`)
+    AND `נגרמו לחברה נזקים עקב העדר הגילוי`
+
+§§ `סעיף 284: תקנות`
+
+-- Section 284: the Minister may provide that the chapter does not apply to classes of transactions (for a public company or bond company,
+-- after consulting the Securities Authority). Whether a transaction belongs to a class so exempted is a plain input; the regulations
+-- (the notes on src:1922 and src:1923) are not among the inputs.
+-- src:1920 | {{ח:סעיף|284|תקנות|תיקון: תשע״א־4, תשע״ד־5}}
+-- src:1921 | {{ח:ת}} השר רשאי לקבוע כי הוראות {{ח:פנימי|חלק 6 פרק 5|פרק זה}} לא יחולו על סוגים שונים של עסקאות, ובלבד שלעניין חברה ציבורית או חברת איגרות חוב, יקבע כן לאחר התייעצות עם רשות ניירות ערך.
+@ref סעיף 284 (src:1920-1921)
+GIVEN `העסקה היא מסוג שהשר קבע כי הוראות הפרק לא יחולו עליו` IS A BOOLEAN
+GIVETH A BOOLEAN
+`סעיף 284 - הוראות הפרק חלות על העסקה` MEANS
+    NOT `העסקה היא מסוג שהשר קבע כי הוראות הפרק לא יחולו עליו`
