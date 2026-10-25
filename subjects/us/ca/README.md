@@ -6,6 +6,24 @@ The subjects here were laid out on 2026-09-22 for the legislation governing twel
 
 **Licence category: open.** Statute text may be deposited and quoted in an encoding, subject to the attribution above.
 
+## Line-structured siblings of the Welfare and Institutions Code deposits
+
+Six texts deposited on 2026-10-20 under `welfare-and-institutions-code-division-9-part-3-chapter-2` (four files) and `welfare-and-institutions-code-division-9-part-3-chapter-3-state-supplementary-program` (two files) contain no newline.
+Each is a single line of 46,000 to 474,000 characters, although the converter described in its `.meta.json` put one paragraph per line.
+An encoding quotes the law by line (`-- src:N |`, checked by `srcrefs.py` in `legalese/l4-ide`), and every provision of a one-line file is on line 1, so such a file cannot be quoted or cited by line.
+The Guide (`docs/ENCODING-GUIDE.md`, section 8) says never to alter a deposited text and to put a correction beside it as a new file.
+So each of the six has a sibling, `<id>.lines.txt`, with its own `<id>.lines.meta.json`, and the originals are unchanged.
+The sibling is a duplicate of the original with line breaks put in; it is not a second source.
+An encoding should quote the sibling, and its `NOTES.md` should name it.
+
+The sibling has the same words in the same order as the original; only line breaks, and the spaces next to them, differ.
+Anyone can check that with the command in the sibling's meta (`derivation.check`), and the original's sha256 is in the sibling's meta (`derived_from`).
+A break goes before each section marker, each heading marker, the line of equals signs that closes the header, and each first-level lettered subdivision ((a), (b), ...) that follows a full stop and begins a capitalised sentence; the exact rule and a script that applies it are in `derivation` in the meta.
+That is a heuristic about layout, not a parse of the code's structure: a line is a section or a lettered subdivision of one, a few lines are longer than 5,000 characters, and a break may fall where the code has none.
+Nothing in the words depends on it.
+
+Four other deposits under this directory have the same defect and have no sibling yet: the three Revenue and Taxation Code texts (Part 10, chapters 1 to 3) and the Unemployment Insurance Code text (Division 1, Part 1, chapter 5), which already have `baseline-2026-10` encodings.
+
 ## Topics with no legislation here
 
 - **Passenger compensation**: Air passenger rights are federal (DOT rules under 49 U.S.C., with state regulation preempted by the Airline Deregulation Act). California has no passenger-compensation statute comparable to EU261.
