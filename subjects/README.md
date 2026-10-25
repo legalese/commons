@@ -375,7 +375,7 @@ One directory per jurisdiction, then one directory per body of law inside it.
 | [`us/ar/`](us/ar/) | Arkansas (US state) -- **metadata only**; licence decision pending |
 | [`us/co/`](us/co/) | Colorado (US state) -- **metadata only**; licence decision pending |
 | [`us/ct/`](us/ct/) | Connecticut (US state) -- **metadata only**; licence decision pending |
-| [`us/de/`](us/de/) | Delaware (US state) -- **metadata only**; licence decision pending |
+| [`us/de/`](us/de/) | Delaware (US state) -- licence decided 2026-10-25: the text may be deposited and quoted (government-edicts doctrine, see `us/de/README.md`) |
 | [`us/dc/`](us/dc/) | District of Columbia (US federal district) -- **metadata only**; licence decision pending |
 | [`us/fl/`](us/fl/) | Florida (US state) -- **metadata only**; licence decision pending |
 | [`us/ga/`](us/ga/) | Georgia (US state) -- **metadata only**; licence decision pending |

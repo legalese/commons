@@ -16,6 +16,18 @@ The text of **Companies Law, 5759-1999** (חוק החברות, התשנ"ט-1999)
 Statute text may be deposited and quoted in an encoding. Record which text was used and its date:
 a consolidated working text has no official status, so an encoding that relies on it must say so.
 
+## Ruling recorded 2026-10-25
+
+Meng's ruling on the version of the Wikisource licence, in his words: "I believe CC licenses include their own forward compatibility clause so we can resolve the versioning in favour of the later".
+Checked on 2026-10-25 against the licence texts:
+- CC BY-SA 3.0 Unported, section 4(b), lets an Adaptation be distributed or publicly performed only under "(i) the terms of this License; (ii) a later version of this License with the same License Elements as this License;" or "(iii) a Creative Commons jurisdiction license (either this or a later license version) that contains the same License Elements".
+  The License Elements of BY-SA are Attribution and ShareAlike.
+- The Wikimedia Foundation Terms of Use, section 7.1, have contributors license their text under CC BY-SA 4.0 (https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use, read 2026-10-25).
+So a Wikisource contribution that was made under 3.0 is treated here as available under 4.0, and the licence of Wikisource's own editorial layer is taken to be CC BY-SA 4.0 throughout.
+This resolves the difference between this file (4.0) and the `NOTICE` entry for `il/penal-law-1977` (3.0); that entry is not changed here.
+The ruling does not decide whether ShareAlike reaches the quoted lines of the statute at all, or the question whether Copyright Act 5768-2007 s 6 has been checked against the section text.
+Those stay open.
+
 ## Language
 
 Hebrew is authoritative; English translations are unofficial. The English title above is a rendering, not an enacted title.

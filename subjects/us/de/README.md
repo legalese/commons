@@ -4,7 +4,24 @@ Delaware (US state) legislation, one subject-id per body of law, following the s
 
 The subjects here were laid out on 2026-09-23 for the legislation governing twelve everyday topics. Each was checked against the The Delaware Code Online (Delaware General Assembly, Division of Research); the check is recorded in each subject's `registers/source-bundle/*.meta.json`. No statute text has been deposited and nothing is encoded yet.
 
-**Licence category: unclear.** **Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
+**Licence decided 2026-10-25.**
+Meng's ruling, in his words: "drop the metadata assertions. License in the full text? We rely on previous American cases that say law should be open and not copyrighted to the extent of restricting our kind of use".
+So the full text of a Delaware statute may be deposited here, quoted line by line in an encoding, and redistributed with it.
+The Delaware Code Online gives no licence of its own: for the General Corporation Law deposit it was checked on 2026-10-21 and has no terms-of-use, copyright or licence page, and its pages claim no copyright in the statutory text (`delaware-code-title-8-corporations-chapter-1-general-corporation-law/SOURCE-LICENSE.md`).
+The decision therefore rests on the American government-edicts doctrine and not on a licence from the State.
+The authorities, as I read them on 2026-10-25 (Claude, session market-register); no lawyer has reviewed this paragraph:
+- *Georgia v. Public.Resource.Org, Inc.*, No. 18-1150 (U.S. Apr. 27, 2020), 590 U.S. 255.
+  The Court held that the annotations in Georgia's Official Code are not copyrightable, because the doctrine turns on the identity of the author and judges and legislators may not be the authors of works made in their official capacity: "no one can own the law".
+  It relied on *Wheaton v. Peters* (1834), *Banks v. Manchester* (1888) and *Callaghan v. Myers* (1888).
+  Public.Resource.Org had posted a digital copy of the whole Code online, without permission, for the public to download without charge.
+  The publisher's drafting labour "redounds to the Commission as the statutory author".
+  Georgia did not claim copyright in the statutory text or its numbering, so the holding is about the annotations and the statutory text was not in dispute.
+- *Veeck v. Southern Building Code Congress International, Inc.*, 293 F.3d 791 (5th Cir. 2002) (en banc), persuasive only: a model code that a town enacts is "the law" of the town and "may be reproduced or distributed", while the model code as a model keeps its protection.
+The limit is the authorship rule itself.
+It covers works whose author has the power to make or interpret the law; it does not cover what a private publisher writes on its own account (in *Callaghan* the reporter kept his copyright in his own notes).
+The Code Online says it is prepared by the Delaware Code Revisors and the editorial staff of LexisNexis in cooperation with the Division of Legislative Services; the General Corporation Law deposit keeps each section's `History:` line, a citation of the session laws, and no annotation or headnote; some section headings carry a bracketed note pointing to a session-law application clause.
+Our use, quoting the text line by line in an encoding published under Apache-2.0, is the same kind of use as the one in *Georgia*: copying published law and republishing it.
+This record does not extend to any other jurisdiction.
 
 ## Register access
 
