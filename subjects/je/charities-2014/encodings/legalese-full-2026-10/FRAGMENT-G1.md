@@ -1,7 +1,7 @@
 # FRAGMENT-G1: Articles 1 and 2 of the Charities (Jersey) Law 2014 (interpretation; definition of entity and related terms)
 
-Written by ENCODER G1 on 2026-10-26.
-Everything stated in the present tense below was checked on that day against the files named, with the fleet binary `l4` (sha256 `18bd5a72fb8dc3180540afeece05da982f87d03aa098de562de2140e4e89d475`), by `work/g1/check.sh`.
+Written by ENCODER G1 on 2026-10-26; changed on 2026-10-27 by section 11.1 (assumed, not ruled).
+Everything stated in the present tense below was checked against the files named, on 2026-10-26 for sections 1 to 10 and on 2026-10-27 for the check block of section 0 and for section 11.1, with the fleet binary `l4` (sha256 `18bd5a72fb8dc3180540afeece05da982f87d03aa098de562de2140e4e89d475`), by `work/g1/check.sh`.
 The last run printed what section 0 shows.
 Nothing here has been read by a domain expert (the review the pipeline calls HG1 has not happened).
 
@@ -15,7 +15,9 @@ Files in DEPOSIT (all start with `g1-`, none starts with `@lang en`):
 | `g1-art1-defined-terms.l4` | the title, the long title and Article 1: four computed definitions, three roles, the stubs for the rest |
 | `g1-art2-entity.l4` | Article 2(1) to (6): the facts about a body, the kinds of entity, the power in 2(2), Jersey entity, constitution, constitutional Law, purpose |
 | `g1-art2-governor-misconduct.l4` | Article 2(7) to (10): governor, relevant unincorporated entity, the two clarifications of (9), misconduct |
+| `g1-art2-9a-persons.l4` | added 2026-10-27 (section 11.1, assumed, not ruled): Article 2(9)(a) with the persons in it, and the derivation of the four-way relation of `g1-art2-governor-misconduct.l4` from persons; an additional, callable route |
 | `g1-tests-art1.l4`, `g1-tests-art2-entity.l4`, `g1-tests-art2-governor-misconduct.l4` | the tests; every expected value was decided from the source before the module was run |
+| `g1-tests-art2-9a-persons.l4` | added 2026-10-27: the tests of the persons route, 63 assertions, expected values decided from the Law's text |
 | `FRAGMENT-G1.md` | this file |
 
 There is no `g1-tests-red.l4`: nothing in Articles 1 and 2 is expected to fail, so the expected-failed count of group G1 is 0 in every module.
@@ -28,17 +30,19 @@ l4 binary: FLEET_DIR/bin/l4 (sha256 matches the fleet's binary)
 
 module                                    errors satisfied  failed  refused  warnings  expected
 g1-art1-defined-terms.l4                       0         0       0        0         0         0
+g1-art2-9a-persons.l4                          0         0       0        0         0         0
 g1-art2-entity.l4                              0         0       0        0         0         0
 g1-art2-governor-misconduct.l4                 0         0       0        0         0         0
 g1-interpretation.l4                           0         0       0        0         0         0
 g1-tests-art1.l4                               0        74       0        0         0         0
+g1-tests-art2-9a-persons.l4                    0        63       0        0         0         0
 g1-tests-art2-entity.l4                        0       185       0        0         0         0
 g1-tests-art2-governor-misconduct.l4           0       147       0        0         0         0
-TOTAL (7 modules)                              0       406       0        0         0
+TOTAL (9 modules)                              0       469       0        0         0
 (a failed assertion is also an error; a refused assertion is also a warning; any other error, any refusal, any warning and any failed count other than expected make the run red)
 
 shape: every g1- module has a plain name, starts without @lang en, and imports only prelude, daydate, domain and g1- modules
-srcrefs check: 134 src: lines, 81 runs, 144 locators, 0 problems
+srcrefs check: 137 src: lines, 83 runs, 146 locators, 0 problems
 module                                        traces in-module   sidecar     ok   bad  unguarded
 g1-tests-art2-entity.l4                            3         3         0      3     0          0
 TOTAL                                              3         3         0      3     0          0
@@ -163,8 +167,8 @@ Where the module column names a module for an out-of-scope row, the module holds
 | 2(8)(b) | Article 2(8)(b) | encoded | g1-art2-governor-misconduct | `Art 2(8)(b) the constitution conforms to a model published by the Commissioner that provides for a management committee` |  |
 | 2(8)(b)(i) | Article 2(8)(b)(i) | encoded | g1-art2-governor-misconduct | `Art 2(8)(b)(i) the model is published for the purpose by the Commissioner` |  |
 | 2(8)(b)(ii) | Article 2(8)(b)(ii) | encoded | g1-art2-governor-misconduct | `Art 2(8)(b)(ii) the model provides for the entity to have a management committee` |  |
-| 2(9) | Article 2(9) | encoded | g1-art2-governor-misconduct | `Art 2(9)(a) the person only exercises the general control and management on behalf of another who has it in own right`; `Art 2(9)(b) the person has the general control and management alone or as one of a number of governors` | both clarifications are named rules over the shared noun `Relation to the general control and management`; (9)(a) is declaratory and is asserted, not added to (7)(e) |
-| 2(9)(a) | Article 2(9)(a) | encoded | g1-art2-governor-misconduct | `Art 2(9)(a) the person only exercises the general control and management on behalf of another who has it in own right` |  |
+| 2(9) | Article 2(9) | encoded | g1-art2-governor-misconduct | `Art 2(9)(a) the person only exercises the general control and management on behalf of another who has it in own right`; `Art 2(9)(b) the person has the general control and management alone or as one of a number of governors` | both clarifications are named rules over the shared noun `Relation to the general control and management`; (9)(a) is declaratory and is asserted, not added to (7)(e); section 11.1 adds the persons route for (a) in `g1-art2-9a-persons` |
+| 2(9)(a) | Article 2(9)(a) | encoded | g1-art2-governor-misconduct | `Art 2(9)(a) the person only exercises the general control and management on behalf of another who has it in own right` | stays encoded here, over the caller-supplied relation; section 11.1 adds an additional route in `g1-art2-9a-persons` (`Art 2(9)(a) the person exercises the general control and management on behalf of another person who has it in that other person's own right`, `Art 2(9) the relation of the person under the constitution`), which derives that relation from persons; assumed, not ruled |
 | 2(9)(b) | Article 2(9)(b) | encoded | g1-art2-governor-misconduct | `Art 2(9)(b) the person has the general control and management alone or as one of a number of governors` |  |
 | 2(10) | Article 2(10) | encoded | g1-art2-governor-misconduct | `Art 2(10) the conduct is misconduct` | forks F1.2 and F1.7; inputs IP13, IP19, IP26 under their standard names |
 | 2(10)(a) | Article 2(10)(a) | encoded | g1-art2-governor-misconduct | `Art 2(10)(a) a contravention by a registered charity or by any of its governors`; `Art 2(10) the entity is a registered charity at the time the standing is read` |  |
@@ -334,6 +338,10 @@ The following nouns are defined in G1's own modules; the integrator may move the
 5. `Governor` in `domain.l4` has fields named `is a natural person`, `is resident in Jersey` and `is itself a Jersey entity by virtue of Article 2(3)(a)`, which begin with `is`; the house ruling on clitic verbs asks fields to start at the complement.
    Read-only to G1, so recorded here.
 6. The roles `the Comptroller` and `the Jersey Financial Services Commission` are constructors of `Legal actor` already; no request.
+7. `Person` (in `g1-art2-9a-persons.l4`, section 11.1): a name and an identifier, equal when both are equal.
+   The shared nouns have no person.
+   Another group whose Article says "another person" (Article 21(2) and (7) are the nearest) can take the same type, and the same shape of rule: two persons introduced on the `GIVEN` line, and the condition that the second is not the first.
+   If the integrator moves `Person` into `domain.l4`, the two other nouns of that module (`Exercise on behalf of another person`, `Constitution as to the general control and management`) can stay where they are.
 
 ## 5. Inputs consumed, functions exported
 
@@ -353,6 +361,8 @@ IP1 (`the day`) is not used: Articles 1 and 2 have no date rule of their own; th
 
 `Facts about the body under Article 2` (23 fields: the status under the other enactments, how the body was established, its governors), `Facts about a person's role in an entity` (5 fields), `Facts about the model constitution of Article 2(8)`, `Facts about a publication`, `Facts about conduct under Article 2(10)` (19 fields).
 Each field has a `@desc` that says which sub-paragraph it feeds.
+Added 2026-10-27 (section 11.1): `Person`, `Exercise on behalf of another person` and `Constitution as to the general control and management`, the inputs of the persons route to Article 2(9)(a).
+None of the rules of that route is `@export`ed, so the table of exported functions below is unchanged.
 
 ### Functions exported (`@export`, with a sentence and a `@desc` on every `GIVEN`)
 
@@ -477,3 +487,111 @@ I listed `FLEET_DIR/work` once, to see that my own directory could be created; i
 While probing the compiler I once copied the DEPOSIT directory into my own `work/g1/probe` (to give a probe file its `domain.l4`); the copy included other groups' modules as they stood at that moment, and a later `ls` of that probe directory and of DEPOSIT printed their file names.
 I opened none of those files, and I deleted the copies from `work/g1/probe`; only the names of other groups' modules were seen.
 My context carried the harness's memory index, which names notes on this subject; I did not follow it and read none of the notes.
+On 2026-10-27, for the change of section 11.1, I ran one `grep` over the deposit's module files to see whether any of them already declares the names `Person`, `Exercise on behalf of another person` or `Constitution as to the general control and management`; it printed no match, and I read no module's contents.
+
+## 11. Changes after independent testing
+
+### 11.1 2026-10-27: Article 2(9)(a) with the persons ("a / the / another"), assumed, not ruled
+
+**Status.**
+Decided by the fleet lead and the general manager on 2026-10-27 and labelled *assumed, not ruled*; it is not a ruling of the owner.
+Written and checked in `work/g1/change-1027` against a copy of the deposit's seven `g1-` files (compared with `cmp`; byte-identical to the deposit's) plus the two new files.
+The two new files are additions: no earlier assertion, rule, record or signature of the group changed.
+
+**What was wrong, or rather missing.**
+Article 2(9)(a) reads (src:103): "a person is not a governor merely by virtue of exercising general control and management on behalf of another person who has the general control and management in that other person's own right under the constitution of the entity".
+`g1-art2-governor-misconduct.l4` takes how a person stands to the control as one caller-supplied four-way fact, `Relation to the general control and management`, and `Art 2(9)(a)` tests one constructor of it.
+Persons are not values there, and "another person" and "that other person" live inside the name of a constructor.
+
+**What was added.**
+The Law's grammar, in `g1-art2-9a-persons.l4`: "a person" and "another person" are two inputs introduced on the `GIVEN` line; "that other person" is the second one used again; "another" is the condition that the other person is not the person; "the entity" is the entity whose constitution it is.
+Then the four-way relation is derived from persons, so that the derived value can be fed to the existing rules and the existing headline.
+
+| the Law's words | the input or the condition |
+| --- | --- |
+| "a person" | `the person`, introduced on the `GIVEN` line |
+| "another person" | `the other person`, introduced on the `GIVEN` line, and the condition `NOT (the person EQUALS the other person)` |
+| "that other person" | `the other person`, used again in the body |
+| "has the general control and management in that other person's own right under the constitution of the entity" | `the other person` is a member of the list `who has it in their own right under the constitution` of `the constitution of the entity` |
+| "exercising ... on behalf of" | some entry of `who exercises it on behalf of whom` has `who exercises it` equal to the person and `on whose behalf` equal to the other person |
+
+**Types** (all in `g1-art2-9a-persons.l4`, all unique in the deposit: the grep named in section 10 found no other declaration of them).
+
+- `Person`: `name` (STRING) and `identifier` (STRING).
+  Equality is structural, so the same name with the same identifier is the same person, and the same name with different identifiers are two persons.
+  The caller gives distinct persons distinct pairs.
+- `Exercise on behalf of another person`: `who exercises it` (`Person`), `on whose behalf` (`Person`).
+  Someone who exercises it on their own behalf is recorded with the same person in both.
+- `Constitution as to the general control and management`: `who has it in their own right under the constitution` (`LIST OF Person`) and `who exercises it on behalf of whom` (`LIST OF Exercise on behalf of another person`).
+
+**Rules and their `GIVEN` lists** (no section `GIVEN`; no `@export`; the module imports `prelude` and `g1-art2-governor-misconduct` only; nothing in it needs `domain`).
+
+| rule | `GIVEN` | gives |
+| --- | --- | --- |
+| `Art 2(9)(a) the person exercises the general control and management on behalf of another person who has it in that other person's own right` | `the person` : `Person`; `the other person` : `Person`; `the constitution of the entity` : `Constitution as to the general control and management` | BOOLEAN |
+| `Art 2(9) the relation of the person under the constitution` | `the person` : `Person`; `the constitution of the entity` : `Constitution as to the general control and management` | `Relation to the general control and management` |
+
+The derivation reads, in order: if the person is among those who have it in their own right, then `holds the general control and management alone` when the distinct persons who have it number one (a person listed twice counts once), otherwise `holds the general control and management as one of a number of governors` (Article 2(9)(b)); otherwise, if the condition of (a) holds for some other person among those who have it in their own right, `exercises the general control and management only on behalf of another who holds it in that other's own right`; otherwise `holds none of the general control and management`.
+
+**"Merely" is read as "only", and there is no fork on it.**
+A person who has the control in their own right and also exercises it for another is not one who merely exercises it for another, so is not the third constructor; the first branch comes first for that reason.
+No second reading changes an answer: classing such a person as the agent would make them a non-governor although the constitution gives them the control, which the word "merely" is there to prevent.
+It is an assumption of the persons route, recorded here and in the module comment.
+
+**An additional, callable route.**
+The wired path is unchanged: `Art 2(7) the person is a governor of the entity`, `Art 2(9)(a)`, `Art 2(9)(b)` and `Art 2(7)(e)` of `g1-art2-governor-misconduct.l4` still take the relation as a caller input, and the integrator wires that.
+A caller who has persons instead applies `Art 2(9) the relation of the person under the constitution` and passes the result as the relation of `Facts about a person's role in an entity`; the tests do exactly that, including through the headline `Art 2(7)`.
+The new rules are not exported, so the published surface of the group is unchanged.
+
+**Tests** (`g1-tests-art2-9a-persons.l4`): 63 assertions, all satisfied; the expected values were decided from the Law's text before the module was run.
+
+| section | assertions |
+| --- | --- |
+| persons are told apart by name and identifier | 3 |
+| 2(9)(a): the three worked examples | 3 |
+| 2(9)(a): more cases | 9 |
+| the derived relation: each of the four constructors | 6 |
+| the derived relation: the edges | 9 |
+| agreement with the caller-supplied route | 27 |
+| through the headline `Art 2(7)`, with the derived relation | 6 |
+
+The three worked examples are those of the sidebar `art2-9a-3-echo.l4`, with persons named as there: Jo exercises it only for Sam, who has it in Sam's own right (the condition holds); Sam recorded as exercising it on Sam's own behalf (does not hold: "another"); Kit exercises it for Jo, who does not have it in Jo's own right (does not hold).
+"More cases" adds the reverse direction, an unmentioned person, a second holder, nobody holding it, two persons of one name (different identifiers: two persons; the same name and identifier: one person), and the wrong Jo holding it.
+
+**The agreement test.**
+Thirteen situations, each a person, a constitution and the relation a caller would supply by hand for it (read off the Law), include each of the four constructors, a person listed twice, a holder who also exercises it for another, and the two-Jos cases.
+For each situation one assertion states that the derived relation equals the caller-supplied one, and that `Art 2(9)(a) the person only exercises ...`, `Art 2(9)(b) ...` and `Art 2(7)(e) ...` give the same answer fed either (13 assertions); one assertion states it for all thirteen together and one pins the length of the list at 13 so a dropped situation cannot pass.
+Agreement alone could be vacuous if both routes were wrong in the same way, so twelve more assertions state the three rules' answers for the derived route of one situation of each constructor, from the Law: (9)(b) and (7)(e) hold for alone and for one-of-a-number and for neither of the other two, and the relation tested by (9)(a) holds only for the agent.
+
+**The positive control, shown.**
+In a copy, the line `NOT (the person EQUALS the other person)` was deleted from `Art 2(9)(a) the person exercises ...` (`work/g1/change-1027/pc`, deleted after the run).
+The tests then had 60 assertions satisfied and 3 failed: worked example 2 (Sam on Sam's own behalf) and the two same-person assertions about the first Jo (`Jo Le Brun` and `Jo Le Brun again`, the same name and identifier), which test "another" too.
+Worked examples 1 and 3 stayed satisfied, with every other assertion.
+That one condition carries the word "another".
+
+**Mutants of the new rules** (`work/g1/change-1027/mutants-9a.py`; each run against `g1-tests-art2-9a-persons.l4`): 11, all killed.
+They are the `NOT EQUALS` line removed; the "only one" threshold off by one (`EQUALS 1` to `EQUALS 2`, and to `AT MOST 2`); the own-right membership test negated; `nub` dropped; the two branches swapped; the other person not required to have it in own right; the direction of the exercise reversed; any exercise by anyone accepted; the third branch looking at nobody; and "none" answered for an agent.
+
+**`l4 verify`** on `g1-art2-9a-persons.l4`: `Art 2(9)(a) the person exercises ...` was analysed (3 atoms, 5 ladder nodes) with no propositional findings; `Art 2(9) the relation of the person under the constitution` returns a relation and not a BOOLEAN, so it was not analysed.
+The binary says what a clean run proves and what it does not: silence is not a consistency proof, and the claim made here is only that it found nothing.
+
+**Counts before and after** (the group check, `work/g1/check.sh`, on the copy; the baseline was run first, on the deposit's files as they stood):
+
+| | before (7 modules) | after (9 modules) |
+| --- | --- | --- |
+| assertions satisfied, total | 406 | 469 |
+| `g1-tests-art1.l4`, `g1-tests-art2-entity.l4`, `g1-tests-art2-governor-misconduct.l4` | 74, 185, 147 | 74, 185, 147 |
+| `g1-tests-art2-9a-persons.l4` | none | 63 |
+| failed, refused, errors, warnings | 0, 0, 0, 0 | 0, 0, 0, 0 |
+| `srcrefs check`: quote lines, runs, locators, problems | 134, 81, 144, 0 | 137, 83, 146, 0 |
+| traces guarded, ok, bad, unguarded | 3, 3, 0, 0 | 3, 3, 0, 0 |
+| `@ref` notices | 0 | 0 |
+
+Nothing but the two new modules changed the totals: +63 satisfied, +3 quote lines, +2 runs, +2 locators.
+
+**Coverage.**
+Article 2(9)(a) stays `encoded` in `g1-art2-governor-misconduct`, over the caller-supplied relation; the new module is an additional route to the same sub-paragraph, and the coverage table's notes for 2(9) and 2(9)(a) say so.
+The group still has 113 rows: 76 encoded, 25 inert, 12 out-of-scope, 0 deferred.
+
+**Open questions.**
+None added: the Law's words raise none beyond those already in section 7.
