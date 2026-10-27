@@ -36,7 +36,7 @@ The group modules differ between the 03:02 and the 10:20 copies only in G1 (a co
 - **A. Size and shape (M).**
   July: 12 files, 12,762 lines, 682 rules, 754 assertions, all 754 satisfied, 156 traces with no guard.
   Cleanroom: 1 file, 1,428 lines, 90 rules, 102 assertions, all satisfied, no traces.
-  Ours at 10:20 (the final deposit): 162 files (domain 1, group 102, integration 27, independent tests 32), 56,488 lines, 3,840 rules, 8,011 assertions, 467 `@export`s, 976 traces; `check.sh` printed GREEN: 7,844 assertions satisfied, 157 failed on purpose, 10 refused on purpose, all 976 traces as expected.
+  Ours at 10:20 (the deposit after fork F2.14, before the later change to Articles 21 and 23): 162 files (domain 1, group 102, integration 27, independent tests 32), 56,488 lines, 3,840 rules, 8,011 assertions, 467 `@export`s, 976 traces; `check.sh` printed GREEN: 7,844 assertions satisfied, 157 failed on purpose, 10 refused on purpose, all 976 traces as expected.
   Ours at 03:02: 7,953 assertions, 7,787 satisfied, 156 failed on purpose; at 02:30: 129 files, 6,110 assertions, and the integration layer was red.
 - **B. Coverage (M and J).**
   July: 33 of 43 Articles have operative rules, 8 are stubs only (3, 24, 25, 32, 38, 39, 42, 43), Article 2 is partial, Article 1 is not encoded, both Schedules are partial.

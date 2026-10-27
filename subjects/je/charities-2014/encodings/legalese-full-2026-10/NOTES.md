@@ -355,6 +355,36 @@ What the integrator rewired:
 - `int-tests-repairs.l4` has a seventh scenario, R7 (18 assertions, section 10.8), run at the purpose level (`Art 6(1) the purpose is a charitable purpose`) and through headline (a); the expected values were decided from the text of Articles 5(1)(b), 6(1)(n), 6(2)(e) and 7(3)(a) before the module was run.
 - The fork is not wired from anywhere else: no other group's rule depends on Article 6(2)(e) (checked by searching the modules for `accommodation or care` and `6(2)(e)`), so there is no entry for it in the consistency register of section 6.
 
+### 3.8 After the "a / the / another" round: the parties of a statement (2026-10-27)
+
+Group G7 changed how a statement under Articles 21 to 23 names the people in it.
+The decision was taken by the fleet lead and the general manager on 2026-10-27 and is assumed, not ruled; every choice in it is labelled so in the module comments and in FRAGMENT-G7.md (section 10, "a / the / another").
+The Law's grammar has "a person" and "the person", "an entity" and "the entity", and "another person" (Articles 21(1) to 21(7) and 23(1) to 23(5), src:533-561 and src:578-585).
+Before this round "another person" was folded into the wording of Boolean fields, and the case of Articles 21(7) and 23(5) was the Boolean `made by the entity itself`.
+Now the person who makes the statement, the entity and the other person are separate values of one local type, `Party` (a name and an identifier; two parties are the same party when both are equal), and "another" is the condition that two of them differ.
+What G7 changed:
+
+- The record `Statement about an entity under Articles 21 to 23` lost `made by the entity itself` and gained `the entity as a party`, `the person making the statement` and `the other person`, all `Party`.
+- The four fields of `Intent of the person making a statement` now read "to cause the other person ..." where they read "to cause another person ...".
+- No function has a different `GIVEN` list; the type of the statement input has changed shape, so a caller builds a statement differently and every JSON schema that mentions a statement changes.
+  One export was added, `the person making the statement is the entity`, the Party equality of the maker and the entity as a party.
+  The old and new field lists are in FRAGMENT-G7.md.
+
+What the integrator rewired:
+
+- `int-h-offence.l4` (line 142): the filter that decides whether a contravention of Article 21 or 23 is the body's own offence (Articles 21(7) and 23(5)) now reads `the person making the statement is the entity` where it read the field `made by the entity itself`.
+  The rule `Int the contravention is an offence of the body` keeps its own Boolean input of that name, which is a name and not a field.
+- `gen_fixtures.py`, and so the generated `int-tests-fixtures.l4`: three Party values are new (lines 467, 470 and 473, with the names and identifiers of g7's own fixtures), the statement by the entity itself has the maker equal to the entity as a party and a donor as the other person (lines 482 to 484), the knowing statement by a person has a third person as the maker and a donor as the other person (lines 501 to 503), and the eight intent fields are renamed (lines 490 to 493 and 509 to 512).
+  So every old fixture means what it meant: the maker equals the entity as a party where `made by the entity itself` was TRUE, is a third person where it was FALSE, and the other person is a donor, who differs from both.
+- `ind-b-tests-fixtures-g7.l4` (a fixtures file of an independent author, adapted mechanically; section 12.5b).
+- No other `int-` module changed, and no `#ASSERT` or `#TRACE` line of any `int-` or `ind-` module was edited.
+- Every assertion that existed before the round gives the same result: the per-file counts of all 27 `int-` and all 32 `ind-` modules are the ones they were, and in the five `ind-` modules that are not wholly green the status of each of the 26 assertions is the same line for line (section 12.5b).
+- The statement is the caller's fact in headline (d) (`Offence case`), as before: the integrator does not derive the entity's `Party` from the body in the case (section 14).
+- A new section D9 of `int-tests-offence.l4` has 23 assertions, run through headline (d) and, for the limbs of Article 21(1) and the paragraph of Article 21(2), through G7's Booleans (section 10.4).
+  The expected values were decided by hand from the Law before the module was run, and all held on the first run.
+  Two mutants of the G7 rule are in section 11.5 (M19, M20).
+- With D9 the integration modules hold 627 assertions satisfied and 6 failed (`int-tests-red.l4`); section 11.2 gives the totals of the whole run.
+
 ## 4. Coverage
 
 The survey divided the Law into 851 provisions (rows of `phase1/coverage.tsv`: the Title, the Long title, the commencement note, each Article and each paragraph, sub-paragraph and definition that is a rule, each Schedule paragraph and the endnote tables).
@@ -577,7 +607,7 @@ Nothing is silently harmonised.
 Where two answers differ, both are recorded here, the fleet default of the brief is wired (each group's `TYPICALLY` reading, collected by `Int the favoured readings of the fleet`), and the other reading is a callable function with a test.
 The tests are `int-tests-counting.l4`, `int-tests-consistency.l4`, `int-tests-vintage-matrix.l4`, `int-tests-wiring.l4`, `int-tests-decisions.l4` and `int-tests-red.l4`.
 Each expected value was decided by hand from the Law before the module was run.
-Items 6.1 to 6.4 and 6.9 hold seams that remain open; 6.5 to 6.8 and 6.10 to 6.13 are cases where the groups agree or where the integrator records which group decides.
+Items 6.1 to 6.4 and 6.9 hold seams that remain open; 6.5 to 6.8 and 6.10 to 6.14 are cases where the groups agree or where the integrator records which group decides.
 
 ### 6.1 How a period of days is counted
 
@@ -700,6 +730,27 @@ The two do not conflict, and the integrator does not wire one from the other: `w
 The fleet default is reading A of F2.13 (staff are bound), which the fleet lead ruled by assumption on 2026-10-27 ("assumed, not ruled", revertable).
 `int-tests-repairs.l4` (R3) runs both readings through headline (a): a staff finding of public benefit for a company that benefits only identified persons fails the charity test on reading A and stands on reading B, while the same finding made by the Commissioner fails on both.
 G2's note asks that any other group which attaches a duty to the Commissioner be set from the same view of paragraph 4(3), for example the Commissioner's belief of Article 27(1)(b); G8 takes that belief as an input and has no fork on it, so nothing else was set.
+
+### 6.14 Persons and parties (Articles 21 to 23, "a / the / another")
+
+The groups name the people in a provision in different ways, and the integrator does not unify them, because a group imports only the prelude, `daydate`, `domain` and its own modules.
+The role that acts is a constructor of `Legal actor` in `domain.l4` (the Commissioner, a governor, a member of the Commissioner's staff, any person), and that is how the regulative rules of every group say who must do what.
+`Legal actor` has no constructor for the entity that is the subject of a statement, or for a person who is not that entity (FRAGMENT-G7.md, nouns request 1); the integrator kept G7's stand-in and added no constructor (section 3.5).
+So group G7 defines local types, and since the round of "a / the / another" the person making the statement, the entity and the other person are values of its local type `Party` (a name and an identifier) (section 3.8).
+Equality of parties is L4's structural equality: the same name and the same identifier are the same party.
+Group G1 is to define its own type for a person in a later round; that is proposed and is not in the deposit at the time of writing.
+Whatever it is called, it will be a separate local type by design, and nothing here will convert between it and G7's `Party`.
+What the integrator records:
+
+- The statement is the caller's fact in headline (d), and so is the `Party` that stands for the entity in it.
+  G7 assumes that a `Party` that stands for the entity carries the entity's registered name and number, and that distinct parties are given distinct values.
+  The integrator does not check either against the `Body in the case` (its name and its register entry), because a `Party` is not derived from one: a caller who gives the entity a `Party` that differs from the one it gives the maker of a statement the entity itself made changes the answer (the maker is then "another person" than the entity).
+  This is a limit and is listed in section 14.
+- Whether "another person" may be the entity itself is open (section 8.7).
+  G7's code requires only that the other person differs from the person making the statement, so an entity may be the other person of a knowing offence (case iv of G7's tests).
+- The regulative (b) rules of Articles 21(1), 21(3), 21(5) and 23(1) (the act is by its name the entity causing ANOTHER person to refer) do not carry the condition that the maker differs from the entity; the Boolean forms of the (b) limbs do.
+  That is G7's decision, so that traces written before the round keep their answers (FRAGMENT-G7.md, "Not done, and decided differently").
+- `int-tests-offence.l4` (D9) runs the cases through headline (d): a person who means only to mislead themself does not contravene Article 21(2); the entity itself does, by Article 21(7); and the limb (b) of Article 21(1) needs a maker other than the entity.
 
 ## 7. Consolidated register of contradictions, tensions and slips in the source
 
@@ -883,6 +934,10 @@ The full text of each question is in the group's FRAGMENT, in its section "Open 
   Does the awareness of 21(4)(a) and 21(6)(a) have to cover both limbs together?
   Is the omission of "or other advantage" in 21(4), 21(6) and 23(2) intended (F7.5)?
   Does an offence of both kinds by one act give two convictions, and can the penalties be cumulated (F7.4)?
+- May the "another person" of Articles 21(2)(b), 21(4)(b), 21(6)(b) and 23(2)(b) (the person whom the maker intends to mislead, or to get an advantage from) be the entity itself?
+  The Law says only "another person"; the code requires only that the other person is not the person making the statement, so the entity may be the other person (case iv of G7's tests; assumed, not ruled, 2026-10-27) (G7).
+  Are two parties the same party when they have the same name and the same identifier (assumed), or is there a notion of identity in the Law (a registered number, a natural person's identity) that the caller should supply as the identifier?
+  The code leaves the identifier to the caller (assumed, not ruled, 2026-10-27) (G7).
 - Does 22(1) define an excepted foreign charity for 2(10)(b) (F7.12)?
   Can Regulations under Article 24 attach imprisonment to an offence adapted from 21(9) (F7.13)?
   Can an Order under 2(2) make consequential amendments of other provisions of the Law (F7.14)?
@@ -1011,6 +1066,11 @@ All the scenarios of headline (a) to (d) and (f) are asked on 2 October 2026 unl
 | D4 | a governor acts on 1 April 2026 after reporting on 1 March, without permission and without reasonable excuse | an offence, 12 months and a fine; not on 28 February 2026; not with a reasonable excuse | 19(10), 19(11) |
 | D5 to D7 | contravening a disqualification order; failing to comply with a requirement; giving false information for an application | 24 months and a fine (no offence if the order is not contravened); 3 months and a fine of level 3; 24 months and a fine | 20(6), 26(7), 26(10) |
 | D8 | asked on 31 December 2018 and on 30 April 2018 | refused: Article 21 (Part 6) came into force on 1 January 2019; Article 19 (Part 5) on 1 May 2018 | 21, 19 |
+| D9a | a third person says the unregistered company is registered by the Commissioner, knowing it is not, meaning only to mislead themself (the other person is the maker); the company did not cause or permit it | no offence and no penalty: Article 21(2) needs an intent to cause ANOTHER person to be misled, and neither limb of 21(1) reaches the act | 21(1), 21(2) |
+| D9b | the same, but the company caused or permitted the statement | an offence by 21(1)(b) only: a fine of level 3 and no imprisonment; 21(2) is still not contravened | 21(1)(b), 21(2), 21(10) |
+| D9c | the same words and intent against a donor, another person | 21(2) is contravened: 24 months and a fine | 21(2), 21(9) |
+| D9d | the company itself says it is registered, knowing it is not, meaning to mislead a donor; a director connived | both offences are made out (F7.4): a fine of level 3, and 24 months and a fine; the director is guilty of both, because the knowing offence is the body's own when the entity made the statement | 21(1)(a), 21(2), 21(7), 21(9), 21(10), 37(1) |
+| D9e | the company caused or permitted a third person to say it; and the company itself said it and also caused or permitted it | the first: 21(1)(b) is made out and 21(1)(a) is not; the second: 21(1)(a) is made out and 21(1)(b) is not (the maker is not another person); one fine of level 3 in each; no offence where a third person says it and the company neither caused nor permitted it | 21(1)(a), 21(1)(b) |
 
 ### 10.5 Headline (e): which text and which units (`int-tests-vintage-matrix.l4`, `int-tests-commencement.l4`)
 
@@ -1066,7 +1126,7 @@ The 18 assertions of R7 (fork F2.14, added later the same day) held on the first
 
 ### 11.1 What `check.sh` prints
 
-This is the full output of `check.sh` run in the deposit on 2026-10-27, after the repairs of G2 and G7, the merge of the independent tests and the rewiring for fork F2.14 (Article 6(2)(e)), with the fleet's `l4` (the run took between five and ten minutes, depending on what else the machine was running).
+This is the full output of `check.sh` run in the deposit on 2026-10-27, after the repairs of G2 and G7, the merge of the independent tests, the rewiring for fork F2.14 (Article 6(2)(e)) and the rewiring for the round of "a / the / another" in G7 (Articles 21 to 23), with the fleet's `l4` (the run took between five and ten minutes, depending on what else the machine was running).
 It was run again in a clean copy of the deposit, with the same result (section 11.8).
 The columns are, for each module: error diagnostics, assertions satisfied, assertions failed, assertions refused, warnings, and the number of failures and of refusals the module is meant to have.
 A failed assertion is also an error and a refused assertion is also a warning; the run is red for any other error, any refusal or warning beyond the module's own, and any failed count other than the module's own.
@@ -1154,7 +1214,7 @@ g7-commencement.l4                             0         0       0        0     
 g7-interpretation.l4                           0         0       0        0         0         0         0
 g7-tests-commencement.l4                       0       389       0        0         0         0         0
 g7-tests-expression-traces.l4                  0         0       0        0         0         0         0
-g7-tests-expressions.l4                        0       695       0        0         0         0         0
+g7-tests-expressions.l4                        0       906       0        0         0         0         0
 g7-tests-fixtures-expressions.l4               0         0       0        0         0         0         0
 g7-tests-powers-final.l4                       0        95       0        0         0         0         0
 g7-tests-red.l4                               15         0      15        0         0        15         0
@@ -1231,7 +1291,7 @@ int-tests-contravention.l4                     0        30       0        0     
 int-tests-counting.l4                          0        21       0        0         0         0         0
 int-tests-decisions.l4                         0        24       0        0         0         0         0
 int-tests-fixtures.l4                          0         0       0        0         0         0         0
-int-tests-offence.l4                           0        20       0        0         0         0         0
+int-tests-offence.l4                           0        43       0        0         0         0         0
 int-tests-readings.l4                          0        10       0        0         0         0         0
 int-tests-red.l4                               6         6       6        0         0         6         0
 int-tests-register.l4                          0        27       0        0         0         0         0
@@ -1240,15 +1300,15 @@ int-tests-vintage-matrix.l4                    0        81       0        0     
 int-tests-wiring.l4                            0        30       0        0         0         0         0
 int-vintage.l4                                 0         0       0        0         0         0         0
 int-wiring.l4                                  0         0       0        0         0         0         0
-TOTAL (162 modules)                          157      7844     157       10        10       157        10
-of which the group modules g1- to g9- (102): satisfied 5471, failed 135 (expected 135)
-of which the integration modules int- (27): satisfied 604, failed 6 (expected 6)
+TOTAL (162 modules)                          157      8078     157       10        10       157        10
+of which the group modules g1- to g9- (102): satisfied 5682, failed 135 (expected 135)
+of which the integration modules int- (27): satisfied 627, failed 6 (expected 6)
 of which the independent authors' modules ind- (32): satisfied 1769, failed 16 (expected 16), refused 10 (expected 10)
 (a failed assertion is also an error and a refused assertion is also a warning; any other error, any refusal or warning beyond the module's expected_refused, and any failed count other than its expected_failed, make the run red)
 @ref notices (follows code on its line / end of the file): 0
 
 shape: every module has a plain name and starts without @lang en, and no group module imports another group's
-srcrefs check: 1727 src: lines, 889 runs, 1668 locators, 0 problems
+srcrefs check: 1727 src: lines, 889 runs, 1677 locators, 0 problems
 module                                        traces in-module   sidecar     ok   bad  unguarded
 g1-tests-art2-entity.l4                            3         3         0      3     0          0
 g2-tests-art3-4.l4                                11        11         0     11     0          0
@@ -1272,7 +1332,7 @@ g6-tests-art17.l4                                 40        40         0     40 
 g6-tests-art18.l4                                 11        11         0     11     0          0
 g6-tests-art19.l4                                 67        67         0     67     0          0
 g6-tests-art20.l4                                 34        34         0     34     0          0
-g7-tests-expression-traces.l4                     87        87         0     87     0          0
+g7-tests-expression-traces.l4                    107       107         0    107     0          0
 g7-tests-powers-final.l4                          44        44         0     44     0          0
 g8-tests-art26.l4                                 37        37         0     37     0          0
 g8-tests-art27-28.l4                              15        15         0     15     0          0
@@ -1287,8 +1347,8 @@ ind-a-tests-art8-10.l4                             8         8         0      8 
 ind-c-tests-traces.l4                             33        33         0     33     0          0
 int-tests-chains.l4                                5         5         0      5     0          0
 int-tests-contravention.l4                        12        12         0     12     0          0
-TOTAL                                            976       976         0    976     0          0
-check-traces: all 976 guarded trace(s) behaved as expected
+TOTAL                                            996       996         0    996     0          0
+check-traces: all 996 guarded trace(s) behaved as expected
 
 check.sh: GREEN
 (a green run is the integrator's: it says nothing about whether a domain expert agrees with any reading in NOTES.md; no domain expert has read this encoding against the Law)
@@ -1296,15 +1356,16 @@ check.sh: GREEN
 
 ### 11.2 The numbers, read
 
-The group modules (102) hold 5471 assertions satisfied and 135 failed, all failures in the groups' red files (G2 16, G3 12, G4 14, G5 16, G6 24, G7 15, G8 19, G9 19; G1 has none).
+The group modules (102) hold 5682 assertions satisfied and 135 failed, all failures in the groups' red files (G2 16, G3 12, G4 14, G5 16, G6 24, G7 15, G8 19, G9 19; G1 has none).
 G2 has 16 declared red: 14 at the first pass, 15 after the repairs of the independent testing, and 16 after fork F2.14 (FRAGMENT-G2.md: 15 fork readings answered as their other reading answers them, and one control).
-The satisfied counts of G2 and G7 grew with the repairs (the first pass: 5,235 satisfied and 133 failed over the group modules).
-The integration modules (27) hold 604 assertions satisfied and 6 failed (`int-tests-red.l4`).
+The satisfied counts of G2 and G7 grew with the repairs (the first pass: 5,235 satisfied and 133 failed over the group modules), and G7's grew again with the round of "a / the / another" of 2026-10-27, from 1,429 to 1,640 (211 new assertions and 20 new traces in G7's own tests).
+The integration modules gained 23 assertions in the same round (section D9 of `int-tests-offence.l4`), so the whole run gained 234 satisfied assertions and 20 traces, and the red counts did not move.
+The integration modules (27) hold 627 assertions satisfied and 6 failed (`int-tests-red.l4`).
 The independent authors' modules (32) hold 1769 assertions satisfied, 16 failed and 10 refused, the last two only in their `ambiguous` and `disagree` files (section 12).
-In all, 162 modules: 7844 assertions satisfied, 157 failed (expected 157), 10 refused (expected 10), 10 warnings (one per refusal).
+In all, 162 modules: 8078 assertions satisfied, 157 failed (expected 157), 10 refused (expected 10), 10 warnings (one per refusal).
 No module has a refusal or a warning beyond the ten that are the authors' findings.
-`srcrefs.py check --refs` over all modules finds 0 problems (1727 quotation lines, 889 runs, 1668 locators); the integration and independent modules quote nothing and carry no locator.
-The `#TRACE` check covers 976 traces (the groups', the integrator's and the independent authors') and finds all of them guarded by an `-- EXPECT:` comment and all as expected.
+`srcrefs.py check --refs` over all modules finds 0 problems (1727 quotation lines, 889 runs, 1677 locators); the integration and independent modules quote nothing and carry no locator.
+The `#TRACE` check covers 996 traces (the groups', the integrator's and the independent authors') and finds all of them guarded by an `-- EXPECT:` comment and all as expected.
 These are the integrator's numbers and the groups' own; they say that the modules run and the tests pass, not that the readings are right.
 
 ### 11.3 The trace checker, and its positive control
@@ -1392,6 +1453,16 @@ After the rewiring for fork F2.14, two mutants of the G2 rule (made on copies of
 
 The other eleven assertions of R7 hold under both mutants, as they should: they are the cases on which the two readings agree.
 
+After the rewiring for the "a / the / another" round, two mutants of the G7 rule (again on copies, one change each, outside the sixteen) asked whether section D9 of `int-tests-offence.l4` notices the distinctness conditions:
+
+| mutant | killed by |
+| --- | --- |
+| M19 the shared helper of Articles 21(2)(b), 21(4)(b), 21(6)(b) and 23(2)(b) no longer requires that the other person differs from the maker | the five assertions that rest on the other person being the maker: that no offence is made out and no penalty is due when a person means only to mislead themself, that Article 21(2) is not contravened by that statement, and, where the entity also caused or permitted the statement, that the penalty is the one fine of level 3 and that Article 21(2) is still not contravened |
+| M20 "another person than the entity" is always TRUE in the (b) limbs of Articles 21(1), 21(3), 21(5) and 23(1) | the one assertion that Article 21(1)(b) is not made out when the entity itself said it and also caused or permitted it |
+
+The failures were the ones predicted before the runs.
+G7's own table has the same two mutations (its A1 and A2) against its own tests.
+
 Two things the table does not say: the first batch counted only errors, so M01 and M12 looked like survivors until refusals were counted (a refusal is a Warning, not an error); and mutation testing of the group modules is the groups' own (for example G3's fragment, section 9.3).
 
 ### 11.6 What changed after a first run
@@ -1413,9 +1484,9 @@ No test calls a headline for every one of the ten values of `Vintage of the text
 
 ### 11.8 The clean-copy run
 
-The deposit, the fleet's `inputs` and `bin` were copied side by side into a fresh directory (`work/integrator/clean3/` in the fleet's working directory: `deposit/`, `inputs`, `bin`) and `check.sh` was run there, with nothing else in sight.
-The copy was made after the last module, test and checker had changed, and before `NOTES.md`, `README.md` and `encoding.json` received their final figures, none of which `check.sh` reads; every other file of the deposit is byte-identical to the copy.
-It ended GREEN in 9 minutes 29 seconds, and its output is identical line for line to the output of section 11.1 from the module table to the last line (only the path on the first two lines differs): 162 modules, 7,844 assertions satisfied, 157 failed (expected 157), 10 refused (expected 10), 10 warnings, `srcrefs` 0 problems, 976 traces guarded and as expected.
+The deposit, the fleet's `inputs` and `bin` were copied side by side into a fresh directory (`work/integrator/clean4/` in the fleet's working directory: `deposit/`, `inputs`, `bin`) and `check.sh` was run there, with nothing else in sight.
+The copy was made after the last module, test and checker had changed, and before `NOTES.md` and `encoding.json` received their final figures, neither of which `check.sh` reads; every other file of the deposit is byte-identical to the copy.
+It ended GREEN in 5 minutes 11 seconds, and its output is identical line for line to the output of section 11.1 from the module table to the last line (only the path on the first two lines differs): 162 modules, 8,078 assertions satisfied, 157 failed (expected 157), 10 refused (expected 10), 10 warnings, `srcrefs` 0 problems, 996 traces guarded and as expected.
 
 ## 12. Independent tests
 
@@ -1542,6 +1613,25 @@ Line numbers in this section are those of the files as deposited, after both ada
   No independent assertion changed its result because of F2.14.
   ind-a S6.1-14, a care home for elderly people in need (`ind-a-tests-art3-7.l4`), sets the need-qualified field TRUE and holds; with the new field FALSE it cannot differ between the two readings of F2.14.
 
+### 12.5b The third adaptation, for the round of "a / the / another" in G7 (2026-10-27)
+
+G7 changed the record `Statement about an entity under Articles 21 to 23` (`made by the entity itself` was replaced by `the entity as a party`, `the person making the statement` and `the other person`, all of a new type `Party`) and renamed the four fields of `Intent of the person making a statement` ("to cause another person" became "to cause the other person"; section 3.8).
+The only independent file that builds either record is `ind-b-tests-fixtures-g7.l4`, a fixtures file with no `#ASSERT` or `#TRACE` line.
+The integrator adapted it mechanically with a script (`adapt_ind_g7.py`, in the integrator's working directory, not deposited) that makes three kinds of edit and no other, and checks that the `#ASSERT` and `#TRACE` lines of the file are the same before and after.
+Line numbers are those of the file as deposited.
+
+- **N: the four intent fields.**
+  Each `to cause another person ...` became `to cause the other person ...` in `ind-b7 intent`; lines 75, 76, 77, 78.
+- **P: three Party fixtures.**
+  The file builds its own values, with the names and identifiers of g7's fixtures: `ind-b7 the entity as a party` (line 87), `ind-b7 a third party` (line 90) and `ind-b7 a donor` (line 93), each with a `GIVETH A Party` line above it and a comment before the first.
+- **S: the maker, the entity and the other person.**
+  In `ind-b7 statement` the field `made by the entity itself` IS itself was replaced by three fields (lines 107, 108, 109): the entity as a party, the maker (`IF itself THEN` the entity as a party `ELSE` a third party) and a donor as the other person.
+  In `ind-b7 an excepted statement that it is` the field `made by the entity itself` IS TRUE was replaced by the same three fields with the maker equal to the entity as a party (lines 123, 124, 125).
+  So every old fixture means what it meant: the maker equals the entity as a party where the old field was TRUE, is a third party where it was FALSE, and the other person is a donor, who differs from both.
+- **What the adaptation did to the results.**
+  Every independent module has the same errors, satisfied, failed and refused counts after it as before it (all 32 modules), and in the five modules that are not wholly green the status of each of their 26 assertions is the same line for line (16 failed and 10 refused, both before and after).
+  No independent assertion changed its result because of the round, `ind-b-tests-art21-25.l4` still has its 100 satisfied, and `ind-b-tests-ambiguous.l4` still fails the same two assertions.
+
 ### 12.6 What the merge shows
 
 The independent tests found five defects that the groups' own tests had missed (the object of Article 6(1)(i), the charity test for a non-entity, Articles 21 and 23 for a non-entity, Part 9 and the original Article 41, and staff exercising the Commissioner's function), all now repaired, and a sixth point (the text before 1 January 2019) that the fleet lead left open.
@@ -1591,6 +1681,7 @@ The integrator ran them and recorded their counts in `check.sh`; it did not revi
 - G2's repair left four rules unguarded for a non-entity on purpose (`Art 5(1)(a)`, `Art 5(1)(b)`, `Art 7 the entity provides public benefit` and `Art 6 ... advancement of religion`), with its reasons in FRAGMENT-G2 section 11.2 (`Art 5(2) the bar applies to the entity` takes the constitution facts, not the entity); the headlines reach only the guarded `Art 5` and `Art 5(3)`.
 - A caller that does not fill the new tenth field gets a named refusal for a purpose of head (i); that is the intended signal (FRAGMENT-G2 section 11.2).
 - G7's type `Treatment of a Part brought into force in two stages` and its two values keep their names although Part 9 now has three stages (FRAGMENT-G7 section 10).
+- G7's round of "a / the / another" (2026-10-27, assumed, not ruled) did not give the regulative (b) rules of Articles 21(1), 21(3), 21(5) and 23(1) the condition that the maker differs from the entity, because the traces written before the round expect a breach there; their Boolean forms carry it (FRAGMENT-G7.md, "Not done, and decided differently"; section 6.14).
 
 ## 14. What is not wired, and what is not done
 
@@ -1614,6 +1705,8 @@ The integrator ran them and recorded their counts in `check.sh`; it did not revi
 - **F2.13 is not wired from Schedule 1 paragraph 4(3).**
   `who` (the Commissioner's staff, or any person) is the caller's fact (section 6.13), and no other group's rule that attaches a duty to the Commissioner (for example Article 27(1)(b)) takes the fork.
 - **The new tenth field of the facts of Article 6(1)(i)** comes from the caller inside `Purpose with the facts Article 6 reads`, with the default NOTHING; headline (a) does not derive it.
+- **The `Party` that stands for the entity in a statement** (`the entity as a party`, Articles 21 to 23) is the caller's fact in headline (d) and is not derived from the `Body in the case`, and the integrator does not check that it carries the entity's registered name and number, as G7 assumes (section 6.14).
+  A caller who gives the maker of a statement the entity itself made a `Party` that differs from the one it gives the entity changes the answer: the maker is then another person than the entity.
 - **The new eleventh field of the facts of Article 6** (`the purpose is the provision of accommodation or care`, fork F2.14) likewise comes from the caller inside `Purpose with the facts Article 6 reads`, with the default FALSE; headline (a) does not derive it, and F2.14 is not wired from any other group.
 - **The text before 1 January 2019** is not reconstructed from the amending instruments (section 13.2).
 
@@ -1642,7 +1735,7 @@ On 2026-10-27 the owner had it pushed to `main` (Meng, through the general manag
   The launching session triaged every finding (section 15.8), and two encoders (G2 and G7) were sent repairs, which they reported at 18:10Z and 18:37Z.
   The overlap reader reported at 18:25Z, the comparer at 19:13Z, and the integrator's second pass (rewiring, merging the independent tests) at 19:14Z.
   The launching session re-ran the final `check.sh` in a clean copy; section 11.1 gives its output and section 15.9 says what it showed.
-- **2026-10-27, after the push.** Fork F2.14 was added and a few lines were corrected; section 15.13 says what changed.
+- **2026-10-27, after the push.** Fork F2.14 was added, a few lines were corrected, and Articles 21 and 23 were given a person, an entity and another person; section 15.13 says what changed.
 
 ### 15.3 The source
 
@@ -1707,7 +1800,7 @@ On 2026-10-27 the repository's owner ruled that the refusal before 1 January 201
 
 The integrator ran `check.sh` in the deposit and in a clean copy; section 11.1 gives its output.
 The launching session ran it again in a clean copy of its own (copy of the deposit, with `inputs` and `bin` beside it).
-It was green with exit 0 (this is the run of 2026-10-26/27 before fork F2.14; section 15.13 gives the run after it): 162 modules; 7,787 assertions satisfied; 156 failed, equal to the 156 expected; 10 refused, equal to the 10 expected, with 10 warnings that are exactly those refusals; 1,724 quotation lines (887 runs, 1,666 locators) with 0 problems; 976 guarded traces, all as expected; and the hashes of the binary and of `domain.l4` matched their pins. These are the same totals as the integrator's.
+It was green with exit 0 (this is the run of 2026-10-26/27 before fork F2.14; section 15.13 gives the runs after each later change): 162 modules; 7,787 assertions satisfied; 156 failed, equal to the 156 expected; 10 refused, equal to the 10 expected, with 10 warnings that are exactly those refusals; 1,724 quotation lines (887 runs, 1,666 locators) with 0 problems; 976 guarded traces, all as expected; and the hashes of the binary and of `domain.l4` matched their pins. These are the same totals as the integrator's.
 The row was then copied into the commons worktree and `check.sh` was run from there, where it finds the Law's text in `../../source/` (the only change to `check.sh` for the commons layout); that run's totals are recorded in the commit message.
 Each group's check was also re-run by the launching session in a clean copy with `tools/verify.sh`, and the figures matched each encoder's report, for G1 to G9 before the repairs and for G2 and G7 after.
 A green `check.sh` shows that the modules run without a warning, that the stated tests hold, that every quotation and locator matches the Law's text, that every guarded trace behaves as its `EXPECT` comment says, and that the hashes match.
@@ -1744,21 +1837,29 @@ These are the figures at the time of the first commit; section 15.13 gives the t
 
 ### 15.13 Later changes (2026-10-27, after the push)
 
-The row was on `main` at 27c1db980 when these changes were made; they are one commit on top of it.
+The row was on `main` at 27c1db980 when these changes began; each is a commit on top of the one before it, and each bullet below says which.
 
-- **Fork F2.14, Article 6(2)(e).**
+- **Fork F2.14, Article 6(2)(e)** (commit 2d6f3fdf1, pushed to `main`).
   A comparison with the Articles 5 to 7 cleanroom (its ambiguity A2) raised the question whether Article 6(2)(e) adds an operand to head (n) or only says that relief of those in need can be given by accommodation or care.
   The comparison first said that this row widened head (n); that was wrong, because the only operand of `Art 6(2)(e)` was a fact that already names the need, so the code was declaratory in substance and could not express the other reading.
   G2 registered the question as fork F2.14 (14 forks in G2, 137 in all), with reading A (declaratory) as the default and reading B (widening) callable, tested and with its own red assertion (sections 3.7 and 8.2; `FRAGMENT-G2.md`, fork F2.14 and section 11.5).
   The owner ruled the default on 2026-10-27 ("default ruled by the owner (Meng), 2026-10-27"; his words are in section 8.2 and the fragment, with the middle of the quotation elided).
   The integrator rewired the integration layer and adapted the independent authors' fixtures mechanically (section 12.5a); no independent assertion changed its result.
   The comparer corrected `COMPARISON.md` (sections 4.2 and 5, rows Q3 and D10) and recounted the agreement with the cleanroom's 25 worlds: it is unchanged, 192 of 200 (96.0%) under the favoured readings and 199 of 200 with F2.1 and F2.10 read as their second readings, and reading B of F2.14 changes none of the 200 because none of the cleanroom's worlds sets an accommodation-or-care fact.
-- **The totals after F2.14**, from `check.sh` run in the commons layout from the row directory on the day of the commit: 162 modules; 7,844 assertions satisfied (group modules 5,471; integration 604; independent 1,769); 157 failed on purpose, equal to the 157 expected; 10 refused on purpose, equal to the 10 expected; 1,727 quotation lines, 889 runs and 1,668 locators with 0 problems; 976 guarded traces, all as expected.
+- **The totals after F2.14** (commit 2d6f3fdf1), from `check.sh` run in the commons layout from the row directory on the day of the commit: 162 modules; 7,844 assertions satisfied (group modules 5,471; integration 604; independent 1,769); 157 failed on purpose, equal to the 157 expected; 10 refused on purpose, equal to the 10 expected; 1,727 quotation lines, 889 runs and 1,668 locators with 0 problems; 976 guarded traces, all as expected.
   G2 now holds 409 satisfied assertions (it held 370) and 16 declared red (it held 15).
-- **Lines corrected in the same commit.**
+- **Lines corrected in the same commit (2d6f3fdf1).**
   Section 15.11 said nothing had been pushed; the row is on `main` (section 15.1).
   The `encodings_note` of `subject.json` and the header of `FRAGMENT-G4.md` said the same, and now say when they were true.
   The fork index in section 5 had an empty question cell for every G7 fork, because the generator did not read G7's bare fork headings; the cells are filled and the generator now stops on an empty cell (section 5).
   Section 7, row S18, and `FRAGMENT-G1.md` C2 called "clauses (i) to (v)" in Article 2(10)(b)(vi) a slip; the Law has no other name for that level (it says "sub-paragraphs" for the lettered level), so it is recorded as an observation and not as a slip.
   The totals quoted in sections 15.2 and 15.9 are those of the first run and are marked as such.
-- **Cost of this round**, same method and rates as section 15.10: the fleet sub-agents now total **$279.00** (Sonnet 5.5 $216.61 over 2,705 requests, Opus 5.5 $62.39 over 375 requests), which is $21.29 more than the $257.71 of section 15.10: the G2 encoder about $4.22, the integrator $8.29 and the comparer $8.78.
+- **Cost of that round**, same method and rates as section 15.10: the fleet sub-agents then totalled **$279.00** (Sonnet 5.5 $216.61 over 2,705 requests, Opus 5.5 $62.39 over 375 requests), which is $21.29 more than the $257.71 of section 15.10: the G2 encoder about $4.22, the integrator $8.29 and the comparer $8.78.
+- **"A", "the" and "another" in Articles 21 and 23** (the commit after 2d6f3fdf1; assumed, not ruled).
+  The owner suggested folding the sidebar's incremental edits back into the row; the general manager and the launching session decided the design on 2026-10-27, and each decision is labelled "assumed, not ruled" where it is recorded.
+  Before, the row folded "another person" into the wording of four yes/no fields and carried Articles 21(7) and 23(5) as the yes/no `made by the entity itself`.
+  Now group G7 has a local type `Party` (a name and an identifier); the statement record holds `the entity as a party`, `the person making the statement` and `the other person`; "another" is the condition that two parties differ, in one shared helper for Articles 21(2), 21(4), 21(6) and 23(2) and, for the "cause or permit another person" limbs of Articles 21(1), 21(3), 21(5) and 23(1), as the condition that the person who made the statement is not the entity; and the person may be the entity, as Articles 21(7) and 23(5) say, because both are Party values (sections 3.8 and 6.14; `FRAGMENT-G7.md`).
+  No existing assertion changed its expectation or its result: G7's own tests gain 211 assertions and 20 traces, and the integrator's section D9 of `int-tests-offence.l4` gains 23 assertions.
+  Totals, from `check.sh` run in the commons layout from the row directory on the day of the commit: 162 modules; 8,078 assertions satisfied (group modules 5,682; integration 627; independent 1,769); 157 failed on purpose, equal to the 157 expected; 10 refused on purpose, equal to the 10 expected; 1,727 quotation lines, 889 runs and 1,677 locators with 0 problems; 996 guarded traces, all as expected.
+  Before this commit the same run gave 7,844 satisfied (group modules 5,471; integration 604), 976 traces and 1,668 locators.
+  Cost, same method and rates: the G7 encoder $4.57 and the integrator $2.97 more than at the time of F2.14 (the tokens of the G1 encoder's separate work on Article 2(9)(a) are not counted here).

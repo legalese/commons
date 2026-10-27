@@ -13,10 +13,10 @@ Tool: the fleet binary `bin/l4` (sha256 18bd5a72...), `JL4_LIBRARY_PATH` unset.
 | g7-interpretation.l4 | the record `Interpretation of Articles 21 to 25, 37 to 43 and the endnotes` (fourteen fork fields), its enumerations, `the favoured interpretation`, one value per fork with the other reading, and `the favoured interpretation with the unit of a term of imprisonment` (IP35) |
 | g7-vintages.l4 | the eight amending instruments of the Table as data, the nine texts, the resolver from a day or an instant to a `Vintage of the text` (IP2), what each text says (Minister, Comptroller, paragraph (ba), the Dormant Bank Accounts openings), the "7 days after it is made" rule, the amending instruments in force |
 | g7-commencement.l4 | the staged commencement in the Table's own (original) numbers, the Table of Renumbered Provisions as data, the Articles each Part held (including the spent original Article 41, which stood in Part 9), the stage of each Part, Article and Schedule, whether a unit is in force on a day or at an instant (IP4) |
-| g7-art21-23-expressions.l4 | Articles 21 to 23: the eight prohibitions as regulative rules and as booleans, the offences, the penalties as data, the excepted foreign charity (IP26), the powers of the States and the Minister; every prohibition binds or concerns an ENTITY only (a body whose `kinds of entity` is not empty) |
+| g7-art21-23-expressions.l4 | Articles 21 to 23: the eight prohibitions as regulative rules and as booleans, the offences, the penalties as data, the excepted foreign charity (IP26), the powers of the States and the Minister; every prohibition binds or concerns an ENTITY only (a body whose `kinds of entity` is not empty); the person who makes a statement, the entity and the other person are `Party` values and "another" is a condition that two of them differ (assumed, not ruled, 2026-10-27) |
 | g7-art24-25-powers.l4 | Articles 24 and 25: the powers, what a relevant term is, the cap on the penalty, the illustrative content of an Order carried as text |
 | g7-art37-43-final.l4 | Articles 37 to 43: the officer's liability and penalty, the date of service, the ancillary powers, the savings and transitional powers, Articles 41 and 42 as powers, the citation |
-| g7-tests-fixtures-expressions.l4 | fixtures only (entities, bodies that are not entities, awareness, intent, statements, 52 scenarios); no directive |
+| g7-tests-fixtures-expressions.l4 | fixtures only (entities, bodies that are not entities, parties, awareness, intent, statements, 52 scenarios, and the statements by parties of the a / the / another tests); no directive |
 | g7-tests-vintages.l4, g7-tests-commencement.l4, g7-tests-expressions.l4, g7-tests-powers-final.l4 | the assertions |
 | g7-tests-expression-traces.l4 (and the traces in g7-tests-powers-final.l4) | `#TRACE` of the regulative rules, each with an EXPECT comment, checked by `work/g7/check-traces.py` |
 | g7-tests-red.l4 | 15 assertions that are MEANT to fail: the other reading of each fork asserted against the reading taken (14), and one claim of the brief that the instruments correct (1) |
@@ -43,34 +43,34 @@ No other disposition differs from PLAN's.
 | Commencement note | Commencement note | inert | g7-commencement | `the commencement note of the Law points to the endnotes` | pointer only |
 | 21 | Article 21 | encoded | g7-art21-23-expressions | `§§ Article 21` and the rules for its paragraphs |  |
 | 21(1) | Article 21(1) | encoded | g7-art21-23-expressions | `Art 21(1) the prohibition binds the entity`; `Art 21(1) the statement contravenes paragraph (1)`; `Art 21(1) an unregistered entity must not say it is registered by the Commissioner` |  |
-| 21(1)(a) | Article 21(1)(a) | encoded | g7-art21-23-expressions | `Art 21(1)(a) the entity contravenes sub-paragraph (a)`; `Art 21(1)(a) an unregistered entity must not refer to itself as being registered by the Commissioner` |  |
-| 21(1)(b) | Article 21(1)(b) | encoded | g7-art21-23-expressions | `Art 21(1)(b) the entity contravenes sub-paragraph (b)`; `Art 21(1)(b) an unregistered entity must not cause or permit another person to refer to it as being registered by the Commissioner` |  |
+| 21(1)(a) | Article 21(1)(a) | encoded | g7-art21-23-expressions | `Art 21(1)(a) the entity contravenes sub-paragraph (a)`; `Art 21(1)(a) an unregistered entity must not refer to itself as being registered by the Commissioner` | the entity itself: `the person making the statement is the entity` (Party equality; a / the / another, assumed not ruled, 2026-10-27) |
+| 21(1)(b) | Article 21(1)(b) | encoded | g7-art21-23-expressions | `Art 21(1)(b) the entity contravenes sub-paragraph (b)`; `Art 21(1)(b) an unregistered entity must not cause or permit another person to refer to it as being registered by the Commissioner` | another person: the person making the statement differs from the entity as a party (`the person making the statement is another person than the entity`; assumed not ruled, 2026-10-27) |
 | 21(2) | Article 21(2) | encoded | g7-art21-23-expressions | `Art 21(2) the prohibition binds the person`; `Art 21(2) the statement contravenes paragraph (2)`; `Art 21(2) a person must not say that an unregistered entity is registered, with knowledge and intent` | fork F7.4 with 21(1) |
 | 21(2)(a) | Article 21(2)(a) | encoded | g7-art21-23-expressions | `the person knows, suspects or has reasonable grounds to suspect it` over field `that the entity is not a registered charity` of `Awareness of the person making a statement` |  |
-| 21(2)(b) | Article 21(2)(b) | encoded | g7-art21-23-expressions | `the intent is within the advantage sub-paragraph` called with TRUE (other advantage reached) |  |
-| 21(2)(b)(i) | Article 21(2)(b)(i) | encoded | g7-art21-23-expressions | field `to cause another person to be misled as to the nature of the entity` of `Intent of the person making a statement` |  |
-| 21(2)(b)(ii) | Article 21(2)(b)(ii) | encoded | g7-art21-23-expressions | fields `to cause another person to give the entity any property`, `... a financial advantage`, `... some other advantage` of `Intent of the person making a statement` | fork F7.5: “or other advantage” is here and not in 21(4), 21(6), 23(2) |
+| 21(2)(b) | Article 21(2)(b) | encoded | g7-art21-23-expressions | `the maker intends, by so referring, to cause another person to be misled or to give an advantage`; `the intent is within the advantage sub-paragraph` called with TRUE (other advantage reached) | another person: `the other person` differs from `the person making the statement` (assumed not ruled, 2026-10-27) |
+| 21(2)(b)(i) | Article 21(2)(b)(i) | encoded | g7-art21-23-expressions | field `to cause the other person to be misled as to the nature of the entity` of `Intent of the person making a statement` |  |
+| 21(2)(b)(ii) | Article 21(2)(b)(ii) | encoded | g7-art21-23-expressions | fields `to cause the other person to give the entity any property`, `... a financial advantage`, `... some other advantage` of `Intent of the person making a statement` | fork F7.5: “or other advantage” is here and not in 21(4), 21(6), 23(2) |
 | 21(3) | Article 21(3) | encoded | g7-art21-23-expressions | `Art 21(3) the prohibition binds the Jersey entity`; `Art 21(3) the statement contravenes paragraph (3)`; `Art 21(3) a Jersey entity that is not registered must not call itself a “charity”` |  |
-| 21(3)(a) | Article 21(3)(a) | encoded | g7-art21-23-expressions | `Art 21(3)(a) the Jersey entity contravenes sub-paragraph (a)`; `Art 21(3)(a) a Jersey entity that is not registered must not refer to itself as a “charity”` |  |
-| 21(3)(b) | Article 21(3)(b) | encoded | g7-art21-23-expressions | `Art 21(3)(b) the Jersey entity contravenes sub-paragraph (b)`; `Art 21(3)(b) a Jersey entity that is not registered must not cause or permit another person to refer to it as a “charity”` |  |
+| 21(3)(a) | Article 21(3)(a) | encoded | g7-art21-23-expressions | `Art 21(3)(a) the Jersey entity contravenes sub-paragraph (a)`; `Art 21(3)(a) a Jersey entity that is not registered must not refer to itself as a “charity”` | the entity itself: `the person making the statement is the entity` (Party equality; a / the / another, assumed not ruled, 2026-10-27) |
+| 21(3)(b) | Article 21(3)(b) | encoded | g7-art21-23-expressions | `Art 21(3)(b) the Jersey entity contravenes sub-paragraph (b)`; `Art 21(3)(b) a Jersey entity that is not registered must not cause or permit another person to refer to it as a “charity”` | another person: the person making the statement differs from the entity as a party (`the person making the statement is another person than the entity`; assumed not ruled, 2026-10-27) |
 | 21(4) | Article 21(4) | encoded | g7-art21-23-expressions | `Art 21(4) the prohibition binds the person`; `Art 21(4) the statement contravenes paragraph (4)`; `Art 21(4) a person must not call an unregistered Jersey entity a “charity”, with knowledge and intent` | forks F7.4, F7.5 |
 | 21(4)(a) | Article 21(4)(a) | encoded | g7-art21-23-expressions | `Art 21(4) the prohibition binds the person` (awareness of BOTH (i) and (ii)) |  |
 | 21(4)(a)(i) | Article 21(4)(a)(i) | encoded | g7-art21-23-expressions | field `that the entity is a Jersey entity` of `Awareness of the person making a statement` |  |
 | 21(4)(a)(ii) | Article 21(4)(a)(ii) | encoded | g7-art21-23-expressions | field `that the entity is not a registered charity` of `Awareness of the person making a statement` |  |
-| 21(4)(b) | Article 21(4)(b) | encoded | g7-art21-23-expressions | `the intent is within the advantage sub-paragraph` called with `Articles 21(4)(b)(ii), 21(6)(b)(ii) and 23(2)(b)(ii) reach other advantage under` |  |
-| 21(4)(b)(i) | Article 21(4)(b)(i) | encoded | g7-art21-23-expressions | field `to cause another person to be misled as to the nature of the entity` |  |
+| 21(4)(b) | Article 21(4)(b) | encoded | g7-art21-23-expressions | `the maker intends, by so referring, to cause another person to be misled or to give an advantage`; `the intent is within the advantage sub-paragraph` called with `Articles 21(4)(b)(ii), 21(6)(b)(ii) and 23(2)(b)(ii) reach other advantage under` | another person: `the other person` differs from `the person making the statement` (assumed not ruled, 2026-10-27) |
+| 21(4)(b)(i) | Article 21(4)(b)(i) | encoded | g7-art21-23-expressions | field `to cause the other person to be misled as to the nature of the entity` |  |
 | 21(4)(b)(ii) | Article 21(4)(b)(ii) | encoded | g7-art21-23-expressions | fields `... any property`, `... a financial advantage` (and `... some other advantage` on the other reading of F7.5) | fork F7.5 |
 | 21(5) | Article 21(5) | encoded | g7-art21-23-expressions | `Art 21(5) the prohibition binds the foreign entity`; `Art 21(5) the statement contravenes paragraph (5)`; `Art 21(5) a foreign entity must not call itself a “charity” in connection with its Jersey activities` |  |
-| 21(5)(a) | Article 21(5)(a) | encoded | g7-art21-23-expressions | `Art 21(5)(a) the foreign entity contravenes sub-paragraph (a)`; `Art 21(5)(a) a foreign entity must not refer to itself as a “charity” in connection with its activities in Jersey` |  |
-| 21(5)(b) | Article 21(5)(b) | encoded | g7-art21-23-expressions | `Art 21(5)(b) the foreign entity contravenes sub-paragraph (b)`; `Art 21(5)(b) a foreign entity must not cause or permit another person to refer to it as a “charity” in connection with its activities in Jersey` |  |
+| 21(5)(a) | Article 21(5)(a) | encoded | g7-art21-23-expressions | `Art 21(5)(a) the foreign entity contravenes sub-paragraph (a)`; `Art 21(5)(a) a foreign entity must not refer to itself as a “charity” in connection with its activities in Jersey` | the entity itself: `the person making the statement is the entity` (Party equality; a / the / another, assumed not ruled, 2026-10-27) |
+| 21(5)(b) | Article 21(5)(b) | encoded | g7-art21-23-expressions | `Art 21(5)(b) the foreign entity contravenes sub-paragraph (b)`; `Art 21(5)(b) a foreign entity must not cause or permit another person to refer to it as a “charity” in connection with its activities in Jersey` | another person: the person making the statement differs from the entity as a party (`the person making the statement is another person than the entity`; assumed not ruled, 2026-10-27) |
 | 21(6) | Article 21(6) | encoded | g7-art21-23-expressions | `Art 21(6) the prohibition binds the person`; `Art 21(6) the statement contravenes paragraph (6)`; `Art 21(6) a person must not call a foreign entity a “charity” in connection with its Jersey activities, with knowledge and intent` | forks F7.4, F7.5 |
 | 21(6)(a) | Article 21(6)(a) | encoded | g7-art21-23-expressions | `Art 21(6) the prohibition binds the person` (awareness of BOTH (i) and (ii)) |  |
 | 21(6)(a)(i) | Article 21(6)(a)(i) | encoded | g7-art21-23-expressions | field `that the entity is neither a Jersey entity nor an excepted foreign charity` of `Awareness of the person making a statement` |  |
 | 21(6)(a)(ii) | Article 21(6)(a)(ii) | encoded | g7-art21-23-expressions | field `that the entity is not a registered charity` |  |
-| 21(6)(b) | Article 21(6)(b) | encoded | g7-art21-23-expressions | `the intent is within the advantage sub-paragraph` called with `Articles 21(4)(b)(ii), 21(6)(b)(ii) and 23(2)(b)(ii) reach other advantage under` |  |
-| 21(6)(b)(i) | Article 21(6)(b)(i) | encoded | g7-art21-23-expressions | field `to cause another person to be misled as to the nature of the entity` |  |
+| 21(6)(b) | Article 21(6)(b) | encoded | g7-art21-23-expressions | `the maker intends, by so referring, to cause another person to be misled or to give an advantage`; `the intent is within the advantage sub-paragraph` called with `Articles 21(4)(b)(ii), 21(6)(b)(ii) and 23(2)(b)(ii) reach other advantage under` | another person: `the other person` differs from `the person making the statement` (assumed not ruled, 2026-10-27) |
+| 21(6)(b)(i) | Article 21(6)(b)(i) | encoded | g7-art21-23-expressions | field `to cause the other person to be misled as to the nature of the entity` |  |
 | 21(6)(b)(ii) | Article 21(6)(b)(ii) | encoded | g7-art21-23-expressions | fields `... any property`, `... a financial advantage` (and `... some other advantage` on the other reading of F7.5) | fork F7.5 |
-| 21(7) | Article 21(7) | encoded | g7-art21-23-expressions | `Art 21(7) paragraphs (2), (4) and (6) apply to the person making the reference`, consulted by the binding conditions of (2), (4), (6) | declaratory: TRUE for both values of its input |
+| 21(7) | Article 21(7) | encoded | g7-art21-23-expressions | `Art 21(7) paragraphs (2), (4) and (6) apply to the person making the reference`, consulted by the binding conditions of (2), (4), (6) | declaratory: TRUE for both values of its input, which is now the Party equality `the person making the statement is the entity`; the person and the entity are both Party values and no condition requires them to differ |
 | 21(8) | Article 21(8) | encoded | g7-art21-23-expressions | `Art 21(8) the States may prescribe exceptions`; input `an exception prescribed under Article 21(8) applies` | power of the States typed MAY; the Regulations are an input |
 | 21(9) | Article 21(9) | encoded | g7-art21-23-expressions | `Art 21(9) the statement is an offence under paragraph (9)`; `Art 21 the penalty for the contravention`; `the penalty of imprisonment for a term of 2 years and a fine`; `Art 21(9) and 23(7) the day on which a term of imprisonment of 2 years beginning on a day ends` | penalty as data: 24 months, a fine with no maximum stated; forks F7.8, F7.4 |
 | 21(10) | Article 21(10) | encoded | g7-art21-23-expressions | `Art 21(10) the statement is an offence under paragraph (10)`; `the penalty of a fine of level 3 on the standard scale` | penalty as data: no imprisonment, level 3; the amount of level 3 is not in the sources |
@@ -88,19 +88,19 @@ No other disposition differs from PLAN's.
 | 22(5) | Article 22(5) | encoded | g7-art21-23-expressions | `Art 22(5) the States may amend the conditions` | power of the States typed MAY; the Regulations are not in the sources |
 | 23 | Article 23 | encoded | g7-art21-23-expressions | `§§ Article 23` and the rules for its paragraphs |  |
 | 23(1) | Article 23(1) | encoded | g7-art21-23-expressions | `Art 23(1) the prohibition binds the entity`; `Art 23(1) the statement contravenes paragraph (1)`; `Art 23(1) an entity must not call itself a “Jersey charity” unless it meets the conditions` |  |
-| 23(1)(a) | Article 23(1)(a) | encoded | g7-art21-23-expressions | `Art 23(1)(a) the entity contravenes sub-paragraph (a)`; `Art 23(1)(a) an entity must not refer to itself as a “Jersey charity” unless it meets the conditions` |  |
-| 23(1)(b) | Article 23(1)(b) | encoded | g7-art21-23-expressions | `Art 23(1)(b) the entity contravenes sub-paragraph (b)`; `Art 23(1)(b) an entity must not cause or permit another person to refer to it as a “Jersey charity” unless it meets the conditions` |  |
+| 23(1)(a) | Article 23(1)(a) | encoded | g7-art21-23-expressions | `Art 23(1)(a) the entity contravenes sub-paragraph (a)`; `Art 23(1)(a) an entity must not refer to itself as a “Jersey charity” unless it meets the conditions` | the entity itself: `the person making the statement is the entity` (Party equality; a / the / another, assumed not ruled, 2026-10-27) |
+| 23(1)(b) | Article 23(1)(b) | encoded | g7-art21-23-expressions | `Art 23(1)(b) the entity contravenes sub-paragraph (b)`; `Art 23(1)(b) an entity must not cause or permit another person to refer to it as a “Jersey charity” unless it meets the conditions` | another person: the person making the statement differs from the entity as a party (`the person making the statement is another person than the entity`; assumed not ruled, 2026-10-27) |
 | 23(2) | Article 23(2) | encoded | g7-art21-23-expressions | `Art 23(2) the prohibition binds the person`; `Art 23(2) the statement contravenes paragraph (2)`; `Art 23(2) a person must not call an entity a “Jersey charity” unless it meets the conditions, with knowledge and intent` | forks F7.4, F7.5 |
 | 23(2)(a) | Article 23(2)(a) | encoded | g7-art21-23-expressions | field `that the entity does not meet all of the conditions of Article 23(3)` of `Awareness of the person making a statement` |  |
-| 23(2)(b) | Article 23(2)(b) | encoded | g7-art21-23-expressions | `the intent is within the advantage sub-paragraph` called with `Articles 21(4)(b)(ii), 21(6)(b)(ii) and 23(2)(b)(ii) reach other advantage under` |  |
-| 23(2)(b)(i) | Article 23(2)(b)(i) | encoded | g7-art21-23-expressions | field `to cause another person to be misled as to the nature of the entity` |  |
+| 23(2)(b) | Article 23(2)(b) | encoded | g7-art21-23-expressions | `the maker intends, by so referring, to cause another person to be misled or to give an advantage`; `the intent is within the advantage sub-paragraph` called with `Articles 21(4)(b)(ii), 21(6)(b)(ii) and 23(2)(b)(ii) reach other advantage under` | another person: `the other person` differs from `the person making the statement` (assumed not ruled, 2026-10-27) |
+| 23(2)(b)(i) | Article 23(2)(b)(i) | encoded | g7-art21-23-expressions | field `to cause the other person to be misled as to the nature of the entity` |  |
 | 23(2)(b)(ii) | Article 23(2)(b)(ii) | encoded | g7-art21-23-expressions | fields `... any property`, `... a financial advantage` (and `... some other advantage` on the other reading of F7.5) | fork F7.5 |
 | 23(3) | Article 23(3) | encoded | g7-art21-23-expressions | `Art 23(3) the entity meets all of the conditions` |  |
 | 23(3)(a) | Article 23(3)(a) | encoded | g7-art21-23-expressions | input `the entity is a registered charity` (IP6) |  |
 | 23(3)(b) | Article 23(3)(b) | encoded | g7-art21-23-expressions | field `is a Jersey entity` of `Entity` (IP5) |  |
 | 23(3)(c) | Article 23(3)(c) | encoded | g7-art21-23-expressions | input `the entity is wholly or mainly managed or controlled in or from within Jersey` | an input (nouns request) |
 | 23(4) | Article 23(4) | encoded | g7-art21-23-expressions | `Art 23(4) the States may prescribe exceptions`; input `an exception prescribed under Article 23(4) applies` | power of the States typed MAY; the Regulations are an input |
-| 23(5) | Article 23(5) | encoded | g7-art21-23-expressions | `Art 23(5) paragraph (2) applies to the person making the reference` | declaratory: TRUE for both values of its input |
+| 23(5) | Article 23(5) | encoded | g7-art21-23-expressions | `Art 23(5) paragraph (2) applies to the person making the reference` | declaratory: TRUE for both values of its input, which is now the Party equality `the person making the statement is the entity` |
 | 23(6) | Article 23(6) | encoded | g7-art21-23-expressions | `Art 23(6) the statement is an offence under paragraph (6)`; `Art 23 the penalty for the contravention`; `the penalty of a fine of level 3 on the standard scale` | penalty as data: no imprisonment, level 3 |
 | 23(7) | Article 23(7) | encoded | g7-art21-23-expressions | `Art 23(7) the statement is an offence under paragraph (7)`; `Art 23 the penalty for the contravention`; `the penalty of imprisonment for a term of 2 years and a fine` | penalty as data: 24 months, a fine with no maximum stated; fork F7.8 |
 | 24 | Article 24 | encoded | g7-art24-25-powers | `§§ Article 24` and the rules for its paragraphs |  |
@@ -455,10 +455,11 @@ Differences from PLAN's export table, all deliberate:
 
 ### Exports (exact names, in the order of their GIVEN)
 
-Every export carries a sentence that says what question it answers, and every `GIVEN` of every export has a `@desc` (checked mechanically: 79 exports, 0 `GIVEN` without `@desc`).
+Every export carries a sentence that says what question it answers, and every `GIVEN` of every export has a `@desc` (checked mechanically: 80 exports, 0 `GIVEN` without `@desc`).
 
 | module | export (exact name) | inputs, in order | gives |
 | --- | --- | --- | --- |
+| g7-art21-23-expressions | `the person making the statement is the entity` | statement : `Statement about an entity under Articles 21 to 23` | BOOLEAN |
 | g7-art21-23-expressions | `Art 21(1) the statement contravenes paragraph (1)` | `the entity` : Entity; `the entity is a registered charity` : BOOLEAN; statement : `Statement about an entity under Articles 21 to 23` | BOOLEAN |
 | g7-art21-23-expressions | `Art 21(1) an unregistered entity must not say it is registered by the Commissioner` | `the entity` : Entity; `the entity is a registered charity` : BOOLEAN; statement : `Statement about an entity under Articles 21 to 23` | DEONTIC (party, act of referring to an entity) |
 | g7-art21-23-expressions | `Art 21(2) the statement contravenes paragraph (2)` | `the entity` : Entity; `the entity is a registered charity` : BOOLEAN; statement : `Statement about an entity under Articles 21 to 23` | BOOLEAN |
@@ -586,6 +587,8 @@ The correction is in `gen_tests_vintages.py`'s comment and in `g7-tests-vintages
 - Does "7 days after it is made" leave the day of making out (the seventh day after is the first day in force)? The three Orders in the sources say so by their Table dates.
 - Which Jersey time is meant by "9.30 a.m." (taken: the tz zone Europe/Jersey, which is GMT on 27 February)?
 - Is a Part brought into force in more than one stage "in force" when any, or all, of the Articles it held are (Parts 8 and 9)?
+- May the "another person" of Articles 21(2)(b), 21(4)(b), 21(6)(b) and 23(2)(b) (the person whom the maker intends to mislead, or to get an advantage from) be the entity itself?  The Law says only "another person"; the code requires only that the other person is not the person making the statement, so the entity may be the other person (case iv of the tests; assumed, not ruled, 2026-10-27).
+- Are two parties the same party when they have the same name and the same identifier (assumed), or is there a notion of identity in the Law (a registered number, a natural person's identity) that the caller should supply as the identifier?  The code leaves the identifier to the caller (assumed, not ruled, 2026-10-27).
 - What did the original Article 41 provide (R&O.17/2018's headings suggest taxation), and what did the original 44(3) provide?
 - Did the Act appointing 16 December 2019 for L.1/2017 bring Article 30(3) into force on that day, or only part of that Law?
 - Can the States still make regulations under Article 40(3) "for the purposes of the bringing into force of this Law" after 1 January 2019?
@@ -620,6 +623,7 @@ During the first assignment: nothing.
 The session's global instructions carry an index of someone's notes that mentions this subject; it was not followed.
 No file under `commons`, `commonswt`, `canon`, `paper` or `jl4/examples` was opened, listed or searched, and no filesystem was searched for the names of the Law.
 For the repairs of section 10 the files the fleet lead named were opened: the two `-tests-disagree.l4` files of the independent authors ind-b and ind-c, and, to run their assertions against the repaired modules, copies of their snapshots (including `ind-b-tests-fixtures-g7.l4`, `ind-b-tests-art21-25.l4` and `ind-c-tests-art37-43.l4`).
+For the a / the / another round of 2026-10-27 the fleet lead named an illustration in the lead's state directory (`waddington/sidebar-l4/art21-2-and-7.l4` and the first eighty lines of its `README.md`); both were read, the design was adapted to this row's nouns, and nothing was pasted.
 After the compaction of this session the harness restored into the context, unasked, the text of the integrator's assignment (`phase1/ASSIGN-INT.md`) and of a note from someone's memory about this fleet (the headlines of the hunt and the survey's counts); neither was used for either repair, and no decision in this file rests on them.
 
 
@@ -696,4 +700,131 @@ Which Part the original Article 41 stood in is assumed from its position; if the
 The old and new `Commencement: the stages in which the unit was brought into force` answers differ for Part 9 only.
 Not run: the integrator's `int-` modules (they were being edited while this repair was made; `int-readings.l4` did not check, on a missing input of a G2 record, which is not a G7 input).
 None of the `int-` modules calls the four rules that changed by name.
+
+
+### a / the / another: the person, the entity and the other person are separate values (2026-10-27; assumed, not ruled)
+
+This round was asked for by the fleet lead, who decided it with the general manager on 2026-10-27.
+Every choice in it is assumed, not ruled, and each is labelled so in the module comments.
+The Law's grammar has "a person" and "the person", "an entity" and "the entity", and "another person" (src:533-543, 545-560, 578-585).
+Before this round "another person" was folded into the wording of Boolean fields ("to cause another person to be misled"), and Articles 21(7) and 23(5) were the Boolean `made by the entity itself` and a two-valued enumeration.
+Now the person who makes the statement, the entity and the other person are separate values of one type, and "another" is a condition that two of them differ.
+
+#### The new type, the changed records, and what did not change
+
+New type `Party` in `g7-art21-23-expressions.l4` (not in domain.l4, whose hash is pinned): `name` (STRING) and `identifier` (STRING: a number or reference that tells two parties with the same name apart; for the entity, its registered number if it has one).
+Equality is L4's structural `EQUALS`: the same name and the same identifier are the same party.
+Assumed: the caller gives distinct parties distinct values, and a `Party` that stands for the entity carries the entity's registered name and number.
+
+
+| record | old fields | new fields |
+| --- | --- | --- |
+| `Statement about an entity under Articles 21 to 23` | `what is said of the entity`; `in connection with an activity of the entity in Jersey`; `made by the entity itself` (BOOLEAN); `the entity caused or permitted another person to make it`; `an exception prescribed under Article 21(8) applies`; `an exception prescribed under Article 23(4) applies`; `awareness`; `intent` | `what is said of the entity`; `in connection with an activity of the entity in Jersey`; `the entity as a party` (Party); `the person making the statement` (Party); `the other person` (Party); `the entity caused or permitted another person to make it`; `an exception prescribed under Article 21(8) applies`; `an exception prescribed under Article 23(4) applies`; `awareness`; `intent`.  REMOVED: `made by the entity itself`, which is now the derived `the person making the statement is the entity` (the maker EQUALS the entity as a party) |
+| `Intent of the person making a statement` | `to cause another person to be misled as to the nature of the entity`; `to cause another person to give the entity any property`; `to cause another person to give the entity a financial advantage`; `to cause another person to give the entity some other advantage` | the same four fields with "the other person" for "another person": `to cause the other person to be misled as to the nature of the entity`; `... to give the entity any property`; `... a financial advantage`; `... some other advantage` (the meaning is unchanged; the "other" is the statement's field `the other person`) |
+
+**No function has a different GIVEN list.**
+Every function that takes a statement keeps its name and its GIVEN list; the type of that one input has changed shape (the table above), so a caller builds a statement differently and every JSON schema that mentions a statement changes.
+The functions affected are these 22 exports: `Art 21(1) the statement contravenes paragraph (1)`, `Art 21(1) an unregistered entity must not say it is registered by the Commissioner`, `Art 21(2) the statement contravenes paragraph (2)`, `Art 21(2) a person must not say that an unregistered entity is registered, with knowledge and intent`, `Art 21(3) the statement contravenes paragraph (3)`, `Art 21(3) a Jersey entity that is not registered must not call itself a “charity”`, `Art 21(4) the statement contravenes paragraph (4)`, `Art 21(4) a person must not call an unregistered Jersey entity a “charity”, with knowledge and intent`, `Art 21(5) the statement contravenes paragraph (5)`, `Art 21(5) a foreign entity must not call itself a “charity” in connection with its Jersey activities`, `Art 21(6) the statement contravenes paragraph (6)`, `Art 21(6) a person must not call a foreign entity a “charity” in connection with its Jersey activities, with knowledge and intent`, `Art 21(9) the statement is an offence under paragraph (9)`, `Art 21(10) the statement is an offence under paragraph (10)`, `Art 23(1) the statement contravenes paragraph (1)`, `Art 23(1) an entity must not call itself a “Jersey charity” unless it meets the conditions`, `Art 23(2) the statement contravenes paragraph (2)`, `Art 23(2) a person must not call an entity a “Jersey charity” unless it meets the conditions, with knowledge and intent`, `Art 23(6) the statement is an offence under paragraph (6)`, `Art 23(7) the statement is an offence under paragraph (7)`, `Art 21 and 23: the contraventions made out by the statement`, `Art 21 and 23: the penalties for the statement`.
+`Art 21(7) paragraphs (2), (4) and (6) apply to the person making the reference` and `Art 23(5) paragraph (2) applies to the person making the reference` keep their name and their one Boolean input (not exported); the Boolean is now supplied as the Party equality `the person making the statement is the entity`, and the answer is still TRUE for both values.
+The enumeration `Party to the prohibitions on expressions` and the field `the entity referred to is the speaker` of `Act of referring to an entity` are unchanged: they label an EVENT in a trace, not a fact about the statement, and the comment on the enumeration says so (the label and the flag are derived from the statement by `the party that made the statement, as the prohibitions name it` and `the person making the statement is the entity`, and a test asserts for each of the 52 scenarios that the derived values are the ones the old Boolean gave).
+
+
+New functions (the first is exported, which adds one export; the others are not exported):
+
+| function | gives | what it carries |
+| --- | --- | --- |
+| `the person making the statement is the entity` statement | BOOLEAN (exported) | Party equality of `the person making the statement` and `the entity as a party`: the entity made the statement itself (Articles 21(1)(a), 21(3)(a), 21(5)(a), 23(1)(a); Articles 21(7), 23(5)) |
+| `the person making the statement is another person than the entity` statement | BOOLEAN | the negation: "another person" in the (b) limbs of Articles 21(1), 21(3), 21(5), 23(1) |
+| `the maker intends, by so referring, to cause another person to be misled or to give an advantage` statement `other advantage is reached` | BOOLEAN | ONE shared helper for Articles 21(2)(b), 21(4)(b), 21(6)(b), 23(2)(b): the other person differs from the person making the statement, and the intent is within the advantage sub-paragraph (`other advantage is reached` is the F7.5 wording flag, as before) |
+| `the party that made the statement, as the prohibitions name it` statement | `Party to the prohibitions on expressions` | the label of the event vocabulary, derived from the Party equality |
+
+Rules whose bodies changed (their GIVEN lists did not):
+the (a) limbs of Articles 21(1), 21(3), 21(5), 23(1) (and the Booleans that call them) now ask `the person making the statement is the entity` where they asked the field `made by the entity itself`;
+the (b) limbs of the same four paragraphs now also require `the person making the statement is another person than the entity`;
+the binding conditions of Articles 21(2), 21(4), 21(6), 23(2) (`Art 21(2) the prohibition binds the person` and its three siblings) call the shared helper, so the regulative rules built on them carry the condition too.
+The regulative (b) rules (`Art 21(1)(b) an unregistered entity must not cause or permit another person to refer to it ...` and their three siblings) are NOT changed: their act is by its name the entity causing ANOTHER person to refer, and the traces written before this round run the combined rules of Articles 21(1), 21(3) and 23(1) with scenarios 04, 09 and 13 (the entity is the maker) and a cause-or-permit event, and expect BREACH, so a condition on the maker there would change those answers.
+The Boolean forms of the (b) limbs carry the condition; the regulative form carries it in the name of the act.
+
+#### The fixtures that changed, in the g7 files
+
+`g7-tests-fixtures-expressions.l4`: the four fields of `an intent of` are renamed (from g7-tests-fixtures-expressions.l4:86);
+`a statement` keeps its name, its GIVEN list and its 52 scenarios: it now builds the statement through the new `a statement by parties` with the maker equal to the entity as a party where its argument `itself` is TRUE, a third person where it is FALSE, and a donor as the other person, who differs from both (g7-tests-fixtures-expressions.l4:110, g7-tests-fixtures-expressions.l4:134);
+three party values are new (g7-tests-fixtures-expressions.l4:92, g7-tests-fixtures-expressions.l4:93, g7-tests-fixtures-expressions.l4:94), and the statements of the new tests follow the scenarios (g7-tests-fixtures-expressions.l4:244).
+No `#ASSERT` or `#TRACE` line that existed before this round was edited: the old assertion lines are present, unchanged and in the same order (checked by comparing the `#ASSERT` lines of the module before and after).
+
+#### The lines in the independent authors' and the integrator's files that need adapting
+
+Not edited by group G7; listed for the integrator.
+In each, only VALUE DEFINITIONS (fixtures) and one wiring expression change, not an `#ASSERT` or `#TRACE` line.
+The adaptation was tried on scratch copies: with it, `ind-b-tests-art21-25.l4` passes all its assertions, `ind-b-tests-ambiguous.l4` fails the same two assertions it failed before the round (lines 21 and 27, its stated expectation), and `int-tests-offence.l4`, `int-tests-consistency.l4`, `int-tests-chains.l4`, `int-tests-contravention.l4`, `int-tests-repairs.l4`, `int-tests-wiring.l4`, `int-tests-decisions.l4` pass and `int-tests-red.l4` fails the same 6 assertions as before.
+
+
+| file:line | what to change |
+| --- | --- |
+| ind-b-tests-fixtures-g7.l4:75, ind-b-tests-fixtures-g7.l4:76, ind-b-tests-fixtures-g7.l4:77, ind-b-tests-fixtures-g7.l4:78 | rename the four `Intent of the person making a statement` fields: `to cause another person ...` becomes `to cause the other person ...` |
+| ind-b-tests-fixtures-g7.l4:97, ind-b-tests-fixtures-g7.l4:111 | in `ind-b7 statement` and in `ind-b7 an excepted statement that it is`: replace `made by the entity itself` by three fields: `the entity as a party` (a fixed Party, say name "An entity" and identifier "E-1"), `the person making the statement` (that Party where the old field was TRUE, a third Party where it was FALSE: `IF itself THEN ... ELSE ...`), and `the other person` (a donor Party, different from both) |
+| int-tests-fixtures.l4:478, int-tests-fixtures.l4:479, int-tests-fixtures.l4:480, int-tests-fixtures.l4:481, int-tests-fixtures.l4:495, int-tests-fixtures.l4:496, int-tests-fixtures.l4:497, int-tests-fixtures.l4:498 | rename the four `Intent of the person making a statement` fields as above |
+| int-tests-fixtures.l4:472, int-tests-fixtures.l4:489 | in `Int fx a statement by the entity itself saying` (TRUE) the maker is the entity as a party; in `Int fx a knowing statement by a person that the entity is a charity` (FALSE) the maker is a third party; both get `the other person` = a donor |
+| int-h-offence.l4:142 | `(statement's `made by the entity itself`)` becomes `(`the person making the statement is the entity` statement)`, an export of `g7-art21-23-expressions.l4` |
+
+`int-h-offence.l4:121` also has a rule `Int the contravention is an offence of the body` with an input named `made by the entity itself`; that is the integrator's own Boolean input, a name and not a field, and needs no change.
+
+#### The new tests
+
+211 new assertions in `g7-tests-expressions.l4` and 20 new traces in `g7-tests-expression-traces.l4`; nothing else changed in count.
+
+
+| group | assertions | what each group asserts |
+| --- | --- | --- |
+| parties | 6 | the same name and identifier are the same party, however the value was built; the same name with another identifier, a different name, a third person, the donor are other parties |
+| the first fixtures keep their meaning | 104 | for each of the 52 scenarios: `the person making the statement is the entity` is TRUE exactly where the old fixture said that the entity made the statement itself, and the derived label of the prohibitions is the entity or a person other than the entity accordingly |
+| Articles 21(7), 23(5) | 4 | the paragraphs apply, whichever way the Party equality falls (scenarios 05 and 06, 14 and 15) |
+| the knowing offences, Articles 21(2), 21(4), 21(6), 23(2) | 28 | seven cases for each paragraph: i, the maker means to mislead only themself (not contravened); i-entity, the entity means to mislead only itself (not); ii, the maker is the entity itself and the other person a donor (contravened: Articles 21(7), 23(5)); iii, a third person and a donor (contravened: the old behaviour); iv, the other person is the entity (contravened: assumed, an open question); v, the other person has the maker's name and another identifier (contravened: another party); vi, a party equal to the maker, built again (not contravened) |
+| the (b) limbs, Articles 21(1)(b), 21(3)(b), 21(5)(b), 23(1)(b) | 60 | five cases for each paragraph, each asserted on the (a) limb, the (b) limb and the paragraph: b1, the entity caused or permitted a third person (b made out, a not, paragraph contravened); b2, the maker is the entity itself (a made out, b NOT, paragraph contravened); b3, a third person and not caused or permitted (neither); b4, the maker has the entity's name and another identifier (b made out); b5, a party equal to the entity as a party (a made out, b not) |
+| F7.4 and the offences with the new parties | 9 | scenario 06 with the entity meaning to mislead only itself makes out Article 21(1) alone (one contravention, one penalty of level 3, an offence under 21(10), none under 21(9)); with a donor as the other person both are made out; the same for 23(7) |
+| traces of the knowing rules | 20 (traces) | for each of Articles 21(2), 21(4), 21(6), 23(2): cases i, i-entity and vi are FULFILLED even though the event is the forbidden act; ii and iii are BREACH |
+
+#### The positive control, and the mutation test
+
+`work/g7/mutate.py` copies the staging directory, changes ONE site in the copy, runs the test modules and counts what fails; it never edits a deposit file.
+There was no `mutate.py` before this round: the earlier repairs used the same method by hand (copy, change one site, run, count), and the two earlier mutations are written into the script and re-run.
+The failed counts are assertions, not lines of output (each failure is logged twice).
+
+
+| mutation (one site, on a copy) | result |
+| --- | --- |
+| A1-no-other-person-condition: POSITIVE CONTROL: delete `NOT (the other person EQUALS the person making the statement)` from the shared helper | 17 failed in g7-tests-expressions.l4; 12 trace(s) no longer as expected |
+| A2-no-b-limb-distinctness: delete `the person making the statement is another person than the entity` from the four (b) limbs | 8 failed in g7-tests-expressions.l4; 0 trace(s) no longer as expected |
+| A3-party-equality-by-name-only: Party equality of the maker and the entity by name only (ignores the identifier) | 8 failed in g7-tests-expressions.l4; 0 trace(s) no longer as expected |
+| A4-maker-is-always-the-entity: `the person making the statement is the entity` always TRUE | 161 failed in g7-tests-expressions.l4; 0 trace(s) no longer as expected |
+| A5-maker-is-never-the-entity: `the person making the statement is the entity` always FALSE | 118 failed in g7-tests-expressions.l4; 0 trace(s) no longer as expected |
+| A6-label-swapped: the two labels of `the party that made the statement, as the prohibitions name it` swapped | 52 failed in g7-tests-expressions.l4 |
+| A7-other-person-condition-on-entity-not-maker: the condition compares the other person with the entity instead of with the maker | 14 failed in g7-tests-expressions.l4; 8 trace(s) no longer as expected |
+| R2-entity-guard-removed: (earlier repair, re-run) `the body is an entity within Article 2(1)` always TRUE | 30 failed in g7-tests-expressions.l4; 10 trace(s) no longer as expected |
+| R1-spent-articles-ignored: (earlier repair, re-run) a Part's stages ignore the spent original Articles | 6 failed in g7-tests-commencement.l4 |
+
+The positive control behaves as the design says.
+Removing the condition from the shared helper makes exactly these fail: the three cases whose other person IS the maker (i, i-entity, vi) for each of Articles 21(2), 21(4), 21(6), 23(2), that is 12 assertions and the 12 matching traces, and five assertions of the F7.4 and offence group that rest on case i or i-entity; no (ii), (iii), (iv), (v) case fails and no (b)-limb assertion fails.
+Removing the (b)-limb distinctness makes exactly the 8 (b)-limb assertions of cases b2 and b5 fail (two for each of the four paragraphs) and nothing else, which is how the distinctness of the (b) limbs is shown to be carried by that one condition.
+
+#### Counts before and after
+
+| | before this round | after this round |
+| --- | --- | --- |
+| modules | 13 | 13 |
+| satisfied | 1429 | 1640 |
+| of which `g7-tests-expressions.l4` | 695 | 906 |
+| failed (the red module, expected) | 15 | 15 |
+| refused, other warnings | 0, 0 | 0, 0 |
+| traces behaving as expected | 131 of 131 | 151 of 151 |
+| srcrefs | 200 src: lines, 83 runs, 263 locators, 0 problems | 200 src: lines, 83 runs, 272 locators, 0 problems |
+| exports | 79 | 80 |
+
+Only the new tests changed the totals: satisfied 1429 to 1640 is +211, all in `g7-tests-expressions.l4`; traces 131 to 151 is +20, all in `g7-tests-expression-traces.l4`; the red module still fails its 15 for the reasons it did; the number of locators rose by 9 because the new rules carry `@ref`s (the quotations did not change).
+
+#### Not done, and decided differently
+
+The regulative (b) rules do not carry the condition that the maker differs from the entity (above): doing so would change the answers of traces written before this round.
+The enumeration `Party to the prohibitions on expressions` and the flag on the event were kept, with the relationship documented and derived functions provided, instead of being removed, because the traces and the independent authors' traces name them.
+Whether the other person may be the entity itself is not decided (open question in section 7); the code requires only that the other person is not the person making the statement.
 
