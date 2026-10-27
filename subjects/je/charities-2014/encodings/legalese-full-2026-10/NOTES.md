@@ -838,7 +838,7 @@ The full text of each question is in the group's FRAGMENT, in its section "Open 
 
 ### 8.7 Commencement, offences and the text (Articles 21 to 25, 37 to 43, the endnotes)
 
-- Can "Minister", "Comptroller" and the kinds of entity before 1 January 2019 be derived from the amending instruments, by reversing the amendments the endnotes list (the independent authors ia-AMB1 to 4, ib-V02 and ic-V-08 expect an answer, for example "Chief Minister"), or must they refuse because no text before 1 January 2019 is among the sources (the encoding refuses; the fleet lead's triage of 2026-10-27 left it unrepaired and recorded it as an open question)?
+- **Ruled 2026-10-27, no longer open:** a question about a day before 1 January 2019 that depends on the text of the Law is refused, because no text before that day is among the sources; "Minister", "Comptroller" and the kinds of entity are not reconstructed by reversing the amendments the endnotes list (the independent authors ia-AMB1 to 4, ib-V02 and ic-V-08 had expected such an answer, for example "Chief Minister"). Ruled by the repository's owner, Meng, on 2026-10-27: "agree with refusing pre-2019 questions."
 - Did the Law as enacted place the original Article 41 in Part 9 (G7 assumed it from its position between the original Articles 40 and 42; if it stood elsewhere the days for Part 9 revert to those of the present Articles)?
 - Is the day named in the Table the first day on which a provision is in force?
   Does "7 days after it is made" leave the day of making out?
@@ -904,7 +904,7 @@ Each is a place where the encoding takes an input, gives a named refusal, or sta
   The definition of "Minister" from 1 January 2019 to 30 May 2019 is inferred (R&O.40/2019 shows the words it replaced), the date 16 December 2019 for L.1/2017 rests on the Table alone, and endnote [4] (an editorial change to Article 31) is undated (G7, G8 7).
   Whether the consolidated text is exactly the enacted text outside the amended provisions is not known: the licence note says "for information purposes only" (G7, G8 10).
 - **Which Part the original Article 41 stood in.** The sources show the Table of Renumbered Provisions ("41 spent, omitted") and no text of the Law as enacted; G7 places it in Part 9 by its position between the original Articles 40 and 42 (assumed, not ruled), and Part 9 is in force from 1 January 2019 on reading A of F7.9 because of it.
-- **The text of "Minister", "Comptroller" and the kinds of entity before 1 January 2019.** The endnotes list the later amendments, so the earlier words could be reconstructed by reversing them; the fleet lead's triage of 2026-10-27 left that reading (reading B) unbuilt, so the encoding refuses for those days (section 12).
+- **The text of "Minister", "Comptroller" and the kinds of entity before 1 January 2019.** The endnotes list the later amendments, so the earlier words could be reconstructed by reversing them; the fleet lead's triage of 2026-10-27 left that reading (reading B) unbuilt, so the encoding refuses for those days (section 12), and the repository's owner ruled the same day that the refusal stands (section 8.7).
 - **Every Order and every set of Regulations the Law empowers.** None is among the sources, so each is an input where a rule needs its content.
   The powers named by the groups are: Article 2(2) (any Order other than R&O.56/2025), 5(3), 6(3), 8(3)(n), 8(5)(e), 8(6)(d), 9(1)(d), 9(2), 9(3), 10(2), 11(2)(e)(iv), 11(3), 11(7), 11(8), 13(6)(h), 13(7) to (10), 13(12), 16(1)(d), 19(1)(h), 21(8), 22(2)(a)(ii), 22(4), 22(5), 23(4), 24(1) to (4), 25(1), 27(5), 28(1), 31(f), 36(2), 38, 39, 40(2), 40(3), 41(2), 42 and Schedule 2 paragraph 4(3).
   The three instruments made under the Law (R&O.19/2018, R&O.59/2018, R&O.60/2018) are out of scope.
@@ -1519,7 +1519,7 @@ The integrator ran them and recorded their counts in `check.sh`; it did not revi
 ### 13.2 Found by the independent testing and not repaired
 
 - **The text of "Minister", "Comptroller" and the kinds of entity before 1 January 2019** (ind-a AMB-1 to AMB-4, ind-b V-02, ind-c V-08 and the (ba) and Comptroller rows): the authors expect an answer derived by reversing the amendments the endnotes list; the encoding refuses.
-  The fleet lead's triage left it unrepaired because the `domain.l4` vintage enumeration has no as-enacted text and the sources hold none (assumed, not ruled); it is an open question (section 8.7).
+  The fleet lead's triage left it unrepaired because the `domain.l4` vintage enumeration has no as-enacted text and the sources hold none; the repository's owner ruled on 2026-10-27 that the refusal stands (section 8.7).
 - **G4's duty ignores the day** (ind-a DIS-1): by design (IP4); the headline gate answers (`int-tests-repairs.l4`, R6).
 - **"The most recent year" answered with the calendar year** (ind-a DIS-2) and the other ambiguities of the authors: forks kept (section 12.3).
 
@@ -1565,6 +1565,7 @@ It was fired on 2026-10-14 (04:32Z) and fired again by Meng on 2026-10-26 (about
 Meng's instruction reached this session through the general manager, not directly.
 The conditions of the task are that the row is committed to a local branch of a commons worktree only, with no push to the shared repository, no email and no publication.
 Whether and when the row is pushed is for the repository's owner to decide.
+On 2026-10-27 the owner had it pushed to `main` (Meng, through the general manager: "go ahead and push the charities encoding to public commons.").
 
 ### 15.2 What happened, and when
 
@@ -1635,6 +1636,7 @@ Across the three, the pre-committed scenarios passed on the groups as deposited 
 The launching session read each disagreement against the Law's text (`TRIAGE.md`) and sent repairs only where the text settled the question: G2 (the object of improving the conditions of life in Article 6(1)(i); a body that is not an entity cannot meet the charity test; the Commissioner's staff acting under Schedule 1 paragraph 4(3) are bound as the Commissioner is, kept as fork F2.13 with the old behaviour callable) and G7 (the original Article 41 in Part 9's commencement stages; an "is an entity" check in Articles 21 and 23).
 Two things were not repaired, by decision of the launching session ("assumed, not ruled"): the refusal for every day before the first consolidated text of 1 January 2019 (two authors expected "Chief Minister" and similar answers by reversing the amendments listed in the endnotes; the encoding refuses because no text before 2019 is among the sources), and the readings the authors called ambiguous, which are kept as forks.
 Each repair is a separate change recorded in the group's fragment (section "Changes after independent testing"), so any of them can be reverted alone.
+On 2026-10-27 the repository's owner ruled that the refusal before 1 January 2019 stands (section 8.7); the ambiguous readings remain forks.
 
 ### 15.9 What was run, and what it shows
 

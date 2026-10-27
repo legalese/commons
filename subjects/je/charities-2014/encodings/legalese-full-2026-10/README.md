@@ -5,9 +5,8 @@ It was made in October 2026 by a fleet of AI agents: nine encoders, each taking 
 Three independent test authors then tested it from the Law alone, and two of the nine groups were repaired after their findings.
 No lawyer has read it against the Law yet: treat it as a draft, not as legal advice.
 
-Status on 2026-10-27: proposed, not landed.
-This row exists on the local branch `je-charities-full-2026-10` of a commons worktree and has not been pushed or merged.
-It becomes part of the commons only when it lands on `main`.
+Status on 2026-10-27: on `main` of the commons, pushed on the repository owner's instruction of that day.
+It is still a draft: no lawyer has read it.
 
 ## What it answers
 
