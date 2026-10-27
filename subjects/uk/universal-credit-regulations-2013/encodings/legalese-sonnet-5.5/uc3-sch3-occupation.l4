@@ -1,0 +1,487 @@
+IMPORT prelude
+IMPORT `uc-core`
+IMPORT `uc-core-bodies`
+IMPORT `uc3-periods`
+IMPORT `uc3-disability-payments`
+IMPORT `uc3-sch1-interpretation`
+IMPORT `uc3-sch4-interpretation`
+
+-- The Universal Credit Regulations 2013 (S.I. 2013/376), Schedule 3 (claimant treated as occupying or not occupying accommodation).
+-- Source: ../../registers/source-bundle/uksi-2013-376.txt (plain-text rendering, not the official text). Target: the stable build 1.6.98. Layer 1.
+--
+-- WHAT THIS SCHEDULE DECIDES. Regulation 25 asks whether the claimant meets the occupation condition. Part 1 says which accommodation a claimant is
+-- treated as occupying: the home they normally occupy (paragraph 1), plus six situations in which they are treated as occupying something else, or
+-- two homes, or a home before they have moved into it. Part 2 (paragraph 9) says when a temporary absence ends the occupation.
+-- Each paragraph is a rule over its own record of facts. "The payment condition and the liability condition" are regulation 25(5) (piece uc1) and
+-- are stated inputs. Where the text bounds a situation by a period of months, the periods module counts the months (fork U3-F8).
+--
+-- WHEN THE MONTH STARTS. Paragraphs 5(4), 6(4), 7(3) and 8(2) say "for more than one month" / "for more than 12 months" without saying from when.
+-- Each record carries the first day on which the claimant is treated as occupying the accommodation under that paragraph, and the day the
+-- question is asked about (fork U3-F19, assumed and not ruled).
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Paragraph 1: the general rule.
+-- src:2055 | (1) The general rule is that a claimant is to be treated as occupying as their home the accommodation which the claimant normally occupies as their home.
+-- src:2056 | (2) Subject to the following provisions of this Part, no claimant is to be treated as occupying accommodation which comprises more than one dwelling.
+-- src:2057 | (3) Where none of those provisions applies and the claimant occupies more than one dwelling, regard is to be had to all the circumstances in determining which dwelling the claimant normally occupies as their home, including (among other things) any persons with whom the claimant occupies each dwelling.
+@ref Sch 3 para 1(1) to (3) (src:2055-2057)
+DECLARE `Accommodation the claimant may occupy as their home` HAS
+    -- sub-paragraph (3): where the claimant occupies more than one dwelling, all the circumstances decide which dwelling is normally occupied,
+    -- including (among other things) any persons with whom the claimant occupies each dwelling; the answer is this input
+    `the accommodation is the accommodation which the claimant normally occupies as their home`      IS A BOOLEAN
+    -- sub-paragraph (4): "dwelling" is a dwelling within the meaning of Part 1 (England and Wales) or Part 2 (Scotland) of the Local Government Finance Act 1992
+    `number of dwellings the accommodation comprises`                                                IS A NUMBER
+
+-- src:2055 | (1) The general rule is that a claimant is to be treated as occupying as their home the accommodation which the claimant normally occupies as their home.
+-- src:2056 | (2) Subject to the following provisions of this Part, no claimant is to be treated as occupying accommodation which comprises more than one dwelling.
+@ref Sch 3 para 1(1) and (2) (src:2055-2056)
+GIVEN accommodation IS A `Accommodation the claimant may occupy as their home`
+GIVETH A BOOLEAN
+`Sch 3 para 1 — the claimant is treated as occupying the accommodation as their home` accommodation MEANS
+    (accommodation's `the accommodation is the accommodation which the claimant normally occupies as their home`)
+    AND (accommodation's `number of dwellings the accommodation comprises` AT MOST 1)
+
+-- Paragraph 2: croft land used for the purposes of the accommodation is treated as included in it.
+-- src:2062 | (1) Where accommodation which a claimant normally occupies as their home is situated on or pertains to a croft, croft land used for the purposes of the accommodation is to be treated as included in the accommodation.
+-- src:2063 | (2) “Croft” means a croft within the meaning of section 3(1) of the Crofters (Scotland) Act 1993 .
+@ref Sch 3 para 2 (src:2062-2063)
+DECLARE `Accommodation that may be on a croft` HAS
+    `the accommodation is the accommodation which the claimant normally occupies as their home`   IS A BOOLEAN
+    `the accommodation is situated on or pertains to a croft within the meaning of section 3(1) of the Crofters (Scotland) Act 1993`  IS A BOOLEAN
+    `the croft land is used for the purposes of the accommodation`                               IS A BOOLEAN
+
+-- src:2062 | (1) Where accommodation which a claimant normally occupies as their home is situated on or pertains to a croft, croft land used for the purposes of the accommodation is to be treated as included in the accommodation.
+@ref Sch 3 para 2(1) (src:2062)
+GIVEN accommodation IS A `Accommodation that may be on a croft`
+GIVETH A BOOLEAN
+`Sch 3 para 2 — the croft land is treated as included in the accommodation` accommodation MEANS
+    (accommodation's `the accommodation is the accommodation which the claimant normally occupies as their home`)
+    AND (accommodation's `the accommodation is situated on or pertains to a croft within the meaning of section 3(1) of the Crofters (Scotland) Act 1993`)
+    AND (accommodation's `the croft land is used for the purposes of the accommodation`)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Paragraph 3: living in other accommodation during essential repairs.
+-- src:2065 | (1) Where a claimant—
+-- src:2066 | (a) is required to move into accommodation (“the other accommodation”) on account of essential repairs being carried out to the accommodation the claimant normally occupies as their home;
+-- src:2067 | (b) intends to return to the accommodation which is under repair; and
+-- src:2068 | (c) meets the payment condition and the liability condition in respect of either the other accommodation or the accommodation which they normally occupy as their home (but not both),
+-- src:2069 | the claimant is to be treated as normally occupying as their home the accommodation in respect of which those conditions are met.
+@ref Sch 3 para 3 (src:2065-2069)
+DECLARE `Accommodation treated as normally occupied under paragraph 3` IS ONE OF
+    `the other accommodation`
+    `the accommodation under repair`
+    `the general rule in paragraph 1 applies`
+
+-- src:2065 | (1) Where a claimant—
+-- src:2066 | (a) is required to move into accommodation (“the other accommodation”) on account of essential repairs being carried out to the accommodation the claimant normally occupies as their home;
+-- src:2067 | (b) intends to return to the accommodation which is under repair; and
+-- src:2068 | (c) meets the payment condition and the liability condition in respect of either the other accommodation or the accommodation which they normally occupy as their home (but not both),
+-- src:2069 | the claimant is to be treated as normally occupying as their home the accommodation in respect of which those conditions are met.
+-- src:2070 | (2) A claimant is subject to the general rule in paragraph 1 where—
+-- src:2071 | (a) sub-paragraph (1)(a) and (b) apply to the claimant; but
+-- src:2072 | (b) the claimant meets the payment condition and the liability condition in respect of both the other accommodation and the accommodation which they normally occupy as their home.
+@ref Sch 3 para 3 (src:2065-2072)
+DECLARE `Claimant living in other accommodation during essential repairs` HAS
+    `the claimant is required to move into the other accommodation on account of essential repairs being carried out to the accommodation the claimant normally occupies as their home`  IS A BOOLEAN
+    `the claimant intends to return to the accommodation which is under repair`                                   IS A BOOLEAN
+    -- out of range: reg 25(5) (piece uc1)
+    `the claimant meets the payment condition and the liability condition in respect of the other accommodation`  IS A BOOLEAN
+    `the claimant meets the payment condition and the liability condition in respect of the accommodation which they normally occupy as their home`  IS A BOOLEAN
+
+-- src:2065 | (1) Where a claimant—
+@ref Sch 3 para 3(1)(a) and (b) (src:2065-2067)
+GIVEN claimant IS A `Claimant living in other accommodation during essential repairs`
+GIVETH A BOOLEAN
+`Sch 3 para 3(1)(a) and (b) — the claimant moved out for essential repairs and intends to return` claimant MEANS
+    (claimant's `the claimant is required to move into the other accommodation on account of essential repairs being carried out to the accommodation the claimant normally occupies as their home`)
+    AND (claimant's `the claimant intends to return to the accommodation which is under repair`)
+
+-- src:2065 | (1) Where a claimant—
+-- src:2066 | (a) is required to move into accommodation (“the other accommodation”) on account of essential repairs being carried out to the accommodation the claimant normally occupies as their home;
+-- src:2067 | (b) intends to return to the accommodation which is under repair; and
+-- src:2068 | (c) meets the payment condition and the liability condition in respect of either the other accommodation or the accommodation which they normally occupy as their home (but not both),
+-- src:2069 | the claimant is to be treated as normally occupying as their home the accommodation in respect of which those conditions are met.
+-- src:2070 | (2) A claimant is subject to the general rule in paragraph 1 where—
+-- src:2071 | (a) sub-paragraph (1)(a) and (b) apply to the claimant; but
+-- src:2072 | (b) the claimant meets the payment condition and the liability condition in respect of both the other accommodation and the accommodation which they normally occupy as their home.
+@ref Sch 3 para 3(1) and (2) (src:2065-2072)
+GIVEN claimant IS A `Claimant living in other accommodation during essential repairs`
+GIVETH A `Accommodation treated as normally occupied under paragraph 3`
+`Sch 3 para 3 — the accommodation the claimant is treated as normally occupying` claimant MEANS
+    BRANCH
+        IF NOT (`Sch 3 para 3(1)(a) and (b) — the claimant moved out for essential repairs and intends to return` claimant) THEN `the general rule in paragraph 1 applies`
+        IF (claimant's `the claimant meets the payment condition and the liability condition in respect of the other accommodation`) AND (claimant's `the claimant meets the payment condition and the liability condition in respect of the accommodation which they normally occupy as their home`) THEN `the general rule in paragraph 1 applies`
+        IF claimant's `the claimant meets the payment condition and the liability condition in respect of the other accommodation` THEN `the other accommodation`
+        IF claimant's `the claimant meets the payment condition and the liability condition in respect of the accommodation which they normally occupy as their home` THEN `the accommodation under repair`
+        OTHERWISE `the general rule in paragraph 1 applies`
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Paragraph 4: housed in two dwellings by a provider of social housing; both are treated as the single accommodation normally occupied.
+-- src:2074 | (1) In sub-paragraph (2), “relevant claimant” means a claimant who meets all of the following conditions—
+-- src:2075 | (a) the first condition is that the claimant has been housed in two dwellings (“accommodation A” and “accommodation B”) by a provider of social housing on account of the number of children and qualifying young persons living with the claimant;
+-- src:2076 | (b) the second condition is that the claimant normally occupies both accommodation A and accommodation B with children or qualifying young persons for whom the claimant is responsible;
+-- src:2077 | (c) the third condition is that the claimant meets the payment condition and the liability condition in respect of both accommodation A and accommodation B (and for these purposes it is irrelevant whether the claimant's liability is to the same or a different person).
+-- src:2078 | (2) In the case of a relevant claimant, both accommodation A and accommodation B are to be treated as the single accommodation which the relevant claimant normally occupies as their home.
+-- src:2079 | (3) In sub-paragraph (1), “provider of social housing” has the meaning given in paragraph 2 of Schedule 4.
+@ref Sch 3 para 4 (src:2074-2079)
+DECLARE `Claimant housed in two dwellings by a provider of social housing` HAS
+    `the provider of social housing that housed the claimant`                                                              IS A `Landlord that may be a provider of social housing`
+    `the claimant has been housed in two dwellings on account of the number of children and qualifying young persons living with the claimant`  IS A BOOLEAN
+    -- out of range: reg 4 (piece uc1), "responsible for a child or qualifying young person"
+    `the claimant normally occupies both accommodation A and accommodation B with children or qualifying young persons for whom the claimant is responsible`  IS A BOOLEAN
+    -- out of range: reg 25(5) (piece uc1)
+    `the claimant meets the payment condition and the liability condition in respect of accommodation A`                 IS A BOOLEAN
+    `the claimant meets the payment condition and the liability condition in respect of accommodation B`                 IS A BOOLEAN
+
+-- src:2074 | (1) In sub-paragraph (2), “relevant claimant” means a claimant who meets all of the following conditions—
+-- src:2075 | (a) the first condition is that the claimant has been housed in two dwellings (“accommodation A” and “accommodation B”) by a provider of social housing on account of the number of children and qualifying young persons living with the claimant;
+-- src:2076 | (b) the second condition is that the claimant normally occupies both accommodation A and accommodation B with children or qualifying young persons for whom the claimant is responsible;
+-- src:2077 | (c) the third condition is that the claimant meets the payment condition and the liability condition in respect of both accommodation A and accommodation B (and for these purposes it is irrelevant whether the claimant's liability is to the same or a different person).
+-- src:2078 | (2) In the case of a relevant claimant, both accommodation A and accommodation B are to be treated as the single accommodation which the relevant claimant normally occupies as their home.
+@ref Sch 3 para 4(1) and (2) (src:2074-2078)
+GIVEN claimant IS A `Claimant housed in two dwellings by a provider of social housing`
+GIVETH A BOOLEAN
+`Sch 3 para 4 — both dwellings are treated as the single accommodation the claimant normally occupies as their home` claimant MEANS
+    (`Sch 4 para 2 — provider of social housing` (claimant's `the provider of social housing that housed the claimant`))
+    AND (claimant's `the claimant has been housed in two dwellings on account of the number of children and qualifying young persons living with the claimant`)
+    AND (claimant's `the claimant normally occupies both accommodation A and accommodation B with children or qualifying young persons for whom the claimant is responsible`)
+    AND (claimant's `the claimant meets the payment condition and the liability condition in respect of accommodation A`)
+    AND (claimant's `the claimant meets the payment condition and the liability condition in respect of accommodation B`)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Paragraph 5(3): a person is specified if they are a claimant, or a child or qualifying young person for whom a claimant is responsible,
+-- and in receipt of one of the seven listed payments (the list module).
+-- src:2087 | (3) A person is specified in this sub-paragraph if the person is—
+-- src:2088 | (a) a claimant or any child or qualifying young person for whom a claimant is responsible; and
+-- src:2089 | (b) in receipt of—
+-- src:2090 | (i) the care component of disability living allowance at the middle or highest rate,
+-- src:2091 | (ia) the care component of child disability payment at the middle or highest rate in accordance with regulation 11(5) of the DACYP Regulations,
+-- src:2092 | (ib) the care component of Scottish adult disability living allowance at the highest or middle rate in accordance with regulation 6(4) of the Disability Assistance (Scottish Adult Disability Living Allowance) Regulations 2025,
+-- src:2093 | (ii) attendance allowance, ...
+-- src:2094 | (iia) pension age disability payment,
+-- src:2095 | (iii) the daily living component of personal independence payment or
+-- src:2096 | (iv) the daily living component of adult disability payment at the standard or enhanced rate
+@ref Sch 3 para 5(3) (src:2087-2096)
+DECLARE `Person who may be specified in paragraph 5(3)` HAS
+    -- out of range: reg 4 (piece uc1), "responsible for a child or qualifying young person"
+    `a claimant or any child or qualifying young person for whom a claimant is responsible`    IS A BOOLEAN
+    payments                                                                                   IS A `Disability payments of a person`
+
+-- src:2087 | (3) A person is specified in this sub-paragraph if the person is—
+-- src:2088 | (a) a claimant or any child or qualifying young person for whom a claimant is responsible; and
+-- src:2089 | (b) in receipt of—
+-- src:2090 | (i) the care component of disability living allowance at the middle or highest rate,
+-- src:2091 | (ia) the care component of child disability payment at the middle or highest rate in accordance with regulation 11(5) of the DACYP Regulations,
+-- src:2092 | (ib) the care component of Scottish adult disability living allowance at the highest or middle rate in accordance with regulation 6(4) of the Disability Assistance (Scottish Adult Disability Living Allowance) Regulations 2025,
+-- src:2093 | (ii) attendance allowance, ...
+-- src:2094 | (iia) pension age disability payment,
+-- src:2095 | (iii) the daily living component of personal independence payment or
+-- src:2096 | (iv) the daily living component of adult disability payment at the standard or enhanced rate
+@ref Sch 3 para 5(3) (src:2087-2096)
+GIVEN person IS A `Person who may be specified in paragraph 5(3)`
+GIVETH A BOOLEAN
+`Sch 3 para 5(3) — a person is specified` person MEANS
+    (person's `a claimant or any child or qualifying young person for whom a claimant is responsible`)
+    AND (`Sch 3 para 5(3)(b) — a person in receipt of one of the listed payments` (person's payments))
+
+-- Paragraph 5: moving home, with the new home adapted for a disabled person. The old and the new accommodation are both treated as occupied for up to one month.
+-- src:2081 | (1) Sub-paragraph (2) applies where—
+-- src:2082 | (a) the claimant has moved into accommodation (“the new accommodation”) and, immediately before the move, met the payment condition and liability condition in respect of the new accommodation; and
+-- src:2083 | (b) there was a delay in moving in that was necessary to enable the new accommodation to be adapted to meet the disablement needs of a person specified in sub-paragraph (3).
+-- src:2084 | (2) The claimant is to be treated as occupying both the new accommodation and the accommodation from which the move was made (“the old accommodation”) if—
+-- src:2085 | (a) immediately before the move, the claimant was entitled to the inclusion of the housing costs element in an award of universal credit in respect of the old accommodation; and
+-- src:2086 | (b) the delay in moving into the new accommodation was reasonable.
+-- src:2087 | (3) A person is specified in this sub-paragraph if the person is—
+-- src:2088 | (a) a claimant or any child or qualifying young person for whom a claimant is responsible; and
+-- src:2089 | (b) in receipt of—
+-- src:2090 | (i) the care component of disability living allowance at the middle or highest rate,
+-- src:2091 | (ia) the care component of child disability payment at the middle or highest rate in accordance with regulation 11(5) of the DACYP Regulations,
+-- src:2092 | (ib) the care component of Scottish adult disability living allowance at the highest or middle rate in accordance with regulation 6(4) of the Disability Assistance (Scottish Adult Disability Living Allowance) Regulations 2025,
+-- src:2093 | (ii) attendance allowance, ...
+-- src:2094 | (iia) pension age disability payment,
+-- src:2095 | (iii) the daily living component of personal independence payment or
+-- src:2096 | (iv) the daily living component of adult disability payment at the standard or enhanced rate
+-- src:2097 | (4) No claimant may be treated as occupying both the old accommodation and the new accommodation under this paragraph for more than one month.
+@ref Sch 3 para 5 (src:2081-2097)
+DECLARE `Move to a new home that is adapted for a disabled person` HAS
+    `the claimant has moved into the new accommodation`                                                                   IS A BOOLEAN
+    -- out of range: reg 25(5) (piece uc1)
+    `immediately before the move, the claimant met the payment condition and the liability condition in respect of the new accommodation`  IS A BOOLEAN
+    `there was a delay in moving in that was necessary to enable the new accommodation to be adapted to meet the disablement needs of a specified person`  IS A BOOLEAN
+    `the specified person`                                                                                                 IS A `Person who may be specified in paragraph 5(3)`
+    `immediately before the move, the claimant was entitled to the inclusion of the housing costs element in an award of universal credit in respect of the old accommodation`  IS A BOOLEAN
+    `the delay in moving into the new accommodation was reasonable`                                                       IS A BOOLEAN
+    `first day on which the claimant is treated as occupying both accommodations`                                         IS A DATE
+    `day to which the question relates`                                                                                    IS A DATE
+
+-- src:2081 | (1) Sub-paragraph (2) applies where—
+-- src:2082 | (a) the claimant has moved into accommodation (“the new accommodation”) and, immediately before the move, met the payment condition and liability condition in respect of the new accommodation; and
+-- src:2083 | (b) there was a delay in moving in that was necessary to enable the new accommodation to be adapted to meet the disablement needs of a person specified in sub-paragraph (3).
+@ref Sch 3 para 5(1) (src:2081-2083)
+GIVEN move IS A `Move to a new home that is adapted for a disabled person`
+GIVETH A BOOLEAN
+`Sch 3 para 5(1) — sub-paragraph (2) applies` move MEANS
+    (move's `the claimant has moved into the new accommodation`)
+    AND (move's `immediately before the move, the claimant met the payment condition and the liability condition in respect of the new accommodation`)
+    AND (move's `there was a delay in moving in that was necessary to enable the new accommodation to be adapted to meet the disablement needs of a specified person`)
+    AND (`Sch 3 para 5(3) — a person is specified` (move's `the specified person`))
+
+-- src:2084 | (2) The claimant is to be treated as occupying both the new accommodation and the accommodation from which the move was made (“the old accommodation”) if—
+-- src:2085 | (a) immediately before the move, the claimant was entitled to the inclusion of the housing costs element in an award of universal credit in respect of the old accommodation; and
+-- src:2086 | (b) the delay in moving into the new accommodation was reasonable.
+@ref Sch 3 para 5(2) (src:2084-2086)
+GIVEN move IS A `Move to a new home that is adapted for a disabled person`
+GIVETH A BOOLEAN
+`Sch 3 para 5(2) — conditions for being treated as occupying both` move MEANS
+    (`Sch 3 para 5(1) — sub-paragraph (2) applies` move)
+    AND (move's `immediately before the move, the claimant was entitled to the inclusion of the housing costs element in an award of universal credit in respect of the old accommodation`)
+    AND (move's `the delay in moving into the new accommodation was reasonable`)
+
+-- src:2084 | (2) The claimant is to be treated as occupying both the new accommodation and the accommodation from which the move was made (“the old accommodation”) if—
+-- src:2085 | (a) immediately before the move, the claimant was entitled to the inclusion of the housing costs element in an award of universal credit in respect of the old accommodation; and
+-- src:2086 | (b) the delay in moving into the new accommodation was reasonable.
+-- src:2097 | (4) No claimant may be treated as occupying both the old accommodation and the new accommodation under this paragraph for more than one month.
+@ref Sch 3 para 5(2) and (4) (src:2084-2086) (src:2097)
+GIVEN move IS A `Move to a new home that is adapted for a disabled person`
+GIVETH A BOOLEAN
+`Sch 3 para 5 — the claimant is treated as occupying both the new and the old accommodation` move MEANS
+    (`Sch 3 para 5(2) — conditions for being treated as occupying both` move)
+    AND (`uc3 — a day falls within the first months after a start day` (move's `day to which the question relates`) (move's `first day on which the claimant is treated as occupying both accommodations`) 1)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Paragraph 6: living in other accommodation because of a reasonable fear of violence.
+-- src:2099 | (1) This paragraph applies where—
+-- src:2100 | (a) a claimant is occupying accommodation (“the other accommodation”) other than the accommodation which they normally occupy as their home (“the home accommodation”); and
+-- src:2101 | (b) it is unreasonable to expect the claimant to return to the home accommodation on account of the claimant's reasonable fear of violence in the home, or by a former partner, against the claimant or any child or qualifying young person for whom the claimant is responsible; but
+-- src:2102 | (c) the claimant intends to return to the home accommodation.
+@ref Sch 3 para 6(1) (src:2099-2102)
+DECLARE `Accommodation treated as normally occupied under paragraph 6` IS ONE OF
+    `both the home accommodation and the other accommodation`
+    `the home accommodation only`
+    `the other accommodation only`
+    `neither: paragraph 6 does not treat the claimant as occupying either`
+    `not covered: the text does not say which accommodation the claimant is treated as occupying once the 12 months of paragraph 6(4) have passed`
+
+-- src:2099 | (1) This paragraph applies where—
+-- src:2100 | (a) a claimant is occupying accommodation (“the other accommodation”) other than the accommodation which they normally occupy as their home (“the home accommodation”); and
+-- src:2101 | (b) it is unreasonable to expect the claimant to return to the home accommodation on account of the claimant's reasonable fear of violence in the home, or by a former partner, against the claimant or any child or qualifying young person for whom the claimant is responsible; but
+-- src:2102 | (c) the claimant intends to return to the home accommodation.
+-- src:2103 | (2) The claimant is to be treated as normally occupying both the home accommodation and the other accommodation as their home if—
+-- src:2104 | (a) the claimant meets the payment condition and the liability condition in respect of both the home accommodation and other accommodation; and
+-- src:2105 | (b) it is reasonable to include an amount in the housing costs element for the payments in respect of both the home accommodation and the other accommodation.
+-- src:2106 | (3) Where the claimant meets the payment condition and the liability condition in respect of one accommodation only, the claimant is to be treated as normally occupying that accommodation as their home but only if it is reasonable to include an amount in the housing costs element for the payments in respect of that accommodation.
+-- src:2107 | (4) No claimant may be treated as occupying both the home accommodation and the other accommodation under sub-paragraph (2) for more than 12 months.
+@ref Sch 3 para 6 (src:2099-2107)
+DECLARE `Claimant living in other accommodation because of fear of violence` HAS
+    `the claimant is occupying accommodation other than the accommodation which they normally occupy as their home`      IS A BOOLEAN
+    `it is unreasonable to expect the claimant to return to the home accommodation on account of the claimant's reasonable fear of violence in the home, or by a former partner, against the claimant or any child or qualifying young person for whom the claimant is responsible`  IS A BOOLEAN
+    `the claimant intends to return to the home accommodation`                                                             IS A BOOLEAN
+    -- out of range: reg 25(5) (piece uc1)
+    `the claimant meets the payment condition and the liability condition in respect of the home accommodation`           IS A BOOLEAN
+    `the claimant meets the payment condition and the liability condition in respect of the other accommodation`          IS A BOOLEAN
+    `it is reasonable to include an amount in the housing costs element for the payments in respect of the home accommodation`  IS A BOOLEAN
+    `it is reasonable to include an amount in the housing costs element for the payments in respect of the other accommodation`  IS A BOOLEAN
+    `first day on which the claimant is treated as occupying both accommodations`                                         IS A DATE
+    `day to which the question relates`                                                                                    IS A DATE
+
+-- src:2099 | (1) This paragraph applies where—
+-- src:2100 | (a) a claimant is occupying accommodation (“the other accommodation”) other than the accommodation which they normally occupy as their home (“the home accommodation”); and
+-- src:2101 | (b) it is unreasonable to expect the claimant to return to the home accommodation on account of the claimant's reasonable fear of violence in the home, or by a former partner, against the claimant or any child or qualifying young person for whom the claimant is responsible; but
+-- src:2102 | (c) the claimant intends to return to the home accommodation.
+@ref Sch 3 para 6(1) (src:2099-2102)
+GIVEN claimant IS A `Claimant living in other accommodation because of fear of violence`
+GIVETH A BOOLEAN
+`Sch 3 para 6(1) — this paragraph applies` claimant MEANS
+    (claimant's `the claimant is occupying accommodation other than the accommodation which they normally occupy as their home`)
+    AND (claimant's `it is unreasonable to expect the claimant to return to the home accommodation on account of the claimant's reasonable fear of violence in the home, or by a former partner, against the claimant or any child or qualifying young person for whom the claimant is responsible`)
+    AND (claimant's `the claimant intends to return to the home accommodation`)
+
+-- src:2103 | (2) The claimant is to be treated as normally occupying both the home accommodation and the other accommodation as their home if—
+-- src:2104 | (a) the claimant meets the payment condition and the liability condition in respect of both the home accommodation and other accommodation; and
+-- src:2105 | (b) it is reasonable to include an amount in the housing costs element for the payments in respect of both the home accommodation and the other accommodation.
+-- src:2107 | (4) No claimant may be treated as occupying both the home accommodation and the other accommodation under sub-paragraph (2) for more than 12 months.
+@ref Sch 3 para 6(2) and (4) (src:2103-2105) (src:2107)
+GIVEN claimant IS A `Claimant living in other accommodation because of fear of violence`
+GIVETH A BOOLEAN
+`Sch 3 para 6(2) — the claimant is treated as normally occupying both` claimant MEANS
+    (`Sch 3 para 6(1) — this paragraph applies` claimant)
+    AND (claimant's `the claimant meets the payment condition and the liability condition in respect of the home accommodation`)
+    AND (claimant's `the claimant meets the payment condition and the liability condition in respect of the other accommodation`)
+    AND (claimant's `it is reasonable to include an amount in the housing costs element for the payments in respect of the home accommodation`)
+    AND (claimant's `it is reasonable to include an amount in the housing costs element for the payments in respect of the other accommodation`)
+    AND (`uc3 — a day falls within the first months after a start day` (claimant's `day to which the question relates`) (claimant's `first day on which the claimant is treated as occupying both accommodations`) 12)
+
+-- src:2106 | (3) Where the claimant meets the payment condition and the liability condition in respect of one accommodation only, the claimant is to be treated as normally occupying that accommodation as their home but only if it is reasonable to include an amount in the housing costs element for the payments in respect of that accommodation.
+@ref Sch 3 para 6(3) (src:2106)
+GIVEN claimant IS A `Claimant living in other accommodation because of fear of violence`
+GIVETH A `Accommodation treated as normally occupied under paragraph 6`
+`Sch 3 para 6(3) — the accommodation the claimant is treated as normally occupying where one only meets the conditions` claimant MEANS
+    BRANCH
+        IF (`Sch 3 para 6(1) — this paragraph applies` claimant) AND (claimant's `the claimant meets the payment condition and the liability condition in respect of the home accommodation`) AND (NOT (claimant's `the claimant meets the payment condition and the liability condition in respect of the other accommodation`)) AND (claimant's `it is reasonable to include an amount in the housing costs element for the payments in respect of the home accommodation`) THEN `the home accommodation only`
+        IF (`Sch 3 para 6(1) — this paragraph applies` claimant) AND (claimant's `the claimant meets the payment condition and the liability condition in respect of the other accommodation`) AND (NOT (claimant's `the claimant meets the payment condition and the liability condition in respect of the home accommodation`)) AND (claimant's `it is reasonable to include an amount in the housing costs element for the payments in respect of the other accommodation`) THEN `the other accommodation only`
+        OTHERWISE `neither: paragraph 6 does not treat the claimant as occupying either`
+
+-- Paragraph 6(4): the same conditions as (2), but the 12 months have passed. The text says that no claimant may be treated as occupying both for more than
+-- 12 months, and not what the claimant is treated as occupying after that (fork U3-F20): the answer is the explicit not-covered value.
+-- src:2107 | (4) No claimant may be treated as occupying both the home accommodation and the other accommodation under sub-paragraph (2) for more than 12 months.
+@ref Sch 3 para 6(4) (src:2107)
+GIVEN claimant IS A `Claimant living in other accommodation because of fear of violence`
+GIVETH A BOOLEAN
+`Sch 3 para 6(4) — the 12 months have passed on conditions that would otherwise treat the claimant as occupying both` claimant MEANS
+    (`Sch 3 para 6(1) — this paragraph applies` claimant)
+    AND (claimant's `the claimant meets the payment condition and the liability condition in respect of the home accommodation`)
+    AND (claimant's `the claimant meets the payment condition and the liability condition in respect of the other accommodation`)
+    AND (claimant's `it is reasonable to include an amount in the housing costs element for the payments in respect of the home accommodation`)
+    AND (claimant's `it is reasonable to include an amount in the housing costs element for the payments in respect of the other accommodation`)
+    AND (NOT (`uc3 — a day falls within the first months after a start day` (claimant's `day to which the question relates`) (claimant's `first day on which the claimant is treated as occupying both accommodations`) 12))
+
+-- src:2099 | (1) This paragraph applies where—
+-- src:2100 | (a) a claimant is occupying accommodation (“the other accommodation”) other than the accommodation which they normally occupy as their home (“the home accommodation”); and
+-- src:2101 | (b) it is unreasonable to expect the claimant to return to the home accommodation on account of the claimant's reasonable fear of violence in the home, or by a former partner, against the claimant or any child or qualifying young person for whom the claimant is responsible; but
+-- src:2102 | (c) the claimant intends to return to the home accommodation.
+-- src:2103 | (2) The claimant is to be treated as normally occupying both the home accommodation and the other accommodation as their home if—
+-- src:2104 | (a) the claimant meets the payment condition and the liability condition in respect of both the home accommodation and other accommodation; and
+-- src:2105 | (b) it is reasonable to include an amount in the housing costs element for the payments in respect of both the home accommodation and the other accommodation.
+-- src:2106 | (3) Where the claimant meets the payment condition and the liability condition in respect of one accommodation only, the claimant is to be treated as normally occupying that accommodation as their home but only if it is reasonable to include an amount in the housing costs element for the payments in respect of that accommodation.
+-- src:2107 | (4) No claimant may be treated as occupying both the home accommodation and the other accommodation under sub-paragraph (2) for more than 12 months.
+@ref Sch 3 para 6 (src:2099-2107)
+GIVEN claimant IS A `Claimant living in other accommodation because of fear of violence`
+GIVETH A `Accommodation treated as normally occupied under paragraph 6`
+`Sch 3 para 6 — the accommodation the claimant is treated as normally occupying` claimant MEANS
+    BRANCH
+        IF `Sch 3 para 6(2) — the claimant is treated as normally occupying both` claimant THEN `both the home accommodation and the other accommodation`
+        IF `Sch 3 para 6(4) — the 12 months have passed on conditions that would otherwise treat the claimant as occupying both` claimant THEN `not covered: the text does not say which accommodation the claimant is treated as occupying once the 12 months of paragraph 6(4) have passed`
+        OTHERWISE `Sch 3 para 6(3) — the accommodation the claimant is treated as normally occupying where one only meets the conditions` claimant
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Paragraph 7: moving in delayed by adaptations to meet disablement needs; treated as having occupied before moving in, for up to one month.
+-- src:2109 | (1) The claimant is to be treated as having occupied accommodation before they moved into it where—
+-- src:2110 | (a) the claimant has since moved in and, immediately before the move, met the payment condition and the liability condition in respect of the accommodation;
+-- src:2111 | (b) there was a delay in moving in that was necessary to enable the accommodation to be adapted to meet the disablement needs of a relevant person; and
+-- src:2112 | (c) it was reasonable to delay moving in.
+-- src:2113 | (2) “Relevant person” means a person specified in paragraph 5(3).
+-- src:2114 | (3) No claimant may be treated as occupying accommodation under this paragraph for more than one month.
+@ref Sch 3 para 7 (src:2109-2114)
+DECLARE `Move that was delayed by adaptations to accommodation` HAS
+    `the claimant has since moved in`                                                                                   IS A BOOLEAN
+    -- out of range: reg 25(5) (piece uc1)
+    `immediately before the move the claimant met the payment condition and the liability condition in respect of the accommodation`  IS A BOOLEAN
+    `there was a delay in moving in that was necessary to enable the accommodation to be adapted to meet the disablement needs of a relevant person`  IS A BOOLEAN
+    `the relevant person`                                                                                               IS A `Person who may be specified in paragraph 5(3)`
+    `it was reasonable to delay moving in`                                                                              IS A BOOLEAN
+    `first day on which the claimant is treated as having occupied the accommodation`                                  IS A DATE
+    `day to which the question relates`                                                                                 IS A DATE
+
+-- src:2109 | (1) The claimant is to be treated as having occupied accommodation before they moved into it where—
+-- src:2110 | (a) the claimant has since moved in and, immediately before the move, met the payment condition and the liability condition in respect of the accommodation;
+-- src:2111 | (b) there was a delay in moving in that was necessary to enable the accommodation to be adapted to meet the disablement needs of a relevant person; and
+-- src:2112 | (c) it was reasonable to delay moving in.
+-- src:2113 | (2) “Relevant person” means a person specified in paragraph 5(3).
+-- src:2114 | (3) No claimant may be treated as occupying accommodation under this paragraph for more than one month.
+@ref Sch 3 para 7 (src:2109-2114)
+GIVEN move IS A `Move that was delayed by adaptations to accommodation`
+GIVETH A BOOLEAN
+`Sch 3 para 7 — the claimant is treated as having occupied the accommodation before moving in` move MEANS
+    (move's `the claimant has since moved in`)
+    AND (move's `immediately before the move the claimant met the payment condition and the liability condition in respect of the accommodation`)
+    AND (move's `there was a delay in moving in that was necessary to enable the accommodation to be adapted to meet the disablement needs of a relevant person`)
+    AND (`Sch 3 para 5(3) — a person is specified` (move's `the relevant person`))
+    AND (move's `it was reasonable to delay moving in`)
+    AND (`uc3 — a day falls within the first months after a start day` (move's `day to which the question relates`) (move's `first day on which the claimant is treated as having occupied the accommodation`) 1)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Paragraph 8: moving in following a stay in hospital or a care home; treated as having occupied before moving in, for up to one month.
+-- "Patient": a person undergoing medical or other treatment as an in-patient in any hospital or similar institution (paragraph 8(3)).
+-- "Care home": Schedule 1 paragraph 1.
+-- src:2118 | (b) the liability to make the payments arose while the claimant was a patient or accommodated in a care home (or, in the case of a joint claim, while both joint claimants were patients or were accommodated in a care home).
+-- src:2122 | “patient” means a person who is undergoing medical or other treatment as an in-patient in any hospital or similar institution.
+@ref Sch 3 para 8(1)(b) and (3) (src:2118) (src:2122)
+DECLARE `Person's situation when a liability arose` HAS
+    `the person was undergoing medical or other treatment as an in-patient in any hospital or similar institution`      IS A BOOLEAN
+    `the care home in which the person was accommodated`                                                                 IS A `Premises that may be a care home`
+    `the person was accommodated in that care home`                                                                       IS A BOOLEAN
+
+-- src:2118 | (b) the liability to make the payments arose while the claimant was a patient or accommodated in a care home (or, in the case of a joint claim, while both joint claimants were patients or were accommodated in a care home).
+-- src:2119 | (2) No claimant may be treated as occupying the accommodation under this paragraph for more than one month.
+-- src:2120 | (3) In this paragraph—
+-- src:2121 | “care home” has the meaning given in paragraph 1 of Schedule 1;
+-- src:2122 | “patient” means a person who is undergoing medical or other treatment as an in-patient in any hospital or similar institution.
+@ref Sch 3 para 8(1)(b) and (3) (src:2118) (src:2121-2122)
+GIVEN situation IS A `Person's situation when a liability arose`
+GIVETH A BOOLEAN
+`Sch 3 para 8(1)(b) — the person was a patient or accommodated in a care home` situation MEANS
+    (situation's `the person was undergoing medical or other treatment as an in-patient in any hospital or similar institution`)
+    OR ((situation's `the person was accommodated in that care home`) AND (`Sch 1 para 1 — care home` (situation's `the care home in which the person was accommodated`)))
+
+-- src:2115 | 8 Moving into accommodation following stay in hospital or care home
+-- src:2116 | (1) The claimant is to be treated as having occupied accommodation before they moved into it where—
+-- src:2117 | (a) the claimant has since moved in and, immediately before the move, met the payment condition and the liability condition in respect of that accommodation; and
+-- src:2118 | (b) the liability to make the payments arose while the claimant was a patient or accommodated in a care home (or, in the case of a joint claim, while both joint claimants were patients or were accommodated in a care home).
+-- src:2119 | (2) No claimant may be treated as occupying the accommodation under this paragraph for more than one month.
+@ref Sch 3 para 8 (src:2115-2119)
+DECLARE `Move following a stay in hospital or a care home` HAS
+    `the claimant has since moved in`                                                                                   IS A BOOLEAN
+    -- out of range: reg 25(5) (piece uc1)
+    `immediately before the move the claimant met the payment condition and the liability condition in respect of the accommodation`  IS A BOOLEAN
+    `claim basis`                                                                                                       IS A `Claim basis`
+    `the situation of the claimant when the liability to make the payments arose`                                      IS A `Person's situation when a liability arose`
+    `the situation of the other joint claimant when the liability to make the payments arose`                          IS A `Person's situation when a liability arose`
+    `first day on which the claimant is treated as having occupied the accommodation`                                  IS A DATE
+    `day to which the question relates`                                                                                 IS A DATE
+
+-- src:2118 | (b) the liability to make the payments arose while the claimant was a patient or accommodated in a care home (or, in the case of a joint claim, while both joint claimants were patients or were accommodated in a care home).
+@ref Sch 3 para 8(1)(b) (src:2118)
+GIVEN move IS A `Move following a stay in hospital or a care home`
+GIVETH A BOOLEAN
+`Sch 3 para 8(1)(b) — the liability arose while the claimant (or both joint claimants) were patients or in a care home` move MEANS
+    IF (move's `claim basis`) EQUALS `joint claimants`
+    THEN (`Sch 3 para 8(1)(b) — the person was a patient or accommodated in a care home` (move's `the situation of the claimant when the liability to make the payments arose`)) AND (`Sch 3 para 8(1)(b) — the person was a patient or accommodated in a care home` (move's `the situation of the other joint claimant when the liability to make the payments arose`))
+    ELSE `Sch 3 para 8(1)(b) — the person was a patient or accommodated in a care home` (move's `the situation of the claimant when the liability to make the payments arose`)
+
+-- src:2116 | (1) The claimant is to be treated as having occupied accommodation before they moved into it where—
+-- src:2117 | (a) the claimant has since moved in and, immediately before the move, met the payment condition and the liability condition in respect of that accommodation; and
+-- src:2118 | (b) the liability to make the payments arose while the claimant was a patient or accommodated in a care home (or, in the case of a joint claim, while both joint claimants were patients or were accommodated in a care home).
+-- src:2119 | (2) No claimant may be treated as occupying the accommodation under this paragraph for more than one month.
+@ref Sch 3 para 8(1) and (2) (src:2116-2119)
+GIVEN move IS A `Move following a stay in hospital or a care home`
+GIVETH A BOOLEAN
+`Sch 3 para 8 — the claimant is treated as having occupied the accommodation before moving in` move MEANS
+    (move's `the claimant has since moved in`)
+    AND (move's `immediately before the move the claimant met the payment condition and the liability condition in respect of the accommodation`)
+    AND (`Sch 3 para 8(1)(b) — the liability arose while the claimant (or both joint claimants) were patients or in a care home` move)
+    AND (`uc3 — a day falls within the first months after a start day` (move's `day to which the question relates`) (move's `first day on which the claimant is treated as having occupied the accommodation`) 1)
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Part 2, paragraph 9: a temporary absence that exceeds, or is expected to exceed, 6 months ends the occupation, except for a claimant who falls
+-- within paragraph 3 (sub-paragraph (2)) and, for a claimant who falls within paragraph 6, where the period is 12 months (sub-paragraph (3)).
+-- src:2125 | (1) Subject to sub-paragraphs (2) and (3), a claimant is to be treated as no longer occupying accommodation from which they are temporarily absent where the absence exceeds, or is expected to exceed, 6 months.
+-- src:2126 | (2) Sub-paragraph (1) does not apply to a claimant who falls within paragraph 3.
+-- src:2127 | (3) Where a claimant who falls within paragraph 6 is temporarily absent from the accommodation which they normally occupy as their home, the claimant is to be treated as no longer occupying that accommodation where the absence exceeds, or is expected to exceed, 12 months.
+@ref Sch 3 para 9 (src:2125-2127)
+DECLARE `Temporary absence from accommodation` HAS
+    `first day of the absence`                                                                    IS A DATE
+    `day to which the question relates`                                                           IS A DATE
+    `last day to which the absence is expected to last`                                           IS A DATE
+    `the claimant falls within paragraph 3`                                                       IS A BOOLEAN
+    `the claimant falls within paragraph 6`                                                       IS A BOOLEAN
+
+-- src:2125 | (1) Subject to sub-paragraphs (2) and (3), a claimant is to be treated as no longer occupying accommodation from which they are temporarily absent where the absence exceeds, or is expected to exceed, 6 months.
+@ref Sch 3 para 9(1) (src:2125)
+GIVEN absence IS A `Temporary absence from accommodation`
+      `number of months` IS A NUMBER
+GIVETH A BOOLEAN
+`Sch 3 para 9 — the absence exceeds, or is expected to exceed, a number of months` absence `number of months` MEANS
+    (`uc3 — a period lasting to a last day exceeds a number of months` (absence's `first day of the absence`) (absence's `day to which the question relates`) `number of months`)
+    OR (`uc3 — a period lasting to a last day exceeds a number of months` (absence's `first day of the absence`) (absence's `last day to which the absence is expected to last`) `number of months`)
+
+-- src:2125 | (1) Subject to sub-paragraphs (2) and (3), a claimant is to be treated as no longer occupying accommodation from which they are temporarily absent where the absence exceeds, or is expected to exceed, 6 months.
+-- src:2126 | (2) Sub-paragraph (1) does not apply to a claimant who falls within paragraph 3.
+-- src:2127 | (3) Where a claimant who falls within paragraph 6 is temporarily absent from the accommodation which they normally occupy as their home, the claimant is to be treated as no longer occupying that accommodation where the absence exceeds, or is expected to exceed, 12 months.
+@ref Sch 3 para 9 (src:2125-2127)
+GIVEN absence IS A `Temporary absence from accommodation`
+GIVETH A BOOLEAN
+`Sch 3 para 9 — the claimant is treated as no longer occupying the accommodation` absence MEANS
+    BRANCH
+        IF absence's `the claimant falls within paragraph 3` THEN FALSE
+        IF absence's `the claimant falls within paragraph 6` THEN `Sch 3 para 9 — the absence exceeds, or is expected to exceed, a number of months` absence 12
+        OTHERWISE `Sch 3 para 9 — the absence exceeds, or is expected to exceed, a number of months` absence 6

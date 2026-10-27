@@ -1,0 +1,155 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `oas-core`
+IMPORT `oas-core-measures`
+
+-- Old Age Security Act, section 2 (Interpretation): the payment period, the payment quarter, the first and
+-- second adjustment quarters, and the Consumer Price Index for an adjustment quarter.
+--
+-- Each rule is given a DATE and works on the month that contains it (a month is the DATE of its first day;
+-- see oas-core). The answers are Calendar spans. Every month has exactly one payment period and one payment
+-- quarter, so these rules are total.
+
+-- ---------------------------------------------------------------------------------------------
+-- "payment period, in relation to a month"
+--
+-- FORK F2 (NOTES.md): paragraph (a) says "the fiscal year that includes the month" and the Act does not
+-- say when a fiscal year begins. It is taken to begin in April: paragraph (b) starts the next period on
+-- April 1, 1998, immediately after a fiscal year that ended on March 31, 1998. That is an inference from
+-- the text, not a statement in it, so it is a named value that a reviewer can find and change.
+-- src:60 | (b) the period that begins on April 1, 1998 and ends on June 30, 1999, where that period includes the month, and
+@ref R.S.C., 1985, c. O-9, s 2 "payment period", paragraph (b) (src:60)
+`the month in which a fiscal year begins` MEANS 4
+
+-- "payment period, in relation to a month, means (a) the fiscal year that includes the month, where the month is
+-- before April, 1998, (b) ... and (c) ..." (all three paragraphs are quoted here)
+-- src:58 | payment period, in relation to a month, means
+-- src:59 | (a) the fiscal year that includes the month, where the month is before April, 1998,
+-- src:60 | (b) the period that begins on April 1, 1998 and ends on June 30, 1999, where that period includes the month, and
+-- src:61 | (c) the period after June 30, 1999 that begins on July 1 of one year and ends on June 30 of the next year, where that period includes the month; (période de paiement)
+@ref R.S.C., 1985, c. O-9, s 2 "payment period" (src:58-61)
+GIVEN d IS A DATE
+GIVETH A `Calendar span`
+`the payment period in relation to the month containing` d MEANS
+    BRANCH
+        -- (a) the fiscal year that includes the month, where the month is before April, 1998
+        IF month LESS THAN (YMD 1998 4 1)
+        THEN `Calendar span` WITH
+                 `first day` IS YMD fiscalYear (`the month in which a fiscal year begins`) 1
+                 `last day`  IS (YMD (fiscalYear PLUS 1) (`the month in which a fiscal year begins`) 1) MINUS 1
+        -- (b) the period that begins on April 1, 1998 and ends on June 30, 1999, where that period includes the month
+        IF month LESS THAN (YMD 1999 7 1)
+        THEN `Calendar span` WITH
+                 `first day` IS YMD 1998 4 1
+                 `last day`  IS YMD 1999 6 30
+        -- (c) the period after June 30, 1999 that begins on July 1 of one year and ends on June 30 of the next year
+        OTHERWISE
+            `Calendar span` WITH
+                 `first day` IS YMD julyYear 7 1
+                 `last day`  IS YMD (julyYear PLUS 1) 6 30
+    WHERE
+        month MEANS `the first day of the month containing` d
+        fiscalYear MEANS
+            IF DATE_MONTH month AT LEAST (`the month in which a fiscal year begins`)
+            THEN DATE_YEAR month
+            ELSE DATE_YEAR month MINUS 1
+        julyYear MEANS
+            IF DATE_MONTH month AT LEAST 7
+            THEN DATE_YEAR month
+            ELSE DATE_YEAR month MINUS 1
+
+-- ---------------------------------------------------------------------------------------------
+-- "payment quarter means a period of three months commencing on the first day of April, July, October
+-- or January in a payment period"
+-- src:62 | payment quarter means a period of three months commencing on the first day of April, July, October or January in a payment period; (trimestre de paiement)
+@ref R.S.C., 1985, c. O-9, s 2 "payment quarter" (src:62)
+GIVEN d IS A DATE
+GIVETH A `Calendar span`
+`the payment quarter containing the month containing` d MEANS
+    `Calendar span` WITH
+        `first day` IS first
+        `last day`  IS `the last day of the month containing` (`add months` first 2)
+    WHERE
+        -- January, April, July or October: the first month of the calendar quarter that holds d
+        first MEANS Date 1 ((FLOOR ((DATE_MONTH d MINUS 1) DIVIDED BY 3) TIMES 3) PLUS 1) (DATE_YEAR d)
+
+-- ---------------------------------------------------------------------------------------------
+-- "first adjustment quarter, in relation to a payment quarter": the three months that begin 5 months
+-- before the payment quarter, written out as the four paragraphs of the definition.
+-- The input is any date in the payment quarter.
+-- src:24 | first adjustment quarter, in relation to a payment quarter, means,
+-- src:25 | (a) if the payment quarter commences on the first day of April in a payment period, the period of three months commencing on the first day of November immediately before that first day of April,
+-- src:26 | (b) if the payment quarter commences on the first day of July in a payment period, the period of three months commencing on the first day of February immediately before that first day of July,
+-- src:27 | (c) if the payment quarter commences on the first day of October in a payment period, the period of three months commencing on the first day of May immediately before that first day of October, and
+-- src:28 | (d) if the payment quarter commences on the first day of January in a payment period, the period of three months commencing on the first day of August immediately before that first day of January; (premier trimestre de rajustement)
+@ref R.S.C., 1985, c. O-9, s 2 "first adjustment quarter" (src:24-28)
+GIVEN d IS A DATE
+GIVETH A `Calendar span`
+`the first adjustment quarter in relation to the payment quarter containing` d MEANS
+    `Calendar span` WITH
+        `first day` IS start
+        `last day`  IS `the last day of the month containing` (`add months` start 2)
+    WHERE
+        quarter MEANS `the payment quarter containing the month containing` d
+        quarterYear MEANS DATE_YEAR (quarter's `first day`)
+        start MEANS
+            BRANCH
+                -- (a) the payment quarter commences on the first day of April: the three months commencing on the first day of November immediately before
+                IF DATE_MONTH (quarter's `first day`) EQUALS 4
+                THEN YMD (quarterYear MINUS 1) 11 1
+                -- (b) July: the three months commencing on the first day of February immediately before
+                IF DATE_MONTH (quarter's `first day`) EQUALS 7
+                THEN YMD quarterYear 2 1
+                -- (c) October: the three months commencing on the first day of May immediately before
+                IF DATE_MONTH (quarter's `first day`) EQUALS 10
+                THEN YMD quarterYear 5 1
+                -- (d) January: the three months commencing on the first day of August immediately before
+                OTHERWISE YMD (quarterYear MINUS 1) 8 1
+
+-- "second adjustment quarter, in relation to a payment quarter": the three months that begin 8 months
+-- before the payment quarter, written out as the four paragraphs of the definition.
+-- src:68 | second adjustment quarter, in relation to a payment quarter, means,
+-- src:69 | (a) if the payment quarter commences on the first day of April in a payment period, the period of three months commencing on the first day of August immediately before that first day of April,
+-- src:70 | (b) if the payment quarter commences on the first day of July in a payment period, the period of three months commencing on the first day of November immediately before that first day of July,
+-- src:71 | (c) if the payment quarter commences on the first day of October in a payment period, the period of three months commencing on the first day of February immediately before that first day of October, and
+-- src:72 | (d) if the payment quarter commences on the first day of January in a payment period, the period of three months commencing on the first day of May immediately before that first day of January; (second trimestre de rajustement)
+@ref R.S.C., 1985, c. O-9, s 2 "second adjustment quarter" (src:68-72)
+GIVEN d IS A DATE
+GIVETH A `Calendar span`
+`the second adjustment quarter in relation to the payment quarter containing` d MEANS
+    `Calendar span` WITH
+        `first day` IS start
+        `last day`  IS `the last day of the month containing` (`add months` start 2)
+    WHERE
+        quarter MEANS `the payment quarter containing the month containing` d
+        quarterYear MEANS DATE_YEAR (quarter's `first day`)
+        start MEANS
+            BRANCH
+                -- (a) April: the three months commencing on the first day of August immediately before
+                IF DATE_MONTH (quarter's `first day`) EQUALS 4
+                THEN YMD (quarterYear MINUS 1) 8 1
+                -- (b) July: the three months commencing on the first day of November immediately before
+                IF DATE_MONTH (quarter's `first day`) EQUALS 7
+                THEN YMD (quarterYear MINUS 1) 11 1
+                -- (c) October: the three months commencing on the first day of February immediately before
+                IF DATE_MONTH (quarter's `first day`) EQUALS 10
+                THEN YMD quarterYear 2 1
+                -- (d) January: the three months commencing on the first day of May immediately before
+                OTHERWISE YMD (quarterYear MINUS 1) 5 1
+
+-- ---------------------------------------------------------------------------------------------
+-- "Consumer Price Index, with respect to any adjustment quarter, means the average for that adjustment
+-- quarter of the Consumer Price Index for Canada, as published by Statistics Canada ..., for each month in
+-- that adjustment quarter". An adjustment quarter has three months, so the three published monthly figures
+-- are the inputs. The average is not rounded here: Regulations s 9(1) and (2) say how the average is
+-- determined and expressed (to one decimal place, `rounded half up to the number of decimal places`), and
+-- that is encoded by piece oa3; a rule that needs the figure in the form the Regulations give calls
+-- oa3's rule on the result of this one.
+-- src:23 | Consumer Price Index, with respect to any adjustment quarter, means the average for that adjustment quarter of the Consumer Price Index for Canada, as published by Statistics Canada under the authority of the Statistics Act, for each month in that adjustment quarter; (indice des prix à la consommation)
+@ref R.S.C., 1985, c. O-9, s 2 "Consumer Price Index" (src:23)
+GIVEN `figure for the first month`  IS A NUMBER
+      `figure for the second month` IS A NUMBER
+      `figure for the third month`  IS A NUMBER
+GIVETH A NUMBER
+`the Consumer Price Index for an adjustment quarter` `figure for the first month` `figure for the second month` `figure for the third month` MEANS
+    (`figure for the first month` PLUS `figure for the second month` PLUS `figure for the third month`) DIVIDED BY 3

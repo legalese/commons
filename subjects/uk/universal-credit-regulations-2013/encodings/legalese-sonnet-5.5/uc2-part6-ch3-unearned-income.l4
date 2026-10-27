@@ -1,0 +1,822 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `uc-core`
+IMPORT `uc2-domain`
+
+-- The Universal Credit Regulations 2013 (S.I. 2013/376), Part 6, Chapter 3 (regulations 65 to 74): UNEARNED INCOME.
+-- Source: ../../registers/source-bundle/uksi-2013-376.txt (lines 1085-1203), a plain-text rendering made by a converter script; it is not the official
+-- text. Target: the stable build 1.6.98. Money is a NUMBER of pounds; a calculated amount is rounded once, at the end, with the
+-- keel's `core — an amount rounded to the nearest penny` (regulation 6(1)).
+-- Two formulas in this Chapter's neighbours are missing from the text (regulation 73(2A) below, regulation 54A(6) elsewhere):
+-- they are not reconstructed.
+
+§ `Part 6, Chapter 3 -- Unearned income`
+
+§§ `Chapter 3 heading, and regulation 65 -- Introduction (inert)`
+-- src:1085 | CHAPTER 3 — UNEARNED INCOME
+-- src:1086 | 65 Introduction
+-- src:1087 | This Chapter provides for the calculation of a person's unearned income for the purposes of section 8 of the Act (calculation of awards).
+-- INERT: a statement of what the Chapter is for. It cites section 8 of the Act (calculation of awards, not an input) and decides
+-- nothing a person could ask, so it has no rule.
+
+§§ `Regulation 66 -- What is included in unearned income?`
+
+-- The kinds of income regulation 66(1) lists, one field per limb. A limb that is itself a defined term (retirement pension
+-- income, foreign state retirement pension, PPF periodic payments, student income, capital treated as income) is a field the
+-- caller fills from the rule that defines it (regulations 67, 66(2)(a), 66(2)(c), 68 to 71, 46(3) and (4)). Income the person is
+-- treated as having by virtue of regulation 74 is "their income" for this test, so it is described by the same fields.
+-- src:1089 | (1) A person's unearned income is any of their income, including income the person is treated as having by virtue of regulation 74 (notional unearned income), falling within the following descriptions—
+-- src:1090 | (a) retirement pension income (see regulation 67) to which the person is entitled, subject to any adjustment to the amount payable in accordance with regulations under section 73 of the Social Security Administration Act 1992 (overlapping benefits);
+-- src:1103 | (d) payments made towards the maintenance of the person by their spouse, civil partner, former spouse or former civil partner under a court order or an agreement for maintenance;
+-- src:1104 | (da) foreign state retirement pension;
+-- src:1105 | (e) student income (see regulation 68);
+-- src:1106 | (f) a payment made under section 2 of the Employment and Training Act 1973 or section 2 of the Enterprise and New Towns (Scotland) Act 1990 which is a substitute for universal credit or is for a person's living expenses;
+-- src:1107 | (g) a payment made by one of the Sports Councils named in section 23(2) of the National Lottery etc. Act 1993 out of sums allocated to it for distribution where the payment is for the person's living expenses;
+-- src:1108 | (h) a payment received under an insurance policy to insure against—
+-- src:1109 | (i) the risk of losing income due to illness, accident or redundancy, or
+-- src:1110 | (ii) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-- src:1111 | (i) income from an annuity (other than retirement pension income), unless disregarded under regulation 75 (compensation for personal injury);
+-- src:1112 | (j) income from a trust, unless disregarded under regulation 75 (compensation for personal injury) or 76 (special schemes for compensation);
+-- src:1113 | (k) income that is treated as the yield from a person's capital by virtue of regulation 72;
+-- src:1114 | (l) capital that is treated as income by virtue of regulation 46(3) or (4);
+-- src:1115 | (la) PPF periodic payments;
+-- src:1116 | (m) income that does not fall within sub-paragraphs (a) to (la) and is taxable under Part 5 of the Income Tax (Trading and Other Income) Act 2005 (miscellaneous income).
+@ref reg 66(1) (src:1089-1090) (src:1103-1116)
+DECLARE `Item of income considered under regulation 66` HAS
+    `retirement pension income to which the person is entitled`                       IS A BOOLEAN
+    `benefit to which the person is entitled`                                          IS A MAYBE Benefit
+    `benefit, allowance or other payment paid under the law of a country outside the United Kingdom and analogous to a benefit mentioned in sub-paragraph (b)`  IS A BOOLEAN
+    `payment towards the maintenance of the person by a spouse, civil partner, former spouse or former civil partner under a court order or an agreement for maintenance`  IS A BOOLEAN
+    `foreign state retirement pension`                                                 IS A BOOLEAN
+    `student income`                                                                   IS A BOOLEAN
+    `payment under section 2 of the Employment and Training Act 1973 or section 2 of the Enterprise and New Towns (Scotland) Act 1990`  IS A BOOLEAN
+    `payment is a substitute for universal credit`                                     IS A BOOLEAN
+    `payment is for a person's living expenses`                                        IS A BOOLEAN
+    `payment by a Sports Council named in section 23(2) of the National Lottery etc. Act 1993 out of sums allocated to it for distribution`  IS A BOOLEAN
+    `payment received under an insurance policy to insure against the risk of losing income due to illness, accident or redundancy`  IS A BOOLEAN
+    `income from an annuity`                                                           IS A BOOLEAN
+    `income from an annuity is retirement pension income`                              IS A BOOLEAN
+    `income from a trust`                                                              IS A BOOLEAN
+    `income from an annuity or a trust is disregarded under regulation 75`             IS A BOOLEAN
+    `income from a trust is disregarded under regulation 76`                           IS A BOOLEAN
+    `income treated as the yield from the person's capital by virtue of regulation 72` IS A BOOLEAN
+    `capital treated as income by virtue of regulation 46(3) or (4)`                   IS A BOOLEAN
+    `PPF periodic payments`                                                            IS A BOOLEAN
+    `income taxable under Part 5 of the Income Tax (Trading and Other Income) Act 2005 (miscellaneous income)`  IS A BOOLEAN
+
+-- Limb (b): the benefits listed. Sub-paragraph (iv) is a run of dots in this text (nothing is reconstructed).
+-- src:1091 | (b) any of the following benefits to which the person is entitled, subject to any adjustment to the amount payable in accordance with regulations under section 73 of the Social Security Administration Act 1992 (overlapping benefits)—
+-- src:1092 | (i) jobseeker's allowance,
+-- src:1093 | (ii) employment and support allowance,
+-- src:1094 | (iii) carer's allowance,
+-- src:1095 | (iiia) carer support payment but only up to a maximum of the amount a claimant would receive if they had an entitlement to carer’s allowance,
+-- src:1096 | (iv) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-- src:1097 | (v) widowed mother's allowance,
+-- src:1098 | (vi) widowed parent's allowance,
+-- src:1099 | (vii) widow's pension,
+-- src:1100 | (viii) maternity allowance, or
+-- src:1101 | (ix) industrial injuries benefit, excluding any increase in that benefit under section 104 or 105 of the Contributions and Benefits Act (increases where constant attendance needed and for exceptionally severe disablement);
+@ref reg 66(1)(b) (src:1091-1101)
+GIVEN benefit IS A Benefit
+GIVETH A BOOLEAN
+`reg 66(1)(b) — a benefit listed in regulation 66(1)(b)` benefit MEANS
+    CONSIDER benefit
+    WHEN `jobseeker's allowance`                THEN TRUE
+    WHEN `employment and support allowance`     THEN TRUE
+    WHEN `carer's allowance`                    THEN TRUE
+    WHEN `carer support payment`                THEN TRUE
+    WHEN `widowed mother's allowance`           THEN TRUE
+    WHEN `widowed parent's allowance`           THEN TRUE
+    WHEN `widow's pension`                      THEN TRUE
+    WHEN `maternity allowance`                  THEN TRUE
+    WHEN `industrial injuries benefit`          THEN TRUE
+    OTHERWISE FALSE
+
+-- src:1090 | (a) retirement pension income (see regulation 67) to which the person is entitled, subject to any adjustment to the amount payable in accordance with regulations under section 73 of the Social Security Administration Act 1992 (overlapping benefits);
+-- src:1091 | (b) any of the following benefits to which the person is entitled, subject to any adjustment to the amount payable in accordance with regulations under section 73 of the Social Security Administration Act 1992 (overlapping benefits)—
+@ref reg 66(1)(b) (src:1090-1091)
+GIVEN item IS AN `Item of income considered under regulation 66`
+GIVETH A BOOLEAN
+`reg 66(1)(b) — the item is a listed benefit to which the person is entitled` item MEANS
+    CONSIDER item's `benefit to which the person is entitled`
+    WHEN NOTHING THEN FALSE
+    WHEN JUST listed THEN `reg 66(1)(b) — a benefit listed in regulation 66(1)(b)` listed
+
+-- src:1106 | (f) a payment made under section 2 of the Employment and Training Act 1973 or section 2 of the Enterprise and New Towns (Scotland) Act 1990 which is a substitute for universal credit or is for a person's living expenses;
+@ref reg 66(1)(f) (src:1106)
+GIVEN item IS AN `Item of income considered under regulation 66`
+GIVETH A BOOLEAN
+`reg 66(1)(f) — a payment under the Employment and Training Act 1973 or the Enterprise and New Towns (Scotland) Act 1990` item MEANS
+    (item's `payment under section 2 of the Employment and Training Act 1973 or section 2 of the Enterprise and New Towns (Scotland) Act 1990`)
+    AND (    (item's `payment is a substitute for universal credit`)
+          OR (item's `payment is for a person's living expenses`))
+
+-- src:1107 | (g) a payment made by one of the Sports Councils named in section 23(2) of the National Lottery etc. Act 1993 out of sums allocated to it for distribution where the payment is for the person's living expenses;
+@ref reg 66(1)(g) (src:1107)
+GIVEN item IS AN `Item of income considered under regulation 66`
+GIVETH A BOOLEAN
+`reg 66(1)(g) — a Sports Council payment for living expenses` item MEANS
+    (item's `payment by a Sports Council named in section 23(2) of the National Lottery etc. Act 1993 out of sums allocated to it for distribution`)
+    AND (item's `payment is for a person's living expenses`)
+
+-- src:1111 | (i) income from an annuity (other than retirement pension income), unless disregarded under regulation 75 (compensation for personal injury);
+@ref reg 66(1)(i) (src:1111)
+GIVEN item IS AN `Item of income considered under regulation 66`
+GIVETH A BOOLEAN
+`reg 66(1)(i) — income from an annuity` item MEANS
+    (item's `income from an annuity`)
+    AND (NOT (item's `income from an annuity is retirement pension income`))
+    AND (NOT (item's `income from an annuity or a trust is disregarded under regulation 75`))
+
+-- src:1112 | (j) income from a trust, unless disregarded under regulation 75 (compensation for personal injury) or 76 (special schemes for compensation);
+@ref reg 66(1)(j) (src:1112)
+GIVEN item IS AN `Item of income considered under regulation 66`
+GIVETH A BOOLEAN
+`reg 66(1)(j) — income from a trust` item MEANS
+    (item's `income from a trust`)
+    AND (NOT (item's `income from an annuity or a trust is disregarded under regulation 75`))
+    AND (NOT (item's `income from a trust is disregarded under regulation 76`))
+
+-- Limbs (a) to (la): each is a description on its own; the item is unearned income if any one of them fits.
+-- src:1089 | (1) A person's unearned income is any of their income, including income the person is treated as having by virtue of regulation 74 (notional unearned income), falling within the following descriptions—
+-- src:1090 | (a) retirement pension income (see regulation 67) to which the person is entitled, subject to any adjustment to the amount payable in accordance with regulations under section 73 of the Social Security Administration Act 1992 (overlapping benefits);
+-- src:1102 | (c) any benefit, allowance, or other payment which is paid under the law of a country outside the United Kingdom and is analogous to a benefit mentioned in sub-paragraph (b);
+-- src:1103 | (d) payments made towards the maintenance of the person by their spouse, civil partner, former spouse or former civil partner under a court order or an agreement for maintenance;
+-- src:1104 | (da) foreign state retirement pension;
+-- src:1105 | (e) student income (see regulation 68);
+-- src:1113 | (k) income that is treated as the yield from a person's capital by virtue of regulation 72;
+-- src:1114 | (l) capital that is treated as income by virtue of regulation 46(3) or (4);
+-- src:1115 | (la) PPF periodic payments;
+@ref reg 66(1) limbs (a) to (la) (src:1089-1115)
+GIVEN item IS AN `Item of income considered under regulation 66`
+GIVETH A BOOLEAN
+`reg 66(1) — the item falls within limbs (a) to (la)` item MEANS
+        (item's `retirement pension income to which the person is entitled`)
+    OR  (`reg 66(1)(b) — the item is a listed benefit to which the person is entitled` item)
+    OR  (item's `benefit, allowance or other payment paid under the law of a country outside the United Kingdom and analogous to a benefit mentioned in sub-paragraph (b)`)
+    OR  (item's `payment towards the maintenance of the person by a spouse, civil partner, former spouse or former civil partner under a court order or an agreement for maintenance`)
+    OR  (item's `foreign state retirement pension`)
+    OR  (item's `student income`)
+    OR  (`reg 66(1)(f) — a payment under the Employment and Training Act 1973 or the Enterprise and New Towns (Scotland) Act 1990` item)
+    OR  (`reg 66(1)(g) — a Sports Council payment for living expenses` item)
+    OR  (item's `payment received under an insurance policy to insure against the risk of losing income due to illness, accident or redundancy`)
+    OR  (`reg 66(1)(i) — income from an annuity` item)
+    OR  (`reg 66(1)(j) — income from a trust` item)
+    OR  (item's `income treated as the yield from the person's capital by virtue of regulation 72`)
+    OR  (item's `capital treated as income by virtue of regulation 46(3) or (4)`)
+    OR  (item's `PPF periodic payments`)
+
+-- Limb (m) catches what the other limbs miss: income that does not fall within (a) to (la) and is taxable as miscellaneous income.
+-- src:1089 | (1) A person's unearned income is any of their income, including income the person is treated as having by virtue of regulation 74 (notional unearned income), falling within the following descriptions—
+-- src:1116 | (m) income that does not fall within sub-paragraphs (a) to (la) and is taxable under Part 5 of the Income Tax (Trading and Other Income) Act 2005 (miscellaneous income).
+@ref reg 66(1) (src:1089) (src:1116)
+GIVEN item IS AN `Item of income considered under regulation 66`
+GIVETH A BOOLEAN
+`reg 66(1) — an item of income is unearned income` item MEANS
+        (`reg 66(1) — the item falls within limbs (a) to (la)` item)
+    OR  (    (item's `income taxable under Part 5 of the Income Tax (Trading and Other Income) Act 2005 (miscellaneous income)`)
+         AND (NOT (`reg 66(1) — the item falls within limbs (a) to (la)` item)))
+
+-- The amount of an item that counts. Each benefit in limb (b) counts "subject to any adjustment to the amount payable in
+-- accordance with regulations under section 73 of the Social Security Administration Act 1992 (overlapping benefits)": the
+-- caller supplies the amount payable after that adjustment. Carer support payment counts only up to the carer's allowance
+-- amount (limb (b)(iiia)); industrial injuries benefit counts without any increase under section 104 or 105 (limb (b)(ix)).
+-- src:1090 | (a) retirement pension income (see regulation 67) to which the person is entitled, subject to any adjustment to the amount payable in accordance with regulations under section 73 of the Social Security Administration Act 1992 (overlapping benefits);
+-- src:1091 | (b) any of the following benefits to which the person is entitled, subject to any adjustment to the amount payable in accordance with regulations under section 73 of the Social Security Administration Act 1992 (overlapping benefits)—
+-- src:1092 | (i) jobseeker's allowance,
+-- src:1093 | (ii) employment and support allowance,
+-- src:1094 | (iii) carer's allowance,
+-- src:1095 | (iiia) carer support payment but only up to a maximum of the amount a claimant would receive if they had an entitlement to carer’s allowance,
+-- src:1096 | (iv) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-- src:1097 | (v) widowed mother's allowance,
+-- src:1098 | (vi) widowed parent's allowance,
+-- src:1099 | (vii) widow's pension,
+-- src:1100 | (viii) maternity allowance, or
+-- src:1101 | (ix) industrial injuries benefit, excluding any increase in that benefit under section 104 or 105 of the Contributions and Benefits Act (increases where constant attendance needed and for exceptionally severe disablement);
+@ref reg 66(1)(a) and (b) (src:1090-1101)
+DECLARE `Amount of an item of income considered under regulation 66` HAS
+    item                                                                                         IS AN `Item of income considered under regulation 66`
+    `amount payable after any overlapping benefits adjustment`  IS A NUMBER
+    `amount of carer's allowance that a claimant would receive if entitled to it`                IS A NUMBER
+    `increase in industrial injuries benefit under section 104 or 105`  IS A NUMBER
+
+-- src:1090 | (a) retirement pension income (see regulation 67) to which the person is entitled, subject to any adjustment to the amount payable in accordance with regulations under section 73 of the Social Security Administration Act 1992 (overlapping benefits);
+-- src:1091 | (b) any of the following benefits to which the person is entitled, subject to any adjustment to the amount payable in accordance with regulations under section 73 of the Social Security Administration Act 1992 (overlapping benefits)—
+-- src:1092 | (i) jobseeker's allowance,
+-- src:1093 | (ii) employment and support allowance,
+-- src:1094 | (iii) carer's allowance,
+-- src:1095 | (iiia) carer support payment but only up to a maximum of the amount a claimant would receive if they had an entitlement to carer’s allowance,
+-- src:1096 | (iv) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+-- src:1097 | (v) widowed mother's allowance,
+-- src:1098 | (vi) widowed parent's allowance,
+-- src:1099 | (vii) widow's pension,
+-- src:1100 | (viii) maternity allowance, or
+-- src:1101 | (ix) industrial injuries benefit, excluding any increase in that benefit under section 104 or 105 of the Contributions and Benefits Act (increases where constant attendance needed and for exceptionally severe disablement);
+@ref reg 66(1)(a) and (b) (src:1090-1101)
+GIVEN amount IS AN `Amount of an item of income considered under regulation 66`
+GIVETH A NUMBER
+`reg 66(1)(b) — the amount of a listed benefit that counts` amount MEANS
+    CONSIDER (amount's item)'s `benefit to which the person is entitled`
+    WHEN NOTHING THEN amount's `amount payable after any overlapping benefits adjustment`
+    WHEN JUST listed THEN
+        CONSIDER listed
+        WHEN `carer support payment` THEN
+            min (amount's `amount payable after any overlapping benefits adjustment`) (amount's `amount of carer's allowance that a claimant would receive if entitled to it`)
+        WHEN `industrial injuries benefit` THEN
+            (amount's `amount payable after any overlapping benefits adjustment`) MINUS (amount's `increase in industrial injuries benefit under section 104 or 105`)
+        OTHERWISE amount's `amount payable after any overlapping benefits adjustment`
+
+@ref reg 66(1) (src:1090-1101)
+GIVEN amount IS AN `Amount of an item of income considered under regulation 66`
+GIVETH A NUMBER
+`reg 66(1) — the amount of an item of income that counts as unearned income` amount MEANS
+    IF NOT (`reg 66(1) — an item of income is unearned income` (amount's item))
+    THEN 0
+    ELSE `core — an amount rounded to the nearest penny` (`reg 66(1)(b) — the amount of a listed benefit that counts` amount)
+
+-- Paragraph (2)(a): a foreign state retirement pension is any pension paid under the law of a country outside the United Kingdom
+-- that is in the nature of social security.
+-- src:1118 | (a) in paragraph (1)(da) “foreign state retirement pension” means any pension which is paid under the law of a country outside the United Kingdom and is in the nature of social security;
+@ref reg 66(2)(a) (src:1118)
+DECLARE `Pension that may be a foreign state retirement pension` HAS
+    `paid under the law of a country outside the United Kingdom`  IS A BOOLEAN
+    `in the nature of social security`                            IS A BOOLEAN
+
+-- src:1118 | (a) in paragraph (1)(da) “foreign state retirement pension” means any pension which is paid under the law of a country outside the United Kingdom and is in the nature of social security;
+@ref reg 66(2)(a) (src:1118)
+GIVEN pension IS A `Pension that may be a foreign state retirement pension`
+GIVETH A BOOLEAN
+`reg 66(2)(a) — a foreign state retirement pension` pension MEANS
+    (pension's `paid under the law of a country outside the United Kingdom`)
+    AND (pension's `in the nature of social security`)
+
+-- Paragraph (2)(b): living expenses (limbs (f) and (g), and paragraph 17 of Schedule 10): the cost of food, ordinary clothing or
+-- footwear, or household fuel, rent or other housing costs (including council tax), for the person, their partner and any child
+-- or qualifying young person for whom the person is responsible. The text says "for the person, their partner and any child":
+-- a cost for any one of them is taken to be enough (fork F-U4 in NOTES.md).
+-- src:1119 | (b) in paragraph (1)(f) and (g) a person's “living expenses” are the cost of—
+-- src:1120 | (i) food;
+-- src:1121 | (ii) ordinary clothing or footwear;
+-- src:1122 | (iii) household fuel, rent or other housing costs (including council tax),
+-- src:1123 | for the person, their partner and any child or qualifying young person for whom the person is responsible;
+@ref reg 66(2)(b) (src:1119-1123)
+DECLARE `Cost that may be a living expense` HAS
+    `cost of food`                                                                   IS A BOOLEAN
+    `cost of ordinary clothing or footwear`                                          IS A BOOLEAN
+    `cost of household fuel, rent or other housing costs (including council tax)`    IS A BOOLEAN
+    `for the person`                                                                 IS A BOOLEAN
+    `for the person's partner`                                                       IS A BOOLEAN
+    `for a child or qualifying young person for whom the person is responsible`      IS A BOOLEAN
+
+-- src:1119 | (b) in paragraph (1)(f) and (g) a person's “living expenses” are the cost of—
+-- src:1120 | (i) food;
+-- src:1121 | (ii) ordinary clothing or footwear;
+-- src:1122 | (iii) household fuel, rent or other housing costs (including council tax),
+-- src:1123 | for the person, their partner and any child or qualifying young person for whom the person is responsible;
+@ref reg 66(2)(b) (src:1119-1123)
+GIVEN cost IS A `Cost that may be a living expense`
+GIVETH A BOOLEAN
+`reg 66(2)(b) — the cost of the kind that is a living expense` cost MEANS
+        (cost's `cost of food`)
+    OR  (cost's `cost of ordinary clothing or footwear`)
+    OR  (cost's `cost of household fuel, rent or other housing costs (including council tax)`)
+
+-- src:1119 | (b) in paragraph (1)(f) and (g) a person's “living expenses” are the cost of—
+-- src:1120 | (i) food;
+-- src:1121 | (ii) ordinary clothing or footwear;
+-- src:1122 | (iii) household fuel, rent or other housing costs (including council tax),
+-- src:1123 | for the person, their partner and any child or qualifying young person for whom the person is responsible;
+@ref reg 66(2)(b) (src:1119-1123)
+GIVEN cost IS A `Cost that may be a living expense`
+GIVETH A BOOLEAN
+`reg 66(2)(b) — the cost is for one of the people the paragraph names` cost MEANS
+        (cost's `for the person`)
+    OR  (cost's `for the person's partner`)
+    OR  (cost's `for a child or qualifying young person for whom the person is responsible`)
+
+-- src:1119 | (b) in paragraph (1)(f) and (g) a person's “living expenses” are the cost of—
+-- src:1120 | (i) food;
+-- src:1121 | (ii) ordinary clothing or footwear;
+-- src:1122 | (iii) household fuel, rent or other housing costs (including council tax),
+-- src:1123 | for the person, their partner and any child or qualifying young person for whom the person is responsible;
+@ref reg 66(2)(b) (src:1119-1123)
+GIVEN cost IS A `Cost that may be a living expense`
+GIVETH A BOOLEAN
+`reg 66(2)(b) — living expenses` cost MEANS
+        (`reg 66(2)(b) — the cost of the kind that is a living expense` cost)
+    AND (`reg 66(2)(b) — the cost is for one of the people the paragraph names` cost)
+
+-- Paragraph (2)(c): "PPF periodic payments" has the meaning in section 17(1) of the State Pension Credit Act 2002, which is not an
+-- input; whether a payment is one is the stated input `PPF periodic payments` of the item above.
+-- src:1124 | (c) in paragraph (1)(la) “PPF periodic payments” has the meaning given in section 17(1) of the State Pension Credit Act 2002 .
+-- INERT (reg 66(2)(c)): a definition by citation of another Act. The fact is the field `PPF periodic payments` of
+-- `Item of income considered under regulation 66`.
+
+§§ `Regulation 67 -- Meaning of "retirement pension income"`
+
+-- Paragraph (1): the meaning in section 16 of the State Pension Credit Act 2002 as extended by regulation 16 of the State Pension
+-- Credit Regulations 2002 (neither an input; a stated input). Paragraph (2) adds an increase in a Category A or Category B
+-- retirement pension, mentioned in section 16(1)(a), payable under Part 4 of the Contributions and Benefits Act for a partner.
+-- src:1125 | 67 Meaning of “retirement pension income”
+-- src:1126 | (1) Subject to paragraph (2), in regulation 66(1)(a) “retirement pension income” has the same meaning as in section 16 of the State Pension Credit Act 2002 as extended by regulation 16 of the State Pension Credit Regulations 2002 .
+-- src:1127 | (2) Retirement pension income includes any increase in a Category A or Category B retirement pension mentioned in section 16(1)(a) of the State Pension Credit Act 2002 which is payable under Part 4 of the Contributions and Benefits Act in respect of a person's partner.
+@ref reg 67 (src:1125-1127)
+DECLARE `Pension that may be retirement pension income` HAS
+    `retirement pension income within section 16 of the State Pension Credit Act 2002 as extended by regulation 16 of the State Pension Credit Regulations 2002`  IS A BOOLEAN
+    `increase in a Category A or Category B retirement pension mentioned in section 16(1)(a) of the State Pension Credit Act 2002`  IS A BOOLEAN
+    `increase is payable under Part 4 of the Contributions and Benefits Act in respect of a person's partner`  IS A BOOLEAN
+
+-- src:1125 | 67 Meaning of “retirement pension income”
+-- src:1126 | (1) Subject to paragraph (2), in regulation 66(1)(a) “retirement pension income” has the same meaning as in section 16 of the State Pension Credit Act 2002 as extended by regulation 16 of the State Pension Credit Regulations 2002 .
+-- src:1127 | (2) Retirement pension income includes any increase in a Category A or Category B retirement pension mentioned in section 16(1)(a) of the State Pension Credit Act 2002 which is payable under Part 4 of the Contributions and Benefits Act in respect of a person's partner.
+@ref reg 67 (src:1125-1127)
+GIVEN pension IS A `Pension that may be retirement pension income`
+GIVETH A BOOLEAN
+`reg 67 — retirement pension income` pension MEANS
+        (pension's `retirement pension income within section 16 of the State Pension Credit Act 2002 as extended by regulation 16 of the State Pension Credit Regulations 2002`)
+    OR  (    (pension's `increase in a Category A or Category B retirement pension mentioned in section 16(1)(a) of the State Pension Credit Act 2002`)
+         AND (pension's `increase is payable under Part 4 of the Contributions and Benefits Act in respect of a person's partner`))
+
+§§ `Regulation 68 -- Person treated as having student income`
+
+-- Paragraph (1) says in which assessment periods a person is treated as having student income: the period in which the course
+-- begins; for a course of two or more years, the period in which the second or a later year begins; and any other period in which,
+-- or in any part of which, the person is undertaking the course, except the period in which the long vacation begins or which
+-- falls within it, and the period in which the course ends.
+-- src:1129 | (1) A person who is undertaking a course of education, study or training (see regulation 13) and has a student loan, a postgraduate ... loan or a grant in respect of that course, is to be treated as having student income in respect of—
+-- src:1130 | (a) an assessment period in which the course begins;
+-- src:1131 | (b) in the case of a course which lasts for two or more years, an assessment period in which the second or subsequent year begins;
+-- src:1132 | (c) any other assessment period in which, or in any part of which, the person is undertaking the course, excluding—
+-- src:1133 | (i) an assessment period in which the long vacation begins or which falls within the long vacation, or
+-- src:1134 | (ii) an assessment period in which the course ends.
+@ref reg 68(1) (src:1129-1134)
+DECLARE `Course and assessment period considered under regulation 68` HAS
+    `undertaking a course of education, study or training`                                  IS A BOOLEAN   -- out of range: regulation 13 (piece uc1)
+    `student loan in respect of the course`                                                 IS A BOOLEAN
+    `postgraduate loan in respect of the course`                                            IS A BOOLEAN
+    `could acquire a student loan or a postgraduate loan by taking reasonable steps`        IS A BOOLEAN
+    `grant in respect of the course`                                                        IS A BOOLEAN
+    `the course begins in the assessment period`                                            IS A BOOLEAN
+    `the course lasts two or more years`                                                    IS A BOOLEAN
+    `the second or a subsequent year of the course begins in the assessment period`         IS A BOOLEAN
+    `the person undertakes the course in the assessment period or in any part of it`        IS A BOOLEAN
+    `the long vacation begins in the assessment period`                                     IS A BOOLEAN
+    `the assessment period falls within the long vacation`                                  IS A BOOLEAN
+    `the course ends in the assessment period`                                              IS A BOOLEAN
+
+-- src:1140 | (5) A person is to be treated as having a student loan or a postgraduate ... loan where the person could acquire a student loan or a postgraduate ... loan by taking reasonable steps to do so.
+@ref reg 68(5) (src:1140)
+GIVEN course IS A `Course and assessment period considered under regulation 68`
+GIVETH A BOOLEAN
+`reg 68(5) — the person is treated as having a student loan or a postgraduate loan` course MEANS
+        (course's `student loan in respect of the course`)
+    OR  (course's `postgraduate loan in respect of the course`)
+    OR  (course's `could acquire a student loan or a postgraduate loan by taking reasonable steps`)
+
+-- src:1129 | (1) A person who is undertaking a course of education, study or training (see regulation 13) and has a student loan, a postgraduate ... loan or a grant in respect of that course, is to be treated as having student income in respect of—
+@ref reg 68(1) (src:1129)
+GIVEN course IS A `Course and assessment period considered under regulation 68`
+GIVETH A BOOLEAN
+`reg 68(1) — the person has a loan or a grant in respect of the course` course MEANS
+        (`reg 68(5) — the person is treated as having a student loan or a postgraduate loan` course)
+    OR  (course's `grant in respect of the course`)
+
+-- src:1132 | (c) any other assessment period in which, or in any part of which, the person is undertaking the course, excluding—
+-- src:1133 | (i) an assessment period in which the long vacation begins or which falls within the long vacation, or
+-- src:1134 | (ii) an assessment period in which the course ends.
+@ref reg 68(1)(c) (src:1132-1134)
+GIVEN course IS A `Course and assessment period considered under regulation 68`
+GIVETH A BOOLEAN
+`reg 68(1)(c) — any other assessment period in which the person undertakes the course` course MEANS
+        (course's `the person undertakes the course in the assessment period or in any part of it`)
+    AND (NOT ((course's `the long vacation begins in the assessment period`) OR (course's `the assessment period falls within the long vacation`)))
+    AND (NOT (course's `the course ends in the assessment period`))
+
+-- src:1129 | (1) A person who is undertaking a course of education, study or training (see regulation 13) and has a student loan, a postgraduate ... loan or a grant in respect of that course, is to be treated as having student income in respect of—
+-- src:1130 | (a) an assessment period in which the course begins;
+-- src:1131 | (b) in the case of a course which lasts for two or more years, an assessment period in which the second or subsequent year begins;
+-- src:1132 | (c) any other assessment period in which, or in any part of which, the person is undertaking the course, excluding—
+-- src:1133 | (i) an assessment period in which the long vacation begins or which falls within the long vacation, or
+-- src:1134 | (ii) an assessment period in which the course ends.
+@ref reg 68(1) (src:1129-1134)
+GIVEN course IS A `Course and assessment period considered under regulation 68`
+GIVETH A BOOLEAN
+`reg 68(1) — the person is treated as having student income in the assessment period` course MEANS
+        (course's `undertaking a course of education, study or training`)
+    AND (`reg 68(1) — the person has a loan or a grant in respect of the course` course)
+    AND (    (course's `the course begins in the assessment period`)
+          OR (    (course's `the course lasts two or more years`)
+              AND (course's `the second or a subsequent year of the course begins in the assessment period`))
+          OR (`reg 68(1)(c) — any other assessment period in which the person undertakes the course` course))
+
+-- Paragraphs (2) to (4): what the student income is based on. A loan (student or postgraduate, including one the person is
+-- treated as having by paragraph (5)) comes first; a grant is the basis only where paragraph (2) does not apply.
+-- src:1135 | (2) Where a person has a student loan or a postgraduate ... loan, their student income for any assessment period referred to in paragraph (1) is to be based on the amount of that loan.
+-- src:1136 | (3) Where paragraph (2) applies, any grant in relation to the period to which the loan applies is to be disregarded except for—
+-- src:1137 | (a) any specific amount included in the grant to cover payments which are rent payments in respect of which an amount is included in an award of universal credit for the housing costs element;
+-- src:1138 | (b) any amount intended for the maintenance of another person in respect of whom an amount is included in the award.
+-- src:1139 | (4) Where paragraph (2) does not apply, the person's student income for any assessment period in which they are treated as having that income is to be based on the amount of their grant.
+@ref reg 68(2) to (4) (src:1135-1139)
+DECLARE `Basis of student income` IS ONE OF
+    `student income based on the amount of a loan`
+    `student income based on the amount of a grant`
+    `no loan or grant on which student income could be based`
+
+-- src:1135 | (2) Where a person has a student loan or a postgraduate ... loan, their student income for any assessment period referred to in paragraph (1) is to be based on the amount of that loan.
+-- src:1136 | (3) Where paragraph (2) applies, any grant in relation to the period to which the loan applies is to be disregarded except for—
+-- src:1137 | (a) any specific amount included in the grant to cover payments which are rent payments in respect of which an amount is included in an award of universal credit for the housing costs element;
+-- src:1138 | (b) any amount intended for the maintenance of another person in respect of whom an amount is included in the award.
+-- src:1139 | (4) Where paragraph (2) does not apply, the person's student income for any assessment period in which they are treated as having that income is to be based on the amount of their grant.
+@ref reg 68(2) to (4) (src:1135-1139)
+GIVEN course IS A `Course and assessment period considered under regulation 68`
+GIVETH A `Basis of student income`
+`reg 68(2) to (4) — what the student income is based on` course MEANS
+    IF `reg 68(5) — the person is treated as having a student loan or a postgraduate loan` course
+    THEN `student income based on the amount of a loan`
+    ELSE IF course's `grant in respect of the course`
+         THEN `student income based on the amount of a grant`
+         ELSE `no loan or grant on which student income could be based`
+
+-- Paragraph (3): where student income is based on a loan, any grant for the period of the loan is disregarded except a specific
+-- amount for rent payments for which the award includes the housing costs element, and an amount intended for the maintenance of
+-- another person for whom the award includes an amount. What is left is the sum of the two exceptions.
+-- src:1136 | (3) Where paragraph (2) applies, any grant in relation to the period to which the loan applies is to be disregarded except for—
+-- src:1137 | (a) any specific amount included in the grant to cover payments which are rent payments in respect of which an amount is included in an award of universal credit for the housing costs element;
+-- src:1138 | (b) any amount intended for the maintenance of another person in respect of whom an amount is included in the award.
+@ref reg 68(3) (src:1136-1138)
+GIVEN `specific amount in the grant to cover rent payments for which the award includes the housing costs element` IS A NUMBER
+      `amount in the grant intended for the maintenance of another person for whom the award includes an amount` IS A NUMBER
+GIVETH A NUMBER
+`reg 68(3) — the part of a grant that is not disregarded when student income is based on a loan` `specific amount in the grant to cover rent payments for which the award includes the housing costs element` `amount in the grant intended for the maintenance of another person for whom the award includes an amount` MEANS
+    `specific amount in the grant to cover rent payments for which the award includes the housing costs element` PLUS `amount in the grant intended for the maintenance of another person for whom the award includes an amount`
+
+-- Paragraph (6): student income does not include a training allowance of the kind regulation 66(1)(f) names.
+-- src:1141 | (6) Student income does not include any payment referred to in regulation 66(1)(f) (training allowances).
+@ref reg 68(6) (src:1141)
+GIVEN `payment is referred to in regulation 66(1)(f)` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 68(6) — a payment counts as student income` `payment is referred to in regulation 66(1)(f)` MEANS
+    NOT `payment is referred to in regulation 66(1)(f)`
+
+-- Paragraph (7): the four defined terms. None of the Acts they cite is an input, so each limb is a stated fact.
+-- src:1143 | “grant” means any kind of educational grant or award, excluding a student loan or a payment made under a scheme to enable persons under the age of 21 to complete courses of education or training that are not advanced education;
+@ref reg 68(7) "grant" (src:1143)
+DECLARE `Award that may be a grant` HAS
+    `educational grant or award of any kind`                                                          IS A BOOLEAN
+    `student loan`                                                                                    IS A BOOLEAN
+    `payment under a scheme to enable persons under the age of 21 to complete courses of education or training that are not advanced education`  IS A BOOLEAN
+
+-- src:1143 | “grant” means any kind of educational grant or award, excluding a student loan or a payment made under a scheme to enable persons under the age of 21 to complete courses of education or training that are not advanced education;
+@ref reg 68(7) "grant" (src:1143)
+GIVEN award IS AN `Award that may be a grant`
+GIVETH A BOOLEAN
+`reg 68(7) — grant` award MEANS
+        (award's `educational grant or award of any kind`)
+    AND (NOT (award's `student loan`))
+    AND (NOT (award's `payment under a scheme to enable persons under the age of 21 to complete courses of education or training that are not advanced education`))
+
+-- src:1144 | “the long vacation” is a period of no less than one month which, in the opinion of the Secretary of State, is the longest vacation during a course which is intended to last for two or more years;
+@ref reg 68(7) "the long vacation" (src:1144)
+GIVEN `start of the vacation` IS A DATE
+      `end of the vacation` IS A DATE
+      `the Secretary of State is of the opinion that it is the longest vacation during a course intended to last for two or more years` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 68(7) — the long vacation` `start of the vacation` `end of the vacation` `the Secretary of State is of the opinion that it is the longest vacation during a course intended to last for two or more years` MEANS
+        (`end of the vacation` PLUS 1 AT LEAST `core — the date reached by adding a time limit to a date` `start of the vacation` (`Time limit` WITH quantity IS 1, unit IS months))
+    AND `the Secretary of State is of the opinion that it is the longest vacation during a course intended to last for two or more years`
+
+-- src:1145 | “postgraduate loan” means a loan to a student undertaking a postgraduate master’s degree course or a postgraduate doctoral degree course pursuant to regulations made under section 22 of the Teaching and Higher Education Act 1998;
+@ref reg 68(7) "postgraduate loan" (src:1145)
+GIVEN `loan to a student undertaking a postgraduate master's degree course or a postgraduate doctoral degree course` IS A BOOLEAN
+      `pursuant to regulations made under section 22 of the Teaching and Higher Education Act 1998` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 68(7) — postgraduate loan` `loan to a student undertaking a postgraduate master's degree course or a postgraduate doctoral degree course` `pursuant to regulations made under section 22 of the Teaching and Higher Education Act 1998` MEANS
+    `loan to a student undertaking a postgraduate master's degree course or a postgraduate doctoral degree course` AND `pursuant to regulations made under section 22 of the Teaching and Higher Education Act 1998`
+
+-- src:1146 | “student loan” means a loan towards a student's maintenance pursuant to any regulations made under section 22 of the Teaching and Higher Education Act 1998 , section 73 of the Education (Scotland) Act 1980 or Article 3 of the Education (Student Support) (Northern Ireland) Order 1998 ... .
+@ref reg 68(7) "student loan" (src:1146)
+GIVEN `loan towards a student's maintenance` IS A BOOLEAN
+      `pursuant to regulations under section 22 of the Teaching and Higher Education Act 1998, section 73 of the Education (Scotland) Act 1980 or Article 3 of the Education (Student Support) (Northern Ireland) Order 1998` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 68(7) — student loan` `loan towards a student's maintenance` `pursuant to regulations under section 22 of the Teaching and Higher Education Act 1998, section 73 of the Education (Scotland) Act 1980 or Article 3 of the Education (Student Support) (Northern Ireland) Order 1998` MEANS
+    `loan towards a student's maintenance` AND `pursuant to regulations under section 22 of the Teaching and Higher Education Act 1998, section 73 of the Education (Scotland) Act 1980 or Article 3 of the Education (Student Support) (Northern Ireland) Order 1998`
+
+§§ `Regulation 69 -- Calculation of student income: student loans and postgraduate loans`
+
+-- Paragraph (1): the amount is the maximum student loan, including increases for additional weeks, that the person could acquire
+-- for the year by taking reasonable steps. Paragraph (2) says to assume no reduction for means or for any grant; so the input is
+-- that maximum, worked out on that assumption.
+-- src:1148 | (1) Where, in accordance with regulation 68(2), a person's student income is to be based on the amount of a student loan for a year, the amount to be taken into account is the maximum student loan (including any increases for additional weeks) that the person would be able to acquire in respect of that year by taking reasonable steps to do so.
+-- src:1150 | (2) For the purposes of calculating the maximum student loan in paragraph (1) or the maximum postgraduate ... loan in paragraph (1A) it is to be assumed no reduction has been made on account of—
+-- src:1151 | (a) the person's means or the means of their partner, parent or any other person; or
+-- src:1152 | (b) any grant made to the person.
+@ref reg 69(1) and (2) (src:1148) (src:1150-1152)
+GIVEN `maximum student loan for the year, with increases for additional weeks, assuming no reduction on account of means or of any grant` IS A NUMBER
+GIVETH A NUMBER
+`reg 69(1) — the amount of a student loan taken into account` `maximum student loan for the year, with increases for additional weeks, assuming no reduction on account of means or of any grant` MEANS
+    `core — an amount rounded to the nearest penny` `maximum student loan for the year, with increases for additional weeks, assuming no reduction on account of means or of any grant`
+
+-- Paragraph (1A): 30 per cent. of the maximum postgraduate loan that the person could acquire by taking reasonable steps.
+-- src:1149 | (1A) Where, in accordance with regulation 68(2), a person’s student income is to be based on the amount of a postgraduate ... loan for a year, the amount to be taken into account is 30 per cent. of the maximum postgraduate ... loan that the person would be able to acquire by taking reasonable steps to do so.
+-- src:1150 | (2) For the purposes of calculating the maximum student loan in paragraph (1) or the maximum postgraduate ... loan in paragraph (1A) it is to be assumed no reduction has been made on account of—
+-- src:1151 | (a) the person's means or the means of their partner, parent or any other person; or
+-- src:1152 | (b) any grant made to the person.
+@ref reg 69(1A) and (2) (src:1149-1152)
+GIVEN `maximum postgraduate loan, assuming no reduction on account of means or of any grant` IS A NUMBER
+GIVETH A NUMBER
+`reg 69(1A) — the amount of a postgraduate loan taken into account` `maximum postgraduate loan, assuming no reduction on account of means or of any grant` MEANS
+    `core — an amount rounded to the nearest penny` (30% TIMES `maximum postgraduate loan, assuming no reduction on account of means or of any grant`)
+
+§§ `Regulation 70 -- Calculation of student income: grants`
+
+-- The whole of the grant, excluding eight kinds of payment. Exclusion (d) does not apply where the award includes the housing
+-- costs element for those costs; exclusion (e) applies only if the award includes no amount for that other person.
+-- src:1154 | Where, in accordance with regulation 68(4), a person's student income is to be based on the amount of a grant, the amount to be taken into account is the whole of the grant excluding any payment—
+-- src:1155 | (a) intended to meet tuition fees or examination fees;
+-- src:1156 | (b) in respect of the person's disability;
+-- src:1157 | (c) intended to meet additional expenditure connected with term time residential study away from the person's educational establishment;
+-- src:1158 | (d) intended to meet the cost of the person maintaining a home at a place other than that at which they reside during their course, except where an award of universal credit includes an amount for the housing costs element in respect of those costs;
+-- src:1159 | (e) intended for the maintenance of another person, but only if an award of universal credit does not include any amount in respect of that person;
+-- src:1160 | (f) intended to meet the cost of books and equipment;
+-- src:1161 | (g) intended to meet travel expenses incurred as a result of the person's attendance on the course; or
+-- src:1162 | (h) intended to meet childcare costs.
+@ref reg 70 (src:1154-1162)
+DECLARE `Grant counted as student income` HAS
+    `whole of the grant`                                                                                  IS A NUMBER
+    `payment intended to meet tuition fees or examination fees`                                           IS A NUMBER
+    `payment in respect of the person's disability`                                                       IS A NUMBER
+    `payment intended to meet additional expenditure connected with term time residential study away from the person's educational establishment`  IS A NUMBER
+    `payment intended to meet the cost of the person maintaining a home at a place other than that at which they reside during their course`  IS A NUMBER
+    `an award of universal credit includes the housing costs element in respect of those costs`           IS A BOOLEAN
+    `payment intended for the maintenance of another person`                                              IS A NUMBER
+    `an award of universal credit includes an amount in respect of that other person`                     IS A BOOLEAN
+    `payment intended to meet the cost of books and equipment`                                            IS A NUMBER
+    `payment intended to meet travel expenses incurred as a result of the person's attendance on the course`  IS A NUMBER
+    `payment intended to meet childcare costs`                                                            IS A NUMBER
+
+-- src:1154 | Where, in accordance with regulation 68(4), a person's student income is to be based on the amount of a grant, the amount to be taken into account is the whole of the grant excluding any payment—
+-- src:1155 | (a) intended to meet tuition fees or examination fees;
+-- src:1156 | (b) in respect of the person's disability;
+-- src:1157 | (c) intended to meet additional expenditure connected with term time residential study away from the person's educational establishment;
+-- src:1158 | (d) intended to meet the cost of the person maintaining a home at a place other than that at which they reside during their course, except where an award of universal credit includes an amount for the housing costs element in respect of those costs;
+-- src:1159 | (e) intended for the maintenance of another person, but only if an award of universal credit does not include any amount in respect of that person;
+-- src:1160 | (f) intended to meet the cost of books and equipment;
+-- src:1161 | (g) intended to meet travel expenses incurred as a result of the person's attendance on the course; or
+-- src:1162 | (h) intended to meet childcare costs.
+@ref reg 70 (src:1154-1162)
+GIVEN grant IS A `Grant counted as student income`
+GIVETH A NUMBER
+`reg 70 — the amount of a grant taken into account` grant MEANS
+    `core — an amount rounded to the nearest penny`
+        ( (grant's `whole of the grant`)
+          MINUS (grant's `payment intended to meet tuition fees or examination fees`)
+          MINUS (grant's `payment in respect of the person's disability`)
+          MINUS (grant's `payment intended to meet additional expenditure connected with term time residential study away from the person's educational establishment`)
+          MINUS (IF grant's `an award of universal credit includes the housing costs element in respect of those costs`
+                 THEN 0
+                 ELSE grant's `payment intended to meet the cost of the person maintaining a home at a place other than that at which they reside during their course`)
+          MINUS (IF grant's `an award of universal credit includes an amount in respect of that other person`
+                 THEN 0
+                 ELSE grant's `payment intended for the maintenance of another person`)
+          MINUS (grant's `payment intended to meet the cost of books and equipment`)
+          MINUS (grant's `payment intended to meet travel expenses incurred as a result of the person's attendance on the course`)
+          MINUS (grant's `payment intended to meet childcare costs`))
+
+§§ `Regulation 71 -- Calculation of student income: amount for an assessment period`
+
+-- Step 1 picks the loan (and any grant that is not disregarded), 30 per cent. of a postgraduate loan, or the grant; step 2 counts
+-- the assessment periods; step 3 divides; step 4 deducts 110 pounds. Step 2: months before the award began that regulation 71
+-- Step 2 counts as assessment periods are added to the assessment periods of the year. (The text does not floor the result at
+-- nil: fork F-U6 in NOTES.md.)
+-- src:1164 | The amount of a person's student income in relation to each assessment period in which the person is to be treated as having student income in accordance with regulation 68(1) is calculated as follows.
+-- src:1165 | Step 1
+-- src:1166 | Determine whichever of the following amounts is applicable—
+-- src:1167 | (a) in so far as regulation 68(2) applies to a person with a student loan, the amount of the loan (and, if applicable, the amount of any grant) in relation to the year of the course in which the assessment period falls; ...
+-- src:1168 | (aa) in so far as regulation 68(2) applies to a person with a postgraduate ... loan, 30 per cent. of the amount of the loan in relation to the year of the course in which the assessment period falls; or
+-- src:1169 | (b) if regulation 68(4) applies (person with a grant but no student loan or postgraduate ... loan) the amount of the grant in relation to the year of the course in which the assessment period falls.
+-- src:1170 | But if the period of the course is less than a year determine the amount of the grant or loan in relation to the course.
+-- src:1171 | Step 2
+-- src:1172 | Determine in relation to—
+-- src:1173 | (a) the year of the course in which the assessment period falls; or
+-- src:1174 | (b) if the period of the course is less than a year, the period of the course,
+-- src:1175 | the number of assessment periods for which the person is to be treated as having student income under regulation 68(1).
+-- src:1176 | But where the first day of the person’s universal credit award is on a date later than the first day of the year of the course, or period of the course, in question, each period of one month beginning on the same day as the assessment periods for, and preceding the commencement of, that award is to be treated as an assessment period when determining the number of assessment periods for which the person is to be treated as having student income.
+-- src:1177 | Step 3
+-- src:1178 | Divide the amount produced by step 1 by the number of assessment periods produced by step 2.
+-- src:1179 | Step 4
+-- src:1180 | Deduct £110.
+@ref reg 71 (src:1164-1180)
+DECLARE `Student income for an assessment period` HAS
+    basis                                                                                  IS A `Basis of student income`
+    `student loan for the year of the course, or for the course if it is shorter`            IS A NUMBER
+    `postgraduate loan for the year of the course, or for the course if it is shorter`      IS A NUMBER
+    `part of any grant that is not disregarded`                                              IS A NUMBER
+    `grant for the year of the course, or for the course if it is shorter`                   IS A NUMBER
+    `person has a student loan`                                                              IS A BOOLEAN
+    `person has a postgraduate loan`                                                         IS A BOOLEAN
+    `assessment periods in the year of the course, or in the course if it is shorter, for which the person is treated as having student income`  IS A NUMBER
+    `earlier months of one month each, beginning on the same day as the assessment periods, that precede the commencement of the award and fall in that year of the course or that course`  IS A NUMBER
+
+-- src:1165 | Step 1
+-- src:1166 | Determine whichever of the following amounts is applicable—
+-- src:1167 | (a) in so far as regulation 68(2) applies to a person with a student loan, the amount of the loan (and, if applicable, the amount of any grant) in relation to the year of the course in which the assessment period falls; ...
+-- src:1168 | (aa) in so far as regulation 68(2) applies to a person with a postgraduate ... loan, 30 per cent. of the amount of the loan in relation to the year of the course in which the assessment period falls; or
+-- src:1169 | (b) if regulation 68(4) applies (person with a grant but no student loan or postgraduate ... loan) the amount of the grant in relation to the year of the course in which the assessment period falls.
+@ref reg 71 Step 1 (src:1165-1169)
+GIVEN income IS A `Student income for an assessment period`
+GIVETH A NUMBER
+`reg 71 Step 1 — the amount of the loan or the grant` income MEANS
+    IF income's `person has a student loan` OR income's `person has a postgraduate loan`
+    THEN (IF income's `person has a student loan`
+          THEN (income's `student loan for the year of the course, or for the course if it is shorter`) PLUS (income's `part of any grant that is not disregarded`)
+          ELSE 0)
+         PLUS (IF income's `person has a postgraduate loan`
+               THEN 30% TIMES (income's `postgraduate loan for the year of the course, or for the course if it is shorter`)
+               ELSE 0)
+    ELSE income's `grant for the year of the course, or for the course if it is shorter`
+
+-- src:1171 | Step 2
+-- src:1172 | Determine in relation to—
+-- src:1173 | (a) the year of the course in which the assessment period falls; or
+-- src:1174 | (b) if the period of the course is less than a year, the period of the course,
+-- src:1175 | the number of assessment periods for which the person is to be treated as having student income under regulation 68(1).
+-- src:1176 | But where the first day of the person’s universal credit award is on a date later than the first day of the year of the course, or period of the course, in question, each period of one month beginning on the same day as the assessment periods for, and preceding the commencement of, that award is to be treated as an assessment period when determining the number of assessment periods for which the person is to be treated as having student income.
+@ref reg 71 Step 2 (src:1171-1176)
+GIVEN income IS A `Student income for an assessment period`
+GIVETH A NUMBER
+`reg 71 Step 2 — the number of assessment periods` income MEANS
+    (income's `assessment periods in the year of the course, or in the course if it is shorter, for which the person is treated as having student income`)
+    PLUS (income's `earlier months of one month each, beginning on the same day as the assessment periods, that precede the commencement of the award and fall in that year of the course or that course`)
+
+-- src:1164 | The amount of a person's student income in relation to each assessment period in which the person is to be treated as having student income in accordance with regulation 68(1) is calculated as follows.
+-- src:1165 | Step 1
+-- src:1166 | Determine whichever of the following amounts is applicable—
+-- src:1167 | (a) in so far as regulation 68(2) applies to a person with a student loan, the amount of the loan (and, if applicable, the amount of any grant) in relation to the year of the course in which the assessment period falls; ...
+-- src:1168 | (aa) in so far as regulation 68(2) applies to a person with a postgraduate ... loan, 30 per cent. of the amount of the loan in relation to the year of the course in which the assessment period falls; or
+-- src:1169 | (b) if regulation 68(4) applies (person with a grant but no student loan or postgraduate ... loan) the amount of the grant in relation to the year of the course in which the assessment period falls.
+-- src:1170 | But if the period of the course is less than a year determine the amount of the grant or loan in relation to the course.
+-- src:1171 | Step 2
+-- src:1172 | Determine in relation to—
+-- src:1173 | (a) the year of the course in which the assessment period falls; or
+-- src:1174 | (b) if the period of the course is less than a year, the period of the course,
+-- src:1175 | the number of assessment periods for which the person is to be treated as having student income under regulation 68(1).
+-- src:1176 | But where the first day of the person’s universal credit award is on a date later than the first day of the year of the course, or period of the course, in question, each period of one month beginning on the same day as the assessment periods for, and preceding the commencement of, that award is to be treated as an assessment period when determining the number of assessment periods for which the person is to be treated as having student income.
+-- src:1177 | Step 3
+-- src:1178 | Divide the amount produced by step 1 by the number of assessment periods produced by step 2.
+-- src:1179 | Step 4
+-- src:1180 | Deduct £110.
+@ref reg 71 (src:1164-1180)
+GIVEN income IS A `Student income for an assessment period`
+GIVETH A MAYBE NUMBER
+`reg 71 — the student income for an assessment period` income MEANS
+    IF `reg 71 Step 2 — the number of assessment periods` income AT LEAST 1
+    THEN JUST (`core — an amount rounded to the nearest penny`
+                ((`reg 71 Step 1 — the amount of the loan or the grant` income DIVIDED BY `reg 71 Step 2 — the number of assessment periods` income) MINUS 110))
+    ELSE NOTHING
+
+-- src:1181 | General
+§§ `Regulation 72 -- Assumed yield from capital`
+
+-- Paragraph (1): 4.35 pounds a month for each 250 pounds over 6,000 pounds, and 4.35 pounds for any excess that is not a complete
+-- 250 pounds. The second limb makes the count a ceiling: 6,001 pounds is one step, 6,250 is one step, 6,251 is two.
+-- src:1182 | 72 Assumed yield from capital
+-- src:1183 | (1) A person's capital is to be treated as yielding a monthly income of £4.35 for each £250 in excess of £6,000 and £4.35 for any excess which is not a complete £250.
+@ref reg 72(1) (src:1182-1183)
+GIVEN capital IS A NUMBER
+GIVETH A NUMBER
+`reg 72(1) — the monthly income that capital is treated as yielding` capital MEANS
+    IF capital AT MOST 6000
+    THEN 0
+    ELSE `core — an amount rounded to the nearest penny` (4.35 TIMES (CEILING ((capital MINUS 6000) DIVIDED BY 250)))
+
+-- src:1184 | (2) Paragraph (1) does not apply where the capital is disregarded or the actual income from that capital is taken into account under regulation 66(1)(i) (income from an annuity) or (j) (income from a trust).
+@ref reg 72(2) (src:1184)
+GIVEN `the capital is disregarded` IS A BOOLEAN
+      `the actual income from the capital is taken into account under regulation 66(1)(i) (income from an annuity)` IS A BOOLEAN
+      `the actual income from the capital is taken into account under regulation 66(1)(j) (income from a trust)` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 72(2) — paragraph (1) applies to the capital` `the capital is disregarded` `the actual income from the capital is taken into account under regulation 66(1)(i) (income from an annuity)` `the actual income from the capital is taken into account under regulation 66(1)(j) (income from a trust)` MEANS
+        (NOT `the capital is disregarded`)
+    AND (NOT `the actual income from the capital is taken into account under regulation 66(1)(i) (income from an annuity)`)
+    AND (NOT `the actual income from the capital is taken into account under regulation 66(1)(j) (income from a trust)`)
+
+-- Paragraph (3): where a person's capital is treated as yielding income, actual income derived from it (rental, interest,
+-- dividends) is treated as part of the capital from the day it is due to be paid to the person.
+-- src:1185 | (3) Where a person's capital is treated as yielding income, any actual income derived from that capital, for example rental, interest or dividends, is to be treated as part of the person's capital from the day it is due to be paid to the person.
+@ref reg 72(3) (src:1185)
+GIVEN `the capital is treated as yielding income` IS A BOOLEAN
+      `the day the actual income is due to be paid to the person` IS A DATE
+      `the day on which the capital is calculated` IS A DATE
+GIVETH A BOOLEAN
+`reg 72(3) — the actual income derived from the capital is treated as part of the capital` `the capital is treated as yielding income` `the day the actual income is due to be paid to the person` `the day on which the capital is calculated` MEANS
+        `the capital is treated as yielding income`
+    AND (`the day on which the capital is calculated` AT LEAST `the day the actual income is due to be paid to the person`)
+
+§§ `Regulation 73 -- Unearned income calculated monthly`
+
+-- Paragraphs (1) and (2): a monthly amount; where the payment is not made monthly, its monthly equivalent. The keel's
+-- `core — the monthly equivalent of a payment` holds the table (the text's list is "so for example", and the core also has the
+-- two-weekly interval that Schedules 4 and 5 list).
+-- src:1187 | (1) A person's unearned income is to be calculated as a monthly amount.
+-- src:1188 | (2) Where the period in respect of which a payment of income is made is not a month, an amount is to be calculated as the monthly equivalent, so for example—
+-- src:1189 | (a) weekly payments are multiplied by 52 and divided by 12;
+-- src:1190 | (b) four weekly payments are multiplied by 13 and divided 12;
+-- src:1191 | (c) three monthly payments are multiplied by 4 and divided by 12; and
+-- src:1192 | (d) annual payments are divided by 12.
+@ref reg 73(1) and (2) (src:1187-1192)
+GIVEN amount IS A NUMBER
+      interval IS A `Payment interval`
+GIVETH A NUMBER
+`reg 73(2) — the monthly equivalent of a payment of unearned income` amount interval MEANS
+    `core — an amount rounded to the nearest penny` (`core — the monthly equivalent of a payment` amount interval)
+
+-- Paragraph (2A): the formula is MISSING from this text (the text shows "as follows—" and then "where N is ... and M is ...").
+-- It is not reconstructed. Where the period of payment neither begins nor ends in the assessment period the paragraph is not in
+-- play and the monthly amount stands; where it does, the encoding returns NOTHING (fork F-U1 in NOTES.md).
+-- src:1193 | (2A) Where the period in respect of which unearned income is paid begins or ends during an assessment period the amount of unearned income for that assessment period is to be calculated as follows—
+-- src:1194 | where N is the number of days in respect of which unearned income is paid that fall within the assessment period and M is the monthly amount referred to in paragraph (1) or, as the case may be, the monthly equivalent referred to in paragraph (2).
+@ref reg 73(2A) (src:1193-1194)
+GIVEN `the period in respect of which the unearned income is paid begins or ends during the assessment period` IS A BOOLEAN
+      `number of days in respect of which unearned income is paid that fall within the assessment period (N)` IS A NUMBER
+      `monthly amount or monthly equivalent (M)` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`reg 73(2A) — the amount of unearned income for the assessment period` `the period in respect of which the unearned income is paid begins or ends during the assessment period` `number of days in respect of which unearned income is paid that fall within the assessment period (N)` `monthly amount or monthly equivalent (M)` MEANS
+    IF `the period in respect of which the unearned income is paid begins or ends during the assessment period`
+    THEN NOTHING
+    ELSE JUST `monthly amount or monthly equivalent (M)`
+
+-- Paragraph (3): where the amount fluctuates, the monthly equivalent is worked out over one identifiable cycle, or, if there is
+-- none, over three months or such other period as will enable the monthly equivalent to be determined more accurately. The text
+-- does not say how a cycle's length is turned into months; the caller supplies the months.
+-- src:1195 | (3) Where the amount of a person's unearned income fluctuates, the monthly equivalent is to be calculated—
+-- src:1196 | (a) where there is an identifiable cycle, over the duration of one such cycle; or
+-- src:1197 | (b) where there is no identifiable cycle, over three months or such other period as may, in the particular case, enable the monthly equivalent of the person's income to be determined more accurately.
+@ref reg 73(3) (src:1195-1197)
+DECLARE `Fluctuating unearned income` HAS
+    `total unearned income received over the cycle or the period`            IS A NUMBER
+    `there is an identifiable cycle`                                          IS A BOOLEAN
+    `duration of the identifiable cycle in months`                            IS A NUMBER
+    `other period in months that would enable the monthly equivalent to be determined more accurately`  IS A MAYBE NUMBER
+
+-- src:1195 | (3) Where the amount of a person's unearned income fluctuates, the monthly equivalent is to be calculated—
+-- src:1196 | (a) where there is an identifiable cycle, over the duration of one such cycle; or
+-- src:1197 | (b) where there is no identifiable cycle, over three months or such other period as may, in the particular case, enable the monthly equivalent of the person's income to be determined more accurately.
+@ref reg 73(3) (src:1195-1197)
+GIVEN income IS A `Fluctuating unearned income`
+GIVETH A MAYBE NUMBER
+`reg 73(3) — the monthly equivalent of unearned income that fluctuates` income MEANS
+    LET months MEANS
+        IF income's `there is an identifiable cycle`
+        THEN income's `duration of the identifiable cycle in months`
+        ELSE (CONSIDER income's `other period in months that would enable the monthly equivalent to be determined more accurately`
+              WHEN NOTHING THEN 3
+              WHEN JUST other THEN other)
+    IN IF months GREATER THAN 0
+       THEN JUST (`core — an amount rounded to the nearest penny` ((income's `total unearned income received over the cycle or the period`) DIVIDED BY months))
+       ELSE NOTHING
+
+-- src:1198 | (4) This regulation does not apply to student income.
+@ref reg 73(4) (src:1198)
+GIVEN `the income is student income` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 73(4) — regulation 73 applies to the income` `the income is student income` MEANS
+    NOT `the income is student income`
+
+§§ `Regulation 74 -- Notional unearned income`
+
+-- Paragraphs (1) and (2): unearned income that would be available on application is treated as the person's, except the
+-- benefits that regulation 66(1)(b) lists.
+-- src:1200 | (1) If unearned income would be available to a person upon the making of an application for it, the person is to be treated as having that unearned income.
+-- src:1201 | (2) Paragraph (1) does not apply to the benefits listed in regulation 66(1)(b).
+@ref reg 74(1) and (2) (src:1200-1201)
+GIVEN `unearned income would be available to the person upon the making of an application for it` IS A BOOLEAN
+      `the income is a benefit` IS A MAYBE Benefit
+GIVETH A BOOLEAN
+`reg 74(1) — the person is treated as having unearned income that would be available on application` `unearned income would be available to the person upon the making of an application for it` `the income is a benefit` MEANS
+        `unearned income would be available to the person upon the making of an application for it`
+    AND (NOT (CONSIDER `the income is a benefit`
+              WHEN NOTHING THEN FALSE
+              WHEN JUST listed THEN `reg 66(1)(b) — a benefit listed in regulation 66(1)(b)` listed))
+
+-- Paragraph (3): a person who has reached the qualifying age for state pension credit is treated as possessing the retirement
+-- pension income for which no application has been made and to which they might expect to be entitled if a claim were made.
+-- NOTHING means the paragraph does not treat the person as possessing any.
+-- src:1202 | (3) A person who has reached the qualifying age for state pension credit is to be treated as possessing the amount of any retirement pension income for which no application has been made and to which the person might expect to be entitled if a claim were made.
+@ref reg 74(3) (src:1202)
+GIVEN `the person has reached the qualifying age for state pension credit` IS A BOOLEAN
+      `no application has been made for the retirement pension income` IS A BOOLEAN
+      `retirement pension income to which the person might expect to be entitled if a claim were made` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`reg 74(3) — the retirement pension income the person is treated as possessing` `the person has reached the qualifying age for state pension credit` `no application has been made for the retirement pension income` `retirement pension income to which the person might expect to be entitled if a claim were made` MEANS
+    IF `the person has reached the qualifying age for state pension credit` AND `no application has been made for the retirement pension income`
+    THEN JUST (`core — an amount rounded to the nearest penny` `retirement pension income to which the person might expect to be entitled if a claim were made`)
+    ELSE NOTHING
+
+-- Paragraph (4): the circumstances in which a person is treated as possessing retirement pension income are those of regulation 18
+-- of the State Pension Credit Regulations 2002 (not an input): a stated fact.
+-- src:1203 | (4) The circumstances in which a person is to be treated as possessing retirement pension income for the purposes of universal credit are the same as the circumstances set out in regulation 18 of the State Pension Credit Regulations 2002 in which a person is treated as receiving retirement pension income for the purposes of state pension credit.
+@ref reg 74(4) (src:1203)
+GIVEN `the circumstances are those in which regulation 18 of the State Pension Credit Regulations 2002 treats a person as receiving retirement pension income for the purposes of state pension credit` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 74(4) — the person is treated as possessing retirement pension income` `the circumstances are those in which regulation 18 of the State Pension Credit Regulations 2002 treats a person as receiving retirement pension income for the purposes of state pension credit` MEANS
+    `the circumstances are those in which regulation 18 of the State Pension Credit Regulations 2002 treats a person as receiving retirement pension income for the purposes of state pension credit`

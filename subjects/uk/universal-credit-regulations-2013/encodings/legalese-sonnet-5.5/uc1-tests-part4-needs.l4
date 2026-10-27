@@ -1,0 +1,284 @@
+IMPORT prelude
+IMPORT `uc-core`
+IMPORT `uc1-part3-awards`
+IMPORT `uc1-part4-amounts`
+IMPORT `uc1-part2-finance-and-restrictions`
+IMPORT `uc1-part4-needs`
+
+-- Tests of uc1-part4-needs.l4 (regulations 27 to 30). Every expected value is written by hand from the text of the
+-- regulation named in the comment beside it, and none was copied from the output of the rule.
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 27(1) and (2): the amount of the LCWRA element (regulation 36: 429.80, or 217.26 for any other claimant).
+GIVEN lcwra IS A BOOLEAN
+      scc IS A BOOLEAN
+GIVETH A `Capability for work`
+`test — capability` lcwra scc MEANS
+    `Capability for work` WITH
+        `limited capability for work` IS lcwra
+        `limited capability for work and work-related activity` IS lcwra
+        `severe conditions criteria claimant` IS scc
+#ASSERT `reg 27(1) and (2) — the amount of the LCWRA element for a claimant` (`test — capability` TRUE FALSE) TRUE FALSE EQUALS JUST 429.80
+#ASSERT `reg 27(1) and (2) — the amount of the LCWRA element for a claimant` (`test — capability` TRUE TRUE) FALSE FALSE EQUALS JUST 429.80
+#ASSERT `reg 27(1) and (2) — the amount of the LCWRA element for a claimant` (`test — capability` TRUE FALSE) FALSE TRUE EQUALS JUST 429.80
+#ASSERT `reg 27(1) and (2) — the amount of the LCWRA element for a claimant` (`test — capability` TRUE FALSE) FALSE FALSE EQUALS JUST 217.26
+-- A claimant without limited capability for work and work-related activity has no LCWRA element at all.
+#ASSERT `reg 27(1) and (2) — the amount of the LCWRA element for a claimant` (`test — capability` FALSE FALSE) TRUE TRUE EQUALS NOTHING
+
+-- (4) Joint claimants who both have it: one element, the higher amount.
+#ASSERT `reg 27(4) — the LCWRA element of joint claimants` NOTHING NOTHING EQUALS NOTHING
+#ASSERT `reg 27(4) — the LCWRA element of joint claimants` (JUST 217.26) NOTHING EQUALS JUST 217.26
+#ASSERT `reg 27(4) — the LCWRA element of joint claimants` NOTHING (JUST 429.80) EQUALS JUST 429.80
+#ASSERT `reg 27(4) — the LCWRA element of joint claimants` (JUST 217.26) (JUST 429.80) EQUALS JUST 429.80
+#ASSERT `reg 27(4) — the LCWRA element of joint claimants` (JUST 429.80) (JUST 217.26) EQUALS JUST 429.80
+#ASSERT `reg 27(4) — the LCWRA element of joint claimants` (JUST 217.26) (JUST 217.26) EQUALS JUST 217.26
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 27A.
+#ASSERT `reg 27A(1)(a) — the day before which entitlement to an award that included the LCWRA element had to begin` EQUALS YMD 2026 4 6
+
+-- (2) A period of non-entitlement that began because the financial condition ceased to be met on 10 March 2025 is disregarded if it
+-- ends within the six months beginning with that day, which end on 9 September 2025.
+`non-entitlement ending on 9 September 2025` MEANS `Period of non-entitlement to universal credit` WITH
+    `the period began because the financial condition in section 5(1)(b) or (2)(b) of the Act ceased to be met` IS TRUE
+    `day on which that condition ceased to be met` IS YMD 2025 3 10
+    `last day of the period of non-entitlement` IS YMD 2025 9 9
+`non-entitlement ending on 10 September 2025` MEANS `Period of non-entitlement to universal credit` WITH
+    `the period began because the financial condition in section 5(1)(b) or (2)(b) of the Act ceased to be met` IS TRUE
+    `day on which that condition ceased to be met` IS YMD 2025 3 10
+    `last day of the period of non-entitlement` IS YMD 2025 9 10
+`non-entitlement for another reason` MEANS `Period of non-entitlement to universal credit` WITH
+    `the period began because the financial condition in section 5(1)(b) or (2)(b) of the Act ceased to be met` IS FALSE
+    `day on which that condition ceased to be met` IS YMD 2025 3 10
+    `last day of the period of non-entitlement` IS YMD 2025 3 20
+#ASSERT `reg 27A(2) — the period of non-entitlement is not taken into account` `non-entitlement ending on 9 September 2025`
+#ASSERT NOT (`reg 27A(2) — the period of non-entitlement is not taken into account` `non-entitlement ending on 10 September 2025`)
+#ASSERT NOT (`reg 27A(2) — the period of non-entitlement is not taken into account` `non-entitlement for another reason`)
+
+-- Not disregarded: a gap that ends on 5 April 2026 (so the present run of entitlement begins on 6 April 2026), and one that ends on
+-- 4 April 2026 (so it begins on 5 April 2026).
+`non-entitlement ending on 5 April 2026` MEANS `Period of non-entitlement to universal credit` WITH
+    `the period began because the financial condition in section 5(1)(b) or (2)(b) of the Act ceased to be met` IS FALSE
+    `day on which that condition ceased to be met` IS YMD 2026 1 1
+    `last day of the period of non-entitlement` IS YMD 2026 4 5
+`non-entitlement ending on 4 April 2026` MEANS `Period of non-entitlement to universal credit` WITH
+    `the period began because the financial condition in section 5(1)(b) or (2)(b) of the Act ceased to be met` IS FALSE
+    `day on which that condition ceased to be met` IS YMD 2026 1 1
+    `last day of the period of non-entitlement` IS YMD 2026 4 4
+
+GIVEN lcwra IS A BOOLEAN
+      earliest IS A MAYBE DATE
+      gaps IS A LIST OF `Period of non-entitlement to universal credit`
+      schedule IS A BOOLEAN
+GIVETH A `Claimant's entitlement to awards that included the LCWRA element`
+`test — entitlement` lcwra earliest gaps schedule MEANS
+    `Claimant's entitlement to awards that included the LCWRA element` WITH
+        `the claimant has limited capability for work and work-related activity` IS lcwra
+        `earliest day on which the claimant was entitled to an award that included the LCWRA element` IS earliest
+        `periods of non-entitlement since that day` IS gaps
+        `the claimant meets a circumstance in Schedule 5A` IS schedule
+
+-- The present run of entitlement starts on the earliest day, or the day after the last gap that is not disregarded.
+#ASSERT `reg 27A(1) — the first day of the present run of entitlement` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) EMPTY FALSE) EQUALS JUST (YMD 2025 1 1)
+#ASSERT `reg 27A(1) — the first day of the present run of entitlement` (`test — entitlement` TRUE NOTHING EMPTY FALSE) EQUALS NOTHING
+#ASSERT `reg 27A(1) — the first day of the present run of entitlement` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) (LIST `non-entitlement ending on 9 September 2025`) FALSE) EQUALS JUST (YMD 2025 1 1)
+#ASSERT `reg 27A(1) — the first day of the present run of entitlement` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) (LIST `non-entitlement ending on 10 September 2025`) FALSE) EQUALS JUST (YMD 2025 9 11)
+#ASSERT `reg 27A(1) — the first day of the present run of entitlement` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) (LIST `non-entitlement ending on 10 September 2025`, `non-entitlement for another reason`) FALSE) EQUALS JUST (YMD 2025 9 11)
+#ASSERT `reg 27A(1) — the first day of the present run of entitlement` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) (LIST `non-entitlement for another reason`, `non-entitlement ending on 10 September 2025`) FALSE) EQUALS JUST (YMD 2025 9 11)
+-- Entitled from 1 January 2025 without a break: a pre-2026 claimant.
+#ASSERT `reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) EMPTY FALSE)
+-- 5 April 2026 is before 6 April 2026; 6 April 2026 is not.
+#ASSERT `reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` TRUE (JUST (YMD 2026 4 5)) EMPTY FALSE)
+#ASSERT NOT (`reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` TRUE (JUST (YMD 2026 4 6)) EMPTY FALSE))
+-- Never entitled to an award that included the element.
+#ASSERT NOT (`reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` TRUE NOTHING EMPTY FALSE))
+-- A lapse long before 6 April 2026 does not count against a claimant who has been entitled continuously since a time before it.
+#ASSERT `reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) (LIST `non-entitlement ending on 10 September 2025`) FALSE)
+#ASSERT `reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) (LIST `non-entitlement ending on 9 September 2025`) FALSE)
+-- A lapse that ends on 4 April 2026 leaves the claimant entitled from 5 April; one that ends on 5 April, from 6 April.
+#ASSERT `reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) (LIST `non-entitlement ending on 4 April 2026`) FALSE)
+#ASSERT NOT (`reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) (LIST `non-entitlement ending on 5 April 2026`) FALSE))
+-- ... unless paragraph (2) disregards it.
+`non-entitlement ending on 5 April 2026 after the financial condition ceased to be met on 6 November 2025` MEANS `Period of non-entitlement to universal credit` WITH
+    `the period began because the financial condition in section 5(1)(b) or (2)(b) of the Act ceased to be met` IS TRUE
+    `day on which that condition ceased to be met` IS YMD 2025 11 6
+    `last day of the period of non-entitlement` IS YMD 2026 4 5
+#ASSERT `reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` TRUE (JUST (YMD 2025 1 1)) (LIST `non-entitlement ending on 5 April 2026 after the financial condition ceased to be met on 6 November 2025`) FALSE)
+-- (1A) Schedule 5A gives a further route; but only to a claimant with limited capability for work and work-related activity.
+#ASSERT `reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` TRUE NOTHING EMPTY TRUE)
+#ASSERT NOT (`reg 27A(1) — the claimant is a pre-2026 claimant` (`test — entitlement` FALSE (JUST (YMD 2025 1 1)) EMPTY TRUE))
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 28(2): the relevant period.
+GIVEN applies IS A BOOLEAN
+      commences IS A DATE
+      applied IS A MAYBE DATE
+      evidence IS A DATE
+GIVETH A `Start of the relevant period for the LCWRA element`
+`test — start` applies commences applied evidence MEANS
+    `Start of the relevant period for the LCWRA element` WITH
+        `regulation 41(2) applies to the claimant` IS applies
+        `day on which the award of universal credit commences` IS commences
+        `day on which the claimant applies for the LCWRA element to be included in the award` IS applied
+        `first day on which the claimant provides evidence of having limited capability for work in accordance with the Medical Evidence Regulations` IS evidence
+-- regulation 41(2) applies: the day the award commences, or if later the day of the application.
+#ASSERT `reg 28(2) — the first day of the relevant period` (`test — start` TRUE (YMD 2025 6 10) NOTHING (YMD 2025 6 20)) EQUALS YMD 2025 6 10
+#ASSERT `reg 28(2) — the first day of the relevant period` (`test — start` TRUE (YMD 2025 6 10) (JUST (YMD 2025 7 1)) (YMD 2025 6 20)) EQUALS YMD 2025 7 1
+#ASSERT `reg 28(2) — the first day of the relevant period` (`test — start` TRUE (YMD 2025 6 10) (JUST (YMD 2025 6 1)) (YMD 2025 6 20)) EQUALS YMD 2025 6 10
+#ASSERT `reg 28(2) — the first day of the relevant period` (`test — start` TRUE (YMD 2025 6 10) (JUST (YMD 2025 6 10)) (YMD 2025 6 20)) EQUALS YMD 2025 6 10
+-- any other case: the first day the claimant provides evidence.
+#ASSERT `reg 28(2) — the first day of the relevant period` (`test — start` FALSE (YMD 2025 6 10) NOTHING (YMD 2025 6 20)) EQUALS YMD 2025 6 20
+-- Three months beginning with 10 June 2025 end on 9 September 2025.
+#ASSERT `reg 28(2) — the last day of the relevant period` (`test — start` FALSE (YMD 2025 6 10) NOTHING (YMD 2025 6 10)) EQUALS YMD 2025 9 9
+-- Three months beginning with 31 January 2025: by the core's month arithmetic, 30 April 2025 is three months on, so the period ends 29 April.
+#ASSERT `reg 28(2) — the last day of the relevant period` (`test — start` FALSE (YMD 2025 1 10) NOTHING (YMD 2025 1 31)) EQUALS YMD 2025 4 29
+
+GIVEN a IS A BOOLEAN
+      b IS A BOOLEAN
+      included IS A BOOLEAN
+      begun IS A BOOLEAN
+      ends IS A DATE
+GIVETH A `Previous award of universal credit`
+`test — previous award` a b included begun ends MEANS
+    `Previous award of universal credit` WITH
+        `immediately before the award commences the previous award ceased because the claimant ceased to be a member of a couple or became a member of a couple` IS a
+        `within the six months before the award commences the previous award ceased because the financial condition in section 5(1)(b) or 5(2)(b) of the Act was not met` IS b
+        `the previous award included the LCWRA element` IS included
+        `the relevant period in relation to the previous award has begun but not ended` IS begun
+        `the day on which that relevant period would have ended in relation to the previous award` IS ends
+-- (4) the circumstances: (a) or (b).
+#ASSERT `reg 28(4) — the circumstances in which there has been a previous award exist` (`test — previous award` TRUE FALSE FALSE FALSE (YMD 2025 8 1))
+#ASSERT `reg 28(4) — the circumstances in which there has been a previous award exist` (`test — previous award` FALSE TRUE FALSE FALSE (YMD 2025 8 1))
+#ASSERT NOT (`reg 28(4) — the circumstances in which there has been a previous award exist` (`test — previous award` FALSE FALSE TRUE TRUE (YMD 2025 8 1)))
+-- (3)(a) A previous award in those circumstances that included the element: paragraph (1) does not apply.
+#ASSERT `reg 28(3)(a) — paragraph (1) does not apply because the previous award included the LCWRA element` (JUST (`test — previous award` TRUE FALSE TRUE FALSE (YMD 2025 8 1)))
+#ASSERT NOT (`reg 28(3)(a) — paragraph (1) does not apply because the previous award included the LCWRA element` (JUST (`test — previous award` TRUE FALSE FALSE FALSE (YMD 2025 8 1))))
+#ASSERT NOT (`reg 28(3)(a) — paragraph (1) does not apply because the previous award included the LCWRA element` (JUST (`test — previous award` FALSE FALSE TRUE FALSE (YMD 2025 8 1))))
+#ASSERT NOT (`reg 28(3)(a) — paragraph (1) does not apply because the previous award included the LCWRA element` NOTHING)
+-- (3)(b) The relevant period ends when it would have ended in relation to the previous award.
+#ASSERT `reg 28(3)(b) — the last day of the relevant period, allowing for a previous award` (`test — start` FALSE (YMD 2025 6 10) NOTHING (YMD 2025 6 10)) (JUST (`test — previous award` TRUE FALSE FALSE TRUE (YMD 2025 8 1))) EQUALS YMD 2025 8 1
+#ASSERT `reg 28(3)(b) — the last day of the relevant period, allowing for a previous award` (`test — start` FALSE (YMD 2025 6 10) NOTHING (YMD 2025 6 10)) (JUST (`test — previous award` TRUE FALSE FALSE FALSE (YMD 2025 8 1))) EQUALS YMD 2025 9 9
+#ASSERT `reg 28(3)(b) — the last day of the relevant period, allowing for a previous award` (`test — start` FALSE (YMD 2025 6 10) NOTHING (YMD 2025 6 10)) (JUST (`test — previous award` FALSE FALSE FALSE TRUE (YMD 2025 8 1))) EQUALS YMD 2025 9 9
+#ASSERT `reg 28(3)(b) — the last day of the relevant period, allowing for a previous award` (`test — start` FALSE (YMD 2025 6 10) NOTHING (YMD 2025 6 10)) NOTHING EQUALS YMD 2025 9 9
+
+GIVEN terminally IS A BOOLEAN
+      support IS A BOOLEAN
+      ceased IS A BOOLEAN
+      later IS A BOOLEAN
+GIVETH A `Claimant who may not be held back from the LCWRA element`
+`test — claimant` terminally support ceased later MEANS
+    `Claimant who may not be held back from the LCWRA element` WITH
+        `the claimant is terminally ill` IS terminally
+        `the claimant is entitled to an employment and support allowance that includes the support component` IS support
+        `the claimant was so entitled on the day before the award commenced and ceased to be so entitled by virtue of section 1A of the Welfare Reform Act 2007` IS ceased
+        `the claimant has limited capability for work and it is subsequently determined that they have limited capability for work and work-related activity` IS later
+-- (5)(a), (5)(b)(i), (5)(b)(ii) and (6): each takes the claimant out of paragraph (1).
+#ASSERT `reg 28(5) and (6) — paragraph (1) does not apply to the claimant` (`test — claimant` TRUE FALSE FALSE FALSE)
+#ASSERT `reg 28(5) and (6) — paragraph (1) does not apply to the claimant` (`test — claimant` FALSE TRUE FALSE FALSE)
+#ASSERT `reg 28(5) and (6) — paragraph (1) does not apply to the claimant` (`test — claimant` FALSE FALSE TRUE FALSE)
+#ASSERT `reg 28(5) and (6) — paragraph (1) does not apply to the claimant` (`test — claimant` FALSE FALSE FALSE TRUE)
+#ASSERT NOT (`reg 28(5) and (6) — paragraph (1) does not apply to the claimant` (`test — claimant` FALSE FALSE FALSE FALSE))
+-- (1) applies unless any of those, or (3)(a), takes the claimant out of it.
+#ASSERT `reg 28(1) — paragraph (1) applies` NOTHING (`test — claimant` FALSE FALSE FALSE FALSE)
+#ASSERT NOT (`reg 28(1) — paragraph (1) applies` NOTHING (`test — claimant` TRUE FALSE FALSE FALSE))
+#ASSERT NOT (`reg 28(1) — paragraph (1) applies` (JUST (`test — previous award` TRUE FALSE TRUE FALSE (YMD 2025 8 1))) (`test — claimant` FALSE FALSE FALSE FALSE))
+#ASSERT `reg 28(1) — paragraph (1) applies` (JUST (`test — previous award` FALSE FALSE TRUE FALSE (YMD 2025 8 1))) (`test — claimant` FALSE FALSE FALSE FALSE)
+-- (1) The element is held back until the assessment period after the one in which the relevant period ends.
+-- Assessment periods from 10 June 2025 begin on the 10th. 9 September is the last day of the third (10 August to 9 September):
+-- the element can be included from the next, 10 September. A relevant period ending on 10 September ends in the fourth (10 September to 9 October).
+#ASSERT `reg 28(1) — the first day from which the award may include the LCWRA element` (YMD 2025 6 10) (YMD 2025 9 9) EQUALS JUST (YMD 2025 9 10)
+#ASSERT `reg 28(1) — the first day from which the award may include the LCWRA element` (YMD 2025 6 10) (YMD 2025 9 10) EQUALS JUST (YMD 2025 10 10)
+#ASSERT `reg 28(1) — the first day from which the award may include the LCWRA element` (YMD 2025 6 10) (YMD 2025 6 1) EQUALS NOTHING
+-- (7)
+#ASSERT `reg 28(7) — the amount payable during the relevant period` TRUE EQUALS JUST 0.01
+#ASSERT `reg 28(7) — the amount payable during the relevant period` FALSE EQUALS NOTHING
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 30.
+GIVEN allowance IS A BOOLEAN
+      earnings IS A BOOLEAN
+      scotland IS A BOOLEAN
+      outside IS A BOOLEAN
+      support IS A BOOLEAN
+      derives IS A BOOLEAN
+GIVETH A `Caring responsibilities for a severely disabled person`
+`test — caring` allowance earnings scotland outside support derives MEANS
+    `Caring responsibilities for a severely disabled person` WITH
+        `the person satisfies the conditions for entitlement to a carer's allowance` IS allowance
+        `the person would satisfy those conditions but for the fact that their earnings have exceeded the limit prescribed for that allowance` IS earnings
+        `the person would satisfy those conditions but for the fact that they are resident, or treated as resident, in Scotland` IS scotland
+        `the person would satisfy those conditions but for the fact that they are resident outside of Great Britain and have a genuine and sufficient link to Scotland` IS outside
+        `the person is entitled to carer support payment` IS support
+        `the person derives earned income from those caring responsibilities` IS derives
+#ASSERT `reg 30 — regular and substantial caring responsibilities for a severely disabled person` (`test — caring` TRUE FALSE FALSE FALSE FALSE FALSE)
+#ASSERT `reg 30 — regular and substantial caring responsibilities for a severely disabled person` (`test — caring` FALSE TRUE FALSE FALSE FALSE FALSE)
+#ASSERT `reg 30 — regular and substantial caring responsibilities for a severely disabled person` (`test — caring` FALSE FALSE TRUE FALSE FALSE FALSE)
+#ASSERT `reg 30 — regular and substantial caring responsibilities for a severely disabled person` (`test — caring` FALSE FALSE FALSE TRUE FALSE FALSE)
+#ASSERT `reg 30 — regular and substantial caring responsibilities for a severely disabled person` (`test — caring` FALSE FALSE FALSE FALSE TRUE FALSE)
+#ASSERT NOT (`reg 30 — regular and substantial caring responsibilities for a severely disabled person` (`test — caring` FALSE FALSE FALSE FALSE FALSE FALSE))
+-- (3) Earned income from the caring responsibilities takes them out.
+#ASSERT NOT (`reg 30 — regular and substantial caring responsibilities for a severely disabled person` (`test — caring` TRUE FALSE FALSE FALSE FALSE TRUE))
+#ASSERT NOT (`reg 30 — regular and substantial caring responsibilities for a severely disabled person` (`test — caring` FALSE FALSE FALSE FALSE TRUE TRUE))
+
+-- ---------------------------------------------------------------------------------------------------------
+-- Regulation 29(1) to (3).
+GIVEN caring IS A BOOLEAN
+      section70 IS A BOOLEAN
+      several IS A BOOLEAN
+      elected IS A BOOLEAN
+      determined IS A BOOLEAN
+GIVETH A `Claimant who may have the carer element`
+`test — carer` caring section70 several elected determined MEANS
+    `Claimant who may have the carer element` WITH
+        `the claimant has regular and substantial caring responsibilities for a severely disabled person` IS caring
+        `section 70 of the Contributions and Benefits Act excludes the claimant from the carer element` IS section70
+        `two or more persons have regular and substantial caring responsibilities for the same severely disabled person` IS several
+        `those persons have jointly elected the claimant` IS elected
+        `those persons have made no election and the Secretary of State determines the claimant` IS determined
+#ASSERT `reg 29(1) to (3) — the carer element may be included for the claimant` (`test — carer` TRUE FALSE FALSE FALSE FALSE)
+#ASSERT NOT (`reg 29(1) to (3) — the carer element may be included for the claimant` (`test — carer` FALSE FALSE FALSE FALSE FALSE))
+#ASSERT NOT (`reg 29(1) to (3) — the carer element may be included for the claimant` (`test — carer` TRUE TRUE FALSE FALSE FALSE))
+-- (3) Several carers for the same person: only the one elected, or in default of election the one the Secretary of State determines.
+#ASSERT `reg 29(1) to (3) — the carer element may be included for the claimant` (`test — carer` TRUE FALSE TRUE TRUE FALSE)
+#ASSERT `reg 29(1) to (3) — the carer element may be included for the claimant` (`test — carer` TRUE FALSE TRUE FALSE TRUE)
+#ASSERT NOT (`reg 29(1) to (3) — the carer element may be included for the claimant` (`test — carer` TRUE FALSE TRUE FALSE FALSE))
+-- (4) Only the LCWRA element: a carer who has limited capability for work and work-related activity, unless the other joint
+-- claimant's LCWRA element is not included.
+#ASSERT `reg 29(4) — only the LCWRA element may be included` TRUE TRUE FALSE FALSE
+#ASSERT `reg 29(4) — only the LCWRA element may be included` TRUE TRUE TRUE FALSE
+#ASSERT NOT (`reg 29(4) — only the LCWRA element may be included` TRUE TRUE TRUE TRUE)
+#ASSERT NOT (`reg 29(4) — only the LCWRA element may be included` TRUE FALSE FALSE FALSE)
+#ASSERT NOT (`reg 29(4) — only the LCWRA element may be included` FALSE TRUE FALSE FALSE)
+
+-- (5) and (6): the Scottish entitlement.
+GIVEN a1 IS A BOOLEAN
+      a2 IS A BOOLEAN
+      b IS A BOOLEAN
+      noSection70 IS A BOOLEAN
+      elect IS A BOOLEAN
+      default IS A BOOLEAN
+GIVETH A `Carer element where a Scottish entitlement is in question`
+`test — Scottish` a1 a2 b noSection70 elect default MEANS
+    `Carer element where a Scottish entitlement is in question` WITH
+        `person A has, or would have but for regulation 5(3) of the Carer's Assistance (Carer Support Payment) (Scotland) Regulations 2023, an entitlement to carer support payment` IS a1
+        `person A has, or would have but for section 70 of the Contributions and Benefits Act, an entitlement to carer's allowance in respect of which the Scottish Ministers have the power to make decisions` IS a2
+        `person B has, or would have but for regulation 29, an entitlement to the carer element for the same day in respect of the same severely disabled person` IS b
+        `section 70 of the Contributions and Benefits Act does not apply to the decision in respect of B's entitlement to universal credit` IS noSection70
+        `A and B jointly elect that B shall have entitlement to the carer element and that A shall not have an entitlement mentioned in paragraph (5)(a)` IS elect
+        `in default of election the Secretary of State is satisfied, following consultation with the Scottish Ministers, that the Scottish Ministers have decided or will decide that A shall not have an entitlement and that B shall have a carer element` IS default
+-- (5) applies and neither (6)(a) nor (6)(b): no carer element in B's award.
+#ASSERT NOT (`reg 29(6) — B's award may include the carer element` (`test — Scottish` TRUE FALSE TRUE TRUE FALSE FALSE))
+#ASSERT NOT (`reg 29(6) — B's award may include the carer element` (`test — Scottish` FALSE TRUE TRUE TRUE FALSE FALSE))
+-- (6)(a) joint election, or (6)(b) in default of election the Secretary of State is satisfied.
+#ASSERT `reg 29(6) — B's award may include the carer element` (`test — Scottish` TRUE FALSE TRUE TRUE TRUE FALSE)
+#ASSERT `reg 29(6) — B's award may include the carer element` (`test — Scottish` TRUE FALSE TRUE TRUE FALSE TRUE)
+-- (5) does not apply: no restriction. A has no entitlement; B has none; section 70 does apply to the decision.
+#ASSERT `reg 29(6) — B's award may include the carer element` (`test — Scottish` FALSE FALSE TRUE TRUE FALSE FALSE)
+#ASSERT `reg 29(6) — B's award may include the carer element` (`test — Scottish` TRUE FALSE FALSE TRUE FALSE FALSE)
+#ASSERT `reg 29(6) — B's award may include the carer element` (`test — Scottish` TRUE FALSE TRUE FALSE FALSE FALSE)
+
+-- The amount of the carer element: regulation 36's 209.34 when all three allow it; NOTHING otherwise.
+#ASSERT `reg 29 — the amount of the carer element for a claimant` TRUE FALSE TRUE EQUALS JUST 209.34
+#ASSERT `reg 29 — the amount of the carer element for a claimant` FALSE FALSE TRUE EQUALS NOTHING
+#ASSERT `reg 29 — the amount of the carer element for a claimant` TRUE TRUE TRUE EQUALS NOTHING
+#ASSERT `reg 29 — the amount of the carer element for a claimant` TRUE FALSE FALSE EQUALS NOTHING
