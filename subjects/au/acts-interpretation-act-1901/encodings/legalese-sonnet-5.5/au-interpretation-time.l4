@@ -1,0 +1,513 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Acts Interpretation Act 1901 (Australia), compilation C2026C00117 (28 March 2026):
+-- THE TIME RULES, in one self-contained module (imports only prelude and daydate).
+--
+-- LAYER 1: the law, objectively. No party's point of view is taken here; each rule
+-- states the text's relation once and is named neutrally. Days of rest, public
+-- holidays and days on which an office is closed are always INPUTS (a list the
+-- caller supplies); no holiday calendar is built in. Saturday and Sunday are
+-- computed, because the text names them (s 36(2)).
+--
+-- WHAT THE TEXT DOES NOT SAY IS NEVER INVENTED. The Act has no definition of "day",
+-- "week" or "year" (the word "week" does not occur in it at all; "year" occurs only in
+-- "calendar year", "financial year" and the age rule of s 37A). So the length of a
+-- period of weeks or of years is NOT derived here: those functions answer NOTHING,
+-- and the 7-day and 12-month readings are offered only as separately named
+-- ALTERNATIVE functions (see NOTES.md, fork F4).
+--
+-- The text is quoted mechanically (srcrefs.py) and every rule carries an @ref with
+-- src: locators into the plain-text rendering C1901A00002.txt (a converter's output,
+-- not the official text).
+
+§ `Preliminaries: dates`
+
+-- The stable prelude has no YMD. This one-line shim is the only definition of it in
+-- the whole encoding; every other module reaches it by importing this module.
+GIVEN y IS A NUMBER
+      m IS A NUMBER
+      d IS A NUMBER
+GIVETH A DATE
+YMD y m d MEANS Date d m y
+
+-- The nouns of this module.
+DECLARE `Unit of a period` IS ONE OF Days, Weeks, Months, Years
+
+DECLARE `A span of days` HAS
+    `first day` IS A DATE
+    `last day`  IS A DATE
+
+-- The two kinds of closed day the text names in s 36(3). Both are supplied by the
+-- caller; neither is computed.
+DECLARE `Days of closure` HAS
+    `public holidays in the place` IS A LIST OF DATE
+    `days the office is closed for the whole day` IS A LIST OF DATE
+
+-- A moment inside a day. The text speaks of "the start of the day" (s 3) and of "the
+-- commencement of the relevant anniversary" (s 37A), in the legal time of the place
+-- (s 37); a time zone is not modelled, so the moment is a day plus a time of day.
+DECLARE `Moment in a day` HAS
+    `day`    IS A DATE
+    `hour`   IS A NUMBER
+    `minute` IS A NUMBER
+    `second` IS A NUMBER
+
+§ `Section 2B: day words (business day, calendar month, calendar year, financial year)`
+
+-- src:76 | business day means a day that is not a Saturday, a Sunday or a public holiday in the place concerned.
+@ref Acts Interpretation Act 1901 s 2B "business day" (src:76)
+GIVEN d IS A DATE
+      `public holidays in the place concerned` IS A LIST OF DATE
+GIVETH A BOOLEAN
+`is a business day` d `public holidays in the place concerned` MEANS
+        (NOT (`is weekend` d))
+    AND (NOT (elem d `public holidays in the place concerned`))
+
+-- src:77 | calendar month means one of the 12 months of the year.
+@ref Acts Interpretation Act 1901 s 2B "calendar month" (src:77)
+GIVEN n IS A NUMBER
+GIVETH A BOOLEAN
+`is one of the 12 calendar months` n MEANS
+    FLOOR n EQUALS n AND n AT LEAST 1 AND n AT MOST 12
+
+-- src:78 | calendar year means a period of 12 months starting on 1 January.
+@ref Acts Interpretation Act 1901 s 2B "calendar year" (src:78)
+GIVEN d IS A DATE
+GIVETH A `A span of days`
+`the calendar year containing` d MEANS
+    `A span of days` OF YMD (DATE_YEAR d) 1 1, YMD (DATE_YEAR d) 12 31
+
+-- src:105 | financial year means a period of 12 months starting on 1 July.
+@ref Acts Interpretation Act 1901 s 2B "financial year" (src:105)
+GIVEN d IS A DATE
+GIVETH A `A span of days`
+`the financial year containing` d MEANS
+    IF DATE_MONTH d AT LEAST 7
+    THEN `A span of days` OF YMD (DATE_YEAR d) 7 1, YMD (DATE_YEAR d PLUS 1) 6 30
+    ELSE `A span of days` OF YMD (DATE_YEAR d MINUS 1) 7 1, YMD (DATE_YEAR d) 6 30
+
+§ `Section 2G: months`
+
+-- Written from the text, not from the library's add months, which clamps. The
+-- text ends a period of months "immediately before the start of the corresponding
+-- day" of the calendar month that many months on, or, if that month has no such
+-- day, at the end of that month. The LAST DAY returned is the last day inside the
+-- period (the day before the start of the corresponding day).
+-- src:194 | 2G Months
+-- src:195 | (1) In any Act, month means a period:
+-- src:196 | (a) starting at the start of any day of one of the calendar months; and
+-- src:197 | (b) ending:
+-- src:198 | (i) immediately before the start of the corresponding day of the next calendar month; or
+-- src:199 | (ii) if there is no such day—at the end of the next calendar month.
+-- src:200 | Example 1: A month starting on 15 December in a year ends immediately before 15 January in the next year.
+-- src:201 | Example 2: A month starting on 31 August in a year ends at the end of September in that year (because September is the calendar month coming after August and does not have 31 days).
+-- src:202 | (2) In any Act, a reference to a period of 2 or more months is a reference to a period:
+-- src:203 | (a) starting at the start of a day of one of the calendar months (the starting month); and
+-- src:204 | (b) ending:
+-- src:205 | (i) immediately before the start of the corresponding day of the calendar month that is that number of calendar months after the starting month; or
+-- src:206 | (ii) if there is no such day—at the end of the calendar month that is that number of calendar months after the starting month.
+-- src:207 | Example 1: A reference to 6 months starting on 15 December in a year is a reference to a period starting on that day and ending immediately before 15 June in the next year.
+-- src:208 | Example 2: A reference to 6 months starting on 31 October in a year is a reference to a period starting on that day and ending at the end of April in the next year (because April is the calendar month coming sixth after October and does not have 31 days).
+@ref Acts Interpretation Act 1901 s 2G(1) and (2) (src:194-208)
+GIVEN n IS A NUMBER
+      s IS A DATE
+GIVETH A DATE
+`the last day of` n `calendar months starting on` s MEANS
+    IF   DATE_DAY s AT MOST `Days in month` targetMonth targetYear
+    THEN YMD targetYear targetMonth (DATE_DAY s) MINUS 1
+    ELSE YMD targetYear targetMonth (`Days in month` targetMonth targetYear)
+    WHERE
+        monthCount MEANS ((DATE_YEAR s) TIMES 12) PLUS ((DATE_MONTH s) MINUS 1) PLUS n
+        targetYear MEANS FLOOR (monthCount DIVIDED BY 12)
+        targetMonth MEANS (monthCount MODULO 12) PLUS 1
+
+@ref Acts Interpretation Act 1901 s 2G(1) (src:195-199)
+GIVEN s IS A DATE
+GIVETH A DATE
+`the last day of a month starting on` s MEANS
+    `the last day of` 1 `calendar months starting on` s
+
+§ `Section 36: calculating time`
+
+-- src:780 | 36 Calculating time
+-- src:781 | (1) A period of time referred to in an Act that is of a kind mentioned in column 1 of an item in the following table is to be calculated according to the rule mentioned in column 2 of that item:
+-- src:782 | Calculating periods of time
+-- src:783 | Item
+-- src:784 | Column 1 If the period of time:
+-- src:785 | Column 2 then the period of time:
+-- src:786 | 1
+-- src:787 | is expressed to occur between 2 days
+-- src:788 | includes both days.
+-- src:789 | 2
+-- src:790 | is expressed to begin at, on or with a specified day
+-- src:791 | includes that day.
+-- src:792 | 3
+-- src:793 | is expressed to continue until a specified day
+-- src:794 | includes that day.
+-- src:795 | 4
+-- src:796 | is expressed to end at, on or with a specified day
+-- src:797 | includes that day.
+-- src:798 | 5
+-- src:799 | is expressed to begin from a specified day
+-- src:800 | does not include that day.
+-- src:801 | 6
+-- src:802 | is expressed to begin after a specified day
+-- src:803 | does not include that day.
+-- src:804 | 7
+-- src:805 | is expressed to end before a specified day
+-- src:806 | does not include that day.
+-- src:807 | Example 1: If a claim may be made between 1 September and 30 November, a claim may be made on both 1 September and 30 November.
+-- src:808 | Example 2: If a permission begins on the first day of a financial year, the permission is in force on that day.
+-- src:809 | Example 3: If a licence continues until 31 March, the licence is valid up to and including 31 March.
+-- src:810 | Example 4: If a person’s right to make submissions ends on the last day of a financial year, the person may make submissions on that day.
+-- src:811 | Example 5: If a variation of an agreement is expressed to operate from 30 June, the variation starts to operate on 1 July.
+-- src:812 | Example 6: If a decision is made on 2 August and a person has 28 days after the day the decision is made to seek a review of the decision, the 28-day period begins on 3 August.
+-- src:813 | Example 7: If a person must give a notice to another person at any time during the period of 7 days before the day a proceeding starts and the proceeding starts on 8 May, the notice may be given at any time during the 7-day period starting on 1 May and ending on 7 May.
+@ref Acts Interpretation Act 1901 s 36(1) table, items 1 to 7, and examples 1 to 7 (src:780-813)
+DECLARE `How a period is expressed` IS ONE OF
+    `between two days`
+    `begins at, on or with a specified day`
+    `continues until a specified day`
+    `ends at, on or with a specified day`
+    `begins from a specified day`
+    `begins after a specified day`
+    `ends before a specified day`
+
+@ref Acts Interpretation Act 1901 s 36(1) table, items 1 to 7 (src:786-806)
+GIVEN how IS A `How a period is expressed`
+GIVETH A BOOLEAN
+`a period expressed in this way includes the specified day` how MEANS
+    CONSIDER how
+    WHEN `between two days`                         THEN TRUE
+    WHEN `begins at, on or with a specified day`    THEN TRUE
+    WHEN `continues until a specified day`          THEN TRUE
+    WHEN `ends at, on or with a specified day`      THEN TRUE
+    WHEN `begins from a specified day`              THEN FALSE
+    WHEN `begins after a specified day`             THEN FALSE
+    WHEN `ends before a specified day`              THEN FALSE
+
+-- Which end of the period the specified day is named at. "Between 2 days" names
+-- both ends, and includes both (item 1).
+@ref Acts Interpretation Act 1901 s 36(1) table, items 1 to 7 (src:786-806)
+GIVEN how IS A `How a period is expressed`
+GIVETH A BOOLEAN
+`the specified day names the start of a period expressed in this way` how MEANS
+    CONSIDER how
+    WHEN `between two days`                         THEN TRUE
+    WHEN `begins at, on or with a specified day`    THEN TRUE
+    WHEN `continues until a specified day`          THEN FALSE
+    WHEN `ends at, on or with a specified day`      THEN FALSE
+    WHEN `begins from a specified day`              THEN TRUE
+    WHEN `begins after a specified day`             THEN TRUE
+    WHEN `ends before a specified day`              THEN FALSE
+
+@ref Acts Interpretation Act 1901 s 36(1) table, items 1 to 7 (src:786-806)
+GIVEN how IS A `How a period is expressed`
+GIVETH A BOOLEAN
+`the specified day names the end of a period expressed in this way` how MEANS
+    CONSIDER how
+    WHEN `between two days`                         THEN TRUE
+    WHEN `begins at, on or with a specified day`    THEN FALSE
+    WHEN `continues until a specified day`          THEN TRUE
+    WHEN `ends at, on or with a specified day`      THEN TRUE
+    WHEN `begins from a specified day`              THEN FALSE
+    WHEN `begins after a specified day`             THEN FALSE
+    WHEN `ends before a specified day`              THEN TRUE
+
+-- The first day of a period whose START is expressed by reference to a day. NOTHING
+-- when the expression names the end of the period instead (the text then gives no
+-- first day).
+@ref Acts Interpretation Act 1901 s 36(1) table, items 1, 2, 5 and 6, and examples 5 and 6 (src:786-806)
+GIVEN how IS A `How a period is expressed`
+      anchor IS A DATE
+GIVETH A MAYBE DATE
+`the first day of the period` how anchor MEANS
+    IF   `the specified day names the start of a period expressed in this way` how
+    THEN IF   `a period expressed in this way includes the specified day` how
+         THEN JUST anchor
+         ELSE JUST (anchor PLUS 1)
+    ELSE NOTHING
+
+-- The last day of a period whose END is expressed by reference to a day.
+@ref Acts Interpretation Act 1901 s 36(1) table, items 1, 3, 4 and 7, and example 3 (src:786-806)
+GIVEN how IS A `How a period is expressed`
+      anchor IS A DATE
+GIVETH A MAYBE DATE
+`the last day of the period` how anchor MEANS
+    IF   `the specified day names the end of a period expressed in this way` how
+    THEN IF   `a period expressed in this way includes the specified day` how
+         THEN JUST anchor
+         ELSE JUST (anchor MINUS 1)
+    ELSE NOTHING
+
+-- A period of n units that starts on the day s, counted day by day (n days
+-- starting on 1 May and ending on 7 May is 7 days: example 7). Only days and months
+-- have a length the text gives; weeks and years do not (fork F4), so they answer
+-- NOTHING, as does a length that is not a whole number of at least 1.
+@ref Acts Interpretation Act 1901 s 36(1) examples 6 and 7, and s 2G (src:812-813)
+GIVEN n IS A NUMBER
+      u IS A `Unit of a period`
+      s IS A DATE
+GIVETH A MAYBE DATE
+`the last day of a period of` n u `starting on` s MEANS
+    IF   n LESS THAN 1 OR (NOT (FLOOR n EQUALS n))
+    THEN NOTHING
+    ELSE CONSIDER u
+         WHEN Days   THEN JUST (s PLUS (n MINUS 1))
+         WHEN Months THEN JUST (`the last day of` n `calendar months starting on` s)
+         WHEN Weeks  THEN NOTHING
+         WHEN Years  THEN NOTHING
+
+-- The composition of s 36(1) with s 2G: "a period of n units that begins from (or
+-- after) a day" begins on the following day (items 5 and 6), and is then counted as
+-- above.
+@ref Acts Interpretation Act 1901 s 36(1) items 5 and 6 with s 2G (src:799-803)
+GIVEN n IS A NUMBER
+      u IS A `Unit of a period`
+      how IS A `How a period is expressed`
+      anchor IS A DATE
+GIVETH A MAYBE DATE
+`the last day of a counted period of` n u `that` how anchor MEANS
+    CONSIDER `the first day of the period` how anchor
+    WHEN NOTHING   THEN NOTHING
+    WHEN JUST first THEN `the last day of a period of` n u `starting on` first
+
+-- ALTERNATIVE READING, NOT STATED BY THE ACT (fork F4). If a week were counted as 7
+-- days and a year as 12 months, the same counting would apply. The Act says only
+-- that a calendar year and a financial year are each "a period of 12 months"; it
+-- never says what a week or a year is. This function exists so that a reader can see
+-- what that reading would give; no other rule in the encoding calls it.
+-- src:78 | calendar year means a period of 12 months starting on 1 January.
+-- src:105 | financial year means a period of 12 months starting on 1 July.
+@ref NOT STATED IN THE ACT: by analogy with s 2B "calendar year" and "financial year" (src:78-105)
+GIVEN n IS A NUMBER
+      u IS A `Unit of a period`
+      s IS A DATE
+GIVETH A MAYBE DATE
+`ALTERNATIVE READING: the last day of a period of` n u `starting on` s MEANS
+    CONSIDER u
+    WHEN Days   THEN `the last day of a period of` n Days   `starting on` s
+    WHEN Months THEN `the last day of a period of` n Months `starting on` s
+    WHEN Weeks  THEN `the last day of a period of` (n TIMES 7)  Days   `starting on` s
+    WHEN Years  THEN `the last day of a period of` (n TIMES 12) Months `starting on` s
+
+@ref NOT STATED IN THE ACT: by analogy with s 2B "calendar year" and "financial year" (src:78-105)
+GIVEN how IS A `How a period is expressed`
+      anchor IS A DATE
+      n IS A NUMBER
+      u IS A `Unit of a period`
+GIVETH A MAYBE DATE
+`ALTERNATIVE READING: the last day of a counted period, expressed as` how anchor n u MEANS
+    CONSIDER `the first day of the period` how anchor
+    WHEN NOTHING   THEN NOTHING
+    WHEN JUST first THEN `ALTERNATIVE READING: the last day of a period of` n u `starting on` first
+
+§§ `Section 36(2) and (3): a last day on a Saturday, a Sunday or a holiday`
+
+-- src:819 | (3) In this section:
+-- src:820 | holiday, in relation to the time for doing a thing, means:
+-- src:821 | (a) a day that is a public holiday in the place in which the thing is to be or may be done; and
+-- src:822 | (b) if the thing is to be or may be done at a particular office or other place—a day on which the place or office is closed for the whole day.
+@ref Acts Interpretation Act 1901 s 36(3) "holiday" (src:819-822)
+GIVEN d IS A DATE
+      closures IS A `Days of closure`
+GIVETH A BOOLEAN
+`is a holiday for the time for doing a thing` d closures MEANS
+        elem d (closures's `public holidays in the place`)
+     OR elem d (closures's `days the office is closed for the whole day`)
+
+-- src:814 | (2) If:
+-- src:815 | (a) an Act requires or allows a thing to be done; and
+-- src:816 | (b) the last day for doing the thing is a Saturday, a Sunday or a holiday;
+-- src:817 | then the thing may be done on the next day that is not a Saturday, a Sunday or a holiday.
+-- src:818 | Example: If a person has until 31 March to make an application and 31 March is a Saturday, the application may be made on Monday 2 April.
+@ref Acts Interpretation Act 1901 s 36(2)(b) (src:814-818)
+GIVEN d IS A DATE
+      closures IS A `Days of closure`
+GIVETH A BOOLEAN
+`is a Saturday, a Sunday or a holiday` d closures MEANS
+        `is weekend` d
+     OR `is a holiday for the time for doing a thing` d closures
+
+-- "The next day that is not a Saturday, a Sunday or a holiday": from a day that is
+-- itself one of those, step forward one day at a time to the first that is not; this
+-- passes over several rest days in a row.
+@ref Acts Interpretation Act 1901 s 36(2) (src:817)
+GIVEN d IS A DATE
+      closures IS A `Days of closure`
+GIVETH A DATE
+`the first day from` d `that is not a Saturday, a Sunday or a holiday, given` closures MEANS
+    IF   `is a Saturday, a Sunday or a holiday` d closures
+    THEN `the first day from` (d PLUS 1) `that is not a Saturday, a Sunday or a holiday, given` closures
+    ELSE d
+
+-- The rule moves the day on which the thing may be done only when an Act requires or
+-- allows the thing to be done (limb (a)) and the last day for doing it is a Saturday,
+-- a Sunday or a holiday (limb (b)). It makes no distinction between periods counted
+-- in days, months or years (fork F3).
+@ref Acts Interpretation Act 1901 s 36(2) (src:814-817)
+GIVEN `an Act requires or allows the thing to be done` IS A BOOLEAN
+      `the last day for doing the thing` IS A DATE
+      closures IS A `Days of closure`
+GIVETH A DATE
+`the last day on which the thing may be done` `an Act requires or allows the thing to be done` `the last day for doing the thing` closures MEANS
+    IF   `an Act requires or allows the thing to be done`
+         AND `is a Saturday, a Sunday or a holiday` `the last day for doing the thing` closures
+    THEN `the first day from` `the last day for doing the thing` `that is not a Saturday, a Sunday or a holiday, given` closures
+    ELSE `the last day for doing the thing`
+
+-- Whether the thing may be done on a given day inside a period that starts on
+-- `the first day` and has `the last day for doing the thing` as its last day.
+@ref Acts Interpretation Act 1901 s 36(1) and (2) (src:814-817)
+GIVEN `the day the thing is done` IS A DATE
+      `the first day of the period` IS A DATE
+      `the last day for doing the thing` IS A DATE
+      closures IS A `Days of closure`
+GIVETH A BOOLEAN
+`the thing is done within the time allowed` `the day the thing is done` `the first day of the period` `the last day for doing the thing` closures MEANS
+        `the day the thing is done` AT LEAST `the first day of the period`
+    AND `the day the thing is done` AT MOST
+            `the last day on which the thing may be done` TRUE `the last day for doing the thing` closures
+
+§ `Part 3: when an Act comes into operation (ss 3 and 3A)`
+
+-- src:235 | 3 When Acts come into operation
+-- src:236 | If an Act or a provision of an Act is expressed to come into operation on a particular day (whether the expression “come into operation” or “commence” is used), it comes into operation at the start of the day.
+-- src:237 | 3A Commencement of Acts
+-- src:238 | (1) This section does not apply to an Act so far as it provides for its commencement.
+-- src:239 | (2) An Act (other than an Act to alter the Constitution) commences on the 28th day after the day on which that Act receives the Royal Assent.
+-- src:240 | (3) An Act to alter the Constitution commences on the day on which that Act receives the Royal Assent.
+@ref Acts Interpretation Act 1901 s 3 and s 3A (src:235-240)
+DECLARE `What an Act says about when it commences` IS ONE OF
+    `silent about commencement`
+    `commencement on a particular day`  HAS `the day it names` IS A DATE
+    `commencement on a day still to be fixed`
+    `commencement on a day fixed later` HAS `the day fixed` IS A DATE
+
+@ref Acts Interpretation Act 1901 s 3A(2) and (3) (src:238-240)
+DECLARE `Kind of enactment` IS ONE OF
+    `Act`
+    `Act to alter the Constitution`
+    `legislative instrument`
+    `notifiable instrument`
+    `other instrument made under a power`
+
+-- The DAY. Section 3A applies "to an Act" only, and not "so far as it provides for its
+-- commencement" (3A(1)); then the 28th day after the day of Royal Assent (3A(2)), or
+-- the day of Royal Assent for an Act to alter the Constitution (3A(3)). For any other
+-- enactment the text gives no default day: NOTHING (fork F6).
+@ref Acts Interpretation Act 1901 s 3A (src:238-240)
+GIVEN kind IS A `Kind of enactment`
+      says IS A `What an Act says about when it commences`
+      `the day of Royal Assent, or of making` IS A DATE
+GIVETH A MAYBE DATE
+`the day the enactment commences` kind says `the day of Royal Assent, or of making` MEANS
+    CONSIDER says
+    WHEN `commencement on a particular day` d  THEN JUST d
+    WHEN `commencement on a day fixed later` d THEN JUST d
+    WHEN `commencement on a day still to be fixed` THEN NOTHING
+    WHEN `silent about commencement` THEN
+        CONSIDER kind
+        WHEN `Act`                           THEN JUST (`the day of Royal Assent, or of making` PLUS 28)
+        WHEN `Act to alter the Constitution` THEN JUST `the day of Royal Assent, or of making`
+        WHEN `legislative instrument`        THEN NOTHING
+        WHEN `notifiable instrument`         THEN NOTHING
+        WHEN `other instrument made under a power` THEN NOTHING
+
+-- The MOMENT: "it comes into operation at the start of the day" (s 3), in the legal
+-- time of the place (s 37).
+@ref Acts Interpretation Act 1901 s 3 (src:236)
+GIVEN kind IS A `Kind of enactment`
+      says IS A `What an Act says about when it commences`
+      `the day of Royal Assent, or of making` IS A DATE
+GIVETH A MAYBE `Moment in a day`
+`the moment the enactment comes into operation` kind says `the day of Royal Assent, or of making` MEANS
+    CONSIDER `the day the enactment commences` kind says `the day of Royal Assent, or of making`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST d  THEN JUST (`the start of the day` d)
+
+-- The start of a day: midnight, hour 0, minute 0, second 0 (s 3: "at the start of the day").
+@ref Acts Interpretation Act 1901 s 3 (src:236)
+GIVEN d IS A DATE
+GIVETH A `Moment in a day`
+`the start of the day` d MEANS `Moment in a day` OF d, 0, 0, 0
+
+§ `Part 6: service by post (s 29)`
+
+-- src:620 | 29 Meaning of service by post
+-- src:621 | (1) Where an Act authorises or requires any document to be served by post, whether the expression “serve” or the expression “give” or “send” or any other expression is used, then the service shall be deemed to be effected by properly addressing, prepaying and posting the document as a letter and, unless the contrary is proved, to have been effected at the time at which the letter would be delivered in the ordinary course of post.
+-- src:622 | (2) This section does not affect the operation of section 160 of the Evidence Act 1995.
+@ref Acts Interpretation Act 1901 s 29(1) (src:620-622)
+GIVEN `the document was properly addressed` IS A BOOLEAN
+      `the document was prepaid` IS A BOOLEAN
+      `the document was posted as a letter` IS A BOOLEAN
+      `the day the letter would be delivered in the ordinary course of post` IS A DATE
+      `the day service in fact took place, if the contrary is proved` IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`the day service by post is taken to be effected` `the document was properly addressed` `the document was prepaid` `the document was posted as a letter` `the day the letter would be delivered in the ordinary course of post` `the day service in fact took place, if the contrary is proved` MEANS
+    IF   `the document was properly addressed`
+         AND `the document was prepaid`
+         AND `the document was posted as a letter`
+    THEN CONSIDER `the day service in fact took place, if the contrary is proved`
+         WHEN JUST proved THEN JUST proved
+         WHEN NOTHING     THEN JUST `the day the letter would be delivered in the ordinary course of post`
+    ELSE NOTHING
+
+§ `Section 37A: attaining an age`
+
+-- src:825 | 37A Attainment of particular age
+-- src:826 | For the purposes of any Act, the time at which a person attains a particular age expressed in years is the commencement of the relevant anniversary of the date of the birth of that person.
+@ref Acts Interpretation Act 1901 s 37A (src:825-826)
+GIVEN `the date of birth` IS A DATE
+      `the age in years` IS A NUMBER
+GIVETH A MAYBE `Moment in a day`
+`the moment a person attains the age` `the date of birth` `the age in years` MEANS
+    IF   `the age in years` LESS THAN 1 OR (NOT (FLOOR `the age in years` EQUALS `the age in years`))
+    THEN NOTHING
+    ELSE IF   DATE_DAY `the date of birth` AT MOST `Days in month` (DATE_MONTH `the date of birth`) anniversaryYear
+         THEN JUST (`the start of the day` (YMD anniversaryYear (DATE_MONTH `the date of birth`) (DATE_DAY `the date of birth`)))
+         ELSE NOTHING
+    WHERE
+        anniversaryYear MEANS (DATE_YEAR `the date of birth`) PLUS `the age in years`
+
+§ `Section 2M: sitting day`
+
+-- src:225 | 2M Sitting day
+-- src:226 | (1) In any Act, a sitting day, in relation to a House of the Parliament, is a day on which the House actually sits.
+-- src:227 | (2) However, if the House sat without adjourning on a previous day (the earlier sitting day), any period during which the House continues to sit, with or without a suspension, on a later day, until it adjourns, is taken to be part of the earlier sitting day.
+-- src:228 | Example 1: The Senate begins sitting at 9 am on Thursday and extends (with or without a suspension of the sitting) until it is adjourned at 3 pm on Friday. Thursday is a sitting day for the Senate but Friday is not. This example applies equally to the House of Representatives.
+-- src:229 | Example 2: The House of Representatives begins sitting at 9 am on Wednesday and extends (with or without a suspension of the sitting) until it is adjourned at 1 am on Thursday. The House of Representatives then starts sitting again at 10 am on Thursday and adjourns at 3 pm on Thursday. Both Wednesday and Thursday are sitting days for the House of Representatives. This example applies equally to the Senate.
+-- src:230 | (3) For the purposes of this section, a House is taken to have adjourned if:
+-- src:231 | (a) the Parliament is prorogued; or
+-- src:232 | (b) that House is dissolved; or
+-- src:233 | (c) if that House is the House of Representatives—that House expires.
+@ref Acts Interpretation Act 1901 s 2M (src:225-233)
+DECLARE `A sitting of a House` HAS
+    `begins on`   IS A DATE
+    `adjourns on` IS A DATE
+
+-- A sitting is a stretch during which the House sits, with or without a suspension,
+-- until it adjourns (or is prorogued, dissolved or expires: 2M(3)). Each sitting is
+-- one `A sitting of a House`. A day is a sitting day if a sitting BEGINS on it; the
+-- later days of a long sitting are part of the earlier sitting day (2M(2)).
+@ref Acts Interpretation Act 1901 s 2M(1) and (2) (src:226-227)
+GIVEN d IS A DATE
+      sittings IS A LIST OF `A sitting of a House`
+GIVETH A BOOLEAN
+`is a sitting day` d sittings MEANS
+    any (GIVEN x YIELD x's `begins on` EQUALS d) sittings
+
+-- "N sitting days after a day": the N-th sitting day that falls strictly after it
+-- (s 36(1) item 6). NOTHING when the supplied sittings run out first.
+@ref Acts Interpretation Act 1901 s 2M with s 36(1) item 6 (src:226-227)
+GIVEN n IS A NUMBER
+      d IS A DATE
+      sittings IS A LIST OF `A sitting of a House`
+GIVETH A MAYBE DATE
+`the sitting day that is the n-th after` n d sittings MEANS
+    IF   n LESS THAN 1 OR (NOT (FLOOR n EQUALS n)) OR count laterDays LESS THAN n
+    THEN NOTHING
+    ELSE JUST (Date (at laterDays (n MINUS 1)))
+    WHERE
+        laterDays MEANS sort (nub (map (GIVEN x YIELD Day (x's `begins on`)) (filter (GIVEN x YIELD x's `begins on` GREATER THAN d) sittings)))

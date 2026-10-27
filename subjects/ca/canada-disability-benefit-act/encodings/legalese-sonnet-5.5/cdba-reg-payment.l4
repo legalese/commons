@@ -1,0 +1,105 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cdba-nouns`
+IMPORT `cdba-calendar`
+IMPORT `cdba-reg-definitions`
+IMPORT `cdba-reg-eligibility`
+IMPORT `cdba-reg-amount`
+IMPORT `cdba-reg-application`
+
+-- Canada Disability Benefit Regulations (SOR/2025-35), sections 7 to 9.1 -- WHEN THE
+-- ALLOCATION BEGINS, HOW IT IS PAID, AND THE FIRST PAYMENT.
+--
+-- What the text does not say, and these modules do not guess: on which day of the month
+-- a monthly payment is made, and what "the day on which the first payment of an allocation
+-- would have been made" (s 8(2)) is. Rules that need such a day take it as an input.
+
+§ `Regulations s 7 -- When allocation begins`
+
+-- The month after the month of approval is the first month the beneficiary is entitled to
+-- an allocation for.
+-- src:136 | 7 The month following the month in which a beneficiary’s application is approved under section 5 is the first month with respect to which they are entitled to an allocation.
+@ref Regulations s 7 (src:136)
+GIVEN `the day the application is deemed to have been approved` IS A DATE
+GIVETH A DATE
+`the first month for which a beneficiary is entitled to an allocation` `the day the application is deemed to have been approved` MEANS
+    `the first day of the month after the month of` `the day the application is deemed to have been approved`
+
+§ `Regulations s 8 -- Monthly payments`
+
+-- 8(1): the allocation is payable each month of the payment period: a beneficiary is
+-- entitled to the allocation for a month that is not before the first month of s 7 and
+-- for which they are eligible under section 2.
+-- src:138 | 8 (1) Subject to subsection (2), an allocation is payable each month during the payment period.
+@ref Regulations s 8(1) (src:138); s 7 (src:136)
+GIVEN `the first month for which the beneficiary is entitled to an allocation` IS A DATE
+      facts IS A `Person facts for a month`
+GIVETH A BOOLEAN
+`the beneficiary is entitled to an allocation for the month` `the first month for which the beneficiary is entitled to an allocation` facts MEANS
+        `the month number of` (facts's `the month asked about`) AT LEAST `the month number of` `the first month for which the beneficiary is entitled to an allocation`
+    AND `the person is eligible to receive an allocation for the month` facts
+
+-- 8(1) with section 6: the amount of the allocation for a month. Nothing if the beneficiary
+-- is not entitled to it; NOTHING (not covered) if section 6 gives no indexing factor for the
+-- payment period the month falls in.
+-- src:78 | 6 (1) The amount (referred to in these Regulations as the “basic amount”) that is payable to a beneficiary for any month for which they are eligible to receive an allocation in a payment period is the amount — rounded to the nearest cent or, if the amount is equidistant from two cents, to the higher of them — determined by the formula
+@ref Regulations s 8(1) (src:138); s 6(1) (src:78)
+GIVEN `the first month for which the beneficiary is entitled to an allocation` IS A DATE
+      facts IS A `Person facts for a month`
+      household IS A `Income and household facts`
+      figures IS A LIST OF `Consumer Price Index figure`
+GIVETH A MAYBE NUMBER
+`the allocation payable for the month` `the first month for which the beneficiary is entitled to an allocation` facts household figures MEANS
+    IF `the beneficiary is entitled to an allocation for the month` `the first month for which the beneficiary is entitled to an allocation` facts
+    THEN `the basic amount payable for the month` (`the payment period that includes the day` (facts's `the month asked about`)) figures household
+    ELSE JUST 0
+
+-- 8(2): twenty dollars or less. Fork F10: only an amount above zero engages it.
+-- src:140 | (2) If, for a payment period, the allocation payable to a beneficiary in a month is twenty dollars or less, their entire allocation for the period, being an amount equal to the basic amount multiplied by the number of months remaining in that period, is payable as a lump sum on the day on which the first payment of an allocation would have been made.
+@ref Regulations s 8(2) (src:140)
+GIVEN `the allocation payable in a month` IS A NUMBER
+GIVETH A BOOLEAN
+`the allocation is paid as a lump sum for the payment period` `the allocation payable in a month` MEANS
+        `the allocation payable in a month` GREATER THAN 0
+    AND `the allocation payable in a month` AT MOST 20
+
+-- 8(2): the lump sum is the basic amount multiplied by the number of months remaining in
+-- the period. Fork F10: the first month the allocation is payable counts, and so does every
+-- later month up to the last day of the period (June).
+@ref Regulations s 8(2) (src:140)
+GIVEN `the basic amount` IS A NUMBER
+      `the first month for which the allocation is payable in the payment period` IS A DATE
+      period IS A `Payment period`
+GIVETH A NUMBER
+`the lump sum for the payment period` `the basic amount` `the first month for which the allocation is payable in the payment period` period MEANS
+    `the basic amount` TIMES (`the number of months from the month of` (`the later day of` `the first month for which the allocation is payable in the payment period` (period's `the first day of the payment period`)) `to the month of` (period's `the last day of the payment period`) PLUS 1)
+
+§ `Regulations s 9 -- First payment of allocation`
+
+-- 9: the first payment equals the sum of the payments, worked out under section 6, for the
+-- months from the month after approval through the month in which the first payment is
+-- made. The amounts are given one per month in order, with 0 for a month in which the
+-- beneficiary was not eligible; the list must have exactly that many entries or the sum
+-- is not covered (NOTHING), as it is when the first payment is made before the first
+-- month of entitlement.
+-- src:142 | 9 The first payment of an allocation that is payable to a beneficiary must be an amount equal to the sum of the payments, as calculated in accordance with section 6, to be made to the beneficiary for the period beginning with the month following the month in which their application is approved under section 5 and ending with the month in which the first payment is made.
+@ref Regulations s 9 (src:142)
+GIVEN `the day the application is deemed to have been approved` IS A DATE
+      `the day the first payment is made` IS A DATE
+      `the amounts under section 6, one for each month in order` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+`the first payment of an allocation` `the day the application is deemed to have been approved` `the day the first payment is made` `the amounts under section 6, one for each month in order` MEANS
+    IF months GREATER THAN 0 AND count `the amounts under section 6, one for each month in order` EQUALS months
+    THEN JUST (sum `the amounts under section 6, one for each month in order`)
+    ELSE NOTHING
+    WHERE months MEANS `the number of months from the month of` (`the day the application is deemed to have been approved`) `to the month of` `the day the first payment is made`
+
+§ `Regulations s 9.1 -- Supplemental amount`
+
+DECLARE `Form of payment` IS ONE OF
+    `paid monthly`
+    `paid as a lump sum`
+
+-- src:144 | 9.1 The supplemental amount is paid as a lump sum.
+@ref Regulations s 9.1 (src:144)
+`the form in which the supplemental amount is paid` MEANS `paid as a lump sum`

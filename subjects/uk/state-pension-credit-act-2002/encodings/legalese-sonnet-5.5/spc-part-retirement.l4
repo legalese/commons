@@ -1,0 +1,538 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `spc-nouns`
+IMPORT `spc-dates`
+IMPORT `spc-part-interpretation`
+
+-- State Pension Credit Act 2002 -- LAYER 1, "Retirement provision" (sections 6 to 10):
+-- the assessed income period, which fixes how a claimant's pension-type income is
+-- counted for a period of years (or indefinitely) after a decision.
+--
+-- WHY IT MATTERS. Sections 6 to 10 apply to decisions that take effect before 6 April
+-- 2016, so they bind today only through periods that are still running: an
+-- indefinite period begun for a claimant aged 75 or over runs on, and a five-year
+-- period begun in the last days before that date ran until 2021.
+--
+-- HOW THE MODULE IS ORGANISED. Section 6 says when the Secretary of State must fix a
+-- period; section 7 says how the income of the claimant is counted during it;
+-- section 8 lets fresh determinations in when they raise entitlement; section 9
+-- says how long a period lasts and when it ends; section 10 says how the
+-- amount payable changes when a counted element varies. Each is encoded as a test
+-- on the facts the Act names. Judgments the Act hands to the Secretary of State
+-- (whether particulars are "typical", whether circumstances are "prescribed") are
+-- inputs, never decided here.
+
+§ `Retirement provision`
+
+§§ `The records this Part uses`
+
+-- The relevant decision of section 6(5): the facts the Act's tests ask about it.
+DECLARE `Relevant decision` HAS
+    `day the decision takes effect`                                         IS A DATE     -- s 6(1), (3)(c), (4)(c), s 9(1)
+    `the Secretary of State determined the amount of the claimant's income for the purposes of a decision relating to state pension credit` IS A BOOLEAN  -- s 6(3)(a)
+    `the decision is a decision under section 8(1), 9 or 10 of the Social Security Act 1998` IS A BOOLEAN  -- s 6(3)(b)
+    `the decision is to the effect that the claimant is not entitled to state pension credit`  IS A BOOLEAN  -- s 6(3)(d)
+    `the amount of the claimant's income was determined on, or for the purposes of, an appeal against a decision that the claimant is not entitled to state pension credit` IS A BOOLEAN  -- s 6(4)(a)
+    `on the appeal it was decided that the claimant is entitled to state pension credit` IS A BOOLEAN  -- s 6(4)(b)
+    `an assessed income period is in force when the decision takes effect by virtue of a previous application of section 6` IS A BOOLEAN  -- s 6(2)(a)
+    `other circumstances prescribed under section 6(2)(b) prevent a period being specified` IS A BOOLEAN  -- s 6(2)(b)
+
+-- A variation of an assessed amount under regulations made under section 7(4): a
+-- prescribed date and a prescribed amount, positive for an increase and negative
+-- for a decrease.
+DECLARE Variation HAS
+    `day the variation takes effect` IS A DATE
+    `amount of the variation`        IS A NUMBER
+
+-- One element of the claimant's retirement provision (section 7(6)).
+DECLARE `Element of retirement provision` HAS
+    `assessed amount`                                                       IS A NUMBER   -- s 7(3)
+    `income from capital`                                                   IS A BOOLEAN  -- s 7(4)(b)
+    `included in the claimant's income as determined for the relevant decision` IS A BOOLEAN  -- s 7(5)
+    `variations prescribed under section 7(4)`                              IS A LIST OF Variation
+    `prescribed circumstances in which the assessed amount is not deemed to vary` IS A BOOLEAN  -- s 7(4), "except in prescribed circumstances"
+
+-- The facts section 9 needs about the life of one assessed income period, beyond
+-- those the Case already holds (the claimant's and the other member's birthdays, and
+-- whether the claimant is in a couple).
+DECLARE `Assessed income period` HAS
+    `day the relevant decision takes effect`                                IS A DATE     -- s 9(1), the day the period begins
+    `first day after that day on which the claimant becomes or ceases to be a member of a couple` IS A MAYBE DATE  -- s 9(4)(a), (b)
+    `first further time prescribed under section 9(5)`                      IS A MAYBE DATE
+    `prescribed circumstances in which the period does not end under section 9(4)` IS A BOOLEAN
+
+-- What section 6 requires of the Secretary of State on one decision.
+DECLARE `What section 6 requires` IS ONE OF
+    `Section 6 does not apply to the decision`
+    `The Secretary of State must specify an assessed income period`
+    `The Secretary of State is prevented from specifying an assessed income period`
+    `The Secretary of State need not specify an assessed income period, and any period specified must be shorter than 5 years`
+
+-- Which determination governs a day of the assessed income period (section 8(3)).
+DECLARE `Which determination governs` IS ONE OF
+    `The fresh determination governs`
+    `The determination it replaces governs`
+
+-- How long an assessed income period lasts (section 9(1)).
+DECLARE `Length of an assessed income period` IS ONE OF
+    `Five years beginning with the day the relevant decision takes effect`
+    `An indefinite period beginning with that day`
+
+§§ `6 Duty to specify assessed income period for pre-6 April 2016 awards`
+
+-- Section 6(3)(c): "the decision takes effect on or after (i) the day on which the
+-- claimant attains the age of 65; or (ii) if earlier, in a case where the claimant is
+-- a member of a couple, the day on which the other member of the couple attains that
+-- age". "On or after" the earlier of two days is "on or after" either, so the two
+-- limbs are joined by OR. The day of attaining an age is its anniversary (see
+-- spc-dates.l4).
+-- src:92 | (c) the decision takes effect on or after—
+-- src:93 | (i) the day on which the claimant attains the age of 65; or
+-- src:94 | (ii) if earlier, in a case where the claimant is a member of a couple , the day on which the other member of the couple attains that age; and
+@ref s 6(3)(c) (src:92-94)
+GIVEN case IS A Case
+      day IS A DATE
+GIVETH A BOOLEAN
+`s 6(3)(c) -- the decision takes effect on or after the day the claimant, or the other member of a couple if earlier, attains the age of 65` case day MEANS
+        "(i) the day on which the claimant attains the age of 65;" ... `the age has been attained on` day `by a person born on` (case's claimant's `date of birth`) `at the age of` `the age of 65`
+    OR  "(ii) if earlier, in a case where the claimant is a member of a couple, the day on which the other member of the couple attains that age;" ...
+            (       `s 17(1) -- couple` (case's household)
+                AND `the age has been attained on` day `by a person born on` (case's `other member of the couple`'s `date of birth`) `at the age of` `the age of 65` )
+
+-- Section 6(3): the first case.
+-- src:89 | (3) The first case is where—
+-- src:90 | (a) the Secretary of State determines the amount of a claimant’s income for the purposes of a decision relating to state pension credit;
+-- src:91 | (b) the decision is a decision under section 8(1), 9 or 10 of the Social Security Act 1998 (c. 14) (decisions on claims etc, and decisions revising or superseding decisions);
+-- src:92 | (c) the decision takes effect on or after—
+-- src:93 | (i) the day on which the claimant attains the age of 65; or
+-- src:94 | (ii) if earlier, in a case where the claimant is a member of a couple , the day on which the other member of the couple attains that age; and
+-- src:95 | (d) the decision is not to the effect that the claimant is not entitled to state pension credit.
+@ref s 6(3) (src:89-95)
+GIVEN case IS A Case
+      decision IS A `Relevant decision`
+GIVETH A BOOLEAN
+`s 6(3) -- the first case` case decision MEANS
+        "(a) the Secretary of State determines the amount of a claimant's income for the purposes of a decision relating to state pension credit;" ... decision's `the Secretary of State determined the amount of the claimant's income for the purposes of a decision relating to state pension credit`
+    ... "(b) the decision is a decision under section 8(1), 9 or 10 of the Social Security Act 1998;" ... decision's `the decision is a decision under section 8(1), 9 or 10 of the Social Security Act 1998`
+    ... "(c) the decision takes effect on or after (i) or (ii); and" ... `s 6(3)(c) -- the decision takes effect on or after the day the claimant, or the other member of a couple if earlier, attains the age of 65` case (decision's `day the decision takes effect`)
+    AND "(d) the decision is not to the effect that the claimant is not entitled to state pension credit." ... NOT (decision's `the decision is to the effect that the claimant is not entitled to state pension credit`)
+
+-- Section 6(4): the second case, a decision on appeal.
+-- src:96 | (4) The second case is where—
+-- src:97 | (a) the amount of the claimant’s income is determined on, or for the purposes of, an appeal against a decision that the claimant is not entitled to state pension credit;
+-- src:98 | (b) on the appeal, it is decided that the claimant is entitled to state pension credit; and
+-- src:99 | (c) the decision takes effect as mentioned in subsection (3)(c).
+@ref s 6(4) (src:96-99)
+GIVEN case IS A Case
+      decision IS A `Relevant decision`
+GIVETH A BOOLEAN
+`s 6(4) -- the second case` case decision MEANS
+        "(a) the amount of the claimant's income is determined on, or for the purposes of, an appeal against a decision that the claimant is not entitled to state pension credit;" ... decision's `the amount of the claimant's income was determined on, or for the purposes of, an appeal against a decision that the claimant is not entitled to state pension credit`
+    ... "(b) on the appeal, it is decided that the claimant is entitled to state pension credit; and" ... decision's `on the appeal it was decided that the claimant is entitled to state pension credit`
+    AND "(c) the decision takes effect as mentioned in subsection (3)(c)." ... `s 6(3)(c) -- the decision takes effect on or after the day the claimant, or the other member of a couple if earlier, attains the age of 65` case (decision's `day the decision takes effect`)
+
+-- Section 6(2): the Secretary of State is prevented from specifying a period (a) if
+-- the decision takes effect when a period is already in force by virtue of a previous
+-- application of section 6; or (b) in other prescribed circumstances.
+-- src:86 | (2) The Secretary of State is prevented from specifying a period as the assessed income period under subsection (1)—
+-- src:87 | (a) if the relevant decision takes effect at a time when an assessed income period is in force in the case of the claimant by virtue of a previous application of this section; or
+-- src:88 | (b) in such other circumstances as may be prescribed.
+@ref s 6(2) (src:86-88)
+GIVEN decision IS A `Relevant decision`
+GIVETH A BOOLEAN
+`s 6(2) -- the Secretary of State is prevented from specifying a period` decision MEANS
+        "(a) if the relevant decision takes effect at a time when an assessed income period is in force in the case of the claimant by virtue of a previous application of this section; or" ... decision's `an assessed income period is in force when the decision takes effect by virtue of a previous application of section 6`
+    OR  "(b) in such other circumstances as may be prescribed." ... decision's `other circumstances prescribed under section 6(2)(b) prevent a period being specified`
+
+-- Section 6(1): in any case within (3) or (4) where the relevant decision takes effect
+-- before 6 April 2016, the Secretary of State shall specify a period on making the
+-- decision, unless prevented by (2). Section 6(6) makes this subject to section 9, whose
+-- subsection (2) lets him not specify one if he considers the particulars are not
+-- likely to be typical (the judgment is an input).
+-- src:85 | (1) In any case falling within subsection (3) or (4) where the relevant decision takes effect before 6 April 2016, the Secretary of State shall, on the making of the relevant decision, specify a period as the assessed income period, unless prevented by subsection (2).
+-- src:103 | (6) This section is subject to section 9.
+@ref s 6(1), (6) (src:85; src:103)
+GIVEN case IS A Case
+      decision IS A `Relevant decision`
+      `the Secretary of State considers the particulars of the claimant's retirement provision not likely to be typical of it throughout the period of 12 months beginning with the day the decision takes effect` IS A BOOLEAN
+GIVETH A `What section 6 requires`
+`s 6(1) -- what section 6 requires of the Secretary of State on the decision` case decision `the Secretary of State considers the particulars of the claimant's retirement provision not likely to be typical of it throughout the period of 12 months beginning with the day the decision takes effect` MEANS
+    BRANCH
+        IF NOT (    (    `s 6(3) -- the first case` case decision
+                      OR `s 6(4) -- the second case` case decision )
+                AND decision's `day the decision takes effect` LESS THAN `6 April 2016` )
+        THEN `Section 6 does not apply to the decision`
+        IF `s 6(2) -- the Secretary of State is prevented from specifying a period` decision
+        THEN `The Secretary of State is prevented from specifying an assessed income period`
+        IF `the Secretary of State considers the particulars of the claimant's retirement provision not likely to be typical of it throughout the period of 12 months beginning with the day the decision takes effect`
+        THEN `The Secretary of State need not specify an assessed income period, and any period specified must be shorter than 5 years`
+        OTHERWISE `The Secretary of State must specify an assessed income period`
+
+-- Section 6(5) defines "the relevant decision" as the decision in (3)(a) in the first
+-- case and the decision on appeal in (4)(b) in the second; the `Relevant decision`
+-- record holds whichever it is. Section 6(7) says this section and sections 7 to 10
+-- are to be construed as one.
+-- src:100 | (5) In this section “the relevant decision” means—
+-- src:101 | (a) so far as relating to the first case, the decision mentioned in subsection (3)(a);
+-- src:102 | (b) so far as relating to the second case, the decision on appeal mentioned in subsection (4)(b).
+-- src:104 | (7) This section and sections 7 to 10 shall be construed as one.
+-- (not encoded: section 6(5) names the decision the record holds; section 6(7) is a rule of construction)
+
+§§ `7 Fixing of claimant's retirement provision for assessed income period`
+
+-- Section 7(6)(a) excludes from "retirement provision" a "benefit under Part 1 of the
+-- Pensions Act 2014 or the Contributions and Benefits Act". Of the descriptions in
+-- section 16(1), those are the state pension of paragraph (za) and the pensions and
+-- benefits of paragraphs (a) to (e), as payable under the Great Britain legislation;
+-- the same paragraphs also reach the Northern Ireland counterparts (section 16(1)(za),
+-- (a)(ii), (b)(ii), (c), (d), (e): "either of those Acts"), which are NOT benefits under
+-- Part 1 of the 2014 Act or the Contributions and Benefits Act. Read literally, the
+-- Northern Ireland counterparts are therefore not excluded (fork F-12, NOTES.md).
+-- src:117 | (a) retirement pension income, other than benefit under Part 1 of the Pensions Act 2014 or the Contributions and Benefits Act;
+@ref s 7(6)(a) (src:117)
+GIVEN description IS A `Description of income`
+      `paid under the law of Northern Ireland` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 7(6)(a) -- a benefit under Part 1 of the Pensions Act 2014 or the Contributions and Benefits Act` description `paid under the law of Northern Ireland` MEANS
+    CONSIDER description
+        WHEN `a state pension under Part 1 of the Pensions Act 2014 or its Northern Ireland counterpart` THEN NOT `paid under the law of Northern Ireland`
+        WHEN `a Category A or Category B retirement pension` THEN NOT `paid under the law of Northern Ireland`
+        WHEN `a shared additional pension` THEN NOT `paid under the law of Northern Ireland`
+        WHEN `graduated retirement benefit` THEN NOT `paid under the law of Northern Ireland`
+        WHEN `a Category C or Category D retirement pension` THEN NOT `paid under the law of Northern Ireland`
+        WHEN `age addition` THEN NOT `paid under the law of Northern Ireland`
+        OTHERWISE FALSE
+
+-- Section 7(6): "retirement provision" is income of four descriptions: (a) retirement
+-- pension income other than those benefits; (b) income from annuity contracts (other
+-- than retirement pension income); (c) income from capital; (d) PPF periodic payments.
+-- src:116 | (6) For the purposes of this Act “retirement provision” means income of any of the following descriptions—
+-- src:117 | (a) retirement pension income, other than benefit under Part 1 of the Pensions Act 2014 or the Contributions and Benefits Act;
+-- src:118 | (b) income from annuity contracts (other than retirement pension income);
+-- src:119 | (c) income from capital;
+-- src:120 | (d) PPF periodic payments,
+-- src:121 | and an “element” of a person’s retirement provision is income of any of those descriptions from a particular source.
+@ref s 7(6) (src:116-121)
+GIVEN description IS A `Description of income`
+      `ordered by a court or made in settlement of a claim` IS A BOOLEAN
+      `paid under the law of Northern Ireland` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 7(6) -- retirement provision` description `ordered by a court or made in settlement of a claim` `paid under the law of Northern Ireland` MEANS
+        "(a) retirement pension income, other than benefit under Part 1 of the Pensions Act 2014 or the Contributions and Benefits Act;" ...
+            (       `s 16(1) -- retirement pension income` description `ordered by a court or made in settlement of a claim`
+                AND NOT (`s 7(6)(a) -- a benefit under Part 1 of the Pensions Act 2014 or the Contributions and Benefits Act` description `paid under the law of Northern Ireland`) )
+    ..  "(b) income from annuity contracts (other than retirement pension income);" ... description EQUALS `income from an annuity contract other than retirement pension income`
+    ..  "(c) income from capital;" ... description EQUALS `income from capital`
+    OR  "(d) PPF periodic payments," ... description EQUALS `PPF periodic payments`
+
+-- Section 7(3) to (5): during the assessed income period, the amount of an element
+-- is the assessed amount as varied in accordance with regulations under (4). The
+-- assessed amount is deemed, except in prescribed circumstances, to increase (and,
+-- for income from capital, to increase or decrease) on prescribed dates by
+-- prescribed amounts, so a variation counts from its date, and a decrease counts
+-- only for income from capital. Section 7(5): an element the relevant decision
+-- found NOT to be in the claimant's income is taken not to be in it throughout.
+-- The tests assume the assessed income period is in force on the day.
+-- src:110 | (3) Where the claimant’s income, as determined for the purposes of the relevant decision, includes an amount (the “assessed amount”) in respect of an element of the claimant’s retirement provision, the amount of that element as at any time in the assessed income period shall be taken to be the assessed amount as for the time being varied in accordance with regulations under subsection (4).
+-- src:111 | (4) The assessed amount shall be deemed, except in prescribed circumstances,—
+-- src:112 | (a) to increase, or
+-- src:113 | (b) in the case of income from capital, to increase or decrease,
+-- src:114 | on such date or dates and by such amounts as may be prescribed.
+-- src:115 | (5) Where it is determined for the purposes of the relevant decision that the claimant’s income does not include any, or any further, elements of retirement provision, the claimant’s income throughout the assessed income period shall be taken not to include those elements.
+@ref s 7(3) to (5) (src:110-115)
+GIVEN day IS A DATE
+      element IS AN `Element of retirement provision`
+GIVETH A NUMBER
+`s 7(3) to (5) -- the amount of the element on` day element MEANS
+    IF NOT (element's `included in the claimant's income as determined for the relevant decision`)
+    THEN 0
+    ELSE IF element's `prescribed circumstances in which the assessed amount is not deemed to vary`
+         THEN element's `assessed amount`
+         ELSE element's `assessed amount` PLUS `sum of the variations that count` 
+    WHERE
+        `sum of the variations that count` MEANS
+            sum (map `amount of a variation` `the variations that count`)
+        `the variations that count` MEANS
+            filter `a variation counts` (element's `variations prescribed under section 7(4)`)
+        `amount of a variation` v MEANS v's `amount of the variation`
+        `a variation counts` v MEANS
+                v's `day the variation takes effect` AT MOST day
+            AND (    v's `amount of the variation` AT LEAST 0
+                  OR element's `income from capital` )
+
+-- Section 7(1) and (2) say when the section applies and what it is for; (7) lets
+-- regulations treat income of one description as another, or income from different
+-- sources as from one source; (8) preserves the power to revise under section 9 of
+-- the Social Security Act 1998; (9) makes the section subject to section 8. None
+-- states a test on the facts of a case.
+-- src:106 | (1) This section applies where, pursuant to section 6(1), the Secretary of State on the making of the relevant decision specifies a period as the assessed income period.
+-- src:107 | (2) This section has effect for the purpose of determining, as at any time in the assessed income period,—
+-- src:108 | (a) the claimant’s entitlement to state pension credit; or
+-- src:109 | (b) the amount of state pension credit to which the claimant is entitled.
+-- src:122 | (7) For the purposes of this section, regulations may make provision—
+-- src:123 | (a) for treating income of any particular description as income of another description; or
+-- src:124 | (b) for treating income from different sources as income from the same source.
+-- src:125 | (8) Nothing in subsections (3) to (5) prevents the revision under section 9 of the Social Security Act 1998 (c. 14) of the relevant decision or of any earlier or later decision under section 10 of that Act.
+-- src:126 | (9) This section is subject to section 8.
+-- (not encoded: section 7(1), (2), (7), (8), (9) are scope, purpose, powers and savings)
+
+§§ `8 Fresh determinations increasing claimant's entitlement`
+
+-- Section 8(1) lets fresh determinations of the elements be made, despite section
+-- 7(3) to (5), if (a) they are made to decide a new decision under section 10 of the
+-- Social Security Act 1998; (b) the new decision increases the state pension credit to
+-- which the claimant is entitled; and (c) the increase is in whole or in part the
+-- result of the fresh determinations. Section 8(2): (b) and (c) are taken to be
+-- satisfied if the new decision REDUCES the amount, but by less than it would have
+-- been apart from the fresh determinations. The amounts are the claimant's: before
+-- the new decision, under it, and what it would have been under it apart from the
+-- fresh determinations.
+-- src:128 | (1) Subsections (3) to (5) of section 7 do not prevent the making of fresh determinations as to the elements, or any of the elements, or the amount of any of the elements, of the claimant’s retirement provision as at any time during the assessed income period, if—
+-- src:129 | (a) the fresh determinations are for the purpose of making a decision under section 10 of the Social Security Act 1998 (c. 14) (“the new decision”);
+-- src:130 | (b) the new decision increases the amount of state pension credit to which the claimant is entitled; and
+-- src:131 | (c) the increase is in whole or in part the result of the fresh determinations (taken as a whole).
+-- src:132 | (2) The conditions in paragraphs (b) and (c) of subsection (1) shall be taken to be satisfied if—
+-- src:133 | (a) the new decision reduces the amount of state pension credit to which the claimant is entitled; but
+-- src:134 | (b) the reduction is less than it would have been apart from the fresh determinations (taken as a whole).
+@ref s 8(1), (2) (src:128-134)
+GIVEN `the new decision is a decision under section 10 of the Social Security Act 1998` IS A BOOLEAN
+      `the increase is in whole or in part the result of the fresh determinations (taken as a whole)` IS A BOOLEAN
+      `the amount of state pension credit before the new decision` IS A NUMBER
+      `the amount of state pension credit under the new decision` IS A NUMBER
+      `the amount of state pension credit under the new decision apart from the fresh determinations` IS A NUMBER
+GIVETH A BOOLEAN
+`s 8(1), (2) -- fresh determinations may be made` `the new decision is a decision under section 10 of the Social Security Act 1998` `the increase is in whole or in part the result of the fresh determinations (taken as a whole)` `the amount of state pension credit before the new decision` `the amount of state pension credit under the new decision` `the amount of state pension credit under the new decision apart from the fresh determinations` MEANS
+        "(a) the fresh determinations are for the purpose of making a decision under section 10 of the Social Security Act 1998 (\"the new decision\");" ... `the new decision is a decision under section 10 of the Social Security Act 1998`
+    AND (       (       "(b) the new decision increases the amount of state pension credit to which the claimant is entitled; and" ... `the amount of state pension credit under the new decision` GREATER THAN `the amount of state pension credit before the new decision`
+                    AND "(c) the increase is in whole or in part the result of the fresh determinations (taken as a whole)." ... `the increase is in whole or in part the result of the fresh determinations (taken as a whole)` )
+            OR  (       "(2)(a) the new decision reduces the amount of state pension credit to which the claimant is entitled; but" ... `the amount of state pension credit under the new decision` LESS THAN `the amount of state pension credit before the new decision`
+                    AND "(2)(b) the reduction is less than it would have been apart from the fresh determinations (taken as a whole)." ... `the amount of state pension credit under the new decision` GREATER THAN `the amount of state pension credit under the new decision apart from the fresh determinations` ) )
+
+-- Section 8(3): where a fresh determination is made, then as respects the part of
+-- the assessed income period that begins with the day the new decision takes effect,
+-- section 7(3) to (5) have effect in accordance with it instead of the
+-- determination it replaces. "Begins with the day" makes that day the first day of
+-- the part.
+-- src:135 | (3) Where a fresh determination is made by virtue of subsection (1), then, as respects the part of the assessed income period that begins with the day on which the new decision takes effect, subsections (3) to (5) of section 7 shall have effect in accordance with the fresh determination, instead of the determination which it replaces, but as if—
+-- src:136 | (a) the fresh determination were (and the determination which it replaces were not) a determination for the purposes of the relevant decision;
+-- src:137 | (b) any assessed amount resulting from the fresh determination were not subject to variation under subsection (4) of that section at any time before the day on which the new decision takes effect; and
+-- src:138 | (c) the claimant’s income, as determined for the purposes of the relevant decision, were constituted accordingly.
+@ref s 8(3) (src:135-138)
+GIVEN day IS A DATE
+      `day the new decision takes effect` IS A DATE
+GIVETH A `Which determination governs`
+`s 8(3) -- which determination governs on` day `when the new decision takes effect on` `day the new decision takes effect` MEANS
+    IF day AT LEAST `day the new decision takes effect`
+    THEN `The fresh determination governs`
+    ELSE `The determination it replaces governs`
+
+§§ `9 Duration of assessed income period`
+
+-- Section 9(1): the period is (a) for a claimant UNDER 75 on the day the relevant
+-- decision takes effect, 5 years beginning with that day; (b) for a claimant aged 75
+-- or over on that day, an indefinite period beginning with that day. A person is 75
+-- on the 75th anniversary of their birth (spc-dates.l4), so a decision taking effect
+-- on the 75th birthday itself is (b).
+-- src:140 | (1) An assessed income period shall (subject to the following subsections) be—
+-- src:141 | (a) in the case of a claimant who is under the age of 75 on the day on which the relevant decision takes effect, the period of 5 years beginning with that day;
+-- src:142 | (b) in the case of a claimant who is aged 75 or over on that day, an indefinite period beginning with that day.
+@ref s 9(1) (src:140-142)
+GIVEN day IS A DATE
+      `date of birth` IS A DATE
+GIVETH A `Length of an assessed income period`
+`s 9(1) -- the length of the assessed income period for a decision taking effect on` day `for a claimant born on` `date of birth` MEANS
+    IF `the age has been attained on` day `by a person born on` `date of birth` `at the age of` `the age of 75`
+    THEN `An indefinite period beginning with that day`
+    ELSE `Five years beginning with the day the relevant decision takes effect`
+
+-- Section 9(1)(a): "the period of 5 years beginning with that day". Beginning with the
+-- day makes it the first day, so the period ends on the day before the fifth
+-- anniversary; the first day on which it is no longer in force is the anniversary.
+@ref s 9(1)(a) (src:141)
+GIVEN start IS A DATE
+GIVETH A DATE
+`s 9(1)(a) -- the first day after a period of 5 years beginning with` start MEANS
+    Date (DATE_DAY start) (DATE_MONTH start) (DATE_YEAR start PLUS `the 5 years of an assessed income period`)
+
+-- Section 9(2): if the Secretary of State considers that the particulars are not
+-- likely to be typical over the 12 months beginning with the day the decision takes
+-- effect, (a) he need not specify a period under section 6(1); and (b) if he does,
+-- the period shall be shorter than 5 years, beginning as mentioned in subsection (1)
+-- (with the day the decision takes effect). His consideration is an input. Section
+-- 9(3) tells him to assume, for that judgment, the variations section 7(4) would
+-- make if a period were specified.
+-- src:143 | (2) If the Secretary of State considers that the particulars of the claimant’s retirement provision as determined for the purposes of the relevant decision are not likely, after taking account of any assumed variations under subsection (3), to be typical of the claimant’s retirement provision throughout the period of 12 months beginning with the day on which that decision takes effect—
+-- src:144 | (a) he need not specify a period under section 6(1); and
+-- src:145 | (b) if he does so, he shall specify a period that is shorter than 5 years (but beginning as mentioned in subsection (1)).
+-- src:146 | (3) It shall be assumed for the purposes of subsection (2) that the same variations fall to be made in relation to the amount of an element of the claimant’s retirement provision as determined for the purposes of the relevant decision as would fall to be made under section 7(4) if an assessed income period were to be specified in accordance with subsection (1).
+@ref s 9(2), (3) (src:143-146)
+GIVEN `day the relevant decision takes effect` IS A DATE
+      `first day of the period specified` IS A DATE
+      `last day of the period specified` IS A DATE
+      `the Secretary of State considers the particulars of the claimant's retirement provision not likely to be typical of it throughout the period of 12 months beginning with the day the decision takes effect` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 9(2)(b) -- the period specified complies` `day the relevant decision takes effect` `first day of the period specified` `last day of the period specified` `the Secretary of State considers the particulars of the claimant's retirement provision not likely to be typical of it throughout the period of 12 months beginning with the day the decision takes effect` MEANS
+    NOT (`the Secretary of State considers the particulars of the claimant's retirement provision not likely to be typical of it throughout the period of 12 months beginning with the day the decision takes effect`)
+    OR (       `first day of the period specified` EQUALS `day the relevant decision takes effect`
+           AND (Day `last day of the period specified` PLUS 1)
+               LESS THAN Day (`s 9(1)(a) -- the first day after a period of 5 years beginning with` `day the relevant decision takes effect`) )
+
+-- Section 9(6): where (a) a period is brought to an end, on or after 6 April 2009 but
+-- before 6 April 2014, by the expiry of a period of 5 years or more, and (b) the
+-- claimant is aged 80 or over at that time, the period is treated as not ending at that
+-- time but, subject to subsections (4) and (5), as continuing indefinitely. A period
+-- expires at the end of its last day, so "the day it is brought to an end" is its
+-- LAST day (fork F-11, NOTES.md).
+-- src:153 | (6) Where—
+-- src:154 | (a) an assessed income period is brought to an end , on or after 6 April 2009 but before 6 April 2014, by the expiry of a period of 5 years or more, and
+-- src:155 | (b) the claimant is aged 80 or over at that time,
+-- src:156 | the assessed income period shall be treated as not ending at that time but, subject to subsection (4) and provision made under subsection (5), as continuing indefinitely.
+@ref s 9(6) (src:153-156)
+GIVEN `the last day of the period` IS A DATE
+      `date of birth` IS A DATE
+GIVETH A BOOLEAN
+`s 9(6) -- an assessed income period brought to an end on` `the last day of the period` `by expiry, for a claimant born on` `date of birth` `is treated as continuing indefinitely` MEANS
+        "(a) an assessed income period is brought to an end, on or after 6 April 2009 but before 6 April 2014, by the expiry of a period of 5 years or more, and" ...
+            (       `the last day of the period` AT LEAST `6 April 2009`
+                AND `the last day of the period` LESS THAN `6 April 2014` )
+    AND "(b) the claimant is aged 80 or over at that time," ... `the age has been attained on` `the last day of the period` `by a person born on` `date of birth` `at the age of` `the age of 80`
+
+-- (Encoding helper, not a provision.) The earlier of two optional days.
+GIVEN a IS A MAYBE DATE
+      b IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`encoding helper -- the earlier of two optional days` a b MEANS
+    CONSIDER a
+        WHEN NOTHING THEN b
+        WHEN JUST x THEN
+            CONSIDER b
+                WHEN NOTHING THEN JUST x
+                WHEN JUST y THEN JUST (IF x LESS THAN y THEN x ELSE y)
+
+-- Section 9(4): the period shall, except in prescribed circumstances, end at any
+-- time at which (a) the claimant becomes a member of a couple; (b) ceases to be one;
+-- (c) attains 65; or (d) in a couple, the other member attains 65. Section 9(5): regulations
+-- may prescribe further times. Taking a time to be a day, the first day on which the
+-- period is no longer in force is the day of the event. A birthday on or before the day
+-- the period begins is not "a time at which" the claimant attains 65 during it: a period under
+-- section 6 can begin only on or after the 65th birthday (section 6(3)(c)), so for a
+-- claimant who is not in a couple limb (c) can never end one (finding 8, NOTES.md).
+-- src:147 | (4) An assessed income period shall, except in prescribed circumstances, end at any time at which—
+-- src:148 | (a) the claimant becomes a member of a couple ;
+-- src:149 | (b) the claimant ceases to be a member of a couple ;
+-- src:150 | (c) the claimant attains the age of 65; or
+-- src:151 | (d) in a case where the claimant is a member of a couple , the other member of the couple attains the age of 65.
+-- src:152 | (5) Regulations may prescribe further times at which, or circumstances in which, an assessed income period shall end.
+@ref s 9(4), (5) (src:147-152)
+GIVEN case IS A Case
+      period IS AN `Assessed income period`
+GIVETH A MAYBE DATE
+`s 9(4), (5) -- the first day on which the assessed income period is no longer in force because it ends` case period MEANS
+    `encoding helper -- the earlier of two optional days`
+        (IF period's `prescribed circumstances in which the period does not end under section 9(4)`
+         THEN NOTHING
+         ELSE `encoding helper -- the earlier of two optional days`
+                (period's `first day after that day on which the claimant becomes or ceases to be a member of a couple`)
+                (`encoding helper -- the earlier of two optional days`
+                    (IF (    `the day on which the age is attained` (case's claimant's `date of birth`) `the age of 65`
+                         GREATER THAN period's `day the relevant decision takes effect` )
+                     THEN JUST (`the day on which the age is attained` (case's claimant's `date of birth`) `the age of 65`)
+                     ELSE NOTHING)
+                    (IF (        `s 17(1) -- couple` (case's household)
+                             AND `the day on which the age is attained` (case's `other member of the couple`'s `date of birth`) `the age of 65`
+                                 GREATER THAN period's `day the relevant decision takes effect` )
+                     THEN JUST (`the day on which the age is attained` (case's `other member of the couple`'s `date of birth`) `the age of 65`)
+                     ELSE NOTHING)))
+        (period's `first further time prescribed under section 9(5)`)
+
+-- Section 9 as a whole: the first day on which the period is no longer in force. It
+-- is the earlier of (i) the day of an ending event under (4) or (5) and (ii) for a
+-- period of 5 years, the first day after the 5 years, unless section 9(6) carries
+-- the period on. NOTHING means no ending day is known (an indefinite period
+-- with no event yet).
+@ref s 9(1), (4), (5), (6) (src:140-142; src:147-156)
+GIVEN case IS A Case
+      period IS AN `Assessed income period`
+GIVETH A MAYBE DATE
+`s 9 -- the first day on which the assessed income period is no longer in force` case period MEANS
+    `encoding helper -- the earlier of two optional days`
+        (`s 9(4), (5) -- the first day on which the assessed income period is no longer in force because it ends` case period)
+        (IF `s 9(1) -- the length of the assessed income period for a decision taking effect on` (period's `day the relevant decision takes effect`) `for a claimant born on` (case's claimant's `date of birth`)
+                EQUALS `Five years beginning with the day the relevant decision takes effect`
+              AND NOT (`s 9(6) -- an assessed income period brought to an end on`
+                          (Date (Day (`s 9(1)(a) -- the first day after a period of 5 years beginning with` (period's `day the relevant decision takes effect`)) MINUS 1))
+                          `by expiry, for a claimant born on` (case's claimant's `date of birth`) `is treated as continuing indefinitely`)
+         THEN JUST (`s 9(1)(a) -- the first day after a period of 5 years beginning with` (period's `day the relevant decision takes effect`))
+         ELSE NOTHING)
+
+-- Whether the period is in force on a day: from the day it begins, and before the
+-- first day on which it is no longer in force.
+@ref s 9(1), (4), (5), (6) (src:140-142; src:147-156)
+GIVEN day IS A DATE
+      case IS A Case
+      period IS AN `Assessed income period`
+GIVETH A BOOLEAN
+`s 9 -- the assessed income period is in force on` day case period MEANS
+        day AT LEAST period's `day the relevant decision takes effect`
+    AND CONSIDER `s 9 -- the first day on which the assessed income period is no longer in force` case period
+            WHEN NOTHING THEN TRUE
+            WHEN JUST end THEN day LESS THAN end
+
+§§ `10 Effect of variations under section 7(4)`
+
+-- Section 10(1): the section applies where (a) an assessed income period is in force
+-- and (b) there is an alteration in an element of the claimant's retirement provision
+-- which affects the computation of the amount of state pension credit. "Alteration"
+-- (subsection (4)) means a variation of the amount of an element in accordance with
+-- regulations under section 7(4). Section 10(2): where, as a result, the amount is
+-- increased or reduced, then as from the commencing date (the date the alteration
+-- comes into force) the amount payable is the increased or reduced amount, without
+-- any further decision of the Secretary of State. Section 10(3): where the claimant
+-- continues to be entitled to the same amount, the award continues in force.
+-- WHERE SECTION 10 DOES NOT APPLY (no period in force, no variation, or one that does not
+-- affect the computation) the section says nothing about what is payable, so the rule
+-- answers NOTHING, not an amount. BEFORE the commencing date section 10 is silent too
+-- (it speaks "as from the commencing date"); the existing award's amount, which is an
+-- input, is returned (fork F-23).
+-- src:158 | (1) This section applies where—
+-- src:159 | (a) an assessed income period is in force; and
+-- src:160 | (b) there is an alteration in an element of the claimant’s retirement provision which affects the computation of the amount of state pension credit to which the claimant is entitled.
+-- src:161 | (2) Where, as a result of the alteration, the amount of state pension credit to which the claimant is entitled is increased or reduced, then, as from the commencing date, the amount of state pension credit payable in the case of the claimant shall be the increased or reduced amount, without any further decision of the Secretary of State (and the award of state pension credit shall have effect accordingly).
+-- src:162 | (3) Where, notwithstanding the alteration, the claimant continues on and after the commencing date to be entitled to the same amount of state pension credit as before, the award shall continue in force accordingly.
+-- src:163 | (4) In this section—
+-- src:164 | “alteration” means a variation in the amount of an element of the claimant’s retirement provision in accordance with regulations under section 7(4);
+-- src:165 | “commencing date”, in relation to an alteration, means the date on which the alteration comes into force.
+@ref s 10(1) to (4) (src:158-165)
+GIVEN day IS A DATE
+      `the commencing date` IS A DATE
+      `an assessed income period is in force` IS A BOOLEAN
+      `there is a variation of the amount of an element in accordance with regulations under section 7(4)` IS A BOOLEAN
+      `the variation affects the computation of the amount of state pension credit` IS A BOOLEAN
+      `the amount payable before the commencing date` IS A NUMBER
+      `the amount to which the claimant is entitled after the alteration` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 10(2), (3) -- the amount of state pension credit payable on` day `given the commencing date` `the commencing date` `with an assessed income period in force` `an assessed income period is in force` `and a variation of an element` `there is a variation of the amount of an element in accordance with regulations under section 7(4)` `that affects the computation` `the variation affects the computation of the amount of state pension credit` `from the amount before` `the amount payable before the commencing date` `to the amount after` `the amount to which the claimant is entitled after the alteration` MEANS
+    BRANCH
+        IF NOT (       `an assessed income period is in force`
+                   AND `there is a variation of the amount of an element in accordance with regulations under section 7(4)`
+                   AND `the variation affects the computation of the amount of state pension credit` )
+        THEN NOTHING
+        IF day AT LEAST `the commencing date`
+        THEN JUST `the amount to which the claimant is entitled after the alteration`
+        OTHERWISE JUST `the amount payable before the commencing date`
+
+-- Section 10(2): the changed amount is payable "without any further decision of the
+-- Secretary of State". So, where section 10 applies, no further decision is needed (`The Act says no`);
+-- where it does not apply, the section is silent, and the answer is `Not covered by this encoding`.
+@ref s 10(2) (src:161)
+GIVEN `an assessed income period is in force` IS A BOOLEAN
+      `there is a variation of the amount of an element in accordance with regulations under section 7(4)` IS A BOOLEAN
+      `the variation affects the computation of the amount of state pension credit` IS A BOOLEAN
+GIVETH AN Answer
+`s 10(2) -- whether a further decision of the Secretary of State is needed for the changed amount to be payable` `an assessed income period is in force` `there is a variation of the amount of an element in accordance with regulations under section 7(4)` `the variation affects the computation of the amount of state pension credit` MEANS
+    BRANCH
+        IF       `an assessed income period is in force`
+             AND `there is a variation of the amount of an element in accordance with regulations under section 7(4)`
+             AND `the variation affects the computation of the amount of state pension credit`
+        THEN `The Act says no`
+        OTHERWISE `Not covered by this encoding`

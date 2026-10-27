@@ -1,0 +1,261 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cdba-nouns`
+IMPORT `cdba-calendar`
+IMPORT `cdba-reg-definitions`
+
+-- Canada Disability Benefit Regulations (SOR/2025-35), sections 6 and 6.1 -- HOW MUCH.
+--
+-- All the money is NUMBER, in Canadian dollars; numbers are exact fractions, so a rule
+-- that rounds says so. The Consumer Price Index figures, the adjusted incomes and the
+-- working incomes are INPUTS: this encoding holds no published figure. A caller who
+-- has not got a figure gets NOTHING back (not covered), never a guess.
+--
+-- THE FORMULA CAN GO NEGATIVE (fork F9). Subsection 6(1) says the amount payable is the
+-- rounded value of ((2,400 x A) - B) / 12, and B is a reduction with no upper limit:
+-- once B passes 2,400 x A, the formula value is below zero. The text does not say what
+-- is payable then. These modules report the formula value as it stands, and report the
+-- amount PAYABLE as that value or nothing, whichever is more (assumed, not stated).
+
+§ `Regulations s 6 -- Basic amount`
+
+-- The greater and the lesser of two numbers; not provisions.
+GIVEN x IS A NUMBER
+      y IS A NUMBER
+GIVETH A NUMBER
+`the larger number of` x `and` y MEANS
+    IF x AT LEAST y THEN x ELSE y
+
+GIVEN x IS A NUMBER
+      y IS A NUMBER
+GIVETH A NUMBER
+`the smaller number of` x `and` y MEANS
+    IF x AT MOST y THEN x ELSE y
+
+-- 6(1): "rounded to the nearest cent or, if the amount is equidistant from two cents,
+-- to the higher of them". Half a cent is added and the result floored to a whole cent,
+-- which rounds a tie up for negative numbers too (-83.335 becomes -83.33).
+GIVEN x IS A NUMBER
+GIVETH A NUMBER
+`rounded to the nearest cent, or to the higher of two equidistant cents` x MEANS
+    FLOOR (x TIMES 100 PLUS 0.5) DIVIDED BY 100
+
+-- 6(7): working income is the sum of six amounts.
+-- src:123 | working income, of an individual for a given taxation year, means the total of
+-- src:124 | (a) the amounts referred to in paragraphs (a) and (b) of the definition working income in subsection 122.7(1) of the Income Tax Act, and
+-- src:125 | (b) the total of the following types of business income:
+-- src:126 | (i) net farming income,
+-- src:127 | (ii) net fishing income,
+-- src:128 | (iii) net professional income,
+-- src:129 | (iv) net commission income, and
+-- src:130 | (v) other net business income. (revenu de travail)
+@ref Regulations s 6(7) "working income" (src:123-130)
+GIVEN w IS A `Working income`
+GIVETH A NUMBER
+`the working income` w MEANS
+    w's `amounts referred to in paragraphs (a) and (b) of the definition working income in subsection 122.7(1) of the Income Tax Act`
+        PLUS w's `net farming income`
+        PLUS w's `net fishing income`
+        PLUS w's `net professional income`
+        PLUS w's `net commission income`
+        PLUS w's `other net business income`
+
+-- 6(5) and 6(6): the indexing factor is the highest annual Consumer Price Index for any
+-- calendar year from 2024 to the last calendar year that ended before the payment
+-- period began, divided by the index for 2024. For a payment period that begins on
+-- 1 July of year Y that last calendar year is Y - 1. When Y - 1 is before 2024 there is
+-- no such calendar year, so CPImax has no value and neither does the factor: this is
+-- the case for the payment period that began on 1 July 2024, which is why no
+-- allocation worked out under this section exists for June 2025 (finding in NOTES.md).
+-- The figures are expected to hold one entry per calendar year; a year missing from the
+-- range 2024 to Y - 1 makes the factor not covered.
+-- src:112 | Indexing factor
+-- src:113 | (5) The indexing factor for a payment period is the amount determined by the formula
+-- src:114 | CPImax ÷ CPI2024
+-- src:115 | where
+-- src:116 | CPImax is the highest Consumer Price Index for any calendar year beginning with 2024 and ending with the last calendar year that ended before the beginning of the payment period; and
+-- src:117 | CPI2024 is the Consumer Price Index for 2024.
+-- src:118 | Consumer Price Index
+-- src:119 | (6) For the purpose of subsection (5), a reference to the Consumer Price Index for a calendar year is a reference to the all-items Consumer Price Index for Canada, annual average, not seasonally adjusted, for that year, as published by Statistics Canada under the authority of the Statistics Act.
+@ref Regulations s 6(5) and (6) (src:112-119)
+GIVEN period IS A `Payment period`
+      figures IS A LIST OF `Consumer Price Index figure`
+GIVETH A MAYBE NUMBER
+`the indexing factor for the payment period` period figures MEANS
+    IF lastYear LESS THAN 2024
+    THEN NOTHING
+    ELSE CONSIDER filter in2024 figures
+         WHEN EMPTY THEN NOTHING
+         WHEN first FOLLOWED BY rest THEN
+             IF count inRange EQUALS lastYear MINUS 2023
+             THEN JUST (`the highest figure` (map valueOf inRange) DIVIDED BY valueOf first)
+             ELSE NOTHING
+    WHERE
+        lastYear MEANS DATE_YEAR (period's `the first day of the payment period`) MINUS 1
+        yearOf f MEANS f's `the calendar year of the figure`
+        valueOf f MEANS f's `the annual average all-items Consumer Price Index for Canada, not seasonally adjusted`
+        in2024 f MEANS yearOf f EQUALS 2024
+        inRange MEANS filter inYears figures
+        inYears f MEANS yearOf f AT LEAST 2024 AND yearOf f AT MOST lastYear
+
+-- Not a provision: the highest of a list of numbers, or 0 for an empty list (which the
+-- rule above never passes).
+GIVEN xs IS A LIST OF NUMBER
+GIVETH A NUMBER
+`the highest figure` xs MEANS
+    CONSIDER xs
+    WHEN EMPTY THEN 0
+    WHEN y FOLLOWED BY ys THEN maximum xs
+
+-- 6(2): a beneficiary with no cohabiting spouse or common-law partner. C is the adjusted
+-- income without the spouse's; D is the lesser of the working income and $10,000 x A.
+-- src:83 | Reduction — single beneficiary
+-- src:84 | (2) If the beneficiary does not have a cohabiting spouse or common-law partner, the reduction based on income is the greater of zero and the amount determined by the formula
+-- src:85 | 20% × (C − D − ($23,000 × A))
+-- src:86 | where
+-- src:87 | C is the beneficiary’s adjusted income for the last taxation year that ended before the beginning of the payment period, without taking into account the income of the person who was their cohabiting spouse or common-law partner, if any, at the end of that year;
+-- src:88 | D is the lesser of
+-- src:89 | (a) the beneficiary’s working income for the last taxation year that ended before the beginning of the payment period, and
+-- src:90 | (b) the product of $10,000 and the indexing factor for the payment period, calculated in accordance with subsection (5); and
+-- src:91 | A is the indexing factor for the payment period, calculated in accordance with subsection (5).
+@ref Regulations s 6(2) (src:83-91)
+GIVEN a IS A NUMBER
+      c IS A NUMBER
+      own IS A `Working income`
+GIVETH A NUMBER
+`the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` a c own MEANS
+    `the larger number of` 0 (20% TIMES (c MINUS d MINUS 23000 TIMES a))
+    WHERE d MEANS `the smaller number of` (`the working income` own) (10000 TIMES a)
+
+-- 6(3): the cohabiting spouse or common-law partner is not a beneficiary. E is the
+-- adjusted income (as if the current partner had been the partner at the end of the
+-- year); F is the lesser of the two working incomes together and $14,000 x A.
+-- src:92 | Reduction — non-beneficiary spouse or partner
+-- src:93 | (3) If the beneficiary has a cohabiting spouse or common-law partner who is not a beneficiary, the reduction based on income is the greater of zero and the amount determined by the formula
+-- src:94 | 20% × (E − F − ($32,500 × A))
+-- src:95 | where
+-- src:96 | E is the beneficiary’s adjusted income for the last taxation year that ended before the beginning of the payment period or, if their current cohabiting spouse or common-law partner was not their cohabiting spouse or common-law partner at the end of that year, the amount that would have been the beneficiary’s adjusted income if their current cohabiting spouse or common-law partner had been their cohabiting spouse or common-law partner at the end of that year;
+-- src:97 | F is the lesser of
+-- src:98 | (a) the sum of the beneficiary’s working income for the last taxation year that ended before the beginning of the payment period and that of their cohabiting spouse or common-law partner, and
+-- src:99 | (b) the product of $14,000 and the indexing factor for the payment period, calculated in accordance with subsection (5); and
+-- src:100 | A is the indexing factor for the payment period, calculated in accordance with subsection (5).
+@ref Regulations s 6(3) (src:92-100)
+GIVEN a IS A NUMBER
+      e IS A NUMBER
+      own IS A `Working income`
+      partner IS A `Working income`
+GIVETH A NUMBER
+`the reduction based on income when the cohabiting spouse or common-law partner is not a beneficiary` a e own partner MEANS
+    `the larger number of` 0 (20% TIMES (e MINUS f MINUS 32500 TIMES a))
+    WHERE f MEANS `the smaller number of` (`the working income` own PLUS `the working income` partner) (14000 TIMES a)
+
+-- 6(4): the cohabiting spouse or common-law partner is also a beneficiary: 10%, not 20%.
+-- src:101 | Reduction — beneficiary spouse or partner
+-- src:102 | (4) If the beneficiary has a cohabiting spouse or common-law partner who is also a beneficiary, the reduction based on income is the greater of zero and the amount determined by the formula
+-- src:103 | 10% × (E − F − ($32,500 × A))
+-- src:104 | where
+-- src:105 | E is the beneficiary’s adjusted income for the last taxation year that ended before the beginning of the payment period or, if their current cohabiting spouse or common-law partner was not their cohabiting spouse or common-law partner at the end of that year, the amount that would have been the beneficiary’s adjusted income if their current cohabiting spouse or common-law partner had been their cohabiting spouse or common-law partner at the end of that year;
+-- src:106 | F is the lesser of
+-- src:107 | (a) the sum of the beneficiary’s working income for the last taxation year that ended before the beginning of the payment period and that of their cohabiting spouse or common-law partner, and
+-- src:108 | (b) the product of $14,000 and the indexing factor for the payment period, calculated in accordance with subsection (5); and
+-- src:109 | A is the indexing factor for the payment period, calculated in accordance with subsection (5).
+@ref Regulations s 6(4) (src:101-109)
+GIVEN a IS A NUMBER
+      e IS A NUMBER
+      own IS A `Working income`
+      partner IS A `Working income`
+GIVETH A NUMBER
+`the reduction based on income when the cohabiting spouse or common-law partner is also a beneficiary` a e own partner MEANS
+    `the larger number of` 0 (10% TIMES (e MINUS f MINUS 32500 TIMES a))
+    WHERE f MEANS `the smaller number of` (`the working income` own PLUS `the working income` partner) (14000 TIMES a)
+
+-- Which of subsections 6(2) to (4) applies, "taking into account subsection (4.1)": when
+-- the Minister has waived the condition in subsection 2(4), subsection (2) applies as if
+-- there were no partner. The facts are those of the last day of the month before.
+DECLARE `Subsection that works out the reduction` IS ONE OF
+    `subsection 6(2): no cohabiting spouse or common-law partner`
+    `subsection 6(3): a cohabiting spouse or common-law partner who is not a beneficiary`
+    `subsection 6(4): a cohabiting spouse or common-law partner who is also a beneficiary`
+    `subsection 6(4.1): the Minister waived the condition in subsection 2(4), so subsection 6(2) applies`
+
+-- src:110 | Reduction — waiver
+-- src:111 | (4.1) If the Minister waives the condition set out in subsection 2(4), the reduction based on income is calculated in accordance with subsection (2) as if the beneficiary does not have a cohabiting spouse or common-law partner.
+@ref Regulations s 6(1) B; s 6(4.1) (src:110-111)
+GIVEN h IS A `Income and household facts`
+GIVETH A `Subsection that works out the reduction`
+`which subsection works out the reduction` h MEANS
+    BRANCH IF h's `the Minister waived the condition in subsection 2(4)`
+                THEN `subsection 6(4.1): the Minister waived the condition in subsection 2(4), so subsection 6(2) applies`
+           IF NOT h's `a cohabiting spouse or common-law partner on the last day of the month that precedes the month`
+                THEN `subsection 6(2): no cohabiting spouse or common-law partner`
+           IF NOT h's `the cohabiting spouse or common-law partner is also a beneficiary`
+                THEN `subsection 6(3): a cohabiting spouse or common-law partner who is not a beneficiary`
+           OTHERWISE `subsection 6(4): a cohabiting spouse or common-law partner who is also a beneficiary`
+
+-- B, the reduction based on income, whichever subsection applies.
+@ref Regulations s 6(1) B (src:78-82)
+GIVEN a IS A NUMBER
+      h IS A `Income and household facts`
+GIVETH A NUMBER
+`the reduction based on income` a h MEANS
+    CONSIDER `which subsection works out the reduction` h
+    WHEN `subsection 6(2): no cohabiting spouse or common-law partner`
+        THEN `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` a withoutSpouse (h's `the beneficiary's own working income`)
+    WHEN `subsection 6(4.1): the Minister waived the condition in subsection 2(4), so subsection 6(2) applies`
+        THEN `the reduction based on income when the beneficiary has no cohabiting spouse or common-law partner` a withoutSpouse (h's `the beneficiary's own working income`)
+    WHEN `subsection 6(3): a cohabiting spouse or common-law partner who is not a beneficiary`
+        THEN `the reduction based on income when the cohabiting spouse or common-law partner is not a beneficiary` a withSpouse (h's `the beneficiary's own working income`) (h's `the working income of the cohabiting spouse or common-law partner`)
+    WHEN `subsection 6(4): a cohabiting spouse or common-law partner who is also a beneficiary`
+        THEN `the reduction based on income when the cohabiting spouse or common-law partner is also a beneficiary` a withSpouse (h's `the beneficiary's own working income`) (h's `the working income of the cohabiting spouse or common-law partner`)
+    WHERE
+        withoutSpouse MEANS h's `adjusted income without the income of a person who was the spouse or partner at the end of the year`
+        withSpouse MEANS h's `adjusted income as if the current spouse or partner had been the spouse or partner at the end of the year`
+
+-- 6(1): the formula, rounded. A is the indexing factor, B the reduction.
+-- src:78 | 6 (1) The amount (referred to in these Regulations as the “basic amount”) that is payable to a beneficiary for any month for which they are eligible to receive an allocation in a payment period is the amount — rounded to the nearest cent or, if the amount is equidistant from two cents, to the higher of them — determined by the formula
+-- src:79 | (($2,400 × A) − B) ÷ 12
+-- src:80 | where
+-- src:81 | A is the indexing factor for the payment period, calculated in accordance with subsection (5); and
+-- src:82 | B is the reduction based on income, calculated in accordance with whichever of subsections (2) to (4) applies to the beneficiary, taking into account subsection (4.1) if applicable, on the last day of the month that precedes the applicable month.
+@ref Regulations s 6(1) (src:78-82)
+GIVEN a IS A NUMBER
+      b IS A NUMBER
+GIVETH A NUMBER
+`the basic amount worked out by the formula` a b MEANS
+    `rounded to the nearest cent, or to the higher of two equidistant cents` ((2400 TIMES a MINUS b) DIVIDED BY 12)
+
+-- Fork F9: the amount payable is the formula value, or nothing if the formula value is
+-- below zero. Not stated by the Regulations.
+GIVEN a IS A NUMBER
+      b IS A NUMBER
+GIVETH A NUMBER
+`the basic amount payable` a b MEANS
+    `the larger number of` 0 (`the basic amount worked out by the formula` a b)
+
+-- The whole of 6(1) for one month: not covered (NOTHING) when the indexing factor has
+-- no value.
+@ref Regulations s 6(1) (src:78-82)
+GIVEN period IS A `Payment period`
+      figures IS A LIST OF `Consumer Price Index figure`
+      h IS A `Income and household facts`
+GIVETH A MAYBE NUMBER
+`the basic amount worked out by the formula for the month` period figures h MEANS
+    CONSIDER `the indexing factor for the payment period` period figures
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST a  THEN JUST (`the basic amount worked out by the formula` a (`the reduction based on income` a h))
+
+@ref Regulations s 6(1) (src:78-82)
+GIVEN period IS A `Payment period`
+      figures IS A LIST OF `Consumer Price Index figure`
+      h IS A `Income and household facts`
+GIVETH A MAYBE NUMBER
+`the basic amount payable for the month` period figures h MEANS
+    CONSIDER `the indexing factor for the payment period` period figures
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST a  THEN JUST (`the basic amount payable` a (`the reduction based on income` a h))
+
+§ `Regulations s 6.1 -- Supplemental amount`
+
+-- src:132 | 6.1 The supplemental amount is $150.
+@ref Regulations s 6.1 (src:132)
+`the supplemental amount` MEANS 150
