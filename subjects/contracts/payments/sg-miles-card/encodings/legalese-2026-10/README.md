@@ -4,8 +4,8 @@ Which card earns the most on this purchase: twelve Singapore card programmes, on
 Status `draft`; no person has reviewed it (`encoding.json`).
 
 - `NOTES.md`: what the row is, what is held, what was checked, what was not done, and every choice marked assumed, not ruled. Read it first.
-- `registers/`: `source-bundle.json` (28 documents by URL and sha256), `fork-register.json` (27 forks), `external-modifications.json`.
-- `source/fetch.sh`: fetches the 28 documents from their publishers and refuses any digest mismatch. No document is copied into this repository.
+- `registers/`: `source-bundle.json` (29 documents by URL and sha256), `fork-register.json` (28 forks), `external-modifications.json`.
+- `source/fetch.sh`: fetches the 29 documents from their publishers and refuses any digest mismatch. No document is copied into this repository.
 - `check.sh`: `L4=<path to l4> L4_TARGET=unstable ./check.sh`.
 - `cards.l4`: the composer. Everything else is one issuer document set per file.
 

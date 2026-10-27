@@ -29,7 +29,35 @@ IMPORT fixtures
 -- statement; tax refunds credited to the Card; charges not submitted or posted
 -- in the period; fraudulent transactions; betting; top-ups or payment of funds
 -- to prepaid cards and accounts "including without limitation" a list of
--- named accounts; and any transaction under thirty-five listed MCCs.
+-- named accounts; and any transaction under thirty-five listed MCCs. The list
+-- ends "any other charge, fees or payments as we may stipulate from time to
+-- time", which no rule can encode.
+--
+-- HOW EACH CLASS IS ENCODED (checked against the page text on 2026-10-22).
+--   cash advance; ATM transactions ......... `Cash advance` (an ATM withdrawal is
+--                                            read as a cash advance)
+--   Credit Card Funds Transfer ............. `Balance transfer or funds transfer`
+--   monthly instalment of an EasyPay ....... `Instalment plan charge`
+--   cancelled, voided, refunded, reversed .. `later reversed`
+--   AXS or SAM transactions ................ the descriptors `AXS` and `SAM`
+--   insurance premiums ..................... the item `An insurance premium`
+--   recurring payments ..................... the presentation `Recurring payment
+--                                            arrangement` (fork F-sc-recurring)
+--   payments to billing organisations
+--   through SC Online Banking or the app ... `Bill payment`
+--   fees or charges ........................ `Fee, interest or finance charge`
+--   not submitted or posted in the period .. `Authorised but not posted`
+--   betting ................................ the item `A betting payment`
+--   top-ups or payments of funds to
+--   prepaid accounts, and the named list ... `Top-up of a prepaid card or
+--                                            stored-value account`, `Payment of
+--                                            funds to a payment service provider`
+--                                            and the named descriptors
+--   the thirty-five MCCs ................... `the SC excluded category codes`
+-- NOT ENCODED: amounts rolled over from a preceding statement and tax refunds
+-- credited to the Card (statement entries, not purchases); a fraudulent retail
+-- transaction (no field of a purchase says a charge is fraudulent); and the
+-- closing "any other charge, fees or payments as we may stipulate".
 --
 -- THE FORK F-sc-simplygo. The named-accounts list ends "... SIMPLYGO ...
 -- TRANSITLINK*". The Smart promotion terms name "BUS/MRT via SimplyGo" as a
@@ -45,6 +73,17 @@ IMPORT fixtures
 -- using Standard Chartered Online Banking or mobile app", not every bill: a
 -- bill paid directly to the biller on the card is not within that sentence, and
 -- is within the recurring-payment sentence only if it is a standing instruction.
+--
+-- THE FORK F-sc-recurring. The recurring-payment sentence excludes a charge
+-- paid under a standing instruction, whoever the merchant is; the Smart
+-- promotion terms name Netflix and Spotify as Bonus Merchants, which are
+-- ordinarily paid by standing instruction. Reading 1: the sentence applies, so
+-- a subscription charge earns nothing and does not count toward the month's
+-- S$800. Reading 2: the Bonus Merchant list governs for the merchants it names.
+-- `the SC page excludes` gives Reading 1. `only the recurring-payment sentence
+-- would exclude` picks out the purchases the fork touches, and sc-smart.l4
+-- brackets them: floor nothing, ceiling the Bonus Merchant answer. ASSUMED, NOT
+-- RULED; found 2026-10-22, not addressed by any held document.
 -- ===========================================================================
 
 
@@ -69,6 +108,15 @@ GIVETH A BOOLEAN
     WHEN `NETS or NETS-related transaction`                  THEN FALSE
     WHEN `SmartPay or personal loan`                         THEN FALSE
     WHEN `Transit-related transaction`                       THEN FALSE
+
+-- "any insurance premiums" and the betting payments, by what was paid for.
+GIVEN i IS AN Item
+GIVETH A BOOLEAN
+`the SC page excludes the item` i MEANS
+    CONSIDER i
+    WHEN `An insurance premium`  THEN TRUE
+    WHEN `A betting payment`     THEN TRUE
+    OTHERWISE                         FALSE
 
 -- "recurring payments": the presentation is a standing instruction.
 GIVEN how IS A Presentation
@@ -102,6 +150,9 @@ GIVETH A BOOLEAN
 -- EZLINK*, EZLINKS.COM), FLASHPAY ATU, TRANSIT, TRANSIT LINK PL, TRANSIT LINK*,
 -- TRANSITLINK*, PAYPAL * BIZCONSULTA, PAYPAL * CAPITALROYA. SIMPLYGO is the
 -- seventeenth entry and is handled separately (fork F-sc-simplygo).
+-- Separately, "AXS, SAM or ATM transactions made using your Card" are excluded:
+-- AXS and SAM are descriptors here. The shared ontology also has `SingPost-SAM`,
+-- which the UOB documents name and this page does not, so it is left out.
 GIVEN d IS A Descriptor
 GIVETH A BOOLEAN
 `the SC page names the description` d MEANS
@@ -111,6 +162,8 @@ GIVETH A BOOLEAN
     WHEN `TRANSIT`                                             THEN TRUE
     WHEN `Transit Link`                                        THEN TRUE
     WHEN `PayPal Bizconsulta or Capitalroya or Oandaasiapa`    THEN TRUE
+    WHEN `AXS`                                                 THEN TRUE
+    WHEN `SAM`                                                 THEN TRUE
     OTHERWISE                                                       FALSE
 
 GIVEN d IS A Descriptor
@@ -121,15 +174,31 @@ GIVETH A BOOLEAN
 
 §§ `Whether the page excludes a purchase`
 
+-- Every exclusion except the recurring-payment sentence.
 GIVEN p IS A Purchase
 GIVETH A BOOLEAN
-`the SC page excludes` p MEANS
+`the SC page excludes apart from the presentation` p MEANS
     `the SC page excludes the kind` (p's `charge kind`)
-    OR `the SC page excludes the presentation` (p's presentation)
+    OR `the SC page excludes the item` (p's item)
     OR p's `posting status` EQUALS `Authorised but not posted`
     OR p's `later reversed`
     OR `the SC page lists the code of` p
     OR `the SC page names the description` (p's descriptor)
+
+GIVEN p IS A Purchase
+GIVETH A BOOLEAN
+`the SC page excludes` p MEANS
+    `the SC page excludes apart from the presentation` p
+    OR `the SC page excludes the presentation` (p's presentation)
+
+-- TRUE iff only the recurring-payment sentence would exclude it (fork
+-- F-sc-recurring): it is paid under a standing instruction, and nothing else
+-- excludes it.
+GIVEN p IS A Purchase
+GIVETH A BOOLEAN
+`only the recurring-payment sentence would exclude` p MEANS
+    `the SC page excludes the presentation` (p's presentation)
+    AND NOT (`the SC page excludes apart from the presentation` p)
 
 -- TRUE iff only Reading 2 of the SIMPLYGO entry would exclude it: the
 -- statement line bears the SimplyGo description, and nothing else excludes it.
@@ -150,13 +219,15 @@ GIVETH A BOOLEAN
 #ASSERT `the SC page excludes` (`purchase of kind` `the base purchase` `Top-up of a prepaid card or stored-value account`)
 #ASSERT `the SC page excludes` (`purchase of kind` `the base purchase` `Bill payment`)
 #ASSERT `the SC page excludes` (`purchase paid by` `the base purchase` `Recurring payment arrangement`)
+#ASSERT `the SC page excludes` (`purchase of item` `the base purchase` `An insurance premium`)
+#ASSERT `the SC page excludes` (`purchase of item` `the base purchase` `A betting payment`)
 #ASSERT `the SC page excludes` (`purchase with status` `the base purchase` `Authorised but not posted`)
 #ASSERT `the SC page excludes` (`purchase later reversed` `the base purchase`)
 
 -- A bill paid directly to the biller on the card is not within the page's sentence.
 #ASSERT NOT (`the SC page excludes` (`purchase of kind` `the base purchase` `Bill paid directly to the biller on the card`))
 
--- Each listed MCC; a restaurant (5812), fast food (5814) and EV charging (5552) are not listed.
+-- Each of the thirty-five listed MCCs (8211 to 8299 are the schools, 9311 tax); a restaurant (5812), fast food (5814), EV charging (5552), betting (7995) and insurance sales (6300) are not listed.
 #ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 4829)
 #ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 4900)
 #ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 5047)
@@ -175,14 +246,31 @@ GIVETH A BOOLEAN
 #ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 7511)
 #ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 7523)
 #ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8062)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8211)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8220)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8241)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8244)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8249)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8299)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8398)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8651)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8661)
 #ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 8999)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 9211)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 9222)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 9223)
 #ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 9311)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 9399)
+#ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 9402)
 #ASSERT `the SC page excludes` (`recoded purchase` `the base purchase` 9405)
 #ASSERT NOT (`the SC page excludes` (`recoded purchase` `the base purchase` 5812))
 #ASSERT NOT (`the SC page excludes` (`recoded purchase` `the base purchase` 5814))
 #ASSERT NOT (`the SC page excludes` (`recoded purchase` `the base purchase` 5552))
 #ASSERT NOT (`the SC page excludes` (`recoded purchase` `the base purchase` 7399))
 #ASSERT NOT (`the SC page excludes` (`recoded purchase` `the base purchase` 6300))
+-- ... 7995 is not on the page's list either: betting is excluded by what was paid for (a betting payment), not by the code.
+#ASSERT NOT (`the SC page excludes` (`recoded purchase` `the base purchase` 7995))
+#ASSERT `the SC page excludes` (`purchase of item` (`recoded purchase` `the base purchase` 7995) `A betting payment`)
 
 -- Named accounts.
 #ASSERT `the SC page excludes` (`purchase described as` `the base purchase` `EZ-Link`)
@@ -190,10 +278,20 @@ GIVETH A BOOLEAN
 #ASSERT `the SC page excludes` (`purchase described as` `the base purchase` `Transit Link`)
 #ASSERT `the SC page excludes` (`purchase described as` `the base purchase` `TRANSIT`)
 #ASSERT `the SC page excludes` (`purchase described as` `the base purchase` `PayPal Bizconsulta or Capitalroya or Oandaasiapa`)
-#ASSERT NOT (`the SC page excludes` (`purchase described as` `the base purchase` `AXS`))
+#ASSERT `the SC page excludes` (`purchase described as` `the base purchase` `AXS`)
+#ASSERT `the SC page excludes` (`purchase described as` `the base purchase` `SAM`)
+#ASSERT NOT (`the SC page excludes` (`purchase described as` `the base purchase` `SingPost-SAM`))
 #ASSERT NOT (`the SC page excludes` (`purchase described as` `the base purchase` `Amaze`))
 
 -- The SIMPLYGO entry is the open reading, not an exclusion.
 #ASSERT NOT (`the SC page excludes` (`purchase described as` `the base purchase` `SimplyGo as a descriptor`))
 #ASSERT `only the SIMPLYGO entry would exclude` (`purchase described as` `the base purchase` `SimplyGo as a descriptor`)
 #ASSERT NOT (`only the SIMPLYGO entry would exclude` `the base purchase`)
+
+-- Fork F-sc-recurring: a standing-instruction charge that nothing else excludes is the case it touches.
+#ASSERT `only the recurring-payment sentence would exclude` (`purchase paid by` `the base purchase` `Recurring payment arrangement`)
+#ASSERT NOT (`only the recurring-payment sentence would exclude` `the base purchase`)
+-- ... a standing-instruction charge that is also a cash advance, a premium or at a listed code is excluded either way.
+#ASSERT NOT (`only the recurring-payment sentence would exclude` (`purchase paid by` (`purchase of kind` `the base purchase` `Cash advance`) `Recurring payment arrangement`))
+#ASSERT NOT (`only the recurring-payment sentence would exclude` (`purchase paid by` (`purchase of item` `the base purchase` `An insurance premium`) `Recurring payment arrangement`))
+#ASSERT NOT (`only the recurring-payment sentence would exclude` (`purchase paid by` (`recoded purchase` `the base purchase` 4900) `Recurring payment arrangement`))
