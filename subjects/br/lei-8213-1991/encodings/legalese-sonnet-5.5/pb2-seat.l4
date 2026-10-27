@@ -1,0 +1,1031 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `pb-core`
+IMPORT `pb2-salario-de-beneficio`
+IMPORT `pb2-renda-mensal`
+IMPORT `pb2-reajustamento`
+IMPORT `pb2-aposentadoria-por-invalidez`
+IMPORT `pb2-aposentadoria-por-idade`
+IMPORT `pb2-aposentadoria-por-tempo`
+IMPORT `pb2-aposentadoria-especial`
+
+-- pb2-seat.l4: Lei nº 8.213/1991, Título III, Capítulo II, Seção III (Subseções I e II), Seção IV e
+-- Seção V (Subseções I a IV), arts. 28 a 58 -- THE SEAT LAYER, over the layer-1 modules imported above.
+-- The text is the plain-text rendering of Planalto's compilation (not the official text).
+--
+-- SEAT: a person insured under the Regime Geral de Previdência Social, or a dependant of one, asking
+-- whether they qualify for a benefit (a retirement, disability, sickness, maternity or death benefit),
+-- how much it is, from when and for how long, and what they must do or declare. Nothing here is new
+-- law: every question calls rules of the layer-1 modules; no rule is restated or copied.
+--
+-- PLAIN INPUTS. Each question takes plain inputs (yes/no, numbers, dates, or a choice from a list of
+-- the modules' own choices), one for each fact the person can state, each with an @desc worded as the
+-- person would be asked. The records the layer-1 rules expect (`Segurado`, `Valores de referência`)
+-- are built inside each question, from those answers, by the two helpers below; a record field that no
+-- rule called reads gets a fixed placeholder with a comment saying so. A fact that layer 1 takes as an
+-- optional date (`MAYBE DATE`) is asked as a yes/no and a date. The salário mínimo and the limite
+-- máximo do salário-de-contribuição are asked as numbers: the Law fixes neither, and the person can
+-- state them for the date of the benefit.
+--
+-- WHAT THE PERSON IS NOT ASKED. Three things layer 1 takes as lists are not asked as lists in a form.
+-- The mean of the highest 80% of the salários-de-contribuição (art. 29) is asked as the figure the
+-- INSS's statement shows; the INPC variation (art. 29-B) is asked as one accumulated variation; the
+-- last 12 salários (art. 29, § 10) are asked as 12 numbers. The salário-de-benefício of the rural
+-- worker with periods under other categories (art. 48, § 4) is not asked as a whole, because it
+-- needs a list of salários; the monthly figure it fixes for the months as segurado especial is.
+-- Provisions with no question: art. 57, §§ 6º and 7º (the company's contribution, nothing the
+-- insured states), arts. 38-A caput and § 1º, 38-B § 5º (inert, machinery), art. 41-A § 4º
+-- (the meaning of a working day, folded into the dates the payment questions ask).
+--
+-- Where the layer-1 rules depart from the defaults ruled on 2026-10-18 (recorded, not fixed):
+--   * Judgments the text hands to someone else are taken as conditional facts, as the defaults say:
+--     the perícia médica of the Previdência Social, the Poder Executivo's list of harmful agents, the
+--     Regulamento's criteria. They are named for whose conclusion they are.
+--   * The values the Law leaves to the Executive (the fator previdenciário, the INPC variation, the
+--     conversion factor of special time) are asked as numbers the person can read from the INSS's
+--     statement; a different value would change the answers.
+
+§ `Lei nº 8.213/1991, arts. 28 a 58: as perguntas de quem é segurado ou dependente`
+
+§§ `Quem sou eu e quais são os valores de referência (auxiliares, sem pergunta)`
+
+-- Helper, not a question: builds the `Segurado` record the rules expect.
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado`
+      `o meu sexo` IS A Sexo
+      `a minha idade em anos completos` IS A NUMBER
+GIVETH A Segurado
+`eu como segurado` `a minha categoria de segurado` `o meu sexo` `a minha idade em anos completos` MEANS
+    Segurado WITH
+        `categoria`                IS `a minha categoria de segurado`
+        `sexo`                     IS `o meu sexo`
+        `idade em anos completos`  IS `a minha idade em anos completos`
+
+-- Helper, not a question: builds the `Valores de referência` the rules expect from the two figures
+-- the person states for the date of the benefit.
+GIVEN `o salário mínimo na data do benefício, em reais` IS A NUMBER
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER
+GIVETH A `Valores de referência`
+`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais` MEANS
+    `Valores de referência` WITH
+        `salário mínimo`                            IS `o salário mínimo na data do benefício, em reais`
+        `limite máximo do salário-de-contribuição`  IS `o limite máximo do salário-de-contribuição na data do benefício, em reais`
+        -- Placeholder: no rule called with this record reads the limite mínimo (only art. 48, § 4º does,
+        -- and that question builds its own record).
+        `limite mínimo do salário-de-contribuição`  IS `o salário mínimo na data do benefício, em reais`
+
+§§ `Salário-de-benefício (arts. 28 a 32)`
+
+-- Art. 28. The salário-de-benefício is the base of the monthly value of most benefits; not of the
+-- salário-família or the salário-maternidade.
+@export O meu benefício é calculado com base no salário-de-benefício? (art. 28)
+GIVEN `o benefício que peço ou recebo` IS A Prestação @desc Qual benefício você pede ou recebe?
+GIVETH A MAYBE BOOLEAN
+DECIDE `O meu benefício é calculado com base no salário-de-benefício` IS
+    `art. 28 — a prestação é calculada com base no salário-de-benefício` `o benefício que peço ou recebo`
+
+-- Art. 29, caput, I and II, and § 2. The mean is what the INSS's statement shows: the average of the
+-- highest salários-de-contribuição that make up 80% of the whole contributory period.
+@export Qual é o meu salário-de-benefício, em reais? (art. 29, caput, I e II, e § 2º)
+GIVEN `o benefício que peço ou recebo` IS A Prestação @desc Qual benefício você pede ou recebe?
+      `a média dos meus maiores salários-de-contribuição, em reais` IS A NUMBER @desc Qual é a média simples dos seus maiores salários-de-contribuição, aqueles que correspondem a 80% de todo o seu período contributivo, em reais? (É o número que o INSS mostra no cálculo.)
+      `o meu fator previdenciário` IS A NUMBER @desc Qual é o seu fator previdenciário, calculado pelo INSS a partir da sua idade, da expectativa de sobrevida e do seu tempo de contribuição? Só conta para a aposentadoria por idade e por tempo de contribuição; para os outros benefícios informe 1.
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo na data em que o benefício começa, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto) na data em que o benefício começa, em reais?
+GIVETH A MAYBE NUMBER
+DECIDE `Qual é o meu salário-de-benefício` IS
+    CONSIDER `art. 29 — salário-de-benefício da prestação antes dos limites do § 2º, em reais` `o benefício que peço ou recebo` `a média dos meus maiores salários-de-contribuição, em reais` `o meu fator previdenciário`
+    WHEN JUST `o salário-de-benefício calculado` THEN
+        JUST (`art. 29, § 2º — salário-de-benefício entre o salário mínimo e o limite máximo do salário-de-contribuição, em reais` `o salário-de-benefício calculado` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`))
+    WHEN NOTHING THEN NOTHING
+
+-- Art. 29, § 3. Which of an employee's earnings count.
+@export O meu ganho de empregado entra no cálculo do salário-de-benefício? (art. 29, § 3º)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `o ganho é habitual` IS A BOOLEAN @desc O ganho é habitual (recebido com regularidade)?
+      `o ganho foi pago em moeda corrente ou em utilidades` IS A BOOLEAN @desc O ganho foi pago em dinheiro ou em utilidades (bens e vantagens)?
+      `incidiu contribuição previdenciária sobre o ganho` IS A BOOLEAN @desc Foi paga contribuição previdenciária sobre esse ganho?
+      `o ganho é décimo terceiro salário` IS A BOOLEAN @desc O ganho é décimo terceiro salário (gratificação natalina)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `O meu ganho de empregado entra no cálculo do salário-de-benefício` IS
+    `art. 29, § 3º — o ganho é considerado no cálculo do salário-de-benefício` (`eu como segurado` `a minha categoria de segurado` masculino 0) `o ganho é habitual` `o ganho foi pago em moeda corrente ou em utilidades` `incidiu contribuição previdenciária sobre o ganho` `o ganho é décimo terceiro salário`
+    -- Placeholder: the rule reads only the category of the Segurado, not the sex or the age.
+
+-- Art. 29, § 4. An increase of the salário-de-contribuição that is left out.
+@export O aumento do meu salário-de-contribuição fica de fora do cálculo do benefício? (art. 29, § 4º)
+GIVEN `o aumento excede o limite legal` IS A BOOLEAN @desc O aumento faz o seu salário-de-contribuição passar do limite legal?
+      `o aumento foi concedido voluntariamente nos 36 meses anteriores ao início do benefício` IS A BOOLEAN @desc O aumento foi concedido voluntariamente (sem ser obrigado) nos 36 meses antes do início do benefício?
+      `o aumento foi homologado pela Justiça do Trabalho` IS A BOOLEAN @desc O aumento foi homologado pela Justiça do Trabalho?
+      `o aumento resultou de promoção regulada por normas gerais da empresa` IS A BOOLEAN @desc O aumento veio de promoção regulada por normas gerais da empresa, admitida pela legislação do trabalho?
+      `o aumento resultou de sentença normativa` IS A BOOLEAN @desc O aumento veio de sentença normativa?
+      `o aumento resultou de reajuste da categoria` IS A BOOLEAN @desc O aumento veio de reajuste salarial obtido pela sua categoria?
+GIVETH A BOOLEAN
+DECIDE `O aumento do meu salário-de-contribuição fica de fora do cálculo do benefício` IS
+    `art. 29, § 4º — o aumento do salário-de-contribuição não é considerado no cálculo do salário-de-benefício` `o aumento excede o limite legal` `o aumento foi concedido voluntariamente nos 36 meses anteriores ao início do benefício` `o aumento foi homologado pela Justiça do Trabalho` `o aumento resultou de promoção regulada por normas gerais da empresa` `o aumento resultou de sentença normativa` `o aumento resultou de reajuste da categoria`
+
+-- Art. 29, § 5. A month on which the person received an incapacity benefit.
+@export Quanto vale, no meu cálculo, um mês em que recebi benefício por incapacidade, em reais? (art. 29, § 5º)
+GIVEN `neste mês recebi benefício por incapacidade` IS A BOOLEAN @desc Neste mês você recebeu auxílio-doença ou outro benefício por incapacidade?
+      `o salário-de-benefício reajustado que serviu de base à minha renda mensal, em reais` IS A NUMBER @desc Qual é o salário-de-benefício que serviu de base ao benefício por incapacidade, reajustado como os benefícios em geral, em reais?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A MAYBE NUMBER
+DECIDE `Quanto vale, no meu cálculo, um mês em que recebi benefício por incapacidade` IS
+    `art. 29, § 5º — salário-de-contribuição do mês de gozo de benefício por incapacidade, em reais` `neste mês recebi benefício por incapacidade` `o salário-de-benefício reajustado que serviu de base à minha renda mensal, em reais` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+
+-- Art. 29, § 6. The segurado especial.
+@export Qual é o meu salário-de-benefício como segurado especial, em reais? (art. 29, § 6º)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `eu contribuo facultativamente como segurado especial` IS A BOOLEAN @desc Você contribui facultativamente para a Previdência Social, na forma do Plano de Custeio da Seguridade Social?
+      `a minha aposentadoria por idade é a do trabalhador rural com períodos sob outras categorias` IS A BOOLEAN @desc A aposentadoria que você pede é a por idade do trabalhador rural que soma períodos de contribuição sob outras categorias (art. 48, §§ 3º e 4º)?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A MAYBE NUMBER
+DECIDE `Qual é o meu salário-de-benefício como segurado especial` IS
+    `art. 29, § 6º — salário-de-benefício do segurado especial, em reais` (`eu como segurado` `a minha categoria de segurado` masculino 0) `eu contribuo facultativamente como segurado especial` `a minha aposentadoria por idade é a do trabalhador rural com períodos sob outras categorias` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+    -- Placeholder: the rule reads only the category of the Segurado.
+
+-- Art. 29, §§ 7 to 9. The years added to the contribution time that feeds the fator previdenciário.
+@export Quantos meses de contribuição valem para o meu fator previdenciário? (art. 29, § 9º)
+GIVEN `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `o meu tempo de contribuição, em meses completos` IS A NUMBER @desc Quantos meses completos de contribuição você tem?
+      `eu comprovo exclusivamente tempo de magistério` IS A BOOLEAN @desc Você comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio?
+GIVETH A NUMBER
+DECIDE `Quantos meses de contribuição valem para o meu fator previdenciário` IS
+    `art. 29, § 9º — tempo de contribuição acrescido para o fator previdenciário, em meses completos` (`eu como segurado` `segurado empregado` `o meu sexo` 0) `o meu tempo de contribuição, em meses completos` `eu comprovo exclusivamente tempo de magistério`
+    -- Placeholder: the rule reads only the sex of the Segurado.
+
+-- Art. 29, § 10. The last 12 salários-de-contribuição, newest first. The person says how many
+-- months they have (up to 12) and the value of each; the layer-1 rule takes the first 12 of the list.
+@export Até quanto pode chegar o meu auxílio-doença, em reais? (art. 29, § 10)
+GIVEN `o valor calculado do meu auxílio-doença, em reais` IS A NUMBER @desc Qual é o valor calculado do seu auxílio-doença, em reais?
+      `quantos dos meus últimos 12 meses têm salário-de-contribuição` IS A NUMBER @desc Quantos dos seus últimos 12 meses têm salário-de-contribuição (de 0 a 12)?
+      `o salário-de-contribuição do mês 1, o mais recente, em reais` IS A NUMBER @desc Qual foi o salário-de-contribuição do mês mais recente, em reais?
+      `o salário-de-contribuição do mês 2, em reais` IS A NUMBER @desc Qual foi o salário-de-contribuição do mês anterior a esse, em reais? (0 se não houver)
+      `o salário-de-contribuição do mês 3, em reais` IS A NUMBER @desc Qual foi o do mês 3 contado de trás para frente, em reais? (0 se não houver)
+      `o salário-de-contribuição do mês 4, em reais` IS A NUMBER @desc Qual foi o do mês 4, em reais? (0 se não houver)
+      `o salário-de-contribuição do mês 5, em reais` IS A NUMBER @desc Qual foi o do mês 5, em reais? (0 se não houver)
+      `o salário-de-contribuição do mês 6, em reais` IS A NUMBER @desc Qual foi o do mês 6, em reais? (0 se não houver)
+      `o salário-de-contribuição do mês 7, em reais` IS A NUMBER @desc Qual foi o do mês 7, em reais? (0 se não houver)
+      `o salário-de-contribuição do mês 8, em reais` IS A NUMBER @desc Qual foi o do mês 8, em reais? (0 se não houver)
+      `o salário-de-contribuição do mês 9, em reais` IS A NUMBER @desc Qual foi o do mês 9, em reais? (0 se não houver)
+      `o salário-de-contribuição do mês 10, em reais` IS A NUMBER @desc Qual foi o do mês 10, em reais? (0 se não houver)
+      `o salário-de-contribuição do mês 11, em reais` IS A NUMBER @desc Qual foi o do mês 11, em reais? (0 se não houver)
+      `o salário-de-contribuição do mês 12, em reais` IS A NUMBER @desc Qual foi o do mês 12, em reais? (0 se não houver)
+GIVETH A MAYBE NUMBER
+DECIDE `Até quanto pode chegar o meu auxílio-doença` IS
+    `art. 29, § 10 — valor do auxílio-doença limitado à média dos últimos 12 salários-de-contribuição, em reais` `o valor calculado do meu auxílio-doença, em reais` `os meus salários-de-contribuição, do mais recente ao mais antigo`
+    WHERE
+        `os meus salários-de-contribuição, do mais recente ao mais antigo` MEANS
+            take `quantos dos meus últimos 12 meses têm salário-de-contribuição`
+                 (LIST `o salário-de-contribuição do mês 1, o mais recente, em reais`, `o salário-de-contribuição do mês 2, em reais`, `o salário-de-contribuição do mês 3, em reais`, `o salário-de-contribuição do mês 4, em reais`, `o salário-de-contribuição do mês 5, em reais`, `o salário-de-contribuição do mês 6, em reais`, `o salário-de-contribuição do mês 7, em reais`, `o salário-de-contribuição do mês 8, em reais`, `o salário-de-contribuição do mês 9, em reais`, `o salário-de-contribuição do mês 10, em reais`, `o salário-de-contribuição do mês 11, em reais`, `o salário-de-contribuição do mês 12, em reais`)
+
+§§ `O Cadastro Nacional de Informações Sociais, o CNIS (art. 29-A)`
+-- This group arises only if the person has to ask the INSS for the CNIS data or to correct it; the form can ask "Você precisa pedir ou corrigir dados do CNIS?" first.
+
+-- Art. 29-A, caput. For what the INSS uses the CNIS data on links and remunerations.
+@export O INSS usa as informações do CNIS sobre os meus vínculos e remunerações para essa finalidade? (art. 29-A, caput)
+GIVEN `a finalidade` IS A `Finalidade do uso das informações do CNIS (art. 29-A)` @desc Para que finalidade: cálculo do salário-de-benefício, comprovação de filiação, comprovação de tempo de contribuição ou comprovação de relação de emprego?
+GIVETH A BOOLEAN
+DECIDE `O INSS usa as informações do CNIS sobre os meus vínculos e remunerações para essa finalidade` IS
+    `art. 29-A — o INSS utiliza as informações do CNIS sobre vínculos e remunerações para a finalidade` `a finalidade`
+
+-- Art. 29-A, § 1. 180 days from the request.
+@export Até que dia o INSS deve me dar as informações do meu CNIS? (art. 29-A, § 1º)
+GIVEN `a data em que pedi as informações` IS A DATE @desc Em que data você pediu ao INSS as informações do CNIS?
+GIVETH A DATE
+DECIDE `Até que dia o INSS deve me dar as informações do meu CNIS` IS
+    `art. 29-A, § 1º — último dia em que o INSS deve fornecer as informações do CNIS` `a data em que pedi as informações`
+
+@export O INSS me deu as informações do CNIS dentro do prazo de 180 dias? (art. 29-A, § 1º)
+GIVEN `a data em que pedi as informações` IS A DATE @desc Em que data você pediu ao INSS as informações do CNIS?
+      `a data em que o INSS me deu as informações` IS A DATE @desc Em que data o INSS lhe deu as informações?
+GIVETH A BOOLEAN
+DECIDE `O INSS me deu as informações do CNIS dentro do prazo de 180 dias` IS
+    `art. 29-A, § 1º — o INSS forneceu as informações do CNIS no prazo` `a data em que pedi as informações` `a data em que o INSS me deu as informações`
+
+-- Art. 29-A, § 2. I may ask, at any time, for the inclusion, exclusion or rectification of CNIS data.
+@export Posso pedir a inclusão, exclusão ou retificação de informações do meu CNIS? (art. 29-A, § 2º)
+GIVEN `eu apresento documentos que provam os dados divergentes` IS A BOOLEAN @desc Você apresenta documentos que comprovam os dados divergentes?
+      `os documentos atendem aos critérios definidos pelo INSS` IS A BOOLEAN @desc Os documentos atendem aos critérios que o INSS definiu?
+GIVETH A BOOLEAN
+DECIDE `Posso pedir a inclusão, exclusão ou retificação de informações do meu CNIS` IS
+    `art. 29-A, § 2º — o segurado pode solicitar a inclusão, exclusão ou retificação de informações do CNIS` `eu apresento documentos que provam os dados divergentes` `os documentos atendem aos critérios definidos pelo INSS`
+
+-- Art. 29-A, § 4. Extemporaneous: presented after the time limits the regulation sets.
+@export A minha inserção de dados no CNIS é extemporânea? (art. 29-A, § 4º)
+GIVEN `a data em que apresentei o documento ou a retificação` IS A DATE @desc Em que data você apresentou o documento ou a retificação?
+      `a data-limite do regulamento` IS A DATE @desc Qual é a data-limite que o regulamento fixa para apresentar o documento ou a retificação?
+GIVETH A BOOLEAN
+DECIDE `A minha inserção de dados no CNIS é extemporânea` IS
+    `art. 29-A, § 4º — a inserção de dados no CNIS é extemporânea` `a data em que apresentei o documento ou a retificação` `a data-limite do regulamento`
+
+-- Art. 29-A, § 3. Extemporaneous data is accepted only if proved as the regulation requires.
+@export Os meus dados inseridos fora do prazo no CNIS podem ser aceitos? (art. 29-A, § 3º)
+GIVEN `a data em que apresentei o documento ou a retificação` IS A DATE @desc Em que data você apresentou o documento ou a retificação?
+      `a data-limite do regulamento` IS A DATE @desc Qual é a data-limite que o regulamento fixa para apresentar o documento ou a retificação?
+      `comprovei os dados ou as divergências como o regulamento exige` IS A BOOLEAN @desc Você comprovou os dados ou as divergências conforme os critérios do regulamento?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Os meus dados inseridos fora do prazo no CNIS podem ser aceitos` IS
+    `art. 29-A, § 3º — a condição para aceitar a informação extemporânea no CNIS está cumprida`
+        (`art. 29-A, § 4º — a inserção de dados no CNIS é extemporânea` `a data em que apresentei o documento ou a retificação` `a data-limite do regulamento`)
+        `comprovei os dados ou as divergências como o regulamento exige`
+
+-- Art. 29-A, § 5. Doubt about a link entered in the CNIS and no information on remunerations and contributions.
+@export O INSS pode exigir os documentos que serviram de base à anotação do meu vínculo? (art. 29-A, § 5º)
+GIVEN `há dúvida sobre a regularidade do meu vínculo no CNIS` IS A BOOLEAN @desc Há dúvida sobre a regularidade de um vínculo seu incluído no CNIS?
+      `há informações sobre as remunerações e contribuições desse vínculo` IS A BOOLEAN @desc Existem informações sobre as remunerações e as contribuições desse vínculo?
+GIVETH A BOOLEAN
+DECIDE `O INSS pode exigir os documentos que serviram de base à anotação do meu vínculo` IS
+    `art. 29-A, § 5º — o INSS exige a apresentação dos documentos que serviram de base à anotação do vínculo` `há dúvida sobre a regularidade do meu vínculo no CNIS` `há informações sobre as remunerações e contribuições desse vínculo`
+
+@export O período do meu vínculo pode ser excluído do CNIS? (art. 29-A, § 5º)
+GIVEN `há dúvida sobre a regularidade do meu vínculo no CNIS` IS A BOOLEAN @desc Há dúvida sobre a regularidade de um vínculo seu incluído no CNIS?
+      `há informações sobre as remunerações e contribuições desse vínculo` IS A BOOLEAN @desc Existem informações sobre as remunerações e as contribuições desse vínculo?
+      `apresentei os documentos que serviram de base à anotação` IS A BOOLEAN @desc Você apresentou os documentos que serviram de base à anotação do vínculo?
+GIVETH A BOOLEAN
+DECIDE `O período do meu vínculo pode ser excluído do CNIS` IS
+    `art. 29-A, § 5º — o período do vínculo é excluído do CNIS` `há dúvida sobre a regularidade do meu vínculo no CNIS` `há informações sobre as remunerações e contribuições desse vínculo` `apresentei os documentos que serviram de base à anotação`
+
+§§ `A correção dos salários-de-contribuição (art. 29-B)`
+
+-- Art. 29-B. The variation is asked as one accumulated figure; one month's (1 + v) is the whole factor.
+@export Quanto vale o meu salário-de-contribuição corrigido pelo INPC, em reais? (art. 29-B)
+GIVEN `o meu salário-de-contribuição do mês, em reais` IS A NUMBER @desc Qual foi o seu salário-de-contribuição naquele mês, em reais?
+      `a variação acumulada do INPC desde aquele mês, em fração` IS A NUMBER @desc Qual foi a variação acumulada do INPC desde aquele mês até o início do benefício, como fração? (5% é 0,05)
+GIVETH A NUMBER
+DECIDE `Quanto vale o meu salário-de-contribuição corrigido pelo INPC` IS
+    `art. 29-B — salário-de-contribuição corrigido, em reais` `o meu salário-de-contribuição do mês, em reais` (LIST `a variação acumulada do INPC desde aquele mês, em fração`)
+
+§§ `A opção pela não incidência do fator previdenciário (art. 29-C)`
+-- This group arises only for a person who is asking for the aposentadoria por tempo de contribuição.
+
+-- Art. 29-C. The requirement for the aposentadoria por tempo de contribuição (art. 52) is supplied by
+-- calling the art. 52 rule with the same answers. The date on which the person reached the
+-- requirement is a yes/no and a date.
+@export Posso optar por não ter o fator previdenciário aplicado à minha aposentadoria por tempo de contribuição? (art. 29-C)
+GIVEN `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `a minha idade em meses completos` IS A NUMBER @desc Quantos meses completos de idade você tem? (Some os anos vezes 12 e os meses.)
+      `o meu tempo de contribuição, em meses completos` IS A NUMBER @desc Quantos meses completos de tempo de contribuição você tem?
+      `a data do meu requerimento` IS A DATE @desc Em que data você pede (ou pediu) a aposentadoria?
+      `já alcancei o requisito da opção antes do requerimento` IS A BOOLEAN @desc Você já tinha alcançado o requisito da opção antes do requerimento, sem ter pedido a aposentadoria?
+      `a data em que alcancei o requisito da opção` IS A DATE @desc Em que data você alcançou o requisito da opção? (Só vale se respondeu que sim acima.)
+      `eu comprovo exclusivamente tempo de magistério` IS A BOOLEAN @desc Você comprova exclusivamente tempo de efetivo exercício das funções de magistério na educação infantil e no ensino fundamental e médio?
+      `eu cumpri a carência exigida` IS A BOOLEAN @desc Você já cumpriu a carência exigida para a aposentadoria por tempo de contribuição?
+GIVETH A BOOLEAN
+DECIDE `Posso optar por não ter o fator previdenciário aplicado à minha aposentadoria por tempo de contribuição` IS
+    `art. 29-C — o segurado pode optar pela não incidência do fator previdenciário` `eu como segurado de sexo e idade` `a minha idade em meses completos` `o meu tempo de contribuição, em meses completos` `a data do meu requerimento` `o requisito alcançado antes` `eu comprovo exclusivamente tempo de magistério` `o requisito do art. 52`
+    WHERE
+        -- Placeholder: art. 29-C reads the sex of the Segurado only; the category and the age in years are not read.
+        `eu como segurado de sexo e idade` MEANS `eu como segurado` `segurado empregado` `o meu sexo` 0
+        `o requisito alcançado antes` MEANS
+            IF `já alcancei o requisito da opção antes do requerimento`
+            THEN JUST `a data em que alcancei o requisito da opção`
+            ELSE NOTHING
+        `o requisito do art. 52` MEANS
+            `art. 52 — o segurado tem direito à aposentadoria por tempo de serviço` `eu como segurado de sexo e idade` `eu cumpri a carência exigida` `o meu tempo de contribuição, em meses completos`
+
+@export Quantos pontos a minha aposentadoria exige para eu optar pelo fim do fator previdenciário? (art. 29-C, § 2º)
+GIVEN `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `a data` IS A DATE @desc Em que data você mede a pontuação (a do requerimento, ou a em que alcançou o requisito)?
+GIVETH A NUMBER
+DECIDE `Quantos pontos a minha aposentadoria exige para eu optar pelo fim do fator previdenciário` IS
+    `art. 29-C, § 2º — pontuação exigida na data, em pontos` (`eu como segurado` `segurado empregado` `o meu sexo` 0) `a data`
+    -- Placeholder: the rule reads only the sex of the Segurado.
+
+§§ `O auxílio-acidente na aposentadoria (art. 31) e as atividades concomitantes (art. 32)`
+-- This group arises only for a person who receives auxílio-acidente or who contributes for two activities at once.
+
+-- Art. 31. The monthly auxílio-acidente integrates the salário-de-contribuição for any aposentadoria.
+@export O valor do meu auxílio-acidente entra no salário-de-contribuição do mês para calcular a minha aposentadoria, e quanto fica? (art. 31)
+GIVEN `a aposentadoria que peço` IS A Prestação @desc Qual benefício você pede?
+      `o meu salário-de-contribuição do mês, em reais` IS A NUMBER @desc Qual foi o seu salário-de-contribuição naquele mês, em reais?
+      `o valor mensal do meu auxílio-acidente, em reais` IS A NUMBER @desc Qual é o valor mensal do seu auxílio-acidente, em reais?
+GIVETH A MAYBE NUMBER
+DECIDE `O valor do meu auxílio-acidente entra no salário-de-contribuição do mês para calcular a minha aposentadoria` IS
+    `art. 31 — salário-de-contribuição do mês com o valor do auxílio-acidente, para o cálculo da aposentadoria, em reais` `a aposentadoria que peço` `o meu salário-de-contribuição do mês, em reais` `o valor mensal do meu auxílio-acidente, em reais`
+
+-- Art. 32. Two activities at once; the asked sum is the base of the salário-de-benefício.
+@export Qual é a soma dos salários-de-contribuição das minhas atividades simultâneas que serve de base ao meu salário-de-benefício, em reais? (art. 32)
+GIVEN `o salário-de-contribuição da minha primeira atividade, em reais` IS A NUMBER @desc Qual é o salário-de-contribuição da sua primeira atividade, em reais?
+      `o salário-de-contribuição da minha segunda atividade, em reais` IS A NUMBER @desc Qual é o salário-de-contribuição da sua segunda atividade, em reais?
+      `contribuí apenas por uma das atividades por causa do limite máximo` IS A BOOLEAN @desc Por causa do limite máximo do salário-de-contribuição, você contribuiu apenas por uma das atividades simultâneas?
+      `meu salário-de-contribuição foi reduzido por causa do limite máximo` IS A BOOLEAN @desc O seu salário-de-contribuição nas atividades simultâneas foi reduzido por causa do limite máximo?
+GIVETH A MAYBE NUMBER
+DECIDE `Qual é a soma dos salários-de-contribuição das minhas atividades simultâneas que serve de base ao meu salário-de-benefício` IS
+    `art. 32 — soma dos salários-de-contribuição das atividades concomitantes que serve de base ao salário-de-benefício, em reais` (LIST `o salário-de-contribuição da minha primeira atividade, em reais`, `o salário-de-contribuição da minha segunda atividade, em reais`) `contribuí apenas por uma das atividades por causa do limite máximo` `meu salário-de-contribuição foi reduzido por causa do limite máximo`
+
+§ `Renda mensal do benefício (arts. 33 a 40)`
+
+§§ `O piso e o teto, e os salários-de-contribuição que contam (arts. 33 e 34)`
+
+@export Qual é a renda mensal do meu benefício, entre o piso e o teto, em reais? (art. 33)
+GIVEN `o valor calculado da renda mensal do meu benefício, em reais` IS A NUMBER @desc Qual é o valor calculado da renda mensal do seu benefício, em reais?
+      `o meu benefício substitui o meu salário-de-contribuição ou o rendimento do meu trabalho` IS A BOOLEAN @desc O seu benefício substitui o seu salário-de-contribuição ou o rendimento do seu trabalho?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A MAYBE NUMBER
+DECIDE `Qual é a renda mensal do meu benefício, entre o piso e o teto` IS
+    `art. 33 — renda mensal do benefício que substitui o salário-de-contribuição ou o rendimento do trabalho do segurado, em reais` `o valor calculado da renda mensal do meu benefício, em reais` `o meu benefício substitui o meu salário-de-contribuição ou o rendimento do meu trabalho` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+
+-- Art. 34, I and III. The month's salário-de-contribuição counts if the contribution was due (employee,
+-- domestic employee, avulso) or was paid (the others); a period the INSS excluded from the CNIS under
+-- art. 29-A, § 5, does not count.
+@export O salário-de-contribuição de um mês conta no cálculo da minha renda mensal? (art. 34, I e III)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `a contribuição do mês era devida` IS A BOOLEAN @desc A contribuição daquele mês era devida?
+      `a contribuição do mês foi efetivamente recolhida` IS A BOOLEAN @desc A contribuição daquele mês foi efetivamente recolhida?
+      `há dúvida sobre a regularidade do meu vínculo no CNIS` IS A BOOLEAN @desc Há dúvida sobre a regularidade do vínculo desse mês no CNIS?
+      `há informações sobre as remunerações e contribuições desse vínculo` IS A BOOLEAN @desc Existem informações sobre as remunerações e as contribuições desse vínculo?
+      `apresentei os documentos que serviram de base à anotação` IS A BOOLEAN @desc Você apresentou os documentos que serviram de base à anotação do vínculo?
+GIVETH A BOOLEAN
+DECIDE `O salário-de-contribuição de um mês conta no cálculo da minha renda mensal` IS
+    `art. 34, incisos I e III — o salário-de-contribuição do mês é computado no cálculo da renda mensal` (`eu como segurado` `a minha categoria de segurado` masculino 0) `a contribuição do mês era devida` `a contribuição do mês foi efetivamente recolhida`
+        (`art. 29-A, § 5º — o período do vínculo é excluído do CNIS` `há dúvida sobre a regularidade do meu vínculo no CNIS` `há informações sobre as remunerações e contribuições desse vínculo` `apresentei os documentos que serviram de base à anotação`)
+    -- Placeholder: the rule reads only the category of the Segurado.
+
+@export O valor do meu auxílio-acidente conta como salário-de-contribuição para a minha aposentadoria? (art. 34, II)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `a aposentadoria que peço` IS A Prestação @desc Qual benefício você pede?
+GIVETH A MAYBE BOOLEAN
+DECIDE `O valor do meu auxílio-acidente conta como salário-de-contribuição para a minha aposentadoria` IS
+    `art. 34, inciso II — o valor mensal do auxílio-acidente é considerado salário-de-contribuição` (`eu como segurado` `a minha categoria de segurado` masculino 0) `a aposentadoria que peço`
+    -- Placeholder: the rule reads only the category of the Segurado.
+
+§§ `Se eu não consigo provar os meus salários, e o recálculo (arts. 35 a 37)`
+-- This group arises only for an empregado, a doméstico or an avulso who cannot prove the value of the salários; the form can ask "Você não consegue provar os seus salários?" first.
+
+@export Recebo o benefício no valor mínimo por não conseguir provar os meus salários de contribuição? (arts. 35 e 36)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `eu cumpri todas as condições para a concessão do benefício` IS A BOOLEAN @desc Você cumpriu todas as condições para a concessão do benefício que pede?
+      `eu consigo comprovar o valor dos meus salários de contribuição` IS A BOOLEAN @desc Você consegue comprovar o valor dos seus salários de contribuição no período básico de cálculo?
+      `eu comprovo o efetivo recolhimento das contribuições devidas` IS A BOOLEAN @desc Você (empregado doméstico) comprova o efetivo recolhimento das contribuições devidas?
+GIVETH A BOOLEAN
+DECIDE `Recebo o benefício no valor mínimo por não conseguir provar os meus salários de contribuição` IS
+        `art. 35 — o benefício é concedido no valor mínimo por falta de prova dos salários de contribuição` (`eu como segurado` `a minha categoria de segurado` masculino 0) `eu cumpri todas as condições para a concessão do benefício` `eu consigo comprovar o valor dos meus salários de contribuição`
+    OR  `art. 36 — o benefício do empregado doméstico é concedido no valor mínimo por falta de prova do recolhimento` (`eu como segurado` `a minha categoria de segurado` masculino 0) `eu cumpri todas as condições para a concessão do benefício` `eu comprovo o efetivo recolhimento das contribuições devidas`
+    -- Placeholder: both rules read only the category of the Segurado.
+
+@export De quanto é o benefício de valor mínimo, em reais? (arts. 35 e 36)
+GIVEN `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A NUMBER
+DECIDE `De quanto é o benefício de valor mínimo` IS
+    `arts. 35 e 36 — valor do benefício de valor mínimo, em reais` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+
+@export Quanto passa a valer a minha renda mensal recalculada e reajustada, em reais? (art. 37)
+GIVEN `a minha renda mensal inicial recalculada, em reais` IS A NUMBER @desc Qual é a sua renda mensal inicial depois de recalculada com a prova dos salários-de-contribuição, em reais?
+      `o fator de reajuste acumulado dos benefícios com a mesma data de início` IS A NUMBER @desc Qual é o fator de reajuste acumulado dos benefícios correspondentes com a mesma data de início que o seu? (1,05 para 5%)
+GIVETH A NUMBER
+DECIDE `Quanto passa a valer a minha renda mensal recalculada e reajustada` IS
+    `art. 37 — renda mensal inicial recalculada e reajustada como a dos benefícios correspondentes, em reais` `a minha renda mensal inicial recalculada, em reais` `o fator de reajuste acumulado dos benefícios com a mesma data de início`
+
+@export A renda mensal recalculada já substitui a anterior em uma data? (art. 37)
+GIVEN `a data` IS A DATE @desc Em que data você quer saber?
+      `a data do meu requerimento de revisão do valor do benefício` IS A DATE @desc Em que data você pediu a revisão do valor do benefício?
+GIVETH A BOOLEAN
+DECIDE `A renda mensal recalculada já substitui a anterior em uma data` IS
+    `art. 37 — a renda mensal recalculada substitui a que prevalecia até então na data` `a data` `a data do meu requerimento de revisão do valor do benefício`
+
+@export O que a Previdência Social deve fazer quanto ao meu cadastro de segurado? (art. 38)
+GIVETH A DEONTIC Parte `Ato do art. 38`
+DECIDE `O que a Previdência Social deve fazer quanto ao meu cadastro de segurado` IS
+    `art. 38 — dever da Previdência Social de manter o cadastro dos segurados`
+
+§§ `Se sou segurado especial: o cadastro e a prova da atividade rural (arts. 38-A e 38-B)`
+-- This group arises only for a segurado especial (art. 11, VII). The form can ask first "Sou segurado especial?".
+
+@export A aplicação do cadastro dos segurados especiais pode me impor algum ônus? (art. 38-A, § 2º)
+GIVEN `o ônus decorre da atualização anual do cadastro (art. 38-A, § 4º)` IS A BOOLEAN @desc O ônus de que se trata decorre da atualização anual do cadastro, até 30 de junho do ano seguinte?
+GIVETH A BOOLEAN
+DECIDE `A aplicação do cadastro dos segurados especiais pode me impor algum ônus` IS
+    `art. 38-A, § 2º — a aplicação do art. 38-A pode resultar ônus para o segurado` `o ônus decorre da atualização anual do cadastro (art. 38-A, § 4º)`
+
+@export O INSS vai verificar a minha condição de segurado especial e o pagamento da contribuição? (art. 38-A, § 3º)
+GIVEN `estou na habilitação ou na concessão de benefício` IS A BOOLEAN @desc Você está na fase de habilitação ou de concessão de um benefício?
+GIVETH A BOOLEAN
+DECIDE `O INSS vai verificar a minha condição de segurado especial e o pagamento da contribuição` IS
+    `art. 38-A, § 3º — o INSS deve verificar a condição de segurado especial e o pagamento da contribuição` `estou na habilitação ou na concessão de benefício`
+
+@export Até que dia devo atualizar o meu cadastro de segurado especial de um ano? (art. 38-A, § 4º)
+GIVEN `o ano a que se refere a atualização do cadastro` IS A NUMBER @desc A que ano se refere a atualização do cadastro? (por exemplo, 2024)
+GIVETH A DATE
+DECIDE `Até que dia devo atualizar o meu cadastro de segurado especial de um ano` IS
+    `art. 38-A, § 4º — último dia da atualização anual do cadastro` `o ano a que se refere a atualização do cadastro`
+
+@export Ainda posso atualizar o meu cadastro de segurado especial em uma data, ou a atualização é vedada? (art. 38-A, § 5º)
+GIVEN `o ano a que se refere a atualização do cadastro` IS A NUMBER @desc A que ano se refere a atualização do cadastro?
+      `a data da atualização` IS A DATE @desc Em que data você quer atualizar o cadastro?
+GIVETH A BOOLEAN
+DECIDE `A atualização do meu cadastro de segurado especial é vedada em uma data` IS
+    `art. 38-A, § 5º — é vedada a atualização do cadastro` `o ano a que se refere a atualização do cadastro` `a data da atualização`
+
+@export Posso computar o meu período de trabalho rural se não atualizei o cadastro a tempo? (art. 38-A, § 6º)
+GIVEN `o ano a que se refere a atualização do cadastro` IS A NUMBER @desc A que ano se refere o período de trabalho rural?
+      `atualizei o cadastro daquele ano` IS A BOOLEAN @desc Você chegou a atualizar o cadastro daquele ano?
+      `a data em que atualizei o cadastro daquele ano` IS A DATE @desc Em que data você o atualizou? (Só vale se respondeu que sim acima.)
+      `a data em que pretendo computar o período` IS A DATE @desc Em que data você pretende computar o período de trabalho rural?
+      `a comercialização da produção foi feita em época própria` IS A BOOLEAN @desc A comercialização da sua produção foi feita em época própria?
+      `o recolhimento da contribuição foi feito em época própria` IS A BOOLEAN @desc O recolhimento da contribuição do art. 25 da Lei nº 8.212 foi feito em época própria?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Posso computar o meu período de trabalho rural se não atualizei o cadastro a tempo` IS
+    `art. 38-A, § 6º — o segurado especial pode computar o período de trabalho rural` `o ano a que se refere a atualização do cadastro` `a data da atualização, se houve` `a data em que pretendo computar o período` `a comercialização da produção foi feita em época própria` `o recolhimento da contribuição foi feito em época própria`
+    WHERE
+        `a data da atualização, se houve` MEANS
+            IF `atualizei o cadastro daquele ano` THEN JUST `a data em que atualizei o cadastro daquele ano` ELSE NOTHING
+
+@export O INSS usa o cadastro para comprovar essa característica da minha atividade? (art. 38-B, caput)
+GIVEN `a finalidade` IS A `Finalidade do uso do cadastro dos segurados especiais (art. 38-B)` @desc Para que finalidade: comprovar o exercício da atividade, a condição de segurado especial ou o grupo familiar?
+GIVETH A BOOLEAN
+DECIDE `O INSS usa o cadastro para comprovar essa característica da minha atividade` IS
+    `art. 38-B — o INSS utiliza as informações do cadastro do art. 38-A para a finalidade` `a finalidade`
+
+@export Como comprovo a minha atividade rural de segurado especial em um período? (art. 38-B, §§ 1º e 2º)
+GIVEN `a data do período de atividade rural` IS A DATE @desc Em que data foi o período de atividade rural que você quer comprovar?
+GIVETH A `Meio de comprovação da atividade rural do segurado especial`
+DECIDE `Como comprovo a minha atividade rural de segurado especial em um período` IS
+    `art. 38-B, §§ 1º e 2º — meio de comprovação da atividade rural do segurado especial` `a data do período de atividade rural`
+
+@export Ainda posso fazer, atualizar ou corrigir o meu cadastro de segurado especial em uma data? (art. 38-B, § 3º)
+GIVEN `a data` IS A DATE @desc Em que data você quer fazer, atualizar ou corrigir o cadastro?
+GIVETH A BOOLEAN
+DECIDE `Ainda posso fazer, atualizar ou corrigir o meu cadastro de segurado especial em uma data` IS
+    `art. 38-B, § 3º — o cadastro ainda pode ser realizado, atualizado e corrigido na data` `a data`
+
+@export O INSS pode me exigir os documentos do art. 106 se o cadastro divergir de outras bases de dados? (art. 38-B, § 4º)
+GIVEN `há divergência de informações entre o cadastro e outras bases de dados` IS A BOOLEAN @desc Há divergência entre o seu cadastro e outras bases de dados?
+GIVETH A BOOLEAN
+DECIDE `O INSS pode me exigir os documentos do art. 106 se o cadastro divergir de outras bases de dados` IS
+    `art. 38-B, § 4º — o INSS pode exigir a apresentação dos documentos do art. 106` `há divergência de informações entre o cadastro e outras bases de dados`
+
+§§ `A concessão garantida ao segurado especial (art. 39)`
+
+@export Tenho garantida a concessão do benefício como segurado especial? (art. 39, I)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `o benefício que peço` IS A Prestação @desc Qual benefício você pede?
+      `os meses de atividade rural que comprovo, contados para trás a partir do requerimento` IS A NUMBER @desc Quantos meses de atividade rural você comprova, contados para trás a partir do requerimento, ainda que de forma descontínua?
+      `o número de meses de carência do benefício que peço` IS A NUMBER @desc Quantos meses de carência o benefício que você pede exige?
+      `a comprovação observa os arts. 38-A e 38-B` IS A BOOLEAN @desc A sua comprovação observa o cadastro e as regras dos arts. 38-A e 38-B?
+GIVETH A BOOLEAN
+DECIDE `Tenho garantida a concessão do benefício como segurado especial` IS
+    `art. 39, inciso I — a concessão do benefício está garantida ao segurado especial` (`eu como segurado` `a minha categoria de segurado` masculino 0) `o benefício que peço` `os meses de atividade rural que comprovo, contados para trás a partir do requerimento` `o número de meses de carência do benefício que peço` `a comprovação observa os arts. 38-A e 38-B`
+    -- Placeholder: the rule reads only the category of the Segurado.
+
+@export De quanto é o benefício garantido ao segurado especial, em reais? (art. 39, I)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `o benefício que peço` IS A Prestação @desc Qual benefício você pede?
+      `os meses de atividade rural que comprovo, contados para trás a partir do requerimento` IS A NUMBER @desc Quantos meses de atividade rural você comprova, contados para trás a partir do requerimento, ainda que de forma descontínua?
+      `o número de meses de carência do benefício que peço` IS A NUMBER @desc Quantos meses de carência o benefício que você pede exige?
+      `a comprovação observa os arts. 38-A e 38-B` IS A BOOLEAN @desc A sua comprovação observa o cadastro e as regras dos arts. 38-A e 38-B?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A MAYBE NUMBER
+DECIDE `De quanto é o benefício garantido ao segurado especial` IS
+    `art. 39, inciso I — valor garantido do benefício do segurado especial, em reais` (`eu como segurado` `a minha categoria de segurado` masculino 0) `o benefício que peço` `os meses de atividade rural que comprovo, contados para trás a partir do requerimento` `o número de meses de carência do benefício que peço` `a comprovação observa os arts. 38-A e 38-B` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+    -- Placeholder: the rule reads only the category of the Segurado.
+
+@export Tenho garantidos os benefícios desta Lei por contribuir facultativamente como segurado especial? (art. 39, II)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `eu contribuo facultativamente na forma do Plano de Custeio` IS A BOOLEAN @desc Você contribui facultativamente para a Previdência Social, na forma estipulada no Plano de Custeio da Seguridade Social?
+GIVETH A BOOLEAN
+DECIDE `Tenho garantidos os benefícios desta Lei por contribuir facultativamente como segurado especial` IS
+    `art. 39, inciso II — a concessão dos benefícios desta Lei está garantida ao segurado especial que contribui facultativamente` (`eu como segurado` `a minha categoria de segurado` masculino 0) `eu contribuo facultativamente na forma do Plano de Custeio`
+    -- Placeholder: the rule reads only the category of the Segurado.
+
+@export Tenho garantido o salário-maternidade como segurada especial? (art. 39, parágrafo único)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `comprovo atividade rural nos 12 meses anteriores ao início do benefício` IS A BOOLEAN @desc Você comprova o exercício de atividade rural, ainda que de forma descontínua, nos 12 meses imediatamente anteriores ao início do benefício?
+GIVETH A BOOLEAN
+DECIDE `Tenho garantido o salário-maternidade como segurada especial` IS
+    `art. 39, parágrafo único — o salário-maternidade está garantido à segurada especial` (`eu como segurado` `a minha categoria de segurado` `o meu sexo` 0) `comprovo atividade rural nos 12 meses anteriores ao início do benefício`
+    -- Placeholder: the rule reads the category and the sex of the Segurado, not the age.
+
+@export De quanto é o salário-maternidade da segurada especial, em reais? (art. 39, parágrafo único)
+GIVEN `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A NUMBER
+DECIDE `De quanto é o salário-maternidade da segurada especial` IS
+    `art. 39, parágrafo único — valor do salário-maternidade da segurada especial, em reais` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+
+§§ `O abono anual (art. 40)`
+-- This group arises only for a person (or a dependant) who received a benefit during the year.
+
+@export Tenho direito ao abono anual? (art. 40)
+GIVEN `o benefício que recebi durante o ano` IS A Prestação @desc Qual benefício você recebeu durante o ano?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Tenho direito ao abono anual` IS
+    `art. 40 — é devido abono anual a quem recebeu a prestação durante o ano` `o benefício que recebi durante o ano`
+
+@export Quanto recebo de abono anual, em reais? (art. 40, parágrafo único)
+GIVEN `a renda mensal do meu benefício em dezembro, em reais` IS A NUMBER @desc Qual é a renda mensal do seu benefício no mês de dezembro, em reais?
+      `a fração do abono anual, calculada como a da Gratificação de Natal` IS A NUMBER @desc Que fração da renda de dezembro corresponde ao seu abono anual, calculada como a da Gratificação de Natal dos trabalhadores? (1 para o ano inteiro; 0,5 para meio ano)
+GIVETH A NUMBER
+DECIDE `Quanto recebo de abono anual` IS
+    `art. 40, parágrafo único — valor do abono anual, em reais` `a renda mensal do meu benefício em dezembro, em reais` `a fração do abono anual, calculada como a da Gratificação de Natal`
+
+§ `Reajustamento do valor dos benefícios (art. 41-A)`
+-- This group arises only for a person who already receives a benefit.
+
+@export Quanto passa a valer o meu benefício depois do reajuste anual, em reais? (art. 41-A, caput, §§ 1º e 6º)
+GIVEN `o valor do meu benefício, em reais` IS A NUMBER @desc Qual é o valor atual do seu benefício, em reais?
+      `a variação do INPC desde o início do benefício ou do último reajuste` IS A NUMBER @desc Qual foi a variação do INPC desde a data de início do benefício ou do último reajuste, como fração? (5% é 0,05)
+      `o aumento por elevação do salário mínimo a compensar, em reais` IS A NUMBER @desc De quanto foi o aumento do seu benefício por elevação do salário mínimo, que deve ser compensado nesse reajuste, segundo as normas do Ministério, em reais? (0 se nenhum)
+      `tenho direito adquirido a valor acima do limite máximo` IS A BOOLEAN @desc Você tem direito adquirido a valor acima do limite máximo do salário-de-benefício?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-benefício (o teto) na data do reajuste, em reais?
+GIVETH A NUMBER
+DECIDE `Quanto passa a valer o meu benefício depois do reajuste anual` IS
+    `art. 41-A — valor do benefício depois do reajuste anual, em reais` `o valor do meu benefício, em reais` `a variação do INPC desde o início do benefício ou do último reajuste` `o aumento por elevação do salário mínimo a compensar, em reais` `tenho direito adquirido a valor acima do limite máximo` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+
+-- Art. 41-A, §§ 2 and 3 (and § 4, what a working day is). The three working-day dates are asked as dates,
+-- worked out with the banking day of § 4.
+@export Qual é o primeiro dia em que o meu benefício do mês deve ser pago? (art. 41-A, §§ 2º e 3º)
+GIVEN `a renda mensal do meu benefício, em reais` IS A NUMBER @desc Qual é a renda mensal do seu benefício, em reais?
+      `o quinto dia útil que antecede o final do mês da competência` IS A DATE @desc Qual é o quinto dia útil que antecede o final do mês da competência (dia útil é o de expediente bancário com horário normal de atendimento)?
+      `o primeiro dia útil do mês seguinte` IS A DATE @desc Qual é o primeiro dia útil do mês seguinte ao da competência?
+      `o quinto dia útil do mês seguinte` IS A DATE @desc Qual é o quinto dia útil do mês seguinte ao da competência?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A DATE
+DECIDE `Qual é o primeiro dia em que o meu benefício do mês deve ser pago` IS
+    `art. 41-A, §§ 2º e 3º — primeiro dia do período de pagamento` `a renda mensal do meu benefício, em reais` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`) `os dias úteis do pagamento`
+    WHERE
+        `os dias úteis do pagamento` MEANS `Dias úteis do pagamento (art. 41-A, §§ 2º a 4º)` WITH
+            `quinto dia útil que antecede o final do mês da competência`  IS `o quinto dia útil que antecede o final do mês da competência`
+            `primeiro dia útil do mês seguinte ao da competência`         IS `o primeiro dia útil do mês seguinte`
+            `quinto dia útil do mês seguinte ao da competência`           IS `o quinto dia útil do mês seguinte`
+
+@export Qual é o último dia em que o meu benefício do mês deve ser pago? (art. 41-A, §§ 2º e 3º)
+GIVEN `o quinto dia útil que antecede o final do mês da competência` IS A DATE @desc Qual é o quinto dia útil que antecede o final do mês da competência?
+      `o primeiro dia útil do mês seguinte` IS A DATE @desc Qual é o primeiro dia útil do mês seguinte ao da competência?
+      `o quinto dia útil do mês seguinte` IS A DATE @desc Qual é o quinto dia útil do mês seguinte ao da competência?
+GIVETH A DATE
+DECIDE `Qual é o último dia em que o meu benefício do mês deve ser pago` IS
+    `art. 41-A, §§ 2º e 3º — último dia do período de pagamento` `os dias úteis do pagamento`
+    WHERE
+        `os dias úteis do pagamento` MEANS `Dias úteis do pagamento (art. 41-A, §§ 2º a 4º)` WITH
+            `quinto dia útil que antecede o final do mês da competência`  IS `o quinto dia útil que antecede o final do mês da competência`
+            `primeiro dia útil do mês seguinte ao da competência`         IS `o primeiro dia útil do mês seguinte`
+            `quinto dia útil do mês seguinte ao da competência`           IS `o quinto dia útil do mês seguinte`
+
+@export O meu benefício do mês foi pago dentro do período devido? (art. 41-A, §§ 2º e 3º)
+GIVEN `a renda mensal do meu benefício, em reais` IS A NUMBER @desc Qual é a renda mensal do seu benefício, em reais?
+      `o quinto dia útil que antecede o final do mês da competência` IS A DATE @desc Qual é o quinto dia útil que antecede o final do mês da competência?
+      `o primeiro dia útil do mês seguinte` IS A DATE @desc Qual é o primeiro dia útil do mês seguinte ao da competência?
+      `o quinto dia útil do mês seguinte` IS A DATE @desc Qual é o quinto dia útil do mês seguinte ao da competência?
+      `a data em que recebi o pagamento` IS A DATE @desc Em que data você recebeu o pagamento?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A BOOLEAN
+DECIDE `O meu benefício do mês foi pago dentro do período devido` IS
+    `art. 41-A, §§ 2º e 3º — o benefício foi pago dentro do período de pagamento` `a renda mensal do meu benefício, em reais` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`) `os dias úteis do pagamento` `a data em que recebi o pagamento`
+    WHERE
+        `os dias úteis do pagamento` MEANS `Dias úteis do pagamento (art. 41-A, §§ 2º a 4º)` WITH
+            `quinto dia útil que antecede o final do mês da competência`  IS `o quinto dia útil que antecede o final do mês da competência`
+            `primeiro dia útil do mês seguinte ao da competência`         IS `o primeiro dia útil do mês seguinte`
+            `quinto dia útil do mês seguinte ao da competência`           IS `o quinto dia útil do mês seguinte`
+
+@export Até que dia devo receber o primeiro pagamento do meu benefício? (art. 41-A, § 5º)
+GIVEN `a data em que entreguei a documentação necessária à concessão` IS A DATE @desc Em que data você entregou a documentação necessária à concessão do benefício?
+GIVETH A DATE
+DECIDE `Até que dia devo receber o primeiro pagamento do meu benefício` IS
+    `art. 41-A, § 5º — último dia para o primeiro pagamento do benefício` `a data em que entreguei a documentação necessária à concessão`
+
+@export Recebi o primeiro pagamento do meu benefício no prazo? (art. 41-A, § 5º)
+GIVEN `a data em que entreguei a documentação necessária à concessão` IS A DATE @desc Em que data você entregou a documentação necessária à concessão do benefício?
+      `a data em que recebi o primeiro pagamento` IS A DATE @desc Em que data você recebeu o primeiro pagamento?
+GIVETH A BOOLEAN
+DECIDE `Recebi o primeiro pagamento do meu benefício no prazo` IS
+    `art. 41-A, § 5º — o primeiro pagamento foi efetuado no prazo` `a data em que entreguei a documentação necessária à concessão` `a data em que recebi o primeiro pagamento`
+
+§ `Os benefícios (arts. 42 a 58)`
+
+§§ `Aposentadoria por invalidez (arts. 42 a 47)`
+-- This group arises only for a person who is, or may be, incapacitated for work.
+
+@export Tenho direito à aposentadoria por invalidez? (art. 42, caput, § 1º e § 2º)
+GIVEN `eu cumpri a carência exigida` IS A BOOLEAN @desc Você já cumpriu a carência exigida para a aposentadoria por invalidez (quando ela é exigida)?
+      `a perícia médica da Previdência Social conclui que estou incapaz e insusceptível de reabilitação` IS A BOOLEAN @desc A perícia médica da Previdência Social concluiu que você está incapaz e insusceptível de reabilitação para o exercício de atividade que lhe garanta a subsistência?
+      `a minha doença ou lesão já existia quando me filiei` IS A BOOLEAN @desc A doença ou lesão que causa a incapacidade já existia quando você se filiou ao Regime Geral de Previdência Social?
+      `a minha incapacidade sobreveio por progressão ou agravamento` IS A BOOLEAN @desc A incapacidade sobreveio por motivo de progressão ou agravamento dessa doença ou lesão?
+GIVETH A BOOLEAN
+DECIDE `Tenho direito à aposentadoria por invalidez` IS
+    `art. 42 — o segurado tem direito à aposentadoria por invalidez` `eu cumpri a carência exigida` `a perícia médica da Previdência Social conclui que estou incapaz e insusceptível de reabilitação` `a minha doença ou lesão já existia quando me filiei` `a minha incapacidade sobreveio por progressão ou agravamento`
+
+@export A minha doença ou lesão anterior à filiação me tira o direito à aposentadoria por invalidez? (art. 42, § 2º)
+GIVEN `a minha doença ou lesão já existia quando me filiei` IS A BOOLEAN @desc A doença ou lesão já existia quando você se filiou ao Regime Geral de Previdência Social?
+      `a minha incapacidade sobreveio por progressão ou agravamento` IS A BOOLEAN @desc A incapacidade sobreveio por motivo de progressão ou agravamento dessa doença ou lesão?
+GIVETH A BOOLEAN
+DECIDE `A minha doença ou lesão anterior à filiação me tira o direito à aposentadoria por invalidez` IS
+    `art. 42, § 2º — a doença ou lesão preexistente à filiação não confere direito à aposentadoria por invalidez` `a minha doença ou lesão já existia quando me filiei` `a minha incapacidade sobreveio por progressão ou agravamento`
+
+@export Por quanto tempo recebo a aposentadoria por invalidez? (art. 42)
+GIVETH A `Duração do benefício`
+DECIDE `Por quanto tempo recebo a aposentadoria por invalidez` IS
+    `art. 42 — duração da aposentadoria por invalidez`
+
+@export Posso levar um médico de minha confiança à perícia? (art. 42, § 1º)
+GIVEN `levo médico de minha confiança às minhas expensas` IS A BOOLEAN @desc Você levaria o médico de sua confiança às suas expensas (por sua conta)?
+GIVETH A BOOLEAN
+DECIDE `Posso levar um médico de minha confiança à perícia` IS
+    `art. 42, § 1º — o segurado pode fazer-se acompanhar de médico de sua confiança no exame médico-pericial` `levo médico de minha confiança às minhas expensas`
+
+@export A minha perícia pode ser feita por telemedicina ou por análise documental? (art. 42, § 1º-A)
+GIVEN `a minha situação atende ao regulamento` IS A BOOLEAN @desc A sua situação atende às situações e requisitos que o regulamento define para a perícia por telemedicina ou por análise documental?
+GIVETH A BOOLEAN
+DECIDE `A minha perícia pode ser feita por telemedicina ou por análise documental` IS
+    `art. 42, § 1º-A — o exame médico-pericial pode ser realizado por telemedicina ou por análise documental` `a minha situação atende ao regulamento`
+
+-- Art. 43, caput and § 1. After an auxílio-doença: the day after it ceased. Without one, where the
+-- first examination finds total and definitive incapacity: the dates of § 1.
+@export A partir de que data recebo a aposentadoria por invalidez? (art. 43, caput e § 1º)
+GIVEN `a aposentadoria sucede um auxílio-doença` IS A BOOLEAN @desc A aposentadoria por invalidez vem depois de um auxílio-doença que você recebia?
+      `a data em que o auxílio-doença cessou` IS A DATE @desc Em que data o auxílio-doença cessou? (Só vale se respondeu que sim acima.)
+      `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `a data do meu afastamento da atividade` IS A DATE @desc Em que data você se afastou da atividade?
+      `a data do início da minha incapacidade` IS A DATE @desc Em que data começou a sua incapacidade?
+      `a data do meu requerimento` IS A DATE @desc Em que data você pediu a aposentadoria?
+GIVETH A DATE
+DECIDE `A partir de que data recebo a aposentadoria por invalidez` IS
+    IF `a aposentadoria sucede um auxílio-doença`
+    THEN `art. 43 — data de início da aposentadoria por invalidez que sucede o auxílio-doença` `a data em que o auxílio-doença cessou`
+    ELSE `art. 43, § 1º — data de início da aposentadoria por invalidez quando a perícia inicial conclui pela incapacidade total e definitiva` (`eu como segurado` `a minha categoria de segurado` masculino 0) `a data do meu afastamento da atividade` `a data do início da minha incapacidade` `a data do meu requerimento`
+    -- Placeholder: the § 1 rule reads only the category of the Segurado.
+
+@export A minha empresa deve me pagar o salário neste dia do meu afastamento por invalidez? (art. 43, § 2º)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `o dia do afastamento, contado do primeiro dia` IS A NUMBER @desc Que dia do afastamento por motivo de invalidez é esse, contando o primeiro dia como dia 1?
+GIVETH A BOOLEAN
+DECIDE `A minha empresa deve me pagar o salário neste dia do meu afastamento por invalidez` IS
+    `art. 43, § 2º — a empresa deve pagar o salário ao segurado empregado no dia do afastamento` (`eu como segurado` `a minha categoria de segurado` masculino 0) `o dia do afastamento, contado do primeiro dia`
+    -- Placeholder: the rule reads only the category of the Segurado.
+
+@export Posso ser convocado a qualquer momento para avaliar a minha aposentadoria por invalidez? (art. 43, §§ 4º a 6º)
+GIVEN `tenho uma das doenças do § 5º` IS A BOOLEAN @desc Você tem síndrome da imunodeficiência adquirida, doença de Alzheimer, doença de Parkinson ou esclerose lateral amiotrófica?
+      `a perícia constata que a minha incapacidade é permanente, irreversível ou irrecuperável` IS A BOOLEAN @desc A perícia médica constatou que a sua incapacidade é permanente, irreversível ou irrecuperável?
+      `há fundamentada suspeita de fraude ou erro` IS A BOOLEAN @desc Há fundamentada suspeita de fraude ou erro?
+GIVETH A BOOLEAN
+DECIDE `Posso ser convocado a qualquer momento para avaliar a minha aposentadoria por invalidez` IS
+    `art. 43, § 4º — o aposentado por invalidez pode ser convocado a qualquer momento para avaliação` `tenho uma das doenças do § 5º` `a perícia constata que a minha incapacidade é permanente, irreversível ou irrecuperável` `há fundamentada suspeita de fraude ou erro`
+
+-- Arts. 44 and 45. The income is 100% of the salário-de-benefício; for an accident victim on
+-- auxílio-doença it is at least that benefit's value; the 25% is added outside the cap.
+@export Quanto recebo por mês de aposentadoria por invalidez, em reais? (arts. 44 e 45)
+GIVEN `o meu salário-de-benefício, em reais` IS A NUMBER @desc Qual é o seu salário-de-benefício, em reais?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+      `a minha incapacidade vem de acidente do trabalho` IS A BOOLEAN @desc A sua incapacidade vem de um acidente do trabalho?
+      `estou em gozo de auxílio-doença` IS A BOOLEAN @desc Você está em gozo de auxílio-doença?
+      `o valor do meu auxílio-doença, reajustado, em reais` IS A NUMBER @desc Qual é o valor atual do seu auxílio-doença, reajustado, em reais? (0 se não recebe)
+      `necessito da assistência permanente de outra pessoa` IS A BOOLEAN @desc Você necessita da assistência permanente de outra pessoa?
+GIVETH A NUMBER
+DECIDE `Quanto recebo por mês de aposentadoria por invalidez` IS
+    `art. 45 — valor da aposentadoria por invalidez com o acréscimo, fora do limite máximo, em reais` `a renda mensal sem o acréscimo` `necessito da assistência permanente de outra pessoa`
+    WHERE
+        `os valores de referência` MEANS `os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`
+        `a renda mensal sem o acréscimo` MEANS
+            `art. 44, § 2º — renda mensal da aposentadoria por invalidez do acidentado do trabalho em gozo de auxílio-doença, em reais` `o meu salário-de-benefício, em reais` `os valores de referência` `a minha incapacidade vem de acidente do trabalho` `estou em gozo de auxílio-doença` `o valor do meu auxílio-doença, reajustado, em reais`
+
+@export Tenho direito ao acréscimo de 25% na aposentadoria por invalidez, e de quanto é, em reais? (art. 45)
+GIVEN `a renda mensal da minha aposentadoria por invalidez, em reais` IS A NUMBER @desc Qual é a renda mensal da sua aposentadoria por invalidez, em reais?
+      `necessito da assistência permanente de outra pessoa` IS A BOOLEAN @desc Você necessita da assistência permanente de outra pessoa?
+GIVETH A MAYBE NUMBER
+DECIDE `Tenho direito ao acréscimo de 25% na aposentadoria por invalidez` IS
+    `art. 45 — acréscimo de vinte e cinco por cento à aposentadoria por invalidez, em reais` `a renda mensal da minha aposentadoria por invalidez, em reais` `necessito da assistência permanente de outra pessoa`
+
+@export O acréscimo de 25% passa para a pensão por morte? (art. 45, parágrafo único, c)
+GIVETH A BOOLEAN
+DECIDE `O acréscimo de 25% passa para a pensão por morte` IS
+    `art. 45, parágrafo único, c — o acréscimo é incorporado ao valor da pensão`
+
+@export Até quando recebo o acréscimo de 25%? (art. 45, parágrafo único, c)
+GIVEN `a data do óbito do aposentado` IS A DATE @desc Em que data o aposentado faleceu (ou faleceria)?
+GIVETH A `Duração do benefício`
+DECIDE `Até quando recebo o acréscimo de 25%` IS
+    `art. 45, parágrafo único, c — duração do acréscimo` `a data do óbito do aposentado`
+
+@export Quanto passa a ser o acréscimo de 25% depois do reajuste do meu benefício, em reais? (art. 45, parágrafo único, b)
+GIVEN `a renda mensal da minha aposentadoria depois do reajuste, em reais` IS A NUMBER @desc Qual é a renda mensal da sua aposentadoria por invalidez depois do reajuste, em reais?
+GIVETH A NUMBER
+DECIDE `Quanto passa a ser o acréscimo de 25% depois do reajuste do meu benefício` IS
+    `art. 45, parágrafo único, b — acréscimo recalculado depois do reajuste do benefício, em reais` `a renda mensal da minha aposentadoria depois do reajuste, em reais`
+
+@export A minha aposentadoria por invalidez é cancelada se eu voltar a trabalhar? (art. 46)
+GIVEN `voltei voluntariamente à atividade` IS A BOOLEAN @desc Você voltou voluntariamente à atividade?
+GIVETH A BOOLEAN
+DECIDE `A minha aposentadoria por invalidez é cancelada se eu voltar a trabalhar` IS
+    `art. 46 — a aposentadoria por invalidez é cancelada automaticamente` `voltei voluntariamente à atividade`
+
+@export A partir de que data a minha aposentadoria por invalidez é cancelada? (art. 46)
+GIVEN `a data em que voltei à atividade` IS A DATE @desc Em que data você voltou voluntariamente à atividade?
+GIVETH A DATE
+DECIDE `A partir de que data a minha aposentadoria por invalidez é cancelada` IS
+    `art. 46 — data a partir da qual a aposentadoria é cancelada` `a data em que voltei à atividade`
+
+@export O que acontece com a minha aposentadoria por invalidez se eu recuperar a capacidade de trabalho? (art. 47)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `a data em que começou a aposentadoria ou o auxílio-doença que a antecedeu` IS A DATE @desc Em que data começou a aposentadoria por invalidez, ou o auxílio-doença que a antecedeu sem interrupção?
+      `a data em que foi verificada a recuperação` IS A DATE @desc Em que data foi verificada a recuperação da sua capacidade de trabalho?
+      `a recuperação é total` IS A BOOLEAN @desc A recuperação da capacidade é total?
+      `fui declarado apto para trabalho diverso do que exercia` IS A BOOLEAN @desc Você foi declarado apto para trabalho diverso do que habitualmente exercia?
+      `tenho direito de voltar à função que exercia na empresa` IS A BOOLEAN @desc Você (empregado) tem direito de voltar à função que desempenhava na empresa quando se aposentou, na forma da legislação trabalhista?
+      `quantos meses durou o auxílio-doença mais a aposentadoria` IS A NUMBER @desc Quantos meses completos duraram, somados, o auxílio-doença e a aposentadoria por invalidez?
+GIVETH A `Efeito da recuperação da capacidade de trabalho (art. 47)`
+DECIDE `O que acontece com a minha aposentadoria por invalidez se eu recuperar a capacidade de trabalho` IS
+    `art. 47 — efeito da recuperação da capacidade de trabalho sobre a aposentadoria por invalidez` (`eu como segurado` `a minha categoria de segurado` masculino 0) `a data em que começou a aposentadoria ou o auxílio-doença que a antecedeu` `a data em que foi verificada a recuperação` `a recuperação é total` `fui declarado apto para trabalho diverso do que exercia` `tenho direito de voltar à função que exercia na empresa` `quantos meses durou o auxílio-doença mais a aposentadoria`
+    -- Placeholder: the rule reads only the category of the Segurado.
+
+@export Quanto recebo da aposentadoria por invalidez mantida, em uma data depois da recuperação parcial, em reais? (art. 47, II)
+GIVEN `a data em que foi verificada a recuperação` IS A DATE @desc Em que data foi verificada a recuperação da sua capacidade de trabalho?
+      `a data que quero saber` IS A DATE @desc Para que data você quer saber quanto recebe?
+      `o valor integral da minha aposentadoria, em reais` IS A NUMBER @desc Qual é o valor integral da sua aposentadoria por invalidez, em reais?
+GIVETH A MAYBE NUMBER
+DECIDE `Quanto recebo da aposentadoria por invalidez mantida em uma data depois da recuperação parcial` IS
+    CONSIDER `art. 47, inciso II — fase da aposentadoria mantida na data` `a data em que foi verificada a recuperação` `a data que quero saber`
+    WHEN JUST `a fase` THEN JUST (`art. 47, inciso II — valor pago da aposentadoria na fase, em reais` `a fase` `o valor integral da minha aposentadoria, em reais`)
+    WHEN NOTHING THEN NOTHING
+
+§§ `Aposentadoria por idade (arts. 48 a 51)`
+-- This group arises only for a person who is asking for the aposentadoria por idade.
+
+@export Qual é a idade mínima para a minha aposentadoria por idade, em anos? (art. 48, caput e § 1º)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `presto serviço de natureza rural` IS A BOOLEAN @desc Você presta serviço de natureza rural?
+      `sou o contribuinte individual do art. 11, V, g` IS A BOOLEAN @desc Você é o contribuinte individual que presta serviço de natureza rural, em caráter eventual, a uma ou mais empresas, sem relação de emprego (art. 11, V, g)?
+GIVETH A NUMBER
+DECIDE `Qual é a idade mínima para a minha aposentadoria por idade` IS
+    `art. 48 — idade mínima para a aposentadoria por idade, em anos completos` `eu como segurado de sexo` `sou trabalhador rural`
+    WHERE
+        -- Placeholder: the rules read the category and the sex of the Segurado, not the age.
+        `eu como segurado de sexo` MEANS `eu como segurado` `a minha categoria de segurado` `o meu sexo` 0
+        `sou trabalhador rural` MEANS
+            `art. 48, § 1º — o segurado é trabalhador rural` `eu como segurado de sexo` `presto serviço de natureza rural` `sou o contribuinte individual do art. 11, V, g`
+
+@export Tenho direito à aposentadoria por idade? (art. 48)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `a minha idade em anos completos` IS A NUMBER @desc Quantos anos completos você tem?
+      `presto serviço de natureza rural` IS A BOOLEAN @desc Você presta serviço de natureza rural?
+      `sou o contribuinte individual do art. 11, V, g` IS A BOOLEAN @desc Você é o contribuinte individual que presta serviço de natureza rural, em caráter eventual, a uma ou mais empresas, sem relação de emprego (art. 11, V, g)?
+      `eu cumpri a carência exigida` IS A BOOLEAN @desc Você já cumpriu a carência exigida para a aposentadoria por idade, só com contribuições?
+      `os meses de atividade rural que comprovo, contados para trás a partir do requerimento` IS A NUMBER @desc Quantos meses de atividade rural você comprova, contados para trás a partir do requerimento, ainda que de forma descontínua?
+      `os meses dos períodos do art. 11, § 9º, III a VIII` IS A NUMBER @desc Quantos meses você tem nos períodos a que se referem os incisos III a VIII do § 9º do art. 11 (por exemplo, de gozo de benefício)?
+      `os meses de contribuição sob outras categorias` IS A NUMBER @desc Quantos meses de contribuição você tem sob outras categorias de segurado?
+      `o número de meses de carência do benefício` IS A NUMBER @desc Quantos meses de contribuição correspondem à carência da aposentadoria por idade?
+GIVETH A BOOLEAN
+DECIDE `Tenho direito à aposentadoria por idade` IS
+    `art. 48 — o segurado tem direito à aposentadoria por idade` (`eu como segurado` `a minha categoria de segurado` `o meu sexo` `a minha idade em anos completos`) `presto serviço de natureza rural` `sou o contribuinte individual do art. 11, V, g` `eu cumpri a carência exigida` `os meses de atividade rural que comprovo, contados para trás a partir do requerimento` `os meses dos períodos do art. 11, § 9º, III a VIII` `os meses de contribuição sob outras categorias` `o número de meses de carência do benefício`
+
+@export Qual salário-de-contribuição vale, para cada mês meu como segurado especial, no cálculo da aposentadoria por idade do trabalhador rural que soma outras categorias, em reais? (art. 48, § 4º)
+GIVEN `o limite mínimo do salário-de-contribuição, em reais` IS A NUMBER @desc Qual é o limite mínimo do salário-de-contribuição da Previdência Social, em reais?
+GIVETH A NUMBER
+DECIDE `Qual salário-de-contribuição vale para cada mês meu como segurado especial` IS
+    `art. 48, § 4º — salário-de-contribuição mensal do período como segurado especial, em reais` `os valores de referência com o limite mínimo`
+    WHERE
+        -- Placeholders: the rule reads only the limite mínimo.
+        `os valores de referência com o limite mínimo` MEANS `Valores de referência` WITH
+            `salário mínimo`                            IS `o limite mínimo do salário-de-contribuição, em reais`
+            `limite máximo do salário-de-contribuição`  IS `o limite mínimo do salário-de-contribuição, em reais`
+            `limite mínimo do salário-de-contribuição`  IS `o limite mínimo do salário-de-contribuição, em reais`
+
+@export A partir de que data recebo a aposentadoria por idade? (art. 49)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `houve o fim do meu emprego` IS A BOOLEAN @desc O seu emprego terminou?
+      `a data do fim do meu emprego` IS A DATE @desc Em que data o seu emprego terminou? (Só vale se respondeu que sim acima.)
+      `a data do meu requerimento` IS A DATE @desc Em que data você pediu a aposentadoria?
+GIVETH A DATE
+DECIDE `A partir de que data recebo a aposentadoria por idade` IS
+    `art. 49 — data de início da aposentadoria por idade` (`eu como segurado` `a minha categoria de segurado` masculino 0) `o fim do meu emprego, se houve` `a data do meu requerimento`
+    WHERE
+        -- Placeholder: the rule reads only the category of the Segurado.
+        `o fim do meu emprego, se houve` MEANS IF `houve o fim do meu emprego` THEN JUST `a data do fim do meu emprego` ELSE NOTHING
+
+@export Quanto recebo por mês de aposentadoria por idade, em reais? (art. 50)
+GIVEN `o meu salário-de-benefício, em reais` IS A NUMBER @desc Qual é o seu salário-de-benefício, em reais?
+      `o número de contribuições mensais que tenho` IS A NUMBER @desc Quantas contribuições mensais você tem?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A NUMBER
+DECIDE `Quanto recebo por mês de aposentadoria por idade` IS
+    `art. 50 — renda mensal da aposentadoria por idade, em reais` `o meu salário-de-benefício, em reais` `o número de contribuições mensais que tenho` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+
+@export A minha empresa pode requerer a minha aposentadoria por idade, e ela passa a ser compulsória? (art. 51)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `a minha idade em anos completos` IS A NUMBER @desc Quantos anos completos você tem?
+      `eu cumpri a carência exigida` IS A BOOLEAN @desc Você já cumpriu o período de carência exigido?
+GIVETH A BOOLEAN
+DECIDE `A minha empresa pode requerer a minha aposentadoria por idade` IS
+    `art. 51 — a empresa pode requerer a aposentadoria por idade do segurado empregado` (`eu como segurado` `a minha categoria de segurado` `o meu sexo` `a minha idade em anos completos`) `eu cumpri a carência exigida`
+
+@export Que data vale como a da rescisão do meu contrato de trabalho se a empresa requereu a minha aposentadoria? (art. 51)
+GIVEN `a data do início da aposentadoria por idade` IS A DATE @desc Em que data começa a aposentadoria por idade?
+GIVETH A DATE
+DECIDE `Que data vale como a da rescisão do meu contrato de trabalho se a empresa requereu a minha aposentadoria` IS
+    `art. 51 — data considerada da rescisão do contrato de trabalho` `a data do início da aposentadoria por idade`
+
+§§ `Aposentadoria por tempo de serviço, ou de contribuição (arts. 52 a 56)`
+-- This group arises only for a person who is asking for the aposentadoria por tempo de contribuição, or for the aposentadoria of the professor or the professora.
+
+@export Tenho direito à aposentadoria por tempo de contribuição? (art. 52)
+GIVEN `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `eu cumpri a carência exigida` IS A BOOLEAN @desc Você já cumpriu a carência exigida para a aposentadoria por tempo de contribuição?
+      `o meu tempo de contribuição, em meses completos` IS A NUMBER @desc Quantos meses completos de tempo de serviço (ou de contribuição) você tem? (25 anos são 300 meses; 30 anos, 360)
+GIVETH A BOOLEAN
+DECIDE `Tenho direito à aposentadoria por tempo de contribuição` IS
+    `art. 52 — o segurado tem direito à aposentadoria por tempo de serviço` (`eu como segurado` `segurado empregado` `o meu sexo` 0) `eu cumpri a carência exigida` `o meu tempo de contribuição, em meses completos`
+    -- Placeholder: the rule reads only the sex of the Segurado.
+
+@export Que percentual do meu salário-de-benefício recebo na aposentadoria por tempo de contribuição? (art. 53)
+GIVEN `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `o meu tempo de contribuição, em meses completos` IS A NUMBER @desc Quantos meses completos de tempo de serviço (ou de contribuição) você tem?
+GIVETH A MAYBE NUMBER
+DECIDE `Que percentual do meu salário-de-benefício recebo na aposentadoria por tempo de contribuição` IS
+    `art. 53 — percentual do salário-de-benefício da aposentadoria por tempo de serviço` (`eu como segurado` `segurado empregado` `o meu sexo` 0) `o meu tempo de contribuição, em meses completos`
+    -- Placeholder: the rule reads only the sex of the Segurado.
+
+@export Quanto recebo por mês de aposentadoria por tempo de contribuição, em reais? (art. 53)
+GIVEN `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `o meu tempo de contribuição, em meses completos` IS A NUMBER @desc Quantos meses completos de tempo de serviço (ou de contribuição) você tem?
+      `o meu salário-de-benefício, em reais` IS A NUMBER @desc Qual é o seu salário-de-benefício, em reais?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A MAYBE NUMBER
+DECIDE `Quanto recebo por mês de aposentadoria por tempo de contribuição` IS
+    `art. 53 — renda mensal da aposentadoria por tempo de serviço, em reais` (`eu como segurado` `segurado empregado` `o meu sexo` 0) `o meu tempo de contribuição, em meses completos` `o meu salário-de-benefício, em reais` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+    -- Placeholder: the rule reads only the sex of the Segurado.
+
+@export A partir de que data recebo a aposentadoria por tempo de contribuição? (art. 54)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `houve o fim do meu emprego` IS A BOOLEAN @desc O seu emprego terminou?
+      `a data do fim do meu emprego` IS A DATE @desc Em que data o seu emprego terminou? (Só vale se respondeu que sim acima.)
+      `a data do meu requerimento` IS A DATE @desc Em que data você pediu a aposentadoria?
+GIVETH A DATE
+DECIDE `A partir de que data recebo a aposentadoria por tempo de contribuição` IS
+    `art. 54 — data de início da aposentadoria por tempo de serviço` (`eu como segurado` `a minha categoria de segurado` masculino 0) `o fim do meu emprego, se houve` `a data do meu requerimento`
+    WHERE
+        -- Placeholder: the rule reads only the category of the Segurado.
+        `o fim do meu emprego, se houve` MEANS IF `houve o fim do meu emprego` THEN JUST `a data do fim do meu emprego` ELSE NOTHING
+
+@export Este período conta como tempo de serviço para a minha aposentadoria? (art. 55, caput e I a VI)
+GIVEN `a espécie do período` IS A `Espécie de período de tempo de serviço (art. 55)` @desc Que tipo de período é esse (atividade, serviço militar, gozo intercalado de auxílio-doença ou aposentadoria por invalidez, contribuição como facultativo, mandato eletivo, contribuição depois de deixar a atividade, ou contribuição da Lei nº 8.162)?
+      `o serviço militar já foi contado para inatividade remunerada ou aposentadoria no serviço público` IS A BOOLEAN @desc O serviço militar já foi contado para inatividade remunerada nas Forças Armadas ou para aposentadoria no serviço público?
+      `o mandato eletivo já foi contado para aposentadoria em outro regime` IS A BOOLEAN @desc O tempo de mandato eletivo já foi contado para aposentadoria em outro regime de previdência social?
+      `o gozo de auxílio-doença ou aposentadoria por invalidez foi intercalado com atividade` IS A BOOLEAN @desc O período em que você esteve em gozo de auxílio-doença ou de aposentadoria por invalidez foi intercalado com períodos de atividade?
+GIVETH A BOOLEAN
+DECIDE `Este período conta como tempo de serviço para a minha aposentadoria` IS
+    `art. 55 — o período conta como tempo de serviço` `a espécie do período` `o serviço militar já foi contado para inatividade remunerada ou aposentadoria no serviço público` `o mandato eletivo já foi contado para aposentadoria em outro regime` `o gozo de auxílio-doença ou aposentadoria por invalidez foi intercalado com atividade`
+
+@export Este período conta para a minha carência? (art. 55, inciso VI)
+GIVEN `a espécie do período` IS A `Espécie de período de tempo de serviço (art. 55)` @desc Que tipo de período é esse?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Este período conta para a minha carência` IS
+    `art. 55, inciso VI — o período conta para a carência` `a espécie do período`
+
+@export Posso averbar o tempo de serviço de atividade que não determinava filiação obrigatória ao regime anterior? (art. 55, § 1º)
+GIVEN `a atividade não determinava filiação obrigatória ao regime urbano anterior` IS A BOOLEAN @desc A atividade não determinava filiação obrigatória ao anterior Regime de Previdência Social Urbana?
+      `foram recolhidas as contribuições correspondentes` IS A BOOLEAN @desc Foram recolhidas as contribuições correspondentes, conforme o Regulamento?
+      `sou trabalhador rural e o tempo é anterior à vigência da Lei nº 8.213` IS A BOOLEAN @desc O tempo é de trabalhador rural e anterior à vigência da Lei nº 8.213?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Posso averbar o tempo de serviço de atividade que não determinava filiação obrigatória ao regime anterior` IS
+    `art. 55, § 1º — a averbação do tempo de serviço sem filiação obrigatória ao regime anterior é admitida` `a atividade não determinava filiação obrigatória ao regime urbano anterior` `foram recolhidas as contribuições correspondentes` `sou trabalhador rural e o tempo é anterior à vigência da Lei nº 8.213`
+
+@export O meu tempo de trabalhador rural anterior à Lei nº 8.213 conta sem contribuições? (art. 55, § 2º)
+GIVEN `sou trabalhador rural` IS A BOOLEAN @desc Você é trabalhador rural?
+      `o último dia do período de serviço` IS A DATE @desc Qual é o último dia do período de serviço?
+GIVETH A MAYBE BOOLEAN
+DECIDE `O meu tempo de trabalhador rural anterior à Lei nº 8.213 conta sem contribuições` IS
+    CONSIDER `art. 55, § 2º — efeito do tempo de serviço do trabalhador rural anterior à vigência da Lei nº 8.213` `sou trabalhador rural` `o último dia do período de serviço`
+    WHEN JUST `o efeito` THEN JUST (`o efeito`'s `conta como tempo de serviço sem o recolhimento das contribuições`)
+    WHEN NOTHING THEN NOTHING
+
+@export O meu tempo de trabalhador rural anterior à Lei nº 8.213 conta para a carência? (art. 55, § 2º)
+GIVEN `sou trabalhador rural` IS A BOOLEAN @desc Você é trabalhador rural?
+      `o último dia do período de serviço` IS A DATE @desc Qual é o último dia do período de serviço?
+GIVETH A MAYBE BOOLEAN
+DECIDE `O meu tempo de trabalhador rural anterior à Lei nº 8.213 conta para a carência` IS
+    CONSIDER `art. 55, § 2º — efeito do tempo de serviço do trabalhador rural anterior à vigência da Lei nº 8.213` `sou trabalhador rural` `o último dia do período de serviço`
+    WHEN JUST `o efeito` THEN JUST (`o efeito`'s `conta para a carência`)
+    WHEN NOTHING THEN NOTHING
+
+@export A minha prova do tempo de serviço produz efeito? (art. 55, § 3º)
+GIVEN `a prova se baseia em início de prova material contemporânea dos fatos` IS A BOOLEAN @desc A sua prova se baseia em início de prova material contemporânea dos fatos?
+      `ocorreu motivo de força maior ou caso fortuito` IS A BOOLEAN @desc Ocorreu motivo de força maior ou caso fortuito que impediu a prova material?
+GIVETH A BOOLEAN
+DECIDE `A minha prova do tempo de serviço produz efeito` IS
+    `art. 55, § 3º — a comprovação do tempo de serviço produz efeito` `a prova se baseia em início de prova material contemporânea dos fatos` `ocorreu motivo de força maior ou caso fortuito`
+
+@export O meu período como contribuinte individual ou facultativo deixa de ser computado como tempo de contribuição? (art. 55, § 4º)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `contribuí na forma do § 2º do art. 21 da Lei nº 8.212` IS A BOOLEAN @desc Você contribuiu na forma do § 2º do art. 21 da Lei nº 8.212?
+      `complementei as contribuições na forma do § 3º do art. 21` IS A BOOLEAN @desc Você complementou as contribuições na forma do § 3º do mesmo artigo?
+GIVETH A BOOLEAN
+DECIDE `O meu período como contribuinte individual ou facultativo deixa de ser computado como tempo de contribuição` IS
+    `art. 55, § 4º — o período não é computado como tempo de contribuição para a aposentadoria por tempo de serviço` (`eu como segurado` `a minha categoria de segurado` masculino 0) `contribuí na forma do § 2º do art. 21 da Lei nº 8.212` `complementei as contribuições na forma do § 3º do art. 21`
+    -- Placeholder: the rule reads only the category of the Segurado.
+
+@export Tenho direito a me aposentar como professor ou professora? (art. 56)
+GIVEN `o meu sexo` IS A Sexo @desc Qual é o seu sexo (masculino ou feminino)?
+      `o meu tempo de magistério, em meses completos` IS A NUMBER @desc Quantos meses completos de efetivo exercício em funções de magistério você tem? (30 anos são 360 meses; 25 anos, 300) O artigo não pede a carência; verifique também a do art. 25.
+GIVETH A BOOLEAN
+DECIDE `Tenho direito a me aposentar como professor ou professora` IS
+    `art. 56 — o professor ou a professora tem direito a aposentar-se por tempo de serviço` (`eu como segurado` `segurado empregado` `o meu sexo` 0) `o meu tempo de magistério, em meses completos`
+    -- Placeholder: the rule reads only the sex of the Segurado.
+
+@export Quanto recebo por mês de aposentadoria de professor ou professora, em reais? (art. 56)
+GIVEN `o meu salário-de-benefício, em reais` IS A NUMBER @desc Qual é o seu salário-de-benefício, em reais?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A NUMBER
+DECIDE `Quanto recebo por mês de aposentadoria de professor ou professora` IS
+    `art. 56 — renda mensal da aposentadoria do professor e da professora, em reais` `o meu salário-de-benefício, em reais` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+
+§§ `Aposentadoria especial (arts. 57 e 58)`
+-- This group arises only for a person who worked under conditions harmful to health or physical integrity.
+
+@export Tenho direito à aposentadoria especial? (art. 57, caput, §§ 3º e 4º, e art. 58)
+GIVEN `eu cumpri a carência exigida` IS A BOOLEAN @desc Você já cumpriu a carência exigida para a aposentadoria especial?
+      `o meu tempo de trabalho sujeito a condições especiais, em meses completos` IS A NUMBER @desc Quantos meses completos você trabalhou sujeito a condições especiais que prejudicam a saúde ou a integridade física?
+      `os anos de trabalho que a atividade exige` IS A NUMBER @desc Quantos anos de trabalho a sua atividade exige para a aposentadoria especial, conforme a lei: 15, 20 ou 25?
+      `comprovei perante o INSS o tempo de trabalho em condições especiais` IS A BOOLEAN @desc Você comprovou perante o INSS o tempo de trabalho em condições especiais que prejudicam a saúde ou a integridade física?
+      `o trabalho foi permanente, não ocasional nem intermitente` IS A BOOLEAN @desc O seu trabalho foi permanente, não ocasional nem intermitente?
+      `comprovei a exposição aos agentes nocivos` IS A BOOLEAN @desc Você comprovou a exposição aos agentes nocivos químicos, físicos, biológicos ou à associação de agentes prejudiciais?
+      `a exposição comprovada cobre o período exigido` IS A BOOLEAN @desc A exposição comprovada cobre o período equivalente ao exigido para a concessão do benefício?
+      `o agente consta da relação do Poder Executivo` IS A BOOLEAN @desc O agente nocivo consta da relação definida pelo Poder Executivo?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Tenho direito à aposentadoria especial` IS
+    `art. 57 — o segurado tem direito à aposentadoria especial` `eu cumpri a carência exigida` `o meu tempo de trabalho sujeito a condições especiais, em meses completos` `os anos de trabalho que a atividade exige` (`art. 57, § 3º — o tempo de trabalho em condições especiais está comprovado` `comprovei perante o INSS o tempo de trabalho em condições especiais` `o trabalho foi permanente, não ocasional nem intermitente`) (`a exposição está comprovada pelo período e o agente conta`)
+    WHERE
+        `a exposição está comprovada pelo período e o agente conta` MEANS
+                `art. 57, § 4º — a exposição aos agentes nocivos está comprovada pelo período exigido` `comprovei a exposição aos agentes nocivos` `a exposição comprovada cobre o período exigido`
+            AND `art. 58 — o agente é considerado para fins de concessão da aposentadoria especial` `o agente consta da relação do Poder Executivo`
+
+@export Quanto recebo por mês de aposentadoria especial, em reais? (art. 57, § 1º)
+GIVEN `o meu salário-de-benefício, em reais` IS A NUMBER @desc Qual é o seu salário-de-benefício, em reais?
+      `o salário mínimo na data do benefício, em reais` IS A NUMBER @desc Qual é o valor do salário mínimo, em reais?
+      `o limite máximo do salário-de-contribuição na data do benefício, em reais` IS A NUMBER @desc Qual é o limite máximo do salário-de-contribuição (o teto), em reais?
+GIVETH A NUMBER
+DECIDE `Quanto recebo por mês de aposentadoria especial` IS
+    `art. 57, § 1º — renda mensal da aposentadoria especial, em reais` `o meu salário-de-benefício, em reais` (`os valores de referência que informei` `o salário mínimo na data do benefício, em reais` `o limite máximo do salário-de-contribuição na data do benefício, em reais`)
+
+@export A partir de que data recebo a aposentadoria especial? (art. 57, § 2º)
+GIVEN `a minha categoria de segurado` IS A `Categoria de segurado` @desc Qual é a sua categoria de segurado?
+      `houve o fim do meu emprego` IS A BOOLEAN @desc O seu emprego terminou?
+      `a data do fim do meu emprego` IS A DATE @desc Em que data o seu emprego terminou? (Só vale se respondeu que sim acima.)
+      `a data do meu requerimento` IS A DATE @desc Em que data você pediu a aposentadoria?
+GIVETH A DATE
+DECIDE `A partir de que data recebo a aposentadoria especial` IS
+    `art. 57, § 2º — data de início da aposentadoria especial` (`eu como segurado` `a minha categoria de segurado` masculino 0) `o fim do meu emprego, se houve` `a data do meu requerimento`
+    WHERE
+        -- Placeholder: the rule reads only the category of the Segurado.
+        `o fim do meu emprego, se houve` MEANS IF `houve o fim do meu emprego` THEN JUST `a data do fim do meu emprego` ELSE NOTHING
+
+@export Quantos meses do meu tempo especial valem como tempo de atividade comum? (art. 57, § 5º)
+GIVEN `o meu tempo de trabalho sob condições especiais, em meses completos` IS A NUMBER @desc Quantos meses completos você trabalhou sob condições especiais?
+      `o fator de conversão do Ministério` IS A NUMBER @desc Qual é o fator de conversão ao tempo de atividade comum, segundo os critérios do Ministério? (1,4 por exemplo)
+GIVETH A NUMBER
+DECIDE `Quantos meses do meu tempo especial valem como tempo de atividade comum` IS
+    `art. 57, § 5º — tempo de trabalho sob condições especiais convertido em tempo de atividade comum, em meses` `o meu tempo de trabalho sob condições especiais, em meses completos` `o fator de conversão do Ministério`
+
+@export A minha aposentadoria especial é cancelada se eu continuar no trabalho que me expõe aos agentes nocivos? (art. 57, § 8º)
+GIVEN `continuo no exercício da atividade que me expõe aos agentes nocivos da relação` IS A BOOLEAN @desc Você continua no exercício de atividade ou operação que o sujeita aos agentes nocivos da relação do art. 58?
+GIVETH A BOOLEAN
+DECIDE `A minha aposentadoria especial é cancelada se eu continuar no trabalho que me expõe aos agentes nocivos` IS
+    `art. 57, § 8º — a aposentadoria especial é cancelada automaticamente` `continuo no exercício da atividade que me expõe aos agentes nocivos da relação`
+
+@export A partir de que data a minha aposentadoria especial é cancelada? (art. 57, § 8º)
+GIVEN `a data em que voltei ou continuei no trabalho exposto` IS A DATE @desc Em que data você voltou ou continuou a exercer a atividade ou operação que o expõe aos agentes nocivos?
+GIVETH A DATE
+DECIDE `A partir de que data a minha aposentadoria especial é cancelada` IS
+    `art. 57, § 8º — data a partir da qual a aposentadoria especial é cancelada` `a data em que voltei ou continuei no trabalho exposto`
+
+@export A minha exposição aos agentes nocivos está comprovada pelo formulário e pelo laudo? (art. 58, § 1º)
+GIVEN `a empresa emitiu o formulário na forma estabelecida pelo INSS` IS A BOOLEAN @desc A empresa (ou seu preposto) emitiu o formulário na forma estabelecida pelo INSS?
+      `o formulário se baseia em laudo técnico de condições ambientais do trabalho` IS A BOOLEAN @desc O formulário se baseia em laudo técnico de condições ambientais do trabalho?
+      `o laudo foi expedido por médico do trabalho ou engenheiro de segurança do trabalho` IS A BOOLEAN @desc O laudo foi expedido por médico do trabalho ou engenheiro de segurança do trabalho, nos termos da legislação trabalhista?
+GIVETH A BOOLEAN
+DECIDE `A minha exposição aos agentes nocivos está comprovada pelo formulário e pelo laudo` IS
+    `art. 58, § 1º — a efetiva exposição do segurado aos agentes nocivos está comprovada` `a empresa emitiu o formulário na forma estabelecida pelo INSS` `o formulário se baseia em laudo técnico de condições ambientais do trabalho` `o laudo foi expedido por médico do trabalho ou engenheiro de segurança do trabalho`
+
+@export O laudo técnico da minha empresa traz o que o artigo exige? (art. 58, § 2º)
+GIVEN `o laudo traz informação sobre tecnologia de proteção` IS A BOOLEAN @desc O laudo traz informação sobre a existência de tecnologia de proteção coletiva ou individual que diminua a intensidade do agente agressivo a limites de tolerância?
+      `o laudo recomenda a sua adoção pelo estabelecimento` IS A BOOLEAN @desc O laudo traz recomendação sobre a adoção dessa tecnologia pelo estabelecimento?
+GIVETH A BOOLEAN
+DECIDE `O laudo técnico da minha empresa traz o que o artigo exige` IS
+    `art. 58, § 2º — o laudo técnico traz o que o parágrafo exige` `o laudo traz informação sobre tecnologia de proteção` `o laudo recomenda a sua adoção pelo estabelecimento`
+
+@export A minha empresa está sujeita à penalidade do art. 133 por laudo desatualizado ou em desacordo? (art. 58, § 3º)
+GIVEN `a empresa mantém laudo técnico atualizado` IS A BOOLEAN @desc A empresa mantém laudo técnico atualizado com referência aos agentes nocivos existentes no ambiente de trabalho?
+      `a empresa emitiu documento em desacordo com o laudo` IS A BOOLEAN @desc A empresa emitiu documento de comprovação de efetiva exposição em desacordo com o laudo?
+GIVETH A BOOLEAN
+DECIDE `A minha empresa está sujeita à penalidade do art. 133 por laudo desatualizado ou em desacordo` IS
+    `art. 58, § 3º — a empresa está sujeita à penalidade prevista no art. 133` `a empresa mantém laudo técnico atualizado` `a empresa emitiu documento em desacordo com o laudo`
+
+@export A minha empresa me deve uma cópia do perfil profissiográfico, e já cumpriu o dever? (art. 58, § 4º)
+GIVEN `a empresa elaborou e manteve atualizado o perfil profissiográfico` IS A BOOLEAN @desc A empresa elaborou e manteve atualizado o perfil profissiográfico das suas atividades?
+      `o meu contrato de trabalho foi rescindido` IS A BOOLEAN @desc O seu contrato de trabalho foi rescindido?
+      `a empresa me deu cópia autêntica do perfil na rescisão` IS A BOOLEAN @desc A empresa lhe deu, quando da rescisão, cópia autêntica do perfil profissiográfico?
+GIVETH A BOOLEAN
+DECIDE `A minha empresa me deve uma cópia do perfil profissiográfico, e já cumpriu o dever` IS
+    `art. 58, § 4º — a empresa cumpriu o dever quanto ao perfil profissiográfico` `a empresa elaborou e manteve atualizado o perfil profissiográfico` `o meu contrato de trabalho foi rescindido` `a empresa me deu cópia autêntica do perfil na rescisão`
