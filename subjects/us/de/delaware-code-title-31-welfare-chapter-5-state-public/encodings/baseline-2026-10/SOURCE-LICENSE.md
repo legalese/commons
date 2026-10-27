@@ -13,7 +13,7 @@ In the United States the text of a statute is not copyrightable: it is an edict 
 
 ## Consequence for this subject
 
-**Metadata only until resolved.** No human has recorded a licence decision for this jurisdiction in `tools/topics/round3/licence-decisions.json`. The register's own terms, quoted above, are the evidence to decide on.
+**Licence decided 2026-10-25.** The text of this subject may be deposited and quoted in an encoding. The register's terms quoted above are not a licence: the decision rests on the American government-edicts doctrine, and the ruling, Meng's words and the authorities are in the Delaware README (`../../../../README.md`, "Licence decided 2026-10-25").
 
 ## Language
 

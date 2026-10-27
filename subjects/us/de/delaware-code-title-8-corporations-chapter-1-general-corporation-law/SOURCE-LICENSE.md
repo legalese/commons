@@ -12,7 +12,7 @@ In the United States the text of a statute is not copyrightable: it is an edict 
 
 ## Consequence for this subject
 
-Statute text may be deposited and quoted in an encoding. It is deposited as unofficial plain text. The verdict is **clean** on the terms read; it is the reading of the session that made the deposit, not a recorded human licence decision.
+Statute text may be deposited and quoted in an encoding. It is deposited as unofficial plain text. Meng ruled on 2026-10-25 that the full text may be deposited and quoted, on the strength of the American government-edicts cases and not of any licence from the register, which gives none; his words and the authorities are in the Delaware README (`../README.md`, "Licence decided 2026-10-25"). This replaces the earlier note that the verdict was only the reading of the session that made the deposit.
 
 ## Language
 
