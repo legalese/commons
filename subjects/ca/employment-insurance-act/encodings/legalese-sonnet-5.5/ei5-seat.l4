@@ -1,0 +1,1648 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `eia-core-interpretation`
+IMPORT `eia-core-insurable-employment`
+IMPORT `ei5-interpretation`
+IMPORT `ei5-agreement`
+IMPORT `ei5-sickness-pregnancy`
+IMPORT `ei5-parental`
+IMPORT `ei5-caring`
+IMPORT `ei5-qualifying`
+IMPORT `ei5-benefit-period`
+IMPORT `ei5-payment`
+IMPORT `ei5-premium`
+IMPORT `ei5-other-provisions`
+
+-- Employment Insurance Act (S.C. 1996, c. 23), PART VII.1 (Benefits for self-employed persons), sections 152.01 to 152.34
+-- -- THE SEAT LAYER for piece ei5. Written by the piece agent ei5 (Sonnet 5.5).
+--
+-- SEAT: a person who has lost work, or cannot work because of sickness, pregnancy, caring for a child or a family member,
+-- or who is self-employed, asking whether they qualify for Employment Insurance benefits under Part VII.1, how many
+-- weeks and how much they would receive, and what they must do or tell the Commission (and the Minister of National Revenue).
+--
+-- This layer phrases the rules already encoded in the layer-1 modules imported above as the questions that person asks.
+-- Nothing here is new law. Every question takes PLAIN INPUTS (yes/no, numbers, dates, and the modules' own choices), one
+-- for each fact the person states, each with an @desc worded as the person is asked. The records the modules expect
+-- (a business of the year, a period of days) and the MAYBE values are built inside each question, in its WHERE, from those
+-- answers, and the SAME module rule is then called; no rule is restated here. A question that needs the answer to another
+-- ("Am I a self-employed person?") asks for it as a yes/no with a pointer to that question.
+--
+-- Plain-input conventions used throughout:
+--   * a fact that may be absent ("the day on which X happened, if it has") is asked as a yes/no and a date: the date is
+--     ignored when the yes/no is no (any date will do);
+--   * a rate or percentage is a fraction (6.5% is 0.065);
+--   * money is dollars; a week is seven consecutive days beginning on a Sunday (s 2(1) "week", "or any other prescribed period" not applied);
+--   * what the Regulations decide (a prescribed illness, the family supplement, the time for a claim) is asked as the fact
+--     the person can state or is told ("Does the Commission treat ... as ...?"); the cross-reference table in NOTES.md lists them.
+-- A judgment the Act leaves to the Commission or the Minister of National Revenue ("shows ... good cause", "knowingly failed
+-- to declare") is asked as a fact the person can state ("Do you show that ...?") or as the outcome of that judgment ("Is it the
+-- Commission's opinion that ...?"), never worked out here.
+-- The Act's own figures are used as the Act states them. A substitution by regulation (the $6,000 of s 152.07(1)(d)(i)(C), a
+-- shorter period under s 152.06(4), a prescribed percentage) is asked for where the Act allows it.
+-- Seats: the self-employed person only. An employer-side or Minister-side seat is not written; the Minister of National
+-- Revenue and the Commission appear only as what the person is owed or exposed to.
+-- The questions are grouped under "§§" headings in the order of the text.
+
+§ `Employment Insurance, Part VII.1 -- the questions of a self-employed person`
+
+§§ `Am I within this Part? (ss 152.01 and 152.02)`
+
+-- s 152.01(1) "self-employed person", with "business". The person is an individual (the seat). Paragraph (a): engaged in a
+-- business now or before. Paragraph (b): employed but without insurable employment by reason of s 5(2)(b), because the
+-- employer is a corporation in which they control more than 40% of the voting shares. The closing sentence takes out fishers and
+-- those whose employment a regulation under s 5(4)(c) includes.
+@export Am I a self-employed person for the purposes of Part VII.1 (s 152.01(1))?
+GIVEN `the kind of work I do, or did, for myself` IS A `ei5 Kind of activity the definition of business lists` @desc Which of these best describes the work you do, or did, for yourself? Choose "ei5 business - something not on the list" if none fits, and "ei5 business - an employment" or "ei5 business - an office" if it is a job or an office.
+      `I am employed by someone` IS A BOOLEAN @desc Are you employed by an employer, besides any work you do for yourself?
+      `my employment would be insurable but for my control of the corporation` IS A BOOLEAN @desc Would your employment count as insurable employment if it were not for the fact that you control your employer corporation?
+      `my employer is a corporation` IS A BOOLEAN @desc Is your employer a corporation?
+      `the portion of the voting shares I control` IS A NUMBER @desc What portion of the voting shares of that corporation do you control? Give a fraction (0.5 for 50%).
+      `regulations made under Part VIII apply to me` IS A BOOLEAN @desc Are you a self-employed fisher to whom the regulations made under Part VIII of the Act apply?
+      `a regulation under paragraph 5(4)(c) includes my employment in insurable employment` IS A BOOLEAN @desc Is your employment included in insurable employment by a regulation made under paragraph 5(4)(c) of the Act?
+GIVETH A BOOLEAN
+DECIDE `Am I a self-employed person for the purposes of Part VII.1` IF
+    `s 152.01(1) self-employed person` `paragraph (a) holds` `paragraph (b) holds`
+        `regulations made under Part VIII apply to me`
+        `a regulation under paragraph 5(4)(c) includes my employment in insurable employment`
+    WHERE
+        `paragraph (a) holds` MEANS
+            `s 152.01(1) self-employed person, paragraph (a)` TRUE (`s 152.01(1) business includes` `the kind of work I do, or did, for myself` EQUALS JUST TRUE)
+        `paragraph (b) holds` MEANS
+            `s 152.01(1) self-employed person, paragraph (b)` TRUE `I am employed by someone`
+                `my employment would be insurable but for my control of the corporation`
+                `my employer is a corporation` `the portion of the voting shares I control`
+
+-- s 152.01(2), (3) the amount of self-employed earnings for a year. One business (the Act speaks of "their businesses": a
+-- caller with more than one adds them as separate records in layer 1; this form asks for one business and the losses).
+@export What are my self-employed earnings for the year (s 152.01(2) and (3))?
+GIVEN `the kind of work I do, or did, for myself` IS A `ei5 Kind of activity the definition of business lists` @desc Which of these best describes the work you do, or did, for yourself?
+      `I am employed by someone` IS A BOOLEAN @desc Are you employed by an employer, besides any work you do for yourself?
+      `my employment would be insurable but for my control of the corporation` IS A BOOLEAN @desc Would your employment count as insurable employment if it were not for the fact that you control your employer corporation?
+      `my employer is a corporation` IS A BOOLEAN @desc Is your employer a corporation?
+      `the portion of the voting shares I control` IS A NUMBER @desc What portion of the voting shares of that corporation do you control? Give a fraction (0.5 for 50%).
+      `my business income under the Income Tax Act` IS A NUMBER @desc What was your income for the year from your business, computed under the Income Tax Act, in dollars?
+      `my business income without reference to paragraph 81(1)(a)` IS A NUMBER @desc What would that income be if computed without reference to paragraph 81(1)(a) of the Income Tax Act? (Only matters if you are an Indian and the income is on a reserve; otherwise repeat the figure above.)
+      `I am an Indian and the income is on a reserve` IS A BOOLEAN @desc Are you an Indian, as defined in subsection 2(1) of the Indian Act, and is that business income earned on a reserve, as defined there?
+      `my business gross revenue` IS A NUMBER @desc What was the gross revenue of the business for the year, in dollars?
+      `rent from land or buildings in that revenue` IS A NUMBER @desc How much of that gross revenue was rent from land or buildings, in dollars?
+      `my business losses` IS A NUMBER @desc What were all the losses, computed under the Income Tax Act, that you sustained in the year in carrying on your businesses, in dollars? (0 if none)
+      `my income from employment excluded under paragraph 5(6)(c)` IS A NUMBER @desc What was your income for the year from employment described in paragraph 5(6)(c) that a regulation made under subsection 5(6) excludes from insurable employment, in dollars? (0 if none)
+      `the insurable earnings I would have had` IS A NUMBER @desc If you are employed by a corporation you control: what would your insurable earnings for the year have been had your employment not been excluded from insurable employment, in dollars? (0 if not applicable)
+GIVETH A MAYBE NUMBER
+DECIDE `What are my self-employed earnings for the year` IS
+    `s 152.01(2) the amount of the self-employed earnings of a self-employed person for a year`
+        `paragraph (a) holds` `paragraph (b) holds`
+        (`s 152.01(2)(a) the self-employed earnings of an individual referred to in paragraph (a) of the definition`
+            (LIST `my business`) `my business losses` `my income from employment excluded under paragraph 5(6)(c)`)
+        (`s 152.01(2)(b) the self-employed earnings of an individual referred to in paragraph (b) of the definition`
+            `the insurable earnings I would have had`)
+    WHERE
+        `paragraph (a) holds` MEANS
+            `s 152.01(1) self-employed person, paragraph (a)` TRUE (`s 152.01(1) business includes` `the kind of work I do, or did, for myself` EQUALS JUST TRUE)
+        `paragraph (b) holds` MEANS
+            `s 152.01(1) self-employed person, paragraph (b)` TRUE `I am employed by someone`
+                `my employment would be insurable but for my control of the corporation`
+                `my employer is a corporation` `the portion of the voting shares I control`
+        -- the five figures of one business, in the order of `ei5 Business of the year`: income under the Income Tax Act, income
+        -- without reference to paragraph 81(1)(a), the Indian-on-a-reserve flag, gross revenue, rent
+        `my business` MEANS `ei5 Business of the year` OF `my business income under the Income Tax Act`, `my business income without reference to paragraph 81(1)(a)`, `I am an Indian and the income is on a reserve`, `my business gross revenue`, `rent from land or buildings in that revenue`
+
+-- s 152.01(1) "balance-due day": the day on which the premium for the year falls due (s 152.25).
+@export What is my balance-due day for the year (s 152.01(1))?
+GIVEN `the year` IS A NUMBER @desc For which calendar year do you want the balance-due day? (for example 2026)
+      `the self-employed person has died` IS A BOOLEAN @desc Has the self-employed person died?
+      `the day of death` IS A DATE @desc On what day did the self-employed person die? (ignored if not; ISO 8601, e.g. 2026-11-20)
+GIVETH A DATE
+DECIDE `What is my balance-due day for the year` IS
+    `s 152.01(1) balance-due day of a self-employed person for a year` `the year` `the day of death if any`
+    WHERE
+        `the day of death if any` MEANS IF `the self-employed person has died` THEN JUST `the day of death` ELSE NOTHING
+
+-- s 152.02(1) the Part applies to a self-employed person who is a Canadian citizen or permanent resident and has entered into an
+-- agreement with the Commission regarding the application of this Part.
+@export Does Part VII.1 apply to me (s 152.02(1))?
+GIVEN `I am a self-employed person as the Act defines it` IS A BOOLEAN @desc Are you a self-employed person as the Act defines it? (see the question "Am I a self-employed person ...")
+      `I am a Canadian citizen` IS A BOOLEAN @desc Are you a Canadian citizen?
+      `I am a permanent resident` IS A BOOLEAN @desc Are you a permanent resident within the meaning of subsection 2(1) of the Immigration and Refugee Protection Act?
+      `I have entered into an agreement with the Commission` IS A BOOLEAN @desc Have you entered into an agreement with the Canada Employment Insurance Commission regarding the application of Part VII.1?
+GIVETH A BOOLEAN
+DECIDE `Does Part VII.1 apply to me` IF
+    `s 152.02(1) this Part applies in respect of a person`
+        `I am a self-employed person as the Act defines it` `I am a Canadian citizen` `I am a permanent resident`
+        `I have entered into an agreement with the Commission`
+
+-- s 152.02(3) the Commission may fix the form and conditions of the agreements.
+@export Is my agreement in the form and on the conditions the Commission has fixed (s 152.02(3))?
+GIVEN `the Commission has fixed a form and conditions for the agreements` IS A BOOLEAN @desc Has the Commission fixed a form and conditions for these agreements?
+      `my agreement is in the form fixed` IS A BOOLEAN @desc Is your agreement in the form the Commission fixed?
+      `my agreement meets the conditions fixed` IS A BOOLEAN @desc Does your agreement meet the conditions the Commission fixed?
+GIVETH A BOOLEAN
+DECIDE `Is my agreement in the form and on the conditions the Commission has fixed` IF
+    `s 152.02(3) the agreement is in the form and on the conditions the Commission has fixed`
+        `the Commission has fixed a form and conditions for the agreements` `my agreement is in the form fixed` `my agreement meets the conditions fixed`
+
+-- s 152.02(4) the agreement is deemed terminated if a circumstance set out in the regulations exists.
+@export Is my agreement deemed to be terminated (s 152.02(4))?
+GIVEN `a circumstance set out in the regulations for deemed termination exists` IS A BOOLEAN @desc Does any of the circumstances that the regulations set out for deemed termination of the agreement exist in your case? (none is set out in the Regulations as deposited, so the usual answer is no)
+GIVETH A BOOLEAN
+DECIDE `Is my agreement deemed to be terminated` IF
+    `s 152.02(4) the agreement is deemed to be terminated` `a circumstance set out in the regulations for deemed termination exists`
+
+-- s 152.02(4) the individual may terminate by notice to the Commission in the prescribed form and manner (reg 9.01: in writing),
+-- before any benefits are paid, or after they are paid if a prescribed circumstance exists. No other manner or time.
+@export May I terminate my agreement by giving notice to the Commission (s 152.02(4))?
+GIVEN `I give notice to the Commission in writing` IS A BOOLEAN @desc Are you giving the Commission notice, in writing, in the prescribed form and manner?
+      `benefits have been paid to me under Part VII.1` IS A BOOLEAN @desc Have benefits already been paid to you under Part VII.1?
+      `a prescribed circumstance for termination after benefits were paid exists` IS A BOOLEAN @desc Does a circumstance exist that the regulations prescribe for terminating after benefits have been paid? (none is prescribed in the Regulations as deposited)
+GIVETH A BOOLEAN
+DECIDE `May I terminate my agreement by giving notice to the Commission` IF
+    `s 152.02(4) the individual may terminate the agreement by notice`
+        `I give notice to the Commission in writing` `benefits have been paid to me under Part VII.1` `a prescribed circumstance for termination after benefits were paid exists`
+
+-- s 152.02(6), (7) what becomes of the notice: terminated on 31 December of the year, unless it was given within 60 days of the
+-- agreement (deemed never entered into), a benefit period was established between the notice and 31 December (deemed never
+-- given), or it was withdrawn before 31 December.
+@export What becomes of my notice to terminate the agreement (s 152.02(6) and (7))?
+GIVEN `my notice was given in accordance with subsection 152.02(4)` IS A BOOLEAN @desc Did you give the notice in accordance with subsection 152.02(4) (in writing, and in time)?
+      `the day I entered into the agreement` IS A DATE @desc On what day did you enter into the agreement with the Commission? (ISO 8601, e.g. 2026-01-10)
+      `the day I gave notice` IS A DATE @desc On what day did you give notice to terminate the agreement?
+      `a benefit period was established for me` IS A BOOLEAN @desc Has a benefit period been established for you under Part VII.1 since you gave notice?
+      `the day the benefit period was established` IS A DATE @desc On what day was it established? (ignored if none)
+      `I withdrew my notice` IS A BOOLEAN @desc Did you withdraw your notice in the prescribed manner (in writing)?
+      `the day I withdrew my notice` IS A DATE @desc On what day did you withdraw it? (ignored if you did not)
+GIVETH A `ei5 What becomes of a notice to terminate an agreement`
+DECIDE `What becomes of my notice to terminate the agreement` IS
+    `s 152.02(6) and (7) what becomes of a notice to terminate the agreement`
+        `my notice was given in accordance with subsection 152.02(4)` `the day I entered into the agreement` `the day I gave notice`
+        `the benefit period day if any` `the withdrawal day if any`
+    WHERE
+        `the benefit period day if any` MEANS IF `a benefit period was established for me` THEN JUST `the day the benefit period was established` ELSE NOTHING
+        `the withdrawal day if any` MEANS IF `I withdrew my notice` THEN JUST `the day I withdrew my notice` ELSE NOTHING
+
+-- s 152.02(4) to (6) the day on which the agreement terminates, if it does.
+@export On what day does my agreement terminate (s 152.02(4) to (6))?
+GIVEN `my agreement is deemed to be terminated` IS A BOOLEAN @desc Is your agreement deemed to be terminated because a circumstance set out in the regulations exists?
+      `the prescribed date of the deemed termination` IS A DATE @desc What date do the regulations prescribe for that deemed termination? (ignored if none)
+      `what became of my notice` IS A `ei5 What becomes of a notice to terminate an agreement` @desc What became of the notice you gave (see "What becomes of my notice ..."). Choose "ei5 notice - not given in accordance with subsection (4), so the agreement is not terminated by it" if you gave none.
+      `the day I gave notice` IS A DATE @desc On what day did you give notice? (ignored if you gave none)
+GIVETH A MAYBE DATE
+DECIDE `On what day does my agreement terminate` IS
+    `s 152.02(4) to (6) the day on which the agreement terminates`
+        `my agreement is deemed to be terminated` `the prescribed date of the deemed termination` `what became of my notice` `the day I gave notice`
+
+-- s 152.02(2) the agreement is of indefinite duration: in force from the day it was entered into until it terminates.
+@export Is my agreement in force on a given day (s 152.02(2))?
+GIVEN `the day I entered into the agreement` IS A DATE @desc On what day did you enter into the agreement with the Commission?
+      `my agreement is deemed never to have been entered into` IS A BOOLEAN @desc Is your agreement deemed never to have been entered into (because you gave notice within 60 days of entering into it)?
+      `my agreement has terminated or will terminate` IS A BOOLEAN @desc Has your agreement terminated, or has a termination day been fixed?
+      `the day my agreement terminates` IS A DATE @desc On what day does it terminate? (ignored if it does not)
+      `the day in question` IS A DATE @desc For which day do you want to know whether the agreement is in force?
+GIVETH A BOOLEAN
+DECIDE `Is my agreement in force on a given day` IF
+    `s 152.02(2) the agreement is in force on a day`
+        `the day I entered into the agreement` `my agreement is deemed never to have been entered into` `the termination day if any` `the day in question`
+    WHERE
+        `the termination day if any` MEANS IF `my agreement has terminated or will terminate` THEN JUST `the day my agreement terminates` ELSE NOTHING
+
+§§ `If I cannot work because of an illness, injury or quarantine (s 152.03)`
+
+-- s 152.03(1), (1.1), (4). The person is unable to work as a self-employed person because of a prescribed illness, injury or
+-- quarantine. Entitled if they ceased to work because of it and would otherwise be working; or, under (1.1), if benefits are
+-- payable to them under another of ss 152.05 to 152.062. Not entitled under (4) if, were it not for the illness, they would
+-- be deemed (reg 30.2) not to be working, unless they are a (1.1) person.
+@export Am I entitled to benefits because of an illness, injury or quarantine (s 152.03(1), (1.1) and (4))?
+GIVEN `my illness, injury or quarantine is one that renders me incapable of performing the duties of my regular or usual employment or of other suitable employment` IS A BOOLEAN @desc Is your illness, injury or quarantine one that makes you incapable of performing the duties of your regular or usual employment or of other suitable employment (reg 40(4))?
+      `I am unable to work as a self-employed person for that reason` IS A BOOLEAN @desc Are you unable to work as a self-employed person for that reason?
+      `I ceased to work as a self-employed person because of it` IS A BOOLEAN @desc Did you stop working as a self-employed person because of it?
+      `I would otherwise be working` IS A BOOLEAN @desc Would you be working as a self-employed person if you were not ill, injured or in quarantine?
+      `benefits are payable to me under another section of Part VII.1` IS A BOOLEAN @desc Are benefits payable to you under section 152.05, 152.06, 152.061 or 152.062 (parental, compassionate care, critically ill child, critically ill adult)?
+      `without the illness I would be deemed not to be working` IS A BOOLEAN @desc Without the illness, injury or quarantine, would you be deemed under reg 30.2 not to be working (that is, not engaged in the normal activities of your business, nor in the normal activities for its continuation)?
+GIVETH A BOOLEAN
+DECIDE `Am I entitled to benefits because of an illness, injury or quarantine` IF
+    `s 152.03 entitled to benefits because of illness, injury or quarantine`
+        `my illness, injury or quarantine is one that renders me incapable of performing the duties of my regular or usual employment or of other suitable employment`
+        `I am unable to work as a self-employed person for that reason`
+        `I ceased to work as a self-employed person because of it`
+        `I would otherwise be working`
+        `benefits are payable to me under another section of Part VII.1`
+        `without the illness I would be deemed not to be working`
+
+-- ss 152.03(2), 152.04(3), 152.05(11), 152.06(9), 152.061(11), 152.062(9): benefits are reduced or eliminated as prescribed where
+-- allowances, money or other benefits are payable for the same reasons under a provincial law (regs 76.36 to 76.42 for
+-- pregnancy and parental benefits). Asked once for all six reasons.
+@export How much of my weekly benefit remains after the reduction for benefits payable under a provincial law (ss 152.03(2), 152.04(3), 152.05(11), 152.06(9), 152.061(11) and 152.062(9))?
+GIVEN `my weekly benefit before the reduction` IS A NUMBER @desc What weekly benefit would be payable to you under Part VII.1 before any reduction, in dollars?
+      `a provincial law pays me for the same reason` IS A BOOLEAN @desc Are allowances, money or other benefits payable to you for the same reason (illness, pregnancy, care of a child, care or support of a family member, a critically ill child or a critically ill adult) under a provincial law?
+      `the reduction the regulations prescribe` IS A NUMBER @desc By how much do the regulations reduce your weekly benefit because of that provincial benefit, in dollars? (use your full weekly benefit if the regulations eliminate it; 0 if they do not reduce it)
+GIVETH A NUMBER
+DECIDE `How much of my weekly benefit remains after the reduction for benefits payable under a provincial law` IS
+    `ss 152.03(2), 152.04(3), 152.05(11), 152.06(9), 152.061(11) and 152.062(9) benefits after the reduction prescribed for benefits payable under a provincial law`
+        `my weekly benefit before the reduction` `a provincial law pays me for the same reason` `the reduction the regulations prescribe`
+
+-- ss 152.03(3) and 152.04(4): allowances payable for the week under a plan that covers insured persons employed by an employer, whose
+-- employer's premium has been reduced under regulations made under s 69(1), are deducted from the benefits.
+@export How much of my weekly benefit remains after deducting allowances payable under a plan whose employer's premium has been reduced (ss 152.03(3) and 152.04(4))?
+GIVEN `my benefit for the week` IS A NUMBER @desc What benefit is payable to you for the week, in dollars?
+      `allowances payable to me for that week under such a plan` IS A NUMBER @desc How much is payable to you for that week under a plan that covers insured persons employed by an employer and in respect of which the employer's premium has been reduced under regulations made under subsection 69(1), in dollars? (0 if none)
+GIVETH A NUMBER
+DECIDE `How much of my weekly benefit remains after deducting allowances payable under a plan whose employer's premium has been reduced` IS
+    `ss 152.03(3) and 152.04(4) benefits after the deduction of allowances payable under a plan whose employer's premium has been reduced`
+        `my benefit for the week` `allowances payable to me for that week under such a plan`
+
+§§ `If I am pregnant (s 152.04)`
+
+@export Are benefits payable to me because of my pregnancy (s 152.04(1))?
+GIVEN `I prove my pregnancy` IS A BOOLEAN @desc Have you proved your pregnancy to the Commission (a signed statement attesting to your pregnancy and declaring your expected date of confinement, reg 41(1))?
+GIVETH A BOOLEAN
+DECIDE `Are benefits payable to me because of my pregnancy` IF
+    `s 152.04(1) benefits are payable because of pregnancy` `I prove my pregnancy`
+
+-- s 152.04(2): the first day of the period for which pregnancy benefits are payable.
+@export On what day does the period for my pregnancy benefits begin (s 152.04(2))?
+GIVEN `the day my confinement is expected` IS A DATE @desc On what day is your confinement expected? (ISO 8601, e.g. 2026-06-10)
+      `my confinement has occurred` IS A BOOLEAN @desc Has your confinement occurred?
+      `the day my confinement occurred` IS A DATE @desc On what day did it occur? (ignored if it has not occurred)
+GIVETH A DATE
+DECIDE `On what day does the period for my pregnancy benefits begin` IS
+    `the pregnancy period`'s `first day of the period`
+    WHERE
+        `the pregnancy period` MEANS
+            `s 152.04(2) the period for which benefits are payable because of pregnancy` `the day my confinement is expected`
+                (IF `my confinement has occurred` THEN JUST `the day my confinement occurred` ELSE NOTHING)
+
+@export On what day does the period for my pregnancy benefits end (s 152.04(2))?
+GIVEN `the day my confinement is expected` IS A DATE @desc On what day is your confinement expected? (ISO 8601, e.g. 2026-06-10)
+      `my confinement has occurred` IS A BOOLEAN @desc Has your confinement occurred?
+      `the day my confinement occurred` IS A DATE @desc On what day did it occur? (ignored if it has not occurred)
+GIVETH A DATE
+DECIDE `On what day does the period for my pregnancy benefits end` IS
+    `the pregnancy period`'s `last day of the period`
+    WHERE
+        `the pregnancy period` MEANS
+            `s 152.04(2) the period for which benefits are payable because of pregnancy` `the day my confinement is expected`
+                (IF `my confinement has occurred` THEN JUST `the day my confinement occurred` ELSE NOTHING)
+
+-- s 152.04(3.1): for serving the waiting period the week immediately before the period is deemed to be included in it.
+@export From which day is my pregnancy period treated as running for serving my waiting period (s 152.04(3.1))?
+GIVEN `the first day of my pregnancy benefit period` IS A DATE @desc On what day does your pregnancy benefit period begin (see "On what day does the period for my pregnancy benefits begin")?
+      `the last day of my pregnancy benefit period` IS A DATE @desc On what day does your pregnancy benefit period end?
+GIVETH A DATE
+DECIDE `From which day is my pregnancy period treated as running for serving my waiting period` IS
+    `the waiting-period view`'s `first day of the period`
+    WHERE
+        `the waiting-period view` MEANS
+            `s 152.04(3.1) the period, for serving the waiting period, with the week that immediately precedes it`
+                (`Period of days` OF `the first day of my pregnancy benefit period`, `the last day of my pregnancy benefit period`)
+
+-- s 152.04(5), (6): if the child is hospitalized the period is extended by the weeks in hospital, but ends no later than 52 weeks
+-- after the week of confinement.
+@export On what day does my pregnancy benefit period end if my child is in hospital (s 152.04(5) and (6))?
+GIVEN `the first day of my pregnancy benefit period` IS A DATE @desc On what day does your pregnancy benefit period begin?
+      `the last day of my pregnancy benefit period` IS A DATE @desc On what day does your pregnancy benefit period end, before any extension?
+      `the day my confinement occurred` IS A DATE @desc On what day did your confinement occur?
+      `the weeks my child was in hospital` IS A NUMBER @desc For how many weeks was the child born of your pregnancy in hospital?
+GIVETH A DATE
+DECIDE `On what day does my pregnancy benefit period end if my child is in hospital` IS
+    `the extended pregnancy period`'s `last day of the period`
+    WHERE
+        `the extended pregnancy period` MEANS
+            `s 152.04(5) and (6) the period extended because the child is hospitalized`
+                (`Period of days` OF `the first day of my pregnancy benefit period`, `the last day of my pregnancy benefit period`)
+                `the day my confinement occurred` `the weeks my child was in hospital`
+
+§§ `If I am caring for a new-born or adopted child (s 152.05)`
+
+@export Are parental benefits payable to me for the care of a child (s 152.05(1))?
+GIVEN `I am caring for one or more new-born children of mine` IS A BOOLEAN @desc Are you caring for one or more new-born children of yours?
+      `I am caring for one or more children placed with me for adoption` IS A BOOLEAN @desc Are you caring for one or more children placed with you for the purpose of adoption under the laws governing adoption in the province where you live?
+GIVETH A BOOLEAN
+DECIDE `Are parental benefits payable to me for the care of a child` IF
+    `s 152.05(1) benefits are payable for the care of a child`
+        `I am caring for one or more new-born children of mine` `I am caring for one or more children placed with me for adoption`
+
+@export Does my claim meet the requirement to elect the 35-week or the 61-week maximum (s 152.05(1.1))?
+GIVEN `my claim is made under section 152.05` IS A BOOLEAN @desc Is your claim made under section 152.05 (parental benefits)?
+      `my claim says which maximum I elect` IS A BOOLEAN @desc Does your claim elect either the 35-week or the 61-week maximum?
+GIVETH A BOOLEAN
+DECIDE `Does my claim meet the requirement to elect the 35-week or the 61-week maximum` IF
+    `s 152.05(1.1) the claim meets the requirement to elect` `my claim is made under section 152.05` `my claim says which maximum I elect`
+
+@export Is my election of the 35-week or the 61-week maximum irrevocable (s 152.05(1.2))?
+GIVEN `benefits have been paid to me under section 152.05 for the same child or children` IS A BOOLEAN @desc Have benefits been paid to you under section 152.05 for the same child or children?
+      `benefits have been paid under section 23 for the same child or children` IS A BOOLEAN @desc Have benefits been paid to anyone under section 23 (parental benefits for insured persons) for the same child or children?
+GIVETH A BOOLEAN
+DECIDE `Is my election of the 35-week or the 61-week maximum irrevocable` IF
+    `s 152.05(1.2) the election is irrevocable`
+        `benefits have been paid to me under section 152.05 for the same child or children`
+        `benefits have been paid under section 23 for the same child or children`
+
+@export Which election of the maximum number of weeks binds me (s 152.05(1.3))?
+GIVEN `the election I made` IS AN `Election of maximum weeks` @desc Which maximum did you elect: "the 35-week maximum" or "the 61-week maximum"?
+      `another person claims for the same child or children` IS A BOOLEAN @desc Has another person (a self-employed person under this Part, or someone claiming under section 23) made a claim for the same child or children?
+      `the election that other person made` IS AN `Election of maximum weeks` @desc Which maximum did that other person elect? (ignored if there is no other claim)
+      `I was the first to make a claim` IS A BOOLEAN @desc Were you the first of the two of you to make a claim?
+GIVETH AN `Election of maximum weeks`
+DECIDE `Which election of the maximum number of weeks binds me` IS
+    `s 152.05(1.3) the election that binds the person`
+        `the election I made` (IF `another person claims for the same child or children` THEN JUST `the election that other person made` ELSE NOTHING) `I was the first to make a claim`
+
+@export On what day does the period for my parental benefits begin (s 152.05(2))?
+GIVEN `the day my child or children were born or placed with me` IS A DATE @desc On what day were your child or children born, or actually placed with you for adoption? (ISO 8601)
+GIVETH A DATE
+DECIDE `On what day does the period for my parental benefits begin` IS
+    `the parental period`'s `first day of the period`
+    WHERE
+        `the parental period` MEANS `s 152.05(2) the period for which parental benefits are payable` `the day my child or children were born or placed with me`
+
+@export On what day does the period for my parental benefits end (s 152.05(2))?
+GIVEN `the day my child or children were born or placed with me` IS A DATE @desc On what day were your child or children born, or actually placed with you for adoption? (ISO 8601)
+GIVETH A DATE
+DECIDE `On what day does the period for my parental benefits end` IS
+    `the parental period`'s `last day of the period`
+    WHERE
+        `the parental period` MEANS `s 152.05(2) the period for which parental benefits are payable` `the day my child or children were born or placed with me`
+-- s 152.05(3), (4): if the child or children are hospitalized during the period it is extended by the weeks in hospital, to at
+-- most 104 weeks.
+@export On what day does my parental benefit period end if my child or children are in hospital (s 152.05(3) and (4))?
+GIVEN `the day my child or children were born or placed with me` IS A DATE @desc On what day were your child or children born, or actually placed with you for adoption?
+      `the weeks my child or children were in hospital` IS A NUMBER @desc For how many weeks, during that period, were the child or children in hospital?
+GIVETH A DATE
+DECIDE `On what day does my parental benefit period end if my child or children are in hospital` IS
+    `the extended parental period`'s `last day of the period`
+    WHERE
+        `the parental period` MEANS `s 152.05(2) the period for which parental benefits are payable` `the day my child or children were born or placed with me`
+        `the extended parental period` MEANS
+            `s 152.05(3) and (4) the period extended because the child or children are hospitalized` `the parental period` `the weeks my child or children were in hospital`
+
+-- s 152.05(5): the period is extended so that benefits can be paid up to the applicable maximum (35 or 61) where, during the
+-- benefit period, benefits were paid for more than one of the six reasons of s 152.14(1), the maximum total weeks for those
+-- reasons is more than 50, and fewer than the applicable maximum was paid for the care of a child.
+@export Is my parental benefit period extended so that I can be paid up to the maximum (s 152.05(5))?
+GIVEN `the number of reasons for which benefits were paid to me in my benefit period` IS A NUMBER @desc For how many of the reasons in section 152.14(1) (pregnancy, care of a child, illness, care or support of a family member, of a critically ill child, of a critically ill adult) have benefits been paid to you in your benefit period?
+      `the maximum total number of weeks for those reasons` IS A NUMBER @desc What is the maximum total number of weeks established by section 152.14(1) for those reasons together?
+      `the weeks paid to me for the care of a child` IS A NUMBER @desc For how many weeks have benefits been paid to you for the care of a new-born or adopted child?
+      `the maximum weeks that applies to me for the care of a child` IS A NUMBER @desc What maximum applies to you for the care of a child: 35 or 61 weeks, by your election?
+GIVETH A BOOLEAN
+DECIDE `Is my parental benefit period extended so that I can be paid up to the maximum` IF
+    `s 152.05(5) the period is extended so that benefits may be paid up to the applicable maximum`
+        `the number of reasons for which benefits were paid to me in my benefit period` `the maximum total number of weeks for those reasons`
+        `the weeks paid to me for the care of a child` `the maximum weeks that applies to me for the care of a child`
+
+@export How many more weeks of parental benefits can I be paid after the extension (s 152.05(5))?
+GIVEN `the number of reasons for which benefits were paid to me in my benefit period` IS A NUMBER @desc For how many of the reasons in section 152.14(1) have benefits been paid to you in your benefit period?
+      `the maximum total number of weeks for those reasons` IS A NUMBER @desc What is the maximum total number of weeks established by section 152.14(1) for those reasons together?
+      `the weeks paid to me for the care of a child` IS A NUMBER @desc For how many weeks have benefits been paid to you for the care of a new-born or adopted child?
+      `the maximum weeks that applies to me for the care of a child` IS A NUMBER @desc What maximum applies to you for the care of a child: 35 or 61 weeks, by your election?
+GIVETH A NUMBER
+DECIDE `How many more weeks of parental benefits can I be paid after the extension` IS
+    `s 152.05(5) the number of weeks of benefits that may be paid, up to the applicable maximum, after the extension`
+        (`s 152.05(5) the period is extended so that benefits may be paid up to the applicable maximum`
+            `the number of reasons for which benefits were paid to me in my benefit period` `the maximum total number of weeks for those reasons`
+            `the weeks paid to me for the care of a child` `the maximum weeks that applies to me for the care of a child`)
+        `the weeks paid to me for the care of a child` `the maximum weeks that applies to me for the care of a child`
+
+@export By how many weeks is my parental benefit period extended if I was paid only parental benefits under the 61-week maximum (s 152.05(5.1))?
+GIVEN `benefits were paid to me for another reason in section 152.14(1)` IS A BOOLEAN @desc Were benefits paid to you in your benefit period for pregnancy, illness, or the care or support of a family member, a critically ill child or a critically ill adult?
+      `benefits were paid to me for the care of a child` IS A BOOLEAN @desc Were benefits paid to you in your benefit period for the care of a new-born or adopted child?
+      `the election I made` IS AN `Election of maximum weeks` @desc Which maximum did you elect: "the 35-week maximum" or "the 61-week maximum"?
+GIVETH A NUMBER
+DECIDE `By how many weeks is my parental benefit period extended if I was paid only parental benefits under the 61-week maximum` IS
+    `s 152.05(5.1) the number of weeks by which the period is extended`
+        `benefits were paid to me for another reason in section 152.14(1)` `benefits were paid to me for the care of a child` `the election I made`
+
+@export How long may my parental benefit period be after an extension under subsection (5) (s 152.05(6))?
+GIVEN `the length of my parental period in weeks after the extension` IS A NUMBER @desc How many weeks long is your parental benefit period after the extension under subsection 152.05(5)?
+      `the maximum benefit period under subsection 152.11(16), in weeks` IS A NUMBER @desc What is the maximum benefit period calculated under subsection 152.11(16), in weeks? (see "How long may a benefit period extended under subsection (14) be")
+GIVETH A NUMBER
+DECIDE `How long may my parental benefit period be after an extension under subsection (5)` IS
+    `s 152.05(6) the length of the period after an extension under subsection (5)`
+        `the length of my parental period in weeks after the extension` `the maximum benefit period under subsection 152.11(16), in weeks`
+
+@export How long may my parental benefit period be after an extension under subsections 152.11(11) to (14.1) (s 152.05(7))?
+GIVEN `the length of my parental period in weeks after the extension` IS A NUMBER @desc How many weeks long is your parental benefit period after the extension under subsections 152.11(11) to (14.1)?
+GIVETH A NUMBER
+DECIDE `How long may my parental benefit period be after an extension under subsections 152.11(11) to (14.1)` IS
+    `s 152.05(7) the length of the period after an extension under subsections 152.11(11) to (14.1)` `the length of my parental period in weeks after the extension`
+
+@export How many weeks of parental benefits can be divided between me and another claimant (s 152.05(12) and (13))?
+GIVEN `the election made` IS AN `Election of maximum weeks` @desc Which maximum was elected: "the 35-week maximum" or "the 61-week maximum"?
+GIVETH A NUMBER
+DECIDE `How many weeks of parental benefits can be divided between me and another claimant` IS
+    `ss 152.05(12) and (13) the maximum number of weeks of benefits that may be divided between two claimants` `the election made`
+
+@export What is the most weeks of parental benefits I can be paid whatever the division (s 152.05(13.01))?
+GIVEN `the election made` IS AN `Election of maximum weeks` @desc Which maximum was elected: "the 35-week maximum" or "the 61-week maximum"?
+GIVETH A NUMBER
+DECIDE `What is the most weeks of parental benefits I can be paid whatever the division` IS
+    `s 152.05(13.01) the maximum number of weeks for which benefits may be paid to a claimant` `the election made`
+
+@export Is our division of the weeks of parental benefits within the limits (s 152.05(12), (13) and (13.01))?
+GIVEN `the election made` IS AN `Election of maximum weeks` @desc Which maximum was elected: "the 35-week maximum" or "the 61-week maximum"?
+      `the weeks of benefits to me` IS A NUMBER @desc How many weeks of benefits are to be paid to you?
+      `the weeks of benefits to the other claimant` IS A NUMBER @desc How many weeks are to be paid to the other claimant (the other parent, under this Part or under section 23)?
+GIVETH A BOOLEAN
+DECIDE `Is our division of the weeks of parental benefits within the limits` IF
+    `s 152.05(12), (13) and (13.01) a division of the weeks of benefits is within the limits`
+        `the election made` `the weeks of benefits to me` `the weeks of benefits to the other claimant`
+
+@export How many weeks of parental benefits will I be paid after the division (s 152.05(12))?
+GIVEN `we agree on a division` IS A BOOLEAN @desc Do you and the other claimant agree on a division of the weeks?
+      `the weeks I would receive under the division we agreed` IS A NUMBER @desc How many weeks would you receive under the division you agreed? (ignored if you cannot agree)
+      `the weeks I would receive under the prescribed rules` IS A NUMBER @desc How many weeks would you receive under the prescribed rules for dividing the weeks (reg 41.6: a week to each claimant in turn, starting with the first to claim)? (ignored if you agree)
+GIVETH A NUMBER
+DECIDE `How many weeks of parental benefits will I be paid after the division` IS
+    `s 152.05(12) the weeks of benefits to be paid to a claimant after the division`
+        `we agree on a division` `the weeks I would receive under the division we agreed` `the weeks I would receive under the prescribed rules`
+
+@export May I have my waiting period deferred because of my claim for a child (s 152.05(14))?
+GIVEN `I have already claimed under section 152.04 or 152.05 for the same child or children and served the waiting period` IS A BOOLEAN @desc Have you already made a claim under section 152.04 or 152.05 for the same child or children, and served the waiting period?
+      `another self-employed person claimed for the same child or children and has served or is serving their waiting period` IS A BOOLEAN @desc Has another self-employed person made a claim under section 152.04 or 152.05 for the same child or children and served, or is serving, their waiting period?
+      `another self-employed person is claiming at the same time and elects to serve the waiting period` IS A BOOLEAN @desc Is another self-employed person claiming for the same child or children at the same time as you, and electing to serve the waiting period?
+      `I or another self-employed person meets the prescribed requirements` IS A BOOLEAN @desc Do you or another self-employed person meet the requirements prescribed for deferring the waiting period? (none is prescribed in the Regulations as deposited)
+GIVETH A BOOLEAN
+DECIDE `May I have my waiting period deferred because of my claim for a child` IF
+    `s 152.05(14) the waiting period may be deferred`
+        `I have already claimed under section 152.04 or 152.05 for the same child or children and served the waiting period`
+        `another self-employed person claimed for the same child or children and has served or is serving their waiting period`
+        `another self-employed person is claiming at the same time and elects to serve the waiting period`
+        `I or another self-employed person meets the prescribed requirements`
+
+@export Am I not required to serve a waiting period because another person claiming under section 22 or 23 has served or elected to serve theirs (s 152.05(15)(a))?
+GIVEN `another person claims under section 22 or 23 for the same child or children` IS A BOOLEAN @desc Has another person made a claim under section 22 or 23 for the same child or children?
+      `one of us has served or elected to serve a waiting period` IS A BOOLEAN @desc Has one of you (you or that other person) served, or elected to serve, a waiting period?
+      `I am the one who served or elected to serve it` IS A BOOLEAN @desc Are you the one who served, or elected to serve, the waiting period?
+GIVETH A BOOLEAN
+DECIDE `Am I not required to serve a waiting period because another person claiming under section 22 or 23 has served or elected to serve theirs` IF
+    `s 152.05(15)(a) the self-employed person is not required to serve a waiting period`
+        `another person claims under section 22 or 23 for the same child or children`
+        `one of us has served or elected to serve a waiting period`
+        `I am the one who served or elected to serve it`
+
+§§ `If I am caring for a family member, a critically ill child or a critically ill adult (ss 152.06, 152.061 and 152.062)`
+
+@export May this practitioner issue my certificate (ss 152.06(2), 152.061(2) and 152.062(2))?
+GIVEN `the practitioner is a medical doctor or a nurse practitioner` IS A BOOLEAN @desc Is the person who issued, or will issue, the certificate a medical doctor or a nurse practitioner?
+      `the practitioner is a member of a prescribed class of medical practitioners` IS A BOOLEAN @desc Is the practitioner a member of a prescribed class of medical practitioners (reg 41.2: an individual authorized by the governmental authority of another country to do the work of a medical doctor or nurse practitioner, with substantially similar qualifications)?
+      `the circumstances set out in the regulations exist` IS A BOOLEAN @desc Do the circumstances set out in the regulations exist (reg 41.2: the person to whom the certificate refers is in that other country)?
+GIVETH A BOOLEAN
+DECIDE `May this practitioner issue my certificate` IF
+    `ss 152.06(2), 152.061(2) and 152.062(2) the certificate may be issued by the practitioner`
+        `the practitioner is a medical doctor or a nurse practitioner` `the practitioner is a member of a prescribed class of medical practitioners` `the circumstances set out in the regulations exist`
+
+@export Are benefits payable to me for the care or support of a gravely ill family member (s 152.06(1))?
+GIVEN `the person who is ill is my family member` IS A BOOLEAN @desc Is the person who is ill a family member of yours as the Regulations define it (reg 1(3))?
+      `a certificate was issued by a practitioner who may issue it` IS A BOOLEAN @desc Has a medical doctor, a nurse practitioner or another practitioner who may issue it (see "May this practitioner issue my certificate") issued a certificate?
+      `the certificate states a serious medical condition with a significant risk of death` IS A BOOLEAN @desc Does the certificate state that the family member has a serious medical condition with a significant risk of death?
+      `the weeks within which the certificate states the risk of death` IS A NUMBER @desc Within how many weeks (from the day the certificate is issued or, if you claimed earlier, from the day from which the practitioner certifies the condition) does the certificate state a significant risk of death?
+      `the certificate states the family member needs the care or support of one or more other family members` IS A BOOLEAN @desc Does the certificate state that the family member requires the care or support of one or more other family members?
+      `a shorter period is prescribed` IS A BOOLEAN @desc Has a shorter period than 26 weeks been prescribed for this section? (none is prescribed in the Regulations as deposited)
+      `the shorter period in weeks` IS A NUMBER @desc How many weeks long is that shorter period? (ignored if none is prescribed)
+GIVETH A BOOLEAN
+DECIDE `Are benefits payable to me for the care or support of a gravely ill family member` IF
+    `s 152.06(1) benefits are payable for the care or support of a gravely ill family member`
+        `the person who is ill is my family member` `a certificate was issued by a practitioner who may issue it`
+        `the certificate states a serious medical condition with a significant risk of death` `the weeks within which the certificate states the risk of death`
+        `the certificate states the family member needs the care or support of one or more other family members`
+        (IF `a shorter period is prescribed` THEN JUST `the shorter period in weeks` ELSE NOTHING)
+
+@export Are benefits payable to me for the care or support of a critically ill child (s 152.061(1))?
+GIVEN `I am a family member of the critically ill child` IS A BOOLEAN @desc Are you a family member of a critically ill child, as the Regulations define those terms (reg 1(3) and (6))?
+      `I am providing care or support to that child` IS A BOOLEAN @desc Are you providing care or support to that child?
+      `a certificate was issued by a practitioner who may issue it` IS A BOOLEAN @desc Has a medical doctor, a nurse practitioner or another practitioner who may issue it issued a certificate?
+      `the certificate says the child is critically ill and needs care or support` IS A BOOLEAN @desc Does the certificate state that the child is a critically ill child and requires the care or support of one or more of their family members?
+      `the certificate sets out the period the child needs that care` IS A BOOLEAN @desc Does the certificate set out the period during which the child requires that care or support?
+GIVETH A BOOLEAN
+DECIDE `Are benefits payable to me for the care or support of a critically ill child` IF
+    `s 152.061(1) benefits are payable for the care or support of a critically ill child`
+        `I am a family member of the critically ill child` `I am providing care or support to that child` `a certificate was issued by a practitioner who may issue it`
+        `the certificate says the child is critically ill and needs care or support` `the certificate sets out the period the child needs that care`
+
+@export Are benefits payable to me for the care or support of a critically ill adult (s 152.062(1))?
+GIVEN `I am a family member of the critically ill adult` IS A BOOLEAN @desc Are you a family member of a critically ill adult, as the Regulations define those terms (reg 1(3) and (7))?
+      `I am providing care or support to that adult` IS A BOOLEAN @desc Are you providing care or support to that adult?
+      `a certificate was issued by a practitioner who may issue it` IS A BOOLEAN @desc Has a medical doctor, a nurse practitioner or another practitioner who may issue it issued a certificate?
+      `the certificate says the adult is critically ill and needs care or support` IS A BOOLEAN @desc Does the certificate state that the adult is a critically ill adult and requires the care or support of one or more of their family members?
+      `the certificate sets out the period the adult needs that care` IS A BOOLEAN @desc Does the certificate set out the period during which the adult requires that care or support?
+GIVETH A BOOLEAN
+DECIDE `Are benefits payable to me for the care or support of a critically ill adult` IF
+    `s 152.062(1) benefits are payable for the care or support of a critically ill adult`
+        `I am a family member of the critically ill adult` `I am providing care or support to that adult` `a certificate was issued by a practitioner who may issue it`
+        `the certificate says the adult is critically ill and needs care or support` `the certificate sets out the period the adult needs that care`
+
+@export Do I need another certificate for benefits payable after the first 26 weeks of compassionate care (s 152.06(3.1))?
+GIVEN `section 50(8.1) requires a further certificate` IS A BOOLEAN @desc Does section 50(8.1) of the Act require a further certificate in your case?
+GIVETH A BOOLEAN
+DECIDE `Do I need another certificate for benefits payable after the first 26 weeks of compassionate care` IF
+    `s 152.06(3.1) an additional certificate is required for benefits payable after the end of the 26 weeks` `section 50(8.1) requires a further certificate`
+
+@export Does the exception apply so that my claim is not treated as made before my certificate was issued (ss 152.06(5), 152.061(5) and 152.062(4))?
+GIVEN `when my certificate is filed, all the benefits that could have been payable on my claim have been exhausted` IS A BOOLEAN @desc When your certificate is filed with the Commission, have all the benefits that could otherwise have been payable on your claim been exhausted?
+      `the beginning of the period has already been determined and my filing would move it to an earlier date` IS A BOOLEAN @desc Has the beginning of the period already been determined for the person you care for, so that filing your certificate would move it to an earlier date?
+      `my claim is made in other circumstances set out in the regulations` IS A BOOLEAN @desc Is your claim made in any other circumstances set out in the regulations? (none is set out in the Regulations as deposited)
+GIVETH A BOOLEAN
+DECIDE `Does the exception apply so that my claim is not treated as made before my certificate was issued` IF
+    `ss 152.06(5), 152.061(5) and 152.062(4) subparagraph (3)(a)(ii) does not apply to the claim`
+        `when my certificate is filed, all the benefits that could have been payable on my claim have been exhausted`
+        `the beginning of the period has already been determined and my filing would move it to an earlier date`
+        `my claim is made in other circumstances set out in the regulations`
+
+-- ss 152.06(3), 152.061(3), 152.062(3): the first day of the period for which benefits are payable (the Sunday of the week of the
+-- first certificate, or of the day from which the practitioner certifies, on a claim made first) and its last day (the Saturday of the
+-- week in which the benefits are exhausted, the person dies, or the 52 weeks end -- the shorter prescribed period in place of the 52
+-- for compassionate care).
+@export On what day does the period for my caring benefits begin (ss 152.06(3), 152.061(3) and 152.062(3))?
+GIVEN `the day the first certificate was issued and filed` IS A DATE @desc On what day was the first certificate that meets the requirements issued and filed with the Commission?
+      `I claimed before the certificate was issued` IS A BOOLEAN @desc Did you make your claim before the certificate was issued?
+      `the day from which the practitioner certifies the condition` IS A DATE @desc From what day does the practitioner certify the condition? (ignored if you did not claim first)
+      `the exception for earlier claims applies` IS A BOOLEAN @desc Does the exception apply that stops your claim being treated as made before the certificate was issued (see "Does the exception apply ...")?
+GIVETH A DATE
+DECIDE `On what day does the period for my caring benefits begin` IS
+    `the caring period`'s `first day of the period`
+    WHERE
+        `the caring period` MEANS
+            `ss 152.06(3), 152.061(3) and 152.062(3) the period for which benefits are payable`
+                `the day the first certificate was issued and filed` `I claimed before the certificate was issued`
+                `the day from which the practitioner certifies the condition` `the exception for earlier claims applies`
+                NOTHING NOTHING 52
+
+@export On what day does the period for my caring benefits end (ss 152.06(3), 152.061(3) and 152.062(3))?
+GIVEN `the day the first certificate was issued and filed` IS A DATE @desc On what day was the first certificate that meets the requirements issued and filed with the Commission?
+      `I claimed before the certificate was issued` IS A BOOLEAN @desc Did you make your claim before the certificate was issued?
+      `the day from which the practitioner certifies the condition` IS A DATE @desc From what day does the practitioner certify the condition? (ignored if you did not claim first)
+      `the exception for earlier claims applies` IS A BOOLEAN @desc Does the exception apply that stops your claim being treated as made before the certificate was issued?
+      `all the benefits payable have been exhausted` IS A BOOLEAN @desc Have all the benefits payable in respect of the person you care for been exhausted?
+      `the day they were exhausted` IS A DATE @desc On what day were they exhausted? (ignored if not)
+      `the person I care for has died` IS A BOOLEAN @desc Has the person you care for died?
+      `the day the person died` IS A DATE @desc On what day did they die? (ignored if not)
+      `a shorter period is prescribed` IS A BOOLEAN @desc For compassionate care only: has a shorter period than 52 weeks been prescribed (s 152.06(4)(b))? (none is prescribed in the Regulations as deposited)
+      `the shorter period in weeks` IS A NUMBER @desc How many weeks long is that shorter period? (ignored if none is prescribed)
+GIVETH A DATE
+DECIDE `On what day does the period for my caring benefits end` IS
+    `the caring period`'s `last day of the period`
+    WHERE
+        `the caring period` MEANS
+            `ss 152.06(3), 152.061(3) and 152.062(3) the period for which benefits are payable`
+                `the day the first certificate was issued and filed` `I claimed before the certificate was issued`
+                `the day from which the practitioner certifies the condition` `the exception for earlier claims applies`
+                (IF `all the benefits payable have been exhausted` THEN JUST `the day they were exhausted` ELSE NOTHING)
+                (IF `the person I care for has died` THEN JUST `the day the person died` ELSE NOTHING)
+                (`s 152.06(4)(b) the number of weeks that ends the period under subparagraph (3)(b)(iii)` (IF `a shorter period is prescribed` THEN JUST `the shorter period in weeks` ELSE NOTHING))
+
+@export May I have my waiting period deferred because another claimant is claiming for the same person (ss 152.06(6), 152.061(6) and 152.062(5))?
+GIVEN `another claimant has claimed for the same person during the period and has served or is serving their waiting period` IS A BOOLEAN @desc Has another claimant claimed for the same family member, child or adult during the period, and served or is serving their waiting period?
+      `another claimant is claiming for the same person at the same time and elects to serve the waiting period` IS A BOOLEAN @desc Is another claimant claiming for the same person at the same time as you, and electing to serve the waiting period?
+      `I or the other claimant meets the prescribed requirements` IS A BOOLEAN @desc Do you or the other claimant meet the requirements prescribed for deferring the waiting period? (none is prescribed in the Regulations as deposited)
+GIVETH A BOOLEAN
+DECIDE `May I have my waiting period deferred because another claimant is claiming for the same person` IF
+    `ss 152.06(6), 152.061(6) and 152.062(5) the waiting period may be deferred`
+        `another claimant has claimed for the same person during the period and has served or is serving their waiting period`
+        `another claimant is claiming for the same person at the same time and elects to serve the waiting period`
+        `I or the other claimant meets the prescribed requirements`
+
+-- ss 152.06(7)-(8), 152.061(8)-(9), 152.062(6)-(7): the remaining weeks may be divided between two claimants up to 26 (family
+-- member), 35 (critically ill child) or 15 (critically ill adult). The reason chooses the maximum; any other reason is not covered.
+@export Is our division of the remaining weeks of caring benefits within the maximum (ss 152.06(7) and (8), 152.061(8) and (9) and 152.062(6) and (7))?
+GIVEN `the reason` IS A `Reason for benefits` @desc For which reason are the benefits: "care or support of a family member", "care or support of a critically ill child" or "care or support of a critically ill adult"?
+      `the weeks of benefits to me` IS A NUMBER @desc How many of the remaining weeks are to be paid to you?
+      `the weeks of benefits to the other claimant` IS A NUMBER @desc How many are to be paid to the other claimant?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is our division of the remaining weeks of caring benefits within the maximum` IS
+    CONSIDER `the maximum for the reason`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST m THEN
+        JUST (`ss 152.06(7) and (8), 152.061(8) and (9) and 152.062(6) and (7) a division of the remaining weeks is within the maximum`
+                m `the weeks of benefits to me` `the weeks of benefits to the other claimant`)
+    WHERE
+        `the maximum for the reason` MEANS
+            CONSIDER `the reason`
+            WHEN `care or support of a family member` THEN JUST `s 152.06(7) and (8) the maximum number of weeks that may be divided`
+            WHEN `care or support of a critically ill child` THEN JUST `s 152.061(8) and (9) the maximum number of weeks that may be divided`
+            WHEN `care or support of a critically ill adult` THEN JUST `s 152.062(6) and (7) the maximum number of weeks that may be divided`
+            OTHERWISE NOTHING
+
+@export How many weeks of caring benefits will I be paid after the division (ss 152.06(7), 152.061(8) and 152.062(6))?
+GIVEN `we agree on a division` IS A BOOLEAN @desc Do you and the other claimant agree on a division of the remaining weeks?
+      `the weeks I would receive under the division we agreed` IS A NUMBER @desc How many weeks would you receive under the division you agreed? (ignored if you cannot agree)
+      `the weeks I would receive under the prescribed rules` IS A NUMBER @desc How many weeks would you receive under the prescribed rules for dividing the weeks (reg 41.6)? (ignored if you agree)
+GIVETH A NUMBER
+DECIDE `How many weeks of caring benefits will I be paid after the division` IS
+    `ss 152.06(7), 152.061(8) and 152.062(6) the weeks of benefits to be paid to a claimant after the division`
+        `we agree on a division` `the weeks I would receive under the division we agreed` `the weeks I would receive under the prescribed rules`
+
+@export Are compassionate care benefits not payable to me in respect of this child or adult on this day (ss 152.061(10) and 152.062(8))?
+GIVEN `my benefits are under section 23.1 or 152.06` IS A BOOLEAN @desc Are your benefits compassionate care benefits under section 23.1 or 152.06?
+      `they are in respect of the child or adult for whom a period was established` IS A BOOLEAN @desc Are they in respect of the child (or adult) for whom a period was established under section 152.061(3) or 23.2(3) (152.062(3) or 23.3(3))?
+      `the first day of that period` IS A DATE @desc On what day does that period begin?
+      `the last day of that period` IS A DATE @desc On what day does that period end?
+      `the day in question` IS A DATE @desc For which day do you want to know?
+GIVETH A BOOLEAN
+DECIDE `Are compassionate care benefits not payable to me in respect of this child or adult on this day` IF
+    `ss 152.061(10) and 152.062(8) benefits under section 23.1 or 152.06 are not payable in respect of the child or adult on a day`
+        `my benefits are under section 23.1 or 152.06` `they are in respect of the child or adult for whom a period was established`
+        (`Period of days` OF `the first day of that period`, `the last day of that period`) `the day in question`
+
+@export Are critically ill adult benefits not payable to me on this day because I was paid for the critically ill child (s 152.061(10.1))?
+GIVEN `my benefits are under section 23.3 or 152.062` IS A BOOLEAN @desc Are your benefits benefits for a critically ill adult under section 23.3 or 152.062?
+      `benefits were paid in respect of that person as a critically ill child` IS A BOOLEAN @desc Were benefits paid in respect of that same person, when they were a critically ill child, under section 152.061?
+      `the first day of the week of the child period` IS A DATE @desc On what day did the week begin in which the period for the critically ill child began (s 152.061(3)(a))?
+      `the day in question` IS A DATE @desc For which day do you want to know?
+GIVETH A BOOLEAN
+DECIDE `Are critically ill adult benefits not payable to me on this day because I was paid for the critically ill child` IF
+    `s 152.061(10.1) benefits under section 23.3 or 152.062 are not payable on a day`
+        `my benefits are under section 23.3 or 152.062` `benefits were paid in respect of that person as a critically ill child`
+        `the first day of the week of the child period` `the day in question`
+
+§§ `Do I qualify for benefits? (ss 152.07 to 152.09)`
+
+-- s 152.07(1)(a): at least 12 months (or a prescribed period) have expired since the agreement was entered into.
+@export Have at least 12 months expired since I entered into my agreement (s 152.07(1)(a))?
+GIVEN `the day I entered into the agreement` IS A DATE @desc On what day did you enter into the agreement with the Commission? (ISO 8601)
+      `the day I make my initial claim` IS A DATE @desc On what day do you make (or did you make) your initial claim for benefits?
+      `a period other than 12 months is prescribed` IS A BOOLEAN @desc Has a period other than 12 months been prescribed for this requirement? (none is prescribed in the Regulations as deposited)
+      `the prescribed period in months` IS A NUMBER @desc How many months is that prescribed period? (ignored if none is prescribed)
+      `the Regulations deem me to have satisfied it` IS A BOOLEAN @desc Do the Regulations deem you to have satisfied this requirement (reg 76.43, for pregnancy and parental benefits only: you ceased to reside in a province that has a provincial plan, you entered into your agreement within 12 months before or three months after that day, and you were covered by the plan during the 12 months before that day)?
+GIVETH A BOOLEAN
+DECIDE `Have at least 12 months expired since I entered into my agreement` IF
+    `s 152.07(1)(a) at least 12 months have expired since the day on which the person entered into the agreement`
+        `the day I entered into the agreement` `the day I make my initial claim`
+        (IF `a period other than 12 months is prescribed` THEN JUST `the prescribed period in months` ELSE NOTHING)
+        `the Regulations deem me to have satisfied it`
+
+@export Is my agreement still in place, neither terminated nor deemed terminated (s 152.07(1)(b))?
+GIVEN `my agreement has been terminated or is deemed to have been terminated` IS A BOOLEAN @desc Has your agreement been terminated, or is it deemed to have been terminated?
+GIVETH A BOOLEAN
+DECIDE `Is my agreement still in place, neither terminated nor deemed terminated` IF
+    `s 152.07(1)(b) the agreement has not been terminated or deemed to have been terminated` `my agreement has been terminated or is deemed to have been terminated`
+
+@export Have I had an interruption of earnings from self-employment (s 152.07(1)(c))?
+GIVEN `I declared that I reduced the time devoted to my business by more than 40% because I stopped working for a reason in reg 14.01` IS A BOOLEAN @desc Have you declared that you reduced the time you devote to your business activities by more than 40% of the normal level because you ceased to work by reason of illness, injury or quarantine, pregnancy, the need to care for a child, or the need to provide care or support to a family member, a critically ill child or a critically ill adult (reg 14.01)?
+GIVETH A BOOLEAN
+DECIDE `Have I had an interruption of earnings from self-employment` IF
+    `s 152.07(1)(c) the person has had an interruption of earnings from self-employment`
+        `I declared that I reduced the time devoted to my business by more than 40% because I stopped working for a reason in reg 14.01`
+
+-- s 152.07(1)(d): the self-employed earnings needed in the qualifying period: $5,000 (benefit period begins 3 Jan to 25 Sep
+-- 2021), $5,289 (26 Sep 2021 to 24 Sep 2022), otherwise $6,000 or the amount fixed by regulation; times 1.25, 1.5, 1.75 or 2 (or a
+-- prescribed multiplier) for a violation in the 260 weeks before the initial claim.
+@export How much self-employed earnings must I have had during my qualifying period (s 152.07(1)(d))?
+GIVEN `the day my benefit period begins` IS A DATE @desc On what day does your benefit period begin? (ISO 8601; see "When does my benefit period begin")
+      `the Regulations fix an amount for my qualifying period` IS A BOOLEAN @desc Do the Regulations fix or determine an amount of self-employed earnings for your qualifying period (reg 11.1: the $6,000 adjusted each year)?
+      `that amount in dollars` IS A NUMBER @desc What is that amount, in dollars? (ignored if none)
+      `I accumulated a violation in the 260 weeks before my initial claim` IS A BOOLEAN @desc Did you accumulate a violation in the 260 weeks before making your initial claim?
+      `the class of my violation` IS A `Violation class` @desc What class is your violation: "a minor violation", "a serious violation", "a very serious violation" or "a subsequent violation"? (ignored if none)
+      `a multiplier is prescribed for that class` IS A BOOLEAN @desc Has a multiplier been prescribed for that class of violation? (none is prescribed in the Regulations as deposited)
+      `the prescribed multiplier` IS A NUMBER @desc What is that multiplier? (ignored if none)
+GIVETH A NUMBER
+DECIDE `How much self-employed earnings must I have had during my qualifying period` IS
+    `s 152.07(1)(d) the amount of self-employed earnings the person must have had during their qualifying period`
+        `the day my benefit period begins`
+        (IF `the Regulations fix an amount for my qualifying period` THEN JUST `that amount in dollars` ELSE NOTHING)
+        (IF `I accumulated a violation in the 260 weeks before my initial claim` THEN JUST `the class of my violation` ELSE NOTHING)
+        (IF `a multiplier is prescribed for that class` THEN JUST `the prescribed multiplier` ELSE NOTHING)
+
+@export Did I have enough self-employed earnings during my qualifying period (s 152.07(1)(d))?
+GIVEN `my self-employed earnings during my qualifying period` IS A NUMBER @desc What were your self-employed earnings during your qualifying period, in dollars?
+      `the day my benefit period begins` IS A DATE @desc On what day does your benefit period begin?
+      `the Regulations fix an amount for my qualifying period` IS A BOOLEAN @desc Do the Regulations fix or determine an amount of self-employed earnings for your qualifying period (reg 11.1)?
+      `that amount in dollars` IS A NUMBER @desc What is that amount, in dollars? (ignored if none)
+      `I accumulated a violation in the 260 weeks before my initial claim` IS A BOOLEAN @desc Did you accumulate a violation in the 260 weeks before making your initial claim?
+      `the class of my violation` IS A `Violation class` @desc What class is your violation? (ignored if none)
+      `a multiplier is prescribed for that class` IS A BOOLEAN @desc Has a multiplier been prescribed for that class of violation?
+      `the prescribed multiplier` IS A NUMBER @desc What is that multiplier? (ignored if none)
+GIVETH A BOOLEAN
+DECIDE `Did I have enough self-employed earnings during my qualifying period` IF
+    `s 152.07(1)(d) the person has had during their qualifying period an amount of self-employed earnings equal to or greater than the amount required`
+        `my self-employed earnings during my qualifying period`
+        (`s 152.07(1)(d) the amount of self-employed earnings the person must have had during their qualifying period`
+            `the day my benefit period begins`
+            (IF `the Regulations fix an amount for my qualifying period` THEN JUST `that amount in dollars` ELSE NOTHING)
+            (IF `I accumulated a violation in the 260 weeks before my initial claim` THEN JUST `the class of my violation` ELSE NOTHING)
+            (IF `a multiplier is prescribed for that class` THEN JUST `the prescribed multiplier` ELSE NOTHING))
+
+@export Do I qualify for benefits (s 152.07(1))?
+GIVEN `the day I entered into the agreement` IS A DATE @desc On what day did you enter into the agreement with the Commission? (ISO 8601)
+      `the day I make my initial claim` IS A DATE @desc On what day do you make (or did you make) your initial claim for benefits?
+      `a period other than 12 months is prescribed` IS A BOOLEAN @desc Has a period other than 12 months been prescribed for the first requirement? (none is prescribed in the Regulations as deposited)
+      `the prescribed period in months` IS A NUMBER @desc How many months is that prescribed period? (ignored if none)
+      `the Regulations deem me to have satisfied the 12 months` IS A BOOLEAN @desc Do the Regulations deem you to have satisfied the 12-month requirement (reg 76.43, for pregnancy and parental benefits only: you ceased to reside in a province that has a provincial plan, you entered into your agreement within 12 months before or three months after that day, and you were covered by the plan during the 12 months before that day)?
+      `my agreement has been terminated or is deemed to have been terminated` IS A BOOLEAN @desc Has your agreement been terminated, or is it deemed to have been terminated?
+      `I have had an interruption of earnings from self-employment` IS A BOOLEAN @desc Have you had an interruption of earnings from self-employment (reg 14.01)?
+      `the day my benefit period begins` IS A DATE @desc On what day does your benefit period begin?
+      `the Regulations fix an amount for my qualifying period` IS A BOOLEAN @desc Do the Regulations fix or determine an amount of self-employed earnings for your qualifying period (reg 11.1)?
+      `that amount in dollars` IS A NUMBER @desc What is that amount, in dollars? (ignored if none)
+      `I accumulated a violation in the 260 weeks before my initial claim` IS A BOOLEAN @desc Did you accumulate a violation in the 260 weeks before making your initial claim?
+      `the class of my violation` IS A `Violation class` @desc What class is your violation? (ignored if none)
+      `a multiplier is prescribed for that class` IS A BOOLEAN @desc Has a multiplier been prescribed for that class of violation?
+      `the prescribed multiplier` IS A NUMBER @desc What is that multiplier? (ignored if none)
+      `my self-employed earnings during my qualifying period` IS A NUMBER @desc What were your self-employed earnings during your qualifying period, in dollars?
+GIVETH A BOOLEAN
+DECIDE `Do I qualify for benefits` IF
+    `s 152.07(1) a self-employed person qualifies for benefits` `paragraph (a)` `paragraph (b)` `paragraph (c)` `paragraph (d)`
+    WHERE
+        `paragraph (a)` MEANS
+            `s 152.07(1)(a) at least 12 months have expired since the day on which the person entered into the agreement`
+                `the day I entered into the agreement` `the day I make my initial claim`
+                (IF `a period other than 12 months is prescribed` THEN JUST `the prescribed period in months` ELSE NOTHING)
+                `the Regulations deem me to have satisfied the 12 months`
+        `paragraph (b)` MEANS `s 152.07(1)(b) the agreement has not been terminated or deemed to have been terminated` `my agreement has been terminated or is deemed to have been terminated`
+        `paragraph (c)` MEANS `s 152.07(1)(c) the person has had an interruption of earnings from self-employment` `I have had an interruption of earnings from self-employment`
+        `paragraph (d)` MEANS
+            `s 152.07(1)(d) the person has had during their qualifying period an amount of self-employed earnings equal to or greater than the amount required`
+                `my self-employed earnings during my qualifying period`
+                (`s 152.07(1)(d) the amount of self-employed earnings the person must have had during their qualifying period`
+                    `the day my benefit period begins`
+                    (IF `the Regulations fix an amount for my qualifying period` THEN JUST `that amount in dollars` ELSE NOTHING)
+                    (IF `I accumulated a violation in the 260 weeks before my initial claim` THEN JUST `the class of my violation` ELSE NOTHING)
+                    (IF `a multiplier is prescribed for that class` THEN JUST `the prescribed multiplier` ELSE NOTHING))
+
+@export Was a violation accumulated in the 260 weeks before I made my initial claim (s 152.07(1)(d))?
+GIVEN `the day the violation was accumulated` IS A DATE @desc On what day was the violation accumulated (the day the Commission issued the notice of violation)?
+      `the day I make my initial claim` IS A DATE @desc On what day do you make (or did you make) your initial claim for benefits?
+GIVETH A BOOLEAN
+DECIDE `Was a violation accumulated in the 260 weeks before I made my initial claim` IF
+    `s 152.07(1)(d) a violation was accumulated in the 260 weeks before making the initial claim` `the day the violation was accumulated` `the day I make my initial claim`
+
+-- s 152.07(2) to (7): violations. What is asked is whether the person has accumulated one, what it is worth, what class it is, and
+-- whether it can still be counted against an initial claim.
+@export Have I accumulated a violation (s 152.07(2))?
+GIVEN `the Commission issued me a notice of violation` IS A BOOLEAN @desc Has the Commission issued you a notice of violation?
+      `penalties were imposed on me under section 38, or under section 41.1 for acts mentioned in section 38` IS A BOOLEAN @desc Were one or more penalties imposed on you under section 38, or under section 41.1 as a result of acts or omissions mentioned in section 38?
+      `I was found guilty of offences under section 135 or 136` IS A BOOLEAN @desc Were you found guilty of one or more offences under section 135 or 136 as a result of acts or omissions mentioned in those sections?
+      `I was found guilty of offences under the Criminal Code relating to this Act` IS A BOOLEAN @desc Were you found guilty of one or more offences under the Criminal Code as a result of acts or omissions relating to the application of this Act?
+GIVETH A BOOLEAN
+DECIDE `Have I accumulated a violation` IF
+    `s 152.07(2) a self-employed person accumulates a violation`
+        `the Commission issued me a notice of violation`
+        `penalties were imposed on me under section 38, or under section 41.1 for acts mentioned in section 38`
+        `I was found guilty of offences under section 135 or 136`
+        `I was found guilty of offences under the Criminal Code relating to this Act`
+
+@export What is the value of my violation (s 152.07(3) and (4))?
+GIVEN `the overpayment of benefits under this Part resulting from my acts or omissions` IS A NUMBER @desc What is the amount of the overpayment of benefits under Part VII.1 resulting from the acts or omissions on which the violation is based, in dollars? (0 if none)
+      `I am disentitled from receiving benefits under this Part` IS A BOOLEAN @desc Are you disentitled from receiving benefits under Part VII.1?
+      `my act or omission relates to the qualification requirements` IS A BOOLEAN @desc Does the act or omission on which the violation is based relate to the qualification requirements under subsection 152.07(1)?
+      `my weekly rate of benefits` IS A NUMBER @desc What is your weekly rate of benefits, in dollars?
+      `the average number of weeks of benefits under this Part` IS A NUMBER @desc What is your average number of weeks of benefits under this Part, as determined under the regulations (reg 13(2): the maximum weeks you may be paid, less the weeks paid, divided by two)?
+      `the benefits that could have been paid had I not been disentitled or had I met the requirements` IS A NUMBER @desc What is the amount of benefits that could have been paid to you if you had not been disentitled or had met the qualification requirements, in dollars?
+GIVETH A NUMBER
+DECIDE `What is the value of my violation` IS
+    `s 152.07(3) the value of a violation`
+        `the overpayment of benefits under this Part resulting from my acts or omissions`
+        (`s 152.07(3)(b) the weekly rate of benefits multiplied by the average number of weeks, held to the maximum of subsection (4)`
+            `I am disentitled from receiving benefits under this Part` `my act or omission relates to the qualification requirements`
+            `my weekly rate of benefits` `the average number of weeks of benefits under this Part`
+            `the benefits that could have been paid had I not been disentitled or had I met the requirements`)
+
+@export What class is my violation (s 152.07(5))?
+GIVEN `a warning was imposed for my violation` IS A BOOLEAN @desc Was a warning imposed for the violation (section 41.1)?
+      `the value of my violation` IS A NUMBER @desc What is the value of the violation, in dollars?
+      `the day the notice of violation was issued` IS A DATE @desc On what day was the notice of violation issued?
+      `I accumulated another violation earlier` IS A BOOLEAN @desc Had you accumulated another violation before?
+      `the day I accumulated the other violation` IS A DATE @desc On what day did you accumulate it? (ignored if none)
+GIVETH A MAYBE `Violation class`
+DECIDE `What class is my violation` IS
+    `s 152.07(5) the class of a violation`
+        `a warning was imposed for my violation` `the value of my violation` `the day the notice of violation was issued`
+        (IF `I accumulated another violation earlier` THEN JUST `the day I accumulated the other violation` ELSE NOTHING)
+
+@export On what day is my violation under section 7.1 treated as accumulated under Part VII.1 (s 152.07(6))?
+GIVEN `I accumulated the violation as an insured person under section 7.1` IS A BOOLEAN @desc Did you accumulate the violation under section 7.1 (as an insured person)?
+      `the day the notice of violation was given to me` IS A DATE @desc On what day was the notice of violation given to you?
+GIVETH A MAYBE DATE
+DECIDE `On what day is my violation under section 7.1 treated as accumulated under Part VII.1` IS
+    `s 152.07(6) the day on which a violation accumulated under section 7.1 is deemed to be accumulated under this section`
+        `I accumulated the violation as an insured person under section 7.1` `the day the notice of violation was given to me`
+
+@export May my violation be taken into account in this initial claim (s 152.07(7))?
+GIVEN `the number of my earlier initial claims in which it was taken into account and I qualified` IS A NUMBER @desc In how many of your earlier initial claims was the violation taken into account and did you qualify for benefits?
+GIVETH A BOOLEAN
+DECIDE `May my violation be taken into account in this initial claim` IF
+    `s 152.07(7) the violation may be taken into account under paragraph (1)(d) in this initial claim` `the number of my earlier initial claims in which it was taken into account and I qualified`
+
+@export On what day does my qualifying period begin (s 152.08(1))?
+GIVEN `the day my benefit period begins` IS A DATE @desc On what day does your benefit period begin?
+GIVETH A DATE
+DECIDE `On what day does my qualifying period begin` IS
+    `my qualifying period`'s `first day of the period`
+    WHERE
+        `my qualifying period` MEANS `s 152.08(1) the qualifying period of a self-employed person` `the day my benefit period begins`
+
+@export On what day does my qualifying period end (s 152.08(1))?
+GIVEN `the day my benefit period begins` IS A DATE @desc On what day does your benefit period begin?
+GIVETH A DATE
+DECIDE `On what day does my qualifying period end` IS
+    `my qualifying period`'s `last day of the period`
+    WHERE
+        `my qualifying period` MEANS `s 152.08(1) the qualifying period of a self-employed person` `the day my benefit period begins`
+
+@export May my self-employed earnings of that year count for this initial claim (s 152.08(2))?
+GIVEN `the number of other initial claims for which those earnings were taken into account` IS A NUMBER @desc For how many other initial claims were your self-employed earnings during that qualifying period taken into account?
+GIVETH A BOOLEAN
+DECIDE `May my self-employed earnings of that year count for this initial claim` IF
+    `s 152.08(2) the self-employed earnings during a qualifying period may be taken into account` `the number of other initial claims for which those earnings were taken into account`
+
+@export Must I elect whether benefits are paid under Part VII.1 or Part I (s 152.09(1))?
+GIVEN `I qualify for benefits under Part VII.1 as a self-employed person` IS A BOOLEAN @desc Do you qualify for benefits under Part VII.1 as a self-employed person?
+      `I qualify for benefits under Part I as an insured person` IS A BOOLEAN @desc Do you qualify for benefits under Part I as an insured person?
+GIVETH A BOOLEAN
+DECIDE `Must I elect whether benefits are paid under Part VII.1 or Part I` IF
+    `s 152.09(1) the individual must elect the Part under which benefits are to be paid`
+        `I qualify for benefits under Part VII.1 as a self-employed person` `I qualify for benefits under Part I as an insured person`
+
+@export Under which Part will my benefits be paid (s 152.09(1))?
+GIVEN `I qualify for benefits under Part VII.1 as a self-employed person` IS A BOOLEAN @desc Do you qualify for benefits under Part VII.1 as a self-employed person?
+      `I qualify for benefits under Part I as an insured person` IS A BOOLEAN @desc Do you qualify for benefits under Part I as an insured person?
+      `I made an election in writing when I made my initial claim` IS A BOOLEAN @desc Did you elect, in writing (reg 25.1), at the time of making your initial claim, the Part under which benefits are to be paid?
+      `the Part I elected` IS A `Part of the Act` @desc Which Part did you elect: "Part I" or "Part VII.1"? (ignored if you made no election)
+GIVETH A MAYBE `Part of the Act`
+DECIDE `Under which Part will my benefits be paid` IS
+    `s 152.09(1) the Part under which benefits are to be paid`
+        `I qualify for benefits under Part VII.1 as a self-employed person` `I qualify for benefits under Part I as an insured person`
+        (IF `I made an election in writing when I made my initial claim` THEN JUST `the Part I elected` ELSE NOTHING)
+
+@export Is my election binding for this reason (s 152.09(2))?
+GIVEN `the reason for the benefits` IS A `Reason for benefits` @desc For which reason are the benefits: pregnancy, caring for a new-born or adopted child, a prescribed illness, injury or quarantine, care or support of a family member, of a critically ill child, or of a critically ill adult?
+GIVETH A BOOLEAN
+DECIDE `Is my election binding for this reason` IF
+    `s 152.09(2) the election is binding in respect of the reason` `the reason for the benefits`
+
+§§ `My benefit period (ss 152.1 to 152.12)`
+
+@export Will a benefit period be established for me (ss 152.1(1) and (2) and 152.11(3))?
+GIVEN `I qualify under section 152.07` IS A BOOLEAN @desc Do you qualify for benefits under section 152.07?
+      `I make an initial claim for benefits` IS A BOOLEAN @desc Do you make an initial claim for benefits?
+      `my claim is made in accordance with section 50 and I prove I am qualified` IS A BOOLEAN @desc Is your initial claim made in accordance with section 50 and the regulations, and do you prove that you are qualified to receive benefits?
+      `I supply the information the Commission directs` IS A BOOLEAN @desc Do you supply, in the form and manner the Commission directs, information on your employment circumstances and the circumstances of any interruption of earnings, and any other information it requires?
+      `a prior benefit period has not ended` IS A BOOLEAN @desc Is there a prior benefit period of yours that has not ended?
+GIVETH A BOOLEAN
+DECIDE `Will a benefit period be established for me` IF
+    `s 152.1 and s 152.11(3) a benefit period is established`
+        `I qualify under section 152.07` `I make an initial claim for benefits`
+        (`s 152.1(2) the conditions for establishing a benefit period are met` `my claim is made in accordance with section 50 and I prove I am qualified` `I supply the information the Commission directs`)
+        `a prior benefit period has not ended`
+
+@export Are benefits payable to me for this week (s 152.1(1))?
+GIVEN `a benefit period has been established for me` IS A BOOLEAN @desc Has a benefit period been established for you under Part VII.1?
+      `I reduced the time devoted to my business by more than 40% of the normal level that week` IS A BOOLEAN @desc Did you reduce the time you devoted to your business activities that week by more than 40% of the normal level (reg 30.1)?
+      `the week falls in my benefit period` IS A BOOLEAN @desc Does that week fall in your benefit period?
+GIVETH A BOOLEAN
+DECIDE `Are benefits payable to me for this week` IF
+    `s 152.1(1) benefits are payable for the week`
+        `a benefit period has been established for me`
+        (`s 152.01(4) week of unemployment for a self-employed person` `I reduced the time devoted to my business by more than 40% of the normal level that week`)
+        `the week falls in my benefit period`
+
+@export When does my benefit period begin (s 152.11(1))?
+GIVEN `the day my interruption of earnings occurs` IS A DATE @desc On what day does your interruption of earnings occur (reg 14.01: the beginning of the week in which you declare you reduced the time devoted to your business by more than 40%)?
+      `the day my initial claim is made or regarded as made` IS A DATE @desc On what day is your initial claim made, or regarded as made (see "On what day is my initial claim regarded as having been made")?
+GIVETH A DATE
+DECIDE `When does my benefit period begin` IS
+    `s 152.11(1) the day on which a benefit period begins` `the day my interruption of earnings occurs` `the day my initial claim is made or regarded as made`
+
+@export On what day is my initial claim for benefits regarded as having been made (s 152.11(4))?
+GIVEN `the day I made my initial claim` IS A DATE @desc On what day did you make your initial claim?
+      `the day I first qualified to make it` IS A DATE @desc On what day did you first qualify to make the claim?
+      `the earlier day I ask for` IS A DATE @desc On what earlier day do you ask that the claim be regarded as made?
+      `I show I qualified on that earlier day` IS A BOOLEAN @desc Do you show that you qualified to receive benefits on that earlier day?
+      `I show good cause for the delay throughout that period` IS A BOOLEAN @desc Do you show that there was good cause for the delay throughout the period from the earlier day to the day you made the claim?
+      `but for the $5,000 amount in clause 152.07(1)(d)(i)(A) I would not have qualified` IS A BOOLEAN @desc But for the $5,000 amount of clause 152.07(1)(d)(i)(A) (benefit periods beginning 3 January to 25 September 2021), would you not have qualified to receive benefits?
+      `my claim is a caring claim to which the exception applies` IS A BOOLEAN @desc Is your claim one referred to in section 152.06, 152.061 or 152.062 to which the exception of subsection 152.11(6), (6.1) or (6.2) applies?
+GIVETH A DATE
+DECIDE `On what day is my initial claim for benefits regarded as having been made` IS
+    `s 152.11(4) the day on which an initial claim for benefits is regarded as having been made`
+        `the day I made my initial claim` `the day I first qualified to make it` `the earlier day I ask for`
+        `I show I qualified on that earlier day` `I show good cause for the delay throughout that period`
+        `but for the $5,000 amount in clause 152.07(1)(d)(i)(A) I would not have qualified`
+        `my claim is a caring claim to which the exception applies`
+
+@export On what day is my other claim for benefits regarded as having been made (s 152.11(5))?
+GIVEN `the day I made the claim` IS A DATE @desc On what day did you make the claim (a claim other than your initial claim)?
+      `I made it after the time prescribed` IS A BOOLEAN @desc Did you make it after the time prescribed for making the claim?
+      `the earlier day I ask for` IS A DATE @desc On what earlier day do you ask that the claim be regarded as made?
+      `I show good cause for the delay throughout that period` IS A BOOLEAN @desc Do you show that there was good cause for the delay throughout the period from the earlier day to the day you made the claim?
+      `but for the $5,000 amount in clause 152.07(1)(d)(i)(A) I would not have qualified` IS A BOOLEAN @desc But for the $5,000 amount of clause 152.07(1)(d)(i)(A), would you not have qualified to receive benefits?
+      `my claim is a caring claim to which the exception applies` IS A BOOLEAN @desc Is your claim one referred to in section 152.06, 152.061 or 152.062 to which the exception of subsection 152.11(6), (6.1) or (6.2) applies?
+GIVETH A DATE
+DECIDE `On what day is my other claim for benefits regarded as having been made` IS
+    `s 152.11(5) the day on which a claim other than an initial claim is regarded as having been made`
+        `the day I made the claim` `I made it after the time prescribed` `the earlier day I ask for`
+        `I show good cause for the delay throughout that period`
+        `but for the $5,000 amount in clause 152.07(1)(d)(i)(A) I would not have qualified`
+        `my claim is a caring claim to which the exception applies`
+
+@export Is the lateness of my claim excused because the 2021 amount of $5,000 would not have let me qualify (s 152.11(5.1))?
+GIVEN `but for the $5,000 amount in clause 152.07(1)(d)(i)(A) I would not have qualified` IS A BOOLEAN @desc But for the $5,000 amount of clause 152.07(1)(d)(i)(A), would you not have qualified to receive benefits?
+GIVETH A BOOLEAN
+DECIDE `Is the lateness of my claim excused because the 2021 amount of $5,000 would not have let me qualify` IF
+    `s 152.11(5.1) that fact is good cause for a delay in making a claim` `but for the $5,000 amount in clause 152.07(1)(d)(i)(A) I would not have qualified`
+
+@export Does the exception apply so that my caring claim is not treated as made on an earlier day (s 152.11(6), (6.1) and (6.2))?
+GIVEN `when I make the claim, all the benefits that could have been payable on it have been exhausted` IS A BOOLEAN @desc When you make the claim, have all the benefits that could otherwise have been payable on it already been exhausted?
+      `the beginning of the period has been determined and my claim would move it earlier` IS A BOOLEAN @desc Has the beginning of the period under subsection 152.06(3), 152.061(3) or 152.062(3) already been determined, so that your claim would move it to an earlier date?
+      `my claim is made in other circumstances set out in the regulations` IS A BOOLEAN @desc Is your claim made in any other circumstances set out in the regulations? (none is set out in the Regulations as deposited)
+GIVETH A BOOLEAN
+DECIDE `Does the exception apply so that my caring claim is not treated as made on an earlier day` IF
+    `ss 152.11(6), (6.1) and (6.2) the claim is not regarded as made on an earlier day`
+        `when I make the claim, all the benefits that could have been payable on it have been exhausted`
+        `the beginning of the period has been determined and my claim would move it earlier`
+        `my claim is made in other circumstances set out in the regulations`
+
+@export May the Commission cancel my benefit period because it has ended with no benefits paid (s 152.11(7)(a))?
+GIVEN `my benefit period has ended` IS A BOOLEAN @desc Has your benefit period ended?
+      `no benefits were paid or payable during it` IS A BOOLEAN @desc Were no benefits paid or payable to you during it?
+GIVETH A BOOLEAN
+DECIDE `May the Commission cancel my benefit period because it has ended with no benefits paid` IF
+    `s 152.11(7)(a) the Commission may cancel the benefit period` `my benefit period has ended` `no benefits were paid or payable during it`
+
+@export May the Commission cancel the part of my benefit period before my first week of benefits at my request (s 152.11(7)(b))?
+GIVEN `I request the cancellation of that earlier portion` IS A BOOLEAN @desc Do you request that the portion of your benefit period immediately before the first week for which benefits were paid or payable be cancelled?
+      `I establish a new benefit period beginning that first week` IS A BOOLEAN @desc Do you establish, under this Part or under Part I as an insured person, a new benefit period beginning that first week?
+      `I show good cause for the delay in asking` IS A BOOLEAN @desc Do you show that there was good cause for the delay in making the request throughout the period from the day benefits were first paid or payable to the day of the request?
+GIVETH A BOOLEAN
+DECIDE `May the Commission cancel the part of my benefit period before my first week of benefits at my request` IF
+    `s 152.11(7)(b) the Commission may cancel the portion of the benefit period immediately before the first week for which benefits were paid or payable`
+        `I request the cancellation of that earlier portion` `I establish a new benefit period beginning that first week` `I show good cause for the delay in asking`
+
+@export Is my cancelled benefit period treated as never having begun (s 152.11(8))?
+GIVEN `my benefit period, or a portion of it, has been cancelled` IS A BOOLEAN @desc Has your benefit period, or a portion of it, been cancelled?
+GIVETH A BOOLEAN
+DECIDE `Is my cancelled benefit period treated as never having begun` IF
+    NOT (`s 152.11(8) the benefit period or portion of it is treated as having begun` `my benefit period, or a portion of it, has been cancelled`)
+
+@export On what day have I requested the end of my benefit period, made a new initial claim and qualified (s 152.11(9)(c))?
+GIVEN `I have requested that my benefit period end` IS A BOOLEAN @desc Have you requested that your benefit period end?
+      `the day I requested it` IS A DATE @desc On what day did you request it? (ignored if you have not)
+      `I have made a new initial claim for benefits` IS A BOOLEAN @desc Have you made a new initial claim for benefits?
+      `the day I made the new claim` IS A DATE @desc On what day did you make it? (ignored if you have not)
+      `I qualify under Part VII.1 or, as an insured person, under Part I` IS A BOOLEAN @desc Do you qualify to receive benefits under Part VII.1 or, as an insured person, under Part I?
+      `the day I qualified` IS A DATE @desc On what day did you qualify? (ignored if you do not)
+GIVETH A MAYBE DATE
+DECIDE `On what day have I requested the end of my benefit period, made a new initial claim and qualified` IS
+    `s 152.11(9)(c) the day on which the person has requested the end of the benefit period, made a new initial claim and qualified`
+        (IF `I have requested that my benefit period end` THEN JUST `the day I requested it` ELSE NOTHING)
+        (IF `I have made a new initial claim for benefits` THEN JUST `the day I made the new claim` ELSE NOTHING)
+        (IF `I qualify under Part VII.1 or, as an insured person, under Part I` THEN JUST `the day I qualified` ELSE NOTHING)
+
+@export On what day does my benefit period end (s 152.11(9))?
+GIVEN `the day my benefit period begins` IS A DATE @desc On what day does your benefit period begin?
+      `the length of my benefit period in weeks` IS A NUMBER @desc How many weeks long is your benefit period (see "How long is my benefit period")?
+      `no further benefits are payable to me` IS A BOOLEAN @desc Are no further benefits payable to you in your benefit period (including because you have been paid the maximum weeks of section 152.14)?
+      `the day that happened` IS A DATE @desc On what day did that happen? (ignored if not)
+      `I have requested the end of my benefit period, made a new initial claim and qualified` IS A BOOLEAN @desc Have you requested that your benefit period end, made a new initial claim and qualified to receive benefits under this Part or, as an insured person, under Part I?
+      `the day the last of those was done` IS A DATE @desc On what day was the last of those three things done? (ignored if you have not done all three)
+GIVETH A DATE
+DECIDE `On what day does my benefit period end` IS
+    `s 152.11(9) the day on which the benefit period ends`
+        (IF `no further benefits are payable to me` THEN JUST `the day that happened` ELSE NOTHING)
+        (`s 152.11(2) the day on which the benefit period would otherwise end` `the day my benefit period begins` `the length of my benefit period in weeks`)
+        (IF `I have requested the end of my benefit period, made a new initial claim and qualified` THEN JUST `the day the last of those was done` ELSE NOTHING)
+
+@export On what day is my request that my benefit period end regarded as having been made (s 152.11(10))?
+GIVEN `the day I made the request` IS A DATE @desc On what day did you make the request that your benefit period end?
+      `the earlier day I ask for` IS A DATE @desc On what earlier day do you ask that the request be regarded as made?
+      `I show good cause for the delay throughout that period` IS A BOOLEAN @desc Do you show that there was good cause for the delay throughout the period from the earlier day to the day you made the request?
+GIVETH A DATE
+DECIDE `On what day is my request that my benefit period end regarded as having been made` IS
+    `s 152.11(10) the day on which a request that the benefit period end is regarded as having been made`
+        `the day I made the request` `the earlier day I ask for` `I show good cause for the delay throughout that period`
+
+-- The maximum number of weeks that section 152.14(1) sets for each benefit that was paid (0 for a benefit that was not paid),
+-- as a list, for s 152.11(16). It calls the rule of s 152.14(1) and restates no figure.
+GIVEN `benefits were paid for pregnancy` IS A BOOLEAN
+      `benefits were paid for the care of a child` IS A BOOLEAN
+      `the election made for the care of a child` IS AN `Election of maximum weeks`
+      `benefits were paid for an illness, injury or quarantine` IS A BOOLEAN
+      `benefits were paid for the care or support of a family member` IS A BOOLEAN
+      `benefits were paid for the care or support of a critically ill child` IS A BOOLEAN
+      `benefits were paid for the care or support of a critically ill adult` IS A BOOLEAN
+GIVETH A LIST OF NUMBER
+`the section 152.14(1) maximum for each benefit paid` MEANS
+    LIST (IF `benefits were paid for pregnancy` THEN `the section 152.14(1) maximum for` `pregnancy` `the election made for the care of a child` ELSE 0),
+         (IF `benefits were paid for the care of a child` THEN `the section 152.14(1) maximum for` `caring for a new-born or adopted child` `the election made for the care of a child` ELSE 0),
+         (IF `benefits were paid for an illness, injury or quarantine` THEN `the section 152.14(1) maximum for` `a prescribed illness, injury or quarantine` `the election made for the care of a child` ELSE 0),
+         (IF `benefits were paid for the care or support of a family member` THEN `the section 152.14(1) maximum for` `care or support of a family member` `the election made for the care of a child` ELSE 0),
+         (IF `benefits were paid for the care or support of a critically ill child` THEN `the section 152.14(1) maximum for` `care or support of a critically ill child` `the election made for the care of a child` ELSE 0),
+         (IF `benefits were paid for the care or support of a critically ill adult` THEN `the section 152.14(1) maximum for` `care or support of a critically ill adult` `the election made for the care of a child` ELSE 0)
+
+GIVEN reason IS A `Reason for benefits`
+      election IS AN `Election of maximum weeks`
+GIVETH A NUMBER
+`the section 152.14(1) maximum for` reason election MEANS
+    CONSIDER `s 152.14(1) the maximum number of weeks for which benefits may be paid in a benefit period` reason (JUST election)
+    WHEN NOTHING THEN 0
+    WHEN JUST m THEN m
+
+-- s 152.11(2), (11) to (16): the length of the benefit period in weeks: 52 weeks, extended for weeks of jail, severance pay,
+-- workers' compensation and provincial payments (11), (12), a child in hospital (13), the extensions (14) and (14.1), held to 104
+-- weeks (15) and, where only (14) extends it, to the sum of (16).
+@export How long is my benefit period in weeks (s 152.11(2) and (11) to (16))?
+GIVEN `weeks not entitled because confined in jail and not found guilty` IS A NUMBER @desc For how many weeks of the benefit period were you not entitled to benefits because you were confined in a jail, penitentiary or similar institution and not found guilty of the offence you were held for or any other offence from the same transaction?
+      `weeks not entitled because of severance earnings` IS A NUMBER @desc For how many weeks were you not entitled because you received earnings paid because of the complete severance of your relationship with your former employer?
+      `weeks not entitled because of workers' compensation` IS A NUMBER @desc For how many weeks were you not entitled because you received workers' compensation payments for an illness or injury?
+      `weeks not entitled because of a provincial payment for danger` IS A NUMBER @desc For how many weeks were you not entitled because you received payments under a provincial law on the basis of having ceased to work because continuing to work would have been dangerous to you, your unborn child or a child you were breast-feeding?
+      `weeks of the further extension under subsection 152.11(12)` IS A NUMBER @desc For how many weeks during an extension for the reasons above were you again not entitled for one of those reasons?
+      `weeks my child or children were in hospital during the parental period` IS A NUMBER @desc For how many weeks was the child (or children) in hospital during the period for your parental benefits?
+      `weeks of extension under subsection 152.11(14)` IS A NUMBER @desc If your benefit period is extended under subsection 152.11(14), by how many weeks does the Commission extend it so that your benefits can be paid up to the maximum total? (0 if it is not extended)
+      `benefits were paid for a reason other than the care of a child` IS A BOOLEAN @desc Were benefits paid to you in your benefit period for pregnancy, illness, or the care or support of a family member, a critically ill child or a critically ill adult?
+      `benefits were paid for the care of a child` IS A BOOLEAN @desc Were benefits paid to you in your benefit period for the care of a new-born or adopted child?
+      `the election I made` IS AN `Election of maximum weeks` @desc Which maximum did you elect for the care of a child: "the 35-week maximum" or "the 61-week maximum"?
+      `benefits were paid for pregnancy` IS A BOOLEAN @desc Were benefits paid to you for pregnancy in your benefit period?
+      `benefits were paid for an illness, injury or quarantine` IS A BOOLEAN @desc Were benefits paid to you for an illness, injury or quarantine?
+      `benefits were paid for the care or support of a family member` IS A BOOLEAN @desc Were benefits paid to you for the care or support of a gravely ill family member?
+      `benefits were paid for the care or support of a critically ill child` IS A BOOLEAN @desc Were benefits paid to you for the care or support of a critically ill child?
+      `benefits were paid for the care or support of a critically ill adult` IS A BOOLEAN @desc Were benefits paid to you for the care or support of a critically ill adult?
+GIVETH A NUMBER
+DECIDE `How long is my benefit period in weeks` IS
+    `s 152.11(2), (15) and (16) the length of the benefit period, in weeks`
+        (`s 152.11(11) the number of weeks by which the benefit period is extended`
+            `weeks not entitled because confined in jail and not found guilty` `weeks not entitled because of severance earnings`
+            `weeks not entitled because of workers' compensation` `weeks not entitled because of a provincial payment for danger`)
+        (`s 152.11(12) the number of weeks of the further extension` `weeks of the further extension under subsection 152.11(12)`)
+        (`s 152.11(13) the number of weeks by which the benefit period is extended because the child or children are hospitalized`
+            `weeks my child or children were in hospital during the parental period`)
+        `weeks of extension under subsection 152.11(14)`
+        (`s 152.11(14.1) the number of weeks by which the benefit period is extended`
+            `benefits were paid for a reason other than the care of a child` `benefits were paid for the care of a child` `the election I made`)
+        `the longest the benefit period may be`
+    WHERE
+        `the longest the benefit period may be` MEANS
+            `s 152.11(16) the longest a benefit period extended under subsection (14) may be, in weeks` `the maxima of the benefits paid`
+        `the maxima of the benefits paid` MEANS
+            `the section 152.14(1) maximum for each benefit paid` `benefits were paid for pregnancy` `benefits were paid for the care of a child` `the election I made`
+                `benefits were paid for an illness, injury or quarantine` `benefits were paid for the care or support of a family member`
+                `benefits were paid for the care or support of a critically ill child` `benefits were paid for the care or support of a critically ill adult`
+
+@export Is my benefit period extended so that my benefits can be paid up to the maximum total (s 152.11(14))?
+GIVEN `the number of reasons for which benefits were paid to me in my benefit period` IS A NUMBER @desc For how many of the reasons in section 152.14(1) have benefits been paid to you in your benefit period?
+      `at least one of those benefits was paid for fewer weeks than its maximum` IS A BOOLEAN @desc Was at least one of those benefits paid for fewer than the applicable maximum number of weeks established for it?
+      `the maximum total number of weeks for those reasons` IS A NUMBER @desc What is the maximum total number of weeks established by section 152.14(1) for those reasons together?
+GIVETH A BOOLEAN
+DECIDE `Is my benefit period extended so that my benefits can be paid up to the maximum total` IF
+    `s 152.11(14) the benefit period is extended so that those benefits may be paid up to the maximum total`
+        `the number of reasons for which benefits were paid to me in my benefit period` `at least one of those benefits was paid for fewer weeks than its maximum` `the maximum total number of weeks for those reasons`
+
+@export How long may a benefit period extended under subsection (14) be, in weeks (s 152.11(16))?
+GIVEN `benefits were paid for pregnancy` IS A BOOLEAN @desc Were benefits paid to you for pregnancy in your benefit period?
+      `benefits were paid for the care of a child` IS A BOOLEAN @desc Were benefits paid to you for the care of a new-born or adopted child?
+      `the election I made` IS AN `Election of maximum weeks` @desc Which maximum did you elect for the care of a child? (ignored if no benefits were paid for the care of a child)
+      `benefits were paid for an illness, injury or quarantine` IS A BOOLEAN @desc Were benefits paid to you for an illness, injury or quarantine?
+      `benefits were paid for the care or support of a family member` IS A BOOLEAN @desc Were benefits paid to you for the care or support of a gravely ill family member?
+      `benefits were paid for the care or support of a critically ill child` IS A BOOLEAN @desc Were benefits paid to you for the care or support of a critically ill child?
+      `benefits were paid for the care or support of a critically ill adult` IS A BOOLEAN @desc Were benefits paid to you for the care or support of a critically ill adult?
+GIVETH A NUMBER
+DECIDE `How long may a benefit period extended under subsection (14) be, in weeks` IS
+    `s 152.11(16) the longest a benefit period extended under subsection (14) may be, in weeks` `the maxima of the benefits paid`
+    WHERE
+        `the maxima of the benefits paid` MEANS
+            `the section 152.14(1) maximum for each benefit paid` `benefits were paid for pregnancy` `benefits were paid for the care of a child` `the election I made`
+                `benefits were paid for an illness, injury or quarantine` `benefits were paid for the care or support of a family member`
+                `benefits were paid for the care or support of a critically ill child` `benefits were paid for the care or support of a critically ill adult`
+
+@export Am I owed a decision on whether I am qualified, and notice of it (s 152.12)?
+GIVEN `the Commission has received my initial claim for benefits` IS A BOOLEAN @desc Has the Commission received your initial claim for benefits?
+GIVETH A BOOLEAN
+DECIDE `Am I owed a decision on whether I am qualified, and notice of it` IF
+    `s 152.12 the person is owed a decision on whether they are qualified and notice of the decision` `the Commission has received my initial claim for benefits`
+
+§§ `How many weeks, and how much (ss 152.13 to 152.2)`
+
+-- s 152.14(1): the maximum number of weeks in a benefit period for each reason; parental benefits depend on the election.
+@export What is the most weeks of benefits I can be paid in my benefit period for this reason (s 152.14(1))?
+GIVEN `the reason for the benefits` IS A `Reason for benefits` @desc For which reason are the benefits: pregnancy, caring for a new-born or adopted child, a prescribed illness injury or quarantine, care or support of a family member, of a critically ill child, or of a critically ill adult?
+      `I elected a maximum for the care of a child` IS A BOOLEAN @desc For the care of a child only: have you elected the 35-week or the 61-week maximum?
+      `the election I made` IS AN `Election of maximum weeks` @desc Which maximum did you elect: "the 35-week maximum" or "the 61-week maximum"? (ignored if you made none)
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most weeks of benefits I can be paid in my benefit period for this reason` IS
+    `s 152.14(1) the maximum number of weeks for which benefits may be paid in a benefit period`
+        `the reason for the benefits` (IF `I elected a maximum for the care of a child` THEN JUST `the election I made` ELSE NOTHING)
+
+@export May benefits be paid to me for this week (s 152.13)?
+GIVEN `a benefit period has been established for me` IS A BOOLEAN @desc Has a benefit period been established for you under Part VII.1?
+      `the week is a week of unemployment that falls in my benefit period` IS A BOOLEAN @desc Is the week a week of unemployment of yours that falls in your benefit period?
+      `the weeks already paid to me for this reason` IS A NUMBER @desc For how many weeks have benefits already been paid to you for this reason?
+      `the reason for the benefits` IS A `Reason for benefits` @desc For which reason are the benefits?
+      `I elected a maximum for the care of a child` IS A BOOLEAN @desc For the care of a child only: have you elected the 35-week or the 61-week maximum?
+      `the election I made` IS AN `Election of maximum weeks` @desc Which maximum did you elect? (ignored if you made none)
+GIVETH A MAYBE BOOLEAN
+DECIDE `May benefits be paid to me for this week` IS
+    CONSIDER `s 152.14(1) the maximum number of weeks for which benefits may be paid in a benefit period` `the reason for the benefits` (IF `I elected a maximum for the care of a child` THEN JUST `the election I made` ELSE NOTHING)
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST m THEN JUST (`s 152.13 benefits may be paid for the week` `a benefit period has been established for me` `the week is a week of unemployment that falls in my benefit period` `the weeks already paid to me for this reason` m)
+
+@export What is the most weeks I can be paid for a single pregnancy or placement (s 152.14(2) and (4))?
+GIVEN `it is for the care of children of a single pregnancy or placement` IS A BOOLEAN @desc Is the question about the care of one or more new-born or adopted children as a result of a single pregnancy or placement (and not about the pregnancy itself)?
+      `the election I made` IS AN `Election of maximum weeks` @desc Which maximum did you elect: "the 35-week maximum" or "the 61-week maximum"?
+      `the weeks are divided between two claimants` IS A BOOLEAN @desc Are the weeks of benefits divided between you and another claimant under section 152.05?
+GIVETH A NUMBER
+DECIDE `What is the most weeks I can be paid for a single pregnancy or placement` IS
+    `ss 152.14(2) and (4) the maximum number of weeks for a single pregnancy or placement`
+        `it is for the care of children of a single pregnancy or placement` `the election I made` `the weeks are divided between two claimants`
+
+@export Are two or more children placed with me at the same time a single placement (s 152.14(3))?
+GIVEN `two or more children are placed with me for adoption` IS A BOOLEAN @desc Are two or more children placed with you for the purpose of adoption?
+      `they are placed at the same or substantially the same time` IS A BOOLEAN @desc Are they placed at the same or substantially the same time?
+GIVETH A BOOLEAN
+DECIDE `Are two or more children placed with me at the same time a single placement` IF
+    `s 152.14(3) the placements are regarded as a single placement of a child or children for the purpose of adoption`
+        `two or more children are placed with me for adoption` `they are placed at the same or substantially the same time`
+
+@export What is the most weeks I can be paid in respect of one family member, critically ill child or critically ill adult (s 152.14(5), (5.1) and (5.2))?
+GIVEN `the reason for the benefits` IS A `Reason for benefits` @desc For which reason: "care or support of a family member", "care or support of a critically ill child" or "care or support of a critically ill adult"?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most weeks I can be paid in respect of one family member, critically ill child or critically ill adult` IS
+    `ss 152.14(5), (5.1) and (5.2) the maximum number of weeks of benefits in respect of one family member, critically ill child or critically ill adult` `the reason for the benefits`
+
+@export On what day does the period end during which that maximum applies (s 152.14(5) and (6))?
+GIVEN `the first day of the week in which the certificate period begins` IS A DATE @desc On what day does the week begin in which your period under subsection 152.06(3)(a) begins?
+      `a shorter period is prescribed` IS A BOOLEAN @desc Has a shorter period been prescribed for the purposes of subsection 152.06(4)? (none is prescribed in the Regulations as deposited)
+      `the shorter period in weeks` IS A NUMBER @desc How many weeks long is it? (ignored if none)
+GIVETH A DATE
+DECIDE `On what day does the period end during which that maximum applies` IS
+    `the window`'s `last day of the period`
+    WHERE
+        `the window` MEANS
+            `ss 152.14(5) and (6) the period during which the maximum applies` `the first day of the week in which the certificate period begins`
+                (IF `a shorter period is prescribed` THEN JUST `the shorter period in weeks` ELSE NOTHING)
+
+@export Are no further compassionate care benefits payable to me for this family member (s 152.14(7))?
+GIVEN `the shorter period has expired for this family member` IS A BOOLEAN @desc Has the shorter prescribed period expired in respect of this family member?
+      `the minimum prescribed number of weeks has elapsed` IS A BOOLEAN @desc Has the minimum prescribed number of weeks elapsed since then? (none is prescribed in the Regulations as deposited)
+GIVETH A BOOLEAN
+DECIDE `Are no further compassionate care benefits payable to me for this family member` IF
+    `s 152.14(7) no further benefits are payable under section 152.06 in respect of the family member`
+        `the shorter period has expired for this family member` `the minimum prescribed number of weeks has elapsed`
+
+@export What is the most weeks I can combine in my benefit period (s 152.14(8))?
+GIVEN `my benefit period is extended under subsection 152.11(14)` IS A BOOLEAN @desc Is your benefit period extended under subsection 152.11(14)?
+      `the longest my benefit period may be under subsection 152.11(16), in weeks` IS A NUMBER @desc How many weeks is the maximum benefit period calculated under subsection 152.11(16)? (ignored if it is not extended)
+GIVETH A NUMBER
+DECIDE `What is the most weeks I can combine in my benefit period` IS
+    `s 152.14(8) the maximum number of combined weeks` `my benefit period is extended under subsection 152.11(14)` `the longest my benefit period may be under subsection 152.11(16), in weeks`
+
+@export Are the weeks I want to combine within the maximum (s 152.14(8))?
+GIVEN `the weeks I want to combine` IS A NUMBER @desc How many weeks of benefits, for the different reasons together, do you want to combine in your benefit period?
+      `my benefit period is extended under subsection 152.11(14)` IS A BOOLEAN @desc Is your benefit period extended under subsection 152.11(14)?
+      `the longest my benefit period may be under subsection 152.11(16), in weeks` IS A NUMBER @desc How many weeks is the maximum benefit period calculated under subsection 152.11(16)? (ignored if it is not extended)
+GIVETH A BOOLEAN
+DECIDE `Are the weeks I want to combine within the maximum` IF
+    `s 152.14(8) the combined weeks are within the maximum`
+        `the weeks I want to combine` `my benefit period is extended under subsection 152.11(14)` `the longest my benefit period may be under subsection 152.11(16), in weeks`
+
+@export Have I served my waiting period (s 152.15)?
+GIVEN `the weeks of unemployment I have served as waiting period` IS A NUMBER @desc After the beginning of your benefit period, how many weeks of unemployment for which benefits would otherwise be payable have you served as your waiting period?
+GIVETH A BOOLEAN
+DECIDE `Have I served my waiting period` IF
+    `s 152.15 the person has served the waiting period and is entitled to be paid benefits` `the weeks of unemployment I have served as waiting period`
+
+@export Does this week count toward my waiting period (s 152.151)?
+GIVEN `my rate of weekly benefits` IS A NUMBER @desc What is your rate of weekly benefits, with any family supplement, in dollars?
+      `my earnings for the week` IS A NUMBER @desc What are your earnings for the week, as determined for the deduction of subsection 152.18(2), in dollars?
+GIVETH A BOOLEAN
+DECIDE `Does this week count toward my waiting period` IF
+    `s 152.151(1) the week of unemployment is deemed to be a week for which benefits would otherwise be payable` `my rate of weekly benefits` `my earnings for the week`
+
+-- s 152.16(1) and (2): 55% of the self-employed earnings and insurable earnings of the qualifying period (held to the maximum yearly
+-- insurable earnings) divided by 52; 33% for weeks paid under s 152.05 under the 61-week election. Rounded to the nearest dollar.
+@export What is my rate of weekly benefits (s 152.16)?
+GIVEN `my self-employed earnings for my qualifying period` IS A NUMBER @desc What were your self-employed earnings for your qualifying period, in dollars (see "What are my self-employed earnings for the year")?
+      `my insurable earnings from employment for my qualifying period` IS A NUMBER @desc What were your insurable earnings from employment for your qualifying period, in dollars, without the earnings the regulations leave out (reg 24.3: earnings from employment you lost through misconduct or left without just cause, and earnings before a prior benefit period)? (0 if none)
+      `the maximum yearly insurable earnings for the year` IS A NUMBER @desc What is the maximum yearly insurable earnings for the year of your benefit period, in dollars (section 4)?
+      `the week is paid under section 152.05` IS A BOOLEAN @desc Is this a week for which you are paid benefits under section 152.05 (care of a child)?
+      `the election I made` IS AN `Election of maximum weeks` @desc Which maximum did you elect for the care of a child: "the 35-week maximum" or "the 61-week maximum"? (ignored if the week is not paid under section 152.05)
+GIVETH A NUMBER
+DECIDE `What is my rate of weekly benefits` IS
+    `s 152.16(1) the rate of weekly benefits payable to a self-employed person`
+        `my self-employed earnings for my qualifying period` `my insurable earnings from employment for my qualifying period`
+        `the maximum yearly insurable earnings for the year` `the week is paid under section 152.05` `the election I made`
+
+@export By how much is my weekly rate increased by the family supplement (s 152.17(1))?
+GIVEN `I have one or more dependent children` IS A BOOLEAN @desc Do you have one or more dependent children?
+      `I establish that I meet the low-income family eligibility criteria` IS A BOOLEAN @desc Do you establish, in the manner the Commission directs, that you meet the prescribed low-income family eligibility criteria (reg 34)?
+      `the supplement the regulations determine` IS A NUMBER @desc What family supplement do the regulations determine for you (reg 34), in dollars a week?
+GIVETH A NUMBER
+DECIDE `By how much is my weekly rate increased by the family supplement` IS
+    `s 152.17(1) the family supplement by which the rate is increased`
+        `I have one or more dependent children` `I establish that I meet the low-income family eligibility criteria` `the supplement the regulations determine`
+
+@export What is the greatest increase the family supplement can make to my weekly rate (s 152.17(4))?
+GIVEN `my self-employed earnings for the year` IS A NUMBER @desc What is your amount of self-employed earnings for the year, in dollars?
+      `a percentage is prescribed` IS A BOOLEAN @desc Has a percentage been prescribed for this limit? (none is prescribed in the Regulations as deposited; otherwise 25%)
+      `the prescribed percentage` IS A NUMBER @desc What is that percentage, as a fraction (0.3 for 30%)? (ignored if none is prescribed)
+GIVETH A NUMBER
+DECIDE `What is the greatest increase the family supplement can make to my weekly rate` IS
+    `s 152.17(4) the greatest increase in the rate of weekly benefits`
+        `my self-employed earnings for the year` (IF `a percentage is prescribed` THEN JUST `the prescribed percentage` ELSE NOTHING)
+
+@export What is the highest weekly rate that can be paid to me (s 152.17(5))?
+GIVEN `the maximum yearly insurable earnings for the year` IS A NUMBER @desc What is the maximum yearly insurable earnings for the year of your benefit period, in dollars (section 4)?
+GIVETH A NUMBER
+DECIDE `What is the highest weekly rate that can be paid to me` IS
+    `s 152.17(5) the maximum rate of weekly benefits` `the maximum yearly insurable earnings for the year`
+
+@export What is my weekly rate with the family supplement (s 152.17)?
+GIVEN `my rate of weekly benefits` IS A NUMBER @desc What is your rate of weekly benefits under section 152.16, in dollars (see "What is my rate of weekly benefits")?
+      `I have one or more dependent children` IS A BOOLEAN @desc Do you have one or more dependent children?
+      `I establish that I meet the low-income family eligibility criteria` IS A BOOLEAN @desc Do you establish that you meet the prescribed low-income family eligibility criteria (reg 34)?
+      `the supplement the regulations determine` IS A NUMBER @desc What family supplement do the regulations determine for you (reg 34), in dollars a week?
+      `my self-employed earnings for the year` IS A NUMBER @desc What is your amount of self-employed earnings for the year, in dollars?
+      `a percentage is prescribed` IS A BOOLEAN @desc Has a percentage been prescribed for the limit on the increase? (otherwise 25%)
+      `the prescribed percentage` IS A NUMBER @desc What is that percentage, as a fraction? (ignored if none is prescribed)
+      `the maximum yearly insurable earnings for the year` IS A NUMBER @desc What is the maximum yearly insurable earnings for the year of your benefit period, in dollars (section 4)?
+GIVETH A NUMBER
+DECIDE `What is my weekly rate with the family supplement` IS
+    `s 152.17 the rate of weekly benefits with the family supplement`
+        `my rate of weekly benefits`
+        (`s 152.17(1) the family supplement by which the rate is increased`
+            `I have one or more dependent children` `I establish that I meet the low-income family eligibility criteria` `the supplement the regulations determine`)
+        (`s 152.17(4) the greatest increase in the rate of weekly benefits` `my self-employed earnings for the year` (IF `a percentage is prescribed` THEN JUST `the prescribed percentage` ELSE NOTHING))
+        (`s 152.17(5) the maximum rate of weekly benefits` `the maximum yearly insurable earnings for the year`)
+
+@export How much of my benefits for the first three weeks is deducted for earnings in my waiting period (s 152.18(1))?
+GIVEN `my earnings during my waiting period` IS A NUMBER @desc What were your earnings during your waiting period, in dollars?
+      `the amount the regulations prescribe to be deducted` IS A NUMBER @desc What amount do the regulations prescribe to be deducted (reg 39(1)), in dollars?
+GIVETH A NUMBER
+DECIDE `How much of my benefits for the first three weeks is deducted for earnings in my waiting period` IS
+    `s 152.18(1) the amount deducted from the benefits payable for the first three weeks`
+        `my earnings during my waiting period` `the amount the regulations prescribe to be deducted`
+
+@export How much is deducted from this week's benefits for my earnings (s 152.18(2) and (2.1))?
+GIVEN `my earnings for the week` IS A NUMBER @desc What are your earnings for this week of unemployment, in dollars?
+      `my self-employed earnings for my qualifying period` IS A NUMBER @desc What were your self-employed earnings for your qualifying period, in dollars?
+      `my insurable earnings from employment for my qualifying period` IS A NUMBER @desc What were your insurable earnings from employment for your qualifying period, in dollars? (0 if none)
+      `the maximum yearly insurable earnings for the year` IS A NUMBER @desc What is the maximum yearly insurable earnings for the year of your benefit period, in dollars (section 4)?
+GIVETH A NUMBER
+DECIDE `How much is deducted from this week's benefits for my earnings` IS
+    `s 152.18(2) the deduction for earnings in a week of unemployment`
+        `my earnings for the week`
+        (`my self-employed earnings for my qualifying period` PLUS `my insurable earnings from employment for my qualifying period`)
+        `the maximum yearly insurable earnings for the year`
+
+@export How much is deducted from my benefits because I did not declare all my earnings (s 152.18(3)(a))?
+GIVEN `the amount of my undeclared earnings` IS A NUMBER @desc What was the amount of the earnings you failed to declare, in dollars?
+      `in the Commission's opinion I knowingly failed to declare them` IS A BOOLEAN @desc Is it the Commission's opinion that you knowingly failed to declare the earnings?
+      `all the amounts determined under paragraph 152.18(2)(a) or (b) for the period` IS A NUMBER @desc What is the total of all the deductions under paragraph 152.18(2)(a) or (b) for the period (as if all the earnings had been declared), in dollars?
+      `the amounts applied under those paragraphs for the earnings I declared` IS A NUMBER @desc What is the total of the amounts applied under those paragraphs for the earnings you did declare, in dollars?
+GIVETH A NUMBER
+DECIDE `How much is deducted from my benefits because I did not declare all my earnings` IS
+    `s 152.18(3)(a) the amount to be deducted for undeclared earnings`
+        `the amount of my undeclared earnings` `in the Commission's opinion I knowingly failed to declare them`
+        `all the amounts determined under paragraph 152.18(2)(a) or (b) for the period` `the amounts applied under those paragraphs for the earnings I declared`
+
+@export How much is taken from each of my next four weeks of benefits for undeclared earnings (s 152.18(3)(b))?
+GIVEN `the amount still to be deducted` IS A NUMBER @desc What amount is still to be deducted for your undeclared earnings, in dollars?
+      `the benefits paid to me in the first week` IS A NUMBER @desc What benefits were paid to you for the first week for which the earnings were not declared, in dollars?
+      `the benefits paid to me in the second week` IS A NUMBER @desc What benefits were paid to you for the second week, in dollars?
+      `the benefits paid to me in the third week` IS A NUMBER @desc What benefits were paid to you for the third week, in dollars?
+      `the benefits paid to me in the fourth week` IS A NUMBER @desc What benefits were paid to you for the fourth week, in dollars?
+GIVETH A LIST OF NUMBER
+DECIDE `How much is taken from each of my next four weeks of benefits for undeclared earnings` IS
+    `s 152.18(3)(b) the amounts deducted in consecutive weeks` `the amount still to be deducted`
+        (LIST `the benefits paid to me in the first week`, `the benefits paid to me in the second week`, `the benefits paid to me in the third week`, `the benefits paid to me in the fourth week`)
+
+@export How much is deducted for the working days on which I am not entitled to benefits (s 152.19(1) and (2))?
+GIVEN `my weekly rate of benefits` IS A NUMBER @desc What is your weekly rate of benefits, in dollars?
+      `the working days on which I am not entitled` IS A NUMBER @desc On how many working days (any day but Saturday and Sunday, reg 32) in the week, or in your waiting period, are you not entitled to receive benefits?
+GIVETH A NUMBER
+DECIDE `How much is deducted for the working days on which I am not entitled to benefits` IS
+    `ss 152.19(1) and (2) the deduction for working days on which the person is not entitled` `my weekly rate of benefits` `the working days on which I am not entitled`
+
+@export Am I not entitled to benefits for a period because I am in prison or outside Canada (s 152.2)?
+GIVEN `I am an inmate of a prison or similar institution` IS A BOOLEAN @desc Are you an inmate of a prison or similar institution?
+      `I am not in Canada` IS A BOOLEAN @desc Are you outside Canada?
+      `a regulation otherwise provides for my case` IS A BOOLEAN @desc Does a regulation otherwise provide for your case (for example reg 54(2): parole, day parole or a temporary absence; reg 55.01: medical treatment abroad, a funeral, or accompanying or visiting a seriously ill immediate family member for at most seven days)?
+GIVETH A BOOLEAN
+DECIDE `Am I not entitled to benefits for a period because I am in prison or outside Canada` IF
+    `s 152.2 the person is not entitled to receive benefits for the period`
+        `I am an inmate of a prison or similar institution` `I am not in Canada` `a regulation otherwise provides for my case`
+
+@export Am I disentitled from receiving benefits (s 152.01(1))?
+GIVEN `I am not entitled under section 49` IS A BOOLEAN @desc Does section 49 make you not entitled to benefits for the week?
+      `I am not entitled under section 50` IS A BOOLEAN @desc Does section 50 make you not entitled (you failed to fulfil or comply with a condition or requirement)?
+      `I am not entitled under section 152.03` IS A BOOLEAN @desc Does section 152.03 make you not entitled to benefits for an illness, injury or quarantine?
+      `I have not served my waiting period` IS A BOOLEAN @desc Have you not yet served your waiting period (section 152.15)?
+      `I am not entitled under section 152.2` IS A BOOLEAN @desc Does section 152.2 make you not entitled (in prison, or outside Canada)?
+      `the regulations make me not entitled` IS A BOOLEAN @desc Do the regulations make you not entitled?
+GIVETH A BOOLEAN
+DECIDE `Am I disentitled from receiving benefits` IF
+    `s 152.01(1) disentitled`
+        `I am not entitled under section 49` `I am not entitled under section 50` `I am not entitled under section 152.03`
+        `I have not served my waiting period` `I am not entitled under section 152.2` `the regulations make me not entitled`
+
+§§ `The premium I must pay, and the return I must file (ss 152.21 to 152.3)`
+
+@export Must I pay a self-employment premium for this year (s 152.21(1) and (3))?
+GIVEN `the year` IS A NUMBER @desc For which calendar year do you ask? (for example 2026)
+      `the day I entered into the agreement` IS A DATE @desc On what day did you enter into the agreement with the Commission?
+      `my agreement is deemed never to have been entered into` IS A BOOLEAN @desc Is your agreement deemed never to have been entered into (you gave notice within 60 days of entering into it)?
+      `my agreement has terminated or is deemed to have terminated` IS A BOOLEAN @desc Has your agreement terminated, or is it deemed to have terminated?
+      `the day it terminated` IS A DATE @desc On what day did it terminate, or is it deemed to have terminated? (ignored if it has not)
+GIVETH A BOOLEAN
+DECIDE `Must I pay a self-employment premium for this year` IF
+    `s 152.21(1) and (3) a premium is required to be paid in respect of the year`
+        `the year` `the day I entered into the agreement` `my agreement is deemed never to have been entered into`
+        (IF `my agreement has terminated or is deemed to have terminated` THEN JUST `the day it terminated` ELSE NOTHING)
+
+@export How much self-employment premium must I pay for the year (s 152.21(1) and (2))?
+GIVEN `my self-employed earnings for the year` IS A NUMBER @desc What is the amount of your self-employed earnings for the year, in dollars?
+      `the maximum yearly insurable earnings for the year` IS A NUMBER @desc What is the maximum yearly insurable earnings for the year, in dollars (section 4)?
+      `my insurable earnings for the year` IS A NUMBER @desc What are your insurable earnings for the year from any employment, in dollars? (0 if none)
+      `the premium rate for the year` IS A NUMBER @desc What is the premium rate set under section 66 or 66.32 for the year, as a fraction (0.0164 for 1.64%)?
+GIVETH A NUMBER
+DECIDE `How much self-employment premium must I pay for the year` IS
+    `s 152.21(1) the self-employment premium for the year`
+        (`s 152.21(2) the amount on which the premium is calculated` `my self-employed earnings for the year` `the maximum yearly insurable earnings for the year` `my insurable earnings for the year`)
+        `the premium rate for the year`
+
+@export By what day must I file my return of self-employed earnings (s 152.22(1))?
+GIVEN `I am required to pay a premium for the year` IS A BOOLEAN @desc Are you required to pay a premium for the year in respect of your self-employed earnings?
+      `the day my income tax return is due` IS A DATE @desc On what day is your return of income under Part I of the Income Tax Act required to be filed (or would be, if tax were payable for the year)?
+GIVETH A MAYBE DATE
+DECIDE `By what day must I file my return of self-employed earnings` IS
+    `s 152.22(1) the day on or before which the return of self-employed earnings must be filed without notice or demand` `I am required to pay a premium for the year` `the day my income tax return is due`
+
+@export Must my representative file my return because I am unable to (s 152.22(1))?
+GIVEN `I am unable for any reason to file the return` IS A BOOLEAN @desc Are you unable, for any reason, to file the return yourself?
+GIVETH A BOOLEAN
+DECIDE `Must my representative file my return because I am unable to` IF
+    `s 152.22(1) the person's representative must file the return` `I am unable for any reason to file the return`
+
+@export By what day must I file a return that the Minister of National Revenue has demanded (s 152.22(2))?
+GIVEN `the demand was served on me personally or by registered letter` IS A BOOLEAN @desc Was the demand served on you personally or by registered letter?
+      `the day the demand was served` IS A DATE @desc On what day was it served?
+      `the time the demand gives me, in days` IS A NUMBER @desc What reasonable time, in days, does the demand give you to file the return?
+GIVETH A MAYBE DATE
+DECIDE `By what day must I file a return that the Minister of National Revenue has demanded` IS
+    `s 152.22(2) the day on or before which the return demanded must be filed`
+        `the demand was served on me personally or by registered letter` `the day the demand was served` `the time the demand gives me, in days`
+
+@export Must the person administering my affairs file my return of self-employed earnings (s 152.22(3))?
+GIVEN `they are a trustee, assignee, liquidator, curator, receiver or other person administering my property, business, estate or succession, or income` IS A BOOLEAN @desc Is the person a trustee in bankruptcy, assignee, liquidator, curator, receiver, receiver-manager, trustee or committee, or an agent, mandatary or other person administering, managing, winding up, controlling or otherwise dealing with your property, business, estate or succession, or income?
+      `I have not filed my return as required` IS A BOOLEAN @desc Have you not filed your return of self-employed earnings for the year as this section requires?
+GIVETH A BOOLEAN
+DECIDE `Must the person administering my affairs file my return of self-employed earnings` IF
+    `s 152.22(3) the administrator of the self-employed person's affairs must file the return`
+        `they are a trustee, assignee, liquidator, curator, receiver or other person administering my property, business, estate or succession, or income`
+        `I have not filed my return as required`
+
+@export Does my return contain the information required (s 152.22(4))?
+GIVEN `my return identifies the province I was resident in on the last day of the year` IS A BOOLEAN @desc Does your return identify the province in which you were resident on the last day of the year?
+GIVETH A BOOLEAN
+DECIDE `Does my return contain the information required` IF
+    `s 152.22(4) the return contains the information required` `my return identifies the province I was resident in on the last day of the year`
+
+@export Does my return contain the estimate of my premium that is required (s 152.23)?
+GIVEN `my return estimates the premium to be paid in respect of my self-employed earnings` IS A BOOLEAN @desc Does your return estimate the amount of the premium to be paid in respect of your self-employed earnings?
+GIVETH A BOOLEAN
+DECIDE `Does my return contain the estimate of my premium that is required` IF
+    `s 152.23 the return contains the estimate required` `my return estimates the premium to be paid in respect of my self-employed earnings`
+
+@export Am I owed an assessment and a notice of assessment (s 152.24)?
+GIVEN `I filed a return of self-employed earnings` IS A BOOLEAN @desc Have you filed a return of your self-employed earnings?
+GIVETH A BOOLEAN
+DECIDE `Am I owed an assessment and a notice of assessment` IF
+    `s 152.24 the person who filed the return is owed an assessment and a notice of assessment` `I filed a return of self-employed earnings`
+
+@export By what day must I pay the whole premium (s 152.25(1))?
+GIVEN `I must pay instalments of income tax for the year under section 155 or 156 of the Income Tax Act` IS A BOOLEAN @desc Are you required by section 155 or 156 of the Income Tax Act to pay instalments of your income tax for the year?
+      `my balance-due day for the year` IS A DATE @desc What is your balance-due day for the year (see "What is my balance-due day for the year")?
+GIVETH A MAYBE DATE
+DECIDE `By what day must I pay the whole premium` IS
+    `s 152.25(1) the day on or before which the whole premium must be paid` `I must pay instalments of income tax for the year under section 155 or 156 of the Income Tax Act` `my balance-due day for the year`
+
+@export How much must I pay on or before December 31 as a farmer (s 152.25(2))?
+GIVEN `I pay by reference to my estimate of the premium for the year` IS A BOOLEAN @desc Do you pay by reference to the premium for the year as you estimate it? (If not, by reference to the premium for the preceding year.)
+      `my estimate of the premium for the year` IS A NUMBER @desc What is the premium for the year as you estimate it, in dollars?
+      `the premium for the preceding year` IS A NUMBER @desc What was the premium for your self-employed earnings for the preceding year, in dollars?
+GIVETH A NUMBER
+DECIDE `How much must I pay on or before December 31 as a farmer` IS
+    `s 152.25(2) the amount payable on or before December 31`
+        `I pay by reference to my estimate of the premium for the year` `my estimate of the premium for the year` `the premium for the preceding year`
+
+@export How much is each of my four instalments if I pay by reference to the premium for the year or the preceding year (s 152.25(3)(a))?
+GIVEN `I pay by reference to my estimate of the premium for the year` IS A BOOLEAN @desc Do you pay by reference to the premium for the year as you estimate it? (If not, by reference to the premium for the preceding year.)
+      `my estimate of the premium for the year` IS A NUMBER @desc What is the premium for the year as you estimate it, in dollars?
+      `the premium for the preceding year` IS A NUMBER @desc What was the premium for the preceding year, in dollars?
+GIVETH A NUMBER
+DECIDE `How much is each of my four instalments if I pay by reference to the premium for the year or the preceding year` IS
+    `s 152.25(3)(a) each of the four instalments`
+        `I pay by reference to my estimate of the premium for the year` `my estimate of the premium for the year` `the premium for the preceding year`
+
+@export How much is each of my instalments of March 15 and June 15 if I pay by reference to the second preceding year (s 152.25(3)(b)(i))?
+GIVEN `the premium for the second preceding year` IS A NUMBER @desc What was the premium required in respect of your self-employed earnings for the second preceding year, in dollars?
+GIVETH A NUMBER
+DECIDE `How much is each of my instalments of March 15 and June 15 if I pay by reference to the second preceding year` IS
+    `s 152.25(3)(b)(i) each of the instalments of March 15 and June 15` `the premium for the second preceding year`
+
+@export How much is each of my instalments of September 15 and December 15 if I pay by reference to the two preceding years (s 152.25(3)(b)(ii))?
+GIVEN `the premium for the preceding year` IS A NUMBER @desc What was the premium required in respect of your self-employed earnings for the preceding year, in dollars?
+      `the premium for the second preceding year` IS A NUMBER @desc What was the premium for the second preceding year, in dollars?
+GIVETH A NUMBER
+DECIDE `How much is each of my instalments of September 15 and December 15 if I pay by reference to the two preceding years` IS
+    `s 152.25(3)(b)(ii) each of the instalments of September 15 and December 15` `the premium for the preceding year` `the premium for the second preceding year`
+
+@export On which days are my instalments of the year due (s 152.25(3))?
+GIVEN `the year` IS A NUMBER @desc For which calendar year do you ask?
+GIVETH A LIST OF DATE
+DECIDE `On which days are my instalments of the year due` IS
+    `s 152.25(3) the days on or before which the instalments of the year are due` `the year`
+
+@export How much of the premium remains to be paid on or before my balance-due day (s 152.25(2) and (3))?
+GIVEN `the premium as estimated in my return` IS A NUMBER @desc What is the premium as you estimated it in your return (section 152.23), in dollars?
+      `the total of the instalments I paid` IS A NUMBER @desc What is the total of the instalments you paid, in dollars?
+GIVETH A NUMBER
+DECIDE `How much of the premium remains to be paid on or before my balance-due day` IS
+    `ss 152.25(2) and (3) the remainder of the premium payable on or before the balance-due day` `the premium as estimated in my return` `the total of the instalments I paid`
+
+@export Is an instalment that would fall due after a person's death required (s 152.25(2) and (3))?
+GIVEN `the day the instalment would fall due` IS A DATE @desc On what day would the instalment otherwise be due?
+      `the person has died` IS A BOOLEAN @desc Has the self-employed person died?
+      `the day of death` IS A DATE @desc On what day did they die? (ignored if not)
+GIVETH A BOOLEAN
+DECIDE `Is an instalment that would fall due after a person's death required` IF
+    `ss 152.25(2) and (3) the instalment is required` `the day the instalment would fall due` (IF `the person has died` THEN JUST `the day of death` ELSE NOTHING)
+
+@export On what amount do I owe interest because I paid too little by my balance-due day (s 152.26(1))?
+GIVEN `the premium required to be paid for the year` IS A NUMBER @desc What premium is required to be paid for the year, in dollars?
+      `the amount I paid on or before my balance-due day` IS A NUMBER @desc What amount did you pay on account of it on or before your balance-due day, in dollars?
+GIVETH A NUMBER
+DECIDE `On what amount do I owe interest because I paid too little by my balance-due day` IS
+    `s 152.26(1) the difference on which interest is payable` `the premium required to be paid for the year` `the amount I paid on or before my balance-due day`
+
+@export For how many days do I owe interest on the unpaid premium, counting both the balance-due day and the day of payment (s 152.26(1))?
+GIVEN `my balance-due day for the year` IS A DATE @desc What is your balance-due day for the year?
+      `the day I paid` IS A DATE @desc On what day did (or will) you pay the difference?
+GIVETH A NUMBER
+DECIDE `For how many days do I owe interest on the unpaid premium, counting both the balance-due day and the day of payment` IS
+    `the number of days in` (`s 152.26(1) the period for which interest is payable` `my balance-due day for the year` `the day I paid`)
+
+@export On what amount do I owe interest because I missed part of an instalment (s 152.26(2))?
+GIVEN `the instalment I was required to pay` IS A NUMBER @desc How much was the instalment you were required to pay, in dollars?
+      `the amount of it I paid` IS A NUMBER @desc How much of it did you pay, in dollars?
+GIVETH A NUMBER
+DECIDE `On what amount do I owe interest because I missed part of an instalment` IS
+    `s 152.26(2) the amount of the instalment on which interest is payable` `the instalment I was required to pay` `the amount of it I paid`
+
+@export For how many days do I owe interest on the unpaid instalment, counting both ends (s 152.26(2))?
+GIVEN `the instalment I was required to pay` IS A NUMBER @desc How much was the instalment you were required to pay, in dollars?
+      `the amount of it I paid` IS A NUMBER @desc How much of it did you pay, in dollars?
+      `the day on or before which I had to pay it` IS A DATE @desc On what day was payment of the instalment due?
+      `the day I paid the rest` IS A DATE @desc On what day did (or will) you pay the rest?
+      `interest is also payable under subsection 152.26(1)` IS A BOOLEAN @desc Is interest also payable on the premium unpaid on your balance-due day under subsection 152.26(1)?
+      `the day that interest period begins` IS A DATE @desc On what day does that period begin (your balance-due day)? (ignored if no interest is payable under (1))
+GIVETH A NUMBER
+DECIDE `For how many days do I owe interest on the unpaid instalment, counting both ends` IS
+    `the number of days in`
+        (`s 152.26(2) the period for which interest on the unpaid instalment is payable`
+            `the instalment I was required to pay` `the amount of it I paid` `the day on or before which I had to pay it` `the day I paid the rest`
+            (IF `interest is also payable under subsection 152.26(1)` THEN JUST `the day that interest period begins` ELSE NOTHING))
+
+@export What instalment is a farmer deemed to have owed on December 31 for the purposes of interest (s 152.26(3))?
+GIVEN `the premium required to be paid for the year` IS A NUMBER @desc What premium is required to be paid for the year, in dollars?
+      `the premium required for the preceding year` IS A NUMBER @desc What premium was required for the preceding year, in dollars?
+      `the Minister's notice states an instalment` IS A BOOLEAN @desc Did the Minister of National Revenue send you a notice stating the amount of the instalment payable for the year?
+      `the instalment the notice states` IS A NUMBER @desc What amount does the notice state, in dollars? (ignored if there is none)
+GIVETH A NUMBER
+DECIDE `What instalment is a farmer deemed to have owed on December 31 for the purposes of interest` IS
+    `s 152.26(3) the instalment on which interest is calculated for a farmer`
+        `the premium required to be paid for the year` `the premium required for the preceding year`
+        (IF `the Minister's notice states an instalment` THEN JUST `the instalment the notice states` ELSE NOTHING)
+
+@export What total of instalments am I deemed to have owed by this instalment day for the purposes of interest (s 152.26(4))?
+GIVEN `the number of this instalment day` IS A NUMBER @desc Which instalment day is it: 1 for March 15, 2 for June 15, 3 for September 15, 4 for December 15?
+      `the premium required to be paid for the year` IS A NUMBER @desc What premium is required to be paid for the year, in dollars?
+      `the premium required for the preceding year` IS A NUMBER @desc What premium was required for the preceding year, in dollars?
+      `the premium required for the second preceding year` IS A NUMBER @desc What premium was required for the second preceding year, in dollars?
+      `the Minister's notices state instalments` IS A BOOLEAN @desc Did the Minister of National Revenue send you notices stating the instalments payable for the year?
+      `the total the notices state by this day` IS A NUMBER @desc What total of instalments do the notices state as payable by this instalment day, in dollars? (ignored if none)
+GIVETH A NUMBER
+DECIDE `What total of instalments am I deemed to have owed by this instalment day for the purposes of interest` IS
+    `s 152.26(4) the least total of the instalments required by the instalment day`
+        `the number of this instalment day` `the premium required to be paid for the year` `the premium required for the preceding year`
+        `the premium required for the second preceding year` (IF `the Minister's notices state instalments` THEN JUST `the total the notices state by this day` ELSE NOTHING)
+
+@export What penalty do I owe for failing to file my return (s 152.27(1))?
+GIVEN `I failed to file my return as and when required by section 152.22` IS A BOOLEAN @desc Did you fail to file your return of self-employed earnings as and when section 152.22 required?
+      `the part of the premium that remained unpaid when the time for filing expired` IS A NUMBER @desc How much of the premium for the year remained unpaid at the expiry of the time the return was required to be filed, in dollars?
+GIVETH A NUMBER
+DECIDE `What penalty do I owe for failing to file my return` IS
+    `s 152.27(1) the penalty for failing to file a return`
+        `I failed to file my return as and when required by section 152.22` `the part of the premium that remained unpaid when the time for filing expired`
+
+@export May the Minister of National Revenue reduce or remit that penalty (s 152.27(1))?
+GIVEN `I am liable to a penalty under subsection 162(1) or (2) of the Income Tax Act for the year` IS A BOOLEAN @desc Are you liable to a penalty under subsection 162(1) or (2) of the Income Tax Act in respect of the year?
+GIVETH A BOOLEAN
+DECIDE `May the Minister of National Revenue reduce or remit that penalty` IF
+    `s 152.27(1) the Minister of National Revenue may reduce or remit the penalty` `I am liable to a penalty under subsection 162(1) or (2) of the Income Tax Act for the year`
+
+@export What penalty do I owe for failing to file a return required of me as an administrator (s 152.27(2))?
+GIVEN `the days I was in default` IS A NUMBER @desc For how many days were you in default of filing the return required by subsection 152.22(3)?
+GIVETH A NUMBER
+DECIDE `What penalty do I owe for failing to file a return required of me as an administrator` IS
+    `s 152.27(2) the penalty for failing to file a return required by subsection 152.22(3)` `the days I was in default`
+
+@export Does this provision of the Income Tax Act apply to my premium as though it were tax (s 152.28(1))?
+GIVEN `it is a provision of Divisions I and J of Part I on payment of tax, assessments, objections, appeals, interest, penalties and excess refunds` IS A BOOLEAN @desc Is the provision one of Divisions I and J of Part I of the Income Tax Act with respect to payment of tax, assessments, objections to assessments, appeals, interest, penalties and excess refunds?
+      `it is a provision of Part XV (except section 221) or subsection 248(7) or (11)` IS A BOOLEAN @desc Is it one of the provisions of Part XV of that Act (except section 221) or subsection 248(7) or (11) of that Act?
+      `Part VII.1 provides otherwise` IS A BOOLEAN @desc Does Part VII.1 provide otherwise?
+      `a regulation under subsection 152.28(2) provides otherwise` IS A BOOLEAN @desc Does a regulation made under subsection 152.28(2) exempt it or modify it? (none was found in the Regulations as deposited)
+GIVETH A BOOLEAN
+DECIDE `Does this provision of the Income Tax Act apply to my premium as though it were tax` IF
+    `s 152.28(1) the provision of the Income Tax Act applies to the premium as though it were tax`
+        `it is a provision of Divisions I and J of Part I on payment of tax, assessments, objections, appeals, interest, penalties and excess refunds`
+        `it is a provision of Part XV (except section 221) or subsection 248(7) or (11)`
+        `Part VII.1 provides otherwise` `a regulation under subsection 152.28(2) provides otherwise`
+
+@export How much of my payment to the Minister of National Revenue is applied to my premium rather than my tax (s 152.29)?
+GIVEN `the part of my payment that would be applied to tax under section 228 of the Income Tax Act` IS A NUMBER @desc How much of your payment would section 228 of the Income Tax Act apply in payment of tax, in dollars?
+      `the premium I owe` IS A NUMBER @desc How much premium under Part VII.1 do you owe, in dollars?
+GIVETH A NUMBER
+DECIDE `How much of my payment to the Minister of National Revenue is applied to my premium rather than my tax` IS
+    `s 152.29 the part of the payment applied in payment of the premium` `the part of my payment that would be applied to tax under section 228 of the Income Tax Act` `the premium I owe`
+
+@export How much of my payment is left to be applied to my tax (s 152.29)?
+GIVEN `my payment` IS A NUMBER @desc How much was your payment to the Minister of National Revenue, in dollars?
+      `the part of my payment that would be applied to tax under section 228 of the Income Tax Act` IS A NUMBER @desc How much of your payment would section 228 of the Income Tax Act apply in payment of tax, in dollars?
+      `the premium I owe` IS A NUMBER @desc How much premium under Part VII.1 do you owe, in dollars?
+GIVETH A NUMBER
+DECIDE `How much of my payment is left to be applied to my tax` IS
+    `s 152.29 the part of the payment left to be applied in payment of tax under the Income Tax Act` `my payment`
+        (`s 152.29 the part of the payment applied in payment of the premium` `the part of my payment that would be applied to tax under section 228 of the Income Tax Act` `the premium I owe`)
+
+@export How much of my premium payments is an excess that may be refunded (s 152.3(1))?
+GIVEN `the amount I paid on account of the premium for the year` IS A NUMBER @desc How much did you pay on account of the premium for the year, in dollars?
+      `the premium I am required to pay for the year` IS A NUMBER @desc What premium are you required to pay for the year, in dollars?
+GIVETH A NUMBER
+DECIDE `How much of my premium payments is an excess that may be refunded` IS
+    `s 152.3(1) the excess of the amount paid over the premium` `the amount I paid on account of the premium for the year` `the premium I am required to pay for the year`
+
+@export Must the Minister of National Revenue refund my excess premium (s 152.3(1)(b))?
+GIVEN `the year` IS A NUMBER @desc For which calendar year was the premium?
+      `the amount I paid on account of the premium for the year` IS A NUMBER @desc How much did you pay on account of the premium for the year, in dollars?
+      `the premium I am required to pay for the year` IS A NUMBER @desc What premium are you required to pay for the year, in dollars?
+      `the Minister has sent me the notice of assessment` IS A BOOLEAN @desc Has the Minister of National Revenue sent you the notice of assessment?
+      `I applied in writing for the refund` IS A BOOLEAN @desc Have you applied in writing for the refund?
+      `the day I applied` IS A DATE @desc On what day did you apply? (ignored if you have not)
+GIVETH A BOOLEAN
+DECIDE `Must the Minister of National Revenue refund my excess premium` IF
+    `s 152.3(1)(b) the Minister of National Revenue shall make the refund`
+        `the year`
+        (`s 152.3(1) the excess of the amount paid over the premium` `the amount I paid on account of the premium for the year` `the premium I am required to pay for the year`)
+        `the Minister has sent me the notice of assessment` `I applied in writing for the refund` `the day I applied`
+
+@export Do subsections 96(11) to (13) apply to my refund (s 152.3(2))?
+GIVEN `my refund is made under subsection 152.3(1)` IS A BOOLEAN @desc Is the refund made under subsection 152.3(1)?
+GIVETH A BOOLEAN
+DECIDE `Do subsections 96(11) to (13) apply to my refund` IF
+    `s 152.3(2) subsections 96(11) to (13) apply to the refund` `my refund is made under subsection 152.3(1)`
+
+§§ `Other provisions of the Act that apply to me (ss 152.31 and 152.32)`
+
+@export Does this section of the Act apply to me under Part VII.1 (s 152.31(1))?
+GIVEN `the number of the section` IS A NUMBER @desc What is the number of the section of the Act, as a decimal (7.1 for section 7.1, 65.2 for section 65.2)?
+      `the section is inconsistent with the provisions of Part VII.1` IS A BOOLEAN @desc Is the section inconsistent with the provisions of Part VII.1?
+GIVETH A BOOLEAN
+DECIDE `Does this section of the Act apply to me under Part VII.1` IF
+    `s 152.31(1) a provision of the Act applies to this Part` `the number of the section` `the section is inconsistent with the provisions of Part VII.1`
+
+@export Do the proceedings provisions of section 102 apply to this matter (s 152.31(3))?
+GIVEN `it is an offence under paragraph 106(4)(a), (d) or (e) in relation to Part VII.1 or the regulations under section 152.26 or 152.28` IS A BOOLEAN @desc Is the matter an offence under paragraph 106(4)(a), (d) or (e) committed in relation to a provision of Part VII.1 or of regulations made under section 152.26 or 152.28?
+      `it is an offence under section 152.32` IS A BOOLEAN @desc Is the matter an offence under section 152.32?
+      `it is a matter referred to in sections 152.21 to 152.3` IS A BOOLEAN @desc Is the matter one referred to in any of sections 152.21 to 152.3, or relating to the application of any of them?
+GIVETH A BOOLEAN
+DECIDE `Do the proceedings provisions of section 102 apply to this matter` IF
+    `s 152.31(3) section 102 applies to the matter`
+        `it is an offence under paragraph 106(4)(a), (d) or (e) in relation to Part VII.1 or the regulations under section 152.26 or 152.28`
+        `it is an offence under section 152.32` `it is a matter referred to in sections 152.21 to 152.3`
+
+@export Do the proceedings provisions of section 125 apply to this matter (s 152.31(4))?
+GIVEN `it is an offence by a self-employed person under subsection 135(1) or 136(2), or a contravention of regulations made under Part VII.1 other than under 152.26 or 152.28` IS A BOOLEAN @desc Is the matter an offence under subsection 135(1) or 136(2) committed by a self-employed person, or an offence in relation to the contravention of a provision of regulations made under Part VII.1 (other than regulations made under section 152.26 or 152.28)?
+      `it is another matter in Part VII.1 outside sections 152.21 to 152.3` IS A BOOLEAN @desc Is the matter referred to in Part VII.1, or relating to its application, other than a matter referred to in sections 152.21 to 152.3 or in regulations made under section 152.26 or 152.28?
+GIVETH A BOOLEAN
+DECIDE `Do the proceedings provisions of section 125 apply to this matter` IF
+    `s 152.31(4) section 125 applies to the matter`
+        `it is an offence by a self-employed person under subsection 135(1) or 136(2), or a contravention of regulations made under Part VII.1 other than under 152.26 or 152.28`
+        `it is another matter in Part VII.1 outside sections 152.21 to 152.3`
+
+@export Does subsection 86(1) apply to me as it applies to an employer (s 152.31(2)(a))?
+GIVEN `I am a self-employed person` IS A BOOLEAN @desc Are you a self-employed person (see "Am I a self-employed person ...")?
+GIVETH A BOOLEAN
+DECIDE `Does subsection 86(1) apply to me as it applies to an employer` IF
+    `s 152.31(2)(a) subsection 86(1) applies to the person as it applies to an employer` `I am a self-employed person`
+
+@export Am I guilty of an offence and liable to a fine if I contravene the duty to file my return (s 152.32)?
+GIVEN `I contravene section 152.22` IS A BOOLEAN @desc Do you contravene section 152.22 (the duty to file a return of self-employed earnings)?
+GIVETH A BOOLEAN
+DECIDE `Am I guilty of an offence and liable to a fine if I contravene the duty to file my return` IF
+    `s 152.32 the person is guilty of an offence and liable on summary conviction to a fine` `I contravene section 152.22`
+
+@export What is the least fine on summary conviction for contravening section 152.22 (s 152.32)?
+GIVEN `the days the offence continues` IS A NUMBER @desc For how many days does the offence continue?
+GIVETH A NUMBER
+DECIDE `What is the least fine on summary conviction for contravening section 152.22` IS
+    `s 152.32 the least fine on summary conviction` `the days the offence continues`
+
+@export What is the greatest fine on summary conviction for contravening section 152.22 (s 152.32)?
+GIVETH A NUMBER
+DECIDE `What is the greatest fine on summary conviction for contravening section 152.22` IS
+    `s 152.32 the greatest fine on summary conviction`

@@ -1,0 +1,142 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `eia-core-insurable-employment`
+IMPORT `ei5-interpretation`
+
+-- Tests of ei5-interpretation (Act s 152.01). Every expected value is written by hand from the text of the Act
+-- beside the assertion, never copied from the module's own output. Figures are invented for the cases.
+
+§ `152.01(1) balance-due day`
+
+-- The person did not die: "(b) in any other case, April 30 in the immediately following year" -> 30 April 2026.
+#ASSERT `s 152.01(1) balance-due day of a self-employed person for a year` 2025 NOTHING EQUALS YMD 2026 4 30
+-- Death on 1 November 2025: after October in the year, before May next year -> 6 months after = 1 May 2026.
+#ASSERT `s 152.01(1) balance-due day of a self-employed person for a year` 2025 (JUST (YMD 2025 11 1)) EQUALS YMD 2026 5 1
+-- Death on 31 December 2025 -> 6 months after = 30 June 2026 (June has 30 days; the day is clamped).
+#ASSERT `s 152.01(1) balance-due day of a self-employed person for a year` 2025 (JUST (YMD 2025 12 31)) EQUALS YMD 2026 6 30
+-- Death on 31 October 2025 is still in October: "any other case" -> 30 April 2026 (fork F1).
+#ASSERT `s 152.01(1) balance-due day of a self-employed person for a year` 2025 (JUST (YMD 2025 10 31)) EQUALS YMD 2026 4 30
+-- Death on 15 January 2026: before May in the following year -> 15 July 2026.
+#ASSERT `s 152.01(1) balance-due day of a self-employed person for a year` 2025 (JUST (YMD 2026 1 15)) EQUALS YMD 2026 7 15
+-- Death on 30 April 2026 is still before May -> 30 October 2026.
+#ASSERT `s 152.01(1) balance-due day of a self-employed person for a year` 2025 (JUST (YMD 2026 4 30)) EQUALS YMD 2026 10 30
+-- Death on 1 May 2026 is not before May -> "any other case" -> 30 April 2026 (a day already past).
+#ASSERT `s 152.01(1) balance-due day of a self-employed person for a year` 2025 (JUST (YMD 2026 5 1)) EQUALS YMD 2026 4 30
+-- Death in the middle of the year (15 June 2025) -> "any other case" -> 30 April 2026.
+#ASSERT `s 152.01(1) balance-due day of a self-employed person for a year` 2025 (JUST (YMD 2025 6 15)) EQUALS YMD 2026 4 30
+
+§ `152.01(1) business`
+
+#ASSERT `s 152.01(1) business includes` `ei5 business - a profession` EQUALS JUST TRUE
+#ASSERT `s 152.01(1) business includes` `ei5 business - a calling` EQUALS JUST TRUE
+#ASSERT `s 152.01(1) business includes` `ei5 business - a trade` EQUALS JUST TRUE
+#ASSERT `s 152.01(1) business includes` `ei5 business - a manufacture` EQUALS JUST TRUE
+#ASSERT `s 152.01(1) business includes` `ei5 business - an undertaking of any kind whatever` EQUALS JUST TRUE
+#ASSERT `s 152.01(1) business includes` `ei5 business - an adventure or concern in the nature of trade` EQUALS JUST TRUE
+-- "but does not include an office or employment"
+#ASSERT `s 152.01(1) business includes` `ei5 business - an office` EQUALS JUST FALSE
+#ASSERT `s 152.01(1) business includes` `ei5 business - an employment` EQUALS JUST FALSE
+-- Not on the list and not excluded: the definition does not say, so NOTHING (not covered), never FALSE.
+#ASSERT `s 152.01(1) business includes` `ei5 business - something not on the list` EQUALS NOTHING
+
+§ `152.01(1) disentitled`
+
+#ASSERT NOT (`s 152.01(1) disentitled` FALSE FALSE FALSE FALSE FALSE FALSE)
+#ASSERT `s 152.01(1) disentitled` TRUE FALSE FALSE FALSE FALSE FALSE
+#ASSERT `s 152.01(1) disentitled` FALSE TRUE FALSE FALSE FALSE FALSE
+#ASSERT `s 152.01(1) disentitled` FALSE FALSE TRUE FALSE FALSE FALSE
+#ASSERT `s 152.01(1) disentitled` FALSE FALSE FALSE TRUE FALSE FALSE
+#ASSERT `s 152.01(1) disentitled` FALSE FALSE FALSE FALSE TRUE FALSE
+#ASSERT `s 152.01(1) disentitled` FALSE FALSE FALSE FALSE FALSE TRUE
+
+§ `152.01(1) initial claim for benefits`
+
+#ASSERT `s 152.01(1) initial claim for benefits` TRUE TRUE TRUE
+#ASSERT NOT (`s 152.01(1) initial claim for benefits` FALSE TRUE TRUE)
+#ASSERT NOT (`s 152.01(1) initial claim for benefits` TRUE FALSE TRUE)
+#ASSERT NOT (`s 152.01(1) initial claim for benefits` TRUE TRUE FALSE)
+
+§ `152.01(1) self-employed person`
+
+-- paragraph (a): an individual who is or was engaged in a business
+#ASSERT `s 152.01(1) self-employed person, paragraph (a)` TRUE TRUE
+#ASSERT NOT (`s 152.01(1) self-employed person, paragraph (a)` TRUE FALSE)
+#ASSERT NOT (`s 152.01(1) self-employed person, paragraph (a)` FALSE TRUE)
+-- paragraph (b): employed, would be insurable but for 5(2)(b), employer a corporation the person controls (more than 40%)
+#ASSERT `s 152.01(1) self-employed person, paragraph (b)` TRUE TRUE TRUE TRUE 0.41
+-- exactly 40% does not exclude the employment (s 5(2)(b) says "more than 40%"), so the person is not within (b)
+#ASSERT NOT (`s 152.01(1) self-employed person, paragraph (b)` TRUE TRUE TRUE TRUE 0.40)
+#ASSERT NOT (`s 152.01(1) self-employed person, paragraph (b)` TRUE TRUE TRUE FALSE 0.9)
+#ASSERT NOT (`s 152.01(1) self-employed person, paragraph (b)` TRUE TRUE FALSE TRUE 0.9)
+#ASSERT NOT (`s 152.01(1) self-employed person, paragraph (b)` TRUE FALSE TRUE TRUE 0.9)
+#ASSERT NOT (`s 152.01(1) self-employed person, paragraph (b)` FALSE TRUE TRUE TRUE 0.9)
+-- the whole definition: (a) or (b), less the two exclusions in the closing sentence
+#ASSERT `s 152.01(1) self-employed person` TRUE FALSE FALSE FALSE
+#ASSERT `s 152.01(1) self-employed person` FALSE TRUE FALSE FALSE
+#ASSERT `s 152.01(1) self-employed person` TRUE TRUE FALSE FALSE
+#ASSERT NOT (`s 152.01(1) self-employed person` FALSE FALSE FALSE FALSE)
+-- "individuals to whom regulations made under Part VIII apply ... are not included"
+#ASSERT NOT (`s 152.01(1) self-employed person` TRUE FALSE TRUE FALSE)
+-- "individuals whose employment is included in insurable employment by a regulation made under paragraph 5(4)(c)"
+#ASSERT NOT (`s 152.01(1) self-employed person` FALSE TRUE FALSE TRUE)
+
+§ `152.01(2) and (3) self-employed earnings`
+
+-- The records: income per the Income Tax Act, income without reference to 81(1)(a), Indian on a reserve,
+-- gross revenue, rent.
+`an ordinary business` MEANS `ei5 Business of the year` OF 10000, 12000, FALSE, 40000, 0
+`a mainly rental business` MEANS `ei5 Business of the year` OF 5000, 5000, FALSE, 100, 60
+`a half-rental business` MEANS `ei5 Business of the year` OF 700, 700, FALSE, 100000, 50000
+`a business just over half rental` MEANS `ei5 Business of the year` OF 700, 700, FALSE, 100000, 50001
+`a business of an Indian on a reserve` MEANS `ei5 Business of the year` OF 2000, 3500, TRUE, 9000, 0
+`a business with no revenue` MEANS `ei5 Business of the year` OF 0, 0, FALSE, 0, 0
+
+-- s 152.01(3): for an Indian on a reserve the income is figured without reference to paragraph 81(1)(a): 3500, not 2000
+#ASSERT `s 152.01(3) the income of a business for clause (2)(a)(i)(A)` `a business of an Indian on a reserve` EQUALS 3500
+-- anyone else: the income under the Income Tax Act (10000, not the 12000 figure)
+#ASSERT `s 152.01(3) the income of a business for clause (2)(a)(i)(A)` `an ordinary business` EQUALS 10000
+
+-- more than fifty per cent: 50000 of 100000 is exactly half and does not count; 50001 does; 60 of 100 does
+#ASSERT NOT (`s 152.01(2)(a)(i)(A) a business more than fifty per cent of the gross revenue of which consisted of rent from land or buildings` `a half-rental business`)
+#ASSERT `s 152.01(2)(a)(i)(A) a business more than fifty per cent of the gross revenue of which consisted of rent from land or buildings` `a business just over half rental`
+#ASSERT `s 152.01(2)(a)(i)(A) a business more than fifty per cent of the gross revenue of which consisted of rent from land or buildings` `a mainly rental business`
+#ASSERT NOT (`s 152.01(2)(a)(i)(A) a business more than fifty per cent of the gross revenue of which consisted of rent from land or buildings` `a business with no revenue`)
+
+-- (A) the ordinary business (10000), not the mainly rental one (5000), and the Indian's business at 3500: 13500
+#ASSERT `s 152.01(2)(a)(i)(A) their income for the year from their businesses, other than a rental business` (LIST `an ordinary business`, `a mainly rental business`, `a business of an Indian on a reserve`) EQUALS 13500
+-- the half-rental business is not taken out: 10000 + 700 = 10700
+#ASSERT `s 152.01(2)(a)(i)(A) their income for the year from their businesses, other than a rental business` (LIST `an ordinary business`, `a half-rental business`) EQUALS 10700
+-- no business at all: nothing to add
+#ASSERT `s 152.01(2)(a)(i)(A) their income for the year from their businesses, other than a rental business` EMPTY EQUALS 0
+
+-- (i) A minus B: 13500 less losses of 1500
+#ASSERT `s 152.01(2)(a)(i) the amount equal to their business income less their business losses` (LIST `an ordinary business`, `a mainly rental business`, `a business of an Indian on a reserve`) 1500 EQUALS 12000
+-- the text does not stop the result at zero: 700 less 3000 is -2300 (fork F3)
+#ASSERT `s 152.01(2)(a)(i) the amount equal to their business income less their business losses` (LIST `a half-rental business`) 3000 EQUALS 0 MINUS 2300
+
+-- (ii) the income from employment excluded under 5(6)(c) is taken as given
+#ASSERT `s 152.01(2)(a)(ii) their income for the year from employment excluded by a regulation under paragraph 5(6)(c)` 800 EQUALS 800
+
+-- (a) = (i) + (ii) = 12000 + 800
+#ASSERT `s 152.01(2)(a) the self-employed earnings of an individual referred to in paragraph (a) of the definition` (LIST `an ordinary business`, `a mainly rental business`, `a business of an Indian on a reserve`) 1500 800 EQUALS 12800
+-- (b) the insurable earnings the person would have had
+#ASSERT `s 152.01(2)(b) the self-employed earnings of an individual referred to in paragraph (b) of the definition` 9000 EQUALS 9000
+
+-- (2): (a) only, (b) only, both (the aggregate: 12800 + 9000 = 21800), neither (not a self-employed person: NOTHING)
+#ASSERT `s 152.01(2) the amount of the self-employed earnings of a self-employed person for a year` TRUE FALSE 12800 9000 EQUALS JUST 12800
+#ASSERT `s 152.01(2) the amount of the self-employed earnings of a self-employed person for a year` FALSE TRUE 12800 9000 EQUALS JUST 9000
+#ASSERT `s 152.01(2) the amount of the self-employed earnings of a self-employed person for a year` TRUE TRUE 12800 9000 EQUALS JUST 21800
+#ASSERT `s 152.01(2) the amount of the self-employed earnings of a self-employed person for a year` FALSE FALSE 12800 9000 EQUALS NOTHING
+
+§ `152.01(4) and (5)`
+
+#ASSERT `s 152.01(4) week of unemployment for a self-employed person` TRUE
+#ASSERT NOT (`s 152.01(4) week of unemployment for a self-employed person` FALSE)
+
+-- (5) the keel rule: nearest dollar, the higher dollar when equidistant
+#ASSERT `s 6(2) and s 152.01(5) amount rounded to the nearest dollar` 10.5 EQUALS 11
+#ASSERT `s 6(2) and s 152.01(5) amount rounded to the nearest dollar` 10.49 EQUALS 10
+#ASSERT `s 6(2) and s 152.01(5) amount rounded to the nearest dollar` 10.51 EQUALS 11
+#ASSERT `s 6(2) and s 152.01(5) amount rounded to the nearest dollar` 0.5 EQUALS 1
+#ASSERT `s 6(2) and s 152.01(5) amount rounded to the nearest dollar` 9 EQUALS 9

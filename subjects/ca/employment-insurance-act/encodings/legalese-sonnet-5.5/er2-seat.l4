@@ -1,0 +1,686 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `er2-common`
+IMPORT `er2-record-of-employment`
+IMPORT `er2-allocation`
+IMPORT `er2-claims`
+IMPORT `er2-full-working-week`
+IMPORT `er2-teachers`
+IMPORT `er2-family-supplement`
+
+-- Employment Insurance Regulations (SOR/96-332), regulations 19 to 34 (piece er2) -- THE SEAT LAYER.
+--
+-- SEAT: a person who has lost work, or cannot work because of sickness, pregnancy, caring for a child or a family member, or who is
+-- self-employed or a fisher, asking whether they qualify for Employment Insurance benefits, how many hours or weeks they need, how much they
+-- would receive and for how long, and what they must do or tell the Commission. Where a provision is about the people around that person
+-- (the employer who owes a record of employment, the representative of an incapacitated or deceased claimant) the question is asked as what
+-- that person is owed or exposed to, or, for a representative, as that person asking it. There is no seat for the Commission or an officer.
+--
+-- This layer phrases the rules already encoded in the six er2 modules as questions. Nothing here is new law.
+--
+-- PLAIN INPUTS. Every question takes plain inputs -- yes/no, numbers, dates, and the core's own choices -- one for each fact the person can
+-- state, each with an @desc worded as that person would be asked. A date is an ISO 8601 date such as 2026-03-04. The records and periods the
+-- long modules expect are built inside each question, in its WHERE, from those answers, and the SAME module rule is called; no rule is
+-- restated here. Where an optional fact (the Commission asked for a copy; evidence of the hours worked) is needed, the person answers a
+-- yes/no question and gives the figure or date, and the layer builds the JUST or the NOTHING. A fixed placeholder is used only where a rule
+-- reads a fact that this seat's person cannot be asked, and a comment says why.
+--
+-- Facts decided outside this range (the rate of weekly benefits, weekly insurable earnings, the maximum weekly insurable earnings, the
+-- section 22(2), 23(2) ... periods, whether there is an interruption of earnings) are asked as facts. The maximum weekly insurable earnings
+-- is not stated in the Regulations; the person is asked for the figure that applies to them.
+--
+-- Questions a person cannot answer with certainty are asked as the facts a decision-maker would find ("is it such a minor extent that a
+-- person would not normally rely on it as a principal means of livelihood?"); the layer answers conditionally on that fact and never guesses.
+
+§ `Employment Insurance Regulations -- the questions of a person who has lost work or cannot work (regs 19 to 34)`
+
+§§ `Your record of employment (regs 19 to 21)`
+
+-- regs 19(1), 19(2). The employer owes a record of employment to the Commission and to you; "employer" includes a former employer, a bankrupt
+-- employer and the trustee of a bankrupt employer.
+@export Must the person or company I worked for complete a record of employment for me (regs 19(1), 19(2))?
+GIVEN `they are, or were, my employer` IS A BOOLEAN @desc Are the person or company you are asking about your employer now, or were they your employer before?
+      `they are a bankrupt employer` IS A BOOLEAN @desc Is that employer bankrupt?
+      `they are the trustee of a bankrupt employer` IS A BOOLEAN @desc Are they the trustee of a bankrupt employer?
+      `I was employed by them in insurable employment` IS A BOOLEAN @desc Were you employed by them in insurable employment?
+      `my earnings from them have been interrupted` IS A BOOLEAN @desc Has an interruption of earnings occurred for you with this employment? (Whether it has is decided under regulation 14; answer yes if you have been told that it has.)
+GIVETH A BOOLEAN
+DECIDE `Must the person or company I worked for complete a record of employment for me` IF
+    `reg 19(2) a record of employment must be completed in respect of the person` `the employer for subsections (2) to (4)` `I was employed by them in insurable employment` `my earnings from them have been interrupted`
+    WHERE
+        -- The two fixed FALSEs are the sponsor or co-ordinator limbs of "employer" (s 2(1), paragraph 5(1)(e)): an employee asking about the
+        -- person who employed them is already covered by "is an employer" or "has been an employer", so those limbs add no one.
+        `the employer for subsections (2) to (4)` MEANS
+            `reg 19(1) employer for the purposes of subsections (2) to (4)` `they are, or were, my employer` `they are, or were, my employer` FALSE FALSE `they are a bankrupt employer` `they are the trustee of a bankrupt employer`
+
+-- reg 19(3)(a): five days after the later of the first day of the interruption and the day the employer becomes aware of it.
+@export By what date must my employer give me my paper record of employment (reg 19(3)(a))?
+GIVEN `the first day of my interruption of earnings` IS A DATE @desc What is the first day of your interruption of earnings? (a date, for example 2026-03-02)
+      `the day my employer became aware of my interruption of earnings` IS A DATE @desc On what day did your employer become aware of it? (a date, for example 2026-03-04)
+GIVETH A DATE
+DECIDE `By what date must my employer give me my paper record of employment` IS
+    `reg 19(3)(a) the last day for delivering the employee's copy to the insured person` `the first day of my interruption of earnings` `the day my employer became aware of my interruption of earnings`
+
+@export Was my paper record of employment given to me in time (reg 19(3)(a))?
+GIVEN `the first day of my interruption of earnings` IS A DATE @desc What is the first day of your interruption of earnings? (a date, for example 2026-03-02)
+      `the day my employer became aware of my interruption of earnings` IS A DATE @desc On what day did your employer become aware of it? (a date, for example 2026-03-04)
+      `the day I was given my copy` IS A DATE @desc On what day was the employee's copy of the record of employment delivered to you? (a date)
+GIVETH A BOOLEAN
+DECIDE `Was my paper record of employment given to me in time` IF
+    `reg 19(3)(a) the employee's copy was delivered in time` `the first day of my interruption of earnings` `the day my employer became aware of my interruption of earnings` `the day I was given my copy`
+
+@export Was the Commission's copy of my paper record of employment sent in time (reg 19(3)(b))?
+GIVEN `the first day of my interruption of earnings` IS A DATE @desc What is the first day of your interruption of earnings? (a date, for example 2026-03-02)
+      `the day my employer became aware of my interruption of earnings` IS A DATE @desc On what day did your employer become aware of it? (a date)
+      `the day the Commission's copy was sent` IS A DATE @desc On what day was the Commission's copy sent to the Commission? (a date)
+GIVETH A BOOLEAN
+DECIDE `Was the Commission's copy of my paper record of employment sent in time` IF
+    `reg 19(3)(b) the Commission's copy was sent in time` `the first day of my interruption of earnings` `the day my employer became aware of my interruption of earnings` `the day the Commission's copy was sent`
+
+-- reg 19(3.1)(a): the earlier of five days after the end of the pay period and, if the pay cycle has 13 or fewer periods a year, 15 days after
+-- the first day of the interruption.
+@export By what date must my employer send my electronic record of employment to the Commission (reg 19(3.1)(a))?
+GIVEN `the last day of the pay period in which my interruption of earnings began` IS A DATE @desc On what day did the pay period during which your interruption of earnings began end? (a date)
+      `the first day of my interruption of earnings` IS A DATE @desc What is the first day of your interruption of earnings? (a date)
+      `the number of pay periods per year at my employer` IS A NUMBER @desc How many pay periods a year are there under your employer's pay cycle (for example 52 weekly, 26 every two weeks, 12 monthly)?
+GIVETH A DATE
+DECIDE `By what date must my employer send my electronic record of employment to the Commission` IS
+    `reg 19(3.1)(a) the last day for sending the electronic record of employment to the Commission` `the last day of the pay period in which my interruption of earnings began` `the first day of my interruption of earnings` `the number of pay periods per year at my employer`
+
+@export Was my electronic record of employment sent to the Commission in time (reg 19(3.1)(a))?
+GIVEN `the last day of the pay period in which my interruption of earnings began` IS A DATE @desc On what day did the pay period during which your interruption of earnings began end? (a date)
+      `the first day of my interruption of earnings` IS A DATE @desc What is the first day of your interruption of earnings? (a date)
+      `the number of pay periods per year at my employer` IS A NUMBER @desc How many pay periods a year are there under your employer's pay cycle?
+      `the day it was sent` IS A DATE @desc On what day was the electronic record of employment sent to the Commission? (a date)
+GIVETH A BOOLEAN
+DECIDE `Was my electronic record of employment sent to the Commission in time` IF
+    `reg 19(3.1)(a) the electronic record of employment was sent in time` `the last day of the pay period in which my interruption of earnings began` `the first day of my interruption of earnings` `the number of pay periods per year at my employer` `the day it was sent`
+
+-- reg 19(3)(c), (3.1)(b): the employer keeps the employer's copy.
+@export Has my employer kept and retained its copy of my record of employment (regs 19(3)(c), 19(3.1)(b))?
+GIVEN `my employer keeps its copy with its records and books of account as subsection 87(3) of the Act requires` IS A BOOLEAN @desc Does your employer keep its copy of your record of employment as part of its records and books of account, as subsection 87(3) of the Act requires?
+GIVETH A BOOLEAN
+DECIDE `Has my employer kept and retained its copy of my record of employment` IF
+    `reg 19(3)(c) the employer's copy has been kept and retained` `my employer keeps its copy with its records and books of account as subsection 87(3) of the Act requires`
+
+-- reg 19(4): situational. Only if your employer could not deliver your copy in time for reasons beyond its control.
+§§ `If your employer could not deliver your copy in time (reg 19(4))`
+
+@export What must my employer do with my record of employment if it could not deliver it to me in time for reasons beyond its control (reg 19(4))?
+GIVEN `my employer was unable to deliver my copy in time for reasons beyond its control` IS A BOOLEAN @desc Was your employer unable, for reasons beyond its control, to deliver your copy of the record of employment to you within five days after the later of the first day of your interruption and the day it became aware of it?
+      `my employer knows my mailing address` IS A BOOLEAN @desc Does your employer know your mailing address?
+GIVETH A `er2 Step the employer takes with an undelivered employee's copy`
+DECIDE `What must my employer do with my record of employment if it could not deliver it to me` IS
+    `reg 19(4) what the employer must do with the employee's copy` `my employer was unable to deliver my copy in time for reasons beyond its control` `my employer knows my mailing address`
+
+@export Until what day may my employer keep my record of employment without sending it (reg 19(4)(b))?
+GIVEN `the day the record of employment was completed` IS A DATE @desc On what day was your record of employment completed? (a date)
+      `the Commission has asked for my copy` IS A BOOLEAN @desc Has the Commission asked for your copy of the record of employment?
+      `the day the Commission asked` IS A DATE @desc If so, on what day did it ask? (a date; ignored if the answer above is no)
+      `I have asked for my copy` IS A BOOLEAN @desc Have you asked for your copy?
+      `the day I asked` IS A DATE @desc If so, on what day did you ask? (a date; ignored if the answer above is no)
+GIVETH A DATE
+DECIDE `Until what day may my employer keep my record of employment without sending it` IS
+    `reg 19(4)(b) the day on which the employer may stop retaining the copy` `the day the record of employment was completed` `the Commission's request, if any` `my request, if any`
+    WHERE
+        `the Commission's request, if any` MEANS IF `the Commission has asked for my copy` THEN JUST `the day the Commission asked` ELSE NOTHING
+        `my request, if any` MEANS IF `I have asked for my copy` THEN JUST `the day I asked` ELSE NOTHING
+
+-- reg 19(5), 19(6). Situational: your employer did not deliver a record, cannot be found, lost its records, or is bankrupt.
+§§ `If you have no record of employment, or your employer is bankrupt (regs 19(5), 19(6))`
+
+@export May I give the Commission a statement of my hours and earnings instead of a record of employment (reg 19(5))?
+GIVEN `my employer has failed to give me a record of employment` IS A BOOLEAN @desc Has your employer failed to deliver a record of employment to you?
+      `my employer has failed to give the Commission a record of employment` IS A BOOLEAN @desc Has your employer failed to deliver a record of employment to the Commission?
+      `my employer is not available` IS A BOOLEAN @desc Is your employer not available (for example it cannot be found or reached)?
+      `my employer cannot give the information because its records are destroyed or lost` IS A BOOLEAN @desc Is your employer unable to give information about your hours of insurable employment and insurable earnings because its records are destroyed or lost?
+      `I have applied or am applying for benefits` IS A BOOLEAN @desc Have you applied, or are you applying, for benefits under the Act?
+GIVETH A BOOLEAN
+DECIDE `May I give the Commission a statement of my hours and earnings instead of a record of employment` IF
+    `reg 19(5) the person may provide a statement of their hours of insurable employment and insurable earnings` `my employer has failed to give me a record of employment` `my employer has failed to give the Commission a record of employment` `my employer is not available` `my employer cannot give the information because its records are destroyed or lost` `I have applied or am applying for benefits` `I have applied or am applying for benefits`
+
+@export Must the Commission work out my hours and earnings from my bankrupt employer's records (reg 19(6))?
+GIVEN `my employer is bankrupt` IS A BOOLEAN @desc Is your employer a bankrupt employer?
+      `my employer's trustee is the one I am asking about` IS A BOOLEAN @desc Is the person or company you are asking about the trustee of a bankrupt employer?
+      `I was not given a record of employment` IS A BOOLEAN @desc Has no record of employment been provided to you?
+      `the Commission was not given a record of employment` IS A BOOLEAN @desc Has no record of employment been provided to the Commission?
+GIVETH A BOOLEAN
+DECIDE `Must the Commission work out my hours and earnings from my bankrupt employer's records` IF
+    `reg 19(6) the hours of insurable employment and insurable earnings are determined from the payroll and personnel records of the bankrupt employer` `my employer is bankrupt` `my employer's trustee is the one I am asking about` `I was not given a record of employment` `the Commission was not given a record of employment`
+
+-- regs 20, 21.
+@export Are the hours on my record of employment the hours determined under Part I of the Act (reg 20)?
+GIVEN `the hours reported on my record of employment` IS A NUMBER @desc How many hours of insurable employment does your record of employment report?
+      `the hours determined under Part I` IS A NUMBER @desc How many hours of insurable employment are determined under Part I of the Act and its regulations for that employment?
+GIVETH A BOOLEAN
+DECIDE `Are the hours on my record of employment the hours determined under Part I of the Act` IF
+    `reg 20 the hours reported are the hours determined under Part I` `the hours reported on my record of employment` `the hours determined under Part I`
+
+@export Are the insurable earnings on my record of employment those determined and allocated under the Act and Regulations (reg 21)?
+GIVEN `the insurable earnings reported on my record of employment` IS A NUMBER @desc How much insurable earnings (dollars) does your record of employment report?
+      `the insurable earnings determined and allocated` IS A NUMBER @desc How much insurable earnings (dollars) are determined under Parts III and IV of the Act and its regulations, and allocated under regulation 23, for that period?
+GIVETH A BOOLEAN
+DECIDE `Are the insurable earnings on my record of employment those determined and allocated` IF
+    `reg 21 the insurable earnings reported are the insurable earnings determined and allocated` `the insurable earnings reported on my record of employment` `the insurable earnings determined and allocated`
+
+§§ `How your hours and earnings are allocated (regs 22 to 24.3)`
+
+-- reg 22. Situational: a job that began before your qualifying period or ended after it began.
+@export Does the Commission allocate the hours of my job across my qualifying period (reg 22(1))?
+GIVEN `the first day of my period of employment` IS A DATE @desc On what day did the period of employment begin? (a date)
+      `the last day of my period of employment` IS A DATE @desc On what day did the period of employment end? (a date)
+      `the first day of my qualifying period` IS A DATE @desc What is the first day of your qualifying period? (a date)
+      `the last day of my qualifying period` IS A DATE @desc What is the last day of your qualifying period? (a date)
+GIVETH A BOOLEAN
+DECIDE `Does the Commission allocate the hours of my job across my qualifying period` IF
+    `reg 22(1) a period of employment falls partially within the claimant's qualifying period` `my period of employment` `my qualifying period`
+    WHERE
+        `my period of employment` MEANS (`Period of days` OF `the first day of my period of employment`, `the last day of my period of employment`)
+        `my qualifying period` MEANS (`Period of days` OF `the first day of my qualifying period`, `the last day of my qualifying period`)
+
+@export How many hours of my job count within my qualifying period (regs 22(1), 22(2))?
+GIVEN `the first day of my period of employment` IS A DATE @desc On what day did the period of employment begin? (a date)
+      `the last day of my period of employment` IS A DATE @desc On what day did the period of employment end? (a date)
+      `the first day of the period my record of employment covers` IS A DATE @desc What is the first day of the period covered by your record of employment? (a date; the same as the first day above if the job lasted 52 weeks or less)
+      `the last day of the period my record of employment covers` IS A DATE @desc What is the last day of the period covered by your record of employment? (a date)
+      `the first day of my qualifying period` IS A DATE @desc What is the first day of your qualifying period? (a date)
+      `the last day of my qualifying period` IS A DATE @desc What is the last day of your qualifying period? (a date)
+      `the total number of hours I worked` IS A NUMBER @desc How many hours in total did you work in that period?
+      `I or my employer can give evidence of the hours I actually worked in my qualifying period` IS A BOOLEAN @desc Can you or your employer give evidence of the number of hours you actually worked within your qualifying period?
+      `the hours that evidence shows` IS A NUMBER @desc If so, how many hours does the evidence show? (ignored if the answer above is no)
+GIVETH A MAYBE NUMBER
+DECIDE `How many hours of my job count within my qualifying period` IS
+    `reg 22 the hours of insurable employment counted within the claimant's qualifying period` `my period of employment` `the period my record of employment covers` `my qualifying period` `the total number of hours I worked` `the evidence of hours, if any`
+    WHERE
+        `my period of employment` MEANS (`Period of days` OF `the first day of my period of employment`, `the last day of my period of employment`)
+        `the period my record of employment covers` MEANS (`Period of days` OF `the first day of the period my record of employment covers`, `the last day of the period my record of employment covers`)
+        `my qualifying period` MEANS (`Period of days` OF `the first day of my qualifying period`, `the last day of my qualifying period`)
+        `the evidence of hours, if any` MEANS IF `I or my employer can give evidence of the hours I actually worked in my qualifying period` THEN JUST `the hours that evidence shows` ELSE NOTHING
+
+-- reg 23. The kind of payment and the basis on which it is paid are asked as choices from the lists of the regulation.
+@export Which rule of regulation 23 allocates this payment of mine to a pay period (reg 23)?
+GIVEN `the kind of payment` IS AN `er2 Item of remuneration` @desc What kind of payment is it? One of: overtime pay, shift premiums, pay adjustments, retroactive pay increases, bonuses, gratuities, accumulated sick leave credits, incentive payments, cost of living allowances, separation payments, wages in lieu of notice, vacation pay, or remuneration not listed in paragraph 23(1)(b).
+      `how the payment is made` IS A `er2 Basis on which remuneration is paid` @desc On what basis is it paid? One of: not paid in respect of a pay period; paid for work performed during the pay period; paid for a period of leave; paid as a lump sum for a period of leave calculated on a basis other than its length; paid in respect of a pay period but neither for work nor for leave.
+      `I am on unpaid leave, have quit, or have been terminated or laid off` IS A BOOLEAN @desc Are you on unpaid leave, or have you quit your employment, or been terminated or laid off?
+      `I am employed under a contract for a fixed term` IS A BOOLEAN @desc Are you employed in insurable employment on the basis of a contract for a fixed term?
+      `my earnings under the contract are not paid on a regular basis` IS A BOOLEAN @desc Are your insurable earnings under the contract not paid on a regular basis?
+      `I am paid solely by commission` IS A BOOLEAN @desc Does your remuneration consist solely of commissions?
+      `I am paid salary and irregular commissions` IS A BOOLEAN @desc Does your remuneration consist of salary and irregularly paid commissions?
+GIVETH A `er2 Method of allocating insurable earnings`
+DECIDE `Which rule of regulation 23 allocates this payment of mine to a pay period` IS
+    `reg 23 the method of allocating insurable earnings` `the kind of payment` `how the payment is made` `I am on unpaid leave, have quit, or have been terminated or laid off` `I am employed under a contract for a fixed term` `my earnings under the contract are not paid on a regular basis` `I am paid solely by commission` `I am paid salary and irregular commissions`
+
+-- reg 23(1)(d), the arithmetic of the methods, and the day counts of (3) and (4).
+@export Is my unpaid remuneration allocated as if I had been paid it in the normal course of business (reg 23(1)(d))?
+GIVEN `my remuneration remains unpaid for reasons in subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations` IS A BOOLEAN @desc Does your remuneration remain unpaid for reasons described in subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations?
+GIVETH A BOOLEAN
+DECIDE `Is my unpaid remuneration allocated as if I had been paid it in the normal course of business` IF
+    `reg 23(1)(d) the unpaid remuneration is allocated as if it had actually been paid in the normal course of business` `my remuneration remains unpaid for reasons in subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations`
+
+@export How much of this payment is allocated to a stretch of days when it is allocated proportionately (reg 23)?
+GIVEN `the amount of the payment` IS A NUMBER @desc How much (dollars) is the payment?
+      `the number of days in the stretch` IS A NUMBER @desc How many days are in the stretch you are asking about?
+      `the number of days in the whole period it is allocated over` IS A NUMBER @desc How many days are in the whole period over which the payment is allocated proportionately?
+GIVETH A MAYBE NUMBER
+DECIDE `How much of this payment is allocated to a stretch of days when it is allocated proportionately` IS
+    `reg 23 the part of an amount allocated proportionately to a stretch of days` `the amount of the payment` `the number of days in the stretch` `the number of days in the whole period it is allocated over`
+
+@export How much of this pay is allocated to one day in proportion to the hours I worked (reg 23(1)(a)(i))?
+GIVEN `the pay` IS A NUMBER @desc How much (dollars) is the pay for the pay period?
+      `the hours I worked on the day` IS A NUMBER @desc How many hours did you work on the day you are asking about?
+      `the hours I worked in the whole pay period` IS A NUMBER @desc How many hours did you work in the whole pay period?
+GIVETH A MAYBE NUMBER
+DECIDE `How much of this pay is allocated to one day in proportion to the hours I worked` IS
+    `reg 23(1)(a)(i) the part of the remuneration allocated to a day in proportion to the hours worked` `the pay` `the hours I worked on the day` `the hours I worked in the whole pay period`
+
+@export How much of my pay for a period of leave is allocated to it at the rate at which the leave was paid (reg 23(1)(a)(ii))?
+GIVEN `the daily rate at which my leave was paid` IS A NUMBER @desc At what daily rate (dollars) was the period of leave compensated?
+      `the number of days of my leave` IS A NUMBER @desc How many days long was the period of leave?
+GIVETH A NUMBER
+DECIDE `How much of my pay for a period of leave is allocated to it at the rate at which the leave was paid` IS
+    `reg 23(1)(a)(ii) the part of the remuneration allocated to a period of leave at the rate at which it was compensated` `the daily rate at which my leave was paid` `the number of days of my leave`
+
+@export Over how many days are my commission earnings allocated, leaving out my weeks of unpaid leave (reg 23(3))?
+GIVEN `the number of days in my period of employment` IS A NUMBER @desc How many days long is your period of employment?
+      `my weeks of unpaid leave for a reason in subsection 12(3)` IS A NUMBER @desc For how many weeks were you on unpaid leave of absence for a reason referred to in subsection 12(3) of the Act? (0 if none)
+GIVETH A MAYBE NUMBER
+DECIDE `Over how many days are my commission earnings allocated, leaving out my weeks of unpaid leave` IS
+    `reg 23(3) the number of days over which the insurable earnings are allocated` `the number of days in my period of employment` `my weeks of unpaid leave for a reason in subsection 12(3)`
+
+@export Over how many days are my other earnings allocated when none of subsections (1) to (3) applies (reg 23(4))?
+GIVEN `the number of days in my period of employment` IS A NUMBER @desc How many days long is your period of employment?
+GIVETH A NUMBER
+DECIDE `Over how many days are my other earnings allocated when none of subsections (1) to (3) applies` IS
+    `reg 23(4) the number of days over which the insurable earnings are allocated` `the number of days in my period of employment`
+
+@export May my employer estimate my insurable earnings for my last pay period (reg 23(5))?
+GIVEN `my pay period was running when I was laid off or separated from employment` IS A BOOLEAN @desc Was a pay period still running at the time you were laid off or separated from employment?
+      `my earnings for that pay period cannot be ascertained with accuracy` IS A BOOLEAN @desc Can your insurable earnings for that pay period not be ascertained with accuracy?
+GIVETH A BOOLEAN
+DECIDE `May my employer estimate my insurable earnings for my last pay period` IF
+    `reg 23(5) the employer may estimate the insurable earnings for the pay period` `my pay period was running when I was laid off or separated from employment` `my earnings for that pay period cannot be ascertained with accuracy`
+
+-- reg 24.
+@export How much of my insurable earnings are allocated to this week of my qualifying period (reg 24)?
+GIVEN `the first day of my period of employment` IS A DATE @desc On what day did the period of employment covered by the record of employment begin? (a date)
+      `the last day of my period of employment` IS A DATE @desc On what day did it end? (a date)
+      `a day in the week` IS A DATE @desc Give any day in the week you are asking about. (a date; a week runs from Sunday to Saturday)
+      `the first day of my qualifying period` IS A DATE @desc What is the first day of your qualifying period? (a date)
+      `the last day of my qualifying period` IS A DATE @desc What is the last day of your qualifying period? (a date)
+      `the insurable earnings on my record of employment` IS A NUMBER @desc How much insurable earnings (dollars) does the record of employment report for that period of employment?
+      `the part of those earnings paid because of lay-off or separation` IS A NUMBER @desc How much of them (dollars) was paid or is payable by reason of lay-off or separation from employment?
+      `I or my employer can show what I actually earned in the week` IS A BOOLEAN @desc Can you or your employer present evidence of the insurable earnings you actually earned in that week?
+      `what I actually earned in the week` IS A NUMBER @desc If so, how much (dollars)? (ignored if the answer above is no)
+GIVETH A MAYBE NUMBER
+DECIDE `How much of my insurable earnings are allocated to this week of my qualifying period` IS
+    `reg 24 the insurable earnings allocated to the week` `my period of employment` `the week` `my qualifying period` `the insurable earnings on my record of employment` `the part of those earnings paid because of lay-off or separation` `the evidence of earnings, if any`
+    WHERE
+        `my period of employment` MEANS (`Period of days` OF `the first day of my period of employment`, `the last day of my period of employment`)
+        `the week` MEANS `er2 the week containing the day` `a day in the week`
+        `my qualifying period` MEANS (`Period of days` OF `the first day of my qualifying period`, `the last day of my qualifying period`)
+        `the evidence of earnings, if any` MEANS IF `I or my employer can show what I actually earned in the week` THEN JUST `what I actually earned in the week` ELSE NOTHING
+
+-- reg 24.1. Situational: you were paid on lay-off or separation.
+@export How much of my pay on lay-off or separation counts as insurable earnings in my qualifying period (reg 24.1)?
+GIVEN `the pay I was or will be paid by reason of lay-off or separation` IS A NUMBER @desc How much (dollars) was or is payable to you during your qualifying period by reason of lay-off or separation from employment?
+      `my insurable earnings in the calculation period from that employment` IS A NUMBER @desc How much insurable earnings (dollars) did you have in the calculation period from the employment that gave rise to that pay, not counting that pay?
+GIVETH A NUMBER
+DECIDE `How much of my pay on lay-off or separation counts as insurable earnings in my qualifying period` IS
+    `reg 24.1 the insurable earnings paid or payable by reason of lay-off or separation that are counted` `the pay I was or will be paid by reason of lay-off or separation` `my insurable earnings in the calculation period from that employment`
+
+-- reg 24.3. Situational: you are self-employed and claiming under Part VII.1.
+@export Are these insurable earnings left out of my rate of weekly benefits as a self-employed person (reg 24.3)?
+GIVEN `I lost that employment because of my misconduct` IS A BOOLEAN @desc Are the earnings from an employment that you lost because of your misconduct?
+      `I left that employment voluntarily without just cause` IS A BOOLEAN @desc Are the earnings from an employment that you voluntarily left without just cause?
+      `the day I earned them` IS A DATE @desc On what day were the insurable earnings earned? (a date)
+      `the first day of my qualifying period` IS A DATE @desc What is the first day of your qualifying period? (a date)
+      `the last day of my qualifying period` IS A DATE @desc What is the last day of your qualifying period? (a date)
+      `I had an earlier benefit period as an insured person` IS A BOOLEAN @desc Did you have an earlier benefit period established, as an insured person, under Part I of the Act or the Part VIII regulations?
+      `the first day of that earlier benefit period` IS A DATE @desc If so, what was its first day? (a date; ignored if the answer above is no)
+GIVETH A BOOLEAN
+DECIDE `Are these insurable earnings left out of my rate of weekly benefits as a self-employed person` IF
+    `reg 24.3 the insurable earnings are not taken into account in the rate of weekly benefits of a self-employed person` `I lost that employment because of my misconduct` `I left that employment voluntarily without just cause` `the day I earned them` `my qualifying period` `my earlier benefit period, if any`
+    WHERE
+        `my qualifying period` MEANS (`Period of days` OF `the first day of my qualifying period`, `the last day of my qualifying period`)
+        `my earlier benefit period, if any` MEANS IF `I had an earlier benefit period as an insured person` THEN JUST `the first day of that earlier benefit period` ELSE NOTHING
+
+§§ `Weeks of benefits, the election and your claims (regs 25 to 26.1)`
+
+-- reg 25. Two lists in the same order: the amount paid for each week, and the rate of weekly benefits for that week.
+-- A mismatch in the lengths of the lists is not guessed at: the answer is then not covered.
+GIVEN amounts IS A LIST OF NUMBER
+      rates IS A LIST OF NUMBER
+GIVETH A LIST OF `er2 Week of benefits paid`
+`er2 seat the weeks of benefits paid, one per amount and rate` MEANS
+    CONSIDER amounts
+    WHEN EMPTY THEN EMPTY
+    WHEN firstAmount FOLLOWED BY otherAmounts THEN
+        CONSIDER rates
+        WHEN EMPTY THEN EMPTY
+        WHEN firstRate FOLLOWED BY otherRates THEN (`er2 Week of benefits paid` OF firstAmount, firstRate) FOLLOWED BY (`er2 seat the weeks of benefits paid, one per amount and rate` otherAmounts otherRates)
+
+@export How many weeks of benefits am I considered to have been paid (regs 25(1), 25(2))?
+GIVEN `the amounts of benefits paid to me, one for each week of unemployment` IS A LIST OF NUMBER @desc For each week of unemployment for which you were paid, the amount of benefits paid to you (dollars), in order.
+      `the rates of weekly benefits for those weeks` IS A LIST OF NUMBER @desc For each of those weeks, in the same order, the rate of weekly benefits applicable to that week (dollars).
+GIVETH A MAYBE NUMBER
+DECIDE `How many weeks of benefits am I considered to have been paid` IS
+    IF   count `the amounts of benefits paid to me, one for each week of unemployment` EQUALS count `the rates of weekly benefits for those weeks`
+    THEN `reg 25(1) the number of weeks of benefits that the claimant is considered to have been paid` (`er2 seat the weeks of benefits paid, one per amount and rate` `the amounts of benefits paid to me, one for each week of unemployment` `the rates of weekly benefits for those weeks`)
+    ELSE NOTHING
+
+-- reg 25.1. Situational: you have to choose between Part I and Part VII.1.
+@export Have I made my election between Part I and Part VII.1 benefits as the Regulations require (reg 25.1)?
+GIVEN `I made the election to the Commission` IS A BOOLEAN @desc Did you make the election to the Commission?
+      `I made the election in writing` IS A BOOLEAN @desc Did you make it in writing (on paper or in electronic form)?
+GIVETH A BOOLEAN
+DECIDE `Have I made my election between Part I and Part VII.1 benefits as the Regulations require` IF
+    `reg 25.1 the election referred to in subsection 152.09(1) of the Act is made as required` `I made the election to the Commission` `I made the election in writing`
+
+-- reg 26.
+@export By what date must I make my claim for a week of unemployment (regs 26(1), 26(2))?
+GIVEN `a day in the week I am claiming for` IS A DATE @desc Give any day in the week for which you are claiming benefits. (a date; a week runs from Sunday to Saturday)
+      `the number of weeks in a row just before this claim for which I made no claim` IS A NUMBER @desc For how many weeks in a row immediately before this claim did you make no claim for benefits? (0 if none)
+GIVETH A DATE
+DECIDE `By what date must I make my claim for a week of unemployment` IS
+    `reg 26 the last day for making the claim for a week of unemployment` `a day in the week I am claiming for` `the number of weeks in a row just before this claim for which I made no claim`
+
+@export Is my claim for this week of unemployment in time (regs 26(1), 26(2))?
+GIVEN `a day in the week I am claiming for` IS A DATE @desc Give any day in the week for which you are claiming benefits. (a date)
+      `the number of weeks in a row just before this claim for which I made no claim` IS A NUMBER @desc For how many weeks in a row immediately before this claim did you make no claim for benefits? (0 if none)
+      `the day I make my claim` IS A DATE @desc On what day did you, or will you, make the claim? (a date)
+GIVETH A BOOLEAN
+DECIDE `Is my claim for this week of unemployment in time` IF
+    `reg 26 the claim for a week of unemployment is made in time` `a day in the week I am claiming for` `the number of weeks in a row just before this claim for which I made no claim` `the day I make my claim`
+
+-- reg 26.1. Situational: claims for pregnancy, a new-born or adopted child, family care, apprenticeship courses or work-sharing.
+§§ `If you may be excused from making periodic claims (reg 26.1)`
+
+@export What is my period of eligibility for the purposes of excusing me from periodic claims (reg 26.1(1))?
+GIVEN `my reason for claiming` IS A `Reason for benefits` @desc Why are you claiming benefits? One of: a reason other than those mentioned in subsection 12(3) (regular benefits); pregnancy; caring for a new-born or adopted child; a prescribed illness, injury or quarantine; care or support of a family member; care or support of a critically ill child; care or support of a critically ill adult.
+      `I am attending an apprenticeship course or program under section 25 of the Act` IS A BOOLEAN @desc Are you claiming under section 25 of the Act to attend an apprenticeship course or program?
+      `I am in work-sharing employment under section 24 of the Act` IS A BOOLEAN @desc Are you claiming under section 24 of the Act to receive work-sharing benefits?
+      `the first day of the period my benefits are payable for` IS A DATE @desc What is the first day of the period fixed by the Act for your benefits (for example the period of section 22(2), 23(2), 23.1(4), 23.2(3) or 23.3(3), or the course or work-sharing period)? (a date)
+      `the last day of the period my benefits are payable for` IS A DATE @desc What is the last day of that period, including any extension? (a date)
+      `the days of my waiting period I have not yet served` IS A NUMBER @desc How many days of the waiting period (section 13 of the Act) have you not yet served? (0 if served)
+GIVETH A MAYBE (`Period of days`)
+DECIDE `What is my period of eligibility for the purposes of excusing me from periodic claims` IS
+    `reg 26.1(1) the period of eligibility` `my reason for claiming` `I am attending an apprenticeship course or program under section 25 of the Act` `I am in work-sharing employment under section 24 of the Act` `the period my benefits are payable for` `the days of my waiting period I have not yet served`
+    WHERE
+        `the period my benefits are payable for` MEANS (`Period of days` OF `the first day of the period my benefits are payable for`, `the last day of the period my benefits are payable for`)
+
+@export Am I excused from making periodic claims on this day (reg 26.1)?
+GIVEN `this is my initial claim for benefits` IS A BOOLEAN @desc Is this your initial claim for benefits?
+      `this is my first claim after four or more weeks without a claim` IS A BOOLEAN @desc Is this the first claim you make after four or more consecutive weeks for which you made no claim (the claims subsection 26(2) covers)?
+      `my reason for claiming` IS A `Reason for benefits` @desc Why are you claiming benefits? One of: a reason other than those mentioned in subsection 12(3) (regular benefits); pregnancy; caring for a new-born or adopted child; a prescribed illness, injury or quarantine; care or support of a family member; care or support of a critically ill child; care or support of a critically ill adult.
+      `I am attending an apprenticeship course or program under section 25 of the Act` IS A BOOLEAN @desc Are you claiming under section 25 of the Act to attend an apprenticeship course or program?
+      `I am in work-sharing employment under section 24 of the Act` IS A BOOLEAN @desc Are you claiming under section 24 of the Act to receive work-sharing benefits?
+      `the first day of the period my benefits are payable for` IS A DATE @desc What is the first day of the period fixed by the Act for your benefits (for example the period of section 22(2), 23(2), 23.1(4), 23.2(3) or 23.3(3), or the course or work-sharing period)? (a date)
+      `the last day of the period my benefits are payable for` IS A DATE @desc What is the last day of that period, including any extension? (a date)
+      `the days of my waiting period I have not yet served` IS A NUMBER @desc How many days of the waiting period (section 13 of the Act) have you not yet served? (0 if served)
+      `I claim for every week of unemployment in my period of eligibility` IS A BOOLEAN @desc Do you make a claim for every week of unemployment in your period of eligibility?
+      `I have completed the Commission's form` IS A BOOLEAN @desc Have you completed a form provided by the Commission for this purpose?
+      `the form says there are no conditions I will fail to meet` IS A BOOLEAN @desc Does the form state that, to the best of your knowledge, there are no conditions of entitlement to benefits that will not be met for each week in the period, except for earnings that may be deducted?
+      `the form says I will notify the Commission as soon as possible` IS A BOOLEAN @desc Does the form state that you will notify the Commission as soon as possible if you cease to meet a condition in a way that reduces or eliminates benefits, or have earnings that may be deducted?
+      `the form says I will notify the Commission at the end of the period` IS A BOOLEAN @desc Does the form state that you will notify the Commission at the end of the period whether you met the conditions for each week and declared all deductible earnings?
+      `the Commission has learned that I do not meet a condition` IS A BOOLEAN @desc Has the Commission become aware that you do not meet a condition of entitlement to benefits during your period of eligibility?
+      `the day the Commission learned it` IS A DATE @desc If so, on what day did it become aware? (a date; ignored if the answer above is no)
+      `the day I am asking about` IS A DATE @desc For what day are you asking whether you must make periodic claims? (a date)
+GIVETH A BOOLEAN
+DECIDE `Am I excused from making periodic claims on this day` IF
+    `reg 26.1 the claimant is not required to make periodic claims on the day` `this is my initial claim for benefits` `this is my first claim after four or more weeks without a claim` `the last day of my period of eligibility` `my reason for claiming` `I am attending an apprenticeship course or program under section 25 of the Act` `I am in work-sharing employment under section 24 of the Act` `I claim for every week of unemployment in my period of eligibility` `I have completed the Commission's form` `the form says there are no conditions I will fail to meet` `the form says I will notify the Commission as soon as possible` `the form says I will notify the Commission at the end of the period` `the day the Commission learned it, if any` `the day I am asking about`
+    WHERE
+        `the day the Commission learned it, if any` MEANS IF `the Commission has learned that I do not meet a condition` THEN JUST `the day the Commission learned it` ELSE NOTHING
+        `the period my benefits are payable for` MEANS (`Period of days` OF `the first day of the period my benefits are payable for`, `the last day of the period my benefits are payable for`)
+        -- For benefits that have no period of eligibility (regular or sickness benefits) paragraph (2)(c) cannot be met whatever this day is, so
+        -- the end of the period fixed for the benefits is passed in its place and changes no answer.
+        `the last day of my period of eligibility` MEANS
+            CONSIDER `reg 26.1(1) the period of eligibility` `my reason for claiming` `I am attending an apprenticeship course or program under section 25 of the Act` `I am in work-sharing employment under section 24 of the Act` `the period my benefits are payable for` `the days of my waiting period I have not yet served`
+            WHEN JUST p THEN p's `last day of the period`
+            WHEN NOTHING THEN `the last day of the period my benefits are payable for`
+
+@export Must I notify the Commission as soon as possible while I am excused from periodic claims (reg 26.1(2)(d)(ii))?
+GIVEN `I cease to meet a condition of entitlement during my period of eligibility` IS A BOOLEAN @desc Do you cease to meet a condition of entitlement to benefits at some time during your period of eligibility?
+      `that failure reduces or eliminates my benefits for some week` IS A BOOLEAN @desc Does that failure reduce or eliminate any benefits for some week in the period?
+      `I have earnings that may be deducted` IS A BOOLEAN @desc Do you have earnings in respect of the period that may be deducted under section 19, 22, 23, 23.1, 23.2 or 23.3 of the Act?
+GIVETH A BOOLEAN
+DECIDE `Must I notify the Commission as soon as possible while I am excused from periodic claims` IF
+    `reg 26.1(2)(d)(ii) the claimant must notify the Commission as soon as possible` `I cease to meet a condition of entitlement during my period of eligibility` `that failure reduces or eliminates my benefits for some week` `I have earnings that may be deducted`
+
+@export By what day must I tell the Commission, at the end of my period of eligibility, whether I met the conditions and declared my earnings (reg 26.1(2)(d)(iii))?
+GIVEN `the first day of my period of eligibility` IS A DATE @desc What is the first day of your period of eligibility? (a date)
+      `the last day of my period of eligibility` IS A DATE @desc What is the last day of your period of eligibility? (a date)
+GIVETH A DATE
+DECIDE `By what day must I tell the Commission at the end of my period of eligibility` IS
+    `reg 26.1(2)(d)(iii) the day at the end of the period of eligibility on which the claimant must notify the Commission` `my period of eligibility`
+    WHERE
+        `my period of eligibility` MEANS (`Period of days` OF `the first day of my period of eligibility`, `the last day of my period of eligibility`)
+
+-- reg 26.1(1): "condition of entitlement to benefits".
+@export Is this a condition of entitlement to benefits for the purposes of regulation 26.1 (reg 26.1(1))?
+GIVEN `it is a requirement, circumstance or condition referred to in subsection 49(1) of the Act` IS A BOOLEAN @desc Is it a requirement, circumstance or condition referred to in subsection 49(1) of the Act?
+GIVETH A BOOLEAN
+DECIDE `Is this a condition of entitlement to benefits for the purposes of regulation 26.1` IF
+    `reg 26.1(1) condition of entitlement to benefits` `it is a requirement, circumstance or condition referred to in subsection 49(1) of the Act`
+
+§§ `If a claim is made for an incapacitated or a deceased person (reg 27)`
+
+-- Situational: you are acting for an incapacitated claimant, or you are the executor, administrator or successor of a claimant who has died.
+@export Will the Commission authorize payment of the benefits to the person acting for an incapacitated claimant (reg 27(1))?
+GIVEN `the claim is made on behalf of a person with mental disabilities or an incapacitated person` IS A BOOLEAN @desc Is the claim made to the Commission on behalf of a person with mental disabilities or an incapacitated person?
+      `that person meets the requirements of Part I, VII.1 or VIII` IS A BOOLEAN @desc Does the person on whose behalf the claim is made meet the requirements of Part I, VII.1 or VIII of the Act?
+GIVETH A BOOLEAN
+DECIDE `Will the Commission authorize payment of the benefits to the person acting for an incapacitated claimant` IF
+    `reg 27(1) payment of the benefits must be authorized to the person acting on behalf of the claimant` `the claim is made on behalf of a person with mental disabilities or an incapacitated person` `that person meets the requirements of Part I, VII.1 or VIII`
+
+@export As the executor or administrator of a deceased claimant, will the Commission authorize payment of their benefits to me (regs 27(2), 27(3))?
+GIVEN `I am the executor of the estate` IS A BOOLEAN @desc Are you the executor of the estate of the deceased person?
+      `I am the administrator of the estate` IS A BOOLEAN @desc Are you the administrator of the estate of the deceased person?
+      `the claim is made by me` IS A BOOLEAN @desc Is the claim for benefits made to the Commission by you?
+      `the deceased met the requirements at the time of death` IS A BOOLEAN @desc Did the deceased person, at the time of death, meet the requirements of Part I, VII.1 or VIII of the Act?
+GIVETH A BOOLEAN
+DECIDE `As the executor or administrator of a deceased claimant, will the Commission authorize payment of their benefits to me` IF
+    `reg 27(2) payment of the benefits must be authorized to the legal representative of the deceased person` ((`reg 27(3) legal representative` `I am the executor of the estate` `I am the administrator of the estate`) AND `the claim is made by me`) `the deceased met the requirements at the time of death`
+
+@export As a person entitled to succeed to a deceased claimant's property, will their benefits be payable to me (regs 27(4), 27(5), 27(6))?
+GIVEN `I am entitled to succeed to the property of the deceased person` IS A BOOLEAN @desc Are you entitled to succeed to the property of the deceased person?
+      `the succession is intestate` IS A BOOLEAN @desc Is the succession intestate (no will)? Answer no if there is a will.
+      `the estate is too small to warrant letters of administration` IS A BOOLEAN @desc If intestate: is the total value of the estate not sufficient to warrant obtaining letters of administration?
+      `the estate is too small to warrant probate` IS A BOOLEAN @desc If there is a will: is the total value of the estate not sufficient to warrant obtaining probate of the will?
+      `I made the claim on the Commission's form` IS A BOOLEAN @desc Did you make the claim on a form supplied by the Commission?
+      `the claim includes my signed statutory declaration` IS A BOOLEAN @desc Does the claim include a statutory declaration you signed, stating that you are a person entitled to succeed to the property of the deceased person?
+      `the claim includes my signed undertaking to repay` IS A BOOLEAN @desc Does the claim include an undertaking you signed to repay to the Receiver General any moneys paid to you in error?
+      `there is a will` IS A BOOLEAN @desc Is there a will of the deceased person?
+      `I submitted a copy of the will` IS A BOOLEAN @desc Have you submitted a copy of the will?
+      `others are entitled to succeed` IS A BOOLEAN @desc Are there other persons, besides you, who are entitled to succeed to the property of the deceased person?
+      `I submitted their signed release` IS A BOOLEAN @desc Have you submitted a release of all claims in respect of the amount payable, signed by all of those other persons?
+GIVETH A BOOLEAN
+DECIDE `As a person entitled to succeed to a deceased claimant's property, will their benefits be payable to me` IF
+    `reg 27(4) the benefits are payable to the person entitled to succeed to the property of the deceased person` `I am entitled to succeed to the property of the deceased person` (`reg 27(4) the total value of the estate of the deceased person is not sufficient to warrant obtaining a grant` `the succession is intestate` `the estate is too small to warrant letters of administration` `the estate is too small to warrant probate`) (`reg 27(5) the claim for benefits is made on the form and includes the declaration and the undertaking` `I made the claim on the Commission's form` `the claim includes my signed statutory declaration` `the claim includes my signed undertaking to repay`) (`reg 27(6) the applicant submits the copy of the will, if one exists, and the release signed by all other persons entitled to succeed` `there is a will` `I submitted a copy of the will` `others are entitled to succeed` `I submitted their signed release`)
+
+§§ `Payment in advance (reg 28)`
+
+@export May the Commission pay my benefits for this week before the usual time (reg 28)?
+GIVEN `my unemployment arises from a fire, flood, hurricane, epidemic or other natural disaster or act of God where I work` IS A BOOLEAN @desc Does your unemployment arise from the occurrence of a fire, flood, hurricane, epidemic or other natural disaster or act of God at the factory, workshop or other premises, or in the area, where you are employed?
+      `a day in the week` IS A DATE @desc Give any day in the week of unemployment you are asking about. (a date; a week runs from Sunday to Saturday)
+      `I am attending an apprenticeship course or program that week` IS A BOOLEAN @desc Are you attending, that week, an apprenticeship course or program referred to in paragraph 25(1)(a) of the Act?
+      `a disruption of services will prevent the normal processing of claims` IS A BOOLEAN @desc Is there, or is there anticipated to be, a disruption of electrical service, electronic processes or telecommunications that will prevent the processing of claims for benefits in the normal manner and in a timely fashion?
+GIVETH A BOOLEAN
+DECIDE `May the Commission pay my benefits for this week before the usual time` IF
+    `reg 28 the Commission may pay benefits for the week of unemployment in advance of the customary time` `my unemployment arises from a fire, flood, hurricane, epidemic or other natural disaster or act of God where I work` `a day in the week` `I am attending an apprenticeship course or program that week` `a disruption of services will prevent the normal processing of claims`
+
+§§ `Whether you worked a full working week (regs 29 to 32)`
+
+-- reg 29(1). Situational: you are a railway employee paid by the mile.
+@export As a railway employee paid by mileage, am I considered to have worked a full working week in each week of the two-week period (reg 29(1))?
+GIVEN `I am a railway employee` IS A BOOLEAN @desc Are you a railway employee?
+      `I am paid on a mileage basis` IS A BOOLEAN @desc Are you paid on a mileage basis?
+      `what I was paid in the two-week period` IS A NUMBER @desc How much (dollars) were you paid in the two-week period reported on in the declaration you filed with your claim?
+      `the maximum weekly insurable earnings` IS A NUMBER @desc What is the maximum weekly insurable earnings (dollars) that applies to you? (set by the Act, not the Regulations)
+GIVETH A BOOLEAN
+DECIDE `As a railway employee paid by mileage, am I considered to have worked a full working week in each week of the two-week period` IF
+    `reg 29(1) the claimant is considered to have worked a full working week during each week in the two-week period` `I am a railway employee` `I am paid on a mileage basis` `what I was paid in the two-week period` `the maximum weekly insurable earnings`
+
+-- reg 29(2). Situational: farming or horticulture.
+@export In farming or horticulture, am I considered to have worked a full working week this week (reg 29(2))?
+GIVEN `I am employed in farming or horticulture` IS A BOOLEAN @desc Are you employed in farming or horticulture?
+      `the number of days I worked this week` IS A NUMBER @desc On how many days did you work this week?
+      `the number of hours I worked this week` IS A NUMBER @desc How many hours in total did you work this week?
+GIVETH A BOOLEAN
+DECIDE `In farming or horticulture, am I considered to have worked a full working week this week` IF
+    `reg 29(2) the claimant employed in farming or horticulture is considered to have worked a full working week` `I am employed in farming or horticulture` `the number of days I worked this week` `the number of hours I worked this week`
+
+-- reg 29(3). Situational: a holiday fell in the week.
+@export Am I regarded as having worked a full working week although a holiday fell in the week (reg 29(3))?
+GIVEN `I did not work on a holiday` IS A BOOLEAN @desc Did you not work on a holiday that fell in the week?
+      `I did not work the day before or after the holiday because of it` IS A BOOLEAN @desc Because of a holiday, did you not work the working day immediately before or immediately after it?
+      `the number of my other working days that week` IS A NUMBER @desc How many working days did you have that week apart from the holiday (and the day next to it that you did not work because of it)?
+      `the number of those days on which I worked at least my normal hours` IS A NUMBER @desc On how many of those days did you work at least the number of hours you would normally work?
+GIVETH A BOOLEAN
+DECIDE `Am I regarded as having worked a full working week although a holiday fell in the week` IF
+    `reg 29(3) the claimant is regarded as having worked a full working week despite a holiday` `I did not work on a holiday` `I did not work the day before or after the holiday because of it` `the number of my other working days that week` `the number of those days on which I worked at least my normal hours`
+
+-- reg 29(4). Situational: your usual pay is for a period longer than a week.
+@export Is this week a full working week because my usual pay is for a period longer than a week (reg 29(4))?
+GIVEN `my usual pay is for the whole period whatever work I do in it` IS A BOOLEAN @desc Does your contract of employment pay your usual remuneration in respect of a period longer than a week, whatever amount of work you do in that period?
+      `the first day of the period my usual pay is for` IS A DATE @desc What is the first day of that period? (a date)
+      `the last day of the period my usual pay is for` IS A DATE @desc What is the last day of that period? (a date)
+      `a day in the week` IS A DATE @desc Give any day in the week you are asking about. (a date; a week runs from Sunday to Saturday)
+GIVETH A BOOLEAN
+DECIDE `Is this week a full working week because my usual pay is for a period longer than a week` IF
+    `reg 29(4) the week is a full working week for the insured person` `my usual pay is for the whole period whatever work I do in it` `the period my usual pay is for` `a day in the week`
+    WHERE
+        `the period my usual pay is for` MEANS (`Period of days` OF `the first day of the period my usual pay is for`, `the last day of the period my usual pay is for`)
+
+-- reg 30. Situational: you are self-employed, run a business, or control your own hours.
+§§ `If you are self-employed or control your own hours (regs 30 to 30.2)`
+
+@export Am I a self-employed person for the purposes of regulation 30 (reg 30(5))?
+GIVEN `I am or was engaged in a business` IS A BOOLEAN @desc Are you, or were you, engaged in a business?
+      `I am employed` IS A BOOLEAN @desc Are you employed?
+      `my employer is a corporation` IS A BOOLEAN @desc Is your employer a corporation?
+      `the share of the voting shares I control` IS A NUMBER @desc What fraction of the voting shares of that corporation do you control? (for example 0.41 for 41%; 0 if none)
+GIVETH A BOOLEAN
+DECIDE `Am I a self-employed person for the purposes of regulation 30` IF
+    `reg 30(5) self-employed person` `I am or was engaged in a business` `I am employed` `my employer is a corporation` `the share of the voting shares I control`
+
+@export Am I considered to have worked a full working week this week as a self-employed person or a person who controls their own hours (regs 30(1), 30(2), 30(4))?
+GIVEN `I am or was engaged in a business` IS A BOOLEAN @desc Are you, or were you, engaged in a business?
+      `I am employed` IS A BOOLEAN @desc Are you employed?
+      `my employer is a corporation` IS A BOOLEAN @desc Is your employer a corporation?
+      `the share of the voting shares I control` IS A NUMBER @desc What fraction of the voting shares of that corporation do you control? (for example 0.41 for 41%; 0 if none)
+      `I operate a business on my own account` IS A BOOLEAN @desc Do you operate a business on your own account?
+      `I operate a business in a partnership` IS A BOOLEAN @desc Do you operate a business in a partnership?
+      `I operate a business in a co-adventure` IS A BOOLEAN @desc Do you operate a business in a co-adventure?
+      `I control my own working hours in another employment` IS A BOOLEAN @desc Are you employed in any other employment in which you control your working hours?
+      `it is to such a minor extent that a person would not normally rely on it as a principal means of livelihood` IS A BOOLEAN @desc Is your employment or engagement to such a minor extent that a person would not normally rely on it as a principal means of livelihood? (Consider the time you spend, the capital and resources you invested, its financial success or failure, its continuity, its nature, and your intention and willingness to seek and immediately accept alternate employment.)
+      `I am employed in farming` IS A BOOLEAN @desc Are you employed in farming?
+      `a day in the week` IS A DATE @desc Give any day in the week you are asking about. (a date; a week runs from Sunday to Saturday)
+      `I prove that I did not work from October to March` IS A BOOLEAN @desc If you are employed in farming, do you prove that during the period from the week of 1 October to the week of the following 31 March you did not work?
+      `I prove that I worked so little that I could have accepted full-time employment` IS A BOOLEAN @desc If you are employed in farming, do you prove that during that period you were employed to such a minor extent that it would not have prevented you from accepting full-time employment?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Am I considered to have worked a full working week this week as a self-employed person or a person who controls their own hours` IS
+    `reg 30 whether the claimant is considered to have worked a full working week in the week` (`reg 30(1) the claimant's work in the week is of a kind that is considered a full working week, before subsections (2) and (4)` (`reg 30(5) self-employed person` `I am or was engaged in a business` `I am employed` `my employer is a corporation` `the share of the voting shares I control`) `I operate a business on my own account` `I operate a business in a partnership` `I operate a business in a co-adventure` `I control my own working hours in another employment`) `it is to such a minor extent that a person would not normally rely on it as a principal means of livelihood` `I am employed in farming` `a day in the week` `I prove that I did not work from October to March` `I prove that I worked so little that I could have accepted full-time employment`
+
+@export What circumstances are considered in judging whether my work is of such a minor extent that I would not rely on it for my livelihood (reg 30(3))?
+GIVETH A LIST OF `er2 Circumstance considered in judging whether employment is of a minor extent`
+DECIDE `What circumstances are considered in judging whether my work is of such a minor extent` IS
+    `reg 30(3) the circumstances to be considered in determining whether employment or engagement is of a minor extent`
+
+@export Is this a week of unemployment for me as a self-employed person (reg 30.1)?
+GIVEN `the normal level of time I devote to my business in a week` IS A NUMBER @desc What is the normal level of the time you devote to your business activities in a week (for example hours)?
+      `the time I devoted to my business this week` IS A NUMBER @desc How much time (in the same unit) did you devote to your business activities this week?
+GIVETH A BOOLEAN
+DECIDE `Is this a week of unemployment for me as a self-employed person` IF
+    `reg 30.1 the week is a week of unemployment for a self-employed person` `the normal level of time I devote to my business in a week` `the time I devoted to my business this week`
+
+@export Am I deemed to be not working as a self-employed person (reg 30.2)?
+GIVEN `I am engaged in the normal activities of my business` IS A BOOLEAN @desc Are you engaged in the normal activities of your business?
+      `I am engaged in the normal activities for the continuation of my business` IS A BOOLEAN @desc Are you engaged in the normal activities for the continuation of your business?
+GIVETH A BOOLEAN
+DECIDE `Am I deemed to be not working as a self-employed person` IF
+    `reg 30.2 the self-employed person is deemed to be not working` `I am engaged in the normal activities of my business` `I am engaged in the normal activities for the continuation of my business`
+
+-- reg 31. Situational: you are an employed person other than the special cases of regulations 29 and 30.
+§§ `What a full working week is for you as an employed person (reg 31)`
+
+@export How many hours, days or shifts make a full working week for me (regs 31(1), 31(2), 31(3))?
+GIVEN `regulation 29 or 30 applies to me` IS A BOOLEAN @desc Are you a claimant referred to in section 29 or 30 of the Regulations (railway employee, farming or horticulture, self-employed and so on)?
+      `I am paid on a piece, mileage or other unit rate` IS A BOOLEAN @desc Are you remunerated on a piece, mileage or other unit rate?
+      `the number normally worked in a week by persons in my grade, class or shift` IS A NUMBER @desc What number of hours, days or shifts is normally worked in a calendar week by persons in your grade, class or shift where you work?
+      `that is a part-time number` IS A BOOLEAN @desc Is that the number normally worked by persons in part-time employment?
+      `the number normally worked in a week in full-time employment closest to mine` IS A NUMBER @desc What number of hours, days or shifts is normally worked in a calendar week by persons in full-time employment in the employment closest in nature to yours?
+      `the days normally worked in a week by persons in my grade, class or shift` IS A NUMBER @desc How many days are normally worked in a calendar week by persons in your grade, class or shift where you work?
+GIVETH A MAYBE NUMBER
+DECIDE `How many hours, days or shifts make a full working week for me` IS
+    `reg 31 the number of hours, days or shifts that makes a full working week for the claimant` `regulation 29 or 30 applies to me` `I am paid on a piece, mileage or other unit rate` `the number normally worked in a week by persons in my grade, class or shift` `that is a part-time number` `the number normally worked in a week in full-time employment closest to mine` `the days normally worked in a week by persons in my grade, class or shift`
+
+@export Have I worked a full working week (regs 31(1), 31(2), 31(3))?
+GIVEN `the number I worked this week` IS A NUMBER @desc How many hours, days or shifts (in the unit the full working week is counted in) did you work this week?
+      `regulation 29 or 30 applies to me` IS A BOOLEAN @desc Are you a claimant referred to in section 29 or 30 of the Regulations?
+      `I am paid on a piece, mileage or other unit rate` IS A BOOLEAN @desc Are you remunerated on a piece, mileage or other unit rate?
+      `the number normally worked in a week by persons in my grade, class or shift` IS A NUMBER @desc What number of hours, days or shifts is normally worked in a calendar week by persons in your grade, class or shift where you work?
+      `that is a part-time number` IS A BOOLEAN @desc Is that the number normally worked by persons in part-time employment?
+      `the number normally worked in a week in full-time employment closest to mine` IS A NUMBER @desc What number is normally worked in a calendar week by persons in full-time employment in the employment closest in nature to yours?
+      `the days normally worked in a week by persons in my grade, class or shift` IS A NUMBER @desc How many days are normally worked in a calendar week by persons in your grade, class or shift where you work?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Have I worked a full working week` IS
+    `reg 31 the claimant has worked a full working week` `the number I worked this week` (`reg 31 the number of hours, days or shifts that makes a full working week for the claimant` `regulation 29 or 30 applies to me` `I am paid on a piece, mileage or other unit rate` `the number normally worked in a week by persons in my grade, class or shift` `that is a part-time number` `the number normally worked in a week in full-time employment closest to mine` `the days normally worked in a week by persons in my grade, class or shift`)
+
+@export Is this a working day (reg 32)?
+GIVEN `the day` IS A DATE @desc Which day? (a date)
+GIVETH A BOOLEAN
+DECIDE `Is this a working day` IF
+    `reg 32 working day` `the day`
+
+§§ `If you are a teacher (reg 33)`
+
+-- Situational: you taught in your qualifying period and are claiming for a week in a non-teaching period.
+@export Does my work count as teaching (reg 33(1))?
+GIVEN `my occupation is teaching` IS A BOOLEAN @desc Is your occupation the occupation of teaching?
+      `it is in a pre-elementary school` IS A BOOLEAN @desc Is it in a pre-elementary school?
+      `it is in an elementary school` IS A BOOLEAN @desc Is it in an elementary school?
+      `it is in a secondary school` IS A BOOLEAN @desc Is it in a secondary school?
+      `it is in a technical or vocational school` IS A BOOLEAN @desc Is it in a technical or vocational school?
+GIVETH A BOOLEAN
+DECIDE `Does my work count as teaching` IF
+    `reg 33(1) teaching` `my occupation is teaching` `it is in a pre-elementary school` `it is in an elementary school` `it is in a secondary school` `it is in a technical or vocational school`
+
+@export Is this period a non-teaching period (reg 33(1))?
+GIVEN `it occurs every year, at regular or irregular intervals` IS A BOOLEAN @desc Does the period occur annually, at regular or irregular intervals?
+      `a significant number of people employed in teaching do no work in it` IS A BOOLEAN @desc Is no work performed during it by a significant number of people employed in teaching?
+GIVETH A BOOLEAN
+DECIDE `Is this period a non-teaching period` IF
+    `reg 33(1) non-teaching period` `it occurs every year, at regular or irregular intervals` `a significant number of people employed in teaching do no work in it`
+
+@export As a teacher, am I barred from benefits for a week of unemployment in a non-teaching period (reg 33(2))?
+GIVEN `I was employed in teaching in my qualifying period` IS A BOOLEAN @desc Were you employed in teaching for any part of your qualifying period?
+      `the week falls in a non-teaching period of mine` IS A BOOLEAN @desc Does the week of unemployment fall in a non-teaching period of yours?
+      `my reason for claiming` IS A `Reason for benefits` @desc Why are you claiming benefits? One of: a reason other than those mentioned in subsection 12(3) (regular benefits); pregnancy; caring for a new-born or adopted child; a prescribed illness, injury or quarantine; care or support of a family member; care or support of a critically ill child; care or support of a critically ill adult.
+      `my teaching contract has terminated` IS A BOOLEAN @desc Has your contract of employment for teaching terminated?
+      `my teaching was casual or as a substitute` IS A BOOLEAN @desc Was your employment in teaching on a casual or substitute basis?
+      `I qualify for benefits from work other than teaching` IS A BOOLEAN @desc Do you qualify to receive benefits in respect of employment in an occupation other than teaching?
+GIVETH A BOOLEAN
+DECIDE `As a teacher, am I barred from benefits for a week of unemployment in a non-teaching period` IF
+    `reg 33(2) the claimant is not entitled to receive benefits for the week of unemployment` `I was employed in teaching in my qualifying period` `the week falls in a non-teaching period of mine` `my reason for claiming` `my teaching contract has terminated` `my teaching was casual or as a substitute` `I qualify for benefits from work other than teaching`
+
+@export As a teacher who also qualifies on other work, what is the most I can be paid for a week in a non-teaching period (reg 33(3))?
+GIVEN `I was employed in teaching in my qualifying period` IS A BOOLEAN @desc Were you employed in teaching for any part of your qualifying period?
+      `I qualify for benefits from work other than teaching` IS A BOOLEAN @desc Do you qualify to receive benefits in respect of employment in an occupation other than teaching?
+      `the week falls in a non-teaching period of mine` IS A BOOLEAN @desc Does the week of unemployment fall within a non-teaching period of yours?
+      `the amount payable for my other work` IS A NUMBER @desc What amount (dollars) is payable in respect of your employment in that other occupation?
+      `the amount otherwise payable for the week` IS A NUMBER @desc What amount (dollars) would otherwise be payable for the week?
+GIVETH A NUMBER
+DECIDE `As a teacher who also qualifies on other work, what is the most I can be paid for a week in a non-teaching period` IS
+    `reg 33(3) the amount of benefits payable for the week of unemployment` `I was employed in teaching in my qualifying period` `I qualify for benefits from work other than teaching` `the week falls in a non-teaching period of mine` `the amount payable for my other work` `the amount otherwise payable for the week`
+
+§§ `If you have children: the family supplement (reg 34)`
+
+-- Situational: you or your spouse or common-law partner receive the Canada child benefit.
+@export Is the person I live with my cohabitating spouse or common-law partner for the purposes of regulation 34 (reg 34(1))?
+GIVEN `they are a cohabitating spouse or common-law partner under section 122.6 of the Income Tax Act` IS A BOOLEAN @desc Is that person your cohabitating spouse or common-law partner within the meaning of section 122.6 of the Income Tax Act?
+GIVETH A BOOLEAN
+DECIDE `Is the person I live with my cohabitating spouse or common-law partner for the purposes of regulation 34` IF
+    `reg 34(1) cohabitating spouse or common-law partner` `they are a cohabitating spouse or common-law partner under section 122.6 of the Income Tax Act`
+
+@export Is my Canada child benefit treated as an overpayment under the Income Tax Act for the purposes of the family supplement (reg 34(2))?
+GIVEN `the payment is a Canada child benefit` IS A BOOLEAN @desc Is the payment a Canada child benefit?
+GIVETH A BOOLEAN
+DECIDE `Is my Canada child benefit treated as an overpayment under the Income Tax Act for the purposes of the family supplement` IF
+    `reg 34(2) the Canada child benefit is deemed to be an overpayment under Subdivision a.1 of Division E of Part I of the Income Tax Act` `the payment is a Canada child benefit`
+
+@export Which month's Canada child benefit counts for the week I am claiming for (reg 34(3))?
+GIVEN `a day in the week I am claiming for` IS A DATE @desc Give any day in the week for which you make your claim. (a date; a week runs from Sunday to Saturday)
+GIVETH A `Period of days`
+DECIDE `Which month's Canada child benefit counts for the week I am claiming for` IS
+    `reg 34(3) the month preceding the Sunday of the week` `a day in the week I am claiming for`
+
+@export How much family supplement does the table give for my family income and my children (reg 34(5))?
+GIVEN `my family income in whole dollars` IS A NUMBER @desc What is the family income (dollars, a whole number) that applies to you?
+      `the number of children I or my cohabiting spouse or common-law partner get the Canada child benefit for` IS A NUMBER @desc For how many children do you, or your cohabiting spouse or common-law partner, receive a Canada child benefit?
+      `how many of those children are under 7` IS A NUMBER @desc How many of those children are under 7 years old?
+GIVETH A MAYBE NUMBER
+DECIDE `How much family supplement does the table give for my family income and my children` IS
+    `reg 34(5) the family supplement` `my family income in whole dollars` `the number of children I or my cohabiting spouse or common-law partner get the Canada child benefit for` `how many of those children are under 7`
+
+@export What is the most my family supplement can be as a percentage of my weekly insurable earnings (reg 34(6))?
+GIVEN `the year my benefit period was established` IS A NUMBER @desc In what year was your benefit period established? (for example 2026)
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most my family supplement can be as a percentage of my weekly insurable earnings` IS
+    `reg 34(6) the percentage of the claimant's weekly insurable earnings that the family supplement shall not exceed` `the year my benefit period was established`
+
+@export By how much is my rate of weekly benefits increased for this week by the family supplement (regs 34(3) to 34(7))?
+GIVEN `I establish, as the Commission directs, that my family receives the Canada child benefit for the month before` IS A BOOLEAN @desc Do you establish, in the manner the Commission directs, that you or your cohabiting spouse or common-law partner receive a Canada child benefit for the month preceding the Sunday of the week you claim for?
+      `my cohabiting spouse or common-law partner is also paid an increased rate` IS A BOOLEAN @desc Are benefits also payable to your cohabiting spouse or common-law partner for that week at a rate increased under this section?
+      `my family income in whole dollars` IS A NUMBER @desc What is the family income (dollars, a whole number) that applies to you?
+      `the number of children I or my cohabiting spouse or common-law partner get the Canada child benefit for` IS A NUMBER @desc For how many children do you, or your cohabiting spouse or common-law partner, receive a Canada child benefit?
+      `how many of those children are under 7` IS A NUMBER @desc How many of those children are under 7 years old?
+      `my weekly insurable earnings` IS A NUMBER @desc What are your weekly insurable earnings (dollars)?
+      `the day my benefit period was established` IS A DATE @desc On what day was your benefit period established? (a date)
+      `the week I am claiming for` IS A DATE @desc Give a day in the week you are claiming for. (a date)
+      `the table reduces my supplement for a week on or after 1 August 1999` IS A BOOLEAN @desc If your benefit period was established before 1 August 1999: does the table of subsection 34(5) reduce the supplement payable to you for a week falling on or after that date? (answer no otherwise)
+      `children I get the benefit for who are 12 to 15` IS A NUMBER @desc For how many children aged 12 to 15 are you entitled to receive a Canada child benefit?
+      `children I get the benefit for who are 16 or 17` IS A NUMBER @desc For how many children aged 16 or 17 are you entitled to receive a Canada child benefit?
+GIVETH A MAYBE NUMBER
+DECIDE `By how much is my rate of weekly benefits increased for this week by the family supplement` IS
+    `reg 34 the amount by which the rate of weekly benefits for the week is increased` `I establish, as the Commission directs, that my family receives the Canada child benefit for the month before` `my cohabiting spouse or common-law partner is also paid an increased rate` `my family income in whole dollars` `the number of children I or my cohabiting spouse or common-law partner get the Canada child benefit for` `how many of those children are under 7` `my weekly insurable earnings` `the day my benefit period was established` `the week I am claiming for` `the table reduces my supplement for a week on or after 1 August 1999` `children I get the benefit for who are 12 to 15` `children I get the benefit for who are 16 or 17`

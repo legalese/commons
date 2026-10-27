@@ -1,0 +1,399 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+
+-- Employment Insurance Regulations (SOR/96-332), regulations 9.1 to 11: Hours of Insurable Employment, Methods of
+-- Determination. Piece er1, layer 1.
+-- Text: the unofficial plain-text rendering of the Justice Laws consolidation current to 2026-09-30
+-- (../../registers/source-bundle/SOR-96-332.txt). Nothing here is verified against the official text. `src:N` is a line of that file.
+-- Instrument: the Regulations. They fix, for the Act's hours tests (ss 7 and 7.1, piece ei1), how many hours a person is
+-- considered to have worked in insurable employment. The Act's own hours thresholds are not encoded here.
+--
+-- Shape. Each regulation deems a number of hours in one situation, so each rule returns a MAYBE NUMBER of hours:
+-- JUST n when the regulation's conditions are met, NOTHING when they are not (the regulation then says nothing about the
+-- hours). The hours are hours of insurable employment in the period of employment in question. Under reg 10.2(b) a total
+-- with a fraction of an hour is counted as a whole hour, "for the purposes of sections 9.1, 10, 10.01, 10.1 and 22", so
+-- every rule of those regulations rounds its total up (CEILING) by calling `reg 10.2(b) ...`; reg 11 deems whole hours.
+-- Facts that other instruments fix are inputs: the reasons in subsection 2(2) and the excluded amounts in subsection 2(3) of
+-- the Insurable Earnings and Collection of Premiums Regulations (that instrument is not among this run's inputs and no
+-- piece encodes it), the provincial minimum wage on January 1, the Minister of National Revenue's figure in reg 10(3).
+
+§ `Regulation 10.2 - an hour is an hour; a fraction counts as a whole hour`
+
+-- src:188 | 10.2 For the purposes of sections 9.1, 10, 10.01, 10.1 and 22,
+-- src:189 | (a) an hour of work performed in insurable employment is considered to be a single hour of insurable employment, even if the hour is remunerated at an overtime rate of pay; and
+@ref Employment Insurance Regulations reg 10.2(a) (src:189)
+-- Plain gloss: add the hours worked; an hour paid at overtime rate still counts as one hour, not as one and a half.
+GIVEN `the hours worked at the ordinary rate of pay` IS A NUMBER
+      `the hours worked at an overtime rate of pay` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 10.2(a) the number of hours of insurable employment` IS
+    `the hours worked at the ordinary rate of pay` PLUS `the hours worked at an overtime rate of pay`
+
+-- src:188 | 10.2 For the purposes of sections 9.1, 10, 10.01, 10.1 and 22,
+-- src:190 | (b) if the addition of hours of insurable employment falling between the first day and the last day worked in a given period of employment results in a total number of hours that contains a fraction of an hour, the fraction shall be counted as a whole hour.
+@ref Employment Insurance Regulations reg 10.2(b) (src:190)
+-- Plain gloss: if the hours added up for the period of employment come to part of an hour over, the part counts as a whole hour.
+GIVEN `the total number of hours of insurable employment in the period of employment` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 10.2(b) hours with a fraction of an hour counted as a whole hour` IS
+    CEILING `the total number of hours of insurable employment in the period of employment`
+
+§ `Regulation 9.1 and 9.2 - hours actually worked`
+
+-- src:169 | 9.1 Where a person's earnings are paid on an hourly basis, the person is considered to have worked in insurable employment for the number of hours that the person actually worked and for which the person was remunerated.
+@ref Employment Insurance Regulations reg 9.1 (src:169)
+-- Plain gloss: a person paid by the hour is counted for the hours they actually worked and were paid for.
+GIVEN `the person's earnings are paid on an hourly basis` IS A BOOLEAN
+      `the number of hours that the person actually worked and for which the person was remunerated` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 9.1 the hours considered to have been worked by a person paid on an hourly basis` IS
+    IF `the person's earnings are paid on an hourly basis`
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour` `the number of hours that the person actually worked and for which the person was remunerated`)
+    ELSE NOTHING
+
+-- src:170 | 9.2 Subject to section 10, where a person's earnings or a portion of a person's earnings for a period of insurable employment remains unpaid for the reasons described in subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations, the person is deemed to have worked in insurable employment for the number of hours that the person actually worked in the period, whether or not the person was remunerated.
+@ref Employment Insurance Regulations reg 9.2 (src:170)
+-- Plain gloss: if some of the pay for a period of work stays unpaid for the reasons in the premiums regulations
+-- (subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations, an undeposited instrument, so one
+-- input), the person is counted for the hours they actually worked in the period, paid or not. "Subject to section 10":
+-- where one of the section 10 methods fixes the hours, that method governs and this rule answers NOTHING (fork F7).
+GIVEN `the person's earnings or a portion of them for a period of insurable employment remain unpaid for the reasons described in subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations` IS A BOOLEAN
+      `section 10 fixes the person's hours for the period` IS A BOOLEAN
+      `the number of hours that the person actually worked in the period` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 9.2 the hours deemed to have been worked where earnings remain unpaid` IS
+    IF     `the person's earnings or a portion of them for a period of insurable employment remain unpaid for the reasons described in subsection 2(2) of the Insurable Earnings and Collection of Premiums Regulations`
+       AND NOT (`section 10 fixes the person's hours for the period`)
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour` `the number of hours that the person actually worked in the period`)
+    ELSE NOTHING
+
+§ `Regulation 10 - hours where earnings are not paid by the hour`
+
+-- src:171 | 10 (1) Where a person's earnings are not paid on an hourly basis but the employer provides evidence of the number of hours that the person actually worked in the period of employment and for which the person was remunerated, the person is deemed to have worked that number of hours in insurable employment.
+@ref Employment Insurance Regulations reg 10(1) (src:171)
+-- Plain gloss: if the person is not paid by the hour, but the employer can show how many hours they worked and were paid for,
+-- they are counted for those hours.
+GIVEN `the person's earnings are not paid on an hourly basis` IS A BOOLEAN
+      `the employer provides evidence of the number of hours that the person actually worked in the period of employment and for which the person was remunerated` IS A BOOLEAN
+      `that number of hours` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 10(1) the hours deemed to have been worked where the employer provides evidence` IS
+    IF     `the person's earnings are not paid on an hourly basis`
+       AND `the employer provides evidence of the number of hours that the person actually worked in the period of employment and for which the person was remunerated`
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour` `that number of hours`)
+    ELSE NOTHING
+
+-- src:172 | (2) Except where subsection (1) and section 9.1 apply, if the employer cannot establish with certainty the actual number of hours of work performed by a worker or by a group of workers and for which they were remunerated, the employer and the worker or group of workers may, subject to subsection (3) and as is reasonable in the circumstances, agree on the number of hours of work that would normally be required to gain the earnings referred to in subsection (1), and, where they do so, each worker is deemed to have worked that number of hours in insurable employment.
+@ref Employment Insurance Regulations reg 10(2) and (3) (src:172)
+-- Plain gloss: reg 10(2) and (3) apply where reg 10(1) and reg 9.1 do not, and the employer cannot say with certainty how many
+-- hours were worked and paid for.
+GIVEN `subsection (1) applies` IS A BOOLEAN
+      `section 9.1 applies` IS A BOOLEAN
+      `the employer cannot establish with certainty the actual number of hours of work performed by a worker or by a group of workers and for which they were remunerated` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `reg 10(2) the employer cannot establish the hours and neither subsection (1) nor section 9.1 applies` IF
+        NOT (`subsection (1) applies`)
+    AND NOT (`section 9.1 applies`)
+    AND `the employer cannot establish with certainty the actual number of hours of work performed by a worker or by a group of workers and for which they were remunerated`
+
+-- src:172 | (2) Except where subsection (1) and section 9.1 apply, if the employer cannot establish with certainty the actual number of hours of work performed by a worker or by a group of workers and for which they were remunerated, the employer and the worker or group of workers may, subject to subsection (3) and as is reasonable in the circumstances, agree on the number of hours of work that would normally be required to gain the earnings referred to in subsection (1), and, where they do so, each worker is deemed to have worked that number of hours in insurable employment.
+@ref Employment Insurance Regulations reg 10(2) (src:172)
+-- Plain gloss: where the employer cannot say, the employer and the worker (or group) may agree how many hours would normally
+-- be needed to earn the pay, as is reasonable; each worker is then counted for that number. An unreasonable agreement goes
+-- to reg 10(3), and so does no agreement: NOTHING here.
+GIVEN `the situation of subsection (2) arises` IS A BOOLEAN
+      `the employer and the worker or group of workers agree on the number of hours of work that would normally be required to gain the earnings referred to in subsection (1)` IS A BOOLEAN
+      `the agreed number of hours is reasonable in the circumstances` IS A BOOLEAN
+      `the agreed number of hours` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 10(2) the hours deemed to have been worked where the parties agree` IS
+    IF     `the situation of subsection (2) arises`
+       AND `the employer and the worker or group of workers agree on the number of hours of work that would normally be required to gain the earnings referred to in subsection (1)`
+       AND `the agreed number of hours is reasonable in the circumstances`
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour` `the agreed number of hours`)
+    ELSE NOTHING
+
+-- src:173 | (3) Where the number of hours agreed to by the employer and the worker or group of workers under subsection (2) is not reasonable or no agreement can be reached, each worker is deemed to have worked the number of hours in insurable employment established by the Minister of National Revenue, based on an examination of the terms and conditions of the employment and a comparison with the number of hours normally worked by workers performing similar tasks or functions in similar occupations and industries.
+@ref Employment Insurance Regulations reg 10(3) (src:173)
+-- Plain gloss: if the agreed number is not reasonable, or no agreement can be reached, each worker is counted for the number of
+-- hours the Minister of National Revenue establishes by comparing the terms of the employment with what workers doing similar
+-- work in similar occupations and industries normally work. The Minister's figure is the Minister's judgment: an input.
+GIVEN `the situation of subsection (2) arises` IS A BOOLEAN
+      `the employer and the worker or group of workers agree on the number of hours of work that would normally be required to gain the earnings referred to in subsection (1)` IS A BOOLEAN
+      `the agreed number of hours is reasonable in the circumstances` IS A BOOLEAN
+      `no agreement can be reached` IS A BOOLEAN
+      `the number of hours in insurable employment established by the Minister of National Revenue` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 10(3) the hours deemed to have been worked as established by the Minister of National Revenue` IS
+    IF     `the situation of subsection (2) arises`
+       AND (   (   `the employer and the worker or group of workers agree on the number of hours of work that would normally be required to gain the earnings referred to in subsection (1)`
+               AND NOT (`the agreed number of hours is reasonable in the circumstances`))
+            OR `no agreement can be reached`)
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour` `the number of hours in insurable employment established by the Minister of National Revenue`)
+    ELSE NOTHING
+
+-- src:175 | (5) In the absence of evidence indicating that overtime or excess hours were worked, the maximum number of hours of insurable employment which a person is deemed to have worked where the number of hours is calculated in accordance with subsection (4) is seven hours per day up to an overall maximum of 35 hours per week.
+@ref Employment Insurance Regulations reg 10(5) (src:175)
+-- Plain gloss: when the hours come from the pay-divided-by-minimum-wage method, they cannot exceed seven hours for each day of
+-- the period of employment, and 35 hours in any week, unless there is evidence that overtime or excess hours were worked. The
+-- weeks are the weeks of the Act (Sunday to Saturday); each calendar day of the period counts as a day, whether or not worked
+-- (fork F9). The helper walks the weeks from the one that begins on the Sunday given, adding the cap of each.
+GIVEN sunday IS A DATE
+      `first day of the period of employment` IS A DATE
+      `last day of the period of employment` IS A DATE
+GIVETH A NUMBER
+DECIDE `reg 10(5) the maximum number of hours for the weeks of the period from the week beginning` IS
+    IF sunday GREATER THAN `last day of the period of employment`
+    THEN 0
+    ELSE (min 35 (7 TIMES `the days of the period of employment in that week`))
+         PLUS (`reg 10(5) the maximum number of hours for the weeks of the period from the week beginning` (sunday PLUS 7) `first day of the period of employment` `last day of the period of employment`)
+    WHERE
+        `the days of the period of employment in that week` MEANS
+            max 0 (((min (Day sunday PLUS 6) (Day `last day of the period of employment`)) MINUS (max (Day sunday) (Day `first day of the period of employment`))) PLUS 1)
+
+-- src:175 | (5) In the absence of evidence indicating that overtime or excess hours were worked, the maximum number of hours of insurable employment which a person is deemed to have worked where the number of hours is calculated in accordance with subsection (4) is seven hours per day up to an overall maximum of 35 hours per week.
+@ref Employment Insurance Regulations reg 10(5) (src:175)
+GIVEN `first day of the period of employment` IS A DATE
+      `last day of the period of employment` IS A DATE
+GIVETH A NUMBER
+DECIDE `reg 10(5) the maximum number of hours of insurable employment deemed under subsection (4)` IS
+    `reg 10(5) the maximum number of hours for the weeks of the period from the week beginning`
+        (`s 2(1) the Sunday that begins the week containing` `first day of the period of employment`)
+        `first day of the period of employment`
+        `last day of the period of employment`
+
+-- src:174 | (4) Except where subsection (1) and section 9.1 apply, where a person's actual hours of insurable employment in the period of employment are not known or ascertainable by the employer, the person, subject to subsection (5), is deemed to have worked, during the period of employment, the number of hours in insurable employment obtained by dividing the total earnings for the period of employment by the minimum wage applicable, on January 1 of the year in which the earnings were payable, in the province where the work was performed.
+-- src:175 | (5) In the absence of evidence indicating that overtime or excess hours were worked, the maximum number of hours of insurable employment which a person is deemed to have worked where the number of hours is calculated in accordance with subsection (4) is seven hours per day up to an overall maximum of 35 hours per week.
+@ref Employment Insurance Regulations reg 10(4) and (5) (src:174) (src:175)
+-- Plain gloss: where the employer does not know the hours and cannot find them out, the person is counted for their total
+-- earnings for the period divided by the minimum wage that applied in the province where they worked, on January 1 of the year
+-- the earnings were payable; with no evidence of overtime, no more than the reg 10(5) maximum. A minimum wage that is not above
+-- zero is not a figure the text contemplates: NOTHING.
+GIVEN `subsection (1) applies` IS A BOOLEAN
+      `section 9.1 applies` IS A BOOLEAN
+      `the person's actual hours of insurable employment in the period of employment are not known or ascertainable by the employer` IS A BOOLEAN
+      `the total earnings for the period of employment` IS A NUMBER
+      `the minimum wage applicable, on January 1 of the year in which the earnings were payable, in the province where the work was performed` IS A NUMBER
+      `there is evidence indicating that overtime or excess hours were worked` IS A BOOLEAN
+      `first day of the period of employment` IS A DATE
+      `last day of the period of employment` IS A DATE
+GIVETH A MAYBE NUMBER
+DECIDE `reg 10(4) the hours deemed to have been worked where the actual hours are not known` IS
+    IF     NOT (`subsection (1) applies`)
+       AND NOT (`section 9.1 applies`)
+       AND `the person's actual hours of insurable employment in the period of employment are not known or ascertainable by the employer`
+       AND `the minimum wage applicable, on January 1 of the year in which the earnings were payable, in the province where the work was performed` GREATER THAN 0
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour`
+                  (IF `there is evidence indicating that overtime or excess hours were worked`
+                   THEN `the total earnings for the period of employment` DIVIDED BY `the minimum wage applicable, on January 1 of the year in which the earnings were payable, in the province where the work was performed`
+                   ELSE min (`the total earnings for the period of employment` DIVIDED BY `the minimum wage applicable, on January 1 of the year in which the earnings were payable, in the province where the work was performed`)
+                            (`reg 10(5) the maximum number of hours of insurable employment deemed under subsection (4)` `first day of the period of employment` `last day of the period of employment`)))
+    ELSE NOTHING
+
+-- src:169 | 9.1 Where a person's earnings are paid on an hourly basis, the person is considered to have worked in insurable employment for the number of hours that the person actually worked and for which the person was remunerated.
+-- src:171 | 10 (1) Where a person's earnings are not paid on an hourly basis but the employer provides evidence of the number of hours that the person actually worked in the period of employment and for which the person was remunerated, the person is deemed to have worked that number of hours in insurable employment.
+-- src:172 | (2) Except where subsection (1) and section 9.1 apply, if the employer cannot establish with certainty the actual number of hours of work performed by a worker or by a group of workers and for which they were remunerated, the employer and the worker or group of workers may, subject to subsection (3) and as is reasonable in the circumstances, agree on the number of hours of work that would normally be required to gain the earnings referred to in subsection (1), and, where they do so, each worker is deemed to have worked that number of hours in insurable employment.
+-- src:173 | (3) Where the number of hours agreed to by the employer and the worker or group of workers under subsection (2) is not reasonable or no agreement can be reached, each worker is deemed to have worked the number of hours in insurable employment established by the Minister of National Revenue, based on an examination of the terms and conditions of the employment and a comparison with the number of hours normally worked by workers performing similar tasks or functions in similar occupations and industries.
+-- src:174 | (4) Except where subsection (1) and section 9.1 apply, where a person's actual hours of insurable employment in the period of employment are not known or ascertainable by the employer, the person, subject to subsection (5), is deemed to have worked, during the period of employment, the number of hours in insurable employment obtained by dividing the total earnings for the period of employment by the minimum wage applicable, on January 1 of the year in which the earnings were payable, in the province where the work was performed.
+-- src:176 | (6) Subsections (1) to (5) are subject to section 10.1.
+@ref Employment Insurance Regulations reg 10(6) (src:169) (src:171) (src:172) (src:173) (src:174) (src:176)
+-- Plain gloss: regs 9.1 and 10(1) to (5) do not decide hours that reg 10.1 decides (paid leave, a lump sum for leave, a paid
+-- non-working day), and where more than one of them could apply the first in this order governs: 9.1, 10(1), 10(4), 10(2),
+-- 10(3). Reg 10(4) comes before 10(2) and (3) because its condition (hours "not known or ascertainable") is the narrower
+-- of the two, and (2) and (3) would otherwise cover every case (3) always yields a number, leaving (4) nothing to do (fork F8
+-- in NOTES.md). This rule only orders the answers of the rules above; it adds no condition of its own except reg 10(6).
+GIVEN `section 10.1 fixes the hours in question` IS A BOOLEAN
+      `the answer under reg 9.1` IS A MAYBE NUMBER
+      `the answer under reg 10(1)` IS A MAYBE NUMBER
+      `the answer under reg 10(4)` IS A MAYBE NUMBER
+      `the answer under reg 10(2)` IS A MAYBE NUMBER
+      `the answer under reg 10(3)` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 9.1 and reg 10(1) to (6) the hours fixed by the first method that applies` IS
+    IF `section 10.1 fixes the hours in question`
+    THEN NOTHING
+    ELSE CONSIDER `the answer under reg 9.1`
+         WHEN JUST hours THEN JUST hours
+         WHEN NOTHING THEN
+             CONSIDER `the answer under reg 10(1)`
+             WHEN JUST hours THEN JUST hours
+             WHEN NOTHING THEN
+                 CONSIDER `the answer under reg 10(4)`
+                 WHEN JUST hours THEN JUST hours
+                 WHEN NOTHING THEN
+                     CONSIDER `the answer under reg 10(2)`
+                     WHEN JUST hours THEN JUST hours
+                     WHEN NOTHING THEN `the answer under reg 10(3)`
+
+-- src:177 | (7) [Repealed, SOR/97-31, s. 4]
+@ref Employment Insurance Regulations reg 10(7) (src:177)
+`reg 10(7) repealed in this text` MEANS "reg 10(7): [Repealed, SOR/97-31, s. 4]"
+
+§ `Regulation 10.01 - hours of availability`
+
+-- src:178 | 10.01 (1) If a person is required under their contract of employment to be available for a certain period awaiting a request from their employer to work, the hours during that period are deemed to be hours of insurable employment if the person is paid for those hours at a rate equivalent or superior to the remuneration that would be paid if the person had actually worked during that period.
+@ref Employment Insurance Regulations reg 10.01(1) (src:178)
+-- Plain gloss: hours when the person must by contract be available for the employer to call them in are counted if the person is
+-- paid for those hours at a rate equal to or above the pay they would get if they actually worked.
+GIVEN `the person is required under their contract of employment to be available for a certain period awaiting a request from their employer to work` IS A BOOLEAN
+      `the rate at which the person is paid for those hours` IS A NUMBER
+      `the remuneration rate that would be paid if the person had actually worked during that period` IS A NUMBER
+      `the number of hours in that period` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 10.01(1) the hours of availability deemed to be hours of insurable employment` IS
+    IF     `the person is required under their contract of employment to be available for a certain period awaiting a request from their employer to work`
+       AND `the rate at which the person is paid for those hours` AT LEAST `the remuneration rate that would be paid if the person had actually worked during that period`
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour` `the number of hours in that period`)
+    ELSE NOTHING
+
+-- src:179 | (2) Despite subsection (1), if a person is required by their employer under their contract of employment to be present at the employer's premises for a certain period in case their services are required, the hours during that period are deemed to be hours of insurable employment if the person is paid for those hours.
+@ref Employment Insurance Regulations reg 10.01(2) (src:179)
+-- Plain gloss: hours when the employer requires the person to be at the employer's premises in case they are needed are counted if
+-- the person is paid for those hours, at whatever rate ("Despite subsection (1)").
+GIVEN `the person is required by their employer under their contract of employment to be present at the employer's premises for a certain period in case their services are required` IS A BOOLEAN
+      `the person is paid for those hours` IS A BOOLEAN
+      `the number of hours in that period` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 10.01(2) the hours of presence at the premises deemed to be hours of insurable employment` IS
+    IF     `the person is required by their employer under their contract of employment to be present at the employer's premises for a certain period in case their services are required`
+       AND `the person is paid for those hours`
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour` `the number of hours in that period`)
+    ELSE NOTHING
+
+-- src:178 | 10.01 (1) If a person is required under their contract of employment to be available for a certain period awaiting a request from their employer to work, the hours during that period are deemed to be hours of insurable employment if the person is paid for those hours at a rate equivalent or superior to the remuneration that would be paid if the person had actually worked during that period.
+-- src:179 | (2) Despite subsection (1), if a person is required by their employer under their contract of employment to be present at the employer's premises for a certain period in case their services are required, the hours during that period are deemed to be hours of insurable employment if the person is paid for those hours.
+@ref Employment Insurance Regulations reg 10.01(1) and (2) (src:178) (src:179)
+-- Plain gloss: for the same hours, (2) governs "despite subsection (1)", so its answer is taken first.
+GIVEN `the answer under reg 10.01(2)` IS A MAYBE NUMBER
+      `the answer under reg 10.01(1)` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 10.01 the hours deemed to be hours of insurable employment` IS
+    CONSIDER `the answer under reg 10.01(2)`
+    WHEN JUST hours THEN JUST hours
+    WHEN NOTHING THEN `the answer under reg 10.01(1)`
+
+§ `Regulation 10.1 and 10.11 - paid leave and paid non-working days`
+
+-- src:180 | 10.1 (1) Where an insured person is remunerated by the employer for a period of paid leave, the person is deemed to have worked in insurable employment for the number of hours that the person would normally have worked and for which the person would normally have been remunerated during that period.
+@ref Employment Insurance Regulations reg 10.1(1) (src:180)
+-- Plain gloss: for a period of paid leave, the person is counted for the hours they would normally have worked and been paid for.
+GIVEN `the insured person is remunerated by the employer for a period of paid leave` IS A BOOLEAN
+      `the number of hours that the person would normally have worked and for which the person would normally have been remunerated during that period` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 10.1(1) the hours deemed to have been worked during a period of paid leave` IS
+    IF `the insured person is remunerated by the employer for a period of paid leave`
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour` `the number of hours that the person would normally have worked and for which the person would normally have been remunerated during that period`)
+    ELSE NOTHING
+
+-- src:187 | 10.11 For the purpose of section 10.1, the amounts that are excluded from an insured person’s earnings from insurable employment by subsection 2(3) of the Insurable Earnings and Collection of Premiums Regulations shall not be taken into account in determining the person’s hours of insurable employment.
+@ref Employment Insurance Regulations reg 10.11 (src:187)
+-- Plain gloss: for reg 10.1, the amounts that subsection 2(3) of the Insurable Earnings and Collection of Premiums Regulations takes
+-- out of earnings from insurable employment are left out of the lump sum when the hours are worked out.
+GIVEN `the lump sum amount` IS A NUMBER
+      `the amounts that are excluded from the person's earnings from insurable employment by subsection 2(3) of the Insurable Earnings and Collection of Premiums Regulations` IS A NUMBER
+GIVETH A NUMBER
+DECIDE `reg 10.11 the amount to be taken into account in determining the hours` IS
+    `the lump sum amount` MINUS `the amounts that are excluded from the person's earnings from insurable employment by subsection 2(3) of the Insurable Earnings and Collection of Premiums Regulations`
+
+-- src:181 | (2) Where an insured person is remunerated by the employer for a period of leave in the form of a lump sum payment calculated without regard to the length of the period of leave, the person is deemed to have worked in insurable employment for the lesser of
+-- src:182 | (a) the number of hours that the person would normally have worked and for which the person would normally have been remunerated during the period, and
+-- src:183 | (b) the number of hours obtained by dividing the lump sum amount by the normal hourly rate of pay.
+@ref Employment Insurance Regulations reg 10.1(2) (src:181-183)
+-- Plain gloss: where leave is paid as a lump sum that does not depend on how long the leave is, the person is counted for the
+-- smaller of the hours they would normally have worked and been paid for in the period, and the lump sum (less the amounts reg
+-- 10.11 leaves out) divided by their normal hourly rate of pay. A normal hourly rate that is not above zero: NOTHING.
+GIVEN `the insured person is remunerated by the employer for a period of leave in the form of a lump sum payment calculated without regard to the length of the period of leave` IS A BOOLEAN
+      `the number of hours that the person would normally have worked and for which the person would normally have been remunerated during the period` IS A NUMBER
+      `the lump sum amount` IS A NUMBER
+      `the amounts that are excluded from the person's earnings from insurable employment by subsection 2(3) of the Insurable Earnings and Collection of Premiums Regulations` IS A NUMBER
+      `the normal hourly rate of pay` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 10.1(2) the hours deemed to have been worked during a period of leave paid as a lump sum` IS
+    IF     `the insured person is remunerated by the employer for a period of leave in the form of a lump sum payment calculated without regard to the length of the period of leave`
+       AND `the normal hourly rate of pay` GREATER THAN 0
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour`
+                  (min `the number of hours that the person would normally have worked and for which the person would normally have been remunerated during the period`
+                       ((`reg 10.11 the amount to be taken into account in determining the hours` `the lump sum amount` `the amounts that are excluded from the person's earnings from insurable employment by subsection 2(3) of the Insurable Earnings and Collection of Premiums Regulations`) DIVIDED BY `the normal hourly rate of pay`)))
+    ELSE NOTHING
+
+-- src:184 | (3) Where an insured person is remunerated by the employer for a non-working day and
+-- src:185 | (a) works on that day, the person is deemed to have worked in insurable employment for the greater of the number of hours that the person actually worked and the number of hours that the person would normally have worked on that day; and
+-- src:186 | (b) does not work on that day, the person is deemed to have worked in insurable employment for the number of hours that the person would normally have worked on that day.
+@ref Employment Insurance Regulations reg 10.1(3) (src:184-186)
+-- Plain gloss: for a non-working day the employer pays for: if the person worked that day, they are counted for the greater of the
+-- hours actually worked and the hours they would normally have worked that day; if they did not work, for the hours they would
+-- normally have worked that day.
+GIVEN `the insured person is remunerated by the employer for a non-working day` IS A BOOLEAN
+      `the person works on that day` IS A BOOLEAN
+      `the number of hours that the person actually worked on that day` IS A NUMBER
+      `the number of hours that the person would normally have worked on that day` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 10.1(3) the hours deemed to have been worked on a non-working day` IS
+    IF `the insured person is remunerated by the employer for a non-working day`
+    THEN JUST (`reg 10.2(b) hours with a fraction of an hour counted as a whole hour`
+                  (IF `the person works on that day`
+                   THEN max `the number of hours that the person actually worked on that day` `the number of hours that the person would normally have worked on that day`
+                   ELSE `the number of hours that the person would normally have worked on that day`))
+    ELSE NOTHING
+
+§ `Regulation 11 - deemed hours`
+
+-- src:191 | 11 (1) Where an insured person is employed on a full-time basis for and remunerated for less than 35 hours per week in an occupation in which the maximum number of hours of full-time work per week is limited by federal or provincial statutes or regulations made under those statutes to less than 35 hours, the insured person is deemed to be employed in insurable employment for 35 hours per week.
+@ref Employment Insurance Regulations reg 11(1) (src:191)
+-- Plain gloss: a full-time worker in an occupation where a statute caps full-time hours below 35 a week, and who is paid for
+-- fewer than 35 hours a week, is counted as working 35 hours a week. The answer is hours per week.
+GIVEN `the insured person is employed on a full-time basis` IS A BOOLEAN
+      `the number of hours per week for which the person is remunerated` IS A NUMBER
+      `the maximum number of hours of full-time work per week in the occupation is limited by federal or provincial statutes or regulations made under those statutes` IS A BOOLEAN
+      `that maximum number of hours per week` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 11(1) the hours per week deemed to be worked in an occupation with limited full-time hours` IS
+    IF     `the insured person is employed on a full-time basis`
+       AND `the number of hours per week for which the person is remunerated` LESS THAN 35
+       AND `the maximum number of hours of full-time work per week in the occupation is limited by federal or provincial statutes or regulations made under those statutes`
+       AND `that maximum number of hours per week` LESS THAN 35
+    THEN JUST 35
+    ELSE NOTHING
+
+-- src:192 | (2) Subject to section 10,
+-- src:193 | (a) an insured person who is a member of the Canadian Forces on full-time service or of a police force and is required to be available on standby outside of their regularly scheduled hours of work is deemed to be employed in insurable employment for 35 hours per week; and
+@ref Employment Insurance Regulations reg 11(2)(a) (src:192) (src:193)
+-- Plain gloss: a full-time member of the Canadian Forces, or a member of a police force, who must be on standby outside their
+-- regular hours is counted as working 35 hours a week. "Subject to section 10": where a section 10 method fixes the hours, NOTHING here.
+GIVEN `section 10 fixes the person's hours for the week` IS A BOOLEAN
+      `the person is a member of the Canadian Forces on full-time service` IS A BOOLEAN
+      `the person is a member of a police force` IS A BOOLEAN
+      `the person is required to be available on standby outside of their regularly scheduled hours of work` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+DECIDE `reg 11(2)(a) the hours per week deemed to be worked by a member of the Canadian Forces or of a police force on standby` IS
+    IF     NOT (`section 10 fixes the person's hours for the week`)
+       AND (   `the person is a member of the Canadian Forces on full-time service`
+            OR `the person is a member of a police force`)
+       AND `the person is required to be available on standby outside of their regularly scheduled hours of work`
+    THEN JUST 35
+    ELSE NOTHING
+
+-- src:192 | (2) Subject to section 10,
+-- src:194 | (b) an insured person who is a member of the reserve force and is paid the rate of pay for
+-- src:195 | (i) each period of duty or training of less than 6 hours is deemed to be employed in insurable employment for 3 1/2 hours per period, or
+-- src:196 | (ii) each period of duty or training of not less than 6 hours and not more than 24 hours is deemed to be employed in insurable employment for 7 hours per period
+-- src:197 | to a maximum of 35 hours of insurable employment per week.
+@ref Employment Insurance Regulations reg 11(2)(b) (src:194-197)
+-- Plain gloss: a reserve force member paid the rate of pay for each period of duty or training is counted for 3.5 hours for each
+-- period under 6 hours and 7 hours for each period of 6 to 24 hours (both ends included), up to 35 hours a week. A period over
+-- 24 hours is not provided for: NOTHING. "Subject to section 10": where a section 10 method fixes the hours, NOTHING here.
+GIVEN `section 10 fixes the person's hours for the week` IS A BOOLEAN
+      `the person is a member of the reserve force` IS A BOOLEAN
+      `the person is paid the rate of pay for each period of duty or training` IS A BOOLEAN
+      `the number of periods of duty or training of less than 6 hours in the week` IS A NUMBER
+      `the number of periods of duty or training of not less than 6 hours and not more than 24 hours in the week` IS A NUMBER
+      `the number of periods of duty or training of more than 24 hours in the week` IS A NUMBER
+GIVETH A MAYBE NUMBER
+DECIDE `reg 11(2)(b) the hours per week deemed to be worked by a member of the reserve force` IS
+    IF     NOT (`section 10 fixes the person's hours for the week`)
+       AND `the person is a member of the reserve force`
+       AND `the person is paid the rate of pay for each period of duty or training`
+       AND `the number of periods of duty or training of more than 24 hours in the week` EQUALS 0
+    THEN JUST (min 35 (3.5 TIMES `the number of periods of duty or training of less than 6 hours in the week` PLUS 7 TIMES `the number of periods of duty or training of not less than 6 hours and not more than 24 hours in the week`))
+    ELSE NOTHING

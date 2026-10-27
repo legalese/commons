@@ -1,0 +1,221 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Employment Insurance Act (S.C. 1996, c. 23) and Employment Insurance Regulations (SOR/96-332):
+-- THE SHARED CORE, written by the keel agent (ei-g0) for the 13 pieces that follow.
+-- Text: the plain-text renderings of the Justice Laws consolidations current to 2026-09-30.
+-- They are unofficial reproductions; nothing here claims to be verified against the official text.
+--
+-- WHAT IS HERE: only what two or more pieces need. Nothing else belongs here.
+-- The conventions this module relies on are listed in NOTES.md, "Naming conventions":
+--   money      a NUMBER of Canadian dollars (not cents)
+--   a rate     a NUMBER written with the postfix % (55% is 0.55); bracket it as an argument: f (6.5%)
+--   hours, weeks, days, years   a NUMBER of that unit
+--   a date     a DATE built with YMD below; never the little-endian Date in a literal
+--   a week     the DATE of its Sunday
+--   a time limit   a NUMBER of days, weeks times seven; the last day is the day it ends on, inclusive
+-- No section GIVEN anywhere: the stable binary rejects it, so every rule has its own GIVEN.
+
+§ `The date shim`
+
+-- YMD is not in the stable prelude (1.6.98) even after IMPORT daydate. This is the one shim:
+-- no other module may define YMD. It is the lenient Date constructor, so a day or month out of
+-- range rolls over instead of being refused.
+GIVEN y IS A NUMBER
+      m IS A NUMBER
+      d IS A NUMBER
+GIVETH A DATE
+YMD y m d MEANS Date d m y
+
+§ `Units of time`
+
+-- src:50 | week means a period of seven consecutive days beginning on and including Sunday, or any other prescribed period; (semaine)
+@ref Employment Insurance Act s 2(1) "week" (src:50)
+GIVEN d IS A DATE
+GIVETH A DATE
+DECIDE `s 2(1) the Sunday that begins the week containing` IS
+    Date (Day d MINUS (Day d MODULO 7))
+
+@ref Employment Insurance Act s 2(1) "week" (src:50)
+GIVEN d IS A DATE
+GIVETH A DATE
+DECIDE `s 2(1) the Saturday that ends the week containing` IS
+    `s 2(1) the Sunday that begins the week containing` d PLUS 6
+
+-- src:51 | year means a calendar year. (année)
+@ref Employment Insurance Act s 2(1) "year" (src:51)
+GIVEN d IS A DATE
+GIVETH A NUMBER
+DECIDE `s 2(1) the year containing` IS DATE_YEAR d
+
+-- A time limit in this text is stated in days, weeks, months or years. It is carried as a NUMBER of days;
+-- a limit in weeks goes through the next rule, a limit in months or years through `add months` and
+-- `add years` (daydate), which clamp to the last day of the month. "Within n days after d" ends on
+-- d PLUS n and the last day counts. That counting reading is the keel's assumption, not a ruling:
+-- the Interpretation Act (not deposited) would settle it.
+@ref Employment Insurance Act s 2(1) "week" (src:50)
+GIVEN n IS A NUMBER
+GIVETH A NUMBER
+DECIDE `weeks as days` IS n TIMES `Days in a week`
+
+GIVEN n IS A NUMBER
+      d IS A DATE
+GIVETH A DATE
+`the last day of` n `days after` d MEANS d PLUS n
+
+-- A period counted in days, both ends included: a qualifying period, a benefit period, a calculation
+-- period, the 52 weeks after a birth. A piece builds one with Period of days OF first, last.
+DECLARE `Period of days` HAS
+    `first day of the period` IS A DATE
+    `last day of the period`  IS A DATE
+
+GIVEN d IS A DATE
+      p IS A `Period of days`
+GIVETH A BOOLEAN
+`the day` d `falls within` p MEANS
+    d AT LEAST p's `first day of the period` AND d AT MOST p's `last day of the period`
+
+GIVEN p IS A `Period of days`
+GIVETH A NUMBER
+DECIDE `the number of days in` IS (Day (p's `last day of the period`) MINUS Day (p's `first day of the period`)) PLUS 1
+
+§ `Rounding`
+
+-- src:146 | (2) A reference in this Part to an amount equal to a percentage or fraction of earnings or benefits in a period shall be rounded to the nearest multiple of one dollar or, if the amount is equidistant from two multiples of one dollar, to the higher multiple.
+-- src:2142 | (5) A reference in this Part to an amount equal to a percentage or fraction of earnings or benefits in a period shall be rounded to the nearest multiple of one dollar or, if the amount is equidistant from two multiples of one dollar, to the higher multiple.
+@ref Employment Insurance Act s 6(2), s 152.01(5) (src:146) (src:2142)
+GIVEN amount IS A NUMBER
+GIVETH A NUMBER
+DECIDE `s 6(2) and s 152.01(5) amount rounded to the nearest dollar` IS FLOOR (amount PLUS 0.5)
+
+§ `Reason for benefits`
+
+-- Used by Part I, Part VII.1, Part VIII and the Regulations: every special-benefit rule, and the
+-- maximum weeks, is keyed by it. s 152.14(1) lists the same six reasons as s 12(3) for a self-employed person.
+-- The Act's own words; the plain names (regular, maternity, parental, sickness, compassionate care,
+-- family caregiver) are the Commission's labels, not the Act's, and are given beside each constructor.
+-- src:358 | (3) The maximum number of weeks for which benefits may be paid in a benefit period
+-- src:359 | (a) because of pregnancy is 15;
+-- src:360 | (b) because the claimant is caring for one or more new-born children of the claimant or one or more children placed with the claimant for the purpose of adoption is, in accordance with the election under section 23,
+-- src:361 | (i) 35, or
+-- src:362 | (ii) 61;
+-- src:363 | (c) because of a prescribed illness, injury or quarantine is 26;
+-- src:364 | (d) because the claimant is providing care or support to one or more family members described in subsection 23.1(2) is 26;
+-- src:365 | (e) because the claimant is providing care or support to one or more critically ill children described in subsection 23.2(1), is 35; and
+-- src:366 | (f) because the claimant is providing care or support to one or more critically ill adults described in subsection 23.3(1) is 15.
+@ref Employment Insurance Act s 12(3), s 152.14(1) (src:358-366)
+DECLARE `Reason for benefits` IS ONE OF
+    `a reason other than those mentioned in subsection 12(3)`   -- regular benefits (s 12(2))
+    `pregnancy`                                                 -- (a) maternity
+    `caring for a new-born or adopted child`                    -- (b) parental
+    `a prescribed illness, injury or quarantine`                -- (c) sickness
+    `care or support of a family member`                        -- (d) compassionate care
+    `care or support of a critically ill child`                 -- (e) family caregiver, child
+    `care or support of a critically ill adult`                 -- (f) family caregiver, adult
+
+-- src:360 | (b) because the claimant is caring for one or more new-born children of the claimant or one or more children placed with the claimant for the purpose of adoption is, in accordance with the election under section 23,
+-- src:361 | (i) 35, or
+-- src:362 | (ii) 61;
+-- src:511 | (1.1) In a claim for benefits made under this section, a claimant shall elect the maximum number of weeks referred to in either subparagraph 12(3)(b)(i) or (ii) for which benefits may be paid.
+-- src:2196 | (1.1) In a claim for benefits made under this section, a self-employed person shall elect the maximum number of weeks referred to in either subparagraph 152.14(1)(b)(i) or (ii) for which benefits may be paid.
+@ref Employment Insurance Act s 12(3)(b), s 23(1.1), s 152.05(1.1) (src:360-362) (src:511) (src:2196)
+DECLARE `Election of maximum weeks` IS ONE OF
+    `the 35-week maximum`   -- subparagraph 12(3)(b)(i) (the 33% rate in s 14(1) does not apply)
+    `the 61-week maximum`   -- subparagraph 12(3)(b)(ii) (the 33% rate in s 14(1) applies)
+
+§ `Violation class`
+
+-- Used by s 7.1 (hours required) and s 152.07 (the self-employed table). A violation for which a
+-- warning was imposed has no class: s 7.1(5) leaves it out, so there is no constructor for it.
+-- src:203 | (5) Except for violations for which a warning was imposed, each violation is classified as a minor, serious, very serious or subsequent violation as follows:
+-- src:204 | (a) if the value of the violation is
+-- src:205 | (i) less than $1,000, it is a minor violation,
+-- src:206 | (ii) $1,000 or more, but less than $5,000, it is a serious violation, or
+-- src:207 | (iii) $5,000 or more, it is a very serious violation; and
+-- src:208 | (b) if the notice of violation is issued within 260 weeks after the person accumulates another violation, it is a subsequent violation, even if the acts or omissions on which it is based occurred before the person accumulated the other violation.
+@ref Employment Insurance Act s 7.1(5) (src:203-208)
+DECLARE `Violation class` IS ONE OF
+    `a minor violation`
+    `a serious violation`
+    `a very serious violation`
+    `a subsequent violation`
+
+§ `Parties`
+
+-- The persons and bodies the text puts duties or powers on, as offices (phrasebook 6.9). A piece that
+-- writes a regulative rule names its parties from this list and declares its own actions.
+-- The Tribunal and the Board of Appeal are not here: only Part VI (piece ei4) names them.
+-- src:22 | claimant means a person who applies or has applied for benefits under this Act; (prestataire)
+-- src:23 | Commission means the Canada Employment Insurance Commission; (Commission)
+-- src:31 | employer includes a person who has been an employer and, in respect of remuneration of an individual referred to as sponsor or co-ordinator of a project in paragraph 5(1)(e), it includes that individual; (employeur)
+-- src:38 | insured person means a person who is or has been employed in insurable employment; (assuré)
+-- src:42 | Minister means the Minister of Employment and Social Development, except in Parts IV and VII; (ministre)
+-- src:1301 | Minister means the Minister of National Revenue. (ministre)
+-- src:2122 | self-employed person means an individual who
+@ref Employment Insurance Act s 2(1) "claimant", "Commission", "employer", "insured person", "Minister" (src:22-42); s 81 "Minister" (src:1301); s 152.01(1) "self-employed person" (src:2122)
+DECLARE `Party` IS ONE OF
+    `the claimant`
+    `the insured person`
+    `the self-employed person`
+    `the employer`
+    `the Commission`
+    `the Minister`
+    `the Minister of National Revenue`
+
+§ `Bands of the regional rate of unemployment`
+
+-- The regional rate of unemployment is a rate (6.5% is 0.065). Ss 7(2), 7.1(1) and 14(2) read it in nine
+-- bands ("more than 13%" is the last); Schedule I and Schedule V read it in these twelve. The nine-band
+-- tables collapse numbers 9 to 12 into "more than 13%". The rate itself is a fact decided outside
+-- the Act: Statistics Canada's figures and reg 17 (piece er1) say which rate applies to a person.
+-- src:3204 | Number of hours of insurable employment in qualifying period | 6% and under | More than 6% but not more than 7% | More than 7% but not more than 8% | More than 8% but not more than 9% | More than 9% but not more than 10% | More than 10% but not more than 11% | More than 11% but not more than 12% | More than 12% but not more than 13% | More than 13% but not more than 14% | More than 14% but not more than 15% | More than 15% but not more than 16% | More than 16%
+@ref Employment Insurance Act Schedule I (src:3204)
+DECLARE `Rate band` IS ONE OF
+    `6% and under`
+    `more than 6% but not more than 7%`
+    `more than 7% but not more than 8%`
+    `more than 8% but not more than 9%`
+    `more than 9% but not more than 10%`
+    `more than 10% but not more than 11%`
+    `more than 11% but not more than 12%`
+    `more than 12% but not more than 13%`
+    `more than 13% but not more than 14%`
+    `more than 14% but not more than 15%`
+    `more than 15% but not more than 16%`
+    `more than 16%`
+
+@ref Employment Insurance Act Schedule I (src:3204)
+GIVEN rate IS A NUMBER
+GIVETH A `Rate band`
+DECIDE `the band of the regional rate of unemployment` IS
+    BRANCH IF rate AT MOST 6%  THEN `6% and under`
+           IF rate AT MOST 7%  THEN `more than 6% but not more than 7%`
+           IF rate AT MOST 8%  THEN `more than 7% but not more than 8%`
+           IF rate AT MOST 9%  THEN `more than 8% but not more than 9%`
+           IF rate AT MOST 10% THEN `more than 9% but not more than 10%`
+           IF rate AT MOST 11% THEN `more than 10% but not more than 11%`
+           IF rate AT MOST 12% THEN `more than 11% but not more than 12%`
+           IF rate AT MOST 13% THEN `more than 12% but not more than 13%`
+           IF rate AT MOST 14% THEN `more than 13% but not more than 14%`
+           IF rate AT MOST 15% THEN `more than 14% but not more than 15%`
+           IF rate AT MOST 16% THEN `more than 15% but not more than 16%`
+           OTHERWISE `more than 16%`
+
+-- The number of a band, 1 to 12 in the order of Schedule I, for a table read by column.
+@ref Employment Insurance Act Schedule I (src:3204)
+GIVEN band IS A `Rate band`
+GIVETH A NUMBER
+DECIDE `the number of the band` IS
+    CONSIDER band
+    WHEN `6% and under`                          THEN 1
+    WHEN `more than 6% but not more than 7%`     THEN 2
+    WHEN `more than 7% but not more than 8%`     THEN 3
+    WHEN `more than 8% but not more than 9%`     THEN 4
+    WHEN `more than 9% but not more than 10%`    THEN 5
+    WHEN `more than 10% but not more than 11%`   THEN 6
+    WHEN `more than 11% but not more than 12%`   THEN 7
+    WHEN `more than 12% but not more than 13%`   THEN 8
+    WHEN `more than 13% but not more than 14%`   THEN 9
+    WHEN `more than 14% but not more than 15%`   THEN 10
+    WHEN `more than 15% but not more than 16%`   THEN 11
+    WHEN `more than 16%`                         THEN 12

@@ -1,0 +1,1913 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cpp-core-definitions`
+IMPORT `cp2-employer-deduct-and-remit`
+IMPORT `cp2-assessment-and-recovery`
+IMPORT `cp2-records-and-inspection`
+IMPORT `cp2-rulings-and-appeals`
+IMPORT `cp2-self-employed-returns`
+IMPORT `cp2-self-employed-payment`
+IMPORT `cp2-refunds`
+IMPORT `cp2-regulations-and-offences`
+
+-- Canada Pension Plan Act (R.S.C. 1985, c. C-8), Part I, Divisions C, D and E (sections 21 to 41) -- THE SEAT LAYER (piece cp2).
+-- Unofficial plain-text rendering of the Justice Laws consolidation current to 2026-09-30; nothing here has been checked against the official text.
+--
+-- SEAT: a worker, self-employed person, survivor, child or person with a disability who contributes to or may claim from the
+-- Canada Pension Plan, asking whether and how much they must contribute, what they must do or tell the Minister, and what
+-- the Minister, the Canada Revenue Agency or a court may do to them or owes them. In this range the seat has four faces,
+-- each a `§§` group below:
+--   * an employee (deductions from pay, rulings and appeals about their job, refunds of CPP they overpaid);
+--   * a self-employed person (the return, the instalments, interest and penalties, refunds);
+--   * any person asked for documents or information, or visited by an authorized person (section 25), or accused (sections 40, 41);
+--   * an individual who is also an employer, a director, or an executor, administrator or other person who winds up another's
+--     affairs: the Act puts duties and liabilities on "every employer", "the directors" and "every person ... administering",
+--     and those persons are individuals. The brief fixes this layer at one module, so their questions sit in a group of their own
+--     beside the others; the employer's duties are asked in the first person ("Must I, as an employer, ...").
+-- There is no seat for an official: the Minister's and the court's duties appear as what the person is owed or exposed to.
+--
+-- PLAIN INPUTS. Every question takes plain inputs -- yes/no, a number, a date, a per cent, or a choice from a layer-1
+-- enumeration whose members the `@desc` lists -- one for each fact the person can state. A fact that may not have happened
+-- ("Did the Minister assess you? On what day?") is asked as a yes/no plus a date and joined into a MAYBE DATE inside the
+-- question by the helper `cp2 seat -- the day it happened, if it did`; the answer to the yes/no decides, and the date is
+-- ignored when the answer is no. The layer-1 records are built inside each question from those answers, and the SAME
+-- layer-1 rule is called; no rule is restated here and no layer-1 module changes to suit this layer.
+--
+-- WHAT A PERSON CANNOT STATE. The Act leaves some figures to the Regulations or to the Minister. They are inputs here, and the
+-- `@desc` says where to find them: the CPP deduction the prescribed rules give for a payment (Regulations Part I, cr1), the
+-- prescribed rate of interest (Regulations section 36, a quarterly figure) and the day an interest period begins (Regulations
+-- section 35), the instalment a notice states, the allowances the Treasury Board approves. A website that deploys this layer
+-- must supply the interest rate itself, and the answers change with it.
+-- A judgment the Act hands to someone else is an input worded as the person would know it, never guessed: whether the Minister
+-- "is satisfied" (section 38), whether a time is "reasonable" (sections 26.1(3), 27.2(3)), whether the case is "appropriate"
+-- (section 41(4)(f)), whether a judge is satisfied (section 25(4), (7)).
+--
+-- A question whose answer the Act does not give returns NOTHING (a MAYBE) or an explicit "the text does not say" constructor,
+-- never FALSE or 0: who must file when a person is unable and has no representative (section 30(1)), what the judge must do in a
+-- case neither limb of section 25(4) covers, the most the court may fine for an offence under section 41(2).
+--
+-- The Income Tax Act, the Bankruptcy and Insolvency Act, the Companies' Creditors Arrangement Act and the Tax Court of Canada Act
+-- are not among the texts this encoding reads; what they add is a plain input where a rule needs it (NOTES.md, fork F10).
+
+§ `Canada Pension Plan Act, Part I, Divisions C to E -- the questions of a worker, a self-employed person, a representative or a survivor`
+
+-- ============================================================================================================
+-- Helpers (no provision licenses them): build a layer-1 record from what a person can state.
+-- ============================================================================================================
+
+-- The record of who pays whom that the section 21 and section 24 rules read. Every field is read by the rules that
+-- call it; none is a placeholder.
+GIVEN `employed under a contract of service or apprenticeship` IS A BOOLEAN
+      `holds an office` IS A BOOLEAN
+      `is paid as an officer by the payer` IS A BOOLEAN
+      `the payer is liable to pay` IS A BOOLEAN
+      `pensionable` IS A BOOLEAN
+GIVETH A `cp2 Employment relationship`
+`cp2 seat — the employment relationship as the person describes it` `employed under a contract of service or apprenticeship` `holds an office` `is paid as an officer by the payer` `the payer is liable to pay` `pensionable` MEANS
+    `cp2 Employment relationship` WITH
+        `payer is liable to pay salary, wages or other remuneration in relation to the employment` IS `the payer is liable to pay`
+        `payee is employed under an express or implied contract of service or apprenticeship` IS `employed under a contract of service or apprenticeship`
+        `payee holds an office` IS `holds an office`
+        `payee, as an officer, receives their remuneration from the payer` IS `is paid as an officer by the payer`
+        `employment is pensionable employment` IS `pensionable`
+
+-- "Do you have a legal representative?" becomes the keel's Kind of representative.
+GIVEN `has a legal representative` IS A BOOLEAN
+GIVETH A `Kind of representative`
+`cp2 seat — the kind of representative the person has` `has a legal representative` MEANS
+    IF `has a legal representative`
+    THEN `another legal representative`
+    ELSE `not a representative`
+
+-- A date the person gives only if something happened: "Did it happen? On what day?" becomes MAYBE DATE.
+GIVEN `it happened` IS A BOOLEAN
+      `the day it happened` IS A DATE
+GIVETH A MAYBE DATE
+`cp2 seat — the day it happened, if it did` `it happened` `the day it happened` MEANS
+    IF `it happened`
+    THEN JUST `the day it happened`
+    ELSE NOTHING
+
+-- ============================================================================================================
+-- Employees: pay, deductions, rulings and appeals (Division C)
+-- ============================================================================================================
+
+§§ `If you are an employee: CPP deductions from your pay (ss 21 to 21.01, 26)`
+
+-- Situational: ask "Do you work for an employer who pays you salary or wages?" before showing this group.
+
+-- s 21(1). The employer's duty to deduct is the employee's liability to have the deduction made.
+@export Must my employer deduct CPP contributions from my pay (s 21(1))?
+GIVEN `I am employed under a contract of service or apprenticeship` IS A BOOLEAN @desc Are you employed under a contract of service or apprenticeship, written or unwritten?
+      `I hold an office` IS A BOOLEAN @desc Do you hold an office, for example as a company director, an elected official, a judge or a minister of the Crown?
+      `the person paying me is liable to pay me for this work` IS A BOOLEAN @desc Is the person who pays you liable to pay you salary, wages or other remuneration for this work?
+      `I am paid for my office by the person asked about` IS A BOOLEAN @desc If you hold an office, do you receive your remuneration for it from that person?
+      `my job is pensionable employment` IS A BOOLEAN @desc Is your job pensionable employment under section 6 of the Act? Most jobs in Canada are, unless an exception in section 6(2) applies.
+      `I am being paid remuneration` IS A BOOLEAN @desc Is the person paying you remuneration (pay) for this work now?
+GIVETH A BOOLEAN
+DECIDE `Must my employer deduct CPP contributions from my pay (s 21(1))` IF
+    `s 21(1) — the employer must deduct from the remuneration` `my relationship` `I am being paid remuneration`
+    WHERE
+        `my relationship` MEANS
+            `cp2 seat — the employment relationship as the person describes it`
+                `I am employed under a contract of service or apprenticeship`
+                `I hold an office`
+                `I am paid for my office by the person asked about`
+                `the person paying me is liable to pay me for this work`
+                `my job is pensionable employment`
+
+@export How much must my employer deduct from this payment of pay, in dollars (s 21(1))?
+GIVEN `I am employed under a contract of service or apprenticeship` IS A BOOLEAN @desc Are you employed under a contract of service or apprenticeship, written or unwritten?
+      `I hold an office` IS A BOOLEAN @desc Do you hold an office, for example as a company director, an elected official, a judge or a minister of the Crown?
+      `the person paying me is liable to pay me for this work` IS A BOOLEAN @desc Is the person who pays you liable to pay you salary, wages or other remuneration for this work?
+      `I am paid for my office by the person asked about` IS A BOOLEAN @desc If you hold an office, do you receive your remuneration for it from that person?
+      `my job is pensionable employment` IS A BOOLEAN @desc Is your job pensionable employment under section 6 of the Act?
+      `I am being paid remuneration` IS A BOOLEAN @desc Is the person paying you remuneration (pay) for this work now?
+      `the CPP deduction the prescribed rules give for this payment` IS A NUMBER @desc What CPP deduction do the prescribed rules (the Canada Revenue Agency's payroll deduction tables) give for this payment of pay, in dollars? The Act leaves the amount to the Regulations.
+GIVETH A NUMBER
+DECIDE `How much must my employer deduct from this payment of pay (s 21(1))` IS
+    `s 21(1) — the amount the employer must deduct` `my relationship` `I am being paid remuneration` `the CPP deduction the prescribed rules give for this payment`
+    WHERE
+        `my relationship` MEANS
+            `cp2 seat — the employment relationship as the person describes it`
+                `I am employed under a contract of service or apprenticeship`
+                `I hold an office`
+                `I am paid for my office by the person asked about`
+                `the person paying me is liable to pay me for this work`
+                `my job is pensionable employment`
+
+-- s 21(3.1), second sentence. The ruling limbs of subsection (3) tell whether the employer is relieved.
+@export Am I treated as having told the Minister that my employer did not deduct a CPP contribution from my pay (s 21(3.1))?
+GIVEN `my employer was told in a written ruling under section 26.1 that it need not make the deduction` IS A BOOLEAN @desc Was your employer told in writing, in a ruling under section 26.1, that it did not have to make the deduction?
+      `that ruling was based on incorrect information my employer gave the Minister` IS A BOOLEAN @desc Was that ruling based on information your employer gave the Minister that was incorrect in a material particular?
+      `it was later decided that the deduction should have been made` IS A BOOLEAN @desc Was it later decided on an appeal to the Minister (section 27.2(3)) or to the Tax Court of Canada (section 28) that the deduction should have been made?
+      `that decision has been communicated to my employer` IS A BOOLEAN @desc Has that decision been communicated to your employer?
+      `my employer has paid an amount on account of that contribution` IS A BOOLEAN @desc Has your employer paid any amount as or on account of that contribution?
+GIVETH A BOOLEAN
+DECIDE `Am I treated as having told the Minister that my employer did not deduct a CPP contribution from my pay (s 21(3.1))` IF
+    `s 21(3.1) — the employee is deemed to have notified the Minister of the employer's failure to deduct`
+        (`s 21(3) — the employer is not liable for the amount it failed to deduct, or for interest or penalties`
+            `my employer was told in a written ruling under section 26.1 that it need not make the deduction`
+            `that ruling was based on incorrect information my employer gave the Minister`
+            `it was later decided that the deduction should have been made`)
+        `that decision has been communicated to my employer`
+        `my employer has paid an amount on account of that contribution`
+
+-- s 21(4). The employer's privilege to recoup a missed deduction is the employee's exposure to a later deduction.
+@export Can my employer take a CPP deduction it missed from a later payment of my pay (s 21(4))?
+GIVEN `my employer failed to deduct a required CPP amount from an earlier payment of my pay` IS A BOOLEAN @desc Did your employer fail to deduct a CPP amount that section 21(1) required from an earlier payment of your pay?
+      `the day of that earlier payment` IS A DATE @desc On what day was that earlier payment of pay made?
+      `the day of the later payment` IS A DATE @desc On what day is the later payment of pay, from which your employer wants to deduct the missed amount, made?
+      `the number of earlier missed amounts being deducted from this one later payment` IS A NUMBER @desc How many earlier missed amounts is your employer deducting from this one later payment? (The Act allows only one.)
+GIVETH A BOOLEAN
+DECIDE `Can my employer take a CPP deduction it missed from a later payment of my pay (s 21(4))` IF
+    `s 21(4) — the employer may deduct the missed amount from a subsequent payment of remuneration`
+        `my employer failed to deduct a required CPP amount from an earlier payment of my pay`
+        `the day of that earlier payment`
+        `the day of the later payment`
+        `the number of earlier missed amounts being deducted from this one later payment`
+
+-- s 21(5).
+@export Am I treated as having received the amount that was deducted from my pay (s 21(5))?
+GIVEN `an amount was deducted from my pay under section 21(1)` IS A BOOLEAN @desc Did your employer deduct an amount from your pay as your CPP contribution?
+GIVETH A BOOLEAN
+DECIDE `Am I treated as having received the amount that was deducted from my pay (s 21(5))` IF
+    `s 21(5) — the employee is deemed to have received the amount deducted` `an amount was deducted from my pay under section 21(1)`
+
+@export On what day am I treated as having received the amount that was deducted from my pay (s 21(5))?
+GIVEN `the day the amount was deducted from my pay` IS A DATE @desc On what day was the amount deducted from your pay under section 21(1)?
+GIVETH A DATE
+DECIDE `On what day am I treated as having received the amount that was deducted from my pay (s 21(5))` IS
+    `s 21(5) — the time at which the employee is deemed to have received the amount` `the day the amount was deducted from my pay`
+
+-- s 21.01(1). An excess payment made to the employee by mistake, and the deduction taken on it.
+@export Is the CPP deduction taken from a pay overpayment treated as never deducted (s 21.01(1))?
+GIVEN `the year the deduction was taken` IS A NUMBER @desc In which calendar year was the deduction taken? (The rule covers years after 2015.)
+      `the deduction was on an excess payment of pay made to me by mistake` IS A BOOLEAN @desc Was the deduction taken on an excess payment of pay that was paid to you as a result of a clerical, administrative or system error?
+      `my employer has elected to have section 21.01 apply` IS A BOOLEAN @desc Has your employer elected to have section 21.01 apply to the deduction?
+      `the day my employer made the election` IS A DATE @desc On what day did your employer make the election? (Any date if it has not.)
+      `I have repaid my employer or made an arrangement to repay` IS A BOOLEAN @desc Have you repaid your employer, or made an arrangement to repay it, the excess payment?
+      `the day I repaid or made the arrangement` IS A DATE @desc On what day did you repay or make the arrangement? (Any date if you have not.)
+      `my employer has filed an information return correcting for the excess payment` IS A BOOLEAN @desc Has your employer filed an information return correcting for the excess payment?
+      `the day my employer filed the correcting return` IS A DATE @desc On what day did your employer file that correcting return? (Any date if it has not.)
+      `the Minister's additional conditions are met` IS A BOOLEAN @desc Are any additional conditions the Minister has specified for section 21.01 met? (Yes if the Minister has specified none.)
+GIVETH A BOOLEAN
+DECIDE `Is the CPP deduction taken from a pay overpayment treated as never deducted (s 21.01(1))` IF
+    `s 21.01(1) — the amount deducted is deemed not to have been deducted`
+        `the year the deduction was taken`
+        `the deduction was on an excess payment of pay made to me by mistake`
+        (`cp2 seat — the day it happened, if it did` `my employer has elected to have section 21.01 apply` `the day my employer made the election`)
+        (`cp2 seat — the day it happened, if it did` `I have repaid my employer or made an arrangement to repay` `the day I repaid or made the arrangement`)
+        (`cp2 seat — the day it happened, if it did` `my employer has filed an information return correcting for the excess payment` `the day my employer filed the correcting return`)
+        `the Minister's additional conditions are met`
+
+@export How much of the CPP deduction is treated as never deducted, in dollars (s 21.01(2))?
+GIVEN `the amount my employer deducted` IS A NUMBER @desc How much CPP did your employer deduct from you for that year, in dollars?
+      `all CPP amounts deducted from me for the year` IS A NUMBER @desc What is the total of all CPP contributions your employer deducted from you for that year, in dollars?
+      `what would have been deducted without the excess payment` IS A NUMBER @desc What total would your employer have deducted from you for that year, in dollars, had it not made the excess payment?
+GIVETH A NUMBER
+DECIDE `How much of the CPP deduction is treated as never deducted (s 21.01(2))` IS
+    `s 21.01(2) — the amount deemed not to have been deducted`
+        `the amount my employer deducted`
+        `all CPP amounts deducted from me for the year`
+        `what would have been deducted without the excess payment`
+
+-- s 26(1) and (2).
+@export Does section 26(1) protect my employer from an action by me for deducting CPP contributions from my pay (s 26(1))?
+GIVEN `my employer deducted a sum of money from my pay` IS A BOOLEAN @desc Did your employer deduct a sum of money from your pay?
+      `the deduction was made in compliance, or intended compliance, with the Act` IS A BOOLEAN @desc Was the deduction made in compliance, or in intended compliance, with the Canada Pension Plan Act?
+GIVETH A BOOLEAN
+DECIDE `Does section 26(1) protect my employer from an action by me for deducting CPP contributions from my pay (s 26(1))` IF
+    `s 26(1) — no action lies against the person for the deduction`
+        `my employer deducted a sum of money from my pay`
+        `the deduction was made in compliance, or intended compliance, with the Act`
+
+@export To what extent does the Minister's receipt discharge what my employer owes me, in dollars (s 26(2))?
+GIVEN `the Minister has given a receipt for an amount my employer deducted as the Act requires` IS A BOOLEAN @desc Has the Minister given a receipt for an amount deducted from your pay as the Act requires?
+      `the amount in the receipt` IS A NUMBER @desc What amount does the receipt state, in dollars?
+      `what my employer owes me with respect to the amount deducted` IS A NUMBER @desc How much does your employer owe you, in dollars, with respect to the amount deducted?
+GIVETH A NUMBER
+DECIDE `To what extent does the Minister's receipt discharge what my employer owes me (s 26(2))` IS
+    `s 26(2) — the extent to which the Minister's receipt discharges the debtor's liability to the creditor`
+        `the Minister has given a receipt for an amount my employer deducted as the Act requires`
+        `the amount in the receipt`
+        `what my employer owes me with respect to the amount deducted`
+
+
+-- ============================================================================================================
+-- The individual who is also an employer, a director, or a representative of another person's affairs
+-- (the Act puts these duties and liabilities on "every employer", "the directors" and "every person ... administering")
+-- ============================================================================================================
+
+§§ `If you employ people, are a company director, or administer someone else's affairs (ss 21 to 24, 27.1, 38, 41)`
+
+-- Situational: ask "Do you employ people, or are you a director of a company that does, or do you act for a deceased or bankrupt person?" before showing this group.
+-- The employer's duties and liabilities here are the individual's own: a self-employed person with employees, a director, an executor.
+
+@export Must I, as an employer, deduct CPP contributions from what I pay an employee (s 21(1))?
+GIVEN `my worker is employed under a contract of service or apprenticeship` IS A BOOLEAN @desc Is the person you pay employed by you under an express or implied contract of service or apprenticeship?
+      `my worker holds an office` IS A BOOLEAN @desc Does the person hold an office, for example as a company director or an elected official?
+      `I pay my worker's remuneration for the office` IS A BOOLEAN @desc If the person holds an office, do they receive their remuneration for it from you?
+      `I am liable to pay my worker for this work` IS A BOOLEAN @desc Are you liable to pay the person salary, wages or other remuneration for this work?
+      `the work is pensionable employment` IS A BOOLEAN @desc Is the work pensionable employment under section 6 of the Act?
+      `I am paying remuneration now` IS A BOOLEAN @desc Are you paying the person remuneration for this work now?
+GIVETH A BOOLEAN
+DECIDE `Must I, as an employer, deduct CPP contributions from what I pay an employee (s 21(1))` IF
+    `s 21(1) — the employer must deduct from the remuneration` `the relationship I describe` `I am paying remuneration now`
+    WHERE
+        `the relationship I describe` MEANS
+            `cp2 seat — the employment relationship as the person describes it`
+                `my worker is employed under a contract of service or apprenticeship`
+                `my worker holds an office`
+                `I pay my worker's remuneration for the office`
+                `I am liable to pay my worker for this work`
+                `the work is pensionable employment`
+
+@export How much must I remit to the Receiver General for an employee, including my own contribution, in dollars (s 21(1))?
+GIVEN `my worker is employed under a contract of service or apprenticeship` IS A BOOLEAN @desc Is the person you pay employed by you under an express or implied contract of service or apprenticeship?
+      `my worker holds an office` IS A BOOLEAN @desc Does the person hold an office, for example as a company director or an elected official?
+      `I pay my worker's remuneration for the office` IS A BOOLEAN @desc If the person holds an office, do they receive their remuneration for it from you?
+      `I am liable to pay my worker for this work` IS A BOOLEAN @desc Are you liable to pay the person salary, wages or other remuneration for this work?
+      `the work is pensionable employment` IS A BOOLEAN @desc Is the work pensionable employment under section 6 of the Act?
+      `I am paying remuneration now` IS A BOOLEAN @desc Are you paying the person remuneration for this work now?
+      `the amount the prescribed rules require me to deduct` IS A NUMBER @desc What amount do the prescribed rules require you to deduct as the employee's contribution, in dollars (Regulations Part I)?
+      `the amount prescribed for my own contribution as employer` IS A NUMBER @desc What amount is prescribed for the contributions you must make as employer, in dollars (Regulations section 7)?
+GIVETH A NUMBER
+DECIDE `How much must I remit to the Receiver General for an employee, including my own contribution (s 21(1))` IS
+    `s 21(1) — the amount the employer must remit` `the relationship I describe` `I am paying remuneration now` `the amount the prescribed rules require me to deduct` `the amount prescribed for my own contribution as employer`
+    WHERE
+        `the relationship I describe` MEANS
+            `cp2 seat — the employment relationship as the person describes it`
+                `my worker is employed under a contract of service or apprenticeship`
+                `my worker holds an office`
+                `I pay my worker's remuneration for the office`
+                `I am liable to pay my worker for this work`
+                `the work is pensionable employment`
+
+@export Where must I remit the amounts I deduct (s 21(1))?
+GIVEN `I am a prescribed person at the prescribed time` IS A BOOLEAN @desc Are you a prescribed person for subsection 21(1) at the prescribed time (Regulations section 8.2)?
+GIVETH A `cp2 Place of remittance`
+DECIDE `Where must I remit the amounts I deduct (s 21(1))` IS
+    `s 21(1) — where the employer must remit` `I am a prescribed person at the prescribed time`
+
+@export If I am a prescribed person, am I treated as having remitted to the account at a financial institution (s 21(1.1))?
+GIVEN `I am a prescribed person at the prescribed time` IS A BOOLEAN @desc Are you a prescribed person for subsection 21(1) at the prescribed time?
+      `the day I remitted the amount to the Receiver General` IS A DATE @desc On what day did you remit the amount to the Receiver General?
+      `the day the amount was due` IS A DATE @desc On what day was the amount due?
+GIVETH A BOOLEAN
+DECIDE `If I am a prescribed person, am I treated as having remitted to the account at a financial institution (s 21(1.1))` IF
+    `s 21(1.1) — the prescribed person is deemed to have remitted to the account at a financial institution` `I am a prescribed person at the prescribed time` `the day I remitted the amount to the Receiver General` `the day the amount was due`
+
+@export Was my remittance made in the manner the Act requires (s 21(1))?
+GIVEN `I am a prescribed person at the prescribed time` IS A BOOLEAN @desc Are you a prescribed person for subsection 21(1) at the prescribed time?
+      `I remitted to the account of the Receiver General at a financial institution` IS A BOOLEAN @desc Did you remit the amount to the account of the Receiver General at a financial institution?
+      `the day I remitted the amount to the Receiver General` IS A DATE @desc On what day did you remit the amount to the Receiver General?
+      `the day the amount was due` IS A DATE @desc On what day was the amount due?
+GIVETH A BOOLEAN
+DECIDE `Was my remittance made in the manner the Act requires (s 21(1))` IF
+    `s 21(1) — the amount was remitted in the manner required` `I am a prescribed person at the prescribed time` `I remitted to the account of the Receiver General at a financial institution` `the day I remitted the amount to the Receiver General` `the day the amount was due`
+
+@export Am I relieved of liability for an amount I failed to deduct because of a ruling (s 21(3))?
+GIVEN `I was told in a written ruling under section 26.1 that I need not make the deduction` IS A BOOLEAN @desc Were you informed in writing, in a ruling under section 26.1, that you were not required to make the deduction?
+      `the ruling was based on incorrect information I gave the Minister` IS A BOOLEAN @desc Was the ruling based on information you provided to the Minister that was incorrect in a material particular?
+      `it was later decided that the deduction should have been made` IS A BOOLEAN @desc Was it subsequently decided under subsection 27.2(3) or section 28 that the deduction should have been made?
+GIVETH A BOOLEAN
+DECIDE `Am I relieved of liability for an amount I failed to deduct because of a ruling (s 21(3))` IF
+    `s 21(3) — the employer is not liable for the amount it failed to deduct, or for interest or penalties`
+        `I was told in a written ruling under section 26.1 that I need not make the deduction`
+        `the ruling was based on incorrect information I gave the Minister`
+        `it was later decided that the deduction should have been made`
+
+@export Am I liable to pay Her Majesty the whole amount I failed to deduct and remit (s 21(2))?
+GIVEN `I failed to deduct and remit the amount as and when subsection 21(1) required` IS A BOOLEAN @desc Did you fail to deduct and remit an amount from an employee's remuneration as and when subsection 21(1) required?
+      `I was told in a written ruling under section 26.1 that I need not make the deduction` IS A BOOLEAN @desc Were you informed in writing, in a ruling under section 26.1, that you were not required to make the deduction?
+      `the ruling was based on incorrect information I gave the Minister` IS A BOOLEAN @desc Was the ruling based on information you provided to the Minister that was incorrect in a material particular?
+      `it was later decided that the deduction should have been made` IS A BOOLEAN @desc Was it subsequently decided under subsection 27.2(3) or section 28 that the deduction should have been made?
+GIVETH A BOOLEAN
+DECIDE `Am I liable to pay Her Majesty the whole amount I failed to deduct and remit (s 21(2))` IF
+    `s 21(2) — the employer is liable to pay Her Majesty the whole amount`
+        `I failed to deduct and remit the amount as and when subsection 21(1) required`
+        (`s 21(3) — the employer is not liable for the amount it failed to deduct, or for interest or penalties`
+            `I was told in a written ruling under section 26.1 that I need not make the deduction`
+            `the ruling was based on incorrect information I gave the Minister`
+            `it was later decided that the deduction should have been made`)
+
+@export How much must I pay Her Majesty for the amount I failed to deduct and remit, in dollars (s 21(2))?
+GIVEN `I failed to deduct and remit the amount as and when subsection 21(1) required` IS A BOOLEAN @desc Did you fail to deduct and remit an amount from an employee's remuneration as and when subsection 21(1) required?
+      `I was told in a written ruling under section 26.1 that I need not make the deduction` IS A BOOLEAN @desc Were you informed in writing, in a ruling under section 26.1, that you were not required to make the deduction?
+      `the ruling was based on incorrect information I gave the Minister` IS A BOOLEAN @desc Was the ruling based on information you provided to the Minister that was incorrect in a material particular?
+      `it was later decided that the deduction should have been made` IS A BOOLEAN @desc Was it subsequently decided under subsection 27.2(3) or section 28 that the deduction should have been made?
+      `the amount that should have been deducted and remitted` IS A NUMBER @desc What amount should have been deducted and remitted, in dollars?
+GIVETH A NUMBER
+DECIDE `How much must I pay Her Majesty for the amount I failed to deduct and remit (s 21(2))` IS
+    `s 21(2) — the amount the employer is liable to pay Her Majesty`
+        `I failed to deduct and remit the amount as and when subsection 21(1) required`
+        (`s 21(3) — the employer is not liable for the amount it failed to deduct, or for interest or penalties`
+            `I was told in a written ruling under section 26.1 that I need not make the deduction`
+            `the ruling was based on incorrect information I gave the Minister`
+            `it was later decided that the deduction should have been made`)
+        `the amount that should have been deducted and remitted`
+
+@export From what time am I liable to pay the amount I failed to deduct (s 21(2))?
+GIVEN `the time the amount should have been deducted` IS A DATE @desc On what day should the amount have been deducted?
+GIVETH A DATE
+DECIDE `From what time am I liable to pay the amount I failed to deduct (s 21(2))` IS
+    `s 21(2) — the time from which the liability to pay runs` `the time the amount should have been deducted`
+
+@export After a decision that I should have deducted, do I owe my own contribution without interest or penalties (s 21(3.1))?
+GIVEN `I was told in a written ruling under section 26.1 that I need not make the deduction` IS A BOOLEAN @desc Were you informed in writing, in a ruling under section 26.1, that you were not required to make the deduction?
+      `the ruling was based on incorrect information I gave the Minister` IS A BOOLEAN @desc Was the ruling based on information you provided to the Minister that was incorrect in a material particular?
+      `it was later decided that the deduction should have been made` IS A BOOLEAN @desc Was it subsequently decided under subsection 27.2(3) or section 28 that the deduction should have been made?
+      `that decision has been communicated to me` IS A BOOLEAN @desc Has that decision been communicated to you?
+GIVETH A BOOLEAN
+DECIDE `After a decision that I should have deducted, do I owe my own contribution without interest or penalties (s 21(3.1))` IF
+    `s 21(3.1) — the employer is liable, without interest or penalties, to pay the contribution required of the employer`
+        (`s 21(3) — the employer is not liable for the amount it failed to deduct, or for interest or penalties`
+            `I was told in a written ruling under section 26.1 that I need not make the deduction`
+            `the ruling was based on incorrect information I gave the Minister`
+            `it was later decided that the deduction should have been made`)
+        `that decision has been communicated to me`
+
+@export How much of my own contribution do I owe after that decision, without interest or penalties, in dollars (s 21(3.1))?
+GIVEN `I was told in a written ruling under section 26.1 that I need not make the deduction` IS A BOOLEAN @desc Were you informed in writing, in a ruling under section 26.1, that you were not required to make the deduction?
+      `the ruling was based on incorrect information I gave the Minister` IS A BOOLEAN @desc Was the ruling based on information you provided to the Minister that was incorrect in a material particular?
+      `it was later decided that the deduction should have been made` IS A BOOLEAN @desc Was it subsequently decided under subsection 27.2(3) or section 28 that the deduction should have been made?
+      `that decision has been communicated to me` IS A BOOLEAN @desc Has that decision been communicated to you?
+      `the contribution required of me as employer with respect to the employee` IS A NUMBER @desc What contribution does section 9 require of you as employer with respect to the employee, in dollars?
+GIVETH A NUMBER
+DECIDE `How much of my own contribution do I owe after that decision, without interest or penalties (s 21(3.1))` IS
+    `s 21(3.1) — the contribution the employer must pay, without interest or penalties`
+        (`s 21(3) — the employer is not liable for the amount it failed to deduct, or for interest or penalties`
+            `I was told in a written ruling under section 26.1 that I need not make the deduction`
+            `the ruling was based on incorrect information I gave the Minister`
+            `it was later decided that the deduction should have been made`)
+        `that decision has been communicated to me`
+        `the contribution required of me as employer with respect to the employee`
+
+@export How much interest must I pay on an amount I did not remit when required, in dollars (s 21(6))?
+GIVEN `the amount I failed to remit when required` IS A NUMBER @desc What amount did you fail to remit at the time required, in dollars?
+      `the day I was required to remit it` IS A DATE @desc On what day were you required to remit it?
+      `the day I remitted it` IS A DATE @desc On what day did you remit it?
+      `the prescribed interest rate in per cent a year` IS A NUMBER @desc What is the prescribed rate of interest per annum, in per cent (for example 8 for 8%)? Regulations section 36 sets it quarter by quarter.
+GIVETH A NUMBER
+DECIDE `How much interest must I pay on an amount I did not remit when required (s 21(6))` IS
+    `s 21(6) — the interest the employer must pay the Receiver General` `the amount I failed to remit when required` `the day I was required to remit it` `the day I remitted it` (`the prescribed interest rate in per cent a year` DIVIDED BY 100)
+
+@export Did I fail to remit the amount at the time required (s 21(7))?
+GIVEN `the day the amount was due` IS A DATE @desc On what day was the amount due?
+      `the Receiver General has received the amount` IS A BOOLEAN @desc Has the Receiver General received the amount?
+      `the day the Receiver General received it` IS A DATE @desc On what day did the Receiver General receive it? (Any date if it has not.)
+      `it was paid in the manner required` IS A BOOLEAN @desc Was the amount paid in the manner required?
+GIVETH A BOOLEAN
+DECIDE `Did I fail to remit the amount at the time required (s 21(7))` IF
+    `s 21(7) — the employer failed to remit the amount at the time required`
+        `the day the amount was due`
+        (`cp2 seat — the day it happened, if it did` `the Receiver General has received the amount` `the day the Receiver General received it`)
+        `it was paid in the manner required`
+
+@export What percentage penalty applies to an amount I did not remit when required (s 21(7))?
+GIVEN `the day the amount was due` IS A DATE @desc On what day was the amount due?
+      `the Receiver General has received the amount` IS A BOOLEAN @desc Has the Receiver General received the amount?
+      `the day the Receiver General received it` IS A DATE @desc On what day did the Receiver General receive it? (Any date if it has not.)
+      `it was paid in the manner required` IS A BOOLEAN @desc Was the amount paid in the manner required?
+      `a penalty under this subsection was already payable by me this year` IS A BOOLEAN @desc At the time of the failure, was a penalty under subsection 21(7) already payable by you in respect of an amount you were required to remit during the year?
+      `the failure was made knowingly or through gross negligence` IS A BOOLEAN @desc Was the failure made knowingly or under circumstances amounting to gross negligence?
+GIVETH A NUMBER
+DECIDE `What percentage penalty applies to an amount I did not remit when required (s 21(7))` IS
+    `s 21(7) — the rate of the penalty for failing to remit`
+        `the day the amount was due`
+        (`cp2 seat — the day it happened, if it did` `the Receiver General has received the amount` `the day the Receiver General received it`)
+        `it was paid in the manner required`
+        `a penalty under this subsection was already payable by me this year`
+        `the failure was made knowingly or through gross negligence`
+
+@export How much is the penalty for an amount I did not remit when required, in dollars (s 21(7))?
+GIVEN `the amount I was required to remit` IS A NUMBER @desc What amount were you required to remit, in dollars?
+      `the day the amount was due` IS A DATE @desc On what day was the amount due?
+      `the Receiver General has received the amount` IS A BOOLEAN @desc Has the Receiver General received the amount?
+      `the day the Receiver General received it` IS A DATE @desc On what day did the Receiver General receive it? (Any date if it has not.)
+      `it was paid in the manner required` IS A BOOLEAN @desc Was the amount paid in the manner required?
+      `a penalty under this subsection was already payable by me this year` IS A BOOLEAN @desc At the time of the failure, was a penalty under subsection 21(7) already payable by you in respect of an amount you were required to remit during the year?
+      `the failure was made knowingly or through gross negligence` IS A BOOLEAN @desc Was the failure made knowingly or under circumstances amounting to gross negligence?
+GIVETH A NUMBER
+DECIDE `How much is the penalty for an amount I did not remit when required (s 21(7))` IS
+    `s 21(7) — the penalty for failing to remit`
+        `the amount I was required to remit`
+        `the day the amount was due`
+        (`cp2 seat — the day it happened, if it did` `the Receiver General has received the amount` `the day the Receiver General received it`)
+        `it was paid in the manner required`
+        `a penalty under this subsection was already payable by me this year`
+        `the failure was made knowingly or through gross negligence`
+
+@export Am I, as a director, jointly and severally liable with the corporation for CPP it failed to deduct or remit (s 21.1(1))?
+GIVEN `the employer that failed to deduct or remit is a corporation` IS A BOOLEAN @desc Is the employer that failed to deduct or remit an amount as subsection 21(1) required a corporation?
+      `I was a director of the corporation when the failure occurred` IS A BOOLEAN @desc Were you a director of the corporation at the time when the failure occurred?
+GIVETH A BOOLEAN
+DECIDE `Am I, as a director, jointly and severally liable with the corporation for CPP it failed to deduct or remit (s 21.1(1))` IF
+    `s 21.1(1) — the director is jointly and severally liable with the corporation` `the employer that failed to deduct or remit is a corporation` `I was a director of the corporation when the failure occurred`
+
+@export How much am I liable for as a director, with interest and penalties, in dollars (s 21.1(1))?
+GIVEN `the employer that failed to deduct or remit is a corporation` IS A BOOLEAN @desc Is the employer that failed to deduct or remit an amount as subsection 21(1) required a corporation?
+      `I was a director of the corporation when the failure occurred` IS A BOOLEAN @desc Were you a director of the corporation at the time when the failure occurred?
+      `the amount the corporation failed to deduct or remit` IS A NUMBER @desc What amount did the corporation fail to deduct or remit, in dollars?
+      `the interest relating to that amount` IS A NUMBER @desc What interest relates to that amount, in dollars?
+      `the penalties relating to that amount` IS A NUMBER @desc What penalties relate to that amount, in dollars?
+GIVETH A NUMBER
+DECIDE `How much am I liable for as a director, with interest and penalties (s 21.1(1))` IS
+    `s 21.1(1) — the amount for which the director is liable to Her Majesty with the corporation`
+        `the employer that failed to deduct or remit is a corporation`
+        `I was a director of the corporation when the failure occurred`
+        `the amount the corporation failed to deduct or remit`
+        `the interest relating to that amount`
+        `the penalties relating to that amount`
+
+@export Am I, as a director, still liable after the Income Tax Act limits and defences apply (s 21.1(2))?
+GIVEN `I am jointly and severally liable under subsection 21.1(1)` IS A BOOLEAN @desc Are you jointly and severally liable under subsection 21.1(1)?
+      `a limit or defence in subsections 227.1(2) to (7) of the Income Tax Act relieves me` IS A BOOLEAN @desc Does a limit or defence in subsections 227.1(2) to (7) of the Income Tax Act, with the modifications the circumstances require, relieve you? (The Act applies those subsections to directors.)
+GIVETH A BOOLEAN
+DECIDE `Am I, as a director, still liable after the Income Tax Act limits and defences apply (s 21.1(2))` IF
+    `s 21.1(2) — the director is liable after the Income Tax Act provisions applied by this subsection` `I am jointly and severally liable under subsection 21.1(1)` `a limit or defence in subsections 227.1(2) to (7) of the Income Tax Act relieves me`
+
+@export Do the assessment rules and an assessed employer's rights apply to me as a director (s 21.1(3))?
+GIVEN `I am jointly and severally liable under subsection 21.1(1)` IS A BOOLEAN @desc Are you jointly and severally liable under subsection 21.1(1)?
+GIVETH A BOOLEAN
+DECIDE `Do the assessment rules and an assessed employer's rights apply to me as a director (s 21.1(3))` IF
+    `s 21.1(3) — the assessment provisions and the rights of an assessed employer apply to the director` `I am jointly and severally liable under subsection 21.1(1)`
+
+@export May the Minister assess me as an employer for an amount I owe under the Act (s 22(1))?
+GIVEN `an amount is payable by me as an employer under the Act` IS A BOOLEAN @desc Is an amount payable by you, as an employer, under the Canada Pension Plan Act?
+GIVETH A BOOLEAN
+DECIDE `May the Minister assess me as an employer for an amount I owe under the Act (s 22(1))` IF
+    `s 22(1) — the Minister may assess the employer for the amount` `an amount is payable by me as an employer under the Act`
+
+@export Must I pay the amount of the assessment at once (s 22(2))?
+GIVEN `the Minister has sent me a notice of assessment` IS A BOOLEAN @desc Has the Minister sent you a notice of assessment?
+      `the assessment has been vacated on appeal` IS A BOOLEAN @desc Has the assessment been vacated on appeal under the Act?
+GIVETH A BOOLEAN
+DECIDE `Must I pay the amount of the assessment at once (s 22(2))` IF
+    `s 22(2) — the assessment is valid and binding, and the employer is liable to pay the amount forthwith` `the Minister has sent me a notice of assessment` `the assessment has been vacated on appeal`
+
+@export How much must I pay at once on the assessment, in dollars (s 22(2))?
+GIVEN `the Minister has sent me a notice of assessment` IS A BOOLEAN @desc Has the Minister sent you a notice of assessment?
+      `the assessment has been vacated on appeal` IS A BOOLEAN @desc Has the assessment been vacated on appeal under the Act?
+      `the amount of the assessment, as varied on appeal if it was` IS A NUMBER @desc What is the amount of the assessment, as varied on appeal if it has been, in dollars?
+GIVETH A NUMBER
+DECIDE `How much must I pay at once on the assessment (s 22(2))` IS
+    `s 22(2) — the amount the employer is liable to pay forthwith` `the Minister has sent me a notice of assessment` `the assessment has been vacated on appeal` `the amount of the assessment, as varied on appeal if it was`
+
+@export Is it too late for the Minister to assess me as an employer (s 22(3))?
+GIVEN `the day of the assessment` IS A DATE @desc On what day is the assessment, re-assessment or additional assessment made?
+      `the earliest day a related contribution should have been paid` IS A DATE @desc What is the earliest of the days on or before which any contribution in relation to which the amount is payable should have been paid?
+      `I made a misrepresentation or committed fraud in filing a return or giving information` IS A BOOLEAN @desc Did you make any misrepresentation or commit any fraud in filing a return or in supplying information under Part I in relation to the contribution?
+GIVETH A BOOLEAN
+DECIDE `Is it too late for the Minister to assess me as an employer (s 22(3))` IF
+    NOT (`s 22(3) — the Minister may still make the assessment` `the day of the assessment` `the earliest day a related contribution should have been paid` `I made a misrepresentation or committed fraud in filing a return or giving information`)
+
+@export Can I appeal my assessment to the Minister for reconsideration (s 27.1)?
+GIVEN `I have been assessed under section 22` IS A BOOLEAN @desc Have you been assessed under section 22?
+      `the day I was notified of the assessment` IS A DATE @desc On what day were you notified of the assessment?
+      `the day I appeal` IS A DATE @desc On what day do you appeal to the Minister?
+GIVETH A BOOLEAN
+DECIDE `Can I appeal my assessment to the Minister for reconsideration (s 27.1)` IF
+    `s 27.1 — the employer may appeal the assessment to the Minister for reconsideration` `I have been assessed under section 22` `the day I was notified of the assessment` `the day I appeal`
+
+@export What is the last day I can appeal my assessment to the Minister (s 27.1)?
+GIVEN `the day I was notified of the assessment` IS A DATE @desc On what day were you notified of the assessment?
+GIVETH A DATE
+DECIDE `What is the last day I can appeal my assessment to the Minister (s 27.1)` IS
+    `s 27.1 — the last day for the employer to appeal the assessment to the Minister` `the day I was notified of the assessment`
+
+@export Is a CPP amount I owe a debt to Her Majesty that can be recovered in court (s 23(1))?
+GIVEN `the amount is a contribution, interest, penalty or other amount payable by me under the Act` IS A BOOLEAN @desc Is the amount a contribution, interest, penalty or other amount payable by you under the Canada Pension Plan Act?
+      `the proceeding is in the Federal Court or another court of competent jurisdiction` IS A BOOLEAN @desc Is the proceeding in the Federal Court or another court of competent jurisdiction?
+      `the recovery is in a way the Act provides` IS A BOOLEAN @desc Is the recovery in another manner the Act provides for?
+GIVETH A BOOLEAN
+DECIDE `Is a CPP amount I owe a debt to Her Majesty that can be recovered in court (s 23(1))` IF
+    `s 23(1) — Her Majesty may recover the debt in that forum or manner`
+        `the amount is a contribution, interest, penalty or other amount payable by me under the Act`
+        `the proceeding is in the Federal Court or another court of competent jurisdiction`
+        `the recovery is in a way the Act provides`
+
+@export Do the listed Income Tax Act collection provisions apply to a CPP amount I owe (s 23(2))?
+GIVEN `the amount is a contribution, interest, penalty or other amount payable by me under the Act` IS A BOOLEAN @desc Is the amount a contribution, interest, penalty or other amount payable by you under the Canada Pension Plan Act?
+GIVETH A BOOLEAN
+DECIDE `Do the listed Income Tax Act collection provisions apply to a CPP amount I owe (s 23(2))` IF
+    `s 23(2) — the listed provisions of the Income Tax Act apply to the amount` `the amount is a contribution, interest, penalty or other amount payable by me under the Act`
+
+@export Does subsection 224(1.2) of the Income Tax Act apply to the contributions and related amounts I owe (s 23(2)(b))?
+GIVEN `the amount is an employer's contribution, an employee's contribution, or related interest, penalties or other amounts` IS A BOOLEAN @desc Is the amount an employer's contribution, an employee's contribution, or related interest, penalties or other amounts?
+      `a stay under the Bankruptcy and Insolvency Act or the Companies' Creditors Arrangement Act applies` IS A BOOLEAN @desc Does subsection 69(1) or 69.1(1) of the Bankruptcy and Insolvency Act, or section 11.09 of the Companies' Creditors Arrangement Act, apply to the amount?
+GIVETH A BOOLEAN
+DECIDE `Does subsection 224(1.2) of the Income Tax Act apply to the contributions and related amounts I owe (s 23(2)(b))` IF
+    `s 23(2)(b) — subsection 224(1.2) of the Income Tax Act applies to the amount` `the amount is an employer's contribution, an employee's contribution, or related interest, penalties or other amounts` `a stay under the Bankruptcy and Insolvency Act or the Companies' Creditors Arrangement Act applies`
+
+@export Do I hold the CPP I deducted from my employee's pay in trust for Her Majesty (s 23(3))?
+GIVEN `I deducted an amount from my employee's pay as a contribution` IS A BOOLEAN @desc Did you deduct an amount from an employee's remuneration as or on account of a contribution required to be made by the employee?
+      `I have remitted the amount to the Receiver General` IS A BOOLEAN @desc Have you remitted the amount to the Receiver General?
+GIVETH A BOOLEAN
+DECIDE `Do I hold the CPP I deducted from my employee's pay in trust for Her Majesty (s 23(3))` IF
+    `s 23(3) — the employer is deemed to hold the amount in trust for Her Majesty` `I deducted an amount from my employee's pay as a contribution` `I have remitted the amount to the Receiver General`
+
+@export How much do I hold in trust for Her Majesty, in dollars (s 23(3))?
+GIVEN `the amount I deducted from my employee's pay as a contribution` IS A NUMBER @desc How much did you deduct from the employee's remuneration as or on account of the employee's contribution, in dollars?
+      `the amount of it I have remitted to the Receiver General` IS A NUMBER @desc How much of it have you remitted to the Receiver General, in dollars?
+GIVETH A NUMBER
+DECIDE `How much do I hold in trust for Her Majesty (s 23(3))` IS
+    `s 23(3) — the amount the employer is deemed to hold in trust for Her Majesty` `the amount I deducted from my employee's pay as a contribution` `the amount of it I have remitted to the Receiver General`
+
+@export Is an interest a security interest for the trust rules, or is it a prescribed one (s 23(4.1))?
+GIVEN `the interest is a security interest as defined in subsection 224(1.3) of the Income Tax Act` IS A BOOLEAN @desc Is the interest a security interest as defined in subsection 224(1.3) of the Income Tax Act?
+      `the interest is a prescribed security interest` IS A BOOLEAN @desc Is the interest a prescribed security interest (Regulations section 8.3)?
+GIVETH A BOOLEAN
+DECIDE `Is an interest a security interest for the trust rules, or is it a prescribed one (s 23(4.1))` IF
+    `s 23(4.1) — the interest is a security interest for subsections 23(3) and 23(4)` `the interest is a security interest as defined in subsection 224(1.3) of the Income Tax Act` `the interest is a prescribed security interest`
+
+@export What is the value of my property that is deemed held in trust for Her Majesty, in dollars (s 23(4))?
+GIVEN `the amount deemed held in trust under subsection 23(3)` IS A NUMBER @desc What amount is deemed by subsection 23(3) to be held in trust, in dollars?
+      `the amount has been paid to Her Majesty in the manner and at the time the Act provides` IS A BOOLEAN @desc Has the amount been paid to Her Majesty in the manner and at the time the Act provides?
+GIVETH A NUMBER
+DECIDE `What is the value of my property that is deemed held in trust for Her Majesty (s 23(4))` IS
+    `s 23(4) — the value of the property deemed to be held in trust for Her Majesty` `the amount deemed held in trust under subsection 23(3)` `the amount has been paid to Her Majesty in the manner and at the time the Act provides`
+
+@export From what time is my property deemed to be held in trust for Her Majesty (s 23(4)(a))?
+GIVEN `the day I deducted the amount` IS A DATE @desc On what day did you deduct the amount?
+GIVETH A DATE
+DECIDE `From what time is my property deemed to be held in trust for Her Majesty (s 23(4)(a))` IS
+    `s 23(4)(a) — the time from which the property is deemed to be held in trust` `the day I deducted the amount`
+
+@export Does Her Majesty's claim to my property rank ahead of a security interest in it (s 23(4))?
+GIVEN `the value of the property deemed held in trust` IS A NUMBER @desc What is the value of the property deemed to be held in trust for Her Majesty, in dollars?
+      `the interest is a security interest for subsections 23(3) and 23(4)` IS A BOOLEAN @desc Is the interest in the property a security interest for subsections 23(3) and 23(4)?
+      `section 81.1 or 81.2 of the Bankruptcy and Insolvency Act gives the claimant priority` IS A BOOLEAN @desc Does section 81.1 or 81.2 of the Bankruptcy and Insolvency Act give the other claimant priority?
+GIVETH A BOOLEAN
+DECIDE `Does Her Majesty's claim to my property rank ahead of a security interest in it (s 23(4))` IF
+    `s 23(4) — Her Majesty's claim to the property and its proceeds ranks ahead of the security interest` `the value of the property deemed held in trust` `the interest is a security interest for subsections 23(3) and 23(4)` `section 81.1 or 81.2 of the Bankruptcy and Insolvency Act gives the claimant priority`
+
+-- s 23(5) to (6). For an executor, administrator or other person who winds up another's affairs (including a survivor).
+@export Am I a responsible representative under section 23 (s 23(5))?
+GIVEN `my capacity` IS A `cp2 Kind of person dealing with another person's property` @desc In what capacity do you deal with another person's property or estate? Choose one: `an assignee dealing with another person's property`, `a liquidator dealing with another person's property`, `a receiver dealing with another person's property`, `a receiver-manager dealing with another person's property`, `an administrator dealing with another person's property`, `an executor dealing with another person's estate`, `a liquidator of a succession dealing with another person's estate`, `another like person dealing with another person's property`, `a trustee in bankruptcy dealing with another person's property` or `a person of no such kind`.
+      `I am administering, winding up, controlling or otherwise dealing with a property, business or estate of another person` IS A BOOLEAN @desc Are you administering, winding up, controlling or otherwise dealing with a property, business or estate of another person?
+GIVETH A BOOLEAN
+DECIDE `Am I a responsible representative under section 23 (s 23(5))` IF
+    `s 23(5) — the person is a responsible representative` `my capacity` `I am administering, winding up, controlling or otherwise dealing with a property, business or estate of another person`
+
+@export Must I obtain a certificate from the Minister before I distribute property I administer (s 23(5))?
+GIVEN `my capacity` IS A `cp2 Kind of person dealing with another person's property` @desc In what capacity do you deal with another person's property or estate? Choose one: `an assignee dealing with another person's property`, `a liquidator dealing with another person's property`, `a receiver dealing with another person's property`, `a receiver-manager dealing with another person's property`, `an administrator dealing with another person's property`, `an executor dealing with another person's estate`, `a liquidator of a succession dealing with another person's estate`, `another like person dealing with another person's property`, `a trustee in bankruptcy dealing with another person's property` or `a person of no such kind`.
+      `I am administering, winding up, controlling or otherwise dealing with a property, business or estate of another person` IS A BOOLEAN @desc Are you administering, winding up, controlling or otherwise dealing with a property, business or estate of another person?
+      `I am about to distribute property I control to one or more persons` IS A BOOLEAN @desc Are you about to distribute to one or more persons property over which you have control in that capacity?
+GIVETH A BOOLEAN
+DECIDE `Must I obtain a certificate from the Minister before I distribute property I administer (s 23(5))` IF
+    `s 23(5) — the responsible representative must obtain a certificate from the Minister before distributing`
+        (`s 23(5) — the person is a responsible representative` `my capacity` `I am administering, winding up, controlling or otherwise dealing with a property, business or estate of another person`)
+        `I am about to distribute property I control to one or more persons`
+
+@export May the Minister certify that the amounts I must have covered are paid or secured (s 23(5))?
+GIVEN `the amounts for which any employer is liable have been paid` IS A BOOLEAN @desc Have the amounts for which any employer is liable under the Act, up to and including the date of distribution, been paid?
+      `the amounts for which I am or can be liable as representative have been paid` IS A BOOLEAN @desc Have the amounts for the payment of which you are, or can reasonably be expected to become, liable in your capacity as responsible representative been paid?
+      `security for the payment has been accepted by the Minister` IS A BOOLEAN @desc Has the Minister accepted security for the payment of those amounts?
+GIVETH A BOOLEAN
+DECIDE `May the Minister certify that the amounts I must have covered are paid or secured (s 23(5))` IF
+    `s 23(5) — the Minister may certify that the amounts are covered` `the amounts for which any employer is liable have been paid` `the amounts for which I am or can be liable as representative have been paid` `security for the payment has been accepted by the Minister`
+
+@export Am I personally liable if I distributed property without a certificate (s 23(5.1))?
+GIVEN `my capacity` IS A `cp2 Kind of person dealing with another person's property` @desc In what capacity do you deal with another person's property or estate? Choose one: `an assignee dealing with another person's property`, `a liquidator dealing with another person's property`, `a receiver dealing with another person's property`, `a receiver-manager dealing with another person's property`, `an administrator dealing with another person's property`, `an executor dealing with another person's estate`, `a liquidator of a succession dealing with another person's estate`, `another like person dealing with another person's property`, `a trustee in bankruptcy dealing with another person's property` or `a person of no such kind`.
+      `I am administering, winding up, controlling or otherwise dealing with a property, business or estate of another person` IS A BOOLEAN @desc Are you administering, winding up, controlling or otherwise dealing with a property, business or estate of another person?
+      `I distributed property I controlled to one or more persons` IS A BOOLEAN @desc Did you distribute to one or more persons property over which you had control in that capacity?
+      `I obtained a certificate under subsection 23(5) for the amounts` IS A BOOLEAN @desc Did you obtain a certificate from the Minister under subsection 23(5) in respect of the amounts?
+GIVETH A BOOLEAN
+DECIDE `Am I personally liable if I distributed property without a certificate (s 23(5.1))` IF
+    `s 23(5.1) — the responsible representative is personally liable for the amounts`
+        (`s 23(5) — the person is a responsible representative` `my capacity` `I am administering, winding up, controlling or otherwise dealing with a property, business or estate of another person`)
+        `I distributed property I controlled to one or more persons`
+        `I obtained a certificate under subsection 23(5) for the amounts`
+
+@export How much am I personally liable for if I distributed property without a certificate, in dollars (s 23(5.1))?
+GIVEN `my capacity` IS A `cp2 Kind of person dealing with another person's property` @desc In what capacity do you deal with another person's property or estate? Choose one: `an assignee dealing with another person's property`, `a liquidator dealing with another person's property`, `a receiver dealing with another person's property`, `a receiver-manager dealing with another person's property`, `an administrator dealing with another person's property`, `an executor dealing with another person's estate`, `a liquidator of a succession dealing with another person's estate`, `another like person dealing with another person's property`, `a trustee in bankruptcy dealing with another person's property` or `a person of no such kind`.
+      `I am administering, winding up, controlling or otherwise dealing with a property, business or estate of another person` IS A BOOLEAN @desc Are you administering, winding up, controlling or otherwise dealing with a property, business or estate of another person?
+      `I distributed property I controlled to one or more persons` IS A BOOLEAN @desc Did you distribute to one or more persons property over which you had control in that capacity?
+      `I obtained a certificate under subsection 23(5) for the amounts` IS A BOOLEAN @desc Did you obtain a certificate from the Minister under subsection 23(5) in respect of the amounts?
+      `the amounts referred to in subsection 23(5)` IS A NUMBER @desc What are the amounts referred to in subsection 23(5) (what any employer is liable for and what you are or can be liable for as representative), in dollars?
+      `the value of the property I distributed` IS A NUMBER @desc What was the value of the property you distributed, in dollars?
+GIVETH A NUMBER
+DECIDE `How much am I personally liable for if I distributed property without a certificate (s 23(5.1))` IS
+    `s 23(5.1) — the amount for which the responsible representative is personally liable`
+        (`s 23(5) — the person is a responsible representative` `my capacity` `I am administering, winding up, controlling or otherwise dealing with a property, business or estate of another person`)
+        `I distributed property I controlled to one or more persons`
+        `I obtained a certificate under subsection 23(5) for the amounts`
+        `the amounts referred to in subsection 23(5)`
+        `the value of the property I distributed`
+
+@export Am I the bankrupt employer's agent for all purposes of the Act (s 23(6))?
+GIVEN `the employer has become a bankrupt` IS A BOOLEAN @desc Has the employer become a bankrupt?
+      `I am the employer's trustee in bankruptcy` IS A BOOLEAN @desc Are you the trustee in bankruptcy of the bankrupt employer?
+GIVETH A BOOLEAN
+DECIDE `Am I the bankrupt employer's agent for all purposes of the Act (s 23(6))` IF
+    `s 23(6) — the trustee in bankruptcy is deemed to be the agent of the bankrupt for all purposes of this Act` `the employer has become a bankrupt` `I am the employer's trustee in bankruptcy`
+
+-- s 24. Records.
+@export Must I, as an employer, keep records and books of account (s 24(1))?
+GIVEN `my worker is employed under a contract of service or apprenticeship` IS A BOOLEAN @desc Is the person you pay employed by you under an express or implied contract of service or apprenticeship?
+      `my worker holds an office` IS A BOOLEAN @desc Does the person hold an office, for example as a company director or an elected official?
+      `I pay my worker's remuneration for the office` IS A BOOLEAN @desc If the person holds an office, do they receive their remuneration for it from you?
+      `I am liable to pay my worker for this work` IS A BOOLEAN @desc Are you liable to pay the person salary, wages or other remuneration for this work?
+      `the work is pensionable employment` IS A BOOLEAN @desc Is the work pensionable employment under section 6 of the Act?
+      `I pay remuneration to my worker` IS A BOOLEAN @desc Are you paying the person remuneration for this work?
+GIVETH A BOOLEAN
+DECIDE `Must I, as an employer, keep records and books of account (s 24(1))` IF
+    `s 24(1) — the employer must keep records and books of account` `the relationship I describe` `I pay remuneration to my worker`
+    WHERE
+        `the relationship I describe` MEANS
+            `cp2 seat — the employment relationship as the person describes it`
+                `my worker is employed under a contract of service or apprenticeship`
+                `my worker holds an office`
+                `I pay my worker's remuneration for the office`
+                `I am liable to pay my worker for this work`
+                `the work is pensionable employment`
+
+@export May I keep my records and books of account at a given place (s 24(1))?
+GIVEN `the place` IS A `cp2 Place where an employer keeps its records` @desc Where do you keep them? Choose one: `the employer's place of business in Canada`, `the employer's residence in Canada`, `a place the Minister has designated` or `any other place`.
+GIVETH A BOOLEAN
+DECIDE `May I keep my records and books of account at a given place (s 24(1))` IF
+    `s 24(1) — the employer may keep its records at the place` `the place`
+
+@export Must I keep the records and books of account the Minister specified (s 24(1))?
+GIVEN `my records and books of account are inadequate` IS A BOOLEAN @desc Have you failed to keep adequate records and books of account?
+      `the Minister required me to keep the records the Minister specified` IS A BOOLEAN @desc Has the Minister required you to keep the records and books of account the Minister specified?
+GIVETH A BOOLEAN
+DECIDE `Must I keep the records and books of account the Minister specified (s 24(1))` IF
+    `s 24(1) — the employer must keep the records and books of account that the Minister specified` `my records and books of account are inadequate` `the Minister required me to keep the records the Minister specified`
+
+@export Until what day must I keep my records and books of account (s 24(2))?
+GIVEN `the year the records are kept for` IS A NUMBER @desc For which calendar year are the records and books of account kept?
+      `the Minister gave me written permission to dispose of them earlier` IS A BOOLEAN @desc Has the Minister given you written permission for their prior disposal?
+      `the day the Minister gave that permission` IS A DATE @desc On what day did the Minister give that permission? (Any date if not.)
+GIVETH A DATE
+DECIDE `Until what day must I keep my records and books of account (s 24(2))` IS
+    `s 24(2) — the last day the employer must retain the records and books of account`
+        `the year the records are kept for`
+        (`cp2 seat — the day it happened, if it did` `the Minister gave me written permission to dispose of them earlier` `the day the Minister gave that permission`)
+
+@export Must I still be keeping my records and books of account on a given day (s 24(2))?
+GIVEN `the day in question` IS A DATE @desc On which day do you ask?
+      `the year the records are kept for` IS A NUMBER @desc For which calendar year are the records and books of account kept?
+      `the Minister gave me written permission to dispose of them earlier` IS A BOOLEAN @desc Has the Minister given you written permission for their prior disposal?
+      `the day the Minister gave that permission` IS A DATE @desc On what day did the Minister give that permission? (Any date if not.)
+GIVETH A BOOLEAN
+DECIDE `Must I still be keeping my records and books of account on a given day (s 24(2))` IF
+    `s 24(2) — the employer must still retain the records and books of account on the day`
+        `the day in question`
+        `the year the records are kept for`
+        (`cp2 seat — the day it happened, if it did` `the Minister gave me written permission to dispose of them earlier` `the day the Minister gave that permission`)
+
+@export Must I keep electronic records in an electronically readable format (s 24(2.1))?
+GIVEN `I keep the records electronically` IS A BOOLEAN @desc Do you keep the records electronically?
+      `the Minister has exempted me from the electronic format requirement` IS A BOOLEAN @desc Has the Minister exempted you from the requirement to retain them in an electronically readable format?
+GIVETH A BOOLEAN
+DECIDE `Must I keep electronic records in an electronically readable format (s 24(2.1))` IF
+    `s 24(2.1) — the employer must retain the records in an electronically readable format for the retention period` `I keep the records electronically` `the Minister has exempted me from the electronic format requirement`
+
+@export Am I exempt from keeping electronic records in an electronically readable format (s 24(2.2))?
+GIVEN `the Minister has exempted me or a class of employers that includes me, on acceptable terms` IS A BOOLEAN @desc Has the Minister exempted you, or a class of employers that includes you, from the requirement, on terms acceptable to the Minister?
+      `I meet those terms` IS A BOOLEAN @desc Do you meet those terms and conditions?
+GIVETH A BOOLEAN
+DECIDE `Am I exempt from keeping electronic records in an electronically readable format (s 24(2.2))` IF
+    `s 24(2.2) — the employer is exempt from the requirement to retain electronic records in an electronically readable format` `the Minister has exempted me or a class of employers that includes me, on acceptable terms` `I meet those terms`
+
+@export Must I keep my records while a ruling or an appeal about them is open (s 24(3))?
+GIVEN `I or my employee is subject to a ruling under section 26.1` IS A BOOLEAN @desc Are you or an employee of yours subject to a ruling under section 26.1?
+      `the ruling has been made` IS A BOOLEAN @desc Has the ruling been made?
+      `I or my employee made an appeal to the Minister under section 27 or 27.1` IS A BOOLEAN @desc Have you or an employee of yours made an appeal to the Minister under section 27 or 27.1?
+      `the appeal has been disposed of` IS A BOOLEAN @desc Has the appeal been disposed of?
+      `any further appeal is disposed of or the time for filing it has expired` IS A BOOLEAN @desc Has any further appeal been disposed of, or has the time for filing a further appeal expired?
+GIVETH A BOOLEAN
+DECIDE `Must I keep my records while a ruling or an appeal about them is open (s 24(3))` IF
+    `s 24(3) — the employer must still retain every record, book of account, account and voucher necessary for the ruling or appeal`
+        `I or my employee is subject to a ruling under section 26.1`
+        `the ruling has been made`
+        `I or my employee made an appeal to the Minister under section 27 or 27.1`
+        `the appeal has been disposed of`
+        `any further appeal is disposed of or the time for filing it has expired`
+
+-- s 38(3.1) to (3.3). The employer's refunds.
+@export May the Minister refund what I remitted as employer in excess of what section 9 requires (s 38(3.1))?
+GIVEN `I applied to the Minister` IS A BOOLEAN @desc Did you apply to the Minister?
+      `the Minister is satisfied that what I remitted exceeds what section 9 requires` IS A BOOLEAN @desc Is the Minister satisfied that the amount you remitted as employer's contributions for the employee for the year exceeds the contributions section 9 requires of you? (The Act leaves this judgment to the Minister.)
+      `the year` IS A NUMBER @desc For which calendar year was the excess remitted?
+      `the day I applied` IS A DATE @desc On what day did you apply? (You have four years after the end of the year.)
+GIVETH A BOOLEAN
+DECIDE `May the Minister refund what I remitted as employer in excess of what section 9 requires (s 38(3.1))` IF
+    `s 38(3.1) — the Minister may refund the excess to the employer` `I applied to the Minister` `the Minister is satisfied that what I remitted exceeds what section 9 requires` `the year` `the day I applied`
+
+@export How much of what I remitted as employer is an excess I may be refunded, in dollars (s 38(3.1))?
+GIVEN `the amount I remitted as employer's contributions for the employee for the year` IS A NUMBER @desc How much did you remit as employer's contributions for the employee for the year, in dollars?
+      `the contributions section 9 requires of me for the employee for the year` IS A NUMBER @desc What contributions does section 9 require of you for the employee for the year, in dollars?
+GIVETH A NUMBER
+DECIDE `How much of what I remitted as employer is an excess I may be refunded (s 38(3.1))` IS
+    `s 38(3.1) — the amount of the excess the Minister may refund to the employer` `the amount I remitted as employer's contributions for the employee for the year` `the contributions section 9 requires of me for the employee for the year`
+
+@export Does subsection 38(3.2) bar a refund of an employer's contribution that section 9 requires (s 38(3.2))?
+GIVEN `the amount is a contribution required to be made as an employer's contribution under section 9` IS A BOOLEAN @desc Is the amount a contribution required to be made as an employer's contribution under section 9?
+GIVETH A BOOLEAN
+DECIDE `Does subsection 38(3.2) bar a refund of an employer's contribution that section 9 requires (s 38(3.2))` IF
+    `s 38(3.2) — no refund may be made of the amount` `the amount is a contribution required to be made as an employer's contribution under section 9`
+
+@export May the Minister refund an amount I remitted that is treated as never deducted under section 21.01 (s 38(3.3))?
+GIVEN `an amount I remitted is deemed under section 21.01 not to have been deducted` IS A BOOLEAN @desc Is an amount you remitted deemed under section 21.01 not to have been deducted?
+      `I applied to the Minister for the refund` IS A BOOLEAN @desc Did you apply to the Minister for the refund?
+      `the year for which the amount was remitted` IS A NUMBER @desc For which calendar year was the amount remitted?
+      `the day I applied` IS A DATE @desc On what day did you apply? (You have four years after the end of the year.)
+GIVETH A BOOLEAN
+DECIDE `May the Minister refund an amount I remitted that is treated as never deducted under section 21.01 (s 38(3.3))` IF
+    `s 38(3.3) — the Minister may refund the section 21.01 amount to the employer` `an amount I remitted is deemed under section 21.01 not to have been deducted` `I applied to the Minister for the refund` `the year for which the amount was remitted` `the day I applied`
+
+-- s 41(1). The employer's offence.
+@export Am I guilty of an offence as an employer if I fail to deduct and remit or to hold the amounts in trust (s 41(1))?
+GIVEN `I failed to comply with subsection 21(1)` IS A BOOLEAN @desc Did you, as an employer, fail to comply with subsection 21(1) (to deduct and remit)?
+      `I failed to comply with subsection 23(3)` IS A BOOLEAN @desc Did you, as an employer, fail to comply with subsection 23(3) (the trust for amounts deducted)?
+GIVETH A BOOLEAN
+DECIDE `Am I guilty of an offence as an employer if I fail to deduct and remit or to hold the amounts in trust (s 41(1))` IF
+    `s 41(1) — the employer is guilty of an offence` `I failed to comply with subsection 21(1)` `I failed to comply with subsection 23(3)`
+
+@export What is the most the court may fine me as an employer for that offence, in dollars (s 41(1))?
+GIVEN `I am guilty of an offence under subsection 41(1)` IS A BOOLEAN @desc Are you guilty of an offence under subsection 41(1)?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most the court may fine me as an employer for that offence (s 41(1))` IS
+    `s 41(1) — the most the court may fine the employer` `I am guilty of an offence under subsection 41(1)`
+
+@export What is the longest term of imprisonment, in months, that may be imposed with the fine on an employer (s 41(1))?
+GIVEN `I am guilty of an offence under subsection 41(1)` IS A BOOLEAN @desc Are you guilty of an offence under subsection 41(1)?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the longest term of imprisonment, in months, that may be imposed with the fine on an employer (s 41(1))` IS
+    `s 41(1) — the longest term of imprisonment, in months, that may be imposed with the fine` `I am guilty of an offence under subsection 41(1)`
+
+-- s 38(3.1) to (3.3) and the rulings an employer may ask for are the same rules as the employee's; the employer's ruling request is s 26.1(1).
+@export As an employer, can I ask the Canada Revenue Agency for a ruling (s 26.1(1))?
+GIVEN `my question is one the Act lists` IS A BOOLEAN @desc Is your question one of these: whether an employment is pensionable; how long it lasts, including the dates it begins and ends; what the earnings from pensionable employment are; whether a contribution is payable; how much a payable contribution is; or who the employer of a person in pensionable employment is?
+GIVETH A BOOLEAN
+DECIDE `As an employer, can I ask the Canada Revenue Agency for a ruling (s 26.1(1))` IF
+    `s 26.1(1) — the person may request a ruling on the question` `an employer requesting a ruling` (IF `my question is one the Act lists` THEN `whether an employment is pensionable` ELSE `another question`)
+
+@export As an employer, am I in time to ask for a ruling (s 26.1(2))?
+GIVEN `the year the question is about` IS A NUMBER @desc Which calendar year does your question relate to?
+      `the day I make the request` IS A DATE @desc On what day do you make the request? (An employer must ask before June 30 of the year after the year the question relates to.)
+GIVETH A BOOLEAN
+DECIDE `As an employer, am I in time to ask for a ruling (s 26.1(2))` IF
+    `s 26.1(2) — the request is made in time` `an employer requesting a ruling` `the year the question is about` `the day I make the request`
+
+§§ `If someone from the Canada Revenue Agency inspects, or asks you for information (s 25)`
+
+-- Situational: ask "Has an authorized person asked to inspect your documents or premises, or served you with a notice?" before showing this group.
+
+-- s 25(2). The authorized person's power is the document-holder's liability to be inspected.
+@export Can an authorized person inspect, audit or examine my documents (s 25(2))?
+GIVEN `the person is authorized by the Minister for the purposes of section 25` IS A BOOLEAN @desc Has the Minister authorized the person for the purposes of section 25?
+      `the time is a reasonable time` IS A BOOLEAN @desc Is it a reasonable time of day?
+      `the purpose relates to administering or enforcing the Act` IS A BOOLEAN @desc Does the inspection relate to the administration or enforcement of the Canada Pension Plan Act?
+      `the document relates to the records or the contributions` IS A BOOLEAN @desc Does the document relate, or may it relate, to the information that is or should be in the records or books of account, or to the amount of any contribution payable under the Act?
+GIVETH A BOOLEAN
+DECIDE `Can an authorized person inspect, audit or examine my documents (s 25(2))` IF
+    `s 25(2) — the authorized person may inspect, audit or examine the document`
+        (`s 25(1) — an authorized person` `the person is authorized by the Minister for the purposes of section 25`)
+        `the time is a reasonable time`
+        `the purpose relates to administering or enforcing the Act`
+        `the document relates to the records or the contributions`
+
+-- s 25(1). The words the section defines, asked by someone holding or handing over a thing.
+@export Is this thing a document for section 25 (s 25(1))?
+GIVEN `the thing` IS A `cp2 Kind of thing that may be a document` @desc What kind of thing is it? Choose one: `money, as a document`, `securities, as a document`, `books, whether computerized or not`, `records, whether computerized or not`, `letters, whether computerized or not`, `telegrams, whether computerized or not`, `vouchers, whether computerized or not`, `invoices, whether computerized or not`, `accounts, whether computerized or not`, `statements, financial or otherwise, whether computerized or not` or `another kind of thing`.
+GIVETH A MAYBE BOOLEAN
+DECIDE `Is this thing a document for section 25 (s 25(1))` IS
+    `s 25(1) — documents` `the thing`
+
+@export Is this person a judge for section 25 (s 25(1))?
+GIVEN `the person is a judge of a superior court having jurisdiction in the province where the matter arises` IS A BOOLEAN @desc Is the person a judge of a superior court having jurisdiction in the province where the matter arises?
+      `the person is a judge of the Federal Court` IS A BOOLEAN @desc Is the person a judge of the Federal Court?
+GIVETH A BOOLEAN
+DECIDE `Is this person a judge for section 25 (s 25(1))` IF
+    `s 25(1) — a judge` `the person is a judge of a superior court having jurisdiction in the province where the matter arises` `the person is a judge of the Federal Court`
+
+-- s 25(3). A dwelling-house cannot be entered without the occupant's consent except under a warrant.
+@export May an authorized person enter this place without my consent unless they have a warrant (s 25(3))?
+GIVEN `the place is kept or occupied as a residence` IS A BOOLEAN @desc Is the place all or part of a building or structure that is kept or occupied as a permanent or temporary residence?
+      `the place is a connected building within the curtilage of a residence` IS A BOOLEAN @desc Is the place a building within the curtilage of a residence that is connected to it by a doorway or by a covered and enclosed passageway?
+      `the place is a mobile unit used as a residence` IS A BOOLEAN @desc Is the place a unit designed to be mobile and to be used as a permanent or temporary residence that is being used as one?
+      `I, the occupant, consent to the entry` IS A BOOLEAN @desc Do you, as the occupant, consent to the entry?
+      `the entry is under a warrant issued under subsection 25(4)` IS A BOOLEAN @desc Is the entry under a warrant issued by a judge under subsection 25(4)?
+GIVETH A BOOLEAN
+DECIDE `May an authorized person enter this place without my consent unless they have a warrant (s 25(3))` IF
+    `s 25(3) — the authorized person may enter the premises or place`
+        (`s 25(1) — a dwelling-house`
+            `the place is kept or occupied as a residence`
+            `the place is a connected building within the curtilage of a residence`
+            `the place is a mobile unit used as a residence`)
+        `I, the occupant, consent to the entry`
+        `the entry is under a warrant issued under subsection 25(4)`
+
+-- s 25(2)(a) and (3). A dwelling-house cannot be entered without the occupant's consent unless there is a warrant.
+@export Can an authorized person enter this place to look for records (s 25(2)(a) and (3))?
+GIVEN `the person is authorized by the Minister for the purposes of section 25` IS A BOOLEAN @desc Has the Minister authorized the person for the purposes of section 25?
+      `the time is a reasonable time` IS A BOOLEAN @desc Is it a reasonable time of day?
+      `the purpose relates to administering or enforcing the Act` IS A BOOLEAN @desc Does the entry relate to the administration or enforcement of the Canada Pension Plan Act?
+      `records or books of account are or should be kept at the place` IS A BOOLEAN @desc Are records or books of account kept at this place, or should they be?
+      `the place is kept or occupied as a residence` IS A BOOLEAN @desc Is the place all or part of a building or structure that is kept or occupied as a permanent or temporary residence?
+      `the place is a connected building within the curtilage of a residence` IS A BOOLEAN @desc Is the place a building within the curtilage of a residence that is connected to it by a doorway or by a covered and enclosed passageway?
+      `the place is a mobile unit used as a residence` IS A BOOLEAN @desc Is the place a unit designed to be mobile and to be used as a permanent or temporary residence that is being used as one?
+      `I, the occupant, consent to the entry` IS A BOOLEAN @desc Do you, as the occupant, consent to the entry?
+      `the entry is under a warrant issued under subsection 25(4)` IS A BOOLEAN @desc Is the entry under a warrant issued by a judge under subsection 25(4)?
+GIVETH A BOOLEAN
+DECIDE `Can an authorized person enter this place to look for records (s 25(2)(a) and (3))` IF
+    `s 25(2)(a) — the authorized person may enter the premises or place`
+        (`s 25(1) — an authorized person` `the person is authorized by the Minister for the purposes of section 25`)
+        `the time is a reasonable time`
+        `the purpose relates to administering or enforcing the Act`
+        `records or books of account are or should be kept at the place`
+        (`s 25(1) — a dwelling-house`
+            `the place is kept or occupied as a residence`
+            `the place is a connected building within the curtilage of a residence`
+            `the place is a mobile unit used as a residence`)
+        `I, the occupant, consent to the entry`
+        `the entry is under a warrant issued under subsection 25(4)`
+
+-- s 25(2)(b). The authorized person's claim to assistance is the occupant's duty to give it.
+@export Must I give reasonable assistance, answer proper questions and attend with an authorized person (s 25(2)(b))?
+GIVEN `the person is authorized by the Minister for the purposes of section 25` IS A BOOLEAN @desc Has the Minister authorized the person for the purposes of section 25?
+      `the time is a reasonable time` IS A BOOLEAN @desc Is it a reasonable time of day?
+      `the purpose relates to administering or enforcing the Act` IS A BOOLEAN @desc Does the request relate to the administration or enforcement of the Canada Pension Plan Act?
+      `I am the owner, occupant or person in charge of the place` IS A BOOLEAN @desc Are you the owner, occupant or person in charge of the premises or place?
+GIVETH A BOOLEAN
+DECIDE `Must I give reasonable assistance, answer proper questions and attend with an authorized person (s 25(2)(b))` IF
+    `s 25(2)(b) — the owner, occupant or person in charge must give all reasonable assistance, answer all proper questions and attend`
+        (`s 25(1) — an authorized person` `the person is authorized by the Minister for the purposes of section 25`)
+        `the time is a reasonable time`
+        `the purpose relates to administering or enforcing the Act`
+        `I am the owner, occupant or person in charge of the place`
+
+-- s 25(4). What a judge must do on the Minister's application about a dwelling-house. The judge's satisfaction is a conditional input.
+@export What must a judge do when the Minister applies for a warrant or an order about my home (s 25(4))?
+GIVEN `the Minister applied ex parte to a judge` IS A BOOLEAN @desc Did the Minister apply ex parte (without notice to you) to a judge?
+      `the judge is satisfied there are reasonable grounds to believe the place is one where records are or should be kept` IS A BOOLEAN @desc Is the judge satisfied by information on oath that there are reasonable grounds to believe the dwelling-house is a premises or place where records or books of account are or should be kept?
+      `the judge is satisfied that entry is necessary` IS A BOOLEAN @desc Is the judge satisfied by information on oath that entry into the dwelling-house is necessary for a purpose relating to the administration or enforcement of the Act?
+      `the judge is satisfied that entry has been refused or will be` IS A BOOLEAN @desc Is the judge satisfied by information on oath that entry has been refused, or that there are reasonable grounds for believing it will be refused?
+      `access to the document has been or may be expected to be refused` IS A BOOLEAN @desc Has access to the document been refused, or may it be expected to be refused?
+      `the document is or may be expected to be kept in my home` IS A BOOLEAN @desc Is the document, or may it be expected to be, kept in the dwelling-house?
+GIVETH A `cp2 Outcome of the Minister's application about a dwelling-house`
+DECIDE `What must a judge do when the Minister applies for a warrant or an order about my home (s 25(4))` IS
+    `s 25(4) — what the judge must do on the Minister's application`
+        `the Minister applied ex parte to a judge`
+        `the judge is satisfied there are reasonable grounds to believe the place is one where records are or should be kept`
+        `the judge is satisfied that entry is necessary`
+        `the judge is satisfied that entry has been refused or will be`
+        `access to the document has been or may be expected to be refused`
+        `the document is or may be expected to be kept in my home`
+
+-- s 25(5) and (6). The Minister's power to require is the person's duty to provide; a requirement about unnamed persons needs a judge's authorization first.
+@export Must I provide the information or document the Minister's notice requires (s 25(5) and (6))?
+GIVEN `the purpose relates to administering or enforcing the Act` IS A BOOLEAN @desc Does the requirement relate to the administration or enforcement of the Canada Pension Plan Act?
+      `the notice was served on me personally` IS A BOOLEAN @desc Was the notice served on you personally?
+      `the notice was served on me by registered or certified mail` IS A BOOLEAN @desc Was the notice served on you by registered or certified mail?
+      `the notice gives me a reasonable time` IS A BOOLEAN @desc Does the notice stipulate a reasonable time for you to provide what it asks for?
+      `the requirement is about one or more unnamed persons` IS A BOOLEAN @desc Does the requirement ask for information or documents about one or more unnamed persons (you are a third party)?
+      `a judge authorized the requirement beforehand` IS A BOOLEAN @desc Did the Minister first obtain a judge's authorization under subsection 25(7)? (No if the requirement is not about unnamed persons.)
+GIVETH A BOOLEAN
+DECIDE `Must I provide the information or document the Minister's notice requires (s 25(5) and (6))` IF
+    `s 25(5) — the person must provide the information or document the notice requires`
+        `the purpose relates to administering or enforcing the Act`
+        `the notice was served on me personally`
+        `the notice was served on me by registered or certified mail`
+        `the notice gives me a reasonable time`
+        (`s 25(6) — the Minister may impose the requirement on the third party`
+            `the requirement is about one or more unnamed persons`
+            `a judge authorized the requirement beforehand`)
+
+@export May a judge authorize the Minister to require information about unnamed persons from me (s 25(7))?
+GIVEN `the Minister applied ex parte to a judge` IS A BOOLEAN @desc Did the Minister apply ex parte to a judge?
+      `the judge is satisfied that the person or group is ascertainable` IS A BOOLEAN @desc Is the judge satisfied by information on oath that the person or group is ascertainable?
+      `the judge is satisfied that the requirement is to verify compliance` IS A BOOLEAN @desc Is the judge satisfied by information on oath that the requirement is made to verify compliance by the person or persons in the group with a duty or obligation under the Act?
+GIVETH A BOOLEAN
+DECIDE `May a judge authorize the Minister to require information about unnamed persons from me (s 25(7))` IF
+    `s 25(7) — the judge may authorize the Minister to impose the requirement relating to unnamed persons`
+        `the Minister applied ex parte to a judge`
+        `the judge is satisfied that the person or group is ascertainable`
+        `the judge is satisfied that the requirement is to verify compliance`
+
+@export Must the judge's authorization be served on me together with the Minister's notice (s 25(8))?
+GIVEN `an authorization has been granted under subsection 25(7)` IS A BOOLEAN @desc Has a judge granted an authorization under subsection 25(7)?
+      `the authorization was served with the notice` IS A BOOLEAN @desc Was the authorization served together with the notice under subsection 25(5)?
+GIVETH A BOOLEAN
+DECIDE `Must the judge's authorization be served on me together with the Minister's notice (s 25(8))` IF
+    `s 25(8) — the authorization has been served as required` `an authorization has been granted under subsection 25(7)` `the authorization was served with the notice`
+
+@export Can I ask a judge to review the authorization, and am I in time (s 25(9))?
+GIVEN `an authorization has been granted under subsection 25(7)` IS A BOOLEAN @desc Has a judge granted an authorization under subsection 25(7)?
+      `I am a third party served with a notice under subsection 25(5)` IS A BOOLEAN @desc Were you served, as a third party, with a notice under subsection 25(5)?
+      `the day the notice was served on me` IS A DATE @desc On what day was the notice served on you?
+      `the day I apply for the review` IS A DATE @desc On what day do you apply to the judge for a review?
+GIVETH A BOOLEAN
+DECIDE `Can I ask a judge to review the authorization, and am I in time (s 25(9))` IF
+    `s 25(9) — the third party may apply for a review of the authorization`
+        `an authorization has been granted under subsection 25(7)`
+        `I am a third party served with a notice under subsection 25(5)`
+        `the day the notice was served on me`
+        `the day I apply for the review`
+
+@export What may the judge do on my application for a review (s 25(10))?
+GIVEN `the judge is satisfied that the conditions in paragraphs 25(7)(a) and (b) have been met` IS A BOOLEAN @desc Is the judge, on hearing your application, satisfied that the person or group is ascertainable and that the requirement is made to verify compliance with a duty or obligation under the Act?
+GIVETH A `cp2 Outcome of a review of an authorization`
+DECIDE `What may the judge do on my application for a review (s 25(10))` IS
+    `s 25(10) — what the judge may do on the review` `the judge is satisfied that the conditions in paragraphs 25(7)(a) and (b) have been met`
+
+@export Can a court order me to comply after I am found guilty of not providing what the Minister required (s 25(11))?
+GIVEN `I have been found guilty under section 41(2) of failing to comply with a requirement under subsection 25(5)` IS A BOOLEAN @desc Have you been found guilty of an offence under subsection 41(2) for failing to comply with a requirement under subsection 25(5)?
+GIVETH A BOOLEAN
+DECIDE `Can a court order me to comply after I am found guilty of not providing what the Minister required (s 25(11))` IF
+    `s 25(11) — the court may make such order as it deems proper to enforce compliance with the requirement` `I have been found guilty under section 41(2) of failing to comply with a requirement under subsection 25(5)`
+
+@export May a copy or print-out of my document be made, and is a certified copy evidence (s 25(12))?
+GIVEN `my document was inspected, audited, examined or provided under section 25` IS A BOOLEAN @desc Was your document inspected, audited, examined or provided under section 25?
+      `the copy is made by the person who inspected it, the person it was provided to, or an officer of the Canada Revenue Agency` IS A BOOLEAN @desc Is the copy or print-out made by the person who inspected, audited or examined it, the person to whom it was provided, or an officer of the Canada Revenue Agency?
+GIVETH A BOOLEAN
+DECIDE `May a copy or print-out of my document be made, and is a certified copy evidence (s 25(12))` IF
+    `s 25(12) — a copy or print-out of the document may be made`
+        `my document was inspected, audited, examined or provided under section 25`
+        `the copy is made by the person who inspected it, the person it was provided to, or an officer of the Canada Revenue Agency`
+
+@export Is a copy certified by the Minister or an authorized person evidence of my document with the same force (s 25(12))?
+GIVEN `the copy purports to be certified by the Minister or an authorized person` IS A BOOLEAN @desc Does the copy, or the print-out of an electronic document, purport to be certified by the Minister or an authorized person to be a copy made under subsection 25(12)?
+GIVETH A BOOLEAN
+DECIDE `Is a copy certified by the Minister or an authorized person evidence of my document with the same force (s 25(12))` IF
+    `s 25(12) — the certified copy is evidence of the nature and content of the original with the same probative force` `the copy purports to be certified by the Minister or an authorized person`
+
+@export Am I breaking the Act if I hinder a person who is acting under section 25 (s 25(13))?
+GIVEN `I hindered, molested or interfered with the person, or prevented or tried to prevent them` IS A BOOLEAN @desc Did you hinder, molest or interfere with a person doing something section 25 authorizes, or prevent or try to prevent them from doing it?
+GIVETH A BOOLEAN
+DECIDE `Am I breaking the Act if I hinder a person who is acting under section 25 (s 25(13))` IF
+    `s 25(13) — the person contravenes the prohibition on hindering a person acting under section 25` `I hindered, molested or interfered with the person, or prevented or tried to prevent them`
+
+@export Have I failed to do everything section 25 requires of me (s 25(13))?
+GIVEN `I did everything section 25 requires of me` IS A BOOLEAN @desc Did you do everything you are required to do by or under section 25?
+      `I was unable to do so` IS A BOOLEAN @desc Were you unable to do what section 25 requires?
+GIVETH A BOOLEAN
+DECIDE `Have I failed to do everything section 25 requires of me (s 25(13))` IF
+    `s 25(13) — the person fails to do everything required under section 25` `I did everything section 25 requires of me` `I was unable to do so`
+
+§§ `If you want a ruling on your job, or want to appeal one (ss 26.1 to 29)`
+
+-- Situational: ask "Have you asked for, or been given, a ruling on your job or your contributions, or appealed an assessment or a decision?" before showing this group.
+
+-- s 26.1(1). The person's power to ask for a ruling is the officer's liability to be asked.
+@export Can I ask the Canada Revenue Agency for a ruling on my CPP position (s 26.1(1))?
+GIVEN `I am an employee, or I claim to be one` IS A BOOLEAN @desc Are you an employee, or a person claiming to be an employee, of the employer whose employment is in question?
+      `my question is one the Act lists` IS A BOOLEAN @desc Is your question one of these: whether an employment is pensionable; how long it lasts, including the dates it begins and ends; what the earnings from pensionable employment are; whether a contribution is payable; how much a payable contribution is; or who the employer of a person in pensionable employment is?
+GIVETH A BOOLEAN
+DECIDE `Can I ask the Canada Revenue Agency for a ruling on my CPP position (s 26.1(1))` IF
+    `s 26.1(1) — the person may request a ruling on the question`
+        (IF `I am an employee, or I claim to be one` THEN `an employee requesting a ruling` ELSE `another person requesting a ruling`)
+        (IF `my question is one the Act lists` THEN `whether an employment is pensionable` ELSE `another question`)
+
+@export Am I in time to ask for a ruling (s 26.1(2))?
+GIVEN `the year the question is about` IS A NUMBER @desc Which calendar year does your question relate to?
+      `the day I make the request` IS A DATE @desc On what day do you make the request for a ruling? (An employee must ask before June 30 of the year after the year the question relates to.)
+GIVETH A BOOLEAN
+DECIDE `Am I in time to ask for a ruling (s 26.1(2))` IF
+    `s 26.1(2) — the request is made in time` `an employee requesting a ruling` `the year the question is about` `the day I make the request`
+
+@export If nobody asked for a ruling, is what was deducted or paid for me presumed to be right (s 26.1(4))?
+GIVEN `a ruling has been requested about my employment` IS A BOOLEAN @desc Has anyone requested a ruling about your pensionable employment?
+      `an amount was deducted from my pay or paid by my employer as my contribution` IS A BOOLEAN @desc Was an amount deducted from your pay, or paid by your employer, as a contribution for you? (No if none was.)
+GIVETH A `cp2 What the Act presumes about an amount`
+DECIDE `If nobody asked for a ruling, is what was deducted or paid for me presumed to be right (s 26.1(4))` IS
+    `s 26.1(4) — what the Act presumes about the amount` `a ruling has been requested about my employment` `an amount was deducted from my pay or paid by my employer as my contribution`
+
+@export Am I in time to appeal a ruling to the Minister (s 27)?
+GIVEN `the day I was notified of the ruling` IS A DATE @desc On what day were you notified of the ruling?
+      `the day I appeal` IS A DATE @desc On what day do you appeal the ruling to the Minister?
+GIVETH A BOOLEAN
+DECIDE `Am I in time to appeal a ruling to the Minister (s 27)` IF
+    `s 27 — the appeal from the ruling is in time` FALSE TRUE `the day I was notified of the ruling` `the day I appeal`
+
+@export What is the last day I can appeal a ruling to the Minister (s 27)?
+GIVEN `the day I was notified of the ruling` IS A DATE @desc On what day were you notified of the ruling?
+GIVETH A DATE
+DECIDE `What is the last day I can appeal a ruling to the Minister (s 27)` IS
+    `s 27 — the last day for a person concerned to appeal the ruling to the Minister` `the day I was notified of the ruling`
+
+@export Must the Minister tell me about an appeal that may affect me and let me make representations (s 27.2(1))?
+GIVEN `an appeal has been made to the Minister under section 27 or 27.1` IS A BOOLEAN @desc Has an appeal been made to the Minister of a ruling (section 27) or of an assessment (section 27.1)?
+      `I may be affected by the appeal` IS A BOOLEAN @desc May you be affected by the appeal?
+GIVETH A BOOLEAN
+DECIDE `Must the Minister tell me about an appeal that may affect me and let me make representations (s 27.2(1))` IF
+    `s 27.2(1) — the Minister must notify the person and give the person an opportunity to provide information and make representations` `an appeal has been made to the Minister under section 27 or 27.1` `I may be affected by the appeal`
+
+@export On what day is the Minister's decision treated as communicated to me (s 28(1.1))?
+GIVEN `the Tax Court of Canada's rule fixes a day for communication` IS A BOOLEAN @desc Does a rule of the Tax Court of Canada made under paragraph 20(1.1)(h.1) of the Tax Court of Canada Act fix the time at which a decision is communicated?
+      `the day under that rule` IS A DATE @desc What day does that rule give? (Any date if there is no such rule.)
+      `the day the decision actually reached me` IS A DATE @desc On what day was the decision actually communicated to you?
+GIVETH A DATE
+DECIDE `On what day is the Minister's decision treated as communicated to me (s 28(1.1))` IS
+    `s 28(1.1) — the day the decision on the appeal to the Minister is communicated to the person`
+        (`cp2 seat — the day it happened, if it did` `the Tax Court of Canada's rule fixes a day for communication` `the day under that rule`)
+        `the day the decision actually reached me`
+
+@export Am I in time to appeal to the Tax Court of Canada (s 28(1))?
+GIVEN `I am a person affected by the Minister's decision` IS A BOOLEAN @desc Are you a person affected by the decision on an appeal to the Minister under section 27 or 27.1?
+      `I am the representative of a person affected by the decision` IS A BOOLEAN @desc Are you the representative of a person affected by the decision?
+      `the day the decision was communicated to me` IS A DATE @desc On what day was the decision communicated to you?
+      `the day I appeal to the Tax Court of Canada` IS A DATE @desc On what day do you appeal to the Tax Court of Canada?
+      `the Court allowed me a longer time` IS A BOOLEAN @desc Did the Tax Court of Canada allow you a longer time, on an application you made within 90 days after the first 90 days ended?
+      `the last day of the longer time the Court allowed` IS A DATE @desc What is the last day of the longer time the Court allowed? (Any date if it allowed none.)
+GIVETH A BOOLEAN
+DECIDE `Am I in time to appeal to the Tax Court of Canada (s 28(1))` IF
+    `s 28(1) — the appeal to the Tax Court of Canada may be brought`
+        `I am a person affected by the Minister's decision`
+        `I am the representative of a person affected by the decision`
+        `the day the decision was communicated to me`
+        `the day I appeal to the Tax Court of Canada`
+        `the Court allowed me a longer time`
+        (`cp2 seat — the day it happened, if it did` `the Court allowed me a longer time` `the last day of the longer time the Court allowed`)
+
+@export What is the last day I can appeal to the Tax Court of Canada without asking for more time (s 28(1))?
+GIVEN `the day the decision was communicated to me` IS A DATE @desc On what day was the decision communicated to you?
+GIVETH A DATE
+DECIDE `What is the last day I can appeal to the Tax Court of Canada without asking for more time (s 28(1))` IS
+    `s 28(1) — the last day for appealing to the Tax Court of Canada without more time` `the day the decision was communicated to me`
+
+@export What is the last day I can apply to the Tax Court of Canada for a longer time to appeal (s 28(1))?
+GIVEN `the day the decision was communicated to me` IS A DATE @desc On what day was the decision communicated to you?
+GIVETH A DATE
+DECIDE `What is the last day I can apply to the Tax Court of Canada for a longer time to appeal (s 28(1))` IS
+    `s 28(1) — the last day for applying to the Tax Court of Canada for a longer time` `the day the decision was communicated to me`
+
+@export Is the ruling or decision final and binding on me (s 29(2))?
+GIVEN `it is a decision of the Minister or the Tax Court of Canada on an appeal, or a ruling of an authorized officer` IS A BOOLEAN @desc Is it a decision of the Minister or the Tax Court of Canada on an appeal under section 27, 27.1 or 28, or a ruling of an authorized officer under section 26.1?
+      `the Act otherwise provides, for example an appeal is still open` IS A BOOLEAN @desc Does the Act otherwise provide, for example because an appeal is still open?
+GIVETH A BOOLEAN
+DECIDE `Is the ruling or decision final and binding on me (s 29(2))` IF
+    `s 29(2) — the decision or ruling is final and binding for all purposes of this Act`
+        `it is a decision of the Minister or the Tax Court of Canada on an appeal, or a ruling of an authorized officer`
+        `the Act otherwise provides, for example an appeal is still open`
+
+@export Must I be paid allowances for attending the Tax Court of Canada when it asks me to (s 29(3))?
+GIVEN `the appeal to the Tax Court of Canada is from a decision of the Minister` IS A BOOLEAN @desc Is the appeal to the Tax Court of Canada from a decision of the Minister?
+      `I am a person affected by the decision` IS A BOOLEAN @desc Are you a person affected by that decision?
+      `the Court asked me to attend` IS A BOOLEAN @desc Did the Court ask you to attend before it on the consideration of the appeal?
+      `I attended` IS A BOOLEAN @desc Did you attend?
+GIVETH A BOOLEAN
+DECIDE `Must I be paid allowances for attending the Tax Court of Canada when it asks me to (s 29(3))` IF
+    `s 29(3) — the person must be paid the travel and other allowances approved by the Treasury Board`
+        `the appeal to the Tax Court of Canada is from a decision of the Minister`
+        `I am a person affected by the decision`
+        `the Court asked me to attend`
+        `I attended`
+
+-- What the officials owe the person who asks for a ruling or appeals (their duties appear as what the person is owed).
+
+@export Must the officer make the ruling within a reasonable time after my request (s 26.1(3))?
+GIVEN `the authorized officer received my request` IS A BOOLEAN @desc Has the authorized officer of the Canada Revenue Agency received your request for a ruling?
+      `the officer made the ruling within a reasonable time` IS A BOOLEAN @desc Did the officer make the ruling within a reasonable time after receiving the request? (The Act leaves "reasonable" to the circumstances.)
+GIVETH A BOOLEAN
+DECIDE `Must the officer make the ruling within a reasonable time after my request (s 26.1(3))` IF
+    `s 26.1(3) — the authorized officer has made the ruling as required` `the authorized officer received my request` `the officer made the ruling within a reasonable time`
+
+@export Where must my appeal to the Minister be addressed and sent (s 27.2(2))?
+GIVEN `my appeal is addressed to the Assistant Director of Appeals in a Tax Services Office of the Canada Revenue Agency` IS A BOOLEAN @desc Is your appeal addressed to the Assistant Director of Appeals in a Tax Services Office of the Canada Revenue Agency?
+      `my appeal is delivered to that office` IS A BOOLEAN @desc Is it delivered to that office?
+      `my appeal is mailed to that office` IS A BOOLEAN @desc Is it mailed to that office?
+GIVETH A BOOLEAN
+DECIDE `Where must my appeal to the Minister be addressed and sent (s 27.2(2))` IF
+    `s 27.2(2) — the appeal is addressed and sent as required`
+        `my appeal is addressed to the Assistant Director of Appeals in a Tax Services Office of the Canada Revenue Agency`
+        `my appeal is delivered to that office`
+        `my appeal is mailed to that office`
+
+@export Must the Minister decide my appeal within a reasonable time and notify me of the decision (s 27.2(3))?
+GIVEN `the Minister decided the appeal within a reasonable time after receiving it` IS A BOOLEAN @desc Did the Minister decide the appeal within a reasonable time after receiving it?
+      `the Minister notified me of the decision in a way the Minister considers adequate` IS A BOOLEAN @desc Did the Minister notify you of the decision in any manner the Minister considers adequate?
+GIVETH A BOOLEAN
+DECIDE `Must the Minister decide my appeal within a reasonable time and notify me of the decision (s 27.2(3))` IF
+    `s 27.2(3) — the Minister has decided the appeal and notified the affected persons as required` `the Minister decided the appeal within a reasonable time after receiving it` `the Minister notified me of the decision in a way the Minister considers adequate`
+
+@export Can the Minister act on its own initiative despite the ruling and appeal rules (s 27.3)?
+GIVEN `the Minister is making a decision on its own initiative` IS A BOOLEAN @desc Is the Minister making a decision under Part I of the Act on its own initiative?
+      `the Minister is making an assessment after the date in subsection 26.1(2)` IS A BOOLEAN @desc Is the Minister making an assessment after the date mentioned in subsection 26.1(2)?
+GIVETH A BOOLEAN
+DECIDE `Can the Minister act on its own initiative despite the ruling and appeal rules (s 27.3)` IF
+    `s 27.3 — sections 26.1 to 27.2 do not restrict the Minister's authority in the case` `the Minister is making a decision on its own initiative` `the Minister is making an assessment after the date in subsection 26.1(2)`
+
+@export Does section 167 of the Income Tax Act apply to my application for a longer time to appeal (s 28(1.2))?
+GIVEN `my application is made under subsection 28(1)` IS A BOOLEAN @desc Is your application one made under subsection 28(1) for a longer time to appeal to the Tax Court of Canada?
+GIVETH A BOOLEAN
+DECIDE `Does section 167 of the Income Tax Act apply to my application for a longer time to appeal (s 28(1.2))` IF
+    `s 28(1.2) — section 167 of the Income Tax Act, except paragraph 167(5)(a), applies to the application` `my application is made under subsection 28(1)`
+
+@export May the Tax Court of Canada make a given order on my appeal (s 28(2))?
+GIVEN `my appeal is from` IS A `cp2 Kind of appeal to the Tax Court of Canada` @desc Is your appeal `an appeal from a decision on an appeal to the Minister under section 27` or `an appeal from an assessment that was the subject of an appeal to the Minister under section 27.1`?
+      `the order` IS A `cp2 Order of the Tax Court of Canada` @desc Which order: `vacate the decision or assessment`, `confirm the decision or assessment`, `vary the decision or assessment` or `refer the matter back to the Minister for reconsideration and reassessment`?
+GIVETH A BOOLEAN
+DECIDE `May the Tax Court of Canada make a given order on my appeal (s 28(2))` IF
+    `s 28(2) — the Tax Court of Canada may make the order on the appeal` `my appeal is from` `the order`
+
+@export Must the Tax Court of Canada notify me of its decision in writing without delay (s 28(2)(a))?
+GIVEN `the Court has decided my appeal` IS A BOOLEAN @desc Has the Tax Court of Canada decided your appeal?
+      `the Court notified the parties in writing without delay` IS A BOOLEAN @desc Did the Court notify the parties to the appeal in writing of its decision without delay?
+GIVETH A BOOLEAN
+DECIDE `Must the Tax Court of Canada notify me of its decision in writing without delay (s 28(2)(a))` IF
+    `s 28(2)(a) — the Court has notified the parties of its decision as required` `the Court has decided my appeal` `the Court notified the parties in writing without delay`
+
+@export Must the Tax Court of Canada's reasons for its decision be in writing (s 28(2)(b))?
+GIVEN `the Court deems it advisable in my case to give reasons in writing` IS A BOOLEAN @desc Does the Court deem it advisable in your particular case to give its reasons in writing?
+GIVETH A BOOLEAN
+DECIDE `Must the Tax Court of Canada's reasons for its decision be in writing (s 28(2)(b))` IF
+    `s 28(2)(b) — the Court's reasons must be in writing` `the Court deems it advisable in my case to give reasons in writing`
+
+@export Does the Minister's or the Tax Court's authority to decide my appeal include deciding a question of fact or law (s 29(1))?
+GIVEN `the appeal is under section 27, 27.1 or 28` IS A BOOLEAN @desc Is the appeal under section 27, 27.1 or 28?
+      `the question is necessary to decide the appeal or is whether a person is affected` IS A BOOLEAN @desc Is the question one of fact or law necessary to be decided in the course of the appeal, or whether a person is or may be affected by the decision?
+GIVETH A BOOLEAN
+DECIDE `Does the Minister's or the Tax Court's authority to decide my appeal include deciding a question of fact or law (s 29(1))` IF
+    `s 29(1) — the authority of the Minister or the Tax Court of Canada includes deciding the question` `the appeal is under section 27, 27.1 or 28` `the question is necessary to decide the appeal or is whether a person is affected`
+
+@export How much must I be paid in allowances for attending the Tax Court of Canada, in dollars (s 29(3))?
+GIVEN `I must be paid the allowances under subsection 29(3)` IS A BOOLEAN @desc Must you be paid the allowances under subsection 29(3) (the Court asked you to attend and you attended)?
+      `the allowances the Treasury Board has approved` IS A NUMBER @desc What travel and other allowances, including compensation for loss of remunerative time, has the Treasury Board approved for you, in dollars?
+GIVETH A NUMBER
+DECIDE `How much must I be paid in allowances for attending the Tax Court of Canada (s 29(3))` IS
+    `s 29(3) — the allowances the person must be paid` `I must be paid the allowances under subsection 29(3)` `the allowances the Treasury Board has approved`
+
+-- ============================================================================================================
+-- Self-employed persons (Division D)
+-- ============================================================================================================
+
+§§ `If you are self-employed: your return of self-employed earnings (ss 30, 31, 32, 35)`
+
+-- Situational: ask "Are you self-employed, or do you act for a self-employed person who has died or cannot act?" before showing this group.
+
+-- s 30(1). The Minister's claim to a return is the person's duty to file it (or the representative's, if the person is unable).
+@export Must I file a return of my self-employed earnings for the year, and who must file it (s 30(1))?
+GIVEN `I am required to make a contribution for the year on my self-employed earnings` IS A BOOLEAN @desc Are you required to make a CPP contribution for the year on your self-employed earnings (section 10)?
+      `I am unable for any reason to file the return` IS A BOOLEAN @desc Are you unable, for any reason, to file the return yourself?
+      `I have a legal representative` IS A BOOLEAN @desc Do you have a legal representative, such as a guardian, curator, committee, executor, liquidator of a succession or administrator?
+GIVETH A `cp2 Who must file the return of self-employed earnings`
+DECIDE `Must I file a return of my self-employed earnings for the year, and who must file it (s 30(1))` IS
+    `s 30(1) — who must file the return`
+        `I am required to make a contribution for the year on my self-employed earnings`
+        `I am unable for any reason to file the return`
+        (`cp2 seat — the kind of representative the person has` `I have a legal representative`)
+
+@export By what day must I file my return of self-employed earnings (s 30(1))?
+GIVEN `the day my income tax return is due, or would be due if tax were payable` IS A DATE @desc On what day is your return of income under Part I of the Income Tax Act required to be filed, or would it be required to be filed if tax were payable for the year?
+GIVETH A DATE
+DECIDE `By what day must I file my return of self-employed earnings (s 30(1))` IS
+    `s 30(1) — the last day for filing the return of self-employed earnings` `the day my income tax return is due, or would be due if tax were payable`
+
+@export Is my return of self-employed earnings filed in time (s 30(1))?
+GIVEN `the day I filed my return` IS A DATE @desc On what day did you file, or will you file, your return of self-employed earnings?
+      `the day my income tax return is due, or would be due if tax were payable` IS A DATE @desc On what day is your return of income under Part I of the Income Tax Act required to be filed, or would it be required if tax were payable for the year?
+GIVETH A BOOLEAN
+DECIDE `Is my return of self-employed earnings filed in time (s 30(1))` IF
+    `s 30(1) — the return is filed in time` `the day I filed my return` `the day my income tax return is due, or would be due if tax were payable`
+
+-- s 30(2). The Minister's power to demand a return of any person is every person's liability to the demand.
+@export Must I file a return of my self-employed earnings because the Minister demanded one (s 30(2))?
+GIVEN `the Minister demanded a return from me` IS A BOOLEAN @desc Has the Minister demanded from you a return of your self-employed earnings for a year the demand designates (whether or not you are liable to contribute and whether or not you have already filed)?
+      `the demand was served on me personally` IS A BOOLEAN @desc Was the demand served on you personally?
+      `the demand was served on me by registered letter` IS A BOOLEAN @desc Was the demand served on you by registered letter?
+GIVETH A BOOLEAN
+DECIDE `Must I file a return of my self-employed earnings because the Minister demanded one (s 30(2))` IF
+    `s 30(2) — the person must file a return of self-employed earnings for the year designated in the demand`
+        `the Minister demanded a return from me`
+        `the demand was served on me personally`
+        `the demand was served on me by registered letter`
+
+@export Did I file within the time the Minister's demand stipulates (s 30(2))?
+GIVEN `the day I filed the return` IS A DATE @desc On what day did you file the return the Minister demanded?
+      `the last day the demand gives me` IS A DATE @desc What is the last day the demand stipulates for filing?
+GIVETH A BOOLEAN
+DECIDE `Did I file within the time the Minister's demand stipulates (s 30(2))` IF
+    `s 30(2) — the return is filed within the time the demand stipulates` `the day I filed the return` `the last day the demand gives me`
+
+-- s 30(3). For a representative or other person administering the affairs of someone who has not filed.
+@export Must I file a return of the self-employed earnings of the person whose affairs I administer (s 30(3))?
+GIVEN `I administer the property, business, estate or income of another person` IS A BOOLEAN @desc Are you a trustee in bankruptcy, assignee, liquidator, curator, receiver, trustee or committee, or an agent or other person administering, managing, winding up, controlling or otherwise dealing with the property, business, estate or income of another person?
+      `that person has not filed a return of self-employed earnings as section 30 requires` IS A BOOLEAN @desc Has that person not filed a return of self-employed earnings for the year as section 30 requires?
+GIVETH A BOOLEAN
+DECIDE `Must I file a return of the self-employed earnings of the person whose affairs I administer (s 30(3))` IF
+    `s 30(3) — the person must file a return of the other person's self-employed earnings for the year`
+        `I administer the property, business, estate or income of another person`
+        `that person has not filed a return of self-employed earnings as section 30 requires`
+
+@export On what day must my return say which province I lived in (s 30(4))?
+GIVEN `the year the return is for` IS A NUMBER @desc For which calendar year is the return?
+GIVETH A DATE
+DECIDE `On what day must my return say which province I lived in (s 30(4))` IS
+    `s 30(4) — the day as at which the return must identify the person's province of residence` `the year the return is for`
+
+@export Does my return identify the province as the Act requires (s 30(4))?
+GIVEN `the province named in my return` IS A STRING @desc Which province does your return name as your province of residence?
+      `the province I lived in on the last day of the year` IS A STRING @desc In which province were you resident on the last day of the year? (Write it the same way as in the return.)
+GIVETH A BOOLEAN
+DECIDE `Does my return identify the province as the Act requires (s 30(4))` IF
+    `s 30(4) — the return identifies the province as required` `the province named in my return` `the province I lived in on the last day of the year`
+
+-- s 30(5). The person's immunity after four years with no return and no assessment.
+@export Is my contribution for the year treated as zero because no return was filed and I was not assessed in four years (s 30(5))?
+GIVEN `the day my return was required to be filed under subsection 30(1)` IS A DATE @desc On what day was your return of self-employed earnings required by subsection 30(1) to be filed?
+      `I have filed the return` IS A BOOLEAN @desc Have you filed the return?
+      `the day I filed the return` IS A DATE @desc On what day did you file it? (Any date if you have not.)
+      `the Minister has assessed the contribution` IS A BOOLEAN @desc Has the Minister assessed the contribution?
+      `the day the Minister assessed the contribution` IS A DATE @desc On what day did the Minister assess it? (Any date if not.)
+GIVETH A BOOLEAN
+DECIDE `Is my contribution for the year treated as zero because no return was filed and I was not assessed in four years (s 30(5))` IF
+    `s 30(5) — the contribution for the year is deemed to be zero`
+        `the day my return was required to be filed under subsection 30(1)`
+        (`cp2 seat — the day it happened, if it did` `I have filed the return` `the day I filed the return`)
+        (`cp2 seat — the day it happened, if it did` `the Minister has assessed the contribution` `the day the Minister assessed the contribution`)
+
+@export How much must I contribute for the year on my self-employed earnings, after subsection 30(5), in dollars (s 30(5))?
+GIVEN `the contribution otherwise required for the year` IS A NUMBER @desc What contribution is otherwise required of you for the year on your self-employed earnings (section 10), in dollars?
+      `the day my return was required to be filed under subsection 30(1)` IS A DATE @desc On what day was your return of self-employed earnings required by subsection 30(1) to be filed?
+      `I have filed the return` IS A BOOLEAN @desc Have you filed the return?
+      `the day I filed the return` IS A DATE @desc On what day did you file it? (Any date if you have not.)
+      `the Minister has assessed the contribution` IS A BOOLEAN @desc Has the Minister assessed the contribution?
+      `the day the Minister assessed the contribution` IS A DATE @desc On what day did the Minister assess it? (Any date if not.)
+GIVETH A NUMBER
+DECIDE `How much must I contribute for the year on my self-employed earnings, after subsection 30(5) (s 30(5))` IS
+    `s 30(5) — the contribution required for the year after subsection 30(5)`
+        `the contribution otherwise required for the year`
+        (`s 30(5) — the contribution for the year is deemed to be zero`
+            `the day my return was required to be filed under subsection 30(1)`
+            (`cp2 seat — the day it happened, if it did` `I have filed the return` `the day I filed the return`)
+            (`cp2 seat — the day it happened, if it did` `the Minister has assessed the contribution` `the day the Minister assessed the contribution`))
+
+@export Must I estimate my contributions in my return (s 31)?
+GIVEN `I am required by section 30 to file a return of my self-employed earnings` IS A BOOLEAN @desc Are you required by section 30 to file a return of your self-employed earnings?
+GIVETH A BOOLEAN
+DECIDE `Must I estimate my contributions in my return (s 31)` IF
+    `s 31 — the person must estimate in the return the contributions to be made on the self-employed earnings` `I am required by section 30 to file a return of my self-employed earnings`
+
+@export Must the Minister examine my return, assess me and send me a notice of assessment (s 32)?
+GIVEN `a return of my self-employed earnings has been filed` IS A BOOLEAN @desc Has a return of your self-employed earnings been filed?
+GIVETH A BOOLEAN
+DECIDE `Must the Minister examine my return, assess me and send me a notice of assessment (s 32)` IF
+    `s 32 — the Minister must examine the return, assess the contributions, interest and penalties, and send a notice of assessment to the person who filed the return` `a return of my self-employed earnings has been filed`
+
+@export What total does my notice of assessment state, in dollars (s 32)?
+GIVEN `my contributions for the year on my self-employed earnings` IS A NUMBER @desc What are your contributions for the year on your self-employed earnings, in dollars?
+      `the interest payable` IS A NUMBER @desc What interest is payable, in dollars? (0 if none.)
+      `the penalties payable` IS A NUMBER @desc What penalties are payable, in dollars? (0 if none.)
+GIVETH A NUMBER
+DECIDE `What total does my notice of assessment state (s 32)` IS
+    `s 32 — the total the assessment states` `my contributions for the year on my self-employed earnings` `the interest payable` `the penalties payable`
+
+-- s 35(1) and (2). The Crown's claim to a penalty is the person's liability to it; the Minister's power to reduce or remit is conditional.
+@export What penalty do I owe for failing to file my return of self-employed earnings, in dollars (s 35(1))?
+GIVEN `I failed to file my return as and when section 30 required` IS A BOOLEAN @desc Did you fail to file your return of self-employed earnings for the year as and when section 30 required?
+      `the part of my contributions still unpaid when the time for filing ran out` IS A NUMBER @desc How much of your contributions for the year remained unpaid when the time for filing the return expired, in dollars?
+GIVETH A NUMBER
+DECIDE `What penalty do I owe for failing to file my return of self-employed earnings (s 35(1))` IS
+    `s 35(1) — the penalty for failing to file the return` `I failed to file my return as and when section 30 required` `the part of my contributions still unpaid when the time for filing ran out`
+
+@export What is my penalty for not filing, after any reduction or remission by the Minister, in dollars (s 35(1))?
+GIVEN `I failed to file my return as and when section 30 required` IS A BOOLEAN @desc Did you fail to file your return of self-employed earnings for the year as and when section 30 required?
+      `the part of my contributions still unpaid when the time for filing ran out` IS A NUMBER @desc How much of your contributions for the year remained unpaid when the time for filing the return expired, in dollars?
+      `I am liable to a penalty under subsection 162(1) or (2) of the Income Tax Act for the year` IS A BOOLEAN @desc Are you liable to a penalty under subsection 162(1) or (2) of the Income Tax Act for the year? The Minister may reduce or remit this penalty only if you are.
+      `the amount the Minister reduces or remits` IS A NUMBER @desc If the Minister has reduced or remitted the penalty, by how much, in dollars? (0 if not.)
+GIVETH A NUMBER
+DECIDE `What is my penalty for not filing, after any reduction or remission by the Minister (s 35(1))` IS
+    `s 35(1) — the penalty after any reduction or remission by the Minister`
+        (`s 35(1) — the penalty for failing to file the return` `I failed to file my return as and when section 30 required` `the part of my contributions still unpaid when the time for filing ran out`)
+        `I am liable to a penalty under subsection 162(1) or (2) of the Income Tax Act for the year`
+        `the amount the Minister reduces or remits`
+
+@export What penalty do I owe for not filing a return I was required to file for someone else, in dollars (s 35(2))?
+GIVEN `I failed to file a return as subsection 30(3) required` IS A BOOLEAN @desc Did you fail to file a return of another person's self-employed earnings as subsection 30(3) required?
+      `the number of days I was in default` IS A NUMBER @desc For how many days were you in default?
+GIVETH A NUMBER
+DECIDE `What penalty do I owe for not filing a return I was required to file for someone else (s 35(2))` IS
+    `s 35(2) — the penalty for failing to file the return required by subsection 30(3)` `I failed to file a return as subsection 30(3) required` `the number of days I was in default`
+
+§§ `If you are self-employed: paying your contributions (ss 33, 34, 36, 37)`
+
+-- Situational: ask "Are you self-employed, or do you act for a self-employed person who has died or cannot act?" before showing this group.
+
+@export How must I pay the CPP contributions on my self-employed earnings (s 33)?
+GIVEN `the contributions required of me for the year on my self-employed earnings` IS A NUMBER @desc What contributions are required of you for the year on your self-employed earnings, in dollars?
+      `I must pay income tax instalments for the year` IS A BOOLEAN @desc Are you required by section 155 or 156 of the Income Tax Act to pay income tax instalments for the year?
+      `I am a farmer or fisher to whom section 155 applies` IS A BOOLEAN @desc Does section 155 of the Income Tax Act apply to you (a person whose chief source of income is farming or fishing)?
+GIVETH A `cp2 Way of paying self-employed contributions`
+DECIDE `How must I pay the CPP contributions on my self-employed earnings (s 33)` IS
+    `s 33 — how the person must pay the contributions` `the contributions required of me for the year on my self-employed earnings` `I must pay income tax instalments for the year` `I am a farmer or fisher to whom section 155 applies`
+
+@export What is my balance-due day for the year (s 33(1))?
+GIVEN `the year` IS A NUMBER @desc For which calendar year are the contributions?
+      `the person has died` IS A BOOLEAN @desc Has the person died? (Answer for the person whose contributions these are.)
+      `the day the person died` IS A DATE @desc On what day did the person die? (Any date if the person is living.)
+GIVETH A DATE
+DECIDE `What is my balance-due day for the year (s 33(1))` IS
+    `s 33(1) — the last day for paying the whole amount of the contributions` `the year` (`cp2 seat — the day it happened, if it did` `the person has died` `the day the person died`)
+
+@export How much must I pay on or before December 31 (s 33(2))?
+GIVEN `my base for the two-thirds payment` IS A `cp2 Base of the two-thirds payment` @desc Which base do you use: `two thirds of the contributions for the year as estimated by the person` or `two thirds of the contributions for the preceding year`?
+      `my estimate of the contributions for the year` IS A NUMBER @desc What are the contributions required of you for the year on your self-employed earnings, as you estimate them, in dollars?
+      `my contributions for the preceding year` IS A NUMBER @desc What contributions were required of you for the preceding year, in dollars?
+GIVETH A NUMBER
+DECIDE `How much must I pay on or before December 31 (s 33(2))` IS
+    `s 33(2) — the amount to pay on or before December 31` `my base for the two-thirds payment` `my estimate of the contributions for the year` `my contributions for the preceding year`
+
+@export What is the last day for the payment under subsection 33(2) (s 33(2))?
+GIVEN `the year` IS A NUMBER @desc For which calendar year is the payment?
+GIVETH A DATE
+DECIDE `What is the last day for the payment under subsection 33(2) (s 33(2))` IS
+    `s 33(2) — the last day for the payment` `the year`
+
+@export When is each of my quarterly instalments due (s 33(3))?
+GIVEN `which instalment, from 1 to 4` IS A NUMBER @desc Which instalment: 1 (March 15), 2 (June 15), 3 (September 15) or 4 (December 15)?
+      `the year` IS A NUMBER @desc For which calendar year are the instalments?
+GIVETH A MAYBE DATE
+DECIDE `When is each of my quarterly instalments due (s 33(3))` IS
+    `s 33(3) — the date the nth instalment is due in the year` `which instalment, from 1 to 4` `the year`
+
+@export How much is each of my quarterly instalments, in dollars (s 33(3))?
+GIVEN `my base for the instalments` IS A `cp2 Base of the quarterly instalments` @desc Which base do you use: `one quarter of the contributions for the year as estimated by the person on each of the four days`, `one quarter of the contributions for the preceding year on each of the four days` or `the amounts of paragraph 33(3)(b), from the second preceding year`?
+      `which instalment, from 1 to 4` IS A NUMBER @desc Which instalment: 1 (March 15), 2 (June 15), 3 (September 15) or 4 (December 15)?
+      `my estimate of the contributions for the year` IS A NUMBER @desc What are the contributions required of you for the year on your self-employed earnings, as you estimate them, in dollars?
+      `my contributions for the preceding year` IS A NUMBER @desc What contributions were required of you for the preceding year, in dollars?
+      `my contributions for the second preceding year` IS A NUMBER @desc What contributions were required of you for the second preceding year, in dollars?
+GIVETH A MAYBE NUMBER
+DECIDE `How much is each of my quarterly instalments (s 33(3))` IS
+    `s 33(3) — the instalment due on the nth date` `my base for the instalments` `which instalment, from 1 to 4` `my estimate of the contributions for the year` `my contributions for the preceding year` `my contributions for the second preceding year`
+
+@export What total instalments should I have paid by each due date, in dollars (s 33(3))?
+GIVEN `my base for the instalments` IS A `cp2 Base of the quarterly instalments` @desc Which base do you use: `one quarter of the contributions for the year as estimated by the person on each of the four days`, `one quarter of the contributions for the preceding year on each of the four days` or `the amounts of paragraph 33(3)(b), from the second preceding year`?
+      `which instalment, from 1 to 4` IS A NUMBER @desc Up to which instalment: 1 (March 15), 2 (June 15), 3 (September 15) or 4 (December 15)?
+      `my estimate of the contributions for the year` IS A NUMBER @desc What are the contributions required of you for the year on your self-employed earnings, as you estimate them, in dollars?
+      `my contributions for the preceding year` IS A NUMBER @desc What contributions were required of you for the preceding year, in dollars?
+      `my contributions for the second preceding year` IS A NUMBER @desc What contributions were required of you for the second preceding year, in dollars?
+GIVETH A MAYBE NUMBER
+DECIDE `What total instalments should I have paid by each due date (s 33(3))` IS
+    `s 33(3) — the total of the instalments due by the nth date` `my base for the instalments` `which instalment, from 1 to 4` `my estimate of the contributions for the year` `my contributions for the preceding year` `my contributions for the second preceding year`
+
+@export How much must I pay as the remainder on or before my balance-due day, in dollars (s 33(4))?
+GIVEN `the contributions for the year as I estimated them in my return` IS A NUMBER @desc What contributions for the year did you estimate in your return under section 31, in dollars?
+      `the total of the parts or instalments I was required to pay` IS A NUMBER @desc What is the total of the parts or instalments you were required to pay under subsection 33(2) or (3) for the year, in dollars?
+GIVETH A NUMBER
+DECIDE `How much must I pay as the remainder on or before my balance-due day (s 33(4))` IS
+    `s 33(4) — the remainder of the estimated contributions to pay on or before the balance-due day` `the contributions for the year as I estimated them in my return` `the total of the parts or instalments I was required to pay`
+
+-- Situational: a survivor or representative asks this after a contributor has died.
+@export Must the estate still pay an instalment that falls due on a given day when the contributor has died (s 33(4))?
+GIVEN `the day the part or instalment falls due` IS A DATE @desc On what day does the part or instalment fall due?
+      `the contributor has died` IS A BOOLEAN @desc Has the contributor died?
+      `the day the contributor died` IS A DATE @desc On what day did the contributor die? (Any date if the contributor is living.)
+GIVETH A BOOLEAN
+DECIDE `Must the estate still pay an instalment that falls due on a given day when the contributor has died (s 33(4))` IF
+    `s 33(4) — the part or instalment falling due on the day is still required` `the day the part or instalment falls due` (`cp2 seat — the day it happened, if it did` `the contributor has died` `the day the contributor died`)
+
+@export How much interest do I owe on contributions I had not paid by my balance-due day, in dollars (s 34(1))?
+GIVEN `the contributions required of me for the year` IS A NUMBER @desc What contributions were required of you for the year on your self-employed earnings, in dollars?
+      `the amount I paid on or before my balance-due day` IS A NUMBER @desc How much did you pay on or before your balance-due day on account of those contributions, in dollars?
+      `my balance-due day` IS A DATE @desc What is your balance-due day for the year?
+      `the day I pay the difference` IS A DATE @desc On what day do you pay, or did you pay, the difference?
+      `the prescribed interest rate in per cent a year` IS A NUMBER @desc What is the prescribed rate of interest per annum, in per cent (for example 8 for 8%)? Regulations section 36 sets it quarter by quarter.
+GIVETH A NUMBER
+DECIDE `How much interest do I owe on contributions I had not paid by my balance-due day (s 34(1))` IS
+    `s 34(1) — the interest on the contributions unpaid at the balance-due day`
+        `the contributions required of me for the year`
+        `the amount I paid on or before my balance-due day`
+        `my balance-due day`
+        `the day I pay the difference`
+        (`the prescribed interest rate in per cent a year` DIVIDED BY 100)
+
+@export How much interest do I owe on an instalment I did not pay when it was due, in dollars (s 34(2))?
+GIVEN `the amount of the instalment I did not pay` IS A NUMBER @desc How much of the part or instalment did you fail to pay, in dollars?
+      `the day the instalment was due` IS A DATE @desc On what day was the payment required?
+      `the day I pay it` IS A DATE @desc On what day do you pay, or did you pay, the amount you failed to pay?
+      `my balance-due day` IS A DATE @desc What is your balance-due day for the year? (Interest under this subsection stops there, and subsection 34(1) takes over.)
+      `the prescribed interest rate in per cent a year` IS A NUMBER @desc What is the prescribed rate of interest per annum, in per cent (for example 8 for 8%)? Regulations section 36 sets it quarter by quarter.
+GIVETH A NUMBER
+DECIDE `How much interest do I owe on an instalment I did not pay when it was due (s 34(2))` IS
+    `s 34(2) — the interest on a part or instalment not paid as required`
+        `the amount of the instalment I did not pay`
+        `the day the instalment was due`
+        `the day I pay it`
+        `my balance-due day`
+        (`the prescribed interest rate in per cent a year` DIVIDED BY 100)
+
+@export What part am I treated as having owed by December 31 for the limit on interest on instalments, in dollars (s 34(3))?
+GIVEN `I am required by subsection 33(2) to pay a part or instalment` IS A BOOLEAN @desc Are you required by subsection 33(2) to pay a part or instalment (a farmer or fisher)?
+      `my contributions required for the year` IS A NUMBER @desc What contributions are required of you for the year on your self-employed earnings, in dollars?
+      `my contributions for the preceding year` IS A NUMBER @desc What contributions were required of you for the preceding year, in dollars?
+      `the Minister sent me a notice of the instalment for the year` IS A BOOLEAN @desc Did the Minister send you a notice stating the instalment payable for the year?
+      `the instalment the notice states` IS A NUMBER @desc What instalment does the notice state, in dollars? (0 if there is no notice.)
+GIVETH A MAYBE NUMBER
+DECIDE `What part am I treated as having owed by December 31 for the limit on interest on instalments (s 34(3))` IS
+    `s 34(3) — the part or instalment the farmer or fisher is deemed to have been liable to pay by December 31`
+        `I am required by subsection 33(2) to pay a part or instalment`
+        `my contributions required for the year`
+        `my contributions for the preceding year`
+        (IF `the Minister sent me a notice of the instalment for the year` THEN JUST `the instalment the notice states` ELSE NOTHING)
+
+@export What total am I treated as having owed by a given quarterly due date for the limit on interest on instalments, in dollars (s 34(4))?
+GIVEN `I am required by subsection 33(3) to pay a part or instalment` IS A BOOLEAN @desc Are you required by subsection 33(3) to pay quarterly instalments?
+      `which instalment, from 1 to 4` IS A NUMBER @desc Up to which instalment: 1 (March 15), 2 (June 15), 3 (September 15) or 4 (December 15)?
+      `my contributions required for the year` IS A NUMBER @desc What contributions are required of you for the year on your self-employed earnings, in dollars?
+      `my contributions for the preceding year` IS A NUMBER @desc What contributions were required of you for the preceding year, in dollars?
+      `my contributions for the second preceding year` IS A NUMBER @desc What contributions were required of you for the second preceding year, in dollars?
+      `the Minister sent me notices of the instalments for the year` IS A BOOLEAN @desc Did the Minister send you notices stating the instalments payable for the year?
+      `the instalment the notices state for 15 March` IS A NUMBER @desc What instalment do the notices state for March 15, in dollars? (0 if there are no notices.)
+      `the instalment the notices state for 15 June` IS A NUMBER @desc What instalment do the notices state for June 15, in dollars? (0 if there are no notices.)
+      `the instalment the notices state for 15 September` IS A NUMBER @desc What instalment do the notices state for September 15, in dollars? (0 if there are no notices.)
+      `the instalment the notices state for 15 December` IS A NUMBER @desc What instalment do the notices state for December 15, in dollars? (0 if there are no notices.)
+GIVETH A MAYBE NUMBER
+DECIDE `What total am I treated as having owed by a given quarterly due date for the limit on interest on instalments (s 34(4))` IS
+    `s 34(4) — the total the person is deemed liable to have paid by the nth date`
+        `I am required by subsection 33(3) to pay a part or instalment`
+        `which instalment, from 1 to 4`
+        `my contributions required for the year`
+        `my contributions for the preceding year`
+        `my contributions for the second preceding year`
+        (IF `the Minister sent me notices of the instalments for the year`
+         THEN JUST (LIST `the instalment the notices state for 15 March`, `the instalment the notices state for 15 June`, `the instalment the notices state for 15 September`, `the instalment the notices state for 15 December`)
+         ELSE NOTHING)
+
+@export What part am I treated as having owed on a given quarterly due date for the limit on interest on instalments, in dollars (s 34(4))?
+GIVEN `I am required by subsection 33(3) to pay a part or instalment` IS A BOOLEAN @desc Are you required by subsection 33(3) to pay quarterly instalments?
+      `which instalment, from 1 to 4` IS A NUMBER @desc Which instalment: 1 (March 15), 2 (June 15), 3 (September 15) or 4 (December 15)?
+      `my contributions required for the year` IS A NUMBER @desc What contributions are required of you for the year on your self-employed earnings, in dollars?
+      `my contributions for the preceding year` IS A NUMBER @desc What contributions were required of you for the preceding year, in dollars?
+      `my contributions for the second preceding year` IS A NUMBER @desc What contributions were required of you for the second preceding year, in dollars?
+      `the Minister sent me notices of the instalments for the year` IS A BOOLEAN @desc Did the Minister send you notices stating the instalments payable for the year?
+      `the instalment the notices state for 15 March` IS A NUMBER @desc What instalment do the notices state for March 15, in dollars? (0 if there are no notices.)
+      `the instalment the notices state for 15 June` IS A NUMBER @desc What instalment do the notices state for June 15, in dollars? (0 if there are no notices.)
+      `the instalment the notices state for 15 September` IS A NUMBER @desc What instalment do the notices state for September 15, in dollars? (0 if there are no notices.)
+      `the instalment the notices state for 15 December` IS A NUMBER @desc What instalment do the notices state for December 15, in dollars? (0 if there are no notices.)
+GIVETH A MAYBE NUMBER
+DECIDE `What part am I treated as having owed on a given quarterly due date for the limit on interest on instalments (s 34(4))` IS
+    `s 34(4) — the part the person is deemed liable to have paid on the nth date`
+        `I am required by subsection 33(3) to pay a part or instalment`
+        `which instalment, from 1 to 4`
+        `my contributions required for the year`
+        `my contributions for the preceding year`
+        `my contributions for the second preceding year`
+        (IF `the Minister sent me notices of the instalments for the year`
+         THEN JUST (LIST `the instalment the notices state for 15 March`, `the instalment the notices state for 15 June`, `the instalment the notices state for 15 September`, `the instalment the notices state for 15 December`)
+         ELSE NOTHING)
+
+@export Do the Income Tax Act's rules on payment, assessment, objections, appeals, interest, penalties and refunds apply to my self-employed contributions (s 36)?
+GIVEN `the amount is paid or payable as or on account of my contributions on self-employed earnings` IS A BOOLEAN @desc Is the amount paid or payable as or on account of your contributions for a year on your self-employed earnings?
+      `a regulation otherwise provides` IS A BOOLEAN @desc Does a regulation under the Act otherwise provide?
+GIVETH A BOOLEAN
+DECIDE `Do the Income Tax Act's rules on payment, assessment, objections, appeals, interest, penalties and refunds apply to my self-employed contributions (s 36)` IF
+    `s 36 — the listed provisions of the Income Tax Act apply to the amount as though it were tax` `the amount is paid or payable as or on account of my contributions on self-employed earnings` `a regulation otherwise provides`
+
+@export How much of a payment on account of both tax and my contributions goes to the contributions, in dollars (s 37)?
+GIVEN `the payment is on account of both tax under section 228 of the Income Tax Act and my contributions` IS A BOOLEAN @desc Is the payment made on account of both taxes specified in section 228 of the Income Tax Act and your contributions on self-employed earnings?
+      `the amount of the payment` IS A NUMBER @desc How much is the payment, in dollars?
+      `the part section 228 of the Income Tax Act would apply to tax` IS A NUMBER @desc How much of the payment would section 228 of the Income Tax Act apply in payment of tax, in dollars?
+GIVETH A MAYBE NUMBER
+DECIDE `How much of a payment on account of both tax and my contributions goes to the contributions (s 37)` IS
+    `s 37 — the part of the payment applied to the contributions` `the payment is on account of both tax under section 228 of the Income Tax Act and my contributions` `the amount of the payment` `the part section 228 of the Income Tax Act would apply to tax`
+
+@export How much of a payment on account of both tax and my contributions goes to income tax, in dollars (s 37)?
+GIVEN `the payment is on account of both tax under section 228 of the Income Tax Act and my contributions` IS A BOOLEAN @desc Is the payment made on account of both taxes specified in section 228 of the Income Tax Act and your contributions on self-employed earnings?
+      `the amount of the payment` IS A NUMBER @desc How much is the payment, in dollars?
+      `the part section 228 of the Income Tax Act would apply to tax` IS A NUMBER @desc How much of the payment would section 228 of the Income Tax Act apply in payment of tax, in dollars?
+GIVETH A MAYBE NUMBER
+DECIDE `How much of a payment on account of both tax and my contributions goes to income tax (s 37)` IS
+    `s 37 — the part of the payment applied to tax under the Income Tax Act` `the payment is on account of both tax under section 228 of the Income Tax Act and my contributions` `the amount of the payment` `the part section 228 of the Income Tax Act would apply to tax`
+
+-- ============================================================================================================
+-- Refunds (Division E)
+-- ============================================================================================================
+
+§§ `If you paid more CPP than you owed: refunds (ss 38, 39)`
+
+-- Situational: ask "Do you think you have overpaid CPP contributions, as an employee or as a self-employed person?" before showing this group.
+
+-- s 38(1). The employee's claim to a refund is the Minister's duty to refund.
+@export How many years after the end of the year do I have to apply for a refund (s 38(1))?
+GIVEN `I was notified of a disability pension decision listed in section 38` IS A BOOLEAN @desc Were you notified, in respect of a disability pension, of a decision under subsection 60(7) or 81(2), a decision under subsection 82(11) or 83(11) as those subsections read immediately before their repeal, or a decision under section 54 or 59 of the Department of Employment and Social Development Act?
+      `the day I was notified` IS A DATE @desc On what day were you notified of that decision? (Any date if you were not.)
+GIVETH A NUMBER
+DECIDE `How many years after the end of the year do I have to apply for a refund (s 38(1))` IS
+    `s 38(1) — the number of years after the end of the year within which the application must be made`
+        (`cp2 seat — the day it happened, if it did` `I was notified of a disability pension decision listed in section 38` `the day I was notified`)
+
+@export What is the last day I can apply for a refund of CPP I overpaid as an employee (s 38(1))?
+GIVEN `the year of the overpayment` IS A NUMBER @desc For which calendar year did you overpay your contributions?
+      `I was notified of a disability pension decision listed in section 38` IS A BOOLEAN @desc Were you notified, in respect of a disability pension, of a decision under subsection 60(7) or 81(2), a decision under subsection 82(11) or 83(11) as those subsections read immediately before their repeal, or a decision under section 54 or 59 of the Department of Employment and Social Development Act?
+      `the day I was notified` IS A DATE @desc On what day were you notified of that decision? (Any date if you were not.)
+GIVETH A DATE
+DECIDE `What is the last day I can apply for a refund of CPP I overpaid as an employee (s 38(1))` IS
+    `s 38(1) — the last day for the employee to apply for a refund of the overpayment`
+        `the year of the overpayment`
+        (`cp2 seat — the day it happened, if it did` `I was notified of a disability pension decision listed in section 38` `the day I was notified`)
+
+@export Must the Minister refund CPP I overpaid as an employee (s 38(1))?
+GIVEN `I overpaid my contributions as an employee for the year` IS A BOOLEAN @desc Have you made an overpayment on account of your employee's contributions for the year?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply in writing to the Minister for the refund?
+      `the year of the overpayment` IS A NUMBER @desc For which calendar year did you overpay?
+      `the day I applied` IS A DATE @desc On what day did you apply?
+      `I was notified of a disability pension decision listed in section 38` IS A BOOLEAN @desc Were you notified, in respect of a disability pension, of a decision under subsection 60(7) or 81(2), a decision under subsection 82(11) or 83(11) as those subsections read immediately before their repeal, or a decision under section 54 or 59 of the Department of Employment and Social Development Act?
+      `the day I was notified` IS A DATE @desc On what day were you notified of that decision? (Any date if you were not.)
+GIVETH A BOOLEAN
+DECIDE `Must the Minister refund CPP I overpaid as an employee (s 38(1))` IF
+    `s 38(1) — the Minister must refund the overpayment to the employee`
+        `I overpaid my contributions as an employee for the year`
+        `I applied in writing to the Minister`
+        `the year of the overpayment`
+        `the day I applied`
+        (`cp2 seat — the day it happened, if it did` `I was notified of a disability pension decision listed in section 38` `the day I was notified`)
+
+@export How much must the Minister refund of CPP I overpaid as an employee, in dollars (s 38(1))?
+GIVEN `I overpaid my contributions as an employee for the year` IS A BOOLEAN @desc Have you made an overpayment on account of your employee's contributions for the year?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply in writing to the Minister for the refund?
+      `the year of the overpayment` IS A NUMBER @desc For which calendar year did you overpay?
+      `the day I applied` IS A DATE @desc On what day did you apply?
+      `I was notified of a disability pension decision listed in section 38` IS A BOOLEAN @desc Were you notified, in respect of a disability pension, of a decision under subsection 60(7) or 81(2), a decision under subsection 82(11) or 83(11) as those subsections read immediately before their repeal, or a decision under section 54 or 59 of the Department of Employment and Social Development Act?
+      `the day I was notified` IS A DATE @desc On what day were you notified of that decision? (Any date if you were not.)
+      `the amount of the overpayment` IS A NUMBER @desc How much did you overpay, in dollars?
+GIVETH A NUMBER
+DECIDE `How much must the Minister refund of CPP I overpaid as an employee (s 38(1))` IS
+    `s 38(1) — the amount the Minister must refund to the employee`
+        (`s 38(1) — the Minister must refund the overpayment to the employee`
+            `I overpaid my contributions as an employee for the year`
+            `I applied in writing to the Minister`
+            `the year of the overpayment`
+            `the day I applied`
+            (`cp2 seat — the day it happened, if it did` `I was notified of a disability pension decision listed in section 38` `the day I was notified`))
+        `the amount of the overpayment`
+
+-- s 38(2). A refund after a decision on appeal: 30 days after the decision is communicated.
+@export Must the Minister refund the excess that an appeal decision found was deducted or paid (s 38(2))?
+GIVEN `an amount was deducted from my pay or paid by my employer for me` IS A BOOLEAN @desc Was an amount on account of contributions deducted from your remuneration, or paid by an employer with respect to you?
+      `an appeal decided that the amount exceeds what the Act requires` IS A BOOLEAN @desc Was it decided on an appeal under section 27, 27.1 or 28 that the amount exceeds the amount the Act requires to be deducted or paid?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply in writing to the Minister?
+      `the day the decision was communicated to me` IS A DATE @desc On what day was the decision communicated to you?
+      `the day I applied` IS A DATE @desc On what day did you apply? (You have until 30 days after the decision is communicated.)
+GIVETH A BOOLEAN
+DECIDE `Must the Minister refund the excess that an appeal decision found was deducted or paid (s 38(2))` IF
+    `s 38(2) — the Minister must refund the excess after the decision on appeal`
+        `an amount was deducted from my pay or paid by my employer for me`
+        `an appeal decided that the amount exceeds what the Act requires`
+        `I applied in writing to the Minister`
+        `the day the decision was communicated to me`
+        `the day I applied`
+
+@export How much of the excess must the Minister refund after the appeal decision, in dollars (s 38(2))?
+GIVEN `an amount was deducted from my pay or paid by my employer for me` IS A BOOLEAN @desc Was an amount on account of contributions deducted from your remuneration, or paid by an employer with respect to you?
+      `an appeal decided that the amount exceeds what the Act requires` IS A BOOLEAN @desc Was it decided on an appeal under section 27, 27.1 or 28 that the amount exceeds the amount the Act requires to be deducted or paid?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply in writing to the Minister?
+      `the day the decision was communicated to me` IS A DATE @desc On what day was the decision communicated to you?
+      `the day I applied` IS A DATE @desc On what day did you apply?
+      `the amount deducted or paid` IS A NUMBER @desc How much was deducted or paid, in dollars?
+      `the amount the Act requires to be deducted or paid` IS A NUMBER @desc How much does the Act require to be deducted or paid, in dollars?
+GIVETH A NUMBER
+DECIDE `How much of the excess must the Minister refund after the appeal decision (s 38(2))` IS
+    `s 38(2) — the amount of the excess the Minister must refund`
+        (`s 38(2) — the Minister must refund the excess after the decision on appeal`
+            `an amount was deducted from my pay or paid by my employer for me`
+            `an appeal decided that the amount exceeds what the Act requires`
+            `I applied in writing to the Minister`
+            `the day the decision was communicated to me`
+            `the day I applied`)
+        `the amount deducted or paid`
+        `the amount the Act requires to be deducted or paid`
+
+-- s 38(3). The employee's request to the Minister; the Minister must be satisfied.
+@export May the Minister refund the excess deducted from my pay over what section 8 requires (s 38(3))?
+GIVEN `I applied to the Minister` IS A BOOLEAN @desc Did you apply to the Minister?
+      `the Minister is satisfied that what was deducted exceeds what section 8 requires` IS A BOOLEAN @desc Is the Minister satisfied that the amount deducted from your remuneration for the year exceeds the contributions required of you under section 8? (The Act leaves this judgment to the Minister.)
+      `the year` IS A NUMBER @desc For which calendar year was the excess deducted?
+      `the day I applied` IS A DATE @desc On what day did you apply?
+      `I was notified of a disability pension decision listed in section 38` IS A BOOLEAN @desc Were you notified, in respect of a disability pension, of a decision under subsection 60(7) or 81(2), a decision under subsection 82(11) or 83(11) as those subsections read immediately before their repeal, or a decision under section 54 or 59 of the Department of Employment and Social Development Act?
+      `the day I was notified` IS A DATE @desc On what day were you notified of that decision? (Any date if you were not.)
+GIVETH A BOOLEAN
+DECIDE `May the Minister refund the excess deducted from my pay over what section 8 requires (s 38(3))` IF
+    `s 38(3) — the Minister may refund the excess to the employee`
+        `I applied to the Minister`
+        `the Minister is satisfied that what was deducted exceeds what section 8 requires`
+        `the year`
+        `the day I applied`
+        (`cp2 seat — the day it happened, if it did` `I was notified of a disability pension decision listed in section 38` `the day I was notified`)
+
+@export How much is the excess deducted from my pay over what section 8 requires, in dollars (s 38(3))?
+GIVEN `the amount deducted from my pay for the year` IS A NUMBER @desc How much was deducted from your remuneration for the year, in dollars?
+      `the contributions section 8 requires of me for the year` IS A NUMBER @desc What contributions does section 8 require of you for the year, in dollars?
+GIVETH A NUMBER
+DECIDE `How much is the excess deducted from my pay over what section 8 requires (s 38(3))` IS
+    `s 38(3) — the amount of the excess the Minister may refund to the employee` `the amount deducted from my pay for the year` `the contributions section 8 requires of me for the year`
+
+-- s 38(4). The self-employed person's refund.
+@export May the Minister refund my overpaid self-employed contributions when it sends my notice of assessment, without my applying (s 38(4)(a))?
+GIVEN `I paid more than my contributions on self-employed earnings for the year` IS A BOOLEAN @desc Have you paid, on account of the contributions required of you for the year on your self-employed earnings, an amount in excess of the contributions?
+GIVETH A BOOLEAN
+DECIDE `May the Minister refund my overpaid self-employed contributions when it sends my notice of assessment, without my applying (s 38(4)(a))` IF
+    `s 38(4)(a) — the Minister may refund the excess on sending the notice of assessment, without any application` `I paid more than my contributions on self-employed earnings for the year`
+
+@export Must the Minister refund my overpaid self-employed contributions after sending my notice of assessment (s 38(4)(b))?
+GIVEN `I paid more than my contributions on self-employed earnings for the year` IS A BOOLEAN @desc Have you paid, on account of the contributions required of you for the year on your self-employed earnings, an amount in excess of the contributions?
+      `the Minister has sent me the notice of assessment` IS A BOOLEAN @desc Has the Minister sent you the notice of assessment?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply in writing to the Minister for the refund?
+      `the year of the overpayment` IS A NUMBER @desc For which calendar year did you overpay?
+      `the day I applied` IS A DATE @desc On what day did you apply?
+      `I was notified of a disability pension decision listed in section 38` IS A BOOLEAN @desc Were you notified, in respect of a disability pension, of a decision under subsection 60(7) or 81(2), a decision under subsection 82(11) or 83(11) as those subsections read immediately before their repeal, or a decision under section 54 or 59 of the Department of Employment and Social Development Act?
+      `the day I was notified` IS A DATE @desc On what day were you notified of that decision? (Any date if you were not.)
+GIVETH A BOOLEAN
+DECIDE `Must the Minister refund my overpaid self-employed contributions after sending my notice of assessment (s 38(4)(b))` IF
+    `s 38(4)(b) — the Minister must refund the excess after sending the notice of assessment`
+        `I paid more than my contributions on self-employed earnings for the year`
+        `the Minister has sent me the notice of assessment`
+        `I applied in writing to the Minister`
+        `the year of the overpayment`
+        `the day I applied`
+        (`cp2 seat — the day it happened, if it did` `I was notified of a disability pension decision listed in section 38` `the day I was notified`)
+
+@export How much of what I paid on my self-employed earnings is in excess of my contributions, in dollars (s 38(4))?
+GIVEN `the amount I paid on account of my contributions for the year` IS A NUMBER @desc How much have you paid on account of the contributions required of you for the year on your self-employed earnings, in dollars?
+      `my contributions for the year on my self-employed earnings` IS A NUMBER @desc What are the contributions required of you for the year on your self-employed earnings (section 10), in dollars?
+GIVETH A NUMBER
+DECIDE `How much of what I paid on my self-employed earnings is in excess of my contributions (s 38(4))` IS
+    `s 38(4) — the part of the amount paid that is in excess of the contributions` `the amount I paid on account of my contributions for the year` `my contributions for the year on my self-employed earnings`
+
+@export May the Minister refund my excess after my Record of Earnings is corrected (s 38(4.1))?
+GIVEN `an amount was paid on my self-employed earnings or deducted from my pay` IS A BOOLEAN @desc Was an amount on account of a contribution paid by you in respect of self-employed earnings, or deducted from your remuneration?
+      `the Minister determines that the amount is in excess after an amendment to my Record of Earnings` IS A BOOLEAN @desc Has the Minister determined, taking into consideration an amendment made under section 97 to your Record of Earnings, that the amount paid or deducted is in excess of the amount the Act requires?
+GIVETH A BOOLEAN
+DECIDE `May the Minister refund my excess after my Record of Earnings is corrected (s 38(4.1))` IF
+    `s 38(4.1) — the Minister may refund the excess after the Record of Earnings is corrected` `an amount was paid on my self-employed earnings or deducted from my pay` `the Minister determines that the amount is in excess after an amendment to my Record of Earnings`
+
+-- s 38(5) to (8). The Crown's claim to recover an excess refund; set-off; interest.
+@export How much of a refund or credit I received in excess can be recovered from me, in dollars (s 38(5))?
+GIVEN `I applied for a refund of an amount deducted from my pay for a year` IS A BOOLEAN @desc Did you apply under section 38 for a refund of an amount deducted on account of your employee's contributions for a year?
+      `the amount refunded to me or applied to a debt I owe the Crown` IS A NUMBER @desc How much did the Minister refund to you, or apply to a liability you owe Her Majesty in right of Canada, in dollars?
+      `the amount that should have been refunded or applied` IS A NUMBER @desc How much should have been refunded or applied, in dollars?
+GIVETH A NUMBER
+DECIDE `How much of a refund or credit I received in excess can be recovered from me (s 38(5))` IS
+    `s 38(5) — the excess that may be recovered at any time from the employee as a debt due to Her Majesty`
+        `I applied for a refund of an amount deducted from my pay for a year`
+        `the amount refunded to me or applied to a debt I owe the Crown`
+        `the amount that should have been refunded or applied`
+
+@export May the Minister apply my refund to a debt I owe the Crown instead of paying it to me (s 38(6))?
+GIVEN `a refund might otherwise be made to me under section 38` IS A BOOLEAN @desc Might a refund otherwise be made to you under section 38?
+      `I am liable, or about to become liable, to pay Her Majesty in right of Canada` IS A BOOLEAN @desc Are you liable, or about to become liable, to make a payment to Her Majesty in right of Canada?
+GIVETH A BOOLEAN
+DECIDE `May the Minister apply my refund to a debt I owe the Crown instead of paying it to me (s 38(6))` IF
+    `s 38(6) — the Minister may apply the refund to the person's liability instead of making the refund` `a refund might otherwise be made to me under section 38` `I am liable, or about to become liable, to pay Her Majesty in right of Canada`
+
+@export How much of my refund may be applied to what I owe the Crown, in dollars (s 38(6))?
+GIVEN `a refund might otherwise be made to me under section 38` IS A BOOLEAN @desc Might a refund otherwise be made to you under section 38?
+      `I am liable, or about to become liable, to pay Her Majesty in right of Canada` IS A BOOLEAN @desc Are you liable, or about to become liable, to make a payment to Her Majesty in right of Canada?
+      `the amount of my refund` IS A NUMBER @desc How much is your refund, in dollars?
+      `the amount I owe Her Majesty in right of Canada` IS A NUMBER @desc How much do you owe Her Majesty in right of Canada, in dollars?
+GIVETH A NUMBER
+DECIDE `How much of my refund may be applied to what I owe the Crown (s 38(6))` IS
+    `s 38(6) — the amount of the refund applied to the liability`
+        (`s 38(6) — the Minister may apply the refund to the person's liability instead of making the refund` `a refund might otherwise be made to me under section 38` `I am liable, or about to become liable, to pay Her Majesty in right of Canada`)
+        `the amount of my refund`
+        `the amount I owe Her Majesty in right of Canada`
+
+@export Must the Minister notify me when my refund is applied to a debt (s 38(6))?
+GIVEN `the Minister applied my refund to my liability` IS A BOOLEAN @desc Did the Minister apply your refund to a liability you owe Her Majesty in right of Canada?
+GIVETH A BOOLEAN
+DECIDE `Must the Minister notify me when my refund is applied to a debt (s 38(6))` IF
+    `s 38(6) — the Minister must notify the person of the application of the refund` `the Minister applied my refund to my liability`
+
+@export How much interest is paid on my refund, in dollars (s 38(7))?
+GIVEN `my overpayment is being refunded or applied to another liability` IS A BOOLEAN @desc Is an amount in respect of your overpayment being refunded, or applied under the Act to another liability?
+      `the amount of the overpayment refunded or applied` IS A NUMBER @desc How much of your overpayment is refunded or applied, in dollars?
+      `the day the interest period begins` IS A DATE @desc On what day does the interest period begin? For an employee or self-employed person Regulations section 35 makes it the latest of May 1 of the year after the year the contributions were paid, the day your application was received and the day the overpayment arose.
+      `the day the amount is refunded or applied` IS A DATE @desc On what day is the amount refunded or applied?
+      `the prescribed interest rate in per cent a year` IS A NUMBER @desc What is the prescribed rate of interest per annum, in per cent (for example 4 for 4%)? Regulations section 36 sets it quarter by quarter.
+      `the amount is refundable under subsection 38(4.1)` IS A BOOLEAN @desc Is the amount one that is refundable under subsection 38(4.1) (after a correction of your Record of Earnings)?
+      `the amount is one referred to in subsection 38(3.3)` IS A BOOLEAN @desc Is the amount an amount remitted by an employer that is deemed under section 21.01 not to have been deducted?
+GIVETH A NUMBER
+DECIDE `How much interest is paid on my refund (s 38(7))` IS
+    `s 38(7) — the interest paid or applied on the overpayment`
+        `my overpayment is being refunded or applied to another liability`
+        `the amount of the overpayment refunded or applied`
+        `the day the interest period begins`
+        `the day the amount is refunded or applied`
+        (`the prescribed interest rate in per cent a year` DIVIDED BY 100)
+        `the amount is refundable under subsection 38(4.1)`
+        `the amount is one referred to in subsection 38(3.3)`
+
+@export Does subsection 38(7) leave out interest on the section 21.01 amount refunded to my employer (s 38(8))?
+GIVEN `the amount is one referred to in subsection 38(3.3)` IS A BOOLEAN @desc Is the amount an amount referred to in subsection 38(3.3) that is refunded or applied under the Act to another liability?
+GIVETH A BOOLEAN
+DECIDE `Does subsection 38(7) leave out interest on the section 21.01 amount refunded to my employer (s 38(8))` IF
+    `s 38(8) — subsection 38(7) does not apply to the amount` `the amount is one referred to in subsection 38(3.3)`
+
+-- s 39. A refund under an agreement with a province that runs its own pension plan.
+@export May the Minister refund the whole excess to me under an agreement with a province that has its own pension plan (s 39(1))?
+GIVEN `I overpaid my contributions as an employee for the year` IS A BOOLEAN @desc Have you made an overpayment on account of your employee's contributions for the year under the Act (contributions to the CPP and to a provincial pension plan together exceeding what was required)?
+      `the Minister has an agreement with the province's authority` IS A BOOLEAN @desc Has the Minister, with the approval of the Governor in Council, entered into an agreement with the appropriate authority of a province that administers the provincial pension plan referred to in subsection 8(2)?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply in writing to the Minister?
+      `the year of the overpayment` IS A NUMBER @desc For which calendar year did you overpay?
+      `the day I applied` IS A DATE @desc On what day did you apply? (You have four years after the end of the year.)
+GIVETH A BOOLEAN
+DECIDE `May the Minister refund the whole excess to me under an agreement with a province that has its own pension plan (s 39(1))` IF
+    `s 39(1) — the Minister may refund the whole amount of the excess to the employee in accordance with the agreement`
+        `I overpaid my contributions as an employee for the year`
+        `the Minister has an agreement with the province's authority`
+        `I applied in writing to the Minister`
+        `the year of the overpayment`
+        `the day I applied`
+
+@export How much is treated as my overpayment under the Act when the Minister refunds the excess under such an agreement, in dollars (s 39(1))?
+GIVEN `the Minister refunds the whole excess to me under the agreement` IS A BOOLEAN @desc Does the Minister refund to you the whole amount of the excess referred to in subsection 8(2) under the agreement?
+      `the excess referred to in subsection 8(2)` IS A NUMBER @desc How much is the excess referred to in subsection 8(2), in dollars?
+GIVETH A NUMBER
+DECIDE `How much is treated as my overpayment under the Act when the Minister refunds the excess under such an agreement (s 39(1))` IS
+    `s 39(1) — the amount deemed to be an overpayment made by the employee under this Act` `the Minister refunds the whole excess to me under the agreement` `the excess referred to in subsection 8(2)`
+
+@export How much is treated as my overpayment under the provincial plan when the province refunds the excess under such an agreement, in dollars (s 39(2))?
+GIVEN `the province has refunded to me the whole excess under the agreement` IS A BOOLEAN @desc Has the appropriate authority of the province refunded to you the whole amount of the excess referred to in subsection 8(2), in accordance with the agreement?
+      `the excess referred to in subsection 8(2)` IS A NUMBER @desc How much is the excess referred to in subsection 8(2), in dollars?
+GIVETH A NUMBER
+DECIDE `How much is treated as my overpayment under the provincial plan when the province refunds the excess under such an agreement (s 39(2))` IS
+    `s 39(2) — the amount deemed to be an overpayment made by the employee under the provincial pension plan` `the province has refunded to me the whole excess under the agreement` `the excess referred to in subsection 8(2)`
+
+@export May the agreement between the Minister and the province provide for financial adjustments between governments (s 39(3))?
+GIVEN `the agreement was entered into under subsection 39(1)` IS A BOOLEAN @desc Was the agreement entered into under subsection 39(1)?
+      `the adjustments are required by reason of payments made to employees under the agreement` IS A BOOLEAN @desc Are the financial adjustments required by reason of payments made to employees in accordance with the agreement?
+GIVETH A BOOLEAN
+DECIDE `May the agreement between the Minister and the province provide for financial adjustments between governments (s 39(3))` IF
+    `s 39(3) — the agreement may provide for the financial adjustments and for crediting or charging them to the Canada Pension Plan Account or the Additional Canada Pension Plan Account` `the agreement was entered into under subsection 39(1)` `the adjustments are required by reason of payments made to employees under the agreement`
+
+-- ============================================================================================================
+-- Regulations and offences (Division E)
+-- ============================================================================================================
+
+§§ `If you are accused of an offence, or a regulation penalises you (ss 40, 41)`
+
+-- Situational: ask "Have you been charged with, or are you worried about, an offence under the CPP Act?" before showing this group.
+
+@export What is the most a regulation can penalise me for not filing an information return, in dollars (s 40(1)(d))?
+GIVEN `the number of days I was in default` IS A NUMBER @desc For how many days were you in default of filing the information return?
+GIVETH A NUMBER
+DECIDE `What is the most a regulation can penalise me for not filing an information return (s 40(1)(d))` IS
+    `s 40(1)(d) — the most a regulation may prescribe as the penalty for not filing an information return` `the number of days I was in default`
+
+@export Is the penalty a regulation sets for me within the limit the Act allows (s 40(1)(d))?
+GIVEN `the penalty the regulation sets` IS A NUMBER @desc What penalty does the regulation set for you, in dollars?
+      `the number of days I was in default` IS A NUMBER @desc For how many days were you in default of filing the information return?
+GIVETH A BOOLEAN
+DECIDE `Is the penalty a regulation sets for me within the limit the Act allows (s 40(1)(d))` IF
+    `s 40(1)(d) — the penalty a regulation prescribes is within the limit the paragraph allows` `the penalty the regulation sets` `the number of days I was in default`
+
+@export From what day does the regulation setting the CPP deduction rules have effect (s 40(3))?
+GIVEN `the day the regulation was published in the Canada Gazette` IS A DATE @desc On what day was the regulation published in the Canada Gazette?
+      `the regulation names an earlier or later day` IS A BOOLEAN @desc Does the regulation specify an earlier or a later day from which it has effect?
+      `the day the regulation names` IS A DATE @desc What day does the regulation specify? (Any date if it specifies none.)
+GIVETH A DATE
+DECIDE `From what day does the regulation setting the CPP deduction rules have effect (s 40(3))` IS
+    `s 40(3) — the day the regulation prescribing the rules for subsection 21(1) has effect from`
+        `the day the regulation was published in the Canada Gazette`
+        (`cp2 seat — the day it happened, if it did` `the regulation names an earlier or later day` `the day the regulation names`)
+
+@export Does an agreement about pensionable employment reach back to a period before it was made (s 40(4))?
+GIVEN `the agreement gives effect to paragraph 6(2)(h) or 7(1)(f)` IS A BOOLEAN @desc Is the agreement one for giving effect to the provisions of paragraph 6(2)(h) or 7(1)(f)?
+      `the Minister made the agreement under regulations made under paragraph 40(1)(h)` IS A BOOLEAN @desc Did the Minister enter into the agreement pursuant to regulations made under paragraph 40(1)(h)?
+      `the agreement provides that it reaches back` IS A BOOLEAN @desc Does the agreement provide that it has effect with reference to a period before it was entered into?
+GIVETH A BOOLEAN
+DECIDE `Does an agreement about pensionable employment reach back to a period before it was made (s 40(4))` IF
+    `s 40(4) — the agreement has effect with reference to a period before it was entered into` `the agreement gives effect to paragraph 6(2)(h) or 7(1)(f)` `the Minister made the agreement under regulations made under paragraph 40(1)(h)` `the agreement provides that it reaches back`
+
+@export Am I guilty of an offence if I do not keep records or I contravene section 25 (s 41(2))?
+GIVEN `I failed to comply with or contravened section 24` IS A BOOLEAN @desc Did you fail to comply with, or contravene, section 24 (keeping records and books of account)?
+      `I failed to comply with or contravened section 25` IS A BOOLEAN @desc Did you fail to comply with, or contravene, section 25 (inspections and requirements for information)?
+GIVETH A BOOLEAN
+DECIDE `Am I guilty of an offence if I do not keep records or I contravene section 25 (s 41(2))` IF
+    `s 41(2) — the person is guilty of an offence punishable on summary conviction` `I failed to comply with or contravened section 24` `I failed to comply with or contravened section 25`
+
+-- The Act names no maximum for this offence: the answer is NOTHING, never a figure.
+@export What is the most the court may fine me for an offence under subsection 41(2), in dollars (s 41(2))?
+GIVEN `I am guilty of an offence under subsection 41(2)` IS A BOOLEAN @desc Are you guilty of an offence under subsection 41(2)?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most the court may fine me for an offence under subsection 41(2) (s 41(2))` IS
+    `s 41(2) — the most the court may fine the person` `I am guilty of an offence under subsection 41(2)`
+
+@export Am I guilty of an offence if I do not file a return or contravene an information-return regulation (s 41(3))?
+GIVEN `I failed to comply with or contravened section 30` IS A BOOLEAN @desc Did you fail to comply with, or contravene, section 30 (returns of self-employed earnings)?
+      `I failed to comply with or contravened a regulation about information returns` IS A BOOLEAN @desc Did you fail to comply with, or contravene, a regulation made under paragraph 40(1)(b) or (c) (information returns)?
+GIVETH A BOOLEAN
+DECIDE `Am I guilty of an offence if I do not file a return or contravene an information-return regulation (s 41(3))` IF
+    `s 41(3) — the person is guilty of an offence` `I failed to comply with or contravened section 30` `I failed to comply with or contravened a regulation about information returns`
+
+@export What is the least the court may fine me for an offence under subsection 41(3), in dollars (s 41(3))?
+GIVEN `I am guilty of an offence under subsection 41(3)` IS A BOOLEAN @desc Are you guilty of an offence under subsection 41(3)?
+      `the number of days I was in default` IS A NUMBER @desc For how many days were you in default?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the least the court may fine me for an offence under subsection 41(3) (s 41(3))` IS
+    `s 41(3) — the least the court may fine the person` `I am guilty of an offence under subsection 41(3)` `the number of days I was in default`
+
+@export What is the most the court may fine me for an offence under subsection 41(3), in dollars (s 41(3))?
+GIVEN `I am guilty of an offence under subsection 41(3)` IS A BOOLEAN @desc Are you guilty of an offence under subsection 41(3)?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most the court may fine me for an offence under subsection 41(3) (s 41(3))` IS
+    `s 41(3) — the most the court may fine the person` `I am guilty of an offence under subsection 41(3)`
+
+@export Am I guilty of an offence for false statements, destroying records, false entries, evasion or conspiracy (s 41(4))?
+GIVEN `I made, or took part in or agreed to, false or deceptive statements in a return, certificate, statement or answer` IS A BOOLEAN @desc Did you make, or participate in, assent to or acquiesce in the making of, false or deceptive statements in a return, certificate, statement or answer filed or made as required by or under Part I or a regulation?
+      `I destroyed, altered or hid an employer's records to evade payment of a contribution` IS A BOOLEAN @desc To evade payment of a contribution, did you destroy, alter, mutilate, secrete or otherwise dispose of the records or books of account of an employer?
+      `I made or agreed to false entries, or omitted a material particular, in an employer's records` IS A BOOLEAN @desc Did you make, or assent to or acquiesce in, false or deceptive entries, or omit (or assent to or acquiesce in the omission of) a material particular, in the records or books of account of an employer?
+      `I wilfully evaded or tried to evade compliance with the Act or payment of contributions` IS A BOOLEAN @desc Did you wilfully, in any manner, evade or attempt to evade compliance with the Act or payment of contributions imposed by it?
+      `I conspired with another person to commit one of those offences` IS A BOOLEAN @desc Did you conspire with any person to commit an offence described in any of paragraphs 41(4)(a) to (d)?
+GIVETH A BOOLEAN
+DECIDE `Am I guilty of an offence for false statements, destroying records, false entries, evasion or conspiracy (s 41(4))` IF
+    `s 41(4) — the person is guilty of an offence`
+        `I made, or took part in or agreed to, false or deceptive statements in a return, certificate, statement or answer`
+        `I destroyed, altered or hid an employer's records to evade payment of a contribution`
+        `I made or agreed to false entries, or omitted a material particular, in an employer's records`
+        `I wilfully evaded or tried to evade compliance with the Act or payment of contributions`
+        `I conspired with another person to commit one of those offences`
+
+@export What is the least the court may fine me for an offence under subsection 41(4), in dollars (s 41(4)(f))?
+GIVEN `I am guilty of an offence under subsection 41(4)` IS A BOOLEAN @desc Are you guilty of an offence under subsection 41(4)?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the least the court may fine me for an offence under subsection 41(4) (s 41(4)(f))` IS
+    `s 41(4)(f) — the least the court may fine the person` `I am guilty of an offence under subsection 41(4)`
+
+@export What is the most the court may fine me for an offence under subsection 41(4), in dollars (s 41(4)(f))?
+GIVEN `I am guilty of an offence under subsection 41(4)` IS A BOOLEAN @desc Are you guilty of an offence under subsection 41(4)?
+      `the court considers it an appropriate case for an amount in addition to the fine` IS A BOOLEAN @desc Does the court consider it an appropriate case for an amount, not more than double the contribution, in addition to the fine? (The Act leaves this to the court.)
+      `the contribution that should have been shown to be payable or that was sought to be evaded` IS A NUMBER @desc What contribution should have been shown to be payable, or was sought to be evaded, in dollars?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the most the court may fine me for an offence under subsection 41(4) (s 41(4)(f))` IS
+    `s 41(4)(f) — the most the court may fine the person` `I am guilty of an offence under subsection 41(4)` `the court considers it an appropriate case for an amount in addition to the fine` `the contribution that should have been shown to be payable or that was sought to be evaded`
+
+@export What is the longest term of imprisonment, in months, that may be imposed with the fine for an offence under subsection 41(4) (s 41(4)(g))?
+GIVEN `I am guilty of an offence under subsection 41(4)` IS A BOOLEAN @desc Are you guilty of an offence under subsection 41(4)?
+GIVETH A MAYBE NUMBER
+DECIDE `What is the longest term of imprisonment, in months, that may be imposed with the fine for an offence under subsection 41(4) (s 41(4)(g))` IS
+    `s 41(4)(g) — the longest term of imprisonment, in months, that may be imposed with the fine` `I am guilty of an offence under subsection 41(4)`
+
+@export Does the saving in section 41(5) relieve me of the penalty for the same failure after my conviction (s 41(5))?
+GIVEN `I have been convicted under section 41 of failing to comply with subsection 21(1) or an information-return regulation` IS A BOOLEAN @desc Have you been convicted under section 41 of failing to comply with subsection 21(1) or a regulation made under paragraph 40(1)(b) or (c)?
+      `I was assessed for the penalty or it was demanded from me` IS A BOOLEAN @desc Were you assessed for the penalty under section 21 or under a regulation made under section 40, or was it demanded from you?
+      `the day I was assessed or the penalty was demanded` IS A DATE @desc On what day were you assessed or was the penalty demanded? (Any date if neither happened.)
+      `the day the information or complaint was laid` IS A DATE @desc On what day was the information or complaint that led to your conviction laid or made?
+GIVETH A BOOLEAN
+DECIDE `Does the saving in section 41(5) relieve me of the penalty for the same failure after my conviction (s 41(5))` IF
+    `s 41(5) — the person is not liable to pay the penalty for the same failure`
+        `I have been convicted under section 41 of failing to comply with subsection 21(1) or an information-return regulation`
+        (`cp2 seat — the day it happened, if it did` `I was assessed for the penalty or it was demanded from me` `the day I was assessed or the penalty was demanded`)
+        `the day the information or complaint was laid`
+
+@export Who may lay an information or complaint against me under section 41 (s 41(6))?
+GIVEN `the person is an officer of the Canada Revenue Agency` IS A BOOLEAN @desc Is the person an officer of the Canada Revenue Agency?
+      `the person is a member of the Royal Canadian Mounted Police` IS A BOOLEAN @desc Is the person a member of the Royal Canadian Mounted Police?
+      `the person is authorized by the Minister` IS A BOOLEAN @desc Is the person authorized by the Minister?
+GIVETH A BOOLEAN
+DECIDE `Who may lay an information or complaint against me under section 41 (s 41(6))` IF
+    `s 41(6) — the person may lay or make an information or complaint under section 41` `the person is an officer of the Canada Revenue Agency` `the person is a member of the Royal Canadian Mounted Police` `the person is authorized by the Minister`
+
+@export May I argue that the person who laid the information against me lacked authority (s 41(6))?
+GIVEN `the information or complaint purports to have been laid or made under section 41` IS A BOOLEAN @desc Does the information or complaint purport to have been laid or made under section 41?
+      `I am the Minister or a person acting for the Minister or Her Majesty` IS A BOOLEAN @desc Are you the Minister, or a person acting for the Minister or Her Majesty?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I argue that the person who laid the information against me lacked authority (s 41(6))` IS
+    `s 41(6) — the person may call in question the informant's or complainant's lack of authority` `the information or complaint purports to have been laid or made under section 41` `I am the Minister or a person acting for the Minister or Her Majesty`

@@ -1,0 +1,345 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cpp-core-age`
+IMPORT `cp3-nouns`
+IMPORT `cp3-part2-interpretation`
+IMPORT `cp3-contributory-period`
+
+-- Canada Pension Plan Act, Part II -- THE AVERAGE MONTHLY PENSIONABLE EARNINGS (sections 47 to 48.2).
+--
+-- A retirement pension is a share of the contributor's average monthly pensionable earnings. The
+-- average is the total pensionable earnings of the contributory period (sections 49 to 51)
+-- divided by the number of months of the period, but never by fewer than the basic number of
+-- contributory months (120 less the months excluded by reason of disability, section 42(1)). Section 48
+-- lets the lowest months drop out in three steps: child-raising months (subsection (2)), months after
+-- age 65 (subsection (3)) and a share of the months over 120 (subsection (4)).
+--
+-- "The lowest months": the text picks the months of least pensionable earnings ("for which months that
+-- aggregate is less than, or if not less than then equal to, the aggregate for any other like number
+-- of months"). Months are put in order of earnings, lowest first, and among months of equal earnings
+-- the earlier month first (NOTES.md, fork register).
+-- A month of the contributory period is a `cp3 Month of a contributory period` (cp3-nouns.l4).
+
+§ `Part II -- Division B -- average monthly pensionable earnings (sections 47 to 48.2)`
+
+§§ `Helpers of this module (no provision licenses them)`
+
+-- Not a provision: put a month into a list that is in order of earnings, lowest first, after any month of equal
+-- earnings, so that among equal earnings the earlier month stays first.
+GIVEN month IS A `cp3 Month of a contributory period`
+      months IS A LIST OF `cp3 Month of a contributory period`
+GIVETH A LIST OF `cp3 Month of a contributory period`
+`cp3 — put a month into a list in order of earnings` month months MEANS
+    CONSIDER months
+    WHEN EMPTY THEN LIST month
+    WHEN other FOLLOWED BY rest THEN
+        IF (month's `pensionable earnings for that month`) LESS THAN (other's `pensionable earnings for that month`)
+        THEN month FOLLOWED BY months
+        ELSE other FOLLOWED BY (`cp3 — put a month into a list in order of earnings` month rest)
+
+-- Not a provision: the months in order of earnings, lowest first (earlier month first among equals).
+GIVEN months IS A LIST OF `cp3 Month of a contributory period`
+GIVETH A LIST OF `cp3 Month of a contributory period`
+`cp3 — the months in order of earnings, lowest first` months MEANS
+    foldl (GIVEN sorted, month YIELD `cp3 — put a month into a list in order of earnings` month sorted) EMPTY months
+
+-- Not a provision: the pensionable earnings of a list of months added up.
+GIVEN months IS A LIST OF `cp3 Month of a contributory period`
+GIVETH A NUMBER
+`cp3 — the pensionable earnings of a list of months` months MEANS
+    sum (map (GIVEN month YIELD month's `pensionable earnings for that month`) months)
+
+§§ `47 -- a retirement pension commencing before 1976`
+
+-- src:1117 | 47 Where a retirement pension becomes payable to a contributor commencing with any month before January, 1976, his average monthly pensionable earnings are an amount calculated by dividing his total pensionable earnings by the basic number of contributory months.
+@ref Act s 47 (src:1117)
+GIVEN `the month with which the retirement pension commences` IS A DATE
+      `the total pensionable earnings of the contributor` IS A NUMBER
+      `the basic number of contributory months` IS A NUMBER
+GIVETH A MAYBE NUMBER
+-- Plain gloss: for a retirement pension commencing with a month before January 1976, the average
+-- monthly pensionable earnings are the total pensionable earnings divided by the basic number of
+-- contributory months. NOTHING means the section does not reach the pension (it commences in 1976 or
+-- later: section 48 applies) or the basic number is zero.
+`s 47 — the average monthly pensionable earnings of a contributor whose retirement pension commences before 1976` `the month with which the retirement pension commences` `the total pensionable earnings of the contributor` `the basic number of contributory months` MEANS
+    IF `the month with which the retirement pension commences` LESS THAN (YMD 1976 1 1) AND (NOT (`the basic number of contributory months` EQUALS 0))
+    THEN JUST (`the total pensionable earnings of the contributor` DIVIDED BY `the basic number of contributory months`)
+    ELSE NOTHING
+
+§§ `48(1) -- a retirement pension commencing after 1975`
+
+-- src:1119 | 48 (1) Subject to subsections (2), (3) and (4), where a retirement pension becomes payable to a contributor commencing with any month after December, 1975, his average monthly pensionable earnings are an amount calculated by dividing his total pensionable earnings by the total number of months in his contributory period or by the basic number of contributory months, whichever is the greater.
+@ref Act s 48(1) (src:1119)
+GIVEN `the month with which the retirement pension commences` IS A DATE
+      `the total pensionable earnings of the contributor` IS A NUMBER
+      `the total number of months in the contributor's contributory period` IS A NUMBER
+      `the basic number of contributory months` IS A NUMBER
+GIVETH A MAYBE NUMBER
+-- Plain gloss: for a retirement pension commencing after December 1975, the average monthly
+-- pensionable earnings are the total pensionable earnings divided by the number of months in the
+-- contributory period or by the basic number of contributory months, whichever is the greater. This is
+-- subsection (1) alone, before the deductions of subsections (2) to (4); `s 48 — the average monthly
+-- pensionable earnings after the deductions` below applies them. NOTHING: the pension commences
+-- before 1976 (section 47 applies), or the divisor is zero.
+`s 48(1) — the average monthly pensionable earnings before the deductions` `the month with which the retirement pension commences` `the total pensionable earnings of the contributor` `the total number of months in the contributor's contributory period` `the basic number of contributory months` MEANS
+    IF `the month with which the retirement pension commences` AT LEAST (YMD 1976 1 1) AND `the divisor` GREATER THAN 0
+    THEN JUST (`the total pensionable earnings of the contributor` DIVIDED BY `the divisor`)
+    ELSE NOTHING
+    WHERE
+        `the divisor` MEANS max `the total number of months in the contributor's contributory period` `the basic number of contributory months`
+
+§§ `48(2) -- months of child-raising years`
+
+-- src:1122 | (a) from the total number of months in a contributor’s contributory period, those months during which he was a family allowance recipient and during which his pensionable earnings were less than his average monthly pensionable earnings calculated without regard to subsections (3) and (4), but no such deduction shall reduce the number of months in his contributory period to less than the basic number of contributory months, except
+-- src:1123 | (i) for the purpose of calculating a disability benefit in respect of a contributor who is deemed to have become disabled for the purposes of this Act after December 31, 1997, in which case the words “the basic number of contributory months” shall be read as “48 months”,
+-- src:1124 | (i.1) for the purpose of calculating a disability benefit in respect of a contributor who is deemed to have become disabled for the purposes of this Act in 1997, in which case the words “the basic number of contributory months” shall be read as “24 months”, and
+-- src:1125 | (ii) for the purpose of calculating a death benefit and a survivor’s pension, in which case the words “the basic number of contributory months” shall be read as “thirty-six months”; and
+@ref Act s 48(2)(a)(i), (i.1), (ii) (src:1122-1125)
+GIVEN kind IS A `Kind of benefit`
+      `the day on which the contributor is deemed to have become disabled, if the contributor has been` IS A MAYBE DATE
+      `the basic number of contributory months` IS A NUMBER
+GIVETH A NUMBER
+-- Plain gloss: the deduction of child-raising months may not reduce the contributory period below the
+-- basic number of contributory months, except that for a disability benefit (a disability pension or a
+-- post-retirement disability benefit) of a contributor deemed disabled after 1997 the number is 48, for one
+-- deemed disabled in 1997 it is 24, and for a death benefit or a survivor's pension it is 36.
+-- "Disability benefit" is not defined: it is read as those two benefits (NOTES.md, fork register).
+`s 48(2)(a) — the number of months below which the deduction may not reduce the contributory period` kind `the day on which the contributor is deemed to have become disabled, if the contributor has been` `the basic number of contributory months` MEANS
+    BRANCH IF (kind EQUALS `a death benefit` OR kind EQUALS `a survivor's pension`) THEN 36
+           IF (kind EQUALS `a disability pension` OR kind EQUALS `a post-retirement disability benefit`) AND `deemed disabled after 1997` THEN 48
+           IF (kind EQUALS `a disability pension` OR kind EQUALS `a post-retirement disability benefit`) AND `deemed disabled in 1997` THEN 24
+           OTHERWISE `the basic number of contributory months`
+    WHERE
+        `deemed disabled after 1997` MEANS
+            CONSIDER `the day on which the contributor is deemed to have become disabled, if the contributor has been`
+            WHEN NOTHING THEN FALSE
+            WHEN JUST d THEN d AT LEAST (YMD 1998 1 1)
+        `deemed disabled in 1997` MEANS
+            CONSIDER `the day on which the contributor is deemed to have become disabled, if the contributor has been`
+            WHEN NOTHING THEN FALSE
+            WHEN JUST d THEN DATE_YEAR d EQUALS 1997
+
+-- src:1120 | Deductions in calculating average monthly pensionable earnings of certain months during child raising years
+-- src:1121 | (2) In calculating the average monthly pensionable earnings of a contributor in accordance with subsection (1) for the purpose of calculating or recalculating benefits payable for a month commencing on or after January 1, 1978, there may be deducted
+-- src:1122 | (a) from the total number of months in a contributor’s contributory period, those months during which he was a family allowance recipient and during which his pensionable earnings were less than his average monthly pensionable earnings calculated without regard to subsections (3) and (4), but no such deduction shall reduce the number of months in his contributory period to less than the basic number of contributory months, except
+-- src:1123 | (i) for the purpose of calculating a disability benefit in respect of a contributor who is deemed to have become disabled for the purposes of this Act after December 31, 1997, in which case the words “the basic number of contributory months” shall be read as “48 months”,
+-- src:1124 | (i.1) for the purpose of calculating a disability benefit in respect of a contributor who is deemed to have become disabled for the purposes of this Act in 1997, in which case the words “the basic number of contributory months” shall be read as “24 months”, and
+-- src:1125 | (ii) for the purpose of calculating a death benefit and a survivor’s pension, in which case the words “the basic number of contributory months” shall be read as “thirty-six months”; and
+-- src:1126 | (b) from his total pensionable earnings, the aggregate of his pensionable earnings attributable to the months deducted pursuant to paragraph (a).
+@ref Act s 48(2) (src:1120-1126)
+GIVEN months IS A LIST OF `cp3 Month of a contributory period`
+      `the month for which the benefit is payable` IS A DATE
+      `the number of months below which the deduction may not reduce the contributory period` IS A NUMBER
+      `the basic number of contributory months` IS A NUMBER
+GIVETH A LIST OF `cp3 Month of a contributory period`
+-- Plain gloss: for a benefit payable for a month on or after 1 January 1978, the months of the
+-- contributory period in which the contributor was a family allowance recipient and in which pensionable
+-- earnings were less than the average monthly pensionable earnings calculated without regard to
+-- subsections (3) and (4) are deducted, but not so many that fewer than the floor number of months
+-- remain. The text says "there may be deducted" and does not say which months go when the floor
+-- stops the deduction: this encoding makes the deduction (it can only raise the average) and takes the
+-- months of least earnings first. The "average calculated without regard to (3) and (4)" is taken as
+-- subsection (1)'s average over all months, before any deduction (NOTES.md, fork register). The result
+-- is the months that remain.
+`s 48(2) — the months of the contributory period that remain after the deduction for child-raising years` months `the month for which the benefit is payable` `the number of months below which the deduction may not reduce the contributory period` `the basic number of contributory months` MEANS
+    IF `the month for which the benefit is payable` LESS THAN (YMD 1978 1 1) OR `the divisor` EQUALS 0
+    THEN months
+    ELSE append (drop `the number deducted` `the candidate months in order of earnings`) `the other months`
+    WHERE
+        `the divisor` MEANS max (count months) `the basic number of contributory months`
+        `the average without regard to subsections (3) and (4)` MEANS (`cp3 — the pensionable earnings of a list of months` months) DIVIDED BY `the divisor`
+        `is a candidate` month MEANS (month's `a family allowance recipient in that month`) AND (month's `pensionable earnings for that month`) LESS THAN `the average without regard to subsections (3) and (4)`
+        `the candidate months in order of earnings` MEANS `cp3 — the months in order of earnings, lowest first` (filter (GIVEN month YIELD `is a candidate` month) months)
+        `the other months` MEANS filter (GIVEN month YIELD NOT (`is a candidate` month)) months
+        `the number deducted` MEANS min (count `the candidate months in order of earnings`) (max 0 ((count months) MINUS `the number of months below which the deduction may not reduce the contributory period`))
+
+§§ `48(3) -- months after age 65`
+
+-- src:1128 | (3) Where a contributor’s contributory period ends after the month preceding the month in which he reaches sixty-five years of age and the total number of months in his contributory period remaining after the deduction under paragraph (2)(a) exceeds the basic number of contributory months, in calculating his average monthly pensionable earnings in accordance with subsection (1) there shall be deducted
+-- src:1129 | (a) from the total number of months remaining in his contributory period, the number of months therein after he reached sixty-five years of age or by which the total exceeds the basic number of contributory months, whichever is the lesser; and
+-- src:1130 | (b) from the contributor’s total pensionable earnings remaining after the deduction under paragraph (2)(b), the aggregate of the contributor’s pensionable earnings for a number of months equal to the number of months deducted under paragraph (a), for which months that aggregate is less than — or, if not less than, then equal to — the aggregate of the contributor’s pensionable earnings for any other like number of months in the contributor’s contributory period other than for months for which a deduction has already been made under subsection (2).
+@ref Act s 48(3) (src:1128-1130)
+GIVEN months IS A LIST OF `cp3 Month of a contributory period`
+      `the last month of the contributor's contributory period` IS A DATE
+      `the contributor's date of birth` IS A DATE
+      `the basic number of contributory months` IS A NUMBER
+GIVETH A LIST OF `cp3 Month of a contributory period`
+-- Plain gloss: if the contributory period ends after the month before the month in which the
+-- contributor reaches 65, and more months remain than the basic number, then deduct the lesser of the
+-- months after reaching 65 and the excess over the basic number, and from the pensionable earnings deduct
+-- those of that many months of least earnings (not the same months as were deducted under subsection (2)).
+-- The result is the months that remain. Reaching 65 is section 2(2)'s deemed date.
+`s 48(3) — the months of the contributory period that remain after the deduction for months after age 65` months `the last month of the contributor's contributory period` `the contributor's date of birth` `the basic number of contributory months` MEANS
+    IF `the period ends after the month before the month of reaching 65` AND (count months) GREATER THAN `the basic number of contributory months`
+    THEN drop `the number deducted` (`cp3 — the months in order of earnings, lowest first` months)
+    ELSE months
+    WHERE
+        `the month of reaching 65` MEANS `the month of a date` (`s 2(2) — the date a person is deemed to reach a specified age` `the contributor's date of birth` 65)
+        `the period ends after the month before the month of reaching 65` MEANS
+            `the month of a date` `the last month of the contributor's contributory period` AT LEAST `the month of reaching 65`
+        `the months after reaching 65` MEANS count (filter (GIVEN month YIELD `the month of a date` (month's `the month of the record`) AT LEAST `the month of reaching 65`) months)
+        `the number deducted` MEANS min `the months after reaching 65` ((count months) MINUS `the basic number of contributory months`)
+
+§§ `48(4) and 48(5) -- months over 120`
+
+-- src:1134 | (i) subject to subsection (5), if the retirement pension or other benefit becomes payable commencing with a month before January 2012, fifteen per cent of the number remaining — and sixteen per cent commencing with a month after December 2011 and before January 2014 and seventeen per cent commencing with a month after December 2013 — and, if that per cent includes a fraction of a month, the fraction shall be taken to be a complete month, and
+@ref Act s 48(4)(a)(i) (src:1134)
+GIVEN `the month with which the retirement pension or other benefit becomes payable` IS A DATE
+GIVETH A NUMBER
+-- Plain gloss: fifteen per cent for a benefit commencing with a month before January 2012, sixteen per
+-- cent for one commencing after December 2011 and before January 2014, seventeen per cent for one
+-- commencing after December 2013.
+`s 48(4)(a)(i) — the percentage of the months remaining that is deducted` `the month with which the retirement pension or other benefit becomes payable` MEANS
+    BRANCH IF `the month with which the retirement pension or other benefit becomes payable` LESS THAN (YMD 2012 1 1) THEN 15%
+           IF `the month with which the retirement pension or other benefit becomes payable` LESS THAN (YMD 2014 1 1) THEN 16%
+           OTHERWISE 17%
+
+-- src:1131 | Deductions allowed where number of months remaining exceeds 120
+-- src:1132 | (4) Where the number of months remaining after making any deduction under subsection (2) or (3) from the total number of months in the contributory period of a contributor exceeds one hundred and twenty, in calculating his average monthly pensionable earnings in accordance with subsection (1) there shall be deducted
+-- src:1133 | (a) from the number of months remaining, a number of months equal to the lesser of
+-- src:1134 | (i) subject to subsection (5), if the retirement pension or other benefit becomes payable commencing with a month before January 2012, fifteen per cent of the number remaining — and sixteen per cent commencing with a month after December 2011 and before January 2014 and seventeen per cent commencing with a month after December 2013 — and, if that per cent includes a fraction of a month, the fraction shall be taken to be a complete month, and
+-- src:1135 | (ii) the number of months by which the number remaining exceeds one hundred and twenty; and
+-- src:1137 | Exception — same percentage
+-- src:1138 | (5) The percentage used in a calculation of the amount of average monthly pensionable earnings under subsection (4) is to be used in the calculation of other benefits based on that amount.
+@ref Act s 48(4)(a), (5) (src:1131-1138)
+GIVEN `the number of months remaining after any deduction under subsection (2) or (3)` IS A NUMBER
+      `the month with which the retirement pension or other benefit becomes payable` IS A DATE
+      `the percentage already used under subsection (4) in calculating another benefit based on that amount` IS A MAYBE NUMBER
+GIVETH A NUMBER
+-- Plain gloss: when more than 120 months remain, deduct the lesser of (i) the percentage of the number
+-- remaining, a fraction of a month counting as a whole month, and (ii) the excess over 120. The
+-- percentage used is also the one used for every other benefit calculated from that amount
+-- (subsection (5)), which is the last input. When 120 or fewer remain, nothing is deducted.
+`s 48(4)(a) — the number of months deducted from the months remaining` `the number of months remaining after any deduction under subsection (2) or (3)` `the month with which the retirement pension or other benefit becomes payable` `the percentage already used under subsection (4) in calculating another benefit based on that amount` MEANS
+    IF `the number of months remaining after any deduction under subsection (2) or (3)` GREATER THAN 120
+    THEN min (CEILING (`the percentage` TIMES `the number of months remaining after any deduction under subsection (2) or (3)`)) (`the number of months remaining after any deduction under subsection (2) or (3)` MINUS 120)
+    ELSE 0
+    WHERE
+        `the percentage` MEANS
+            CONSIDER `the percentage already used under subsection (4) in calculating another benefit based on that amount`
+            WHEN NOTHING THEN `s 48(4)(a)(i) — the percentage of the months remaining that is deducted` `the month with which the retirement pension or other benefit becomes payable`
+            WHEN JUST used THEN used
+
+-- src:1131 | Deductions allowed where number of months remaining exceeds 120
+-- src:1132 | (4) Where the number of months remaining after making any deduction under subsection (2) or (3) from the total number of months in the contributory period of a contributor exceeds one hundred and twenty, in calculating his average monthly pensionable earnings in accordance with subsection (1) there shall be deducted
+-- src:1133 | (a) from the number of months remaining, a number of months equal to the lesser of
+-- src:1134 | (i) subject to subsection (5), if the retirement pension or other benefit becomes payable commencing with a month before January 2012, fifteen per cent of the number remaining — and sixteen per cent commencing with a month after December 2011 and before January 2014 and seventeen per cent commencing with a month after December 2013 — and, if that per cent includes a fraction of a month, the fraction shall be taken to be a complete month, and
+-- src:1135 | (ii) the number of months by which the number remaining exceeds one hundred and twenty; and
+-- src:1136 | (b) from the contributor’s total pensionable earnings remaining after making any deduction under subsection (2) or (3), the aggregate of the contributor’s pensionable earnings for a number of months equal to the number of months deducted under paragraph (a), for which months that aggregate is less than — or, if not less than, then equal to — the contributor’s aggregate pensionable earnings for any like number of months in the contributor’s contributory period other than for months for which a deduction has already been made under subsection (2) or (3).
+@ref Act s 48(4) (src:1131-1136)
+GIVEN months IS A LIST OF `cp3 Month of a contributory period`
+      `the month with which the retirement pension or other benefit becomes payable` IS A DATE
+      `the percentage already used under subsection (4) in calculating another benefit based on that amount` IS A MAYBE NUMBER
+GIVETH A LIST OF `cp3 Month of a contributory period`
+-- Plain gloss: the months that remain after the deduction of subsection (4): the months of least earnings
+-- go, as many as paragraph (a) says.
+`s 48(4) — the months of the contributory period that remain after the deduction for months over 120` months `the month with which the retirement pension or other benefit becomes payable` `the percentage already used under subsection (4) in calculating another benefit based on that amount` MEANS
+    drop (`s 48(4)(a) — the number of months deducted from the months remaining` (count months) `the month with which the retirement pension or other benefit becomes payable` `the percentage already used under subsection (4) in calculating another benefit based on that amount`) (`cp3 — the months in order of earnings, lowest first` months)
+
+§§ `48 -- the average monthly pensionable earnings after the deductions`
+
+-- src:1118 | Average monthly pensionable earnings in case of pension commencing after December, 1975
+-- src:1119 | 48 (1) Subject to subsections (2), (3) and (4), where a retirement pension becomes payable to a contributor commencing with any month after December, 1975, his average monthly pensionable earnings are an amount calculated by dividing his total pensionable earnings by the total number of months in his contributory period or by the basic number of contributory months, whichever is the greater.
+-- src:1120 | Deductions in calculating average monthly pensionable earnings of certain months during child raising years
+-- src:1121 | (2) In calculating the average monthly pensionable earnings of a contributor in accordance with subsection (1) for the purpose of calculating or recalculating benefits payable for a month commencing on or after January 1, 1978, there may be deducted
+-- src:1122 | (a) from the total number of months in a contributor’s contributory period, those months during which he was a family allowance recipient and during which his pensionable earnings were less than his average monthly pensionable earnings calculated without regard to subsections (3) and (4), but no such deduction shall reduce the number of months in his contributory period to less than the basic number of contributory months, except
+-- src:1123 | (i) for the purpose of calculating a disability benefit in respect of a contributor who is deemed to have become disabled for the purposes of this Act after December 31, 1997, in which case the words “the basic number of contributory months” shall be read as “48 months”,
+-- src:1124 | (i.1) for the purpose of calculating a disability benefit in respect of a contributor who is deemed to have become disabled for the purposes of this Act in 1997, in which case the words “the basic number of contributory months” shall be read as “24 months”, and
+-- src:1125 | (ii) for the purpose of calculating a death benefit and a survivor’s pension, in which case the words “the basic number of contributory months” shall be read as “thirty-six months”; and
+-- src:1126 | (b) from his total pensionable earnings, the aggregate of his pensionable earnings attributable to the months deducted pursuant to paragraph (a).
+-- src:1127 | Deductions allowed where contributory period ends after age 65
+-- src:1128 | (3) Where a contributor’s contributory period ends after the month preceding the month in which he reaches sixty-five years of age and the total number of months in his contributory period remaining after the deduction under paragraph (2)(a) exceeds the basic number of contributory months, in calculating his average monthly pensionable earnings in accordance with subsection (1) there shall be deducted
+-- src:1129 | (a) from the total number of months remaining in his contributory period, the number of months therein after he reached sixty-five years of age or by which the total exceeds the basic number of contributory months, whichever is the lesser; and
+-- src:1130 | (b) from the contributor’s total pensionable earnings remaining after the deduction under paragraph (2)(b), the aggregate of the contributor’s pensionable earnings for a number of months equal to the number of months deducted under paragraph (a), for which months that aggregate is less than — or, if not less than, then equal to — the aggregate of the contributor’s pensionable earnings for any other like number of months in the contributor’s contributory period other than for months for which a deduction has already been made under subsection (2).
+-- src:1131 | Deductions allowed where number of months remaining exceeds 120
+-- src:1132 | (4) Where the number of months remaining after making any deduction under subsection (2) or (3) from the total number of months in the contributory period of a contributor exceeds one hundred and twenty, in calculating his average monthly pensionable earnings in accordance with subsection (1) there shall be deducted
+-- src:1133 | (a) from the number of months remaining, a number of months equal to the lesser of
+-- src:1134 | (i) subject to subsection (5), if the retirement pension or other benefit becomes payable commencing with a month before January 2012, fifteen per cent of the number remaining — and sixteen per cent commencing with a month after December 2011 and before January 2014 and seventeen per cent commencing with a month after December 2013 — and, if that per cent includes a fraction of a month, the fraction shall be taken to be a complete month, and
+-- src:1135 | (ii) the number of months by which the number remaining exceeds one hundred and twenty; and
+-- src:1136 | (b) from the contributor’s total pensionable earnings remaining after making any deduction under subsection (2) or (3), the aggregate of the contributor’s pensionable earnings for a number of months equal to the number of months deducted under paragraph (a), for which months that aggregate is less than — or, if not less than, then equal to — the contributor’s aggregate pensionable earnings for any like number of months in the contributor’s contributory period other than for months for which a deduction has already been made under subsection (2) or (3).
+-- src:1137 | Exception — same percentage
+-- src:1138 | (5) The percentage used in a calculation of the amount of average monthly pensionable earnings under subsection (4) is to be used in the calculation of other benefits based on that amount.
+@ref Act s 48 (src:1118-1138)
+GIVEN months IS A LIST OF `cp3 Month of a contributory period`
+      kind IS A `Kind of benefit`
+      `the month with which the retirement pension or other benefit becomes payable` IS A DATE
+      `the month for which the benefit is payable` IS A DATE
+      `the last month of the contributor's contributory period` IS A DATE
+      `the contributor's date of birth` IS A DATE
+      `the day on which the contributor is deemed to have become disabled, if the contributor has been` IS A MAYBE DATE
+      `the months excluded from the contributor's contributory period by reason of disability` IS A NUMBER
+      `the percentage already used under subsection (4) in calculating another benefit based on that amount` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+-- Plain gloss: subsection (1) as cut by subsections (2), (3) and (4): the months of the contributory period are
+-- reduced by the three deductions in turn and the total pensionable earnings of the months left are divided by
+-- the number left or by the basic number of contributory months, whichever is greater. NOTHING: the benefit
+-- commences before 1976 (section 47 applies) or the divisor is zero.
+`s 48 — the average monthly pensionable earnings after the deductions` months kind `the month with which the retirement pension or other benefit becomes payable` `the month for which the benefit is payable` `the last month of the contributor's contributory period` `the contributor's date of birth` `the day on which the contributor is deemed to have become disabled, if the contributor has been` `the months excluded from the contributor's contributory period by reason of disability` `the percentage already used under subsection (4) in calculating another benefit based on that amount` MEANS
+    `s 48(1) — the average monthly pensionable earnings before the deductions`
+        `the month with which the retirement pension or other benefit becomes payable`
+        (`cp3 — the pensionable earnings of a list of months` `the months that remain`)
+        (count `the months that remain`)
+        `the basic number of contributory months`
+    WHERE
+        `the basic number of contributory months` MEANS `s 42(1) — the basic number of contributory months` `the months excluded from the contributor's contributory period by reason of disability`
+        `after subsection (2)` MEANS `s 48(2) — the months of the contributory period that remain after the deduction for child-raising years` months `the month for which the benefit is payable` (`s 48(2)(a) — the number of months below which the deduction may not reduce the contributory period` kind `the day on which the contributor is deemed to have become disabled, if the contributor has been` `the basic number of contributory months`) `the basic number of contributory months`
+        `after subsection (3)` MEANS `s 48(3) — the months of the contributory period that remain after the deduction for months after age 65` `after subsection (2)` `the last month of the contributor's contributory period` `the contributor's date of birth` `the basic number of contributory months`
+        `the months that remain` MEANS `s 48(4) — the months of the contributory period that remain after the deduction for months over 120` `after subsection (3)` `the month with which the retirement pension or other benefit becomes payable` `the percentage already used under subsection (4) in calculating another benefit based on that amount`
+
+§§ `48.1 and 48.2 -- the first and the second additional monthly pensionable earnings`
+
+-- src:1141 | (a) in the case where their first additional contributory period is less than or equal to 480 months, dividing their total first additional pensionable earnings by 480; or
+@ref Act s 48.1(a) (src:1141)
+GIVEN `the total first additional pensionable earnings of the contributor` IS A NUMBER
+GIVETH A NUMBER
+-- Plain gloss: when the first additional contributory period is 480 months or less, the first additional
+-- monthly pensionable earnings are the total first additional pensionable earnings divided by 480.
+`s 48.1(a) — the first additional monthly pensionable earnings when the first additional contributory period is not more than 480 months` `the total first additional pensionable earnings of the contributor` MEANS
+    `the total first additional pensionable earnings of the contributor` DIVIDED BY 480
+
+-- src:1142 | (b) in the case where their first additional contributory period exceeds 480 months, dividing the aggregate of their 480 highest first additional pensionable earnings for a month by 480.
+@ref Act s 48.1(b) (src:1142)
+GIVEN `the first additional pensionable earnings of the contributor for each month in the first additional contributory period` IS A LIST OF NUMBER
+GIVETH A NUMBER
+-- Plain gloss: when the period is more than 480 months, the aggregate of the 480 highest first additional
+-- pensionable earnings for a month, divided by 480.
+`s 48.1(b) — the first additional monthly pensionable earnings when the first additional contributory period exceeds 480 months` `the first additional pensionable earnings of the contributor for each month in the first additional contributory period` MEANS
+    (sum (take 480 (reverse (sort `the first additional pensionable earnings of the contributor for each month in the first additional contributory period`)))) DIVIDED BY 480
+
+-- src:1140 | 48.1 The first additional monthly pensionable earnings of a contributor are an amount calculated by
+-- src:1141 | (a) in the case where their first additional contributory period is less than or equal to 480 months, dividing their total first additional pensionable earnings by 480; or
+-- src:1142 | (b) in the case where their first additional contributory period exceeds 480 months, dividing the aggregate of their 480 highest first additional pensionable earnings for a month by 480.
+@ref Act s 48.1 (src:1140-1142)
+GIVEN `the first additional pensionable earnings of the contributor for each month in the first additional contributory period` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`s 48.1 — the first additional monthly pensionable earnings of a contributor` `the first additional pensionable earnings of the contributor for each month in the first additional contributory period` MEANS
+    IF count `the first additional pensionable earnings of the contributor for each month in the first additional contributory period` AT MOST 480
+    THEN `s 48.1(a) — the first additional monthly pensionable earnings when the first additional contributory period is not more than 480 months` (`s 50.1 — the total first additional pensionable earnings of a contributor` `the first additional pensionable earnings of the contributor for each month in the first additional contributory period`)
+    ELSE `s 48.1(b) — the first additional monthly pensionable earnings when the first additional contributory period exceeds 480 months` `the first additional pensionable earnings of the contributor for each month in the first additional contributory period`
+
+-- src:1145 | (a) in the case where their second additional contributory period is less than or equal to 480 months, dividing their total second additional pensionable earnings by 480; or
+@ref Act s 48.2(a) (src:1145)
+GIVEN `the total second additional pensionable earnings of the contributor` IS A NUMBER
+GIVETH A NUMBER
+`s 48.2(a) — the second additional monthly pensionable earnings when the second additional contributory period is not more than 480 months` `the total second additional pensionable earnings of the contributor` MEANS
+    `the total second additional pensionable earnings of the contributor` DIVIDED BY 480
+
+-- src:1146 | (b) in the case where their second additional contributory period exceeds 480 months, dividing the aggregate of their 480 highest second additional pensionable earnings for a month by 480.
+@ref Act s 48.2(b) (src:1146)
+GIVEN `the second additional pensionable earnings of the contributor for each month in the second additional contributory period` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`s 48.2(b) — the second additional monthly pensionable earnings when the second additional contributory period exceeds 480 months` `the second additional pensionable earnings of the contributor for each month in the second additional contributory period` MEANS
+    (sum (take 480 (reverse (sort `the second additional pensionable earnings of the contributor for each month in the second additional contributory period`)))) DIVIDED BY 480
+
+-- src:1144 | 48.2 The second additional monthly pensionable earnings of a contributor are an amount calculated by
+-- src:1145 | (a) in the case where their second additional contributory period is less than or equal to 480 months, dividing their total second additional pensionable earnings by 480; or
+-- src:1146 | (b) in the case where their second additional contributory period exceeds 480 months, dividing the aggregate of their 480 highest second additional pensionable earnings for a month by 480.
+@ref Act s 48.2 (src:1144-1146)
+GIVEN `the second additional pensionable earnings of the contributor for each month in the second additional contributory period` IS A LIST OF NUMBER
+GIVETH A NUMBER
+`s 48.2 — the second additional monthly pensionable earnings of a contributor` `the second additional pensionable earnings of the contributor for each month in the second additional contributory period` MEANS
+    IF count `the second additional pensionable earnings of the contributor for each month in the second additional contributory period` AT MOST 480
+    THEN `s 48.2(a) — the second additional monthly pensionable earnings when the second additional contributory period is not more than 480 months` (`s 50.2 — the total second additional pensionable earnings of a contributor` `the second additional pensionable earnings of the contributor for each month in the second additional contributory period`)
+    ELSE `s 48.2(b) — the second additional monthly pensionable earnings when the second additional contributory period exceeds 480 months` `the second additional pensionable earnings of the contributor for each month in the second additional contributory period`

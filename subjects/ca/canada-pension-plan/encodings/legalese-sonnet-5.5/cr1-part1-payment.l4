@@ -1,0 +1,457 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cpp-core-definitions`
+IMPORT `cr1-helpers`
+
+-- Canada Pension Plan Regulations (C.R.C., c. 385), PART I (part): regulations 8 to 8.3 -- the payment of
+-- contributions (when they are remitted), the person deemed to be an employer, the prescribed persons and the
+-- prescribed security interest. Piece cr1. LAYER 1: the law as the text states it.
+--
+-- Dates are DATEs written YMD year month day. A day "on or before" a date is met by a remittance on that date.
+-- The Income Tax Regulations (subsections 108(1.2) to (1.41)) say how an employer's "average monthly
+-- withholding amount" and "new employer" status are determined (subsection 8(1.2)); they are not among the
+-- texts this encoding reads, so both arrive as inputs. So does the list of holidays in subsection (1.1)(b): the
+-- text excludes "a Saturday or holiday" and defines neither the holidays nor Sundays (fork F5).
+
+§ `Regulations, Part I -- payment of contributions (regs 8 to 8.3)`
+
+§§ `Regulation 8: the employer's withholding history, and the ways of remitting`
+
+-- out of range: the Income Tax Regulations, subsections 108(1.2) to (1.4) -- not deposited
+DECLARE `cr1 Employer's withholding history` HAS
+    `average monthly withholding amount for the second calendar year preceding the particular calendar year` IS A NUMBER
+    `average monthly withholding amount for the calendar year preceding the particular calendar year` IS A NUMBER
+    `the employer has advised the Minister that the employer has elected` IS A BOOLEAN
+    `the employer is a new employer throughout the particular month` IS A BOOLEAN
+    `throughout the 12-month period before that time the employer has remitted on time all the amounts required to be remitted` IS A BOOLEAN
+    `throughout the 12-month period before that time the employer has filed on time all the returns required to be filed` IS A BOOLEAN
+
+-- src:138 | 8 (1) Subject to subsections (1.1), (1.11), (1.12), (1.13) and (2), the employee’s contributions and the employer’s contributions shall be remitted to the Receiver General on or before the 15th day of the month following the month in which the employer paid to the employee the remuneration in respect of which those contributions were required to be made.
+-- src:139 | (1.1) Subject to subsection (1.11), where the average monthly withholding amount of an employer for the second calendar year preceding a particular calendar year is
+-- src:140 | (a) equal to or greater than $25,000 and less than $100,000, the employer shall remit the employee’s contributions and the employer’s contributions to the Receiver General
+-- src:141 | (i) in respect of remuneration paid before the 16th day of a month in the particular calendar year, on or before the 25th day of the month, and
+-- src:142 | (ii) in respect of remuneration paid after the 15th day of a month in the particular calendar year, on or before the 10th day of the following month; or
+-- src:143 | (b) equal to or greater than $100,000, the employer shall remit the employee’s contributions and the employer’s contributions to the Receiver General on or before the third day, not including a Saturday or holiday, after the end of the following periods in which remuneration was paid,
+-- src:144 | (i) the period beginning on the first day of a month in the particular calendar year and ending on the 7th day of the month,
+-- src:145 | (ii) the period beginning on the 8th day of a month in the particular calendar year and ending on the 14th day of the month,
+-- src:146 | (iii) the period beginning on the 15th day of a month in the particular calendar year and ending on the 21st day of the month, and
+-- src:147 | (iv) the period beginning on the 22nd day of a month in the particular calendar year and ending on the last day of the month.
+@ref Reg 8(1), 8(1.1) (src:138-147)
+DECLARE `cr1 Way of remitting` IS ONE OF
+    `remitting by the 15th day of the month following the month in which the remuneration was paid`
+    `remitting by the 25th day of the month, or the 10th day of the following month`
+    `remitting within three days, not counting a Saturday or holiday, after the end of the part of the month in which the remuneration was paid`
+
+-- src:138 | 8 (1) Subject to subsections (1.1), (1.11), (1.12), (1.13) and (2), the employee’s contributions and the employer’s contributions shall be remitted to the Receiver General on or before the 15th day of the month following the month in which the employer paid to the employee the remuneration in respect of which those contributions were required to be made.
+@ref Reg 8(1) (src:138)
+GIVEN `the day the employer paid the remuneration` IS A DATE
+GIVETH A DATE
+`reg 8(1) — the day by which contributions must be remitted` `the day the employer paid the remuneration` MEANS
+    (`the month following the month of a date` `the day the employer paid the remuneration`) PLUS 14
+
+-- (1.1)(a) remuneration paid before the 16th day of a month: on or before the 25th day of the month;
+-- remuneration paid after the 15th day of a month: on or before the 10th day of the following month.
+-- src:139 | (1.1) Subject to subsection (1.11), where the average monthly withholding amount of an employer for the second calendar year preceding a particular calendar year is
+-- src:140 | (a) equal to or greater than $25,000 and less than $100,000, the employer shall remit the employee’s contributions and the employer’s contributions to the Receiver General
+-- src:141 | (i) in respect of remuneration paid before the 16th day of a month in the particular calendar year, on or before the 25th day of the month, and
+-- src:142 | (ii) in respect of remuneration paid after the 15th day of a month in the particular calendar year, on or before the 10th day of the following month; or
+@ref Reg 8(1.1)(a) (src:139-142)
+GIVEN `the day the employer paid the remuneration` IS A DATE
+GIVETH A DATE
+`reg 8(1.1)(a) — the day by which contributions must be remitted` `the day the employer paid the remuneration` MEANS
+    IF (DATE_DAY `the day the employer paid the remuneration`) AT MOST 15
+    THEN (`the month of a date` `the day the employer paid the remuneration`) PLUS 24
+    ELSE (`the month following the month of a date` `the day the employer paid the remuneration`) PLUS 9
+
+-- A day counts for (1.1)(b) unless it is a Saturday or a holiday. 1 January 2000 was a Saturday, so a day is
+-- a Saturday when its day number less that day's number is a multiple of 7.
+-- src:143 | (b) equal to or greater than $100,000, the employer shall remit the employee’s contributions and the employer’s contributions to the Receiver General on or before the third day, not including a Saturday or holiday, after the end of the following periods in which remuneration was paid,
+@ref Reg 8(1.1)(b) (src:143)
+GIVEN candidate IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A BOOLEAN
+`reg 8(1.1)(b) — a day is a Saturday or a holiday` candidate holidays MEANS
+    ((((Day candidate) MINUS (Day (YMD 2000 1 1))) MODULO 7) EQUALS 0) OR (elem candidate holidays)
+
+-- "on or before the third day, not including a Saturday or holiday, after the end of" the period.
+-- src:143 | (b) equal to or greater than $100,000, the employer shall remit the employee’s contributions and the employer’s contributions to the Receiver General on or before the third day, not including a Saturday or holiday, after the end of the following periods in which remuneration was paid,
+@ref Reg 8(1.1)(b) (src:143)
+GIVEN start IS A DATE
+      count IS A NUMBER
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`reg 8(1.1)(b) — the day that is a number of counted days after a day` start count holidays MEANS
+    IF count AT MOST 0
+    THEN start
+    ELSE IF `reg 8(1.1)(b) — a day is a Saturday or a holiday` (start PLUS 1) holidays
+         THEN `reg 8(1.1)(b) — the day that is a number of counted days after a day` (start PLUS 1) count holidays
+         ELSE `reg 8(1.1)(b) — the day that is a number of counted days after a day` (start PLUS 1) (count MINUS 1) holidays
+
+-- (1.1)(b) the periods in which remuneration was paid: (i) the 1st to the 7th, (ii) the 8th to the 14th,
+-- (iii) the 15th to the 21st, (iv) the 22nd to the last day of the month.
+-- src:143 | (b) equal to or greater than $100,000, the employer shall remit the employee’s contributions and the employer’s contributions to the Receiver General on or before the third day, not including a Saturday or holiday, after the end of the following periods in which remuneration was paid,
+-- src:144 | (i) the period beginning on the first day of a month in the particular calendar year and ending on the 7th day of the month,
+-- src:145 | (ii) the period beginning on the 8th day of a month in the particular calendar year and ending on the 14th day of the month,
+-- src:146 | (iii) the period beginning on the 15th day of a month in the particular calendar year and ending on the 21st day of the month, and
+-- src:147 | (iv) the period beginning on the 22nd day of a month in the particular calendar year and ending on the last day of the month.
+@ref Reg 8(1.1)(b) (src:143-147)
+GIVEN `the day the employer paid the remuneration` IS A DATE
+GIVETH A DATE
+`reg 8(1.1)(b) — the last day of the period in which remuneration was paid` `the day the employer paid the remuneration` MEANS
+    BRANCH
+        IF (DATE_DAY `the day the employer paid the remuneration`) AT MOST 7 THEN (`the month of a date` `the day the employer paid the remuneration`) PLUS 6
+        IF (DATE_DAY `the day the employer paid the remuneration`) AT MOST 14 THEN (`the month of a date` `the day the employer paid the remuneration`) PLUS 13
+        IF (DATE_DAY `the day the employer paid the remuneration`) AT MOST 21 THEN (`the month of a date` `the day the employer paid the remuneration`) PLUS 20
+        OTHERWISE (`the month following the month of a date` `the day the employer paid the remuneration`) PLUS (0 MINUS 1)
+
+-- src:143 | (b) equal to or greater than $100,000, the employer shall remit the employee’s contributions and the employer’s contributions to the Receiver General on or before the third day, not including a Saturday or holiday, after the end of the following periods in which remuneration was paid,
+-- src:144 | (i) the period beginning on the first day of a month in the particular calendar year and ending on the 7th day of the month,
+-- src:145 | (ii) the period beginning on the 8th day of a month in the particular calendar year and ending on the 14th day of the month,
+-- src:146 | (iii) the period beginning on the 15th day of a month in the particular calendar year and ending on the 21st day of the month, and
+-- src:147 | (iv) the period beginning on the 22nd day of a month in the particular calendar year and ending on the last day of the month.
+@ref Reg 8(1.1)(b) (src:143-147)
+GIVEN `the day the employer paid the remuneration` IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`reg 8(1.1)(b) — the day by which contributions must be remitted` `the day the employer paid the remuneration` holidays MEANS
+    `reg 8(1.1)(b) — the day that is a number of counted days after a day`
+        (`reg 8(1.1)(b) — the last day of the period in which remuneration was paid` `the day the employer paid the remuneration`)
+        3
+        holidays
+
+-- (1.1) Subject to (1.11), where the average monthly withholding amount of an employer for the second calendar
+-- year preceding a particular calendar year is (a) at least $25,000 and under $100,000, or (b) at least
+-- $100,000, the employer shall remit as paragraph (a) or (b) says. Otherwise subsection (1) governs.
+-- src:139 | (1.1) Subject to subsection (1.11), where the average monthly withholding amount of an employer for the second calendar year preceding a particular calendar year is
+@ref Reg 8(1), 8(1.1) (src:138), (src:139)
+GIVEN history IS A `cr1 Employer's withholding history`
+GIVETH A `cr1 Way of remitting`
+`reg 8(1.1) — the way an employer shall remit` history MEANS
+    BRANCH
+        IF (history's `average monthly withholding amount for the second calendar year preceding the particular calendar year`) AT LEAST 100000 THEN `remitting within three days, not counting a Saturday or holiday, after the end of the part of the month in which the remuneration was paid`
+        IF (history's `average monthly withholding amount for the second calendar year preceding the particular calendar year`) AT LEAST 25000 THEN `remitting by the 25th day of the month, or the 10th day of the following month`
+        OTHERWISE `remitting by the 15th day of the month following the month in which the remuneration was paid`
+
+-- (1.11) An employer who would otherwise remit under (1.1)(a) or (b) may elect to remit (a) under subsection
+-- (1), if the average monthly withholding amount for the calendar year preceding the particular calendar year
+-- is under $25,000 and the employer has advised the Minister of the election; or (b) on the 25th and 10th, if
+-- that amount is at least $25,000 and under $100,000 and the employer has advised the Minister.
+-- src:148 | (1.11) If an employer referred to in paragraph (1.1)(a) or (b) would otherwise be required to remit the employee’s contributions and employer’s contributions in respect of a particular calendar year in accordance with that paragraph, the employer may elect to remit those contributions
+-- src:149 | (a) in accordance with subsection (1), if the average monthly withholding amount of the employer for the calendar year preceding the particular calendar year is less than $25,000 and the employer has advised the Minister that the employer has so elected; or
+-- src:150 | (b) if the average monthly withholding amount of the employer for the calendar year preceding the particular calendar year is equal to or greater than $25,000 and less than $100,000 and the employer has advised the Minister that the employer has so elected,
+-- src:151 | (i) in respect of remuneration paid before the 16th day of a month in the particular calendar year, on or before the 25th day of the month, and
+-- src:152 | (ii) in respect of remuneration paid after the 15th day of a month in the particular calendar year, on or before the 10th day of the following month.
+@ref Reg 8(1.11) (src:148-152)
+GIVEN history IS A `cr1 Employer's withholding history`
+GIVETH A MAYBE `cr1 Way of remitting`
+`reg 8(1.11) — the way an employer may elect to remit instead` history MEANS
+    BRANCH
+        IF `reg 8(1.1) — the way an employer shall remit` history EQUALS `remitting by the 15th day of the month following the month in which the remuneration was paid` THEN NOTHING
+        IF NOT (history's `the employer has advised the Minister that the employer has elected`) THEN NOTHING
+        IF (history's `average monthly withholding amount for the calendar year preceding the particular calendar year`) LESS THAN 25000 THEN JUST `remitting by the 15th day of the month following the month in which the remuneration was paid`
+        IF (history's `average monthly withholding amount for the calendar year preceding the particular calendar year`) LESS THAN 100000 THEN JUST `remitting by the 25th day of the month, or the 10th day of the following month`
+        OTHERWISE NOTHING
+
+@ref Reg 8(1), 8(1.1), 8(1.11) (src:138-152)
+GIVEN way IS A `cr1 Way of remitting`
+      `the day the employer paid the remuneration` IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`reg 8 — the day by which contributions must be remitted in a way of remitting` way `the day the employer paid the remuneration` holidays MEANS
+    CONSIDER way
+    WHEN `remitting by the 15th day of the month following the month in which the remuneration was paid` THEN `reg 8(1) — the day by which contributions must be remitted` `the day the employer paid the remuneration`
+    WHEN `remitting by the 25th day of the month, or the 10th day of the following month` THEN `reg 8(1.1)(a) — the day by which contributions must be remitted` `the day the employer paid the remuneration`
+    WHEN `remitting within three days, not counting a Saturday or holiday, after the end of the part of the month in which the remuneration was paid` THEN `reg 8(1.1)(b) — the day by which contributions must be remitted` `the day the employer paid the remuneration` holidays
+
+§§ `Regulation 8(1.12) and (1.13): quarterly remittance`
+
+-- (1.12) If at any time (a) the average monthly withholding amount for either the first or the second calendar
+-- year before the particular calendar year is under $3,000, (b) throughout the 12-month period before that time
+-- the employer has remitted on time every amount required under s 21(1) of the Act, s 82(1) of the Employment
+-- Insurance Act, Part IX of the Excise Tax Act or s 153(1) of the Income Tax Act, and (c) throughout that period
+-- the employer has filed on time every return required under the Income Tax Act or Part IX of the Excise Tax
+-- Act, then contributions payable in a month that ends after that time may be remitted quarterly.
+-- src:153 | (1.12) If at any time
+-- src:154 | (a) the average monthly withholding amount in respect of an employer for either the first or the second calendar year before the particular calendar year that includes that time is less than $3,000;
+-- src:155 | (b) throughout the 12-month period before that time, the employer has remitted, on or before the day on or before which the amounts were required to be remitted, all amounts each of which was required to be remitted under subsection 21(1) of the Act, under subsection 82(1) of the Employment Insurance Act, under Part IX of the Excise Tax Act or under subsection 153(1) of the Income Tax Act; and
+-- src:156 | (c) throughout the 12-month period before that time, the employer has filed all returns each of which was required to be filed under the Income Tax Act or Part IX of the Excise Tax Act on or before the day on or before which those returns were required to be filed under those Acts,
+-- src:157 | contributions payable in a month that ends after that time and that is in the particular calendar year may be remitted by the employer to the Receiver General
+@ref Reg 8(1.12) (src:153-157)
+GIVEN history IS A `cr1 Employer's withholding history`
+GIVETH A BOOLEAN
+`reg 8(1.12) — the employer may remit quarterly` history MEANS
+        (   (history's `average monthly withholding amount for the calendar year preceding the particular calendar year`) LESS THAN 3000
+         OR (history's `average monthly withholding amount for the second calendar year preceding the particular calendar year`) LESS THAN 3000)
+    AND (history's `throughout the 12-month period before that time the employer has remitted on time all the amounts required to be remitted`)
+    AND (history's `throughout the 12-month period before that time the employer has filed on time all the returns required to be filed`)
+
+-- (1.13) If an employer is a new employer throughout a particular month in a particular calendar year,
+-- contributions payable in the month may be remitted quarterly.
+-- src:162 | (1.13) If an employer is a new employer throughout a particular month in a particular calendar year, contributions payable in the month may be remitted by the employer to the Receiver General
+@ref Reg 8(1.13) (src:162)
+GIVEN history IS A `cr1 Employer's withholding history`
+GIVETH A BOOLEAN
+`reg 8(1.13) — a new employer may remit quarterly` history MEANS
+    history's `the employer is a new employer throughout the particular month`
+
+-- (1.12)(d) to (g) and (1.13)(a) to (d) fix the same four days: contributions paid in January, February and
+-- March by the 15th of April; in April, May and June by the 15th of July; in July, August and September by
+-- the 15th of October; in October, November and December by the 15th of January of the following year.
+-- src:158 | (d) in respect of such contributions paid in January, February and March of the particular calendar year, on or before the 15th day of April of the particular year,
+-- src:159 | (e) in respect of such contributions paid in April, May and June of the particular calendar year, on or before the 15th day of July of the particular year,
+-- src:160 | (f) in respect of such contributions paid in July, August and September of the particular calendar year, on or before the 15th day of October of the particular year, and
+-- src:161 | (g) in respect of such contributions paid in October, November and December of the particular calendar year, on or before the 15th day of January of the year following the particular year.
+-- src:163 | (a) in respect of those contributions paid in January, February and March of the particular calendar year, on or before the 15th day of April of the particular calendar year;
+-- src:164 | (b) in respect of those contributions paid in April, May and June of the particular calendar year, on or before the 15th day of July of the particular calendar year;
+-- src:165 | (c) in respect of those contributions paid in July, August and September of the particular calendar year, on or before the 15th day of October of the particular calendar year; and
+-- src:166 | (d) in respect of those contributions paid in October, November and December of the particular calendar year, on or before the 15th day of January of the year following the particular calendar year.
+@ref Reg 8(1.12)(d) to (g), 8(1.13)(a) to (d) (src:158-161), (src:163-166)
+GIVEN `the day the employer paid the remuneration` IS A DATE
+GIVETH A DATE
+`reg 8(1.12) and (1.13) — the quarterly day for contributions paid in a month` `the day the employer paid the remuneration` MEANS
+    BRANCH
+        IF (DATE_MONTH `the day the employer paid the remuneration`) AT MOST 3 THEN YMD (DATE_YEAR `the day the employer paid the remuneration`) 4 15
+        IF (DATE_MONTH `the day the employer paid the remuneration`) AT MOST 6 THEN YMD (DATE_YEAR `the day the employer paid the remuneration`) 7 15
+        IF (DATE_MONTH `the day the employer paid the remuneration`) AT MOST 9 THEN YMD (DATE_YEAR `the day the employer paid the remuneration`) 10 15
+        OTHERWISE YMD ((DATE_YEAR `the day the employer paid the remuneration`) PLUS 1) 1 15
+
+-- The last day on which remitting is still on time under some provision. (1) to (1.13) all say how an employer
+-- "shall" or "may" remit: (1.11), (1.12) and (1.13) add choices to the way (1.1) fixes, so an employer who
+-- has a choice meets the duty by remitting by the latest of the days it gives (fork F6). Subsection (2),
+-- which overrides (1), is taken up in `reg 8(2)` below.
+-- src:138 | 8 (1) Subject to subsections (1.1), (1.11), (1.12), (1.13) and (2), the employee’s contributions and the employer’s contributions shall be remitted to the Receiver General on or before the 15th day of the month following the month in which the employer paid to the employee the remuneration in respect of which those contributions were required to be made.
+@ref Reg 8(1), 8(1.1), 8(1.11), 8(1.12), 8(1.13) (src:138)
+GIVEN history IS A `cr1 Employer's withholding history`
+      `the day the employer paid the remuneration` IS A DATE
+      holidays IS A LIST OF DATE
+GIVETH A DATE
+`reg 8 — the latest day by which contributions may be remitted` history `the day the employer paid the remuneration` holidays MEANS
+    `cr1 helper: the later of two dates`
+        (`cr1 helper: the later of two dates` `the day when the way the employer shall remit requires remittance` `the day when the way the employer may elect requires remittance`)
+        `the quarterly day if the employer may remit quarterly`
+    WHERE
+        `the day when the way the employer shall remit requires remittance` MEANS
+            `reg 8 — the day by which contributions must be remitted in a way of remitting`
+                (`reg 8(1.1) — the way an employer shall remit` history) `the day the employer paid the remuneration` holidays
+        `the day when the way the employer may elect requires remittance` MEANS
+            CONSIDER `reg 8(1.11) — the way an employer may elect to remit instead` history
+            WHEN NOTHING THEN `the day when the way the employer shall remit requires remittance`
+            WHEN JUST way THEN `reg 8 — the day by which contributions must be remitted in a way of remitting` way `the day the employer paid the remuneration` holidays
+        `the quarterly day if the employer may remit quarterly` MEANS
+            IF (`reg 8(1.12) — the employer may remit quarterly` history) OR (`reg 8(1.13) — a new employer may remit quarterly` history)
+            THEN `reg 8(1.12) and (1.13) — the quarterly day for contributions paid in a month` `the day the employer paid the remuneration`
+            ELSE `the day when the way the employer shall remit requires remittance`
+
+-- (1.2) For the purpose of this section (a) the average monthly withholding amount of an employer for a
+-- calendar year, (b) whether an employer is a new employer and (c) the monthly withholding amount of a new
+-- employer for a month are determined under subsections 108(1.2) to (1.41) and (1.21) of the Income Tax
+-- Regulations. Those Regulations are not deposited: the first two are the fields of
+-- `cr1 Employer's withholding history`, and no rule here needs the third.
+
+-- (2) If an employer carrying on a business or activity with respect to which they employ employees in
+-- pensionable employment ceases to carry on it, the employer shall, within seven days of ceasing, remit what
+-- the employer is required to remit with respect to those employees.
+-- src:171 | (2) If an employer carrying on a business or activity with respect to which they employ employees in pensionable employment ceases to carry on that business or activity, the employer shall, within seven days of ceasing to carry on that business or activity, remit to the Receiver General any employee’s contributions and any employer’s contributions that the employer is required to remit with respect to those employees.
+@ref Reg 8(2) (src:171)
+GIVEN `the day the employer ceased to carry on the business or activity` IS A DATE
+GIVETH A DATE
+`reg 8(2) — the day by which an employer who ceases to carry on a business must remit` `the day the employer ceased to carry on the business or activity` MEANS
+    `the day the employer ceased to carry on the business or activity` PLUS 7
+
+-- Subsection (1) is "subject to" (2): for an employer who has ceased, the day is the earlier of the day (2)
+-- gives and the day the other subsections give (fork F7).
+-- src:171 | (2) If an employer carrying on a business or activity with respect to which they employ employees in pensionable employment ceases to carry on that business or activity, the employer shall, within seven days of ceasing to carry on that business or activity, remit to the Receiver General any employee’s contributions and any employer’s contributions that the employer is required to remit with respect to those employees.
+@ref Reg 8(1), 8(2) (src:138), (src:171)
+GIVEN `the latest day by which contributions may be remitted if the employer had not ceased` IS A DATE
+      `the day the employer ceased to carry on the business or activity` IS A MAYBE DATE
+GIVETH A DATE
+`reg 8(2) — the day by which contributions must be remitted, allowing for a cessation` `the latest day by which contributions may be remitted if the employer had not ceased` `the day the employer ceased to carry on the business or activity` MEANS
+    CONSIDER `the day the employer ceased to carry on the business or activity`
+    WHEN NOTHING THEN `the latest day by which contributions may be remitted if the employer had not ceased`
+    WHEN JUST ceased THEN
+        `cr1 helper: the earlier of two dates` `the latest day by which contributions may be remitted if the employer had not ceased`
+            (`reg 8(2) — the day by which an employer who ceases to carry on a business must remit` ceased)
+
+-- Whether a remittance was in time.
+-- src:138 | 8 (1) Subject to subsections (1.1), (1.11), (1.12), (1.13) and (2), the employee’s contributions and the employer’s contributions shall be remitted to the Receiver General on or before the 15th day of the month following the month in which the employer paid to the employee the remuneration in respect of which those contributions were required to be made.
+@ref Reg 8(1) (src:138)
+GIVEN `the day the contributions were remitted` IS A DATE
+      `the day by which they had to be remitted` IS A DATE
+GIVETH A BOOLEAN
+`reg 8(1) — the contributions were remitted on time` `the day the contributions were remitted` `the day by which they had to be remitted` MEANS
+    `the day the contributions were remitted` AT MOST `the day by which they had to be remitted`
+
+-- (3) Every payment by an employer of an employee's contributions or an employer's contributions shall be
+-- accompanied by a return in prescribed form. "Prescribed" for a form is, in the Act's own definition, a form
+-- authorized by the Minister administering the Part (fork F8: that definition is the Act's).
+-- src:172 | (3) Every payment by an employer of an employee’s contributions or an employer’s contributions shall be accompanied by a return in prescribed form.
+@ref Reg 8(3) (src:172)
+GIVEN `a return accompanies the payment` IS A BOOLEAN
+      `the return is on a form the Minister has authorized` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 8(3) — the payment is accompanied by a return in prescribed form` `a return accompanies the payment` `the return is on a form the Minister has authorized` MEANS
+        `a return accompanies the payment`
+    AND `s 2(1) — prescribed` `a form or the information to be given on a form` `the return is on a form the Minister has authorized` FALSE FALSE
+
+§§ `Regulation 8.1: the person deemed to be an employer`
+
+-- (1) Every person by whom the remuneration of an employee in respect of pensionable employment is paid
+-- either wholly or in part is, for the purpose of calculating the employee's contributory salary and wages,
+-- maintaining records and filing returns, and paying, deducting and remitting the contributions, deemed to be
+-- an employer of that employee in addition to the actual employer.
+-- src:173 | 8.1 (1) Every person by whom the remuneration of an employee in respect of pensionable employment is paid either wholly or in part is, for the purpose of calculating the employee’s contributory salary and wages, maintaining records and filing returns, and paying, deducting and remitting the contributions payable under the Act and these Regulations, deemed to be an employer of that employee in addition to the actual employer of that employee.
+@ref Reg 8.1(1) (src:173)
+GIVEN `the person pays the remuneration of the employee wholly or in part` IS A BOOLEAN
+      `the remuneration is in respect of pensionable employment` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 8.1(1) — a person is deemed to be an employer of an employee` `the person pays the remuneration of the employee wholly or in part` `the remuneration is in respect of pensionable employment` MEANS
+    `the person pays the remuneration of the employee wholly or in part` AND `the remuneration is in respect of pensionable employment`
+
+-- (1.1) The amount of any contributions paid by the person who is deemed to be the employer under (1) is
+-- recoverable by that person from the actual employer. The provision gives the right to no one else, so for
+-- anyone else it says nothing (NOTHING).
+-- src:174 | (1.1) The amount of any contributions paid by the person who is deemed to be the employer under subsection (1) is recoverable by that person from the actual employer.
+@ref Reg 8.1(1.1) (src:174)
+GIVEN `the person is deemed to be an employer under subsection (1)` IS A BOOLEAN
+      `the amount of the contributions the person has paid` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`reg 8.1(1.1) — the amount the person may recover from the actual employer` `the person is deemed to be an employer under subsection (1)` `the amount of the contributions the person has paid` MEANS
+    IF `the person is deemed to be an employer under subsection (1)`
+    THEN JUST `the amount of the contributions the person has paid`
+    ELSE NOTHING
+
+-- (2) Where a person deemed by (1) to be an employer fails to pay, deduct or remit the contributions that an
+-- employer is required to, the provisions of Part I of the Act apply to that person as if the actual employer.
+-- src:175 | (2) Where a person who is deemed by subsection (1) to be an employer fails to pay, deduct or remit the contributions that an employer is required to pay, deduct and remit under the Act and these Regulations, the provisions of Part I of the Act shall apply to that person as if he were the actual employer.
+@ref Reg 8.1(2) (src:175)
+GIVEN `the person is deemed to be an employer under subsection (1)` IS A BOOLEAN
+      `the person fails to pay, deduct or remit the contributions an employer is required to pay, deduct and remit` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 8.1(2) — Part I of the Act applies to the person as if the actual employer` `the person is deemed to be an employer under subsection (1)` `the person fails to pay, deduct or remit the contributions an employer is required to pay, deduct and remit` MEANS
+    `the person is deemed to be an employer under subsection (1)` AND `the person fails to pay, deduct or remit the contributions an employer is required to pay, deduct and remit`
+
+§§ `Regulation 8.2: prescribed persons`
+
+-- (2) the average monthly remittance of a person or partnership for the second calendar year preceding the
+-- particular year is the aggregate, for that year, of the amounts in (1)(b)(i) to (iii) remitted on behalf of
+-- all the employers, divided by the number of months in that year for which the person remitted those amounts.
+-- NOTHING when no month is counted (a division the text does not contemplate).
+-- src:184 | (2) For the purposes of paragraph (1)(b), the average monthly remittance made by a person or partnership on behalf of all the employers for whom that person or partnership is acting, for the second calendar year preceding the particular calendar year, is the quotient obtained when the aggregate, for that preceding year, of all amounts referred to in subparagraphs (1)(b)(i) to (iii) remitted by the person or partnership on behalf of those employers is divided by the number of months, in that preceding year, for which the person or partnership remitted those amounts.
+@ref Reg 8.2(2) (src:184)
+GIVEN `the aggregate of the amounts remitted on behalf of all the employers for that preceding year` IS A NUMBER
+      `the number of months in that preceding year for which the person or partnership remitted those amounts` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`reg 8.2(2) — the average monthly remittance` `the aggregate of the amounts remitted on behalf of all the employers for that preceding year` `the number of months in that preceding year for which the person or partnership remitted those amounts` MEANS
+    IF `the number of months in that preceding year for which the person or partnership remitted those amounts` AT MOST 0
+    THEN NOTHING
+    ELSE JUST (`the aggregate of the amounts remitted on behalf of all the employers for that preceding year`
+               DIVIDED BY `the number of months in that preceding year for which the person or partnership remitted those amounts`)
+
+-- (1)(b) the average monthly remittance is at least $50,000.
+-- src:180 | (b) a person or partnership who, acting on behalf of one or more employers, remits the following amounts in a particular calendar year and whose average monthly remittance, in respect of those amounts, for the second calendar year preceding the particular calendar year, is equal to or greater than $50,000,
+@ref Reg 8.2(1)(b) (src:180)
+GIVEN average IS A MAYBE NUMBER
+GIVETH A MAYBE BOOLEAN
+`reg 8.2(1)(b) — the average monthly remittance is at least $50,000` average MEANS
+    CONSIDER average
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST figure THEN JUST (figure AT LEAST 50000)
+
+-- (1) The following are prescribed persons for the purposes of subsection 21(1) of the Act: (a) an employer who
+-- is required, under 21(1) of the Act and in accordance with 8(1.1)(b), to remit amounts deducted; and (b) a
+-- person or partnership who, acting on behalf of one or more employers, remits in a particular calendar year
+-- the amounts of (i) to (iii) and whose average monthly remittance for the second calendar year preceding the
+-- particular calendar year is at least $50,000. Where (a) does not hold and the average of (b) cannot be worked
+-- out (no month counted), the answer is NOTHING.
+-- src:178 | 8.2 (1) The following are prescribed persons for the purposes of subsection 21(1) of the Act:
+-- src:179 | (a) an employer who is required, under subsection 21(1) of the Act and in accordance with paragraph 8(1.1)(b), to remit amounts deducted; and
+-- src:180 | (b) a person or partnership who, acting on behalf of one or more employers, remits the following amounts in a particular calendar year and whose average monthly remittance, in respect of those amounts, for the second calendar year preceding the particular calendar year, is equal to or greater than $50,000,
+-- src:181 | (i) amounts required to be remitted under subsection 21(1) of the Act,
+-- src:182 | (ii) amounts required to be remitted under subsection 153(1) of the Income Tax Act and a similar provision of a law of a province that imposes a tax on the income of individuals, where the province has entered into an agreement with the Minister of Finance for the collection of taxes payable to the province, in respect of payments described in the definition remuneration in subsection 100(1) of the Income Tax Regulations, and
+-- src:183 | (iii) amounts required to be remitted under subsection 53(1) of the Unemployment Insurance Act.
+@ref Reg 8.2(1) (src:178-183)
+GIVEN history IS A `cr1 Employer's withholding history`
+      `the employer is required under subsection 21(1) of the Act to remit amounts deducted` IS A BOOLEAN
+      `the person or partnership remits the amounts on behalf of one or more employers in the particular calendar year` IS A BOOLEAN
+      `the aggregate of the amounts remitted on behalf of all the employers for that preceding year` IS A NUMBER
+      `the number of months in that preceding year for which the person or partnership remitted those amounts` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`reg 8.2(1) — a person is a prescribed person` history `the employer is required under subsection 21(1) of the Act to remit amounts deducted` `the person or partnership remits the amounts on behalf of one or more employers in the particular calendar year` `the aggregate of the amounts remitted on behalf of all the employers for that preceding year` `the number of months in that preceding year for which the person or partnership remitted those amounts` MEANS
+    BRANCH
+        IF (`the employer is required under subsection 21(1) of the Act to remit amounts deducted`) AND (`reg 8(1.1) — the way an employer shall remit` history EQUALS `remitting within three days, not counting a Saturday or holiday, after the end of the part of the month in which the remuneration was paid`) THEN JUST TRUE
+        IF NOT `the person or partnership remits the amounts on behalf of one or more employers in the particular calendar year` THEN JUST FALSE
+        OTHERWISE `reg 8.2(1)(b) — the average monthly remittance is at least $50,000` (`reg 8.2(2) — the average monthly remittance` `the aggregate of the amounts remitted on behalf of all the employers for that preceding year` `the number of months in that preceding year for which the person or partnership remitted those amounts`)
+
+§§ `Regulation 8.3: the prescribed security interest`
+
+-- (1) For the purpose of subsection 23(4.1) of the Act, prescribed security interest, in relation to an amount
+-- deemed by 23(3) of the Act to be held in trust by a person, means that part of a mortgage securing the
+-- performance of an obligation of the person, that encumbers land or a building, where the mortgage is
+-- registered pursuant to the appropriate land registration system before the time the amount is deemed to be
+-- held in trust by the person.
+-- src:187 | 8.3 (1) For the purpose of subsection 23(4.1) of the Act, prescribed security interest, in relation to an amount deemed by subsection 23(3) of the Act to be held in trust by a person means that part of a mortgage securing the performance of an obligation of the person, that encumbers land or a building, where the mortgage is registered pursuant to the appropriate land registration system before the time the amount is deemed to be held in trust by the person.
+@ref Reg 8.3(1) (src:187)
+GIVEN `the mortgage secures the performance of an obligation of the person` IS A BOOLEAN
+      `the mortgage encumbers land or a building` IS A BOOLEAN
+      `the mortgage was registered under the appropriate land registration system before the amount was deemed held in trust` IS A BOOLEAN
+GIVETH A BOOLEAN
+`reg 8.3(1) — a mortgage is a prescribed security interest` `the mortgage secures the performance of an obligation of the person` `the mortgage encumbers land or a building` `the mortgage was registered under the appropriate land registration system before the amount was deemed held in trust` MEANS
+        `the mortgage secures the performance of an obligation of the person`
+    AND `the mortgage encumbers land or a building`
+    AND `the mortgage was registered under the appropriate land registration system before the amount was deemed held in trust`
+
+-- (2) Where, at any time after 1999, the person fails to pay an amount deemed by 23(3) to be held in trust, the
+-- amount of the prescribed security interest is deemed not to exceed the amount by which the obligation
+-- outstanding at that time, secured by the mortgage, exceeds the total of (a) the value, determined at the time
+-- of the failure having regard to all the circumstances including any deemed trust for Her Majesty, of all the
+-- rights of the secured creditor securing the obligation (guarantees and set-off included, the mortgage itself
+-- excluded) and (b) all amounts applied after the failure on account of the obligation, so long as any amount
+-- deemed to be held in trust under an enactment the Minister administers, other than the Excise Tax Act,
+-- remains unpaid. After 1999 is read as on or after 1 January 2000. The cap is NOTHING when the failure is
+-- not after 1999 or when no deemed-trust amount remains unpaid: the subsection then says nothing.
+-- src:188 | (2) For the purpose of subsection (1), where, at any time after 1999, the person referred to in subsection (1) fails to pay an amount deemed by subsection 23(3) of the Act to be held in trust by the person, as required under the Act, the amount of the prescribed security interest referred to in subsection (1) is deemed not to exceed the amount by which the amount, at that time, of the obligation outstanding secured by the mortgage exceeds the total of
+-- src:189 | (a) all amounts each of which is the value determined at the time of the failure, having regard to all the circumstances including the existence of any deemed trust for the benefit of Her Majesty pursuant to subsection 23(3) of the Act, of all the rights of the secured creditor securing the obligation, whether granted by the person or not, including guarantees or rights of set-off but not including the mortgage referred to in subsection (1), and
+-- src:190 | (b) all amounts applied after the time of the failure on account of the obligation,
+-- src:191 | so long as any amount deemed under any enactment administered by the Minister, other than the Excise Tax Act, to be held in trust by the person, remains unpaid.
+@ref Reg 8.3(2) (src:188-191)
+GIVEN `the day of the failure to pay an amount deemed held in trust` IS A DATE
+      `an amount deemed to be held in trust remains unpaid` IS A BOOLEAN
+      `the obligation outstanding at that time, secured by the mortgage` IS A NUMBER
+      `the value at the time of the failure of the secured creditor's other rights securing the obligation` IS A NUMBER
+      `the amounts applied after the failure on account of the obligation` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`reg 8.3(2) — the most the prescribed security interest may be` `the day of the failure to pay an amount deemed held in trust` `an amount deemed to be held in trust remains unpaid` `the obligation outstanding at that time, secured by the mortgage` `the value at the time of the failure of the secured creditor's other rights securing the obligation` `the amounts applied after the failure on account of the obligation` MEANS
+    IF     (`the day of the failure to pay an amount deemed held in trust` AT LEAST (YMD 2000 1 1))
+       AND `an amount deemed to be held in trust remains unpaid`
+    THEN JUST (max 0 (  `the obligation outstanding at that time, secured by the mortgage`
+                      MINUS (  `the value at the time of the failure of the secured creditor's other rights securing the obligation`
+                             PLUS `the amounts applied after the failure on account of the obligation`)))
+    ELSE NOTHING
+
+-- (3) For greater certainty, a prescribed security interest includes the amount of insurance or expropriation
+-- proceeds relating to land or a building that is the subject of a registered mortgage interest, adjusted after
+-- 1999 in accordance with (2), but does not include a lien, a priority or any other security interest created by
+-- statute, an assignment or hypothec of rents or of leases, or a mortgage interest in any equipment or fixtures
+-- that a mortgagee or any other person has the right absolutely or conditionally to remove or dispose of
+-- separately from the land or building. For anything else (3) says nothing (NOTHING): (1) decides.
+-- src:192 | (3) For greater certainty, a prescribed security interest includes the amount of insurance or expropriation proceeds relating to land or a building that is the subject of a registered mortgage interest, adjusted after 1999 in accordance with subsection (2), but does not include a lien, a priority or any other security interest created by statute, an assignment or hypothec of rents or of leases, or a mortgage interest in any equipment or fixtures that a mortgagee or any other person has the right absolutely or conditionally to remove or dispose of separately from the land or building.
+@ref Reg 8.3(3) (src:192)
+DECLARE `cr1 Interest named in the avoidance-of-doubt clause on prescribed security interests` IS ONE OF
+    `insurance or expropriation proceeds relating to land or a building that is the subject of a registered mortgage interest`
+    `a lien, a priority or any other security interest created by statute`
+    `an assignment or hypothec of rents or of leases`
+    `a mortgage interest in equipment or fixtures that a mortgagee or another has the right to remove or dispose of separately from the land or building`
+    `another interest`
+
+@ref Reg 8.3(3) (src:192)
+GIVEN interest IS A `cr1 Interest named in the avoidance-of-doubt clause on prescribed security interests`
+GIVETH A MAYBE BOOLEAN
+`reg 8.3(3) — an interest is included in a prescribed security interest` interest MEANS
+    CONSIDER interest
+    WHEN `insurance or expropriation proceeds relating to land or a building that is the subject of a registered mortgage interest` THEN JUST TRUE
+    WHEN `a lien, a priority or any other security interest created by statute` THEN JUST FALSE
+    WHEN `an assignment or hypothec of rents or of leases` THEN JUST FALSE
+    WHEN `a mortgage interest in equipment or fixtures that a mortgagee or another has the right to remove or dispose of separately from the land or building` THEN JUST FALSE
+    WHEN `another interest` THEN NOTHING

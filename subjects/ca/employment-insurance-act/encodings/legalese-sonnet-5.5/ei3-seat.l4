@@ -1,0 +1,878 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `ei3-part3-premiums`
+IMPORT `ei3-part3-account`
+IMPORT `ei3-part4-deduction`
+IMPORT `ei3-part4-assessment`
+IMPORT `ei3-part4-records-inspection`
+IMPORT `ei3-part4-rulings-appeals`
+IMPORT `ei3-part4-refunds`
+IMPORT `ei3-part4-administration`
+IMPORT `ei3-part4-review`
+IMPORT `ei3-part4-offences`
+IMPORT `ei3-part4-regulations`
+IMPORT `ei3-part5-pilot-projects`
+
+-- Employment Insurance Act (S.C. 1996, c. 23), Parts III, IV and V -- THE SEAT LAYER (piece ei3).
+-- Unofficial plain-text source (Justice Laws consolidation current to 2026-09-30); nothing here is verified against the
+-- official text.
+--
+-- SEAT: a person who has lost work, or cannot work because of sickness, pregnancy, caring for a child or a family member, or
+-- who is self-employed or a fisher, asking whether they qualify for Employment Insurance benefits, how many hours or weeks they
+-- need, how much they would receive and for how long, and what they must do or tell the Commission. For Parts III to V that
+-- person asks about the premium taken from their pay, the refund of premium, rulings about their employment, appeals, being
+-- asked for information or visited, being charged, and the pilot-project rules that apply to them.
+--
+-- WHAT THIS LAYER IS. Every question below calls a rule already written in the layer-1 modules imported above and restates
+-- none. The records and the plain inputs are the ones the person can state (yes/no, a number of dollars, a date, a choice from
+-- a list), each with an @desc worded as the person would be asked. A rate is asked as a percentage ("1.63") and divided by 100
+-- here, because the layer-1 rules take a fraction. Every question name carries the section it rests on, so that after the
+-- merge no two pieces' questions can share a name.
+--
+-- WHAT IS NOT ASKED HERE. Provisions that bind other individuals are in layer 1 only: a director (s 83), a responsible
+-- representative (s 86), an officer of a corporation (ss 101 and 107), and an employer (ss 68, 82, 82.01, 82.1, 85 except
+-- 85(5), 87, 92, 96(3.1) and 96(6) to (9)); they are candidates for an employer seat and a director/representative seat
+-- (NOTES.md, "Seat"). Provisions that address only officials, the Crown's accounts or its collection machinery (ss 65.21 to
+-- 66.6, 69(1), 70.2 to 76, 77(1), 77.1 to 81, 97 to 99, 108 other than (1)(c), 109) decide nothing the person could ask; they
+-- are encoded in layer 1 or listed `inert` in the coverage table.
+--
+-- Figures the Act lets others fix are the Act's own here (nothing is substituted): the premium rate and the maximum yearly
+-- insurable earnings are published each year and are plain inputs.
+
+§ `Premiums (Part III)`
+
+-- Only if I am, or was, employed. A person who is not employed in insurable employment pays no employee's premium.
+-- Section 69(2) only if a provincial plan pays me allowances; section 77 concerns my benefits.
+
+-- s 67. The "employee's premium" is the premium a person employed in insurable employment must pay, by deduction from pay.
+@export Must I pay the employee's premium (s 67)?
+GIVEN `my employment is insurable employment` IS A BOOLEAN @desc Is your employment insurable employment under the Employment Insurance Act (work under a contract of service, and not excluded by section 5(2))?
+GIVETH A BOOLEAN
+DECIDE `Must I pay the employee's premium (s 67)` IF
+    `s 67 a person must pay the employee's premium` `my employment is insurable employment`
+
+-- s 67. The premium is the person's insurable earnings multiplied by the premium rate set for the year.
+@export How much employee's premium do I pay on my insurable earnings (s 67)?
+GIVEN `my insurable earnings for the year in dollars` IS A NUMBER @desc How much insurable earnings did you have from this employment in the year, in dollars (your pay before deductions, within what counts as insurable earnings)?
+      `the premium rate for the year as a percentage` IS A NUMBER @desc What is the Employment Insurance premium rate for that year, as a percentage (for example 1.63 for 1.63%)?
+GIVETH A NUMBER
+DECIDE `How much employee's premium do I pay on my insurable earnings (s 67)` IS
+    `s 67 the employee's premium` `my insurable earnings for the year in dollars` (`the premium rate for the year as a percentage` DIVIDED BY 100)
+
+-- s 69(2). Where a plan under a provincial law (such as Quebec's) pays me allowances for illness, injury, quarantine, pregnancy,
+-- child care, compassionate care, a child's critical illness or an adult's critical illness, the Commission must provide a system of
+-- reducing premiums. Only if such a plan pays me.
+@export Which premiums does a system for provincial plans reduce for me (s 69(2))?
+GIVEN `a plan under a provincial law pays me allowances for one of those reasons` IS A BOOLEAN @desc Does a plan under a provincial law pay you allowances, money or other benefits because of illness, injury, quarantine, pregnancy, child care, compassionate care, a child's critical illness or an adult's critical illness?
+      `it reduces or eliminates my special benefits as an insured person` IS A BOOLEAN @desc Does that payment reduce or eliminate the special benefits you would otherwise get as an insured person?
+      `it reduces or eliminates my benefits as a self-employed person` IS A BOOLEAN @desc Does that payment reduce or eliminate the benefits you would otherwise get as a self-employed person under Part VII.1?
+GIVETH A MAYBE `ei3 Premiums to be reduced under subsection 69(2)`
+DECIDE `Which premiums does a system for provincial plans reduce for me (s 69(2))` IS
+    `s 69(2) the premiums a system must reduce` `a plan under a provincial law pays me allowances for one of those reasons` `it reduces or eliminates my special benefits as an insured person` `it reduces or eliminates my benefits as a self-employed person`
+
+-- s 70. Insurable earnings paid after the end of the year in which the work was done are treated as earned in the year they are paid.
+@export In which year are my late-paid insurable earnings treated as earned (s 70)?
+GIVEN `the year in which I did the work` IS A NUMBER @desc In which year did you do the work (for example 2025)?
+      `the day I was paid` IS A DATE @desc On what day were you paid (a date, for example 2026-01-05)?
+GIVETH A MAYBE NUMBER
+DECIDE `In which year are my late-paid insurable earnings treated as earned (s 70)` IS
+    `s 70 the year in which the insurable employment is deemed to have occurred` `the year in which I did the work` `the day I was paid`
+
+-- s 77(2). Benefits "shall be paid by special warrants" drawn on the Receiver General.
+@export Will my benefits be paid by special warrant (s 77(2))?
+GIVEN `the money is benefits under the Employment Insurance Act` IS A BOOLEAN @desc Is the money you are asking about benefits paid to you under the Employment Insurance Act?
+GIVETH A MAYBE `ei3 How an amount is to be paid by special warrant`
+DECIDE `Will my benefits be paid by special warrant (s 77(2))` IS
+    `s 77(2) the way the amount is paid by special warrant`
+        (IF `the money is benefits under the Employment Insurance Act`
+         THEN `ei3 amounts paid as or on account of benefits under this Act`
+         ELSE `ei3 a payment of a kind section 77(1) does not list`)
+
+-- s 77(2). A special warrant is issued by the Commission, by electronic means or with the printed signatures of the Chairperson and
+-- Vice-Chairperson.
+@export Is the special warrant I was given validly issued (s 77(2))?
+GIVEN `it is drawn on the Receiver General and issued by the Commission` IS A BOOLEAN @desc Is the warrant drawn on the Receiver General and issued by the Employment Insurance Commission?
+      `it was issued by electronic means` IS A BOOLEAN @desc Was it issued by electronic means?
+      `it bears the printed signatures of the Chairperson and Vice-Chairperson of the Commission` IS A BOOLEAN @desc Does it bear the printed signatures of the Chairperson and Vice-Chairperson of the Commission?
+GIVETH A BOOLEAN
+DECIDE `Is the special warrant I was given validly issued (s 77(2))` IF
+    `s 77(2) the special warrant is validly issued` `it is drawn on the Receiver General and issued by the Commission` `it was issued by electronic means` `it bears the printed signatures of the Chairperson and Vice-Chairperson of the Commission`
+
+-- s 77(3). A special warrant is "negotiable without charge at any financial institution in Canada".
+@export Can I cash my special warrant without charge (s 77(3))?
+GIVEN `the document is a special warrant` IS A BOOLEAN @desc Is the document a special warrant the Commission issued to pay you benefits?
+      `the institution is a financial institution in Canada` IS A BOOLEAN @desc Is the bank, credit union or other place where you are cashing it a financial institution in Canada?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can I cash my special warrant without charge (s 77(3))` IS
+    `s 77(3) the special warrant is negotiable without charge at the institution` `the document is a special warrant` `the institution is a financial institution in Canada`
+
+§ `Payment of Premiums (Part IV, ss 82 to 85)`
+
+-- Only if I am, or was, employed and premium was deducted from my pay. Section 85(5) applies to any notice put in my secure electronic account.
+
+-- s 82(2). An employer must not deduct premium for a year once the insurable earnings it paid me in the year have reached the maximum.
+@export Must my employer stop deducting premium from my pay (s 82(2))?
+GIVEN `what my employer has paid me this year before this payment` IS A NUMBER @desc How much insurable earnings has this employer paid you so far this year, before the payment now being made, in dollars?
+      `the maximum yearly insurable earnings for the year` IS A NUMBER @desc What is the maximum yearly insurable earnings for that year, in dollars (the figure Service Canada publishes)?
+GIVETH A BOOLEAN
+DECIDE `Must my employer stop deducting premium from my pay (s 82(2))` IF
+    `s 82(2) the employer shall not make any deduction for the year` `what my employer has paid me this year before this payment` `the maximum yearly insurable earnings for the year`
+
+-- s 82(6). An employer that failed to deduct my premium may deduct it from a later payment within 12 months, but not more than one
+-- other missed premium on top of the premium due on that payment. Only if my employer failed to deduct.
+@export May my employer deduct a premium it missed from my later pay (s 82(6))?
+GIVEN `the day of the payment from which my employer should have deducted` IS A DATE @desc On what day was the payment from which the premium should have been deducted made?
+      `the day of the later payment` IS A DATE @desc On what day is the later payment, from which the employer wants to deduct, made?
+      `the other missed premiums deducted from that later payment` IS A NUMBER @desc How many other missed premiums is the employer also deducting from that later payment (0 if none)?
+GIVETH A BOOLEAN
+DECIDE `May my employer deduct a premium it missed from my later pay (s 82(6))` IF
+    `s 82(6) the employer may deduct the premium it failed to deduct from the subsequent payment` `the day of the payment from which my employer should have deducted` `the day of the later payment` `the other missed premiums deducted from that later payment`
+
+-- s 82(7). An amount deducted from my pay as premium is treated as received by me when it was deducted.
+@export When am I treated as having received the premium my employer deducted (s 82(7))?
+GIVEN `my employer deducted premium from my pay` IS A BOOLEAN @desc Did your employer deduct premium from your pay?
+      `the day it was deducted` IS A DATE @desc On what day was it deducted?
+GIVETH A MAYBE DATE
+DECIDE `When am I treated as having received the premium my employer deducted (s 82(7))` IS
+    `s 82(7) the day on which the insured person is deemed to have received the amount` `my employer deducted premium from my pay` `the day it was deducted`
+
+-- s 84. Despite any contract, an employer cannot recover its own premium from me, by withholding from my wages or otherwise.
+@export Can my employer make me bear its own premium (s 84)?
+GIVEN `the amount is my employer's own premium` IS A BOOLEAN @desc Is the amount in question the employer's own premium (the employer's share, which is 1.4 times the employees' premiums), not your own employee's premium?
+      `I am an insured person` IS A BOOLEAN @desc Are you an insured person (employed in insurable employment now or before)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can my employer make me bear its own premium (s 84)` IS
+    `s 84 the employer is entitled to recover the amount from the person` `the amount is my employer's own premium` `I am an insured person`
+
+-- s 85(5). For the purposes of the whole Act, a notice made available in my secure electronic account is presumed sent to me, and received, on the
+-- date of the electronic message telling me it is there.
+@export When am I presumed to have received a notice put in my secure electronic account (s 85(5))?
+GIVEN `a notice or other communication for me is in electronic format` IS A BOOLEAN @desc Is the notice or other communication in an electronic format that can be read or perceived by a person or a computer system?
+      `the Minister posted it in my secure electronic account` IS A BOOLEAN @desc Did the Minister post it in your secure electronic account?
+      `I authorized notices to be made available in that way` IS A BOOLEAN @desc Have you authorized notices and other communications to be made available to you in your secure electronic account?
+      `I revoked that authorization in the way the Minister specifies before that date` IS A BOOLEAN @desc Did you revoke that authorization, in the way the Minister specifies, before the date of the message?
+      `a message was sent to the electronic address I most recently gave the Minister for this purpose` IS A BOOLEAN @desc Was an electronic message sent to the electronic address you most recently gave the Minister for this purpose?
+      `the message told me a notice needing my immediate attention is in my account` IS A BOOLEAN @desc Did the message inform you that a notice or other communication requiring your immediate attention is available in your secure electronic account?
+      `the date of that message` IS A DATE @desc On what date was the message sent?
+GIVETH A MAYBE DATE
+DECIDE `When am I presumed to have received a notice put in my secure electronic account (s 85(5))` IS
+    `s 85(5) the day on which the notice is presumed to be sent and received` `a notice or other communication for me is in electronic format` `the Minister posted it in my secure electronic account` `I authorized notices to be made available in that way` `I revoked that authorization in the way the Minister specifies before that date` `a message was sent to the electronic address I most recently gave the Minister for this purpose` `the message told me a notice needing my immediate attention is in my account` `the date of that message`
+
+§ `Inspections, demands and protection (ss 88 and 89)`
+
+-- Only if an authorized person wants to inspect or enter, or I have been served with a demand, or a deduction was made from what is owed to me. These sections bind "any person".
+
+-- s 88(1). An authorized person may, at any reasonable time and for the administration or enforcement of the Act, inspect, audit or examine any document that
+-- relates or may relate to the records or books of account or to a premium payable.
+@export May an authorized person inspect, audit or examine my documents (s 88(1))?
+GIVEN `they are a person authorized by the Minister for the purposes of Part IV` IS A BOOLEAN @desc Is the person authorized by the Minister (of National Revenue) for the purposes of Part IV?
+      `they act at a reasonable time` IS A BOOLEAN @desc Are they acting at a reasonable time?
+      `they act for the administration or enforcement of the Act` IS A BOOLEAN @desc Are they acting for a purpose relating to the administration or enforcement of the Employment Insurance Act?
+      `the document relates or may relate to the records or books or to a premium` IS A BOOLEAN @desc Does the document relate, or may it relate, to the information that is or should be in the records or books of account, or to the amount of any premium payable?
+GIVETH A BOOLEAN
+DECIDE `May an authorized person inspect, audit or examine my documents (s 88(1))` IF
+    `s 88(1) the authorized person may inspect, audit or examine the document` `they are a person authorized by the Minister for the purposes of Part IV` `they act at a reasonable time` `they act for the administration or enforcement of the Act` `the document relates or may relate to the records or books or to a premium`
+
+-- s 88(1)(a). Subject to s 88(2), an authorized person may enter any premises or place where records or books of account are or should be kept.
+@export May an authorized person enter my premises (s 88(1)(a))?
+GIVEN `they may inspect, audit or examine the document under section 88(1)` IS A BOOLEAN @desc Are they entitled to inspect, audit or examine the document under section 88(1) (see the question before this)?
+      `records or books of account are or should be kept at the premises or place` IS A BOOLEAN @desc Are records or books of account kept, or supposed to be kept, at the premises or place?
+      `the premises or place is a dwelling-house` IS A BOOLEAN @desc Is the premises or place a dwelling-house (a residence, a building in its yard joined to it by a doorway or enclosed passage, or a unit designed to be mobile and used as a residence)?
+      `I consent` IS A BOOLEAN @desc Have you, as the occupant, consented to their entering?
+      `they have a warrant from a judge` IS A BOOLEAN @desc Do they have a warrant issued by a judge under section 88(3)?
+GIVETH A BOOLEAN
+DECIDE `May an authorized person enter my premises (s 88(1)(a))` IF
+    `s 88(1)(a) the authorized person may enter the premises or place` `they may inspect, audit or examine the document under section 88(1)` `records or books of account are or should be kept at the premises or place` `the premises or place is a dwelling-house` `I consent` `they have a warrant from a judge`
+
+-- s 88(1)(b). The owner, occupant or person in charge must give an authorized person reasonable assistance, answer proper questions
+-- and attend at the premises with them.
+@export Must I help an authorized person and answer their questions (s 88(1)(b))?
+GIVEN `I own, occupy or am in charge of the premises` IS A BOOLEAN @desc Do you own, occupy or are you in charge of the premises or place?
+      `the authorized person is acting under section 88(1)` IS A BOOLEAN @desc Is the authorized person inspecting, auditing or examining documents for the administration or enforcement of the Act, at a reasonable time?
+      `what they ask is reasonable help, a proper question or to attend with them` IS A BOOLEAN @desc Is what they ask reasonable assistance, a proper question about the administration or enforcement of the Act, or that you attend at the premises with them?
+GIVETH A BOOLEAN
+DECIDE `Must I help an authorized person and answer their questions (s 88(1)(b))` IF
+    `s 88(1)(b) the owner, occupant or person in charge must give what is required` `I own, occupy or am in charge of the premises` `the authorized person is acting under section 88(1)` `what they ask is reasonable help, a proper question or to attend with them`
+
+-- s 88(2). An authorized person may enter a dwelling-house only with the occupant's consent or under a warrant.
+@export Can an authorized person come into my home without a warrant (s 88(2))?
+GIVEN `I consent` IS A BOOLEAN @desc Have you, as occupant of the home, consented to the authorized person entering?
+      `they have a warrant from a judge` IS A BOOLEAN @desc Do they have a warrant issued by a judge under section 88(3) of the Employment Insurance Act?
+GIVETH A BOOLEAN
+DECIDE `Can an authorized person come into my home without a warrant (s 88(2))` IF
+    `s 88(2) the authorized person may enter the dwelling-house` `I consent` `they have a warrant from a judge`
+
+-- s 88(3). On the Minister's ex parte application, a judge satisfied by information on oath of three things may issue a warrant to enter a dwelling-house.
+@export May a judge issue a warrant to enter my home (s 88(3))?
+GIVEN `the Minister applied ex parte` IS A BOOLEAN @desc Did the Minister apply to the judge ex parte (without notice to you)?
+      `the judge is satisfied there are reasonable grounds to believe the home is a place where records are or should be kept` IS A BOOLEAN @desc Is the judge satisfied by information on oath that there are reasonable grounds for believing that the dwelling-house is a premises or place where records or books of account are or should be kept?
+      `the judge is satisfied entry is necessary for the administration or enforcement of the Act` IS A BOOLEAN @desc Is the judge satisfied by information on oath that entry is necessary for a purpose relating to the administration or enforcement of the Act?
+      `the judge is satisfied entry was refused or will be refused` IS A BOOLEAN @desc Is the judge satisfied by information on oath that entry has been refused, or that there are reasonable grounds for believing that it will be refused?
+GIVETH A BOOLEAN
+DECIDE `May a judge issue a warrant to enter my home (s 88(3))` IF
+    `s 88(3) the judge may issue a warrant authorizing an authorized person to enter the dwelling-house` `the Minister applied ex parte` `the judge is satisfied there are reasonable grounds to believe the home is a place where records are or should be kept` `the judge is satisfied entry is necessary for the administration or enforcement of the Act` `the judge is satisfied entry was refused or will be refused`
+
+-- s 88(4). If the judge is not satisfied that entry is necessary, the judge may order the occupant to give an authorized person reasonable access to documents.
+@export May a judge order me to give access to documents kept in my home (s 88(4))?
+GIVEN `the judge is not satisfied that entry into my home is necessary` IS A BOOLEAN @desc Is the judge not satisfied that entry into the dwelling-house is necessary for a purpose relating to the administration or enforcement of the Act?
+      `access has been or may be expected to be refused` IS A BOOLEAN @desc Has access been refused, or may it be expected to be refused?
+      `the document is or may be expected to be kept in my home` IS A BOOLEAN @desc Is the document kept, or may it be expected to be kept, in the dwelling-house?
+GIVETH A BOOLEAN
+DECIDE `May a judge order me to give access to documents kept in my home (s 88(4))` IF
+    `s 88(4) the judge may order the occupant to provide access and make any other appropriate order` `the judge is not satisfied that entry into my home is necessary` `access has been or may be expected to be refused` `the document is or may be expected to be kept in my home`
+
+-- s 88(5), (6). The Minister may by notice served personally or by confirmed delivery service require any person to provide
+-- information or a document within the reasonable time stated; a requirement about unnamed persons needs a judge's authorization.
+@export Must I give the Minister the information or document asked for in the notice (s 88(5))?
+GIVEN `the notice is for a purpose relating to the administration or enforcement of Part IV` IS A BOOLEAN @desc Does the notice say it is for a purpose relating to the administration or enforcement of Part IV of the Employment Insurance Act?
+      `it was served on me personally or by certified or registered mail or another service that proves delivery` IS A BOOLEAN @desc Was the notice served on you personally, or by certified mail, registered mail or another delivery service that provides proof of delivery?
+      `it states a reasonable time to provide it` IS A BOOLEAN @desc Does the notice state a reasonable time within which to provide it?
+      `it asks about one or more unnamed persons` IS A BOOLEAN @desc Does the notice ask for information or documents about one or more people it does not name?
+      `a judge authorized the Minister to ask about them` IS A BOOLEAN @desc If so, did a judge first authorize the Minister to ask (the authorization must be served with the notice)?
+GIVETH A BOOLEAN
+DECIDE `Must I give the Minister the information or document asked for in the notice (s 88(5))` IF
+    `s 88(5) the Minister may require the person to provide the information or document` `the notice is for a purpose relating to the administration or enforcement of Part IV` `it was served on me personally or by certified or registered mail or another service that proves delivery` `it states a reasonable time to provide it` `it asks about one or more unnamed persons` `a judge authorized the Minister to ask about them`
+
+-- s 88(7). On the Minister's ex parte application, a judge satisfied of four things may authorize the Minister to ask a third party about unnamed persons.
+@export May a judge authorize the Minister to ask me about unnamed persons (s 88(7))?
+GIVEN `the Minister applied ex parte` IS A BOOLEAN @desc Did the Minister apply to the judge ex parte (without notice to you)?
+      `the person or group is ascertainable` IS A BOOLEAN @desc Is the person or group the Minister asks about ascertainable?
+      `the requirement is made to verify compliance with a duty under Part IV` IS A BOOLEAN @desc Is the requirement made to verify compliance by the person or persons in the group with a duty or obligation under Part IV?
+      `it is reasonable to expect they may have failed or may fail to comply` IS A BOOLEAN @desc Is it reasonable to expect, on any grounds including statistical information or past experience, that the person or a person in the group may have failed or be likely to fail to provide information or to comply with the Act?
+      `the information or document is not otherwise more readily available` IS A BOOLEAN @desc Is the information or document not otherwise more readily available?
+GIVETH A BOOLEAN
+DECIDE `May a judge authorize the Minister to ask me about unnamed persons (s 88(7))` IF
+    `s 88(7) the judge may authorize the Minister to impose the requirement` `the Minister applied ex parte` `the person or group is ascertainable` `the requirement is made to verify compliance with a duty under Part IV` `it is reasonable to expect they may have failed or may fail to comply` `the information or document is not otherwise more readily available`
+
+-- s 88(8). If the authorization is granted, it must be served together with the notice asking me for the information.
+@export Was the judge's authorization served on me together with the notice (s 88(8))?
+GIVEN `the authorization was granted` IS A BOOLEAN @desc Did a judge grant the Minister an authorization to ask you about unnamed persons?
+      `it was served together with the notice asking me for the information or document` IS A BOOLEAN @desc Was it served on you together with the notice mentioned in section 88(5)?
+GIVETH A BOOLEAN
+DECIDE `Was the judge's authorization served on me together with the notice (s 88(8))` IF
+    `s 88(8) the authorization has been served as required` `the authorization was granted` `it was served together with the notice asking me for the information or document`
+
+-- s 88(9). A third party served with a judge's authorization may apply for a review within 15 days after being served.
+@export May I apply to a judge to review the authorization served on me (s 88(9))?
+GIVEN `I am a third party on whom the authorization was served` IS A BOOLEAN @desc Were you served with a judge's authorization for the Minister to ask you about unnamed persons?
+      `the day it was served on me` IS A DATE @desc On what day was it served on you?
+      `the day I apply for the review` IS A DATE @desc On what day do you apply for the review?
+GIVETH A BOOLEAN
+DECIDE `May I apply to a judge to review the authorization served on me (s 88(9))` IF
+    `s 88(9) the third party may apply for a review of the authorization` `I am a third party on whom the authorization was served` `the day it was served on me` `the day I apply for the review`
+
+-- s 88(10). On a review the judge may cancel the authorization if not satisfied the s 88(7) conditions are met, and may confirm or vary it if satisfied.
+@export May the judge cancel the authorization on my application for review (s 88(10))?
+GIVEN `the judge is satisfied that the conditions in section 88(7)(a) to (d) are met` IS A BOOLEAN @desc Is the judge, on hearing your application, satisfied that the conditions in section 88(7)(a) to (d) have been met?
+GIVETH A BOOLEAN
+DECIDE `May the judge cancel the authorization on my application for review (s 88(10))` IF
+    `s 88(10) the judge may cancel the authorization` `the judge is satisfied that the conditions in section 88(7)(a) to (d) are met`
+
+@export May the judge confirm or vary the authorization on my application for review (s 88(10))?
+GIVEN `the judge is satisfied that the conditions in section 88(7)(a) to (d) are met` IS A BOOLEAN @desc Is the judge, on hearing your application, satisfied that the conditions in section 88(7)(a) to (d) have been met?
+GIVETH A BOOLEAN
+DECIDE `May the judge confirm or vary the authorization on my application for review (s 88(10))` IF
+    `s 88(10) the judge may confirm or vary the authorization` `the judge is satisfied that the conditions in section 88(7)(a) to (d) are met`
+
+-- s 88(11). A person found guilty under s 106(2) of failing to comply with a requirement under s 88(5) may be ordered by the court to comply.
+@export May the court order me to comply with the requirement after I am found guilty (s 88(11))?
+GIVEN `I was found guilty under section 106(2) of failing to comply with a requirement under section 88(5)` IS A BOOLEAN @desc Were you found guilty of an offence under section 106(2) for failing to comply with a requirement under section 88(5)?
+GIVETH A BOOLEAN
+DECIDE `May the court order me to comply with the requirement after I am found guilty (s 88(11))` IF
+    `s 88(11) the court may make such order as it considers proper to enforce compliance with the requirement` `I was found guilty under section 106(2) of failing to comply with a requirement under section 88(5)`
+
+-- s 88(12)(a). When a document is inspected, audited, examined or provided under s 88, the person who inspected it, or to whom it was provided, or a Canada Revenue Agency officer, may copy it.
+@export May a copy be made of the document I gave or showed (s 88(12)(a))?
+GIVEN `the document was inspected, audited, examined or provided in accordance with section 88` IS A BOOLEAN @desc Was the document inspected, audited, examined or provided in accordance with section 88?
+      `they are the person who inspected it or to whom it was provided, or a Canada Revenue Agency officer` IS A BOOLEAN @desc Is the person who wants to copy it the one who inspected, audited or examined it or to whom it was provided, or an officer of the Canada Revenue Agency?
+GIVETH A BOOLEAN
+DECIDE `May a copy be made of the document I gave or showed (s 88(12)(a))` IF
+    `s 88(12)(a) the person may make one or more copies or have them made` `the document was inspected, audited, examined or provided in accordance with section 88` `they are the person who inspected it or to whom it was provided, or a Canada Revenue Agency officer`
+
+-- s 88(13). No one may hinder, molest or interfere with a person acting under s 88, and everyone must do what s 88 requires unless unable.
+@export Have I complied with what section 88 requires of every person (s 88(13))?
+GIVEN `I hindered or interfered with someone acting under section 88, or tried to stop them` IS A BOOLEAN @desc Did you hinder, molest or interfere with a person doing anything section 88 authorizes, or prevent or try to prevent them?
+      `I did everything section 88 required of me` IS A BOOLEAN @desc Did you do everything section 88 required of you?
+      `I was unable to` IS A BOOLEAN @desc If you did not, were you unable to?
+GIVETH A BOOLEAN
+DECIDE `Have I complied with what section 88 requires of every person (s 88(13))` IF
+    `s 88(13) the person has complied with the subsection` `I hindered or interfered with someone acting under section 88, or tried to stop them` `I did everything section 88 required of me` `I was unable to`
+
+-- s 89(1). No action lies against a person for deducting a sum in compliance with the Act.
+@export Can I sue my employer for deducting premium from my pay (s 89(1))?
+GIVEN `my employer deducted it in compliance, or intended compliance, with the Act` IS A BOOLEAN @desc Did your employer deduct the sum in compliance, or intended compliance, with the Employment Insurance Act?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can I sue my employer for deducting premium from my pay (s 89(1))` IS
+    `s 89(1) an action lies against the person for deducting the sum` `my employer deducted it in compliance, or intended compliance, with the Act`
+
+-- s 89(2). If I am a creditor of the person who deducted, the Minister's receipt discharges what they owe me, up to the receipt.
+@export How much of what my employer owes me does the Minister's receipt discharge (s 89(2))?
+GIVEN `the amount was deducted as the Act requires` IS A BOOLEAN @desc Was the amount deducted as the Employment Insurance Act requires?
+      `the Minister gave a receipt for it` IS A BOOLEAN @desc Did the Minister give a receipt for the amount?
+      `the amount mentioned in the receipt` IS A NUMBER @desc What amount does the receipt mention, in dollars?
+      `what my employer owed me with respect to the deduction` IS A NUMBER @desc What did your employer owe you with respect to the deduction, in dollars?
+GIVETH A MAYBE NUMBER
+DECIDE `How much of what my employer owes me does the Minister's receipt discharge (s 89(2))` IS
+    `s 89(2) the amount of the debtor's liability that is discharged` `the amount was deducted as the Act requires` `the Minister gave a receipt for it` `the amount mentioned in the receipt` `what my employer owed me with respect to the deduction`
+
+§ `Rulings and Appeals (ss 90 to 94)`
+
+-- Only if there is a question about whether my work is insurable, how long it lasted, my earnings or hours, or a premium.
+
+-- s 90(1). An employer, an employee, or a person claiming to be one (or the Commission) may ask an authorized Canada Revenue Agency
+-- officer for a ruling on nine questions.
+@export May I ask the Canada Revenue Agency for a ruling on this question (s 90(1))?
+GIVEN `which of these describes me` IS A `ei3 Person who asks for a ruling` @desc Which describes you: an employer, an employee, a person claiming to be an employer, a person claiming to be an employee, or someone not named in section 90(1)?
+      `the question I want decided` IS A `ei3 Question for a ruling` @desc Which question do you want decided: whether an employment is insurable; how long an insurable employment lasts; the amount of insurable earnings; how many hours an insured person has had; whether a premium is payable; the amount of a premium payable; who is the employer; whether employers are associated; what amount is refunded under section 96(4) to (10); or a question not named in section 90(1)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `May I ask the Canada Revenue Agency for a ruling on this question (s 90(1))` IS
+    `s 90(1) the person may request a ruling of an authorized officer of the Canada Revenue Agency on the question` `which of these describes me` `the question I want decided`
+
+-- s 90(2). Anyone but the Commission must ask before 30 June following the year the question relates to.
+@export Is my request for a ruling in time (s 90(2))?
+GIVEN `the year the question relates to` IS A NUMBER @desc To which year does the question relate (for example 2025)?
+      `the day I ask` IS A DATE @desc On what day do you ask (or did you ask) for the ruling?
+GIVETH A BOOLEAN
+DECIDE `Is my request for a ruling in time (s 90(2))` IF
+    `s 90(2) the request for a ruling is made in time` FALSE `the year the question relates to` `the day I ask`
+
+-- s 90(3). The officer must make the ruling within a reasonable time after receiving the request.
+@export Has the officer ruled within a reasonable time (s 90(3))?
+GIVEN `the officer has made the ruling` IS A BOOLEAN @desc Has the officer made the ruling you asked for?
+      `the time taken since my request is a reasonable time` IS A BOOLEAN @desc Is the time taken since your request a reasonable time?
+GIVETH A BOOLEAN
+DECIDE `Has the officer ruled within a reasonable time (s 90(3))` IF
+    `s 90(3) the authorized officer has made the ruling within a reasonable time` `the officer has made the ruling` `the time taken since my request is a reasonable time`
+
+-- s 90(4)(a). If no ruling was asked for, an amount deducted from my pay as premium is treated as deducted in accordance with the Act.
+@export If nobody asked for a ruling, is the premium deducted from my pay treated as correctly deducted (s 90(4)(a))?
+GIVEN `a ruling has been asked for about me` IS A BOOLEAN @desc Has anyone asked for a ruling about you (about your insurable earnings, premiums or employment)?
+      `premium was deducted from my pay or paid for me` IS A BOOLEAN @desc Was premium deducted from your pay, or paid by your employer for you?
+GIVETH A BOOLEAN
+DECIDE `If nobody asked for a ruling, is the premium deducted from my pay treated as correctly deducted (s 90(4)(a))` IF
+    `s 90(4)(a) the amount is deemed to have been deducted or paid in accordance with this Act` `a ruling has been asked for about me` `premium was deducted from my pay or paid for me`
+
+-- s 90(4)(b). If no ruling was asked for, an amount that was not deducted or paid is treated as not required to be deducted or paid.
+@export If nobody asked for a ruling, is a premium that was not deducted from my pay treated as not required (s 90(4)(b))?
+GIVEN `a ruling has been asked for about me` IS A BOOLEAN @desc Has anyone asked for a ruling about you (about your insurable earnings, premiums or employment)?
+      `no premium was deducted from my pay or paid for me` IS A BOOLEAN @desc Was the premium not deducted from your pay and not paid for you?
+GIVETH A BOOLEAN
+DECIDE `If nobody asked for a ruling, is a premium that was not deducted from my pay treated as not required (s 90(4)(b))` IF
+    `s 90(4)(b) the amount is deemed not to have been required to be deducted or paid in accordance with this Act` `a ruling has been asked for about me` `no premium was deducted from my pay or paid for me`
+
+-- s 90.1. A claim for benefits that turns on one of those questions needs a ruling by an authorized Canada Revenue Agency officer.
+@export Must a Canada Revenue Agency officer rule on this question in my claim (s 90.1)?
+GIVEN `the question my claim turns on` IS A `ei3 Question for a ruling` @desc Which question does your claim for benefits turn on (the nine questions of section 90(1), or a question not named in it)?
+      `it arises in the consideration of my claim for benefits` IS A BOOLEAN @desc Does the question arise in the consideration of your claim for benefits?
+GIVETH A BOOLEAN
+DECIDE `Must a Canada Revenue Agency officer rule on this question in my claim (s 90.1)` IF
+    `s 90.1 a ruling must be made by an authorized officer of the Canada Revenue Agency` `the question my claim turns on` `it arises in the consideration of my claim for benefits`
+
+-- s 91. A person concerned appeals a ruling to the Minister within 90 days after being notified of it.
+@export Is my appeal to the Minister from the ruling in time (s 91)?
+GIVEN `I am a person concerned in the ruling` IS A BOOLEAN @desc Are you a person concerned in the ruling (for example the employer or employee it is about)?
+      `the day I was notified of the ruling` IS A DATE @desc On what day were you notified of the ruling?
+      `the day I appeal` IS A DATE @desc On what day do you appeal (or did you appeal) to the Minister?
+GIVETH A BOOLEAN
+DECIDE `Is my appeal to the Minister from the ruling in time (s 91)` IF
+    `s 91 the appeal to the Minister from the ruling is made in time` FALSE `I am a person concerned in the ruling` `the day I was notified of the ruling` `the day I appeal`
+
+-- s 93(1). The Minister must notify anyone who may be affected by an appeal of the intention to decide it and let them make representations.
+@export Am I owed notice and a chance to be heard on an appeal that may affect me (s 93(1))?
+GIVEN `the appeal may affect me` IS A BOOLEAN @desc Is there an appeal to the Minister that may affect you?
+GIVETH A BOOLEAN
+DECIDE `Am I owed notice and a chance to be heard on an appeal that may affect me (s 93(1))` IF
+    `s 93(1) the person is to be notified of the Minister's intention to decide the appeal and heard` `the appeal may affect me` FALSE
+
+@export Did the Minister notify me and give me the chance to be heard (s 93(1))?
+GIVEN `I am owed notice and a chance to be heard` IS A BOOLEAN @desc Are you a person who may be affected by the appeal?
+      `the Minister notified me of the intention to decide the appeal` IS A BOOLEAN @desc Did the Minister notify you of the intention to decide the appeal?
+      `the Minister gave me the opportunity to provide information and make representations` IS A BOOLEAN @desc Did the Minister give you the opportunity to provide information and make representations to protect your interests?
+GIVETH A BOOLEAN
+DECIDE `Did the Minister notify me and give me the chance to be heard (s 93(1))` IF
+    `s 93(1) the Minister has done what the subsection requires` `I am owed notice and a chance to be heard` `the Minister notified me of the intention to decide the appeal` `the Minister gave me the opportunity to provide information and make representations`
+
+-- s 93(2). An appeal is addressed to the Assistant Director of Appeals in a Tax Services Office of the Canada Revenue Agency and delivered or mailed there.
+@export Have I sent my appeal to the right place (s 93(2))?
+GIVEN `I addressed it to the Assistant Director of Appeals in a Tax Services Office` IS A BOOLEAN @desc Did you address the appeal to the Assistant Director of Appeals in a Tax Services Office of the Canada Revenue Agency?
+      `I delivered or mailed it to that office` IS A BOOLEAN @desc Did you deliver or mail it to that office?
+GIVETH A BOOLEAN
+DECIDE `Have I sent my appeal to the right place (s 93(2))` IF
+    `s 93(2) the appeal has been sent as required` `I addressed it to the Assistant Director of Appeals in a Tax Services Office` `I delivered or mailed it to that office`
+
+-- s 93(3). The Minister must decide the appeal within a reasonable time and notify the affected persons.
+@export Has the Minister decided my appeal in a reasonable time and told me (s 93(3))?
+GIVEN `the Minister has decided the appeal` IS A BOOLEAN @desc Has the Minister decided your appeal?
+      `the time taken is a reasonable time` IS A BOOLEAN @desc Is the time taken since the Minister received it a reasonable time?
+      `I was notified of the decision` IS A BOOLEAN @desc Were you notified of the decision?
+GIVETH A BOOLEAN
+DECIDE `Has the Minister decided my appeal in a reasonable time and told me (s 93(3))` IF
+    `s 93(3) the Minister has decided the appeal and notified the affected persons as required` `the Minister has decided the appeal` `the time taken is a reasonable time` `I was notified of the decision`
+
+-- s 93(4). If the Minister must notify me of an appeal, the Minister may have me notified in whatever manner the Minister considers adequate.
+@export May the Minister notify me of an appeal in a manner of their choosing (s 93(4))?
+GIVEN `the Minister is required to notify me because I may be or am affected by an appeal` IS A BOOLEAN @desc Is the Minister required to notify you because you may be, or are, affected by an appeal?
+      `the Minister considers the manner adequate` IS A BOOLEAN @desc Does the Minister consider the manner of notification adequate?
+GIVETH A BOOLEAN
+DECIDE `May the Minister notify me of an appeal in a manner of their choosing (s 93(4))` IF
+    `s 93(4) the Minister may have the person notified in that manner` `the Minister is required to notify me because I may be or am affected by an appeal` `the Minister considers the manner adequate`
+
+-- s 94. Sections 90 to 93 do not stop the Minister deciding under Part IV or Part VII on their own initiative, or assessing after the s 90(2) date.
+@export Can the Minister decide on their own even though I asked for no ruling (s 94)?
+GIVEN `the Minister is deciding on their own initiative, or assessing after the date in section 90(2)` IS A BOOLEAN @desc Is the Minister making a decision under Part IV or Part VII on their own initiative, or making an assessment after the date mentioned in section 90(2)?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can the Minister decide on their own even though I asked for no ruling (s 94)` IS
+    `s 94 sections 90 to 93 restrict the Minister's authority` `the Minister is deciding on their own initiative, or assessing after the date in section 90(2)`
+
+§ `Overpayments and Refunds (ss 95 and 96)`
+
+-- Only if premium was deducted from my pay and I think too much was, or I was not employed in insurable employment, or I earned $2,000 or less.
+
+-- s 95. The overpayment: premium deducted above what the maximum yearly insurable earnings allows.
+@export How much of the premium deducted from my pay is an overpayment (s 95)?
+GIVEN `all the premium deducted from my pay in the year by all my employers` IS A NUMBER @desc How much employee's premium was deducted from your pay in the year, by all your employers together, in dollars?
+      `my total insurable earnings in the year from all employers` IS A NUMBER @desc What were your total insurable earnings in the year from all your employers together, in dollars?
+      `the maximum yearly insurable earnings for the year` IS A NUMBER @desc What is the maximum yearly insurable earnings for that year, in dollars (the figure Service Canada publishes)?
+      `the premium rate for the year as a percentage` IS A NUMBER @desc What is the Employment Insurance premium rate for that year, as a percentage (for example 1.63 for 1.63%)?
+GIVETH A NUMBER
+DECIDE `How much of the premium deducted from my pay is an overpayment (s 95)` IS
+    `s 95 the premiums deducted in excess of what the maximum allows` `all the premium deducted from my pay in the year by all my employers` `my total insurable earnings in the year from all employers` `the maximum yearly insurable earnings for the year` (`the premium rate for the year as a percentage` DIVIDED BY 100)
+
+-- s 96(1). The Minister shall refund an overpayment, or premium paid in a year I was not employed in insurable employment, if I apply
+-- in writing within three years after the end of that year.
+@export Must the Minister refund my overpayment or premium paid when I was not insured (s 96(1))?
+GIVEN `I made an overpayment of employee's premium` IS A BOOLEAN @desc Did you make an overpayment of employee's premium (see the question on section 95)?
+      `I paid premium in a year when I was not employed in insurable employment` IS A BOOLEAN @desc Did you pay employee's premium in a year when you were not employed in insurable employment?
+      `the amount of the overpayment or of the payment` IS A NUMBER @desc How much was the overpayment, or the premium paid when you were not insured, in dollars?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply to the Minister in writing?
+      `the year the premium was deducted` IS A NUMBER @desc For which year was the premium deducted (for example 2023)?
+      `the day I applied` IS A DATE @desc On what day did you apply (or will you apply)?
+GIVETH A `ei3 Refund`
+DECIDE `Must the Minister refund my overpayment or premium paid when I was not insured (s 96(1))` IS
+    `s 96(1) the refund of the overpayment or of the payment` `I made an overpayment of employee's premium` `I paid premium in a year when I was not employed in insurable employment` `the amount of the overpayment or of the payment` `I applied in writing to the Minister` `the year the premium was deducted` `the day I applied`
+
+-- s 96(2). After an appeal decision that too much premium was deducted or paid, the Minister shall refund it if I apply in writing within
+-- 30 days after the decision is communicated to me.
+@export Must the Minister refund me after an appeal decision that too much premium was taken (s 96(2))?
+GIVEN `premium was deducted from my pay in a year` IS A BOOLEAN @desc Was premium deducted from your pay in a year (or paid by your employer for you)?
+      `an appeal decision found it exceeded what was required or should not have been deducted` IS A BOOLEAN @desc Did a decision on an appeal under section 91, 92 or 103 find that the amount deducted or paid exceeded the amount required, or should not have been deducted or paid?
+      `the excess amount in dollars` IS A NUMBER @desc How much was the excess, or the amount that should not have been deducted or paid, in dollars?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply to the Minister in writing?
+      `the day the decision was communicated to me` IS A DATE @desc On what day was the decision communicated to you?
+      `the day I applied` IS A DATE @desc On what day did you apply (or will you apply)?
+GIVETH A `ei3 Refund`
+DECIDE `Must the Minister refund me after an appeal decision that too much premium was taken (s 96(2))` IS
+    `s 96(2) the refund after a decision on an appeal` `premium was deducted from my pay in a year` `an appeal decision found it exceeded what was required or should not have been deducted` `the excess amount in dollars` `I applied in writing to the Minister` `the day the decision was communicated to me` `the day I applied`
+
+-- s 96(3). The Minister MAY refund an excess if I apply and satisfy the Minister, within three years after the end of the year.
+@export May the Minister refund me an amount deducted that should not have been (s 96(3))?
+GIVEN `I applied to the Minister` IS A BOOLEAN @desc Did you apply to the Minister?
+      `I satisfied the Minister that too much was deducted or paid` IS A BOOLEAN @desc Did you satisfy the Minister that the amount deducted from your pay for the year was more than required, or should not have been deducted?
+      `the year the premium was deducted` IS A NUMBER @desc For which year was the premium deducted (for example 2023)?
+      `the day I applied` IS A DATE @desc On what day did you apply (or will you apply)?
+GIVETH A BOOLEAN
+DECIDE `May the Minister refund me an amount deducted that should not have been (s 96(3))` IF
+    `s 96(3) the Minister may refund the excess amount or the amount that should not have been deducted or paid` `I applied to the Minister` `I satisfied the Minister that too much was deducted or paid` `the year the premium was deducted` `the day I applied`
+
+-- s 96(4), (4.1). If my insurable earnings in the year were $2,000 or less, the Minister shall refund all the premium deducted by all
+-- my employers, unless I am also self-employed (Part VII.1) with total earnings over $2,000.
+@export Must the Minister refund all the premium taken from me on earnings of $2,000 or less (s 96(4))?
+GIVEN `my insurable earnings in the year` IS A NUMBER @desc What were your insurable earnings in the year, in dollars?
+      `all the premium deducted from my pay by all my employers` IS A NUMBER @desc How much employee's premium was deducted from your pay in the year by all your employers together, in dollars?
+      `I am also self-employed and Part VII.1 applies to me` IS A BOOLEAN @desc Are you also a self-employed person to whom Part VII.1 (benefits for self-employed persons) applies?
+      `my total earnings from employment and self-employment` IS A NUMBER @desc What were your total earnings from insurable employment and from self-employment, calculated under Part VII.1, in dollars (0 if you are not self-employed)?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply to the Minister in writing?
+      `the year the premium was deducted` IS A NUMBER @desc For which year was the premium deducted (for example 2023)?
+      `the day I applied` IS A DATE @desc On what day did you apply (or will you apply)?
+GIVETH A `ei3 Refund`
+DECIDE `Must the Minister refund all the premium taken from me on earnings of $2,000 or less (s 96(4))` IS
+    `s 96(4) the refund of premiums on insurable earnings of not more than $2,000` `my insurable earnings in the year` `all the premium deducted from my pay by all my employers` `I am also self-employed and Part VII.1 applies to me` `my total earnings from employment and self-employment` `I applied in writing to the Minister` `the year the premium was deducted` `the day I applied`
+
+-- s 96(4.1). No refund under s 96(4) if I am also a self-employed person to whom Part VII.1 applies and my total earnings are over $2,000 in the year.
+@export Am I barred from the s 96(4) refund because I am also self-employed (s 96(4.1))?
+GIVEN `I am also self-employed and Part VII.1 applies to me` IS A BOOLEAN @desc Are you also a self-employed person to whom Part VII.1 (benefits for self-employed persons) applies?
+      `my total earnings from employment and self-employment` IS A NUMBER @desc What were your total earnings from insurable employment and from self-employment, calculated under Part VII.1, in dollars?
+GIVETH A BOOLEAN
+DECIDE `Am I barred from the s 96(4) refund because I am also self-employed (s 96(4.1))` IF
+    `s 96(4.1) no refund shall be made under subsection (4)` `I am also self-employed and Part VII.1 applies to me` `my total earnings from employment and self-employment`
+
+-- s 96(5). If my insurable earnings were over $2,000 but my earnings less my premium are under $2,000, the refund is $2,000 less that figure, if over $1.
+@export How much will the Minister refund if my earnings after premium fall under $2,000 (s 96(5))?
+GIVEN `I am self-employed and Part VII.1 applies to me` IS A BOOLEAN @desc Are you a self-employed person to whom Part VII.1 (benefits for self-employed persons) applies?
+      `my insurable earnings in the year` IS A NUMBER @desc What were your insurable earnings in the year, in dollars?
+      `the premium deducted from my pay in the year` IS A NUMBER @desc How much employee's premium was deducted from your pay in the year, in dollars?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply to the Minister in writing?
+      `the year the premium was deducted` IS A NUMBER @desc For which year was the premium deducted (for example 2023)?
+      `the day I applied` IS A DATE @desc On what day did you apply (or will you apply)?
+GIVETH A `ei3 Refund`
+DECIDE `How much will the Minister refund if my earnings after premium fall under $2,000 (s 96(5))` IS
+    `s 96(5) the refund of the shortfall below $2,000` `I am self-employed and Part VII.1 applies to me` `my insurable earnings in the year` `the premium deducted from my pay in the year` `I applied in writing to the Minister` `the year the premium was deducted` `the day I applied`
+
+-- s 96(5.1). The same when I am also self-employed: the lesser of the premium deducted and $2,000 less (total earnings less deducted premium and Part VII.1 premium), if over $1.
+@export How much will the Minister refund if I am also self-employed and my combined earnings after premium fall under $2,000 (s 96(5.1))?
+GIVEN `I have insurable earnings` IS A BOOLEAN @desc Did you have insurable earnings in the year?
+      `I am also self-employed and Part VII.1 applies to me` IS A BOOLEAN @desc Are you also a self-employed person to whom Part VII.1 (benefits for self-employed persons) applies?
+      `my total earnings from employment and self-employment` IS A NUMBER @desc What were your total earnings from insurable employment and from self-employment, calculated under Part VII.1, in dollars?
+      `the premium deducted from my pay in the year` IS A NUMBER @desc How much employee's premium was deducted from your pay in the year, in dollars?
+      `the premium I owe as a self-employed person` IS A NUMBER @desc How much premium were you required to pay as a self-employed person under section 152.21, in dollars?
+      `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply to the Minister in writing?
+      `the year the premium was deducted` IS A NUMBER @desc For which year was the premium deducted (for example 2023)?
+      `the day I applied` IS A DATE @desc On what day did you apply (or will you apply)?
+GIVETH A `ei3 Refund`
+DECIDE `How much will the Minister refund if I am also self-employed and my combined earnings after premium fall under $2,000 (s 96(5.1))` IS
+    `s 96(5.1) the refund of the shortfall below $2,000 for a person who is also self-employed` `I have insurable earnings` `I am also self-employed and Part VII.1 applies to me` `my total earnings from employment and self-employment` `the premium deducted from my pay in the year` `the premium I owe as a self-employed person` `I applied in writing to the Minister` `the year the premium was deducted` `the day I applied`
+
+-- s 96(10). A refund is payable only if I apply in writing within three years after the end of the year the premium was deducted.
+@export Have I applied for my refund in time (s 96(10))?
+GIVEN `I applied in writing to the Minister` IS A BOOLEAN @desc Did you apply to the Minister in writing?
+      `the year the premium was deducted` IS A NUMBER @desc For which year was the premium deducted or required to be paid (for example 2023)?
+      `the day I applied` IS A DATE @desc On what day did you apply (or will you apply)?
+GIVETH A BOOLEAN
+DECIDE `Have I applied for my refund in time (s 96(10))` IF
+    `s 96(10) the application for the refund is made in time` `I applied in writing to the Minister` `the year the premium was deducted` `the day I applied`
+
+-- s 96(11). If the Minister refunded me, or applied to what I owe Her Majesty, more than they should have, the excess may be recovered
+-- from me at any time as a debt due to Her Majesty.
+@export Must I repay a refund the Minister gave me by mistake (s 96(11))?
+GIVEN `I applied for a refund under section 96` IS A BOOLEAN @desc Did you apply for a refund under section 96?
+      `what the Minister refunded me or applied to what I owe Her Majesty` IS A NUMBER @desc How much did the Minister refund you, or apply to a liability you have to Her Majesty, in dollars?
+      `what should have been refunded or applied` IS A NUMBER @desc How much should have been refunded or applied, in dollars?
+GIVETH A BOOLEAN
+DECIDE `Must I repay a refund the Minister gave me by mistake (s 96(11))` IF
+    `s 96(11) the excess may be recovered at any time from the person as a debt due to Her Majesty` `I applied for a refund under section 96` `what the Minister refunded me or applied to what I owe Her Majesty` `what should have been refunded or applied`
+
+@export How much of a refund must I repay (s 96(11))?
+GIVEN `what the Minister refunded me or applied to what I owe Her Majesty` IS A NUMBER @desc How much did the Minister refund you, or apply to a liability you have to Her Majesty, in dollars?
+      `what should have been refunded or applied` IS A NUMBER @desc How much should have been refunded or applied, in dollars?
+GIVETH A NUMBER
+DECIDE `How much of a refund must I repay (s 96(11))` IS
+    `s 96(11) the excess amount` `what the Minister refunded me or applied to what I owe Her Majesty` `what should have been refunded or applied`
+
+-- s 96(12). If I owe, or am about to owe, Her Majesty a payment and a refund is otherwise payable to me, the Minister may set it off.
+@export May the Minister keep my refund to pay what I owe Her Majesty (s 96(12))?
+GIVEN `I owe or am about to owe a payment to Her Majesty in right of Canada` IS A BOOLEAN @desc Are you liable, or about to become liable, to make a payment to Her Majesty in right of Canada?
+      `a refund under section 96 is otherwise payable to me` IS A BOOLEAN @desc Is a refund under section 96 otherwise payable to you?
+GIVETH A BOOLEAN
+DECIDE `May the Minister keep my refund to pay what I owe Her Majesty (s 96(12))` IF
+    `s 96(12) the Minister may apply the refund to that liability and notify the person instead of making the refund` `I owe or am about to owe a payment to Her Majesty in right of Canada` `a refund under section 96 is otherwise payable to me`
+
+-- s 96(13). Interest is paid on a refund (or on an amount applied to another liability) at the prescribed rate, unless it is under $1.
+-- Asked as for a refund under s 96(1); the answer is the same for s 96(2) to (5.1), none of which s 96(13.1) excludes (it excludes ss 96(3.1), (8.7), (8.91), (8.94), (8.97) and (8.98)).
+@export Will I be paid interest on my refund (s 96(13))?
+GIVEN `the amount for my overpayment is refunded to me or applied to another liability` IS A BOOLEAN @desc Is the amount for your overpayment being refunded to you, or applied to another liability of yours?
+      `the interest at the prescribed rate in dollars` IS A NUMBER @desc How much interest does the prescribed annual rate give for the prescribed period, in dollars?
+GIVETH A BOOLEAN
+DECIDE `Will I be paid interest on my refund (s 96(13))` IF
+    `s 96(13) interest shall be paid or applied on the amount` `ei3 subsection 96(1)` `the amount for my overpayment is refunded to me or applied to another liability` `the interest at the prescribed rate in dollars`
+
+§ `Administration (ss 97 to 102)`
+
+-- Only if I am paying an amount imposed by Part IV, or I have been charged, or may be (ss 102(1) to (19) concern a prosecution or a notice sent to me).
+
+-- s 100. A financial institution must receive for deposit, without charge for discount or commission, a cheque to the Receiver General
+-- in payment of premiums, interest or penalties under Part IV.
+@export Must a bank take my cheque to the Receiver General without charge (s 100)?
+GIVEN `the cheque is payable to the Receiver General` IS A BOOLEAN @desc Is the cheque made payable to the Receiver General?
+      `it pays premiums, interest or penalties imposed by Part IV` IS A BOOLEAN @desc Is it in payment of premiums, interest or penalties imposed by Part IV of the Employment Insurance Act?
+      `it is drawn on a financial institution in Canada` IS A BOOLEAN @desc Is it drawn on the institution receiving it, or on any other financial institution in Canada?
+GIVETH A BOOLEAN
+DECIDE `Must a bank take my cheque to the Receiver General without charge (s 100)` IF
+    `s 100 the financial institution shall receive the cheque for deposit without charge for discount or commission` `the cheque is payable to the Receiver General` `it pays premiums, interest or penalties imposed by Part IV` `it is drawn on a financial institution in Canada`
+
+-- s 102(1). An information or complaint under Part IV may be laid or made by an officer of the Canada Revenue Agency, a member of the RCMP, or an authorized person.
+@export May this person lay an information or complaint against me under Part IV (s 102(1))?
+GIVEN `they are an officer of the Canada Revenue Agency` IS A BOOLEAN @desc Is the person an officer of the Canada Revenue Agency?
+      `they are a member of the Royal Canadian Mounted Police` IS A BOOLEAN @desc Is the person a member of the Royal Canadian Mounted Police?
+      `they are an authorized person` IS A BOOLEAN @desc Is the person authorized by the Minister for the purposes of Part IV?
+GIVETH A BOOLEAN
+DECIDE `May this person lay an information or complaint against me under Part IV (s 102(1))` IF
+    `s 102(1) the person may lay or make an information or complaint under this Part` `they are an officer of the Canada Revenue Agency` `they are a member of the Royal Canadian Mounted Police` `they are an authorized person`
+
+-- s 102(1). An information that appears to have been laid under Part IV is deemed laid by an authorized person; only the Minister, or someone acting for the
+-- Minister or Her Majesty, may call the informant's lack of authority into question.
+@export May I challenge the informant's authority to lay the information (s 102(1))?
+GIVEN `I am the Minister or a person acting for the Minister or for Her Majesty` IS A BOOLEAN @desc Are you the Minister, or a person acting for the Minister or for Her Majesty?
+GIVETH A BOOLEAN
+DECIDE `May I challenge the informant's authority to lay the information (s 102(1))` IF
+    `s 102(1) the information or complaint may be called into question for lack of authority of the informant or complainant` `I am the Minister or a person acting for the Minister or for Her Majesty`
+
+-- s 102(2). No proceeding is objectionable or insufficient because it relates to two or more offences.
+@export Can I object that the information covers two or more offences (s 102(2))?
+GIVEN `my objection is that it relates to two or more offences` IS A BOOLEAN @desc Is your objection that the information, complaint, warrant, conviction or other proceeding relates to two or more offences?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can I object that the information covers two or more offences (s 102(2))` IS
+    `s 102(2) the information, complaint, warrant, conviction or other proceeding is objectionable or insufficient` `my objection is that it relates to two or more offences`
+
+-- s 102(3). A provincial court judge may try an offence under Part IV although it did not arise in the judge's jurisdiction, if the accused is resident, carrying
+-- on business, found, apprehended or in custody there.
+@export May a provincial court judge try me although the matter arose elsewhere (s 102(3))?
+GIVEN `I am resident within the judge's territorial jurisdiction` IS A BOOLEAN @desc Are you resident within the judge's territorial jurisdiction?
+      `I carry on business within the judge's territorial jurisdiction` IS A BOOLEAN @desc Do you carry on business within the judge's territorial jurisdiction?
+      `I am found within the judge's territorial jurisdiction` IS A BOOLEAN @desc Are you found within the judge's territorial jurisdiction?
+      `I am apprehended within the judge's territorial jurisdiction` IS A BOOLEAN @desc Were you apprehended within the judge's territorial jurisdiction?
+      `I am in custody within the judge's territorial jurisdiction` IS A BOOLEAN @desc Are you in custody within the judge's territorial jurisdiction?
+GIVETH A BOOLEAN
+DECIDE `May a provincial court judge try me although the matter arose elsewhere (s 102(3))` IF
+    `s 102(3) a provincial court judge may hear, try or determine the information or complaint although the matter did not arise within the jurisdiction` `I am resident within the judge's territorial jurisdiction` `I carry on business within the judge's territorial jurisdiction` `I am found within the judge's territorial jurisdiction` `I am apprehended within the judge's territorial jurisdiction` `I am in custody within the judge's territorial jurisdiction`
+
+-- s 102(4). An information or complaint for an offence under Part IV may be laid within five years after the subject-matter arose.
+@export Can I still be charged with an offence under Part IV (s 102(4))?
+GIVEN `the day the matter arose` IS A DATE @desc On what day did the subject-matter of the information or complaint arise?
+      `the day the information or complaint is laid or made` IS A DATE @desc On what day is the information or complaint laid or made?
+GIVETH A BOOLEAN
+DECIDE `Can I still be charged with an offence under Part IV (s 102(4))` IF
+    `s 102(4) the information or complaint is laid or made in time` `the day the matter arose` `the day the information or complaint is laid or made`
+
+-- s 102(5). Where Part IV provides for sending a request, notice or demand by mail, an affidavit of a Canada Revenue Agency officer is evidence of it and of its being sent.
+@export Does an officer's affidavit prove a request, notice or demand was mailed to me (s 102(5))?
+GIVEN `Part IV or the regulations provide for sending it by mail` IS A BOOLEAN @desc Does Part IV or the regulations provide for sending the request, notice or demand by mail?
+      `the affidavit is of an officer of the Canada Revenue Agency` IS A BOOLEAN @desc Is the affidavit of an officer of the Canada Revenue Agency?
+      `it says the officer has charge of the records and knows the facts` IS A BOOLEAN @desc Does it state that the officer has charge of the appropriate records and has knowledge of the facts in your case?
+      `it says it was sent by registered letter on a named day to my address` IS A BOOLEAN @desc Does it state that the request, notice or demand was sent by registered letter on a named day to you, indicating the address?
+      `it attaches the registration certificate and a copy` IS A BOOLEAN @desc Does it identify as exhibits the post office certificate of registration (or a true copy of the relevant part) and a true copy of the request, notice or demand?
+GIVETH A BOOLEAN
+DECIDE `Does an officer's affidavit prove a request, notice or demand was mailed to me (s 102(5))` IF
+    `s 102(5) the affidavit is evidence of the request, notice or demand and of its being sent` `Part IV or the regulations provide for sending it by mail` `the affidavit is of an officer of the Canada Revenue Agency` `it says the officer has charge of the records and knows the facts` `it says it was sent by registered letter on a named day to my address` `it attaches the registration certificate and a copy`
+
+-- s 102(6). Where Part IV provides for personal service, an affidavit of a Canada Revenue Agency officer is evidence of the request, notice or demand and of its personal service.
+@export Does an officer's affidavit prove a request, notice or demand was served on me personally (s 102(6))?
+GIVEN `Part IV or the regulations provide for personal service of it` IS A BOOLEAN @desc Does Part IV or the regulations provide for personal service of the request, notice or demand?
+      `the affidavit is of an officer of the Canada Revenue Agency` IS A BOOLEAN @desc Is the affidavit of an officer of the Canada Revenue Agency?
+      `it says the officer has charge of the records and knows the facts` IS A BOOLEAN @desc Does it state that the officer has charge of the appropriate records and has knowledge of the facts in your case?
+      `it says it was served on me personally on a named day` IS A BOOLEAN @desc Does it state that the request, notice or demand was served personally on you on a named day?
+      `it attaches a copy` IS A BOOLEAN @desc Does it identify as an exhibit a true copy of the request, notice or demand?
+GIVETH A BOOLEAN
+DECIDE `Does an officer's affidavit prove a request, notice or demand was served on me personally (s 102(6))` IF
+    `s 102(6) the affidavit is evidence of the request, notice or demand and of its personal service` `Part IV or the regulations provide for personal service of it` `the affidavit is of an officer of the Canada Revenue Agency` `it says the officer has charge of the records and knows the facts` `it says it was served on me personally on a named day` `it attaches a copy`
+
+-- s 102(7). An officer's affidavit that, after careful search, no return of mine was found is evidence that I did not file it.
+@export Is an officer's affidavit that no return of mine was found evidence I did not file one (s 102(7))?
+GIVEN `I am required by Part IV or the regulations to make a return, statement, answer or certificate` IS A BOOLEAN @desc Are you required by Part IV or the regulations to make a return, statement, answer or certificate?
+      `the affidavit is of an officer of the Canada Revenue Agency` IS A BOOLEAN @desc Is the affidavit of an officer of the Canada Revenue Agency?
+      `it says the officer has charge of the appropriate records` IS A BOOLEAN @desc Does it say the officer has charge of the appropriate records?
+      `it says a careful examination and search found no return filed or made by me` IS A BOOLEAN @desc Does it say that, after a careful examination and search of the records, the officer was unable to find that the return was filed or made by you?
+GIVETH A BOOLEAN
+DECIDE `Is an officer's affidavit that no return of mine was found evidence I did not file one (s 102(7))` IF
+    `s 102(7) the affidavit is evidence that the person did not file or make it` `I am required by Part IV or the regulations to make a return, statement, answer or certificate` `the affidavit is of an officer of the Canada Revenue Agency` `it says the officer has charge of the appropriate records` `it says a careful examination and search found no return filed or made by me`
+
+-- s 102(8). An officer's affidavit that a return, statement, answer or certificate was filed or made on a particular day is evidence that it was filed or made on that day and not before.
+@export Does an officer's affidavit prove the day I filed a return (s 102(8))?
+GIVEN `I am required by Part IV or the regulations to make a return, statement, answer or certificate` IS A BOOLEAN @desc Are you required by Part IV or the regulations to make a return, statement, answer or certificate?
+      `the affidavit is of an officer of the Canada Revenue Agency` IS A BOOLEAN @desc Is the affidavit of an officer of the Canada Revenue Agency?
+      `it says the officer has charge of the appropriate records` IS A BOOLEAN @desc Does it state that the officer has charge of the appropriate records?
+      `it says a careful examination found it filed or made on a particular day` IS A BOOLEAN @desc Does it state that, after careful examination of the records, the officer found it was filed or made on a particular day?
+GIVETH A BOOLEAN
+DECIDE `Does an officer's affidavit prove the day I filed a return (s 102(8))` IF
+    `s 102(8) the affidavit is evidence that it was filed or made on that day and not before` `I am required by Part IV or the regulations to make a return, statement, answer or certificate` `the affidavit is of an officer of the Canada Revenue Agency` `it says the officer has charge of the appropriate records` `it says a careful examination found it filed or made on a particular day`
+
+-- s 102(11). Where evidence is offered by an affidavit from which it appears the person is a Canada Revenue Agency officer, three things need not be proved.
+@export Must the other side prove the officer's signature or status when offering an affidavit (s 102(11))?
+GIVEN `the affidavit appears to be made by an officer of the Canada Revenue Agency` IS A BOOLEAN @desc Does it appear from the affidavit that the person making it is an officer of the Canada Revenue Agency?
+      `the matter` IS A `ei3 Matter an affidavit may leave unproved` @desc Which matter: the signature of the person making the affidavit; that they are an officer of the Canada Revenue Agency; the signature or official character of the person before whom it was sworn; or any other matter?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Must the other side prove the officer's signature or status when offering an affidavit (s 102(11))` IS
+    `s 102(11) it is necessary to prove the matter` `the affidavit appears to be made by an officer of the Canada Revenue Agency` `the matter`
+
+-- s 102(12). Judicial notice is taken of all orders made under Part IV without their being specially pleaded or proven.
+@export Must I plead or prove an order made under Part IV (s 102(12))?
+GIVEN `the order is made under Part IV` IS A BOOLEAN @desc Is the order one made under Part IV of the Employment Insurance Act?
+GIVETH A BOOLEAN
+DECIDE `Must I plead or prove an order made under Part IV (s 102(12))` IF
+    NOT (`s 102(12) judicial notice shall be taken of the order without it being specially pleaded or proven` `the order is made under Part IV`)
+
+-- s 102(13). A document that appears to be an order, notice, assessment or other document executed under Part IV over the name of the Minister or an authorized officer is deemed signed, made and issued by
+-- them, unless the Minister or someone acting for the Minister or Her Majesty calls it into question.
+@export Is a document over the Minister's name treated as signed and issued by the Minister (s 102(13))?
+GIVEN `it appears to be an order, notice, assessment, decision or other document executed under Part IV` IS A BOOLEAN @desc Does the document appear to be an order, direction, demand, notice, certificate, requirement, decision, assessment, discharge of mortgage, release of hypothec or other document executed under, or in the course of administering or enforcing, Part IV?
+      `it is over the written name of the Minister or an officer authorized to act for the Minister` IS A BOOLEAN @desc Is it over the name in writing of the Minister, the Deputy Minister of National Revenue, the Commissioner of Customs and Revenue, the Commissioner of Revenue or an officer authorized to exercise the Minister's powers under Part IV?
+      `the Minister or someone acting for the Minister or Her Majesty called it into question` IS A BOOLEAN @desc Has the Minister, or a person acting for the Minister or for Her Majesty, called it into question?
+GIVETH A BOOLEAN
+DECIDE `Is a document over the Minister's name treated as signed and issued by the Minister (s 102(13))` IF
+    `s 102(13) the document is deemed to be a document signed, made and issued by that person` `it appears to be an order, notice, assessment, decision or other document executed under Part IV` `it is over the written name of the Minister or an officer authorized to act for the Minister` `the Minister or someone acting for the Minister or Her Majesty called it into question`
+
+-- s 102(15). A form that appears to be authorized by the Minister is deemed authorized under Part IV unless called into question by the Minister or someone acting for the Minister or Her Majesty.
+@export Is a form that looks authorized by the Minister treated as authorized (s 102(15))?
+GIVEN `the form appears to be authorized by the Minister` IS A BOOLEAN @desc Does the form appear to be authorized by the Minister?
+      `the Minister or someone acting for the Minister or Her Majesty called it into question` IS A BOOLEAN @desc Has the Minister, or a person acting for the Minister or for Her Majesty, called it into question?
+GIVETH A BOOLEAN
+DECIDE `Is a form that looks authorized by the Minister treated as authorized (s 102(15))` IF
+    `s 102(15) the form is deemed to be a form authorized by the Minister under this Part` `the form appears to be authorized by the Minister` `the Minister or someone acting for the Minister or Her Majesty called it into question`
+
+-- s 102(16). In a prosecution, a return that appears to have been filed or made by me, if produced, is proof that I did, absent evidence to the contrary.
+@export Does producing a return that appears to be mine prove I filed it (s 102(16))?
+GIVEN `I am charged with an offence under Part IV` IS A BOOLEAN @desc Are you being prosecuted for an offence under Part IV?
+      `the return, certificate, statement or answer is required by Part IV or the regulations` IS A BOOLEAN @desc Is the document one that Part IV or the regulations require?
+      `it is produced and appears to have been filed or made or signed by me or for me` IS A BOOLEAN @desc Is it produced, and does it appear to have been filed, delivered, made or signed by you or for you?
+      `there is evidence to the contrary` IS A BOOLEAN @desc Is there evidence that it was not?
+GIVETH A BOOLEAN
+DECIDE `Does producing a return that appears to be mine prove I filed it (s 102(16))` IF
+    `s 102(16) the production is proof that it was filed, delivered, made or signed by or for the person charged` `I am charged with an offence under Part IV` `the return, certificate, statement or answer is required by Part IV or the regulations` `it is produced and appears to have been filed or made or signed by me or for me` `there is evidence to the contrary`
+
+-- s 102(19)(b). A notice or document sent to a partnership at its latest known address or place of business, or to a member at their latest known address (an unlimited member
+-- if it is a limited partnership), is deemed provided to each member.
+@export Is a notice sent to my partnership treated as given to me as a partner (s 102(19)(b))?
+GIVEN `it was sent to the partnership at its latest known address or place of business` IS A BOOLEAN @desc Was the notice or document mailed to, served on or otherwise sent to the partnership at its latest known address or place of business?
+      `the partnership is a limited partnership` IS A BOOLEAN @desc Is the partnership a limited partnership?
+      `it was sent to the latest known address of a member whose liability is not limited` IS A BOOLEAN @desc Was it sent to the latest known address of a member whose liability as a member is not limited?
+      `it was sent to the latest known address of any member` IS A BOOLEAN @desc Was it sent to the latest known address of any member of the partnership?
+GIVETH A BOOLEAN
+DECIDE `Is a notice sent to my partnership treated as given to me as a partner (s 102(19)(b))` IF
+    `s 102(19)(b) the notice or other document is deemed to have been provided to each member of the partnership` `it was sent to the partnership at its latest known address or place of business` `the partnership is a limited partnership` `it was sent to the latest known address of a member whose liability is not limited` `it was sent to the latest known address of any member`
+
+§ `Objection and Review (ss 103 to 105)`
+
+-- Only if I am appealing a decision of the Minister to the Tax Court of Canada.
+
+-- s 103(1). An appeal to the Tax Court of Canada within 90 days after the decision is communicated, or within the longer time the Court
+-- allows on an application made within 90 days after those 90 days.
+@export Is my appeal to the Tax Court of Canada in time (s 103(1))?
+GIVEN `I am a person affected by the Minister's decision on an appeal under section 91 or 92` IS A BOOLEAN @desc Are you a person affected by a decision of the Minister on an appeal under section 91 or 92?
+      `the day the decision was communicated to me` IS A DATE @desc On what day was the Minister's decision communicated to you?
+      `the day I appeal to the Tax Court` IS A DATE @desc On what day do you appeal (or did you appeal) to the Tax Court of Canada?
+      `the day I asked the Court for more time, if I did` IS A MAYBE DATE @desc If you asked the Court for a longer time, on what day (leave empty if you did not)?
+      `the last day the Court allowed me, if it allowed more time` IS A MAYBE DATE @desc If the Court allowed a longer time, what is the last day it allowed (leave empty if it did not)?
+GIVETH A BOOLEAN
+DECIDE `Is my appeal to the Tax Court of Canada in time (s 103(1))` IF
+    `s 103(1) the appeal to the Tax Court of Canada is brought in time` `I am a person affected by the Minister's decision on an appeal under section 91 or 92` `the day the decision was communicated to me` `the day I appeal to the Tax Court` `the day I asked the Court for more time, if I did` `the last day the Court allowed me, if it allowed more time`
+
+-- s 103(3)(a). On an appeal the Tax Court of Canada may vacate, confirm or vary a decision on an appeal under s 91 or an assessment appealed under s 92.
+@export May the Tax Court vacate, confirm or vary the decision I appealed (s 103(3)(a))?
+GIVEN `my appeal concerns a decision on an appeal under section 91 or an assessment appealed under section 92` IS A BOOLEAN @desc Does your appeal concern a decision of the Minister on an appeal under section 91, or an assessment that is the subject of an appeal under section 92?
+GIVETH A BOOLEAN
+DECIDE `May the Tax Court vacate, confirm or vary the decision I appealed (s 103(3)(a))` IF
+    `s 103(3)(a) the Court may vacate, confirm or vary the decision or the assessment` `my appeal concerns a decision on an appeal under section 91 or an assessment appealed under section 92`
+
+-- s 103(3)(b). On an appeal under s 92, the Court may refer the matter back to the Minister for reconsideration and reassessment.
+@export May the Tax Court send my assessment back to the Minister for reassessment (s 103(3)(b))?
+GIVEN `my appeal is an appeal under section 92` IS A BOOLEAN @desc Is your appeal to the Tax Court an appeal under section 92 (from an assessment)?
+GIVETH A BOOLEAN
+DECIDE `May the Tax Court send my assessment back to the Minister for reassessment (s 103(3)(b))` IF
+    `s 103(3)(b) the Court may refer the matter back to the Minister for reconsideration and reassessment` `my appeal is an appeal under section 92`
+
+-- s 103(3)(c). The Court must notify the parties to the appeal of its decision in writing.
+@export Must the Tax Court tell me its decision in writing (s 103(3)(c))?
+GIVEN `I am a party to an appeal to the Tax Court of Canada` IS A BOOLEAN @desc Are you a party to an appeal to the Tax Court of Canada under section 103?
+GIVETH A BOOLEAN
+DECIDE `Must the Tax Court tell me its decision in writing (s 103(3)(c))` IF
+    `s 103(3)(c) the Court shall notify in writing the parties to the appeal of its decision` `I am a party to an appeal to the Tax Court of Canada`
+
+-- s 103(3)(d). The Court must give reasons, which need not be in writing unless the Court deems it advisable in the particular case.
+@export Must the Tax Court's reasons be in writing (s 103(3)(d))?
+GIVEN `the Court deems it advisable in my case to give reasons in writing` IS A BOOLEAN @desc Does the Court deem it advisable in your particular case to give its reasons in writing?
+GIVETH A BOOLEAN
+DECIDE `Must the Tax Court's reasons be in writing (s 103(3)(d))` IF
+    `s 103(3)(d) the Court's reasons must be given in writing` `the Court deems it advisable in my case to give reasons in writing`
+
+-- s 104(1). The Tax Court and the Minister may decide any question of fact or law needed on an appeal under s 91 or 103 or a reconsideration under s 92, and whether a person is affected.
+@export May the Tax Court or the Minister decide this question in my appeal (s 104(1))?
+GIVEN `it is a question of fact or law necessary to decide my appeal or reconsideration` IS A BOOLEAN @desc Is it a question of fact or law necessary to be decided in the course of an appeal under section 91 or 103, or to reconsider an assessment under section 92?
+      `it is whether a person may be or is affected by the decision or assessment` IS A BOOLEAN @desc Is it the question whether a person may be, or is, affected by the decision or assessment?
+GIVETH A BOOLEAN
+DECIDE `May the Tax Court or the Minister decide this question in my appeal (s 104(1))` IF
+    `s 104(1) the Tax Court of Canada and the Minister have authority to decide the question` `it is a question of fact or law necessary to decide my appeal or reconsideration` `it is whether a person may be or is affected by the decision or assessment`
+
+-- s 104(2). A decision of the Tax Court or the Minister, and a ruling under s 90, are final and binding unless the Act otherwise provides.
+@export Is the decision or ruling final and binding on me (s 104(2))?
+GIVEN `it is a decision of the Tax Court of Canada or the Minister, or a ruling under section 90` IS A BOOLEAN @desc Is it a decision of the Tax Court of Canada or the Minister, or a ruling of an authorized officer under section 90?
+      `the Act otherwise provides` IS A BOOLEAN @desc Does the Employment Insurance Act itself provide otherwise (for example, an appeal)?
+GIVETH A BOOLEAN
+DECIDE `Is the decision or ruling final and binding on me (s 104(2))` IF
+    `s 104(2) the decision or ruling is final and binding for all purposes of this Act` `it is a decision of the Tax Court of Canada or the Minister, or a ruling under section 90` `the Act otherwise provides`
+
+-- s 104(3). A person affected who attends the Tax Court at its request is paid travel and other allowances approved by the Treasury Board.
+@export Am I owed allowances for attending the Tax Court (s 104(3))?
+GIVEN `the appeal is to the Tax Court from a decision of the Minister` IS A BOOLEAN @desc Is the appeal to the Tax Court of Canada from a decision of the Minister?
+      `I am a person affected by the decision` IS A BOOLEAN @desc Are you a person affected by the decision?
+      `the Court asked me to attend` IS A BOOLEAN @desc Did the Court request you to attend before it on the consideration of the appeal?
+      `I attended` IS A BOOLEAN @desc Did you attend?
+GIVETH A BOOLEAN
+DECIDE `Am I owed allowances for attending the Tax Court (s 104(3))` IF
+    `s 104(3) the person shall be paid travel and other allowances approved by the Treasury Board` `the appeal is to the Tax Court from a decision of the Minister` `I am a person affected by the decision` `the Court asked me to attend` `I attended`
+
+@export How much are my allowances for attending the Tax Court (s 104(3))?
+GIVEN `I am owed allowances` IS A BOOLEAN @desc Are you owed allowances for attending the Tax Court of Canada (see the question before this one)?
+      `the amount the Treasury Board approved in dollars` IS A NUMBER @desc What amount did the Treasury Board approve for travel and other allowances, including compensation for loss of remunerative time, in dollars?
+GIVETH A MAYBE NUMBER
+DECIDE `How much are my allowances for attending the Tax Court (s 104(3))` IS
+    `s 104(3) the allowances payable` `I am owed allowances` `the amount the Treasury Board approved in dollars`
+
+-- s 105. The Tax Court's decision on a section 103 appeal is final, except for an appeal under the Federal Courts Act.
+@export Can I appeal or seek review of the Tax Court's decision on my section 103 appeal (s 105)?
+GIVEN `it is the Tax Court of Canada's decision on an appeal under section 103` IS A BOOLEAN @desc Is it the decision of the Tax Court of Canada on an appeal under section 103?
+      `I am appealing under the Federal Courts Act` IS A BOOLEAN @desc Are you appealing under the Federal Courts Act?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Can I appeal or seek review of the Tax Court's decision on my section 103 appeal (s 105)` IS
+    `s 105 the decision is subject to appeal to or review by a court` `it is the Tax Court of Canada's decision on an appeal under section 103` `I am appealing under the Federal Courts Act`
+
+§ `Offences (ss 106 and 107)`
+
+-- Only if I have been charged, or may be. Section 107 (officers and directors of a corporation) binds other individuals and is in layer 1 only.
+
+-- s 106(2). A person who contravenes s 87 (records, which bind employers) or s 88 commits an offence punishable on summary conviction.
+-- The seat asks only about section 88; section 87 binds employers, so it is fixed at "no" here.
+@export Do I commit an offence by contravening section 88 (s 106(2))?
+GIVEN `I contravene section 88` IS A BOOLEAN @desc Do you contravene section 88 (for example by refusing assistance, answers or a document the section requires, or by hindering an authorized person)?
+GIVETH A BOOLEAN
+DECIDE `Do I commit an offence by contravening section 88 (s 106(2))` IF
+    `s 106(2) the person is guilty of an offence punishable on summary conviction` FALSE `I contravene section 88`
+
+-- s 106(3). A person who contravenes regulations made under s 108(1)(a) or (b) (information returns) commits an offence.
+@export Do I commit an offence by contravening an information-return regulation (s 106(3))?
+GIVEN `I contravene regulations made under section 108(1)(a) or (b)` IS A BOOLEAN @desc Do you contravene regulations requiring an information return, or a copy of it, under section 108(1)(a) or (b)?
+GIVETH A BOOLEAN
+DECIDE `Do I commit an offence by contravening an information-return regulation (s 106(3))` IF
+    `s 106(3) the person is guilty of an offence` `I contravene regulations made under section 108(1)(a) or (b)`
+
+-- s 106(3). The fine is not less than $25 a day of default, but not more than $1,000 in all.
+@export What is the least fine for my days of default (s 106(3))?
+GIVEN `the number of days of default` IS A NUMBER @desc For how many days were you in default?
+GIVETH A NUMBER
+DECIDE `What is the least fine for my days of default (s 106(3))` IS
+    `s 106(3) the least fine` `the number of days of default`
+
+-- s 106(4). An offence: false or deceptive statements in a return, certificate, statement or answer under Part IV or Part VII.1; destroying or
+-- falsifying an employer's records to evade premium; wilful evasion; conspiracy.
+@export Have I committed an offence by false statements or evading premium (s 106(4))?
+GIVEN `I made or took part in false or deceptive statements in a return, certificate, statement or answer` IS A BOOLEAN @desc Did you make, take part in, assent to or acquiesce in false or deceptive statements in a return, certificate, statement or answer filed or made as required by Part IV, Part VII.1 or the regulations?
+      `I destroyed or altered an employer's records to evade premium` IS A BOOLEAN @desc To evade payment of a premium, did you destroy, alter, mutilate, secrete or otherwise dispose of an employer's records or books of account?
+      `I made false entries or left out a material particular` IS A BOOLEAN @desc Did you make false or deceptive entries in an employer's records or books of account, omit a material particular, or assent to or acquiesce in either?
+      `I wilfully evaded or tried to evade compliance or payment of premium` IS A BOOLEAN @desc Did you wilfully evade, or try to evade, compliance with the Act or payment of premiums?
+      `I conspired with someone to do one of those things` IS A BOOLEAN @desc Did you conspire with anyone to commit one of those offences?
+GIVETH A BOOLEAN
+DECIDE `Have I committed an offence by false statements or evading premium (s 106(4))` IF
+    `s 106(4) the person is guilty of an offence` `I made or took part in false or deceptive statements in a return, certificate, statement or answer` `I destroyed or altered an employer's records to evade premium` `I made false entries or left out a material particular` `I wilfully evaded or tried to evade compliance or payment of premium` `I conspired with someone to do one of those things`
+
+-- s 106(5). The punishment on summary conviction: a fine of $25 to $5,000, plus (in an appropriate case) up to double the premium, and/or up to six months.
+@export Is the punishment I was given within what section 106(5) allows (s 106(5))?
+GIVEN `the fine, not counting any addition by reference to the premium` IS A NUMBER @desc What was the fine, not counting any addition by reference to the premium, in dollars?
+      `the addition by reference to the premium` IS A NUMBER @desc What addition by reference to the premium was imposed, in dollars (0 if none)?
+      `the premium that should have been shown or was sought to be evaded` IS A NUMBER @desc What was the premium that should have been shown to be payable, or that was sought to be evaded, in dollars?
+      `the months of imprisonment` IS A NUMBER @desc How many months of imprisonment were imposed (0 if none)?
+GIVETH A BOOLEAN
+DECIDE `Is the punishment I was given within what section 106(5) allows (s 106(5))` IF
+    `s 106(5) the punishment is within what the subsection allows on summary conviction` `the fine, not counting any addition by reference to the premium` `the addition by reference to the premium` `the premium that should have been shown or was sought to be evaded` `the months of imprisonment`
+
+§ `Regulations (s 108)`
+
+-- Only if regulations require me to file an information return or a copy of one.
+
+-- s 108(1)(c). A regulation may prescribe a penalty for not filing an information return equal to the greater of $100 and $25 a day of non-compliance, to a maximum of $2,500.
+@export What penalty may a regulation prescribe for my days of not filing a return (s 108(1)(c))?
+GIVEN `the number of days during which I did not comply` IS A NUMBER @desc For how many days did you not comply with the regulations requiring an information return, or a copy of it?
+GIVETH A NUMBER
+DECIDE `What penalty may a regulation prescribe for my days of not filing a return (s 108(1)(c))` IS
+    `s 108(1)(c) the penalty a regulation may prescribe for non-compliance with regulations made under paragraph (a) or (b)` `the number of days during which I did not comply`
+
+§ `Pilot projects (Part V)`
+
+-- Only if a pilot-project regulation applied to me. Regulations made under Part V cease to have effect three years after they come into force.
+
+@export Has the pilot-project regulation that applied to me ceased to have effect (s 110)?
+GIVEN `the regulation was repealed` IS A BOOLEAN @desc Has the pilot-project regulation been repealed?
+      `the day it came into force` IS A DATE @desc On what day did the pilot-project regulation come into force?
+      `the day I am asking about` IS A DATE @desc For which day are you asking whether it still has effect?
+GIVETH A MAYBE BOOLEAN
+DECIDE `Has the pilot-project regulation that applied to me ceased to have effect (s 110)` IS
+    `s 110 the regulation has ceased to have effect on the day` `the regulation was repealed` `the day it came into force` `the day I am asking about`
+

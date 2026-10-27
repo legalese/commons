@@ -1,0 +1,467 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `cpp-core`
+IMPORT `cpp-core-calendar`
+IMPORT `cpp-core-age`
+IMPORT `cp4-nouns`
+IMPORT `cp4-pension-index`
+
+-- Canada Pension Plan Act, section 58, subsections (1) to (5) and (9) -- THE SURVIVOR'S PENSION.
+--
+-- A survivor's pension (paragraph 44(1)(d), piece cp3) is paid to the survivor of a contributor. Section
+-- 58 says how much: a flat rate benefit and a share of the contributor's retirement pension, the share
+-- depending on whether the survivor is under or over 65 and whether the survivor has a retirement pension
+-- of their own (subsection (2) then caps the two together). The contributor's retirement pension is the
+-- aggregate of three portions (subsections (3), (3.1) and (3.4)), each indexed by the Pension Index from
+-- the month a listed event occurs. Subsections (6) to (8.1), which cut the pensions down when the survivor
+-- also has a disability pension, are in the next module, cp4-survivors-pension-offsets.l4.
+--
+-- Out of range, taken as plain inputs: the Pension Index (s 43), the survivor's own retirement pension
+-- portions (s 46), the adjustment under s 45(2), the Maximum Pensionable Earnings Average (s 42(1)), the
+-- Year's Maximum Pensionable Earnings (s 18, piece cp1), the first and second additional monthly
+-- pensionable earnings (ss 48.1, 48.2, 51), the retirement pension used for the base portion (s 57(2) in
+-- this piece, whose result the caller passes), whether the person is a survivor, a survivor with dependent
+-- children or disabled (ss 42, 44; piece cp3), and a division of unadjusted pensionable earnings (ss 55,
+-- 55.1; piece cp3). All amounts are monthly dollars.
+
+§ `Section 58 (subsections 1 to 5 and 9) -- amount of survivor's pension`
+
+§§ `Section 58(1.1) -- the flat rate benefit`
+
+-- src:1739 | Amount of flat rate benefit
+-- src:1740 | (1.1) The amount of the flat rate benefit referred to in subparagraphs (1)(a)(i) and (a.1)(i) is
+-- src:1741 | (a) in the year 1986, ninety-one dollars and six cents; or
+-- src:1742 | (b) in the year 1987 or any subsequent year, an amount calculated by multiplying
+-- src:1743 | (i) the amount of the flat rate benefit that would have been payable for a month in the year preceding that year
+-- src:1744 | by
+-- src:1745 | (ii) the ratio that the Pension Index for the year in which the flat rate benefit commences to be payable bears to the Pension Index for the year preceding that year.
+@ref Act s 58(1.1) (src:1740-1745)
+GIVEN `the year in which the flat rate benefit commences to be payable` IS A NUMBER
+      `the Pension Index by year, beginning with 1986` IS A LIST OF NUMBER
+GIVETH A MAYBE NUMBER
+`s 58(1.1) — the flat rate benefit of a survivor's pension` `the year in which the flat rate benefit commences to be payable` `the Pension Index by year, beginning with 1986` MEANS
+    -- Unlike subsection 56(2), the year 1987 runs from the 1986 amount here (NOTES.md, finding on the two flat rates).
+    BRANCH
+        IF `the year in which the flat rate benefit commences to be payable` EQUALS 1986
+            THEN JUST 91.06
+        IF `the year in which the flat rate benefit commences to be payable` AT LEAST 1987
+            THEN `cp4 an amount that may be missing times a ratio that may be missing` (`s 58(1.1) — the flat rate benefit of a survivor's pension` (`the year in which the flat rate benefit commences to be payable` MINUS 1) `the Pension Index by year, beginning with 1986`) (`cp4 the ratio of the Pension Index for a year to the Pension Index for the year before` `the year in which the flat rate benefit commences to be payable` `the Pension Index by year, beginning with 1986`)
+        OTHERWISE NOTHING
+
+§§ `Section 58(1) -- the basic monthly amount where no retirement pension is payable to the survivor`
+
+-- Not a provision: the number of months by which a person's age at a time is less than 45. Reaching 45 goes
+-- through section 2(2): the person is deemed to reach 45 at the start of the month after the birthday month.
+GIVEN `date of birth` IS A DATE
+      time IS A DATE
+GIVETH A NUMBER
+`cp4 the months by which a person's age at a time is less than 45` `date of birth` time MEANS
+    max 0 (`the number of months from the month of one date to the month of another` time (`s 2(2) — the date a person is treated as reaching a specified age for a provision` `any other provision` `date of birth` 45))
+
+-- src:1719 | (a) in the case of a survivor who has not reached 65 years of age and to whom no retirement pension is payable under this Act or a provincial pension plan, for any month before January 2019, a basic monthly amount consisting of
+-- src:1720 | (i) a flat rate benefit, calculated as provided in subsection (1.1), and
+-- src:1721 | (ii) 37.5% of the amount of the contributor’s retirement pension, which amount is calculated as the aggregate of
+-- src:1722 | (A) the amount calculated as provided in subsection (3),
+-- src:1723 | (B) the amount calculated as provided in subsection (3.1), and
+-- src:1724 | (C) the amount calculated as provided in subsection (3.4),
+-- src:1725 | reduced, unless the survivor was at the time of the death of the contributor a survivor with dependent children or unless he is disabled, by 1/120 for each month by which the age of the survivor at the time of the death of the contributor is less than forty-five years, and reduced, if at any time after the death of the contributor the survivor ceases to be
+-- src:1726 | (iii) a survivor with dependent children and is not at that time disabled, or
+-- src:1727 | (iv) disabled and is not at that time a survivor with dependent children,
+-- src:1728 | by 1/120 for each month by which the age of the survivor at that time is less than forty-five years;
+@ref Act s 58(1)(a) (src:1719-1728)
+GIVEN `the flat rate benefit` IS A NUMBER
+      `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` IS A `cp4 Retirement pension portions`
+      `the survivor was at the time of the death of the contributor a survivor with dependent children` IS A BOOLEAN
+      `the survivor is disabled` IS A BOOLEAN
+      `the survivor's date of birth` IS A DATE
+      `the day of the death of the contributor` IS A DATE
+      `the day on which the survivor ceased to be a survivor with dependent children while not disabled, or ceased to be disabled while not a survivor with dependent children` IS A MAYBE DATE
+GIVETH A MAYBE NUMBER
+`s 58(1)(a) — the survivor's pension for a month before 2019 where the survivor is under 65 and no retirement pension is payable` `the flat rate benefit` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor was at the time of the death of the contributor a survivor with dependent children` `the survivor is disabled` `the survivor's date of birth` `the day of the death of the contributor` `the day on which the survivor ceased to be a survivor with dependent children while not disabled, or ceased to be disabled while not a survivor with dependent children` MEANS
+    -- NOTHING: the reductions together take more than the whole amount (more than 120 months of 1/120); the text
+    -- gives no floor (NOTES.md, fork register).
+    IF `the months of reduction` GREATER THAN 120
+    THEN NOTHING
+    ELSE JUST (`the basic amount` TIMES (1 MINUS (`the months of reduction` DIVIDED BY 120)))
+    WHERE
+        `the basic amount` MEANS
+            `the flat rate benefit` PLUS (37.5% TIMES (  `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the base portion of a retirement pension`
+                                                           PLUS `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the first additional portion of a retirement pension`
+                                                           PLUS `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the second additional portion of a retirement pension`))
+        -- "reduced, unless the survivor was at the time of the death of the contributor a survivor with dependent
+        -- children or unless he is disabled, by 1/120 for each month by which the age of the survivor at the time of
+        -- the death of the contributor is less than forty-five years"
+        `the months of reduction at death` MEANS
+            IF `the survivor was at the time of the death of the contributor a survivor with dependent children` OR `the survivor is disabled`
+            THEN 0
+            ELSE `cp4 the months by which a person's age at a time is less than 45` `the survivor's date of birth` `the day of the death of the contributor`
+        -- "and reduced, if at any time after the death of the contributor the survivor ceases to be (iii) ... or (iv) ...,
+        -- by 1/120 for each month by which the age of the survivor at that time is less than forty-five years"
+        `the months of reduction on ceasing` MEANS
+            CONSIDER `the day on which the survivor ceased to be a survivor with dependent children while not disabled, or ceased to be disabled while not a survivor with dependent children`
+            WHEN NOTHING THEN 0
+            WHEN JUST ceased THEN `cp4 the months by which a person's age at a time is less than 45` `the survivor's date of birth` ceased
+        `the months of reduction` MEANS `the months of reduction at death` PLUS `the months of reduction on ceasing`
+
+-- src:1729 | (a.1) in the case of a survivor who has not reached 65 years of age and to whom no retirement pension is payable under this Act or a provincial pension plan, for any month after December 2018, a basic monthly amount consisting of
+-- src:1730 | (i) a flat rate benefit, calculated as provided in subsection (1.1), and
+-- src:1731 | (ii) 37.5% of the amount of the contributor’s retirement pension, which amount is calculated as the aggregate of
+-- src:1732 | (A) the amount calculated as provided in subsection (3),
+-- src:1733 | (B) the amount calculated as provided in subsection (3.1), and
+-- src:1734 | (C) the amount calculated as provided in subsection (3.4); and
+@ref Act s 58(1)(a.1) (src:1729-1734)
+GIVEN `the flat rate benefit` IS A NUMBER
+      `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` IS A `cp4 Retirement pension portions`
+GIVETH A NUMBER
+`s 58(1)(a.1) — the survivor's pension for a month after 2018 where the survivor is under 65 and no retirement pension is payable` `the flat rate benefit` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` MEANS
+    -- No reduction by 1/120 appears in paragraph (a.1).
+    `the flat rate benefit` PLUS (37.5% TIMES (  `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the base portion of a retirement pension`
+                                                   PLUS `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the first additional portion of a retirement pension`
+                                                   PLUS `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the second additional portion of a retirement pension`))
+
+-- src:1735 | (b) in the case of a survivor who has reached 65 years of age and to whom no retirement pension is payable under this Act or a provincial pension plan, a basic monthly amount equal to 60% of the amount of the contributor’s retirement pension, which amount is calculated as the aggregate of
+-- src:1736 | (i) the amount calculated as provided in subsection (3),
+-- src:1737 | (ii) the amount calculated as provided in subsection (3.1), and
+-- src:1738 | (iii) the amount calculated as provided in subsection (3.4).
+@ref Act s 58(1)(b) (src:1735-1738)
+GIVEN `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` IS A `cp4 Retirement pension portions`
+GIVETH A NUMBER
+`s 58(1)(b) — the survivor's pension where the survivor has reached 65 and no retirement pension is payable` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` MEANS
+    60% TIMES (  `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the base portion of a retirement pension`
+              PLUS `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the first additional portion of a retirement pension`
+              PLUS `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the second additional portion of a retirement pension`)
+
+-- src:1718 | 58 (1) Subject to this section, a survivor’s pension payable to the survivor of a contributor is a basic monthly amount as follows:
+@ref Act s 58(1) (src:1718)
+GIVEN month IS A DATE
+      `the survivor's date of birth` IS A DATE
+      `a retirement pension is payable to the survivor under this Act or a provincial pension plan` IS A BOOLEAN
+      `the flat rate benefit` IS A NUMBER
+      `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` IS A `cp4 Retirement pension portions`
+      `the survivor was at the time of the death of the contributor a survivor with dependent children` IS A BOOLEAN
+      `the survivor is disabled` IS A BOOLEAN
+      `the day of the death of the contributor` IS A DATE
+      `the day on which the survivor ceased to be a survivor with dependent children while not disabled, or ceased to be disabled while not a survivor with dependent children` IS A MAYBE DATE
+GIVETH A MAYBE NUMBER
+`s 58(1) — the basic monthly amount of a survivor's pension where no retirement pension is payable to the survivor` month `the survivor's date of birth` `a retirement pension is payable to the survivor under this Act or a provincial pension plan` `the flat rate benefit` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor was at the time of the death of the contributor a survivor with dependent children` `the survivor is disabled` `the day of the death of the contributor` `the day on which the survivor ceased to be a survivor with dependent children while not disabled, or ceased to be disabled while not a survivor with dependent children` MEANS
+    -- NOTHING where a retirement pension is payable to the survivor: subsection (2) governs that case.
+    BRANCH
+        IF `a retirement pension is payable to the survivor under this Act or a provincial pension plan`
+            THEN NOTHING
+        IF `s 2(2) — the person is treated as having reached a specified age on a date for a provision` `any other provision` `the survivor's date of birth` 65 (`the month of a date` month)
+            THEN JUST (`s 58(1)(b) — the survivor's pension where the survivor has reached 65 and no retirement pension is payable` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`)
+        IF month LESS THAN (YMD 2019 1 1)
+            THEN `s 58(1)(a) — the survivor's pension for a month before 2019 where the survivor is under 65 and no retirement pension is payable` `the flat rate benefit` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor was at the time of the death of the contributor a survivor with dependent children` `the survivor is disabled` `the survivor's date of birth` `the day of the death of the contributor` `the day on which the survivor ceased to be a survivor with dependent children while not disabled, or ceased to be disabled while not a survivor with dependent children`
+        OTHERWISE JUST (`s 58(1)(a.1) — the survivor's pension for a month after 2018 where the survivor is under 65 and no retirement pension is payable` `the flat rate benefit` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`)
+
+§§ `Section 58(3) to (3.6) -- the three portions of the contributor's retirement pension`
+
+-- Not a provision: an amount multiplied by the Pension Index ratio "for the purpose of calculating the monthly
+-- amount of the survivor's pension for months commencing with the month in which" an event occurred. A month is
+-- multiplied when it is the month of the first event or later; with no event, it is not multiplied.
+GIVEN amount IS A NUMBER
+      month IS A DATE
+      `the months in which one of the events described in paragraphs (3)(a) to (e) occurred` IS A LIST OF DATE
+      ratio IS A NUMBER
+GIVETH A NUMBER
+`cp4 an amount multiplied by the Pension Index ratio for months from the first event` amount month `the months in which one of the events described in paragraphs (3)(a) to (e) occurred` ratio MEANS
+    IF any (GIVEN event YIELD `the month of a date` event AT MOST `the month of a date` month) `the months in which one of the events described in paragraphs (3)(a) to (e) occurred`
+    THEN amount TIMES ratio
+    ELSE amount
+
+-- src:1813 | (3) The amount of the portion of the contributor’s retirement pension that is to be used for the purposes of subsections (1) and (2) is an amount calculated as provided in paragraph 57(2)(a), (b) or (c), multiplied, for the purpose of calculating the monthly amount of the survivor’s pension for months commencing with the month in which
+-- src:1814 | (a) a survivor’s pension became payable to the survivor by reason of a disability that began after the death of the contributor,
+-- src:1815 | (b) the survivor reached sixty-five years of age, not having reached that age at the time of the death of the contributor,
+-- src:1816 | (c) the survivor’s pension under this Act or the survivor’s retirement pension under this Act or a provincial pension plan commenced to be payable, whichever is the later,
+-- src:1817 | (d) a survivor’s pension became payable to the survivor under this Act in circumstances other than those described in paragraph (a), (b) or (c), or
+-- src:1818 | (e) the survivor has had an adjustment to the survivor’s retirement pension pursuant to subsection 55(7) or 55.2(9) following a division of unadjusted pensionable earnings,
+-- src:1819 | by the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died.
+@ref Act s 58(3) (src:1813-1819)
+GIVEN `the amount calculated as provided in paragraph 57(2)(a), (b) or (c)` IS A NUMBER
+      month IS A DATE
+      `the months in which one of the events described in paragraphs (a) to (e) occurred` IS A LIST OF DATE
+      `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died` IS A NUMBER
+GIVETH A NUMBER
+`s 58(3) — the base portion of the contributor's retirement pension` `the amount calculated as provided in paragraph 57(2)(a), (b) or (c)` month `the months in which one of the events described in paragraphs (a) to (e) occurred` `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died` MEANS
+    `cp4 an amount multiplied by the Pension Index ratio for months from the first event` `the amount calculated as provided in paragraph 57(2)(a), (b) or (c)` month `the months in which one of the events described in paragraphs (a) to (e) occurred` `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died`
+
+-- src:1821 | (3.1) The amount of the portion of the contributor’s retirement pension that is to be used for the purposes of subsections (1) and (2) is an amount calculated as provided in subsection (3.2), multiplied, for the purpose of calculating the monthly amount of the survivor’s pension for months commencing with the month in which one of the events described in paragraphs 3(a) to (e) has occurred, by the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died.
+@ref Act s 58(3.1) (src:1821)
+GIVEN `the amount calculated as provided in subsection (3.2)` IS A NUMBER
+      month IS A DATE
+      `the months in which one of the events described in paragraphs (3)(a) to (e) occurred` IS A LIST OF DATE
+      `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died` IS A NUMBER
+GIVETH A NUMBER
+`s 58(3.1) — the first additional portion of the contributor's retirement pension` `the amount calculated as provided in subsection (3.2)` month `the months in which one of the events described in paragraphs (3)(a) to (e) occurred` `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died` MEANS
+    `cp4 an amount multiplied by the Pension Index ratio for months from the first event` `the amount calculated as provided in subsection (3.2)` month `the months in which one of the events described in paragraphs (3)(a) to (e) occurred` `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died`
+
+-- src:1823 | (3.2) The amount to be calculated for the purpose of subsection (3.1) is equal to
+-- src:1824 | (a) if a retirement pension was not payable for the month in which the contributor died, an amount equal to 8.33% of their first additional monthly pensionable earnings, or
+-- src:1825 | (b) if a retirement pension was payable for the month in which the contributor died, an amount equal to the product obtained by multiplying
+-- src:1826 | (i) an amount equal to 8.33% of their first additional monthly pensionable earnings,
+-- src:1827 | by
+-- src:1828 | (ii) the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the retirement pension first became payable.
+@ref Act s 58(3.2) (src:1823-1828)
+GIVEN `a retirement pension was payable for the month in which the contributor died` IS A BOOLEAN
+      `the first additional monthly pensionable earnings` IS A NUMBER
+      `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the retirement pension first became payable` IS A NUMBER
+GIVETH A NUMBER
+`s 58(3.2) — the amount calculated for the purpose of subsection (3.1)` `a retirement pension was payable for the month in which the contributor died` `the first additional monthly pensionable earnings` `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the retirement pension first became payable` MEANS
+    -- "that month" in (b)(ii) is the month in which the contributor died (NOTES.md, fork register).
+    IF `a retirement pension was payable for the month in which the contributor died`
+    THEN (8.33% TIMES `the first additional monthly pensionable earnings`) TIMES `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the retirement pension first became payable`
+    ELSE 8.33% TIMES `the first additional monthly pensionable earnings`
+
+-- src:1830 | (3.3) For the purpose of subsection (3.2), the first additional monthly pensionable earnings of a contributor are an amount calculated as provided in section 48.1, and
+-- src:1831 | (a) in the case of a contributor to whom a retirement pension was payable for the month in which they died, section 51 applies; or
+-- src:1832 | (b) in the case of a contributor to whom no retirement pension was payable for the month in which they died, section 51 applies but the reference in that section to the year in which a benefit becomes payable to the contributor is to be read as a reference to the year in which the contributor died.
+@ref Act s 58(3.3) (src:1830-1832)
+GIVEN `a retirement pension was payable for the month in which the contributor died` IS A BOOLEAN
+      `the year in which a benefit becomes payable to the contributor` IS A NUMBER
+      `the year in which the contributor died` IS A NUMBER
+GIVETH A NUMBER
+`s 58(3.3) — the year to which section 51 refers for the first additional monthly pensionable earnings` `a retirement pension was payable for the month in which the contributor died` `the year in which a benefit becomes payable to the contributor` `the year in which the contributor died` MEANS
+    IF `a retirement pension was payable for the month in which the contributor died`
+    THEN `the year in which a benefit becomes payable to the contributor`
+    ELSE `the year in which the contributor died`
+
+-- src:1834 | (3.4) The amount of the portion of the contributor’s retirement pension that is to be used for the purposes of subsections (1) and (2) is an amount calculated as provided in subsection (3.5), multiplied, for the purpose of calculating the monthly amount of the survivor’s pension for months commencing with the month in which one of the events described in paragraphs 3(a) to (e) has occurred, by the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died.
+@ref Act s 58(3.4) (src:1834)
+GIVEN `the amount calculated as provided in subsection (3.5)` IS A NUMBER
+      month IS A DATE
+      `the months in which one of the events described in paragraphs (3)(a) to (e) occurred` IS A LIST OF DATE
+      `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died` IS A NUMBER
+GIVETH A NUMBER
+`s 58(3.4) — the second additional portion of the contributor's retirement pension` `the amount calculated as provided in subsection (3.5)` month `the months in which one of the events described in paragraphs (3)(a) to (e) occurred` `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died` MEANS
+    `cp4 an amount multiplied by the Pension Index ratio for months from the first event` `the amount calculated as provided in subsection (3.5)` month `the months in which one of the events described in paragraphs (3)(a) to (e) occurred` `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the contributor died`
+
+-- src:1836 | (3.5) The amount that is to be calculated for the purpose of subsection (3.4) is equal to
+-- src:1837 | (a) if a retirement pension was not payable for the month in which the contributor died, an amount equal to 33.33% of their second additional monthly pensionable earnings, or
+-- src:1838 | (b) if a retirement pension was payable for the month in which the contributor died, an amount equal to the product obtained by multiplying
+-- src:1839 | (i) an amount equal to 33.33% of their second additional monthly pensionable earnings,
+-- src:1840 | by
+-- src:1841 | (ii) the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the retirement pension first became payable.
+@ref Act s 58(3.5) (src:1836-1841)
+GIVEN `a retirement pension was payable for the month in which the contributor died` IS A BOOLEAN
+      `the second additional monthly pensionable earnings` IS A NUMBER
+      `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the retirement pension first became payable` IS A NUMBER
+GIVETH A NUMBER
+`s 58(3.5) — the amount calculated for the purpose of subsection (3.4)` `a retirement pension was payable for the month in which the contributor died` `the second additional monthly pensionable earnings` `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the retirement pension first became payable` MEANS
+    IF `a retirement pension was payable for the month in which the contributor died`
+    THEN (33.33% TIMES `the second additional monthly pensionable earnings`) TIMES `the ratio that the Pension Index for the year that includes that month bears to the Pension Index for the year in which the retirement pension first became payable`
+    ELSE 33.33% TIMES `the second additional monthly pensionable earnings`
+
+-- src:1843 | (3.6) For the purpose of subsection (3.5), the second additional monthly pensionable earnings of a contributor are an amount calculated as provided in section 48.2, and
+-- src:1844 | (a) in the case of a contributor to whom a retirement pension was payable for the month in which they died, section 51 applies; or
+-- src:1845 | (b) in the case of a contributor to whom no retirement pension was payable for the month in which they died, section 51 applies but the reference in that section to the year in which a benefit becomes payable to the contributor is to be read as a reference to the year in which the contributor died.
+@ref Act s 58(3.6) (src:1843-1845)
+GIVEN `a retirement pension was payable for the month in which the contributor died` IS A BOOLEAN
+      `the year in which a benefit becomes payable to the contributor` IS A NUMBER
+      `the year in which the contributor died` IS A NUMBER
+GIVETH A NUMBER
+`s 58(3.6) — the year to which section 51 refers for the second additional monthly pensionable earnings` `a retirement pension was payable for the month in which the contributor died` `the year in which a benefit becomes payable to the contributor` `the year in which the contributor died` MEANS
+    IF `a retirement pension was payable for the month in which the contributor died`
+    THEN `the year in which a benefit becomes payable to the contributor`
+    ELSE `the year in which the contributor died`
+
+-- src:1846 | Pension Index limitation removed
+-- src:1847 | (4) For the purpose of calculating the monthly amount of a survivor’s pension under subsection (3) in a case where the survivor’s pension commences with a month in a year after 1973 and is in respect of a contributor who died prior to 1974, the ratio referred to in that subsection shall be calculated as if the Pension Index for the year in which the contributor died had not been subject to the limitation referred to in paragraph 43.1(2)(a) of the Canada Pension Plan, chapter C-5 of the Revised Statutes of Canada, 1970, of 1.02 times the Pension Index for the preceding year.
+@ref Act s 58(4) (src:1847)
+GIVEN `the year in which the contributor died` IS A NUMBER
+      `the year in which the survivor's pension commences` IS A NUMBER
+      `the Pension Index for the year in which the contributor died` IS A NUMBER
+      `the Pension Index for the year in which the contributor died, calculated as if it had not been subject to the limitation of 1.02 times the Pension Index for the preceding year` IS A NUMBER
+GIVETH A NUMBER
+`s 58(4) — the Pension Index for the year of the contributor's death that the ratio of subsection (3) uses` `the year in which the contributor died` `the year in which the survivor's pension commences` `the Pension Index for the year in which the contributor died` `the Pension Index for the year in which the contributor died, calculated as if it had not been subject to the limitation of 1.02 times the Pension Index for the preceding year` MEANS
+    -- The limitation is that of paragraph 43.1(2)(a) of the Canada Pension Plan, chapter C-5 of the Revised
+    -- Statutes of Canada, 1970; that Act is not among the texts read, so both indices are supplied.
+    IF (`the year in which the contributor died` LESS THAN 1974) AND (`the year in which the survivor's pension commences` GREATER THAN 1973)
+    THEN `the Pension Index for the year in which the contributor died, calculated as if it had not been subject to the limitation of 1.02 times the Pension Index for the preceding year`
+    ELSE `the Pension Index for the year in which the contributor died`
+
+-- src:1848 | Calculation of amount of retirement pension to survivor
+-- src:1849 | (5) For the purposes of subsection (2), the monthly amount of the retirement pension payable to the survivor of a contributor shall be calculated without regard to any provision of the provincial pension plan referred to in that subsection that reduces the pensions of contributors who have reached sixty-five years of age or precludes the payment of pensions to those contributors by reason of their employment earnings.
+@ref Act s 58(5) (src:1849)
+GIVEN `the monthly amount of the retirement pension payable to the survivor under the provincial pension plan` IS A NUMBER
+      `the amount by which a provision of that plan reduces, or precludes payment of, the pension of a contributor who has reached sixty-five years of age by reason of employment earnings` IS A NUMBER
+GIVETH A NUMBER
+`s 58(5) — the monthly amount of the survivor's retirement pension to use in subsection (2)` `the monthly amount of the retirement pension payable to the survivor under the provincial pension plan` `the amount by which a provision of that plan reduces, or precludes payment of, the pension of a contributor who has reached sixty-five years of age by reason of employment earnings` MEANS
+    -- "calculated without regard to any provision of the provincial pension plan ... that reduces the pensions of
+    -- contributors who have reached sixty-five years of age or precludes the payment of pensions ... by reason of
+    -- their employment earnings": what such a provision took away is put back.
+    `the monthly amount of the retirement pension payable to the survivor under the provincial pension plan` PLUS `the amount by which a provision of that plan reduces, or precludes payment of, the pension of a contributor who has reached sixty-five years of age by reason of employment earnings`
+
+§§ `Section 58(2) -- where a survivor's pension and a retirement pension are both payable`
+
+-- Not a provision: "an amount that, when added to X, is equal to the amount of a benefit of 25% of 1/12 of Y,
+-- adjusted in accordance with subsection 45(2)": the benefit of 25% of 1/12 of an average, once adjusted. The
+-- adjustment under 45(2) (piece cp3) is a ratio of Pension Indexes, supplied; 1 where nothing is adjusted.
+GIVEN average IS A NUMBER
+      `the adjustment under subsection 45(2), as a ratio` IS A NUMBER
+GIVETH A NUMBER
+`cp4 a benefit of 25% of 1/12 of an average, adjusted` average `the adjustment under subsection 45(2), as a ratio` MEANS
+    ((25% TIMES average) DIVIDED BY 12) TIMES `the adjustment under subsection 45(2), as a ratio`
+
+-- Not a provision: A minus B, where B is the lesser of 40% of A and 40% of the survivor's own portion
+-- (the formulas "C - D" and "A - B" of subsection (2)).
+GIVEN share IS A NUMBER
+      `the survivor's own portion` IS A NUMBER
+GIVETH A NUMBER
+`cp4 a share less the lesser of 40% of it and 40% of the survivor's own portion` share `the survivor's own portion` MEANS
+    share MINUS (min (40% TIMES share) (40% TIMES `the survivor's own portion`))
+
+-- src:1748 | (a) in the case of a survivor who has not reached sixty-five years of age and whose retirement pension commences to be payable after December 31, 1997, the aggregate of
+-- src:1749 | (i) the aggregate of
+-- src:1750 | (A) a flat rate benefit, calculated as provided in subsection (1.1), or, if a post-retirement disability benefit is payable to the survivor, the greater of
+-- src:1751 | (I) the flat rate benefit, and
+-- src:1752 | (II) the post-retirement disability benefit, and
+-- src:1753 | (B) the lesser of
+-- src:1754 | (I) the amount determined by the formula
+-- src:1755 | C – D
+-- src:1756 | where
+-- src:1757 | C is 37.5% of the amount of the portion of the contributor’s retirement pension, which amount is calculated as provided in subsection (3), and
+-- src:1758 | D is the lesser of
+-- src:1759 | (1) 40% of C, and
+-- src:1760 | (2) 40% of the amount of the portion of the survivor’s retirement pension, which amount is calculated as provided in paragraph 46(1)(a), without regard to subsections 46(3) to (6), and adjusted in accordance with subsection 45(2), and
+-- src:1761 | (II) an amount that, when added to the amount of the portion of the survivor’s retirement pension that is calculated as provided in paragraph 46(1)(a), without regard to subsections 46(3) to (6), and adjusted in accordance with subsection 45(2), is equal to the amount of a benefit of 25% of 1/12 of the survivor’s Maximum Pensionable Earnings Average for the later of the year in which the survivor first became qualified to receive the survivor’s pension and the year in which the survivor’s retirement pension commenced to be payable, adjusted in accordance with subsection 45(2) as if the benefit had commenced to be payable in the later of the year in which the survivor first became qualified to receive the survivor’s pension and the year in which the survivor’s retirement pension commenced to be payable,
+-- src:1762 | (ii) the amount determined by the formula
+-- src:1763 | C – D
+-- src:1764 | where
+-- src:1765 | C is 37.5% of the amount of the portion of the contributor’s retirement pension, which amount is calculated as provided in subsection (3.1), and
+-- src:1766 | D is the lesser of
+-- src:1767 | (1) 40% of C, and
+-- src:1768 | (2) 40% of the amount of the portion of the survivor’s retirement pension, which amount is calculated as provided in paragraph 46(1)(b), without regard to subsections 46(3.1) to (6), and adjusted in accordance with subsection 45(2), and
+-- src:1769 | (iii) the amount determined by the formula
+-- src:1770 | C – D
+-- src:1771 | where
+-- src:1772 | C is 37.5% of the amount of the portion of the contributor’s retirement pension, which amount is calculated as provided in subsection (3.4), and
+-- src:1773 | D is the lesser of
+-- src:1774 | (1) 40% of C, and
+-- src:1775 | (2) 40% of the amount of the portion of the survivor’s retirement pension, which amount is calculated as provided in paragraph 46(1)(c), without regard to subsections 46(3.1) to (6) and adjusted in accordance with subsection 45(2);
+@ref Act s 58(2)(a) (src:1748-1775)
+GIVEN `the flat rate benefit` IS A NUMBER
+      `a post-retirement disability benefit is payable to the survivor` IS A BOOLEAN
+      `the post-retirement disability benefit` IS A NUMBER
+      `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` IS A `cp4 Retirement pension portions`
+      `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` IS A `cp4 Retirement pension portions`
+      `the benefit of 25% of 1/12 of the survivor's Maximum Pensionable Earnings Average, adjusted` IS A NUMBER
+GIVETH A NUMBER
+`s 58(2)(a) — the survivor's pension where the survivor is under 65 and the retirement pension commences after 1997` `the flat rate benefit` `a post-retirement disability benefit is payable to the survivor` `the post-retirement disability benefit` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` `the benefit of 25% of 1/12 of the survivor's Maximum Pensionable Earnings Average, adjusted` MEANS
+    -- (i): (A) the flat rate benefit, or the greater of it and a post-retirement disability benefit, plus (B) the
+    -- lesser of (I) C - D and (II) the top-up to the benefit of 25% of 1/12 of the Maximum Pensionable Earnings Average.
+    -- (ii) and (iii): C - D for the first and the second additional portions.
+    (`the flat rate benefit or the greater of it and the post-retirement disability benefit` PLUS `the lesser of (I) and (II)`)
+        PLUS (`cp4 a share less the lesser of 40% of it and 40% of the survivor's own portion` (37.5% TIMES `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the first additional portion of a retirement pension`) (`the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)`'s `cp4 the first additional portion of a retirement pension`))
+        PLUS (`cp4 a share less the lesser of 40% of it and 40% of the survivor's own portion` (37.5% TIMES `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the second additional portion of a retirement pension`) (`the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)`'s `cp4 the second additional portion of a retirement pension`))
+    WHERE
+        `the flat rate benefit or the greater of it and the post-retirement disability benefit` MEANS
+            IF `a post-retirement disability benefit is payable to the survivor`
+            THEN max `the flat rate benefit` `the post-retirement disability benefit`
+            ELSE `the flat rate benefit`
+        `the lesser of (I) and (II)` MEANS
+            min (`cp4 a share less the lesser of 40% of it and 40% of the survivor's own portion` (37.5% TIMES `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the base portion of a retirement pension`) (`the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)`'s `cp4 the base portion of a retirement pension`))
+                (`the benefit of 25% of 1/12 of the survivor's Maximum Pensionable Earnings Average, adjusted` MINUS `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)`'s `cp4 the base portion of a retirement pension`)
+
+-- src:1776 | (b) in the case of a survivor who has not reached sixty-five years of age and whose retirement pension commences to be payable before January 1, 1998, the aggregate of
+-- src:1777 | (i) a flat rate benefit, calculated as provided in subsection (1.1), and
+-- src:1778 | (ii) the lesser of
+-- src:1779 | (A) 37.5% of the amount of the contributor’s retirement pension, calculated as provided in subsection (3), and
+-- src:1780 | (B) an amount that, when added to the survivor’s retirement pension (calculated without regard to subsections 46(3) to (6) but in accordance with subsection 45(2)), is equal to the amount of a benefit of 25% of 1/12 of the average of the Year’s Maximum Pensionable Earnings for the later of the year in which the survivor first became qualified to receive the survivor’s pension and the year in which the survivor’s retirement pension commenced to be payable, and for each of the two preceding years, adjusted in accordance with subsection 45(2) as if the benefit had commenced to be payable in the later of the year in which the survivor first became qualified to receive the survivor’s pension and the year in which the survivor’s retirement pension commenced to be payable; or
+@ref Act s 58(2)(b) (src:1776-1780)
+GIVEN `the flat rate benefit` IS A NUMBER
+      `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` IS A `cp4 Retirement pension portions`
+      `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` IS A `cp4 Retirement pension portions`
+      `the benefit of 25% of 1/12 of the average of the Year's Maximum Pensionable Earnings, adjusted` IS A NUMBER
+GIVETH A NUMBER
+`s 58(2)(b) — the survivor's pension where the survivor is under 65 and the retirement pension commences before 1998` `the flat rate benefit` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` `the benefit of 25% of 1/12 of the average of the Year's Maximum Pensionable Earnings, adjusted` MEANS
+    -- Before 1998 a retirement pension had no additional portion, so the survivor's retirement pension is the base portion.
+    `the flat rate benefit` PLUS (min (37.5% TIMES `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the base portion of a retirement pension`) (`the benefit of 25% of 1/12 of the average of the Year's Maximum Pensionable Earnings, adjusted` MINUS `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)`'s `cp4 the base portion of a retirement pension`))
+
+-- src:1781 | (c) in the case of a survivor who has reached 65 years of age and who was born after December 31, 1932 and whose retirement pension commences to be payable after December 31, 1997, the aggregate of
+-- src:1782 | (i) the lesser of
+-- src:1783 | (A) the amount determined by the formula
+-- src:1784 | A – B
+-- src:1785 | where
+-- src:1786 | A is 60% of the amount of the portion of the contributor’s retirement pension, which amount is calculated as provided in subsection (3), and
+-- src:1787 | B is the lesser of
+-- src:1788 | (I) 40% of A, and
+-- src:1789 | (II) 40% of the amount of the portion of the survivor’s retirement pension, which amount is calculated as provided in paragraph 46(1)(a), without regard to subsections 46(3) to (6), and adjusted in accordance with subsection 45(2), and
+-- src:1790 | (B) an amount that, when added to the amount of the portion of the survivor’s retirement pension that is calculated as provided in paragraph 46(1)(a), without regard to subsections 46(3) to (6), and adjusted in accordance with subsection 45(2), is equal to the amount of a benefit of 25% of 1/12 of the survivor’s Maximum Pensionable Earnings Average for the later of the year in which the survivor first became qualified to receive the survivor’s pension and the year in which the survivor’s retirement pension commenced to be payable, adjusted in accordance with subsection 45(2) as if the benefit had commenced to be payable in the later of the year in which the survivor first became qualified to receive the survivor’s pension and the year in which the survivor’s retirement pension commenced to be payable,
+-- src:1791 | (ii) the amount determined by the formula
+-- src:1792 | A – B
+-- src:1793 | where
+-- src:1794 | A is 60% of the amount of the portion of the contributor’s retirement pension, which amount is calculated as provided in subsection (3.1), and
+-- src:1795 | B is the lesser of
+-- src:1796 | (I) 40% of A, and
+-- src:1797 | (II) 40% of the amount of the portion of the survivor’s retirement pension, which amount is calculated as provided in paragraph 46(1)(b), without regard to subsections 46(3.1) to (6), and adjusted in accordance with subsection 45(2), and
+-- src:1798 | (iii) the amount determined by the formula
+-- src:1799 | A – B
+-- src:1800 | where
+-- src:1801 | A is 60% of the amount of the portion of the contributor’s retirement pension, which amount is calculated as provided in subsection (3.4), and
+-- src:1802 | B is the lesser of
+-- src:1803 | (I) 40% of A, and
+-- src:1804 | (II) 40% of the amount of the portion of the survivor’s retirement pension, which amount is calculated as provided in paragraph 46(1)(c), without regard to subsections 46(3.1) to (6), and adjusted in accordance with subsection 45(2);
+-- src:1805 | or
+@ref Act s 58(2)(c) (src:1781-1805)
+GIVEN `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` IS A `cp4 Retirement pension portions`
+      `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` IS A `cp4 Retirement pension portions`
+      `the benefit of 25% of 1/12 of the survivor's Maximum Pensionable Earnings Average, adjusted` IS A NUMBER
+GIVETH A NUMBER
+`s 58(2)(c) — the survivor's pension where the survivor has reached 65, was born after 1932 and the retirement pension commences after 1997` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` `the benefit of 25% of 1/12 of the survivor's Maximum Pensionable Earnings Average, adjusted` MEANS
+    (min (`cp4 a share less the lesser of 40% of it and 40% of the survivor's own portion` (60% TIMES `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the base portion of a retirement pension`) (`the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)`'s `cp4 the base portion of a retirement pension`))
+         (`the benefit of 25% of 1/12 of the survivor's Maximum Pensionable Earnings Average, adjusted` MINUS `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)`'s `cp4 the base portion of a retirement pension`))
+        PLUS (`cp4 a share less the lesser of 40% of it and 40% of the survivor's own portion` (60% TIMES `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the first additional portion of a retirement pension`) (`the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)`'s `cp4 the first additional portion of a retirement pension`))
+        PLUS (`cp4 a share less the lesser of 40% of it and 40% of the survivor's own portion` (60% TIMES `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the second additional portion of a retirement pension`) (`the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)`'s `cp4 the second additional portion of a retirement pension`))
+
+-- src:1806 | (d) in any other case, the aggregate of
+-- src:1807 | (i) the lesser of
+-- src:1808 | (A) 60% of the amount of the portion of the contributor’s retirement pension, which amount is calculated as provided in subsection (3), and
+-- src:1809 | (B) an amount that, when added to the amount of the portion of the survivor’s retirement pension that is calculated as provided in paragraph 46(1)(a), without regard to subsections 46(3) to (6), and adjusted in accordance with subsection 45(2), is equal to the amount of a benefit of 25% of 1/12 of the average of the Year’s Maximum Pensionable Earnings for the later of the year in which the survivor first became qualified to receive the survivor’s pension and the year in which the survivor’s retirement pension commenced to be payable, and for each of the two preceding years, adjusted in accordance with subsection 45(2) as if the benefit had commenced to be payable in the later of the year in which the survivor first became qualified to receive the survivor’s pension and the year in which the survivor’s retirement pension commenced to be payable,
+-- src:1810 | (ii) 60% of the amount of the portion of the contributor’s retirement pension, which amount is calculated as provided in subsection (3.1), and
+-- src:1811 | (iii) 60% of the amount of the portion of the contributor’s retirement pension, which amount is calculated as provided in subsection (3.4).
+@ref Act s 58(2)(d) (src:1806-1811)
+GIVEN `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` IS A `cp4 Retirement pension portions`
+      `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` IS A `cp4 Retirement pension portions`
+      `the benefit of 25% of 1/12 of the average of the Year's Maximum Pensionable Earnings, adjusted` IS A NUMBER
+GIVETH A NUMBER
+`s 58(2)(d) — the survivor's pension in any other case where a retirement pension is also payable` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` `the benefit of 25% of 1/12 of the average of the Year's Maximum Pensionable Earnings, adjusted` MEANS
+    (min (60% TIMES `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the base portion of a retirement pension`) (`the benefit of 25% of 1/12 of the average of the Year's Maximum Pensionable Earnings, adjusted` MINUS `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)`'s `cp4 the base portion of a retirement pension`))
+        PLUS (60% TIMES `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the first additional portion of a retirement pension`)
+        PLUS (60% TIMES `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)`'s `cp4 the second additional portion of a retirement pension`)
+
+-- src:1747 | (2) Where a survivor’s pension under this Act and a retirement pension under this Act or under a provincial pension plan are payable to the survivor of a contributor, the basic monthly amount of the survivor’s pension payable to the survivor is
+@ref Act s 58(2) (src:1747)
+GIVEN `a survivor's pension under this Act and a retirement pension under this Act or under a provincial pension plan are payable to the survivor` IS A BOOLEAN
+      month IS A DATE
+      `the survivor's date of birth` IS A DATE
+      `the day on which the survivor's retirement pension commences to be payable` IS A DATE
+      `the flat rate benefit` IS A NUMBER
+      `a post-retirement disability benefit is payable to the survivor` IS A BOOLEAN
+      `the post-retirement disability benefit` IS A NUMBER
+      `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` IS A `cp4 Retirement pension portions`
+      `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` IS A `cp4 Retirement pension portions`
+      `the benefit of 25% of 1/12 of the survivor's Maximum Pensionable Earnings Average, adjusted` IS A NUMBER
+      `the benefit of 25% of 1/12 of the average of the Year's Maximum Pensionable Earnings, adjusted` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 58(2) — the basic monthly amount of a survivor's pension where a retirement pension is also payable to the survivor` `a survivor's pension under this Act and a retirement pension under this Act or under a provincial pension plan are payable to the survivor` month `the survivor's date of birth` `the day on which the survivor's retirement pension commences to be payable` `the flat rate benefit` `a post-retirement disability benefit is payable to the survivor` `the post-retirement disability benefit` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` `the benefit of 25% of 1/12 of the survivor's Maximum Pensionable Earnings Average, adjusted` `the benefit of 25% of 1/12 of the average of the Year's Maximum Pensionable Earnings, adjusted` MEANS
+    -- NOTHING where subsection (2) does not apply (not both pensions payable): subsection (1) governs.
+    BRANCH
+        IF NOT `a survivor's pension under this Act and a retirement pension under this Act or under a provincial pension plan are payable to the survivor`
+            THEN NOTHING
+        IF (NOT `s 2(2) — the person is treated as having reached a specified age on a date for a provision` `any other provision` `the survivor's date of birth` 65 (`the month of a date` month)) AND (`the day on which the survivor's retirement pension commences to be payable` AT LEAST (YMD 1998 1 1))
+            THEN JUST (`s 58(2)(a) — the survivor's pension where the survivor is under 65 and the retirement pension commences after 1997` `the flat rate benefit` `a post-retirement disability benefit is payable to the survivor` `the post-retirement disability benefit` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` `the benefit of 25% of 1/12 of the survivor's Maximum Pensionable Earnings Average, adjusted`)
+        IF NOT `s 2(2) — the person is treated as having reached a specified age on a date for a provision` `any other provision` `the survivor's date of birth` 65 (`the month of a date` month)
+            THEN JUST (`s 58(2)(b) — the survivor's pension where the survivor is under 65 and the retirement pension commences before 1998` `the flat rate benefit` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` `the benefit of 25% of 1/12 of the average of the Year's Maximum Pensionable Earnings, adjusted`)
+        IF (`the survivor's date of birth` AT LEAST (YMD 1933 1 1)) AND (`the day on which the survivor's retirement pension commences to be payable` AT LEAST (YMD 1998 1 1))
+            THEN JUST (`s 58(2)(c) — the survivor's pension where the survivor has reached 65, was born after 1932 and the retirement pension commences after 1997` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` `the benefit of 25% of 1/12 of the survivor's Maximum Pensionable Earnings Average, adjusted`)
+        OTHERWISE JUST (`s 58(2)(d) — the survivor's pension in any other case where a retirement pension is also payable` `the contributor's retirement pension portions under subsections (3), (3.1) and (3.4)` `the survivor's own retirement pension portions under paragraphs 46(1)(a), (b) and (c)` `the benefit of 25% of 1/12 of the average of the Year's Maximum Pensionable Earnings, adjusted`)
+
+§§ `Section 58(9) -- when a survivor first becomes qualified`
+
+-- src:1921 | Interpretation
+-- src:1922 | (9) For the purposes of this section, a survivor first becomes qualified to receive a survivor’s pension in the month following the month in which the survivor first met the criteria of subsection 44(1) in relation to that pension.
+@ref Act s 58(9) (src:1922)
+GIVEN `the month in which the survivor first met the criteria of subsection 44(1) in relation to that pension` IS A DATE
+GIVETH A DATE
+`s 58(9) — the month in which the survivor first becomes qualified to receive the survivor's pension` `the month in which the survivor first met the criteria of subsection 44(1) in relation to that pension` MEANS
+    `the month following the month of a date` `the month in which the survivor first met the criteria of subsection 44(1) in relation to that pension`

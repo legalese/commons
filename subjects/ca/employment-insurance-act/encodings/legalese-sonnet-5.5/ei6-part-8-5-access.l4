@@ -1,0 +1,210 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `eia-core`
+IMPORT `eia-core-interpretation`
+
+-- Employment Insurance Act (S.C. 1996, c. 23), Part VIII.5 (Temporary Measures to Facilitate Access to Benefits):
+-- Definitions (s 153.15), Rate of Unemployment (s 153.16), Availability (s 153.161), Increase in Hours of Insurable
+-- Employment (ss 153.17 to 153.172), Extension of Qualifying Period (s 153.18) and Benefit Period (s 153.19).
+-- Written by piece ei6 (Sonnet 5.5) on 2026-10-24.
+-- Text: the unofficial plain-text rendering of the Justice Laws consolidation current to 2026-09-30; nothing here is
+-- claimed to be verified against the official text.
+--
+-- Seat: a person who has lost work and asks whether they qualify, how many hours or weeks they need, and what they must do.
+--
+-- CESSATION. Part VIII.5 ceases to apply under s 153.196 (module ei6-part-8-5-cessation). Each rule here that is
+-- limited by that section takes the BOOLEAN "Part VIII.5 has not ceased to apply under section 153.196"; the caller gets it
+-- from `s 153.196 the provision applies on the day`. Where that BOOLEAN is FALSE the rule gives the answer "this
+-- provision does not apply", and the Act outside this Part decides (pieces ei1 and ei2).
+--
+-- A rule that says only what a section adds or changes returns a MAYBE: NOTHING means that the section does not apply
+-- to this claimant, so it adds or changes nothing. That is the text's answer, not a gap in the encoding.
+
+§ `Section 153.15 - definitions`
+
+-- Three terms are defined by pointing at s 6(1) (piece ei1) or s 152.01(1) (piece ei5). The first two are the plain
+-- inputs "the initial claim for benefits" and "the qualifying period" wherever they are used below. For "waiting
+-- period" the pointer depends on the Part the benefits are payable under.
+-- src:2971 | 153.15 The following definitions apply in this Part.
+-- src:2972 | initial claim for benefits has the same meaning as in subsection 6(1). (demande initiale de prestations)
+-- src:2973 | qualifying period in respect of benefits under Part I, has the same meaning as in subsection 6(1). (période de référence)
+-- src:2974 | waiting period has
+-- src:2975 | (a) in respect of benefits under Part I or VIII, the same meaning as in subsection 6(1); and
+-- src:2976 | (b) in respect of benefits under Part VII.1, the same meaning as in subsection 152.01(1). (délai de carence)
+@ref Employment Insurance Act s 153.15 (src:2971-2976)
+GIVEN `the Part under which the benefits are payable` IS A `Part of the Act`
+GIVETH A MAYBE STRING
+DECIDE `s 153.15 the provision that gives the meaning of waiting period` IS
+    CONSIDER `the Part under which the benefits are payable`
+    WHEN `Part I`     THEN JUST "subsection 6(1)"
+    WHEN `Part VIII`  THEN JUST "subsection 6(1)"
+    WHEN `Part VII.1` THEN JUST "subsection 152.01(1)"
+    OTHERWISE NOTHING
+
+§ `Section 153.16 - the rate of unemployment of 13.1%`
+
+-- "The later of the weeks referred to in subsection 10(1)": the week of the interruption of earnings or the week of the
+-- initial claim, whichever is later. A week is identified by the DATE of its Sunday.
+-- src:2980 | 153.16 Despite section 17 of the Employment Insurance Regulations, if the later of the weeks referred to in subsection 10(1) begins during the period beginning on September 27, 2020 and ending on September 25, 2021, the regional rate of unemployment that applies to the claimant is 13.1%, if that rate is greater than the rate that would otherwise apply to them.
+@ref Employment Insurance Act s 153.16 (src:2980)
+GIVEN `the day on which the interruption of earnings occurs` IS A DATE
+      `the day on which the initial claim for benefits is made` IS A DATE
+GIVETH A DATE
+DECIDE `s 153.16 the Sunday that begins the later of the weeks referred to in subsection 10(1)` IS
+    IF `s 2(1) the Sunday that begins the week containing` `the day on which the interruption of earnings occurs` AT LEAST `s 2(1) the Sunday that begins the week containing` `the day on which the initial claim for benefits is made`
+    THEN `s 2(1) the Sunday that begins the week containing` `the day on which the interruption of earnings occurs`
+    ELSE `s 2(1) the Sunday that begins the week containing` `the day on which the initial claim for benefits is made`
+
+-- src:2980 | 153.16 Despite section 17 of the Employment Insurance Regulations, if the later of the weeks referred to in subsection 10(1) begins during the period beginning on September 27, 2020 and ending on September 25, 2021, the regional rate of unemployment that applies to the claimant is 13.1%, if that rate is greater than the rate that would otherwise apply to them.
+@ref Employment Insurance Act s 153.16 (src:2980)
+GIVEN `Part VIII.5 has not ceased to apply under section 153.196` IS A BOOLEAN
+      `the day on which the interruption of earnings occurs` IS A DATE
+      `the day on which the initial claim for benefits is made` IS A DATE
+      `the regional rate of unemployment that would otherwise apply to the claimant` IS A NUMBER  -- out of range: reg 17 (piece er1); a fraction, 6.5% is 0.065
+GIVETH A NUMBER
+DECIDE `s 153.16 the regional rate of unemployment that applies to the claimant` IS
+    IF     `Part VIII.5 has not ceased to apply under section 153.196`
+       AND `s 153.16 the Sunday that begins the later of the weeks referred to in subsection 10(1)` `the day on which the interruption of earnings occurs` `the day on which the initial claim for benefits is made` AT LEAST (YMD 2020 9 27)
+       AND `s 153.16 the Sunday that begins the later of the weeks referred to in subsection 10(1)` `the day on which the interruption of earnings occurs` `the day on which the initial claim for benefits is made` AT MOST (YMD 2021 9 25)
+       AND 13.1% GREATER THAN `the regional rate of unemployment that would otherwise apply to the claimant`
+    THEN 13.1%
+    ELSE `the regional rate of unemployment that would otherwise apply to the claimant`
+
+§ `Section 153.161 - availability for work`
+
+-- (1): for the purposes of paragraph 18(1)(a), a claimant who attends a course, program of instruction or training to
+-- which they are not referred under paragraph 25(1)(a) or (b) is not entitled to be paid benefits for a working day in
+-- a benefit period for which they cannot prove they were capable of and available for work.
+-- src:2984 | 153.161 (1) For the purposes of applying paragraph 18(1)(a), a claimant who attends a course, program of instruction or training to which the claimant is not referred under paragraphs 25(1)(a) or (b) is not entitled to be paid benefits for any working day in a benefit period for which the claimant is unable to prove that on that day they were capable of and available for work.
+@ref Employment Insurance Act s 153.161(1) (src:2984)
+GIVEN `Part VIII.5 has not ceased to apply under section 153.196` IS A BOOLEAN
+      `attends a course, program of instruction or training to which the claimant is not referred under paragraph 25(1)(a) or (b)` IS A BOOLEAN
+      `is unable to prove that on that working day they were capable of and available for work` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 153.161(1) the claimant is not entitled to be paid benefits for the working day` IF
+        `Part VIII.5 has not ceased to apply under section 153.196`
+    AND `attends a course, program of instruction or training to which the claimant is not referred under paragraph 25(1)(a) or (b)`
+    AND `is unable to prove that on that working day they were capable of and available for work`
+
+-- (2): after benefits are paid, the Commission may require proof for any working day of the benefit period.
+-- src:2986 | (2) The Commission may, at any point after benefits are paid to a claimant, verify that the claimant referred to in subsection (1) is entitled to those benefits by requiring proof that they were capable of and available for work on any working day of their benefit period.
+@ref Employment Insurance Act s 153.161(2) (src:2986)
+GIVEN `Part VIII.5 has not ceased to apply under section 153.196` IS A BOOLEAN
+      `benefits have been paid to the claimant` IS A BOOLEAN
+      `attends a course, program of instruction or training to which the claimant is not referred under paragraph 25(1)(a) or (b)` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 153.161(2) the Commission may require proof that the claimant was capable of and available for work` IF
+        `Part VIII.5 has not ceased to apply under section 153.196`
+    AND `benefits have been paid to the claimant`
+    AND `attends a course, program of instruction or training to which the claimant is not referred under paragraph 25(1)(a) or (b)`
+
+§ `Sections 153.17 to 153.172 - increase in hours of insurable employment`
+
+-- (1): a claimant who makes an initial claim under Part I on or after September 27, 2020, or in relation to an
+-- interruption of earnings on or after that date, is deemed to have an additional 480 hours in the qualifying period if
+-- the claim is for benefits referred to in any of sections 21 to 23.3, and an additional 300 hours in any other case.
+-- (2): not if the claimant has already had the hours increased under that subsection (or this section as it read on
+-- September 26, 2020) and a benefit period was established in relation to that qualifying period.
+-- src:2990 | 153.17 (1) A claimant who makes an initial claim for benefits under Part I on or after September 27, 2020 or in relation to an interruption of earnings that occurs on or after that date is deemed to have in their qualifying period
+-- src:2991 | (a) if the initial claim is in respect of benefits referred to in any of sections 21 to 23.3, an additional 480 hours of insurable employment; and
+-- src:2992 | (b) in any other case, an additional 300 hours of insurable employment.
+-- src:2993 | Limitation
+-- src:2994 | (2) Subsection (1) does not apply to a claimant who has already had the number of insurable hours in their qualifying period increased under that subsection or under this section as it read on September 26, 2020, if a benefit period was established in relation to that qualifying period.
+@ref Employment Insurance Act s 153.17 (src:2990-2994)
+GIVEN `Part VIII.5 has not ceased to apply under section 153.196` IS A BOOLEAN
+      `the initial claim is for benefits under Part I` IS A BOOLEAN
+      `the day on which the initial claim for benefits is made` IS A DATE
+      `the day on which the interruption of earnings occurs` IS A DATE
+      `the claim is in respect of benefits referred to in any of sections 21 to 23.3` IS A BOOLEAN
+      `has already had the number of insurable hours in the qualifying period increased under subsection 153.17(1) or under section 153.17 as it read on September 26, 2020` IS A BOOLEAN
+      `a benefit period was established in relation to that qualifying period` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+DECIDE `s 153.17 the additional hours of insurable employment the claimant is deemed to have in the qualifying period` IS
+    IF     `Part VIII.5 has not ceased to apply under section 153.196`
+       AND `the initial claim is for benefits under Part I`
+       AND (   `the day on which the initial claim for benefits is made` AT LEAST (YMD 2020 9 27)
+            OR `the day on which the interruption of earnings occurs` AT LEAST (YMD 2020 9 27))
+       AND NOT (   `has already had the number of insurable hours in the qualifying period increased under subsection 153.17(1) or under section 153.17 as it read on September 26, 2020`
+               AND `a benefit period was established in relation to that qualifying period`)
+    THEN (IF `the claim is in respect of benefits referred to in any of sections 21 to 23.3` THEN JUST 480 ELSE JUST 300)
+    ELSE NOTHING
+
+-- 153.171: a claimant who qualifies under section 7 and received the additional 300 hours of paragraph 153.17(1)(b)
+-- may claim benefits under sections 21 to 23.3 even if not a major attachment claimant.
+-- src:2996 | 153.171 A claimant who qualifies to receive benefits under section 7 and who received the additional 300 hours of insurable employment under paragraph 153.17(1)(b) may make a claim for benefits under sections 21 to 23.3, even if they are not a major attachment claimant as defined in subsection 6(1).
+@ref Employment Insurance Act s 153.171 (src:2996)
+GIVEN `Part VIII.5 has not ceased to apply under section 153.196` IS A BOOLEAN
+      `qualifies to receive benefits under section 7` IS A BOOLEAN
+      `received the additional 300 hours of insurable employment under paragraph 153.17(1)(b)` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 153.171 the claimant may make a claim for benefits under sections 21 to 23.3 although not a major attachment claimant` IF
+        `Part VIII.5 has not ceased to apply under section 153.196`
+    AND `qualifies to receive benefits under section 7`
+    AND `received the additional 300 hours of insurable employment under paragraph 153.17(1)(b)`
+
+-- 153.172: a claimant for whom a benefit period could have been established under section 8 of the Employment
+-- Insurance (Fishing) Regulations (not among the inputs) before section 153.17 came into force may make a request under
+-- section 112 to receive benefits under those Regulations rather than under section 7. The day section 153.17 came into
+-- force is not in the text, so the claimant states the fact.
+-- src:2998 | 153.172 A claimant for whom, before the coming into force of section 153.17, a benefit period could have been established under section 8 of the Employment Insurance (Fishing) Regulations may make a request under section 112 in order to receive benefits under those Regulations rather than under section 7.
+@ref Employment Insurance Act s 153.172 (src:2998)
+GIVEN `Part VIII.5 has not ceased to apply under section 153.196` IS A BOOLEAN
+      `before the coming into force of section 153.17 a benefit period could have been established under section 8 of the Employment Insurance (Fishing) Regulations` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 153.172 the claimant may make a request under section 112 to receive benefits under the Fishing Regulations rather than under section 7` IF
+        `Part VIII.5 has not ceased to apply under section 153.196`
+    AND `before the coming into force of section 153.17 a benefit period could have been established under section 8 of the Employment Insurance (Fishing) Regulations`
+
+§ `Section 153.18 - extension of the qualifying period`
+
+-- (1): the qualifying period of paragraph 8(1)(a) is extended by 28 weeks if the claimant makes the initial claim on or
+-- after September 27, 2020 (or for an interruption of earnings on or after that date) and received, during that
+-- period, the emergency response benefit or an income support payment under the Canada Emergency Response Benefit Act.
+-- (2): not if the period was already extended under that subsection or this section as it read on August 29, 2020 or
+-- September 26, 2020.
+-- src:3002 | 153.18 (1) A qualifying period mentioned in paragraph 8(1)(a) is extended by 28 weeks if the claimant
+-- src:3003 | (a) makes the initial claim for benefits on or after September 27, 2020 or in relation to an interruption of earnings that occurs on or after that date; and
+-- src:3004 | (b) received, during the period mentioned in that paragraph, an employment insurance emergency response benefit referred to in subsection 153.7(1) or an income support payment under the Canada Emergency Response Benefit Act.
+-- src:3005 | Limitation
+-- src:3006 | (2) Subsection (1) does not apply to a claimant who has already had a qualifying period extended under that subsection or under this section as it read on August 29, 2020 or September 26, 2020.
+@ref Employment Insurance Act s 153.18 (src:3002-3006)
+GIVEN `Part VIII.5 has not ceased to apply under section 153.196` IS A BOOLEAN
+      `the day on which the initial claim for benefits is made` IS A DATE
+      `the day on which the interruption of earnings occurs` IS A DATE
+      `received during the qualifying period mentioned in paragraph 8(1)(a) an emergency response benefit referred to in subsection 153.7(1) or an income support payment under the Canada Emergency Response Benefit Act` IS A BOOLEAN
+      `has already had a qualifying period extended under subsection 153.18(1) or under section 153.18 as it read on August 29, 2020 or September 26, 2020` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+DECIDE `s 153.18 the number of weeks by which the qualifying period is extended` IS
+    IF     `Part VIII.5 has not ceased to apply under section 153.196`
+       AND (   `the day on which the initial claim for benefits is made` AT LEAST (YMD 2020 9 27)
+            OR `the day on which the interruption of earnings occurs` AT LEAST (YMD 2020 9 27))
+       AND `received during the qualifying period mentioned in paragraph 8(1)(a) an emergency response benefit referred to in subsection 153.7(1) or an income support payment under the Canada Emergency Response Benefit Act`
+       AND NOT (`has already had a qualifying period extended under subsection 153.18(1) or under section 153.18 as it read on August 29, 2020 or September 26, 2020`)
+    THEN JUST 28
+    ELSE NOTHING
+
+-- The extended qualifying period begins 28 weeks (196 days) earlier; it ends where it did.
+-- src:3002 | 153.18 (1) A qualifying period mentioned in paragraph 8(1)(a) is extended by 28 weeks if the claimant
+@ref Employment Insurance Act s 153.18(1) (src:3002)
+GIVEN `the number of weeks by which the qualifying period is extended` IS A MAYBE NUMBER
+      `the qualifying period mentioned in paragraph 8(1)(a)` IS A `Period of days`  -- out of range: section 8 (piece ei1)
+GIVETH A `Period of days`
+DECIDE `s 153.18 the qualifying period as extended` IS
+    CONSIDER `the number of weeks by which the qualifying period is extended`
+    WHEN NOTHING THEN `the qualifying period mentioned in paragraph 8(1)(a)`
+    WHEN JUST weeks THEN
+        `Period of days` OF (`the qualifying period mentioned in paragraph 8(1)(a)`'s `first day of the period` MINUS `weeks as days` weeks), `the qualifying period mentioned in paragraph 8(1)(a)`'s `last day of the period`
+
+§ `Section 153.19 - late claims`
+
+-- For the purposes of subsections 10(4) and (5): that, but for sections 153.17 and 153.18 as they read on August 29,
+-- 2020, the claimant would not have qualified for benefits referred to in any of sections 22 to 24 is good cause for a
+-- delay in making a claim for those benefits. Section 153.19 ceases to apply on the day s 153.196(2) says.
+-- src:3010 | 153.19 For the purposes of subsections 10(4) and (5), the fact that, but for sections 153.17 and 153.18 as they read on August 29, 2020, the claimant would not have qualified to receive benefits referred to in any of sections 22 to 24 is good cause for a delay in making a claim for those benefits.
+@ref Employment Insurance Act s 153.19 (src:3010)
+GIVEN `section 153.19 has not ceased to apply under section 153.196` IS A BOOLEAN
+      `but for sections 153.17 and 153.18 as they read on August 29, 2020, the claimant would not have qualified to receive benefits referred to in any of sections 22 to 24` IS A BOOLEAN
+GIVETH A BOOLEAN
+DECIDE `s 153.19 the fact is good cause for a delay in making a claim for the benefits` IF
+        `section 153.19 has not ceased to apply under section 153.196`
+    AND `but for sections 153.17 and 153.18 as they read on August 29, 2020, the claimant would not have qualified to receive benefits referred to in any of sections 22 to 24`
