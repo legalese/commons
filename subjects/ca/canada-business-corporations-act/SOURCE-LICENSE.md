@@ -20,6 +20,8 @@ The Justice Laws Important Note adds: "The Department of Justice Canada assumes 
 
 The Reproduction Order covers reproduction and does not expressly grant a right to adapt. The XML repository's Open Government Licence does grant adaptation, which is why the text was taken from the repository. Whether an L4 encoding that quotes this text may rely on the Open Government Licence is a human decision to record here before an encoding quotes it.
 
+**Recorded 2026-10-25.** Meng ruled on 2026-10-25 ("Record yes for Canadian license") that an L4 encoding may rely on the Open Government Licence - Canada 2.0 for federal texts taken from justicecanada/laws-lois-xml, which permits adaptation. The same question was recorded as settled on 2026-10-24 in the `SOURCE-LICENSE.md` of the Canada Pension Plan, Employment Insurance, Old Age Security, Canada Disability Benefit and Income Tax Act subjects. An encoding here may quote this text, keeping the notice that it is not an official version and the attribution ("Contains information licensed under the Open Government Licence - Canada.").
+
 ## Language
 
 English is not the only authoritative language. Federal Acts are enacted in both English and French, and the two versions have equal authority (Constitution Act, 1982, s. 18; Official Languages Act, s. 13). Only the English version is deposited; Justice Laws publishes both, at /eng/ and /fra/.
