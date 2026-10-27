@@ -29,3 +29,10 @@ Deposited as unofficial plain text from the Legislative Counsel's bulk database 
 
 - `registers/source-bundle/ca-wic-div9-part3-ch3-arts1-6-state-supplementary-program-2026-10.txt` -- Welfare and Institutions Code, Division 9, Part 3, Chapter 3 (State Supplementary Program for Aged, Blind and Disabled), Articles 1 to 6 (Cal. Welf. & Inst. Code ss 12000 to 12254). The State Supplementary Program (SSP) that supplements federal SSI: general provisions, definitions, administration, eligibility, payment of aid including the payment standards (12200 ff.), and services (12000-12254). 45 section versions; 46,399 characters.
 - `registers/source-bundle/ca-wic-div9-part3-ch3-arts7-8-in-home-supportive-services-relatives-2026-10.txt` -- Welfare and Institutions Code, Division 9, Part 3, Chapter 3 (State Supplementary Program for Aged, Blind and Disabled), Articles 7 and 8 (Cal. Welf. & Inst. Code ss 12300 to 12351). In-Home Supportive Services (12300-12318) and relatives' responsibility (12350-12351). 91 section versions; 276,200 characters.
+
+## Line-structured siblings (2026-10-25)
+
+Each text above has a sibling beside it, named `<id>.lines.txt` with a `<id>.lines.meta.json`, that holds the same words in the same order with line breaks put in.
+The licence is the same: the text is public domain (Gov. Code 10248.5, as recorded above), and the sibling adds only line breaks.
+Why the sibling exists, and how to check it, is in `subjects/us/ca/README.md` ("Line-structured siblings of the Welfare and Institutions Code deposits").
+Files: `registers/source-bundle/ca-wic-div9-part3-ch3-arts1-6-state-supplementary-program-2026-10.lines.txt`; `registers/source-bundle/ca-wic-div9-part3-ch3-arts7-8-in-home-supportive-services-relatives-2026-10.lines.txt`.
