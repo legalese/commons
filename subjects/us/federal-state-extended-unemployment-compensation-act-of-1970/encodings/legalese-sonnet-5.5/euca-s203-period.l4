@@ -1,0 +1,197 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `euca-nouns`
+IMPORT `euca-shared`
+IMPORT `euca-s207-dates`
+
+-- Section 203(a), (b), (c): the extended benefit period and the individual's eligibility period.
+-- Layer 1: the law, objectively. A "week" is the DATE on which the State law's week begins.
+-- The relation: the Secretary (and the State agency) determine the indicators; once an extended
+-- benefit period is in effect for a State, an individual's eligibility period is the set of weeks
+-- of their benefit year (and, if the benefit year ends inside the period, the weeks after it) that
+-- begin in the period. Weeks are 7 days apart, so "the third week after" is 21 days on.
+-- Reading taken (fork register): "begin with" and "end with" a named week include that week.
+-- out of text: section 3304(a)(11) of the Internal Revenue Code (whether a State law approved under it lets a
+-- period begin before 1 January 1972) and the weekly "on" and "off" readings: plain inputs.
+
+§ `Section 203(a), (b), (c): the extended benefit period`
+
+§§ `203(a): beginning and ending`
+
+-- src:77 | “(1) shall begin with the third week after the first week for which there is a State ‘on’ indicator; and
+@ref s 203(a)(1) (src:77)
+GIVEN firstOnWeek IS A DATE
+GIVETH A DATE
+`the third week after the first week with a State on indicator` firstOnWeek MEANS
+    `the week that falls this many weeks after` firstOnWeek 3
+
+-- src:78 | “(2) shall end with the third week after the first week for which there is a State ‘off’ indicator.
+@ref s 203(a)(2) (src:78)
+GIVEN firstOffWeek IS A DATE
+GIVETH A DATE
+`the third week after the first week with a State off indicator` firstOffWeek MEANS
+    `the week that falls this many weeks after` firstOffWeek 3
+
+§§ `203(b)(1): the shortest period, and the gap between periods`
+
+-- src:79 | “(b) [Special Rules] (1) In the case of any State—
+-- src:80 | “(A) no extended benefit period shall last for a period of less than thirteen consecutive weeks, and
+@ref s 203(b)(1)(A) (src:79-80)
+GIVEN firstWeek IS A DATE
+GIVETH A DATE
+`the earliest last week of an extended benefit period of thirteen consecutive weeks` firstWeek MEANS
+    `the week that falls this many weeks after` firstWeek 12
+
+-- src:79 | “(b) [Special Rules] (1) In the case of any State—
+-- src:81 | “(B) no extended benefit period may begin before the fourteenth week after the close of a prior extended benefit period with respect to such State.
+@ref s 203(b)(1)(B) (src:79 src:81)
+GIVEN closingWeek IS A DATE
+GIVETH A DATE
+`the earliest week with which a new extended benefit period may begin` closingWeek MEANS
+    `the week that falls this many weeks after` closingWeek 14
+
+§§ `203(a) and (b)(1) together: the weeks a period runs from and to`
+
+-- The week with which a period begins is the third week after the first "on" week, but not before
+-- the fourteenth week after the close of a prior period. Before 1 January 1972 the Act says the
+-- period is determined by the indicators alone (s 207(b)(2)), so the spacing rule is left out.
+-- src:76 | For purposes of this title, in the case of any State, an extended benefit period—
+-- src:77 | “(1) shall begin with the third week after the first week for which there is a State ‘on’ indicator; and
+-- src:81 | “(B) no extended benefit period may begin before the fourteenth week after the close of a prior extended benefit period with respect to such State.
+@ref s 203(a)(1) and (b)(1)(B) (src:76-77 src:81)
+GIVEN firstOnWeek IS A DATE
+      priorClose IS A MAYBE DATE
+GIVETH A DATE
+`the week with which an extended benefit period begins` firstOnWeek priorClose MEANS
+    CONSIDER priorClose
+    WHEN NOTHING THEN `the third week after the first week with a State on indicator` firstOnWeek
+    WHEN JUST closed THEN
+        IF `the extended benefit period is determined solely by the State on and off indicators` (`the third week after the first week with a State on indicator` firstOnWeek)
+        THEN `the third week after the first week with a State on indicator` firstOnWeek
+        ELSE `the later of two dates` (`the third week after the first week with a State on indicator` firstOnWeek) (`the earliest week with which a new extended benefit period may begin` closed)
+
+-- The period ends with the third week after the first "off" week, but not so that it lasts
+-- fewer than thirteen consecutive weeks (again, not before 1 January 1972: s 207(b)(2)).
+-- src:76 | For purposes of this title, in the case of any State, an extended benefit period—
+-- src:78 | “(2) shall end with the third week after the first week for which there is a State ‘off’ indicator.
+-- src:79 | “(b) [Special Rules] (1) In the case of any State—
+-- src:80 | “(A) no extended benefit period shall last for a period of less than thirteen consecutive weeks, and
+@ref s 203(a)(2) and (b)(1)(A) (src:76 src:78-80)
+GIVEN firstWeek IS A DATE
+      firstOffWeek IS A DATE
+GIVETH A DATE
+`the week with which an extended benefit period ends` firstWeek firstOffWeek MEANS
+    IF `the extended benefit period is determined solely by the State on and off indicators` firstWeek
+    THEN `the third week after the first week with a State off indicator` firstOffWeek
+    ELSE `the later of two dates` (`the third week after the first week with a State off indicator` firstOffWeek) (`the earliest last week of an extended benefit period of thirteen consecutive weeks` firstWeek)
+
+§§ `203(a), (b): the period that follows a run of weekly indicator readings`
+
+-- One period per call: the readings start no earlier than the close of any prior period.
+-- NOTHING means that the readings show no "on" week from which a period could begin, or that
+-- the period could not begin (s 207(a)(1)). A period with no "off" reading after its "on" week is
+-- still in effect: it has no last week.
+-- src:77 | “(1) shall begin with the third week after the first week for which there is a State ‘on’ indicator; and
+@ref s 203(a)(1) (src:77)
+GIVEN readings IS A LIST OF `Indicator reading`
+GIVETH A MAYBE DATE
+`the first week with a State on indicator` readings MEANS
+    CONSIDER readings
+    WHEN EMPTY THEN NOTHING
+    WHEN reading FOLLOWED BY rest THEN
+        IF reading's `State on indicator`
+        THEN JUST (reading's `week beginning`)
+        ELSE `the first week with a State on indicator` rest
+
+-- src:78 | “(2) shall end with the third week after the first week for which there is a State ‘off’ indicator.
+@ref s 203(a)(2) (src:78)
+GIVEN readings IS A LIST OF `Indicator reading`
+      fromWeek IS A DATE
+GIVETH A MAYBE DATE
+`the first week with a State off indicator from the week` readings fromWeek MEANS
+    CONSIDER readings
+    WHEN EMPTY THEN NOTHING
+    WHEN reading FOLLOWED BY rest THEN
+        IF (NOT reading's `State on indicator`) AND reading's `week beginning` AT LEAST fromWeek
+        THEN JUST (reading's `week beginning`)
+        ELSE `the first week with a State off indicator from the week` rest fromWeek
+
+-- src:76 | For purposes of this title, in the case of any State, an extended benefit period—
+@ref s 203(a) and (b)(1) (src:76)
+GIVEN readings IS A LIST OF `Indicator reading`
+      priorClose IS A MAYBE DATE
+      `a State law approved under section 3304(a)(11) provides that an extended benefit period may begin with the week` IS A BOOLEAN
+GIVETH A MAYBE `Extended benefit period`
+`the extended benefit period that follows the readings` readings priorClose `a State law approved under section 3304(a)(11) provides that an extended benefit period may begin with the week` MEANS
+    CONSIDER `the first week with a State on indicator` readings
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST firstOn THEN
+        IF `an extended benefit period may begin with the week` (`the week with which an extended benefit period begins` firstOn priorClose) `a State law approved under section 3304(a)(11) provides that an extended benefit period may begin with the week`
+        THEN JUST (`Extended benefit period` WITH
+                      `first week of the extended benefit period` IS `the week with which an extended benefit period begins` firstOn priorClose
+                      `last week of the extended benefit period` IS
+                          CONSIDER `the first week with a State off indicator from the week` readings firstOn
+                          WHEN NOTHING THEN NOTHING
+                          WHEN JUST firstOff THEN JUST (`the week with which an extended benefit period ends` (`the week with which an extended benefit period begins` firstOn priorClose) firstOff))
+        ELSE NOTHING
+
+§§ `203(b)(2): notice of a determination`
+
+-- src:82 | “(2) When a determination has been made that an extended benefit period is beginning or ending with respect to a State, the Secretary shall cause notice of such determination to be published in the Federal Register.
+@ref s 203(b)(2) (src:82)
+GIVEN `a determination has been made that an extended benefit period is beginning or ending` IS A BOOLEAN
+GIVETH A BOOLEAN
+`the Secretary must cause notice to be published in the Federal Register` `a determination has been made that an extended benefit period is beginning or ending` MEANS
+    `a determination has been made that an extended benefit period is beginning or ending`
+
+-- src:82 | “(2) When a determination has been made that an extended benefit period is beginning or ending with respect to a State, the Secretary shall cause notice of such determination to be published in the Federal Register.
+@ref s 203(b)(2) (src:82)
+GIVETH A Party
+`the party who must cause notice of a determination to be published` MEANS `the Secretary of Labor`
+
+§§ `203(c): the eligibility period`
+
+-- src:83 | an individual’s eligibility period under the State law shall consist of the weeks in his benefit year which begin in an extended benefit period
+@ref s 203(c) (src:83)
+GIVEN week IS A DATE
+      period IS AN `Extended benefit period`
+GIVETH A BOOLEAN
+`the week begins in the extended benefit period` week period MEANS
+        week AT LEAST period's `first week of the extended benefit period`
+    AND CONSIDER period's `last week of the extended benefit period`
+        WHEN NOTHING THEN TRUE
+        WHEN JUST lastWeek THEN week AT MOST lastWeek
+
+-- src:83 | the weeks in his benefit year which begin in an extended benefit period
+@ref s 203(c) (src:83)
+GIVEN week IS A DATE
+      benefitYear IS A `Benefit year`
+GIVETH A BOOLEAN
+`the week is in the benefit year` week benefitYear MEANS
+        week AT LEAST benefitYear's `first day of the benefit year`
+    AND week AT MOST benefitYear's `last day of the benefit year`
+
+-- "ends within such extended benefit period": the last day of the benefit year falls from the first
+-- day of the period's first week to the last day of its last week (6 days after that week begins).
+-- src:83 | if his benefit year ends within such extended benefit period
+@ref s 203(c) (src:83)
+GIVEN benefitYear IS A `Benefit year`
+      period IS AN `Extended benefit period`
+GIVETH A BOOLEAN
+`the benefit year ends within the extended benefit period` benefitYear period MEANS
+        benefitYear's `last day of the benefit year` AT LEAST period's `first week of the extended benefit period`
+    AND CONSIDER period's `last week of the extended benefit period`
+        WHEN NOTHING THEN TRUE
+        WHEN JUST lastWeek THEN benefitYear's `last day of the benefit year` AT MOST (lastWeek PLUS 6)
+
+-- src:83 | “(c) [Eligibility Period] For purposes of this title, an individual’s eligibility period under the State law shall consist of the weeks in his benefit year which begin in an extended benefit period and, if his benefit year ends within such extended benefit period, any weeks thereafter which begin in such extended benefit period.
+@ref s 203(c) (src:83)
+GIVEN week IS A DATE
+      benefitYear IS A `Benefit year`
+      period IS AN `Extended benefit period`
+GIVETH A BOOLEAN
+`the week is in the individual's eligibility period` week benefitYear period MEANS
+        `the week begins in the extended benefit period` week period
+    AND (   `the week is in the benefit year` week benefitYear
+         OR (    `the benefit year ends within the extended benefit period` benefitYear period
+             AND week GREATER THAN benefitYear's `last day of the benefit year`))
