@@ -107,3 +107,13 @@ Two baseline encodings, each from the seat of the individual and checked with th
 **Annual figures deposited.** Most Personal Income Tax Law amounts are recomputed by the Franchise Tax Board each year, so the FTB's 2025 California Tax Rate Schedules and 2025 Form 540 booklet were deposited on 2026-10-24 (public domain under the State's conditions of use) in `revenue-and-taxation-code-division-2-part-10-personal-income-tax/registers/source-bundle/`, and the figures used are recorded in that subject's `registers/annual-figures.json`.
 
 **Not yet encoded:** the CalEITC and Young Child Tax Credit (they turn on a Budget Act adjustment factor and form FTB 3514, not deposited); CalWORKs maximum aid payments and SSP payment standards (recomputed annually, the current figures not deposited). The renter's credit for 2026 onward is $250/$500 only if a Budget Act bill says so, and otherwise stays $60/$120 (Rev. & Tax. Code 17053.5(k)).
+
+## Interpretation provisions
+
+California has no single interpretation act: Gov. Code § 9603 says that the general rules for the construction of statutes are contained in the preliminary provisions of the different codes.
+`interpretation-provisions/` is therefore a cluster of sections: Gov. Code §§ 1-26, 6700-6736, 6800-6808 and 9600-9612, Civ. Code §§ 1-23.6, and Code Civ. Proc. §§ 1-34.
+Which sections belong in the cluster is an assumption, not a ruling, and the row's `NOTES.md` records it as a fork.
+The text was read from the same Legislature bulk export as the sample above, and is public domain under Gov. Code § 10248.5.
+The first encoding is `interpretation-provisions/encodings/legalese-sonnet-5.5/`, written by one Sonnet 5.5 agent against the `unstable` compiler.
+It encodes the rules for computing time, commencement, the holidays and repeal, and lists each of the 159 sections with a disposition.
+No one has read the encoding against the official text.

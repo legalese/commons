@@ -1,0 +1,873 @@
+@lang en
+-- UNOFFICIAL TEXT. This is a plain-text reproduction, made by legalese commons, of the consolidation published by the King's Printer, Province of British Columbia (BC Laws). It is not an official version.
+-- Source: https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/96238_01/xml (BC Laws consolidation, current to 2026-10-13).
+-- These materials contain information that has been derived from information originally made available by the Province of British Columbia at: http://www.bclaws.gov.bc.ca and this information is being used in accordance with the King's Printer Licence – British Columbia available at: https://www.bclaws.gov.bc.ca/standards/Licence.html. They have not, however, been produced in affiliation with, or with the endorsement of, the Province of British Columbia and THESE MATERIALS ARE NOT AN OFFICIAL VERSION.
+--
+-- The Interpretation Act (British Columbia), RSBC 1996, c. 238: the rules that count time.
+-- A reusable module: it imports only `prelude` and `daydate`, so that an encoding of any
+-- other British Columbia enactment can IMPORT it and ask when a period ends, when an
+-- enactment binds, and what a holiday does to a deadline.
+--
+-- Draft. A single Sonnet 5.5 agent wrote this from the text alone; no domain expert has read it
+-- against the statute. The quotations are copied from `RSBC-1996-c.-238.txt`, a plain-text
+-- rendering made by a script (not the official text), by `srcrefs.py`; `src:N` is line N of that file.
+--
+-- Four conventions hold throughout.
+--   * Days of rest, recess and holiday are never computed: the caller supplies them as a
+--     function from a day to TRUE or FALSE (s 25(3), s 25(4), s 25.5, s 29 "holiday").
+--     That function is the WHOLE calendar: nothing tops it up with Sundays, and a calendar that
+--     leaves them out silently gives wrong answers. To get the Sundays and the 26 December that
+--     the text itself names, build it as `s 29 a day is a holiday` applied to your other holidays.
+--   * Where the text does not answer, the answer is a named REFUSE, never a default.
+--   * A period is counted as the text counts it: the reference day is NOT in a period that
+--     runs from or after it (s 25.2(2)(a)), and the last day of a period is inside it.
+--   * Target compiler: `unstable` (REFUSE and YMD are rejected by `main`).
+
+IMPORT prelude
+IMPORT daydate
+
+§ `Types`
+
+-- The reference day (s 25(1)) may lie before the period (a period "from" or "after" it) or
+-- after the period (a period "before" it). The text names both limbs in every counting rule.
+DECLARE `Position of the reference day` IS ONE OF
+    `The reference day is before the period`
+    `The reference day is after the period`
+
+DECLARE `Unit of a period` IS ONE OF
+    Days
+    Weeks
+    Months
+    Years
+
+-- `clear` is TRUE when the period is "expressed as" "clear" days, weeks, months or years,
+-- or as "at least" or "not less than" a number of them (ss 25.2(3), 25.3(2), 25.4(2)).
+DECLARE `Period of time` HAS
+    `unit` IS A `Unit of a period`
+    `how many` IS A NUMBER
+    `clear` IS A BOOLEAN
+
+DECLARE `Span of days` HAS
+    `first day` IS A DATE
+    `last day` IS A DATE
+
+-- A moment in British Columbia, as the text means it (s 26(2)): Pacific Time, which the text
+-- fixes at 7 hours behind UTC all year round (s 26(1)).
+DECLARE `Pacific Time moment` HAS
+    `calendar day` IS A DATE
+    `hour of the day` IS A NUMBER
+    `minute of the hour` IS A NUMBER
+
+DECLARE `UTC moment` HAS
+    `calendar day` IS A DATE
+    `hour of the day` IS A NUMBER
+    `minute of the hour` IS A NUMBER
+
+§ `Named refusals`
+
+-- One definition per refusal; the definition's name is its message (writing-l4-rules, entry 11.5).
+-- Every rule that needs a refusal returns the name, so that nothing downstream can default it.
+
+-- src:173 | (2) Subject to subsection (3), the beginning or end of a period of one day or consecutive days or of one week or consecutive weeks, expressed in relation to a reference day, is to be determined as follows:
+-- src:181 | 25.3 (1) Subject to subsection (2), the beginning or end of a period of one month or consecutive months, expressed in relation to a reference day, is to be determined as follows:
+-- src:190 | 25.4 (1) Subject to subsection (2), the beginning or end of a period of one year or consecutive years, expressed in relation to a reference day, is to be determined as follows:
+@ref Interpretation Act (BC) s 25.2(2), s 25.3(1), s 25.4(1) (src:173, src:181, src:190)
+GIVETH A DATE
+`ss 25.2 to 25.4 count a whole number of one or more days, weeks, months or years` MEANS
+    REFUSE "ss 25.2 to 25.4 count a whole number of one or more days, weeks, months or years"
+
+-- src:181 | 25.3 (1) Subject to subsection (2), the beginning or end of a period of one month or consecutive months, expressed in relation to a reference day, is to be determined as follows:
+-- src:182 | (a) if the reference day is before the period, by going forward to and including the date numerically corresponding to the reference day in the calendar month in which the period begins or ends, as the case may be;
+-- src:183 | (b) if the reference day is after the period, by going backward to and including the date numerically corresponding to the reference day in the calendar month in which the period begins or ends, as the case may be.
+-- src:184 | (2) If a period described in subsection (1) is expressed as "clear" months or "at least" or "not less than" a number of months,
+-- src:185 | (a) the beginning or end of the period, as determined under subsection (1) (a), is one day later, and
+-- src:186 | (b) the beginning or end of the period, as determined under subsection (1) (b), is one day earlier.
+-- src:187 | (3) If the beginning or end of a period determined under subsection (1) or subsections (1) and (2), as applicable, would fall on a date that does not occur in the calendar month in which the period begins or ends, the period begins or ends, as the case may be, on the last day of that month.
+@ref Interpretation Act (BC) s 25.3(2) and (3) (src:181-187)
+GIVETH A DATE
+`s 25.3 does not say how to shift a clear month by a day when the day numerically corresponding to the reference day does not occur` MEANS
+    REFUSE "s 25.3 does not say how to shift a clear month by a day when the day numerically corresponding to the reference day does not occur"
+
+-- src:190 | 25.4 (1) Subject to subsection (2), the beginning or end of a period of one year or consecutive years, expressed in relation to a reference day, is to be determined as follows:
+-- src:191 | (a) if the reference day is before the period, by going forward to and including the date numerically corresponding to the reference day in the same calendar month as the reference day in the year in which the period begins or ends, as the case may be;
+-- src:192 | (b) if the reference day is after the period, by going backward to and including the date numerically corresponding to the reference day in the same calendar month as the reference day in the year in which the period begins or ends, as the case may be.
+-- src:193 | (2) If a period described in subsection (1) is expressed as "clear" years or "at least" or "not less than" a number of years,
+-- src:194 | (a) the beginning or end of the period, as determined under subsection (1) (a), is one day later, and
+-- src:195 | (b) the beginning or end of the period, as determined under subsection (1) (b), is one day earlier.
+-- src:196 | (3) If the beginning or end of a period determined under subsection (1) or subsections (1) and (2), as applicable, would be February 29 and February 29 does not occur in the year in which the period begins or ends, the period begins or ends, as the case may be, on February 28.
+@ref Interpretation Act (BC) s 25.4(2) and (3) (src:190-196)
+GIVETH A DATE
+`s 25.4 does not say how to shift a clear year by a day when the reference day is 29 February and the year has none` MEANS
+    REFUSE "s 25.4 does not say how to shift a clear year by a day when the reference day is 29 February and the year has none"
+
+-- src:159 | (3) A period for doing an act that is determined under section 25.2, 25.3 or 25.4 to begin or end on a holiday begins or ends, as the case may be,
+-- src:160 | (a) if the reference day is before the period, on the next day that is not a holiday, and
+-- src:161 | (b) if the reference day is after the period, on the previous day that is not a holiday.
+@ref Interpretation Act (BC) s 25(3) (src:159-161)
+GIVETH A DATE
+`the holiday calendar supplied has no day free of holidays within a year` MEANS
+    REFUSE "the holiday calendar supplied has no day free of holidays within a year"
+
+-- src:162 | (4) A period for doing an act in a business office that is determined under section 25.2, 25.3 or 25.4 to begin or end on a day on which the office is not open during regular business hours begins or ends, as the case may be, as follows:
+-- src:163 | (a) on the next day the office is open during its regular business hours, unless paragraph (b) applies;
+-- src:164 | (b) on the previous day the office is open during its regular business hours if
+-- src:165 | (i) the office is regularly closed on the day the period is determined under the applicable section to begin or end, and
+-- src:166 | (ii) the reference day is after the period.
+@ref Interpretation Act (BC) s 25(4) (src:162-166)
+GIVETH A DATE
+`the office calendar supplied has no open day within a year` MEANS
+    REFUSE "the office calendar supplied has no open day within a year"
+
+-- src:275 | month means a period calculated from a day in one month to a day numerically corresponding to that day in the following month, less one day;
+@ref Interpretation Act (BC) s 29 "month" (src:275)
+GIVETH A DATE
+`s 29 month: the following month has no day numerically corresponding to the day the month begins on` MEANS
+    REFUSE "s 29 month: the following month has no day numerically corresponding to the day the month begins on"
+
+-- src:169 | 25.1 A person reaches a particular age expressed in years at the beginning of the relevant anniversary of the person's birth date.
+@ref Interpretation Act (BC) s 25.1 (src:169)
+GIVETH A DATE
+`s 25.1 does not say which day is the anniversary of a birth on 29 February in a year that has none` MEANS
+    REFUSE "s 25.1 does not say which day is the anniversary of a birth on 29 February in a year that has none"
+
+-- src:92 | 16 (1) In a proclamation, it is not necessary to mention that it is issued under an order of the Lieutenant Governor in Council.
+-- src:93 | (2) If a proclamation is authorized, the proclamation may be dated the day its issue was authorized, and, despite the Regulations Act, the day on which it so purports to have been issued is deemed to be the day on which the proclamation takes effect.
+@ref Interpretation Act (BC) s 16(2) (src:92-93)
+GIVETH A DATE
+`s 16(2) does not say when a proclamation takes effect if it is not dated the day its issue was authorized` MEANS
+    REFUSE "s 16(2) does not say when a proclamation takes effect if it is not dated the day its issue was authorized"
+
+-- src:32 | (5) Every regulation of a class that is exempted from the application of the Regulations Act or to which that Act does not apply and that is not expressed to come into force on a particular day comes into force the day the regulation was enacted.
+@ref Interpretation Act (BC) s 3(5) (src:32)
+GIVETH A DATE
+`s 3(5) does not say when a regulation of any other class that names no day comes into force` MEANS
+    REFUSE "s 3(5) does not say when a regulation of any other class that names no day comes into force"
+
+§ `s 25.2 Periods of days and weeks`
+
+-- src:172 | 25.2 (1) In this section, week means a period of 7 consecutive days.
+@ref Interpretation Act (BC) s 25.2(1) (src:172)
+GIVETH A NUMBER
+`s 25.2(1) the number of days in a week` MEANS 7
+
+-- src:173 | (2) Subject to subsection (3), the beginning or end of a period of one day or consecutive days or of one week or consecutive weeks, expressed in relation to a reference day, is to be determined as follows:
+-- src:174 | (a) if the reference day is before the period, by counting forward from and including the day after the reference day;
+-- src:175 | (b) if the reference day is after the period, by counting backward from and including the day before the reference day.
+-- src:176 | (3) If a period described in subsection (2) is expressed as "clear" days or weeks or "at least" or "not less than" a number of days or weeks,
+-- src:177 | (a) the beginning or end of the period, as determined under subsection (2) (a), is one day later, and
+-- src:178 | (b) the beginning or end of the period, as determined under subsection (2) (b), is one day earlier.
+@ref Interpretation Act (BC) s 25.2(2) and (3) (src:173-178)
+GIVEN reference IS A DATE
+      position  IS A `Position of the reference day`
+      n         IS A NUMBER
+      clear     IS A BOOLEAN
+GIVETH A DATE
+`s 25.2 beginning or end of a period of days` reference position n clear MEANS
+    BRANCH
+        IF n BELOW 1 OR NOT (FLOOR n EQUALS n)
+            THEN `ss 25.2 to 25.4 count a whole number of one or more days, weeks, months or years`
+        OTHERWISE
+            CONSIDER position
+                WHEN `The reference day is before the period` THEN reference PLUS (n PLUS extra)
+                WHEN `The reference day is after the period`  THEN reference MINUS (n PLUS extra)
+    WHERE
+        extra MEANS IF clear THEN 1 ELSE 0
+
+GIVEN reference IS A DATE
+      position  IS A `Position of the reference day`
+      n         IS A NUMBER
+      clear     IS A BOOLEAN
+GIVETH A DATE
+`s 25.2 beginning or end of a period of weeks` reference position n clear MEANS
+    `s 25.2 beginning or end of a period of days` reference position (n TIMES `s 25.2(1) the number of days in a week`) clear
+
+§ `s 25.3 Periods of months`
+
+-- The calendar month in which a period of N months begins or ends is the N-th calendar month
+-- after (or before) the one the reference day is in. The text takes that for granted.
+GIVEN d IS A DATE
+GIVETH A NUMBER
+`the number of the calendar month a day is in, counted from year 0 January` d MEANS
+    (DATE_YEAR d TIMES 12) PLUS (DATE_MONTH d MINUS 1)
+
+-- src:181 | 25.3 (1) Subject to subsection (2), the beginning or end of a period of one month or consecutive months, expressed in relation to a reference day, is to be determined as follows:
+-- src:182 | (a) if the reference day is before the period, by going forward to and including the date numerically corresponding to the reference day in the calendar month in which the period begins or ends, as the case may be;
+-- src:183 | (b) if the reference day is after the period, by going backward to and including the date numerically corresponding to the reference day in the calendar month in which the period begins or ends, as the case may be.
+-- src:184 | (2) If a period described in subsection (1) is expressed as "clear" months or "at least" or "not less than" a number of months,
+-- src:185 | (a) the beginning or end of the period, as determined under subsection (1) (a), is one day later, and
+-- src:186 | (b) the beginning or end of the period, as determined under subsection (1) (b), is one day earlier.
+-- src:187 | (3) If the beginning or end of a period determined under subsection (1) or subsections (1) and (2), as applicable, would fall on a date that does not occur in the calendar month in which the period begins or ends, the period begins or ends, as the case may be, on the last day of that month.
+@ref Interpretation Act (BC) s 25.3(1), (2) and (3) (src:181-187)
+GIVEN reference IS A DATE
+      position  IS A `Position of the reference day`
+      n         IS A NUMBER
+      clear     IS A BOOLEAN
+GIVETH A DATE
+`s 25.3 beginning or end of a period of months` reference position n clear MEANS
+    BRANCH
+        IF n BELOW 1 OR NOT (FLOOR n EQUALS n)
+            THEN `ss 25.2 to 25.4 count a whole number of one or more days, weeks, months or years`
+        IF clear AND d ABOVE dim
+            THEN `s 25.3 does not say how to shift a clear month by a day when the day numerically corresponding to the reference day does not occur`
+        IF d ABOVE dim
+            THEN YMD ty tm dim
+        OTHERWISE
+            (YMD ty tm d) PLUS (IF clear THEN sign ELSE 0)
+    WHERE
+        sign MEANS CONSIDER position
+                       WHEN `The reference day is before the period` THEN 1
+                       WHEN `The reference day is after the period`  THEN 0 MINUS 1
+        k    MEANS `the number of the calendar month a day is in, counted from year 0 January` reference PLUS (sign TIMES n)
+        ty   MEANS FLOOR (k DIVIDED BY 12)
+        tm   MEANS (k MODULO 12) PLUS 1
+        dim  MEANS `Days in month` tm ty
+        d    MEANS DATE_DAY reference
+
+§ `s 25.4 Periods of years`
+
+-- src:190 | 25.4 (1) Subject to subsection (2), the beginning or end of a period of one year or consecutive years, expressed in relation to a reference day, is to be determined as follows:
+-- src:191 | (a) if the reference day is before the period, by going forward to and including the date numerically corresponding to the reference day in the same calendar month as the reference day in the year in which the period begins or ends, as the case may be;
+-- src:192 | (b) if the reference day is after the period, by going backward to and including the date numerically corresponding to the reference day in the same calendar month as the reference day in the year in which the period begins or ends, as the case may be.
+-- src:193 | (2) If a period described in subsection (1) is expressed as "clear" years or "at least" or "not less than" a number of years,
+-- src:194 | (a) the beginning or end of the period, as determined under subsection (1) (a), is one day later, and
+-- src:195 | (b) the beginning or end of the period, as determined under subsection (1) (b), is one day earlier.
+-- src:196 | (3) If the beginning or end of a period determined under subsection (1) or subsections (1) and (2), as applicable, would be February 29 and February 29 does not occur in the year in which the period begins or ends, the period begins or ends, as the case may be, on February 28.
+@ref Interpretation Act (BC) s 25.4(1), (2) and (3) (src:190-196)
+GIVEN reference IS A DATE
+      position  IS A `Position of the reference day`
+      n         IS A NUMBER
+      clear     IS A BOOLEAN
+GIVETH A DATE
+`s 25.4 beginning or end of a period of years` reference position n clear MEANS
+    BRANCH
+        IF n BELOW 1 OR NOT (FLOOR n EQUALS n)
+            THEN `ss 25.2 to 25.4 count a whole number of one or more days, weeks, months or years`
+        IF clear AND d ABOVE dim
+            THEN `s 25.4 does not say how to shift a clear year by a day when the reference day is 29 February and the year has none`
+        IF d ABOVE dim
+            THEN YMD ty tm dim
+        OTHERWISE
+            (YMD ty tm d) PLUS (IF clear THEN sign ELSE 0)
+    WHERE
+        sign MEANS CONSIDER position
+                       WHEN `The reference day is before the period` THEN 1
+                       WHEN `The reference day is after the period`  THEN 0 MINUS 1
+        ty   MEANS DATE_YEAR reference PLUS (sign TIMES n)
+        tm   MEANS DATE_MONTH reference
+        d    MEANS DATE_DAY reference
+        dim  MEANS `Days in month` tm ty
+
+§ `Counting any period`
+
+-- src:173 | (2) Subject to subsection (3), the beginning or end of a period of one day or consecutive days or of one week or consecutive weeks, expressed in relation to a reference day, is to be determined as follows:
+-- src:181 | 25.3 (1) Subject to subsection (2), the beginning or end of a period of one month or consecutive months, expressed in relation to a reference day, is to be determined as follows:
+-- src:190 | 25.4 (1) Subject to subsection (2), the beginning or end of a period of one year or consecutive years, expressed in relation to a reference day, is to be determined as follows:
+@ref Interpretation Act (BC) s 25.2, s 25.3, s 25.4 (src:173, src:181, src:190)
+GIVEN reference IS A DATE
+      position  IS A `Position of the reference day`
+      period    IS A `Period of time`
+GIVETH A DATE
+`the beginning or end of a period` reference position period MEANS
+    CONSIDER period's `unit`
+        WHEN Days   THEN `s 25.2 beginning or end of a period of days`   reference position (period's `how many`) (period's `clear`)
+        WHEN Weeks  THEN `s 25.2 beginning or end of a period of weeks`  reference position (period's `how many`) (period's `clear`)
+        WHEN Months THEN `s 25.3 beginning or end of a period of months` reference position (period's `how many`) (period's `clear`)
+        WHEN Years  THEN `s 25.4 beginning or end of a period of years`  reference position (period's `how many`) (period's `clear`)
+
+-- The four named questions the brief asks of this module. Each is the counting rule with the
+-- reference day before the period and the period not "clear".
+
+GIVEN reference IS A DATE
+      n IS A NUMBER
+GIVETH A DATE
+`the last day of a period of days counted from a day` reference n MEANS
+    `s 25.2 beginning or end of a period of days` reference `The reference day is before the period` n FALSE
+
+GIVEN reference IS A DATE
+      n IS A NUMBER
+GIVETH A DATE
+`the last day of a period of weeks counted from a day` reference n MEANS
+    `s 25.2 beginning or end of a period of weeks` reference `The reference day is before the period` n FALSE
+
+GIVEN reference IS A DATE
+      n IS A NUMBER
+GIVETH A DATE
+`the last day of a period of months counted after an event` reference n MEANS
+    `s 25.3 beginning or end of a period of months` reference `The reference day is before the period` n FALSE
+
+GIVEN reference IS A DATE
+      n IS A NUMBER
+GIVETH A DATE
+`the last day of a period of years counted after an event` reference n MEANS
+    `s 25.4 beginning or end of a period of years` reference `The reference day is before the period` n FALSE
+
+§ `s 25(3), s 25(4) and s 25.5 Holidays and closed offices`
+
+-- A holiday calendar is an INPUT: a function from a day to TRUE (the day is a holiday) or FALSE.
+-- Nothing here knows which days are holidays; s 29 "holiday" is a list of kinds of day, most of
+-- which have no date in the text. A walk stops after 366 days with a refusal, so a calendar that
+-- says every day is a holiday cannot loop.
+
+-- src:159 | (3) A period for doing an act that is determined under section 25.2, 25.3 or 25.4 to begin or end on a holiday begins or ends, as the case may be,
+-- src:160 | (a) if the reference day is before the period, on the next day that is not a holiday, and
+-- src:161 | (b) if the reference day is after the period, on the previous day that is not a holiday.
+@ref Interpretation Act (BC) s 25(3)(a) (src:159-161)
+GIVEN isHoliday IS A FUNCTION FROM DATE TO BOOLEAN
+      start     IS A DATE
+      daysLeft  IS A NUMBER
+GIVETH A DATE
+`walk forward from a day to the first day that is not a holiday` isHoliday start daysLeft MEANS
+    BRANCH
+        IF NOT (isHoliday start) THEN start
+        IF daysLeft AT MOST 0 THEN `the holiday calendar supplied has no day free of holidays within a year`
+        OTHERWISE `walk forward from a day to the first day that is not a holiday` isHoliday (start PLUS 1) (daysLeft MINUS 1)
+
+-- src:161 | (b) if the reference day is after the period, on the previous day that is not a holiday.
+@ref Interpretation Act (BC) s 25(3)(b) (src:161)
+GIVEN isHoliday IS A FUNCTION FROM DATE TO BOOLEAN
+      start     IS A DATE
+      daysLeft  IS A NUMBER
+GIVETH A DATE
+`walk backward from a day to the first day that is not a holiday` isHoliday start daysLeft MEANS
+    BRANCH
+        IF NOT (isHoliday start) THEN start
+        IF daysLeft AT MOST 0 THEN `the holiday calendar supplied has no day free of holidays within a year`
+        OTHERWISE `walk backward from a day to the first day that is not a holiday` isHoliday (start MINUS 1) (daysLeft MINUS 1)
+
+-- src:159 | (3) A period for doing an act that is determined under section 25.2, 25.3 or 25.4 to begin or end on a holiday begins or ends, as the case may be,
+-- src:160 | (a) if the reference day is before the period, on the next day that is not a holiday, and
+-- src:161 | (b) if the reference day is after the period, on the previous day that is not a holiday.
+@ref Interpretation Act (BC) s 25(3) (src:159-161)
+GIVEN isHoliday IS A FUNCTION FROM DATE TO BOOLEAN
+      position  IS A `Position of the reference day`
+      boundary  IS A DATE
+GIVETH A DATE
+`s 25(3) the beginning or end of a period for doing an act, moved off a holiday` isHoliday position boundary MEANS
+    CONSIDER position
+        WHEN `The reference day is before the period` THEN
+            `walk forward from a day to the first day that is not a holiday` isHoliday boundary 366
+        WHEN `The reference day is after the period` THEN
+            `walk backward from a day to the first day that is not a holiday` isHoliday boundary 366
+
+-- src:163 | (a) on the next day the office is open during its regular business hours, unless paragraph (b) applies;
+@ref Interpretation Act (BC) s 25(4) (src:163)
+GIVEN isOpen   IS A FUNCTION FROM DATE TO BOOLEAN
+      start    IS A DATE
+      daysLeft IS A NUMBER
+GIVETH A DATE
+`walk forward from a day to the first day the office is open` isOpen start daysLeft MEANS
+    BRANCH
+        IF isOpen start THEN start
+        IF daysLeft AT MOST 0 THEN `the office calendar supplied has no open day within a year`
+        OTHERWISE `walk forward from a day to the first day the office is open` isOpen (start PLUS 1) (daysLeft MINUS 1)
+
+-- src:164 | (b) on the previous day the office is open during its regular business hours if
+-- src:165 | (i) the office is regularly closed on the day the period is determined under the applicable section to begin or end, and
+-- src:166 | (ii) the reference day is after the period.
+@ref Interpretation Act (BC) s 25(4)(b) (src:164-166)
+GIVEN isOpen   IS A FUNCTION FROM DATE TO BOOLEAN
+      start    IS A DATE
+      daysLeft IS A NUMBER
+GIVETH A DATE
+`walk backward from a day to the first day the office is open` isOpen start daysLeft MEANS
+    BRANCH
+        IF isOpen start THEN start
+        IF daysLeft AT MOST 0 THEN `the office calendar supplied has no open day within a year`
+        OTHERWISE `walk backward from a day to the first day the office is open` isOpen (start MINUS 1) (daysLeft MINUS 1)
+
+-- isOpen: the office is open during its regular business hours on that day.
+-- isRegularlyClosed: the office is regularly closed on that day (for example, every Saturday).
+-- The backward move needs BOTH (b)(i) and (b)(ii); an office closed for some other reason on a
+-- day when the reference day is after the period moves FORWARD (limb (a)).
+-- src:162 | (4) A period for doing an act in a business office that is determined under section 25.2, 25.3 or 25.4 to begin or end on a day on which the office is not open during regular business hours begins or ends, as the case may be, as follows:
+-- src:163 | (a) on the next day the office is open during its regular business hours, unless paragraph (b) applies;
+-- src:164 | (b) on the previous day the office is open during its regular business hours if
+-- src:165 | (i) the office is regularly closed on the day the period is determined under the applicable section to begin or end, and
+-- src:166 | (ii) the reference day is after the period.
+@ref Interpretation Act (BC) s 25(4) (src:162-166)
+GIVEN isOpen             IS A FUNCTION FROM DATE TO BOOLEAN
+      isRegularlyClosed  IS A FUNCTION FROM DATE TO BOOLEAN
+      position           IS A `Position of the reference day`
+      boundary           IS A DATE
+GIVETH A DATE
+`s 25(4) the beginning or end of a period for doing an act in a business office, moved to a day the office is open` isOpen isRegularlyClosed position boundary MEANS
+    BRANCH
+        IF isOpen boundary THEN boundary
+        IF isRegularlyClosed boundary AND position EQUALS `The reference day is after the period`
+            THEN `walk backward from a day to the first day the office is open` isOpen boundary 366
+        OTHERWISE `walk forward from a day to the first day the office is open` isOpen boundary 366
+
+-- src:199 | 25.5 (1) If a day that is specified for doing an act falls on a holiday, the day falls on the next day that is not a holiday.
+@ref Interpretation Act (BC) s 25.5(1) (src:199)
+GIVEN isHoliday IS A FUNCTION FROM DATE TO BOOLEAN
+      specified IS A DATE
+GIVETH A DATE
+`s 25.5(1) a day specified for doing an act, moved off a holiday` isHoliday specified MEANS
+    `walk forward from a day to the first day that is not a holiday` isHoliday specified 366
+
+-- src:200 | (2) If a day that is specified for doing an act in a business office falls on a day on which the office is not open during regular business hours, the day falls on the next day the office is open during its regular business hours.
+@ref Interpretation Act (BC) s 25.5(2) (src:200)
+GIVEN isOpen    IS A FUNCTION FROM DATE TO BOOLEAN
+      specified IS A DATE
+GIVETH A DATE
+`s 25.5(2) a day specified for doing an act in a business office, moved to a day the office is open` isOpen specified MEANS
+    `walk forward from a day to the first day the office is open` isOpen specified 366
+
+-- src:252 | holiday includes
+-- src:253 | (a) Sunday, Christmas Day, Good Friday and Easter Monday,
+-- src:254 | (b) Canada Day, Victoria Day, British Columbia Day, Labour Day, National Day for Truth and Reconciliation, Remembrance Day, Family Day and New Year's Day,
+-- src:255 | (c) December 26, and
+-- src:256 | (d) a day set by the Parliament of Canada or by the Legislature, or appointed by proclamation of the Governor General or the Lieutenant Governor, to be observed as a day of general prayer or mourning, a day of public rejoicing or thanksgiving, a day for celebrating the birthday of the reigning Sovereign, or as a public holiday;
+@ref Interpretation Act (BC) s 29 "holiday" (src:252-256)
+GIVEN `any other holiday` IS A FUNCTION FROM DATE TO BOOLEAN
+      d                   IS A DATE
+GIVETH A BOOLEAN
+`s 29 a day is a holiday` `any other holiday` d MEANS
+        `Weekday of` d EQUALS 0
+    OR  (DATE_MONTH d EQUALS 12 AND DATE_DAY d EQUALS 26)
+    OR  `any other holiday` d
+
+§ `Where a period lies, and whether a day falls inside it`
+
+-- The text fixes one end of a period by counting from the reference day (ss 25.2 to 25.4).
+-- The other end is the day next to the reference day. For a period of days or weeks that is
+-- stated: counting starts "from and including the day after the reference day" (s 25.2(2)(a)),
+-- or "the day before" it (s 25.2(2)(b)). For months and years the text is silent; this module
+-- reads them the same way (see NOTES, fork F-month).
+-- src:173 | (2) Subject to subsection (3), the beginning or end of a period of one day or consecutive days or of one week or consecutive weeks, expressed in relation to a reference day, is to be determined as follows:
+-- src:174 | (a) if the reference day is before the period, by counting forward from and including the day after the reference day;
+-- src:175 | (b) if the reference day is after the period, by counting backward from and including the day before the reference day.
+@ref Interpretation Act (BC) s 25.2(2) (src:173-175)
+GIVEN reference IS A DATE
+      position  IS A `Position of the reference day`
+      period    IS A `Period of time`
+GIVETH A `Span of days`
+`the span of days of a period counted from a reference day` reference position period MEANS
+    CONSIDER position
+        WHEN `The reference day is before the period` THEN
+            `Span of days` WITH `first day` IS reference PLUS 1, `last day` IS boundary
+        WHEN `The reference day is after the period` THEN
+            `Span of days` WITH `first day` IS boundary, `last day` IS reference MINUS 1
+    WHERE
+        boundary MEANS `the beginning or end of a period` reference position period
+
+-- The same, for a period "for doing an act". s 25(3) speaks of a period that "begins or ends" on
+-- a holiday, so BOTH ends are moved off a holiday: the far end that ss 25.2 to 25.4 count out
+-- to, and the near end, the day next to the reference day (NOTES, fork F-near-end).
+-- src:159 | (3) A period for doing an act that is determined under section 25.2, 25.3 or 25.4 to begin or end on a holiday begins or ends, as the case may be,
+-- src:160 | (a) if the reference day is before the period, on the next day that is not a holiday, and
+-- src:161 | (b) if the reference day is after the period, on the previous day that is not a holiday.
+@ref Interpretation Act (BC) s 25(3) (src:159-161)
+GIVEN isHoliday IS A FUNCTION FROM DATE TO BOOLEAN
+      reference IS A DATE
+      position  IS A `Position of the reference day`
+      period    IS A `Period of time`
+GIVETH A `Span of days`
+`the span of days of a period for doing an act` isHoliday reference position period MEANS
+    CONSIDER position
+        WHEN `The reference day is before the period` THEN
+            `Span of days` WITH `first day` IS nearEnd, `last day` IS farEnd
+        WHEN `The reference day is after the period` THEN
+            `Span of days` WITH `first day` IS farEnd, `last day` IS nearEnd
+    WHERE
+        nextToReference MEANS CONSIDER position
+                                  WHEN `The reference day is before the period` THEN reference PLUS 1
+                                  WHEN `The reference day is after the period`  THEN reference MINUS 1
+        farEnd  MEANS `s 25(3) the beginning or end of a period for doing an act, moved off a holiday` isHoliday position (`the beginning or end of a period` reference position period)
+        nearEnd MEANS `s 25(3) the beginning or end of a period for doing an act, moved off a holiday` isHoliday position nextToReference
+
+GIVEN d    IS A DATE
+      span IS A `Span of days`
+GIVETH A BOOLEAN
+`a day falls inside a span of days` d span MEANS
+    span's `first day` AT MOST d AND d AT MOST span's `last day`
+
+GIVEN d         IS A DATE
+      reference IS A DATE
+      position  IS A `Position of the reference day`
+      period    IS A `Period of time`
+GIVETH A BOOLEAN
+`a day falls inside a period counted from a reference day` d reference position period MEANS
+    `a day falls inside a span of days` d (`the span of days of a period counted from a reference day` reference position period)
+
+GIVEN isHoliday IS A FUNCTION FROM DATE TO BOOLEAN
+      d         IS A DATE
+      reference IS A DATE
+      position  IS A `Position of the reference day`
+      period    IS A `Period of time`
+GIVETH A BOOLEAN
+`a day falls inside a period for doing an act` isHoliday d reference position period MEANS
+    `a day falls inside a span of days` d (`the span of days of a period for doing an act` isHoliday reference position period)
+
+§ `s 4(1) and s 26 The moment within a day, in Pacific Time`
+
+-- src:203 | 26 (1) In this section, Pacific Time means 7 hours behind Coordinated Universal Time (UTC).
+-- src:204 | (2) A reference to time in British Columbia is a reference to Pacific Time.
+@ref Interpretation Act (BC) s 26(1) (src:203-204)
+GIVETH A NUMBER
+`s 26(1) the number of hours Pacific Time is behind UTC` MEANS 7
+
+-- src:35 | 4 (1) An enactment must be construed as commencing at the beginning of the day on which it comes into force.
+@ref Interpretation Act (BC) s 4(1) (src:35)
+GIVEN d IS A DATE
+GIVETH A `Pacific Time moment`
+`s 4(1) the beginning of a day` d MEANS
+    `Pacific Time moment` WITH `calendar day` IS d, `hour of the day` IS 0, `minute of the hour` IS 0
+
+-- The end of a day and the beginning of the next day are the same instant; the text names both
+-- (s 4(3), s 20(4)(b)), so there is a name for each.
+-- src:37 | (3) Any other enactment ceases to have effect at the end of the day on which it expires or otherwise ceases to have effect.
+@ref Interpretation Act (BC) s 4(3) (src:37)
+GIVEN d IS A DATE
+GIVETH A `Pacific Time moment`
+`s 4(3) the end of a day` d MEANS
+    `s 4(1) the beginning of a day` (d PLUS 1)
+
+-- src:203 | 26 (1) In this section, Pacific Time means 7 hours behind Coordinated Universal Time (UTC).
+-- src:204 | (2) A reference to time in British Columbia is a reference to Pacific Time.
+@ref Interpretation Act (BC) s 26(1) and (2) (src:203-204)
+GIVEN m IS A `Pacific Time moment`
+GIVETH A `UTC moment`
+`s 26 the UTC moment of a Pacific Time moment` m MEANS
+    BRANCH
+        IF utcHour AT LEAST 24
+            THEN `UTC moment` WITH `calendar day` IS m's `calendar day` PLUS 1, `hour of the day` IS utcHour MINUS 24, `minute of the hour` IS m's `minute of the hour`
+        OTHERWISE
+            `UTC moment` WITH `calendar day` IS m's `calendar day`, `hour of the day` IS utcHour, `minute of the hour` IS m's `minute of the hour`
+    WHERE
+        utcHour MEANS m's `hour of the day` PLUS `s 26(1) the number of hours Pacific Time is behind UTC`
+
+§ `s 3 Date of commencement of an Act`
+
+DECLARE `How an Act received assent` IS ONE OF
+    `The Lieutenant Governor assented to the Act`
+        HAS `the day of assent` IS A DATE
+    `The Act was reserved for the signification of the pleasure of the Governor General`
+        HAS `the day the Lieutenant Governor signified that the Governor General in Council assented, if it has been signified` IS A MAYBE DATE
+
+DECLARE `What an Act says about when a portion of it comes into force` IS ONE OF
+    `It provides no date of commencement`
+    `It provides that it comes into force on a stated day`
+        HAS `the stated day` IS A DATE
+    `It provides that it comes into force on proclamation or by regulation of the Lieutenant Governor in Council`
+        HAS `the day fixed, if it has been fixed` IS A MAYBE DATE
+
+-- src:25 | 3 (1) In this section, the date of assent for an Act reserved for the signification of the Governor General's pleasure, means the date of the signification by the Lieutenant Governor that the Governor General in Council assented to the Act.
+@ref Interpretation Act (BC) s 3(1) (src:25)
+GIVEN received IS A `How an Act received assent`
+GIVETH A MAYBE DATE
+`s 3(1) the date of assent to an Act` received MEANS
+    CONSIDER received
+        WHEN `The Lieutenant Governor assented to the Act` day THEN JUST day
+        WHEN `The Act was reserved for the signification of the pleasure of the Governor General` signified THEN signified
+
+-- The text speaks of the DATE OF ASSENT, and of nothing else, as the day an Act with no other
+-- date of commencement commences. It does not say that the day an Act was passed, or the day it
+-- was published, is its date of assent. A caller that knows only one of those days gets this
+-- refusal, not a guess.
+-- src:25 | 3 (1) In this section, the date of assent for an Act reserved for the signification of the Governor General's pleasure, means the date of the signification by the Lieutenant Governor that the Governor General in Council assented to the Act.
+-- src:26 | (2) The date of the commencement of an Act or of a portion of it for which no other date of commencement is provided in the Act is the date of assent to the Act.
+@ref Interpretation Act (BC) s 3(1) and (2) (src:25-26)
+GIVEN `the day it was passed or published` IS A DATE
+GIVETH A MAYBE DATE
+`s 3 does not say that the day an Act was passed or published is its date of assent` `the day it was passed or published` MEANS
+    REFUSE "s 3 does not say that the day an Act was passed or published is its date of assent"
+
+-- src:26 | (2) The date of the commencement of an Act or of a portion of it for which no other date of commencement is provided in the Act is the date of assent to the Act.
+-- src:27 | (3) If an Act contains a provision that the Act or a portion of it is to come into force on a day other than the date of assent to the Act or on proclamation or by regulation of the Lieutenant Governor in Council, that provision and the title of the Act are deemed to have come into force on the date of assent to the Act.
+@ref Interpretation Act (BC) s 3(2) and (3) (src:26-27)
+GIVEN assent IS A MAYBE DATE
+      says   IS A `What an Act says about when a portion of it comes into force`
+GIVETH A MAYBE DATE
+`s 3(2) the date of commencement of a portion of an Act` assent says MEANS
+    CONSIDER assent
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST assentDay THEN
+            CONSIDER says
+                WHEN `It provides no date of commencement` THEN JUST assentDay
+                WHEN `It provides that it comes into force on a stated day` stated THEN JUST stated
+                WHEN `It provides that it comes into force on proclamation or by regulation of the Lieutenant Governor in Council` fixed THEN fixed
+
+-- The provision that fixes a later day, and the title of the Act, are deemed in force on the date
+-- of assent (s 3(3)); where the Act provides no date at all, s 3(2) puts the whole Act, title
+-- included, on the date of assent, so the answer is the date of assent in every case.
+-- src:27 | (3) If an Act contains a provision that the Act or a portion of it is to come into force on a day other than the date of assent to the Act or on proclamation or by regulation of the Lieutenant Governor in Council, that provision and the title of the Act are deemed to have come into force on the date of assent to the Act.
+@ref Interpretation Act (BC) s 3(3) (src:27)
+GIVEN assent IS A MAYBE DATE
+      says   IS A `What an Act says about when a portion of it comes into force`
+GIVETH A MAYBE DATE
+`s 3(3) the day the commencement provision and the title of an Act are in force` assent says MEANS
+    CONSIDER says
+        WHEN `It provides no date of commencement` THEN assent
+        WHEN `It provides that it comes into force on a stated day` stated THEN assent
+        WHEN `It provides that it comes into force on proclamation or by regulation of the Lieutenant Governor in Council` fixed THEN assent
+
+-- src:28 | (3.1) If an Act contains a provision to the effect that the Act, or a portion of it, comes into force on a date that is earlier than the date of assent, that Act or portion referred to in the provision
+-- src:29 | (a) comes into force in accordance with the terms of the provision, and
+-- src:30 | (b) on coming into force, is deemed to have come into force on the earlier date referred to in the provision and is retroactive to the extent necessary to give it force and effect on and after that earlier date.
+@ref Interpretation Act (BC) s 3(3.1) (src:28-30)
+GIVEN assent IS A MAYBE DATE
+      says   IS A `What an Act says about when a portion of it comes into force`
+GIVETH A BOOLEAN
+`s 3(3.1) a portion comes into force on a day earlier than the date of assent, and is retroactive` assent says MEANS
+    CONSIDER assent
+        WHEN NOTHING THEN FALSE
+        WHEN JUST assentDay THEN
+            CONSIDER says
+                WHEN `It provides no date of commencement` THEN FALSE
+                WHEN `It provides that it comes into force on a stated day` stated THEN stated BELOW assentDay
+                WHEN `It provides that it comes into force on proclamation or by regulation of the Lieutenant Governor in Council` fixed THEN
+                    CONSIDER fixed
+                        WHEN NOTHING THEN FALSE
+                        WHEN JUST fixedDay THEN fixedDay BELOW assentDay
+
+-- The day, and the moment within the day, from which a portion of an Act binds: the beginning
+-- of its day of commencement, in Pacific Time. NOTHING means that no day has yet been fixed, so
+-- the portion is not yet in force.
+-- src:26 | (2) The date of the commencement of an Act or of a portion of it for which no other date of commencement is provided in the Act is the date of assent to the Act.
+-- src:35 | 4 (1) An enactment must be construed as commencing at the beginning of the day on which it comes into force.
+-- src:203 | 26 (1) In this section, Pacific Time means 7 hours behind Coordinated Universal Time (UTC).
+-- src:204 | (2) A reference to time in British Columbia is a reference to Pacific Time.
+@ref Interpretation Act (BC) s 3(2), s 4(1), s 26 (src:26, src:35, src:203-204)
+GIVEN assent IS A MAYBE DATE
+      says   IS A `What an Act says about when a portion of it comes into force`
+GIVETH A MAYBE `Pacific Time moment`
+`the moment from which a portion of an Act binds` assent says MEANS
+    CONSIDER `s 3(2) the date of commencement of a portion of an Act` assent says
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST commencementDay THEN JUST (`s 4(1) the beginning of a day` commencementDay)
+
+§ `s 3(5) Regulations, and s 16(2) proclamations`
+
+DECLARE `Class of regulation under the Regulations Act` IS ONE OF
+    `A regulation of a class exempted from the Regulations Act, or to which that Act does not apply`
+    `A regulation of any other class`
+
+DECLARE `What a regulation says about when it comes into force` IS ONE OF
+    `It is expressed to come into force on a particular day`
+        HAS `the particular day` IS A DATE
+    `It is not expressed to come into force on a particular day`
+
+-- A regulation that is expressed to come into force on a particular day comes into force on it,
+-- whichever class it is. s 3(5) is the only provision in this text about the commencement of a
+-- regulation, and it covers only the exempt class and only a regulation that names no day; for
+-- a stated day, in either class, this module passes the day through. The text presupposes that a
+-- regulation can be so expressed ("that is not expressed to come into force on a particular
+-- day"), but it does not say in so many words that the stated day governs, and the Regulations
+-- Act, which is not in this text, may add conditions (NOTES, fork F-regulation-silent).
+-- src:32 | (5) Every regulation of a class that is exempted from the application of the Regulations Act or to which that Act does not apply and that is not expressed to come into force on a particular day comes into force the day the regulation was enacted.
+@ref Interpretation Act (BC) s 3(5) (src:32)
+GIVEN enacted IS A DATE
+      class   IS A `Class of regulation under the Regulations Act`
+      says    IS A `What a regulation says about when it comes into force`
+GIVETH A DATE
+`s 3(5) the day a regulation comes into force` enacted class says MEANS
+    CONSIDER says
+        WHEN `It is expressed to come into force on a particular day` particular THEN particular
+        WHEN `It is not expressed to come into force on a particular day` THEN
+            CONSIDER class
+                WHEN `A regulation of a class exempted from the Regulations Act, or to which that Act does not apply` THEN enacted
+                WHEN `A regulation of any other class` THEN
+                    `s 3(5) does not say when a regulation of any other class that names no day comes into force`
+
+-- The moment is the beginning of that day (s 4(1): "enactment" includes a regulation, s 1).
+-- The refusal is repeated here at the type of a moment, because a refusal stored in a field
+-- of a record is not reached until the field is read.
+-- src:12 | enactment means an Act or a regulation or a portion of an Act or regulation;
+-- src:13 | public officer includes a person in the public service of British Columbia;
+-- src:14 | regulation means a regulation, order, rule, form, tariff of costs or fees, proclamation, letters patent, commission, warrant, bylaw or other instrument enacted but does not include an order of a court made in the course of an action or an order made by a public officer or administrative tribunal in a dispute between 2 or more persons;
+@ref Interpretation Act (BC) s 1 "enactment", s 4(1) (src:12-14)
+GIVETH A `Pacific Time moment`
+`s 3(5) does not say when a regulation of any other class that names no day comes into force, so no moment can be given` MEANS
+    REFUSE "s 3(5) does not say when a regulation of any other class that names no day comes into force, so no moment can be given"
+
+-- src:32 | (5) Every regulation of a class that is exempted from the application of the Regulations Act or to which that Act does not apply and that is not expressed to come into force on a particular day comes into force the day the regulation was enacted.
+-- src:35 | 4 (1) An enactment must be construed as commencing at the beginning of the day on which it comes into force.
+-- src:203 | 26 (1) In this section, Pacific Time means 7 hours behind Coordinated Universal Time (UTC).
+-- src:204 | (2) A reference to time in British Columbia is a reference to Pacific Time.
+@ref Interpretation Act (BC) s 3(5), s 4(1), s 26 (src:32, src:35, src:203-204)
+GIVEN enacted IS A DATE
+      class   IS A `Class of regulation under the Regulations Act`
+      says    IS A `What a regulation says about when it comes into force`
+GIVETH A `Pacific Time moment`
+`the moment from which a regulation binds` enacted class says MEANS
+    CONSIDER says
+        WHEN `It is expressed to come into force on a particular day` particular THEN `s 4(1) the beginning of a day` particular
+        WHEN `It is not expressed to come into force on a particular day` THEN
+            CONSIDER class
+                WHEN `A regulation of a class exempted from the Regulations Act, or to which that Act does not apply` THEN `s 4(1) the beginning of a day` enacted
+                WHEN `A regulation of any other class` THEN
+                    `s 3(5) does not say when a regulation of any other class that names no day comes into force, so no moment can be given`
+
+-- src:92 | 16 (1) In a proclamation, it is not necessary to mention that it is issued under an order of the Lieutenant Governor in Council.
+-- src:93 | (2) If a proclamation is authorized, the proclamation may be dated the day its issue was authorized, and, despite the Regulations Act, the day on which it so purports to have been issued is deemed to be the day on which the proclamation takes effect.
+@ref Interpretation Act (BC) s 16(2) (src:92-93)
+GIVEN `the date the proclamation bears`  IS A DATE
+      `the day its issue was authorized` IS A DATE
+GIVETH A DATE
+`s 16(2) the day a proclamation takes effect` `the date the proclamation bears` `the day its issue was authorized` MEANS
+    IF   `the date the proclamation bears` EQUALS `the day its issue was authorized`
+    THEN `the date the proclamation bears`
+    ELSE `s 16(2) does not say when a proclamation takes effect if it is not dated the day its issue was authorized`
+
+§ `s 4(2) and (3) The moment an enactment ceases to have effect`
+
+-- src:36 | (2) An enactment that is repealed and replaced ceases to have effect at the time the new enactment commences.
+@ref Interpretation Act (BC) s 4(2) (src:36)
+GIVEN `the day the new enactment commences` IS A DATE
+GIVETH A `Pacific Time moment`
+`s 4(2) the moment an enactment that is repealed and replaced ceases to have effect` `the day the new enactment commences` MEANS
+    `s 4(1) the beginning of a day` `the day the new enactment commences`
+
+-- src:37 | (3) Any other enactment ceases to have effect at the end of the day on which it expires or otherwise ceases to have effect.
+@ref Interpretation Act (BC) s 4(3) (src:37)
+GIVEN `the day it expires or otherwise ceases to have effect` IS A DATE
+GIVETH A `Pacific Time moment`
+`s 4(3) the moment any other enactment ceases to have effect` `the day it expires or otherwise ceases to have effect` MEANS
+    `s 4(3) the end of a day` `the day it expires or otherwise ceases to have effect`
+
+§ `s 20 Appointments of officers`
+
+DECLARE `How an appointment made by an appointing instrument comes to an end` IS ONE OF
+    `The appointing instrument specifies the day the appointment terminates`
+        HAS `the day specified in the instrument` IS A DATE
+    `The appointing instrument does not specify the day, and the appointment has a last day of its term`
+        HAS `the last day of the term` IS A DATE
+    `An enactment terminates the appointment and specifies the day the termination is effective`
+        HAS `the day specified in the terminating enactment` IS A DATE
+    `An enactment terminates the appointment and does not specify the day the termination is effective`
+        HAS `the day on which the terminating enactment is made` IS A DATE
+    `The same enactment terminates the appointment and appoints another person to the same office`
+        HAS `the moment the new appointment begins` IS A `Pacific Time moment`
+
+-- src:122 | (3) An appointment made by an appointing instrument begins at the beginning of the day the appointment is effective.
+@ref Interpretation Act (BC) s 20(3) (src:122)
+GIVEN `the day the appointment is effective` IS A DATE
+GIVETH A `Pacific Time moment`
+`s 20(3) the moment an appointment begins` `the day the appointment is effective` MEANS
+    `s 4(1) the beginning of a day` `the day the appointment is effective`
+
+-- "Unless earlier terminated by the appointee": an earlier termination by the appointee is a
+-- fact the caller supplies by calling this function with the day it took effect as
+-- `the day specified in the instrument`; the text does not say when a resignation takes effect.
+-- src:123 | (4) Unless earlier terminated by the appointee, an appointment made by an appointing instrument ends,
+-- src:124 | (a) if the day the appointment terminates is specified in the appointing instrument, at the beginning of the day specified,
+-- src:125 | (b) if the day the appointment terminates is not specified in the appointing instrument, at the end of the last day of the term of the appointment, unless paragraph (c), (d) or (e) applies,
+-- src:126 | (c) if the appointment is terminated by an enactment that specifies the day the termination is effective, at the beginning of the day specified,
+-- src:127 | (d) if the appointment is terminated by an enactment that does not specify the day the termination is effective, at the beginning of the day on which the enactment is made, and
+-- src:128 | (e) if the appointment is terminated and another person is appointed to the same office by the same enactment, when the new appointment begins.
+@ref Interpretation Act (BC) s 20(4) (src:123-128)
+GIVEN how IS A `How an appointment made by an appointing instrument comes to an end`
+GIVETH A `Pacific Time moment`
+`s 20(4) the moment an appointment ends` how MEANS
+    CONSIDER how
+        WHEN `The appointing instrument specifies the day the appointment terminates` specified THEN
+            `s 4(1) the beginning of a day` specified
+        WHEN `The appointing instrument does not specify the day, and the appointment has a last day of its term` lastDay THEN
+            `s 4(3) the end of a day` lastDay
+        WHEN `An enactment terminates the appointment and specifies the day the termination is effective` specified THEN
+            `s 4(1) the beginning of a day` specified
+        WHEN `An enactment terminates the appointment and does not specify the day the termination is effective` madeOn THEN
+            `s 4(1) the beginning of a day` madeOn
+        WHEN `The same enactment terminates the appointment and appoints another person to the same office` newBegins THEN
+            newBegins
+
+§ `s 25.1 Calculation of age`
+
+-- src:169 | 25.1 A person reaches a particular age expressed in years at the beginning of the relevant anniversary of the person's birth date.
+@ref Interpretation Act (BC) s 25.1 (src:169)
+GIVEN `birth date` IS A DATE
+      years        IS A NUMBER
+GIVETH A DATE
+`s 25.1 the day a person reaches an age expressed in years` `birth date` years MEANS
+    BRANCH
+        IF DATE_MONTH `birth date` EQUALS 2 AND DATE_DAY `birth date` EQUALS 29 AND anniversaryYearDays EQUALS 28
+            THEN `s 25.1 does not say which day is the anniversary of a birth on 29 February in a year that has none`
+        OTHERWISE YMD anniversaryYear (DATE_MONTH `birth date`) (DATE_DAY `birth date`)
+    WHERE
+        anniversaryYear     MEANS DATE_YEAR `birth date` PLUS years
+        anniversaryYearDays MEANS `Days in month` 2 anniversaryYear
+
+-- The person has reached the age at the beginning of that day, so on every moment of it and after.
+-- src:169 | 25.1 A person reaches a particular age expressed in years at the beginning of the relevant anniversary of the person's birth date.
+@ref Interpretation Act (BC) s 25.1 (src:169)
+GIVEN `birth date` IS A DATE
+      years        IS A NUMBER
+      d            IS A DATE
+GIVETH A BOOLEAN
+`s 25.1 a person has reached an age on a day` `birth date` years d MEANS
+    d AT LEAST `s 25.1 the day a person reaches an age expressed in years` `birth date` years
+
+§ `s 29 Time words`
+
+-- src:229 | commencement, with reference to an enactment, means the date on which the enactment comes into force;
+@ref Interpretation Act (BC) s 29 "commencement" (src:229)
+GIVEN `the date on which the enactment comes into force` IS A DATE
+GIVETH A DATE
+`s 29 the commencement of an enactment` `the date on which the enactment comes into force` MEANS
+    `the date on which the enactment comes into force`
+
+-- src:281 | now must be construed as referring to the time of commencement of the enactment containing the word;
+@ref Interpretation Act (BC) s 29 "now" (src:281)
+GIVEN `the date on which the enactment containing the word comes into force` IS A DATE
+GIVETH A `Pacific Time moment`
+`s 29 the time that the word now refers to` `the date on which the enactment containing the word comes into force` MEANS
+    `s 4(1) the beginning of a day` `the date on which the enactment containing the word comes into force`
+
+-- "month means a period calculated from a day in one month to a day numerically corresponding to
+-- that day in the following month, less one day". A month that begins on the 29th, 30th or 31st
+-- has no corresponding day in a following month that is too short, and the text does not say
+-- what then happens; s 25.3(3) is written for periods "expressed in relation to a reference day"
+-- and is not applied to this definition (see NOTES, fork F-month-def).
+-- src:275 | month means a period calculated from a day in one month to a day numerically corresponding to that day in the following month, less one day;
+@ref Interpretation Act (BC) s 29 "month" (src:275)
+GIVEN start IS A DATE
+GIVETH A DATE
+`s 29 the day on which the month following a month that begins on a day begins` start MEANS
+    BRANCH
+        IF DATE_DAY start ABOVE `Days in month` nextMonth nextYear
+            THEN `s 29 month: the following month has no day numerically corresponding to the day the month begins on`
+        OTHERWISE YMD nextYear nextMonth (DATE_DAY start)
+    WHERE
+        k         MEANS (DATE_YEAR start TIMES 12) PLUS (DATE_MONTH start MINUS 1) PLUS 1
+        nextYear  MEANS FLOOR (k DIVIDED BY 12)
+        nextMonth MEANS (k MODULO 12) PLUS 1
+
+-- src:275 | month means a period calculated from a day in one month to a day numerically corresponding to that day in the following month, less one day;
+@ref Interpretation Act (BC) s 29 "month" (src:275)
+GIVEN start IS A DATE
+GIVETH A DATE
+`s 29 the last day of a month that begins on a day` start MEANS
+    `s 29 the day on which the month following a month that begins on a day begins` start MINUS 1
+
+-- "year means any period of 12 consecutive months": twelve months, each beginning on the day
+-- after the last day of the one before.
+GIVEN start  IS A DATE
+      months IS A NUMBER
+GIVETH A DATE
+`s 29 the day on which a month begins, counting consecutive months from a day` start months MEANS
+    IF   months AT MOST 0
+    THEN start
+    ELSE `s 29 the day on which the month following a month that begins on a day begins`
+             (`s 29 the day on which a month begins, counting consecutive months from a day` start (months MINUS 1))
+
+-- src:329 | year means any period of 12 consecutive months; but a reference to a calendar year means a period of 12 consecutive months beginning on January 1, and a reference by number to a dominical year means a period of 12 consecutive months beginning on January 1 of that dominical year;
+@ref Interpretation Act (BC) s 29 "year" (src:329)
+GIVEN start IS A DATE
+GIVETH A DATE
+`s 29 the last day of a year that begins on a day` start MEANS
+    `s 29 the day on which a month begins, counting consecutive months from a day` start 12 MINUS 1
+
+-- src:329 | year means any period of 12 consecutive months; but a reference to a calendar year means a period of 12 consecutive months beginning on January 1, and a reference by number to a dominical year means a period of 12 consecutive months beginning on January 1 of that dominical year;
+@ref Interpretation Act (BC) s 29 "year" (src:329)
+GIVEN y IS A NUMBER
+GIVETH A DATE
+`s 29 the last day of the calendar year` y MEANS
+    `s 29 the last day of a year that begins on a day` (YMD y 1 1)
+
+-- src:329 | year means any period of 12 consecutive months; but a reference to a calendar year means a period of 12 consecutive months beginning on January 1, and a reference by number to a dominical year means a period of 12 consecutive months beginning on January 1 of that dominical year;
+@ref Interpretation Act (BC) s 29 "year" (src:329)
+GIVEN y IS A NUMBER
+GIVETH A DATE
+`s 29 the first day of the calendar year` y MEANS
+    YMD y 1 1

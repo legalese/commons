@@ -1,0 +1,644 @@
+@lang en
+-- Source text: Interpretation Act 2005 (Ireland), Act No. 23 of 2005, as enacted, from the unofficial plain-text rendering No.-23-of-2005.txt.
+-- (c) Government of Ireland. Oireachtas Copyright Material is reproduced with the permission of the Houses of the Oireachtas.
+--
+-- WHAT THIS MODULE IS.
+-- The reusable time module for the Interpretation Act 2005 (Ireland): when an enactment comes into operation, how a period of days, weeks,
+-- months or years is counted and where it ends, which day is its last, and what the Act's own time words mean.
+-- It imports only `prelude` and `daydate`.
+--
+-- PRECONDITION, STATED ONCE (section 4(1)): "A provision of this Act applies to an enactment except in so far as the contrary intention
+-- appears in this Act, in the enactment itself or, where relevant, in the Act under which the enactment is made."
+-- Callers apply this module only where no contrary intention appears; no function here takes a contrary-intention flag.
+--
+-- WHERE THE TEXT IS SILENT THE MODULE REFUSES; it never answers with a plausible default.
+-- The Act has no rule for: a period counted "after" an event; a period of months, years or weeks that begins on a day other than the first
+-- day of a calendar month, of a year, or of a week; a last day that falls on a day of rest, recess or holiday; the moment within the date
+-- of passing at which an Act with no commencement provision comes into operation.
+-- Each of those is a named refusal below, and NOTES.md (fork register) says what each reading would answer.
+--
+-- TWO ASSUMPTIONS THE TEXT DOES NOT STATE.
+-- (1) The Act does not define "day". A day is taken to be a calendar date of `daydate`, running from one midnight to the next.
+-- (2) "midnight" is, in relation to a particular day, "the point of time at which the day ends". The end of one day and the start of the next
+--     are taken to be the same point, so a provision in operation from the end of D-1 is in operation throughout D.
+--
+-- Days of rest, recess and holiday, and public holidays, are INPUTS (a function from a date to a boolean). No calendar of holidays is encoded.
+
+IMPORT prelude
+IMPORT daydate
+
+§ `Types`
+
+-- src:86 | “Act” means—
+-- src:87 | (a) an Act of the Oireachtas, and
+-- src:88 | (b) a statute which was in force in Saorstát Éireann immediately before the date of the coming into operation of the Constitution and which continued in force by virtue of Article 50 of the Constitution;
+-- src:91 | “statutory instrument” means an order, regulation, rule, bye-law, warrant, licence, certificate, direction, notice, guideline or other like document made, issued, granted or otherwise created by or under an Act and references, in relation to a statutory instrument, to “made” or to “made under” include references to made, issued, granted or otherwise created by or under such instrument.
+@ref Interpretation Act 2005 s 2(1) "Act", "statutory instrument" (src:86-88, src:91)
+DECLARE `Kind of enactment` IS ONE OF
+    `an Act of the Oireachtas`
+    `a statute of Saorstat Eireann continued in force`
+    `a statutory instrument`
+
+-- src:230 | “midnight” means, in relation to a particular day, the point of time at which the day ends;
+@ref Interpretation Act 2005 Schedule Pt 1 "midnight" (src:230)
+DECLARE Midnight HAS
+    `the day it ends` IS A DATE
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 ss 16(1)-(4) (src:155-158)
+DECLARE `What an enactment says about its own commencement` IS ONE OF
+    `it says nothing about when it comes into operation`
+    `it is expressed to come into operation on a particular day`  HAS `the particular day` IS A DATE
+    `it is expressed to come into operation on a day not yet fixed or ascertained`
+
+-- src:153 | Date of passing of Acts of Oireachtas. 15.—(1) The date of the passing of an Act of the Oireachtas is the date of the day on which the Bill for the Act is signed by the President.
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 ss 15(1), 16 (src:153, src:155-158)
+DECLARE `Facts about an enactment` HAS
+    `its kind`                            IS A `Kind of enactment`
+    `what it says about commencement`     IS A `What an enactment says about its own commencement`
+    `the day of its passing or making`    IS A MAYBE DATE
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 ss 16(1)-(4) (src:155-158)
+DECLARE Commencement HAS
+    `the day the text names`      IS A DATE
+    `the moment the text fixes`   IS A MAYBE Midnight
+    `the provision that decides`  IS A STRING
+
+DECLARE `Unit of time` IS ONE OF
+    Days
+    Weeks
+    `Calendar months`
+    Years
+
+DECLARE `How a period is counted` IS ONE OF
+    `from a day`
+    `after an event`
+
+DECLARE `A period of time` HAS
+    `its length`                   IS A NUMBER
+    `its unit`                     IS A `Unit of time`
+    `how it is counted`            IS A `How a period is counted`
+    `the day it is counted from`   IS A DATE
+
+DECLARE Span HAS
+    `its first day` IS A DATE
+    `its last day`  IS A DATE
+
+§ `Named refusals`
+
+-- One definition per refusal; each name is its message. A refusal is an expression at any type, so no sentinel value is needed.
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+@ref Interpretation Act 2005 s 18(h) (src:177)
+GIVEN a IS A TYPE
+GIVETH AN a
+`section 18(h) says nothing about a period counted after an event` MEANS
+    REFUSE "section 18(h) says nothing about a period counted after an event"
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+-- src:232 | “month” means a calendar month;
+@ref Interpretation Act 2005 s 18(h); Schedule Pt 1 "month" (src:177, src:232)
+GIVEN a IS A TYPE
+GIVETH AN a
+`the Act has no rule for a period of calendar months that does not begin on the first day of a month` MEANS
+    REFUSE "the Act has no rule for a period of calendar months that does not begin on the first day of a month"
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+-- src:248 | “year”, when used without qualification, means a period of 12 months beginning on the 1st day of January in any year.
+@ref Interpretation Act 2005 s 18(h); Schedule Pt 1 "year" (src:177, src:248)
+GIVEN a IS A TYPE
+GIVETH AN a
+`the Act has no rule for a period of years that does not begin on 1 January` MEANS
+    REFUSE "the Act has no rule for a period of years that does not begin on 1 January"
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+-- src:245 | “week” means the period between midnight on any Saturday and midnight on the following Saturday;
+@ref Interpretation Act 2005 s 18(h); Schedule Pt 1 "week" (src:177, src:245)
+GIVEN a IS A TYPE
+GIVETH AN a
+`the Act has no rule for a period of weeks that does not begin on a Sunday` MEANS
+    REFUSE "the Act has no rule for a period of weeks that does not begin on a Sunday"
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+@ref Interpretation Act 2005 s 18(h) (src:177)
+GIVEN a IS A TYPE
+GIVETH AN a
+`a period must be a whole number of units, at least one` MEANS
+    REFUSE "a period must be a whole number of units, at least one"
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+@ref Interpretation Act 2005 s 18(h) (src:177); the Act has no rule moving a last day (no provision of the text)
+GIVEN a IS A TYPE
+GIVETH AN a
+`the Act has no rule for a last day that falls on a day of rest, recess or holiday; another enactment or rules of court may have one` MEANS
+    REFUSE "the Act has no rule for a last day that falls on a day of rest, recess or holiday; another enactment or rules of court may have one"
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+@ref Interpretation Act 2005 s 16(1) (src:155)
+GIVEN a IS A TYPE
+GIVETH AN a
+`section 16(1) names no moment within the date of passing` MEANS
+    REFUSE "section 16(1) names no moment within the date of passing"
+
+-- src:153 | Date of passing of Acts of Oireachtas. 15.—(1) The date of the passing of an Act of the Oireachtas is the date of the day on which the Bill for the Act is signed by the President.
+@ref Interpretation Act 2005 s 15(1) (src:153)
+GIVEN a IS A TYPE
+GIVETH AN a
+`section 15(1) defines the date of passing only for an Act of the Oireachtas` MEANS
+    REFUSE "section 15(1) defines the date of passing only for an Act of the Oireachtas"
+
+-- src:153 | Date of passing of Acts of Oireachtas. 15.—(1) The date of the passing of an Act of the Oireachtas is the date of the day on which the Bill for the Act is signed by the President.
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+@ref Interpretation Act 2005 ss 15(1), 16(1), 16(3) (src:153, src:155, src:157)
+GIVEN a IS A TYPE
+GIVETH AN a
+`the day of the passing or the making was not supplied` MEANS
+    REFUSE "the day of the passing or the making was not supplied"
+
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 s 16(2) (src:156)
+GIVEN a IS A TYPE
+GIVETH AN a
+`the particular day on which the enactment is to come into operation has not been fixed or ascertained` MEANS
+    REFUSE "the particular day on which the enactment is to come into operation has not been fixed or ascertained"
+
+-- src:178 | (i) Time. Where time is expressed by reference to a specified hour or to a time before or after a specified hour, that time shall be determined by reference to the Standard Time (Amendment) Act 1971 ;
+@ref Interpretation Act 2005 s 18(i) (src:178)
+GIVEN a IS A TYPE
+GIVETH AN a
+`the Standard Time (Amendment) Act 1971 is not in the text of this Act and is not encoded` MEANS
+    REFUSE "the Standard Time (Amendment) Act 1971 is not in the text of this Act and is not encoded"
+
+-- src:255 | “public holiday” means a public holiday determined in accordance with the Organisation of Working Time Act 1997 ;
+@ref Interpretation Act 2005 Schedule Pt 2 "public holiday" (src:255)
+GIVEN a IS A TYPE
+GIVETH AN a
+`no day was found within the search limit` MEANS
+    REFUSE "no day was found within the search limit"
+
+-- src:153 | Date of passing of Acts of Oireachtas. 15.—(1) The date of the passing of an Act of the Oireachtas is the date of the day on which the Bill for the Act is signed by the President.
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+@ref Interpretation Act 2005 ss 15(1), 16(1) (src:153, src:155)
+GIVEN a IS A TYPE
+GIVETH AN a
+`the moment within a day at which the enactment comes into operation is not fixed by the text, so whether the whole of that day is in operation is not answered` MEANS
+    REFUSE "the moment within a day at which the enactment comes into operation is not fixed by the text, so whether the whole of that day is in operation is not answered"
+
+§ `Section 18(h): periods of time`
+
+-- "from" a day includes that day; the last day of a period of N days is the Nth day counting the first as day 1.
+-- A period "after" an event is not governed by the text: it refuses.
+-- Weeks, calendar months and years are counted only from the day on which the defined unit itself begins (a Sunday, the first of a month, 1 January):
+-- beginning anywhere else the text gives no rule, and the module refuses; see NOTES.md, forks F4 to F6, for the readings it did not take.
+
+GIVEN n IS A NUMBER
+GIVETH A BOOLEAN
+`n is a whole number of at least one` n MEANS
+    n AT LEAST 1 AND FLOOR n EQUALS n
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+@ref Interpretation Act 2005 s 18(h) (src:177)
+GIVEN n IS A NUMBER
+      d IS A DATE
+GIVETH A DATE
+`the last day of a period of` n `days beginning on or reckoned from` d MEANS
+    IF   `n is a whole number of at least one` n
+    THEN d PLUS (n MINUS 1)
+    ELSE `a period must be a whole number of units, at least one`
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+-- src:245 | “week” means the period between midnight on any Saturday and midnight on the following Saturday;
+@ref Interpretation Act 2005 s 18(h); Schedule Pt 1 "week" (src:177, src:245)
+GIVEN n IS A NUMBER
+      d IS A DATE
+GIVETH A DATE
+`the last day of a period of` n `weeks beginning on or reckoned from` d MEANS
+    BRANCH IF NOT `n is a whole number of at least one` n THEN `a period must be a whole number of units, at least one`
+           IF NOT `is the first day of a week` d          THEN `the Act has no rule for a period of weeks that does not begin on a Sunday`
+           OTHERWISE d PLUS ((7 TIMES n) MINUS 1)
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+-- src:232 | “month” means a calendar month;
+@ref Interpretation Act 2005 s 18(h); Schedule Pt 1 "month" (src:177, src:232)
+GIVEN n IS A NUMBER
+      d IS A DATE
+GIVETH A DATE
+`the last day of a period of` n `calendar months beginning on or reckoned from` d MEANS
+    BRANCH IF NOT `n is a whole number of at least one` n THEN `a period must be a whole number of units, at least one`
+           IF DATE_DAY d GREATER THAN 1                    THEN `the Act has no rule for a period of calendar months that does not begin on the first day of a month`
+           OTHERWISE (`the calendar month containing` (`add months` d (n MINUS 1)))'s `its last day`
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+-- src:248 | “year”, when used without qualification, means a period of 12 months beginning on the 1st day of January in any year.
+@ref Interpretation Act 2005 s 18(h); Schedule Pt 1 "year" (src:177, src:248)
+GIVEN n IS A NUMBER
+      d IS A DATE
+GIVETH A DATE
+`the last day of a period of` n `years beginning on or reckoned from` d MEANS
+    BRANCH IF NOT `n is a whole number of at least one` n THEN `a period must be a whole number of units, at least one`
+           IF NOT (DATE_MONTH d EQUALS 1 AND DATE_DAY d EQUALS 1) THEN `the Act has no rule for a period of years that does not begin on 1 January`
+           OTHERWISE YMD (DATE_YEAR d PLUS (n MINUS 1)) 12 31
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+@ref Interpretation Act 2005 s 18(h) (src:177)
+GIVEN p IS A `A period of time`
+GIVETH A DATE
+`the last day of the period` p MEANS
+    CONSIDER p's `how it is counted`
+    WHEN `from a day` THEN
+        CONSIDER p's `its unit`
+        WHEN Days              THEN `the last day of a period of` (p's `its length`) `days beginning on or reckoned from` (p's `the day it is counted from`)
+        WHEN Weeks             THEN `the last day of a period of` (p's `its length`) `weeks beginning on or reckoned from` (p's `the day it is counted from`)
+        WHEN `Calendar months` THEN `the last day of a period of` (p's `its length`) `calendar months beginning on or reckoned from` (p's `the day it is counted from`)
+        WHEN Years             THEN `the last day of a period of` (p's `its length`) `years beginning on or reckoned from` (p's `the day it is counted from`)
+    WHEN `after an event` THEN `section 18(h) says nothing about a period counted after an event`
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+@ref Interpretation Act 2005 s 18(h) (src:177)
+GIVEN p IS A `A period of time`
+GIVETH A Span
+`the span of the period` p MEANS
+    Span WITH `its first day` IS p's `the day it is counted from`
+              `its last day`  IS `the last day of the period` p
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+@ref Interpretation Act 2005 s 18(h) (src:177)
+GIVEN d IS A DATE
+      f IS A DATE
+      l IS A DATE
+GIVETH A BOOLEAN
+`the day` d `falls within the period beginning on` f `and ending on` l MEANS
+    d AT LEAST f AND d AT MOST l
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+@ref Interpretation Act 2005 s 18(h) (src:177)
+GIVEN d IS A DATE
+      p IS A `A period of time`
+GIVETH A BOOLEAN
+`the day` d `falls within the period` p MEANS
+    CONSIDER p's `how it is counted`
+    WHEN `from a day`    THEN d AT LEAST start AND (d EQUALS start OR d AT MOST `the last day of the period` p)
+    WHEN `after an event` THEN IF   d LESS THAN start
+                               THEN FALSE
+                               ELSE `section 18(h) says nothing about a period counted after an event`
+    WHERE
+        start MEANS p's `the day it is counted from`
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+@ref Interpretation Act 2005 s 18(h) (src:177)
+GIVEN f IS A DATE
+      l IS A DATE
+GIVETH A NUMBER
+`the number of days in the period beginning on` f `and ending on` l MEANS
+    (Day l MINUS Day f) PLUS 1
+
+§ `Days of rest, recess and holiday`
+
+-- The Act contains no provision that moves the last day of a period off a day of rest, recess or holiday.
+-- So the last day is returned when it is not such a day, and the module refuses when it is, whatever follows it.
+-- Which days are days of rest, recess or holiday under some other enactment is an INPUT.
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+@ref Interpretation Act 2005 s 18(h) (src:177); no provision of the text moves a last day
+GIVEN `the last day` IS A DATE
+      `rest days`    IS A FUNCTION FROM DATE TO BOOLEAN
+GIVETH A DATE
+`the last day of a period, allowing for days of rest, recess or holiday` `the last day` `rest days` MEANS
+    IF   `rest days` `the last day`
+    THEN `the Act has no rule for a last day that falls on a day of rest, recess or holiday; another enactment or rules of court may have one`
+    ELSE `the last day`
+
+§ `The Schedule, Parts 1 and 2: the Act's time words`
+
+-- src:230 | “midnight” means, in relation to a particular day, the point of time at which the day ends;
+-- src:245 | “week” means the period between midnight on any Saturday and midnight on the following Saturday;
+@ref Interpretation Act 2005 Schedule Pt 1 "week" (src:245); "midnight" (src:230)
+GIVEN d IS A DATE
+GIVETH A Span
+`the week containing` d MEANS
+    Span WITH `its first day` IS d MINUS `Weekday of` d
+              `its last day`  IS (d MINUS `Weekday of` d) PLUS 6
+
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`is the first day of a week` d MEANS
+    `Weekday of` d EQUALS 0
+
+-- src:232 | “month” means a calendar month;
+@ref Interpretation Act 2005 Schedule Pt 1 "month" (src:232)
+GIVEN d IS A DATE
+GIVETH A Span
+`the calendar month containing` d MEANS
+    Span WITH `its first day` IS YMD (DATE_YEAR d) (DATE_MONTH d) 1
+              `its last day`  IS YMD (DATE_YEAR d) (DATE_MONTH d) (`Days in month` (DATE_MONTH d) (DATE_YEAR d))
+
+-- src:248 | “year”, when used without qualification, means a period of 12 months beginning on the 1st day of January in any year.
+@ref Interpretation Act 2005 Schedule Pt 1 "year" (src:248)
+GIVEN d IS A DATE
+GIVETH A Span
+`the year containing` d MEANS
+    Span WITH `its first day` IS YMD (DATE_YEAR d) 1 1
+              `its last day`  IS YMD (DATE_YEAR d) 12 31
+
+-- src:224 | “financial year”, in relation to an exchequer financial year, means the period which is coextensive with a calendar year;
+@ref Interpretation Act 2005 Schedule Pt 1 "financial year" (src:224)
+GIVEN d IS A DATE
+GIVETH A Span
+`the exchequer financial year containing` d MEANS
+    `the year containing` d
+
+-- src:229 | “local financial year” means a period which is coextensive with a calendar year;
+@ref Interpretation Act 2005 Schedule Pt 1 "local financial year" (src:229)
+GIVEN d IS A DATE
+GIVETH A Span
+`the local financial year containing` d MEANS
+    `the year containing` d
+
+-- src:246 | “week-day” means a day which is not a Sunday;
+@ref Interpretation Act 2005 Schedule Pt 1 "week-day" (src:246)
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`is a week-day` d MEANS
+    `Weekday of` d GREATER THAN 0
+
+-- src:255 | “public holiday” means a public holiday determined in accordance with the Organisation of Working Time Act 1997 ;
+-- src:257 | “working day” means a day which is not a Saturday, Sunday or public holiday.
+@ref Interpretation Act 2005 Schedule Pt 2 "working day" (src:257); "public holiday" (src:255)
+GIVEN d              IS A DATE
+      `public holidays` IS A FUNCTION FROM DATE TO BOOLEAN
+GIVETH A BOOLEAN
+`is a working day` d `public holidays` MEANS
+        `is weekday` d
+    AND NOT `public holidays` d
+
+GIVEN remaining         IS A NUMBER
+      d                 IS A DATE
+      `public holidays` IS A FUNCTION FROM DATE TO BOOLEAN
+      fuel              IS A NUMBER
+GIVETH A DATE
+`the day on which the remaining working days are completed` remaining d `public holidays` fuel MEANS
+    BRANCH IF fuel AT MOST 0 THEN `no day was found within the search limit`
+           IF `is a working day` d `public holidays`
+              THEN (IF   remaining EQUALS 1
+                    THEN d
+                    ELSE `the day on which the remaining working days are completed` (remaining MINUS 1) (d PLUS 1) `public holidays` (fuel MINUS 1))
+           OTHERWISE `the day on which the remaining working days are completed` remaining (d PLUS 1) `public holidays` (fuel MINUS 1)
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+-- src:257 | “working day” means a day which is not a Saturday, Sunday or public holiday.
+@ref Interpretation Act 2005 s 18(h); Schedule Pt 2 "working day" (src:177, src:257)
+GIVEN n                 IS A NUMBER
+      d                 IS A DATE
+      `public holidays` IS A FUNCTION FROM DATE TO BOOLEAN
+GIVETH A DATE
+`the last day of a period of` n `working days beginning on or reckoned from` d `, public holidays being` `public holidays` MEANS
+    IF   `n is a whole number of at least one` n
+    THEN `the day on which the remaining working days are completed` n d `public holidays` 4000
+    ELSE `a period must be a whole number of units, at least one`
+
+GIVEN remaining IS A NUMBER
+      d         IS A DATE
+      fuel      IS A NUMBER
+GIVETH A DATE
+`the day on which the remaining week-days are completed` remaining d fuel MEANS
+    BRANCH IF fuel AT MOST 0 THEN `no day was found within the search limit`
+           IF `is a week-day` d
+              THEN (IF   remaining EQUALS 1
+                    THEN d
+                    ELSE `the day on which the remaining week-days are completed` (remaining MINUS 1) (d PLUS 1) (fuel MINUS 1))
+           OTHERWISE `the day on which the remaining week-days are completed` remaining (d PLUS 1) (fuel MINUS 1)
+
+-- src:177 | (h) Periods of time. Where a period of time is expressed to begin on or be reckoned from a particular day, that day shall be deemed to be included in the period and, where a period of time is expressed to end on or be reckoned to a particular day, that day shall be deemed to be included in the period;
+-- src:246 | “week-day” means a day which is not a Sunday;
+@ref Interpretation Act 2005 s 18(h); Schedule Pt 1 "week-day" (src:177, src:246)
+GIVEN n IS A NUMBER
+      d IS A DATE
+GIVETH A DATE
+`the last day of a period of` n `week-days beginning on or reckoned from` d MEANS
+    IF   `n is a whole number of at least one` n
+    THEN `the day on which the remaining week-days are completed` n d 4000
+    ELSE `a period must be a whole number of units, at least one`
+
+§ `Section 18(i): a time expressed by reference to an hour`
+
+-- src:178 | (i) Time. Where time is expressed by reference to a specified hour or to a time before or after a specified hour, that time shall be determined by reference to the Standard Time (Amendment) Act 1971 ;
+@ref Interpretation Act 2005 s 18(i) (src:178)
+GIVEN hour IS A NUMBER
+GIVETH A NUMBER
+`the clock time of a specified hour in an enactment` hour MEANS
+    `the Standard Time (Amendment) Act 1971 is not in the text of this Act and is not encoded`
+
+§ `Sections 15 and 16: the day, and the moment, from which an enactment is in operation`
+
+-- "binds" is not a word the Act uses; the Act says "comes into operation", and the Schedule says that "commencement" is "the time at which the enactment comes into operation".
+
+-- src:153 | Date of passing of Acts of Oireachtas. 15.—(1) The date of the passing of an Act of the Oireachtas is the date of the day on which the Bill for the Act is signed by the President.
+@ref Interpretation Act 2005 s 15(1) (src:153)
+GIVEN `the day the Bill was signed by the President` IS A DATE
+GIVETH A DATE
+`the date of the passing of an Act of the Oireachtas signed on` `the day the Bill was signed by the President` MEANS
+    `the day the Bill was signed by the President`
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+@ref Interpretation Act 2005 s 16(1) (src:155)
+GIVEN passed IS A DATE
+GIVETH A Commencement
+`section 16(1) commencement` passed MEANS
+    Commencement WITH `the day the text names`     IS passed
+                      `the moment the text fixes`  IS NOTHING
+                      `the provision that decides` IS "section 16(1)"
+
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 s 16(2) (src:156)
+GIVEN particular IS A DATE
+GIVETH A Commencement
+`section 16(2) commencement` particular MEANS
+    Commencement WITH `the day the text names`     IS particular
+                      `the moment the text fixes`  IS JUST (Midnight WITH `the day it ends` IS particular MINUS 1)
+                      `the provision that decides` IS "section 16(2)"
+
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+@ref Interpretation Act 2005 s 16(3) (src:157)
+GIVEN made IS A DATE
+GIVETH A Commencement
+`section 16(3) commencement` made MEANS
+    Commencement WITH `the day the text names`     IS made
+                      `the moment the text fixes`  IS JUST (Midnight WITH `the day it ends` IS made MINUS 1)
+                      `the provision that decides` IS "section 16(3)"
+
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 s 16(4) (src:158)
+GIVEN particular IS A DATE
+GIVETH A Commencement
+`section 16(4) commencement` particular MEANS
+    Commencement WITH `the day the text names`     IS particular
+                      `the moment the text fixes`  IS JUST (Midnight WITH `the day it ends` IS particular MINUS 1)
+                      `the provision that decides` IS "section 16(4)"
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 s 16(1), (2) (src:155-156)
+GIVEN facts IS A `Facts about an enactment`
+GIVETH A Commencement
+`the commencement of an Act` facts MEANS
+    CONSIDER facts's `what it says about commencement`
+    WHEN `it says nothing about when it comes into operation` THEN
+        CONSIDER facts's `the day of its passing or making`
+        WHEN NOTHING THEN `the day of the passing or the making was not supplied`
+        WHEN JUST passed THEN `section 16(1) commencement` passed
+    WHEN `it is expressed to come into operation on a particular day` particular THEN `section 16(2) commencement` particular
+    WHEN `it is expressed to come into operation on a day not yet fixed or ascertained` THEN `the particular day on which the enactment is to come into operation has not been fixed or ascertained`
+
+-- src:153 | Date of passing of Acts of Oireachtas. 15.—(1) The date of the passing of an Act of the Oireachtas is the date of the day on which the Bill for the Act is signed by the President.
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 ss 15(1), 16(1), (2) (src:153, src:155-156)
+GIVEN facts IS A `Facts about an enactment`
+GIVETH A Commencement
+`the commencement of a Saorstat Eireann statute` facts MEANS
+    CONSIDER facts's `what it says about commencement`
+    WHEN `it says nothing about when it comes into operation` THEN `section 15(1) defines the date of passing only for an Act of the Oireachtas`
+    WHEN `it is expressed to come into operation on a particular day` particular THEN `section 16(2) commencement` particular
+    WHEN `it is expressed to come into operation on a day not yet fixed or ascertained` THEN `the particular day on which the enactment is to come into operation has not been fixed or ascertained`
+
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 s 16(3), (4) (src:157-158)
+GIVEN facts IS A `Facts about an enactment`
+GIVETH A Commencement
+`the commencement of a statutory instrument` facts MEANS
+    CONSIDER facts's `what it says about commencement`
+    WHEN `it says nothing about when it comes into operation` THEN
+        CONSIDER facts's `the day of its passing or making`
+        WHEN NOTHING THEN `the day of the passing or the making was not supplied`
+        WHEN JUST made THEN `section 16(3) commencement` made
+    WHEN `it is expressed to come into operation on a particular day` particular THEN `section 16(4) commencement` particular
+    WHEN `it is expressed to come into operation on a day not yet fixed or ascertained` THEN `the particular day on which the enactment is to come into operation has not been fixed or ascertained`
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 s 16 (src:155-158)
+GIVEN facts IS A `Facts about an enactment`
+GIVETH A Commencement
+`the commencement of` facts MEANS
+    CONSIDER facts's `its kind`
+    WHEN `an Act of the Oireachtas`                                     THEN `the commencement of an Act` facts
+    WHEN `a statute of Saorstat Eireann continued in force`             THEN `the commencement of a Saorstat Eireann statute` facts
+    WHEN `a statutory instrument`                                       THEN `the commencement of a statutory instrument` facts
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 s 16(1)-(4) (src:155-158)
+GIVEN facts IS A `Facts about an enactment`
+GIVETH A DATE
+`the day on which the enactment comes into operation, as the text names it` facts MEANS
+    (`the commencement of` facts)'s `the day the text names`
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 s 16(2)-(4) (src:156-158); s 16(1) names none (src:155)
+GIVEN facts IS A `Facts about an enactment`
+GIVETH A Midnight
+`the moment at which the enactment comes into operation` facts MEANS
+    CONSIDER (`the commencement of` facts)'s `the moment the text fixes`
+    WHEN NOTHING THEN `section 16(1) names no moment within the date of passing`
+    WHEN JUST m THEN m
+
+-- src:220 | “commencement”, when used in relation to an enactment, means the time at which the enactment comes into operation;
+@ref Interpretation Act 2005 Schedule Pt 1 "commencement" (src:220)
+GIVEN facts IS A `Facts about an enactment`
+GIVETH A Midnight
+`the commencement of the enactment, as the Schedule defines the word` facts MEANS
+    `the moment at which the enactment comes into operation` facts
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+-- src:230 | “midnight” means, in relation to a particular day, the point of time at which the day ends;
+@ref Interpretation Act 2005 s 16(1)-(4) (src:155-158); Schedule Pt 1 "midnight" (src:230)
+GIVEN facts IS A `Facts about an enactment`
+      d     IS A DATE
+GIVETH A BOOLEAN
+`the enactment` facts `is in operation at the end of` d MEANS
+    CONSIDER c's `the moment the text fixes`
+    WHEN JUST m   THEN d AT LEAST m's `the day it ends`
+    WHEN NOTHING  THEN d AT LEAST c's `the day the text names`
+    WHERE
+        c MEANS `the commencement of` facts
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+-- src:230 | “midnight” means, in relation to a particular day, the point of time at which the day ends;
+@ref Interpretation Act 2005 s 16(1)-(4) (src:155-158); Schedule Pt 1 "midnight" (src:230)
+GIVEN facts IS A `Facts about an enactment`
+      d     IS A DATE
+GIVETH A BOOLEAN
+`the enactment` facts `is in operation throughout` d MEANS
+    CONSIDER c's `the moment the text fixes`
+    WHEN JUST m   THEN d AT LEAST (m's `the day it ends` PLUS 1)
+    WHEN NOTHING  THEN BRANCH IF d GREATER THAN c's `the day the text names` THEN TRUE
+                              IF d LESS THAN c's `the day the text names`    THEN FALSE
+                              OTHERWISE `the moment within a day at which the enactment comes into operation is not fixed by the text, so whether the whole of that day is in operation is not answered`
+    WHERE
+        c MEANS `the commencement of` facts
+
+-- src:155 | Commencement. 16.—(1) Subject to subsection (2), every provision of an Act comes into operation on the date of its passing.
+-- src:156 | (2) Where an Act or a provision of an Act is expressed to come into operation on a particular day (whether the day is before or after the date of the passing of the Act and whether the day is named in the Act or is to be fixed or ascertained in a particular manner), the Act or provision comes into operation at the end of the day before the particular day.
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+-- src:230 | “midnight” means, in relation to a particular day, the point of time at which the day ends;
+@ref Interpretation Act 2005 s 16(1)-(4) (src:155-158); Schedule Pt 1 "midnight" (src:230)
+GIVEN facts IS A `Facts about an enactment`
+GIVETH A DATE
+`the first day on which the enactment is in operation throughout` facts MEANS
+    CONSIDER c's `the moment the text fixes`
+    WHEN JUST m   THEN m's `the day it ends` PLUS 1
+    WHEN NOTHING  THEN `the moment within a day at which the enactment comes into operation is not fixed by the text, so whether the whole of that day is in operation is not answered`
+    WHERE
+        c MEANS `the commencement of` facts
+
+-- src:157 | (3) Subject to subsection (4), every provision of a statutory instrument comes into operation at the end of the day before the day on which the statutory instrument is made.
+-- src:158 | (4) Where a statutory instrument or a provision of a statutory instrument is expressed to come into operation on a particular day (whether the day is before or after the date of the making of the statutory instrument and whether the day is named in the instrument or is to be fixed or ascertained in a particular manner), the statutory instrument or provision comes into operation at the end of the day before the particular day.
+@ref Interpretation Act 2005 s 16(3), (4) (src:157-158)
+GIVEN `what it says`   IS A `What an enactment says about its own commencement`
+      `the day it was made` IS A DATE
+GIVETH A DATE
+`the first day on which a statutory instrument is in operation throughout` `what it says` `the day it was made` MEANS
+    `the first day on which the enactment is in operation throughout` facts
+    WHERE
+        facts MEANS `Facts about an enactment` WITH
+            `its kind`                         IS `a statutory instrument`
+            `what it says about commencement`  IS `what it says`
+            `the day of its passing or making` IS JUST `the day it was made`
+
+§ `Section 1(2): the commencement of this Act`
+
+-- src:80 | [17th October, 2005]
+-- src:84 | (2) This Act comes into operation on 1 January 2006.
+@ref Interpretation Act 2005 s 1(2) (src:84); the date of its passing, endorsed under s 15(2) (src:80)
+`the facts about this Act` MEANS
+    `Facts about an enactment` WITH
+        `its kind`                         IS `an Act of the Oireachtas`
+        `what it says about commencement`  IS `it is expressed to come into operation on a particular day` (YMD 2006 1 1)
+        `the day of its passing or making` IS JUST (YMD 2005 10 17)
