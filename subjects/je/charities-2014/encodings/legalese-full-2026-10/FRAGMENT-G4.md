@@ -3,7 +3,7 @@
 Written by ENCODER G4 on 2026-10-26 for the integrator.
 Status: draft; no domain expert has read it against the Law (`not_reviewed`).
 Verified on the fleet's binary (sha256 `18bd5a72fb8dc3180540afeece05da982f87d03aa098de562de2140e4e89d475`) by the check script reproduced in section 11; its last line, when this file was generated, was `check.sh (G4): GREEN`.
-Nothing in this file was committed, pushed or sent.
+When this file was written (2026-10-26), nothing in it had been committed, pushed or sent.
 
 ## 0. What is here
 

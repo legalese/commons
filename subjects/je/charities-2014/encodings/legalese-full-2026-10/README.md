@@ -20,18 +20,18 @@ The integration layer (the `int-` files) answers six questions, each as an `@exp
 6. Who may appeal which decision to the Charity Tribunal, and by when (`Int (f) ...`)?
 
 A question asked about a day on which the Articles it rests on were not yet in force, or before the first consolidated text of 1 January 2019, is refused with a named reason and not answered.
-Where the Law can be read more than one way (136 places, called forks) the encoding takes one reading and keeps the others callable; NOTES.md lists them all.
+Where the Law can be read more than one way (137 places, called forks) the encoding takes one reading and keeps the others callable; NOTES.md lists them all.
 
 ## How to run it
 
 You need the `l4` binary the fleet used (its sha256 is in `check.sh`), and you should leave `JL4_LIBRARY_PATH` unset.
 `l4 run int-tests-chains.l4` runs one whole history across the headlines; `l4 run <any module>.l4` runs the tests of a module.
-`./check.sh` runs everything (about seven minutes), checks the two hashes, the quotations against the Law's text, the traces and the shape of the import graph, and prints GREEN or RED.
+`./check.sh` runs everything (five to ten minutes, depending on the machine), checks the two hashes, the quotations against the Law's text, the traces and the shape of the import graph, and prints GREEN or RED.
 It expects `../bin/l4` beside this directory, or the `L4` environment variable; in the commons set `L4` to the prerelease `unstable-20261026-6325439` (darwin-arm64) from `legalese/prereleases`, whose binary hash is pinned in `check.sh`. It finds the Law's text in `../../source/` (or in `RAW`).
 
 ## What is here
 
-- `NOTES.md`: scope, layout, the integration points, coverage, the 136 forks, the places where the groups disagree, the contradictions found in the Law, the open questions for an expert, the answer table, what `check.sh` prints, and the defects found.
+- `NOTES.md`: scope, layout, the integration points, coverage, the 137 forks, the places where the groups disagree, the contradictions found in the Law, the open questions for an expert, the answer table, what `check.sh` prints, and the defects found.
   Read this first.
 - `domain.l4`: the shared nouns.
 - `g1-*.l4` to `g9-*.l4`: the nine groups' modules and tests, and `FRAGMENT-G1.md` to `FRAGMENT-G9.md`, their own records.

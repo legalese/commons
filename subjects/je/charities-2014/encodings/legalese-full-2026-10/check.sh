@@ -45,7 +45,7 @@ DOMAIN_SHA="af1703908b8f62922ed36a9984104231b93b41703deec7c1e45f1fef84399d66"
 # the ind-*-tests-ambiguous and ind-*-tests-disagree files are the independent test authors' (NOTES.md, section 11, "Independent tests").
 expected_failed() {
   case "$1" in
-    g2-tests-red.l4) echo 15 ;;
+    g2-tests-red.l4) echo 16 ;;
     g3-tests-red.l4) echo 12 ;;
     g4-tests-red.l4) echo 14 ;;
     g5-tests-red.l4) echo 16 ;;

@@ -1,6 +1,6 @@
 # Three encodings of the Charities (Jersey) Law 2014, compared
 
-Written by the comparer agent of the October 2026 fleet, on 2026-10-27 (work began about 02:25 and ended about 03:25, +08).
+Written by the comparer agent of the October 2026 fleet, on 2026-10-27 (work began about 02:25 and ended about 10:30, +08).
 Status: draft.
 No domain expert has read any of the three encodings, and none has read this comparison.
 Nothing here is legal advice, and nothing here says which reading of the Law is right.
@@ -17,44 +17,44 @@ Where a cell has no mark, the column or the section heading says which kind it i
 | --- | --- | --- | --- |
 | What it is | 12 modules in `paper/case-studies/charities-jersey-2014` of `legalese/l4-ide`, extracted with `git archive` from `origin/unstable` at `0a9d0474d` (26 October 2026); the directory was last changed on 2026-09-13 (`4921d4b6e` renamed 94 fields to drop a doubled verb, `bea7c4460` six exemptions and one rewording; no change in line or assertion counts), so the files I ran are not byte-identical to the ones the July report and PDFs describe | an encoding of Articles 5 to 7 only, written 2 to 3 August 2026 without sight of the July corpus | the whole Law, by nine group encoders and an integrator, 26 to 27 October 2026 |
 | Text of the Law it read | consolidation showing the law from 16 October 2025 | the same (fetched 2026-08-02) | consolidation showing the law from 2 October 2026 |
-| Dates | report PDF created 14 July 2026; companion PDF 15 July 2026 (for CALC 2026); the cleanroom's `COMPARISON.md` says the corpus file was committed on 2026-07-18 (C) | `README.md` and `COMPARISON.md` dated 2026-08-03; deposited in the commons row 2026-09-23 | deposit files dated 26 to 27 October 2026 |
-| What I ran | `l4 run` on each of the 12 modules, `JL4_LIBRARY_PATH` unset, `nice -n 15`, one process at a time | `l4 run charity-test.l4`, same way | `check.sh` on copies taken at 02:30:44 and 03:02:35, and a harness of my own on a copy of the G2 modules |
+| Dates | report PDF created 14 July 2026; companion PDF 15 July 2026 (prepared for a conference); the cleanroom's `COMPARISON.md` says the corpus file was committed on 2026-07-18 (C) | `README.md` and `COMPARISON.md` dated 2026-08-03; deposited in the commons row 2026-09-23 | deposit files dated 26 to 27 October 2026 |
+| What I ran | `l4 run` on each of the 12 modules, `JL4_LIBRARY_PATH` unset, `nice -n 15`, one process at a time | `l4 run charity-test.l4`, same way | `check.sh` on copies taken at 02:30:44, 03:02:35 and 10:20:20, and a harness of my own on a copy of the G2 modules |
 | Binary | the fleet's `l4`, sha256 `18bd5a72fb8dc3180540afeece05da982f87d03aa098de562de2140e4e89d475` (M) | same | same |
 
 Ours was changing while I measured, so every figure for it carries a time.
-I took two copies of the deposit: at 02:30:44 (129 `.l4` files; 146 files in all) and at 03:02:35 (162 `.l4` files; 179 files in all).
-Their hashes are in `run/deposit-snap.sha256` and `run/deposit-snap2.sha256` (M).
-Between the two, the integrator re-wired the integration layer for G2's thirteenth fork, one more integration test module (`int-tests-repairs`) appeared, `check.sh` was changed (G2's red file pinned at 15, and expected refusals for some of the independent authors' files), and the independent test authors added 32 modules (`ind-a-*`, `ind-b-*`, `ind-c-*`), which were not in my brief to analyse; I report their counts only from `check.sh`.
+I took three copies of the deposit: at 02:30:44 (129 `.l4` files; 146 files in all), at 03:02:35 (162 `.l4` files; 179 files in all) and at 10:20:20 (162 `.l4` files; 179 files in all), the last after the group that owns Articles 3 to 7 (G2) had finished.
+Their hashes are in `run/deposit-snap.sha256`, `run/deposit-snap2.sha256` and `run/deposit-snap3.sha256` (M).
+Between the first and the second, the integrator re-wired the integration layer for G2's thirteenth fork, one more integration test module (`int-tests-repairs`) appeared, `check.sh` was changed (G2's red file pinned at 15, and expected refusals for some of the independent authors' files), and the independent test authors added 32 modules (`ind-a-*`, `ind-b-*`, `ind-c-*`), which were not in my brief to analyse; I report their counts only from `check.sh`.
+Between the second and the third, G2 added a fourteenth fork, F2.14 (Article 6(2)(e); section 4.2, row Q3), with a new eleventh field in the facts record and a fourteenth in the interpretation record; the changed `.l4` files are `g2-nouns`, `g2-readings`, `g2-art6-purposes`, `g2-fixtures`, `g2-tests-art5`, `g2-tests-art6`, `g2-tests-red`, a comment in `g1-art2-governor-misconduct`, some of the independent authors' modules, `int-readings`, `int-tests-fixtures` and `int-tests-repairs` (M).
 The 02:30 copy was red in its integration layer: G2 had gained a thirteenth fork (F2.13), so `Interpretation of Articles 3 to 7` has 13 fields, and `int-readings.l4` still supplied 12 (M; the error text is "you have not supplied these inputs: `whether the Commissioner's staff exercising the Commissioner's function are bound`").
-The 03:02 copy printed `check.sh: GREEN` (M).
-The integrator's `NOTES.md` was rewritten at 03:13:28, after my first report (it now has 15 sections, 136 forks and a section 11.1 table of 162 modules); until then its table and its fork count of 135 described neither copy.
-I re-read the finished file at about 03:23 (section 12 below); its section 11.1 table now equals my 03:02 run, and the 162 `.l4` files of the finished deposit are byte-identical to my 03:02 copy (M).
-The group modules (G1 to G9) are byte-identical in the two copies except `FRAGMENT-G2.md` prose, and give the same counts in both runs.
-The finished deposit also differs from my 03:02 copy in three non-code files only: `NOTES.md`, `README.md` and `encoding.json` (M).
+The 03:02 and the 10:20 copies each printed `check.sh: GREEN` (M).
+`NOTES.md` was rewritten at 03:13 and again later; the version in my 10:20 copy has 15 sections, 137 forks, a section 11.1 table of 162 modules whose figures equal my 10:20 run (section 2), and a provenance section 15 that was empty before.
+The group modules differ between the 03:02 and the 10:20 copies only in G1 (a comment), G2 (F2.14) and `FRAGMENT-G1.md`, `FRAGMENT-G2.md` and `FRAGMENT-G4.md` prose.
 
 ## 1. Headline figures
 
 - **A. Size and shape (M).**
   July: 12 files, 12,762 lines, 682 rules, 754 assertions, all 754 satisfied, 156 traces with no guard.
   Cleanroom: 1 file, 1,428 lines, 90 rules, 102 assertions, all satisfied, no traces.
-  Ours at 03:02: 162 files (domain 1, group 102, integration 27, independent tests 32), 56,280 lines, 3,828 rules, 7,953 assertions, 467 `@export`s, 976 traces; `check.sh` printed GREEN: 7,787 assertions satisfied, 156 failed on purpose, 10 refused on purpose, all 976 traces as expected.
-  Ours at 02:30 (the copy I started from): 129 files, 6,110 assertions; the group modules gave 5,432 satisfied and 134 failed on purpose, and the integration layer was red.
+  Ours at 10:20 (the final deposit): 162 files (domain 1, group 102, integration 27, independent tests 32), 56,488 lines, 3,840 rules, 8,011 assertions, 467 `@export`s, 976 traces; `check.sh` printed GREEN: 7,844 assertions satisfied, 157 failed on purpose, 10 refused on purpose, all 976 traces as expected.
+  Ours at 03:02: 7,953 assertions, 7,787 satisfied, 156 failed on purpose; at 02:30: 129 files, 6,110 assertions, and the integration layer was red.
 - **B. Coverage (M and J).**
   July: 33 of 43 Articles have operative rules, 8 are stubs only (3, 24, 25, 32, 38, 39, 42, 43), Article 2 is partial, Article 1 is not encoded, both Schedules are partial.
   Cleanroom: Articles 5 to 7 only, and within them not 5(4) to 5(8), 6(3), 6(4) or 7(4).
   Ours: 851 provisions; 755 encoded, 80 inert, 2 refused, 14 out of scope; 35 of the 43 Articles have every row encoded, and the other 8 (1, 3, 4, 25, 28, 32, 40, 43) have at least one row that is not.
 - **C. Registers of places where the Law reads two ways (M and J).**
-  Ours: 136 forks (the first `NOTES.md` said 135; the rewritten one says 136), 35 further entries for conflicts, commencement oddities and slips, and 71 open-question bullets (some hold more than one question).
+  Ours: 137 forks (the first `NOTES.md` said 135; the finished one says 137), 35 further entries for conflicts, commencement oddities and slips, and 73 open-question bullets (some hold more than one question, and one is marked as ruled).
   July: 20 findings in its report, about 39 interpretation calls in its module headers (J), and 189 `WITHIN <number>` deadlines of which 67 lines are marked as placeholders.
   Cleanroom: 12 numbered ambiguities.
-  For Articles 5 to 7 the three registers hold 20 distinct questions: 1 registered by all three, 5 by two, 14 by one.
+  For Articles 5 to 7 the three registers hold 20 distinct questions: 1 registered by all three, 6 by two, 13 by one.
   For the rest of the Law, July has 43 identifiable items; ours registers the same question for 16 of them (10 with the same reading, 6 with a different default), a related question for 9, and nothing for 18.
 - **D. Different defaults where both sides registered the question (J, with M evidence).**
   Nine: three in Articles 5 to 7 (no purposes; a defective determination; who Article 7 binds) and six between July and ours in Articles 4, 11, 21, 27 and 37.
-  Two more differ where only one side registered the question (6(2)(e); an ancillary purpose alone).
+  Two more differ from July where July took a reading without registering the question, and ours and the cleanroom agree with each other (6(2)(e), since fork F2.14; an ancillary purpose alone).
 - **E. Outcomes on the cleanroom's 25 worlds (M).**
-  Eight decisions per world, 200 comparisons: ours agrees on 192 (96.0%) under its favoured readings, 199 when F2.1 and F2.10 are both read as their second reading.
-  The 8 disagreements have three causes: F2.1 (3), F2.10 (4) and the scope of "properly made" (1).
+  Eight decisions per world, 200 comparisons, against the final deposit with its 11-field facts record and 14-field interpretation record: ours agrees on 192 (96.0%) under its favoured readings, 195 with F2.1 read as B, 196 with F2.10 read as B, 192 with F2.14 read as B (no world changes), and 199 when F2.1 and F2.10 are both read as their second reading (also 199 with F2.14 B added).
+  The 8 disagreements have three causes: F2.1 (3), F2.10 (4) and the scope of "properly made" (1); these are the same 8 as before F2.14.
+  A 26th world that I constructed for 6(2)(e) (a purpose of providing accommodation or care with nobody shown to be in need) agrees on 8 of 8 comparisons under F2.14 A and on 4 of 8 under F2.14 B, measured against expected values that I copied from the cleanroom's world 05 (a purpose with no flag set); the cleanroom itself was not run on this world, so these two figures are not a measurement of the cleanroom (section 12).
 - **F. What each has that the others lack.**
   See section 8.
   Ours has no NLG, no projection, no golden file and no wizard; the cleanroom has a DMN projection, four golden files and a pinned case file; July has two PDFs for drafters.
@@ -65,35 +65,36 @@ All figures are **M** unless stated; the commands are in section 11.
 "Rules" is a proxy: lines that start in column 1 and contain `MEANS` (or start with `DECIDE`).
 Ours includes fixture and test modules in its totals, and the tables below split them.
 
-| | July | Cleanroom | Ours, copy of 02:30 | Ours, copy of 03:02 |
-| --- | --- | --- | --- | --- |
-| `.l4` files | 12 | 1 | 129 (domain 1, group 102, integration 26) | 162 (domain 1, group 102, integration 27, independent tests 32) |
-| lines | 12,762 | 1,428 | 48,723 | 56,280 |
-| bytes | 973,620 | 104,085 | 4,546,194 | 5,249,898 |
-| rules (proxy) | 682 | 90 | 3,349 (rule modules 1,736) | 3,828 (rule modules 1,736) |
-| rules typed `GIVETH A DEONTIC` | 93 | 0 | 284 in rule modules | 286 (284 in rule modules, 2 in tests) |
-| `DECLARE` (types) | 70 | 4 | 405 | 406 |
-| `@export` | 0 | 1 | 467 (13 in the integration layer) | 467 (13 in the integration layer) |
-| `@ref` lines / `-- src:` quotation lines | 0 / 0 | 45 / 0 (its 62 quoted strings are matched against the Law by its own audit, C) | 1,509 / 1,702 | 1,509 / 1,725 (`srcrefs.py` counts 1,724 and finds 0 problems in 1,666 locators) |
-| `#ASSERT` directives | 754 | 102 | 6,110 | 7,953 |
-| assertions satisfied (run) | 754 | 102 | 5,640 (group modules 5,432; integration modules 208, not green); the earlier `NOTES.md` table said 5,773 | 7,787 (group 5,432; integration 586; independent 1,769); the finished `NOTES.md` section 11.1 prints the same 7,787 |
-| assertions failed (run) | 0 | 0 | 470, of which 134 are the group modules' by design | 156, all expected: 134 in the group red files (G2's holds 15), 6 in `int-tests-red`, 16 in the independent authors' files |
-| assertions refused (run) | 0 | 0 | 0 | 10, all expected, in the independent authors' `ambiguous` and `disagree` files |
-| diagnostics above Information (errors, warnings) | 0 | 0 | integration layer: 387 errors | none besides the expected failures and refusals |
-| `#TRACE` | 156 | 0 | 917 | 976 |
-| traces guarded by an `-- EXPECT:` comment | 0 | not applicable | 926 `EXPECT` lines; 900 of 917 traces behaved as expected; the 17 that did not are in `int-tests-chains` and `int-tests-contravention`, whose imports did not compile | 985 `EXPECT` lines; all 976 traces behaved as expected |
-| `#EVAL` | 34 | 0 | 0 | 0 |
-| golden files | 0 | 4 (`tests/`) | 0 | 0 |
-| time to run all modules | about 10 seconds for the 12 modules, one at a time | 0.6 seconds | 446 seconds for `check.sh` | 362 seconds for `check.sh` (162 modules, the quotation check and the trace check), on a loaded machine |
+| | July | Cleanroom | Ours, copy of 02:30 | Ours, copy of 03:02 | Ours, copy of 10:20 (final) |
+| --- | --- | --- | --- | --- | --- |
+| `.l4` files | 12 | 1 | 129 (domain 1, group 102, integration 26) | 162 (domain 1, group 102, integration 27, independent tests 32) | 162 (same split) |
+| lines | 12,762 | 1,428 | 48,723 | 56,280 | 56,488 |
+| bytes | 973,620 | 104,085 | 4,546,194 | 5,249,898 | 5,283,836 |
+| rules (proxy) | 682 | 90 | 3,349 (rule modules 1,736) | 3,828 (rule modules 1,736) | 3,840 (rule modules 1,743) |
+| rules typed `GIVETH A DEONTIC` | 93 | 0 | 284 in rule modules | 286 (284 in rule modules, 2 in tests) | 286 |
+| `DECLARE` (types) | 70 | 4 | 405 | 406 | 407 |
+| `@export` | 0 | 1 | 467 (13 in the integration layer) | 467 | 467 |
+| `@ref` lines / `-- src:` quotation lines | 0 / 0 | 45 / 0 (its 62 quoted strings are matched against the Law by its own audit, C) | 1,509 / 1,702 | 1,509 / 1,725 | 1,511 / 1,728 (`srcrefs.py` counts 1,727 and finds 0 problems in 1,668 locators) |
+| `#ASSERT` directives | 754 | 102 | 6,110 | 7,953 | 8,011 |
+| assertions satisfied (run) | 754 | 102 | 5,640 (group modules 5,432; integration modules 208, not green) | 7,787 (group 5,432; integration 586; independent 1,769) | 7,844 (group 5,471; integration 604; independent 1,769); the finished `NOTES.md` section 11.1 prints the same 7,844 |
+| assertions failed (run) | 0 | 0 | 470, of which 134 are the group modules' by design | 156, all expected | 157, all expected: 135 in the group red files (G2's holds 16), 6 in `int-tests-red`, 16 in the independent authors' files |
+| assertions refused (run) | 0 | 0 | 0 | 10, all expected | 10, all expected, in the independent authors' `ambiguous` and `disagree` files |
+| diagnostics above Information (errors, warnings) | 0 | 0 | integration layer: 387 errors | none besides the expected failures and refusals | the same |
+| `#TRACE` | 156 | 0 | 917 | 976 | 976 |
+| traces guarded by an `-- EXPECT:` comment | 0 | not applicable | 926 `EXPECT` lines; 900 of 917 traces behaved as expected; the 17 that did not are in `int-tests-chains` and `int-tests-contravention`, whose imports did not compile | 985 `EXPECT` lines; all 976 behaved as expected | 985 `EXPECT` lines; all 976 behaved as expected |
+| `#EVAL` | 34 | 0 | 0 | 0 | 0 |
+| golden files | 0 | 4 (`tests/`) | 0 | 0 | 0 |
+| time to run all modules | about 10 seconds for the 12 modules, one at a time | 0.6 seconds | 446 seconds for `check.sh` | 362 seconds | 322 seconds for `check.sh` (162 modules, the quotation check and the trace check), on a loaded machine |
 
 By group, for ours (M).
-The group rows are identical in the two copies.
+Groups other than G2 have the same figures in all three copies; G1's lines, rules and assertions are unchanged by its one comment.
 
 | group | scope | files | lines | rules (proxy) | `#ASSERT` | `#TRACE` | `@export` |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | domain | shared nouns | 1 | 261 | 0 | 0 | 0 | 0 |
 | G1 | Articles 1, 2 | 7 | 2,897 | 262 | 406 | 3 | 19 |
-| G2 | Articles 3 to 7 | 12 | 3,775 | 265 | 385 | 62 | 40 |
+| G2, to 03:02 | Articles 3 to 7 | 12 | 3,775 | 265 | 385 | 62 | 40 |
+| G2, 10:20 | Articles 3 to 7, with F2.14 | 12 | 3,904 | 273 | 425 | 62 | 40 |
 | G3 | Articles 8 to 10 | 14 | 4,057 | 304 | 461 | 52 | 42 |
 | G4 | Articles 11, 12 | 11 | 4,292 | 302 | 423 | 117 | 27 |
 | G5 | Articles 13, 14 | 12 | 4,755 | 325 | 362 | 97 | 46 |
@@ -103,12 +104,15 @@ The group rows are identical in the two copies.
 | G9 | Schedules 1, 2 | 9 | 5,025 | 449 | 640 | 131 | 68 |
 | integration, 02:30 | wiring, six headlines | 26 | 5,916 | 381 | 544 | 17 | 13 |
 | integration, 03:02 | the same, re-wired, plus `int-tests-repairs` | 27 | 6,168 | 404 | 592 | 17 | 13 |
+| integration, 10:20 | the same, re-wired for F2.14 | 27 | 6,237 | 408 | 610 | 17 | 13 |
 | independent tests, 03:02 | `ind-a-*`, `ind-b-*`, `ind-c-*`; appeared mid-work | 32 | 7,305 | 456 | 1,795 | 59 | 0 |
+| independent tests, 10:20 | the same, with small edits | 32 | 7,315 | 456 | 1,795 | 59 | 0 |
 
 Three notes on how far these numbers can be trusted.
 **How recent is the integrator's table?**
 The table in the first version of `NOTES.md` section 11.1 (last written at 01:50, 129 modules) differed from my 02:30 run in six modules, all in G2 and G7.
-The `NOTES.md` rewritten at 03:13 prints a new table of 162 modules, 7,787 satisfied, 156 failed (expected 156), 10 refused (expected 10), `srcrefs` 1,724 lines, 1,666 locators, 0 problems, 976 traces; every one of those figures equals my 03:02 run (M).
+The `NOTES.md` rewritten at 03:13 printed a table of 162 modules, 7,787 satisfied, 156 failed (expected 156), 10 refused (expected 10), `srcrefs` 1,724 lines, 1,666 locators, 0 problems, 976 traces, equal to my 03:02 run.
+The `NOTES.md` of my 10:20 copy prints 162 modules, 7,844 satisfied, 157 failed (expected 157), 10 refused (expected 10), `srcrefs` 1,727 lines, 1,668 locators, 0 problems, 976 traces, equal to my 10:20 run on every figure (M).
 **The cleanroom's own line count.**
 Its `COMPARISON.md` says 1,472 lines; its `README.md` and `wc -l` say 1,428 (M).
 I use 1,428.
@@ -206,21 +210,21 @@ Both treat Article 3 as inert.
 
 | | Ours | July | Cleanroom |
 | --- | --- | --- | --- |
-| Main register | forks: 136, each a field of an `Interpretation of ...` record, `TYPICALLY` the reading taken, with the other readings callable and tested (M) | 20 findings in the report: 8 with a section each and 12 in one-line bullets (M, by reading); about 39 interpretation calls in the module headers marked `>>>` (J, counted by reading the headers of 10 modules; test-level `>>>` commentary not counted) | 12 ambiguities A1 to A12, each marked `-- AMBIGUITY A<n>` at the site (M) |
-| Other registers | 35 entries S1 to S35 for conflicts, commencement oddities and slips (25 that change an answer, 3 on commencement, 7 slips; S35 is F2.13, added at 03:13); 71 open-question bullets; the independent authors' ambiguity rows kept in section 12.3; non-fork readings listed in G2 (8), G4 (13), G6 (18) and G7 (4) (M) | 189 `WITHIN <number>` deadlines invented where the Law gives none, of which 67 lines are marked as placeholders; the report says "roughly forty" (M) | a thirteenth reading recorded as "not an ambiguity" (M) |
-| Stale or inconsistent | the first `NOTES.md` section 5 said 135 and omitted F2.13; the rewritten one says 136, and its fork table still has an empty question for all 14 G7 forks (M) | the report counts "about twenty" findings and the `>>>` markers are more than twice that (J) | its `COMPARISON.md` counts 1,472 lines against 1,428 (M) |
+| Main register | forks: 137, each a field of an `Interpretation of ...` record, `TYPICALLY` the reading taken, with the other readings callable and tested (M) | 20 findings in the report: 8 with a section each and 12 in one-line bullets (M, by reading); about 39 interpretation calls in the module headers marked `>>>` (J, counted by reading the headers of 10 modules; test-level `>>>` commentary not counted) | 12 ambiguities A1 to A12, each marked `-- AMBIGUITY A<n>` at the site (M) |
+| Other registers | 35 entries S1 to S35 for conflicts, commencement oddities and slips (25 that change an answer, 3 on commencement, 7 slips; S35 is F2.13, added at 03:13); 73 open-question bullets (one of them marked as ruled and no longer open); the independent authors' ambiguity rows kept in section 12.3; non-fork readings listed in G2 (8), G4 (13), G6 (18) and G7 (4) (M) | 189 `WITHIN <number>` deadlines invented where the Law gives none, of which 67 lines are marked as placeholders; the report says "roughly forty" (M) | a thirteenth reading recorded as "not an ambiguity" (M) |
+| Stale or inconsistent | the first `NOTES.md` section 5 said 135 and omitted F2.13; the finished one says 137, and its fork table, which had an empty question for all 14 G7 forks in the 03:02 copy, now has none (M) | the report counts "about twenty" findings and the `>>>` markers are more than twice that (J) | its `COMPARISON.md` counts 1,472 lines against 1,428 (M) |
 
-How ours' forks divide by kind (J: my classification of each fork's question; the lists are in `scripts/fork-classes.py`).
+How ours' forks divide by kind (F2.14 is a question of meaning) (J: my classification of each fork's question; the lists are in `scripts/fork-classes.py`).
 
 | kind of question | forks |
 | --- | --- |
-| meaning, scope or relation of provisions | 77 |
+| meaning, scope or relation of provisions | 78 |
 | time arithmetic: when a period starts or ends, how days, months, years and units are counted, which date | 49 |
 | promptness: "reasonable time", "promptly", "as soon as practicable" | 7 |
 | commencement and which text of the Law is in force | 3 |
-| all | 136 |
+| all | 137 |
 
-Four of the 136 are one question asked in four groups: the unit of a term of imprisonment (F6.16, F7.8, F8.8, F9.13).
+Four of the 137 are one question asked in four groups: the unit of a term of imprisonment (F6.16, F7.8, F8.8, F9.13).
 July flags one time-arithmetic choice with a `>>>` (a period of one year is taken as 365 days, `part-7-information.l4:307`) and does not register the others; where the Law gives no period it writes a number and marks it as a placeholder.
 
 ### 4.2 Articles 5 to 7: all three compared, question by question (J)
@@ -232,7 +236,7 @@ July flags one time-arithmetic choice with a `>>>` (a period of one year is take
 | --- | --- | --- | --- | --- | --- | --- |
 | Q1 | 5(1)(a) | "all of its purposes" when the entity has no purposes | F2.1 (fork) | A10 (register) | header call (part-3 line 52) and README Sidebar 8 | all three |
 | Q2 | 5(1)(a)(ii) | an ancillary purpose when no charitable purpose stands beside it ("any of its charitable purposes") | F2.1 (same fork as Q1) | A9 (register) | not recorded | ours and cleanroom |
-| Q3 | 6(2)(e) | "(1)(n) includes relief given by accommodation or care": widening or declaratory | not recorded | A2 (register) | not recorded | cleanroom only |
+| Q3 | 6(2)(e) | "(1)(n) includes relief given by accommodation or care": widening or declaratory | F2.14 (fork; added after the encoders finished, prompted by this comparison) | A2 (register) | not recorded (the widening reading is taken) | ours and cleanroom |
 | Q4 | 6(2)(c) | "sport that involves physical skill and exertion": both, or either | not recorded (one input fact) | A1 (register) | not recorded (one boolean) | cleanroom only |
 | Q5 | 6(1)(p) | "may reasonably be regarded as analogous": open standard or closed list | listed in G2 section 8 as a judgement the caller records (not a register entry) | A3 (register) | not recorded (a boolean) | cleanroom only |
 | Q6 | 6(5) | political carve-out: purpose-level or entity-level | not recorded | A4 (register) | README section 5 (per-purpose, at both gates), not as a question | cleanroom only |
@@ -253,15 +257,26 @@ July flags one time-arithmetic choice with a `>>>` (a period of one year is take
 
 Counts, from the table (M): 20 distinct questions.
 Registered by all three: 1 (Q1).
-Registered by two: 5 (Q2, Q7, Q10, Q11 by ours and the cleanroom; Q17 by ours and July).
-Registered by one: 14, of which 7 by the cleanroom alone (Q3 to Q6, Q8, Q9 and Q12) and 7 by ours alone (Q13 to Q16 and Q18 to Q20).
+Registered by two: 6 (Q2, Q3, Q7, Q10, Q11 by ours and the cleanroom; Q17 by ours and July).
+Registered by one: 13, of which 6 by the cleanroom alone (Q4, Q5, Q6, Q8, Q9 and Q12) and 7 by ours alone (Q13 to Q16 and Q18 to Q20).
 Q7 changed status in the re-read at 03:23: the first `NOTES.md` did not record it, and the rewritten section 12.3 records it twice (A-14 from ind-b and A7-01b from ind-c, both "ambiguity kept"); my first report counted 1, 4 and 15.
+Q3 changed status in the third re-read (10:20, section 12.3): fork F2.14 registers it in ours, which moves the split from 1 / 5 / 14 to 1 / 6 / 13; F2.14 was added after the encoders finished, in response to this comparison, so that row is not independent evidence that the encoders saw the question.
 July registers only Q1 and Q17 in Articles 5 to 7, and describes Q6, Q8, Q9 and Q10 in prose without presenting them as questions.
 
 Which side saw a question the other did not (J).
-The cleanroom saw seven that ours did not register: 6(2)(c) conjunctive or not (Q4), the analogy standard in 6(1)(p) (Q5, which ours lists as a judgement the caller records), whether 6(5) works at purpose or entity level (Q6), whether 7(3)(b) is operative (Q8), whether "unduly restrictive" defeats public benefit (Q9), the reach of the list in 5(2) (Q12), and 6(2)(e) (Q3).
-The cleanroom's own `COMPARISON.md` called 6(2)(e) "the single most useful thing this whole exercise produced", because the July corpus took the widening reading without recording that a choice was made.
-Ours repeats that: ours widens (`g2-art6-purposes.l4:268-283`; `g2-tests-art6.l4:139-144` asserts it) and nothing in any fragment, in the rewritten `NOTES.md` or `README.md`, or in any module comment I found records 6(2)(e) as contestable (M: `grep` for "accommodation" and "6(2)(e)" across all fragments finds only the coverage row, the answer table and a test inventory, and finds nothing in `NOTES.md` or `README.md`; re-run at 03:23).
+The cleanroom saw six that ours did not register: 6(2)(c) conjunctive or not (Q4), the analogy standard in 6(1)(p) (Q5, which ours lists as a judgement the caller records), whether 6(5) works at purpose or entity level (Q6), whether 7(3)(b) is operative (Q8), whether "unduly restrictive" defeats public benefit (Q9), and the reach of the list in 5(2) (Q12).
+Article 6(2)(e) (Q3) is registered by the cleanroom (its A2) and, since fork F2.14, by ours; July took a reading (it widens) and records no choice.
+The cleanroom's own `COMPARISON.md` called 6(2)(e) "the single most useful thing this whole exercise produced", because the July corpus took the widening reading without recording that a choice was made; `part-3-charity-test.l4:106` and `165-169` confirm that July has a plain boolean `(2)(e) relief given by the provision of accommodation or care` and makes head (n) the disjunction of (n) and (2)(e) (M).
+**A correction.**
+My first two versions of this file said that ours widened head (n) at 6(2)(e), that a commercial care home was "charitable on that ground alone" in ours, and that no register of ours recorded the question.
+The first two statements were wrong about ours, and I correct them here and do not soften them.
+What the 03:02 modules did, measured with the probe `run/e-old-probe/probe.l4`: the only operand of `Art 6(2)(e)` was the seventh field of the facts record, which fuses the need element and the accommodation-or-care element ("the purpose is relief of those in need by reason of age, ill-health, disability, financial hardship or other disadvantage, given by the provision of accommodation or care"); a purpose of providing accommodation or care with nobody shown to be in need could not be said, and recorded under no head with that field FALSE it was not a charitable purpose (FALSE), while the same purpose with the field TRUE was (TRUE) (M).
+So the code was already declaratory in substance, as the cleanroom's reading is.
+I had read the name of a test fixture, which omits the need element, as a widening.
+The third statement was true when I made it (a search of the fragments, `NOTES.md` and `README.md` found nothing on 6(2)(e)) and is false now.
+Fork F2.14 has reading A, declaratory, as the default (the owner's ruling of 2026-10-27) and reading B, widening, callable: B is A OR a new eleventh fact, `the purpose is the provision of accommodation or care`; they differ only where that fact is TRUE and the need-qualified fact is FALSE.
+Public benefit is a separate limb on both readings (Articles 5(1)(b), 7(2), 7(3)(a)), so a commercial care home that passes head (n) on reading B still has to meet it.
+A question for a domain expert remains open in G2 (section 7, question 14): whether Jersey's omission from 6(2)(e) of the words "to the persons mentioned in that paragraph" is deliberate.
 Ours registered seven that nobody else did: four inside the cleanroom's scope, which the cleanroom encoded without registering ("acting in that capacity", Q13; "a Minister", Q14; "equality and diversity", Q15; the philosophical-belief head, Q16), and three outside the cleanroom's scope (the "before" of 5(6), Q18; which guidance 5(6) to 5(8) reach, Q19; the Commissioner's staff, Q20).
 Ours and July both registered the promptness of 5(7) and 5(8) (Q17), in different ways: ours as a fork with no number, July as a flagged placeholder number.
 July saw none that the other two missed in Articles 5 to 7 (its only registered call there, Q1, was also seen by both).
@@ -321,7 +336,7 @@ Match: SAME is the same question with the same reading taken; DIFF is the same q
 
 Counts (M, from the table): 43 July items; SAME 10; DIFF 6; REL 9; JONLY 18.
 So ours registers the same question as July for 16 of the 43.
-Of ours' 136 forks, 12 are matched to a SAME or DIFF row (F1.1, F3.10, F4.3, F7.5, F7.10, F8.5, F8.11, F8.14, F8.18, F9.8 outside G2, and F2.8 and F2.9 inside it); 8 more relate to a REL row (F3.1, F6.1, F6.3, F6.14, F6.15, F8.6, F8.12, F8.15); and 105 of the 123 forks outside G2 have no July counterpart that I found.
+Of ours' 137 forks, 12 are matched to a SAME or DIFF row (F1.1, F3.10, F4.3, F7.5, F7.10, F8.5, F8.11, F8.14, F8.18, F9.8 outside G2, and F2.8 and F2.9 inside it); 8 more relate to a REL row (F3.1, F6.1, F6.3, F6.14, F6.15, F8.6, F8.12, F8.15); and 105 of the 123 forks outside G2 have no July counterpart that I found.
 July's deadline placeholders (189 numbers) correspond in ours to seven promptness forks and to inputs, and not to numbers.
 
 ## 5. D. Where both sides saw the same question and took different readings
@@ -342,11 +357,11 @@ A question that ours registers and declines to answer is not counted here (12(3)
 | D8 | 27(1), "if the Commissioner believes that" (F8.14) | reading A: the belief alone is the ground | July: belief and the limb's content both required (`part-7-information.l4:496-503`) | a belief that misconduct occurred when the facts show none | J |
 | D9 | 37(1)(a), officers of "the partnership" and "the body corporate" (F7.10) | capacity as printed for each kind of body | July: flat disjunction; "cross-gate" expressly rejected | a director of a limited liability partnership who connived | J |
 
-Two more differences in default, where only one side registered the question (J):
+Two more differences from July, where July took a reading without registering the question and ours and the cleanroom agree with each other (J):
 
 | # | Provision | Readings | One discriminating case | Evidence |
 | --- | --- | --- | --- | --- |
-| D10 | 6(2)(e), accommodation or care | ours and July widen head (n); the cleanroom (A2) reads (e) as declaratory and gives it no operand | a commercial care home: ours and July charitable on that ground alone; cleanroom not | M for ours' reading (module and test); C for the cleanroom and July |
+| D10 | 6(2)(e), accommodation or care (F2.14; the cleanroom's A2) | ours: declaratory by default (the owner's ruling of 2026-10-27), as before F2.14, with widening callable as reading B; the cleanroom: declaratory, no operand; July: widens, `(n) OR (2)(e)` with a plain boolean, not registered | a purpose of providing accommodation or care with nobody shown to be in need (a commercial care home): within head (n) on July's reading and on ours' reading B; not within it on ours' reading A and the cleanroom's | M for ours (probe on the 03:02 modules, and the harness witness world: A agrees with the cleanroom's expected values for a purpose with no flag set on 8 of 8 comparisons, B on 4 of 8; the cleanroom was not run on that world) and for July's code; C for the cleanroom; the default is a ruling and an expert question remains; on either reading of ours a care home that passes head (n) still has to meet the public benefit test (Articles 5(1)(b), 7(2), 7(3)(a)) |
 | D11 | 5(1)(a)(ii), an ancillary purpose with no charitable purpose beside it | ours (F2.1 A, B) and the cleanroom (A9): fails. July: passes (the ancillary flag is taken as given) | a charity shop with nothing behind it (world 02): ours and cleanroom fail it | M for ours and the cleanroom (world 02 agrees on all 8 decisions); C for July (cleanroom `COMPARISON.md` D2) |
 
 One case that looks like a disagreement and is a difference of definition (J).
@@ -359,8 +374,9 @@ Both give the same answer to the question the Law asks (the entity does not prov
 ### 6.1 What I did
 
 The cleanroom ships `charity-test.cases.json`: 25 worlds, each an entity with its purposes, constitution, applicant flag and public-benefit finding, with 40 decisions pinned to what its own L4 gave.
-I expressed each world as inputs to ours' exports, with `scripts/gen-harness.py`, and evaluated them with `#EVAL` under the group's own named readings, in a copy of the G2 modules (`run/e/`).
-G2 version: the module hashes in `run/e/e-inputs.sha256`; they are the same as at 02:28 when I began and, at the time of the last check (section 12), the same as in the live deposit.
+I expressed each world as inputs to ours' exports, with `scripts/gen-harness-v2.py`, and evaluated them with `#EVAL` under the group's own named readings, in a copy of the G2 modules (`run/e3/`).
+The first run (`run/e/`, 13-field interpretation and 10-field facts) was against the G2 modules of 02:28 to 03:02; the run reported here is against the final modules, with the 14-field interpretation record and the 11-field facts record, adapted mechanically (one more positional argument at the end of each record, and two more named readings: R8 and R9).
+G2 version: the module hashes in `run/e3/e3-inputs.sha256`; `g2-nouns`, `g2-readings`, `g2-art6-purposes`, `g2-art5-charity-test`, `g2-art7-public-benefit` and `domain` there are byte-identical to the final deposit (checked with `cmp` at 10:23); `g2-art5` and `g2-art7` are unchanged from 02:28.
 Eight of the cleanroom's 40 decisions have a counterpart in ours' exports (called E1 to E8 below):
 
 | # | Cleanroom decision | Ours |
@@ -383,7 +399,7 @@ I did not compare the intermediate limbs.
 | cleanroom field | ours | note |
 | --- | --- | --- |
 | purpose with up to 16 head booleans | `Purpose` with one `head` (MAYBE) | no world has two heads; the generator would have reported one |
-| extension and gate booleans (sickness, regeneration, civic, sport skill, recreation need and public, equality, diversity) | `Facts about a purpose under Article 6` | `object of improving the conditions of life` set TRUE for the two recreation worlds because the cleanroom's head (i) boolean already includes it; equality and diversity both TRUE for the one world with the compound head |
+| extension and gate booleans (sickness, regeneration, civic, sport skill, recreation need and public, equality, diversity) | `Facts about a purpose under Article 6` | `object of improving the conditions of life` set TRUE for the two recreation worlds because the cleanroom's head (i) boolean already includes it; equality and diversity both TRUE for the one world with the compound head; the eleventh field (`the purpose is the provision of accommodation or care`, added for F2.14) FALSE in all 25 worlds, because the cleanroom has no operand for 6(2)(e) |
 | `constitution` with six permission booleans and one capacity boolean | list of `Permission that a constitution expressly makes` | the one capacity boolean is copied onto each permission; "a Minister" maps to `a Minister` with no office |
 | `an_applicant` | `standing on the register`: `an applicant for registration` or `entered in the general section` | |
 | `the_public_benefit_finding` | `Determination of public benefit` | ours has `regard had to the guidance` (Article 5(5)), which the cleanroom does not model: set TRUE for every world; and `treated identified persons as a section of the public`: set FALSE; the determiner is `the Commissioner` |
@@ -391,80 +407,96 @@ I did not compare the intermediate limbs.
 | entity-ness (Article 2) | every entity is `a company`, a Jersey entity | neither the cleanroom nor this comparison tests Article 2 |
 | the Order of 5(3) | the Boolean `an Order under Article 5(3) disapplies Article 5(2) for the entity` | |
 | office of the Minister | `the Chief Minister` (text of 2 October 2026) | affects only F2.3 reading B |
+| the cleanroom's A2 (6(2)(e) gives no operand) | a 26th world, constructed by me, called W: a purpose of providing accommodation or care with nobody shown to be in need, recorded under no head, the eleventh field TRUE and the seventh FALSE; the determination finds public benefit | the expected values are those of the cleanroom's world 05, a purpose with no flag set, because with no operand for 6(2)(e) the cleanroom can only represent the witness that way; I did not run the cleanroom on W (J) |
 
 All 25 worlds mapped; one input (world 22) has a fact with no field.
+World W is not one of the cleanroom's worlds and is counted separately everywhere below.
 
 ### 6.3 Result
 
-R0 to R7 in the table are the readings of ours defined in the second table below.
+R0 to R9 in the tables are the readings of ours defined in the second table below.
+Row W is the constructed witness world.
 
 | # | Cleanroom world (shortened) | Cleanroom: meets the test | Ours, favoured: meets the test | Decisions agreeing under the favoured reading (of 8) | Readings of ours under which all 8 decisions agree |
 | --- | --- | --- | --- | --- | --- |
-| 00 | the St Helier poverty trust + a poverty-relief purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 01 | the poverty trust with a charity shop + an ancillary fundraising | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 02 | the charity shop with nothing behind it + an ancillary fundraisi | FALSE | FALSE | 8 | R0, R1, R3, R4, R5, R6, R7 |
-| 03 | the poverty trust with a party-political object + a party-politi | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 04 | the poverty trust with incidental campaigning + an ancillary par | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 05 | the grocery company + a purely commercial purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 06 | the entity with no purposes + a poverty-relief purpose | TRUE | FALSE | 6 | R1, R2, R7 |
-| 07 | the entity with no purposes and no benefit + a poverty-relief pu | FALSE | FALSE | 7 | R1, R2, R7 |
-| 08 | the disease-prevention trust + a sickness-prevention purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 09 | the pigeon fanciers' association + a spectator-pastime purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 10 | the island swimming association + a physical-sport purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 11 | the members-only tennis club + a members-only recreation purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 12 | the public recreation ground trust + an open recreation purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 13 | the humanist society + a philosophical-belief purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 14 | the Ministerially directed trust + a poverty-relief purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R7 |
-| 15 | the Ministerially directed trust exempted by Order + a poverty-r | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 16 | the States-governed foundation + a poverty-relief purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 17 | the Guernsey-governed foundation + a poverty-relief purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 18 | the trust with a Minister in a private capacity + a poverty-reli | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R6, R7 |
-| 19 | the dormant registered charity + a poverty-relief purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 20 | the applicant not yet operating + a poverty-relief purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
+| 00 | the St Helier poverty trust + a poverty-relief purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 01 | the poverty trust with a charity shop + an ancillary fundraising | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 02 | the charity shop with nothing behind it + an ancillary fundraisi | FALSE | FALSE | 8 | R0, R1, R3, R4, R5, R6, R7, R8, R9 |
+| 03 | the poverty trust with a party-political object + a party-politi | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 04 | the poverty trust with incidental campaigning + an ancillary par | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 05 | the grocery company + a purely commercial purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 06 | the entity with no purposes + a poverty-relief purpose | TRUE | FALSE | 6 | R1, R2, R7, R9 |
+| 07 | the entity with no purposes and no benefit + a poverty-relief pu | FALSE | FALSE | 7 | R1, R2, R7, R9 |
+| 08 | the disease-prevention trust + a sickness-prevention purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 09 | the pigeon fanciers' association + a spectator-pastime purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 10 | the island swimming association + a physical-sport purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 11 | the members-only tennis club + a members-only recreation purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 12 | the public recreation ground trust + an open recreation purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 13 | the humanist society + a philosophical-belief purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 14 | the Ministerially directed trust + a poverty-relief purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R7, R8, R9 |
+| 15 | the Ministerially directed trust exempted by Order + a poverty-r | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 16 | the States-governed foundation + a poverty-relief purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 17 | the Guernsey-governed foundation + a poverty-relief purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 18 | the trust with a Minister in a private capacity + a poverty-reli | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R6, R7, R8, R9 |
+| 19 | the dormant registered charity + a poverty-relief purpose | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 20 | the applicant not yet operating + a poverty-relief purpose | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
 | 21 | the grandchildren's trust + a poverty-relief purpose | FALSE | FALSE | 7 | none |
-| 22 | the school with an unduly restrictive fee + a poverty-relief pur | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
-| 23 | the church whose benefit was presumed + a poverty-relief purpose | TRUE | REFUSED | 6 | R3, R7 |
-| 24 | the entity whose determiner skipped 7(2)(b) + a poverty-relief p | TRUE | REFUSED | 6 | R3, R7 |
+| 22 | the school with an unduly restrictive fee + a poverty-relief pur | TRUE | TRUE | 8 | R0, R1, R2, R3, R4, R5, R6, R7, R8, R9 |
+| 23 | the church whose benefit was presumed + a poverty-relief purpose | TRUE | REFUSED | 6 | R3, R7, R9 |
+| 24 | the entity whose determiner skipped 7(2)(b) + a poverty-relief p | TRUE | REFUSED | 6 | R3, R7, R9 |
+| W | WITNESS (constructed): a commercial care home, a purpose of prov | FALSE | FALSE | 8 | R0, R1, R2, R3, R4, R5, R6, R7 |
 
-Agreement by reading of ours, over all 200 comparisons (M):
+Agreement by reading of ours, over the 200 comparisons of the 25 worlds, and over the 8 comparisons of world W (M):
 
-| reading of ours | agree | refused |
-| --- | --- | --- |
-| R0 favoured interpretation | 192 | 4 |
-| R1 F2.1 read as B (an entity with no purposes passes vacuously) | 195 | 4 |
-| R2 F2.1 read as C (ancillary alone passes) | 192 | 4 |
-| R3 F2.10 read as B (the finding stands) | 196 | 0 |
-| R4 F2.10 read as C (treated as no public benefit) | 192 | 0 |
-| R5 F2.2 read as B (capacity not required) | 190 | 4 |
-| R6 F2.3 read as B (only the defined Minister) | 190 | 4 |
-| R7 F2.1 and F2.10 both read as B | 199 | 0 |
+| reading of ours | agree, 25 worlds (of 200) | refused | agree, world W (of 8) |
+| --- | --- | --- | --- |
+| R0 favoured interpretation (F2.14 A) | 192 | 4 | 8 |
+| R1 F2.1 read as B (an entity with no purposes passes vacuously) | 195 | 4 | 8 |
+| R2 F2.1 read as C (ancillary alone passes) | 192 | 4 | 8 |
+| R3 F2.10 read as B (the finding stands) | 196 | 0 | 8 |
+| R4 F2.10 read as C (treated as no public benefit) | 192 | 0 | 8 |
+| R5 F2.2 read as B (capacity not required) | 190 | 4 | 8 |
+| R6 F2.3 read as B (only the defined Minister) | 190 | 4 | 8 |
+| R7 F2.1 and F2.10 both read as B | 199 | 0 | 8 |
+| R8 F2.14 read as B (6(2)(e) widens head (n)) | 192 | 4 | 4 |
+| R9 F2.1, F2.10 and F2.14 all read as B | 199 | 0 | 4 |
 
-By decision, under the favoured reading: E1 22 of 25; E2 23; E3 23; E4 25; E5 25; E6 25; E7 25; E8 24.
+By decision, under the favoured reading, over the 25 worlds: E1 22 of 25; E2 23; E3 23; E4 25; E5 25; E6 25; E7 25; E8 24.
 
-The eight disagreements under the favoured reading, with their causes (M):
+**Does F2.14 B change any comparison?**
+Among the 25 cleanroom worlds, none: R0 and R8 give the same 200 values (192 agree, 8 disagree, the same 8), because no world sets the accommodation-or-care fact (the cleanroom has no operand for 6(2)(e)).
+In the constructed world W, four comparisons change between reading A and reading B, all in the same direction: E1 (meets the test) FALSE to TRUE, E2 (5(1)(a)) FALSE to TRUE, E6 (the purpose counts) FALSE to TRUE, E7 (falls within a paragraph of 6(1)) FALSE to TRUE; the cleanroom-side expectation is FALSE for all four, so A agrees with the cleanroom on all 8 comparisons of W and B on 4.
+The other four of W (E3, E4, E5, E8) are the same on both readings, E3 being the public-benefit limb, which the finding in W satisfies on both.
+W is my construction and its expected values are my reading of the cleanroom's A2 (J).
+
+The eight disagreements under the favoured reading, among the 25 worlds, with their causes (M); they are the same eight as before F2.14:
 
 | world | decision | cleanroom | ours | cause | ours agrees under |
 | --- | --- | --- | --- | --- | --- |
-| 06 | meets the test | TRUE | FALSE | F2.1: no purposes (provision 5(1)(a)) | F2.1 B, F2.1 C, R7 |
-| 06 | 5(1)(a) | TRUE | FALSE | F2.1 | F2.1 B, F2.1 C, R7 |
-| 07 | 5(1)(a) | TRUE | FALSE | F2.1 (the headline agrees: both FALSE, for different limbs) | F2.1 B, F2.1 C, R7 |
-| 23 | meets the test | TRUE | REFUSED | F2.10: determination made in breach of 7(3)(a) | F2.10 B, R7 |
-| 23 | 5(1)(b) | TRUE | REFUSED | F2.10 | F2.10 B, R7 |
-| 24 | meets the test | TRUE | REFUSED | F2.10: 7(2)(b) not asked | F2.10 B, R7 |
-| 24 | 5(1)(b) | TRUE | REFUSED | F2.10 | F2.10 B, R7 |
+| 06 | meets the test | TRUE | FALSE | F2.1: no purposes (provision 5(1)(a)) | R1, R2, R7, R9 |
+| 06 | 5(1)(a) | TRUE | FALSE | F2.1 | R1, R2, R7, R9 |
+| 07 | 5(1)(a) | TRUE | FALSE | F2.1 (the headline agrees: both FALSE, for different limbs) | R1, R2, R7, R9 |
+| 23 | meets the test | TRUE | REFUSED | F2.10: determination made in breach of 7(3)(a) | R3, R7, R9 |
+| 23 | 5(1)(b) | TRUE | REFUSED | F2.10 | R3, R7, R9 |
+| 24 | meets the test | TRUE | REFUSED | F2.10: 7(2)(b) not asked | R3, R7, R9 |
+| 24 | 5(1)(b) | TRUE | REFUSED | F2.10 | R3, R7, R9 |
 | 21 | determination properly made | TRUE | FALSE | scope of "properly made" (section 5, last paragraph) | no reading |
 
 Controls (M).
-The harness can disagree: it does, 8 times, and the 8 move with the readings the group provides (R1, R3, R7), which is what a harness that measured the readings and not itself would do.
+The harness can disagree: it does, 8 times among the 25 worlds, and the 8 move with the readings the group provides (R1, R3, R7), which is what a harness that measured the readings and not itself would do.
 It is sensitive to inputs: worlds 14 and 15 differ only by the Order flag and give FALSE and TRUE; world 18 flips under F2.2 B (capacity), and world 14 flips under F2.3 B.
-It is deterministic: three runs gave identical results.
-One parsing slip of mine, found and fixed: the last evaluation in the file carried the trailing `Evaluation[n]` listing into its message and was first read as a refusal; the first summary I printed had one extra refusal for that reason, and every figure above is from the corrected parse.
+It is deterministic: three runs against the final modules gave identical results for all 2,080 evaluations.
+**Positive control for the adapted harness, two planted disagreements, each run through the same scripts.**
+(1) A planted disagreement in an input: in a copy, world 00's determination was changed from finding public benefit to finding none; the favoured reading's agreement fell from 192 to 190 of 200, and the two new disagreements are world 00's E1 and E3 (cleanroom TRUE, ours FALSE), found by the harness without being listed anywhere.
+(2) A planted disagreement in the rules: in a copy of `g2-art6-purposes.l4`, reading A of 6(2)(e) was changed to read the new eleventh fact; agreement on world W fell from 8 of 8 to 4 of 8 under the favoured reading, and the 25 worlds stayed at 192 of 200, as they must since none sets that fact.
+Both copies are in `run/e3-ctl1/` and `run/e3-ctl2/`.
+One parsing slip of mine in the first version, found and fixed: the last evaluation in the file carried the trailing `Evaluation[n]` listing into its message and was first read as a refusal; every figure above is from the corrected parse.
 
 What this does not show.
 It does not test the 32 decisions that I did not compare.
 It does not test Article 2.
 It says nothing on which reading of the Law is right.
-It cannot test the cleanroom's A1, A2, A3, A4 and A12 against ours, because ours has no field that varies them (section 5, D10).
+It cannot test the cleanroom's A1, A3, A4 and A12 against ours, because ours has no field that varies them; the cleanroom's A2 is tested only through the constructed witness world and not through any of its 25 worlds, none of which sets an accommodation-or-care fact.
 
 ## 7. Judgements I am least sure of
 
@@ -478,8 +510,8 @@ It cannot test the cleanroom's A1, A2, A3, A4 and A12 against ours, because ours
 3. **What counts as "registered" in section 4.2.**
    I excluded the non-fork lists (G2 has 8 items, for example) from the count; including them would move some "one" rows to "two".
    After the 03:13 rewrite of `NOTES.md` I did count its new section 12.3 (the independent authors' ambiguity rows, kept) as part of ours' register, for Q7; I checked every row of that section against my two tables and found no other that matches a cleanroom-only or a July-only item.
-4. **The classification of the 136 forks by kind (section 4.1).**
-   Mine, by reading each fork's question; 49 "time arithmetic" and 77 "meaning" could each move by a handful.
+4. **The classification of the 137 forks by kind (section 4.1).**
+   Mine, by reading each fork's question; 49 "time arithmetic" and 78 "meaning" could each move by a handful.
 5. **D4 and D5 (July against ours in Article 4).**
    I read July's code for 4(2)/4(3) and 4(4) and ours' module and fork text, and did not run a discriminating case through July.
    D4 is the one I am least sure of: July's own header call is about the governor carve-out, and I read the further difference (no function nexus for 4(3)) from its rule and its comment "they need not pass the 4(2) gate".
@@ -490,6 +522,10 @@ It cannot test the cleanroom's A1, A2, A3, A4 and A12 against ours, because ours
    A domain expert might say they differ in substance.
 8. **The vintage statement (section 9).**
    It is measured for the text of Articles 5 to 7 and the definition of "Minister"; for the rest of the Law it rests on the Table of Legislation History and on R&O.102/2026.
+9. **World W and the 6(2)(e) rows (sections 4.2, 5, 6.3).**
+   W is my construction, and its expected values are my reading of the cleanroom's A2: with no operand for 6(2)(e), the cleanroom can represent the witness only as a purpose with no flag set, so I copied world 05's expectations and did not run the cleanroom on W.
+   A reader who thinks the cleanroom would represent the witness otherwise would change those four comparisons.
+   The statement that the 03:02 modules were already declaratory rests on one probe (`run/e-old-probe/probe.l4`) of two inputs, and on reading the old rule; it agrees with the account in `FRAGMENT-G2.md` (fork F2.14, "What the code did before F2.14").
 
 ## 8. F. What each has that the others lack
 
@@ -499,9 +535,9 @@ Items marked M were found by looking in the three trees.
 **Ours has, and neither predecessor has (M):**
 - Every Article and Schedule as a row in a coverage table (851 rows), with a disposition and a module for each; July says only that "there are no silent gaps".
 - The commencement and text-of-the-law layer: nine consolidated texts, three stages of commencement, and headline functions that refuse by name for a day before a unit was in force or before the first consolidated text.
-- A typed record of readings for each group (136 fields in 9 records), each field with the other readings callable and a test for each, and a "red" file per group that states the discriminating case under the reading taken.
+- A typed record of readings for each group (137 fields in 9 records), each field with the other readings callable and a test for each, and a "red" file per group that states the discriminating case under the reading taken.
 - Mechanical checks in `check.sh`: every quotation and locator against the Law's text (`srcrefs.py`: 1,724 `src:` lines, 1,666 locators, 0 problems in my 03:02 run), a shape check on the import graph, and the trace checker that reads each `-- EXPECT:` comment against `l4 run --json`, with a positive control (NOTES section 11.3).
-- A register of 35 conflicts, slips and commencement oddities, and 71 open-question bullets for an expert, with discriminating cases; and, in `NOTES.md` section 12.3, every assertion of the independent authors that did not pass, with its provision and disposition.
+- A register of 35 conflicts, slips and commencement oddities, and 73 open-question bullets for an expert, with discriminating cases; and, in `NOTES.md` section 12.3, every assertion of the independent authors that did not pass, with its provision and disposition.
 - Six headline questions that cross the groups (application, register, contravention, offence and penalty, text in force, appeal), answered by 13 integration-layer `@export`s whose every input has an `@desc` (the integrator's check; the other 454 `@export`s are in the group modules).
 - Mutation testing claimed by the groups (G2 42 mutants, G3 97, G5 52, G4 28 rows, G6 a sweep) and 16 by the integrator.
   I did not re-run any.
@@ -515,8 +551,8 @@ Items marked M were found by looking in the three trees.
 - A pinned case file: 25 worlds by 40 decisions, each value evaluated by the L4 binary.
   Ours has answer tables in prose and tests, but no case file in the same form.
 - An independence audit and a "where this is most likely to be wrong" section: the cleanroom's `README.md` section 6 and 7.
-  Ours has no provenance section yet (`NOTES.md` section 15 still reads "to be written by the launching session").
-- A report for drafters (July): a 21-page PDF in plain language with sidebars that teach the logic, a 6-page companion of annotated excerpts prepared for CALC 2026, and a list of findings framed as questions to a drafter ("is this worth a tidying amendment?").
+  Ours has a provenance section (`NOTES.md` section 15, empty until after my first report) that records who asked for the run, what happened and when, and how it was measured; it is a record, not an independence audit.
+- A report for drafters (July): a 21-page PDF in plain language with sidebars that teach the logic, a 6-page companion of annotated excerpts prepared for a conference, and a list of findings framed as questions to a drafter ("is this worth a tidying amendment?").
   Ours has `NOTES.md`, which is written for a maintainer.
 - A different place for the statute's words: July and the cleanroom carry them inside the expressions as inert strings joined by `...` and `..`, so the left margin of a rule reads as the Article.
   Ours carries them in `-- src:` comment lines and `@ref` locators above each rule (checked mechanically against the Law's text) and uses short inert labels such as "(i)" inside the expressions; I did not judge which is easier to audit.
@@ -570,24 +606,25 @@ Nothing outside that directory was written, and nothing in `deposit/` was touche
 
 | what | how |
 | --- | --- |
-| July corpus extracted | `git -C /Users/mengwong/src/legalese/l4-ide archive origin/unstable paper/case-studies/charities-jersey-2014 \| tar -x -C july` (`origin/unstable` was `0a9d0474d`) |
+| July corpus extracted | `git -C <reference checkout> archive origin/unstable paper/case-studies/charities-jersey-2014 \| tar -x -C july` (`origin/unstable` was `0a9d0474d`) |
 | July run | `scripts/run-july.sh` (`nice -n 15 l4 run <module>.l4`, one at a time, `JL4_LIBRARY_PATH` unset); outputs in `july-run/`; counted by `scripts/count-l4out.py` (assertions counted from `Message:` blocks and from unique file and range: equal) |
 | July PDFs | `pdftotext -layout` into `july-pdf/`; `scripts/pdfdiff.py` compared the report PDF to `README.md`: word-level ratio 0.9963, no run of 8 or more words in the PDF that is not in the README |
 | Static counts | `scripts/metrics.py <label> <files>` for all three |
-| Copy of the deposit | `cp -R deposit run/deposit-snap` at 02:30:44 and `run/deposit-snap2` at 03:02:35; hashes in `run/deposit-snap.sha256` and `run/deposit-snap2.sha256` |
-| Ours, full check | `L4=bin/l4 RAW=inputs/charities-jersey-law-2014-2026-10-02.txt nice -n 15 ./check.sh` in each copy; output in `run/check-snap.out` (02:30, RED) and `run/check-snap2.out` (03:02, GREEN) |
+| Copy of the deposit | `cp -R deposit run/deposit-snap` at 02:30:44, `run/deposit-snap2` at 03:02:35 and `run/deposit-snap3` at 10:20:20; hashes in `run/deposit-snap.sha256`, `run/deposit-snap2.sha256` and `run/deposit-snap3.sha256` |
+| Ours, full check | `L4=bin/l4 RAW=inputs/charities-jersey-law-2014-2026-10-02.txt nice -n 15 ./check.sh` in each copy; output in `run/check-snap.out` (02:30, RED), `run/check-snap2.out` (03:02, GREEN) and `run/check-snap3.out` (10:20, GREEN) |
 | Coverage | `data/table-coverage.md` from `coverage-all.tsv` and `phase1/coverage.tsv` by `scripts/tables.py` |
 | Registers | `data/zone1-arts5-7.tsv`, `data/zone2-july-vs-ours.tsv` (written by hand from the reading described above); counts by `scripts/tables.py` |
-| Fork kinds | `scripts/fork-classes.py` |
+| Fork kinds | `scripts/fork-classes.py` (137 forks) |
 | Vintage check | `scripts/vintage-check.py` (cleanroom `SOURCE-EXTRACT.md` blockquotes against the 2 October 2026 text) |
 | Cleanroom run | `l4 run charity-test.l4` in `run/cr/`: 102 satisfied, 0 failed, 0 other diagnostics |
-| E harness | `scripts/gen-harness.py` writes `run/e/cmp-harness.l4` (1,600 `#EVAL`s) and its index; `l4 run`; `scripts/parse-harness.py`; `scripts/summarise-e.py`; `scripts/table-e.py`; probe in `run/e/cmp-a5.l4` |
+| E harness | `scripts/gen-harness-v2.py` (the first version, `gen-harness.py`, is kept; `patch-gen-v2.py` records the mechanical change) writes `run/e3/cmp-harness.l4` (2,080 `#EVAL`s: 26 worlds, 10 readings, 8 decisions) and its index; `l4 run`; `scripts/parse-harness.py`; `scripts/summarise-e2.py`; `scripts/table-e2.py`; probe `run/e3/cmp-a5.l4`; planted-disagreement controls `run/e3-ctl1/` and `run/e3-ctl2/`; the 6(2)(e) probe of the old modules `run/e-old-probe/probe.l4`; the first-version run is `run/e/` |
 | This file | `COMPARISON.template.md` filled by `scripts/build.py` from the data files |
 
 ## 12. Re-read at the end of the work
 
-There were two re-reads.
-The first was at 03:10, before the integrator finished; the second was at about 03:23, after the lead reported the finished deposit and `NOTES.md` rewritten at 03:13:28.
+There were three re-reads.
+The first was at 03:10, before the integrator finished; the second was at about 03:23, after the lead reported the finished deposit and `NOTES.md` rewritten at 03:13:28; the third was from 10:16, after fork F2.14.
+Sections 12.1 and 12.2 describe the deposit as it was at 03:10 and 03:23, and section 12.3 supersedes them where they differ.
 
 ### 12.1 First re-read, 03:10
 
@@ -631,3 +668,34 @@ So every measurement of the code in this report, including the E results and the
 - References to `NOTES.md` sections 13 and 14 became 14 and 15.
 
 **What did not change:** every figure in sections 2, 3 and 6 (size, coverage, the 192 of 200 and 199 of 200), the vintage statement, and every other row of the register tables.
+
+### 12.3 Third re-read, 10:16 to 10:35, after fork F2.14
+
+The fleet lead asked me to correct my statements on Article 6(2)(e) and to recount the figures that depend on G2, once G2 had added a fourteenth fork.
+I did not read the G2 files until `FRAGMENT-G2.md` was more than ten minutes old (its modification time was 09:41:53; I read it at 10:16) (M).
+
+**The code.**
+Against my 03:02 copy, these `.l4` files changed by the time of the 10:20 copy: `g2-nouns`, `g2-readings`, `g2-art6-purposes`, `g2-fixtures`, `g2-tests-art5`, `g2-tests-art6`, `g2-tests-red` (G2, for F2.14), `g1-art2-governor-misconduct` (one comment), `ind-a-tests-art3-7`, `ind-a-tests-readings`, `ind-b-tests-art5-7`, `ind-b-tests-fixtures-g2`, `ind-c-tests-art5-7`, `int-readings`, `int-tests-fixtures`, `int-tests-repairs` (M, `cmp` per file).
+`g2-art5-charity-test`, `g2-art7-public-benefit` and `domain` are unchanged from 02:28.
+The deposit did not change between my 10:16 hash list and the 10:20 copy.
+
+**`check.sh` on the 10:20 copy** (`run/check-snap3.out`, 322 seconds): GREEN; 162 modules; 7,844 assertions satisfied, 157 failed (expected 157), 10 refused (expected 10); group modules 5,471 satisfied and 135 failed (G2's red file holds 16); integration 604 and 6; independent 1,769, 16 and 10; srcrefs 1,727 lines, 1,668 locators, 0 problems; 976 traces, all as expected (M).
+The finished `NOTES.md` section 11.1 prints the same figures.
+
+**Counts, recounted from the 10:20 copy by `grep` and by script, not adjusted by hand** (M).
+Forks: 137 (G1 8, G2 14, G3 13, G4 12, G5 14, G6 24, G7 14, G8 19, G9 19; was 136); `NOTES.md` section 5 says 137 and its table has 137 rows.
+Entries S1 to S35 in `NOTES.md` section 7: 35 (25 that change an answer, 3 commencement, 7 slips), unchanged.
+Open-question bullets in `NOTES.md` section 8: 73 (was 71), one of them marked "Ruled 2026-10-27, no longer open".
+The question column of the fork table, empty for all 14 G7 forks in my earlier copies, now has no empty cell.
+`NOTES.md` section 15, provenance, is written; section 3.7 records F2.14.
+Coverage (851 rows; 755, 80, 2, 14) and `coverage-all.tsv` are unchanged.
+Zone 1 split of the 20 questions in Articles 5 to 7: 1 / 5 / 14 became 1 / 6 / 13 because Q3 (6(2)(e)) is now registered by ours (F2.14) as well as by the cleanroom.
+Headline D is unchanged at nine, but D10 (6(2)(e)) is now a difference from July only, with ours and the cleanroom agreeing.
+
+**Harness re-run** (section 6): 25 worlds, 8 decisions, 200 comparisons, final modules: favoured 192, F2.1 B 195, F2.1 C 192, F2.10 B 196, F2.10 C 192, F2.2 B 190, F2.3 B 190, F2.1 and F2.10 both B 199, F2.14 B 192, F2.1 and F2.10 and F2.14 all B 199; F2.14 B changes no comparison among the 25 worlds.
+The constructed world W: 8 of 8 under the favoured reading and 4 of 8 under F2.14 B.
+Every figure for the 25 worlds equals the earlier run against the 13-field record; only the new readings and world W are new.
+
+**What I corrected in this file because of it.**
+The statements that ours widens head (n) at 6(2)(e), that a commercial care home is "charitable on that ground alone" in ours, and that ours has no field that varies the cleanroom's A2: the first two were wrong about ours before F2.14 (the code was already declaratory in substance, section 4.2) and the third is false since F2.14.
+The Q3 row, the 4.2 counts, the D10 row and the section 5 heading above it, the section 6.1 to 6.3 text and tables, the section 2 table (a third column for the 10:20 copy), the fork count 136 to 137 in sections 1, 4.1, 4.3, 7 and 8, the open-question count 71 to 73, the statement that the G7 questions are empty, the statement that `NOTES.md` section 15 is empty, and a removal of a home-directory path and a conference name from the file.

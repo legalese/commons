@@ -232,7 +232,7 @@ The clean list is the hunt's own record of what it read and found nothing furthe
 | item | gist | relation | S | self-label | hunt's clean list |
 | --- | --- | --- | --- | --- | --- |
 | G1:C1 | 2(10)(b) "in relation a registered charity": a "to" is missing, in the consolidated text and the PDF alike | none | T8 (quotes the missing "to" in passing) | X | not listed |
-| G1:C2 | 2(10)(b)(vi) says "clauses (i) to (v)" where the rest of the Law says "sub-paragraphs" | none | none | X | not listed |
+| G1:C2 | 2(10)(b)(vi) says "clauses (i) to (v)"; the Law has no other name for that level and says "sub-paragraphs" only for the lettered level, so it is not shown to be a slip | none | none | X | not listed |
 | G1:C4 | 2(1)(g) overlaps (c) and (d) as written, against 8(3)(a)(i)'s "the sub-paragraph" | none (near: T5, on overlapping kinds) | none | - | listed |
 | G1:C5 | 2(1)(j) "an entity that is substantially similar to an entity" uses "entity" for the thing defined | none | none | X | not listed |
 | G1:C6 | 2(1)(b) is "without prejudice to" (a) and (i) excludes only "the trustees of a trust": a fidéicommis may be within (a) and (b) | none | none | - | partly |

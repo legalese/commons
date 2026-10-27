@@ -393,7 +393,8 @@ The consolidated text and the official PDF text layer agree word for word on Art
 - **C1: 2(10)(b), "in relation a registered charity".** A "to" is missing, in the consolidated text and in the PDF alike.
   The sense is clear; no case discriminates.
   Flagged in the module comment.
-- **C2: 2(10)(b)(vi), "clauses (i) to (v)".** The rest of the Law says "sub-paragraphs".
+- **C2: 2(10)(b)(vi), "clauses (i) to (v)".** The Law says "sub-paragraphs" for the lettered level, (a), (b) and so on.
+  It has no other name for the level of (i) to (v) (a search of the consolidated text for "paragraphs (i)", "sub-paragraphs (i)" and "clause (i)" finds nothing), so this use of "clauses" is not shown to be a slip.
   No case discriminates.
 - **C3: 2(5) names a Law for five kinds of entity out of twelve (trap T6), and (e) says "by (but not under)".** Sub-paragraphs (g) and (h) are "under, but not by".
   No case for (ba), (g), (h), (i), (j).

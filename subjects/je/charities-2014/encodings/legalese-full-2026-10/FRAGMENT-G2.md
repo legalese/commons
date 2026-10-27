@@ -2,7 +2,7 @@
 
 Encoder G2. Scope: Part 2 (Articles 3 and 4: the Commissioner and its general functions) and Part 3 (Articles 5 to 7: the charity test, charitable purposes, public benefit). Module prefix `g2-`. Source: `inputs/charities-jersey-law-2014-2026-10-02.txt` (the text from 2 October 2026), checked word for word against the official PDF's text layer for Articles 3 to 7; the two agree (only layout differs). No endnote marker falls on Articles 3 to 7, and none of the instruments in `inputs/amending/` amends them (read for their amendments of this Law: Article 1 "Minister" and "Comptroller", Article 2(1)(ba), Schedule 1; R&O.17/2018 and R&O.136/2019 only appoint days). So the Articles read the same in the vintages the sources show. "The Minister" of Articles 4(3), 5(3) and 5(6) to 5(8) is the role `the Minister`; the office the role names in a given text is reached only through the input `the office of the Minister` (IP3), and only on the second reading of fork F2.3.
 
-This file was revised after independent testing: three repairs (the object of improving the conditions of life in 6(1)(i); a body that is not an entity cannot meet the charity test; the Commissioner's staff exercising the Commissioner's function are bound as the Commissioner is, fork F2.13). Section 11, "Changes after independent testing", lists every change of signature and of behaviour, with the old and the new `GIVEN` lists, so that the integrator can rewire.
+This file was revised after independent testing: three repairs (the object of improving the conditions of life in 6(1)(i); a body that is not an entity cannot meet the charity test; the Commissioner's staff exercising the Commissioner's function are bound as the Commissioner is, fork F2.13). A fourth change, fork F2.14 (Article 6(2)(e)), was added on 2026-10-27 at the fleet lead's request. Section 11, "Changes after independent testing", lists every change of signature and of behaviour, with the old and the new `GIVEN` lists (and, in 11.5, the record fields), so that the integrator can rewire.
 
 Everything below was checked with `work/g2/check-g2.sh` (the output is pasted in section 10). The statements in this file about the modules were checked against the modules at the time of writing; where a claim is only a proposal it says "proposed".
 
@@ -12,17 +12,17 @@ All in `deposit/`, all starting `g2-`. Import graph (acyclic; each imports only 
 
 | module | holds | imports (G2) |
 | --- | --- | --- |
-| `g2-nouns` | the group's nouns: the act type, the records, the limb result, the thirteen fork enumerations and the record `Interpretation of Articles 3 to 7`. DECLAREs only | none |
-| `g2-readings` | data: ready-made values of the record (the favoured interpretation, and 15 others that each differ from it at exactly one fork point) | `g2-nouns` |
+| `g2-nouns` | the group's nouns: the act type, the records, the limb result, the fourteen fork enumerations and the record `Interpretation of Articles 3 to 7`. DECLAREs only | none |
+| `g2-readings` | data: ready-made values of the record (the favoured interpretation, and 16 others that each differ from it at exactly one fork point) | `g2-nouns` |
 | `g2-fixtures` | data: purposes, facts about purposes, entities, constitutions, determinations, for the tests and for any caller | `g2-nouns` |
 | `g2-art3-4-commissioner` | Articles 3 and 4 | `g2-nouns` |
 | `g2-art6-purposes` | Article 6 | `g2-nouns` |
 | `g2-art7-public-benefit` | Article 7 | `g2-nouns` |
 | `g2-art5-charity-test` | Article 5 | `g2-nouns`, `g2-art6-purposes`, `g2-art7-public-benefit` |
 | `g2-tests-art3-4`, `g2-tests-art5`, `g2-tests-art6`, `g2-tests-art7` | green tests | the modules they test, `g2-readings`, `g2-fixtures` |
-| `g2-tests-red` | assertions that are MEANT to fail, counted: 15 (14 forks answered as their other reading answers them, and one control) | all of the above |
+| `g2-tests-red` | assertions that are MEANT to fail, counted: 16 (15 forks answered as their other reading answers them, and one control) | all of the above |
 
-Departures from PLAN section (b), with the reason. (1) A module `g2-nouns` was added because the one record of forks must be shared by four Article modules and `domain.l4` is read-only. (2) `g2-readings` and `g2-fixtures` were added so that the record, which has thirteen fields that L4 source must all supply (TYPICALLY does not let a source omit one; at the service boundary `l4 batch` fills an omitted field from its TYPICALLY, which I tested), and the case values need not be rewritten in every test or by every caller. (3) The rule names are PLAN's, kept exactly where PLAN gave one; PLAN gave no names for the extra rules, which follow the same `Art N(m) ...` style and are unique to this group by their Article number.
+Departures from PLAN section (b), with the reason. (1) A module `g2-nouns` was added because the one record of forks must be shared by four Article modules and `domain.l4` is read-only. (2) `g2-readings` and `g2-fixtures` were added so that the record, which has fourteen fields that L4 source must all supply (TYPICALLY does not let a source omit one; at the service boundary `l4 batch` fills an omitted field from its TYPICALLY, which I tested), and the case values need not be rewritten in every test or by every caller. (3) The rule names are PLAN's, kept exactly where PLAN gave one; PLAN gave no names for the extra rules, which follow the same `Art N(m) ...` style and are unique to this group by their Article number.
 
 No module starts with `@lang en`. No section `GIVEN` is used in any g2 module: every input is an ordinary rule `GIVEN`, so that an `@export` reaching a rule in another module never reaches a section `GIVEN`.
 
@@ -94,7 +94,7 @@ Where a row says "calls", the rule named is where the provision's words are deci
 | 6(1)(k) | Article 6(1)(k) | (k) the promotion of religious or racial harmony; | encoded | g2-art6-purposes | arm `the promotion of religious or racial harmony` of `Art 6(1) the head admits the purpose` (constructor of `Head of charitable purpose`, domain.l4) | a head admits a purpose recorded under it |
 | 6(1)(l) | Article 6(1)(l) | (l) the promotion of equality and diversity; | encoded | g2-art6-purposes | arm `the promotion of equality and diversity` of `Art 6(1) the head admits the purpose` (constructor of `Head of charitable purpose`, domain.l4) | F2.11 |
 | 6(1)(m) | Article 6(1)(m) | (m) the advancement of environmental protection or improvement; | encoded | g2-art6-purposes | arm `the advancement of environmental protection or improvement` of `Art 6(1) the head admits the purpose` (constructor of `Head of charitable purpose`, domain.l4) | a head admits a purpose recorded under it |
-| 6(1)(n) | Article 6(1)(n) | (n) the relief of those in need by reason of … | encoded | g2-art6-purposes | arm `the relief of those in need by reason of age, ill-health, disability, financial hardship or other disadvantage` of `Art 6(1) the head admits the purpose` (constructor of `Head of charitable purpose`, domain.l4) | extended by 6(2)(e) |
+| 6(1)(n) | Article 6(1)(n) | (n) the relief of those in need by reason of … | encoded | g2-art6-purposes | arm `the relief of those in need by reason of age, ill-health, disability, financial hardship or other disadvantage` of `Art 6(1) the head admits the purpose` (constructor of `Head of charitable purpose`, domain.l4) | extended by 6(2)(e) (F2.14) |
 | 6(1)(o) | Article 6(1)(o) | (o) the advancement of animal welfare; | encoded | g2-art6-purposes | arm `the advancement of animal welfare` of `Art 6(1) the head admits the purpose` (constructor of `Head of charitable purpose`, domain.l4) | a head admits a purpose recorded under it |
 | 6(1)(p) | Article 6(1)(p) | (p) any other purpose that may reasonably be regarded as … | encoded | g2-art6-purposes | arm `any other purpose that may reasonably be regarded as analogous to one of the above` of `Art 6(1) the head admits the purpose` (constructor of `Head of charitable purpose`, domain.l4) | the caller records the judgement by recording this head; 6(2)(f) deems one analogy |
 | 6(2) | Article 6(2) | (2) For the purposes of paragraph (1) – | encoded | g2-art6-purposes | `Art 6(2) a clarification brings the purpose within a head` | the extensions (a), (b), (e); the narrowings (c), (d) are applied through the heads (h) and (i) |
@@ -106,7 +106,7 @@ Where a row says "calls", the rule named is where the provision's words are deci
 | 6(2)(d) | Article 6(2)(d) | (d) paragraph (1)(i) applies only in relation to recreational facilities … | encoded | g2-art6-purposes | `Art 6(2)(d) paragraph (1)(i) applies` | narrowing of head (i), the second condition of it; refuses if neither alternative is stated; head (i) calls it through `Art 6(1)(i) paragraph (1)(i) is met` |
 | 6(2)(d)(i) | Article 6(2)(d)(i) | (i) primarily intended for persons who have need of them … | encoded | g2-art6-purposes | field `the facilities or activities are primarily intended for persons who have need of them ...` of `Facts about a purpose under Article 6` |  |
 | 6(2)(d)(ii) | Article 6(2)(d)(ii) | (ii) available to members of the public at large or … | encoded | g2-art6-purposes | field `the facilities or activities are available to members of the public at large or to male or female members of the public at large` |  |
-| 6(2)(e) | Article 6(2)(e) | (e) paragraph (1)(n) includes relief given by the provision of … | encoded | g2-art6-purposes | `Art 6(2)(e) paragraph (1)(n) includes the purpose, as relief given by accommodation or care` | extension of head (n) |
+| 6(2)(e) | Article 6(2)(e) | (e) paragraph (1)(n) includes relief given by the provision of … | encoded | g2-art6-purposes | `Art 6(2)(e) paragraph (1)(n) includes the purpose, as relief given by accommodation or care`; `reading A of Article 6(2)(e): only as relief of those in need`; `reading B of Article 6(2)(e): the provision of accommodation or care suffices`; fields `the purpose is relief of those in need ..., given by the provision of accommodation or care` and `the purpose is the provision of accommodation or care` of `Facts about a purpose under Article 6` | F2.14: extension of head (n); declaratory on the default reading, widening on the other (default ruled by the owner (Meng), 2026-10-27) |
 | 6(2)(f) | Article 6(2)(f) | (f) for the purposes of paragraph (1)(p), the advancement of … | encoded | g2-art6-purposes | `Art 6(2)(f) the purpose is analogous to the advancement of religion by the analogy of paragraph (1)(p)`; `Art 6 the purpose is within the advancement of religion` | F2.5; T27; IP11 |
 | 6(3) | Article 6(3) | (3) The States may, on the recommendation of the Commissioner, … | encoded | g2-art6-purposes | `Art 6(3) the States may add a sub-paragraph to Article 6(1) or (2)`; `Art 6(3) the States may make the Regulations` | a MAY of the States, guarded by the Commissioner's recommendation; the Regulations' content is an input |
 | 6(3)(a) | Article 6(3)(a) | (a) add sub-paragraphs to paragraph (1); | encoded | g2-art6-purposes | field `adds sub-paragraphs to paragraph (1)` of `Content of Regulations under Article 6(3)` |  |
@@ -131,7 +131,7 @@ Counts: 90 rows; encoded 81, inert 9; deferred 0.
 
 ## 2. Fork register (the R4 shape)
 
-The record is `Interpretation of Articles 3 to 7` (module `g2-nouns`), with thirteen fields; each field is one fork point and one enumeration; each is `TYPICALLY` the reading taken. Every public decision that depends on a fork takes the record as an ordinary `GIVEN` named `interp` and delegates by `CONSIDER` to one private rule per reading (the rules are named `reading A of ...` and `reading B of ...`, so that each reading is callable and has a test). `g2-readings` has the favoured interpretation and one value per other reading, each differing from the favoured one at exactly one field. Register entries map 1:1 to the record's fields, in this order.
+The record is `Interpretation of Articles 3 to 7` (module `g2-nouns`), with fourteen fields; each field is one fork point and one enumeration; each is `TYPICALLY` the reading taken. Every public decision that depends on a fork takes the record as an ordinary `GIVEN` named `interp` and delegates by `CONSIDER` to one private rule per reading (the rules are named `reading A of ...` and `reading B of ...`, so that each reading is callable and has a test). `g2-readings` has the favoured interpretation and one value per other reading, each differing from the favoured one at exactly one field. Register entries map 1:1 to the record's fields, in this order.
 
 A note on the red tests. For every fork the discriminating case is asserted in a green test under each reading, and the answer the OTHER reading would give is asserted under the favoured reading in `g2-tests-red.l4`, where it fails on purpose. Those failures are the proof that the fork is real: the readings differ on that case.
 
@@ -257,6 +257,82 @@ A note on the red tests. For every fork the discriminating case is asserted in a
 - What the fork does not decide: the three decisions that paragraph 4(3) excepts (Articles 11, 15(3), 16) are not Articles 3 to 7 and are not modelled here; whether a given act was in fact authorized is the caller's fact (the choice between the constructor `a member of the Commissioner's staff` and `any person`).
 - Discriminating case: a member of staff, authorized under paragraph 4(3), finds that an entity that benefits only one named natural person provides public benefit. A: 7(3)(b) binds the finding, so the entity does not provide public benefit (FALSE). B: Article 7(1) does not name staff, so the finding stands and the entity provides public benefit (TRUE). Tests: `g2-tests-art7` sections "Article 7(1)" and "Article 5(1)(b) with Article 7", `g2-tests-art5` section "FORK F2.13". Red: 1.
 
+### F2.14: does Article 6(2)(e) add an operand to head (n)?
+
+- The provisions.
+  Article 6(1)(n) (`-- src:181`) makes a charitable purpose "the relief of those in need by reason of age, ill-health, disability, financial hardship or other disadvantage".
+  Article 6(2)(e) (`-- src:193`) says "paragraph (1)(n) includes relief given by the provision of accommodation or care;".
+- The question.
+  Does Article 6(2)(e) add an operand to head (n), or does it only say that relief of those in need can be given by accommodation or care?
+- The witness.
+  A purpose of providing accommodation or care, with nobody shown to be in need, recorded under no head.
+- The readings (field `how Article 6(2)(e) is read`).
+  - Reading A, the default, declaratory: `Article 6(2)(e) is declaratory: relief given by accommodation or care is within paragraph (1)(n) only as relief of those in need`.
+    The clause adds no operand, and "relief" in it is the relief of (1)(n).
+    On A the witness is not within head (n), so it is not a charitable purpose.
+  - Reading B, widening: `Article 6(2)(e) widens paragraph (1)(n): the provision of accommodation or care is within it without more`.
+    The clause says what (1)(n) includes, and the provision of accommodation or care engages (1)(n) with nobody shown to be in need.
+    On B the witness is within head (n), so it is a charitable purpose (the public benefit limb is separate, see below).
+  - A and B differ on one thing only: B is A OR the new fact `the purpose is the provision of accommodation or care`.
+    They differ only where that fact is TRUE and the existing fact (the need-qualified one) is FALSE.
+    On every other input they give the same answer, and the route through `Art 6(2) a clarification brings the purpose within a head` is the same on both.
+    That is tested on four fact-sets, and stated as an equation on each (`g2-tests-art6`).
+- The ruling.
+  Label: default ruled by the owner (Meng), 2026-10-27.
+  His words, typed on 2026-10-27 after the question was explained to him, as relayed by the fleet lead: "I agree with your declaratory reading [...] it is of limited import because a commercial care home would still need to meet the public benefit test."
+  The first clause, "I agree with your declaratory reading", is the ruling.
+  [...] marks words elided from the quotation; they are not part of the ruling.
+  Reading B stays callable: the value `the interpretation of Articles 3 to 7 with F2.14 read as B` selects it, and it has its own private rule and its own tests.
+- History of the default.
+  The declaratory default had been recommended by GM, to whom the owner had delegated the call: "what's this about Article 6.2.e? i probably don't mind one way or the other so i am happy to take your recommendation."
+  The point arose from the comparison with an independent encoding of Articles 5 to 7 (its ambiguity A2), after the encoders had finished.
+  I did not read that encoding or any file of it; the fork was registered from the fleet lead's messages.
+- What the code did before F2.14.
+  The code was already declaratory in substance, and a comparison document had said otherwise; the fleet lead is correcting that document.
+  The only operand of `Art 6(2)(e) ...` was the existing fact `the purpose is relief of those in need by reason of age, ill-health, disability, financial hardship or other disadvantage, given by the provision of accommodation or care`, which has the need element and the accommodation-or-care element fused.
+  So the witness could be recorded only as that fact FALSE, which is indistinguishable from a purpose with nothing to do with accommodation or care, and it was not brought within (n).
+  Measured on the code as it stood (`l4 run`, the probe `work/g2/probe-f214-before/p-witness.l4`): the witness recorded under no head, with that fact FALSE, gave FALSE (not a charitable purpose).
+  The same purpose with the fact TRUE gave TRUE.
+  A purpose the caller recorded under head (n), with the fact FALSE, gave TRUE, because the head arm for (n) trusts the caller's determination that it relieves those in need.
+  So reading A is that behaviour, unchanged on every input the old record could express, and reading B was not expressible and is new.
+- Public benefit is a separate limb, on both readings.
+  Even on reading B, a purpose within head (n) does not make an entity a charity.
+  Article 5(1)(b) (`-- src:149`) still requires that the entity provides public benefit in Jersey or elsewhere to a reasonable degree.
+  Under Article 7(2)(a) (`-- src:205-208`) the determiner compares the benefit gained by members or other persons with the benefit to the public, with any disbenefit.
+  Under Article 7(2)(b) (`-- src:209`) any condition on obtaining the benefit, including any charge or fee, is tested for being unduly restrictive.
+  Article 7(3)(a) (`-- src:211`) forbids presuming any particular charitable purpose to be for the public benefit.
+  So a commercial care home that passes head (n) on reading B still has to meet the public benefit test, and the fork matters for the purposes limb only.
+  Tested without a new input: on reading B an entity whose only purpose is the witness does not meet the charity test when the determination is that it does not provide public benefit, and the limb that decides is 5(1)(b); a determination made without the 7(2)(a) comparison, without the 7(2)(b) regard, or by presuming public benefit does not answer the question (`g2-tests-art5`, section "Article 6(2) reached through the charity test").
+- Evidence from other statutes, for a reviewer.
+  Charities Act 2011 (England and Wales) section 3(2)(e) reads "paragraph (j) includes relief given by the provision of accommodation or care to the persons mentioned in that paragraph", paragraph (j) there being the relief of those in need.
+  The fleet lead verified that wording on 2026-10-27 against the WIPO Lex copy, https://www.wipo.int/wipolex/edocs/lexdocs/laws/en/gb/gb423en.html; I did not open it.
+  A web search is reported to give the same words in the Charities Act 2006 and the Charities Act (Northern Ireland) 2008; those texts were NOT opened by anyone: reported, not checked.
+  Jersey's 6(2)(e) stops at "accommodation or care;" and does not say "to the persons mentioned in that paragraph".
+- Question for a domain expert (section 7, question 14).
+  Is the omission, in Jersey's Article 6(2)(e), of the words "to the persons mentioned in that paragraph" deliberate?
+  If it is deliberate, the clause widens (1)(n) and reading B is the better one; if it is not, reading A.
+  The omission supports B, because it may be deliberate; under A it is neutral, because "relief" in (2)(e) is the relief of (1)(n).
+  This is a question, not an answer; the default stands as the owner's ruling until an expert says otherwise.
+- Representation.
+  A new fact at the end of the facts record, `the purpose is the provision of accommodation or care`: the second element alone.
+  It is a `BOOLEAN`, `TYPICALLY FALSE`, like the other extension facts (sickness, regeneration, civic responsibility, and the existing fact itself); FALSE means "not this", and a JSON row that leaves it out takes FALSE.
+  A `MAYBE` that is NOTHING would have to refuse under B for every purpose that says nothing about care, or default to FALSE anyway.
+  The existing fact keeps its name and meaning, and is read as entailing the new one.
+  `Art 6(2)(e) ...` takes `interp` and delegates by `CONSIDER` to one private rule per reading.
+  `reading A of Article 6(2)(e): only as relief of those in need` is the existing fact.
+  `reading B of Article 6(2)(e): the provision of accommodation or care suffices` is the new fact OR the existing one, so a caller that sets only the old fact gets the old answer on both readings.
+  The values `F2.14 A`, `F2.14 B` and `the interpretation of Articles 3 to 7 with F2.14 read as B` are in `g2-readings`.
+- Where it bites.
+  Only for a purpose that the head recorded for it does not already admit: a purpose recorded under no head, or under a head that does not admit it, with the witness facts.
+  A purpose recorded under head (n) is within it on both readings.
+  Article 6(5) still excludes a political purpose with the witness facts on reading B (tested; on A that purpose is not charitable in any case).
+- Discriminating case and tests.
+  The witness.
+  A: head (n) is not engaged and the purpose is not a charitable purpose, so an entity whose only purpose it is fails 5(1)(a).
+  B: head (n) is engaged and the purpose is charitable, so that entity passes 5(1)(a) and meets the test if it also provides public benefit.
+  Tests: `g2-tests-art6` section "Article 6(2)(e) ... (FORK F2.14)" (both readings of the clause, of each private rule, of the clarifications as a whole, and of the charitable-purpose export, each on four fact-sets: the witness, relief of those in need given by accommodation or care, the seventh field alone, and nothing relevant), and `g2-tests-art5` section "Article 6(2) reached through the charity test".
+  Red: 1 (`g2-tests-red`, the witness asserted charitable under the favoured reading).
+
 ### Ambiguities met that did not become forks
 
 Each is a place where the text can be read two ways but where the Law has no case that the two readings answer differently, or where the point is a judgement the caller records. They are listed so that a reviewer can disagree with the decision cheaply.
@@ -324,6 +400,9 @@ Each row is a scenario run by a green test; "FR" is the favoured interpretation 
 | Assistance to a foreign equivalent body that relates to no function of the Commissioner (F2.8) | A no power; B power | 4(3)(c) |
 | First limb practicable and not sought, last not practicable (F2.9) | A broken; B no duty | 4(4) |
 | Guidance on the duties of governors under 4(1)(d) only (F2.12) | A out of 5(6) to (8); B in | 5(6) |
+| A purpose of providing accommodation or care, nobody shown to be in need, recorded under no head (F2.14; default ruled by the owner (Meng), 2026-10-27) | A: head (n) not engaged, not a charitable purpose; B: engaged, charitable | 6(2)(e), 6(1)(n) |
+| An entity whose only purpose is that (F2.14) | A: fails 5(1)(a), the limb that decides names the purpose; B: meets the test | 5(1)(a), 6(2)(e) |
+| Relief of those in need given by accommodation or care (F2.14) | within head (n) on both readings | 6(2)(e), 6(1)(n) |
 | Recreational facilities open to the public at large, the object of improving the conditions of life stated NOT to hold (a public amusement arcade) | not within head (i); not charitable | 6(1)(i), 6(2)(d)(ii) |
 | Recreational facilities with the object of improving the conditions of life, for people in need or open to the public at large | within head (i) | 6(1)(i), 6(2)(d) |
 | Recreational facilities with the object, neither for people in need nor open to the public at large | not within head (i) | 6(2)(d) |
@@ -337,12 +416,12 @@ Each row is a scenario run by a green test; "FR" is the favoured interpretation 
 
 `domain.l4` is read-only, so each noun below is declared in `g2-nouns` as a local stand-in.
 
-- N1. `Facts about a purpose under Article 6` and `Purpose with the facts Article 6 reads`. Article 6(2) narrows head (h) and head (i), extends heads (d), (f) and (n), and head (l) joins two ideas; `Purpose` carries only the head and three flags. Request: add the ten fields of `Facts about a purpose under Article 6` (the tenth, the object of improving the conditions of life, was added after independent testing) to `Purpose` (the three-valued ones as `MAYBE BOOLEAN`), so that `Entity.purposes` carries them; G2's headline would then drop its parallel list `the purposes with their Article 6 facts`. Until then the charity test takes the entity and the list, and refuses if the list is not the entity's purposes.
+- N1. `Facts about a purpose under Article 6` and `Purpose with the facts Article 6 reads`. Article 6(2) narrows head (h) and head (i), extends heads (d), (f) and (n), and head (l) joins two ideas; `Purpose` carries only the head and three flags. Request: add the eleven fields of `Facts about a purpose under Article 6` (the tenth, the object of improving the conditions of life, was added after independent testing; the eleventh, the provision of accommodation or care, for fork F2.14) to `Purpose` (the three-valued ones as `MAYBE BOOLEAN`), so that `Entity.purposes` carries them; G2's headline would then drop its parallel list `the purposes with their Article 6 facts`. Until then the charity test takes the entity and the list, and refuses if the list is not the entity's purposes.
 - N2. `Facts about the constitution under Article 5(2)` (a list of `Permission that a constitution expressly makes`, with `Person named in Article 5(2)` and `What a constitution expressly permits`). It is a fact about the constitution (Article 2(4)), which G1 owns. Request: a field of `Entity` or of G1's constitution record. 8(3)(i) (G3) asks for "the text of the provision in the constitution that falls within paragraph (2)", so the permission's text should be recorded with it.
 - N3. `Determination of public benefit`: who determined, what was found, and what the determiner did and did not do. It is not a fact about the entity but a record of a decision; the integrator needs one per time the test is applied (IP9: at the application and at the appeal). No change to `domain.l4` is requested; the integrator decides where it lives.
 - N4. `Act under Articles 3 to 7` and `Subject of the Commissioner's guidance`: local to the group. If the integrator wants one act type across the fleet, the constructors are named for what is done and not for an Article, and each carries its performer as its first `Legal actor` field.
 - N5. `Limb of the charity test that decides it`: local. It has a sixth constructor since the repair, `Article 5(1) does not apply: the body is not an entity within Article 2(1)`; a `CONSIDER` over it elsewhere must be extended.
-- N6. `Interpretation of Articles 3 to 7` and its thirteen enumerations: local.
+- N6. `Interpretation of Articles 3 to 7` and its fourteen enumerations: local.
 - N7. `Legal actor` (domain.l4) is matched exhaustively in `Art 7(1) Articles 7(2) and 7(3) apply to the person` and in `the person is one of those whom Article 5(5) binds in other functions`, and `Head of charitable purpose` in `Art 6(1) the head admits the purpose`. If a constructor is added, those matches must be extended; the compiler says where.
 
 Standard inputs consumed. `the entity` : `Entity` (IP5: its `standing on the register`, for "applicant", and its `purposes`); `the office of the Minister` : `Office of the Minister` (IP3, read only on the second reading of F2.3). Also consumed since the repair: `the entity`'s `kinds of entity` (IP5, empty for a body that is not an entity). Not consumed: `the day` and `the vintage of the text` (IP1, IP2): this group decides nothing by the day of the question. Everything else is a group-local input, named in section 5.
@@ -775,6 +854,7 @@ Where I looked. I re-read Articles 3 to 7 against my modules once all were green
 11. In 7(2)(a), are the benefit to members and the disbenefit to the public two comparisons or one?
 12. What does "or will do so on registration" in 11(4)(a) add to 5(1)(b)'s applicant limb (C5)?
 13. Does a function exercised by a member of the Commissioner's staff under Schedule 1 paragraph 4(3) carry the duties that Articles 7(1) and 5(5) attach to the Commissioner (F2.13, C10)?
+14. Is the omission, in Article 6(2)(e), of the words "to the persons mentioned in that paragraph" deliberate? Section 3(2)(e) of the Charities Act 2011 (England and Wales) has them (verified by the fleet lead against the WIPO Lex copy; the same words are reported, not checked, in the Charities Act 2006 and the Charities Act (Northern Ireland) 2008); Jersey's 6(2)(e) stops at "accommodation or care;". If deliberate, the clause widens (1)(n) and reading B of F2.14 is the better one; if not, reading A. Under A the omission is neutral, because "relief" in (2)(e) is the relief of (1)(n). The default (A) was ruled by the owner (Meng) on 2026-10-27; reading B stays callable.
 
 ## 8. What the sources do not answer
 
@@ -796,11 +876,11 @@ Where I looked. I re-read Articles 3 to 7 against my modules once all were green
 3. IP10: `Art 5(3) the entity meets the charity test only by virtue of an Order` takes the same seven inputs and is TRUE only if the Order input is TRUE, the constitution is within 5(2) and (a) and (b) hold.
 4. IP11: `Art 6 the entity has a purpose within the advancement of religion`; the first reading of F2.5 is the one consistent with 6(2)(f) read as written. G8's F8.3 should be set from the same reading of F2.5 (BRIEF "Forks that must be set together").
 5. Commencement. No G2 function gates itself. Articles 3 to 7 are in the first stage (21 November 2014) per the Table of Legislation History; the integrator's wrapper (IP4) asks it.
-6. A function that depends on a fork takes the whole record; the 16 values of `g2-readings` are the readings by name. The fork fields are 13; the register above has 13 entries.
+6. A function that depends on a fork takes the whole record; the 17 values of `g2-readings` are the readings by name. The fork fields are 14; the register above has 14 entries.
 7. Article 11(6)(b) (G4): "Articles 5(6) to (8) apply to that guidance as they apply to guidance under Article 5(4)". The G2 rules of 5(6) to (8) do not read the identity of the guidance, so G4 may call them for the guidance on "substantial"; they assume scope.
 8. Article 28(1)(a) (G8) and Article 8(3)(i) (G3) consume IP11 and IP10.
 9. A refused result is a named refusal and not an error. What can refuse, and why: (i) `Art 7 the entity provides public benefit`, and so `Art 5(1)(b) ...`, `Art 5 the entity meets the charity test`, `Art 5(3) the entity meets the charity test only by virtue of an Order` and `Art 5 the limb that decides the charity test`, when the determination was made in breach of the duties on its maker (first reading of F2.10) and nothing else decides the case first; (ii) `Art 6(1) the purpose is a charitable purpose` and so the functions of Article 5 that call it, when the head recorded is (h), (i) or (l) and a fact that 6(2)(c), 6(2)(d) or 6(1)(l) needs is NOTHING and no clarification or other alternative decides first; (iii) `Art 5(1)(a) ...`, `Art 5 ...`, IP10 and the limb function, when `the purposes with their Article 6 facts` are not the entity's purposes; (iv) `Art 5 the limb that decides the charity test`, additionally, for an entity that is barred by 5(2) and whose (b) cannot be answered (the test is FALSE; which limb is first is not known); (v) `Art 6(1) the purpose is a charitable purpose` and so Article 5's functions, when the head recorded is (i) and `the facilities or activities have the object of improving the conditions of life ...` is NOTHING, unless 6(2)(d) is stated not to hold on both alternatives (then FALSE). A body that is not an entity does not refuse: `Art 5 the entity meets the charity test` and IP10 answer FALSE for it before any other refusal can arise, and the limb function names the limb `Article 5(1) does not apply: the body is not an entity within Article 2(1)`.
-10. Repair (section 11). IP5: the entity's `kinds of entity` must be filled (empty means "not an entity", and the charity test then answers FALSE). N1: the object of 6(1)(i) is a field of the facts (`MAYBE BOOLEAN`, TYPICALLY NOTHING); a caller that omits it in JSON gets NOTHING, and a head (i) purpose then refuses unless 6(2)(d) decides it as FALSE. F2.13: pass `a member of the Commissioner's staff` as `who` only for a function exercised under Schedule 1 paragraph 4(3); otherwise pass `any person`. Nine exports gained `interp`.
+10. Repair (section 11). IP5: the entity's `kinds of entity` must be filled (empty means "not an entity", and the charity test then answers FALSE). N1: the object of 6(1)(i) is a field of the facts (`MAYBE BOOLEAN`, TYPICALLY NOTHING); a caller that omits it in JSON gets NOTHING, and a head (i) purpose then refuses unless 6(2)(d) decides it as FALSE. F2.13: pass `a member of the Commissioner's staff` as `who` only for a function exercised under Schedule 1 paragraph 4(3); otherwise pass `any person`. Nine exports gained `interp`. F2.14 (2026-10-27) adds an eleventh field to the facts record (default FALSE) and a fourteenth to the interpretation record (default reading A); no export gained an input (11.5).
 
 ## 10. Checks, numbers re-read, peeked
 
@@ -818,7 +898,7 @@ Test inventory (assertions and traces by module and section, counted from the de
 | `g2-tests-art6` | Article 6(2)(c): sport means sport that involves physical skill and exertion | 7 | 0 |
 | `g2-tests-art6` | Article 6(2)(d): paragraph (1)(i) applies only to facilities for people in need or open to the public at large | 5 | 0 |
 | `g2-tests-art6` | Article 6(1)(i): the object of improving the conditions of life, and 6(2)(d), each on both sides | 13 | 0 |
-| `g2-tests-art6` | Article 6(2)(e): paragraph (1)(n) includes relief given by the provision of accommodation or care | 3 | 0 |
+| `g2-tests-art6` | Article 6(2)(e): paragraph (1)(n) includes relief given by the provision of accommodation or care (FORK F2.14) | 33 | 0 |
 | `g2-tests-art6` | Article 6(2)(f): the advancement of any philosophical belief is analogous to the purpose in paragraph (1)(c), for the purposes of paragraph (1)(p) | 12 | 0 |
 | `g2-tests-art6` | Article 6(1)(l): equality and diversity | 10 | 0 |
 | `g2-tests-art6` | Article 6(5): political purposes | 7 | 0 |
@@ -831,7 +911,7 @@ Test inventory (assertions and traces by module and section, counted from the de
 | `g2-tests-art7` | Article 7(4): guidance on public benefit | 4 | 0 |
 | `g2-tests-art5` | Article 5(1): the charity test | 10 | 0 |
 | `g2-tests-art5` | Article 6(5) and Article 5(1)(a)(ii): a political purpose is neither charitable nor ancillary | 6 | 0 |
-| `g2-tests-art5` | Article 6(2) reached through the charity test | 4 | 0 |
+| `g2-tests-art5` | Article 6(2) reached through the charity test | 13 | 0 |
 | `g2-tests-art5` | FORK F2.1: "all of its purposes" with no purposes, and with ancillary purposes alone | 14 | 0 |
 | `g2-tests-art5` | The facts must be the entity's purposes | 3 | 0 |
 | `g2-tests-art5` | Article 5(1): a body that is not an entity does not meet the charity test | 18 | 0 |
@@ -847,8 +927,8 @@ Test inventory (assertions and traces by module and section, counted from the de
 | `g2-tests-art5` | Article 5(7): providing the Minister with the guidance and the report | 13 | 6 |
 | `g2-tests-art5` | Article 5(8): laying the guidance and the report before the States | 8 | 6 |
 | `g2-tests-red` | Control | 1 | 0 |
-| `g2-tests-red` | Each fork, answered as its other reading answers it | 14 | 0 |
-| total | | 385 | 62 |
+| `g2-tests-red` | Each fork, answered as its other reading answers it | 15 | 0 |
+| total | | 425 | 62 |
 
 What `work/g2/check-g2.sh` printed on the final run:
 
@@ -862,14 +942,14 @@ g2-fixtures.l4                                 0         0       0        0     
 g2-nouns.l4                                    0         0       0        0         0         0
 g2-readings.l4                                 0         0       0        0         0         0
 g2-tests-art3-4.l4                             0        30       0        0         0         0
-g2-tests-art5.l4                               0       162       0        0         0         0
-g2-tests-art6.l4                               0        96       0        0         0         0
+g2-tests-art5.l4                               0       171       0        0         0         0
+g2-tests-art6.l4                               0       126       0        0         0         0
 g2-tests-art7.l4                               0        82       0        0         0         0
-g2-tests-red.l4                               15         0      15        0         0        15
-TOTAL (12 modules)                            15       370      15        0         0
+g2-tests-red.l4                               16         0      16        0         0        16
+TOTAL (12 modules)                            16       409      16        0         0
 (a failed assertion is also an error; any other error, any refused assertion, any warning, and any failed count other than the expected one make the run red)
 
-srcrefs check: 212 src: lines, 71 runs, 133 locators, 0 problems
+srcrefs check: 215 src: lines, 73 runs, 135 locators, 0 problems
 
 module                                        traces in-module   sidecar     ok   bad  unguarded
 g2-tests-art3-4.l4                                11        11         0     11     0          0
@@ -882,11 +962,11 @@ check-traces: all 62 guarded trace(s) behaved as expected
 check-g2.sh: GREEN
 ```
 
-Other checks. `l4 verify` over the four Article modules, re-run on the final sources (`work/g2/frag/verify-*.txt`): every rule it analyses is without findings in `g2-art3-4-commissioner` (12 rules), `g2-art6-purposes` (30) and `g2-art5-charity-test` (28). In `g2-art7-public-benefit` it analyses 14 rules, 11 without findings and 3 with one finding each (the DEONTIC rules are reported `NOT ANALYSED`, as before: the tool visualises only a BOOLEAN-valued DECIDE). (1) `[vacuous-guard]` in `Art 7 the entity provides public benefit`, as before the repair, in the true-paths: the negated first arm of the BRANCH is entailed there, because a determination that complies with 7(3)(b) and finds public benefit cannot be one for an entity that benefits only identified natural persons; the first arm is not vacuous for the other outcomes, since it turns the REFUSE of a breach into the FALSE that 7(3)(b) requires (tested). (2) `[unsat]` in `reading B of F2.13: only the persons the Articles name are bound`, and (3) `[dead-branch]` at the second arm of `Arts 7(1) and 5(5) the Commissioner's staff are bound as the Commissioner is`, which calls it. Both come from the same thing: the second reading of F2.13 is the constant FALSE ("not bound"), which as a BOOLEAN is unsatisfiable by construction, and the tool reads the arm that calls it through to that constant. They are new with this repair, they are not defects in the Law's encoding, and I kept the one-rule-per-reading shape of the other forks rather than inline the constant to silence them. `l4 batch` run on `Art 4(2) the Commissioner has power to do the thing` and on `Art 5 the entity meets the charity test` with a JSON row: the exports load, an omitted record field takes its TYPICALLY default, and the answers agree. Re-run for the repair (`work/g2/batch/rows-repair-r1.json`, `rows-repair-r2.json`, with `interp` given as one field only, since an `interp` of `{}` is refused by the service with "the value is not known", before and after the repair alike): a company with an educational purpose gives true and the same inputs with `kinds of entity` empty give false (R2); a recreational head with the object field left out of the JSON is presumed NOTHING by the soft presumption and gives the named refusal of 6(1)(i), with the object true it gives true and with it false it gives false (R1); the thirteenth field of `interp`, left out, took its default. One limit found: a constructor with fields of an enumeration cannot be given as JSON input, so `Head of charitable purpose`'s `a purpose added by Regulations under Article 6(3)` (a constructor of domain.l4) cannot be supplied through the service; the other sixteen heads are given by name, and a `MAYBE` head as the plain name or null.
+Other checks. `l4 verify` over the four Article modules, re-run on the final sources (`work/g2/frag/verify-*.txt`): every rule it analyses is without findings in `g2-art3-4-commissioner` (12 rules), `g2-art6-purposes` (32, after F2.14 added two) and `g2-art5-charity-test` (28). In `g2-art7-public-benefit` it analyses 14 rules, 11 without findings and 3 with one finding each (the DEONTIC rules are reported `NOT ANALYSED`, as before: the tool visualises only a BOOLEAN-valued DECIDE). (1) `[vacuous-guard]` in `Art 7 the entity provides public benefit`, as before the repair, in the true-paths: the negated first arm of the BRANCH is entailed there, because a determination that complies with 7(3)(b) and finds public benefit cannot be one for an entity that benefits only identified natural persons; the first arm is not vacuous for the other outcomes, since it turns the REFUSE of a breach into the FALSE that 7(3)(b) requires (tested). (2) `[unsat]` in `reading B of F2.13: only the persons the Articles name are bound`, and (3) `[dead-branch]` at the second arm of `Arts 7(1) and 5(5) the Commissioner's staff are bound as the Commissioner is`, which calls it. Both come from the same thing: the second reading of F2.13 is the constant FALSE ("not bound"), which as a BOOLEAN is unsatisfiable by construction, and the tool reads the arm that calls it through to that constant. They are new with this repair, they are not defects in the Law's encoding, and I kept the one-rule-per-reading shape of the other forks rather than inline the constant to silence them. `l4 batch` run on `Art 4(2) the Commissioner has power to do the thing` and on `Art 5 the entity meets the charity test` with a JSON row: the exports load, an omitted record field takes its TYPICALLY default, and the answers agree. Re-run for the repair (`work/g2/batch/rows-repair-r1.json`, `rows-repair-r2.json`, with `interp` given as one field only, since an `interp` of `{}` is refused by the service with "the value is not known", before and after the repair alike): a company with an educational purpose gives true and the same inputs with `kinds of entity` empty give false (R2); a recreational head with the object field left out of the JSON is presumed NOTHING by the soft presumption and gives the named refusal of 6(1)(i), with the object true it gives true and with it false it gives false (R1); the thirteenth field of `interp`, left out, took its default. Re-run for F2.14 (`work/g2/batch/rows-f214.json`, six rows to `Art 6(1) the purpose is a charitable purpose`, with the expected value of each decided before the run): the witness with the fourteenth field of `interp` left out gives false (the default, reading A, was presumed); the witness with reading B named gives true; the witness with the eleventh field of the facts left out and reading B gives false (the field took FALSE); the seventh field alone gives true on both readings; the witness with reading A named gives false. One limit found: a constructor with fields of an enumeration cannot be given as JSON input, so `Head of charitable purpose`'s `a purpose added by Regulations under Article 6(3)` (a constructor of domain.l4) cannot be supplied through the service; the other sixteen heads are given by name, and a `MAYBE` head as the plain name or null.
 
-Mutation test of the modules (`work/g2/mutate.py`): 42 mutants, each a one-token change to one rule (a negation removed, a connective swapped, a branch flipped, a boundary changed, a reading's arm exchanged, a guard answered the other way), each run against the four green test modules and the trace check. Thirty are the original set. Twelve (M31 to M42) were added for the repair after independent testing: the non-entity guard (M31 the guard rule always true; M32 the guard answers TRUE in the rule for IP10; M33 the limb function names `none` for a non-entity; M34 the guard answers TRUE in the rule for IP8), the object of 6(1)(i) (M35 an object stated false admits the purpose; M36 an object stated true admits it without 6(2)(d); M37 6(2)(d) stated false on both alternatives admits it; M38 head (i) skips the object and asks 6(2)(d) alone), and the staff fork F2.13 (M39 the staff arm of 7(1) answers FALSE; M40 reading A of F2.13 answers FALSE; M41 the staff arm of 5(5) answers FALSE; M42 reading B answers TRUE).
+Mutation test of the modules (`work/g2/mutate.py`): 48 mutants, each a one-token change to one rule (a negation removed, a connective swapped, a branch flipped, a boundary changed, a reading's arm exchanged, a guard answered the other way), each run against the four green test modules and the trace check. Thirty are the original set. Twelve (M31 to M42) were added for the repair after independent testing and six (M43 to M48) for fork F2.14: the non-entity guard (M31 the guard rule always true; M32 the guard answers TRUE in the rule for IP10; M33 the limb function names `none` for a non-entity; M34 the guard answers TRUE in the rule for IP8), the object of 6(1)(i) (M35 an object stated false admits the purpose; M36 an object stated true admits it without 6(2)(d); M37 6(2)(d) stated false on both alternatives admits it; M38 head (i) skips the object and asks 6(2)(d) alone), and the staff fork F2.13 (M39 the staff arm of 7(1) answers FALSE; M40 reading A of F2.13 answers FALSE; M41 the staff arm of 5(5) answers FALSE; M42 reading B answers TRUE). The F2.14 mutants: M43 reading A of 6(2)(e) reads the accommodation-or-care fact instead of the need fact; M44 reading B requires both facts; M45 reading B ignores the need fact; M46 the two arms of the dispatch exchanged; M47 the clause dropped from the clarifications; M48 reading A widened to read either fact.
 
-Result, on the final sources: 42 of 42 killed, in one run of all 42 (`work/g2/mutants/report-final42.txt`). Before that run I checked by script that each of the 42 patterns occurs exactly once in the final sources; four of the original thirty (M06, M11, M15, M28) had patterns that no longer matched and I had corrected them, and M40 and M42 were re-aimed at the two per-reading rules of F2.13 when I split that fork into one rule per reading. Earlier partial runs on earlier states of the repaired sources (`report-repair-old.txt`, `report-repair-fixed.txt`, `report-repair-new.txt`, `report-repair-f213.txt`) agreed with it where they applied.
+Result, on the final sources: 48 of 48 killed, in one run of all 48 (`work/g2/mutants/report-final48b.txt`, made after the last test and comment edits; an earlier run of the same 48, `report-final48.txt`, agreed). Before that run I checked by script that each of the 48 patterns occurs exactly once in the sources; four of the original thirty (M06, M11, M15, M28) had patterns that no longer matched and I had corrected them, and M40 and M42 were re-aimed at the two per-reading rules of F2.13 when I split that fork into one rule per reading. Earlier runs on earlier states of the repaired sources (`report-final42.txt`, the 42 before F2.14; `report-repair-old.txt`, `report-repair-fixed.txt`, `report-repair-new.txt`, `report-repair-f213.txt`) agreed with it where they applied. A first start of the 48-mutant run was stopped after a minute, by its PID, because I changed an `@desc` in `g2-art6-purposes` and wanted every mutant to run against the same sources; its partial files were deleted and the run was restarted.
 
 History. The first run of the thirty on the sources as first delivered: 29 killed, 1 survived (`M27`, the lower bound of `Art 5(7) and 5(8) the act falls within the days counted from the event`), because the assertion meant to put an act before the event used a date a year after it; I corrected the date and added the 5(8) counterpart, and `M27` is killed. That run's report listed M06, M11 and M15 as killed; section 11.4 says what that run did and did not establish.
 
@@ -951,4 +1031,28 @@ New, and so not a change: the enumeration `Whether a member of the Commissioner'
 - I did not guard the four rules named in 11.2 against a non-entity; that is a judgement, stated there.
 - My earlier statement that all 30 mutants were killed does not stand as it was made. Before the repair I counted, by script, how often each mutant's pattern occurs in the sources as delivered: the patterns of three mutants (M06, M11, M15) occurred 0 times, so those three could not have been applied to the delivered sources, although the report of the first run lists them as killed. The likely cause is that helper rules were renamed (to carry an Article number) after that run, but I did not establish that. Their kill status is established only by the re-run reported in section 10, on the repaired sources, with corrected patterns.
 
-Peeked: nothing. I read only the files named in the assignment and the brief, the l4 documentation under `doc/reference` and `doc/concepts/legal-modeling`, and `phase1/slice-G2.md`. My context carried an index of someone's notes that mentions this subject; I did not follow it.
+### 11.5 F2.14, 2026-10-27 (Article 6(2)(e); default ruled by the owner (Meng), 2026-10-27)
+
+What changed for the integrator, precisely. No export gained or lost an input: `Art 6(1) the purpose is a charitable purpose` already takes `interp`, and no other export reads the clause. Two rules that are not exported, and are callable, gained `interp` as a last input:
+
+| rule | old GIVEN list | new GIVEN list |
+| --- | --- | --- |
+| `Art 6(2)(e) paragraph (1)(n) includes the purpose, as relief given by accommodation or care` (not exported) | `facts` | `facts`, `interp` |
+| `Art 6(2) a clarification brings the purpose within a head` (not exported) | `facts` | `facts`, `interp` |
+
+Record shapes:
+
+| type | before | after |
+| --- | --- | --- |
+| record `Facts about a purpose under Article 6` | 10 fields | 11: the last is `the purpose is the provision of accommodation or care`, a `BOOLEAN` that is `TYPICALLY FALSE`. A positional `OF` takes 11 values; in JSON the field may be left out and takes FALSE. The seventh field keeps its name and meaning and is read as entailing the eleventh. |
+| record `Interpretation of Articles 3 to 7` | 13 fields | 14: the last is `how Article 6(2)(e) is read`, `TYPICALLY` the first reading (declaratory). A positional `OF` takes 14 values (all 17 values of `g2-readings` and the one in `g2-tests-art5` were extended); in JSON the field may be left out and takes its default. |
+
+New, and so not a change: the enumeration `How Article 6(2)(e) is read` (constructors `Article 6(2)(e) is declaratory: relief given by accommodation or care is within paragraph (1)(n) only as relief of those in need` and `Article 6(2)(e) widens paragraph (1)(n): the provision of accommodation or care is within it without more`); the rules `reading A of Article 6(2)(e): only as relief of those in need` (`facts`) and `reading B of Article 6(2)(e): the provision of accommodation or care suffices` (`facts`); the values `F2.14 A`, `F2.14 B` and `the interpretation of Articles 3 to 7 with F2.14 read as B`; the fixtures `G2 facts: the provision of accommodation or care, nobody shown to be in need` and `G2 facts: relief of those in need given by accommodation or care, the provision not separately recorded`.
+
+Behaviour that changed with the same `GIVEN` list: none on the default reading, for any caller that fills the facts as before, because the code was already declaratory in substance and reading A is its behaviour. A caller that sets only the seventh field gets the old answer on both readings. A caller that wants the witness to count under reading A cannot say so: that is what reading A means. `@desc` of `interp` in `Art 6(1) the purpose is a charitable purpose` now also names how Article 6(2)(e) is read.
+
+For the integrator: the favoured value is unchanged in name (`the favoured interpretation of Articles 3 to 7`) and now has 14 fields. Whoever builds the facts from a source of truth should set the eleventh field for a purpose of providing accommodation or care whether or not it also relieves those in need, and the seventh only if it does.
+
+Red: one new assertion in `g2-tests-red`, so 16 in all.
+
+Peeked: nothing. I read only the files named in the assignment and the brief, the l4 documentation under `doc/reference` and `doc/concepts/legal-modeling`, and `phase1/slice-G2.md`. My context carried an index of someone's notes that mentions this subject; I did not follow it. For F2.14 I did not read the independent encoding of Articles 5 to 7, or any file of it, and I did not open the WIPO Lex page or the texts of the Charities Act 2006 and the Charities Act (Northern Ireland) 2008; what this file says about them is what the fleet lead's message said.

@@ -216,7 +216,7 @@ Modules by group: G1 7, G2 12, G3 14, G4 11, G5 12, G6 12, G7 13, G8 12, G9 9, d
 | int-tests-readings | int | domain, g1-interpretation, g2-readings, g3-fixtures, g4-tests-fixtures, g5-interpretation, g6-interpretation, g7-interpretation, g8-tests-fixtures, g9-interpretation, int-readings |
 | int-tests-red | int | domain, g6-art20-court-orders, g7-interpretation, g7-art21-23-expressions, g8-nouns, g8-art26-demand, g8-penalties, g9-interpretation, g9-sched2-tribunal, int-readings, int-nouns, int-wiring, int-h-offence, int-tests-fixtures |
 | int-tests-register | int | domain, g2-nouns, g3-nouns, g5-nouns, g8-nouns, int-readings, int-nouns, int-wiring, int-h-register, int-tests-fixtures |
-| int-tests-repairs | int | domain, g2-nouns, g2-readings, g3-nouns, g4-nouns, g6-art19-reportable-matters, g7-interpretation, g7-art21-23-expressions, g7-art37-43-final, g8-nouns, int-readings, int-nouns, int-wiring, int-h-text, int-h-application, int-h-offence, int-tests-fixtures |
+| int-tests-repairs | int | domain, g2-nouns, g2-readings, g2-art6-purposes, g3-nouns, g4-nouns, g6-art19-reportable-matters, g7-interpretation, g7-art21-23-expressions, g7-art37-43-final, g8-nouns, int-readings, int-nouns, int-wiring, int-h-text, int-h-application, int-h-offence, int-tests-fixtures |
 | int-tests-vintage-matrix | int | domain, g1-interpretation, g1-art1-defined-terms, g1-art2-entity, g7-interpretation, g7-vintages, g7-commencement, g9-interpretation, g9-sched1-commissioner, int-readings, int-h-text |
 | int-tests-wiring | int | domain, g2-nouns, g2-readings, g3-nouns, g4-nouns, g4-art11-application, g4-art11-decision, g5-nouns, g6-art17-after-deregistration, g7-art21-23-expressions, g8-nouns, g8-art26-demand, g8-art27-28-required-steps, g8-art29-31-information, g8-tests-fixtures, int-readings, int-nouns, int-wiring, int-h-application, int-h-offence, int-tests-fixtures |
 
@@ -228,7 +228,7 @@ A group module never imports another group's module; only `int-` modules (and th
 
 ### 3.1 The six headline functions
 
-Each headline takes `Readings of the fleet` (the reading taken at each of the 136 forks, see section 5) and the day, and each `@export` has a sentence and a `@desc` on every `GIVEN`.
+Each headline takes `Readings of the fleet` (the reading taken at each of the 137 forks, see section 5) and the day, and each `@export` has a sentence and a `@desc` on every `GIVEN`.
 Each headline first asks the gate (section 3.2) whether every unit of the Law its answer rests on was in force on the day, and refuses by name when one was not.
 
 | headline | function (module) | what it answers | units the answer rests on (Articles as now numbered) |
@@ -334,8 +334,26 @@ What the integrator rewired:
   None of them calls a rule whose signature changed: headline (a) reaches G2 through `Art 5`, `Art 5(3)` and `Art 6 ... advancement of religion`, whose inputs are unchanged, and it passes G1's derived `kinds of entity`, so a body with none is refused as a non-entity without further wiring.
 - The new input of headline (a) comes from the caller, inside the record `Purpose with the facts Article 6 reads` of each purpose of the body in the case (default NOTHING); a purpose of head (i) without it is refused by name (`int-tests-repairs.l4`, R1).
 - F2.13 is a field of `Readings of the fleet` like any other fork; `who` for the rules of Articles 7 and 5(5) is the caller's fact (section 6.13).
-- `int-tests-repairs.l4` tests what changed through the headlines (48 assertions, scenarios R1 to R6 of section 10.8): a recreational purpose with and without the object; a partnership applicant; a staff determination on both readings of F2.13; Part 9 and the original Article 41 in headline (e) on both readings of F7.9; a non-entity saying it is a charity at headline (d); and the gate of headline (a) on 30 April and 1 May 2018.
-- All 586 assertions of the integration modules, including the 538 of the first pass, pass on the repaired groups.
+- `int-tests-repairs.l4` tests what changed through the headlines (48 assertions at that point, scenarios R1 to R6 of section 10.8; section 3.7 adds R7): a recreational purpose with and without the object; a partnership applicant; a staff determination on both readings of F2.13; Part 9 and the original Article 41 in headline (e) on both readings of F7.9; a non-entity saying it is a charity at headline (d); and the gate of headline (a) on 30 April and 1 May 2018.
+- At the end of this rewiring the integration modules held 586 assertions, including the 538 of the first pass, and all of them passed on the repaired groups; section 3.7 gives the count after F2.14.
+
+### 3.7 After the comparison: fork F2.14, Article 6(2)(e) (2026-10-27)
+
+Group G2 added a fourteenth fork, F2.14: whether Article 6(2)(e) ("paragraph (1)(n) includes relief given by the provision of accommodation or care") adds an operand to head (n) of Article 6(1), or only says that relief of those in need can be given by accommodation or care.
+The label of the default is "default ruled by the owner (Meng), 2026-10-27; the widening reading stays callable".
+Reading A (the default) is declaratory: relief given by accommodation or care is within head (n) only as relief of those in need.
+Reading B widens: the provision of accommodation or care is within head (n) without more, and B stays callable as `the interpretation of Articles 3 to 7 with F2.14 read as B`.
+G2 gave `Facts about a purpose under Article 6` an eleventh field, `the purpose is the provision of accommodation or care` (a BOOLEAN, TYPICALLY FALSE), gave `Interpretation of Articles 3 to 7` a fourteenth, `how Article 6(2)(e) is read`, and added `interp` as the last input of `Art 6(2)(e) paragraph (1)(n) includes the purpose, as relief given by accommodation or care` and of `Art 6(2) a clarification brings the purpose within a head`.
+What the integrator rewired:
+
+- `int-readings.l4` (generated) now sets the fourteenth field of the G2 reading from the reading G2 marks TYPICALLY; `int-tests-fixtures.l4` (generated) now sets the eleventh field of the shared Article 6 facts to FALSE.
+- No other `int-` module needed a change.
+  No `int-` rule calls `Art 6(2)` or `Art 6(2)(e)` directly (checked by searching the `int-` modules): headline (a) reaches Article 6 through `Art 5 the entity meets the charity test` and `Art 6 the entity has a purpose within the advancement of religion` (`int-wiring.l4`), whose inputs did not change, with the reading taken from `Readings of the fleet`.
+- The new fact comes from the caller, inside the record `Purpose with the facts Article 6 reads` of each purpose of the body in the case, as the tenth field does; the default of the record is FALSE, not NOTHING, because G2 declares it a plain BOOLEAN, so a row that leaves it out takes FALSE and reading B then agrees with reading A.
+  The integrator did not derive it from anything.
+- The one test module that built the facts record by hand, `int-tests-repairs.l4` (R1), gained the field set to FALSE, and an import of `g2-art6-purposes` for the purpose-level assertions of R7 (an `int-` module may import across groups).
+- `int-tests-repairs.l4` has a seventh scenario, R7 (18 assertions, section 10.8), run at the purpose level (`Art 6(1) the purpose is a charitable purpose`) and through headline (a); the expected values were decided from the text of Articles 5(1)(b), 6(1)(n), 6(2)(e) and 7(3)(a) before the module was run.
+- The fork is not wired from anywhere else: no other group's rule depends on Article 6(2)(e) (checked by searching the modules for `accommodation or care` and `6(2)(e)`), so there is no entry for it in the consistency register of section 6.
 
 ## 4. Coverage
 
@@ -401,9 +419,12 @@ Rows whose disposition differs from the survey's: 17.
 
 A fork is a place where the Law's words allow more than one reading and the encoding takes one, marks it `TYPICALLY` in a field of its group's `Interpretation of ...` record, and keeps the others callable with a test.
 The index below is generated by a script (`forkindex.py`, in the integrator's working directory) from the nine fragments' fork registers and the nine interpretation records.
-There are 136 forks: G1 8, G2 13, G3 13, G4 12, G5 14, G6 24, G7 14, G8 19, G9 19.
+There are 137 forks: G1 8, G2 14, G3 13, G4 12, G5 14, G6 24, G7 14, G8 19, G9 19.
 The thirteenth fork of G2, F2.13, was added on 2026-10-27 after the independent testing.
+The fourteenth, F2.14 (does Article 6(2)(e) add an operand to head (n), or only say that relief of those in need can be given by accommodation or care?), was added on 2026-10-27 after a comparison with an independent encoding of Articles 5 to 7, once the encoders had finished: default ruled by the owner (Meng), 2026-10-27; the widening reading stays callable.
 Each fork is carried by exactly one field of its group's record, and no field is without a fork (checked by the script).
+The question column is the text of the fork's heading in the group's fragment; G7 writes its headings without text, so for its rows the question is the phrase that names the field of its record in the fork's section (`Field and constructors`), put as an indirect question in the form of the G6 rows, and for the five forks whose field is a noun phrase (F7.3, F7.5, F7.6, F7.7, F7.8) the script holds the question and stops if the fragment's phrase changes.
+The script also stops, naming the fork and the column, on an empty cell in any row; the table as deposited after the second pass had fourteen empty question cells (every G7 row), and a reader found them.
 The reading taken is the constructor the field is marked `TYPICALLY`, which is what `Int the favoured readings of the fleet` uses.
 Each fork's discriminating case, the text that licenses each reading, and the reasons for the choice are in the group's fragment, section "Fork register" (section 2 of each fragment, in G6 section (2)), under the heading with the fork's id.
 
@@ -430,6 +451,7 @@ Each fork's discriminating case, the text that licenses each reading, and the re
 | F2.11 | G2 | the promotion of equality and diversity | a purpose must promote both equality and diversity |
 | F2.12 | G2 | which guidance do Articles 5(6) to 5(8) apply to? | the guidance under Article 5(4), including the guidance on public benefit that Article 7(4) requires it to contain |
 | F2.13 | G2 | is a member of the Commissioner's staff, exercising the Commissioner's function, bound as the Commissioner is? | a member of staff exercising a function of the Commissioner under Schedule 1 paragraph 4(3) is bound as the Commissioner is |
+| F2.14 | G2 | does Article 6(2)(e) add an operand to head (n)? | Article 6(2)(e) is declaratory: relief given by accommodation or care is within paragraph (1)(n) only as relief of those in need |
 | F3.1 | G3 | Article 8(6): from when do the ten years of retention run? | from the day the Commissioner receives or makes each copy |
 | F3.2 | G3 | Article 8(3)(j): which year is "the most recent year"? | the calendar year |
 | F3.3 | G3 | Article 10(4): does "a particular registered charity" include a deregistered entity? | a registered charity is an entity entered in the general or the restricted section only |
@@ -493,20 +515,20 @@ Each fork's discriminating case, the text that licenses each reading, and the re
 | F6.5 | G6 | when the ten years of Article 17(1)(a) start | the ten years run from the date of the deregistration notice |
 | F6.6 | G6 | how long the bar on assigning the registered number lasts | the bar on assigning the registered number has no end |
 | F6.18 | G6 | how the ten years of Article 17(1)(a) are counted | the last day is the anniversary, and 29 February falls back to 28 February |
-| F7.1 | G7 |  | a question about that day alone is refused |
-| F7.2 | G7 |  | the day of making is left out |
-| F7.3 | G7 |  | the table is in the original numbers |
-| F7.4 | G7 |  | both offences are made out |
-| F7.5 | G7 |  | the wording differs as printed |
-| F7.6 | G7 |  | only partnerships and bodies corporate |
-| F7.7 | G7 |  | the date of receipt |
-| F7.8 | G7 |  | calendar months |
-| F7.9 | G7 |  | in force when all its Articles are |
-| F7.10 | G7 |  | capacity as printed for each kind of body |
-| F7.11 | G7 |  | the named day is the first day in force |
-| F7.12 | G7 |  | Article 22 defines the term wherever the Law uses it |
-| F7.13 | G7 |  | the cap of Article 24(4) applies to every offence of the Regulations |
-| F7.14 | G7 |  | only Regulations can make consequential amendments of this Law |
+| F7.1 | G7 | how a day on which a text takes effect at a stated time is treated | a question about that day alone is refused |
+| F7.2 | G7 | how “7 days after it is made” is counted | the day of making is left out |
+| F7.3 | G7 | which numbering the commencement table speaks in | the table is in the original numbers |
+| F7.4 | G7 | how the strict and the knowing offences combine for one act | both offences are made out |
+| F7.5 | G7 | whether the wording of the advantage limb of the knowing offences is kept as printed or harmonised | the wording differs as printed |
+| F7.6 | G7 | which bodies are within Article 37(1) | only partnerships and bodies corporate |
+| F7.7 | G7 | on which date a notice is served | the date of receipt |
+| F7.8 | G7 | in what unit a term of imprisonment is counted | calendar months |
+| F7.9 | G7 | how a Part brought into force in two stages is treated | in force when all its Articles are |
+| F7.10 | G7 | how capacity is paired with the kind of body in Article 37(1) | capacity as printed for each kind of body |
+| F7.11 | G7 | how the day named as the day of commencement is counted | the named day is the first day in force |
+| F7.12 | G7 | whether Article 22 defines an excepted foreign charity outside Article 21 | Article 22 defines the term wherever the Law uses it |
+| F7.13 | G7 | whether adapting Articles 21 to 23 under Article 24(3)(a) can carry their imprisonment | the cap of Article 24(4) applies to every offence of the Regulations |
+| F7.14 | G7 | whether an Order under Article 2(2) can make consequential amendments of other provisions of the Law | only Regulations can make consequential amendments of this Law |
 | F8.1 | G8 | when does the one year of Article 26(5)(a) start? | the year of Article 26(5) runs from the day the document is provided or retained |
 | F8.2 | G8 | what is "as soon as practicable" in Article 26(6)? | promptness under Article 26(6) is a judgement the caller supplies |
 | F8.3 | G8 | does Article 28(1)(a) "by virtue of Article 6(1)(c)" reach a philosophical-belief purpose? | only a purpose within Article 6(1)(c) counts under Article 28(1)(a) |
@@ -546,7 +568,7 @@ Each fork's discriminating case, the text that licenses each reading, and the re
 | F9.18 | G9 | at least one member of staff to serve as the responsible officer against "the responsible officer" (Sch 2 3(2), src:841, and 3(3) to (5), src:842 to src:844) | the one member of staff the Minister has named is the responsible officer |
 | F9.19 | G9 | after satisfying himself or herself that the person has been absent ... for a period longer than (Sch 1 3(2)(a), src:784; Sch 2 2(2)(a), src:830) | the Minister's satisfaction and the absence longer than the number of weeks are both required |
 
-Total: 136 forks.
+Total: 137 forks.
 
 ## 6. The cross-group consistency register
 
@@ -709,7 +731,7 @@ Whether a pair is a real contradiction in the Law, a drafting slip or a delibera
 | S15 | 13(10), 13(8), 13(11)(a), 13(9)(b), 11(2)(e)(ii), 8(3)(m), 13(9)(c) | 13(10) names an Order under (8), which creates none; "a statement"/"that statement"/"current intentions"; 11(2)(e)(ii) says 13(9)(b), 8(3)(m) says 13(9)(c); an applicant is not yet "the registered charity" those provisions speak of | an Order made under (a) alone; a statement provided on the day of a payment | G5 1, 5, 9; G4 C5, C7 | forks F5.3, F5.14; IP29 split (section 6.10) |
 | S16 | 13(2), 5(1)(a)(ii), 6(5), 14(2), 14(1), 13(5)(b), 13(4)(b), 33(2)(e), 14(3)(a)(i), 25 | 13(2) strikes a provision for a purpose "that is not charitable" while 5(1)(a)(ii) accepts a purely ancillary purpose; 14(2) joins three aims by "and" although 14(1)(b) needs no misconduct; 13(5)(b) presupposes a permission no provision confers; 13(4)(b) and 33(2)(e) describe an approval regime the Law does not state; a court may forbid a charity to hold itself out as a charity while an Order under 25 may require registered charities to say they are one | a purely ancillary purpose added by amendment; an order under 14(1)(b) with no misconduct | G5 2, 3, 4, 11, 12 | forks F5.7, F5.12; 13(5)(b) encoded as the Commissioner's MAY, marked "presupposed, conferred by no provision" |
 | S17 | 18(4)(c), 1 ("misconduct"), 19(8), 19(10), 19(11), 19(4), 19(5), 20 (heading), 20(3) to (6), 17(9), 14(1) | 18(4)(c) makes a governor's misconduct depend on another governor's and Article 1 sends "misconduct" of a governor to 18(4); 19(8) forbids acting while in breach but only 19(10) has an offence (19(11)); the duty to declare (19(4)) is triggered by a notification nobody must give, and the charity must state in the return (19(5)) that it holds the declarations; the heading of Article 20 says "governor", paragraphs (3) to (6) say "a person"; 17(9) lends Article 14 powers to the court but changes the applicant (not the Commissioner) | governors who only assist each other; an unreported bankruptcy and the governor acts; a charity files its return without notifying its governors; the Commissioner wishes to protect the property of a deregistered entity | G6 bullets 7, 8, 9, 10, 12 | forks F6.24, F6.11, F6.21; 17(9) encoded as the text says (a test asserts that the Commissioner is not an applicant) |
-| S18 | 2(10)(b), 18(4)(a) | "in relation a registered charity" (missing "to"), "clauses (i) to (v)" for "sub-paragraphs"; 18(4)(a) says "an offence, mentioned in Article 2(10)" which can be read without the connection to a charity | an offence under 2(10)(b)(ii) to (vi) not in relation to a charity | G1 C1, C2, C16 | fork F1.2 |
+| S18 | 2(10)(b), 18(4)(a) | "in relation a registered charity" (missing "to"); 2(10)(b)(vi) says "clauses (i) to (v)", and the Law has no other name for that level (it says "sub-paragraphs" for the lettered level), so that is an observation and not shown to be a slip; 18(4)(a) says "an offence, mentioned in Article 2(10)" which can be read without the connection to a charity | an offence under 2(10)(b)(ii) to (vi) not in relation to a charity | G1 C1, C2, C16 | fork F1.2 |
 | S19 | 9(2), 9(2)(a), 9(2)(b), 11(1) | The lead-in lets "an applicant for registration, or a charity registered in the general section" request the restricted section; (a) and (b) say "the applicant"; 11(1) defines "the applicant" | a charity already in the general section that meets the funding condition | G3 1 | fork F3.12 |
 | S20 | 21(1) to (6), 23(1), 23(2), 21(2)(b)(ii), 21(4)(b)(ii), 21(6)(b)(ii), 23(2)(b)(ii), 24(3)(a), 24(4), 37(1) | A statement can make out both a strict and a knowing offence; "or other advantage" is in one limb and not in three alike; 24(3)(a) lets Regulations adapt offences that carry imprisonment while 24(4) caps the penalty at "no greater than a fine"; 37(1) names three kinds of body while 2(1) makes other kinds offenders | a statement made knowing it is untrue to a donor; Regulations adapting 21(9) wholesale; a committee member of an unincorporated association; a director of an LLP | G7 C2, C4, C5, C9 | forks F7.4, F7.5, F7.13, F7.6, F7.10; trap T26 tested in scenario D3 |
 | S21 | 26(1), 26(10), 26(9), 30, 31 | The power to demand serves one purpose, the offence of false information two; an application's information is asked under 11(2)(f)(ii), which has no offence; 26(9) excepts "proceedings under paragraph (7)"; 30 obliges disclosure only for some functions while 31 permits it for any | false information in an application with no 26(1) demand behind it | G8 9, 11, 16 | encoded as written; no fork |
@@ -779,6 +801,14 @@ The full text of each question is in the group's FRAGMENT, in its section "Open 
 - In 7(2)(a), are the benefit to members and the disbenefit to the public two comparisons or one (G2 q11)?
 - What does "or will do so on registration" in 11(4)(a) add to 5(1)(b)'s applicant limb (G2 q12)?
 - Does a function exercised by a member of the Commissioner's staff under Schedule 1 paragraph 4(3) carry the duties that Articles 7(1) and 5(5) attach to the Commissioner (G2 q13, F2.13)?
+- Does Article 6(2)(e) add an operand to head (n) of Article 6(1), so that the provision of accommodation or care is within the head with nobody shown to be in need, or does it only say that relief of those in need can be given by accommodation or care (F2.14)?
+  Label: default ruled by the owner (Meng), 2026-10-27; the widening reading stays callable.
+  History: the declaratory default was first recommended by the general manager when the owner delegated the call ("what's this about Article 6.2.e? i probably don't mind one way or the other so i am happy to take your recommendation."); the owner then ruled in his own words, below.
+  The owner's words, as FRAGMENT-G2.md records them: "I agree with your declaratory reading [...] it is of limited import because a commercial care home would still need to meet the public benefit test" ([...] marks words elided from the quotation; they are not part of the ruling).
+- Is the omission, in Article 6(2)(e), of the words "to the persons mentioned in that paragraph" deliberate (G2 q14, F2.14)?
+  If it is deliberate, the clause widens head (n) and reading B is the better one; if it is not, reading A.
+  This is a question and not an answer: the default stands as the owner's ruling until an expert says otherwise.
+  The words are those of a corresponding section of an English statute, and FRAGMENT-G2.md (fork F2.14, "Evidence from other statutes") records where they come from and what was and was not checked; the integrator opened none of it.
 
 ### 8.3 The register, the restricted section, public access (Articles 8 to 10)
 
@@ -1017,9 +1047,10 @@ All the scenarios of headline (a) to (d) and (f) are asked on 2 October 2026 unl
 | 2 | a conviction for that offence | a reportable matter of the director (19(1)(f)), built from headline (d)'s own answer |
 | 3 | an NPO body corporate entered in the general section on 1 December 2025 | a registered charity in the text of 2 October 2026 (and not before 16 October 2025 under the earlier text); the note of status names (ba) and requires neither "also within (a)" nor enactment details; the principal address is the main premises |
 
-### 10.8 What changed after the independent testing (`int-tests-repairs.l4`)
+### 10.8 What changed after the independent testing, and fork F2.14 (`int-tests-repairs.l4`)
 
-Each expected answer was decided by hand from the Law before the module was run, and all 48 assertions held on the first run.
+Each expected answer was decided by hand from the Law before the module was run, and all 48 assertions of R1 to R6 held on the first run.
+The 18 assertions of R7 (fork F2.14, added later the same day) held on the first run that compiled; the first attempt did not compile, because the facts record that R1 builds by hand lacked the new eleventh field.
 
 | id | facts | answer | provisions |
 | --- | --- | --- | --- |
@@ -1029,12 +1060,13 @@ Each expected answer was decided by hand from the Law before the module was run,
 | R4 | the units of the Law in force, headline (e), on 30 April 2018, 1 May 2018, 31 December 2018 and 1 January 2019 | Parts: 1, 2, 3 on 30 April 2018; 1, 2, 3, 4, 5, 7, 8 on 1 May 2018 and on 31 December 2018; all nine on 1 January 2019 (Part 9 is held back by the original Article 41, stage 3); on reading B of F7.9 Parts 8 and 9 are in force from 2014 (1, 2, 3, 8, 9 on 30 April 2018); Articles in force: 14, 38, 43; present Article 41 in force from 2014 | Table of Legislation History; R&O.17/2018 Articles 1 and 2 |
 | R5 | a partnership, an NPO body corporate and a Jersey company, none on the register, say they are a charity in connection with their Jersey activities | the partnership: no offence, no penalty; the Jersey company: the strict offence of 21(3), level 3; the NPO body corporate: no offence on 15 October 2025 (no entity before (ba)), the strict offence at level 3 on 16 October 2025 | 21(3), 21(5), 21(10), 2(1)(ba); R&O.56/2025 |
 | R6 | headline (a), a complete application, on 30 April 2018, 1 May 2018 and 1 January 2019 | 30 April 2018: refused, Article 8 (Part 4) was not in force; 1 May 2018: refused, no text of the Law before 1 January 2019 is among the sources; 1 January 2019: answered (may be granted) | R&O.17/2018; IP4 |
+| R7 | a Jersey company whose only purpose is to provide residential accommodation and care, recorded under no head, with nobody shown to be in need (the eleventh fact TRUE, the need-qualified seventh fact FALSE) | at the purpose level: not a charitable purpose on reading A of F2.14 (taken), a charitable purpose on reading B; with neither fact, not charitable on either; with the need-qualified fact TRUE, charitable on both. Through headline (a) with the public benefit determination in favour: A, the test is not met and the Commissioner must refuse; B, the test is met and the Commissioner must register. Through headline (a) with the Commissioner's determination that no public benefit is provided: the test is not met on B either (the purpose is charitable, public benefit is not shown) and the Commissioner must refuse. A care home for persons in need, with public benefit shown: registered on both readings | 5(1)(b), 6(1)(n), 6(2)(e), 7(3)(a), 11(4)(a); F2.14 (default ruled by the owner (Meng), 2026-10-27; the widening reading stays callable) |
 
 ## 11. Tests, and what `check.sh` prints
 
 ### 11.1 What `check.sh` prints
 
-This is the full output of `check.sh` run in the deposit on 2026-10-27, after the repairs of G2 and G7 and the merge of the independent tests, with the fleet's `l4` (the run took about seven minutes).
+This is the full output of `check.sh` run in the deposit on 2026-10-27, after the repairs of G2 and G7, the merge of the independent tests and the rewiring for fork F2.14 (Article 6(2)(e)), with the fleet's `l4` (the run took between five and ten minutes, depending on what else the machine was running).
 It was run again in a clean copy of the deposit, with the same result (section 11.8).
 The columns are, for each module: error diagnostics, assertions satisfied, assertions failed, assertions refused, warnings, and the number of failures and of refusals the module is meant to have.
 A failed assertion is also an error and a refused assertion is also a warning; the run is red for any other error, any refusal or warning beyond the module's own, and any failed count other than the module's own.
@@ -1062,10 +1094,10 @@ g2-fixtures.l4                                 0         0       0        0     
 g2-nouns.l4                                    0         0       0        0         0         0         0
 g2-readings.l4                                 0         0       0        0         0         0         0
 g2-tests-art3-4.l4                             0        30       0        0         0         0         0
-g2-tests-art5.l4                               0       162       0        0         0         0         0
-g2-tests-art6.l4                               0        96       0        0         0         0         0
+g2-tests-art5.l4                               0       171       0        0         0         0         0
+g2-tests-art6.l4                               0       126       0        0         0         0         0
 g2-tests-art7.l4                               0        82       0        0         0         0         0
-g2-tests-red.l4                               15         0      15        0         0        15         0
+g2-tests-red.l4                               16         0      16        0         0        16         0
 g3-art10-public-access.l4                      0         0       0        0         0         0         0
 g3-art8-register.l4                            0         0       0        0         0         0         0
 g3-art9-restricted-section.l4                  0         0       0        0         0         0         0
@@ -1203,20 +1235,20 @@ int-tests-offence.l4                           0        20       0        0     
 int-tests-readings.l4                          0        10       0        0         0         0         0
 int-tests-red.l4                               6         6       6        0         0         6         0
 int-tests-register.l4                          0        27       0        0         0         0         0
-int-tests-repairs.l4                           0        48       0        0         0         0         0
+int-tests-repairs.l4                           0        66       0        0         0         0         0
 int-tests-vintage-matrix.l4                    0        81       0        0         0         0         0
 int-tests-wiring.l4                            0        30       0        0         0         0         0
 int-vintage.l4                                 0         0       0        0         0         0         0
 int-wiring.l4                                  0         0       0        0         0         0         0
-TOTAL (162 modules)                          156      7787     156       10        10       156        10
-of which the group modules g1- to g9- (102): satisfied 5432, failed 134 (expected 134)
-of which the integration modules int- (27): satisfied 586, failed 6 (expected 6)
+TOTAL (162 modules)                          157      7844     157       10        10       157        10
+of which the group modules g1- to g9- (102): satisfied 5471, failed 135 (expected 135)
+of which the integration modules int- (27): satisfied 604, failed 6 (expected 6)
 of which the independent authors' modules ind- (32): satisfied 1769, failed 16 (expected 16), refused 10 (expected 10)
 (a failed assertion is also an error and a refused assertion is also a warning; any other error, any refusal or warning beyond the module's expected_refused, and any failed count other than its expected_failed, make the run red)
 @ref notices (follows code on its line / end of the file): 0
 
 shape: every module has a plain name and starts without @lang en, and no group module imports another group's
-srcrefs check: 1724 src: lines, 887 runs, 1666 locators, 0 problems
+srcrefs check: 1727 src: lines, 889 runs, 1668 locators, 0 problems
 module                                        traces in-module   sidecar     ok   bad  unguarded
 g1-tests-art2-entity.l4                            3         3         0      3     0          0
 g2-tests-art3-4.l4                                11        11         0     11     0          0
@@ -1264,13 +1296,14 @@ check.sh: GREEN
 
 ### 11.2 The numbers, read
 
-The group modules (102) hold 5432 assertions satisfied and 134 failed, all failures in the groups' red files (G2 15, G3 12, G4 14, G5 16, G6 24, G7 15, G8 19, G9 19; G1 has none).
-After the repairs G2 has 15 declared red (it had 14) and the satisfied counts of G2 and G7 grew (the first pass: 5,235 satisfied and 133 failed over the group modules).
-The integration modules (27) hold 586 assertions satisfied and 6 failed (`int-tests-red.l4`).
+The group modules (102) hold 5471 assertions satisfied and 135 failed, all failures in the groups' red files (G2 16, G3 12, G4 14, G5 16, G6 24, G7 15, G8 19, G9 19; G1 has none).
+G2 has 16 declared red: 14 at the first pass, 15 after the repairs of the independent testing, and 16 after fork F2.14 (FRAGMENT-G2.md: 15 fork readings answered as their other reading answers them, and one control).
+The satisfied counts of G2 and G7 grew with the repairs (the first pass: 5,235 satisfied and 133 failed over the group modules).
+The integration modules (27) hold 604 assertions satisfied and 6 failed (`int-tests-red.l4`).
 The independent authors' modules (32) hold 1769 assertions satisfied, 16 failed and 10 refused, the last two only in their `ambiguous` and `disagree` files (section 12).
-In all, 162 modules: 7787 assertions satisfied, 156 failed (expected 156), 10 refused (expected 10), 10 warnings (one per refusal).
+In all, 162 modules: 7844 assertions satisfied, 157 failed (expected 157), 10 refused (expected 10), 10 warnings (one per refusal).
 No module has a refusal or a warning beyond the ten that are the authors' findings.
-`srcrefs.py check --refs` over all modules finds 0 problems (1724 quotation lines, 887 runs, 1666 locators); the integration and independent modules quote nothing and carry no locator.
+`srcrefs.py check --refs` over all modules finds 0 problems (1727 quotation lines, 889 runs, 1668 locators); the integration and independent modules quote nothing and carry no locator.
 The `#TRACE` check covers 976 traces (the groups', the integrator's and the independent authors') and finds all of them guarded by an `-- EXPECT:` comment and all as expected.
 These are the integrator's numbers and the groups' own; they say that the modules run and the tests pass, not that the readings are right.
 
@@ -1350,6 +1383,15 @@ The mutation run was made on the first pass's modules, before the repairs of G2 
 | M15 IP9: the charity test at the time of the application is read at the time of the appeal | `int-tests-appeal` (F4) |
 | M16 the gate of headline (a) omits Article 8 | `int-tests-application` (A9) |
 
+After the rewiring for fork F2.14, two mutants of the G2 rule (made on copies of all the modules, one change each, and not of the integration layer, so they are outside the sixteen) asked whether R7 of `int-tests-repairs.l4` notices a wrong reading:
+
+| mutant | killed by |
+| --- | --- |
+| M17 reading B of Article 6(2)(e) ignores the new eleventh fact (B becomes A) | the four assertions that hold only on B: the purpose-level assertion, and the charity test, the Commissioner's duty to register and the grant in headline (a) |
+| M18 reading A of Article 6(2)(e) also reads the new eleventh fact (A becomes B) | the three assertions that hold only on A: the purpose-level assertion, and the charity test and the Commissioner's duty to refuse in headline (a) |
+
+The other eleven assertions of R7 hold under both mutants, as they should: they are the cases on which the two readings agree.
+
 Two things the table does not say: the first batch counted only errors, so M01 and M12 looked like survivors until refusals were counted (a refusal is a Warning, not an error); and mutation testing of the group modules is the groups' own (for example G3's fragment, section 9.3).
 
 ### 11.6 What changed after a first run
@@ -1366,13 +1408,14 @@ These are the departures, all in the integrator's own modules except the one not
 ### 11.7 What the tests do not cover
 
 The integration tests cover the six headlines on the scenarios of section 10 and the wiring of every integration point at least once (section 3.4).
-They do not run every fork on both readings through every headline: the groups' own tests do that for their forks, and the integrator's only for the forks that cross groups (F2.5 with F8.3, F2.13, F4.4, F7.7, F7.9, F8.14, the shared year and unit, and the counting conventions).
+They do not run every fork on both readings through every headline: the groups' own tests do that for their forks, and the integrator's only for the forks that cross groups (F2.5 with F8.3, F2.13, F2.14, F4.4, F7.7, F7.9, F8.14, the shared year and unit, and the counting conventions).
 No test calls a headline for every one of the ten values of `Vintage of the text` except headline (e).
 
 ### 11.8 The clean-copy run
 
-The deposit, the fleet's `inputs` and `bin` were copied side by side into a fresh directory (the layout of `work/vint/` in the fleet's working directory: `deposit/`, `inputs`, `bin`) and `check.sh` was run there, with nothing else in sight.
-It ended GREEN in 5 minutes 19 seconds, and its output is identical line for line to the output of section 11.1 from the module table to the last line (only the path on the first two lines differs): 162 modules, 7,787 assertions satisfied, 156 failed (expected 156), 10 refused (expected 10), 10 warnings, `srcrefs` 0 problems, 976 traces guarded and as expected.
+The deposit, the fleet's `inputs` and `bin` were copied side by side into a fresh directory (`work/integrator/clean3/` in the fleet's working directory: `deposit/`, `inputs`, `bin`) and `check.sh` was run there, with nothing else in sight.
+The copy was made after the last module, test and checker had changed, and before `NOTES.md`, `README.md` and `encoding.json` received their final figures, none of which `check.sh` reads; every other file of the deposit is byte-identical to the copy.
+It ended GREEN in 9 minutes 29 seconds, and its output is identical line for line to the output of section 11.1 from the module table to the last line (only the path on the first two lines differs): 162 modules, 7,844 assertions satisfied, 157 failed (expected 157), 10 refused (expected 10), 10 warnings, `srcrefs` 0 problems, 976 traces guarded and as expected.
 
 ## 12. Independent tests
 
@@ -1479,6 +1522,26 @@ Line numbers are those of the author's file as snapshotted (`work/ind-X/snapshot
   `ind-c-tests-disagree.l4` is empty after the moves and is not carried into the deposit; its original count was 5.
   The header comments of the other `disagree` files still state the authors' original counts; `check.sh` holds the current ones.
 
+### 12.5a The second adaptation, for fork F2.14 (2026-10-27)
+
+G2 then added an eleventh field to `Facts about a purpose under Article 6` and a fourteenth to `Interpretation of Articles 3 to 7` (fork F2.14, Article 6(2)(e); section 3.7), and the fixtures were adapted again by the same script, extended with two kinds of edit and no other.
+Nothing in section 12.5 above was undone, and no expected value, polarity, `REFUSED`/`BECAUSE` text or assertion keyword was changed.
+Line numbers in this section are those of the files as deposited, after both adaptations, because the first kind inserts lines.
+
+- **G: the eleventh field of the facts of Article 6.**
+  Every construction `Facts about a purpose under Article 6` WITH ... got a line `the purpose is the provision of accommodation or care` IS FALSE, and the one-line constructions inside `#ASSERT` lines got the same field in the same position.
+  FALSE and not TRUE because the field is a plain BOOLEAN whose declared default is FALSE (`g2-nouns.l4`), and because G2 states that reading B of F2.14 is reading A or this field: with the field FALSE the two readings agree on every input, so the adaptation cannot change an answer under either reading.
+  The authors' frozen rows on Article 6(2)(e) (ind-a S6.1-14, ind-b E6-2e, ind-c A6-27) are each "relief of elderly people in need" by providing accommodation or care, so they state the need element and none states the provision of accommodation or care without it; the need-qualified field (the seventh) is left as each author wrote it.
+  Lines inserted: ind-a-tests-art3-7: 28, 44; ind-a-tests-readings: 54; ind-b-tests-fixtures-g2: 28, 209, 226, 245, 259, 279; ind-c-tests-art5-7: 30.
+  Lines edited in place (the field appended inside an `#ASSERT` line): ind-a-tests-readings: 153, 154; ind-b-tests-art5-7: 244, 245.
+- **I: the fourteenth field of the interpretation.**
+  Each positional `Interpretation of Articles 3 to 7` OF thirteen values got a fourteenth, `F2.14 A`, the default reading.
+  Lines: ind-a-tests-readings: 114, 115; ind-b-tests-art5-7: 241, 242 (all in `#ASSERT` lines).
+- **What the adaptation did to the results.**
+  Every independent module has the same errors, satisfied, failed and refused counts after the second adaptation as before it, and in the five modules that are not wholly green (the `ambiguous` and `disagree` files) the status of each of their 26 assertions is the same line for line (16 failed and 10 refused, both before and after).
+  No independent assertion changed its result because of F2.14.
+  ind-a S6.1-14, a care home for elderly people in need (`ind-a-tests-art3-7.l4`), sets the need-qualified field TRUE and holds; with the new field FALSE it cannot differ between the two readings of F2.14.
+
 ### 12.6 What the merge shows
 
 The independent tests found five defects that the groups' own tests had missed (the object of Article 6(1)(i), the charity test for a non-entity, Articles 21 and 23 for a non-entity, Part 9 and the original Article 41, and staff exercising the Commissioner's function), all now repaired, and a sixth point (the text before 1 January 2019) that the fleet lead left open.
@@ -1551,6 +1614,7 @@ The integrator ran them and recorded their counts in `check.sh`; it did not revi
 - **F2.13 is not wired from Schedule 1 paragraph 4(3).**
   `who` (the Commissioner's staff, or any person) is the caller's fact (section 6.13), and no other group's rule that attaches a duty to the Commissioner (for example Article 27(1)(b)) takes the fork.
 - **The new tenth field of the facts of Article 6(1)(i)** comes from the caller inside `Purpose with the facts Article 6 reads`, with the default NOTHING; headline (a) does not derive it.
+- **The new eleventh field of the facts of Article 6** (`the purpose is the provision of accommodation or care`, fork F2.14) likewise comes from the caller inside `Purpose with the facts Article 6 reads`, with the default FALSE; headline (a) does not derive it, and F2.14 is not wired from any other group.
 - **The text before 1 January 2019** is not reconstructed from the amending instruments (section 13.2).
 
 ## 15. Provenance of this run
@@ -1563,7 +1627,7 @@ Everything below is a record of what was done and how it was measured; none of i
 The task is the trigger word ALMSHOUSE in the general manager's table: encode the whole Charities (Jersey) Law 2014 afresh as the row `legalese-full-2026-10` by the recipe used for the HVAC whole-Law row, with a register of the places where the Law reads two ways, and compare it with the July corpus and with the Articles 5 to 7 cleanroom.
 It was fired on 2026-10-14 (04:32Z) and fired again by Meng on 2026-10-26 (about 14:40Z, "Let's just fire ALMSHOUSE now."), which is the run recorded here.
 Meng's instruction reached this session through the general manager, not directly.
-The conditions of the task are that the row is committed to a local branch of a commons worktree only, with no push to the shared repository, no email and no publication.
+The conditions of the task were that the row be committed to a local branch of a commons worktree only, with no push to the shared repository, no email and no publication.
 Whether and when the row is pushed is for the repository's owner to decide.
 On 2026-10-27 the owner had it pushed to `main` (Meng, through the general manager: "go ahead and push the charities encoding to public commons.").
 
@@ -1578,6 +1642,7 @@ On 2026-10-27 the owner had it pushed to `main` (Meng, through the general manag
   The launching session triaged every finding (section 15.8), and two encoders (G2 and G7) were sent repairs, which they reported at 18:10Z and 18:37Z.
   The overlap reader reported at 18:25Z, the comparer at 19:13Z, and the integrator's second pass (rewiring, merging the independent tests) at 19:14Z.
   The launching session re-ran the final `check.sh` in a clean copy; section 11.1 gives its output and section 15.9 says what it showed.
+- **2026-10-27, after the push.** Fork F2.14 was added and a few lines were corrected; section 15.13 says what changed.
 
 ### 15.3 The source
 
@@ -1642,7 +1707,7 @@ On 2026-10-27 the repository's owner ruled that the refusal before 1 January 201
 
 The integrator ran `check.sh` in the deposit and in a clean copy; section 11.1 gives its output.
 The launching session ran it again in a clean copy of its own (copy of the deposit, with `inputs` and `bin` beside it).
-It was green with exit 0: 162 modules; 7,787 assertions satisfied; 156 failed, equal to the 156 expected; 10 refused, equal to the 10 expected, with 10 warnings that are exactly those refusals; 1,724 quotation lines (887 runs, 1,666 locators) with 0 problems; 976 guarded traces, all as expected; and the hashes of the binary and of `domain.l4` matched their pins. These are the same totals as the integrator's.
+It was green with exit 0 (this is the run of 2026-10-26/27 before fork F2.14; section 15.13 gives the run after it): 162 modules; 7,787 assertions satisfied; 156 failed, equal to the 156 expected; 10 refused, equal to the 10 expected, with 10 warnings that are exactly those refusals; 1,724 quotation lines (887 runs, 1,666 locators) with 0 problems; 976 guarded traces, all as expected; and the hashes of the binary and of `domain.l4` matched their pins. These are the same totals as the integrator's.
 The row was then copied into the commons worktree and `check.sh` was run from there, where it finds the Law's text in `../../source/` (the only change to `check.sh` for the commons layout); that run's totals are recorded in the commit message.
 Each group's check was also re-run by the launching session in a clean copy with `tools/verify.sh`, and the figures matched each encoder's report, for G1 to G9 before the repairs and for G2 and G7 after.
 A green `check.sh` shows that the modules run without a warning, that the stated tests hold, that every quotation and locator matches the Law's text, that every guarded trace behaves as its `EXPECT` comment says, and that the hashes match.
@@ -1657,13 +1722,15 @@ Tokens recorded: Sonnet 1,307.8 million cache reads, 14.2 million one-hour and 1
 Cache reads are $167.72 of the $257.71 (65%) and output tokens $5.61, so the list figure tracks how long the agents ran and how much context they carried, not the size of the Law.
 The figure is a valuation, not a measure of what the subscription was charged or of the share of a weekly allowance used; the latter was not measured.
 It counts the sub-agents only: the launching session's own tokens, which also covered unrelated work, are not included.
+These are the figures at the time of the first commit; section 15.13 gives the total after fork F2.14.
 
 ### 15.11 Not done
 
 - No domain expert (a Jersey charity lawyer, or anyone who knows the Commissioner's practice) has read any module.
 - The subordinate legislation made under the Law (R&O.19/2018, R&O.59/2018, R&O.60/2018) is not encoded.
 - The text before 1 January 2019 is not reconstructed.
-- Nothing has been pushed to the shared repository, and no message about the row has been sent to anyone outside the session group.
+- The row has been on `main` of the commons since 2026-10-27 (section 15.1).
+  The launching session has sent no message about it to anyone outside the session group; what the general manager or the owner has sent is not recorded here.
 - The `@nlg` natural-language generation, projections to other formats, and a web wizard were not made; the cleanroom has a DMN projection and golden files and this row has neither (`COMPARISON.md` section 8).
 
 ### 15.12 The record of the run
@@ -1674,3 +1741,24 @@ It counts the sub-agents only: the launching session's own tokens, which also co
 - `INDEPENDENT-ind-a-expectations.md`, `INDEPENDENT-ind-b-expectations.md`, `INDEPENDENT-ind-c-expectations.md`.
 - `provenance/BRIEF.md` and `provenance/ASSIGN-*.md`: the brief and every assignment the agents were given, as sent.
 - `tools/`: the scripts used (`verify.sh`, `cost.py`, the rate card, `extract_law.py`).
+
+### 15.13 Later changes (2026-10-27, after the push)
+
+The row was on `main` at 27c1db980 when these changes were made; they are one commit on top of it.
+
+- **Fork F2.14, Article 6(2)(e).**
+  A comparison with the Articles 5 to 7 cleanroom (its ambiguity A2) raised the question whether Article 6(2)(e) adds an operand to head (n) or only says that relief of those in need can be given by accommodation or care.
+  The comparison first said that this row widened head (n); that was wrong, because the only operand of `Art 6(2)(e)` was a fact that already names the need, so the code was declaratory in substance and could not express the other reading.
+  G2 registered the question as fork F2.14 (14 forks in G2, 137 in all), with reading A (declaratory) as the default and reading B (widening) callable, tested and with its own red assertion (sections 3.7 and 8.2; `FRAGMENT-G2.md`, fork F2.14 and section 11.5).
+  The owner ruled the default on 2026-10-27 ("default ruled by the owner (Meng), 2026-10-27"; his words are in section 8.2 and the fragment, with the middle of the quotation elided).
+  The integrator rewired the integration layer and adapted the independent authors' fixtures mechanically (section 12.5a); no independent assertion changed its result.
+  The comparer corrected `COMPARISON.md` (sections 4.2 and 5, rows Q3 and D10) and recounted the agreement with the cleanroom's 25 worlds: it is unchanged, 192 of 200 (96.0%) under the favoured readings and 199 of 200 with F2.1 and F2.10 read as their second readings, and reading B of F2.14 changes none of the 200 because none of the cleanroom's worlds sets an accommodation-or-care fact.
+- **The totals after F2.14**, from `check.sh` run in the commons layout from the row directory on the day of the commit: 162 modules; 7,844 assertions satisfied (group modules 5,471; integration 604; independent 1,769); 157 failed on purpose, equal to the 157 expected; 10 refused on purpose, equal to the 10 expected; 1,727 quotation lines, 889 runs and 1,668 locators with 0 problems; 976 guarded traces, all as expected.
+  G2 now holds 409 satisfied assertions (it held 370) and 16 declared red (it held 15).
+- **Lines corrected in the same commit.**
+  Section 15.11 said nothing had been pushed; the row is on `main` (section 15.1).
+  The `encodings_note` of `subject.json` and the header of `FRAGMENT-G4.md` said the same, and now say when they were true.
+  The fork index in section 5 had an empty question cell for every G7 fork, because the generator did not read G7's bare fork headings; the cells are filled and the generator now stops on an empty cell (section 5).
+  Section 7, row S18, and `FRAGMENT-G1.md` C2 called "clauses (i) to (v)" in Article 2(10)(b)(vi) a slip; the Law has no other name for that level (it says "sub-paragraphs" for the lettered level), so it is recorded as an observation and not as a slip.
+  The totals quoted in sections 15.2 and 15.9 are those of the first run and are marked as such.
+- **Cost of this round**, same method and rates as section 15.10: the fleet sub-agents now total **$279.00** (Sonnet 5.5 $216.61 over 2,705 requests, Opus 5.5 $62.39 over 375 requests), which is $21.29 more than the $257.71 of section 15.10: the G2 encoder about $4.22, the integrator $8.29 and the comparer $8.78.
