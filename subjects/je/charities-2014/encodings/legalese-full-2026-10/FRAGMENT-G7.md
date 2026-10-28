@@ -291,6 +291,7 @@ A test location is `file:line` of the assertion in the deposit that tells the tw
 - **Discriminating case.** Is Part 1 in force on 21 November 2014? Yes (A); no (B).
 - **Tests.** g7-tests-commencement.l4:442; g7-tests-commencement.l4:205
 - **Kind of period.** commencement by a named day — P46, P47
+- **Settled (2026-10-28).** Reading A is the only reading with licence in the Interpretation (Jersey) Law 1954, Article 1(5), for what commenced before 28 September 2021, and in the Legislation (Jersey) Law 2021, Article 3(2), after; reading B has none. See `INTERPRETATION-LAWS.md` section 3. Tests: `g7-tests-interpretation-laws.l4`, lines 82 to 171. Unchanged: the default, the rule, the callable reading B.
 
 ### F7.12
 
@@ -321,6 +322,7 @@ A test location is `file:line` of the assertion in the deposit that tells the tw
 - **Discriminating case.** An Order under 2(2) adds a sub-paragraph and also amends 8(3)(a)(ii): not allowed (A); allowed (B).
 - **Tests.** g7-tests-powers-final.l4:187; g7-tests-powers-final.l4:188
 - **Kind of period.** none
+- **Settled (2026-10-28).** Reading A is the only reading with licence: the Legislation (Jersey) Law 2021, Article 9(5) and (6)(b), does not let an Order, which is not made by the States, amend a Law by its incidental power (on both readings of "made by the States" in that row). Article 39(1) says the same. See `INTERPRETATION-LAWS.md` section 3. Tests: `g7-tests-interpretation-laws.l4`, lines 203 to 293. Unchanged: the default, the rule, the callable reading B.
 
 ### The kinds of period of the scope, one fork each
 
