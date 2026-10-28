@@ -15,7 +15,7 @@ It is written for the `unstable` compiler (binary `unstable-20261026-6325439`); 
 ```
 
 `check.sh` runs every `je21-*.l4` module (one at a time, `nice -n 15`), counts errors, warnings, assertions satisfied, failed and refused per module by reading the line after every `Message:`, checks every quotation and `@ref` locator against the source text with `srcrefs.py check --refs`, and exits 0 only when everything is green.
-Set `L4=/path/to/l4` if the binary named at the top of `check.sh` is not there; set `RAW=` if the source text is not at `../../source/l_8_2021.current.txt`.
+It uses the `l4` on your `PATH`; set `L4=/path/to/l4` to name another, and say which: the row was written and checked with the `unstable` prerelease `unstable-20261026-6325439` (sha256 in `encoding.json`), and `check.sh` prints the binary's sha256 and notes when it differs. Set `RAW=` if the source text is not at `../../source/l_8_2021.current.txt`.
 Leave `JL4_LIBRARY_PATH` unset.
 
 Quotations in the modules are `-- src:N | text` lines (`src:l_8_2021_20240110:N` for the earlier text), written by `srcrefs.py quote` and never retyped.
@@ -45,9 +45,9 @@ The questions a reader asks, `@export`ed in the reader's words (63 of them):
 16. `je21-seat-2-powers-and-effects.l4`: Articles 4 to 11.
 17. `je21-seat-3-versions-and-publication.l4`: Articles 12 to 18 and 22, Schedule 1.
 
-Tests, one module for each rule module and each seat module (923 assertions; expected values written by hand from the text):
+Tests: one module for each rule module and each seat module (960 assertions; expected values written by hand from the text), and two modules holding an independent test pass (335 assertions) that a second session wrote from the text before it opened the encoding (`NOTES.md` section 10.3):
 
-`je21-tests-art01-definitions.l4`, `je21-tests-art02-making.l4`, `je21-tests-art03-commencement.l4`, `je21-tests-art04-08-effects.l4`, `je21-tests-art09-10-subordinate-powers.l4`, `je21-tests-art11-annulment.l4`, `je21-tests-part3a-consolidation.l4`, `je21-tests-schedule1.l4`, `je21-tests-art15-16-revision-publication.l4`, `je21-tests-art17-18-official-versions.l4`, `je21-tests-part4-office.l4`, `je21-tests-art26-commencement.l4`, `je21-tests-seat-1-making-and-commencement.l4`, `je21-tests-seat-2-powers-and-effects.l4`, `je21-tests-seat-3-versions-and-publication.l4`.
+`je21-tests-art01-definitions.l4`, `je21-tests-art02-making.l4`, `je21-tests-art03-commencement.l4`, `je21-tests-art04-08-effects.l4`, `je21-tests-art09-10-subordinate-powers.l4`, `je21-tests-art11-annulment.l4`, `je21-tests-part3a-consolidation.l4`, `je21-tests-schedule1.l4`, `je21-tests-art15-16-revision-publication.l4`, `je21-tests-art17-18-official-versions.l4`, `je21-tests-part4-office.l4`, `je21-tests-art26-commencement.l4`, `je21-tests-seat-1-making-and-commencement.l4`, `je21-tests-seat-2-powers-and-effects.l4`, `je21-tests-seat-3-versions-and-publication.l4`; independent: `je21-tests-independent-1.l4` (the Law itself and Articles 1 to 8) and `je21-tests-independent-2.l4` (Articles 9 to 22).
 
 ## Other files
 
