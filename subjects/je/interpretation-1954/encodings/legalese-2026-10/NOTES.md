@@ -3,6 +3,7 @@
 Status: draft.
 Target: `unstable`.
 No domain expert has read this encoding against the Law.
+An independent test pass was run on it on 2026-10-28 by another session, and its findings are in section 10.3; that is a second reader of the text, not a domain expert.
 How the figures below were verified: `check.sh` was run on 2026-10-28 against the prerelease binary `unstable-20261026-6325439` and its whole output was read; it is pasted in section 9.
 Anything in this file that says "the text says" was checked against the deposited `.txt` files on 2026-10-28, with the line number given; anything that says "the brief says" is the brief's claim.
 
@@ -30,15 +31,18 @@ The brief asks for this list first.
   Lines 868 to 902 of `charities-jersey-law-2014-2026-10-02.txt` (the only lines read) say: "Parts 1 to 3, Articles 32, 38, 39, 40, 42, 43 and 44 and the Schedules, in force 21 November 2014" (lines 876 to 877, so not the whole Law); "Parts 4, 5, 7, 8 (other than Article 32), Article 37 in force 1 May 2018 (R&O.17/2018)" (lines 878 to 879); "Remainder in force 1 January 2019 (R&O.17/2018)" (line 880).
   The words "come into force on 1st May 2018" and "1st January 2019" are not in those lines, and nothing about R&O.10/2024, 9.30 a.m. or 27 February 2024 is in them.
   The brief limits the read to about lines 870 to 900, so the following lines were not read, and the 27 February 2024 case is in `je54-tests-crosschecks.l4` labelled as the brief's date, unverified.
+  Added by the integrator, 2026-10-28: R&O.10/2024 is among the Charities sources (`subjects/je/charities-2014/source/amending/RO-010-2024.txt`), and lines 46 and 90 read "Coming into force 9.30 a.m. 27th February 2024" and "comes into force at 9.30 a.m. on 27th February 2024", so the date and time of the cross-check are the Order's own.
 - **B5. Not checkable here.**
   The brief says the 2021 Law gives the same day as V1 Article 1(5) for a named day, and that the day and period words in the Law's texts are only those of the commencement provisions plus the 2021 Law's definition of "relevant period" in its Article 8(2).
   The 2021 Law is not in the deposit, so the first claim is unverified (the marker `governed by the 2021 Law, Article 3(2)` rests on it, fork I1).
   The second is true of the seven texts as far as they go (search in section 7) and the "relevant period" definition is not in them.
-  Added by the integrator, 2026-10-28, after the 2021 Law was encoded as its own subject: the first claim is now checked against the text.
-  Article 3(2) of the Legislation (Jersey) Law 2021 (`subjects/je/legislation-2021/source/l_8_2021.current.txt`, line 48) reads "it is treated as coming into force at the beginning of that day, unless provision is made to the contrary".
-  Article 3(6) (line 54) reads "Nothing in this Article affects the commencement of any Jersey legislation that had commenced before the commencement of this Part".
-  So a named day is the first day in force under V1 Article 1(5) and under 2021 Article 3(2) alike, and the marker rests on a quoted text, not on the brief.
-  What stays unchecked is a stated time of day: 2021 Article 3(2) says "unless provision is made to the contrary" and does not say whether a time of day is such a provision (fork L2 of that row).
+- **B6. Two of the brief's claims leave out a qualifier the text has.**
+  Brief, claim 2: "V1 Art 1(2): a Law is not deemed passed until confirmed by Her Majesty in Council and registered by the Royal Court."
+  V1 line 6 reads "..., unless a contrary intention appears, a Law shall not be deemed to have been passed until it has been confirmed by Her Majesty in Council and registered by the Royal Court".
+  Brief, claim 6: "Art 8: a "person becoming bankrupt" in any enactment means any of the listed events".
+  RAW line 29 reads "shall, unless the contrary intention appears, be construed as references to either".
+  The encoding follows the text: both rules take `a contrary intention appears` as an input and refuse when it is true (`je54-tests-art01-commencement.l4`, the refusal "Article 1(2) does not say when a Law is deemed passed"; `je54-tests-art08-bankruptcy.l4`, the refusal "Article 8 does not say what a reference to a person becoming bankrupt then means").
+  Claim 9, the proviso to Article 3, is B1.
 
 Findings about the Law itself, not about the brief:
 
@@ -55,7 +59,7 @@ Findings about the Law itself, not about the brief:
 
 ## 1. What is encoded and what is not
 
-The deposit encodes every paragraph of Articles 1 to 18 and of the Schedule (Part 1 and Part 2) of the Interpretation (Jersey) Law 1954 in each of the seven consolidated texts on jerseylaw.je, from 1 January 2019 to the current text, which has run since 19 June 2026 (V1, V2a to V2f), as 29 modules: 15 rule modules (nouns, the vintage table, the rules by Article, the questions a reader asks) and 14 tests modules.
+The deposit encodes every paragraph of Articles 1 to 18 and of the Schedule (Part 1 and Part 2) of the Interpretation (Jersey) Law 1954 in each of the seven consolidated texts on jerseylaw.je, from 1 January 2019 to the current text, which has run since 19 June 2026 (V1, V2a to V2f), as 32 modules: 15 rule modules (nouns, the vintage table, the rules by Article, the questions a reader asks) and 17 tests modules, three of which (`je54-tests-independent-1.l4` to `-3.l4`) hold the independent test pass (section 10.3).
 The text of the Law that governs is an input chosen from a date by the vintage table, never a name the caller must know, and the versions are never merged: each rule takes the text and answers from that text, and a text that is silent answers with `REFUSE`.
 Where the Law says "unless the contrary intention appears" or "unless the context otherwise requires", the rule takes that fact as a `BOOLEAN` input and refuses when it is true; Article 11A says "unless the contrary is expressed" and has an input of that name.
 43 `@export` questions in `je54-seat.l4` and `je54-seat-powers-and-penalties.l4` put the rules in the reader's words.
@@ -69,6 +73,20 @@ Every `@export` is phrased as that person would ask it ("on what day did the ena
 The Law is addressed to no one in particular: it tells the reader how to read enactments.
 Officials (the Royal Court, the Viscount, the Juge d'Instruction) appear only inside Article 8 and the Schedule definitions, as parts of the event or of the definition the reader asks about.
 The seat is recorded in `encoding.json`.
+
+Four conventions carry through.
+They are the ones the Legislation (Jersey) Law 2021 row uses (`subjects/je/legislation-2021/encodings/legalese-2026-10/NOTES.md`, sections 2, 6 fork L12 and 10.3), and they were adopted here on the team lead's instruction of 2026-10-28, after the independent pass (section 10.3).
+They are assumed, not ruled.
+
+- A question whether an Article applies, or whether a thing is one that a list or a definition names, may be answered TRUE or FALSE from the Article's own words.
+  The one function here that asks only whether an Article applies, `Article 12: the Article applies`, does not use that allowance: it answers TRUE where the trigger is met and refuses where it is not (an act that is an offence under one enactment only, under the customary law only or under none, or two offences under the same enactment); it is not exported, so the independent pass did not test it, and the allowance is not used elsewhere for an Article's reach (fork I7, section 6).
+  The allowance is used for list membership: Article 8 lists the events a reference to a person becoming bankrupt covers as a closed list (assumption A4), so an event that is not on it is FALSE; a Schedule definition that says "shall mean" is closed too, so a thing outside it is outside the word.
+- A question that asks for a consequence or a permission in the world (may the power be exercised in this way, do the expressions have the same meaning, may the offender be prosecuted and punished under this enactment) refuses outside the Article's reach.
+  Outside means an enactment passed on a day the Article does not cover (Articles 10, 11(4) and 16(1)), or a way, act, power, route, purpose, effect or manner the Article does not name (Articles 11(3), 11(4), 11A, 12, 16(1), 17(2) and 17(3)).
+- An "includes" or "including" list does not close the word or the power: a thing it does not name is not shut out, and the Law does not say.
+  In Articles 11(3), 11A, 17(2) and 17(3) the question refuses; in the Schedule a definition that says "includes" answers `not named by the Schedule, which says includes and so does not shut it out: the word's own meaning decides`, which is a value that says the Schedule does not decide, not FALSE; fork I6 covers the one definition that says both.
+- A contrary-intention input that is true makes the rule refuse in every function that takes one, and so do "unless the context otherwise requires" (Articles 5 and 9(3)) and "unless the contrary is expressed" (Article 11A).
+  On 2026-10-28 I read the body of each of the 34 rule-module functions that take such an input and each refuses on it, directly or through the function it calls; the one that did not was the restriction of Article 16(1) (finding P08b, section 10.3).
 
 ## 3. The target and the build
 
@@ -148,32 +166,32 @@ The three lines above Article 1 (title, long title, commencement note) are `iner
 | 52 | Article 9(5) | V1-V2f l.45/42/43/44/44/44/45 | encoded | `art09-10-references`: `Article 9(4) and 9(5): how the Article applies to an enactment passed or made on any day` / `seat-powers-and-penalties`: `does Article 9 apply to the instrument` | inserted by L.16/2003 (endnote [8]); refuses before 1 January 2019 (open question Q1) |
 | 53 | Article 9(6) | V1-V2f l.46/43/44/45/45/45/46 | encoded | `art09-10-references`: `Article 9(6): the instrument is a subordinate enactment` | inserted by L.16/2003 (endnote [8]); refuses before 1 January 2019 (open question Q1) |
 | 54 | Article 10 (heading) | V1-V2f l.47/44/45/46/46/46/47 | inert | `art09-10-references`: section title only | heading: no operative content; the words are the section title “Article 10: Construction of subordinate enactments” in `art09-10-references` |
-| 55 | Article 10, the single paragraph | V1-V2f l.48/45/46/47/47/47/48 | encoded | `art09-10-references`: `Article 10: the Law does not say at what time of day it came into operation`; `Article 10: the expressions used in the other enactment have the same meanings as in the enactment conferring the power`; `Article 10: the Article deals only with an enactment that confers power to pass another`; `Article 10: a contrary intention appears, and the Article does not decide` / `seat-powers-and-penalties`: `do the expressions in the other enactment have the same meaning as in the enabling enactment` |  |
+| 55 | Article 10, the single paragraph | V1-V2f l.48/45/46/47/47/47/48 | encoded | `art09-10-references`: `Article 10: the Law does not say at what time of day it came into operation`; `Article 10: an enactment passed before the commencement of the Law is not dealt with`; `Article 10: the expressions used in the other enactment have the same meanings as in the enactment conferring the power`; `Article 10: the Article deals only with an enactment that confers power to pass another`; `Article 10: a contrary intention appears, and the Article does not decide` (and 1 more in the same modules) |  |
 | 56 | Article 11 (heading) | V1-V2f l.49/46/47/48/48/48/49 | inert | `art11-powers`: section title only | heading: no operative content; the words are the section title “Article 11: Construction of provisions as to exercise of powers and duties” in `art11-powers` |
 | 57 | Article 11(1) | V1-V2f l.50/47/48/49/49/49/50 | encoded | `art11-powers`: `Article 11(1): the enactment neither confers a power nor imposes a duty`; `Article 11(1): the power may be exercised or the duty must be performed on this occasion`; `Article 11(1): a contrary intention appears, and the Article does not decide` / `seat-powers-and-penalties`: `may the power be exercised or the duty performed on this occasion` |  |
 | 58 | Article 11(2) | V1-V2f l.51/48/49/50/50/50/51 | encoded | `art11-powers`: `Article 11(2): the enactment does not confer the power or impose the duty on the holder of an office as such`; `Article 11(2): nobody is performing the duty of the office`; `Article 11(2): who exercises the power or performs the duty of the office`; `Article 11(2): a contrary intention appears, and the Article does not decide` / `seat-powers-and-penalties`: `who exercises the power or performs the duty of the office` |  |
 | 59 | Article 11A (heading) | V2a-V2f l.51/52/53/53/53/54 | inert | `art11-powers`: section title only | heading: no operative content; the words are the section title “Article 11A: Power to appoint to an office includes related powers” in `art11-powers` |
-| 60 | Article 11A(1) | V2a-V2f l.52/53/54/54/54/55 | encoded | `art11-powers`: `Article 11A: the enactment does not confer power to appoint a person to an office`; `Article 11A is in the text`; `Article 11A: the power to appoint to an office includes the power`; `Article 11A: inserted from 28 September 2021`; `Article 11A: the contrary is expressed, and the Article does not decide` (and 1 more in the same modules) | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
-| 61 | Article 11A(1)(a) | V2a-V2f l.53/54/55/55/55/56 | encoded | `art11-powers`: `Article 11A: the power to appoint to an office includes the power` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
-| 62 | Article 11A(1)(b) | V2a-V2f l.54/55/56/56/56/57 | encoded | `art11-powers`: `Article 11A: the power to appoint to an office includes the power` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
-| 63 | Article 11A(1)(c) | V2a-V2f l.55/56/57/57/57/58 | encoded | `art11-powers`: `Article 11A: the power to appoint to an office includes the power` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
-| 64 | Article 11A(1)(d) | V2a-V2f l.56/57/58/58/58/59 | encoded | `art11-powers`: `Article 11A: the power to appoint to an office includes the power` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
+| 60 | Article 11A(1) | V2a-V2f l.52/53/54/54/54/55 | encoded | `art11-powers`: `Article 11A: the enactment does not confer power to appoint a person to an office`; `Article 11A: the Article does not say whether the power to appoint includes some other power`; `Article 11A is in the text`; `Article 11A: the power to appoint to an office includes the power`; `Article 11A: inserted from 28 September 2021` (and 2 more in the same modules) | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
+| 61 | Article 11A(1)(a) | V2a-V2f l.53/54/55/55/55/56 | encoded | `art11-powers`: `Article 11A: the Article does not say whether the power to appoint includes some other power`; `Article 11A: the power to appoint to an office includes the power` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
+| 62 | Article 11A(1)(b) | V2a-V2f l.54/55/56/56/56/57 | encoded | `art11-powers`: `Article 11A: the Article does not say whether the power to appoint includes some other power`; `Article 11A: the power to appoint to an office includes the power` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
+| 63 | Article 11A(1)(c) | V2a-V2f l.55/56/57/57/57/58 | encoded | `art11-powers`: `Article 11A: the Article does not say whether the power to appoint includes some other power`; `Article 11A: the power to appoint to an office includes the power` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
+| 64 | Article 11A(1)(d) | V2a-V2f l.56/57/58/58/58/59 | encoded | `art11-powers`: `Article 11A: the Article does not say whether the power to appoint includes some other power`; `Article 11A: the power to appoint to an office includes the power` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
 | 65 | Article 11A(2) | V2a-V2f l.57/58/59/59/59/60 | encoded | `art11-powers`: `Article 11A(2): the circumstances for the power to appoint in place of the last holder are met` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
 | 66 | Article 11A(2)(a) | V2a-V2f l.58/59/60/60/60/61 | encoded | `art11-powers`: `Article 11A(2): the circumstances for the power to appoint in place of the last holder are met` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
 | 67 | Article 11A(2)(b) | V2a-V2f l.59/60/61/61/61/62 | encoded | `art11-powers`: `Article 11A(2): the circumstances for the power to appoint in place of the last holder are met` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
 | 68 | Article 11A(2)(c) | V2a-V2f l.60/61/62/62/62/63 | encoded | `art11-powers`: `Article 11A(2): the circumstances for the power to appoint in place of the last holder are met` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
 | 69 | Article 11A(2)(d) | V2a-V2f l.61/62/63/63/63/64 | encoded | `art11-powers`: `Article 11A(2): the circumstances for the power to appoint in place of the last holder are met` / `seat-powers-and-penalties`: `does the power to appoint to an office include this related power` | V2a onwards (inserted by L.8/2021 from 28 September 2021) |
-| 70 | Article 11(3) | V1 l.52 | encoded | `art11-powers`: `Article 11(3): the enactment does not confer power to pass another enactment`; `Article 11(3): the power to pass the other enactment includes the power`; `Article 11(3) and 11(4) are in the text`; `Article 11(3): deleted from 28 September 2021`; `Article 11(3): a contrary intention appears, and the Article does not decide` (and 1 more in the same modules) | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 70 | Article 11(3) | V1 l.52 | encoded | `art11-powers`: `Article 11(3): the enactment does not confer power to pass another enactment`; `Article 11(3): the Article does not say whether the power includes some other act on the other enactment`; `Article 11(3): the power to pass the other enactment includes the power`; `Article 11(3) and 11(4) are in the text`; `Article 11(3): deleted from 28 September 2021` (and 2 more in the same modules) | V1 only (deleted by L.8/2021 from 28 September 2021) |
 | 71 | Article 11(3), placeholder in V2a to V2f | V2a-V2f l.49/50/51/51/51/52 | inert | `art11-powers`: `Article 11(3): deleted from 28 September 2021` | the later texts keep only the number of a paragraph that L.8/2021 deleted from 28 September 2021; no operative content; the functions for those days refuse naming that Law; the operative words are in the row above (V1) |
-| 72 | Article 11(4) | V1 l.53 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the enactment does not confer a power to make another enactment`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021`; `Article 11(4): a contrary intention appears, and the Article does not decide` (and 1 more in the same modules) | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 73 | Article 11(4)(a) | V1 l.54 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021` / `seat-powers-and-penalties`: `may the power to make an enactment be exercised in this way` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 74 | Article 11(4)(b) | V1 l.55 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021` / `seat-powers-and-penalties`: `may the power to make an enactment be exercised in this way` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 75 | Article 11(4)(b)(i) | V1 l.56 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021` / `seat-powers-and-penalties`: `may the power to make an enactment be exercised in this way` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 76 | Article 11(4)(b)(ii) | V1 l.57 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021` / `seat-powers-and-penalties`: `may the power to make an enactment be exercised in this way` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 77 | Article 11(4)(b)(iii) | V1 l.58 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021` / `seat-powers-and-penalties`: `may the power to make an enactment be exercised in this way` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 72 | Article 11(4) | V1 l.53 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the enactment does not confer a power to make another enactment`; `Article 11(4): the enactment conferring the power was not passed after 28th March 2003`; `Article 11(4): the Article does not say whether the power may be exercised in some other way`; `Article 11(4): the power may be exercised in the way` (and 3 more in the same modules) | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 73 | Article 11(4)(a) | V1 l.54 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the Article does not say whether the power may be exercised in some other way`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021` / `seat-powers-and-penalties`: `may the power to make an enactment be exercised in this way` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 74 | Article 11(4)(b) | V1 l.55 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the Article does not say whether the power may be exercised in some other way`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021` / `seat-powers-and-penalties`: `may the power to make an enactment be exercised in this way` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 75 | Article 11(4)(b)(i) | V1 l.56 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the Article does not say whether the power may be exercised in some other way`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021` / `seat-powers-and-penalties`: `may the power to make an enactment be exercised in this way` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 76 | Article 11(4)(b)(ii) | V1 l.57 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the Article does not say whether the power may be exercised in some other way`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021` / `seat-powers-and-penalties`: `may the power to make an enactment be exercised in this way` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 77 | Article 11(4)(b)(iii) | V1 l.58 | encoded | `art11-powers`: `Article 11(3) and 11(4) are in the text`; `Article 11(4): the Article does not say whether the power may be exercised in some other way`; `Article 11(4): the power may be exercised in the way`; `Article 11(4): deleted from 28 September 2021` / `seat-powers-and-penalties`: `may the power to make an enactment be exercised in this way` | V1 only (deleted by L.8/2021 from 28 September 2021) |
 | 78 | Article 11(4), placeholder in V2a to V2f | V2a-V2f l.50/51/52/52/52/53 | inert | `art11-powers`: `Article 11(4): deleted from 28 September 2021` | the later texts keep only the number of a paragraph that L.8/2021 deleted from 28 September 2021; no operative content; the functions for those days refuse naming that Law; the operative words are in the row above (V1) |
 | 79 | Article 12 (heading) | V1-V2f l.59/62/63/64/64/64/65 | inert | `art12-15-penalties-forms`: section title only | heading: no operative content; the words are the section title “Article 12: Offences under 2 or more enactments, etc.” in `art12-15-penalties-forms` |
-| 80 | Article 12, the single paragraph | V1-V2f l.60/63/64/65/65/65/66 | encoded | `art12-15-penalties-forms`: `Article 12: two offences under the same enactment are not dealt with`; `Article 12: there is no second source of the offence`; `the customary law of Jersey`; `Article 12: the offences have more than one source`; `Article 12: the Article applies` (and 5 more in the same modules) |  |
+| 80 | Article 12, the single paragraph | V1-V2f l.60/63/64/65/65/65/66 | encoded | `art12-15-penalties-forms`: `Article 12: two offences under the same enactment are not dealt with`; `Article 12: there is no second source of the offence`; `Article 12: the route is not one that the Article names`; `the customary law of Jersey`; `Article 12: the offences have more than one source` (and 6 more in the same modules) |  |
 | 81 | Article 13 (heading) | V1-V2f l.61/64/65/66/66/66/67 | inert | `art12-15-penalties-forms`: section title only | heading: no operative content; the words are the section title “Article 13: Construction of penalties for offences” in `art12-15-penalties-forms` |
 | 82 | Article 13(1) | V1-V2f l.62/65/66/67/67/67/68 | encoded | `art12-15-penalties-forms`: `Article 13(1): no penalty is specified`; `Article 13(1): the offence is punishable by the penalty proposed`; `Article 13(1): a contrary intention appears, and the Article does not decide` / `seat-powers-and-penalties`: `is the offence punishable by the penalty proposed` | inserted by L.16/2003 (endnote [10]); refuses before 1 January 2019 (open question Q1) |
 | 83 | Article 13(2) | V1-V2f l.63/66/67/68/68/68/69 | encoded | `art12-15-penalties-forms`: `Article 13(2): the penalty is not a fine`; `Article 13(2): the fine is of an unlimited amount` / `seat-powers-and-penalties`: `is the fine of an unlimited amount` | inserted by L.16/2003 (endnote [10]); refuses before 1 January 2019 (open question Q1) |
@@ -184,19 +202,19 @@ The three lines above Article 1 (title, long title, commencement note) are `iner
 | 88 | Article 15 (heading) | V1-V2f l.68/71/72/73/73/73/74 | inert | `art12-15-penalties-forms`: section title only | heading: no operative content; the words are the section title “Article 15: Measurement of distance” in `art12-15-penalties-forms` |
 | 89 | Article 15, the single paragraph | V1-V2f l.69/72/73/74/74/74/75 | encoded | `art12-15-penalties-forms`: `Article 15: the distance as measured is the distance for the purposes of the enactment`; `Article 15: a contrary intention appears, and the Article does not decide` / `seat-powers-and-penalties`: `was the distance measured the way the Law requires` |  |
 | 90 | Article 16 (heading) | V1 l.70 | inert | `v1-arts-6-16-17`: section title only | heading: no operative content; the words are the section title “Article 16: Exercise of statutory powers before commencement of enactment” in `v1-arts-6-16-17` |
-| 91 | Article 16(1) | V1 l.71 | encoded | `seat-powers-and-penalties`: `may the power be exercised before the Law comes into force`; `may the enactment passed under the power come into force at the instant` / `v1-arts-6-16-17`: `Article 16: the instrument is neither a Law nor Regulations passed by the States`; `Article 16(1): the Law comes into operation immediately on its passing, or confers no power`; `Article 16(1): the Law gives no time of day for its own commencement` (and 3 more in the same modules) | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 91 | Article 16(1) | V1 l.71 | encoded | `seat-powers-and-penalties`: `may the power be exercised before the Law comes into force`; `may the enactment passed under the power come into force at the instant` / `v1-arts-6-16-17`: `Article 16: the instrument is neither a Law nor Regulations passed by the States`; `Article 16(1): the Law comes into operation immediately on its passing, or confers no power`; `Article 16(1): the Law gives no time of day for its own commencement` (and 7 more in the same modules) | V1 only (deleted by L.8/2021 from 28 September 2021) |
 | 92 | Article 16(2) | V1 l.72 | encoded | `seat-powers-and-penalties`: `may the power be exercised before the Law comes into force`; `may the enactment passed under the power come into force at the instant` / `v1-arts-6-16-17`: `Article 16(1) and 16(2): the power may be exercised before the Law comes into operation`; `Article 16(1): the enactment passed under the power may come into operation at that instant` | V1 only (deleted by L.8/2021 from 28 September 2021) |
 | 93 | Article 16, placeholder in V2a to V2f | V2a-V2f l.73/74/75/75/75/76 | inert | `v1-arts-6-16-17`: `Article 16: deleted from 28 September 2021` | the later texts keep only the number of a paragraph that L.8/2021 deleted from 28 September 2021; no operative content; the functions for those days refuse naming that Law; the operative words are in the row above (V1) |
 | 94 | Article 17 (heading) | V1 l.73 | inert | `v1-arts-6-16-17`: section title only | heading: no operative content; the words are the section title “Article 17: Effect of repeal and re-enactment, and expiry” in `v1-arts-6-16-17` |
 | 95 | Article 17(1) | V1 l.74 | encoded | `seat-powers-and-penalties`: `is a reference to the provisions repealed a reference to the provisions re-enacted` / `v1-arts-6-16-17`: `Article 17(1): the enactment does not repeal and re-enact provisions of a former enactment`; `Article 17(1): a reference in another enactment to the provisions repealed is construed as a reference to the provisions re-enacted`; `Article 17(1): a contrary intention appears, and the Article does not decide` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 96 | Article 17(2) | V1 l.75 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched`; `may the proceeding be brought or the penalty imposed as if the repealing enactment had not been passed` / `v1-arts-6-16-17`: `Article 17(2): the enactment does not repeal any other enactment`; `Article 17(2): the repeal does not`; `Article 17(2): the thing may be done as if the repealing enactment had not been passed` (and 1 more in the same modules) | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 97 | Article 17(2)(a) | V1 l.76 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched` / `v1-arts-6-16-17`: `Article 17(2): the repeal does not` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 98 | Article 17(2)(b) | V1 l.77 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched` / `v1-arts-6-16-17`: `Article 17(2): the repeal does not` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 99 | Article 17(2)(c) | V1 l.78 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched` / `v1-arts-6-16-17`: `Article 17(2): the repeal does not` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 100 | Article 17(2)(d) | V1 l.79 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched` / `v1-arts-6-16-17`: `Article 17(2): the repeal does not` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 101 | Article 17(2)(e) | V1 l.80 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched` / `v1-arts-6-16-17`: `Article 17(2): the repeal does not` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 102 | Article 17(2), closing words | V1 l.81 | encoded | `seat-powers-and-penalties`: `may the proceeding be brought or the penalty imposed as if the repealing enactment had not been passed` / `v1-arts-6-16-17`: `Article 17(2): the thing may be done as if the repealing enactment had not been passed` | V1 only (deleted by L.8/2021 from 28 September 2021) |
-| 103 | Article 17(3) | V1 l.82 | encoded | `seat-powers-and-penalties`: `does paragraph 2 apply to the enactment that ceased` / `v1-arts-6-16-17`: `Article 17(3): paragraph (2) applies to the enactment` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 96 | Article 17(2) | V1 l.75 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched`; `may the proceeding be brought or the penalty imposed as if the repealing enactment had not been passed` / `v1-arts-6-16-17`: `Article 17(2): the enactment does not repeal any other enactment`; `Article 17(2): the Article does not say whether anything else may be done as if the repealing enactment had not been passed`; `Article 17(2): the Article does not say whether the repeal has some other effect` (and 3 more in the same modules) | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 97 | Article 17(2)(a) | V1 l.76 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched` / `v1-arts-6-16-17`: `Article 17(2): the Article does not say whether the repeal has some other effect`; `Article 17(2): the repeal does not` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 98 | Article 17(2)(b) | V1 l.77 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched` / `v1-arts-6-16-17`: `Article 17(2): the Article does not say whether the repeal has some other effect`; `Article 17(2): the repeal does not` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 99 | Article 17(2)(c) | V1 l.78 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched` / `v1-arts-6-16-17`: `Article 17(2): the Article does not say whether the repeal has some other effect`; `Article 17(2): the repeal does not` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 100 | Article 17(2)(d) | V1 l.79 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched` / `v1-arts-6-16-17`: `Article 17(2): the Article does not say whether the repeal has some other effect`; `Article 17(2): the repeal does not` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 101 | Article 17(2)(e) | V1 l.80 | encoded | `seat-powers-and-penalties`: `does the repeal leave what was done, acquired, incurred or begun untouched` / `v1-arts-6-16-17`: `Article 17(2): the Article does not say whether the repeal has some other effect`; `Article 17(2): the repeal does not` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 102 | Article 17(2), closing words | V1 l.81 | encoded | `seat-powers-and-penalties`: `may the proceeding be brought or the penalty imposed as if the repealing enactment had not been passed` / `v1-arts-6-16-17`: `Article 17(2): the Article does not say whether anything else may be done as if the repealing enactment had not been passed`; `Article 17(2): the thing may be done as if the repealing enactment had not been passed` | V1 only (deleted by L.8/2021 from 28 September 2021) |
+| 103 | Article 17(3) | V1 l.82 | encoded | `seat-powers-and-penalties`: `does paragraph 2 apply to the enactment that ceased` / `v1-arts-6-16-17`: `Article 17(3): the Article does not say whether paragraph (2) applies to an enactment that ceased in some other way`; `Article 17(3): paragraph (2) applies to the enactment` | V1 only (deleted by L.8/2021 from 28 September 2021) |
 | 104 | Article 17, placeholder in V2a to V2f | V2a-V2f l.74/75/76/76/76/77 | inert | `v1-arts-6-16-17`: `Article 17: deleted from 28 September 2021` | the later texts keep only the number of a paragraph that L.8/2021 deleted from 28 September 2021; no operative content; the functions for those days refuse naming that Law; the operative words are in the row above (V1) |
 | 105 | Article 18 (heading) | V1-V2f l.83/75/76/77/77/77/78 | inert | `vintage`: section title only | heading: no operative content; the words are the section title “The citation of the Law (Article 18)” in `vintage` |
 | 106 | Article 18, the single paragraph | V1-V2f l.84/76/77/78/78/78/79 | encoded | `vintage`: `the name by which Article 18 says the Law may be cited` |  |
@@ -343,7 +361,13 @@ Where I looked: every paragraph of Articles 1 to 18 and the Schedule was read fo
 
 - **Article 13(2)**, "the amount of the fine or a level on the standard scale is not specified" (RAW line 69): read as "neither is specified".
   The other reading (either unspecified) would make a fine specified by level alone unlimited, which cannot be meant.
-- **Article 11(4)** (V1), "passed after 28th March 2003": compared by day, so an enactment passed on 28 March 2003 itself is not after it.
+- **Article 11(4)** (V1), "passed after 28th March 2003": compared by day, so an enactment passed on 28 March 2003 itself is not after it, and the question whether its power may be exercised in a way refuses (findings N20 and N21, section 10.3).
+- **Fork I7, whether an applicability clause is exhaustive (the 2021 row's L12): not registered.**
+  None of the 14 findings of the independent pass was an applicability question: each asked for a permission or a consequence in the world (section 10.3).
+  No function of this encoding answers "does Article 10 apply" or "is this route one that Article 12 names" on its own, so the allowance that FALSE may stand for such a question is not used for them.
+  The one function that asks only whether an Article applies is `Article 12: the Article applies`; it answers TRUE where the trigger is met and refuses where it is not, which is the 2021 row's second reading of L12 and not its default, and its own tests assert those refusals (`je54-tests-art12-15-penalties-forms.l4`).
+  So the default here is the refusing reading, there is no alternative to call, and a reviewer who wants FALSE outside Article 12's trigger would be asking for I7 with the exhaustive reading as the alternative.
+  If a reviewer holds that Article 10 or Article 12 should answer FALSE outside its reach, I7 would be the fork to register, and its default would then be a ruling and not mine to assume.
 - **Article 6(2)** (V1), "until the substituted provisions come into operation": at the instant of operation the repealed provisions are no longer in force (assumption A3).
 - **Article 8**: the list is read as the complete list ("construed as references to either", and "construed accordingly"; assumption A4).
 - **Article 14**, "not materially affecting the substance nor likely to mislead": both are conditions, both are judgement inputs; when either fails the Article neither saves the form nor says it is invalid, and the function says so.
@@ -369,6 +393,14 @@ Each row is a question a reader will ask and the Law does not answer; the functi
 | Does "Her Majesty in Council" (V1 to V2c) include a confirmation in the name of His Majesty? | Nothing | not answered; Article 1(1) is quoted in both wordings and the rule is the same (open question Q2) |
 | What does Article 12 say about two offences in the same enactment? | Nothing (RAW line 66 covers two or more enactments, or an enactment and the customary law) | not answered |
 | What other modes of service than post? | Nothing in Article 7 | `Article 7 deals only with a document to be served by post` refuses |
+| Do the expressions of an enactment passed before the commencement of the Law (21 August 1954) bear the meanings of the enactment conferring the power? | Article 10 gives them to an enactment passed after the commencement (RAW 47-48) and says nothing of an earlier one | `Article 10: an enactment passed before the commencement of the Law is not dealt with` refuses (finding M20) |
+| What else does a power to pass an enactment include, apart from repealing, rescinding, amending or varying it? | V1 Article 11(3) (V1 line 52) names those four | `Article 11(3): the Article does not say whether the power includes some other act on the other enactment` refuses (N10b) |
+| May a power to make an enactment passed on or before 28 March 2003 be exercised in the ways Article 11(4) lists, or in any other way? | V1 Article 11(4) (V1 lines 53 to 58) deals only with an enactment passed after that day and lists the ways | `Article 11(4): the enactment conferring the power was not passed after 28th March 2003` and `Article 11(4): the Article does not say whether the power may be exercised in some other way` refuse (N18b, N20, N21) |
+| Does a power to appoint to an office include any power other than the four Article 11A lists? | Article 11A(1) (RAW 55-59) | `Article 11A: the Article does not say whether the power to appoint includes some other power` refuses (N42b) |
+| May the offender be prosecuted and punished under a route Article 12 does not name, or under the customary law where the act is not an offence under it? | Article 12 (RAW 66) names the enactments that create the offences and the customary law where the act is an offence under it | `Article 12: the route is not one that the Article names` refuses (O09t) |
+| May a power be exercised before the passing of the Law, for a purpose other than bringing the Law into operation, or under a Law passed before the commencement? | V1 Article 16(1) (V1 line 71) gives it after the passing, so far as necessary or expedient for that purpose, for a Law passed after the commencement | `Article 16(1): the power is exercised before the passing of the Law`, `... the exercise is not necessary or expedient ...` and `... the Law was passed before the commencement of the Law` refuse (P02, P03, S1) |
+| When may an enactment passed under the power come into operation when a contrary intention appears in the Law, or the contrary is necessary? | V1 Article 16(1) lifts its restriction and says no more | `Article 16(1): the restriction does not apply, and the Article does not say when the enactment may then come into operation` refuses (P08b) |
+| Does a repeal have an effect other than those V1 Article 17(2) lists, may anything else be done as if the repealing enactment had not been passed, and does paragraph (2) apply to an enactment that ceased in a way other than expiry? | V1 Article 17(2) and (3) (V1 lines 75 to 82) | `Article 17(2): the Article does not say whether the repeal has some other effect`, `... whether anything else may be done ...` and `Article 17(3): the Article does not say whether paragraph (2) applies to an enactment that ceased in some other way` refuse (P15b, P13b, P18b) |
 | Is the contrary intention present, or does the context otherwise require? | The Articles say "unless" and name no test | a `BOOLEAN` input; when true the rule refuses and says the Article does not decide |
 | How to measure a distance, other than in a straight line on a horizontal plane? | Nothing | the method is a noun and the measured distance an input; no geometry |
 | Any provision other than the four, for a day before 1 January 2019 | Nothing is deposited; the endnotes date several provisions to 2003 (B3) | refuses with `before the first consolidated version (1 January 2019)`; for a day before 28 March 2003 the four also refuse |
@@ -384,7 +416,7 @@ No provision uses `week`, `year`, `hour`, `period`, `clock` or `minute`.
 ## 8. The answer table
 
 The headline questions, in the reader's words, answered from the current text unless a text is named.
-Every answer is asserted in a tests module (named in the last column) with an expected value written from the source before the code was run.
+Every answer is asserted in a tests module (named in the last column) with an expected value written from the source; the Article 10 and Article 16(1) rows are among the answers the independent pass corrected (section 10.3), and they are also asserted in its files.
 
 | Question | Answer | Source | Tests |
 |---|---|---|---|
@@ -402,6 +434,8 @@ Every answer is asserted in a tests module (named in the last column) with an ex
 | A fine with neither an amount nor a level is how large? | Unlimited | Article 13(2) (RAW 69) | `je54-tests-art12-15-penalties-forms` |
 | An act is an offence under two enactments: may I be punished under both? | Prosecuted and punished under either or any, never punished twice for the same offence; unless a contrary intention appears | Article 12 (RAW 66) | same |
 | Does a power to appoint to an office include a power to remove? | Yes, unless the contrary is expressed (from 28 September 2021); the power to appoint in place of the last holder only in the four circumstances | Article 11A (RAW 55-64) | `je54-tests-art11-powers` |
+| Do the expressions in an enactment passed in 1950 bear the meanings of the enactment conferring the power? | The Law does not say (Article 10 deals with an enactment passed after 21 August 1954); the same in all seven texts | Article 10 (RAW 47-48) | `je54-tests-art09-10-references`, `je54-tests-seat` |
+| May a power conferred by a Law be exercised before the Law is passed? | The Law does not say (V1 Article 16(1) gives the power after the passing, so far as necessary or expedient for bringing the Law into operation); after the passing and for that purpose: yes | V1 Article 16(1) (V1 line 71) | `je54-tests-v1-arts-6-16-17`, `je54-tests-seat` |
 | Which text of the Law was in force on 24 November 2025? | V2e (child and parent added; no administration order limb) | vintage table | `je54-tests-vintage` |
 | Article 7 for a day in 2010? | Refuses: `before the first consolidated version (1 January 2019)`; but "month" and "midnight" for 2010 are answered, labelled inferred | B3, section 5 | `je54-tests-art07-service-by-post`, `je54-tests-schedule-definitions` |
 
@@ -413,9 +447,8 @@ Command: `L4=<path of the binary> ./check.sh` in this directory; it runs for sev
 Run on 2026-10-28; the output below is the whole of it, read in full before this file was written.
 
 ```
-check.sh: the target is unstable, so the main check was skipped.
-check.sh of /Volumes/transcend/src/commonswt/je-interp/subjects/je/interpretation-1954/encodings/legalese-2026-10
-l4 binary: /Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-l4-ide/4df05dcf-024a-459b-af21-5c4586df4478/scratchpad/bin/l4 (sha256 matches the binary the numbers in NOTES.md were produced with, 18bd5a72fb8dc3180540afeece05da982f87d03aa098de562de2140e4e89d475)
+check.sh of <this directory>
+l4 binary: <path to the pinned l4 binary> (sha256 matches the binary the numbers in NOTES.md were produced with, 18bd5a72fb8dc3180540afeece05da982f87d03aa098de562de2140e4e89d475)
 target: unstable
 
 module                                       errors satisfied failed refused warnings exp.fail  exp.ref
@@ -437,34 +470,38 @@ je54-tests-art01-commencement.l4                  0        75      0       0    
 je54-tests-art02-05-words.l4                      0        36      0       0        0        0        0
 je54-tests-art07-service-by-post.l4               0        40      0       0        0        0        0
 je54-tests-art08-bankruptcy.l4                    0       120      0       0        0        0        0
-je54-tests-art09-10-references.l4                 0       122      0       0        0        0        0
-je54-tests-art11-powers.l4                        0       121      0       0        0        0        0
-je54-tests-art12-15-penalties-forms.l4            0       177      0       0        0        0        0
+je54-tests-art09-10-references.l4                 0       124      0       0        0        0        0
+je54-tests-art11-powers.l4                        0       128      0       0        0        0        0
+je54-tests-art12-15-penalties-forms.l4            0       181      0       0        0        0        0
 je54-tests-crosschecks.l4                         0        51      0       0        0        0        0
 je54-tests-gaps.l4                                0        13      0       0        0        0        0
+je54-tests-independent-1.l4                       0       158      0       0        0        0        0
+je54-tests-independent-2.l4                       0       148      0       0        0        0        0
+je54-tests-independent-3.l4                       0       214      0       0        0        0        0
 je54-tests-schedule-definitions.l4                0       115      0       0        0        0        0
-je54-tests-seat.l4                                0       111      0       0        0        0        0
-je54-tests-v1-arts-6-16-17.l4                     0       106      0       0        0        0        0
+je54-tests-seat.l4                                0       116      0       0        0        0        0
+je54-tests-v1-arts-6-16-17.l4                     0       112      0       0        0        0        0
 je54-tests-vintage.l4                             0        40      0       0        0        0        0
 je54-v1-arts-6-16-17.l4                           0         0      0       0        0        0        0
 je54-vintage.l4                                   0         0      0       0        0        0        0
-TOTAL (29 modules)                                0      1228      0       0        0        0        0
-of which the tests modules je54-tests- (14): satisfied 1228; the other 15 modules carry no assertion
+TOTAL (32 modules)                                0      1772      0       0        0        0        0
+of which the tests modules je54-tests- (17): satisfied 1772; the other 15 modules carry no assertion
 (a failed assertion is also an error and a refused assertion is also a warning; any other error, any refusal or warning beyond the module's expected_refused, and any failed count other than its expected_failed, make the run red)
 @ref notices (follows code on its line / end of the file): 0
 
 shape: every module has a plain je54- name, starts without @lang en, and is at most 600 lines (the longest is je54-schedule-definitions.l4, 545 lines)
-srcrefs check: 599 src: lines, 253 runs, 319 locators, 0 problems
+srcrefs check: 628 src: lines, 266 runs, 333 locators, 0 problems
 
 check.sh: GREEN
 (a green run says nothing about whether a domain expert agrees with any reading in NOTES.md; no domain expert has read this encoding against the Law)
-exit 0
 ```
 
-Totals: 29 modules (15 rule modules and 14 tests modules); errors 0, satisfied 1228, failed 0 (expected 0), refused 0 (expected 0), warnings 0; srcrefs 599 `src:` lines, 253 runs, 319 locators, 0 problems; shape check passed; exit status 0.
+Totals: 32 modules (15 rule modules and 17 tests modules); errors 0, satisfied 1772, failed 0 (expected 0), refused 0 (expected 0), warnings 0; srcrefs 628 `src:` lines, 266 runs, 333 locators, 0 problems; shape check passed; exit status 0.
 No test is meant to fail and none is meant to refuse (`expected_failed` and `expected_refused` list nothing).
 
-## 10. Open questions for a domain expert
+## 10. Open questions and the independent pass
+
+### 10.1 Questions for a domain expert
 
 - **Q1.** Should Articles 1(7), 4, 5, 6(3), 9, 11(4), 13 and 14, which the V1 endnotes date to L.16/2003 (28 March 2003), be answered for 28 March 2003 to 31 December 2018 like the brief's four (B3)?
   If so the inference is the same kind (endnotes of the 2019 consolidation, not verified against L.16/2003) and later amendments before 2019 would need ruling out.
@@ -479,7 +516,9 @@ No test is meant to fail and none is meant to refuse (`expected_failed` and `exp
 - **Q9.** Is the list in Article 8 exhaustive (assumption A4)?
 - **Q10.** The shared files that the skill's `references/canon-deposit.md` says to update in the same commit (`subjects/README.md` and `NOTICE`) are outside this deposit and were not touched.
 
-Assumed, not ruled (in the order they arose):
+### 10.2 Assumed, not ruled
+
+In the order they arose:
 
 - **A1.** "Comes into operation" (Article 1(4)) and "comes into force" are the same event (the brief).
 - **A2.** The time zone is an input; Jersey local time is assumed in examples; the Law names none.
@@ -488,12 +527,84 @@ Assumed, not ruled (in the order they arose):
 - **A5.** "Before the date of the commencement" and "after 28th March 2003" compare calendar days; a same-day question about an hour refuses.
 - **A6.** The kind of person (company, bank, limited liability company) is the caller's input.
 - **A7.** Articles 9(5), 11(1) and 13(4) say they apply to all enactments whenever passed or made: their functions take the date and ignore it, and are documented as such.
+- **A8.** Article 1(3), "where appropriate": whether it is appropriate to read passing as making, or repeal as rescission, is the caller's judgement, an input; with FALSE the reference stands as written.
+- **A9.** The four conventions of section 2 (an applicability or list-membership question may be TRUE or FALSE; a permission or consequence outside the Article's reach refuses; an "includes" list does not close the word; a true contrary-intention input refuses), adopted from the 2021 row.
+
+### 10.3 The independent test pass
+
+The `encoding-a-subject` skill recommends one, and it was run on 2026-10-28.
+As the team lead reported it to me (I have not read the working file), a fresh Claude Sonnet 5.5 session decided more than 150 scenarios from the text of the Law before it opened any file of the encoding, kept them in a `decisions.md` in the lead's scratch directory (not deposited), then mapped each onto an exported question and wrote it as an `#ASSERT`.
+They are in `je54-tests-independent-1.l4` (Articles 1 to 6 and the Schedule definitions of midnight and month, 158 assertions), `je54-tests-independent-2.l4` (Article 7, Article 8, Articles 12 to 15, the dates before 2019 and the author's unsure scenarios, 148) and `je54-tests-independent-3.l4` (Articles 9 to 11A, Articles 16 and 17 and Part 1 of the Schedule, 214).
+The pass first arrived as one file of 1160 lines and was split by Article, with no assertion lost: 520 before, 520 after, and the lines of its sections compare equal as a multiset against the unsplit file.
+Sections S and U sit in part 2, out of Article order, because they reuse local definitions of the sections K, L and O, which are in that part.
+Its status is the same as the encoding's: one reader's answers, not ruled.
+
+The first run, on the encoding as it stood before the work below (a `check.sh` run of 29 modules that was otherwise green), gave 520 assertions in the independent file: 506 satisfied, 14 failed, 0 warnings.
+All 14 are `#ASSERT REFUSED` lines where the encoding gave a value: 12 gave FALSE and 2 gave TRUE.
+A failing assertion is a finding, and none was deleted.
+No independent expected value was changed, and no independent assertion was pointed at another reading: the only changes are the split (each section moved whole into one of three files) and two comment lines at the head of each part.
+After the work below the pass is 520 satisfied, 0 failed, 0 refused.
+
+Nine of the 14 are not independent of the encoding's option names.
+Their ids carry a letter suffix: N10b, N18b, N42b, O09t, P08b (two assertions), P13b, P15b and P18b.
+They were written while the file was being made, after the exported names and the "some other ..." options had been read (the header of the file says so), so they test the encoding's own list against the author's reading of the Law, not the author's unprompted reading.
+The other five (M20, N20, N21, P02 and P03) were decided before the encoding was opened.
+All 14 have the same cause: the encoding answered a question that asks for a permission or a consequence in the world with a value where the Article says nothing, and the convention of section 2 is that such a question refuses.
+
+Line numbers are lines of the unsplit independent file; the ids are the author's, in the comments above each assertion.
+
+| # | Id (line) | The author decided | The encoding answered | Triage | What was done |
+| --- | --- | --- | --- | --- | --- |
+| 1 | M20 (661) | Regulations passed 20 August 1954, before the commencement of the Law, are not dealt with by Article 10: a refusal | FALSE | encoding error | The question is whether the expressions bear the same meanings, a consequence in the world, so it now refuses with `Article 10: an enactment passed before the commencement of the Law is not dealt with`. No function answers only "does Article 10 apply" (fork I7 is not registered, section 6). Own assertions: 8 corrected (7 in `art09-10-references`, 1 in `seat`), 3 added |
+| 2 | N10b (703) | An act on the other enactment that is not on the list in V1 Article 11(3) ("repeal, rescind, amend or vary") is not decided: a refusal | FALSE | encoding error | `some other act on it` now refuses with `Article 11(3): the Article does not say whether the power includes some other act on the other enactment`. Own: 2 corrected (`art11-powers`, `seat`) |
+| 3 | N18b (725) | A way of exercising the power that V1 Article 11(4) does not list is not decided: a refusal | FALSE | encoding error | `in some other way` now refuses with `Article 11(4): the Article does not say whether the power may be exercised in some other way`. Own: 1 corrected, 2 added |
+| 4 | N20 (729) | An enactment passed on 28 March 2003 is not "after 28th March 2003", and Article 11(4) says nothing of it: a refusal | FALSE | encoding error | Now refuses with `Article 11(4): the enactment conferring the power was not passed after 28th March 2003`. An "applies" question could stay FALSE; the question here is whether the power may be exercised in a way, so it refuses. Own: 4 corrected (28 March 2003, 27 March 2003 and 21 August 1954 in `art11-powers`, 28 March 2003 in `seat`), 2 added |
+| 5 | N21 (730) | The same for 27 March 2003 | FALSE | encoding error | As row 4 |
+| 6 | N42b (774) | A related power that Article 11A(1) does not list: not decided, a refusal | FALSE | encoding error | `some other power` now refuses with `Article 11A: the Article does not say whether the power to appoint includes some other power`. Own: 2 corrected (V2c, V2f), 4 added (V2a, V2b, V2d, V2e) |
+| 7 | O09t (808) | A route (`the Gamma Law`) that is not among the enactments creating the offences: Article 12 says nothing, a refusal | FALSE | encoding error | The export is "may the offender be prosecuted and punished under this enactment", a permission, not "is this one of the routes Article 12 names", so it refuses with `Article 12: the route is not one that the Article names`. Own: 2 corrected (`art12-15-penalties-forms`), 3 added |
+| 8 | P02 (897) | V1 Article 16(1), power exercised 28 February 2020, before the Law was passed on 1 March 2020: the Article gives "any time after the passing" and says nothing of before: a refusal | FALSE | encoding error | Now refuses with `Article 16(1): the power is exercised before the passing of the Law`. Own: 2 corrected (`v1-arts-6-16-17`, `seat`), 1 added |
+| 9 | P03 (899) | The exercise is not necessary or expedient for bringing the Law into operation: the Article gives the power for that purpose only, a refusal | FALSE | encoding error | Now refuses with `Article 16(1): the exercise is not necessary or expedient for bringing the Law into operation`. Own: 1 corrected, 2 added |
+| 10 | P08b (919) | The Law's contrary intention appears: the restriction on an enactment passed under the power is lifted and the Article says no more: a refusal | TRUE | encoding error | The restriction function was the one place where a true contrary-intention input did not refuse; it returned TRUE. It now refuses with `Article 16(1): the restriction does not apply, and the Article does not say when the enactment may then come into operation`. Own: 1 corrected, 3 added (shared with row 11) |
+| 11 | P08b (920) | The contrary is necessary for bringing the Law into operation: the same | TRUE | encoding error | As row 10. Own: 1 corrected |
+| 12 | P13b (932) | Something else done as if the repealing enactment had not been passed: the closing words of V1 Article 17(2) name two things, so not decided | FALSE | encoding error | Now refuses with `Article 17(2): the Article does not say whether anything else may be done as if the repealing enactment had not been passed`. Own: 2 corrected (`v1-arts-6-16-17`, `seat`) |
+| 13 | P15b (940) | Some other effect of the repeal than the five V1 Article 17(2) lists: not decided | FALSE | encoding error | Now refuses with `Article 17(2): the Article does not say whether the repeal has some other effect`. Own: 2 corrected |
+| 14 | P18b (947) | An enactment that ceased in some other way than expiry (V1 Article 17(3)): not decided | FALSE | encoding error | Now refuses with `Article 17(3): the Article does not say whether paragraph (2) applies to an enactment that ceased in some other way`. Own: 2 corrected |
+
+None of the 14 is a fork.
+Had a finding been an applicability question, the instruction was to keep FALSE, say so here, and register fork I7 with the refusal as the callable alternative and the exhaustive reading (FALSE) as the default, as the 2021 row does for L12.
+None was, so I7 is not registered; `Article 12: the Article applies` is the one function that asks only whether an Article applies, and it refuses outside its trigger (section 6), which the lead should verify.
+
+Two sibling decisions follow from the same convention and were not tested by the pass; the team lead should verify them.
+
+- **S1.** Article 16(1) deals only with a Law passed after the commencement of the Law, so a Law passed before 21 August 1954 now refuses (it answered FALSE).
+  `Article 16(1): the Law was passed before the commencement of the Law`; own: 1 corrected, 2 added (`v1-arts-6-16-17`).
+- **S2.** Article 12 names the customary law as a route only where the act is an offence under it, so the customary law as a route when the act is not an offence under it now refuses (it answered FALSE), with the same text as row 7.
+  Own: 2 corrected (`art12-15-penalties-forms` and `seat`), 2 added (the customary route when the act is an offence under it, which is TRUE, and the refusal in V1).
+
+What changed in my own tests, so that no change is hidden.
+Thirty-three of my own assertions had their expected value changed, each with a one-line comment above it that points at this section: 7 in `je54-tests-art11-powers.l4`, 7 in `je54-tests-art09-10-references.l4`, 3 in `je54-tests-art12-15-penalties-forms.l4`, 8 in `je54-tests-v1-arts-6-16-17.l4` and 8 in `je54-tests-seat.l4`.
+Each moved from `FALSE` (or `TRUE`) to `#ASSERT REFUSED ... BECAUSE "<the full text>"`.
+For each of the 33 the first draft's expected value agreed with the first draft's code; the independent reading disagreed with both, and the text was re-read for each row above.
+The first draft's sentence that no expected value was ever fixed to the code's answer is retired (section 11): for these 33 it cannot be shown, and the agreement of test and code is no evidence about the text.
+Twenty-four assertions were added, to give both sides of each corrected case (the listed or covered case that answers a value, and the case outside that refuses): 7 in `art11-powers`, 2 in `art09-10-references`, 4 in `art12-15-penalties-forms`, 6 in `v1-arts-6-16-17` and 5 in `seat`.
+The assertions of my own moved from 1228 to 1252, and the independent pass adds 520, so the row runs 1772.
+
+The author's unsure scenarios (section U of the independent file, now at the end of part 2) are the places where the words allow more than one reading; each states the reading taken and the other reading in a comment.
+Five of the seven groups are covered by a fork and pass on my default, and on the other reading too wherever the author asserted it: U02 (the day for an enactment naming 28 September 2021; only the day is asserted, and it is the same on every reading of I1), U09 (the event or the question day, I2: the author took the day of the event, my default, and the other reading is asserted too), U06 (the proviso and the Schedule definition of person, I5: the literal reading, my default), U (K03, the rebutted presumption of Article 7, I4: the time proved, my default, and the other reading is asserted), and the callable alternatives (b) and (c) of I1.
+Two have no fork and pass on my defaults: U (J04), whether the substituted provisions are in force at the instant they are replaced (the author took "not in force", which is assumption A3 and open question Q8), and U14 (D03), "where appropriate" in Article 1(3) (the author took "the reference stands as written" and offers "the Article gives no reading" as the other; the encoding takes the appropriateness as an input, assumption A8, so with FALSE it reads as written and the other reading is not callable).
+
+What the pass did not do.
+It did not run before the encoding existed in the sense that matters for the shape: the author decided the scenarios from the text first, but mapped each onto an exported question after reading the seat modules, so the pass is independent of my tests and not of the shape of my exports.
+Nine of the 14 findings are not independent of the encoding's option names (above).
+Besides the prelude and `daydate`, its imports are the nouns and the two seat modules, so it reaches the rule modules only through the exported questions, and every one of the 43 exported names appears in the three files (checked by searching for each name).
+Its answers are one reader's; the triage above followed the convention of section 2, which is also assumed, not ruled, and which a Jersey drafter could rule the other way for Articles 10 and 12 (I7 in section 6).
 
 ## 11. Provenance
 
-- **Model and effort.** Claude Sonnet 5.5 (`claude-sonnet-5-5`), working as a subagent of a team lead in one long session that was compacted once; reasoning effort set by the harness (the value shown to me in the last turn was 30; I cannot report the earlier values).
-  I wrote every file in the deposit except `BRIEF.md`, `srcrefs.py`, `SOURCE-LICENSE.md` and `tools/`, and nobody has reviewed them; no independent test pass was run: every test was written by the encoder, with expected values written from the source before the code was run.
-  None of the fixes made to the tests changed an expected value to match what the code computed; the errors fixed were syntax, locators and function shapes.
+- **Model and effort.** Claude Sonnet 5.5 (`claude-sonnet-5-5`), working as a subagent of a team lead in one long session that was compacted twice by the time the independent-pass fixes were made; reasoning effort set by the harness (the value shown to me in the last turn was 30; I cannot report the earlier values).
+  I wrote every file in the deposit except `BRIEF.md`, `srcrefs.py`, `SOURCE-LICENSE.md`, `tools/` and the three `je54-tests-independent-` files, which the team lead added; no domain expert has reviewed any of it.
+  An independent test pass was run (section 10.3).
+  My own tests were first written with expected values taken from the source before the code was run, and the first draft's sentence that none was ever changed to match the code is retired: after the independent pass 33 of my own expected values were changed, and for those 33 the test and the code had agreed on a reading the pass did not share (section 10.3).
 - **What I read.**
   The brief.
   The two skills named in it (`encoding-a-subject` and `writing-l4-rules`: the `SKILL.md` of each and the reference and asset files they point at, including `references/canon-deposit.md` and `references/source-locators.md`).
@@ -505,7 +616,8 @@ Assumed, not ruled (in the order they arose):
   Python generators kept in the encoder's scratch directory, not deposited: a template expander that fills the `-- src:` quotation runs from `srcrefs.py quote` and `quoteid` so that no quotation is retyped; a generator for the Schedule definitions and for the two seat modules; a parser that numbers every provision of the seven texts (`paras.py`); a coverage-table generator; and a locator audit (`audit_refs.py`, `blocks.py`) that maps every locator of every `@ref` to the paragraph it lands on and compares that with the paragraph the `@ref` names (F2).
   `grep` and `diff` over the sources, to check each claim in the brief and to compare the seven Part 1 blocks and the other paragraphs paragraph by paragraph.
   Probe `.l4` files for syntax, run with `l4 run` under `nice -n 15`.
-  One `pgrep -fl` on the pattern `bin/l4`, at the end, to look for stray `l4` processes: a check, not a wait loop and not a kill, but it is a `pgrep -f` on a name.
+  Two `pgrep -fl` calls, on the patterns `bin/l4` (at the end of the first deposit) and `bin/l4 run` (after the independent-pass fixes), to look for stray `l4` processes: checks, not wait loops and not kills, but each is a `pgrep -f` on a name.
+  For the independent-pass fixes, in the encoder's scratch directory and not deposited: `edit_rules.py` and `edit_tests.py` (the exact replacements, so that each corrected assertion and each new refusal text is the same string in the rule and in the test), `split_indep.py` (the split of the independent file, with a check that its sections tile the original and that the multiset of lines is unchanged), and a scan of every function that takes a contrary-intention input.
   A positive control of `check.sh` in a scratch copy: with a failing assertion, a refused assertion, a warning, a `@lang en` head and a corrupted quotation injected in turn, the script turned red each time and green again when they were removed.
   `sha256` of the binary (by `check.sh`).
 - **What the checks do not show.**
