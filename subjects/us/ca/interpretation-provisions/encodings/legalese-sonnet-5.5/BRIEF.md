@@ -1,157 +1,109 @@
-# Encoding brief: the California interpretation provisions (a cluster of sections, not a single Act), in L4
+# Completion brief: the California interpretation provisions (Code of Civil Procedure ss 1-34, Civil Code ss 1-23.6, Government Code ss 1-26, 6700-6736, 6800-6808 and 9600-9612), to "whole" in L4 (unstable)
 
-You are producing an L4 encoding of the California interpretation provisions (a cluster of sections, not a single Act) (Cal. Gov. Code, Civ. Code and Code Civ. Proc.), from the English text of the sections as published by the Legislature in its bulk data (California publishes its codes in English only), in English L4.
+You are completing an existing, draft L4 encoding of the California interpretation provisions (Code of Civil Procedure ss 1-34, Civil Code ss 1-23.6, Government Code ss 1-26, 6700-6736, 6800-6808 and 9600-9612) (six deposited section ranges of three California codes) so that every provision of the text is accounted for to the standard below.
 This brief is the whole specification. Read it fully before opening any source.
+You are the ONLY agent on this row: no subagents. You work in one context and check your own work with the diagnostics.
 
-You are the ONLY encoder: no ontology agent, no fleet, no integrator, no independent test author, no subagents.
-You do all of it in one context and you check your own work with the diagnostics.
+## What "whole" means (Meng's ruling of 2026-10-22, applied to this Act)
 
-## Why this exists
+Every provision of the text, that is every section, subsection, paragraph, schedule, table row and defined term, has a row in the coverage table, and each row has exactly one disposition:
+- `encoded`: a rule, definition or table in layer-1 L4, with a test, citing the provision with `@ref`.
+- `inert`: allowed ONLY for the three reasons below.
+- `fork`: the text can be read two or more ways with different outcomes. The row points at the fork-register entry (every reading, and the text that licenses each) and at the rule that encodes the chosen reading, or at the explicit "not covered" value when the text does not choose.
+- `repealed or blank in this text`: say what the text shows.
 
-Other encodings of this jurisdiction's legislation need executable answers to questions such as: when does an enactment come into force or begin to bind; when does a period of "N days", "N weeks", "N months" or "N years" from or after a day end; do rest days and holidays count; when is a document treated as served; what a repeal does; what "day", "month" and "year" mean.
-Those answers come from the interpretation provisions, not from the statute being encoded, and different encodings of other statutes give different answers when they guess.
-Your job is to make the California interpretation provisions (a cluster of sections, not a single Act) executable and tested, as a module other encodings can reuse.
-Decide every answer from the statute text alone; do not look for the answers anywhere else, and do not import an answer from another jurisdiction's law or from your general knowledge of how this one is applied.
+There is no `out-of-scope` row and no `deferred` row.
+
+The three reasons for `inert`, and no others:
+1. Not operative: the title, long title, enacting words, headings, the date of enactment, a purpose or objects clause that creates no rule.
+2. Machinery (Guide section 4): boards and offices and their staffing, the Act's own commencement, short title and extent, regulation-making and rule-making powers, savings and transitional provisions that affect no one now, amendments of other Acts.
+3. Text shown repealed or blank.
+
+These are NOT reasons. Earlier passes used them and they no longer stand:
+- "addresses an official": encode what it means for the individual: what may be done to them, what they must be given, and by when (Guide section 2).
+- "an interpretive canon" or "open-textured": encode the rule, and take the open-textured judgment as a plain input.
+- "refers to another Act or instrument that is not among the sources": encode the provision as stated and ask the borrowed fact or term as an input (Guide section 4).
+- "no input from which an answer would differ": a rule with one answer is still a rule; encode it and test it.
+- "the earlier brief said it need not be coded": superseded by this brief.
+
+A definition is encoded: a defined-term table or function that returns the term's meaning as the Act states it (the members it names, what it includes or excludes, what it points at), with a test for each entry.
+Rules of reading (the singular includes the plural; a reference to an Act includes amendments; and so on) are encoded as functions over a small typed representation of what the rule operates on, as an existing module of this family does, with tests on both sides of each limb.
+
+## Your starting point
+
+`DEPOSIT/encodings/legalese-sonnet-5.5/` already holds a draft encoding of this Act (pass 1): modules, tests, `NOTES.md`, `encoding.json`, `PROGRESS.md`, `check.sh`, `srcrefs.py`, and the pass-1 brief as `BRIEF-pass1.md`.
+It is a copy; the repository is not touched. READ IT FIRST: `NOTES.md` (coverage table, fork register, findings), `encoding.json` (its `scope.not_encoded`), then the modules.
+Pass 1 worked to a narrower standard of what to skip. Do not trust its dispositions; re-derive them from the text.
+
+Six source files are deposited, one per section range. Pass 1's 29 `inert` rows are your audit list. The scope is the six deposited ranges, no more: do not go looking for other California sections.
+
+## Steps, in order
+
+1. **Baseline.** Run `check.sh` before you change anything and keep the numbers it prints in `PROGRESS.md` under "baseline". At the end every baseline number must still hold, plus your additions, unless you log a defect fix (step 5).
+2. **Count and audit, before you encode.** Count the text's units (every section heading, subsection, schedule paragraph, defined-term entry and table row) from the text with a script. Compare with the coverage table's rows. Write a section `## Re-disposition audit` in `NOTES.md` with: the counts; each unit missing from the table; and, for every row that is not `encoded`, a one-line verdict: it keeps its disposition (name which of the three inert reasons) or it moves to `encoded` or `fork`. Write this section before you write any new L4, and keep it current.
+3. **Encode what the audit moved.** New layer-1 modules beside the existing ones, named in the folder's own pattern (read `ls` first), following the text's own structure. Every rule has an `@ref`; quote and cite per `encoding-a-subject/references/source-locators.md`. Reuse the existing modules' definitions by IMPORT; never copy a rule.
+4. **Tests from the text** for every new rule, as described under Tests below.
+5. **Existing files.** You may not edit an existing module or test except to fix a defect you can show against the text (a failing assertion the text supports; a wrong citation). Log every such edit under `## Changes to existing modules` in `NOTES.md`: the file, what changed, why, and the text that licenses it. Never delete a module or a test.
+6. **Bookkeeping.** `NOTES.md`: the coverage table complete (one row per unit, dispositions as above), the fork register, numbered findings, the `## Jural relations` section, what `check.sh` prints, and what would need doing before the encoding is worth relying on. `encoding.json`: version `0.2.0`, `scope.encoded` rewritten, `scope.not_encoded` empty or absent, `checks` updated, `l4_bin` with its sha256 and version line, status stays `draft`, `not_reviewed` says no domain expert has read it against the text.
+
+## Rights and duties come in pairs (Hohfeld)
+
+Hohfeld's correlatives: the person's right (a claim) is the other party's duty; the person's privilege (a liberty) is the other party's no-right; the person's power is the other party's liability, that is, being subject to that power (not an obligation); the person's immunity is the other party's disability.
+In layer 1, state each rule once, as a relation between two parties, and name it neutrally; never write the same relation twice, once from each side.
+In `NOTES.md` keep a section `## Jural relations`: a table with one row per provision that creates a relation, giving the party holding the right, privilege, power or immunity, the party bearing the correlative duty, no-right, liability or disability, the section, and the L4 rule that encodes it. A provision that creates no such relation (a definition, a counting rule) is listed once as `none`. In an interpretation Act most provisions create none, so this section is short; it must still cover the whole text.
 
 ## The subject and the sources
 
-- **the California interpretation provisions (a cluster of sections, not a single Act)**, Cal. Gov. Code, Civ. Code and Code Civ. Proc..
+- **the California interpretation provisions (Code of Civil Procedure ss 1-34, Civil Code ss 1-23.6, Government Code ss 1-26, 6700-6736, 6800-6808 and 9600-9612)**, six deposited section ranges of three California codes.
 - Source file(s) in `INPUTS_DIR`: `CCP-ss-1-34.txt`, `CIV-ss-1-23.6.txt`, `GOV-ss-1-26.txt`, `GOV-ss-6700-6736.txt`, `GOV-ss-6800-6808.txt`, `GOV-ss-9600-9612.txt`.
-- `inputs/SOURCES.md` records where each came from, its version or currency date, its URL and its hashes. **Read it.**
-- The `.txt` is a plain-text rendering of the official source made by a converter script; it is not the official text and it is not marked up. Say so in `NOTES.md` and in your row's `SOURCE-LICENSE.md`, and do not claim anything is "verified against the official text".
-- `inputs/STUB-SOURCE-LICENSE.md` is the subject-level licence note written when the text was deposited. Your row's `SOURCE-LICENSE.md` points at it and does not repeat it.
-- **California has no single Interpretation Act, and this run's scope is an assumption, not a ruling.** Gov. Code § 9603, which is in your deposit, says: "The general rules for the construction of statutes are contained in the preliminary provisions of the different codes." So the nearest analogue to the other jurisdictions' Interpretation Acts is a cluster of sections, deposited as six text files: Gov. Code §§ 1-26 (General Provisions); Civ. Code §§ 1-23.6 and Code Civ. Proc. §§ 1-34 (the two codes' Preliminary Provisions); Gov. Code §§ 6700-6736 (Holidays) and §§ 6800-6808 (Computation of Time); and Gov. Code §§ 9600-9612 (Operation of Statutes and Resolutions). The Penal Code, the Evidence Code and the other codes' preliminary provisions are NOT deposited; say so in `NOTES.md` and in the coverage table, and record the scope itself as a fork.
-- **Because the cluster is not one Act, the same rule appears in several places. Treat each overlap or tension as a fork, not as noise.** Period counting appears in Gov. Code § 6800, Civ. Code §§ 10-11 and Code Civ. Proc. §§ 12-13b. Holidays appear in Gov. Code § 6700, Civ. Code §§ 7-9 and Code Civ. Proc. § 10, which points to a section, § 135, that is not deposited. "Month" is defined in Gov. Code § 6804, Civ. Code § 14 and Code Civ. Proc. § 17. Say which provision governs which kind of statute or proceeding, using only what the deposited text says; where it does not say, `REFUSE`.
-- **Where the six must-encode items sit in this deposit**: commencement of statutes at Gov. Code § 9600, and of the codes themselves at Code Civ. Proc. §§ 2 and 8; period counting and holidays at the sections listed above and Code Civ. Proc. §§ 12a-12c; effect of repeal at Gov. Code §§ 9605-9611; time words at Gov. Code §§ 6803-6806. Deemed service: look for it, and if the deposit has no general deemed-service rule, say so in `NOTES.md` rather than inventing one (Civ. Code § 17 and Code Civ. Proc. § 11 concern registered and certified mail, and § 12c concerns days added for a method of service; read each before you say what it does).
-- Each deposited section is followed by its history note in parentheses. Treat the note as provenance, not as legal text.
-- The first lines of each text file are an unofficial-text notice and its source. The text is public domain by Gov. Code § 10248.5 (the stub's `SOURCE-LICENSE.md` records the basis; copy it into your row), so there is no attribution statement to copy.
+- `inputs/SOURCES.md` records where each came from, its version, its URL and its hashes. **Read it.**
+- Each text is a plain-text rendering made by a converter script; it is not the official text. Say so in `NOTES.md`, and do not claim anything is "verified against the official text".
+- `inputs/STUB-SOURCE-LICENSE.md` is the subject's licence note. Your `SOURCE-LICENSE.md` points at it and does not repeat it.
+- Encode only from these files. Quote the text mechanically (copy it, or script it as long as the script reads the file); never reconstruct wording from memory.
+- Defaults ruled for Commons (Guide section 4): the Act alone, plus instruments that set its numbers or dates if among your inputs, otherwise make the number an input and say so; the actors the text names; a judgment the text hands to someone else becomes a conditional input and is never guessed; the Act's own definitions are worked out from facts, borrowed terms are asked as facts; the Act's own words, each with a plain gloss in a comment.
 
+## Dialect: this folder is written for `unstable`
 
-All inputs are under `INPUTS_DIR` (given in your task). Read them there and nowhere else.
-Quote the text mechanically (copy it, or script it as long as the script reads the file); never reconstruct wording from memory.
-
-## Scope, pinned
-
-- **Every section, subsection, schedule and table of the text in `INPUTS_DIR`.** Build the coverage table from the text itself, one row per section (and per schedule), with a disposition for each: `encoded`, `inert` (with a reason of real length), `repealed or blank in this text` (say what the text shows), or `not applicable`.
-- **Must be encoded as executable functions with tests, wherever the text has the provision.** If the text has no provision on one of these, its coverage row says "the Act is silent on this", and nothing is invented:
-  1. when an enactment comes into force or begins to bind, where it does not say so itself (the day, and the moment within the day);
-  2. how a period of days, weeks, months or years is counted from or after a day or an event, and which day is its last (including a start on the 31st, a start on 29 February, and a month that lacks the start day's number);
-  3. what happens when the last day of a period is a day of rest, a holiday or a day on which an office is closed, as the text defines it;
-  4. deemed service or notice, where the text has a rule on it;
-  5. what a repeal does: effect on things done under the repealed text, revival, savings, repeal and re-enactment, where the text has a rule on it;
-  6. the meanings the text gives to "day", "week", "month", "year" and any other time word.
-- **Everything else:** encode what is computable; mark the rest `inert` in the coverage table with a reason of real length.
-  Interpretive canons (the singular includes the plural, gender words, and so on) need not be forced into code.
-
-## The module other encodings will reuse
-
-Put the time-computation functions in ONE self-contained module that imports only `prelude` and `daydate`, with the descriptive ASCII filename `usca-interpretation-time.l4`.
-It must answer, as named functions with `@ref` citations to the section of the text, each of these that the text governs:
-
-1. the last day of a period of N days or N weeks counted from a day;
-2. the last day of a period of N months or N years counted after an event, including a start on the 31st, a start on 29 February, and a month that lacks the start day's number;
-3. what happens to a period whose last day or last days are days of rest, recess or holiday under an enactment;
-4. whether a given date falls inside a period;
-5. the day, and the moment within the day, from which an enactment binds;
-6. the day subordinate legislation (regulations, rules, orders) comes into force, where the text says.
-
-**Days of rest, recess and holiday are an INPUT, never computed.**
-Take them as a function or a list that the caller supplies.
-Do not hard-code a holiday calendar.
-Where the text asks for a period by a calendar the encoding does not have, or where the text is silent on an item above, write a named `REFUSE` saying what is missing; never a plausible default.
-
-## Deliverables, all under your `DEPOSIT` directory (given in your task)
-
-`DEPOSIT` holds exactly one directory, laid out so that it can be copied as it stands into `subjects/us/ca/interpretation-provisions/`:
-
-```
-DEPOSIT/
-  encodings/legalese-sonnet-5.5/
-    usca-interpretation-time.l4   the reusable time module
-    *.l4                                every other module; ASCII filenames; every module starts with `@lang en`; a nouns module first if you need one
-    tests, check.sh, NOTES.md, PROGRESS.md, encoding.json, SOURCE-LICENSE.md, BRIEF.md (a copy of this brief)
-```
-
-You do not write `subject.json`, `README.md` or `source/`: the subject already exists and is not yours to change.
-`encoding.json` and `SOURCE-LICENSE.md` follow `references/canon-deposit.md` of the `encoding-a-subject` skill (status `draft`; `not_reviewed` saying no domain expert has read it against the statute).
-The row name is `legalese-sonnet-5.5`; the method is a single Sonnet 5.5 agent working alone from this brief.
-Record the pinned `L4_BIN` path and its sha256 in `encoding.json`.
-
-`NOTES.md` carries: what is encoded and what is not; a coverage table with one row per section and schedule and a disposition for each; a **fork register** (every ambiguity, the readings you saw, the one you took, the text that licenses each); an answer table for the worked cases below; what `check.sh` prints; open questions for a domain expert.
-
+The existing modules use `REFUSE`, `#ASSERT REFUSED ... BECAUSE`, `YMD` and `@lang`, which the stable binary rejects. The folder's target is `unstable` and your binary is the unstable prerelease. Write every new module in the same dialect so the folder stays one unit that one binary reads. `writing-l4-rules/references/dialects.md` says what `main` would read differently; it does not bind you here, and porting this folder to stable is a separate job that is not yours.
+Where the source does not answer, `REFUSE "..."` (as the existing modules do), asserted with `#ASSERT REFUSED`. Do not use a construct your own binary rejects.
 ## Your context will be compacted: make the disk your memory
 
-This run may exceed your context window, and the harness will then compact your context into a summary.
-So write as you go, not at the end:
-
-- Keep `NOTES.md`'s coverage table, fork register and answer table on disk, and update them after each section you finish.
-- Keep `PROGRESS.md`: sections done, sections in progress, what is next, decisions taken (with the section that licenses each), and a list of the files you have written.
-- After any compaction, re-read `PROGRESS.md`, `NOTES.md` and the statute text, not your summary of them.
-
-## Forks you must look at (they are the point of the exercise)
-
-- Whether a period "from" a day counts that day, and whether a period "after" an event does; and whether the last day is inside the period.
-- Whether the rule that moves a last day off a rest day or holiday applies to periods in months and years or only to periods in days, on the words of the text; and what it does when several days at the end of a period are rest days in a row.
-- What the text means by "month" and "year" (calendar or fixed length) and what follows for a start on the 31st or on 29 February.
-- From what moment on its commencement day an enactment binds, and whether the text says so.
-- Which language version or versions of the text have authority, if the text says.
-- Anything else the text leaves open. "No ambiguities found" is a claim a reviewer will not believe; say where you looked.
+This run may exceed your context window, and the harness will then compact your context into a summary. So write as you go, not at the end:
+- Keep `NOTES.md`'s coverage table and fork register on disk, and update them after each section you finish.
+- Keep `PROGRESS.md`: sections done, in progress, next, decisions taken (with the section that licenses each), and the files you have written.
+- After any compaction, re-read `PROGRESS.md`, `NOTES.md` and the text, not your summary of them.
 
 ## Tests
 
-Expected values come from the statute text, never from your code.
-Decide each expected answer by reading the section, write it down, then run.
-A failing assertion is a finding: never edit an expected value to match what the code computed.
-
-Cover at least: every branch of each time rule you encode; month-end and leap-day starts; periods of one day, one week, one month, one year; a last day that is a rest day or holiday, and two in a row, using a rest-day input you supply in the test; the boundary dates on each side of every period (the last day inside, the next day outside); commencement; and every other rule you encode.
-Also run these worked cases and put each in the answer table with its section citation, or say that the text is silent on the question:
-
-| period | counted from |
-| --- | --- |
-| three years | the day 2025-07-16 |
-| five years | the day 2025-01-15, and the day 2025-09-01 |
-| thirty days | the day 2026-01-01 |
-| two years | the day 2024-02-28 |
-| one year | the day 2024-02-29 |
-| one month | the day 2025-01-31 |
-
-And these commencement cases:
-
-| case | question |
-| --- | --- |
-| an Act is passed or published on 2026-03-10 and says nothing about when it comes into force | from what day, and what moment of that day, does it bind, on the text? |
-| an Act says it comes into force on a day to be fixed later; the day is fixed as 2026-06-01 | from what day and moment does it bind? |
-| subordinate legislation is made on 2026-03-10 and says nothing about when it comes into force | from what day does it bind, on the text? |
-
-If you keep some expectations meant to fail, put them in their own file, count them, and say how many.
+Expected values come from the text, never from your code, and are written beside the assertion.
+Decide each expected answer by reading the section, write it down, then run. A failing assertion is a finding: never edit an expected value to match what the code computed.
+Cover at least: every branch of each rule you encode; the boundary values on each side of every threshold; every question in the seat layer (if the row has one), with the facts a real person in the seat would state; and a case outside the encoding (an explicit "not covered" value, asserted).
+If you keep some expectations meant to fail, put them in their own file, count them, record them in `NOTES.md` as a finding, and list them in `check.sh`'s `expected_failed`.
+Every case file ends with assertions written equal to assertions satisfied.
 
 ## Rules that matter
 
-- **Follow the two skills.** Read before writing any L4:
-  `/Users/mengwong/src/legalese/l4-ide/skills/encoding-a-subject/SKILL.md` (steps 1 to 7, 9 and 11; there is no step 8 here, and you do not deposit into a repository) and
-  `/Users/mengwong/src/legalese/l4-ide/skills/writing-l4-rules/SKILL.md`, then its `references/drafting-patterns.md` and all of `references/source-patterns/` (especially 04-dates-and-periods and 11-when-the-encoding-cannot-answer).
-  Documentation is under `/Users/mengwong/src/legalese/l4-ide/doc/`.
-- **Encode isomorphically.** A reader holding the statute beside your module checks it line by line. Cite the section on every rule with `@ref`.
-- **Where the source does not answer, `REFUSE "…"`.** Never `FALSE`, never `0`, never a plausible default. Do not invent a home-made three-valued type; the language has `MAYBE` and `REFUSE`.
-- **Read the DIAGNOSTICS, not the exit code.** `l4 run` exits 0 when an `#ASSERT` fails or refuses; a failure is a `DiagnosticSeverity_Error` line and a refusal is a Warning. Report the numbers `check.sh` prints (start from the skill's `assets/check.sh`).
-- **Dates** need `IMPORT daydate`. Arithmetic on dates without it produces an ambiguous-operator error, not a date. Check how `daydate` handles a start on the 31st and on 29 February instead of assuming; if its behaviour differs from the statute, the statute governs and you write the rule.
-- **No sleep-polls and no waiting loops**: there is nothing to wait on. Run each command in the foreground.
+- **Follow the two skills.** Read before writing any L4: `<the lead's scratchpad>/skills/encoding-a-subject/SKILL.md` (steps 1 to 7 and 9; you do not deposit into a repository) and `<the lead's scratchpad>/skills/writing-l4-rules/SKILL.md`, then its `references/drafting-patterns.md`, all of `references/source-patterns/`, and `references/dialects.md`.
+- **Encode isomorphically.** One source provision, one recognisable place in the L4, with the source's numbering and an `@ref`. Run `python3 -I srcrefs.py check --refs <the raw text file> <your .l4 files>` for each raw text file the folder's `check.sh` or pass-1 `NOTES.md` says to; it must report 0 problems.
+- **Where the source does not answer,** return an explicit "not covered" value and assert it. Never `FALSE`, never `0`, never a plausible default.
+- **Read the DIAGNOSTICS, not the exit code.** `l4 run` exits 0 when an `#ASSERT` fails. Report the numbers `check.sh` prints.
+- **Every file runs clean:** `l4 run` shows no `DiagnosticSeverity_Error` or `_Warning` on any file except a registered, deliberately failing one.
+- **No sleep-polls and no waiting loops**: run each command in the foreground.
 - **Do not git add, commit or push anything.** Write files only under `DEPOSIT`.
 
 ## Toolchain
 
-The binary is `L4_BIN` (given in your task; sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7`). Leave `JL4_LIBRARY_PATH` UNSET: the standard library is compiled into the binary and always matches it.
-`L4_BIN check FILE` typechecks; `L4_BIN run FILE` also evaluates every `#EVAL`, `#ASSERT` and `#TRACE`.
-`l4` has no `--version` flag. Run the binary by its absolute path.
+The binary is `L4_BIN` (given in your task; version unstable-20261028-5e95b5a (unstable, 5e95b5a, 2026-10-28), sha256 `0f0f1b86d37164af242ca2b6c03aa31ddeedef752bd10474f1459b78cf539e9d`). Leave `JL4_LIBRARY_PATH` UNSET: the standard library is compiled into the binary and always matches it.
+`L4_BIN check FILE` typechecks; `L4_BIN run FILE` also evaluates every `#EVAL` and `#ASSERT`. Run the binary by its absolute path.
+Run the check as `L4=<L4_BIN> L4_TARGET=unstable ./check.sh` (the word `unstable` tells the script not to compare with a second binary: this folder is written for unstable).
 
 ## Independence
 
-Do not read any existing encoding of any interpretation law: nothing under `/Users/mengwong/src/legalese/commons`, `commonswt` or `canon` (the subjects `il/interpretation-law-1981`, `sg/interpretation-act` and `au/acts-interpretation-act-1901` in particular), no directory under `/Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-l4-ide/f0f88090-d3bb-4c2f-a86e-663d7b9acf93/scratchpad/interp-wave` other than your own `us-ca/`, and nothing under `~/.claude/` except the two skills named above (no `memory/`, no `projects/`, no `state/`, no `tmp`).
-The answers must come from the statute text alone.
-You may read `INPUTS_DIR`, the two skills and their references, and the l4-ide `doc/` tree.
-Your context may contain an index of someone's notes that mentions other encodings; do not follow it.
-If you open a forbidden file by accident, stop reading it and say so under `peeked`.
+You may read: `INPUTS_DIR`, `DEPOSIT` (including pass 1), the two skills and their references, and the Commons guide copies in `inputs/`.
+Do not read any other encoding of any other Act: nothing under `/Users/mengwong/src/legalese/commons`, `commonswt` or `canon`, no other directory under `<the lead's scratchpad>/runs` than your own `iaw-usca/`, and nothing under `~/.claude/` (no `memory/`, no `projects/`, no `state/`, no `tmp`).
+Your context may contain an index of someone's notes that mentions other encodings; do not follow it. If you open a forbidden file by accident, stop reading it and say so under `peeked`.
 
-## Final report (your last message)
+## Final report (your last message; the report is your final response, not a file)
 
-Return: (1) the list of files you wrote; (2) exactly what `check.sh` printed; (3) the coverage table summary (counts per disposition); (4) the forks you took, each in a line with the reading chosen; (5) the answer table for the worked cases; (6) any failing or refused assertion and what it means; (7) what the source does not answer; (8) `peeked`: nothing, or what you opened by accident.
+Return: (1) the list of files you wrote or changed; (2) exactly what `check.sh` printed, and the baseline numbers it replaced; (3) the coverage table summary (counts per disposition) and the audit counts (text units counted, rows in the table before and after); (4) the forks you took, one line each with the reading chosen; (5) every row you moved out of `inert` and every row you left `inert` with its reason number (1, 2 or 3); (6) any failing or refused assertion and what it means; (7) what the text does not answer; (8) `peeked`: nothing, or what you opened by accident.
+Subagents cannot write report-named files such as `FINDINGS.md`; `NOTES.md`, `PROGRESS.md` and `.l4` files are fine.
