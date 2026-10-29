@@ -118,6 +118,7 @@ produced_output() {
 expected_failed() {
   case "$1" in
     bc-tests-alt-readings-expected-fail.l4) echo 16 ;;   # rival readings, meant to fail: see the file's header
+    bc-tests-alt-readings-2-expected-fail.l4) echo 5 ;;  # pass 2: rival readings that change a value, meant to fail: see the file's header
     *) echo 0 ;;
   esac
 }
