@@ -1,46 +1,29 @@
 # Source licence: Interpretation Act (Canada), R.S.C., 1985, c. I-21
 
-This file records the terms the quoted source text carries.
+This file records where the terms of the quoted source text are, and what this encoding quotes.
 It is not the licence of the encoding.
 
 The terms were established by whoever deposited the text, not by this run.
 They are in `STUB-SOURCE-LICENSE.md` and `SOURCES.md` in the subject's inputs, and are not repeated here.
-This run did not open the Justice Laws Website, the Reproduction of Federal Law Order (SI/97-5), or the licence page, and so has not checked them.
+That stub's section "Consequence for this subject" records a ruling of 2026-10-25 on whether an L4 encoding may quote this text; read it there.
+An earlier version of this file, written when the stub did not yet carry the ruling, called the question open; that is out of date.
+This run did not open the Justice Laws Website, the Reproduction of Federal Law Order (SI/97-5) or the licence page, and has not checked them.
 
 ## What this encoding quotes
 
-Every `-- src:N | text` line in the four `ca-interpretation-*.l4` modules is a verbatim line of `R.S.C.-1985-c.-I-21.txt`, copied by `srcrefs.py quote`.
-The test files quote nothing from it.
-So the encoding does reproduce the text, in comments, and the question of terms is real.
-
-## What the inputs say, in one place each
-
-- **The text is not official.**
-  It is a plain-text rendering made by a converter script from the Department of Justice Canada consolidation, current to 2026-09-30 and last amended 2024-11-27.
-  Nothing here has been verified against the official text.
-  Line 1 of the text says so, and any use of the quoted lines must keep that notice and must not present them as official.
-- **Reproduction of Federal Law Order (SI/97-5).**
-  The inputs say it permits reproduction on two conditions, due diligence over accuracy and no representation as an official version, and that it does **not** expressly grant a right to adapt.
-- **Open Government Licence - Canada, version 2.0.**
-  The inputs say the XML repository the text was taken from is under this licence, which does grant adaptation.
-  **Whether an L4 encoding that quotes the text may rely on it is a human decision that `STUB-SOURCE-LICENSE.md` says is to be recorded before an encoding quotes it.
-  That decision is still open: this run did not make it and found no record that anyone has.**
-- **Attribution** asked for by the licence where no specific statement is given:
-  "Contains information licensed under the Open Government Licence – Canada."
-- **Languages.**
-  Only the English version is in the text.
-  The inputs say the French version is equally authoritative and cite the Constitution Act, 1982, s 18 and the Official Languages Act, s 13.
-  Those two statutes are not in the deposited text and were not read.
+Every `-- src:N | text` line in the ten `ca-interpretation-*.l4` modules is a verbatim line of `R.S.C.-1985-c.-I-21.txt`, copied by `srcrefs.py quote` (driven by `requote.py`) and checked by the gate in `check.sh`.
+The test files carry short quotations of the text in comments, in quotation marks; those are typed, not produced by `srcrefs.py`, and not checked by the gate.
+(A one-off script compared the long quoted pieces of the new modules and test files with the text on 2026-10-29: 94 of 109 pieces were found, and the other 15, read by hand, were quotation marks paired across lines, or curly against straight quotation marks.
+Pass 3 added the modules `commencement` and `resolutions`, whose quotation lines are produced and checked the same way, and the test files `transition` and `resolutions`, whose typed quotations in comments were not compared by a script.)
+So the encoding does reproduce the text, in comments, and the notice and attribution that the stub names have to stay with any copy of those lines.
 
 ## The text this encoding was written against
 
 | item | value |
 | --- | --- |
 | file | `R.S.C.-1985-c.-I-21.txt` |
-| sha256 | `ea96eac51e21b630b96c0fb210492d9d6cda355e9dfb9e0afd84730bafb98c15` (computed by this run and equal to the one in `SOURCES.md`) |
-| characters | 53,666 (counted by this run, equal to `SOURCES.md`) |
-| repository commit | `0507465393c224c0491fc8c17c88340217acc656` (from `SOURCES.md`) |
-| consolidation | current to 2026-09-30; last amended 2024-11-27 |
+| sha256 | `ea96eac51e21b630b96c0fb210492d9d6cda355e9dfb9e0afd84730bafb98c15` (recomputed by this run on 2026-10-29 and equal to the one in `SOURCES.md`) |
+| consolidation | current to 2026-09-30; last amended 2024-11-27 (from `SOURCES.md`) |
+| status | an unofficial plain-text rendering made by a converter script; not the official text, and nothing here is verified against the official text |
 
-**Status of this record: terms not established by this run.**
-Where the inputs and this file differ, the inputs govern, and a human has to settle the adaptation question before the quoted lines are published anywhere.
+Where the inputs and this file differ, the inputs govern.
