@@ -1,0 +1,477 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Interpretation Act 1965 (Singapore), 2020 Revised Edition, informal consolidation
+-- in force from 5 December 2025 -- LAYER 1, THE TIME RULES, in one self-contained module.
+-- This module imports only `prelude` and `daydate`.
+--
+-- What the Act says about time, and where it stops (every answer below is the Act's own;
+-- nothing is borrowed from another jurisdiction or from how courts treat the point):
+--   s 10      when a written law comes into operation (the day, and the moment within it)
+--   s 50      how a period of days is counted, and what a Sunday or public holiday does to it
+--   s 51      the clock the Act uses (standard time, 8 hours ahead of UTC unless notified)
+--   s 52      doing a thing when no time is prescribed
+--   s 53      a power to extend a time may be used after the time has run out
+--   s 2(5)    a letter posted is deemed served, at the time it would ordinarily be delivered
+--   s 2(1)    "month" and "year" (and the fact that "day" and "week" are NOT defined)
+-- The Act has NO rule for counting a period of weeks, months or years from a day (it defines the
+-- unit and stops), none for a period "after" an event, none for a day on which an office is closed,
+-- and none for a written law that names no day of commencement. Those cases return an explicit
+-- NOTHING ("the Act does not say"), and a test asserts each one.
+
+§ `Shared nouns`
+
+-- Dates are written `Date day month year`; this encoding defines no YMD or YearMonthDay shim.
+
+-- A moment: a calendar day, the seconds elapsed since that day's midnight on the clock in use,
+-- and how many hours that clock is ahead of Coordinated Universal Time.
+DECLARE Moment HAS
+    day IS A DATE
+    `seconds into the day` IS A NUMBER
+    `hours ahead of UTC` IS A NUMBER
+
+-- The unit a period is stated in. The Act defines "month" and "year" (s 2(1)) and nothing else.
+DECLARE `Period unit` IS ONE OF
+    Days
+    Weeks
+    Months
+    Years
+
+-- The word that links a period to its starting point. Section 50(a) names only "from".
+DECLARE `Counting word` IS ONE OF
+    From
+    After
+
+-- The fork F4 of NOTES.md: does the rule of s 50(b) reach every period, or only a period of days?
+DECLARE `Reach of section 50(b)` IS ONE OF
+    `every period`
+    `periods of days only`
+
+-- How the day a written law comes into operation is fixed (s 10(1)).
+DECLARE `How the day of commencement is fixed` IS ONE OF
+    `specified by the written law or by a notification made under it`
+    `the date of publication in the Gazette`
+    `fixed by neither`
+
+-- One provision and the day a notification brings it into operation (s 10(2)).
+DECLARE `Provision and its day` HAS
+    provision IS A STRING
+    day IS A DATE
+
+-- What s 52 says about a thing for which no time is prescribed.
+DECLARE `Time for doing a thing` IS ONE OF
+    `with all convenient speed and as often as the prescribed occasion arises`
+
+§ `Excluded days -- s 50(b)`
+
+-- A Sunday is any day that falls a whole number of weeks from a known Sunday.
+-- 4 January 2026 is a Sunday (hand-checked against a calendar; see the tests).
+-- src:2153 | (b) if the last day of the period is a Sunday or a public holiday
+-- src:2154 | (which days are called in this section excluded days) the
+@ref s 50(b) Sunday (src:2153-2154)
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`is a Sunday` d MEANS
+    ((Day d) MODULO 7) EQUALS ((Day (Date 4 1 2026)) MODULO 7)
+
+-- src:2153 | (b) if the last day of the period is a Sunday or a public holiday
+-- src:2154 | (which days are called in this section excluded days) the
+-- src:2155 | period includes the next following day not being an
+-- src:2156 | excluded day;
+@ref s 50(b) excluded days (src:2153-2156)
+GIVEN d IS A DATE
+      `the public holidays` IS A LIST OF DATE @desc The days that are public holidays in Singapore (s 2(1) "public holiday": declared, proclaimed or observed under a written law)
+GIVETH A BOOLEAN
+`is an excluded day` d `the public holidays` MEANS
+    `is a Sunday` d OR elem d `the public holidays`
+
+@ref s 50(b) the next following day not being an excluded day (src:2153-2156)
+GIVEN d IS A DATE
+      `the public holidays` IS A LIST OF DATE
+GIVETH A DATE
+`the next day after that is not an excluded day` d `the public holidays` MEANS
+    IF `is an excluded day` (d PLUS 1) `the public holidays`
+    THEN `the next day after that is not an excluded day` (d PLUS 1) `the public holidays`
+    ELSE d PLUS 1
+
+§ `Counting a period of days -- s 50(a), (b), (d)`
+
+-- Policy for "unless the contrary intention appears" (NOTES.md, finding 2): a public rule under that
+-- phrase takes a plain yes/no input, `a contrary intention appears`, and answers NOTHING when it is
+-- TRUE, because the Act's default then no longer decides and the Act does not say what does.
+-- The helpers below carry no such input; the public rules that call them do.
+
+-- src:2149 | (a) a period of days from the happening of an event or the
+-- src:2150 | doing of any act or thing is deemed to be exclusive of the
+-- src:2151 | day on which the event happens or the act or thing is done;
+@ref s 50(a) (src:2149-2151)
+GIVEN `the day of the event` IS A DATE
+GIVETH A DATE
+`the first day of a period of days from the event` `the day of the event` MEANS
+    `the day of the event` PLUS 1
+
+-- src:2167 | (d) when any act or proceeding is directed or allowed to be
+-- src:2168 | done or taken within any time not exceeding 6 days,
+-- src:2169 | excluded days must not be reckoned in the computation of
+-- src:2170 | the time.
+@ref s 50(d) (src:2167-2170)
+GIVEN `the number of days` IS A NUMBER
+GIVETH A BOOLEAN
+`excluded days are not reckoned` `the number of days` MEANS
+    `the number of days` AT LEAST 1 AND `the number of days` AT MOST 6
+
+-- Counting n days forward when excluded days are not reckoned: the nth day, taking only days that
+-- are not Sundays or public holidays.
+@ref s 50(d) counting only days that are not excluded days (src:2167-2170)
+GIVEN `the day counted from` IS A DATE
+      n IS A NUMBER
+      `the public holidays` IS A LIST OF DATE
+GIVETH A DATE
+`the nth day that is not an excluded day after` `the day counted from` n `the public holidays` MEANS
+    IF n AT MOST 0
+    THEN `the day counted from`
+    ELSE `the nth day that is not an excluded day after`
+             (`the next day after that is not an excluded day` `the day counted from` `the public holidays`)
+             (n MINUS 1)
+             `the public holidays`
+
+-- src:2153 | (b) if the last day of the period is a Sunday or a public holiday
+-- src:2154 | (which days are called in this section excluded days) the
+-- src:2155 | period includes the next following day not being an
+-- src:2156 | excluded day;
+@ref s 50(b) the period includes the next following day (src:2153-2156)
+GIVEN `the last day as counted` IS A DATE
+      `the unit of the period` IS A `Period unit`
+      `reach of the rule` IS A `Reach of section 50(b)`
+      `the public holidays` IS A LIST OF DATE
+GIVETH A DATE
+`the last day of the period after section 50(b)` `the last day as counted` `the unit of the period` `reach of the rule` `the public holidays` MEANS
+    IF `is an excluded day` `the last day as counted` `the public holidays`
+       AND (`reach of the rule` EQUALS `every period`
+            OR `the unit of the period` EQUALS Days)
+    THEN `the next day after that is not an excluded day` `the last day as counted` `the public holidays`
+    ELSE `the last day as counted`
+
+-- CHOSEN READING (fork F2 and F4 of NOTES.md): "from" is the only counting word s 50(a) names, so a
+-- period of days from an event is counted; and s 50(b) reaches the last day of every period.
+-- src:2146 | 50. In computing time for the purposes of any written law, unless
+-- src:2147 | the contrary intention appears —
+-- src:2149 | (a) a period of days from the happening of an event or the
+-- src:2150 | doing of any act or thing is deemed to be exclusive of the
+-- src:2151 | day on which the event happens or the act or thing is done;
+-- src:2153 | (b) if the last day of the period is a Sunday or a public holiday
+-- src:2154 | (which days are called in this section excluded days) the
+-- src:2155 | period includes the next following day not being an
+-- src:2156 | excluded day;
+-- src:2158 | (c) when any act or proceeding is directed or allowed to be
+-- src:2159 | done or taken on a certain day, then, if that day happens to
+-- src:2160 | be an excluded day, the act or proceeding is considered as
+-- src:2161 | done or taken in due time if it is done or taken on the next
+-- src:2162 | day afterwards, not being an excluded day;
+-- src:2167 | (d) when any act or proceeding is directed or allowed to be
+-- src:2168 | done or taken within any time not exceeding 6 days,
+-- src:2169 | excluded days must not be reckoned in the computation of
+-- src:2170 | the time.
+@ref s 50 a period of days from an event (src:2146-2170)
+GIVEN `the day of the event` IS A DATE
+      `the number of days` IS A NUMBER
+      `the public holidays` IS A LIST OF DATE
+      `a contrary intention appears` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`the last day of a period of days from the event` `the day of the event` `the number of days` `the public holidays` `a contrary intention appears` MEANS
+    BRANCH
+        IF `a contrary intention appears` THEN NOTHING
+        IF `the number of days` LESS THAN 1 THEN NOTHING
+        IF `excluded days are not reckoned` `the number of days` THEN
+            JUST (`the nth day that is not an excluded day after` `the day of the event` `the number of days` `the public holidays`)
+        OTHERWISE
+            JUST (`the last day of the period after section 50(b)`
+                      (`the day of the event` PLUS `the number of days`) Days `every period` `the public holidays`)
+
+-- src:406 | “month” means calendar month;
+-- src:575 | “year” means a year reckoned according to the Gregorian
+-- src:576 | calendar;
+-- src:2146 | 50. In computing time for the purposes of any written law, unless
+-- src:2147 | the contrary intention appears —
+-- src:2149 | (a) a period of days from the happening of an event or the
+-- src:2150 | doing of any act or thing is deemed to be exclusive of the
+-- src:2151 | day on which the event happens or the act or thing is done;
+-- src:2153 | (b) if the last day of the period is a Sunday or a public holiday
+-- src:2154 | (which days are called in this section excluded days) the
+-- src:2155 | period includes the next following day not being an
+-- src:2156 | excluded day;
+-- src:2158 | (c) when any act or proceeding is directed or allowed to be
+-- src:2159 | done or taken on a certain day, then, if that day happens to
+-- src:2160 | be an excluded day, the act or proceeding is considered as
+-- src:2161 | done or taken in due time if it is done or taken on the next
+-- src:2162 | day afterwards, not being an excluded day;
+-- src:2167 | (d) when any act or proceeding is directed or allowed to be
+-- src:2168 | done or taken within any time not exceeding 6 days,
+-- src:2169 | excluded days must not be reckoned in the computation of
+-- src:2170 | the time.
+@ref s 50 and s 2(1) month, year: the Act has no counting rule (src:406-2170)
+GIVEN `the day the period runs from` IS A DATE
+      `how many` IS A NUMBER
+      `the unit of the period` IS A `Period unit`
+      `the counting word` IS A `Counting word`
+      `the public holidays` IS A LIST OF DATE
+      `a contrary intention appears` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`the last day of a period` `the day the period runs from` `how many` `the unit of the period` `the counting word` `the public holidays` `a contrary intention appears` MEANS
+    BRANCH
+        IF `the unit of the period` EQUALS Days AND `the counting word` EQUALS From THEN
+            `the last day of a period of days from the event` `the day the period runs from` `how many` `the public holidays` `a contrary intention appears`
+        OTHERWISE NOTHING
+
+-- Section 50(b) applied to a last day that the person has worked out for themselves, for a period
+-- (weeks, months, years, or days "after" an event) whose counting the Act does not give.
+-- CHOSEN READING of fork F4: the rule reaches the last day of every period.
+-- src:2146 | 50. In computing time for the purposes of any written law, unless
+-- src:2147 | the contrary intention appears —
+-- src:2153 | (b) if the last day of the period is a Sunday or a public holiday
+-- src:2154 | (which days are called in this section excluded days) the
+-- src:2155 | period includes the next following day not being an
+-- src:2156 | excluded day;
+@ref s 50(b) applied to a last day worked out elsewhere (src:2146-2156)
+GIVEN `the last day as worked out` IS A DATE
+      `the unit of the period` IS A `Period unit`
+      `the public holidays` IS A LIST OF DATE
+      `a contrary intention appears` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`the last day of the period once section 50(b) is applied` `the last day as worked out` `the unit of the period` `the public holidays` `a contrary intention appears` MEANS
+    IF `a contrary intention appears`
+    THEN NOTHING
+    ELSE JUST (`the last day of the period after section 50(b)` `the last day as worked out` `the unit of the period` `every period` `the public holidays`)
+
+-- THE OTHER READING of fork F4, kept so that both outcomes are tested: s 50(b) is read as belonging
+-- to the "period of days" of s 50(a) and so reaches periods of days only.
+-- src:2149 | (a) a period of days from the happening of an event or the
+-- src:2150 | doing of any act or thing is deemed to be exclusive of the
+-- src:2151 | day on which the event happens or the act or thing is done;
+-- src:2153 | (b) if the last day of the period is a Sunday or a public holiday
+-- src:2154 | (which days are called in this section excluded days) the
+-- src:2155 | period includes the next following day not being an
+-- src:2156 | excluded day;
+@ref s 50(b) read as reaching periods of days only (src:2149-2156)
+GIVEN `the last day as worked out` IS A DATE
+      `the unit of the period` IS A `Period unit`
+      `the public holidays` IS A LIST OF DATE
+      `a contrary intention appears` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`the last day of the period once section 50(b) is applied, if it reaches periods of days only` `the last day as worked out` `the unit of the period` `the public holidays` `a contrary intention appears` MEANS
+    IF `a contrary intention appears`
+    THEN NOTHING
+    ELSE JUST (`the last day of the period after section 50(b)` `the last day as worked out` `the unit of the period` `periods of days only` `the public holidays`)
+
+§ `An act directed for a day -- s 50(c)`
+
+-- src:2146 | 50. In computing time for the purposes of any written law, unless
+-- src:2147 | the contrary intention appears —
+-- src:2158 | (c) when any act or proceeding is directed or allowed to be
+-- src:2159 | done or taken on a certain day, then, if that day happens to
+-- src:2160 | be an excluded day, the act or proceeding is considered as
+-- src:2161 | done or taken in due time if it is done or taken on the next
+-- src:2162 | day afterwards, not being an excluded day;
+@ref s 50(c) (src:2146-2162)
+GIVEN `the day directed` IS A DATE
+      `the day the act was done` IS A DATE
+      `the public holidays` IS A LIST OF DATE
+      `a contrary intention appears` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`section 50(c) treats the act as done in due time` `the day directed` `the day the act was done` `the public holidays` `a contrary intention appears` MEANS
+    IF (NOT `a contrary intention appears`)
+       AND `is an excluded day` `the day directed` `the public holidays`
+       AND `the day the act was done` EQUALS `the next day after that is not an excluded day` `the day directed` `the public holidays`
+    THEN JUST TRUE
+    ELSE NOTHING
+
+@ref s 50(c) the day by which an act directed for an excluded day may be done (src:2158-2162)
+GIVEN `the day directed` IS A DATE
+      `the public holidays` IS A LIST OF DATE
+      `a contrary intention appears` IS A BOOLEAN
+GIVETH A MAYBE DATE
+`the last day for an act directed for a day` `the day directed` `the public holidays` `a contrary intention appears` MEANS
+    BRANCH
+        IF `a contrary intention appears` THEN NOTHING
+        IF `is an excluded day` `the day directed` `the public holidays` THEN
+            JUST (`the next day after that is not an excluded day` `the day directed` `the public holidays`)
+        OTHERWISE JUST `the day directed`
+
+§ `Standard time -- s 51`
+
+-- src:2181 | (2) “Standard time” means standard time as used in Singapore,
+-- src:2182 | namely, 8 hours, or such other period as may from time to time be
+-- src:2183 | determined by the President by notification in the Gazette, in advance
+-- src:2184 | of Coordinated Universal Time.
+@ref s 51(2) (src:2181-2184)
+GIVEN `notified by the President` IS A MAYBE NUMBER
+GIVETH A NUMBER
+`standard time, in hours ahead of UTC` `notified by the President` MEANS
+    CONSIDER `notified by the President`
+    WHEN NOTHING THEN 8
+    WHEN JUST hours THEN hours
+
+-- src:2174 | 51.—(1) Where any expression of time occurs in any written law or
+-- src:2175 | in any instrument and whenever the doing or not doing anything at a
+-- src:2176 | certain time of the day or night or during a certain part of the day or
+-- src:2177 | night has an effect in law, that time is, unless it is otherwise
+-- src:2178 | specifically stated, held to be standard time as declared by this
+-- src:2179 | section.
+@ref s 51(1) (src:2174-2179)
+GIVEN `otherwise specifically stated` IS A BOOLEAN
+GIVETH A BOOLEAN
+`a time of day is held to be standard time` `otherwise specifically stated` MEANS
+    NOT `otherwise specifically stated`
+
+-- The same instant on the clock of Coordinated Universal Time.
+-- src:2181 | (2) “Standard time” means standard time as used in Singapore,
+-- src:2182 | namely, 8 hours, or such other period as may from time to time be
+-- src:2183 | determined by the President by notification in the Gazette, in advance
+-- src:2184 | of Coordinated Universal Time.
+@ref s 51(2) in advance of Coordinated Universal Time (src:2181-2184)
+GIVEN m IS A Moment
+GIVETH A Moment
+`the moment on the UTC clock` m MEANS
+    Moment
+        WITH day IS m's day PLUS (FLOOR ((m's `seconds into the day` MINUS (m's `hours ahead of UTC` TIMES 3600)) DIVIDED BY 86400))
+             `seconds into the day` IS (m's `seconds into the day` MINUS (m's `hours ahead of UTC` TIMES 3600))
+                                       MINUS (86400 TIMES (FLOOR ((m's `seconds into the day` MINUS (m's `hours ahead of UTC` TIMES 3600)) DIVIDED BY 86400)))
+             `hours ahead of UTC` IS 0
+
+§ `When a written law comes into operation -- s 10`
+
+-- "on the expiration of the previous day": the last instant of the previous day is the same instant
+-- as the first moment of the day itself.
+-- src:994 | 10.—(1) A written law or a provision of a written law comes into
+-- src:995 | operation —
+-- src:997 | (a) where a particular day for its coming into operation is
+-- src:998 | specified by the written law or by a notification made
+-- src:999 | under the written law — on the expiration of the previous
+-- src:1000 | day; or
+-- src:1002 | (b) where the day of its coming into operation is the date of its
+-- src:1003 | publication in the Gazette — on the expiration of the
+-- src:1004 | previous day.
+@ref s 10(1) (src:994-1004)
+GIVEN `the day` IS A DATE
+      `hours ahead of UTC` IS A NUMBER
+GIVETH A Moment
+`the expiration of the day before` `the day` `hours ahead of UTC` MEANS
+    Moment OF (`the day` MINUS 1), 86400, `hours ahead of UTC`
+
+@ref s 10(1) the first moment of the day (src:994-1004)
+GIVEN `the day` IS A DATE
+      `hours ahead of UTC` IS A NUMBER
+GIVETH A Moment
+`the first moment of the day` `the day` `hours ahead of UTC` MEANS
+    Moment OF `the day`, 0, `hours ahead of UTC`
+
+-- src:994 | 10.—(1) A written law or a provision of a written law comes into
+-- src:995 | operation —
+-- src:997 | (a) where a particular day for its coming into operation is
+-- src:998 | specified by the written law or by a notification made
+-- src:999 | under the written law — on the expiration of the previous
+-- src:1000 | day; or
+-- src:1002 | (b) where the day of its coming into operation is the date of its
+-- src:1003 | publication in the Gazette — on the expiration of the
+-- src:1004 | previous day.
+@ref s 10(1)(a), (b) (src:994-1004)
+GIVEN `how the day is fixed` IS A `How the day of commencement is fixed`
+      `the day` IS A DATE
+      `hours ahead of UTC` IS A NUMBER
+GIVETH A MAYBE Moment
+`the moment a written law comes into operation` `how the day is fixed` `the day` `hours ahead of UTC` MEANS
+    CONSIDER `how the day is fixed`
+    WHEN `specified by the written law or by a notification made under it`
+        THEN JUST (`the first moment of the day` `the day` `hours ahead of UTC`)
+    WHEN `the date of publication in the Gazette`
+        THEN JUST (`the first moment of the day` `the day` `hours ahead of UTC`)
+    WHEN `fixed by neither` THEN NOTHING
+
+-- src:1006 | (2) Where a written law is to come into operation on a day specified
+-- src:1007 | by a notification made under the written law, the notification may
+-- src:1008 | specify different days for different provisions of the written law to
+-- src:1009 | come into operation.
+@ref s 10(2) (src:1006-1009)
+GIVEN `the notified days` IS A LIST OF `Provision and its day`
+      `the provision` IS A STRING
+GIVETH A MAYBE DATE
+`the day a notification brings a provision into operation` `the notified days` `the provision` MEANS
+    CONSIDER filter (GIVEN x YIELD x's provision EQUALS `the provision`) `the notified days`
+    WHEN EMPTY THEN NOTHING
+    WHEN x FOLLOWED BY rest THEN JUST (x's day)
+
+§ `Doing a thing when no time is prescribed, and extending a time -- ss 52, 53`
+
+-- src:2188 | 52. Where no time is prescribed or allowed within which anything
+-- src:2189 | is to be done, that thing is to be done with all convenient speed and as
+-- src:2190 | often as the prescribed occasion arises.
+@ref s 52 (src:2188-2190)
+GIVEN `a time is prescribed or allowed` IS A BOOLEAN
+GIVETH A MAYBE `Time for doing a thing`
+`the time for doing a thing` `a time is prescribed or allowed` MEANS
+    IF `a time is prescribed or allowed`
+    THEN NOTHING
+    ELSE JUST `with all convenient speed and as often as the prescribed occasion arises`
+
+-- src:2194 | 53. Where in any written law a time is prescribed for doing any act
+-- src:2195 | or taking any proceeding and power is given to a court or other
+-- src:2196 | authority to extend the time, unless the contrary intention appears, the
+-- src:2197 | power may be exercised by the court or other authority although the
+-- src:2198 | application for the extension is not made until after the expiration of
+-- src:2199 | the time prescribed.
+@ref s 53 (src:2194-2199)
+GIVEN `a power to extend the time is given` IS A BOOLEAN
+      `a contrary intention appears` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`the power to extend may be exercised after the time has run out` `a power to extend the time is given` `a contrary intention appears` MEANS
+    IF `a power to extend the time is given` AND (NOT `a contrary intention appears`)
+    THEN JUST TRUE
+    ELSE NOTHING
+
+§ `A document served by post -- s 2(5)`
+
+-- src:657 | (5) Where an Act authorises or requires any document to be served
+-- src:658 | by post, whether the word “serve”, “give” or “send” or any other
+-- src:659 | word is used, then, unless a contrary intention appears, the service is
+-- src:660 | deemed to be effected by properly addressing, prepaying and posting
+-- src:661 | a letter containing the document, and, unless the contrary is proved, is
+-- src:662 | deemed to have been effected at the time at which the letter would be
+-- src:663 | delivered in the ordinary course of post.
+@ref s 2(5) (src:657-663)
+GIVEN `a written law authorises or requires service by post` IS A BOOLEAN
+      `a contrary intention appears` IS A BOOLEAN
+      `properly addressed` IS A BOOLEAN
+      `prepaid` IS A BOOLEAN
+      `posted` IS A BOOLEAN
+GIVETH A BOOLEAN
+`service by post is deemed effected` `a written law authorises or requires service by post` `a contrary intention appears` `properly addressed` `prepaid` `posted` MEANS
+    `a written law authorises or requires service by post`
+    AND (NOT `a contrary intention appears`)
+    AND `properly addressed`
+    AND `prepaid`
+    AND `posted`
+
+@ref s 2(5) the time of deemed service (src:660-663)
+GIVEN `service by post is deemed effected` IS A BOOLEAN
+      `the moment the letter would be delivered in the ordinary course of post` IS A Moment
+      `the contrary is proved` IS A BOOLEAN
+GIVETH A MAYBE Moment
+`the moment service by post is deemed effected` `service by post is deemed effected` `the moment the letter would be delivered in the ordinary course of post` `the contrary is proved` MEANS
+    IF `service by post is deemed effected` AND (NOT `the contrary is proved`)
+    THEN JUST `the moment the letter would be delivered in the ordinary course of post`
+    ELSE NOTHING
+
+§ `The units of time the Act defines -- s 2(1)`
+
+-- src:406 | “month” means calendar month;
+-- src:575 | “year” means a year reckoned according to the Gregorian
+-- src:576 | calendar;
+@ref s 2(1) "month", "year" (src:406-576)
+GIVEN `the unit` IS A `Period unit`
+GIVETH A MAYBE STRING
+`what the Act says the unit means` `the unit` MEANS
+    CONSIDER `the unit`
+    WHEN Days THEN NOTHING
+    WHEN Weeks THEN NOTHING
+    WHEN Months THEN JUST "calendar month"
+    WHEN Years THEN JUST "a year reckoned according to the Gregorian calendar"

@@ -31,6 +31,7 @@ L4="${L4:-l4}"
 expected_failed() {
   case "$1" in
     tests-red.l4) echo 12 ;;   # twelve rejected readings, see the header of tests-red.l4 and NOTES.md
+    tests-red-completion.l4) echo 14 ;;   # fourteen rejected readings found in pass 2 (F27 to F34), see the header of tests-red-completion.l4 and NOTES.md
     *) echo 0 ;;
   esac
 }
