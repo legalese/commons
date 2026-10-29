@@ -1257,6 +1257,20 @@ Each of these returns an explicit not-covered value (NOTHING) or asks the caller
 11. When service by leaving a document at an address is complete (s 76 gives the manners, not a deemed time).
 12. A period counted in hours or minutes: the Act counts days, months and years (ss 61, 62); the only part of a day it speaks of is the moment a law commences (s 21).
 
+## Reading a result: FALSE and NOTHING
+
+The rule in force for this row, from 2026-10-29 (assumed, not ruled by a lawyer). This row had already answered `NOTHING` for an "includes" list and for silence; the rule makes the test the text's own words.
+
+A function answers `JUST FALSE` only where the text itself says no to the case in its own words: a definition that says "means", a condition introduced by "if", "only if", "as long as" or "unless", or a list the text closes with "only" or an equivalent. Where the text lists things without closing the list, says "includes", leaves a term undefined, is silent, or points to a power or authority outside the text, the function answers `NOTHING`, and a comment on that branch names which of those it is. The function's name carries the scope its `FALSE` claims ("under section 47 ...", not "may I ..."), and a seat question that asks Act-wide inherits `NOTHING` wherever the Act points outside itself.
+
+In plain words: `JUST FALSE` is the Act's own "no"; `NOTHING` is "the Act does not say". A caller must not read `NOTHING` as "no".
+
+**Checked on 2026-10-29 under this rule.** A second reader read the 15 literal `JUST FALSE` lines in 12 functions and 10 further rows in 9 functions whose `FALSE` is computed (65 module `MAYBE BOOLEAN` bodies and 11 in the seat), against the text. Changed to `NOTHING` (14 assertions restated, each with a `-- RECONCILED 2026-10-29` comment quoting the original; three of them are in the independent test author's file, where the author had written `JUST FALSE`): the lookup `the definition of the word lists the thing` for three entries whose list the text does not close, "chief executive officer" ("has the meaning given by the Public Sector Management Act 1994 and" adds limbs), "prescribed" (limb (b) "includes") and "publication" (limb (c) is a descriptive catch-all; this follows the module's own rule for a descriptive meaning), by setting `the list is complete` to FALSE; s 19(2) ("includes ... Without limiting the generality of subsection (1)") for the three kinds of material tied to "before the time when the provision was enacted"; s 54(1) ("may be performed by a majority", no "only"); and the seat question on s 54(2)(b) for a decision made with a quorum present that a majority did not make. Kept, because the text's own words say no: the 14 other literal lines (a flat "shall not", "does not ... unless", "no ... shall ... unless", "not exceeding") and the eight "means" entries. Nine of those 14 rest on a flat "shall not" with none of the rule's four words, which the reader counted as the text saying no in its own words; that is a reading for a lawyer to confirm.
+
+**Marginal, kept, for a lawyer:** s 76(c) and (d) (`service may be effected in the manner`; an "if" inside a list of permissions that nothing closes with "only"); the no-quorum limb of s 54(2)(b) (a plain "if" in a deeming); s 50(1) (`the other power is also deemed conferred`; "as are reasonably necessary"); s 45A (`a power to prescribe a fee allows it to recover the expenditure`; the text's "unless" is about relevance, the name asks the wider question); and the seat question `Am I in time if I do it on a given day` (s 61(1)(h), "if"), which a reader would have answered `NOTHING` because the period itself is fixed by other law.
+
+**Not changed, and open:** three plain-`BOOLEAN` functions answer `FALSE` for a catch-all value (`a person with none of those statuses`, s 13(2); `for some other reason`, s 19(1); `any other expenditure`, s 45A(2)); under the rule they would be `MAYBE BOOLEAN` with `NOTHING`. The names of the four Second Schedule functions (`the proceeding may be quashed, vacated or removed on that ground`, `the plaintiff recovers in the action`, `the plaintiff who obtained a verdict has costs against the defendant`, `an action lies against the defendant`) and of several others do not carry their section, so as named they claim more than the text; their `FALSE` rests on the text's own "no ... shall" and "unless", and a rename, not a change of answer, is what the rule asks. Function names were not changed in this pass.
+
 ## Known limits (stated, not modelled)
 
 Each of these is a place where the encoding does less than the text says, or does it in a way a reader might not expect.
@@ -1417,6 +1431,8 @@ No test of the first version was edited, and no expected value of the first vers
 Rows relabelled in the coverage table: `uncommenced-header` and `uncommenced-row-1` (lines 923 to 932) and `fn5` (line 966), from `inert (2)` to `inert (1)`, with a plain reason ("not operative: ..."); the old reason, "amends nothing yet and affects no one now", was not a reason of machinery.
 `s77(1)` and `s1` stay `inert (2)`.
 The row count stays 790, and the dispositions stay 529 encoded, 241 inert, 13 fork, 7 repealed or blank; the inert reasons move from 235, 5 and 1 to 238, 2 and 1.
+
+- **2026-10-29, the rule in "Reading a result: FALSE and NOTHING":** five layer-1 and seat changes from `JUST FALSE` to `NOTHING` (the three `the list is complete` flags in `wa-interpretation-s5-definitions.l4`; s 19(2) in `wa-interpretation-part2.l4`; s 54(1) in `wa-interpretation-part7.l4`; the s 54(2)(b) question in `wa-seat.l4`), and 14 assertions restated in `wa-tests-s5-definitions.l4` (3), `wa-tests-part2.l4` (3), `wa-tests-part7.l4` (3), `wa-cases-seat.l4` (2) and `tests-independent.l4` (3). `check.sh` after the change: 32 modules, 2,051 satisfied, 0 failed, 0 refused, every module `same` on 1.6.102.
 
 ## Generators and checkers used and not shipped
 
