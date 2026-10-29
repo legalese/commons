@@ -469,6 +469,18 @@ A finding ends "Asserted." when a case asserts it.
 23. **Only one row of s 2(3) says "respectively", and it pairs.** Row (l) reads a Judge of the High Court as a Judge of the Supreme Court and the Registrar of the High Court as the Registrar of the Supreme Court; each old expression has its own replacement and the printed words stay queryable (`the words section 2(3) prints for`). "respectively" occurs once in the whole text, in (l) (searched); rows (e) and (f) pair by "corresponding" and are left as the Act words them (F9). Asserted.
 24. **Lists printed in s 2(1) are named twice, as the phrase and as its parts.** See "List members in the s 2(1) table". A thing the Act does not list is not named, which is weaker than excluded. Asserted.
 
+## Reading a result: FALSE and NOTHING
+
+The rule in force for this row, from 2026-10-29 (assumed, not ruled by a lawyer). This row already answered by it where it matters: fork F19 chose `NOTHING` for a list the text does not close.
+
+A function answers `JUST FALSE` only where the text itself says no to the case in its own words: a definition that says "means", a condition introduced by "if", "only if", "as long as" or "unless", or a list the text closes with "only" or an equivalent. Where the text lists things without closing the list, says "includes", leaves a term undefined, is silent, or points to a power or authority outside the text, the function answers `NOTHING`, and a comment on that branch names which of those it is. The function's name carries the scope its `FALSE` claims ("under section 47 ...", not "may I ..."), and a seat question that asks Act-wide inherits `NOTHING` wherever the Act points outside itself.
+
+In plain words: `JUST FALSE` is the Act's own "no"; `NOTHING` is "the Act does not say". The seat renders them "No." and "The Interpretation Act does not say."
+
+**Checked on 2026-10-29 under this rule.** The 22 `JUST FALSE` sites in the modules were read against the text by a second reader and all were kept, with no change to a function or an assertion. Twenty rest on an express negation in the text ("does not extend", "does not permit", "may not be further delegated", "are not discontinued or abated", "do not invalidate" and the like), which the reader counted as the text saying no in its own words; that is a reading for a lawyer to confirm, and 45 `JUST FALSE` assertions depend on it. Two are marginal and are for a lawyer: s 48(6) and (7), where the text says one form "prevails over" another and the function answers `JUST FALSE` for the form that loses, which is the converse of the text's sentence (the reader leaned to `NOTHING`; this row keeps `JUST FALSE` because the independent test author expected "No." and the encoder had first returned `NOTHING`, which could never say who loses; finding 22).
+
+**Not changed, and open (counts are the second reader's, read from the code and not re-run):** only 2 of the 15 function names that return `JUST FALSE` say "under section N"; the section is in each `@ref` and the comment above the function. The `JUST FALSE` of `that provision has any effect in relation to the application` (s 41A(2)(c)) is unqualified although the text says "to the extent of the inconsistency". The reader found at least 19 `JUST <expression>` branches that can also evaluate to `FALSE` and did not classify them. It found none of the 38 plain-`BOOLEAN` functions answering `FALSE` for a catch-all value.
+
 ## Known limits
 
 What the encoding cannot answer, stated so that nobody looks for it.
