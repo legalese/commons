@@ -36,7 +36,7 @@ There was no independent test pass: the one agent wrote the rules and the tests.
 | `pb2-aposentadoria-por-tempo.l4` | layer 1: arts. 52 to 56 (Subseção III) |
 | `pb2-aposentadoria-especial.l4` | layer 1: arts. 57 and 58 (Subseção IV) |
 | `pb2-tests-<the same seven names>.l4` | tests of layer 1, one file per module |
-| `pb2-seat.l4` | layer 2: 98 questions, each with `@export` and an `@desc` on each input (three take no input), over the seven modules |
+| `pb2-seat.l4` | layer 2: 98 questions, with an `@desc` on each input (three take no input) and an `@export` on all but one (art. 38, a DEONTIC: its `@export` is commented out ahead of legalese/l4-ide#779, a draft, not landed, which refuses it), over the seven modules |
 | `pb2-cases-seat.l4` | layer 2: worked cases, at least one per question |
 
 Imports, with no cycle: `renda-mensal` is imported by `invalidez`, `idade`, `tempo` and `especial`; `salario-de-beneficio` by `idade`; `idade` by `tempo` and `especial`; `invalidez` by `especial`; `pb-core` by all; the seat imports all seven.
@@ -48,7 +48,7 @@ It is the individual to whom the Law is applied, which Commons requires first (`
 No seat is written for an official (the Previdência Social, the INSS, the Ministry, the Executive) and none for the company: the company's duties appear as what the person is owed or exposed to (art. 43 § 2, art. 51, art. 58 §§ 1 to 4), and the company's own liabilities (art. 57 §§ 6 and 7) are in layer 1 only.
 
 Layer 1 is the seven `pb2-*.l4` modules, written from the text alone.
-Layer 2 is `pb2-seat.l4` and `pb2-cases-seat.l4`: 98 questions, each with `@export` and an `@desc` on each input (three questions take no input: 29, 54 and 62 in the order of the file), grouped under `§` headings in the order of the text (salário-de-benefício; the CNIS; the correction of the salários; the option about the fator previdenciário; the auxílio-acidente and concomitant activities; the floor and the ceiling of the monthly income; if I cannot prove my salários; the register of the segurado especial; the guaranteed grant to the segurado especial; the abono anual; the readjustment; and the five benefits).
+Layer 2 is `pb2-seat.l4` and `pb2-cases-seat.l4`: 98 questions, an `@export` on all but the 29th (art. 38, which returns a DEONTIC: its `@export` is commented out ahead of legalese/l4-ide#779, a draft, not landed, which refuses it) and an `@desc` on each input (three questions take no input: 29, 54 and 62 in the order of the file), grouped under `§` headings in the order of the text (salário-de-benefício; the CNIS; the correction of the salários; the option about the fator previdenciário; the auxílio-acidente and concomitant activities; the floor and the ceiling of the monthly income; if I cannot prove my salários; the register of the segurado especial; the guaranteed grant to the segurado especial; the abono anual; the readjustment; and the five benefits).
 A group that arises only for a person in a particular situation says so in a comment under its heading (the segurado especial, the person who cannot prove the salários, the one who is or may be incapacitated, and so on), so that the form can ask "Isso aconteceu com você?" before showing it.
 The questions are in Brazilian Portuguese in the first person ("Tenho direito à aposentadoria por invalidez?"), take plain inputs (yes/no, numbers, dates, or a choice from the modules' own lists), and build the records the rules expect (`Segurado`, `Valores de referência`) inside the question, with a comment on every placeholder field.
 

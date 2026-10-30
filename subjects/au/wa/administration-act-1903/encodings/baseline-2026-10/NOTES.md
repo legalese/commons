@@ -17,6 +17,8 @@ used no `REFUSE`.
 Every question is published with `@export` and a plain-words description, and
 every input carries an `@desc`, so the module can be deployed to Legalese Cloud as
 it stands.
+The one exception is the regulative rule `my duty to file the inventory and accounts`:
+its `@export` is commented out ahead of legalese/l4-ide#779 (a draft, not landed), which refuses an `@export` whose result is a DEONTIC.
 
 ## Edition
 
