@@ -20,6 +20,7 @@ Every question is published with `@export` and a plain-words description, and
 every input carries an `@desc`, so the module can be deployed to Legalese Cloud as
 it stands. One duty with a deadline, the community corporation's duty to give the
 owner a s 97 certificate within 14 days, is also written as a regulative rule.
+That rule, `the community corporation's duty to give me the certificate`, is the one exception to the line above: its `@export` is commented out ahead of legalese/l4-ide#779 (a draft, not landed), which refuses an `@export` whose result is a DEONTIC.
 
 ## Edition
 
