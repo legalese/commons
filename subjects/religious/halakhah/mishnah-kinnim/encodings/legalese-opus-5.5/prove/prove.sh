@@ -5,8 +5,8 @@
 #
 # `l4 prove` is in draft legalese/l4-ide#784 (not merged on 2026-11-02); it needs z3 on PATH or Z3_EXE.
 # An IMPORT reaches only the importing file's own folder, so each obligations file is copied beside the
-# kn- modules for the run, under a name ../check.sh will not mistake for a module of the encoding
-# (it starts with "_prove-"), and removed afterwards, also on failure.
+# kn- modules for the run, as "_prove-<name>", and removed afterwards, also on failure.  ../check.sh runs
+# every *.l4 in that folder, so do not run it while this script is running: it would pick up the copy.
 #
 # Expected: every #ASSERT in kn-obligations.l4 is `proved` or `decided` (a ground witness the
 # evaluator satisfies); every #ASSERT in kn-refutations.l4 is `refuted`.  Anything else is a failure.
