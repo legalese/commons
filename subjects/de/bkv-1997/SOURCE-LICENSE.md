@@ -4,8 +4,10 @@ The deposited texts for this subject are German statutory and official texts, an
 They are deposited and quoted in `registers/source-bundle/`:
 
 - `bgbl-2026-i-210`: Siebte Verordnung zur Änderung der Berufskrankheiten-Verordnung vom 16. Juli 2026 (BGBl. 2026 I Nr. 210), full gazette text (gazette); https://www.recht.bund.de/eli/bund/bgbl-1/2026/210/regelungstext.pdf
+- `bkv-1`: Berufskrankheiten-Verordnung (BKV), § 1 Berufskrankheiten (official-site); https://www.gesetze-im-internet.de/bkv/__1.html
 - `bkv-8`: Berufskrankheiten-Verordnung (BKV), § 8 Mitglieder (official-site); https://www.gesetze-im-internet.de/bkv/__8.html
 - `bkv-9`: BKV, § 9 Durchführung der Aufgaben (as amended with effect from 1 August 2026) (official-site); https://www.gesetze-im-internet.de/bkv/__9.html
+- `bkv-anlage-1-nrn-1321-1322`: BKV, Anlage 1 (Liste der Berufskrankheiten): the page heading, the column heading, the group headings 1 and 13, and the rows for Nos. 1321 and 1322 only (official-site-excerpt); https://www.gesetze-im-internet.de/bkv/anlage_1.html
 - `bkv-eingangsformel`: BKV, Eingangsformel (the original 1997 preamble) (official-site); https://www.gesetze-im-internet.de/bkv/eingangsformel.html
 - `brd-312-26`: Bundesrat Drucksache 312/26 of 28 May 2026: Siebte Verordnung zur Änderung der Berufskrankheiten-Verordnung (government draft with its Begründung) (parliamentary-document); https://dserver.bundestag.de/brd/2026/0312-26.pdf
 - `btd-19-17586-p101-102`: Bundestag Drucksache 19/17586, pages 101 and 102 (Begründung of the bill that added SGB VII § 9(1a)) (parliamentary-document-excerpt); https://dserver.bundestag.de/btd/19/175/1917586.pdf
@@ -14,6 +16,9 @@ They are deposited and quoted in `registers/source-bundle/`:
 - `gg-art-80`: Grundgesetz für die Bundesrepublik Deutschland, Art. 80 (official-site); https://www.gesetze-im-internet.de/gg/art_80.html
 - `ifg-1`: Informationsfreiheitsgesetz (IFG), § 1 Grundsatz (official-site); https://www.gesetze-im-internet.de/ifg/__1.html
 - `ifg-3`: IFG, § 3 Schutz von besonderen öffentlichen Belangen (official-site); https://www.gesetze-im-internet.de/ifg/__3.html
+- `ifg-4`: IFG, § 4 Schutz des behördlichen Entscheidungsprozesses (official-site); https://www.gesetze-im-internet.de/ifg/__4.html
+- `ifg-5`: IFG, § 5 Schutz personenbezogener Daten (official-site); https://www.gesetze-im-internet.de/ifg/__5.html
+- `ifg-6`: IFG, § 6 Schutz des geistigen Eigentums und von Betriebs- oder Geschäftsgeheimnissen (official-site); https://www.gesetze-im-internet.de/ifg/__6.html
 - `sgb7-9`: Siebtes Buch Sozialgesetzbuch (SGB VII), § 9 Berufskrankheit (official-site); https://www.gesetze-im-internet.de/sgb_7/__9.html
 - `btd-19-17586-p130-132`: Bundestag Drucksache 19/17586, pages 130 to 132 (Begründung zu Artikel 24, the BKV §§ 7 to 11) (parliamentary-document-excerpt); https://dserver.bundestag.de/btd/19/175/1917586.pdf
 - `btd-19-17586-p47-48`: Bundestag Drucksache 19/17586, pages 47 and 48 (Artikel 24 of the bill: BKV §§ 7 to 11 as proposed, including the original § 9 Absatz 5) (parliamentary-document-excerpt); https://dserver.bundestag.de/btd/19/175/1917586.pdf
