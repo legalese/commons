@@ -14,10 +14,10 @@ It is not the licence of the encoding, which is Apache-2.0 like the rest of cano
 
 ## The terms
 
-The subject-level note written when the text was deposited, `../../SOURCE-LICENSE.md` (the subject's source licence note), states the terms, the date they were checked, and the attribution required.
-It is not repeated here.
+The subject's licence note is `../../SOURCE-LICENSE.md` (in the run's inputs directory).
+It states the terms, the date they were checked and the attribution required, and it is not repeated here.
 This run did not re-check them.
-The note says the statute text may be deposited and quoted in an encoding, subject to the attribution it names, and quoting the Act's text in the modules with the notice below is all this row does with it.
+All this row does with the text is quote it in the modules with the notice below.
 
 ## The notice, copied mechanically from line 4 of the rendering
 
@@ -27,8 +27,9 @@ The same line heads every module that quotes the text.
 
 ## What the modules quote
 
-Each `ie-*.l4` module quotes the Act's text in `-- src:N | text` comment lines that `srcrefs.py quote` copied from the rendering, line by line, and cites each with an `@ref` that carries the same line numbers.
-The test files quote no text.
+Each `ie-*.l4` module that quotes the Act's text does so in `-- src:N | text` comment lines that `srcrefs.py quote` copied from the rendering, line by line, and cites each with an `@ref` that carries the same line numbers.
+Two test files, `tests-schedule-definitions.l4` and `tests-acts-referred-to.l4`, repeat lines of the text in comments beside the assertions that were written from them, and carry the same notice in their headers; `srcrefs.py` does not check those comments.
+The other test files quote at most a phrase or two.
 `NOTES.md` section 1 says how this is checked.
 
 ## Not covered

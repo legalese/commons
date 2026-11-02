@@ -1,51 +1,78 @@
-# PROGRESS (Interpretation Act 2005, Ireland; row legalese-sonnet-5.5)
+# PROGRESS (Interpretation Act 2005, Ireland; row legalese-sonnet-5.5, completion pass 2)
 
 This file is the run's memory.
 After a context compaction, re-read this file, `NOTES.md` and the statute text (`../../registers/source-bundle/No.-23-of-2005.txt`, sha256 0108a07d...), not a summary.
+The pass-1 PROGRESS.md, NOTES.md and encoding.json were kept in a scratch directory `_work/` while pass 2 rewrote all three; the directory is deleted.
 
-## Status
+## Baseline (step 1), measured 2026-10-29 before any change
 
-Written 2026-10-21; this version rewritten at the end of the run.
-Everything in the brief is written: six Act modules (five answering the Act, one of labelled alternative readings), ten test files, `check.sh`, `NOTES.md`, `encoding.json`, `SOURCE-LICENSE.md`, `BRIEF.md`.
-`NOTES.md` sections 3 to 8 are complete; section 7 holds the final `check.sh` output.
-Left to do: nothing in the deposit; the final report goes to the team lead.
+Binary: `/Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-l4-ide/ca81f332-162b-4c52-8cc3-57ed15b3f6fa/scratchpad/bin/l4-unstable-0528`, `l4 --version` prints `unstable-20261028-5e95b5a (unstable, 5e95b5a, 2026-10-28)`, sha256 `0f0f1b86d37164af242ca2b6c03aa31ddeedef752bd10474f1459b78cf539e9d`.
+Command: `SRC_RAW=<registers/source-bundle/No.-23-of-2005.txt> L4=<binary> L4_TARGET=unstable ./check.sh`.
+Printed (the full output was kept in `_work/baseline-check.txt`, now deleted):
 
-## Toolchain facts, measured
+```
+module                                    errors satisfied  failed  refused  expected
+ie-general.l4                                  0         0       0        0         0
+ie-interpretation-time.l4                      0         0       0        0         0
+ie-month-year-readings.l4                      0         0       0        0         0
+ie-operation-and-construction.l4               0         0       0        0         0
+ie-powers-and-service.l4                       0         0       0        0         0
+ie-repeal.l4                                   0         0       0        0         0
+tests-commencement.l4                          0        57       0        0         0
+tests-general.l4                               0       102       0        0         0
+tests-operation.l4                             0       112       0        0         0
+tests-periods.l4                               0        96       0        0         0
+tests-powers-service.l4                        0        31       0        0         0
+tests-readings.l4                              0        59       0        0         0
+tests-red-control.l4                           8         0       8        0         8
+tests-repeal.l4                                0       105       0        0         0
+tests-rest-days-and-words.l4                   0        57       0        0         0
+tests-worked-cases.l4                          0        26       0        0         0
+TOTAL (16 modules)                             8       645       8        0
+srcrefs check: 261 src: lines, 132 runs, 172 locators, 0 problems
+```
 
-- `L4_BIN` is `/Users/mengwong/.cabal/store/ghc-9.10.3-fe9c/jl4-0.1-9afd0288/bin/l4`, sha256 `2d912dd2a61ba36b3fb8c1e02dcbd445ba1143c3b8ecb931462c01050cd607d7` (checked, matches the brief); `l4 --version` prints `dev`.
-- Target compiler: `unstable`, because the brief requires `@lang en`, `REFUSE` and `YMD`, which `main` rejects (`dialects.md`).
-  `check.sh` defaults to `L4_TARGET=unstable`, which skips the main comparison.
-- `@lang en` draws a Hint, "A module that declares nothing is English; this line can go."; the brief requires the line, so the hint stays.
-- `Weekday of` (daydate): Sunday 0 ... Saturday 6; 2026-01-01 is a Thursday (4).
-- `YMD 2024 2 30` refuses on this binary; `Date` rolls over; `add months` and `add years` clamp.
-- A satisfied `#ASSERT` logs one `Message:` line on this binary; a refusing `#ASSERT` is a Warning, counted as "refused".
-- DATETIME has no `<` or `>`; it supports `EQUALS`, and `Date dt` gives the UTC date.
+Baseline numbers that must still hold at the end: 16 modules, 645 satisfied, 8 failed (all in tests-red-control.l4, expected), 0 refused, 261 src lines, 132 runs, 172 locators, 0 problems.
+The pass-1 binary printed `dev`; this pass uses the unstable prerelease above, and the baseline numbers are identical on it.
 
-## Design decisions (each with the text that licenses it); the full register is `NOTES.md` section 5
+## Plan, in order
 
-1. A period "from" a day counts that day: s 18(h) first limb. N days from D end on D + N - 1. (F1, F3)
-2. A period "after" an event: the text is silent, so every such computation REFUSES. (F2)
-3. "month" is a calendar month and "year" is 12 months beginning 1 January (Sch Pt 1), so N months or years from D is determinate only when D is the first day of a month, or 1 January; otherwise REFUSE. Weeks likewise: a week runs Sunday to Saturday (Sch Pt 1 "week" with "midnight"), so N weeks is determinate only from a Sunday. `daydate`'s `add months` clamps; the Act has no clamp rule, so it is used only in the labelled readings module. (F4 to F6)
-4. The Act has no rule moving a last day off a day of rest, recess or holiday: the function returns the last day when it is not a rest day and REFUSES when it is. Rest days are an input (a function from a date to a boolean). (F8)
-5. Commencement: s 16(1) (Act, nothing expressed) is the date of passing with NO moment; s 16(2), (3), (4) are at the end of the day before. The end of D-1 is the start of D (an assumption, F9). (F10 to F16)
-6. "day" is not defined by the Act: a day is a calendar date of `daydate`. (F9)
-7. Section 4(1) (contrary intention) is handled ONCE, as a precondition: `a provision of this Act applies to an enactment` in `ie-general.l4` takes the three places a contrary intention can appear, and the other modules state in their headers that they assume none appears. It is NOT a flag on the operative functions, and nothing REFUSES on account of it. (F17)
-8. Which language text prevails: the English text says nothing; recorded as a fork, not decided. (F34)
+1. Audit (step 2): count units with `_work/units.py`; write `## Re-disposition audit` in NOTES.md BEFORE any new L4.
+2. Encode what the audit moves (step 3), new modules beside the existing ones.
+3. Tests from the text (step 4), one test file per new module.
+4. Bookkeeping (step 6): NOTES.md coverage table (one row per unit), fork register, `## Jural relations`, `## Changes to existing modules`, `check.sh` output; encoding.json 0.2.0.
 
-## Files in the deposit
+## Status (2026-10-29, bookkeeping done)
 
-- Act modules: `ie-interpretation-time.l4` (imports only `prelude` and `daydate`), `ie-general.l4`, `ie-operation-and-construction.l4`, `ie-powers-and-service.l4`, `ie-repeal.l4`.
-- Labelled alternative readings, NOT the Act's: `ie-month-year-readings.l4`.
-- Tests: `tests-periods.l4`, `tests-rest-days-and-words.l4`, `tests-commencement.l4`, `tests-worked-cases.l4`, `tests-general.l4`, `tests-operation.l4`, `tests-powers-service.l4`, `tests-repeal.l4`, `tests-readings.l4`, and `tests-red-control.l4` (eight deliberately wrong expectations, counted).
-- `check.sh` (adapted: unstable by default, `tests-red-control.l4` expects 8 failures, optional `SRC_RAW` quotation gate at `--strict`), `fetch-main-l4.sh` (copied beside it; unused for target unstable), `srcrefs.py`.
-- `NOTES.md`, `PROGRESS.md`, `encoding.json`, `SOURCE-LICENSE.md`, `BRIEF.md`.
-- Scratch (`_work/`, `_probes/`) was deleted at the end.
+DONE: audit (before any new L4); five new modules and five new test files; NOTES.md (all sections, 256-row coverage table, fork register F1 to F48, `## Jural relations`, `## Changes to existing modules`, numbered findings, check.sh output); `encoding.json` 0.2.0; `SOURCE-LICENSE.md` pointing at `../../SOURCE-LICENSE.md`.
+Final `check.sh`: 26 modules, 1322 satisfied (645 baseline + 677 new), 8 failed (all expected, tests-red-control.l4), 0 refused; srcrefs 438 src lines / 254 runs / 312 locators / 0 problems under both `--strict` and `--refs`.
+All 16 baseline modules print exactly their baseline numbers.
+New modules and tests (each rule has an `@ref` with src locators):
+- `ie-schedule-definitions.l4` + `tests-schedule-definitions.l4` (421): Schedule Pt 1 (32) and Pt 2 (8) as a defined-term table, appliers, s 21(1) and (2).
+- `ie-words-and-meaning.l4` + `tests-words-and-meaning.l4` (64): s 18 lead-in, 18(a), 18(c), 18(j), 18(i) with the 1971 offset as an input, s 19, s 20(2).
+- `ie-powers-duties-continuing.l4` + `tests-powers-duties.l4` (57): s 10, 22(1), 22(2), 23(1), 23(2), 24.
+- `ie-citation-and-text.l4` + `tests-citation-and-text.l4` (67): s 7(1)(a), (b), (c), s 14(2), s 14(3), s 15(2).
+- `ie-acts-referred-to.l4` + `tests-acts-referred-to.l4` (68): the 18-row table.
+No pass-1 module or test was edited (every pass-1 file keeps the modification time of the copy made at the start of pass 2); `ie-schedule-definitions.l4` and `tests-schedule-definitions.l4` were edited once afterwards, for Update 3 below.
+The scratch directory `_work/` was deleted at the end.
 
-## History, short
+Decisions taken this pass, each with the text that licenses it:
+- s 14(3): "that is not required for the purpose of punctuation" is read as governing both commas (F39).
+- Sch Pt 1 "President": "exercising the powers and performing the duties" read as both (F40).
+- "pre-union Irish statute" passed on 1 January 1801 itself: not answered (F41).
+- s 18(c): the list of kinds is not closed by the text; a party of another kind is not answered (F42).
+- s 15(2): "immediately" gives no measure; the latest moment is not answered (F43).
+- ss 22(2), 23(2): two holders on one day is not answered; a vacancy gives NOTHING (F44).
+- s 7(1)(b), (c): both map to limb (b) of "Act" in s 2(1) (F45).
+- s 18(j): "whether punishable on indictment or on summary conviction" read as naming the two ways; another way is not answered (F46).
+- Entries that say "includes" are open lists and entries that say "does not include" exclude only what they name (F47).
+- The members of an "includes" entry are the things the line lists, one member each (F48; added by the fix of 2026-10-29).
 
-- Update 1: time module and period tests landed.
-- Update 2: rest-day, commencement, readings and worked-case tests landed.
-- Update 3: the other four Act modules and their tests landed.
-- Update 4: red control, `check.sh` adaptation, strict quotation gate (quote runs generated from each `@ref`'s locators; 0 problems).
-- Update 5: `NOTES.md`, `encoding.json`, `SOURCE-LICENSE.md` written.
-  One change after the pre-registered answers: `the first day on which the enactment is in operation throughout` for an Act silent on commencement returned the day after the passing, which contradicted its neighbour's refusal for the passing day; it now refuses, and its test was changed with it. `NOTES.md` 2.3 discloses it.
+## History
+
+- Update 0: baseline run, pass-1 files read, unit counter written.
+- Update 1: audit written; Schedule module and tests; words-and-meaning, powers-duties, citation-and-text and Acts-Referred-to modules and tests; full check.sh run (numbers above).
+- Update 2: coverage table (256 rows) generated and inserted; forks F39 to F47; Jural relations; encoding.json 0.2.0; SOURCE-LICENSE.md; final check.sh and srcrefs runs; `_work/` deleted.
+- Update 3 (2026-10-29): reviewer's defect fixed. The lookup for "includes" entries held whole phrases as members; Pt 1 "land" and "writing" and Pt 2 "functions" now hold both the items as the line prints them and the things each lists (F48, reading c; see Update 4). Edited `ie-schedule-definitions.l4` and `tests-schedule-definitions.l4` only; 383 to 403 assertions at that point; check.sh 26 modules, 1304 satisfied, 8 failed (expected), 0 refused; srcrefs unchanged. See NOTES.md `## Changes to existing modules`.
+- Update 4 (2026-10-29): over-correction undone. After the split the Act's own printed phrases ("houses and buildings", "powers and duties", ...) refused; land, writing and functions now hold both the printed items and their constituents (F48, reading c). 383 to 411 assertions; check.sh 26 modules, 1312 satisfied, 8 failed (expected), 0 refused.
+- Update 5 (2026-10-29): F48 extended to Pt 1 "oath", "swear" and "Great Britain" after a script sweep of all 40 Schedule entries (7 not `means`: 6 extended, "affidavit" left; 33 `means` entries left, since the applier refuses for them). 411 to 421 assertions; check.sh 26 modules, 1322 satisfied, 8 failed (expected), 0 refused.

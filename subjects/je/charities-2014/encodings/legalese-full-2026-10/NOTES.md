@@ -53,7 +53,7 @@ The import graph below is generated from the `IMPORT` lines of the files.
 A group module imports only `prelude`, `daydate`, `domain` and modules of its own group, and `check.sh` fails if one does not; only `int-` and `ind-` modules import across groups.
 The modules are listed in dependency order (dependencies first), which is also the order of `modules` in `encoding.json`.
 
-Modules by group: G1 9, G2 12, G3 14, G4 11, G5 12, G6 12, G7 13, G8 12, G9 9, domain 1, ind-a 10, ind-b 12, ind-c 10, int 27; 164 in all.
+Modules by group: G1 9, G2 12, G3 14, G4 11, G5 12, G6 12, G7 15, G8 12, G9 9, domain 1, ind-a 10, ind-b 12, ind-c 10, int 27; 166 in all (164 on 2026-10-27; G7 gained `g7-interpretation-laws` and `g7-tests-interpretation-laws` on 2026-10-28, section 16).
 
 | module | group | imports (other than prelude and daydate) |
 | --- | --- | --- |
@@ -583,10 +583,10 @@ Each fork's discriminating case, the text that licenses each reading, and the re
 | F7.8 | G7 | in what unit a term of imprisonment is counted | calendar months |
 | F7.9 | G7 | how a Part brought into force in two stages is treated | in force when all its Articles are |
 | F7.10 | G7 | how capacity is paired with the kind of body in Article 37(1) | capacity as printed for each kind of body |
-| F7.11 | G7 | how the day named as the day of commencement is counted | the named day is the first day in force |
+| F7.11 | G7 | how the day named as the day of commencement is counted | the named day is the first day in force (settled by the Interpretation Laws, section 16) |
 | F7.12 | G7 | whether Article 22 defines an excepted foreign charity outside Article 21 | Article 22 defines the term wherever the Law uses it |
 | F7.13 | G7 | whether adapting Articles 21 to 23 under Article 24(3)(a) can carry their imprisonment | the cap of Article 24(4) applies to every offence of the Regulations |
-| F7.14 | G7 | whether an Order under Article 2(2) can make consequential amendments of other provisions of the Law | only Regulations can make consequential amendments of this Law |
+| F7.14 | G7 | whether an Order under Article 2(2) can make consequential amendments of other provisions of the Law | only Regulations can make consequential amendments of this Law (settled by the Legislation (Jersey) Law 2021, section 16) |
 | F8.1 | G8 | when does the one year of Article 26(5)(a) start? | the year of Article 26(5) runs from the day the document is provided or retained |
 | F8.2 | G8 | what is "as soon as practicable" in Article 26(6)? | promptness under Article 26(6) is a judgement the caller supplies |
 | F8.3 | G8 | does Article 28(1)(a) "by virtue of Article 6(1)(c)" reach a philosophical-belief purpose? | only a purpose within Article 6(1)(c) counts under Article 28(1)(a) |
@@ -1905,3 +1905,17 @@ The row was on `main` at 27c1db980 when these changes began; each is a commit on
   Group G1 gains two modules and 63 assertions (406 to 469), with three quotation lines.
   Totals, from `check.sh` run in the commons layout from the row directory on the day of the commit: 164 modules; 8,141 assertions satisfied (group modules 5,745; integration 627; independent 1,769); 157 failed on purpose, equal to the 157 expected; 10 refused on purpose, equal to the 10 expected; 1,730 quotation lines, 891 runs and 1,679 locators with 0 problems; 996 guarded traces, all as expected.
 - **Cost of the two later changes together**, same method and rates: the fleet sub-agents now total **$294.40**, which is $15.40 more than the $279.00 after F2.14: the G7 encoder $4.57, the G1 encoder $6.50 and the integrator $4.33.
+
+## 16. The Interpretation (Jersey) Law 1954 and the Legislation (Jersey) Law 2021 (added 2026-10-28)
+
+Status: draft; the text below was checked against the files named on 2026-10-28.
+
+This row was made without those two Laws among its sources.
+They are now encoded in full as subjects of their own in the commons (`subjects/je/interpretation-1954` and `subjects/je/legislation-2021`, row `legalese-2026-10` of each).
+`INTERPRETATION-LAWS.md` sorts all 137 forks of this row by what the two Laws say about them: 2 settled, 7 narrowed, 49 open, 79 not reached (the figures after a second, independent sort; section 9 of that file).
+Only the two settled forks were changed, and they were not changed in code: F7.11 (the named day is the first day in force: 1954 Article 1(5) for what commenced before 28 September 2021, 2021 Article 3(2) after) and F7.14 (an Order cannot amend a Law by its incidental power: 2021 Article 9(5) and (6)(b)).
+No default flipped and no rule changed.
+Added: `g7-interpretation-laws.l4` (22 blocks copied by hand from the two other rows, because L4 cannot import across folders yet; assumed, not ruled; a hack), `g7-tests-interpretation-laws.l4` (83 assertions), `tools/sync-copies/` (reports whether a copied block has drifted from its source; re-run it whenever either of the two rows changes) and `INTERPRETATION-LAWS.md`.
+`domain.l4` is untouched, so its pinned sha stands.
+`check.sh` on 2026-10-28: 166 modules; 8,224 assertions satisfied (8,141 + 83); 157 failed on purpose (157 expected); 10 refused on purpose (10 expected); srcrefs 1730 / 891 / 1679 / 0 problems; 996 traces as expected; GREEN.
+The figures in sections 11.1 and 12 and in the provenance (section 15) are those of the run of 2026-10-27 and are left as they were.

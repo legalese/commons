@@ -6,7 +6,7 @@ This file records the terms the quoted legal text carries. It is not the licence
 
 - The statute is the Acts Interpretation Act 1901 (Cth), Act No. 2, 1901, Compilation No. 39, compilation date 28 March 2026 (register id C2026C00117).
 - The file `../../registers/source-bundle/C1901A00002.txt` that every `-- src:N |` line quotes is **a converter's plain-text rendering** of the Federal Register of Legislation download, made by `harvest/fetch/fetch-source.py`. It is **not the official text**.
-  `inputs/SOURCES.md` records the download hash (`83699a56b58157b8bb552a07c0690ed1407b728c40ee8292a2eb1147a296697b`) and the hash of the rendering (`8b3b2487ec843f0f52ce2555dda326507c54d4f009418e5b2d8694004c34c108`).
+  `../../registers/source-bundle/C1901A00002.meta.json` records the download hash (`83699a56b58157b8bb552a07c0690ed1407b728c40ee8292a2eb1147a296697b`) and the hash of the rendering (`8b3b2487ec843f0f52ce2555dda326507c54d4f009418e5b2d8694004c34c108`).
 - The quotes in the `.l4` files are produced mechanically from that rendering (`srcrefs.py quote`) and checked against it (`srcrefs.py check`). No quote has been compared with the official compilation.
 
 ## The terms

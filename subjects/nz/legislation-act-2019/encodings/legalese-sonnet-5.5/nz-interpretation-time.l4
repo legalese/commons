@@ -1,0 +1,663 @@
+IMPORT prelude
+IMPORT daydate
+
+-- Legislation Act 2019 (New Zealand), 2019 No 58 -- LAYER 1: THE TIME RULES.
+--
+-- This module holds every rule of the Act that computes a day, a period, or a moment:
+--   s 13   "month" and "working day"          s 17   sending by post
+--   ss 25-28 when legislation commences       s 39   time of repeal on a particular day
+--   ss 54-56 when periods start and end, the extension for a day that is not a working day,
+--            and periods of months              s 57   determining time     s 58 distance
+-- It imports only `prelude` and `daydate`, so another encoding of a New Zealand Act can lean on it.
+--
+-- What the text does NOT supply is asked as an input, never guessed:
+--   * the dates of Waitangi Day, Good Friday, Easter Monday, Anzac Day, the Sovereign's birthday,
+--     Matariki Observance Day and Labour Day (s 13 names them, the Act dates none of them);
+--   * the day a document posted in the ordinary course of post would be delivered (s 17(3));
+--   * the New Zealand offset from UTC (s 57 hands it to the Time Act 1974).
+-- The Act does not define "day", "week" or "year". A period in weeks or years therefore has no
+-- answer here: the functions return NOTHING, and the tests assert it (see NOTES.md, forks F5 and F6).
+
+-- Dates are written `Date day month year`; this encoding defines no YMD or YearMonthDay shim.
+
+§ `Calendar arithmetic that is not law`
+
+-- 0 is Monday, 1 Tuesday, 2 Wednesday, 3 Thursday, 4 Friday, 5 Saturday, 6 Sunday.
+-- 5 January 2026 was a Monday; `Day` counts days, and MODULO never returns a negative number.
+GIVEN d IS A DATE
+GIVETH A NUMBER
+`the weekday number of` d MEANS (Day d MINUS Day (Date 5 1 2026)) MODULO 7
+
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`is the first of January` d MEANS (DATE_MONTH d EQUALS 1) AND (DATE_DAY d EQUALS 1)
+
+-- The number of the month (1 to 12) that is n months after the month of d, and its year.
+GIVEN n IS A NUMBER
+      d IS A DATE
+GIVETH A NUMBER
+`the number of the month` n `months after the month of` d MEANS
+    (((DATE_YEAR d TIMES 12) PLUS (DATE_MONTH d MINUS 1) PLUS n) MODULO 12) PLUS 1
+
+GIVEN n IS A NUMBER
+      d IS A DATE
+GIVETH A NUMBER
+`the year of the month` n `months after the month of` d MEANS
+    FLOOR (((DATE_YEAR d TIMES 12) PLUS (DATE_MONTH d MINUS 1) PLUS n) DIVIDED BY 12)
+
+§ `Section 13 -- "month" and "working day"`
+
+-- src:127 | month means a calendar month
+@ref Legislation Act 2019 s 13, definition of month (src:127)
+GIVETH A STRING
+`the Act's meaning of a month` MEANS "a calendar month"
+
+-- The seven named days of s 13. The Act names them and dates none of them.
+DECLARE `Kind of named day` IS ONE OF
+    `Waitangi Day`
+    `Good Friday`
+    `Easter Monday`
+    `Anzac Day`
+    `the Sovereign's birthday`
+    `Matariki Observance Day`
+    `Labour Day`
+
+-- One entry of the calendar a caller supplies: which named day it is, and the date it falls on.
+DECLARE `Named day` HAS
+    `which day`  IS A `Kind of named day`
+    `its date`   IS A DATE
+
+GIVETH A LIST OF `Kind of named day`
+`all kinds of named day` MEANS
+    LIST `Waitangi Day`, `Good Friday`, `Easter Monday`, `Anzac Day`, `the Sovereign's birthday`, `Matariki Observance Day`, `Labour Day`
+
+-- The calendar names all seven days in the given year. The Act does not date them, so without
+-- this a Saturday-free answer could be a guess.
+GIVEN y IS A NUMBER
+      calendar IS A LIST OF `Named day`
+GIVETH A BOOLEAN
+`the calendar names all seven named days in` y `according to` calendar MEANS
+    all (GIVEN k YIELD any (GIVEN nd YIELD ((nd's `which day`) EQUALS k) AND (DATE_YEAR (nd's `its date`) EQUALS y)) calendar) `all kinds of named day`
+
+-- src:153 | working day means a day of a week other than—
+-- src:154 | a Saturday, a Sunday, Waitangi Day, Good Friday, Easter Monday, Anzac Day, the Sovereign’s birthday, Te Rā Aro ki a Matariki/Matariki Observance Day, and Labour Day; and
+-- A day of a week other than: (a) a Saturday, a Sunday or one of the named days; (b) a day from
+-- 25 December to 2 January; (c) the Monday after a Friday 1 January; (d) the Monday and Tuesday after
+-- a Saturday or Sunday 1 January; (e) the Monday after Waitangi Day or Anzac Day falls on a weekend.
+-- The calendar-free limbs come first: they need no named day.
+@ref Legislation Act 2019 s 13, definition of working day, limbs (a) weekend (src:153-154)
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`is a Saturday or a Sunday` d MEANS `the weekday number of` d AT LEAST 5
+
+-- src:155 | a day in the period commencing with 25 December in a year and ending with 2 January in the following year; and
+@ref Legislation Act 2019 s 13, definition of working day, limb (b) (src:155)
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`falls from 25 December to 2 January` d MEANS
+        ((DATE_MONTH d EQUALS 12) AND (DATE_DAY d AT LEAST 25))
+     OR ((DATE_MONTH d EQUALS 1) AND (DATE_DAY d AT MOST 2))
+
+-- (c) a Monday exactly three days after 1 January (so 1 January was a Friday).
+-- (d) a Monday two days or one day after 1 January (a Saturday or a Sunday), or a Tuesday three days or two days after it.
+-- src:156 | if 1 January falls on a Friday, the following Monday; and
+-- src:157 | if 1 January falls on a Saturday or a Sunday, the following Monday and Tuesday; and
+@ref Legislation Act 2019 s 13, definition of working day, limbs (c) and (d) (src:156-157)
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`is left out because 1 January fell on a Friday, a Saturday or a Sunday` d MEANS
+        ((`the weekday number of` d EQUALS 0) AND `is the first of January` (d MINUS 3))
+     OR ((`the weekday number of` d EQUALS 0) AND `is the first of January` (d MINUS 2))
+     OR ((`the weekday number of` d EQUALS 0) AND `is the first of January` (d MINUS 1))
+     OR ((`the weekday number of` d EQUALS 1) AND `is the first of January` (d MINUS 3))
+     OR ((`the weekday number of` d EQUALS 1) AND `is the first of January` (d MINUS 2))
+
+GIVEN d IS A DATE
+      calendar IS A LIST OF `Named day`
+GIVETH A BOOLEAN
+`is one of the named days` d `in` calendar MEANS
+    any (GIVEN nd YIELD (nd's `its date`) EQUALS d) calendar
+
+-- (e) the following Monday: d is a Monday, and the Saturday (d minus 2) or the Sunday (d minus 1)
+-- before it was Waitangi Day or Anzac Day.
+-- src:158 | if Waitangi Day or Anzac Day falls on a Saturday or a Sunday, the following Monday
+@ref Legislation Act 2019 s 13, definition of working day, limb (e) (src:158)
+GIVEN k IS A `Kind of named day`
+GIVETH A BOOLEAN
+`is Waitangi Day or Anzac Day` k MEANS (k EQUALS `Waitangi Day`) OR (k EQUALS `Anzac Day`)
+
+-- src:158 | if Waitangi Day or Anzac Day falls on a Saturday or a Sunday, the following Monday
+@ref Legislation Act 2019 s 13, definition of working day, limb (e) (src:158)
+GIVEN d IS A DATE
+      calendar IS A LIST OF `Named day`
+GIVETH A BOOLEAN
+`is the Monday after Waitangi Day or Anzac Day fell on a weekend` d `in` calendar MEANS
+        (`the weekday number of` d EQUALS 0)
+    AND any (GIVEN nd YIELD (`is Waitangi Day or Anzac Day` (nd's `which day`)) AND (((nd's `its date`) EQUALS (d MINUS 2)) OR ((nd's `its date`) EQUALS (d MINUS 1)))) calendar
+
+-- NOTHING means the answer needs a named day the calendar does not supply for that year.
+-- src:158 | if Waitangi Day or Anzac Day falls on a Saturday or a Sunday, the following Monday
+-- src:153 | working day means a day of a week other than—
+@ref Legislation Act 2019 s 13, definition of working day (src:153-158)
+GIVEN d IS A DATE
+      calendar IS A LIST OF `Named day`
+GIVETH A MAYBE BOOLEAN
+`is a working day` d `according to` calendar MEANS
+    BRANCH
+        IF `is a Saturday or a Sunday` d THEN JUST FALSE
+        IF `falls from 25 December to 2 January` d THEN JUST FALSE
+        IF `is left out because 1 January fell on a Friday, a Saturday or a Sunday` d THEN JUST FALSE
+        IF NOT (`the calendar names all seven named days in` (DATE_YEAR d) `according to` calendar) THEN NOTHING
+        OTHERWISE JUST (NOT ((`is one of the named days` d `in` calendar) OR (`is the Monday after Waitangi Day or Anzac Day fell on a weekend` d `in` calendar)))
+
+-- The first working day on or after d. The step count only stops a runaway search.
+GIVEN d IS A DATE
+      steps IS A NUMBER
+      calendar IS A LIST OF `Named day`
+GIVETH A MAYBE DATE
+`the first working day on or after` d `searching` steps `more days in` calendar MEANS
+    IF steps LESS THAN 0
+    THEN NOTHING
+    ELSE CONSIDER `is a working day` d `according to` calendar
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST isWorking THEN
+             IF isWorking
+             THEN JUST d
+             ELSE `the first working day on or after` (d PLUS 1) `searching` (steps MINUS 1) `more days in` calendar
+
+§ `Section 17 -- when sending by post is taken as done`
+
+DECLARE `Posting facts` HAS
+    `the legislation authorises or requires sending by post`  IS A BOOLEAN
+    `the document is properly addressed`                      IS A BOOLEAN
+    `the document is prepaid`                                 IS A BOOLEAN
+    `the document is posted as a postal article`              IS A BOOLEAN
+    `the contrary to the sending is proved`                   IS A BOOLEAN
+    `the contrary to the receipt is proved`                   IS A BOOLEAN
+    `the day it would be delivered in the ordinary course of post`  IS A DATE
+
+DECLARE `Whether sending is taken as done` IS ONE OF
+    `Taken to have been sent`
+    `Not taken to have been sent by section 17`
+
+-- src:179 | This section applies to legislation that authorises or requires a document to be sent by post (whether the expression serve, give, or send, or any other expression, is used).
+-- src:180 | The document is taken to be sent if it is properly addressed, prepaid, and posted as a postal article.
+-- src:181 | The document is taken to be received at the time at which it would be delivered in the ordinary course of post.
+-- src:182 | However, subsection (2) or (3) does not apply if the contrary is proved.
+-- src:178 | 17 When sending by post is taken as done
+@ref Legislation Act 2019 s 17(1), (2) and (4) (src:178) (src:179-180) (src:182)
+GIVEN facts IS A `Posting facts`
+GIVETH A `Whether sending is taken as done`
+`whether the document is taken to be sent` facts MEANS
+    IF     (facts's `the legislation authorises or requires sending by post`)
+       AND (facts's `the document is properly addressed`)
+       AND (facts's `the document is prepaid`)
+       AND (facts's `the document is posted as a postal article`)
+       AND (NOT (facts's `the contrary to the sending is proved`))
+    THEN `Taken to have been sent`
+    ELSE `Not taken to have been sent by section 17`
+
+-- The Act takes receipt to be at the time the document would be delivered in the ordinary course of
+-- post, a borrowed fact the caller supplies. If the contrary is proved, or section 17 does not apply,
+-- the section says nothing about when it was received: NOTHING.
+@ref Legislation Act 2019 s 17(3) and (4) (src:181-182)
+GIVEN facts IS A `Posting facts`
+GIVETH A MAYBE DATE
+`the day the document is taken to be received` facts MEANS
+    IF     (facts's `the legislation authorises or requires sending by post`)
+       AND (facts's `the document is properly addressed`)
+       AND (facts's `the document is prepaid`)
+       AND (facts's `the document is posted as a postal article`)
+       AND (NOT (facts's `the contrary to the receipt is proved`))
+    THEN JUST (facts's `the day it would be delivered in the ordinary course of post`)
+    ELSE NOTHING
+
+-- (5) See also Part 4 of the Contract and Commercial Law Act 2017, which provides for the deemed timing and receipt of electronic communications.
+-- That Act is not among the sources: whether it provides for the communication in question is asked as an input. This section says nothing more of electronic communications.
+-- src:183 | See also Part 4 of the Contract and Commercial Law Act 2017, which provides for the deemed timing and receipt of electronic communications.
+@ref Legislation Act 2019 s 17(5) (src:183)
+GIVEN `Part 4 of the Contract and Commercial Law Act 2017 provides for the deemed timing and receipt of the electronic communication` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`the deemed timing and receipt of an electronic communication is governed by Part 4 of the Contract and Commercial Law Act 2017` `Part 4 of the Contract and Commercial Law Act 2017 provides for the deemed timing and receipt of the electronic communication` MEANS
+    IF `Part 4 of the Contract and Commercial Law Act 2017 provides for the deemed timing and receipt of the electronic communication` THEN JUST TRUE ELSE NOTHING
+
+§ `Moments`
+
+-- A moment is a day with the part of the day the Act speaks of: its start, its close, or a stated
+-- time on it. The Act leaves the clock to the Time Act 1974 (s 57); hours and minutes are a plain 24-hour clock.
+DECLARE Moment IS ONE OF
+    `the start of the day` HAS `the day` IS A DATE
+    `the close of the day` HAS `the day` IS A DATE
+    `a time on the day`    HAS `the day`    IS A DATE
+                               `the hour`   IS A NUMBER
+                               `the minute` IS A NUMBER
+
+§ `Sections 25 to 28 -- commencement`
+
+DECLARE `Kind of provision` IS ONE OF
+    `an ordinary provision`
+    `the Title`
+    `a commencement section`
+    `a principal legislation provision`
+
+-- src:209 | 25 Date on which Acts commence
+-- src:210 | An Act or a part of an Act comes into force on the date stated or provided for in the Act.
+-- src:211 | If an Act does not state or provide for a commencement date for the Act or part, the Act or part comes into force on the day after Royal assent.
+-- src:212 | However, an Act’s Title and commencement sections, and any principal legislation provision, come into force on Royal assent (and no reference in the commencement section includes them).
+-- src:213 | In subsection (3), principal legislation provision means a section or part of a section that identifies legislation being amended.
+-- (3) The Title, the commencement sections and any principal legislation provision come into force
+-- on Royal assent; (1) otherwise on the date stated or provided for; (2) failing that, the day after Royal assent.
+@ref Legislation Act 2019 s 25 (src:209-213)
+GIVEN kind IS A `Kind of provision`
+      stated IS A MAYBE DATE
+      assent IS A DATE
+GIVETH A DATE
+`the day on which an Act or a part of an Act comes into force` kind `with the date stated` stated `and Royal assent on` assent MEANS
+    IF kind EQUALS `an ordinary provision`
+    THEN CONSIDER stated
+         WHEN JUST statedDay THEN statedDay
+         WHEN NOTHING THEN assent PLUS 1
+    ELSE assent
+
+-- (3), last words: "no reference in the commencement section includes them". A reference in section 2 of this Act to "the rest of this Act" is the example: it does not reach the Title, the commencement sections or a principal legislation provision.
+-- Only those three are excluded; whether a reference reaches an ordinary provision turns on the words of the reference, which the Act does not give, so the answer for it is NOTHING (the section draws the edge, ruling B).
+@ref Legislation Act 2019 s 25(3) (src:212)
+GIVEN kind IS A `Kind of provision`
+GIVETH A MAYBE BOOLEAN
+`a reference in the commencement section of an Act includes` kind MEANS
+    CONSIDER kind
+    WHEN `an ordinary provision` THEN NOTHING
+    WHEN `the Title` THEN JUST FALSE
+    WHEN `a commencement section` THEN JUST FALSE
+    WHEN `a principal legislation provision` THEN JUST FALSE
+
+-- src:214 | 26 Date on which secondary legislation commences
+-- src:215 | Secondary legislation or a part of any secondary legislation comes into force on the date stated or provided for in the legislation.
+-- src:216 | If it does not state or provide for that date, the legislation or part comes into force on the day after it is published or first made available (whether under Part 3 or otherwise as required by law).
+-- src:217 | However, the secondary legislation’s Title and commencement provisions, and any provision identifying the principal legislation amended, come into force on its making (and no reference in the commencement provision includes them), even if it is not yet published.
+-- NOTHING: the secondary legislation has no stated date and has not been published or made available, so the day cannot be worked out.
+@ref Legislation Act 2019 s 26 (src:214-217)
+GIVEN kind IS A `Kind of provision`
+      stated IS A MAYBE DATE
+      made IS A DATE
+      published IS A MAYBE DATE
+GIVETH A MAYBE DATE
+`the day on which secondary legislation or a part of it comes into force` kind `with the date stated` stated `made on` made `and first published or made available on` published MEANS
+    IF kind EQUALS `an ordinary provision`
+    THEN CONSIDER stated
+         WHEN JUST statedDay THEN JUST statedDay
+         WHEN NOTHING THEN
+             CONSIDER published
+             WHEN JUST pubDay THEN JUST (pubDay PLUS 1)
+             WHEN NOTHING THEN NOTHING
+    ELSE JUST made
+
+-- (3), last words: "no reference in the commencement provision includes them": the same exclusion as section 25(3), for the Title, the commencement provisions and the provision identifying the principal legislation.
+@ref Legislation Act 2019 s 26(3) (src:217)
+GIVEN kind IS A `Kind of provision`
+GIVETH A MAYBE BOOLEAN
+`a reference in the commencement provision of secondary legislation includes` kind MEANS
+    CONSIDER kind
+    WHEN `an ordinary provision` THEN NOTHING
+    WHEN `the Title` THEN JUST FALSE
+    WHEN `a commencement section` THEN JUST FALSE
+    WHEN `a principal legislation provision` THEN JUST FALSE
+
+-- src:218 | 27 Time at which legislation commences
+-- src:219 | Legislation comes into force—
+-- src:220 | at the start of the day on which it comes into force (unless paragraph (b) or (c) applies); or
+-- src:221 | if it is expressed to come into force from a particular day, at the start of the next day; or
+-- src:222 | if it states or provides for a particular time of commencement on a date on which it comes into force, at that time.
+-- (a) at the start of the day on which it comes into force; (b) if expressed to come into force from a particular day, at the start of the next day;
+-- (c) if it states a particular time on the date on which it comes into force, at that time.
+-- NOTHING when (b) and (c) both apply: the text does not say which wins (fork F3).
+@ref Legislation Act 2019 s 27 (src:218-222)
+GIVEN `the day named in the legislation` IS A DATE
+      `expressed as coming into force from that day` IS A BOOLEAN
+      `a particular time is stated` IS A BOOLEAN
+      `the hour stated` IS A NUMBER
+      `the minute stated` IS A NUMBER
+GIVETH A MAYBE Moment
+`the moment at which legislation comes into force` `the day named in the legislation` `expressed as coming into force from that day` `a particular time is stated` `the hour stated` `the minute stated` MEANS
+    BRANCH
+        IF `expressed as coming into force from that day` AND `a particular time is stated` THEN NOTHING
+        IF `a particular time is stated` THEN JUST (`a time on the day` `the day named in the legislation` `the hour stated` `the minute stated`)
+        IF `expressed as coming into force from that day` THEN JUST (`the start of the day` (`the day named in the legislation` PLUS 1))
+        OTHERWISE JUST (`the start of the day` `the day named in the legislation`)
+
+-- src:223 | 28 When legislation commences if calculated by number of months
+-- src:224 | This section applies to legislation expressed to come into force a number of months after a day or an act or event that occurs on a day (date A in the starting month).
+-- src:225 | The legislation comes into force in the month that is that number of months after the starting month,—
+-- src:226 | on the day of that month that corresponds to date A; or
+-- src:227 | if there is no such day, on the last day of that month.
+-- src:228 | This section applies instead of section 56 (on months generally).
+-- src:229 | Examples
+-- src:230 | ABC Act 2020 states that it comes into force a month after Royal assent. Royal assent is given on 1 July 2020. The Act comes into force on 1 August 2020.
+-- src:231 | XYZ Act 2020 states that it comes into force 4 months after Royal assent. Royal assent is given on 31 May 2020. The Act comes into force on 30 September 2020 (because September does not have 31 days).
+-- "a number of months after a day ... (date A in the starting month)": in force in the month that many months on, on the day
+-- of that month that corresponds to date A, or, if there is no such day, on the last day of that month. No day is taken off.
+@ref Legislation Act 2019 s 28 (src:223-231)
+GIVEN n IS A NUMBER
+      `date A` IS A DATE
+GIVETH A MAYBE DATE
+`the day of commencement` n `months after` `date A` MEANS
+    IF n LESS THAN 1
+    THEN NOTHING
+    ELSE JUST (
+        IF DATE_DAY `date A` AT MOST `Days in month` (`the number of the month` n `months after the month of` `date A`) (`the year of the month` n `months after the month of` `date A`)
+        THEN Date (DATE_DAY `date A`) (`the number of the month` n `months after the month of` `date A`) (`the year of the month` n `months after the month of` `date A`)
+        ELSE Date (`Days in month` (`the number of the month` n `months after the month of` `date A`) (`the year of the month` n `months after the month of` `date A`)) (`the number of the month` n `months after the month of` `date A`) (`the year of the month` n `months after the month of` `date A`))
+
+§ `Section 39 -- time of repeal of legislation on a particular day`
+
+-- src:290 | 39 Time of repeal of legislation on particular day
+-- src:291 | Legislation that is expressed to be repealed on a particular day is repealed at the start of that day.
+-- "repealed on a particular day": repealed at the start of that day, so it is not in force on that day at all.
+@ref Legislation Act 2019 s 39(1) (src:290-291)
+GIVEN `the day named` IS A DATE
+GIVETH A Moment
+`the moment of repeal of legislation expressed to be repealed on` `the day named` MEANS
+    `the start of the day` `the day named`
+
+GIVEN `the day named` IS A DATE
+      `the day in question` IS A DATE
+GIVETH A BOOLEAN
+`legislation expressed to be repealed on` `the day named` `is still in force on` `the day in question` MEANS
+    `the day in question` LESS THAN `the day named`
+
+-- "remain in force until a particular day": in force until the close of that day, so the day itself is included.
+-- src:292 | Legislation that is expressed to remain in force, or to continue to have effect, until a particular day, remains in force or has effect until the close of that day.
+@ref Legislation Act 2019 s 39(2) (src:292)
+GIVEN `the day named` IS A DATE
+GIVETH A Moment
+`the moment until which legislation remains in force when it is expressed to remain in force until` `the day named` MEANS
+    `the close of the day` `the day named`
+
+GIVEN `the day named` IS A DATE
+      `the day in question` IS A DATE
+GIVETH A BOOLEAN
+`legislation expressed to remain in force until` `the day named` `is still in force on` `the day in question` MEANS
+    `the day in question` AT MOST `the day named`
+
+-- Section 39 speaks of "repealed on" a day and "until" a day. It has no rule for "repealed from" a day: section 27(b) reads "from" a day as the start of the next day for commencement, but nothing says the same for repeal.
+-- So the moment and the day-by-day question both answer NOTHING (an explicit not-covered value, fork F14).
+-- src:291 | Legislation that is expressed to be repealed on a particular day is repealed at the start of that day.
+@ref Legislation Act 2019 s 39(1) (src:291)
+GIVEN `the day named` IS A DATE
+GIVETH A MAYBE Moment
+`the moment of repeal of legislation expressed to be repealed from` `the day named` MEANS NOTHING
+
+GIVEN `the day named` IS A DATE
+      `the day in question` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`legislation expressed to be repealed from` `the day named` `is still in force on` `the day in question` MEANS NOTHING
+
+§ `Sections 54 to 56 -- periods`
+
+-- The units a period can be counted in. The Act defines "month" (s 13) and gives rules for months (s 56)
+-- and, by the examples to s 54, for days. It does not define "week" or "year".
+DECLARE `Unit of time` IS ONE OF
+    `days`
+    `weeks`
+    `months`
+    `years`
+
+DECLARE `Period length` HAS
+    `how many`  IS A NUMBER
+    `counted in` IS A `Unit of time`
+
+-- How the legislation introduces the period. The deposited text keeps only the examples of s 54's table
+-- (Items 1 to 7); the rules are read from what the examples show (fork F1, finding 1).
+DECLARE `How a period is introduced` IS ONE OF
+    `starting or beginning on the day named`        -- Item 1; s 56 examples 1 and 2
+    `from or after the day or the event named`      -- Item 2; s 56 example 3
+
+DECLARE `How a period is closed` IS ONE OF
+    `ending on the day named`                       -- Item 4
+    `continuing until the day named`                -- Item 5
+    `ending before the start of the day named`      -- Item 6
+
+-- src:383 | Item 1: If the legislation states that a permission begins on the first day of a financial year, the permission is in force on that day.
+-- src:384 | Item 2: If the legislation states that a variation of an agreement operates from 30 June, the variation starts to operate on 1 July.
+-- Item 1: "begins on the first day of a financial year" -- in force on that day. Item 2: "operates from 30 June" starts on 1 July,
+-- and s 56's third example makes "after the date on which notice is sent" the same (fork F2: a period "from" or "after" a day does not count that day).
+@ref Legislation Act 2019 s 54 Items 1 and 2 (src:383-384)
+GIVEN how IS A `How a period is introduced`
+      day IS A DATE
+GIVETH A DATE
+`the first day of a period that is` how `by reference to` day MEANS
+    CONSIDER how
+    WHEN `starting or beginning on the day named` THEN day
+    WHEN `from or after the day or the event named` THEN day PLUS 1
+
+-- Items 4, 5 and 6: a period that ends on, or continues until, a day includes that day; one that ends before the start of a day stops the day before.
+-- src:386 | Item 4: If the legislation states that a right to make a submission ends on 30 June, the submission may still be made on 30 June.
+-- src:388 | Item 6: If the legislation states that a statement must be filed before the start of the next financial year, the statement must be filed on 30 June, not 1 July.
+@ref Legislation Act 2019 s 54 Items 4 to 6 (src:386-388)
+GIVEN closing IS A `How a period is closed`
+      day IS A DATE
+GIVETH A DATE
+`the last day of a period that is` closing `by reference to` day MEANS
+    CONSIDER closing
+    WHEN `ending on the day named` THEN day
+    WHEN `continuing until the day named` THEN day
+    WHEN `ending before the start of the day named` THEN day MINUS 1
+
+-- src:392 | 56 Calculating periods of months (except for commencement of legislation)
+-- src:393 | A reference to 1 or more months in legislation is a reference to a period calculated as follows:
+-- src:394 | the period starts at the start of the relevant day in the month; and
+-- src:395 | the relevant number of months must then be counted to find the ending month; and
+-- src:396 | the period ends immediately before the corresponding day in the ending month or (if there is no such day) at the close of the last day of the ending month.
+-- src:397 | Examples
+-- src:398 | If the legislation refers to a period of 1 month starting on 15 February, the period starts on 15 February and ends at the close of 14 March (because March has a corresponding day).
+-- src:399 | If the legislation refers to a period of 6 months starting on 31 October, the period starts on 31 October and ends at the close of 30 April (because April does not have 31 days).
+-- src:400 | If the legislation refers to a period of 3 months after the date on which notice is sent and notice is sent on 2 August, the period starts on 3 August (under item 2 in section 54) and ends at the close of 2 November.
+-- src:401 | This section does not apply to commencement of legislation (see section 28).
+-- s 56: the period starts at the start of the relevant day; the months are counted to find the ending month; the period ends
+-- immediately before the corresponding day in the ending month or, if there is none, at the close of the last day of that month.
+@ref Legislation Act 2019 s 56 (src:392-401)
+GIVEN n IS A NUMBER
+      start IS A DATE
+GIVETH A MAYBE DATE
+`the last day of a period of months` n `starting on` start MEANS
+    IF n LESS THAN 1
+    THEN NOTHING
+    ELSE JUST (
+        IF DATE_DAY start AT MOST `Days in month` (`the number of the month` n `months after the month of` start) (`the year of the month` n `months after the month of` start)
+        THEN Date (Day (Date (DATE_DAY start) (`the number of the month` n `months after the month of` start) (`the year of the month` n `months after the month of` start)) MINUS 1)
+        ELSE Date (`Days in month` (`the number of the month` n `months after the month of` start) (`the year of the month` n `months after the month of` start)) (`the number of the month` n `months after the month of` start) (`the year of the month` n `months after the month of` start))
+
+-- A period of N days that starts on a day: the starting day is the first of the N days (Item 3: "within 10 days of" 1 August
+-- starts on 2 August and ends by the close of 11 August).
+-- src:384 | Item 2: If the legislation states that a variation of an agreement operates from 30 June, the variation starts to operate on 1 July.
+-- src:385 | Item 3: If the legislation states that public notice must be given within 10 days of adopting a constitution and the constitution is adopted on 1 August, the notice must be given by the close of 11 August.
+@ref Legislation Act 2019 s 54 Items 2 and 3 (src:384-385)
+GIVEN n IS A NUMBER
+      start IS A DATE
+GIVETH A MAYBE DATE
+`the last day of a period of days` n `starting on` start MEANS
+    IF n LESS THAN 1
+    THEN NOTHING
+    ELSE JUST (start PLUS (n MINUS 1))
+
+-- The one entry point for a period counted from a day: how it is introduced, the day it refers to, and its length.
+-- NOTHING for weeks and years: the Act does not define either (fork F5, F6), and s 56 speaks only of months.
+-- src:380 | 54 When periods start and end
+-- src:401 | This section does not apply to commencement of legislation (see section 28).
+@ref Legislation Act 2019 ss 54 and 56 (src:380-401)
+GIVEN length IS A `Period length`
+      how IS A `How a period is introduced`
+      day IS A DATE
+GIVETH A MAYBE DATE
+`the last day of a described period` length `that is` how `by reference to` day MEANS
+    CONSIDER length's `counted in`
+    WHEN `days` THEN `the last day of a period of days` (length's `how many`) `starting on` (`the first day of a period that is` how `by reference to` day)
+    WHEN `months` THEN `the last day of a period of months` (length's `how many`) `starting on` (`the first day of a period that is` how `by reference to` day)
+    WHEN `weeks` THEN NOTHING
+    WHEN `years` THEN NOTHING
+
+-- Section 28 applies only to legislation expressed to come into force "a number of months after" a day. "10 days after" Royal assent, "2 weeks after" it or "a year after" it is outside the section,
+-- and section 56 is about months generally: the Act gives no rule for the day of commencement, so the answer is NOTHING for days, weeks and years (forks F5, F6 and F13).
+-- src:224 | This section applies to legislation expressed to come into force a number of months after a day or an act or event that occurs on a day (date A in the starting month).
+-- src:228 | This section applies instead of section 56 (on months generally).
+@ref Legislation Act 2019 s 28 (src:224) (src:228)
+GIVEN length IS A `Period length`
+      `date A` IS A DATE
+GIVETH A MAYBE DATE
+`the day of commencement when expressed as` length `after` `date A` MEANS
+    CONSIDER length's `counted in`
+    WHEN `months` THEN `the day of commencement` (length's `how many`) `months after` `date A`
+    WHEN `days` THEN NOTHING
+    WHEN `weeks` THEN NOTHING
+    WHEN `years` THEN NOTHING
+
+-- "Anniversary" is used by Schedule 1 and by section 2(1)(c) of this Act and is defined nowhere. A year is not defined either (fork F5), and there is no rule for the anniversary of a 29 February
+-- (28 February and 1 March are both natural readings), so the function answers NOTHING for every date (fork F12). An anniversary the Act mentions is a DATE input elsewhere in this encoding.
+-- src:12 | to the extent not brought into force earlier, on the fifth anniversary of the date on which the Secondary Legislation Act 2021 receives the Royal assent.
+-- src:1162 | the first anniversary of the publication commencement date (unless paragraph (b) or (c) applies); or
+@ref Legislation Act 2019 s 2(1)(c) and Schedule 1 clause 15(5) (src:12) (src:1162)
+GIVEN day IS A DATE
+      n IS A NUMBER
+GIVETH A MAYBE DATE
+`the anniversary of` day `after` n `years` MEANS NOTHING
+
+-- Item 7: "at least 10 working days" between two events does not count the day of either. The number of
+-- working days strictly between the two days; NOTHING if a day in between needs a named day the calendar lacks.
+-- src:389 | Item 7: If the legislation states that the period between sending a draft decision document to submitters for comments and finalising the decision must be at least 10 working days, do not count the day on which the draft is sent or the day on which the decision is finalised.
+@ref Legislation Act 2019 s 54 Item 7 (src:389)
+GIVEN from IS A DATE
+      to IS A DATE
+      calendar IS A LIST OF `Named day`
+GIVETH A MAYBE NUMBER
+`the number of working days strictly between` from `and` to `according to` calendar MEANS
+    IF (from PLUS 1) AT LEAST to
+    THEN JUST 0
+    ELSE CONSIDER `is a working day` (from PLUS 1) `according to` calendar
+         WHEN NOTHING THEN NOTHING
+         WHEN JUST isWorking THEN
+             CONSIDER `the number of working days strictly between` (from PLUS 1) `and` to `according to` calendar
+             WHEN NOTHING THEN NOTHING
+             WHEN JUST rest THEN JUST ((IF isWorking THEN 1 ELSE 0) PLUS rest)
+
+-- The earliest day on which the second event can happen so that at least n working days lie strictly between: the day after the nth working day after the first event.
+-- src:389 | Item 7: If the legislation states that the period between sending a draft decision document to submitters for comments and finalising the decision must be at least 10 working days, do not count the day on which the draft is sent or the day on which the decision is finalised.
+@ref Legislation Act 2019 s 54 Item 7 (src:389)
+GIVEN n IS A NUMBER
+      from IS A DATE
+      steps IS A NUMBER
+      calendar IS A LIST OF `Named day`
+GIVETH A MAYBE DATE
+`the nth working day after` n `counting from` from `searching` steps `more days in` calendar MEANS
+    IF steps LESS THAN 0
+    THEN NOTHING
+    ELSE IF n LESS THAN 1
+         THEN JUST from
+         ELSE CONSIDER `is a working day` (from PLUS 1) `according to` calendar
+              WHEN NOTHING THEN NOTHING
+              WHEN JUST isWorking THEN
+                  IF isWorking
+                  THEN `the nth working day after` (n MINUS 1) `counting from` (from PLUS 1) `searching` (steps MINUS 1) `more days in` calendar
+                  ELSE `the nth working day after` n `counting from` (from PLUS 1) `searching` (steps MINUS 1) `more days in` calendar
+
+-- src:389 | Item 7: If the legislation states that the period between sending a draft decision document to submitters for comments and finalising the decision must be at least 10 working days, do not count the day on which the draft is sent or the day on which the decision is finalised.
+@ref Legislation Act 2019 s 54 Item 7 (src:389)
+GIVEN n IS A NUMBER
+      from IS A DATE
+      calendar IS A LIST OF `Named day`
+GIVETH A MAYBE DATE
+`the earliest day for the second event if at least` n `working days must lie between it and the first event on` from `according to` calendar MEANS
+    CONSIDER `the nth working day after` n `counting from` from `searching` 400 `more days in` calendar
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST lastCounted THEN JUST (lastCounted PLUS 1)
+
+-- src:390 | 55 Extension for doing thing if day or last day is not working day
+-- src:391 | A thing that, under legislation, must or may be done on a particular day or within a limited period of time may, if that day or the last day of that period is not a working day, be done on the next working day.
+-- "A thing that must or may be done on a particular day or within a limited period of time may, if that day or the last day of that
+-- period is not a working day, be done on the next working day." It says "a limited period of time", not "a period of days",
+-- so it reaches periods of months as well (fork F4). The day itself stays open: the thing "may" be done on the next working day.
+@ref Legislation Act 2019 s 55 (src:390-391)
+GIVEN `the day or the last day of the period` IS A DATE
+      calendar IS A LIST OF `Named day`
+GIVETH A MAYBE DATE
+`the last day on which the thing may be done under section 55` `the day or the last day of the period` `according to` calendar MEANS
+    `the first working day on or after` `the day or the last day of the period` `searching` 30 `more days in` calendar
+
+GIVEN `the day or the last day of the period` IS A DATE
+      `the day the thing is done` IS A DATE
+      calendar IS A LIST OF `Named day`
+GIVETH A MAYBE BOOLEAN
+`the thing due by` `the day or the last day of the period` `may be done on` `the day the thing is done` `according to` calendar MEANS
+    CONSIDER `the last day on which the thing may be done under section 55` `the day or the last day of the period` `according to` calendar
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST extended THEN JUST (`the day the thing is done` AT MOST extended)
+
+§ `Section 57 -- determining time generally`
+
+-- src:402 | 57 Determining time generally
+-- src:403 | A reference to a point of time in legislation is to time for general purposes in New Zealand as determined by sections 3 and 4 of the Time Act 1974 (which provides for New Zealand standard time and New Zealand daylight time).
+-- A point of time is New Zealand time as the Time Act 1974 fixes it (standard or daylight). The offset is that Act's, so it is an input.
+@ref Legislation Act 2019 s 57 (src:402-403)
+GIVEN `the UTC day` IS A DATE
+      `the minutes after midnight UTC` IS A NUMBER
+      `the offset in minutes that the Time Act 1974 fixes for New Zealand then` IS A NUMBER
+GIVETH A Moment
+`the New Zealand time of` `the UTC day` `at` `the minutes after midnight UTC` `with offset` `the offset in minutes that the Time Act 1974 fixes for New Zealand then` MEANS
+    `a time on the day`
+        (`the UTC day` PLUS (FLOOR ((`the minutes after midnight UTC` PLUS `the offset in minutes that the Time Act 1974 fixes for New Zealand then`) DIVIDED BY 1440)))
+        (FLOOR (((`the minutes after midnight UTC` PLUS `the offset in minutes that the Time Act 1974 fixes for New Zealand then`) MODULO 1440) DIVIDED BY 60))
+        (((`the minutes after midnight UTC` PLUS `the offset in minutes that the Time Act 1974 fixes for New Zealand then`) MODULO 1440) MODULO 60)
+
+§ `Section 58 -- determining measurements of distance`
+
+DECLARE Place HAS
+    `metres east`   IS A NUMBER
+    `metres north`  IS A NUMBER
+    `metres above sea level` IS A NUMBER
+
+-- src:404 | 58 Determining measurements of distance
+-- src:405 | A reference to a distance means a distance measured in a straight line on a horizontal plane.
+-- A distance is measured in a straight line on a horizontal plane: height does not count. Squared, so that no square root is needed.
+@ref Legislation Act 2019 s 58 (src:404-405)
+GIVEN a IS A Place
+      b IS A Place
+GIVETH A NUMBER
+`the square of the straight-line horizontal distance between` a `and` b MEANS
+    ((a's `metres east`) MINUS (b's `metres east`)) TIMES ((a's `metres east`) MINUS (b's `metres east`))
+    PLUS ((a's `metres north`) MINUS (b's `metres north`)) TIMES ((a's `metres north`) MINUS (b's `metres north`))
+
+GIVEN a IS A Place
+      b IS A Place
+      limit IS A NUMBER
+GIVETH A BOOLEAN
+`the distance between` a `and` b `is no more than` limit `metres` MEANS
+    `the square of the straight-line horizontal distance between` a `and` b AT MOST (limit TIMES limit)
+
+§ `What the Act says about the words for a stretch of time`
+
+DECLARE `Word for a stretch of time` IS ONE OF
+    `a day`
+    `a week`
+    `a month`
+    `a year`
+    `a working day`
+    `a sitting day`
+
+DECLARE `What the Act says of a word` IS ONE OF
+    `Defined by the Act` HAS `what it means` IS A STRING
+                             `where` IS A STRING
+    `The Act is silent`
+
+-- src:80 | sitting day means a sitting day of the House of Representatives.
+-- src:127 | month means a calendar month
+-- src:153 | working day means a day of a week other than—
+@ref Legislation Act 2019 ss 5(1) and 13 (src:80) (src:127) (src:153)
+GIVEN word IS A `Word for a stretch of time`
+GIVETH A `What the Act says of a word`
+`what the Act says of` word MEANS
+    CONSIDER word
+    WHEN `a day` THEN `The Act is silent`
+    WHEN `a week` THEN `The Act is silent`
+    WHEN `a month` THEN `Defined by the Act` "a calendar month" "section 13"
+    WHEN `a year` THEN `The Act is silent`
+    WHEN `a working day` THEN `Defined by the Act` "a day of a week other than a Saturday, a Sunday and the named days, the days from 25 December to 2 January, and the Mondays and Tuesdays that follow 1 January and Waitangi Day or Anzac Day on a weekend" "section 13"
+    WHEN `a sitting day` THEN `Defined by the Act` "a sitting day of the House of Representatives" "section 5(1)"
