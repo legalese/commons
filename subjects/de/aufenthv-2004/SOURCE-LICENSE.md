@@ -4,11 +4,14 @@ The deposited texts for this subject are German statutory and official texts, an
 They are deposited and quoted in `registers/source-bundle/`:
 
 - `aufenthg-99`: Aufenthaltsgesetz (AufenthG), § 99 Verordnungsermächtigung (official-site); https://www.gesetze-im-internet.de/aufenthg_2004/__99.html
-- `aufenthv-2015-preamble-aid`: AID: preamble of the Verordnung zur Änderung der Aufenthaltsverordnung und der AZRG-Durchführungsverordnung vom 18. Dezember 2015, as quoted by Ringe and Folkerts (aid); https://www.felixringe.com/legal-exploits/
 - `aufenthv-26`: Aufenthaltsverordnung (AufenthV), § 26 Transit ohne Einreise; Flughafentransitvisum (official-site); https://www.gesetze-im-internet.de/aufenthv/__26.html
 - `aufenthv-anlage-c`: AufenthV, Anlage C (zu § 26 Absatz 2 Satz 1) (official-site); https://www.gesetze-im-internet.de/aufenthv/anlage_c.html
+- `bgbl-2015-i-54-excerpt`: Verordnung zur Änderung der Aufenthaltsverordnung und der AZRG-Durchführungsverordnung vom 18. Dezember 2015 (BGBl. 2015 I Nr. 54, S. 2467), excerpt: preamble, Art. 1 No. 10 (Anlage C), Art. 3 and signature (gazette-excerpt-transcribed); https://www.bgbl.de/xaver/bgbl/start.xav?start=%2F%2F%2A%5B%40attr_id%3D%27bgbl115s2467.pdf%27%5D
+- `bgbl-2023-i-201`: Verordnung zur Änderung der Aufenthaltsverordnung vom 27. Juli 2023 (BGBl. 2023 I Nr. 201), full gazette text: Anlage C, "Kuba" inserted (gazette); https://www.recht.bund.de/eli/bund/bgbl-1/2023/201/regelungstext.pdf?__blob=publicationFile
+- `bgbl-2026-i-161`: Einundzwanzigste Verordnung zur Änderung der Aufenthaltsverordnung vom 26. Mai 2026 (BGBl. 2026 I Nr. 161), full gazette text: Anlage C, "Indien" struck (gazette); https://www.recht.bund.de/eli/bund/bgbl-1/2026/161/regelungstext.pdf?__blob=publicationFile
 - `bverfg-2bvf3-90-paras-151-158`: BVerfG, Urteil vom 6. Juli 1999, 2 BvF 3/90 (Hennenhaltungsverordnung): paragraphs 151 to 158, the Zitiergebot passage (court-decision); https://www.bundesverfassungsgericht.de/SharedDocs/Entscheidungen/DE/1999/07/fs19990706_2bvf000390.html
 - `gg-art-80`: Grundgesetz für die Bundesrepublik Deutschland, Art. 80 (official-site); https://www.gesetze-im-internet.de/gg/art_80.html
+- `visacode-excerpt`: Regulation (EC) No 810/2009 (Visa Code), consolidated version of 28.06.2024: Article 3 and Annex IV (consolidated-excerpt-transcribed); https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02009R0810-20240628
 
 ## Terms
 
@@ -20,7 +23,9 @@ They are deposited and quoted in `registers/source-bundle/`:
   So the texts from that site are the site's reading versions, and the Federal Law Gazette (BGBl.) is where each amending act was promulgated.
 - **Terms checked**: 2026-11-02.
 - **Attribution**: Bundesamt für Justiz and juris GmbH, gesetze-im-internet.de, for the consolidated texts; Bundesgesetzblatt, via recht.bund.de, for the gazette texts; Bundesverfassungsgericht for the judgment; Bundesrat for its printed paper. None of them made or checked anything in this subject.
-- **Not deposited**: the article by Felix Ringe and Linus Folkerts, "Legal exploits may emerge at scale" (28 October 2026), https://www.felixringe.com/legal-exploits/, is the author's work and is linked, not copied. Where a file quotes the article, it quotes only the regulation's German text as the article prints it, and says so in its first lines.
+- **Browser reads**: where a file's first line says it is a transcription of a browser read (the bgbl.de archive and EUR-Lex answered curl with a JavaScript shell and an HTTP 202 with an empty body), the text was read on 2026-11-02 in a Chrome session the repository owner directed Claude to drive, and the file is the encoder's transcription of what the browser returned. Its `.meta.json` says so. Commons guide §8 treats a bot challenge as a "no"; whether a browser read is acceptable under it is for Michael to say.
+- **Not deposited**: the article by Felix Ringe and Linus Folkerts, "Legal exploits may emerge at scale" (28 October 2026), https://www.felixringe.com/legal-exploits/, is the author's work and is linked, not copied.
+- **The Visa Code excerpt (Article 3 and Annex IV of Regulation (EC) No 810/2009, consolidated version of 28.06.2024)** is EU legislation, not a German official work, so UrhG § 5 does not cover it. The reuse terms of EUR-Lex were NOT read: terms **UNDETERMINED**. One article and one annex are deposited, as the encoding needs them; resolve the terms before anything more is taken from EUR-Lex. EUR-Lex marks consolidated texts as a documentation tool with no legal effect.
 
 ## Language
 
