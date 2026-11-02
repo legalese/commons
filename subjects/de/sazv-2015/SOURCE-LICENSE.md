@@ -22,6 +22,9 @@ They are deposited and quoted in `registers/source-bundle/`:
 - `sazv-6`: SAZV, § 6 Regelmäßige tägliche Arbeitszeit (official-site); https://www.gesetze-im-internet.de/sazv/__6.html
 - `sazv-12`: SAZV, § 12 Rufbereitschaft (official-site); https://www.gesetze-im-internet.de/sazv/__12.html
 - `sazv-19`: SAZV, § 19 Ausnahmen für bestimmte Soldatinnen und Soldaten (official-site); https://www.gesetze-im-internet.de/sazv/__19.html
+- `sazv-5-before-2025`: SAZV, § 5 as in force before 1 April 2025, the version BGBl. 2025 I Nr. 78 Art. 5 No. 1 replaced (secondary-site-transcription, not authoritative; the gazette of 2015 was not read; only the statutory text was taken, none of buzer's markup or annotations); https://www.buzer.de/gesetz/11778/al211499-0.htm
+- `sazv-6-before-2025`: SAZV, § 6 as in force before 1 April 2025, the version BGBl. 2025 I Nr. 78 Art. 5 No. 3 replaced (secondary-site-transcription, not authoritative; the gazette of 2015 was not read; only the statutory text was taken, none of buzer's markup or annotations); https://www.buzer.de/gesetz/11778/al211501-0.htm
+- `sazv-12-before-2025`: SAZV, § 12 as in force before 1 January 2025, the version BGBl. 2025 I Nr. 78 Art. 5 No. 4 replaced with retroactive effect (secondary-site-transcription, not authoritative; every word is also determined by the deposited gazette instructions; only the statutory text was taken, none of buzer's markup or annotations); https://www.buzer.de/gesetz/11778/al211464-0.htm
 
 ## Terms
 
@@ -34,6 +37,7 @@ They are deposited and quoted in `registers/source-bundle/`:
 - **Terms checked**: 2026-11-02.
 - **Attribution**: Bundesamt für Justiz and juris GmbH, gesetze-im-internet.de, for the consolidated texts; Bundesgesetzblatt, via recht.bund.de, for the gazette texts; Bundesverfassungsgericht for the judgment; Bundesrat for its printed paper. None of them made or checked anything in this subject.
 - **Browser reads**: where a file's `.meta.json` says it was obtained in a Chrome session, curl had been answered with a JavaScript shell (bgbl.de) or an HTTP 202 with an empty body (EUR-Lex); the repository owner directed Claude to drive the browser and saved the PDF or the page himself on 2026-11-02. Commons guide §8 treats a bot challenge as a "no"; whether a browser read is acceptable under it is for Michael to say.
+- **buzer.de** (the `*-before-2025` transcriptions): a private consolidation that keeps earlier versions. Its usage notes (https://www.buzer.de/h.htm) and imprint (https://www.buzer.de/i.htm) were fetched on 2026-11-02; a search of them for "Urheber", "Nutzung", "Lizenz" and "Copyright" found no licence or reuse conditions. Only the statutory wording was taken, which § 5(1) UrhG leaves unprotected; buzer's sentence numbers, highlighting and annotations were not. Attribution: buzer.de, for the transcriptions of the earlier versions.
 - **Not deposited**: the article by Felix Ringe and Linus Folkerts, "Legal exploits may emerge at scale" (28 October 2026), https://www.felixringe.com/legal-exploits/, is the author's work and is linked, not copied.
 ## Language
 
