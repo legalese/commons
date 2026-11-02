@@ -11,6 +11,7 @@ encoding at all, which the `what it encodes` column says plainly.
 
 | subject | what it encodes | status |
 | --- | --- | --- |
+| [`de/aufenthv-2004`](de/aufenthv-2004) | Aufenthaltsverordnung § 26 and Anlage C (the airport transit visa), with the power it rests on (AufenthG § 99(3a)) and the citation test of Grundgesetz Art. 80(1) sentence 3 — a law layer and a seat for a person changing planes at a German airport, answering under Annex C as printed and under the reading on which the 2015 additions are void — encoding `legalese-sonnet-5.5` | `draft` |
 | [`uk/child-benefit-rates-regulations-2006`](uk/child-benefit-rates-regulations-2006) | Child Benefit (Rates) Regulations 2006 (S.I. 2006/965) — the whole text as deposited, as a law layer and a seat for a person who claims Child Benefit — encoding `legalese-sonnet-5.5` | `draft` |
 | [`uk/social-security-benefits-up-rating-order-2026`](uk/social-security-benefits-up-rating-order-2026) | Social Security Benefits Up-rating Order 2026 (S.I. 2026/148) — the whole text as deposited (the amounts it sets), as a law layer and a seat for a person who receives a UK social security benefit — encoding `legalese-sonnet-5.5` | `draft` |
 | [`uk/personal-independence-payment-regulations-2013`](uk/personal-independence-payment-regulations-2013) | Social Security (Personal Independence Payment) Regulations 2013 (S.I. 2013/377) — the whole text as deposited, as a law layer and a seat for a person who claims Personal Independence Payment — encoding `legalese-sonnet-5.5` | `draft` |
