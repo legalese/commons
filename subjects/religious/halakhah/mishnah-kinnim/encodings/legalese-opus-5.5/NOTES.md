@@ -197,16 +197,25 @@ The gloss's "thesis" that the tractate may be theoretical is not gloss-only: Rei
 **What each backend did with it (run 2026-11-02 on nye; nothing here is merged):**
 
 - **`l4 prove` (Z3)**, draft legalese/l4-ide#784 at `193690e14`, z3 4.16.0, via `prove/prove.sh`: **PASS**.
-  7 universal obligations proved: 1-2-3-10-100 cannot be halved (all 32 divisions); one burnt offering is safe in 1:3's mixture; the lower bounds 200, 20, 16 and 20 birds for the Mishnah's, Reiss's, R. Heller's and Gewirtz's cases; and 3:4's two.
+  8 universal obligations proved: 1-2-3-10-100 cannot be halved (all 32 divisions); one burnt offering is safe in 1:3's mixture; the lower bounds 200, 20, 16 and 20 birds for the Mishnah's, Reiss's, R. Heller's and Gewirtz's cases; 3:4's two; and section F, below.
   5 ground witnesses satisfied: each of the four bounds is reached, and 1-3-5-6-13 can be halved.
-  4 false claims refuted, each with a counterexample:
+  5 false claims refuted, each with a counterexample:
   - that two burnt offerings are safe in 1:3's mixture: `X1 = 2` (both of them the first woman's);
   - that 201 of 232 are valid: `A5 = 116` (the hundred's birds all above);
   - Tiferet Yisrael's 20 birds on 1-2-3-4-5: `H = 2, 3, 2, 8, 0`, eighteen;
-  - filling both containers on 3-3-3-5-5 (22 birds): `G = 0, 0, 0, 10, 9`, twenty.
-  The solver's fragment has no lists and no recursion, so the obligations are stated per case over plain numbers, calling the encoding's own scalar rule `the valid offerings of a nest of pairs with so many of its birds above`; the general theorem over any list of owners is not stated to the solver.
+  - filling both containers on 3-3-3-5-5 (22 birds): `G = 0, 0, 0, 10, 9`, twenty;
+  - section F's control (below): `P = 2, U = 4`.
+
+  **What the solver checks, and what it does not.**
+  The solver's fragment has no lists and no recursion, so the rules that give the encoding's chapter-3 answers cannot be handed to it: the smallest-majority formula, which answers 3:2 (`kn-ch3.l4:52`), and the search over apportionments, which answers the designated mixtures and the splits the text does not name (`kn-ch3.l4:77`, `:118–122`), both take a list of owners.
+  The obligations are written by hand instead, one per case, with a free number for each owner's birds above, and the sum over that case's owners written out.
+  Each owner's count is the plain-number rule `the valid offerings of a nest of pairs with so many of its birds above`.
+  The search scores a nest with a different rule, `the valid offerings of an obligation with so many of its birds above`, on the record `a nest of pairs` builds; section F proves the two equal for every number of pairs and of birds above, and its control (a nest owing one burnt offering more) is refuted, so the per-nest count the solver reasons about is the one the search uses.
+  Not proved: that each case's written-out sum is the set of apportionments the search ranges over.
+  That link rests on evaluation and on reading the two: on these four cases `kn-tests.l4` asserts that the search equals twice the smallest majority, and that 3:2's rule gives 200, 20, 16 and 20 birds, the bounds the solver shows are least.
+  The general theorem over any list of owners is not stated to the solver at all.
 - **Lean 4** (`l4-ee export lean --check`, l4-verify `da31bb0` on l4-ide `9359ae64d`, Lean 4.35.0).
-  On `prove/kn-obligations.l4`, 5 of 17 theorems proved, the 5 ground witnesses, agreeing with the evaluator.
+  On `prove/kn-obligations.l4` (as it stood before section F was added), 5 of 17 theorems proved, the 5 ground witnesses, agreeing with the evaluator.
   **None of the 7 universal obligations proved**: the `ASSUME`s became Lean `variable`s, so each theorem is stated universally, but `grind` did not unfold the encoding's definitions.
   On `prove/kn-refutations.l4`, 0 of 4 proved (correctly; Lean gives no counterexample).
   On `kn-tests.l4` the export skipped 15 decisions (most for "a type the typechecker did not pin down", the rest because they use one of those) and the 57 assertions that use them; Lean then reported 5 "fail to show termination" errors on the recursive decisions and 95 `grind` failures, and the run broke without a verdict.
