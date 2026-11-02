@@ -55,7 +55,7 @@ One assertion failed on the first run: my own transcription put a `TRUE` in the 
 | 2015 amending regulation, preamble | encoded | `the powers cited in the preamble of the 2015 amending regulation`, from the aid (finding 3) |
 | 2015 amending regulation, Art. 1 No. 10 (the Annex C change) | out-of-scope | not obtained from the gazette; the statement that it added Mali and South Sudan is the article's (finding 3) |
 | the 2023 amendment (adds Cuba) and the 2026 amendment (removes India) | out-of-scope | no date axis: only Anlage C as printed on 2026-11-02 is encoded (fork F8) |
-| EU Visa Code (Regulation (EC) No 810/2009), Art. 3(1), (2), (5), Annex IV | out-of-scope | not deposited (EUR-Lex bot challenge); asked as facts |
+| EU Visa Code (Regulation (EC) No 810/2009), Art. 3(1), (2), (5), Annex IV | out-of-scope | not deposited (EUR-Lex answered the fetch with HTTP 202 and an empty body; not retried or worked around); asked as facts |
 | AufenthG § 13(2) (what counts as entering) | out-of-scope | asked as the fact "stays only in the transit area" |
 | the rest of AufenthV; AZRG § 40; Verwaltungskostengesetz | out-of-scope | not part of the question |
 
