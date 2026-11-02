@@ -6,8 +6,8 @@ It states the law as the Mishnah and its commentators give it, and claims nothin
 
 The sources are in `../../registers/source-bundle/`: the Hebrew text from he.wikisource, with Bartenura, Tiferet Yisrael on chapter 3 and Maimonides' code as aids (`../../SOURCE-LICENSE.md`, copied here as `SOURCE-LICENSE.md`).
 The target is `main`; the build compared with is 1.6.108 (main, 2ae7c9b, 2026-11-02).
-Modules: `kn-nouns.l4`, `kn-ch1.l4`, `kn-ch2.l4`, `kn-majority.l4` (the counting core), `kn-ch3.l4`, `kn-seat.l4`, `kn-tests.l4`, `kn-cases-seat.l4`; the solver obligations in `prove/`.
-The six rule modules are generated from `tools/*.l4.in` by `tools/render.py`, which pastes each quotation from the bundle; the tests, the seat cases and `prove/` are written directly.
+Modules: `kn-nouns.l4`, `kn-ch1.l4`, `kn-ch2.l4`, `kn-majority.l4` (the counting core), `kn-majority-fixed.l4` (3:2 at a fixed number of owners, with no list), `kn-ch3.l4`, `kn-seat.l4`, `kn-tests.l4`, `kn-cases-seat.l4`; the solver obligations in `prove/`.
+The seven rule modules are generated from `tools/*.l4.in` by `tools/render.py`, which pastes each quotation from the bundle; `kn-majority-fixed.l4.in` and `prove/kn-fixed-arity.l4` are themselves written by `tools/gen_fixed_arity.py`; the tests, the seat cases and the rest of `prove/` are written directly.
 
 ## Seat
 
@@ -22,7 +22,7 @@ One question is asked by an heir (2:5), and one is labelled as going beyond the 
 One agent (Claude Opus 5.5), working alone in one session, with no subagents and **no independent test pass**.
 The Hebrew was read directly; every English word in the encoding is the encoder's gloss.
 Quotations were pasted by script (`tools/render.py` calls `srcrefs.py quoteid`), never retyped.
-Every expected value in the tests is taken from a source, which the comment above it names.
+Every expected value in the tests is taken from a source, which the comment above it names, except the 15 that check the fixed-size formulas against the list ones.
 Because a green run proves nothing about the tests, two mutants were run against `kn-tests.l4` in a scratch copy: making each middle nest in 2:3 lose one pair a round trip instead of two failed 6 assertions; replacing Koppel's formula by Tiferet Yisrael's failed 9.
 
 ## Sources, and what each contributed
@@ -87,7 +87,7 @@ kinin-lean also reports Sefaria's segmentation, which divides chapter 2 differen
 | 2:5 | turtledoves and young pigeons; Ben Azzai | encoded | `what she must bring again when her pair was of two species` |
 | 2:5 | the heirs | encoded | `her heirs must bring the other offering of her pair` |
 | 3:1 | the asking priest is chapters 1–2; equal obligations, not asking: half every way | encoded | `the fewest offerings certainly valid when nests were mixed and the priest did not ask` |
-| 3:2 | 1, 2, 3, 10, 100: half, half, the majority; the general principle | encoded | the same rule, and `kn-majority.l4` throughout |
+| 3:2 | 1, 2, 3, 10, 100: half, half, the majority; the general principle | encoded | the same rule, and `kn-majority.l4` throughout; `kn-majority-fixed.l4` for two, three and five owners |
 | 3:3 | a sin for one, a burnt for another: half, half, both invalid | encoded | `the fewest offerings certainly valid in a mixture with designated birds, the priest not asking` |
 | 3:4 | sin, burnt, unassigned and designated: half, half, only the unassigned, divided | encoded | the same; `the unassigned nest counts one offering for each of the two women` |
 | 3:5 | a designated bird among an obligation already partly offered | encoded | `the birds that may be offered when a designated bird falls among an obligation's remaining birds` |
@@ -114,9 +114,11 @@ For 3:2 they differ in scope for two owners and in substance beyond them; see F3
 
 **F3. "The majority is valid" (3:2).**
 (a) **Koppel and Reiss** (taken): the smallest sum of some owners' pairs that is at least half the total; equivalently, in Koppel's own wording as Beller reports it (p. 155), the larger side of the most even division of the owners into two groups.
+For two, three and five owners with any counts, the solver proves it is the worst case (`prove/kn-fixed-arity.l4`; section "Formal treatments, and the backends").
 Koppel also found the reading in R. David of Dubno's *David ha-Levi* (1845), in an article by Z. H. Yaffe in *Talpiot* (1895) and in R. A. Y. Weiss's *Shenei Ofarim* (1997) (Reiss n. 29(1)), and remarked that it is implicit in Tiferet Yisrael (Beller p. 155).
 Taken because Meng asked for an encoding informed by Reiss and Koppel, and because it is the only one of the four readings that equals the worst case for any number of owners; every commentator read takes the worst case as the rule (Gewirtz n. 4: "I know of no instance where this rule is disputed"; Beller p. 155).
 (b) **Bartenura**: the larger woman's number, two women only; NOTHING for more.
+For two women it equals (a) for every count (proved), as Beller says the two readings coincide (p. 156).
 (c) **Tiferet Yisrael**: one woman's number if it exceeds all the others together, otherwise the others'; wrong on R. Heller's 1-2-3-4-5 (ten, against eight), and, as encoded, on Gewirtz's two counterexamples too (26 against 17, and 14 against 10).
 (d) **Maimonides** (8:6–7): for two nests the larger is valid, because all the larger owner's offerings count; his reason attributes the count to her, which the others do not.
 Reiss n. 28 calls it "radically different" and records that its formulation mystified Ravad and R. Yosef Karo.
@@ -196,15 +198,17 @@ The gloss's "thesis" that the tractate may be theoretical is not gloss-only: Rei
 
 **What each backend did with it (run 2026-11-02 on nye; nothing here is merged):**
 
-- **`l4 prove` (Z3)**, draft legalese/l4-ide#784 at `193690e14`, z3 4.16.0, via `prove/prove.sh`: **PASS**.
+- **`l4 prove` (Z3)**, draft legalese/l4-ide#784 at `193690e14`, z3 4.16.0, via `prove/prove.sh` (three files, 5 s in all on nye): **PASS**.
+  The counts below are for `prove/kn-obligations.l4` and `prove/kn-refutations.l4`; `prove/kn-fixed-arity.l4` follows them.
   8 universal obligations proved: 1-2-3-10-100 cannot be halved (all 32 divisions); one burnt offering is safe in 1:3's mixture; the lower bounds 200, 20, 16 and 20 birds for the Mishnah's, Reiss's, R. Heller's and Gewirtz's cases; 3:4's two; and section F, below.
   5 ground witnesses satisfied: each of the four bounds is reached, and 1-3-5-6-13 can be halved.
-  5 false claims refuted, each with a counterexample:
+  6 false claims refuted, each with a counterexample:
   - that two burnt offerings are safe in 1:3's mixture: `X1 = 2` (both of them the first woman's);
   - that 201 of 232 are valid: `A5 = 116` (the hundred's birds all above);
   - Tiferet Yisrael's 20 birds on 1-2-3-4-5: `H = 2, 3, 2, 8, 0`, eighteen;
   - filling both containers on 3-3-3-5-5 (22 birds): `G = 0, 0, 0, 10, 9`, twenty;
-  - section F's control (below): `P = 2, U = 4`.
+  - section F's control (below): `P = 2, U = 4`;
+  - the five-owner control of `prove/kn-fixed-arity.l4` (below): one more than the bound.
 
   **What the solver checks, and what it does not.**
   The solver's fragment has no lists and no recursion, so the rules that give the encoding's chapter-3 answers cannot be handed to it: the smallest-majority formula, which answers 3:2 (`kn-ch3.l4:52`), and the search over apportionments, which answers the designated mixtures and the splits the text does not name (`kn-ch3.l4:77`, `:118–122`), both take a list of owners.
@@ -213,7 +217,17 @@ The gloss's "thesis" that the tractate may be theoretical is not gloss-only: Rei
   The search scores a nest with a different rule, `the valid offerings of an obligation with so many of its birds above`, on the record `a nest of pairs` builds; section F proves the two equal for every number of pairs and of birds above, and its control (a nest owing one burnt offering more) is refuted, so the per-nest count the solver reasons about is the one the search uses.
   Not proved: that each case's written-out sum is the set of apportionments the search ranges over.
   That link rests on evaluation and on reading the two: on these four cases `kn-tests.l4` asserts that the search equals twice the smallest majority, and that 3:2's rule gives 200, 20, 16 and 20 birds, the bounds the solver shows are least.
-  The general theorem over any list of owners is not stated to the solver at all.
+  The general theorem over any list of owners is not stated to the solver at all; at a fixed number of owners with any counts it is (next).
+
+  **3:2 at a fixed number of owners, for any counts** (`prove/kn-fixed-arity.l4`, generated by `tools/gen_fixed_arity.py`).
+  `kn-majority-fixed.l4` writes the smallest majority out for two, three and five owners over every choice of owners, with no list.
+  For each size, two theorems are proved for every count: whatever the apportionment of half the birds above, at least twice the smallest majority are valid; and Reiss's division (§6: owners making up the largest minority all below, every other owner but one all above, the last split) reaches exactly that.
+  For two owners, a third: the smallest majority is the larger owner's pairs, Bartenura's count.
+  Times for z3 on each emitted script (2026-11-03): two owners 0.01, 0.01 and under 0.01 s; three owners 0.01 and 0.01 s; five owners 0.16 s for the bound and 1.37 s for Reiss's division.
+  The control (one more than the bound, five owners) is refuted: counts 93, 13, 20, 32, 22 with 180 of the first owner's birds above.
+  Not proved by the solver: that Reiss's division is in whole birds when the counts are whole. Each of its values is 0, twice an owner's pairs, or twice the last owner's pairs less (all the pairs less twice the chosen owners' pairs), so it is whole by construction; stated as `FLOOR w EQUALS w` it timed out at 120 s for every size, so the division theorem is stated over counts of at least one pair, whole or not, with its range written out.
+  The first version of these theorems, with that whole-number condition inside, timed out at 600 s for the division at every size; on 19 concrete cases the evaluator had found the division right.
+  The equality of these fixed-size formulas with the list formula rests on evaluation, on the 15 cases `kn-tests.l4` checks.
 - **Lean 4** (`l4-ee export lean --check`, l4-verify `da31bb0` on l4-ide `9359ae64d`, Lean 4.35.0).
   On `prove/kn-obligations.l4` (as it stood before section F was added), 5 of 17 theorems proved, the 5 ground witnesses, agreeing with the evaluator.
   **None of the 7 universal obligations proved**: the `ASSUME`s became Lean `variable`s, so each theorem is stated universally, but `grind` did not unfold the encoding's definitions.
@@ -234,15 +248,16 @@ kn-cases-seat.l4                               0        49       0        0     
 kn-ch1.l4                                      0         0       0        0         0 |      0         0       0        0  same
 kn-ch2.l4                                      0         0       0        0         0 |      0         0       0        0  same
 kn-ch3.l4                                      0         0       0        0         0 |      0         0       0        0  same
+kn-majority-fixed.l4                           0         0       0        0         0 |      0         0       0        0  same
 kn-majority.l4                                 0         0       0        0         0 |      0         0       0        0  same
 kn-nouns.l4                                    0         0       0        0         0 |      0         0       0        0  same
 kn-seat.l4                                     0         0       0        0         0 |      0         0       0        0  same
-kn-tests.l4                                    0       157       0        0         0 |      0       157       0        0  same
-TOTAL (8 modules)                              0       206       0        0           |      0       206       0        0
+kn-tests.l4                                    0       172       0        0         0 |      0       172       0        0  same
+TOTAL (9 modules)                              0       221       0        0           |      0       221       0        0
 ```
 
 `check.sh` exit status 0; no failing assertion is expected.
-`srcrefs.py check --refs`: 98 quote lines, 28 runs, 51 locators, 0 problems; `--strict` reports 8, all of one kind: a later rule cites an earlier quote run in its file, which plain `--refs` allows.
+`srcrefs.py check --refs`: 104 quote lines, 29 runs, 58 locators, 0 problems; `--strict` reports 8, all of one kind: a later rule cites an earlier quote run in its file, which plain `--refs` allows.
 Bartenura, whose lines are whole paragraphs, is cited by file and line in prose, not quoted.
 `prove/` is not run by `check.sh`: plain `l4 run` reports its `ASSUME` assertions as errors on both compilers.
 Run `prove/prove.sh` with an `l4` that has `prove`.
@@ -255,10 +270,13 @@ Run `prove/prove.sh` with an `l4` that has `prove`.
    This encoding cites pp. 96–102.
 2. **The gloss misattributes Reiss's paper to Koppel** (section "Formal treatments").
 3. **The definition and the formula agree** on all ten cases that `kn-tests.l4` checks them on (a search over every apportionment, against Koppel's and Reiss's smallest majority), and the solver proves the bound universally for four of them.
+   At two, three and five owners the solver proves more: for every count, the smallest majority is the worst case, and Reiss's division attains it.
    Tiferet Yisrael's rule agrees with Koppel's on every example Tiferet Yisrael gives, and fails on R. Heller's and on Gewirtz's two counterexamples.
 4. **Bartenura's decree reproduces 2:3**: one rule (each departure costs a pair; the middle nests twice a round trip) gives all three of the text's tables, and the "some say" variant gives five.
 5. **The cover reproduces 3:6's first numbers**: Bartenura's possible shortfalls, covered species by species, give 1, 2, 3 and 4.
 6. **1:3's count needs neither reason nor owner**: the text's "whether for one reason or two, one woman or two" is borne out by a rule that takes neither as an input.
+7. **For two women, Koppel's majority and Bartenura's are the same number for every count** (proved), which bears out Beller's remark that the readings coincide for two women.
+8. **A compiler finding: main 1.6.108 did not finish reading a module whose `max` calls nested 31 deep** within 300 s, where the dev build read it at once; written as a balanced tree, 5 deep, main reads it in under a second (`tools/gen_fixed_arity.py`, `nested_max`). `check.sh` reported it as a module that reads differently on main.
 
 ## Open questions for a domain expert
 
