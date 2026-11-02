@@ -8,7 +8,9 @@ They are deposited and quoted in `registers/source-bundle/`:
 - `bkv-9`: BKV, § 9 Durchführung der Aufgaben (as amended with effect from 1 August 2026) (official-site); https://www.gesetze-im-internet.de/bkv/__9.html
 - `bkv-eingangsformel`: BKV, Eingangsformel (the original 1997 preamble) (official-site); https://www.gesetze-im-internet.de/bkv/eingangsformel.html
 - `brd-312-26`: Bundesrat Drucksache 312/26 of 28 May 2026: Siebte Verordnung zur Änderung der Berufskrankheiten-Verordnung (government draft with its Begründung) (parliamentary-document); https://dserver.bundestag.de/brd/2026/0312-26.pdf
+- `btd-19-17586-p101-102`: Bundestag Drucksache 19/17586, pages 101 and 102 (Begründung of the bill that added SGB VII § 9(1a)) (parliamentary-document-excerpt); https://dserver.bundestag.de/btd/19/175/1917586.pdf
 - `bverfg-2bvf3-90-paras-151-158`: BVerfG, Urteil vom 6. Juli 1999, 2 BvF 3/90 (Hennenhaltungsverordnung): paragraphs 151 to 158, the Zitiergebot passage (court-decision); https://www.bundesverfassungsgericht.de/SharedDocs/Entscheidungen/DE/1999/07/fs19990706_2bvf000390.html
+- `bverwg-7c4-11-excerpt`: BVerwG, Urteil vom 3. November 2011, 7 C 4.11, Rn. 29 to 34 (IFG § 3 nos. 3 and 4 and statements to the Petitions Committee) (court-decision-excerpt); https://www.bverwg.de/031111U7C4.11.0
 - `gg-art-80`: Grundgesetz für die Bundesrepublik Deutschland, Art. 80 (official-site); https://www.gesetze-im-internet.de/gg/art_80.html
 - `ifg-1`: Informationsfreiheitsgesetz (IFG), § 1 Grundsatz (official-site); https://www.gesetze-im-internet.de/ifg/__1.html
 - `ifg-3`: IFG, § 3 Schutz von besonderen öffentlichen Belangen (official-site); https://www.gesetze-im-internet.de/ifg/__3.html
@@ -24,8 +26,7 @@ They are deposited and quoted in `registers/source-bundle/`:
   So the texts from that site are the site's reading versions, and the Federal Law Gazette (BGBl.) is where each amending act was promulgated.
 - **Terms checked**: 2026-11-02.
 - **Attribution**: Bundesamt für Justiz and juris GmbH, gesetze-im-internet.de, for the consolidated texts; Bundesgesetzblatt, via recht.bund.de, for the gazette texts; Bundesverfassungsgericht for the judgment; Bundesrat for its printed paper. None of them made or checked anything in this subject.
-- **Not deposited**: the article by Felix Ringe and Linus Folkerts, "Legal exploits may emerge at scale" (28 October 2026), https://www.felixringe.com/legal-exploits/, is the author's work and is linked, not copied. Where a file quotes the article, it quotes only the regulation's German text as the article prints it, and says so in its first lines.
-
+- **Not deposited**: the article by Felix Ringe and Linus Folkerts, "Legal exploits may emerge at scale" (28 October 2026), https://www.felixringe.com/legal-exploits/, is the author's work and is linked, not copied.
 ## Language
 
 German is the only authoritative language. English in the encoding is a gloss. The article's English renderings are "unofficial translation" by the article's own label and are not used as source.
