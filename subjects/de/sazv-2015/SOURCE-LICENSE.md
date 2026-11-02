@@ -17,6 +17,11 @@ They are deposited and quoted in `registers/source-bundle/`:
 - `sg-30c`: Soldatengesetz (SG), § 30c Arbeitszeit (official-site); https://www.gesetze-im-internet.de/sg/__30c.html
 - `sg-30d`: SG, § 30d Höchstzulässige Arbeitszeit bei bestimmten Tätigkeiten (official-site); https://www.gesetze-im-internet.de/sg/__30d.html
 - `sg-93`: SG, § 93 Verordnungsermächtigungen (official-site); https://www.gesetze-im-internet.de/sg/__93.html
+- `sazv-5`: SAZV, § 5 Regelmäßige wöchentliche Arbeitszeit (official-site); https://www.gesetze-im-internet.de/sazv/__5.html
+- `sazv-5a`: SAZV, § 5a Höchstarbeitszeit bei bestimmten Tätigkeiten der fliegenden Besatzung und der Schiffsbesatzung (official-site); https://www.gesetze-im-internet.de/sazv/__5a.html
+- `sazv-6`: SAZV, § 6 Regelmäßige tägliche Arbeitszeit (official-site); https://www.gesetze-im-internet.de/sazv/__6.html
+- `sazv-12`: SAZV, § 12 Rufbereitschaft (official-site); https://www.gesetze-im-internet.de/sazv/__12.html
+- `sazv-19`: SAZV, § 19 Ausnahmen für bestimmte Soldatinnen und Soldaten (official-site); https://www.gesetze-im-internet.de/sazv/__19.html
 
 ## Terms
 
