@@ -15,17 +15,19 @@ They are deposited and quoted in `registers/source-bundle/`:
 - `ifg-1`: Informationsfreiheitsgesetz (IFG), § 1 Grundsatz (official-site); https://www.gesetze-im-internet.de/ifg/__1.html
 - `ifg-3`: IFG, § 3 Schutz von besonderen öffentlichen Belangen (official-site); https://www.gesetze-im-internet.de/ifg/__3.html
 - `sgb7-9`: Siebtes Buch Sozialgesetzbuch (SGB VII), § 9 Berufskrankheit (official-site); https://www.gesetze-im-internet.de/sgb_7/__9.html
+- `btd-19-17586-p130-132`: Bundestag Drucksache 19/17586, pages 130 to 132 (Begründung zu Artikel 24, the BKV §§ 7 to 11) (parliamentary-document-excerpt); https://dserver.bundestag.de/btd/19/175/1917586.pdf
+- `btd-19-17586-p47-48`: Bundestag Drucksache 19/17586, pages 47 and 48 (Artikel 24 of the bill: BKV §§ 7 to 11 as proposed, including the original § 9 Absatz 5) (parliamentary-document-excerpt); https://dserver.bundestag.de/btd/19/175/1917586.pdf
 
 ## Terms
 
 - **Basis**: § 5 of the Urheberrechtsgesetz (UrhG), "Amtliche Werke". Fetched from https://www.gesetze-im-internet.de/urhg/__5.html on 2026-11-02.
   § 5(1): "Gesetze, Verordnungen, amtliche Erlasse und Bekanntmachungen sowie Entscheidungen und amtlich verfaßte Leitsätze zu Entscheidungen genießen keinen urheberrechtlichen Schutz."
   § 5(2) extends this to "andere amtliche Werke, die im amtlichen Interesse zur allgemeinen Kenntnisnahme veröffentlicht worden sind", with the restriction that the rules on the ban on alteration and on naming the source in § 62(1) to (3) and § 63(1) and (2) apply accordingly.
-  The statutes, regulations, the gazette texts and the court decision fall under § 5(1). A Bundesrat printed paper (where one is deposited) falls under § 5(2): this subject quotes it unaltered and names its source.
+  The statutes, regulations, the gazette texts and the court decision fall under § 5(1). A Bundesrat or Bundestag printed paper (where one is deposited) falls under § 5(2): this subject quotes it unaltered and names its source.
 - **The site's own terms**: https://www.gesetze-im-internet.de/impressum.html was fetched on 2026-11-02. It names the editors (Bundesamt für Justiz) and the technical provider (juris GmbH), says the service gives no legal advice, and disclaims any guarantee of completeness, correctness, currency and availability. It states no licence or reuse conditions.
   So the texts from that site are the site's reading versions, and the Federal Law Gazette (BGBl.) is where each amending act was promulgated.
 - **Terms checked**: 2026-11-02.
-- **Attribution**: Bundesamt für Justiz and juris GmbH, gesetze-im-internet.de, for the consolidated texts; Bundesgesetzblatt, via recht.bund.de, for the gazette texts; Bundesverfassungsgericht for the judgment; Bundesrat for its printed paper. None of them made or checked anything in this subject.
+- **Attribution**: Bundesamt für Justiz and juris GmbH, gesetze-im-internet.de, for the consolidated texts; Bundesgesetzblatt, via recht.bund.de, for the gazette texts; Bundesverfassungsgericht for the judgment; Bundesrat and Deutscher Bundestag for their printed papers. None of them made or checked anything in this subject.
 - **Not deposited**: the article by Felix Ringe and Linus Folkerts, "Legal exploits may emerge at scale" (28 October 2026), https://www.felixringe.com/legal-exploits/, is the author's work and is linked, not copied.
 ## Language
 
