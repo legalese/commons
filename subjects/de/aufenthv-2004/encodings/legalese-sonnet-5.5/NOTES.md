@@ -73,7 +73,7 @@ The answer an officer applying the rule today would give is (a).
 
 **F2. How far does the voidness go?**
 (a) The whole of Article 1 No. 10, which is one sentence of two operations ("In Anlage C wird das Wort „Myanmar“ durch das Wort „Mali“ ersetzt und wird nach dem Wort „Sudan“ das Wort „Südsudan“ eingefügt", `bgbl-2015-i-54.txt:75-76`). Encoded as reading (b): the previous annex comes back, Myanmar in it.
-(b) Only the additions, with the removal of Myanmar surviving as severable. Not encoded: it would leave Myanmar out and Mali and South Sudan out, a state the gazette never had. The article does not discuss the point, and its sentence "the previous Annex C listed neither Mali nor South Sudan" is true of the previous annex only because that annex had Myanmar instead. A defence brief written on 2026-11-02 (a Sonnet agent arguing the Ministry's side, files only) grades the Myanmar deletion as severable and valid on any view, because it widens an exemption, which § 99(1) no. 1 plainly covers, and puts the chance of a court voiding it under 15%; so (b) now has the better argument, and (a) stays encoded only because it is the reading on which the article's "void" is one instruction.
+(b) Only the additions, with the removal of Myanmar surviving as severable. Encoded on 2026-11-02 as the third reading, `as if only the 2015 additions to Annex C were void`, with `the reading of Annex C to apply given severability`, which takes the severability of the deletion as a second judgment input; it leaves Myanmar out and Mali and South Sudan out, a state the gazette never had. The seat's exported questions keep the two-way choice (reading (a) when void). The article does not discuss the point, and its sentence "the previous Annex C listed neither Mali nor South Sudan" is true of the previous annex only because that annex had Myanmar instead. A defence brief written on 2026-11-02 (a Sonnet agent arguing the Ministry's side, files only) grades the Myanmar deletion as severable and valid on any view, because it widens an exemption, which § 99(1) no. 1 plainly covers, and puts the chance of a court voiding it under 15%; so (b) now has the better argument, and (a) stays encoded only because it is the reading on which the article's "void" is one instruction.
 (c) The whole 2015 amending regulation: BVerfG 2 BvF 3/90 para. 158 speaks of "die Verordnung" (`bverfg-2bvf3-90-paras-151-158.txt:65-71`), which would reach its other provisions as well. The article does not argue it.
 The encoding follows (a) because it is the reading that treats No. 10 as one provision, which is how the article's "void" is applied; the answer table shows the consequence for Myanmar nationals.
 
@@ -128,6 +128,8 @@ Reading (b) assumes there was no other amendment of Anlage C between 2015 and to
 | the twelve Annex IV states (for example Nigeria) | yes | yes |
 | any other state | no | no |
 
+Under the third reading, `as if only the 2015 additions to Annex C were void` (F2(b), added 2026-11-02), the column "if void" reads the same except that Myanmar is "no": the deletion stands and no reading lists it.
+
 ## Checks run
 
 `./check.sh` in this folder, target `main`, on 2026-11-02 (the `l4` is a dev build, 25a091f4...; the main build compared with is 1.6.108 (main, 2ae7c9b, 2026-11-02)):
@@ -139,8 +141,8 @@ module                                    errors satisfied  failed  refused  exp
 atv-cases-seat.l4                              0        14       0        0         0 |      0        14       0        0  same
 atv-law.l4                                     0         0       0        0         0 |      0         0       0        0  same
 atv-seat.l4                                    0         0       0        0         0 |      0         0       0        0  same
-atv-tests.l4                                   0        56       0        0         0 |      0        56       0        0  same
-TOTAL (4 modules)                              0        70       0        0           |      0        70       0        0
+atv-tests.l4                                   0        67       0        0         0 |      0        67       0        0  same
+TOTAL (4 modules)                              0        81       0        0           |      0        81       0        0
 (a failed assertion is also an error; any other error, or any refused assertion, makes the run red)
 (target main: every module has the same four counts on the main build. That rules out a module main rejects and a difference an assertion shows; it does not see a different TRACE outcome, or any difference no assertion exercises)
 ```
