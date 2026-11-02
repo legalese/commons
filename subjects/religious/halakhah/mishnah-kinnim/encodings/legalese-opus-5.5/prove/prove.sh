@@ -8,8 +8,9 @@
 # kn- modules for the run, as "_prove-<name>", and removed afterwards, also on failure.  ../check.sh runs
 # every *.l4 in that folder, so do not run it while this script is running: it would pick up the copy.
 #
-# Expected: every #ASSERT in kn-obligations.l4 is `proved` or `decided` (a ground witness the
-# evaluator satisfies); every #ASSERT in kn-refutations.l4 is `refuted`.  Anything else is a failure.
+# Expected: every #ASSERT in kn-obligations.l4 and kn-fixed-arity.l4 is `proved` or `decided` (a ground
+# witness the evaluator satisfies); every #ASSERT in kn-refutations.l4 is `refuted`.  Anything else, a
+# timeout included (l4 prove's default, 10 s an obligation), is a failure.
 # Exit 0 only when both hold.  The verdict lines are printed as l4 prints them.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -36,6 +37,7 @@ run() {  # $1 = file in prove/, $2 = the verdicts allowed
 }
 
 run kn-obligations.l4 'proved|decided'
+run kn-fixed-arity.l4 'proved|decided'
 run kn-refutations.l4 'refuted'
 [ "$fail" -eq 0 ] && echo "prove.sh: PASS" || echo "prove.sh: FAIL"
 exit "$fail"
