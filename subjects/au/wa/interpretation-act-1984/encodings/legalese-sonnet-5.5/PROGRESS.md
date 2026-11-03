@@ -3,7 +3,7 @@
 Read this first after any compaction, then NOTES.md, then the text (../../registers/source-bundle/mrdoc_49111.txt, 1118 lines).
 
 ## Paths
-- DEPOSIT dir (this folder): /Volumes/transcend/claude-tmp/claude-502/-Users-mengwong-src-legalese-l4-ide/ca81f332-162b-4c52-8cc3-57ed15b3f6fa/scratchpad/runs/iaw-wa/deposit/encodings/legalese-sonnet-5.5
+- DEPOSIT dir (this folder): <the lead's scratchpad>/runs/iaw-wa/deposit/encodings/legalese-sonnet-5.5
 - scratch work (probes, templates, build scripts) lives in `scratch/` UNDER this folder's parent `deposit/`, i.e. deposit/scratch/ (brief: write only under DEPOSIT). Delete deposit/scratch at the end.
 - L4_BIN (stable 1.6.98, sha256 82ea44ad...): .../scratchpad/bin/l4-stable-98 ; L4_MAIN (1.6.102): .../scratchpad/bin/l4-stable-102
 
@@ -40,3 +40,47 @@ Read this first after any compaction, then NOTES.md, then the text (../../regist
 
 
 Note added 2026-10-29, after the run: the date shim described above no longer exists. Every module writes dates as `Date day month year`, and this encoding defines no `YMD` or `YearMonthDay`.
+
+
+## Fix run fix-wa, 2026-11-04 (catch-all pass: plain-BOOLEAN functions that answered FALSE for a catch-all)
+
+Read this first after any compaction, then NOTES.md ("Catch-all pass 2026-11-04", "Reading a result: FALSE and NOTHING", "Marginal readings for a lawyer"), then the text.
+Brief: <the lead's scratchpad>/runs/fix-wa/BRIEF.md.
+Work copy of the .l4 files for trial edits: ../../scratch/work/ (deposit/scratch/work); the real files in this folder are changed only after the baseline finished.
+
+### Status (updated as I go)
+- DONE (all steps of the brief): baseline, find-them-all, change, tests, NOTES, encoding.json (version 0.1.1), check.sh after, srcrefs. Nothing is staged, committed or pushed.
+
+### Decisions taken (with the section that licenses each)
+- s 13(2) `a person with none of those statuses` -> NOTHING-kind (list not closed): s 13(2) "shall be read as a reference to an Australian citizen and to any other person who ... has the status ...", no "only".
+- s 13(3) function keeps delegating to the s 13(2) function (same persons, same words), so it becomes MAYBE BOOLEAN with it.
+- s 19(1) `for some other reason` -> NOTHING-kind (limited by its own wording): "may be given to that material ... (a) to confirm ...; or (b) to determine ... when ...", no "only".
+- s 19(1) material not capable of assisting -> JUST FALSE (FALSE-kind): "if any material ... is capable of assisting in the ascertainment of the meaning of the provision". Rests on reading (a) of the brief (a failed "if" is the text's no), so it is listed under "Marginal readings for a lawyer", with the other reading (NOTHING). The old function answered FALSE for it too.
+- s 45A(2) `any other expenditure` is KEPT as plain BOOLEAN FALSE (deviation from the brief's premise, reported to the lead): "Expenditure is not relevant for the purposes of subsection (1) unless it has been or is to be incurred" is a flat negative with "unless" (src:539). The caller `a power to prescribe a fee allows it to recover the expenditure` is a site NOTES marks "marginal, kept, for a lawyer", out of scope, and stays as it is.
+
+### Facts
+- No function in wa-seat.l4 reaches s 13 or s 19: the seat imports time, part3, part5, part6, part7, part9, part10 and not part2. Seat questions returning MAYBE: 20 before and 20 after (11 MAYBE BOOLEAN, 8 MAYBE DATE, 1 MAYBE NUMBER).
+
+### baseline 2026-11-04
+Run before any change, in this folder: `L4=.../bin/l4-stable-98 L4_MAIN=.../bin/l4-main-108 ./check.sh` (log: ../../logs/baseline.log).
+Result: 32 modules, 0 errors, 2051 satisfied, 0 failed, 0 refused, every module `same` on the main build `1.6.108 (main, 2ae7c9b, 2026-11-02)`; exit 0.
+Per module counts that matter here: tests-independent 565, wa-cases-seat 109, wa-tests-part2 116, wa-tests-part6 113; the other 28 modules as printed in the log.
+srcrefs (`--refs`, and again with `--strict`, over wa-*.l4): 606 src: lines, 350 runs, 432 locators, 0 problems; run after the .l4 edits, same numbers.
+
+### Files changed in this run (all in this folder)
+- wa-interpretation-part2.l4 (3 functions, s 13(2), s 13(3), s 19(1); comment above s 19(1))
+- wa-interpretation-part6.l4 (comment only, on the s 45A(2) `any other expenditure` branch; no behaviour change)
+- wa-tests-part2.l4 (11 restated, 4 added)
+- tests-independent.l4 (8 restated)
+- NOTES.md (sections "Catch-all pass 2026-11-04" and "Marginal readings for a lawyer" added; the "Not changed, and open" paragraph rewritten; "What `check.sh` prints" and "Changes to existing modules" extended)
+- encoding.json (version, checks, notes)
+- PROGRESS.md (this section)
+- ../../logs/baseline.log and ../../logs/after.log (the two check.sh runs, outside the folder)
+
+### After the change (check.sh, log ../../logs/after.log)
+32 modules, 0 errors, 2055 satisfied, 0 failed, 0 refused, every module `same` on 1.6.108; exit 0.
+A diff of the two printed tables shows only wa-tests-part2.l4 (116 to 120, both builds) and the TOTAL line (2051 to 2055).
+The NOTES claims about the after-run (Catch-all pass, Changes to existing modules, What `check.sh` prints) were checked against this log.
+srcrefs (--refs and --strict, wa-*.l4): 606 src: lines, 350 runs, 432 locators, 0 problems each.
+No DiagnosticSeverity_Error or _Warning in the four changed files run on their own.
+deposit/scratch (probe scripts, the work copy) is deleted at the end; deposit/logs is kept.
