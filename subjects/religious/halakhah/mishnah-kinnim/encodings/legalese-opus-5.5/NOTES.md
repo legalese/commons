@@ -277,6 +277,7 @@ Run `prove/prove.sh` with an `l4` that has `prove`.
 6. **1:3's count needs neither reason nor owner**: the text's "whether for one reason or two, one woman or two" is borne out by a rule that takes neither as an input.
 7. **For two women, Koppel's majority and Bartenura's are the same number for every count** (proved), which bears out Beller's remark that the readings coincide for two women.
 8. **A compiler finding: main 1.6.108 did not finish reading a module whose `max` calls nested 31 deep** within 300 s, where the dev build read it at once; written as a balanced tree, 5 deep, main reads it in under a second (`tools/gen_fixed_arity.py`, `nested_max`). `check.sh` reported it as a module that reads differently on main.
+   The cost is in the type checker, not the parser: it is smucclaw/l4-ide#929's exponential in nested calls to a name with two meanings (the prelude defines `max` for NUMBER and for MAYBE NUMBER), fixed on unstable by legalese/l4-ide#169 and not on main, and filed for main as [smucclaw/l4-ide#1054](https://github.com/smucclaw/l4-ide/issues/1054) on 2026-11-03.
 
 ## Open questions for a domain expert
 
