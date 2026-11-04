@@ -1,0 +1,608 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ssc-core`
+IMPORT `ssc2-prelim`
+
+-- Social Security Contributions and Benefits Act 1992 (United Kingdom), 1992 c. 4.
+-- LAYER 1, part ssc2, module 2 of 6: ss 22, 23, 23A and 24 (earnings factors, credits, records).
+-- Source: inputs/ukpga-1992-4.txt, a plain-text rendering made by a converter script; it is not the
+-- official text and nothing here is "verified against the official text".
+-- Money is a NUMBER in pounds. Limits are weekly unless the name says otherwise.
+-- JUST TRUE / JUST FALSE is the Act answering in its own words; NOTHING is "not covered".
+
+§ `Part II -- Earnings factors and credits (ss 22, 23, 23A and 24)`
+
+§§ `s 22 Earnings factors`
+
+-- (1) intro, paragraphs (a) and (b), closing words. One pay period of a tax year from 1987-88.
+-- "the part of the earnings that did not exceed the upper earnings limit and on which primary Class 1
+-- contributions have been paid or treated as paid" is s 6's answer (seam S4), one figure per pay period.
+-- src:766 | (1) A person shall, for the purposes specified in subsection (2) below, be treated as having annual earnings factors derived—
+-- src:767 | (a) in the case of 1987-88 or any subsequent tax year, from so much of his earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid and from Class 2 and Class 3 contributions; and
+-- src:768 | (b) in the case of any earlier tax year, from his contributions of any of Classes 1, 2 and 3;
+-- src:769 | but subject to the following provisions of this section and those of section 23 below.
+@ref s 22(1)(a) (src:766-769)
+DECLARE `s 22(1)(a) Pay period` HAS
+    `s 6 the earnings on which primary Class 1 contributions have been paid or treated as paid in the pay period` IS A NUMBER
+    `s 22(9) the upper earnings limit for the pay period` IS A NUMBER
+    `s 22(4)(a) the contributions were paid at the reduced rate` IS A BOOLEAN
+
+-- (9) "In relation to earners paid otherwise than weekly" the limits are read as the prescribed equivalent.
+-- For a weekly earner the references stand as they are. With no prescribed equivalent: not covered.
+-- src:805 | (9) References in this Act or any other Act to earnings factors derived from so much of a person's earnings as do not exceed the upper accrual point or the upper earnings limit are to be read, in relation to earners paid otherwise than weekly, as references to earnings factors derived from so much of those earnings as do not exceed the prescribed equivalent.
+@ref s 22(9) (src:805)
+GIVEN `the earner is paid otherwise than weekly` IS A BOOLEAN
+      `the weekly limit` IS A NUMBER
+      `the prescribed equivalent of the weekly limit` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 22(9) the limit that applies to the earnings` MEANS
+    IF `the earner is paid otherwise than weekly`
+    THEN `the prescribed equivalent of the weekly limit`   -- NOTHING when the equivalent is not supplied: NOTHING-kind (points outside the text): "the prescribed equivalent"
+    ELSE JUST `the weekly limit`
+
+-- s 23(3)(a): the earnings (not exceeding the limit) on which Class 1 has been paid give an earnings
+-- factor "equal or approximating to the amount of those earnings".
+-- src:811 | (3) The tables and rules referred to in subsection (1) above shall be drawn up so that, in general—
+-- src:812 | (a) in respect of the tax year 1987-88 and any subsequent tax year, the amount of earnings not exceeding the upper earnings limit upon which primary Class 1 contributions have been paid or treated as paid gives rise, subject to subsections (3A) and (4) below, to an earnings factor for that year equal or approximating to the amount of those earnings; and
+@ref s 23(3)(a) (src:811-812)
+GIVEN earnings IS A NUMBER
+      limit IS A NUMBER
+GIVETH A NUMBER
+`s 23(3)(a) the amount to which the earnings factor from earnings equals or approximates` MEANS
+    IF earnings AT MOST limit THEN earnings ELSE limit
+
+-- (4)(a): for 1987-88 or a later year no earnings factor is derived from earnings on which primary
+-- Class 1 contributions are paid at the reduced rate; (b) for an earlier year none from reduced-rate
+-- primary or from secondary Class 1. Both are "subject to regulations under section 19(4) to (6)".
+-- src:786 | (4) Subject to regulations under section 19(4) to (6) above, no earnings factor shall be derived—
+-- src:787 | (a) for 1987-88 or any subsequent tax year, from earnings in respect of which primary Class 1 contributions are paid at the reduced rate, or
+-- src:788 | (b) for any earlier tax year, from primary Class 1 contributions paid at the reduced rate or from secondary Class 1 contributions.
+@ref s 22(4) (src:786-788)
+GIVEN year IS A `Tax year`
+      `the contributions are primary Class 1 contributions paid at the reduced rate` IS A BOOLEAN
+      `the contributions are secondary Class 1 contributions` IS A BOOLEAN
+      `regulations under section 19(4) to (6) provide otherwise` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 22(4) an earnings factor is derived from the earnings or contributions` MEANS
+    IF `regulations under section 19(4) to (6) provide otherwise`
+    THEN NOTHING     -- NOTHING-kind (points outside the text): "Subject to regulations under section 19(4) to (6) above"
+    ELSE IF year's `calendar year in which it begins` AT LEAST 1987
+         THEN (IF `the contributions are primary Class 1 contributions paid at the reduced rate`
+               THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "no earnings factor shall be derived— (a) for 1987-88 or any subsequent tax year, from earnings in respect of which primary Class 1 contributions are paid at the reduced rate"
+               ELSE NOTHING)     -- NOTHING-kind (silent): the subsection says when no factor is derived, not when one is
+         ELSE (IF `the contributions are primary Class 1 contributions paid at the reduced rate` OR `the contributions are secondary Class 1 contributions`
+               THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "no earnings factor shall be derived— (b) for any earlier tax year, from primary Class 1 contributions paid at the reduced rate or from secondary Class 1 contributions"
+               ELSE NOTHING)     -- NOTHING-kind (silent): the subsection says when no factor is derived, not when one is
+
+-- (1)(a) applied to one pay period: the earnings factor derived from the pay period.
+-- src:767 | (a) in the case of 1987-88 or any subsequent tax year, from so much of his earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid and from Class 2 and Class 3 contributions; and
+@ref s 22(1)(a) (src:767)
+GIVEN period IS A `s 22(1)(a) Pay period`
+      year IS A `Tax year`
+      `regulations under section 19(4) to (6) provide otherwise` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`s 22(1)(a) the earnings factor derived from a pay period` MEANS
+    IF year's `calendar year in which it begins` AT LEAST 1987
+    THEN (CONSIDER `s 22(4) an earnings factor is derived from the earnings or contributions` year (period's `s 22(4)(a) the contributions were paid at the reduced rate`) FALSE `regulations under section 19(4) to (6) provide otherwise`
+          WHEN JUST FALSE THEN JUST 0    -- s 22(4)(a): no earnings factor is derived from reduced-rate earnings
+          OTHERWISE
+              IF period's `s 22(4)(a) the contributions were paid at the reduced rate`
+              THEN NOTHING    -- NOTHING-kind (points outside the text): regulations under s 19(4) to (6) may provide otherwise
+              ELSE JUST (`s 23(3)(a) the amount to which the earnings factor from earnings equals or approximates` (period's `s 6 the earnings on which primary Class 1 contributions have been paid or treated as paid in the pay period`) (period's `s 22(9) the upper earnings limit for the pay period`)))
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): paragraph (a) is for "1987-88 or any subsequent tax year"
+
+-- s 23(3)(b): any number of Class 2 or Class 3 contributions in a tax year give an earnings factor equal
+-- or approximating to that year's lower earnings limit for Class 1 contributions times the number.
+-- src:813 | (b) any number of Class 2 or Class 3 contributions in respect of a tax year gives rise to an earnings factor for that tax year equal or approximating to that year’s lower earnings limit for Class 1 contributions multiplied by the number of contributions.
+@ref s 23(3)(b) (src:813)
+GIVEN `the lower earnings limit for the tax year` IS A NUMBER
+      `the number of Class 2 or Class 3 contributions in respect of the tax year` IS A NUMBER
+GIVETH A NUMBER
+`s 23(3)(b) the amount to which the earnings factor from Class 2 or Class 3 contributions equals or approximates` MEANS
+    `the lower earnings limit for the tax year` TIMES `the number of Class 2 or Class 3 contributions in respect of the tax year`
+
+-- (1)(a) the annual earnings factor for 1987-88 or a later year: pay periods, plus Class 2 and Class 3
+-- (the weeks are seams S4: s 11 and s 13 answer).
+-- src:767 | (a) in the case of 1987-88 or any subsequent tax year, from so much of his earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid and from Class 2 and Class 3 contributions; and
+@ref s 22(1)(a) (src:767)
+GIVEN periods IS A LIST OF `s 22(1)(a) Pay period`
+      year IS A `Tax year`
+      `regulations under section 19(4) to (6) provide otherwise` IS A BOOLEAN
+      `s 5(1)(a) the lower earnings limit in force at the time in pounds` IS A NUMBER
+      `s 11 the number of weeks for which a Class 2 contribution was paid in the tax year` IS A NUMBER
+      `s 13 the number of weeks for which a Class 3 contribution was paid in the tax year` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 22(1)(a) the annual earnings factor` MEANS
+    CONSIDER `s 22(1)(a) all pay periods` periods year `regulations under section 19(4) to (6) provide otherwise`
+    WHEN NOTHING THEN NOTHING     -- NOTHING-kind (points outside the text): regulations under s 19(4) to (6)
+    WHEN JUST fromEarnings THEN
+        JUST (fromEarnings
+              PLUS (`s 23(3)(b) the amount to which the earnings factor from Class 2 or Class 3 contributions equals or approximates` `s 5(1)(a) the lower earnings limit in force at the time in pounds`
+                       (`s 11 the number of weeks for which a Class 2 contribution was paid in the tax year` PLUS `s 13 the number of weeks for which a Class 3 contribution was paid in the tax year`)))
+
+-- src:767 | (a) in the case of 1987-88 or any subsequent tax year, from so much of his earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid and from Class 2 and Class 3 contributions; and
+@ref s 22(1)(a) (src:767)
+GIVEN periods IS A LIST OF `s 22(1)(a) Pay period`
+      year IS A `Tax year`
+      `regulations under section 19(4) to (6) provide otherwise` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`s 22(1)(a) all pay periods` MEANS
+    CONSIDER periods
+    WHEN EMPTY THEN JUST 0
+    WHEN first FOLLOWED BY rest THEN
+        CONSIDER `s 22(1)(a) the earnings factor derived from a pay period` first year `regulations under section 19(4) to (6) provide otherwise`
+        WHEN NOTHING THEN NOTHING
+        WHEN JUST a THEN
+            CONSIDER `s 22(1)(a) all pay periods` rest year `regulations under section 19(4) to (6) provide otherwise`
+            WHEN NOTHING THEN NOTHING
+            WHEN JUST b THEN JUST (a PLUS b)
+
+-- (1)(b): an earlier year, from contributions of any of Classes 1, 2 and 3.
+-- src:768 | (b) in the case of any earlier tax year, from his contributions of any of Classes 1, 2 and 3;
+@ref s 22(1)(b) (src:768)
+GIVEN `the earnings factor derived from the person's Class 1 contributions` IS A NUMBER
+      `the earnings factor derived from the person's Class 2 contributions` IS A NUMBER
+      `the earnings factor derived from the person's Class 3 contributions` IS A NUMBER
+GIVETH A NUMBER
+`s 22(1)(b) the annual earnings factor for an earlier tax year` MEANS
+    `the earnings factor derived from the person's Class 1 contributions`
+        PLUS `the earnings factor derived from the person's Class 2 contributions`
+        PLUS `the earnings factor derived from the person's Class 3 contributions`
+
+-- (2) the purposes. "(a) ... any benefit specified in section 20(1) above, other than maternity allowance".
+-- Seam S9: ssc1 s 13(2) asks whether a purpose is one of these.
+-- src:770 | (2) The purposes referred to in subsection (1) above are those of—
+-- src:771 | (a) establishing, by reference to the satisfaction of contribution conditions, entitlement to a contribution-based jobseeker’s allowance, to a contributory employment and support allowance or to any benefit specified in section 20(1) above, other than maternity allowance; ...
+-- src:772 | (b) calculating the additional pension in the rate of a long-term benefit ; and
+-- src:773 | (c) establishing entitlement to a state pension under Part 1 of the Pensions Act 2014 and, where relevant, calculating the rate of a state pension under that Part; and
+-- src:774 | (d) establishing entitlement to bereavement support payment under section 30 of the Pensions Act 2014.
+@ref s 22(2) (src:770-774)
+DECLARE `s 22(2) Purpose` IS ONE OF
+    `s 22(2)(a) establishing entitlement to a contribution-based jobseeker's allowance`
+    `s 22(2)(a) establishing entitlement to a contributory employment and support allowance`
+    `s 22(2)(a) establishing entitlement to a benefit specified in section 20(1)` HAS `s 22(2)(a) benefit` IS A Benefit
+    `s 22(2)(b) calculating the additional pension in the rate of a long-term benefit`
+    `s 22(2)(c) establishing entitlement to a state pension under Part 1 of the Pensions Act 2014, or calculating its rate`
+    `s 22(2)(d) establishing entitlement to bereavement support payment under section 30 of the Pensions Act 2014`
+    `s 22(2) any other purpose`
+
+@ref s 22(2) (src:770-774)
+GIVEN purpose IS A `s 22(2) Purpose`
+GIVETH A MAYBE BOOLEAN
+`s 22(2) the purpose is one for which earnings factors are treated as derived` MEANS
+    CONSIDER purpose
+    WHEN `s 22(2)(a) establishing entitlement to a contribution-based jobseeker's allowance` THEN JUST TRUE
+    WHEN `s 22(2)(a) establishing entitlement to a contributory employment and support allowance` THEN JUST TRUE
+    WHEN `s 22(2)(a) establishing entitlement to a benefit specified in section 20(1)` b THEN
+        IF b EQUALS `maternity allowance`
+        THEN JUST FALSE     -- FALSE-kind (the text says no in its own words): "any benefit specified in section 20(1) above, other than maternity allowance"
+        ELSE JUST TRUE
+    WHEN `s 22(2)(b) calculating the additional pension in the rate of a long-term benefit` THEN JUST TRUE
+    WHEN `s 22(2)(c) establishing entitlement to a state pension under Part 1 of the Pensions Act 2014, or calculating its rate` THEN JUST TRUE
+    WHEN `s 22(2)(d) establishing entitlement to bereavement support payment under section 30 of the Pensions Act 2014` THEN JUST TRUE
+    WHEN `s 22(2) any other purpose` THEN NOTHING    -- NOTHING-kind (list not closed): the text says "are those of" and does not close the list with "only"
+
+-- (2A): for the purpose in (2)(b), in the first appointed year or any later year the earnings factor is
+-- derived only from so much of the earnings as did not exceed the applicable limit and on which primary
+-- Class 1 contributions have been paid or treated as paid. "the first appointed year" is a term the Act
+-- defines elsewhere; the person states whether the year is that year or a later one.
+-- src:775 | (2A) For the purposes specified in subsection (2)(b) above, in the case of the first appointed year or any subsequent tax year a person’s earnings factor shall be treated as derived only from so much of his earnings as did not exceed the applicable limit and on which primary Class 1 contributions have been paid or treated as paid.
+-- src:776 | This subsection does not affect the operation of sections 44A and 44B (deemed earnings factors).
+@ref s 22(2A) (src:775-776)
+GIVEN `the tax year is the first appointed year or a later tax year` IS A BOOLEAN
+      earnings IS A NUMBER
+      `the applicable limit` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 22(2A) the earnings from which the earnings factor for additional pension is derived` MEANS
+    IF `the tax year is the first appointed year or a later tax year`
+    THEN JUST (IF earnings AT MOST `the applicable limit` THEN earnings ELSE `the applicable limit`)
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "in the case of the first appointed year or any subsequent tax year"
+
+-- src:776 | This subsection does not affect the operation of sections 44A and 44B (deemed earnings factors).
+@ref s 22(2A) (src:776)
+GIVEN `the earnings factor is a deemed earnings factor under section 44A or 44B` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 22(2A) the subsection affects deemed earnings factors under sections 44A and 44B` MEANS
+    IF `the earnings factor is a deemed earnings factor under section 44A or 44B`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "This subsection does not affect the operation of sections 44A and 44B (deemed earnings factors)."
+    ELSE NOTHING      -- NOTHING-kind (limited by its own wording): the sentence speaks only of deemed earnings factors
+
+-- (2B) the applicable limit: the upper earnings limit before 2009-10, the upper accrual point from 2009-10.
+-- src:777 | (2B) “The applicable limit” means—
+-- src:778 | (a) in relation to a tax year before 2009-10, the upper earnings limit;
+-- src:779 | (b) in relation to 2009-10 or any subsequent tax year, the upper accrual point.
+@ref s 22(2B) (src:777-779)
+GIVEN year IS A `Tax year`
+      `the upper earnings limit` IS A NUMBER
+GIVETH A NUMBER
+`s 22(2B) the applicable limit` MEANS
+    IF year's `calendar year in which it begins` AT MOST 2008
+    THEN `the upper earnings limit`           -- (a) before 2009-10
+    ELSE `the upper accrual point`            -- (b) 2009-10 or any subsequent tax year
+
+-- (3) the sources from which separate earnings factors may be derived. The text speaks in two halves:
+-- 1987-88 and later; earlier years.
+-- src:780 | (3) Separate earnings factors may be derived for 1987-88 and subsequent tax years—
+-- src:781 | (a) from earnings not exceeding the upper earnings limit upon which primary Class 1 contributions have been paid or treated as paid;
+-- src:782 | (b) from earnings which have been credited;
+-- src:783 | (c) from contributions of different classes paid or credited in the same tax year;
+-- src:784 | (d) by any combination of the methods mentioned in paragraphs (a) to (c) above,
+-- src:785 | and may be derived for any earlier tax year from contributions of different classes paid or credited in the same tax year, and from contributions which have actually been paid, as opposed to those not paid but credited.
+@ref s 22(3) (src:780-785)
+DECLARE `s 22(3) Source of an earnings factor` IS ONE OF
+    `s 22(3)(a) earnings not exceeding the upper earnings limit on which primary Class 1 contributions have been paid or treated as paid`
+    `s 22(3)(b) earnings which have been credited`
+    `s 22(3)(c) contributions of different classes paid or credited in the same tax year`
+    `s 22(3)(d) any combination of the methods in paragraphs (a) to (c)`
+    `s 22(3) contributions which have actually been paid, as opposed to those credited`
+
+@ref s 22(3) (src:780-785)
+GIVEN year IS A `Tax year`
+      source IS A `s 22(3) Source of an earnings factor`
+GIVETH A MAYBE BOOLEAN
+`s 22(3) a separate earnings factor may be derived from the source` MEANS
+    IF year's `calendar year in which it begins` AT LEAST 1987
+    THEN (CONSIDER source
+          WHEN `s 22(3) contributions which have actually been paid, as opposed to those credited` THEN NOTHING   -- NOTHING-kind (limited by its own wording): that limb is for "any earlier tax year"
+          OTHERWISE JUST TRUE)
+    ELSE (CONSIDER source
+          WHEN `s 22(3)(c) contributions of different classes paid or credited in the same tax year` THEN JUST TRUE
+          WHEN `s 22(3) contributions which have actually been paid, as opposed to those credited` THEN JUST TRUE
+          OTHERWISE NOTHING)  -- NOTHING-kind (limited by its own wording): paragraphs (a), (b) and (d) are for 1987-88 and subsequent tax years
+
+-- (5) S11: regulations may provide for crediting earnings or contributions to bring a person's
+-- earnings factor to a figure that enables them to satisfy contribution conditions. The answer is a fact
+-- about what the regulations did.
+-- src:789 | (5) Regulations may provide for crediting—
+-- src:790 | (a) for 1987-88 or any subsequent tax year, earnings or Class 2 or Class 3 contributions, or
+-- src:791 | (b) for any earlier tax year, contributions of any class,
+-- src:792 | for the purpose of bringing a person’s earnings factor for that tax year to a figure which will enable him to satisfy contribution conditions of entitlement to a contribution-based jobseeker’s allowance, to a contributory employment and support allowance or to any prescribed description of benefit (whether his own entitlement or another person’s).
+@ref s 22(5) (src:789-792)
+GIVEN `regulations made under section 22(5) credit earnings or contributions to the person for the tax year` IS A BOOLEAN
+      `the credit is for the purpose of bringing the earnings factor to a figure which enables the person to satisfy contribution conditions` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 22(5) the person was credited with contributions or earnings by regulations` MEANS
+    IF `regulations made under section 22(5) credit earnings or contributions to the person for the tax year`
+       AND `the credit is for the purpose of bringing the earnings factor to a figure which enables the person to satisfy contribution conditions`
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (points outside the text): whether regulations credit anyone is for the regulations; the subsection only says they "may"
+
+-- (5ZA)/(5ZB): crediting for the purposes of Part 1 of the Pensions Act 2014. (5ZB): regulations
+-- "must provide for crediting" a spouse or civil partner of a member of HM forces accompanying the member
+-- on an assignment outside the United Kingdom, for periods on or after 6 April 1975, who is not of a
+-- description the regulations specify.
+-- src:793 | (5ZA) Regulations may provide for crediting—
+-- src:794 | (a) for 1987-88 or any subsequent tax year, earnings or Class 2 or Class 3 contributions, or
+-- src:795 | (b) for any earlier tax year, contributions of any class,
+-- src:796 | for the purpose of bringing an earnings factor for that tax year to a figure which will make that year a “qualifying year”, “pre-commencement qualifying year” or “post-commencement qualifying year” of a person for the purposes of Part 1 of the Pensions Act 2014 (see sections 2(4) and 4(4) of that Act).
+@ref s 22(5ZA) (src:793-796)
+GIVEN `regulations made under section 22(5ZA) credit earnings or contributions to the person for the tax year` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 22(5ZA) the person was credited by regulations toward a qualifying year` MEANS
+    IF `regulations made under section 22(5ZA) credit earnings or contributions to the person for the tax year`
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (points outside the text): the subsection only says regulations "may" provide for crediting
+
+-- src:797 | (5ZB) Regulations under subsection (5ZA) must provide for crediting a person with such contributions as may be specified in respect of periods on or after 6 April 1975 during which the person was—
+-- src:798 | (a) a spouse or civil partner of a member of Her Majesty's forces,
+-- src:799 | (b) accompanying the member on an assignment outside the United Kingdom, and
+-- src:800 | (c) not of a description specified in the regulations.
+@ref s 22(5ZB) (src:797-800)
+GIVEN `the period begins on or after 6 April 1975` IS A BOOLEAN
+      `the person was a spouse or civil partner of a member of Her Majesty's forces` IS A BOOLEAN
+      `the person was accompanying the member on an assignment outside the United Kingdom` IS A BOOLEAN
+      `the person was of a description specified in the regulations` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 22(5ZB) the regulations must provide for crediting the person for the period` MEANS
+    IF `the period begins on or after 6 April 1975`
+       AND `the person was a spouse or civil partner of a member of Her Majesty's forces`
+       AND `the person was accompanying the member on an assignment outside the United Kingdom`
+       AND (NOT `the person was of a description specified in the regulations`)
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): the duty is for periods and persons so described
+
+-- (8) "contributory employment and support allowance" means a contributory allowance under Part 1 of the
+-- Welfare Reform Act 2007.
+-- src:804 | (8) In this section, “contributory employment and support allowance” means a contributory allowance under Part 1 of the Welfare Reform Act 2007 (employment and support allowance).
+@ref s 22(8) (src:804)
+GIVEN `the allowance is a contributory allowance under Part 1 of the Welfare Reform Act 2007` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 22(8) the allowance is a contributory employment and support allowance` MEANS
+    IF `the allowance is a contributory allowance under Part 1 of the Welfare Reform Act 2007`
+    THEN JUST TRUE
+    ELSE JUST FALSE   -- FALSE-kind (the text says no in its own words): "“contributory employment and support allowance” means a contributory allowance under Part 1 of the Welfare Reform Act 2007"
+
+§§ `s 23 Provisions supplemental to sections 21 and 22`
+
+-- (2) the exception: earnings factors for 1978-79 or any later year revalued for guaranteed minimum
+-- pensions need not be whole pounds.
+-- The factor asked about is one "derived as mentioned in section 22(1)": the function is not called for any other.
+-- Subsection (1)(a) says in its own words that such a factor "shall be expressed, subject to subsection (2) below,
+-- as whole numbers of pounds"; subsection (2) is the only exception it makes. So the answer is no where (2)
+-- exempts the factor and yes everywhere else (triage 2026-11-04, S120).
+-- src:807 | (1) Earnings factors derived as mentioned in section 22(1) above, including earnings factors as increased by any order under section 148 of the Administration Act—
+-- src:808 | (a) shall be expressed, subject to subsection (2) below, as whole numbers of pounds; and
+@ref s 23(1) (src:807-808)
+-- src:810 | (2) Subsection (1) above does not require earnings factors in respect of the tax year 1978-79 or any subsequent tax year which have been revalued for the purpose of calculating guaranteed minimum pensions under the Pensions Act or the Social Security Pensions Act 1975 to be expressed as whole numbers of pounds.
+@ref s 23(2) (src:810)
+GIVEN year IS A `Tax year`
+      `the earnings factor has been revalued for the purpose of calculating guaranteed minimum pensions` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 23(2) subsection (1) requires the earnings factor to be expressed as a whole number of pounds` MEANS
+    IF year's `calendar year in which it begins` AT LEAST 1978 AND `the earnings factor has been revalued for the purpose of calculating guaranteed minimum pensions`
+    THEN JUST FALSE   -- FALSE-kind (the text says no in its own words): "Subsection (1) above does not require earnings factors in respect of the tax year 1978-79 or any subsequent tax year which have been revalued ... to be expressed as whole numbers of pounds"
+    ELSE JUST TRUE    -- the text says yes in its own words: "(a) shall be expressed, subject to subsection (2) below, as whole numbers of pounds" (s 23(1)(a), src:808)
+
+-- (1)(a) whole pounds, "including earnings factors as increased by any order under section 148 of the
+-- Administration Act" (seam S5: an input in every case). How the figure is brought to whole pounds is
+-- in the tables or rules of regulations (1)(b): the whole number they give is an input.
+-- src:807 | (1) Earnings factors derived as mentioned in section 22(1) above, including earnings factors as increased by any order under section 148 of the Administration Act—
+-- src:808 | (a) shall be expressed, subject to subsection (2) below, as whole numbers of pounds; and
+-- src:809 | (b) shall be made ascertainable from tables or rules to be drawn up by the Secretary of State and embodied in regulations.
+@ref s 23(1) (src:807-809)
+GIVEN year IS A `Tax year`
+      `s 23(1) the earnings factor as increased by an order under section 148 of the Administration Act` IS A NUMBER
+      `the earnings factor has been revalued for the purpose of calculating guaranteed minimum pensions` IS A BOOLEAN
+      `the whole number of pounds the tables or rules in the regulations give` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 23(1)(a) the earnings factor expressed in pounds` MEANS
+    CONSIDER `s 23(2) subsection (1) requires the earnings factor to be expressed as a whole number of pounds` year `the earnings factor has been revalued for the purpose of calculating guaranteed minimum pensions`
+    WHEN JUST FALSE THEN JUST `s 23(1) the earnings factor as increased by an order under section 148 of the Administration Act`
+    OTHERWISE `the whole number of pounds the tables or rules in the regulations give`   -- NOTHING when no whole number is supplied: NOTHING-kind (points outside the text): "tables or rules to be drawn up by the Secretary of State and embodied in regulations"
+
+-- (3A): for the purposes of s 22(2)(b) (additional pension), (3)(a) has effect for 2009-10 and later as
+-- if the reference to the upper earnings limit were to the upper accrual point.
+-- src:814 | (3A) For the purposes specified in section 22(2)(b) (additional pension), subsection (3)(a) has effect in relation to 2009-10 and subsequent tax years as if the reference to the upper earnings limit were to the upper accrual point.
+@ref s 23(3A) (src:814)
+GIVEN year IS A `Tax year`
+      `the upper earnings limit` IS A NUMBER
+GIVETH A NUMBER
+`s 23(3A) the limit for subsection (3)(a) for the purpose of additional pension` MEANS
+    IF year's `calendar year in which it begins` AT LEAST 2009
+    THEN `the upper accrual point`
+    ELSE `the upper earnings limit`
+
+§§ `s 23A Contributions credits for relevant parents and carers`
+
+-- (1) the benefits to which the section applies. A Category B retirement pension is split by the section
+-- that makes it payable.
+-- src:817 | (1) This section applies to the following benefits—
+-- src:818 | (a) a Category A retirement pension in a case where the contributor concerned attains pensionable age on or after 6th April 2010;
+-- src:819 | (b) a Category B retirement pension payable by virtue of section 48A or 48AA below in a case where the contributor concerned attains pensionable age on or after that date;
+-- src:820 | (c) a Category B retirement pension payable by virtue of section 48B below in a case where the contributor concerned dies on or after that date without having attained pensionable age before that date;
+-- src:821 | (d) a widowed parent's allowance payable in a case where the contributor concerned dies on or after that date;
+-- src:822 | (e) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+@ref s 23A(1) (src:817-822)
+DECLARE `s 23A(1) Basis of a Category B retirement pension` IS ONE OF
+    `s 23A(1)(b) payable by virtue of section 48A or 48AA`
+    `s 23A(1)(c) payable by virtue of section 48B`
+    `s 23A(1) payable by virtue of another section`
+
+@ref s 23A(1) (src:817-822)
+GIVEN benefit IS A Benefit
+      basis IS A `s 23A(1) Basis of a Category B retirement pension`
+      `the contributor concerned` IS A Person
+      `the day the contributor concerned dies` IS A MAYBE DATE
+GIVETH A MAYBE BOOLEAN
+`s 23A(1) this section applies to the benefit` MEANS
+    CONSIDER benefit
+    WHEN `Category A retirement pension` THEN       -- (a)
+        IF `the contributor concerned`'s `date of attaining pensionable age` AT LEAST (Date 6 4 2010) THEN JUST TRUE
+        ELSE NOTHING    -- NOTHING-kind (limited by its own wording): "in a case where the contributor concerned attains pensionable age on or after 6th April 2010"
+    WHEN `Category B retirement pension` THEN
+        CONSIDER basis
+        WHEN `s 23A(1)(b) payable by virtue of section 48A or 48AA` THEN      -- (b)
+            IF `the contributor concerned`'s `date of attaining pensionable age` AT LEAST (Date 6 4 2010) THEN JUST TRUE
+            ELSE NOTHING   -- NOTHING-kind (limited by its own wording): "in a case where the contributor concerned attains pensionable age on or after that date"
+        WHEN `s 23A(1)(c) payable by virtue of section 48B` THEN              -- (c)
+            CONSIDER `the day the contributor concerned dies`
+            WHEN JUST died THEN
+                IF died AT LEAST (Date 6 4 2010) AND `the contributor concerned`'s `date of attaining pensionable age` AT LEAST (Date 6 4 2010) THEN JUST TRUE
+                ELSE NOTHING   -- NOTHING-kind (limited by its own wording): "dies on or after that date without having attained pensionable age before that date"
+            WHEN NOTHING THEN NOTHING   -- NOTHING-kind (silent): paragraph (c) needs a death
+        WHEN `s 23A(1) payable by virtue of another section` THEN NOTHING     -- NOTHING-kind (list not closed): the list does not close with "only"
+    WHEN `widowed parent's allowance` THEN          -- (d)
+        CONSIDER `the day the contributor concerned dies`
+        WHEN JUST died THEN
+            IF died AT LEAST (Date 6 4 2010) THEN JUST TRUE
+            ELSE NOTHING       -- NOTHING-kind (limited by its own wording): "in a case where the contributor concerned dies on or after that date"
+        WHEN NOTHING THEN NOTHING   -- NOTHING-kind (silent): paragraph (d) needs a death
+    OTHERWISE NOTHING     -- NOTHING-kind (list not closed): the list does not close with "only"; paragraph (e) is blank in this text
+
+-- (3) a relevant carer in respect of a week: (a) awarded child benefit for any part of the week in
+-- respect of a child under 12, (b) a foster parent for any part of the week, (c) engaged in caring,
+-- within the meaning given by regulations, in the week. "foster parent" has the meaning regulations give
+-- (subsection (9)); "under 12" is s 173(a)'s answer (seam K2).
+-- src:824 | (3) A person is a relevant carer in respect of a week if the person—
+-- src:825 | (a) is awarded child benefit for any part of that week in respect of a child under the age of 12,
+-- src:826 | (b) is a foster parent for any part of that week, or
+-- src:827 | (c) is engaged in caring, within the meaning given by regulations, in that week.
+@ref s 23A(3) (src:824-827)
+GIVEN a IS A MAYBE BOOLEAN, b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 23A(3) both` MEANS
+    CONSIDER a
+    WHEN JUST FALSE THEN JUST FALSE
+    WHEN JUST TRUE THEN b
+    WHEN NOTHING THEN
+        CONSIDER b
+        WHEN JUST FALSE THEN JUST FALSE
+        OTHERWISE NOTHING
+
+@ref s 23A(3) (src:824-827)
+GIVEN a IS A MAYBE BOOLEAN, b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 23A(3) either` MEANS
+    CONSIDER a
+    WHEN JUST TRUE THEN JUST TRUE
+    WHEN JUST FALSE THEN b
+    WHEN NOTHING THEN
+        CONSIDER b
+        WHEN JUST TRUE THEN JUST TRUE
+        OTHERWISE NOTHING
+
+@ref s 23A(3) (src:824-827)
+GIVEN `child benefit is awarded to the person for any part of the week in respect of a child` IS A BOOLEAN
+      `s 173(a) the child is under 12` IS A MAYBE BOOLEAN
+      `the person is a foster parent for any part of the week, as the regulations define foster parent` IS A BOOLEAN
+      `the person is engaged in caring, within the meaning given by regulations, in the week` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 23A(3) the person was a relevant carer in respect of the week` MEANS
+    `s 23A(3) either`
+        (`s 23A(3) either`
+            (`s 23A(3) both` (JUST `child benefit is awarded to the person for any part of the week in respect of a child`) `s 173(a) the child is under 12`)
+            (JUST `the person is a foster parent for any part of the week, as the regulations define foster parent`))
+        (JUST `the person is engaged in caring, within the meaning given by regulations, in the week`)
+    -- when none of (a), (b), (c) holds the answer is JUST FALSE: FALSE-kind (the text says no in its own words): "A person is a relevant carer in respect of a week if the person—"
+
+-- (2) credited with a Class 3 contribution for each week falling after 6 April 2010 in respect of which
+-- the contributor was a relevant carer. "Week" in this Part is a period of 7 days beginning with Sunday
+-- (s 122(1), ssc5), so the week is identified by its first day, which must be a Sunday. A week "falls
+-- after 6 April 2010" here when its first day is after that date (fork F in NOTES.md).
+-- src:823 | (2) The contributor concerned in the case of a benefit to which this section applies shall be credited with a Class 3 contribution for each week falling after 6th April 2010 in respect of which the contributor was a relevant carer.
+@ref s 23A(2) (src:823)
+GIVEN `the first day of the week` IS A DATE
+      `s 23A(3) the person was a relevant carer in respect of the week` IS A MAYBE BOOLEAN
+GIVETH A MAYBE NUMBER
+`s 23A(2) the number of Class 3 contributions credited for the week` MEANS
+    IF `s 21(6)(a) the weekday of the date, 0 for Sunday` `the first day of the week` EQUALS 0
+    THEN (IF `the first day of the week` ABOVE (Date 6 4 2010)
+          THEN (CONSIDER `s 23A(3) the person was a relevant carer in respect of the week`
+                WHEN JUST TRUE THEN JUST 1
+                OTHERWISE NOTHING)   -- NOTHING-kind (limited by its own wording): "for each week ... in respect of which the contributor was a relevant carer"
+          ELSE NOTHING)              -- NOTHING-kind (limited by its own wording): "each week falling after 6th April 2010"
+    ELSE NOTHING                     -- NOTHING-kind (undefined term): the first day is not a Sunday, so it does not begin a "week" as s 122(1) defines it
+
+-- (8) a week that falls partly in one tax year and partly in another is treated as falling in the year in
+-- which it begins. A tax year begins on 6 April.
+-- src:836 | (8) For the purpose of determining entitlement to a benefit to which this section applies, a week that falls partly in one tax year and partly in another is to be treated as falling in the year in which it begins and not in the following year.
+@ref s 23A(8) (src:836)
+GIVEN date IS A DATE
+GIVETH A NUMBER
+`s 23A(8) the calendar year in which the tax year containing the date begins` MEANS
+    IF date AT LEAST (Date 6 4 (DATE_YEAR date)) THEN DATE_YEAR date ELSE (DATE_YEAR date) MINUS 1
+
+@ref s 23A(8) (src:836)
+GIVEN `the first day of the week` IS A DATE
+GIVETH A MAYBE `Tax year`
+`s 23A(8) the tax year in which the week is treated as falling` MEANS
+    IF NOT (`s 23A(8) the calendar year in which the tax year containing the date begins` `the first day of the week` EQUALS `s 23A(8) the calendar year in which the tax year containing the date begins` ((`the first day of the week`) PLUS 6))
+    THEN JUST (`Tax year` WITH `calendar year in which it begins` IS `s 23A(8) the calendar year in which the tax year containing the date begins` `the first day of the week`)
+    ELSE NOTHING   -- NOTHING-kind (limited by its own wording): the text speaks only of "a week that falls partly in one tax year and partly in another"
+
+-- (5) credited with 52 Class 3 contributions for each tax year ending before 6 April 2010 in which the
+-- contributor was precluded from regular employment by responsibilities at home (the regulations under
+-- paragraph 5(7) of Schedule 3 give "within the meaning of": a fact asked as an input). A tax year ends
+-- before 6 April 2010 when it began in 2009 or earlier (2009-10 ends on 5 April 2010).
+-- src:831 | (5) The contributor concerned in the case of a benefit to which this section applies shall be credited with 52 Class 3 contributions for each tax year ending before 6th April 2010 in which the contributor was precluded from regular employment by responsibilities at home within the meaning of regulations under paragraph 5(7) of Schedule 3.
+@ref s 23A(5) (src:831)
+GIVEN year IS A `Tax year`
+      `the contributor concerned was precluded from regular employment by responsibilities at home` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`s 23A(5) the number of Class 3 contributions credited for the tax year` MEANS
+    IF year's `calendar year in which it begins` AT MOST 2009 AND `the contributor concerned was precluded from regular employment by responsibilities at home`
+    THEN JUST 52
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "each tax year ending before 6th April 2010 in which the contributor was precluded from regular employment by responsibilities at home"
+
+-- (6) the maximum number of tax years: (a) 22 for a benefit in (1)(a) to (c); (b) half the requisite
+-- number of years of the person's working life for a benefit in (1)(d). (7) the requisite number comes
+-- from the table in paragraph 5(5) of Schedule 3 (ssc8; the table is omitted from this text).
+-- src:835 | (7) The table in paragraph 5(5) of Schedule 3 (requisite number of years of a working life of given duration) applies for the purposes of subsection (6)(b) above as it applies for the purposes of the second condition set out in paragraph 5(3) of that Schedule.
+@ref s 23A(7) (src:835)
+GIVEN `sch 3 para 5(5) the requisite number of years of the person's working life` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 23A(7) the requisite number of years from the table in paragraph 5(5) of Schedule 3` MEANS
+    `sch 3 para 5(5) the requisite number of years of the person's working life`   -- NOTHING when absent: NOTHING-kind (points outside the text): the table is in Schedule 3 and is omitted from this text
+
+-- src:832 | (6) But the maximum number of tax years for which a person can be credited with contributions under subsection (5) above is—
+-- src:833 | (a) in the case of a benefit mentioned in subsection (1)(a) to (c) above, 22;
+-- src:834 | (b) in the case of a benefit mentioned in subsection (1)(d) ... above, half the requisite number of years of the person's working life.
+@ref s 23A(6) (src:832-834)
+GIVEN benefit IS A Benefit
+      `s 23A(1) this section applies to the benefit` IS A MAYBE BOOLEAN
+      `sch 3 para 5(5) the requisite number of years of the person's working life` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 23A(6) the maximum number of tax years that can be credited under subsection (5)` MEANS
+    CONSIDER `s 23A(1) this section applies to the benefit`
+    WHEN JUST TRUE THEN
+        CONSIDER benefit
+        WHEN `Category A retirement pension` THEN JUST 22      -- (a)
+        WHEN `Category B retirement pension` THEN JUST 22      -- (a)
+        WHEN `widowed parent's allowance` THEN                 -- (b)
+            CONSIDER `s 23A(7) the requisite number of years from the table in paragraph 5(5) of Schedule 3` `sch 3 para 5(5) the requisite number of years of the person's working life`
+            WHEN JUST n THEN JUST (n DIVIDED BY 2)
+            WHEN NOTHING THEN NOTHING   -- NOTHING-kind (points outside the text): the table in paragraph 5(5) of Schedule 3
+        OTHERWISE NOTHING               -- NOTHING-kind (silent): the subsection names no maximum for another benefit
+    OTHERWISE NOTHING                   -- NOTHING-kind (limited by its own wording): the subsection speaks of "a benefit mentioned in subsection (1)"
+
+@ref s 23A(6) (src:832-834)
+GIVEN `the number of tax years in which the contributor was precluded from regular employment by responsibilities at home` IS A NUMBER
+      `the maximum number of tax years that can be credited` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 23A(6) the number of tax years for which the contributor is credited under subsection (5)` MEANS
+    CONSIDER `the maximum number of tax years that can be credited`
+    WHEN NOTHING THEN NOTHING     -- NOTHING-kind (points outside the text): the maximum depends on the table or the benefit
+    WHEN JUST most THEN JUST (IF `the number of tax years in which the contributor was precluded from regular employment by responsibilities at home` AT MOST most THEN `the number of tax years in which the contributor was precluded from regular employment by responsibilities at home` ELSE most)
+
+-- (8A) contributions credited on or after 6 April 2016 for a tax year starting before that date are
+-- treated, for calculating the rate under paragraph 3 of Schedule 1 to the Pensions Act 2014, as having
+-- been credited before 6 April 2016.
+-- src:837 | (8A) Where this section, or regulations made under it, have the effect that the contributor concerned is credited, on or after 6 April 2016, with contributions for a tax year starting before that date, the contributions are to be treated for the purposes of calculating the rate under paragraph 3 of Schedule 1 to the Pensions Act 2014 as having been credited before 6 April 2016.
+@ref s 23A(8A) (src:837)
+GIVEN `the day the contributions are credited` IS A DATE
+      `the first day of the tax year for which they are credited` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 23A(8A) the contributions are treated as having been credited before 6 April 2016` MEANS
+    IF `the day the contributions are credited` AT LEAST (Date 6 4 2016) AND `the first day of the tax year for which they are credited` BELOW (Date 6 4 2016)
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "credited, on or after 6 April 2016, with contributions for a tax year starting before that date"
+
+-- (9) "the contributor concerned" has the meaning given in s 21(5)(a): see
+-- `s 21(5)(a) the contributor concerned` in ssc2-prelim.l4. "foster parent" has the meaning given by
+-- regulations: s 23A(3)(b) asks it as a fact.
+
+§§ `s 24 Records of earnings and calculation of earnings factors in absence of records`
+
+-- (2) The Secretary of State, satisfied that records of earnings relevant for calculating a person's
+-- earnings factors for 1987-88 or any later tax year have not been maintained or retained or are
+-- otherwise unobtainable, MAY (a) compute an amount to be regarded as the earnings, or (b) take the
+-- earnings to be a sum he specifies. The judgment "satisfied" is the Secretary of State's: a plain input.
+-- src:843 | (2) Where the Secretary of State is satisfied that records of earnings relevant for the purpose of calculating a person’s earnings factors for the tax year 1987-88 or any subsequent tax year have not been maintained or retained or are otherwise unobtainable, then, for the purpose of determining those earnings factors, he may—
+-- src:844 | (a) compute, in such manner as he thinks fit, an amount which shall be regarded as the amount of so much of that person’s earnings as did not exceed the upper earnings limit and on which primary Class 1 contributions have been paid or treated as paid; or
+-- src:845 | (b) take the amount of those earnings to be such sum as he may specify in the particular case.
+@ref s 24(2) (src:843-845)
+GIVEN year IS A `Tax year`
+      `the Secretary of State is satisfied that records of earnings have not been maintained or retained or are otherwise unobtainable` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 24(2) the Secretary of State may determine the earnings by computation or by specifying a sum` MEANS
+    IF year's `calendar year in which it begins` AT LEAST 1987
+       AND `the Secretary of State is satisfied that records of earnings have not been maintained or retained or are otherwise unobtainable`
+    THEN JUST TRUE
+    ELSE NOTHING     -- NOTHING-kind (limited by its own wording): "Where the Secretary of State is satisfied ... for the tax year 1987-88 or any subsequent tax year"
+
+-- src:843 | (2) Where the Secretary of State is satisfied that records of earnings relevant for the purpose of calculating a person’s earnings factors for the tax year 1987-88 or any subsequent tax year have not been maintained or retained or are otherwise unobtainable, then, for the purpose of determining those earnings factors, he may—
+-- src:844 | (a) compute, in such manner as he thinks fit, an amount which shall be regarded as the amount of so much of that person’s earnings as did not exceed the upper earnings limit and on which primary Class 1 contributions have been paid or treated as paid; or
+-- src:845 | (b) take the amount of those earnings to be such sum as he may specify in the particular case.
+@ref s 24(2) (src:843-845)
+DECLARE `s 24(2) Party` IS ONE OF
+    `s 24(2) the Secretary of State`
+
+DECLARE `s 24(2) Act` IS ONE OF
+    `s 24(2)(a) compute an amount to be regarded as the earnings`
+    `s 24(2)(b) take the earnings to be a sum specified in the particular case`
+
+@ref s 24(2)(a) (src:844)
+GIVEN `the Secretary of State is satisfied that records of earnings have not been maintained or retained or are otherwise unobtainable` IS A BOOLEAN
+GIVETH A DEONTIC `s 24(2) Party` `s 24(2) Act`
+`s 24(2)(a) the Secretary of State may compute the earnings` MEANS
+    IF `the Secretary of State is satisfied that records of earnings have not been maintained or retained or are otherwise unobtainable`
+    THEN PARTY `s 24(2) the Secretary of State` MAY `s 24(2)(a) compute an amount to be regarded as the earnings`
+    ELSE FULFILLED
+
+@ref s 24(2)(b) (src:845)
+GIVEN `the Secretary of State is satisfied that records of earnings have not been maintained or retained or are otherwise unobtainable` IS A BOOLEAN
+GIVETH A DEONTIC `s 24(2) Party` `s 24(2) Act`
+`s 24(2)(b) the Secretary of State may take the earnings to be a specified sum` MEANS
+    IF `the Secretary of State is satisfied that records of earnings have not been maintained or retained or are otherwise unobtainable`
+    THEN PARTY `s 24(2) the Secretary of State` MAY `s 24(2)(b) take the earnings to be a sum specified in the particular case`
+    ELSE FULFILLED

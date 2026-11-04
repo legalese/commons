@@ -1,0 +1,815 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ssc-core`
+
+-- Social Security Contributions and Benefits Act 1992 (United Kingdom), 1992 c. 4.
+-- SCHEDULE 3: contribution conditions for entitlement to benefit (ssc8, layer 1).
+-- Source: ukpga-1992-4.txt, a plain-text rendering made by a converter script from
+-- legislation.gov.uk (point in time 2026-07-08). It is not the official text and nothing
+-- here is "verified against the official text".
+--
+-- WHAT THIS MODULE ANSWERS (seam S1 of PLAN.md): whether the contribution conditions of Part I
+-- are satisfied. The rates are not here (Schedule 4's table is omitted from the text).
+--   * the earnings factor of a year is an INPUT: s 21(5)(c) and s 22 (ssc2) derive it;
+--   * "a relevant class" is an INPUT: the table in s 21(2) (src:746) is omitted from the text;
+--   * the lower earnings limit of a year is an INPUT (the core's `Earnings limits`);
+--   * the qualifying earnings factor and the requisite number of years (the table in
+--     paragraph 5(5), src:4861) are INPUTS: the table is omitted from the text;
+--   * "precluded from regular employment by responsibilities at home" is an INPUT: "within the
+--     meaning of regulations" (paragraph 5(7)(b)).
+-- Paragraph numbers are dropped by the converter: 2, 4, 5, 5A, 6 and 7 are the numbers that
+-- s 22(5A) (src:759) and ss 37, 38, 44, 53, 60 cite; 1, 3 and 8, 9 are counted (see NOTES.md).
+--
+-- Result types. A condition answers MAYBE BOOLEAN: JUST TRUE (satisfied), JUST FALSE (the text
+-- says it is not: reading (a), see NOTES.md "Marginal readings for a lawyer"), NOTHING (the
+-- text does not answer). A caller never turns NOTHING into FALSE.
+
+§ `Schedule 3 -- contribution conditions for entitlement to benefit`
+
+§§ `Part I -- nouns and helpers`
+
+-- One tax year of a person's contribution record, as a witness would state it. The fields
+-- are facts; whether they satisfy a condition is for the paragraphs below.
+-- "the contributor concerned" (s 21(5)(a)) is the person by whom the condition is to be satisfied.
+DECLARE `sch 3 pt I a year of the record` HAS
+    `the earnings limits for the year`                       IS AN `Earnings limits`
+    `contributions of a relevant class were actually paid for the year`  IS A BOOLEAN
+    `those contributions were paid before the relevant time`  IS A BOOLEAN
+    `contributions of a relevant class were paid or credited for the year` IS A BOOLEAN
+    `earnings were credited for the year`                     IS A BOOLEAN
+    `the earnings factor derived from contributions paid or treated as paid` IS A NUMBER
+    `the earnings factor derived with credited earnings added` IS A NUMBER
+    `the qualifying earnings factor for the year`            IS A NUMBER
+
+-- The last three complete years before the beginning of the relevant benefit year, most recent first.
+DECLARE `sch 3 pt I para 2 the last three complete years` HAS
+    `the last complete year`        IS A `sch 3 pt I a year of the record`
+    `the second last complete year` IS A `sch 3 pt I a year of the record`
+    `the third last complete year`  IS A `sch 3 pt I a year of the record`
+
+-- What "benefit" and "modifications" in paragraph 2(9) are asked about.
+DECLARE `sch 3 pt I para 2(9) kind of benefit` IS ONE OF
+    `sch 3 pt I para 2(9) a benefit under Parts II to V of this Act`
+    `sch 3 pt I para 2(9) a benefit under Parts VII to XII of this Act`
+    `sch 3 pt I para 2(9) credits under regulations under section 22(5)`
+    `sch 3 pt I para 2(9) some other benefit`
+
+DECLARE `sch 3 pt I para 2(9) kind of change` IS ONE OF
+    `sch 3 pt I para 2(9) an addition`
+    `sch 3 pt I para 2(9) an omission`
+    `sch 3 pt I para 2(9) an amendment`
+    `sch 3 pt I para 2(9) some other change`
+
+-- The paragraph-5 benefits asked about.
+DECLARE `sch 3 pt I para 5(7) section 23A status` IS ONE OF
+    `sch 3 pt I para 5(7) section 23A applies to the benefit`
+    `sch 3 pt I para 5(7) section 23A does not apply to the benefit`
+
+-- The calendar year in which a tax year begins.
+GIVEN year IS A `sch 3 pt I a year of the record`
+GIVETH A NUMBER
+`sch 3 pt I the calendar year in which the year begins` MEANS
+    year's `the earnings limits for the year`'s `the tax year`'s `calendar year in which it begins`
+
+-- Three-valued AND of two answers: one JUST FALSE decides, two JUST TRUE make JUST TRUE,
+-- anything else is NOTHING. This is not a reading of the text; it combines two answers.
+GIVEN a IS A MAYBE BOOLEAN
+      b IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I both answers` MEANS
+    BRANCH
+        IF a EQUALS JUST FALSE THEN JUST FALSE
+        IF b EQUALS JUST FALSE THEN JUST FALSE
+        IF a EQUALS JUST TRUE AND b EQUALS JUST TRUE THEN JUST TRUE
+        OTHERWISE NOTHING
+
+-- The tax year (6 April to 5 April) in which a day falls, as the calendar year in which it begins.
+-- src:4861 | (5) For the purposes of the first condition, a relevant year is any year ending before that in which the contributor concerned attained pensionable age or died under that age; and the following table shows the requisite number of years for the purpose of the second condition, by reference to a working life of a given duration—
+@ref sch 3 pt I para 5(5) (src:4861)
+GIVEN day IS A DATE
+GIVETH A `Tax year`
+`sch 3 pt I para 5(5) the tax year in which the day falls` MEANS
+    `Tax year` OF
+        IF day AT LEAST (Date 6 4 (DATE_YEAR day))
+        THEN DATE_YEAR day
+        ELSE (DATE_YEAR day) MINUS 1
+
+§§ `Part I paragraph 2 -- short-term incapacity benefit`
+
+-- (6)(a): the relevant time is the day in respect of which benefit is claimed.
+-- src:4827 | (a) “the relevant time” is the day in respect of which benefit is claimed;
+@ref sch 3 pt I para 2(6)(a) (src:4827)
+GIVEN `the day in respect of which benefit is claimed` IS A DATE
+GIVETH A DATE
+`sch 3 pt I para 2(6)(a) the relevant time` MEANS
+    `the day in respect of which benefit is claimed`
+
+-- s 21(6) defines "benefit year" (it is ssc2's section; it is needed here because (6)(b) uses it):
+-- it begins on the first Sunday in January of a calendar year. Regulations may give another
+-- meaning "for any prescribed purposes"; this is the meaning the Act gives.
+-- src:761 | (6) In this Part of this Act “benefit year” means a period—
+-- src:762 | (a) beginning with the first Sunday in January in any calendar year, and
+-- src:763 | (b) ending with the Saturday immediately preceding the first Sunday in January in the following calendar year;
+-- src:764 | but for any prescribed purposes of this Part of this Act “benefit year” may by regulations be made to mean such other period (whether or not a period of 12 months) as may be specified in the regulations.
+@ref s 21(6) (src:761-764)
+GIVEN year IS A NUMBER
+GIVETH A DATE
+`sch 3 pt I para 2(6)(b) the first Sunday in January of the calendar year` MEANS
+    Date (1 PLUS ((7 MINUS (`Weekday of` (Date 1 1 year))) MODULO 7)) 1 year
+
+-- (6)(b): the relevant benefit year is the benefit year in which the period of incapacity for work
+-- that includes the relevant time began. The answer is the calendar year in which that benefit year begins.
+-- src:4828 | (b) “the relevant benefit year” is the benefit year in which there falls the beginning of the period of incapacity for work which includes the relevant time.
+@ref sch 3 pt I para 2(6)(b) (src:4828)
+GIVEN `the day the period of incapacity for work that includes the relevant time began` IS A DATE
+GIVETH A NUMBER
+`sch 3 pt I para 2(6)(b) the calendar year in which the relevant benefit year begins` MEANS
+    IF `the day the period of incapacity for work that includes the relevant time began`
+         AT LEAST `sch 3 pt I para 2(6)(b) the first Sunday in January of the calendar year`
+                    (DATE_YEAR `the day the period of incapacity for work that includes the relevant time began`)
+    THEN DATE_YEAR `the day the period of incapacity for work that includes the relevant time began`
+    ELSE (DATE_YEAR `the day the period of incapacity for work that includes the relevant time began`) MINUS 1
+
+-- "complete year": a tax year that has ended before the benefit year begins. A tax year that begins
+-- in calendar year y ends on 5 April of y+1, so for a benefit year beginning in calendar year B
+-- the last complete year begins in B-2, the second last in B-3 and the third last in B-4.
+-- The text does not define "complete"; this is the reading that follows from s 21(5)(d) and (6).
+-- src:4811 | (a) the claimant must have actually paid contributions of a relevant class in respect of one of the last three complete years before the beginning of the relevant benefit year, and those contributions must have been paid before the relevant time; and
+@ref sch 3 pt I para 2(2)(a) (src:4811)
+GIVEN year IS A `sch 3 pt I a year of the record`
+      `the benefit year` IS A NUMBER
+      `how far back` IS A NUMBER
+GIVETH A BOOLEAN
+`sch 3 pt I para 2(2)(a) the record is for the complete year that many years before the benefit year` MEANS
+    `sch 3 pt I the calendar year in which the year begins` year EQUALS `the benefit year` MINUS (1 PLUS `how far back`)
+
+GIVEN years IS A `sch 3 pt I para 2 the last three complete years`
+      `the benefit year` IS A NUMBER
+GIVETH A BOOLEAN
+`sch 3 pt I para 2(2)(a) the records are the last three complete years` MEANS
+        `sch 3 pt I para 2(2)(a) the record is for the complete year that many years before the benefit year`
+            (years's `the last complete year`) `the benefit year` 1
+    AND `sch 3 pt I para 2(2)(a) the record is for the complete year that many years before the benefit year`
+            (years's `the second last complete year`) `the benefit year` 2
+    AND `sch 3 pt I para 2(2)(a) the record is for the complete year that many years before the benefit year`
+            (years's `the third last complete year`) `the benefit year` 3
+
+-- src:4811 | (a) the claimant must have actually paid contributions of a relevant class in respect of one of the last three complete years before the beginning of the relevant benefit year, and those contributions must have been paid before the relevant time; and
+@ref sch 3 pt I para 2(2)(a) (src:4811)
+GIVEN year IS A `sch 3 pt I a year of the record`
+GIVETH A BOOLEAN
+`sch 3 pt I para 2(2)(a) contributions of a relevant class were actually paid in time for the year` MEANS
+        year's `contributions of a relevant class were actually paid for the year`
+    AND year's `those contributions were paid before the relevant time`
+
+-- src:4812 | (b) the earnings factor derived as mentioned in sub-paragraph (4) below must be not less than that year’s lower earnings limit multiplied by 25.
+@ref sch 3 pt I para 2(2)(b) (src:4812)
+GIVEN year IS A `sch 3 pt I a year of the record`
+GIVETH A BOOLEAN
+`sch 3 pt I para 2(2)(b) the earnings factor is at least 25 times the lower earnings limit` MEANS
+    year's `the earnings factor derived from contributions paid or treated as paid`
+        AT LEAST year's `the earnings limits for the year`'s `lower earnings limit` TIMES 25
+
+-- src:4814 | (a) the claimant must in respect of the last two complete years before the beginning of the relevant benefit year have either paid or been credited with contributions of a relevant class or been credited (in the case of 1987-88 or any subsequent year) with earnings; and
+@ref sch 3 pt I para 2(3)(a) (src:4814)
+GIVEN year IS A `sch 3 pt I a year of the record`
+GIVETH A BOOLEAN
+`sch 3 pt I para 2(3)(a) the year has contributions paid or credited, or earnings credited` MEANS
+        year's `contributions of a relevant class were paid or credited for the year`
+    OR (    year's `earnings were credited for the year`
+        AND `sch 3 pt I the calendar year in which the year begins` year AT LEAST 1987)
+
+-- src:4815 | (b) the earnings factor derived as mentioned in sub-paragraph (5) below must be not less in each of those years than the year’s lower earnings limit multiplied by 50.
+@ref sch 3 pt I para 2(3)(b) (src:4815)
+GIVEN year IS A `sch 3 pt I a year of the record`
+GIVETH A BOOLEAN
+`sch 3 pt I para 2(3)(b) the earnings factor is at least 50 times the lower earnings limit` MEANS
+    year's `the earnings factor derived with credited earnings added`
+        AT LEAST year's `the earnings limits for the year`'s `lower earnings limit` TIMES 50
+
+-- (2): the first condition. One of the last three complete years must satisfy (a) AND (b) together
+-- ("that year's lower earnings limit" in (b) is the year of (a): fork F-S3-1, NOTES.md).
+-- Regulations under (8) may take the first condition to be satisfied (an input).
+-- src:4810 | (2) The first condition is that—
+-- src:4811 | (a) the claimant must have actually paid contributions of a relevant class in respect of one of the last three complete years before the beginning of the relevant benefit year, and those contributions must have been paid before the relevant time; and
+-- src:4812 | (b) the earnings factor derived as mentioned in sub-paragraph (4) below must be not less than that year’s lower earnings limit multiplied by 25.
+@ref sch 3 pt I para 2(2) (src:4810-4812)
+GIVEN `the benefit year` IS A NUMBER
+      years IS A `sch 3 pt I para 2 the last three complete years`
+      `regulations under sub-paragraph (8) take the first condition to be satisfied` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 2(2) the first condition is satisfied` MEANS
+    BRANCH
+        -- not a no: sub-paragraph (8)(a) lets regulations take the first condition to be satisfied
+        IF `regulations under sub-paragraph (8) take the first condition to be satisfied` THEN JUST TRUE
+        -- NOTHING-kind (limited by its own wording): "one of the last three complete years before the beginning of the relevant benefit year"
+        IF NOT (`sch 3 pt I para 2(2)(a) the records are the last three complete years` years `the benefit year`) THEN NOTHING
+        IF any (GIVEN y YIELD (
+                        `sch 3 pt I para 2(2)(a) contributions of a relevant class were actually paid in time for the year` y
+                    AND `sch 3 pt I para 2(2)(b) the earnings factor is at least 25 times the lower earnings limit` y))
+               (LIST years's `the last complete year`, years's `the second last complete year`, years's `the third last complete year`)
+           THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "The first condition is that" (reading (a): a failed limb is the text's no)
+        OTHERWISE JUST FALSE
+
+-- (3): the second condition: each of the last two complete years satisfies (a) AND (b).
+-- src:4813 | (3) The second condition is that—
+-- src:4814 | (a) the claimant must in respect of the last two complete years before the beginning of the relevant benefit year have either paid or been credited with contributions of a relevant class or been credited (in the case of 1987-88 or any subsequent year) with earnings; and
+-- src:4815 | (b) the earnings factor derived as mentioned in sub-paragraph (5) below must be not less in each of those years than the year’s lower earnings limit multiplied by 50.
+@ref sch 3 pt I para 2(3) (src:4813-4815)
+GIVEN `the benefit year` IS A NUMBER
+      years IS A `sch 3 pt I para 2 the last three complete years`
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 2(3) the second condition is satisfied` MEANS
+    BRANCH
+        -- NOTHING-kind (limited by its own wording): "the last two complete years before the beginning of the relevant benefit year"
+        IF NOT (    `sch 3 pt I para 2(2)(a) the record is for the complete year that many years before the benefit year`
+                        (years's `the last complete year`) `the benefit year` 1
+                AND `sch 3 pt I para 2(2)(a) the record is for the complete year that many years before the benefit year`
+                        (years's `the second last complete year`) `the benefit year` 2)
+           THEN NOTHING
+        IF all (GIVEN y YIELD (
+                        `sch 3 pt I para 2(3)(a) the year has contributions paid or credited, or earnings credited` y
+                    AND `sch 3 pt I para 2(3)(b) the earnings factor is at least 50 times the lower earnings limit` y))
+               (LIST years's `the last complete year`, years's `the second last complete year`)
+           THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "The second condition is that" (reading (a): a failed limb is the text's no)
+        OTHERWISE JUST FALSE
+
+-- (1): the contribution conditions for short-term incapacity benefit are the first and the second.
+-- This is the seam S1 answer for paragraph 2 (src:870, s 30A(2)(a)).
+-- src:4809 | (1) The contribution conditions for short-term incapacity benefit are the following.
+@ref sch 3 pt I para 2(1) (src:4809)
+GIVEN `the benefit year` IS A NUMBER
+      years IS A `sch 3 pt I para 2 the last three complete years`
+      `regulations under sub-paragraph (8) take the first condition to be satisfied` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 2 the contribution conditions for short-term incapacity benefit are satisfied` MEANS
+    `sch 3 pt I both answers`
+        (`sch 3 pt I para 2(2) the first condition is satisfied` `the benefit year` years
+            `regulations under sub-paragraph (8) take the first condition to be satisfied`)
+        (`sch 3 pt I para 2(3) the second condition is satisfied` `the benefit year` years)
+
+-- (7): a claim that failed a condition is disregarded when a later claim, in a later benefit year in which
+-- the person would have satisfied it, is made. "shall be disregarded" is a grant limited by "Where ..."
+-- (reading (b)): outside the "Where", the text does not say the claim is NOT disregarded.
+-- src:4829 | (7) Where a person makes a claim for incapacity benefit and does not satisfy the first contribution condition (specified in sub-paragraph (2) above) or, as the case may be, the second contribution condition (specified in sub-paragraph (3) above) and, in a later benefit year in which he would satisfy that condition had no such claim been made, he makes a further claim for incapacity benefit, the previous claim shall be disregarded.
+@ref sch 3 pt I para 2(7) (src:4829)
+GIVEN `a previous claim for incapacity benefit was made` IS A BOOLEAN
+      `that claim failed the first or the second contribution condition` IS A BOOLEAN
+      `a further claim is made in a later benefit year` IS A BOOLEAN
+      `the claimant would satisfy that condition in the later benefit year had no such claim been made` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 2(7) the previous claim is disregarded` MEANS
+    IF     `a previous claim for incapacity benefit was made`
+       AND `that claim failed the first or the second contribution condition`
+       AND `a further claim is made in a later benefit year`
+       AND `the claimant would satisfy that condition in the later benefit year had no such claim been made`
+    THEN JUST TRUE
+    -- NOTHING-kind (limited by its own wording): "Where a person makes a claim ... the previous claim shall be disregarded"
+    ELSE NOTHING
+
+-- (9): "benefit" in sub-paragraph (8) INCLUDES the two listed groups, so any other benefit is not answered.
+-- src:4833 | (9) In sub-paragraph (8)—
+-- src:4834 | “benefit” includes (in addition to any benefit under Parts II to V of this Act)—
+-- src:4835 | any benefit under Parts VII to XII of this Act, and
+-- src:4836 | credits under regulations under section 22(5) above;
+@ref sch 3 pt I para 2(9) (src:4833-4836)
+GIVEN kind IS A `sch 3 pt I para 2(9) kind of benefit`
+      `s 22(5) the person was credited with contributions or earnings by regulations` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 2(9) the thing is a benefit for sub-paragraph (8)` MEANS
+    CONSIDER kind
+    WHEN `sch 3 pt I para 2(9) a benefit under Parts II to V of this Act` THEN JUST TRUE
+    WHEN `sch 3 pt I para 2(9) a benefit under Parts VII to XII of this Act` THEN JUST TRUE
+    WHEN `sch 3 pt I para 2(9) credits under regulations under section 22(5)`
+        THEN IF `s 22(5) the person was credited with contributions or earnings by regulations`
+             THEN JUST TRUE
+             -- NOTHING-kind (limited by its own wording): "credits under regulations under section 22(5) above" only if there were such credits
+             ELSE NOTHING
+    -- NOTHING-kind (includes): "benefit” includes (in addition to any benefit under Parts II to V of this Act)
+    WHEN `sch 3 pt I para 2(9) some other benefit` THEN NOTHING
+
+-- src:4837 | “modifications” includes additions, omissions and amendments.
+@ref sch 3 pt I para 2(9) (src:4837)
+GIVEN kind IS A `sch 3 pt I para 2(9) kind of change`
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 2(9) the change is a modification` MEANS
+    CONSIDER kind
+    WHEN `sch 3 pt I para 2(9) an addition` THEN JUST TRUE
+    WHEN `sch 3 pt I para 2(9) an omission` THEN JUST TRUE
+    WHEN `sch 3 pt I para 2(9) an amendment` THEN JUST TRUE
+    -- NOTHING-kind (includes): "modifications” includes additions, omissions and amendments
+    WHEN `sch 3 pt I para 2(9) some other change` THEN NOTHING
+
+§§ `Part I paragraph 5 -- widowed mother's allowance, widowed parent's allowance, widow's pension, retirement pensions (Categories A and B)`
+
+-- (1): the benefits whose conditions this paragraph sets out. The list is not closed with "only", so
+-- any other benefit is not answered. "(other than one in relation to which paragraph 5A applies)" is
+-- a flat exclusion: a Category A pension to which paragraph 5A applies is not one of them.
+-- src:4843 | (1) This paragraph sets out the contribution conditions for—
+-- src:4844 | (a) a widowed mother's allowance, a widowed parent's allowance or a widow's pension;
+-- src:4845 | (b) a Category A retirement pension (other than one in relation to which paragraph 5A applies);
+-- src:4846 | (c) a Category B retirement pension in the cases provided for by any of sections 48A to 51ZA.
+@ref sch 3 pt I para 5(1) (src:4843-4846)
+GIVEN benefit IS A Benefit
+      `paragraph 5A applies to the benefit` IS A MAYBE BOOLEAN
+      `the case is one provided for by any of sections 48A to 51ZA` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5(1) this paragraph sets out the contribution conditions for the benefit` MEANS
+    CONSIDER benefit
+    WHEN `widowed mother's allowance` THEN JUST TRUE
+    WHEN `widowed parent's allowance` THEN JUST TRUE
+    WHEN `widow's pension` THEN JUST TRUE
+    WHEN `Category A retirement pension` THEN
+        CONSIDER `paragraph 5A applies to the benefit`
+        -- NOTHING-kind (points outside the text): whether paragraph 5A applies is paragraph 5A(1)'s answer, asked as an input
+        WHEN NOTHING THEN NOTHING
+        -- FALSE-kind (the text says no in its own words): "(other than one in relation to which paragraph 5A applies)"
+        WHEN JUST applies THEN JUST (NOT applies)
+    WHEN `Category B retirement pension` THEN
+        IF `the case is one provided for by any of sections 48A to 51ZA`
+        THEN JUST TRUE
+        -- NOTHING-kind (limited by its own wording): "in the cases provided for by any of sections 48A to 51ZA"
+        ELSE NOTHING
+    -- NOTHING-kind (list not closed): "This paragraph sets out the contribution conditions for" the listed benefits, and says nothing of any other
+    OTHERWISE NOTHING
+
+-- (5), first sentence: a relevant year is any year ending before the tax year in which the contributor
+-- attained pensionable age or died under that age.
+-- src:4861 | (5) For the purposes of the first condition, a relevant year is any year ending before that in which the contributor concerned attained pensionable age or died under that age; and the following table shows the requisite number of years for the purpose of the second condition, by reference to a working life of a given duration—
+@ref sch 3 pt I para 5(5) (src:4861)
+GIVEN year IS A `sch 3 pt I a year of the record`
+      `the day the contributor attained pensionable age or died under that age` IS A DATE
+GIVETH A BOOLEAN
+`sch 3 pt I para 5(5) the year is a relevant year` MEANS
+    `sch 3 pt I the calendar year in which the year begins` year
+        LESS THAN (`sch 3 pt I para 5(5) the tax year in which the day falls`
+                      `the day the contributor attained pensionable age or died under that age`)'s `calendar year in which it begins`
+
+-- (2)(a) and (b): in one relevant year the contributor must have actually paid contributions of a
+-- relevant class AND the earnings factor (derived as (2)(b) says) must reach that year's qualifying
+-- earnings factor.
+-- src:4847 | (2) The first condition is that—
+-- src:4848 | (a) the contributor concerned must in respect of any one relevant year have actually paid contributions of a relevant class; and
+-- src:4849 | (b) the earnings factor derived—
+-- src:4850 | (i) if that year is 1987-88 or any subsequent year, from so much of the contributor’s earnings as did not exceed the upper earnings limit and upon which such of those contributions as are primary Class 1 contributions were paid or treated as paid and any Class 2 or Class 3 contributions, or
+-- src:4851 | (ii) if that year is an earlier year, from the contributions referred to in paragraph (a) above,
+-- src:4852 | must be not less than the qualifying earnings factor for that year.
+@ref sch 3 pt I para 5(2) (src:4847-4852)
+GIVEN year IS A `sch 3 pt I a year of the record`
+GIVETH A BOOLEAN
+`sch 3 pt I para 5(2) contributions of a relevant class were actually paid and the earnings factor reaches the qualifying earnings factor` MEANS
+        year's `contributions of a relevant class were actually paid for the year`
+    AND year's `the earnings factor derived from contributions paid or treated as paid`
+            AT LEAST year's `the qualifying earnings factor for the year`
+
+GIVEN years IS A LIST OF `sch 3 pt I a year of the record`
+      `the day the contributor attained pensionable age or died under that age` IS A DATE
+GIVETH A NUMBER
+`sch 3 pt I para 5(2) the number of relevant years that satisfy paragraphs (a) and (b)` MEANS
+    count (filter (GIVEN y YIELD (
+                        `sch 3 pt I para 5(5) the year is a relevant year` y `the day the contributor attained pensionable age or died under that age`
+                    AND `sch 3 pt I para 5(2) contributions of a relevant class were actually paid and the earnings factor reaches the qualifying earnings factor` y))
+                  years)
+
+-- (6): the first condition is taken to be satisfied if the contributor was entitled to long-term incapacity
+-- benefit at any time in the year of attaining pensionable age (or dying under it) or the year before.
+-- src:4862 | (6) The first condition shall be taken to be satisfied if the contributor concerned was entitled to long-term incapacity benefit at any time during—
+-- src:4863 | (a) the year in which he attained pensionable age or died under that age, or
+-- src:4864 | (b) the year immediately preceding that year.
+@ref sch 3 pt I para 5(6) (src:4862-4864)
+GIVEN `the contributor was entitled to long-term incapacity benefit at any time in that year or the year before` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5(6) the first condition is taken to be satisfied` MEANS
+    IF `the contributor was entitled to long-term incapacity benefit at any time in that year or the year before`
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "The first condition shall be taken to be satisfied if" (reading (a): this sub-paragraph does not deem it)
+    ELSE JUST FALSE
+
+-- (6B): "main phase employment and support allowance" is an allowance whose amount includes an addition
+-- under section 2(1)(b) or 4(2)(b) of the Welfare Reform Act 2007 (another Act: asked as a fact).
+-- src:4868 | (6B) The reference in sub-paragraph (6A) to main phase employment and support allowance is to an employment and support allowance in the case of which the calculation of the amount payable in respect of the claimant includes an addition under section 2(1)(b) or 4(2)(b) of the Welfare Reform Act 2007 (addition where conditions of entitlement to support component or work-related activity component satisfied).
+@ref sch 3 pt I para 5(6B) (src:4868)
+GIVEN `the calculation of the amount payable includes an addition under section 2(1)(b) or 4(2)(b) of the Welfare Reform Act 2007` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5(6B) the allowance is main phase employment and support allowance` MEANS
+    IF `the calculation of the amount payable includes an addition under section 2(1)(b) or 4(2)(b) of the Welfare Reform Act 2007`
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "is to an employment and support allowance in the case of which the calculation of the amount payable in respect of the claimant includes an addition"
+    ELSE JUST FALSE
+
+-- (6A): the first condition is taken to be satisfied if the contributor was entitled to main phase employment
+-- and support allowance at any time in the year of attaining pensionable age (or dying under it) or the year before.
+-- src:4865 | (6A) The first condition shall be taken to be satisfied if the contributor concerned was entitled to main phase employment and support allowance at any time during—
+-- src:4866 | (a) the year in which he attained pensionable age or died under that age, or
+-- src:4867 | (b) the year immediately preceding that year.
+@ref sch 3 pt I para 5(6A) (src:4865-4867)
+GIVEN `the allowance is main phase employment and support allowance` IS A MAYBE BOOLEAN
+      `the contributor was entitled to it at any time in that year or the year before` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5(6A) the first condition is taken to be satisfied` MEANS
+    BRANCH
+        IF `the allowance is main phase employment and support allowance` EQUALS JUST TRUE
+           AND `the contributor was entitled to it at any time in that year or the year before`
+           THEN JUST TRUE
+        -- NOTHING-kind (points outside the text): whether the allowance is main phase is sub-paragraph (6B)'s answer, asked as an input
+        IF `the allowance is main phase employment and support allowance` EQUALS NOTHING THEN NOTHING
+        -- FALSE-kind (the text says no in its own words): "The first condition shall be taken to be satisfied if" (reading (a): this sub-paragraph does not deem it)
+        OTHERWISE JUST FALSE
+
+-- (2) with (6) and (6A): the first condition.
+-- src:4847 | (2) The first condition is that—
+-- src:4848 | (a) the contributor concerned must in respect of any one relevant year have actually paid contributions of a relevant class; and
+-- src:4849 | (b) the earnings factor derived—
+-- src:4850 | (i) if that year is 1987-88 or any subsequent year, from so much of the contributor’s earnings as did not exceed the upper earnings limit and upon which such of those contributions as are primary Class 1 contributions were paid or treated as paid and any Class 2 or Class 3 contributions, or
+-- src:4851 | (ii) if that year is an earlier year, from the contributions referred to in paragraph (a) above,
+-- src:4852 | must be not less than the qualifying earnings factor for that year.
+@ref sch 3 pt I para 5(2) (src:4847-4852)
+GIVEN `the number of relevant years that satisfy paragraphs (a) and (b)` IS A NUMBER
+      `the first condition is taken to be satisfied under sub-paragraph (6)` IS A MAYBE BOOLEAN
+      `the first condition is taken to be satisfied under sub-paragraph (6A)` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5(2) the first condition is satisfied` MEANS
+    BRANCH
+        IF `the first condition is taken to be satisfied under sub-paragraph (6)` EQUALS JUST TRUE THEN JUST TRUE
+        IF `the first condition is taken to be satisfied under sub-paragraph (6A)` EQUALS JUST TRUE THEN JUST TRUE
+        IF `the number of relevant years that satisfy paragraphs (a) and (b)` AT LEAST 1 THEN JUST TRUE
+        -- NOTHING-kind (points outside the text): sub-paragraph (6) or (6A) was not answered, so deeming cannot be ruled out
+        IF `the first condition is taken to be satisfied under sub-paragraph (6)` EQUALS NOTHING THEN NOTHING
+        IF `the first condition is taken to be satisfied under sub-paragraph (6A)` EQUALS NOTHING THEN NOTHING
+        -- FALSE-kind (the text says no in its own words): "The first condition is that" (reading (a): a failed limb is the text's no)
+        OTHERWISE JUST FALSE
+
+-- (3)(a) and (b), with (4): each of at least the requisite number of years of the working life must have
+-- contributions paid or credited (or earnings credited, from 1987-88) AND an earnings factor that reaches the
+-- year's qualifying earnings factor. (3)(a) is worded as paragraph 2(3)(a) is.
+-- src:4854 | (a) the contributor concerned must, in respect of each of not less than the requisite number of years of his working life, have paid or been credited with contributions of a relevant class or been credited (in the case of 1987-88 or any subsequent year) with earnings; and
+@ref sch 3 pt I para 5(3)(a) (src:4854)
+GIVEN year IS A `sch 3 pt I a year of the record`
+GIVETH A BOOLEAN
+`sch 3 pt I para 5(3)(a) the year has contributions paid or credited, or earnings credited` MEANS
+    `sch 3 pt I para 2(3)(a) the year has contributions paid or credited, or earnings credited` year
+
+-- src:4855 | (b) in the case of each of those years, the earnings factor derived as mentioned in sub-paragraph (4) below must be not less than the qualifying earnings factor for that year.
+@ref sch 3 pt I para 5(3)(b) (src:4855)
+GIVEN year IS A `sch 3 pt I a year of the record`
+GIVETH A BOOLEAN
+`sch 3 pt I para 5(3)(b) the earnings factor reaches the qualifying earnings factor` MEANS
+    year's `the earnings factor derived with credited earnings added`
+        AT LEAST year's `the qualifying earnings factor for the year`
+
+-- src:4874 | (8) For the purposes of Parts I to VI of this Act a person’s working life is the period between—
+-- src:4875 | (a) (inclusive) the tax year in which he attained the age of 16; and
+-- src:4876 | (b) (exclusive) the tax year in which he attained pensionable age or died under that age.
+@ref sch 3 pt I para 5(8) (src:4874-4876)
+GIVEN year IS A `sch 3 pt I a year of the record`
+      `the day the contributor attained the age of 16` IS A DATE
+      `the day the contributor attained pensionable age or died under that age` IS A DATE
+GIVETH A BOOLEAN
+`sch 3 pt I para 5(8) the year is in the contributor's working life` MEANS
+        `sch 3 pt I the calendar year in which the year begins` year
+            AT LEAST (`sch 3 pt I para 5(5) the tax year in which the day falls` `the day the contributor attained the age of 16`)'s `calendar year in which it begins`
+    AND `sch 3 pt I the calendar year in which the year begins` year
+            LESS THAN (`sch 3 pt I para 5(5) the tax year in which the day falls` `the day the contributor attained pensionable age or died under that age`)'s `calendar year in which it begins`
+
+-- src:4874 | (8) For the purposes of Parts I to VI of this Act a person’s working life is the period between—
+-- src:4875 | (a) (inclusive) the tax year in which he attained the age of 16; and
+-- src:4876 | (b) (exclusive) the tax year in which he attained pensionable age or died under that age.
+@ref sch 3 pt I para 5(8) (src:4874-4876)
+GIVEN `the day the contributor attained the age of 16` IS A DATE
+      `the day the contributor attained pensionable age or died under that age` IS A DATE
+GIVETH A NUMBER
+`sch 3 pt I para 5(8) the number of years of the contributor's working life` MEANS
+    (`sch 3 pt I para 5(5) the tax year in which the day falls` `the day the contributor attained pensionable age or died under that age`)'s `calendar year in which it begins`
+        MINUS (`sch 3 pt I para 5(5) the tax year in which the day falls` `the day the contributor attained the age of 16`)'s `calendar year in which it begins`
+
+-- src:4853 | (3) The second condition is that—
+-- src:4854 | (a) the contributor concerned must, in respect of each of not less than the requisite number of years of his working life, have paid or been credited with contributions of a relevant class or been credited (in the case of 1987-88 or any subsequent year) with earnings; and
+-- src:4855 | (b) in the case of each of those years, the earnings factor derived as mentioned in sub-paragraph (4) below must be not less than the qualifying earnings factor for that year.
+@ref sch 3 pt I para 5(3) (src:4853-4855)
+GIVEN years IS A LIST OF `sch 3 pt I a year of the record`
+      `the day the contributor attained the age of 16` IS A DATE
+      `the day the contributor attained pensionable age or died under that age` IS A DATE
+GIVETH A NUMBER
+`sch 3 pt I para 5(3) the number of years of the working life that satisfy paragraphs (a) and (b)` MEANS
+    count (filter (GIVEN y YIELD (
+                        `sch 3 pt I para 5(8) the year is in the contributor's working life` y
+                            `the day the contributor attained the age of 16` `the day the contributor attained pensionable age or died under that age`
+                    AND `sch 3 pt I para 5(3)(a) the year has contributions paid or credited, or earnings credited` y
+                    AND `sch 3 pt I para 5(3)(b) the earnings factor reaches the qualifying earnings factor` y))
+                  years)
+
+-- (3): "not less than the requisite number of years" (the table in (5) is omitted from the text: an input).
+-- src:4853 | (3) The second condition is that—
+-- src:4854 | (a) the contributor concerned must, in respect of each of not less than the requisite number of years of his working life, have paid or been credited with contributions of a relevant class or been credited (in the case of 1987-88 or any subsequent year) with earnings; and
+-- src:4855 | (b) in the case of each of those years, the earnings factor derived as mentioned in sub-paragraph (4) below must be not less than the qualifying earnings factor for that year.
+@ref sch 3 pt I para 5(3) (src:4853-4855)
+GIVEN `the requisite number of years for a working life of that duration` IS A NUMBER
+      `the number of years of the working life that satisfy paragraphs (a) and (b)` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5(3) the second condition is satisfied` MEANS
+    IF `the number of years of the working life that satisfy paragraphs (a) and (b)`
+           AT LEAST `the requisite number of years for a working life of that duration`
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "The second condition is that" (reading (a): a failed limb is the text's no)
+    ELSE JUST FALSE
+
+-- (7): the second condition is taken to be satisfied although (3)(a) and (b) are not complied with for each
+-- of the requisite number of years, if they are complied with for at least half of them AND in each of the
+-- other years the contributor was precluded from regular employment by responsibilities at home (within
+-- the meaning of regulations: an input). The other years are the rest of the requisite number (fork F-S3-3).
+-- "But nothing in this sub-paragraph applies in relation to any benefit to which section 23A above applies."
+-- src:4869 | (7) The second condition shall be taken to be satisfied notwithstanding that paragraphs (a) and (b) of sub-paragraph (3) above are not complied with as respects each of the requisite number of years if—
+-- src:4870 | (a) those paragraphs are complied with as respects at least half that number of years ... ; and
+-- src:4871 | (b) in each of the other years the contributor concerned was, within the meaning of regulations, precluded from regular employment by responsibilities at home.
+-- src:4872 | But nothing in this sub-paragraph applies in relation to any benefit to which section 23A above applies.
+@ref sch 3 pt I para 5(7) (src:4869-4872)
+GIVEN `the requisite number of years for a working life of that duration` IS A NUMBER
+      `the number of years of the working life that satisfy paragraphs (a) and (b)` IS A NUMBER
+      `the number of other years in which the contributor was precluded from regular employment by responsibilities at home` IS A NUMBER
+      status IS A `sch 3 pt I para 5(7) section 23A status`
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5(7) the second condition is taken to be satisfied` MEANS
+    BRANCH
+        -- FALSE-kind (the text says no in its own words): "But nothing in this sub-paragraph applies in relation to any benefit to which section 23A above applies"
+        IF status EQUALS `sch 3 pt I para 5(7) section 23A applies to the benefit` THEN JUST FALSE
+        IF     `the number of years of the working life that satisfy paragraphs (a) and (b)` TIMES 2
+                   AT LEAST `the requisite number of years for a working life of that duration`
+           AND `the number of years of the working life that satisfy paragraphs (a) and (b)`
+                   PLUS `the number of other years in which the contributor was precluded from regular employment by responsibilities at home`
+                   AT LEAST `the requisite number of years for a working life of that duration`
+           THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "shall be taken to be satisfied notwithstanding ... if" (reading (a): this sub-paragraph does not deem it)
+        OTHERWISE JUST FALSE
+
+-- Paragraph 5 as a whole: the seam S1 answer for the benefits of sub-paragraph (1)
+-- (ss 37(1), 38(1), 39A(2), 44(1A)(a), 51 and others cite it). Both conditions: the first, and the second
+-- or the second as sub-paragraph (7) takes it to be satisfied.
+-- src:4843 | (1) This paragraph sets out the contribution conditions for—
+-- src:4844 | (a) a widowed mother's allowance, a widowed parent's allowance or a widow's pension;
+-- src:4845 | (b) a Category A retirement pension (other than one in relation to which paragraph 5A applies);
+-- src:4846 | (c) a Category B retirement pension in the cases provided for by any of sections 48A to 51ZA.
+@ref sch 3 pt I para 5(1) (src:4843-4846)
+GIVEN `this paragraph sets out the contribution conditions for the benefit` IS A MAYBE BOOLEAN
+      `the first condition is satisfied` IS A MAYBE BOOLEAN
+      `the second condition is taken to be satisfied under sub-paragraph (7)` IS A MAYBE BOOLEAN
+      `the second condition is satisfied under sub-paragraph (3)` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5 the contribution conditions for the benefit are satisfied` MEANS
+    BRANCH
+        IF `this paragraph sets out the contribution conditions for the benefit` EQUALS JUST TRUE
+           AND `the second condition is taken to be satisfied under sub-paragraph (7)` EQUALS JUST TRUE
+           THEN `the first condition is satisfied`
+        IF `this paragraph sets out the contribution conditions for the benefit` EQUALS JUST TRUE
+           THEN `sch 3 pt I both answers` `the first condition is satisfied` `the second condition is satisfied under sub-paragraph (3)`
+        -- NOTHING-kind (limited by its own wording): this paragraph sets out the conditions only for the benefits it lists in sub-paragraph (1)
+        OTHERWISE NOTHING
+
+§§ `Part I paragraph 5A -- Category A and Category B retirement pensions: the 30-year condition`
+
+-- (1): this paragraph applies to a Category A pension "in a case where" the contributor attains pensionable
+-- age on or after 6 April 2010, and to a Category B pension "in the cases provided for by" ss 48A to 51ZA.
+-- Category A: reading (a): a failed "in a case where" is the text's no (NOTES.md, Marginal readings), because
+-- paragraph 5(1)(b) ("other than one in relation to which paragraph 5A applies") presupposes that the
+-- two paragraphs divide Category A pensions between them. The other reading is NOTHING.
+-- Category B: reading (b), as in paragraph 5(1)(c), which has the same words: "in the cases provided for by"
+-- is a limit of the grant, and outside it the paragraph says nothing. The other reading is JUST FALSE.
+-- src:4877 | (1) This paragraph applies to—
+-- src:4878 | (a) a Category A retirement pension in a case where the contributor concerned attains pensionable age on or after 6th April 2010;
+-- src:4879 | (b) a Category B retirement pension in the cases provided for by any of sections 48A to 51ZA.
+@ref sch 3 pt I para 5A(1) (src:4877-4879)
+GIVEN benefit IS A Benefit
+      `the day the contributor attains pensionable age` IS A DATE
+      `the case is one provided for by any of sections 48A to 51ZA` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5A(1) this paragraph applies to the benefit` MEANS
+    CONSIDER benefit
+    WHEN `Category A retirement pension` THEN
+        IF `the day the contributor attains pensionable age` AT LEAST (Date 6 4 2010)
+        THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "in a case where the contributor concerned attains pensionable age on or after 6th April 2010"
+        ELSE JUST FALSE
+    WHEN `Category B retirement pension` THEN
+        IF `the case is one provided for by any of sections 48A to 51ZA`
+        THEN JUST TRUE
+        -- NOTHING-kind (limited by its own wording): "in the cases provided for by any of sections 48A to 51ZA", read as in paragraph 5(1)(c), which has the same words
+        ELSE NOTHING
+    -- NOTHING-kind (list not closed): "This paragraph applies to" the two listed pensions and says nothing of any other benefit
+    OTHERWISE NOTHING
+
+-- (2)(a) and (b), with (3): at least 30 years of the working life must have contributions paid or credited
+-- (or earnings credited) AND an earnings factor (with credited earnings added) that reaches the year's
+-- qualifying earnings factor. The 30 is the Act's own number.
+-- src:4880 | (2) The contribution condition for a Category A or Category B retirement pension in relation to which this paragraph applies is that—
+-- src:4881 | (a) the contributor concerned must, in respect of each of not less than 30 years of his working life, have paid or been credited with contributions of a relevant class or been credited (in the case of 1987-88 or any subsequent year) with earnings; and
+-- src:4882 | (b) in the case of each of those years, the earnings factor derived as mentioned in sub-paragraph (3) below must be not less than the qualifying earnings factor for that year.
+-- src:4883 | (3) For the purposes of paragraph (b) of sub-paragraph (2) above, the earnings factor—
+-- src:4884 | (a) in the case of 1987-88 or any subsequent year, is that which is derived from—
+-- src:4885 | (i) so much of the contributor's earnings as did not exceed the upper earnings limit and upon which such of the contributions mentioned in paragraph (a) of that sub-paragraph as are primary Class 1 contributions were paid or treated as paid or earnings credited; and
+-- src:4886 | (ii) any Class 2 or Class 3 contributions for the year; or
+-- src:4887 | (b) in the case of any earlier year, is that which is derived from the contributions mentioned in paragraph (a) of that sub-paragraph.
+@ref sch 3 pt I para 5A(2) (src:4880-4887)
+GIVEN `the number of years of the working life that satisfy paragraphs (a) and (b)` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5A(2) the contribution condition is satisfied` MEANS
+    IF `the number of years of the working life that satisfy paragraphs (a) and (b)` AT LEAST 30
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "The contribution condition ... is that" (reading (a): a failed limb is the text's no)
+    ELSE JUST FALSE
+
+-- (4): regulations may modify (2) and (3) for contributions under the National Insurance Acts 1946 and 1965.
+-- Whether such regulations meet the condition for this contributor is an input.
+-- Paragraph 5A as a whole: the seam S1 answer for the condition of paragraph 5A (ss 44(1A)(b), 48A, 48B, 51 and
+-- others cite it).
+-- src:4877 | (1) This paragraph applies to—
+-- src:4878 | (a) a Category A retirement pension in a case where the contributor concerned attains pensionable age on or after 6th April 2010;
+-- src:4879 | (b) a Category B retirement pension in the cases provided for by any of sections 48A to 51ZA.
+-- src:4880 | (2) The contribution condition for a Category A or Category B retirement pension in relation to which this paragraph applies is that—
+-- src:4881 | (a) the contributor concerned must, in respect of each of not less than 30 years of his working life, have paid or been credited with contributions of a relevant class or been credited (in the case of 1987-88 or any subsequent year) with earnings; and
+-- src:4882 | (b) in the case of each of those years, the earnings factor derived as mentioned in sub-paragraph (3) below must be not less than the qualifying earnings factor for that year.
+-- src:4883 | (3) For the purposes of paragraph (b) of sub-paragraph (2) above, the earnings factor—
+-- src:4884 | (a) in the case of 1987-88 or any subsequent year, is that which is derived from—
+-- src:4885 | (i) so much of the contributor's earnings as did not exceed the upper earnings limit and upon which such of the contributions mentioned in paragraph (a) of that sub-paragraph as are primary Class 1 contributions were paid or treated as paid or earnings credited; and
+-- src:4886 | (ii) any Class 2 or Class 3 contributions for the year; or
+-- src:4887 | (b) in the case of any earlier year, is that which is derived from the contributions mentioned in paragraph (a) of that sub-paragraph.
+-- src:4888 | (4) Regulations may modify sub-paragraphs (2) and (3) above for the purposes of their application in a case where—
+-- src:4889 | (a) the contributor concerned has paid, or been credited with, contributions, or
+-- src:4890 | (b) contributions have been deemed to be, or treated as, paid by or credited to him,
+-- src:4891 | under the National Insurance Act 1946 or the National Insurance Act 1965.
+@ref sch 3 pt I para 5A (src:4877-4891)
+GIVEN `this paragraph applies to the benefit` IS A MAYBE BOOLEAN
+      `the contribution condition is satisfied under sub-paragraph (2)` IS A MAYBE BOOLEAN
+      `regulations under sub-paragraph (4) modify the condition so that it is met` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 5A the contribution conditions for the benefit are satisfied` MEANS
+    BRANCH
+        IF `this paragraph applies to the benefit` EQUALS JUST TRUE
+           AND `regulations under sub-paragraph (4) modify the condition so that it is met`
+           THEN JUST TRUE
+        IF `this paragraph applies to the benefit` EQUALS JUST TRUE
+           THEN `the contribution condition is satisfied under sub-paragraph (2)`
+        -- NOTHING-kind (limited by its own wording): "This paragraph applies to" the two pensions it lists
+        OTHERWISE NOTHING
+
+§§ `Part I paragraph 6 -- child's special allowance`
+
+-- (2): a relevant year is any year ending before the date on which the contributor attained pensionable age or died under that age.
+-- src:4896 | (2) For the purposes of this condition, a relevant year is any year ending before the date on which the contributor concerned attained pensionable age or died under that age.
+@ref sch 3 pt I para 6(2) (src:4896)
+GIVEN year IS A `sch 3 pt I a year of the record`
+      `the day the contributor attained pensionable age or died under that age` IS A DATE
+GIVETH A BOOLEAN
+`sch 3 pt I para 6(2) the year is a relevant year` MEANS
+    Date 5 4 (1 PLUS `sch 3 pt I the calendar year in which the year begins` year)
+        LESS THAN `the day the contributor attained pensionable age or died under that age`
+
+-- (1)(a) and (b): in one relevant year the contributor must have actually paid contributions of a relevant
+-- class AND the earnings factor derived from those contributions must reach 50 times that year's lower earnings limit.
+-- src:4893 | (1) The contribution condition for a child’s special allowance is that—
+-- src:4894 | (a) the contributor concerned must in respect of any one relevant year have actually paid contributions of a relevant class; and
+-- src:4895 | (b) the earnings factor derived from those contributions must be not less than that year’s lower earnings limit multiplied by 50.
+@ref sch 3 pt I para 6(1) (src:4893-4895)
+GIVEN year IS A `sch 3 pt I a year of the record`
+GIVETH A BOOLEAN
+`sch 3 pt I para 6(1) contributions of a relevant class were actually paid and the earnings factor reaches 50 times the lower earnings limit` MEANS
+        year's `contributions of a relevant class were actually paid for the year`
+    AND year's `the earnings factor derived from contributions paid or treated as paid`
+            AT LEAST year's `the earnings limits for the year`'s `lower earnings limit` TIMES 50
+
+GIVEN years IS A LIST OF `sch 3 pt I a year of the record`
+      `the day the contributor attained pensionable age or died under that age` IS A DATE
+GIVETH A NUMBER
+`sch 3 pt I para 6(1) the number of relevant years that satisfy paragraphs (a) and (b)` MEANS
+    count (filter (GIVEN y YIELD (
+                        `sch 3 pt I para 6(2) the year is a relevant year` y `the day the contributor attained pensionable age or died under that age`
+                    AND `sch 3 pt I para 6(1) contributions of a relevant class were actually paid and the earnings factor reaches 50 times the lower earnings limit` y))
+                  years)
+
+-- The seam S1 answer for paragraph 6 (s 53(1)(a), src:1754).
+-- src:4893 | (1) The contribution condition for a child’s special allowance is that—
+-- src:4894 | (a) the contributor concerned must in respect of any one relevant year have actually paid contributions of a relevant class; and
+-- src:4895 | (b) the earnings factor derived from those contributions must be not less than that year’s lower earnings limit multiplied by 50.
+@ref sch 3 pt I para 6(1) (src:4893-4895)
+GIVEN `the number of relevant years that satisfy paragraphs (a) and (b)` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt I para 6 the contribution conditions for a child's special allowance are satisfied` MEANS
+    IF `the number of relevant years that satisfy paragraphs (a) and (b)` AT LEAST 1
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "The contribution condition for a child’s special allowance is that"
+    ELSE JUST FALSE
+
+§§ `Part II -- satisfaction of conditions in early years of contribution`
+
+-- Paragraph 8 (the paragraph number is counted: the two rows of dots at src:4898 and src:4900 stand either side of it).
+-- A claimant for short-term incapacity benefit is taken to satisfy the first contribution condition if, on a previous
+-- claim for any short-term benefit, they satisfied the first contribution condition for that benefit by virtue of
+-- paragraph 8 of Schedule 3 to the 1975 Act, with contributions of a class relevant to short-term incapacity benefit.
+-- src:4899 | Where a person claims short-term incapacity benefit, he shall be taken to satisfy the first contribution condition for the benefit if on a previous claim for any short-term benefit he has satisfied the first contribution condition for that benefit, by virtue of paragraph 8 of Schedule 3 to the 1975 Act, with contributions of a class relevant to short-term incapacity benefit.
+@ref sch 3 pt II para 8 (src:4899)
+GIVEN `a claim is made for short-term incapacity benefit` IS A BOOLEAN
+      `on a previous claim for a short-term benefit the claimant satisfied the first contribution condition by virtue of paragraph 8 of Schedule 3 to the 1975 Act` IS A BOOLEAN
+      `with contributions of a class relevant to short-term incapacity benefit` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`sch 3 pt II para 8 the first contribution condition is taken to be satisfied` MEANS
+    IF     `a claim is made for short-term incapacity benefit`
+       AND `on a previous claim for a short-term benefit the claimant satisfied the first contribution condition by virtue of paragraph 8 of Schedule 3 to the 1975 Act`
+       AND `with contributions of a class relevant to short-term incapacity benefit`
+    THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "he shall be taken to satisfy the first contribution condition for the benefit if" (reading (a): this paragraph does not deem it)
+    ELSE JUST FALSE
+
+§§ `Earnings factor: which earnings and contributions it is derived from (sub-paragraphs 2(4), 2(5), 5(2)(b), 5(4) and 5A(3))`
+
+-- The sources a year's earnings factor can be derived from. The derivation itself (earnings factor from earnings and contributions) is section 22's (ssc2): each figure here is an INPUT,
+-- and the functions below say which of them count for which condition. Their results are the values to put in the year's record (`the earnings factor derived ...` fields above).
+-- Sub-paragraphs 2(4)(a)(i) and (ii) are joined by "or"; section 21(5)(c)(i) defines the earnings factor as "the aggregate of his earnings factors derived from" the earnings "and from his Class 2 and Class 3 contributions",
+-- so the two are added (fork F-S3-5 in NOTES.md).
+DECLARE `sch 3 pt I an earnings factor source` HAS
+    `the tax year`                                                                       IS A `Tax year`
+    `the earnings factor derived from so much of the earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid` IS A NUMBER
+    `the earnings factor derived from earnings credited`                                 IS A NUMBER
+    `the earnings factor derived from Class 2 contributions`                             IS A NUMBER
+    `the earnings factor derived from Class 3 contributions`                             IS A NUMBER
+    `the earnings factor derived from the contributions paid, for a year before 1987-88` IS A NUMBER
+
+-- 1987-88 is the tax year that begins in 1987.
+GIVEN source IS A `sch 3 pt I an earnings factor source`
+GIVETH A BOOLEAN
+`sch 3 pt I the year is 1987-88 or a subsequent year` MEANS
+    source's `the tax year`'s `calendar year in which it begins` AT LEAST 1987
+
+-- src:4816 | (4) The earnings factor referred to in paragraph (b) of sub-paragraph (2) above is that which is derived—
+-- src:4817 | (a) if the year in question is 1987-88 or any subsequent year—
+-- src:4818 | (i) from so much of the claimant’s earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid; or
+-- src:4819 | (ii) from Class 2 contributions; and
+-- src:4820 | (b) if the year in question is an earlier year, from the contributions paid as mentioned in paragraph (a) of that sub-paragraph.
+@ref sch 3 pt I para 2(4) (src:4816-4820)
+GIVEN source IS A `sch 3 pt I an earnings factor source`
+GIVETH A NUMBER
+`sch 3 pt I para 2(4) the earnings factor for the first condition` MEANS
+    IF `sch 3 pt I the year is 1987-88 or a subsequent year` source
+    THEN source's `the earnings factor derived from so much of the earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid`
+         PLUS source's `the earnings factor derived from Class 2 contributions`
+    ELSE source's `the earnings factor derived from the contributions paid, for a year before 1987-88`
+
+-- src:4821 | (5) The earnings factor referred to in paragraph (b) of sub-paragraph (3) above is that which is derived—
+-- src:4822 | (a) if the year in question is 1987-88 or any subsequent year—
+-- src:4823 | (i) from so much of the claimant’s earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid or from earnings credited; or
+-- src:4824 | (ii) from Class 2 contributions; and
+-- src:4825 | (b) if the year in question is an earlier year, from the contributions referred to in paragraph (a) of that sub-paragraph.
+@ref sch 3 pt I para 2(5) (src:4821-4825)
+GIVEN source IS A `sch 3 pt I an earnings factor source`
+GIVETH A NUMBER
+`sch 3 pt I para 2(5) the earnings factor for the second condition` MEANS
+    IF `sch 3 pt I the year is 1987-88 or a subsequent year` source
+    THEN source's `the earnings factor derived from so much of the earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid`
+         PLUS source's `the earnings factor derived from earnings credited`
+         PLUS source's `the earnings factor derived from Class 2 contributions`
+    ELSE source's `the earnings factor derived from the contributions paid, for a year before 1987-88`
+
+-- src:4849 | (b) the earnings factor derived—
+-- src:4850 | (i) if that year is 1987-88 or any subsequent year, from so much of the contributor’s earnings as did not exceed the upper earnings limit and upon which such of those contributions as are primary Class 1 contributions were paid or treated as paid and any Class 2 or Class 3 contributions, or
+-- src:4851 | (ii) if that year is an earlier year, from the contributions referred to in paragraph (a) above,
+-- src:4852 | must be not less than the qualifying earnings factor for that year.
+@ref sch 3 pt I para 5(2)(b) (src:4849-4852)
+GIVEN source IS A `sch 3 pt I an earnings factor source`
+GIVETH A NUMBER
+`sch 3 pt I para 5(2)(b) the earnings factor for the first condition` MEANS
+    IF `sch 3 pt I the year is 1987-88 or a subsequent year` source
+    THEN source's `the earnings factor derived from so much of the earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid`
+         PLUS source's `the earnings factor derived from Class 2 contributions`
+         PLUS source's `the earnings factor derived from Class 3 contributions`
+    ELSE source's `the earnings factor derived from the contributions paid, for a year before 1987-88`
+
+-- src:4856 | (4) For the purposes of paragraph (b) of sub-paragraph (3) above, the earnings factor—
+-- src:4857 | (a) in the case of 1987-88 or any subsequent year, is that which is derived from—
+-- src:4858 | (i) so much of the contributor’s earnings as did not exceed the upper earnings limit and upon which such of the contributions mentioned in paragraph (a) of that sub-paragraph as are primary Class 1 contributions were paid or treated as paid or earnings credited; and
+-- src:4859 | (ii) any Class 2 or Class 3 contributions for the year; or
+-- src:4860 | (b) in the case of any earlier year, is that which is derived from the contributions mentioned in paragraph (a) of that sub-paragraph.
+@ref sch 3 pt I para 5(4) (src:4856-4860)
+GIVEN source IS A `sch 3 pt I an earnings factor source`
+GIVETH A NUMBER
+`sch 3 pt I para 5(4) the earnings factor for the second condition` MEANS
+    IF `sch 3 pt I the year is 1987-88 or a subsequent year` source
+    THEN source's `the earnings factor derived from so much of the earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid`
+         PLUS source's `the earnings factor derived from earnings credited`
+         PLUS source's `the earnings factor derived from Class 2 contributions`
+         PLUS source's `the earnings factor derived from Class 3 contributions`
+    ELSE source's `the earnings factor derived from the contributions paid, for a year before 1987-88`
+
+-- src:4883 | (3) For the purposes of paragraph (b) of sub-paragraph (2) above, the earnings factor—
+-- src:4884 | (a) in the case of 1987-88 or any subsequent year, is that which is derived from—
+-- src:4885 | (i) so much of the contributor's earnings as did not exceed the upper earnings limit and upon which such of the contributions mentioned in paragraph (a) of that sub-paragraph as are primary Class 1 contributions were paid or treated as paid or earnings credited; and
+-- src:4886 | (ii) any Class 2 or Class 3 contributions for the year; or
+-- src:4887 | (b) in the case of any earlier year, is that which is derived from the contributions mentioned in paragraph (a) of that sub-paragraph.
+@ref sch 3 pt I para 5A(3) (src:4883-4887)
+GIVEN source IS A `sch 3 pt I an earnings factor source`
+GIVETH A NUMBER
+`sch 3 pt I para 5A(3) the earnings factor` MEANS
+    IF `sch 3 pt I the year is 1987-88 or a subsequent year` source
+    THEN source's `the earnings factor derived from so much of the earnings as did not exceed the upper earnings limit and upon which primary Class 1 contributions have been paid or treated as paid`
+         PLUS source's `the earnings factor derived from earnings credited`
+         PLUS source's `the earnings factor derived from Class 2 contributions`
+         PLUS source's `the earnings factor derived from Class 3 contributions`
+    ELSE source's `the earnings factor derived from the contributions paid, for a year before 1987-88`

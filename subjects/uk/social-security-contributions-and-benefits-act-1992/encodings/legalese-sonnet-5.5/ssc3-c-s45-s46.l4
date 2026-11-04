@@ -1,0 +1,562 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ssc-core`
+IMPORT `ssc3-helpers`
+IMPORT `ssc3-a-s43-s44`
+
+-- Social Security Contributions and Benefits Act 1992 (United Kingdom), 1992 c. 4, ss 45, 45AA, 45A, 45B and 46 (part ssc3).
+-- Source: inputs/ukpga-1992-4.txt, a plain-text rendering by a converter script; it is not the official text.
+--
+-- The additional pension in a Category A retirement pension (s 45), the effect of working families' tax credit
+-- and disabled person's tax credit on the earnings factor (s 45AA), the reduction for pension sharing (s 45B),
+-- and the modifications of s 45 for the benefits that borrow it (s 46).
+--
+-- Amounts that other parts or regulations supply are INPUTS: the amount Schedule 4A and Schedule 4B calculate
+-- (ssc8), the amount per unit of additional pension "specified" by regulations (s 45(2A)), the number N of tax
+-- years in the working life (s 45(4)(b), borrowed from the definitions of "working life"), the qualifying earnings
+-- factor and the last order under s 148 of the Administration Act.
+-- "The weekly equivalent" of an amount is rounded to the whole penny (s 45(6)).
+
+§ `Part II: the additional pension`
+
+§§ `Section 45: the additional pension in a Category A retirement pension`
+
+-- (7): where the amount falling to be rounded under (6) is less than 1/2p the amount calculated is taken to be zero.
+-- src:1389 | (7) Where the amount falling to be rounded under subsection (6) above is a sum less than 1/2p, the amount calculated under that subsection shall be taken to be zero, notwithstanding any other provision of this Act or the Administration Act.
+@ref s 45(7) (src:1389)
+GIVEN `the amount falling to be rounded in pounds` IS A NUMBER
+GIVETH A BOOLEAN
+`s 45(7) the amount calculated under subsection (6) is taken to be zero` MEANS
+    `the amount falling to be rounded in pounds` LESS THAN 0.005
+
+-- (6): the weekly equivalent of any amount is the amount divided by 52 and rounded to the nearest whole penny,
+-- taking any 1/2p as nearest to the next whole penny; less than 1/2p is zero (subsection (7)).
+-- src:1388 | (6) For the purposes of subsections (1) and (2) above, the weekly equivalent of any amount shall be calculated by dividing that amount by 52 and rounding the result to the nearest whole penny, taking any 1/2p as nearest to the next whole penny.
+@ref s 45(6) (src:1388)
+GIVEN amount IS A NUMBER
+GIVETH A NUMBER
+`s 45(6) the weekly equivalent of the amount in pounds` MEANS
+    IF `s 45(7) the amount calculated under subsection (6) is taken to be zero` (amount DIVIDED BY 52)
+    THEN 0
+    ELSE FLOOR ((((amount DIVIDED BY 52) TIMES 100) PLUS 0.5)) DIVIDED BY 100
+
+-- (2A): for (1)(b) and (2)(e) the "specified amount" for each unit is an amount specified by the Secretary of State in regulations.
+-- src:1372 | (2A) For the purposes of subsections (1)(b) and (2)(e) the “specified amount” is an amount to be specified by the Secretary of State in regulations.
+@ref s 45(2A) (src:1372)
+GIVEN `the amount specified in regulations for each unit of additional pension in pounds` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 45(2A) the specified amount for each unit in pounds` MEANS `the amount specified in regulations for each unit of additional pension in pounds`
+
+-- The units limb of (1)(b) and (2)(e): "a specified amount for each of those units".
+-- src:1365 | (b) if the pensioner has one or more units of additional pension, a specified amount for each of those units.
+@ref s 45(1)(b) (src:1365)
+GIVEN units IS A NUMBER
+      `the specified amount for each unit in pounds` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 45(1)(b) the weekly amount for the units of additional pension in pounds` MEANS
+    IF units EQUALS 0
+    THEN JUST 0
+    ELSE
+        CONSIDER `the specified amount for each unit in pounds`
+        WHEN NOTHING THEN NOTHING  -- NOTHING-kind (points outside the text): the amount per unit is specified by the Secretary of State in regulations (s 45(2A))
+        WHEN JUST perunit THEN JUST (units TIMES perunit)
+
+-- (4)(a): X = 0.5 for each tax year by which the tax year in which the pensioner attained pensionable age
+-- precedes 2009-10.
+-- src:1379 | (4) In this section—
+-- src:1380 | (a) X = 0.5 for each tax year by which the tax year in which the pensioner attained pensionable age precedes 2009-10; and
+@ref s 45(4)(a) (src:1379-1380)
+GIVEN pensioner IS A Person
+GIVETH A NUMBER
+`s 45(4)(a) X` MEANS
+    0.5 TIMES (max 0 (2009 MINUS `ssc3 helper tax year of` (pensioner's `date of attaining pensionable age`)))
+
+-- (4)(b): N = the number of tax years in the pensioner's working life which fall after 5 April 1978; paragraph (b) is subject,
+-- in particular, to subsection (5) and, where applicable, section 46. The count of the working life's years arrives as
+-- an input; subsection (5) and section 46 act on it below.
+-- src:1381 | (b) N = the number of tax years in the pensioner’s working life which fall after 5th April 1978;
+-- src:1382 | but paragraph (b) above is subject, in particular, to subsection (5) and, where applicable, section 46 below.
+@ref s 45(4)(b) (src:1381-1382)
+GIVEN `the number of tax years in the pensioner's working life which fall after 5th April 1978` IS A NUMBER
+GIVETH A NUMBER
+`s 45(4)(b) N` MEANS `the number of tax years in the pensioner's working life which fall after 5th April 1978`
+
+-- (5): regulations may direct that in prescribed cases any tax year is disregarded in calculating N, if it is a
+-- tax year after 5 April 1978 in which the pensioner was credited with contributions or earnings under regulations
+-- under section 22(5) (seam S11), was precluded from regular employment by responsibilities at home, or was in
+-- prescribed circumstances treated as such; "but not so as to reduce the number of years below 20".
+-- N is reduced by the years the regulations direct to be disregarded, to no fewer than 20 (and an N already below 20
+-- is not reduced).
+-- src:1383 | (5) Regulations may direct that in prescribed cases or classes of cases any tax year shall be disregarded for the purpose of calculating N under subsection (4)(b) above, if it is a tax year after 5th April 1978 in which the pensioner—
+-- src:1384 | (a) was credited with contributions or earnings under this Act by virtue of regulations under section 22(5) above, or
+-- src:1385 | (b) was precluded from regular employment by responsibilities at home, or
+-- src:1386 | (c) in prescribed circumstances, would have been treated as falling within paragraph (a) or (b) above,
+-- src:1387 | but not so as to reduce the number of years below 20.
+@ref s 45(5) (src:1383-1387)
+GIVEN n IS A NUMBER
+      `the number of tax years the regulations direct to be disregarded` IS A NUMBER
+GIVETH A NUMBER
+`s 45(5) N after the years directed to be disregarded` MEANS
+    IF n AT MOST 20
+    THEN n
+    ELSE max 20 (n MINUS `the number of tax years the regulations direct to be disregarded`)
+
+-- (5)(a) to (c): which years the regulations may direct to be disregarded.
+-- src:1383 | (5) Regulations may direct that in prescribed cases or classes of cases any tax year shall be disregarded for the purpose of calculating N under subsection (4)(b) above, if it is a tax year after 5th April 1978 in which the pensioner—
+-- src:1384 | (a) was credited with contributions or earnings under this Act by virtue of regulations under section 22(5) above, or
+-- src:1385 | (b) was precluded from regular employment by responsibilities at home, or
+-- src:1386 | (c) in prescribed circumstances, would have been treated as falling within paragraph (a) or (b) above,
+-- src:1387 | but not so as to reduce the number of years below 20.
+@ref s 45(5)(a) to (c) (src:1383-1387)
+GIVEN `the year is a tax year after 5 April 1978` IS A BOOLEAN
+      `s 22(5) the person was credited with contributions or earnings by regulations` IS A BOOLEAN
+      `the pensioner was precluded from regular employment by responsibilities at home` IS A BOOLEAN
+      `the pensioner would in prescribed circumstances have been treated as falling within paragraph (a) or (b)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 45(5) the year is one the regulations may direct to be disregarded` MEANS
+    IF `the year is a tax year after 5 April 1978`
+    THEN JUST (`s 22(5) the person was credited with contributions or earnings by regulations` OR `the pensioner was precluded from regular employment by responsibilities at home` OR `the pensioner would in prescribed circumstances have been treated as falling within paragraph (a) or (b)`)  -- FALSE-kind (the text says no in its own words): "if it is a tax year after 5th April 1978 in which the pensioner" -- a failed "if" counts as the text's no (marginal reading (a))
+    ELSE JUST FALSE  -- FALSE-kind (the text says no in its own words): "if it is a tax year after 5th April 1978"
+
+-- (3): "relevant percentage" for (2)(b): (a) 20/N per cent. where the pensioner attained pensionable age in 2009-10
+-- or any later tax year; (b) (20+X)/N per cent. where in a tax year from 1999-2000 to 2008-09. The answer is the
+-- percentage, in per cent (20/40 is 0.5 per cent). N below 1 gives no answer.
+-- src:1373 | (3) In subsection (2)(b) above, “relevant percentage” means—
+-- src:1374 | (a) 20/N per cent., where the pensioner attained pensionable age in 2009-10 or any subsequent tax year;
+-- src:1375 | (b) (20+X)/N per cent., where the pensioner attained pensionable age in a tax year falling within the period commencing with 1999-2000 and ending with 2008-9.
+@ref s 45(3) (src:1373-1375)
+GIVEN pensioner IS A Person
+      n IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 45(3) the relevant percentage` MEANS
+    BRANCH
+        IF n LESS THAN 1 THEN NOTHING  -- NOTHING-kind (undefined term): N is the number of tax years in the working life, and a percentage "of N" has no value for none
+        IF `ssc3 helper tax year of` (pensioner's `date of attaining pensionable age`) AT LEAST 2009 THEN JUST (20 DIVIDED BY n)
+        IF `ssc3 helper tax year of` (pensioner's `date of attaining pensionable age`) AT LEAST 1999 THEN JUST ((20 PLUS `s 45(4)(a) X` pensioner) DIVIDED BY n)
+        OTHERWISE NOTHING  -- NOTHING-kind (limited by its own wording): paragraph (b) starts with the tax year 1999-2000; an earlier pensioner is under subsection (1)
+
+-- (3A): the tax years that fall within the subsection: (a) the first appointed year; (b) subsequent tax years before
+-- the flat rate introduction year (section 46(4)(b) omits "before the flat rate introduction year" in some cases).
+-- src:1376 | (3A) The following tax years fall within this subsection—
+-- src:1377 | (a) the first appointed year;
+-- src:1378 | (b) subsequent tax years before the flat rate introduction year.
+@ref s 45(3A) (src:1376-1378)
+GIVEN `the year is the first appointed year` IS A BOOLEAN
+      `the year is a subsequent tax year` IS A BOOLEAN
+      `the year is before the flat rate introduction year` IS A BOOLEAN
+      `the words "before the flat rate introduction year" are omitted by section 46(4)(b)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 45(3A) the tax year falls within this subsection` MEANS
+    IF `the year is the first appointed year` OR (`the year is a subsequent tax year` AND (`the year is before the flat rate introduction year` OR `the words "before the flat rate introduction year" are omitted by section 46(4)(b)`))
+    THEN JUST TRUE
+    ELSE NOTHING  -- NOTHING-kind (list not closed): "The following tax years fall within this subsection" does not say that no others do
+
+-- (1): the weekly rate of the additional pension where the pensioner attained pensionable age in a tax year before
+-- 6 April 1999: (a) the weekly equivalent of 1 1/4 per cent. of the adjusted amount of the surpluses mentioned in
+-- section 44(3)(b); and (b) if the pensioner has units of additional pension, a specified amount for each.
+-- src:1363 | (1) The weekly rate of the additional pension in a Category A retirement pension in any case where the pensioner attained pensionable age in a tax year before 6th April 1999 shall be the sum of the following—
+-- src:1364 | (a) in relation to any surpluses in the pensioner's earnings factors, the weekly equivalent of 1 1/4 per cent. of the adjusted amount of the surpluses mentioned in section 44(3)(b) above; and
+-- src:1365 | (b) if the pensioner has one or more units of additional pension, a specified amount for each of those units.
+@ref s 45(1) (src:1363-1365)
+GIVEN pensioner IS A Person
+      `the adjusted amount of the surpluses mentioned in section 44(3)(b) in pounds` IS A NUMBER
+      `the number of units of additional pension the pensioner has` IS A NUMBER
+      `the specified amount for each unit in pounds` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 45(1) the weekly rate of the additional pension in pounds` MEANS
+    IF pensioner's `date of attaining pensionable age` AT LEAST (Date 6 4 1999)
+    THEN NOTHING  -- NOTHING-kind (limited by its own wording): subsection (1) is "in any case where the pensioner attained pensionable age in a tax year before 6th April 1999"; later pensioners are under subsection (2)
+    ELSE
+        `ssc3 helper sum of`
+            (LIST
+                JUST (`s 45(6) the weekly equivalent of the amount in pounds` (`the adjusted amount of the surpluses mentioned in section 44(3)(b) in pounds` TIMES 0.0125))
+              , `s 45(1)(b) the weekly amount for the units of additional pension in pounds` `the number of units of additional pension the pensioner has` `the specified amount for each unit in pounds`)
+
+-- (2): the weekly rate where the pensioner attained pensionable age in a tax year after 5 April 1999 is the sum of
+-- (a) the weekly equivalent of 25/N per cent. of the adjusted amount of the surpluses for 1978-79 to 1987-88;
+-- (b) the weekly equivalent of the relevant percentage of the adjusted amount of the surpluses for tax years after
+--     1987-88 and before the first appointed year;
+-- (c) the weekly equivalent of the Schedule 4A amount for the tax years within (3A);
+-- (d) the weekly equivalent of the Schedule 4B amount for the flat rate introduction year and later (omitted where
+--     section 46(4)(a) so provides);
+-- (e) a specified amount for each unit.
+-- src:1366 | (2) The weekly rate of the additional pension in a Category A retirement pension in any case where the pensioner attained pensionable age in a tax year after 5th April 1999 shall be the sum of the following—
+-- src:1367 | (a) in relation to any surpluses in the pensioner’s earnings factors for the tax years in the period beginning with 1978-79 and ending with 1987-88, the weekly equivalent of 25/N per cent. of the adjusted amount of those surpluses; and
+-- src:1368 | (b) in relation to any surpluses in the pensioner’s earnings factors in a tax year after 1987-88 but before the first appointed year, the weekly equivalent of the relevant percentage of the adjusted amount of those surpluses; and
+-- src:1369 | (c) in relation to any tax years falling within subsection (3A) below, the weekly equivalent of the amount calculated in accordance with Schedule 4A to this Act; and
+-- src:1370 | (d) in relation to the flat rate introduction year and subsequent tax years, the weekly equivalent of the amount calculated in accordance with Schedule 4B to this Act; and
+-- src:1371 | (e) if the pensioner has one or more units of additional pension, a specified amount for each of those units.
+@ref s 45(2) (src:1366-1371)
+GIVEN pensioner IS A Person
+      `the adjusted amount of the surpluses for the tax years 1978-79 to 1987-88 in pounds` IS A NUMBER
+      `the adjusted amount of the surpluses for the tax years after 1987-88 and before the first appointed year in pounds` IS A NUMBER
+      `N, the number of tax years in the pensioner's working life which fall after 5 April 1978` IS A NUMBER
+      `sch 4A the amount calculated in accordance with Schedule 4A in pounds` IS A MAYBE NUMBER
+      `sch 4B the amount calculated in accordance with Schedule 4B in pounds` IS A MAYBE NUMBER
+      `paragraph (d) is omitted by section 46(4)(a)` IS A BOOLEAN
+      `the number of units of additional pension the pensioner has` IS A NUMBER
+      `the specified amount for each unit in pounds` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 45(2) the weekly rate of the additional pension in pounds` MEANS
+    IF pensioner's `date of attaining pensionable age` LESS THAN (Date 6 4 1999)
+    THEN NOTHING  -- NOTHING-kind (limited by its own wording): subsection (2) is "in any case where the pensioner attained pensionable age in a tax year after 5th April 1999"; earlier pensioners are under subsection (1)
+    ELSE
+        `ssc3 helper sum of`
+            (LIST
+                `paragraph (a)`
+              , `paragraph (b)`
+              , `paragraph (c)`
+              , `paragraph (d)`
+              , `s 45(1)(b) the weekly amount for the units of additional pension in pounds` `the number of units of additional pension the pensioner has` `the specified amount for each unit in pounds`)
+    WHERE
+        `paragraph (a)` MEANS
+            IF `the adjusted amount of the surpluses for the tax years 1978-79 to 1987-88 in pounds` EQUALS 0
+            THEN JUST 0
+            ELSE
+                IF `N, the number of tax years in the pensioner's working life which fall after 5 April 1978` AT LEAST 1
+                THEN JUST (`s 45(6) the weekly equivalent of the amount in pounds` ((`the adjusted amount of the surpluses for the tax years 1978-79 to 1987-88 in pounds` TIMES 25) DIVIDED BY (`N, the number of tax years in the pensioner's working life which fall after 5 April 1978` TIMES 100)))
+                ELSE NOTHING  -- NOTHING-kind (undefined term): 25/N per cent. has no value for N below 1
+        `paragraph (b)` MEANS
+            IF `the adjusted amount of the surpluses for the tax years after 1987-88 and before the first appointed year in pounds` EQUALS 0
+            THEN JUST 0
+            ELSE
+                CONSIDER `s 45(3) the relevant percentage` pensioner `N, the number of tax years in the pensioner's working life which fall after 5 April 1978`
+                WHEN NOTHING THEN NOTHING
+                WHEN JUST percentage THEN JUST (`s 45(6) the weekly equivalent of the amount in pounds` ((`the adjusted amount of the surpluses for the tax years after 1987-88 and before the first appointed year in pounds` TIMES percentage) DIVIDED BY 100))
+        `paragraph (c)` MEANS
+            CONSIDER `sch 4A the amount calculated in accordance with Schedule 4A in pounds`
+            WHEN NOTHING THEN NOTHING  -- NOTHING-kind (points outside the text): Schedule 4A is another part's answer
+            WHEN JUST amount THEN JUST (`s 45(6) the weekly equivalent of the amount in pounds` amount)
+        `paragraph (d)` MEANS
+            IF `paragraph (d) is omitted by section 46(4)(a)`
+            THEN JUST 0
+            ELSE
+                CONSIDER `sch 4B the amount calculated in accordance with Schedule 4B in pounds`
+                WHEN NOTHING THEN NOTHING  -- NOTHING-kind (points outside the text): Schedule 4B is another part's answer
+                WHEN JUST amount THEN JUST (`s 45(6) the weekly equivalent of the amount in pounds` amount)
+
+§§ `Section 45AA: effect of working families' tax credit and disabled person's tax credit on earnings factor`
+
+-- (4): subsection (1) does not apply to a woman who has made, or is treated as having made, an election under
+-- regulations under section 19(4), not revoked, that her liability for primary Class 1 contributions is at a reduced rate.
+-- src:1399 | (4) Subsection (1) does not apply to any woman who has made, or is treated as having made, an election under regulations under section 19(4), which has not been revoked, that her liability in respect of primary Class 1 contributions shall be at a reduced rate.
+@ref s 45AA(4) (src:1399)
+GIVEN `the woman has made, or is treated as having made, an unrevoked election to pay primary Class 1 contributions at a reduced rate` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 45AA(4) subsection (1) applies to the woman` MEANS
+    IF `the woman has made, or is treated as having made, an unrevoked election to pay primary Class 1 contributions at a reduced rate`
+    THEN JUST FALSE  -- FALSE-kind (the text says no in its own words): "Subsection (1) does not apply to any woman who has made, or is treated as having made, an election"
+    ELSE NOTHING  -- NOTHING-kind (silent): the subsection says to whom (1) does not apply
+
+-- (1): for calculating additional pension under ss 44 and 45 where a working families' tax credit is paid in respect
+-- of an employed earner, or a disabled person's tax credit is paid to one, s 44(6)(a)(i) has effect as if
+-- (a) where the person had qualifying earnings (earnings of not less than the qualifying earnings factor on which
+--     primary Class 1 contributions were paid) the amount were increased by the aggregate AG of the credit paid for the year;
+-- (b) in any other case the person had qualifying earnings equal to AG plus the qualifying earnings factor.
+-- (3): the qualifying earnings cannot be treated by virtue of (1) as exceeding the upper earnings limit multiplied by 53.
+-- src:1392 | (1) For the purposes of calculating additional pension under sections 44 and 45 where, in the case of any relevant year, working families' tax credit is paid in respect of any employed earner, or disabled person's tax credit is paid to any employed earner, section 44(6)(a)(i) shall have effect as if—
+-- src:1393 | (a) where that person had earnings of not less than the qualifying earnings factor for that year, being earnings upon which primary class 1 contributions were paid or treated as paid (“qualifying earnings”) in respect of that year, the amount of those qualifying earnings were increased by the aggregate amount (“AG”) of working families' tax credit, or, as the case may be, disabled person's tax credit paid in respect of that year, and
+-- src:1394 | (b) in any other case, that person had qualifying earnings in respect of that year and the amount of those qualifying earnings were equal to AG plus the qualifying earnings factor for that year.
+-- src:1395 | (2) The reference in subsection (1) to the person in respect of whom working families' tax credit is paid—
+-- src:1396 | (a) where it is paid to one of a couple, is a reference to the prescribed member of the couple, and
+-- src:1397 | (b) in any other case, is a reference to the person to whom it is paid.
+-- src:1398 | (3) A person's qualifying earnings in respect of any year cannot be treated by virtue of subsection (1) as exceeding the upper earnings limit for that year multiplied by 53.
+@ref s 45AA(1) and (3) (src:1392-1398)
+GIVEN `the credit is paid in respect of an employed earner or to an employed earner for the year` IS A BOOLEAN
+      `subsection (1) applies to the woman` IS A MAYBE BOOLEAN
+      `the earnings on which primary Class 1 contributions were paid or treated as paid in pounds` IS A NUMBER
+      `the qualifying earnings factor for the year` IS A NUMBER
+      `AG, the aggregate amount of the credit paid in respect of the year in pounds` IS A NUMBER
+      `the upper earnings limit for the year in pounds` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 45AA(1) the qualifying earnings treated as paid in pounds` MEANS
+    IF NOT `the credit is paid in respect of an employed earner or to an employed earner for the year`
+    THEN NOTHING  -- NOTHING-kind (limited by its own wording): the subsection operates "where ... working families' tax credit is paid ... or disabled person's tax credit is paid"
+    ELSE
+        IF `subsection (1) applies to the woman` EQUALS JUST FALSE
+        THEN NOTHING  -- NOTHING-kind (limited by its own wording): subsection (4) says (1) "does not apply", so the earnings are not increased and this section gives no figure
+        ELSE JUST (min `the capped figure` (`the upper earnings limit for the year in pounds` TIMES 53))
+    WHERE
+        `the capped figure` MEANS
+            IF `the earnings on which primary Class 1 contributions were paid or treated as paid in pounds` AT LEAST `the qualifying earnings factor for the year`
+            THEN `the earnings on which primary Class 1 contributions were paid or treated as paid in pounds` PLUS `AG, the aggregate amount of the credit paid in respect of the year in pounds`
+            ELSE `AG, the aggregate amount of the credit paid in respect of the year in pounds` PLUS `the qualifying earnings factor for the year`
+
+-- (2): the person in respect of whom the credit is paid: (a) where it is paid to one of a couple, the prescribed
+-- member of the couple; (b) in any other case, the person to whom it is paid. "Couple" is s 137's (seam S12).
+DECLARE `s 45AA Person in respect of whom the credit is paid` IS ONE OF
+    `s 45AA(2)(a) the prescribed member of the couple`
+    `s 45AA(2)(b) the person to whom it is paid`
+    `s 45AA(2) not determined because it is not known whether the two persons are a couple`
+
+-- src:1395 | (2) The reference in subsection (1) to the person in respect of whom working families' tax credit is paid—
+-- src:1396 | (a) where it is paid to one of a couple, is a reference to the prescribed member of the couple, and
+-- src:1397 | (b) in any other case, is a reference to the person to whom it is paid.
+@ref s 45AA(2) (src:1395-1397)
+GIVEN `s 137(1) the two persons are a couple` IS A MAYBE BOOLEAN
+GIVETH A `s 45AA Person in respect of whom the credit is paid`
+`s 45AA(2) the person in respect of whom the credit is paid` MEANS
+    CONSIDER `s 137(1) the two persons are a couple`
+    WHEN JUST TRUE THEN `s 45AA(2)(a) the prescribed member of the couple`
+    WHEN JUST FALSE THEN `s 45AA(2)(b) the person to whom it is paid`  -- FALSE-kind (the text says no in its own words): "(b) in any other case, is a reference to the person to whom it is paid"
+    WHEN NOTHING THEN `s 45AA(2) not determined because it is not known whether the two persons are a couple`  -- NOTHING-kind (points outside the text): "couple" has the meaning in Part 7 (s 137)
+
+-- (5): "couple" has the same meaning as in Part 7 (see section 137); "relevant year" has the same meaning as in section 44.
+-- src:1400 | (5) In this section—
+-- src:1401 | “couple” has the same meaning as in Part 7 (see section 137);
+@ref s 45AA(5), couple (src:1400-1401)
+GIVEN `s 137(1) the two persons are a couple` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 45AA(5) the two persons are a couple` MEANS `s 137(1) the two persons are a couple`
+
+-- src:1400 | (5) In this section—
+-- src:1401 | “couple” has the same meaning as in Part 7 (see section 137);
+-- src:1402 | “relevant year” has the same meaning as in section 44.
+@ref s 45AA(5), relevant year (src:1400-1402)
+GIVEN pensioner IS A Person
+      `s 173 the day the person attains the age of 16` IS A MAYBE DATE
+      year IS A `Tax year`
+GIVETH A MAYBE BOOLEAN
+`s 45AA(5) the tax year is a relevant year` MEANS `s 44(7)(a) the tax year is a relevant year` pensioner `s 173 the day the person attains the age of 16` year
+
+§§ `Section 45B: reduction of additional pension in Category A retirement pension: pension sharing`
+
+-- (1): the weekly rate of the additional pension is reduced where (a) the pensioner has become subject to a state
+-- scheme pension debit and (b) the debit is to any extent referable to the additional pension.
+-- src:1406 | (1) The weekly rate of the additional pension in a Category A retirement pension shall be reduced as follows in any case where—
+-- src:1407 | (a) the pensioner has become subject to a state scheme pension debit, and
+-- src:1408 | (b) the debit is to any extent referable to the additional pension.
+@ref s 45B(1) (src:1406-1408)
+GIVEN `the pensioner has become subject to a state scheme pension debit` IS A BOOLEAN
+      `the debit is to any extent referable to the additional pension` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 45B(1) the weekly rate of the additional pension is reduced` MEANS
+    IF `the pensioner has become subject to a state scheme pension debit` AND `the debit is to any extent referable to the additional pension`
+    THEN JUST TRUE
+    ELSE NOTHING  -- NOTHING-kind (limited by its own wording): the reduction is "in any case where" both facts hold; the text does not say there is none otherwise
+
+-- (8): "final relevant year" means the tax year immediately preceding that in which the pensioner attains pensionable age.
+-- src:1420 | (8) In this section—
+-- src:1421 | “final relevant year” means the tax year immediately preceding that in which the pensioner attains pensionable age;
+@ref s 45B(8), final relevant year (src:1420-1421)
+GIVEN pensioner IS A Person
+GIVETH A `Tax year`
+`s 45B(8) the final relevant year` MEANS
+    `Tax year` OF ((`ssc3 helper tax year of` (pensioner's `date of attaining pensionable age`)) MINUS 1)
+
+-- (8): "state scheme pension debit" means a debit under section 49(1)(a) of the Welfare Reform and Pensions Act 1999.
+-- src:1420 | (8) In this section—
+-- src:1421 | “final relevant year” means the tax year immediately preceding that in which the pensioner attains pensionable age;
+-- src:1422 | “state scheme pension debit” means a debit under section 49(1)(a) of the Welfare Reform and Pensions Act 1999 (debit for the purposes of this Part of this Act);
+@ref s 45B(8), state scheme pension debit (src:1420-1422)
+GIVEN `the debit is a debit under section 49(1)(a) of the Welfare Reform and Pensions Act 1999` IS A BOOLEAN
+GIVETH A BOOLEAN
+`s 45B(8) the debit is a state scheme pension debit` MEANS `the debit is a debit under section 49(1)(a) of the Welfare Reform and Pensions Act 1999`
+
+-- (8): "valuation day" means the day on which the pensioner became subject to the state scheme pension debit.
+-- src:1420 | (8) In this section—
+-- src:1421 | “final relevant year” means the tax year immediately preceding that in which the pensioner attains pensionable age;
+-- src:1422 | “state scheme pension debit” means a debit under section 49(1)(a) of the Welfare Reform and Pensions Act 1999 (debit for the purposes of this Part of this Act);
+-- src:1423 | “valuation day” means the day on which the pensioner became subject to the state scheme pension debit.
+@ref s 45B(8), valuation day (src:1420-1423)
+GIVEN `the day on which the pensioner became subject to the state scheme pension debit` IS A DATE
+GIVETH A DATE
+`s 45B(8) the valuation day` MEANS `the day on which the pensioner became subject to the state scheme pension debit`
+
+-- (4): the appropriate weekly amount is the weekly rate, expressed in terms of the valuation day, at which the cash
+-- equivalent on that day of the notional pension equals so much of the debit as is referable to the additional pension
+-- (cash equivalents are calculated under regulations, subsection (7): an input).
+-- src:1411 | (4) The appropriate weekly amount for the purposes of subsections (2) and (3) above is the weekly rate, expressed in terms of the valuation day, at which the cash equivalent, on that day, of the pension mentioned in subsection (5) below is equal to so much of the debit as is referable to the additional pension.
+@ref s 45B(4) (src:1411)
+GIVEN `the weekly rate at which the cash equivalent on the valuation day of the notional pension equals the part of the debit referable to the additional pension in pounds` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 45B(4) the appropriate weekly amount in pounds` MEANS `the weekly rate at which the cash equivalent on the valuation day of the notional pension equals the part of the debit referable to the additional pension in pounds`
+
+-- (5): the notional pension becomes payable on the later of (a) his attaining pensionable age and (b) the valuation day.
+-- src:1412 | (5) The pension referred to above is a notional pension for the pensioner by virtue of section 44(3)(b) above which becomes payable on the later of—
+-- src:1413 | (a) his attaining pensionable age, and
+-- src:1414 | (b) the valuation day.
+@ref s 45B(5) (src:1412-1414)
+GIVEN pensioner IS A Person
+      `valuation day` IS A DATE
+GIVETH A DATE
+`s 45B(5) the day the notional pension becomes payable` MEANS
+    IF pensioner's `date of attaining pensionable age` AT LEAST `valuation day`
+    THEN pensioner's `date of attaining pensionable age`
+    ELSE `valuation day`
+
+-- (6): the relevant revaluation percentage is the percentage specified, for earnings factors for the tax year in which
+-- the pensioner became subject to the debit, by the last order under section 148 of the Administration Act to come
+-- into force before the end of the final relevant year (an input: the order is outside the sources).
+-- src:1415 | (6) For the purposes of subsection (3) above, the relevant revaluation percentage is the percentage specified, in relation to earnings factors for the tax year in which the pensioner became subject to the debit, by the last order under section 148 of the Administration Act to come into force before the end of the final relevant year.
+@ref s 45B(6) (src:1415)
+GIVEN `the percentage specified by the last order under section 148 of the Administration Act to come into force before the end of the final relevant year` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 45B(6) the relevant revaluation percentage` MEANS `the percentage specified by the last order under section 148 of the Administration Act to come into force before the end of the final relevant year`
+
+-- (2) and (3): the weekly rate is reduced by the appropriate weekly amount if the pensioner became subject to the
+-- debit in or after the final relevant year; by that amount multiplied by the relevant revaluation percentage if before.
+-- ("multiplied by the percentage" is taken as multiplied by the figure as a percentage: 150 means one and a half times;
+-- fork F6 in NOTES.md.) A reduction larger than the rate gives no answer: the text names none.
+-- src:1409 | (2) If the pensioner became subject to the debit in or after the final relevant year, the weekly rate of the additional pension shall be reduced by the appropriate weekly amount.
+-- src:1410 | (3) If the pensioner became subject to the debit before the final relevant year, the weekly rate of the additional pension shall be reduced by the appropriate weekly amount multiplied by the relevant revaluation percentage.
+@ref s 45B(2) and (3) (src:1409-1410)
+GIVEN `the weekly rate of the additional pension before the reduction in pounds` IS A NUMBER
+      `the appropriate weekly amount in pounds` IS A MAYBE NUMBER
+      `the pensioner became subject to the debit in or after the final relevant year` IS A BOOLEAN
+      `the relevant revaluation percentage` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 45B(2) the weekly rate of the additional pension after the reduction in pounds` MEANS
+    CONSIDER `the reduction`
+    WHEN NOTHING THEN NOTHING  -- NOTHING-kind (points outside the text): the appropriate weekly amount and the revaluation percentage are calculated under regulations and an order
+    WHEN JUST reduction THEN
+        IF reduction GREATER THAN `the weekly rate of the additional pension before the reduction in pounds`
+        THEN NOTHING  -- NOTHING-kind (silent): the text names no rate below nil
+        ELSE JUST (`the weekly rate of the additional pension before the reduction in pounds` MINUS reduction)
+    WHERE
+        `the reduction` MEANS
+            IF `the pensioner became subject to the debit in or after the final relevant year`
+            THEN `the appropriate weekly amount in pounds`
+            ELSE
+                CONSIDER `the appropriate weekly amount in pounds`
+                WHEN NOTHING THEN NOTHING
+                WHEN JUST amount THEN
+                    CONSIDER `the relevant revaluation percentage`
+                    WHEN NOTHING THEN NOTHING
+                    WHEN JUST percentage THEN JUST ((amount TIMES percentage) DIVIDED BY 100)
+
+§§ `Section 46: modifications of section 45 for calculating the additional pension in certain benefits`
+
+-- The deceased person in s 46(2): a spouse, a civil partner or a cohabiting partner.
+DECLARE `s 46 Kind of deceased person` IS ONE OF
+    `s 46 a deceased spouse`
+    `s 46 a deceased civil partner`
+    `s 46 a deceased cohabiting partner`
+
+-- (2): the substituted definition of N applies to the additional pension calculated under s 45
+--   by virtue of s 39(1) or 39C(1) or s 48B(2) where the deceased spouse died under pensionable age, or
+--   by virtue of s 39C(1) or s 48B(2) where the deceased civil partner died under pensionable age, or
+--   by virtue of s 39C(1) where the deceased cohabiting partner died under pensionable age.
+-- src:1426 | (2) For the purpose of determining the additional pension falling to be calculated under section 45 above by virtue of section 39(1) or 39C(1) ... above or section ... 48B(2) below in a case where the deceased spouse died under pensionable age or by virtue of section 39C(1) above or section ... 48B(2) below in a case where the deceased civil partner died under pensionable age or by virtue of section 39C(1) above in a case where the deceased cohabiting partner died under pensionable age, the following definition shall be substituted for the definition of “ N ” in section 45(4)(b) above—
+@ref s 46(2), application (src:1426)
+GIVEN kind IS A `s 46 Kind of deceased person`
+      `the deceased died under pensionable age` IS A BOOLEAN
+      `s 39(1) the additional pension falls to be calculated under section 45 by virtue of this section` IS A MAYBE BOOLEAN
+      `s 39C(1) the additional pension falls to be calculated under section 45 by virtue of this section` IS A MAYBE BOOLEAN
+      `the additional pension falls to be calculated under section 45 by virtue of section 48B(2)` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 46(2) the substituted definition of N applies` MEANS
+    IF NOT `the deceased died under pensionable age`
+    THEN NOTHING  -- NOTHING-kind (limited by its own wording): the substitution is for "a case where the deceased ... died under pensionable age"
+    ELSE
+        IF `the cases that apply to this kind` EQUALS JUST TRUE
+        THEN JUST TRUE
+        ELSE NOTHING  -- NOTHING-kind (limited by its own wording): the substitution is for the listed calculations only
+    WHERE
+        `the cases that apply to this kind` MEANS
+            CONSIDER kind
+            WHEN `s 46 a deceased spouse` THEN `ssc3 helper any of` (LIST `s 39(1) the additional pension falls to be calculated under section 45 by virtue of this section`, `s 39C(1) the additional pension falls to be calculated under section 45 by virtue of this section`, JUST `the additional pension falls to be calculated under section 45 by virtue of section 48B(2)`)
+            WHEN `s 46 a deceased civil partner` THEN `ssc3 helper any of` (LIST `s 39C(1) the additional pension falls to be calculated under section 45 by virtue of this section`, JUST `the additional pension falls to be calculated under section 45 by virtue of section 48B(2)`)
+            WHEN `s 46 a deceased cohabiting partner` THEN `s 39C(1) the additional pension falls to be calculated under section 45 by virtue of this section`
+
+-- (2)(a) and (3)(a): the number of tax years which begin after 5 April 1978 and end before a date (the date the
+-- entitlement to the additional pension commences, or the date the deceased dies).
+-- A tax year begins on 6 April and ends on the next 5 April; it ends before the date if it ends on an earlier day.
+-- src:1428 | (a) the number of tax years which begin after 5th April 1978 and end before the date when the entitlement to the additional pension commences, or
+@ref s 46(2)(a) (src:1428)
+GIVEN `the date when the entitlement to the additional pension commences` IS A DATE
+GIVETH A NUMBER
+`s 46(2)(a) the number of tax years which begin after 5th April 1978 and end before the date` MEANS
+    max 0 ((`ssc3 helper tax year of` `the date when the entitlement to the additional pension commences`) MINUS 1978)
+
+-- src:1435 | (a) the number of tax years which begin after 5th April 1978 and end before the date when the deceased spouse or civil partner dies, or
+@ref s 46(3)(a) (src:1435)
+GIVEN `the date when the deceased spouse or civil partner dies` IS A DATE
+GIVETH A NUMBER
+`s 46(3)(a) the number of tax years which begin after 5th April 1978 and end before the date` MEANS
+    max 0 ((`ssc3 helper tax year of` `the date when the deceased spouse or civil partner dies`) MINUS 1978)
+
+-- (2)(b) and (3)(b): the number of tax years in the period beginning with the tax year in which S attained 16 (or,
+-- if later, 1978-79) and ending immediately before the tax year in which S would have attained pensionable age had
+-- S not died earlier. The day S attains 16 is s 173's answer (seam K2); S's date of attaining pensionable age is the
+-- date S would have attained it.
+-- src:1429 | (b) the number of tax years in the period—
+-- src:1430 | (i) beginning with the tax year in which the deceased spouse, civil partner or cohabiting partner (“S”) attained the age of 16 or if later 1978-79, and
+-- src:1431 | (ii) ending immediately before the tax year in which S would have attained pensionable age if S had not died earlier,
+@ref s 46(2)(b) (src:1429-1431)
+GIVEN deceased IS A Person
+      `s 173 the day the person attains the age of 16` IS A MAYBE DATE
+GIVETH A MAYBE NUMBER
+`s 46(2)(b) the number of tax years from the sixteenth birthday or 1978-79 to the year before S would have attained pensionable age` MEANS
+    CONSIDER `s 173 the day the person attains the age of 16`
+    WHEN NOTHING THEN NOTHING  -- NOTHING-kind (silent): s 173 does not say when a person born on 29 February attains an age in a year without one (fork F1 of the keel)
+    WHEN JUST sixteenth THEN
+        JUST (max 0 ((`ssc3 helper tax year of` (deceased's `date of attaining pensionable age`)) MINUS (max 1978 (`ssc3 helper tax year of` sixteenth))))
+
+-- src:1436 | (b) the number of tax years in the period—
+-- src:1437 | (i) beginning with the tax year in which the deceased spouse or civil partner (“S”) attained the age of 16 or, if later, 1978-79, and
+-- src:1438 | (ii) ending immediately before the tax year in which S would have attained pensionable age if S had not died earlier,
+@ref s 46(3)(b) (src:1436-1438)
+GIVEN deceased IS A Person
+      `s 173 the day the person attains the age of 16` IS A MAYBE DATE
+GIVETH A MAYBE NUMBER
+`s 46(3)(b) the number of tax years from the sixteenth birthday or 1978-79 to the year before S would have attained pensionable age` MEANS
+    `s 46(2)(b) the number of tax years from the sixteenth birthday or 1978-79 to the year before S would have attained pensionable age` deceased `s 173 the day the person attains the age of 16`
+
+-- (2) and (3): "whichever is the smaller number".
+-- src:1427 | "N” =
+-- src:1428 | (a) the number of tax years which begin after 5th April 1978 and end before the date when the entitlement to the additional pension commences, or
+-- src:1429 | (b) the number of tax years in the period—
+-- src:1430 | (i) beginning with the tax year in which the deceased spouse, civil partner or cohabiting partner (“S”) attained the age of 16 or if later 1978-79, and
+-- src:1431 | (ii) ending immediately before the tax year in which S would have attained pensionable age if S had not died earlier,
+-- src:1432 | whichever is the smaller number.
+@ref s 46(2), the substituted N (src:1427-1432)
+GIVEN `s 46(2)(a) the number` IS A NUMBER
+      `s 46(2)(b) the number` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 46(2) the substituted N` MEANS
+    CONSIDER `s 46(2)(b) the number`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST other THEN JUST (min `s 46(2)(a) the number` other)
+
+-- src:1434 | “N =
+-- src:1435 | (a) the number of tax years which begin after 5th April 1978 and end before the date when the deceased spouse or civil partner dies, or
+-- src:1436 | (b) the number of tax years in the period—
+-- src:1437 | (i) beginning with the tax year in which the deceased spouse or civil partner (“S”) attained the age of 16 or, if later, 1978-79, and
+-- src:1438 | (ii) ending immediately before the tax year in which S would have attained pensionable age if S had not died earlier,
+-- src:1439 | whichever is the smaller number.
+@ref s 46(3), the substituted N (src:1434-1439)
+GIVEN `s 46(3)(a) the number` IS A NUMBER
+      `s 46(3)(b) the number` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 46(3) the substituted N` MEANS
+    CONSIDER `s 46(3)(b) the number`
+    WHEN NOTHING THEN NOTHING
+    WHEN JUST other THEN JUST (min `s 46(3)(a) the number` other)
+
+-- (3): the substituted definition of N applies to the additional pension calculated under s 45 by virtue of s 48BB
+-- where the deceased spouse or civil partner died under pensionable age.
+-- src:1433 | (3) For the purpose of determining the additional pension falling to be calculated under section 45 above by virtue of section 48BB below in a case where the deceased spouse or civil partner died under pensionable age, the following definition shall be substituted for the definition of “N” in section 45(4)(b) above—
+@ref s 46(3), application (src:1433)
+GIVEN `the deceased spouse or civil partner died under pensionable age` IS A BOOLEAN
+      `the additional pension falls to be calculated under section 45 by virtue of section 48BB` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 46(3) the substituted definition of N applies` MEANS
+    IF `the deceased spouse or civil partner died under pensionable age` AND `the additional pension falls to be calculated under section 45 by virtue of section 48BB`
+    THEN JUST TRUE
+    ELSE NOTHING  -- NOTHING-kind (limited by its own wording): the substitution is for a calculation "by virtue of section 48BB" where the deceased "died under pensionable age"
+
+-- (4): for the additional pension under s 45 by virtue of s 39C(1) where the deceased spouse, civil partner or
+-- cohabiting partner died under pensionable age, s 45 has effect (a) without subsection (2)(d) and (b) without the
+-- words "before the flat rate introduction year" in subsection (3A)(b).
+-- src:1440 | (4) For the purpose of determining the additional pension falling to be calculated under section 45 above by virtue of section 39C(1) above in a case where the deceased spouse, civil partner or cohabiting partner died under pensionable age, section 45 has effect subject to the following additional modifications—
+-- src:1441 | (a) the omission of subsection (2)(d), and
+-- src:1442 | (b) the omission in subsection (3A)(b) of the words “before the flat rate introduction year”.
+@ref s 46(4) (src:1440-1442)
+GIVEN `s 39C(1) the additional pension falls to be calculated under section 45 by virtue of this section` IS A MAYBE BOOLEAN
+      `the deceased spouse, civil partner or cohabiting partner died under pensionable age` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 46(4) section 45 has effect subject to the additional modifications` MEANS
+    IF `s 39C(1) the additional pension falls to be calculated under section 45 by virtue of this section` EQUALS JUST TRUE AND `the deceased spouse, civil partner or cohabiting partner died under pensionable age`
+    THEN JUST TRUE
+    ELSE NOTHING  -- NOTHING-kind (limited by its own wording): the modifications are "for the purpose of determining the additional pension ... by virtue of section 39C(1) ... where the deceased ... died under pensionable age"

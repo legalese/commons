@@ -1,0 +1,636 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `ssc-core`
+IMPORT `ssc1-prelim`
+
+-- Social Security Contributions and Benefits Act 1992 (United Kingdom), 1992 c. 4.
+-- Part I, Class 1 contributions: ss 5 to 9B (src lines 234-355). Part agent ssc1, LAYER 1.
+-- Source: a plain-text rendering by a converter script, not the official text.
+--
+-- Reading a result: JUST TRUE / JUST FALSE is the text answering in its own words; NOTHING is
+-- "not covered" and must never be turned into FALSE.
+-- Figures the Act leaves to regulations (the s 5 limits, their prescribed equivalents, the upper secondary
+-- thresholds, the age-related secondary percentage, whose table is OMITTED from this text) are inputs.
+-- The percentages the Act states in its own words (8%, 2%, 15%) are constants "as the Act states it": the
+-- Act says they are "subject to alteration under sections 143 and 145 of the Administration Act", so every
+-- amount function takes the percentage as an input and the seat layer passes the constant.
+-- Amounts are NOT rounded here: the text of these sections says nothing of pence (rounding is in Schedule 1, ssc8).
+
+§ `Part I -- Class 1 contributions, ss 5 to 9B`
+
+§§ `s 5 Earnings limits and thresholds for Class 1 contributions`
+
+-- s 5(1): for every tax year there is a lower earnings limit, a primary threshold, an upper earnings limit and a secondary
+-- threshold, "the amounts specified for that year by regulations". The regulations are outside these sources, so the
+-- limits are supplied as a list (the core's `Earnings limits`, one per tax year) and the one for the year is found.
+-- src:235 | (1) For the purposes of this Act there shall for every tax year be—
+-- src:236 | (a) the following for primary Class 1 contributions—
+-- src:237 | (i) a lower earnings limit,
+-- src:238 | (ii) a primary threshold, and
+-- src:239 | (iii) an upper earnings limit; and
+-- src:240 | (b) a secondary threshold for secondary Class 1 contributions.
+-- src:241 | Those limits and thresholds shall be the amounts specified for that year by regulations ...
+@ref s 5(1) (src:235-241)
+GIVEN limits IS A LIST OF `Earnings limits`
+      year IS A `Tax year`
+GIVETH A MAYBE `Earnings limits`
+`s 5(1) the limits and thresholds for the tax year` MEANS
+    CONSIDER filter (GIVEN l YIELD l's `the tax year` EQUALS year) limits
+    WHEN EMPTY THEN NOTHING    -- NOTHING-kind (points outside the text): "the amounts specified for that year by regulations"; no limits for that year were supplied
+    WHEN first FOLLOWED BY rest THEN JUST first
+
+-- PLAN.md seam S26: ss 164 and 171ZA (ssc6) take "the lower earnings limit in force at the time" from s 5(1)(a)(i).
+-- src:236 | (a) the following for primary Class 1 contributions—
+-- src:237 | (i) a lower earnings limit,
+-- src:238 | (ii) a primary threshold, and
+@ref s 5(1)(a) (src:236-238)
+GIVEN limits IS AN `Earnings limits`
+GIVETH A NUMBER
+`s 5(1)(a) the lower earnings limit in force at the time in pounds` MEANS limits's `lower earnings limit`
+
+-- src:236 | (a) the following for primary Class 1 contributions—
+-- src:237 | (i) a lower earnings limit,
+-- src:238 | (ii) a primary threshold, and
+@ref s 5(1)(a) (src:236-238)
+GIVEN limits IS AN `Earnings limits`
+GIVETH A NUMBER
+`s 5(1)(a) the primary threshold in force at the time in pounds` MEANS limits's `primary threshold`
+
+-- src:236 | (a) the following for primary Class 1 contributions—
+-- src:237 | (i) a lower earnings limit,
+-- src:238 | (ii) a primary threshold, and
+-- src:239 | (iii) an upper earnings limit; and
+@ref s 5(1)(a) (src:236-239)
+GIVEN limits IS AN `Earnings limits`
+GIVETH A NUMBER
+`s 5(1)(a) the upper earnings limit in force at the time in pounds` MEANS limits's `upper earnings limit`
+
+-- src:240 | (b) a secondary threshold for secondary Class 1 contributions.
+@ref s 5(1)(b) (src:240-240)
+GIVEN limits IS AN `Earnings limits`
+GIVETH A NUMBER
+`s 5(1)(b) the secondary threshold in force at the time in pounds` MEANS limits's `secondary threshold`
+
+-- s 5(4): in the case of each limit or threshold, an equivalent may be prescribed for earners paid otherwise than weekly;
+-- "the prescribed equivalent" is that equivalent. The equivalents are supplied as a second `Earnings limits`.
+-- src:244 | (4) Regulations may, in the case of each of the limits or thresholds mentioned in subsection (1) above, prescribe an equivalent of that limit or threshold in relation to earners paid otherwise than weekly (and references in this or any other Act to “the prescribed equivalent”, in the context of any of those limits or thresholds, are accordingly references to the equivalent prescribed under this subsection in relation to such earners).
+@ref s 5(4) (src:244-244)
+GIVEN weekly IS AN `Earnings limits`
+      equivalents IS A MAYBE `Earnings limits`
+      `the earner is paid otherwise than weekly` IS A BOOLEAN
+GIVETH A MAYBE `Earnings limits`
+`s 5(4) the limits and thresholds that apply to the earner` MEANS
+    IF NOT `the earner is paid otherwise than weekly`
+    THEN JUST weekly
+    ELSE equivalents    -- NOTHING when none was prescribed: NOTHING-kind (points outside the text): "Regulations may ... prescribe an equivalent"
+
+-- s 5(5): an equivalent may exceed the arithmetical equivalent by not more than GBP 1.00.
+-- src:245 | (5) The power conferred by subsection (4) above to prescribe an equivalent of any of those limits or thresholds includes power to prescribe an amount which exceeds, by not more than £1.00, the amount which is the arithmetical equivalent of that limit or threshold.
+@ref s 5(5) (src:245-245)
+GIVEN `the prescribed equivalent` IS A NUMBER
+      `the arithmetical equivalent` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 5(5) the regulations may prescribe the amount as an equivalent of the limit or threshold` MEANS
+    BRANCH
+        IF     `the prescribed equivalent` GREATER THAN `the arithmetical equivalent`
+           AND `the prescribed equivalent` AT MOST (`the arithmetical equivalent` PLUS 1) THEN JUST TRUE
+        IF `the prescribed equivalent` GREATER THAN (`the arithmetical equivalent` PLUS 1) THEN NOTHING    -- NOTHING-kind (includes): "The power conferred by subsection (4) ... includes power to prescribe an amount which exceeds, by not more than £1.00, the amount which is the arithmetical equivalent"; "includes" does not close the power
+        OTHERWISE NOTHING    -- NOTHING-kind (silent): an amount that does not exceed the arithmetical equivalent is not addressed by subsection (5)
+
+§§ `s 6 Liability for Class 1 contributions`
+
+-- The tax year of the limits must be the tax year of the tax week in which the earnings were paid: "current" threshold.
+GIVEN paid IS AN `Earnings paid`
+      limits IS AN `Earnings limits`
+GIVETH A BOOLEAN
+`s 6(1) the limits are those of the tax year in which the earnings were paid` MEANS
+    limits's `the tax year` EQUALS paid's `the tax week they were paid in`'s `the tax year`
+
+-- The "where" part of s 6(1): earnings paid in a tax week to an earner over 16 in respect of one employment which is employed
+-- earner's employment. "over the age of 16" is s 173(a): the earner has attained 16 (input K2).
+GIVEN paid IS AN `Earnings paid`
+      limits IS AN `Earnings limits`
+      `s 173(a) the person is over 16` IS A MAYBE BOOLEAN
+      employment IS AN Employment
+      `the person is gainfully employed` IS A BOOLEAN
+      `the office carries earnings` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6(1) the earnings fall within the opening words of subsection (1)` MEANS
+    BRANCH
+        IF NOT `s 6(1) the limits are those of the tax year in which the earnings were paid` paid limits THEN NOTHING    -- NOTHING-kind (limited by its own wording): "the current" threshold is that of the tax year of the tax week; other limits were supplied
+        IF `s 173(a) the person is over 16` EQUALS JUST FALSE THEN NOTHING    -- NOTHING-kind (limited by its own wording): "Where ... an earner over the age of 16"; the case of an earner not over 16 is outside the opening words
+        IF `s 2(1)(a) the person is an employed earner` employment `the person is gainfully employed` `the office carries earnings` EQUALS JUST FALSE THEN NOTHING    -- NOTHING-kind (limited by its own wording): "in respect of any one employment of his which is employed earner’s employment"
+        IF `s 173(a) the person is over 16` EQUALS NOTHING THEN NOTHING    -- NOTHING-kind (points outside the text): the answer of section 173(a) was not supplied
+        OTHERWISE JUST TRUE
+
+-- src:248 | (1) Where in any tax week earnings are paid to or for the benefit of an earner over the age of 16 in respect of any one employment of his which is employed earner’s employment—
+-- src:249 | (a) a primary Class 1 contribution shall be payable in accordance with this section and section 8 below if the amount paid exceeds the current primary threshold (or the prescribed equivalent); and
+@ref s 6(1)(a) (src:248-249)
+GIVEN paid IS AN `Earnings paid`
+      limits IS AN `Earnings limits`
+      `s 173(a) the person is over 16` IS A MAYBE BOOLEAN
+      employment IS AN Employment
+      `the person is gainfully employed` IS A BOOLEAN
+      `the office carries earnings` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6(1)(a) a primary Class 1 contribution is payable in accordance with sections 6 and 8` MEANS
+    CONSIDER `s 6(1) the earnings fall within the opening words of subsection (1)` paid limits `s 173(a) the person is over 16` employment `the person is gainfully employed` `the office carries earnings`
+    WHEN JUST TRUE THEN
+        IF paid's `the amount in pounds` GREATER THAN limits's `primary threshold`
+        THEN JUST TRUE
+        ELSE JUST FALSE    -- FALSE-kind (the text says no in its own words): "a primary Class 1 contribution shall be payable ... if the amount paid exceeds the current primary threshold (or the prescribed equivalent)" (marginal reading M1(a): a failed "if" counts as the text's no)
+    WHEN JUST FALSE THEN NOTHING    -- NOTHING-kind (limited by its own wording): outside the opening words of subsection (1)
+    WHEN NOTHING THEN NOTHING       -- NOTHING-kind (points outside the text): the answer of section 173(a), or limits for another tax year
+
+-- src:248 | (1) Where in any tax week earnings are paid to or for the benefit of an earner over the age of 16 in respect of any one employment of his which is employed earner’s employment—
+-- src:249 | (a) a primary Class 1 contribution shall be payable in accordance with this section and section 8 below if the amount paid exceeds the current primary threshold (or the prescribed equivalent); and
+-- src:250 | (b) a secondary Class 1 contribution shall be payable in accordance with this section and section 9 below if the amount paid exceeds the current secondary threshold (or the prescribed equivalent).
+@ref s 6(1)(b) (src:248-250)
+GIVEN paid IS AN `Earnings paid`
+      limits IS AN `Earnings limits`
+      `s 173(a) the person is over 16` IS A MAYBE BOOLEAN
+      employment IS AN Employment
+      `the person is gainfully employed` IS A BOOLEAN
+      `the office carries earnings` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6(1)(b) a secondary Class 1 contribution is payable in accordance with sections 6 and 9` MEANS
+    CONSIDER `s 6(1) the earnings fall within the opening words of subsection (1)` paid limits `s 173(a) the person is over 16` employment `the person is gainfully employed` `the office carries earnings`
+    WHEN JUST TRUE THEN
+        IF paid's `the amount in pounds` GREATER THAN limits's `secondary threshold`
+        THEN JUST TRUE
+        ELSE JUST FALSE    -- FALSE-kind (the text says no in its own words): "a secondary Class 1 contribution shall be payable ... if the amount paid exceeds the current secondary threshold (or the prescribed equivalent)" (marginal reading M1(a))
+    WHEN JUST FALSE THEN NOTHING    -- NOTHING-kind (limited by its own wording): outside the opening words of subsection (1)
+    WHEN NOTHING THEN NOTHING       -- NOTHING-kind (points outside the text): the answer of section 173(a), or limits for another tax year
+
+-- s 6(2): no primary or secondary Class 1 contribution is payable in respect of earnings if a Class 1B contribution is payable in respect of them.
+-- src:251 | (2) No primary or secondary Class 1 contribution shall be payable in respect of earnings if a Class 1B contribution is payable in respect of them.
+@ref s 6(2) (src:251-251)
+GIVEN `a Class 1B contribution is payable in respect of the earnings` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6(2) a primary or secondary Class 1 contribution is payable in respect of the earnings` MEANS
+    IF `a Class 1B contribution is payable in respect of the earnings`
+    THEN JUST FALSE    -- FALSE-kind (the text says no in its own words): "No primary or secondary Class 1 contribution shall be payable in respect of earnings if a Class 1B contribution is payable in respect of them"
+    ELSE NOTHING       -- NOTHING-kind (limited by its own wording): the bar is for the case where a Class 1B contribution is payable; otherwise the subsection is silent
+
+-- s 6(3): except as may be prescribed, no primary Class 1 contribution is payable on earnings paid after the earner attains
+-- pensionable age; secondary contributions are unaffected ("without prejudice to any liability to pay secondary Class 1 contributions").
+-- The core's `Earnings paid` carries a tax week, not a date, so whether the payment is after the earner attains pensionable
+-- age is a plain fact the earner can state.
+-- src:252 | (3) Except as may be prescribed, no primary Class 1 contribution shall be payable in respect of earnings paid to or for the benefit of an employed earner after he attains pensionable age, but without prejudice to any liability to pay secondary Class 1 contributions in respect of any such earnings.
+@ref s 6(3) (src:252-252)
+GIVEN `the earnings are paid after the earner attains pensionable age` IS A BOOLEAN
+      `the regulations prescribe otherwise for the case` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6(3) a primary Class 1 contribution is payable in respect of the earnings` MEANS
+    BRANCH
+        IF NOT `the earnings are paid after the earner attains pensionable age` THEN NOTHING    -- NOTHING-kind (limited by its own wording): the bar is on earnings "paid ... after he attains pensionable age"
+        IF `the regulations prescribe otherwise for the case` THEN NOTHING    -- NOTHING-kind (points outside the text): "Except as may be prescribed"
+        OTHERWISE JUST FALSE    -- FALSE-kind (the text says no in its own words): "no primary Class 1 contribution shall be payable in respect of earnings paid to or for the benefit of an employed earner after he attains pensionable age"
+
+-- s 6(4): the primary contribution is the liability of the earner and the secondary the liability of the secondary contributor,
+-- without prejudice to paragraphs 3 to 3B of Schedule 1 (ssc8 answers those).
+DECLARE `s 6(4) Who is liable` IS ONE OF
+    `s 6(4)(a) the earner`
+    `s 6(4)(b) the secondary contributor`
+
+-- src:253 | (4) The primary and secondary Class 1 contributions referred to in subsection (1) above are payable as follows—
+-- src:254 | (a) the primary contribution shall be the liability of the earner; and
+-- src:255 | (b) the secondary contribution shall be the liability of the secondary contributor;
+-- src:256 | but nothing in this subsection shall prejudice the provisions of paragraphs 3 to 3B of Schedule 1 to this Act.
+@ref s 6(4) (src:253-256)
+GIVEN class IS A `Class of contribution`
+      `paragraphs 3 to 3B of Schedule 1 apply to the contribution` IS A BOOLEAN
+GIVETH A MAYBE `s 6(4) Who is liable`
+`s 6(4) who is liable to pay the Class 1 contribution` MEANS
+    BRANCH
+        IF `paragraphs 3 to 3B of Schedule 1 apply to the contribution` THEN NOTHING    -- NOTHING-kind (points outside the text): "nothing in this subsection shall prejudice the provisions of paragraphs 3 to 3B of Schedule 1"
+        IF class EQUALS `Class 1 primary` THEN JUST `s 6(4)(a) the earner`
+        IF class EQUALS `Class 1 secondary` THEN JUST `s 6(4)(b) the secondary contributor`
+        OTHERWISE NOTHING    -- NOTHING-kind (silent): subsection (4) speaks of the primary and secondary Class 1 contributions only
+
+-- s 6(5): each employment is taken on its own: contributions are payable "without regard to any other such payment of earnings
+-- in respect of any other employment", except as this Act provides (Schedule 1 aggregation, ssc8).
+-- src:257 | (5) Except as provided by this Act, the primary and secondary Class 1 contributions in respect of earnings paid to or for the benefit of an earner in respect of any one employment of his shall be payable without regard to any other such payment of earnings in respect of any other employment of his.
+@ref s 6(5) (src:257-257)
+GIVEN `the earnings paid in respect of this employment` IS A NUMBER
+      `the earnings paid in respect of the earner's other employments` IS A NUMBER
+      `this Act provides otherwise` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`s 6(5) the earnings counted for this employment` MEANS
+    IF `this Act provides otherwise`
+    THEN NOTHING    -- NOTHING-kind (points outside the text): "Except as provided by this Act"
+    ELSE JUST `the earnings paid in respect of this employment`
+
+-- The combination the Act's wording asks for: a bar that says no (s 1(6)(a), s 6(2), s 6(3)) overrides a grant; where no bar
+-- says no, the grant stands. A bar that is NOTHING (not engaged, or not covered) never turns the grant into FALSE.
+GIVEN bar IS A MAYBE BOOLEAN
+      answer IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6 the answer once a bar is taken into account` MEANS
+    IF bar EQUALS JUST FALSE THEN JUST FALSE ELSE answer    -- FALSE-kind (the text says no in its own words): the bar's own no, passed on; ss 1(6)(a), 6(2) and 6(3) carry the quoted words
+
+-- s 6 with the bars in s 1(6)(a), s 6(2) and s 6(3): is a primary Class 1 contribution payable on the earnings?
+-- src:248 | (1) Where in any tax week earnings are paid to or for the benefit of an earner over the age of 16 in respect of any one employment of his which is employed earner’s employment—
+-- src:249 | (a) a primary Class 1 contribution shall be payable in accordance with this section and section 8 below if the amount paid exceeds the current primary threshold (or the prescribed equivalent); and
+-- src:250 | (b) a secondary Class 1 contribution shall be payable in accordance with this section and section 9 below if the amount paid exceeds the current secondary threshold (or the prescribed equivalent).
+-- src:251 | (2) No primary or secondary Class 1 contribution shall be payable in respect of earnings if a Class 1B contribution is payable in respect of them.
+-- src:252 | (3) Except as may be prescribed, no primary Class 1 contribution shall be payable in respect of earnings paid to or for the benefit of an employed earner after he attains pensionable age, but without prejudice to any liability to pay secondary Class 1 contributions in respect of any such earnings.
+@ref s 6(1)(a) (src:248-252)
+GIVEN paid IS AN `Earnings paid`
+      limits IS AN `Earnings limits`
+      `s 173(a) the person is over 16` IS A MAYBE BOOLEAN
+      employment IS AN Employment
+      `the person is gainfully employed` IS A BOOLEAN
+      `the office carries earnings` IS A BOOLEAN
+      `the person fulfils the prescribed conditions as to residence or presence in Great Britain` IS A BOOLEAN
+      `a Class 1B contribution is payable in respect of the earnings` IS A BOOLEAN
+      `the earnings are paid after the earner attains pensionable age` IS A BOOLEAN
+      `the regulations prescribe otherwise for the case` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6 a primary Class 1 contribution is payable, having regard to sections 1(6)(a), 6(2) and 6(3)` MEANS
+    `s 6 the answer once a bar is taken into account`
+        (`s 1(6)(a) the person is liable to pay a Class 1, Class 1A, Class 1B or Class 2 contribution` `Class 1 primary` `the person fulfils the prescribed conditions as to residence or presence in Great Britain`)
+        (`s 6 the answer once a bar is taken into account`
+            (`s 6(2) a primary or secondary Class 1 contribution is payable in respect of the earnings` `a Class 1B contribution is payable in respect of the earnings`)
+            (`s 6 the answer once a bar is taken into account`
+                (`s 6(3) a primary Class 1 contribution is payable in respect of the earnings` `the earnings are paid after the earner attains pensionable age` `the regulations prescribe otherwise for the case`)
+                (`s 6(1)(a) a primary Class 1 contribution is payable in accordance with sections 6 and 8` paid limits `s 173(a) the person is over 16` employment `the person is gainfully employed` `the office carries earnings`)))
+
+-- src:248 | (1) Where in any tax week earnings are paid to or for the benefit of an earner over the age of 16 in respect of any one employment of his which is employed earner’s employment—
+-- src:249 | (a) a primary Class 1 contribution shall be payable in accordance with this section and section 8 below if the amount paid exceeds the current primary threshold (or the prescribed equivalent); and
+-- src:250 | (b) a secondary Class 1 contribution shall be payable in accordance with this section and section 9 below if the amount paid exceeds the current secondary threshold (or the prescribed equivalent).
+-- src:251 | (2) No primary or secondary Class 1 contribution shall be payable in respect of earnings if a Class 1B contribution is payable in respect of them.
+@ref s 6(1)(b) (src:248-251)
+GIVEN paid IS AN `Earnings paid`
+      limits IS AN `Earnings limits`
+      `s 173(a) the person is over 16` IS A MAYBE BOOLEAN
+      employment IS AN Employment
+      `the person is gainfully employed` IS A BOOLEAN
+      `the office carries earnings` IS A BOOLEAN
+      `the person fulfils the prescribed conditions as to residence or presence in Great Britain` IS A BOOLEAN
+      `a Class 1B contribution is payable in respect of the earnings` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6 a secondary Class 1 contribution is payable, having regard to sections 1(6)(a) and 6(2)` MEANS
+    `s 6 the answer once a bar is taken into account`
+        (`s 1(6)(a) the person is liable to pay a Class 1, Class 1A, Class 1B or Class 2 contribution` `Class 1 secondary` `the person fulfils the prescribed conditions as to residence or presence in Great Britain`)
+        (`s 6 the answer once a bar is taken into account`
+            (`s 6(2) a primary or secondary Class 1 contribution is payable in respect of the earnings` `a Class 1B contribution is payable in respect of the earnings`)
+            (`s 6(1)(b) a secondary Class 1 contribution is payable in accordance with sections 6 and 9` paid limits `s 173(a) the person is over 16` employment `the person is gainfully employed` `the office carries earnings`))
+
+-- PLAN.md seam S4 (ss 6, 11 and 13 answer section 22, ssc2). The input names ssc2 uses are these functions' names.
+-- Each week is one element: the earnings paid in the tax week, and whether a primary Class 1 contribution was paid or treated
+-- as paid on them (s 6(1)(a), or s 6A(2)). The whole of the earnings in such a week counts: s 6A(2)(b) speaks of "those earnings"
+-- as "earnings upon which such a contribution has been paid" (fork F3). The lead aggregates by tax year at the merge.
+DECLARE `s 6 Week of earnings` HAS
+    `s 6 the earnings paid in the tax week`                             IS A NUMBER
+    `s 6 a primary Class 1 contribution was paid or treated as paid on them` IS A BOOLEAN
+
+-- src:266 | (b) those earnings shall be treated as earnings upon which such a contribution has been paid,
+@ref s 6A(2) (src:266-266)
+GIVEN weeks IS A LIST OF `s 6 Week of earnings`
+GIVETH A NUMBER
+`s 6 the earnings on which primary Class 1 contributions have been paid or treated as paid in the tax year` MEANS
+    sum (map (GIVEN w YIELD w's `s 6 the earnings paid in the tax week`) (filter (GIVEN w YIELD w's `s 6 a primary Class 1 contribution was paid or treated as paid on them`) weeks))
+
+§§ `s 6A Notional payment of primary Class 1 contribution where earnings not less than lower earnings limit`
+
+-- src:261 | (1) This section applies where in any tax week earnings are paid to or for the benefit of an earner over the age of 16 in respect of any one employment of his which is employed earner’s employment and the amount paid—
+-- src:262 | (a) is not less than the current lower earnings limit (or the prescribed equivalent), but
+-- src:263 | (b) does not exceed the current primary threshold (or the prescribed equivalent).
+@ref s 6A(1) (src:261-263)
+GIVEN paid IS AN `Earnings paid`
+      limits IS AN `Earnings limits`
+      `s 173(a) the person is over 16` IS A MAYBE BOOLEAN
+      employment IS AN Employment
+      `the person is gainfully employed` IS A BOOLEAN
+      `the office carries earnings` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6A(1) section 6A applies to the earnings` MEANS
+    CONSIDER `s 6(1) the earnings fall within the opening words of subsection (1)` paid limits `s 173(a) the person is over 16` employment `the person is gainfully employed` `the office carries earnings`
+    WHEN JUST TRUE THEN
+        IF     paid's `the amount in pounds` AT LEAST limits's `lower earnings limit`
+           AND paid's `the amount in pounds` AT MOST limits's `primary threshold`
+        THEN JUST TRUE
+        ELSE NOTHING    -- NOTHING-kind (limited by its own wording): "This section applies where ... the amount paid (a) is not less than the current lower earnings limit ... but (b) does not exceed the current primary threshold"
+    WHEN JUST FALSE THEN NOTHING    -- NOTHING-kind (limited by its own wording): outside the opening words of subsection (1)
+    WHEN NOTHING THEN NOTHING       -- NOTHING-kind (points outside the text): the answer of section 173(a), or limits for another tax year
+
+-- s 6A(3): the purposes for which the notional payment counts.
+DECLARE `s 6A(3) Purpose` IS ONE OF
+    `s 6A(3)(a) the purposes of section 14(1)(a)`
+    `s 6A(3)(b) the purposes of the provisions mentioned in section 21(5A)(a) to (c)`
+    `s 6A(3)(c) any other purposes relating to contributory benefits`
+    `s 6A(3)(d) any purposes relating to jobseeker's allowance`
+    `s 6A(3)(e) any purposes relating to employment and support allowance`
+    `s 6A(3) any other purpose`
+
+-- s 6A(2) and (3): where section 6A applies, the earner is treated as having actually paid a primary Class 1 contribution and the
+-- earnings as earnings upon which one has been paid, for the purposes in (3), subject to prescribed exceptions or modifications.
+-- SEAM S8: whether a provision is one mentioned in section 21(5A)(a) to (c) is ssc2's answer (an input).
+-- src:264 | (2) Subject to any prescribed exceptions or modifications—
+-- src:265 | (a) the earner shall be treated as having actually paid a primary Class 1 contribution in respect of that week, and
+-- src:266 | (b) those earnings shall be treated as earnings upon which such a contribution has been paid,
+-- src:267 | for any of the purposes mentioned in subsection (3) below.
+-- src:268 | (3) The purposes are—
+-- src:269 | (a) the purposes of section 14(1)(a) below;
+-- src:270 | (b) the purposes of the provisions mentioned in section 21(5A)(a) to (c) below;
+-- src:271 | (c) any other purposes relating to contributory benefits; ...
+-- src:272 | (d) any purposes relating to jobseeker’s allowance; and
+-- src:273 | (e) any purposes relating to employment and support allowance.
+@ref s 6A(2), s 6A(3) (src:264-273)
+GIVEN `s 6A(1) section 6A applies to the earnings` IS A MAYBE BOOLEAN
+      purpose IS A `s 6A(3) Purpose`
+      `s 21(5A) the provision is one mentioned in section 21(5A)(a) to (c)` IS A BOOLEAN
+      `a prescribed exception or modification applies` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6A(2) the earner is treated as having actually paid a primary Class 1 contribution for the week` MEANS
+    BRANCH
+        IF NOT (`s 6A(1) section 6A applies to the earnings` EQUALS JUST TRUE) THEN NOTHING    -- NOTHING-kind (limited by its own wording): "This section applies where" the opening conditions hold
+        IF `a prescribed exception or modification applies` THEN NOTHING    -- NOTHING-kind (points outside the text): "Subject to any prescribed exceptions or modifications"
+        OTHERWISE
+            CONSIDER purpose
+            WHEN `s 6A(3)(a) the purposes of section 14(1)(a)` THEN JUST TRUE
+            WHEN `s 6A(3)(b) the purposes of the provisions mentioned in section 21(5A)(a) to (c)` THEN
+                IF `s 21(5A) the provision is one mentioned in section 21(5A)(a) to (c)` THEN JUST TRUE ELSE NOTHING    -- NOTHING-kind (points outside the text): whether the provision is one mentioned in section 21(5A)(a) to (c) is for section 21(5A)
+            WHEN `s 6A(3)(c) any other purposes relating to contributory benefits` THEN JUST TRUE
+            WHEN `s 6A(3)(d) any purposes relating to jobseeker's allowance` THEN JUST TRUE
+            WHEN `s 6A(3)(e) any purposes relating to employment and support allowance` THEN JUST TRUE
+            WHEN `s 6A(3) any other purpose` THEN NOTHING    -- NOTHING-kind (list not closed): "The purposes are" the five listed, with no "only" (marginal reading M2)
+
+-- s 6A(5): except as may be prescribed, nothing in section 6A applies to earnings paid after the earner attains pensionable age.
+-- src:278 | (5) Except as may be prescribed, nothing in this section applies in relation to earnings paid to or for the benefit of an employed earner after he attains pensionable age.
+@ref s 6A(5) (src:278-278)
+GIVEN `the earnings are paid after the earner attains pensionable age` IS A BOOLEAN
+      `the regulations prescribe otherwise for the case` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 6A(5) section 6A applies in relation to the earnings` MEANS
+    BRANCH
+        IF NOT `the earnings are paid after the earner attains pensionable age` THEN NOTHING    -- NOTHING-kind (limited by its own wording): the bar is on earnings "paid ... after he attains pensionable age"
+        IF `the regulations prescribe otherwise for the case` THEN NOTHING    -- NOTHING-kind (points outside the text): "Except as may be prescribed"
+        OTHERWISE JUST FALSE    -- FALSE-kind (the text says no in its own words): "nothing in this section applies in relation to earnings paid to or for the benefit of an employed earner after he attains pensionable age"
+
+-- s 6A(6): as s 6(5), each employment is taken on its own.
+-- src:279 | (6) Except as provided by this Act, this section applies in relation to earnings paid to or for the benefit of an earner in respect of any one employment of his irrespective of any other such payment of earnings in respect of any other employment of his.
+@ref s 6A(6) (src:279-279)
+GIVEN `the earnings paid in respect of this employment` IS A NUMBER
+      `the earnings paid in respect of the earner's other employments` IS A NUMBER
+      `this Act provides otherwise` IS A BOOLEAN
+GIVETH A MAYBE NUMBER
+`s 6A(6) the earnings counted for this employment` MEANS
+    IF `this Act provides otherwise`
+    THEN NOTHING    -- NOTHING-kind (points outside the text): "Except as provided by this Act"
+    ELSE JUST `the earnings paid in respect of this employment`
+
+§§ `s 7 "Secondary contributor"`
+
+-- s 7(1): for an earner under a contract of service, the employer; for an earner in an office, the person prescribed for the
+-- office or, if none is prescribed, the department, authority or body responsible for paying the earnings of the office.
+-- Subsection (1) is subject to (2): regulations may make a prescribed person the secondary contributor.
+DECLARE `s 7(1) Who is the secondary contributor` IS ONE OF
+    `s 7(1)(a) the employer`
+    `s 7(1)(b)(i) the person prescribed in relation to the office`
+    `s 7(1)(b)(ii) the government department, public authority or body of persons responsible for paying the earnings of the office`
+    `s 7(2) the person prescribed by regulations under subsection (2)`
+
+-- src:282 | (1) For the purposes of this Act, the “secondary contributor” in relation to any payment of earnings to or for the benefit of an employed earner, is—
+-- src:283 | (a) in the case of an earner employed under a contract of service, his employer;
+-- src:284 | (b) in the case of an earner employed in an office with ... earnings, either—
+-- src:285 | (i) such person as may be prescribed in relation to that office; or
+-- src:286 | (ii) if no person is prescribed, the government department, public authority or body of persons responsible for paying the ... earnings of the office;
+-- src:287 | but this subsection is subject to subsection (2) below.
+@ref s 7(1) (src:282-287)
+GIVEN employment IS AN Employment
+      `a person is prescribed in relation to the office` IS A BOOLEAN
+      `regulations under subsection (2) make a prescribed person the secondary contributor` IS A BOOLEAN
+GIVETH A MAYBE `s 7(1) Who is the secondary contributor`
+`s 7(1) who the secondary contributor is` MEANS
+    BRANCH
+        IF `regulations under subsection (2) make a prescribed person the secondary contributor` THEN JUST `s 7(2) the person prescribed by regulations under subsection (2)`
+        IF employment's `held under a contract of service` THEN JUST `s 7(1)(a) the employer`
+        IF employment's `held in an office` AND `a person is prescribed in relation to the office` THEN JUST `s 7(1)(b)(i) the person prescribed in relation to the office`
+        IF employment's `held in an office` THEN JUST `s 7(1)(b)(ii) the government department, public authority or body of persons responsible for paying the earnings of the office`
+        OTHERWISE NOTHING    -- NOTHING-kind (limited by its own wording): subsection (1) speaks of an earner under a contract of service and an earner in an office
+
+-- src:293 | (2B) In subsection (2A) “arrangements” include any scheme, transaction or series of transactions, agreement or understanding, whether or not legally enforceable, and any associated operations.
+@ref s 7(2B) (src:293-293)
+GIVEN thing IS A `s 2(2ZB) Kind of thing`
+GIVETH A MAYBE BOOLEAN
+`s 7(2B) the thing is an arrangement` MEANS `s 2(2ZB) the thing is an arrangement` thing
+
+§§ `s 8 Calculation of primary Class 1 contributions`
+
+-- s 8(2): the main primary percentage is 8% and the additional primary percentage is 2 per cent, the main one being subject
+-- to alteration under sections 143 and 145 of the Administration Act.
+-- src:301 | (2) For the purposes of this Act—
+-- src:302 | (a) the main primary percentage is 8%; and
+@ref s 8(2)(a) (src:301-302)
+`s 8(2)(a) the main primary percentage as the Act states it` MEANS 8%
+
+-- src:303 | (b) the additional primary percentage is 2 per cent;
+-- src:304 | but the main primary percentage is subject to alteration under sections 143 and 145 of the Administration Act.
+@ref s 8(2)(b) (src:303-304)
+`s 8(2)(b) the additional primary percentage as the Act states it` MEANS 2%
+
+-- s 8(1): where a primary Class 1 contribution is payable as mentioned in s 6(1)(a), the amount is the aggregate of
+-- (a) the main primary percentage of the earnings above the primary threshold up to the upper earnings limit, and
+-- (b) the additional primary percentage of the earnings above the upper earnings limit.
+-- src:296 | (1) Where a primary Class 1 contribution is payable as mentioned in section 6(1)(a) above, the amount of that contribution is the aggregate of—
+-- src:297 | (a) the main primary percentage of so much of the earner’s earnings paid in the tax week, in respect of the employment in question, as—
+-- src:298 | (i) exceeds the current primary threshold (or the prescribed equivalent); but
+-- src:299 | (ii) does not exceed the current upper earnings limit (or the prescribed equivalent); and
+-- src:300 | (b) the additional primary percentage of so much of those earnings as exceeds the current upper earnings limit (or the prescribed equivalent).
+@ref s 8(1) (src:296-300)
+GIVEN `s 6(1)(a) a primary Class 1 contribution is payable` IS A MAYBE BOOLEAN
+      earnings IS A NUMBER
+      limits IS AN `Earnings limits`
+      `the main primary percentage` IS A NUMBER
+      `the additional primary percentage` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 8(1) the amount of the primary Class 1 contribution` MEANS
+    CONSIDER `s 6(1)(a) a primary Class 1 contribution is payable`
+    WHEN JUST TRUE THEN
+        JUST (   `the main primary percentage` TIMES max 0 ((min earnings (limits's `upper earnings limit`)) MINUS (limits's `primary threshold`))
+              PLUS `the additional primary percentage` TIMES max 0 (earnings MINUS limits's `upper earnings limit`))
+    WHEN JUST FALSE THEN NOTHING    -- NOTHING-kind (limited by its own wording): "Where a primary Class 1 contribution is payable as mentioned in section 6(1)(a)"
+    WHEN NOTHING THEN NOTHING       -- NOTHING-kind (points outside the text): whether one is payable was not answered
+
+§§ `s 9 Calculation of secondary Class 1 contributions`
+
+-- s 9(2): the secondary percentage is 15%, subject to alteration under sections 143 and 145 of the Administration Act.
+-- src:315 | (2) For the purposes of this Act the secondary percentage is 15%; but that percentage is subject to alteration under sections 143 and 145 of the Administration Act.
+@ref s 9(2) (src:315-315)
+`s 9(2) the secondary percentage as the Act states it` MEANS 15%
+
+-- s 9B(2): a "relevant apprentice" is an earner aged under 25 who is employed in the employment as an apprentice.
+-- "apprentice" has the meaning the Treasury prescribe (s 9B(9)): a plain input. "aged under 25" is s 173(a) (input K2).
+-- src:341 | (2) An earner is a “relevant apprentice”, in relation to an employment, if the earner—
+-- src:342 | (a) is aged under 25, and
+-- src:343 | (b) is employed, in the employment, as an apprentice.
+-- src:354 | (9) In subsection (2)(b) “apprentice” has such meaning as the Treasury may prescribe.
+@ref s 9B(2), s 9B(9) (src:341-343) (src:354-354)
+GIVEN `s 173(a) the person is under 25` IS A MAYBE BOOLEAN
+      `the earner is employed, in the employment, as an apprentice` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 9B(2) the earner is a relevant apprentice` MEANS
+    IF NOT `the earner is employed, in the employment, as an apprentice`
+    THEN JUST FALSE    -- FALSE-kind (the text says no in its own words): "An earner is a “relevant apprentice” ... if the earner ... (b) is employed, in the employment, as an apprentice" (marginal reading M1(a))
+    ELSE `s 173(a) the person is under 25`    -- JUST FALSE is the text's no for the (a) limb (marginal reading M1(a)); NOTHING-kind (points outside the text) when K2 was not answered
+
+-- s 9B(1): where a secondary Class 1 contribution is payable, section 9B applies to the earnings if the earner is a relevant apprentice.
+-- src:340 | (1) Where a secondary Class 1 contribution is payable as mentioned in section 6(1)(b) above, this section applies to the earnings paid in the tax week, in respect of the employment in question, if the earner is a relevant apprentice in relation to that employment.
+@ref s 9B(1) (src:340-340)
+GIVEN `s 6(1)(b) a secondary Class 1 contribution is payable` IS A MAYBE BOOLEAN
+      `s 9B(2) the earner is a relevant apprentice` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 9B(1) section 9B applies to the earnings` MEANS
+    IF `s 6(1)(b) a secondary Class 1 contribution is payable` EQUALS JUST TRUE
+    THEN `s 9B(2) the earner is a relevant apprentice`    -- JUST FALSE here is the text's no: "if the earner is a relevant apprentice" (marginal reading M1(a))
+    ELSE NOTHING    -- NOTHING-kind (limited by its own wording): "Where a secondary Class 1 contribution is payable as mentioned in section 6(1)(b)"
+
+-- s 9A(1) and (1A): where a secondary Class 1 contribution is payable, section 9A applies to the earnings if the earner falls
+-- within an age group specified in column 1 of the table in subsection (3) (OMITTED from this text: an input); it does not apply
+-- so far as section 9B applies.
+-- src:321 | (1) Where a secondary Class 1 contribution is payable as mentioned in section 6(1)(b) above, this section applies to the earnings paid in the tax week, in respect of the employment in question, if the earner falls within an age group specified in column 1 of the table in subsection (3).
+-- src:322 | (1A) But this section does not apply to those earnings so far as section 9B below (zero-rate secondary Class 1 contributions for certain apprentices) applies to them.
+@ref s 9A(1), s 9A(1A) (src:321-322)
+GIVEN `s 6(1)(b) a secondary Class 1 contribution is payable` IS A MAYBE BOOLEAN
+      `the earner falls within an age group specified in column 1 of the table in subsection (3)` IS A BOOLEAN
+      `s 9B(1) section 9B applies to the earnings` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 9A(1) section 9A applies to the earnings` MEANS
+    BRANCH
+        IF NOT (`s 6(1)(b) a secondary Class 1 contribution is payable` EQUALS JUST TRUE) THEN NOTHING    -- NOTHING-kind (limited by its own wording): "Where a secondary Class 1 contribution is payable as mentioned in section 6(1)(b)"
+        IF `s 9B(1) section 9B applies to the earnings` EQUALS JUST TRUE THEN JUST FALSE    -- FALSE-kind (the text says no in its own words): "But this section does not apply to those earnings so far as section 9B ... applies to them"
+        IF `s 9B(1) section 9B applies to the earnings` EQUALS NOTHING THEN NOTHING    -- NOTHING-kind (points outside the text): whether section 9B applies was not answered
+        IF `the earner falls within an age group specified in column 1 of the table in subsection (3)` THEN JUST TRUE
+        OTHERWISE JUST FALSE    -- FALSE-kind (the text says no in its own words): "this section applies to the earnings ... if the earner falls within an age group specified in column 1" (marginal reading M1(a))
+
+-- s 9(1A): the relevant percentage is (a) the age-related secondary percentage if section 9A applies, (aa) 0% if section 9B applies,
+-- (b) otherwise the secondary percentage. Section 9A(1A) makes 9A and 9B exclusive, so 9B is tried first.
+-- src:311 | (1A) For the purposes of subsection (1) “the relevant percentage” is—
+-- src:312 | (a) if section 9A below applies to the earnings, the age-related secondary percentage;
+-- src:313 | (aa) if section 9B below (zero-rate secondary Class 1 contributions for certain apprentices) applies to the earnings, 0%;
+-- src:314 | (b) otherwise, the secondary percentage.
+-- src:323 | (2) For the purposes of section 9(1A)(a) above, the age-related secondary percentage is the percentage for the earner's age group specified in column 2 of the table.
+@ref s 9(1A), s 9A(2) (src:311-314) (src:323-323)
+GIVEN `s 9A(1) section 9A applies to the earnings` IS A MAYBE BOOLEAN
+      `s 9B(1) section 9B applies to the earnings` IS A MAYBE BOOLEAN
+      `s 9A(2) the age-related secondary percentage` IS A NUMBER
+      `s 9(2) the secondary percentage` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 9(1A) the relevant percentage` MEANS
+    BRANCH
+        IF `s 9B(1) section 9B applies to the earnings` EQUALS JUST TRUE THEN JUST 0    -- (aa) "0%"
+        IF `s 9A(1) section 9A applies to the earnings` EQUALS JUST TRUE THEN JUST `s 9A(2) the age-related secondary percentage`    -- (a)
+        IF     `s 9A(1) section 9A applies to the earnings` EQUALS JUST FALSE
+           AND `s 9B(1) section 9B applies to the earnings` EQUALS JUST FALSE THEN JUST `s 9(2) the secondary percentage`    -- (b) "otherwise"
+        OTHERWISE NOTHING    -- NOTHING-kind (points outside the text): whether section 9A or 9B applies was not answered, so "otherwise" cannot be decided
+
+-- s 9(1): the secondary Class 1 contribution is the relevant percentage of the earnings above the secondary threshold. Where an upper
+-- secondary threshold applies (s 9A(7), s 9B(4): regulations; NOTHING means none has been provided), the earnings above it carry
+-- the secondary percentage instead (s 9A(9), s 9B(7)).
+-- src:310 | (1) Where a secondary Class 1 contribution is payable as mentioned in section 6(1)(b) above, the amount of that contribution shall be the relevant percentage of so much of the earnings paid in the tax week, in respect of the employment in question, as exceeds the current secondary threshold (or the prescribed equivalent).
+-- src:333 | (9) Where—
+-- src:334 | (a) a secondary Class 1 contribution is payable as mentioned in section 6(1)(b) above,
+-- src:335 | (b) the earner falls within an age group in relation to which provision has been made under subsection (7), and
+-- src:336 | (c) the earnings paid in the tax week, in respect of the employment in question, exceed the current upper secondary threshold (or the prescribed equivalent) in relation to the age group,
+-- src:337 | this section is not to apply to the earnings so far as they exceed that threshold (or the prescribed equivalent); and for the purposes of section 9(1) above the relevant percentage in respect of the earnings so far as they exceed that threshold (or the prescribed equivalent) is, accordingly, to be the secondary percentage.
+-- src:348 | (6) Subsection (7) applies if—
+-- src:349 | (a) a secondary Class 1 contribution is payable as mentioned in section 6(1)(b) above,
+-- src:350 | (b) the earnings paid in the tax week, in respect of the employment in question, exceed the current upper secondary threshold (or the prescribed equivalent) in relation to relevant apprentices, and
+-- src:351 | (c) the earner is a relevant apprentice in relation to the employment.
+-- src:352 | (7) This section does not apply to those earnings so far as they exceed that threshold (or the prescribed equivalent) (“the excess earnings”) and, accordingly, for the purposes of section 9(1) above the relevant percentage in respect of the excess earnings is the secondary percentage.
+@ref s 9(1), s 9A(9), s 9B(6), s 9B(7) (src:310-310) (src:333-337) (src:348-352)
+GIVEN `s 6(1)(b) a secondary Class 1 contribution is payable` IS A MAYBE BOOLEAN
+      earnings IS A NUMBER
+      limits IS AN `Earnings limits`
+      `s 9A(1) section 9A applies to the earnings` IS A MAYBE BOOLEAN
+      `s 9B(1) section 9B applies to the earnings` IS A MAYBE BOOLEAN
+      `s 9A(2) the age-related secondary percentage` IS A NUMBER
+      `s 9(2) the secondary percentage` IS A NUMBER
+      `s 9A(7) the upper secondary threshold for the age group` IS A MAYBE NUMBER
+      `s 9B(4) the upper secondary threshold for relevant apprentices` IS A MAYBE NUMBER
+GIVETH A MAYBE NUMBER
+`s 9(1) the amount of the secondary Class 1 contribution` MEANS
+    CONSIDER `s 6(1)(b) a secondary Class 1 contribution is payable`
+    WHEN JUST TRUE THEN
+        CONSIDER `s 9(1A) the relevant percentage` `s 9A(1) section 9A applies to the earnings` `s 9B(1) section 9B applies to the earnings` `s 9A(2) the age-related secondary percentage` `s 9(2) the secondary percentage`
+        WHEN NOTHING THEN NOTHING    -- NOTHING-kind (points outside the text): the relevant percentage was not decided
+        WHEN JUST pct THEN
+            CONSIDER `the upper threshold that applies`
+            WHEN NOTHING THEN JUST (pct TIMES max 0 (earnings MINUS limits's `secondary threshold`))
+            WHEN JUST upper THEN
+                JUST (   pct TIMES max 0 (min earnings upper MINUS limits's `secondary threshold`)
+                      PLUS `s 9(2) the secondary percentage` TIMES max 0 (earnings MINUS upper))
+    WHEN JUST FALSE THEN NOTHING    -- NOTHING-kind (limited by its own wording): "Where a secondary Class 1 contribution is payable as mentioned in section 6(1)(b)"
+    WHEN NOTHING THEN NOTHING       -- NOTHING-kind (points outside the text): whether one is payable was not answered
+    WHERE
+        `the upper threshold that applies` MEANS
+            BRANCH
+                IF `s 9B(1) section 9B applies to the earnings` EQUALS JUST TRUE THEN `s 9B(4) the upper secondary threshold for relevant apprentices`
+                IF `s 9A(1) section 9A applies to the earnings` EQUALS JUST TRUE THEN `s 9A(7) the upper secondary threshold for the age group`
+                OTHERWISE NOTHING    -- NOTHING-kind (points outside the text): no upper secondary threshold applies unless regulations under s 9A(7) or s 9B(4) provide one
+
+§§ `s 9A The age-related secondary percentage`
+
+-- s 9A(3): the table is OMITTED from this text (src:324 "Here is the table—" is followed at once by subsection (4)). Its age groups and
+-- percentages are inputs: `the earner falls within an age group ...` and `s 9A(2) the age-related secondary percentage`.
+
+-- s 9A(5): a percentage specified for an added age group must be lower than the secondary percentage.
+-- src:328 | (5) A percentage specified under subsection (4)(a) must be lower than the secondary percentage.
+@ref s 9A(5) (src:328-328)
+GIVEN `the percentage specified for the added age group` IS A NUMBER
+      `s 9(2) the secondary percentage` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 9A(5) the percentage may be specified for an added age group` MEANS
+    IF `the percentage specified for the added age group` LESS THAN `s 9(2) the secondary percentage`
+    THEN JUST TRUE
+    ELSE JUST FALSE    -- FALSE-kind (the text says no in its own words): "A percentage specified under subsection (4)(a) must be lower than the secondary percentage"
+
+-- s 9A(6): a person is still regarded as liable to pay a secondary Class 1 contribution though the amount is GBP 0 because the
+-- age-related secondary percentage is 0%.
+-- src:329 | (6) For the purposes of this Act a person is still to be regarded as being liable to pay a secondary Class 1 contribution even though the amount of the contribution is £0 because the age-related secondary percentage is 0%.
+@ref s 9A(6) (src:329-329)
+GIVEN `the amount of the contribution is £0 because the age-related secondary percentage is 0%` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 9A(6) the person is regarded as liable to pay a secondary Class 1 contribution` MEANS
+    IF `the amount of the contribution is £0 because the age-related secondary percentage is 0%`
+    THEN JUST TRUE
+    ELSE NOTHING    -- NOTHING-kind (limited by its own wording): "still ... even though the amount of the contribution is £0 because the age-related secondary percentage is 0%"
+
+-- s 9A(8): subsections (4) and (5) of section 5 apply to an upper secondary threshold as they apply to a secondary threshold.
+-- src:332 | (8) Subsections (4) and (5) of section 5 above (which confer power to prescribe an equivalent of a secondary threshold in relation to earners paid otherwise than weekly), and subsection (6) of that section as it applies for the purposes of those subsections, apply for the purposes of an upper secondary threshold in relation to an age group as they apply for the purposes of a secondary threshold.
+@ref s 9A(8) (src:332-332)
+GIVEN `the prescribed equivalent` IS A NUMBER
+      `the arithmetical equivalent` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 9A(8) the regulations may prescribe the amount as an equivalent of the upper secondary threshold` MEANS
+    `s 5(5) the regulations may prescribe the amount as an equivalent of the limit or threshold` `the prescribed equivalent` `the arithmetical equivalent`
+
+-- s 9A(10): in subsections (7) to (9) a reference to an age group includes a part of an age group.
+-- src:338 | (10) In subsections (7) to (9) references to an age group include a part of an age group.
+@ref s 9A(10) (src:338-338)
+GIVEN `the earner falls within a part of an age group` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 9A(10) the earner falls within an age group for the purposes of subsections (7) to (9)` MEANS
+    IF `the earner falls within a part of an age group` THEN JUST TRUE
+    ELSE NOTHING    -- NOTHING-kind (includes): "references to an age group include a part of an age group"
+
+§§ `s 9B Zero-rate secondary Class 1 contributions for certain apprentices`
+
+-- src:344 | (3) For the purposes of this Act a person is still to be regarded as being liable to pay a secondary Class 1 contribution even if the amount of the contribution is £0 because this section applies to the earnings in question.
+@ref s 9B(3) (src:344-344)
+GIVEN `the amount of the contribution is £0 because section 9B applies to the earnings` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 9B(3) the person is regarded as liable to pay a secondary Class 1 contribution` MEANS
+    IF `the amount of the contribution is £0 because section 9B applies to the earnings`
+    THEN JUST TRUE
+    ELSE NOTHING    -- NOTHING-kind (limited by its own wording): "still ... even if the amount of the contribution is £0 because this section applies to the earnings"
+
+-- src:347 | (5) Subsections (4) and (5) of section 5 above (which confer power to prescribe an equivalent of a secondary threshold in relation to earners paid otherwise than weekly), and subsection (6) of that section as it applies for the purposes of those subsections, apply for the purposes of an upper secondary threshold in relation to relevant apprentices as they apply for the purposes of a secondary threshold.
+@ref s 9B(5) (src:347-347)
+GIVEN `the prescribed equivalent` IS A NUMBER
+      `the arithmetical equivalent` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 9B(5) the regulations may prescribe the amount as an equivalent of the upper secondary threshold for relevant apprentices` MEANS
+    `s 5(5) the regulations may prescribe the amount as an equivalent of the limit or threshold` `the prescribed equivalent` `the arithmetical equivalent`
