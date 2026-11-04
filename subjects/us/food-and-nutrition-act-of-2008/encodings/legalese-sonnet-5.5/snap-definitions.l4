@@ -1,0 +1,1147 @@
+IMPORT prelude
+IMPORT daydate
+IMPORT `snap-core`
+
+-- Food and Nutrition Act of 2008 (7 U.S.C. ch. 51), s 2012 "Definitions" -- lines 23-134 of usc07-ch51.txt.
+-- The source is a plain-text rendering made by a converter script; it is NOT the official text, and nothing here is
+-- "verified against the official text". s 2011 (lines 18-21) is a declaration of policy and carries no rule (NOTES.md).
+--
+-- HOW A DEFINITION IS ENCODED HERE. Each term of s 2012 is a function from the facts a witness could state to the
+-- Act's own meaning, answering `MAYBE BOOLEAN` (or `MAYBE NUMBER`): JUST TRUE, JUST FALSE, or NOTHING for "the text
+-- does not say". A caller must never turn NOTHING into FALSE. A fact that only one definition reads is declared here,
+-- as a type named `s 2012(x) ...`; a fact several parts read is in snap-core.l4.
+--   * Every definition here says "means". Where a case matches none of the limbs the answer is JUST FALSE, with the
+--     comment `FALSE-kind`. That includes a case that has the category of a limb but fails the limb's own qualifier
+--     ("when prescribed", "whose tribal organization meets the requirements"): the qualifier is part of what the
+--     definition means (NOTES.md, Marginal readings).
+--   * NOTHING is used where the text says "such as" or "includes" (list not closed), where a term is left undefined,
+--     or where the meaning turns on a determination of the Secretary or on another provision that is not among the
+--     keel's lines (points outside the text).
+-- Reading a result: FALSE and NOTHING -- see NOTES.md.
+
+-- ============================================================================================================
+-- 3-valued helpers, used by several definitions. Named for the paragraph that first needs them.
+-- ============================================================================================================
+
+-- "Any of these limbs": JUST TRUE if one limb holds; else NOTHING if one limb is undecided; else JUST FALSE.
+-- The JUST FALSE branch is the definition's own "means": none of the limbs holds.
+GIVEN limbs IS A LIST OF MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(j) one of the limbs holds` MEANS
+    BRANCH
+        IF any (GIVEN x YIELD x EQUALS JUST TRUE) limbs THEN JUST TRUE
+        IF any (GIVEN x YIELD x EQUALS NOTHING) limbs THEN NOTHING -- NOTHING-kind (points outside the text): a limb turns on a determination the caller cannot say has been made
+        -- FALSE-kind (the text says no in its own words): the definition "means" its limbs, and none holds
+        OTHERWISE JUST FALSE
+
+-- ============================================================================================================
+-- (a) "Access device"
+-- ============================================================================================================
+
+-- src:25 | (a) “Access device” means any card, plate, code, account number, or other means of access, including point of sale devices, that can be used, alone or in conjunction with another access device, to obtain payments, allotments, benefits, money, goods, or other things of value, or that can be used to initiate a transfer of funds under this chapter.
+@ref Food and Nutrition Act of 2008, s 2012(a) (src:25)
+-- Plain gloss: a card, code, account number or the like that can be used to get benefits or money or goods, or to start a transfer of funds under this chapter.
+DECLARE `s 2012(a) thing` HAS
+    `a card, plate, code, account number or other means of access, including a point of sale device` IS A BOOLEAN  -- the catch-all "other means of access" is the witness's own judgment
+    `can be used, alone or in conjunction with another access device, to obtain payments, allotments, benefits, money, goods, or other things of value` IS A BOOLEAN
+    `can be used to initiate a transfer of funds under this chapter` IS A BOOLEAN
+
+@ref Food and Nutrition Act of 2008, s 2012(a) (src:25)
+GIVEN thing IS A `s 2012(a) thing`
+GIVETH A MAYBE BOOLEAN
+`s 2012(a) the thing is an access device` MEANS
+    BRANCH
+        IF thing's `a card, plate, code, account number or other means of access, including a point of sale device`
+           AND (    thing's `can be used, alone or in conjunction with another access device, to obtain payments, allotments, benefits, money, goods, or other things of value`
+                 OR thing's `can be used to initiate a transfer of funds under this chapter`)
+           THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "means any card, plate, code, account number, or other means of access"
+        IF NOT thing's `a card, plate, code, account number or other means of access, including a point of sale device` THEN JUST FALSE
+        -- FALSE-kind (the text says no in its own words): "that can be used, alone or in conjunction with another access device, to obtain payments, allotments, benefits, money, goods, or other things of value, or that can be used to initiate a transfer of funds under this chapter"
+        OTHERWISE JUST FALSE
+
+-- ============================================================================================================
+-- (b) "Allotment"
+-- ============================================================================================================
+
+-- src:26 | (b) “Allotment” means the total value of benefits a household is authorized to receive during each month.
+@ref Food and Nutrition Act of 2008, s 2012(b) (src:26)
+-- Plain gloss: the total dollar value of all the benefits a household is authorized to get for one month.
+GIVEN benefits IS A LIST OF Benefit
+      month IS A DATE
+GIVETH A NUMBER
+`s 2012(b) the allotment for the month` MEANS
+    sum (map (GIVEN b YIELD b's `value in dollars`) (filter (GIVEN b YIELD b's `month it is for begins` EQUALS month) benefits))
+
+-- ============================================================================================================
+-- (c) "Allowable medical expenses"
+-- ============================================================================================================
+
+-- src:27 | (c) “Allowable medical expenses” means expenditures for (1) medical and dental care, (2) hospitalization or nursing care (including hospitalization or nursing care of an individual who was a household member immediately prior to entering a hospital or nursing home), (3) prescription drugs when prescribed by a licensed practitioner authorized under State law and over-the-counter medication (including insulin) when approved by a licensed practitioner or other qualified health professional, (4) health and hospitalization insurance policies (excluding the costs of health and accident or income maintenance policies), (5) medicare premiums related to coverage under title XVIII of the Social Security Act [42 U.S.C. 1395 et seq.], (6) dentures, hearing aids, and prosthetics (including the costs of securing and maintaining a seeing eye dog), (7) eye glasses prescribed by a physician skilled in eye disease or by an optometrist, (8) reasonable costs of transportation necessary to secure medical treatment or services, and (9) maintaining an attendant, homemaker, home health aide, housekeeper, or child care services due to age, infirmity, or illness.
+@ref Food and Nutrition Act of 2008, s 2012(c) (src:27)
+-- Plain gloss: the nine kinds of money a household spends on medical care that can count as medical expenses.
+-- Limb (2) includes nursing care of a person who was a household member just before entering a hospital or nursing home: that person is only an example of whose care counts, and is not a separate fact.
+DECLARE `s 2012(c) kind of expenditure` IS ONE OF
+    `medical and dental care`                                                    -- (1)
+    `hospitalization or nursing care`                                            -- (2)
+    `prescription drugs`                                                         -- (3), first part
+    `over-the-counter medication, including insulin`                             -- (3), second part
+    `a health and hospitalization insurance policy`                              -- (4)
+    `a medicare premium related to coverage under title XVIII of the Social Security Act` -- (5)
+    `dentures, hearing aids, or prosthetics, including a seeing eye dog`         -- (6)
+    `eye glasses`                                                                -- (7)
+    `transportation to secure medical treatment or services`                     -- (8)
+    `an attendant, homemaker, home health aide, housekeeper, or child care services` -- (9)
+    `any other expenditure`
+
+DECLARE `s 2012(c) expenditure` HAS
+    `the kind`                                                                   IS A `s 2012(c) kind of expenditure`
+    `prescribed by a licensed practitioner authorized under State law`           IS A BOOLEAN  -- limb (3), prescription drugs
+    `approved by a licensed practitioner or other qualified health professional` IS A BOOLEAN  -- limb (3), over-the-counter medication
+    `a health and accident or income maintenance policy`                         IS A BOOLEAN  -- limb (4): the excluded kind of policy
+    `prescribed by a physician skilled in eye disease or by an optometrist`      IS A BOOLEAN  -- limb (7)
+    `the cost is reasonable and the transportation is necessary to secure medical treatment or services` IS A BOOLEAN  -- limb (8)
+    `needed due to age, infirmity, or illness`                                   IS A BOOLEAN  -- limb (9)
+
+@ref Food and Nutrition Act of 2008, s 2012(c) (src:27)
+GIVEN e IS A `s 2012(c) expenditure`
+GIVETH A MAYBE BOOLEAN
+`s 2012(c) the expenditure is an allowable medical expense` MEANS
+    CONSIDER e's `the kind`
+    WHEN `medical and dental care` THEN JUST TRUE
+    WHEN `hospitalization or nursing care` THEN JUST TRUE
+    WHEN `prescription drugs` THEN
+        -- FALSE-kind (the text says no in its own words): "prescription drugs when prescribed by a licensed practitioner authorized under State law"
+        JUST (e's `prescribed by a licensed practitioner authorized under State law`)
+    WHEN `over-the-counter medication, including insulin` THEN
+        -- FALSE-kind (the text says no in its own words): "over-the-counter medication (including insulin) when approved by a licensed practitioner or other qualified health professional"
+        JUST (e's `approved by a licensed practitioner or other qualified health professional`)
+    WHEN `a health and hospitalization insurance policy` THEN
+        -- FALSE-kind (the text says no in its own words): "(excluding the costs of health and accident or income maintenance policies)"
+        JUST (NOT e's `a health and accident or income maintenance policy`)
+    WHEN `a medicare premium related to coverage under title XVIII of the Social Security Act` THEN JUST TRUE
+    WHEN `dentures, hearing aids, or prosthetics, including a seeing eye dog` THEN JUST TRUE
+    WHEN `eye glasses` THEN
+        -- FALSE-kind (the text says no in its own words): "eye glasses prescribed by a physician skilled in eye disease or by an optometrist"
+        JUST (e's `prescribed by a physician skilled in eye disease or by an optometrist`)
+    WHEN `transportation to secure medical treatment or services` THEN
+        -- FALSE-kind (the text says no in its own words): "reasonable costs of transportation necessary to secure medical treatment or services"
+        JUST (e's `the cost is reasonable and the transportation is necessary to secure medical treatment or services`)
+    WHEN `an attendant, homemaker, home health aide, housekeeper, or child care services` THEN
+        -- FALSE-kind (the text says no in its own words): "due to age, infirmity, or illness"
+        JUST (e's `needed due to age, infirmity, or illness`)
+    -- FALSE-kind (the text says no in its own words): "means expenditures for (1) medical and dental care, (2) hospitalization or nursing care"
+    WHEN `any other expenditure` THEN JUST FALSE
+
+-- ============================================================================================================
+-- (d) "Benefit"
+-- ============================================================================================================
+
+-- src:28 | (d) Benefit.—
+-- src:29 | The term “benefit” means the value of supplemental nutrition assistance provided to a household by means of—
+-- src:30 | (1) an electronic benefit transfer under section 2016(h) of this title; or
+-- src:31 | (2) other means of providing assistance, as determined by the Secretary.
+@ref Food and Nutrition Act of 2008, s 2012(d) (src:28-31)
+-- Plain gloss: the value of food assistance given to a household, either on an EBT card (s 2016(h)) or by some other means the Secretary decides on.
+DECLARE `s 2012(d) assistance` HAS
+    `supplemental nutrition assistance provided to a household` IS A BOOLEAN
+    `the form`                                                  IS A `Form of benefit`
+    `the Secretary has determined the other means`              IS A MAYBE BOOLEAN  -- three values: JUST TRUE = the Secretary has made the determination; JUST FALSE = the Secretary has made no such determination, or made the opposite one; NOTHING = the caller cannot say whether the Secretary has determined it
+
+@ref Food and Nutrition Act of 2008, s 2012(d) (src:28-31)
+GIVEN a IS A `s 2012(d) assistance`
+GIVETH A MAYBE BOOLEAN
+`s 2012(d) the assistance is a benefit` MEANS
+    BRANCH
+        -- FALSE-kind (the text says no in its own words): "means the value of supplemental nutrition assistance provided to a household"
+        IF NOT a's `supplemental nutrition assistance provided to a household` THEN JUST FALSE
+        IF a's `the form` EQUALS `an electronic benefit transfer under section 2016(h)` THEN JUST TRUE
+        IF a's `the Secretary has determined the other means` EQUALS JUST TRUE THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "other means of providing assistance, as determined by the Secretary" (the Secretary made no such determination, or determined that it is not)
+        IF a's `the Secretary has determined the other means` EQUALS JUST FALSE THEN JUST FALSE
+        -- NOTHING-kind (points outside the text): whether other means count is "as determined by the Secretary", and the caller cannot say whether the Secretary has determined it (an input that says it has made no determination is JUST FALSE above)
+        OTHERWISE NOTHING
+
+-- ============================================================================================================
+-- (e) "Benefit issuer"
+-- ============================================================================================================
+
+-- src:32 | (e) Benefit Issuer.—
+-- src:33 | The term “benefit issuer” means any office of the State agency or any person, partnership, corporation, organization, political subdivision, or other entity with which a State agency has contracted for, or to which it has delegated functional responsibility in connection with, the issuance of benefits to households.
+@ref Food and Nutrition Act of 2008, s 2012(e) (src:32-33)
+-- Plain gloss: a State agency office, or anyone the State agency has hired, or handed the job to, to issue benefits to households.
+DECLARE `s 2012(e) entity` HAS
+    `an office of the State agency`                                                   IS A BOOLEAN
+    `a person, partnership, corporation, organization, political subdivision, or other entity` IS A BOOLEAN
+    `the State agency has contracted with it for the issuance of benefits to households` IS A BOOLEAN
+    `the State agency has delegated to it functional responsibility in connection with the issuance of benefits to households` IS A BOOLEAN
+
+@ref Food and Nutrition Act of 2008, s 2012(e) (src:32-33)
+GIVEN e IS A `s 2012(e) entity`
+GIVETH A MAYBE BOOLEAN
+`s 2012(e) the entity is a benefit issuer` MEANS
+    BRANCH
+        IF e's `an office of the State agency` THEN JUST TRUE
+        IF e's `a person, partnership, corporation, organization, political subdivision, or other entity`
+           AND (e's `the State agency has contracted with it for the issuance of benefits to households` OR e's `the State agency has delegated to it functional responsibility in connection with the issuance of benefits to households`)
+           THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "means any office of the State agency or any person, partnership, corporation, organization, political subdivision, or other entity with which a State agency has contracted for, or to which it has delegated functional responsibility in connection with, the issuance of benefits to households"
+        OTHERWISE JUST FALSE
+
+-- ============================================================================================================
+-- (f) "Certification period"
+-- ============================================================================================================
+
+-- src:34 | (f) “Certification period” means the period for which households shall be eligible to receive benefits. The certification period shall not exceed 12 months, except that the certification period may be up to 24 months if all adult household members are elderly or disabled. A State agency shall have at least 1 contact with each certified household every 12 months. The limits specified in this subsection may be extended until the end of any transitional benefit period established under section 2020(s) of this title.
+@ref Food and Nutrition Act of 2008, s 2012(f) (src:34)
+-- Plain gloss: the stretch of months for which a household is certified as eligible: at most 12, or up to 24 if every adult in it is elderly or disabled; and the State agency must be in touch with the household at least once every 12 months.
+-- SEAMS: `all adult household members are elderly or disabled` is the answer s 2012(j) gives for each adult member (this module's s 2012(j) functions);
+-- `within a transitional benefit period under section 2020(s)` is a fact about s 2020(s), which another part encodes.
+DECLARE `s 2012(f) the period and its setting` HAS
+    `the period`                                                                  IS A `Certification period`
+    `all adult household members are elderly or disabled`                          IS A BOOLEAN
+    `the period or the contact falls within a transitional benefit period under section 2020(s)` IS A BOOLEAN
+
+@ref Food and Nutrition Act of 2008, s 2012(f) (src:34)
+GIVEN c IS A `s 2012(f) the period and its setting`
+GIVETH A MAYBE BOOLEAN
+`s 2012(f) the certification period is within the limit` MEANS
+    BRANCH
+        IF c's `the period`'s `length in months` AT MOST 12 THEN JUST TRUE
+        IF c's `the period`'s `length in months` AT MOST 24 AND c's `all adult household members are elderly or disabled` THEN JUST TRUE
+        -- NOTHING-kind (points outside the text): "The limits specified in this subsection may be extended until the end of any transitional benefit period established under section 2020(s)", and the extension is not among the keel's lines
+        IF c's `the period or the contact falls within a transitional benefit period under section 2020(s)` THEN NOTHING
+        -- FALSE-kind (the text says no in its own words): "The certification period shall not exceed 12 months, except that the certification period may be up to 24 months if all adult household members are elderly or disabled"
+        OTHERWISE JUST FALSE
+
+-- "A State agency shall have at least 1 contact with each certified household every 12 months."
+@ref Food and Nutrition Act of 2008, s 2012(f) (src:34)
+GIVEN `contacts in the 12 months` IS A NUMBER
+      `within a transitional benefit period` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(f) the State agency has had the required contact` MEANS
+    BRANCH
+        IF `contacts in the 12 months` AT LEAST 1 THEN JUST TRUE
+        -- NOTHING-kind (points outside the text): the 12-month limit "may be extended until the end of any transitional benefit period established under section 2020(s)"
+        IF `within a transitional benefit period` THEN NOTHING
+        -- FALSE-kind (the text says no in its own words): "A State agency shall have at least 1 contact with each certified household every 12 months" (a duty with a numeric floor; Marginal readings, NOTES.md)
+        OTHERWISE JUST FALSE
+
+-- ============================================================================================================
+-- (g) "Coupon"
+-- ============================================================================================================
+
+-- src:35 | (g) “Coupon” means any coupon, stamp, type of certificate, authorization card, cash or check issued in lieu of a coupon.
+@ref Food and Nutrition Act of 2008, s 2012(g) (src:35)
+-- Plain gloss: a coupon, stamp, certificate or authorization card, or cash or a check given instead of a coupon.
+-- FORK (NOTES.md, F-1): does "issued in lieu of a coupon" qualify only "cash or check" (the reading taken) or the whole list?
+DECLARE `s 2012(g) kind of thing` IS ONE OF
+    `a coupon`
+    `a stamp`
+    `a type of certificate`
+    `an authorization card`
+    `cash`
+    `a check`
+    `any other thing`
+
+DECLARE `s 2012(g) thing issued` HAS
+    `the kind`                    IS A `s 2012(g) kind of thing`
+    `issued in lieu of a coupon`  IS A BOOLEAN
+
+@ref Food and Nutrition Act of 2008, s 2012(g) (src:35)
+GIVEN t IS A `s 2012(g) thing issued`
+GIVETH A MAYBE BOOLEAN
+`s 2012(g) the thing is a coupon` MEANS
+    CONSIDER t's `the kind`
+    WHEN `a coupon` THEN JUST TRUE
+    WHEN `a stamp` THEN JUST TRUE
+    WHEN `a type of certificate` THEN JUST TRUE
+    WHEN `an authorization card` THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "cash or check issued in lieu of a coupon"
+    WHEN `cash` THEN JUST (t's `issued in lieu of a coupon`)
+    -- FALSE-kind (the text says no in its own words): "cash or check issued in lieu of a coupon"
+    WHEN `a check` THEN JUST (t's `issued in lieu of a coupon`)
+    -- FALSE-kind (the text says no in its own words): "means any coupon, stamp, type of certificate, authorization card, cash or check"
+    WHEN `any other thing` THEN JUST FALSE
+
+-- The other reading of the fork (F-1): "issued in lieu of a coupon" qualifies every kind in the list.
+@ref Food and Nutrition Act of 2008, s 2012(g) (src:35)
+GIVEN t IS A `s 2012(g) thing issued`
+GIVETH A MAYBE BOOLEAN
+`s 2012(g) the thing is a coupon, on the reading that "issued in lieu of a coupon" qualifies every kind` MEANS
+    CONSIDER t's `the kind`
+    -- FALSE-kind (the text says no in its own words): "means any coupon, stamp, type of certificate, authorization card, cash or check issued in lieu of a coupon"
+    WHEN `any other thing` THEN JUST FALSE
+    OTHERWISE JUST (t's `issued in lieu of a coupon`)
+
+-- ============================================================================================================
+-- (h) "Drug addiction or alcoholic treatment and rehabilitation program"
+-- ============================================================================================================
+
+-- src:36 | (h) “Drug addiction or alcoholic treatment and rehabilitation program” means any such program conducted by a private nonprofit organization or institution, or a publicly operated community mental health center, under part B of title XIX of the Public Health Service Act (42 U.S.C. 300x et seq.) to provide treatment that can lead to the rehabilitation of drug addicts or alcoholics.
+@ref Food and Nutrition Act of 2008, s 2012(h) (src:36)
+-- Plain gloss: a treatment program run by a private nonprofit or a public community mental health center under part B of title XIX of the Public Health Service Act, that can lead to rehabilitation.
+-- (s 2012a, in the first part's lines, extends subsections (f) and (i) of this section to publicly operated community health centers.)
+DECLARE `s 2012(h) program` HAS
+    `conducted by a private nonprofit organization or institution`    IS A BOOLEAN
+    `conducted by a publicly operated community mental health center` IS A BOOLEAN
+    `under part B of title XIX of the Public Health Service Act`       IS A BOOLEAN  -- a borrowed term, asked as a fact
+    `provides treatment that can lead to the rehabilitation of drug addicts or alcoholics` IS A BOOLEAN
+
+@ref Food and Nutrition Act of 2008, s 2012(h) (src:36)
+GIVEN p IS A `s 2012(h) program`
+GIVETH A MAYBE BOOLEAN
+`s 2012(h) the program is a drug addiction or alcoholic treatment and rehabilitation program` MEANS
+    BRANCH
+        IF (p's `conducted by a private nonprofit organization or institution` OR p's `conducted by a publicly operated community mental health center`)
+           AND p's `under part B of title XIX of the Public Health Service Act`
+           AND p's `provides treatment that can lead to the rehabilitation of drug addicts or alcoholics`
+           THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "means any such program conducted by a private nonprofit organization or institution, or a publicly operated community mental health center, under part B of title XIX of the Public Health Service Act (42 U.S.C. 300x et seq.) to provide treatment that can lead to the rehabilitation of drug addicts or alcoholics"
+        OTHERWISE JUST FALSE
+
+-- ============================================================================================================
+-- (i) "EBT card"
+-- ============================================================================================================
+
+-- src:37 | (i) EBT Card.—
+-- src:38 | The term “EBT card” means an electronic benefit transfer card issued under section 2016(h) of this title.
+@ref Food and Nutrition Act of 2008, s 2012(i) (src:37-38)
+-- Plain gloss: an electronic benefit transfer card issued under s 2016(h).
+-- SEAM: `issued under section 2016(h)` is answered by s 2016(h), which another part encodes.
+DECLARE `s 2012(i) card` HAS
+    `an electronic benefit transfer card`     IS A BOOLEAN
+    `issued under section 2016(h) of this title` IS A BOOLEAN
+
+@ref Food and Nutrition Act of 2008, s 2012(i) (src:37-38)
+GIVEN c IS A `s 2012(i) card`
+GIVETH A MAYBE BOOLEAN
+`s 2012(i) the card is an EBT card` MEANS
+    BRANCH
+        IF c's `an electronic benefit transfer card` AND c's `issued under section 2016(h) of this title` THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "means an electronic benefit transfer card issued under section 2016(h) of this title"
+        OTHERWISE JUST FALSE
+
+-- ============================================================================================================
+-- (j) "Elderly or disabled member"
+-- ============================================================================================================
+
+-- src:39 | (j) “Elderly or disabled member” means a member of a household who—
+-- src:40 | (1) is sixty years of age or older;
+-- src:41 | (2)
+-- src:42 | (A) receives supplemental security income benefits under title XVI of the Social Security Act (42 U.S.C. 1381 et seq.), or Federally or State administered supplemental benefits of the type described in section 212(a) of Public Law 93–66 (42 U.S.C. 1382 note), or
+-- src:43 | (B) receives Federally or State administered supplemental assistance of the type described in section 1616(a) of the Social Security Act (42 U.S.C. 1382e(a)), interim assistance pending receipt of supplemental security income, disability-related medical assistance under title XIX of the Social Security Act (42 U.S.C. 1396 et seq.), or disability-based State general assistance benefits, if the Secretary determines that such benefits are conditioned on meeting disability or blindness criteria at least as stringent as those used under title XVI of the Social Security Act;
+-- src:44 | (3) receives disability or blindness payments under title I, II, X, XIV, or XVI of the Social Security Act [42 U.S.C. 301 et seq., 401 et seq., 1201 et seq., 1351 et seq., 1381 et seq.] or receives disability retirement benefits from a governmental agency because of a disability considered permanent under section 221(i) of the Social Security Act (42 U.S.C. 421(i));
+-- src:45 | (4) is a veteran who—
+-- src:46 | (A) has a service-connected or non-service-connected disability which is rated as total under title 38; or
+-- src:47 | (B) is considered in need of regular aid and attendance or permanently housebound under such title;
+-- src:48 | (5) is a surviving spouse of a veteran and—
+-- src:49 | (A) is considered in need of regular aid and attendance or permanently housebound under title 38; or
+-- src:50 | (B) is entitled to compensation for a service-connected death or pension benefits for a non-service-connected death under title 38, and has a disability considered permanent under section 221(i) of the Social Security Act (42 U.S.C. 421(i));
+-- src:51 | (6) is a child of a veteran and—
+-- src:52 | (A) is considered permanently incapable of self-support under section 1314 of title 38; or
+-- src:53 | (B) is entitled to compensation for a service-connected death or pension benefits for a non-service-connected death under title 38, and has a disability considered permanent under section 221(i) of the Social Security Act (42 U.S.C. 421(i)); or
+-- src:54 | (7) is an individual receiving an annuity under section 2(a)(1)(iv) or 2(a)(1)(v) of the Railroad Retirement Act of 1974 (45 U.S.C. 231a(a)(1)(iv) or 231a(a)(1)(v)), if the individual’s service as an employee under the Railroad Retirement Act of 1974 [45 U.S.C. 231 et seq.], after December 31, 1936, had been included in the term “employment” as defined in the Social Security Act [42 U.S.C. 301 et seq.], and if an application for disability benefits had been filed.
+@ref Food and Nutrition Act of 2008, s 2012(j) (src:39-54)
+-- Plain gloss: a household member who is 60 or older, or who gets disability or blindness benefits of the kinds listed, or is a disabled veteran (or a veteran's surviving spouse or child with the listed status), or gets a railroad disability annuity.
+-- The member's age and receipt of supplemental security income are in the core (Individual); every other fact is below.
+-- Borrowed terms (title 38, title XIX, section 221(i) of the Social Security Act, the Railroad Retirement Act) are asked as facts.
+DECLARE `s 2012(j) facts about the member` HAS
+    `Federally or State administered supplemental benefits of the type described in section 212(a) of Public Law 93-66` IS A BOOLEAN  -- limb (2)(A)
+    `Federally or State administered supplemental assistance of the type described in section 1616(a) of the Social Security Act` IS A BOOLEAN  -- limb (2)(B)
+    `interim assistance pending receipt of supplemental security income`    IS A BOOLEAN  -- limb (2)(B)
+    `disability-related medical assistance under title XIX of the Social Security Act` IS A BOOLEAN  -- limb (2)(B)
+    `disability-based State general assistance benefits`                    IS A BOOLEAN  -- limb (2)(B)
+    `the Secretary determines that the (2)(B) benefits are conditioned on meeting disability or blindness criteria at least as stringent as those used under title XVI` IS A MAYBE BOOLEAN  -- three values: JUST TRUE = the Secretary has made the determination; JUST FALSE = the Secretary has made no such determination, or made the opposite one; NOTHING = the caller cannot say whether the Secretary has determined it
+    `disability or blindness payments under title I, II, X, XIV, or XVI of the Social Security Act`  IS A BOOLEAN  -- limb (3)
+    `disability retirement benefits from a governmental agency because of a disability considered permanent under section 221(i) of the Social Security Act` IS A BOOLEAN  -- limb (3)
+    `a veteran`                                                              IS A BOOLEAN  -- limb (4)
+    `a service-connected or non-service-connected disability rated as total under title 38` IS A BOOLEAN  -- limb (4)(A)
+    `considered in need of regular aid and attendance or permanently housebound under title 38` IS A BOOLEAN  -- limbs (4)(B) and (5)(A)
+    `a surviving spouse of a veteran`                                        IS A BOOLEAN  -- limb (5)
+    `entitled to compensation for a service-connected death or pension benefits for a non-service-connected death under title 38` IS A BOOLEAN  -- limbs (5)(B) and (6)(B)
+    `a disability considered permanent under section 221(i) of the Social Security Act` IS A BOOLEAN  -- limbs (5)(B) and (6)(B)
+    `a child of a veteran`                                                   IS A BOOLEAN  -- limb (6)
+    `considered permanently incapable of self-support under section 1314 of title 38` IS A BOOLEAN  -- limb (6)(A)
+    `an individual receiving an annuity under section 2(a)(1)(iv) or 2(a)(1)(v) of the Railroad Retirement Act of 1974` IS A BOOLEAN  -- limb (7)
+    `the individual's service as an employee under the Railroad Retirement Act of 1974 after December 31, 1936, had been included in the term "employment" as defined in the Social Security Act` IS A BOOLEAN  -- limb (7)
+    `an application for disability benefits had been filed`                  IS A BOOLEAN  -- limb (7)
+
+@ref Food and Nutrition Act of 2008, s 2012(j)(1) (src:40)
+GIVEN m IS AN Individual
+GIVETH A MAYBE BOOLEAN
+`s 2012(j)(1) the member is sixty years of age or older` MEANS
+    -- FALSE-kind (the text says no in its own words): "is sixty years of age or older"
+    JUST (m's `age in years` AT LEAST 60)
+
+@ref Food and Nutrition Act of 2008, s 2012(j)(2) (src:41-43)
+GIVEN m IS AN Individual
+      f IS A `s 2012(j) facts about the member`
+GIVETH A MAYBE BOOLEAN
+`s 2012(j)(2) the member receives supplemental security income or a like benefit` MEANS
+    BRANCH
+        -- limb (2)(A): "receives supplemental security income benefits under title XVI of the Social Security Act ... or Federally or State administered supplemental benefits of the type described in section 212(a) of Public Law 93-66"
+        IF m's `receives supplemental security income benefits`
+           OR f's `Federally or State administered supplemental benefits of the type described in section 212(a) of Public Law 93-66`
+           THEN JUST TRUE
+        -- limb (2)(B): the member receives one of the four kinds of assistance
+        IF NOT (    f's `Federally or State administered supplemental assistance of the type described in section 1616(a) of the Social Security Act`
+                 OR f's `interim assistance pending receipt of supplemental security income`
+                 OR f's `disability-related medical assistance under title XIX of the Social Security Act`
+                 OR f's `disability-based State general assistance benefits`)
+           -- FALSE-kind (the text says no in its own words): "(2) (A) receives supplemental security income benefits ... or (B) receives Federally or State administered supplemental assistance ..."
+           THEN JUST FALSE
+        -- ... and the Secretary has determined that the benefits are conditioned on criteria at least as stringent
+        IF f's `the Secretary determines that the (2)(B) benefits are conditioned on meeting disability or blindness criteria at least as stringent as those used under title XVI` EQUALS JUST TRUE THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "if the Secretary determines that such benefits are conditioned on meeting disability or blindness criteria at least as stringent as those used under title XVI of the Social Security Act" (a failed "if"; Marginal readings (a), NOTES.md)
+        IF f's `the Secretary determines that the (2)(B) benefits are conditioned on meeting disability or blindness criteria at least as stringent as those used under title XVI` EQUALS JUST FALSE THEN JUST FALSE
+        -- NOTHING-kind (points outside the text): whether the (2)(B) benefits meet the title XVI criteria is "if the Secretary determines", and the caller cannot say whether the Secretary has (an input that says it has made no determination is JUST FALSE above)
+        OTHERWISE NOTHING
+
+@ref Food and Nutrition Act of 2008, s 2012(j)(3) (src:44)
+GIVEN f IS A `s 2012(j) facts about the member`
+GIVETH A MAYBE BOOLEAN
+`s 2012(j)(3) the member receives disability or blindness payments` MEANS
+    -- FALSE-kind (the text says no in its own words): "(3) receives disability or blindness payments under title I, II, X, XIV, or XVI of the Social Security Act ... or receives disability retirement benefits from a governmental agency because of a disability considered permanent under section 221(i)"
+    JUST (    f's `disability or blindness payments under title I, II, X, XIV, or XVI of the Social Security Act`
+           OR f's `disability retirement benefits from a governmental agency because of a disability considered permanent under section 221(i) of the Social Security Act`)
+
+@ref Food and Nutrition Act of 2008, s 2012(j)(4) (src:45-47)
+GIVEN f IS A `s 2012(j) facts about the member`
+GIVETH A MAYBE BOOLEAN
+`s 2012(j)(4) the member is a veteran with a total disability or in need of aid and attendance` MEANS
+    -- FALSE-kind (the text says no in its own words): "(4) is a veteran who— (A) has a service-connected or non-service-connected disability which is rated as total under title 38; or (B) is considered in need of regular aid and attendance or permanently housebound under such title"
+    JUST (    f's `a veteran`
+          AND (    f's `a service-connected or non-service-connected disability rated as total under title 38`
+                OR f's `considered in need of regular aid and attendance or permanently housebound under title 38`))
+
+@ref Food and Nutrition Act of 2008, s 2012(j)(5) (src:48-50)
+GIVEN f IS A `s 2012(j) facts about the member`
+GIVETH A MAYBE BOOLEAN
+`s 2012(j)(5) the member is a surviving spouse of a veteran with the listed status` MEANS
+    -- FALSE-kind (the text says no in its own words): "(5) is a surviving spouse of a veteran and— (A) is considered in need of regular aid and attendance or permanently housebound under title 38; or (B) is entitled to compensation for a service-connected death or pension benefits for a non-service-connected death under title 38, and has a disability considered permanent under section 221(i)"
+    JUST (    f's `a surviving spouse of a veteran`
+          AND (    f's `considered in need of regular aid and attendance or permanently housebound under title 38`
+                OR (    f's `entitled to compensation for a service-connected death or pension benefits for a non-service-connected death under title 38`
+                     AND f's `a disability considered permanent under section 221(i) of the Social Security Act`)))
+
+@ref Food and Nutrition Act of 2008, s 2012(j)(6) (src:51-53)
+GIVEN f IS A `s 2012(j) facts about the member`
+GIVETH A MAYBE BOOLEAN
+`s 2012(j)(6) the member is a child of a veteran with the listed status` MEANS
+    -- FALSE-kind (the text says no in its own words): "(6) is a child of a veteran and— (A) is considered permanently incapable of self-support under section 1314 of title 38; or (B) is entitled to compensation for a service-connected death or pension benefits for a non-service-connected death under title 38, and has a disability considered permanent under section 221(i)"
+    JUST (    f's `a child of a veteran`
+          AND (    f's `considered permanently incapable of self-support under section 1314 of title 38`
+                OR (    f's `entitled to compensation for a service-connected death or pension benefits for a non-service-connected death under title 38`
+                     AND f's `a disability considered permanent under section 221(i) of the Social Security Act`)))
+
+@ref Food and Nutrition Act of 2008, s 2012(j)(7) (src:54)
+GIVEN f IS A `s 2012(j) facts about the member`
+GIVETH A MAYBE BOOLEAN
+`s 2012(j)(7) the member receives a railroad retirement annuity of the listed kind` MEANS
+    -- FALSE-kind (the text says no in its own words): "(7) is an individual receiving an annuity under section 2(a)(1)(iv) or 2(a)(1)(v) of the Railroad Retirement Act of 1974 ... if the individual's service as an employee ... had been included in the term "employment" ... and if an application for disability benefits had been filed"
+    JUST (    f's `an individual receiving an annuity under section 2(a)(1)(iv) or 2(a)(1)(v) of the Railroad Retirement Act of 1974`
+          AND f's `the individual's service as an employee under the Railroad Retirement Act of 1974 after December 31, 1936, had been included in the term "employment" as defined in the Social Security Act`
+          AND f's `an application for disability benefits had been filed`)
+
+@ref Food and Nutrition Act of 2008, s 2012(j) (src:39-54)
+GIVEN m IS AN Individual
+      f IS A `s 2012(j) facts about the member`
+GIVETH A MAYBE BOOLEAN
+`s 2012(j) the member is an elderly or disabled member` MEANS
+    `s 2012(j) one of the limbs holds`
+        (LIST `s 2012(j)(1) the member is sixty years of age or older` m
+            , `s 2012(j)(2) the member receives supplemental security income or a like benefit` m f
+            , `s 2012(j)(3) the member receives disability or blindness payments` f
+            , `s 2012(j)(4) the member is a veteran with a total disability or in need of aid and attendance` f
+            , `s 2012(j)(5) the member is a surviving spouse of a veteran with the listed status` f
+            , `s 2012(j)(6) the member is a child of a veteran with the listed status` f
+            , `s 2012(j)(7) the member receives a railroad retirement annuity of the listed kind` f)
+
+-- ============================================================================================================
+-- (k) "Food"
+-- ============================================================================================================
+
+-- src:55 | (k) “Food” means (1) any food or food product for home consumption except alcoholic beverages, tobacco, hot foods or hot food products ready for immediate consumption other than those authorized pursuant to clauses (3), (4), (5), (7), (8), and (9) of this subsection,
+-- src:55 | (1) any food or food product for home consumption except alcoholic beverages, tobacco, hot foods or hot food products ready for immediate consumption other than those authorized pursuant to clauses (3), (4), (5), (7), (8), and (9) of this subsection, and any deposit fee in excess of the amount of the State fee reimbursement (if any) required to purchase any food or food product contained in a returnable bottle or can, regardless of whether the fee is included in the shelf price posted for the food or food product,
+-- src:55 | (2) seeds and plants for use in gardens to produce food for the personal consumption of the eligible household,
+-- src:55 | (3) in the case of those persons who are sixty years of age or over or who receive supplemental security income benefits or disability or blindness payments under title I, II, X, XIV, or XVI of the Social Security Act [42 U.S.C. 301 et seq., 401 et seq., 1201 et seq., 1351 et seq., 1381 et seq.], and their spouses, meals prepared by and served in senior citizens’ centers, apartment buildings occupied primarily by such persons, public or private nonprofit establishments (eating or otherwise) that feed such persons, private establishments that contract with the appropriate agency of the State to offer meals for such persons at concessional prices subject to section 2018(h) of this title, and meals prepared for and served to residents of federally subsidized housing for the elderly,
+-- src:55 | (4) in the case of persons sixty years of age or over and persons who are physically or mentally handicapped or otherwise so disabled that they are unable adequately to prepare all of their meals, meals prepared for and delivered to them (and their spouses) at their home by a public or private nonprofit organization or by a private establishment that contracts with the appropriate State agency to perform such services at concessional prices subject to section 2018(h) of this title,
+-- src:55 | (5) in the case of narcotics addicts or alcoholics, and their children, served by drug addiction or alcoholic treatment and rehabilitation programs, meals prepared and served under such programs,
+-- src:55 | (6) in the case of certain eligible households living in Alaska, equipment for procuring food by hunting and fishing, such as nets, hooks, rods, harpoons, and knives (but not equipment for purposes of transportation, clothing, or shelter, and not firearms, ammunition, and explosives) if the Secretary determines that such households are located in an area of the State where it is extremely difficult to reach stores selling food and that such households depend to a substantial extent upon hunting and fishing for subsistence,
+-- src:55 | (7) in the case of disabled or blind recipients of benefits under title I, II, X, XIV, or XVI of the Social Security Act [42 U.S.C. 301 et seq., 401 et seq., 1201 et seq., 1351 et seq., 1381 et seq.], and individuals described in paragraphs (2) through (7) of subsection (j), who are residents in a public or private nonprofit group living arrangement that serves no more than sixteen residents and is certified by the appropriate State agency or agencies under regulations issued under section 1616(e) of the Social Security Act [42 U.S.C. 1382e(e)] or under standards determined by the Secretary to be comparable to standards implemented by appropriate State agencies under such section, meals prepared and served under such arrangement,
+-- src:55 | (8) in the case of women and children temporarily residing in public or private nonprofit shelters for battered women and children, meals prepared and served, by such shelters,
+-- src:55 | (9) in the case of households that do not reside in permanent dwellings and households that have no fixed mailing addresses, meals prepared for and served by a public or private nonprofit establishment (approved by an appropriate State or local agency) that feeds such individuals and by private establishments that contract with the appropriate agency of the State to offer meals for such individuals at concessional prices subject to section 2018(h) of this title.
+@ref Food and Nutrition Act of 2008, s 2012(k) (src:55)
+-- Plain gloss: ordinary food for home use (not alcohol, tobacco or hot ready-to-eat food), garden seeds and plants, and in nine listed cases prepared meals or hunting and fishing gear.
+-- Each constructor carries only the facts its own clause reads, so a case is stated with a handful of facts.
+-- SEAM: where a clause says the meals are offered "at concessional prices subject to section 2018(h)", `permitted under section 2018(h)` is the answer s 2018(h) gives
+-- (another part encodes it). The Secretary's finding in clause (6) is a conditional input.
+DECLARE `s 2012(k)(3) place` IS ONE OF
+    `a senior citizens' center`
+    `an apartment building occupied primarily by such persons`
+    `a public or private nonprofit establishment (eating or otherwise) that feeds such persons`
+    `a private establishment that contracts with the appropriate agency of the State to offer meals for such persons at concessional prices`
+    `federally subsidized housing for the elderly`
+    `any other place`
+
+DECLARE `s 2012(k)(4) provider` IS ONE OF
+    `a public or private nonprofit organization`
+    `a private establishment that contracts with the appropriate State agency to perform such services at concessional prices`
+    `any other provider`
+
+DECLARE `s 2012(k)(9) provider` IS ONE OF
+    `a public or private nonprofit establishment (approved by an appropriate State or local agency) that feeds such individuals`
+    `a private establishment that contracts with the appropriate agency of the State to offer meals for such individuals at concessional prices`
+    `any other provider`
+
+DECLARE `s 2012(k) what is bought or served` IS ONE OF
+    `food or a food product for home consumption` HAS
+        `an alcoholic beverage`                       IS A BOOLEAN
+        `tobacco`                                     IS A BOOLEAN
+        `a hot food or hot food product ready for immediate consumption` IS A BOOLEAN
+        `the hot food is authorized pursuant to clause (3), (4), (5), (7), (8), or (9)` IS A MAYBE BOOLEAN  -- the answer the matching meal gives
+    `a deposit fee on a returnable bottle or can` HAS
+        `in excess of the amount of the State fee reimbursement (if any)` IS A BOOLEAN
+    `seeds and plants` HAS
+        `for use in gardens to produce food for the personal consumption of the eligible household` IS A BOOLEAN
+    `a meal under clause (3)` HAS
+        `the eater is sixty years of age or over, or receives supplemental security income benefits or disability or blindness payments under title I, II, X, XIV, or XVI of the Social Security Act, or is the spouse of such a person` IS A BOOLEAN
+        `the place`                                   IS A `s 2012(k)(3) place`
+        `permitted under section 2018(h) (clause (3))` IS A BOOLEAN
+    `a meal under clause (4)` HAS
+        `the eater is sixty years of age or over, or physically or mentally handicapped or otherwise so disabled that unable adequately to prepare all of their meals, or is the spouse of such a person` IS A BOOLEAN
+        `prepared for and delivered at the eater's home` IS A BOOLEAN
+        `the provider`                                IS A `s 2012(k)(4) provider`
+        `permitted under section 2018(h) (clause (4))` IS A BOOLEAN
+    `a meal under clause (5)` HAS
+        `the eater is a narcotics addict or alcoholic, or their child, served by a drug addiction or alcoholic treatment and rehabilitation program` IS A BOOLEAN
+        `prepared and served under such a program`    IS A BOOLEAN
+    `equipment under clause (6)` HAS
+        `for procuring food by hunting and fishing, such as nets, hooks, rods, harpoons, and knives` IS A BOOLEAN
+        `for purposes of transportation, clothing, or shelter, or a firearm, ammunition, or an explosive` IS A BOOLEAN
+        `bought by an eligible household living in Alaska` IS A BOOLEAN
+        `the Secretary determines that the household is located in an area of the State where it is extremely difficult to reach stores selling food and depends to a substantial extent upon hunting and fishing for subsistence` IS A MAYBE BOOLEAN  -- three values: JUST TRUE = the Secretary has made the determination; JUST FALSE = the Secretary has made no such determination, or made the opposite one; NOTHING = the caller cannot say whether the Secretary has found it
+    `a meal under clause (7)` HAS
+        `the eater is a disabled or blind recipient of benefits under title I, II, X, XIV, or XVI of the Social Security Act, or an individual described in paragraphs (2) through (7) of subsection (j)` IS A BOOLEAN
+        `a resident of a public or private nonprofit group living arrangement that serves no more than sixteen residents and is certified by the appropriate State agency or agencies under regulations issued under section 1616(e) of the Social Security Act or under standards determined by the Secretary to be comparable` IS A BOOLEAN
+        `prepared and served under such an arrangement` IS A BOOLEAN
+    `a meal under clause (8)` HAS
+        `the eater is a woman or child temporarily residing in a public or private nonprofit shelter for battered women and children` IS A BOOLEAN
+        `prepared and served by such a shelter`       IS A BOOLEAN
+    `a meal under clause (9)` HAS
+        `the eater is in a household that does not reside in a permanent dwelling or has no fixed mailing address` IS A BOOLEAN
+        `the provider`                                IS A `s 2012(k)(9) provider`
+        `permitted under section 2018(h) (clause (9))` IS A BOOLEAN
+
+@ref Food and Nutrition Act of 2008, s 2012(k)(3) (src:55)
+GIVEN w IS A `s 2012(k) what is bought or served`
+GIVETH A MAYBE BOOLEAN
+`s 2012(k) the item or meal is food` MEANS
+    CONSIDER w
+    WHEN `food or a food product for home consumption` alcohol tobacco hot authorized THEN
+        BRANCH
+            -- FALSE-kind (the text says no in its own words): "except alcoholic beverages, tobacco"
+            IF alcohol THEN JUST FALSE
+            -- FALSE-kind (the text says no in its own words): "except alcoholic beverages, tobacco"
+            IF tobacco THEN JUST FALSE
+            IF NOT hot THEN JUST TRUE
+            IF authorized EQUALS JUST TRUE THEN JUST TRUE
+            -- FALSE-kind (the text says no in its own words): "hot foods or hot food products ready for immediate consumption other than those authorized pursuant to clauses (3), (4), (5), (7), (8), and (9) of this subsection"
+            IF authorized EQUALS JUST FALSE THEN JUST FALSE
+            -- NOTHING-kind (points outside the text): whether the hot food is authorized under clauses (3), (4), (5), (7), (8) or (9) is not supplied
+            OTHERWISE NOTHING
+    -- FALSE-kind (the text says no in its own words): "any deposit fee in excess of the amount of the State fee reimbursement (if any)"
+    WHEN `a deposit fee on a returnable bottle or can` excess THEN JUST excess
+    -- FALSE-kind (the text says no in its own words): "seeds and plants for use in gardens to produce food for the personal consumption of the eligible household"
+    WHEN `seeds and plants` garden THEN JUST garden
+    WHEN `a meal under clause (3)` eater place permitted THEN `s 2012(k)(3) the meal is food` eater place permitted
+    WHEN `a meal under clause (4)` eater delivered provider permitted THEN `s 2012(k)(4) the meal is food` eater delivered provider permitted
+    WHEN `a meal under clause (5)` eater served THEN JUST (eater AND served) -- FALSE-kind (the text says no in its own words): "in the case of narcotics addicts or alcoholics, and their children, served by drug addiction or alcoholic treatment and rehabilitation programs, meals prepared and served under such programs"
+    WHEN `equipment under clause (6)` hunting transport alaska finding THEN `s 2012(k)(6) the equipment is food` hunting transport alaska finding
+    WHEN `a meal under clause (7)` eater arrangement served THEN JUST (eater AND arrangement AND served) -- FALSE-kind (the text says no in its own words): "meals prepared and served under such arrangement"
+    WHEN `a meal under clause (8)` eater served THEN JUST (eater AND served) -- FALSE-kind (the text says no in its own words): "women and children temporarily residing in public or private nonprofit shelters for battered women and children, meals prepared and served, by such shelters"
+    WHEN `a meal under clause (9)` eater provider permitted THEN `s 2012(k)(9) the meal is food` eater provider permitted
+
+@ref Food and Nutrition Act of 2008, s 2012(k)(3) (src:55)
+GIVEN eater IS A BOOLEAN
+      place IS A `s 2012(k)(3) place`
+      permitted IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(k)(3) the meal is food` MEANS
+    BRANCH
+        -- FALSE-kind (the text says no in its own words): "in the case of those persons who are sixty years of age or over or who receive supplemental security income benefits or disability or blindness payments ... and their spouses"
+        IF NOT eater THEN JUST FALSE
+        IF place EQUALS `a senior citizens' center` THEN JUST TRUE
+        IF place EQUALS `an apartment building occupied primarily by such persons` THEN JUST TRUE
+        IF place EQUALS `a public or private nonprofit establishment (eating or otherwise) that feeds such persons` THEN JUST TRUE
+        IF place EQUALS `federally subsidized housing for the elderly` THEN JUST TRUE
+        IF place EQUALS `a private establishment that contracts with the appropriate agency of the State to offer meals for such persons at concessional prices` AND permitted THEN JUST TRUE
+        -- NOTHING-kind (points outside the text): such a private establishment's meals are "subject to section 2018(h)", and that section is not among the keel's lines
+        IF place EQUALS `a private establishment that contracts with the appropriate agency of the State to offer meals for such persons at concessional prices` THEN NOTHING
+        -- FALSE-kind (the text says no in its own words): "meals prepared by and served in senior citizens' centers, apartment buildings occupied primarily by such persons, public or private nonprofit establishments (eating or otherwise) that feed such persons, private establishments that contract with the appropriate agency of the State ..., and meals prepared for and served to residents of federally subsidized housing for the elderly"
+        OTHERWISE JUST FALSE
+
+@ref Food and Nutrition Act of 2008, s 2012(k)(4) (src:55)
+GIVEN eater IS A BOOLEAN
+      delivered IS A BOOLEAN
+      provider IS A `s 2012(k)(4) provider`
+      permitted IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(k)(4) the meal is food` MEANS
+    BRANCH
+        -- FALSE-kind (the text says no in its own words): "in the case of persons sixty years of age or over and persons who are physically or mentally handicapped or otherwise so disabled that they are unable adequately to prepare all of their meals, meals prepared for and delivered to them (and their spouses) at their home"
+        IF NOT (eater AND delivered) THEN JUST FALSE
+        IF provider EQUALS `a public or private nonprofit organization` THEN JUST TRUE
+        IF provider EQUALS `a private establishment that contracts with the appropriate State agency to perform such services at concessional prices` AND permitted THEN JUST TRUE
+        -- NOTHING-kind (points outside the text): the private establishment's meals are "subject to section 2018(h)", and that section is not among the keel's lines
+        IF provider EQUALS `a private establishment that contracts with the appropriate State agency to perform such services at concessional prices` THEN NOTHING
+        -- FALSE-kind (the text says no in its own words): "by a public or private nonprofit organization or by a private establishment that contracts with the appropriate State agency to perform such services at concessional prices"
+        OTHERWISE JUST FALSE
+
+@ref Food and Nutrition Act of 2008, s 2012(k)(6) (src:55)
+GIVEN hunting IS A BOOLEAN
+      transport IS A BOOLEAN
+      alaska IS A BOOLEAN
+      finding IS A MAYBE BOOLEAN  -- three values: JUST TRUE = the Secretary has made the determination; JUST FALSE = the Secretary has made no such determination, or made the opposite one; NOTHING = the caller cannot say whether the Secretary has found it
+GIVETH A MAYBE BOOLEAN
+`s 2012(k)(6) the equipment is food` MEANS
+    BRANCH
+        -- FALSE-kind (the text says no in its own words): "equipment for procuring food by hunting and fishing ... (but not equipment for purposes of transportation, clothing, or shelter, and not firearms, ammunition, and explosives)"
+        IF (NOT hunting) OR transport THEN JUST FALSE
+        -- FALSE-kind (the text says no in its own words): "in the case of certain eligible households living in Alaska"
+        IF NOT alaska THEN JUST FALSE
+        IF finding EQUALS JUST TRUE THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "if the Secretary determines that such households are located in an area of the State where it is extremely difficult to reach stores selling food" (a failed "if"; Marginal readings (a), NOTES.md)
+        IF finding EQUALS JUST FALSE THEN JUST FALSE
+        -- NOTHING-kind (points outside the text): the caller cannot say whether the Secretary has made the determination under clause (6) (an input that says it has made none is JUST FALSE above)
+        OTHERWISE NOTHING
+
+@ref Food and Nutrition Act of 2008, s 2012(k)(9) (src:55)
+GIVEN eater IS A BOOLEAN
+      provider IS A `s 2012(k)(9) provider`
+      permitted IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(k)(9) the meal is food` MEANS
+    BRANCH
+        -- FALSE-kind (the text says no in its own words): "in the case of households that do not reside in permanent dwellings and households that have no fixed mailing addresses"
+        IF NOT eater THEN JUST FALSE
+        IF provider EQUALS `a public or private nonprofit establishment (approved by an appropriate State or local agency) that feeds such individuals` THEN JUST TRUE
+        IF provider EQUALS `a private establishment that contracts with the appropriate agency of the State to offer meals for such individuals at concessional prices` AND permitted THEN JUST TRUE
+        -- NOTHING-kind (points outside the text): the private establishment's meals are "subject to section 2018(h)", and that section is not among the keel's lines
+        IF provider EQUALS `a private establishment that contracts with the appropriate agency of the State to offer meals for such individuals at concessional prices` THEN NOTHING
+        -- FALSE-kind (the text says no in its own words): "meals prepared for and served by a public or private nonprofit establishment (approved by an appropriate State or local agency) that feeds such individuals and by private establishments that contract with the appropriate agency of the State"
+        OTHERWISE JUST FALSE
+
+-- ============================================================================================================
+-- (l) "Homeless individual"
+-- ============================================================================================================
+
+-- src:56 | (l) “Homeless individual” means—
+-- src:57 | (1) an individual who lacks a fixed and regular nighttime residence; or
+-- src:58 | (2) an individual who has a primary nighttime residence that is—
+-- src:59 | (A) a supervised publicly or privately operated shelter (including a welfare hotel or congregate shelter) designed to provide temporary living accommodations;
+-- src:60 | (B) an institution that provides a temporary residence for individuals intended to be institutionalized;
+-- src:61 | (C) a temporary accommodation for not more than 90 days in the residence of another individual; or
+-- src:62 | (D) a public or private place not designed for, or ordinarily used as, a regular sleeping accommodation for human beings.
+@ref Food and Nutrition Act of 2008, s 2012(l) (src:56-62)
+-- Plain gloss: someone with no fixed and regular place to sleep at night, or whose main place is a shelter, a temporary institution, a stay of no more than 90 days at someone else's home, or somewhere not made for sleeping.
+DECLARE `s 2012(l) main place to sleep at night` IS ONE OF
+    `a supervised publicly or privately operated shelter designed to provide temporary living accommodations, including a welfare hotel or congregate shelter`
+    `an institution that provides a temporary residence for individuals intended to be institutionalized`
+    `a temporary accommodation in the residence of another individual` HAS days IS A NUMBER
+    `a public or private place not designed for, or ordinarily used as, a regular sleeping accommodation for human beings`
+    `none of those places`
+
+DECLARE `s 2012(l) individual` HAS
+    `lacks a fixed and regular nighttime residence` IS A BOOLEAN
+    `the primary nighttime residence`               IS A `s 2012(l) main place to sleep at night`
+
+@ref Food and Nutrition Act of 2008, s 2012(l) (src:56-62)
+GIVEN i IS A `s 2012(l) individual`
+GIVETH A MAYBE BOOLEAN
+`s 2012(l) the individual is a homeless individual` MEANS
+    BRANCH
+        IF i's `lacks a fixed and regular nighttime residence` THEN JUST TRUE
+        IF i's `the primary nighttime residence` EQUALS `none of those places` THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "means— (1) an individual who lacks a fixed and regular nighttime residence; or (2) an individual who has a primary nighttime residence that is—"
+        OTHERWISE
+            CONSIDER i's `the primary nighttime residence`
+            WHEN `a temporary accommodation in the residence of another individual` d THEN
+                -- FALSE-kind (the text says no in its own words): "(C) a temporary accommodation for not more than 90 days in the residence of another individual"
+                JUST (d AT MOST 90)
+            OTHERWISE JUST TRUE
+
+-- ============================================================================================================
+-- (m) "Household"
+-- ============================================================================================================
+
+-- src:63 | (m)
+-- src:64 | (1) “Household” means—
+-- src:65 | (A) an individual who lives alone or who, while living with others, customarily purchases food and prepares meals for home consumption separate and apart from the others; or
+-- src:66 | (B) a group of individuals who live together and customarily purchase food and prepare meals together for home consumption.
+-- src:67 | (2) Spouses who live together, parents and their children 21 years of age or younger who live together, and children (excluding foster children) under 18 years of age who live with and are under the parental control of a person other than their parent together with the person exercising parental control shall be treated as a group of individuals who customarily purchase and prepare meals together for home consumption even if they do not do so.
+-- src:68 | (3) Notwithstanding paragraphs (1) and (2), an individual who lives with others, who is sixty years of age or older, and who is unable to purchase food and prepare meals because such individual suffers, as certified by a licensed physician, from a disability which would be considered a permanent disability under section 221(i) of the Social Security Act (42 U.S.C. 421(i)) or from a severe, permanent, and disabling physical or mental infirmity which is not symptomatic of a disease shall be considered, together with any of the others who is the spouse of such individual, an individual household, without regard to the purchase of food and preparation of meals, if the income (as determined under section 2014(d) of this title) of the others, excluding the spouse, does not exceed the poverty line, as described in section 2014(c)(1) of this title, by more than 65 per centum.
+-- src:69 | (4) In no event shall any individual or group of individuals constitute a household if they reside in an institution or boarding house, or else live with others and pay compensation to the others for meals.
+-- src:70 | (5) For the purposes of this subsection, the following persons shall not be considered to be residents of institutions and shall be considered to be individual households:
+-- src:71 | (A) Residents of federally subsidized housing for the elderly, disabled or blind recipients of benefits under title I, II, X, XIV, or XVI of the Social Security Act [42 U.S.C. 301 et seq., 401 et seq., 1201 et seq., 1351 et seq., 1381 et seq.].
+-- src:72 | (B) Individuals described in paragraphs (2) through (7) of subsection (j), who are residents in a public or private nonprofit group living arrangement that serves no more than sixteen residents and is certified by the appropriate State agency or agencies under regulations issued under section 1616(e) of the Social Security Act [42 U.S.C. 1382e(e)] or under standards determined by the Secretary to be comparable to standards implemented by appropriate State agencies under that section.
+-- src:73 | (C) Temporary residents of public or private nonprofit shelters for battered women and children.
+-- src:74 | (D) Residents of public or private nonprofit shelters for individuals who do not reside in permanent dwellings or have no fixed mailing addresses, who are otherwise eligible for benefits.
+-- src:75 | (E) Narcotics addicts or alcoholics, together with their children, who live under the supervision of a private nonprofit institution, or a publicly operated community mental health center, for the purpose of regular participation in a drug or alcoholic treatment program.
+@ref Food and Nutrition Act of 2008, s 2012(m) (src:63-75)
+-- Plain gloss: a person who lives alone or eats separately from the people they live with, or a group who live together and buy and cook food together; spouses and parents with children are treated as eating together; and nobody counts as a household if they live in an institution or boarding house, or pay others for meals, except the persons paragraph (5) names.
+-- Each paragraph is a function; the last function combines their answers.
+
+DECLARE `s 2012(m)(2) pair` HAS
+    `spouses who live together`                                         IS A BOOLEAN
+    `a parent and child who live together`                              IS A BOOLEAN
+    `the child's age in years`                                          IS A NUMBER
+    `a child, not a foster child, who lives with and is under the parental control of a person other than the child's parent` IS A BOOLEAN
+    `the child is under 18 years of age`                                IS A BOOLEAN
+
+@ref Food and Nutrition Act of 2008, s 2012(m)(2) (src:67)
+GIVEN p IS A `s 2012(m)(2) pair`
+GIVETH A MAYBE BOOLEAN
+`s 2012(m)(2) the pair is treated as customarily purchasing and preparing meals together` MEANS
+    BRANCH
+        IF p's `spouses who live together` THEN JUST TRUE
+        IF p's `a parent and child who live together` AND p's `the child's age in years` AT MOST 21 THEN JUST TRUE
+        IF p's `a child, not a foster child, who lives with and is under the parental control of a person other than the child's parent` AND p's `the child is under 18 years of age` THEN JUST TRUE
+        -- NOTHING-kind (limited by its own wording): the deeming covers "parents and their children 21 years of age or younger" and "children (excluding foster children) under 18", so a pair outside those words is left to paragraph (1), which asks whether they do buy and cook together (Marginal readings MB-11, NOTES.md)
+        OTHERWISE NOTHING
+
+DECLARE `s 2012(m)(3) individual` HAS
+    `sixty years of age or older`                     IS A BOOLEAN
+    `lives with others`                               IS A BOOLEAN
+    `unable to purchase food and prepare meals because of a disability or infirmity` IS A BOOLEAN
+    `certified by a licensed physician as suffering from a disability considered permanent under section 221(i) of the Social Security Act, or from a severe, permanent, and disabling physical or mental infirmity which is not symptomatic of a disease` IS A BOOLEAN
+    `income of the others, excluding the spouse, determined under section 2014(d)` IS A NUMBER  -- SEAM: s 2014(d)
+    `the poverty line described in section 2014(c)(1)` IS A NUMBER  -- SEAM: s 2014(c)(1)
+
+@ref Food and Nutrition Act of 2008, s 2012(m)(3) (src:68)
+GIVEN i IS A `s 2012(m)(3) individual`
+GIVETH A MAYBE BOOLEAN
+`s 2012(m)(3) the individual is considered an individual household with the spouse` MEANS
+    BRANCH
+        -- NOTHING-kind (limited by its own wording): paragraph (3) reaches only a person who lives with others, is sixty or older, and is unable to buy and prepare food because of a certified disability or infirmity; paragraphs (1) and (2) govern anyone else
+        IF NOT (i's `sixty years of age or older` AND i's `lives with others` AND i's `unable to purchase food and prepare meals because of a disability or infirmity` AND i's `certified by a licensed physician as suffering from a disability considered permanent under section 221(i) of the Social Security Act, or from a severe, permanent, and disabling physical or mental infirmity which is not symptomatic of a disease`) THEN NOTHING
+        IF i's `income of the others, excluding the spouse, determined under section 2014(d)` AT MOST (i's `the poverty line described in section 2014(c)(1)` TIMES 1.65) THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "if the income (as determined under section 2014(d) of this title) of the others, excluding the spouse, does not exceed the poverty line, as described in section 2014(c)(1) of this title, by more than 65 per centum" (a failed "if"; Marginal readings (a), NOTES.md)
+        OTHERWISE JUST FALSE
+
+@ref Food and Nutrition Act of 2008, s 2012(m)(4) (src:69)
+GIVEN `resides in an institution or boarding house` IS A BOOLEAN
+      `lives with others and pays compensation to the others for meals` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(m)(4) the individual or group may constitute a household` MEANS
+    BRANCH
+        -- FALSE-kind (the text says no in its own words): "In no event shall any individual or group of individuals constitute a household if they reside in an institution or boarding house, or else live with others and pay compensation to the others for meals" (JUST FALSE here means: they may not constitute a household)
+        IF `resides in an institution or boarding house` OR `lives with others and pays compensation to the others for meals` THEN JUST FALSE
+        -- NOTHING-kind (silent): paragraph (4) only bars; it does not say that anyone else may constitute a household
+        OTHERWISE NOTHING
+
+DECLARE `s 2012(m)(5) person` HAS
+    `a resident of federally subsidized housing for the elderly`        IS A BOOLEAN  -- (A), first class (Fork F-3, NOTES.md: two classes, not one)
+    `a disabled or blind recipient of benefits under title I, II, X, XIV, or XVI of the Social Security Act` IS A BOOLEAN  -- (A), second class
+    `an individual described in paragraphs (2) through (7) of subsection (j) who is a resident in a public or private nonprofit group living arrangement that serves no more than sixteen residents and is certified by the appropriate State agency or agencies under regulations issued under section 1616(e) of the Social Security Act or under standards determined by the Secretary to be comparable` IS A BOOLEAN  -- (B)
+    `a temporary resident of a public or private nonprofit shelter for battered women and children` IS A BOOLEAN  -- (C)
+    `a resident of a public or private nonprofit shelter for individuals who do not reside in permanent dwellings or have no fixed mailing addresses, who is otherwise eligible for benefits` IS A BOOLEAN  -- (D)
+    `a narcotics addict or alcoholic, together with their children, who lives under the supervision of a private nonprofit institution, or a publicly operated community mental health center, for the purpose of regular participation in a drug or alcoholic treatment program` IS A BOOLEAN  -- (E)
+
+@ref Food and Nutrition Act of 2008, s 2012(m)(5) (src:70-75)
+GIVEN p IS A `s 2012(m)(5) person`
+GIVETH A MAYBE BOOLEAN
+`s 2012(m)(5) the person is not a resident of an institution and is an individual household` MEANS
+    BRANCH
+        IF p's `a resident of federally subsidized housing for the elderly` THEN JUST TRUE
+        IF p's `a disabled or blind recipient of benefits under title I, II, X, XIV, or XVI of the Social Security Act` THEN JUST TRUE
+        IF p's `an individual described in paragraphs (2) through (7) of subsection (j) who is a resident in a public or private nonprofit group living arrangement that serves no more than sixteen residents and is certified by the appropriate State agency or agencies under regulations issued under section 1616(e) of the Social Security Act or under standards determined by the Secretary to be comparable` THEN JUST TRUE
+        IF p's `a temporary resident of a public or private nonprofit shelter for battered women and children` THEN JUST TRUE
+        IF p's `a resident of a public or private nonprofit shelter for individuals who do not reside in permanent dwellings or have no fixed mailing addresses, who is otherwise eligible for benefits` THEN JUST TRUE
+        IF p's `a narcotics addict or alcoholic, together with their children, who lives under the supervision of a private nonprofit institution, or a publicly operated community mental health center, for the purpose of regular participation in a drug or alcoholic treatment program` THEN JUST TRUE
+        -- NOTHING-kind (list not closed): paragraph (5) lists persons who "shall not be considered to be residents of institutions", and does not say that no one else is
+        OTHERWISE NOTHING
+
+DECLARE `s 2012(m) circumstances` HAS
+    `lives alone`                                                       IS A BOOLEAN
+    `lives with others and customarily purchases food and prepares meals for home consumption separate and apart from the others` IS A BOOLEAN
+    `lives together with a group who customarily purchase food and prepare meals together for home consumption` IS A BOOLEAN
+    `paragraph (2) treats them as purchasing and preparing meals together` IS A MAYBE BOOLEAN  -- the answer of s 2012(m)(2)
+    `paragraph (3) considers the individual an individual household`    IS A MAYBE BOOLEAN  -- the answer of s 2012(m)(3)
+    `paragraph (4) lets them constitute a household`                    IS A MAYBE BOOLEAN  -- the answer of s 2012(m)(4): JUST FALSE is "in no event"
+    `paragraph (5) makes them an individual household`                  IS A MAYBE BOOLEAN  -- the answer of s 2012(m)(5)
+
+@ref Food and Nutrition Act of 2008, s 2012(m) (src:63-75)
+GIVEN c IS A `s 2012(m) circumstances`
+GIVETH A MAYBE BOOLEAN
+`s 2012(m) the individual or group is a household` MEANS
+    BRANCH
+        -- paragraph (5): these persons "shall not be considered to be residents of institutions and shall be considered to be individual households"
+        -- (Fork F-5, NOTES.md: this branch comes first, so paragraph (5) overrides paragraph (4) wholly)
+        IF c's `paragraph (5) makes them an individual household` EQUALS JUST TRUE THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "In no event shall any individual or group of individuals constitute a household if they reside in an institution or boarding house, or else live with others and pay compensation to the others for meals"
+        IF c's `paragraph (4) lets them constitute a household` EQUALS JUST FALSE THEN JUST FALSE
+        IF c's `lives alone` THEN JUST TRUE
+        IF c's `lives with others and customarily purchases food and prepares meals for home consumption separate and apart from the others` THEN JUST TRUE
+        IF c's `lives together with a group who customarily purchase food and prepare meals together for home consumption` THEN JUST TRUE
+        IF c's `paragraph (2) treats them as purchasing and preparing meals together` EQUALS JUST TRUE THEN JUST TRUE
+        IF c's `paragraph (3) considers the individual an individual household` EQUALS JUST TRUE THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "“Household” means— (A) an individual who lives alone or who, while living with others, customarily purchases food and prepares meals for home consumption separate and apart from the others; or (B) a group of individuals who live together and customarily purchase food and prepare meals together for home consumption"
+        OTHERWISE JUST FALSE
+
+-- ============================================================================================================
+-- (n) "Reservation"
+-- ============================================================================================================
+
+-- src:76 | (n) “Reservation” means the geographically defined area or areas over which a tribal organization exercises governmental jurisdiction.
+@ref Food and Nutrition Act of 2008, s 2012(n) (src:76)
+-- Plain gloss: the mapped-out area where a tribal organization governs.
+GIVEN `a geographically defined area or areas` IS A BOOLEAN
+      `over which a tribal organization exercises governmental jurisdiction` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(n) the area is a reservation` MEANS
+    -- FALSE-kind (the text says no in its own words): "means the geographically defined area or areas over which a tribal organization exercises governmental jurisdiction"
+    JUST (`a geographically defined area or areas` AND `over which a tribal organization exercises governmental jurisdiction`)
+
+-- ============================================================================================================
+-- (o) "Retail food store"
+-- ============================================================================================================
+
+-- src:77 | (o) “Retail food store” means—
+-- src:78 | (1) an establishment, house-to-house trade route, or online entity that sells food for home preparation and consumption and—
+-- src:79 | (A) offers for sale, on a continuous basis, a variety of at least 7 foods in each of the 4 categories of staple foods specified in subsection (q)(1), including perishable foods in at least 3 of the categories; or
+-- src:80 | (B) has over 50 percent of the total sales of the establishment or route in staple foods,
+-- src:81 | as determined by visual inspection, sales records, purchase records, counting of stockkeeping units, or other inventory or accounting recordkeeping methods that are customary or reasonable in the retail food industry;
+-- src:82 | (2) an establishment, organization, program, or group living arrangement referred to in paragraphs (3), (4), (5), (7), (8), and (9) of subsection (k);
+-- src:83 | (3) a store purveying the hunting and fishing equipment described in subsection (k)(6);
+-- src:84 | (4) any private nonprofit cooperative food purchasing venture, including those in which the members pay for food purchased prior to the receipt of such food, or agricultural producers who market agricultural products directly to consumers; and
+-- src:85 | (5) a governmental or private nonprofit food purchasing and delivery service that—
+-- src:86 | (A) purchases food for, and delivers the food to, individuals who are—
+-- src:87 | (i) unable to shop for food; and
+-- src:88 | (ii)
+-- src:89 | (I) not less than 60 years of age; or
+-- src:90 | (II) physically or mentally handicapped or otherwise disabled;
+-- src:91 | (B) clearly notifies the participating household at the time the household places a food order—
+-- src:92 | (i) of any delivery fee associated with the food purchase and delivery provided to the household by the service; and
+-- src:93 | (ii) that a delivery fee cannot be paid with benefits provided under supplemental nutrition assistance program; and
+-- src:94 | (C) sells food purchased for the household at the price paid by the service for the food and without any additional cost markup.
+@ref Food and Nutrition Act of 2008, s 2012(o) (src:77-94)
+-- Plain gloss: a shop, route or online seller that stocks enough staple foods (or makes most of its sales in them); a place serving meals under (k); a hunting and fishing store (k)(6); a food co-op or farmer selling direct; or a nonprofit or public delivery service for people who cannot shop, which tells them its fees and does not mark up the food.
+DECLARE `s 2012(o)(1) seller` HAS
+    `an establishment, house-to-house trade route, or online entity that sells food for home preparation and consumption` IS A BOOLEAN
+    `varieties of meat, poultry, or fish offered for sale on a continuous basis` IS A NUMBER
+    `varieties of bread or cereals offered for sale on a continuous basis`      IS A NUMBER
+    `varieties of vegetables or fruits offered for sale on a continuous basis`  IS A NUMBER
+    `varieties of dairy products offered for sale on a continuous basis`        IS A NUMBER
+    `categories in which perishable foods are offered`                           IS A NUMBER
+    `share of the total sales of the establishment or route that are staple foods` IS A NUMBER  -- a fraction: 0.5 is 50 percent
+
+@ref Food and Nutrition Act of 2008, s 2012(o)(1) (src:78-81)
+GIVEN s IS A `s 2012(o)(1) seller`
+GIVETH A MAYBE BOOLEAN
+`s 2012(o)(1) the seller is a retail food store under paragraph (1)` MEANS
+    BRANCH
+        IF NOT s's `an establishment, house-to-house trade route, or online entity that sells food for home preparation and consumption` THEN JUST FALSE -- FALSE-kind (the text says no in its own words): "(1) an establishment, house-to-house trade route, or online entity that sells food for home preparation and consumption and—"
+        IF s's `varieties of meat, poultry, or fish offered for sale on a continuous basis` AT LEAST 7
+           AND s's `varieties of bread or cereals offered for sale on a continuous basis` AT LEAST 7
+           AND s's `varieties of vegetables or fruits offered for sale on a continuous basis` AT LEAST 7
+           AND s's `varieties of dairy products offered for sale on a continuous basis` AT LEAST 7
+           AND s's `categories in which perishable foods are offered` AT LEAST 3
+           THEN JUST TRUE
+        IF s's `share of the total sales of the establishment or route that are staple foods` GREATER THAN 0.5 THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "(A) offers for sale, on a continuous basis, a variety of at least 7 foods in each of the 4 categories of staple foods ..., including perishable foods in at least 3 of the categories; or (B) has over 50 percent of the total sales of the establishment or route in staple foods"
+        OTHERWISE JUST FALSE
+
+DECLARE `s 2012(o)(5) service` HAS
+    `a governmental or private nonprofit food purchasing and delivery service` IS A BOOLEAN
+    `purchases food for, and delivers the food to, individuals who are unable to shop for food and are not less than 60 years of age or are physically or mentally handicapped or otherwise disabled` IS A BOOLEAN
+    `clearly notifies the participating household, when it places a food order, of any delivery fee` IS A BOOLEAN
+    `clearly notifies the participating household, when it places a food order, that a delivery fee cannot be paid with benefits` IS A BOOLEAN
+    `sells food purchased for the household at the price paid by the service and without any additional cost markup` IS A BOOLEAN
+
+@ref Food and Nutrition Act of 2008, s 2012(o)(5) (src:85-94)
+GIVEN s IS A `s 2012(o)(5) service`
+GIVETH A MAYBE BOOLEAN
+`s 2012(o)(5) the service is a retail food store under paragraph (5)` MEANS
+    -- FALSE-kind (the text says no in its own words): "(5) a governmental or private nonprofit food purchasing and delivery service that— (A) ...; (B) ...; and (C) ..."
+    JUST (    s's `a governmental or private nonprofit food purchasing and delivery service`
+          AND s's `purchases food for, and delivers the food to, individuals who are unable to shop for food and are not less than 60 years of age or are physically or mentally handicapped or otherwise disabled`
+          AND s's `clearly notifies the participating household, when it places a food order, of any delivery fee`
+          AND s's `clearly notifies the participating household, when it places a food order, that a delivery fee cannot be paid with benefits`
+          AND s's `sells food purchased for the household at the price paid by the service and without any additional cost markup`)
+
+-- The five paragraphs are alternative kinds of retail food store: the "and" before (5) joins a list of kinds, not five tests that must all hold (Fork F-2, NOTES.md).
+@ref Food and Nutrition Act of 2008, s 2012(o) (src:77-94)
+GIVEN `paragraph (1)` IS A MAYBE BOOLEAN
+      `paragraph (2): an establishment, organization, program, or group living arrangement referred to in paragraphs (3), (4), (5), (7), (8), and (9) of subsection (k)` IS A BOOLEAN
+      `paragraph (3): a store purveying the hunting and fishing equipment described in subsection (k)(6)` IS A BOOLEAN
+      `paragraph (4): a private nonprofit cooperative food purchasing venture, including those in which the members pay for food purchased prior to the receipt of such food, or agricultural producers who market agricultural products directly to consumers` IS A BOOLEAN
+      `paragraph (5)` IS A MAYBE BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(o) the seller is a retail food store` MEANS
+    BRANCH
+        IF `paragraph (1)` EQUALS JUST TRUE THEN JUST TRUE
+        IF `paragraph (2): an establishment, organization, program, or group living arrangement referred to in paragraphs (3), (4), (5), (7), (8), and (9) of subsection (k)` THEN JUST TRUE
+        IF `paragraph (3): a store purveying the hunting and fishing equipment described in subsection (k)(6)` THEN JUST TRUE
+        IF `paragraph (4): a private nonprofit cooperative food purchasing venture, including those in which the members pay for food purchased prior to the receipt of such food, or agricultural producers who market agricultural products directly to consumers` THEN JUST TRUE
+        IF `paragraph (5)` EQUALS JUST TRUE THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "“Retail food store” means— (1) ...; (2) ...; (3) ...; (4) ...; and (5) ..."
+        OTHERWISE JUST FALSE
+
+-- ============================================================================================================
+-- (p) "Secretary"
+-- ============================================================================================================
+
+-- src:95 | (p) “Secretary” means the Secretary of Agriculture.
+@ref Food and Nutrition Act of 2008, s 2012(p) (src:95)
+-- Plain gloss: the Secretary of Agriculture, the head of the USDA.
+GIVEN `holds the office of Secretary of Agriculture` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(p) the officer is the Secretary` MEANS
+    -- FALSE-kind (the text says no in its own words): "“Secretary” means the Secretary of Agriculture"
+    JUST `holds the office of Secretary of Agriculture`
+
+-- ============================================================================================================
+-- (q) "Staple foods"
+-- ============================================================================================================
+
+-- src:96 | (q)
+-- src:97 | (1) Except as provided in paragraph (2), “staple foods” means foods in the following categories:
+-- src:98 | (A) Meat, poultry, or fish.
+-- src:99 | (B) Bread or cereals.
+-- src:100 | (C) Vegetables or fruits.
+-- src:101 | (D) Dairy products.
+-- src:102 | (2) “Staple foods” do not include accessory food items, such as coffee, tea, cocoa, carbonated and uncarbonated drinks, candy, condiments, and spices.
+@ref Food and Nutrition Act of 2008, s 2012(q) (src:96-102)
+-- Plain gloss: meat, poultry or fish; bread or cereals; vegetables or fruits; dairy products. Not coffee, tea, cocoa, drinks, candy, condiments and spices, or other "accessory" items.
+DECLARE `s 2012(q) kind of food` IS ONE OF
+    `meat, poultry, or fish`
+    `bread or cereals`
+    `vegetables or fruits`
+    `dairy products`
+    `coffee, tea, cocoa, a carbonated or uncarbonated drink, candy, a condiment, or a spice`
+    `another food that may be an accessory food item`
+    `any other food`
+
+@ref Food and Nutrition Act of 2008, s 2012(q) (src:96-102)
+GIVEN k IS A `s 2012(q) kind of food`
+GIVETH A MAYBE BOOLEAN
+`s 2012(q) the food is a staple food` MEANS
+    CONSIDER k
+    WHEN `meat, poultry, or fish` THEN JUST TRUE
+    WHEN `bread or cereals` THEN JUST TRUE
+    WHEN `vegetables or fruits` THEN JUST TRUE
+    WHEN `dairy products` THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "“Staple foods” do not include accessory food items, such as coffee, tea, cocoa, carbonated and uncarbonated drinks, candy, condiments, and spices."
+    WHEN `coffee, tea, cocoa, a carbonated or uncarbonated drink, candy, a condiment, or a spice` THEN JUST FALSE
+    -- NOTHING-kind (list not closed): "accessory food items, such as ..." names examples, and whether this food is another accessory item is not settled
+    WHEN `another food that may be an accessory food item` THEN NOTHING
+    -- FALSE-kind (the text says no in its own words): "“staple foods” means foods in the following categories"
+    WHEN `any other food` THEN JUST FALSE
+
+-- ============================================================================================================
+-- (r) "State"
+-- ============================================================================================================
+
+-- src:103 | (r) “State” means the fifty States, the District of Columbia, Guam, the Virgin Islands of the United States, and the reservations of an Indian tribe whose tribal organization meets the requirements of this chapter for participation as a State agency.
+@ref Food and Nutrition Act of 2008, s 2012(r) (src:103)
+-- Plain gloss: the fifty States, DC, Guam, the Virgin Islands, and the reservation of a tribe whose tribal organization qualifies to run the program as a State agency.
+GIVEN place IS A `Kind of place`
+      `the tribal organization of the tribe meets the requirements of this chapter for participation as a State agency` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(r) the place is a State` MEANS
+    CONSIDER place
+    WHEN `one of the fifty States` THEN JUST TRUE
+    WHEN `the District of Columbia as a place` THEN JUST TRUE
+    WHEN `the territory of Guam` THEN JUST TRUE
+    WHEN `the territory of the Virgin Islands` THEN JUST TRUE
+    -- FALSE-kind (the text says no in its own words): "the reservations of an Indian tribe whose tribal organization meets the requirements of this chapter for participation as a State agency"
+    WHEN `a reservation of an Indian tribe` THEN JUST `the tribal organization of the tribe meets the requirements of this chapter for participation as a State agency`
+    -- FALSE-kind (the text says no in its own words): "“State” means the fifty States, the District of Columbia, Guam, the Virgin Islands of the United States, and the reservations of an Indian tribe"
+    WHEN `any other place` THEN JUST FALSE
+
+-- ============================================================================================================
+-- (s) "State agency"
+-- ============================================================================================================
+
+-- src:104 | (s) “State agency” means (1) the agency of State government, including the local offices thereof, which has the responsibility for the administration of the federally aided public assistance programs within such State, and in those States where such assistance programs are operated on a decentralized basis, the term shall include the counterpart local agencies administering such programs, and (2) the tribal organization of an Indian tribe determined by the Secretary to be capable of effectively administering a food distribution program under section 2013(b) of this title or a supplemental nutrition assistance program under section 2020(d) of this title.
+@ref Food and Nutrition Act of 2008, s 2012(s) (src:104)
+-- Plain gloss: the State government agency that runs the public assistance programs (and the local offices or counterpart local agencies), or a tribal organization the Secretary has found able to run a food distribution or SNAP program.
+DECLARE `s 2012(s) agency` HAS
+    `the agency of State government, including the local offices thereof, which has the responsibility for the administration of the federally aided public assistance programs within such State` IS A BOOLEAN
+    `in a State where those assistance programs are operated on a decentralized basis, a counterpart local agency administering such programs` IS A BOOLEAN
+    `the tribal organization of an Indian tribe`  IS A BOOLEAN
+    `the Secretary determines that the tribal organization is capable of effectively administering a food distribution program under section 2013(b) or a supplemental nutrition assistance program under section 2020(d)` IS A MAYBE BOOLEAN  -- three values: JUST TRUE = the Secretary has made the determination; JUST FALSE = the Secretary has made no such determination, or made the opposite one; NOTHING = the caller cannot say whether the Secretary has determined it
+
+@ref Food and Nutrition Act of 2008, s 2012(s) (src:104)
+GIVEN a IS A `s 2012(s) agency`
+GIVETH A MAYBE BOOLEAN
+`s 2012(s) the body is a State agency` MEANS
+    BRANCH
+        IF a's `the agency of State government, including the local offices thereof, which has the responsibility for the administration of the federally aided public assistance programs within such State` THEN JUST TRUE
+        IF a's `in a State where those assistance programs are operated on a decentralized basis, a counterpart local agency administering such programs` THEN JUST TRUE
+        IF a's `the tribal organization of an Indian tribe` AND a's `the Secretary determines that the tribal organization is capable of effectively administering a food distribution program under section 2013(b) or a supplemental nutrition assistance program under section 2020(d)` EQUALS JUST TRUE THEN JUST TRUE
+        -- NOTHING-kind (points outside the text): a tribal organization counts if "determined by the Secretary to be capable", and the caller cannot say whether the Secretary has determined it (an input that says it has not is JUST FALSE below)
+        IF a's `the tribal organization of an Indian tribe` AND a's `the Secretary determines that the tribal organization is capable of effectively administering a food distribution program under section 2013(b) or a supplemental nutrition assistance program under section 2020(d)` EQUALS NOTHING THEN NOTHING
+        -- FALSE-kind (the text says no in its own words): "“State agency” means (1) the agency of State government ... and (2) the tribal organization of an Indian tribe determined by the Secretary to be capable of effectively administering a food distribution program"
+        OTHERWISE JUST FALSE
+
+-- ============================================================================================================
+-- (t) "Supplemental nutrition assistance program"
+-- ============================================================================================================
+
+-- src:105 | (t) “Supplemental nutrition assistance program” means the program operated pursuant to this chapter.
+@ref Food and Nutrition Act of 2008, s 2012(t) (src:105)
+-- Plain gloss: SNAP is the program run under this chapter (7 U.S.C. 2011 and following).
+GIVEN `the program is operated pursuant to this chapter` IS A BOOLEAN
+GIVETH A MAYBE BOOLEAN
+`s 2012(t) the program is the supplemental nutrition assistance program` MEANS
+    -- FALSE-kind (the text says no in its own words): "“Supplemental nutrition assistance program” means the program operated pursuant to this chapter"
+    JUST `the program is operated pursuant to this chapter`
+
+-- ============================================================================================================
+-- (u) "Thrifty food plan"
+-- ============================================================================================================
+
+-- src:106 | (u) Thrifty Food Plan.—
+-- src:107 | (1) In general.—
+-- src:108 | The term “thrifty food plan” means the diet required to feed a family of 4 persons consisting of a man and a woman ages 20 through 50, a child ages 6 through 8, and a child ages 9 through 11 using the items and quantities of food described in the report of the Department of Agriculture entitled “Thrifty Food Plan, 2021”, and each successor report updated pursuant to this subsection, subject to the conditions that—
+-- src:109 | (A) the relevant market baskets of the thrifty food plan shall only be changed pursuant to paragraph (4);
+-- src:110 | (B) the cost of the thrifty food plan shall be the basis for uniform allotments for all households, regardless of the actual composition of the household; and
+-- src:111 | (C) the cost of the thrifty food plan may only be adjusted in accordance with this subsection.
+-- src:112 | (2) Household adjustments.—
+-- src:113 | The Secretary shall make household adjustments using the following ratios of household size as a percentage of the maximum 4-person allotment:
+-- src:114 | (A) For a 1-person household, 30 percent.
+-- src:115 | (B) For a 2-person household, 55 percent.
+-- src:116 | (C) For a 3-person household, 79 percent.
+-- src:117 | (D) For a 4-person household, 100 percent.
+-- src:118 | (E) For a 5-person household, 119 percent.
+-- src:119 | (F) For a 6-person household, 143 percent.
+-- src:120 | (G) For a 7-person household, 158 percent.
+-- src:121 | (H) For an 8-person household, 180 percent.
+-- src:122 | (I) For a household of 9 persons or more, an additional 22 percent per person, which additional percentage shall not total more than 200 percent.
+-- src:123 | (3) Allowable cost adjustments.—
+-- src:124 | The Secretary shall—
+-- src:125 | (A) make cost adjustments in the thrifty food plan for Hawaii and the urban and rural parts of Alaska to reflect the cost of food in Hawaii and urban and rural Alaska;
+-- src:126 | (B) make cost adjustments in the separate thrifty food plans for Guam and the Virgin Islands of the United States to reflect the cost of food in those States, but not to exceed the cost of food in the 50 States and the District of Columbia; and
+-- src:127 | (C) on October 1, 2025, and on each October 1 thereafter, adjust the cost of the thrifty food plan to reflect changes in the Consumer Price Index for All Urban Consumers, published by the Bureau of Labor Statistics of the Department of Labor, for the most recent 12-month period ending in June.
+-- src:128 | (4) Re-evaluation of market baskets.—
+-- src:129 | (A) Re-evaluation.—
+-- src:130 | Not earlier than October 1, 2027, the Secretary may re-evaluate the market baskets of the thrifty food plan based on current food prices, food composition data, consumption patterns, and dietary guidance.
+-- src:131 | (B) Cost neutrality.—
+-- src:132 | The Secretary shall not increase the cost of the thrifty food plan based on a re-evaluation under this paragraph.
+@ref Food and Nutrition Act of 2008, s 2012(u) (src:106-132)
+-- Plain gloss: the USDA's diet plan for a family of four, whose cost sets the maximum allotment; smaller and larger households get set percentages of the four-person figure; the cost is adjusted each October 1 for inflation; the baskets may be re-evaluated from 1 October 2027 but not at a higher cost.
+DECLARE `s 2012(u)(1) plan` HAS
+    `a diet required to feed a family of 4 persons`                              IS A BOOLEAN
+    `the family consists of a man and a woman ages 20 through 50, a child ages 6 through 8, and a child ages 9 through 11` IS A BOOLEAN
+    `using the items and quantities of food described in the report entitled "Thrifty Food Plan, 2021", or a successor report updated pursuant to this subsection` IS A BOOLEAN
+    `the relevant market baskets change only pursuant to paragraph (4)`           IS A BOOLEAN  -- condition (A)
+    `the cost is the basis for uniform allotments for all households, regardless of the actual composition of the household` IS A BOOLEAN  -- condition (B)
+    `the cost is adjusted only in accordance with this subsection`                IS A BOOLEAN  -- condition (C)
+
+@ref Food and Nutrition Act of 2008, s 2012(u)(1) (src:107-111)
+GIVEN p IS A `s 2012(u)(1) plan`
+GIVETH A MAYBE BOOLEAN
+`s 2012(u)(1) the plan is the thrifty food plan` MEANS
+    -- FALSE-kind (the text says no in its own words): "“thrifty food plan” means the diet required to feed a family of 4 persons ... subject to the conditions that— (A) ...; (B) ...; and (C) ..." (the conditions are read as "if" limbs; Marginal readings (a), NOTES.md)
+    JUST (    p's `a diet required to feed a family of 4 persons`
+          AND p's `the family consists of a man and a woman ages 20 through 50, a child ages 6 through 8, and a child ages 9 through 11`
+          AND p's `using the items and quantities of food described in the report entitled "Thrifty Food Plan, 2021", or a successor report updated pursuant to this subsection`
+          AND p's `the relevant market baskets change only pursuant to paragraph (4)`
+          AND p's `the cost is the basis for uniform allotments for all households, regardless of the actual composition of the household`
+          AND p's `the cost is adjusted only in accordance with this subsection`)
+
+-- (2): ratios are fractions of the maximum 4-person allotment. For 9 persons or more the Act says "an additional 22 percent per person,
+-- which additional percentage shall not total more than 200 percent". Taken: the additional percentage over the 8-person 180 percent is
+-- capped at 200 percent (Fork F-4, NOTES.md); FY2027 COLA row "18+" ($3,887 = $1,841 + 2 x $1,023) agrees.
+@ref Food and Nutrition Act of 2008, s 2012(u)(2) (src:112-122)
+GIVEN `household size` IS A NUMBER
+GIVETH A MAYBE NUMBER
+`s 2012(u)(2) the household adjustment ratio` MEANS
+    BRANCH
+        -- NOTHING-kind (silent): the Act gives ratios for a household of 1 or more persons and says nothing of a size below 1
+        IF `household size` LESS THAN 1 THEN NOTHING
+        IF `household size` EQUALS 1 THEN JUST 0.30
+        IF `household size` EQUALS 2 THEN JUST 0.55
+        IF `household size` EQUALS 3 THEN JUST 0.79
+        IF `household size` EQUALS 4 THEN JUST 1.00
+        IF `household size` EQUALS 5 THEN JUST 1.19
+        IF `household size` EQUALS 6 THEN JUST 1.43
+        IF `household size` EQUALS 7 THEN JUST 1.58
+        IF `household size` EQUALS 8 THEN JUST 1.80
+        IF (0.22 TIMES (`household size` MINUS 8)) AT MOST 2.00 THEN JUST (1.80 PLUS (0.22 TIMES (`household size` MINUS 8)))
+        OTHERWISE JUST (1.80 PLUS 2.00)
+
+@ref Food and Nutrition Act of 2008, s 2012(u)(3) (src:123-127)
+GIVEN `the area` IS AN Area
+GIVETH A MAYBE BOOLEAN
+`s 2012(u)(3)(A) the Secretary must make a cost adjustment for the area` MEANS
+    CONSIDER `the area`
+    WHEN `Alaska, urban` THEN JUST TRUE
+    WHEN `Alaska, rural 1` THEN JUST TRUE
+    WHEN `Alaska, rural 2` THEN JUST TRUE
+    WHEN Hawaii THEN JUST TRUE
+    -- NOTHING-kind (silent): paragraph (3)(A) names Hawaii and urban and rural Alaska; Guam and the Virgin Islands are under (B), and the 48 States and DC are under neither
+    OTHERWISE NOTHING
+
+@ref Food and Nutrition Act of 2008, s 2012(u)(3) (src:126)
+GIVEN `the cost reflecting the cost of food in Guam or the Virgin Islands` IS A NUMBER
+      `the cost of food in the 50 States and the District of Columbia` IS A NUMBER
+GIVETH A NUMBER
+`s 2012(u)(3)(B) the plan cost for Guam or the Virgin Islands` MEANS
+    -- "to reflect the cost of food in those States, but not to exceed the cost of food in the 50 States and the District of Columbia"
+    IF `the cost reflecting the cost of food in Guam or the Virgin Islands` AT MOST `the cost of food in the 50 States and the District of Columbia`
+    THEN `the cost reflecting the cost of food in Guam or the Virgin Islands`
+    ELSE `the cost of food in the 50 States and the District of Columbia`
+
+@ref Food and Nutrition Act of 2008, s 2012(u)(3) (src:127)
+GIVEN `the date` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 2012(u)(3)(C) the Secretary must adjust the cost to reflect the Consumer Price Index on the date` MEANS
+    BRANCH
+        IF DATE_DAY `the date` EQUALS 1 AND DATE_MONTH `the date` EQUALS 10 AND DATE_YEAR `the date` AT LEAST 2025 THEN JUST TRUE
+        -- NOTHING-kind (silent): paragraph (3)(C) sets the duty "on October 1, 2025, and on each October 1 thereafter" and says nothing of another day
+        OTHERWISE NOTHING
+
+@ref Food and Nutrition Act of 2008, s 2012(u)(4) (src:128-132)
+GIVEN `the date` IS A DATE
+GIVETH A MAYBE BOOLEAN
+`s 2012(u)(4)(A) the Secretary may re-evaluate the market baskets on the date` MEANS
+    BRANCH
+        IF `the date` AT LEAST (Date 1 10 2027) THEN JUST TRUE
+        -- NOTHING-kind (limited by its own wording): "Not earlier than October 1, 2027, the Secretary may re-evaluate", and the text does not say what the Secretary may do before then (Marginal readings (b), NOTES.md)
+        OTHERWISE NOTHING
+
+@ref Food and Nutrition Act of 2008, s 2012(u)(4) (src:131-132)
+GIVEN `the cost before the re-evaluation` IS A NUMBER
+      `the cost after the re-evaluation` IS A NUMBER
+GIVETH A MAYBE BOOLEAN
+`s 2012(u)(4)(B) the cost after a re-evaluation is allowed` MEANS
+    BRANCH
+        -- FALSE-kind (the text says no in its own words): "The Secretary shall not increase the cost of the thrifty food plan based on a re-evaluation under this paragraph."
+        IF `the cost after the re-evaluation` GREATER THAN `the cost before the re-evaluation` THEN JUST FALSE
+        -- NOTHING-kind (silent): the text forbids an increase and does not say that a cost which does not increase is permitted
+        OTHERWISE NOTHING
+
+-- ============================================================================================================
+-- (v) "Tribal organization"
+-- ============================================================================================================
+
+-- src:133 | (v) “Tribal organization” means the recognized governing body of an Indian tribe (including the tribally recognized intertribal organization of such tribes), as the term “Indian tribe” is defined in section 5304 of title 25, as well as any Indian tribe, band, or community holding a treaty with a State government.
+@ref Food and Nutrition Act of 2008, s 2012(v) (src:133)
+-- Plain gloss: the recognized governing body of an Indian tribe (or an intertribal body of such tribes), or an Indian tribe, band or community that holds a treaty with a State government.
+DECLARE `s 2012(v) body` HAS
+    `the recognized governing body of an Indian tribe, including the tribally recognized intertribal organization of such tribes` IS A BOOLEAN
+    `the tribe is an Indian tribe as defined in section 5304 of title 25`  IS A BOOLEAN  -- a borrowed term, asked as a fact
+    `an Indian tribe, band, or community holding a treaty with a State government` IS A BOOLEAN
+
+@ref Food and Nutrition Act of 2008, s 2012(v) (src:133)
+GIVEN b IS A `s 2012(v) body`
+GIVETH A MAYBE BOOLEAN
+`s 2012(v) the body is a tribal organization` MEANS
+    BRANCH
+        IF b's `the recognized governing body of an Indian tribe, including the tribally recognized intertribal organization of such tribes` AND b's `the tribe is an Indian tribe as defined in section 5304 of title 25` THEN JUST TRUE
+        IF b's `an Indian tribe, band, or community holding a treaty with a State government` THEN JUST TRUE
+        -- FALSE-kind (the text says no in its own words): "“Tribal organization” means the recognized governing body of an Indian tribe ... as well as any Indian tribe, band, or community holding a treaty with a State government"
+        OTHERWISE JUST FALSE
