@@ -1,0 +1,94 @@
+-- What the three time axes do to the First Schedule rule.  Each expected value is written by hand from the
+-- documented behaviour (doc/tutorials/multi-temporal-modeling/multi-temporal-rule-modeling.md in l4-ide) and
+-- from the two dates the Notification carries, NOT copied from the output.
+--
+-- FORWARD-LOOKING ROW, TARGET unstable.  Needs the time built-ins.
+-- A failing assertion here means either the row is wrong or the language has changed under it; both are findings.
+--
+-- Two days used throughout:
+--   Date 1 6 2011 read on Date 1 8 2012   -> the three-item Schedule governs
+--   Date 1 6 2011 read on Date 1 11 2012  -> the TVRO-only Schedule governs
+
+IMPORT prelude
+IMPORT daydate
+IMPORT `sgbau-nouns`
+IMPORT `sgbau-first-schedule`
+
+TIMEZONE IS "Asia/Singapore"
+
+`a television set` MEANS Apparatus WITH
+    `capable of or designed or constructed for the reception of a broadcasting service`  IS TRUE
+    `used for the aural reception of a broadcasting service`                             IS FALSE
+    `used for the visual and aural reception of a broadcasting service`                  IS TRUE
+    `capable of direct reception from a satellite in extra-terrestrial space`            IS FALSE
+
+GIVEN d IS A DATE
+GIVETH A BOOLEAN
+`the television set is specified that day` MEANS
+    `apparatus is specified in the First Schedule that governs` `a television set`
+
+§ `The valid-time pin, the rule-effective pin, both, and VALUE AT, say the same thing`
+
+-- (a) valid time only: the rule-effective date falls back to it.
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`EVAL UNDER VALID TIME` (Date 1 6 2011) `the version of the First Schedule that governs`) EQUALS `the First Schedule of three items`
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`EVAL UNDER VALID TIME` (Date 1 6 2011) `the version of the First Schedule that governs`) EQUALS `the First Schedule of the TVRO system only`
+-- (b) the rule-effective axis pinned directly, valid time left alone.
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`EVAL UNDER RULES EFFECTIVE AT` (Date 1 6 2011) `the version of the First Schedule that governs`) EQUALS `the First Schedule of three items`
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`EVAL UNDER RULES EFFECTIVE AT` (Date 1 6 2011) `the version of the First Schedule that governs`) EQUALS `the First Schedule of the TVRO system only`
+-- (c) both pinned to the same day.
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`EVAL UNDER VALID TIME` (Date 1 6 2011) (`EVAL UNDER RULES EFFECTIVE AT` (Date 1 6 2011) `the version of the First Schedule that governs`)) EQUALS `the First Schedule of three items`
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`EVAL UNDER VALID TIME` (Date 1 6 2011) (`EVAL UNDER RULES EFFECTIVE AT` (Date 1 6 2011) `the version of the First Schedule that governs`)) EQUALS `the First Schedule of the TVRO system only`
+-- (d) VALUE AT stamps valid time and rule-effective time, but not system time; the reading day is pinned outside.
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`VALUE AT` (Date 1 6 2011) (GIVEN x YIELD `the version of the First Schedule that governs`)) EQUALS `the First Schedule of three items`
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`VALUE AT` (Date 1 6 2011) (GIVEN x YIELD `the version of the First Schedule that governs`)) EQUALS `the First Schedule of the TVRO system only`
+
+§ `The order of the two outer pins does not matter`
+
+#ASSERT `EVAL UNDER VALID TIME` (Date 1 6 2011) (`EVAL AS OF SYSTEM TIME` (Date 1 8 2012) `the version of the First Schedule that governs`) EQUALS `the First Schedule of three items`
+#ASSERT `EVAL UNDER VALID TIME` (Date 1 6 2011) (`EVAL AS OF SYSTEM TIME` (Date 1 11 2012) `the version of the First Schedule that governs`) EQUALS `the First Schedule of the TVRO system only`
+
+§ `An explicit rule-effective pin beats a valid-time pin, in either nesting`
+
+-- The tutorial's fallback chain: an explicit rule-effective pin, else the valid-time pin, else today.
+-- Facts on 1 June 2011, but the text at 31 December 2010, read 1 November 2012: the three-item Schedule.
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`EVAL UNDER VALID TIME` (Date 1 6 2011) (`EVAL UNDER RULES EFFECTIVE AT` (Date 31 12 2010) `the version of the First Schedule that governs`)) EQUALS `the First Schedule of three items`
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`EVAL UNDER RULES EFFECTIVE AT` (Date 31 12 2010) (`EVAL UNDER VALID TIME` (Date 1 6 2011) `the version of the First Schedule that governs`)) EQUALS `the First Schedule of three items`
+
+§ `Which axis each of the two helper rules reads`
+
+-- The day the law is read is the system-time axis: the pin, whatever the other axes say.
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) `the day the law is read` EQUALS Date 1 8 2012
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`EVAL UNDER VALID TIME` (Date 1 6 2011) `the day the law is read`) EQUALS Date 1 8 2012
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`EVAL UNDER RULES EFFECTIVE AT` (Date 1 6 2011) `the day the law is read`) EQUALS Date 1 8 2012
+-- The day whose text governs follows the valid-time pin ...
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`EVAL UNDER VALID TIME` (Date 1 6 2011) `the day whose text governs`) EQUALS Date 1 6 2011
+-- ... and the rule-effective pin, which wins over the valid-time pin ...
+#ASSERT `EVAL UNDER VALID TIME` (Date 1 6 2011) (`EVAL UNDER RULES EFFECTIVE AT` (Date 31 12 2010) `the day whose text governs`) EQUALS Date 31 12 2010
+-- ... and, with NEITHER pinned, follows the system-time pin.  This is the behaviour the row guards against:
+-- a caller who pins only the reading day makes the "day whose text governs" the reading day (finding 2).
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) `the day whose text governs` EQUALS Date 1 8 2012
+
+§ `The pin is deep: it holds through a constructor`
+
+-- A version wrapped in JUST, or in a LIST, is still evaluated under the pin (the pin is deep since 2026-08-03).
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`EVAL UNDER VALID TIME` (Date 1 6 2011) (JUST `the version of the First Schedule that governs`)) EQUALS JUST `the First Schedule of three items`
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`EVAL UNDER VALID TIME` (Date 1 6 2011) (JUST `the version of the First Schedule that governs`)) EQUALS JUST `the First Schedule of the TVRO system only`
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`EVAL UNDER VALID TIME` (Date 1 6 2011) (LIST `the version of the First Schedule that governs`)) EQUALS LIST `the First Schedule of three items`
+
+§ `The interval built-ins re-stamp valid time and rule-effective time per day, and leave the reading day alone`
+
+-- Is the television set specified on EVERY day from 1 Jan 2011 to 1 Jan 2013?
+-- Read on 1 Aug 2012 (before the Notification was published): yes, every day.
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`ALWAYS BETWEEN` (Date 1 1 2011) (Date 1 1 2013) `the television set is specified that day`) EQUALS TRUE
+-- Read on 1 Nov 2012: no day at all from 1 Jan 2011.
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`EVER BETWEEN` (Date 1 1 2011) (Date 1 1 2013) `the television set is specified that day`) EQUALS FALSE
+-- A range that starts the day before: 31 Dec 2010 still is, on every reading.
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`EVER BETWEEN` (Date 31 12 2010) (Date 1 1 2013) `the television set is specified that day`) EQUALS TRUE
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`ALWAYS BETWEEN` (Date 31 12 2010) (Date 1 1 2013) `the television set is specified that day`) EQUALS FALSE
+-- The last day on or before 31 Oct 2012 on which it is specified: the day before 1 Jan 2011 for a later reader ...
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`WHEN LAST` (Date 31 10 2012) `the television set is specified that day`) EQUALS JUST (Date 31 12 2010)
+-- ... and 31 Oct 2012 itself for an earlier one.
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`WHEN LAST` (Date 31 10 2012) `the television set is specified that day`) EQUALS JUST (Date 31 10 2012)
+-- The next such day on or after 1 Jan 2011: that day for an earlier reader, none for a later one (the search is bounded).
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 8 2012) (`WHEN NEXT` (Date 1 1 2011) `the television set is specified that day`) EQUALS JUST (Date 1 1 2011)
+#ASSERT `EVAL AS OF SYSTEM TIME` (Date 1 11 2012) (`WHEN NEXT` (Date 1 1 2011) `the television set is specified that day`) EQUALS NOTHING
