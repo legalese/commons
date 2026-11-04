@@ -1,0 +1,162 @@
+# Encoding brief: the Income Support Law 5741-1980 (Israel), whole, in L4 (stable)
+
+You are producing a full L4 encoding of the Income Support Law 5741-1980 (Israel) (Sefer HaChukim 5741, as consolidated on Hebrew Wikisource) from the HEBREW-language text deposited in `INPUTS_DIR`.
+This brief is the whole specification. Read it fully before opening any source.
+You are the ONLY encoder: no ontology agent, no fleet, no integrator, no independent test author, no subagents. You do all of it in one context and check your own work with the diagnostics.
+
+## What you are building: two layers
+
+**Layer 1: the law, objectively.** The whole text, as isomorphic and tested L4 modules that follow the text's own structure (one module per Part or natural group, a nouns module first if you need one). It is written from the text alone and takes nobody's point of view: a reader holding the text beside a module checks it line by line, and every rule carries a source citation.
+
+**Layer 2: one thin seat layer over it.** Commons requires every Act to be asked about from the position of the individual to whom the law is applied (the "seat"), because the Legalese website turns such a layer into a question form.
+Here the seat is: **a person or family living in Israel whose means fall short of the minimum the Income Support Law sets, asking on facts they can state whether they are entitled to an income-support allowance, how much and from when, what they must do to keep it, what can reduce or stop it, and what they can be made to repay.**
+The layer is the two files `isl-seat.l4` and `isl-cases-seat.l4`. It IMPORTs the layer-1 modules and calls their rules; it never restates a rule, and no layer-1 module changes to suit it.
+Each question has `@export` and `@desc`, takes plain inputs (one per fact the person can state, each `@desc` worded as that person would be asked), and the questions are grouped under `§` headings in the text's natural order.
+Read `inputs/ENCODING-GUIDE.md` sections 2, 3, 4, 5 and 9 and `inputs/COMMONS-CLAUDE.md` before you write any L4. `inputs/EXAMPLE-sg-employment-act-seat/ea-seat.l4` is a finished seat layer for a different Act and shows the shape (it imports modules you cannot see; copy its shape, not its content).
+Questions are phrased as the person asks them ("Must I ...?", "Am I entitled to ...?"). Provisions that address only an official are encoded in layer 1 for what they decide, and in layer 2 only for what they mean to the person. There is never a seat for an official.
+
+## What "whole" means (Meng's ruling of 2026-10-22, applied to this Act)
+
+Every provision of the text, that is every section, subsection, paragraph, schedule, table row and defined term, has a row in the coverage table, and each row has exactly one disposition:
+- `encoded`: a rule, definition or table in layer-1 L4, with a test, citing the provision with `@ref`.
+- `inert`: allowed ONLY for the three reasons below.
+- `fork`: the text can be read two or more ways with different outcomes. The row points at the fork-register entry (every reading, and the text that licenses each) and at the rule that encodes the chosen reading, or at the explicit "not covered" value when the text does not choose.
+- `repealed or blank in this text`: say what the text shows.
+
+There is no `out-of-scope` row and no `deferred` row.
+
+The three reasons for `inert`, and no others:
+1. Not operative: the title, long title, enacting words, headings, the date of enactment, a purpose or objects clause that creates no rule.
+2. Machinery (Guide section 4): boards and offices and their staffing, the Act's own commencement, short title and extent, regulation-making and rule-making powers, savings and transitional provisions that affect no one now, amendments of other Acts.
+3. Text shown repealed or blank.
+
+These are NOT reasons. Earlier passes used them and they no longer stand:
+- "addresses an official": encode what it means for the individual: what may be done to them, what they must be given, and by when (Guide section 2).
+- "an interpretive canon" or "open-textured": encode the rule, and take the open-textured judgment as a plain input.
+- "refers to another Act or instrument that is not among the sources": encode the provision as stated and ask the borrowed fact or term as an input (Guide section 4).
+- "no input from which an answer would differ": a rule with one answer is still a rule; encode it and test it.
+- "the earlier brief said it need not be coded": superseded by this brief.
+
+A definition is encoded: a defined-term table or function that returns the term's meaning as the Act states it (the members it names, what it includes or excludes, what it points at), with a test for each entry.
+Rules of reading (the singular includes the plural; a reference to an Act includes amendments; and so on) are encoded as functions over a small typed representation of what the rule operates on, as an existing module of this family does, with tests on both sides of each limb.
+
+
+
+## About this text
+
+- The source is HEBREW: a consolidated wikitext from Hebrew Wikisource (`income-support-law-5741-1980.he.wiki.txt`), which is unofficial; `inputs/SOURCES.md` and the `.meta.json` file say what it is. Say in NOTES.md that it is not the official text. Whole means every section, schedule and heading of that file.
+- The stable binary accepts Hebrew in backtick identifiers (checked by the lead on 2026-11-04). Write identifiers, `@desc` strings and NOTES.md in ENGLISH, and give the Hebrew term of art in a comment beside the first use; quote the source in Hebrew exactly as the file prints it in the `-- src:` lines, so that `srcrefs.py` can check them.
+- Amounts the Law leaves to regulations, to the Minister or to the National Insurance Institute's tables are INPUTS; do not use a figure from memory.
+- Do not translate the Law into English as if the translation were its text: your English is a gloss, and NOTES says so.
+
+## What FALSE and NOTHING mean in your answers (the rule of 2026-10-29; assumed, not ruled by a lawyer)
+
+This rule is in force for every row the family has filed since 2026-10-29. Follow it exactly, and flag, do not decide, the two readings marked "for a lawyer".
+- A decision function answers `JUST FALSE` (a `BOOLEAN` that is `MAYBE`-wrapped), or a constructor whose meaning is "the text says no" (for example `Not entitled`, `Not barred`, `Not obliged`; choose your own descriptive names), **only** where the text itself says no to the case in its own words: a definition that says "means"; a condition the text introduces with "if", "only if", "as long as" or "unless" (and their plain variants: "so long as", "while", "until", "except", "save", "provided that"); a list the text closes with "only" or "nothing but"; a flat negative ("does not", "shall not", "may not", "is not entitled").
+- Everywhere else the function answers `NOTHING` (a `MAYBE` result) or a named "... not covered" constructor: where the text lists without closing the list, says "includes", leaves a term undefined, is silent, points to a power, regulation, rate or authority outside your sources, or limits a grant or prohibition in its own wording ("without", "against the will of", "when", a stated period, a named complement) and the case falls outside the limit.
+- Every branch that answers a "no" carries a comment `-- FALSE-kind (the text says no in its own words): "<the quoted words>"`, and every branch that answers "not covered" carries `-- NOTHING-kind (<why>)` where <why> is one of: silent, list not closed, includes, undefined term, points outside the text, limited by its own wording.
+- The function's name carries the section it implements, in this form: `s 47(2) the instrument is valid`, `s 4(2)(a) the claimant has reached the qualifying age`, `sch 3 para 2 the amount is reduced` (the Act's own numbering; parentheses inside a backtick name are fine on the stable binary, checked). Not `is the instrument valid`, not `may I ...`: the name must not claim more than the section says. A caller must never turn `NOTHING` into `FALSE`.
+- **For a lawyer, not for you to decide:** (a) a failed "if" counts as the text's no, clause by clause, within the provision that holds the "if" (an inference: "if A then B" does not itself say "if not A then not B"), and flat negatives count as the text saying no; (b) a prohibition or grant limited by its own wording does not. Take these readings as the status quo, and list every branch that rests on one under a heading `## Marginal readings for a lawyer` in `NOTES.md`, with the other reading stated.
+- Put a short section `### Reading a result: FALSE and NOTHING` in `NOTES.md` saying this in your own subject's terms: what a "no" is in this row, and what "not covered" is.
+- `REFUSE` does not exist on the stable binary: "not covered" is `NOTHING` or a constructor, asserted.
+
+## Rules, duties and decision functions
+
+The text says who is entitled to what, who must do what by when, and what follows. Encode it the way it reads, provision by provision, choosing the form closest to the words:
+- a **decision function** (a typed `DECIDE`) where the provision fixes a sum, a rate, a rank, an entitlement, a condition for a lawful act, a period, or a list of who is covered;
+- a **regulative rule** (`PARTY ... MUST / MAY / SHANT ... WITHIN ... HENCE ... LEST ...`, see `writing-l4-rules/references/regulative.md`) where a provision imposes a duty, permission or prohibition on a named party, with its time limit and consequence if the text gives them.
+Both are tested. A regulative rule is run (`#TRACE` / `#EVAL`) and you assert what you can assert on the stable binary; if some regulative construct cannot be asserted on it, say so under "What the stable binary does not accept" and also encode the same duty as a decision function over the facts.
+Do not invent an actor, a deadline, a remedy or a consequence the text does not state: where it does not say who decides, by when, or what follows, say so in the fork register and return a "not covered" value.
+Amounts, rates and thresholds the text leaves to regulations, orders or a Minister are INPUTS (a number the person states), asked with an `@desc`; never a number from memory.
+Dates are `Date day month year`; a period measured in days, weeks, months or years is a function with a test on both sides of its end.
+
+## Rights and duties come in pairs (Hohfeld)
+
+Hohfeld's correlatives: the person's right (a claim) is the other party's duty; the person's privilege (a liberty) is the other party's no-right; the person's power is the other party's liability, that is, being subject to that power (not an obligation); the person's immunity is the other party's disability.
+In layer 1, state each rule once, as a relation between two parties, and name it neutrally; never write the same relation twice, once from each side.
+In `NOTES.md` keep a section `## Jural relations`: a table with one row per provision that creates a relation, giving the party holding the right, privilege, power or immunity, the party bearing the correlative duty, no-right, liability or disability, the section, and the L4 rule that encodes it. A provision that creates no such relation (a definition, a counting rule) is listed once as `none`. Most provisions of this text DO create a relation (a person against the authority that pays or decides, an employer against an employee, a claimant against the Crown), so this section is long; it must cover the whole of your range.
+
+## The subject and the sources
+
+- **the Income Support Law 5741-1980 (Israel)**, Sefer HaChukim 5741, as consolidated on Hebrew Wikisource.
+- Source file(s) in `INPUTS_DIR`: `income-support-law-5741-1980.he.wiki.txt`.
+- `inputs/SOURCES.md` records where each came from, its version, its URL and its hashes. **Read it.**
+- Each text is a plain-text rendering made by a converter script; it is not the official text. Say so in `NOTES.md` and in your `SOURCE-LICENSE.md`, and do not claim anything is "verified against the official text".
+- `inputs/STUB-SOURCE-LICENSE.md` is the subject-level licence note written when the text was deposited. Your `SOURCE-LICENSE.md` points at it and does not repeat it.
+- Encode only from these files. Quote the text mechanically (copy it, or script it as long as the script reads the file); never reconstruct wording from memory.
+- Defaults ruled for Commons (Guide section 4): the Act alone, plus instruments that set its numbers or dates if among your inputs, otherwise make the number an input and say so; the actors the text names; a judgment the text hands to someone else becomes a conditional input and is never guessed; the Act's own definitions are worked out from facts, borrowed terms are asked as facts; one case is the text's natural unit; the Act's own words, each with a plain gloss in a comment.
+- Build the coverage table from the text itself with a script, one row per section, subsection, schedule paragraph, defined term and table row, and check that every non-blank line of the text falls in some row.
+
+## Writing L4 that the stable binary accepts (from the Commons guide, section 5, verbatim)
+
+- **No `REFUSE`, `#ASSERT REFUSED` or `BECAUSE`** (except `LEST BREACH … BECAUSE`, which is accepted). For a case outside the encoding, return an explicit "not covered" value, either a constructor or `NOTHING`, and assert it.
+- **Parenthesise every `NOT`.** `NOT a AND b` parses as `NOT (a AND b)`.
+- **Keep each `#ASSERT` on one line.** A continuation line is rejected.
+- **Bracket arithmetic that crosses a line break.** `x DIVIDED BY w` at the end of a line, followed by `TIMES 100` on the next, divides by `w × 100`. Chained `MINUS` is left-associative.
+- **`IMPORT` finds only modules in the importing file's own folder** (and the libraries). One encoding cannot import another from a different subject, and a file in a `cases/` subfolder cannot reach the modules above it. A name defined in two imported modules cannot be used at all. Cross-encoding links go in `docs/au-baseline-links.md` style registers, not code, until the language allows them.
+- **Dates: write `Date day month year`, and never define a `YMD` of your own.** `Date` (from `IMPORT daydate`) is in every build. Unstable builds have had a year-first `YMD` in daydate since 29 July 2026, and it is proposed for the stable line (legalese/l4-ide#768, not landed); a file that imports daydate and also defines `YMD` then fails with "There are multiple definitions for the identifier YMD", and so does every file that imports it. Earlier encodings followed this guide's old advice to add a `YMD` shim; on 29 October 2026 the shim was renamed `YearMonthDay` in the 50 files that define it and the 809 others that call it, so that the collision no longer stops them (checked on 29 October 2026 over those files and every file that imports them: no file that checked before fails after, on stable 1.6.98, on unstable-20261028-5e95b5a, or with the daydate of #768). Keep `YearMonthDay` where an encoding already uses it, and do not start a new encoding with it. `Date` and the shim roll an impossible date forward (`Date 29 2 2023` is 1 March 2023); daydate's `YMD` refuses it. When a stable `l4` ships `YMD`, the shims are to be deleted and `YearMonthDay` renamed back. **Smaller gaps:** `WAIT UNTIL` is spelled `WAITUNTIL`. `TYPICALLY` on a record field is not accepted.
+- **`@export` and `@desc` on every question** in a seat or baseline. Legalese Cloud publishes those, and the website's Interact form asks them.
+- **Expected values are hand-written from the text,** never copied from the encoding's own output.
+- **Checks before committing:** `l4 run` on every file shows no `DiagnosticSeverity_Error` or `_Warning`, and every case file has assertions written equal to assertions satisfied. A test that fails on purpose is allowed only where NOTES.md records it as a finding, as the HVAC worked example does.
+- **Lists:** write a list of strings as a vertical `LIST` block, one string per line, not with `•` bullets (those are a parse error on the stable binary).
+
+Your binary is the stable build, so anything it rejects is not available to you. Where the skills describe a construct the stable binary rejects, the binary governs; say so in `NOTES.md` under the finding "What the stable binary does not accept".
+## Deliverables, all under your `DEPOSIT` directory (given in your task)
+
+```
+DEPOSIT/
+  encodings/legalese-sonnet-5.5/
+    isl-*.l4            layer 1: every module of the law (flat folder: IMPORT finds only modules beside it)
+    isl-seat.l4         layer 2: the seat's questions
+    isl-cases-seat.l4   layer 2: worked cases, one per question at least
+    tests, check.sh, srcrefs.py, NOTES.md, PROGRESS.md, encoding.json, SOURCE-LICENSE.md, BRIEF.md (a copy of this brief)
+```
+
+All `.l4` files sit directly in that folder (no subfolders), have ASCII filenames beginning with `isl-`, and never define the same name as another module imported with it.
+You do not write `subject.json`, `README.md` or `source/`: the subject already exists and is not yours to change.
+`encoding.json` and `SOURCE-LICENSE.md` follow `references/canon-deposit.md` of the `encoding-a-subject` skill: status `draft`, `not_reviewed` saying no domain expert has read it against the text, `"seat": "<the seat in one line>"`, the scope and the edition encoded, the checks run, and the `l4_bin` path with its sha256.
+The encoding's name is `legalese-sonnet-5.5`; the method is a single Sonnet 5.5 agent working alone from this brief.
+`NOTES.md` carries: a `## Seat` section naming the seat and why; the `## Jural relations` table; what is encoded and what is not; the coverage table; a **fork register** (every ambiguity, the readings you saw, the one you took, the text that licenses each); numbered findings ("What the text turns out to say"), each ending "Asserted." where a case asserts it; what the binary does not accept; what `check.sh` prints; what would need doing before the encoding is worth relying on.
+
+## Your context will be compacted: make the disk your memory
+
+This run may exceed your context window, and the harness will then compact your context into a summary. So write as you go, not at the end:
+- Keep `NOTES.md`'s coverage table and fork register on disk, and update them after each section you finish.
+- Keep `PROGRESS.md`: sections done, in progress, next, decisions taken (with the section that licenses each), and the files you have written.
+- After any compaction, re-read `PROGRESS.md`, `NOTES.md` and the text, not your summary of them.
+
+## Tests
+
+Expected values come from the text, never from your code, and are written beside the assertion.
+Decide each expected answer by reading the section, write it down, then run. A failing assertion is a finding: never edit an expected value to match what the code computed.
+Cover at least: every branch of each rule you encode; the boundary values on each side of every threshold; every question in the seat layer (if the row has one), with the facts a real person in the seat would state; and a case outside the encoding (an explicit "not covered" value, asserted).
+If you keep some expectations meant to fail, put them in their own file, count them, record them in `NOTES.md` as a finding, and list them in `check.sh`'s `expected_failed`.
+Every case file ends with assertions written equal to assertions satisfied.
+
+## Rules that matter
+
+- **Follow the two skills.** Read before writing any L4: `<the lead's scratchpad>/skills/encoding-a-subject/SKILL.md` (steps 1 to 7, 9 and 11; there is no step 8 here, and you do not deposit into a repository) and `<the lead's scratchpad>/skills/writing-l4-rules/SKILL.md`, then its `references/drafting-patterns.md`, all of `references/source-patterns/`, and `references/dialects.md`.
+- **Encode isomorphically.** Cite the section on every rule with `@ref`; follow `encoding-a-subject/references/source-locators.md` for quoting and run `python3 -I srcrefs.py check --refs <the raw text file> <your .l4 files>`; it must report 0 problems.
+- **Where the source does not answer,** return an explicit "not covered" value (a constructor or `NOTHING`) and assert it. Never `FALSE`, never `0`, never a plausible default.
+- **Read the DIAGNOSTICS, not the exit code.** `l4 run` exits 0 when an `#ASSERT` fails. Report the numbers `check.sh` prints.
+- **Every file runs clean:** `l4 run` shows no `DiagnosticSeverity_Error` or `_Warning` on any file except a registered, deliberately failing one.
+- **No sleep-polls and no waiting loops**: run each command in the foreground.
+- **Do not git add, commit or push anything.** Write files only under `DEPOSIT`.
+
+## Toolchain
+
+The binary is `L4_BIN` (given in your task; version 1.6.98 (main, 7689b0d, 2026-10-19), sha256 `82ea44addf093ea4dd84c4e4416184920857ca9c762c5b31feed20541c20263e`). Leave `JL4_LIBRARY_PATH` UNSET: the standard library is compiled into the binary and always matches it.
+`L4_BIN check FILE` typechecks; `L4_BIN run FILE` also evaluates every `#EVAL` and `#ASSERT`. Run the binary by its absolute path.
+Run the check as `L4=<L4_BIN> L4_MAIN=<the lead's scratchpad>/bin/l4-main-108 ./check.sh` (the default target `main`: it runs every module with a second stable build as well and goes red when the two read it differently).
+
+## Independence
+
+Do not read any existing encoding of any Act: nothing under `/Users/mengwong/src/legalese/commons`, `commonswt` or `canon`, no directory under `<the lead's scratchpad>/runs` other than your own `iaw-isl/`, and nothing under `~/.claude/` (no `memory/`, no `projects/`, no `state/`, no `tmp`).
+The one exception is `inputs/EXAMPLE-sg-employment-act-seat/`, which is yours to read.
+The answers must come from the text alone. You may read `INPUTS_DIR`, the two skills and their references, and the Commons guide copies in `inputs/`.
+Your context may contain an index of someone's notes that mentions other encodings; do not follow it. If you open a forbidden file by accident, stop reading it and say so under `peeked`.
+
+## Final report (your last message; the report is your final response, not a file)
+
+Return: (1) the list of files you wrote or changed; (2) exactly what `check.sh` printed, and the baseline numbers it replaced; (3) the coverage table summary (counts per disposition) and the audit counts (text units counted, rows in the table before and after); (4) the forks you took, one line each with the reading chosen; (5) every row you moved out of `inert` and every row you left `inert` with its reason number (1, 2 or 3); (6) any failing or refused assertion and what it means; (7) what the text does not answer; (8) `peeked`: nothing, or what you opened by accident.
+Subagents cannot write report-named files such as `FINDINGS.md`; `NOTES.md`, `PROGRESS.md` and `.l4` files are fine.
