@@ -111,3 +111,41 @@ Paths (absolute):
 
 
 Note added 2026-10-29, after the run: the date shim described above no longer exists. Every module writes dates as `Date day month year`, and this encoding defines no `YMD` or `YearMonthDay`.
+
+---
+# FIX PASS 2026-11-04: plain-BOOLEAN catch-all functions (agent fix-au)
+
+Paths (absolute):
+- RUN = <the lead's scratchpad>/runs/fix-au
+- D (the only place I write) = RUN/deposit/encodings/legalese-sonnet-5.5 ; logs in RUN/deposit/logs (baseline.log; orig/ = copy of the files before any change, DELETED at the end, as were the helper scripts)
+- L4 = SCRATCH/bin/l4-stable-98 (1.6.98, sha256 82ea44ad...263e) ; L4_MAIN = SCRATCH/bin/l4-main-108 (1.6.108 (main, 2ae7c9b, 2026-11-02), sha256 4159128db3bb804afff82aa3319caf320267ea0acf459cedc5483ee173c06e64)
+- check: cd D && L4=$SCRATCH/bin/l4-stable-98 L4_MAIN=$SCRATCH/bin/l4-main-108 ./check.sh  (about 5 minutes; foreground is fine)
+- Brief: RUN/BRIEF.md. Do not git add, commit or push. No subagents.
+
+## baseline 2026-11-04 (check.sh before any change; run 2026-11-03T23:22:27Z to 23:27:42Z UTC)
+- target main, main build 1.6.108 (main, 2ae7c9b, 2026-11-02); 45 modules (44 + tests-independent.l4); errors 0, satisfied 2041, failed 0, refused 0; every module "same" on main; exit 0.
+- per module satisfied: au-cases-seat 124, au-tests-part1 8, part10-11 27, part2-more 41, part2-terms 422, part2 62, part3-more 12, part3 17, part4-more 15, part4 30, part5-ministers 97, part5-readings 122, part5 41, part6-more 2, part6 15, part7-more 208, part7 60, part8-more 3, part8 5, part9-more 4, part9 37, au-tests-time 134, tests-independent 555; layer-1 modules and au-seat 0.
+- srcrefs baseline (from encoding.json, pass 2): 913 src: lines, 280 runs, 314 locators, 0 problems (to be re-run on the files I change).
+- 129 plain `GIVETH A BOOLEAN` functions in the modules (script, not kept), 10 of them seat questions.
+
+## Decisions (fix pass), with the licence for each
+- F1 (REVISED after an advisor read; this replaces the first draft) Scope line: change a plain-BOOLEAN function when its FALSE is the answer for a catch-all enumeration constructor (`any other ...`, `anyone else`, `something else`, `no authority ...`, `not a matter`, `not relevant`), plus s 40 (unlisted citation pairs), plus exactly two BOOLEAN-input "includes" functions named by reviewer scenarios (54 Senior Counsel, 138 s 2J), plus the one NOTHING-to-FALSE coercion found (s 33(4) twelve months have expired). NOT done, left open and counted in NOTES: the same-text siblings (contravene, 2CA(2)) and s 10(b), 10(c) [scenario 204], 10A(b), 10A(c), which open with "where/if" (reading (a), for a lawyer, listed under Marginal readings).
+- F2 NOT changed (the larger open class, counted in NOTES): FALSE from a failed `if`/`where`/`unless`/`except` condition or from a case outside a stated limit (readings (a) and (b) of the brief, status quo), e.g. 15B(1)-(3A), 25A, 33B(3), 34AB, 34B, 40A(1). Kept catch-all candidates: 19B(7)/19C(6)/19D(5) ("authority means any of the following"), s 2B Australia/Commonwealth ("does not include any other external Territory"), external Territory / foreign country ("means"), document ("means ... and includes"), 34C bodies (flat "does not apply").
+- F3 In a function I convert, every branch conforms: JUST TRUE where the text says yes, JUST FALSE only with a quoted flat negative / `means` / failed `if` (reading (a)) and a FALSE-kind comment, NOTHING with a NOTHING-kind comment otherwise. Existing FALSE that rests on a failed `if`/`where` (reading (a)) is kept as JUST FALSE and listed under `## Marginal readings for a lawyer`.
+- F4 Do not rename functions (brief step 5). Seat: only `Was the document served on me ...` (s 28A) becomes MAYBE BOOLEAN.
+- F5 Assertions: restated IN PLACE with `-- RECONCILED 2026-11-04: was <original>; <reason>`; expected values written from the rule (a Python spec of the new semantics is used to check my hand-written values, not to bless program output).
+
+## Status (fix pass 2026-11-04), final
+- [x] baseline (above)
+- [x] find them all: 129 plain `GIVETH A BOOLEAN` functions listed by script and read against the text; verdicts in NOTES.md `## Catch-all pass 2026-11-04` (21 changed + 2 callers + 1 seat question = 24; kept with comments: 19B(7), 19C(6), 19D(5), s 2B Australia; 105 plain BOOLEAN remain, of which 57 are the larger "failed condition" class left open for a lawyer)
+- [x] changed in the modules, callers, seat; all 45 `.l4` files give `Check succeeded.` with nothing else
+- [x] tests: 233 assertions restated in place with `-- RECONCILED 2026-11-04: was ...` (script, not kept; expected values from a second implementation of the rule, none marked suspect), 35 added under `ADDED 2026-11-04`
+- [x] NOTES.md (Reading a result paragraph and bullet, `## Catch-all pass 2026-11-04`, `## Marginal readings for a lawyer`, Changes to existing modules, The seat's questions, What check.sh prints, Known limits, Check) and encoding.json (version 0.3.0, checks, l4_bin sha256 and version, l4_main updated to 1.6.108)
+- [x] check.sh after: 45 modules, errors 0, satisfied 2,076 (2,041 + 35), failed 0, refused 0, every module `same` on 1.6.108, exit 0 (run 2026-11-03T23:50:46Z to 23:52:19Z); srcrefs --refs and --strict over every au-*.l4: 913 src: lines, 280 runs, 314 locators, 0 problems (same as baseline)
+- [x] l4 batch on the s 28A seat question: 4 rows, results true / null / null / true
+
+## Files I changed (24)
+Modules (10): au-part2-definitions.l4, au-part2-more.l4, au-part5-interpretation.l4, au-part5-ministers.l4, au-part5-readings.l4, au-part6-service.l4, au-part7-more.l4, au-part7-powers.l4, au-part9-citation.l4, au-seat.l4.
+Tests (11): au-cases-seat.l4, au-tests-part2.l4, au-tests-part2-more.l4, au-tests-part5.l4, au-tests-part5-readings.l4, au-tests-part5-ministers.l4, au-tests-part6.l4, au-tests-part7.l4, au-tests-part7-more.l4, au-tests-part9.l4, tests-independent.l4.
+Bookkeeping (3): NOTES.md, PROGRESS.md, encoding.json.
+Not part of the row: RUN/deposit/logs/ holds only baseline.log, after.log and the four timestamp files baseline.start, baseline.end, after.start, after.end (the `orig/` snapshot, the helper scripts and the probe inputs were deleted on 2026-11-04). Do not file this directory with the row.
